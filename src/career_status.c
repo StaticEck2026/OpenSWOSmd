@@ -149,7 +149,7 @@ extern uint8_t *secondaryCompetitionPtr;
 extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t    competitionContext[];
-extern uint8_t    tertiaryCompetitionContext[];
+extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t    euroCupsCompetitionContext[];
 extern uint8_t    competitionFileBuffer[];
 extern volatile uint16_t   seasonUpdateInProgress;
@@ -182,7 +182,7 @@ extern uint16_t   currentDivisionIndex;
 extern uint16_t   seasonReview;
 extern uint16_t   seasonFinished;
 extern uint16_t   secondaryCompFinished;
-extern uint16_t   tertiaryCompFinished;
+/* tertiaryCompFinished migrated to tertiaryCompetitionContextBuf.tourn.header.compFinished (slot-2 untangle, S3) */
 extern uint16_t   leaguePromotionCount;
 extern uint16_t   leagueRelegationCount;
 extern uint16_t   leagueWarningsEnabled;
@@ -205,7 +205,7 @@ extern DIYTournamentState diyFileBufferCopy;
 /* Winner teams */
 extern uint16_t   primaryCompWinnerTeam;
 extern uint16_t   secondaryCompWinnerTeam;
-extern uint16_t   tertiaryCompWinnerTeam;
+/* tertiaryCompWinnerTeam migrated to tertiaryCompetitionContextBuf.tourn.header.winnerTeam (slot-2 untangle, S3) */
 extern uint16_t   quaternaryCompWinnerTeam;
 extern uint16_t   euroCupSlotIndex;
 
@@ -223,7 +223,7 @@ extern uint16_t   minorTrophyBonusCount;
 extern uint16_t   majorTrophyBonusCount;
 extern uint8_t    majorTrophyBonusValue;
 extern uint8_t    minorTrophyBonusValue;
-extern uint8_t    leagueTitleBonusValue;
+/* leagueTitleBonusValue migrated to tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue (slot-2 untangle, S3) */
 extern uint8_t    majorTrophyOrCupBonusValue;
 
 /* DIY competition buffer — kept as uint8_t[] to avoid size warnings */
@@ -1322,7 +1322,7 @@ static uint16_t areActiveCompsFinished(void) {
             return 1;
     }
     if (tertiaryCompetitionPtr != 0) {
-        if (tertiaryCompFinished != 0)
+        if (tertiaryCompetitionContextBuf.tourn.header.compFinished != 0)
             return 1;
     }
     return 0;
@@ -1409,7 +1409,7 @@ performance_warning_active:
             /* Check if secondary/tertiary comps block escalation */
             if (secondaryCompetitionPtr != 0 && secondaryCompFinished != 0)
                 goto random_escalate;
-            if (tertiaryCompetitionPtr != 0 && tertiaryCompFinished != 0)
+            if (tertiaryCompetitionPtr != 0 && tertiaryCompetitionContextBuf.tourn.header.compFinished != 0)
                 goto random_escalate;
             /* Issue 3-more-matches warning */
             performanceWarningState = 3;
@@ -1496,7 +1496,7 @@ done_performance:
                 goto issue_overdraft_last_warning;
             if (secondaryCompetitionPtr != 0 && secondaryCompFinished != 0)
                 goto issue_overdraft_last_warning;
-            if (tertiaryCompetitionPtr != 0 && tertiaryCompFinished != 0)
+            if (tertiaryCompetitionPtr != 0 && tertiaryCompetitionContextBuf.tourn.header.compFinished != 0)
                 goto issue_overdraft_last_warning;
             /* Clear overdraft immediately */
             overdraftWarningState = 3;
@@ -1659,8 +1659,8 @@ void _InitializeCareerSeasonFinancials(void) {
         d5 += getExpectedLeagueRankIndex(competitionContext, mec2);
     }
     if (tertiaryCompetitionPtr != 0) {
-        uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)tertiaryCompetitionContext);
-        d5 += getExpectedLeagueRankIndex(tertiaryCompetitionContext, mec3);
+        uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
+        d5 += getExpectedLeagueRankIndex((uint8_t *)&tertiaryCompetitionContextBuf, mec3);
     }
     if (quaternaryCompetitionPtr != 0) {
         uint16_t mec4 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)euroCupsCompetitionContext);
@@ -1949,7 +1949,7 @@ check_tertiary_winner:
     leagueTitleBonusActive = 0;
 
     if (tertiaryCompetitionPtr != 0 &&
-        selTeamNumber == tertiaryCompWinnerTeam &&
+        selTeamNumber == tertiaryCompetitionContextBuf.tourn.header.winnerTeam &&
         tertiaryCompetitionPtr != (uint8_t *)friendlyCopy) {
         leagueTitleBonusActive = 1;
     }
@@ -2069,7 +2069,7 @@ void _UpdateCareerReputationBonuses(void) {
     }
 
     if (leagueTitleBonusActive != 0)
-        addReputationFromBonusValueDiv8((int8_t)leagueTitleBonusValue);
+        addReputationFromBonusValueDiv8((int8_t)tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue);
 
     if (majorTrophyBonusActive != 0 || cupBonus1Active != 0 || cupBonus2Active != 0) {
         majorTrophyBonusCount++;
@@ -2126,7 +2126,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
 
     /* League title bonus */
     if (leagueTitleBonusActive != 0) {
-        int16_t bonusVal = (int16_t)(int8_t)leagueTitleBonusValue;
+        int16_t bonusVal = (int16_t)(int8_t)tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue;
         startingBalance += (int32_t)((uint32_t)(uint16_t)bonusVal * 0x44F1);
     }
 
@@ -3199,7 +3199,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
     if (compPtr != (uint8_t *)currentCompetitionPtr) {
         ctx = competitionContext;
         if (compPtr != (uint8_t *)secondaryCompetitionPtr) {
-            ctx = tertiaryCompetitionContext;
+            ctx = (uint8_t *)&tertiaryCompetitionContextBuf;
             if (compPtr != (uint8_t *)tertiaryCompetitionPtr) {
                 ctx = euroCupsCompetitionContext;
             }

@@ -501,9 +501,7 @@ extern uint16_t primaryCompSlotStateC;
 extern uint16_t secondaryCompSlotStateA;
 extern uint16_t secondaryCompSlotStateB;
 extern uint16_t secondaryCompSlotStateC;
-extern uint16_t tertiaryCompSlotStateA;
-extern uint16_t tertiaryCompSlotStateB;
-extern uint16_t tertiaryCompSlotStateC;
+/* tertiaryCompSlotStateA/B/C migrated to tertiaryCompetitionContextBuf.tourn.header.slotState* (slot-2 untangle, S3) */
 extern uint16_t quaternaryCompSlotStateA;
 extern uint16_t quaternaryCompSlotStateB;
 extern uint16_t quaternaryCompSlotStateC;
@@ -550,7 +548,7 @@ extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t *diyCompetitionPtr;
 extern uint8_t competitionFileBuffer[];
 extern uint32_t competitionContext;
-extern uint32_t tertiaryCompetitionContext;
+extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint32_t euroCupsCompetitionContext;
 extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 extern uint8_t *careerCompetitionSlotPtrTable[];
@@ -712,9 +710,9 @@ void _InitCareer(uint16_t teamNo)
     secondaryCompSlotStateA = 3;
     secondaryCompSlotStateB = 2;
     secondaryCompSlotStateC = 8;
-    tertiaryCompSlotStateA = 3;
-    tertiaryCompSlotStateB = 2;
-    tertiaryCompSlotStateC = 8;
+    tertiaryCompetitionContextBuf.tourn.header.slotStateA = 3;
+    tertiaryCompetitionContextBuf.tourn.header.slotStateB = 2;
+    tertiaryCompetitionContextBuf.tourn.header.slotStateC = 8;
     quaternaryCompSlotStateA = 3;
     quaternaryCompSlotStateB = 2;
     quaternaryCompSlotStateC = 8;
@@ -798,6 +796,53 @@ static int _Career_TeamInEuroCup(uint8_t *cupCopy)
             return 1;   /* participating */
     }
     return 0;           /* not in this cup */
+}
+
+/* _Career_TeamInLoadedEuroSlot — non-panicking membership probe for the LOADED
+ * slot-3 buffer (a DIYCompetition), used by the load-time slot-3 re-derivation.
+ *
+ * It answers "is selTeamNumber genuinely a participant in this euro cup?" using
+ * the SAME list `_FindTeamInDIY` searches — the loaded buffer's team list
+ * (teamIds for a type-2 tournament, cupTeamIds for a type-1 cup, each via the
+ * buffer's own index table). This is the AUTHORITATIVE source for the loaded
+ * season: the slot-3 buffer is saved (FA blob) so it holds the season's real
+ * euro field, whereas `euroCupCopy` is reconstructed from its STATIC template on
+ * load (save_format_json.c comp_copy_region) and holds DEFAULT teams — so
+ * `_Career_TeamInEuroCup(euroCupCopy)` gives a FALSE NEGATIVE for a club that's
+ * in the saved season's cup but not the default template, leaving
+ * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list row in
+ * `_CareerGameListCommon` on `compInfo[5]`. Gating on the buffer keeps this
+ * consistent with `_FindTeamInDIY`: gate-pass => `_FindTeamInDIY(team, buffer)`
+ * also finds the team (no 0x6006); gate-fail => slot stays inactive (preserves
+ * 940603f's protection — a true non-participant is in neither buffer nor
+ * template). Mirrors `_FindTeamInDIY`'s per-type search but returns found/
+ * not-found instead of panicking. */
+static int _Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
+{
+    uint16_t numTeams = (uint16_t)comp->numTeams;
+    uint16_t target   = selTeamNumber;
+
+    if (comp->competitionType == 2) {
+        /* DIY_TOURNAMENT (e.g. European Champions Cup) — teamIds[teamIndexOrder[i]]. */
+        uint16_t *teamIds = ((DIYTournamentState *)comp)->teamIds;
+        int8_t   *order   = (int8_t *)((DIYTournamentState *)comp)->teamIndexOrder;
+        for (uint16_t i = 0; i < numTeams; i++) {
+            int16_t idx = (int16_t)(int8_t)order[i];
+            if (BE_READ_U16(&teamIds[idx]) == target)
+                return 1;
+        }
+    } else if (comp->competitionType == 1) {
+        /* DIY_CUP (Cup Winners'/UEFA) — cupTeamIds[teamGridPairings[i]]. */
+        DIYCompetitionEx *ex      = (DIYCompetitionEx *)comp;
+        uint16_t *cupTeamIds      = ex->cupTeamIds;
+        int8_t   *pairings        = (int8_t *)ex->teamGridPairings;
+        for (uint16_t i = 0; i < numTeams; i++) {
+            int16_t idx = (int16_t)(int8_t)pairings[i];
+            if (BE_READ_U16(&cupTeamIds[idx]) == target)
+                return 1;
+        }
+    }
+    return 0;           /* not in this loaded euro slot */
 }
 
 /* ================================================================
@@ -1020,7 +1065,7 @@ void _InitializeNewSeason(void)
     /* Initialize competition slot pointer table */
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
-    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
+    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
@@ -1156,21 +1201,21 @@ void _InitializeNewSeason(void)
 
         /* Set up tertiary competition (slot 2) if present */
         if ((uintptr_t)*compTablePtr != (uintptr_t)-1) {
-            uint16_t savedA2 = tertiaryCompSlotStateA;
-            uint16_t savedB2 = tertiaryCompSlotStateB;
-            uint16_t savedC2 = tertiaryCompSlotStateC;
+            uint16_t savedA2 = tertiaryCompetitionContextBuf.tourn.header.slotStateA;
+            uint16_t savedB2 = tertiaryCompetitionContextBuf.tourn.header.slotStateB;
+            uint16_t savedC2 = tertiaryCompetitionContextBuf.tourn.header.slotStateC;
 
             comp = (uint8_t *)*compTablePtr;
             _Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
 
-            /* tertiaryCompStringOffset == tertiaryCompetitionContext+0x28
+            /* tertiaryCompStringOffset == tertiaryCompetitionContextBuf+0x28
              * namePtr on Amiga (slot 2). */
             ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr2 =
                 ((DIYCompetition *)careerCompetitionSlotPtrTable[2])->namePtr;
 
-            tertiaryCompSlotStateC = savedC2;
-            tertiaryCompSlotStateB = savedB2;
-            tertiaryCompSlotStateA = savedA2;
+            tertiaryCompetitionContextBuf.tourn.header.slotStateC = savedC2;
+            tertiaryCompetitionContextBuf.tourn.header.slotStateB = savedB2;
+            tertiaryCompetitionContextBuf.tourn.header.slotStateA = savedA2;
         }
     }
 
@@ -1282,7 +1327,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     /* Initialize competition slot pointer table */
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
-    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
+    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
@@ -1369,9 +1414,9 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  *
  *   1. careerCompetitionSlotPtrTable[5]  — five competition slot bases.
  *      Re-derived from `&competitionFileBuffer / &competitionContext /
- *      &tertiaryCompetitionContext / &euroCupsCompetitionContext /
- *      &diyCompetitionContextBuf` in the current build's BSS (slots 0-3
- *      still SLOT_ALIAS into their bufs; slot 4 is the typed buffer).
+ *      &tertiaryCompetitionContextBuf / &euroCupsCompetitionContext /
+ *      &diyCompetitionContextBuf` in the current build's BSS (slots 0/1/3
+ *      still SLOT_ALIAS into their bufs; slots 2 & 4 are the typed buffers).
  *
  *   2. diyCompetitionStart — runtime DIY working buffer (separate 4 KB
  *      BSS, NOT inside the careerFileBuffer overlay). Repopulated
@@ -1556,12 +1601,23 @@ static void _Rebuild_CompetitionSlotPointers(void)
          * cup's team list. (gdb-confirmed 2026-06-10: club 5141 in SERIE A, euro
          * slot held EUROPEAN CHAMPIONS CUP whose Italian entrant is 5142, stale
          * euroCupSlotIndex=0.) */
+        /* Gate on the LOADED BUFFER's team list (q3), NOT the static euroCupCopy
+         * template. euroCupCopy is reconstructed from its static template on load
+         * (default teams, NOT the saved season's qualifiers), so
+         * _Career_TeamInEuroCup(euroCup3) gives a FALSE NEGATIVE for a club that's
+         * in the saved season's cup but not the default template — leaving
+         * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list
+         * row in _CareerGameListCommon on compInfo[5]. The saved slot-3 buffer is
+         * the season's authoritative field; _Career_TeamInLoadedEuroSlot checks it
+         * with the same search _FindTeamInDIY uses (gate-pass => no 0x6006). euroCup3
+         * (the static record) is still the pointer TARGET — it carries the name
+         * table the game list reads. */
         if (euroCup3 != 0 && q3->isActive != 0 &&
             q3->competitionType == ((Competition *)euroCup3)->type &&
-            _Career_TeamInEuroCup(euroCup3)) {
+            _Career_TeamInLoadedEuroSlot(q3)) {
             quaternaryCompetitionPtr = euroCup3;
         } else {
-            quaternaryCompetitionPtr = 0;  /* slot 3 inactive this season */
+            quaternaryCompetitionPtr = 0;  /* slot 3 inactive / club not in it this season */
         }
     }
 }
@@ -1597,7 +1653,7 @@ void _RebuildPointersAfterLoad(void)
      * the current run's competition-buffer addresses. */
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&competitionFileBuffer;
     careerCompetitionSlotPtrTable[1] = (uint8_t *)&competitionContext;
-    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContext;
+    careerCompetitionSlotPtrTable[2] = (uint8_t *)&tertiaryCompetitionContextBuf;
     careerCompetitionSlotPtrTable[3] = (uint8_t *)&euroCupsCompetitionContext;
     careerCompetitionSlotPtrTable[4] = (uint8_t *)&diyCompetitionContextBuf;
 
@@ -1740,7 +1796,7 @@ void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
     if (comp == (uint8_t *)secondaryCompetitionPtr)
         goto found_slot;
 
-    slotCtx = (uint8_t *)&tertiaryCompetitionContext;
+    slotCtx = (uint8_t *)&tertiaryCompetitionContextBuf;
     if (comp == (uint8_t *)tertiaryCompetitionPtr)
         goto found_slot;
 

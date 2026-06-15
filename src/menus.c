@@ -4402,7 +4402,7 @@ extern uint8_t *tertiaryCompetitionPtr;
 extern uint8_t *quaternaryCompetitionPtr;
 extern uint8_t  diyPresetNameOfCompetition[];
 extern uint8_t  secondaryCompetitionName[];
-extern uint8_t  tertiaryCompetitionName[];
+extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t  quaternaryCompetitionName[];
 extern uint8_t  plNationality;
 extern uint8_t  nationalityOrdinal;
@@ -4464,7 +4464,7 @@ void _ViewCompetitionsOnReturn(void)
     /* Set text pointers for competition name entries */
     menuEntries[1].fg = (uintptr_t)diyPresetNameOfCompetition;
     menuEntries[2].fg = (uintptr_t)secondaryCompetitionName;
-    menuEntries[3].fg = (uintptr_t)tertiaryCompetitionName;
+    menuEntries[3].fg = (uintptr_t)tertiaryCompetitionContextBuf.tourn.header.competitionName;
     menuEntries[4].fg = (uintptr_t)quaternaryCompetitionName;
 
     /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */

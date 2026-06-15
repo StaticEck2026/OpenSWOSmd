@@ -661,6 +661,8 @@ _Static_assert(offsetof(DIYCompetition, relegationCount)   == 0x5A + (sizeof(voi
  * compile time on both targets (CFB_NP = sizeof(void*)-4 tracks the namePtr@0x28
  * growth for the slot-state fields; competitionType@0 sits before it). */
 _Static_assert(offsetof(DIYCompetition, competitionType) == 0x00,                        "competitionType@0x00");
+/* competitionName@0x04 (slot-2 S3 + others): before namePtr@0x28, never shifts. */
+_Static_assert(offsetof(DIYCompetition, competitionName) == 0x04,                        "competitionName@0x04");
 _Static_assert(offsetof(DIYCompetition, slotStateA)      == 0x3E + (sizeof(void *) - 4), "slotStateA@0x3E");
 _Static_assert(offsetof(DIYCompetition, slotStateB)      == 0x40 + (sizeof(void *) - 4), "slotStateB@0x40");
 _Static_assert(offsetof(DIYCompetition, slotStateC)      == 0x42 + (sizeof(void *) - 4), "slotStateC@0x42");

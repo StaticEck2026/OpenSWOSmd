@@ -421,7 +421,7 @@ check_self:
 
 extern uint8_t competitionFileBuffer[];
 extern uint8_t competitionContext[];
-extern uint8_t tertiaryCompetitionContext[];
+extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
 extern uint8_t euroCupsCompetitionContext[];
 
 extern uint8_t *currentCompetitionPtr;
@@ -641,7 +641,7 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     /* Tertiary competition: top-2 finish → -2 */
     if (tertiaryCompetitionPtr != 0) {
-        int16_t pos3 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)tertiaryCompetitionContext);
+        int16_t pos3 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
         if ((uint16_t)pos3 < 2)
             d7 -= 2;
     }
