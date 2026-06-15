@@ -3654,6 +3654,7 @@ static void load_competition_overrides(const char *buf, int buflen)
  * reuses it to detect whether a type-2 tournament's active stage is a league
  * (group phase) or a cup (knockout), reading the master's roundComplete. */
 static int diy_stage_is_league(const DIYCompetitionEx *stage);
+static int diy_stage_is_league_master(const DIYTournamentState *master);
 
 /* _VerifyTeamLoaded is extern'd further down (preset path); the career load
  * path's cup teamOffsetTable rebuild needs it earlier, so declare it here. */
@@ -3732,6 +3733,37 @@ static void emit_ctx_stage(mjson_print_fn_t fn, void *fnd, const char *key,
     mjson_printf(fn, fnd, "%s", ",\n  ");
     emit_comp_slot(fn, fnd, key, stage);
     emit_stage_cupfull(fn, fnd, key, stage, slot->base.numTeams);
+    /* League/group active stage: standings rows. Mirrors the primary's
+     * stage_standings, but PER-CONTEXT and serialising teamSelOffset (the
+     * target-independent team identity: -1 careerTeam / selTeamsPtr index)
+     * explicitly. The primary can rebuild it as the row index i (a national
+     * tournament's teams sit in selTeamsPtr order); a euro CLUB cup's teams are a
+     * SUBSET of selectedTeams so the identity must round-trip. Without this the
+     * int32 teamSelOffset rode the raw stageSnapshot blob and byte-swapped on a
+     * 64-bit-LE save -> 32-bit-BE Amiga load, so every group team resolved to
+     * selectedTeams[0] (whole Champions-Cup group table showed the career team).
+     * All values are endian-neutral decimals. */
+    if (diy_stage_is_league_master((const DIYTournamentState *)slot)) {
+        uint16_t nrows = slot->base.numTeams; if (nrows > 64) nrows = 64;
+        char sk[64];
+        swos_io_snprintf(sk, sizeof(sk), "%s_standings", key);
+        mjson_printf(fn, fnd, ",\n  %Q:[", sk);
+        for (uint16_t i = 0; i < nrows; i++) {
+            DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
+            if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd,
+                "{%Q:%d,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u}",
+                "so",  (int)r->teamSelOffset,
+                "gp",  (unsigned)r->gamesPlayed,
+                "w",   (unsigned)r->wins,
+                "d",   (unsigned)r->draws,
+                "l",   (unsigned)r->losses,
+                "gf",  (unsigned)r->goalsFor,
+                "ga",  (unsigned)r->goalsAgainst,
+                "pts", (unsigned)r->points);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+    }
 }
 
 static void load_ctx_stage(const char *src, int src_size, const char *key,
@@ -3743,6 +3775,44 @@ static void load_ctx_stage(const char *src, int src_size, const char *key,
         ((uint8_t *)slot + offsetof(CompetitionSlotBuffer, stageSnapshot));
     load_comp_slot(src, src_size, key, stage);
     load_stage_cupfull(src, src_size, key, stage, slot->base.numTeams);
+    /* League/group stage standings restore (see emit_ctx_stage): teamSelOffset
+     * (identity) + uint16 stats from typed decimals, overwriting the
+     * byte-swapped raw-blob bytes. Absent in pre-fix saves -> mjson_find misses
+     * -> no-op (blob bytes stand). */
+    if (diy_stage_is_league_master((const DIYTournamentState *)slot)) {
+        char sk[64];
+        swos_io_snprintf(sk, sizeof(sk), "$.%s_standings", key);
+        const char *rows = NULL; int rows_len = 0;
+        if (mjson_find(src, src_size, sk, &rows, &rows_len) == MJSON_TOK_ARRAY) {
+            uint16_t nrows = slot->base.numTeams; if (nrows > 64) nrows = 64;
+            int pos = 0, voff, vlen, vt; uint16_t i = 0;
+            while (i < nrows &&
+                   (pos = fast_array_next(rows, rows_len, pos,
+                                          &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+                const char *e = rows + voff; int el = vlen;
+                long so = 0, gp = 0, w = 0, d = 0, l = 0, gf = 0, ga = 0, pts = 0;
+                mjson_get_long(e, el, "$.so",  &so);
+                mjson_get_long(e, el, "$.gp",  &gp);
+                mjson_get_long(e, el, "$.w",   &w);
+                mjson_get_long(e, el, "$.d",   &d);
+                mjson_get_long(e, el, "$.l",   &l);
+                mjson_get_long(e, el, "$.gf",  &gf);
+                mjson_get_long(e, el, "$.ga",  &ga);
+                mjson_get_long(e, el, "$.pts", &pts);
+                DIYTeamStats *r = diy_ovr_row(stage, i);
+                r->teamSelOffset = (int32_t)so;
+                r->gamesPlayed  = (uint16_t)gp;
+                r->wins         = (uint16_t)w;
+                r->draws        = (uint16_t)d;
+                r->losses       = (uint16_t)l;
+                r->goalsFor     = (uint16_t)gf;
+                r->goalsAgainst = (uint16_t)ga;
+                r->points       = (uint16_t)pts;
+                i++;
+            }
+        }
+    }
 }
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
@@ -4745,14 +4815,25 @@ extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
  * (it round-trips in the master "comp_slot" via emit/load_comp_slot), so this
  * is valid on both sides. Defaults to league if out of range. The `stage` arg
  * is kept for call-site symmetry but the decision is master-driven. */
-static int diy_stage_is_league(const DIYCompetitionEx *stage)
+/* league-format detection for a tournament's ACTIVE stage, from its master's
+ * roundComplete (active stage index) -> slots[r].isLeagueFormat. Parameterised
+ * by the master so it works per-context (the euro/secondary/... slots' own
+ * tourn), not only the primary. isLeagueFormat is tested != 0 so the result is
+ * robust even if that uint16 rode the raw blob byte-swapped cross-target
+ * (1 <-> 0x100 are both nonzero); roundComplete for a group/first-round stage
+ * is 0 (byte-swap-safe). */
+static int diy_stage_is_league_master(const DIYTournamentState *master)
 {
-    (void)stage;
-    const DIYTournamentState *master =
-        (const DIYTournamentState *)&primaryCompetitionBuf;
     int16_t r = master->header.roundComplete;   /* 0x54: active stage index */
     if (r < 0 || r >= 6) return 1;
     return master->slots[r].isLeagueFormat != 0;
+}
+
+static int diy_stage_is_league(const DIYCompetitionEx *stage)
+{
+    (void)stage;
+    return diy_stage_is_league_master(
+        (const DIYTournamentState *)&primaryCompetitionBuf);
 }
 
 /* Shared write body for preset / DIY — they share competitionFileBuffer
