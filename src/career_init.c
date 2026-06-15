@@ -798,6 +798,53 @@ static int _Career_TeamInEuroCup(uint8_t *cupCopy)
     return 0;           /* not in this cup */
 }
 
+/* _Career_TeamInLoadedEuroSlot — non-panicking membership probe for the LOADED
+ * slot-3 buffer (a DIYCompetition), used by the load-time slot-3 re-derivation.
+ *
+ * It answers "is selTeamNumber genuinely a participant in this euro cup?" using
+ * the SAME list `_FindTeamInDIY` searches — the loaded buffer's team list
+ * (teamIds for a type-2 tournament, cupTeamIds for a type-1 cup, each via the
+ * buffer's own index table). This is the AUTHORITATIVE source for the loaded
+ * season: the slot-3 buffer is saved (FA blob) so it holds the season's real
+ * euro field, whereas `euroCupCopy` is reconstructed from its STATIC template on
+ * load (save_format_json.c comp_copy_region) and holds DEFAULT teams — so
+ * `_Career_TeamInEuroCup(euroCupCopy)` gives a FALSE NEGATIVE for a club that's
+ * in the saved season's cup but not the default template, leaving
+ * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list row in
+ * `_CareerGameListCommon` on `compInfo[5]`. Gating on the buffer keeps this
+ * consistent with `_FindTeamInDIY`: gate-pass => `_FindTeamInDIY(team, buffer)`
+ * also finds the team (no 0x6006); gate-fail => slot stays inactive (preserves
+ * 940603f's protection — a true non-participant is in neither buffer nor
+ * template). Mirrors `_FindTeamInDIY`'s per-type search but returns found/
+ * not-found instead of panicking. */
+static int _Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
+{
+    uint16_t numTeams = (uint16_t)comp->numTeams;
+    uint16_t target   = selTeamNumber;
+
+    if (comp->competitionType == 2) {
+        /* DIY_TOURNAMENT (e.g. European Champions Cup) — teamIds[teamIndexOrder[i]]. */
+        uint16_t *teamIds = ((DIYTournamentState *)comp)->teamIds;
+        int8_t   *order   = (int8_t *)((DIYTournamentState *)comp)->teamIndexOrder;
+        for (uint16_t i = 0; i < numTeams; i++) {
+            int16_t idx = (int16_t)(int8_t)order[i];
+            if (BE_READ_U16(&teamIds[idx]) == target)
+                return 1;
+        }
+    } else if (comp->competitionType == 1) {
+        /* DIY_CUP (Cup Winners'/UEFA) — cupTeamIds[teamGridPairings[i]]. */
+        DIYCompetitionEx *ex      = (DIYCompetitionEx *)comp;
+        uint16_t *cupTeamIds      = ex->cupTeamIds;
+        int8_t   *pairings        = (int8_t *)ex->teamGridPairings;
+        for (uint16_t i = 0; i < numTeams; i++) {
+            int16_t idx = (int16_t)(int8_t)pairings[i];
+            if (BE_READ_U16(&cupTeamIds[idx]) == target)
+                return 1;
+        }
+    }
+    return 0;           /* not in this loaded euro slot */
+}
+
 /* ================================================================
  * Career_SelectEuroCupSlotIfTeamParticipates  (SWOS2.s line 32087)
  *
@@ -1554,12 +1601,23 @@ static void _Rebuild_CompetitionSlotPointers(void)
          * cup's team list. (gdb-confirmed 2026-06-10: club 5141 in SERIE A, euro
          * slot held EUROPEAN CHAMPIONS CUP whose Italian entrant is 5142, stale
          * euroCupSlotIndex=0.) */
+        /* Gate on the LOADED BUFFER's team list (q3), NOT the static euroCupCopy
+         * template. euroCupCopy is reconstructed from its static template on load
+         * (default teams, NOT the saved season's qualifiers), so
+         * _Career_TeamInEuroCup(euroCup3) gives a FALSE NEGATIVE for a club that's
+         * in the saved season's cup but not the default template — leaving
+         * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list
+         * row in _CareerGameListCommon on compInfo[5]. The saved slot-3 buffer is
+         * the season's authoritative field; _Career_TeamInLoadedEuroSlot checks it
+         * with the same search _FindTeamInDIY uses (gate-pass => no 0x6006). euroCup3
+         * (the static record) is still the pointer TARGET — it carries the name
+         * table the game list reads. */
         if (euroCup3 != 0 && q3->isActive != 0 &&
             q3->competitionType == ((Competition *)euroCup3)->type &&
-            _Career_TeamInEuroCup(euroCup3)) {
+            _Career_TeamInLoadedEuroSlot(q3)) {
             quaternaryCompetitionPtr = euroCup3;
         } else {
-            quaternaryCompetitionPtr = 0;  /* slot 3 inactive this season */
+            quaternaryCompetitionPtr = 0;  /* slot 3 inactive / club not in it this season */
         }
     }
 }
