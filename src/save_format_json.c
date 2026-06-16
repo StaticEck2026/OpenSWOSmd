@@ -4884,6 +4884,17 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     emit_comp_slot(json_out_emit, &out, "comp_slot",
                    (const DIYCompetitionEx *)&primaryCompetitionBuf);
 
+    /* Cross-target league-standings override (teamSelOffset -> team identity),
+     * the SAME endian-neutral re-lay the career path uses (SaveJson_WriteCareer).
+     * A .DIY/.PRE LEAGUE's 64 standings rows otherwise ride ONLY the raw
+     * primary_competition_context FLD_BYTES blob, whose int32 teamSelOffset
+     * byte-swaps on a LE<->BE (SDL->Amiga) load — every row then resolves to the
+     * wrong/blank team and the DIY league table is garbage cross-target (the
+     * career path was immune only because it already emitted this override). For
+     * non-league comps this emits just {type} (load is a no-op). */
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_competition_overrides(json_out_emit, &out);
+
     /* TYPE-2 tournament current-STAGE slot. A WORLD CUP / EUROPEAN
      * CHAMPIONSHIP keeps a *second* DIYCompetitionEx for the stage in
      * progress — a league during the group phase, a cup during the
@@ -5099,6 +5110,14 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * no-op (mjson_find returns non-object), so older saves still load. */
     load_comp_slot((const char *)src, (int)src_size, "comp_slot",
                    (DIYCompetitionEx *)&primaryCompetitionBuf);
+
+    /* Cross-target league-standings override — apply AFTER load_comp_slot/blob
+     * so it corrects the struct-correct positions (same as the career path's
+     * apply_semantic_load). Re-derives each row's teamSelOffset from the saved
+     * team identity, fixing the LE<->BE int32 byte-swap that otherwise garbles
+     * a .DIY/.PRE LEAGUE table cross-target. type != 0 (cup/tournament) → no-op;
+     * pre-fix saves lack the key → no-op (blob bytes stand, same-target-fine). */
+    load_competition_overrides((const char *)src, (int)src_size);
 
     /* TYPE-2 tournament current-STAGE slot (see write_competition_buf). The
      * master load above sets competitionFileBuffer's type; if it's a
