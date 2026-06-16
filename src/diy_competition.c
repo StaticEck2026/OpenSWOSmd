@@ -2886,36 +2886,52 @@ void _DIY_RecordCupBracketProgress(void)
 {
     int16_t d7 = 0;
 
-    /* Re-derive bracketScratch.teamOffsetTable from cupTeamIds before filling
-     * the keycache. teamOffsetTable caches selTeams *indices*, which go stale
-     * on SDL whenever the careerFileBuffer overlay repopulates/reorders
-     * selTeams between a cup slot store and load — slots 62/63 then resolve to
-     * selTeams[0] (the player's frozen copy), dragging the player into TWO
-     * grid pairs. A career cup keycache entry is sized for exactly one fixture
-     * (stride 0x16), so two recorded fixtures overflow the entry and smash the
-     * next entry's stride -> walker desync -> panic 0x6666 (and the milder
-     * "VIEW RESULT locked / squadChangesAllowed=0" mis-placement).
+    /* Stage-3 band-aid removal (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4). The
+     * 3ac95cf rebuild of bracketScratch.teamOffsetTable that ran here is REMOVED.
+     * It guarded the selTeams-index staleness — "the careerFileBuffer overlay
+     * reorders selTeams between a cup slot store and load, so slots 62/63 resolve
+     * to selTeams[0], dragging the player into TWO grid pairs → the 22-byte
+     * keycache entry overflows → walker desync → panic 0x6666 (or the milder
+     * VIEW-RESULT-locked mis-placement)." But that careerFileBuffer overlay was
+     * RETIRED in Part B, so the selTeams reorder — and thus the staleness — no
+     * longer happens; the §4 removability probe confirmed the rebuild was a
+     * no-op 6/6 across euro-cup seasons. Production therefore no longer rebuilds.
      *
-     * The same rebuild already runs at the player-facing cup menu
-     * (_Career_OpenCompetitionSlotMenuAndApplyChanges) and the season keycache
-     * build (career_status.c), but BOTH are gated compType==1 and run too
-     * early: the auto-sim loop advances the bracket to the next round AFTER
-     * that rebuild (draw->replay cups, roundPenalties==2), and the type==2
-     * HYBRID path (_DIY_UpdateCompetitionProgressOrAdvanceSlot) is never
-     * covered at all. Doing it here — the single choke point every cup fill
-     * passes through, always in a loaded-cup context where selTeams matches
-     * cupTeamIds — closes both gaps. Idempotent with the earlier calls.
-     *
-     * Save/restore roundIterator (0x4C) around the call: that field is
-     * overloaded (non-national count / hasGroups / totalMatchesInRound across
-     * contexts) and Part 2 of the rebuild recomputes it, but the fill below
-     * reads it. We want only the teamOffsetTable correction, so leave the
-     * overloaded field exactly as the caller left it. */
+     * Debug builds keep a NON-WRITING regression check (the "re-instrument the
+     * 62/63 check" of §4.1): run the rebuild, see whether it WOULD have changed
+     * teamOffsetTable, then RESTORE the rebuild's only two mutations
+     * (teamOffsetTable + roundIterator — see _DIY_BuildTeamSelectionPointerCache)
+     * so the live state is byte-identical to a production build. A logged change
+     * means the staleness is back and Stage 4 (stable-id) is genuinely needed. */
+#ifdef SWOS_DEBUG_AUTOSKIP
     {
         int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
+        int32_t tot_before[64];
+        for (int i = 0; i < 64; i++)
+            tot_before[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
         _DIY_BuildTeamSelectionPointerCache();
+        int mism = 0, first = -1;
+        long new_first = 0;
+        for (int i = 0; i < 64; i++)
+            if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
+                if (first < 0) {
+                    first = i;
+                    new_first = (long)diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+                }
+                mism++;
+            }
+        /* Discard the rebuild: restore both mutations so debug == production. */
+        for (int i = 0; i < 64; i++)
+            diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
         diyCompetitionStart.base.roundIterator = savedRoundIter;
+        if (mism)
+            SWOS_AUTOSKIP_LOG("[tot-rebuild] band-aid REMOVED but rebuild WOULD HAVE CHANGED %d/64 "
+                              "(first idx %d: %ld -> %ld) -> STALENESS BACK, Stage 4 needed",
+                              mism, first, (long)tot_before[first], new_first);
+        else
+            SWOS_AUTOSKIP_LOG("[tot-rebuild] band-aid REMOVED, no-rebuild state stays correct");
     }
+#endif
 
 outer_loop:
     ;
