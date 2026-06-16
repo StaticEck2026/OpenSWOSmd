@@ -247,27 +247,50 @@ Each slot commit:
 
 ---
 
-## 8. Part B — `careerFileBuffer` overlay (mostly done)
+## 8. Part B — `careerFileBuffer` overlay
 
 Current state: the 338-label run is reduced to **3 structural labels**
-(`careerFileBufferBuf`, `careerFileBuffer`, `numSelectedTeams`) + 74 `.skip` holes
+(`careerFileBufferBuf`, `careerFileBuffer`, `numSelectedTeams`) + `.skip` holes
 where pilots were extracted. So there is **no large struct-conversion left** here.
 
-Remaining work, in priority order:
-1. **Audit for residual raw-offset access** to `careerFileBufferBuf` /
-   `&careerFileBuffer + N`. Grep for `careerFileBuffer` arithmetic and any
-   `(T*)(careerFileBufferBuf + 0xNN)`. Each is a not-yet-extracted field; extract
-   it with the proven recipe (`[[project_career_overlay_extraction_recipe]]`:
-   standalone typed struct + real labels + `.skip` the hole, save-FX unchanged).
-2. **Retire the `careerFileBufferBuf` 256 KB backing buffer** once (1) shows nothing
-   reads it by offset. This is tied to roadmap **step 4** (replace the raw `.CAR`
-   dump). Until the legacy `.CAR` *reader* is fully dead for career saves, the
-   buffer may still back the opaque fallback — confirm via VERIFY before removing.
-3. The `numSelectedTeams` end-marker + `career_data_size()` must stay put — the
-   on-disk save layout depends on it (`[[project_career_buffer_overlay]]`).
+### 8.1 Residual raw-offset audit — DONE (2026-06-15), CLEAN
 
-Part B is **lower risk than Part A** (it's verification + small extractions, not a
-46-alias save-coupled rewrite). It can be interleaved or deferred.
+No code reads `careerFileBufferBuf + 0xNN` or `&careerFileBuffer + N` by offset.
+The only direct uses left are: `careerFileBuffer` as the `uint16` TMD-team-count
+field (a value, not a base), `numSelectedTeams` as a `uint16`, and the
+`save_format_json.c` load-memset + VERIFY-region base. Every former field is
+already a standalone typed struct. **No not-yet-extracted fields remain.**
+
+### 8.2 Retirement gate — SATISFIED, but a prerequisite surfaced
+
+The legacy raw-dump `.CAR` reader was retired 2026-06-10 (`file_io.c`: JSON-only,
+non-JSON gracefully rejected) and `opaque_data` is gone, so **nothing loads the
+buffer by offset** — the doc's removal gate is met and `careerFileBufferBuf` is
+now vestigial (256 KB backing only the 2 live scalars + dead zero-holes).
+
+**BUT** retiring it is NOT the "lower-risk" drop the earlier draft implied:
+`numSelectedTeams`'s *runtime address* was the upper bound of the `.DIY`/`.PRE`
+comp-slot field-selection span `field_in_range(&primaryCompetitionBuf,
+&numSelectedTeams)` (used by the preset/DIY emit + load + zero). Moving it to a
+standalone global can invert that span and break preset/DIY saves cross-target —
+the exact forbidden address-range pattern.
+
+### 8.3 Phase plan
+
+- **Phase 1 — DONE (commit pending push):** replace the comp-slot address-span
+  selection with an explicit `comp` tag on `FieldDesc` (`FXC`/`FAC` macros);
+  select the 23 primary-slot + header + count fields by identity. Removes
+  `field_in_range`; decouples comp-field selection from `numSelectedTeams`'s
+  address. Format-neutral (same 23 keys). VERIFY: career 0, DIY 0; cup-stage
+  preset shows the pre-existing ~12 derived-`teamOffsetTable`/stage-name snapshot
+  diffs (`[[project_tournament_type2_save]]`, benign — see the preset-VERIFY
+  comment). 3 arches syntax-clean.
+- **Phase 2 — NEXT:** make `careerFileBuffer` + `numSelectedTeams` standalone
+  `uint16` globals, delete the 256 KB buffer + `.skip` holes + `career_data_size()`,
+  simplify the load memset, and replace the now-vacuous career VERIFY region with
+  per-struct round-trip checks over the extracted structs (user chose "keep a
+  VERIFY"). `numSelectedTeams` is still re-derived semantically on `.DIY`/`.PRE`
+  load (`= primaryCompetitionBuf.tourn.header.numTeams`).
 
 ---
 
