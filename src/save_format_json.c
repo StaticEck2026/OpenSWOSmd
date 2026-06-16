@@ -671,6 +671,12 @@ typedef struct {
                              * the careerFileBuffer overlay */
     uint32_t    size;       /* for FLD_STR / FLD_BYTES; ignored for scalars */
     FieldType   type;
+    uint8_t     comp;       /* 1 = member of the .DIY/.PRE/.SEA competition-slot
+                             * save set (the primary slot + save-file header +
+                             * counts). Selected EXPLICITLY by identity for the
+                             * preset/DIY save path, NOT by a runtime address
+                             * span — see emit_scalar_table_comp. The career save
+                             * path ignores this flag and emits the whole table. */
 } FieldDesc;
 
 /* extern declarations for all overlay symbols referenced by the
@@ -905,8 +911,18 @@ extern uint8_t  euroCupCopy[];
  * resilient to overlay layout shifts (e.g. eventual 64-bit move)
  * and self-documenting. The compile-time address-constant rule
  * applies — `&overdraftStreak` is valid in a static initializer. */
-#define FX(name, sym, type) { name, (void *)&sym, 0, type }
-#define FA(name, sym, len, type) { name, (void *)&sym, len, type }
+#define FX(name, sym, type) { name, (void *)&sym, 0, type, 0 }
+#define FA(name, sym, len, type) { name, (void *)&sym, len, type, 0 }
+/* FXC/FAC — same as FX/FA but tagged comp=1: the entry belongs to the
+ * .DIY/.PRE/.SEA competition-slot save set. Membership is the PRIMARY
+ * competition slot + save-file header + team/tmd counts (the only state a
+ * standalone competition file carries). Tagging by identity replaces the old
+ * field_in_range(&primaryCompetitionBuf, &numSelectedTeams) address span,
+ * which was forbidden (a build/target-specific symbol-order dependency) and,
+ * after the S6 slot-0 untangle moved primaryCompetitionBuf 1.7 MB away from
+ * numSelectedTeams, had ballooned to sweep unrelated career globals. */
+#define FXC(name, sym, type) { name, (void *)&sym, 0, type, 1 }
+#define FAC(name, sym, len, type) { name, (void *)&sym, len, type, 1 }
 
 /* Compile-time invariants for the primary-competition header runs (see
  * the primary_comp_ids/dims/months/state/ex/matchdata_* entries below).
@@ -967,7 +983,7 @@ static const FieldDesc s_career_scalars[] = {
      * of populated TeamFileEx records in the TMD pool that follows at
      * tmdFileBuffer (= &careerFileBuffer + 2). Consumed by
      * _SearchTeamInTmdFile and friends in career_teams.c. */
-    FX("tmd_team_count",                  careerFileBuffer,            FLD_U16),
+    FXC("tmd_team_count",                 careerFileBuffer,            FLD_U16),
 
     /* Per-slot type bytes — first int16 of each careerCompetitionSlotPtrTable
      * entry (= DIYCompetition.competitionType field). Saved explicitly so
@@ -976,7 +992,7 @@ static const FieldDesc s_career_scalars[] = {
      * (b20b070) which broke when the saved in-memory state disagreed with
      * the pointer; an explicit field is authoritative and survives any
      * future struct reshuffles. */
-    FX("primary_slot_type",               primaryCompetitionBuf.tourn.header.competitionType, FLD_S16),
+    FXC("primary_slot_type",              primaryCompetitionBuf.tourn.header.competitionType, FLD_S16),
     FX("secondary_slot_type",             competitionContextBuf.tourn.header.competitionType, FLD_S16),
     FX("tertiary_slot_type",              tertiaryCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
     FX("quaternary_slot_type",            euroCupsCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
@@ -1139,20 +1155,20 @@ static const FieldDesc s_career_scalars[] = {
      * aliases (typed primaryCompetitionBuf.tourn.header.* paths), so byte-identical.
      * major_trophy_bonus_value keeps FLD_U16 over the .trophyBonusValue byte@0x30
      * (reads 0x30-0x31, the legacy alias width — S4 precedent, do not "fix"). */
-    FX("competition_over",                primaryCompetitionBuf.tourn.header.competitionOver, FLD_U16),
-    FA("diy_preset_name_of_competition",  primaryCompetitionBuf.tourn.header.competitionName, 36, FLD_STR),
-    FX("major_trophy_bonus_value",        primaryCompetitionBuf.tourn.header.trophyBonusValue, FLD_U16),
-    FX("num_diy_teams",                   primaryCompetitionBuf.tourn.header.numTeams, FLD_U16),
-    FX("primary_comp_winner_team",        primaryCompetitionBuf.tourn.header.winnerTeam, FLD_U16),
-    FX("primary_comp_squad_view_param",   primaryCompetitionBuf.tourn.header.squadViewParam, FLD_U16),
-    FX("primary_comp_slot_state_a",       primaryCompetitionBuf.tourn.header.slotStateA, FLD_U16),
-    FX("primary_comp_slot_state_b",       primaryCompetitionBuf.tourn.header.slotStateB, FLD_U16),
-    FX("primary_comp_slot_state_c",       primaryCompetitionBuf.tourn.header.slotStateC, FLD_U16),
-    FX("diy_team_min_division_index",     primaryCompetitionBuf.tourn.header.minDivisionIndex, FLD_U16),
-    FX("diy_team_max_division_offset",    primaryCompetitionBuf.tourn.header.maxDivisionOffset, FLD_U16),
-    FX("league_promotion_count",          primaryCompetitionBuf.tourn.header.promotionCount, FLD_U16),
-    FX("league_relegation_count",         primaryCompetitionBuf.tourn.header.relegationCount, FLD_U16),
-    FX("league_warnings_enabled",         primaryCompetitionBuf.tourn.leagueWarningsEnabled, FLD_U16),
+    FXC("competition_over",               primaryCompetitionBuf.tourn.header.competitionOver, FLD_U16),
+    FAC("diy_preset_name_of_competition", primaryCompetitionBuf.tourn.header.competitionName, 36, FLD_STR),
+    FXC("major_trophy_bonus_value",       primaryCompetitionBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FXC("num_diy_teams",                  primaryCompetitionBuf.tourn.header.numTeams, FLD_U16),
+    FXC("primary_comp_winner_team",       primaryCompetitionBuf.tourn.header.winnerTeam, FLD_U16),
+    FXC("primary_comp_squad_view_param",  primaryCompetitionBuf.tourn.header.squadViewParam, FLD_U16),
+    FXC("primary_comp_slot_state_a",      primaryCompetitionBuf.tourn.header.slotStateA, FLD_U16),
+    FXC("primary_comp_slot_state_b",      primaryCompetitionBuf.tourn.header.slotStateB, FLD_U16),
+    FXC("primary_comp_slot_state_c",      primaryCompetitionBuf.tourn.header.slotStateC, FLD_U16),
+    FXC("diy_team_min_division_index",    primaryCompetitionBuf.tourn.header.minDivisionIndex, FLD_U16),
+    FXC("diy_team_max_division_offset",   primaryCompetitionBuf.tourn.header.maxDivisionOffset, FLD_U16),
+    FXC("league_promotion_count",         primaryCompetitionBuf.tourn.header.promotionCount, FLD_U16),
+    FXC("league_relegation_count",        primaryCompetitionBuf.tourn.header.relegationCount, FLD_U16),
+    FXC("league_warnings_enabled",        primaryCompetitionBuf.tourn.leagueWarningsEnabled, FLD_U16),
     FX("view_random_phase",               viewRandomPhase,             FLD_U8 ),
     FX("season_playing",                  seasonPlaying,               FLD_U8 ),
     FX("in_friendly_menu",                inFriendlyMenu,              FLD_U16),
@@ -1171,9 +1187,9 @@ static const FieldDesc s_career_scalars[] = {
     FX("rand_xor_key_2",                  randXorKey2,                 FLD_U8 ),
     FX("new_random_seed_copy",            newRandomSeedCopy,           FLD_U8 ),
     FX("random_seed",                     randomSeed,                  FLD_U16),
-    FX("save_file_version",               saveFileVersion,             FLD_U16),
-    FX("save_file_amiga_type",            saveFileAmigaType,           FLD_U32),
-    FX("num_selected_teams_inner",        numSelectedTeams,            FLD_U16),
+    FXC("save_file_version",              saveFileVersion,             FLD_U16),
+    FXC("save_file_amiga_type",           saveFileAmigaType,           FLD_U32),
+    FXC("num_selected_teams_inner",       numSelectedTeams,            FLD_U16),
 
     /* Comp context names + slot states (secondary/tertiary/quaternary). */
     FA("secondary_competition_name",      competitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
@@ -1247,9 +1263,9 @@ static const FieldDesc s_career_scalars[] = {
      * views of teamIds/groupMap/slots/teamIndexOrder + stageSnapshot). FLD_BYTES =
      * raw copy from the anchor address — byte-identical to the retired aliases
      * (offsets verified; VERIFY=0 gate). */
-    FA("diy_team_id_list_type_0",         ((DIYCompetitionEx *)&primaryCompetitionBuf)->matchData.league.leagueTeamIds, 288, FLD_BYTES),
-    FA("diy_team_id_list_type_1",         ((DIYCompetitionEx *)&primaryCompetitionBuf)->cupTeamIds, 2310, FLD_BYTES),
-    FA("diy_team_id_list_type_2",         primaryCompetitionBuf.tourn.teamIds, 148, FLD_BYTES),
+    FAC("diy_team_id_list_type_0",        ((DIYCompetitionEx *)&primaryCompetitionBuf)->matchData.league.leagueTeamIds, 288, FLD_BYTES),
+    FAC("diy_team_id_list_type_1",        ((DIYCompetitionEx *)&primaryCompetitionBuf)->cupTeamIds, 2310, FLD_BYTES),
+    FAC("diy_team_id_list_type_2",        primaryCompetitionBuf.tourn.teamIds, 148, FLD_BYTES),
 
     /* Per-career-slot competition contexts. Each is a snapshot of
      * diyCompetitionStart / diyFileBufferCopy at the moment
@@ -1275,7 +1291,7 @@ static const FieldDesc s_career_scalars[] = {
      * safety) are superseded by emit_comp_slot, which corrects every cross-
      * target-sensitive field on load AFTER this blob. namePtr rides the blob
      * (stale absolute pointer) and is re-derived by _RebuildPointersAfterLoad. */
-    FA("primary_competition_context",     primaryCompetitionBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FAC("primary_competition_context",    primaryCompetitionBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
     /* Context-slot raw blobs — UNTANGLE step A4. The 4 *Context slots are now
      * standalone typed CompetitionSlotBuffer { DIYTournamentState tourn;
      * uint8_t stageSnapshot[DIY_STAGE_SNAPSHOT_LEN]; } (swos_competition_slots.c),
@@ -4545,21 +4561,17 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
 
 /* ---------- .SEA / .PRE / .DIY (preset / DIY competition) ----------
  *
- * Cover the bytes [&primaryCompetitionBuf, &numSelectedTeams + 2)
- * plus `primaryCompetitionBuf.tourn.header.numTeams * 684` trailing TeamFileEx records at
- * &selTeamsPtr. Re-uses the careerFileBuffer scalar/blob tables
- * with an address range filter so we only emit entries that fall
- * inside the preset save region.
+ * A standalone competition file carries the PRIMARY competition slot (the
+ * only competition it defines) plus the save-file header and team/tmd counts
+ * — and `primaryCompetitionBuf.tourn.header.numTeams * 684` trailing
+ * TeamFileEx records at &selTeamsPtr. Re-uses the careerFileBuffer
+ * scalar/blob table (s_career_scalars) but emits only the entries tagged
+ * comp=1 (FXC/FAC) — selected by IDENTITY, not by a runtime address span.
+ * (The career save path emits the whole table; the comp tag only gates the
+ * preset/DIY subset.)
  */
 
 /* competitionFileBuffer retired → primaryCompetitionBuf (file-scope decl above; S6). */
-
-static int field_in_range(const FieldDesc *f,
-                          const uint8_t *lo, const uint8_t *hi)
-{
-    const uint8_t *p = (const uint8_t *)f->addr;
-    return p >= lo && p < hi;
-}
 
 /* Byte footprint of a FieldDesc's target: the type width for scalars, the
  * declared `size` for string/bytes/array fields. Used to zero exactly the
@@ -4577,15 +4589,14 @@ static uint32_t field_byte_size(const FieldDesc *f)
 }
 
 
-static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
-                                    const char *section_key,
-                                    const FieldDesc *table,
-                                    const uint8_t *lo, const uint8_t *hi)
+static void emit_scalar_table_comp(mjson_print_fn_t fn, void *fnd,
+                                   const char *section_key,
+                                   const FieldDesc *table)
 {
     mjson_printf(fn, fnd, "%Q:{", section_key);
     int first = 1;
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
-        if (!field_in_range(f, lo, hi)) continue;
+        if (!f->comp) continue;
         if (!first) mjson_printf(fn, fnd, "%s", ",");
         first = 0;
         const uint8_t *p = (const uint8_t *)f->addr;
@@ -4650,10 +4661,9 @@ static void emit_scalar_table_range(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "}");
 }
 
-static void load_scalar_table_range(const char *buf, int buflen,
-                                    const char *section_key,
-                                    const FieldDesc *table,
-                                    const uint8_t *lo, const uint8_t *hi)
+static void load_scalar_table_comp(const char *buf, int buflen,
+                                   const char *section_key,
+                                   const FieldDesc *table)
 {
     /* Slice the section once — same speedup pattern as
      * load_scalar_table. */
@@ -4666,13 +4676,13 @@ static void load_scalar_table_range(const char *buf, int buflen,
 
 #if MJSON_ENABLE_NEXT && !defined(SWOS_SAVE_LEGACY_DISPATCH)
     /* Walk-once hashed dispatch — same speedup load_scalar_table got, but
-     * with the [lo,hi) range filter applied at lookup. The legacy variant
-     * below did one O(section_len) mjson_get_long per in-range FieldDesc;
+     * with the comp-tag filter applied at lookup. The legacy variant
+     * below did one O(section_len) mjson_get_long per comp-tagged FieldDesc;
      * for s_career_scalars (242 entries) over the ~20 KB comp_scalars
      * section that is ~5 MB of byte scanning per preset/DIY load — the
      * single mjson_next pass is ~10-20× faster (this was the slow .PRE
      * load). Behaviour-identical: absent keys leave their target unchanged,
-     * out-of-range fields are skipped. Own index cache (same table as
+     * non-comp fields are skipped. Own index cache (same table as
      * load_scalar_table's, but a separate static is simplest + one-time). */
     static HashedField        s_range_index[300];
     static const FieldDesc   *s_range_table = NULL;
@@ -4697,7 +4707,7 @@ static void load_scalar_table_range(const char *buf, int buflen,
         if (!f) continue;
         if ((int)strlen(f->name) != keyl ||
             memcmp(f->name, key, (size_t)keyl) != 0) continue;
-        if (!field_in_range(f, lo, hi)) continue;
+        if (!f->comp) continue;
 
         uint8_t    *p  = (uint8_t *)f->addr;
         const char *vs = section + voff;
@@ -4739,7 +4749,7 @@ static void load_scalar_table_range(const char *buf, int buflen,
     char tmp[64];
     long num = 0.0;
     for (const FieldDesc *f = table; f->type != FLD_END; f++) {
-        if (!field_in_range(f, lo, hi)) continue;
+        if (!f->comp) continue;
         swos_io_snprintf(path, sizeof(path), "$.%s", f->name);
         uint8_t *p = (uint8_t *)f->addr;
         switch (f->type) {
@@ -4767,7 +4777,7 @@ static void load_scalar_table_range(const char *buf, int buflen,
             break;
         case FLD_U16_ARRAY: {
             /* Endian-neutral decimal words — preset/DIY (.SEA/.DIY) load
-             * companion to emit_scalar_table_range. Without this the
+             * companion to emit_scalar_table_comp. Without this the
              * primary-competition header runs load as zero on those save
              * kinds → panic on first use. */
             const char *arr = NULL;
@@ -4840,9 +4850,6 @@ static int diy_stage_is_league(const DIYCompetitionEx *stage)
  * layout, only the file_kind string differs. */
 static int16_t write_competition_buf(uint8_t *filename, const char *kind)
 {
-    const uint8_t *lo = (const uint8_t *)&primaryCompetitionBuf;
-    const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
-                        sizeof(numSelectedTeams);  /* +2 for the count word */
     JsonOutBuf out = { NULL, 0, 0, 0 };
 
     /* Pool reset — see comment in SaveJson_WriteCareer. */
@@ -4859,11 +4866,10 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
      * format dumped verbatim. The career load path zeroes it in
      * _Rebuild_CompStringOffsets and _InitializeNewSeason tolerates
      * the resulting empty string in the season-end summary. Preset/
-     * DIY loads land in the same place after the memset that opens
-     * load_competition_buf (the field lives inside the cleared
-     * range), so nothing here needs to write it. */
-    emit_scalar_table_range(json_out_emit, &out,
-                            "comp_scalars", s_career_scalars, lo, hi);
+     * DIY loads land in the same place after load_competition_buf
+     * zeroes the comp-tagged fields, so nothing here needs to write it. */
+    emit_scalar_table_comp(json_out_emit, &out,
+                           "comp_scalars", s_career_scalars);
 
     /* Typed primary competition slot — competitionFileBuffer IS the
      * primary DIYCompetitionEx. The .PRE/.DIY region only carries this
@@ -4877,6 +4883,17 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     mjson_printf(json_out_emit, &out, ",\n  ");
     emit_comp_slot(json_out_emit, &out, "comp_slot",
                    (const DIYCompetitionEx *)&primaryCompetitionBuf);
+
+    /* Cross-target league-standings override (teamSelOffset -> team identity),
+     * the SAME endian-neutral re-lay the career path uses (SaveJson_WriteCareer).
+     * A .DIY/.PRE LEAGUE's 64 standings rows otherwise ride ONLY the raw
+     * primary_competition_context FLD_BYTES blob, whose int32 teamSelOffset
+     * byte-swaps on a LE<->BE (SDL->Amiga) load — every row then resolves to the
+     * wrong/blank team and the DIY league table is garbage cross-target (the
+     * career path was immune only because it already emitted this override). For
+     * non-league comps this emits just {type} (load is a no-op). */
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_competition_overrides(json_out_emit, &out);
 
     /* TYPE-2 tournament current-STAGE slot. A WORLD CUP / EUROPEAN
      * CHAMPIONSHIP keeps a *second* DIYCompetitionEx for the stage in
@@ -4995,7 +5012,17 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * load_competition_buf restores. Same-target the primary_competition_
          * context whole-buffer blob (s_career_scalars) round-trips every byte
          * verbatim; comp_slot is a cross-target override re-writing identical
-         * values on top, so this diffs to 0.
+         * values on top.
+         *
+         * For a LEAGUE preset/DIY this diffs to 0. For a CUP-stage preset it
+         * shows a SMALL EXPECTED nonzero count (~12 on the WC/euro presets):
+         * load_comp_slot RECONSTRUCTS the stage snapshot's derived
+         * bracketScratch.teamOffsetTable from cupTeamIds (id-based — bracket
+         * order != selTeamsPtr order) and does NOT re-apply the stage's
+         * competition-name copy, so those snapshot bytes legitimately differ
+         * from the saved raw blob. The teamOffsetTable is a DERIVED cache, not
+         * authored state (see project_tournament_type2_save). These are benign;
+         * any count BEYOND that small derived-snapshot set is a real regression.
          *
          * Do NOT revive the legacy [&primaryCompetitionBuf, &numSelectedTeams +
          * primaryCompetitionBuf.tourn.header.numTeams*684) span: the competition-slots untangle (2026-06-04)
@@ -5038,32 +5065,27 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         return 1;
     }
 
-    const uint8_t *lo = (const uint8_t *)&primaryCompetitionBuf;
-    const uint8_t *hi = (const uint8_t *)&numSelectedTeams +
-                        sizeof(numSelectedTeams);
-    /* Zero the destination FIELD-BY-FIELD, NOT with one memset over
-     * [lo, hi). On the SDL build competitionFileBuffer was un-tangled into a
-     * STANDALONE CompetitionSlotBuffer (0x51a000), 1.7 MB BELOW the
-     * careerFileBuffer overlay (0x6ca144) — so &primaryCompetitionBuf (lo)
-     * and &numSelectedTeams (hi) no longer bracket a contiguous region. A
-     * single `memset(lo, 0, hi-lo)` scythes the ~1.7 MB linker gap between
-     * them, zeroing unrelated globals that the linker happened to place
-     * there (spriteBlitQueue, menuEntries, sprite tables, ...). That left
-     * spriteBlitQueue == 0 -> *(uint32_t*)0 = BLT_BLITQ_END -> SIGSEGV in the
-     * next menu sprite draw on any DIY/preset reload (live-confirmed via gdb:
-     * spriteBlitQueue 0x0, backing buffers intact).
+    /* Zero the destination FIELD-BY-FIELD (each comp-tagged s_career_scalars
+     * entry by its own addr,size), NOT with one memset over a [lo,hi) span.
+     * After the S6 untangle competitionFileBuffer became a STANDALONE
+     * CompetitionSlotBuffer ~1.7 MB BELOW the careerFileBuffer overlay, so
+     * &primaryCompetitionBuf and &numSelectedTeams no longer bracket a
+     * contiguous region. A single `memset` over that span scythed the ~1.7 MB
+     * linker gap, zeroing unrelated globals the linker placed there
+     * (spriteBlitQueue, menuEntries, sprite tables, ...) → spriteBlitQueue==0
+     * → *(uint32_t*)0 SIGSEGV in the next menu sprite draw on any DIY/preset
+     * reload (live-confirmed via gdb). See project_diy_preset_load_memset_gap.
      *
-     * Zeroing each in-range s_career_scalars field by its own (addr, size)
-     * clears EXACTLY what the load restores and never touches the gap. Since
-     * opaque_data is retired, every save-relevant byte is covered by a typed
-     * field/blob, so unmodeled interstitial padding doesn't matter. Correct
-     * cross-target: on the Amiga the in-range fields are contiguous, so this
-     * covers the same set the old single memset did; on SDL it skips the gap.
-     * (The competitionFileBuffer slot itself is the primary_competition_context
-     * FLD_BYTES blob — zeroed whole here.) See
-     * project_diy_preset_load_memset_gap. */
+     * Selecting the fields to zero by the `comp` tag (their identity) instead
+     * of by address range clears EXACTLY what the comp save restores and never
+     * touches the gap — and, unlike the old field_in_range(&primaryCompetitionBuf,
+     * &numSelectedTeams) span, the set is build/target-independent (the span
+     * inverts to empty when the two symbols sort the other way, e.g. on the
+     * 32-bit Amiga). Since opaque_data is retired, every save-relevant byte is
+     * covered by a typed field/blob. (The primary slot itself is the
+     * primary_competition_context FLD_BYTES blob — zeroed whole here.) */
     for (const FieldDesc *f = s_career_scalars; f->type != FLD_END; f++) {
-        if (!field_in_range(f, lo, hi)) continue;
+        if (!f->comp) continue;
         uint32_t sz = field_byte_size(f);
         if (sz) memset(f->addr, 0, sz);
     }
@@ -5078,8 +5100,8 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * pointer that would have crashed if dereferenced after a
      * cross-build load anyway. */
 
-    load_scalar_table_range((const char *)src, (int)src_size,
-                            "comp_scalars", s_career_scalars, lo, hi);
+    load_scalar_table_comp((const char *)src, (int)src_size,
+                           "comp_scalars", s_career_scalars);
 
     /* Typed primary competition slot — applied AFTER the scalar/blob load
      * so it re-lays the cross-target-sensitive header + team-id + cup +
@@ -5088,6 +5110,14 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * no-op (mjson_find returns non-object), so older saves still load. */
     load_comp_slot((const char *)src, (int)src_size, "comp_slot",
                    (DIYCompetitionEx *)&primaryCompetitionBuf);
+
+    /* Cross-target league-standings override — apply AFTER load_comp_slot/blob
+     * so it corrects the struct-correct positions (same as the career path's
+     * apply_semantic_load). Re-derives each row's teamSelOffset from the saved
+     * team identity, fixing the LE<->BE int32 byte-swap that otherwise garbles
+     * a .DIY/.PRE LEAGUE table cross-target. type != 0 (cup/tournament) → no-op;
+     * pre-fix saves lack the key → no-op (blob bytes stand, same-target-fine). */
+    load_competition_overrides((const char *)src, (int)src_size);
 
     /* TYPE-2 tournament current-STAGE slot (see write_competition_buf). The
      * master load above sets competitionFileBuffer's type; if it's a
@@ -5188,17 +5218,15 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
         }
     }
 
-    /* numSelectedTeams: restore by SEMANTIC VALUE, not via the address-range
-     * comp_scalars table. For a standalone .DIY/.PRE the selected teams ARE the
-     * diy teams, so numSelectedTeams == primaryCompetitionBuf.tourn.header.numTeams by construction. The saved
-     * num_selected_teams_inner DOES carry 16, but load_scalar_table_range only
-     * applies fields whose runtime address falls in [&primaryCompetitionBuf,
-     * &numSelectedTeams) — and on the 32-bit Amiga those two symbols sort in the
-     * OPPOSITE order vs the 64-bit SDL build, so that range is empty and the
-     * field was silently dropped (-> 0 -> findTeamInCache bails -> cup
-     * _VerifyTeamLoaded panic). Setting it from primaryCompetitionBuf.tourn.header.numTeams is target-independent
-     * and address-free. (The address-range field selection itself is being
-     * removed — see the save-format rule in CLAUDE.md / docs.) */
+    /* numSelectedTeams: set from the construction invariant. For a standalone
+     * .DIY/.PRE the selected teams ARE the diy teams, so numSelectedTeams ==
+     * primaryCompetitionBuf.tourn.header.numTeams by construction. The saved
+     * num_selected_teams_inner is now comp-tagged and IS reliably applied by
+     * load_scalar_table_comp on both targets (it no longer depends on a runtime
+     * [&primaryCompetitionBuf, &numSelectedTeams) span — which inverted to empty
+     * on the 32-bit Amiga, silently dropping the field → 0 → findTeamInCache
+     * bails → cup _VerifyTeamLoaded panic). We still re-derive from numTeams here
+     * as the canonical, target-independent value. */
     numSelectedTeams = primaryCompetitionBuf.tourn.header.numTeams;
 
     /* TYPE-2 tournament KNOCKOUT stage: rebuild the cup bracket
