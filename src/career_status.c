@@ -4395,18 +4395,52 @@ init_competition:
     /* Reload state and update competition progress */
     _Career_LoadCompetitionSlotStateFromBuffer(slotState);
     if (compType == 1) {
-        /* The cup slot load restores bracketScratch.teamOffsetTable, which
-         * caches selTeams INDICES that go stale on SDL (bracketScratch is
-         * overlay-shared with the league sim). The advance below fills the
-         * season teamSelectionKeyCache via that table; a stale slot then
-         * resolves to the wrong/duplicate team, so two fixtures land in one
-         * 1-game keycache entry -> walker stride desync -> _VerifyTeamLoaded
-         * garbage-id panic in the career game list (_CareerGameListCommon).
-         * cupTeamIds matches the current selTeams here (just initialised for
-         * this slot), so re-derive the index cache. Same root + fix as
-         * _Career_OpenCompetitionSlotMenuAndApplyChanges (career_teams.c). */
+        /* Stage-3 band-aid removal (be8ac25, TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md
+         * §4). The teamOffsetTable rebuild before the season keycache fill is
+         * REMOVED. It guarded the selTeams-index staleness — "the cup slot load
+         * restores bracketScratch.teamOffsetTable (selTeams INDICES that go stale
+         * when the careerFileBuffer overlay reorders selTeams), so the fill
+         * resolves a slot to a duplicate team → two fixtures in one 1-game
+         * keycache entry → walker desync → _VerifyTeamLoaded garbage-id panic" —
+         * but Part B retired that overlay, killing the staleness root (same as the
+         * 3ac95cf removal). The §4 probe confirmed it a no-op 14/14 across many
+         * cup/euro seasons, INCLUDING roundIterator (this site never save/restored
+         * it, but the loaded slot's value already equals the Part-2 recompute, so
+         * that was redundant too). Production no longer rebuilds; debug keeps a
+         * NON-WRITING check (run the rebuild, diff teamOffsetTable + roundIterator,
+         * restore both so debug == production; log if it ever WOULD change). */
+#ifdef SWOS_DEBUG_AUTOSKIP
         extern void _DIY_BuildTeamSelectionPointerCache(void);
-        _DIY_BuildTeamSelectionPointerCache();
+        {
+            int16_t ri_before = diyCompetitionStart.base.roundIterator;
+            int32_t tot_before[64];
+            for (int i = 0; i < 64; i++)
+                tot_before[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+            _DIY_BuildTeamSelectionPointerCache();
+            int m = 0, first = -1;
+            long new_first = 0;
+            for (int i = 0; i < 64; i++)
+                if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
+                    if (first < 0) {
+                        first = i;
+                        new_first = (long)diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+                    }
+                    m++;
+                }
+            int ri_new = diyCompetitionStart.base.roundIterator;
+            int ri_chg = (ri_new != ri_before);
+            for (int i = 0; i < 64; i++)
+                diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
+            diyCompetitionStart.base.roundIterator = ri_before;
+            if (m || ri_chg)
+                SWOS_AUTOSKIP_LOG("[tot-rebuild-be8ac25] REMOVED but rebuild WOULD CHANGE tot=%d/64 "
+                                  "(idx %d %ld->%ld) roundIter(%d->%d) -> STALENESS BACK, revisit",
+                                  m, first, (long)(first >= 0 ? tot_before[first] : 0), new_first,
+                                  ri_before, ri_new);
+            else
+                SWOS_AUTOSKIP_LOG("[tot-rebuild-be8ac25] band-aid REMOVED, no-rebuild state stays correct");
+        }
+#endif
     }
     _DIY_UpdateCompetitionProgressOrAdvanceSlot(slotState);
 }
