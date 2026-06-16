@@ -545,8 +545,9 @@ void _DIY_CacheSelectedTeamPointers(void)
         TeamFileEx *teamPtr = _VerifyTeamLoaded(teamNum);
 
         /* Store the team IDENTITY (step-4 phase 3): -1 for careerTeam, else the
-         * selTeamsPtr array index. Standings table overlays cupTeamIds — use the
-         * typed helper instead of the Amiga byte offsets (entry + 0x2B4). */
+         * selTeamsPtr array index. Standings rows are the relocated
+         * leagueStandings[] field — use the typed helper (diy_standings_row)
+         * instead of the original Amiga byte offset (entry + 0x2B4). */
         uint16_t entryIdx = (uint16_t)(int16_t)idx;
         int32_t off = diy_team_to_identity((uint8_t *)teamPtr);
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -2045,7 +2046,7 @@ uint16_t _DIY_GetCurrentFixtureTeamClass(void)
     uint8_t *team1, *team2;
     getCurrentFixtureTeamPtrs(&team1, &team2);
 
-    /* Follow pointer at DIYTeamStats teamSelOffset (+0x2B4) + selTeamsPtr base */
+    /* Follow pointer at DIYTeamStats teamSelOffset (Amiga +0x2B4, now DIY_STANDINGS_OFFSET) + selTeamsPtr base */
     uint8_t *sel1 = diy_resolve_team(((DIYTeamStats *)(team1 + DIY_STANDINGS_OFFSET))->teamSelOffset);
     uint8_t *sel2 = diy_resolve_team(((DIYTeamStats *)(team2 + DIY_STANDINGS_OFFSET))->teamSelOffset);
 
@@ -2258,7 +2259,7 @@ void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights)
  * relegated count from offset 0x58.
  *
  * For promoted teams: iterates indices at offset 0x6E forwards,
- * reads competition entry, follows pointer at offset 0x2B4 to
+ * reads competition entry, follows teamSelOffset (DIY_STANDINGS_OFFSET; was 0x2B4) to
  * get team data in selTeamsPtr, reads country number, and
  * decrements scratch count. Sets playPromotedAnimation if
  * career team.
@@ -2286,7 +2287,7 @@ void _DIY_UpdatePromotionRelegationScratchCounts(void)
         for (int16_t i = (int16_t)(promotedCount - 1); i >= 0; i--) {
             uint16_t entryOff = *indices++;
             uint8_t *entry = comp + entryOff;
-            /* Follow DIYTeamStats teamSelOffset (+0x2B4) and add selTeamsPtr base */
+            /* Follow DIYTeamStats teamSelOffset (Amiga +0x2B4, now DIY_STANDINGS_OFFSET) and add selTeamsPtr base */
             /* teamSelOffset is int32_t — careerTeam's offset is negative; keep
          * signed so 64-bit pointer arithmetic sign-extends correctly
          * (see SetupCurrentFixtureTeamNames for the bug story). */
@@ -3313,7 +3314,7 @@ process_next:
     /* Advance league progress */
     _DIY_AdvanceLeagueProgressAfterMatch(team1Comp, team2Comp);
 
-    /* Get selected team pointers from DIYTeamStats teamSelOffset (+0x2B4) */
+    /* Get selected team pointers from DIYTeamStats teamSelOffset (Amiga +0x2B4, now DIY_STANDINGS_OFFSET) */
     uint8_t *sel1 = diy_resolve_team(((DIYTeamStats *)(team1Comp + DIY_STANDINGS_OFFSET))->teamSelOffset);
     uint8_t *sel2 = diy_resolve_team(((DIYTeamStats *)(team2Comp + DIY_STANDINGS_OFFSET))->teamSelOffset);
 
@@ -3459,7 +3460,7 @@ static void diy_ResetCompetitionStatsAndProgress(void)
     comp->matchData.league.totalMatchesPerSectionLive = comp->matchData.league.totalMatchesPerSection;
     comp->minSubstitutes = (uint16_t)a2s->playEachTeam;
 
-    /* Reset per-team stats: 64 entries (DIYTeamStats rows from base+0x2B4) */
+    /* Reset per-team stats: 64 entries (DIYTeamStats rows in the relocated leagueStandings field, DIY_STANDINGS_OFFSET) */
     {
         DIYTeamStats *row = (DIYTeamStats *)(a2 + DIY_STANDINGS_OFFSET);
         for (int16_t i = 0; i <= 0x3F; i++) {
@@ -7462,8 +7463,8 @@ void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry)
         /* Standings row for the team at rank (teamIdx>>1). teamEntryOffsets
          * holds 18 * team_index per the sorted-by-standings layout, so
          * the row index is fixtureOff / 18. Use diy_standings_row() so
-         * the +0x2B4 base shift is derived from the struct layout
-         * (handles 64-bit pointer-width growth). */
+         * the standings base (DIY_STANDINGS_OFFSET) is derived from the struct
+         * layout (handles the relocated leagueStandings + 64-bit width growth). */
         uint16_t fixtureOff = diyCompetitionStart.matchData.league.teamEntryOffsets[teamIdx >> 1];
         DIYTeamStats *a4row = diy_standings_row(&diyCompetitionStart, fixtureOff / 18);
 
@@ -8734,7 +8735,7 @@ void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)
 
     e++;  /* entry 12 */
     e->isInvisible = 0;
-    /* DIYTeamStats teamSelOffset (+0x2B4) → name offset, add selTeamNameBase.
+    /* DIYTeamStats teamSelOffset (Amiga +0x2B4, now DIY_STANDINGS_OFFSET) → name offset, add selTeamNameBase.
      * teamSelOffset is int32_t (signed) — careerTeam lives BELOW
      * selTeamsPtr in BSS so its offset is negative. Reading into
      * uint32_t and then adding to a pointer on 64-bit zero-extends the
@@ -11170,7 +11171,7 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     uint8_t *compPtr1 = fixtureTeam1CompPtr;
     uint8_t *compPtr2 = fixtureTeam2CompPtr;
 
-    /* Build team file pointers from DIYTeamStats teamSelOffset (+0x2B4).
+    /* Build team file pointers from DIYTeamStats teamSelOffset (Amiga +0x2B4, now DIY_STANDINGS_OFFSET).
      * teamSelOffset is a SIGNED byte-offset into selTeamsPtr — positive
      * values index forward (other teams), negative values index back
      * (careerTeam lives below selTeamsPtr in memory). */
@@ -11217,8 +11218,8 @@ uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sel
     /* Safety guard ONLY for auto-advance paths. If either teamSelOffset
      * offset is genuinely out of range for selTeamsPtr during
      * careerAutoAdvanceInProgress / seasonUpdateInProgress, the
-     * standings table at diyCompetitionStart+0x2B4 is garbage (uninit
-     * competition context for a slot the user isn't really in).
+     * standings table (diyCompetitionStart's leagueStandings field) is garbage
+     * (uninit competition context for a slot the user isn't really in).
      *
      * The previous unsigned `>= maxOff` test misclassified legitimate
      * negative offsets (careerTeam, e.g. -42288 = 0xFFFF5AD0) as

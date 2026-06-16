@@ -3308,9 +3308,10 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
      * 64-byte shuffle index table (+0x5A) is plain bytes. Only the slot
      * uint16 fields need re-laying.
      *
-     * The current-stage league/cup standings live in the embedded
-     * diyCompetitionStart region (snapshot +0x420 onward) and are NOT
-     * covered here yet — see the type-2 standings task. */
+     * The current-stage league/cup standings live in the relocated
+     * leagueStandings[] tail of the stageSnapshot image. emit_comp_slot
+     * here does NOT cover them — the primary's are serialized by
+     * stage_standings (below) and each *Context slot's by emit_ctx_stage. */
     if (b->competitionType == 2) {
         const DIYTournamentSlot *slots =
             (const DIYTournamentSlot *)((const uint8_t *)s + 0x15A);
@@ -3714,10 +3715,10 @@ extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
  * These helpers give each type-2 *Context slot the same typed stage treatment.
  * emit_comp_slot / load_comp_slot are fully slot-based (no primary hardcoding),
  * so a cup stage round-trips cupTeamIds/teamGridPairings/scores/teamOffsetTable
- * cross-target — exactly what copyTitleHolderGrid reads. (League group-stage
- * standings stats, like the primary's stage_standings, are a deliberate
- * follow-up: the master-driven diy_stage_is_league reads &primaryCompetitionBuf,
- * so it can't be reused per-context as-is.) Non-type-2 slots and pre-fix saves
+ * cross-target — exactly what copyTitleHolderGrid reads. League group-stage
+ * standings stats are also covered per-context below (emit_ctx_stage), via
+ * diy_stage_is_league_master (the master-parameterized variant of
+ * diy_stage_is_league). Non-type-2 slots and pre-fix saves
  * are a no-op (the load mjson_find just misses → blob bytes stand). */
 /* A type-2 tournament STAGE's cupTeamIds holds the FULL bracket — the MASTER
  * tournament's team list (master order), indexed by teamGridPairings — NOT a
@@ -4243,10 +4244,10 @@ static void apply_semantic_load(const char *src, int src_size)
     }
 
     /* TYPE-2 tournament current-STAGE restore (cross-target) — mirrors the
-     * preset load_competition_buf. Re-lay the stage at competitionFileBuffer
-     * + 0x420 typed/endian-neutral over the raw blob BEFORE
+     * preset load_competition_buf. Re-lay the stage at competitionFileBuffer's
+     * stageSnapshot typed/endian-neutral over the raw blob BEFORE
      * _RebuildPointersAfterLoad copies it into diyCompetitionStart. League:
-     * stats + i*684 teamSelOffset; cup: the three knockout score arrays. The
+     * stats + teamSelOffset reconstructed = i; cup: the three knockout score arrays. The
      * cup teamOffsetTable is rebuilt careerTeam-aware below, after the
      * selected_teams load (it needs selTeamsPtr). Absent in pre-fix saves ->
      * mjson_find misses -> no-op, blob bytes stand. */
@@ -5025,25 +5026,25 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
                            ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
 
-        /* GROUP-phase stage standings. The 64-row DIYTeamStats table at the
-         * stage's +0x2B4 holds each tournament team's group results. Its
+        /* GROUP-phase stage standings. The 64-row DIYTeamStats table in the
+         * stage's relocated leagueStandings[] field (DIY_STANDINGS_OFFSET) holds
+         * each tournament team's group results. Its
          * int32 teamSelOffset is a DERIVED team IDENTITY (step-4 phase 3): row i
          * always resolves to selTeamsPtr team i, so the identity is simply i,
          * built by _DIY_CacheSelectedTeamPointers. We do
-         * NOT serialize it (it byte-swaps on LE<->BE, AND the row region
-         * overlays the cup bracketScratch so it's corrupted on the saving
-         * host too — gdb showed scattered garbage rows). Instead serialize
+         * NOT serialize it (it byte-swaps on LE<->BE and is fully derivable
+         * from the row index). Instead serialize
          * ONLY the non-derivable stats endian-neutral and RECONSTRUCT
          * teamSelOffset = i (the identity) on load (which fixes the group team
          * NAMES that resolve via teamEntryOffsets->row->teamSelOffset->team via
          * diy_resolve_team). Indexed by
          * selTeamsPtr team index 0..primaryCompetitionBuf.tourn.header.numTeams-1 so every group's table +
          * the re-sort on group switch are correct cross-target. Gated to
-         * LEAGUE/group stages (slot isLeagueFormat != 0): the standings table
-         * physically overlaps the cup bracketScratch.teamOffsetTable, so for
-         * a KNOCKOUT stage these rows are the (BE-safe + reconstructed) cup
-         * bracket, NOT standings — emitting/restoring them as stats would
-         * corrupt the bracket. competitionType is 0 for both, so route off
+         * LEAGUE/group stages (slot isLeagueFormat != 0): a KNOCKOUT stage has no
+         * league table — its bracket lives separately in bracketScratch
+         * (post-8f14738 leagueStandings no longer overlays it), so leagueStandings
+         * is unused/stale there and emitting these rows would just serialize
+         * stale data. competitionType is 0 for both, so route off
          * the slot type. */
         if (diy_stage_is_league(stage)) {
             uint16_t nrows = primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
@@ -5224,9 +5225,9 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
 
     /* TYPE-2 tournament current-STAGE slot (see write_competition_buf). The
      * master load above sets competitionFileBuffer's type; if it's a
-     * tournament, re-lay the stage DIYCompetitionEx at +0x420 typed/endian-
+     * tournament, re-lay the stage DIYCompetitionEx in stageSnapshot typed/endian-
      * neutral over the raw blob, BEFORE the game's diy_cfb_to_tournament
-     * copies cfb+0x420 -> diyCompetitionStart (so the corrected bytes are
+     * copies the stageSnapshot -> diyCompetitionStart (so the corrected bytes are
      * what gets copied). Absent in pre-fix saves -> mjson_find misses ->
      * load_comp_slot is a no-op, blob bytes stand. */
     if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
@@ -5242,9 +5243,9 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
          * RECONSTRUCT each row's derived teamSelOffset = i (the team identity;
          * row i = selTeamsPtr team i — the cache _DIY_CacheSelectedTeamPointers
          * builds) and restore the endian-neutral stats. LEAGUE/group stages
-         * only — a KNOCKOUT stage's same bytes are the cup bracket, rebuilt
-         * separately after the diy_teams load below (see the cup
-         * teamOffsetTable reconstruct). */
+         * only — a KNOCKOUT stage has no league table; its bracket lives in
+         * bracketScratch and is rebuilt separately after the diy_teams load
+         * below (see the cup teamOffsetTable reconstruct). */
         if (diy_stage_is_league(stage)) {
             const char *rows = NULL; int rows_len = 0;
             if (mjson_find((const char *)src, (int)src_size,
