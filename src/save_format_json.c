@@ -763,8 +763,17 @@ extern uint16_t numLost;
 extern uint16_t goalsScored;
 extern uint16_t goalsTaken;
 extern uint16_t boardConfidenceMod0;
+extern uint16_t boardConfidenceMod1;
+extern uint16_t boardConfidenceMod2;
+extern uint16_t boardConfidenceMod3;
 extern uint16_t boardConfidenceValue0;
 extern uint16_t boardConfidenceValue1;
+extern uint16_t boardConfidenceMod4;
+extern uint16_t boardConfidenceMod5;
+extern uint16_t boardConfidenceMod6;
+extern uint16_t boardConfidenceMod7;
+extern uint16_t boardConfidenceMod8;
+extern uint16_t boardConfidenceMod9;
 extern uint16_t contractNegotiationActive;
 extern uint16_t wageScalingDivisor;
 extern uint16_t teamNoOfferAccepted;
@@ -1081,10 +1090,25 @@ static const FieldDesc s_career_scalars[] = {
     FX("num_lost",                        numLost,                     FLD_U16),
     FX("goals_scored",                    goalsScored,                 FLD_U16),
     FX("goals_taken",                     goalsTaken,                  FLD_U16),
-    /* uint16_t[10] in game code — endian-neutral 16-bit decimals. */
-    FA("board_confidence_mods",           boardConfidenceMod0, 20,     FLD_U16_ARRAY),
+    /* Board-confidence mods (10 x uint16) are INTERLEAVED with value_0/1 in BSS
+     * (Mod0-3, Value0, Value1, Mod4-9 — see career_board_confidence.c). Serialize
+     * each by NAME, in struct order. The old single FA(...Mod0, 20, FLD_U16_ARRAY)
+     * span conflated Value0/1 into the "mods" array AND dropped Mod8/Mod9 (past the
+     * 20-byte/10-u16 window) so they were never saved; it also overlapped the
+     * value_0/1 FX, which the round-trip verify flagged as a false mismatch.
+     * Endian-neutral 16-bit decimals. */
+    FX("board_confidence_mod_0",          boardConfidenceMod0,         FLD_U16),
+    FX("board_confidence_mod_1",          boardConfidenceMod1,         FLD_U16),
+    FX("board_confidence_mod_2",          boardConfidenceMod2,         FLD_U16),
+    FX("board_confidence_mod_3",          boardConfidenceMod3,         FLD_U16),
     FX("board_confidence_value_0",        boardConfidenceValue0,       FLD_U16),
     FX("board_confidence_value_1",        boardConfidenceValue1,       FLD_U16),
+    FX("board_confidence_mod_4",          boardConfidenceMod4,         FLD_U16),
+    FX("board_confidence_mod_5",          boardConfidenceMod5,         FLD_U16),
+    FX("board_confidence_mod_6",          boardConfidenceMod6,         FLD_U16),
+    FX("board_confidence_mod_7",          boardConfidenceMod7,         FLD_U16),
+    FX("board_confidence_mod_8",          boardConfidenceMod8,         FLD_U16),
+    FX("board_confidence_mod_9",          boardConfidenceMod9,         FLD_U16),
     FX("contract_negotiation_active",     contractNegotiationActive,   FLD_U16),
     FX("wage_scaling_divisor",            wageScalingDivisor,          FLD_U16),
     FX("team_no_offer_accepted",          teamNoOfferAccepted,         FLD_U16),
