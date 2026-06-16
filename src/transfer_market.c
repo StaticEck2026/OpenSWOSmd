@@ -65,6 +65,28 @@ extern uint32_t _GetLowestAndHighestPlayerPrice(void);
 
 /* ---- Additional externs for Chunk 74/75 ---- */
 extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer (was competitionFileBuffer + diyTeamIdListType0/1/2 + numDiyTeams) */
+
+/* Pin the two trialist-insert-position fields (see _AddTrialist... below), which
+ * replaced raw 0x4E/0x66 reads. Both sit past DIYCompetition.namePtr@0x28, so the
+ * raw byte offsets are correct on 32-bit but WRONG on 64-bit — and by DIFFERENT
+ * amounts, which is exactly why the typed fix is needed:
+ *   - sizeof(DIYCompetition) is 0x60 (32-bit) but 0x68 (64-bit): namePtr 4->8
+ *     (+4) PLUS +4 end-padding to 8-byte alignment.
+ *   - numTeamsInStage is INSIDE the header (before the end-pad): +4 -> 0x52.
+ *   - leagueMaxSubstitutes is in matchData AFTER the header: +8 -> 0x6E.
+ * Asserting both layouts proves byte-identical behaviour on the Amiga (32-bit)
+ * and the correct (different-per-field) offsets on the 64-bit SDL build. */
+#if UINTPTR_MAX == 0xFFFFFFFFu
+_Static_assert(offsetof(DIYCompetitionEx, base.numTeamsInStage) == 0x4E,
+               "numTeamsInStage must be at 0x4E on 32-bit (was raw compBuf[0x4E/2])");
+_Static_assert(offsetof(DIYCompetitionEx, matchData.league.leagueMaxSubstitutes) == 0x66,
+               "matchData+2 must be at 0x66 on 32-bit (was raw compBuf[0x66/2])");
+#else
+_Static_assert(offsetof(DIYCompetitionEx, base.numTeamsInStage) == 0x52,
+               "numTeamsInStage must be at 0x4E+4 on 64-bit (namePtr +4, in-header)");
+_Static_assert(offsetof(DIYCompetitionEx, matchData.league.leagueMaxSubstitutes) == 0x6E,
+               "matchData+2 must be at 0x66+8 on 64-bit (namePtr +4 + header end-pad +4)");
+#endif
 /* In-progress transfer offer parameters — 7 host-native fields untangled
  * from the offerOrdinalsBackingBuf .equ overlay into a typed struct
  * (OfferOrdinals, game_types.h). All access below is offerOrdinals.<field>;
@@ -4196,17 +4218,23 @@ void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOr
         d += 2;
     }
 
-    /* Determine insertion position in currentMatchPlayers:
-       competitionFileBuffer[0] == 2 ? use offset 0x4E : offset 0x66 */
-    /* TODO(S6 FLAG-3): raw unshifted offsets compBuf[0x4E/2]/[0x66/2] are a
-     * pre-existing 64-bit hazard (CFB_NP namePtr slide) — S6 only rebases the
-     * symbol to preserve current behaviour; fix the offsets in a separate commit. */
-    uint16_t *compBuf = (uint16_t *)&primaryCompetitionBuf;
+    /* Determine insertion position in currentMatchPlayers. The original asm read
+     * raw 16-bit offsets into the slot-0 competition buffer: type-2 (tournament)
+     * -> 0x4E, else -> 0x66. Those are now TYPED field reads (S6 FLAG-3 fix):
+     * both offsets sit past DIYCompetition.namePtr@0x28, so the raw byte offsets
+     * slid +4 on 64-bit (CFB_NP namePtr growth) and read the wrong field there.
+     *   0x4E = base.numTeamsInStage  (DIYCompetition header)
+     *   0x66 = matchData+2 = matchData.league.leagueMaxSubstitutes (the league
+     *          view names it; for a cup the union covers the same bytes — the
+     *          original read matchData+2 regardless of type).
+     * Typed access auto-adjusts per target: byte-identical on 32-bit, correct on
+     * 64-bit. */
+    DIYCompetitionEx *comp = (DIYCompetitionEx *)&primaryCompetitionBuf;
     uint16_t insertPos;
-    if (compBuf[0] == 2) {
-        insertPos = compBuf[0x4E / 2];  /* 0x4E = offset 78 from slot-0 buffer start */
+    if (comp->base.competitionType == 2) {
+        insertPos = (uint16_t)comp->base.numTeamsInStage;
     } else {
-        insertPos = compBuf[0x66 / 2];  /* 0x66 = offset 102 */
+        insertPos = comp->matchData.league.leagueMaxSubstitutes;
     }
     insertPos += 11;  /* addi.w #$B,d2 */
 
