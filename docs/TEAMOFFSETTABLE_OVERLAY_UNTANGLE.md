@@ -9,27 +9,39 @@ the game boots clean. **The rebuild band-aids are STILL in place as a safety net
 (Stages 3-5 pending).** Save format changed (slot blob grew) → old `.CAR/.SEA/
 .PRE/.DIY` saves are incompatible; play fresh careers.
 
-**STAGE 3 step 1 LANDED (2026-06-16, `2101ac1`).** The choke-point rebuild
-band-aid (`3ac95cf`, in `_DIY_RecordCupBracketProgress`) is **removed**. Key
-finding while removing it: that rebuild guarded the **selTeams-index staleness**
-(per its own commit msg — "the careerFileBuffer overlay reorders selTeams between
-a cup slot store and load"), NOT the standings clobber — i.e. it was really
-**Stage-4 territory**. But **Part B retired that careerFileBuffer overlay**, so the
-reorder (and thus the staleness) no longer happens. Validated empirically: the
-`c9a5060` removability probe saw the rebuild redundant **6/6**, then the removal
-re-tested **10/10 "no-rebuild state stays correct", zero `0x6666`** across
-euro-cup (hybrid type-2) seasons (self-driven gdb/WSLg, `SWOS_DEBUG=1
-SWOS_TEST_NO_INJURIES_CARDS=1`). Production no longer rebuilds; debug keeps a
-**non-writing** regression check (run rebuild → diff → restore its two mutations
-so debug == production; logs if it ever WOULD change = staleness back). **Open
-question this raises:** if Part B killed the staleness, **Stage 4 (stable-id) may
-be unnecessary** — the remaining band-aids may all be removable the same way.
+**STAGE 3 DONE (2026-06-16).** The three selTeams-index-staleness rebuild
+band-aids are **removed**; the one genuine re-sync is **kept**. All validated by
+self-driven gdb/WSLg runs (`SWOS_DEBUG=1 SWOS_TEST_NO_INJURIES_CARDS=1`) with a
+non-writing regression check at each removed site (run the rebuild, diff
+teamOffsetTable + roundIterator, restore both so debug == production, log if
+either WOULD change):
 
-Remaining: Stage 3 cont. (remove the OTHER rebuilds — `be8ac25` season-keycache,
-`34828ff` `_DIYCupFinish`, `b5cafcb` slot-load, `773827f` cup-slot-copy — one at a
-time, re-test each), Stage 2 (save round-trip + cross-target verify), Stage 4
-(re-apply stable-id — **may now be moot**, decide after the rest of Stage 3),
-Stage 5 (back-port to the Amiga C port). See §5 below.
+| rebuild | site | verdict |
+|---|---|---|
+| `3ac95cf` | `_DIY_RecordCupBracketProgress` (hybrid choke point) | REMOVED `2101ac1` — probe 6/6, re-test 10/10 clean |
+| `be8ac25` | `career_status.c` season-keycache fill | REMOVED `18d00be` — probe 14/14 (incl roundIterator) |
+| cup-menu | `career_teams.c` `_Career_OpenCompetitionSlotMenuAndApplyChanges` | REMOVED `d88da82` — re-test 8/8 clean |
+| `34828ff` | `_DIYCupFinish` | **KEPT** `d88da82` — re-test caught it STILL load-bearing |
+
+**Root finding:** all three removed rebuilds guarded the **selTeams-index
+staleness** ("the careerFileBuffer overlay reorders selTeams between a cup slot
+store and load") — and **Part B retired that overlay**, so the staleness is gone.
+**`34828ff` is different:** it re-derives teamOffsetTable to match the *current*
+cup at finish time (a secondary cup finishing during next-season processing; the
+check observed 31/64 entries differ) — a real re-sync, not a staleness artefact,
+so it stays. The legit cache builds (`_DIY_InitCupBracketState` 1655,
+`_DIY_RebuildCompetitionAndTeamSelectionCaches`) were never band-aids and are
+untouched. `b5cafcb`'s play_match_menu.c rebuild was already gone; `773827f` is a
+64-bit copy-*size* fix, not a rebuild (stays).
+
+**=> Stage 4 (re-apply stable-id) is MOOT.** Its sole purpose was to kill the
+selTeams-index staleness; Part B already did, proven by the three clean removals.
+(Stable-id wouldn't remove `34828ff` either — that's a context re-sync, not
+staleness.) The reverted stable-id reconstruction is therefore not worth doing.
+
+Remaining: Stage 2 (save round-trip + cross-target verify of the Stage-1
+leagueStandings layout change — orthogonal to the band-aids), Stage 5 (back-port:
+each commit synced to the Amiga tree; user commits there manually).
 
 ## 1. Root cause (precise)
 
