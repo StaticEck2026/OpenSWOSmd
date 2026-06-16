@@ -1637,6 +1637,43 @@ void _DIY_BuildTeamSelectionPointerCache(void)
     }
 }
 
+#ifdef SWOS_DEBUG_AUTOSKIP
+/* Stage-3 shared non-writing regression check for a REMOVED teamOffsetTable
+ * rebuild band-aid (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4). Runs the rebuild,
+ * diffs its only two mutations (teamOffsetTable + roundIterator), then RESTORES
+ * both so the live state is byte-identical to a production build (no rebuild),
+ * and logs if either would have changed (= the selTeams-index staleness is back,
+ * which Part B's overlay retirement was supposed to have killed). Used by every
+ * removed rebuild site so debug builds keep catching a regression while
+ * production carries no rebuild. */
+void _DIY_TotRebuildRegressionCheck(const char *site)
+{
+    int16_t ri = diyCompetitionStart.base.roundIterator;
+    int32_t tot[64];
+    for (int i = 0; i < 64; i++)
+        tot[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+    _DIY_BuildTeamSelectionPointerCache();
+    int m = 0, first = -1;
+    long nf = 0;
+    for (int i = 0; i < 64; i++)
+        if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot[i]) {
+            if (first < 0) { first = i; nf = (long)diyCompetitionStart.bracketScratch.teamOffsetTable[i]; }
+            m++;
+        }
+    int ri_new = diyCompetitionStart.base.roundIterator;
+    int ri_chg = (ri_new != ri);
+    for (int i = 0; i < 64; i++)
+        diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot[i];
+    diyCompetitionStart.base.roundIterator = ri;
+    if (m || ri_chg)
+        SWOS_AUTOSKIP_LOG("[tot-rebuild] %s: REMOVED but rebuild WOULD CHANGE tot=%d/64 "
+                          "(idx %d %ld->%ld) roundIter(%d->%d) -> STALENESS BACK, revisit",
+                          site, m, first, (long)(first >= 0 ? tot[first] : 0), nf, ri, ri_new);
+    else
+        SWOS_AUTOSKIP_LOG("[tot-rebuild] %s: band-aid REMOVED, no-rebuild state stays correct", site);
+}
+#endif
+
 /* ================================================================
  * DIY_InitCupBracketState  (SWOS2.s line 32425)
  *
@@ -7847,16 +7884,20 @@ void _DIYCupFinish(void)
 {
     uint16_t off74 = *(uint16_t *)&diyCompetitionStart.base.menuState; /* FIELD_3A+$10 */
 
-    /* INTERIM (overlay band-aid): the cup result / match-list strings below
-     * resolve team NAMES via diyCompetitionStart.bracketScratch.teamOffsetTable,
-     * which the league-standings overlay can clobber (slots 62/63 -> garbage),
-     * e.g. when a secondary cup is finished during next-season processing
-     * (_Career_ProcessSecondaryCompetitionForNextSeason). A garbage slot makes
-     * diy_resolve_team_name return a wild pointer -> _StringCopy SIGSEGV. The
-     * grid + cupTeamIds are intact, so re-derive the table from them. Removed by
-     * the bracketScratch/standings overlay untangle (step 3,
-     * docs/TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md). roundIterator (0x4C, overloaded)
-     * is saved/restored so only teamOffsetTable changes. */
+    /* KEPT — Stage-3 re-test found this rebuild STILL LOAD-BEARING
+     * (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4). The cup result / match-list strings
+     * below resolve team NAMES via diyCompetitionStart.bracketScratch.teamOffsetTable.
+     * Unlike the other rebuild band-aids (3ac95cf / be8ac25 / cup-menu — all removed
+     * once Part B's overlay retirement killed the selTeams-index staleness), the
+     * 2026-06-16 non-writing-check re-test caught THIS site genuinely needing it:
+     * at _DIYCupFinish (e.g. a secondary cup finishing during next-season
+     * processing) the live teamOffsetTable does NOT match the current
+     * diyCompetitionStart cup (observed: 31/64 entries differ, idx 1: 14->0), so
+     * without the re-derive the names resolve via a stale/foreign table (slots
+     * 62/63 -> wild pointer -> _StringCopy SIGSEGV). This is a real re-sync, not a
+     * staleness artefact, so it stays. grid + cupTeamIds are intact, so re-derive
+     * from them. roundIterator (0x4C, overloaded) is saved/restored so only
+     * teamOffsetTable changes. */
     {
         int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
         _DIY_BuildTeamSelectionPointerCache();
