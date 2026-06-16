@@ -9,10 +9,27 @@ the game boots clean. **The rebuild band-aids are STILL in place as a safety net
 (Stages 3-5 pending).** Save format changed (slot blob grew) → old `.CAR/.SEA/
 .PRE/.DIY` saves are incompatible; play fresh careers.
 
-Remaining: Stage 2 (save round-trip + cross-target verify), Stage 3 (remove the
-teamOffsetTable rebuilds one at a time, re-instrument the 62/63 clobber check),
-Stage 4 (re-apply the stable-team-id representation), Stage 5 (back-port to the
-Amiga C port). See §5 below.
+**STAGE 3 step 1 LANDED (2026-06-16, `2101ac1`).** The choke-point rebuild
+band-aid (`3ac95cf`, in `_DIY_RecordCupBracketProgress`) is **removed**. Key
+finding while removing it: that rebuild guarded the **selTeams-index staleness**
+(per its own commit msg — "the careerFileBuffer overlay reorders selTeams between
+a cup slot store and load"), NOT the standings clobber — i.e. it was really
+**Stage-4 territory**. But **Part B retired that careerFileBuffer overlay**, so the
+reorder (and thus the staleness) no longer happens. Validated empirically: the
+`c9a5060` removability probe saw the rebuild redundant **6/6**, then the removal
+re-tested **10/10 "no-rebuild state stays correct", zero `0x6666`** across
+euro-cup (hybrid type-2) seasons (self-driven gdb/WSLg, `SWOS_DEBUG=1
+SWOS_TEST_NO_INJURIES_CARDS=1`). Production no longer rebuilds; debug keeps a
+**non-writing** regression check (run rebuild → diff → restore its two mutations
+so debug == production; logs if it ever WOULD change = staleness back). **Open
+question this raises:** if Part B killed the staleness, **Stage 4 (stable-id) may
+be unnecessary** — the remaining band-aids may all be removable the same way.
+
+Remaining: Stage 3 cont. (remove the OTHER rebuilds — `be8ac25` season-keycache,
+`34828ff` `_DIYCupFinish`, `b5cafcb` slot-load, `773827f` cup-slot-copy — one at a
+time, re-test each), Stage 2 (save round-trip + cross-target verify), Stage 4
+(re-apply stable-id — **may now be moot**, decide after the rest of Stage 3),
+Stage 5 (back-port to the Amiga C port). See §5 below.
 
 ## 1. Root cause (precise)
 
