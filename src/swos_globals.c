@@ -1179,8 +1179,11 @@ __asm__(
  * `careerForeignMarketPlayers` (offset 75162) — memory reuse that let a
  * career-mode cache overflow stomp player data. They now live in their own
  * files: the cache + cursors + end marker in career_key_cache.c (dedicated
- * 20014-byte buffer = the original InsertSpaceSorted bound span), and the
- * market pool in career_foreign_market.c (MarketPlayer[432]) — no shared
- * memory. The overlay keeps a 20024-byte .skip hole so later labels don't
- * cascade. careerJobOfferPhaseBias (was cache byte 1) is now a standalone
- * scalar. See docs/KEYCACHE_CLUSTER_REWORK.md / project_keycache_cluster_design. */
+ * 8192-byte buffer — tightened from the original 20014-byte InsertSpaceSorted
+ * bound span to an honest bound now that nothing shares the slack, ~7x the
+ * measured ~1188 B HWM), and the market pool in career_foreign_market.c
+ * (MarketPlayer[432]) — no shared memory. (The careerFileBufferBuf overlay
+ * these were lifted from was itself subsequently retired in Part B, so there
+ * is no longer a .skip hole to keep.) careerJobOfferPhaseBias (was cache byte
+ * 1) is now a standalone scalar.
+ * See docs/KEYCACHE_CLUSTER_REWORK.md / project_keycache_cluster_design. */

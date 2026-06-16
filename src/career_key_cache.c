@@ -16,13 +16,20 @@
  * two can never overlap; an overflow now stays in the cache's own dead tail
  * (clamped by the stride bounds-check in the three cache walkers).
  *
- * Buffer size = 20014 bytes: the EXACT span the original allowed the cache,
- * i.e. teamSelectionKeyCache -> &teamSelectionKeyCacheEnd in SWOS2.s. Keeping it
- * identical means _TeamSelectionKeyCache_InsertSpaceSorted's `ptr >
- * &teamSelectionKeyCacheEnd` panic (0x8889) fires at exactly the same point the
- * original did — no behaviour change to the bound, we only stop foreign-market
- * sharing the slack. (Real cache usage is far below this: the high-water-mark
- * probe measured ~1188 bytes over full careers.)
+ * Buffer size = 8192 bytes: a tight, HONEST bound. The original gave the cache
+ * the full 20014-byte span to &teamSelectionKeyCacheEnd (straight through the
+ * foreign-market region) as accidental slack; once the two no longer share
+ * memory that 18 KB of dead tail only served to SWALLOW a genuine overflow
+ * instead of tripping _TeamSelectionKeyCache_InsertSpaceSorted's `ptr >
+ * &teamSelectionKeyCacheEnd` panic (0x8889) — counter to "panics are signals".
+ * The high-water-mark probe measured real usage at ~1188 bytes over full
+ * careers, and the analytical heavy case (24-team league + domestic cup +
+ * European cup, KEYCACHE_CLUSTER_REWORK.md §8.1) tops out ~2.5 KB. 8192 is ~7x
+ * the measured HWM / ~3x the analytical worst case — ample headroom — while
+ * making the 0x8889 bound fire loudly on any real overflow rather than eating
+ * 18 KB of player-data-free slack first. The 1870-byte save blob (TSKC_SIZE)
+ * and the stride-clamped walkers are unaffected (both << 8192). This is the
+ * Tier 2 §8.3 finish; the deferred per-record writer fix is still a follow-up.
  *
  * careerJobOfferPhaseBias was byte 1 of the cache buffer in SWOS2.s
  * (`teamSelectionKeyCache: ds.b $1` then `careerJobOfferPhaseBias: ds.b $1`) —
@@ -41,13 +48,20 @@
 #include "swos_types.h"
 #include "swos_platform.h"
 
-#define KEY_CACHE_BUF_SIZE 20014   /* SWOS2.s teamSelectionKeyCache->End span */
+/* Tightened from the SWOS2.s 20014-byte teamSelectionKeyCache->End span to an
+ * honest bound now that foreign-market no longer shares the slack — see the
+ * file header. ~7x the measured ~1188 B HWM. */
+#define KEY_CACHE_BUF_SIZE 8192
+/* Stringize so the BSS `.skip` below reserves EXACTLY KEY_CACHE_BUF_SIZE and
+ * can't drift from the declared array size. */
+#define KCBS_STR2(x) #x
+#define KCBS_STR(x)  KCBS_STR2(x)
 
 extern uint8_t  teamSelectionKeyCache[KEY_CACHE_BUF_SIZE];
 
-_Static_assert(sizeof(teamSelectionKeyCache) == 20014,
-               "teamSelectionKeyCache buffer must stay 20014 bytes "
-               "(SWOS2.s InsertSpaceSorted bound span)");
+_Static_assert(sizeof(teamSelectionKeyCache) == 8192,
+               "teamSelectionKeyCache buffer must stay 8192 bytes "
+               "(tightened InsertSpaceSorted bound; KEYCACHE_CLUSTER_REWORK.md §8.3)");
 
 __asm__(
 #if defined(__APPLE__)
@@ -69,11 +83,11 @@ __asm__(
     ".globl " _ASM_PFX "careerSlotProcessingInProgress\n"
     _ASM_PFX "careerSlotProcessingInProgress:\n"
     ".skip 2\n"
-    /* ---- dedicated cache buffer (20014 B) ---- */
+    /* ---- dedicated cache buffer (KEY_CACHE_BUF_SIZE B) ---- */
     ".globl " _ASM_PFX "teamSelectionKeyCache\n"
     _ASM_PFX "teamSelectionKeyCache:\n"
-    ".skip 20014\n"
-    /* ---- end marker: &it = cache+20014 = InsertSpaceSorted bound; value = season flag ---- */
+    ".skip " KCBS_STR(KEY_CACHE_BUF_SIZE) "\n"
+    /* ---- end marker: &it = cache+KEY_CACHE_BUF_SIZE = InsertSpaceSorted bound; value = season flag ---- */
     ".globl " _ASM_PFX "teamSelectionKeyCacheEnd\n"
     _ASM_PFX "teamSelectionKeyCacheEnd:\n"
     ".skip 2\n"
