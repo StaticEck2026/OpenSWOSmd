@@ -1,28 +1,37 @@
 # teamSelectionKeyCache cluster rework — design (read-only, pre-implementation)
 
-Status: **DESIGN ONLY — no code changed.** This is the plan for the last
-untangle item remaining in the `careerFileBuffer` overlay after the careerTeam
-step-4 rework (`aded568`). Review before implementing. Modeled on
-`docs/CAREERTEAM_STEP4_REWORK.md`.
+Status: **IMPLEMENTED + TIGHTENED — DONE.** The cluster lift + de-overlap
+(Tier 1 + foreign-market split + phase-bias promotion) landed in `b993f43`; the
+cache buffer was then tightened from the 20014-byte historical slack to an honest
+**8192 B** bound (§8.3 finish). What remains is only the deferred per-record
+writer redesign (§9, optional, Amiga-shared). The plan text below is preserved
+for reference. (Was: the last untangle item remaining in the `careerFileBuffer`
+overlay after the careerTeam step-4 rework `aded568`; modeled on
+`docs/CAREERTEAM_STEP4_REWORK.md`.)
 
 Decision taken (2026-06-08): **design Tier 2 first** so the extraction and the
 overlap-removal land together as a clean struct rather than relocating the bug
 intact. §§8–10 below are the Tier 2 detailed design; §§1–7 are the original
 audit.
 
-**IMPLEMENTED 2026-06-08 (3-arch build-verified; awaiting user functional test).**
-Buffer size resolved NOT by the HWM probe but from SWOS2.s directly: the original
-`InsertSpaceSorted` bound is `&teamSelectionKeyCacheEnd`, exactly **20014 bytes**
-past `teamSelectionKeyCache` (the cache's tolerated capacity, which the original
-reached by overflowing through foreign market). The dedicated buffer is sized to
-that same 20014 so the `0x8889` panic fires at the identical point — no behaviour
-change to the bound, we only stop foreign market sharing the slack. The HWM probe
-(max ~1188 B over full careers) confirmed real usage sits far below it. Files:
-`src/career_key_cache.c` (cursors + 20014-B cache buffer + end marker +
+**IMPLEMENTED 2026-06-08 (`b993f43`), then TIGHTENED 2026-06-16.** Stage 1 lifted
+the cluster out intact at the original `&teamSelectionKeyCacheEnd` bound (20014 B
+past `teamSelectionKeyCache`) so the `0x8889` panic fired at the identical point —
+no behaviour change to the bound, only stopping foreign market from sharing the
+slack. Files: `src/career_key_cache.c` (cursors + cache buffer + end marker +
 promoted `careerJobOfferPhaseBias`), `src/career_foreign_market.c`
-(`MarketPlayer[432]`); overlay → one `.skip 20024` hole; new
-`FX("career_job_offer_phase_bias", …, FLD_U8)`. nm: no-cascade 99092/98476,
-`&End−&cache`=20014, all symbols outside the overlay, on x86_64/ARM/ARM64.
+(`MarketPlayer[432]`); overlay → one `.skip` hole (since RETIRED with the whole
+careerFileBufferBuf overlay in Part B); new `FX("career_job_offer_phase_bias", …,
+FLD_U8)`. **Stage 2 (2026-06-16, the §8.3 finish):** now that nothing shares the
+slack, the dedicated buffer was tightened from 20014 → **8192 B** — an honest
+bound at ~7x the measured ~1188 B HWM (and ~3x the §8.1 analytical ~2.5 KB heavy
+case), so `InsertSpaceSorted`'s `0x8889` now fires loudly on a genuine overflow
+instead of swallowing 18 KB of dead slack ("panics are signals"). `.skip` wired
+to `KEY_CACHE_BUF_SIZE` via stringize so the BSS reservation can't drift from the
+declared size. 3-arch build-verified; `nm` confirms `&End−&cache`=0x2000 (8192),
+foreign market a separate region. Functional gate (a heavy multi-competition
+career season; confirm no spurious `0x8889`) is the load-time test since this
+region is outside the VERIFY window.
 
 ## 1. Goal
 

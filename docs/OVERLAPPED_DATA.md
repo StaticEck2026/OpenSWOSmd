@@ -286,12 +286,24 @@ legitimate cache.
 jumping. If outside [10, 256], treat as end-of-cache. Replicates the
 Amiga's accidental safety-net behaviour deterministically.
 
-**Status:** mitigated for the new-career menu draw path; the writer
-overflow itself is unfixed (matches asm). Proper fix is to redesign
-the writer to advance to the next cache slot after each fixture
-write — deferred until the overlay untangle phase (CLAUDE.md step 3)
-because changing the writer needs the matching layout change on
-both the SDL and Amiga ports and the new save-format work.
+**Status: RESOLVED (overlap removed).** The untangle landed in `b993f43`:
+`teamSelectionKeyCache` (+ cursors + end marker + the promoted
+`careerJobOfferPhaseBias` scalar) now lives in `src/career_key_cache.c` and
+`careerForeignMarketPlayers` in `src/career_foreign_market.c` as two independent
+standalone symbols — they no longer share a BSS run, so a cache overflow can no
+longer reach foreign-market player data. The cache buffer was then tightened from
+the 20014-byte historical slack to an honest **8192 B** bound (~7x the measured
+~1188 B HWM), so `InsertSpaceSorted`'s `0x8889` panic now fires on a genuine
+overflow instead of silently eating slack (see `docs/KEYCACHE_CLUSTER_REWORK.md`
+§8.3). The `[10,256]` stride clamp in the walkers stays as defence-in-depth but
+is no longer load-bearing for player-data safety.
+
+The remaining **intra-cache** per-record writer overflow (a career-mode 22-byte
+slot can take >1 fixture record and spill into the next slot's header, still
+matching the asm) is now contained inside the cache's own buffer and clamped —
+harmless. A full writer redesign (advance to the next slot per fixture; size
+`slotLen` from real records-per-entry) is a deferred follow-up that touches the
+Amiga-shared builder/recorder — tracked in KEYCACHE_CLUSTER_REWORK.md §9.
 
 ### 9. Adjacent-globals reads
 
