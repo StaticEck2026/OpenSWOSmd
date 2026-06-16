@@ -1846,22 +1846,19 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     }
     if (type == 1) {
         /* Cup */
-        /* The flat slot load above restored bracketScratch.teamOffsetTable,
-         * which caches selTeams *indices* (step-4 rework: was BE byte offsets
-         * on the Amiga). Those indices stay valid on the Amiga (selTeams is a
-         * fixed-address BSS array with stable contents) but go stale on SDL
-         * because the careerFileBuffer overlay repopulates selTeams between
-         * store and load — typically slots 62/63 end up pointing at
-         * selTeams[0] (the player's frozen copy) instead of the real team,
-         * dragging the player into the wrong fixture (locked VIEW RESULT /
-         * squadChangesAllowed=0) and desyncing the keycache that
-         * _DIY_RecordCupBracketProgress walks below (panic 0x6666). cupTeamIds
-         * was restored consistent with the current selTeams, so re-derive the
-         * index cache. Done HERE (the player-facing cup menu, run once per
-         * open) rather than inside _Career_LoadCompetitionSlotStateFromBuffer,
-         * which is also called from the auto-sim/auto-play loops where selTeams
-         * may not match the loaded competition and a rebuild would spin. */
-        _DIY_BuildTeamSelectionPointerCache();
+        /* Stage-3 band-aid removal (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4): the
+         * teamOffsetTable rebuild at the player-facing cup menu is REMOVED. It
+         * guarded the selTeams-index staleness — the careerFileBuffer overlay
+         * repopulated selTeams between a cup slot store and load, so slots 62/63
+         * pointed at selTeams[0] (locked VIEW RESULT / squadChangesAllowed=0, and
+         * the 0x6666 keycache desync _DIY_RecordCupBracketProgress walks) — but
+         * Part B retired that overlay, killing the staleness root (same as the
+         * 3ac95cf / be8ac25 removals, validated 10/10 + 14/14). Production no
+         * longer rebuilds; debug keeps the shared non-writing regression check. */
+#ifdef SWOS_DEBUG_AUTOSKIP
+        extern void _DIY_TotRebuildRegressionCheck(const char *site);
+        _DIY_TotRebuildRegressionCheck("career_teams cup-menu");
+#endif
         /* Auto-simulate CPU-only fixtures BEFORE the menu draws so that
          * currentMatchIndex points at the career team's fixture when the
          * cup menu first opens. Otherwise _DIY_CompareCurrentMatchTeamCategories
