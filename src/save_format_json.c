@@ -679,6 +679,13 @@ typedef struct {
                              * path ignores this flag and emits the whole table. */
 } FieldDesc;
 
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+/* Per-field round-trip verify — defined after field_byte_size, but the career
+ * write path (above) calls it, so forward-declare here. */
+static void verify_roundtrip_fields(const char *label, const FieldDesc *table,
+                                    VerifyReloadFn reload, uint8_t *filename);
+#endif
+
 /* extern declarations for all overlay symbols referenced by the
  * tables below. The .equ aliases in swos_globals_career_overlay.c
  * make these visible to the linker; taking their address gives a
@@ -4101,14 +4108,15 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     }
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
-    /* No ignore predicate: the only bytes that ever needed exempting were the 4
-     * seasonInformations comp-name pointer slots, and seasonInformationsArray now
-     * lives OUTSIDE this [careerFileBuffer, numSelectedTeams) region
-     * (career_season_info.c), so every byte here verifies bit-exactly. */
-    verify_roundtrip_region("career",
-                            (uint8_t *)&careerFileBuffer, data_size,
-                            verify_reload_career, filename,
-                            NULL);
+    /* Per-FIELD verify over s_career_scalars (see verify_roundtrip_fields): diffs
+     * exactly the bytes the save captured, across every standalone extracted
+     * struct. Replaces the old single-region [&careerFileBuffer, +data_size)
+     * diff — that region is the careerFileBufferBuf overlay, which post-untangle
+     * holds only dead .skip zeros + 2 scalars, so it verified almost nothing.
+     * The seasonInformations comp-name pointer slots that once needed exempting
+     * now live outside this set entirely (career_season_info.c). */
+    verify_roundtrip_fields("career", s_career_scalars,
+                            verify_reload_career, filename);
 #endif
 
     return 0;
@@ -4587,6 +4595,76 @@ static uint32_t field_byte_size(const FieldDesc *f)
     default:                          return 0;
     }
 }
+
+#ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
+/* Per-FIELD round-trip verify: snapshot every saved field in `table` by its own
+ * (&addr, byte size), zero them all, reload the just-written file once, then
+ * diff each field against its snapshot (restoring the live bytes as it goes, so
+ * the verify is non-destructive).
+ *
+ * Replaces the old single-region verify_roundtrip_region("career",
+ * &careerFileBuffer, data_size). That region WAS the careerFileBufferBuf overlay,
+ * but after the field-extraction untangle it holds only dead .skip zeros plus
+ * the two surviving scalars (tmd count + numSelectedTeams) — every other saved
+ * field is a standalone struct OUTSIDE the region — so the region diff verified
+ * almost nothing (~zeros vs zeros). Walking the descriptor table verifies
+ * EXACTLY the bytes the save captures, across every extracted struct (finances,
+ * season record, status/trophy flags, settings, comp slots, market counters,
+ * ...), and tracks the table automatically. A nonzero count is a real
+ * save/load round-trip regression; reports the first mismatching field by name. */
+static void verify_roundtrip_fields(const char *label,
+                                    const FieldDesc *table,
+                                    VerifyReloadFn reload,
+                                    uint8_t *filename)
+{
+    uint32_t total = 0, nfields = 0;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        uint32_t sz = field_byte_size(f);
+        if (sz) { total += sz; nfields++; }
+    }
+    if (!total) return;
+
+    uint8_t *snap = (uint8_t *)swos_io_alloc(total);
+    if (!snap) return;
+
+    uint32_t off = 0;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        uint32_t sz = field_byte_size(f);
+        if (!sz) continue;
+        memcpy(snap + off, f->addr, sz);   /* snapshot the just-saved live bytes */
+        memset(f->addr, 0, sz);            /* clear so the reload must restore it */
+        off += sz;
+    }
+
+    reload(filename);
+
+    size_t bad_fields = 0, bad_bytes = 0;
+    const char *first = NULL;
+    off = 0;
+    for (const FieldDesc *f = table; f->type != FLD_END; f++) {
+        uint32_t sz = field_byte_size(f);
+        if (!sz) continue;
+        if (memcmp(f->addr, snap + off, sz) != 0) {
+            bad_fields++;
+            for (uint32_t i = 0; i < sz; i++)
+                if (((const uint8_t *)f->addr)[i] != snap[off + i]) bad_bytes++;
+            if (!first) first = f->name;
+        }
+        memcpy(f->addr, snap + off, sz);   /* restore live bytes (non-destructive) */
+        off += sz;
+    }
+
+    if (bad_fields == 0)
+        SWOS_DBG("[json-verify-%s] 0 mismatches across %u fields (%u bytes)\n",
+                 label, (unsigned)nfields, (unsigned)total);
+    else
+        SWOS_DBG("[json-verify-%s] %zu field(s) / %zu byte(s) mismatch "
+                 "(first field '%s')\n",
+                 label, bad_fields, bad_bytes, first ? first : "?");
+
+    swos_io_free(snap);
+}
+#endif /* SWOS_SAVE_FORMAT_JSON_VERIFY */
 
 
 static void emit_scalar_table_comp(mjson_print_fn_t fn, void *fnd,
