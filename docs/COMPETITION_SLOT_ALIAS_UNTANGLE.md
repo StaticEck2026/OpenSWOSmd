@@ -277,20 +277,33 @@ the exact forbidden address-range pattern.
 
 ### 8.3 Phase plan
 
-- **Phase 1 — DONE (commit pending push):** replace the comp-slot address-span
-  selection with an explicit `comp` tag on `FieldDesc` (`FXC`/`FAC` macros);
-  select the 23 primary-slot + header + count fields by identity. Removes
-  `field_in_range`; decouples comp-field selection from `numSelectedTeams`'s
-  address. Format-neutral (same 23 keys). VERIFY: career 0, DIY 0; cup-stage
-  preset shows the pre-existing ~12 derived-`teamOffsetTable`/stage-name snapshot
-  diffs (`[[project_tournament_type2_save]]`, benign — see the preset-VERIFY
-  comment). 3 arches syntax-clean.
-- **Phase 2 — NEXT:** make `careerFileBuffer` + `numSelectedTeams` standalone
-  `uint16` globals, delete the 256 KB buffer + `.skip` holes + `career_data_size()`,
-  simplify the load memset, and replace the now-vacuous career VERIFY region with
-  per-struct round-trip checks over the extracted structs (user chose "keep a
-  VERIFY"). `numSelectedTeams` is still re-derived semantically on `.DIY`/`.PRE`
-  load (`= primaryCompetitionBuf.tourn.header.numTeams`).
+- **Phase 1 — DONE (`cd5c359`, Amiga-validated):** replace the comp-slot
+  address-span selection with an explicit `comp` tag on `FieldDesc`
+  (`FXC`/`FAC` macros); select the 23 primary-slot + header + count fields by
+  identity. Removes `field_in_range`; decouples comp-field selection from
+  `numSelectedTeams`'s address. Format-neutral (same 23 keys). VERIFY: career 0,
+  DIY 0; cup-stage preset shows pre-existing ~12 derived-`teamOffsetTable`/
+  stage-name snapshot diffs (`[[project_tournament_type2_save]]`, benign).
+  - **Follow-up (`4a5e65b`, Amiga-validated):** Phase 1 unmasked that the
+    `.DIY`/`.PRE` LEAGUE standings only rode the raw blob and byte-swapped the
+    int32 `teamSelOffset` cross-target. Wired `emit/load_competition_overrides`
+    (the career path's endian-neutral standings re-lay) into
+    `write_/load_competition_buf`. TEST.DIY now loads correct on the BE Amiga.
+- **Phase 2a — DONE (`2734186` + `df0f068`):** replace the near-vacuous career
+  VERIFY *region* diff (`[&careerFileBuffer, +data_size)`) with
+  `verify_roundtrip_fields()` — a per-field walk of `s_career_scalars`. Strict
+  coverage increase: **0 mismatches across 240 typed fields** (was zeros-vs-zeros).
+  The 5 redundant whole-buffer comp-slot blobs (`sizeof(CompetitionSlotBuffer)`)
+  are exempted (logged) — their authored state is the typed fields (clean); their
+  residual diffs are derived caches + typed-path-recomputed bytes. VERIFY-only.
+- **Phase 2b — DONE (commit pending Amiga validation):** `careerFileBuffer`
+  (TMD count) + `numSelectedTeams` are now standalone `uint16` globals;
+  `swos_globals_career_overlay.c` gutted to those two (the 256 KB
+  `careerFileBufferBuf` + the whole `.skip` sequence deleted); `career_data_size()`
+  removed; the load memset reduced to zeroing the two scalars. **The overlay is
+  retired.** `numSelectedTeams` is still re-derived semantically on `.DIY`/`.PRE`
+  load (`= primaryCompetitionBuf.tourn.header.numTeams`). Real BSS-layout change →
+  needs Cygwin link + VERIFY=0 + a career load + Amiga cross-target test.
 
 ---
 

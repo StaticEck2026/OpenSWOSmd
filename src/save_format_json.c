@@ -81,8 +81,12 @@ extern int    atoi(const char *s);
 #define PROF_END(name, label) ((void)0)
 #endif
 
-/* Externs from the careerFileBuffer overlay. */
-extern uint8_t  careerFileBuffer;
+/* careerFileBuffer (TMD team-pool count) + numSelectedTeams are standalone
+ * uint16 globals (the careerFileBufferBuf overlay was retired). careerFileBuffer
+ * was historically declared uint8_t here (a "stub" for the old byte-memset);
+ * it is really a uint16, so declare it as such — `careerFileBuffer = 0` must
+ * clear both bytes, and tmd_team_count reads it FLD_U16. */
+extern uint16_t careerFileBuffer;
 extern uint16_t numSelectedTeams;
 extern uint8_t  selTeamsPtr;
 /* step-4 phase 3: standings/bracket team-selection fields hold a team IDENTITY
@@ -293,14 +297,9 @@ static void load_str_pool_field(const char *buf, int buflen,
 #define KIND_HIGHLIGHTS "highlights"
 #define KIND_TACTICS    "tactics"
 
-/* careerFileBuffer save region: bytes [0, numSelectedTeams_offset) +
- * numSelectedTeams * sizeof(TeamFileEx) + 2. Match the legacy
- * _SaveCareerFile sizing exactly. */
-static uint32_t career_data_size(void)
-{
-    return (uint32_t)((uint8_t *)&numSelectedTeams - (uint8_t *)&careerFileBuffer)
-         + (uint32_t)numSelectedTeams * 684 + 2;
-}
+/* (career_data_size() retired with the careerFileBufferBuf overlay — the save is
+ * typed JSON of named fields; there is no contiguous "career region" left, and
+ * careerFileBuffer/numSelectedTeams are now standalone scalars.) */
 
 /* ---------- format detection ---------- */
 
@@ -3840,7 +3839,6 @@ static void load_ctx_stage(const char *src, int src_size, const char *key,
 
 int16_t SaveJson_WriteCareer(uint8_t *filename)
 {
-    uint32_t data_size = career_data_size();
     JsonOutBuf out = { NULL, 0, 0, 0 };
 
     /* Reset string pool — emit_str_pool_field consumers (the four
@@ -3851,12 +3849,10 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * stable round-trip with the loader. */
     string_pool_reset();
 
-    /* Top-level object. Every byte of careerFileBuffer is now
-     * covered by either a typed semantic field or a named blob
-     * (verified at runtime with SWOS_SAVE_FORMAT_JSON_VERIFY before
-     * opaque_data was dropped — see SAVE_FORMAT_JSON.md). Save files
-     * are now pointer-portable and 64-bit-friendly by construction. */
-    (void)data_size;
+    /* Top-level object. Every saved field is a typed semantic field
+     * (verified at runtime with SWOS_SAVE_FORMAT_JSON_VERIFY — see
+     * verify_roundtrip_fields). Save files are pointer-portable and
+     * 64-bit-friendly by construction. */
     mjson_printf(json_out_emit, &out,
         "{\n"
         "  %Q: %d,\n"
@@ -4510,37 +4506,16 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
         return 1;
     }
 
-    /* Zero the entire careerFileBuffer region — every byte is now
-     * covered by either a typed scalar in s_career_scalars or a
-     * top-level structured field (tmd_teams, selected_teams,
-     * career_foreign_market_players, career_team_reserves,
-     * current_team_reserves). The legacy `$.opaque_data` blob and the
-     * named-blob sub-object have both been retired. Anything the new
-     * scalar/field paths don't populate (transient menu scratch,
-     * unused buffer tail) stays zero, which matches the original
-     * Amiga career_init zeroing semantics.
-     *
-     * careerFileBuffer is declared `extern uint8_t` (single-byte stub)
-     * so we go through careerFileBufferBuf for the memset — the
-     * compiler sees the full 256 KB destination and fortify_source
-     * doesn't trip. */
+    /* Clear the two surviving careerFileBuffer scalars before the typed load
+     * repopulates them. The 256 KB careerFileBufferBuf overlay (which the
+     * legacy load memset cleared whole) is RETIRED — every career field is now
+     * a standalone typed struct loaded from named JSON, and careerFileBuffer
+     * (TMD count) + numSelectedTeams are standalone uint16 globals. So there is
+     * no longer a contiguous region to zero; just reset these two (the load's
+     * tmd_team_count / num_selected_teams paths set them right after). */
     PROF_START(memset_buf);
-    uint32_t want = career_data_size();
-#ifdef SWOS_SDL_BUILD
-    /* SDL: careerFileBuffer is a 1-byte stub for symbol-only purposes
-     * and the real backing storage lives in careerFileBufferBuf (see
-     * swos_globals_career_overlay.c). Going through the *Buf alias
-     * keeps fortify_source happy with the full destination size. */
-    extern uint8_t careerFileBufferBuf[];
-    memset(careerFileBufferBuf, 0, want);
-#else
-    /* Amiga: careerFileBuffer IS the real backing storage (defined in
-     * SWOS2.s with a real ds.b reservation). The earlier `extern uint8_t
-     * careerFileBuffer;` (single-byte stub) declaration in this file
-     * makes the symbol available — take its address as a uint8_t* for
-     * the memset destination. */
-    memset(&careerFileBuffer, 0, want);
-#endif
+    careerFileBuffer = 0;
+    numSelectedTeams = 0;
     PROF_END(memset_buf, "career-load");
 
     PROF_START(apply_semantic);
