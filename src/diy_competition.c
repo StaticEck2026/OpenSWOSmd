@@ -2913,8 +2913,40 @@ void _DIY_RecordCupBracketProgress(void)
      * overloaded field exactly as the caller left it. */
     {
         int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        /* Stage-3 removability probe (TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md §4/§5):
+         * Stage 1 relocated leagueStandings to its own trailing field, so the
+         * standings write can no longer zero teamOffsetTable[62]/[63]. If that
+         * truly killed the clobber, the loaded teamOffsetTable is already correct
+         * here and this rebuild (the 3ac95cf band-aid) is REDUNDANT. Snapshot
+         * before, compare after: zero changes across a full hybrid-cup season =
+         * provably removable; any logged change = still load-bearing (likely the
+         * separate selTeams-index staleness that Stage 4's stable-id re-apply
+         * addresses). teamOffsetTable is int32_t[64] (0x344..0x443). */
+        int32_t tot_before[64];
+        for (int i = 0; i < 64; i++)
+            tot_before[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+#endif
         _DIY_BuildTeamSelectionPointerCache();
         diyCompetitionStart.base.roundIterator = savedRoundIter;
+#ifdef SWOS_DEBUG_AUTOSKIP
+        {
+            int mism = 0, first = -1;
+            for (int i = 0; i < 64; i++)
+                if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
+                    mism++;
+                    if (first < 0) first = i;
+                }
+            if (mism)
+                SWOS_AUTOSKIP_LOG("[tot-rebuild] RecordCupBracketProgress: rebuild CHANGED %d/64 "
+                                  "(first idx %d: %ld -> %ld) -> band-aid STILL LOAD-BEARING",
+                                  mism, first, (long)tot_before[first],
+                                  (long)diyCompetitionStart.bracketScratch.teamOffsetTable[first]);
+            else
+                SWOS_AUTOSKIP_LOG("[tot-rebuild] RecordCupBracketProgress: rebuild REDUNDANT "
+                                  "(teamOffsetTable already correct) -> removable");
+        }
+#endif
     }
 
 outer_loop:
