@@ -108,7 +108,21 @@ extern void    _ShowFsErrorByCode(uint16_t code);
 /* Generic round-trip verify: snapshot a memory region, zero it,
  * call the just-written file's loader, then diff against the
  * snapshot. Used by each Write* path to confirm the JSON schema
- * round-trips bit-exactly for that save type. */
+ * round-trips bit-exactly for that save type.
+ *
+ * NON-RESTORE POLICY: the loader (reload) writes the LIVE game globals and, as
+ * a data-load, also rebuilds runtime/derived state (diyCompetitionStart, the
+ * re-derived pointers, reconstructed comp-slot caches, ...). We intentionally
+ * leave that fully-reloaded state in place rather than copying the pre-save
+ * snapshot back. A PARTIAL restore (snapshot only this region / only the
+ * scalar table) was the bug: it left the restored bytes pre-save but the
+ * runtime caches reloaded, so a save-then-CONTINUE walked into a desynced mix
+ * and panicked (e.g. _FindTeamInDIY 0x6006). The fully-reloaded state is
+ * exactly what a fresh load of the same file produces — proven playable — so
+ * continuing from it is safe. (For a clean verify the reloaded bytes equal the
+ * pre-save bytes, so authored state is unchanged either way.) The snapshot is
+ * kept only for the diff. VERIFY builds therefore behave like an implicit
+ * save+reload on every save, which is acceptable for a debug/test build. */
 typedef int16_t (*VerifyReloadFn)(uint8_t *filename);
 
 /* Optional per-region predicate: return non-zero for byte offsets that are
@@ -152,7 +166,8 @@ static void verify_roundtrip_region(const char *label,
         SWOS_DBG("[json-verify-%s] %zu mismatches across %u bytes (first at +%zu)\n",
                  label, mismatches, (unsigned)size, first);
 
-    memcpy(region, snap, size);
+    /* Deliberately NOT restoring `snap` over `region` — see NON-RESTORE POLICY
+     * above. The live state stays as the fresh reload (consistent + playable). */
     swos_io_free(snap);
 }
 
@@ -4574,8 +4589,14 @@ static uint32_t field_byte_size(const FieldDesc *f)
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
 /* Per-FIELD round-trip verify: snapshot every saved field in `table` by its own
  * (&addr, byte size), zero them all, reload the just-written file once, then
- * diff each field against its snapshot (restoring the live bytes as it goes, so
- * the verify is non-destructive).
+ * diff each field against its snapshot. Does NOT restore the snapshot afterwards
+ * (see the NON-RESTORE POLICY on verify_roundtrip_region): a partial restore
+ * left the scalar table pre-save but the reload's runtime/derived state
+ * (diyCompetitionStart, comp-slot caches, re-derived pointers) reloaded — a
+ * desynced mix that crashed save-then-CONTINUE (0x6006). We leave the fully
+ * reloaded state, which is exactly what a fresh load produces (playable); for a
+ * clean verify the reloaded bytes equal the pre-save bytes, so authored state is
+ * unchanged. The snapshot is kept only for the diff.
  *
  * Replaces the old single-region verify_roundtrip_region("career",
  * &careerFileBuffer, data_size). That region WAS the careerFileBufferBuf overlay,
@@ -4654,7 +4675,7 @@ static void verify_roundtrip_fields(const char *label,
                          (unsigned)live[fo], (unsigned)was[fo]);
             }
         }
-        memcpy(f->addr, was, sz);   /* restore live bytes (non-destructive) */
+        /* No restore — leave the reloaded value (NON-RESTORE POLICY above). */
         off += sz;
     }
 
