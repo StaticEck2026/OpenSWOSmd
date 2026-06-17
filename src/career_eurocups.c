@@ -15,7 +15,6 @@
 #include "career_status.h"
 #include "career_teams.h"
 #include "panic.h"
-#include "auto_skip_debug.h"  /* TEMP: SWOS_AUTOSKIP_LOG for euro-cup draw trace */
 
 /* ---- ASM externs (globals defined in assembly) ---- */
 extern DIYCompetitionEx diyCompetitionStart;
@@ -387,13 +386,6 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
      * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
     uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     *titleHolderTeamId = teamNum;
-    /* TEMP (euro-cup title-holder bring-up — REMOVE after fix): the cup
-     * winner that becomes next season's title holder. A non-European id here
-     * means the auto-advanced cup had wrong teams. */
-    SWOS_AUTOSKIP_LOG("[eurocup-title] gridByte=%d -> titleHolderTeamId=0x%04X "
-                      "(country=%u ordinal=%u)",
-                      (int)idx, (unsigned)teamNum,
-                      (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF));
     TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
 }
@@ -577,22 +569,6 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
      * the function works in. */
     uint8_t *listBytes = (uint8_t *)teamList;
 
-#ifdef SWOS_DEBUG_AUTOSKIP
-    /* TEMP (euro-cup draw bring-up — REMOVE after fix): dump the title-holder
-     * grid team + the qualified-team list so we can see whether a non-European
-     * (e.g. NEW ZEALAND) team is in the list / grid and from which offset. */
-    {
-        TeamFileEx *g = (TeamFileEx *)dstGrid;
-        SWOS_AUTOSKIP_LOG("[eurocup-draw] ENTER titleHolder=0x%04X count=%u listPtr=%p "
-                          "grid.team={c=0x%02X o=0x%02X}",
-                          (unsigned)titleHolder, (unsigned)count, (void *)teamList,
-                          (unsigned)g->team.countryNumber, (unsigned)g->team.teamOrdinal);
-        for (uint16_t k = 0; k < count && k < 40; k++)
-            SWOS_AUTOSKIP_LOG("[eurocup-draw]   list[%u]=0x%04X", (unsigned)k,
-                              (unsigned)BE_READ_U16(&listBytes[k * 2]));
-    }
-#endif
-
     uint16_t randIdx;
     uint16_t selectedTeam;
     uint8_t selectedCountry;
@@ -620,9 +596,6 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
      * Write the title holder back as BE bytes to match the list's encoding. */
     uint16_t removedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
     BE_WRITE_U16(&listBytes[randIdx * 2], titleHolder);
-
-    SWOS_AUTOSKIP_LOG("[eurocup-draw] randIdx=%u removedTeam=0x%04X -> swap titleHolder in, "
-                      "append titleHolder grid to pool", (unsigned)randIdx, (unsigned)removedTeam);
 
     uint16_t savedCareerFile = careerFileBuffer;
     _Career_RemoveTeamFromTmdTeamPool(removedTeam);

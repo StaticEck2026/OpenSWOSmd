@@ -434,36 +434,6 @@ void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
     /* Verify team is not already in pool */
     uint16_t teamNo = PACK_BE_U16(team->team.countryNumber, team->team.teamOrdinal);
     if (_SearchTeamInTmdFile(teamNo) == 0) {
-#ifdef SWOS_DEBUG_AUTOSKIP
-        /* TEMP (0x3443 euro-cup dup bring-up — REMOVE after fix): the team being
-         * appended is already in the TMD pool. Dump WHO duplicated, the three
-         * euro-cup title-holder ids (to catch two cups resolving to the SAME
-         * holder — the leading hypothesis), and the full pool so we can see at
-         * which index the original copy sits and whether it matches a holder. */
-        extern uint16_t euroCupTitleHolderTeamId;
-        extern uint16_t cupWinnersCupTitleHolderTeamId;
-        extern uint16_t uefaCupTitleHolderTeamId;
-        SWOS_AUTOSKIP_LOG("[tmd-dup-0x3443] DUP teamNo=0x%04X (c=%u o=%u) poolCount=%u "
-                          "titleHolders: euro=0x%04X cwc=0x%04X uefa=0x%04X%s",
-                          (unsigned)teamNo,
-                          (unsigned)team->team.countryNumber,
-                          (unsigned)team->team.teamOrdinal,
-                          (unsigned)careerFileBuffer,
-                          (unsigned)euroCupTitleHolderTeamId,
-                          (unsigned)cupWinnersCupTitleHolderTeamId,
-                          (unsigned)uefaCupTitleHolderTeamId,
-                          (teamNo == euroCupTitleHolderTeamId)      ? " [==euroHolder]" :
-                          (teamNo == cupWinnersCupTitleHolderTeamId)? " [==cwcHolder]"  :
-                          (teamNo == uefaCupTitleHolderTeamId)      ? " [==uefaHolder]" : "");
-        {
-            TeamFileEx *p = (TeamFileEx *)&tmdFileBuffer;
-            for (uint16_t i = 0; i < careerFileBuffer; i++) {
-                uint16_t id = PACK_BE_U16(p[i].team.countryNumber, p[i].team.teamOrdinal);
-                SWOS_AUTOSKIP_LOG("[tmd-dup-0x3443]   pool[%u]=0x%04X%s", (unsigned)i,
-                                  (unsigned)id, (id == teamNo) ? " <-- the original copy" : "");
-            }
-        }
-#endif
         /* Already in pool — panic */
         panicReasonCode = 0x3443;
         _PanicHaltLoop();
