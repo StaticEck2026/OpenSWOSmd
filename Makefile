@@ -50,7 +50,20 @@ else
 	SDKDIR = $(abspath $(dir $(shell which $(CC)))../m68k-amiga-elf/sys-include)
 endif
 
-CCFLAGS   = -g -MP -MMD -m68020 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow -fomit-frame-pointer -fno-tree-loop-distribution -fno-strict-aliasing -fno-exceptions -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Iinclude $(DATA_FLAGS)
+# Optimization is parameterized so a gdb-friendly build can override it.
+# DBG=1 -> -O0: precise line breakpoints (no reordering) and every local/static
+# lives in memory (not elided into registers), which the gdb-driven test harness
+# needs to drive the Amiga UI via input injection reliably (-Ofast reordering
+# defeats it). Same struct/ABI layout as the release build, so save-format
+# cross-target tests stay valid. NOTE: keep -fomit-frame-pointer even under DBG
+# — -fno-omit-frame-pointer ICEs GCC 15.1.0 (dwarf2out_frame_debug_adjust_cfa);
+# -g already emits CFI so gdb can still unwind without a frame pointer.
+OPT = -Ofast
+FP  = -fomit-frame-pointer
+ifdef DBG
+OPT = -O0
+endif
+CCFLAGS   = -g -MP -MMD -m68020 $(OPT) -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -Wno-stringop-overflow $(FP) -fno-tree-loop-distribution -fno-strict-aliasing -fno-exceptions -fno-optimize-sibling-calls -ffunction-sections -fdata-sections -Iinclude $(DATA_FLAGS)
 
 # DUMP_ASM=1 → save preprocessed .i and assembly .s next to each .o.
 # Slight build slowdown; output lands in obj/ alongside .o files.
