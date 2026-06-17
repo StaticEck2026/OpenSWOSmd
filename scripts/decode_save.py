@@ -10,7 +10,14 @@ on the 32- and 64-bit builds with SWOS_SAVE_FORMAT_JSON_VERIFY.
 
 Usage:
     scripts/decode_save.py <save-file> [<save-file> ...]
-    scripts/decode_save.py --diff <save-a> <save-b>   # compare slot fields
+    scripts/decode_save.py --diff <save-a> <save-b>     # compare slot fields
+    scripts/decode_save.py --standings <save-file> ...  # name-resolved league/
+                                                        # group tables only
+
+The --standings view resolves each row's stored team identity (-1 careerTeam,
+else selected_teams index) to a team name and prints the league/group table the
+way the in-game screen shows it — for eyeballing an SDL save against an Amiga
+(big-endian) load during cross-target verification.
 
 Career (.CAR) saves carry a `comp_slots` object with up to five named slots
 (primary/secondary/tertiary/diy/euro). Preset/DIY (.PRE/.DIY) saves carry a
@@ -157,6 +164,132 @@ def print_stage(doc):
                 print(f"        {k}: {pretty}")
 
 
+def build_name_resolver(doc):
+    """Return resolve(identity) -> team-name string, mirroring diy_resolve_team:
+    identity -1 == careerTeam, >= 0 == index into the selected_teams array.
+    This is what turns a standings row's stored team identity into the name the
+    Amiga league/group screen prints, so the two can be eyeballed side by side."""
+    sel = doc.get("selected_teams")
+    sel = sel if isinstance(sel, list) else []
+
+    def team_name(entry):
+        if isinstance(entry, dict):
+            t = entry.get("team", entry)
+            if isinstance(t, dict):
+                return (t.get("team_name") or "").strip()
+        return ""
+
+    names = [team_name(e) for e in sel]
+    ct = doc.get("career_team")
+    career_name = team_name(ct) if isinstance(ct, dict) else ""
+
+    def resolve(identity):
+        try:
+            i = int(identity)
+        except (TypeError, ValueError):
+            return f"?id={identity!r}"
+        if i < 0:
+            return f"{career_name or '(career team)'} *"
+        if 0 <= i < len(names):
+            return names[i] or f"(sel #{i})"
+        return f"(sel #{i}?)"
+
+    return resolve
+
+
+def _row_int(r, *keys):
+    for k in keys:
+        if k in r:
+            return int(r.get(k, 0) or 0)
+    return 0
+
+
+def _print_table(title, rows, resolve, id_keys, note="", sort=False):
+    """rows: list of dicts with gp/w/d/l/gf/ga/pts and an id field (id_keys).
+
+    Saved rows are in storage (alphabetical/entry) order; the in-game league
+    screen sorts by points > goal-diff > goals-for > name (see
+    _DIY_SortLeagueTableByStandings). sort=True mirrors that so a single-table
+    league lines up row-for-row with the Amiga screen. Group comps keep storage
+    order (a global sort across multiple groups would be misleading) — compare
+    those by team name."""
+    decorated = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        ident = next((r[k] for k in id_keys if k in r), None)
+        decorated.append((r, resolve(ident if ident is not None else 0)))
+    if sort:
+        decorated.sort(key=lambda rn: (
+            -_row_int(rn[0], "pts"),
+            -(_row_int(rn[0], "gf") - _row_int(rn[0], "ga")),
+            -_row_int(rn[0], "gf"),
+            rn[1].rstrip(" *")))
+    print(f"\n  {title}{('   ' + note) if note else ''}")
+    print("    Pos  Team                       GP   W   D   L  GF  GA  GD Pts")
+    for pos, (r, name) in enumerate(decorated, 1):
+        gf, ga = _row_int(r, "gf"), _row_int(r, "ga")
+        print("    %3d  %-24s %3d %3d %3d %3d %3d %3d %+4d %3d" % (
+            pos, name[:24], _row_int(r, "gp"), _row_int(r, "w"),
+            _row_int(r, "d"), _row_int(r, "l"), gf, ga, gf - ga,
+            _row_int(r, "pts")))
+
+
+def print_standings_named(doc):
+    """Human-readable standings for cross-target (Amiga screen) comparison.
+    Covers all three Stage-2 paths: primary domestic LEAGUE
+    (competition_overrides.league_rows), primary national GROUP
+    (stage_standings), and per-context club-cup GROUP
+    (<ctx>_comp_slot_stage_standings)."""
+    resolve = build_name_resolver(doc)
+    printed = False
+
+    # --- Scenario 1: primary domestic league ---
+    co = doc.get("competition_overrides")
+    if isinstance(co, dict) and co.get("type") == 0 and isinstance(
+            co.get("league_rows"), list):
+        rows = co["league_rows"]
+        prim = (doc.get("comp_slots") or {}).get("primary") or {}
+        n = prim.get("num_teams")
+        if not isinstance(n, int) or n <= 0:
+            n = sum(1 for r in rows if isinstance(r, dict) and (
+                _row_int(r, "gp") or _row_int(r, "id") < 0))
+        cname = fmt_name(prim) or "league"
+        _print_table(f"LEAGUE TABLE — {cname}  (primary, type-0)",
+                     rows[:n], resolve, ("id",),
+                     note="* = your career team", sort=True)
+        printed = True
+
+    # --- Scenario 2: primary national tournament group phase ---
+    if isinstance(doc.get("stage_standings"), list):
+        rows = doc["stage_standings"]
+        live = [r for r in rows if isinstance(r, dict) and (
+            _row_int(r, "gp") or _row_int(r, "pts") or _row_int(r, "gf"))]
+        _print_table("GROUP STANDINGS — primary tournament (type-2)",
+                     live or rows, resolve, ("so", "id"),
+                     note="row i -> selected_teams[i]")
+        printed = True
+
+    # --- Scenario 3: per-context club-cup group phase ---
+    for key in sorted(doc):
+        if not key.endswith("_comp_slot_stage_standings"):
+            continue
+        rows = doc.get(key)
+        if not isinstance(rows, list):
+            continue
+        live = [r for r in rows if isinstance(r, dict) and (
+            _row_int(r, "gp") or _row_int(r, "pts") or _row_int(r, "gf"))]
+        ctx = key[: -len("_comp_slot_stage_standings")]
+        _print_table(f"GROUP STANDINGS — {ctx} context (type-2 club cup)",
+                     live or rows, resolve, ("so", "id"),
+                     note="* = your career team")
+        printed = True
+
+    if not printed:
+        print("\n  (no standings tables in this save — comp at season start, "
+              "or a knockout phase with no league/group table)")
+
+
 def summarise(path):
     doc = load(path)
     print(f"\n=== {path} ===")
@@ -172,6 +305,7 @@ def summarise(path):
     for label, slot in slots:
         print_slot(label, slot)
     print_stage(doc)
+    print_standings_named(doc)
     if type2:
         print(f"  => TYPE-2 tournament present in: {', '.join(type2)}")
     else:
@@ -214,6 +348,17 @@ def main(argv):
             print("usage: decode_save.py --diff <save-a> <save-b>")
             return 2
         diff(argv[2], argv[3])
+        return 0
+    if argv[1] == "--standings":
+        if len(argv) < 3:
+            print("usage: decode_save.py --standings <save-file> [...]")
+            return 2
+        for p in argv[2:]:
+            try:
+                print(f"\n=== {p} ===")
+                print_standings_named(load(p))
+            except Exception as e:  # noqa: BLE001 - inspector, report and continue
+                print(f"  ERROR: {e}")
         return 0
     for p in argv[1:]:
         try:
