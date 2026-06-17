@@ -95,9 +95,12 @@ class SwosHarness:
         return self.where()
 
     def fire(self):
-        """Press fire on the current entry (activates its onSelect)."""
+        """Press fire on the current entry (activates its onSelect). Sets BOTH
+        fire (d7 bit 0) and shortFire (bit 5): most menu *selections* (CONTINUE
+        buttons, etc.) gate on shortFire via the entry's controlMask, not fire."""
         self.prime()
         self.h.set_var("fire", 1)
+        self.h.set_var("shortFire", 1)
         self.h.cont(20)
         return self.where()
 
@@ -105,7 +108,9 @@ class SwosHarness:
         """Hold several controls for one frame (e.g. ['fire','left'] -> OTHER
         nationality). controls = subset of fire/up/down/left/right."""
         self.prime()
-        self.h.set_var("fire", 1 if "fire" in controls else 0)
+        if "fire" in controls:
+            self.h.set_var("fire", 1)
+            self.h.set_var("shortFire", 1)
         for d in ("up", "down", "left", "right"):
             if d in controls:
                 self.h.set_var(DIR_GLOBAL[d], 1)
