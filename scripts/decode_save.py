@@ -270,6 +270,24 @@ def print_standings_named(doc):
                      note="row i -> selected_teams[i]")
         printed = True
 
+    # --- Context type-0 league (e.g. national FRIENDLY mini-league) ---
+    for key in sorted(doc):
+        if not key.endswith("_league_rows"):
+            continue
+        rows = doc.get(key)
+        if not isinstance(rows, list):
+            continue
+        ctx = key[: -len("_league_rows")]
+        # Only the first num_teams rows are this league's teams (the rest are
+        # stale slot residue, same as the primary's 64-row array).
+        slot = (doc.get("comp_slots") or {}).get(ctx) or {}
+        n = slot.get("num_teams")
+        shown = rows[:n] if isinstance(n, int) and n > 0 else rows
+        _print_table(f"LEAGUE TABLE — {ctx} context (type-0)",
+                     shown, resolve, ("id",),
+                     note="* = your career team", sort=True)
+        printed = True
+
     # --- Scenario 3: per-context club-cup group phase ---
     for key in sorted(doc):
         if not key.endswith("_comp_slot_stage_standings"):
@@ -290,6 +308,75 @@ def print_standings_named(doc):
               "or a knockout phase with no league/group table)")
 
 
+def _team_label(entry):
+    """`team_name (coach NAME)` from a {team:{...}} or bare team {...} entry."""
+    if not isinstance(entry, dict):
+        return "?"
+    t = entry.get("team", entry)
+    if not isinstance(t, dict):
+        return "?"
+    name = (t.get("team_name") or "").strip() or "(none)"
+    coach = (t.get("coach_name") or "").strip()
+    return name + (f" (coach {coach})" if coach else "")
+
+
+def _count_populated(lst):
+    """Count entries with any truthy scalar field — a rough 'in use' count for
+    the fixed-size tables (offers/market/reserves) that pad with empty records."""
+    if not isinstance(lst, list):
+        return 0
+    n = 0
+    for e in lst:
+        if isinstance(e, dict):
+            if any(v for v in e.values() if not isinstance(v, (list, dict))):
+                n += 1
+        elif e:
+            n += 1
+    return n
+
+
+def print_career_state(doc):
+    """Concise summary of the non-competition career state, so every top-level
+    key in a .CAR is surfaced (nothing invisible). Summary level matches the
+    rest of the inspector — counts + key fields, not a full field dump.
+    All keys are presence-guarded, so this is a no-op on .PRE/.DIY/.SEA."""
+    if "career_team" in doc or "current_team" in doc:
+        print(f"  career_team:  {_team_label(doc.get('career_team'))}")
+        print(f"  current_team: {_team_label(doc.get('current_team'))}")
+    if doc.get("primary_country_code") is not None:
+        print(f"  primary_country_code={doc.get('primary_country_code')}")
+
+    teams = [f"{lbl}={len(doc[k])}" for k, lbl in
+             (("selected_teams", "selected"), ("tmd_teams", "tmd"))
+             if isinstance(doc.get(k), list)]
+    if teams:
+        print("  teams: " + "  ".join(teams))
+    for k in ("career_team_reserves", "current_team_reserves",
+              "career_foreign_market_players"):
+        if isinstance(doc.get(k), list):
+            print(f"  {k}: {len(doc[k])} ({_count_populated(doc[k])} populated)")
+    for k in ("transfer_offer_table", "new_job_offers", "job_offers"):
+        if isinstance(doc.get(k), list):
+            print(f"  {k}: {len(doc[k])} ({_count_populated(doc[k])} active)")
+
+    if isinstance(doc.get("season_informations"), list):
+        print(f"  season_informations: {len(doc['season_informations'])} rows")
+    if isinstance(doc.get("career_scalars"), dict):
+        print(f"  career_scalars: {len(doc['career_scalars'])} fields")
+    if isinstance(doc.get("competition_overrides"), dict):
+        print(f"  competition_overrides: type={doc['competition_overrides'].get('type')}")
+    if isinstance(doc.get("comp_copy_teamlists"), list):
+        ct = doc["comp_copy_teamlists"]
+        nonempty = sum(1 for a in ct if isinstance(a, list) and a)
+        print(f"  comp_copy_teamlists: {len(ct)} records ({nonempty} non-empty)")
+    if isinstance(doc.get("comp_copy_dynamic"), dict):
+        print(f"  comp_copy_dynamic: {doc['comp_copy_dynamic']}")
+    cache = [f"{k}={len(doc[k])}" for k in ("cache_strides", "cache_scores")
+             if isinstance(doc.get(k), list)]
+    if cache:
+        print("  " + "  ".join(cache))
+
+
 def summarise(path):
     doc = load(path)
     print(f"\n=== {path} ===")
@@ -306,6 +393,7 @@ def summarise(path):
         print_slot(label, slot)
     print_stage(doc)
     print_standings_named(doc)
+    print_career_state(doc)
     if type2:
         print(f"  => TYPE-2 tournament present in: {', '.join(type2)}")
     else:
