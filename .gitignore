@@ -1,3 +1,4 @@
 *.o
 *.exe
 sensible-soccer-nes-c/
+scripts/__pycache__/

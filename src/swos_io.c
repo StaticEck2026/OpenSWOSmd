@@ -30,6 +30,14 @@ int strcmp(const char *a, const char *b) {
     return (int)(unsigned char)*a - (int)(unsigned char)*b;
 }
 
+/* mjson uses strncmp; -Ofast inlined it as a builtin so it never needed a
+ * definition, but -O0 (DBG build) emits a real call. */
+int strncmp(const char *a, const char *b, size_t n) {
+    while (n && *a && *a == *b) { a++; b++; n--; }
+    if (n == 0) return 0;
+    return (int)(unsigned char)*a - (int)(unsigned char)*b;
+}
+
 int memcmp(const void *a, const void *b, size_t n) {
     const unsigned char *pa = (const unsigned char *)a;
     const unsigned char *pb = (const unsigned char *)b;

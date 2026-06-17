@@ -1,0 +1,179 @@
+# SWOS gdb Test Harness
+
+A gdb-driven harness that lets the assistant **drive the game and read its state
+itself** — navigate menus, press fire, load saves, capture the screen — on
+**both** the SDL build and the Amiga build (under FS-UAE), with no OS-level input
+or screenshot tools. Navigation feedback comes from reading the game's internal
+menu state over gdb (fast + token-light); screenshots are an orientation aid
+only.
+
+This document is **separate from the generic gdb daemon doc**
+(`SWOS_C/docs/GDB.md`). GDB.md documents the reusable transport; this documents
+the SWOS automation built on top of it.
+
+## Architecture (layered; the SWOS bits are a plugin)
+
+```
+gdb_proxy.py        generic transport — one persistent gdb session, cmd /
+ (SWOS_C tree)       waitstop / health / watch; --mode amiga (FS-UAE remote)
+                     or --mode sdl (native x86). Reusable, no game knowledge.
+        |
+harness_lib.py      generic harness primitives — read/write vars, breakpoints,
+ (scripts/)          input injection (break+set+continue), framebuffer capture.
+                     Reusable across projects; no game knowledge.
+        |
+swos_plugin.py      THE SWOS PLUGIN — Menu struct accessors, the injection point
+ (scripts/)          + direction encoding, framebuffer geometry, save loading.
+                     Swap THIS file to drive a different game.
+        |
+swos_harness.py     thin CLI (where / enum / nav / fire / combo / goto / select
+ (scripts/)          / load / cap / check).
+```
+
+The seam is deliberate: `gdb_proxy.py` + `harness_lib.py` are game-agnostic and
+can be lifted to another project; everything SWOS-specific is in
+`swos_plugin.py`.
+
+## Why one mechanism drives both targets
+
+The menu system (`src/menu_system.c`) is shared C between the SDL and Amiga
+builds. The harness injects input at a single line in `_MenuProc`
+(`menu_system.c:1567`, right after `_MenuCheckControls` sets the input globals
+and before the `d7`/onSelect dispatch and the nav read). Setting the input
+globals there replicates real input for the whole frame — so the **same
+injection works on both targets**, no per-target input code.
+
+`_MenuCheckControls` re-derives the input globals from (idle) hardware every
+frame, so an injected value is automatically "released" on the next frame — a
+single set = a single key tap, no explicit release needed.
+
+Direction encoding (`menuControlsDirection`): `up=0, right=2, down=4, left=6`
+(verified against `nextEntryDirectionOffsets` + entry neighbor links). `fire=1`
+presses the current entry. For value-cyclers (e.g. nationality → OTHER) use a
+combo, e.g. `combo fire left`.
+
+## Prerequisite: a write-capable gdb stub
+
+Input injection, inferior calls, and filename staging all require gdb to **write**
+target memory/registers. Native SDL gdb is fine. **The FS-UAE / bartman stub was
+read-only** (it ACKs reads + breakpoints but silently drops `M`/`X`/`G`/`P`
+writes — so `set var` never stuck and every injection no-op'd). It was patched to
+add write support — see below. Run `swos_harness.py check` to confirm writes
+reach the target (it fails loudly on a read-only stub).
+
+### FS-UAE write support (the patch)
+
+Source: `C:\Projects\Linux\fs-uae` (the bartman fork; has
+`src/barto_gdbserver.cpp`). Added to `barto_gdbserver.cpp`:
+
+- `set_register(int reg, uint32_t value)` — inverse of `get_register`
+  (D0-7=`m68k_dreg`, A0-7=`m68k_areg`, SR=`regs.sr`+`MakeFromSR()`,
+  PC=`m68k_setpc`). Values arrive MSB-first hex, same as `hex32` emits.
+- Dispatch handlers after the `m` (read) case:
+  - `M addr,len:hex` → memory write via `get_mem_bank(adr).bput()` (guarded by
+    `debug_safe_addr`).
+  - `P n=val` → one register; `G <144 hex>` → all 18 registers.
+- `X` (binary write) is intentionally left unimplemented: gdb's auto-probe
+  disables it and falls back to `M`, so writes work. **Do not** `set remote
+  X-packet on` — the stub won't answer `X` and gdb hangs.
+
+Build (WSL-native — the bartman extension ships Linux binaries):
+
+```sh
+make -C /mnt/c/Projects/Linux/fs-uae -j$(nproc)            # incremental relink OK
+cp /mnt/c/Projects/Linux/fs-uae/fs-uae \
+   /mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-*/bin/linux/fs-uae/fs-uae
+```
+
+(The original is backed up as `fs-uae.orig.bak`. The patch is purely additive —
+safe to keep permanently. The bartman dir stays the cwd for its support files.)
+
+## Amiga `DBG=1` build (precise breakpoints)
+
+The release Amiga build is `-Ofast`, whose reordering makes line breakpoints
+imprecise and elides locals. The Makefile (`SWOS_C/Makefile`) has a **`DBG=1`**
+mode that builds `-O0` (precise line breakpoints, every local/static live in
+memory). Struct/ABI layout is opt-independent, so save-format cross-target tests
+stay valid.
+
+```sh
+export AMIGA_BIN=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-*/bin/linux
+export PATH=$AMIGA_BIN/opt/bin:$AMIGA_BIN:$PATH
+rm -f /mnt/c/Projects/AI/SWOS/SWOS_C/obj/* /mnt/c/Projects/AI/SWOS/SWOS_C/out/*   # first WSL build only: stale Windows-path .d files break GNU make
+make -C /mnt/c/Projects/AI/SWOS/SWOS_C DBG=1 DUMP_ASM=0 -j$(nproc)
+```
+
+Notes: keep `-fomit-frame-pointer` even in DBG (`-fno-omit-frame-pointer` ICEs
+GCC 15.1.0 in `dwarf2out_frame_debug_adjust_cfa`); `-g` still emits CFI so gdb
+unwinds. `-O0` emits a real `strncmp` that `-Ofast` inlined — provided in the
+`#if defined(__m68k__)` shim in `src/swos_io.c`. Release binary backed up as
+`uae/dh0/data/SWOS2.release.bak`.
+
+## Usage
+
+Bring a target up (see `SWOS_C/docs/GDB.md` for the daemon / `amiga_gdb.sh`),
+get it to a menu, then:
+
+```sh
+python3 scripts/swos_harness.py check            # verify gdb writes reach target
+python3 scripts/swos_harness.py where            # ordinal + onSelect symbol + count
+python3 scripts/swos_harness.py enum             # every entry's onSelect symbol
+python3 scripts/swos_harness.py nav down         # one step (up/down/left/right)
+python3 scripts/swos_harness.py fire             # press the current entry
+python3 scripts/swos_harness.py combo fire left  # hold controls one frame
+python3 scripts/swos_harness.py goto _CareerMenu # move selection by action symbol
+python3 scripts/swos_harness.py select _CareerMenu  # goto + fire
+python3 scripts/swos_harness.py load HYBRID_CC.CAR  # load a career via the game's loader
+python3 scripts/swos_harness.py cap /tmp/s.png   # screenshot (SDL only)
+```
+
+`nav`/`fire`/`combo` auto-`prime` (set the inject breakpoint and stop on it).
+`goto`/`select` jump directly via `_SetCurrentEntry` (a memory write).
+
+## Save loading (no UI navigation needed)
+
+`load NAME.CAR` stages the filename into a scratch global (`menuSongData`, via
+per-byte writes — no inferior `malloc`) and calls the game's own
+`SaveJson_LoadCareer` natively. This is the clean way to set up a cross-target
+test: load a save, then read the restored state read-only and compare to the SDL
+side (or `scripts/decode_save.py`).
+
+## Screen capture
+
+`cap OUT.png` writes a PNG of the live display on **either target** (orientation
+aid; drive via menu state for precision). The plugin auto-detects the target:
+
+- **SDL** — 8bpp chunky framebuffer (`frontbufferBaseAltPtr`, 336×272) + the
+  `s_palette` RGBA table. (`scripts/swos_screencap.py` is the standalone SDL
+  version.)
+- **Amiga** — interleaved bitplanes decoded planar→chunky→RGB. Handles **AGA**
+  (8 planes / 256 colours) and **OCS** (4 planes / 16 colours), auto-detected via
+  the `bitPlane4Base` symbol (AGA-only). Layout (`src/include/display.h`): pixel
+  (x,y) bit p is at `base + y*PLANE_STRIDE*NUM_PLANES + p*PLANE_STRIDE + x/8`,
+  bit `7-(x%8)`, `PLANE_STRIDE=44`. The displayed base is the flag-selected
+  frontbuffer (`usePlaneOffsetFlag`→mask, `useAltBaseFlag`→Alt, else base).
+  Palette is `gamePalette[]` (big-endian uint16, 12-bit `0x0RGB`; nibble×0x11 →
+  8-bit). Camera offsets are assumed 0 (menus); in-match scrolling isn't decoded.
+
+## Reusing for another project
+
+1. Keep `gdb_proxy.py` and `harness_lib.py` as-is.
+2. Write a new `<game>_plugin.py` mirroring `swos_plugin.py`: the input
+   injection point + encoding for that game's UI, its menu/state accessors, and
+   framebuffer geometry.
+3. If the target is an emulator with a read-only gdb stub, patch it for writes
+   (as done for FS-UAE) or confirm writes another way (`check`).
+
+## Status
+
+- Validated on the **Amiga** (FS-UAE, patched stub, `-O0` DBG build): writes,
+  menu state read, multi-step navigation (`nav down`/`up`, action symbols
+  resolved each step), and **screen capture** (OCS decode verified pixel-correct
+  against the live main menu). The AGA capture path shares the same parameterized
+  decode (planes=8/colors=256, palette format confirmed against
+  `_WriteCopperPalette`'s AGA branch); runtime verification against an AGA build
+  is pending because the **AGA game build itself isn't fully implemented yet** —
+  not a harness limitation.
+- The injection is shared C, so it applies to **SDL** identically (native gdb
+  writes always work); re-validate SDL after pointing the daemon at a runnable
+  Linux ELF.

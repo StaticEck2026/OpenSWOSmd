@@ -1,208 +1,89 @@
 #!/usr/bin/env python3
-"""SWOS gdb-driven test harness — drive menus + read state over the gdb_proxy
-daemon, WITHOUT screenshots (fast + token-light). Screenshots (swos_screencap.py)
-are for orientation only; navigation feedback comes from reading the menu state
-internally.
+"""SWOS gdb test-harness CLI — drive menus + read state via the gdb_proxy daemon,
+WITHOUT screenshots (fast + token-light). Screenshots (`cap`) are for
+orientation only; navigation feedback comes from reading the menu state.
 
-Mechanism (SDL; Amiga is analogous once the daemon is --mode amiga):
-  - state:  ((Menu *)currentMenu)->selectedEntry gives the live selection;
-            ->ordinal identifies it, ->onSelect resolves to the action symbol
-            (e.g. <_CareerMenu>) — gdb prints the function name.
-  - input:  set the InputSDL keyboard-state statics s_kbd_up/down/left/right/fire;
-            InputSDL_PostFrame folds them into joy1Dat/ciaa each frame, which
-            _Player1StatusProc decodes (pl1Direction) and _MenuCheckControls
-            consumes. A clean tap = release (clear the edge) -> press -> release,
-            frame-stepped on a breakpoint at _MenuCheckControls (once per menu
-            frame). Verified: down moved ordinal 6->7.
+This is a thin CLI over the layered harness (see docs/HARNESS.md):
+  gdb_proxy.py (transport) -> harness_lib.py (generic) -> swos_plugin.py (game).
 
-The game must already be AT A MENU (so _MenuCheckControls runs). Commands:
-  where                  print selectedEntry ordinal + action symbol + numEntries
-  nav up|down|left|right one directional tap; prints where afterwards
-  fire                   select the current entry (one fire tap)
-  cap OUT.png            screenshot (orientation only; shells to swos_screencap.py)
-
-All ops leave the target stopped at the _MenuCheckControls breakpoint.
+Driving works on BOTH the SDL build and the Amiga build (FS-UAE), via one
+injection point in the shared _MenuProc — no per-target input code. The game
+must be AT A MENU. Commands:
+  where                  selected ordinal + onSelect symbol + numEntries
+  enum                   list every entry's onSelect symbol
+  nav up|down|left|right one directional step; prints where after
+  fire                   press fire on the current entry
+  combo CTRL...          hold controls together one frame (e.g. combo fire left)
+  goto SYMBOL            move selection to entry whose onSelect == SYMBOL
+  select SYMBOL          goto SYMBOL then fire
+  load NAME.CAR          load a career save via the game's own loader
+  cap OUT.png            screenshot (SDL only; orientation aid)
+  check                  self-test that gdb writes reach the target (read-only
+                         stub detector)
 """
 import argparse
-import os
-import re
-import subprocess
 import sys
-
-PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py"
-HERE = os.path.dirname(os.path.abspath(__file__))
-MENU = "((Menu *)currentMenu)->selectedEntry"
-
-
-def gdb(command, timeout=6):
-    r = subprocess.run(["python3", PROXY, "cmd", command, "--timeout", str(timeout)],
-                       capture_output=True, text=True)
-    return r.stdout + r.stderr
-
-
-def gset(var, val):
-    gdb(f"set variable {var} = {val}")
-
-
-def ensure_menu_bp():
-    """Set a breakpoint on _MenuCheckControls (once) for per-menu-frame stepping."""
-    info = gdb("info breakpoints")
-    if "_MenuCheckControls" not in info:
-        gdb("break _MenuCheckControls")
-
-
-def frame():
-    """Advance to the next _MenuCheckControls (one menu frame)."""
-    gdb("continue", timeout=4)
-
-
-def read_val(expr):
-    m = re.search(r"\$\d+\s*=\s*(.+)", gdb(f"print {expr}"))
-    return m.group(1).strip() if m else "?"
-
-
-def where():
-    ordinal = read_val(f"{MENU}->ordinal")
-    nentries = read_val("((Menu *)currentMenu)->numEntries")
-    action = read_val(f"{MENU}->onSelect")
-    sym = re.search(r"<([^>+]+)", action)
-    action = sym.group(1) if sym else action
-    print(f"selected: ordinal={ordinal}  action={action}  (numEntries={nentries})")
-
-
-def tap(var, press_frames=3):
-    """Clean edge tap of an s_kbd_* control: clear -> press -> release."""
-    ensure_menu_bp()
-    gset(var, 0)
-    for _ in range(4):
-        frame()                      # clear the held-direction edge
-    gset(var, 1)
-    for _ in range(press_frames):
-        frame()                      # fresh edge -> action
-    gset(var, 0)
-    for _ in range(2):
-        frame()                      # release
-
-
-def sym_of(expr):
-    """print <expr> and return the resolved <symbol> name (function pointer)."""
-    m = re.search(r"<([^>+]+)", gdb(f"print {expr}"))
-    return m.group(1) if m else None
-
-
-def num_entries():
-    m = re.search(r"=\s*(-?\d+)", gdb("print ((Menu *)currentMenu)->numEntries"))
-    return int(m.group(1)) if m else 0
-
-
-def entry_action(i):
-    """onSelect action symbol of menu entry `i` (platform-independent via
-    _CalcMenuEntryAddress, so it works on SDL and Amiga)."""
-    return sym_of(f"((MenuEntry *)_CalcMenuEntryAddress({i}))->onSelect")
-
-
-def enum():
-    n = num_entries()
-    print(f"menu: {n} entries")
-    for i in range(n):
-        a = entry_action(i)
-        if a:
-            print(f"  {i:2d} -> {a}")
-
-
-def goto(symbol):
-    """Move the selection to the entry whose onSelect == symbol (direct, via
-    _SetCurrentEntry — no path-finding, NO fire). Returns the ordinal or None.
-    Use this to land on a value-cycling control (e.g. nationality) before
-    applying a combo; use `select` to actually activate an entry."""
-    ensure_menu_bp()
-    n = num_entries()
-    target = next((i for i in range(n) if entry_action(i) == symbol), None)
-    if target is None:
-        print(f"goto: '{symbol}' not in this menu (try `enum`)")
-        return None
-    gdb(f"call (void)_SetCurrentEntry({target})")
-    got = sym_of("((Menu *)currentMenu)->selectedEntry->onSelect")
-    if got != symbol:
-        print(f"goto: set failed (selected={got})")
-        return None
-    return target
-
-
-def select(symbol):
-    """goto(symbol) then fire to activate it."""
-    target = goto(symbol)
-    if target is None:
-        return 1
-    tap("s_kbd_fire")
-    print(f"selected+fired {symbol} (ordinal {target})")
-    return 0
-
-
-def tap_multi(vars_, press_frames=3):
-    """Hold several s_kbd_* controls together for one clean tap (clear edge ->
-    press -> release). For combos like fire+left (nationality -> OTHER)."""
-    ensure_menu_bp()
-    for v in vars_:
-        gset(v, 0)
-    for _ in range(4):
-        frame()
-    for v in vars_:
-        gset(v, 1)
-    for _ in range(press_frames):
-        frame()
-    for v in vars_:
-        gset(v, 0)
-    for _ in range(2):
-        frame()
-
-
-def combo(ctrls):
-    tap_multi([f"s_kbd_{c}" for c in ctrls])
-    print("combo " + "+".join(ctrls))
+from swos_plugin import SwosHarness
 
 
 def main(argv):
     ap = argparse.ArgumentParser()
+    ap.add_argument("--proxy", default=None, help="gdb_proxy.py path override")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("where")
     sub.add_parser("enum")
-    p_nav = sub.add_parser("nav")
-    p_nav.add_argument("dir", choices=["up", "down", "left", "right"])
+    sub.add_parser("prime")
+    sub.add_parser("check")
+    p = sub.add_parser("nav"); p.add_argument("dir", choices=["up", "down", "left", "right"])
     sub.add_parser("fire")
-    p_sel = sub.add_parser("select")
-    p_sel.add_argument("symbol")
-    p_goto = sub.add_parser("goto")
-    p_goto.add_argument("symbol")
-    p_combo = sub.add_parser("combo")
-    p_combo.add_argument("ctrls", nargs="+",
-                         help="controls to hold together, e.g. fire left")
-    p_cap = sub.add_parser("cap")
-    p_cap.add_argument("out")
+    p = sub.add_parser("combo"); p.add_argument("ctrls", nargs="+")
+    p = sub.add_parser("goto"); p.add_argument("symbol")
+    p = sub.add_parser("select"); p.add_argument("symbol")
+    p = sub.add_parser("load"); p.add_argument("name")
+    p = sub.add_parser("cap"); p.add_argument("out")
     a = ap.parse_args(argv[1:])
 
+    H = SwosHarness(proxy=a.proxy)
+
+    def show(w):
+        print(f"selected: ordinal={w['ordinal']}  action={w['action']}  "
+              f"(numEntries={w['num_entries']})")
+
     if a.cmd == "where":
-        where()
+        H.ensure_stopped(); show(H.where())
     elif a.cmd == "enum":
-        enum()
+        H.ensure_stopped()
+        print(f"target={'SDL' if H.is_sdl() else 'Amiga'}")
+        for i, act in H.enum():
+            if act:
+                print(f"  {i:2d} -> {act}")
+    elif a.cmd == "prime":
+        H.prime(); show(H.where())
+    elif a.cmd == "check":
+        ok, rb = H.h.write_check("numSelectedTeams", 88)
+        H.h.set_var("numSelectedTeams", 0)
+        print(f"write {'OK' if ok else 'FAILED (read-only stub?)'} "
+              f"(set 88 -> read {rb})")
+        return 0 if ok else 1
     elif a.cmd == "nav":
-        tap(f"s_kbd_{a.dir}")
-        where()
+        show(H.nav(a.dir))
     elif a.cmd == "fire":
-        tap("s_kbd_fire")
-        print("fired.")
-    elif a.cmd == "select":
-        return select(a.symbol)
-    elif a.cmd == "goto":
-        ok = goto(a.symbol)
-        if ok is not None:
-            where()
-        return 0 if ok is not None else 1
+        show(H.fire())
     elif a.cmd == "combo":
-        combo(a.ctrls)
-        where()
+        show(H.combo(a.ctrls))
+    elif a.cmd == "goto":
+        t = H.goto(a.symbol)
+        print(f"goto {a.symbol}: {'ordinal '+str(t) if t is not None else 'not found'}")
+        return 0 if t is not None else 1
+    elif a.cmd == "select":
+        ok = H.select(a.symbol)
+        print(f"select {a.symbol}: {'fired' if ok else 'not found'}")
+        return 0 if ok else 1
+    elif a.cmd == "load":
+        rc = H.load_career(a.name)
+        print(f"load {a.name}: returned {rc}")
     elif a.cmd == "cap":
-        subprocess.run(["python3", os.path.join(HERE, "swos_screencap.py"), a.out])
+        print(H.screencap(a.out))
     return 0
 
 
