@@ -3791,6 +3791,82 @@ static void load_competition_overrides(const char *buf, int buflen)
     }
 }
 
+/* Context (non-primary) type-0 league standings — the missing twin of
+ * load_competition_overrides. emit_competition_overrides covers the PRIMARY
+ * slot's leagueStandings typed/offset-correct, and emit_ctx_stage covers TYPE-2
+ * context slots' stageSnapshot standings — but a TYPE-0 league sitting in a
+ * *context* slot (secondary/tertiary/diy, e.g. a national side's FRIENDLY
+ * mini-league) had NO typed standings path. Its leagueStandings rode only the
+ * raw 64-bit-layout slot image, so a 32-bit BE Amiga load read it 8 bytes off
+ * (the namePtr/leagueStandings 0x5C8<->0x5D0 shift): every row's teamSelOffset
+ * came back 0 (all teams resolved to selectedTeams[0]) plus a stray byte in
+ * `draws` (Amiga-confirmed 2026-06-17 via gdb on MILAN2.CAR's FRIENDLY — the
+ * real teamSelOffsets -1/6/8/9/7/10 sat 8 bytes late). Emit the rows typed
+ * (teamSelOffset->identity, 7 endian-neutral u16 stats) per context slot and
+ * restore them over the raw image on load, exactly like the primary override.
+ * Key "<slot>_league_rows". numTeams<=0 (empty/inactive slot) emits nothing. */
+static void emit_ctx_league_standings(mjson_print_fn_t fn, void *fnd,
+                                      const char *key, const DIYCompetitionEx *slot)
+{
+    if (slot->base.competitionType != 0 || slot->base.numTeams <= 0)
+        return;
+    char sk[64];
+    swos_io_snprintf(sk, sizeof(sk), "%s_league_rows", key);
+    mjson_printf(fn, fnd, ",\n  %Q:[", sk);
+    for (int i = 0; i < DIY_OVR_LEAGUE_ROWS; i++) {
+        DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)slot, i);
+        if (i > 0) mjson_printf(fn, fnd, "%s", ",");
+        mjson_printf(fn, fnd,
+            "{%Q:%d,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u}",
+            "id",  (int)diy_teamseloffset_to_identity(r->teamSelOffset),
+            "gp",  (unsigned)r->gamesPlayed,
+            "w",   (unsigned)r->wins,
+            "d",   (unsigned)r->draws,
+            "l",   (unsigned)r->losses,
+            "gf",  (unsigned)r->goalsFor,
+            "ga",  (unsigned)r->goalsAgainst,
+            "pts", (unsigned)r->points);
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
+static void load_ctx_league_standings(const char *src, int src_size,
+                                      const char *key, DIYCompetitionEx *slot)
+{
+    if (slot->base.competitionType != 0)
+        return;
+    char sk[64];
+    swos_io_snprintf(sk, sizeof(sk), "$.%s_league_rows", key);
+    const char *rows = NULL; int rows_len = 0;
+    if (mjson_find(src, src_size, sk, &rows, &rows_len) != MJSON_TOK_ARRAY)
+        return;                          /* pre-fix save -> raw image stands */
+    int pos = 0, voff, vlen, vt, i = 0;
+    while (i < DIY_OVR_LEAGUE_ROWS &&
+           (pos = fast_array_next(rows, rows_len, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) { i++; continue; }
+        const char *e = rows + voff; int el = vlen;
+        long id = 0, gp = 0, w = 0, d = 0, l = 0, gf = 0, ga = 0, pts = 0;
+        mjson_get_long(e, el, "$.id",  &id);
+        mjson_get_long(e, el, "$.gp",  &gp);
+        mjson_get_long(e, el, "$.w",   &w);
+        mjson_get_long(e, el, "$.d",   &d);
+        mjson_get_long(e, el, "$.l",   &l);
+        mjson_get_long(e, el, "$.gf",  &gf);
+        mjson_get_long(e, el, "$.ga",  &ga);
+        mjson_get_long(e, el, "$.pts", &pts);
+        DIYTeamStats *r = diy_ovr_row(slot, i);
+        r->teamSelOffset = diy_identity_to_teamseloffset((int32_t)id);
+        r->gamesPlayed  = (uint16_t)gp;
+        r->wins         = (uint16_t)w;
+        r->draws        = (uint16_t)d;
+        r->losses       = (uint16_t)l;
+        r->goalsFor     = (uint16_t)gf;
+        r->goalsAgainst = (uint16_t)ga;
+        r->points       = (uint16_t)pts;
+        i++;
+    }
+}
+
 /* ---------- .CAR writer ---------- */
 
 /* Forward decl — defined later (with the preset .PRE path). The career path
@@ -4121,6 +4197,18 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     emit_ctx_stage(json_out_emit, &out, "euro_comp_slot_stage",
                    (const DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
 
+    /* TYPE-0 *Context slots' league standings — cross-target fix (see
+     * emit_ctx_league_standings). Emits "<slot>_league_rows" only for a type-0
+     * context league with teams (e.g. a national FRIENDLY); no-op otherwise. */
+    emit_ctx_league_standings(json_out_emit, &out, "secondary",
+                   (const DIYCompetitionEx *)&competitionContextBuf);
+    emit_ctx_league_standings(json_out_emit, &out, "tertiary",
+                   (const DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+    emit_ctx_league_standings(json_out_emit, &out, "diy",
+                   (const DIYCompetitionEx *)&diyCompetitionContextBuf);
+    emit_ctx_league_standings(json_out_emit, &out, "euro",
+                   (const DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+
     /* teamSelectionKeyCache stride list (endian-neutral) — paired with the
      * raw cache blob; re-lays the host-native +2 strides on load. */
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
@@ -4433,6 +4521,19 @@ static void apply_semantic_load(const char *src, int src_size)
     load_ctx_stage((const char *)src, (int)src_size, "diy_comp_slot_stage",
                    (DIYCompetitionEx *)&diyCompetitionContextBuf);
     load_ctx_stage((const char *)src, (int)src_size, "euro_comp_slot_stage",
+                   (DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+
+    /* TYPE-0 *Context slots' league standings — cross-target fix (see
+     * load_ctx_league_standings). Slot competitionType is loaded and the raw
+     * blob already applied, so the typed rows overwrite the mis-positioned
+     * (8-byte-shifted) blob bytes. No-op for non-type-0 slots / pre-fix saves. */
+    load_ctx_league_standings((const char *)src, (int)src_size, "secondary",
+                   (DIYCompetitionEx *)&competitionContextBuf);
+    load_ctx_league_standings((const char *)src, (int)src_size, "tertiary",
+                   (DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+    load_ctx_league_standings((const char *)src, (int)src_size, "diy",
+                   (DIYCompetitionEx *)&diyCompetitionContextBuf);
+    load_ctx_league_standings((const char *)src, (int)src_size, "euro",
                    (DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
     PROF_END(comp_slots, "career-load");
 
