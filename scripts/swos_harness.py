@@ -84,25 +84,123 @@ def tap(var, press_frames=3):
         frame()                      # release
 
 
+def sym_of(expr):
+    """print <expr> and return the resolved <symbol> name (function pointer)."""
+    m = re.search(r"<([^>+]+)", gdb(f"print {expr}"))
+    return m.group(1) if m else None
+
+
+def num_entries():
+    m = re.search(r"=\s*(-?\d+)", gdb("print ((Menu *)currentMenu)->numEntries"))
+    return int(m.group(1)) if m else 0
+
+
+def entry_action(i):
+    """onSelect action symbol of menu entry `i` (platform-independent via
+    _CalcMenuEntryAddress, so it works on SDL and Amiga)."""
+    return sym_of(f"((MenuEntry *)_CalcMenuEntryAddress({i}))->onSelect")
+
+
+def enum():
+    n = num_entries()
+    print(f"menu: {n} entries")
+    for i in range(n):
+        a = entry_action(i)
+        if a:
+            print(f"  {i:2d} -> {a}")
+
+
+def goto(symbol):
+    """Move the selection to the entry whose onSelect == symbol (direct, via
+    _SetCurrentEntry — no path-finding, NO fire). Returns the ordinal or None.
+    Use this to land on a value-cycling control (e.g. nationality) before
+    applying a combo; use `select` to actually activate an entry."""
+    ensure_menu_bp()
+    n = num_entries()
+    target = next((i for i in range(n) if entry_action(i) == symbol), None)
+    if target is None:
+        print(f"goto: '{symbol}' not in this menu (try `enum`)")
+        return None
+    gdb(f"call (void)_SetCurrentEntry({target})")
+    got = sym_of("((Menu *)currentMenu)->selectedEntry->onSelect")
+    if got != symbol:
+        print(f"goto: set failed (selected={got})")
+        return None
+    return target
+
+
+def select(symbol):
+    """goto(symbol) then fire to activate it."""
+    target = goto(symbol)
+    if target is None:
+        return 1
+    tap("s_kbd_fire")
+    print(f"selected+fired {symbol} (ordinal {target})")
+    return 0
+
+
+def tap_multi(vars_, press_frames=3):
+    """Hold several s_kbd_* controls together for one clean tap (clear edge ->
+    press -> release). For combos like fire+left (nationality -> OTHER)."""
+    ensure_menu_bp()
+    for v in vars_:
+        gset(v, 0)
+    for _ in range(4):
+        frame()
+    for v in vars_:
+        gset(v, 1)
+    for _ in range(press_frames):
+        frame()
+    for v in vars_:
+        gset(v, 0)
+    for _ in range(2):
+        frame()
+
+
+def combo(ctrls):
+    tap_multi([f"s_kbd_{c}" for c in ctrls])
+    print("combo " + "+".join(ctrls))
+
+
 def main(argv):
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("where")
+    sub.add_parser("enum")
     p_nav = sub.add_parser("nav")
     p_nav.add_argument("dir", choices=["up", "down", "left", "right"])
     sub.add_parser("fire")
+    p_sel = sub.add_parser("select")
+    p_sel.add_argument("symbol")
+    p_goto = sub.add_parser("goto")
+    p_goto.add_argument("symbol")
+    p_combo = sub.add_parser("combo")
+    p_combo.add_argument("ctrls", nargs="+",
+                         help="controls to hold together, e.g. fire left")
     p_cap = sub.add_parser("cap")
     p_cap.add_argument("out")
     a = ap.parse_args(argv[1:])
 
     if a.cmd == "where":
         where()
+    elif a.cmd == "enum":
+        enum()
     elif a.cmd == "nav":
         tap(f"s_kbd_{a.dir}")
         where()
     elif a.cmd == "fire":
         tap("s_kbd_fire")
         print("fired.")
+    elif a.cmd == "select":
+        return select(a.symbol)
+    elif a.cmd == "goto":
+        ok = goto(a.symbol)
+        if ok is not None:
+            where()
+        return 0 if ok is not None else 1
+    elif a.cmd == "combo":
+        combo(a.ctrls)
+        where()
     elif a.cmd == "cap":
         subprocess.run(["python3", os.path.join(HERE, "swos_screencap.py"), a.out])
     return 0
