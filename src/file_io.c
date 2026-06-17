@@ -19,6 +19,17 @@
 #include <string.h>
 #endif
 
+/* Stable scratch buffer for RNC decompression staging. The compressed file is
+ * copied here before decoding so the decoder never reads from a volatile display
+ * buffer (frontbufferBaseAlt / frontbufferBasePtr): on the Amiga the VBlank
+ * ISR's double-buffer swap can flip/redraw that buffer DURING the multi-VBlank
+ * decode, corrupting the compressed stream mid-decode -> RNC bitstream desync ->
+ * the output cursor runs ~1 MB past the destination and stomps unrelated globals
+ * (e.g. numSelectedTeams -> bogus team count -> _VerifyTeamLoaded panic; found
+ * 2026-06-16 via watchpoint, Amiga-only — SDL already staged here). Shared by
+ * BOTH _LoadFileEx decode paths. 256 KB covers any asset. */
+static uint8_t s_rnc_scratch[256 * 1024];
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t assetCurrentIndex;
 extern uintptr_t assetLoaderCacheFlag;
@@ -171,7 +182,6 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
             if (result == 0 && fileSize >= 18 &&
                 dest[0] == 'R' && dest[1] == 'N' && dest[2] == 'C' &&
                 (dest[3] == 0x01 || dest[3] == 0x02)) {
-                static uint8_t s_rnc_scratch[256 * 1024];
                 if (fileSize <= sizeof(s_rnc_scratch)) {
                     /* RNC header offset 4 = unpacked size (big-endian). */
                     uint32_t unpacked = BE_READ_U32(dest + 4);
@@ -257,15 +267,30 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
         magic = *(uint32_t *)frontbuf;
 
         if (magic == RNC_MAGIC_V1 || magic == RNC_MAGIC_V2) {
+            /* Stage the COMPRESSED file into the stable scratch before decoding.
+             * frontbuf is a display buffer and the VBlank double-buffer swap can
+             * flip/redraw it during the multi-VBlank decode, corrupting the
+             * stream mid-decode -> bitstream desync -> the output cursor runs off
+             * the end of `dest` and stomps unrelated globals (see s_rnc_scratch
+             * note above; this was the Amiga numSelectedTeams=0x0707 overrun).
+             * Copy the on-disk (compressed) byte count, i.e. the current
+             * fileSize, BEFORE it is overwritten with the unpacked size. */
+            uint8_t *rncSrc = frontbuf;
+            if (fileSize <= sizeof(s_rnc_scratch)) {
+                uint32_t k;
+                for (k = 0; k < fileSize; k++)
+                    s_rnc_scratch[k] = frontbuf[k];
+                rncSrc = s_rnc_scratch;
+            }
             /* RNC header offset 4 = unpacked size (big-endian). A
              * native uint32 load on LE would byte-swap it (e.g.
              * 0x00007AEA becomes 0xEA7A0000 ≈ 3.9 GB) and trip the
              * > 64000 sanity check at LoadTeamFile. */
             fileSize = BE_READ_U32(frontbuf + 4);
             if (magic == RNC_MAGIC_V1)
-                _RncDecompressV1(frontbuf, dest);
+                _RncDecompressV1(rncSrc, dest);
             else
-                _RncDecompressV2(frontbuf, dest);
+                _RncDecompressV2(rncSrc, dest);
         } else {
             /* Raw data: byte-copy from frontbuffer to dest */
             src = frontbuf;
