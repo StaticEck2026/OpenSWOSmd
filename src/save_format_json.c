@@ -763,8 +763,17 @@ extern uint16_t numLost;
 extern uint16_t goalsScored;
 extern uint16_t goalsTaken;
 extern uint16_t boardConfidenceMod0;
+extern uint16_t boardConfidenceMod1;
+extern uint16_t boardConfidenceMod2;
+extern uint16_t boardConfidenceMod3;
 extern uint16_t boardConfidenceValue0;
 extern uint16_t boardConfidenceValue1;
+extern uint16_t boardConfidenceMod4;
+extern uint16_t boardConfidenceMod5;
+extern uint16_t boardConfidenceMod6;
+extern uint16_t boardConfidenceMod7;
+extern uint16_t boardConfidenceMod8;
+extern uint16_t boardConfidenceMod9;
 extern uint16_t contractNegotiationActive;
 extern uint16_t wageScalingDivisor;
 extern uint16_t teamNoOfferAccepted;
@@ -1081,10 +1090,25 @@ static const FieldDesc s_career_scalars[] = {
     FX("num_lost",                        numLost,                     FLD_U16),
     FX("goals_scored",                    goalsScored,                 FLD_U16),
     FX("goals_taken",                     goalsTaken,                  FLD_U16),
-    /* uint16_t[10] in game code — endian-neutral 16-bit decimals. */
-    FA("board_confidence_mods",           boardConfidenceMod0, 20,     FLD_U16_ARRAY),
+    /* Board-confidence mods (10 x uint16) are INTERLEAVED with value_0/1 in BSS
+     * (Mod0-3, Value0, Value1, Mod4-9 — see career_board_confidence.c). Serialize
+     * each by NAME, in struct order. The old single FA(...Mod0, 20, FLD_U16_ARRAY)
+     * span conflated Value0/1 into the "mods" array AND dropped Mod8/Mod9 (past the
+     * 20-byte/10-u16 window) so they were never saved; it also overlapped the
+     * value_0/1 FX, which the round-trip verify flagged as a false mismatch.
+     * Endian-neutral 16-bit decimals. */
+    FX("board_confidence_mod_0",          boardConfidenceMod0,         FLD_U16),
+    FX("board_confidence_mod_1",          boardConfidenceMod1,         FLD_U16),
+    FX("board_confidence_mod_2",          boardConfidenceMod2,         FLD_U16),
+    FX("board_confidence_mod_3",          boardConfidenceMod3,         FLD_U16),
     FX("board_confidence_value_0",        boardConfidenceValue0,       FLD_U16),
     FX("board_confidence_value_1",        boardConfidenceValue1,       FLD_U16),
+    FX("board_confidence_mod_4",          boardConfidenceMod4,         FLD_U16),
+    FX("board_confidence_mod_5",          boardConfidenceMod5,         FLD_U16),
+    FX("board_confidence_mod_6",          boardConfidenceMod6,         FLD_U16),
+    FX("board_confidence_mod_7",          boardConfidenceMod7,         FLD_U16),
+    FX("board_confidence_mod_8",          boardConfidenceMod8,         FLD_U16),
+    FX("board_confidence_mod_9",          boardConfidenceMod9,         FLD_U16),
     FX("contract_negotiation_active",     contractNegotiationActive,   FLD_U16),
     FX("wage_scaling_divisor",            wageScalingDivisor,          FLD_U16),
     FX("team_no_offer_accepted",          teamNoOfferAccepted,         FLD_U16),
@@ -2704,6 +2728,54 @@ static void emit_comp_copy_dynamic(mjson_print_fn_t fn, void *fnd)
                  "oceania_qual_teams",(unsigned)oceaniaWorldCupQualificationCopy[0xD]);
 }
 
+/* Save each *Copy competition record's per-career dynamic team-list region
+ * (unk1[]). reconstruct_comp_copy_region_from_templates() resets the *Copy
+ * records to their static TEMPLATES on load — which WIPES the career's actual
+ * cup brackets. On a loaded career the background euro cups then auto-advance
+ * from TEMPLATE teams, and a template team (e.g. FC PORTO, the euroCup
+ * template's last entry) can become a spurious title holder that collides with
+ * the player's real cup holder -> the 0x3443 TMD-pool dup
+ * (project_eurocup_draw_dup_nondeterministic). The 2696 "almost entirely
+ * static" assumption missed that qualification writes the qualified teams INTO
+ * these records (euroCupTeamListPtr == euroCupCopy+offset). Locate the list
+ * exactly as _Career_PrepareEuropeanCupQualificationState does:
+ *   off = 7 + base[7] + 2*(sizeof(char*) - 4)   // PAST the text[2] pointers
+ *   len = templateSize - off
+ * so NO pointer bytes are serialized, and the BE {country,ordinal} byte pairs
+ * are endian-/target-safe (len is target-independent: both off and templateSize
+ * grow by the same text[2] delta on 64-bit). One sub-array per careerContests
+ * record, in table order; records with no team list (off before text[2], or
+ * past the record) emit []. */
+static void emit_comp_copy_teamlists(mjson_print_fn_t fn, void *fnd)
+{
+    extern CompetitionCareer careerContests[];
+    mjson_printf(fn, fnd, "%Q:[", "comp_copy_teamlists");
+    int first = 1;
+    for (CompetitionCareer *e = careerContests;
+         (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
+        const uint8_t *base = (const uint8_t *)e->competitionCopy;
+        int8_t nameOffset = (int8_t)base[5];
+        uint16_t text_end = (nameOffset != 0)
+            ? (uint16_t)(5 + nameOffset + 2u * sizeof(char *)) : 7u;
+        uint16_t off = (uint16_t)(7u + base[7]
+                       + 2u * (sizeof(char *) - sizeof(uint32_t)));
+        if (!first) mjson_printf(fn, fnd, "%s", ",");
+        first = 0;
+        if (off < text_end || off >= e->templateSize) {
+            mjson_printf(fn, fnd, "%s", "[]");   /* no team list / unsafe */
+            continue;
+        }
+        uint16_t len = (uint16_t)(e->templateSize - off);
+        mjson_printf(fn, fnd, "%s", "[");
+        for (uint16_t i = 0; i < len; i++) {
+            if (i) mjson_printf(fn, fnd, "%s", ",");
+            mjson_printf(fn, fnd, "%u", (unsigned)base[off + i]);
+        }
+        mjson_printf(fn, fnd, "%s", "]");
+    }
+    mjson_printf(fn, fnd, "%s", "]");
+}
+
 /* Reconstruct the *Copy region: templates → *Copy, then re-apply the two
  * saved dynamic bytes. Pointers are fixed separately by
  * restore_comp_copy_text_ptrs_from_template (called by the load path). */
@@ -2719,6 +2791,39 @@ static void load_comp_copy_region(const char *buf, int buflen)
             worldCupQualifyingGroup8Copy[0xD] = (uint8_t)v;
         if (mjson_get_long(o, olen, "$.oceania_qual_teams", &v) > 0)
             oceaniaWorldCupQualificationCopy[0xD] = (uint8_t)v;
+    }
+
+    /* Restore the per-career *Copy team-list regions OVER the just-reconstructed
+     * templates (see emit_comp_copy_teamlists). Lockstep walk of careerContests
+     * and the saved sub-arrays. Absent in pre-fix saves -> mjson_find misses ->
+     * templates stand (old behavior, still subject to the euro-cup dup until the
+     * career is re-saved on this build). off/len recomputed per record exactly as
+     * on emit (base[5]/base[7] are static descriptor fields, so identical after
+     * reconstruct); the guard keeps us past text[2] and inside the record. */
+    {
+        extern CompetitionCareer careerContests[];
+        const char *arr = NULL; int alen = 0;
+        if (mjson_find(buf, buflen, "$.comp_copy_teamlists", &arr, &alen)
+                == MJSON_TOK_ARRAY) {
+            int pos = 0, voff, vlen, vt;
+            CompetitionCareer *e = careerContests;
+            while ((uintptr_t)e->competition != 0xFFFFFFFFu &&
+                   (pos = fast_array_next(arr, alen, pos, &voff, &vlen, &vt)) != 0) {
+                if (vt == MJSON_TOK_ARRAY) {
+                    uint8_t *base = (uint8_t *)e->competitionCopy;
+                    int8_t nameOffset = (int8_t)base[5];
+                    uint16_t text_end = (nameOffset != 0)
+                        ? (uint16_t)(5 + nameOffset + 2u * sizeof(char *)) : 7u;
+                    uint16_t off = (uint16_t)(7u + base[7]
+                                   + 2u * (sizeof(char *) - sizeof(uint32_t)));
+                    if (off >= text_end && off < e->templateSize) {
+                        parse_byte_array_slice(arr + voff, vlen, base + off,
+                                               (uint32_t)(e->templateSize - off));
+                    }
+                }
+                e++;
+            }
+        }
     }
 }
 
@@ -3912,12 +4017,16 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_competition_overrides(json_out_emit, &out);
 
-    /* The 34 *Copy competition records are reconstructed from their static
-     * templates on load (not saved as a raw blob — see
-     * reconstruct_comp_copy_region_from_templates). Only the 2 dynamic
-     * bytes are carried here. */
+    /* The 34 *Copy competition records' STATIC parts are reconstructed from
+     * their templates on load (not saved as a raw blob — see
+     * reconstruct_comp_copy_region_from_templates). The 2 dynamic descriptor
+     * bytes (comp_copy_dynamic) AND the per-career team-list regions
+     * (comp_copy_teamlists) are carried here so a loaded career's cup brackets
+     * survive instead of reverting to template teams (the euro-cup 0x3443 dup). */
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_comp_copy_dynamic(json_out_emit, &out);
+    mjson_printf(json_out_emit, &out, "%s", ",\n  ");
+    emit_comp_copy_teamlists(json_out_emit, &out);
 
     /* Unified typed competition slots — emit_comp_slot for all 5 slots
      * (primary + 4 contexts) via their DIYCompetitionEx struct view, so
