@@ -9197,7 +9197,11 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
          * templates with a `char *text[2]` pair) has unk1[] pushed +8 on
          * 64-bit. Must match the writers (career_season.c euro-cup list /
          * career_eurocups.c) and readers (career_teams.c, career_init.c). */
-        const uint8_t *seedTable = (const uint8_t *)(a5 + 7 + seedOff
+        /* The seed list is a TeamId[] of {country,ordinal} pairs (the static
+         * comp's teamSeedList, reached via the dynamic teamListOffset). TeamId
+         * is endian-neutral, so field access needs no swap; TEAMID_PACK rebuilds
+         * the BE key to compare against the BE-packed teamIds below. */
+        const TeamId *seedTable = (const TeamId *)(a5 + 7 + seedOff
                           + 2u * (sizeof(char *) - sizeof(uint32_t)));
         uint8_t *a3 = ((DIYTournamentState *)a6)->teamIndexOrder;
         int16_t count = (int8_t)a5[0xF] - 1;
@@ -9216,8 +9220,8 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
         uint16_t numTeams16 = (uint16_t)(count + 1);  /* = a5[0xF], loaded team count */
 
         for (int16_t i = count; i >= 0; i--) {
-            uint16_t seedId = BE_READ_U16(seedTable);
-            seedTable += 2;
+            uint16_t seedId = TEAMID_PACK(*seedTable);
+            seedTable++;
             uint16_t *teamIds = ((DIYTournamentState *)a6)->teamIds;
             uint16_t d1 = 0;
 

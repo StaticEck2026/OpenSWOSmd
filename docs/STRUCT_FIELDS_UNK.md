@@ -330,3 +330,34 @@ No `unkX` fields; all named (`legs`, `extraTime`, `penalties`, `playCount`, `pts
    task. It must be resolved before any `CompType` enum is introduced.
 4. **Keep this doc in sync** with `STRUCT_CONSOLIDATE.md`: the `nameTableOffset` /
    `teamListOffset` renames and the consolidation both touch the same stored bytes.
+
+---
+
+## 11. `TeamId` — the {country, ordinal} pair (partly done; TODO)
+
+The fundamental SWOS team identity is a 2-byte `{countryNumber, teamOrdinal}`
+pair (cf. `TeamFile`@0, `NationalTeamRecord`@0). A two-byte struct is
+**endian-neutral** (each byte keeps its position on LE and BE), so it removes a
+whole class of byte-pair-vs-host-uint16 bugs. The packed comparison key the game
+uses is the big-endian word — `TEAMID_PACK(t)` = `PACK_BE_U16(country, ordinal)`.
+
+**DONE (2026-06-18):** added `TeamId` + `TEAMID_PACK` (`game_types.h`) and applied
+it to the **static** competition draws — `CompetitionCup`/`CompetitionCup2`
+`teamSeedList` is now `TeamId[32]` (was `int8_t[64]`), the 6 non-empty
+initializers re-bracketed into pairs (byte-identical, verified), and the
+`diy_competition.c` seed-reorder reader uses `const TeamId *` + `TEAMID_PACK`.
+No save-format impact (static `const` templates).
+
+**TODO — migrate the RUNTIME team-id buffers to `TeamId`** (separate,
+save-format-aware pass; do NOT drive-by):
+- Buffers: `diyTournamentTeamIds`, `cupTeamIds`, `euroCupCopy`/`cwcCopy`/`uefaCopy`
+  team lists, the WC/EC qualifier lists, `diyQualifiedTeamIndices`, and
+  `Playoffs.qualifiedTeamIds` (currently `int8_t[8]`, written at runtime).
+- These are **saved to disk** and read/written with `BE_READ_U16`/`BE_WRITE_U16`/
+  `PACK_BE_U16` across `career_eurocups.c`, `career_season.c`, `career_status.c`,
+  `diy_competition.c`. Converting them touches the JSON serializer and many
+  load-bearing consumers — see the memory notes on BE-pair traps
+  (`cup_team_list_be_pairs`, `offer_table_word_vs_be_pair`, score-swap).
+- Approach: migrate one buffer at a time; replace `BE_READ_U16(p)` with
+  `TEAMID_PACK(*(TeamId*)p)` and `BE_WRITE_U16(p, id)` with field stores; keep the
+  packed key for comparisons; re-verify each save round-trips cross-target.
