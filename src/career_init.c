@@ -909,22 +909,23 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
     if (((Competition *)comp)->type != 0)   /* type at offset 1; 0 == league */
         return;
 
-    /* The original asm followed divisions[currentDivisionIndex].unk1 as a
-     * SELF-RELATIVE byte offset (from that byte) to a {diyComp,
+    /* The original asm followed divisions[currentDivisionIndex].qualifierLinkOffset
+     * (was unk1) as a SELF-RELATIVE byte offset (from that byte) to a {diyComp,
      * diyCompetitionTablePtr} pointer pair. That offset was baked for the Amiga
      * name[8] / 4-byte-pointer layout, where it pointed at the per-division
      * playoff link pair. The struct consolidation widened name[] to [10] and
      * 64-bit grew the pointers, so the byte walk now lands on name[] (e.g.
      * aDivisionTwo) -> garbage diyComp -> slot-4 type-check panic 0x4459.
      * Resolve via the typed fields instead — the SAME per-division playoff
-     * links career_season.c uses. unk1 == 0 => no link (e.g. Premier, div 0).
+     * links career_season.c uses. qualifierLinkOffset == 0 => no link (e.g.
+     * Premier, div 0).
      *
      * Pairs verified against the Amiga 4-byte offsets + live pointers:
      *   div 1: _main.playoffLinkPtrs[0]/[1] = {&div1Playoffs, &_div1}
      *   div 2: _div1.playoffs/nextGroup     = {&div2Playoffs, &_div2}
      *   div 3: _div2.playoffs/nextGroup     = {&div3Playoffs, &_div3} */
     CompetitionLeague *league = (CompetitionLeague *)comp;
-    if (league->divisions[(uint16_t)currentDivisionIndex].unk1 == 0)
+    if (league->divisions[(uint16_t)currentDivisionIndex].qualifierLinkOffset == 0)
         return;
     if (comp != (uint8_t *)&englishLeaguesBlock._main)
         return;  /* only the English leagues carry these per-division links */

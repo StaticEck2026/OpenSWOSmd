@@ -735,7 +735,7 @@ void _ImportTactics(void)
         _SaveCurrentTactics();
         tacticsChangedFlag = 1;
 
-        /* Copy positions + unkTable + ballOutOfPlay from the selected tactic (361 bytes) */
+        /* Copy positions + pairIds + ballOutOfPlay from the selected tactic (361 bytes) */
         TeamTactics *srcTactics = (TeamTactics *)teamTacticsTable[selected];
         uint8_t *src = (uint8_t *)srcTactics->positions;
         uint8_t *dst = (uint8_t *)editTacticsCurrentTactics.positions;
@@ -1075,7 +1075,7 @@ void _EditTactics_SetAllPlayersQuadrantForBallLoc(uint16_t ballLoc,
  * If flipOnOff is active and the area is not in the center column
  * (remainder != 2), mirrors all player X positions in the given
  * area (flips high nibble: 0xEF - highNibble), then swaps paired
- * players using the unkTable.
+ * players using the pairIds table.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
@@ -1089,7 +1089,7 @@ void _EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
         return;
 
     uint8_t *positions = (uint8_t *)editTacticsCurrentTactics.positions;
-    uint8_t *unkTable = editTacticsCurrentTactics.unkTable;
+    uint8_t *pairIds = editTacticsCurrentTactics.pairIds;
 
     /* Mirror X positions for 10 outfield players */
     uint8_t *p = positions;
@@ -1102,14 +1102,14 @@ void _EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
         p += 0x23; /* next player: stride = 35 */
     }
 
-    /* Swap paired players using unkTable */
+    /* Swap paired players using the pair-id table */
     for (int16_t pairVal = 4; pairVal >= 0; pairVal--) {
         for (int16_t j = 9; j >= 0; j--) {
-            if (unkTable[j] == (uint8_t)pairVal) {
+            if (pairIds[j] == (uint8_t)pairVal) {
                 /* Found first of pair at index j — find second */
                 int16_t k = j - 1;
                 while (k >= 0) {
-                    if (unkTable[k] == (uint8_t)pairVal)
+                    if (pairIds[k] == (uint8_t)pairVal)
                         break;
                     k--;
                 }
@@ -2078,14 +2078,14 @@ uint8_t *_GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot
 /* ================================================================
  * EditTactics_FindFreePairId  (SWOS2.s line 87515)
  *
- * Scans the 10-byte unkTable in tactics data, builds a bitmask of
+ * Scans the 10-byte pairIds table in tactics data, builds a bitmask of
  * used pair IDs, and returns the first free pair ID (lowest bit
  * not set).
  * ================================================================ */
 __attribute__((used, externally_visible))
 uint16_t _EditTactics_FindFreePairId(void)
 {
-    uint8_t *table = editTacticsCurrentTactics.unkTable;
+    uint8_t *table = editTacticsCurrentTactics.pairIds;
     uint16_t used = 0;
     int16_t i;
     for (i = 9; i >= 0; i--) {
@@ -2103,13 +2103,13 @@ uint16_t _EditTactics_FindFreePairId(void)
 /* ================================================================
  * EditTactics_ClearPairId  (SWOS2.s line 87540)
  *
- * Scans the 10-byte unkTable and sets all entries matching the
+ * Scans the 10-byte pairIds table and sets all entries matching the
  * given pair ID value to 0xFF (unlinked).
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _EditTactics_ClearPairId(uint16_t value)
 {
-    uint8_t *table = editTacticsCurrentTactics.unkTable;
+    uint8_t *table = editTacticsCurrentTactics.pairIds;
     int16_t i;
     for (i = 9; i >= 0; i--) {
         if (table[i] == (uint8_t)value)
@@ -2181,7 +2181,7 @@ void _EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
  * EditTacticsCommon  (SWOS2.s line 87444)
  *
  * Called when a player pair entry is selected in the edit tactics
- * menu. Handles linking/unlinking player pairs via the unkTable.
+ * menu. Handles linking/unlinking player pairs via the pairIds table.
  * First click selects a player; second click on a different player
  * links them as a pair; clicking the same player again cancels.
  * ================================================================ */
@@ -2223,20 +2223,20 @@ void _EditTacticsCommon(MenuEntry *cur)
     }
 
     /* Different slot - link/unlink pair */
-    uint8_t *unkTable = editTacticsCurrentTactics.unkTable;
-    uint8_t pairIdCurrent = unkTable[slot];
-    uint8_t pairIdPrevious = unkTable[editTacticsSelectedPairSlotIndex];
+    uint8_t *pairIds = editTacticsCurrentTactics.pairIds;
+    uint8_t pairIdCurrent = pairIds[slot];
+    uint8_t pairIdPrevious = pairIds[editTacticsSelectedPairSlotIndex];
 
     /* Clear both pair IDs from the table */
-    _EditTactics_ClearPairId((uint16_t)unkTable[slot]);
-    _EditTactics_ClearPairId((uint16_t)unkTable[editTacticsSelectedPairSlotIndex]);
+    _EditTactics_ClearPairId((uint16_t)pairIds[slot]);
+    _EditTactics_ClearPairId((uint16_t)pairIds[editTacticsSelectedPairSlotIndex]);
 
     /* Assign new pair ID unless both already had the same valid ID */
     if ((int8_t)pairIdCurrent < 0 || (int8_t)pairIdPrevious < 0 ||
         pairIdCurrent != pairIdPrevious) {
         uint16_t newPairId = _EditTactics_FindFreePairId();
-        unkTable[slot] = (uint8_t)newPairId;
-        unkTable[editTacticsSelectedPairSlotIndex] = (uint8_t)newPairId;
+        pairIds[slot] = (uint8_t)newPairId;
+        pairIds[editTacticsSelectedPairSlotIndex] = (uint8_t)newPairId;
     }
 
     editTacticsSelectedPairSlotIndex = 0xFFFF;
@@ -3278,8 +3278,8 @@ void _EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *c
     /* Flip-on pair coloring */
     if (flipOnOff != 0) {
         if (slot != 0 && slot < 11) {
-            uint8_t *unkTable = editTacticsCurrentTactics.unkTable;
-            int8_t pairVal = (int8_t)unkTable[slot - 1];
+            uint8_t *pairIds = editTacticsCurrentTactics.pairIds;
+            int8_t pairVal = (int8_t)pairIds[slot - 1];
             if (pairVal >= 0) {
                 uint16_t colorIdx = editTacticsFlipPairColorTable[pairVal];
                 setBgColor(entry39, colorIdx);
