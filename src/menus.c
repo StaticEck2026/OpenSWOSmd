@@ -5377,7 +5377,7 @@ void _RandomlySwapTeams(void)
     uint16_t r = _Rand2();
     if (!(r & 1)) return;
     /* Swap two TeamFileEx records word-by-word (684 / 2 = 342 words). */
-    TeamFileEx *base = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *base = selectedTeams;
     uint16_t *a = (uint16_t *)&base[0];
     uint16_t *b = (uint16_t *)&base[1];
     int16_t i;

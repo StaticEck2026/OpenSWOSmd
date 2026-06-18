@@ -71,7 +71,7 @@ uint8_t *diy_resolve_team(int32_t teamSel)
 {
     if (teamSel < 0)                                          /* -1 = careerTeam */
         return (uint8_t *)&careerTeam;
-    return (uint8_t *)((TeamFileEx *)&selTeamsPtr + teamSel); /* selTeamsPtr + index*684 */
+    return (uint8_t *)(selectedTeams + teamSel); /* selTeamsPtr + index*684 */
 }
 uint8_t *diy_resolve_team_name(int32_t teamSel)
 {

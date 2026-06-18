@@ -390,7 +390,7 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
      * 2 = coach only, 3 = player-coach */
     uint8_t controlByte = (coachOrPlayer != 0) ? 2 : 3;
     careerTeam.team.teamControls = controlByte;
-    ((TeamFileEx *)&selTeamsPtr)->team.teamControls = controlByte;
+    selectedTeams->team.teamControls = controlByte;
 
     /* Copy 16 bytes of playerNumbers (TeamFile.playerNumbers) to currentMatchPlayers */
     teamPtr = _GetTeamPointer(selTeamNumber);
@@ -1370,7 +1370,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     /* Count non-computer-controlled squads */
     seasonNumberOfSquads = 0;
     uint16_t *squadTeams = seasonSquadTeamNumbers;
-    TeamFileEx *teamPtr = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *teamPtr = selectedTeams;
     int16_t numTeams = numSelectedTeams - 1;
     for (int16_t i = numTeams; i >= 0; i--) {
         if (teamPtr->team.teamControls != 1) {

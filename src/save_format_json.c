@@ -4228,7 +4228,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     for (uint16_t i = 0; i < numSelectedTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
-                               (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
+                               (uint8_t *)(selectedTeams + i));
     }
     mjson_printf(json_out_emit, &out, "%s", "]");
 
@@ -4561,7 +4561,7 @@ static void apply_semantic_load(const char *src, int src_size)
                                       &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
-                                    (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
+                                    (uint8_t *)(selectedTeams + i));
             i++;
         }
     }
@@ -5304,7 +5304,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     for (uint16_t i = 0; i < primaryCompetitionBuf.tourn.header.numTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
-                               (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
+                               (uint8_t *)(selectedTeams + i));
     }
     mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
 
@@ -5529,7 +5529,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
-                                    (uint8_t *)((TeamFileEx *)&selTeamsPtr + i));
+                                    (uint8_t *)(selectedTeams + i));
             i++;
         }
     }

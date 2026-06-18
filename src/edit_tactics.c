@@ -598,7 +598,7 @@ void _MarkSelectedTeamsTacticsChanged(void)
     if (count == 0)
         return;
 
-    TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *team = selectedTeams;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
         if (team->team.tactics == (uint8_t)chosenTactics) {
             team->team.someFlag = 1;
@@ -2377,14 +2377,14 @@ extern void *playerPositionsStringTable[];       /* 8 string pointers */
 static PlayerFile *EditTeamsGetPlayerFileC(MenuEntry *entry)
 {
     uint16_t idx = entry->ordinal - 23;
-    TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *team = selectedTeams;
     return &team->players[idx];
 }
 
 /* PrimaryKitColorConversion — build primary shirt/shorts/socks color tables */
 static void PrimaryKitColorConversionC(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint16_t *colTable = editTeamsPrimaryShirts.colTable;
     uint16_t stripesCol = kTeamColorsTable[tf->prStripesColor];
     uint16_t basicCol = kTeamColorsTable[tf->prBasicColor];
@@ -2411,7 +2411,7 @@ static void PrimaryKitColorConversionC(void)
 /* SecondaryKitColorConversion — build secondary shirt/shorts/socks color tables */
 static void SecondaryKitColorConversionC(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint16_t *colTable = editTeamsSecondaryShirt.colTable;
     uint16_t stripesCol = kTeamColorsTable[tf->secStripesColor];
     uint16_t basicCol = kTeamColorsTable[tf->secBasicColor];
@@ -2438,7 +2438,7 @@ static void SecondaryKitColorConversionC(void)
 /* MarkFirstKitShirt — highlight selected primary shirt type in menu */
 static void MarkFirstKitShirtC(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     MenuEntry *e = &menuEntries[0x348 / 56]; /* menuEntries + $348 / 56 = entry 15 */
     uint8_t shirtType = tf->prShirtType;
 
@@ -2453,7 +2453,7 @@ static void MarkFirstKitShirtC(void)
 /* MarkSecondKitShirt — highlight selected secondary shirt type in menu */
 static void MarkSecondKitShirtC(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     MenuEntry *e = &menuEntries[0x428 / 56]; /* entry 19 */
     uint8_t shirtType = tf->secShirtType;
 
@@ -2525,7 +2525,7 @@ void _EditTeamsOK(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShirtsPrimary(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint8_t d0;
 
     if (controlMask == 0x41) {          /* left+fire */
@@ -2569,7 +2569,7 @@ void _EditTeamsChangeShirtsPrimary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShirtsSecondary(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint8_t d0;
 
     if (controlMask == 0x41) {          /* left+fire */
@@ -2613,7 +2613,7 @@ void _EditTeamsChangeShirtsSecondary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShortsPrimary(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint8_t d0 = tf->prShortsColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
@@ -2634,7 +2634,7 @@ void _EditTeamsChangeShortsPrimary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeShortsSecondary(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint8_t d0 = tf->secShortsColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
@@ -2655,7 +2655,7 @@ void _EditTeamsChangeShortsSecondary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeSocksPrimary(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint8_t d0 = tf->prSocksColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
@@ -2675,7 +2675,7 @@ void _EditTeamsChangeSocksPrimary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsChangeSocksSecondary(void)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     uint8_t d0 = tf->secSocksColor;
 
     if (controlMask == 0x41 || controlMask == 0x101) {
@@ -2695,7 +2695,7 @@ void _EditTeamsChangeSocksSecondary(void)
 __attribute__((used, externally_visible))
 void _EditTeamsSelectPrimaryShirtType(MenuEntry *entry)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     tf->prShirtType = (uint8_t)(entry->ordinal - 12);
     MarkFirstKitShirtC();
     PrimaryKitColorConversionC();
@@ -2708,7 +2708,7 @@ void _EditTeamsSelectPrimaryShirtType(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void _EditTeamsSelectSecondaryShirtType(MenuEntry *entry)
 {
-    TeamFile *tf = &((TeamFileEx *)&selTeamsPtr)->team;
+    TeamFile *tf = &selectedTeams->team;
     tf->secShirtType = (uint8_t)(entry->ordinal - 16);
     MarkSecondKitShirtC();
     SecondaryKitColorConversionC();
@@ -2766,7 +2766,7 @@ void _InitEditTeamsMenu(void)
     if (teamIsImported != 0)
         menuEntries[0x460 / 56].isInvisible = 1;
 
-    TeamFileEx *teamEx = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *teamEx = selectedTeams;
 
     /* Team name → entry 0 */
     menuEntries[0].fg = (uintptr_t)(uint8_t *)teamEx->team.teamName;
@@ -2800,7 +2800,7 @@ __attribute__((used, externally_visible))
 void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 {
     uint16_t playerIdx = entry->ordinal - 23;
-    TeamFileEx *teamEx = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *teamEx = selectedTeams;
     PlayerFile *pf = &teamEx->players[playerIdx];
 
     uint8_t posAndFace = pf->positionAndFace;
@@ -2989,7 +2989,7 @@ void _ImportTeamsMenu(void)
 
     if ((int16_t)selectedTeamCountryNumber != -1) {
         /* Save selTeamsPtr team number and selTeamImportField, copy selected team data */
-        uint16_t savedTeamNum = *(uint16_t *)&((TeamFileEx *)&selTeamsPtr)->team.countryNumber;
+        uint16_t savedTeamNum = *(uint16_t *)&selectedTeams->team.countryNumber;
         uint8_t savedImportField = selTeamImportField;
 
         /* Copy 342 words (684 bytes) from selectedTeamPtr to selTeamsPtr */
@@ -3000,7 +3000,7 @@ void _ImportTeamsMenu(void)
 
         /* Restore saved values */
         selTeamImportField = savedImportField;
-        *(uint16_t *)&((TeamFileEx *)&selTeamsPtr)->team.countryNumber = savedTeamNum;
+        *(uint16_t *)&selectedTeams->team.countryNumber = savedTeamNum;
 
         teamIsImported = 1;
         _SetCurrentEntry(21);
@@ -3157,7 +3157,7 @@ void _EditTactics(void)
     }
 
     {
-        TeamFileEx *selPtr = (TeamFileEx *)&selTeamsPtr;
+        TeamFileEx *selPtr = selectedTeams;
         uint16_t *countryBuf = (uint16_t *)editTacticsCountryBuffer;
         uint16_t found = 0;
         TeamFileEx *lastNonComputer = (TeamFileEx *)0;
@@ -3207,7 +3207,7 @@ check_sel_team:
     }
 
 show_menu_from_sel:
-    teamPtr = (TeamFileEx *)&selTeamsPtr;
+    teamPtr = selectedTeams;
 
 show_menu:
     _ShowStandardChooseTacticsMenu(teamPtr);

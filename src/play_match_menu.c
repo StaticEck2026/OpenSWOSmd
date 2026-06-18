@@ -1084,7 +1084,7 @@ void _TogglePlayerCoach(void) {
             coachOrPlayer ^= 1;
             uint8_t nc = coachOrPlayer ? TEAM_PLAYER_COACH : TEAM_COACH;
             careerTeam.team.teamControls = nc;
-            ((TeamFileEx *)&selTeamsPtr)->team.teamControls = nc;
+            selectedTeams->team.teamControls = nc;
             if (trainingGame)
                 currentTeam.team.teamControls = 1;
         }

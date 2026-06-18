@@ -572,6 +572,14 @@ typedef struct __attribute__((packed, aligned(2))) TeamFileEx {
 
 typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
 
+/* The selected-teams roster (career "SELECT TEAMS" list), max 32. Typed alias
+ * for the relocated carrier in selected_teams.c — same address as the legacy
+ * `selTeamsPtr` overlay base (both labels sit at +0). Prefer `selectedTeams[i]`
+ * over the historical `(TeamFileEx *)&selTeamsPtr` cast (STRUCT_CONSOLIDATE /
+ * SELECTED_TEAMS_UNTANGLE phase 3). The raw `(uint8_t*)&selTeamsPtr + offset`
+ * identity-resolve sites stay as-is (teamSelOffset is a byte-offset identity). */
+extern TeamFileEx selectedTeams[];
+
 /* The careerTeam and currentTeam buffers are each a TeamFileEx (16 active
  * players) immediately followed by 16 reserve PlayerFile entries = 1292 bytes.
  * Use this for "is this player pointer inside the career/current team buffer?"
