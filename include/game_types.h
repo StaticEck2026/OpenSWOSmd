@@ -1671,14 +1671,51 @@ _Static_assert(CUP2_NAME_TABLE_OFFSET == 35 && CUP2_TEAMLIST_TABLE_OFFSET == 41,
 
 /* Playoffs — merged Playoffs_8/_4 (consolidation step, see docs/STRUCT_CONSOLIDATE.md
  * §4b). qualifiedTeamIds sized to the max (8); the former Playoffs_4 instances
- * (scottish/uruguayan) leave the last 4 entries unused. The qualified-team list
- * length is the explicit count in playoffHeader[10]; the list is located via the
- * self-offset byte playoffHeader[7] (= 17), so the trailing growth is layout-safe. */
+ * (scottish/uruguayan) leave the last 4 entries unused.
+ *
+ * The former opaque `playoffHeader[16]` is a CUP competition record: a
+ * CompCupHeader (14 B) + roundRuleFlags[2]. comp.type == 1 (cup); the player's
+ * qualified teams contest a knockout, and it is initialised through the cup path
+ * (_Career_AutoAdvanceCupCompetitionFromRecord). The name is reached via
+ * comp.nameTableOffset (= 11 → name[]) and the team list via comp.teamListOffset
+ * (= 17 → qualifiedTeamIds[]) — the same polymorphic Competition self-offset
+ * accessors every other competition uses.
+ *
+ * Field meanings cross-checked against the in-game DIY-competition editor
+ * (DUTCH / URUGUAYAN PLAYOFFS screenshots, 2026-06-18) — see each comment. */
 typedef struct __attribute__((packed)) {
-    int8_t  playoffHeader[16];   /* was unk1: structured (byte 7=offset-to-ids, byte 10=qual count) */
-    char   *name[2];             /* playoff name strings (was text[2]) */
-    int8_t  qualifiedTeamIds[8]; /* was unk2: BE-packed qualified team-id output buffer */
+    Competition comp;            /* 0x00: cup header (type=1; teamNumber = country, e.g.
+                                  *       URUGUAY=71; months ×8 encoded — DEC=88, MAY=128) */
+    int8_t  numRoundsOverride;   /* 0x09: forces runtime numRounds — Dutch=1 collapses its
+                                  *       4-team bracket to a single FINAL; English div=0 →
+                                  *       computed 2 rounds (two-leg semis + one-leg final) */
+    int8_t  teams;               /* 0x0A: bracket size = qualified-team count. Editor "TEAMS"
+                                  *       (Eng/Dutch/Spanish 4, Scottish/Uruguay 2). The team
+                                  *       count read in career_season.c qualification loop. */
+    int8_t  awayGoalsMode;       /* 0x0B: away-goals rule (editor "AWAY GOALS" tristate via
+                                  *       diyCupAwayGoalsStringTable on runtime playEachTeam/$5E):
+                                  *       0=OFF, 1="AFTER 90 MINS", 2="AFTER EXTRA TIME". All
+                                  *       playoffs = 1. */
+    int8_t  subsAndMaxSubs;      /* 0x0C: hi nibble = substitutes, lo = bench "FROM" size.
+                                  *       Editor "SUBSTITUTES 3 FROM 5" = 0x35 (inherited from
+                                  *       the parent league's subs byte). NB the cup-init path
+                                  *       reads the lo nibble as pointsForAWin — a no-op in a
+                                  *       knockout; the editor's "FROM" is the real meaning. */
+    int8_t  roundStringBase;     /* 0x0D: cup round-string base (all 1) */
+    int8_t  roundRuleFlags[2];   /* 0x0E: per-round packed legs/ET/pens (bits 7-6/5-4/3-2).
+                                  *       0x94 = 2-leg + ET + pens; 0x14 = 1-leg + ET + pens
+                                  *       (e.g. English two-leg semis then a one-leg final).
+                                  *       [1] = 0 for a single-round playoff. */
+    char   *name[2];             /* 0x10: playoff name strings (was text[2]) */
+    int8_t  qualifiedTeamIds[8]; /* comp.teamListOffset target: BE-packed qualified team ids,
+                                  *       zero-init, filled at runtime (was unk2) */
 } Playoffs;
+
+/* Pin the layout the self-offset bytes encode: comp.nameTableOffset(11) ⇒
+ * 5+11 = 16 = offsetof(name); roundRuleFlags follows the 14-byte cup header.
+ * Both are pre-pointer, so identical on 32/64-bit. */
+_Static_assert(offsetof(Playoffs, roundRuleFlags) == 14, "Playoffs roundRuleFlags@14");
+_Static_assert(offsetof(Playoffs, name)           == 16, "Playoffs name@16 (= 5 + nameTableOffset 11)");
 
 /* Leagues — merged Leagues_4 / Leagues_2 / Leagues_4_2_24 (consolidation,
  * docs/STRUCT_CONSOLIDATE.md §4c). The layout mirrors the largest variant
