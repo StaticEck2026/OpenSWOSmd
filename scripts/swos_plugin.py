@@ -287,35 +287,47 @@ class SwosHarness:
         return None
 
     # ---- the in-season fixtures (sim each via pl1Fire on the squad) --------
-    def drive_inseason(self, max_steps=250, timeout=12):
+    def drive_inseason(self, max_steps=800, timeout=20, stuck_limit=30):
         """From just after a season increment, drive the new season to the next
-        season-end hub: shortFire advances menus, pl1Fire sims the fixture at the
-        squad screen (_PlayMatchSelected gates on the raw joystick fire, not the
-        menu shortFire). Returns True if the hub was reached.
+        season-end hub (_CareerOverInit). Returns True if the hub was reached.
 
-        NOTE: the in-season cup match-day (_DIYCupInit) is a small state machine
-        whose post-match entry selection is not yet fully mapped, so this is a
-        best-effort stepper with a stuck-detector that fails cleanly rather than
-        looping. The season TRANSITION above is the proven part."""
+        How the season self-drives: shortFire on the default selection advances
+        the menus AND the cup/league match-day state machines — _DIYCupInit /
+        _DIYLeagueTournamentInit pre-select the correct entry at each state (play
+        the human's fixture, auto-advance an AI fixture, or exit when the round
+        is done, e.g. _DIYCupOnSelect10 at mState=6/roundComplete=1). The ONLY
+        screen needing different input is the pre-match squad (_PlayMatchMenuInit):
+        _PlayMatchSelected gates on the RAW joystick fire pl1Fire, not the menu
+        shortFire. When the season's fixtures are exhausted (seasonFinished=1),
+        the contest hub's PLAY MATCH runs _SeasonFinished -> careerOverMenu.
+
+        A season legitimately bounces match-day <-> squad and cycles a cup round
+        across several _DIYCupInit states, so 'stuck' is keyed on (screen,
+        selected-ordinal) staying IDENTICAL for stuck_limit steps — genuine
+        progress always changes one of them, while a true freeze repeats. A full
+        season is many fixtures, so this can take several minutes (intended for
+        unattended verification runs)."""
         h = self.h
         h.delete_breakpoints()
         h.break_at(INJECT_LINE)
-        stuck, last = 0, None
+        last_key, same = None, 0
         for _ in range(max_steps):
             h.cont(timeout)
-            if not h.is_stopped():
+            if not h.is_stopped():                  # a match/menu over-ran timeout
                 self._interrupt()
                 return False
             init = self._current_init()
             if init == self.HUB_INIT:
                 return True
-            if init == self.SQUAD_INIT:
-                h.set_var("pl1Fire", 1)             # play/sim the fixture
-            h.set_var("shortFire", 1)              # advance the menu
-            stuck = stuck + 1 if init == last else 0
-            last = init
-            if stuck >= 50:                         # unmapped screen -> bail
+            key = (init, self.ordinal())
+            same = same + 1 if key == last_key else 0
+            last_key = key
+            if same >= stuck_limit:
+                print(f"drive_inseason: stuck at {init} ord={key[1]}")
                 return False
+            if init == self.SQUAD_INIT:
+                h.set_var("pl1Fire", 1)             # sim the human fixture
+            h.set_var("shortFire", 1)              # advance menu / state machine
         return self.at_contest_menu()
 
     def advance_one_season(self):

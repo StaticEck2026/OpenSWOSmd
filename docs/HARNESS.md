@@ -195,11 +195,27 @@ free-running into a screen that waits for input.
    on the **raw joystick fire** `pl1Fire`, *not* the menu `shortFire`. Set
    `pl1Fire = 1` to play/sim the fixture (CPU-vs-CPU → instant result).
 
-**Status of the loop:** the **transition** is proven (season 3→4, `health=OK`,
-zero wedges, no threading change). The **in-season cup match-day** (`_DIYCupInit`)
-is a small post-match state machine whose entry selection isn't fully mapped yet,
-so `drive_inseason` is best-effort with a stuck-detector that fails cleanly. That
-state machine is the next piece to finish a fully-unattended multi-season run.
+The in-season **cup/league match-day menus self-drive on `shortFire`**:
+`_DIYCupInit` / `_DIYLeagueTournamentInit` pre-select the correct entry at each
+state — play the human's fixture, auto-advance an AI fixture, or **exit** when
+the round is done (e.g. `_DIYCupOnSelect10` at `menuState=6 / roundComplete=1`).
+When the season's fixtures are exhausted (`seasonFinished=1`), the contest hub's
+PLAY MATCH runs `_SeasonFinished → careerOverMenu` (the hub). The driver's
+stuck-detector is keyed on `(screen, selected-ordinal)` so the legitimate
+match-day↔squad bounce and cup-round cycling don't false-trigger.
+
+**Status of the loop — validated end-to-end on SDL:**
+
+- **Transition** — season 3→4 via the skip-latch path, `health=OK`, zero wedges.
+- **In-season** — a full season driven to the season-end hub in 208 steps /
+  ~174s, no stuck, no wedge.
+- **Full cycle** — `advance_one_season` (hub → CONTINUE → transition →
+  in-season → next hub) ran season 4→5 in ~274s, landing back at
+  `_CareerOverInit`, `health=OK`, threads untouched.
+
+A full season is a few minutes (≈0.9s/step over a few hundred steps), so a
+multi-season `seasons N` run is minutes-to-tens-of-minutes — intended to run
+unattended.
 
 ## Reusing for another project
 
