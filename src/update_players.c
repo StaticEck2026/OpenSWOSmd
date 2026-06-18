@@ -1366,7 +1366,7 @@ not_in_penalty:
 
     enter_possession:
         if (!team->allowedDirections)
-            team->unkBallTimer = 0;
+            team->ballControlTurnTimer = 0;
 
         /* attempt_header_or_tackle */
         team->playerHasBall = 1;
