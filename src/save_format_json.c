@@ -2235,9 +2235,11 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", ",");
     emit_s8_at  (fn, fnd, "passing",              p, offsetof(PlayerFile, passing));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "shooting_heading",     p, offsetof(PlayerFile, shootingHeading));
+    /* Keys renamed to the SWOS player-card labels 2026-06-18 (Ve / Co); old saves
+     * with "shooting_heading"/"tackling_ball_control" were migrated in-place. */
+    emit_s8_at  (fn, fnd, "velocity_heading",     p, offsetof(PlayerFile, velocityHeading));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "tackling_ball_control",p, offsetof(PlayerFile, tacklingBallControl));
+    emit_s8_at  (fn, fnd, "tackling_control",     p, offsetof(PlayerFile, tacklingControl));
     mjson_printf(fn, fnd, "%s", ",");
     emit_s8_at  (fn, fnd, "speed_finishing",      p, offsetof(PlayerFile, speedFinishing));
     mjson_printf(fn, fnd, "%s", ",");
@@ -2365,8 +2367,8 @@ static const StructFieldDesc s_player_fields[] = {
     { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
     { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
     { "passing",              offsetof(PlayerFile, passing),             0, FLD_U8 },
-    { "shooting_heading",     offsetof(PlayerFile, shootingHeading),     0, FLD_U8 },
-    { "tackling_ball_control",offsetof(PlayerFile, tacklingBallControl), 0, FLD_U8 },
+    { "velocity_heading",     offsetof(PlayerFile, velocityHeading),     0, FLD_U8 },
+    { "tackling_control",     offsetof(PlayerFile, tacklingControl),     0, FLD_U8 },
     { "speed_finishing",      offsetof(PlayerFile, speedFinishing),      0, FLD_U8 },
     { "price",                offsetof(PlayerFile, price),               0, FLD_U8 },
     { "goal_stats",           offsetof(PlayerFile, goalStats),           4, FLD_BYTES },

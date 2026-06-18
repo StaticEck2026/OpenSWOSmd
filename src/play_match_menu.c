@@ -1311,11 +1311,11 @@ void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile)
         bitRot = (const uint8_t *)topSkillBitRotEven[posGroup];
     }
 
-    /* Get PASSING longword (4 skills packed: passing, shootingHeading,
-     * tacklingBallControl, speedFinishing) and shift left 4.
+    /* Get PASSING longword (4 skills packed: passing, velocityHeading,
+     * tacklingControl, speedFinishing) and shift left 4.
      *
      * The Amiga asm did `move.l (a0)+,d7` which on m68k BE reads the
-     * bytes as (passing<<24)|(shootingHeading<<16)|(tacklingBallControl
+     * bytes as (passing<<24)|(velocityHeading<<16)|(tacklingControl
      * <<8)|speedFinishing. A native `*(uint32_t *)` on our LE host
      * reverses the byte order, so the subsequent rot+mask extracts the
      * wrong skill nibbles — giving wrong top-skill letters ("VHF" in

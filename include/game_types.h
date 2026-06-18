@@ -528,8 +528,10 @@ typedef struct __attribute__((packed, aligned(2))) PlayerFile {
                                     *     bits (00=dark hair,08=blonde,10=dark skin) */
     uint8_t  cardsInjuries;        /* 27: injury condition + card discipline flags */
     int8_t   passing;              /* 28: high nibble 0 / low nibble = passing */
-    int8_t   shootingHeading;      /* 29: hi nibble = shooting / lo = heading */
-    int8_t   tacklingBallControl;  /* 30: hi nibble = tackling / lo = ball control */
+    int8_t   velocityHeading;      /* 29: hi nibble = velocity (Ve — the SWOS player-card
+                                    *     label, aka shot power; cross-validated against
+                                    *     AnoXic's SavCar.ASI attVH) / lo = heading */
+    int8_t   tacklingControl;      /* 30: hi nibble = tackling (Ta) / lo = control (Co) */
     int8_t   speedFinishing;       /* 31: hi nibble = speed / lo = finishing */
     int8_t   price;                /* 32: base market price ID (lookup into the .exe
                                     *     price table; valid range 0x00-0x31) */
@@ -1561,9 +1563,12 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
     Competition comp;
-    int8_t unk1;
-    int8_t unk2;
-    int8_t unk3;
+    int8_t seedingType;         /* was unk1 (byte 9): copied to every stage slot's seedingType
+                                 * (slot $160); _InitDIYLeagueFromRecord / SWOS2.s:52485 */
+    int8_t menuState;           /* was unk2 (byte 0xA): copied to runtime DIYComp menuState
+                                 * ($4A); _InitDIYLeagueFromRecord / SWOS2.s:52458 */
+    int8_t playEachTeam;        /* was unk3 (byte 0xB): copied to every stage slot's playEachTeam
+                                 * (slot $166); _InitDIYLeagueFromRecord / SWOS2.s:52488 */
     int8_t awayGoalsMode;
     int8_t subsAndPointsForWin; /* was subsReserves: hi nibble = min subs, lo = points-for-win */
     int8_t roundStringBase;     /* was firstRoundNo: round-string base / rounds[0] source */
