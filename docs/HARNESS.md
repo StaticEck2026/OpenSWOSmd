@@ -88,6 +88,38 @@ cp /mnt/c/Projects/Linux/fs-uae/fs-uae \
 (The original is backed up as `fs-uae.orig.bak`. The patch is purely additive —
 safe to keep permanently. The bartman dir stays the cwd for its support files.)
 
+### ⚠️ Inferior CALLS don't work on the FS-UAE stub yet (load_career, save_career)
+
+Reads, writes, breakpoints and menu-driving all work on the Amiga. **gdb inferior
+function calls do NOT** — `call func()` / `print func()` free-runs the inferior
+instead of returning. This means `load_career` / `save_career` / `enter_career`
+(which `call SaveJson_LoadCareer` etc.) work **only on SDL**, not Amiga. On the
+Amiga, load a save through the game's own UI and use gdb only for inspection
+(reads + breakpoints), which is how cross-target saves were validated before.
+
+Root cause (confirmed by `set debug remote 1` capture + reading
+`barto_gdbserver.cpp` / `debug.cpp`): gdb does an inferior call by writing the
+**call-dummy return address = the ELF entry point** onto the stack, setting a
+`Z0` breakpoint there, pointing PC at the target, and `vCont;c`. The stub's `Z0`
+records the address into FS-UAE's `bpnodes[]` as a **PC-compare** entry but
+**writes no trap opcode** (`barto_gdbserver.cpp` ~819-829); the per-instruction
+PC scan that turns that into a stop is the FS-UAE `bpnodes` scan (`debug.cpp`
+~7302 / re-armed at ~7508). That scan reliably fires for ordinary source
+breakpoints (resume happens from inside `debug()` with the table live) but does
+**not** catch the synthesized call-dummy return, so the `rts` to the entry point
+just runs on (no opcode was written to trap on). Captured packets:
+`M…:00219b10` (return addr = entry point) → `Z0,219b10,2`→`OK` → `vCont;c` →
+free-run.
+
+Recommended fix (conventional gdbserver behaviour, deterministic — doesn't depend
+on the scan): make `Z0`/`z0` write a real software-breakpoint opcode
+(`ILLEGAL` `0x4AFC`) into Amiga memory, save/restore the original word, and
+**shadow** it in the `m` read handler so gdb still sees the original bytes; the
+existing IllegalError→`T05swbreak` exception path then reports the stop. Modify
+the `Z0`/`z0` blocks (~808-854) and the `m` handler (~916) in
+`barto_gdbserver.cpp`; build+deploy as above. Until then the Amiga harness is
+read/breakpoint/nav-capable but not inferior-call-capable.
+
 ## Amiga `DBG=1` build (precise breakpoints)
 
 The release Amiga build is `-Ofast`, whose reordering makes line breakpoints
