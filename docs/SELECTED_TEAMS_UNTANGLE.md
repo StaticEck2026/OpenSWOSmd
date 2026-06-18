@@ -1,7 +1,15 @@
 # Selected-teams cluster untangle (careerFileBuffer overlay, tail)
 
-**Status: DESIGN — not yet implemented.** Reviewed-before-code pass, same
-discipline as `docs/CAREERTEAM_STEP4_REWORK.md`.
+**Status: DONE.** Phases 1–2 landed (decouple + relocate the cluster to a typed
+`.bss` carrier in `src/selected_teams.c`). **Phase 3 done 2026-06-18 (commit
+6888f96):** the 49 raw `(TeamFileEx *)&selTeamsPtr` cast sites across 12 files
+converted to named `selectedTeams[i]` access via `extern TeamFileEx
+selectedTeams[]` in `game_types.h` — byte-identical (same address+type), builds
+x86_64/armhf/aarch64, Amiga-synced. Phase 4 (verify) is covered: the relocation
+was build- + cross-target-save-validated earlier, and phase 3 changes no bytes.
+The `(uint8_t*)&selTeamsPtr + offset` identity-resolve sites are intentionally
+kept (teamSelOffset byte-offset identity). Original design pass below (kept for
+history), same discipline as `docs/CAREERTEAM_STEP4_REWORK.md`.
 
 ## Goal
 

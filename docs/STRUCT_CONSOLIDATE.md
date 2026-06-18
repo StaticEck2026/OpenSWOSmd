@@ -1,5 +1,12 @@
 # STRUCT_CONSOLIDATE.md — Merging the competition struct variant families
 
+**Status: DONE.** All families collapsed to single merged structs in
+`src/game_types.h` (`CompetitionCup`, `CompetitionCup2`, `CompetitionLeague`,
+`Playoffs`, `Leagues`, `QualifyingGroup` + the `CompCupHeader`/`CompCupHeader2`/
+`CompLeagueHeader` headers); the old `*_4`/`*_8`/`*_2` variant names survive only
+in comments. `unkX` field naming finished (see `STRUCT_FIELDS_UNK.md`). Builds
+x86_64/armhf/aarch64, cross-target save-validated. Plan kept below for history.
+
 **Scope:** the per-instance variant struct families in `src/game_types.h`:
 `CompetitionCup_4` / `_6` / `_10` / `_6_2` / `_4_2` / `_6_2_8` / `_6_2_12` /
 `_6_2_64`; the `CompetitionCup2_*` family; `CompetitionLeague_1`..`_4` and the
