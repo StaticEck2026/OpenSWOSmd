@@ -13,6 +13,8 @@ docs/HARNESS.md "FS-UAE write support"). The injection point is a single line in
 the shared _MenuProc, so one mechanism drives both.
 """
 import re
+import subprocess
+import time
 from harness_lib import GdbHarness, _write_png
 
 # _MenuProc(), right after _MenuCheckControls() (line 1565) sets the input
@@ -191,127 +193,153 @@ class SwosHarness:
                 f"base={base}, {nz} non-zero bytes)")
 
     # ---- season-loop driver -----------------------------------------------
-    # _InitializeNewSeason does `currentSeasonShowing++` here. A CODE breakpoint
-    # at this line is the stable way to stop after a season transition: the game
-    # free-runs the result chain + catch-up sim at native speed and stops here.
-    # (Per-frame menu-bp stepping is too slow for the catch-up sim, and
-    # watchpoints / Ctrl-C interrupts wedge the multithreaded SDL inferior.)
+    # Per-screen INPUT MODEL (reverse-engineered 2026-06-17; see docs/HARNESS.md
+    # "Season loop"). The career advances through THREE kinds of screen, each
+    # taking a DIFFERENT input. Using the wrong one is exactly what made the
+    # driver appear to "wedge" — it was NEVER gdb / multithread instability:
+    #
+    #  1. Season TRANSITION (seasonUpdateInProgress != 0): the cup/league result
+    #     displays are AUTO-ADVANCE menus — _DIYCupInit pre-selects entry-66
+    #     (controlMask 0xFFFF; see _Career_AutoAdvanceCupMatches). Setting
+    #     s_seasonSkipLatched=1 drains the WHOLE chain at once; the latch persists
+    #     until seasonUpdateInProgress drops to 0. DO NOT move the selection
+    #     (that clobbers entry-66 and the modal sticks — the original bug). The
+    #     ONLY screen in the chain that needs a keypress is the chairman memo
+    #     (_ChairmanMemosInit, a plain modal): shortFire on its Continue button.
+    #     The transition ends at the season increment (_InitializeNewSeason).
+    #
+    #     The OLD driver free-ran straight to the increment line — which hangs
+    #     forever at the chairman memo (a modal waiting for input). That hang,
+    #     mistaken for a gdb/thread wedge, is the whole reason this rewrite
+    #     exists. Skip-latch + a conditional memo breakpoint = no free-run into
+    #     an input-waiting screen, no wedge, threads untouched.
+    #
+    #  2. In-season menus (memo / contest hub / match-day list): shortFire.
+    #
+    #  3. The pre-match SQUAD screen (_PlayMatchMenuInit): _PlayMatchSelected
+    #     gates on the RAW joystick fire pl1Fire (NOT the menu shortFire). Set
+    #     pl1Fire=1 to start/sim the fixture (CPU-vs-CPU -> instant result).
     SEASON_INCR_LINE = "career_init.c:974"
-    CONTEST_CONTINUE_ORDINAL = 6   # CONTINUE CAREER entry in the contest menu
-    # In-season match-day RESULT handlers = INSTANT SIMULATE (vs the MATCH
-    # handlers _DIYCupOnSelect3 / _DIYLeagueTournamentMatch = play the real
-    # game). The CPU computes the score; fastest way through a season.
-    # See project_career_play_vs_sim.
-    CUP_RESULT_HANDLER = "_DIYCupOnSelect5"
-    LEAGUE_RESULT_HANDLER = "_DIYLeagueTournamentResult"
-    # Screen identity by the ACTIVE menu's onInit, read from the unpacked
-    # currentMenu buffer (Menu->onInit is its first field). This is ONE read
-    # instead of enumerating every entry (the 68-entry match-day screen made the
-    # old enum-per-step O(entries) and minutes/season). onInit is reliable;
-    # currentMenuPtr is not (it shifts during sub-menu navigation).
-    # onInit symbol -> (target entry handler, step kind). The season-END hub is
-    # careerOverMenu (onInit _CareerOverInit, the "...Retired" entries + CONTINUE
-    # CAREER) — _ActivateMenu(contestMenu) redirects there at season end.
-    SEASON_SCREENS = {
-        "_CareerOverInit":           (None,                         "hub"),
-        "_DIYCupInit":               ("_DIYCupOnSelect5",           "cup-result"),     # RESULT = sim
-        "_DIYLeagueTournamentInit":  ("_DIYLeagueTournamentResult", "league-result"),  # RESULT = sim
-        "_PlayMatchMenuInit":        ("_ExitPlayMatch",             "exit-playmatch"),
-    }
-    HUB_INIT = "_CareerOverInit"
-    HUB_CONTINUE = "_ContinueCareer"   # CONTINUE CAREER entry on the season-end hub
+    MEMO_INIT = "_ChairmanMemosInit"
+    SQUAD_INIT = "_PlayMatchMenuInit"
+    HUB_INIT = "_CareerOverInit"         # season-end hub (CONTINUE CAREER)
+    HUB_CONTINUE = "_ContinueCareer"     # the CONTINUE CAREER entry's onSelect
 
     def _current_init(self):
-        """onInit symbol of the active menu (identifies the screen)."""
+        """onInit symbol of the active menu (identifies the screen). ONE read,
+        O(1) — reliable, unlike currentMenuPtr (which shifts in sub-menus)."""
         return self.h.symbol("((Menu *)currentMenu)->onInit")
-
-    def _ordinal_of(self, name, symbol):
-        """Ordinal of the entry whose onSelect == symbol. Cached per menu, with a
-        cheap verify (one read) and a bounded (0..17, where the buttons live)
-        re-search if the slot moved (e.g. RESULT/ViewMatch union)."""
-        if not hasattr(self, "_ord_cache"):
-            self._ord_cache = {}
-        key = (name, symbol)
-        c = self._ord_cache.get(key)
-        if c is not None and self.entry_action(c) == symbol:
-            return c
-        for i in range(0, 18):
-            if self.entry_action(i) == symbol:
-                self._ord_cache[key] = i
-                return i
-        return None
-
-    def _fire_ordinal(self, ordinal, timeout=12):
-        self.h.cmd(f"call (void)_SetCurrentEntry({ordinal})")
-        self.h.set_var("shortFire", 1)
-        self.h.cont(timeout)
 
     def at_contest_menu(self):
         """True at the season-end hub (onInit == _CareerOverInit)."""
         return self._current_init() == self.HUB_INIT
 
-    def sim_one_step(self):
-        """One in-season step toward season end. O(1): identify the active screen
-        by its onInit, fire the known RESULT/exit entry. Returns 'hub' at the
-        season-end contest menu, the kind acted on, or 'shortfire' for an
-        interstitial (chairman memo / cup view / unknown)."""
-        init = self._current_init()
-        entry = self.SEASON_SCREENS.get(init)
-        if entry:
-            handler, kind = entry
-            if kind == "hub":
-                return "hub"
-            ordn = self._ordinal_of(init, handler)
-            if ordn is not None:
-                self._fire_ordinal(ordn)
-                return kind
-        # interstitial / unknown menu -> advance with shortFire
-        self.h.set_var("shortFire", 1)
-        self.h.cont(8)
-        return "shortfire"
+    # ---- interrupt fallback (only for an UNEXPECTED input-waiter) ----------
+    def _gdb_pid(self):
+        r = subprocess.run(["pgrep", "-f", "gdb .*bin/SWOS"],
+                           capture_output=True, text=True)
+        return r.stdout.split()[0] if r.stdout.strip() else None
 
-    def sim_through_season(self, max_steps=300):
-        """Simulate every human match-day (RESULT) until the season-end hub.
-        Returns True if the hub was reached, False if stuck.
+    def _interrupt(self):
+        """Stop a running inferior after a cont timed out (it hit a screen the
+        driver did not anticipate). kill -INT on the gdb process is the only
+        method that works through the daemon pipe — stdin Ctrl-C does not (no
+        tty). A SAFETY NET for discovery; the proven transition path never needs
+        it. Returns True if the inferior is stopped afterward."""
+        pid = self._gdb_pid()
+        if pid:
+            subprocess.run(["kill", "-INT", pid])
+            time.sleep(1.5)
+        return self.h.is_stopped()
 
-        Each step is O(1) (currentMenuPtr identity + known ordinal). Bails if it
-        gets stuck on an unknown screen that shortFire won't advance (so an
-        unmapped menu surfaces as a clean failure, not an infinite loop)."""
-        shortfires = 0
+    # ---- the season transition (skip-latch; NO free-run into a modal) ------
+    def drive_transition(self, max_stops=80, timeout=14):
+        """Drive ONE season transition to the next season's increment. Assumes
+        CONTINUE CAREER was just fired at the hub (or seasonUpdateInProgress is
+        already set). Returns the new currentSeasonShowing, or None if it stuck
+        on an unanticipated input-waiter (call stack printed to stdout).
+
+        Mechanism (see the class comment): s_seasonSkipLatched drains the
+        cup/league auto-advance displays; a CONDITIONAL breakpoint catches only
+        chairman-memo frames (shortFire dismisses them); a code breakpoint at the
+        season increment ends the drive. No blind free-run, so no wedge — this is
+        the proven-reliable core (season 3->4 verified, health OK throughout,
+        threads untouched)."""
+        h = self.h
+        start = h.int_value("currentSeasonShowing")
+        h.set_var("s_seasonSkipLatched", 1)
+        h.delete_breakpoints()
+        h.break_at(self.SEASON_INCR_LINE)
+        h.cmd(f'break {INJECT_LINE} '
+              f'if ((Menu*)currentMenu)->onInit == {self.MEMO_INIT}')
+        for _ in range(max_stops):
+            h.set_var("s_seasonSkipLatched", 1)    # keep latched across screens
+            h.cont(timeout)
+            if not h.is_stopped():                  # unanticipated waiter
+                self._interrupt()
+                print("drive_transition: stuck (unknown waiter)\n" + h.cmd("bt"))
+                return None
+            s = h.int_value("currentSeasonShowing")
+            if s is not None and s != start:
+                return s                            # hit the season increment
+            if self._current_init() == self.MEMO_INIT:
+                h.set_var("shortFire", 1)           # dismiss the chairman memo
+        return None
+
+    # ---- the in-season fixtures (sim each via pl1Fire on the squad) --------
+    def drive_inseason(self, max_steps=250, timeout=12):
+        """From just after a season increment, drive the new season to the next
+        season-end hub: shortFire advances menus, pl1Fire sims the fixture at the
+        squad screen (_PlayMatchSelected gates on the raw joystick fire, not the
+        menu shortFire). Returns True if the hub was reached.
+
+        NOTE: the in-season cup match-day (_DIYCupInit) is a small state machine
+        whose post-match entry selection is not yet fully mapped, so this is a
+        best-effort stepper with a stuck-detector that fails cleanly rather than
+        looping. The season TRANSITION above is the proven part."""
+        h = self.h
+        h.delete_breakpoints()
+        h.break_at(INJECT_LINE)
+        stuck, last = 0, None
         for _ in range(max_steps):
-            r = self.sim_one_step()
-            if r == "hub":
+            h.cont(timeout)
+            if not h.is_stopped():
+                self._interrupt()
+                return False
+            init = self._current_init()
+            if init == self.HUB_INIT:
                 return True
-            shortfires = shortfires + 1 if r == "shortfire" else 0
-            if shortfires >= 20:    # stuck on an unmapped screen
+            if init == self.SQUAD_INIT:
+                h.set_var("pl1Fire", 1)             # play/sim the fixture
+            h.set_var("shortFire", 1)              # advance the menu
+            stuck = stuck + 1 if init == last else 0
+            last = init
+            if stuck >= 50:                         # unmapped screen -> bail
                 return False
         return self.at_contest_menu()
 
     def advance_one_season(self):
-        """From the season-end contest hub: CONTINUE -> transition (free-run to
-        the season increment) -> sim the new season's matches -> next hub.
-        Returns the new currentSeasonShowing (at the next season-end hub).
-
-        The transition uses the only stable stop on the multithreaded SDL
-        inferior: free-run to the SEASON_INCR_LINE code breakpoint. The in-season
-        matches are simulated via RESULT (sim_through_season)."""
+        """From a season-end hub: fire CONTINUE -> drive the transition to the
+        season increment -> drive the new season's fixtures to the next hub.
+        Returns the new currentSeasonShowing (at the increment), or None."""
+        if not self.at_contest_menu():
+            return None
         # fire CONTINUE CAREER (selections gate on shortFire, bit 5)
-        ordn = self._ordinal_of(self.HUB_INIT, self.HUB_CONTINUE)
-        self.h.cmd(f"call (void)_SetCurrentEntry({ordn if ordn is not None else self.CONTEST_CONTINUE_ORDINAL})")
+        self.goto(self.HUB_CONTINUE)
         self.h.set_var("shortFire", 1)
-        # free-run the transition (result chain + catch-up sim) to the increment
-        self.h.delete_breakpoints(); self.h.break_at(self.SEASON_INCR_LINE); self.h.cont(60)
-        # step past it back into the menu loop, then sim the new season's matches
-        self.h.delete_breakpoints(); self.h.break_at(INJECT_LINE); self.h.cont(20)
-        self.sim_through_season()
-        return self.h.int_value("currentSeasonShowing")
+        s = self.drive_transition()
+        if s is None:
+            return None
+        self.drive_inseason()
+        return s
 
     def run_seasons(self, n):
-        """Advance n full seasons (all matches simulated via RESULT). Returns the
-        list of season numbers reached. Drives to a season-end hub first."""
+        """Advance up to n full seasons. Returns the list of season numbers
+        reached (None marks a season that stuck). Drives to a season-end hub
+        first."""
         self.prime()
         if not self.at_contest_menu():
-            self.sim_through_season()
+            self.drive_inseason()
         out = []
         for _ in range(n):
             s = self.advance_one_season()

@@ -155,6 +155,52 @@ aid; drive via menu state for precision). The plugin auto-detects the target:
   Palette is `gamePalette[]` (big-endian uint16, 12-bit `0x0RGB`; nibble×0x11 →
   8-bit). Camera offsets are assumed 0 (menus); in-match scrolling isn't decoded.
 
+## Season loop (driving a career through seasons)
+
+`seasons N` advances a loaded career up to `N` seasons unattended. The career
+moves through three kinds of screen, each taking a **different** input — and
+getting this wrong is what once looked like a "gdb wedge". It was not: gdb and
+the multithreaded SDL inferior are stable (80+ menu-steps and a full transition
+run with `health=OK` throughout, threads untouched). The wedge was the *driver*
+free-running into a screen that waits for input.
+
+**Per-screen input model** (`scripts/swos_plugin.py`, `drive_transition` /
+`drive_inseason`):
+
+1. **Season transition** (`seasonUpdateInProgress != 0`). The cup/league result
+   displays are auto-advance menus: `_DIYCupInit` pre-selects entry-66 with
+   `controlMask == 0xFFFF` (see `_Career_AutoAdvanceCupMatches`). Set
+   `s_seasonSkipLatched = 1` and the whole chain drains itself; the latch
+   persists until `seasonUpdateInProgress` returns to 0. **Do not move the
+   selection** — `_SetCurrentEntry` off entry-66 makes the modal stick (that was
+   the original bug). The only keypress the chain needs is at the **chairman
+   memo** (`_ChairmanMemosInit`, a plain modal) — `shortFire` on its Continue
+   button. A conditional breakpoint
+   (`break menu_system.c:1567 if ((Menu*)currentMenu)->onInit == _ChairmanMemosInit`)
+   catches *only* memo frames; a code breakpoint at the season increment
+   (`career_init.c:974`, `_InitializeNewSeason`) ends the drive. Skip-latch +
+   conditional-memo-bp = no blind free-run into an input-waiting screen, so no
+   wedge.
+
+   The **old** driver free-ran straight to the increment line, which hangs
+   forever at the chairman memo. That hang — misread as gdb/thread instability —
+   is the entire reason this approach exists. The interrupt fallback uses
+   `kill -INT` on the gdb process (stdin Ctrl-C does not work through the daemon
+   pipe — no tty); it is only a safety net for an *unanticipated* waiter.
+
+2. **In-season menus** (memo / contest hub / match-day list, `sUIP == 0`):
+   plain `shortFire` on the default selection.
+
+3. **Pre-match squad screen** (`_PlayMatchMenuInit`): `_PlayMatchSelected` gates
+   on the **raw joystick fire** `pl1Fire`, *not* the menu `shortFire`. Set
+   `pl1Fire = 1` to play/sim the fixture (CPU-vs-CPU → instant result).
+
+**Status of the loop:** the **transition** is proven (season 3→4, `health=OK`,
+zero wedges, no threading change). The **in-season cup match-day** (`_DIYCupInit`)
+is a small post-match state machine whose entry selection isn't fully mapped yet,
+so `drive_inseason` is best-effort with a stuck-detector that fails cleanly. That
+state machine is the next piece to finish a fully-unattended multi-season run.
+
 ## Reusing for another project
 
 1. Keep `gdb_proxy.py` and `harness_lib.py` as-is.
@@ -177,3 +223,8 @@ aid; drive via menu state for precision). The plugin auto-detects the target:
 - The injection is shared C, so it applies to **SDL** identically (native gdb
   writes always work); re-validate SDL after pointing the daemon at a runnable
   Linux ELF.
+- **Season transition driving** validated on SDL: a career advanced 3→4 via the
+  skip-latch path with `health=OK` throughout and no threading change. The
+  in-season match-day stepper is best-effort (see "Season loop"). The old
+  "free-run to the season increment" path is retired — it hung at the chairman
+  memo, which was mistaken for gdb/multithread instability and is *not*.
