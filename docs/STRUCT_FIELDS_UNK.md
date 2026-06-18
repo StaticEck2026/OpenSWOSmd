@@ -210,17 +210,34 @@ per variant — they are three recurring roles:
 
 ## 8. `Playoffs_*`, `Leagues_*`, `QualifyingGroup_*`, `CompetitionCareer`
 
-### 8a. `Playoffs_8` / `Playoffs_4` (`game_types.h:1711`)
+### 8a. `Playoffs` (merged `Playoffs_8`/`_4`) — DONE ✅ (2026-06-18)
+
+**FULLY DECODED.** The former opaque `playoffHeader[16]` is a CUP competition
+record — a `CompCupHeader` (14 B) + `roundRuleFlags[2]`. `comp.type == 1`;
+the qualified teams contest a knockout, initialised via the cup path
+(`_Career_AutoAdvanceCupCompetitionFromRecord`). Name reached via
+`comp.nameTableOffset` (=11 → `name[]`), team list via `comp.teamListOffset`
+(=17 → `qualifiedTeamIds[]`). Cross-checked against the **in-game DIY editor**
+(DUTCH / URUGUAYAN PLAYOFFS screenshots).
 
 ```c
-typedef struct { int8_t unk1[16]; char *text[2]; int8_t unk2[8 or 4]; } Playoffs_8/_4;
+typedef struct __attribute__((packed)) {
+    Competition comp;            /* 0x00: cup header (type=1; teamNumber=country) */
+    int8_t  numRoundsOverride;   /* 0x09: forces numRounds (Dutch=1 → single 4-team final) */
+    int8_t  teams;               /* 0x0A: bracket size = qualified-team count (editor TEAMS) */
+    int8_t  awayGoalsMode;       /* 0x0B: editor "AWAY GOALS" */
+    int8_t  subsAndMaxSubs;      /* 0x0C: hi=subs, lo=bench (editor "SUBSTITUTES 3 FROM 5"=0x35) */
+    int8_t  roundStringBase;     /* 0x0D */
+    int8_t  roundRuleFlags[2];   /* 0x0E: per-round legs/ET/pens (0x94=2-leg+ET+pens, 0x14=1-leg) */
+    char   *name[2];             /* 0x10: was text[2] */
+    int8_t  qualifiedTeamIds[8]; /* was unk2: BE-packed qualified team ids, filled at runtime */
+} Playoffs;
 ```
 
-| Current | Type | Suggested | Conf. | Description / evidence |
-|---|---|---|---|---|
-| `unk1[16]` | db×16 | **`playoffHeader[16]`** (structured) | Med | A small structured header, not opaque: byte **`unk1[10]` = qualifying-team count** (`div1Playoffs.unk1[10]=4`, read `career_season.c:1498`); byte **`unk1[7]` = offset to `unk2`** (=17, validated, panic `0x3003` if 0, `career_season.c:1522`). Consider breaking out: `…; uint8_t toUnk2Offset; …; uint8_t qualTeamCount; …`. |
-| `text[2]` | ptr×2 | **`name[2]`** | High | Playoff name strings (`aPlayoffs`, etc.). |
-| `unk2[8]/[4]` | db×N | **`qualifiedTeamIds[N]`** | Med-High | Output buffer of qualified team ids, written via `BE_WRITE_U16` (`career_season.c:1533–1547`). |
+Screenshot ground-truth (Uruguay `{105,1,71,88,88,11,0,17,1,0,2,1,53,1,-108,0}`):
+DEC–DEC = months 88/8=11; AWAY GOALS = byte11=1; SUBSTITUTES 3 FROM 5 = byte12
+0x35; TEAMS 2 = byte10; FINAL 2 LEGS + ET + PENS = byte14 0x94. Dutch (4 teams,
+`numRoundsOverride=1`) collapses to one FINAL → confirms byte 9.
 
 ### 8b. `Leagues_4` / `Leagues_2` / `Leagues_4_2_24` (`game_types.h:1723`)
 

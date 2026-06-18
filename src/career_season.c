@@ -1445,7 +1445,7 @@ extern Playoffs div3Playoffs;
  *            qIdx pairs in englishLeaguesBlock._div2.qualifierIndexPairs[].
  *
  * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs
- * statics qualComp->playoffHeader[7] = 17 (Amiga byte offset to qualifiedTeamIds[0]).
+ * statics qualComp->comp.teamListOffset = 17 (Amiga byte offset to qualifiedTeamIds[0]).
  * On 64-bit Playoffs.qualifiedTeamIds sits 8 bytes later (text[2] grew). Using
  * typed `&qualComp->qualifiedTeamIds[0]` resolves correctly on both targets. */
 static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competition)
@@ -1495,7 +1495,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         return; /* Premier (index=0) returned via early-exit. */
     }
 
-    int8_t count = (int8_t)qualComp->playoffHeader[10];
+    int8_t count = (int8_t)qualComp->teams;   /* qualified-team count (was playoffHeader[10]) */
 
     if (!youreSacked && (uint8_t *)qualComp == diyCompetitionPtr) {
         /* Player's competition — interactive processing. Advance the
@@ -1518,8 +1518,8 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         careerTeam.team.teamControls = 1;
 
         /* Sanity check matching the asm `beq.w loc_12BCD0` — Playoffs
-         * statics all have playoffHeader[7]=17, so 0 should never appear. */
-        if (qualComp->playoffHeader[7] == 0) {
+         * statics all have comp.teamListOffset=17, so 0 should never appear. */
+        if (qualComp->comp.teamListOffset == 0) {
             panicReasonCode = 0x3003;
             _PanicHaltLoop();
             return;
@@ -1527,7 +1527,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
 
         /* teamData lands at qualComp->qualifiedTeamIds[0] on both targets via
          * typed access (replaces the asm's `lea 7(a1,d0.w),a0` byte walk where
-         * d0 = qualComp->playoffHeader[7] = 17). On 32-bit byte 7+17=24 =
+         * d0 = qualComp->comp.teamListOffset = 17). On 32-bit byte 7+17=24 =
          * qualifiedTeamIds[0]; on 64-bit the same logical position is byte 32
          * because text[2] widened. Typed lookup picks the right byte on each. */
         uint8_t *teamData = (uint8_t *)&qualComp->qualifiedTeamIds[0];

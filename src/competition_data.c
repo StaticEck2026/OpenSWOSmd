@@ -594,9 +594,9 @@ EnglishLeaguesBlock englishLeaguesBlock = {
 /* (the englishLeagues / englishLeagues1..3 .equ aliases are gone — all
  * access is via englishLeaguesBlock._main/._div1/._div2/._div3 now) */
 
-Playoffs div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
-Playoffs div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
-Playoffs div3Playoffs = { { 49, 1, 8, -128, -124, 11, 0, 17, 1, 0, 4, 1, 51, 1, -108, 20 }, { aDiv3Playoffs, aPlayoffs }, { 0 } };
+Playoffs div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
+Playoffs div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
+Playoffs div3Playoffs = { { 49, 1, 8, -128, -124, 11, 0, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv3Playoffs, aPlayoffs }, { 0 } };
 
 /* Dutch league */
 CompetitionLeague dutchLeague = {
@@ -614,7 +614,7 @@ Leagues dutchLeagues1 = {
     (CompetitionLeague *)&dutchLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs dutchPlayoffs = { { 57, 1, 25, -128, -128, 11, 0, 17, 1, 1, 4, 1, 53, 1, -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs dutchPlayoffs = { { 57, 1, 25, -128, -128, 11, 0, 17, 1 }, 1, 4, 1, 53, 1, { -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Scottish league */
 CompetitionLeague scottishLeague = {
@@ -630,7 +630,7 @@ Leagues scottishLeague1 = {
     (CompetitionLeague *)&scottishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs scottishPlayoffs = { { 75, 1, 33, -128, -128, 11, 0, 17, 1, 0, 2, 1, 51, 1, 20, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs scottishPlayoffs = { { 75, 1, 33, -128, -128, 11, 0, 17, 1 }, 0, 2, 1, 51, 1, { 20, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Spanish league */
 CompetitionLeague spanishLeague = {
@@ -648,7 +648,7 @@ Leagues spanishLeague1 = {
     (CompetitionLeague *)&spanishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs spanishPlayoffs = { { 79, 1, 35, -120, -120, 11, 0, 17, 1, 1, 4, 1, 53, 1, -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs spanishPlayoffs = { { 79, 1, 35, -120, -120, 11, 0, 17, 1 }, 1, 4, 1, 53, 1, { -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Uruguayan league */
 CompetitionLeague uruguayanLeague = {
@@ -664,7 +664,7 @@ Leagues uruguayanLeague1 = {
     (CompetitionLeague *)&uruguayanLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs uruguayanPlayoffs = { { 105, 1, 71, 88, 88, 11, 0, 17, 1, 0, 2, 1, 53, 1, -108, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs uruguayanPlayoffs = { { 105, 1, 71, 88, 88, 11, 0, 17, 1 }, 0, 2, 1, 53, 1, { -108, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* ======================================================================
  * National Cups
