@@ -164,28 +164,28 @@ CompetitionCup2 euroCup = {
       { { 16, 4, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 0, 0 }, { 0, 0, 0 } }, 0 },
     { 0, -108, -108, 20 },
     { aEuropeanChampi_1, aEuropeanCup },
-    { 13, 1, 25, 0, 37, 5, 33, 33, 35, 6, 30, 18, 14, 4, 28, 23,
-      1, 5, 38, 9, 20, 22, 8, 20, 36, 8, 27, 11, 20, 0, 29, 12 }
+    { {13,1}, {25,0}, {37,5}, {33,33}, {35,6}, {30,18}, {14,4}, {28,23},
+      {1,5}, {38,9}, {20,22}, {8,20}, {36,8}, {27,11}, {20,0}, {29,12} }
 };
 
 CompetitionCup cupWinnersCup = {
     { { 1, 1, -1, 64, 32, 15, 0, 21, 1 }, 0, 32, 1, 53, 1 },
     { -108, -108, -108, -108, 20, 0 },
     { aEuropeanCupWin, aEuroCwCup },
-    { 15, 0, 78, 2, 7, 2, 34, 11, 35, 8, 5, 0, 29, 2, 40, 16,
-      17, 8, 36, 0, 2, 2, 27, 1, 19, 15, 38, 10, 11, 4, 25, 21,
-      30, 8, 20, 18, 14, 22, 41, 7, 31, 10, 4, 11, 12, 8, 8, 18,
-      3, 6, 16, 8, 37, 12, 39, 10, 1, 7, 6, 10, 21, 6, 13, 30 }
+    { {15,0}, {78,2}, {7,2}, {34,11}, {35,8}, {5,0}, {29,2}, {40,16},
+      {17,8}, {36,0}, {2,2}, {27,1}, {19,15}, {38,10}, {11,4}, {25,21},
+      {30,8}, {20,18}, {14,22}, {41,7}, {31,10}, {4,11}, {12,8}, {8,18},
+      {3,6}, {16,8}, {37,12}, {39,10}, {1,7}, {6,10}, {21,6}, {13,30} }
 };
 
 CompetitionCup uefaCup = {
     { { 2, 1, -1, 64, 32, 15, 0, 21, 1 }, 0, 32, 1, 53, 1 },
     { -108, -108, -108, -108, 20, 0 },
     { aEufaCup, aEufaCup_0 },
-    { 31, 19, 29, 3, 28, 7, 38, 5, 6, 8, 35, 44, 29, 24, 2, 0,
-      14, 23, 20, 40, 36, 7, 37, 10, 35, 19, 25, 10, 2, 4, 30, 10,
-      20, 21, 1, 2, 33, 0, 7, 3, 16, 5, 8, 22, 14, 30, 38, 21,
-      20, 23, 35, 42, 14, 17, 31, 16, 13, 22, 29, 20, 13, 23, 14, 25 }
+    { {31,19}, {29,3}, {28,7}, {38,5}, {6,8}, {35,44}, {29,24}, {2,0},
+      {14,23}, {20,40}, {36,7}, {37,10}, {35,19}, {25,10}, {2,4}, {30,10},
+      {20,21}, {1,2}, {33,0}, {7,3}, {16,5}, {8,22}, {14,30}, {38,21},
+      {20,23}, {35,42}, {14,17}, {31,16}, {13,22}, {29,20}, {13,23}, {14,25} }
 };
 
 /* ======================================================================
@@ -196,8 +196,7 @@ CompetitionCup2 worldCup2 = {
     { { 3, 2, -1, -120, -112, 35, 0, 41, 0 }, 1, 0, 1, 3, 53, 6,
       { { 32, 8, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
     { 0, 20, 20, 20, 20, 20 },
-    { aWorldCup, aWorldCup_0 },
-    { 0 }
+    { aWorldCup, aWorldCup_0 }
 };
 
 CompetitionCup2 worldCup = {
@@ -205,9 +204,9 @@ CompetitionCup2 worldCup = {
       { { 24, 6, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
     { 0, 20, 20, 20, 20, 20 },
     { aWorldCup, aWorldCup_0 },
-    { 80, 36, 82, 4, 83, 13, 80, 44, 82, 2, 80, 37, 81, 6, 80, 43,
-      80, 17, 82, 1, 80, 42, 84, 24, 82, 0, 80, 18, 81, 22, 80, 6,
-      80, 23, 80, 35, 80, 32, 83, 8, 80, 5, 81, 19, 80, 19, 84, 22 }
+    { {80,36}, {82,4}, {83,13}, {80,44}, {82,2}, {80,37}, {81,6}, {80,43},
+      {80,17}, {82,1}, {80,42}, {84,24}, {82,0}, {80,18}, {81,22}, {80,6},
+      {80,23}, {80,35}, {80,32}, {83,8}, {80,5}, {81,19}, {80,19}, {84,22} }
 };
 
 /* ======================================================================
@@ -216,42 +215,42 @@ CompetitionCup2 worldCup = {
 
 CompetitionCup worldCupQualifyingGroup1 = {
     { { 5, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_2, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_2, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup2 = {
     { { 6, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_3, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_3, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup3 = {
     { { 7, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_4, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_4, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup4 = {
     { { 8, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_5, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_5, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup5 = {
     { { 9, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_6, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_6, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup6 = {
     { { 10, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_7, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_7, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup7 = {
     { { 11, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_8, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_8, aWCQualifier_0 }
 };
 
 CompetitionCup worldCupQualifyingGroup8 = {
     { { 12, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_9, aWCQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aWorldCupQualif_9, aWCQualifier_0 }
 };
 
 /* ======================================================================
@@ -262,33 +261,33 @@ CompetitionCup2 northAmericaWorldCupQualification = {
     { { 13, 2, 83, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 2,
       { { 12, 0, 12 }, { 6, 1, 6 }, { 3, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { -108, 20, 20, 20, 20, 20 },
-    { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
+    { aWorldCupQualif_1, aWCQualifier_0 }
 };
 
 CompetitionCup2 southAmericaWorldCupQualification = {
     { { 14, 2, 82, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 1,
       { { 8, 1, 8 }, { 4, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { 20, 20, 20, 20, 20, 20 },
-    { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
+    { aWorldCupQualif_1, aWCQualifier_0 }
 };
 
 CompetitionCup2 africaWorldCupQualification = {
     { { 15, 2, 81, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 3,
       { { 32, 0, 32 }, { 16, 0, 16 }, { 8, 1, 8 }, { 5, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { -108, -108, 20, 20, 20, 20 },
-    { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
+    { aWorldCupQualif_1, aWCQualifier_0 }
 };
 
 CompetitionCup2 asiaWorldCupQualification = {
     { { 16, 2, 84, 72, 16, 35, 0, 41, 0 }, 1, 0, 2, 3, 53, 3,
       { { 24, 0, 24 }, { 12, 0, 12 }, { 6, 1, 6 }, { 2, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { -108, -108, 20, 20, 20, 20 },
-    { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
+    { aWorldCupQualif_1, aWCQualifier_0 }
 };
 
 CompetitionCup oceaniaWorldCupQualification = {
     { { 17, 0, 85, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 4 },
-    { 1, 0, 0, 0, 0, 0 }, { aWorldCupQualif_1, aWCQualifier_0 }, { 0 }
+    { 1, 0, 0, 0, 0, 0 }, { aWorldCupQualif_1, aWCQualifier_0 }
 };
 
 /* ======================================================================
@@ -297,17 +296,17 @@ CompetitionCup oceaniaWorldCupQualification = {
 
 CompetitionCup invitationTournament = {
     { { 18, 0, -1, -104, -104, 15, 0, 21, 0 }, 1, 1, 3, 53, 4 },
-    { 0 }, { aInvitationTour, aInvTournament }, { 0 }
+    { 0 }, { aInvitationTour, aInvTournament }
 };
 
 CompetitionCup tour = {
     { { 19, 0, -1, -104, -104, 15, 0, 21, 0 }, 1, -1, 3, 53, 4 },
-    { 0 }, { 0, aTour }, { 0 }
+    { 0 }, { 0, aTour }
 };
 
 CompetitionCup friendly = {
     { { 20, 0, -1, 56, 0, 15, 0, 21, 0 }, 1, -1, 3, 53, 6 },
-    { 0 }, { aFriendly, aFriendly_0 }, { 0 }
+    { 0 }, { aFriendly, aFriendly_0 }
 };
 
 /* ======================================================================
@@ -318,7 +317,7 @@ CompetitionCup2 europeanChampionships2 = {
     { { 21, 2, 80, -120, -120, CUP2_NAME_TABLE_OFFSET, 0, CUP2_TEAMLIST_TABLE_OFFSET, 0 }, 1, 0, 1, 3, 53, 4,
       { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { 0, 20, 20, 20 },
-    { aEuropeanChampi_0, aECFinals }, { 0 }
+    { aEuropeanChampi_0, aECFinals }
 };
 
 CompetitionCup2 europeanChampionships = {
@@ -326,8 +325,8 @@ CompetitionCup2 europeanChampionships = {
       { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { 0, 20, 20, 20 },
     { aEuropeanChampi_0, aECFinals },
-    { 80, 11, 80, 44, 80, 19, 80, 39, 80, 42, 80, 6, 80, 36, 80, 15,
-      80, 17, 80, 9, 80, 23, 80, 37, 80, 10, 80, 34, 80, 45, 80, 7 }
+    { {80,11}, {80,44}, {80,19}, {80,39}, {80,42}, {80,6}, {80,36}, {80,15},
+      {80,17}, {80,9}, {80,23}, {80,37}, {80,10}, {80,34}, {80,45}, {80,7} }
 };
 
 /* ======================================================================
@@ -336,42 +335,42 @@ CompetitionCup2 europeanChampionships = {
 
 CompetitionCup ecQualifyingGroup1 = {
     { { 23, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup2 = {
     { { 24, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_0, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_0, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup3 = {
     { { 25, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_1, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_1, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup4 = {
     { { 26, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_2, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_2, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup5 = {
     { { 27, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_3, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_3, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup6 = {
     { { 28, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_4, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_4, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup7 = {
     { { 29, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 6 },
-    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_5, aECQualifier_0 }, { 0 }
+    { 2, 0, 0, 0, 0, 0 }, { aECQualifyingGr_5, aECQualifier_0 }
 };
 
 CompetitionCup ecQualifyingGroup8 = {
     { { 30, 0, 80, 72, 16, 15, 0, 21, 0 }, 1, 2, 3, 53, 4 },
-    { 1, 0, 0, 0, 0, 0 }, { aECQualifyingGr_6, aECQualifier_0 }, { 0 }
+    { 1, 0, 0, 0, 0, 0 }, { aECQualifyingGr_6, aECQualifier_0 }
 };
 
 /* ======================================================================
@@ -383,7 +382,8 @@ CompetitionCup2 copaAmerica = {
       { { 12, 3, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { 0, 4, 4, 4 },
     { aCopaAmerica, aCopaAmerica_0 },
-    { 83, 8, 83, 13, 82, 8, 82, 9, 82, 0, 82, 1, 82, 2, 82, 3, 82, 4, 82, 5, 82, 6, 82, 7 }
+    { {83,8}, {83,13}, {82,8}, {82,9}, {82,0}, {82,1}, {82,2}, {82,3},
+      {82,4}, {82,5}, {82,6}, {82,7} }
 };
 
 CompetitionCup2 africanNationsCup = {

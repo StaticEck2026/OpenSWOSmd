@@ -16,6 +16,7 @@
  * size_t) come from swos_types.h. On hosted builds it pulls in
  * <stdint.h>/<stddef.h>; on Amiga it provides manual typedefs. */
 #include "swos_types.h"
+#include "endian_helpers.h"   /* PACK_BE_U16, used by TEAMID_PACK below */
 
 /* ---- Forward declarations ---- */
 typedef struct Sprite Sprite;
@@ -207,7 +208,7 @@ struct __attribute__((packed, aligned(2))) TeamGeneralInfo {
     int16_t            ballY;                       /* 100 */
     int16_t            passKickTimer;               /* 102 */
     Sprite            *passingKickingPlayer;        /* 104 */
-    int16_t            unkBallTimer;                /* 108 */
+    int16_t            ballControlTurnTimer;        /* 108: frames the ball-controlling player has been turning; if > ballControlTurnThresholds[ballControl] the player loses the ball on the turn */
     int16_t            ballCanBeControlled;         /* 110 */
     int16_t            ballControllingPlayerDirection; /* 112 */
     int16_t            field_72;                    /* 114 */
@@ -1609,6 +1610,32 @@ _Static_assert(offsetof(CompetitionLeague, name) - 5 > 0 &&
                "league nameTableOffset must be a positive int8");
 
 /* ==================================================================
+ * TeamId — 2 bytes, an Amiga SWOS team identity: {countryNumber, teamOrdinal}.
+ *
+ * This is the {country, ordinal} byte pair the whole game uses to name a team
+ * (cf. TeamFile@0, NationalTeamRecord@0). Unlike a host uint16 read, a two-byte
+ * struct is endian-NEUTRAL: countryNumber is always byte 0 and teamOrdinal byte
+ * 1 on LE and BE alike, so no byte-swap is needed to access the fields. The
+ * packed comparison key the game compares against selTeamNumber/globalTeamNumber
+ * is the big-endian word (countryNumber << 8 | teamOrdinal) — use TEAMID_PACK,
+ * never `*(uint16_t *)`.
+ *
+ * Currently applied to the STATIC competition draw lists (CompetitionCup/Cup2
+ * teamSeedList). The runtime team-id buffers (diyTournamentTeamIds, cupTeamIds,
+ * euroCupCopy/cwc/uefa, qualifier lists) still use raw BE byte pairs — migrating
+ * those is a separate, save-format-aware pass (see docs/STRUCT_FIELDS_UNK.md).
+ * ================================================================== */
+typedef struct __attribute__((packed)) TeamId {
+    uint8_t countryNumber;       /* 0: country/region number (BE high byte) */
+    uint8_t teamOrdinal;         /* 1: team index within country (BE low byte) */
+} TeamId;
+typedef char _teamid_size_check[(sizeof(TeamId) == 2) ? 1 : -1];
+
+/* Packed BE comparison key (countryNumber << 8 | teamOrdinal), matching what an
+ * m68k `move.w` produced and what isTeamInList/seed-reorder compare against. */
+#define TEAMID_PACK(t)  PACK_BE_U16((t).countryNumber, (t).teamOrdinal)
+
+/* ==================================================================
  * CompetitionCup — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md §4).
  * Collapses all 8 CompetitionCup_* variants into one — the old _6_2_64 layout,
  * the largest: CompCupHeader header + per-round rule flags + cup name strings +
@@ -1623,7 +1650,7 @@ typedef struct __attribute__((packed)) {
     CompCupHeader header;          /* 14 B (was the CompetitionCup header struct) */
     int8_t   roundRuleFlags[6];    /* per-round legs/ET/pen flag bytes */
     char    *name[2];              /* cup name strings (was text[2]) */
-    int8_t   teamSeedList[64];     /* embedded BE {country,ordinal} draw pairs */
+    TeamId   teamSeedList[32];     /* embedded competition draw: {country,ordinal} pairs */
 } CompetitionCup;
 
 /* Self-offset bytes for the merged layout (Competition byte 5 / byte 7). Both are
@@ -1652,7 +1679,7 @@ typedef struct __attribute__((packed)) {
     CompCupHeader2 header;         /* 34 B (was the CompetitionCup2 header struct) */
     int8_t   roundRuleFlags[6];    /* per-round legs/ET/pen flag bytes */
     char    *name[2];              /* tournament name strings (was text[2]) */
-    int8_t   teamSeedList[64];     /* embedded BE {country,ordinal} draw pairs */
+    TeamId   teamSeedList[32];     /* embedded competition draw: {country,ordinal} pairs */
 } CompetitionCup2;
 
 /* Self-offset bytes for the merged layout (Competition byte 5 / byte 7). Both are

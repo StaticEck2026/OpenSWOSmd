@@ -596,14 +596,14 @@ calculate_ball_destination:
             goto finalize;
 
         /* Player is turning -- increment turn timer */
-        team->unkBallTimer = team->unkBallTimer + 1;
+        team->ballControlTurnTimer = team->ballControlTurnTimer + 1;
 
         /* Check turn threshold based on ball control skill */
         {
             PlayerInfo *pi = a4;
             int16_t bcSkill  = pi->ballControl;
             int16_t threshold = ballControlTurnThresholds[bcSkill];
-            if (threshold > team->unkBallTimer)
+            if (threshold > team->ballControlTurnTimer)
                 goto finalize;
         }
 
