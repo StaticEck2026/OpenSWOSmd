@@ -1614,14 +1614,19 @@ void _MenuProc(void)
          * controlMask=0xFFFF entry fires on iteration 1 and the chain
          * flashes by in milliseconds — see Amiga visual reference.
          *
-         * SDL-only: pauseSkipRequested (SPACE key / second controller
-         * button) latches s_seasonSkipLatched, draining the hold counter
-         * for THIS menu AND every remaining menu in the chain. The latch
-         * clears the next time seasonUpdateInProgress drops to 0 (see
-         * top of MenuProc), so a single press skips the whole sequence
-         * without the user having to hold the button. */
+         * SPACE / second controller button latches s_seasonSkipLatched,
+         * draining the hold counter for THIS menu AND every remaining menu
+         * in the chain. The latch clears the next time seasonUpdateInProgress
+         * drops to 0 (see top of MenuProc), so a single press skips the whole
+         * sequence without the user having to hold the button. */
 #ifdef SWOS_SDL_BUILD
         if (pauseSkipRequested)
+            s_seasonSkipLatched = 1;
+#else
+        /* Amiga: SPACE is post-LUT 0x20 in currentKey (NOT the raw 0x40 in
+         * keyIn). _MenuCheckControls already called _GetKey() this frame, so
+         * currentKey reflects the latest key. */
+        if (currentKey == 0x20)
             s_seasonSkipLatched = 1;
 #endif
         if (s_seasonSkipLatched) {
