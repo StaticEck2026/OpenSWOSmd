@@ -198,61 +198,88 @@ class SwosHarness:
     # watchpoints / Ctrl-C interrupts wedge the multithreaded SDL inferior.)
     SEASON_INCR_LINE = "career_init.c:974"
     CONTEST_CONTINUE_ORDINAL = 6   # CONTINUE CAREER entry in the contest menu
+    # In-season match-day RESULT handlers = INSTANT SIMULATE (vs the MATCH
+    # handlers _DIYCupOnSelect3 / _DIYLeagueTournamentMatch = play the real
+    # game). The CPU computes the score; fastest way through a season.
+    # See project_career_play_vs_sim.
+    CUP_RESULT_HANDLER = "_DIYCupOnSelect5"
+    LEAGUE_RESULT_HANDLER = "_DIYLeagueTournamentResult"
+
+    def _actions(self):
+        return [a for _, a in self.enum() if a]
 
     def at_contest_menu(self):
-        """True if the current menu is the career contest menu (has CONTINUE
-        CAREER = _ContinueCareer among its entries)."""
-        return any(act == "_ContinueCareer" for _, act in self.enum())
+        """True at the season-end contest hub (exposes CONTINUE CAREER)."""
+        return "_ContinueCareer" in self._actions()
 
-    def drive_to_contest(self, max_steps=15):
-        """From a post-transition continue-screen (chairman memo, etc.), press
-        shortFire until the contest menu is reached."""
+    def _fire_entry(self, symbol, timeout=12):
+        """Select the entry whose onSelect == symbol and press it (shortFire),
+        no prime() overhead. Returns False if the symbol isn't on this menu."""
+        if self.goto(symbol) is None:
+            return False
+        self.h.set_var("shortFire", 1)
+        self.h.cont(timeout)
+        return True
+
+    def sim_one_step(self):
+        """One in-season step toward season end, simulating matches via RESULT.
+        Returns 'hub' at the season-end contest menu, else the action taken."""
+        acts = self._actions()
+        if "_ContinueCareer" in acts:
+            return "hub"
+        if self.CUP_RESULT_HANDLER in acts:        # cup match-day: RESULT = sim
+            self._fire_entry(self.CUP_RESULT_HANDLER); return "cup-result"
+        if self.LEAGUE_RESULT_HANDLER in acts:     # league match-day: RESULT = sim
+            self._fire_entry(self.LEAGUE_RESULT_HANDLER); return "league-result"
+        if "_PlayMatchSelected" in acts:           # team-select -> match-day overview
+            self._fire_entry("_ExitPlayMatch"); return "exit-playmatch"
+        # chairman memo / cup view / other interstitial -> advance
+        self.h.set_var("shortFire", 1); self.h.cont(8); return "shortfire"
+
+    def sim_through_season(self, max_steps=200):
+        """Simulate every human match-day (RESULT) until the season-end hub.
+
+        WIP: the individual mechanisms are validated (cup RESULT sims + advances;
+        _ExitPlayMatch -> match-day overview; contest-hub detection), but a full
+        season hasn't been driven to completion yet — sim_one_step calls enum()
+        which queries EVERY entry's onSelect (O(entries) daemon round-trips on
+        the 68-entry match-day screen), so a season is thousands of round-trips
+        (minutes) and the long run tends to wedge the multithreaded SDL daemon.
+        TODO: detect the screen by currentMenu identity (==&diyCupMenu /
+        &contestMenu / ...) and fire the known RESULT ordinal directly — O(1) per
+        step instead of O(entries)."""
         for _ in range(max_steps):
-            if self.at_contest_menu():
+            if self.sim_one_step() == "hub":
                 return True
-            self.h.set_var("shortFire", 1)
-            self.h.cont(8)
         return self.at_contest_menu()
 
-    def advance_season(self):
-        """Advance one season TRANSITION and return the new currentSeasonShowing.
-        Precondition: stopped at the menu breakpoint on the SEASON-END contest
-        menu (the one exposing CONTINUE CAREER).
+    def advance_one_season(self):
+        """From the season-end contest hub: CONTINUE -> transition (free-run to
+        the season increment) -> sim the new season's matches -> next hub.
+        Returns the new currentSeasonShowing (at the next season-end hub).
 
-        Flow: fire CONTINUE CAREER -> free-run the transition (result screens
-        auto-advance via the hold counter; the catch-up sim runs) to the season
-        increment -> step past it -> drive the post-transition screens.
-
-        VALIDATED for the end-of-season transition (3->4, MILAN.CAR). NOTE: after
-        the transition the game drops into the NEW season's in-season flow
-        (PLAY MATCH / cup views), NOT straight back to a CONTINUE-CAREER contest
-        menu — so chaining multiple seasons needs in-season navigation that maps
-        play-match/cup screens back to the contest hub (TODO; the career menu web
-        is more than a CONTINUE chain). The stable transition mechanism (free-run
-        to the SEASON_INCR_LINE code breakpoint) is the reusable core."""
-        # fire CONTINUE CAREER (menu selections gate on shortFire, bit 5)
+        The transition uses the only stable stop on the multithreaded SDL
+        inferior: free-run to the SEASON_INCR_LINE code breakpoint. The in-season
+        matches are simulated via RESULT (sim_through_season)."""
+        # fire CONTINUE CAREER (selections gate on shortFire, bit 5)
         self.h.cmd(f"call (void)_SetCurrentEntry({self.CONTEST_CONTINUE_ORDINAL})")
         self.h.set_var("shortFire", 1)
-        # free-run to the season-increment code breakpoint (stable, no wedge)
-        self.h.delete_breakpoints()
-        self.h.break_at(self.SEASON_INCR_LINE)
-        self.h.cont(60)
-        # step past the increment back into the menu loop
-        self.h.delete_breakpoints()
-        self.h.break_at(INJECT_LINE)
-        self.h.cont(20)
-        self.drive_to_contest()
+        # free-run the transition (result chain + catch-up sim) to the increment
+        self.h.delete_breakpoints(); self.h.break_at(self.SEASON_INCR_LINE); self.h.cont(60)
+        # step past it back into the menu loop, then sim the new season's matches
+        self.h.delete_breakpoints(); self.h.break_at(INJECT_LINE); self.h.cont(20)
+        self.sim_through_season()
         return self.h.int_value("currentSeasonShowing")
 
     def run_seasons(self, n):
-        """Advance n seasons from the current contest menu. Returns the list of
-        season numbers reached. Re-primes / drives to the contest menu first."""
+        """Advance n full seasons (all matches simulated via RESULT). Returns the
+        list of season numbers reached. Drives to a season-end hub first."""
         self.prime()
         if not self.at_contest_menu():
-            self.drive_to_contest()
+            self.sim_through_season()
         out = []
         for _ in range(n):
-            s = self.advance_season()
+            s = self.advance_one_season()
             out.append(s)
             if s is None or s == 19:   # 19 = retirement
                 break
