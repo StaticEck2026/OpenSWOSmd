@@ -5023,8 +5023,8 @@ static int16_t playerMarketPlayerMatchesFilters(uint8_t *blockPtr, int16_t ratin
             return 1;                           /* goalkeepers excluded */
         /* Reconstruct big-endian skills longword from 4 consecutive bytes */
         uint32_t skills = ((uint32_t)(uint8_t)pf->passing << 24) |
-                          ((uint32_t)(uint8_t)pf->shootingHeading << 16) |
-                          ((uint32_t)(uint8_t)pf->tacklingBallControl << 8) |
+                          ((uint32_t)(uint8_t)pf->velocityHeading << 16) |
+                          ((uint32_t)(uint8_t)pf->tacklingControl << 8) |
                           (uint32_t)(uint8_t)pf->speedFinishing;
         if (!(skills & ((uint32_t)1 << skillBitIndex)))
             return 1;                           /* required skill bit not set */

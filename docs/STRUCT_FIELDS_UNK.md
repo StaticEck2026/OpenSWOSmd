@@ -21,6 +21,30 @@ C port actually read each byte.
 
 ---
 
+## Status (2026-06-18) — most of this is LANDED
+
+This started as a backlog; nearly all of it is now applied in `src/game_types.h`:
+
+- **Priority 1–4 — DONE.** `nameTableOffset`, `teamListOffset`, `seedReorderFlag`,
+  `subsAndMaxSubs`, `subsAndPointsForWin`, `numRoundsOverride`, `roundStringBase`,
+  `roundRuleFlags`, `teamSeedList`, `templateSize`, `playoffHeader`,
+  `qualifiedTeamIds`, plus the merged `CompetitionLeague`/`CompetitionCup(2)`/
+  `Leagues`/`Playoffs` consolidation (`name[]`, `playoffLinkPtrs`,
+  `promotionLinkData`, `linkParams`, `qualifierIndexPairs`).
+- **`CompetitionCup2.unk1/unk2/unk3` — DONE** (SWOS2.s cross-check, see §6):
+  `seedingType` / `menuState` / `playEachTeam`.
+- **Still `unkX` (deliberately).** `Competition.unk2`, `Division.unk1`,
+  `CompetitionCup2.unk4`, `Leagues.linkParamsN[8]` — no confirmed runtime read;
+  leave until proven against the SWOS2.s data tables.
+- **Not a naming task: §9.1 `Competition.type` convention conflict** — still a
+  latent bug to fix before any `CompType` enum.
+
+NB these competition templates are serialized as **opaque offset/size blobs** in
+`save_format_json.c` (pointers re-derived from the static template on load), so
+none of these renames touches a JSON key or the save format.
+
+---
+
 ## 0. The single most important finding — two *self-describing offset bytes*
 
 Almost nothing reads these structs by typed C field past the 9-byte `Competition`
@@ -146,9 +170,9 @@ typedef struct { Competition comp; int8_t unk1, unk2, unk3, awayGoalsMode, subsR
 
 | Current | Off | Sz | Type | Suggested | Conf. | Description / evidence |
 |---|---|---|---|---|---|---|
-| **unk1** | 9 | 1 | db | **`numStageRounds?`** | Med | Analogous to `CompetitionCup.unk1`; feeds the per-stage rounds/`$160` field (SWOS2.s:52484). |
-| **unk2** | 10 | 1 | db | **`menuState?`** | Med | Raw read `a5[0xA] → $4A menuState` (`diy_competition.c:9142`; SWOS2.s league-init). |
-| **unk3** | 11 | 1 | db | **`playEachTeam?`** | Med | `a5[0xB] → per-stage $166` (times teams meet); nibble pair at `a5[0xD]` also read (`diy_competition.c:9144`). |
+| ~~unk1~~ | 9 | 1 | db | **`seedingType`** ✅ | High | **RENAMED (SWOS2.s cross-check, 2026-06-18).** `move.b 9(a5),d0 → $160(a0)` copied to *every* stage slot's `seedingType` field (SWOS2.s:52485, `_InitDIYLeagueFromRecord`). The earlier `numStageRounds?` guess was wrong — `$160` is the slot's `seedingType` (offset 0x06), not a round count. |
+| ~~unk2~~ | 10 | 1 | db | **`menuState`** ✅ | High | **RENAMED.** Direct `move.b $A(a5),d0 → $4A(a6)` = the named runtime `menuState` field (SWOS2.s:52458). Cleanest of the three — a straight copy into an already-named field. |
+| ~~unk3~~ | 11 | 1 | db | **`playEachTeam`** ✅ | High | **RENAMED.** `move.b $B(a5),d6 → $166(a0)` copied to every stage slot's `playEachTeam` field (SWOS2.s:52488). |
 | awayGoalsMode | 12 | 1 | db | `awayGoalsTieBreakMode` | High | Same as §4. |
 | subsReserves | 13 | 1 | db | `subsAndPointsForWin` | Med | Same packing as §4. |
 | firstRoundNo | 14 | 1 | db | `roundStringBase` / `rounds[0]` source | Med | Read at fixed `$F(a0)` as the first round/team count (`diy_competition.c:9073/9127`, SWOS2.s:126089). |
@@ -271,7 +295,8 @@ No `unkX` fields; all named (`legs`, `extraTime`, `penalties`, `playCount`, `pts
 | 3 | `*.subsReserves` | → **`subsAndMaxSubs`** (league) / **`subsAndPointsForWin`** (cup) | Different nibble packing per type. |
 | 4 | `Playoffs_*.unk1[16]` | → **`playoffHeader[16]`** (break out `qualTeamCount`@10, `toUnk2Offset`@7) | Structured, not opaque. |
 | 4 | `Playoffs_*.unk2[N]` | → **`qualifiedTeamIds[N]`** | Output id buffer. |
-| 5 | `Competition.unk2`, `Division.unk1`, `CompetitionCup2.unk2/unk4`, `Leagues_*.unkN[8]` | leave as `unkX` / mark `?` | No confirmed runtime read; verify against SWOS2.s data values before naming. |
+| ✅ done | `CompetitionCup2.unk1/unk2/unk3` | → **`seedingType`** / **`menuState`** / **`playEachTeam`** | SWOS2.s cross-check 2026-06-18 (§6): direct byte→slot/runtime-field copies. `unk1` was NOT `numStageRounds`. |
+| 5 | `Competition.unk2`, `Division.unk1`, `CompetitionCup2.unk4`, `Leagues_*.unkN[8]` | leave as `unkX` / mark `?` | No confirmed runtime read; verify against SWOS2.s data values before naming. |
 
 ### Recommendations / next steps
 

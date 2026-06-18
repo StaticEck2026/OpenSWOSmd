@@ -1415,7 +1415,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
     d4 = _GetPlayerPricePercentageChange(d4, teamFile, callerD0);
 
     /* Read packed skills longword from PlayerFile:
-     * passing(28), shootingHeading(29), tacklingBallControl(30), speedFinishing(31).
+     * passing(28), velocityHeading(29), tacklingControl(30), speedFinishing(31).
      * Each byte has two 4-bit nibbles. The mask 0x07777777 clears the unused
      * high nibble of the passing byte and keeps all 7 skill nibbles (0-7 range).
      * After lsl #4, the loop uses rol #4 to extract each nibble in order:
@@ -1847,10 +1847,10 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
     const uint8_t *skillsPerQ = skillsPerQuadrant - 35 + position * 35;
 
     /* Player skills packed: 4 bytes starting at passing (offset 28).
-     * Big-endian: passing, shootingHeading, tacklingBallControl, speedFinishing */
+     * Big-endian: passing, velocityHeading, tacklingControl, speedFinishing */
     uint32_t d5 = ((uint32_t)(uint8_t)plFile->passing << 24) |
-                  ((uint32_t)(uint8_t)plFile->shootingHeading << 16) |
-                  ((uint32_t)(uint8_t)plFile->tacklingBallControl << 8) |
+                  ((uint32_t)(uint8_t)plFile->velocityHeading << 16) |
+                  ((uint32_t)(uint8_t)plFile->tacklingControl << 8) |
                   (uint8_t)plFile->speedFinishing;
     d5 &= 0x07777777;   /* mask to 3 bits per nibble */
     d5 += 0x01111111;   /* add 1 to each nibble (range: 1-8) */
