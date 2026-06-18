@@ -2428,7 +2428,7 @@ static const StructFieldDesc s_job_offer_fields[] = {
      * raw bytes — endian-safe and byte-exact, unlike FLD_STR. */
     { "team_name",      offsetof(JobOffer, teamName),     18, FLD_BYTES },
     { "amount_offered", offsetof(JobOffer, amountOffered), 0, FLD_U32   },
-    { "unkn",           offsetof(JobOffer, unkn),          0, FLD_U16   },
+    { "reserved",       offsetof(JobOffer, reserved),      0, FLD_U16   },
     { NULL, 0, 0, FLD_END }
 };
 
@@ -5705,9 +5705,9 @@ static void emit_team_game(mjson_print_fn_t fn, void *fnd,
                  (unsigned)BE_READ_U16(tg + offsetof(TeamGame, markedPlayer)));
     emit_str_at(fn, fnd, "team_name", (uint8_t *)tg, offsetof(TeamGame, teamName), 17);
     mjson_printf(fn, fnd, ",%Q:%u,%Q:%u,%Q:%u",
-                 "unk1",          (unsigned)tg[offsetof(TeamGame, unk1)],
+                 "reserved1",     (unsigned)tg[offsetof(TeamGame, reserved1)],
                  "num_own_goals", (unsigned)tg[offsetof(TeamGame, numOwnGoals)],
-                 "unk3",          (unsigned)tg[offsetof(TeamGame, unk3)]);
+                 "reserved3",     (unsigned)tg[offsetof(TeamGame, reserved3)]);
 
     mjson_printf(fn, fnd, ",%Q:[", "players");
     for (int i = 0; i < 16; i++) {
@@ -5796,9 +5796,9 @@ static void load_team_game_slice(const char *buf, int buflen, uint8_t *tg)
         if (mjson_get_long(buf, buflen, "$." key, &num) > 0) \
             tg[offsetof(TeamGame, field)] = (uint8_t)(int)num; \
     } while (0)
-    LOAD_B("unk1",          unk1);
+    LOAD_B("reserved1",     reserved1);
     LOAD_B("num_own_goals", numOwnGoals);
-    LOAD_B("unk3",          unk3);
+    LOAD_B("reserved3",     reserved3);
 #undef LOAD_B
 
     /* Walk the players array via mjson_next — same O(N) pattern
@@ -6342,12 +6342,12 @@ static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
     }
     mjson_printf(json_out_emit, &out, "%s", "]");
 
-    /* unk_table (10 bytes) + ball_out_of_play_tactics (1 byte) */
-    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "unk_table");
+    /* pairIds (10 bytes) + ball_out_of_play_tactics (1 byte). */
+    mjson_printf(json_out_emit, &out, ",\n  %Q:[", "pair_ids");
     for (int i = 0; i < 10; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         mjson_printf(json_out_emit, &out, "%u",
-                     (unsigned)src[offsetof(TeamTactics, unkTable) + i]);
+                     (unsigned)src[offsetof(TeamTactics, pairIds) + i]);
     }
     mjson_printf(json_out_emit, &out, "%s", "],\n  ");
     mjson_printf(json_out_emit, &out, "%Q:%u\n}\n",
@@ -6427,8 +6427,8 @@ static int16_t load_tactics_buf(const char *src, int src_size, uint8_t *dst)
                       sizeof(PlayerPositions));
     }
 
-    load_bytes_at(src, src_size, "$.unk_table",
-                  dst, offsetof(TeamTactics, unkTable), 10);
+    load_bytes_at(src, src_size, "$.pair_ids",
+                  dst, offsetof(TeamTactics, pairIds), 10);
 
     long num = 0.0;
     if (mjson_get_long(src, src_size, "$.ball_out_of_play_tactics", &num) > 0)

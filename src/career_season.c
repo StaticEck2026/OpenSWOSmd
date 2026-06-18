@@ -1419,7 +1419,8 @@ extern Playoffs div3Playoffs;
 /* Refactored from asm-style byte walking to typed struct access (May 2026).
  *
  * SWOS2.s Career_ProcessDiyLeagueQualificationEntry (line 58055) walks the
- * country's leagues block via byte offsets stored in `divisions[i].unk1` to
+ * country's leagues block via byte offsets stored in
+ * `divisions[i].qualifierLinkOffset` (was unk1) to
  * find a `Playoffs *` qualification competition and a qIdx pair list. The
  * walk assumed the 32-bit Amiga struct layout. On 64-bit several involved
  * structs grow because of pointer-field widening:
@@ -1427,13 +1428,15 @@ extern Playoffs div3Playoffs;
  *   - Leagues_4_2_24: Leagues_4+playoffs+leagues2 grow → 80 → 104 bytes
  *   - Playoffs: text[2] grows → 32 → 40 bytes
  *
- * The static `divisions[i].unk1` byte hints were authored for 32-bit, so the
- * walk `competition + i*6 + 0x12 + unk1` lands inside text[8] (a string
- * pointer) instead of unk2[0] on 64-bit, returning garbage as qualComp.
+ * The static `divisions[i].qualifierLinkOffset` byte hints were authored for
+ * 32-bit, so the walk `competition + i*6 + 0x12 + qualifierLinkOffset` lands
+ * inside text[8] (a string pointer) instead of unk2[0] on 64-bit, returning
+ * garbage as qualComp.
  *
  * In practice only the English block (EnglishLeaguesBlock) ever exercises
- * this walk — its divisions[1..3].unk1 are non-zero (46, 120, 194) while
- * every other country has all-zero division.unk1 and exits at the early
+ * this walk — its divisions[1..3].qualifierLinkOffset are non-zero (46, 120,
+ * 194) while every other country has all-zero division.qualifierLinkOffset and
+ * exits at the early
  * `if (d0 == 0) return;` test. The typed dispatch below is English-specific.
  *
  * For each English division, by static data analysis:
@@ -1468,9 +1471,10 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     }
 
     /* Typed dispatch (see header comment for derivation). The walk via
-     * `divisions[i].unk1` is replaced with direct struct-member access. */
+     * `divisions[i].qualifierLinkOffset` is replaced with direct struct-member
+     * access. */
     if (competition != (uint8_t *)&englishLeaguesBlock._main) {
-        /* Non-English country reached the walk despite divisions[i].unk1
+        /* Non-English country reached the walk despite divisions[i].qualifierLinkOffset
          * being expected zero — unexpected. Bail safely rather than
          * re-introduce the broken byte walk. */
         return;

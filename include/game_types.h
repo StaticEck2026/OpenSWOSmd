@@ -289,9 +289,13 @@ struct TeamGame {
     int16_t    secSocksCol;     /* 18 */
     int16_t    markedPlayer;    /* 20 */
     int8_t     teamName[17];    /* 22 */
-    int8_t     unk1;            /* 39 */
+    int8_t     reserved1;       /* 39: confirmed no reads (tree + SWOS2.s) — TEAMGAME_UNK1
+                                 * EQU 39 is defined but never referenced; in-match team
+                                 * header pad between teamName and numOwnGoals (was unk1) */
     int8_t     numOwnGoals;     /* 40 */
-    int8_t     unk3;            /* 41 */
+    int8_t     reserved3;       /* 41: confirmed no reads (tree + SWOS2.s) — TEAMGAME_UNK3
+                                 * EQU 41 defined but never referenced; pad before players[]
+                                 * (was unk3) */
     PlayerInfo players[16];     /* 42 */
 };
 
@@ -1092,7 +1096,12 @@ typedef struct __attribute__((packed, aligned(2))) JobOffer {
     uint16_t teamNo;               /* 0 */
     int8_t   teamName[18];         /* 2: 0xFF = unset */
     uint32_t amountOffered;        /* 20 */
-    uint16_t unkn;                 /* 24 */
+    uint16_t reserved;             /* 24: confirmed no reads (tree + SWOS2.s) — JOBOFFER_UNKN
+                                    * EQU 24 defined but never referenced; the offer builder
+                                    * only writes teamNo/amountOffered/teamName. Trailing pad
+                                    * to the 26-byte record size (was unkn). NOTE: the save
+                                    * format still emits this as JSON key "unkn" for save
+                                    * compat — see s_job_offer_fields in save_format_json.c */
 } JobOffer;
 
 typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
@@ -1340,7 +1349,13 @@ typedef char _playerpositions_size_check[(sizeof(PlayerPositions) == 35) ? 1 : -
 typedef struct TeamTactics {
     int8_t           name[9];              /* 0: tactic name */
     PlayerPositions  positions[10];        /* 9: 10 players × 35 bytes = 350 */
-    uint8_t          unkTable[10];         /* 359: pairing table */
+    uint8_t          pairIds[10];          /* 359: per-outfield-player pair/marking id —
+                                            * one byte per the 10 outfield players; equal ids
+                                            * = a linked pair, 0xFF/-1 = unlinked. Read+written
+                                            * by edit_tactics.c (_EditTactics_FindFreePairId /
+                                            * _ClearPairId / swap-paired-players / row colour).
+                                            * SWOS2.s TEAMTACTICS_UNKTABLE EQU 359, init data
+                                            * SWOS2.s:47291+ ({0,-1,-1,0,1,...}). Was unkTable */
     uint8_t          ballOutOfPlayTactics; /* 369: redirect tactic index */
 } TeamTactics;
 
@@ -1499,7 +1514,9 @@ typedef struct __attribute__((packed)) {
     int8_t beginMonth;       /* season start month, encoded ×8 (monthIdx = value/8) */
     int8_t endMonth;         /* season end month, ×8 (wraps +0x60 if < beginMonth) */
     int8_t nameTableOffset;  /* was unk1: text[] name table at base+5+this (0 = default) */
-    int8_t unk2;             /* unconfirmed — no known read, likely padding (left as unk) */
+    int8_t reserved;         /* byte 6: confirmed no reads (tree + SWOS2.s) — COMPETITION_UNK2
+                              * EQU 6 defined but never referenced; pad between the name-table
+                              * and team-list self-offset bytes (was unk2) */
     int8_t teamListOffset;   /* was unk3: team-seed list at base+7+this (0 = none) */
     int8_t seedReorderFlag;  /* was unk4: 0 = shuffle bracket, nonzero = preset seed order */
 } Competition;
@@ -1528,7 +1545,17 @@ typedef struct __attribute__((packed)) {
     int8_t promotedPo;
     int8_t relegated;
     int8_t relegatedPo;
-    int8_t unk1;
+    int8_t qualifierLinkOffset; /* was unk1 (byte 5): self-relative byte offset (from the
+                                 * Amiga divisions[] base + i*6 + 0x12, i.e. from this field)
+                                 * to the division's qualification/promotion link — a
+                                 * {Playoffs *, qIdx-pair list} pair. 0 = no link (most
+                                 * countries / Premier). Only the English block uses it
+                                 * (divisions[1..3] = 46/120/194). Read by
+                                 * career_init.c _DIY_SelectCompetitionSlot4FromCurrentDivision
+                                 * and career_season.c processDiyLeagueQualificationEntry
+                                 * (now resolved via typed fields because the 32-bit byte
+                                 * offset breaks on 64-bit). SWOS2.s DIVISION_UNK1 EQU 5 /
+                                 * Career_ProcessDiyLeagueQualificationEntry:58055 ($12(a2)) */
 } Division;
 
 /* ==================================================================
@@ -1574,7 +1601,15 @@ typedef struct __attribute__((packed)) {
     int8_t subsAndPointsForWin; /* was subsReserves: hi nibble = min subs, lo = points-for-win */
     int8_t roundStringBase;     /* was firstRoundNo: round-string base / rounds[0] source */
     Round rounds[6];
-    int8_t unk4;
+    int8_t reserved;            /* byte 33: confirmed no reads (tree + SWOS2.s). The
+                                 * _InitDIYLeagueFromRecord round loop (SWOS2.s:52480-52531)
+                                 * walks the per-round bytes via a1 (rounds region) and reads
+                                 * the per-round rule nibbles via a2 = $22(a5) = byte 34
+                                 * (roundRuleFlags), so byte 33 is the gap between the two and
+                                 * is never read. Initializers do store 0/1 here (euroCup 0,
+                                 * worldCup 1) but no consumer reads it. Was unk4 — distinct
+                                 * from Competition.seedReorderFlag (byte 8, also formerly
+                                 * unk4) which IS read. */
 } CompCupHeader2;
 
 /* ==================================================================

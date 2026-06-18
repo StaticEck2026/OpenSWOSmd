@@ -545,7 +545,7 @@ CompetitionLeague newZealandLeague = {
  * qualifierIndexPairs tail like the others; it is the block's last member so the
  * growth only extends the block).
  * processDiyLeagueQualificationEntry walks past the end of _main using
- * the per-division qualification offset in `divisions[i].unk1`,
+ * the per-division qualification offset in `divisions[i].qualifierLinkOffset`,
  * expecting to land inside _div1 or _div2 (whose `playoffs` field at
  * +48 supplies the qualification competition pointer). Four separate
  * linker-scattered globals broke that walk → qualComp garbage → SIGSEGV.
