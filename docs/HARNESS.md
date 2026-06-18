@@ -92,58 +92,53 @@ safe to keep permanently. The bartman dir stays the cwd for its support files.)
 
 gdb inferior function calls (`call func()` / `print func()`, used by
 `load_career` / `save_career` / `enter_career`) originally **free-ran** the
-inferior on the FS-UAE stub instead of returning. **Now fixed** (a second
-additive patch to `barto_gdbserver.cpp`, alongside the write support above).
+inferior on the FS-UAE stub instead of returning. **Fixed** by a one-line
+additive patch to `barto_gdbserver.cpp`, alongside the write support above.
 
-Two bugs had to be fixed:
+**The whole fix is `fill_prefetch()` in `set_register(PC)`.** The A1200 runs a
+cycle-exact 68020 whose instruction stream comes from the prefetch pipe /
+i-cache (`regs.irc` / `regs.prefetch020[]` / `caches020`), not directly from
+`regs.pc_p`. `m68k_setpc` (the `P11` packet gdb sends to point PC at the target
+function) updated `regs.pc` but did **not** rebuild the prefetch — so a resumed
+inferior call executed the **stale prefetched opcode** from where the inferior
+had stopped, faulting at the new PC. `fill_prefetch()` after `m68k_setpc` rebuilds
+it. With that, the call runs correctly and **FS-UAE's existing `bpnodes[]`
+PC-compare scan catches the call-dummy return on its own**: gdb's `Z0` at the
+return address (the ELF entry point) makes a `bpnodes[]` entry, and the scan
+(`debug.cpp` ~7315) — re-armed after every `vCont;c` (`debug.cpp` ~7508) — stops
+there. No trap-opcode patching is needed.
 
-1. **`Z0` wrote no trap opcode.** gdb does an inferior call by writing the
-   call-dummy return address (= the ELF entry point) onto the stack, setting a
-   `Z0` breakpoint there, pointing PC at the target, and `vCont;c`. The stub's
-   `Z0` only recorded a `bpnodes[]` **PC-compare** entry (no opcode); FS-UAE's
-   address scan catches ordinary source breakpoints but not the synthesized
-   call-dummy return, so the `rts` ran on. Fix: `Z0`/`z0` now also write a real
-   `ILLEGAL` (`0x4AFC`) opcode (save/restore the original word; `m`-reads are
-   **shadowed** so gdb still sees the original bytes), and the IllegalError
-   exception path reports `T05swbreak:;` when the trap PC matches one of our
-   written breakpoints.
-2. **Setting PC didn't rebuild the 68020 prefetch.** The A1200 runs cycle-exact
-   68020; `m68k_setpc` (the `P11` packet) updated `regs.pc` but not the prefetch
-   pipeline, so a resumed call executed a stale prefetched opcode. Fix:
-   `set_register(PC)` now calls `fill_prefetch()` after `m68k_setpc`.
+> **History (why this is one line, not the original ~120):** the first version of
+> this fix ALSO wrote real `ILLEGAL` (`0x4AFC`) opcodes at breakpoints + shadowed
+> `m`-reads + a custom IllegalError→swbreak path, believing the `bpnodes` scan
+> couldn't catch the dummy-return. That belief was wrong — the scan DID work once
+> the prefetch was rebuilt; the opcode machinery was both unnecessary AND the
+> cause of an intermittent SIGILL (`Illegal 0008 at 0x20F3B0`) on **repeated**
+> calls, where the opcode save/restore round-trip gdb does around each call
+> desynced and left a corrupted word. The hardening pass deleted all of it
+> (10 insertions, 117 deletions vs baseline = just `fill_prefetch`), which made
+> repeated inferior calls robust. Keep it simple: don't reintroduce opcode
+> patching.
 
 The change is additive (the `bpnodes` scan is untouched, so source breakpoints
 and menu-driving are unaffected). Build + deploy as in "FS-UAE write support".
-Verified: trivial call returns; source breakpoints still fire; and
-`SaveJson_LoadCareer("AUTO_S03.CAR")` on the Amiga returns 0 with
-`gameType=4`/`currentSeasonShowing=3`/`numSelectedTeams=47`.
+**Verified:** a 5-load loop (`AUTO_S03/05/08/12/19`) all return `rc=0` with
+correct `gameType=4`/`season`, no SIGILL; single calls return; source breakpoints
+still fire. `rc` is reliable on the Amiga now (no "verify by data" caveat).
 
 > **Long-call timeout (important):** the inferior call of `SaveJson_LoadCareer` /
 > `SaveJson_WriteCareer` parses/emits JSON via mjson — a few seconds on SDL but
 > **1-3 minutes on the emulated Amiga**. The proxy `cmd` must use a long
 > `--timeout` (the plugin uses `CALL_TIMEOUT=300`) or it disconnects mid-call and
-> wedges the gdb client (which looks like state corruption but is a timeout
-> artifact). The daemon returns as soon as the call completes, so a high ceiling
-> is safe on both targets. Stage the filename as ONE bulk write
+> wedges the gdb client. The daemon returns as soon as the call completes, so a
+> high ceiling is safe on both targets. Stage the filename as ONE bulk write
 > (`set {char[N]}scratch = "..."`, via `_stage_filename`), not per-byte
 > `write_bytes` — the latter returned `rc=None` on the Amiga.
-
-> **⚠️ Amiga inferior-call rc is UNRELIABLE in repeated calls — verify by DATA,
-> not by rc.** A single inferior call from a clean state returns its value
-> (`rc=0`), but **repeated** calls in a loop intermittently hit a SIGILL
-> (`Illegal instruction: 0008 at 0020F3B0`) mid-call: gdb abandons the call
-> (so `load_career` returns `rc=None`) **even though the load fully applied** —
-> the restored fields (`gameType`, `currentSeasonShowing`, `numSelectedTeams`)
-> are correct. So on the Amiga, judge a load by re-reading those fields, not by
-> the rc. This is a residual robustness bug in the FS-UAE inferior-call patch
-> (the breakpoint round-trip gdb does around an inferior call corrupts a word →
-> illegal); a follow-up for the fs-uae stub. It does NOT affect SDL (rc reliable
-> there) and does NOT affect load correctness on either target.
 >
 > **Cross-target result (2026-06-18):** all 17 deep-run saves (`AUTO_S03`–`S19`,
 > SDL-written) load correctly on the Amiga build — `season`/`gameType`/`numSel`
-> match per-save across the full 16-season career (verified 3× by the field
-> check; the rc-based "0/17" headline is a false negative from the rc artifact).
+> match per-save across the full 16-season career (5 re-confirmed by `rc=0` after
+> the hardening; all 17 by the field check).
 
 ## Amiga `DBG=1` build (precise breakpoints)
 
