@@ -381,6 +381,16 @@ class SwosHarness:
     # the gdb client (looks like corruption; it's a timeout artifact). 300s.
     CALL_TIMEOUT = 300
 
+    def _stage_filename(self, filename):
+        """Stage a save basename into the scratch global as ONE bulk write
+        (`set {char[N]}scratch = "..."`) — robust on the Amiga stub, where the
+        per-byte write_bytes path (N separate M packets) is slow/flaky. Returns
+        the staged basename."""
+        name = self._save_basename(filename)
+        n = len(name) + 1  # + NUL
+        self.h.cmd(f'set {{char[{n}]}}{FILENAME_SCRATCH} = "{name}"')
+        return name
+
     def load_career(self, filename):
         """Stage the basename into a scratch global and call the game's loader.
         Returns 0 on success (game convention: non-zero == failure). NOTE: this
@@ -388,8 +398,7 @@ class SwosHarness:
         enter_career() afterwards (the game's _LoadCareerFile path runs
         _StartContest, which load_career does not)."""
         self.ensure_stopped()
-        name = self._save_basename(filename)
-        self.h.write_bytes(FILENAME_SCRATCH, name.encode() + b"\x00")
+        self._stage_filename(filename)
         r = self.h.cmd(
             f"call (int)SaveJson_LoadCareer((unsigned char *){FILENAME_SCRATCH}, 0, 0)",
             timeout=self.CALL_TIMEOUT)
@@ -401,8 +410,7 @@ class SwosHarness:
         Pass a basename ('X.CAR'); resolve_save_path prepends 'save/'. Returns
         the writer's rc (0 == success)."""
         self.ensure_stopped()
-        name = self._save_basename(filename)
-        self.h.write_bytes(FILENAME_SCRATCH, name.encode() + b"\x00")
+        self._stage_filename(filename)
         r = self.h.cmd(
             f"call (int)SaveJson_WriteCareer((unsigned char *){FILENAME_SCRATCH})",
             timeout=timeout or self.CALL_TIMEOUT)
