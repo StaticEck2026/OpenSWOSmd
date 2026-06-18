@@ -361,13 +361,53 @@ class SwosHarness:
         return out
 
     # ---- career save loading (game's own native load; no UI nav needed) ---
+    @staticmethod
+    def _save_basename(filename):
+        """The game's resolve_save_path() (swos_io.c) strips a 'drive:' prefix
+        then UNCONDITIONALLY prepends 'save/'. So a caller passing 'save/X.CAR'
+        gets the doubled 'save/save/X.CAR' -> fopen fails -> the load silently
+        no-ops (a failure long masked by warm in-memory career state). Pass the
+        bare basename; strip a leading 'save/' if a caller still includes it."""
+        f = filename.replace("\\", "/")
+        if f.lower().startswith("save/"):
+            f = f[5:]
+        return f
+
     def load_career(self, filename):
-        """Stage the filename into a scratch global and call the game's loader.
-        Works on both targets now that memory + register writes are supported."""
+        """Stage the basename into a scratch global and call the game's loader.
+        Returns 0 on success (game convention: non-zero == failure). NOTE: this
+        only loads DATA; to enter the career UI from a cold boot call
+        enter_career() afterwards (the game's _LoadCareerFile path runs
+        _StartContest, which load_career does not)."""
         self.ensure_stopped()
-        self.h.write_bytes(FILENAME_SCRATCH, filename.encode() + b"\x00")
+        name = self._save_basename(filename)
+        self.h.write_bytes(FILENAME_SCRATCH, name.encode() + b"\x00")
         r = self.h.cmd(
             f"call (int)SaveJson_LoadCareer((unsigned char *){FILENAME_SCRATCH}, 0, 0)",
             timeout=60)
         m = re.search(r"\$\d+\s*=\s*(-?\d+)", r)
         return int(m.group(1)) if m else None
+
+    def save_career(self, filename, timeout=60):
+        """Write the live career to a .CAR via the game's SaveJson_WriteCareer.
+        Pass a basename ('X.CAR'); resolve_save_path prepends 'save/'. Returns
+        the writer's rc (0 == success)."""
+        self.ensure_stopped()
+        name = self._save_basename(filename)
+        self.h.write_bytes(FILENAME_SCRATCH, name.encode() + b"\x00")
+        r = self.h.cmd(
+            f"call (int)SaveJson_WriteCareer((unsigned char *){FILENAME_SCRATCH})",
+            timeout=timeout)
+        m = re.search(r"\$\d+\s*=\s*(-?\d+)", r)
+        return int(m.group(1)) if m else None
+
+    def enter_career(self):
+        """Enter the loaded career's UI from a cold boot. The game's load path
+        runs _StartContest() -> _ShowMenu(contestMenu) (modal). Calling it with
+        the inject breakpoint set makes the inferior call break INSIDE the now-
+        active contest menu (the correct nested context the whole career runs
+        in). Returns the active menu's onInit symbol afterwards."""
+        if INJECT_LINE not in self.h.cmd("info breakpoints"):
+            self.h.break_at(INJECT_LINE)
+        self.h.cmd("call (void)_StartContest()", timeout=40)
+        return self._current_init()

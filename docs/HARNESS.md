@@ -138,6 +138,23 @@ per-byte writes — no inferior `malloc`) and calls the game's own
 test: load a save, then read the restored state read-only and compare to the SDL
 side (or `scripts/decode_save.py`).
 
+**Pass a BASENAME, not a `save/`-prefixed path.** The game's `resolve_save_path`
+(`swos_io.c`) strips a `drive:` prefix then **unconditionally prepends `save/`**.
+So `load_career("save/X.CAR")` opens `save/save/X.CAR`, which **fails** —
+`SaveJson_LoadCareer` returns non-zero (`0` == success) and the load **silently
+no-ops**. That failure is easy to miss because a warm in-memory career masks it
+(the harness keeps driving the *previous* career). `load_career()` /
+`save_career()` now strip a leading `save/` defensively, but pass
+`"MILAN.CAR"`, not `"save/MILAN.CAR"`. Always check the return is `0` and that a
+sentinel field actually changed (e.g. `game_type` == 4 for career,
+`current_season_showing`, `num_selected_teams`).
+
+`load_career()` only loads **data**. From a cold boot the active menu is still
+`_SWOSMainMenuInit`; call **`enter_career()`** afterwards — it runs the game's
+`_StartContest()` (with the inject breakpoint set so the modal `_ShowMenu`
+call breaks *inside* the now-active contest menu, the correct nested context).
+`save_career("X.CAR")` writes via `SaveJson_WriteCareer` (same basename rule).
+
 ## Screen capture
 
 `cap OUT.png` writes a PNG of the live display on **either target** (orientation
@@ -156,6 +173,34 @@ aid; drive via menu state for precision). The plugin auto-detects the target:
   8-bit). Camera offsets are assumed 0 (menus); in-match scrolling isn't decoded.
 
 ## Season loop (driving a career through seasons)
+
+> ### ⚠️ REQUIRED build flags for season runs
+>
+> An unattended season run needs a binary built with **both** of these, or it
+> will stick or corrupt state:
+>
+> - **`SWOS_TEST_NO_INJURIES_CARDS=1`** — disables injuries/suspensions/cards so
+>   no player ever goes **red**. Without it, a carded/injured player turns the
+>   squad row red and the game **locks PLAY MATCH / VIEW RESULT until you swap
+>   that player out**. The driver does not do squad swaps, so it gets **stuck on
+>   the squad screen** the first time a red player appears (`_PlayMatchMenuInit`
+>   with no fireable result button). With the flag, VIEW RESULT is always
+>   available and the fixture sims on `pl1Fire`.
+> - **`SWOS_SAVE_FORMAT_JSON_VERIFY=0`** — RELEASE (verify off). The default
+>   build has VERIFY **on**, and VERIFY **reloads the career into the live
+>   globals on every save** to diff it — which leaves live state half-restored,
+>   so **save-then-continue crashes**. The driver saves at each season hub and
+>   keeps playing, so it must not be a VERIFY build. (Verify saves separately:
+>   load each file in a VERIFY build, or use `decode_save.py`.)
+>
+> Build it: `make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0 SWOS_TEST_NO_INJURIES_CARDS=1`
+> Confirm: `nm bin/SWOS.x86_64 | grep -c verify_roundtrip` → `0`.
+>
+> **Cold-boot setup** (fresh daemon): `break menu_system.c:1567`, `run`, then let
+> the loader-intro auto-time-out to `_SWOSMainMenuInit` (~1–2 min; it ignores the
+> 1567 breakpoint until the main menu). Then `load_career("NAME.CAR")` +
+> `enter_career()` (runs `_StartContest` to enter the career UI — a plain data
+> load does NOT enter it). Filenames are **basenames** — see "Save loading".
 
 `seasons N` advances a loaded career up to `N` seasons unattended. The career
 moves through three kinds of screen, each taking a **different** input — and
