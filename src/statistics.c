@@ -766,7 +766,7 @@ next_player:
  * ================================================================ */
 static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
 {
-    TeamFileEx *teamsPtr = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *teamsPtr = selectedTeams;
     uint16_t numTeams = numSelectedTeams;
     uint16_t careerTeamNum;
 

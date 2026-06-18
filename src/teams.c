@@ -492,7 +492,7 @@ uint16_t _GetAveragePlayerPriceInSelectedTeams(void)
     if (numSelectedTeams == 0)
         return 0;
 
-    team = (TeamFileEx *)&selTeamsPtr;
+    team = selectedTeams;
     total = 0;
     for (i = numSelectedTeams - 1; ; i--) {
         total += _GetAveragePlayerPrice(team);
@@ -780,7 +780,7 @@ void _RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 TeamFileEx *_AddTeamToBuffer(TeamFileEx *team)
 {
-    TeamFileEx *dest = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
+    TeamFileEx *dest = selectedTeams + numSelectedTeams;
     uint16_t *src16 = (uint16_t *)team;
     uint16_t *dst16 = (uint16_t *)dest;
     uint16_t i;
@@ -819,7 +819,7 @@ TeamFileEx *_FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount)
     if (count == 0)
         goto panic;
     count--;
-    TeamFileEx *ptr = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *ptr = selectedTeams;
     uint16_t remaining = count;
     while (1) {
         /* First 2 bytes of each TeamFileEx are {countryNumber, teamOrdinal}.
@@ -1438,7 +1438,7 @@ void _RemovePlayerFromTeam(uint16_t playerOrd)
 __attribute__((used, externally_visible))
 void _DeselectAllTeams(void)
 {
-    TeamFileEx *ptr = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *ptr = selectedTeams;
     if (numSelectedTeams == 0)
         return;
 
@@ -2173,7 +2173,7 @@ void _ChooseTeamsFriendlyInit(void)
     selTeamsUpperBound = numSelectedTeams;
 
     /* Build teamPointers[] and teamNumbersIndices[] from selTeamsPtr */
-    TeamFileEx *src = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *src = selectedTeams;
     uint16_t i;
     for (i = 0; i < selTeamsUpperBound; i++) {
         teamPointers[i] = (uintptr_t)src;

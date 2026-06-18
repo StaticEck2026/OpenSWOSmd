@@ -1191,7 +1191,7 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
 __attribute__((used, externally_visible))
 void _InitTeams(void)
 {
-    TeamFileEx *teams = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *teams = selectedTeams;
 
     for (int16_t i = (int16_t)(numSelectedTeams - 1); i >= 0; i--) {
         teamInit(teams, 15);
@@ -1214,7 +1214,7 @@ void _InitTeams(void)
 __attribute__((used, externally_visible))
 void _PlayFriendly(void)
 {
-    TeamFileEx *teams = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *teams = selectedTeams;
     _InitAndPlayGame(&teams[0], &teams[1]);
 }
 

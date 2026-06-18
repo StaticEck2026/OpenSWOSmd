@@ -104,7 +104,7 @@ static int16_t findTeamInCache(uint16_t teamNum, TeamFileEx **teamOut, uint16_t 
     if (count == 0)
         return 1;
 
-    TeamFileEx *ptr = (TeamFileEx *)&selTeamsPtr;
+    TeamFileEx *ptr = selectedTeams;
     for (uint16_t i = 0; i < count; i++) {
         if (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) == teamNum) {
             *teamOut = ptr;
@@ -140,7 +140,7 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
                 (unsigned)teamNum,
                 (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF),
                 (unsigned)selTeamNumber, (unsigned)numSelectedTeams);
-        TeamFileEx *firstFew = (TeamFileEx *)&selTeamsPtr;
+        TeamFileEx *firstFew = selectedTeams;
         unsigned dumpN = numSelectedTeams;
         if (dumpN > 16) dumpN = 16;
         for (unsigned i = 0; i < dumpN; i++) {
@@ -691,7 +691,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
     }
 
     /* Phase 2: Process remaining teams */
-    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
+    TeamFileEx *selDst = selectedTeams + numSelectedTeams;
 
     for (;;) {
         int16_t foundIdx = -1;
@@ -831,7 +831,7 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
      * produce the same `(country << 8) | ordinal` value that
      * findTeamInCache / isTeamInCache compare against, and
      * BE_WRITE_U16 to store. */
-    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
+    TeamFileEx *selDst = selectedTeams + numSelectedTeams;
     uint16_t *idOut = diyCompetitionStart.matchData.league.leagueTeamIds;
     for (j = 0; j < tfCount; j++) {
         TeamFileEx *src = &tfBase[j];
@@ -916,7 +916,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
 
     /* selDst stays uint8_t * here because tryAddRandomTeamByRegion_Cup
      * takes a uint8_t ** in/out parameter and reassigns it across calls. */
-    uint8_t *selDst = (uint8_t *)((TeamFileEx *)&selTeamsPtr + numSelectedTeams);
+    uint8_t *selDst = (uint8_t *)(selectedTeams + numSelectedTeams);
 
     /* BE-write convention for diyCompetitionStart.cupTeamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
@@ -931,7 +931,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     if (gameType == 3) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
-            TeamFileEx *selBase = (TeamFileEx *)&selTeamsPtr;
+            TeamFileEx *selBase = selectedTeams;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
                 uint16_t rnd = _Rand2();
@@ -956,7 +956,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     if (initialCount > 0x20) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
-            TeamFileEx *selTeam = (TeamFileEx *)&selTeamsPtr;
+            TeamFileEx *selTeam = selectedTeams;
             uint16_t k;
             for (k = 0; k < numSel; k++) {
                 uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
@@ -1024,7 +1024,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
     _LoadTeamFile(extNumber);
 
-    TeamFileEx *selDst = (TeamFileEx *)&selTeamsPtr + numSelectedTeams;
+    TeamFileEx *selDst = selectedTeams + numSelectedTeams;
 
     /* BE-write convention for diyFileBufferCopy.teamIds (4e5f378). */
     /* If not career loaded and gameType==4, add selected team first */
@@ -1039,7 +1039,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
     if (gameType == 3) {
         uint16_t numSel = numSelectedTeams;
         if (numSel != 0) {
-            TeamFileEx *selBase = (TeamFileEx *)&selTeamsPtr;
+            TeamFileEx *selBase = selectedTeams;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
                 uint16_t rnd = _Rand2();

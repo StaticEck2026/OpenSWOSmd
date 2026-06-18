@@ -1505,7 +1505,7 @@ static void applyForeignMarketPlayersToTeams(uint16_t count)
     for (i = 0; i < count; i++) {
         uint8_t entryHi = *(uint8_t *)&entry->teamId;
         uint8_t entryLo = *((uint8_t *)&entry->teamId + 1);
-        TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
+        TeamFileEx *team = selectedTeams;
         uint16_t t;
 
         for (t = 0; t < numSelectedTeams; t++) {
@@ -1580,7 +1580,7 @@ void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi)
         if (phase >= (uint8_t)lo && phase <= (uint8_t)hi) {
             uint8_t entryHi = *(uint8_t *)&entry->teamId;       /* team number high byte */
             uint8_t entryLo = *((uint8_t *)&entry->teamId + 1); /* team number low byte */
-            TeamFileEx *team = (TeamFileEx *)&selTeamsPtr;
+            TeamFileEx *team = selectedTeams;
             uint16_t t;
 
             for (t = 0; t < numSelectedTeams; t++) {
@@ -4305,7 +4305,7 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
         uint16_t r = _Rand2();
         uint32_t idx = (uint32_t)r * (uint32_t)numSelectedTeams;
         idx >>= 8;
-        result = (TeamFileEx *)&selTeamsPtr + idx;
+        result = selectedTeams + idx;
 
         uint16_t candTeamId2 = PACK_BE_U16(result->team.countryNumber,
                                            result->team.teamOrdinal);
