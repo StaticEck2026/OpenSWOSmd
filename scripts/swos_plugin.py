@@ -204,53 +204,87 @@ class SwosHarness:
     # See project_career_play_vs_sim.
     CUP_RESULT_HANDLER = "_DIYCupOnSelect5"
     LEAGUE_RESULT_HANDLER = "_DIYLeagueTournamentResult"
+    # Screen identity by the ACTIVE menu's onInit, read from the unpacked
+    # currentMenu buffer (Menu->onInit is its first field). This is ONE read
+    # instead of enumerating every entry (the 68-entry match-day screen made the
+    # old enum-per-step O(entries) and minutes/season). onInit is reliable;
+    # currentMenuPtr is not (it shifts during sub-menu navigation).
+    # onInit symbol -> (target entry handler, step kind). The season-END hub is
+    # careerOverMenu (onInit _CareerOverInit, the "...Retired" entries + CONTINUE
+    # CAREER) — _ActivateMenu(contestMenu) redirects there at season end.
+    SEASON_SCREENS = {
+        "_CareerOverInit":           (None,                         "hub"),
+        "_DIYCupInit":               ("_DIYCupOnSelect5",           "cup-result"),     # RESULT = sim
+        "_DIYLeagueTournamentInit":  ("_DIYLeagueTournamentResult", "league-result"),  # RESULT = sim
+        "_PlayMatchMenuInit":        ("_ExitPlayMatch",             "exit-playmatch"),
+    }
+    HUB_INIT = "_CareerOverInit"
+    HUB_CONTINUE = "_ContinueCareer"   # CONTINUE CAREER entry on the season-end hub
 
-    def _actions(self):
-        return [a for _, a in self.enum() if a]
+    def _current_init(self):
+        """onInit symbol of the active menu (identifies the screen)."""
+        return self.h.symbol("((Menu *)currentMenu)->onInit")
 
-    def at_contest_menu(self):
-        """True at the season-end contest hub (exposes CONTINUE CAREER)."""
-        return "_ContinueCareer" in self._actions()
+    def _ordinal_of(self, name, symbol):
+        """Ordinal of the entry whose onSelect == symbol. Cached per menu, with a
+        cheap verify (one read) and a bounded (0..17, where the buttons live)
+        re-search if the slot moved (e.g. RESULT/ViewMatch union)."""
+        if not hasattr(self, "_ord_cache"):
+            self._ord_cache = {}
+        key = (name, symbol)
+        c = self._ord_cache.get(key)
+        if c is not None and self.entry_action(c) == symbol:
+            return c
+        for i in range(0, 18):
+            if self.entry_action(i) == symbol:
+                self._ord_cache[key] = i
+                return i
+        return None
 
-    def _fire_entry(self, symbol, timeout=12):
-        """Select the entry whose onSelect == symbol and press it (shortFire),
-        no prime() overhead. Returns False if the symbol isn't on this menu."""
-        if self.goto(symbol) is None:
-            return False
+    def _fire_ordinal(self, ordinal, timeout=12):
+        self.h.cmd(f"call (void)_SetCurrentEntry({ordinal})")
         self.h.set_var("shortFire", 1)
         self.h.cont(timeout)
-        return True
+
+    def at_contest_menu(self):
+        """True at the season-end hub (onInit == _CareerOverInit)."""
+        return self._current_init() == self.HUB_INIT
 
     def sim_one_step(self):
-        """One in-season step toward season end, simulating matches via RESULT.
-        Returns 'hub' at the season-end contest menu, else the action taken."""
-        acts = self._actions()
-        if "_ContinueCareer" in acts:
-            return "hub"
-        if self.CUP_RESULT_HANDLER in acts:        # cup match-day: RESULT = sim
-            self._fire_entry(self.CUP_RESULT_HANDLER); return "cup-result"
-        if self.LEAGUE_RESULT_HANDLER in acts:     # league match-day: RESULT = sim
-            self._fire_entry(self.LEAGUE_RESULT_HANDLER); return "league-result"
-        if "_PlayMatchSelected" in acts:           # team-select -> match-day overview
-            self._fire_entry("_ExitPlayMatch"); return "exit-playmatch"
-        # chairman memo / cup view / other interstitial -> advance
-        self.h.set_var("shortFire", 1); self.h.cont(8); return "shortfire"
+        """One in-season step toward season end. O(1): identify the active screen
+        by its onInit, fire the known RESULT/exit entry. Returns 'hub' at the
+        season-end contest menu, the kind acted on, or 'shortfire' for an
+        interstitial (chairman memo / cup view / unknown)."""
+        init = self._current_init()
+        entry = self.SEASON_SCREENS.get(init)
+        if entry:
+            handler, kind = entry
+            if kind == "hub":
+                return "hub"
+            ordn = self._ordinal_of(init, handler)
+            if ordn is not None:
+                self._fire_ordinal(ordn)
+                return kind
+        # interstitial / unknown menu -> advance with shortFire
+        self.h.set_var("shortFire", 1)
+        self.h.cont(8)
+        return "shortfire"
 
-    def sim_through_season(self, max_steps=200):
+    def sim_through_season(self, max_steps=300):
         """Simulate every human match-day (RESULT) until the season-end hub.
+        Returns True if the hub was reached, False if stuck.
 
-        WIP: the individual mechanisms are validated (cup RESULT sims + advances;
-        _ExitPlayMatch -> match-day overview; contest-hub detection), but a full
-        season hasn't been driven to completion yet — sim_one_step calls enum()
-        which queries EVERY entry's onSelect (O(entries) daemon round-trips on
-        the 68-entry match-day screen), so a season is thousands of round-trips
-        (minutes) and the long run tends to wedge the multithreaded SDL daemon.
-        TODO: detect the screen by currentMenu identity (==&diyCupMenu /
-        &contestMenu / ...) and fire the known RESULT ordinal directly — O(1) per
-        step instead of O(entries)."""
+        Each step is O(1) (currentMenuPtr identity + known ordinal). Bails if it
+        gets stuck on an unknown screen that shortFire won't advance (so an
+        unmapped menu surfaces as a clean failure, not an infinite loop)."""
+        shortfires = 0
         for _ in range(max_steps):
-            if self.sim_one_step() == "hub":
+            r = self.sim_one_step()
+            if r == "hub":
                 return True
+            shortfires = shortfires + 1 if r == "shortfire" else 0
+            if shortfires >= 20:    # stuck on an unmapped screen
+                return False
         return self.at_contest_menu()
 
     def advance_one_season(self):
@@ -262,7 +296,8 @@ class SwosHarness:
         inferior: free-run to the SEASON_INCR_LINE code breakpoint. The in-season
         matches are simulated via RESULT (sim_through_season)."""
         # fire CONTINUE CAREER (selections gate on shortFire, bit 5)
-        self.h.cmd(f"call (void)_SetCurrentEntry({self.CONTEST_CONTINUE_ORDINAL})")
+        ordn = self._ordinal_of(self.HUB_INIT, self.HUB_CONTINUE)
+        self.h.cmd(f"call (void)_SetCurrentEntry({ordn if ordn is not None else self.CONTEST_CONTINUE_ORDINAL})")
         self.h.set_var("shortFire", 1)
         # free-run the transition (result chain + catch-up sim) to the increment
         self.h.delete_breakpoints(); self.h.break_at(self.SEASON_INCR_LINE); self.h.cont(60)
