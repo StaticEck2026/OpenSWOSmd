@@ -124,7 +124,26 @@ Verified: trivial call returns; source breakpoints still fire; and
 > `--timeout` (the plugin uses `CALL_TIMEOUT=300`) or it disconnects mid-call and
 > wedges the gdb client (which looks like state corruption but is a timeout
 > artifact). The daemon returns as soon as the call completes, so a high ceiling
-> is safe on both targets.
+> is safe on both targets. Stage the filename as ONE bulk write
+> (`set {char[N]}scratch = "..."`, via `_stage_filename`), not per-byte
+> `write_bytes` — the latter returned `rc=None` on the Amiga.
+
+> **⚠️ Amiga inferior-call rc is UNRELIABLE in repeated calls — verify by DATA,
+> not by rc.** A single inferior call from a clean state returns its value
+> (`rc=0`), but **repeated** calls in a loop intermittently hit a SIGILL
+> (`Illegal instruction: 0008 at 0020F3B0`) mid-call: gdb abandons the call
+> (so `load_career` returns `rc=None`) **even though the load fully applied** —
+> the restored fields (`gameType`, `currentSeasonShowing`, `numSelectedTeams`)
+> are correct. So on the Amiga, judge a load by re-reading those fields, not by
+> the rc. This is a residual robustness bug in the FS-UAE inferior-call patch
+> (the breakpoint round-trip gdb does around an inferior call corrupts a word →
+> illegal); a follow-up for the fs-uae stub. It does NOT affect SDL (rc reliable
+> there) and does NOT affect load correctness on either target.
+>
+> **Cross-target result (2026-06-18):** all 17 deep-run saves (`AUTO_S03`–`S19`,
+> SDL-written) load correctly on the Amiga build — `season`/`gameType`/`numSel`
+> match per-save across the full 16-season career (verified 3× by the field
+> check; the rc-based "0/17" headline is a false negative from the rc artifact).
 
 ## Amiga `DBG=1` build (precise breakpoints)
 
