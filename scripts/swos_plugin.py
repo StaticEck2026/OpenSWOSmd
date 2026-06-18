@@ -373,6 +373,14 @@ class SwosHarness:
             f = f[5:]
         return f
 
+    # NOTE on timeouts: the inferior CALL of SaveJson_Load/WriteCareer parses/
+    # emits JSON via mjson. On SDL that's a few seconds; on the EMULATED Amiga
+    # (FS-UAE, cycle-exact 68020) it's 1-3 MINUTES. The daemon cmd returns as
+    # soon as the call completes, so a high ceiling is safe on both — but it must
+    # exceed the Amiga parse time or the proxy disconnects mid-call and wedges
+    # the gdb client (looks like corruption; it's a timeout artifact). 300s.
+    CALL_TIMEOUT = 300
+
     def load_career(self, filename):
         """Stage the basename into a scratch global and call the game's loader.
         Returns 0 on success (game convention: non-zero == failure). NOTE: this
@@ -384,11 +392,11 @@ class SwosHarness:
         self.h.write_bytes(FILENAME_SCRATCH, name.encode() + b"\x00")
         r = self.h.cmd(
             f"call (int)SaveJson_LoadCareer((unsigned char *){FILENAME_SCRATCH}, 0, 0)",
-            timeout=60)
+            timeout=self.CALL_TIMEOUT)
         m = re.search(r"\$\d+\s*=\s*(-?\d+)", r)
         return int(m.group(1)) if m else None
 
-    def save_career(self, filename, timeout=60):
+    def save_career(self, filename, timeout=None):
         """Write the live career to a .CAR via the game's SaveJson_WriteCareer.
         Pass a basename ('X.CAR'); resolve_save_path prepends 'save/'. Returns
         the writer's rc (0 == success)."""
@@ -397,7 +405,7 @@ class SwosHarness:
         self.h.write_bytes(FILENAME_SCRATCH, name.encode() + b"\x00")
         r = self.h.cmd(
             f"call (int)SaveJson_WriteCareer((unsigned char *){FILENAME_SCRATCH})",
-            timeout=timeout)
+            timeout=timeout or self.CALL_TIMEOUT)
         m = re.search(r"\$\d+\s*=\s*(-?\d+)", r)
         return int(m.group(1)) if m else None
 

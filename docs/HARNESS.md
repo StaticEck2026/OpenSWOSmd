@@ -88,37 +88,43 @@ cp /mnt/c/Projects/Linux/fs-uae/fs-uae \
 (The original is backed up as `fs-uae.orig.bak`. The patch is purely additive —
 safe to keep permanently. The bartman dir stays the cwd for its support files.)
 
-### ⚠️ Inferior CALLS don't work on the FS-UAE stub yet (load_career, save_career)
+### Inferior CALLS on the FS-UAE stub (fixed — needed for load_career on Amiga)
 
-Reads, writes, breakpoints and menu-driving all work on the Amiga. **gdb inferior
-function calls do NOT** — `call func()` / `print func()` free-runs the inferior
-instead of returning. This means `load_career` / `save_career` / `enter_career`
-(which `call SaveJson_LoadCareer` etc.) work **only on SDL**, not Amiga. On the
-Amiga, load a save through the game's own UI and use gdb only for inspection
-(reads + breakpoints), which is how cross-target saves were validated before.
+gdb inferior function calls (`call func()` / `print func()`, used by
+`load_career` / `save_career` / `enter_career`) originally **free-ran** the
+inferior on the FS-UAE stub instead of returning. **Now fixed** (a second
+additive patch to `barto_gdbserver.cpp`, alongside the write support above).
 
-Root cause (confirmed by `set debug remote 1` capture + reading
-`barto_gdbserver.cpp` / `debug.cpp`): gdb does an inferior call by writing the
-**call-dummy return address = the ELF entry point** onto the stack, setting a
-`Z0` breakpoint there, pointing PC at the target, and `vCont;c`. The stub's `Z0`
-records the address into FS-UAE's `bpnodes[]` as a **PC-compare** entry but
-**writes no trap opcode** (`barto_gdbserver.cpp` ~819-829); the per-instruction
-PC scan that turns that into a stop is the FS-UAE `bpnodes` scan (`debug.cpp`
-~7302 / re-armed at ~7508). That scan reliably fires for ordinary source
-breakpoints (resume happens from inside `debug()` with the table live) but does
-**not** catch the synthesized call-dummy return, so the `rts` to the entry point
-just runs on (no opcode was written to trap on). Captured packets:
-`M…:00219b10` (return addr = entry point) → `Z0,219b10,2`→`OK` → `vCont;c` →
-free-run.
+Two bugs had to be fixed:
 
-Recommended fix (conventional gdbserver behaviour, deterministic — doesn't depend
-on the scan): make `Z0`/`z0` write a real software-breakpoint opcode
-(`ILLEGAL` `0x4AFC`) into Amiga memory, save/restore the original word, and
-**shadow** it in the `m` read handler so gdb still sees the original bytes; the
-existing IllegalError→`T05swbreak` exception path then reports the stop. Modify
-the `Z0`/`z0` blocks (~808-854) and the `m` handler (~916) in
-`barto_gdbserver.cpp`; build+deploy as above. Until then the Amiga harness is
-read/breakpoint/nav-capable but not inferior-call-capable.
+1. **`Z0` wrote no trap opcode.** gdb does an inferior call by writing the
+   call-dummy return address (= the ELF entry point) onto the stack, setting a
+   `Z0` breakpoint there, pointing PC at the target, and `vCont;c`. The stub's
+   `Z0` only recorded a `bpnodes[]` **PC-compare** entry (no opcode); FS-UAE's
+   address scan catches ordinary source breakpoints but not the synthesized
+   call-dummy return, so the `rts` ran on. Fix: `Z0`/`z0` now also write a real
+   `ILLEGAL` (`0x4AFC`) opcode (save/restore the original word; `m`-reads are
+   **shadowed** so gdb still sees the original bytes), and the IllegalError
+   exception path reports `T05swbreak:;` when the trap PC matches one of our
+   written breakpoints.
+2. **Setting PC didn't rebuild the 68020 prefetch.** The A1200 runs cycle-exact
+   68020; `m68k_setpc` (the `P11` packet) updated `regs.pc` but not the prefetch
+   pipeline, so a resumed call executed a stale prefetched opcode. Fix:
+   `set_register(PC)` now calls `fill_prefetch()` after `m68k_setpc`.
+
+The change is additive (the `bpnodes` scan is untouched, so source breakpoints
+and menu-driving are unaffected). Build + deploy as in "FS-UAE write support".
+Verified: trivial call returns; source breakpoints still fire; and
+`SaveJson_LoadCareer("AUTO_S03.CAR")` on the Amiga returns 0 with
+`gameType=4`/`currentSeasonShowing=3`/`numSelectedTeams=47`.
+
+> **Long-call timeout (important):** the inferior call of `SaveJson_LoadCareer` /
+> `SaveJson_WriteCareer` parses/emits JSON via mjson — a few seconds on SDL but
+> **1-3 minutes on the emulated Amiga**. The proxy `cmd` must use a long
+> `--timeout` (the plugin uses `CALL_TIMEOUT=300`) or it disconnects mid-call and
+> wedges the gdb client (which looks like state corruption but is a timeout
+> artifact). The daemon returns as soon as the call completes, so a high ceiling
+> is safe on both targets.
 
 ## Amiga `DBG=1` build (precise breakpoints)
 
