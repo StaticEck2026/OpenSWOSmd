@@ -40,6 +40,7 @@ def main(argv):
     p = sub.add_parser("goto"); p.add_argument("symbol")
     p = sub.add_parser("select"); p.add_argument("symbol")
     p = sub.add_parser("load"); p.add_argument("name")
+    p = sub.add_parser("seasons"); p.add_argument("n", type=int)
     p = sub.add_parser("cap"); p.add_argument("out")
     a = ap.parse_args(argv[1:])
 
@@ -82,6 +83,9 @@ def main(argv):
     elif a.cmd == "load":
         rc = H.load_career(a.name)
         print(f"load {a.name}: returned {rc}")
+    elif a.cmd == "seasons":
+        seasons = H.run_seasons(a.n)
+        print(f"advanced through seasons: {seasons}")
     elif a.cmd == "cap":
         print(H.screencap(a.out))
     return 0

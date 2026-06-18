@@ -190,6 +190,74 @@ class SwosHarness:
         return (f"wrote {out_png} {w}x{h} (Amiga {planes}-plane/{ncolors}col, "
                 f"base={base}, {nz} non-zero bytes)")
 
+    # ---- season-loop driver -----------------------------------------------
+    # _InitializeNewSeason does `currentSeasonShowing++` here. A CODE breakpoint
+    # at this line is the stable way to stop after a season transition: the game
+    # free-runs the result chain + catch-up sim at native speed and stops here.
+    # (Per-frame menu-bp stepping is too slow for the catch-up sim, and
+    # watchpoints / Ctrl-C interrupts wedge the multithreaded SDL inferior.)
+    SEASON_INCR_LINE = "career_init.c:974"
+    CONTEST_CONTINUE_ORDINAL = 6   # CONTINUE CAREER entry in the contest menu
+
+    def at_contest_menu(self):
+        """True if the current menu is the career contest menu (has CONTINUE
+        CAREER = _ContinueCareer among its entries)."""
+        return any(act == "_ContinueCareer" for _, act in self.enum())
+
+    def drive_to_contest(self, max_steps=15):
+        """From a post-transition continue-screen (chairman memo, etc.), press
+        shortFire until the contest menu is reached."""
+        for _ in range(max_steps):
+            if self.at_contest_menu():
+                return True
+            self.h.set_var("shortFire", 1)
+            self.h.cont(8)
+        return self.at_contest_menu()
+
+    def advance_season(self):
+        """Advance one season TRANSITION and return the new currentSeasonShowing.
+        Precondition: stopped at the menu breakpoint on the SEASON-END contest
+        menu (the one exposing CONTINUE CAREER).
+
+        Flow: fire CONTINUE CAREER -> free-run the transition (result screens
+        auto-advance via the hold counter; the catch-up sim runs) to the season
+        increment -> step past it -> drive the post-transition screens.
+
+        VALIDATED for the end-of-season transition (3->4, MILAN.CAR). NOTE: after
+        the transition the game drops into the NEW season's in-season flow
+        (PLAY MATCH / cup views), NOT straight back to a CONTINUE-CAREER contest
+        menu — so chaining multiple seasons needs in-season navigation that maps
+        play-match/cup screens back to the contest hub (TODO; the career menu web
+        is more than a CONTINUE chain). The stable transition mechanism (free-run
+        to the SEASON_INCR_LINE code breakpoint) is the reusable core."""
+        # fire CONTINUE CAREER (menu selections gate on shortFire, bit 5)
+        self.h.cmd(f"call (void)_SetCurrentEntry({self.CONTEST_CONTINUE_ORDINAL})")
+        self.h.set_var("shortFire", 1)
+        # free-run to the season-increment code breakpoint (stable, no wedge)
+        self.h.delete_breakpoints()
+        self.h.break_at(self.SEASON_INCR_LINE)
+        self.h.cont(60)
+        # step past the increment back into the menu loop
+        self.h.delete_breakpoints()
+        self.h.break_at(INJECT_LINE)
+        self.h.cont(20)
+        self.drive_to_contest()
+        return self.h.int_value("currentSeasonShowing")
+
+    def run_seasons(self, n):
+        """Advance n seasons from the current contest menu. Returns the list of
+        season numbers reached. Re-primes / drives to the contest menu first."""
+        self.prime()
+        if not self.at_contest_menu():
+            self.drive_to_contest()
+        out = []
+        for _ in range(n):
+            s = self.advance_season()
+            out.append(s)
+            if s is None or s == 19:   # 19 = retirement
+                break
+        return out
+
     # ---- career save loading (game's own native load; no UI nav needed) ---
     def load_career(self, filename):
         """Stage the filename into a scratch global and call the game's loader.
