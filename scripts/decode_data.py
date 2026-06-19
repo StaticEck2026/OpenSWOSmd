@@ -14,7 +14,7 @@ Examples:
     decode_data.py 33 --json                # JSON for the whole file
     decode_data.py --all --names            # every data file, names only
     decode_data.py --verify                 # round-trip every data file
-    decode_data.py --dump-json              # export the whole corpus to bin/data_json/
+    decode_data.py --dump-json              # export the whole corpus to bin/data_json/teams/
 """
 import argparse
 import glob
@@ -77,14 +77,14 @@ def names_of(d):
 
 
 def out_name(target):
-    """JSON output filename for a target: <CN_NAME>.json for TEAM databases,
-    the full source name + .json otherwise (EUROCUP.TMD.json, POOLPLYR.DAT.json)."""
+    """JSON output filename: <CN_NAME>.json for TEAM databases, else the source
+    stem + .json (EUROCUP.json, UEFACUP.json, POOLPLYR.json)."""
     ft = tf.file_type(target)
     if ft == "team":
         c = int(target) if (isinstance(target, int) or str(target).isdigit()) \
             else int(os.path.basename(str(target)).split(".")[1])
         return tf.country_name(c) + ".json"
-    return os.path.basename(str(target)) + ".json"
+    return os.path.splitext(os.path.basename(str(target)))[0] + ".json"
 
 
 def cmd_verify():
@@ -123,8 +123,8 @@ def main(argv=None):
     ap.add_argument("--names", action="store_true", help="compact name list")
     ap.add_argument("--all", action="store_true", help="sweep every bin/data file")
     ap.add_argument("--verify", action="store_true", help="round-trip every file (binary->dict->binary)")
-    ap.add_argument("--dump-json", metavar="DIR", nargs="?", const="bin/data_json", default=None,
-                    help="export every file as JSON to DIR (default: bin/data_json/, relative to repo root)")
+    ap.add_argument("--dump-json", metavar="DIR", nargs="?", const="bin/data_json/teams", default=None,
+                    help="export every file as JSON to DIR (default: bin/data_json/teams/, relative to repo root)")
     ap.add_argument("--compact", action="store_true", help="minify the --dump-json output (default: indented)")
     args = ap.parse_args(argv)
 

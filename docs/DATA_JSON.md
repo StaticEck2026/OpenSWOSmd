@@ -127,7 +127,7 @@ Position nibble (`positionAndFace >> 5`): `0=GK 1=RB 2=LB 3=CD 4=RW 5=LW 6=MF 7=
   decode_data.py 33 --json                # JSON for the whole file
   decode_data.py --all --names            # every data file, names only
   decode_data.py --verify                 # round-trip every data file
-  decode_data.py --dump-json              # export the whole corpus to bin/data_json/
+  decode_data.py --dump-json              # export the whole corpus to bin/data_json/teams/
   ```
 - **`scripts/annotate_competition_teams.py`** — used the library to rewrite the
   `competition_data.c` `teamSeedList[]` draws as `{ CN_*, ordinal /* NAME */ }`.
@@ -212,10 +212,10 @@ Same `teams[]` (TeamFileEx) shape, no `country` field — `count = size/684`:
 
 ### On-disk export
 
-`decode_data.py --dump-json` writes the corpus to **`bin/data_json/`** —
-`<CN_NAME>.json` for the team databases (e.g. `SCOTLAND.json`), and the full
-source name for the rest: `EUROCUP.TMD.json`, `EUROCWC.TMD.json`,
-`UEFACUP.TMD.json`, `POOLPLYR.DAT.json`. Files are written **expanded
+`decode_data.py --dump-json` writes the corpus to **`bin/data_json/teams/`** —
+`<CN_NAME>.json` for the team databases (e.g. `SCOTLAND.json`), and the source
+stem for the rest: `EUROCUP.json`, `EUROCWC.json`, `UEFACUP.json`,
+`POOLPLYR.json`. Files are written **expanded
 (indented)** by default while developing (readable); `--compact` minifies them
 (~7.8 MB vs ~16 MB) for release. The dir lives under `bin/` so the game can load
 JSON in place of the binaries during testing; the binary files are retained for
