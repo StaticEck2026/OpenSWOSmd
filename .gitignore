@@ -2,3 +2,6 @@
 *.exe
 sensible-soccer-nes-c/
 scripts/__pycache__/
+
+# generated JSON export of bin/data (regenerate: scripts/decode_data.py --dump-json)
+data_json/

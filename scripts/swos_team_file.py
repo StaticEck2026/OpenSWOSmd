@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-"""swos_team_file — read/write SWOS TEAM.NNN team-data files.
+"""swos_team_file — read/write the SWOS bin/data team/player data files.
 
-Each bin/data/TEAM.<country> is RNC-ProPack compressed.  Decompressed it is:
+Covers all three record-based data files (all RNC-ProPack compressed):
 
-    [0..1]   uint16 big-endian   team count N
-    [2..]    N * 684-byte TeamFileEx records   (see src/game_types.h)
+  * TEAM.<country>  RNC v1: [u16 BE count] + count * 684-byte TeamFileEx records
+  * *.TMD           RNC v2: bare TeamFileEx[] (no count; N = size / 684)
+                    EUROCUP(16) / EUROCWC(32) / UEFACUP(32) — the European cups
+  * POOLPLYR.DAT    RNC v2: bare PoolPlayer[] (no count; 58 B each, 900 records)
 
-A TeamFileEx is a 76-byte TeamFile header followed by 16 * 38-byte PlayerFile
-records.  A {country, ordinal} TeamId (game_types.h) resolves to a team by
+A TeamFileEx is a 76-byte TeamFile header + 16 * 38-byte PlayerFile records; a
+PoolPlayer is teamId + playerOrdinal + teamName[17] + an embedded PlayerFile
+(see src/game_types.h).  A {country, ordinal} TeamId resolves to a team by
 loading TEAM.<country> and finding the record whose teamOrdinal == ordinal.
 
-This module is the parsing/encoding LIBRARY; `decode_team_file.py` is the CLI
-util built on top of it.  The parse produces plain JSON-serialisable dicts and
-`encode_*` is the faithful inverse, so a TEAM file can be round-tripped
-(binary -> dict -> binary) and is the foundation for the TEAM->JSON migration
-(see docs/TEAM_XXX_JSON.md).
+This module is the parsing/encoding LIBRARY; `decode_data.py` is the CLI util
+built on top of it.  The parse produces plain JSON-serialisable dicts and
+`encode_*` is the faithful inverse, so every file round-trips
+(binary -> dict -> binary) — the foundation for the data->JSON migration
+(see docs/DATA_JSON.md).
 
-RNC decompression reuses the existing port (rnc_propack.py).  Set the
-RNC_PROPACK_DIR env var if it is not on one of the default search paths.
+RNC method (v1/v2) is auto-detected from the header.  Decompression reuses the
+existing port (rnc_propack.py); set RNC_PROPACK_DIR if it is not on a default
+search path.
 """
 import os
 import sys
@@ -55,16 +59,26 @@ def _import_rnc():
     raise ImportError("rnc_propack.py not found. Set RNC_PROPACK_DIR.")
 
 
+def _apply_method_clamps(v, method):
+    """Mirror rnc_propack.main()'s per-method dict/match setup."""
+    v.method = method
+    if method == 2:                 # RNC\x02 (TMD, POOLPLYR.DAT)
+        v.dict_size = 0x1000
+        v.max_matches = 0xFF
+    else:                           # RNC\x01 (TEAM.NNN)
+        v.dict_size = 0x8000
+        v.max_matches = 0x1000
+
+
 def rnc_unpack(packed: bytes) -> bytes:
-    """Decompress an RNC ProPack v1 blob (mirrors rnc_propack.main method-1 setup)."""
+    """Decompress an RNC ProPack blob.  Method (v1/v2) is taken from the header
+    byte (packed[3] & 3) so both TEAM.NNN (v1) and TMD/POOLPLYR (v2) work."""
     rnc = _import_rnc()
     v = rnc.Vars()
     v.input = bytearray(packed)
     v.file_size = len(packed)
     v.read_start_offset = v.input_offset = v.output_offset = 0
-    v.method = 1
-    v.dict_size = 0x8000        # method-1 dictionary clamp
-    v.max_matches = 0x1000
+    _apply_method_clamps(v, packed[3] & 3 if len(packed) > 3 else 1)
     v.output = bytearray(rnc.MAX_BUF_SIZE)
     v.temp = bytearray(rnc.MAX_BUF_SIZE)
     err = rnc.do_unpack(v)
@@ -73,16 +87,14 @@ def rnc_unpack(packed: bytes) -> bytes:
     return bytes(v.output[: v.output_offset])
 
 
-def rnc_pack(raw: bytes) -> bytes:
-    """Re-compress with RNC ProPack v1 (for writing TEAM files back, later use)."""
+def rnc_pack(raw: bytes, method: int = 1) -> bytes:
+    """Re-compress with RNC ProPack (method 1 or 2) — for writing files back."""
     rnc = _import_rnc()
     v = rnc.Vars()
     v.input = bytearray(raw)
     v.file_size = len(raw)
     v.read_start_offset = v.input_offset = v.output_offset = 0
-    v.method = 1
-    v.dict_size = 0x8000
-    v.max_matches = 0x1000
+    _apply_method_clamps(v, method)
     v.puse_mode = ord("p")
     v.output = bytearray(rnc.MAX_BUF_SIZE)
     v.temp = bytearray(rnc.MAX_BUF_SIZE)
@@ -242,6 +254,62 @@ def encode_blob(teams: list) -> bytes:
 
 
 # ======================================================================
+# TMD (EUROCUP/EUROCWC/UEFACUP)  —  bare TeamFileEx[] array, no count header
+# (loaded into tmdFileBuffer = TeamFileEx[80]; count = filesize / 684)
+# ======================================================================
+def parse_tmd_blob(blob: bytes) -> list:
+    n = len(blob) // TEAM_REC_SIZE
+    return [parse_team(blob[i * TEAM_REC_SIZE : (i + 1) * TEAM_REC_SIZE]) for i in range(n)]
+
+
+def encode_tmd_blob(teams: list) -> bytes:
+    out = bytearray()
+    for t in teams:
+        out += encode_team(t)
+    return bytes(out)
+
+
+# ======================================================================
+# POOLPLYR.DAT  —  PoolPlayer[] array, 58 B each, no count header
+# PoolPlayer = teamId(BE u16) + playerOrdinal + teamName[17] + PlayerFile (game_types.h)
+# ======================================================================
+POOLPLAYER_REC_SIZE = 58
+POOL_TEAMNAME_OFF, POOL_TEAMNAME_LEN = 3, 17
+
+
+def parse_pool_player(b: bytes) -> dict:
+    return {
+        "teamId": (b[0] << 8) | b[1],          # uint16 big-endian on disk
+        "playerOrdinal": b[2],
+        "teamName": _decode_str(b[POOL_TEAMNAME_OFF : POOL_TEAMNAME_OFF + POOL_TEAMNAME_LEN]),
+        "player": parse_player(b[20:58]),
+    }
+
+
+def encode_pool_player(pp: dict) -> bytearray:
+    b = bytearray(POOLPLAYER_REC_SIZE)
+    tid = pp["teamId"] & 0xFFFF
+    b[0], b[1] = (tid >> 8) & 0xFF, tid & 0xFF
+    b[2] = pp["playerOrdinal"] & 0xFF
+    _put_str(b, POOL_TEAMNAME_OFF, POOL_TEAMNAME_LEN, pp["teamName"])
+    b[20:58] = encode_player(pp["player"])
+    return b
+
+
+def parse_poolplyr_blob(blob: bytes) -> list:
+    n = len(blob) // POOLPLAYER_REC_SIZE
+    return [parse_pool_player(blob[i * POOLPLAYER_REC_SIZE : (i + 1) * POOLPLAYER_REC_SIZE])
+            for i in range(n)]
+
+
+def encode_poolplyr_blob(players: list) -> bytes:
+    out = bytearray()
+    for pp in players:
+        out += encode_pool_player(pp)
+    return bytes(out)
+
+
+# ======================================================================
 # file-level API
 # ======================================================================
 def _data_dir() -> str:
@@ -268,21 +336,53 @@ def load(target) -> list:
     return parse_blob(_read_blob(target))
 
 
+def file_type(target) -> str:
+    """Classify a bin/data target: 'team' (TEAM.NNN or a country number),
+    'tmd' (*.TMD), or 'pool' (POOLPLYR.DAT).  None if unrecognised."""
+    if isinstance(target, int) or (isinstance(target, str) and target.isdigit()):
+        return "team"
+    name = os.path.basename(str(target)).upper()
+    if name.startswith("TEAM."):
+        return "team"
+    if name.endswith(".TMD"):
+        return "tmd"
+    if name.endswith("POOLPLYR.DAT"):
+        return "pool"
+    return None
+
+
 def file_to_dict(target) -> dict:
-    """Whole-file JSON-ready dict: {country, country_name, count, teams:[...]}."""
-    teams = load(target)
-    country = teams[0]["country"] if teams else None
-    return {
-        "country": country,
-        "country_name": country_name(country) if country is not None else None,
-        "count": len(teams),
-        "teams": teams,
-    }
+    """Whole-file JSON-ready dict, dispatched by file type."""
+    ft = file_type(target)
+    blob = _read_blob(target)
+    if ft == "team":
+        teams = parse_blob(blob)
+        country = teams[0]["country"] if teams else None
+        return {"type": "team", "country": country,
+                "country_name": country_name(country) if country is not None else None,
+                "count": len(teams), "teams": teams}
+    if ft == "tmd":
+        teams = parse_tmd_blob(blob)
+        return {"type": "tmd", "file": os.path.basename(str(target)),
+                "count": len(teams), "teams": teams}
+    if ft == "pool":
+        players = parse_poolplyr_blob(blob)
+        return {"type": "pool", "file": os.path.basename(str(target)),
+                "count": len(players), "players": players}
+    raise ValueError("unknown data file type: %s" % target)
 
 
 def reencode(target) -> bytes:
-    """Decompressed-blob round-trip: parse then re-encode (no RNC)."""
-    return encode_blob(load(target))
+    """Decompressed-blob round-trip: parse then re-encode (no RNC), by file type."""
+    ft = file_type(target)
+    blob = _read_blob(target)
+    if ft == "team":
+        return encode_blob(parse_blob(blob))
+    if ft == "tmd":
+        return encode_tmd_blob(parse_tmd_blob(blob))
+    if ft == "pool":
+        return encode_poolplyr_blob(parse_poolplyr_blob(blob))
+    raise ValueError("unknown data file type: %s" % target)
 
 
 _names_cache = {}
