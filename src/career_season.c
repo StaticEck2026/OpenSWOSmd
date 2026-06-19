@@ -1249,10 +1249,7 @@ static void setupFriendlyCupTeams(void)
 
     uint8_t *comp = friendlyCopy;
     int16_t teamCount = (int8_t)((CompCupHeader *)comp)->roundStringBase;
-    uint8_t hdrSize = (uint8_t)((Competition *)comp)->teamListOffset;
-    /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
-    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
-                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
+    uint16_t *teamList = (uint16_t *)comp_team_seed_list((Competition *)comp);
     uint16_t *listBase = teamList;
 
     /* BE writes so the slot bytes match the static-init dc.b layout
@@ -1279,10 +1276,7 @@ static void setupInvitationTournamentTeams(void)
 
     uint8_t *comp = invitationTournamentCopy;
     int16_t teamCount = (int8_t)((CompCupHeader *)comp)->roundStringBase;
-    uint8_t hdrSize = (uint8_t)((Competition *)comp)->teamListOffset;
-    /* +text[2]-growth delta — see fillWorldCupQualifyingGroupTeams. */
-    uint16_t *teamList = (uint16_t *)(comp + 7 + (hdrSize & 0xFF)
-                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
+    uint16_t *teamList = (uint16_t *)comp_team_seed_list((Competition *)comp);
     uint16_t *listBase = teamList;
 
     /* BE writes — see setupFriendlyCupTeams comment. */
@@ -1517,7 +1511,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
 
         /* Sanity check matching the asm `beq.w loc_12BCD0` — Playoffs
          * statics all have comp.teamListOffset=17, so 0 should never appear. */
-        if (qualComp->comp.teamListOffset == 0) {
+        if (comp_team_seed_list(&qualComp->comp) == NULL) {
             panicReasonCode = 0x3003;
             _PanicHaltLoop();
             return;

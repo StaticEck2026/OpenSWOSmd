@@ -687,15 +687,11 @@ void _Career_UpdateEuropeanChampionshipCompetitions(void)
         return;
 
     uint8_t *a5 = europeanChampionships2Copy;
-    /* unk3 is the 32-bit Amiga byte distance from a5+7 to the embedded
-     * unk1[] qualifier list. The cup *Copy struct has a `char *text[2]`
-     * pair before unk1[]; on 64-bit those pointers widen 8->16 bytes,
-     * pushing unk1[] +8. Without this delta the qualifier writes land in
-     * text[1], corrupting the comp name pointer (SIGSEGV when the season
-     * list is drawn). Matches the team-selection reader in career_teams.c. */
-    uint16_t offset = (uint8_t)((Competition *)a5)->teamListOffset +
-                      2u * (sizeof(char *) - sizeof(uint32_t));
-    a5 = a5 + 7 + offset;
+    /* qualifier list = the cup *Copy's embedded teamSeedList. comp_team_seed_list
+     * handles base+7+offset and the 64-bit name[2] pointer-growth delta — without
+     * it the writes would land in name[1] and corrupt the comp name pointer
+     * (SIGSEGV when the season list is drawn). */
+    a5 = (uint8_t *)comp_team_seed_list((Competition *)a5);
     /* Asm `move.w euroChampionshipQualTeam,(a5)+` writes BE on m68k.
      * Use BE_WRITE_U16 so the destination byte order matches the rest
      * of europeanChampionships2Copy.unk1 (BE-packed `{country, ordinal}`
@@ -765,12 +761,9 @@ void _Career_UpdateWorldCupCompetitions(void)
         return;
 
     uint8_t *a5 = worldCup2Copy;
-    /* +text[2]-growth delta — see _Career_UpdateEuropeanChampionshipCompetitions
-     * above. Keeps the qualifier writes in unk1[] (not text[1]) on 64-bit and
-     * matching the AltTableHeader reader / Amiga byte layout. */
-    uint16_t offset = (uint8_t)((Competition *)a5)->teamListOffset +
-                      2u * (sizeof(char *) - sizeof(uint32_t));
-    a5 = a5 + 7 + offset;
+    /* qualifier list = the cup *Copy's embedded teamSeedList — see the EC variant
+     * above. comp_team_seed_list handles the offset + 64-bit delta. */
+    a5 = (uint8_t *)comp_team_seed_list((Competition *)a5);
     /* BE write — matches the eurochampionship variant above and the
      * BE-packed convention for *.unk1 team-id lists (4e5f378). */
     BE_WRITE_U16(a5, worldCupHostTeam);

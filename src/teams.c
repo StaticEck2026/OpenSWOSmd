@@ -3107,14 +3107,11 @@ skip_continental_check:
          * pointer-width-correct on both targets. */
         divIdx = 0;
 loc_E246:
-        nameOff = compHdr->nameTableOffset;
-        if (nameOff == 0) {
-            /* Use divisionStringTable */
-            namePtr = (uint8_t *)divisionStringTable[divIdx];
-        } else {
-            off16 = (int8_t)nameOff;
-            char **nameTbl = (char **)(compEntry + 5 + off16);
-            namePtr = (uint8_t *)nameTbl[divIdx * 2];
+        {
+            /* leagues: 2 char* per division (full name + abbreviation) */
+            char **nameTbl = comp_name_table(compHdr);
+            namePtr = nameTbl ? (uint8_t *)nameTbl[divIdx * 2]
+                              : (uint8_t *)divisionStringTable[divIdx];
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3127,12 +3124,9 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 1) {
         /* Cup — single name pointer at +5+off16 (1 entry, char *). */
-        nameOff = compHdr->nameTableOffset;
-        if (nameOff == 0) {
-            namePtr = (uint8_t *)aCup_0;
-        } else {
-            off16 = (int8_t)nameOff;
-            namePtr = (uint8_t *)(*(char **)(compEntry + 5 + off16));
+        {
+            char **nameTbl = comp_name_table(compHdr);
+            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)aCup_0;
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3141,12 +3135,9 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 2) {
         /* Tournament — same as Cup */
-        nameOff = compHdr->nameTableOffset;
-        if (nameOff == 0) {
-            namePtr = (uint8_t *)aLeague_1;
-        } else {
-            off16 = (int8_t)nameOff;
-            namePtr = (uint8_t *)(*(char **)(compEntry + 5 + off16));
+        {
+            char **nameTbl = comp_name_table(compHdr);
+            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)aLeague_1;
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;

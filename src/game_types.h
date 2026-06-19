@@ -1721,6 +1721,22 @@ typedef char _teamid_size_check[(sizeof(TeamId) == 2) ? 1 : -1];
 #define TEAMID_PACK(t)  PACK_BE_U16((t).countryNumber, (t).teamOrdinal)
 
 /* ==================================================================
+ * Polymorphic competition accessors (untangle Step 4) — reach a competition
+ * record's embedded name-pointer table and team-seed/qualifier list WITHOUT the
+ * per-call-site `base + 5/7 + selfOffset` byte arithmetic (which was fragile and
+ * 64-bit-unsafe). Defined in competition_data.c.
+ *
+ *  comp_name_table(c)     -> the char *[] name table, or NULL if the record uses
+ *                            the default names. Callers index per their own
+ *                            stride: leagues use 2 ptrs/division ([i*2]=full,
+ *                            [i*2+1]=abbrev); cups/tournaments a single [0].
+ *  comp_team_seed_list(c) -> the {country,ordinal} draw / qualifier list
+ *                            (TeamId *), or NULL if the record has none (leagues).
+ * ================================================================== */
+char  **comp_name_table(Competition *c);
+TeamId *comp_team_seed_list(Competition *c);
+
+/* ==================================================================
  * CompetitionCup — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md §4).
  * Collapses all 8 CompetitionCup_* variants into one — the old _6_2_64 layout,
  * the largest: CompCupHeader header + per-round rule flags + cup name strings +

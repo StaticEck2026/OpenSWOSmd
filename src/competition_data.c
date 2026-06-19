@@ -15,6 +15,30 @@
 #include "competition_data.h"
 
 /* ======================================================================
+ * Polymorphic competition accessors (untangle Step 4 — declared in game_types.h).
+ * PHASE 1: still derived from the self-offset bytes (Competition byte 5 / byte 7).
+ * Phase 2 will switch these on a CompKind discriminator and return the concrete
+ * struct field, after which the offset bytes are dropped. Centralising the
+ * arithmetic here first removes ~12 fragile, 64-bit-unsafe call sites.
+ * ====================================================================== */
+char **comp_name_table(Competition *c)
+{
+    uint8_t off = (uint8_t)c->nameTableOffset;
+    return off ? (char **)((uint8_t *)c + 5 + off) : (char **)0;  /* 0 = default names */
+}
+
+TeamId *comp_team_seed_list(Competition *c)
+{
+    uint8_t off = (uint8_t)c->teamListOffset;
+    if (off == 0)
+        return (TeamId *)0;          /* leagues / unset: no embedded list */
+    /* + the text[2] 64-bit pointer-growth delta: the stored byte is the 32-bit
+       value, and the list sits after the name[2] pointer pair (widens 4->8). */
+    return (TeamId *)((uint8_t *)c + 7 + off
+                      + 2u * (sizeof(char *) - sizeof(uint32_t)));
+}
+
+/* ======================================================================
  * Forward declarations — strings defined in assembly/Data.c
  * These will need proper externs when integrated into the build.
  * ====================================================================== */

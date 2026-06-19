@@ -9041,12 +9041,10 @@ void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
 
     /* Division/competition name */
     uint8_t *nameSource;
-    int8_t nameOffset = compHdr->nameTableOffset;
-    if (nameOffset == 0) {
-        nameSource = (uint8_t *)divisionStringTable[d7];
-    } else {
-        uint8_t *customTable = table + 5 + nameOffset;
-        nameSource = *(uint8_t **)(customTable + (d7 << 3));
+    {
+        char **nameTbl = comp_name_table(compHdr);
+        nameSource = nameTbl ? (uint8_t *)nameTbl[d7]
+                             : (uint8_t *)divisionStringTable[d7];
     }
     a6s->namePtr = nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
@@ -9099,9 +9097,9 @@ void _InitDIYCupFromRecord(uint8_t *cupRec)
 
     /* Cup name */
     uint8_t *nameSource = (uint8_t *)aCup_0; /* "CUP" default */
-    int8_t nameOffset = compHdr->nameTableOffset;
-    if (nameOffset != 0) {
-        nameSource = *(uint8_t **)(cupRec + 5 + nameOffset);
+    {
+        char **nameTbl = comp_name_table(compHdr);
+        if (nameTbl) nameSource = (uint8_t *)nameTbl[0];
     }
     a6s->namePtr = nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);
@@ -9170,39 +9168,19 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
     if (compHdr->seedReorderFlag != 0) {
         a6s->matchPairsPerRound = 1;  /* 0x50 */
 
-        int8_t seedOff = compHdr->teamListOffset;
-        if (seedOff == 0) {
+        /* Seed list = the static competition's embedded teamSeedList[] of
+         * {country,ordinal} pairs. comp_team_seed_list() handles base+7+offset
+         * and the 64-bit name[2] pointer-growth delta; NULL == no list (the asm
+         * `beq` sanity check). TeamId is endian-neutral so field access needs no
+         * swap; TEAMID_PACK rebuilds the BE key to compare against the BE-packed
+         * teamIds below (m68k read this via `move.w (an)+,d0`). Reading raw
+         * `*(uint16_t *)` on the LE host would byte-swap and the reorder would
+         * no-op — the historical "preset WC wrong groups" bug. */
+        const TeamId *seedTable = comp_team_seed_list(compHdr);
+        if (seedTable == NULL) {
             panicReasonCode = 0x5295;
             _PanicHaltLoop();
         }
-
-        /* The seed table is the static competition's unk1[] array of
-         * packed (country, ordinal) byte pairs. On Amiga m68k a
-         * `move.w (an)+,d0` reads it as a big-endian uint16 — the same
-         * format every other team-id consumer expects (e.g. the values
-         * `_CopySelectedTeamNumbers` just wrote into diyTournamentTeamIds
-         * via PACK_BE_U16). Reading as raw `*(uint16_t *)` on the SDL LE
-         * host byte-swaps each entry, the find-loop below never matches,
-         * the reorder no-ops, and the cup grid stays in selTeamsPtr
-         * resolution order — exactly the "preset WC wrong groups"
-         * symptom (Group A draws as Romania/Russia/Sweden/Switzerland
-         * because those are selTeamsPtr[0..3] from batched file load,
-         * instead of unk1[0..3] which is Colombia/Romania/Switzerland/
-         * Trinidad-Tobago). Decode each entry once via BE_READ_U16 so
-         * the comparison sees the right value on both hosts.
-         *
-         * +text[2]-growth delta: seedOff (= unk3) is the 32-bit Amiga byte
-         * distance from a5+7 to unk1[]; every preset competition reaching
-         * this seed-reorder (unk4 != 0 → all are CompetitionCup/Cup2 static
-         * templates with a `char *text[2]` pair) has unk1[] pushed +8 on
-         * 64-bit. Must match the writers (career_season.c euro-cup list /
-         * career_eurocups.c) and readers (career_teams.c, career_init.c). */
-        /* The seed list is a TeamId[] of {country,ordinal} pairs (the static
-         * comp's teamSeedList, reached via the dynamic teamListOffset). TeamId
-         * is endian-neutral, so field access needs no swap; TEAMID_PACK rebuilds
-         * the BE key to compare against the BE-packed teamIds below. */
-        const TeamId *seedTable = (const TeamId *)(a5 + 7 + seedOff
-                          + 2u * (sizeof(char *) - sizeof(uint32_t)));
         uint8_t *a3 = ((DIYTournamentState *)a6)->teamIndexOrder;
         int16_t count = (int8_t)a5[0xF] - 1;
         /* Find-loop bound: search ONLY the teams just loaded into
@@ -9266,9 +9244,9 @@ void _InitDIYLeagueFromRecord(uint8_t *leagueRec)
 
     /* League name */
     uint8_t *nameSource = (uint8_t *)aLeague_1; /* "LEAGUE" default */
-    int8_t nameOffset = compHdr->nameTableOffset;
-    if (nameOffset != 0) {
-        nameSource = *(uint8_t **)(a5 + 5 + nameOffset);
+    {
+        char **nameTbl = comp_name_table(compHdr);
+        if (nameTbl) nameSource = (uint8_t *)nameTbl[0];
     }
     a6s->namePtr = nameSource;  /* 0x28 */
     a1 = _StringCopy(nameSource, a1);

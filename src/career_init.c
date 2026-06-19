@@ -1466,11 +1466,12 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         uint8_t *src  = (uint8_t *)e->competition;
         uint8_t *dest = (uint8_t *)e->competitionCopy;
-        int8_t nameOffset = ((Competition *)src)->nameTableOffset;
-        if (nameOffset != 0) {
-            memcpy(dest + 5 + nameOffset,
-                   src  + 5 + nameOffset,
-                   2 * sizeof(void *));
+        /* Copy the 2 name pointers (full + abbreviation) into the comp copy.
+           dest is a byte copy of src, so its name table sits at the same place. */
+        char **srcName = comp_name_table((Competition *)src);
+        if (srcName) {
+            memcpy((char **)comp_name_table((Competition *)dest),
+                   srcName, 2 * sizeof(void *));
         }
     }
 }
