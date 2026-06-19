@@ -169,6 +169,19 @@ static void dos_load_pitch(uint16_t mapIndex)
         else
             s_pitchFullPtrs[i] = (uint8_t *)0;   /* unmapped → surround */
     }
+
+    /* Mirror the Amiga SDL pitch fixup (Step 1b in _FixupAndColorPitchFile):
+     * also store each slot's chunky-tile pointer (truncated to 32 bits) in the
+     * pitchDatBuffer slot itself. The crowd animation (_DrawAnimatedPatterns /
+     * _ResetAnimatedPatternsForBothTeams) reads these slots as tile offsets
+     * from pitchChunkyBuffer (`*slot - pitchChunkyBuffer == tileIdx*256`) to
+     * toggle fan tiles between their static and animated (waving) variants. The
+     * DOS tile bank stores those pairs at adjacent indices just like the Amiga,
+     * so the same toggle works. Without this the slots would hold raw .DAT
+     * bytes and the toggle math would read garbage. */
+    uint32_t *slots = (uint32_t *)pitchDatBuffer;
+    for (int i = 0; i < PITCH_POINTER_COUNT; i++)
+        slots[i] = (uint32_t)(uintptr_t)s_pitchFullPtrs[i];
 }
 #endif /* SWOS_SDL_BUILD */
 
