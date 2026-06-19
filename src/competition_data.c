@@ -164,28 +164,104 @@ CompetitionCup2 euroCup = {
       { { 16, 4, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 0, 0 }, { 0, 0, 0 } }, 0 },
     { 0, -108, -108, 20 },
     { aEuropeanChampi_1, aEuropeanCup },
-    { {13,1}, {25,0}, {37,5}, {33,33}, {35,6}, {30,18}, {14,4}, {28,23},
-      {1,5}, {38,9}, {20,22}, {8,20}, {36,8}, {27,11}, {20,0}, {29,12} }
+    {
+        { CN_FRANCE,       1 /* AUXERRE */ },
+        { CN_HOLLAND,      0 /* AJAX */ },
+        { CN_SWITZERLAND,  5 /* GRASSHOPPERS */ },
+        { CN_SCOTLAND,    33 /* RANGERS */ },
+        { CN_SPAIN,        6 /* ATLETICO MADRID */ },
+        { CN_ROMANIA,     18 /* STEAUA BUCHAREST */ },
+        { CN_GERMANY,      4 /* BOR. DORTMUND */ },
+        { CN_POLAND,      23 /* WIDZEW LODZ */ },
+        { CN_AUSTRIA,      5 /* RAPID VIENNA */ },
+        { CN_TURKEY,       9 /* FENERBAHCE */ },
+        { CN_ITALY,       22 /* JUVENTUS */ },
+        { CN_ENGLAND,     20 /* MANCHESTER UTD */ },
+        { CN_SWEDEN,       8 /* IFK GOTHENBURG */ },
+        { CN_NORWAY,      11 /* ROSENBORG */ },
+        { CN_ITALY,        0 /* AC MILAN */ },
+        { CN_PORTUGAL,    12 /* FC PORTO */ },
+    }
 };
 
 CompetitionCup cupWinnersCup = {
     { { 1, 1, -1, 64, 32, 15, 0, 21, 1 }, 0, 32, 1, 53, 1 },
     { -108, -108, -108, -108, 20, 0 },
     { aEuropeanCupWin, aEuroCwCup },
-    { {15,0}, {78,2}, {7,2}, {34,11}, {35,8}, {5,0}, {29,2}, {40,16},
-      {17,8}, {36,0}, {2,2}, {27,1}, {19,15}, {38,10}, {11,4}, {25,21},
-      {30,8}, {20,18}, {14,22}, {41,7}, {31,10}, {4,11}, {12,8}, {8,18},
-      {3,6}, {16,8}, {37,12}, {39,10}, {1,7}, {6,10}, {21,6}, {13,30} }
+    {
+        { CN_GREECE,          0 /* AEK ATHENS */ },
+        { CN_SLOVAKIA,        2 /* CHEMLON HUMENNE */ },
+        { CN_DENMARK,         2 /* AGF */ },
+        { CN_SLOVENIA,       11 /* OLIMPIJA L'JANA */ },
+        { CN_SPAIN,           8 /* BARCELONA */ },
+        { CN_CYPRUS,          0 /* AEK LARNACA */ },
+        { CN_PORTUGAL,        2 /* BENFICA */ },
+        { CN_WALES,          16 /* LLANSANTFFRAID */ },
+        { CN_ICELAND,         8 /* KR */ },
+        { CN_SWEDEN,          0 /* AIK */ },
+        { CN_BELGIUM,         2 /* CERCLE BRUGES */ },
+        { CN_NORWAY,          1 /* BRANN */ },
+        { CN_ISRAEL,         15 /* RISHON LEZION */ },
+        { CN_TURKEY,         10 /* GALATASARAY */ },
+        { CN_FAROE_ISLANDS,   4 /* HB */ },
+        { CN_HOLLAND,        21 /* PSV */ },
+        { CN_ROMANIA,         8 /* GLORIA BISTRITA */ },
+        { CN_ITALY,          18 /* FIORENTINA */ },
+        { CN_GERMANY,        22 /* KAISERSLAUTERN */ },
+        { CN_YUGOSLAVIA,      7 /* RED STAR B'GRADE */ },
+        { CN_RUSSIA,         10 /* LOKOMOTIV MOSCOW */ },
+        { CN_CROATIA,        11 /* VARTEKS VARAZDIN */ },
+        { CN_FINLAND,         8 /* MYPA */ },
+        { CN_ENGLAND,        18 /* LIVERPOOL */ },
+        { CN_BULGARIA,        6 /* LEVSKI SOFIA */ },
+        { CN_HUNGARY,         8 /* KISPEST-HONVED */ },
+        { CN_SWITZERLAND,    12 /* SION */ },
+        { CN_UKRAINE,        10 /* NIVA VINNITSA */ },
+        { CN_AUSTRIA,         7 /* STURM GRAZ */ },
+        { CN_CZECH_REPUBLIC, 10 /* SPARTA PRAGUE */ },
+        { CN_LATVIA,          6 /* RAF YELGAVA */ },
+        { CN_FRANCE,         30 /* PARIS ST-GERMAIN */ },
+    }
 };
 
 CompetitionCup uefaCup = {
     { { 2, 1, -1, 64, 32, 15, 0, 21, 1 }, 0, 32, 1, 53, 1 },
     { -108, -108, -108, -108, 20, 0 },
     { aEufaCup, aEufaCup_0 },
-    { {31,19}, {29,3}, {28,7}, {38,5}, {6,8}, {35,44}, {29,24}, {2,0},
-      {14,23}, {20,40}, {36,7}, {37,10}, {35,19}, {25,10}, {2,4}, {30,10},
-      {20,21}, {1,2}, {33,0}, {7,3}, {16,5}, {8,22}, {14,30}, {38,21},
-      {20,23}, {35,42}, {14,17}, {31,16}, {13,22}, {29,20}, {13,23}, {14,25} }
+    {
+        { CN_RUSSIA,         19 /* TORPEDO MOSCOW */ },
+        { CN_PORTUGAL,        3 /* BOAVISTA */ },
+        { CN_POLAND,          7 /* LEGIA WARSAW */ },
+        { CN_TURKEY,          5 /* BESIKTAS */ },
+        { CN_CZECH_REPUBLIC,  8 /* SLAVIA PRAGUE */ },
+        { CN_SPAIN,          44 /* VALENCIA */ },
+        { CN_PORTUGAL,       24 /* VIT. GUIMARAES */ },
+        { CN_BELGIUM,         0 /* ANDERLECHT */ },
+        { CN_GERMANY,        23 /* KARLSRUHE */ },
+        { CN_ITALY,          40 /* ROMA */ },
+        { CN_SWEDEN,          7 /* HELSINGBORG */ },
+        { CN_SWITZERLAND,    10 /* NEUCHATEL XAMAX */ },
+        { CN_SPAIN,          19 /* ESPANYOL */ },
+        { CN_HOLLAND,        10 /* FEYENOORD */ },
+        { CN_BELGIUM,         4 /* CLUB BRUGES */ },
+        { CN_ROMANIA,        10 /* NATIONAL */ },
+        { CN_ITALY,          21 /* INTER MILAN */ },
+        { CN_AUSTRIA,         2 /* GRAZER AK */ },
+        { CN_SCOTLAND,        0 /* ABERDEEN */ },
+        { CN_DENMARK,         3 /* BRONDBY */ },
+        { CN_HUNGARY,         5 /* FERENCVAROS */ },
+        { CN_ENGLAND,        22 /* NEWCASTLE UNITED */ },
+        { CN_GERMANY,        30 /* SCHALKE */ },
+        { CN_TURKEY,         21 /* TRABZONSPOR */ },
+        { CN_ITALY,          23 /* LAZIO */ },
+        { CN_SPAIN,          42 /* TENERIFE */ },
+        { CN_GERMANY,        17 /* HAMBURG */ },
+        { CN_RUSSIA,         16 /* SPARTAK MOSCOW */ },
+        { CN_FRANCE,         22 /* METZ */ },
+        { CN_PORTUGAL,       20 /* SPORTING LISBON */ },
+        { CN_FRANCE,         23 /* MONACO */ },
+        { CN_GERMANY,        25 /* MONCHENGLADBACH */ },
+    }
 };
 
 /* ======================================================================
@@ -204,9 +280,32 @@ CompetitionCup2 worldCup = {
       { { 24, 6, 4 }, { 16, 0, 16 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, -1, 2 }, { 2, 0, 2 } }, 1 },
     { 0, 20, 20, 20, 20, 20 },
     { aWorldCup, aWorldCup_0 },
-    { {80,36}, {82,4}, {83,13}, {80,44}, {82,2}, {80,37}, {81,6}, {80,43},
-      {80,17}, {82,1}, {80,42}, {84,24}, {82,0}, {80,18}, {81,22}, {80,6},
-      {80,23}, {80,35}, {80,32}, {83,8}, {80,5}, {81,19}, {80,19}, {84,22} }
+    {
+        { CN_EUROPE,        36 /* ROMANIA */ },
+        { CN_SOUTH_AMERICA,  4 /* COLOMBIA */ },
+        { CN_NORTH_AMERICA, 13 /* TRINIDAD-TOBAGO */ },
+        { CN_EUROPE,        44 /* SWITZERLAND */ },
+        { CN_SOUTH_AMERICA,  2 /* BRAZIL */ },
+        { CN_EUROPE,        37 /* RUSSIA */ },
+        { CN_AFRICA,         6 /* CAMEROON */ },
+        { CN_EUROPE,        43 /* SWEDEN */ },
+        { CN_EUROPE,        17 /* GERMANY */ },
+        { CN_SOUTH_AMERICA,  1 /* BOLIVIA */ },
+        { CN_EUROPE,        42 /* SPAIN */ },
+        { CN_ASIA,          24 /* SOUTH KOREA */ },
+        { CN_SOUTH_AMERICA,  0 /* ARGENTINA */ },
+        { CN_EUROPE,        18 /* GREECE */ },
+        { CN_AFRICA,        22 /* NIGERIA */ },
+        { CN_EUROPE,         6 /* BULGARIA */ },
+        { CN_EUROPE,        23 /* ITALY */ },
+        { CN_EUROPE,        35 /* REPUBLIC IRELAND */ },
+        { CN_EUROPE,        32 /* NORWAY */ },
+        { CN_NORTH_AMERICA,  8 /* MEXICO */ },
+        { CN_EUROPE,         5 /* BELGIUM */ },
+        { CN_AFRICA,        19 /* MOROCCO */ },
+        { CN_EUROPE,        19 /* HOLLAND */ },
+        { CN_ASIA,          22 /* SAUDI ARABIA */ },
+    }
 };
 
 /* ======================================================================
@@ -325,8 +424,24 @@ CompetitionCup2 europeanChampionships = {
       { { 16, 4, 4 }, { 8, 0, 0 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { 0, 20, 20, 20 },
     { aEuropeanChampi_0, aECFinals },
-    { {80,11}, {80,44}, {80,19}, {80,39}, {80,42}, {80,6}, {80,36}, {80,15},
-      {80,17}, {80,9}, {80,23}, {80,37}, {80,10}, {80,34}, {80,45}, {80,7} }
+    {
+        { CN_EUROPE, 11 /* ENGLAND */ },
+        { CN_EUROPE, 44 /* SWITZERLAND */ },
+        { CN_EUROPE, 19 /* HOLLAND */ },
+        { CN_EUROPE, 39 /* SCOTLAND */ },
+        { CN_EUROPE, 42 /* SPAIN */ },
+        { CN_EUROPE,  6 /* BULGARIA */ },
+        { CN_EUROPE, 36 /* ROMANIA */ },
+        { CN_EUROPE, 15 /* FRANCE */ },
+        { CN_EUROPE, 17 /* GERMANY */ },
+        { CN_EUROPE,  9 /* CZECH REPUBLIC */ },
+        { CN_EUROPE, 23 /* ITALY */ },
+        { CN_EUROPE, 37 /* RUSSIA */ },
+        { CN_EUROPE, 10 /* DENMARK */ },
+        { CN_EUROPE, 34 /* PORTUGAL */ },
+        { CN_EUROPE, 45 /* TURKEY */ },
+        { CN_EUROPE,  7 /* CROATIA */ },
+    }
 };
 
 /* ======================================================================
@@ -382,8 +497,20 @@ CompetitionCup2 copaAmerica = {
       { { 12, 3, 4 }, { 8, 0, 8 }, { 4, 0, 4 }, { 2, 0, 2 }, { 1, 1, 1 }, { 1, 1, 1 } }, 1 },
     { 0, 4, 4, 4 },
     { aCopaAmerica, aCopaAmerica_0 },
-    { {83,8}, {83,13}, {82,8}, {82,9}, {82,0}, {82,1}, {82,2}, {82,3},
-      {82,4}, {82,5}, {82,6}, {82,7} }
+    {
+        { CN_NORTH_AMERICA,  8 /* MEXICO */ },
+        { CN_NORTH_AMERICA, 13 /* TRINIDAD-TOBAGO */ },
+        { CN_SOUTH_AMERICA,  8 /* URUGUAY */ },
+        { CN_SOUTH_AMERICA,  9 /* VENEZUELA */ },
+        { CN_SOUTH_AMERICA,  0 /* ARGENTINA */ },
+        { CN_SOUTH_AMERICA,  1 /* BOLIVIA */ },
+        { CN_SOUTH_AMERICA,  2 /* BRAZIL */ },
+        { CN_SOUTH_AMERICA,  3 /* CHILE */ },
+        { CN_SOUTH_AMERICA,  4 /* COLOMBIA */ },
+        { CN_SOUTH_AMERICA,  5 /* ECUADOR */ },
+        { CN_SOUTH_AMERICA,  6 /* PARAGUAY */ },
+        { CN_SOUTH_AMERICA,  7 /* PERU */ },
+    }
 };
 
 CompetitionCup2 africanNationsCup = {
