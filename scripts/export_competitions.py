@@ -301,6 +301,39 @@ def parse_designated_arrays(name: str, body: str) -> dict:
     return out
 
 
+def parse_country_tables(text: str) -> dict:
+    """Competition *<name>Table[N] = { &league, -2, &cup(s), -1 } -> {name: {leagues,cups}}.
+    -2 separates the league(s) from the cup(s); -1 terminates."""
+    out = {}
+    for m in re.finditer(r'\bCompetition\s*\*\s*(\w+)\s*\[\d*\]\s*=\s*\{([^}]*)\}', text):
+        name, body = m.group(1), m.group(2)
+        leagues, cups, sep = [], [], False
+        for tok in split_top(body):
+            t = tok.strip()
+            if "&" not in t and "-2" in t:
+                sep = True
+                continue
+            if "&" not in t and "-1" in t:
+                break
+            s = xref(t)
+            if s:
+                (cups if sep else leagues).append(s)
+        out[name] = {"leagues": leagues, "cups": cups}
+    return out
+
+
+def parse_comp_index(text: str) -> dict:
+    """void *competitionsTable[256] = { [n] = <tableSymbol>, ... } -> {country_number: symbol}."""
+    m = re.search(r'\bcompetitionsTable\s*\[\d*\]\s*=\s*\{([^}]*)\}', text, re.S)
+    out = {}
+    if m:
+        for dm in re.finditer(r'\[\s*(\d+)\s*\]\s*=\s*([^,]+?)\s*(?:,|$)', m.group(1)):
+            sym = re.search(r'([A-Za-z_]\w*)\s*$', dm.group(2))
+            if sym:
+                out[int(dm.group(1))] = sym.group(1)
+    return out
+
+
 def dump(fname: str, kind: str, key: str, items: list):
     with open(os.path.join(OUT_DIR, fname), "w") as f:
         json.dump({"type": kind, "count": len(items), key: items}, f, indent=2, ensure_ascii=False)
@@ -337,6 +370,20 @@ def main():
     for n, b in find_defs(text, "CompetitionCareer"):
         contests = parse_career(n, b)
     dump("career.json", "career_index", "contests", contests)
+
+    # country competitions — competitionsTable[country] -> {leagues, cups} (the
+    # per-country competition mapping; region/qualifying slots reference a group).
+    ctabs = parse_country_tables(text)
+    cidx = parse_comp_index(text)
+    country_comps = []
+    for numv in sorted(cidx):
+        sym = cidx[numv]
+        e = {"number": numv, "name": tf.country_name(numv), "table": sym}
+        if sym in ctabs:
+            e["leagues"] = ctabs[sym]["leagues"]
+            e["cups"] = ctabs[sym]["cups"]
+        country_comps.append(e)
+    dump("country_competitions.json", "country_competitions", "countries", country_comps)
 
     # countries master — the editable {number, name, define, team_file} registry
     # so adding/removing a country is one entry mapping to its teams/<NAME>.json.

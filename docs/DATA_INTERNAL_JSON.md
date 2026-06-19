@@ -130,6 +130,7 @@ competitions/playoffs.json        Playoffs[]
 competitions/qualifying.json      QualifyingGroup[]
 competitions/league_blocks.json   Leagues[] + EnglishLeaguesBlock
 competitions/career.json          careerContests[35] (the index)
+competitions/country_competitions.json  competitionsTable[country] -> {leagues, cups} (the <country>Table[] map)
 competitions/countries.json       country master: {number, name, define, team_file} (allCountriesList)
 competitions/seed_buckets.json    euro-cup qualification berth allocation (EuroCupQualSeedBucketBlock)
 ```
