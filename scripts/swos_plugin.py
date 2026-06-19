@@ -479,24 +479,23 @@ class SwosHarness:
         currentSeasonShowing, seasonFinished), NOT the screen — the league
         match-day keeps onInit=_DIYLeagueTournamentInit + ordinal=3 constant
         across fixtures, so the old (screen, ordinal) key false-stopped while
-        matches were in fact playing.
+        matches were in fact playing. matchesPlayedCount (DIYCompetitionEx 0x1BE)
+        is a clean named field and a VALID progress signal on a CLEAN run.
 
-        ⚠️ OVERLAY TRAP / KNOWN LIMITATION (2026-06-19): this does NOT yet
-        complete a full ENGLISH-LEAGUE season, and there is NO reliable in-season
-        progress counter. diyCompetitionStart.matchesPlayedCount is an OVERLAID
-        field — it reads 0 at the hub and fixed garbage (1614) the instant the
-        league match-day is active, regardless of fixtures played;
-        currentRoundIndex reads a constant default (3). So the stuck tuple above
-        can't actually measure mid-season progress (only currentSeasonShowing /
-        seasonFinished are cross-screen-stable, and they don't tick within a
-        season). From a clean career the blind-shortFire loop WANDERS
-        hub<->match-day<->chairman-memo with seasonFinished never flipping; the
-        check still TERMINATES instead of looping forever. Driving a 4-division
-        league to _CareerOverInit needs (1) a non-overlaid progress field from the
-        data-overlay UNTANGLE, and (2) per-screen input routing (don't
-        blanket-shortFire the hub/memo — they exit instead of advancing). The
-        season TRANSITION path (drive_transition) and the sim lever itself work;
-        this in-season league completion is the open follow-up."""
+        ⚠️ TEST FROM A COLD BOOT — DO NOT load_career() IN PLACE first.
+        matchesPlayedCount is RUNTIME state of the active DIY competition and is
+        NOT serialized in the career save, so load_career() does not reset it.
+        Reloading a save into an inferior that already drove a career leaves the
+        active competition with STALE values (e.g. 1614 from a prior drive) → the
+        league screen runs on inconsistent state and the driver wanders. Always
+        cold-boot + start_fresh_career() to exercise this.
+
+        STATUS (2026-06-19): a clean sim-mode drive was PROGRESSING (mp climbing,
+        a 4-division season is many fixtures) but was killed at ~30 min before it
+        finished — full ENGLISH-LEAGUE completion to _CareerOverInit is UNVERIFIED
+        (not proven to reach the hub, but NOT shown blocked; the earlier 'wanders'
+        finding was the reload-in-place confound above). The sim lever and the
+        season TRANSITION path (drive_transition) work."""
         h = self.h
         h.delete_breakpoints()
         h.break_at(INJECT_LINE)
