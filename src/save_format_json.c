@@ -2639,6 +2639,88 @@ int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, in
 }
 
 #ifdef SWOS_SDL_BUILD
+/* Read a whole file into a malloc'd NUL-terminated buffer (*out_len = byte len).
+   Caller frees. Returns NULL on any error. */
+static char *dj_slurp(const char *path, int *out_len)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f)
+        return NULL;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (n <= 0) { fclose(f); return NULL; }
+    char *buf = (char *)malloc((size_t)n + 1);
+    if (!buf || fread(buf, 1, (size_t)n, f) != (size_t)n) { fclose(f); free(buf); return NULL; }
+    buf[n] = '\0';
+    fclose(f);
+    *out_len = (int)n;
+    return buf;
+}
+
+/* SWOS_DATA_JSON wire-in: load a country's teams from data_json/ instead of the
+   binary TEAM.NNN. Resolves countryNum -> "teams/NAME.json" via the master
+   data_json/competitions/countries.json list, reads it, and parses it into
+   `teamFileBuf` in the exact layout _LoadTeamFile expects: a 2-byte HOST-NATIVE
+   count header followed by `count` TeamFileEx records. Returns the team count
+   (>0) on success, or -1 to tell the caller to FALL BACK to the binary file
+   (country not in the JSON corpus, file missing, or parse failure). No byteswap
+   is needed afterwards — fields are parsed as logical host-native ints. */
+int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams)
+{
+    int clen = 0;
+    char *cj = dj_slurp("data_json/competitions/countries.json", &clen);
+    if (!cj)
+        return -1;
+
+    char team_file[128];
+    team_file[0] = '\0';
+    const char *arr;
+    int arr_len;
+    if (mjson_find(cj, clen, "$.countries", &arr, &arr_len) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt;
+        while ((pos = fast_array_next(arr, arr_len, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT)
+                continue;
+            double num = -1;
+            if (mjson_get_number(arr + voff, vlen, "$.number", &num) &&
+                (int)num == countryNum) {
+                mjson_get_string(arr + voff, vlen, "$.team_file",
+                                 team_file, (int)sizeof team_file);
+                break;
+            }
+        }
+    }
+    free(cj);
+    if (!team_file[0])
+        return -1;   /* country not represented in the JSON corpus */
+
+    char path[256];
+    snprintf(path, sizeof path, "data_json/%s", team_file);
+    int jlen = 0;
+    char *jj = dj_slurp(path, &jlen);
+    if (!jj)
+        return -1;
+
+    int n = DataJson_LoadTeamArray(jj, jlen,
+                                   (struct TeamFileEx *)(teamFileBuf + 2), maxTeams);
+    free(jj);
+    if (n <= 0)
+        return -1;
+    *(unsigned short *)teamFileBuf = (unsigned short)n;   /* host-native count header */
+    {
+        /* Announce ONCE so a test run can confirm the JSON path is live (not a
+           silent fallback to the binary TEAM.NNN). */
+        static int announced = 0;
+        if (!announced) {
+            announced = 1;
+            printf("[data-json] TEAM LOADING ACTIVE — country %d <- data_json/%s (%d teams)\n",
+                   countryNum, team_file, n);
+        }
+    }
+    return n;
+}
+
 /* Self-test (SWOS_DATA_JSON_SELFTEST=1): load teams/SCOTLAND.json and check the
  * parse against known values. Proves the data-JSON loader builds the structs
  * correctly. Semantic checks (not a raw memcmp) so endian-sensitive fields like

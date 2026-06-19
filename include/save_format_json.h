@@ -62,6 +62,10 @@ uint8_t SaveJson_GetLoadedPrimaryCountryCode(void);
 struct TeamFileEx;
 int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, int max);
 #ifdef SWOS_SDL_BUILD
+/* SWOS_DATA_JSON wire-in: load a country's teams from data_json/ into the
+   teamFileBuf (2-byte host-native count + TeamFileEx records). Returns the team
+   count (>0), or -1 to fall back to the binary TEAM.NNN. See _LoadTeamFile. */
+int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams);
 int DataJson_SelfTest(void);   /* run via SWOS_DATA_JSON_SELFTEST=1 */
 #endif
 

@@ -16,6 +16,9 @@
 #include "career_status.h"
 #include "play_match_menu.h"
 #include "career_init.h"
+#ifdef SWOS_SDL_BUILD
+#include <stdlib.h>            /* getenv — SWOS_DATA_JSON team-load wire-in */
+#endif
 
 /* ---- Constants ---- */
 #define GAME_TYPE_CAREER            4
@@ -339,38 +342,56 @@ int16_t _LoadTeamFile(uint16_t extNumber)
 #endif
         setLoadedTeamsGlobalNumbers();
     } else {
-        /* Normal team file: construct "data/team.NNN" */
-        uint8_t hundreds, tens, ones;
-        uint16_t val;
-
         lastLoadedExtNumber = ext8;
 
-        val = (uint16_t)ext8;
-        hundreds = (uint8_t)(val / 100);
-        val = val % 100;
-        tens = (uint8_t)(val / 10);
-        ones = (uint8_t)(val % 10);
-
-        aDataTeamNnn[0xA] = hundreds + '0';
-        aDataTeamNnn[0xB] = tens + '0';
-        aDataTeamNnn[0xC] = ones + '0';
-
-        _StringCopy(aDataTeamNnn, teamFilenameBuffer);
-
-        result = _LoadFileEx(teamFilenameBuffer, teamFileBuffer, &fileSize);
-        if (result != 0) {
-            /* Non-custom file load failure: panic and halt */
-            panicReasonCode = 0x8008;
-            _PanicHaltLoop();
-            /* never returns */
-        }
-        if (fileSize > 64000u) {
-            panicReasonCode = 0x1939;
-            _PanicHaltLoop();
-        }
+        int json_loaded = 0;
 #ifdef SWOS_SDL_BUILD
-        byteswap_loaded_team_file();
+        /* SWOS_DATA_JSON: load this country's teams from data_json/ instead of the
+         * binary TEAM.NNN. Falls back to the binary file on any miss (country not
+         * in the corpus, file missing, parse error). The JSON path writes
+         * teamFileBuffer host-native, so it SKIPS the BE byteswap. */
+        if (getenv("SWOS_DATA_JSON")) {
+            extern int DataJson_LoadTeamFileForCountry(int, uint8_t *, int);
+            /* teamFileBuffer is 0xFA0E bytes → (0xFA0E-2)/sizeof(TeamFileEx) ≈ 93 */
+            if (DataJson_LoadTeamFileForCountry((int)ext8, teamFileBuffer, 93) > 0)
+                json_loaded = 1;
+        }
 #endif
+
+        if (!json_loaded) {
+            /* Normal team file: construct "data/team.NNN" */
+            uint8_t hundreds, tens, ones;
+            uint16_t val;
+
+            val = (uint16_t)ext8;
+            hundreds = (uint8_t)(val / 100);
+            val = val % 100;
+            tens = (uint8_t)(val / 10);
+            ones = (uint8_t)(val % 10);
+
+            aDataTeamNnn[0xA] = hundreds + '0';
+            aDataTeamNnn[0xB] = tens + '0';
+            aDataTeamNnn[0xC] = ones + '0';
+
+            _StringCopy(aDataTeamNnn, teamFilenameBuffer);
+
+            result = _LoadFileEx(teamFilenameBuffer, teamFileBuffer, &fileSize);
+            if (result != 0) {
+                /* Non-custom file load failure: panic and halt */
+                panicReasonCode = 0x8008;
+                _PanicHaltLoop();
+                /* never returns */
+            }
+            if (fileSize > 64000u) {
+                panicReasonCode = 0x1939;
+                _PanicHaltLoop();
+            }
+#ifdef SWOS_SDL_BUILD
+            byteswap_loaded_team_file();
+#endif
+        }
+
+        /* Shared post-load processing (binary OR json source). */
         setLoadedTeamsGlobalNumbers();
 
         /* In career mode, also set league numbers */
@@ -3086,14 +3107,11 @@ skip_continental_check:
          * pointer-width-correct on both targets. */
         divIdx = 0;
 loc_E246:
-        nameOff = compHdr->nameTableOffset;
-        if (nameOff == 0) {
-            /* Use divisionStringTable */
-            namePtr = (uint8_t *)divisionStringTable[divIdx];
-        } else {
-            off16 = (int8_t)nameOff;
-            char **nameTbl = (char **)(compEntry + 5 + off16);
-            namePtr = (uint8_t *)nameTbl[divIdx * 2];
+        {
+            /* leagues: 2 char* per division (full name + abbreviation) */
+            char **nameTbl = comp_name_table(compHdr);
+            namePtr = nameTbl ? (uint8_t *)nameTbl[divIdx * 2]
+                              : (uint8_t *)divisionStringTable[divIdx];
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3106,12 +3124,9 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 1) {
         /* Cup — single name pointer at +5+off16 (1 entry, char *). */
-        nameOff = compHdr->nameTableOffset;
-        if (nameOff == 0) {
-            namePtr = (uint8_t *)aCup_0;
-        } else {
-            off16 = (int8_t)nameOff;
-            namePtr = (uint8_t *)(*(char **)(compEntry + 5 + off16));
+        {
+            char **nameTbl = comp_name_table(compHdr);
+            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)aCup_0;
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3120,12 +3135,9 @@ loc_E246:
         goto loc_E086;
     } else if (compType == 2) {
         /* Tournament — same as Cup */
-        nameOff = compHdr->nameTableOffset;
-        if (nameOff == 0) {
-            namePtr = (uint8_t *)aLeague_1;
-        } else {
-            off16 = (int8_t)nameOff;
-            namePtr = (uint8_t *)(*(char **)(compEntry + 5 + off16));
+        {
+            char **nameTbl = comp_name_table(compHdr);
+            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)aLeague_1;
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;

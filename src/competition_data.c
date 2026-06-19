@@ -15,6 +15,39 @@
 #include "competition_data.h"
 
 /* ======================================================================
+ * Polymorphic competition accessors (untangle Step 4b — declared in game_types.h).
+ * Switch on comp.type (+ comp.isPlayoff to split the two type==1 layouts,
+ * CompetitionCup vs Playoffs) and return the concrete struct's field directly.
+ * Typed field access is automatically pointer-width-correct on 32/64-bit — no
+ * self-offset bytes, no name[2]-growth delta math. The former nameTableOffset /
+ * teamListOffset bytes (Competition byte 5 / 7) are now inert.
+ * ====================================================================== */
+char **comp_name_table(Competition *c)
+{
+    char **nm;
+    switch (c->type) {
+    case 0:  nm = ((CompetitionLeague *)c)->name; break;                 /* league */
+    case 1:  nm = c->isPlayoff ? ((Playoffs *)c)->name
+                               : ((CompetitionCup *)c)->name; break;      /* playoff / cup */
+    case 2:  nm = ((CompetitionTournament *)c)->name; break;             /* tournament */
+    default: return (char **)0;
+    }
+    /* An empty table (name[0] == NULL) means the record uses default names;
+       callers substitute divisionStringTable / aCup_0 / aLeague_1. */
+    return nm[0] ? nm : (char **)0;
+}
+
+TeamId *comp_team_seed_list(Competition *c)
+{
+    switch (c->type) {
+    case 1:  return c->isPlayoff ? (TeamId *)((Playoffs *)c)->qualifiedTeamIds
+                                 : ((CompetitionCup *)c)->teamSeedList;   /* playoff / cup */
+    case 2:  return ((CompetitionTournament *)c)->teamSeedList;          /* tournament */
+    default: return (TeamId *)0;     /* league (type 0): no embedded draw list */
+    }
+}
+
+/* ======================================================================
  * Forward declarations — strings defined in assembly/Data.c
  * These will need proper externs when integrated into the build.
  * ====================================================================== */
@@ -718,9 +751,9 @@ Leagues englishLeagues3 = {
 /* (the englishLeagues / englishLeagues1..3 .equ aliases are gone — all
  * access is via englishLeague/._div1/._div2/._div3 now) */
 
-Playoffs div1Playoffs = { { 47, 1, 8, -128, -124, 11, 0, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
-Playoffs div2Playoffs = { { 48, 1, 8, -128, -124, 11, 0, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
-Playoffs div3Playoffs = { { 49, 1, 8, -128, -124, 11, 0, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv3Playoffs, aPlayoffs }, { 0 } };
+Playoffs div1Playoffs = { { 47, 1, 8, -128, -124, 11, 1, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv1Playoffs, aPlayoffs }, { 0 } };
+Playoffs div2Playoffs = { { 48, 1, 8, -128, -124, 11, 1, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv2Playoffs, aPlayoffs }, { 0 } };
+Playoffs div3Playoffs = { { 49, 1, 8, -128, -124, 11, 1, 17, 1 }, 0, 4, 1, 51, 1, { -108, 20 }, { aDiv3Playoffs, aPlayoffs }, { 0 } };
 
 /* Dutch league */
 CompetitionLeague dutchLeague = {
@@ -738,7 +771,7 @@ Leagues dutchLeagues1 = {
     (CompetitionLeague *)&dutchLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs dutchPlayoffs = { { 57, 1, 25, -128, -128, 11, 0, 17, 1 }, 1, 4, 1, 53, 1, { -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs dutchPlayoffs = { { 57, 1, 25, -128, -128, 11, 1, 17, 1 }, 1, 4, 1, 53, 1, { -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Scottish league */
 CompetitionLeague scottishLeague = {
@@ -754,7 +787,7 @@ Leagues scottishLeague1 = {
     (CompetitionLeague *)&scottishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs scottishPlayoffs = { { 75, 1, 33, -128, -128, 11, 0, 17, 1 }, 0, 2, 1, 51, 1, { 20, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs scottishPlayoffs = { { 75, 1, 33, -128, -128, 11, 1, 17, 1 }, 0, 2, 1, 51, 1, { 20, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Spanish league */
 CompetitionLeague spanishLeague = {
@@ -772,7 +805,7 @@ Leagues spanishLeague1 = {
     (CompetitionLeague *)&spanishLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs spanishPlayoffs = { { 79, 1, 35, -120, -120, 11, 0, 17, 1 }, 1, 4, 1, 53, 1, { -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs spanishPlayoffs = { { 79, 1, 35, -120, -120, 11, 1, 17, 1 }, 1, 4, 1, 53, 1, { -108, -108 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* Uruguayan league */
 CompetitionLeague uruguayanLeague = {
@@ -788,7 +821,7 @@ Leagues uruguayanLeague1 = {
     (CompetitionLeague *)&uruguayanLeague, { 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 
-Playoffs uruguayanPlayoffs = { { 105, 1, 71, 88, 88, 11, 0, 17, 1 }, 0, 2, 1, 53, 1, { -108, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
+Playoffs uruguayanPlayoffs = { { 105, 1, 71, 88, 88, 11, 1, 17, 1 }, 0, 2, 1, 53, 1, { -108, 0 }, { aPlayoffs, aPlayoffs }, { 0 } };
 
 /* ======================================================================
  * National Cups

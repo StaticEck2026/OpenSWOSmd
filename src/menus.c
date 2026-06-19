@@ -1016,7 +1016,7 @@ void _SquadCommitPositionsAndUpdateSkill(void)
         dst[i] = src[i];
 
     TeamFile *teamFile = (TeamFile *)squadTeamFilePtr;
-    teamFile->form = 1;
+    teamFile->playerValuesDirty = TEAM_VALUES_DIRTY;
 
     _ComputeOldPlayerSkillForViewResult((TeamFileEx *)teamFile, 5);
     _UpdateBigCheckMark();
@@ -1169,7 +1169,7 @@ void _SquadCommon(void *entryPtr)
                 squadPrevSelectedPlayerIndex, d7,
                 squadPrevSelectedBreakPos, d6);
             _SetBenchPlayersNumbers((TeamFileEx *)squadTeamFilePtr);
-            ((TeamFile *)squadTeamFilePtr)->form = 1;
+            ((TeamFile *)squadTeamFilePtr)->playerValuesDirty = TEAM_VALUES_DIRTY;
             _SquadCommitPositionsAndUpdateSkill();
             squadPrevSelectedPlayerIndex = 0xFFFF;
             _DrawMenu();
