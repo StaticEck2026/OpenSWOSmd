@@ -2222,13 +2222,13 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", "{");
     emit_s8_at  (fn, fnd, "nationality",          p, offsetof(PlayerFile, nationality));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "field_1",              p, offsetof(PlayerFile, field_1));
+    emit_s8_at  (fn, fnd, "cached_match_value",   p, offsetof(PlayerFile, cachedMatchValue));
     mjson_printf(fn, fnd, "%s", ",");
     emit_s8_at  (fn, fnd, "shirt_number",         p, offsetof(PlayerFile, shirtNumber));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_str_at (fn, fnd, "player_name",          p, offsetof(PlayerFile, playerName), 22);
-    mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "field_19",             p, offsetof(PlayerFile, field_19));
+    /* player_name now 23 bytes: the 22-char name + its NUL terminator (the former
+     * separate "field_19" byte, folded into the name buffer 2026-06-19). */
+    emit_str_at (fn, fnd, "player_name",          p, offsetof(PlayerFile, playerName), 23);
     mjson_printf(fn, fnd, "%s", ",");
     emit_u8_at  (fn, fnd, "position_and_face",    p, offsetof(PlayerFile, positionAndFace));
     mjson_printf(fn, fnd, "%s", ",");
@@ -2248,7 +2248,7 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", ",");
     emit_bytes_at(fn, fnd,"goal_stats",           p, offsetof(PlayerFile, goalStats), 4);
     mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "some_flag",            p, offsetof(PlayerFile, someFlag));
+    emit_s8_at  (fn, fnd, "form",                 p, offsetof(PlayerFile, form));
     mjson_printf(fn, fnd, "%s", "}");
 }
 
@@ -2361,10 +2361,9 @@ static void emit_struct_object(mjson_print_fn_t fn, void *fnd,
 /* PlayerFile field table — keys must match emit_player_file_body. */
 static const StructFieldDesc s_player_fields[] = {
     { "nationality",          offsetof(PlayerFile, nationality),         0, FLD_U8 },
-    { "field_1",              offsetof(PlayerFile, field_1),             0, FLD_U8 },
+    { "cached_match_value",   offsetof(PlayerFile, cachedMatchValue),    0, FLD_U8 },
     { "shirt_number",         offsetof(PlayerFile, shirtNumber),         0, FLD_U8 },
-    { "player_name",          offsetof(PlayerFile, playerName),         22, FLD_STR },
-    { "field_19",             offsetof(PlayerFile, field_19),            0, FLD_U8 },
+    { "player_name",          offsetof(PlayerFile, playerName),         23, FLD_STR },
     { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
     { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
     { "passing",              offsetof(PlayerFile, passing),             0, FLD_U8 },
@@ -2373,7 +2372,7 @@ static const StructFieldDesc s_player_fields[] = {
     { "speed_finishing",      offsetof(PlayerFile, speedFinishing),      0, FLD_U8 },
     { "price",                offsetof(PlayerFile, price),               0, FLD_U8 },
     { "goal_stats",           offsetof(PlayerFile, goalStats),           4, FLD_BYTES },
-    { "some_flag",            offsetof(PlayerFile, someFlag),            0, FLD_U8 },
+    { "form",                 offsetof(PlayerFile, form),                0, FLD_U8 },
     { NULL, 0, 0, FLD_END }
 };
 
@@ -2391,7 +2390,7 @@ static const StructFieldDesc s_team_file_fields[] = {
     { "league",             offsetof(TeamFile, league),            0, FLD_U8 },
     { "kit_colors",         offsetof(TeamFile, prShirtType),      10, FLD_BYTES },
     { "coach_name",         offsetof(TeamFile, coachName),        23, FLD_STR },
-    { "some_flag",          offsetof(TeamFile, someFlag),          0, FLD_U8 },
+    { "player_values_dirty",offsetof(TeamFile, playerValuesDirty), 0, FLD_U8 },
     { "player_numbers",     offsetof(TeamFile, playerNumbers),    16, FLD_BYTES },
     { NULL, 0, 0, FLD_END }
 };
@@ -2519,7 +2518,7 @@ static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", ",");
     emit_str_at (fn, fnd, "coach_name",         team, offsetof(TeamFile, coachName), 23);
     mjson_printf(fn, fnd, "%s", ",");
-    emit_u8_at  (fn, fnd, "some_flag",          team, offsetof(TeamFile, someFlag));
+    emit_u8_at  (fn, fnd, "player_values_dirty",team, offsetof(TeamFile, playerValuesDirty));
     mjson_printf(fn, fnd, "%s", ",");
     emit_bytes_at(fn, fnd,"player_numbers",     team, offsetof(TeamFile, playerNumbers), 16);
     mjson_printf(fn, fnd, "%s", "}");

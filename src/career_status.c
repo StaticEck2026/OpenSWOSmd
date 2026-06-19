@@ -238,9 +238,7 @@ extern DIYCompetitionEx diyCompetitionStart;
 #define CI_INJURY_BITS       0x1C   /* bits 2-4: injury severity */
 #define CI_STATUS_BUCKET     0xE0   /* bits 5-7: status bucket */
 
-/* Position extraction from positionAndFace */
-#define PF_POSITION_MASK     0xE0
-#define PF_POSITION_SHIFT    5
+/* PF_POSITION_MASK / PF_POSITION_SHIFT now defined in game_types.h */
 
 /* ================================================================
  * Helper: get the player index list pointer for a given team.
@@ -805,9 +803,9 @@ int16_t _GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase) {
     int16_t ageDivisor = (int16_t)(uint8_t)kPlayerAgeToFormDivisorTable[(uint8_t)age];
 
     int16_t formValue;
-    uint8_t flagByte = (uint8_t)pf->someFlag;
+    uint8_t flagByte = (uint8_t)pf->form;
 
-    if (flagByte == 0x9B || flagByte == 0x9A) {
+    if (flagByte == PLAYER_FORM_TRIALIST || flagByte == PLAYER_FORM_RESERVE) {
         /* Special career form: compute player index within careerTeam */
         uint32_t offset = (uintptr_t)((uintptr_t)playerBase - (uintptr_t)&careerTeam);
         uint16_t playerIdx = offset / 38;
@@ -816,7 +814,7 @@ int16_t _GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase) {
     } else {
         formValue = (int16_t)(int8_t)flagByte;
         /* If bit 0 of positionAndFace is set, double the form */
-        if (pf->positionAndFace & 0x01) {
+        if (pf->positionAndFace & PF_INFORM) {
             formValue <<= 1;
         }
     }
@@ -2224,7 +2222,7 @@ uint16_t _GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t play
  * Steps:
  *   1. Get average team value base for the player
  *   2. Check player status flags for wage reduction
- *      (0x9B = trialist → 33%, 0x9A = youth → 66%)
+ *      (0x9B = trialist / "TRIAL" → 33%, 0x9A = reserve / "RES" → 66%)
  *   3. Apply scaling: value * 1000 / 768 * 96 / wageScalingDivisor
  *   4. Store in weeklyWageByPlayerIndex[playerIndex]
  *   5. Recalculate total weekly wages
@@ -2237,12 +2235,12 @@ void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
     /* Get player pointer to check status flags */
     uint8_t *player = _GetPlayer(selTeamNumber, playerIndex);
     PlayerFile *pf = (PlayerFile *)(player + 76);
-    uint8_t someFlag = (uint8_t)pf->someFlag;
+    uint8_t someFlag = (uint8_t)pf->form;
 
-    if (someFlag == 0x9B) {
+    if (someFlag == PLAYER_FORM_TRIALIST) {
         /* Trialist: reduce wage to 33% */
         avgBase = (uint16_t)((uint32_t)avgBase * 33 / 100);
-    } else if (someFlag == 0x9A) {
+    } else if (someFlag == PLAYER_FORM_RESERVE) {
         /* Youth: reduce wage to 66% */
         avgBase = (uint16_t)((uint32_t)avgBase * 66 / 100);
     }
@@ -2434,18 +2432,18 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
 
     PlayerFile *pf = (PlayerFile *)(playerSlotPtr + 76);
     uint8_t positionAndFace = pf->positionAndFace;
-    uint8_t form = (uint8_t)pf->someFlag;
+    uint8_t form = (uint8_t)pf->form;
 
-    if (!(positionAndFace & 0x01)) {
+    if (!(positionAndFace & PF_INFORM)) {
         /* Player is NOT in form (bit 0 clear) */
-        if (form == 0x9B) {
+        if (form == PLAYER_FORM_TRIALIST) {
             /* Trialist hired → demote to "on trial" ($9A) */
-            pf->someFlag = (int8_t)0x9A;
+            pf->form = (int8_t)PLAYER_FORM_RESERVE;
             _Career_UpdatePlayerWeeklyWageCache(playerIdx);
             return;
         }
 
-        if (form != 0x9A)
+        if (form != PLAYER_FORM_RESERVE)
             return;  /* Not trial — nothing to do */
 
         /* Form = $9A (on trial) — ~20% chance to promote */
@@ -2453,24 +2451,24 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
             return;
 
         /* Restore form from saved modifier table and set in-form bit */
-        pf->someFlag = (int8_t)playerFormModifiers[playerIdx];
-        pf->positionAndFace = positionAndFace | 0x01;  /* bset #0 */
+        pf->form = (int8_t)playerFormModifiers[playerIdx];
+        pf->positionAndFace = positionAndFace | PF_INFORM;  /* bset #0 */
         _Career_UpdatePlayerWeeklyWageCache(playerIdx);
         return;
     }
 
     /* Player is in form (bit 0 set) */
     form = (uint8_t)(form + 2);
-    pf->someFlag = (int8_t)form;
+    pf->form = (int8_t)form;
 
     if ((int8_t)form < 0) {
         /* Overflowed past 127 → clear in-form bit */
-        pf->positionAndFace = positionAndFace & (uint8_t)~0x01;
+        pf->positionAndFace = positionAndFace & (uint8_t)~PF_INFORM;
     }
 
     /* Clamp form at 100 ($64) */
-    if ((int8_t)pf->someFlag > 0x64) {
-        pf->someFlag = 0x64;
+    if ((int8_t)pf->form > PLAYER_FORM_MAX) {
+        pf->form = PLAYER_FORM_MAX;
     }
 }
 
@@ -2571,7 +2569,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     pf->shirtNumber = 0x10;
 
     /* Store position into positionAndFace (position << 5) */
-    pf->positionAndFace = (uint8_t)(position << 5);
+    pf->positionAndFace = (uint8_t)(position << PF_POSITION_SHIFT);
 
     /* Convert player to trialist */
     _Career_ConvertPlayerToTrialistFromName(selTeamNumber, freeSlot);
@@ -2664,9 +2662,9 @@ void _CheckPlayersLeavingComing(void)
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
             uint16_t fileIndex = (uint16_t)currentMatchPlayers[d2];
             PlayerFile *pf = (PlayerFile *)(player + 76);
-            uint8_t form = (uint8_t)pf->someFlag;
+            uint8_t form = (uint8_t)pf->form;
 
-            if (form == 0x9B) {
+            if (form == PLAYER_FORM_TRIALIST) {
                 /* Trial player ($9B) — 5/256 chance to leave */
                 if (_Rand() >= 5)
                     continue;
@@ -2674,7 +2672,7 @@ void _CheckPlayersLeavingComing(void)
                 goto remove;
             }
 
-            if (form == 0x9A) {
+            if (form == PLAYER_FORM_RESERVE) {
                 /* Reserve/loan player ($9A) — 2/256 chance to leave */
                 if (_Rand() >= 2)
                     continue;
@@ -3516,10 +3514,10 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
         uint8_t *goalCounterForPlayer = goalCounter + slot;
 
         PlayerFile *pl = &careerTeam.players[slot];
-        uint8_t plSomeFlag = (uint8_t)pl->someFlag;
+        uint8_t plSomeFlag = (uint8_t)pl->form;
 
         /* Skip trialist/reserve leaving special states */
-        if (plSomeFlag == 0x9B || plSomeFlag == 0x9A)
+        if (plSomeFlag == PLAYER_FORM_TRIALIST || plSomeFlag == PLAYER_FORM_RESERVE)
             goto nextPlayer;
 
         int8_t d4;  /* form delta to apply */
@@ -3562,7 +3560,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             uint8_t expected = (uint8_t)div10 + price;  /* add.b */
 
             /* formDelta = field_1 - expected */
-            uint8_t field1 = (uint8_t)pl->field_1;
+            uint8_t field1 = (uint8_t)pl->cachedMatchValue;
             int8_t formDelta = (int8_t)(field1 - expected);  /* sub.b */
 
             int16_t d4s = (int16_t)formDelta;
@@ -3589,7 +3587,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             if (_Rand2() > 0x33)
                 goto clampForm;
 
-            uint8_t posType = (((uint8_t)pl->positionAndFace) & 0xE0) >> 5;
+            uint8_t posType = (((uint8_t)pl->positionAndFace) & PF_POSITION_MASK) >> 5;
             if (posType == 0) {
                 /* GK sub: random ±1 */
                 uint16_t r = _Rand2();
@@ -3640,14 +3638,14 @@ applyGoalBonus:
         /* Apply delta to someFlag.
          * ASM has dead code checking d0 against 0x9B/0x9A (impossible values).
          * Replicated as no-op. */
-        pl->someFlag = (int8_t)((int8_t)pl->someFlag + d4);
+        pl->form = (int8_t)((int8_t)pl->form + d4);
 
 clampForm:
         /* Clamp someFlag to [-100..100] signed (0x9C..0x64 unsigned) */
-        if ((int8_t)pl->someFlag < (int8_t)0x9C)
-            pl->someFlag = (int8_t)0x9C;
-        if ((int8_t)pl->someFlag > (int8_t)0x64)
-            pl->someFlag = (int8_t)0x64;
+        if ((int8_t)pl->form < (int8_t)PLAYER_FORM_MIN)
+            pl->form = (int8_t)PLAYER_FORM_MIN;
+        if ((int8_t)pl->form > (int8_t)PLAYER_FORM_MAX)
+            pl->form = (int8_t)PLAYER_FORM_MAX;
 
 nextPlayer:
         ;

@@ -464,12 +464,21 @@ struct __attribute__((packed, aligned(2))) TeamFile {
     uint8_t  secShortsColor;     /* 34 */
     uint8_t  secSocksColor;      /* 35 */
     int8_t   coachName[23];      /* 36 */
-    uint8_t  someFlag;           /* 59 */
+    uint8_t  playerValuesDirty;  /* 59 (was someFlag): dirty flag for the per-player
+                                  *     cachedMatchValue cache. TEAM_VALUES_DIRTY when the
+                                  *     squad changes (tactics edit / transfer / teamInit);
+                                  *     TEAM_VALUES_CLEAN once _UpdatePlayerPositionAndReturnRole
+                                  *     recomputes the values. See TEAM_VALUES_* below. */
     uint8_t  playerNumbers[16];  /* 60 */
     /* player data follows at offset 76 */
 };
 
 typedef char _teamfile_size_check[(sizeof(struct TeamFile) == 76) ? 1 : -1];
+
+/* TeamFile.playerValuesDirty (byte 59) states — is the per-player
+ * cachedMatchValue cache stale? */
+#define TEAM_VALUES_CLEAN  0   /* cache valid — use cachedMatchValue as-is */
+#define TEAM_VALUES_DIRTY  1   /* squad changed — recompute cachedMatchValue before use */
 
 typedef struct TeamFile TeamFile;
 
@@ -507,30 +516,31 @@ typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
 /* ==================================================================
  * PlayerFile — 38 bytes per player within a team file
  *
- * Field names mirror the canonical SWOS2.s PLAYERFILE_* equates exactly
- * (PLAYERFILE_FIELD_1 = 1, PLAYERFILE_FIELD_19 = 25, PLAYERFILE_SOMEFLAG = 37,
- * PLAYERFILE_GOALSTATS = 33 size 4). The comments below add the byte
- * interpretations from the SWOS HEX editing guide (BLISZKA) and the
- * known nibble-packing; the original reverse-engineering left field_1 /
- * field_19 / someFlag without semantic names because their function was
- * never pinned down, so we keep those canonical names rather than assert
- * an unverified meaning (see the field_1 note — our own code contradicts
- * the guide's guess there).
+ * Field names mirror the canonical SWOS2.s PLAYERFILE_* equates; the comments
+ * add byte interpretations from the SWOS HEX editing guide (BLISZKA) and from
+ * our own runtime analysis. Three formerly-opaque fields are now resolved from
+ * how the code uses them: field_1 -> cachedMatchValue, someFlag -> form, and
+ * field_19 (the NUL at byte 25) folded into playerName[23] (see each comment +
+ * the PLAYER_FORM_* / PF_* defines below).
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) PlayerFile {
     int8_t   nationality;          /* 0: nationality code */
-    /* 1: PLAYERFILE_FIELD_1 — purpose unconfirmed. The HEX guide labels this
-     * "player skill / invisible ability points", but our code does NOT use it
-     * that way: match_sim.c (_UpdatePlayerPositionAndReturnRole) caches a
-     * computed position here, and career_status.c reads it as a form-delta.
-     * Left as the canonical SWOS2.s name; do not rename to the guide's guess. */
-    int8_t   field_1;              /* 1 */
+    /* 1 (was field_1): RUNTIME scratch — the player's computed match value/rating.
+     * _UpdatePlayerPositionAndReturnRole (match_sim.c) writes the per-player match
+     * value here (_GetPlayerPrice for outfielders / price for GK+subs, forced to 1
+     * if sold / 0 if injured) and caches it; career_status.c reads it back as
+     * `formDelta = cachedMatchValue - expected` to drive the post-match form change.
+     * NOT the HEX guide's "invisible skill", and NOT a formation slot. */
+    int8_t   cachedMatchValue;     /* 1 */
     int8_t   shirtNumber;          /* 2: shirt / squad number */
-    int8_t   playerName[22];       /* 3-24: first + last name, 00-terminated */
-    int8_t   field_19;             /* 25: PLAYERFILE_FIELD_19 — null spacer after the name */
-    uint8_t  positionAndFace;      /* 26: position (00=GK,20=RB,40=LB,60=CD,80=RW,
-                                    *     a0=LW,c0=MF,e0=ST) + skin/hair in the low
-                                    *     bits (00=dark hair,08=blonde,10=dark skin) */
+    int8_t   playerName[23];       /* 3-25: first + last name. 22 chars max (the canonical
+                                    *     PLAYERFILE_PLAYERNAME) plus byte 25 = the always-NUL
+                                    *     terminator (was the separate PLAYERFILE_FIELD_19);
+                                    *     folded in so the name buffer is self-terminating. */
+    uint8_t  positionAndFace;      /* 26: bits 5-7 = position (PF_POSITION_MASK: 0=GK..7=ST),
+                                    *     bits 3-4 = face/hair (PF_FACE_MASK), and three runtime
+                                    *     flags in the low bits: PF_INFORM (0), PF_LOAN (1),
+                                    *     PF_TRIALIST (2). See the PF_* defines below. */
     uint8_t  cardsInjuries;        /* 27: injury condition + card discipline flags */
     int8_t   passing;              /* 28: high nibble 0 / low nibble = passing */
     int8_t   velocityHeading;      /* 29: hi nibble = velocity (Ve — the SWOS player-card
@@ -553,11 +563,42 @@ typedef struct __attribute__((packed, aligned(2))) PlayerFile {
             uint8_t euroCupGoals;      /* 36: european / continental cup */
         };
     };
-    int8_t   someFlag;             /* 37: PLAYERFILE_SOMEFLAG — HEX guide: "current
-                                    *     active form indicator" (semantics unconfirmed) */
+    int8_t   form;                 /* 37 (was someFlag): player form/morale, signed
+                                    *     [PLAYER_FORM_MIN..PLAYER_FORM_MAX] = [-100..+100].
+                                    *     Two out-of-range sentinels mark non-first-team
+                                    *     players: PLAYER_FORM_TRIALIST / PLAYER_FORM_RESERVE. */
 } PlayerFile;
 
 typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
+
+/* ---- PlayerFile.form (byte 37) values ----
+ * Normal range is signed [-100, +100]. The two values below -100 are sentinels
+ * for non-first-team players (the form slot is repurposed as a status marker,
+ * shown verbatim by _FormatPlayerValueOrStatusText / teams.c): a trialist is
+ * signed at TRIALIST (status "TRIAL", 33% wage), demoted to RESERVE (status
+ * "RES", 66% wage) the next week, then has a ~20%/week chance of promotion to a
+ * real form value with PF_INFORM set. These are NOT "sold"/"transferred" — that
+ * was a transfer_market.c misread; a loaned/transfer-listed player is flagged by
+ * PF_LOAN (positionAndFace bit 1), not here.
+ *
+ * Plain byte values (no cast): callers keep their existing (int8_t)/(uint8_t)
+ * casts, so signed clamps and unsigned equality tests both stay correct. */
+#define PLAYER_FORM_MAX        0x64   /* +100 (signed clamp ceiling) */
+#define PLAYER_FORM_MIN        0x9C   /* -100 (signed clamp floor) */
+#define PLAYER_FORM_TRIALIST   0x9B   /* trialist — in-game status "TRIAL" */
+#define PLAYER_FORM_RESERVE    0x9A   /* reserve  — in-game status "RES" */
+
+/* ---- PlayerFile.positionAndFace (byte 26) bitfields ----
+ * Static (from the team file): position in the top 3 bits, face/hair in bits 3-4.
+ * The low 3 bits are runtime flags (0 in static .EDT/.TMD files). */
+#define PF_POSITION_MASK   0xE0   /* bits 5-7: 0=GK,1=RB,2=LB,3=CD,4=RW,5=LW,6=MF,7=ST */
+#define PF_POSITION_SHIFT  5
+#define PF_FACE_MASK       0x18   /* bits 3-4: face/hair index 0-3 */
+#define PF_FACE_SHIFT      3
+#define PF_INFORM          0x01   /* bit 0: player is "in form" (doubles form gains) */
+#define PF_LOAN            0x02   /* bit 1: on loan — in-game status "LOAN" (match_sim
+                                  *        "preserves loan bit"). NOT transfer-list/sold. */
+#define PF_TRIALIST        0x04   /* bit 2: trialist marker (set when adding a trialist) */
 
 #define PLAYERFILE_SIZE 38
 

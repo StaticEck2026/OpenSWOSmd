@@ -208,7 +208,7 @@ void _SavePositionsAndUpdateLittleCheckmark(void) {
     newPlayerSkill = oldPlayerSkill;
     int16_t i; for (i = 0; i < 32; i++) oldPlayerPositionsArray[i] = playerPositionsArray[i];
     TeamFileEx *team = playMatchTeam1Ptr;
-    team->team.someFlag = 1;
+    team->team.playerValuesDirty = TEAM_VALUES_DIRTY;
     _ComputeOldPlayerSkillForViewResult((TeamFileEx *)playMatchTeam1Ptr, maxSubstitutesEntries);
     _UpdateCheckMarkSprite();
 }
@@ -760,7 +760,7 @@ void _OnSwapPlayer(MenuEntry *a5) {
                 TeamFileEx *team = playMatchTeam1Ptr;
                 _PlayMatchMenuSwapPlayers(team, selectedPlayerTacticsPosition, d6);
                 _SetBenchPlayersNumbers((TeamFileEx *)team);
-                team->team.someFlag = 1;
+                team->team.playerValuesDirty = TEAM_VALUES_DIRTY;
                 _SavePositionsAndUpdateLittleCheckmark();
                 selectedPlayerPosition = -1;
                 _SetPlayerSurnamesOnSidePitch();
@@ -795,7 +795,7 @@ cpuPath:
         uint16_t slot, fIdx;
         uint8_t *pl = _GetPlayerInfoBreakPosition((TeamFileEx *)t1, (uint16_t)d1, &slot, &fIdx);
         PlayerFile *plPf = (PlayerFile *)(pl + 76);
-        if (((plPf->positionAndFace & 0xE0) >> 5) == 0) return;
+        if (((plPf->positionAndFace & PF_POSITION_MASK) >> 5) == 0) return;
 
         uint16_t *ip = (uint16_t *)currentSelectedPlayerIndexPtr;
         if (*ip == fIdx)
@@ -907,7 +907,7 @@ int16_t _HandleSquadSwapSelectionToggle(int16_t d6) {
          * is already a file index, no translation needed. */
         uint8_t *pl = _GetPlayer(tNum, (uint16_t)selectedPlayerPosition);
         PlayerFile *plPf = (PlayerFile *)(pl + 76);
-        if (((plPf->positionAndFace & 0xE0) >> 5) == 0) return 0;
+        if (((plPf->positionAndFace & PF_POSITION_MASK) >> 5) == 0) return 0;
     }
 
     *selPos = (uint16_t)curSel;
@@ -927,7 +927,7 @@ void _PlayMatchChangeTactics(MenuEntry *a5) {
     TeamFileEx *t = playMatchTeam1Ptr;
     if ((int8_t)t->team.tactics == (int8_t)nt) return;
     t->team.tactics = (uint8_t)nt;
-    t->team.someFlag = 1;
+    t->team.playerValuesDirty = TEAM_VALUES_DIRTY;
     _SavePositionsAndUpdateLittleCheckmark();
     _SetUpTacticsButtons();
     _SetPlayerSurnamesOnSidePitch();
@@ -1217,7 +1217,7 @@ void _DrawPlayerEntries(MenuEntry *a5) {
     /* Position text (entry 34) */
     MenuEntry *posE = numE + 1;
     {
-        uint16_t posField = (playerPf->positionAndFace & 0xE0) >> 3;
+        uint16_t posField = (playerPf->positionAndFace & PF_POSITION_MASK) >> 3;
         posE->fg = (uintptr_t)playerPositionsStringTable[posField >> 2];
         posE->y = a5->y;
     }
@@ -1243,12 +1243,12 @@ void _DrawPlayerEntries(MenuEntry *a5) {
 
     {
         uint16_t cb = 0x0D;
-        uint8_t sf = (uint8_t)playerPf->someFlag;
+        uint8_t sf = (uint8_t)playerPf->form;
         if (sf == 0x9B)      cb = 0x0D;
         else if (sf == 0x9A) cb = 0x01;
         else {
             cb = 0x0F;
-            if (!(playerPf->positionAndFace & 0x02)) cb = 0x02;
+            if (!(playerPf->positionAndFace & PF_LOAN)) cb = PF_LOAN;
         }
         valE->stringFlags = (valE->stringFlags & 0xFFF0) | cb;
         valE->isInvisible = 0;
@@ -1286,7 +1286,7 @@ void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile)
      * PlayerFile data is at playerFile[2] (2 * 38 = 76 bytes in). */
     PlayerFile *pf = &playerFile[2];
 
-    uint16_t posGroup = (pf->positionAndFace & 0xE0) >> 5;
+    uint16_t posGroup = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
     if (posGroup == 0) {
         /* Goalkeeper: no skill string */
         *dst = 0;

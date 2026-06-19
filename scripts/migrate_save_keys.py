@@ -35,13 +35,28 @@ DEFAULT_DIRS = [
 # JSON save types only (NOT .TAC/.HIL/.EDT/.CFG — those are binary records).
 SAVE_EXTS = ("CAR", "SEA", "PRE", "DIY")
 
-# Current key renames (old -> new). Keep in sync with src/save_format_json.c.
+# Current simple key renames (old -> new), applied as "<old>": -> "<new>":.
+# Use this for keys that are UNIQUE to one struct. Keep in sync with
+# src/save_format_json.c.
+#   (prior migration, already applied: unkn->reserved, unk1->reserved1,
+#    unk3->reserved3 [TeamGame/JobOffer], unk_table->pair_ids [TeamTactics])
 RENAMES = {
-    "unkn":      "reserved",    # JobOffer
-    "unk1":      "reserved1",   # TeamGame
-    "unk3":      "reserved3",   # TeamGame
-    "unk_table": "pair_ids",    # TeamTactics
+    "field_1":   "cached_match_value",     # PlayerFile (player-only key)
+    "some_flag": "player_values_dirty",    # TeamFile (player one already -> form via RAW below)
 }
+
+# Context-ANCHORED renames, for keys SHARED by more than one struct where a blind
+# "<old>": replace would hit the wrong one. Each entry is (find_bytes, repl_bytes).
+# These run BEFORE the simple RENAMES above, so the shared key is disambiguated
+# first and the remaining blind rename only sees the other struct's key.
+# PlayerFile.form was "some_flag", but TeamFile ALSO had a "some_flag" key. The
+# player one is the LAST field of a player object, after goal_stats
+# ( ...],"some_flag":N} ); the team one follows coach_name ( ...","some_flag":N ).
+# Anchor on the '],' prefix so the player key -> "form" first; then the simple
+# RENAMES "some_flag" -> "player_values_dirty" only hits the team key.
+RAW_RENAMES = [
+    (b'],"some_flag":', b'],"form":'),   # PlayerFile.form (NOT TeamFile)
+]
 
 
 def save_files(dirs):
@@ -56,10 +71,16 @@ def save_files(dirs):
     return sorted(set(out))
 
 
-def migrate_file(path, renames, dry):
+def migrate_file(path, renames, dry, raw=()):
     data = open(path, "rb").read()
     orig = data
     hits = {}
+    # Anchored renames FIRST (disambiguate shared keys before the blind pass).
+    for find, repl in raw:
+        n = data.count(find)
+        if n:
+            data = data.replace(find, repl)
+            hits[find.decode("latin1")] = n
     for old, new in renames.items():
         pat = b'"' + old.encode() + b'":'
         rep = b'"' + new.encode() + b'":'
@@ -67,10 +88,6 @@ def migrate_file(path, renames, dry):
         if n:
             data = data.replace(pat, rep)
             hits[old] = n
-        # Safety: warn if the NEW key already exists distinctly (possible clash /
-        # already-migrated file being re-run with a different mapping).
-        if old != new and data.count(b'"' + new.encode() + b'":') and not n:
-            pass
     if data != orig and not dry:
         with open(path, "wb") as f:
             f.write(data)
@@ -89,26 +106,29 @@ def main(argv):
         if "=" in args[i]:
             o, n = args[i].split("=", 1); pairs[o] = n
         i += 1
+    # Ad-hoc old=new args override RENAMES and skip the default anchored renames.
     renames = pairs or RENAMES
+    raw = () if pairs else RAW_RENAMES
 
-    print(f"{'DRY-RUN: ' if dry else ''}renaming save keys: " +
-          ", ".join(f'{o}->{n}' for o, n in renames.items()))
+    desc = [f'{o}->{n}' for o, n in renames.items()] + \
+           [f'{f.decode("latin1")} (anchored)' for f, _ in raw]
+    print(f"{'DRY-RUN: ' if dry else ''}renaming save keys: " + ", ".join(desc))
     files = save_files(dirs)
     print(f"scanning {len(files)} JSON save file(s) across {len(dirs)} folder(s)\n")
 
-    total = {o: 0 for o in renames}
+    total = {}
     changed = 0
     for p in files:
-        hits = migrate_file(p, renames, dry)
+        hits = migrate_file(p, renames, dry, raw)
         if hits:
             changed += 1
             for o, n in hits.items():
-                total[o] += n
+                total[o] = total.get(o, 0) + n
             print(f"  {os.path.relpath(p):55s} " +
-                  ", ".join(f"{o}->{renames[o]} x{c}" for o, c in hits.items()))
+                  ", ".join(f"{o} x{c}" for o, c in hits.items()))
     print(f"\n{'would change' if dry else 'changed'} {changed} file(s). "
           "Per-key totals: " +
-          ", ".join(f"{o}={total[o]}" for o in renames if total[o]) or "(none)")
+          (", ".join(f"{o}={c}" for o, c in total.items()) or "(none)"))
     return 0
 
 

@@ -32,7 +32,7 @@ PLAYER_REC_SIZE = 38         # sizeof(PlayerFile)
 PLAYERS_PER_TEAM = 16
 TEAM_NAME_OFF, TEAM_NAME_LEN = 5, 17
 COACH_NAME_OFF, COACH_NAME_LEN = 36, 23
-PLAYER_NAME_OFF, PLAYER_NAME_LEN = 3, 22
+PLAYER_NAME_OFF, PLAYER_NAME_LEN = 3, 23   # 22-char name + folded NUL terminator (byte 25)
 
 # positionAndFace high 3 bits -> position label (game_types.h)
 POSITIONS = {0: "GK", 1: "RB", 2: "LB", 3: "CD", 4: "RW", 5: "LW", 6: "MF", 7: "ST"}
@@ -111,7 +111,7 @@ def _decode_str(raw: bytes) -> str:
     """Faithful name decode: bytes up to the first NUL, latin1.  No stripping/
     filtering so the value round-trips exactly (names may keep trailing spaces;
     a name that fills the whole field has no NUL and is terminated by the next
-    struct field, e.g. PlayerFile.field_19)."""
+    struct field, e.g. PlayerFile.player_name[23] -> position_and_face)."""
     return raw.split(b"\x00")[0].decode("latin1")
 
 
@@ -140,10 +140,11 @@ def _s16(v: int) -> int:
 def parse_player(b: bytes) -> dict:
     return {
         "nationality": _s8(b[0]),
-        "field_1": _s8(b[1]),
+        "cached_match_value": _s8(b[1]),   # was field_1
         "shirt_number": _s8(b[2]),
+        # player_name now 23 B (3..25): the 22-char name + its NUL terminator
+        # (the former separate field_19 byte, folded into the name buffer).
         "player_name": _decode_str(b[PLAYER_NAME_OFF : PLAYER_NAME_OFF + PLAYER_NAME_LEN]),
-        "field_19": _s8(b[25]),
         "position_and_face": b[26],
         "cards_injuries": b[27],
         "passing": _s8(b[28]),
@@ -152,17 +153,18 @@ def parse_player(b: bytes) -> dict:
         "speed_finishing": _s8(b[31]),
         "price": _s8(b[32]),
         "goal_stats": list(b[33:37]),
-        "some_flag": _s8(b[37]),
+        "form": _s8(b[37]),                # was some_flag
     }
 
 
 def encode_player(p: dict) -> bytearray:
     b = bytearray(PLAYER_REC_SIZE)
     b[0] = p["nationality"] & 0xFF
-    b[1] = p["field_1"] & 0xFF
+    b[1] = p["cached_match_value"] & 0xFF
     b[2] = p["shirt_number"] & 0xFF
+    # 23-byte name field covers byte 25 (the NUL terminator); a <=22-char name
+    # leaves it 0, so no separate field_19 write is needed.
     _put_str(b, PLAYER_NAME_OFF, PLAYER_NAME_LEN, p["player_name"])
-    b[25] = p["field_19"] & 0xFF
     b[26] = p["position_and_face"] & 0xFF
     b[27] = p["cards_injuries"] & 0xFF
     b[28] = p["passing"] & 0xFF
@@ -172,7 +174,7 @@ def encode_player(p: dict) -> bytearray:
     b[32] = p["price"] & 0xFF
     gs = (list(p["goal_stats"]) + [0, 0, 0, 0])[:4]
     b[33:37] = bytes(x & 0xFF for x in gs)
-    b[37] = p["some_flag"] & 0xFF
+    b[37] = p["form"] & 0xFF
     return b
 
 
@@ -195,7 +197,7 @@ def parse_team(b: bytes) -> dict:
             "league": b[25],
             "kit_colors": list(b[26:36]),
             "coach_name": _decode_str(b[COACH_NAME_OFF : COACH_NAME_OFF + COACH_NAME_LEN]),
-            "some_flag": b[59],
+            "player_values_dirty": b[59],   # was some_flag
             "player_numbers": list(b[60:76]),
         },
         "players": [
@@ -221,7 +223,7 @@ def encode_team(t: dict) -> bytearray:
     kit = (list(h["kit_colors"]) + [0] * 10)[:10]
     b[26:36] = bytes(x & 0xFF for x in kit)
     _put_str(b, COACH_NAME_OFF, COACH_NAME_LEN, h["coach_name"])
-    b[59] = h["some_flag"] & 0xFF
+    b[59] = h["player_values_dirty"] & 0xFF
     pn = (list(h["player_numbers"]) + [0] * 16)[:16]
     b[60:76] = bytes(x & 0xFF for x in pn)
     for i, p in enumerate(t["players"][:16]):
