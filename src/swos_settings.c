@@ -12,6 +12,10 @@
  *   [audio]
  *   mode=mono             ; mono | stereo
  *
+ *   [dos]                 ; PC-only extras (Amiga is the definitive version)
+ *   graphics=false        ; true | false — render DOS graphics (bin/grafs_dos)
+ *   gameplay=false        ; true | false — DOS gameplay tweaks (reserved)
+ *
  * Boolean values accept on/off, true/false, yes/no, 1/0 — case-insensitive.
  * Unknown keys / sections are silently ignored so the file format can grow
  * without breaking older binaries.
@@ -72,6 +76,10 @@ static int handler(void *user, const char *section,
             if      (eqi(value, "mono"))   opts->audio_mono = 1;
             else if (eqi(value, "stereo")) opts->audio_mono = 0;
         }
+    } else if (eqi(section, "dos")) {
+        int b;
+        if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
+        else if (eqi(name, "gameplay") && parse_bool(value, &b)) opts->dos_gameplay = b;
     }
     /* Return nonzero on success, even for ignored keys — we don't want
      * inih to flag unknown sections as parse errors. */
@@ -139,12 +147,18 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "scale=%d\n"
         "\n"
         "[audio]\n"
-        "mode=%s\n",
+        "mode=%s\n"
+        "\n"
+        "[dos]\n"
+        "graphics=%s\n"
+        "gameplay=%s\n",
         renderer_str(opts->renderer),
         opts->vsync ? "on" : "off",
         fullscreen_str(fs_now),
         scale_now,
-        opts->audio_mono ? "mono" : "stereo");
+        opts->audio_mono ? "mono" : "stereo",
+        opts->dos_graphics ? "true" : "false",
+        opts->dos_gameplay ? "true" : "false");
 
     fclose(f);
 }

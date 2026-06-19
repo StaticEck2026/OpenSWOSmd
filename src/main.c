@@ -34,6 +34,12 @@
 #include "platform_sdl.h"
 #include "swos_settings.h"
 #include "save_format_json.h"   /* DataJson_SelfTest */
+#include "dos_mode.h"
+
+/* Optional DOS-graphics/gameplay flags (PC-only extras; default Amiga). Set
+ * from the [dos] INI section / --dos-* options below; read by the game code. */
+int gDosGraphics = 0;
+int gDosGameplay = 0;
 
 #define SWOS_INI_PATH "SWOS.ini"
 
@@ -129,6 +135,11 @@ static void print_usage(const char *argv0)
         "                            (1,2 → left, 0,3 → right) which sounds\n"
         "                            lopsided on most modern playback setups.\n"
         "                            'stereo' restores the original Amiga panning.\n"
+        "  --dos-graphics=<on|off>   Render the DOS-version graphics (bin/grafs_dos)\n"
+        "                            instead of the Amiga graphics. Default: off.\n"
+        "                            PC-only extra; the Amiga look is the default.\n"
+        "  --dos-gameplay=<on|off>   DOS gameplay tweaks (framerate etc.). Default:\n"
+        "                            off. Reserved — not wired up yet.\n"
         "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
 }
@@ -167,6 +178,8 @@ int main(int argc, char **argv)
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
     opts.audio_mono = 1;
+    opts.dos_graphics = 0;        /* default Amiga graphics */
+    opts.dos_gameplay = 0;        /* default Amiga gameplay */
 
     /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
      * at clean shutdown will create one. */
@@ -214,6 +227,20 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid --audio value '%s' (expected mono|stereo)\n", v);
                 return 1;
             }
+        } else if ((v = match_kv(a, "dos-graphics")) != NULL) {
+            if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.dos_graphics = 1;
+            else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.dos_graphics = 0;
+            else {
+                fprintf(stderr, "Invalid --dos-graphics value '%s' (expected on|off)\n", v);
+                return 1;
+            }
+        } else if ((v = match_kv(a, "dos-gameplay")) != NULL) {
+            if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.dos_gameplay = 1;
+            else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.dos_gameplay = 0;
+            else {
+                fprintf(stderr, "Invalid --dos-gameplay value '%s' (expected on|off)\n", v);
+                return 1;
+            }
         } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -223,6 +250,10 @@ int main(int argc, char **argv)
             return 1;
         }
     }
+
+    /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
+    gDosGraphics = opts.dos_graphics;
+    gDosGameplay = opts.dos_gameplay;
 
     /* Redirect stderr to SWOS.log alongside the binary. Saves the
      * tester from having to remember `2> SWOS.log` on every launch
@@ -237,6 +268,9 @@ int main(int argc, char **argv)
             setvbuf(log, NULL, _IONBF, 0);
         }
     }
+
+    if (gDosGraphics)
+        fprintf(stderr, "[dos] DOS graphics mode ON (bin/grafs_dos)\n");
 
     SDL_SetMainReady();
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS |
