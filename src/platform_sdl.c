@@ -462,10 +462,16 @@ void Platform_SetWindowScale(int scale)
  * copperlist offsets COP_PAL_B*_C*_OFF. */
 static void refresh_palette_from_copper(void)
 {
-    if (gDosGraphics) {
-        /* DOS graphics use the full 256-colour DOS palette (not the Amiga
-         * 16-colour copper). The pitch-condition overlay keys off the low byte
-         * of pitchNumberAndType (the high byte is which pitch graphic). */
+    /* DOS graphics use the full 256-colour DOS palette, but ONLY during a
+     * match. The intro, title and menu screens are still Amiga graphics and
+     * need their normal Amiga (copper) palette — otherwise they render with the
+     * wrong colours (olive backgrounds etc.). playGame is set at kickoff and
+     * cleared when the match ends, so it cleanly scopes the DOS palette to the
+     * in-match pitch/players. (DOS menu backgrounds are a separate follow-up.) */
+    extern volatile uint16_t playGame;
+    if (gDosGraphics && playGame) {
+        /* The pitch-condition overlay keys off the low byte of
+         * pitchNumberAndType (the high byte is which pitch graphic). */
         extern uint16_t pitchNumberAndType;
         uint8_t rgb[768];
         DosGfx_BuildPalette((int)(pitchNumberAndType & 0xFF), rgb);
