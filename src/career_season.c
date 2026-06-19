@@ -1395,18 +1395,12 @@ extern uint16_t youreSacked;
 extern uint8_t *diyCompetitionPtr;
 extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 
-/* Local copy of EnglishLeaguesBlock typedef (keeping competition_data.h out
- * of this TU per the design notes — career_season.c uses opaque pointer
- * forward decls for several competition tables). The block layout and
- * `englishLeaguesBlock` extern must match competition_data.[ch] exactly. */
-typedef struct __attribute__((packed)) {
-    CompetitionLeague _main;   /* merged record (was CompetitionLeague_4_8_2_24) */
-    Leagues           _div1;   /* merged Leagues (was Leagues_4_2_24) */
-    Leagues           _div2;
-    Leagues           _div3;   /* was Leagues_4; trailing playoffs/nextGroup/qIdx zero */
-} EnglishLeaguesBlock;
-
-extern EnglishLeaguesBlock englishLeaguesBlock;
+/* England's leagues — standalone globals, consolidated from the old
+ * EnglishLeaguesBlock (competition_data.c). competition_data.h is kept out of
+ * this TU (opaque forward decls for several competition tables); CompetitionLeague
+ * / Leagues come from game_types.h, so extern the four globals here. */
+extern CompetitionLeague englishLeague;
+extern Leagues englishLeagues1, englishLeagues2, englishLeagues3;
 extern Playoffs div1Playoffs;
 extern Playoffs div2Playoffs;
 extern Playoffs div3Playoffs;
@@ -1440,12 +1434,12 @@ extern Playoffs div3Playoffs;
  * `if (d0 == 0) return;` test. The typed dispatch below is English-specific.
  *
  * For each English division, by static data analysis:
- *   index=1: walk lands at englishLeaguesBlock._main.unk2[0] = &div1Playoffs;
- *            qIdx pairs live in englishLeaguesBlock._main.unk3[].
- *   index=2: walk lands at englishLeaguesBlock._div1.playoffs = &div2Playoffs;
- *            qIdx pairs in englishLeaguesBlock._div1.qualifierIndexPairs[].
- *   index=3: walk lands at englishLeaguesBlock._div2.playoffs = &div3Playoffs;
- *            qIdx pairs in englishLeaguesBlock._div2.qualifierIndexPairs[].
+ *   index=1: walk lands at englishLeague.unk2[0] = &div1Playoffs;
+ *            qIdx pairs live in englishLeague.unk3[].
+ *   index=2: walk lands at englishLeagues1.playoffs = &div2Playoffs;
+ *            qIdx pairs in englishLeagues1.qualifierIndexPairs[].
+ *   index=3: walk lands at englishLeagues2.playoffs = &div3Playoffs;
+ *            qIdx pairs in englishLeagues2.qualifierIndexPairs[].
  *
  * teamData = qualComp + 7 + qualComp[7] in the asm; for all three Playoffs
  * statics qualComp->comp.teamListOffset = 17 (Amiga byte offset to qualifiedTeamIds[0]).
@@ -1473,7 +1467,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     /* Typed dispatch (see header comment for derivation). The walk via
      * `divisions[i].qualifierLinkOffset` is replaced with direct struct-member
      * access. */
-    if (competition != (uint8_t *)&englishLeaguesBlock._main) {
+    if (competition != (uint8_t *)&englishLeague) {
         /* Non-English country reached the walk despite divisions[i].qualifierLinkOffset
          * being expected zero — unexpected. Bail safely rather than
          * re-introduce the broken byte walk. */
@@ -1484,16 +1478,16 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     uint8_t   *teamIdxList;
     switch (index) {
     case 1:
-        qualComp    = (Playoffs *)englishLeaguesBlock._main.playoffLinkPtrs[0]; /* &div1Playoffs */
-        teamIdxList = (uint8_t *)englishLeaguesBlock._main.promotionLinkData;
+        qualComp    = (Playoffs *)englishLeague.playoffLinkPtrs[0]; /* &div1Playoffs */
+        teamIdxList = (uint8_t *)englishLeague.promotionLinkData;
         break;
     case 2:
-        qualComp    = englishLeaguesBlock._div1.playoffs;              /* &div2Playoffs */
-        teamIdxList = (uint8_t *)englishLeaguesBlock._div1.qualifierIndexPairs;
+        qualComp    = englishLeagues1.playoffs;              /* &div2Playoffs */
+        teamIdxList = (uint8_t *)englishLeagues1.qualifierIndexPairs;
         break;
     case 3:
-        qualComp    = englishLeaguesBlock._div2.playoffs;              /* &div3Playoffs */
-        teamIdxList = (uint8_t *)englishLeaguesBlock._div2.qualifierIndexPairs;
+        qualComp    = englishLeagues2.playoffs;              /* &div3Playoffs */
+        teamIdxList = (uint8_t *)englishLeagues2.qualifierIndexPairs;
         break;
     default:
         return; /* Premier (index=0) returned via early-exit. */

@@ -891,16 +891,11 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
  * If the primary competition is a league (type 0), check if it has
  * a linked DIY competition and set up slot 4 for it.
  * ================================================================ */
-/* Local copy of EnglishLeaguesBlock typedef (keeping competition_data.h out of
- * this TU, matching career_season.c). Layout must match competition_data.[ch];
- * CompetitionLeague / Leagues / Playoffs / Division come from game_types.h. */
-typedef struct __attribute__((packed)) {
-    CompetitionLeague _main;
-    Leagues           _div1;
-    Leagues           _div2;
-    Leagues           _div3;
-} EnglishLeaguesBlock;
-extern EnglishLeaguesBlock englishLeaguesBlock;
+/* England's leagues — standalone globals, consolidated from the old
+ * EnglishLeaguesBlock (competition_data.c). CompetitionLeague / Leagues come from
+ * game_types.h; competition_data.h is kept out of this TU, so extern them here. */
+extern CompetitionLeague englishLeague;
+extern Leagues englishLeagues1, englishLeagues2, englishLeagues3;
 
 __attribute__((used, externally_visible))
 void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
@@ -927,23 +922,23 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
     CompetitionLeague *league = (CompetitionLeague *)comp;
     if (league->divisions[(uint16_t)currentDivisionIndex].qualifierLinkOffset == 0)
         return;
-    if (comp != (uint8_t *)&englishLeaguesBlock._main)
+    if (comp != (uint8_t *)&englishLeague)
         return;  /* only the English leagues carry these per-division links */
 
     uint8_t *diyComp;
     void    *diyTable;
     switch ((uint16_t)currentDivisionIndex) {
     case 1:
-        diyComp  = (uint8_t *)englishLeaguesBlock._main.playoffLinkPtrs[0];
-        diyTable = englishLeaguesBlock._main.playoffLinkPtrs[1];
+        diyComp  = (uint8_t *)englishLeague.playoffLinkPtrs[0];
+        diyTable = englishLeague.playoffLinkPtrs[1];
         break;
     case 2:
-        diyComp  = (uint8_t *)englishLeaguesBlock._div1.playoffs;
-        diyTable = englishLeaguesBlock._div1.nextGroup;
+        diyComp  = (uint8_t *)englishLeagues1.playoffs;
+        diyTable = englishLeagues1.nextGroup;
         break;
     case 3:
-        diyComp  = (uint8_t *)englishLeaguesBlock._div2.playoffs;
-        diyTable = englishLeaguesBlock._div2.nextGroup;
+        diyComp  = (uint8_t *)englishLeagues2.playoffs;
+        diyTable = englishLeagues2.nextGroup;
         break;
     default:
         return;

@@ -26,7 +26,7 @@
  * Each record carries a `text[2]` pointer pair, so its size grows by 8 bytes on
  * 64-bit (32-bit pointers -> 64-bit). The per-record reservation therefore keeps
  * the same conditional +8 pad the overlay used; the typed externs in
- * competition_data.c (CompetitionCup2 euroCupCopy, etc.) resolve to these
+ * competition_data.c (CompetitionTournament euroCupCopy, etc.) resolve to these
  * raw-byte labels, exactly as they did when the storage lived in the overlay.
  * Emitted via __asm__ real labels (matching the overlay's own style) so no
  * competition-type header include is needed here (see

@@ -1434,6 +1434,7 @@ typedef uint8_t CountryNumbers;
 #define CN_TAIWAN           67
 #define CN_SOUTH_AFRICA     69
 #define CN_URUGUAY          71
+#define CN_CUSTOM           72   /* TEAM.072 — the custom/joke preset teams (customsLeague) */
 #define CN_USA              73
 #define CN_INDIA            75
 #define CN_BELARUS          76
@@ -1582,7 +1583,7 @@ typedef struct __attribute__((packed)) {
 } CompCupHeader;
 
 /* ==================================================================
- * Round — 3 bytes, round descriptor for CompetitionCup2
+ * Round — 3 bytes, round descriptor for CompetitionTournament
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
@@ -1592,8 +1593,8 @@ typedef struct __attribute__((packed)) {
 } Round;
 
 /* ==================================================================
- * CompCupHeader2 — 34 bytes, type-2 group-tournament header (embedded as
- * CompetitionCup2.header after the consolidation). Was named `CompetitionCup2`;
+ * CompTournamentHeader — 34 bytes, type-2 group-tournament header (embedded as
+ * CompetitionTournament.header after the consolidation). Was named `CompetitionTournament`;
  * that name now belongs to the merged record below.
  * ================================================================== */
 
@@ -1618,7 +1619,7 @@ typedef struct __attribute__((packed)) {
                                  * worldCup 1) but no consumer reads it. Was unk4 — distinct
                                  * from Competition.seedReorderFlag (byte 8, also formerly
                                  * unk4) which IS read. */
-} CompCupHeader2;
+} CompTournamentHeader;
 
 /* ==================================================================
  * CompetitionLeague — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md
@@ -1707,9 +1708,9 @@ _Static_assert(CUP_NAME_TABLE_OFFSET == 15 && CUP_TEAMLIST_TABLE_OFFSET == 21,
                "merged CompetitionCup offsets must match the historical _6_2* values");
 
 /* ==================================================================
- * CompetitionCup2 — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md §4).
- * Collapses all 11 CompetitionCup2_* variants into one — the old _6_2_64 layout,
- * the largest: CompCupHeader2 header + per-round rule flags + tournament name
+ * CompetitionTournament — merged record (consolidation, docs/STRUCT_CONSOLIDATE.md §4).
+ * Collapses all 11 CompetitionTournament_* variants into one — the old _6_2_64 layout,
+ * the largest: CompTournamentHeader header + per-round rule flags + tournament name
  * strings + the embedded team-seed draw list. roundRuleFlags is sized [6] (the
  * max used; the header's Round[6] already fixes the per-stage count), so name[]
  * and teamSeedList[] keep the SAME offsets the _6_2* tournaments already used
@@ -1719,21 +1720,21 @@ _Static_assert(CUP_NAME_TABLE_OFFSET == 15 && CUP_TEAMLIST_TABLE_OFFSET == 21,
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    CompCupHeader2 header;         /* 34 B (was the CompetitionCup2 header struct) */
+    CompTournamentHeader header;         /* 34 B (was the CompetitionTournament header struct) */
     int8_t   roundRuleFlags[6];    /* per-round legs/ET/pen flag bytes */
     char    *name[2];              /* tournament name strings (was text[2]) */
     TeamId   teamSeedList[32];     /* embedded competition draw: {country,ordinal} pairs */
-} CompetitionCup2;
+} CompetitionTournament;
 
 /* Self-offset bytes for the merged layout (Competition byte 5 / byte 7). Both are
  * layout-derived constants; the *_TEAMLIST one subtracts the 64-bit name[2]
  * pointer-growth delta so the STORED byte is identical on 32/64-bit (consumers
  * re-add that delta), matching the historical _6_2* values 35 / 41. */
-#define CUP2_NAME_TABLE_OFFSET     ((int8_t)(offsetof(CompetitionCup2, name) - 5))
-#define CUP2_TEAMLIST_TABLE_OFFSET ((int8_t)(offsetof(CompetitionCup2, teamSeedList) - 7 \
+#define TOURNAMENT_NAME_TABLE_OFFSET     ((int8_t)(offsetof(CompetitionTournament, name) - 5))
+#define TOURNAMENT_TEAMLIST_TABLE_OFFSET ((int8_t)(offsetof(CompetitionTournament, teamSeedList) - 7 \
                                     - 2 * (int)(sizeof(char *) - sizeof(uint32_t))))
-_Static_assert(CUP2_NAME_TABLE_OFFSET == 35 && CUP2_TEAMLIST_TABLE_OFFSET == 41,
-               "merged CompetitionCup2 offsets must match the historical _6_2* values");
+_Static_assert(TOURNAMENT_NAME_TABLE_OFFSET == 35 && TOURNAMENT_TEAMLIST_TABLE_OFFSET == 41,
+               "merged CompetitionTournament offsets must match the historical _6_2* values");
 
 /* ==================================================================
  * Playoff and Leagues helper structs
@@ -1791,7 +1792,7 @@ _Static_assert(offsetof(Playoffs, name)           == 16, "Playoffs name@16 (= 5 
  * docs/STRUCT_CONSOLIDATE.md §4c). The layout mirrors the largest variant
  * (Leagues_4_2_24) exactly — four {league*, linkParams[8]} promotion-link
  * records followed by the playoff/next-group pointers and the qualifier-index
- * tail — so the englishLeaguesBlock._div1/._div2 instances (which were
+ * tail — so the englishLeagues1/._div2 instances (which were
  * Leagues_4_2_24) stay byte-identical and their typed .playoffs /
  * .qualifierIndexPairs reads are unchanged. The plain Leagues_4 (dutch/spanish/
  * _div3) and Leagues_2 (scottish/uruguay) instances leave the trailing
@@ -1833,7 +1834,7 @@ typedef struct __attribute__((packed)) {
  * -2/0xFC in-band markers; countries[] is 0xFF-terminated. Padded slots are zero.
  *
  * compCup holds a MIXED cup/cup2 list (e.g. europeTable carries
- * &europeanChampionships, a CompetitionCup2) — it is retyped to the polymorphic
+ * &europeanChampionships, a CompetitionTournament) — it is retyped to the polymorphic
  * Competition* base in the CompetitionCup family step; kept as CompetitionCup*
  * here to match the current header type.
  * ================================================================== */
