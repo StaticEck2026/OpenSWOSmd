@@ -110,13 +110,32 @@ the DOS data into the exact buffer our renderer already consumes:
      top row. Matches the existing `_DrawChunkyPitch` (`PITCH_PTR_START=0`, 42×55).
      The reference's "skip 42-entry header row (→42×54)" does NOT apply here.
 
-3. **Sprites** — our sprites are `SpriteGraphics` records + chunky pixels, built
-   from the Amiga `.raw` via `image_cmd.c`/`asset_loader.c`. Hook: when
-   `gDosGraphics`, for each DOS `.dat`, walk the `[24-byte header][planar]`
-   records, `DosGfx_DecodePlanarSprite` into a chunky buffer, fill a
-   `SpriteGraphics` (pixWidth/nlines/wquads/centerX/centerY from the DOS header,
-   `sprData`=chunky), and store it in our sprite table at
-   `amigaIndex = dosIndex − 114`. charset uses the separate `sprite.dat` offsets.
+3. **Sprites** — ✅ **DONE (players/keepers/bench)** (`color_sprites.c::
+   _DosOverlaySprites`, called at the end of `_ConvertColorsAndTextSprites` when
+   `gDosGraphics`). For each DOS `.dat` it walks the `[24-byte header][4-bitplane
+   planar]` records, `DosGfx_DecodePlanarSprite`s the pixels into a persistent
+   chunky buffer, fills a `SpriteGraphics` (pixWidth/nlines/wquads/centerX/centerY
+   from the DOS header; **type=0, bltsize=h·64+wq·2, maskPtr=0** — same as the
+   Amiga `_ProcessImageCommandStream` chunky output, NOT the DOS header's
+   type/bltsize), and stores it at `amigaIndex = dosIndex − 114`. Files +
+   DOS-start indices (from the reference `loadAllGameSprites`): `team1.dat 303@341`
+   (→amiga 227), `team3.dat 303@644` (→530), `goal1.dat 116@947` (→833),
+   `goal1.dat 116@1063` (→949), `bench.dat 155@1179` (→1065). Built once
+   (file-load + decode persist); the table slots are re-pointed every call because
+   the Amiga load+convert path overwrote them earlier in the same function. The
+   blitter resolves `spriteGraphicsPtr[idx]` live each frame, and player
+   `Sprite`s look up their graphic by index, so re-pointing redirects rendering.
+   - **Scope / deferred:** `score.dat` (amiga 113..226 — score/result digits,
+     team-name + player-name sprites at 0x8D.., partly runtime-generated) and the
+     charset/fonts stay Amiga, so text/HUD keep working. **Per-team kit-colour
+     tinting of DOS players is NOT done** — the Amiga 16-entry colour-conversion
+     LUTs (`_ConvertSpriteColors`) can't recolour 256-colour DOS sprites, so both
+     teams currently render the DOS *default* kit baked into the `.dat`. A DOS
+     kit-recolour pass is the next follow-up.
+   - Verified: all four `.dat` record-walks consume their files exactly; a
+     standalone decode of `team1.dat` (`/tmp/dos_sprite_render.c`) renders
+     coherent player figures (kits, shadows, animation frames, working index-0
+     transparency).
 
 ## Status
 - Done: `[dos]` INI section + `--dos-graphics`/`--dos-gameplay` flags + `gDosGraphics`
@@ -125,7 +144,9 @@ the DOS data into the exact buffer our renderer already consumes:
 - Done: hook **1 (palette)** — `platform_sdl.c::refresh_palette_from_copper`.
 - Done: hook **2 (pitch)** — `pitch.c::dos_load_pitch` + `_FixupAndColorPitchFile`
   short-circuit + `animated_patterns.c` DOS gates. Row offset settled (42×55 from 0).
-- Next: hook **3 (sprites)** — `asset_loader.c`: decode each DOS `.dat`
-  `[24B header][planar]` → `SpriteGraphics` at `amigaIndex = dosIndex − 114`.
-- **`team1/team3.dat` ARE now present** in `bin/grafs_dos` (`TEAM1.DAT`/`TEAM2.DAT`/
-  `TEAM3.DAT`, 45648 B each) — so player sprites can be wired in the sprite hook.
+- Done: hook **3 (sprites, players/keepers/bench)** — `color_sprites.c::
+  _DosOverlaySprites` overlays DOS team1/team3/goal1×2/bench at amiga 227..1219.
+- Next follow-ups: **(a) DOS kit-colour recolour** so the two teams differ (DOS
+  players currently show the default kit); **(b) score.dat** (digits/HUD numbers)
+  and **(c) DOS charset/fonts** via `SPRITE.DAT` if Amiga fonts look wrong under
+  the DOS palette.
