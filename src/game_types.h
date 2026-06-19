@@ -1434,6 +1434,7 @@ typedef uint8_t CountryNumbers;
 #define CN_TAIWAN           67
 #define CN_SOUTH_AFRICA     69
 #define CN_URUGUAY          71
+#define CN_CUSTOM           72   /* TEAM.072 — the custom/joke preset teams (customsLeague) */
 #define CN_USA              73
 #define CN_INDIA            75
 #define CN_BELARUS          76

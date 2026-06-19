@@ -41,6 +41,7 @@ uint8_t SaveJson_GetLoadedPrimaryCountryCode(void)
 #include <string.h>
 #ifdef SWOS_SDL_BUILD
 #include <stdlib.h>  /* atoi */
+#include <stdio.h>   /* DataJson self-test */
 #endif
 #ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
 /* clock() — only the PROFILE macros need this. The Amiga toolchain
@@ -2608,6 +2609,78 @@ static void load_team_file_ex_slice(const char *buf, int buflen,
         }
     }
 }
+
+/* ======================================================================
+ * Data-file JSON loaders (bin/data_json) — docs/DATA_INTERNAL_JSON.md
+ *
+ * These reuse the save-format machinery above (load_team_file_ex_slice /
+ * load_struct_object / the s_*_fields tables) so the bin/data JSON and the
+ * .CAR JSON share ONE representation and ONE loader. Phase 4 of the data
+ * jailbreak; teams first.
+ * ====================================================================== */
+
+/* Load a teams/TMD JSON document — { ..., "teams":[ {team,players}, ... ] } —
+ * into out[] (each a TeamFileEx). Returns the count loaded, or -1 if there is
+ * no teams array. The same shape covers TEAM.<country>.json and the *.TMD.json. */
+int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, int max)
+{
+    const char *arr;
+    int arr_len;
+    if (mjson_find(json, len, "$.teams", &arr, &arr_len) != MJSON_TOK_ARRAY)
+        return -1;
+    int pos = 0, voff, vlen, vt, i = 0;
+    while (i < max && (pos = fast_array_next(arr, arr_len, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT)
+            continue;
+        memset(&out[i], 0, sizeof(TeamFileEx));
+        load_team_file_ex_slice(arr + voff, vlen, (uint8_t *)&out[i]);
+        i++;
+    }
+    return i;
+}
+
+#ifdef SWOS_SDL_BUILD
+/* Self-test (SWOS_DATA_JSON_SELFTEST=1): load teams/SCOTLAND.json and check the
+ * parse against known values. Proves the data-JSON loader builds the structs
+ * correctly. Semantic checks (not a raw memcmp) so endian-sensitive fields like
+ * globalTeamNumber are compared as logical values, not disk byte order. */
+int DataJson_SelfTest(void)
+{
+    /* CWD is anchored to the binary dir (bin/) by chdir_to_binary, like data/. */
+    FILE *f = fopen("data_json/teams/SCOTLAND.json", "rb");
+    if (!f) { printf("[data-json] selftest: cannot open data_json/teams/SCOTLAND.json\n"); return 2; }
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = (char *)malloc((size_t)n + 1);
+    if (!buf || fread(buf, 1, (size_t)n, f) != (size_t)n) { fclose(f); free(buf); return 2; }
+    buf[n] = '\0';
+    fclose(f);
+
+    static TeamFileEx t[64];
+    int cnt = DataJson_LoadTeamArray(buf, (int)n, t, 64);
+    free(buf);
+
+    int ok = 1;
+#define CHK(c) do { if (!(c)) { printf("[data-json]   FAIL: %s\n", #c); ok = 0; } } while (0)
+    CHK(cnt == 40);
+    CHK(t[0].team.countryNumber == 33);
+    CHK(t[0].team.teamOrdinal == 0);
+    CHK(memcmp(t[0].team.teamName, "ABERDEEN", 8) == 0);
+    CHK(t[33].team.teamOrdinal == 33);
+    CHK(memcmp(t[33].team.teamName, "RANGERS", 7) == 0);
+    CHK(t[33].team.globalTeamNumber == 1393);
+    CHK(memcmp(t[33].players[11].playerName, "PAUL GASCOIGNE", 14) == 0);
+    CHK((uint8_t)t[33].players[11].positionAndFace == 0xC8);  /* MF + blonde */
+    CHK((uint8_t)t[33].players[11].speedFinishing == 0x5F);   /* Sp5 F15 */
+#undef CHK
+    printf("[data-json] selftest teams: loaded=%d  %s\n", cnt, ok ? "PASS" : "FAIL");
+    printf("[data-json]   t[0]=%.17s  t[33]=%.17s gtn=%d  p11=%.22s\n",
+           t[0].team.teamName, t[33].team.teamName,
+           t[33].team.globalTeamNumber, t[33].players[11].playerName);
+    return ok ? 0 : 1;
+}
+#endif /* SWOS_SDL_BUILD */
 
 /* The named-blob ("blobs":{}) sub-object and the previous base64
  * payload-per-region scheme have been retired. Every region that used

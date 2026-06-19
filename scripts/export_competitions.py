@@ -338,14 +338,59 @@ def main():
         contests = parse_career(n, b)
     dump("career.json", "career_index", "contests", contests)
 
-    # misc lookup tables (best-effort): country lists + euro-cup seed buckets
-    misc = {"country_lists": [{"id": n, "countries": [num(x) for x in split_top(b)]}
-                              for n, b in find_defs(text, "CountryNumbers")],
-            "euro_cup_qual_seed_buckets": [parse_designated_arrays(n, b)
-                                           for n, b in find_defs(text, "EuroCupQualSeedBucketBlock")]}
-    with open(os.path.join(OUT_DIR, "misc.json"), "w") as f:
-        json.dump({"type": "misc", **misc}, f, indent=2, ensure_ascii=False)
-    print("wrote %-20s (%d country lists)" % ("misc.json", len(misc["country_lists"])))
+    # countries master — the editable {number, name, define, team_file} registry
+    # so adding/removing a country is one entry mapping to its teams/<NAME>.json.
+    teams_dir = os.path.join(os.path.dirname(OUT_DIR), "teams")
+
+    def country_entry(numv):
+        nm = tf.country_name(numv)
+        tj = nm + ".json"
+        return {"number": numv, "name": nm, "define": tf.country_define(numv),
+                "team_file": "teams/" + tj if os.path.isfile(os.path.join(teams_dir, tj)) else None}
+
+    country_lists = {}
+    for n, b in find_defs(text, "CountryNumbers"):
+        country_lists[n] = [country_entry(num(x)) for x in split_top(b)]
+    master = country_lists.get("allCountriesList", [])
+    with open(os.path.join(OUT_DIR, "countries.json"), "w") as f:
+        json.dump({"type": "countries", "count": len(master), "countries": master},
+                  f, indent=2, ensure_ascii=False)
+    print("wrote %-20s (%d countries master)" % ("countries.json", len(master)))
+
+    # euro-cup qualification seed buckets: the UEFA Cup berth allocation by
+    # country coefficient tier. Raw form repeats a country number once per berth
+    # (Germany×4 = 4 UEFA teams); re-express as readable {country, berths} runs
+    # (order preserved — the draw walks them in order). 0xFF = end sentinel.
+    def berths_of(arr):
+        out = []
+        for v in arr:
+            if v == 0xFF:
+                break
+            nm = tf.country_name(v)
+            if out and out[-1]["country"] == nm:
+                out[-1]["berths"] += 1
+            else:
+                out.append({"country": nm, "number": v, "berths": 1})
+        return out
+
+    buckets = []
+    for n, b in find_defs(text, "EuroCupQualSeedBucketBlock"):
+        d = parse_designated_arrays(n, b)
+        buckets = [{"tier": k, "size": len(v), "allocation": berths_of(v)}
+                   for k, v in d.items() if k != "id"]
+
+    payload = {"type": "seed_buckets",
+               "_comment": "euro_cup_qual_seed_buckets = UEFA Cup berths per country, by "
+                           "coefficient tier; order matters; re-expanded to repeated "
+                           "country numbers + 0xFF sentinel on load. See docs/DATA_CUSTOMIZE.md.",
+               "euro_cup_qual_seed_buckets": buckets}
+    # any country-number tables other than the allCountriesList master (none today)
+    extra = [{"id": n, "countries": v} for n, v in country_lists.items() if n != "allCountriesList"]
+    if extra:
+        payload["country_lists"] = extra
+    with open(os.path.join(OUT_DIR, "seed_buckets.json"), "w") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+    print("wrote %-20s (%d euro berth tiers)" % ("seed_buckets.json", len(buckets)))
 
 
 if __name__ == "__main__":

@@ -130,8 +130,13 @@ competitions/playoffs.json        Playoffs[]
 competitions/qualifying.json      QualifyingGroup[]
 competitions/league_blocks.json   Leagues[] + EnglishLeaguesBlock
 competitions/career.json          careerContests[35] (the index)
-competitions/misc.json            EuroCupQualSeedBucketBlock, CountryNumbers, seed tables
+competitions/countries.json       country master: {number, name, define, team_file} (allCountriesList)
+competitions/seed_buckets.json    euro-cup qualification berth allocation (EuroCupQualSeedBucketBlock)
 ```
+
+`countries.json` is the **master registry** that maps a country number → name →
+its `teams/<NAME>.json` — the single place to add/remove a country (see
+`docs/DATA_CUSTOMIZE.md`).
 
 (Per-competition files under `competitions/<id>.json` are an option if finer
 add/remove granularity is wanted; grouped-by-type is the recommended default.)
@@ -190,8 +195,11 @@ like the teams `--verify`).
 3. **Extend export** to leagues / playoffs / qualifying / career / league-blocks
    (incl. the English block) with cross-ref ids; full competition corpus.
    ✅ DONE — graph closed (0 dangling refs).
-4. **C loaders** (teams + competitions) table-driven + registry + auto-detect;
-   verify the JSON-loaded tables are byte-identical to the static init. ← NEXT
+4. **C loaders** (teams + competitions) table-driven + registry + auto-detect.
+   Teams loader ✅ DONE — `DataJson_LoadTeamArray` in save_format_json.c reuses
+   `load_team_file_ex_slice`/`s_team_file_fields`; `SWOS_DATA_JSON_SELFTEST=1`
+   loads SCOTLAND.json → PASS (40 teams, RANGERS/Gascoigne verified). Competitions
+   loader + registry + auto-detect/fallback ← NEXT.
 5. **Switch default to JSON**; retire the static initializers (competition_data.c
    → storage only). Game is data-driven.
 6. **Amiga path** — *open question* (see §8).

@@ -57,6 +57,14 @@ int16_t SaveJson_LoadTactics (uint8_t *filename, uint8_t *dst, uint32_t dst_capa
  * loaded or the save was from before this field existed. */
 uint8_t SaveJson_GetLoadedPrimaryCountryCode(void);
 
+/* ---- Data-file JSON loaders (bin/data_json) — docs/DATA_INTERNAL_JSON.md ----
+ * Reuse the save-format struct machinery to load the team/competition JSON. */
+struct TeamFileEx;
+int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, int max);
+#ifdef SWOS_SDL_BUILD
+int DataJson_SelfTest(void);   /* run via SWOS_DATA_JSON_SELFTEST=1 */
+#endif
+
 #ifdef __cplusplus
 }
 #endif

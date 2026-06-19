@@ -33,6 +33,7 @@
 
 #include "platform_sdl.h"
 #include "swos_settings.h"
+#include "save_format_json.h"   /* DataJson_SelfTest */
 
 #define SWOS_INI_PATH "SWOS.ini"
 
@@ -150,6 +151,13 @@ int main(int argc, char **argv)
      * exe regardless of where the user launched from. Done before
      * Settings_Load so SWOS.ini lookup hits the right file. */
     chdir_to_binary(argv ? argv[0] : NULL);
+
+#ifdef SWOS_SDL_BUILD
+    /* Data-file JSON loader self-test (docs/DATA_INTERNAL_JSON.md). Runs before
+     * any SDL/game init and exits — `SWOS_DATA_JSON_SELFTEST=1 ./bin/SWOS`. */
+    if (getenv("SWOS_DATA_JSON_SELFTEST"))
+        return DataJson_SelfTest();
+#endif
 
     /* 1) Hard-coded defaults — used when SWOS.ini doesn't exist yet
      * and no CLI flags override. */
