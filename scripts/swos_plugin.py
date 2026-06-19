@@ -99,11 +99,19 @@ class SwosHarness:
     def fire(self):
         """Press fire on the current entry (activates its onSelect). Sets BOTH
         fire (d7 bit 0) and shortFire (bit 5): most menu *selections* (CONTINUE
-        buttons, etc.) gate on shortFire via the entry's controlMask, not fire."""
+        buttons, etc.) gate on shortFire via the entry's controlMask, not fire.
+
+        The press is a SINGLE-FRAME PULSE: fire/shortFire are cleared after the
+        frame. A *held* fire mis-drives a nested modal entered by the press —
+        e.g. firing CAREER opens careerMenu (a _ShowMenu do/while loop), and a
+        still-set fire makes careerMenu immediately re-fire/exit its default
+        entry on the next frame (the careerMenu 'bounce/hang' bug)."""
         self.prime()
         self.h.set_var("fire", 1)
         self.h.set_var("shortFire", 1)
         self.h.cont(20)
+        self.h.set_var("fire", 0)
+        self.h.set_var("shortFire", 0)
         return self.where()
 
     def combo(self, controls):
@@ -151,6 +159,22 @@ class SwosHarness:
                                     SCREEN_W, SCREEN_H, SCREEN_STRIDE,
                                     palette_expr="&s_palette[0]", pal_fmt="rgba")
         return self._screencap_amiga(out_png)
+
+    def screencap_oriented(self, out_png):
+        """Screenshot with the selection cursor pinned BRIGHT and blink-text
+        visible, so the image reliably shows which entry is selected (the cursor
+        normally pulses kColorTableShine={2,2,1,1,7,7,1,1} via menuCursorFrame and
+        is faint on some frames). menuCursorFrame=8 -> after the frame's ++ -> 9
+        -> index (9&14)>>1=4 -> colour 7 (brightest). One input-free frame is
+        consumed to re-render with the pinned values. Use this to ORIENT — see
+        docs/HARNESS.md 'Navigating by screenshot'."""
+        self.prime()
+        self.h.set_var("menuCursorFrame", 8)
+        self.h.set_var("menuTextBlinkCounter", 0)
+        for v in ("fire", "shortFire", "up", "down", "left", "right"):
+            self.h.set_var(v, 0)
+        self.h.cont(20)            # re-render one frame with cursor pinned bright
+        return self.screencap(out_png)
 
     def _screencap_amiga(self, out_png):
         """Decode the Amiga interleaved-bitplane display -> PNG. Handles AGA

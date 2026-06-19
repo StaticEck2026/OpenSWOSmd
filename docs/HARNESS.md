@@ -224,6 +224,79 @@ aid; drive via menu state for precision). The plugin auto-detects the target:
   Palette is `gamePalette[]` (big-endian uint16, 12-bit `0x0RGB`; nibble×0x11 →
   8-bit). Camera offsets are assumed 0 (menus); in-match scrolling isn't decoded.
 
+## Reliability & navigating by screenshot
+
+Most "harness flakiness" is avoidable — it comes from process mistakes, not gdb
+(gdb itself is stable; the inspection/read path is rock-solid). Follow this:
+
+### Run the inferior HEADLESS (the #1 reliability fix)
+
+Set `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy` for the inferior (in the
+daemon's gdb, **before `run`**):
+
+```
+cmd "set environment SDL_VIDEODRIVER dummy"
+cmd "set environment SDL_AUDIODRIVER dummy"
+cmd "break menu_system.c:1567" ; cmd "run" ; waitstop(200)
+```
+
+No real SDL window → no WSLg window churn → the daemon stays stable across long
+runs. The game **still renders to `frontbufferBaseAltPtr`** (its 8bpp chunky
+buffer — the chunky draw is the game's own code, before the SDL upload), so
+`screencap` works unchanged. Booting *with* a real window and relaunching it many
+times per session is what made the daemon look unreliable.
+
+### Daemon discipline
+
+- **Launch the daemon ONCE per session and leave it alone.** Do not rapid
+  kill/relaunch it — that (stale sockets, half-dead gdb) is most of the "flake".
+- **Boot is slow (1–2 min)** — the loader intro auto-times-out to the main menu
+  and ignores the `1567` breakpoint until then. Use `waitstop(200)`; never wrap
+  the boot in a tight outer `timeout`.
+- **Re-boot the inferior in the same daemon** with `kill` then `run` — breakpoints
+  and `set environment` persist, so you don't pay a relaunch.
+- Foreground `sleep` is blocked in this environment — poll background output, or
+  use `python3 -c "import time;time.sleep(N)"` as its own step (not chained).
+
+### Navigate by screenshot — `screencap_oriented()`
+
+**Use screenshots to orient.** `screencap_oriented(out_png)` pins the selection
+cursor BRIGHT (`menuCursorFrame=8` → `kColorTableShine[4]`=colour 7; the cursor
+normally pulses `{2,2,1,1,7,7,1,1}` and is faint/invisible on some frames) and
+blink-text visible, re-renders one input-free frame, then captures. Read the PNG
+to see *which* screen you're on and what's displayed (team lists, names, etc.).
+
+### The navigation-learning process
+
+To discover an unknown menu flow, combine three reads at each screen:
+1. `_current_init()` / `((Menu*)currentMenu)->onInit` — which screen.
+2. `enum()` — every entry's `onSelect` symbol (tells you what each entry *does*).
+3. `screencap_oriented()` — *see* it (labels, selection, lists).
+
+Then act with `select("_SymbolName")` (jump to + fire an entry by its onSelect) or
+`nav("down")`/`fire()`, and repeat. Symbols + screenshot together = you always
+know where you are and where to go.
+
+### Single-frame input pulse
+
+`fire()` / `combo()` clear `fire`/`shortFire` after the frame, so input is a
+one-frame pulse. A *held* fire mis-drives a nested `_ShowMenu` modal (it would
+re-fire/exit the modal's default entry on the next frame).
+
+### ⚠️ Known gap — driving the careerMenu (fresh-career START)
+
+Starting a career *from scratch through the menus* is **not yet scripted**. The
+`careerMenu` (manager-setup / team-select screen) runs as a nested `_ShowMenu`
+`do { _MenuProc(); } while(!exitMenu)` modal, and in testing the `1567`
+breakpoint did **not** reliably hold through that modal — after CAREER is fired
+the inferior bounces back to `_FrontEndMainLoop` and then free-runs (the bp
+catches the boot but not subsequent frames). Root cause still open. Until it's
+fixed, the season-loop harness can only *advance loaded* careers. (`_LoadLiverpool`
+starts an English career directly via an inferior `call`, but it's a debug
+shortcut, not the real path.)
+
+---
+
 ## Season loop (driving a career through seasons)
 
 > ### ⚠️ REQUIRED build flags for season runs
