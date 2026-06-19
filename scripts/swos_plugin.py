@@ -475,26 +475,28 @@ class SwosHarness:
         to the inject breakpoint until the clock runs out) — impractical to drive
         unattended. Sim mode is re-asserted every step.
 
-        STUCK DETECTION keys on STRUCTURAL progress only — matchesPlayedCount,
-        currentRoundIndex, currentSeasonShowing, seasonFinished — NOT the screen.
-        The league match-day keeps onInit=_DIYLeagueTournamentInit + ordinal=3
-        constant across fixtures, so the old (screen, ordinal) key false-stopped
-        at ~mp 6 while matches were in fact being played. When fixtures are
-        exhausted (seasonFinished=1) the hub's PLAY MATCH runs _SeasonFinished ->
-        careerOverMenu (_CareerOverInit).
+        STUCK DETECTION keys on (matchesPlayedCount, currentRoundIndex,
+        currentSeasonShowing, seasonFinished), NOT the screen — the league
+        match-day keeps onInit=_DIYLeagueTournamentInit + ordinal=3 constant
+        across fixtures, so the old (screen, ordinal) key false-stopped while
+        matches were in fact playing.
 
-        ⚠️ KNOWN LIMITATION (2026-06-19): this does NOT yet complete a full
-        ENGLISH-LEAGUE season. sim mode advances several rounds (mp climbs into
-        the thousands across the 4 divisions), then the blind-shortFire loop
-        starts WANDERING hub<->match-day<->chairman-memo with currentRoundIndex
-        frozen (~3) and mp no longer rising — shortFire on some of those screens
-        exits to the hub instead of advancing the round. The structural-stuck
-        check now TERMINATES on that freeze (returns False with the state) rather
-        than re-simming forever, but driving a league season to its end needs
-        screen-specific input at the freeze point (the open follow-up). The
-        season TRANSITION path (drive_transition) and AI-fixture auto-sim do
-        work; cup/national careers with few human matches fare better than a
-        full 4-division league."""
+        ⚠️ OVERLAY TRAP / KNOWN LIMITATION (2026-06-19): this does NOT yet
+        complete a full ENGLISH-LEAGUE season, and there is NO reliable in-season
+        progress counter. diyCompetitionStart.matchesPlayedCount is an OVERLAID
+        field — it reads 0 at the hub and fixed garbage (1614) the instant the
+        league match-day is active, regardless of fixtures played;
+        currentRoundIndex reads a constant default (3). So the stuck tuple above
+        can't actually measure mid-season progress (only currentSeasonShowing /
+        seasonFinished are cross-screen-stable, and they don't tick within a
+        season). From a clean career the blind-shortFire loop WANDERS
+        hub<->match-day<->chairman-memo with seasonFinished never flipping; the
+        check still TERMINATES instead of looping forever. Driving a 4-division
+        league to _CareerOverInit needs (1) a non-overlaid progress field from the
+        data-overlay UNTANGLE, and (2) per-screen input routing (don't
+        blanket-shortFire the hub/memo — they exit instead of advancing). The
+        season TRANSITION path (drive_transition) and the sim lever itself work;
+        this in-season league completion is the open follow-up."""
         h = self.h
         h.delete_breakpoints()
         h.break_at(INJECT_LINE)

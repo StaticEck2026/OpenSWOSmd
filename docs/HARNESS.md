@@ -435,11 +435,12 @@ free-running into a screen that waits for input.
    `careerTeam.team.teamControls = TEAM_COMPUTER (1)` — the game then treats the
    player's fixture like an AI fixture and **auto-simulates** it on `shortFire`
    (computes a result, no squad, no in-game match). `drive_inseason(sim_mode=True)`
-   (the default) sets this every step. Confirmed 2026-06-19: with sim mode the
-   player's fixtures sim instantly and `matchesPlayedCount` climbs (6→7→8 in a
-   focused test; into the thousands over a long run across the 4 divisions). (AI
-   fixtures already auto-sim via the game's own `selector==0` path; sim mode just
-   brings the player's fixture into the same path.)
+   (the default) sets this every step. Confirmed 2026-06-19 on a just-started
+   career: a pending player fixture simmed instantly (no squad/in-game screen).
+   (AI fixtures already auto-sim via the game's own `selector==0` path; sim mode
+   just brings the player's fixture into the same path.) NOTE: don't measure this
+   by `matchesPlayedCount` — that field is an overlay and reads garbage on the
+   league screen (see the progress-counter caveat below).
 
 The in-season **cup/league match-day menus self-drive on `shortFire`**:
 `_DIYCupInit` / `_DIYLeagueTournamentInit` pre-select the correct entry at each
@@ -449,15 +450,17 @@ state — sim the player's fixture (in sim mode), auto-advance an AI fixture, or
 (`seasonFinished=1`), the contest hub's PLAY MATCH runs
 `_SeasonFinished → careerOverMenu` (the hub).
 
-**Stuck detection must be STRUCTURAL.** The league match-day keeps
-`onInit = _DIYLeagueTournamentInit` and `selectedEntry->ordinal = 3` ("- MATCH -")
-**constant across every fixture** — so keying "stuck" on `(screen, ordinal)`
-false-triggers even while matches are being simmed (the original bug: the driver
-bailed at ~`mp=6` reporting "stuck" while the season was in fact progressing).
-`drive_inseason` therefore keys stuck on **structural** progress only
-(`matchesPlayedCount`, `currentRoundIndex`, `currentSeasonShowing`,
-`seasonFinished`), ignoring the screen — it gives up only when none of those move
-for `stuck_limit` steps.
+**⚠️ No reliable in-season progress counter (overlay trap).** Do NOT trust
+`diyCompetitionStart.matchesPlayedCount` as a progress signal — it is an
+**overlaid field** (see "Overlapped data regions"): it reads `0` at the contest
+hub and a fixed garbage value (`1614` in testing) the moment the league match-day
+is active, regardless of how many fixtures actually played. `currentRoundIndex`
+likewise reads a constant default (`3`) for a fresh league career. The only
+cross-screen-stable fields are `currentSeasonShowing` and `seasonFinished`, so
+`drive_inseason` keys stuck on those — but they don't tick *within* a season, so
+it can't measure mid-season progress. A clean in-season progress metric needs the
+data-overlay **untangle** (the field-rename work in flight) to expose a
+non-overlaid counter first.
 
 **Status of the loop (SDL):**
 
@@ -465,19 +468,22 @@ for `stuck_limit` steps.
   `_ContestMenuInit` (England/Arsenal, season 0), validated 2026-06-19. Save/load
   round-trip of that career (`FRESHARS.CAR`) also validated (rc 0 both ways).
 - ✅ **Transition** — season 3→4 via the skip-latch path, `health=OK`, zero
-  wedges (earlier sessions).
-- ✅ **AI-fixture auto-sim + sim mode** — the player's and AI fixtures sim and
-  `matchesPlayedCount` climbs steadily under `drive_inseason(sim_mode=True)`.
-- ⚠️ **OPEN — full ENGLISH-LEAGUE season does NOT complete yet.** After
-  advancing several rounds (mp into the thousands across the 4 divisions), the
-  blind-`shortFire` loop starts **wandering** `hub ↔ match-day ↔ chairman-memo`
-  with `currentRoundIndex` frozen (~3) and `mp` no longer rising — `shortFire` on
-  some of those screens exits to the hub instead of advancing the round. The
-  structural-stuck check now terminates cleanly on that freeze instead of
-  re-simming forever. **Next step:** give `drive_inseason` screen-specific input
-  at the freeze (don't blanket-`shortFire` the hub / memo; route each screen),
-  then re-validate a season to `_CareerOverInit`. Cup/national careers (few human
-  matches) get further than a 4-division league.
+  wedges (earlier sessions, loaded careers).
+- ✅ **AI-fixture auto-sim + sim lever** — the in-game match plays in REAL TIME
+  for a human-controlled team (`teamControls` 2/3); `careerTeam.team.teamControls
+  = 1` (TEAM_COMPUTER) makes the player's fixtures auto-sim via the game's own
+  `selector==0` path. Confirmed on the live just-started career (a pending
+  fixture simmed instantly).
+- ⚠️ **OPEN — full ENGLISH-LEAGUE season does NOT complete via this driver.**
+  From a clean career the blind-`shortFire` loop **wanders**
+  `hub ↔ match-day ↔ chairman-memo` and makes no measurable progress (mp/roundIdx
+  are the overlay/default values above; `seasonFinished` never flips). The driver
+  terminates cleanly (structural-stuck) instead of looping forever, but driving a
+  4-division league to `_CareerOverInit` needs: (1) a real progress counter from
+  the **untangle**, and (2) per-screen input routing (don't blanket-`shortFire`
+  the hub/memo — those exit instead of advancing the round). This is entangled
+  with the data-overlay cleanup and is the open follow-up. The season-TRANSITION
+  path (`drive_transition`) and loaded cup/national careers fare better.
 
 ## Reusing for another project
 
