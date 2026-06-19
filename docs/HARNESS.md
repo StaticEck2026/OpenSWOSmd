@@ -471,11 +471,13 @@ cold-boot fresh each time.
 
 **Status of the loop (SDL) — VALIDATED on the fresh binary 2026-06-19:**
 
-- ✅ **Multi-season advance** — `boot()` → `load_career("MILAN.CAR")` (rc 0) →
+- ✅ **Full career to retirement** — `boot()` → `load_career("MILAN.CAR")` (rc 0) →
   `enter_career()` → `_CareerOverInit` (season 3, sane: gameType 4, numSel 47,
-  `gamesPlayed=[34,34,34]`). `advance_one_season()` → season 4; `run_seasons(4)` →
-  **seasons 5,6,7,8** — five seasons total (3→8), each landing at
-  `_CareerOverInit`, ~47s/season, no wedge. This is the working harness.
+  `gamesPlayed=[34,34,34]`). `advance_one_season()` / `run_seasons()` drove
+  **season 3 → 19** (17 seasons, each landing at `_CareerOverInit`, ~17–47s/season,
+  no wedge); then CONTINUE CAREER at the season-19 hub triggered the retirement
+  flow — `_ChairmanMemosInit` (retirement memo) → `_SWOSMainMenuInit` (career reset,
+  season 0). This is the working harness: a complete career lifecycle.
 - ✅ **Fresh-career START** — `boot()` + `start_fresh_career()` cold-boot →
   `_ContestMenuInit` (England/Arsenal, season 0), validated. Use this to CREATE a
   career; to DRIVE seasons, save it and re-enter (or play into a competition)
