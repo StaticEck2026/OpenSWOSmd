@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include "platform_sdl.h"
 #include "display.h"
+#include "dos_mode.h"        /* gDosGraphics */
+#include "dos_graphics.h"    /* DosGfx_BuildPalette */
 
 #include <SDL.h>
 #include <stdio.h>
@@ -460,6 +462,21 @@ void Platform_SetWindowScale(int scale)
  * copperlist offsets COP_PAL_B*_C*_OFF. */
 static void refresh_palette_from_copper(void)
 {
+    if (gDosGraphics) {
+        /* DOS graphics use the full 256-colour DOS palette (not the Amiga
+         * 16-colour copper). The pitch-condition overlay keys off the low byte
+         * of pitchNumberAndType (the high byte is which pitch graphic). */
+        extern uint16_t pitchNumberAndType;
+        uint8_t rgb[768];
+        DosGfx_BuildPalette((int)(pitchNumberAndType & 0xFF), rgb);
+        for (int i = 0; i < 256; ++i) {
+            s_palette[i].r = rgb[i * 3 + 0];
+            s_palette[i].g = rgb[i * 3 + 1];
+            s_palette[i].b = rgb[i * 3 + 2];
+            s_palette[i].a = 255;
+        }
+        return;
+    }
 #ifdef AGA
     /* TODO: walk 8 banks of 32 colours each, combining the high/low MOVEs. */
     /* Until then, leave whatever was last loaded. */
