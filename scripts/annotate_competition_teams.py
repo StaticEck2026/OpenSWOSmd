@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Annotate the TeamId seed lists in src/competition_data.c.
 
-For every CompetitionCup / CompetitionCup2 `teamSeedList` (the LAST aggregate of
+For every CompetitionCup / CompetitionTournament `teamSeedList` (the LAST aggregate of
 each initializer), rewrite each {country, ordinal} pair so the country is its
 CN_* #define and the team name is appended as a comment:
 
@@ -29,7 +29,7 @@ SRC = os.path.join(REPO, "src", "competition_data.c")
 
 # {N, M} or already-converted {CN_X, M /* ... */} ; captures country token + ordinal
 PAIR = re.compile(r"\{\s*(CN_\w+|-?\d+)\s*,\s*(-?\d+)\s*(?:/\*.*?\*/\s*)?\}", re.S)
-DEF = re.compile(r"\bCompetitionCup2?\s+[A-Za-z_]\w*\s*=\s*\{")
+DEF = re.compile(r"\bCompetition(?:Cup|Tournament)\s+[A-Za-z_]\w*\s*=\s*\{")
 
 
 def name2num():
@@ -114,7 +114,7 @@ def main():
     print("seed lists rewritten: %d   team-id pairs annotated: %d" % (n_lists, n_pairs))
 
     # preview the euroCup seed list
-    m = re.search(r"CompetitionCup2 euroCup =.*?\n\};", out, re.S)
+    m = re.search(r"CompetitionTournament euroCup =.*?\n\};", out, re.S)
     if m:
         print("\n--- euroCup (after) ---")
         print(m.group(0))

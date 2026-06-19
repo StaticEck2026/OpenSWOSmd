@@ -10,13 +10,13 @@
  * Major International Cups
  * ====================================================================== */
 
-extern CompetitionCup2 euroCup;
+extern CompetitionTournament euroCup;
 extern CompetitionCup cupWinnersCup;
 extern CompetitionCup uefaCup;
 
 /* World Cup */
-extern CompetitionCup2 worldCup2;
-extern CompetitionCup2 worldCup;
+extern CompetitionTournament worldCup2;
+extern CompetitionTournament worldCup;
 
 /* World Cup Qualifying Groups */
 extern CompetitionCup worldCupQualifyingGroup1;
@@ -29,10 +29,10 @@ extern CompetitionCup worldCupQualifyingGroup7;
 extern CompetitionCup worldCupQualifyingGroup8;
 
 /* World Cup Regional Qualifications */
-extern CompetitionCup2 northAmericaWorldCupQualification;
-extern CompetitionCup2 southAmericaWorldCupQualification;
-extern CompetitionCup2 africaWorldCupQualification;
-extern CompetitionCup2 asiaWorldCupQualification;
+extern CompetitionTournament northAmericaWorldCupQualification;
+extern CompetitionTournament southAmericaWorldCupQualification;
+extern CompetitionTournament africaWorldCupQualification;
+extern CompetitionTournament asiaWorldCupQualification;
 extern CompetitionCup oceaniaWorldCupQualification;
 
 /* Invitation / Tour / Friendly */
@@ -44,8 +44,8 @@ extern CompetitionCup friendly;
  * European Championships
  * ====================================================================== */
 
-extern CompetitionCup2 europeanChampionships2;
-extern CompetitionCup2 europeanChampionships;
+extern CompetitionTournament europeanChampionships2;
+extern CompetitionTournament europeanChampionships;
 
 /* EC Qualifying Groups */
 extern CompetitionCup ecQualifyingGroup1;
@@ -61,10 +61,10 @@ extern CompetitionCup ecQualifyingGroup8;
  * Continental Cups
  * ====================================================================== */
 
-extern CompetitionCup2 copaAmerica;
-extern CompetitionCup2 africanNationsCup;
-extern CompetitionCup2 northAmericanCup;
-extern CompetitionCup2 asianCup;
+extern CompetitionTournament copaAmerica;
+extern CompetitionTournament africanNationsCup;
+extern CompetitionTournament northAmericanCup;
+extern CompetitionTournament asianCup;
 extern CompetitionCup oceaniaCup;
 
 /* ======================================================================
@@ -149,24 +149,19 @@ extern CompetitionLeague newZealandLeague;
  * Complex leagues with playoffs
  * ====================================================================== */
 
-/* englishLeagues / englishLeagues1..3: untangled into EnglishLeaguesBlock
- * fields (._main/._div1/._div2/._div3) — see below + competition_data.c. */
 extern Playoffs div1Playoffs;
 extern Playoffs div2Playoffs;
 extern Playoffs div3Playoffs;
 
-/* EnglishLeaguesBlock: composite of the four English league structs into one
- * BSS run so the .equ aliases above resolve at consistent byte offsets. On
- * 64-bit the .equ offsets (102/182/262) become stale because pointer-bearing
- * substructs widen — typed access via the block fields below avoids that. */
-typedef struct __attribute__((packed)) {
-    CompetitionLeague _main;
-    Leagues           _div1;   /* was Leagues_4_2_24 (uses playoffs/nextGroup/qualifierIndexPairs) */
-    Leagues           _div2;   /* was Leagues_4_2_24 */
-    Leagues           _div3;   /* was Leagues_4 (trailing fields zero) */
-} EnglishLeaguesBlock;
-
-extern EnglishLeaguesBlock englishLeaguesBlock;
+/* England's leagues — standalone per-country globals (consolidated from the old
+ * EnglishLeaguesBlock 2026-06-18 so England is uniform with every other country).
+ * englishLeague = the 4-division league; englishLeagues1/2/3 = the per-division
+ * promotion/relegation link blocks. Forward-declared here so their mutual
+ * cross-references resolve inside competition_data.c. */
+extern CompetitionLeague englishLeague;
+extern Leagues englishLeagues1;
+extern Leagues englishLeagues2;
+extern Leagues englishLeagues3;
 
 extern CompetitionLeague dutchLeague;
 extern Leagues dutchLeagues1;
@@ -248,13 +243,13 @@ extern CompetitionCup japaneseEmperorsCup;
  * Competition "Copy" variables (BSS, used at runtime for career/season)
  * ====================================================================== */
 
-extern CompetitionCup2 euroCupCopy;
+extern CompetitionTournament euroCupCopy;
 extern CompetitionCup cupWinnersCupCopy;
 extern CompetitionCup uefaCupCopy;
 extern CompetitionCup invitationTournamentCopy;
 extern CompetitionCup tourCopy;
 extern CompetitionCup friendlyCopy;
-extern CompetitionCup2 europeanChampionships2Copy;
+extern CompetitionTournament europeanChampionships2Copy;
 extern CompetitionCup ecQualifyingGroup1Copy;
 extern CompetitionCup ecQualifyingGroup2Copy;
 extern CompetitionCup ecQualifyingGroup3Copy;
@@ -263,12 +258,12 @@ extern CompetitionCup ecQualifyingGroup5Copy;
 extern CompetitionCup ecQualifyingGroup6Copy;
 extern CompetitionCup ecQualifyingGroup7Copy;
 extern CompetitionCup ecQualifyingGroup8Copy;
-extern CompetitionCup2 copaAmericaCopy;
-extern CompetitionCup2 africanNationsCupCopy;
-extern CompetitionCup2 northAmericanCupCopy;
-extern CompetitionCup2 asianCupCopy;
+extern CompetitionTournament copaAmericaCopy;
+extern CompetitionTournament africanNationsCupCopy;
+extern CompetitionTournament northAmericanCupCopy;
+extern CompetitionTournament asianCupCopy;
 extern CompetitionCup oceaniaCupCopy;
-extern CompetitionCup2 worldCup2Copy;
+extern CompetitionTournament worldCup2Copy;
 extern CompetitionCup worldCupQualifyingGroup1Copy;
 extern CompetitionCup worldCupQualifyingGroup2Copy;
 extern CompetitionCup worldCupQualifyingGroup3Copy;
@@ -277,10 +272,10 @@ extern CompetitionCup worldCupQualifyingGroup5Copy;
 extern CompetitionCup worldCupQualifyingGroup6Copy;
 extern CompetitionCup worldCupQualifyingGroup7Copy;
 extern CompetitionCup worldCupQualifyingGroup8Copy;
-extern CompetitionCup2 northAmericaWorldCupQualificationCopy;
-extern CompetitionCup2 southAmericaWorldCupQualificationCopy;
-extern CompetitionCup2 africaWorldCupQualificationCopy;
-extern CompetitionCup2 asiaWorldCupQualificationCopy;
+extern CompetitionTournament northAmericaWorldCupQualificationCopy;
+extern CompetitionTournament southAmericaWorldCupQualificationCopy;
+extern CompetitionTournament africaWorldCupQualificationCopy;
+extern CompetitionTournament asiaWorldCupQualificationCopy;
 extern CompetitionCup oceaniaWorldCupQualificationCopy;
 
 /* ======================================================================

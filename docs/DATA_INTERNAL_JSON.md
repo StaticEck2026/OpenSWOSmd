@@ -41,18 +41,17 @@ game can load JSON in place of the compiled data during testing.
 |------|-------|------|
 | `CompetitionCup`      | ~76 | domestic/continental cups (merged header + rounds + name[2] + teamSeedList[32]) |
 | `CompetitionLeague`   | ~65 | leagues |
-| `CompetitionCup2`     | ~13 | type-2 group/seeded cups (EURO/CWC/UEFA/WC etc.) |
+| `CompetitionTournament` | ~13 | type-2 staged/group tournaments (EURO/CWC/UEFA/WC etc.); was `CompetitionCup2` |
 | `QualifyingGroup`     | ~10 | qualifier group tables (compCup[], countries[]) |
 | `Playoffs`            | ~7  | promotion/relegation playoffs |
-| `Leagues`             | ~4  | league-group link blocks (`{league*, linkParams}` ×4 + playoffs + nextGroup) |
-| `EnglishLeaguesBlock` | 1   | embeds several `Leagues`/`Playoffs` sub-records |
+| `Leagues`             | ~7  | league-group link blocks (`{league*, linkParams}` ×4 + playoffs + nextGroup); incl. `englishLeagues1/2/3` |
 | `CompetitionCareer`   | 1 (`careerContests[35]`) | the master index: `{competition*, competitionCopy*, templateSize}` ×35 |
 | `EuroCupQualSeedBucketBlock`, `CountryNumbers`, misc `uint8/16` tables | a few | seeds / lookups |
 
 Struct definitions live in `src/game_types.h` (the merged
-`CompetitionCup`/`CompetitionCup2`/`CompetitionLeague`/`Playoffs`/`Leagues`/
+`CompetitionCup`/`CompetitionTournament`/`CompetitionLeague`/`Playoffs`/`Leagues`/
 `QualifyingGroup`/`CompetitionCareer`, and the `Competition`/`CompCupHeader`/
-`CompCupHeader2`/`Round` building blocks).
+`CompTournamentHeader`/`Round` building blocks).
 
 ---
 
@@ -64,8 +63,8 @@ Struct definitions live in `src/game_types.h` (the merged
    On load they are interned / pointed at a string pool. This is the same
    pointer-to-disk fix the save format already uses for competition names.
 2. **Cross-object pointers** — `CompetitionCareer{competition*, competitionCopy*}`,
-   `Leagues{league1..4*, playoffs*, nextGroup*}`, `EnglishLeaguesBlock` embedding
-   `Leagues`. → JSON stores a **stable string ID** = the object's C symbol name
+   `Leagues{league1..4*, playoffs*, nextGroup*}`, the country `<country>Table[]`
+   competition lists. → JSON stores a **stable string ID** = the object's C symbol name
    (`"competition": "euroCup"`). A **registry** (id → object) resolves them on
    load. Never store an address.
 3. **The `*Copy` runtime templates** — `euroCupCopy`, `uefaCupCopy`, … are NOT
@@ -95,11 +94,11 @@ Reuse the `.CAR`/teams conventions (`docs/DATA_JSON.md` §4): snake_case keys,
 arrays for fixed byte runs, numbers host-order-independent. Each addressable
 object carries an `"id"` (its C symbol name) so cross-refs resolve.
 
-`CompetitionCup` / `CompetitionCup2` (mirrors the merged structs):
+`CompetitionCup` (knockout) / `CompetitionTournament` (staged, was Cup2):
 
 ```json
 {
-  "id": "euroCup", "type": "cup2",
+  "id": "euroCup", "type": "tournament",
   "comp": { /* Competition base: comp_type, num_teams, ... + derived offset bytes */ },
   "seeding_type": 1, "menu_state": 1, "play_each_team": 2, "away_goals_mode": 3,
   "subs_and_points_for_win": 53, "round_string_base": 4,
@@ -114,8 +113,8 @@ object carries an `"id"` (its C symbol name) so cross-refs resolve.
 ```
 
 `CompetitionLeague`, `Playoffs`, `QualifyingGroup` — one object schema each,
-fields named after the struct. `Leagues` and `EnglishLeaguesBlock` store member
-references **by id** (`"league1": "englishPremier"`, `"playoffs": "div1Playoffs"`,
+fields named after the struct. `Leagues` blocks store member
+references **by id** (`"league": "englishLeague"`, `"playoffs": "div1Playoffs"`,
 `"next_group": null`) plus `link_params` arrays. `careerContests` (the master
 index) is an ordered array of `{ "competition": "<id>", "template_size": N }` —
 the `competitionCopy` is derived.
@@ -123,12 +122,12 @@ the `competitionCopy` is derived.
 ### File grouping (one file per type — diffable, not 175 tiny files)
 
 ```
-competitions/cups.json            CompetitionCup[]
-competitions/cups2.json           CompetitionCup2[]
-competitions/leagues.json         CompetitionLeague[]
+competitions/cups.json            CompetitionCup[] (knockout cups)
+competitions/tournaments.json     CompetitionTournament[] (staged/group; was cups2.json)
+competitions/leagues.json         CompetitionLeague[] (incl. englishLeague)
 competitions/playoffs.json        Playoffs[]
 competitions/qualifying.json      QualifyingGroup[]
-competitions/league_blocks.json   Leagues[] + EnglishLeaguesBlock
+competitions/league_blocks.json   Leagues[] (incl. englishLeagues1/2/3 — EnglishLeaguesBlock removed)
 competitions/career.json          careerContests[35] (the index)
 competitions/country_competitions.json  competitionsTable[country] -> {leagues, cups} (the <country>Table[] map)
 competitions/countries.json       country master: {number, name, define, team_file} (allCountriesList)

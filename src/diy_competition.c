@@ -3498,7 +3498,7 @@ void _DIY_RebuildCompetitionAndTeamSelectionCaches(void)
     int16_t count = ctxS->numTeams - 1;
 
     /* diyCompetitionTablePtr points at the promotion-link record array at
-     * the head of a `Leagues` struct (e.g. &englishLeaguesBlock._div1):
+     * the head of a `Leagues` struct (e.g. &englishLeagues1):
      * each record is {CompetitionLeague *league; int8_t linkParams[8]}.
      * The asm (DIY_RebuildCompetitionAndTeamSelectionCaches +
      * Career_CopyCompetitionTeamByIndex) consumes THREE longs per record:

@@ -9,7 +9,7 @@ team names via swos_team_file, and writes one JSON file per competition type to
 bin/data_json/competitions/.
 
 Phase 2 (this commit): the cup competitions — CompetitionCup (cups.json) and
-CompetitionCup2 (cups2.json). Leagues / playoffs / qualifying / career index /
+CompetitionTournament (tournaments.json). Leagues / playoffs / qualifying / career index /
 league-blocks follow (mechanism B, the in-build C emitter, is the production
 path; see the doc).
 
@@ -31,7 +31,7 @@ OUT_DIR = os.path.join(REPO, "bin", "data_json", "competitions")
 
 # Self-relative offset bytes are derived layout artifacts (game_types.h static
 # asserts / offsetof fix them): CompetitionCup name/teamList = 15/21,
-# CompetitionCup2 = 35/41, CompetitionLeague name = 33 (offsetof(name)-5).
+# CompetitionTournament = 35/41, CompetitionLeague name = 33 (offsetof(name)-5).
 CUP_OFFSETS = {False: (15, 21), True: (35, 41)}   # keyed by is_cup2
 LEAGUE_NAME_OFFSET = 33
 
@@ -173,7 +173,7 @@ def parse_cup(name: str, body: str, is_cup2: bool, strings: dict) -> dict:
     seed_tok = members[3] if len(members) > 3 else None
 
     htoks = split_top(inner(header))
-    d = {"id": name, "type": "cup2" if is_cup2 else "cup",
+    d = {"id": name, "type": "tournament" if is_cup2 else "cup",
          "comp": parse_comp(htoks[0], *CUP_OFFSETS[is_cup2])}
 
     if is_cup2:
@@ -347,8 +347,8 @@ def main():
 
     dump("cups.json", "competition_cups", "competitions",
          [parse_cup(n, b, False, strings) for n, b in find_defs(text, "CompetitionCup")])
-    dump("cups2.json", "competition_cups2", "competitions",
-         [parse_cup(n, b, True, strings) for n, b in find_defs(text, "CompetitionCup2")])
+    dump("tournaments.json", "competition_tournaments", "competitions",
+         [parse_cup(n, b, True, strings) for n, b in find_defs(text, "CompetitionTournament")])
     dump("playoffs.json", "playoffs", "playoffs",
          [parse_playoffs(n, b, strings) for n, b in find_defs(text, "Playoffs")])
     dump("leagues.json", "competition_leagues", "leagues",
@@ -356,14 +356,10 @@ def main():
     dump("qualifying.json", "qualifying_groups", "groups",
          [parse_qualifying(n, b) for n, b in find_defs(text, "QualifyingGroup")])
 
-    # league blocks: the standalone Leagues groups + the English block (designated init)
-    groups = [parse_leagues(n, b) for n, b in find_defs(text, "Leagues")]
-    english = [parse_english_block(n, b, strings) for n, b in find_defs(text, "EnglishLeaguesBlock")]
-    with open(os.path.join(OUT_DIR, "league_blocks.json"), "w") as f:
-        json.dump({"type": "league_blocks", "groups": groups,
-                   "english_block": english[0] if english else None},
-                  f, indent=2, ensure_ascii=False)
-    print("wrote %-20s (%d groups + %d english block)" % ("league_blocks.json", len(groups), len(english)))
+    # league blocks: the standalone Leagues groups (englishLeagues1/2/3 are now
+    # regular groups here too, after the EnglishLeaguesBlock consolidation).
+    dump("league_blocks.json", "league_blocks", "groups",
+         [parse_leagues(n, b) for n, b in find_defs(text, "Leagues")])
 
     # career index (single table of 35 contests)
     contests = []
