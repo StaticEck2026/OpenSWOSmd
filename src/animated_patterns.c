@@ -282,12 +282,6 @@ _DrawAnimatedPatterns(void)
     uint32_t baseAddr = ANIM_TILE_BASE;
     (void)baseAddr;
 
-    /* DOS pitch has no relocated pointer-slot table to walk; the animation
-     * math would read raw DAT bytes and stomp s_pitchFullPtrs. Skip it
-     * (see _ResetAnimatedPatternsForBothTeams). */
-    if (gDosGraphics)
-        return;
-
     /* ---- state 0: replayState == 0 → no game ---- */
     if (replayState == 0) {
         animPatternsState = 0;
@@ -309,6 +303,15 @@ _DrawAnimatedPatterns(void)
             showFansCounter--;
 
         otherTeamScored = 0;
+
+        /* DOS: the per-frame state bookkeeping above MUST run — in particular
+         * the showFansCounter countdown, since _MoveCamera stays locked while
+         * showFansCounter != 0 (set to 100 at kickoff). Only the pitch-tile
+         * animation below is skipped: it walks the raw pitchDatBuffer slots,
+         * which on the DOS path hold raw DAT bytes (not relocated pointers) and
+         * would stomp s_pitchFullPtrs. See _ResetAnimatedPatternsForBothTeams. */
+        if (gDosGraphics)
+            return;
 
         if (showFansCounter != 0)
             goto game_hasnt_started;
