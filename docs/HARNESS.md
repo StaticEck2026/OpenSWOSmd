@@ -403,16 +403,19 @@ boot()                         → _SWOSMainMenuInit          (headless, ~2 min)
 from swos_plugin import SwosHarness
 s = SwosHarness()
 s.boot()                                  # cold start → main menu
-s.start_fresh_career()                    # default: Arsenal, English Premier League
-# → returns '_ContestMenuInit'; the career is live.
+s.start_fresh_career()                    # CREATE a career → _ContestMenuInit (Arsenal, EPL)
 s.save_career("FRESHARS.CAR")             # snapshot it (reload in seconds later)
-s.drive_inseason()                        # sim-advances fixtures (see ⚠️ below — a
-                                          # full 4-division league season does not
-                                          # complete yet; the driver wanders mid-season)
 ```
 
+`start_fresh_career()` is for **creating** a career; it lands at the *in-season*
+hub (`_ContestMenuInit`). To **drive seasons**, use the proven `run_seasons` path
+on a career that's at the *season-end* hub (`_CareerOverInit`) — see "⭐ READ THIS
+FIRST" at the top. Driving a *fresh* career's first season in-season with
+`drive_inseason` is **not** the proven engine (blind `shortFire` wanders); the
+reliable season driver is `run_seasons` on a loaded career (e.g. `MILAN.CAR`).
+
 To reload a saved career fast (skip the ~7-min start): `s.boot();
-s.load_career("FRESHARS.CAR"); s.enter_career()` → back at `_ContestMenuInit`.
+s.load_career("FRESHARS.CAR"); s.enter_career()`.
 
 Pick a different club with the `path` argument (continent, country, division,
 club — all by visible label):
