@@ -140,21 +140,35 @@ void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
  * DOS number is mapIndex + 1.
  * ================================================================ */
 extern uint8_t pitchChunkyBuffer[];
+/* Direct asset dispatch (writes straight to dest, no frontbuffer staging).
+ * ASSET_OP_INIT_SOURCE0 == 2 (see file_io.c / asset_loader.c). */
+extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
+                                          void *name, void *dest,
+                                          uint32_t *outFileSize);
+#define DOS_ASSET_OP_INIT_SOURCE0   2
+/* pitchChunkyBuffer capacity in whole 16x16 tiles. */
+#define DOS_PITCH_BANK_MAX_TILES    PITCH_POINTER_COUNT   /* 2310 → 591360 B */
 
 static void dos_load_pitch(uint16_t mapIndex)
 {
-    char name[64];
+    char name[320];
     uint32_t blkSize = 0, datSize = 0;
     int pitchNum = (int)mapIndex + 1;          /* DOS PITCH1..PITCH6 */
     if (pitchNum < 1) pitchNum = 1;
     if (pitchNum > 6) pitchNum = 6;
 
-    /* Tile bank — already 256-byte chunky tiles, load straight in. */
-    snprintf(name, sizeof name, "grafs_dos/PITCH%d.BLK", pitchNum);
-    _LoadFileEx((uint8_t *)name, pitchChunkyBuffer, &blkSize);
+    /* Tile bank — already 256-byte chunky tiles. Load via the DIRECT asset
+     * dispatch, NOT _LoadFileEx: _LoadFileEx stages through the ~91 KB
+     * frontbuffer and panics (0xE000) on anything larger. The SWOS-2020 .blk
+     * banks are 190–545 KB, so they MUST bypass that staging. The direct
+     * dispatch writes straight into pitchChunkyBuffer (591360 B = 2310 tiles);
+     * the 2020 set's largest is pitch6 at 545536 B (2131 tiles), which fits. */
+    snprintf(name, sizeof name, "%s/PITCH%d.BLK", gDosGraphicsDir, pitchNum);
+    _CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, name,
+                               pitchChunkyBuffer, &blkSize);
 
     /* Tile map — stage into pitchDatBuffer, then parse the LE offsets. */
-    snprintf(name, sizeof name, "grafs_dos/PITCH%d.DAT", pitchNum);
+    snprintf(name, sizeof name, "%s/PITCH%d.DAT", gDosGraphicsDir, pitchNum);
     _LoadFileEx((uint8_t *)name, pitchDatBuffer, &datSize);
 
     static uint16_t tileMap[PITCH_POINTER_COUNT];
@@ -162,6 +176,9 @@ static void dos_load_pitch(uint16_t mapIndex)
                                  PITCH_POINTER_COUNT);
 
     uint32_t tileCount = blkSize / DOS_TILE_BYTES;
+    /* Never point past the end of pitchChunkyBuffer, even if a future bank has
+     * more tiles than the buffer holds (the 2020 set stays under this). */
+    if (tileCount > DOS_PITCH_BANK_MAX_TILES) tileCount = DOS_PITCH_BANK_MAX_TILES;
     for (int i = 0; i < PITCH_POINTER_COUNT; i++) {
         if (i < n && (uint32_t)tileMap[i] < tileCount)
             s_pitchFullPtrs[i] = pitchChunkyBuffer +
@@ -169,6 +186,19 @@ static void dos_load_pitch(uint16_t mapIndex)
         else
             s_pitchFullPtrs[i] = (uint8_t *)0;   /* unmapped → surround */
     }
+
+    /* Mirror the Amiga SDL pitch fixup (Step 1b in _FixupAndColorPitchFile):
+     * also store each slot's chunky-tile pointer (truncated to 32 bits) in the
+     * pitchDatBuffer slot itself. The crowd animation (_DrawAnimatedPatterns /
+     * _ResetAnimatedPatternsForBothTeams) reads these slots as tile offsets
+     * from pitchChunkyBuffer (`*slot - pitchChunkyBuffer == tileIdx*256`) to
+     * toggle fan tiles between their static and animated (waving) variants. The
+     * DOS tile bank stores those pairs at adjacent indices just like the Amiga,
+     * so the same toggle works. Without this the slots would hold raw .DAT
+     * bytes and the toggle math would read garbage. */
+    uint32_t *slots = (uint32_t *)pitchDatBuffer;
+    for (int i = 0; i < PITCH_POINTER_COUNT; i++)
+        slots[i] = (uint32_t)(uintptr_t)s_pitchFullPtrs[i];
 }
 #endif /* SWOS_SDL_BUILD */
 

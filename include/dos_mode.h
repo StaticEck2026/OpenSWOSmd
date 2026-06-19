@@ -16,4 +16,9 @@
 extern int gDosGraphics;
 extern int gDosGameplay;
 
+/* Directory the DOS assets are loaded from, relative to the working dir (bin/).
+ * Default "grafs_dos"; override via [dos] directory=... or --dos-dir=... to test
+ * alternate sets (e.g. a SWOS-2020 graphics folder). No trailing slash. */
+extern char gDosGraphicsDir[256];
+
 #endif /* SWOS_DOS_MODE_H */
