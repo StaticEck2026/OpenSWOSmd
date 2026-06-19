@@ -14,7 +14,7 @@ Examples:
     decode_data.py 33 --json                # JSON for the whole file
     decode_data.py --all --names            # every data file, names only
     decode_data.py --verify                 # round-trip every data file
-    decode_data.py --dump-json              # export the whole corpus to data_json/
+    decode_data.py --dump-json              # export the whole corpus to bin/data_json/
 """
 import argparse
 import glob
@@ -33,21 +33,26 @@ def _all_targets():
             + sorted(glob.glob(os.path.join(d, "POOLPLYR.DAT"))))
 
 
-def _skills(s):
+# The JSON stores packed bytes (matching .CAR); decode them for human display.
+def _skills(p):
+    vh = p["velocity_heading"] & 0xFF
+    tc = p["tackling_control"] & 0xFF
+    sf = p["speed_finishing"] & 0xFF
     return "P%d V%d H%d Ta%d Co%d Sp%d F%d" % (
-        s["passing"], s["velocity"], s["heading"],
-        s["tackling"], s["control"], s["speed"], s["finishing"])
+        p["passing"] & 0x0F, vh >> 4, vh & 0xF, tc >> 4, tc & 0xF, sf >> 4, sf & 0xF)
 
 
 def _print_player(i, p, indent="    "):
+    pos = tf.POSITIONS.get((p["position_and_face"] & 0xFF) >> 5, "?")
     print("%s%2s %-3s #%-2d %-18s %s  price=%d" % (
-        indent, i, p["position"], p["shirt"], p["name"], _skills(p["skills"]), p["price"]))
+        indent, i, pos, p["shirt_number"], p["player_name"], _skills(p), p["price"]))
 
 
 def print_team(t, full=True):
+    h = t["team"]
     print("[%d.%d] %-17s coach=%s tactics=%d league=%d  (%s)" % (
-        t["country"], t["ordinal"], t["name"], t["coach"],
-        t["tactics"], t["league"], tf.country_name(t["country"])))
+        h["country_number"], h["team_ordinal"], h["team_name"], h["coach_name"],
+        h["tactics"], h["league"], tf.country_name(h["country_number"])))
     if full:
         for i, p in enumerate(t["players"]):
             _print_player(i, p)
@@ -59,26 +64,27 @@ def print_doc(d, full=True):
             print_team(t, full)
     elif d["type"] == "pool":
         for i, pp in enumerate(d["players"]):
-            print("[%d] teamId=%d ord=%d %-16s" % (i, pp["teamId"], pp["playerOrdinal"], pp["teamName"]))
+            print("[%d] team_id=%d ord=%d %-16s" % (i, pp["team_id"], pp["player_ordinal"], pp["team_name"]))
             if full:
                 _print_player("", pp["player"], indent="      ")
 
 
 def names_of(d):
     if d["type"] in ("team", "tmd"):
-        return ["%3d: %s" % (t["ordinal"], t["name"]) for t in d["teams"]]
-    return ["%3d: %-16s %s" % (i, pp["teamName"], pp["player"]["name"])
+        return ["%3d: %s" % (t["team"]["team_ordinal"], t["team"]["team_name"]) for t in d["teams"]]
+    return ["%3d: %-16s %s" % (i, pp["team_name"], pp["player"]["player_name"])
             for i, pp in enumerate(d["players"])]
 
 
 def out_name(target):
-    """JSON output filename for a target (country name for TEAM, basename otherwise)."""
+    """JSON output filename for a target: <CN_NAME>.json for TEAM databases,
+    the full source name + .json otherwise (EUROCUP.TMD.json, POOLPLYR.DAT.json)."""
     ft = tf.file_type(target)
     if ft == "team":
         c = int(target) if (isinstance(target, int) or str(target).isdigit()) \
             else int(os.path.basename(str(target)).split(".")[1])
         return tf.country_name(c) + ".json"
-    return os.path.splitext(os.path.basename(str(target)))[0] + ".json"
+    return os.path.basename(str(target)) + ".json"
 
 
 def cmd_verify():
@@ -93,20 +99,19 @@ def cmd_verify():
     return 0 if total == 0 else 1
 
 
-def cmd_dump_json(out_dir):
+def cmd_dump_json(out_dir, compact=False):
     # resolve a relative dir against the repo root (parent of bin/data's parent)
     if not os.path.isabs(out_dir):
         repo = os.path.dirname(os.path.dirname(tf._data_dir()))
         out_dir = os.path.join(repo, out_dir)
     os.makedirs(out_dir, exist_ok=True)
+    kw = {"separators": (",", ":")} if compact else {"indent": 2}   # expanded by default
     n = 0
     for p in _all_targets():
-        doc = tf.file_to_dict(p)
-        dest = os.path.join(out_dir, out_name(p))
-        with open(dest, "w") as f:
-            json.dump(doc, f, indent=2, ensure_ascii=False)
+        with open(os.path.join(out_dir, out_name(p)), "w") as f:
+            json.dump(tf.file_to_dict(p), f, ensure_ascii=False, **kw)
         n += 1
-    print("wrote %d JSON files to %s" % (n, out_dir))
+    print("wrote %d %s JSON files to %s" % (n, "compact" if compact else "expanded", out_dir))
     return 0
 
 
@@ -118,14 +123,15 @@ def main(argv=None):
     ap.add_argument("--names", action="store_true", help="compact name list")
     ap.add_argument("--all", action="store_true", help="sweep every bin/data file")
     ap.add_argument("--verify", action="store_true", help="round-trip every file (binary->dict->binary)")
-    ap.add_argument("--dump-json", metavar="DIR", nargs="?", const="data_json", default=None,
-                    help="export every file as JSON to DIR (default: data_json/, relative to repo root)")
+    ap.add_argument("--dump-json", metavar="DIR", nargs="?", const="bin/data_json", default=None,
+                    help="export every file as JSON to DIR (default: bin/data_json/, relative to repo root)")
+    ap.add_argument("--compact", action="store_true", help="minify the --dump-json output (default: indented)")
     args = ap.parse_args(argv)
 
     if args.verify:
         return cmd_verify()
     if args.dump_json:
-        return cmd_dump_json(args.dump_json)
+        return cmd_dump_json(args.dump_json, args.compact)
 
     if args.all:
         targets = _all_targets()
@@ -151,7 +157,8 @@ def main(argv=None):
         return 0
 
     if args.ordinal is not None and doc["type"] in ("team", "tmd"):
-        doc = {**doc, "teams": [t for t in doc["teams"] if t["ordinal"] == args.ordinal]}
+        doc = {**doc, "teams": [t for t in doc["teams"]
+                                if t["team"]["team_ordinal"] == args.ordinal]}
 
     if args.json:
         payload = doc

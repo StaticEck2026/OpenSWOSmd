@@ -122,32 +122,37 @@ def _put_str(buf: bytearray, off: int, field_len: int, text: str):
     buf[off : off + len(enc)] = enc
 
 
+def _s8(v: int) -> int:
+    return v - 256 if v >= 128 else v
+
+
+def _s16(v: int) -> int:
+    return v - 65536 if v >= 0x8000 else v
+
+
 # ======================================================================
 # PlayerFile  <->  dict
 # ======================================================================
+# Keys/structure/signedness mirror save_format_json.c (emit_player_file_body /
+# s_player_fields) so the .CAR and bin/data JSON share one representation and one
+# C loader. Skill bytes stay PACKED (position_and_face, velocity_heading, ...);
+# decode_data.py decodes them for human display only.
 def parse_player(b: bytes) -> dict:
-    paf, vh, tc, sf = b[26], b[29], b[30], b[31]
     return {
-        "shirt": b[2],
-        "name": _decode_str(b[PLAYER_NAME_OFF : PLAYER_NAME_OFF + PLAYER_NAME_LEN]),
-        "nationality": b[0],
-        "position": POSITIONS.get(paf >> 5, "?"),
-        "face": paf & 0x1F,
-        "skills": {
-            "passing": b[28] & 0x0F,
-            "velocity": (vh >> 4) & 0x0F,
-            "heading": vh & 0x0F,
-            "tackling": (tc >> 4) & 0x0F,
-            "control": tc & 0x0F,
-            "speed": (sf >> 4) & 0x0F,
-            "finishing": sf & 0x0F,
-        },
-        "price": b[32],
-        "cardsInjuries": b[27],
-        "goalStats": list(b[33:37]),
-        "field_1": b[1],
-        "field_19": b[25],
-        "someFlag": b[37],
+        "nationality": _s8(b[0]),
+        "field_1": _s8(b[1]),
+        "shirt_number": _s8(b[2]),
+        "player_name": _decode_str(b[PLAYER_NAME_OFF : PLAYER_NAME_OFF + PLAYER_NAME_LEN]),
+        "field_19": _s8(b[25]),
+        "position_and_face": b[26],
+        "cards_injuries": b[27],
+        "passing": _s8(b[28]),
+        "velocity_heading": _s8(b[29]),
+        "tackling_control": _s8(b[30]),
+        "speed_finishing": _s8(b[31]),
+        "price": _s8(b[32]),
+        "goal_stats": list(b[33:37]),
+        "some_flag": _s8(b[37]),
     }
 
 
@@ -155,48 +160,44 @@ def encode_player(p: dict) -> bytearray:
     b = bytearray(PLAYER_REC_SIZE)
     b[0] = p["nationality"] & 0xFF
     b[1] = p["field_1"] & 0xFF
-    b[2] = p["shirt"] & 0xFF
-    _put_str(b, PLAYER_NAME_OFF, PLAYER_NAME_LEN, p["name"])
+    b[2] = p["shirt_number"] & 0xFF
+    _put_str(b, PLAYER_NAME_OFF, PLAYER_NAME_LEN, p["player_name"])
     b[25] = p["field_19"] & 0xFF
-    b[26] = ((_POS_REV.get(p["position"], 0) << 5) | (p["face"] & 0x1F)) & 0xFF
-    b[27] = p["cardsInjuries"] & 0xFF
-    s = p["skills"]
-    b[28] = s["passing"] & 0x0F
-    b[29] = (((s["velocity"] & 0xF) << 4) | (s["heading"] & 0xF)) & 0xFF
-    b[30] = (((s["tackling"] & 0xF) << 4) | (s["control"] & 0xF)) & 0xFF
-    b[31] = (((s["speed"] & 0xF) << 4) | (s["finishing"] & 0xF)) & 0xFF
+    b[26] = p["position_and_face"] & 0xFF
+    b[27] = p["cards_injuries"] & 0xFF
+    b[28] = p["passing"] & 0xFF
+    b[29] = p["velocity_heading"] & 0xFF
+    b[30] = p["tackling_control"] & 0xFF
+    b[31] = p["speed_finishing"] & 0xFF
     b[32] = p["price"] & 0xFF
-    gs = (list(p["goalStats"]) + [0, 0, 0, 0])[:4]
+    gs = (list(p["goal_stats"]) + [0, 0, 0, 0])[:4]
     b[33:37] = bytes(x & 0xFF for x in gs)
-    b[37] = p["someFlag"] & 0xFF
+    b[37] = p["some_flag"] & 0xFF
     return b
 
 
 # ======================================================================
 # TeamFileEx  <->  dict
 # ======================================================================
+# Mirrors save_format_json.c emit_team_file_ex_body / s_team_file_fields:
+# { "team": { header... }, "players": [16] }, kit_colors as one 10-byte array.
 def parse_team(b: bytes) -> dict:
     return {
-        "country": b[0],
-        "ordinal": b[1],
-        "globalTeamNumber": (b[2] << 8) | b[3],   # int16 big-endian on disk
-        "controls": b[4],
-        "name": _decode_str(b[TEAM_NAME_OFF : TEAM_NAME_OFF + TEAM_NAME_LEN]),
-        "writesZeroHere": b[22],
-        "andWith0xFE": b[23],
-        "tactics": b[24],
-        "league": b[25],
-        "primaryKit": {
-            "shirtType": b[26], "stripes": b[27], "basic": b[28],
-            "shorts": b[29], "socks": b[30],
+        "team": {
+            "country_number": b[0],
+            "team_ordinal": b[1],
+            "global_team_number": _s16((b[2] << 8) | b[3]),   # int16 big-endian on disk
+            "team_controls": b[4],
+            "team_name": _decode_str(b[TEAM_NAME_OFF : TEAM_NAME_OFF + TEAM_NAME_LEN]),
+            "writes_zero_here": b[22],
+            "and_with_0xfe": b[23],
+            "tactics": b[24],
+            "league": b[25],
+            "kit_colors": list(b[26:36]),
+            "coach_name": _decode_str(b[COACH_NAME_OFF : COACH_NAME_OFF + COACH_NAME_LEN]),
+            "some_flag": b[59],
+            "player_numbers": list(b[60:76]),
         },
-        "secondaryKit": {
-            "shirtType": b[31], "stripes": b[32], "basic": b[33],
-            "shorts": b[34], "socks": b[35],
-        },
-        "coach": _decode_str(b[COACH_NAME_OFF : COACH_NAME_OFF + COACH_NAME_LEN]),
-        "someFlag": b[59],
-        "playerNumbers": list(b[60:76]),
         "players": [
             parse_player(b[76 + i * PLAYER_REC_SIZE : 76 + (i + 1) * PLAYER_REC_SIZE])
             for i in range(PLAYERS_PER_TEAM)
@@ -206,24 +207,22 @@ def parse_team(b: bytes) -> dict:
 
 def encode_team(t: dict) -> bytearray:
     b = bytearray(TEAM_REC_SIZE)
-    b[0] = t["country"] & 0xFF
-    b[1] = t["ordinal"] & 0xFF
-    gtn = t["globalTeamNumber"] & 0xFFFF
+    h = t["team"]
+    b[0] = h["country_number"] & 0xFF
+    b[1] = h["team_ordinal"] & 0xFF
+    gtn = h["global_team_number"] & 0xFFFF
     b[2], b[3] = (gtn >> 8) & 0xFF, gtn & 0xFF
-    b[4] = t["controls"] & 0xFF
-    _put_str(b, TEAM_NAME_OFF, TEAM_NAME_LEN, t["name"])
-    b[22] = t["writesZeroHere"] & 0xFF
-    b[23] = t["andWith0xFE"] & 0xFF
-    b[24] = t["tactics"] & 0xFF
-    b[25] = t["league"] & 0xFF
-    pk, sk = t["primaryKit"], t["secondaryKit"]
-    b[26], b[27], b[28], b[29], b[30] = (pk["shirtType"] & 0xFF, pk["stripes"] & 0xFF,
-                                         pk["basic"] & 0xFF, pk["shorts"] & 0xFF, pk["socks"] & 0xFF)
-    b[31], b[32], b[33], b[34], b[35] = (sk["shirtType"] & 0xFF, sk["stripes"] & 0xFF,
-                                         sk["basic"] & 0xFF, sk["shorts"] & 0xFF, sk["socks"] & 0xFF)
-    _put_str(b, COACH_NAME_OFF, COACH_NAME_LEN, t["coach"])
-    b[59] = t["someFlag"] & 0xFF
-    pn = (list(t["playerNumbers"]) + [0] * 16)[:16]
+    b[4] = h["team_controls"] & 0xFF
+    _put_str(b, TEAM_NAME_OFF, TEAM_NAME_LEN, h["team_name"])
+    b[22] = h["writes_zero_here"] & 0xFF
+    b[23] = h["and_with_0xfe"] & 0xFF
+    b[24] = h["tactics"] & 0xFF
+    b[25] = h["league"] & 0xFF
+    kit = (list(h["kit_colors"]) + [0] * 10)[:10]
+    b[26:36] = bytes(x & 0xFF for x in kit)
+    _put_str(b, COACH_NAME_OFF, COACH_NAME_LEN, h["coach_name"])
+    b[59] = h["some_flag"] & 0xFF
+    pn = (list(h["player_numbers"]) + [0] * 16)[:16]
     b[60:76] = bytes(x & 0xFF for x in pn)
     for i, p in enumerate(t["players"][:16]):
         b[76 + i * PLAYER_REC_SIZE : 76 + (i + 1) * PLAYER_REC_SIZE] = encode_player(p)
@@ -277,21 +276,23 @@ POOLPLAYER_REC_SIZE = 58
 POOL_TEAMNAME_OFF, POOL_TEAMNAME_LEN = 3, 17
 
 
+# Mirrors save_format_json.c emit_market_player_body naming (team_id / player_ordinal
+# / player), with PoolPlayer's team_name[17] where MarketPlayer has padding.
 def parse_pool_player(b: bytes) -> dict:
     return {
-        "teamId": (b[0] << 8) | b[1],          # uint16 big-endian on disk
-        "playerOrdinal": b[2],
-        "teamName": _decode_str(b[POOL_TEAMNAME_OFF : POOL_TEAMNAME_OFF + POOL_TEAMNAME_LEN]),
+        "team_id": _s16((b[0] << 8) | b[1]),   # uint16 big-endian on disk
+        "player_ordinal": _s8(b[2]),
+        "team_name": _decode_str(b[POOL_TEAMNAME_OFF : POOL_TEAMNAME_OFF + POOL_TEAMNAME_LEN]),
         "player": parse_player(b[20:58]),
     }
 
 
 def encode_pool_player(pp: dict) -> bytearray:
     b = bytearray(POOLPLAYER_REC_SIZE)
-    tid = pp["teamId"] & 0xFFFF
+    tid = pp["team_id"] & 0xFFFF
     b[0], b[1] = (tid >> 8) & 0xFF, tid & 0xFF
-    b[2] = pp["playerOrdinal"] & 0xFF
-    _put_str(b, POOL_TEAMNAME_OFF, POOL_TEAMNAME_LEN, pp["teamName"])
+    b[2] = pp["player_ordinal"] & 0xFF
+    _put_str(b, POOL_TEAMNAME_OFF, POOL_TEAMNAME_LEN, pp["team_name"])
     b[20:58] = encode_player(pp["player"])
     return b
 
@@ -357,7 +358,7 @@ def file_to_dict(target) -> dict:
     blob = _read_blob(target)
     if ft == "team":
         teams = parse_blob(blob)
-        country = teams[0]["country"] if teams else None
+        country = teams[0]["team"]["country_number"] if teams else None
         return {"type": "team", "country": country,
                 "country_name": country_name(country) if country is not None else None,
                 "count": len(teams), "teams": teams}
@@ -392,7 +393,8 @@ def team_names(country) -> dict:
     """{teamOrdinal: name} for a country number (cached)."""
     country = int(country)
     if country not in _names_cache:
-        _names_cache[country] = {t["ordinal"]: t["name"] for t in load(country)}
+        _names_cache[country] = {t["team"]["team_ordinal"]: t["team"]["team_name"]
+                                 for t in load(country)}
     return _names_cache[country]
 
 

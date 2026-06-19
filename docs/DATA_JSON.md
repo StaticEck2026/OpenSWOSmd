@@ -127,7 +127,7 @@ Position nibble (`positionAndFace >> 5`): `0=GK 1=RB 2=LB 3=CD 4=RW 5=LW 6=MF 7=
   decode_data.py 33 --json                # JSON for the whole file
   decode_data.py --all --names            # every data file, names only
   decode_data.py --verify                 # round-trip every data file
-  decode_data.py --dump-json data_json # export the whole corpus to JSON
+  decode_data.py --dump-json              # export the whole corpus to bin/data_json/
   ```
 - **`scripts/annotate_competition_teams.py`** — used the library to rewrite the
   `competition_data.c` `teamSeedList[]` draws as `{ CN_*, ordinal /* NAME */ }`.
@@ -137,11 +137,28 @@ includes `/mnt/c/Projects/Python/SWOS`).
 
 ---
 
-## 4. Proposed JSON schemas
+## 4. JSON schema (matches the .CAR save format exactly)
+
+The keys, nesting, packing and signedness mirror `save_format_json.c`
+(`emit_team_file_ex_body` / `s_team_file_fields`, `emit_player_file_body` /
+`s_player_fields`, `emit_market_player_body`) so the `.CAR` and `bin/data` JSON
+share **one** representation and **one** C loader: `load_struct_object` with the
+existing field tables can read these documents directly.
+
+Consequences of matching `.CAR` (rather than a "prettier" decode):
+
+- snake_case keys (`writes_zero_here`, `global_team_number`, `cards_injuries`).
+- Skill/position bytes stay **packed** — `position_and_face`, `velocity_heading`,
+  `tackling_control`, `speed_finishing` are single (signed) bytes, not decoded
+  nibbles. `decode_data.py` decodes them for human display only.
+- `kit_colors` is one 10-byte array; `player_numbers` 16; `goal_stats` 4.
+- A `TeamFileEx` is `{ "team": { …13 header fields… }, "players": [16] }`.
+- `global_team_number` / `team_id` are signed (`s16`); the many byte fields are
+  emitted signed (`s8`) exactly as the save format does — both signed and
+  unsigned JSON decode to the same byte via `(uint8_t)`.
 
 `file_to_dict()` tags each document with a `"type"`. Every byte of every record
-is covered by a named field, so the schema is complete and round-trippable — no
-opaque-blob fallback (the end-state the save-format migration is still chasing).
+is covered by a named field — no opaque-blob fallback.
 
 ### TEAM.<country>  (`"type": "team"`)
 
@@ -150,21 +167,22 @@ opaque-blob fallback (the end-state the save-format migration is still chasing).
   "type": "team", "country": 33, "country_name": "SCOTLAND", "count": 40,
   "teams": [
     {
-      "country": 33, "ordinal": 0, "globalTeamNumber": 1360,
-      "controls": 0, "name": "ABERDEEN", "coach": "ROY AITKEN",
-      "tactics": 5, "league": 0,
-      "writesZeroHere": 0, "andWith0xFE": 0, "someFlag": 0,
-      "primaryKit":   { "shirtType": 0, "stripes": 4, "basic": 4, "shorts": 4, "socks": 4 },
-      "secondaryKit": { "shirtType": 0, "stripes": 5, "basic": 5, "shorts": 5, "socks": 5 },
-      "playerNumbers": [0, 2, 5, 6, 3, 8, 10, 11, 9, 14, 15, 1, 4, 7, 12, 13],
+      "team": {
+        "country_number": 33, "team_ordinal": 0, "global_team_number": 1360,
+        "team_controls": 0, "team_name": "ABERDEEN",
+        "writes_zero_here": 0, "and_with_0xfe": 0, "tactics": 5, "league": 0,
+        "kit_colors": [0, 4, 4, 4, 4, 0, 5, 5, 5, 5],
+        "coach_name": "ROY AITKEN", "some_flag": 0,
+        "player_numbers": [0, 2, 5, 6, 3, 8, 10, 11, 9, 14, 15, 1, 4, 7, 12, 13]
+      },
       "players": [
         {
-          "shirt": 1, "name": "NICKY WALKER", "nationality": 31,
-          "position": "GK", "face": 0,
-          "skills": { "passing": 0, "velocity": 0, "heading": 0,
-                      "tackling": 0, "control": 0, "speed": 0, "finishing": 0 },
-          "price": 22, "cardsInjuries": 0, "goalStats": [0,0,0,0],
-          "field_1": 0, "field_19": 0, "someFlag": 0
+          "nationality": 31, "field_1": 0, "shirt_number": 1,
+          "player_name": "NICKY WALKER", "field_19": 0,
+          "position_and_face": 0, "cards_injuries": 0,
+          "passing": 0, "velocity_heading": 0, "tackling_control": 0,
+          "speed_finishing": 0, "price": 22, "goal_stats": [0, 0, 0, 0],
+          "some_flag": 0
         }
       ]
     }
@@ -174,10 +192,10 @@ opaque-blob fallback (the end-state the save-format migration is still chasing).
 
 ### *.TMD  (`"type": "tmd"`)
 
-Same `teams[]` shape, no `country`/count header — `count = size/684`:
+Same `teams[]` (TeamFileEx) shape, no `country` field — `count = size/684`:
 
 ```json
-{ "type": "tmd", "file": "EUROCUP.TMD", "count": 16, "teams": [ /* TeamFileEx... */ ] }
+{ "type": "tmd", "file": "EUROCUP.TMD", "count": 16, "teams": [ /* { "team":…, "players":… } */ ] }
 ```
 
 ### POOLPLYR.DAT  (`"type": "pool"`)
@@ -186,17 +204,23 @@ Same `teams[]` shape, no `country`/count header — `count = size/684`:
 {
   "type": "pool", "file": "POOLPLYR.DAT", "count": 900,
   "players": [
-    { "teamId": 516, "playerOrdinal": 2, "teamName": "CLUB BRUGES",
-      "player": { "shirt": 7, "name": "ERIC DEFLANDRE", "position": "RB", "...": "..." } }
+    { "team_id": 516, "player_ordinal": 2, "team_name": "CLUB BRUGES",
+      "player": { "shirt_number": 7, "player_name": "ERIC DEFLANDRE", "position_and_face": 32, "...": "..." } }
   ]
 }
 ```
 
-Proposed on-disk location for authored JSON: `data_json/` — `<CN_NAME>.json`
-for the team databases (e.g. `SCOTLAND.json`), `EUROCUP.json` etc. for the TMDs,
-`POOLPLYR.json` for the pool. The binary files are retained for the loader's
-auto-detect during the transition. (`decode_data.py --dump-json data_json`
-generates exactly this corpus.)
+### On-disk export
+
+`decode_data.py --dump-json` writes the corpus to **`bin/data_json/`** —
+`<CN_NAME>.json` for the team databases (e.g. `SCOTLAND.json`), and the full
+source name for the rest: `EUROCUP.TMD.json`, `EUROCWC.TMD.json`,
+`UEFACUP.TMD.json`, `POOLPLYR.DAT.json`. Files are written **expanded
+(indented)** by default while developing (readable); `--compact` minifies them
+(~7.8 MB vs ~16 MB) for release. The dir lives under `bin/` so the game can load
+JSON in place of the binaries during testing; the binary files are retained for
+the loader's auto-detect during the transition. The corpus is git-ignored
+(regenerable).
 
 ---
 
@@ -207,11 +231,13 @@ generates exactly this corpus.)
 2. **Finalise the JSON schemas** (this doc). Decide the on-disk naming/location.
 3. **Export pass.** Generate the JSON corpus with `decode_data.py --dump-json`
    and check it in (or generate on demand).
-4. **C-side JSON loaders.** Add mjson-based readers mirroring
-   `save_format_json.c` for `TEAM.NNN` / `.TMD` / `POOLPLYR.DAT`: load named
-   fields, re-derive nothing from addresses, keep endianness explicit. Each
-   loader **auto-detects** format by header (RNC magic / `{` JSON) so legacy
-   binary still loads — same policy as the save loader.
+4. **C-side JSON loaders.** Because the schema matches the save format, the
+   readers can **reuse `save_format_json.c`'s `load_struct_object` with the
+   existing `s_team_file_fields` / `s_player_fields` tables** (and a small
+   PoolPlayer table) rather than new parsers — load named fields, re-derive
+   nothing from addresses, keep endianness explicit. Each loader
+   **auto-detects** format by header (RNC magic / `{` JSON) so legacy binary
+   still loads — same policy as the save loader.
 5. **Verify** byte-image parity (JSON-derived image == binary image) and
    cross-target (the Amiga build reads the same JSON).
 6. **Author as JSON.** Once parity holds, JSON becomes the source of truth; the
