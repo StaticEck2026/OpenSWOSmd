@@ -1563,11 +1563,21 @@ typedef struct __attribute__((packed)) {
                               * nationals; 0xFF (255) = .TMD / special team file */
     int8_t beginMonth;       /* season start month, encoded ×8 (monthIdx = value/8) */
     int8_t endMonth;         /* season end month, ×8 (wraps +0x60 if < beginMonth) */
-    int8_t nameTableOffset;  /* was unk1: text[] name table at base+5+this (0 = default) */
-    int8_t reserved;         /* byte 6: confirmed no reads (tree + SWOS2.s) — COMPETITION_UNK2
-                              * EQU 6 defined but never referenced; pad between the name-table
-                              * and team-list self-offset bytes (was unk2) */
-    int8_t teamListOffset;   /* was unk3: team-seed list at base+7+this (0 = none) */
+    int8_t reserved1;        /* byte 5: WAS nameTableOffset. Untangle Step 4b — the name table
+                              * is now reached by comp_name_table() (switch on type + isPlayoff
+                              * → the concrete struct's name[] field), so this self-offset byte
+                              * is no longer read. Initializers still carry the old value; it
+                              * is inert. */
+    int8_t isPlayoff;        /* byte 6: discriminator for the otherwise-ambiguous type==1
+                              * records — 1 = Playoffs, 0 = CompetitionCup. Both share
+                              * comp.type == 1 (the cup-init path) but have different layouts
+                              * (Playoffs name@16 / qualifiedTeamIds; Cup name@20 /
+                              * teamSeedList), so type alone can't select the right field. Was
+                              * the unused `reserved` pad (confirmed no prior reads); set only
+                              * on the Playoffs records. */
+    int8_t reserved2;        /* byte 7: WAS teamListOffset. Untangle Step 4b — the team-seed /
+                              * qualifier list is now reached by comp_team_seed_list(); this
+                              * self-offset byte is no longer read (inert). */
     int8_t seedReorderFlag;  /* was unk4: 0 = shuffle bracket, nonzero = preset seed order */
 } Competition;
 
@@ -1804,10 +1814,12 @@ _Static_assert(TOURNAMENT_NAME_TABLE_OFFSET == 35 && TOURNAMENT_TEAMLIST_TABLE_O
  * The former opaque `playoffHeader[16]` is a CUP competition record: a
  * CompCupHeader (14 B) + roundRuleFlags[2]. comp.type == 1 (cup); the player's
  * qualified teams contest a knockout, and it is initialised through the cup path
- * (_Career_AutoAdvanceCupCompetitionFromRecord). The name is reached via
- * comp.nameTableOffset (= 11 → name[]) and the team list via comp.teamListOffset
- * (= 17 → qualifiedTeamIds[]) — the same polymorphic Competition self-offset
- * accessors every other competition uses.
+ * (_Career_AutoAdvanceCupCompetitionFromRecord). Because CompetitionCup is ALSO
+ * comp.type == 1 but has a different layout (name@20 / teamSeedList vs Playoffs
+ * name@16 / qualifiedTeamIds), Playoffs records set comp.isPlayoff = 1 (untangle
+ * Step 4b) — that is how comp_name_table() / comp_team_seed_list() select the
+ * Playoffs fields rather than the cup ones. (Pre-4b this used the per-record
+ * nameTableOffset/teamListOffset self-offset bytes, now inert.)
  *
  * Field meanings cross-checked against the in-game DIY-competition editor
  * (DUTCH / URUGUAYAN PLAYOFFS screenshots, 2026-06-18) — see each comment. */
