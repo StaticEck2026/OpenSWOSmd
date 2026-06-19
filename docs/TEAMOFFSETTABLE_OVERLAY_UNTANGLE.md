@@ -39,9 +39,17 @@ selTeams-index staleness; Part B already did, proven by the three clean removals
 (Stable-id wouldn't remove `34828ff` either — that's a context re-sync, not
 staleness.) The reverted stable-id reconstruction is therefore not worth doing.
 
-Remaining: Stage 2 (save round-trip + cross-target verify of the Stage-1
-leagueStandings layout change — orthogonal to the band-aids), Stage 5 (back-port:
-each commit synced to the Amiga tree; user commits there manually).
+**STAGE 2 DONE (2026-06-18).** Save round-trip + cross-target verify of the
+Stage-1 `leagueStandings[64]` relocation, via the harness
+(`scripts/decode_save.py --standings`):
+- **Gate A — SDL round-trip:** load `AUTO_S03.CAR` (AC Milan, full Serie A
+  standings) → re-save → standings **byte-identical** to the original.
+- **Gate B — cross-target SDL↔Amiga:** the Amiga build (FS-UAE) loaded the
+  SDL-written `AUTO_S03.CAR` (rc=0) and re-saved it; the Amiga-written standings
+  are **IDENTICAL** to the SDL original. The relocated layout round-trips both
+  ways. (Used the now-working Amiga inferior-call harness.)
+Stages 1–4 done/moot; Stage 2 done. Only **Stage 5** remains: back-port — the
+Amiga tree is synced; user commits there manually.
 
 ## 1. Root cause (precise)
 
