@@ -448,39 +448,42 @@ state — sim the player's fixture (in sim mode), auto-advance an AI fixture, or
 (`seasonFinished=1`), the contest hub's PLAY MATCH runs
 `_SeasonFinished → careerOverMenu` (the hub).
 
-**⚠️ The progress counter is RUNTIME state — don't reload a save IN PLACE to test
-in-season driving.** `diyCompetitionStart.matchesPlayedCount` (offset 0x1BE) is a
-clean, named, properly-untangled field — NOT an overlay. BUT it is **runtime state
-of the active DIY competition** and is *not* serialized in the career save (grep
-`FRESHARS.CAR`: no `matchesPlayedCount` key). So `load_career()` does **not** reset
-it. If you `load_career()` into an inferior that already drove a career, the active
-competition keeps **stale** values (e.g. 1614 left from a prior 30-min drive) and
-the league screen then runs on inconsistent state → the driver wanders. LESSON: to
-test in-season driving, **cold-boot → `start_fresh_career()`** (fresh process); do
-NOT `load_career` in place into a dirty inferior. On a clean run `matchesPlayedCount`
-is a valid progress signal that increments per simmed fixture.
+**✅ THE PROVEN WAY TO DRIVE SEASONS — `run_seasons` on a LOADED career.** Driving
+a career through seasons works via `advance_one_season` / `run_seasons`, which
+operate from the **season-end hub** (`_CareerOverInit`): fire CONTINUE CAREER →
+`drive_transition` (skip-latch auto-advances the result chain) → `drive_inseason`
+→ next season-end hub. Start it by `load_career()`-ing a career that's at/near a
+season end (e.g. `MILAN.CAR` = AC Milan season 3) + `enter_career()`. This is the
+route that has always worked; use it.
 
-**Status of the loop (SDL):**
+**⚠️ Do NOT use a brand-new `start_fresh_career()` as the season-driver entry, and
+do NOT read `diyCompetitionStart` before the league competition is active.** On a
+fresh career sitting at the in-season hub, `diyCompetitionStart` is **not yet
+populated** as the active league competition — reading
+`diyCompetitionStart.matchesPlayedCount` / `leagueStandings` there returns
+uninitialised values (the `1614` / `gamesPlayed=206` "garbage" that sent an
+earlier debugging session down a rabbit hole; the field itself is a clean,
+properly-untangled member at 0x1BE, NOT an overlay, and the struct size asserts
+pass). Once a competition is active (a loaded mid/late-season career, or after
+the season is under way) the same fields read correctly (`gamesPlayed ≤ 38`).
+Also: don't `load_career()` IN PLACE into an inferior that already drove a career —
+cold-boot fresh each time.
 
+**Status of the loop (SDL) — VALIDATED on the fresh binary 2026-06-19:**
+
+- ✅ **Multi-season advance** — `boot()` → `load_career("MILAN.CAR")` (rc 0) →
+  `enter_career()` → `_CareerOverInit` (season 3, sane: gameType 4, numSel 47,
+  `gamesPlayed=[34,34,34]`). `advance_one_season()` → season 4; `run_seasons(4)` →
+  **seasons 5,6,7,8** — five seasons total (3→8), each landing at
+  `_CareerOverInit`, ~47s/season, no wedge. This is the working harness.
 - ✅ **Fresh-career START** — `boot()` + `start_fresh_career()` cold-boot →
-  `_ContestMenuInit` (England/Arsenal, season 0), validated 2026-06-19. Save/load
-  round-trip of that career (`FRESHARS.CAR`) also validated (rc 0 both ways).
-- ✅ **Transition** — season 3→4 via the skip-latch path, `health=OK`, zero
-  wedges (earlier sessions, loaded careers).
-- ✅ **Sim lever** — a human-controlled team (`teamControls` 2/3) PLAYS each
-  fixture in the real-time in-game loop (`_ShowMatchSequence`, throttled in
-  `clock_nanosleep`); `careerTeam.team.teamControls = 1` (TEAM_COMPUTER) makes the
-  player's fixtures auto-sim via the game's `selector==0` path. Confirmed on a
-  just-started career (pending fixture simmed instantly; `matchesPlayedCount`
-  ticked).
-- ❓ **UNVERIFIED — full ENGLISH-LEAGUE season to `_CareerOverInit`.** A clean
-  sim-mode drive WAS progressing (`matchesPlayedCount` climbing steadily; a 4-
-  division season is many fixtures) but was killed at ~30 min before finishing.
-  The follow-up "it wanders / no progress" run was **confounded** by reload-in-
-  place stale state (box above), so it does NOT establish a real wall. **Next:** a
-  clean cold-boot `start_fresh_career()` + `drive_inseason()` left to run to
-  completion (no reload-in-place) — not yet proven to reach the hub, but not shown
-  to be blocked either. The season-TRANSITION path (`drive_transition`) works.
+  `_ContestMenuInit` (England/Arsenal, season 0), validated. Use this to CREATE a
+  career; to DRIVE seasons, save it and re-enter (or play into a competition)
+  before relying on `drive_inseason`.
+- ✅ **Sim lever** — `careerTeam.team.teamControls = 1` (TEAM_COMPUTER) makes the
+  player's fixtures auto-sim (the game's `selector==0` path) instead of opening
+  the real-time in-game match loop (`_ShowMatchSequence`, throttled in
+  `clock_nanosleep`). `drive_inseason(sim_mode=True)` sets it each step.
 
 ## Reusing for another project
 
