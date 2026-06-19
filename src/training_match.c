@@ -90,7 +90,7 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
         /* Get position group of the removed player */
         uint8_t *targetPlayer = _GetPlayer(selTeamNumber, value);
         PlayerFile *targetPf = (PlayerFile *)(targetPlayer + sizeof(TeamFile));
-        uint8_t targetPosGroup = (targetPf->positionAndFace & 0xE0) >> 5;
+        uint8_t targetPosGroup = (targetPf->positionAndFace & PF_POSITION_MASK) >> 5;
 
         /* Search substitutes (index 11 to careerNumPlayers-1) for best replacement */
         int8_t bestPrice = -1;   /* 0xFF as signed byte */
@@ -98,7 +98,7 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
         for (int16_t d4 = 11; d4 < numPl; d4++) {
             int16_t pIdx = (int16_t)(int8_t)trainingMatchSavedPlayers[d4];
             PlayerFile *subPf = &((TeamFileEx *)&careerTeam)->players[pIdx];
-            uint8_t posGroup = (subPf->positionAndFace & 0xE0) >> 5;
+            uint8_t posGroup = (subPf->positionAndFace & PF_POSITION_MASK) >> 5;
             if (posGroup != targetPosGroup)
                 continue;
             int8_t price = (int8_t)subPf->price;
@@ -279,7 +279,7 @@ extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
  * isPlayerBetterSwapCandidate (static)  (SWOS2.s line 36086)
  *
  * Checks if candidate player is a better substitute swap than current best.
- * Players with someFlag 0x9A/0x9B (trialists/special) are avoided in favor
+ * Players with form 0x9A/0x9B (reserve/trialist) are avoided in favor
  * of normal players. Between two players of same type, higher price wins.
  *
  * Returns 0 if candidate IS better (should replace), 1 if NOT better.
@@ -293,13 +293,13 @@ static uint16_t isPlayerBetterSwapCandidate(uint8_t *candidate, uint8_t *best, i
     if (bestSkill < 0)
         goto compare_skill;
 
-    uint8_t candFlag = candPf->someFlag;
-    int16_t candHasFlag = (candFlag == 0x9B || candFlag == 0x9A);
+    uint8_t candFlag = candPf->form;
+    int16_t candHasFlag = (candFlag == PLAYER_FORM_TRIALIST || candFlag == PLAYER_FORM_RESERVE);
 
     if (candHasFlag) {
         /* Candidate has special flag */
-        uint8_t bestFlag = bestPf->someFlag;
-        if (bestFlag == 0x9B || bestFlag == 0x9A) {
+        uint8_t bestFlag = bestPf->form;
+        if (bestFlag == PLAYER_FORM_TRIALIST || bestFlag == PLAYER_FORM_RESERVE) {
             /* Both have flag — compare by price */
             goto compare_skill;
         }
@@ -307,8 +307,8 @@ static uint16_t isPlayerBetterSwapCandidate(uint8_t *candidate, uint8_t *best, i
         return 1;
     } else {
         /* Candidate doesn't have flag */
-        uint8_t bestFlag = bestPf->someFlag;
-        if (bestFlag == 0x9B || bestFlag == 0x9A) {
+        uint8_t bestFlag = bestPf->form;
+        if (bestFlag == PLAYER_FORM_TRIALIST || bestFlag == PLAYER_FORM_RESERVE) {
             /* Best has flag, candidate doesn't — candidate IS better */
             return 0;
         }
@@ -355,7 +355,7 @@ static SubSwapResult findBestSubSwapCandidates(void)
         PlayerFile *pf = (PlayerFile *)(player + 76);
 
         /* Extract position from positionAndFace (bits 7:5) */
-        uint16_t position = (pf->positionAndFace & 0xE0) >> 5;
+        uint16_t position = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
         if (position == 0)  /* Skip goalkeepers */
             continue;
 
@@ -423,7 +423,7 @@ void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void)
  * TrainingMatch_TryAddTrialPlayerAtPosition  (SWOS2.s line 36143)
  *
  * Adds a trial player at the given position, then with ~40% probability
- * (random >= 0x99) marks the player's someFlag as 0x9A (trialist) and
+ * (random >= 0x99) marks the player as a reserve (form 0x9A / "RES") and
  * recalculates their weekly wage.
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -436,7 +436,7 @@ void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position)
 
     /* Mark as trialist */
     PlayerFile *pf = (PlayerFile *)(player + 76);
-    pf->someFlag = (int8_t)0x9A;
+    pf->form = (int8_t)PLAYER_FORM_RESERVE;
 
     /* Recover the player index from trainingMatchSavedPlayers.
      * AddTrialPlayerAtPosition saved freeSlot at index (careerNumPlayers-1)
@@ -604,7 +604,7 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
 
                 uint8_t *player = _GetPlayerAtIndex(currentTeamNumber, (uint16_t)d1);
                 PlayerFile *pf = (PlayerFile *)(player + 76);
-                uint8_t positionGroup = (pf->positionAndFace & 0xE0) >> 5;
+                uint8_t positionGroup = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
                 if (positionGroup != (uint8_t)targetPos)
                     continue; /* position doesn't match */
 
@@ -616,8 +616,8 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
                 }
 
                 /* Check trialist status */
-                int16_t isCurrentTrialist = ((uint8_t)pf->someFlag == 0x9B || (uint8_t)pf->someFlag == 0x9A);
-                int16_t isBestTrialist = ((uint8_t)bestPf->someFlag == 0x9B || (uint8_t)bestPf->someFlag == 0x9A);
+                int16_t isCurrentTrialist = ((uint8_t)pf->form == PLAYER_FORM_TRIALIST || (uint8_t)pf->form == PLAYER_FORM_RESERVE);
+                int16_t isBestTrialist = ((uint8_t)bestPf->form == PLAYER_FORM_TRIALIST || (uint8_t)bestPf->form == PLAYER_FORM_RESERVE);
 
                 if (isCurrentTrialist) {
                     if (!isBestTrialist)

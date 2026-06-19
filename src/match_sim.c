@@ -393,7 +393,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 
         /* Check player's position (role) */
         uint8_t posAndFace = playerRec->positionAndFace;
-        uint16_t role = (posAndFace & 0xE0) >> 5;
+        uint16_t role = (posAndFace & PF_POSITION_MASK) >> 5;
 
         if (role == 0) {
             /* Goalkeeper role - check available substitutes */
@@ -568,7 +568,7 @@ loop_start:
 
         /* Check current position/role */
         uint8_t posAndFace = playerRec->positionAndFace;
-        uint16_t role = (posAndFace & 0xE0) >> 5;
+        uint16_t role = (posAndFace & PF_POSITION_MASK) >> 5;
 
         if (role == 0) {
             /* Goalkeeper: check available substitutes */
@@ -685,7 +685,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
         /* Check position/role for goalkeeper */
         uint8_t posAndFace = playerRec->positionAndFace;
-        uint16_t role = (posAndFace & 0xE0) >> 5;
+        uint16_t role = (posAndFace & PF_POSITION_MASK) >> 5;
 
         if (role == 0) {
             /* Goalkeeper: random chance to skip */
@@ -807,7 +807,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
     int16_t gkIdx = (int8_t)goalkeepPlayerNums[0];
     PlayerFile *gkRec = &team->players[(uint16_t)gkIdx];
     uint8_t gkPosAndFace = gkRec->positionAndFace;
-    uint16_t gkRole = (gkPosAndFace & 0xE0) >> 5;
+    uint16_t gkRole = (gkPosAndFace & PF_POSITION_MASK) >> 5;
 
     if (gkRole != 0) {
         /* Non-GK in goalkeeper slot: halve result as weakness penalty.
@@ -819,8 +819,8 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
     result = (uint16_t)((uint32_t)result / oldPlayerSkillDivisor);
     oldPlayerSkill = result;
 
-    /* Clear flag at offset 0x3B (someFlag in TeamFile) */
-    team->team.someFlag = 0;
+    /* Clear flag at offset 0x3B (playerValuesDirty in TeamFile) */
+    team->team.playerValuesDirty = TEAM_VALUES_CLEAN;
 
     return result;
 }
@@ -1153,13 +1153,13 @@ extern uint8_t aAbort[];
  *
  * Initializes player flags for a team. Clears cards/injuries,
  * resets loan/position bits, clears goal stats.
- * For careerTeam with stayingInOldClub, preserves loan bit and someFlag.
+ * For careerTeam with stayingInOldClub, preserves loan bit and playerValuesDirty.
  *
  * Asm: TeamInit(a0=TeamFile*, d2=numPlayersMinus1)
  * ================================================================ */
 static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
 {
-    tfex->team.someFlag = 1;
+    tfex->team.playerValuesDirty = TEAM_VALUES_DIRTY;
     tfex->team.writesZeroHere = 0;
     tfex->team.andWith0xFE &= 0xFE;  /* bclr #0 */
 
@@ -1168,8 +1168,8 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
         pf->cardsInjuries = 0;
 
         if (tfex != &careerTeam || !stayingInOldClub) {
-            pf->positionAndFace &= ~(1 << 1);  /* bclr #1 */
-            pf->someFlag = 0;
+            pf->positionAndFace &= ~PF_LOAN;  /* clear loan bit (bclr #1) */
+            pf->form = 0;
         }
 
         pf->positionAndFace &= ~(1 << 2);  /* bclr #2 */
@@ -1444,7 +1444,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
 
     /* Goalie skill calculation (only for goalkeepers — position 0) */
     pi->goalieSkill = 0;
-    uint8_t position = (pf->positionAndFace & 0xE0) >> 5;
+    uint8_t position = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
     if (position == 0) {
         /* Goalkeeper: (price + 3) / 7, using unsigned division matching asm ext.l + divu */
         int16_t priceWord = (int16_t)(int8_t)pf->price;
@@ -1838,7 +1838,7 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
     TeamFile *tf = teamFile;
 
     /* Position type (0-7) from top 3 bits of positionAndFace */
-    uint16_t position = (plFile->positionAndFace & 0xE0) >> 5;
+    uint16_t position = (plFile->positionAndFace & PF_POSITION_MASK) >> 5;
 
     /* Skill weights for this position.
      * Position 0 (GK) reads from dead code bytes 35 bytes before skillsPerQuadrant.
@@ -2008,17 +2008,17 @@ uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx
     /* Player file data starts after TeamFile header */
     PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
-    /* Check someFlag in TeamFile header */
-    if (team->team.someFlag == 0) {
+    /* Check playerValuesDirty in TeamFile header */
+    if (team->team.playerValuesDirty == TEAM_VALUES_CLEAN) {
         /* Simple path: return field_1 as position, store in array */
-        int16_t pos = (int8_t)pf->field_1;
-        uint16_t role = (pf->positionAndFace & 0xE0) >> 5;
+        int16_t pos = (int8_t)pf->cachedMatchValue;
+        uint16_t role = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
         playerPositionsArray[d6] = (uint8_t)pos;
         return ((uint32_t)role << 16) | ((uint16_t)pos & 0xFFFF);
     }
 
     /* Complex path: someFlag != 0 */
-    uint16_t posType = (pf->positionAndFace & 0xE0) >> 5;
+    uint16_t posType = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
     int16_t d7val;
 
     if (playerIdx == 0) {
@@ -2054,7 +2054,7 @@ uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx
     /* Computer-controlled teams skip injury/sold checks */
     if (team->team.teamControls != TEAM_COMPUTER) {
         /* Check if player is "sold" (bit 1 of positionAndFace) */
-        if (pf->positionAndFace & 0x02) {
+        if (pf->positionAndFace & PF_LOAN) {
             d7val = 1;  /* sold player = minimum price */
         }
 
@@ -2069,11 +2069,11 @@ storeResult:
     /* Store position value */
     {
         uint16_t posVal = (uint16_t)(int16_t)d7val;
-        pf->field_1 = (int8_t)(uint8_t)posVal;
+        pf->cachedMatchValue = (int8_t)(uint8_t)posVal;
         playerPositionsArray[d6] = (uint8_t)posVal;
 
         /* Get role from positionAndFace */
-        uint16_t role = (pf->positionAndFace & 0xE0) >> 5;
+        uint16_t role = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
 
         return ((uint32_t)role << 16) | (posVal & 0xFFFF);
     }

@@ -721,7 +721,7 @@ retry:
         if (highestPrice < price)                           /* cmp.b ... bcs retry */
             goto retry;
         /* Check position bit 2 (goalkeeper flag?) */
-        if (teamEx->players[playerOrd].positionAndFace & 0x04)
+        if (teamEx->players[playerOrd].positionAndFace & PF_TRIALIST)
             goto retry;                                     /* btst #2,... bne retry */
     }
 
@@ -1182,13 +1182,13 @@ int16_t _PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill)
             continue;
 
         /* Skip if on transfer list (bit 1 of positionAndFace) */
-        if (pf->positionAndFace & 0x02)
+        if (pf->positionAndFace & PF_LOAN)
             continue;
 
-        /* Skip if sold (0x9B) or transferred (0x9A) */
-        if ((uint8_t)pf->someFlag == 0x9B)
+        /* Skip trialists (form 0x9B / "TRIAL") and reserves (form 0x9A / "RES") */
+        if ((uint8_t)pf->form == PLAYER_FORM_TRIALIST)
             continue;
-        if ((uint8_t)pf->someFlag == 0x9A)
+        if ((uint8_t)pf->form == PLAYER_FORM_RESERVE)
             continue;
 
         /* Skill must be <= refSkill (unsigned) */
@@ -1243,13 +1243,13 @@ int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(TeamFileEx *teamBlock, int1
         PlayerFile *pf2 = &teamBlock->players[idx];
 
         /* Skip if on transfer list */
-        if (pf2->positionAndFace & 0x02)
+        if (pf2->positionAndFace & PF_LOAN)
             continue;
 
         /* Skip if sold or transferred */
-        if ((uint8_t)pf2->someFlag == 0x9B)
+        if ((uint8_t)pf2->form == PLAYER_FORM_TRIALIST)
             continue;
-        if ((uint8_t)pf2->someFlag == 0x9A)
+        if ((uint8_t)pf2->form == PLAYER_FORM_RESERVE)
             continue;
 
         /* Must be within selected team's skill range */
@@ -1923,9 +1923,9 @@ void _GenerateRandomTransferOffers(void)
         PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
         uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
         /* Check bit 1 of positionAndFace — skip if on transfer list */
-        if (!(pf->positionAndFace & 0x02)) {
-            /* Skip players with sold (0x9B) or transferred (0x9A) status */
-            if ((uint8_t)pf->someFlag != 0x9B && (uint8_t)pf->someFlag != 0x9A) {
+        if (!(pf->positionAndFace & PF_LOAN)) {
+            /* Skip trialists (form 0x9B) and reserves (form 0x9A) */
+            if ((uint8_t)pf->form != PLAYER_FORM_TRIALIST && (uint8_t)pf->form != PLAYER_FORM_RESERVE) {
                 uint16_t threshold = 1;
                 int onMarket = 0;
                 /* _cGetPlayerAtIndexFileIdx holds the file index from last GetPlayerAtIndex call */
@@ -1950,7 +1950,7 @@ void _GenerateRandomTransferOffers(void)
             } else {
                 if (_FindPlayerOnTransferMarket(fileIdx) == 0) {
                     SWOS_AUTOSKIP_LOG("[bug2]   idx=%u fileIdx=%u onMarket=1 SKIPPED someFlag=0x%02X",
-                                      (unsigned)idx, (unsigned)fileIdx, (unsigned)(uint8_t)pf->someFlag);
+                                      (unsigned)idx, (unsigned)fileIdx, (unsigned)(uint8_t)pf->form);
                 }
             }
         } else {
@@ -2439,7 +2439,7 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
 
     /* Entry 5: Position */
     {
-        uint16_t posIdx = (pf->positionAndFace & 0xE0) >> 3;
+        uint16_t posIdx = (pf->positionAndFace & PF_POSITION_MASK) >> 3;
         a0->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     }
     a0->y = y;
@@ -2497,11 +2497,11 @@ void _BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Set status color in stringFlags */
     {
         uint16_t colorBits = 0xD;
-        if ((uint8_t)pf->someFlag == 0x9B) {
+        if ((uint8_t)pf->form == PLAYER_FORM_TRIALIST) {
             /* keep 0xD */
-        } else if ((uint8_t)pf->someFlag == 0x9A) {
+        } else if ((uint8_t)pf->form == PLAYER_FORM_RESERVE) {
             colorBits = 1;
-        } else if (pf->positionAndFace & 0x02) {
+        } else if (pf->positionAndFace & PF_LOAN) {
             colorBits = 0xF;
         } else {
             colorBits = 2;
@@ -3176,10 +3176,10 @@ void _PlayerOffersOnSelect10(void)
         while (i >= 0) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
             PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
-            /* Check if player is sold (0x9B) or transferred (0x9A) */
-            if ((uint8_t)plf->someFlag == 0x9B || (uint8_t)plf->someFlag == 0x9A) {
+            /* Check if player is a trialist (0x9B) or reserve (0x9A) */
+            if ((uint8_t)plf->form == PLAYER_FORM_TRIALIST || (uint8_t)plf->form == PLAYER_FORM_RESERVE) {
                 d7mask |= (1u << i);
-            } else if (plf->positionAndFace & 0x02) {
+            } else if (plf->positionAndFace & PF_LOAN) {
                 /* on transfer list */
                 d7mask |= (1u << i);
             }
@@ -3217,9 +3217,9 @@ void _PlayerOffersOnSelect11(void)
         while (i >= 0) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
             PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
-            if ((uint8_t)plf->someFlag == 0x9B || (uint8_t)plf->someFlag == 0x9A) {
+            if ((uint8_t)plf->form == PLAYER_FORM_TRIALIST || (uint8_t)plf->form == PLAYER_FORM_RESERVE) {
                 d7mask |= (1u << i);
-            } else if (plf->positionAndFace & 0x02) {
+            } else if (plf->positionAndFace & PF_LOAN) {
                 d7mask |= (1u << i);
             }
             i--;
@@ -3932,10 +3932,10 @@ void _Career_BuildForeignMarketPoolFromSelectedTeam(void)
     for (i = 15; i >= 0; i--) {
         uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
         PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
-        pf->positionAndFace &= ~0x02;  /* bclr #1 */
+        pf->positionAndFace &= ~PF_LOAN;  /* bclr #1 */
         pf->cardsInjuries = 0;
-        pf->positionAndFace &= ~0x01;  /* bclr #0 */
-        pf->someFlag = 0;
+        pf->positionAndFace &= ~PF_INFORM;  /* bclr #0 */
+        pf->form = 0;
         _AddCareerPoolPlayer(selTeamNumber, (uint16_t)i, (PlayerFile *)p);
     }
 
@@ -3969,7 +3969,7 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
     PlayerFile *transferredPf = (PlayerFile *)(transferredBase + PF_OFF);
 
     /* Get position group (bits 7-5 of positionAndFace) */
-    uint16_t posGroup = ((uint16_t)transferredPf->positionAndFace & 0xE0) >> 3;
+    uint16_t posGroup = ((uint16_t)transferredPf->positionAndFace & PF_POSITION_MASK) >> 3;
     /* posGroup is now index*4 into the priority table (lsr.w #3) */
 
     uint8_t *priorityList = (uint8_t *)transferReplacementPriorityTable[posGroup >> 2];
@@ -3994,7 +3994,7 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
         uint8_t *scanPtr = (uint8_t *)teamPtr;
         for (uint16_t slot = 0; slot < 16; slot++) {
             PlayerFile *pf = (PlayerFile *)(scanPtr + PF_OFF);
-            uint16_t role = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+            uint16_t role = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
             if (role == targetRole) {
                 if (pf->price < bestPrice) {
                     bestOrdinal = slot;
@@ -4032,9 +4032,9 @@ void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint1
 
         /* Mark replacement as trialist and clear flags */
         PlayerFile *bestPf = (PlayerFile *)(bestPlayer + PF_OFF);
-        bestPf->positionAndFace |= 0x04;   /* bset #2 */
-        bestPf->positionAndFace &= ~0x01;  /* bclr #0 */
-        bestPf->someFlag = 0;
+        bestPf->positionAndFace |= PF_TRIALIST;   /* bset #2 */
+        bestPf->positionAndFace &= ~PF_INFORM;  /* bclr #0 */
+        bestPf->form = 0;
         bestPf->goalStats[0] = 0;
         bestPf->goalStats[1] = 0;
         bestPf->goalStats[2] = 0;
@@ -4096,8 +4096,8 @@ void _Career_AcceptOffer_SellPlayer(void)
 
     /* Flag both teams as changed */
     TeamFileEx *tp = _GetTeamPointer(offerOrdinals.teamOffering);
-    tp->team.someFlag = 1;
-    careerTeam.team.someFlag = 1;
+    tp->team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
 
     _PrunePlayerOffersAgainstRosterLimits();
 
@@ -4153,8 +4153,8 @@ void _Career_AcceptOffer_BuyPlayer(void)
 
     /* Flag both teams as changed */
     TeamFileEx *tp = _GetTeamPointer(offerOrdinals.teamOffering);
-    tp->team.someFlag = 1;
-    careerTeam.team.someFlag = 1;
+    tp->team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
 
     _PrunePlayerOffersAgainstRosterLimits();
 }
@@ -4203,7 +4203,7 @@ void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOr
     _TrainingMatch_SaveSelectedPlayerId(freeSlot);
 
     /* Mark source player as trialist */
-    srcPf->positionAndFace |= 0x04;  /* bset #2 */
+    srcPf->positionAndFace |= PF_TRIALIST;  /* bset #2 */
     srcPf->goalStats[0] = 0;
     srcPf->goalStats[1] = 0;
     srcPf->goalStats[2] = 0;
@@ -4346,7 +4346,7 @@ restart:;
     uint8_t *playerBase = team + playerIdx;
     PlayerFile *tpf = (PlayerFile *)(playerBase + PF_OFF);
     nationality = (uint8_t)tpf->nationality;
-    posFlags = tpf->positionAndFace & 0x18; /* position flags bits 3-4 */
+    posFlags = tpf->positionAndFace & PF_FACE_MASK; /* position flags bits 3-4 */
     uint8_t *name = (uint8_t *)tpf->playerName;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -4399,7 +4399,7 @@ restart:;
         playerBase = team + playerIdx;
         tpf = (PlayerFile *)(playerBase + PF_OFF);
         nationality = (uint8_t)tpf->nationality;
-        posFlags = tpf->positionAndFace & 0x18;
+        posFlags = tpf->positionAndFace & PF_FACE_MASK;
         name = (uint8_t *)tpf->playerName;
 
         /* Same '*ERR* ' marker guard as the first-source pick above —
@@ -4468,7 +4468,7 @@ void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
     pf->nationality = (int8_t)nationality;
 
     uint8_t posAndFace = pf->positionAndFace;
-    posAndFace &= 0xE7;  /* andi.b #$E7 — clear bits 3-4 */
+    posAndFace &= (uint8_t)~PF_FACE_MASK;  /* andi.b #$E7 — clear bits 3-4 */
     posAndFace |= posFlags;
     pf->positionAndFace = posAndFace;
 
@@ -4485,8 +4485,8 @@ void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
     pf->price = 0;
 
     /* Mark as trialist (bit 1) */
-    pf->positionAndFace |= 0x02;  /* bset #1 */
-    pf->someFlag = 0;
+    pf->positionAndFace |= PF_LOAN;  /* bset #1 */
+    pf->form = 0;
 }
 
 /* ================================================================
@@ -4515,7 +4515,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
     int16_t iter = (int16_t)numPl - 1;
     uint16_t totalPrice = 0;
     uint16_t count = 0;
-    uint16_t posGroup = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+    uint16_t posGroup = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
 
     while (iter >= 0) {
         uint8_t *p = _GetPlayerAtIndex(sourceTeam, (uint16_t)iter);
@@ -4527,7 +4527,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
             count++;
         } else {
             /* Different team: only count same position group */
-            uint16_t pg = ((uint16_t)ppf->positionAndFace & 0xE0) >> 5;
+            uint16_t pg = ((uint16_t)ppf->positionAndFace & PF_POSITION_MASK) >> 5;
             if (pg == posGroup) {
                 totalPrice += (uint8_t)ppf->price;
                 count++;
@@ -4598,7 +4598,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
     uint16_t templateOffset = skillLevel << 5;  /* 32 bytes per level */
     uint8_t *tmpl = trialistSkillTemplates + templateOffset;
 
-    uint16_t posIdx = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+    uint16_t posIdx = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
     uint16_t posOff = posIdx << 2;
     uint32_t skills = *(uint32_t *)(tmpl + posOff);
     uint32_t masks = *(uint32_t *)(trialistSkillBitMasks + posOff);
@@ -4657,7 +4657,7 @@ void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playe
     pf->nationality = (int8_t)nationality;
 
     uint8_t posAndFace = pf->positionAndFace;
-    posAndFace &= 0xE7;
+    posAndFace &= (uint8_t)~PF_FACE_MASK;
     posAndFace |= posFlags;
     pf->positionAndFace = posAndFace;
 
@@ -4676,10 +4676,10 @@ void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playe
 
     if (d5 == selTeamNumber) {
         /* Same team: set as goalkeeper sub and clear trialist/other flags */
-        pf->someFlag = (int8_t)0x9B;
-        pf->positionAndFace &= ~0x02;  /* bclr #1 */
-        pf->positionAndFace &= ~0x04;  /* bclr #2 */
-        pf->positionAndFace &= ~0x01;  /* bclr #0 */
+        pf->form = (int8_t)PLAYER_FORM_TRIALIST;
+        pf->positionAndFace &= ~PF_LOAN;  /* bclr #1 */
+        pf->positionAndFace &= ~PF_TRIALIST;  /* bclr #2 */
+        pf->positionAndFace &= ~PF_INFORM;  /* bclr #0 */
     } else {
         /* Different team: add to career pool */
         _AddCareerPoolPlayer(d5, d6, (PlayerFile *)base);
@@ -4720,7 +4720,7 @@ void _TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role)
     _TrainingMatch_SaveSelectedPlayerId(freeSlot);
 
     PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
-    pf->positionAndFace |= 0x04;  /* bset #2 — mark as trialist */
+    pf->positionAndFace |= PF_TRIALIST;  /* bset #2 — mark as trialist */
     pf->shirtNumber = 0x10;       /* shirt number 16 */
 
     /* Set position/role: lsl.w #5,d7; move.b d7,$66(a3) */
@@ -4765,10 +4765,10 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
             while (d2 >= 0) {
                 uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
                 PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
-                uint16_t pos = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+                uint16_t pos = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
                 if (pos == 0) {
                     /* GK — check if trialist (bit 1 of positionAndFace) */
-                    if (pf->positionAndFace & 0x02)
+                    if (pf->positionAndFace & PF_LOAN)
                         goto removeAndRecheck1;
                 }
                 d2--;
@@ -4788,13 +4788,13 @@ void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint1
             while (d2 >= 0) {
                 uint8_t *p = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
                 PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
-                uint16_t pos = ((uint16_t)pf->positionAndFace & 0xE0) >> 5;
+                uint16_t pos = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
                 if (pos == 0) {
                     /* GK — skip */
                     d2--;
                     continue;
                 }
-                if (pf->positionAndFace & 0x02)
+                if (pf->positionAndFace & PF_LOAN)
                     goto removeAndRecheck2;
                 d2--;
                 continue;
@@ -4867,7 +4867,7 @@ void _PutPlayerOnMarketMenu(void)
         for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
             uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
             PlayerFile *pf = (PlayerFile *)(player + 76);
-            if (pf->positionAndFace & 0x02)
+            if (pf->positionAndFace & PF_LOAN)
                 eligible |= (1u << (uint16_t)_cGetPlayerAtIndexFileIdx);
         }
 
@@ -5005,7 +5005,7 @@ static int16_t playerMarketPlayerMatchesFilters(uint8_t *blockPtr, int16_t ratin
 
     /* --- Position group filter (from positionGroupTable) --- */
     if (positionList != (uint8_t *)0) {
-        uint8_t posGroup = (uint8_t)((pf->positionAndFace & 0xE0) >> 5);
+        uint8_t posGroup = (uint8_t)((pf->positionAndFace & PF_POSITION_MASK) >> 5);
         uint8_t *p = positionList;
         for (;;) {
             if ((int8_t)*p < 0)                 /* 0xFF terminator (negative as signed) */
@@ -5018,7 +5018,7 @@ static int16_t playerMarketPlayerMatchesFilters(uint8_t *blockPtr, int16_t ratin
 
     /* --- Specific position skill bit filter --- */
     if (playerMarketFilterPosition != 0 && skillBitIndex >= 0) {
-        uint8_t posGroup = (uint8_t)((pf->positionAndFace & 0xE0) >> 5);
+        uint8_t posGroup = (uint8_t)((pf->positionAndFace & PF_POSITION_MASK) >> 5);
         if (posGroup == 0)
             return 1;                           /* goalkeepers excluded */
         /* Reconstruct big-endian skills longword from 4 consecutive bytes */
@@ -5202,7 +5202,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     }
 
     /* Get position mask */
-    uint16_t posMask = (uint16_t)pfEntry->positionAndFace & 0xE0;
+    uint16_t posMask = (uint16_t)pfEntry->positionAndFace & PF_POSITION_MASK;
     offerPrimaryPositionMask = posMask;
 
     /* Decide home vs foreign market */
@@ -5329,7 +5329,7 @@ void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
                     /* Get extra player entry and check injury + position */
                     uint8_t *extraEntry = _GetPlayer(selTeamNumber, (uint16_t)extraOrd);
                     PlayerFile *extraPf = (PlayerFile *)(extraEntry + PF_OFF);
-                    uint16_t extraPos = (uint16_t)extraPf->positionAndFace & 0xE0;
+                    uint16_t extraPos = (uint16_t)extraPf->positionAndFace & PF_POSITION_MASK;
                     offerExtraPositionMask = extraPos;
                     if (_IsPlayerInjured((PlayerFile *)extraEntry, -1) != 0)
                         return;

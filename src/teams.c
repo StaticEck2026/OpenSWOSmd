@@ -1197,7 +1197,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
     /* Get the removed player to determine its position */
     uint8_t *removedPlayer = _GetPlayerAtIndex(selTeamNumber, removedOrdinal);
     PlayerFile *removedPf = (PlayerFile *)(removedPlayer + 76);
-    uint16_t posIdx = (uint16_t)((removedPf->positionAndFace & 0xE0) >> 5);
+    uint16_t posIdx = (uint16_t)((removedPf->positionAndFace & PF_POSITION_MASK) >> 5);
     const uint8_t *searchOrder = replPosSearchOrderTable[posIdx];
 
     while (1) {
@@ -1216,7 +1216,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
         for (i = rangeStart; i < rangeEnd; i++) {
             uint8_t *candidate = _GetPlayerAtIndex(selTeamNumber, i);
             PlayerFile *candPf = (PlayerFile *)(candidate + 76);
-            uint8_t candPos = (uint8_t)((candPf->positionAndFace & 0xE0) >> 5);
+            uint8_t candPos = (uint8_t)((candPf->positionAndFace & PF_POSITION_MASK) >> 5);
 
             if (candPos != desiredPos)
                 continue;
@@ -1227,7 +1227,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
             }
 
             /* Check if existing best is trialist/trial */
-            if ((uint8_t)bestPf->someFlag == 0x9B || (uint8_t)bestPf->someFlag == 0x9A) {
+            if ((uint8_t)bestPf->form == PLAYER_FORM_TRIALIST || (uint8_t)bestPf->form == PLAYER_FORM_RESERVE) {
                 /* Best IS trialist — compare skill directly */
                 if ((uint8_t)bestSkill >= (uint8_t)candPf->price)
                     continue;
@@ -1235,7 +1235,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
             }
 
             /* Best is NOT trialist — if candidate IS trialist, prefer candidate */
-            if ((uint8_t)candPf->someFlag == 0x9B || (uint8_t)candPf->someFlag == 0x9A) {
+            if ((uint8_t)candPf->form == PLAYER_FORM_TRIALIST || (uint8_t)candPf->form == PLAYER_FORM_RESERVE) {
                 goto accept;
             }
 
@@ -1425,7 +1425,7 @@ void _RemovePlayerFromTeam(uint16_t playerOrd)
 {
     _Career_RemovePlayerFromTeamInternal(selTeamNumber, playerOrd);
     _Career_RemovePlayerFromSelectedTeamRoster(playerOrd);
-    careerTeam.team.someFlag = 1;
+    careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
     _PrunePlayerOffersAgainstRosterLimits();
 }
 
@@ -1715,16 +1715,16 @@ void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
 {
     /* Check status byte (someFlag in PlayerFile) */
     PlayerFile *pf = (PlayerFile *)(base + sizeof(TeamFile));
-    if ((uint8_t)pf->someFlag == 0x9B) {
+    if ((uint8_t)pf->form == PLAYER_FORM_TRIALIST) {
         _StringCopy((const uint8_t *)aTrial, dst);
         return;
     }
-    if ((uint8_t)pf->someFlag == 0x9A) {
+    if ((uint8_t)pf->form == PLAYER_FORM_RESERVE) {
         _StringCopy((const uint8_t *)aRes, dst);
         return;
     }
     /* Check loan flag (positionAndFace bit 1) */
-    if (pf->positionAndFace & 0x02) {
+    if (pf->positionAndFace & PF_LOAN) {
         _StringCopy((const uint8_t *)aLoan, dst);
         return;
     }

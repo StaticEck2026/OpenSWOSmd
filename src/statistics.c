@@ -676,15 +676,15 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
             playerIdx = (int16_t)_cGetPlayerAtIndexFileIdx;
         }
 
-        /* Get score for this player */
+        /* playerBase points at the team base (career: the _GetPlayerAtIndex
+         * result), so the PlayerFile sits at +sizeof(TeamFile). This replaces the
+         * old raw 0x6D..0x70 (= 76 + offsetof(PlayerFile, goalStats)). */
+        PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
         if (statIndex < 0)
         {
             /* Sum all 4 competition goal stats */
-            uint16_t total = 0;
-            total += *(playerBase + 0x6D);   /* goalStats[0] */
-            total += *(playerBase + 0x6E);   /* goalStats[1] */
-            total += *(playerBase + 0x6F);   /* goalStats[2] */
-            total += *(playerBase + 0x70);   /* goalStats[3] */
+            uint16_t total = (uint16_t)pf->goalStats[0] + pf->goalStats[1]
+                           + pf->goalStats[2] + pf->goalStats[3];
             if (total > 255)
                 total = 255;
             score = total;
@@ -694,7 +694,7 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
         else
         {
             /* Specific competition index */
-            score = *(playerBase + 0x6D + statIndex);
+            score = pf->goalStats[statIndex];
             if (score == 0)
                 goto next_player;
         }

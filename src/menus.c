@@ -1016,7 +1016,7 @@ void _SquadCommitPositionsAndUpdateSkill(void)
         dst[i] = src[i];
 
     TeamFile *teamFile = (TeamFile *)squadTeamFilePtr;
-    teamFile->someFlag = 1;
+    teamFile->form = 1;
 
     _ComputeOldPlayerSkillForViewResult((TeamFileEx *)teamFile, 5);
     _UpdateBigCheckMark();
@@ -1169,7 +1169,7 @@ void _SquadCommon(void *entryPtr)
                 squadPrevSelectedPlayerIndex, d7,
                 squadPrevSelectedBreakPos, d6);
             _SetBenchPlayersNumbers((TeamFileEx *)squadTeamFilePtr);
-            ((TeamFile *)squadTeamFilePtr)->someFlag = 1;
+            ((TeamFile *)squadTeamFilePtr)->form = 1;
             _SquadCommitPositionsAndUpdateSkill();
             squadPrevSelectedPlayerIndex = 0xFFFF;
             _DrawMenu();
@@ -1601,7 +1601,7 @@ void _SquadAfterDrawCommon(void *entryPtr)
     e = &menuEntries[49];
     {
         uint8_t posAndFace = pf->positionAndFace;
-        uint16_t posIdx = (posAndFace & 0xE0) >> 3;
+        uint16_t posIdx = (posAndFace & PF_POSITION_MASK) >> 3;
         e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     }
     e->y = yPos;
@@ -1680,13 +1680,13 @@ void _SquadAfterDrawCommon(void *entryPtr)
         }
         menuEntries[57].isInvisible = 0;
 
-        /* Color based on PlayerFile.someFlag and positionAndFace */
+        /* Color based on PlayerFile.playerValuesDirty and positionAndFace */
         uint16_t colorIdx = 2;
-        if ((uint8_t)pf->someFlag == 0x9B) {
+        if ((uint8_t)pf->form == PLAYER_FORM_TRIALIST) {
             colorIdx = 13;
-        } else if ((uint8_t)pf->someFlag == 0x9A) {
+        } else if ((uint8_t)pf->form == PLAYER_FORM_RESERVE) {
             colorIdx = 1;
-        } else if (pf->positionAndFace & 0x02) {
+        } else if (pf->positionAndFace & PF_LOAN) {
             colorIdx = 15;
         }
         {
@@ -5032,7 +5032,7 @@ __attribute__((used, externally_visible))
 void _SetSquadMenuEntryStatusSprite(MenuEntry *entry, PlayerFile *playerFile, uint16_t flag)
 {
     PlayerFile *pf = &playerFile[2];
-    uint16_t d1 = pf->positionAndFace & 0x18;
+    uint16_t d1 = pf->positionAndFace & PF_FACE_MASK;
     d1 >>= 3; /* face index 0-3 */
     uint16_t d2, d3;
     uint16_t sprite;
@@ -5148,7 +5148,7 @@ void _SetSquadMenuEntryStatusSprite_AfterSim(MenuEntry *entry, PlayerFile *playe
      * ASM reads PLAYERFILE_POSITIONANDFACE+$4C(a6) where a6 is the raw
      * player pointer. Since playerFile is already player+PF_OFF (76),
      * we access playerFile directly (offset 26+76=102 from raw player). */
-    uint16_t d1 = playerFile->positionAndFace & 0x18;
+    uint16_t d1 = playerFile->positionAndFace & PF_FACE_MASK;
     d1 >>= 3;
     uint16_t d3 = playerFile->cardsInjuries & 0xE0;
 
@@ -5833,7 +5833,7 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
     careerAddIntlPlayerSelectedSrcPlayerNamePtr = (uintptr_t)teamEx->team.teamName;
 
     /* Get position type of selected source player */
-    uint16_t srcPos = (teamEx->players[selected].positionAndFace & 0xE0) >> 5;
+    uint16_t srcPos = (teamEx->players[selected].positionAndFace & PF_POSITION_MASK) >> 5;
 
     /* Check if career team is full (max 20 players) */
     if (careerNumPlayers >= 20) {
@@ -5855,7 +5855,7 @@ void _Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
         /* Position compatibility:
          * goalkeeper (0) → only goalkeeper slots
          * outfield (>0) → only outfield slots */
-        uint16_t dstPos = (pf->positionAndFace & 0xE0) >> 5;
+        uint16_t dstPos = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
         if (srcPos == 0) {
             if (dstPos != 0)
                 continue;
@@ -5995,7 +5995,7 @@ void _Career_RebuildInternationalPlayerSelectionMasks(void)
      * In asm, loc_147376 = careerIntlPlayerSelectedPlayerDataCopy - 76.
      * The block pointer convention: adding 0x66 reaches positionAndFace. */
     PlayerFile *pendingPf = (PlayerFile *)careerIntlPlayerSelectedPlayerDataCopy;
-    uint16_t pendingPos = (pendingPf->positionAndFace & 0xE0) >> 5;
+    uint16_t pendingPos = (pendingPf->positionAndFace & PF_POSITION_MASK) >> 5;
 
     uint32_t wrongMask = 0;
     uint32_t selectMask = 0xFFFFFFFF;  /* all bits set = all selectable */
@@ -6010,7 +6010,7 @@ void _Career_RebuildInternationalPlayerSelectionMasks(void)
 
         /* Check position compatibility if pending add is active */
         if (careerNationalTeamHasPendingAddPlayer) {
-            uint16_t slotPos = (pf->positionAndFace & 0xE0) >> 5;
+            uint16_t slotPos = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
             if (pendingPos == 0) {
                 /* Pending is GK: only GK slots are compatible */
                 if (slotPos != 0) {
@@ -6188,7 +6188,7 @@ void _SelectNationalTeamAfterDrawCommon(void *entryPtr)
         /* Default color based on position type */
         d5 = 0;
         PlayerFile *pf = (PlayerFile *)(careerPlayer + sizeof(TeamFile));
-        uint16_t posType = (pf->positionAndFace & 0xE0) >> 5;
+        uint16_t posType = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
         if (posType == 0)
             d5 = 0x0E;  /* goalkeeper color */
 

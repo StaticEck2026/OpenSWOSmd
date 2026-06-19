@@ -390,7 +390,7 @@ void _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
     _StringCopy((uint8_t *)pf->playerName, (uint8_t *)pi->fullName);
 
     /* Extract face from positionAndFace: bits 3-4 → 0-3 */
-    uint16_t face = (uint16_t)(pf->positionAndFace & 0x18) >> 3;
+    uint16_t face = (uint16_t)(pf->positionAndFace & PF_FACE_MASK) >> 3;
     pi->face2 = (int8_t)face;
 }
 
@@ -420,11 +420,11 @@ void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
     _StringCopy(surname, (uint8_t *)pi->shortName);
 
     /* Face from positionAndFace: bits 3-4 → 0-3 */
-    uint16_t face = (uint16_t)(pf->positionAndFace & 0x18) >> 3;
+    uint16_t face = (uint16_t)(pf->positionAndFace & PF_FACE_MASK) >> 3;
     pi->face = (int8_t)face;
 
     /* Position: bits 5-7 of positionAndFace */
-    uint16_t pos = (uint16_t)(pf->positionAndFace & 0xE0) >> 5;
+    uint16_t pos = (uint16_t)(pf->positionAndFace & PF_POSITION_MASK) >> 5;
     pi->position = (int8_t)pos;
 
     /* Substituted flag */

@@ -523,7 +523,7 @@ void _EditTactics_CommitPlayerPositionsAndRecalcSkill(void)
     }
 
     TeamFileEx *teamPtr = (TeamFileEx *)chooseTacticsTeamPtr;
-    teamPtr->team.someFlag = 1;
+    teamPtr->team.playerValuesDirty = TEAM_VALUES_DIRTY;
 
     /* Temporarily set tactics byte to 0x12, compute skill, restore */
     uint8_t savedTactics = teamPtr->team.tactics;
@@ -591,7 +591,7 @@ __attribute__((used, externally_visible))
 void _MarkSelectedTeamsTacticsChanged(void)
 {
     if (selTeamNumber != 0xFFFF) {
-        careerTeam.team.someFlag = 1;
+        careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
     }
 
     uint16_t count = numSelectedTeams;
@@ -601,7 +601,7 @@ void _MarkSelectedTeamsTacticsChanged(void)
     TeamFileEx *team = selectedTeams;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
         if (team->team.tactics == (uint8_t)chosenTactics) {
-            team->team.someFlag = 1;
+            team->team.playerValuesDirty = TEAM_VALUES_DIRTY;
         }
         team = (TeamFileEx *)((uint8_t *)team + SELECTED_TEAM_STRIDE);
     }
@@ -746,7 +746,7 @@ void _ImportTactics(void)
 
     /* Mark team as changed */
     TeamFileEx *teamEx = chooseTacticsTeamPtr;
-    teamEx->team.someFlag = 1;
+    teamEx->team.playerValuesDirty = TEAM_VALUES_DIRTY;
     _MarkSelectedTeamsTacticsChanged();
     _CopyCurrentTacticName();
     _EditTactics_CommitPlayerPositionsAndRecalcSkill();
@@ -1486,7 +1486,7 @@ void _DrawLittlePlayersAndBall(void)
 
         /* Determine skin color sprite */
         uint8_t posAndFace = teamEx->players[playerNum].positionAndFace;
-        uint16_t skinIdx = (posAndFace & 0x18) >> 3;   /* 0..3 */
+        uint16_t skinIdx = (posAndFace & PF_FACE_MASK) >> 3;   /* 0..3 */
         uint16_t playerSprite = SPR_SMALL_PL_WHITE + skinIdx;
         _DrawSpriteCentered(playerSprite, px, py);
 
@@ -1508,7 +1508,7 @@ nextIter:
     /* Draw goalkeeper sprite at fixed position (bottom of pitch) */
     int8_t gkNum = (int8_t)playerNums[0];
     uint8_t gkPosAndFace = teamEx->players[gkNum].positionAndFace;
-    uint16_t gkSkinIdx = (gkPosAndFace & 0x18) >> 3;
+    uint16_t gkSkinIdx = (gkPosAndFace & PF_FACE_MASK) >> 3;
     uint16_t gkSprite = SPR_SMALL_GK_WHITE + gkSkinIdx;
     _DrawSpriteCentered(gkSprite, 87, 234);
 }
@@ -1541,7 +1541,7 @@ void _DrawEditTacticsHighlightedPlayerRoute(void)
 
     /* Determine skin color sprite for the player */
     uint8_t posAndFace = teamEx->players[markedNum].positionAndFace;
-    uint16_t skinIdx = (posAndFace & 0x18) >> 3;
+    uint16_t skinIdx = (posAndFace & PF_FACE_MASK) >> 3;
     uint16_t playerSprite = SPR_SMALL_PL_WHITE + skinIdx;
 
     /* Determine shirt number sprite */
@@ -2284,7 +2284,7 @@ void _EditTacticsPlayerNamesCommon(MenuEntry *cur)
                 editTacticsSelectedPlayerSlotIndex, slot);
             _SetBenchPlayersNumbers(chooseTacticsTeamPtr);
             teamEx = chooseTacticsTeamPtr;
-            teamEx->team.someFlag = 1;
+            teamEx->team.playerValuesDirty = TEAM_VALUES_DIRTY;
             _EditTactics_CommitPlayerPositionsAndRecalcSkill();
             editTacticsSelectedPlayerNameIndex = 0xFFFF;
             _DrawMenu();
@@ -2744,13 +2744,13 @@ void _EditTeamsChangePlayerFace(MenuEntry *entry)
 {
     PlayerFile *pf = EditTeamsGetPlayerFileC(entry);
     uint8_t posAndFace = pf->positionAndFace;
-    uint16_t faceIdx = (posAndFace & 0x18) >> 3;
+    uint16_t faceIdx = (posAndFace & PF_FACE_MASK) >> 3;
 
     faceIdx++;
     if (faceIdx == 3)
         faceIdx = 0;
 
-    pf->positionAndFace = (posAndFace & 0xE7) | (uint8_t)(faceIdx << 3);
+    pf->positionAndFace = (posAndFace & (uint8_t)~PF_FACE_MASK) | (uint8_t)(faceIdx << PF_FACE_SHIFT);
 
     /* Update menu entry sprite to show new face */
     entry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
@@ -2786,7 +2786,7 @@ void _InitEditTeamsMenu(void)
     for (int16_t i = 15; i >= 0; i--) {
         PlayerFile *pf = &teamEx->players[15 - i];
         uint8_t posAndFace = pf->positionAndFace;
-        uint16_t faceIdx = (posAndFace & 0x18) >> 3;
+        uint16_t faceIdx = (posAndFace & PF_FACE_MASK) >> 3;
         faceEntry->fgWord = (uint16_t)(faceIdx + 186);  /* SPR_PL_FACE_WHITE_GUY */
         faceEntry = (MenuEntry *)((uint8_t *)faceEntry + MENUENTRY_STRIDE);
 
@@ -2819,7 +2819,7 @@ void _EditTeamsPlayersBeforeDraw(MenuEntry *entry)
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Position string */
-    uint16_t posIdx = (posAndFace & 0xE0) >> 3;  /* extract top 3 bits, shift to word index */
+    uint16_t posIdx = (posAndFace & PF_POSITION_MASK) >> 3;  /* extract top 3 bits, shift to word index */
     e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     e->y = y;
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
@@ -3396,7 +3396,7 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
 
     /* Entry 42: position string */
     uint8_t posAndFace = pf->positionAndFace;
-    uint16_t posIdx = ((uint16_t)posAndFace & 0xE0) >> 3;
+    uint16_t posIdx = ((uint16_t)posAndFace & PF_POSITION_MASK) >> 3;
     e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 43 */
@@ -3421,11 +3421,11 @@ void _EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Determine color for entry 44 based on player status.
      * Asm writes low nibble of stringFlags (offset 0x24 = MENUENTRY_STRINGFLAGS). */
     uint16_t colorVal;
-    if ((uint8_t)pf->someFlag == 0x9B) {
+    if ((uint8_t)pf->form == PLAYER_FORM_TRIALIST) {
         colorVal = 0xD;
-    } else if ((uint8_t)pf->someFlag == 0x9A) {
+    } else if ((uint8_t)pf->form == PLAYER_FORM_RESERVE) {
         colorVal = 1;
-    } else if (pf->positionAndFace & 0x02) {
+    } else if (pf->positionAndFace & PF_LOAN) {
         colorVal = 0xF;
     } else {
         colorVal = 2;
