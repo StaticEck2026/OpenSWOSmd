@@ -2721,6 +2721,103 @@ int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, 
     return n;
 }
 
+/* ----------------------------------------------------------------------------
+ * Competition JSON loader (data_json/competitions/*.json) — first increment:
+ * parse a single competition RECORD (the cup / playoff family: comp base +
+ * scalars + round_rule_flags + name strings + team_seed_list) into the typed
+ * CompetitionCup struct. Tournament rounds[]/league divisions[] and the
+ * country-graph wire-in (competitionsTable reconstruction) are the next steps.
+ * -------------------------------------------------------------------------- */
+
+/* CN_* define -> country number, via the master countries.json (file cached for
+   the process; linear scan per lookup — fine for load-time use). Returns -1. */
+static int dj_cn_number(const char *define, int dlen)
+{
+    static char *cj = (char *)0;
+    static int clen = 0;
+    static int tried = 0;
+    if (!tried) { tried = 1; cj = dj_slurp("data_json/competitions/countries.json", &clen); }
+    if (!cj) return -1;
+    const char *arr; int al;
+    if (mjson_find(cj, clen, "$.countries", &arr, &al) != MJSON_TOK_ARRAY) return -1;
+    int pos = 0, voff, vlen, vt;
+    char buf[64];
+    while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) continue;
+        if (mjson_get_string(arr + voff, vlen, "$.define", buf, (int)sizeof buf) > 0
+            && (int)strlen(buf) == dlen && memcmp(buf, define, (size_t)dlen) == 0) {
+            double v;
+            return mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
+        }
+    }
+    return -1;
+}
+
+/* Parse one cup/playoff competition record (`o`/`ol` = the JSON object slice)
+   into `out`. isPlayoff selects the Competition.isPlayoff discriminator (the
+   caller knows it from the source list). name[] strings are interned into the
+   caller-provided strpool. Returns 0 on success, -1 if the `comp` base is
+   missing. */
+int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
+                                int isPlayoff, char *strpool, int strpoolsz)
+{
+    CompetitionCup *out = (CompetitionCup *)outv;
+    memset(out, 0, sizeof *out);
+    const char *cs; int cl;
+    if (mjson_find(o, ol, "$.comp", &cs, &cl) != MJSON_TOK_OBJECT) return -1;
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    Competition *c = &out->header.comp;
+    c->compNumber     = (int8_t)GN(cs, cl, "$.comp_number");
+    c->type           = (int8_t)GN(cs, cl, "$.type");
+    c->teamNumber     = (int8_t)GN(cs, cl, "$.team_number");
+    c->beginMonth     = (int8_t)GN(cs, cl, "$.begin_month");
+    c->endMonth       = (int8_t)GN(cs, cl, "$.end_month");
+    c->isPlayoff      = (int8_t)isPlayoff;            /* byte 6 discriminator (Step 4b) */
+    c->seedReorderFlag = (int8_t)GN(cs, cl, "$.seed_reorder_flag");
+    out->header.numRoundsOverride   = (int8_t)GN(o, ol, "$.num_rounds_override");
+    out->header.teams               = (int8_t)GN(o, ol, "$.teams");
+    out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
+    out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
+    out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
+
+    const char *arr; int al; int pos, voff, vlen, vt, i;
+    /* round_rule_flags[6] */
+    if (mjson_find(o, ol, "$.round_rule_flags", &arr, &al) == MJSON_TOK_ARRAY) {
+        pos = 0; i = 0;
+        while (i < 6 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0)
+            out->roundRuleFlags[i++] = (int8_t)GN(arr + voff, vlen, "$");
+    }
+    /* name[2] strings -> intern into strpool */
+    if (mjson_find(o, ol, "$.name", &arr, &al) == MJSON_TOK_ARRAY) {
+        pos = 0; i = 0;
+        int used = 0;
+        while (i < 2 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt == MJSON_TOK_STRING && used < strpoolsz) {
+                int n = mjson_get_string(arr + voff, vlen, "$", strpool + used, strpoolsz - used);
+                if (n >= 0) { out->name[i] = strpool + used; used += n + 1; }
+            }
+            i++;
+        }
+    }
+    /* team_seed_list[] -> TeamId[32] ({country: CN_*, ordinal}) */
+    if (mjson_find(o, ol, "$.team_seed_list", &arr, &al) == MJSON_TOK_ARRAY) {
+        pos = 0; i = 0;
+        char cn[64];
+        while (i < 32 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            int num = -1;
+            if (mjson_get_string(arr + voff, vlen, "$.country", cn, (int)sizeof cn) > 0)
+                num = dj_cn_number(cn, (int)strlen(cn));
+            out->teamSeedList[i].countryNumber = (uint8_t)(num < 0 ? 0 : num);
+            out->teamSeedList[i].teamOrdinal   = (uint8_t)GN(arr + voff, vlen, "$.ordinal");
+            i++;
+        }
+    }
+#undef GN
+    return 0;
+}
+
 /* Self-test (SWOS_DATA_JSON_SELFTEST=1): load teams/SCOTLAND.json and check the
  * parse against known values. Proves the data-JSON loader builds the structs
  * correctly. Semantic checks (not a raw memcmp) so endian-sensitive fields like
@@ -2759,7 +2856,52 @@ int DataJson_SelfTest(void)
     printf("[data-json]   t[0]=%.17s  t[33]=%.17s gtn=%d  p11=%.22s\n",
            t[0].team.teamName, t[33].team.teamName,
            t[33].team.globalTeamNumber, t[33].players[11].playerName);
-    return ok ? 0 : 1;
+
+    /* ---- competition record loader: load cups.json's "cupWinnersCup" and
+       verify the parse against the compiled global of the same name. ---- */
+    int cok = 1;
+    extern CompetitionCup cupWinnersCup;   /* compiled record */
+    char *cj = NULL; { FILE *cf = fopen("data_json/competitions/cups.json", "rb");
+        if (cf) { fseek(cf,0,SEEK_END); long cn2=ftell(cf); fseek(cf,0,SEEK_SET);
+            cj=(char*)malloc((size_t)cn2+1); if (cj && fread(cj,1,(size_t)cn2,cf)==(size_t)cn2) cj[cn2]='\0'; else { free(cj); cj=NULL; }
+            fclose(cf); } }
+    if (!cj) { printf("[data-json] selftest comp: cannot open cups.json\n"); return ok ? 0 : 1; }
+    int cjlen = (int)strlen(cj);
+    const char *arr; int al;
+    static CompetitionCup loaded;
+    static char strpool[256];
+    int found = 0;
+    if (mjson_find(cj, cjlen, "$.competitions", &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos=0,voff,vlen,vt; char idbuf[64];
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            if (mjson_get_string(arr+voff, vlen, "$.id", idbuf, (int)sizeof idbuf) > 0
+                && strcmp(idbuf, "cupWinnersCup") == 0) {
+                DataJson_LoadCompetitionCup(arr+voff, vlen, &loaded, 0, strpool, (int)sizeof strpool);
+                found = 1; break;
+            }
+        }
+    }
+    free(cj);
+#define CCHK(c) do { if (!(c)) { printf("[data-json]   comp FAIL: %s\n", #c); cok = 0; } } while (0)
+    CCHK(found);
+    CCHK(loaded.header.comp.compNumber == cupWinnersCup.header.comp.compNumber);
+    CCHK(loaded.header.comp.type == cupWinnersCup.header.comp.type);
+    CCHK(loaded.header.comp.seedReorderFlag == cupWinnersCup.header.comp.seedReorderFlag);
+    CCHK(loaded.header.teams == cupWinnersCup.header.teams);
+    CCHK(loaded.roundRuleFlags[0] == cupWinnersCup.roundRuleFlags[0]);
+    CCHK(loaded.name[0] && cupWinnersCup.name[0] && strcmp(loaded.name[0], cupWinnersCup.name[0]) == 0);
+    CCHK(loaded.name[1] && cupWinnersCup.name[1] && strcmp(loaded.name[1], cupWinnersCup.name[1]) == 0);
+    CCHK(loaded.teamSeedList[0].countryNumber == cupWinnersCup.teamSeedList[0].countryNumber);
+    CCHK(loaded.teamSeedList[0].teamOrdinal   == cupWinnersCup.teamSeedList[0].teamOrdinal);
+    CCHK(loaded.teamSeedList[4].countryNumber == cupWinnersCup.teamSeedList[4].countryNumber);
+#undef CCHK
+    printf("[data-json] selftest comp: cupWinnersCup %s\n", cok ? "PASS" : "FAIL");
+    printf("[data-json]   teams=%d name0=%.30s seed[0]=%u/%u seed[4]=%u/%u\n",
+           loaded.header.teams, loaded.name[0] ? loaded.name[0] : "(null)",
+           loaded.teamSeedList[0].countryNumber, loaded.teamSeedList[0].teamOrdinal,
+           loaded.teamSeedList[4].countryNumber, loaded.teamSeedList[4].teamOrdinal);
+    return (ok && cok) ? 0 : 1;
 }
 #endif /* SWOS_SDL_BUILD */
 

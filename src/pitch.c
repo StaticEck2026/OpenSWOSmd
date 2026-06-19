@@ -8,6 +8,11 @@
 #include "display.h"
 #include "endian_helpers.h"
 #include "swos_types.h"
+#include "dos_mode.h"
+#ifdef SWOS_SDL_BUILD
+#include "dos_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
+#include <stdio.h>          /* snprintf for the DOS pitch filenames */
+#endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern void *swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */
@@ -114,6 +119,59 @@ void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
 #endif
 }
 
+#ifdef SWOS_SDL_BUILD
+/* ================================================================
+ * dos_load_pitch  (SDL + gDosGraphics only)
+ *
+ * Loads a DOS pitch from bin/grafs_dos. Two files:
+ *   PITCHn.BLK — the tile bank: raw N × 256-byte 16×16 8bpp chunky
+ *                tiles. This is already our internal format, so we
+ *                load it straight into pitchChunkyBuffer (tile t at
+ *                +t*256, matching the Amiga decode path and the
+ *                addressing animated_patterns.c expects).
+ *   PITCHn.DAT — the tile map: an array of little-endian u32 byte
+ *                offsets into the bank (tileIndex = offset / 256).
+ *
+ * We synthesise the per-slot pointer table s_pitchFullPtrs[] that
+ * _DrawChunkyPitch consumes — exactly what _FixupAndColorPitchFile's
+ * Amiga bitplane relocate/decode would produce — then short-circuit
+ * that fixup (see _FixupAndColorPitchFile). DOS files are numbered
+ * PITCH1..PITCH6; mapIndex is 0-based (swcPitchMapFiles order), so the
+ * DOS number is mapIndex + 1.
+ * ================================================================ */
+extern uint8_t pitchChunkyBuffer[];
+
+static void dos_load_pitch(uint16_t mapIndex)
+{
+    char name[64];
+    uint32_t blkSize = 0, datSize = 0;
+    int pitchNum = (int)mapIndex + 1;          /* DOS PITCH1..PITCH6 */
+    if (pitchNum < 1) pitchNum = 1;
+    if (pitchNum > 6) pitchNum = 6;
+
+    /* Tile bank — already 256-byte chunky tiles, load straight in. */
+    snprintf(name, sizeof name, "grafs_dos/PITCH%d.BLK", pitchNum);
+    _LoadFileEx((uint8_t *)name, pitchChunkyBuffer, &blkSize);
+
+    /* Tile map — stage into pitchDatBuffer, then parse the LE offsets. */
+    snprintf(name, sizeof name, "grafs_dos/PITCH%d.DAT", pitchNum);
+    _LoadFileEx((uint8_t *)name, pitchDatBuffer, &datSize);
+
+    static uint16_t tileMap[PITCH_POINTER_COUNT];
+    int n = DosGfx_ParsePitchMap(pitchDatBuffer, datSize, tileMap,
+                                 PITCH_POINTER_COUNT);
+
+    uint32_t tileCount = blkSize / DOS_TILE_BYTES;
+    for (int i = 0; i < PITCH_POINTER_COUNT; i++) {
+        if (i < n && (uint32_t)tileMap[i] < tileCount)
+            s_pitchFullPtrs[i] = pitchChunkyBuffer +
+                                 (size_t)tileMap[i] * DOS_TILE_BYTES;
+        else
+            s_pitchFullPtrs[i] = (uint8_t *)0;   /* unmapped → surround */
+    }
+}
+#endif /* SWOS_SDL_BUILD */
+
 /* ================================================================
  * LoadPitchMap  (SWOS2.s line 5557)
  *
@@ -123,6 +181,12 @@ void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
 __attribute__((used, externally_visible))
 void _LoadPitchMap(uint16_t mapIndex)
 {
+#ifdef SWOS_SDL_BUILD
+    if (gDosGraphics) {
+        dos_load_pitch(mapIndex);
+        return;
+    }
+#endif
     uint8_t *filename = (uint8_t *)swcPitchMapFiles[mapIndex];
     uint32_t fileSize = 0;
     int16_t result;
@@ -158,6 +222,23 @@ void _FixupAndColorPitchFile(void)
     uint32_t baseAddr = (uint32_t)(uintptr_t)(pitchDatBuffer + PITCH_POINTER_COUNT * 4);
     TeamGame *teamData;
     uint16_t kitPrimary, kitSecondary, kitTertiary;
+
+#ifdef SWOS_SDL_BUILD
+    if (gDosGraphics) {
+        /* DOS pitch: s_pitchFullPtrs was already built in _LoadPitchMap
+         * from the BLK tile bank + DAT tile map. There is no bitplane
+         * pointer table to relocate or decode, and the Amiga fan-kit
+         * recolor (_AdjustFanColor) doesn't apply to 256-colour DOS tiles
+         * — it indexes a 16-entry LUT with pixel values that can be 0..255.
+         * Just reset the camera and skip the rest. */
+        cameraX.s.i = 0;
+        cameraY.s.i = 0;
+        cameraXMod320 = 0;
+        cameraYMod320 = 0;
+        fansSidesSwapped = 0;
+        return;
+    }
+#endif
 
     /* Step 1: Relocate all pointers in pitchDatBuffer.
      * SWOS Amiga pitch files store each mapping entry as a 32-bit

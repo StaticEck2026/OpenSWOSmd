@@ -66,6 +66,12 @@ int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, in
    teamFileBuf (2-byte host-native count + TeamFileEx records). Returns the team
    count (>0), or -1 to fall back to the binary TEAM.NNN. See _LoadTeamFile. */
 int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams);
+/* Parse one cup/playoff competition record (JSON object slice) into a
+   CompetitionCup (`out`, passed as void* — the type is an anonymous typedef).
+   isPlayoff sets the Competition.isPlayoff discriminator; name[] strings are
+   interned into strpool. Returns 0 on success. */
+int DataJson_LoadCompetitionCup(const char *json, int len, void *out,
+                                int isPlayoff, char *strpool, int strpoolsz);
 int DataJson_SelfTest(void);   /* run via SWOS_DATA_JSON_SELFTEST=1 */
 #endif
 
