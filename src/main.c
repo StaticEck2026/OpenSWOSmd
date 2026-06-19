@@ -34,12 +34,7 @@
 #include "platform_sdl.h"
 #include "swos_settings.h"
 #include "save_format_json.h"   /* DataJson_SelfTest */
-#include "dos_mode.h"
-
-/* Optional DOS-graphics/gameplay flags (PC-only extras; default Amiga). Set
- * from the [dos] INI section / --dos-* options below; read by the game code. */
-int gDosGraphics = 0;
-int gDosGameplay = 0;
+#include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
 
 #define SWOS_INI_PATH "SWOS.ini"
 

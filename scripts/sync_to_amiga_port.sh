@@ -90,6 +90,7 @@ SRC_FILES=(
     fade.c input.c input_text.c loader_bootstrap.c math68k.c panic.c
     random.c string_utils.c team_control.c tactics_menu.c
     game_state.c camera.c move_camera.c scroll_blit.c highlight.c
+    dos_graphics.c
     intro_menu_image_script_cmds.inc
     menu_bg_image_script_cmds.inc
     menu_color_text_script_cmds.inc
@@ -103,6 +104,7 @@ HDR_FILES=(
     rnc_magic.h endian_helpers.h auto_skip_debug.h
     swos_io.h audio.h input.h swos_platform.h swos_sections.h
     competition_data.h sprite_data.h
+    dos_graphics.h dos_mode.h
 )
 
 # ---- Arg parsing ----

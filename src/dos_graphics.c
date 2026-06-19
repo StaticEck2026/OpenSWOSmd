@@ -6,7 +6,15 @@
  * (vm_stubs.cpp, ultimately DosPalette.cs). DOS files are little-endian.
  */
 #include "dos_graphics.h"
+#include "dos_mode.h"
 #include <string.h>
+
+/* DOS-mode flags (declared in dos_mode.h). Defined here — a SYNCED file — so the
+ * Amiga build links even when a synced hook (pitch.c, asset_loader.c, …)
+ * references them. main.c, which sets them from the CLI/INI, is SDL-only.
+ * Default 0 = the normal Amiga graphics/gameplay. */
+int gDosGraphics = 0;
+int gDosGameplay = 0;
 
 /* ---- base game palette: 256 RGB triples, 6-bit VGA (0..63) ---- */
 static const uint8_t kDosGamePalette[768] = {
