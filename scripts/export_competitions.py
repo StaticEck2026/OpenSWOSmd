@@ -30,8 +30,10 @@ STRINGS = os.path.join(REPO, "src", "strings_data.c")
 OUT_DIR = os.path.join(REPO, "bin", "data_json", "competitions")
 
 # Self-relative offset bytes are derived layout artifacts (game_types.h static
-# asserts fix them): CompetitionCup name/teamList = 15/21, CompetitionCup2 = 35/41.
+# asserts / offsetof fix them): CompetitionCup name/teamList = 15/21,
+# CompetitionCup2 = 35/41, CompetitionLeague name = 33 (offsetof(name)-5).
 CUP_OFFSETS = {False: (15, 21), True: (35, 41)}   # keyed by is_cup2
+LEAGUE_NAME_OFFSET = 33
 
 
 # ---------------------------------------------------------------- preprocessing
@@ -44,11 +46,14 @@ def preprocess() -> str:
 
 
 def load_strings() -> dict:
-    """Map name-symbol -> string value from strings_data.c."""
-    text = open(STRINGS, encoding="latin1").read()
+    """Map name-symbol -> string value from every src/*.c (strings_data.c,
+    swos_amiga_strings.c, …); names are `char aX[opt] = "...";`."""
+    import glob
+    pat = re.compile(r'\bchar\s+(a[A-Za-z0-9_]+)\s*\[[0-9]*\]\s*=\s*"((?:[^"\\]|\\.)*)"')
     m = {}
-    for sym, val in re.findall(r'\bchar\s+(a[A-Za-z0-9_]+)\s*\[\]\s*=\s*"((?:[^"\\]|\\.)*)"', text):
-        m[sym] = val.encode().decode("unicode_escape")
+    for path in glob.glob(os.path.join(REPO, "src", "*.c")):
+        for sym, val in pat.findall(open(path, encoding="latin1").read()):
+            m.setdefault(sym, val.encode().decode("unicode_escape"))
     return m
 
 
@@ -85,8 +90,8 @@ def num(tok: str):
 
 
 def find_defs(text: str, typename: str):
-    """Yield (name, body) for each `typename <name> = { ... };` (body = inside braces)."""
-    for m in re.finditer(r'\b' + typename + r'\s+([A-Za-z_]\w*)\s*=\s*\{', text):
+    """Yield (name, body) for each `typename <name>[opt] = { ... };` (body = inside braces)."""
+    for m in re.finditer(r'\b' + typename + r'\s+([A-Za-z_]\w*)\s*(?:\[[0-9]*\])?\s*=\s*\{', text):
         i, depth = m.end() - 1, 0
         while i < len(text):
             if text[i] == "{":
@@ -104,15 +109,34 @@ COMP_FIELDS = ["comp_number", "type", "team_number", "begin_month", "end_month",
                "name_table_offset", "reserved", "team_list_offset", "seed_reorder_flag"]
 
 
-def parse_comp(tok: str, is_cup2: bool) -> dict:
+def parse_comp(tok: str, name_off: int = 0, team_off: int = 0) -> dict:
     vals = split_top(inner(tok))
-    name_off, team_off = CUP_OFFSETS[is_cup2]
     out = {}
     for i, (k, v) in enumerate(zip(COMP_FIELDS, vals)):
         n = num(v)
         if n is None:                       # offsetof macro -> derived constant
             n = name_off if i == 5 else team_off if i == 7 else 0
         out[k] = n
+    return out
+
+
+def xref(tok: str):
+    """Resolve a cross-reference initializer to a symbol id, or None (NULL / -1 term)."""
+    tok = tok.strip()
+    m = re.search(r'&\s*([A-Za-z_][A-Za-z0-9_.]*)', tok)
+    if m:
+        return m.group(1)
+    return None                              # 0 / NULL / (Type *)-1 terminator
+
+
+def sentinel_array(tok: str, term):
+    """Numbers from a {a,b,...,TERM,...} array, stopping at the sentinel value."""
+    out = []
+    for v in split_top(inner(tok)):
+        n = num(v)
+        if n is None or (n & 0xFF) == (term & 0xFF):
+            break
+        out.append(n)
     return out
 
 
@@ -150,7 +174,7 @@ def parse_cup(name: str, body: str, is_cup2: bool, strings: dict) -> dict:
 
     htoks = split_top(inner(header))
     d = {"id": name, "type": "cup2" if is_cup2 else "cup",
-         "comp": parse_comp(htoks[0], is_cup2)}
+         "comp": parse_comp(htoks[0], *CUP_OFFSETS[is_cup2])}
 
     if is_cup2:
         for k, v in zip(["seeding_type", "menu_state", "play_each_team",
@@ -175,19 +199,153 @@ def parse_cup(name: str, body: str, is_cup2: bool, strings: dict) -> dict:
     return d
 
 
+def parse_playoffs(name: str, body: str, strings: dict) -> dict:
+    # { {comp9}, numRoundsOverride, teams, awayGoalsMode, subsAndMaxSubs, roundStringBase,
+    #   {roundRuleFlags[2]}, {name[2]}, {qualifiedTeamIds[8]=0} }
+    m = split_top(body)
+    d = {"id": name, "comp": parse_comp(m[0], 11, 17)}   # Playoffs uses literal 11/17
+    for k, v in zip(["num_rounds_override", "teams", "away_goals_mode",
+                     "subs_and_max_subs", "round_string_base"], m[1:6]):
+        d[k] = num(v)
+    d["round_rule_flags"] = [num(x) for x in split_top(inner(m[6]))] if len(m) > 6 else []
+    d["name"] = [resolve_name(x, strings) for x in split_top(inner(m[7]))] if len(m) > 7 else []
+    return d
+
+
+def parse_division(tok: str) -> dict:
+    v = [num(x) for x in split_top(inner(tok))]
+    keys = ["teams", "promoted", "promoted_po", "relegated", "relegated_po", "qualifier_link_offset"]
+    return {k: (v[i] if i < len(v) else 0) for i, k in enumerate(keys)}
+
+
+def parse_league(name: str, body: str, strings: dict) -> dict:
+    # { {comp9, divisionsCount, rounds, pointsForWin, subsAndMaxSubs}, {divisions[]},
+    #   reserved1, {name[]}, [{playoffLinkPtrs[2]}], [{promotionLinkData[24]}] }
+    m = split_top(body)
+    h = split_top(inner(m[0]))
+    d = {"id": name, "comp": parse_comp(h[0], LEAGUE_NAME_OFFSET, 0)}
+    for k, v in zip(["divisions_count", "rounds", "points_for_win", "subs_and_max_subs"], h[1:5]):
+        d[k] = num(v)
+    d["divisions"] = [parse_division(x) for x in split_top(inner(m[1]))] if len(m) > 1 else []
+    d["reserved1"] = num(m[2]) if len(m) > 2 else 0
+    d["name"] = [resolve_name(x, strings) for x in split_top(inner(m[3]))] if len(m) > 3 else []
+    if len(m) > 4:
+        d["playoff_links"] = [xref(x) for x in split_top(inner(m[4]))]
+    if len(m) > 5:
+        d["promotion_link_data"] = [num(x) for x in split_top(inner(m[5]))]
+    return d
+
+
+def parse_qualifying(name: str, body: str) -> dict:
+    # { {compCup[9] -1-term cross-refs}, {countries[44] 0xFF-term} }
+    m = split_top(body)
+    return {"id": name,
+            "comp_cup": [xref(x) for x in split_top(inner(m[0])) if xref(x)],
+            "countries": sentinel_array(m[1], 0xFF) if len(m) > 1 else []}
+
+
+def parse_career(name: str, body: str) -> list:
+    # careerContests[35]: { &competition, &competitionCopy, sizeof(...) } — size derived on load
+    out = []
+    for e in split_top(body):
+        t = split_top(inner(e))
+        out.append({"competition": xref(t[0]), "competition_copy": xref(t[1])})
+    return out
+
+
+def parse_leagues(name: str, body: str) -> dict:
+    # 4×{ league*, linkParams[8] } then [playoffs*], [nextGroup*], [{qualifierIndexPairs[24]}]
+    m = split_top(body)
+    d = {"id": name, "leagues": []}
+    i = 0
+    while i + 1 < len(m) and len(d["leagues"]) < 4 and m[i + 1].strip().startswith("{"):
+        d["leagues"].append({"league": xref(m[i]),
+                             "link_params": [num(x) for x in split_top(inner(m[i + 1]))]})
+        i += 2
+    rest = m[i:]
+    ptrs = [t for t in rest if not t.strip().startswith("{")]
+    if len(ptrs) >= 1:
+        d["playoffs"] = xref(ptrs[0])
+    if len(ptrs) >= 2:
+        d["next_group"] = xref(ptrs[1])
+    braces = [t for t in rest if t.strip().startswith("{")]
+    if braces:
+        d["qualifier_index_pairs"] = [num(x) for x in split_top(inner(braces[-1]))]
+    return d
+
+
+def split_designated(body: str):
+    """Split a designated-initializer body into (member, value) pairs (.x = v, ...)."""
+    for tok in split_top(body):
+        m = re.match(r'\.(\w+)\s*=\s*(.+)$', tok.strip(), re.S)
+        if m:
+            yield m.group(1), m.group(2).strip()
+
+
+def parse_english_block(name: str, body: str, strings: dict) -> dict:
+    # EnglishLeaguesBlock { _main: CompetitionLeague, _div1/_div2/_div3: Leagues }
+    out = {"id": name}
+    for member, val in split_designated(body):
+        if member == "_main":
+            out[member] = parse_league(name + "._main", inner(val), strings)
+        else:
+            out[member] = parse_leagues(name + "." + member, inner(val))
+    return out
+
+
+def parse_designated_arrays(name: str, body: str) -> dict:
+    """A struct of named numeric arrays (e.g. EuroCupQualSeedBucketBlock)."""
+    out = {"id": name}
+    for member, val in split_designated(body):
+        out[member] = [num(x) for x in split_top(inner(val))] if val.startswith("{") else num(val)
+    return out
+
+
+def dump(fname: str, kind: str, key: str, items: list):
+    with open(os.path.join(OUT_DIR, fname), "w") as f:
+        json.dump({"type": kind, "count": len(items), key: items}, f, indent=2, ensure_ascii=False)
+    print("wrote %-20s (%d)" % (fname, len(items)))
+
+
 def main():
     text = preprocess()
     strings = load_strings()
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    cups = [parse_cup(n, b, False, strings) for n, b in find_defs(text, "CompetitionCup")]
-    cups2 = [parse_cup(n, b, True, strings) for n, b in find_defs(text, "CompetitionCup2")]
+    dump("cups.json", "competition_cups", "competitions",
+         [parse_cup(n, b, False, strings) for n, b in find_defs(text, "CompetitionCup")])
+    dump("cups2.json", "competition_cups2", "competitions",
+         [parse_cup(n, b, True, strings) for n, b in find_defs(text, "CompetitionCup2")])
+    dump("playoffs.json", "playoffs", "playoffs",
+         [parse_playoffs(n, b, strings) for n, b in find_defs(text, "Playoffs")])
+    dump("leagues.json", "competition_leagues", "leagues",
+         [parse_league(n, b, strings) for n, b in find_defs(text, "CompetitionLeague")])
+    dump("qualifying.json", "qualifying_groups", "groups",
+         [parse_qualifying(n, b) for n, b in find_defs(text, "QualifyingGroup")])
 
-    for fname, data in [("cups.json", cups), ("cups2.json", cups2)]:
-        with open(os.path.join(OUT_DIR, fname), "w") as f:
-            json.dump({"type": "competition_cups", "count": len(data), "competitions": data},
-                      f, indent=2, ensure_ascii=False)
-        print("wrote %s (%d competitions)" % (fname, len(data)))
+    # league blocks: the standalone Leagues groups + the English block (designated init)
+    groups = [parse_leagues(n, b) for n, b in find_defs(text, "Leagues")]
+    english = [parse_english_block(n, b, strings) for n, b in find_defs(text, "EnglishLeaguesBlock")]
+    with open(os.path.join(OUT_DIR, "league_blocks.json"), "w") as f:
+        json.dump({"type": "league_blocks", "groups": groups,
+                   "english_block": english[0] if english else None},
+                  f, indent=2, ensure_ascii=False)
+    print("wrote %-20s (%d groups + %d english block)" % ("league_blocks.json", len(groups), len(english)))
+
+    # career index (single table of 35 contests)
+    contests = []
+    for n, b in find_defs(text, "CompetitionCareer"):
+        contests = parse_career(n, b)
+    dump("career.json", "career_index", "contests", contests)
+
+    # misc lookup tables (best-effort): country lists + euro-cup seed buckets
+    misc = {"country_lists": [{"id": n, "countries": [num(x) for x in split_top(b)]}
+                              for n, b in find_defs(text, "CountryNumbers")],
+            "euro_cup_qual_seed_buckets": [parse_designated_arrays(n, b)
+                                           for n, b in find_defs(text, "EuroCupQualSeedBucketBlock")]}
+    with open(os.path.join(OUT_DIR, "misc.json"), "w") as f:
+        json.dump({"type": "misc", **misc}, f, indent=2, ensure_ascii=False)
+    print("wrote %-20s (%d country lists)" % ("misc.json", len(misc["country_lists"])))
 
 
 if __name__ == "__main__":

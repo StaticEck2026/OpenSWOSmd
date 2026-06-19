@@ -1,10 +1,18 @@
 # competition_data.c → JSON (full data jailbreak)
 
-Status: **PLAN.** This extends the data→JSON migration (`docs/DATA_JSON.md`) from
-the external `bin/data` files (teams/TMD/pool) to the **internal** competition
-tables compiled into `src/competition_data.c`. The end goal is a fully
-data-driven SWOS: **add/remove countries, teams, players and competitions by
-editing JSON, no recompile.**
+Status: **EXPORT DONE (2026-06-18).** `scripts/export_competitions.py` writes the
+**entire** competition graph to `bin/data_json/competitions/` — cups (76), cups2
+(13), playoffs (7), leagues (65), qualifying groups (10), league blocks (4 + the
+English block), the 35-entry career index, and misc tables. Validated: 132 seed
+entries match `annotate_competition_teams.py` exactly; every `name[]` symbol
+resolves; the cross-reference graph is **closed** (180 ids, 90 refs, 0 dangling;
+`*Copy` derived). The C-side loader (phase 4) is next.
+
+This extends the data→JSON migration (`docs/DATA_JSON.md`) from the external
+`bin/data` files (teams/TMD/pool) to the **internal** competition tables compiled
+into `src/competition_data.c`. The end goal is a fully data-driven SWOS:
+**add/remove countries, teams, players and competitions by editing JSON, no
+recompile.**
 
 The teams half is done (`docs/DATA_JSON.md`). This document covers the harder
 half — the competition graph — and the C-side loaders that read it all back.
@@ -177,13 +185,13 @@ like the teams `--verify`).
 ## 7. Migration phases
 
 1. **Directory reorg** — teams JSON → `bin/data_json/teams/`; create
-   `competitions/`. *(this change)*
-2. **Schema + bootstrap export of cups** — `cups.json` / `cups2.json` from the
-   Python exporter, verified against the source. *(this change / next)*
+   `competitions/`. ✅ DONE.
+2. **Schema + bootstrap export of cups** — `cups.json` / `cups2.json`. ✅ DONE.
 3. **Extend export** to leagues / playoffs / qualifying / career / league-blocks
-   with cross-ref ids; full competition corpus.
+   (incl. the English block) with cross-ref ids; full competition corpus.
+   ✅ DONE — graph closed (0 dangling refs).
 4. **C loaders** (teams + competitions) table-driven + registry + auto-detect;
-   verify the JSON-loaded tables are byte-identical to the static init.
+   verify the JSON-loaded tables are byte-identical to the static init. ← NEXT
 5. **Switch default to JSON**; retire the static initializers (competition_data.c
    → storage only). Game is data-driven.
 6. **Amiga path** — *open question* (see §8).
