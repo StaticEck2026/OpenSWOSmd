@@ -10,6 +10,7 @@
 #include "dos_graphics.h"   /* DosGfx_DecodePlanarSprite, DOS_TO_AMIGA_OFFSET */
 #include <stdio.h>          /* snprintf */
 #include <stdlib.h>         /* malloc / calloc */
+#include <string.h>         /* memcpy */
 #endif
 
 /* ---- Sprite indices ---- */
@@ -67,30 +68,42 @@ extern GoalieFaceState goalieFaces;     /* GK face/skin state (was 4+2 adjacency
  * Scope: players/keepers/bench only (DOS team1/team3/goal1×2/bench →
  * amiga 227..1219). The score/number/team-name/player-name sprites
  * (amiga 113..226, partly runtime-generated) and the charset/fonts stay
- * Amiga. Per-team kit-colour tinting of DOS players is a follow-up — the
- * Amiga 16-entry colour-conversion LUTs can't recolour 256-colour DOS
- * sprites — so both teams currently render the DOS default kit.
+ * Amiga.
  *
- * Built once (file load + decode + records persist); the table slots are
- * re-pointed on every call because the Amiga load+convert path overwrote
- * them earlier in _ConvertColorsAndTextSprites. The blitter resolves
- * spriteGraphicsPtr[idx] live each frame, so re-pointing takes effect.
+ * Kit colours: the DOS player `.dat` sprites are 4-bitplane = 16-colour
+ * (pixel values 0..15) with the kit at the SAME indices the Amiga uses
+ * (10=stripes, 11=shirt, 14=shorts, 15=socks, plus skin indices). So the
+ * stock Amiga per-team conversions (_ConvertSpriteColors via
+ * team1/2PlayersColorTable) recolour them correctly — we just have to put
+ * the DOS sprites in the table BEFORE those conversions run, not after.
+ *
+ * The conversions recolour the sprite pixels IN PLACE. The DOS sprites are
+ * decoded once into a persistent "working" buffer; we keep a pristine copy
+ * and restore working from it at the start of every match (dos_prepare_sprites),
+ * so the per-match conversions always start from the un-recoloured template
+ * (otherwise successive matches would stack remaps and corrupt the kit).
  * ================================================================ */
 extern uint8_t *spriteGraphicsPtr;
 extern int16_t  _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
 #define DOS_SPRITE_TABLE_SLOTS  1220   /* spriteGraphics[] backing = 1220 ptrs */
+#define DOS_SPRITE_MAX_REGIONS  8      /* one per dos_build_sprite_dat call */
 
 static SpriteGraphics *s_dosSprite[DOS_SPRITE_TABLE_SLOTS];   /* NULL = keep Amiga */
 static int s_dosSpritesBuilt;
+/* Per-.dat chunky regions: `work` is what the table points at (recoloured each
+ * match); `pristine` is the un-recoloured decode used to reset `work`. */
+static struct { uint8_t *work; uint8_t *pristine; uint32_t size; }
+    s_dosRegions[DOS_SPRITE_MAX_REGIONS];
+static int s_dosRegionCount;
 
 static void dos_build_sprite_dat(const char *name, int dosStart, int count)
 {
-    char path[64];
+    char path[320];
     static uint8_t staging[64 * 1024];   /* >= largest game .dat (team*=45648) */
     uint32_t fileSize = 0;
 
-    snprintf(path, sizeof path, "grafs_dos/%s", name);
+    snprintf(path, sizeof path, "%s/%s", gDosGraphicsDir, name);
     _LoadFileEx((uint8_t *)path, staging, &fileSize);
     if (fileSize == 0 || fileSize > sizeof staging)
         return;
@@ -141,6 +154,19 @@ static void dos_build_sprite_dat(const char *name, int dosStart, int count)
         if (amigaIdx >= 0 && amigaIdx < DOS_SPRITE_TABLE_SLOTS)
             s_dosSprite[amigaIdx] = s;
     }
+
+    /* Keep a pristine copy of the decoded pixels so dos_prepare_sprites can
+     * reset `chunky` before each match's in-place kit/skin recolour. */
+    if (outOff > 0 && s_dosRegionCount < DOS_SPRITE_MAX_REGIONS) {
+        uint8_t *pristine = (uint8_t *)malloc(outOff);
+        if (pristine) {
+            memcpy(pristine, chunky, outOff);
+            s_dosRegions[s_dosRegionCount].work     = chunky;
+            s_dosRegions[s_dosRegionCount].pristine = pristine;
+            s_dosRegions[s_dosRegionCount].size     = outOff;
+            s_dosRegionCount++;
+        }
+    }
 }
 
 static void dos_build_all_sprites(void)
@@ -156,11 +182,20 @@ static void dos_build_all_sprites(void)
     s_dosSpritesBuilt = 1;
 }
 
-void _DosOverlaySprites(void)
+/* Put the DOS player/keeper/bench sprites into the table, pristine, ready for
+ * the per-team kit/skin conversions that run later in _ConvertColorsAndTextSprites.
+ * Call this BEFORE those conversions (they recolour the pixels in place). */
+static void dos_prepare_sprites(void)
 {
     SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
     if (!table) return;
     if (!s_dosSpritesBuilt) dos_build_all_sprites();
+
+    /* Reset each region to its un-recoloured decode so this match's
+     * conversions don't stack on the previous match's remap. */
+    for (int i = 0; i < s_dosRegionCount; i++)
+        memcpy(s_dosRegions[i].work, s_dosRegions[i].pristine, s_dosRegions[i].size);
+
     for (int i = 0; i < DOS_SPRITE_TABLE_SLOTS; i++)
         if (s_dosSprite[i]) table[i] = s_dosSprite[i];
 }
@@ -233,6 +268,16 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
     /* Process image command stream (colors menu graphics) */
     /* Force read from memory — LTO must not use a stale cached value */
     _ProcessImageCommandStream(menuColorAndTextScript, *(uint8_t * volatile *)&menuImageStreamBaseEnd);
+
+#ifdef SWOS_SDL_BUILD
+    /* PC-only: drop the DOS player/keeper/bench sprites into the table NOW —
+     * before the kit/skin colour conversions below — so those conversions
+     * recolour the DOS sprites (16-colour, same kit indices as the Amiga)
+     * instead of the Amiga ones we just loaded. dos_prepare_sprites resets the
+     * sprites to their pristine decode first, so per-match remaps don't stack. */
+    if (gDosGraphics)
+        dos_prepare_sprites();
+#endif
 
     /* Copy advertisement sprite data pointers */
     _CopyAdvertisementsData();
@@ -402,12 +447,4 @@ void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
             convertSpriteRange(1007, 1065, team2PlayersColorTable);
         }
     }
-
-#ifdef SWOS_SDL_BUILD
-    /* PC-only: replace the player/keeper/bench slots with DOS graphics AFTER
-     * all the Amiga load+convert work, so the DOS chunky pixels are final and
-     * the 16-entry kit/skin LUTs above don't corrupt them. */
-    if (gDosGraphics)
-        _DosOverlaySprites();
-#endif
 }

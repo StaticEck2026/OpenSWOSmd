@@ -15,6 +15,7 @@
  * Default 0 = the normal Amiga graphics/gameplay. */
 int gDosGraphics = 0;
 int gDosGameplay = 0;
+char gDosGraphicsDir[256] = "grafs_dos";   /* asset dir; see dos_mode.h */
 
 /* ---- base game palette: 256 RGB triples, 6-bit VGA (0..63) ---- */
 static const uint8_t kDosGamePalette[768] = {

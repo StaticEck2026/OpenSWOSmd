@@ -135,6 +135,8 @@ static void print_usage(const char *argv0)
         "                            PC-only extra; the Amiga look is the default.\n"
         "  --dos-gameplay=<on|off>   DOS gameplay tweaks (framerate etc.). Default:\n"
         "                            off. Reserved — not wired up yet.\n"
+        "  --dos-dir=<folder>        Folder (under bin/) to load DOS assets from.\n"
+        "                            Default: grafs_dos.\n"
         "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
 }
@@ -175,6 +177,7 @@ int main(int argc, char **argv)
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
+    snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", "grafs_dos");
 
     /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
      * at clean shutdown will create one. */
@@ -236,6 +239,8 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid --dos-gameplay value '%s' (expected on|off)\n", v);
                 return 1;
             }
+        } else if ((v = match_kv(a, "dos-dir")) != NULL) {
+            snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", v);
         } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -249,6 +254,8 @@ int main(int argc, char **argv)
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     gDosGraphics = opts.dos_graphics;
     gDosGameplay = opts.dos_gameplay;
+    if (opts.dos_dir[0])
+        snprintf(gDosGraphicsDir, sizeof gDosGraphicsDir, "%s", opts.dos_dir);
 
     /* Redirect stderr to SWOS.log alongside the binary. Saves the
      * tester from having to remember `2> SWOS.log` on every launch
@@ -265,7 +272,7 @@ int main(int argc, char **argv)
     }
 
     if (gDosGraphics)
-        fprintf(stderr, "[dos] DOS graphics mode ON (bin/grafs_dos)\n");
+        fprintf(stderr, "[dos] DOS graphics mode ON (bin/%s)\n", gDosGraphicsDir);
 
     SDL_SetMainReady();
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS |

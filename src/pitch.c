@@ -151,7 +151,7 @@ extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
 
 static void dos_load_pitch(uint16_t mapIndex)
 {
-    char name[64];
+    char name[320];
     uint32_t blkSize = 0, datSize = 0;
     int pitchNum = (int)mapIndex + 1;          /* DOS PITCH1..PITCH6 */
     if (pitchNum < 1) pitchNum = 1;
@@ -163,12 +163,12 @@ static void dos_load_pitch(uint16_t mapIndex)
      * banks are 190–545 KB, so they MUST bypass that staging. The direct
      * dispatch writes straight into pitchChunkyBuffer (591360 B = 2310 tiles);
      * the 2020 set's largest is pitch6 at 545536 B (2131 tiles), which fits. */
-    snprintf(name, sizeof name, "grafs_dos/PITCH%d.BLK", pitchNum);
+    snprintf(name, sizeof name, "%s/PITCH%d.BLK", gDosGraphicsDir, pitchNum);
     _CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, name,
                                pitchChunkyBuffer, &blkSize);
 
     /* Tile map — stage into pitchDatBuffer, then parse the LE offsets. */
-    snprintf(name, sizeof name, "grafs_dos/PITCH%d.DAT", pitchNum);
+    snprintf(name, sizeof name, "%s/PITCH%d.DAT", gDosGraphicsDir, pitchNum);
     _LoadFileEx((uint8_t *)name, pitchDatBuffer, &datSize);
 
     static uint16_t tileMap[PITCH_POINTER_COUNT];

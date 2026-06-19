@@ -13,7 +13,8 @@
  *   mode=mono             ; mono | stereo
  *
  *   [dos]                 ; PC-only extras (Amiga is the definitive version)
- *   graphics=false        ; true | false — render DOS graphics (bin/grafs_dos)
+ *   directory=grafs_dos   ; folder (under bin/) to load DOS assets from
+ *   graphics=false        ; true | false — render DOS graphics
  *   gameplay=false        ; true | false — DOS gameplay tweaks (reserved)
  *
  * Boolean values accept on/off, true/false, yes/no, 1/0 — case-insensitive.
@@ -80,6 +81,8 @@ static int handler(void *user, const char *section,
         int b;
         if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
         else if (eqi(name, "gameplay") && parse_bool(value, &b)) opts->dos_gameplay = b;
+        else if (eqi(name, "directory") && value && value[0])
+            snprintf(opts->dos_dir, sizeof opts->dos_dir, "%s", value);
     }
     /* Return nonzero on success, even for ignored keys — we don't want
      * inih to flag unknown sections as parse errors. */
@@ -150,6 +153,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "mode=%s\n"
         "\n"
         "[dos]\n"
+        "directory=%s\n"
         "graphics=%s\n"
         "gameplay=%s\n",
         renderer_str(opts->renderer),
@@ -157,6 +161,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         fullscreen_str(fs_now),
         scale_now,
         opts->audio_mono ? "mono" : "stereo",
+        opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
         opts->dos_graphics ? "true" : "false",
         opts->dos_gameplay ? "true" : "false");
 
