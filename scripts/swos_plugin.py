@@ -47,10 +47,23 @@ class SwosHarness:
 
     # ---- target detection --------------------------------------------------
     def is_sdl(self):
-        """SDL build exposes the SDL palette symbol; the Amiga build does not."""
+        """SDL build exposes the SDL palette symbol; the Amiga build does not.
+        The result is CACHED only on a CONFIDENT answer. A timed-out/empty
+        response (possible when the daemon is under load) is retried, never
+        cached — caching a false 'Amiga' here misroutes screencap() to the
+        Amiga bitplane decoder (the 'dump gamePalette' wrong-path bug)."""
         if self._is_sdl is None:
-            r = self.h.cmd("print &s_palette")
-            self._is_sdl = ("No symbol" not in r and "0x" in r)
+            for _ in range(3):
+                r = self.h.cmd("print &s_palette", timeout=15)
+                if "No symbol" in r:
+                    self._is_sdl = False
+                    break
+                if "0x" in r:
+                    self._is_sdl = True
+                    break
+                # ambiguous (timeout/partial) — retry rather than cache wrong
+            if self._is_sdl is None:
+                self._is_sdl = True   # this plugin's primary target is SDL
         return self._is_sdl
 
     # ---- being at the injection point -------------------------------------
@@ -146,6 +159,69 @@ class SwosHarness:
         self.fire()
         return True
 
+    # ---- label-driven selection (for dynamic lists) -----------------------
+    # Some screens reuse ONE onSelect across many entries whose meaning is the
+    # displayed STRING, not the callback — the career team picker (continents,
+    # then countries, then divisions, then teams all share _SelectTeamsCommon /
+    # _SelectLeaguesCommon / _ChooseTeamsFriendlyCommon2). goto(symbol) can't
+    # disambiguate those, so navigate by the entry's TEXT instead. A string
+    # entry (content == ENTRY_STRING == 2) keeps its text pointer in `fg`.
+    def entry_text(self, ord):
+        """The visible label of entry `ord`, or None if it's invisible / not a
+        string entry."""
+        e = f"((MenuEntry*)_CalcMenuEntryAddress({ord}))"
+        if self.h.int_value(f"{e}->isInvisible"):
+            return None
+        if self.h.int_value(f"{e}->content") != 2:   # ENTRY_STRING
+            return None
+        m = re.search(r'"((?:[^"\\]|\\.)*)"', self.h.cmd(f"x/s (char*)({e}->fg)"))
+        return m.group(1) if m else None
+
+    def scan_text(self):
+        """[(ordinal, label)] for every VISIBLE string entry of the current
+        menu — the reliable way to 'see' a dynamic list without a screenshot."""
+        n = self.num_entries() or 0
+        out = []
+        for i in range(n + 1):
+            t = self.entry_text(i)
+            if t is not None:
+                out.append((i, t))
+        return out
+
+    def find_text(self, label):
+        """Ordinal of the visible entry whose label == `label` (case-insensitive,
+        also matches on a leading-substring so 'NOTT' finds "NOTT'M FOREST"), or
+        None."""
+        want = label.upper()
+        cands = self.scan_text()
+        for i, t in cands:
+            if t.upper() == want:
+                return i
+        for i, t in cands:
+            if t.upper().startswith(want):
+                return i
+        return None
+
+    def fire_ordinal(self, ordinal, timeout=20):
+        """Select `ordinal` by memory write, then a single-frame fire pulse.
+        Use a long timeout on the press that triggers _InitCareer (~30-60s)."""
+        self.h.cmd(f"call (void)_SetCurrentEntry({ordinal})")
+        self.h.set_var("fire", 1)
+        self.h.set_var("shortFire", 1)
+        for v in ("up", "down", "left", "right"):
+            self.h.set_var(v, 0)
+        self.h.cont(timeout)
+        self.h.set_var("fire", 0)
+        self.h.set_var("shortFire", 0)
+
+    def fire_text(self, label, timeout=20):
+        """find_text(label) then fire_ordinal. Returns the ordinal, or None."""
+        ordn = self.find_text(label)
+        if ordn is None:
+            return None
+        self.fire_ordinal(ordn, timeout)
+        return ordn
+
     # ---- screen capture (orientation only) --------------------------------
     def is_aga(self):
         """AGA build = 8 planes / 256 colours; OCS = 4 / 16. bitPlane4Base is
@@ -215,6 +291,81 @@ class SwosHarness:
         nz = sum(1 for b in fb if b)
         return (f"wrote {out_png} {w}x{h} (Amiga {planes}-plane/{ncolors}col, "
                 f"base={base}, {nz} non-zero bytes)")
+
+    # ---- cold boot + fresh-career start (the NORMAL flow) -----------------
+    def boot(self, timeout=180):
+        """Cold-boot the inferior to the MAIN MENU. Assumes the daemon is up in
+        SDL mode with a HEADLESS env (SDL_VIDEODRIVER=dummy /
+        SDL_AUDIODRIVER=dummy) + the season-loop flags
+        (SWOS_TEST_NO_INJURIES_CARDS=1, SWOS_SAVE_FORMAT_JSON_VERIFY=0) — see
+        docs/HARNESS.md 'Reliability'. Sets the inject breakpoint, (re)starts
+        the inferior with `run`, and waits for the first _MenuProc stop (the
+        main menu). `set confirm off` + `kill` make a re-boot in the SAME daemon
+        non-interactive (no 'restart from beginning?' prompt to hang on).
+        Returns the active menu's onInit ('_SWOSMainMenuInit' on success)."""
+        self.h.cmd("set confirm off")
+        self.h.cmd("kill")                     # no-op if nothing is running
+        if INJECT_LINE not in self.h.cmd("info breakpoints"):
+            self.h.break_at(INJECT_LINE)
+        self.h.cmd("run", timeout=4)           # boot is slow; catch the stop below
+        self.h.waitstop(timeout)
+        return self._current_init()
+
+    # Default fresh-career drill-down through the team picker, BY LABEL:
+    #   continent -> country -> league division -> club.
+    FRESH_CAREER_PATH = ("EUROPE", "ENGLAND", "PREMIER LEAGUE", "ARSENAL")
+
+    def start_fresh_career(self, path=None, init_timeout=120):
+        """Start a brand-new career through the NORMAL menu flow (NO
+        _LoadLiverpool). Call boot() first; this must run at the MAIN MENU. It
+        drives the real path verified 2026-06-19:
+            CAREER -> CHOOSE TEAM AND START CAREER
+              -> <continent> -> <country> -> <division> -> <club>   (path, by label)
+              -> _InitCareer(teamId) -> dismiss chairman memo(s) -> contest hub.
+        The auto-generated manager name + default nationality are kept (a fresh
+        career needs no text typed). Returns the hub onInit ('_ContestMenuInit')
+        on success, else None (printing the labels it actually saw).
+
+        Why label-driven and not goto(onSelect): the picker reuses ONE callback
+        across every continent/country/division/club; only the displayed STRING
+        identifies a row. Matching by label (case-insensitive, leading-substring
+        fallback) also survives data edits that renumber ordinals — exactly what
+        we want when testing the data-jailbreak changes. See docs/HARNESS.md
+        'Starting a fresh career'."""
+        path = path or self.FRESH_CAREER_PATH
+        self.prime()
+        if self._current_init() != "_SWOSMainMenuInit":
+            print(f"start_fresh_career: not at main menu (at {self._current_init()})")
+            return None
+        if not self.select("_CareerMenu"):
+            print("start_fresh_career: CAREER entry not found")
+            return None
+        # CHOOSE TEAM AND START CAREER opens the team picker (_SelectTeamsInit)
+        if self.goto("_ChooseTeamAndStartCareer") is None:
+            print("start_fresh_career: CHOOSE TEAM entry not found")
+            return None
+        self.fire()
+        # Drill the picker by label; the LAST hop fires the club, which runs
+        # _InitCareer (slow — give it init_timeout, not the 20s frame budget).
+        for n, label in enumerate(path):
+            last = (n == len(path) - 1)
+            ordn = self.find_text(label)
+            if ordn is None:
+                print(f"start_fresh_career: '{label}' not found; visible: "
+                      f"{[t for _, t in self.scan_text()]}")
+                return None
+            self.fire_ordinal(ordn, timeout=init_timeout if last else 20)
+        # After the club press, _InitCareer runs then stops at the chairman
+        # memo's inject bp; ensure stopped, then dismiss the welcome memo(s).
+        if not self.h.is_stopped():
+            self.h.waitstop(init_timeout)
+        for _ in range(6):
+            if self._current_init() != self.MEMO_INIT:
+                break
+            self.h.set_var("shortFire", 1)
+            self.h.cont(20)
+            self.h.set_var("shortFire", 0)
+        return self._current_init()
 
     # ---- season-loop driver -----------------------------------------------
     # Per-screen INPUT MODEL (reverse-engineered 2026-06-17; see docs/HARNESS.md

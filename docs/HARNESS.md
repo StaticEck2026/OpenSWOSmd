@@ -250,6 +250,13 @@ times per session is what made the daemon look unreliable.
 
 - **Launch the daemon ONCE per session and leave it alone.** Do not rapid
   kill/relaunch it — that (stale sockets, half-dead gdb) is most of the "flake".
+- **One client at a time — NEVER run two harness scripts against the daemon
+  concurrently.** It multiplexes a single gdb stdin/stdout; two overlapping
+  clients interleave their command/response traffic and **wedge gdb**
+  (`health` → `DEGRADED info program hung`), which then needs a daemon restart.
+  In practice: don't launch a new probe while a previous background script is
+  still finishing (e.g. a slow `screencap` memory dump). Wait for it to exit
+  first. If wedged, force-kill the daemon + `gdb` by PID and restart.
 - **Boot is slow (1–2 min)** — the loader intro auto-times-out to the main menu
   and ignores the `1567` breakpoint until then. Use `waitstop(200)`; never wrap
   the boot in a tight outer `timeout`.
@@ -275,7 +282,9 @@ To discover an unknown menu flow, combine three reads at each screen:
 
 Then act with `select("_SymbolName")` (jump to + fire an entry by its onSelect) or
 `nav("down")`/`fire()`, and repeat. Symbols + screenshot together = you always
-know where you are and where to go.
+know where you are and where to go. For lists where every entry shares one
+`onSelect` (the team picker), use `scan_text()` / `fire_text("LABEL")` instead —
+see "Dynamic lists" below.
 
 ### Single-frame input pulse
 
@@ -283,17 +292,67 @@ know where you are and where to go.
 one-frame pulse. A *held* fire mis-drives a nested `_ShowMenu` modal (it would
 re-fire/exit the modal's default entry on the next frame).
 
-### ⚠️ Known gap — driving the careerMenu (fresh-career START)
+### Dynamic lists: navigate by LABEL, not by onSelect
 
-Starting a career *from scratch through the menus* is **not yet scripted**. The
-`careerMenu` (manager-setup / team-select screen) runs as a nested `_ShowMenu`
-`do { _MenuProc(); } while(!exitMenu)` modal, and in testing the `1567`
-breakpoint did **not** reliably hold through that modal — after CAREER is fired
-the inferior bounces back to `_FrontEndMainLoop` and then free-runs (the bp
-catches the boot but not subsequent frames). Root cause still open. Until it's
-fixed, the season-loop harness can only *advance loaded* careers. (`_LoadLiverpool`
-starts an English career directly via an inferior `call`, but it's a debug
-shortcut, not the real path.)
+`goto("_SymbolName")` works when each entry has a distinct `onSelect`. Some
+screens reuse ONE callback across many entries whose meaning is the displayed
+STRING — the career **team picker** is the prime example: continents, then
+countries, then league divisions, then clubs all share `_SelectTeamsCommon` /
+`_SelectLeaguesCommon` / `_ChooseTeamsFriendlyCommon2`. For those, navigate by
+text:
+
+- `scan_text()` → `[(ordinal, label)]` of every visible string entry (the
+  reliable way to "see" a dynamic list without a screenshot).
+- `find_text("ENGLAND")` → the matching ordinal (case-insensitive; leading-
+  substring fallback so `"NOTT"` finds `"NOTT'M FOREST"`).
+- `fire_text("ENGLAND")` / `fire_ordinal(ord, timeout=…)` → select + single-frame
+  fire (give a long timeout to the press that triggers `_InitCareer`).
+
+Label matching also makes the path robust to **data edits that renumber
+ordinals** — only the displayed names matter, which is exactly what you want when
+regression-testing the data-jailbreak changes.
+
+### Starting a fresh career (the NORMAL flow — no `_LoadLiverpool`)
+
+`start_fresh_career()` drives a brand-new career through the real menus (verified
+end-to-end from cold boot, 2026-06-19). The proven path:
+
+```
+boot()                         → _SWOSMainMenuInit          (headless, ~2 min)
+  CAREER (select _CareerMenu)  → _CareerMenuInit
+  CHOOSE TEAM AND START CAREER → _SelectTeamsInit  (the team picker)
+    EUROPE → ENGLAND → PREMIER LEAGUE → ARSENAL  (fire_text drill-down by label)
+  → _ChooseTeamAndStartCareer → _InitCareer(0x800)          (the REAL init; ~30-60s)
+  → _ChairmanMemosInit         (welcome memo — dismiss with shortFire)
+  → _ContestMenuInit           (the live career hub, season 0)
+```
+
+```python
+from swos_plugin import SwosHarness
+s = SwosHarness()
+s.boot()                                  # cold start → main menu
+s.start_fresh_career()                    # default: Arsenal, English Premier League
+# → returns '_ContestMenuInit'; the career is live. Drive seasons from here:
+s.drive_inseason()                        # play the first season to the season-end hub
+s.run_seasons(3)                          # then advance whole seasons
+```
+
+Pick a different club with the `path` argument (continent, country, division,
+club — all by visible label):
+
+```python
+s.start_fresh_career(path=("EUROPE", "ITALY", "SERIE A", "JUVENTUS"))
+```
+
+The auto-generated manager name + default nationality are kept (a fresh career
+needs no name typed). `_LoadLiverpool` is a debug `call` shortcut (hard-codes
+team 0x811, skips the country logic) — **not** used here; `start_fresh_career`
+exercises the same `_InitCareer` path a human triggers.
+
+> Note: the earlier "the `1567` breakpoint won't hold through the careerMenu
+> modal" report was a **misdiagnosis** — it was display flakiness (fixed by
+> running headless) plus a discarded-stop bug in the probe script. The `1567`
+> breakpoint fires correctly inside every nested `_ShowMenu` modal.
 
 ---
 
