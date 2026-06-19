@@ -11,6 +11,78 @@ This document is **separate from the generic gdb daemon doc**
 (`SWOS_C/docs/GDB.md`). GDB.md documents the reusable transport; this documents
 the SWOS automation built on top of it.
 
+---
+
+## ⭐ READ THIS FIRST — driving a career through seasons (the proven recipe)
+
+This is the route that works (validated 2026-06-19: a career driven season 3 → 19
++ retirement, no wedges). Follow it exactly; the "DON'Ts" below each cost *hours*
+in a debugging session — they are the only reason this got hard.
+
+### The recipe (copy/paste)
+
+```bash
+# 1. BUILD FRESH and confirm it actually built (a stale binary = garbage struct reads).
+make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0 SWOS_TEST_NO_INJURIES_CARDS=1 -j"$(nproc)"
+echo "exit=$?"; ls -l bin/SWOS.x86_64        # exit must be 0; mtime must be NEWER than your src edits
+find src \( -name '*.c' -o -name '*.h' \) -newer bin/SWOS.x86_64 | head   # MUST be empty
+```
+
+```python
+# 2. Launch the daemon via Bash run_in_background:true (NOT nohup& — see DON'Ts), headless:
+#    cd bin; SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SWOS_TEST_NO_INJURIES_CARDS=1 \
+#      SWOS_SAVE_FORMAT_JSON_VERIFY=0 python3 .../gdb_proxy.py daemon --mode sdl --bin .../bin/SWOS.x86_64
+# 3. Drive seasons from a LOADED career (NOT a fresh one):
+from swos_plugin import SwosHarness
+s = SwosHarness()
+s.boot()                                  # cold boot → main menu (~2 min; be patient)
+s.load_career("MILAN.CAR")                # rc 0; a career sitting at/near a season end
+s.enter_career()                          # → _CareerOverInit (the season-end hub)
+s.run_seasons(20)                         # advances season-by-season → retirement (season 19)
+```
+
+`run_seasons` = `advance_one_season` in a loop: from `_CareerOverInit`, fire
+CONTINUE CAREER → `drive_transition` (skip-latch auto-advances the result chain) →
+`drive_inseason` → next season-end hub. ~17–47 s/season.
+
+### DON'Ts (each of these wasted hours — do not repeat)
+
+1. **DON'T drive a *fresh* career's in-season fixtures as the season engine.**
+   `start_fresh_career()` is for *creating* a career; it lands at the *in-season*
+   hub (`_ContestMenuInit`), not the season-end hub. Driving its fixtures
+   one-by-one with blind `shortFire` (`drive_inseason` from season 0) is **not the
+   tested path** — it wanders hub↔match-day↔memo. To drive seasons, use
+   `run_seasons` on a **loaded** career. (To use a fresh career: `save_career()` it
+   and reload, or just load `MILAN.CAR`.)
+2. **DON'T read `diyCompetitionStart.*` on a brand-new career.** Until a
+   competition is *active*, that struct is **uninitialised** — you'll read
+   garbage (`matchesPlayedCount=1614`, `gamesPlayed=206 > 38 max`) and conclude
+   there's an "overlay"/regression. There isn't: the fields are clean named
+   members and the size asserts pass; on a *loaded* mid/late-season career they
+   read correctly (`gamesPlayed ≤ 38`). Use `currentSeasonShowing` /
+   `_current_init()` to track progress, not raw competition-struct reads.
+3. **DON'T debug against a stale binary.** If `find src -newer bin/SWOS.x86_64`
+   is non-empty, REBUILD first. A stale binary's gdb member offsets won't match
+   the source — you'll chase phantom "struct mismatches". (`raw[&x+0xNN]` ≠
+   `member` is the tell.)
+4. **DON'T launch the daemon with `nohup … &` inside a normal Bash call** — it
+   dies on shell exit and the next `boot()` returns garbage (`init=module`,
+   everything `None`). Launch it with the Bash tool's **`run_in_background: true`**
+   (a foreground `gdb_proxy.py daemon` the harness keeps alive).
+5. **DON'T run two harness scripts against the daemon at once.** It multiplexes
+   one gdb stdin/stdout; overlapping clients interleave traffic and **wedge** it
+   (`health → DEGRADED info program hung`). Wait for one script to exit before the
+   next. If wedged: force-kill the daemon + `gdb` by PID and relaunch.
+6. **DON'T `load_career()` in place into an inferior that already drove a career**
+   — runtime competition state is left stale. Cold-boot fresh each test.
+7. **DON'T poll the output file every few seconds.** Long drives are minutes;
+   use `python3 -u` + `flush=True` and wait for the background-task notification.
+
+If a season run "wedges": it's almost always #4 (dead daemon) or #5 (contention),
+not gdb instability or a game bug. Check `health` and the daemon process first.
+
+---
+
 ## Architecture (layered; the SWOS bits are a plugin)
 
 ```
