@@ -461,32 +461,55 @@ class SwosHarness:
                 h.set_var("shortFire", 1)           # dismiss the chairman memo
         return None
 
-    # ---- the in-season fixtures (sim each via pl1Fire on the squad) --------
-    def drive_inseason(self, max_steps=800, timeout=20, stuck_limit=30):
-        """From just after a season increment, drive the new season to the next
-        season-end hub (_CareerOverInit). Returns True if the hub was reached.
+    # ---- the in-season fixtures (auto-sim via teamControls=1) --------------
+    def drive_inseason(self, max_steps=2000, timeout=25, stuck_limit=40,
+                       sim_mode=True):
+        """Drive the current season to the season-end hub (_CareerOverInit).
+        Returns True if the hub was reached.
 
-        How the season self-drives: shortFire on the default selection advances
-        the menus AND the cup/league match-day state machines — _DIYCupInit /
-        _DIYLeagueTournamentInit pre-select the correct entry at each state (play
-        the human's fixture, auto-advance an AI fixture, or exit when the round
-        is done, e.g. _DIYCupOnSelect10 at mState=6/roundComplete=1). The ONLY
-        screen needing different input is the pre-match squad (_PlayMatchMenuInit):
-        _PlayMatchSelected gates on the RAW joystick fire pl1Fire, not the menu
-        shortFire. When the season's fixtures are exhausted (seasonFinished=1),
-        the contest hub's PLAY MATCH runs _SeasonFinished -> careerOverMenu.
+        SIM MODE (default): set careerTeam.team.teamControls = TEAM_COMPUTER(1)
+        so the player's OWN fixtures auto-SIMULATE on shortFire like the AI
+        fixtures (the game computes a result; no squad, no real-time in-game
+        match). A human-controlled club team (teamControls 2/3) instead PLAYS
+        each fixture in the real-time in-game loop (>2 min each, never returning
+        to the inject breakpoint until the clock runs out) — impractical to drive
+        unattended. Sim mode is re-asserted every step.
 
-        A season legitimately bounces match-day <-> squad and cycles a cup round
-        across several _DIYCupInit states, so 'stuck' is keyed on (screen,
-        selected-ordinal) staying IDENTICAL for stuck_limit steps — genuine
-        progress always changes one of them, while a true freeze repeats. A full
-        season is many fixtures, so this can take several minutes (intended for
-        unattended verification runs)."""
+        STUCK DETECTION keys on STRUCTURAL progress only — matchesPlayedCount,
+        currentRoundIndex, currentSeasonShowing, seasonFinished — NOT the screen.
+        The league match-day keeps onInit=_DIYLeagueTournamentInit + ordinal=3
+        constant across fixtures, so the old (screen, ordinal) key false-stopped
+        at ~mp 6 while matches were in fact being played. When fixtures are
+        exhausted (seasonFinished=1) the hub's PLAY MATCH runs _SeasonFinished ->
+        careerOverMenu (_CareerOverInit).
+
+        ⚠️ KNOWN LIMITATION (2026-06-19): this does NOT yet complete a full
+        ENGLISH-LEAGUE season. sim mode advances several rounds (mp climbs into
+        the thousands across the 4 divisions), then the blind-shortFire loop
+        starts WANDERING hub<->match-day<->chairman-memo with currentRoundIndex
+        frozen (~3) and mp no longer rising — shortFire on some of those screens
+        exits to the hub instead of advancing the round. The structural-stuck
+        check now TERMINATES on that freeze (returns False with the state) rather
+        than re-simming forever, but driving a league season to its end needs
+        screen-specific input at the freeze point (the open follow-up). The
+        season TRANSITION path (drive_transition) and AI-fixture auto-sim do
+        work; cup/national careers with few human matches fare better than a
+        full 4-division league."""
         h = self.h
         h.delete_breakpoints()
         h.break_at(INJECT_LINE)
-        last_key, same = None, 0
+
+        def progress():
+            # structural signal — does NOT include the (wandering) screen
+            return (h.int_value("diyCompetitionStart.matchesPlayedCount"),
+                    h.int_value("diyCompetitionStart.base.currentRoundIndex"),
+                    h.int_value("currentSeasonShowing"),
+                    h.int_value("seasonFinished"))
+
+        last_prog, same = None, 0
         for _ in range(max_steps):
+            if sim_mode:
+                h.set_var("careerTeam.team.teamControls", 1)  # auto-sim my fixtures
             h.cont(timeout)
             if not h.is_stopped():                  # a match/menu over-ran timeout
                 self._interrupt()
@@ -494,14 +517,15 @@ class SwosHarness:
             init = self._current_init()
             if init == self.HUB_INIT:
                 return True
-            key = (init, self.ordinal())
-            same = same + 1 if key == last_key else 0
-            last_key = key
+            prog = progress()
+            same = same + 1 if prog == last_prog else 0
+            last_prog = prog
             if same >= stuck_limit:
-                print(f"drive_inseason: stuck at {init} ord={key[1]}")
+                print(f"drive_inseason: no structural progress for {stuck_limit} "
+                      f"steps at {init} prog={prog} (see KNOWN LIMITATION)")
                 return False
             if init == self.SQUAD_INIT:
-                h.set_var("pl1Fire", 1)             # sim the human fixture
+                h.set_var("pl1Fire", 1)             # fallback when sim_mode=False
             h.set_var("shortFire", 1)              # advance menu / state machine
         return self.at_contest_menu()
 

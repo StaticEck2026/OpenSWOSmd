@@ -332,10 +332,15 @@ from swos_plugin import SwosHarness
 s = SwosHarness()
 s.boot()                                  # cold start → main menu
 s.start_fresh_career()                    # default: Arsenal, English Premier League
-# → returns '_ContestMenuInit'; the career is live. Drive seasons from here:
-s.drive_inseason()                        # play the first season to the season-end hub
-s.run_seasons(3)                          # then advance whole seasons
+# → returns '_ContestMenuInit'; the career is live.
+s.save_career("FRESHARS.CAR")             # snapshot it (reload in seconds later)
+s.drive_inseason()                        # sim-advances fixtures (see ⚠️ below — a
+                                          # full 4-division league season does not
+                                          # complete yet; the driver wanders mid-season)
 ```
+
+To reload a saved career fast (skip the ~7-min start): `s.boot();
+s.load_career("FRESHARS.CAR"); s.enter_career()` → back at `_ContestMenuInit`.
 
 Pick a different club with the `path` argument (continent, country, division,
 club — all by visible label):
@@ -420,31 +425,59 @@ free-running into a screen that waits for input.
 2. **In-season menus** (memo / contest hub / match-day list, `sUIP == 0`):
    plain `shortFire` on the default selection.
 
-3. **Pre-match squad screen** (`_PlayMatchMenuInit`): `_PlayMatchSelected` gates
-   on the **raw joystick fire** `pl1Fire`, *not* the menu `shortFire`. Set
-   `pl1Fire = 1` to play/sim the fixture (CPU-vs-CPU → instant result).
+3. **The player's OWN fixture — SIM IT (`teamControls = 1`).** A human-controlled
+   club team (`careerTeam.team.teamControls` = 2/3) *plays* each of its ~38 league
+   fixtures: "- MATCH -" → squad (`_PlayMatchMenuInit`) → `pl1Fire` →
+   **the real-time in-game match loop** (`_ShowMatchSequence`, ~2+ min each,
+   throttled in `clock_nanosleep`), which never returns to the inject breakpoint
+   until the match clock expires. That is impractical to drive unattended for a
+   league season (and it's what looked like a "wedge"). The lever: set
+   `careerTeam.team.teamControls = TEAM_COMPUTER (1)` — the game then treats the
+   player's fixture like an AI fixture and **auto-simulates** it on `shortFire`
+   (computes a result, no squad, no in-game match). `drive_inseason(sim_mode=True)`
+   (the default) sets this every step. Confirmed 2026-06-19: with sim mode the
+   player's fixtures sim instantly and `matchesPlayedCount` climbs (6→7→8 in a
+   focused test; into the thousands over a long run across the 4 divisions). (AI
+   fixtures already auto-sim via the game's own `selector==0` path; sim mode just
+   brings the player's fixture into the same path.)
 
 The in-season **cup/league match-day menus self-drive on `shortFire`**:
 `_DIYCupInit` / `_DIYLeagueTournamentInit` pre-select the correct entry at each
-state — play the human's fixture, auto-advance an AI fixture, or **exit** when
-the round is done (e.g. `_DIYCupOnSelect10` at `menuState=6 / roundComplete=1`).
-When the season's fixtures are exhausted (`seasonFinished=1`), the contest hub's
-PLAY MATCH runs `_SeasonFinished → careerOverMenu` (the hub). The driver's
-stuck-detector is keyed on `(screen, selected-ordinal)` so the legitimate
-match-day↔squad bounce and cup-round cycling don't false-trigger.
+state — sim the player's fixture (in sim mode), auto-advance an AI fixture, or
+**exit** when the round is done (e.g. `_DIYCupOnSelect10` at
+`menuState=6 / roundComplete=1`). When the season's fixtures are exhausted
+(`seasonFinished=1`), the contest hub's PLAY MATCH runs
+`_SeasonFinished → careerOverMenu` (the hub).
 
-**Status of the loop — validated end-to-end on SDL:**
+**Stuck detection must be STRUCTURAL.** The league match-day keeps
+`onInit = _DIYLeagueTournamentInit` and `selectedEntry->ordinal = 3` ("- MATCH -")
+**constant across every fixture** — so keying "stuck" on `(screen, ordinal)`
+false-triggers even while matches are being simmed (the original bug: the driver
+bailed at ~`mp=6` reporting "stuck" while the season was in fact progressing).
+`drive_inseason` therefore keys stuck on **structural** progress only
+(`matchesPlayedCount`, `currentRoundIndex`, `currentSeasonShowing`,
+`seasonFinished`), ignoring the screen — it gives up only when none of those move
+for `stuck_limit` steps.
 
-- **Transition** — season 3→4 via the skip-latch path, `health=OK`, zero wedges.
-- **In-season** — a full season driven to the season-end hub in 208 steps /
-  ~174s, no stuck, no wedge.
-- **Full cycle** — `advance_one_season` (hub → CONTINUE → transition →
-  in-season → next hub) ran season 4→5 in ~274s, landing back at
-  `_CareerOverInit`, `health=OK`, threads untouched.
+**Status of the loop (SDL):**
 
-A full season is a few minutes (≈0.9s/step over a few hundred steps), so a
-multi-season `seasons N` run is minutes-to-tens-of-minutes — intended to run
-unattended.
+- ✅ **Fresh-career START** — `boot()` + `start_fresh_career()` cold-boot →
+  `_ContestMenuInit` (England/Arsenal, season 0), validated 2026-06-19. Save/load
+  round-trip of that career (`FRESHARS.CAR`) also validated (rc 0 both ways).
+- ✅ **Transition** — season 3→4 via the skip-latch path, `health=OK`, zero
+  wedges (earlier sessions).
+- ✅ **AI-fixture auto-sim + sim mode** — the player's and AI fixtures sim and
+  `matchesPlayedCount` climbs steadily under `drive_inseason(sim_mode=True)`.
+- ⚠️ **OPEN — full ENGLISH-LEAGUE season does NOT complete yet.** After
+  advancing several rounds (mp into the thousands across the 4 divisions), the
+  blind-`shortFire` loop starts **wandering** `hub ↔ match-day ↔ chairman-memo`
+  with `currentRoundIndex` frozen (~3) and `mp` no longer rising — `shortFire` on
+  some of those screens exits to the hub instead of advancing the round. The
+  structural-stuck check now terminates cleanly on that freeze instead of
+  re-simming forever. **Next step:** give `drive_inseason` screen-specific input
+  at the freeze (don't blanket-`shortFire` the hub / memo; route each screen),
+  then re-validate a season to `_CareerOverInit`. Cup/national careers (few human
+  matches) get further than a 4-division league.
 
 ## Reusing for another project
 
