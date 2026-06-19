@@ -20,6 +20,7 @@
 #include "animated_patterns.h"
 #include "game_types.h"
 #include "display.h"
+#include "dos_mode.h"
 
 /* ---- external asm globals ---- */
 extern uint16_t replayState;
@@ -246,6 +247,13 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 void __attribute__((used, externally_visible))
 _ResetAnimatedPatternsForBothTeams(void)
 {
+    /* DOS pitch: s_pitchFullPtrs is built directly from the DOS tile map
+     * (pitch.c::dos_load_pitch) and pitchDatBuffer holds the raw DAT bytes,
+     * not the relocated 4-byte pointer slots this animation walks. Skip it
+     * so we don't corrupt the DOS tile pointers. */
+    if (gDosGraphics)
+        return;
+
     if (trainingGame != 0)
         return;
 
@@ -273,6 +281,12 @@ _DrawAnimatedPatterns(void)
     int16_t d7;       /* loop counter */
     uint32_t baseAddr = ANIM_TILE_BASE;
     (void)baseAddr;
+
+    /* DOS pitch has no relocated pointer-slot table to walk; the animation
+     * math would read raw DAT bytes and stomp s_pitchFullPtrs. Skip it
+     * (see _ResetAnimatedPatternsForBothTeams). */
+    if (gDosGraphics)
+        return;
 
     /* ---- state 0: replayState == 0 → no game ---- */
     if (replayState == 0) {
