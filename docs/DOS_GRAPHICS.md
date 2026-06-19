@@ -77,18 +77,37 @@ renderer needs no per-frame mapping. (e.g. Amiga team1 227–410 ↔ DOS 341–6
 (Frozen/Muddy/Wet/Soft/Normal/Dry/Hard) overwrite those 9 entries per pitch type
 (`physType = pitchNumberAndType & 0xFF`, clamp >6→4). 6-bit→8-bit: **`v*255/63`**.
 
-## Integration plan (loaders only; gated on `gDosGraphics`)
-1. **Palette** — when DOS, upload `kDosGamePalette` (+ pitch overlay) via our
-   palette path instead of the Amiga palette.
-2. **Pitch** (`pitch.c` load site) — parse `grafs_dos/PITCH{n}.BLK`→tile bank and
-   `PITCH{n}.DAT`→our tile map. ⚠ Convention: the DOS `.dat` is 2310 = **42×55**;
-   the reference skips the first 42 (a header row) → 42×54 grid. Our memory note
-   says our map is 42×55 from index 0. **Reconcile at wire-up** — match whichever
-   our `pitchDatBuffer`/renderer expects (likely no skip; verify against a frame).
-3. **Sprites** (`asset_loader.c` grafs load) — for each DOS `.dat`, walk the
-   `[header][planar]` records, run the decode above into chunky, build a
-   `SpriteGraphics`, and store at `amigaIndex = dosIndex − 114`. charset uses the
-   separate `sprite.dat` offset table.
+## Integration plan (loaders only; gated on `gDosGraphics`) — concrete hook points
+
+Our internals differ structurally from the raw DOS files, so each hook adapts
+the DOS data into the exact buffer our renderer already consumes:
+
+1. **Palette** — our renderer colours come from a 256-entry RGBA palette built in
+   `platform_sdl.c` (`refresh_palette_from_copper`, used by `chunky_to_rgba`).
+   Hook: when `gDosGraphics`, fill that 256-entry palette from
+   `DosGfx_BuildPalette(pitchType, rgb888)` instead of the Amiga copper palette.
+   (Add a `Platform_SetDosPalette(const uint8_t rgb888[768])` setter, or branch
+   inside `refresh_palette_from_copper`.)
+
+2. **Pitch** — `pitch.c::_LoadPitchMap(mapIndex)` loads ONE Amiga `.map` file into
+   `pitchDatBuffer` (a **pointer table** of `PITCH_POINTER_COUNT` longs, then the
+   tile data), then `_FixupAndColorPitchFile()` relocates the pointers. The DOS
+   pitch is TWO files. Hook: when `gDosGraphics`, in `_LoadPitchMap`, load
+   `grafs_dos/PITCH{n}.BLK` (the N×256 chunky tile bank) into the tile-data region
+   and set each `pitchDatBuffer` pointer slot to `tileBank + tileMap[i]*256` using
+   `DosGfx_ParsePitchMap` on `PITCH{n}.DAT` — i.e. synthesise the same pointer
+   table `_FixupAndColorPitchFile` would produce, then skip/short-circuit the
+   Amiga fixup. ⚠ The DOS `.dat` is 2310 = 42×55; the reference skips a 42-entry
+   header row (→42×54). Our `pitchDatBuffer` is 2310 longs from index 0. **Verify
+   the row offset against a rendered frame.**
+
+3. **Sprites** — our sprites are `SpriteGraphics` records + chunky pixels, built
+   from the Amiga `.raw` via `image_cmd.c`/`asset_loader.c`. Hook: when
+   `gDosGraphics`, for each DOS `.dat`, walk the `[24-byte header][planar]`
+   records, `DosGfx_DecodePlanarSprite` into a chunky buffer, fill a
+   `SpriteGraphics` (pixWidth/nlines/wquads/centerX/centerY from the DOS header,
+   `sprData`=chunky), and store it in our sprite table at
+   `amigaIndex = dosIndex − 114`. charset uses the separate `sprite.dat` offsets.
 
 ## Status
 - Done: `[dos]` INI section + `--dos-graphics`/`--dos-gameplay` flags + `gDosGraphics`
