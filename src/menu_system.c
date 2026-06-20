@@ -1602,6 +1602,10 @@ void _MenuProc(void)
                           selectedEntry->controlMask == 0xFFFF ? "yes" : "no");
     }
 
+    if (d7 != 0)
+        HLOG("dispatch-try mask=0x%04x d7=0x%04x onSelect=%p\n",
+             (unsigned)selectedEntry->controlMask, (unsigned)d7, (void *)(uintptr_t)onSelectPtr);
+
     if (selectedEntry->controlMask != 0xFFFF) {
         d7 &= selectedEntry->controlMask;
         if (d7 == 0) {
@@ -1719,6 +1723,7 @@ void _ActivateMenu(uint8_t *packedMenu)
     }
 
     onInitPtr = menu->onInit;
+    HLOG("ActivateMenu onInit=%p\n", (void *)onInitPtr);
     if (onInitPtr != 0) {
         _CallMenuCallback((void *)onInitPtr);
     }
