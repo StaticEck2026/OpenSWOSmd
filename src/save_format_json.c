@@ -2658,6 +2658,35 @@ static char *dj_slurp(const char *path, int *out_len)
     return buf;
 }
 
+/* Slurp `path`, find the record whose "$.id" == id inside the array at
+   "$.<arrkey>", and return its object slice. On success returns 1, sets
+   *filebuf to the malloc'd file (caller must free it once done with the slice)
+   and *o/*ol to the record slice. Returns 0 (and frees the file) otherwise. */
+static int dj_find_comp_record(const char *path, const char *arrkey, const char *id,
+                               char **filebuf, const char **o, int *ol)
+{
+    int len = 0;
+    char *fb = dj_slurp(path, &len);
+    if (!fb)
+        return 0;
+    const char *arr; int al;
+    char apath[64];
+    snprintf(apath, sizeof apath, "$.%s", arrkey);
+    if (mjson_find(fb, len, apath, &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt; char idbuf[64];
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            if (mjson_get_string(arr + voff, vlen, "$.id", idbuf, (int)sizeof idbuf) > 0
+                && strcmp(idbuf, id) == 0) {
+                *filebuf = fb; *o = arr + voff; *ol = vlen;
+                return 1;
+            }
+        }
+    }
+    free(fb);
+    return 0;
+}
+
 /* SWOS_DATA_JSON wire-in: load a country's teams from data_json/ instead of the
    binary TEAM.NNN. Resolves countryNum -> "teams/NAME.json" via the master
    data_json/competitions/countries.json list, reads it, and parses it into
@@ -2753,6 +2782,77 @@ static int dj_cn_number(const char *define, int dlen)
     return -1;
 }
 
+/* ---- shared parse helpers for the competition-record loaders ----
+ * The three concrete competition records (CompetitionCup/Playoffs share one,
+ * CompetitionTournament, CompetitionLeague) all embed a Competition base, an
+ * interned name[] table, and (cup/tournament) a TeamId seed list, so those
+ * sub-parsers are factored out here and shared by all loaders. */
+
+/* Parse the "$.comp" base sub-object into c. isPlayoff sets the byte-6
+   discriminator (the caller knows it from the source list); the two inert
+   self-offset bytes (reserved1/reserved2) are zeroed — they are no longer read
+   after Step 4b. Returns 0, or -1 if the comp base object is missing. */
+static int dj_comp_base(const char *o, int ol, Competition *c, int isPlayoff)
+{
+    const char *cs; int cl; double v;
+    if (mjson_find(o, ol, "$.comp", &cs, &cl) != MJSON_TOK_OBJECT) return -1;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    c->compNumber      = (int8_t)GN(cs, cl, "$.comp_number");
+    c->type            = (int8_t)GN(cs, cl, "$.type");
+    c->teamNumber      = (int8_t)GN(cs, cl, "$.team_number");
+    c->beginMonth      = (int8_t)GN(cs, cl, "$.begin_month");
+    c->endMonth        = (int8_t)GN(cs, cl, "$.end_month");
+    c->reserved1       = 0;                   /* inert (Step 4b) */
+    c->isPlayoff       = (int8_t)isPlayoff;   /* byte 6 discriminator (Step 4b) */
+    c->reserved2       = 0;                   /* inert (Step 4b) */
+    c->seedReorderFlag = (int8_t)GN(cs, cl, "$.seed_reorder_flag");
+#undef GN
+    return 0;
+}
+
+/* Intern up to `max` JSON strings from the array at `path` into strpool,
+   writing pointers to out[]. Missing/over-long entries stay as-is (caller
+   memset the record to 0, so they read NULL = "use default name"). */
+static void dj_intern_names(const char *o, int ol, const char *path,
+                            char **out, int max, char *strpool, int strpoolsz)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0, used = 0;
+    if (mjson_find(o, ol, path, &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt == MJSON_TOK_STRING && used < strpoolsz) {
+            int n = mjson_get_string(arr + voff, vlen, "$", strpool + used, strpoolsz - used);
+            if (n >= 0) { out[i] = strpool + used; used += n + 1; }
+        }
+        i++;
+    }
+}
+
+/* Parse "$.team_seed_list" ({country: "CN_*", ordinal}) into out[max] TeamIds. */
+static void dj_seed_list(const char *o, int ol, TeamId *out, int max)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0; double v; char cn[64];
+    if (mjson_find(o, ol, "$.team_seed_list", &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) continue;
+        int num = -1;
+        if (mjson_get_string(arr + voff, vlen, "$.country", cn, (int)sizeof cn) > 0)
+            num = dj_cn_number(cn, (int)strlen(cn));
+        out[i].countryNumber = (uint8_t)(num < 0 ? 0 : num);
+        out[i].teamOrdinal   = (uint8_t)(mjson_get_number(arr + voff, vlen, "$.ordinal", &v) ? (int)v : 0);
+        i++;
+    }
+}
+
+/* Parse a flat numeric array at `path` into out[max] int8 bytes (values may be
+   negative, e.g. -1 sentinels — stored as the same bit pattern). */
+static void dj_i8_array(const char *o, int ol, const char *path, int8_t *out, int max)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0; double v;
+    if (mjson_find(o, ol, path, &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0)
+        out[i++] = (int8_t)(mjson_get_number(arr + voff, vlen, "$", &v) ? (int)v : 0);
+}
+
 /* Parse one cup/playoff competition record (`o`/`ol` = the JSON object slice)
    into `out`. isPlayoff selects the Competition.isPlayoff discriminator (the
    caller knows it from the source list). name[] strings are interned into the
@@ -2763,58 +2863,92 @@ int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
 {
     CompetitionCup *out = (CompetitionCup *)outv;
     memset(out, 0, sizeof *out);
-    const char *cs; int cl;
-    if (mjson_find(o, ol, "$.comp", &cs, &cl) != MJSON_TOK_OBJECT) return -1;
+    if (dj_comp_base(o, ol, &out->header.comp, isPlayoff) != 0) return -1;
     double v;
 #define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
-    Competition *c = &out->header.comp;
-    c->compNumber     = (int8_t)GN(cs, cl, "$.comp_number");
-    c->type           = (int8_t)GN(cs, cl, "$.type");
-    c->teamNumber     = (int8_t)GN(cs, cl, "$.team_number");
-    c->beginMonth     = (int8_t)GN(cs, cl, "$.begin_month");
-    c->endMonth       = (int8_t)GN(cs, cl, "$.end_month");
-    c->isPlayoff      = (int8_t)isPlayoff;            /* byte 6 discriminator (Step 4b) */
-    c->seedReorderFlag = (int8_t)GN(cs, cl, "$.seed_reorder_flag");
     out->header.numRoundsOverride   = (int8_t)GN(o, ol, "$.num_rounds_override");
     out->header.teams               = (int8_t)GN(o, ol, "$.teams");
     out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
     out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
     out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
+#undef GN
+    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
+    dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
+    dj_seed_list(o, ol, out->teamSeedList, 32);
+    return 0;
+}
 
-    const char *arr; int al; int pos, voff, vlen, vt, i;
-    /* round_rule_flags[6] */
-    if (mjson_find(o, ol, "$.round_rule_flags", &arr, &al) == MJSON_TOK_ARRAY) {
-        pos = 0; i = 0;
-        while (i < 6 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0)
-            out->roundRuleFlags[i++] = (int8_t)GN(arr + voff, vlen, "$");
-    }
-    /* name[2] strings -> intern into strpool */
-    if (mjson_find(o, ol, "$.name", &arr, &al) == MJSON_TOK_ARRAY) {
-        pos = 0; i = 0;
-        int used = 0;
-        while (i < 2 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
-            if (vt == MJSON_TOK_STRING && used < strpoolsz) {
-                int n = mjson_get_string(arr + voff, vlen, "$", strpool + used, strpoolsz - used);
-                if (n >= 0) { out->name[i] = strpool + used; used += n + 1; }
+/* Parse one type-2 group-tournament record into `out` (CompetitionTournament). */
+int DataJson_LoadCompetitionTournament(const char *o, int ol, void *outv,
+                                       char *strpool, int strpoolsz)
+{
+    CompetitionTournament *out = (CompetitionTournament *)outv;
+    memset(out, 0, sizeof *out);
+    if (dj_comp_base(o, ol, &out->header.comp, 0) != 0) return -1;
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    out->header.seedingType         = (int8_t)GN(o, ol, "$.seeding_type");
+    out->header.menuState           = (int8_t)GN(o, ol, "$.menu_state");
+    out->header.playEachTeam        = (int8_t)GN(o, ol, "$.play_each_team");
+    out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
+    out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
+    out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
+    out->header.reserved            = (int8_t)GN(o, ol, "$.header_reserved");
+    /* rounds[6]: {team_count, group_count, team_group_count} */
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0;
+    if (mjson_find(o, ol, "$.rounds", &arr, &al) == MJSON_TOK_ARRAY) {
+        while (i < 6 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt == MJSON_TOK_OBJECT) {
+                out->header.rounds[i].teamCount      = (int8_t)GN(arr + voff, vlen, "$.team_count");
+                out->header.rounds[i].groupCount     = (int8_t)GN(arr + voff, vlen, "$.group_count");
+                out->header.rounds[i].teamGroupCount = (int8_t)GN(arr + voff, vlen, "$.team_group_count");
             }
             i++;
         }
     }
-    /* team_seed_list[] -> TeamId[32] ({country: CN_*, ordinal}) */
-    if (mjson_find(o, ol, "$.team_seed_list", &arr, &al) == MJSON_TOK_ARRAY) {
-        pos = 0; i = 0;
-        char cn[64];
-        while (i < 32 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
-            if (vt != MJSON_TOK_OBJECT) continue;
-            int num = -1;
-            if (mjson_get_string(arr + voff, vlen, "$.country", cn, (int)sizeof cn) > 0)
-                num = dj_cn_number(cn, (int)strlen(cn));
-            out->teamSeedList[i].countryNumber = (uint8_t)(num < 0 ? 0 : num);
-            out->teamSeedList[i].teamOrdinal   = (uint8_t)GN(arr + voff, vlen, "$.ordinal");
+#undef GN
+    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
+    dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
+    dj_seed_list(o, ol, out->teamSeedList, 32);
+    return 0;
+}
+
+/* Parse one type-0 league record into `out` (CompetitionLeague). The cross-ref
+   playoffLinkPtrs[] (JSON "playoff_links": [comp-id, ...]) are NOT resolved here
+   — they point at other competition globals and are wired up at the
+   country-graph stage; left NULL. promotionLinkData[24] is a plain byte array
+   and is parsed now. */
+int DataJson_LoadCompetitionLeague(const char *o, int ol, void *outv,
+                                   char *strpool, int strpoolsz)
+{
+    CompetitionLeague *out = (CompetitionLeague *)outv;
+    memset(out, 0, sizeof *out);
+    if (dj_comp_base(o, ol, &out->header.comp, 0) != 0) return -1;
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    out->header.divisionsCount = (int8_t)GN(o, ol, "$.divisions_count");
+    out->header.rounds         = (int8_t)GN(o, ol, "$.rounds");
+    out->header.pointsForWin   = (int8_t)GN(o, ol, "$.points_for_win");
+    out->header.subsAndMaxSubs = (int8_t)GN(o, ol, "$.subs_and_max_subs");
+    out->reserved1             = (uint8_t)GN(o, ol, "$.reserved1");
+    /* divisions[4] */
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0;
+    if (mjson_find(o, ol, "$.divisions", &arr, &al) == MJSON_TOK_ARRAY) {
+        while (i < 4 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt == MJSON_TOK_OBJECT) {
+                out->divisions[i].teams               = (int8_t)GN(arr + voff, vlen, "$.teams");
+                out->divisions[i].promoted            = (int8_t)GN(arr + voff, vlen, "$.promoted");
+                out->divisions[i].promotedPo          = (int8_t)GN(arr + voff, vlen, "$.promoted_po");
+                out->divisions[i].relegated           = (int8_t)GN(arr + voff, vlen, "$.relegated");
+                out->divisions[i].relegatedPo         = (int8_t)GN(arr + voff, vlen, "$.relegated_po");
+                out->divisions[i].qualifierLinkOffset = (int8_t)GN(arr + voff, vlen, "$.qualifier_link_offset");
+            }
             i++;
         }
     }
 #undef GN
+    dj_intern_names(o, ol, "$.name", out->name, 10, strpool, strpoolsz);
+    dj_i8_array(o, ol, "$.promotion_link_data", (int8_t *)out->promotionLinkData, 24);
     return 0;
 }
 
@@ -2901,7 +3035,68 @@ int DataJson_SelfTest(void)
            loaded.header.teams, loaded.name[0] ? loaded.name[0] : "(null)",
            loaded.teamSeedList[0].countryNumber, loaded.teamSeedList[0].teamOrdinal,
            loaded.teamSeedList[4].countryNumber, loaded.teamSeedList[4].teamOrdinal);
-    return (ok && cok) ? 0 : 1;
+
+    /* ---- tournament loader: load tournaments.json's "euroCup" and verify ---- */
+    int tok = 1;
+    extern CompetitionTournament euroCup;   /* compiled record */
+    { char *tj = NULL; const char *to; int tol;
+      if (dj_find_comp_record("data_json/competitions/tournaments.json", "competitions",
+                              "euroCup", &tj, &to, &tol)) {
+        static CompetitionTournament tl; static char tsp[256];
+        DataJson_LoadCompetitionTournament(to, tol, &tl, tsp, (int)sizeof tsp);
+        free(tj);
+#define TCHK(c) do { if (!(c)) { printf("[data-json]   tour FAIL: %s\n", #c); tok = 0; } } while (0)
+        TCHK(tl.header.comp.compNumber == euroCup.header.comp.compNumber);
+        TCHK(tl.header.comp.type == euroCup.header.comp.type);     /* 2 */
+        TCHK(tl.header.seedingType == euroCup.header.seedingType);
+        TCHK(tl.header.playEachTeam == euroCup.header.playEachTeam);
+        TCHK(tl.header.roundStringBase == euroCup.header.roundStringBase);
+        TCHK(tl.header.rounds[0].teamCount == euroCup.header.rounds[0].teamCount);
+        TCHK(tl.header.rounds[0].groupCount == euroCup.header.rounds[0].groupCount);
+        TCHK(tl.header.rounds[1].teamCount == euroCup.header.rounds[1].teamCount);
+        TCHK(tl.name[0] && euroCup.name[0] && strcmp(tl.name[0], euroCup.name[0]) == 0);
+        TCHK(tl.teamSeedList[0].countryNumber == euroCup.teamSeedList[0].countryNumber);
+        TCHK(tl.teamSeedList[0].teamOrdinal   == euroCup.teamSeedList[0].teamOrdinal);
+#undef TCHK
+        printf("[data-json] selftest comp: euroCup %s — type=%d seed=%d r0=%d/%d name0=%.30s seed[0]=%u/%u\n",
+               tok ? "PASS" : "FAIL", tl.header.comp.type, tl.header.seedingType,
+               tl.header.rounds[0].teamCount, tl.header.rounds[0].groupCount,
+               tl.name[0] ? tl.name[0] : "(null)",
+               tl.teamSeedList[0].countryNumber, tl.teamSeedList[0].teamOrdinal);
+      } else { printf("[data-json] selftest comp: euroCup NOT FOUND\n"); tok = 0; }
+    }
+
+    /* ---- league loader: load leagues.json's "englishLeague" and verify ---- */
+    int lok = 1;
+    extern CompetitionLeague englishLeague;   /* compiled record */
+    { char *lj = NULL; const char *lo; int lol;
+      if (dj_find_comp_record("data_json/competitions/leagues.json", "leagues",
+                              "englishLeague", &lj, &lo, &lol)) {
+        static CompetitionLeague ll; static char lsp[256];
+        DataJson_LoadCompetitionLeague(lo, lol, &ll, lsp, (int)sizeof lsp);
+        free(lj);
+#define LCHK(c) do { if (!(c)) { printf("[data-json]   leag FAIL: %s\n", #c); lok = 0; } } while (0)
+        LCHK(ll.header.comp.compNumber == englishLeague.header.comp.compNumber);
+        LCHK(ll.header.comp.type == englishLeague.header.comp.type);   /* 0 */
+        LCHK(ll.header.divisionsCount == englishLeague.header.divisionsCount);
+        LCHK(ll.header.pointsForWin == englishLeague.header.pointsForWin);
+        LCHK(ll.header.subsAndMaxSubs == englishLeague.header.subsAndMaxSubs);
+        LCHK(ll.divisions[0].teams == englishLeague.divisions[0].teams);
+        LCHK(ll.divisions[0].relegated == englishLeague.divisions[0].relegated);
+        LCHK(ll.divisions[1].teams == englishLeague.divisions[1].teams);
+        LCHK(ll.name[0] && englishLeague.name[0] && strcmp(ll.name[0], englishLeague.name[0]) == 0);
+        LCHK(ll.name[2] && englishLeague.name[2] && strcmp(ll.name[2], englishLeague.name[2]) == 0);
+        LCHK(ll.promotionLinkData[3] == englishLeague.promotionLinkData[3]);
+        LCHK(ll.promotionLinkData[8] == englishLeague.promotionLinkData[8]); /* 0xFF sentinel */
+#undef LCHK
+        printf("[data-json] selftest comp: englishLeague %s — type=%d divs=%d d0.teams=%d name0=%.30s plink[3]=%u plink[8]=%u\n",
+               lok ? "PASS" : "FAIL", ll.header.comp.type, ll.header.divisionsCount,
+               ll.divisions[0].teams, ll.name[0] ? ll.name[0] : "(null)",
+               ll.promotionLinkData[3], ll.promotionLinkData[8]);
+      } else { printf("[data-json] selftest comp: englishLeague NOT FOUND\n"); lok = 0; }
+    }
+
+    return (ok && cok && tok && lok) ? 0 : 1;
 }
 #endif /* SWOS_SDL_BUILD */
 

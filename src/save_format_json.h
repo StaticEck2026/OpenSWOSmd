@@ -72,6 +72,14 @@ int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, 
    interned into strpool. Returns 0 on success. */
 int DataJson_LoadCompetitionCup(const char *json, int len, void *out,
                                 int isPlayoff, char *strpool, int strpoolsz);
+/* Parse a type-2 group-tournament record (CompetitionTournament) / a type-0
+   league record (CompetitionLeague) — same `out` is void* (anonymous typedef).
+   League cross-ref playoffLinkPtrs[] are resolved later at the country-graph
+   wire-in, not here. */
+int DataJson_LoadCompetitionTournament(const char *json, int len, void *out,
+                                       char *strpool, int strpoolsz);
+int DataJson_LoadCompetitionLeague(const char *json, int len, void *out,
+                                   char *strpool, int strpoolsz);
 int DataJson_SelfTest(void);   /* run via SWOS_DATA_JSON_SELFTEST=1 */
 #endif
 
