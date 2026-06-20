@@ -86,10 +86,12 @@ Columns: **DOS 70 / Amiga 50** (60-FPS shown where relevant).
 | `GS_PT_55_50` | 50² | 50 | 60 | Penalty keeper-still-down compare (`swos.asm:113363`). |
 | `GS_SF_128__128` / `GS_SF_8000h__8000h` | 128 / 0x8000 | -128 / -0x8000 | — | Sign-fix constants (negative for styles 1-3). |
 
-¹ **Gotcha:** original DOS value is **54**, but swos-2020 deliberately ships
-`GS_54_49 = 69; // original = 54` (`options.cpp:1581`) — a retune of the DOS clock
-cadence. Use **54** for "true DOS" or **69** to match swos-2020; the Amiga value
-is the clean **49**.
+¹ **Decision: default to the authentic original DOS value `54`, but make it a
+tweakable** so it can be flipped to `69` at runtime. swos-2020 ships
+`GS_54_49 = 69; // original = 54` (`options.cpp:1581`) — a deliberate retune of the
+DOS clock cadence; we keep `54` as the default for authenticity and expose `69` as
+an option. When implemented, the code comment must record both values (original
+DOS = 54, swos-2020 = 69). The Amiga value is the clean **49**.
 ² `GS_PT_55_50` DOS value happens to equal the Amiga value (50).
 
 ### NOT differentiated (important)
@@ -106,7 +108,8 @@ Frame-driven accumulator, **same algorithm** both modes, differing only by
 
 - Per in-progress frame: `secondsSwitchAccumulator -= timeDelta`; on underflow →
   `secondsSwitchAccumulator += GS_54_49; gameSeconds++` (`swos.asm:97793-97830`).
-  So `GS_54_49` ≈ frames-per-game-second: 49 @ 50 FPS, 54 (project 69) @ 70 FPS.
+  So `GS_54_49` ≈ frames-per-game-second: 49 @ 50 FPS, **54 @ 70 FPS** (our
+  default = authentic original DOS; tweakable to swos-2020's `69`, see §3 note ¹).
 - `timeDelta` comes from `gameLenSecondsTable dw 30,18,12,9` indexed by the chosen
   match length (`swos.asm:96458`) — **FPS-independent**; the FPS dependence is
   entirely in the `GS_54_49` reload.
@@ -180,8 +183,9 @@ frame, so they are effectively faster in wall-clock terms at 70 FPS *by design*:
 - `issue-list.txt` — multiplayer frame-time + per-mode notes.
 
 ## Open questions
-- Use true-DOS `GS_54_49 = 54` or swos-2020's retuned `69`? (Default 54 for
-  authenticity; expose as a tweak.)
+- **`GS_54_49` — DECIDED:** default `54` (authentic original DOS), exposed as a
+  runtime tweak so it can be flipped to swos-2020's `69`. Keep both values in the
+  code comment. (See §3 note ¹.)
 - Do we want the 60-FPS styles at all, or just DOS-70/Amiga-50?
 - Does our match-clock path already key off `GS_54_49`, or is the cadence
   hard-coded somewhere that needs the same treatment?
