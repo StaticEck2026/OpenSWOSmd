@@ -144,20 +144,69 @@ fit the pure-knockout `euroCup`/`cupWinnersCup`/`uefaCup` model. It maps to the
 - **Kits/graphics**: club kit colours per `TeamFile`; no new sprite work beyond
   the team data.
 
-## 6. Optional: as a career continental cup
+## 6. Career-mode qualification (required)
 
-Beyond the standalone 1996 preset, Copa Libertadores could become a **career
-CONMEBOL cup** (the South-American analogue of the career euro cups): each season
-the South-American league champions/runners-up auto-qualify and are drawn into the
-five groups by the §3 association-pairing rule. This depends on:
-- South-American **club leagues** existing in the data (career euro cups draw from
-  European league finishers; the equivalent CONMEBOL leagues must exist — another
-  data-drive item).
-- Generalising `career_eurocups.c` qualification to be **confederation-
-  parameterised** (Europe → euro cups; South America → Libertadores).
-`competition_data.c:1098` already has the CONMEBOL nation list
-(`{CN_ARGENTINA, CN_BOLIVIA, CN_BRAZIL, CN_CHILE, CN_COLOMBIA, CN_ECUADOR,
-CN_PARAGUAY, CN_PERU, CN_SURINAM, CN_URUGUAY, CN_VENEZUELA}`).
+In career mode the field is **not** the fixed 1996 list — it is **earned each
+season**. At the end of every season, the **Champion and Runner-Up of each of the
+following 10 South-American leagues qualify for the *next* season's Copa
+Libertadores**:
+
+| # | League (nation) | CN_ code | qualifiers |
+|---|---|---|---|
+| 1 | Brazil | `CN_BRAZIL` | champion + runner-up |
+| 2 | Argentina | `CN_ARGENTINA` | champion + runner-up |
+| 3 | Colombia | `CN_COLOMBIA` | champion + runner-up |
+| 4 | Peru | `CN_PERU` | champion + runner-up |
+| 5 | Bolivia | `CN_BOLIVIA` | champion + runner-up |
+| 6 | Chile | `CN_CHILE` | champion + runner-up |
+| 7 | Paraguay | `CN_PARAGUAY` | champion + runner-up |
+| 8 | Ecuador | `CN_ECUADOR` | champion + runner-up |
+| 9 | Uruguay | `CN_URUGUAY` | champion + runner-up |
+| 10 | Venezuela | `CN_VENEZUELA` | champion + runner-up |
+
+**This is exactly the 20-team field**: 10 leagues × 2 = 20 teams, **2 per nation**
+— which is precisely what the §3 group draw needs (each group pairs two nations'
+two clubs each). So career flow is:
+
+```
+season N ends
+  → for each of the 10 leagues: take final-table positions 1 (champion) and 2 (runner-up)
+  → 20 qualified clubs (2 per nation)
+  → draw into groups A–E by the §3 nation-pairing rule
+  → Copa Libertadores runs during season N+1
+```
+
+(Note: it's "next season" — the qualifiers are decided by season N's league
+finish and contest the Libertadores in season N+1, mirroring the real CONMEBOL
+calendar. This is the same "qualify this season, play next season" cadence the
+career euro cups already use.)
+
+### Dependencies / mapping
+- **South-American club leagues must exist in the data.** The career euro cups
+  draw from European league final tables; Copa Libertadores needs the 10
+  CONMEBOL **club leagues** present so they produce a champion + runner-up each
+  season. SWOS ships these *nations* (national teams + `CN_` codes) but not their
+  club leagues — add them via the **data-drive** (`docs/FEATURES.md` §3 /
+  `DATA_JSON.md`). This is the load-bearing prerequisite.
+- **Qualification logic**: generalise `career_eurocups.c` to be **confederation-
+  parameterised** — Europe → the three euro cups (by finishing position); South
+  America → one cup, **positions 1 and 2 of each league → Copa Libertadores**.
+  The "top-2-of-each-league into one competition, 2 per nation" rule is simpler
+  than the European split.
+- `competition_data.c:1098` already has the CONMEBOL nation list
+  (`{CN_ARGENTINA, CN_BOLIVIA, CN_BRAZIL, CN_CHILE, CN_COLOMBIA, CN_ECUADOR,
+  CN_PARAGUAY, CN_PERU, CN_SURINAM, CN_URUGUAY, CN_VENEZUELA}`). **Surinam is in
+  that list but NOT a Libertadores qualifier** — the 10 qualifying leagues are
+  exactly the table above (no Surinam), matching the 20-team / 5-group maths.
+- The per-career competition record is a `copaLibertadoresCopy` (the
+  `career_comp_copies.c` pattern) whose team-list is **rebuilt each season** from
+  the qualifiers (like the euro-cup `*Copy` team lists are repopulated from
+  league finishers); register it in `careerContests[]` (cap 35).
+- Edge cases to define: what if the same club is both a league champion and would
+  otherwise duplicate (can't happen — 1 & 2 are distinct); how a mid-table
+  human-managed club qualifies (finish 1st/2nd in its domestic league); and
+  whether the *holder* gets an automatic berth (real Libertadores does — optional;
+  the clean 20-from-leagues model omits it, see §1 note).
 
 ## 7. Implementation phasing
 
@@ -168,7 +217,9 @@ CN_PARAGUAY, CN_PERU, CN_SURINAM, CN_URUGUAY, CN_VENEZUELA}`).
 4. **Two-legged knockout**: combine type-2 bracket with euro-cup aggregate ties
    (away goals OFF, penalties).
 5. **Screens/strings**: summary screen (§1) + team list + TRANSLATIONS keys.
-6. **(Later)** career CONMEBOL cup (§6) once South-American leagues are data-driven.
+6. **Career qualification (§6)**: add the 10 South-American club leagues (data-
+   drive), then the per-season "champion + runner-up of each → next-season Copa
+   Libertadores" qualifier that rebuilds the 20-team field and draws groups A–E.
 
 ## Open questions
 - The **16th qualifier**: confirm "best runner-up" really means **best 4th-placed**
@@ -177,4 +228,7 @@ CN_PARAGUAY, CN_PERU, CN_SURINAM, CN_URUGUAY, CN_VENEZUELA}`).
   draw for replayability / career use?
 - Knockout: enforce the "no same-nation clubs before QF" seeding constraint, or
   keep a plain seeded bracket?
-- Standalone preset only, or also the career continental cup (§6) now?
+- Career qualification (§6) is **required** — champion + runner-up of the 10
+  CONMEBOL leagues. Open sub-points: does the holder get an automatic berth, and
+  exactly which season's table feeds which edition (assumed: season N → edition
+  N+1)? The fixed 1996 list (§2) is then just the standalone/preset edition.
