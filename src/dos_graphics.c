@@ -66,6 +66,22 @@ static const uint8_t kPitchPalettes[7][27] = {
     /* 6 Hard   */ {36,28, 0, 32,28, 0, 28,28, 0, 50,46,37, 45,34, 0, 19,15, 0, 26,19, 0, 20,25, 0, 44,38,28},
 };
 
+/* ---- arcade service-menu palette: 16 TRUE 8-bit RGB entries ----
+ * From SVCFONT.bmp's embedded palette (== DosPalette.Service). These are NOT
+ * 6-bit-scaled values (e.g. 0xAD = 173 is not a multiple of 4), so store the
+ * 8-bit RGB directly — do NOT run them through DosGfx_6to8. */
+static const uint8_t kDosServicePalette[48] = {
+    0x00,0x00,0x00,  0xAD,0xAD,0xAD,  0xF7,0xF7,0xF7,  0xF7,0x00,0x00,
+    0xEF,0x94,0x00,  0xEF,0xEF,0x00,  0x00,0xF7,0x00,  0x00,0x00,0xF7,
+    0x73,0xA5,0x73,  0x00,0xD6,0xF7,  0x6B,0x6B,0x6B,  0xDE,0xC6,0x00,
+    0x00,0xCE,0xFF,  0xF7,0x7B,0xBD,  0xF7,0x00,0xF7,  0xCE,0xDE,0xFF,
+};
+
+void DosGfx_BuildServicePalette(uint8_t *rgb888Out)
+{
+    memcpy(rgb888Out, kDosServicePalette, sizeof kDosServicePalette);
+}
+
 void DosGfx_BuildPalette(int pitchType, uint8_t *rgb888Out)
 {
     uint8_t pal6[768];
