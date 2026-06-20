@@ -21,6 +21,7 @@
  * etc.) use this macro inside .globl/.equ inline-asm declarations and
  * need it defined on both ports. */
 #define _ASM_PFX ""
+#define HLOG(...) do { } while (0)
 #else
 
 /* The SDL build is hosted on x86/x64 with little-endian ordering. */
@@ -98,6 +99,20 @@ typedef __UINTPTR_TYPE__ uintptr_t;
 struct Custom;
 extern volatile struct Custom *custom;
 #define CUSTOM_BASE ((unsigned long)(custom))
+
+/* ------------------------------------------------------------------
+ * HLOG — harness diagnostic log. Writes "[harness] ..." to stderr
+ * (main.c redirects stderr to SWOS.log) ONLY when env SWOS_HARNESS_LOG
+ * is set. Lets the gdb test harness "see" the menu/flow it drives by
+ * reading SWOS.log directly — independent of gdb, so it works even when
+ * the inferior is mid-operation or hung (the last line printed pinpoints
+ * where it stuck). Flushes each line so nothing is lost on a freeze. */
+#include <stdio.h>
+#include <stdlib.h>
+#define HLOG(...) do { static int hl_ = -1; \
+        if (hl_ < 0) hl_ = getenv("SWOS_HARNESS_LOG") ? 1 : 0; \
+        if (hl_) { fprintf(stderr, "[harness] " __VA_ARGS__); fflush(stderr); } \
+    } while (0)
 
 #endif /* !__m68k__ */
 

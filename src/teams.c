@@ -2908,6 +2908,7 @@ void _SelectTeamsFinalMenu(uint16_t mode)
     uint16_t countryByte;
 
     leagueNumber = 0;
+    HLOG("SelectTeamsFinalMenu enter mode=%u\n", (unsigned)mode);
 
     /* Initialize customsLeague: offset 9 = comp.divisionsCount, offset 0xD = divisions[0].teams */
     customsLeague[9] = 3;
@@ -2987,6 +2988,7 @@ loc_E012:
 loc_E086:
     compEntry = (uint8_t *)(*a5);
     a5++;
+    HLOG("  walk d7=%u comp=%p\n", (unsigned)(d7 & 0xFF), (void *)compEntry);
 
     if (compEntry == (uint8_t *)(uintptr_t)-1)
         goto loc_E2D0;
@@ -3118,6 +3120,8 @@ loc_E246:
         *leagueNumsOut++ = divIdx;
         d1++;
         divIdx++;
+        HLOG("    div %u/%u (comp=%p)\n", (unsigned)divIdx,
+             (unsigned)(uint8_t)league->divisionsCount, (void *)compEntry);
         if ((uint8_t)divIdx != (uint8_t)league->divisionsCount)
             goto loc_E246;
         numberOfLeagues = (int8_t)league->divisionsCount;
@@ -3152,6 +3156,7 @@ loc_E246:
 
 loc_E2D0:
     numLeaguesInCountry = d1;
+    HLOG("enum done country=%u numLeagues=%u\n", (unsigned)(d7 & 0xFF), (unsigned)d1);
 
     /* Build country names list */
     countryNamesPtr = countryNames;

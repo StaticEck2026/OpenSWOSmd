@@ -2658,6 +2658,35 @@ static char *dj_slurp(const char *path, int *out_len)
     return buf;
 }
 
+/* Slurp `path`, find the record whose "$.id" == id inside the array at
+   "$.<arrkey>", and return its object slice. On success returns 1, sets
+   *filebuf to the malloc'd file (caller must free it once done with the slice)
+   and *o/*ol to the record slice. Returns 0 (and frees the file) otherwise. */
+static int dj_find_comp_record(const char *path, const char *arrkey, const char *id,
+                               char **filebuf, const char **o, int *ol)
+{
+    int len = 0;
+    char *fb = dj_slurp(path, &len);
+    if (!fb)
+        return 0;
+    const char *arr; int al;
+    char apath[64];
+    snprintf(apath, sizeof apath, "$.%s", arrkey);
+    if (mjson_find(fb, len, apath, &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt; char idbuf[64];
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            if (mjson_get_string(arr + voff, vlen, "$.id", idbuf, (int)sizeof idbuf) > 0
+                && strcmp(idbuf, id) == 0) {
+                *filebuf = fb; *o = arr + voff; *ol = vlen;
+                return 1;
+            }
+        }
+    }
+    free(fb);
+    return 0;
+}
+
 /* SWOS_DATA_JSON wire-in: load a country's teams from data_json/ instead of the
    binary TEAM.NNN. Resolves countryNum -> "teams/NAME.json" via the master
    data_json/competitions/countries.json list, reads it, and parses it into
@@ -2721,6 +2750,631 @@ int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, 
     return n;
 }
 
+/* ----------------------------------------------------------------------------
+ * Competition JSON loader (data_json/competitions/*.json) — first increment:
+ * parse a single competition RECORD (the cup / playoff family: comp base +
+ * scalars + round_rule_flags + name strings + team_seed_list) into the typed
+ * CompetitionCup struct. Tournament rounds[]/league divisions[] and the
+ * country-graph wire-in (competitionsTable reconstruction) are the next steps.
+ * -------------------------------------------------------------------------- */
+
+/* CN_* define -> country number, via the master countries.json (file cached for
+   the process; linear scan per lookup — fine for load-time use). Returns -1. */
+static int dj_cn_number(const char *define, int dlen)
+{
+    static char *cj = (char *)0;
+    static int clen = 0;
+    static int tried = 0;
+    if (!tried) { tried = 1; cj = dj_slurp("data_json/competitions/countries.json", &clen); }
+    if (!cj) return -1;
+    const char *arr; int al;
+    if (mjson_find(cj, clen, "$.countries", &arr, &al) != MJSON_TOK_ARRAY) return -1;
+    int pos = 0, voff, vlen, vt;
+    char buf[64];
+    while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) continue;
+        if (mjson_get_string(arr + voff, vlen, "$.define", buf, (int)sizeof buf) > 0
+            && (int)strlen(buf) == dlen && memcmp(buf, define, (size_t)dlen) == 0) {
+            double v;
+            return mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
+        }
+    }
+    return -1;
+}
+
+/* ---- shared parse helpers for the competition-record loaders ----
+ * The three concrete competition records (CompetitionCup/Playoffs share one,
+ * CompetitionTournament, CompetitionLeague) all embed a Competition base, an
+ * interned name[] table, and (cup/tournament) a TeamId seed list, so those
+ * sub-parsers are factored out here and shared by all loaders. */
+
+/* Parse the "$.comp" base sub-object into c. isPlayoff sets the byte-6
+   discriminator (the caller knows it from the source list); the two inert
+   self-offset bytes (reserved1/reserved2) are zeroed — they are no longer read
+   after Step 4b. Returns 0, or -1 if the comp base object is missing. */
+static int dj_comp_base(const char *o, int ol, Competition *c, int isPlayoff)
+{
+    const char *cs; int cl; double v;
+    if (mjson_find(o, ol, "$.comp", &cs, &cl) != MJSON_TOK_OBJECT) return -1;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    c->compNumber      = (int8_t)GN(cs, cl, "$.comp_number");
+    c->type            = (int8_t)GN(cs, cl, "$.type");
+    c->teamNumber      = (int8_t)GN(cs, cl, "$.team_number");
+    c->beginMonth      = (int8_t)GN(cs, cl, "$.begin_month");
+    c->endMonth        = (int8_t)GN(cs, cl, "$.end_month");
+    /* byte5/byte7: the old nameTableOffset / teamListOffset. Step 4b reaches the
+       name/seed tables via comp_name_table()/comp_team_seed_list() instead, so
+       these are "inert" by design — BUT a record copy that differs from the
+       compiled global by even one byte trips the season-transition scratch-buffer
+       checksum (_DIY_ValidateLeagueScratchBuffer, panic 0x4444). Keep them
+       byte-faithful: parse the stored values rather than zeroing. */
+    c->reserved1       = (int8_t)GN(cs, cl, "$.name_table_offset");
+    c->isPlayoff       = (int8_t)isPlayoff;   /* byte 6 discriminator (Step 4b) */
+    c->reserved2       = (int8_t)GN(cs, cl, "$.team_list_offset");
+    c->seedReorderFlag = (int8_t)GN(cs, cl, "$.seed_reorder_flag");
+#undef GN
+    return 0;
+}
+
+/* Intern up to `max` JSON strings from the array at `path` into strpool,
+   writing pointers to out[]. Missing/over-long entries stay as-is (caller
+   memset the record to 0, so they read NULL = "use default name"). */
+static void dj_intern_names(const char *o, int ol, const char *path,
+                            char **out, int max, char *strpool, int strpoolsz)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0, used = 0;
+    if (mjson_find(o, ol, path, &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt == MJSON_TOK_STRING && used < strpoolsz) {
+            int n = mjson_get_string(arr + voff, vlen, "$", strpool + used, strpoolsz - used);
+            if (n >= 0) { out[i] = strpool + used; used += n + 1; }
+        }
+        i++;
+    }
+}
+
+/* Parse "$.team_seed_list" ({country: "CN_*", ordinal}) into out[max] TeamIds. */
+static void dj_seed_list(const char *o, int ol, TeamId *out, int max)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0; double v; char cn[64];
+    if (mjson_find(o, ol, "$.team_seed_list", &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_OBJECT) continue;
+        int num = -1;
+        if (mjson_get_string(arr + voff, vlen, "$.country", cn, (int)sizeof cn) > 0)
+            num = dj_cn_number(cn, (int)strlen(cn));
+        out[i].countryNumber = (uint8_t)(num < 0 ? 0 : num);
+        out[i].teamOrdinal   = (uint8_t)(mjson_get_number(arr + voff, vlen, "$.ordinal", &v) ? (int)v : 0);
+        i++;
+    }
+}
+
+/* Parse a flat numeric array at `path` into out[max] int8 bytes (values may be
+   negative, e.g. -1 sentinels — stored as the same bit pattern). */
+static void dj_i8_array(const char *o, int ol, const char *path, int8_t *out, int max)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0; double v;
+    if (mjson_find(o, ol, path, &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0)
+        out[i++] = (int8_t)(mjson_get_number(arr + voff, vlen, "$", &v) ? (int)v : 0);
+}
+
+/* Parse one cup/playoff competition record (`o`/`ol` = the JSON object slice)
+   into `out`. isPlayoff selects the Competition.isPlayoff discriminator (the
+   caller knows it from the source list). name[] strings are interned into the
+   caller-provided strpool. Returns 0 on success, -1 if the `comp` base is
+   missing. */
+int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
+                                int isPlayoff, char *strpool, int strpoolsz)
+{
+    CompetitionCup *out = (CompetitionCup *)outv;
+    memset(out, 0, sizeof *out);
+    if (dj_comp_base(o, ol, &out->header.comp, isPlayoff) != 0) return -1;
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    out->header.numRoundsOverride   = (int8_t)GN(o, ol, "$.num_rounds_override");
+    out->header.teams               = (int8_t)GN(o, ol, "$.teams");
+    out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
+    out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
+    out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
+#undef GN
+    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
+    dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
+    dj_seed_list(o, ol, out->teamSeedList, 32);
+    return 0;
+}
+
+/* Parse one type-2 group-tournament record into `out` (CompetitionTournament). */
+int DataJson_LoadCompetitionTournament(const char *o, int ol, void *outv,
+                                       char *strpool, int strpoolsz)
+{
+    CompetitionTournament *out = (CompetitionTournament *)outv;
+    memset(out, 0, sizeof *out);
+    if (dj_comp_base(o, ol, &out->header.comp, 0) != 0) return -1;
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    out->header.seedingType         = (int8_t)GN(o, ol, "$.seeding_type");
+    out->header.menuState           = (int8_t)GN(o, ol, "$.menu_state");
+    out->header.playEachTeam        = (int8_t)GN(o, ol, "$.play_each_team");
+    out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
+    out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
+    out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
+    out->header.reserved            = (int8_t)GN(o, ol, "$.header_reserved");
+    /* rounds[6]: {team_count, group_count, team_group_count} */
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0;
+    if (mjson_find(o, ol, "$.rounds", &arr, &al) == MJSON_TOK_ARRAY) {
+        while (i < 6 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt == MJSON_TOK_OBJECT) {
+                out->header.rounds[i].teamCount      = (int8_t)GN(arr + voff, vlen, "$.team_count");
+                out->header.rounds[i].groupCount     = (int8_t)GN(arr + voff, vlen, "$.group_count");
+                out->header.rounds[i].teamGroupCount = (int8_t)GN(arr + voff, vlen, "$.team_group_count");
+            }
+            i++;
+        }
+    }
+#undef GN
+    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
+    dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
+    dj_seed_list(o, ol, out->teamSeedList, 32);
+    return 0;
+}
+
+/* Parse one type-0 league record into `out` (CompetitionLeague). The cross-ref
+   playoffLinkPtrs[] (JSON "playoff_links": [comp-id, ...]) are NOT resolved here
+   — they point at other competition globals and are wired up at the
+   country-graph stage; left NULL. promotionLinkData[24] is a plain byte array
+   and is parsed now. */
+int DataJson_LoadCompetitionLeague(const char *o, int ol, void *outv,
+                                   char *strpool, int strpoolsz)
+{
+    CompetitionLeague *out = (CompetitionLeague *)outv;
+    memset(out, 0, sizeof *out);
+    if (dj_comp_base(o, ol, &out->header.comp, 0) != 0) return -1;
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    out->header.divisionsCount = (int8_t)GN(o, ol, "$.divisions_count");
+    out->header.rounds         = (int8_t)GN(o, ol, "$.rounds");
+    out->header.pointsForWin   = (int8_t)GN(o, ol, "$.points_for_win");
+    out->header.subsAndMaxSubs = (int8_t)GN(o, ol, "$.subs_and_max_subs");
+    out->reserved1             = (uint8_t)GN(o, ol, "$.reserved1");
+    /* divisions[4] */
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0;
+    if (mjson_find(o, ol, "$.divisions", &arr, &al) == MJSON_TOK_ARRAY) {
+        while (i < 4 && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt == MJSON_TOK_OBJECT) {
+                out->divisions[i].teams               = (int8_t)GN(arr + voff, vlen, "$.teams");
+                out->divisions[i].promoted            = (int8_t)GN(arr + voff, vlen, "$.promoted");
+                out->divisions[i].promotedPo          = (int8_t)GN(arr + voff, vlen, "$.promoted_po");
+                out->divisions[i].relegated           = (int8_t)GN(arr + voff, vlen, "$.relegated");
+                out->divisions[i].relegatedPo         = (int8_t)GN(arr + voff, vlen, "$.relegated_po");
+                out->divisions[i].qualifierLinkOffset = (int8_t)GN(arr + voff, vlen, "$.qualifier_link_offset");
+            }
+            i++;
+        }
+    }
+#undef GN
+    dj_intern_names(o, ol, "$.name", out->name, 10, strpool, strpoolsz);
+    dj_i8_array(o, ol, "$.promotion_link_data", (int8_t *)out->promotionLinkData, 24);
+    return 0;
+}
+
+/* ======================================================================
+ * Runtime country-graph wire-in (SWOS_DATA_JSON)
+ *
+ * Rebuilds the per-country competition tables in competitionsTable[] from the
+ * data_json/ corpus at startup, so the ~65 "normal" countries (those carrying
+ * leagues[]+cups[] in country_competitions.json) run off the JSON instead of the
+ * compiled competition_data.c tables. Region/special tables (europe/world/
+ * customs — QualifyingGroup structs) keep their compiled pointers, as do all the
+ * named competition globals (englishLeague &c.) that the career playoff /
+ * qualification code reads directly by name. Gated on SWOS_DATA_JSON; a country
+ * whose ids don't all resolve is left compiled (never a partial table).
+ *
+ * The validation in dj_selftest_graph() proves this reconstruction is faithful
+ * (membership/order/compNumbers match the compiled tables) before it goes live.
+ * ====================================================================== */
+#define DJ_MAX_CUPS    96
+#define DJ_MAX_LEAGUES 80
+#define DJ_MAX_RECS    200   /* name-pool slices: ~142 parsed + ~14 in-place overwrites */
+#define DJ_NAMEPOOL    256
+#define DJ_MAX_TABLES  72
+#define DJ_TABLE_SLOTS 16
+
+/* Persistent storage — competitionsTable entries point into these, so they must
+   outlive startup (static, never freed). */
+static CompetitionCup    s_djCups[DJ_MAX_CUPS];
+static CompetitionLeague s_djLeagues[DJ_MAX_LEAGUES];
+static char              s_djNamePool[DJ_MAX_RECS][DJ_NAMEPOOL];
+static Competition      *s_djCountryTables[DJ_MAX_TABLES][DJ_TABLE_SLOTS];
+
+struct dj_graph_reg { char id[40]; Competition *comp; int hasPlayoffLinks; };
+
+/* Parse every record of one corpus file into persistent storage `dst`
+   (element size elemsz, capacity cap, running count *n), recording
+   id -> &dst[i] in the registry. isLeague picks the loader. */
+static void dj_graph_parse_file(const char *path, const char *arrkey, int isLeague,
+                                void *dst, size_t elemsz, int cap, int *n,
+                                struct dj_graph_reg *reg, int *regN, int regMax,
+                                int *poolIdx)
+{
+    int len = 0;
+    char *fb = dj_slurp(path, &len);
+    if (!fb) return;
+    const char *arr; int al; char apath[64];
+    snprintf(apath, sizeof apath, "$.%s", arrkey);
+    if (mjson_find(fb, len, apath, &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt;
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            char idbuf[40];
+            if (mjson_get_string(arr + voff, vlen, "$.id", idbuf, (int)sizeof idbuf) <= 0) continue;
+            if (*n >= cap || *poolIdx >= DJ_MAX_RECS || *regN >= regMax) break;
+            void *slot = (char *)dst + (size_t)(*n) * elemsz;
+            char *pool = s_djNamePool[*poolIdx];
+            int rc = isLeague
+                ? DataJson_LoadCompetitionLeague(arr + voff, vlen, slot, pool, DJ_NAMEPOOL)
+                : DataJson_LoadCompetitionCup(arr + voff, vlen, slot, 0, pool, DJ_NAMEPOOL);
+            if (rc != 0) continue;
+            (*poolIdx)++;
+            struct dj_graph_reg *e = &reg[(*regN)++];
+            strncpy(e->id, idbuf, sizeof e->id - 1); e->id[sizeof e->id - 1] = '\0';
+            e->comp = (Competition *)slot;
+            /* A league with a non-empty playoff_links array reaches a Playoffs +
+               league-block (Leagues struct) whose sub-league pointers reference
+               the COMPILED globals — those blocks aren't rebuilt from JSON yet, so
+               swapping such a country leaves the division-loop (JSON copy) and the
+               qualification walk (compiled Leagues block) mismatched and the
+               season-transition scratch checksum panics (0x4444). Flag them so the
+               install leaves those countries compiled. */
+            e->hasPlayoffLinks = 0;
+            if (isLeague) {
+                const char *pl; int pll;
+                if (mjson_find(arr + voff, vlen, "$.playoff_links", &pl, &pll) == MJSON_TOK_ARRAY) {
+                    int p2 = 0, vo, vl, t2;
+                    if (fast_array_next(pl, pll, p2, &vo, &vl, &t2) != 0) e->hasPlayoffLinks = 1;
+                }
+            }
+            (*n)++;
+        }
+    }
+    free(fb);
+}
+
+static Competition *dj_graph_resolve(struct dj_graph_reg *reg, int regN, const char *id)
+{
+    for (int i = 0; i < regN; i++)
+        if (strcmp(reg[i].id, id) == 0) return reg[i].comp;
+    return (Competition *)0;
+}
+
+/* Resolve every string id in the JSON array (arrj/arrl) via the registry,
+   appending the Competition* pointers into tbl[] (bounded by *k < limit).
+   Returns 1 if all resolved, 0 if any id was missing (caller aborts the swap
+   and leaves that country compiled). */
+static int dj_graph_append_ids(const char *arrj, int arrl, struct dj_graph_reg *reg, int regN,
+                               Competition **tbl, int *k, int limit)
+{
+    int pos = 0, voff, vlen, vt; char idb[40];
+    while ((pos = fast_array_next(arrj, arrl, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_STRING) continue;
+        if (mjson_get_string(arrj + voff, vlen, "$", idb, (int)sizeof idb) <= 0) continue;
+        Competition *c = dj_graph_resolve(reg, regN, idb);
+        if (!c) return 0;
+        if (*k < limit) tbl[(*k)++] = c;
+    }
+    return 1;
+}
+
+/* A country is "complex" if any of its leagues carries playoff_links. Such a
+   league's season-transition qualification code (processDiyLeagueQualificationEntry)
+   is hardcoded by NAME to the compiled englishLeague / englishLeagues1 / etc. and
+   gates on `competition == &englishLeague` (by address) — so the country CANNOT be
+   served from a separate JSON copy (the address check fails, the promotion/
+   relegation scratch weights never clear, panic 0x4444). Instead these countries
+   are made data-driven by overwriting the compiled globals IN PLACE (see
+   dj_inplace_load), keeping competitionsTable pointing at the compiled table.
+   Returns 1 if complex. */
+static int dj_graph_country_is_complex(const char *lj, int ljl,
+                                       struct dj_graph_reg *reg, int regN)
+{
+    int pos = 0, voff, vlen, vt; char idb[40];
+    while ((pos = fast_array_next(lj, ljl, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_STRING) continue;
+        if (mjson_get_string(lj + voff, vlen, "$", idb, (int)sizeof idb) <= 0) continue;
+        for (int i = 0; i < regN; i++)
+            if (reg[i].hasPlayoffLinks && strcmp(reg[i].id, idb) == 0) return 1;
+    }
+    return 0;
+}
+
+/* Overwrite compiled competition globals IN PLACE with JSON data, pairing each
+   JSON id (in array order) with compGlobals[i] (the compiled globals walked out
+   of competitionsTable in the same order — inc3 proved the orders match). The
+   competitionsTable pointer is left untouched, so every by-name / by-address
+   reference (englishLeague, englishLeagues1->league1, the `==&englishLeague`
+   gate) keeps seeing one object that now holds JSON data. A league's compiled
+   playoffLinkPtrs (→ Playoffs + Leagues block) are PRESERVED across the
+   overwrite, and the overwrite only happens when the parsed compNumber matches
+   the compiled one (defensive — never corrupt a mispaired global). Returns the
+   number overwritten. */
+static int dj_inplace_load(const char *ids, int idsLen, int isLeague,
+                           Competition **compGlobals, int nGlobals, int *poolIdx)
+{
+    if (idsLen <= 0) return 0;
+    const char *file = isLeague ? "data_json/competitions/leagues.json"
+                                : "data_json/competitions/cups.json";
+    const char *key  = isLeague ? "leagues" : "competitions";
+    int pos = 0, voff, vlen, vt, gi = 0, loaded = 0; char idb[40];
+    while (gi < nGlobals && (pos = fast_array_next(ids, idsLen, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_STRING) continue;
+        if (mjson_get_string(ids + voff, vlen, "$", idb, (int)sizeof idb) <= 0) continue;
+        char *recfb; const char *o; int ol;
+        if (!dj_find_comp_record(file, key, idb, &recfb, &o, &ol)) { gi++; continue; }
+        if (*poolIdx >= DJ_MAX_RECS) { free(recfb); break; }
+        char *pool = s_djNamePool[*poolIdx];
+        Competition *G = compGlobals[gi];
+        if (isLeague) {
+            CompetitionLeague tmp;
+            if (DataJson_LoadCompetitionLeague(o, ol, &tmp, pool, DJ_NAMEPOOL) == 0
+                && tmp.header.comp.compNumber == ((CompetitionLeague *)G)->header.comp.compNumber) {
+                CompetitionLeague *L = (CompetitionLeague *)G;
+                char *p0 = L->playoffLinkPtrs[0], *p1 = L->playoffLinkPtrs[1];
+                *L = tmp;                               /* names point into the persistent pool */
+                L->playoffLinkPtrs[0] = p0; L->playoffLinkPtrs[1] = p1;   /* keep compiled plumbing */
+                (*poolIdx)++; loaded++;
+            }
+        } else {
+            CompetitionCup tmp;
+            if (DataJson_LoadCompetitionCup(o, ol, &tmp, ((Competition *)G)->isPlayoff, pool, DJ_NAMEPOOL) == 0
+                && tmp.header.comp.compNumber == ((CompetitionCup *)G)->header.comp.compNumber) {
+                *(CompetitionCup *)G = tmp;
+                (*poolIdx)++; loaded++;
+            }
+        }
+        free(recfb);
+        gi++;
+    }
+    return loaded;
+}
+
+void DataJson_InstallCompetitionGraph(void)
+{
+    static int installed = 0;
+    if (installed) return;
+    if (!getenv("SWOS_DATA_JSON")) return;
+    /* Isolation knob: SWOS_DATA_JSON_NO_COMP keeps the teams JSON loader on but
+       leaves the compiled competitionsTable in place (so the two SWOS_DATA_JSON
+       effects — JSON teams vs JSON competition graph — can be tested apart). */
+    if (getenv("SWOS_DATA_JSON_NO_COMP")) return;
+    installed = 1;   /* single attempt; any country left unswapped stays compiled */
+
+    static struct dj_graph_reg reg[DJ_MAX_RECS];
+    int regN = 0, nCups = 0, nLeagues = 0, poolIdx = 0;
+    dj_graph_parse_file("data_json/competitions/cups.json",    "competitions", 0,
+                        s_djCups,    sizeof s_djCups[0],    DJ_MAX_CUPS,    &nCups,
+                        reg, &regN, DJ_MAX_RECS, &poolIdx);
+    dj_graph_parse_file("data_json/competitions/leagues.json", "leagues",      1,
+                        s_djLeagues, sizeof s_djLeagues[0], DJ_MAX_LEAGUES, &nLeagues,
+                        reg, &regN, DJ_MAX_RECS, &poolIdx);
+
+    int len = 0;
+    char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
+    if (!fb) { printf("[data-json] graph install: cannot open country_competitions.json\n"); return; }
+    extern void *competitionsTable[];
+    const char *arr; int al; int tableN = 0, swapped = 0, inPlace = 0;
+    if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt; double v;
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            const char *lj, *cj; int ljl, cjl;
+            int hasL = mjson_find(arr + voff, vlen, "$.leagues", &lj, &ljl) == MJSON_TOK_ARRAY;
+            int hasC = mjson_find(arr + voff, vlen, "$.cups",    &cj, &cjl) == MJSON_TOK_ARRAY;
+            if (!hasL && !hasC) continue;            /* region/special — keep compiled */
+            int number = mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
+            if (number < 0 || number > 255) continue;
+
+            /* Complex (playoff-link) countries: cannot be served from a separate
+               JSON copy (the qualification code is hardcoded to &englishLeague by
+               address/name). Make them data-driven by overwriting the compiled
+               globals IN PLACE, leaving competitionsTable pointing at the compiled
+               table. */
+            if (hasL && dj_graph_country_is_complex(lj, ljl, reg, regN)) {
+                Competition **ctab = (Competition **)competitionsTable[number];
+                if (!ctab) continue;
+                Competition *cL[DJ_TABLE_SLOTS], *cC[DJ_TABLE_SLOTS]; int nLg = 0, nCp = 0, sep = 0;
+                for (int i = 0; i < DJ_TABLE_SLOTS; i++) {
+                    intptr_t pv = (intptr_t)ctab[i];
+                    if (pv == -1) break;
+                    if (pv == -2) { sep = 1; continue; }
+                    if (pv > -0x1000 && pv < 0x1000) continue;
+                    if (!sep) { if (nLg < DJ_TABLE_SLOTS) cL[nLg++] = ctab[i]; }
+                    else      { if (nCp < DJ_TABLE_SLOTS) cC[nCp++] = ctab[i]; }
+                }
+                if (hasL) dj_inplace_load(lj, ljl, 1, cL, nLg, &poolIdx);
+                if (hasC) dj_inplace_load(cj, cjl, 0, cC, nCp, &poolIdx);
+                inPlace++;
+                continue;                            /* keep competitionsTable[number] compiled */
+            }
+
+            /* Simple countries: build a fresh JSON table and swap the pointer. */
+            if (tableN >= DJ_MAX_TABLES) break;
+            Competition **tbl = s_djCountryTables[tableN];
+            int k = 0;
+            /* leagues (before the separator) */
+            if (hasL && !dj_graph_append_ids(lj, ljl, reg, regN, tbl, &k, DJ_TABLE_SLOTS - 2))
+                continue;                            /* unresolved id — leave compiled */
+            tbl[k++] = (Competition *)(intptr_t)-2;  /* league/cup separator */
+            /* cups (after the separator) */
+            if (hasC && !dj_graph_append_ids(cj, cjl, reg, regN, tbl, &k, DJ_TABLE_SLOTS - 1))
+                continue;                            /* unresolved id — leave compiled */
+            tbl[k++] = (Competition *)(intptr_t)-1;  /* terminator */
+            competitionsTable[number] = tbl;         /* install over the compiled pointer */
+            tableN++; swapped++;
+        }
+    }
+    free(fb);
+    printf("[data-json] competition graph installed: %d simple countries swapped, "
+           "%d complex countries loaded in place (cups=%d leagues=%d)\n",
+           swapped, inPlace, nCups, nLeagues);
+}
+
+/* ======================================================================
+ * Country-graph validation (selftest increment 3)
+ *
+ * Builds an id -> {compNumber,type} registry by parsing EVERY record in the
+ * four competition corpus files with the loaders above (a corpus-wide smoke
+ * test of the loaders), then verifies that country_competitions.json's
+ * per-country leagues[]/cups[] lists reproduce the compiled competitionsTable[]
+ * country tables — same membership, same order, same compNumbers. This proves
+ * the JSON corpus + loaders + country graph are complete and self-consistent,
+ * which is the prerequisite for the runtime country-graph wire-in (loading the
+ * competition tables from JSON instead of the compiled competition_data.c).
+ *
+ * Region/special tables (europe/world/customs/...) carry no leagues[]/cups[]
+ * in the JSON (they are QualifyingGroup structs with continental cups + member
+ * lists) and are skipped here — they are a separate, later pass.
+ * ====================================================================== */
+
+struct dj_reg_entry { char id[40]; int compNumber; int type; int isPlayoff; };
+
+enum { DJ_KIND_CUP, DJ_KIND_PLAYOFF, DJ_KIND_TOUR, DJ_KIND_LEAGUE };
+
+union dj_any_comp { CompetitionCup cup; CompetitionTournament tour; CompetitionLeague leag; };
+
+/* Parse every record in one corpus file (array at "$.<arrkey>") with the loader
+   selected by `kind`, recording id+compNumber+type into reg[]. The names are
+   interned into a throwaway pool (overwritten per record — only the identity is
+   kept). Returns the number added, or -1 on file error. */
+static int dj_reg_add_file(const char *path, const char *arrkey, int kind,
+                           struct dj_reg_entry *reg, int *regN, int regMax)
+{
+    int len = 0;
+    char *fb = dj_slurp(path, &len);
+    if (!fb)
+        return -1;
+    const char *arr; int al; char apath[64];
+    snprintf(apath, sizeof apath, "$.%s", arrkey);
+    int added = 0;
+    static char namepool[512];
+    if (mjson_find(fb, len, apath, &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt;
+        static union dj_any_comp scratch;
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            char idbuf[40];
+            if (mjson_get_string(arr + voff, vlen, "$.id", idbuf, (int)sizeof idbuf) <= 0) continue;
+            int rc = -1;
+            switch (kind) {
+            case DJ_KIND_CUP:     rc = DataJson_LoadCompetitionCup(arr + voff, vlen, &scratch, 0, namepool, (int)sizeof namepool); break;
+            case DJ_KIND_PLAYOFF: rc = DataJson_LoadCompetitionCup(arr + voff, vlen, &scratch, 1, namepool, (int)sizeof namepool); break;
+            case DJ_KIND_TOUR:    rc = DataJson_LoadCompetitionTournament(arr + voff, vlen, &scratch, namepool, (int)sizeof namepool); break;
+            case DJ_KIND_LEAGUE:  rc = DataJson_LoadCompetitionLeague(arr + voff, vlen, &scratch, namepool, (int)sizeof namepool); break;
+            }
+            if (rc != 0) continue;   /* parse failure — leave out of registry (surfaces as a missing id) */
+            if (*regN < regMax) {
+                struct dj_reg_entry *e = &reg[(*regN)++];
+                strncpy(e->id, idbuf, sizeof e->id - 1); e->id[sizeof e->id - 1] = '\0';
+                Competition *c = (Competition *)&scratch;   /* comp base is at offset 0 of every record */
+                e->compNumber = c->compNumber; e->type = c->type; e->isPlayoff = c->isPlayoff;
+                added++;
+            }
+        }
+    }
+    free(fb);
+    return added;
+}
+
+static int dj_reg_find(struct dj_reg_entry *reg, int regN, const char *id)
+{
+    for (int i = 0; i < regN; i++)
+        if (strcmp(reg[i].id, id) == 0) return i;
+    return -1;
+}
+
+/* Compare a JSON id array (arrj/arrl) against the compiled compNumber sequence
+   comp[ncomp]: every id must resolve in the registry, in the same order, with a
+   matching compNumber, and the counts must match. Returns 1 on full match. */
+static int dj_cmp_idlist(const char *arrj, int arrl, struct dj_reg_entry *reg, int regN,
+                         const int *comp, int ncomp, const char *what, int number)
+{
+    int pos = 0, voff, vlen, vt, k = 0, ok = 1; char idb[40];
+    while ((pos = fast_array_next(arrj, arrl, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_STRING) continue;
+        if (mjson_get_string(arrj + voff, vlen, "$", idb, (int)sizeof idb) <= 0) continue;
+        int ri = dj_reg_find(reg, regN, idb);
+        if (ri < 0) {
+            printf("[data-json]   graph FAIL[%d]: %s id '%s' not in registry\n", number, what, idb); ok = 0; k++; continue;
+        }
+        if (k >= ncomp) {
+            printf("[data-json]   graph FAIL[%d]: %s extra id '%s' (compiled has %d)\n", number, what, idb, ncomp); ok = 0; k++; continue;
+        }
+        if (reg[ri].compNumber != comp[k]) {
+            printf("[data-json]   graph FAIL[%d]: %s '%s' compNum %d != compiled %d\n", number, what, idb, reg[ri].compNumber, comp[k]); ok = 0;
+        }
+        k++;
+    }
+    if (k != ncomp) {
+        printf("[data-json]   graph FAIL[%d]: %s count %d != compiled %d\n", number, what, k, ncomp); ok = 0;
+    }
+    return ok;
+}
+
+static int dj_selftest_graph(void)
+{
+    struct dj_reg_entry reg[256]; int regN = 0;
+    int nc = dj_reg_add_file("data_json/competitions/cups.json",        "competitions", DJ_KIND_CUP,     reg, &regN, 256);
+    int np = dj_reg_add_file("data_json/competitions/playoffs.json",    "playoffs",     DJ_KIND_PLAYOFF, reg, &regN, 256);
+    int nt = dj_reg_add_file("data_json/competitions/tournaments.json", "competitions", DJ_KIND_TOUR,    reg, &regN, 256);
+    int nl = dj_reg_add_file("data_json/competitions/leagues.json",     "leagues",      DJ_KIND_LEAGUE,  reg, &regN, 256);
+    printf("[data-json] graph: registry built — cups=%d playoffs=%d tournaments=%d leagues=%d total=%d\n",
+           nc, np, nt, nl, regN);
+    if (nc < 0 || np < 0 || nt < 0 || nl < 0) {
+        printf("[data-json] graph: FAIL — a corpus file failed to load\n");
+        return 0;
+    }
+
+    int len = 0;
+    char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
+    if (!fb) { printf("[data-json] graph: cannot open country_competitions.json\n"); return 0; }
+    extern void *competitionsTable[];
+    const char *arr; int al; int ok = 1, countries = 0, mismatches = 0;
+    if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt; double v;
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            const char *lj, *cj; int ljl, cjl;
+            int hasL = mjson_find(arr + voff, vlen, "$.leagues", &lj, &ljl) == MJSON_TOK_ARRAY;
+            int hasC = mjson_find(arr + voff, vlen, "$.cups",    &cj, &cjl) == MJSON_TOK_ARRAY;
+            if (!hasL && !hasC) continue;   /* region/special table — skip */
+            int number = mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
+            if (number < 0 || number > 255) continue;
+            Competition **tbl = (Competition **)competitionsTable[number];
+            if (!tbl) { printf("[data-json]   graph FAIL: number %d has no compiled table\n", number); ok = 0; mismatches++; continue; }
+            /* Walk the compiled Competition*[] table: entries before the (-2)
+               separator are leagues, after it are cups, (-1) terminates. */
+            int compL[16], compC[16], nL = 0, nC = 0, sawSep = 0;
+            for (int i = 0; i < 64; i++) {
+                intptr_t pv = (intptr_t)tbl[i];
+                if (pv == -1) break;
+                if (pv == -2) { sawSep = 1; continue; }
+                if (pv > -0x1000 && pv < 0x1000) continue;   /* region-only small sentinel; not expected here */
+                int cnum = tbl[i]->compNumber;
+                if (!sawSep) { if (nL < 16) compL[nL++] = cnum; }
+                else         { if (nC < 16) compC[nC++] = cnum; }
+            }
+            int cok = 1;
+            cok &= dj_cmp_idlist(hasL ? lj : "", hasL ? ljl : 0, reg, regN, compL, nL, "league", number);
+            cok &= dj_cmp_idlist(hasC ? cj : "", hasC ? cjl : 0, reg, regN, compC, nC, "cup", number);
+            if (!cok) { ok = 0; mismatches++; }
+            countries++;
+        }
+    }
+    free(fb);
+    printf("[data-json] graph: country tables %s — %d countries checked, %d mismatched\n",
+           ok ? "PASS" : "FAIL", countries, mismatches);
+    return ok;
+}
+
 /* Self-test (SWOS_DATA_JSON_SELFTEST=1): load teams/SCOTLAND.json and check the
  * parse against known values. Proves the data-JSON loader builds the structs
  * correctly. Semantic checks (not a raw memcmp) so endian-sensitive fields like
@@ -2759,7 +3413,116 @@ int DataJson_SelfTest(void)
     printf("[data-json]   t[0]=%.17s  t[33]=%.17s gtn=%d  p11=%.22s\n",
            t[0].team.teamName, t[33].team.teamName,
            t[33].team.globalTeamNumber, t[33].players[11].playerName);
-    return ok ? 0 : 1;
+
+    /* ---- competition record loader: load cups.json's "cupWinnersCup" and
+       verify the parse against the compiled global of the same name. ---- */
+    int cok = 1;
+    extern CompetitionCup cupWinnersCup;   /* compiled record */
+    char *cj = NULL; { FILE *cf = fopen("data_json/competitions/cups.json", "rb");
+        if (cf) { fseek(cf,0,SEEK_END); long cn2=ftell(cf); fseek(cf,0,SEEK_SET);
+            cj=(char*)malloc((size_t)cn2+1); if (cj && fread(cj,1,(size_t)cn2,cf)==(size_t)cn2) cj[cn2]='\0'; else { free(cj); cj=NULL; }
+            fclose(cf); } }
+    if (!cj) { printf("[data-json] selftest comp: cannot open cups.json\n"); return ok ? 0 : 1; }
+    int cjlen = (int)strlen(cj);
+    const char *arr; int al;
+    static CompetitionCup loaded;
+    static char strpool[256];
+    int found = 0;
+    if (mjson_find(cj, cjlen, "$.competitions", &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos=0,voff,vlen,vt; char idbuf[64];
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            if (mjson_get_string(arr+voff, vlen, "$.id", idbuf, (int)sizeof idbuf) > 0
+                && strcmp(idbuf, "cupWinnersCup") == 0) {
+                DataJson_LoadCompetitionCup(arr+voff, vlen, &loaded, 0, strpool, (int)sizeof strpool);
+                found = 1; break;
+            }
+        }
+    }
+    free(cj);
+#define CCHK(c) do { if (!(c)) { printf("[data-json]   comp FAIL: %s\n", #c); cok = 0; } } while (0)
+    CCHK(found);
+    CCHK(loaded.header.comp.compNumber == cupWinnersCup.header.comp.compNumber);
+    CCHK(loaded.header.comp.type == cupWinnersCup.header.comp.type);
+    CCHK(loaded.header.comp.seedReorderFlag == cupWinnersCup.header.comp.seedReorderFlag);
+    CCHK(loaded.header.teams == cupWinnersCup.header.teams);
+    CCHK(loaded.roundRuleFlags[0] == cupWinnersCup.roundRuleFlags[0]);
+    CCHK(loaded.name[0] && cupWinnersCup.name[0] && strcmp(loaded.name[0], cupWinnersCup.name[0]) == 0);
+    CCHK(loaded.name[1] && cupWinnersCup.name[1] && strcmp(loaded.name[1], cupWinnersCup.name[1]) == 0);
+    CCHK(loaded.teamSeedList[0].countryNumber == cupWinnersCup.teamSeedList[0].countryNumber);
+    CCHK(loaded.teamSeedList[0].teamOrdinal   == cupWinnersCup.teamSeedList[0].teamOrdinal);
+    CCHK(loaded.teamSeedList[4].countryNumber == cupWinnersCup.teamSeedList[4].countryNumber);
+#undef CCHK
+    printf("[data-json] selftest comp: cupWinnersCup %s\n", cok ? "PASS" : "FAIL");
+    printf("[data-json]   teams=%d name0=%.30s seed[0]=%u/%u seed[4]=%u/%u\n",
+           loaded.header.teams, loaded.name[0] ? loaded.name[0] : "(null)",
+           loaded.teamSeedList[0].countryNumber, loaded.teamSeedList[0].teamOrdinal,
+           loaded.teamSeedList[4].countryNumber, loaded.teamSeedList[4].teamOrdinal);
+
+    /* ---- tournament loader: load tournaments.json's "euroCup" and verify ---- */
+    int tok = 1;
+    extern CompetitionTournament euroCup;   /* compiled record */
+    { char *tj = NULL; const char *to; int tol;
+      if (dj_find_comp_record("data_json/competitions/tournaments.json", "competitions",
+                              "euroCup", &tj, &to, &tol)) {
+        static CompetitionTournament tl; static char tsp[256];
+        DataJson_LoadCompetitionTournament(to, tol, &tl, tsp, (int)sizeof tsp);
+        free(tj);
+#define TCHK(c) do { if (!(c)) { printf("[data-json]   tour FAIL: %s\n", #c); tok = 0; } } while (0)
+        TCHK(tl.header.comp.compNumber == euroCup.header.comp.compNumber);
+        TCHK(tl.header.comp.type == euroCup.header.comp.type);     /* 2 */
+        TCHK(tl.header.seedingType == euroCup.header.seedingType);
+        TCHK(tl.header.playEachTeam == euroCup.header.playEachTeam);
+        TCHK(tl.header.roundStringBase == euroCup.header.roundStringBase);
+        TCHK(tl.header.rounds[0].teamCount == euroCup.header.rounds[0].teamCount);
+        TCHK(tl.header.rounds[0].groupCount == euroCup.header.rounds[0].groupCount);
+        TCHK(tl.header.rounds[1].teamCount == euroCup.header.rounds[1].teamCount);
+        TCHK(tl.name[0] && euroCup.name[0] && strcmp(tl.name[0], euroCup.name[0]) == 0);
+        TCHK(tl.teamSeedList[0].countryNumber == euroCup.teamSeedList[0].countryNumber);
+        TCHK(tl.teamSeedList[0].teamOrdinal   == euroCup.teamSeedList[0].teamOrdinal);
+#undef TCHK
+        printf("[data-json] selftest comp: euroCup %s — type=%d seed=%d r0=%d/%d name0=%.30s seed[0]=%u/%u\n",
+               tok ? "PASS" : "FAIL", tl.header.comp.type, tl.header.seedingType,
+               tl.header.rounds[0].teamCount, tl.header.rounds[0].groupCount,
+               tl.name[0] ? tl.name[0] : "(null)",
+               tl.teamSeedList[0].countryNumber, tl.teamSeedList[0].teamOrdinal);
+      } else { printf("[data-json] selftest comp: euroCup NOT FOUND\n"); tok = 0; }
+    }
+
+    /* ---- league loader: load leagues.json's "englishLeague" and verify ---- */
+    int lok = 1;
+    extern CompetitionLeague englishLeague;   /* compiled record */
+    { char *lj = NULL; const char *lo; int lol;
+      if (dj_find_comp_record("data_json/competitions/leagues.json", "leagues",
+                              "englishLeague", &lj, &lo, &lol)) {
+        static CompetitionLeague ll; static char lsp[256];
+        DataJson_LoadCompetitionLeague(lo, lol, &ll, lsp, (int)sizeof lsp);
+        free(lj);
+#define LCHK(c) do { if (!(c)) { printf("[data-json]   leag FAIL: %s\n", #c); lok = 0; } } while (0)
+        LCHK(ll.header.comp.compNumber == englishLeague.header.comp.compNumber);
+        LCHK(ll.header.comp.type == englishLeague.header.comp.type);   /* 0 */
+        LCHK(ll.header.divisionsCount == englishLeague.header.divisionsCount);
+        LCHK(ll.header.pointsForWin == englishLeague.header.pointsForWin);
+        LCHK(ll.header.subsAndMaxSubs == englishLeague.header.subsAndMaxSubs);
+        LCHK(ll.divisions[0].teams == englishLeague.divisions[0].teams);
+        LCHK(ll.divisions[0].relegated == englishLeague.divisions[0].relegated);
+        LCHK(ll.divisions[1].teams == englishLeague.divisions[1].teams);
+        LCHK(ll.name[0] && englishLeague.name[0] && strcmp(ll.name[0], englishLeague.name[0]) == 0);
+        LCHK(ll.name[2] && englishLeague.name[2] && strcmp(ll.name[2], englishLeague.name[2]) == 0);
+        LCHK(ll.promotionLinkData[3] == englishLeague.promotionLinkData[3]);
+        LCHK(ll.promotionLinkData[8] == englishLeague.promotionLinkData[8]); /* 0xFF sentinel */
+#undef LCHK
+        printf("[data-json] selftest comp: englishLeague %s — type=%d divs=%d d0.teams=%d name0=%.30s plink[3]=%u plink[8]=%u\n",
+               lok ? "PASS" : "FAIL", ll.header.comp.type, ll.header.divisionsCount,
+               ll.divisions[0].teams, ll.name[0] ? ll.name[0] : "(null)",
+               ll.promotionLinkData[3], ll.promotionLinkData[8]);
+      } else { printf("[data-json] selftest comp: englishLeague NOT FOUND\n"); lok = 0; }
+    }
+
+    /* ---- whole-corpus registry + country-graph topology validation ---- */
+    int gok = dj_selftest_graph();
+
+    return (ok && cok && tok && lok && gok) ? 0 : 1;
 }
 #endif /* SWOS_SDL_BUILD */
 
