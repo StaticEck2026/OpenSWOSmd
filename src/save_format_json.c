@@ -2975,7 +2975,7 @@ int DataJson_LoadCompetitionLeague(const char *o, int ol, void *outv,
  * ====================================================================== */
 #define DJ_MAX_CUPS    96
 #define DJ_MAX_LEAGUES 80
-#define DJ_MAX_RECS    160
+#define DJ_MAX_RECS    200   /* name-pool slices: ~142 parsed + ~14 in-place overwrites */
 #define DJ_NAMEPOOL    256
 #define DJ_MAX_TABLES  72
 #define DJ_TABLE_SLOTS 16
@@ -3065,10 +3065,15 @@ static int dj_graph_append_ids(const char *arrj, int arrl, struct dj_graph_reg *
     return 1;
 }
 
-/* A country is "complex" if any of its leagues carries playoff_links — those
-   reach a Leagues block whose sub-league pointers still reference the compiled
-   globals, so the country must stay compiled until league_blocks.json is wired
-   in (see dj_graph_parse_file). Returns 1 if complex. */
+/* A country is "complex" if any of its leagues carries playoff_links. Such a
+   league's season-transition qualification code (processDiyLeagueQualificationEntry)
+   is hardcoded by NAME to the compiled englishLeague / englishLeagues1 / etc. and
+   gates on `competition == &englishLeague` (by address) — so the country CANNOT be
+   served from a separate JSON copy (the address check fails, the promotion/
+   relegation scratch weights never clear, panic 0x4444). Instead these countries
+   are made data-driven by overwriting the compiled globals IN PLACE (see
+   dj_inplace_load), keeping competitionsTable pointing at the compiled table.
+   Returns 1 if complex. */
 static int dj_graph_country_is_complex(const char *lj, int ljl,
                                        struct dj_graph_reg *reg, int regN)
 {
@@ -3080,6 +3085,56 @@ static int dj_graph_country_is_complex(const char *lj, int ljl,
             if (reg[i].hasPlayoffLinks && strcmp(reg[i].id, idb) == 0) return 1;
     }
     return 0;
+}
+
+/* Overwrite compiled competition globals IN PLACE with JSON data, pairing each
+   JSON id (in array order) with compGlobals[i] (the compiled globals walked out
+   of competitionsTable in the same order — inc3 proved the orders match). The
+   competitionsTable pointer is left untouched, so every by-name / by-address
+   reference (englishLeague, englishLeagues1->league1, the `==&englishLeague`
+   gate) keeps seeing one object that now holds JSON data. A league's compiled
+   playoffLinkPtrs (→ Playoffs + Leagues block) are PRESERVED across the
+   overwrite, and the overwrite only happens when the parsed compNumber matches
+   the compiled one (defensive — never corrupt a mispaired global). Returns the
+   number overwritten. */
+static int dj_inplace_load(const char *ids, int idsLen, int isLeague,
+                           Competition **compGlobals, int nGlobals, int *poolIdx)
+{
+    if (idsLen <= 0) return 0;
+    const char *file = isLeague ? "data_json/competitions/leagues.json"
+                                : "data_json/competitions/cups.json";
+    const char *key  = isLeague ? "leagues" : "competitions";
+    int pos = 0, voff, vlen, vt, gi = 0, loaded = 0; char idb[40];
+    while (gi < nGlobals && (pos = fast_array_next(ids, idsLen, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_STRING) continue;
+        if (mjson_get_string(ids + voff, vlen, "$", idb, (int)sizeof idb) <= 0) continue;
+        char *recfb; const char *o; int ol;
+        if (!dj_find_comp_record(file, key, idb, &recfb, &o, &ol)) { gi++; continue; }
+        if (*poolIdx >= DJ_MAX_RECS) { free(recfb); break; }
+        char *pool = s_djNamePool[*poolIdx];
+        Competition *G = compGlobals[gi];
+        if (isLeague) {
+            CompetitionLeague tmp;
+            if (DataJson_LoadCompetitionLeague(o, ol, &tmp, pool, DJ_NAMEPOOL) == 0
+                && tmp.header.comp.compNumber == ((CompetitionLeague *)G)->header.comp.compNumber) {
+                CompetitionLeague *L = (CompetitionLeague *)G;
+                char *p0 = L->playoffLinkPtrs[0], *p1 = L->playoffLinkPtrs[1];
+                *L = tmp;                               /* names point into the persistent pool */
+                L->playoffLinkPtrs[0] = p0; L->playoffLinkPtrs[1] = p1;   /* keep compiled plumbing */
+                (*poolIdx)++; loaded++;
+            }
+        } else {
+            CompetitionCup tmp;
+            if (DataJson_LoadCompetitionCup(o, ol, &tmp, ((Competition *)G)->isPlayoff, pool, DJ_NAMEPOOL) == 0
+                && tmp.header.comp.compNumber == ((CompetitionCup *)G)->header.comp.compNumber) {
+                *(CompetitionCup *)G = tmp;
+                (*poolIdx)++; loaded++;
+            }
+        }
+        free(recfb);
+        gi++;
+    }
+    return loaded;
 }
 
 void DataJson_InstallCompetitionGraph(void)
@@ -3106,7 +3161,7 @@ void DataJson_InstallCompetitionGraph(void)
     char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
     if (!fb) { printf("[data-json] graph install: cannot open country_competitions.json\n"); return; }
     extern void *competitionsTable[];
-    const char *arr; int al; int tableN = 0, swapped = 0, keptComplex = 0;
+    const char *arr; int al; int tableN = 0, swapped = 0, inPlace = 0;
     if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
         int pos = 0, voff, vlen, vt; double v;
         while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
@@ -3117,10 +3172,31 @@ void DataJson_InstallCompetitionGraph(void)
             if (!hasL && !hasC) continue;            /* region/special — keep compiled */
             int number = mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
             if (number < 0 || number > 255) continue;
-            /* leagues with playoff_links reach a not-yet-rebuilt Leagues block —
-               leave those countries compiled (England/Scotland/Holland/Spain/
-               Uruguay). See dj_graph_country_is_complex. */
-            if (hasL && dj_graph_country_is_complex(lj, ljl, reg, regN)) { keptComplex++; continue; }
+
+            /* Complex (playoff-link) countries: cannot be served from a separate
+               JSON copy (the qualification code is hardcoded to &englishLeague by
+               address/name). Make them data-driven by overwriting the compiled
+               globals IN PLACE, leaving competitionsTable pointing at the compiled
+               table. */
+            if (hasL && dj_graph_country_is_complex(lj, ljl, reg, regN)) {
+                Competition **ctab = (Competition **)competitionsTable[number];
+                if (!ctab) continue;
+                Competition *cL[DJ_TABLE_SLOTS], *cC[DJ_TABLE_SLOTS]; int nLg = 0, nCp = 0, sep = 0;
+                for (int i = 0; i < DJ_TABLE_SLOTS; i++) {
+                    intptr_t pv = (intptr_t)ctab[i];
+                    if (pv == -1) break;
+                    if (pv == -2) { sep = 1; continue; }
+                    if (pv > -0x1000 && pv < 0x1000) continue;
+                    if (!sep) { if (nLg < DJ_TABLE_SLOTS) cL[nLg++] = ctab[i]; }
+                    else      { if (nCp < DJ_TABLE_SLOTS) cC[nCp++] = ctab[i]; }
+                }
+                if (hasL) dj_inplace_load(lj, ljl, 1, cL, nLg, &poolIdx);
+                if (hasC) dj_inplace_load(cj, cjl, 0, cC, nCp, &poolIdx);
+                inPlace++;
+                continue;                            /* keep competitionsTable[number] compiled */
+            }
+
+            /* Simple countries: build a fresh JSON table and swap the pointer. */
             if (tableN >= DJ_MAX_TABLES) break;
             Competition **tbl = s_djCountryTables[tableN];
             int k = 0;
@@ -3137,9 +3213,9 @@ void DataJson_InstallCompetitionGraph(void)
         }
     }
     free(fb);
-    printf("[data-json] competition graph installed: %d country tables from JSON "
-           "(cups=%d leagues=%d; %d complex countries kept compiled)\n",
-           swapped, nCups, nLeagues, keptComplex);
+    printf("[data-json] competition graph installed: %d simple countries swapped, "
+           "%d complex countries loaded in place (cups=%d leagues=%d)\n",
+           swapped, inPlace, nCups, nLeagues);
 }
 
 /* ======================================================================
