@@ -1490,6 +1490,8 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     int8_t count = (int8_t)qualComp->teams;   /* qualified-team count (was playoffHeader[10]) */
 
     if (!youreSacked && (uint8_t *)qualComp == diyCompetitionPtr) {
+        HLOG("promotion-playoff INTERACTIVE (player in playoff): index=%u teams=%d\n",
+             (unsigned)index, (int)count);
         /* Player's competition — interactive processing. Advance the
          * teamIdxList past the consumed qIdx pairs (asm `lea (a2,d0.w),a2`
          * with d0 = count*2) so DIY_ApplyPromotionRelegationWeights sees
@@ -1502,6 +1504,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         _DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
         _SaveSelectedTeams();
     } else {
+        HLOG("promotion-playoff auto: index=%u teams=%d\n", (unsigned)index, (int)count);
         /* Not player's competition — auto-fill teams from qualification indices. */
         uint16_t savedSelTeam = selTeamNumber;
         uint8_t  savedCtrl    = careerTeam.team.teamControls;
