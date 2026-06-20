@@ -2952,6 +2952,163 @@ int DataJson_LoadCompetitionLeague(const char *o, int ol, void *outv,
     return 0;
 }
 
+/* ======================================================================
+ * Country-graph validation (selftest increment 3)
+ *
+ * Builds an id -> {compNumber,type} registry by parsing EVERY record in the
+ * four competition corpus files with the loaders above (a corpus-wide smoke
+ * test of the loaders), then verifies that country_competitions.json's
+ * per-country leagues[]/cups[] lists reproduce the compiled competitionsTable[]
+ * country tables — same membership, same order, same compNumbers. This proves
+ * the JSON corpus + loaders + country graph are complete and self-consistent,
+ * which is the prerequisite for the runtime country-graph wire-in (loading the
+ * competition tables from JSON instead of the compiled competition_data.c).
+ *
+ * Region/special tables (europe/world/customs/...) carry no leagues[]/cups[]
+ * in the JSON (they are QualifyingGroup structs with continental cups + member
+ * lists) and are skipped here — they are a separate, later pass.
+ * ====================================================================== */
+
+struct dj_reg_entry { char id[40]; int compNumber; int type; int isPlayoff; };
+
+enum { DJ_KIND_CUP, DJ_KIND_PLAYOFF, DJ_KIND_TOUR, DJ_KIND_LEAGUE };
+
+union dj_any_comp { CompetitionCup cup; CompetitionTournament tour; CompetitionLeague leag; };
+
+/* Parse every record in one corpus file (array at "$.<arrkey>") with the loader
+   selected by `kind`, recording id+compNumber+type into reg[]. The names are
+   interned into a throwaway pool (overwritten per record — only the identity is
+   kept). Returns the number added, or -1 on file error. */
+static int dj_reg_add_file(const char *path, const char *arrkey, int kind,
+                           struct dj_reg_entry *reg, int *regN, int regMax)
+{
+    int len = 0;
+    char *fb = dj_slurp(path, &len);
+    if (!fb)
+        return -1;
+    const char *arr; int al; char apath[64];
+    snprintf(apath, sizeof apath, "$.%s", arrkey);
+    int added = 0;
+    static char namepool[512];
+    if (mjson_find(fb, len, apath, &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt;
+        static union dj_any_comp scratch;
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            char idbuf[40];
+            if (mjson_get_string(arr + voff, vlen, "$.id", idbuf, (int)sizeof idbuf) <= 0) continue;
+            int rc = -1;
+            switch (kind) {
+            case DJ_KIND_CUP:     rc = DataJson_LoadCompetitionCup(arr + voff, vlen, &scratch, 0, namepool, (int)sizeof namepool); break;
+            case DJ_KIND_PLAYOFF: rc = DataJson_LoadCompetitionCup(arr + voff, vlen, &scratch, 1, namepool, (int)sizeof namepool); break;
+            case DJ_KIND_TOUR:    rc = DataJson_LoadCompetitionTournament(arr + voff, vlen, &scratch, namepool, (int)sizeof namepool); break;
+            case DJ_KIND_LEAGUE:  rc = DataJson_LoadCompetitionLeague(arr + voff, vlen, &scratch, namepool, (int)sizeof namepool); break;
+            }
+            if (rc != 0) continue;   /* parse failure — leave out of registry (surfaces as a missing id) */
+            if (*regN < regMax) {
+                struct dj_reg_entry *e = &reg[(*regN)++];
+                strncpy(e->id, idbuf, sizeof e->id - 1); e->id[sizeof e->id - 1] = '\0';
+                Competition *c = (Competition *)&scratch;   /* comp base is at offset 0 of every record */
+                e->compNumber = c->compNumber; e->type = c->type; e->isPlayoff = c->isPlayoff;
+                added++;
+            }
+        }
+    }
+    free(fb);
+    return added;
+}
+
+static int dj_reg_find(struct dj_reg_entry *reg, int regN, const char *id)
+{
+    for (int i = 0; i < regN; i++)
+        if (strcmp(reg[i].id, id) == 0) return i;
+    return -1;
+}
+
+/* Compare a JSON id array (arrj/arrl) against the compiled compNumber sequence
+   comp[ncomp]: every id must resolve in the registry, in the same order, with a
+   matching compNumber, and the counts must match. Returns 1 on full match. */
+static int dj_cmp_idlist(const char *arrj, int arrl, struct dj_reg_entry *reg, int regN,
+                         const int *comp, int ncomp, const char *what, int number)
+{
+    int pos = 0, voff, vlen, vt, k = 0, ok = 1; char idb[40];
+    while ((pos = fast_array_next(arrj, arrl, pos, &voff, &vlen, &vt)) != 0) {
+        if (vt != MJSON_TOK_STRING) continue;
+        if (mjson_get_string(arrj + voff, vlen, "$", idb, (int)sizeof idb) <= 0) continue;
+        int ri = dj_reg_find(reg, regN, idb);
+        if (ri < 0) {
+            printf("[data-json]   graph FAIL[%d]: %s id '%s' not in registry\n", number, what, idb); ok = 0; k++; continue;
+        }
+        if (k >= ncomp) {
+            printf("[data-json]   graph FAIL[%d]: %s extra id '%s' (compiled has %d)\n", number, what, idb, ncomp); ok = 0; k++; continue;
+        }
+        if (reg[ri].compNumber != comp[k]) {
+            printf("[data-json]   graph FAIL[%d]: %s '%s' compNum %d != compiled %d\n", number, what, idb, reg[ri].compNumber, comp[k]); ok = 0;
+        }
+        k++;
+    }
+    if (k != ncomp) {
+        printf("[data-json]   graph FAIL[%d]: %s count %d != compiled %d\n", number, what, k, ncomp); ok = 0;
+    }
+    return ok;
+}
+
+static int dj_selftest_graph(void)
+{
+    struct dj_reg_entry reg[256]; int regN = 0;
+    int nc = dj_reg_add_file("data_json/competitions/cups.json",        "competitions", DJ_KIND_CUP,     reg, &regN, 256);
+    int np = dj_reg_add_file("data_json/competitions/playoffs.json",    "playoffs",     DJ_KIND_PLAYOFF, reg, &regN, 256);
+    int nt = dj_reg_add_file("data_json/competitions/tournaments.json", "competitions", DJ_KIND_TOUR,    reg, &regN, 256);
+    int nl = dj_reg_add_file("data_json/competitions/leagues.json",     "leagues",      DJ_KIND_LEAGUE,  reg, &regN, 256);
+    printf("[data-json] graph: registry built — cups=%d playoffs=%d tournaments=%d leagues=%d total=%d\n",
+           nc, np, nt, nl, regN);
+    if (nc < 0 || np < 0 || nt < 0 || nl < 0) {
+        printf("[data-json] graph: FAIL — a corpus file failed to load\n");
+        return 0;
+    }
+
+    int len = 0;
+    char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
+    if (!fb) { printf("[data-json] graph: cannot open country_competitions.json\n"); return 0; }
+    extern void *competitionsTable[];
+    const char *arr; int al; int ok = 1, countries = 0, mismatches = 0;
+    if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
+        int pos = 0, voff, vlen, vt; double v;
+        while ((pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+            if (vt != MJSON_TOK_OBJECT) continue;
+            const char *lj, *cj; int ljl, cjl;
+            int hasL = mjson_find(arr + voff, vlen, "$.leagues", &lj, &ljl) == MJSON_TOK_ARRAY;
+            int hasC = mjson_find(arr + voff, vlen, "$.cups",    &cj, &cjl) == MJSON_TOK_ARRAY;
+            if (!hasL && !hasC) continue;   /* region/special table — skip */
+            int number = mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
+            if (number < 0 || number > 255) continue;
+            Competition **tbl = (Competition **)competitionsTable[number];
+            if (!tbl) { printf("[data-json]   graph FAIL: number %d has no compiled table\n", number); ok = 0; mismatches++; continue; }
+            /* Walk the compiled Competition*[] table: entries before the (-2)
+               separator are leagues, after it are cups, (-1) terminates. */
+            int compL[16], compC[16], nL = 0, nC = 0, sawSep = 0;
+            for (int i = 0; i < 64; i++) {
+                intptr_t pv = (intptr_t)tbl[i];
+                if (pv == -1) break;
+                if (pv == -2) { sawSep = 1; continue; }
+                if (pv > -0x1000 && pv < 0x1000) continue;   /* region-only small sentinel; not expected here */
+                int cnum = tbl[i]->compNumber;
+                if (!sawSep) { if (nL < 16) compL[nL++] = cnum; }
+                else         { if (nC < 16) compC[nC++] = cnum; }
+            }
+            int cok = 1;
+            cok &= dj_cmp_idlist(hasL ? lj : "", hasL ? ljl : 0, reg, regN, compL, nL, "league", number);
+            cok &= dj_cmp_idlist(hasC ? cj : "", hasC ? cjl : 0, reg, regN, compC, nC, "cup", number);
+            if (!cok) { ok = 0; mismatches++; }
+            countries++;
+        }
+    }
+    free(fb);
+    printf("[data-json] graph: country tables %s — %d countries checked, %d mismatched\n",
+           ok ? "PASS" : "FAIL", countries, mismatches);
+    return ok;
+}
+
 /* Self-test (SWOS_DATA_JSON_SELFTEST=1): load teams/SCOTLAND.json and check the
  * parse against known values. Proves the data-JSON loader builds the structs
  * correctly. Semantic checks (not a raw memcmp) so endian-sensitive fields like
@@ -3096,7 +3253,10 @@ int DataJson_SelfTest(void)
       } else { printf("[data-json] selftest comp: englishLeague NOT FOUND\n"); lok = 0; }
     }
 
-    return (ok && cok && tok && lok) ? 0 : 1;
+    /* ---- whole-corpus registry + country-graph topology validation ---- */
+    int gok = dj_selftest_graph();
+
+    return (ok && cok && tok && lok && gok) ? 0 : 1;
 }
 #endif /* SWOS_SDL_BUILD */
 
