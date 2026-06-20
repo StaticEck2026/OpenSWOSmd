@@ -23,15 +23,26 @@ use it to fail loudly on a read-only target instead of silently no-op'ing.
 import re
 import struct
 import subprocess
+import sys
+import time
 import zlib
 
 DEFAULT_PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py"
+
+# A single `continue` to the next breakpoint should be sub-second with TURBO
+# (and at most ~1 s without it). When the WSL2/gdb session degrades, the
+# inferior's per-frame timer thread starves and conts balloon to 10-120 s
+# (reads stay fast — it's the inferior frame, not command latency). Surface
+# that the MOMENT it starts, not after a 40-step stuck-out, so the operator
+# can act (verify TURBO is on; `wsl --shutdown` to reset a long-up VM).
+CONT_SLOW_WARN_S = 4.0
 
 
 class GdbHarness:
     def __init__(self, proxy=DEFAULT_PROXY, timeout=8):
         self.proxy = proxy
         self.timeout = timeout
+        self._slow_conts = 0   # consecutive slow conts (degradation tripwire)
 
     # ---- transport ---------------------------------------------------------
     def cmd(self, command, timeout=None):
@@ -100,7 +111,20 @@ class GdbHarness:
         self.cmd("delete")
 
     def cont(self, timeout=20):
-        return self.cmd("continue", timeout)
+        t0 = time.monotonic()
+        out = self.cmd("continue", timeout)
+        dt = time.monotonic() - t0
+        if dt > CONT_SLOW_WARN_S:
+            self._slow_conts += 1
+            sys.stderr.write(
+                f"[harness] SLOW CONT {dt:.1f}s (>{CONT_SLOW_WARN_S:.0f}s; "
+                f"{self._slow_conts} in a row) — likely WSL2/gdb timer-thread "
+                f"starvation. Check SWOS_HARNESS_TURBO is set on the inferior; "
+                f"if it persists, `wsl --shutdown` to reset the VM.\n")
+            sys.stderr.flush()
+        else:
+            self._slow_conts = 0
+        return out
 
     def run_to(self, location, timeout=120, fresh=True):
         """Set a breakpoint at `location` and continue until it is hit."""

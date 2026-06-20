@@ -35,7 +35,7 @@ find src \( -name '*.c' -o -name '*.h' \) -newer bin/SWOS.x86_64 | head   # MUST
 # 3. Drive seasons from a LOADED career (NOT a fresh one):
 from swos_plugin import SwosHarness
 s = SwosHarness()
-s.boot()                                  # cold boot → main menu (~2 min; be patient)
+s.boot()                                  # cold boot → main menu (~10 s with TURBO, auto-set by boot())
 s.load_career("MILAN.CAR")                # rc 0; a career sitting at/near a season end
 s.enter_career()                          # → _CareerOverInit (the season-end hub)
 s.run_seasons(20)                         # advances season-by-season → retirement (season 19)
@@ -345,6 +345,40 @@ buffer — the chunky draw is the game's own code, before the SDL upload), so
 `screencap` works unchanged. Booting *with* a real window and relaunching it many
 times per session is what made the daemon look unreliable.
 
+### TURBO — make the inferior CPU-bound, not wall-clock-bound (the cont-balloon fix)
+
+`SWOS_HARNESS_TURBO=1` makes the SDL build run frames as fast as the CPU allows
+instead of pacing them to a 50 Hz wall clock. **`boot()` sets it automatically**
+(via `set environment SWOS_HARNESS_TURBO 1` before `run`), so you normally don't
+touch it; set it by hand only if you `run` the inferior yourself.
+
+Why it matters: the harness drives the game frame-by-frame via `continue`, so
+per-frame real-time waits are pure overhead. Worse, under WSL2/gdb the inferior's
+timer thread starves and those waits balloon — a `continue` that should be
+sub-second stretches to **10–120 s** (reads stay fast; it's the *inferior frame*,
+not command latency), the driver over-runs its `cont` timeout, and
+`is_stopped()` falsely reports "stuck". TURBO removes every wall-clock wait the
+starvation could balloon:
+
+- `Platform_VBlank` skips the 50 Hz `SDL_Delay`+spin pace.
+- `_RunInt3HandlerThrottled`'s 18 ms throttle drops to 0, so `currentGameTick`
+  advances every call — tick-counted fades/holds/the loader-intro timeout drain
+  at CPU speed and stop depending on the starved timer thread.
+- the `SDL_AddTimer` interval drops from 20 ms to 1 ms (for pure-timer spins like
+  the loader intro that never call `Platform_VBlank`).
+
+Effect: a cont is bound by CPU work, not by a clock the scheduler stretches.
+Validated headless — cold boot reaches `_SWOSMainMenuInit` in **~7.5 s** (vs the
+old ~1–2 min); the residue is genuine RNC asset decompression, which TURBO leaves
+alone. No effect on normal play (default off); SDL-only (`platform_sdl.c`
+`s_harness_turbo`), nothing to back-port to the Amiga build.
+
+A tripwire backs this up: `GdbHarness.cont()` warns on stderr (`[harness] SLOW
+CONT …`) when a continue exceeds `CONT_SLOW_WARN_S` (4 s), so a degrading session
+is visible immediately — not after a 40-step stuck-out. If you see it, confirm
+TURBO is set on the inferior; if it persists, `wsl --shutdown` resets a long-up VM
+(a fresh WSL *tab* is not enough).
+
 ### Daemon discipline
 
 - **Launch the daemon ONCE per session and leave it alone.** Do not rapid
@@ -356,9 +390,10 @@ times per session is what made the daemon look unreliable.
   In practice: don't launch a new probe while a previous background script is
   still finishing (e.g. a slow `screencap` memory dump). Wait for it to exit
   first. If wedged, force-kill the daemon + `gdb` by PID and restart.
-- **Boot is slow (1–2 min)** — the loader intro auto-times-out to the main menu
-  and ignores the `1567` breakpoint until then. Use `waitstop(200)`; never wrap
-  the boot in a tight outer `timeout`.
+- **Boot** — the loader intro auto-times-out to the main menu and ignores the
+  `1567` breakpoint until then. With TURBO (the default in `boot()`) this is
+  ~10 s; without it ~1–2 min. Use `waitstop(200)` either way; never wrap the boot
+  in a tight outer `timeout`.
 - **Re-boot the inferior in the same daemon** with `kill` then `run` — breakpoints
   and `set environment` persist, so you don't pay a relaunch.
 - Foreground `sleep` is blocked in this environment — poll background output, or

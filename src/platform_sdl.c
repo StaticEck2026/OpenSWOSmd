@@ -119,6 +119,18 @@ static int           s_frame_count;
 static int           s_renderer_is_hw;
 static int           s_vsync_enabled;
 
+/* Harness TURBO (env SWOS_HARNESS_TURBO, read once in Platform_Init): when
+ * set, the inferior runs frames CPU-bound instead of paced to a 50 Hz wall
+ * clock. The gdb test harness drives the game frame-by-frame via `continue`,
+ * so per-frame real-time waits are pure overhead — and under WSL2/gdb the
+ * timer thread starves, ballooning those waits from tens-of-ms to 10–120 s
+ * per cont (driver then over-runs its timeout and false-reports "stuck").
+ * Turbo removes every wall-clock wait (Platform_VBlank pacing, the
+ * _RunInt3HandlerThrottled throttle, the 20 ms timer interval) so a cont is
+ * bound by CPU work, not by a clock the scheduler stretches. No effect on
+ * normal play (default off). SDL-only file; nothing to back-port to Amiga. */
+static int           s_harness_turbo;
+
 /* ---- VBlank tick driver ------------------------------------------- *
  * The Amiga VBlank ISR (Int3TimerHandler) was responsible for bumping
  * `currentGameTick` once per frame. The game polls that counter in
@@ -151,14 +163,20 @@ static Uint32      s_last_isr_ms;      /* last ISR fire time, for throttle */
  * can monopolise CPU). */
 void _RunInt3HandlerThrottled(void)
 {
+    /* Turbo collapses the 18 ms throttle to 0 so currentGameTick advances on
+     * every call — tick-counting waits (fades, holds, the loader-intro
+     * timeout) drain at CPU speed and stop depending on the starved timer
+     * thread. The loop that calls this exits as soon as the tick advances, so
+     * it runs once or twice, not unbounded. */
+    const Uint32 thr = s_harness_turbo ? 0u : 18u;
     Uint32 now = SDL_GetTicks();
     /* Cheap pre-check before the lock — most calls will be too soon. */
-    if (now - s_last_isr_ms < 18) return;
+    if (now - s_last_isr_ms < thr) return;
     if (!s_isr_mtx) return;            /* not initialised yet */
     if (SDL_TryLockMutex(s_isr_mtx) != 0) return;  /* other thread already in */
     /* Re-check after lock acquired (the other thread may have just run it). */
     now = SDL_GetTicks();
-    if (now - s_last_isr_ms >= 18) {
+    if (now - s_last_isr_ms >= thr) {
         s_last_isr_ms = now;
         _Int3TimerHandler();
     }
@@ -214,7 +232,12 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
         pump_quit_only();
     }
 
-    return interval;      /* fire again */
+    /* Turbo: fire as fast as SDL allows (1 ms) so the loader-intro path — a
+     * pure spin on currentGameTick that never calls Platform_VBlank, advanced
+     * ONLY from this thread — drains in a fraction of a second instead of
+     * ~1–2 min. With the _RunInt3HandlerThrottled throttle also at 0, every
+     * fire advances the tick. */
+    return s_harness_turbo ? (Uint32)1 : interval;   /* fire again */
 }
 
 extern void Platform_RewireCustom(void);
@@ -348,6 +371,13 @@ int Platform_Init(const PlatformInitOptions *opts)
     s_render_mtx = SDL_CreateMutex();
     s_isr_mtx    = SDL_CreateMutex();
     s_dump_frames = (getenv("SWOS_DUMP_FRAMES") != NULL);
+
+    s_harness_turbo = (getenv("SWOS_HARNESS_TURBO") != NULL);
+    if (s_harness_turbo)
+        fprintf(stderr,
+            "[harness] TURBO: 50 Hz pacing + ISR throttle + 20 ms timer "
+            "disabled — frames run CPU-bound for the gdb harness (no "
+            "wall-clock waits to balloon under WSL2/gdb starvation)\n");
 
     {
         const char *si = getenv("SWOS_SCREENSHOT_INTERVAL");
@@ -858,6 +888,14 @@ int Platform_VBlank(void)
      * up — which would just make the next batch of frames feel even
      * more uneven. The 50 Hz audio tick is locked to the same loop so
      * skipping a catch-up keeps music time-aligned with game state. */
+    /* Turbo skips the 50 Hz real-time wait entirely: under gdb we drive the
+     * inferior frame-by-frame and want frames CPU-bound, not paced to a wall
+     * clock the WSL2 scheduler stretches unpredictably. Skipping the
+     * SDL_Delay + spin removes the per-frame real-time cost that
+     * "timer-thread starvation" was ballooning to 10–120 s per cont. */
+    if (s_harness_turbo)
+        return g_quitToDos ? 1 : 0;
+
     s_next_frame_perf += (Uint64)((double)s_perf_freq * k_frame_secs);
     Uint64 now = SDL_GetPerformanceCounter();
 

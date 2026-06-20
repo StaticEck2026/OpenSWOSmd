@@ -316,6 +316,13 @@ class SwosHarness:
         Returns the active menu's onInit ('_SWOSMainMenuInit' on success)."""
         self.h.cmd("set confirm off")
         self.h.cmd("kill")                     # no-op if nothing is running
+        # TURBO: make the inferior CPU-bound rather than paced to a 50 Hz wall
+        # clock. Set on the inferior's environment (inherited at `run`) so EVERY
+        # harness boot gets it without the caller remembering an env var on the
+        # daemon launch. This is the root-cause fix for cont-times ballooning to
+        # 10-120 s under WSL2/gdb timer-thread starvation (see platform_sdl.c
+        # s_harness_turbo); it also slashes the ~1-2 min loader-intro cold boot.
+        self.h.cmd("set environment SWOS_HARNESS_TURBO 1")
         if INJECT_LINE not in self.h.cmd("info breakpoints"):
             self.h.break_at(INJECT_LINE)
         self.h.cmd("run", timeout=4)           # boot is slow; catch the stop below
