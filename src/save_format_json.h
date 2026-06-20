@@ -80,6 +80,11 @@ int DataJson_LoadCompetitionTournament(const char *json, int len, void *out,
                                        char *strpool, int strpoolsz);
 int DataJson_LoadCompetitionLeague(const char *json, int len, void *out,
                                    char *strpool, int strpoolsz);
+/* Runtime wire-in: rebuild the normal-country competition tables in
+   competitionsTable[] from data_json/ at startup. Call once early in front-end
+   setup. No-op unless SWOS_DATA_JSON is set; region/special tables and named
+   competition globals stay compiled. */
+void DataJson_InstallCompetitionGraph(void);
 int DataJson_SelfTest(void);   /* run via SWOS_DATA_JSON_SELFTEST=1 */
 #endif
 
