@@ -152,12 +152,23 @@ class SwosHarness:
         self.h.cmd(f"call (void)_SetCurrentEntry({target})")
         return target if self.action() == symbol else None
 
-    def select(self, symbol):
-        """goto(symbol) then fire."""
-        if self.goto(symbol) is None:
-            return False
-        self.fire()
-        return True
+    def select(self, symbol, tries=12):
+        """goto(symbol) then fire, RETRYING until the menu actually transitions
+        (its onInit changes). The single-frame fire() pulse is occasionally
+        dropped — the input isn't present at the dispatch frame, so a one-shot
+        fire silently no-ops and the caller hangs. The season-loop drivers are
+        robust precisely because they re-assert the press every iteration; this
+        brings menu *selection* to the same robustness. Re-goto each try because
+        a redraw can reset the selection. Returns True once onInit changes, False
+        if it never transitions (entry missing / wrong screen)."""
+        before = self._current_init()
+        for _ in range(tries):
+            if self.goto(symbol) is None:
+                return False
+            self.fire()
+            if self._current_init() != before:
+                return True
+        return False
 
     # ---- label-driven selection (for dynamic lists) -----------------------
     # Some screens reuse ONE onSelect across many entries whose meaning is the
@@ -340,21 +351,48 @@ class SwosHarness:
         if not self.select("_CareerMenu"):
             print("start_fresh_career: CAREER entry not found")
             return None
-        # CHOOSE TEAM AND START CAREER opens the team picker (_SelectTeamsInit)
-        if self.goto("_ChooseTeamAndStartCareer") is None:
-            print("start_fresh_career: CHOOSE TEAM entry not found")
+        # CHOOSE TEAM AND START CAREER opens the team picker (_SelectTeamsInit).
+        # Retry until the menu transitions — the fire pulse is occasionally
+        # dropped (see select()); a one-shot fire silently no-ops and hangs.
+        before = self._current_init()
+        opened = False
+        for _ in range(12):
+            if self.goto("_ChooseTeamAndStartCareer") is None:
+                print("start_fresh_career: CHOOSE TEAM entry not found")
+                return None
+            self.fire()
+            if self._current_init() != before:
+                opened = True
+                break
+        if not opened:
+            print(f"start_fresh_career: team picker did not open (stuck at {before})")
             return None
-        self.fire()
-        # Drill the picker by label; the LAST hop fires the club, which runs
-        # _InitCareer (slow — give it init_timeout, not the 20s frame budget).
+        # Drill the picker by label, RETRYING each hop until the visible list (or
+        # the menu init) actually changes — same dropped-pulse robustness. The
+        # LAST hop fires the club, which runs _InitCareer (slow — init_timeout).
         for n, label in enumerate(path):
             last = (n == len(path) - 1)
-            ordn = self.find_text(label)
-            if ordn is None:
-                print(f"start_fresh_career: '{label}' not found; visible: "
-                      f"{[t for _, t in self.scan_text()]}")
+            before_list = [t for _, t in self.scan_text()]
+            before_init = self._current_init()
+            advanced = False
+            for _ in range(12):
+                ordn = self.find_text(label)
+                if ordn is None:
+                    if (self._current_init() != before_init or
+                            [t for _, t in self.scan_text()] != before_list):
+                        advanced = True   # already advanced (label consumed)
+                        break
+                    print(f"start_fresh_career: '{label}' not found; visible: "
+                          f"{[t for _, t in self.scan_text()]}")
+                    return None
+                self.fire_ordinal(ordn, timeout=init_timeout if last else 20)
+                if (self._current_init() != before_init or
+                        [t for _, t in self.scan_text()] != before_list):
+                    advanced = True
+                    break
+            if not advanced:
+                print(f"start_fresh_career: '{label}' press did not advance (stuck)")
                 return None
-            self.fire_ordinal(ordn, timeout=init_timeout if last else 20)
         # After the club press, _InitCareer runs then stops at the chairman
         # memo's inject bp; ensure stopped, then dismiss the welcome memo(s).
         if not self.h.is_stopped():
