@@ -77,9 +77,36 @@ CONTINUE CAREER → `drive_transition` (skip-latch auto-advances the result chai
    — runtime competition state is left stale. Cold-boot fresh each test.
 7. **DON'T poll the output file every few seconds.** Long drives are minutes;
    use `python3 -u` + `flush=True` and wait for the background-task notification.
+8. **DON'T fire a menu entry once and assume it dispatched.** The harness fire()
+   is a single-frame pulse and is **non-deterministically DROPPED** — the
+   injected fire/shortFire isn't present at the dispatch frame, so the entry
+   silently no-ops and the caller hangs. `select()` / `start_fresh_career()` now
+   **retry the fire until the menu transitions** (onInit or the visible list
+   changes); any custom drive must do the same (the season-loop drivers already
+   re-assert shortFire every iteration — that's why they're robust). Diagnose
+   with `SWOS_HARNESS_LOG=1` (see below): a `dispatch-try` line with the entry's
+   controlMask vs the injected d7, plus per-menu `ActivateMenu` lines.
+9. **DON'T run one daemon for an entire long session.** The gdb/WSL2 daemon
+   **degrades over a session** — after ~20-30 launches/drives the per-frame
+   `continue` balloons from ~tens of ms to 10s-120s (VBlank/timer-thread
+   starvation under gdb), so nav that should take seconds takes many minutes and
+   looks hung. Restart the terminal/WSL (not just the daemon) for a long
+   session, and never let one task's cleanup `pkill -f gdb_proxy.py` run while
+   another task's daemon is live (it kills the wrong daemon).
 
-If a season run "wedges": it's almost always #4 (dead daemon) or #5 (contention),
-not gdb instability or a game bug. Check `health` and the daemon process first.
+If a season run "wedges": it's almost always #4 (dead daemon), #5 (contention),
+#8 (dropped fire, no retry), or #9 (degraded/slow daemon) — not gdb instability
+or a game bug. Check `health`, the daemon process, and a `SWOS_HARNESS_LOG` trail.
+
+### Seeing where the game is — `SWOS_HARNESS_LOG=1` (the [harness] log)
+
+Set `SWOS_HARNESS_LOG=1` in the inferior's env and the game writes `[harness] ...`
+lines to `SWOS.log` (stderr) on menu activation, menu-entry dispatch, and the
+team-picker enumeration — flushed each line. Because it's a plain file the game
+writes itself, you can read `bin/SWOS.log` to see exactly where a drive got even
+when the inferior is mid-operation or hung (the LAST line pinpoints the freeze) —
+no gdb interrupt, no wedge. This is the fastest way to localize a nav hang. Macro
+is `HLOG(...)` in `swos_platform.h`; off by default; SDL-only (no-op on Amiga).
 
 ---
 
