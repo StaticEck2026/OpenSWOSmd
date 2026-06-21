@@ -113,11 +113,27 @@ endif
 BINDIR := bin
 TARGET := $(BINDIR)/$(TARGET_NAME)
 
+# ---- Object output dir (per target) ----
+# Objects go under build/<tag>/ instead of cluttering src/, and the per-target
+# tag keeps each build's .o files separate — so a Linux (x86_64), Windows
+# (cygwin), and ARM build in the same checkout no longer overwrite each other's
+# objects (the old in-tree layout required `make clean` when switching target).
+# Tag derives from TARGET_NAME: SWOS.x86_64 -> x86_64, SWOS.aarch64 -> aarch64,
+# SWOS.armhf -> armhf, SWOS.macos -> macos, SWOS.exe -> windows, SWOS -> native.
+OBJTAG := $(patsubst SWOS.%,%,$(TARGET_NAME))
+ifeq ($(OBJTAG),SWOS)
+OBJTAG := native
+endif
+ifeq ($(OBJTAG),exe)
+OBJTAG := windows
+endif
+OBJDIR := build/$(OBJTAG)
+
 # ---- Sources ----
 SRCDIR  := src
 SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
-OBJECTS := $(SOURCES:.c=.o)
-DEPS    := $(SOURCES:.c=.d)
+OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
+DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
 
 # ---- Windows resource (icon) ----
 # On MinGW and Cygwin we compile SWOS.rc → SWOS.res.o via windres and
@@ -130,10 +146,10 @@ DEPS    := $(SOURCES:.c=.d)
 GCC_MACHINE := $(shell $(CC) -dumpmachine 2>/dev/null)
 WINDRES ?= windres
 ifneq (,$(findstring mingw,$(GCC_MACHINE)))
-WIN_RES_OBJ := SWOS.res.o
+WIN_RES_OBJ := $(OBJDIR)/SWOS.res.o
 OBJECTS     += $(WIN_RES_OBJ)
 else ifneq (,$(findstring cygwin,$(GCC_MACHINE)))
-WIN_RES_OBJ := SWOS.res.o
+WIN_RES_OBJ := $(OBJDIR)/SWOS.res.o
 OBJECTS     += $(WIN_RES_OBJ)
 endif
 
@@ -294,6 +310,7 @@ DEBUG_FLAGS += -DSWOS_SAVE_LEGACY_DISPATCH=1
 endif
 
 CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
+           -MMD -MP \
            -D_FILE_OFFSET_BITS=64 $(DEBUG_FLAGS) \
            -Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable \
            -Wno-attributes -Wno-multichar -Wno-builtin-declaration-mismatch \
@@ -337,7 +354,7 @@ endif
 LDLIBS  := $(SDL2_LIBS) -lm
 
 # ---- Targets ----
-.PHONY: all clean debug macos-universal macos-app
+.PHONY: all clean distclean debug macos-universal macos-app
 all: $(TARGET)
 
 debug:
@@ -351,17 +368,33 @@ $(TARGET): $(OBJECTS) | $(BINDIR)
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-# Compile each .c into a .o (supports subdirectories)
-%.o: %.c
+# Compile each src/*.c into build/<tag>/*.o (mirrors src/ subdirs, e.g.
+# src/generated/x.c -> build/<tag>/generated/x.o). The mkdir creates the
+# per-target object tree on first build.
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile the Windows resource file (icon) on MinGW builds. The output
+# Compile the Windows resource file (icon) on MinGW/Cygwin builds. The output
 # is COFF-format and gets linked into the final exe.
-SWOS.res.o: SWOS.rc SWOS.ico
+$(OBJDIR)/SWOS.res.o: SWOS.rc SWOS.ico
+	@mkdir -p $(dir $@)
 	$(WINDRES) -O coff $< $@
 
+# Pull in the auto-generated header dependencies (-MMD) so editing a header
+# rebuilds just the affected objects — no more blanket `make clean`.
+-include $(DEPS)
+
+# clean removes THIS target's objects (build/<tag>/) + its binary. It also
+# sweeps any legacy in-tree *.o from before the build/ move. `distclean` nukes
+# every target's objects.
 clean:
-	rm -f $(TARGET) $(OBJECTS) SWOS.res.o
+	rm -rf $(OBJDIR)
+	rm -f $(TARGET)
+	rm -f $(SRCDIR)/*.o $(SRCDIR)/generated/*.o SWOS.res.o
+
+distclean: clean
+	rm -rf build
 
 # ---- macOS universal binary (x86_64 + arm64) ---------------------- *
 # Builds two slices via recursive make, lipos them into a single
@@ -375,9 +408,9 @@ clean:
 # Minimum deployment target defaults to macOS 12 (Monterey); override
 # with `make macos-universal MACOS_MIN=11.0` etc. if needed.
 #
-# Each recursive build runs `make clean` first because the source-tree
-# .o files don't carry per-arch tags — sharing them across arches would
-# pick up the wrong ELF/Mach-O slice on the second pass.
+# Each recursive build runs `make clean` first: both slices are TARGET_NAME
+# SWOS.macos so they share the build/macos object dir — clean gives each slice
+# a fresh tree so the second pass doesn't pick up the wrong Mach-O arch.
 .PHONY: macos-universal
 macos-universal:
 	@test "$$(uname -s)" = Darwin || { \
