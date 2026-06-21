@@ -92,7 +92,26 @@ static char *tr_dup(const char *tok, int len)
             default: s[o++] = n; break;   /* \\ \" \/ and anything else */
             }
         } else {
-            s[o++] = c;
+            unsigned char uc = (unsigned char)c;
+            if (uc >= 0xC0) {
+                /* Raw UTF-8 multi-byte (a hand-edited fr.json/de.json with real
+                 * accented characters, not \uXXXX escapes): decode to the code
+                 * point and keep its low byte — Latin-1, which IS the game's
+                 * single-byte charset (É U+00C9 -> 0xC9, matching the font /
+                 * conversionTable). Code points above 0xFF can't be one byte and
+                 * fall back to (cp & 0xFF) — they'd need a custom glyph slot. */
+                int extra = uc >= 0xF0 ? 3 : uc >= 0xE0 ? 2 : 1;
+                int cp = uc & (0x3F >> extra), ok = 1;
+                for (int k = 0; k < extra; k++) {
+                    unsigned char cc = (i + 1 < len) ? (unsigned char)tok[i + 1] : 0;
+                    if ((cc & 0xC0) != 0x80) { ok = 0; break; }   /* not a continuation byte */
+                    cp = (cp << 6) | (cc & 0x3F);
+                    i++;
+                }
+                s[o++] = ok ? (char)(cp & 0xFF) : (char)uc;
+            } else {
+                s[o++] = c;   /* ASCII (and stray bytes) pass through */
+            }
         }
     }
     s[o] = '\0';
