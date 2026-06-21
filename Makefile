@@ -78,56 +78,74 @@ SHELL := /bin/bash
 
 # ---- Platform ----
 UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
+MACOS_ARCH ?= $(shell uname -m)
+
+# Normalize an arch string for the build/<os>/<arch> object dir so the same
+# 64-bit ARM target is "arm64" on every OS (Linux uname says aarch64, macOS/
+# Windows say arm64) and 32-bit x86 is "x86": $(call norm_arch,aarch64) -> arm64.
+norm_arch = $(patsubst aarch64,arm64,$(patsubst amd64,x86_64,$(patsubst i686,x86,$(patsubst i386,x86,$(1)))))
 
 # ---- Output ----
+# Each branch sets TARGET_NAME (the bin/ binary name) AND the BUILD_OS /
+# BUILD_ARCH that select the build/<os>/<arch> object dir.
 ifeq ($(OS),Windows_NT)
 TARGET_NAME := SWOS.exe
+BUILD_OS    := windows
+BUILD_ARCH  := $(call norm_arch,$(UNAME_M))
 else ifneq (,$(findstring CYGWIN,$(UNAME_S)))
 # uname -s on Cygwin outputs `CYGWIN_NT-10.0-22631` (or similar with
 # the Windows build number suffix), not bare `CYGWIN_NT`. Use
 # `findstring` so the version suffix doesn't break detection.
 TARGET_NAME := SWOS.exe
+BUILD_OS    := windows
+BUILD_ARCH  := $(call norm_arch,$(UNAME_M))
 else ifneq (,$(findstring MINGW,$(UNAME_S)))
 # Same suffix issue for MSYS2 MINGW32_NT-X.Y / MINGW64_NT-X.Y.
 TARGET_NAME := SWOS.exe
+BUILD_OS    := windows
+BUILD_ARCH  := $(call norm_arch,$(UNAME_M))
 else ifdef ARM64
 TARGET_NAME := SWOS.aarch64
+BUILD_OS    := linux
+BUILD_ARCH  := arm64
 else ifdef ARM
 # Distinguish the cross-built ARM binary so it doesn't overwrite a
 # native x86 bin/SWOS in the same checkout. Native ARM builds (on a
 # Pi) also get the .armhf suffix — `file bin/SWOS.armhf` confirms the
 # ELF arch either way.
 TARGET_NAME := SWOS.armhf
+BUILD_OS    := linux
+BUILD_ARCH  := armhf
 else ifdef X86_64
 # Linux x86_64 explicit build (drops the default -m32 so the binary
 # is 64-bit LP64 — matches what the macOS / aarch64 / cygwin64
 # targets already produce). The size_check[] asserts are gated on
 # UINTPTR_MAX so they pick up the 64-bit struct sizes correctly.
 TARGET_NAME := SWOS.x86_64
+BUILD_OS    := linux
+BUILD_ARCH  := x86_64
 else ifeq ($(UNAME_S),Darwin)
 TARGET_NAME := SWOS.macos
+BUILD_OS    := macos
+BUILD_ARCH  := $(call norm_arch,$(MACOS_ARCH))
 else
+# Default native build: 32-bit x86 (-m32).
 TARGET_NAME := SWOS
+BUILD_OS    := linux
+BUILD_ARCH  := x86
 endif
 
 BINDIR := bin
 TARGET := $(BINDIR)/$(TARGET_NAME)
 
-# ---- Object output dir (per target) ----
-# Objects go under build/<tag>/ instead of cluttering src/, and the per-target
-# tag keeps each build's .o files separate — so a Linux (x86_64), Windows
-# (cygwin), and ARM build in the same checkout no longer overwrite each other's
-# objects (the old in-tree layout required `make clean` when switching target).
-# Tag derives from TARGET_NAME: SWOS.x86_64 -> x86_64, SWOS.aarch64 -> aarch64,
-# SWOS.armhf -> armhf, SWOS.macos -> macos, SWOS.exe -> windows, SWOS -> native.
-OBJTAG := $(patsubst SWOS.%,%,$(TARGET_NAME))
-ifeq ($(OBJTAG),SWOS)
-OBJTAG := native
-endif
-ifeq ($(OBJTAG),exe)
-OBJTAG := windows
-endif
-OBJDIR := build/$(OBJTAG)
+# ---- Object output dir (build/<os>/<arch>) ----
+# Objects build under build/<os>/<arch> instead of cluttering src/, split by OS
+# AND arch so every target in the same checkout keeps its own .o files:
+# build/linux/x86_64, build/windows/x86_64, build/windows/arm64, build/linux/
+# arm64, build/macos/arm64, … never collide. (The old flat in-tree layout forced
+# a `make clean` whenever you switched target; Windows-on-ARM now slots in too.)
+OBJDIR := build/$(BUILD_OS)/$(BUILD_ARCH)
 
 # ---- Sources ----
 SRCDIR  := src
@@ -368,8 +386,8 @@ $(TARGET): $(OBJECTS) | $(BINDIR)
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-# Compile each src/*.c into build/<tag>/*.o (mirrors src/ subdirs, e.g.
-# src/generated/x.c -> build/<tag>/generated/x.o). The mkdir creates the
+# Compile each src/*.c into build/<os>/<arch>/*.o (mirrors src/ subdirs, e.g.
+# src/generated/x.c -> $(OBJDIR)/generated/x.o). The mkdir creates the
 # per-target object tree on first build.
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(dir $@)
@@ -385,7 +403,7 @@ $(OBJDIR)/SWOS.res.o: SWOS.rc SWOS.ico
 # rebuilds just the affected objects — no more blanket `make clean`.
 -include $(DEPS)
 
-# clean removes THIS target's objects (build/<tag>/) + its binary. It also
+# clean removes THIS target's objects (build/<os>/<arch>/) + its binary. It also
 # sweeps any legacy in-tree *.o from before the build/ move. `distclean` nukes
 # every target's objects.
 clean:
@@ -408,9 +426,9 @@ distclean: clean
 # Minimum deployment target defaults to macOS 12 (Monterey); override
 # with `make macos-universal MACOS_MIN=11.0` etc. if needed.
 #
-# Each recursive build runs `make clean` first: both slices are TARGET_NAME
-# SWOS.macos so they share the build/macos object dir — clean gives each slice
-# a fresh tree so the second pass doesn't pick up the wrong Mach-O arch.
+# The slices now build into per-arch dirs (build/macos/x86_64 and
+# build/macos/arm64) so they no longer share objects; the `make clean` between
+# them is just a precaution (each slice's tree is already independent).
 .PHONY: macos-universal
 macos-universal:
 	@test "$$(uname -s)" = Darwin || { \
