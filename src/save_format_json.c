@@ -2884,6 +2884,31 @@ int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
     return 0;
 }
 
+/* Parse one promotion-playoff record into `out` (Playoffs struct). The Playoffs
+   layout differs from CompetitionCup — roundRuleFlags is [2] (not [6]), there's
+   no embedded teamSeedList, and the editor bytes (numRoundsOverride / teams /
+   awayGoalsMode / subsAndMaxSubs / roundStringBase) sit between the header and
+   name[2]. qualifiedTeamIds[8] is runtime-filled (left zero by the memset).
+   Verified field-for-field against the compiled div1Playoffs initializer. */
+int DataJson_LoadPlayoffs(const char *o, int ol, void *outv,
+                          char *strpool, int strpoolsz)
+{
+    Playoffs *out = (Playoffs *)outv;
+    memset(out, 0, sizeof *out);
+    if (dj_comp_base(o, ol, &out->comp, 1) != 0) return -1;   /* isPlayoff = 1 */
+    double v;
+#define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
+    out->numRoundsOverride = (int8_t)GN(o, ol, "$.num_rounds_override");
+    out->teams             = (int8_t)GN(o, ol, "$.teams");
+    out->awayGoalsMode     = (int8_t)GN(o, ol, "$.away_goals_mode");
+    out->subsAndMaxSubs    = (int8_t)GN(o, ol, "$.subs_and_max_subs");
+    out->roundStringBase   = (int8_t)GN(o, ol, "$.round_string_base");
+#undef GN
+    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 2);
+    dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
+    return 0;
+}
+
 /* Parse one type-2 group-tournament record into `out` (CompetitionTournament). */
 int DataJson_LoadCompetitionTournament(const char *o, int ol, void *outv,
                                        char *strpool, int strpoolsz)
@@ -2975,7 +3000,9 @@ int DataJson_LoadCompetitionLeague(const char *o, int ol, void *outv,
  * ====================================================================== */
 #define DJ_MAX_CUPS    96
 #define DJ_MAX_LEAGUES 80
-#define DJ_MAX_RECS    200   /* name-pool slices: ~142 parsed + ~14 in-place overwrites */
+#define DJ_MAX_RECS    280   /* name-pool slices: ~142 parsed + ~14 complex-country
+                                in-place + 20 standalone tournament/playoff in-place +
+                                26 special-comp in-place (region/career cups + customs) */
 #define DJ_NAMEPOOL    256
 #define DJ_MAX_TABLES  72
 #define DJ_TABLE_SLOTS 16
@@ -3213,9 +3240,284 @@ void DataJson_InstallCompetitionGraph(void)
         }
     }
     free(fb);
+
+    /* Standalone competition globals — the tournaments (European cups, World Cup,
+       continental cups, WC/EC qualification) and promotion playoffs that the
+       region QualifyingGroup tables (europe/world/customs) and league
+       playoff-links reference. The region tables themselves stay COMPILED
+       (structural containers, not Competition records); their underlying comps
+       become JSON-driven here, overwritten IN PLACE (compNumber-matched) exactly
+       like the 5 complex countries' leagues — preserving the address identity the
+       by-name/by-address game plumbing depends on. id == global symbol name. */
+    int nTour = 0, nPlay = 0;
+    {
+        extern CompetitionTournament euroCup, worldCup, worldCup2,
+            northAmericaWorldCupQualification, southAmericaWorldCupQualification,
+            africaWorldCupQualification, asiaWorldCupQualification,
+            europeanChampionships, europeanChampionships2,
+            copaAmerica, africanNationsCup, northAmericanCup, asianCup;
+        extern Playoffs div1Playoffs, div2Playoffs, div3Playoffs,
+            dutchPlayoffs, scottishPlayoffs, spanishPlayoffs, uruguayanPlayoffs;
+        enum { GK_TOUR, GK_PLAYOFF };
+        static const struct { const char *id; void *g; int kind; } sg[] = {
+            { "euroCup",                          &euroCup,                          GK_TOUR },
+            { "worldCup",                         &worldCup,                         GK_TOUR },
+            { "worldCup2",                        &worldCup2,                        GK_TOUR },
+            { "northAmericaWorldCupQualification", &northAmericaWorldCupQualification, GK_TOUR },
+            { "southAmericaWorldCupQualification", &southAmericaWorldCupQualification, GK_TOUR },
+            { "africaWorldCupQualification",      &africaWorldCupQualification,      GK_TOUR },
+            { "asiaWorldCupQualification",        &asiaWorldCupQualification,        GK_TOUR },
+            { "europeanChampionships",            &europeanChampionships,            GK_TOUR },
+            { "europeanChampionships2",           &europeanChampionships2,           GK_TOUR },
+            { "copaAmerica",                      &copaAmerica,                      GK_TOUR },
+            { "africanNationsCup",                &africanNationsCup,                GK_TOUR },
+            { "northAmericanCup",                 &northAmericanCup,                 GK_TOUR },
+            { "asianCup",                         &asianCup,                         GK_TOUR },
+            { "div1Playoffs",      &div1Playoffs,      GK_PLAYOFF },
+            { "div2Playoffs",      &div2Playoffs,      GK_PLAYOFF },
+            { "div3Playoffs",      &div3Playoffs,      GK_PLAYOFF },
+            { "dutchPlayoffs",     &dutchPlayoffs,     GK_PLAYOFF },
+            { "scottishPlayoffs",  &scottishPlayoffs,  GK_PLAYOFF },
+            { "spanishPlayoffs",   &spanishPlayoffs,   GK_PLAYOFF },
+            { "uruguayanPlayoffs", &uruguayanPlayoffs, GK_PLAYOFF },
+        };
+        for (unsigned gi = 0; gi < sizeof sg / sizeof sg[0]; gi++) {
+            if (poolIdx >= DJ_MAX_RECS) break;
+            const char *file = sg[gi].kind == GK_PLAYOFF
+                ? "data_json/competitions/playoffs.json"
+                : "data_json/competitions/tournaments.json";
+            const char *arrkey = sg[gi].kind == GK_PLAYOFF ? "playoffs" : "competitions";
+            char *recfb; const char *ro; int rol;
+            if (!dj_find_comp_record(file, arrkey, sg[gi].id, &recfb, &ro, &rol)) continue;
+            char *pool = s_djNamePool[poolIdx];
+            if (sg[gi].kind == GK_PLAYOFF) {
+                Playoffs tmp;
+                if (DataJson_LoadPlayoffs(ro, rol, &tmp, pool, DJ_NAMEPOOL) == 0
+                    && tmp.comp.compNumber == ((Playoffs *)sg[gi].g)->comp.compNumber) {
+                    *(Playoffs *)sg[gi].g = tmp;   /* names point into the persistent pool */
+                    poolIdx++; nPlay++;
+                }
+            } else {
+                CompetitionTournament tmp;
+                if (DataJson_LoadCompetitionTournament(ro, rol, &tmp, pool, DJ_NAMEPOOL) == 0
+                    && tmp.header.comp.compNumber == ((CompetitionTournament *)sg[gi].g)->header.comp.compNumber) {
+                    *(CompetitionTournament *)sg[gi].g = tmp;
+                    poolIdx++; nTour++;
+                }
+            }
+            free(recfb);
+        }
+    }
+
+    /* Remaining special competition records that no country table and no entry in
+       the standalone tournament/playoff list reaches: the European club cups, the
+       WC/EC qualifying-group cups, the Oceania cup + qualifier, the career special
+       cups (invitation/tour/friendly), the English cup variants, and customsLeague.
+       They are referenced by NAME (career code) or via the region QualifyingGroup
+       tables, so — like the 5 complex countries' leagues and the standalone
+       tournaments — they are data-driven by overwriting the compiled global IN
+       PLACE (compNumber-matched), keeping the address identity intact. With this
+       block every Competition record (162/162) is JSON-driven. */
+    int nSpec = 0;
+    {
+        extern CompetitionCup cupWinnersCup, uefaCup, oceaniaCup,
+            oceaniaWorldCupQualification, invitationTournament, tour, friendly,
+            englishCup_1, englishLeagueCup_1,
+            worldCupQualifyingGroup1, worldCupQualifyingGroup2, worldCupQualifyingGroup3,
+            worldCupQualifyingGroup4, worldCupQualifyingGroup5, worldCupQualifyingGroup6,
+            worldCupQualifyingGroup7, worldCupQualifyingGroup8,
+            ecQualifyingGroup1, ecQualifyingGroup2, ecQualifyingGroup3, ecQualifyingGroup4,
+            ecQualifyingGroup5, ecQualifyingGroup6, ecQualifyingGroup7, ecQualifyingGroup8;
+        extern CompetitionLeague customsLeague;
+        enum { SK_CUP, SK_LEAGUE };
+        static const struct { const char *id; void *g; int kind; } sp[] = {
+            { "cupWinnersCup",                &cupWinnersCup,                SK_CUP },
+            { "uefaCup",                      &uefaCup,                      SK_CUP },
+            { "oceaniaCup",                   &oceaniaCup,                   SK_CUP },
+            { "oceaniaWorldCupQualification", &oceaniaWorldCupQualification, SK_CUP },
+            { "invitationTournament",         &invitationTournament,         SK_CUP },
+            { "tour",                         &tour,                         SK_CUP },
+            { "friendly",                     &friendly,                     SK_CUP },
+            { "englishCup_1",                 &englishCup_1,                 SK_CUP },
+            { "englishLeagueCup_1",           &englishLeagueCup_1,           SK_CUP },
+            { "worldCupQualifyingGroup1",     &worldCupQualifyingGroup1,     SK_CUP },
+            { "worldCupQualifyingGroup2",     &worldCupQualifyingGroup2,     SK_CUP },
+            { "worldCupQualifyingGroup3",     &worldCupQualifyingGroup3,     SK_CUP },
+            { "worldCupQualifyingGroup4",     &worldCupQualifyingGroup4,     SK_CUP },
+            { "worldCupQualifyingGroup5",     &worldCupQualifyingGroup5,     SK_CUP },
+            { "worldCupQualifyingGroup6",     &worldCupQualifyingGroup6,     SK_CUP },
+            { "worldCupQualifyingGroup7",     &worldCupQualifyingGroup7,     SK_CUP },
+            { "worldCupQualifyingGroup8",     &worldCupQualifyingGroup8,     SK_CUP },
+            { "ecQualifyingGroup1",           &ecQualifyingGroup1,           SK_CUP },
+            { "ecQualifyingGroup2",           &ecQualifyingGroup2,           SK_CUP },
+            { "ecQualifyingGroup3",           &ecQualifyingGroup3,           SK_CUP },
+            { "ecQualifyingGroup4",           &ecQualifyingGroup4,           SK_CUP },
+            { "ecQualifyingGroup5",           &ecQualifyingGroup5,           SK_CUP },
+            { "ecQualifyingGroup6",           &ecQualifyingGroup6,           SK_CUP },
+            { "ecQualifyingGroup7",           &ecQualifyingGroup7,           SK_CUP },
+            { "ecQualifyingGroup8",           &ecQualifyingGroup8,           SK_CUP },
+            { "customsLeague",                &customsLeague,                SK_LEAGUE },
+        };
+        for (unsigned si = 0; si < sizeof sp / sizeof sp[0]; si++) {
+            if (poolIdx >= DJ_MAX_RECS) break;
+            const char *file = sp[si].kind == SK_LEAGUE
+                ? "data_json/competitions/leagues.json"
+                : "data_json/competitions/cups.json";
+            const char *arrkey = sp[si].kind == SK_LEAGUE ? "leagues" : "competitions";
+            char *recfb; const char *ro; int rol;
+            if (!dj_find_comp_record(file, arrkey, sp[si].id, &recfb, &ro, &rol)) continue;
+            char *pool = s_djNamePool[poolIdx];
+            if (sp[si].kind == SK_LEAGUE) {
+                CompetitionLeague tmp;
+                CompetitionLeague *L = (CompetitionLeague *)sp[si].g;
+                if (DataJson_LoadCompetitionLeague(ro, rol, &tmp, pool, DJ_NAMEPOOL) == 0
+                    && tmp.header.comp.compNumber == L->header.comp.compNumber) {
+                    char *p0 = L->playoffLinkPtrs[0], *p1 = L->playoffLinkPtrs[1];
+                    *L = tmp;                                  /* names point into the persistent pool */
+                    L->playoffLinkPtrs[0] = p0; L->playoffLinkPtrs[1] = p1;
+                    poolIdx++; nSpec++;
+                }
+            } else {
+                CompetitionCup tmp;
+                CompetitionCup *C = (CompetitionCup *)sp[si].g;
+                if (DataJson_LoadCompetitionCup(ro, rol, &tmp, C->header.comp.isPlayoff, pool, DJ_NAMEPOOL) == 0
+                    && tmp.header.comp.compNumber == C->header.comp.compNumber) {
+                    *C = tmp;
+                    poolIdx++; nSpec++;
+                }
+            }
+            free(recfb);
+        }
+    }
+
+    /* Region QualifyingGroup tables (europe/world/customs/continents + the WC/EC
+       qualifying-group containers). These are NOT Competition records — they are
+       structural containers: compCup[9] is a token stream of competition-global
+       pointers plus in-band sentinels (252=0xFC league-menu marker, -2=league/cup
+       separator, -1=terminator), and countries[44] is a 0xFF-terminated member
+       list. qualifying.json carries the exact token stream; the loader resolves
+       each string id to its global via R[] (the same globals data-driven above —
+       so the pointers come out identical to the compiled table) and casts numeric
+       tokens to literal sentinel pointers. Each table is overwritten in place ONLY
+       after a byte-identical memcmp against the compiled global, so this is a pure
+       data-relocation with zero behaviour/save-format change. */
+    int nRegion = 0, regionMiss = 0;
+    {
+        extern CompetitionTournament euroCup, worldCup, europeanChampionships,
+            northAmericaWorldCupQualification, southAmericaWorldCupQualification,
+            africaWorldCupQualification, asiaWorldCupQualification,
+            copaAmerica, africanNationsCup, northAmericanCup, asianCup;
+        extern CompetitionCup cupWinnersCup, uefaCup, oceaniaCup,
+            oceaniaWorldCupQualification,
+            worldCupQualifyingGroup1, worldCupQualifyingGroup2, worldCupQualifyingGroup3,
+            worldCupQualifyingGroup4, worldCupQualifyingGroup5, worldCupQualifyingGroup6,
+            worldCupQualifyingGroup7, worldCupQualifyingGroup8,
+            ecQualifyingGroup1, ecQualifyingGroup2, ecQualifyingGroup3, ecQualifyingGroup4,
+            ecQualifyingGroup5, ecQualifyingGroup6, ecQualifyingGroup7, ecQualifyingGroup8;
+        extern CompetitionLeague customsLeague;
+        extern QualifyingGroup worldCupQualifyingGroups, ecQualifyingGroups, customsTable,
+            worldTable, europeTable, africaTable, southAmericaTable, northAmericaTable,
+            asiaTable, oceaniaTable;
+        /* competition-id -> &global, for every comp a region table can reference */
+        static const struct { const char *id; void *g; } R[] = {
+            { "worldCup", &worldCup }, { "euroCup", &euroCup },
+            { "europeanChampionships", &europeanChampionships },
+            { "cupWinnersCup", &cupWinnersCup }, { "uefaCup", &uefaCup },
+            { "africaWorldCupQualification", &africaWorldCupQualification },
+            { "africanNationsCup", &africanNationsCup },
+            { "southAmericaWorldCupQualification", &southAmericaWorldCupQualification },
+            { "copaAmerica", &copaAmerica },
+            { "northAmericaWorldCupQualification", &northAmericaWorldCupQualification },
+            { "northAmericanCup", &northAmericanCup },
+            { "asiaWorldCupQualification", &asiaWorldCupQualification },
+            { "asianCup", &asianCup },
+            { "oceaniaWorldCupQualification", &oceaniaWorldCupQualification },
+            { "oceaniaCup", &oceaniaCup }, { "customsLeague", &customsLeague },
+            { "worldCupQualifyingGroup1", &worldCupQualifyingGroup1 },
+            { "worldCupQualifyingGroup2", &worldCupQualifyingGroup2 },
+            { "worldCupQualifyingGroup3", &worldCupQualifyingGroup3 },
+            { "worldCupQualifyingGroup4", &worldCupQualifyingGroup4 },
+            { "worldCupQualifyingGroup5", &worldCupQualifyingGroup5 },
+            { "worldCupQualifyingGroup6", &worldCupQualifyingGroup6 },
+            { "worldCupQualifyingGroup7", &worldCupQualifyingGroup7 },
+            { "worldCupQualifyingGroup8", &worldCupQualifyingGroup8 },
+            { "ecQualifyingGroup1", &ecQualifyingGroup1 },
+            { "ecQualifyingGroup2", &ecQualifyingGroup2 },
+            { "ecQualifyingGroup3", &ecQualifyingGroup3 },
+            { "ecQualifyingGroup4", &ecQualifyingGroup4 },
+            { "ecQualifyingGroup5", &ecQualifyingGroup5 },
+            { "ecQualifyingGroup6", &ecQualifyingGroup6 },
+            { "ecQualifyingGroup7", &ecQualifyingGroup7 },
+            { "ecQualifyingGroup8", &ecQualifyingGroup8 },
+        };
+        /* region-table id -> &global QualifyingGroup target */
+        static const struct { const char *id; QualifyingGroup *g; } QT[] = {
+            { "worldCupQualifyingGroups", &worldCupQualifyingGroups },
+            { "ecQualifyingGroups", &ecQualifyingGroups },
+            { "customsTable", &customsTable }, { "worldTable", &worldTable },
+            { "europeTable", &europeTable }, { "africaTable", &africaTable },
+            { "southAmericaTable", &southAmericaTable },
+            { "northAmericaTable", &northAmericaTable },
+            { "asiaTable", &asiaTable }, { "oceaniaTable", &oceaniaTable },
+        };
+        int qlen = 0;
+        char *qfb = dj_slurp("data_json/competitions/qualifying.json", &qlen);
+        const char *garr; int gal;
+        if (qfb && mjson_find(qfb, qlen, "$.groups", &garr, &gal) == MJSON_TOK_ARRAY) {
+            int pos = 0, voff, vlen, vt; char idb[40];
+            while ((pos = fast_array_next(garr, gal, pos, &voff, &vlen, &vt)) != 0) {
+                if (vt != MJSON_TOK_OBJECT) continue;
+                if (mjson_get_string(garr + voff, vlen, "$.id", idb, (int)sizeof idb) <= 0) continue;
+                QualifyingGroup *G = NULL;
+                for (unsigned i = 0; i < sizeof QT / sizeof QT[0]; i++)
+                    if (strcmp(QT[i].id, idb) == 0) { G = QT[i].g; break; }
+                if (!G) continue;
+                QualifyingGroup tmp; memset(&tmp, 0, sizeof tmp);
+                int ok = 1;
+                /* compCup token stream */
+                const char *cc; int ccl, k = 0;
+                if (mjson_find(garr + voff, vlen, "$.comp_cup", &cc, &ccl) == MJSON_TOK_ARRAY) {
+                    int p2 = 0, o2, l2, t2; double dv;
+                    while (k < 9 && (p2 = fast_array_next(cc, ccl, p2, &o2, &l2, &t2)) != 0) {
+                        if (t2 == MJSON_TOK_STRING) {
+                            char nb[40]; void *p = NULL;
+                            if (mjson_get_string(cc + o2, l2, "$", nb, (int)sizeof nb) <= 0) { ok = 0; break; }
+                            for (unsigned i = 0; i < sizeof R / sizeof R[0]; i++)
+                                if (strcmp(R[i].id, nb) == 0) { p = R[i].g; break; }
+                            if (!p) { printf("[data-json]   region '%s': unresolved comp id '%s'\n", idb, nb); ok = 0; break; }
+                            tmp.compCup[k++] = (Competition *)p;
+                        } else if (t2 == MJSON_TOK_NUMBER) {
+                            mjson_get_number(cc + o2, l2, "$", &dv);
+                            tmp.compCup[k++] = (Competition *)(intptr_t)(int)dv;
+                        }
+                    }
+                }
+                /* countries byte list (zero-padded to 44 by the memset) */
+                const char *co; int col, n = 0;
+                if (mjson_find(garr + voff, vlen, "$.countries", &co, &col) == MJSON_TOK_ARRAY) {
+                    int p3 = 0, o3, l3, t3; double dv;
+                    while (n < 44 && (p3 = fast_array_next(co, col, p3, &o3, &l3, &t3)) != 0) {
+                        if (t3 != MJSON_TOK_NUMBER) continue;
+                        mjson_get_number(co + o3, l3, "$", &dv);
+                        tmp.countries[n++] = (uint8_t)(int)dv;
+                    }
+                }
+                if (!ok) continue;
+                if (memcmp(&tmp, G, sizeof tmp) != 0) {     /* corpus drift — keep compiled, flag it */
+                    printf("[data-json]   region '%s': JSON != compiled (kept compiled)\n", idb);
+                    regionMiss++; continue;
+                }
+                *G = tmp; nRegion++;
+            }
+        }
+        free(qfb);
+    }
+
     printf("[data-json] competition graph installed: %d simple countries swapped, "
-           "%d complex countries loaded in place (cups=%d leagues=%d)\n",
-           swapped, inPlace, nCups, nLeagues);
+           "%d complex countries loaded in place (cups=%d leagues=%d); "
+           "standalone globals in place: %d tournaments, %d playoffs, %d special records, "
+           "%d region tables (%d kept-compiled)\n",
+           swapped, inPlace, nCups, nLeagues, nTour, nPlay, nSpec, nRegion, regionMiss);
 }
 
 /* ======================================================================

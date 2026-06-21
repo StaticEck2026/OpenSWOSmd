@@ -80,6 +80,13 @@ int DataJson_LoadCompetitionTournament(const char *json, int len, void *out,
                                        char *strpool, int strpoolsz);
 int DataJson_LoadCompetitionLeague(const char *json, int len, void *out,
                                    char *strpool, int strpoolsz);
+/* Parse a promotion-playoff record into a `Playoffs` struct (`out` is void* —
+   anonymous typedef). DISTINCT from CompetitionCup: the Playoffs layout has
+   roundRuleFlags[2] + explicit teams/awayGoalsMode/subsAndMaxSubs bytes and a
+   runtime-filled qualifiedTeamIds[8], so the cup loader's layout does NOT fit.
+   name[] strings are interned into strpool. Returns 0 on success. */
+int DataJson_LoadPlayoffs(const char *json, int len, void *out,
+                          char *strpool, int strpoolsz);
 /* Runtime wire-in: rebuild the normal-country competition tables in
    competitionsTable[] from data_json/ at startup. Call once early in front-end
    setup. No-op unless SWOS_DATA_JSON is set; region/special tables and named
