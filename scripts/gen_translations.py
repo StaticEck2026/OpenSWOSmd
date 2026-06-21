@@ -152,24 +152,58 @@ NL = {
 
 # Languages with their own value->translation dict (the rest use the TR 3-tuples).
 SEP = {"es": ES, "nl": NL}
+TR_IDX = {"fr": 0, "de": 1, "it": 2}
 
-def lookup(v, lang, i):
-    if lang in SEP:
-        return SEP[lang].get(v, v)
-    return TR[v][i] if v in TR else v
+# Bulk machine-translation table (english value -> {lang: text}), built by
+# merge_agents() from the per-language translator outputs. The small curated
+# TR/ES/NL dicts above OVERRIDE it (hand-authored wins); anything not in either
+# falls back to English. Edit translations_master.json to fix a bulk translation.
+MASTER = os.path.join(REPO, "scripts", "translations_master.json")
+MASTER_DATA = json.load(open(MASTER, encoding="utf-8")) if os.path.exists(MASTER) else {}
+
+def lookup(v, lang):
+    if lang in SEP and v in SEP[lang]:          # curated override (es/nl)
+        return SEP[lang][v]
+    if lang in TR_IDX and v in TR:              # curated override (fr/de/it)
+        return TR[v][TR_IDX[lang]]
+    m = MASTER_DATA.get(v)                       # bulk machine translation
+    if m and lang in m:
+        return m[lang]
+    return v                                     # English fallback
+
+def merge_agents():
+    """Fold /tmp/tr_<lang>.json translator outputs into translations_master.json,
+    keeping only entries that actually changed (value != key)."""
+    master = dict(MASTER_DATA)
+    for lang in LANGS:
+        p = "/tmp/tr_%s.json" % lang
+        if not os.path.exists(p):
+            print("  missing", p); continue
+        d = json.load(open(p, encoding="utf-8"))
+        n = 0
+        for eng, tr in d.items():
+            if isinstance(tr, str) and tr.strip() and tr != eng:
+                master.setdefault(eng, {})[lang] = tr; n += 1
+        print("  %s: +%d translations" % (lang, n))
+    json.dump(master, open(MASTER, "w", encoding="utf-8"),
+              ensure_ascii=False, sort_keys=True, indent=0)
+    print("wrote %s: %d english values" % (MASTER, len(master)))
 
 def main():
     en = json.load(open(os.path.join(TDIR, "en.json"), encoding="utf-8"))
-    for i, lang in enumerate(LANGS):
-        table = SEP.get(lang, TR)
-        strings = {k: lookup(v, lang, i) for k, v in en["strings"].items()}
+    for lang in LANGS:
+        strings = {k: lookup(v, lang) for k, v in en["strings"].items()}
         out = {"language": lang, "strings": strings, "countries": en["countries"]}
         path = os.path.join(TDIR, lang + ".json")
         with open(path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=1)
             f.write("\n")
-        n = sum(1 for v in en["strings"].values() if v in table)
-        print(f"wrote {lang}.json: {n} strings translated, {len(strings)-n} English fallback")
+        n = sum(1 for v in en["strings"].values() if lookup(v, lang) != v)
+        print("wrote %s.json: %d translated, %d English fallback" % (lang, n, len(strings) - n))
 
 if __name__ == "__main__":
+    import sys
+    if "--merge" in sys.argv:
+        merge_agents()
+        MASTER_DATA = json.load(open(MASTER, encoding="utf-8"))   # reload for main()
     main()
