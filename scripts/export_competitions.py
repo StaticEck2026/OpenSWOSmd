@@ -236,12 +236,44 @@ def parse_league(name: str, body: str, strings: dict) -> dict:
     return d
 
 
+def comp_cup_token(tok: str):
+    """A compCup[] element -> a competition symbol id (str) for `&sym`, else the
+    literal in-band sentinel pointer as an int (252=0xFC league-menu marker,
+    -2=league/cup separator, -1=terminator). Emitting the sentinels (not just the
+    cross-refs) is what lets the loader rebuild the table byte-identically."""
+    s = tok.strip()
+    m = re.search(r'&\s*([A-Za-z_][A-Za-z0-9_.]*)', s)
+    if m:
+        return m.group(1)
+    lit = re.sub(r'^\(\s*[A-Za-z_][\w ]*\*\s*\)\s*', '', s).strip()   # strip a leading C cast
+    if lit in ("", "NULL"):
+        return 0
+    return int(lit, 0)
+
+
+def countries_faithful(tok: str):
+    """countries[44] member bytes INCLUDING the 0xFF terminator (stop after it, so
+    a trailing CN_ALBANIA(0) pad slot is dropped). Loader zero-pads back to 44."""
+    out = []
+    for v in split_top(inner(tok)):
+        n = num(v)
+        if n is None:
+            break
+        out.append(n & 0xFF)
+        if (n & 0xFF) == 0xFF:
+            break
+    return out
+
+
 def parse_qualifying(name: str, body: str) -> dict:
-    # { {compCup[9] -1-term cross-refs}, {countries[44] 0xFF-term} }
+    # QualifyingGroup: { compCup[9] token stream, countries[44] 0xFF-terminated }.
+    # Faithful export: keep the in-band sentinels (0xFC/-2/-1) in comp_cup and the
+    # 0xFF terminator in countries so save_format_json's loader reconstructs the
+    # region table byte-identically (in-place install gated on a memcmp verify).
     m = split_top(body)
     return {"id": name,
-            "comp_cup": [xref(x) for x in split_top(inner(m[0])) if xref(x)],
-            "countries": sentinel_array(m[1], 0xFF) if len(m) > 1 else []}
+            "comp_cup": [comp_cup_token(x) for x in split_top(inner(m[0]))],
+            "countries": countries_faithful(m[1]) if len(m) > 1 else []}
 
 
 def parse_career(name: str, body: str) -> list:
