@@ -529,6 +529,10 @@ int MenuJson_VerifyAll(void)
  * needs the call-site-repoint step, MENUS.md §1e). Returns the number skipped+errored. */
 int MenuJson_InstallAll(void)
 {
+    /* All menu-json logging goes to stderr (freopen'd to bin/SWOS.log by main.c).
+     * stdout is block-buffered and would not flush while the game is running. */
+    fprintf(stderr, "[menu-json] SWOS_MENU_JSON set — installing menus from "
+                    "data_json/menus/*.json (relative to the binary dir)\n");
     int installed = 0, changed = 0, toobig = 0, err = 0;
     for (int i = 0; i < NUM_STATIC_MENUS; i++) {
         const char *name = s_staticMenus[i].name;
@@ -554,10 +558,14 @@ int MenuJson_InstallAll(void)
         int diff = (len != cap) || memcmp(packed, dst, (size_t)len) != 0;
         memcpy(dst, packed, (size_t)len);   /* JSON is now authoritative for this menu */
         installed++;
-        if (diff) changed++;
+        if (diff) {
+            changed++;
+            fprintf(stderr, "[menu-json]   %s: loaded from JSON (EDITED vs compiled)\n", name);
+        }
     }
-    printf("[menu-json] install: %d/%d menus loaded from JSON in place "
-           "(%d edited vs compiled, %d too-large-skipped, %d error)\n",
-           installed, NUM_STATIC_MENUS, changed, toobig, err);
+    fprintf(stderr, "[menu-json] install: %d/%d menus loaded from JSON in place "
+            "(%d edited vs compiled, %d too-large-skipped, %d error)\n",
+            installed, NUM_STATIC_MENUS, changed, toobig, err);
+    fflush(stderr);     /* SWOS.log is fully buffered once freopen'd to a file */
     return toobig + err;
 }
