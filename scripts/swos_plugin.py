@@ -17,11 +17,18 @@ import subprocess
 import time
 from harness_lib import GdbHarness, _write_png
 
-# _MenuProc(), right after _MenuCheckControls() (line 1565) sets the input
-# globals and BEFORE the d7/onSelect dispatch (1575+) and the nav read (1650).
-# Setting the input globals here replicates real input for the whole frame:
-# fire feeds the onSelect d7 bitmask; menuControlsDirection feeds the nav.
-INJECT_LINE = "menu_system.c:1567"
+# Menu input-injection point: the no-op _MenuInputInjectPoint() in _MenuProc(),
+# called right after _MenuCheckControls() (which sets the frame's input globals)
+# and BEFORE the d7/onSelect dispatch and the nav read. Setting the input globals
+# here replicates real input for the whole frame: fire feeds the onSelect d7
+# bitmask; menuControlsDirection feeds the nav.
+#
+# This is a SYMBOL, not a line number, on purpose: a hardcoded `menu_system.c:NNN`
+# silently broke whenever code above _MenuProc moved (e.g. the i18n render hook
+# pushed _MenuCheckControls past the old inject line, so the injected fire was
+# overwritten and every career season-transition "stuck"). gdb resolves the
+# symbol wherever it lands.
+INJECT_LINE = "_MenuInputInjectPoint"
 
 # menuControlsDirection encoding: (dir & 6) >> 1 indexes nextEntryDirectionOffsets.
 # Verified against the live table [2,1,3,0] + neighbor links.

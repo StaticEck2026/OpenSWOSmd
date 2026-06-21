@@ -29,31 +29,64 @@ DEF = re.compile(r'^\s*(?:const\s+)?char\s+([A-Za-z_]\w*)\s*\[\s*\d*\s*\]\s*=\s*
 
 
 def decode_c(body: str) -> str:
-    """Decode the handful of C escapes that show up in SWOS strings."""
-    return (body.replace('\\"', '"').replace('\\\\', '\\')
-                .replace('\\n', '\n').replace('\\t', '\t').replace('\\r', '\r'))
+    """Decode the C escapes that show up in SWOS strings, including the octal
+    (\\NNN) and hex (\\xNN) escapes the packed country names use."""
+    out = []
+    i = 0
+    while i < len(body):
+        c = body[i]
+        if c == '\\' and i + 1 < len(body):
+            n = body[i + 1]
+            if n in '01234567':
+                m = re.match(r'[0-7]{1,3}', body[i + 1:i + 4])
+                out.append(chr(int(m.group(0), 8))); i += 1 + len(m.group(0))
+            elif n == 'x':
+                m = re.match(r'[0-9a-fA-F]{1,2}', body[i + 2:i + 4])
+                out.append(chr(int(m.group(0), 16))); i += 2 + len(m.group(0))
+            else:
+                out.append({'n': '\n', 't': '\t', 'r': '\r'}.get(n, n)); i += 2
+        else:
+            out.append(c); i += 1
+    return ''.join(out)
+
+
+def split_country(v: str):
+    """If `v` is a packed country name — a flag byte (0/1) then NAME\\0NAT — return
+    [name, nationality]; else None. countriesTable[] entries point at these and the
+    consumers read `str + 1` (skip the flag) up to the NUL."""
+    if len(v) >= 2 and ord(v[0]) <= 1 and '\x00' in v[1:]:
+        parts = v[1:].split('\x00')
+        return [parts[0], parts[1] if len(parts) > 1 else parts[0]]
+    return None
 
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     strings = {}
+    countries = {}
     dups = 0
     for src in SRCS:
         text = open(src, encoding="utf-8", errors="replace").read()
         for m in DEF.finditer(text):
             name, body = m.group(1), decode_c(m.group(2))
-            if name in strings:
+            if name in strings or name in countries:
                 dups += 1
                 continue            # first definition wins
-            strings[name] = body
+            cc = split_country(body)
+            if cc is not None:
+                countries[name] = cc          # ["NAME", "NATIONALITY"] — clean, no escapes
+            else:
+                strings[name] = body
 
-    out = {"language": "en", "strings": dict(sorted(strings.items()))}
+    out = {"language": "en",
+           "strings": dict(sorted(strings.items())),
+           "countries": dict(sorted(countries.items()))}
     path = os.path.join(OUT_DIR, "en.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
         f.write("\n")
-    print("wrote %s: %d strings (%d duplicate names skipped)"
-          % (os.path.relpath(path, REPO), len(strings), dups))
+    print("wrote %s: %d strings + %d countries (%d duplicate names skipped)"
+          % (os.path.relpath(path, REPO), len(strings), len(countries), dups))
 
 
 if __name__ == "__main__":

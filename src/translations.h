@@ -22,4 +22,9 @@ const char *tr(const char *symbol);
  * option values — no length limit, the pointer is swapped for a pool string. */
 const char *tr_ptr(const void *strAddr);
 
+/* Repoint countriesTable[] entries to their localized packed name strings. Call
+ * once after Translations_Load (the country names are packed flag/name/nat, so
+ * they need this rebuild rather than a plain tr_ptr at each of the ~8 sites). */
+void Countries_Localize(void);
+
 #endif /* TRANSLATIONS_H */

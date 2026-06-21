@@ -707,13 +707,6 @@ void _DrawMenuItem(MenuEntry *entry)
 
         idx -= base;
         textPtr = (uint8_t *)entries[idx];
-        /* Localize the option value for the active language (no length limit —
-         * the C-symbol pointer is swapped for a translation-pool string). */
-        {
-            extern const char *tr_ptr(const void *);
-            const char *t = tr_ptr(textPtr);
-            if (t) textPtr = (uint8_t *)t;
-        }
         goto fg_text_common;
     }
 
@@ -819,6 +812,17 @@ fg_sprite_draw:
     }
 
 fg_text_common:
+    /* Localize for the active language: if textPtr is a compiled UI string
+     * symbol (a menu label, a string_table option value, an in-game label such
+     * as GROUP A / ROUND 1 set into fg by code, …) swap it for its translation-
+     * pool string. No length limit; non-symbol pointers (already-translated pool
+     * strings, dynamic buffers) are left unchanged. */
+    {
+        extern const char *tr_ptr(const void *);
+        const char *t = tr_ptr(textPtr);
+        if (t) textPtr = (uint8_t *)t;
+    }
+
     /* Common text rendering path */
     flags = entry->stringFlags;
     flagsMask = (flags & STR_FLAGS_MASK) >> 2;
@@ -1514,6 +1518,23 @@ void _MenuCheckControls(void)
 }
 
 /* ================================================================
+ * MenuInputInjectPoint — STABLE breakpoint anchor for the test harness.
+ *
+ * Called from _MenuProc immediately after _MenuCheckControls() (which sets the
+ * frame's input globals) and before the d7/onSelect dispatch. The harness breaks
+ * on this SYMBOL to inject menu input — robust to line-number shifts, unlike the
+ * old hardcoded `menu_system.c:<line>` breakpoint which silently broke whenever
+ * code above it moved. The empty asm-with-memory-clobber keeps the call from
+ * being optimized away; cost is one no-op call per menu frame.
+ * See scripts/swos_plugin.py (MENU_INJECT_SYMBOL).
+ * ================================================================ */
+__attribute__((used, externally_visible, noinline))
+void _MenuInputInjectPoint(void)
+{
+    __asm__ volatile("" ::: "memory");
+}
+
+/* ================================================================
  * MenuProc
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
@@ -1570,6 +1591,7 @@ void _MenuProc(void)
 
     _UpdateBlinkingMenuText();
     _MenuCheckControls();
+    _MenuInputInjectPoint();   /* stable harness input-injection anchor — break here by SYMBOL */
 
     menu = (Menu *)currentMenu;
     selectedEntry = menu->selectedEntry;

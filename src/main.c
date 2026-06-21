@@ -279,7 +279,9 @@ int main(int argc, char **argv)
      * string symbol. Must run before the menu/competition install reads it. */
     {
         extern void Translations_Load(const char *lang);
+        extern void Countries_Localize(void);
         Translations_Load(opts.language);
+        Countries_Localize();
     }
 
     if (gDosGraphics)
