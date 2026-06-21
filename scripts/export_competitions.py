@@ -141,10 +141,20 @@ def sentinel_array(tok: str, term):
 
 
 def resolve_name(tok: str, strings: dict):
+    """Emit the string SYMBOL name (e.g. 'aDivision1') for a competition name
+    slot — NOT the resolved text. The loader localizes it at load time via tr()
+    against data_json/translations/<lang>.json, so competition names follow the
+    selected language. `strings` is kept only to sanity-check the symbol exists.
+    None marks a NULL slot. Inline string literals (none in the comp data today)
+    pass through as text."""
     tok = tok.strip()
     if tok in ("0", "NULL"):
         return None
-    return strings.get(tok, tok)            # fall back to the symbol if unresolved
+    if tok.startswith('"') and tok.endswith('"'):
+        return tok[1:-1]                    # inline literal — keep the text
+    if strings is not None and tok not in strings:
+        print("  warning: competition name symbol '%s' not in strings_data" % tok)
+    return tok                              # the symbol name → tr() at load
 
 
 def parse_seed_list(tok: str):

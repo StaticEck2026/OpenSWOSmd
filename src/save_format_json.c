@@ -21,6 +21,7 @@
 #include "mjson.h"
 #include "game_types.h"
 #include "endian_helpers.h"
+#include "translations.h"   /* tr() — localize competition name symbols */
 
 extern uint8_t *currentCompetitionPtr;
 
@@ -2825,9 +2826,22 @@ static void dj_intern_names(const char *o, int ol, const char *path,
     const char *arr; int al, pos = 0, voff, vlen, vt, i = 0, used = 0;
     if (mjson_find(o, ol, path, &arr, &al) != MJSON_TOK_ARRAY) return;
     while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
-        if (vt == MJSON_TOK_STRING && used < strpoolsz) {
-            int n = mjson_get_string(arr + voff, vlen, "$", strpool + used, strpoolsz - used);
-            if (n >= 0) { out[i] = strpool + used; used += n + 1; }
+        if (vt == MJSON_TOK_STRING) {
+            /* The JSON now carries the string SYMBOL name (e.g. "aDivision1");
+             * localize it via tr() for the active language. Falls back to the
+             * symbol name itself if translations aren't loaded / the symbol is
+             * unknown (keeps the slot non-NULL and debuggable). */
+            char sym[64];
+            int n = mjson_get_string(arr + voff, vlen, "$", sym, (int)sizeof sym);
+            if (n > 0) {
+                const char *txt = tr(sym);
+                if (txt)
+                    out[i] = (char *)txt;                         /* permanent translation pool */
+                else if (used + n + 1 <= strpoolsz) {
+                    memcpy(strpool + used, sym, (size_t)n + 1);   /* fallback: the symbol name */
+                    out[i] = strpool + used; used += n + 1;
+                }
+            }
         }
         i++;
     }
@@ -3686,6 +3700,10 @@ static int dj_selftest_graph(void)
  * globalTeamNumber are compared as logical values, not disk byte order. */
 int DataJson_SelfTest(void)
 {
+    /* The selftest runs before main()'s Translations_Load, so load the English
+     * table here — competition name slots are symbols resolved through tr(). */
+    Translations_Load("en");
+
     /* CWD is anchored to the binary dir (bin/) by chdir_to_binary, like data/. */
     FILE *f = fopen("data_json/teams/SCOTLAND.json", "rb");
     if (!f) { printf("[data-json] selftest: cannot open data_json/teams/SCOTLAND.json\n"); return 2; }
