@@ -2744,8 +2744,9 @@ int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, 
         static int announced = 0;
         if (!announced) {
             announced = 1;
-            printf("[data-json] TEAM LOADING ACTIVE — country %d <- data_json/%s (%d teams)\n",
-                   countryNum, team_file, n);
+            fprintf(stderr, "[data-json] TEAM LOADING ACTIVE — country %d <- data_json/%s (%d teams)\n",
+                    countryNum, team_file, n);
+            fflush(stderr);
         }
     }
     return n;

@@ -526,8 +526,8 @@ int MenuJson_VerifyAll(void)
         else if (rc == 1) diff++;
         else err++;
     }
-    printf("[menu-json] verify: %d/%d byte-identical, %d differ, %d error\n",
-           pass, NUM_STATIC_MENUS, diff, err);
+    fprintf(stderr, "[menu-json] verify: %d/%d byte-identical, %d differ, %d error\n",
+            pass, NUM_STATIC_MENUS, diff, err);
     return diff + err;
 }
 
