@@ -308,6 +308,9 @@ void _mainC(void)
     extern void _SwosSDL_InitImageScripts(void);
     _SwosSDL_InitImageScripts();
     _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
+    /* Map the font-extension glyphs (accented capitals, full ASCII, $) into the
+     * char tables now that their sprites have been extracted by the script. */
+    { extern void FontExt_ApplyConv(void); FontExt_ApplyConv(); }
     /* Force this write through to memory — LTO must not eliminate it.
      * menuImageStreamBaseEnd is read later by _ConvertColorsAndTextSprites. */
     *(uint8_t * volatile *)&menuImageStreamBaseEnd =

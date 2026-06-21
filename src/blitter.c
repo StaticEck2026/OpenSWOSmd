@@ -1003,7 +1003,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
     uint16_t spriteIndexOffset;
     uint16_t charSpacing;
     uint16_t spaceWidth;
-    uint8_t *convTable;
+    uint16_t *convTable;
     uint8_t ch;
 
     /* Get total text width (GetTextWidth already ported to C) */
@@ -1031,7 +1031,7 @@ uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
     spriteIndexOffset = (uint16_t)ct->spriteIndexOffset;
     charSpacing = (uint16_t)ct->charSpacing;
     spaceWidth = (uint16_t)ct->spaceWidth;
-    convTable = (uint8_t *)(ct + 1);
+    convTable = (uint16_t *)(ct + 1);
 
     /* Process each character */
     while ((ch = *text++) != 0) {

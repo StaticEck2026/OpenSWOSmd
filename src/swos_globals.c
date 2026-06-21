@@ -171,9 +171,11 @@ extern const char aGrafsCharsetRa[];
 extern const char aGrafsMenusRaw[];
 extern const char aGrafsMenus2Raw[];
 
-uint16_t introMenuImageScript[343] = {
+uint16_t introMenuImageScript[] = {
     0x7000, 0, 0,            /* filename ptr halves filled at init */
 #include "intro_menu_image_script_cmds.inc"
+#include "font_ext_script.inc"   /* accented / full-ASCII / $ glyph extracts */
+    0xFFFF
 };
 
 /* ---- menuBGImageCmdStream: transcribed from Data.c with the two
@@ -692,14 +694,16 @@ __asm__(".globl " _ASM_PFX "poolplyrDatBuffer\n"
         ".equ   " _ASM_PFX "sfxInsBank2, "      _ASM_PFX "sfxInsBankBacking + 71500\n");
 
 /* ---- Menu font tables (small + big) --------------------------------
- * Each CharTable is a 238-byte struct: header (unk1, charHeight, unk2,
- * charSpacing, spaceWidth, spriteIndexOffset) + 224-byte ASCII→sprite
- * conversion table. _DrawMenuTextCentered reads charHeight/spaceWidth
- * and indexes into spriteGraphicsPtr via `conversionTable[c] +
- * spriteIndexOffset`. Values transcribed verbatim from the Amiga C
- * port's Data.c (smallCharsTable / bigCharsTable). The 2-entry
- * `charTables` pointer table below is what menu_system.c actually
- * reads to pick the small/big font. */
+ * Each CharTable is a 14-byte header (unk1, charHeight, unk2, charSpacing,
+ * spaceWidth, spriteIndexOffset) + a 224-entry ASCII→sprite conversion table.
+ * _DrawMenuTextCentered reads charHeight/spaceWidth and indexes into
+ * spriteGraphicsPtr via `conversionTable[c] + spriteIndexOffset`. Values
+ * transcribed verbatim from the Amiga C port's Data.c. conversionTable is
+ * uint16 (was uint8) so glyph slots can exceed 255 — needed for the font
+ * extension, whose glyphs live above the game sprites at slots 256+. This is
+ * in-memory data (not a file format), so uint16 is native-endian on both the
+ * 68k (BE) and x86 (LE) — no byteswap helpers needed; the renderers read it as
+ * uint16 too. The 2-entry `charTables` pointer table picks the small/big font. */
 typedef struct CharTable {
     uint16_t unk1;
     uint16_t charHeight;
@@ -707,7 +711,7 @@ typedef struct CharTable {
     uint16_t charSpacing;
     uint16_t spaceWidth;
     uint16_t spriteIndexOffset;
-    uint8_t  conversionTable[224];
+    uint16_t conversionTable[224];
 } CharTable;
 
 /* Per the Amiga SWOS2.s smallCharsTable / bigCharsTable: only these
@@ -751,6 +755,19 @@ CharTable bigCharsTable = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,                /*192-207 */
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44 }              /*208-223 */
 };
+
+/* Apply the conversionTable entries for the font-extension glyphs (accented
+ * capitals, full ASCII punctuation, $), the lowercase a-z -> uppercase-glyph
+ * mappings, and the Latin-1 remap of the existing Ä/Ö/Ü. Called once after the
+ * charset image script runs so the new glyph sprites already exist. Generated
+ * mappings live in font_ext_conv.inc (from SWOS_Font/integration.txt). */
+void FontExt_ApplyConv(void)
+{
+#define SB(i, s, b) do { smallCharsTable.conversionTable[(i)] = (uint16_t)(s); \
+                         bigCharsTable.conversionTable[(i)]   = (uint16_t)(b); } while (0)
+#include "font_ext_conv.inc"
+#undef SB
+}
 
 /* 2-entry pointer table read by _DrawMenuItem etc:
  *   charTables[0] = &smallCharsTable
