@@ -14,3 +14,4 @@ bin/data_json/translations/*
 !bin/data_json/translations/fr.json
 !bin/data_json/translations/de.json
 !bin/data_json/translations/it.json
+!bin/data_json/translations/es.json

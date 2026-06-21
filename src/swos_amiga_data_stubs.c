@@ -1613,13 +1613,14 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
  * corrupting whatever's adjacent (in our case the glyph pointers used
  * by the menu font on aarch64 — caught by the user reporting "missing
  * fonts on the main menu" on Raspberry Pi 5). Size by pointer count: 1220 game
- * slots (the DOS overlay fills 227..1219) + 70 font-extension slots at 1220..1289,
- * which the DOS sprite build never touches, so the accented/$ glyphs survive in
- * DOS-graphics mode as well as Amiga. */
+ * slots (the DOS overlay fills 227..1219) + 84 font-extension slots at 1220..1303
+ * (accented capitals incl. Spanish Á Ú Ñ + ¿ ¡ and French Œ Ÿ, full ASCII, $),
+ * which the DOS sprite build never touches, so the glyphs survive in DOS-graphics
+ * mode as well as Amiga. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-SWOS_CHIP_BSS char spriteGraphics[1290 * 4];          /* 1290 ptrs × 4 B = 5160 */
+SWOS_CHIP_BSS char spriteGraphics[1310 * 4];          /* 1310 ptrs × 4 B = 5240 */
 #else
-SWOS_CHIP_BSS char spriteGraphics[1290 * 8];          /* 1290 ptrs × 8 B = 10320 */
+SWOS_CHIP_BSS char spriteGraphics[1310 * 8];          /* 1310 ptrs × 8 B = 10480 */
 #endif
 /* spriteGraphicsPtr: real data in swos_amiga_data_imports.c */
 /* squadChangesAllowed: real data in swos_amiga_data_imports.c */

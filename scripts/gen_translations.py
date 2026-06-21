@@ -14,7 +14,7 @@ import json, os
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TDIR = os.path.join(REPO, "bin", "data_json", "translations")
-LANGS = ("fr", "de", "it")
+LANGS = ("fr", "de", "it", "es")
 
 # english value -> (fr, de, it). UPPERCASE, accented. Keep only confident UI terms.
 TR = {
@@ -96,16 +96,50 @@ TR = {
  "OCT":("OCT","OKT","OTT"), "NOV":("NOV","NOV","NOV"), "DEC":("DÉC","DEZ","DIC"),
 }
 
+# Spanish kept separate so the TR tuples stay 3-wide. english value -> es (UPPERCASE,
+# accented: Á É Í Ó Ú Ñ ¿ ¡ all exist in the font extension).
+ES = {
+ "ABORT":"ABORTAR", "ACCEPT":"ACEPTAR", "ACCEPT OFFER":"ACEPTAR OFERTA",
+ "CANCEL":"CANCELAR", "CONTINUE":"CONTINUAR", "EXIT":"SALIR", "YES":"SÍ", "NO":"NO",
+ "OK":"OK", "BACK":"ATRÁS", "RETURN":"VOLVER", "NEXT":"SIGUIENTE", "SAVE":"GUARDAR",
+ "LOAD":"CARGAR", "QUIT":"SALIR", "DONE":"HECHO", "ASK FOR MORE":"PEDIR MÁS",
+ "OPTIONS":"OPCIONES", "CAREER":"CARRERA", "FRIENDLY":"AMISTOSO",
+ "PLAY MATCH":"JUGAR PARTIDO", "NEW GAME":"NUEVO JUEGO", "LOAD GAME":"CARGAR JUEGO",
+ "EDIT TEAMS":"EDITAR EQUIPOS", "CHOOSE TEAM":"ELEGIR EQUIPO",
+ "CHOOSE TEAMS":"ELEGIR EQUIPOS", "CHOOSE SEASON":"ELEGIR TEMPORADA",
+ "CHANGE SQUAD":"CAMBIAR PLANTILLA", "CHANGE TEAMS":"CAMBIAR EQUIPOS",
+ "GOAL":"GOL", "HALF TIME":"DESCANSO", "FULL TIME":"FINAL", "KICK OFF":"SAQUE INICIAL",
+ "ATTACK":"ATAQUE", "DEFENCE":"DEFENSA", "MIDFIELD":"MEDIOCAMPO",
+ "GOALKEEPER":"PORTERO", "DEFENDER":"DEFENSA", "ATTACKER":"DELANTERO",
+ "SUBSTITUTE":"SUPLENTE", "PENALTY":"PENALTI", "BOOKINGS":"TARJETAS",
+ "INJURY":"LESIÓN", "RESULT":"RESULTADO", "ALL MATCHES":"TODOS LOS PARTIDOS",
+ "COACH":"ENTRENADOR", "PLAYER":"JUGADOR", "TEAM":"EQUIPO",
+ "CLUB TEAMS":"EQUIPOS DE CLUB", "BANK":"BANCO", "BANK STATEMENT":"EXTRACTO BANCARIO",
+ "BUY PLAYER":"COMPRAR JUGADOR", "SELL PLAYER":"VENDER JUGADOR",
+ "ADD PLAYER":"AÑADIR JUGADOR", "SEASON":"TEMPORADA", "DIVISION":"DIVISIÓN",
+ "CLUBS":"CLUBES", "CONFIRM OFFER":"CONFIRMAR OFERTA", "APPROX VALUE":"VALOR APROX.",
+ "BEST REGARDS":"UN CORDIAL SALUDO", "COMPUTER":"ORDENADOR", "NAME":"NOMBRE",
+ "AGE":"EDAD", "VALUE":"VALOR", "SCORE":"MARCADOR", "POSITION":"POSICIÓN",
+ "JAN":"ENE","FEB":"FEB","MAR":"MAR","APR":"ABR","MAY":"MAY","JUN":"JUN",
+ "JUL":"JUL","AUG":"AGO","SEP":"SEP","OCT":"OCT","NOV":"NOV","DEC":"DIC",
+}
+
+def lookup(v, lang, i):
+    if lang == "es":
+        return ES.get(v, v)
+    return TR[v][i] if v in TR else v
+
 def main():
     en = json.load(open(os.path.join(TDIR, "en.json"), encoding="utf-8"))
     for i, lang in enumerate(LANGS):
-        strings = {k: (TR[v][i] if v in TR else v) for k, v in en["strings"].items()}
+        table = ES if lang == "es" else TR
+        strings = {k: lookup(v, lang, i) for k, v in en["strings"].items()}
         out = {"language": lang, "strings": strings, "countries": en["countries"]}
         path = os.path.join(TDIR, lang + ".json")
         with open(path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=1)
             f.write("\n")
-        n = sum(1 for k, v in en["strings"].items() if v in TR)
+        n = sum(1 for v in en["strings"].values() if v in table)
         print(f"wrote {lang}.json: {n} strings translated, {len(strings)-n} English fallback")
 
 if __name__ == "__main__":

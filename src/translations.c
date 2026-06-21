@@ -98,8 +98,10 @@ static char *tr_dup(const char *tok, int len)
                  * accented characters, not \uXXXX escapes): decode to the code
                  * point and keep its low byte — Latin-1, which IS the game's
                  * single-byte charset (É U+00C9 -> 0xC9, matching the font /
-                 * conversionTable). Code points above 0xFF can't be one byte and
-                 * fall back to (cp & 0xFF) — they'd need a custom glyph slot. */
+                 * conversionTable). Code points above 0xFF that DO have a font
+                 * glyph are mapped to a spare byte (French Œ U+0152 -> 0x8C,
+                 * Ÿ U+0178 -> 0x9E; see swos_font.py CP_OVERRIDE); any other
+                 * >0xFF point falls back to (cp & 0xFF). */
                 int extra = uc >= 0xF0 ? 3 : uc >= 0xE0 ? 2 : 1;
                 int cp = uc & (0x3F >> extra), ok = 1;
                 for (int k = 0; k < extra; k++) {
@@ -108,7 +110,8 @@ static char *tr_dup(const char *tok, int len)
                     cp = (cp << 6) | (cc & 0x3F);
                     i++;
                 }
-                s[o++] = ok ? (char)(cp & 0xFF) : (char)uc;
+                int b = cp == 0x152 ? 0x8C : cp == 0x178 ? 0x9E : (cp & 0xFF);
+                s[o++] = ok ? (char)b : (char)uc;
             } else {
                 s[o++] = c;   /* ASCII (and stray bytes) pass through */
             }
