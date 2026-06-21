@@ -83,6 +83,9 @@ static int handler(void *user, const char *section,
         else if (eqi(name, "gameplay") && parse_bool(value, &b)) opts->dos_gameplay = b;
         else if (eqi(name, "directory") && value && value[0])
             snprintf(opts->dos_dir, sizeof opts->dos_dir, "%s", value);
+    } else if (eqi(section, "general")) {
+        if (eqi(name, "language") && value && value[0])
+            snprintf(opts->language, sizeof opts->language, "%s", value);
     }
     /* Return nonzero on success, even for ignored keys — we don't want
      * inih to flag unknown sections as parse errors. */
@@ -155,7 +158,10 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "[dos]\n"
         "directory=%s\n"
         "graphics=%s\n"
-        "gameplay=%s\n",
+        "gameplay=%s\n"
+        "\n"
+        "[general]\n"
+        "language=%s\n",
         renderer_str(opts->renderer),
         opts->vsync ? "on" : "off",
         fullscreen_str(fs_now),
@@ -163,7 +169,8 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         opts->audio_mono ? "mono" : "stereo",
         opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
         opts->dos_graphics ? "true" : "false",
-        opts->dos_gameplay ? "true" : "false");
+        opts->dos_gameplay ? "true" : "false",
+        opts->language[0] ? opts->language : "en");
 
     fclose(f);
 }

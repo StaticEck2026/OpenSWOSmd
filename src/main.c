@@ -178,6 +178,7 @@ int main(int argc, char **argv)
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", "grafs_dos");
+    snprintf(opts.language, sizeof opts.language, "%s", "en");
 
     /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
      * at clean shutdown will create one. */
@@ -269,6 +270,16 @@ int main(int argc, char **argv)
         if (log) {
             setvbuf(log, NULL, _IONBF, 0);
         }
+    }
+
+    /* Load the UI translation table for the selected language
+     * (data_json/translations/<lang>.json) now that the CWD is the binary dir
+     * and stderr is the log. tr(symbol) resolves menu/UI text through it; a
+     * missing file just leaves every lookup falling back to the compiled
+     * string symbol. Must run before the menu/competition install reads it. */
+    {
+        extern void Translations_Load(const char *lang);
+        Translations_Load(opts.language);
     }
 
     if (gDosGraphics)

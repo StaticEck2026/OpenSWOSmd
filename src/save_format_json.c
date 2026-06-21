@@ -3168,7 +3168,9 @@ void DataJson_InstallCompetitionGraph(void)
 {
     static int installed = 0;
     if (installed) return;
-    if (!getenv("SWOS_DATA_JSON")) return;
+    /* SWOS_DATA_JSON is default-ON; set SWOS_DATA_JSON=0 to fall back to the
+       compiled competition tables. */
+    { const char *v = getenv("SWOS_DATA_JSON"); if (v && v[0] == '0' && v[1] == '\0') return; }
     /* Isolation knob: SWOS_DATA_JSON_NO_COMP keeps the teams JSON loader on but
        leaves the compiled competitionsTable in place (so the two SWOS_DATA_JSON
        effects — JSON teams vs JSON competition graph — can be tested apart). */
@@ -3186,7 +3188,7 @@ void DataJson_InstallCompetitionGraph(void)
 
     int len = 0;
     char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
-    if (!fb) { printf("[data-json] graph install: cannot open country_competitions.json\n"); return; }
+    if (!fb) { fprintf(stderr, "[data-json] graph install: cannot open country_competitions.json\n"); return; }
     extern void *competitionsTable[];
     const char *arr; int al; int tableN = 0, swapped = 0, inPlace = 0;
     if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
@@ -3484,7 +3486,7 @@ void DataJson_InstallCompetitionGraph(void)
                             if (mjson_get_string(cc + o2, l2, "$", nb, (int)sizeof nb) <= 0) { ok = 0; break; }
                             for (unsigned i = 0; i < sizeof R / sizeof R[0]; i++)
                                 if (strcmp(R[i].id, nb) == 0) { p = R[i].g; break; }
-                            if (!p) { printf("[data-json]   region '%s': unresolved comp id '%s'\n", idb, nb); ok = 0; break; }
+                            if (!p) { fprintf(stderr, "[data-json]   region '%s': unresolved comp id '%s'\n", idb, nb); ok = 0; break; }
                             tmp.compCup[k++] = (Competition *)p;
                         } else if (t2 == MJSON_TOK_NUMBER) {
                             mjson_get_number(cc + o2, l2, "$", &dv);
@@ -3504,7 +3506,7 @@ void DataJson_InstallCompetitionGraph(void)
                 }
                 if (!ok) continue;
                 if (memcmp(&tmp, G, sizeof tmp) != 0) {     /* corpus drift — keep compiled, flag it */
-                    printf("[data-json]   region '%s': JSON != compiled (kept compiled)\n", idb);
+                    fprintf(stderr, "[data-json]   region '%s': JSON != compiled (kept compiled)\n", idb);
                     regionMiss++; continue;
                 }
                 *G = tmp; nRegion++;
@@ -3513,11 +3515,12 @@ void DataJson_InstallCompetitionGraph(void)
         free(qfb);
     }
 
-    printf("[data-json] competition graph installed: %d simple countries swapped, "
+    fprintf(stderr, "[data-json] competition graph installed: %d simple countries swapped, "
            "%d complex countries loaded in place (cups=%d leagues=%d); "
            "standalone globals in place: %d tournaments, %d playoffs, %d special records, "
            "%d region tables (%d kept-compiled)\n",
            swapped, inPlace, nCups, nLeagues, nTour, nPlay, nSpec, nRegion, regionMiss);
+    fflush(stderr);
 }
 
 /* ======================================================================

@@ -350,7 +350,9 @@ int16_t _LoadTeamFile(uint16_t extNumber)
          * binary TEAM.NNN. Falls back to the binary file on any miss (country not
          * in the corpus, file missing, parse error). The JSON path writes
          * teamFileBuffer host-native, so it SKIPS the BE byteswap. */
-        if (getenv("SWOS_DATA_JSON")) {
+        /* SWOS_DATA_JSON default-ON; SWOS_DATA_JSON=0 disables. */
+        const char *djv = getenv("SWOS_DATA_JSON");
+        if (!(djv && djv[0] == '0' && djv[1] == '\0')) {
             extern int DataJson_LoadTeamFileForCountry(int, uint8_t *, int);
             /* teamFileBuffer is 0xFA0E bytes → (0xFA0E-2)/sizeof(TeamFileEx) ≈ 93 */
             if (DataJson_LoadTeamFileForCountry((int)ext8, teamFileBuffer, 93) > 0)

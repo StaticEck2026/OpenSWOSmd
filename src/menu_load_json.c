@@ -23,6 +23,7 @@
 
 #include "mjson.h"
 #include "menu_symbols.h"
+#include "translations.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,7 +150,7 @@ static int mj_bool_def(const char *j, int jl, const char *path, int def)
  * registry), a literal INTEGER (a small deferred-string sentinel 1..255 that
  * _UnpackMenu rewrites to 0xFFFFFFFF), or null/absent (a NULL pointer). */
 static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
-                       const char *menuName);
+                       const char *menuName, int translate);
 
 /* Resolve a name field ("$.func"/"$.str"/…) to its address; NULL if the field
  * is absent / JSON null / unresolved (a missing symbol is logged, not fatal). */
@@ -168,7 +169,7 @@ static void *mj_sym(const char *j, int jl, const char *path, const char *menuNam
 }
 
 static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
-                       const char *menuName)
+                       const char *menuName, int translate)
 {
     const char *tp; int tl;
     int t = mjson_find(j, jl, path, &tp, &tl);
@@ -181,10 +182,20 @@ static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
         w->p += sizeof pv;
         return;
     }
-    if (t == MJSON_TOK_STRING)             /* symbol name → registry address */
-        wptr(w, mj_sym(j, jl, path, menuName));
-    else                                   /* null / absent → NULL pointer */
-        wptr(w, NULL);
+    if (t == MJSON_TOK_STRING) {           /* symbol name */
+        if (translate) {
+            /* Display text: resolve the symbol's text for the active language
+             * from translations/<lang>.json; fall back to the compiled string. */
+            char name[80];
+            if (mjson_get_string(j, jl, path, name, (int)sizeof name) > 0) {
+                const char *txt = tr(name);
+                if (txt) { wptr(w, (void *)txt); return; }
+            }
+        }
+        wptr(w, mj_sym(j, jl, path, menuName));   /* → compiled string/symbol address */
+    } else {
+        wptr(w, NULL);                     /* null / absent → NULL pointer */
+    }
 }
 
 /* ---- opcode-name -> number (MENU_CMD_*; see _UnpackMenu cases 0..22) ---- */
@@ -233,7 +244,7 @@ static void emit_command(MWriter *w, const char *cmd, int cmdl, const char *menu
         w8(w, (unsigned)mj_long_def(cmd, cmdl, "$.down",  0));
         break;
     case 3:  /* bg_func: ptr */
-        wfield_ptr(w, cmd, cmdl, "$.func", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
     case 4:  /* colors: u16 */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.value", 0));
@@ -245,46 +256,46 @@ static void emit_command(MWriter *w, const char *cmd, int cmdl, const char *menu
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.value", 0));
         break;
     case 7:  /* fg_func: ptr */
-        wfield_ptr(w, cmd, cmdl, "$.func", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
     case 8:  /* text: u16 flags, ptr str */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.flags", 0));
-        wfield_ptr(w, cmd, cmdl, "$.str", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.str", menuName, 1);
         break;
     case 9:  /* sprite_fg: u16 index */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.index", 0));
         break;
     case 10: /* string_table: u16 flags, ptr table */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.flags", 0));
-        wfield_ptr(w, cmd, cmdl, "$.table", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.table", menuName, 0);
         break;
     case 11: /* multiline: u16 flags, ptr str */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.flags", 0));
-        wfield_ptr(w, cmd, cmdl, "$.str", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.str", menuName, 1);
         break;
     case 12: /* number: u16 flags, u16 value */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.flags", 0));
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.value", 0));
         break;
     case 13: /* onselect_fire: ptr */
-        wfield_ptr(w, cmd, cmdl, "$.func", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
     case 14: /* input_func: u16 mask, ptr */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.mask", 0));
-        wfield_ptr(w, cmd, cmdl, "$.func", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
     case 15: /* before_draw: ptr */
-        wfield_ptr(w, cmd, cmdl, "$.func", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
     case 16: /* after_draw: ptr */
-        wfield_ptr(w, cmd, cmdl, "$.func", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
     case 17: case 18: case 19: case 20: /* *_skip: u8 skip, u8 dir */
         w8(w, (unsigned)mj_long_def(cmd, cmdl, "$.skip", 0));
         w8(w, (unsigned)mj_long_def(cmd, cmdl, "$.dir",  0));
         break;
     case 21: /* sprite_copy: ptr */
-        wfield_ptr(w, cmd, cmdl, "$.sprite", menuName);
+        wfield_ptr(w, cmd, cmdl, "$.sprite", menuName, 0);
         break;
     case 22: /* text_no_ptr: u16 flags (deferred string; _UnpackMenu sets fg=0xFFFFFFFF) */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.flags", 0));
@@ -521,8 +532,8 @@ int MenuJson_VerifyAll(void)
 }
 
 /* Build every menu from JSON and overwrite the compiled static `fooMenu` storage
- * IN PLACE, so editing bin/data_json/menus/*.json changes the running game with
- * no call-site churn (every `_ShowMenu(fooMenu)` keeps reading the same symbol).
+ * IN PLACE, so editing the per-menu JSON changes the running game with no
+ * call-site churn (every `_ShowMenu(fooMenu)` keeps reading the same symbol).
  * The overwrite is bounded by the menu's compiled packed length (packed_source_len)
  * so an edit can never spill past the static struct into adjacent globals — a menu
  * that grows beyond its compiled size is left compiled and flagged (growing a menu
