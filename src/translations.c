@@ -43,17 +43,59 @@ static int trp_cmp(const void *a, const void *b)
     return (x > y) - (x < y);
 }
 
-/* Copy an mjson token to a fresh NUL-terminated string, stripping the
- * surrounding quotes a string token carries. (en.json values have no escapes —
- * verified at export — so a raw copy is exact.) */
+static int tr_hex(char c)
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+/* Copy an mjson string token to a fresh NUL-terminated string, stripping the
+ * surrounding quotes AND decoding the JSON escapes the exporter emits (\\ \" \/
+ * \b \f \n \r \t and \uXXXX). SWOS uses a single-byte charset, so \uXXXX is
+ * emitted as one byte (code & 0xFF): this losslessly round-trips the control /
+ * high bytes a few compiled strings carry — a leading 0x01/0xFF render marker,
+ * the 0x9C pound (£) glyph, the offer-letter leading 0x00 — so the pool string
+ * is byte-identical to the compiled symbol. A raw copy (the old behaviour) would
+ * instead render the literal escape text, e.g. "SOUTH AMERICA". The decode
+ * is never longer than the source, so len+1 is a safe bound. */
 static char *tr_dup(const char *tok, int len)
 {
     if (len >= 2 && tok[0] == '"' && tok[len - 1] == '"') { tok++; len -= 2; }
     if (len < 0) len = 0;
     char *s = (char *)malloc((size_t)len + 1);
     if (!s) return NULL;
-    memcpy(s, tok, (size_t)len);
-    s[len] = '\0';
+    int o = 0;
+    for (int i = 0; i < len; i++) {
+        char c = tok[i];
+        if (c == '\\' && i + 1 < len) {
+            char n = tok[++i];
+            switch (n) {
+            case 'n': s[o++] = '\n'; break;
+            case 't': s[o++] = '\t'; break;
+            case 'r': s[o++] = '\r'; break;
+            case 'b': s[o++] = '\b'; break;
+            case 'f': s[o++] = '\f'; break;
+            case 'u': {
+                int h0, h1, h2, h3;
+                if (i + 4 < len &&
+                    (h0 = tr_hex(tok[i + 1])) >= 0 && (h1 = tr_hex(tok[i + 2])) >= 0 &&
+                    (h2 = tr_hex(tok[i + 3])) >= 0 && (h3 = tr_hex(tok[i + 4])) >= 0) {
+                    s[o++] = (char)((((h0 << 12) | (h1 << 8) | (h2 << 4) | h3)) & 0xFF);
+                    i += 4;
+                } else {
+                    s[o++] = n;   /* malformed — emit literally */
+                }
+                break;
+            }
+            default: s[o++] = n; break;   /* \\ \" \/ and anything else */
+            }
+        } else {
+            s[o++] = c;
+        }
+    }
+    s[o] = '\0';
     return s;
 }
 

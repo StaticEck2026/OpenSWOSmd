@@ -51,10 +51,18 @@ def decode_c(body: str) -> str:
 
 
 def split_country(v: str):
-    """If `v` is a packed country name — a flag byte (0/1) then NAME\\0NAT — return
-    [name, nationality]; else None. countriesTable[] entries point at these and the
-    consumers read `str + 1` (skip the flag) up to the NUL."""
-    if len(v) >= 2 and ord(v[0]) <= 1 and '\x00' in v[1:]:
+    """If `v` is a packed country/region name — a leading REGION byte then
+    NAME\\0NATIONALITY — return [name, nationality]; else None. The leading byte is
+    the continent index (0=Europe, 1=N.America, 2=S.America, 3=Asia, 4=Oceania,
+    5=Africa), NOT a 0/1 flag — testing `<= 1` only caught Europe/N.America and
+    dropped every other country (Argentina, Australia, India, Algeria…) into the
+    plain "strings" section, where its leading byte + embedded NUL got JSON-escaped
+    (\\u0002…\\u0000…) and rendered as literal garbage ("⌧0002SOUTH AMERICA").
+    Any non-printable leading byte (< 0x20) before a NAME\\0NAT pair is a packed
+    country. countriesTable[] entries point at these; consumers read `str + 1`
+    (skip the region byte) up to the NUL, so it must be decomposed here, never
+    emitted as a raw string with binary bytes in it."""
+    if len(v) >= 2 and ord(v[0]) < 0x20 and '\x00' in v[1:]:
         parts = v[1:].split('\x00')
         return [parts[0], parts[1] if len(parts) > 1 else parts[0]]
     return None
@@ -83,7 +91,11 @@ def main():
            "countries": dict(sorted(countries.items()))}
     path = os.path.join(OUT_DIR, "en.json")
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False, indent=1)
+        # ensure_ascii=True so the handful of strings carrying a high byte (0xFF
+        # render marker, 0x9C pound glyph) are written as \uXXXX like the control
+        # bytes already are — one consistent escape form for translations.c's
+        # tr_dup() to decode back to a single byte. (Plain text is unaffected.)
+        json.dump(out, f, ensure_ascii=True, indent=1)
         f.write("\n")
     print("wrote %s: %d strings + %d countries (%d duplicate names skipped)"
           % (os.path.relpath(path, REPO), len(strings), len(countries), dups))
