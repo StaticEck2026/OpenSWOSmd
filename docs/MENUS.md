@@ -394,6 +394,20 @@ verifiable menu-by-menu (round-trip a menu, diff its packed bytes vs the static
 struct's bytes — a zero-diff is the green light, same discipline as
 `SWOS_SAVE_FORMAT_JSON_VERIFY`).
 
+> **STATUS (2026-06-20): C loader + verify DONE.** `src/menu_load_json.c`
+> (`MenuJson_BuildPacked` + `MenuJson_VerifyAll`) builds the §0 packed stream
+> for every menu and `memcmp`s it against the compiled static bytes. Gated on
+> **env** `SWOS_MENU_JSON` (matching the `SWOS_DATA_JSON` precedent, not a
+> compile flag) and wired into `_FrontEndPreLoopSetup`. Result: **47/47 menus
+> byte-identical, 0 diff.** Two corpus subtleties that the round-trip flushed
+> out and the loader now handles: (1) the skip opcodes are `UP/DOWN/LEFT/RIGHT
+> = 0x11/0x12/0x13/0x14` (the §0b "left/right/up/down" ordering above is
+> misleading — trust the `MENU_CMD_*` enum); (2) a `text`/`string_table`/
+> `multiline` pointer field may be a SYMBOL name, a literal INTEGER
+> deferred-string sentinel (`"str": 4` → fg `0xFFFFFFFF`), or `null`. This is
+> the green light to repoint the legacy `uint8_t fooMenu[]` call sites at the
+> loaded buffers (§1e) and retire the static `menu_data.c` initializers.
+
 ---
 
 ## 3. Task 3 — Python `json → binary` (the Amiga path)

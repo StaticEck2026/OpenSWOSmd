@@ -87,6 +87,13 @@ void _FrontEndPreLoopSetup(void)
        before any menu reads competitionsTable[]. No-op unless the env var is set. */
     extern void DataJson_InstallCompetitionGraph(void);
     DataJson_InstallCompetitionGraph();
+    /* SWOS_MENU_JSON: round-trip the JSON menu corpus against the compiled static
+       menu bytes (docs/MENUS.md §2d). Verify-only for now — a zero-diff is the
+       green light to retire the static menu_data.c initializers. No-op otherwise. */
+    if (getenv("SWOS_MENU_JSON")) {
+        extern int MenuJson_VerifyAll(void);
+        MenuJson_VerifyAll();
+    }
 #endif
     _InitMenuMusic();
     _PrepareMenuBackground();
