@@ -14,7 +14,7 @@ import json, os
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TDIR = os.path.join(REPO, "bin", "data_json", "translations")
-LANGS = ("fr", "de", "it", "es")
+LANGS = ("fr", "de", "it", "es", "nl")
 
 # english value -> (fr, de, it). UPPERCASE, accented. Keep only confident UI terms.
 TR = {
@@ -124,15 +124,44 @@ ES = {
  "JUL":"JUL","AUG":"AGO","SEP":"SEP","OCT":"OCT","NOV":"NOV","DEC":"DIC",
 }
 
+# Dutch — also a separate dict. Mostly plain ASCII; CARRIÈRE uses È (covered).
+NL = {
+ "ABORT":"AFBREKEN", "ACCEPT":"ACCEPTEREN", "ACCEPT OFFER":"BOD ACCEPTEREN",
+ "CANCEL":"ANNULEREN", "CONTINUE":"DOORGAAN", "EXIT":"AFSLUITEN", "YES":"JA", "NO":"NEE",
+ "OK":"OK", "BACK":"TERUG", "RETURN":"TERUG", "NEXT":"VOLGENDE", "SAVE":"OPSLAAN",
+ "LOAD":"LADEN", "QUIT":"AFSLUITEN", "DONE":"KLAAR", "ASK FOR MORE":"VRAAG MEER",
+ "OPTIONS":"OPTIES", "CAREER":"CARRIÈRE", "FRIENDLY":"VRIENDSCHAPPELIJK",
+ "PLAY MATCH":"SPEEL WEDSTRIJD", "NEW GAME":"NIEUW SPEL", "LOAD GAME":"SPEL LADEN",
+ "EDIT TEAMS":"TEAMS BEWERKEN", "CHOOSE TEAM":"KIES TEAM", "CHOOSE TEAMS":"KIES TEAMS",
+ "CHOOSE SEASON":"KIES SEIZOEN", "CHANGE SQUAD":"WIJZIG SELECTIE",
+ "CHANGE TEAMS":"WIJZIG TEAMS", "GOAL":"DOELPUNT", "HALF TIME":"RUST", "FULL TIME":"EINDE",
+ "KICK OFF":"AFTRAP", "ATTACK":"AANVAL", "DEFENCE":"VERDEDIGING", "MIDFIELD":"MIDDENVELD",
+ "GOALKEEPER":"KEEPER", "DEFENDER":"VERDEDIGER", "ATTACKER":"AANVALLER",
+ "SUBSTITUTE":"WISSEL", "PENALTY":"STRAFSCHOP", "BOOKINGS":"KAARTEN", "INJURY":"BLESSURE",
+ "RESULT":"RESULTAAT", "ALL MATCHES":"ALLE WEDSTRIJDEN", "COACH":"TRAINER",
+ "PLAYER":"SPELER", "TEAM":"TEAM", "CLUB TEAMS":"CLUBTEAMS", "BANK":"BANK",
+ "BANK STATEMENT":"BANKAFSCHRIFT", "BUY PLAYER":"SPELER KOPEN",
+ "SELL PLAYER":"SPELER VERKOPEN", "ADD PLAYER":"SPELER TOEVOEGEN", "SEASON":"SEIZOEN",
+ "DIVISION":"DIVISIE", "CLUBS":"CLUBS", "CONFIRM OFFER":"BOD BEVESTIGEN",
+ "APPROX VALUE":"CA. WAARDE", "BEST REGARDS":"MET VRIENDELIJKE GROET",
+ "COMPUTER":"COMPUTER", "NAME":"NAAM", "AGE":"LEEFTIJD", "VALUE":"WAARDE",
+ "SCORE":"STAND", "POSITION":"POSITIE",
+ "JAN":"JAN","FEB":"FEB","MAR":"MRT","APR":"APR","MAY":"MEI","JUN":"JUN",
+ "JUL":"JUL","AUG":"AUG","SEP":"SEP","OCT":"OKT","NOV":"NOV","DEC":"DEC",
+}
+
+# Languages with their own value->translation dict (the rest use the TR 3-tuples).
+SEP = {"es": ES, "nl": NL}
+
 def lookup(v, lang, i):
-    if lang == "es":
-        return ES.get(v, v)
+    if lang in SEP:
+        return SEP[lang].get(v, v)
     return TR[v][i] if v in TR else v
 
 def main():
     en = json.load(open(os.path.join(TDIR, "en.json"), encoding="utf-8"))
     for i, lang in enumerate(LANGS):
-        table = ES if lang == "es" else TR
+        table = SEP.get(lang, TR)
         strings = {k: lookup(v, lang, i) for k, v in en["strings"].items()}
         out = {"language": lang, "strings": strings, "countries": en["countries"]}
         path = os.path.join(TDIR, lang + ".json")
