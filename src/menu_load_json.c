@@ -70,6 +70,52 @@ static void wptr(MWriter *w, void *ptr)
     w->p += sizeof(uintptr_t);
 }
 
+/* ---- packed-stream reader: walk a compiled static menu to its end marker to
+ *      learn its byte length (the in-place install's overflow bound). Mirrors
+ *      the parse in _UnpackMenu / the build above, payload-width for payload-
+ *      width, so it can never disagree about how far a menu extends. ---- */
+static unsigned rd16(const uint8_t *p) { return (unsigned)p[0] | ((unsigned)p[1] << 8); }
+
+static int op_payload_width(int op)
+{
+    switch (op) {
+    case 1:  return 0;                              /* invisible */
+    case 2:  return 4;                              /* nav: 4×i8 */
+    case 4: case 5: case 6: case 9: return 2;       /* colors/sprite_bg/invalid/sprite_fg: u16 */
+    case 12: return 4;                              /* number: u16+u16 */
+    case 17: case 18: case 19: case 20: return 2;   /* skips: u8+u8 */
+    case 22: return 2;                              /* text_no_ptr: u16 */
+    case 3: case 7: case 13: case 15: case 16: case 21:
+        return (int)sizeof(uintptr_t);              /* ptr-only opcodes */
+    case 8: case 10: case 11: case 14:
+        return 2 + (int)sizeof(uintptr_t);          /* u16 flags/mask + ptr */
+    default: return 0;
+    }
+}
+
+static int packed_source_len(const uint8_t *m)
+{
+    const uint8_t *p = m + 3 * sizeof(uintptr_t) + 4;   /* header: 3 ptr + u32 defaultEntry */
+    int byteMode = 0;
+    for (;;) {
+        unsigned w = rd16(p);
+        if (w == MK_END)        { p += 2; break; }
+        if (w == MK_SET_ORIGIN) { p += 6; continue; }
+        if (w == MK_RESET_TMPL) { p += 2; continue; }
+        if (w == MK_TEMPLATE)   { p += 2; }            /* then parse the template entry */
+        unsigned w0 = rd16(p);
+        if (w0 == MK_COORDS_BYTE) { byteMode = 1; p += 2; }
+        else if (w0 == MK_COORDS_WIDE) { byteMode = 0; p += 2; }
+        p += byteMode ? 4 : 8;                          /* coords */
+        for (;;) {
+            unsigned op = rd16(p); p += 2;
+            if (op == 0) break;                         /* MENU_CMD_END */
+            p += op_payload_width((int)op);
+        }
+    }
+    return (int)(p - m);
+}
+
 /* ======================================================================
  * mjson field readers — integers may be JSON numbers OR hex strings ("0x10").
  * Uses mjson_get_long (integer-only; works on the FPU-less m68k back-port too).
@@ -472,4 +518,46 @@ int MenuJson_VerifyAll(void)
     printf("[menu-json] verify: %d/%d byte-identical, %d differ, %d error\n",
            pass, NUM_STATIC_MENUS, diff, err);
     return diff + err;
+}
+
+/* Build every menu from JSON and overwrite the compiled static `fooMenu` storage
+ * IN PLACE, so editing bin/data_json/menus/*.json changes the running game with
+ * no call-site churn (every `_ShowMenu(fooMenu)` keeps reading the same symbol).
+ * The overwrite is bounded by the menu's compiled packed length (packed_source_len)
+ * so an edit can never spill past the static struct into adjacent globals — a menu
+ * that grows beyond its compiled size is left compiled and flagged (growing a menu
+ * needs the call-site-repoint step, MENUS.md §1e). Returns the number skipped+errored. */
+int MenuJson_InstallAll(void)
+{
+    int installed = 0, changed = 0, toobig = 0, err = 0;
+    for (int i = 0; i < NUM_STATIC_MENUS; i++) {
+        const char *name = s_staticMenus[i].name;
+        uint8_t *dst = s_staticMenus[i].menu;
+        char path[160];
+        snprintf(path, sizeof path, "data_json/menus/%s.json", name);
+        int jl = 0;
+        uint8_t *j = menu_slurp(path, &jl);
+        if (!j) { fprintf(stderr, "[menu-json] %s: cannot open %s\n", name, path); err++; continue; }
+
+        static uint8_t packed[16384];
+        int len = MenuJson_BuildPacked((const char *)j, jl, packed, (int)sizeof packed);
+        free(j);
+        if (len < 0) { fprintf(stderr, "[menu-json] %s: build failed\n", name); err++; continue; }
+
+        int cap = packed_source_len(dst);
+        if (len > cap) {
+            fprintf(stderr, "[menu-json] %s: SKIP — JSON build %d B > compiled %d B "
+                    "(growing a menu needs the call-site repoint, MENUS.md §1e)\n", name, len, cap);
+            toobig++;
+            continue;
+        }
+        int diff = (len != cap) || memcmp(packed, dst, (size_t)len) != 0;
+        memcpy(dst, packed, (size_t)len);   /* JSON is now authoritative for this menu */
+        installed++;
+        if (diff) changed++;
+    }
+    printf("[menu-json] install: %d/%d menus loaded from JSON in place "
+           "(%d edited vs compiled, %d too-large-skipped, %d error)\n",
+           installed, NUM_STATIC_MENUS, changed, toobig, err);
+    return toobig + err;
 }
