@@ -12,6 +12,14 @@
 /* ASM externs for number formatting */
 extern uint8_t aPound[];       /* "£" (0x9C, 0x00) */
 extern uint8_t nullString_0[]; /* "" (0x00) */
+
+/* Currency symbol prepended to formatted money. Defaults to the pound (£,
+ * byte 0x9C); SWOS.ini [general] currency=dollar swaps it to '$' (byte 0x24)
+ * via Currency_SetDollar(). The '$' glyph must be present in the charset (font
+ * extension) to render — otherwise it shows the empty 0x24 slot. */
+static uint8_t s_dollarSym[2] = { '$', 0x00 };
+uint8_t *g_currencySymbol = aPound;
+void Currency_SetDollar(int dollar) { g_currencySymbol = dollar ? s_dollarSym : aPound; }
 extern uint8_t aBank[];        /* "BANK" */
 extern int32_t newBalance;
 
@@ -191,8 +199,8 @@ __attribute__((used, externally_visible))
 void _Int2Pounds(uint32_t pounds, uint8_t *dst)
 {
     /* nullsub_11 is a no-op */
-    /* Copy pound sign "£" */
-    dst = _StringCopy(aPound, dst);
+    /* Copy the currency sign (£ by default, $ if currency=dollar) */
+    dst = _StringCopy(g_currencySymbol, dst);
     /* Format number with commas */
     dst = int2StrWithCommas(pounds, dst);
     /* Copy null string (null terminator) */

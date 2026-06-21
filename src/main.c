@@ -179,6 +179,7 @@ int main(int argc, char **argv)
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", "grafs_dos");
     snprintf(opts.language, sizeof opts.language, "%s", "en");
+    snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
     /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
      * at clean shutdown will create one. */
@@ -280,8 +281,10 @@ int main(int argc, char **argv)
     {
         extern void Translations_Load(const char *lang);
         extern void Countries_Localize(void);
+        extern void Currency_SetDollar(int dollar);
         Translations_Load(opts.language);
         Countries_Localize();
+        Currency_SetDollar(opts.currency[0] == 'd' || opts.currency[0] == 'D');
     }
 
     if (gDosGraphics)

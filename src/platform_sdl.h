@@ -69,6 +69,7 @@ typedef struct {
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
     char                   dos_dir[256];     /* DOS asset dir (default "grafs_dos"). PC-only */
     char                   language[16];     /* UI language code, e.g. "en" — selects data_json/translations/<lang>.json */
+    char                   currency[8];      /* "pound" (default) or "dollar" — money symbol */
 } PlatformInitOptions;
 
 int  Platform_Init(const PlatformInitOptions *opts);

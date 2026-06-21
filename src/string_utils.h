@@ -24,5 +24,7 @@ void _Int2PoundsSigned(int32_t pounds, uint8_t *dst);
 void _WriteAccountBalance(int32_t delta, uint8_t *dst);
 void _GetBankBalance(uint8_t *dst);
 void _PrepareMenuForFadeIn(void);
+/* Select the money symbol: dollar!=0 -> '$', else the default '£'. */
+void Currency_SetDollar(int dollar);
 
 #endif

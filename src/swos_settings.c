@@ -86,6 +86,8 @@ static int handler(void *user, const char *section,
     } else if (eqi(section, "general")) {
         if (eqi(name, "language") && value && value[0])
             snprintf(opts->language, sizeof opts->language, "%s", value);
+        else if (eqi(name, "currency") && value && value[0])
+            snprintf(opts->currency, sizeof opts->currency, "%s", value);
     }
     /* Return nonzero on success, even for ignored keys — we don't want
      * inih to flag unknown sections as parse errors. */
@@ -161,7 +163,8 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "gameplay=%s\n"
         "\n"
         "[general]\n"
-        "language=%s\n",
+        "language=%s\n"
+        "currency=%s\n",
         renderer_str(opts->renderer),
         opts->vsync ? "on" : "off",
         fullscreen_str(fs_now),
@@ -170,7 +173,8 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
         opts->dos_graphics ? "true" : "false",
         opts->dos_gameplay ? "true" : "false",
-        opts->language[0] ? opts->language : "en");
+        opts->language[0] ? opts->language : "en",
+        opts->currency[0] ? opts->currency : "pound");
 
     fclose(f);
 }
