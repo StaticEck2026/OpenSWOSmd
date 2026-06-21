@@ -13,13 +13,18 @@
 extern uint8_t aPound[];       /* "£" (0x9C, 0x00) */
 extern uint8_t nullString_0[]; /* "" (0x00) */
 
-/* Currency symbol prepended to formatted money. Defaults to the pound (£,
- * byte 0x9C); SWOS.ini [general] currency=dollar swaps it to '$' (byte 0x24)
- * via Currency_SetDollar(). The '$' glyph must be present in the charset (font
- * extension) to render — otherwise it shows the empty 0x24 slot. */
-static uint8_t s_dollarSym[2] = { '$', 0x00 };
-uint8_t *g_currencySymbol = aPound;
-void Currency_SetDollar(int dollar) { g_currencySymbol = dollar ? s_dollarSym : aPound; }
+/* Money symbol. The pound (byte 0x9C) is hard-coded at the start of every money
+ * format string: aPound (used by _Int2Pounds for balances/wages/transfers) and
+ * the K/M player-value strings a1k/a0m/a01m. SWOS.ini [general] currency=dollar
+ * patches that leading byte to '$' (0x24) in all of them. The '$' glyph is in the
+ * font extension; the pound glyph is the stock 0x9C. */
+void Currency_SetDollar(int dollar)
+{
+    extern char a1k[], a0m[], a01m[];
+    char sym = dollar ? '$' : (char)0x9C;
+    aPound[0] = (uint8_t)sym;
+    a1k[0] = a0m[0] = a01m[0] = sym;
+}
 extern uint8_t aBank[];        /* "BANK" */
 extern int32_t newBalance;
 
@@ -199,8 +204,9 @@ __attribute__((used, externally_visible))
 void _Int2Pounds(uint32_t pounds, uint8_t *dst)
 {
     /* nullsub_11 is a no-op */
-    /* Copy the currency sign (£ by default, $ if currency=dollar) */
-    dst = _StringCopy(g_currencySymbol, dst);
+    /* Copy the currency sign — aPound[0] is patched to '$' by Currency_SetDollar
+     * when currency=dollar (default stays the £, byte 0x9C). */
+    dst = _StringCopy(aPound, dst);
     /* Format number with commas */
     dst = int2StrWithCommas(pounds, dst);
     /* Copy null string (null terminator) */
