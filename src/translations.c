@@ -14,6 +14,7 @@
  * ====================================================================== */
 
 #include "translations.h"
+#include "string_symbols.h"
 #include "mjson.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,12 +22,25 @@
 
 typedef struct { const char *sym; const char *text; } TrEntry;
 
-static TrEntry *s_tr      = NULL;   /* sorted by sym */
+static TrEntry *s_tr      = NULL;   /* sorted by sym (name → text) */
 static int      s_trCount = 0;
+
+/* Address → translated text: the compiled string symbol's &address mapped to its
+ * localized text, so the renderer can localize a string it only holds as a
+ * POINTER (e.g. menu string_table option values). Built by joining the
+ * stringSymbols registry (name → &addr) with the loaded name → text table. */
+typedef struct { void *addr; const char *text; } TrPtrEntry;
+static TrPtrEntry *s_trp      = NULL;   /* sorted by addr */
+static int         s_trpCount = 0;
 
 static int tr_cmp(const void *a, const void *b)
 {
     return strcmp(((const TrEntry *)a)->sym, ((const TrEntry *)b)->sym);
+}
+static int trp_cmp(const void *a, const void *b)
+{
+    void *x = ((const TrPtrEntry *)a)->addr, *y = ((const TrPtrEntry *)b)->addr;
+    return (x > y) - (x < y);
 }
 
 /* Copy an mjson token to a fresh NUL-terminated string, stripping the
@@ -91,7 +105,23 @@ void Translations_Load(const char *lang)
     qsort(s_tr, (size_t)s_trCount, sizeof *s_tr, tr_cmp);
     free(buf);   /* tr_dup copied everything we keep */
 
-    fprintf(stderr, "[i18n] loaded %d strings from %s\n", s_trCount, path);
+    /* Build the address → text map: each compiled string symbol's &address →
+     * its localized text. Lets the renderer localize by pointer (tr_ptr). */
+    if (stringSymbolsCount > 0) {
+        s_trp = (TrPtrEntry *)malloc((size_t)stringSymbolsCount * sizeof *s_trp);
+        if (s_trp) {
+            int m = 0;
+            for (int si = 0; si < stringSymbolsCount; si++) {
+                const char *txt = tr(stringSymbols[si].name);
+                if (txt) { s_trp[m].addr = stringSymbols[si].addr; s_trp[m].text = txt; m++; }
+            }
+            s_trpCount = m;
+            qsort(s_trp, (size_t)s_trpCount, sizeof *s_trp, trp_cmp);
+        }
+    }
+
+    fprintf(stderr, "[i18n] loaded %d strings from %s (%d address-mapped)\n",
+            s_trCount, path, s_trpCount);
     fflush(stderr);
 }
 
@@ -102,5 +132,15 @@ const char *tr(const char *symbol)
     key.sym = symbol;
     key.text = NULL;
     TrEntry *e = (TrEntry *)bsearch(&key, s_tr, (size_t)s_trCount, sizeof *s_tr, tr_cmp);
+    return e ? e->text : NULL;
+}
+
+const char *tr_ptr(const void *strAddr)
+{
+    if (!s_trp || !strAddr) return NULL;
+    TrPtrEntry key;
+    key.addr = (void *)strAddr;
+    key.text = NULL;
+    TrPtrEntry *e = (TrPtrEntry *)bsearch(&key, s_trp, (size_t)s_trpCount, sizeof *s_trp, trp_cmp);
     return e ? e->text : NULL;
 }

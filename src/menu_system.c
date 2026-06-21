@@ -707,6 +707,13 @@ void _DrawMenuItem(MenuEntry *entry)
 
         idx -= base;
         textPtr = (uint8_t *)entries[idx];
+        /* Localize the option value for the active language (no length limit —
+         * the C-symbol pointer is swapped for a translation-pool string). */
+        {
+            extern const char *tr_ptr(const void *);
+            const char *t = tr_ptr(textPtr);
+            if (t) textPtr = (uint8_t *)t;
+        }
         goto fg_text_common;
     }
 

@@ -16,4 +16,10 @@ void Translations_Load(const char *lang);
  * exit, so it is safe to store in long-lived menu/competition data. */
 const char *tr(const char *symbol);
 
+/* Localize a string the caller only has as a POINTER: if `strAddr` is the
+ * address of a compiled UI string symbol, return its translated text; else NULL
+ * (caller keeps the original pointer). Used by the renderer for string_table
+ * option values — no length limit, the pointer is swapped for a pool string. */
+const char *tr_ptr(const void *strAddr);
+
 #endif /* TRANSLATIONS_H */
