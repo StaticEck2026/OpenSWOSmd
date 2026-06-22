@@ -3008,6 +3008,20 @@ static void dj_i8_array(const char *o, int ol, const char *path, int8_t *out, in
    caller knows it from the source list). name[] strings are interned into the
    caller-provided strpool. Returns 0 on success, -1 if the `comp` base is
    missing. */
+/* Recombine the split substitutes (hi nibble) + low-nibble companion (points_for_win
+ * for cups/tournaments, max_subs for leagues/playoffs) into the packed byte. Falls back
+ * to the old packed key (subs_and_points_for_win / subs_and_max_subs) for pre-split files. */
+static int dj_subs_pair(const char *o, int ol, const char *lo_path, const char *packed_path)
+{
+    double v;
+    if (mjson_get_number(o, ol, "$.substitutes", &v)) {
+        int subs = (int)v;
+        int lo   = mjson_get_number(o, ol, lo_path, &v) ? (int)v : 0;
+        return (int)(((subs & 0x0F) << 4) | (lo & 0x0F));
+    }
+    return mjson_get_number(o, ol, packed_path, &v) ? (int)v : 0;
+}
+
 int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
                                 int isPlayoff, char *strpool, int strpoolsz)
 {
@@ -3019,7 +3033,7 @@ int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
     out->header.numRoundsOverride   = (int8_t)GN(o, ol, "$.num_rounds_override");
     out->header.teams               = (int8_t)GN(o, ol, "$.teams");
     out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
-    out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
+    out->header.subsAndPointsForWin = (int8_t)dj_subs_pair(o, ol, "$.points_for_win", "$.subs_and_points_for_win");
     out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
 #undef GN
     dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
@@ -3045,7 +3059,7 @@ int DataJson_LoadPlayoffs(const char *o, int ol, void *outv,
     out->numRoundsOverride = (int8_t)GN(o, ol, "$.num_rounds_override");
     out->teams             = (int8_t)GN(o, ol, "$.teams");
     out->awayGoalsMode     = (int8_t)GN(o, ol, "$.away_goals_mode");
-    out->subsAndMaxSubs    = (int8_t)GN(o, ol, "$.subs_and_max_subs");
+    out->subsAndMaxSubs    = (int8_t)dj_subs_pair(o, ol, "$.max_subs", "$.subs_and_max_subs");
     out->roundStringBase   = (int8_t)GN(o, ol, "$.round_string_base");
 #undef GN
     dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 2);
@@ -3066,7 +3080,7 @@ int DataJson_LoadCompetitionTournament(const char *o, int ol, void *outv,
     out->header.menuState           = (int8_t)GN(o, ol, "$.menu_state");
     out->header.playEachTeam        = (int8_t)GN(o, ol, "$.play_each_team");
     out->header.awayGoalsMode       = (int8_t)GN(o, ol, "$.away_goals_mode");
-    out->header.subsAndPointsForWin = (int8_t)GN(o, ol, "$.subs_and_points_for_win");
+    out->header.subsAndPointsForWin = (int8_t)dj_subs_pair(o, ol, "$.points_for_win", "$.subs_and_points_for_win");
     out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
     out->header.reserved            = (int8_t)GN(o, ol, "$.header_reserved");
     /* rounds[6]: {team_count, group_count, team_group_count} */
@@ -3104,7 +3118,7 @@ int DataJson_LoadCompetitionLeague(const char *o, int ol, void *outv,
     out->header.divisionsCount = (int8_t)GN(o, ol, "$.divisions_count");
     out->header.rounds         = (int8_t)GN(o, ol, "$.rounds");
     out->header.pointsForWin   = (int8_t)GN(o, ol, "$.points_for_win");
-    out->header.subsAndMaxSubs = (int8_t)GN(o, ol, "$.subs_and_max_subs");
+    out->header.subsAndMaxSubs = (int8_t)dj_subs_pair(o, ol, "$.max_subs", "$.subs_and_max_subs");
     out->reserved1             = (uint8_t)GN(o, ol, "$.reserved1");
     /* divisions[4] */
     const char *arr; int al, pos = 0, voff, vlen, vt, i = 0;

@@ -89,6 +89,19 @@ def num(tok: str):
     return int(tok, 0)
 
 
+def _put_field(d: dict, k: str, v):
+    """Set d[k] = num(v) — except a packed subs byte (subs_and_points_for_win /
+    subs_and_max_subs), which is split in place into substitutes (hi nibble) + a
+    companion (points_for_win or max_subs, lo nibble). Mirrors save_format_json.c
+    dj_subs_pair."""
+    if k.startswith("subs_and_"):
+        b = num(v) & 0xFF
+        d["substitutes"] = (b >> 4) & 0x0F
+        d["points_for_win" if k == "subs_and_points_for_win" else "max_subs"] = b & 0x0F
+    else:
+        d[k] = num(v)
+
+
 def find_defs(text: str, typename: str):
     """Yield (name, body) for each `typename <name>[opt] = { ... };` (body = inside braces)."""
     for m in re.finditer(r'\b' + typename + r'\s+([A-Za-z_]\w*)\s*(?:\[[0-9]*\])?\s*=\s*\{', text):
@@ -190,7 +203,7 @@ def parse_cup(name: str, body: str, is_cup2: bool, strings: dict) -> dict:
         for k, v in zip(["seeding_type", "menu_state", "play_each_team",
                          "away_goals_mode", "subs_and_points_for_win",
                          "round_string_base"], htoks[1:7]):
-            d[k] = num(v)
+            _put_field(d, k, v)
         rounds = []
         for r in split_top(inner(htoks[7])):
             rt = split_top(inner(r))
@@ -201,7 +214,7 @@ def parse_cup(name: str, body: str, is_cup2: bool, strings: dict) -> dict:
     else:
         for k, v in zip(["num_rounds_override", "teams", "away_goals_mode",
                          "subs_and_points_for_win", "round_string_base"], htoks[1:6]):
-            d[k] = num(v)
+            _put_field(d, k, v)
 
     d["round_rule_flags"] = [num(x) for x in split_top(inner(rule_flags_tok))] if rule_flags_tok else []
     d["name"] = [resolve_name(x, strings) for x in split_top(inner(name_tok))] if name_tok else []
@@ -216,7 +229,7 @@ def parse_playoffs(name: str, body: str, strings: dict) -> dict:
     d = {"id": name, "comp": parse_comp(m[0], 11, 17)}   # Playoffs uses literal 11/17
     for k, v in zip(["num_rounds_override", "teams", "away_goals_mode",
                      "subs_and_max_subs", "round_string_base"], m[1:6]):
-        d[k] = num(v)
+        _put_field(d, k, v)
     d["round_rule_flags"] = [num(x) for x in split_top(inner(m[6]))] if len(m) > 6 else []
     d["name"] = [resolve_name(x, strings) for x in split_top(inner(m[7]))] if len(m) > 7 else []
     return d
@@ -235,7 +248,7 @@ def parse_league(name: str, body: str, strings: dict) -> dict:
     h = split_top(inner(m[0]))
     d = {"id": name, "comp": parse_comp(h[0], LEAGUE_NAME_OFFSET, 0)}
     for k, v in zip(["divisions_count", "rounds", "points_for_win", "subs_and_max_subs"], h[1:5]):
-        d[k] = num(v)
+        _put_field(d, k, v)
     d["divisions"] = [parse_division(x) for x in split_top(inner(m[1]))] if len(m) > 1 else []
     d["reserved1"] = num(m[2]) if len(m) > 2 else 0
     d["name"] = [resolve_name(x, strings) for x in split_top(inner(m[3]))] if len(m) > 3 else []
