@@ -468,7 +468,13 @@ void _DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w,
 __attribute__((used, externally_visible))
 void _DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    _RectRowMaskedApplyScreenOffset(x, y, w, h, frontbufferMaskBuffer, (uint8_t *)frontbufferBasePtr);
+    /* Widescreen: align the masked (transparent) background with the centered
+     * frame/text/items, which draw at x + g_menu_draw_x_offset via the base-shifted
+     * primitives. Both the mask read and the front write shift by the offset. Without
+     * this the masked bg lands un-centered (corrupt menu item in masked-bg states).
+     * Same fix as _BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
+    _RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
+                                    frontbufferMaskBuffer, (uint8_t *)frontbufferBasePtr);
 }
 
 /* ================================================================
