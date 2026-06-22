@@ -263,6 +263,9 @@ int main(int argc, char **argv)
      * per-site culls, camera clamp, menu fill) is converted. Menu CONTENT centering is
      * a follow-up: menus render left-aligned in the wider frame with a cleared border. */
     g_screen_width = gWidescreen ? WIDESCREEN_WIDTH : SCREEN_WIDTH;
+    /* Center all 336-wide UI (menus + in-match HUD) in the wider frame, persistently.
+     * Only the in-match WORLD draw (_DrawSprites) scopes this back to 0. =0 if not wide. */
+    g_menu_draw_x_offset = WIDE_MARGIN;
     if (opts.dos_dir[0])
         snprintf(gDosGraphicsDir, sizeof gDosGraphicsDir, "%s", opts.dos_dir);
 

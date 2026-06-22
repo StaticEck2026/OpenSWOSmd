@@ -575,10 +575,8 @@ void _CallDrawMenuItem(MenuEntry *entry)
      * presents the new state), then memcpy the displayed buffer to
      * the now-drawing-target buffer so both are in sync. No second
      * present required. */
-    g_menu_draw_x_offset = WIDE_MARGIN;   /* widescreen: keep the redraw centered too */
     _DrawMenuBackWithCheck(entry);
     _DrawMenuItem(entry);
-    g_menu_draw_x_offset = 0;
     _WaitForVSync();
     _BlitterCopyOverlayToScreen();
 #else
@@ -1292,9 +1290,7 @@ void _DrawSelectedMenuItemFrame(void)
         return;
 
     color = kColorTableShine[(menuCursorFrame & 14) >> 1];
-    g_menu_draw_x_offset = WIDE_MARGIN;   /* center the selector frame like the entries */
     _DrawMenuItemInnerFrame(color, sel->x, sel->y, w, h);
-    g_menu_draw_x_offset = 0;
 }
 
 /* ================================================================
@@ -1310,6 +1306,10 @@ void _DrawMenu(void)
 
     menuStatus = 0;
     menuTextBlinkCounter = 0;
+    /* Widescreen: center all menu drawing. Set once here; every partial redraw
+     * (_CallDrawMenuItem, _DrawMultipleItems, selector, custom callbacks, ...)
+     * inherits it. The in-match game loop resets it to 0 for the world. */
+    g_menu_draw_x_offset = WIDE_MARGIN;
 
     _BlitterCopyPanelToScreen2();
     _DrawMenuPanelBackground();
@@ -1328,16 +1328,13 @@ void _DrawMenu(void)
         _CallMenuCallback((void *)onDrawPtr);
     }
 
-    /* Draw all entries — widescreen: center the 336-wide content in the wider frame
-     * (the full-width panel background above was drawn at offset 0). */
+    /* Draw all entries (centered via the persistent g_menu_draw_x_offset). */
     entry = (MenuEntry *)menuEntries;
     count = (int16_t)menu->numEntries;
-    g_menu_draw_x_offset = WIDE_MARGIN;
     for (i = 0; i < count; i++) {
         _DrawMenuItem(entry);
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
-    g_menu_draw_x_offset = 0;
     _WaitForVSync();
     _BlitterCopyOverlayToScreen();
 }
