@@ -14,6 +14,7 @@
 #include "platform_sdl.h"
 #include "display.h"
 #include "dos_mode.h"        /* gDosGraphics */
+#include "dos_gameplay.h"    /* DosGameplay_TargetFps — 70 (DOS) vs 50 (Amiga) */
 #include "dos_graphics.h"    /* DosGfx_BuildPalette */
 
 #include <SDL.h>
@@ -81,7 +82,8 @@ static SDL_mutex    *s_render_mtx;       /* serializes Platform_RenderFrame call
 
 static Uint64        s_perf_freq;
 static Uint64        s_next_frame_perf;  /* high-res counter for 50 Hz pacing */
-static const double  k_frame_secs = 1.0 / 50.0;
+static double        k_frame_secs = 1.0 / 50.0;  /* refreshed per frame from the
+                                                  * active game style (DOS 70 / Amiga 50) */
 /* `s_last_main_render_ms` is the SDL_GetTicks() value of the last
  * render driven by Platform_VBlank (main/game thread). The SDL timer
  * callback uses this to skip its own render when the main thread is
@@ -168,7 +170,8 @@ void _RunInt3HandlerThrottled(void)
      * timeout) drain at CPU speed and stop depending on the starved timer
      * thread. The loop that calls this exits as soon as the tick advances, so
      * it runs once or twice, not unbounded. */
-    const Uint32 thr = s_harness_turbo ? 0u : 18u;
+    /* Throttle just under one frame interval: 18 ms @ 50 Hz, ~12 ms @ 70 Hz (DOS). */
+    const Uint32 thr = s_harness_turbo ? 0u : (Uint32)(1000 / DosGameplay_TargetFps() - 2);
     Uint32 now = SDL_GetTicks();
     /* Cheap pre-check before the lock — most calls will be too soon. */
     if (now - s_last_isr_ms < thr) return;
@@ -237,7 +240,10 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
      * ONLY from this thread — drains in a fraction of a second instead of
      * ~1–2 min. With the _RunInt3HandlerThrottled throttle also at 0, every
      * fire advances the tick. */
-    return s_harness_turbo ? (Uint32)1 : interval;   /* fire again */
+    /* Re-arm at the active style's rate so a DOS-gameplay toggle re-paces the
+     * worker tick: 1000/70 ≈ 14 ms (DOS) or 1000/50 = 20 ms (Amiga). */
+    (void)interval;
+    return s_harness_turbo ? (Uint32)1 : (Uint32)(1000 / DosGameplay_TargetFps());
 }
 
 extern void Platform_RewireCustom(void);
@@ -397,7 +403,7 @@ int Platform_Init(const PlatformInitOptions *opts)
 
     /* 20 ms = 50 Hz, the PAL VBlank rate the game expects. */
     SDL_InitSubSystem(SDL_INIT_TIMER);
-    s_tick_timer = SDL_AddTimer(20, tick_timer_cb, NULL);
+    s_tick_timer = SDL_AddTimer((Uint32)(1000 / DosGameplay_TargetFps()), tick_timer_cb, NULL);
 
     return 0;
 }
@@ -896,6 +902,8 @@ int Platform_VBlank(void)
     if (s_harness_turbo)
         return g_quitToDos ? 1 : 0;
 
+    /* Read the frame rate live so an in-game DOS-gameplay toggle re-paces. */
+    k_frame_secs = 1.0 / (double)DosGameplay_TargetFps();
     s_next_frame_perf += (Uint64)((double)s_perf_freq * k_frame_secs);
     Uint64 now = SDL_GetPerformanceCounter();
 
