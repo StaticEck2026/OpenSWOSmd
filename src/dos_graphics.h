@@ -7,7 +7,7 @@
 #ifndef SWOS_DOS_GRAPHICS_H
 #define SWOS_DOS_GRAPHICS_H
 
-#include <stdint.h>
+#include "swos_types.h"   /* uint*_t — not <stdint.h> directly (broken on m68k) */
 
 /* DOS sprite indices are Amiga index + 114; store a decoded DOS sprite at
  * (dosIndex - DOS_TO_AMIGA_OFFSET) so our Amiga sim/renderer finds it. */

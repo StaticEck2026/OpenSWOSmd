@@ -15,6 +15,13 @@
 
 #include "translations.h"
 #include "string_symbols.h"
+
+#ifdef SWOS_SDL_BUILD   /* Runtime JSON translation is host-only: mjson + stdio +
+                           malloc. The m68k Amiga toolchain has none of those, and
+                           the Amiga plan is to bake JSON->C at build time, so the
+                           #else stubs at the bottom make tr() behave as "no
+                           translation file loaded" (compiled English strings)
+                           until that bake step exists. */
 #include "mjson.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -266,3 +273,14 @@ void Countries_Localize(void)
     fprintf(stderr, "[i18n] localized %d country names\n", n);
     fflush(stderr);
 }
+
+#else  /* Amiga: no runtime JSON loader (see the #ifdef SWOS_SDL_BUILD above). Every
+          entry point behaves as "nothing loaded" — tr/tr_ptr return NULL so each
+          caller falls back to its compiled English string, and load/localize are
+          no-ops. Matches the documented missing-file behaviour in translations.h. */
+void Translations_Load(const char *lang) { (void)lang; }
+const char *tr(const char *symbol) { (void)symbol; return 0; }
+const char *tr_ptr(const void *strAddr) { (void)strAddr; return 0; }
+void Countries_Localize(void) { }
+
+#endif /* SWOS_SDL_BUILD */
