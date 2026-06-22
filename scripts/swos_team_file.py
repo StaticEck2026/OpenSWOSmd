@@ -146,8 +146,14 @@ def parse_player(b: bytes) -> dict:
         # player_name now 23 B (3..25): the 22-char name + its NUL terminator
         # (the former separate field_19 byte, folded into the name buffer).
         "player_name": _decode_str(b[PLAYER_NAME_OFF : PLAYER_NAME_OFF + PLAYER_NAME_LEN]),
-        "position_and_face": b[26],
-        "cards_injuries": b[27],
+        # positionAndFace byte: position (bits 5-7), face (bits 3-4), flags (bits 0-2).
+        "position":  (b[26] >> 5) & 0x07,
+        "face":      (b[26] >> 3) & 0x03,
+        "flags":     b[26] & 0x07,
+        # cardsInjuries byte: cards (bits 0-1), injury (bits 2-4), status_bucket (bits 5-7).
+        "cards":         b[27] & 0x03,
+        "injury":        (b[27] >> 2) & 0x07,
+        "status_bucket": (b[27] >> 5) & 0x07,
         "passing": _s8(b[28]),
         # Skill bytes 29-31 are nibble pairs (hi=first label, lo=second); split for editing.
         "velocity":  (b[29] >> 4) & 0x0F,
@@ -170,6 +176,17 @@ def _pack_nib(p: dict, hi_key: str, lo_key: str, packed_key: str) -> int:
     return int(p.get(packed_key, 0)) & 0xFF
 
 
+def _pack_bits(p: dict, fields, packed_key: str) -> int:
+    """Combine named bit-run fields [(key, shift, value_mask), ...] into one byte. Falls
+    back to a pre-split packed key so old dicts still encode."""
+    if any(k in p for k, _, _ in fields):
+        v = 0
+        for key, shift, vmask in fields:
+            v |= (int(p.get(key, 0)) & vmask) << shift
+        return v & 0xFF
+    return int(p.get(packed_key, 0)) & 0xFF
+
+
 def encode_player(p: dict) -> bytearray:
     b = bytearray(PLAYER_REC_SIZE)
     b[0] = p["nationality"] & 0xFF
@@ -178,8 +195,10 @@ def encode_player(p: dict) -> bytearray:
     # 23-byte name field covers byte 25 (the NUL terminator); a <=22-char name
     # leaves it 0, so no separate field_19 write is needed.
     _put_str(b, PLAYER_NAME_OFF, PLAYER_NAME_LEN, p["player_name"])
-    b[26] = p["position_and_face"] & 0xFF
-    b[27] = p["cards_injuries"] & 0xFF
+    b[26] = _pack_bits(p, [("position", 5, 0x07), ("face", 3, 0x03), ("flags", 0, 0x07)],
+                       "position_and_face")
+    b[27] = _pack_bits(p, [("cards", 0, 0x03), ("injury", 2, 0x07), ("status_bucket", 5, 0x07)],
+                       "cards_injuries")
     b[28] = p["passing"] & 0xFF
     b[29] = _pack_nib(p, "velocity", "heading",   "velocity_heading")
     b[30] = _pack_nib(p, "tackling", "control",   "tackling_control")
@@ -208,7 +227,17 @@ def parse_team(b: bytes) -> dict:
             "and_with_0xfe": b[23],
             "tactics": b[24],
             "league": b[25],
-            "kit_colors": list(b[26:36]),
+            # Kit colors as 10 named fields (primary + secondary; bytes 26-35).
+            "primary_shirt_type":      b[26],
+            "primary_stripes_color":   b[27],
+            "primary_basic_color":     b[28],
+            "primary_shorts_color":    b[29],
+            "primary_socks_color":     b[30],
+            "secondary_shirt_type":    b[31],
+            "secondary_stripes_color": b[32],
+            "secondary_basic_color":   b[33],
+            "secondary_shorts_color":  b[34],
+            "secondary_socks_color":   b[35],
             "coach_name": _decode_str(b[COACH_NAME_OFF : COACH_NAME_OFF + COACH_NAME_LEN]),
             "player_values_dirty": b[59],   # was some_flag
             "player_numbers": list(b[60:76]),
@@ -233,8 +262,15 @@ def encode_team(t: dict) -> bytearray:
     b[23] = h["and_with_0xfe"] & 0xFF
     b[24] = h["tactics"] & 0xFF
     b[25] = h["league"] & 0xFF
-    kit = (list(h["kit_colors"]) + [0] * 10)[:10]
-    b[26:36] = bytes(x & 0xFF for x in kit)
+    if "kit_colors" in h:   # back-compat: pre-split flat 10-byte array
+        kit = (list(h["kit_colors"]) + [0] * 10)[:10]
+    else:
+        kit = [h.get(k, 0) for k in (
+            "primary_shirt_type", "primary_stripes_color", "primary_basic_color",
+            "primary_shorts_color", "primary_socks_color",
+            "secondary_shirt_type", "secondary_stripes_color", "secondary_basic_color",
+            "secondary_shorts_color", "secondary_socks_color")]
+    b[26:36] = bytes(int(x) & 0xFF for x in kit)
     _put_str(b, COACH_NAME_OFF, COACH_NAME_LEN, h["coach_name"])
     b[59] = h["player_values_dirty"] & 0xFF
     pn = (list(h["player_numbers"]) + [0] * 16)[:16]

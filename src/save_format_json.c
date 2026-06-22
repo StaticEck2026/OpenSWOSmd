@@ -683,6 +683,12 @@ typedef enum {
      * so the byte round-trips exactly as long as both halves are present. Used for
      * the PlayerFile skill pairs (velocity/heading, tackling/control, speed/finishing). */
     FLD_NIBBLE_HI, FLD_NIBBLE_LO,
+    /* One contiguous bit-run of the byte at `offset`, selected by `size` used as a
+     * MASK (e.g. 0xE0). Emitted right-justified: (byte & mask) >> trailing_zeros(mask);
+     * loaded read-modify-write. Several entries at the same offset (whose masks tile the
+     * byte) split a packed byte into editable named fields (position/face/flags,
+     * cards/injury/status_bucket). */
+    FLD_BITS,
 } FieldType;
 
 typedef struct {
@@ -2062,9 +2068,10 @@ static void load_scalar_table(const char *buf, int buflen,
  * the selTeamsPtr array (16 TeamFileEx records following
  * numSelectedTeams). Encoded as:
  *
- *   { "team": { ... 14 named fields ... },
- *     "players": [ 16 × { ... 16 named fields; the 3 skill nibble-pairs are
- *                  split into velocity/heading, tackling/control, speed/finishing ... } ] }
+ *   { "team": { ... named fields; kit_colors split into 10 primary_/secondary_ slots ... },
+ *     "players": [ 16 × { ... named fields; packed bytes split for editing:
+ *                  position/face/flags, cards/injury/status_bucket, and the three skill
+ *                  nibble-pairs velocity/heading, tackling/control, speed/finishing ... } ] }
  *
  * Offsets via offsetof() — survives the 64-bit migration because
  * both struct layouts are packed (no padding to shift).
@@ -2141,6 +2148,23 @@ static void emit_nibble_lo_at(mjson_print_fn_t fn, void *fnd,
                               const char *key, const uint8_t *base, size_t off)
 {
     mjson_printf(fn, fnd, "%Q:%u", key, (unsigned)(base[off] & 0x0F));
+}
+
+/* Right-justify shift for a contiguous bit mask (trailing-zero count). */
+static int mask_shift(unsigned mask)
+{
+    int s = 0;
+    if (!mask) return 0;
+    while (!(mask & 1u)) { mask >>= 1; s++; }
+    return s;
+}
+
+/* Emit one contiguous bit-run (selected by `mask`) of a packed byte, right-justified. */
+static void emit_bits_at(mjson_print_fn_t fn, void *fnd, const char *key,
+                         const uint8_t *base, size_t off, unsigned mask)
+{
+    mjson_printf(fn, fnd, "%Q:%u", key,
+                 (unsigned)((base[off] & mask) >> mask_shift(mask)));
 }
 
 static void emit_s16_at(mjson_print_fn_t fn, void *fnd,
@@ -2251,9 +2275,21 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
      * separate "field_19" byte, folded into the name buffer 2026-06-19). */
     emit_str_at (fn, fnd, "player_name",          p, offsetof(PlayerFile, playerName), 23);
     mjson_printf(fn, fnd, "%s", ",");
-    emit_u8_at  (fn, fnd, "position_and_face",    p, offsetof(PlayerFile, positionAndFace));
+    /* positionAndFace byte split: position (bits 5-7), face (bits 3-4), flags (bits 0-2:
+     * inform/loan/trialist — runtime, 0 in static team data). 2026-06-22. */
+    emit_bits_at(fn, fnd, "position", p, offsetof(PlayerFile, positionAndFace), PF_POSITION_MASK);
     mjson_printf(fn, fnd, "%s", ",");
-    emit_u8_at  (fn, fnd, "cards_injuries",       p, offsetof(PlayerFile, cardsInjuries));
+    emit_bits_at(fn, fnd, "face",     p, offsetof(PlayerFile, positionAndFace), PF_FACE_MASK);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_bits_at(fn, fnd, "flags",    p, offsetof(PlayerFile, positionAndFace), 0x07);
+    mjson_printf(fn, fnd, "%s", ",");
+    /* cardsInjuries byte split: cards (bits 0-1), injury (bits 2-4), status_bucket
+     * (bits 5-7) — all runtime career state, 0 in static team data. */
+    emit_bits_at(fn, fnd, "cards",         p, offsetof(PlayerFile, cardsInjuries), 0x03);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_bits_at(fn, fnd, "injury",        p, offsetof(PlayerFile, cardsInjuries), 0x1C);
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_bits_at(fn, fnd, "status_bucket", p, offsetof(PlayerFile, cardsInjuries), 0xE0);
     mjson_printf(fn, fnd, "%s", ",");
     emit_s8_at  (fn, fnd, "passing",              p, offsetof(PlayerFile, passing));
     mjson_printf(fn, fnd, "%s", ",");
@@ -2336,6 +2372,14 @@ static void load_struct_object(const char *slice, int slen, uint8_t *base,
             if (vt == MJSON_TOK_NUMBER)
                 *p = (uint8_t)((*p & 0xF0) | ((uint8_t)parse_long_slice(vs, vl) & 0x0F));
             break;
+        case FLD_BITS:        /* contiguous bit-run; mask = f->size; RMW */
+            if (vt == MJSON_TOK_NUMBER) {
+                unsigned mask = f->size;
+                int      sh   = mask_shift(mask);
+                *p = (uint8_t)((*p & ~mask) |
+                               (((unsigned)parse_long_slice(vs, vl) << sh) & mask));
+            }
+            break;
         case FLD_U16: case FLD_S16:
             if (vt == MJSON_TOK_NUMBER) {
                 uint16_t v = (uint16_t)parse_long_slice(vs, vl);
@@ -2385,6 +2429,7 @@ static void emit_struct_object(mjson_print_fn_t fn, void *fnd,
         case FLD_S8:    emit_s8_at   (fn, fnd, f->name, base, f->offset); break;
         case FLD_NIBBLE_HI: emit_nibble_hi_at(fn, fnd, f->name, base, f->offset); break;
         case FLD_NIBBLE_LO: emit_nibble_lo_at(fn, fnd, f->name, base, f->offset); break;
+        case FLD_BITS:  emit_bits_at(fn, fnd, f->name, base, f->offset, f->size); break;
         case FLD_U16:   emit_u16_at  (fn, fnd, f->name, base, f->offset); break;
         case FLD_S16:   emit_s16_at  (fn, fnd, f->name, base, f->offset); break;
         case FLD_U32:
@@ -2403,8 +2448,14 @@ static const StructFieldDesc s_player_fields[] = {
     { "cached_match_value",   offsetof(PlayerFile, cachedMatchValue),    0, FLD_U8 },
     { "shirt_number",         offsetof(PlayerFile, shirtNumber),         0, FLD_U8 },
     { "player_name",          offsetof(PlayerFile, playerName),         23, FLD_STR },
-    { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
-    { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
+    /* positionAndFace bits: position (5-7), face (3-4), flags (0-2). */
+    { "position",             offsetof(PlayerFile, positionAndFace), PF_POSITION_MASK, FLD_BITS },
+    { "face",                 offsetof(PlayerFile, positionAndFace), PF_FACE_MASK,     FLD_BITS },
+    { "flags",                offsetof(PlayerFile, positionAndFace), 0x07,             FLD_BITS },
+    /* cardsInjuries bits: cards (0-1), injury (2-4), status_bucket (5-7). */
+    { "cards",                offsetof(PlayerFile, cardsInjuries),   0x03,             FLD_BITS },
+    { "injury",               offsetof(PlayerFile, cardsInjuries),   0x1C,             FLD_BITS },
+    { "status_bucket",        offsetof(PlayerFile, cardsInjuries),   0xE0,             FLD_BITS },
     { "passing",              offsetof(PlayerFile, passing),             0, FLD_U8 },
     /* Skill nibble pairs, split into editable halves (hi=first label, lo=second). */
     { "velocity",             offsetof(PlayerFile, velocityHeading),     0, FLD_NIBBLE_HI },
@@ -2414,6 +2465,8 @@ static const StructFieldDesc s_player_fields[] = {
     { "speed",                offsetof(PlayerFile, speedFinishing),      0, FLD_NIBBLE_HI },
     { "finishing",            offsetof(PlayerFile, speedFinishing),      0, FLD_NIBBLE_LO },
     /* Backward-compat (load-only): pre-split saves/data used the packed bytes. */
+    { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
+    { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
     { "velocity_heading",     offsetof(PlayerFile, velocityHeading),     0, FLD_U8 },
     { "tackling_control",     offsetof(PlayerFile, tacklingControl),     0, FLD_U8 },
     { "speed_finishing",      offsetof(PlayerFile, speedFinishing),      0, FLD_U8 },
@@ -2435,6 +2488,17 @@ static const StructFieldDesc s_team_file_fields[] = {
     { "and_with_0xfe",      offsetof(TeamFile, andWith0xFE),       0, FLD_U8 },
     { "tactics",            offsetof(TeamFile, tactics),           0, FLD_U8 },
     { "league",             offsetof(TeamFile, league),            0, FLD_U8 },
+    { "primary_shirt_type",      offsetof(TeamFile, prShirtType),     0, FLD_U8 },
+    { "primary_stripes_color",   offsetof(TeamFile, prStripesColor),  0, FLD_U8 },
+    { "primary_basic_color",     offsetof(TeamFile, prBasicColor),    0, FLD_U8 },
+    { "primary_shorts_color",    offsetof(TeamFile, prShortsColor),   0, FLD_U8 },
+    { "primary_socks_color",     offsetof(TeamFile, prSocksColor),    0, FLD_U8 },
+    { "secondary_shirt_type",    offsetof(TeamFile, secShirtType),    0, FLD_U8 },
+    { "secondary_stripes_color", offsetof(TeamFile, secStripesColor), 0, FLD_U8 },
+    { "secondary_basic_color",   offsetof(TeamFile, secBasicColor),   0, FLD_U8 },
+    { "secondary_shorts_color",  offsetof(TeamFile, secShortsColor),  0, FLD_U8 },
+    { "secondary_socks_color",   offsetof(TeamFile, secSocksColor),   0, FLD_U8 },
+    /* Back-compat (load-only): pre-split files used a flat kit_colors[10] array. */
     { "kit_colors",         offsetof(TeamFile, prShirtType),      10, FLD_BYTES },
     { "coach_name",         offsetof(TeamFile, coachName),        23, FLD_STR },
     { "player_values_dirty",offsetof(TeamFile, playerValuesDirty), 0, FLD_U8 },
@@ -2560,8 +2624,27 @@ static void emit_team_file_ex_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", ",");
     emit_u8_at  (fn, fnd, "league",             team, offsetof(TeamFile, league));
     mjson_printf(fn, fnd, "%s", ",");
-    /* 10 colors as one array — easier to read than 10 fields. */
-    emit_bytes_at(fn, fnd, "kit_colors",        team, offsetof(TeamFile, prShirtType), 10);
+    /* Kit colors as 10 named fields (primary + secondary, each: shirt_type, stripes,
+     * basic, shorts, socks) — clearer to edit than a flat 10-byte array. 2026-06-22. */
+    emit_u8_at(fn, fnd, "primary_shirt_type",      team, offsetof(TeamFile, prShirtType));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "primary_stripes_color",   team, offsetof(TeamFile, prStripesColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "primary_basic_color",     team, offsetof(TeamFile, prBasicColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "primary_shorts_color",    team, offsetof(TeamFile, prShortsColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "primary_socks_color",     team, offsetof(TeamFile, prSocksColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "secondary_shirt_type",    team, offsetof(TeamFile, secShirtType));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "secondary_stripes_color", team, offsetof(TeamFile, secStripesColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "secondary_basic_color",   team, offsetof(TeamFile, secBasicColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "secondary_shorts_color",  team, offsetof(TeamFile, secShortsColor));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_u8_at(fn, fnd, "secondary_socks_color",   team, offsetof(TeamFile, secSocksColor));
     mjson_printf(fn, fnd, "%s", ",");
     emit_str_at (fn, fnd, "coach_name",         team, offsetof(TeamFile, coachName), 23);
     mjson_printf(fn, fnd, "%s", ",");
