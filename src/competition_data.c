@@ -1589,7 +1589,7 @@ CompetitionCareer careerContests[35] = {
     { (Competition *)&africaWorldCupQualification, (Competition *)&africaWorldCupQualificationCopy, sizeof(africaWorldCupQualification) },
     { (Competition *)&asiaWorldCupQualification, (Competition *)&asiaWorldCupQualificationCopy, sizeof(asiaWorldCupQualification) },
     { (Competition *)&oceaniaWorldCupQualification, (Competition *)&oceaniaWorldCupQualificationCopy, sizeof(oceaniaWorldCupQualification) },
-    { 0, 0, 0 },
+    { (Competition *)0xFFFFFFFFu, (Competition *)0, 0 },  /* sentinel */
 };
 
 /* ======================================================================

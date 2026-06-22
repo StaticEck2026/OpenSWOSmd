@@ -136,8 +136,10 @@ def emit_career(rec):
     rows = []
     for c in rec["contests"]:
         comp, copy = c["competition"], c["competition_copy"]
-        if not comp:                                  # null terminator entry
-            rows.append("    { 0, 0, 0 },")
+        if not comp:                                  # sentinel terminator: _InitCareer's
+            # careerContests copy loop stops on competition == 0xFFFFFFFF, NOT 0 — emitting
+            # { 0, 0, 0 } here makes it walk off the end (SIGSEGV starting a career).
+            rows.append("    { (Competition *)0xFFFFFFFFu, (Competition *)0, 0 },  /* sentinel */")
         else:
             rows.append("    { (Competition *)&%s, (Competition *)&%s, sizeof(%s) }," %
                         (comp, copy if copy else "0", comp))
