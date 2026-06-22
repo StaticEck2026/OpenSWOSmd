@@ -246,9 +246,17 @@ static void emit_command(MWriter *w, const char *cmd, int cmdl, const char *menu
     case 3:  /* bg_func: ptr */
         wfield_ptr(w, cmd, cmdl, "$.func", menuName, 0);
         break;
-    case 4:  /* colors: u16 */
-        w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.value", 0));
+    case 4: {  /* colors: u16 — hi nibble = frame color, lo nibble = background color */
+        long val;
+        if (mj_long(cmd, cmdl, "$.value", &val)) {        /* back-compat: packed key */
+            w16(w, (unsigned)val);
+        } else {
+            long fr = mj_long_def(cmd, cmdl, "$.frame_color", 0);
+            long bg = mj_long_def(cmd, cmdl, "$.background_color", 0);
+            w16(w, (unsigned)(((fr & 0x0F) << 4) | (bg & 0x0F)));
+        }
         break;
+    }
     case 5:  /* sprite_bg: u16 */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.index", mj_long_def(cmd, cmdl, "$.value", 0)));
         break;
@@ -544,6 +552,9 @@ int MenuJson_InstallAll(void)
      * stdout is block-buffered and would not flush while the game is running. */
     fprintf(stderr, "[menu-json] SWOS_MENU_JSON set — installing menus from "
                     "data_json/menus/*.json (relative to the binary dir)\n");
+    /* Byte-exact round-trip check (JSON-built vs compiled static menus), before the
+     * install loop overwrites them. Opt-in via SWOS_MENU_JSON_VERIFY. */
+    if (getenv("SWOS_MENU_JSON_VERIFY")) MenuJson_VerifyAll();
     int installed = 0, changed = 0, toobig = 0, err = 0;
     for (int i = 0; i < NUM_STATIC_MENUS; i++) {
         const char *name = s_staticMenus[i].name;

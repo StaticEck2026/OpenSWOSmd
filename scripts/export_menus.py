@@ -45,7 +45,7 @@ OPCODES = {
     "MENU_CMD_NAV":           ("nav",           [("left", "int"), ("right", "int"),
                                                   ("up", "int"), ("down", "int")]),
     "MENU_CMD_BG_FUNC":       ("bg_func",       [("func", "ptr")]),
-    "MENU_CMD_COLORS":        ("colors",        [("value", "flags")]),
+    "MENU_CMD_COLORS":        ("colors",        [("value", "colorpair")]),
     "MENU_CMD_BG_SPRITE":     ("sprite_bg",     [("index", "int")]),
     "MENU_CMD_FG_FUNC":       ("fg_func",       [("func", "ptr")]),
     "MENU_CMD_TEXT_PTR":      ("text",          [("flags", "flags"), ("str", "ptr")]),
@@ -173,6 +173,10 @@ def parse_entry(w, symbols, is_template):
                 cmd[key] = parse_int(tok)
             elif knd == "flags":
                 cmd[key] = parse_flags(tok)
+            elif knd == "colorpair":   # split the colors byte: hi nibble=frame, lo=background
+                b = parse_int(tok) & 0xFF
+                cmd["frame_color"] = (b >> 4) & 0x0F
+                cmd["background_color"] = b & 0x0F
             else:  # ptr
                 cmd[key] = parse_ptr(tok, symbols, key)
         cmds.append(cmd)
