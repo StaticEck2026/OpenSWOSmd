@@ -57,7 +57,7 @@ SRC_FILES=(
     SWOS.c adverts.c animated_patterns.c asset_loader.c asset_sys.c
     audio.c audio_irq.c
     ball_physics.c bench_subs.c blitter.c
-    career_eurocups.c career_init.c career_season.c career_status.c career_teams.c
+    career_eurocups.c career_init.c career_params.c career_season.c career_status.c career_teams.c
     display.c diy_competition.c edit_tactics.c file_io.c
     game_hud.c game_init.c game_loop.c game_timers.c game_utils.c
     image_cmd.c
@@ -101,7 +101,7 @@ SRC_FILES=(
 # .h files (copied to dest include/)
 HDR_FILES=(
     swos_types.h
-    diy_competition.h menu_system.h teams.h game_types.h
+    diy_competition.h menu_system.h teams.h game_types.h career_params.h
     mjson.h save_format_json.h file_io.h
     rnc_magic.h endian_helpers.h auto_skip_debug.h
     swos_io.h audio.h input.h swos_platform.h swos_sections.h

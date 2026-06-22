@@ -87,6 +87,11 @@ void _FrontEndPreLoopSetup(void)
        before any menu reads competitionsTable[]. No-op unless the env var is set. */
     extern void DataJson_InstallCompetitionGraph(void);
     DataJson_InstallCompetitionGraph();
+    /* career_params.json: override the compiled career-mode balance knobs (starting
+       balance, gate receipts, wages, board expectations) so testers can tune them
+       without a rebuild. Absent file -> compiled defaults. */
+    extern void DataJson_LoadCareerParams(void);
+    DataJson_LoadCareerParams();
     /* SWOS_MENU_JSON: load every menu from bin/data_json/menus/*.json and overwrite
        the compiled static menu bytes IN PLACE (docs/MENUS.md §2d), so editing the
        JSON changes the running game. Bounded by each menu's compiled size; a menu

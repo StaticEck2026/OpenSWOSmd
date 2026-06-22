@@ -2788,6 +2788,46 @@ static char *dj_slurp(const char *path, int *out_len)
     return buf;
 }
 
+#include "career_params.h"
+/* Load bin/data_json/career_params.json (if present) over the compiled defaults — lets
+ * testers tune career-mode economy + board expectations without a rebuild. A missing file
+ * or a missing field leaves the compiled default in place, so behaviour is unchanged by
+ * default. */
+void DataJson_LoadCareerParams(void)
+{
+    int len;
+    char *j = dj_slurp("data_json/career_params.json", &len);
+    if (!j)
+        return;
+    double v;
+    #define LDU(path, f) do { if (mjson_get_number(j, len, path, &v)) g_careerParams.f = (uint16_t)v; } while (0)
+    #define LDS(path, f) do { if (mjson_get_number(j, len, path, &v)) g_careerParams.f = (int16_t)v;  } while (0)
+    LDU("$.start_balance_value_mult",   start_balance_value_mult);
+    LDU("$.start_balance_pct_min",      start_balance_pct_min);
+    LDU("$.start_balance_pct_range",    start_balance_pct_range);
+    LDU("$.start_balance_scale",        start_balance_scale);
+    LDU("$.gate_value_divisor",         gate_value_divisor);
+    LDU("$.gate_league_mult_home",      gate_league_mult_home);
+    LDU("$.gate_league_mult_away",      gate_league_mult_away);
+    LDU("$.gate_cup_mult",              gate_cup_mult);
+    LDU("$.wage_trialist_pct",          wage_trialist_pct);
+    LDU("$.wage_reserve_pct",           wage_reserve_pct);
+    LDU("$.wage_scale",                 wage_scale);
+    LDS("$.board_ratio_ok",             board_ratio_ok);
+    LDS("$.board_ratio_good",           board_ratio_good);
+    LDS("$.board_ratio_poor",           board_ratio_poor);
+    LDS("$.board_ratio_terrible",       board_ratio_terrible);
+    LDU("$.board_percentile_low",       board_percentile_low);
+    LDU("$.board_percentile_high",      board_percentile_high);
+    LDU("$.board_secondary_top2_bonus", board_secondary_top2_bonus);
+    LDU("$.board_tertiary_top2_bonus",  board_tertiary_top2_bonus);
+    LDU("$.board_euro_top2_bonus",      board_euro_top2_bonus);
+    #undef LDU
+    #undef LDS
+    free(j);
+    fprintf(stderr, "[data-json] career params loaded from data_json/career_params.json\n");
+}
+
 /* Slurp `path`, find the record whose "$.id" == id inside the array at
    "$.<arrkey>", and return its object slice. On success returns 1, sets
    *filebuf to the malloc'd file (caller must free it once done with the slice)

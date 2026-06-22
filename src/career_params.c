@@ -1,0 +1,36 @@
+/* career_params.c — runtime-tunable career-mode balance knobs.
+ *
+ * These defaults are the original hard-coded SWOS values; the game behaves exactly as
+ * before unless bin/data_json/career_params.json overrides a field at startup
+ * (DataJson_LoadCareerParams in save_format_json.c, SDL build). Compiled on both ports. */
+#include "career_params.h"
+
+CareerParams g_careerParams = {
+    /* finances: starting balance */
+    .start_balance_value_mult = 3,
+    .start_balance_pct_min    = 80,
+    .start_balance_pct_range  = 40,
+    .start_balance_scale      = 1000,
+
+    /* finances: gate receipts */
+    .gate_value_divisor    = 4000,
+    .gate_league_mult_home = 10000,
+    .gate_league_mult_away = 2000,
+    .gate_cup_mult         = 6000,
+
+    /* finances: wages */
+    .wage_trialist_pct = 33,
+    .wage_reserve_pct  = 66,
+    .wage_scale        = 96,
+
+    /* board / chairman expectations */
+    .board_ratio_ok       = 30,
+    .board_ratio_good     = 10,
+    .board_ratio_poor     = -10,
+    .board_ratio_terrible = -30,
+    .board_percentile_low  = 25,
+    .board_percentile_high = 75,
+    .board_secondary_top2_bonus = 2,
+    .board_tertiary_top2_bonus  = 2,
+    .board_euro_top2_bonus      = 3,
+};

@@ -26,3 +26,6 @@ bin/data_json/competitions/*
 !bin/data_json/menus
 bin/data_json/menus/*
 !bin/data_json/menus/*.json
+
+# Career-mode balance knobs (runtime-loaded; testers edit + relaunch, no rebuild).
+!bin/data_json/career_params.json
