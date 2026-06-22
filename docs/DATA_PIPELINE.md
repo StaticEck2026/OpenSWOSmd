@@ -140,6 +140,21 @@ python3 scripts/emit_teams.py --write    # regenerate the RNC-compressed bin/dat
 These stay local (the binaries are gitignored). Refresh the JSON from the binaries with
 `python3 scripts/decode_data.py --dump-json bin/data_json/teams`.
 
+### Career-mode balance knobs (`career_params.json`)
+
+`bin/data_json/career_params.json` exposes career-mode economy + board-expectation
+constants that used to be hard-coded — **starting balance**, **gate receipts**, **wages**,
+and **chairman-verdict thresholds**. It's loaded at startup over the compiled defaults
+(which equal the original SWOS values), so editing a value and relaunching changes the
+running game with **no rebuild** (and no `SWOS_DATA_JSON` flag needed). A removed field
+falls back to its default, so behaviour is identical until you change a knob. The loader is
+`DataJson_LoadCareerParams` (SDL); the defaults live in `src/career_params.c` and are used
+as-is on the Amiga build (which doesn't run the loader). See the file's inline comments for
+what each knob does.
+
+> Season **count** (20) is *not* a knob here — it's a compile-time array size tied to the
+> save-file layout, so changing it needs a code + save-format change, not a JSON edit.
+
 ---
 
 ## Verification
