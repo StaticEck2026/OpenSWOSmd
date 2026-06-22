@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""JSON -> C emitter for SWOS menus — the inverse of export_menus.py.
+
+Regenerates each `Menu_<Type> <name> = { ... };` initializer in menu_data.c from
+bin/data_json/menus/*.json, recombining the split colors byte (frame/background nibbles).
+Emits FULLY-FLAT initializers: the C compiler fills each bespoke per-menu struct
+field-by-field in declaration order, so one uniform form works for all 102 menu types
+(continueMenu's flat layout, buyOtherPlayers' wrapped entries, ...). menu_data.h (the
+types) and the file preamble/stubs are kept; only the `{ ... }` bodies are replaced.
+
+Verifies via the export round-trip (emit -> splice -> re-export -> diff the JSON). Final
+byte-correctness is the compile + SWOS_MENU_JSON_VERIFY check (raw mode, 47/47). `--out
+PATH` writes the regenerated file.
+"""
+import json, os, re, sys, glob, tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import export_menus as exp
+
+MENU_DIR = exp.OUT_DIR
+REV = {jo: (cmd, fields) for cmd, (jo, fields) in exp.OPCODES.items()}   # json_op -> (MENU_CMD_*, fields)
+
+
+def _ptr(v, key=None):
+    if v is None:
+        return "0"
+    if isinstance(v, int):
+        return str(v)
+    if "." in v:                # dotted field ref (buffer) -> &
+        return "&" + v
+    if key == "sprite":         # MENU_CMD_SPRITE_COPY operand is a struct -> &
+        return "&" + v
+    return v                    # function / string / table name decays to a pointer
+
+
+def _cmd_toks(cmd):
+    name, fields = REV[cmd["op"]]
+    toks = [name]
+    for key, knd in fields:
+        if knd == "colorpair":
+            b = ((cmd.get("frame_color", 0) & 0xF) << 4) | (cmd.get("background_color", 0) & 0xF)
+            toks.append("0x%X" % b)
+        elif knd == "int":
+            toks.append(str(cmd[key]))
+        elif knd == "flags":
+            toks.append(cmd[key] if isinstance(cmd[key], str) else "0x%X" % cmd[key])
+        else:                                   # ptr
+            toks.append(_ptr(cmd[key], key))
+    return toks
+
+
+def _item_toks(it):
+    k = it["kind"]
+    if k == "coords_mode":
+        return ["MENU_MARK_WIDE_COORDS" if it["wide"] else "MENU_MARK_BYTE_COORDS"]
+    if k == "set_origin":
+        return ["MENU_MARK_START_MENU", str(it["x"]), str(it["y"])]
+    if k == "reset_template":
+        return ["MENU_MARK_INIT_ENTRY"]
+    if k == "start_template":
+        return ["MENU_MARK_START_TEMPLATE"]
+    if k == "entry":
+        c = it["coords"]
+        toks = [str(c["x"]), str(c["y"]), str(c["w"]), str(c["h"])]
+        for cmd in it["commands"]:
+            toks += _cmd_toks(cmd)
+        toks.append("MENU_CMD_END")
+        return toks
+    raise ValueError("unknown item kind %r" % k)
+
+
+def emit_menu(menu):
+    lines = [", ".join([_ptr(menu["onInit"]), _ptr(menu["onReturn"]),
+                        _ptr(menu["onDraw"]), str(menu["defaultEntry"])])]
+    lines += [", ".join(_item_toks(it)) for it in menu["items"]]
+    lines.append("MENU_MARK_END_MENU")
+    return "{\n    " + ",\n    ".join(lines) + "\n}"
+
+
+def splice_menu(text, name, init):
+    m = re.search(r'\b' + re.escape(name) + r'\s*=\s*\{', text)
+    if not m:
+        return text, 0
+    i = text.index('{', m.start()); depth = 0; j = i
+    while j < len(text):
+        if text[j] == '{':
+            depth += 1
+        elif text[j] == '}':
+            depth -= 1
+            if depth == 0:
+                break
+        j += 1
+    return text[:i] + init + text[j + 1:], 1
+
+
+def _diff(a, b, path=""):
+    if isinstance(a, dict) and isinstance(b, dict):
+        for k in set(a) | set(b):
+            if k not in a or k not in b:
+                print("    %s/%s only on one side" % (path, k))
+            else:
+                _diff(a[k], b[k], path + "/" + str(k))
+    elif isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            print("    len %s: %d != %d" % (path, len(a), len(b)))
+        for i in range(min(len(a), len(b))):
+            _diff(a[i], b[i], path + "[%d]" % i)
+    elif a != b:
+        print("    %s: %r != %r" % (path, a, b))
+
+
+def main():
+    menus = []
+    for f in sorted(glob.glob(os.path.join(MENU_DIR, "*.json"))):
+        d = json.load(open(f))
+        if "items" in d:                        # skip the manifest
+            menus.append(d)
+
+    text = open(exp.SRC, encoding="utf-8", errors="replace").read()
+    n = 0
+    for menu in menus:
+        text, k = splice_menu(text, menu["name"], emit_menu(menu))
+        if not k:
+            print("  WARN: menu %s not found in menu_data.c" % menu["name"])
+        n += k
+    print("emitted/spliced %d of %d menus" % (n, len(menus)))
+
+    with tempfile.TemporaryDirectory() as td:
+        gen = os.path.join(td, "menu_data.c")
+        open(gen, "w").write(text)
+        out = os.path.join(td, "out"); os.makedirs(out)
+        exp.SRC = gen; exp.OUT_DIR = out
+        exp.main()
+        bad = 0
+        for menu in menus:
+            name = menu["name"]
+            o = json.load(open(os.path.join(MENU_DIR, name + ".json")))
+            r = json.load(open(os.path.join(out, name + ".json")))
+            if o != r:
+                bad += 1
+                print("  DIFF in %s" % name)
+                _diff(o, r)
+        print("\nround-trip: %s" % ("FAITHFUL (0 diff)" if bad == 0 else "%d menu(s) differ" % bad))
+
+    if "--out" in sys.argv:
+        out_path = sys.argv[sys.argv.index("--out") + 1]
+        open(out_path, "w").write(text)
+        print("wrote regenerated C -> %s" % out_path)
+    return bad
+
+
+if __name__ == "__main__":
+    sys.exit(1 if main() else 0)
