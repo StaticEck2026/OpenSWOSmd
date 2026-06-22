@@ -9,6 +9,7 @@
 #include "goalkeeper.h"
 #include "tackle_foul.h"
 #include "headers.h"
+extern int16_t gsBallDefensiveZ;   /* GS_27_22 goalie-catch z-threshold — dos_gameplay.c */
 #include "player_anim.h"
 #include "player_positioning.h"
 #include "ai.h"
@@ -831,7 +832,7 @@ not_in_penalty:
         }
     attempt_catch_conditions:
         if (ballNextGroundX < 0) goto cannot_catch_exit;
-        if (ballDefensiveZ > 22) goto cannot_catch_exit;
+        if (ballDefensiveZ > gsBallDefensiveZ) goto cannot_catch_exit;  /* GS_27_22 */
         if (ballDefensiveZ <= 12) goto cannot_catch_exit;
         if ((uint32_t)player->ballDistance > 2116) goto cannot_catch_exit;
         {

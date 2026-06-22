@@ -14,6 +14,11 @@
 /* ---- Extern globals ---- */
 extern uint16_t playingPenalties;
 extern uint16_t gameState;
+/* GS_* stoppage timers — dos_gameplay.c (Amiga default / DOS value): */
+extern int16_t  gsStoppageEventReload;   /* GS_GK_55_50  50 / 55 */
+extern int16_t  gsBallOutOfGameTimer;    /* GS_550_500  500 / 550 */
+extern int16_t  gsPenaltyTimer;          /* GS_110_100  100 / 110 */
+extern int16_t  gsKickoffStoppage;       /* GS_825_750  750 / 825 */
 extern uint16_t gameStatePl;
 extern uint16_t penaltiesTimer;
 extern uint16_t lastFrameTicks;
@@ -281,7 +286,7 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
         breakCameraMode = 1;
         if (gameState == ST_KEEPER_HOLDS_BALL)
             break;
-        stoppageEventTimer = 50;
+        stoppageEventTimer = (uint16_t)gsStoppageEventReload;   /* GS_GK_55_50 */
         if (goalCameraMode != 0)
             stoppageEventTimer = 75;
         break;
@@ -386,7 +391,7 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
     case 7: /* ball in play / throw-in setup */
         a6->ballInPlay = 1;
         ballOutOfGameTimer += 1;
-        if (ballOutOfGameTimer >= 500) {
+        if (ballOutOfGameTimer >= gsBallOutOfGameTimer) {   /* GS_550_500 */
             deadCameraBreakVar01 += 1;
             deadCameraBreakVar02 = gameStatePl;
             deadCameraBreakVar03 = gameState;
@@ -445,7 +450,7 @@ void _UpdateGameTimersAndCameraBreakMode(void)
     if (playingPenalties != 0) {
         if (gameState != ST_PENALTIES) {
             penaltiesTimer += 1;
-            if (penaltiesTimer == 100)
+            if (penaltiesTimer == gsPenaltyTimer)   /* GS_110_100 */
                 _NextPenalty();
         }
     }
@@ -465,7 +470,7 @@ void _UpdateGameTimersAndCameraBreakMode(void)
         stoppageTimerActive += d0;
         a6 = lastTeamPlayedBeforeBreak;
         if (a6->playerNumber == 0) {
-            if (stoppageTimerActive >= 750) {
+            if (stoppageTimerActive >= gsKickoffStoppage) {   /* GS_825_750 */
                 _PrepareForInitialKick();
                 initialKickWriteOnlyTicks += 1;
             }

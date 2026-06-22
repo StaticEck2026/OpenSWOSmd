@@ -78,6 +78,7 @@ extern ScorerInfo team2Scorers[8];
 extern uint16_t timeVar;
 extern uint16_t timeDelta;
 extern int16_t  gsFramesPerGameSecond;   /* GS_54_49 clock reload — dos_gameplay.c */
+extern int16_t  gsEndGameCounter;        /* GS_55_50 endGameCounter reload — dos_gameplay.c */
 extern uint16_t gameStatePl;
 extern uint16_t playingPenalties;
 extern int16_t  extraTimeState;
@@ -934,7 +935,7 @@ end_game:
 
 last_cycle:
     gameSeconds = 0xFFFF;       /* negative = last minute in progress */
-    endGameCounter = 50;
+    endGameCounter = (uint16_t)gsEndGameCounter;   /* GS_55_50: 50 Amiga / 55 DOS */
     goto no_update_to_time;
 
 last_minute_in_progress:
