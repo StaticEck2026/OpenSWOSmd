@@ -11,6 +11,7 @@
 #include "chairman_memo.h"
 #include "menu_system.h"
 #include "input_text.h"
+#include "translations.h"   /* tr_ptr — localize the by-pointer memo body text */
 
 /* ---- ASM externs (globals) ---- */
 extern MenuEntry menuEntries[];
@@ -76,10 +77,21 @@ void _ChairmanMemosInit(void)
  * menu, waits 100 VBlanks, then shows the "Continue" button.
  * ================================================================ */
 __attribute__((used, externally_visible))
+/* Localize a compiled message-string pointer to the active language: tr_ptr maps
+ * the address to its translated text, or returns NULL to keep the English original.
+ * No-op on the Amiga (i18n isn't loaded there). The chairman memo body is set
+ * dynamically by pointer, so unlike the static title/footer menu entries it isn't
+ * localized by the menu loader and needs this at the point of use. */
+static const uint8_t *loc_msg(const void *s)
+{
+    const char *t = tr_ptr(s);
+    return t ? (const uint8_t *)t : (const uint8_t *)s;
+}
+
 void _ChairmanMemosOnReturn(void)
 {
     /* Format "DEAR %a %b" into entry 1's text buffer */
-    _PrintFormatted(aDearAB_0, (uint8_t *)menuEntries[1].fg,
+    _PrintFormatted(loc_msg(aDearAB_0), (uint8_t *)menuEntries[1].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     managerSexBuffer, managerSurnameBuffer, (void *)0);
 
@@ -92,13 +104,13 @@ void _ChairmanMemosOnReturn(void)
     int16_t msgIdx = (int16_t)(currentMessage - 1) * 2;
 
     /* Format message line 1 into entry 2's text buffer */
-    _PrintFormatted((const uint8_t *)clubMessagesTable[msgIdx],
+    _PrintFormatted(loc_msg(clubMessagesTable[msgIdx]),
                     (uint8_t *)menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
 
     /* Format message line 2 into entry 3's text buffer */
-    _PrintFormatted((const uint8_t *)clubMessagesTable[msgIdx + 1],
+    _PrintFormatted(loc_msg(clubMessagesTable[msgIdx + 1]),
                     (uint8_t *)menuEntries[3].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
