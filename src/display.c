@@ -698,6 +698,18 @@ void _SwapBuffersAndCameraViewState(void)
 __attribute__((used, externally_visible))
 void _SetCameraCoordinates(int16_t targetX, int16_t targetY)
 {
+    /* Keep the g_screen_width-wide view on the pitch for ANY caller — the kickoff/intro
+     * and panel-restore set the camera directly, bypassing _MoveCamera's clamp, so on a
+     * wide view they'd run off the pitch edge until gameplay takes over. pitchWidth
+     * (0x2A0) - viewWidth = the max camera X. Folds to [0, 0x150] on Amiga (g_screen_width
+     * = 336), the original range — a no-op for the always-on-pitch classic view. */
+    {
+        int16_t panRange = (int16_t)(0x2A0 - g_screen_width);
+        if (panRange < 0) panRange = 0;
+        if (targetX < 0) targetX = 0;
+        else if (targetX > panRange) targetX = panRange;
+    }
+
     /* Move X toward target */
     while (cameraX.s.i != targetX)
     {
