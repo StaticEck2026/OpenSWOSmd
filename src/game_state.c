@@ -77,6 +77,8 @@ extern ScorerInfo team2Scorers[8];
 /* ---- UpdateTime globals ---- */
 extern uint16_t timeVar;
 extern uint16_t timeDelta;
+extern int16_t  gsFramesPerGameSecond;   /* GS_54_49 clock reload — dos_gameplay.c */
+extern int16_t  gsEndGameCounter;        /* GS_55_50 endGameCounter reload — dos_gameplay.c */
 extern uint16_t gameStatePl;
 extern uint16_t playingPenalties;
 extern int16_t  extraTimeState;
@@ -766,7 +768,9 @@ void _UpdateTime(void)
     if ((int16_t)secondsSwitchAccumulator >= 0)
         goto no_update_to_time;
 
-    secondsSwitchAccumulator += 49;
+    /* GS_54_49: frames per in-game second — Amiga 49, DOS 54 (set per style by
+     * ApplyGameStyle/dos_gameplay.c). The whole match-clock cadence keys off this. */
+    secondsSwitchAccumulator += (uint16_t)gsFramesPerGameSecond;
     gameSeconds++;
 
     if (gameSeconds != 60)
@@ -931,7 +935,7 @@ end_game:
 
 last_cycle:
     gameSeconds = 0xFFFF;       /* negative = last minute in progress */
-    endGameCounter = 50;
+    endGameCounter = (uint16_t)gsEndGameCounter;   /* GS_55_50: 50 Amiga / 55 DOS */
     goto no_update_to_time;
 
 last_minute_in_progress:

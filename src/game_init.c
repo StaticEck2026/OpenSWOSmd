@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "game_init.h"
+#include "dos_gameplay.h"   /* ApplyGameStyle — DOS/Amiga match tuning */
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "play_match_menu.h"
@@ -113,6 +114,12 @@ extern uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requested
 __attribute__((used, externally_visible))
 void _InitTeamsData(void)
 {
+    /* DOS-vs-Amiga gameplay tuning: write the per-style physics/timer constants
+     * (ball friction/gravity, keeper distances, match-clock + stoppage timers) for
+     * the active gDosGameplay. Done per-match so an in-game toggle takes effect on
+     * the next match; with DOS gameplay off it writes the Amiga defaults (no-op). */
+    ApplyGameStyle();
+
     /* Clear per-match game state */
     currentScorer = 0;
     lastPlayerBeforeGoalkeeper = (Sprite *)0;

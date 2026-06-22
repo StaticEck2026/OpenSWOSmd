@@ -15,6 +15,7 @@
  * Default 0 = the normal Amiga graphics/gameplay. */
 int gDosGraphics = 0;
 int gDosGameplay = 0;
+int gWidescreen  = 0;   /* 1 = wider 16:9 pitch view. SDL main sets from opts; Amiga stays 0 */
 char gDosGraphicsDir[256] = "grafs_dos";   /* asset dir; see dos_mode.h */
 
 /* ---- base game palette: 256 RGB triples, 6-bit VGA (0..63) ---- */

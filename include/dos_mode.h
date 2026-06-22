@@ -15,6 +15,7 @@
 
 extern int gDosGraphics;
 extern int gDosGameplay;
+extern int gWidescreen;   /* 1 = wider 16:9 pitch view (SDL); 0 on Amiga */
 
 /* Directory the DOS assets are loaded from, relative to the working dir (bin/).
  * Default "grafs_dos"; override via [dos] directory=... or --dos-dir=... to test

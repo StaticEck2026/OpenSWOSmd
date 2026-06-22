@@ -17,6 +17,8 @@
 #include "math68k.h"
 
 extern Sprite          ballSprite;
+extern int16_t         gsResultAutoAdvance;   /* GS_660_600 600/660 — dos_gameplay.c */
+extern int16_t         gsHalftimeStoppage;    /* GS_385_350 350/385 — dos_gameplay.c */
 extern TeamGeneralInfo topTeamData;
 extern TeamGeneralInfo bottomTeamData;
 extern uint16_t        currentGameTick;
@@ -403,11 +405,11 @@ _AI_SetControlsDirection(TeamGeneralInfo *team)
 
             if (gameState == ST_RESULT_ON_HALFTIME ||
                 gameState == ST_RESULT_AFTER_THE_GAME) {
-                if (stoppageTimerTotal < 600)
+                if (stoppageTimerTotal < gsResultAutoAdvance)   /* GS_660_600 */
                     return;
             } else {
                 /* 350 ticks for other result states */
-                if (stoppageTimerTotal < 350)
+                if (stoppageTimerTotal < gsHalftimeStoppage)   /* GS_385_350 */
                     return;
             }
             /* Simulate fire press to dismiss result */
