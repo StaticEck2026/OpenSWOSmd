@@ -1871,7 +1871,12 @@ __attribute__((used, externally_visible))
 void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     extern volatile uintptr_t frontbufferBaseAltPtr;
-    _RectRowMaskedApplyScreenOffset(x, y, w, h, (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
+    /* Widescreen: the items were drawn centered (x + g_menu_draw_x_offset via the
+     * base-shifted primitives), so sync the SAME region between the two buffers.
+     * Without this the rect copies the un-offset region and leaves stale/garbage
+     * exactly where the centered items are (corrupt menu element). 0 if not widescreen. */
+    _RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
+                                    (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
 }
 
 /* ================================================================
