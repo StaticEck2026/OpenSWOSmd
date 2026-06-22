@@ -107,6 +107,7 @@ HDR_FILES=(
     swos_io.h audio.h input.h swos_platform.h swos_sections.h
     competition_data.h sprite_data.h
     dos_graphics.h dos_mode.h
+    translations.h string_symbols.h
 )
 
 # ---- Arg parsing ----
