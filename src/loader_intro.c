@@ -184,7 +184,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
     memset(dstAlt, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         const uint8_t *rowSrc = rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
-        uint8_t       *rowDst = dstAlt + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
+        uint8_t       *rowDst = dstAlt + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + WIDE_MARGIN;
         for (int px = 0; px < SCREEN_WIDTH; px++) {
             int bit  = 7 - (px & 7);
             int byte = px >> 3;

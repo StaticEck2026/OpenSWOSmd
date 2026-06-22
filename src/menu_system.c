@@ -1292,7 +1292,9 @@ void _DrawSelectedMenuItemFrame(void)
         return;
 
     color = kColorTableShine[(menuCursorFrame & 14) >> 1];
+    g_menu_draw_x_offset = WIDE_MARGIN;   /* center the selector frame like the entries */
     _DrawMenuItemInnerFrame(color, sel->x, sel->y, w, h);
+    g_menu_draw_x_offset = 0;
 }
 
 /* ================================================================
