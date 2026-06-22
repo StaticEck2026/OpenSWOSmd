@@ -69,16 +69,79 @@ def _item_toks(it):
     raise ValueError("unknown item kind %r" % k)
 
 
-def emit_menu(menu):
-    lines = [", ".join([_ptr(menu["onInit"]), _ptr(menu["onReturn"]),
-                        _ptr(menu["onDraw"]), str(menu["defaultEntry"])])]
-    lines += [", ".join(_item_toks(it)) for it in menu["items"]]
-    lines.append("MENU_MARK_END_MENU")
-    return "{\n    " + ",\n    ".join(lines) + "\n}"
+def menu_flat_tokens(menu):
+    """The full flat leaf-value sequence for a menu (header + items + end marker), with
+    pointer casts/& applied. Same order export_menus.flatten() yields from the C."""
+    toks = [_ptr(menu["onInit"]), _ptr(menu["onReturn"]), _ptr(menu["onDraw"]), str(menu["defaultEntry"])]
+    for it in menu["items"]:
+        toks += _item_toks(it)
+    toks.append("MENU_MARK_END_MENU")
+    return toks
 
 
-def splice_menu(text, name, init):
-    m = re.search(r'\b' + re.escape(name) + r'\s*=\s*\{', text)
+def parse_braces(init):
+    """Parse a C initializer `{ ... }` into a nested list: each `{...}` is a sub-list, each
+    comma-separated value a leaf string. Comments stripped. Captures the brace STRUCTURE
+    (which the bespoke per-menu type dictates) so we can re-emit hand-written-looking C."""
+    s = exp.strip_comments(init)
+    i = s.index("{")
+
+    def group():
+        nonlocal i
+        i += 1                      # skip '{'
+        out, cur = [], ""
+        while i < len(s):
+            ch = s[i]
+            if ch == "{":
+                out.append(group())
+            elif ch == "}":
+                i += 1
+                if cur.strip():
+                    out.append(cur.strip())
+                return out
+            elif ch == ",":
+                if cur.strip():
+                    out.append(cur.strip())
+                cur = ""; i += 1
+            else:
+                cur += ch; i += 1
+        return out
+
+    return group()
+
+
+def _leaf_count(tree):
+    return sum(_leaf_count(x) if isinstance(x, list) else 1 for x in tree)
+
+
+def _substitute(tree, vals):
+    return [_substitute(x, vals) if isinstance(x, list) else next(vals) for x in tree]
+
+
+def _emit_braced(node, indent):
+    if isinstance(node, str):
+        return node
+    parts = [_emit_braced(x, indent + 1) for x in node]
+    if any(isinstance(x, list) for x in node):                 # a group with sub-groups -> block
+        ipad = "    " * (indent + 1)
+        return "{\n" + ",\n".join(ipad + p for p in parts) + "\n" + "    " * indent + "}"
+    return "{ " + ", ".join(parts) + " }"                      # leaf-only group -> inline
+
+
+def emit_menu(menu, orig_init):
+    """Regenerate a menu initializer: take the brace STRUCTURE from the original C and the
+    VALUES from JSON. Value edits reproduce the hand-written shape; a structural edit (leaf
+    count change) raises (it needs a menu_data.h type change too)."""
+    tree = parse_braces(orig_init)
+    vals = menu_flat_tokens(menu)
+    if _leaf_count(tree) != len(vals):
+        raise ValueError("%s: template has %d leaves but JSON has %d values (structural edit "
+                         "needs a menu_data.h type change)" % (menu["name"], _leaf_count(tree), len(vals)))
+    return _emit_braced(_substitute(tree, iter(vals)), 0)
+
+
+def splice_menu(text, menu):
+    m = re.search(r'\b' + re.escape(menu["name"]) + r'\s*=\s*\{', text)
     if not m:
         return text, 0
     i = text.index('{', m.start()); depth = 0; j = i
@@ -90,6 +153,7 @@ def splice_menu(text, name, init):
             if depth == 0:
                 break
         j += 1
+    init = emit_menu(menu, text[i:j + 1])            # original {...} is the brace template
     return text[:i] + init + text[j + 1:], 1
 
 
@@ -119,7 +183,7 @@ def main():
     text = open(exp.SRC, encoding="utf-8", errors="replace").read()
     n = 0
     for menu in menus:
-        text, k = splice_menu(text, menu["name"], emit_menu(menu))
+        text, k = splice_menu(text, menu)
         if not k:
             print("  WARN: menu %s not found in menu_data.c" % menu["name"])
         n += k
