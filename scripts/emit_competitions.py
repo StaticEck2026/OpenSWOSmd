@@ -144,6 +144,43 @@ def emit_career(rec):
     return "CompetitionCareer careerContests[35] = {\n" + "\n".join(rows) + "\n};"
 
 
+def emit_country_table(c):
+    """Competition *<table>[N] = { &league(s), -2, &cup(s), -1 }."""
+    elems = ["(Competition *)&%s" % lg for lg in c["leagues"]]
+    elems.append("(Competition *)-2")
+    elems += ["(Competition *)&%s" % cp for cp in c.get("cups", []) or []]
+    elems.append("(Competition *)-1")
+    return "Competition *%s[%d] = { %s };" % (c["table"], len(elems), ", ".join(elems))
+
+
+def emit_comp_index(countries):
+    """void *competitionsTable[256] = { [n] = table, ... }. Array tables (normal countries)
+    decay to a pointer; QualifyingGroup 'tables' (customs/regions/quals, no leagues) need &."""
+    lines = []
+    for c in sorted(countries, key=lambda c: c["number"]):
+        if not c.get("table"):
+            continue
+        amp = "" if c.get("leagues") else "&"
+        lines.append("    [%d] = %s%s," % (c["number"], amp, c["table"]))
+    return "void *competitionsTable[256] = {\n" + "\n".join(lines) + "\n};"
+
+
+def splice_country(src_text, countries):
+    edits = 0
+    for c in countries:
+        if not c.get("leagues"):       # special QualifyingGroup tables: handled by emit_qualifying
+            continue
+        new = emit_country_table(c)
+        pat = re.compile(r'Competition\s*\*\s*' + re.escape(c["table"]) + r'\s*\[\d+\]\s*=\s*\{[^}]*\};')
+        src_text, k = pat.subn(lambda m: new, src_text)
+        if not k:
+            print("  WARN: country table %s not found" % c["table"])
+        edits += k
+    src_text, ki = re.subn(r'void\s*\*\s*competitionsTable\s*\[\d+\]\s*=\s*\{[^}]*\};',
+                           lambda m: emit_comp_index(countries), src_text)
+    return src_text, edits + ki
+
+
 def _def_spans(text, typename):
     """Map global name -> (start, end) char span of `typename name = { ... };`."""
     spans = {}
@@ -198,7 +235,10 @@ def main():
         ("Leagues", league_blocks, emit_leagues),
         ("CompetitionCareer", [career_rec], emit_career),
     ])
-    print("emitted/spliced %d definitions" % n)
+    country_comps = _load("country_competitions.json")["countries"]
+    spliced, nc = splice_country(spliced, country_comps)
+    n += nc
+    print("emitted/spliced %d definitions (incl. %d country tables + index)" % (n, nc))
 
     if "--out" in sys.argv:
         out = sys.argv[sys.argv.index("--out") + 1]
@@ -216,7 +256,8 @@ def main():
         exp.main()
         bad = 0
         for fname in ("cups.json", "tournaments.json", "leagues.json", "playoffs.json",
-                      "qualifying.json", "league_blocks.json", "career.json"):
+                      "qualifying.json", "league_blocks.json", "career.json",
+                      "country_competitions.json"):
             orig = _load.__wrapped__(fname) if hasattr(_load, "__wrapped__") else \
                 json.load(open(os.path.join(COMP_DIR, fname)))
             regen = json.load(open(os.path.join(out_dir, fname)))
