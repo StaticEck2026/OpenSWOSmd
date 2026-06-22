@@ -259,13 +259,8 @@ int main(int argc, char **argv)
     gDosGraphics = opts.dos_graphics;
     gDosGameplay = opts.dos_gameplay;
     gWidescreen  = opts.widescreen;
-    /* Live frontbuffer stride: 384 (widescreen) or 336. The render path (SDL texture,
-     * per-site culls, camera clamp, menu fill) is converted. Menu CONTENT centering is
-     * a follow-up: menus render left-aligned in the wider frame with a cleared border. */
-    g_screen_width = gWidescreen ? WIDESCREEN_WIDTH : SCREEN_WIDTH;
-    /* Center all 336-wide UI (menus + in-match HUD) in the wider frame, persistently.
-     * Only the in-match WORLD draw (_DrawSprites) scopes this back to 0. =0 if not wide. */
-    g_menu_draw_x_offset = WIDE_MARGIN;
+    /* g_screen_width (the live render width) + g_menu_draw_x_offset (UI centering)
+     * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
     if (opts.dos_dir[0])
         snprintf(gDosGraphicsDir, sizeof gDosGraphicsDir, "%s", opts.dos_dir);
 
@@ -306,6 +301,27 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return 1;
     }
+
+    /* Match the render aspect to the display: width = SCREEN_HEIGHT * (desktop w/h),
+     * clamped to [SCREEN_WIDTH .. the full pitch width]. The render then fills any
+     * monitor — 4:3, 16:9, 21:9, ultrawide — with no letterbox bars, and it "just works"
+     * with no mode to set. widescreen=false forces the classic SCREEN_WIDTH. Needs
+     * SDL_INIT_VIDEO (above); runs before the window/texture (Platform_Init below). */
+    if (gWidescreen) {
+        SDL_DisplayMode dm;
+        int dw = 16, dh = 9;   /* 16:9 fallback if the query fails */
+        if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
+        int w = (int)((long)SCREEN_HEIGHT * dw / dh);
+        w = (w + 1) & ~1;                          /* round up to even */
+        if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
+        if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
+        g_screen_width = w;
+        fprintf(stderr, "[video] render %dx%d (display %dx%d, %.2f:1)\n",
+                g_screen_width, SCREEN_HEIGHT, dw, dh, (double)dw / dh);
+    } else {
+        g_screen_width = SCREEN_WIDTH;
+    }
+    g_menu_draw_x_offset = WIDE_MARGIN;
 
     if (Platform_Init(&opts) != 0) {
         fprintf(stderr, "Platform_Init failed\n");

@@ -261,8 +261,13 @@ extern volatile struct Custom *custom;
  * stays a link-time constant (FRONTBUFFER_ALLOC_TOTAL_BYTES); only the row-stride
  * arithmetic is runtime. SCREEN_WIDTH stays the 336 logical/centered width (menus). */
 extern int g_screen_width;
-#define WIDESCREEN_WIDTH                480   /* ~16:9 (480/272=1.76), matches swos-2020 */
-#define FRONTBUFFER_MAX_STRIDE_BYTES    WIDESCREEN_WIDTH
+/* g_screen_width (the live render width) is derived at startup from the monitor's
+ * aspect ratio (main.c), so the picture fills any display with no bars. The buffer is
+ * ALLOCATED at the MAX useful width = the full pitch world width (the view never
+ * usefully exceeds the pitch; the camera clamp keys off the same 0x2A0). */
+#define WIDESCREEN_WIDTH                480   /* 16:9 reference (1.76); the width is now adaptive */
+#define PITCH_VIEW_MAX_WIDTH            672   /* = 0x2A0, pitch world width = max render width */
+#define FRONTBUFFER_MAX_STRIDE_BYTES    PITCH_VIEW_MAX_WIDTH
 #define FRONTBUFFER_ROW_STRIDE_BYTES    g_screen_width
 #else
 /* Amiga has no widescreen: g_screen_width folds to the fixed visible width at

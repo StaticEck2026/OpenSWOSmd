@@ -299,15 +299,22 @@ offset_and_clamp_to_view:
     targetX += (int16_t)cameraXVelocity;
     targetY += (int16_t)cameraYVelocity;
 
-    /* Clamp X to [boundsMargin, 0x150 - boundsMargin] */
-    if (targetX < boundsMargin)
-        targetX = boundsMargin;
+    /* Clamp X so the g_screen_width-wide view stays on the pitch. */
     {
-        /* pitchWidth(0x2A0=672) - viewWidth: a wider view scrolls LESS far right
-         * so the view's right edge still stops at the pitch edge. =0x150 at 336. */
-        int16_t xMax = (int16_t)(0x2A0 - g_screen_width) - boundsMargin;
-        if (targetX >= xMax)
-            targetX = xMax;
+        /* pitchWidth(0x2A0=672) - viewWidth = how far the camera may pan and keep the
+         * view on the pitch (=0x150 at 336). On wide/ultrawide displays the view nears
+         * the pitch width and this range collapses or inverts — then just center the
+         * view on the pitch (the whole pitch is visible; the camera can't pan). */
+        int16_t panRange = (int16_t)(0x2A0 - g_screen_width);
+        int16_t xMax = panRange - boundsMargin;
+        if (xMax <= boundsMargin) {
+            targetX = (int16_t)(panRange / 2);
+        } else {
+            if (targetX < boundsMargin)
+                targetX = boundsMargin;
+            if (targetX >= xMax)
+                targetX = xMax;
+        }
     }
 
     /* Clamp Y based on game mode */
