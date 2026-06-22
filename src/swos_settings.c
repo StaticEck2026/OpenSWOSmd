@@ -71,6 +71,9 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "scale")) {
             int n = atoi(value);
             if (n >= 1 && n <= 4) opts->win_scale = n;
+        } else if (eqi(name, "widescreen")) {
+            int b;
+            if (parse_bool(value, &b)) opts->widescreen = b;
         }
     } else if (eqi(section, "audio")) {
         if (eqi(name, "mode")) {
@@ -143,32 +146,45 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
     }
 
     fprintf(f,
-        "; SWOS — display + audio settings.\n"
-        "; Auto-generated. Edit by hand or via the command line; runtime\n"
-        "; changes (+/- keys, Alt+Enter) are written back here on clean\n"
-        "; shutdown.\n"
+        "; SWOS — display, audio and gameplay settings.\n"
+        "; Auto-generated. Edit by hand or via the command line; runtime changes\n"
+        "; (+/- keys, Alt+Enter) are written back here on clean shutdown. Booleans\n"
+        "; accept true/false, on/off, yes/no, 1/0 (case-insensitive).\n"
         "\n"
         "[video]\n"
+        "; renderer: software | accel  (hardware-accelerated)\n"
         "renderer=%s\n"
+        "; vsync: on | off  (accel renderer only)\n"
         "vsync=%s\n"
+        "; fullscreen: off | desktop | exclusive\n"
         "fullscreen=%s\n"
+        "; scale: window scale 1-4 (windowed only)\n"
         "scale=%d\n"
+        "; widescreen: true | false — wider 16:9 pitch view (shows more of the pitch)\n"
+        "widescreen=%s\n"
         "\n"
         "[audio]\n"
+        "; mode: mono | stereo\n"
         "mode=%s\n"
         "\n"
-        "[dos]\n"
+        "[dos]              ; PC-only extras (Amiga is the definitive version)\n"
+        "; directory: folder under bin/ to load the DOS assets from\n"
         "directory=%s\n"
+        "; graphics: true | false — render the DOS-version graphics\n"
         "graphics=%s\n"
+        "; gameplay: true | false — DOS 70 FPS physics/timer tuning\n"
         "gameplay=%s\n"
         "\n"
         "[general]\n"
+        "; language: en | de | fr | es | it | nl\n"
         "language=%s\n"
+        "; currency: pound | dollar\n"
         "currency=%s\n",
         renderer_str(opts->renderer),
         opts->vsync ? "on" : "off",
         fullscreen_str(fs_now),
         scale_now,
+        opts->widescreen ? "true" : "false",
         opts->audio_mono ? "mono" : "stereo",
         opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
         opts->dos_graphics ? "true" : "false",

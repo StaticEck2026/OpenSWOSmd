@@ -174,6 +174,7 @@ int main(int argc, char **argv)
     opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
+    opts.widescreen = 1;          /* default ON — wider 16:9 pitch view */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
@@ -256,6 +257,7 @@ int main(int argc, char **argv)
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     gDosGraphics = opts.dos_graphics;
     gDosGameplay = opts.dos_gameplay;
+    gWidescreen  = opts.widescreen;
     if (opts.dos_dir[0])
         snprintf(gDosGraphicsDir, sizeof gDosGraphicsDir, "%s", opts.dos_dir);
 
