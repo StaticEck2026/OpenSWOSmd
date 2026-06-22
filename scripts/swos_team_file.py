@@ -135,8 +135,9 @@ def _s16(v: int) -> int:
 # ======================================================================
 # Keys/structure/signedness mirror save_format_json.c (emit_player_file_body /
 # s_player_fields) so the .CAR and bin/data JSON share one representation and one
-# C loader. Skill bytes stay PACKED (position_and_face, velocity_heading, ...);
-# decode_data.py decodes them for human display only.
+# C loader. The three skill nibble-pairs are SPLIT into editable halves
+# (velocity/heading, tackling/control, speed/finishing); position_and_face and
+# cards_injuries stay packed. Mirrors save_format_json.c s_player_fields.
 def parse_player(b: bytes) -> dict:
     return {
         "nationality": _s8(b[0]),
@@ -148,13 +149,25 @@ def parse_player(b: bytes) -> dict:
         "position_and_face": b[26],
         "cards_injuries": b[27],
         "passing": _s8(b[28]),
-        "velocity_heading": _s8(b[29]),
-        "tackling_control": _s8(b[30]),
-        "speed_finishing": _s8(b[31]),
+        # Skill bytes 29-31 are nibble pairs (hi=first label, lo=second); split for editing.
+        "velocity":  (b[29] >> 4) & 0x0F,
+        "heading":   b[29] & 0x0F,
+        "tackling":  (b[30] >> 4) & 0x0F,
+        "control":   b[30] & 0x0F,
+        "speed":     (b[31] >> 4) & 0x0F,
+        "finishing": b[31] & 0x0F,
         "price": _s8(b[32]),
         "goal_stats": list(b[33:37]),
         "form": _s8(b[37]),                # was some_flag
     }
+
+
+def _pack_nib(p: dict, hi_key: str, lo_key: str, packed_key: str) -> int:
+    """Combine two split nibble fields into one byte (hi<<4 | lo). Falls back to a
+    pre-split packed key so old dicts still encode."""
+    if hi_key in p or lo_key in p:
+        return ((int(p.get(hi_key, 0)) & 0x0F) << 4) | (int(p.get(lo_key, 0)) & 0x0F)
+    return int(p.get(packed_key, 0)) & 0xFF
 
 
 def encode_player(p: dict) -> bytearray:
@@ -168,9 +181,9 @@ def encode_player(p: dict) -> bytearray:
     b[26] = p["position_and_face"] & 0xFF
     b[27] = p["cards_injuries"] & 0xFF
     b[28] = p["passing"] & 0xFF
-    b[29] = p["velocity_heading"] & 0xFF
-    b[30] = p["tackling_control"] & 0xFF
-    b[31] = p["speed_finishing"] & 0xFF
+    b[29] = _pack_nib(p, "velocity", "heading",   "velocity_heading")
+    b[30] = _pack_nib(p, "tackling", "control",   "tackling_control")
+    b[31] = _pack_nib(p, "speed",    "finishing", "speed_finishing")
     b[32] = p["price"] & 0xFF
     gs = (list(p["goal_stats"]) + [0, 0, 0, 0])[:4]
     b[33:37] = bytes(x & 0xFF for x in gs)

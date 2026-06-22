@@ -677,6 +677,12 @@ typedef enum {
      * to garbage → totalTeamValue overflow → panic in the gate-receipts
      * divu). `size` is in BYTES (size/4 words emitted). */
     FLD_U32_ARRAY,
+    /* Split one packed byte at `offset` into two editable JSON numbers:
+     * FLD_NIBBLE_HI = bits 4-7, FLD_NIBBLE_LO = bits 0-3. Two StructFieldDesc
+     * entries point at the SAME offset (a hi + a lo). Load is read-modify-write,
+     * so the byte round-trips exactly as long as both halves are present. Used for
+     * the PlayerFile skill pairs (velocity/heading, tackling/control, speed/finishing). */
+    FLD_NIBBLE_HI, FLD_NIBBLE_LO,
 } FieldType;
 
 typedef struct {
@@ -2057,7 +2063,8 @@ static void load_scalar_table(const char *buf, int buflen,
  * numSelectedTeams). Encoded as:
  *
  *   { "team": { ... 14 named fields ... },
- *     "players": [ 16 × { ... 13 named fields ... } ] }
+ *     "players": [ 16 × { ... 16 named fields; the 3 skill nibble-pairs are
+ *                  split into velocity/heading, tackling/control, speed/finishing ... } ] }
  *
  * Offsets via offsetof() — survives the 64-bit migration because
  * both struct layouts are packed (no padding to shift).
@@ -2121,6 +2128,19 @@ static void emit_s8_at(mjson_print_fn_t fn, void *fnd,
                        const char *key, const uint8_t *base, size_t off)
 {
     mjson_printf(fn, fnd, "%Q:%d", key, (int)(int8_t)base[off]);
+}
+
+/* Emit one nibble of a packed byte as an editable JSON number (0-15). */
+static void emit_nibble_hi_at(mjson_print_fn_t fn, void *fnd,
+                              const char *key, const uint8_t *base, size_t off)
+{
+    mjson_printf(fn, fnd, "%Q:%u", key, (unsigned)((base[off] >> 4) & 0x0F));
+}
+
+static void emit_nibble_lo_at(mjson_print_fn_t fn, void *fnd,
+                              const char *key, const uint8_t *base, size_t off)
+{
+    mjson_printf(fn, fnd, "%Q:%u", key, (unsigned)(base[off] & 0x0F));
 }
 
 static void emit_s16_at(mjson_print_fn_t fn, void *fnd,
@@ -2237,13 +2257,21 @@ static void emit_player_file_body(mjson_print_fn_t fn, void *fnd,
     mjson_printf(fn, fnd, "%s", ",");
     emit_s8_at  (fn, fnd, "passing",              p, offsetof(PlayerFile, passing));
     mjson_printf(fn, fnd, "%s", ",");
-    /* Keys renamed to the SWOS player-card labels 2026-06-18 (Ve / Co); old saves
-     * with "shooting_heading"/"tackling_ball_control" were migrated in-place. */
-    emit_s8_at  (fn, fnd, "velocity_heading",     p, offsetof(PlayerFile, velocityHeading));
+    /* The three skill bytes are nibble pairs (hi=first label, lo=second — see the
+     * PlayerFile struct comments + match_sim.c skill-unpack). Split into six editable
+     * fields 2026-06-22; load recombines them. (Pre-split saves used the packed keys
+     * velocity_heading/tackling_control/speed_finishing — still read for back-compat.) */
+    emit_nibble_hi_at(fn, fnd, "velocity",  p, offsetof(PlayerFile, velocityHeading));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "tackling_control",     p, offsetof(PlayerFile, tacklingControl));
+    emit_nibble_lo_at(fn, fnd, "heading",   p, offsetof(PlayerFile, velocityHeading));
     mjson_printf(fn, fnd, "%s", ",");
-    emit_s8_at  (fn, fnd, "speed_finishing",      p, offsetof(PlayerFile, speedFinishing));
+    emit_nibble_hi_at(fn, fnd, "tackling",  p, offsetof(PlayerFile, tacklingControl));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_nibble_lo_at(fn, fnd, "control",   p, offsetof(PlayerFile, tacklingControl));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_nibble_hi_at(fn, fnd, "speed",     p, offsetof(PlayerFile, speedFinishing));
+    mjson_printf(fn, fnd, "%s", ",");
+    emit_nibble_lo_at(fn, fnd, "finishing", p, offsetof(PlayerFile, speedFinishing));
     mjson_printf(fn, fnd, "%s", ",");
     emit_s8_at  (fn, fnd, "price",                p, offsetof(PlayerFile, price));
     mjson_printf(fn, fnd, "%s", ",");
@@ -2300,6 +2328,14 @@ static void load_struct_object(const char *slice, int slen, uint8_t *base,
             if (vt == MJSON_TOK_NUMBER)
                 *p = (uint8_t)parse_long_slice(vs, vl);
             break;
+        case FLD_NIBBLE_HI:   /* two halves share one offset; RMW so the byte survives */
+            if (vt == MJSON_TOK_NUMBER)
+                *p = (uint8_t)((*p & 0x0F) | (((uint8_t)parse_long_slice(vs, vl) & 0x0F) << 4));
+            break;
+        case FLD_NIBBLE_LO:
+            if (vt == MJSON_TOK_NUMBER)
+                *p = (uint8_t)((*p & 0xF0) | ((uint8_t)parse_long_slice(vs, vl) & 0x0F));
+            break;
         case FLD_U16: case FLD_S16:
             if (vt == MJSON_TOK_NUMBER) {
                 uint16_t v = (uint16_t)parse_long_slice(vs, vl);
@@ -2347,6 +2383,8 @@ static void emit_struct_object(mjson_print_fn_t fn, void *fnd,
         switch (f->type) {
         case FLD_U8:    emit_u8_at   (fn, fnd, f->name, base, f->offset); break;
         case FLD_S8:    emit_s8_at   (fn, fnd, f->name, base, f->offset); break;
+        case FLD_NIBBLE_HI: emit_nibble_hi_at(fn, fnd, f->name, base, f->offset); break;
+        case FLD_NIBBLE_LO: emit_nibble_lo_at(fn, fnd, f->name, base, f->offset); break;
         case FLD_U16:   emit_u16_at  (fn, fnd, f->name, base, f->offset); break;
         case FLD_S16:   emit_s16_at  (fn, fnd, f->name, base, f->offset); break;
         case FLD_U32:
@@ -2368,6 +2406,14 @@ static const StructFieldDesc s_player_fields[] = {
     { "position_and_face",    offsetof(PlayerFile, positionAndFace),     0, FLD_U8 },
     { "cards_injuries",       offsetof(PlayerFile, cardsInjuries),       0, FLD_U8 },
     { "passing",              offsetof(PlayerFile, passing),             0, FLD_U8 },
+    /* Skill nibble pairs, split into editable halves (hi=first label, lo=second). */
+    { "velocity",             offsetof(PlayerFile, velocityHeading),     0, FLD_NIBBLE_HI },
+    { "heading",              offsetof(PlayerFile, velocityHeading),     0, FLD_NIBBLE_LO },
+    { "tackling",             offsetof(PlayerFile, tacklingControl),     0, FLD_NIBBLE_HI },
+    { "control",              offsetof(PlayerFile, tacklingControl),     0, FLD_NIBBLE_LO },
+    { "speed",                offsetof(PlayerFile, speedFinishing),      0, FLD_NIBBLE_HI },
+    { "finishing",            offsetof(PlayerFile, speedFinishing),      0, FLD_NIBBLE_LO },
+    /* Backward-compat (load-only): pre-split saves/data used the packed bytes. */
     { "velocity_heading",     offsetof(PlayerFile, velocityHeading),     0, FLD_U8 },
     { "tackling_control",     offsetof(PlayerFile, tacklingControl),     0, FLD_U8 },
     { "speed_finishing",      offsetof(PlayerFile, speedFinishing),      0, FLD_U8 },
