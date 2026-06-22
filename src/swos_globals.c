@@ -101,10 +101,13 @@ SWOS_CHIP_BSS uint8_t frontbufferBase[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 SWOS_CHIP_BSS uint8_t frontbufferBaseAlt[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 SWOS_CHIP_BSS uint8_t frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 #ifdef SWOS_SDL_BUILD
-/* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH
- * (384), set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
+/* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
+ * set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
 int g_screen_width = SCREEN_WIDTH;
 #endif
+/* Per-draw X shift for centering 336-wide menu content in a widescreen frame. Set to
+ * WIDE_MARGIN only around the menu entry-draw loop; 0 everywhere else (and on Amiga). */
+int g_menu_draw_x_offset = 0;
 /* These store live pointers to frontbuffer memory. On 32-bit they
  * are word-sized for layout compatibility with the Amiga port (where
  * the asm reads them as long words). On 64-bit they must be wide

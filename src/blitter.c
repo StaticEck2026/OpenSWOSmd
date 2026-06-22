@@ -298,7 +298,7 @@ static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
 __attribute__((used, externally_visible))
 void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
-    uint8_t *buf = (uint8_t *)frontbufferBasePtr;
+    uint8_t *buf = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
     uint16_t wrapRows;
     int16_t overflow;
 

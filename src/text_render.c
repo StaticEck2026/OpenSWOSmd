@@ -65,7 +65,7 @@ static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
     if (!spr) return;
 
     const uint8_t *data = (const uint8_t *)(uintptr_t)spr->sprData;
-    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr + g_menu_draw_x_offset;
     if (!data || !dstBase) return;
 
     int16_t glyphW = spr->pixWidth;
@@ -134,7 +134,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
         _PanicHaltLoop();
     }
 
-    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr;
+    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
     uint16_t glyphHeight = (uint16_t)spr->nlines;
 
     /* Apply camera offset */

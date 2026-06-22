@@ -261,7 +261,7 @@ extern volatile struct Custom *custom;
  * stays a link-time constant (FRONTBUFFER_ALLOC_TOTAL_BYTES); only the row-stride
  * arithmetic is runtime. SCREEN_WIDTH stays the 336 logical/centered width (menus). */
 extern int g_screen_width;
-#define WIDESCREEN_WIDTH                384
+#define WIDESCREEN_WIDTH                480   /* ~16:9 (480/272=1.76), matches swos-2020 */
 #define FRONTBUFFER_MAX_STRIDE_BYTES    WIDESCREEN_WIDTH
 #define FRONTBUFFER_ROW_STRIDE_BYTES    g_screen_width
 #else
@@ -279,6 +279,13 @@ extern int g_screen_width;
 #define FRONTBUFFER_ALLOC_TOTAL_BYTES   (FRONTBUFFER_MAX_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
 #define FB_COPY_WORDS_MINUS1            ((FRONTBUFFER_SIZE_TOTAL_BYTES >> 1) - 1)
 #define FB_BLT_MOD_AFTER_1_WORD         (FRONTBUFFER_ROW_STRIDE_BYTES - 2)
+
+/* Widescreen menu centering: 336-wide menu content is drawn centered in the wider
+ * frame by shifting the frontbuffer write base by WIDE_MARGIN. g_menu_draw_x_offset is
+ * set to WIDE_MARGIN only around the menu entry-draw loop (so the full-width panel
+ * background and the in-match pitch stay at offset 0). 0 / WIDE_MARGIN=0 on Amiga. */
+#define WIDE_MARGIN                     ((g_screen_width - SCREEN_WIDTH) / 2)
+extern int g_menu_draw_x_offset;
 
 /* ---- Tile / scroll-blit constants ---- */
 #define TILE_STRIDE                 14

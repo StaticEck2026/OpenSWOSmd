@@ -540,7 +540,7 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Compute destination address */
         uint32_t *a3 = (uint32_t *)spriteBlitQueue;
-        uint8_t *a1 = (uint8_t *)frontbufferBasePtr;
+        uint8_t *a1 = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
 
         int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
         int32_t xWordOffL = (int32_t)xWordOff; /* sign-extend */
@@ -618,7 +618,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 {
     if (!a0) return;
     const uint8_t *data = (const uint8_t *)(uintptr_t)a0->sprData;
-    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr + g_menu_draw_x_offset;
     if (!data || !dstBase) return;
 
     int16_t sprW  = a0->pixWidth;
@@ -674,7 +674,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     if (sprType != 0) {
         /* ---- branch_linked_planes path ---- */
         uint32_t *a3 = (uint32_t *)spriteBlitQueue;
-        uint8_t *a1 = (uint8_t *)frontbufferBasePtr;
+        uint8_t *a1 = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
         int16_t d3 = a0->nlines;
         int16_t d5 = 0;
 
@@ -812,7 +812,7 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     /* ---- Normal (non-linked) 4-plane path ---- */
     {
         uint32_t *a3 = (uint32_t *)spriteBlitQueue;
-        uint8_t *a1 = (uint8_t *)frontbufferBasePtr;
+        uint8_t *a1 = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
 
         /* Redundant type check removed - we know sprType == 0 here */
         int16_t d3 = a0->nlines;

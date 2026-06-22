@@ -575,8 +575,10 @@ void _CallDrawMenuItem(MenuEntry *entry)
      * presents the new state), then memcpy the displayed buffer to
      * the now-drawing-target buffer so both are in sync. No second
      * present required. */
+    g_menu_draw_x_offset = WIDE_MARGIN;   /* widescreen: keep the redraw centered too */
     _DrawMenuBackWithCheck(entry);
     _DrawMenuItem(entry);
+    g_menu_draw_x_offset = 0;
     _WaitForVSync();
     _BlitterCopyOverlayToScreen();
 #else
@@ -1324,13 +1326,16 @@ void _DrawMenu(void)
         _CallMenuCallback((void *)onDrawPtr);
     }
 
-    /* Draw all entries */
+    /* Draw all entries — widescreen: center the 336-wide content in the wider frame
+     * (the full-width panel background above was drawn at offset 0). */
     entry = (MenuEntry *)menuEntries;
     count = (int16_t)menu->numEntries;
+    g_menu_draw_x_offset = WIDE_MARGIN;
     for (i = 0; i < count; i++) {
         _DrawMenuItem(entry);
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
+    g_menu_draw_x_offset = 0;
     _WaitForVSync();
     _BlitterCopyOverlayToScreen();
 }
