@@ -27,4 +27,17 @@ const char *tr_ptr(const void *strAddr);
  * they need this rebuild rather than a plain tr_ptr at each of the ~8 sites). */
 void Countries_Localize(void);
 
+/* Localize a compiled message-string POINTER for display: returns the active
+ * language's text for `s` (the address of a compiled UI string), or `s` itself if
+ * untranslated/unknown. Wrap the format/message argument of code that shows a
+ * string BY POINTER (e.g. _PrintFormatted into a buffer) — the menu loader only
+ * localizes static menu-entry text, and the renderer only tr_ptr's entry pointers,
+ * so text formatted into a runtime buffer needs this at the point of use. No-op on
+ * the Amiga (tr_ptr returns NULL there) -> keeps the English original. */
+static inline const unsigned char *tr_fmt(const void *s)
+{
+    const char *t = tr_ptr(s);
+    return t ? (const unsigned char *)t : (const unsigned char *)s;
+}
+
 #endif /* TRANSLATIONS_H */

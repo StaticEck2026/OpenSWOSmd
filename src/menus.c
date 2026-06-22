@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "menus.h"
+#include "translations.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -2389,7 +2390,7 @@ __attribute__((used, externally_visible))
 void _SetSelectTwoTeamsText(void)
 {
     uint8_t *str = (uint8_t *)menuEntries[10].fg;
-    _PrintFormatted(aSelect0Teams, str, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    _PrintFormatted(tr_fmt(aSelect0Teams), str, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /* ================================================================

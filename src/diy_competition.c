@@ -9,6 +9,7 @@
  */
 
 #include "diy_competition.h"
+#include "translations.h"
 #include "auto_skip_debug.h"
 #include "endian_helpers.h"
 #include "game_types.h"
@@ -4747,7 +4748,7 @@ void _SetNumberOfTeamsToSelect(void)
 {
     uint8_t *str = (uint8_t *)menuEntries[23].fg;
     uint16_t numTeams = *(uint16_t *)&diyCompetitionStart.base.numTeams;
-    _PrintFormatted(aSelect0Teams, str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    _PrintFormatted(tr_fmt(aSelect0Teams), str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /* ShowDesignDIYCupMenu — copy buffer, init cup, show cup design menu (SWOS2.s line 43355) */
@@ -4792,7 +4793,7 @@ void _DesignDIYCup_UpdateSelectTeamsPrompt(void)
 {
     uint8_t *str = (uint8_t *)menuEntries[51].fg;
     uint16_t numTeams = *(uint16_t *)&diyCompetitionStart.base.numTeams;
-    _PrintFormatted(aSelect0Teams, str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    _PrintFormatted(tr_fmt(aSelect0Teams), str, numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /* ShowDesignDIYTournamentMenu — save, init tournament, show menu (SWOS2.s line 47530) */
@@ -4838,7 +4839,7 @@ void _DesignDIYTournament_UpdateSelectTeamsPrompt(void)
 {
     DIYCompetition *buf = &diyFileBufferCopy.header;
     uint8_t *str = (uint8_t *)menuEntries[92].fg;
-    _PrintFormatted(aSelect0Teams, str, (uint16_t)buf->numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    _PrintFormatted(tr_fmt(aSelect0Teams), str, (uint16_t)buf->numTeams, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 }
 
 /* ==========================================================================
@@ -7721,19 +7722,19 @@ void _DesignDIYLeagueUpdatePromotionRelegationText(void)
         /* Winner/qualifier format */
         uint16_t numQualify = (uint16_t)a6s->roundComplete;  /* 0x54 (league: num qualifiers) */
         if (numQualify == 1)
-            _PrintFormatted(aWinnerQualifie, outBuf18, numQualify, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            _PrintFormatted(tr_fmt(aWinnerQualifie), outBuf18, numQualify, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         else
-            _PrintFormatted(aTop0Qualify, outBuf18, numQualify, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            _PrintFormatted(tr_fmt(aTop0Qualify), outBuf18, numQualify, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         e18->isInvisible = 0;
     } else {
         /* Promoted format */
         uint16_t numPromoted = (uint16_t)a6s->roundComplete;    /* 0x54 (league: num promoted) */
         uint16_t numPlayoffs = (uint16_t)a6s->competitionFinished;    /* 0x56 (league: num playoff spots) */
         if (numPlayoffs != 0) {
-            _PrintFormatted(aTeamsPromoted0_0, outBuf18, numPromoted, numPlayoffs, 0, 0, 0, 0, 0, 0, 0, 0);
+            _PrintFormatted(tr_fmt(aTeamsPromoted0_0), outBuf18, numPromoted, numPlayoffs, 0, 0, 0, 0, 0, 0, 0, 0);
             e18->isInvisible = 0;
         } else if (numPromoted != 0) {
-            _PrintFormatted(aTeamsPromoted0, outBuf18, numPromoted, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            _PrintFormatted(tr_fmt(aTeamsPromoted0), outBuf18, numPromoted, 0, 0, 0, 0, 0, 0, 0, 0, 0);
             e18->isInvisible = 0;
         } else {
             /* Both 0: move relegated text up to promoted position */
@@ -7748,10 +7749,10 @@ void _DesignDIYLeagueUpdatePromotionRelegationText(void)
     uint16_t numRelPlayoffs = (uint16_t)a6s->numRounds;  /* 0x5A (league: num relegation playoffs) */
 
     if (numRelPlayoffs != 0) {
-        _PrintFormatted(aTeamsRelegated_0, outBuf19, numRelegated, numRelPlayoffs, 0, 0, 0, 0, 0, 0, 0, 0);
+        _PrintFormatted(tr_fmt(aTeamsRelegated_0), outBuf19, numRelegated, numRelPlayoffs, 0, 0, 0, 0, 0, 0, 0, 0);
         e19->isInvisible = 0;
     } else if (numRelegated != 0) {
-        _PrintFormatted(aTeamsRelegated, outBuf19, numRelegated, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        _PrintFormatted(tr_fmt(aTeamsRelegated), outBuf19, numRelegated, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         e19->isInvisible = 0;
     }
     /* else: both 0, entry stays hidden */
@@ -8431,7 +8432,7 @@ void _CheckNumTeamsAllowed(void)
         if (needed == 1) {
             _StringCopy(aSelect1MoreTea, statusDst);
         } else {
-            _PrintFormatted(aSelect0MoreTea, statusDst,
+            _PrintFormatted(tr_fmt(aSelect0MoreTea), statusDst,
                             needed, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     } else {
@@ -8440,7 +8441,7 @@ void _CheckNumTeamsAllowed(void)
         if (excess == 1) {
             _StringCopy(aSelect1LessTea, statusDst);
         } else {
-            _PrintFormatted(aSelect0LessTea, statusDst,
+            _PrintFormatted(tr_fmt(aSelect0LessTea), statusDst,
                             excess, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     }

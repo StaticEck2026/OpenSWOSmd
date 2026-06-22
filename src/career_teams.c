@@ -11,6 +11,7 @@
  */
 
 #include "career_teams.h"
+#include "translations.h"
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "auto_skip_debug.h"
@@ -2459,7 +2460,7 @@ void _Career_UpdateNationalTeamMenuEntries(void)
         if (remaining == 1) {
             _StringCopy(aSelect1MoreInt, dst);
         } else {
-            _PrintFormatted(aSelect0MoreInt, dst,
+            _PrintFormatted(tr_fmt(aSelect0MoreInt), dst,
                             remaining, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     }
