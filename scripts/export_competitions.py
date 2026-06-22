@@ -102,6 +102,19 @@ def _put_field(d: dict, k: str, v):
         d[k] = num(v)
 
 
+def _round_rules(toks):
+    """Each per-round rule byte -> { legs, extra_time, penalties } (+ low when bits 1-0
+    are set). Mirrors save_format_json.c dj_round_rules: bits 7-6 / 5-4 / 3-2 / 1-0."""
+    out = []
+    for x in toks:
+        b = num(x) & 0xFF
+        r = {"legs": (b >> 6) & 3, "extra_time": (b >> 4) & 3, "penalties": (b >> 2) & 3}
+        if b & 3:
+            r["low"] = b & 3
+        out.append(r)
+    return out
+
+
 def find_defs(text: str, typename: str):
     """Yield (name, body) for each `typename <name>[opt] = { ... };` (body = inside braces)."""
     for m in re.finditer(r'\b' + typename + r'\s+([A-Za-z_]\w*)\s*(?:\[[0-9]*\])?\s*=\s*\{', text):
@@ -216,7 +229,7 @@ def parse_cup(name: str, body: str, is_cup2: bool, strings: dict) -> dict:
                          "subs_and_points_for_win", "round_string_base"], htoks[1:6]):
             _put_field(d, k, v)
 
-    d["round_rule_flags"] = [num(x) for x in split_top(inner(rule_flags_tok))] if rule_flags_tok else []
+    d["round_rule_flags"] = _round_rules(split_top(inner(rule_flags_tok))) if rule_flags_tok else []
     d["name"] = [resolve_name(x, strings) for x in split_top(inner(name_tok))] if name_tok else []
     d["team_seed_list"] = parse_seed_list(seed_tok) if seed_tok else []
     return d
@@ -230,7 +243,7 @@ def parse_playoffs(name: str, body: str, strings: dict) -> dict:
     for k, v in zip(["num_rounds_override", "teams", "away_goals_mode",
                      "subs_and_max_subs", "round_string_base"], m[1:6]):
         _put_field(d, k, v)
-    d["round_rule_flags"] = [num(x) for x in split_top(inner(m[6]))] if len(m) > 6 else []
+    d["round_rule_flags"] = _round_rules(split_top(inner(m[6]))) if len(m) > 6 else []
     d["name"] = [resolve_name(x, strings) for x in split_top(inner(m[7]))] if len(m) > 7 else []
     return d
 

@@ -3003,6 +3003,27 @@ static void dj_i8_array(const char *o, int ol, const char *path, int8_t *out, in
         out[i++] = (int8_t)(mjson_get_number(arr + voff, vlen, "$", &v) ? (int)v : 0);
 }
 
+/* Read round_rule_flags: each element is either the editable object
+ * { legs, extra_time, penalties, low? } — bits 7-6 / 5-4 / 3-2 / 1-0 — or a plain packed
+ * byte (back-compat). Recombine into the packed per-round rule byte. */
+static void dj_round_rules(const char *o, int ol, const char *path, int8_t *out, int max)
+{
+    const char *arr; int al, pos = 0, voff, vlen, vt, i = 0; double v;
+    if (mjson_find(o, ol, path, &arr, &al) != MJSON_TOK_ARRAY) return;
+    while (i < max && (pos = fast_array_next(arr, al, pos, &voff, &vlen, &vt)) != 0) {
+        const char *e = arr + voff; int el = vlen;
+        if (vt == MJSON_TOK_OBJECT) {
+            int legs = mjson_get_number(e, el, "$.legs",       &v) ? (int)v : 0;
+            int et   = mjson_get_number(e, el, "$.extra_time", &v) ? (int)v : 0;
+            int pen  = mjson_get_number(e, el, "$.penalties",  &v) ? (int)v : 0;
+            int low  = mjson_get_number(e, el, "$.low",        &v) ? (int)v : 0;
+            out[i++] = (int8_t)(((legs & 3) << 6) | ((et & 3) << 4) | ((pen & 3) << 2) | (low & 3));
+        } else {
+            out[i++] = (int8_t)(mjson_get_number(e, el, "$", &v) ? (int)v : 0);   /* back-compat */
+        }
+    }
+}
+
 /* Parse one cup/playoff competition record (`o`/`ol` = the JSON object slice)
    into `out`. isPlayoff selects the Competition.isPlayoff discriminator (the
    caller knows it from the source list). name[] strings are interned into the
@@ -3036,7 +3057,7 @@ int DataJson_LoadCompetitionCup(const char *o, int ol, void *outv,
     out->header.subsAndPointsForWin = (int8_t)dj_subs_pair(o, ol, "$.points_for_win", "$.subs_and_points_for_win");
     out->header.roundStringBase     = (int8_t)GN(o, ol, "$.round_string_base");
 #undef GN
-    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
+    dj_round_rules(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
     dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
     dj_seed_list(o, ol, out->teamSeedList, 32);
     return 0;
@@ -3062,7 +3083,7 @@ int DataJson_LoadPlayoffs(const char *o, int ol, void *outv,
     out->subsAndMaxSubs    = (int8_t)dj_subs_pair(o, ol, "$.max_subs", "$.subs_and_max_subs");
     out->roundStringBase   = (int8_t)GN(o, ol, "$.round_string_base");
 #undef GN
-    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 2);
+    dj_round_rules(o, ol, "$.round_rule_flags", out->roundRuleFlags, 2);
     dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
     return 0;
 }
@@ -3096,7 +3117,7 @@ int DataJson_LoadCompetitionTournament(const char *o, int ol, void *outv,
         }
     }
 #undef GN
-    dj_i8_array(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
+    dj_round_rules(o, ol, "$.round_rule_flags", out->roundRuleFlags, 6);
     dj_intern_names(o, ol, "$.name", out->name, 2, strpool, strpoolsz);
     dj_seed_list(o, ol, out->teamSeedList, 32);
     return 0;
