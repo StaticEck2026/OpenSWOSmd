@@ -1,0 +1,2625 @@
+{
+  "name": "designDiyTournamentMenu",
+  "onInit": "_DesignDIYTournamentInit",
+  "onReturn": "_DesignDIYTournamentReinit",
+  "onDraw": "_DesignDIYTournamentOnDraw",
+  "defaultEntry": 19,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aDesignDiyTourn"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "diyFileBufferCopy.header.competitionName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 17,
+        "w": 304,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 4
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "diyFileBufferCopy.header.competitionName"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect2"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 34,
+        "w": 76,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 4,
+          "up": 2,
+          "down": 19
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyPitchSeasonStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 77,
+        "y": 34,
+        "w": 56,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 5,
+          "up": 2,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyPitchTypeStringTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 77,
+        "y": 34,
+        "w": 22,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 7,
+          "up": 4,
+          "down": 20
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStartMonthStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect5"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 100,
+        "y": 34,
+        "w": 10,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "asc_135D96"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 111,
+        "y": 34,
+        "w": 22,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 9,
+          "up": 4,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyEndMonthStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect7"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -118,
+        "y": 34,
+        "w": 64,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aAwayGoals"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -54,
+        "y": 34,
+        "w": 102,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": -1,
+          "up": 2,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyAwayGoalsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect9"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 53,
+        "y": 47,
+        "w": 70,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aSubstitutes"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 124,
+        "y": 47,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 13,
+          "up": 7,
+          "down": 23
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect11"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -91,
+        "y": 47,
+        "w": 38,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aFrom"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -52,
+        "y": 47,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": -1,
+          "up": 9,
+          "down": 25
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect13"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 33
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 29,
+        "w": 34,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "aTeams"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -126,
+        "y": 29,
+        "w": 120,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aDescription"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 83,
+        "y": 29,
+        "w": 50,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aSeeded"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 71
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 185
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 20,
+          "up": 3,
+          "down": 31
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 78,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 19,
+          "right": 21,
+          "up": 5,
+          "down": 32
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 0,
+        "w": 8,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 20,
+          "right": 23,
+          "up": 11,
+          "down": 33
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStar"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 10,
+        "w": 279,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 21,
+          "right": 24,
+          "up": 11,
+          "down": 26
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage1LegsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect23"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 23,
+          "right": 25,
+          "up": 11,
+          "down": 27
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage1ExtraTimeStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect24"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 0,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 24,
+          "right": 26,
+          "up": 13,
+          "down": 28
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage1PenaltiesStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect25"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 25,
+          "right": 27,
+          "up": 23,
+          "down": 35
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage1PtsForWinStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect26"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 26,
+          "right": 28,
+          "up": 24,
+          "down": 36
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -58,
+        "y": 0,
+        "w": 106,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 26,
+          "right": -1,
+          "up": 25,
+          "down": 37
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage1PlayCountStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect28"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 90
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 185
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 32,
+          "up": 19,
+          "down": 43
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 78,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 31,
+          "right": 33,
+          "up": 20,
+          "down": 44
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 0,
+        "w": 8,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 32,
+          "right": 35,
+          "up": 21,
+          "down": 45
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStar"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 10,
+        "w": 279,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": 4
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 33,
+          "right": 36,
+          "up": 26,
+          "down": 38
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage2LegsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect23"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 35,
+          "right": 37,
+          "up": 27,
+          "down": 39
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage2ExtraTimeStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect24"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 0,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 36,
+          "right": 38,
+          "up": 28,
+          "down": 40
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage2PenaltiesStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect25"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 37,
+          "right": 39,
+          "up": 35,
+          "down": 47
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage2PtsForWinStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect26"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 38,
+          "right": 40,
+          "up": 36,
+          "down": 48
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -58,
+        "y": 0,
+        "w": 106,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 38,
+          "right": -1,
+          "up": 37,
+          "down": 49
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage2PlayCountStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect28"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 109
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 185
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 44,
+          "up": 31,
+          "down": 55
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 78,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 43,
+          "right": 45,
+          "up": 32,
+          "down": 56
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 0,
+        "w": 8,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 44,
+          "right": 47,
+          "up": 33,
+          "down": 57
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStar"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 10,
+        "w": 279,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 45,
+          "right": 48,
+          "up": 38,
+          "down": 50
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage3LegsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect23"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 47,
+          "right": 49,
+          "up": 39,
+          "down": 51
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage3ExtraTimeStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect24"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 0,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 48,
+          "right": 50,
+          "up": 40,
+          "down": 52
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage3PenaltiesStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect25"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 49,
+          "right": 51,
+          "up": 47,
+          "down": 59
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage3PtsForWinStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect26"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 50,
+          "right": 52,
+          "up": 48,
+          "down": 60
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -58,
+        "y": 0,
+        "w": 106,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 50,
+          "right": -1,
+          "up": 49,
+          "down": 61
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage3PlayCountStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect28"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 128
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 185
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 56,
+          "up": 43,
+          "down": 67
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 78,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 55,
+          "right": 57,
+          "up": 44,
+          "down": 68
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 0,
+        "w": 8,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 56,
+          "right": 59,
+          "up": 45,
+          "down": 69
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStar"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 10,
+        "w": 279,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 57,
+          "right": 60,
+          "up": 50,
+          "down": 62
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage4LegsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect23"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 59,
+          "right": 61,
+          "up": 51,
+          "down": 63
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage4ExtraTimeStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect24"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 0,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 60,
+          "right": 62,
+          "up": 52,
+          "down": 64
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage4PenaltiesStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect25"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 61,
+          "right": 63,
+          "up": 59,
+          "down": 71
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage4PtsForWinStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect26"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 62,
+          "right": 64,
+          "up": 60,
+          "down": 72
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -58,
+        "y": 0,
+        "w": 106,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 62,
+          "right": -1,
+          "up": 61,
+          "down": 73
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage4PlayCountStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect28"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 147
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 185
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 68,
+          "up": 55,
+          "down": 79
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 78,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 67,
+          "right": 69,
+          "up": 56,
+          "down": 80
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 0,
+        "w": 8,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 68,
+          "right": 71,
+          "up": 57,
+          "down": 81
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStar"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 10,
+        "w": 279,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 69,
+          "right": 72,
+          "up": 62,
+          "down": 74
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage5LegsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect23"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 71,
+          "right": 73,
+          "up": 63,
+          "down": 75
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage5ExtraTimeStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect24"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 0,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 72,
+          "right": 74,
+          "up": 64,
+          "down": 76
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage5PenaltiesStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect25"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 73,
+          "right": 75,
+          "up": 71,
+          "down": 83
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage5PtsForWinStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect26"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 74,
+          "right": 76,
+          "up": 72,
+          "down": 84
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -58,
+        "y": 0,
+        "w": 106,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 74,
+          "right": -1,
+          "up": 73,
+          "down": 85
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage5PlayCountStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect28"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 166
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 10,
+        "w": 16,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 185
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 8,
+        "y": 0,
+        "w": 16,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 80,
+          "up": 67,
+          "down": 90
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 78,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 79,
+          "right": 81,
+          "up": 68,
+          "down": 90
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 0,
+        "w": 8,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 80,
+          "right": 83,
+          "up": 69,
+          "down": 90
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStar"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 10,
+        "w": 279,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 81,
+          "right": 84,
+          "up": 74,
+          "down": 86
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage6LegsStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect23"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 83,
+          "right": 85,
+          "up": 75,
+          "down": 87
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage6ExtraTimeStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect24"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 0,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 84,
+          "right": 86,
+          "up": 76,
+          "down": 88
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage6PenaltiesStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect25"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 0,
+        "w": 84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 85,
+          "right": 87,
+          "up": 83,
+          "down": 90
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage6PtsForWinStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect26"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 86,
+          "right": 88,
+          "up": 84,
+          "down": 91
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -58,
+        "y": 0,
+        "w": 106,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 86,
+          "right": -1,
+          "up": 85,
+          "down": 91
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "diyStage6PlayCountStrTab"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect28"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -71,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 90,
+          "up": 79,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aChooseTeams"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect89"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 89,
+        "y": -71,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 89,
+          "right": 91,
+          "up": 86,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aOk"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOK"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -71,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 90,
+          "right": -1,
+          "up": 87,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DesignDIYTournamentOnSelect91"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -72,
+        "y": -68,
+        "w": 120,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    }
+  ]
+}

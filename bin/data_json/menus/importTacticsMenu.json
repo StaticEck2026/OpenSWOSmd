@@ -1,0 +1,549 @@
+{
+  "name": "importTacticsMenu",
+  "onInit": "_ImportTacticsInit",
+  "onReturn": null,
+  "onDraw": null,
+  "defaultEntry": 2,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aImportTactics"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 85,
+      "y": 60
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ImportTacticsSelectTactics"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 2,
+          "up": -1,
+          "down": 4
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a442"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 45,
+        "y": 0,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 1,
+          "right": 3,
+          "up": -1,
+          "down": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a541"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 90,
+        "y": 0,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 2,
+          "right": -1,
+          "up": -1,
+          "down": 6
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a451"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 11,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 5,
+          "up": 1,
+          "down": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a532"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 45,
+        "y": 11,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 6,
+          "up": 2,
+          "down": 8
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a352"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 90,
+        "y": 11,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": -1,
+          "up": 3,
+          "down": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a433"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 22,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 4,
+          "down": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a424"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 45,
+        "y": 22,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": 9,
+          "up": 5,
+          "down": 11
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a343"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 90,
+        "y": 22,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": -1,
+          "up": 6,
+          "down": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aSweep"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 33,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 11,
+          "up": 7,
+          "down": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "a523"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 45,
+        "y": 33,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 12,
+          "up": 8,
+          "down": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aAttack"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 90,
+        "y": 33,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": -1,
+          "up": 9,
+          "down": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aDefend"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 44,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 14,
+          "up": 10,
+          "down": 15
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "teamTacticsUSERA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 67,
+        "y": 44,
+        "w": 66,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 13,
+          "right": -1,
+          "up": 12,
+          "down": 16
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "teamTacticsUSERB"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 55,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 16,
+          "up": 13,
+          "down": 17
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "teamTacticsUSERC"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 67,
+        "y": 55,
+        "w": 66,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 15,
+          "right": -1,
+          "up": 14,
+          "down": 18
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "teamTacticsUSERD"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 66,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 18,
+          "up": 15,
+          "down": 19
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "teamTacticsUSERE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 67,
+        "y": 66,
+        "w": 66,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 17,
+          "right": -1,
+          "up": 16,
+          "down": 19
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "teamTacticsUSERF"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 78,
+        "w": -124,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 17,
+          "down": 20
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aLoad"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_LoadTactics"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -71,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 19,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ExitImportTactics"
+        }
+      ]
+    }
+  ]
+}

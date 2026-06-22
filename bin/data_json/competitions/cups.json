@@ -1,0 +1,4120 @@
+{
+  "type": "competition_cups",
+  "count": 76,
+  "competitions": [
+    {
+      "id": "cupWinnersCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 1,
+        "type": 1,
+        "team_number": -1,
+        "begin_month": 64,
+        "end_month": 32,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aEuropeanCupWin",
+        "aEuroCwCup"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_GREECE",
+          "ordinal": 0,
+          "team": "AEK ATHENS"
+        },
+        {
+          "country": "CN_SLOVAKIA",
+          "ordinal": 2,
+          "team": "CHEMLON HUMENNE"
+        },
+        {
+          "country": "CN_DENMARK",
+          "ordinal": 2,
+          "team": "AGF"
+        },
+        {
+          "country": "CN_SLOVENIA",
+          "ordinal": 11,
+          "team": "OLIMPIJA L'JANA"
+        },
+        {
+          "country": "CN_SPAIN",
+          "ordinal": 8,
+          "team": "BARCELONA"
+        },
+        {
+          "country": "CN_CYPRUS",
+          "ordinal": 0,
+          "team": "AEK LARNACA"
+        },
+        {
+          "country": "CN_PORTUGAL",
+          "ordinal": 2,
+          "team": "BENFICA"
+        },
+        {
+          "country": "CN_WALES",
+          "ordinal": 16,
+          "team": "LLANSANTFFRAID"
+        },
+        {
+          "country": "CN_ICELAND",
+          "ordinal": 8,
+          "team": "KR"
+        },
+        {
+          "country": "CN_SWEDEN",
+          "ordinal": 0,
+          "team": "AIK"
+        },
+        {
+          "country": "CN_BELGIUM",
+          "ordinal": 2,
+          "team": "CERCLE BRUGES"
+        },
+        {
+          "country": "CN_NORWAY",
+          "ordinal": 1,
+          "team": "BRANN"
+        },
+        {
+          "country": "CN_ISRAEL",
+          "ordinal": 15,
+          "team": "RISHON LEZION"
+        },
+        {
+          "country": "CN_TURKEY",
+          "ordinal": 10,
+          "team": "GALATASARAY"
+        },
+        {
+          "country": "CN_FAROE_ISLANDS",
+          "ordinal": 4,
+          "team": "HB"
+        },
+        {
+          "country": "CN_HOLLAND",
+          "ordinal": 21,
+          "team": "PSV"
+        },
+        {
+          "country": "CN_ROMANIA",
+          "ordinal": 8,
+          "team": "GLORIA BISTRITA"
+        },
+        {
+          "country": "CN_ITALY",
+          "ordinal": 18,
+          "team": "FIORENTINA"
+        },
+        {
+          "country": "CN_GERMANY",
+          "ordinal": 22,
+          "team": "KAISERSLAUTERN"
+        },
+        {
+          "country": "CN_YUGOSLAVIA",
+          "ordinal": 7,
+          "team": "RED STAR B'GRADE"
+        },
+        {
+          "country": "CN_RUSSIA",
+          "ordinal": 10,
+          "team": "LOKOMOTIV MOSCOW"
+        },
+        {
+          "country": "CN_CROATIA",
+          "ordinal": 11,
+          "team": "VARTEKS VARAZDIN"
+        },
+        {
+          "country": "CN_FINLAND",
+          "ordinal": 8,
+          "team": "MYPA"
+        },
+        {
+          "country": "CN_ENGLAND",
+          "ordinal": 18,
+          "team": "LIVERPOOL"
+        },
+        {
+          "country": "CN_BULGARIA",
+          "ordinal": 6,
+          "team": "LEVSKI SOFIA"
+        },
+        {
+          "country": "CN_HUNGARY",
+          "ordinal": 8,
+          "team": "KISPEST-HONVED"
+        },
+        {
+          "country": "CN_SWITZERLAND",
+          "ordinal": 12,
+          "team": "SION"
+        },
+        {
+          "country": "CN_UKRAINE",
+          "ordinal": 10,
+          "team": "NIVA VINNITSA"
+        },
+        {
+          "country": "CN_AUSTRIA",
+          "ordinal": 7,
+          "team": "STURM GRAZ"
+        },
+        {
+          "country": "CN_CZECH_REPUBLIC",
+          "ordinal": 10,
+          "team": "SPARTA PRAGUE"
+        },
+        {
+          "country": "CN_LATVIA",
+          "ordinal": 6,
+          "team": "RAF YELGAVA"
+        },
+        {
+          "country": "CN_FRANCE",
+          "ordinal": 30,
+          "team": "PARIS ST-GERMAIN"
+        }
+      ]
+    },
+    {
+      "id": "uefaCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 2,
+        "type": 1,
+        "team_number": -1,
+        "begin_month": 64,
+        "end_month": 32,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aEufaCup",
+        "aEufaCup_0"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_RUSSIA",
+          "ordinal": 19,
+          "team": "TORPEDO MOSCOW"
+        },
+        {
+          "country": "CN_PORTUGAL",
+          "ordinal": 3,
+          "team": "BOAVISTA"
+        },
+        {
+          "country": "CN_POLAND",
+          "ordinal": 7,
+          "team": "LEGIA WARSAW"
+        },
+        {
+          "country": "CN_TURKEY",
+          "ordinal": 5,
+          "team": "BESIKTAS"
+        },
+        {
+          "country": "CN_CZECH_REPUBLIC",
+          "ordinal": 8,
+          "team": "SLAVIA PRAGUE"
+        },
+        {
+          "country": "CN_SPAIN",
+          "ordinal": 44,
+          "team": "VALENCIA"
+        },
+        {
+          "country": "CN_PORTUGAL",
+          "ordinal": 24,
+          "team": "VIT. GUIMARAES"
+        },
+        {
+          "country": "CN_BELGIUM",
+          "ordinal": 0,
+          "team": "ANDERLECHT"
+        },
+        {
+          "country": "CN_GERMANY",
+          "ordinal": 23,
+          "team": "KARLSRUHE"
+        },
+        {
+          "country": "CN_ITALY",
+          "ordinal": 40,
+          "team": "ROMA"
+        },
+        {
+          "country": "CN_SWEDEN",
+          "ordinal": 7,
+          "team": "HELSINGBORG"
+        },
+        {
+          "country": "CN_SWITZERLAND",
+          "ordinal": 10,
+          "team": "NEUCHATEL XAMAX"
+        },
+        {
+          "country": "CN_SPAIN",
+          "ordinal": 19,
+          "team": "ESPANYOL"
+        },
+        {
+          "country": "CN_HOLLAND",
+          "ordinal": 10,
+          "team": "FEYENOORD"
+        },
+        {
+          "country": "CN_BELGIUM",
+          "ordinal": 4,
+          "team": "CLUB BRUGES"
+        },
+        {
+          "country": "CN_ROMANIA",
+          "ordinal": 10,
+          "team": "NATIONAL"
+        },
+        {
+          "country": "CN_ITALY",
+          "ordinal": 21,
+          "team": "INTER MILAN"
+        },
+        {
+          "country": "CN_AUSTRIA",
+          "ordinal": 2,
+          "team": "GRAZER AK"
+        },
+        {
+          "country": "CN_SCOTLAND",
+          "ordinal": 0,
+          "team": "ABERDEEN"
+        },
+        {
+          "country": "CN_DENMARK",
+          "ordinal": 3,
+          "team": "BRONDBY"
+        },
+        {
+          "country": "CN_HUNGARY",
+          "ordinal": 5,
+          "team": "FERENCVAROS"
+        },
+        {
+          "country": "CN_ENGLAND",
+          "ordinal": 22,
+          "team": "NEWCASTLE UNITED"
+        },
+        {
+          "country": "CN_GERMANY",
+          "ordinal": 30,
+          "team": "SCHALKE"
+        },
+        {
+          "country": "CN_TURKEY",
+          "ordinal": 21,
+          "team": "TRABZONSPOR"
+        },
+        {
+          "country": "CN_ITALY",
+          "ordinal": 23,
+          "team": "LAZIO"
+        },
+        {
+          "country": "CN_SPAIN",
+          "ordinal": 42,
+          "team": "TENERIFE"
+        },
+        {
+          "country": "CN_GERMANY",
+          "ordinal": 17,
+          "team": "HAMBURG"
+        },
+        {
+          "country": "CN_RUSSIA",
+          "ordinal": 16,
+          "team": "SPARTAK MOSCOW"
+        },
+        {
+          "country": "CN_FRANCE",
+          "ordinal": 22,
+          "team": "METZ"
+        },
+        {
+          "country": "CN_PORTUGAL",
+          "ordinal": 20,
+          "team": "SPORTING LISBON"
+        },
+        {
+          "country": "CN_FRANCE",
+          "ordinal": 23,
+          "team": "MONACO"
+        },
+        {
+          "country": "CN_GERMANY",
+          "ordinal": 25,
+          "team": "MONCHENGLADBACH"
+        }
+      ]
+    },
+    {
+      "id": "worldCupQualifyingGroup1",
+      "type": "cup",
+      "comp": {
+        "comp_number": 5,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_2",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup2",
+      "type": "cup",
+      "comp": {
+        "comp_number": 6,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_3",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup3",
+      "type": "cup",
+      "comp": {
+        "comp_number": 7,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_4",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup4",
+      "type": "cup",
+      "comp": {
+        "comp_number": 8,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_5",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup5",
+      "type": "cup",
+      "comp": {
+        "comp_number": 9,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_6",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup6",
+      "type": "cup",
+      "comp": {
+        "comp_number": 10,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_7",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup7",
+      "type": "cup",
+      "comp": {
+        "comp_number": 11,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_8",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "worldCupQualifyingGroup8",
+      "type": "cup",
+      "comp": {
+        "comp_number": 12,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_9",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "oceaniaWorldCupQualification",
+      "type": "cup",
+      "comp": {
+        "comp_number": 17,
+        "type": 0,
+        "team_number": 85,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aWorldCupQualif_1",
+        "aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "invitationTournament",
+      "type": "cup",
+      "comp": {
+        "comp_number": 18,
+        "type": 0,
+        "team_number": -1,
+        "begin_month": -104,
+        "end_month": -104,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aInvitationTour",
+        "aInvTournament"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "tour",
+      "type": "cup",
+      "comp": {
+        "comp_number": 19,
+        "type": 0,
+        "team_number": -1,
+        "begin_month": -104,
+        "end_month": -104,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": -1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        null,
+        "aTour"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "friendly",
+      "type": "cup",
+      "comp": {
+        "comp_number": 20,
+        "type": 0,
+        "team_number": -1,
+        "begin_month": 56,
+        "end_month": 0,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": -1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aFriendly",
+        "aFriendly_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup1",
+      "type": "cup",
+      "comp": {
+        "comp_number": 23,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup2",
+      "type": "cup",
+      "comp": {
+        "comp_number": 24,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_0",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup3",
+      "type": "cup",
+      "comp": {
+        "comp_number": 25,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_1",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup4",
+      "type": "cup",
+      "comp": {
+        "comp_number": 26,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_2",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup5",
+      "type": "cup",
+      "comp": {
+        "comp_number": 27,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_3",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup6",
+      "type": "cup",
+      "comp": {
+        "comp_number": 28,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_4",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup7",
+      "type": "cup",
+      "comp": {
+        "comp_number": 29,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_5",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "ecQualifyingGroup8",
+      "type": "cup",
+      "comp": {
+        "comp_number": 30,
+        "type": 0,
+        "team_number": 80,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 21,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0,
+          "low": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aECQualifyingGr_6",
+        "aECQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "oceaniaCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 35,
+        "type": 0,
+        "team_number": 85,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 1,
+      "teams": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aOceaniaCup",
+        "aOceaniaCup_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "albanianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 109,
+        "type": 1,
+        "team_number": 0,
+        "begin_month": 88,
+        "end_month": 32,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "austrianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 110,
+        "type": 1,
+        "team_number": 1,
+        "begin_month": -128,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "belarusianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 111,
+        "type": 1,
+        "team_number": 76,
+        "begin_month": 72,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "belgianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 112,
+        "type": 1,
+        "team_number": 2,
+        "begin_month": 80,
+        "end_month": 32,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "bulgarianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 113,
+        "type": 1,
+        "team_number": 3,
+        "begin_month": 80,
+        "end_month": 32,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "croatianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 114,
+        "type": 1,
+        "team_number": 4,
+        "begin_month": 80,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "cypriotCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 115,
+        "type": 1,
+        "team_number": 5,
+        "begin_month": 104,
+        "end_month": -128,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "czechCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 116,
+        "type": 1,
+        "team_number": 6,
+        "begin_month": 72,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "danishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 117,
+        "type": 1,
+        "team_number": 7,
+        "begin_month": 112,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "estonianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 122,
+        "type": 1,
+        "team_number": 10,
+        "begin_month": -128,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "faroeIslesCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 123,
+        "type": 1,
+        "team_number": 11,
+        "begin_month": 56,
+        "end_month": 64,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "finnishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 124,
+        "type": 1,
+        "team_number": 12,
+        "begin_month": 32,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "greekCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 127,
+        "type": 1,
+        "team_number": 15,
+        "begin_month": 64,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "hungarianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -128,
+        "type": 1,
+        "team_number": 16,
+        "begin_month": 104,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "icelandicCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -127,
+        "type": 1,
+        "team_number": 17,
+        "begin_month": 56,
+        "end_month": 64,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "irishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -126,
+        "type": 1,
+        "team_number": 18,
+        "begin_month": 112,
+        "end_month": -128,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "israeliCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -125,
+        "type": 1,
+        "team_number": 19,
+        "begin_month": 120,
+        "end_month": -128,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "latvianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -123,
+        "type": 1,
+        "team_number": 21,
+        "begin_month": 56,
+        "end_month": 64,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "lithuanianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -122,
+        "type": 1,
+        "team_number": 22,
+        "begin_month": -128,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "luxembourgCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -121,
+        "type": 1,
+        "team_number": 23,
+        "begin_month": 120,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "malteseCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -120,
+        "type": 1,
+        "team_number": 24,
+        "begin_month": -128,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "northernIrishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -118,
+        "type": 1,
+        "team_number": 26,
+        "begin_month": 104,
+        "end_month": -128,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "norwegianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -117,
+        "type": 1,
+        "team_number": 27,
+        "begin_month": 64,
+        "end_month": 80,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "polishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -116,
+        "type": 1,
+        "team_number": 28,
+        "begin_month": 80,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 5,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "portugeseCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -115,
+        "type": 1,
+        "team_number": 29,
+        "begin_month": 96,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "romanianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -114,
+        "type": 1,
+        "team_number": 30,
+        "begin_month": 112,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "russianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -113,
+        "type": 1,
+        "team_number": 31,
+        "begin_month": 16,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 3,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "sanMarinoCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -112,
+        "type": 1,
+        "team_number": 32,
+        "begin_month": 120,
+        "end_month": -128,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "slovakianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -109,
+        "type": 1,
+        "team_number": 78,
+        "begin_month": -128,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "slovenianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -108,
+        "type": 1,
+        "team_number": 34,
+        "begin_month": 120,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "swedishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -106,
+        "type": 1,
+        "team_number": 36,
+        "begin_month": 32,
+        "end_month": 40,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 5,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "swissCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -105,
+        "type": 1,
+        "team_number": 37,
+        "begin_month": 120,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "turkishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -104,
+        "type": 1,
+        "team_number": 38,
+        "begin_month": 88,
+        "end_month": 24,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "ukrainianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -103,
+        "type": 1,
+        "team_number": 39,
+        "begin_month": 120,
+        "end_month": -120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "welshCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -102,
+        "type": 1,
+        "team_number": 40,
+        "begin_month": 88,
+        "end_month": 32,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "yugoslavianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -101,
+        "type": 1,
+        "team_number": 41,
+        "begin_month": 80,
+        "end_month": 32,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "algerianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -100,
+        "type": 1,
+        "team_number": 42,
+        "begin_month": 96,
+        "end_month": -128,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "southAfricanCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -96,
+        "type": 1,
+        "team_number": 69,
+        "begin_month": 56,
+        "end_month": 80,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "taiwaneseCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -95,
+        "type": 1,
+        "team_number": 67,
+        "begin_month": 96,
+        "end_month": 120,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "englishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 118,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": 96,
+        "end_month": -128,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 64,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 3,
+      "round_string_base": 3,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        }
+      ],
+      "name": [
+        "aCup_4",
+        "aCup_5"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "englishLeagueCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 119,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": 64,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 64,
+      "away_goals_mode": 2,
+      "substitutes": 3,
+      "points_for_win": 3,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        }
+      ],
+      "name": [
+        "aLeagueCup",
+        "aLeagueCup_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "englishCup_1",
+      "type": "cup",
+      "comp": {
+        "comp_number": 120,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": 96,
+        "end_month": -128,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 3,
+      "round_string_base": 4,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aCup_4",
+        "aCup_5"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "englishLeagueCup_1",
+      "type": "cup",
+      "comp": {
+        "comp_number": 121,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": 64,
+        "end_month": 16,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 2,
+      "substitutes": 3,
+      "points_for_win": 3,
+      "round_string_base": 3,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aLeagueCup",
+        "aLeagueCup_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "frenchCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 125,
+        "type": 1,
+        "team_number": 13,
+        "begin_month": 104,
+        "end_month": -120,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aCoupeDeFrance",
+        "aCoupe"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "germanCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": 126,
+        "type": 1,
+        "team_number": 14,
+        "begin_month": 64,
+        "end_month": 40,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 3,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aDFBPokal",
+        "aPokal"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "italianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -124,
+        "type": 1,
+        "team_number": 20,
+        "begin_month": 56,
+        "end_month": 32,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aCoppaItalia",
+        "aCoppa"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "scottishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -111,
+        "type": 1,
+        "team_number": 33,
+        "begin_month": 96,
+        "end_month": -128,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 3,
+      "round_string_base": 3,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aCup_6",
+        "aCup_7"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "scottishLeagueCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -110,
+        "type": 1,
+        "team_number": 33,
+        "begin_month": 56,
+        "end_month": 72,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 3,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 1,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 2,
+          "penalties": 2
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aLeagueCup_1",
+        "aLeagueCup_2"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "spanishCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -107,
+        "type": 1,
+        "team_number": 35,
+        "begin_month": 88,
+        "end_month": 40,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 5,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aCopa",
+        "aCopa_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "dutchCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -119,
+        "type": 1,
+        "team_number": 25,
+        "begin_month": 88,
+        "end_month": 32,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 3,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "australianCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -99,
+        "type": 1,
+        "team_number": 44,
+        "begin_month": 40,
+        "end_month": 80,
+        "name_table_offset": 0,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 32,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [],
+      "team_seed_list": []
+    },
+    {
+      "id": "japaneseCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -98,
+        "type": 1,
+        "team_number": 55,
+        "begin_month": 48,
+        "end_month": 56,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 8,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aCup_8",
+        "aCup_9"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "japaneseEmperorsCup",
+      "type": "cup",
+      "comp": {
+        "comp_number": -97,
+        "type": 1,
+        "team_number": 55,
+        "begin_month": 88,
+        "end_month": 0,
+        "name_table_offset": 15,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "num_rounds_override": 0,
+      "teams": 16,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "round_rule_flags": [
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 1,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "aEmperorSCup",
+        "aEmpCup"
+      ],
+      "team_seed_list": []
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+{
+  "name": "friendlyGameMenu",
+  "onInit": "_FriendlyMenuInit",
+  "onReturn": "_FriendlyMenuReinit",
+  "onDraw": null,
+  "defaultEntry": 8,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aFriendly_1"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 10
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 31,
+        "y": 70,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aSubstitutes"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -63,
+        "y": 70,
+        "w": 38,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aFrom"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 31,
+        "y": 50,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 4,
+          "up": -1,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "pitchTypeOrSeasonTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_PitchTypeOrSeasonProc"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 50,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": -1,
+          "up": -1,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "friendlyPitchTypeTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_FriendlyPitchTypeProc"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 70,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 6,
+          "up": 4,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_MinSubstitutes"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -24,
+        "y": 70,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": -1,
+          "up": 4,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_MaxSubstitutes"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -71,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 9,
+          "up": 5,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aChooseTeams"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChooseTeamsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -91,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": 9
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aOk"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_FriendlyOK"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -71,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": -1,
+          "up": 8,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_jmpSetExitMenuFlag"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -72,
+        "y": -68,
+        "w": 120,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    }
+  ]
+}

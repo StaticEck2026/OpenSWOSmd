@@ -189,6 +189,10 @@ def main():
         n += k
     print("emitted/spliced %d of %d menus" % (n, len(menus)))
 
+    if "--out" in sys.argv:
+        open(sys.argv[sys.argv.index("--out") + 1], "w").write(text)
+        return 0                         # build/regen mode: skip the slow round-trip verify
+
     with tempfile.TemporaryDirectory() as td:
         gen = os.path.join(td, "menu_data.c")
         open(gen, "w").write(text)

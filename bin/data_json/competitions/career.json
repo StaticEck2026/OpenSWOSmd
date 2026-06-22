@@ -1,0 +1,146 @@
+{
+  "type": "career_index",
+  "count": 35,
+  "contests": [
+    {
+      "competition": "euroCup",
+      "competition_copy": "euroCupCopy"
+    },
+    {
+      "competition": "cupWinnersCup",
+      "competition_copy": "cupWinnersCupCopy"
+    },
+    {
+      "competition": "uefaCup",
+      "competition_copy": "uefaCupCopy"
+    },
+    {
+      "competition": "invitationTournament",
+      "competition_copy": "invitationTournamentCopy"
+    },
+    {
+      "competition": "tour",
+      "competition_copy": "tourCopy"
+    },
+    {
+      "competition": "friendly",
+      "competition_copy": "friendlyCopy"
+    },
+    {
+      "competition": "europeanChampionships2",
+      "competition_copy": "europeanChampionships2Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup1",
+      "competition_copy": "ecQualifyingGroup1Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup2",
+      "competition_copy": "ecQualifyingGroup2Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup3",
+      "competition_copy": "ecQualifyingGroup3Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup4",
+      "competition_copy": "ecQualifyingGroup4Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup5",
+      "competition_copy": "ecQualifyingGroup5Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup6",
+      "competition_copy": "ecQualifyingGroup6Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup7",
+      "competition_copy": "ecQualifyingGroup7Copy"
+    },
+    {
+      "competition": "ecQualifyingGroup8",
+      "competition_copy": "ecQualifyingGroup8Copy"
+    },
+    {
+      "competition": "copaAmerica",
+      "competition_copy": "copaAmericaCopy"
+    },
+    {
+      "competition": "africanNationsCup",
+      "competition_copy": "africanNationsCupCopy"
+    },
+    {
+      "competition": "northAmericanCup",
+      "competition_copy": "northAmericanCupCopy"
+    },
+    {
+      "competition": "asianCup",
+      "competition_copy": "asianCupCopy"
+    },
+    {
+      "competition": "oceaniaCup",
+      "competition_copy": "oceaniaCupCopy"
+    },
+    {
+      "competition": "worldCup2",
+      "competition_copy": "worldCup2Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup1",
+      "competition_copy": "worldCupQualifyingGroup1Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup2",
+      "competition_copy": "worldCupQualifyingGroup2Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup3",
+      "competition_copy": "worldCupQualifyingGroup3Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup4",
+      "competition_copy": "worldCupQualifyingGroup4Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup5",
+      "competition_copy": "worldCupQualifyingGroup5Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup6",
+      "competition_copy": "worldCupQualifyingGroup6Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup7",
+      "competition_copy": "worldCupQualifyingGroup7Copy"
+    },
+    {
+      "competition": "worldCupQualifyingGroup8",
+      "competition_copy": "worldCupQualifyingGroup8Copy"
+    },
+    {
+      "competition": "northAmericaWorldCupQualification",
+      "competition_copy": "northAmericaWorldCupQualificationCopy"
+    },
+    {
+      "competition": "southAmericaWorldCupQualification",
+      "competition_copy": "southAmericaWorldCupQualificationCopy"
+    },
+    {
+      "competition": "africaWorldCupQualification",
+      "competition_copy": "africaWorldCupQualificationCopy"
+    },
+    {
+      "competition": "asiaWorldCupQualification",
+      "competition_copy": "asiaWorldCupQualificationCopy"
+    },
+    {
+      "competition": "oceaniaWorldCupQualification",
+      "competition_copy": "oceaniaWorldCupQualificationCopy"
+    },
+    {
+      "competition": null,
+      "competition_copy": null
+    }
+  ]
+}

@@ -1,0 +1,1114 @@
+{
+  "name": "diyLeagueTournamentMenu",
+  "onInit": "_DIYLeagueTournamentInit",
+  "onReturn": "_DIYLeagueTournamentOnRestore",
+  "onDraw": null,
+  "defaultEntry": 1,
+  "items": [
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": -54,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 2,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "right_skip",
+          "skip": 1,
+          "dir": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentNextMatch"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": -54,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 1,
+          "right": 3,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aPlayMatch"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 2,
+          "right": 4,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aMatch"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentMatch"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 77,
+        "y": -68,
+        "w": 80,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 5,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewHighlights_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentOnSelect4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 101,
+        "y": -68,
+        "w": 101,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 6,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aResult"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentResult"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 7,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewMatch"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentViewMatch"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 61,
+        "y": -68,
+        "w": 90,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 8,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewHighlights_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentViewHighlights"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 101,
+        "y": -68,
+        "w": 101,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": 9,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewResult"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentViewResult"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -68,
+        "w": 50,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": 10,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStats"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentStats"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -2,
+        "y": -68,
+        "w": 50,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": -1,
+          "up": 41,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentExit"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -107,
+        "y": -77,
+        "w": 6,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -77,
+        "w": -127,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x4010",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -83,
+        "y": -77,
+        "w": -127,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x8010",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -127,
+        "y": -77,
+        "w": 18,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "number",
+          "flags": "0x4010",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -101,
+        "y": -77,
+        "w": 18,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "number",
+          "flags": "0x8010",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "before_draw",
+          "func": "_DIYLeagueTournament16BeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 126,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aPl"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -105,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aW"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -80,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aD"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -55,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aL"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -30,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aF"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -5,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aA_0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 276,
+        "y": 10,
+        "w": 24,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aPts"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 6,
+        "y": 0,
+        "w": 22,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 25,
+        "y": 0,
+        "w": 100,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 126,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -105,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -80,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -55,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -30,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -5,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 276,
+        "y": 0,
+        "w": 24,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 30,
+        "w": 8,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 1,
+          "up": -1,
+          "down": 41
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "sprite_fg",
+          "index": 183
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentScrollUp"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -98,
+        "w": 8,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 1,
+          "up": 40,
+          "down": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "sprite_fg",
+          "index": 184
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYLeagueTournamentScrollDown"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "input_func",
+          "mask": "0xFFFF",
+          "func": "_jmp_SetExitMenuFlag_7"
+        }
+      ]
+    }
+  ]
+}

@@ -244,6 +244,7 @@ def main():
         out = sys.argv[sys.argv.index("--out") + 1]
         open(out, "w", encoding="latin1").write(spliced)
         print("wrote regenerated C -> %s" % out)
+        return 0                         # build/regen mode: skip the slow round-trip verify
 
     # ---- round-trip verify: re-export the spliced file and diff the JSON ----
     with tempfile.TemporaryDirectory() as td:

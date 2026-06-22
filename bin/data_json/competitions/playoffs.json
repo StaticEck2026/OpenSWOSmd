@@ -1,0 +1,258 @@
+{
+  "type": "playoffs",
+  "count": 7,
+  "playoffs": [
+    {
+      "id": "div1Playoffs",
+      "comp": {
+        "comp_number": 47,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": -128,
+        "end_month": -124,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 4,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 3,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "aDiv1Playoffs",
+        "aPlayoffs"
+      ]
+    },
+    {
+      "id": "div2Playoffs",
+      "comp": {
+        "comp_number": 48,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": -128,
+        "end_month": -124,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 4,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 3,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "aDiv2Playoffs",
+        "aPlayoffs"
+      ]
+    },
+    {
+      "id": "div3Playoffs",
+      "comp": {
+        "comp_number": 49,
+        "type": 1,
+        "team_number": 8,
+        "begin_month": -128,
+        "end_month": -124,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 4,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 3,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "aDiv3Playoffs",
+        "aPlayoffs"
+      ]
+    },
+    {
+      "id": "dutchPlayoffs",
+      "comp": {
+        "comp_number": 57,
+        "type": 1,
+        "team_number": 25,
+        "begin_month": -128,
+        "end_month": -128,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 1,
+      "teams": 4,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "aPlayoffs",
+        "aPlayoffs"
+      ]
+    },
+    {
+      "id": "scottishPlayoffs",
+      "comp": {
+        "comp_number": 75,
+        "type": 1,
+        "team_number": 33,
+        "begin_month": -128,
+        "end_month": -128,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 2,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 3,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aPlayoffs",
+        "aPlayoffs"
+      ]
+    },
+    {
+      "id": "spanishPlayoffs",
+      "comp": {
+        "comp_number": 79,
+        "type": 1,
+        "team_number": 35,
+        "begin_month": -120,
+        "end_month": -120,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 1,
+      "teams": 4,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "aPlayoffs",
+        "aPlayoffs"
+      ]
+    },
+    {
+      "id": "uruguayanPlayoffs",
+      "comp": {
+        "comp_number": 105,
+        "type": 1,
+        "team_number": 71,
+        "begin_month": 88,
+        "end_month": 88,
+        "name_table_offset": 11,
+        "reserved": 1,
+        "team_list_offset": 17,
+        "seed_reorder_flag": 1
+      },
+      "num_rounds_override": 0,
+      "teams": 2,
+      "away_goals_mode": 1,
+      "substitutes": 3,
+      "max_subs": 5,
+      "round_string_base": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "aPlayoffs",
+        "aPlayoffs"
+      ]
+    }
+  ]
+}

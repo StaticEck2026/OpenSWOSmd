@@ -1,0 +1,258 @@
+{
+  "name": "viewCompetitionsMenu",
+  "onInit": "_ViewCompetitionsInit",
+  "onReturn": "_ViewCompetitionsOnReturn",
+  "onDraw": null,
+  "defaultEntry": 1,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewCompetitio"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 47,
+        "y": 30,
+        "w": -46,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_OpenDiyFromFile"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 47,
+        "y": 55,
+        "w": -46,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_OpenDiyPreset1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 47,
+        "y": 80,
+        "w": -46,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_OpenDiyPreset2"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 47,
+        "y": 105,
+        "w": -46,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_OpenDiyPreset3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 47,
+        "y": -126,
+        "w": -46,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": 6
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aTopGoalScorers"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_TopGoalScorersMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 47,
+        "y": -101,
+        "w": -46,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": 7
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aManagementReco_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ManagementRecordMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -71,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 6,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_jmp_SetExitMenuFlag_2"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1022 @@
+{
+  "name": "stadiumMenu",
+  "onInit": "_ShowStadiumInit",
+  "onReturn": null,
+  "onDraw": null,
+  "defaultEntry": 59,
+  "items": [
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": -15
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 12,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 28,
+        "w": -119,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4010"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 28,
+        "w": 20,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "aV"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -89,
+        "y": 28,
+        "w": -119,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8010"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": -1,
+      "y": 35
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "before_draw",
+          "func": "_StadiumBeforeDrawLeftTeam"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 13,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 26,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 39,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 52,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 65,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 78,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 91,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 104,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": 117,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -114,
+        "y": -126,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 30
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 0,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 13,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 26,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 39,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 52,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 65,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 78,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 91,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 104,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": 117,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": -126,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": -111,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": -102,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": -93,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": -84,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -124,
+        "y": -75,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 35
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "before_draw",
+          "func": "_StadiumBeforeDrawRightTeam"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 13,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 26,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 39,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 52,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 65,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 78,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 91,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 104,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": 117,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -94,
+        "y": -126,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "sprite_copy",
+          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 30
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 0,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 13,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 26,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 39,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 52,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 65,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 78,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 91,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 104,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 117,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -126,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -111,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -102,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -93,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -84,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -75,
+        "w": 0,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8001",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": []
+    }
+  ]
+}

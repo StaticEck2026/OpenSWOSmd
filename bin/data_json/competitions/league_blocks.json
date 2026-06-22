@@ -1,0 +1,381 @@
+{
+  "type": "league_blocks",
+  "count": 7,
+  "groups": [
+    {
+      "id": "englishLeagues1",
+      "leagues": [
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            3
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            2
+          ]
+        }
+      ],
+      "playoffs": "div2Playoffs",
+      "next_group": "englishLeagues2",
+      "qualifier_index_pairs": [
+        0,
+        4,
+        0,
+        7,
+        0,
+        5,
+        0,
+        6,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "englishLeagues2",
+      "leagues": [
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            3
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            2
+          ]
+        }
+      ],
+      "playoffs": "div3Playoffs",
+      "next_group": "englishLeagues3",
+      "qualifier_index_pairs": [
+        0,
+        8,
+        0,
+        11,
+        0,
+        9,
+        0,
+        10,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "englishLeagues3",
+      "leagues": [
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            3
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "englishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dutchLeagues1",
+      "leagues": [
+        {
+          "league": "dutchLeague",
+          "link_params": [
+            0
+          ]
+        },
+        {
+          "league": "dutchLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "dutchLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "dutchLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scottishLeague1",
+      "leagues": [
+        {
+          "league": "scottishLeague",
+          "link_params": [
+            0
+          ]
+        },
+        {
+          "league": "scottishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spanishLeague1",
+      "leagues": [
+        {
+          "league": "spanishLeague",
+          "link_params": [
+            0
+          ]
+        },
+        {
+          "league": "spanishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "spanishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]
+        },
+        {
+          "league": "spanishLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uruguayanLeague1",
+      "leagues": [
+        {
+          "league": "uruguayanLeague",
+          "link_params": [
+            0
+          ]
+        },
+        {
+          "league": "uruguayanLeague",
+          "link_params": [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ]
+    }
+  ]
+}

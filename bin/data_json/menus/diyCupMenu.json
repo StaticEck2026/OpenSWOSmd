@@ -1,0 +1,1314 @@
+{
+  "name": "diyCupMenu",
+  "onInit": "_DIYCupInit",
+  "onReturn": "_DIYCupFinish",
+  "onDraw": null,
+  "defaultEntry": 1,
+  "items": [
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": -54,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 2,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "right_skip",
+          "skip": 1,
+          "dir": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": -54,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 1,
+          "right": 3,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aPlayMatch"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 2,
+          "right": 4,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aMatch"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 77,
+        "y": -68,
+        "w": 80,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 5,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewHighlights_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 101,
+        "y": -68,
+        "w": 101,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 6,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aResult"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect5"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -68,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 7,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewMatch"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect6"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 61,
+        "y": -68,
+        "w": 90,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 8,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewHighlights_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect7"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 101,
+        "y": -68,
+        "w": 101,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": 9,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aViewResult"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect8"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -68,
+        "w": 50,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": 10,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aStats"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect9"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -2,
+        "y": -68,
+        "w": 50,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": -1,
+          "up": 17,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect10"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -107,
+        "y": -76,
+        "w": 6,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -76,
+        "w": -127,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x4010",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -83,
+        "y": -76,
+        "w": -127,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x8010",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -127,
+        "y": -76,
+        "w": 18,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "number",
+          "flags": "0x4010",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -101,
+        "y": -76,
+        "w": 18,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "number",
+          "flags": "0x8010",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 30,
+        "w": 8,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 1,
+          "up": -1,
+          "down": 17
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "sprite_fg",
+          "index": 183
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect16"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -91,
+        "w": 8,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 1,
+          "up": 16,
+          "down": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "sprite_fg",
+          "index": 184
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_DIYCupOnSelect17"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 25
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -113,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -95,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xE"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 52
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -113,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -95,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xE"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 79
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -113,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -95,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xE"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 106
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -113,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -95,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xE"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 133
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -113,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -95,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xE"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 160
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -121,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -87,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -113,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -95,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 10,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "input_func",
+          "mask": "0xFFFF",
+          "func": "_jmp_SetExitMenuFlag_5"
+        }
+      ]
+    }
+  ]
+}

@@ -153,6 +153,27 @@ SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
 OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
 DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
 
+# ---- Data-driven C (JSON -> C bake) ----
+# competition_data.c and menu_data.c are GENERATED from the editable JSON in
+# bin/data_json/ by the Python emitters (the Amiga build bakes JSON->C the same way).
+# Editing the JSON regenerates the C at build; `make regen-data` forces it. To verify the
+# regen is faithful, run the bare emitter (no --out): python3 scripts/emit_competitions.py
+COMP_JSON := $(wildcard bin/data_json/competitions/*.json)
+MENU_JSON := $(wildcard bin/data_json/menus/*.json)
+
+$(SRCDIR)/competition_data.c: $(COMP_JSON) scripts/emit_competitions.py scripts/export_competitions.py scripts/swos_team_file.py
+	@echo "  REGEN  $@"
+	@python3 scripts/emit_competitions.py --out $@ >/dev/null
+
+$(SRCDIR)/menu_data.c: $(MENU_JSON) scripts/emit_menus.py scripts/export_menus.py
+	@echo "  REGEN  $@"
+	@python3 scripts/emit_menus.py --out $@ >/dev/null
+
+.PHONY: regen-data
+regen-data:
+	python3 scripts/emit_competitions.py --out $(SRCDIR)/competition_data.c
+	python3 scripts/emit_menus.py --out $(SRCDIR)/menu_data.c
+
 # ---- Windows resource (icon) ----
 # On MinGW and Cygwin we compile SWOS.rc → SWOS.res.o via windres and
 # link it in, which gives the .exe the SWOS.ico for both the file icon

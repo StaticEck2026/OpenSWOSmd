@@ -1,0 +1,414 @@
+{
+  "name": "optionsMenu",
+  "onInit": "_OptionsMenuBeforeDraw",
+  "onReturn": null,
+  "onDraw": null,
+  "defaultEntry": 13,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aOptions"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 10,
+        "y": 64,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aFriendlyDiyGam"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 64,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 4
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "gameLengthStrTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChangeGameLength"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 10,
+        "y": 76,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aFixPitchType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 76,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 6
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "pitchTypeStrTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChangePitchType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 10,
+        "y": 88,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aAutoReplays"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 88,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "autoReplaysStrTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChangeAutoReplays"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 10,
+        "y": 100,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aAllPlayerTeams"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 100,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 6,
+          "down": 10
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "allPlTeamsEqualStrTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChangeAllPlTeamsEqual"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 10,
+        "y": 112,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aAutoSaveHighli"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 112,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 8,
+          "down": 12
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "autoSaveHlStrTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChangeAutoSaveHighlights"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 10,
+        "y": 124,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aMenuMusic"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 124,
+        "w": -116,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 10,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "menuMusicStrTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_ChangeMenuMusic"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -71,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 12,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "input_func",
+          "mask": "0x30",
+          "func": "_ExitOptions"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": -48,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aSwosVersion152"
+        }
+      ]
+    }
+  ]
+}

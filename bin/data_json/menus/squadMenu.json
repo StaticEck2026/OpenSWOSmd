@@ -1,0 +1,1246 @@
+{
+  "name": "squadMenu",
+  "onInit": "_SquadInit",
+  "onReturn": "_SquadFinish",
+  "onDraw": null,
+  "defaultEntry": 9,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 20,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 3,
+        "y": 6,
+        "w": 16,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 0,
+        "w": -121,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 89,
+        "y": 14,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -64,
+        "w": 55,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "aCoach_4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 44,
+        "y": -64,
+        "w": -114,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -12,
+        "y": -71,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": -1,
+          "up": 45,
+          "down": 9
+        },
+        {
+          "op": "down_skip",
+          "skip": 6,
+          "dir": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aTraining"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_SelectTraining"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 6,
+          "down": -1
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -74,
+        "y": -71,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 44,
+          "right": 6,
+          "up": 45,
+          "down": 9
+        },
+        {
+          "op": "left_skip",
+          "skip": 7,
+          "dir": 2
+        },
+        {
+          "op": "right_skip",
+          "skip": 8,
+          "dir": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aGoals"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_SelectGoals"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -74,
+        "y": -55,
+        "w": 122,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 44,
+          "right": -1,
+          "up": 8,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_j_SetExitMenuFlag"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -43,
+        "y": -71,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_j_SetExitMenuFlag"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "onselect_fire",
+          "func": "_SquadOnSelect11"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -19,
+        "y": 2,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x10"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -41,
+        "y": 14,
+        "w": 60,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aGoals"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -83,
+        "y": 14,
+        "w": 60,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aNat"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -38,
+        "y": 14,
+        "w": 48,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aForm"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 3,
+        "w": -126,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x10"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -22,
+        "y": 14,
+        "w": 25,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aCups"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -51,
+        "y": 14,
+        "w": 20,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aLge"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 14,
+        "w": 20,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aCup_3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -11,
+        "y": 14,
+        "w": 20,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 265,
+        "y": 14,
+        "w": 20,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 285,
+        "y": 14,
+        "w": 18,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "aTot"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 172,
+        "w": 304,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 274,
+        "y": 183,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": "aOwnGoals"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 289,
+        "y": 183,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 222
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 274,
+        "y": 192,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": "aExPlayerGoals"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 289,
+        "y": 192,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 333
+        }
+      ]
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "after_draw",
+          "func": "_SquadAfterDrawCommon"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_SquadCommon"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 24,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": -1,
+          "down": 29
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 33,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 28,
+          "down": 30
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 42,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 29,
+          "down": 31
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 51,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 30,
+          "down": 32
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 60,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 31,
+          "down": 33
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 69,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 32,
+          "down": 34
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 78,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 33,
+          "down": 35
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 87,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 34,
+          "down": 36
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 96,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 35,
+          "down": 37
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 105,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 36,
+          "down": 38
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 114,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 37,
+          "down": 39
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 125,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 38,
+          "down": 40
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -122,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 39,
+          "down": 41
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -113,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 40,
+          "down": 42
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -104,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 41,
+          "down": 43
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -95,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 42,
+          "down": 44
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -84,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 45,
+          "right": 8,
+          "up": 43,
+          "down": 8
+        },
+        {
+          "op": "up_skip",
+          "skip": 44,
+          "dir": 2
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -84,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 44,
+          "up": 43,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "_SquadOnSelect45"
+        },
+        {
+          "op": "after_draw",
+          "func": "_Squad45AfterDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 13,
+        "y": 0,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 0,
+        "w": -122,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -98,
+        "y": 0,
+        "w": 14,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -75,
+        "y": 0,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xF"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": 0,
+        "w": 7,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 181
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -77,
+        "y": 0,
+        "w": 7,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 182
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -107,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 189
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -68,
+        "y": 0,
+        "w": 30,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -26,
+        "y": 0,
+        "w": 30,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 333
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -38,
+        "y": 0,
+        "w": 30,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "_locret_139AE2"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 272,
+        "y": 0,
+        "w": 32,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -61,
+        "y": 0,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -47,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 22
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -27,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 33
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -7,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 44
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 269,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 55
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 289,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 77
+        }
+      ]
+    }
+  ]
+}
