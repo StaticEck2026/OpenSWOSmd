@@ -66,6 +66,7 @@ SRC_FILES=(
     pitch.c play_match_menu.c player_anim.c referee.c rnc.c
     color_sprites.c player_sprites.c sprites.c statistics.c text_render.c
     strings_data.c teams.c transfer_market.c update_players.c
+    translations.c string_symbols.c
     competition_data.c tactics_data.c fixture_data.c
     simulation_data.c player_data.c render_data.c palette_data.c
     general_data.c menu_data.c team_colors.c sprite_data.c
@@ -92,6 +93,7 @@ SRC_FILES=(
     game_state.c camera.c move_camera.c scroll_blit.c highlight.c
     dos_graphics.c
     intro_menu_image_script_cmds.inc
+    font_ext_script.inc font_ext_conv.inc
     menu_bg_image_script_cmds.inc
     menu_color_text_script_cmds.inc
 )
