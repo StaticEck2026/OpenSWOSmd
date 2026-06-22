@@ -424,6 +424,31 @@ def file_to_dict(target) -> dict:
     raise ValueError("unknown data file type: %s" % target)
 
 
+def dict_to_blob(d) -> bytes:
+    """Inverse of file_to_dict: a JSON-ready dict -> the DECOMPRESSED binary blob."""
+    t = d["type"]
+    if t == "team":
+        return encode_blob(d["teams"])
+    if t == "tmd":
+        return encode_tmd_blob(d["teams"])
+    if t == "pool":
+        return encode_poolplyr_blob(d["players"])
+    raise ValueError("unknown data dict type: %r" % t)
+
+
+def dict_rnc_method(d) -> int:
+    """TEAM.NNN is RNC v1; *.TMD and POOLPLYR.DAT are RNC v2."""
+    return 1 if d["type"] == "team" else 2
+
+
+def dict_filename(d) -> str:
+    """The on-disk filename a dict regenerates (TEAM.NNN from the country number;
+    tmd/pool keep their original filename)."""
+    if d["type"] == "team":
+        return "TEAM.%03d" % int(d["country"])
+    return d["file"]
+
+
 def reencode(target) -> bytes:
     """Decompressed-blob round-trip: parse then re-encode (no RNC), by file type."""
     ft = file_type(target)
