@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "statistics.h"
+#include "translations.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "play_match_menu.h"
@@ -1329,7 +1330,7 @@ void _ManagementRecordInit(void)
 
     /* Format title: "MANAGEMENT RECORD OF <name> <surname>" */
     dest = (uint8_t *)menuEntries[0].fg;
-    _PrintFormatted(aManagementReco, dest,
+    _PrintFormatted(tr_fmt(aManagementReco), dest,
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, managerSurnameBuffer, (const uint8_t *)0);
 

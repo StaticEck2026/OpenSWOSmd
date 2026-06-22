@@ -11,6 +11,7 @@
  */
 
 #include "job_offers.h"
+#include "translations.h"  /* tr_fmt — localize the offer-letter text */
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "menu_system.h"
@@ -491,7 +492,7 @@ void _GotJobOfferFinish(void) {
     /* Format "DEAR %a %b" with manager sex and surname */
     {
         uint8_t *out = (uint8_t *)menuEntries[1].fg;
-        _PrintFormatted(aDearAB, out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
+        _PrintFormatted(tr_fmt(aDearAB), out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
     }
 
     if (jobOfferFunds != -1) {
@@ -508,19 +509,19 @@ void _GotJobOfferFinish(void) {
 
         {
             uint8_t *out = (uint8_t *)menuEntries[4].fg;
-            _PrintFormatted(aWeCanOfferYouA, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            _PrintFormatted(tr_fmt(aWeCanOfferYouA), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
             uint8_t *out = (uint8_t *)menuEntries[5].fg;
-            _PrintFormatted(aWeHopeToBeAble, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            _PrintFormatted(tr_fmt(aWeHopeToBeAble), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
             uint8_t *out = (uint8_t *)menuEntries[6].fg;
-            _PrintFormatted(aInTheRegionOfA, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            _PrintFormatted(tr_fmt(aInTheRegionOfA), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
             uint8_t *out = (uint8_t *)menuEntries[7].fg;
-            _PrintFormatted(aWeLookForwardT_1, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            _PrintFormatted(tr_fmt(aWeLookForwardT_1), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
     } else {
         /* International offer */
@@ -532,7 +533,7 @@ void _GotJobOfferFinish(void) {
 
         {
             uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            _PrintFormatted(aTheMembersOfTh, out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            _PrintFormatted(tr_fmt(aTheMembersOfTh), out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
         printToEntry(3, aOfAWouldLikeTo, teamName, 0);
         printToEntry(4, aAsCoachOfTheNa, 0, 0);
@@ -557,7 +558,7 @@ acceptedJobPath:
 
     {
         uint8_t *out = (uint8_t *)menuEntries[1].fg;
-        _PrintFormatted(aDearAB, out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
+        _PrintFormatted(tr_fmt(aDearAB), out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
     }
 
     if (jobOfferFunds != -1) {
@@ -566,7 +567,7 @@ acceptedJobPath:
 
         {
             uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            _PrintFormatted(aWeHereAtAAreDe, out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            _PrintFormatted(tr_fmt(aWeHereAtAAreDe), out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
         printToEntry(3, aHaveAcceptedTh, 0, 0);
 
@@ -575,11 +576,11 @@ acceptedJobPath:
         printToEntry(4, aFromTheStartOf_0, fundsBuffer, 0);
         {
             uint8_t *out = (uint8_t *)menuEntries[5].fg;
-            _PrintFormatted(aWeHopeToBeAble_0, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            _PrintFormatted(tr_fmt(aWeHopeToBeAble_0), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         {
             uint8_t *out = (uint8_t *)menuEntries[6].fg;
-            _PrintFormatted(aInTheRegionOfA_0, out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            _PrintFormatted(tr_fmt(aInTheRegionOfA_0), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
         }
         printToEntry(7, aAndWeLookForwa, fundsBuffer, 0);
     } else {
@@ -594,14 +595,14 @@ acceptedJobPath:
 
         {
             uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            _PrintFormatted(aTheMembersOfTh_0, out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            _PrintFormatted(tr_fmt(aTheMembersOfTh_0), out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
         printToEntry(3, aOfAAreDelighte, teamName, 0);
         printToEntry(4, aAcceptedThePos, 0, 0);
         printToEntry(5, aFromTheStartOf, 0, 0);
         {
             uint8_t *out = (uint8_t *)menuEntries[6].fg;
-            _PrintFormatted(aWeLookForwardT_0, out, 0,0,0,0,0,0,0, 0, 0, 0);
+            _PrintFormatted(tr_fmt(aWeLookForwardT_0), out, 0,0,0,0,0,0,0, 0, 0, 0);
         }
         {
             /* asm uses (aWeLookForwardT_0+1) which skips the leading \x00 byte */
