@@ -5,6 +5,7 @@
  */
 #include "game_hud.h"
 #include "game_types.h"
+#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the controlled-player name in widescreen */
 
 /* ---- Sprite indices ---- */
 #define SPR_CORNER_FLAG_FRAME_3         1073
@@ -263,7 +264,10 @@ position_name:
 
     d2 = (int16_t)(int8_t)(uint8_t)d2;     /* sign-extend from byte */
     spr->imageIndex = d1;
-    spr->x.s.i      = (int16_t)cameraX.s.i;
+    /* Widescreen: shift the controlled-player name into the centered 336 region (the
+     * per-corner offsets below — +10/+20 left, +326-width right — key off this base).
+     * WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
+    spr->x.s.i      = (int16_t)cameraX.s.i + WIDE_MARGIN;
     spr->y.s.i      = (int16_t)cameraY.s.i + 8000;
     spr->z.s.i      = 8000;
 
