@@ -265,6 +265,9 @@ extern int g_screen_width;
 #define FRONTBUFFER_MAX_STRIDE_BYTES    WIDESCREEN_WIDTH
 #define FRONTBUFFER_ROW_STRIDE_BYTES    g_screen_width
 #else
+/* Amiga has no widescreen: g_screen_width folds to the fixed visible width at
+ * compile time, so the synced per-site culls/camera math are identical to before. */
+#define g_screen_width                  SCREEN_WIDTH
 #define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
 #endif

@@ -259,12 +259,10 @@ int main(int argc, char **argv)
     gDosGraphics = opts.dos_graphics;
     gDosGameplay = opts.dos_gameplay;
     gWidescreen  = opts.widescreen;
-    /* TODO(widescreen render): hold the live stride at 336 until the render path
-     * (SDL texture width, per-site stride/cull → g_screen_width, camera clamp widen,
-     * menu centering) is complete and screenshot-verified. Flip this to
-     * `gWidescreen ? WIDESCREEN_WIDTH : SCREEN_WIDTH` in that pass — doing it now
-     * would set a 384 stride against a 336 texture and garbage the default build. */
-    g_screen_width = SCREEN_WIDTH;
+    /* Live frontbuffer stride: 384 (widescreen) or 336. The render path (SDL texture,
+     * per-site culls, camera clamp, menu fill) is converted. Menu CONTENT centering is
+     * a follow-up: menus render left-aligned in the wider frame with a cleared border. */
+    g_screen_width = gWidescreen ? WIDESCREEN_WIDTH : SCREEN_WIDTH;
     if (opts.dos_dir[0])
         snprintf(gDosGraphicsDir, sizeof gDosGraphicsDir, "%s", opts.dos_dir);
 

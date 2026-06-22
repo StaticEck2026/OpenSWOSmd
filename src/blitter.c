@@ -277,7 +277,7 @@ static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
  * ================================================================ */
 #ifdef SWOS_SDL_BUILD
 /* SDL build: write to the chunky 8bpp frontbuffer. 1 byte per pixel =
- * palette index. Row stride = SCREEN_WIDTH. */
+ * palette index. Row stride = g_screen_width. */
 static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
                            uint16_t color, uint8_t *buf)
 {
@@ -288,7 +288,7 @@ static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
         uint8_t *row = buf + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
         for (uint16_t dx = 0; dx < w; dx++) {
             uint16_t xx = (uint16_t)(x0 + dx);
-            if (xx >= SCREEN_WIDTH) continue;
+            if (xx >= g_screen_width) continue;
             row[xx] = pixel;
         }
     }
@@ -382,7 +382,7 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
             const uint8_t *srcRow = mask + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
             uint8_t       *dstRow = buf  + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
             uint16_t       copyW  = w;
-            if ((uint32_t)x + copyW > SCREEN_WIDTH) copyW = (uint16_t)(SCREEN_WIDTH - x);
+            if ((uint32_t)x + copyW > g_screen_width) copyW = (uint16_t)(g_screen_width - x);
             memcpy(dstRow + x, srcRow + x, copyW);
         }
     }

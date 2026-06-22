@@ -292,7 +292,7 @@ bench_camera_target_and_zero_vel:
 
 offset_and_clamp_to_view:
     /* Center the view: subtract half screen dimensions */
-    targetX -= 0xA8;    /* 168 */
+    targetX -= (g_screen_width / 2);    /* half the view width: 168 (336) / 192 (384 widescreen) */
     targetY -= 0x88;    /* 136 */
 
     /* Apply camera velocity */
@@ -303,7 +303,9 @@ offset_and_clamp_to_view:
     if (targetX < boundsMargin)
         targetX = boundsMargin;
     {
-        int16_t xMax = 0x150 - boundsMargin;
+        /* pitchWidth(0x2A0=672) - viewWidth: a wider view scrolls LESS far right
+         * so the view's right edge still stops at the pitch edge. =0x150 at 336. */
+        int16_t xMax = (int16_t)(0x2A0 - g_screen_width) - boundsMargin;
         if (targetX >= xMax)
             targetX = xMax;
     }
@@ -376,8 +378,8 @@ offset_and_clamp_to_view:
         /* Final clamp of integer position */
         if (newIntX < 0)
             newIntX = 0;
-        if (newIntX >= SCREEN_WIDTH)
-            newIntX = SCREEN_WIDTH;
+        if (newIntX >= (int16_t)(0x2A0 - g_screen_width))   /* pitchWidth - viewWidth */
+            newIntX = (int16_t)(0x2A0 - g_screen_width);
 
         if (newIntY < 0x10)
             newIntY = 0x10;

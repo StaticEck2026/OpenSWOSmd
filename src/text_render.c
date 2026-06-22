@@ -81,7 +81,7 @@ static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
 
         for (int16_t px = 0; px < glyphW; px++) {
             int16_t dx = dstX + px;
-            if (dx < 0 || dx >= SCREEN_WIDTH) continue;
+            if (dx < 0 || dx >= g_screen_width) continue;
 
             uint8_t src = srcRow[px];
             uint8_t bodyBit   = (uint8_t)((src >> 1) & 1u);
