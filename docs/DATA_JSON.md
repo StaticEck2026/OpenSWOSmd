@@ -1,10 +1,14 @@
 # bin/data → JSON migration
 
-Status: **Python tooling DONE (2026-06-18).** A read/write library + decode util
-cover every record-based file in `bin/data/`; the layouts are fully decoded and
-every file round-trips **binary → dict → binary with 0 mismatched bytes** (76/76:
-72 `TEAM.*`, 3 `.TMD`, `POOLPLYR.DAT`). The C-side JSON loaders and eventual
-authoring-as-JSON are the remaining steps.
+Status: **COMPLETE.** A read/write library + decode util cover every record-based
+file in `bin/data/`; the layouts are fully decoded and every file round-trips
+**binary → dict → binary with 0 mismatched bytes** (76/76: 72 `TEAM.*`, 3 `.TMD`,
+`POOLPLYR.DAT`). Authoring-as-JSON is live: `scripts/emit_teams.py` regenerates the
+RNC-compressed files 1:1 from the JSON, and the C-side data-drive runs.
+
+> This doc is the **teams / TMD / POOLPLYR binary deep-dive**. For the whole
+> data-as-JSON pipeline — competitions + menus → C, the build-time bake/flip, and the
+> edit workflows — see **`docs/DATA_PIPELINE.md`**.
 
 This mirrors the save-format JSON migration (`src/save_format_json.c`,
 `docs/SAVE_DATA.md`): replace raw, endian-/layout-coupled binary blobs with a
