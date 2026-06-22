@@ -152,6 +152,13 @@ static int mj_bool_def(const char *j, int jl, const char *path, int def)
 static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
                        const char *menuName, int translate);
 
+/* When set (during MenuJson_VerifyAll), wfield_ptr resolves text symbols to their
+ * COMPILED address (mj_sym) instead of the translated string, so the JSON-built menu
+ * byte-matches the untranslated static menu_data.c. This proves 1:1 faithfulness: the
+ * runtime tr() pointers are an i18n display detail, and the Amiga JSON->C bake emits the
+ * symbol name (reproducing the original menu_data.c regardless of translation). */
+static int s_menu_verify_raw = 0;
+
 /* Resolve a name field ("$.func"/"$.str"/…) to its address; NULL if the field
  * is absent / JSON null / unresolved (a missing symbol is logged, not fatal). */
 static void *mj_sym(const char *j, int jl, const char *path, const char *menuName)
@@ -183,7 +190,7 @@ static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
         return;
     }
     if (t == MJSON_TOK_STRING) {           /* symbol name */
-        if (translate) {
+        if (translate && !s_menu_verify_raw) {
             /* Display text: resolve the symbol's text for the active language
              * from translations/<lang>.json; fall back to the compiled string. */
             char name[80];
@@ -528,12 +535,14 @@ static int menu_verify_one(const char *name, const uint8_t *staticMenu)
 int MenuJson_VerifyAll(void)
 {
     int pass = 0, diff = 0, err = 0;
+    s_menu_verify_raw = 1;   /* compare against the untranslated static bytes (raw symbols) */
     for (int i = 0; i < NUM_STATIC_MENUS; i++) {
         int rc = menu_verify_one(s_staticMenus[i].name, s_staticMenus[i].menu);
         if (rc == 0) pass++;
         else if (rc == 1) diff++;
         else err++;
     }
+    s_menu_verify_raw = 0;
     fprintf(stderr, "[menu-json] verify: %d/%d byte-identical, %d differ, %d error\n",
             pass, NUM_STATIC_MENUS, diff, err);
     return diff + err;
@@ -567,17 +576,25 @@ int MenuJson_InstallAll(void)
 
         static uint8_t packed[16384];
         int len = MenuJson_BuildPacked((const char *)j, jl, packed, (int)sizeof packed);
-        free(j);
-        if (len < 0) { fprintf(stderr, "[menu-json] %s: build failed\n", name); err++; continue; }
+        if (len < 0) { free(j); fprintf(stderr, "[menu-json] %s: build failed\n", name); err++; continue; }
 
         int cap = packed_source_len(dst);
         if (len > cap) {
+            free(j);
             fprintf(stderr, "[menu-json] %s: SKIP — JSON build %d B > compiled %d B "
                     "(growing a menu needs the call-site repoint, MENUS.md §1e)\n", name, len, cap);
             toobig++;
             continue;
         }
-        int diff = (len != cap) || memcmp(packed, dst, (size_t)len) != 0;
+        /* "Edited" = the JSON STRUCTURALLY differs from the compiled menu. Compare a
+         * raw-symbol build (no tr) so translated display text isn't mistaken for an edit;
+         * the bytes installed below keep the tr() pointers for i18n. */
+        static uint8_t rawpacked[16384];
+        s_menu_verify_raw = 1;
+        int rawlen = MenuJson_BuildPacked((const char *)j, jl, rawpacked, (int)sizeof rawpacked);
+        s_menu_verify_raw = 0;
+        free(j);
+        int diff = (rawlen < 0) || (rawlen != cap) || memcmp(rawpacked, dst, (size_t)rawlen) != 0;
         memcpy(dst, packed, (size_t)len);   /* JSON is now authoritative for this menu */
         installed++;
         if (diff) {
