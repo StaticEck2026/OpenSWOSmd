@@ -26,6 +26,9 @@ extern volatile uint16_t exitMenu;
 extern volatile uint16_t seasonUpdateInProgress;
 
 #include "swos_types.h"
+#include "swos_platform.h"   /* HLOG (real on SDL, no-op on Amiga) — don't rely on
+                               the transitive display.h chain, which is stale on the
+                               Amiga side and breaks the HLOG calls below */
 #include "auto_skip_debug.h"
 #include "input.h"  /* pauseSkipRequested -- SPACE / second controller button */
 #include <string.h>  /* memcpy in _UnpackMenu — Amiga string.h is partial,
