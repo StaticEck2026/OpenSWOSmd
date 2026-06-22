@@ -87,6 +87,16 @@ void _FrontEndPreLoopSetup(void)
        before any menu reads competitionsTable[]. No-op unless the env var is set. */
     extern void DataJson_InstallCompetitionGraph(void);
     DataJson_InstallCompetitionGraph();
+    /* SWOS_MENU_JSON: load every menu from bin/data_json/menus/*.json and overwrite
+       the compiled static menu bytes IN PLACE (docs/MENUS.md §2d), so editing the
+       JSON changes the running game. Bounded by each menu's compiled size; a menu
+       grown beyond it stays compiled and is flagged. Default-ON; SWOS_MENU_JSON=0
+       disables. */
+    { const char *v = getenv("SWOS_MENU_JSON");
+      if (!(v && v[0] == '0' && v[1] == '\0')) {
+        extern int MenuJson_InstallAll(void);
+        MenuJson_InstallAll();
+      } }
 #endif
     _InitMenuMusic();
     _PrepareMenuBackground();

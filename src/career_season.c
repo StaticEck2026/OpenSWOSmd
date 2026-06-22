@@ -16,6 +16,8 @@
 #include "diy_competition.h"
 #include "endian_helpers.h"
 #include "game_types.h"
+#include "swos_platform.h"   /* HLOG — the SDL Makefile force-includes this; the
+                               Amiga Makefile doesn't, so include it explicitly */
 #include "job_offers.h"
 #include "panic.h"
 #include "random.h"

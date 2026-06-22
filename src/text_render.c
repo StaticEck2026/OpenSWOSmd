@@ -300,7 +300,7 @@ uint16_t _GetTextWidth(uint8_t *text, uint8_t *charsTable)
     CharsTableHeader *ct = (CharsTableHeader *)charsTable;
     uint16_t sprIdxOff = (uint16_t)ct->spriteIndexOffset;
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
-    uint8_t *convTable = (uint8_t *)(ct + 1);
+    uint16_t *convTable = (uint16_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
@@ -341,7 +341,7 @@ uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
     CharsTableHeader *ct = (CharsTableHeader *)charsTable;
     uint16_t sprIdxOff = (uint16_t)ct->spriteIndexOffset;
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
-    uint8_t *convTable = (uint8_t *)(ct + 1);
+    uint16_t *convTable = (uint16_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
 
