@@ -153,6 +153,11 @@ SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
 OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
 DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
 
+# The generated-C rules below define `src/*.c` TARGETS, which would otherwise become the
+# Makefile's first (default) goal. Pin the default goal so a bare `make` still builds the
+# binary (the `all` target), not competition_data.c.
+.DEFAULT_GOAL := all
+
 # ---- Data-driven C (JSON -> C bake) ----
 # competition_data.c and menu_data.c are GENERATED from the editable JSON in
 # bin/data_json/ by the Python emitters (the Amiga build bakes JSON->C the same way).
@@ -161,18 +166,30 @@ DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
 COMP_JSON := $(wildcard bin/data_json/competitions/*.json)
 MENU_JSON := $(wildcard bin/data_json/menus/*.json)
 
+# python3 for the JSON->C regen. If it's not on PATH (e.g. a minimal Cygwin), the committed
+# .c is compiled as-is and a JSON edit needs python3 to take effect (the touch suppresses a
+# pointless rebuild loop). The committed .c always exists, so the build never hard-fails.
+PYTHON := $(shell command -v python3 2>/dev/null || command -v python 2>/dev/null)
+
 $(SRCDIR)/competition_data.c: $(COMP_JSON) scripts/emit_competitions.py scripts/export_competitions.py scripts/swos_team_file.py
-	@echo "  REGEN  $@"
-	@python3 scripts/emit_competitions.py --out $@ >/dev/null
+ifeq ($(strip $(PYTHON)),)
+	@echo "  WARN  python3 not found; compiling the committed $@ (JSON edits won't apply)"; touch $@
+else
+	@echo "  REGEN $@"; $(PYTHON) scripts/emit_competitions.py --out $@ >/dev/null
+endif
 
 $(SRCDIR)/menu_data.c: $(MENU_JSON) scripts/emit_menus.py scripts/export_menus.py
-	@echo "  REGEN  $@"
-	@python3 scripts/emit_menus.py --out $@ >/dev/null
+ifeq ($(strip $(PYTHON)),)
+	@echo "  WARN  python3 not found; compiling the committed $@ (JSON edits won't apply)"; touch $@
+else
+	@echo "  REGEN $@"; $(PYTHON) scripts/emit_menus.py --out $@ >/dev/null
+endif
 
 .PHONY: regen-data
 regen-data:
-	python3 scripts/emit_competitions.py --out $(SRCDIR)/competition_data.c
-	python3 scripts/emit_menus.py --out $(SRCDIR)/menu_data.c
+	@test -n "$(strip $(PYTHON))" || { echo "regen-data needs python3 on PATH"; exit 1; }
+	$(PYTHON) scripts/emit_competitions.py --out $(SRCDIR)/competition_data.c
+	$(PYTHON) scripts/emit_menus.py --out $(SRCDIR)/menu_data.c
 
 # ---- Windows resource (icon) ----
 # On MinGW and Cygwin we compile SWOS.rc → SWOS.res.o via windres and
