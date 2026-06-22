@@ -109,10 +109,45 @@ def emit_playoffs(d):
         ", ".join(str(x) for x in _rrf_bytes(d["round_rule_flags"])), _names(d["name"]))
 
 
+def emit_qualifying(d):
+    cc = ", ".join(("(Competition *)&%s" % x) if isinstance(x, str) else ("(Competition *)%d" % x)
+                   for x in d["comp_cup"])
+    countries = ", ".join(str(x) for x in d["countries"])
+    return "QualifyingGroup %s = {\n    { %s },\n    { %s }\n};" % (d["id"], cc, countries)
+
+
+def emit_leagues(d):
+    parts = ["(CompetitionLeague *)&%s, { %s }" % (lg["league"], ", ".join(str(x) for x in lg["link_params"]))
+             for lg in d["leagues"]]
+    tail = []
+    if "playoffs" in d:
+        tail.append("&%s" % d["playoffs"] if d["playoffs"] else "0")
+    if "next_group" in d:
+        tail.append("(Leagues *)&%s" % d["next_group"] if d["next_group"] else "0")
+    body = ",\n    ".join(parts)
+    if tail:
+        body += ",\n    " + ", ".join(tail)
+    if "qualifier_index_pairs" in d:
+        body += ",\n    { %s }" % ", ".join(str(x) for x in d["qualifier_index_pairs"])
+    return "Leagues %s = {\n    %s\n};" % (d["id"], body)
+
+
+def emit_career(rec):
+    rows = []
+    for c in rec["contests"]:
+        comp, copy = c["competition"], c["competition_copy"]
+        if not comp:                                  # null terminator entry
+            rows.append("    { 0, 0, 0 },")
+        else:
+            rows.append("    { (Competition *)&%s, (Competition *)&%s, sizeof(%s) }," %
+                        (comp, copy if copy else "0", comp))
+    return "CompetitionCareer careerContests[35] = {\n" + "\n".join(rows) + "\n};"
+
+
 def _def_spans(text, typename):
     """Map global name -> (start, end) char span of `typename name = { ... };`."""
     spans = {}
-    for m in re.finditer(r'\b' + typename + r'\s+([A-Za-z_]\w*)\s*(?:\[\s*\])?\s*=\s*\{', text):
+    for m in re.finditer(r'\b' + typename + r'\s+([A-Za-z_]\w*)\s*(?:\[\s*\d*\s*\])?\s*=\s*\{', text):
         i = text.index('{', m.start()); depth = 0; j = i
         while j < len(text):
             if text[j] == '{':
@@ -149,6 +184,9 @@ def main():
     tours = _load("tournaments.json")["competitions"]
     leagues = _load("leagues.json")["leagues"]
     playoffs = _load("playoffs.json")["playoffs"]
+    qualifying = _load("qualifying.json")["groups"]
+    league_blocks = _load("league_blocks.json")["groups"]
+    career_rec = {"id": "careerContests", "contests": _load("career.json")["contests"]}
     src_text = open(exp.SRC, encoding="latin1").read()
 
     spliced, n = splice(src_text, [
@@ -156,9 +194,11 @@ def main():
         ("CompetitionTournament", tours, emit_tournament),
         ("CompetitionLeague", leagues, emit_league),
         ("Playoffs", playoffs, emit_playoffs),
+        ("QualifyingGroup", qualifying, emit_qualifying),
+        ("Leagues", league_blocks, emit_leagues),
+        ("CompetitionCareer", [career_rec], emit_career),
     ])
-    print("emitted/spliced %d definitions (%d cups, %d tournaments, %d leagues, %d playoffs)"
-          % (n, len(cups), len(tours), len(leagues), len(playoffs)))
+    print("emitted/spliced %d definitions" % n)
 
     if "--out" in sys.argv:
         out = sys.argv[sys.argv.index("--out") + 1]
@@ -175,7 +215,8 @@ def main():
         exp.OUT_DIR = out_dir
         exp.main()
         bad = 0
-        for fname in ("cups.json", "tournaments.json", "leagues.json", "playoffs.json"):
+        for fname in ("cups.json", "tournaments.json", "leagues.json", "playoffs.json",
+                      "qualifying.json", "league_blocks.json", "career.json"):
             orig = _load.__wrapped__(fname) if hasattr(_load, "__wrapped__") else \
                 json.load(open(os.path.join(COMP_DIR, fname)))
             regen = json.load(open(os.path.join(out_dir, fname)))
