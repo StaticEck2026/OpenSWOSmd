@@ -35,6 +35,7 @@
 #include "swos_settings.h"
 #include "save_format_json.h"   /* DataJson_SelfTest */
 #include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
+#include "display.h"    /* g_screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
 
 #define SWOS_INI_PATH "SWOS.ini"
 
@@ -258,6 +259,12 @@ int main(int argc, char **argv)
     gDosGraphics = opts.dos_graphics;
     gDosGameplay = opts.dos_gameplay;
     gWidescreen  = opts.widescreen;
+    /* TODO(widescreen render): hold the live stride at 336 until the render path
+     * (SDL texture width, per-site stride/cull → g_screen_width, camera clamp widen,
+     * menu centering) is complete and screenshot-verified. Flip this to
+     * `gWidescreen ? WIDESCREEN_WIDTH : SCREEN_WIDTH` in that pass — doing it now
+     * would set a 384 stride against a 336 texture and garbage the default build. */
+    g_screen_width = SCREEN_WIDTH;
     if (opts.dos_dir[0])
         snprintf(gDosGraphicsDir, sizeof gDosGraphicsDir, "%s", opts.dos_dir);
 

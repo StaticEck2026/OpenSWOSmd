@@ -255,14 +255,25 @@ extern volatile struct Custom *custom;
  * palette). Row stride = SCREEN_WIDTH. Sprites store the same format
  * (byte = palette index, 0 = transparent). */
 #ifdef SWOS_SDL_BUILD
-#define FRONTBUFFER_ROW_STRIDE_BYTES    SCREEN_WIDTH
+/* Widescreen: the frontbuffer STRIDE (= visible width) is RUNTIME — g_screen_width is
+ * 336 (normal, == SCREEN_WIDTH) or WIDESCREEN_WIDTH (widescreen), set once at startup
+ * from gWidescreen. The buffers are ALLOCATED at the max stride so their array size
+ * stays a link-time constant (FRONTBUFFER_ALLOC_TOTAL_BYTES); only the row-stride
+ * arithmetic is runtime. SCREEN_WIDTH stays the 336 logical/centered width (menus). */
+extern int g_screen_width;
+#define WIDESCREEN_WIDTH                384
+#define FRONTBUFFER_MAX_STRIDE_BYTES    WIDESCREEN_WIDTH
+#define FRONTBUFFER_ROW_STRIDE_BYTES    g_screen_width
 #else
+#define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
 #endif
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)
 #define FRONTBUFFER_SIZE_VISIBLE_BYTES  (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_VISIBLE_LINES)
 #define FRONTBUFFER_SIZE_TOTAL_BYTES    (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
+/* Compile-time max allocation (max stride) for the frontbuffer array declarations. */
+#define FRONTBUFFER_ALLOC_TOTAL_BYTES   (FRONTBUFFER_MAX_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
 #define FB_COPY_WORDS_MINUS1            ((FRONTBUFFER_SIZE_TOTAL_BYTES >> 1) - 1)
 #define FB_BLT_MOD_AFTER_1_WORD         (FRONTBUFFER_ROW_STRIDE_BYTES - 2)
 
