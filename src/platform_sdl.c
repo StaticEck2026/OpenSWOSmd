@@ -643,14 +643,6 @@ static void write_screenshot(const uint32_t *argb)
     }
     char path[64];
     snprintf(path, sizeof(path), "swos_shot%03d.png", s_screenshot_index++);
-    {   /* TEMP diagnostic v2: find the one-time state change at the flip point. */
-        extern uint16_t useAltBaseFlag, usePlaneOffsetFlag;
-        extern volatile uintptr_t frontbufferBasePtr, frontbufferBaseAltPtr;
-        fprintf(stderr,
-                "[screenshot] %s  camX=%u camY=%u useAlt=%u usePlane=%u base=%p alt=%p\n",
-                path, cameraXMod320, cameraYMod320, useAltBaseFlag, usePlaneOffsetFlag,
-                (void *)frontbufferBasePtr, (void *)frontbufferBaseAltPtr);
-    }
     if (stbi_write_png(path, g_screen_width, PLATFORM_SCREEN_H, 4,
                        rgba, g_screen_width * 4))
         fprintf(stderr, "[screenshot] wrote %s\n", path);
