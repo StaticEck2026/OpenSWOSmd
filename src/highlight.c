@@ -13,6 +13,7 @@
 #include "deterministic.h"
 #include "panic.h"
 #include "endian_helpers.h"
+#include "display.h"    /* WIDE_MARGIN — centre the replay overlay in widescreen (0 on Amiga) */
 
 /* ---- Sprite constants ---- */
 #define SPR_REPLAY_FRAME_00  1095
@@ -571,16 +572,17 @@ end_replay:
 after_decode:
     /* loc_10C4E2: overlay drawing */
 
-    /* Show replay icon (spinning R) when NOT in normal replay */
+    /* Show replay icon (spinning R) when NOT in normal replay. Add WIDE_MARGIN so the icon
+     * tracks the centred HUD in widescreen instead of sitting at the screen's left edge. */
     if (normalReplayRunning == 0) {
         uint16_t frame = (currentGameTick >> 1) & 0x1F;
-        _DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB, 0xE);
+        _DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB + WIDE_MARGIN, 0xE);
     }
 
-    /* Show score overlay during normal replay */
+    /* Show score overlay during normal replay (same playfield-relative offset). */
     if (normalReplayRunning != 0) {
-        uint16_t bx = 17;   /* d1 = 0xD + 4 */
-        uint16_t by = 17;   /* d2 = 0xD + 4 */
+        uint16_t bx = 17 + WIDE_MARGIN;   /* d1 = 0xD + 4 */
+        uint16_t by = 17;                 /* d2 = 0xD + 4 */
 
         /* Left team goals (using SPR_BIG_0 digit sprites) */
         uint16_t leftGoals = hilLeftTeamGoals;
