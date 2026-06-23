@@ -6,7 +6,7 @@ equivalent) to OpenSWOS, modelled on the **1996 edition**
 for how it fits the bigger picture; this doc is the detailed competition design.
 
 Reference mock-ups (the intended SWOS screens):
-`D:\Projects\SensibleSoccer\OpenSWOS\Copa Libertadores\Bildschirmfoto_*_9.04.18_PM.png`
+`D:\Projects\SWOS\OpenSWOS\Copa Libertadores\Bildschirmfoto_*_9.04.18_PM.png`
 (competition summary) and `*_9.08.20_PM.png` (the 20-team list).
 
 ## 1. Format (from the SWOS summary mock-up)

@@ -11,7 +11,7 @@ so the SDL port can offer a DOS-gameplay mode (the reserved `gDosGameplay` flag 
 Source of truth: **swos-2020** (`/mnt/c/Projects/GitHub/swos-2020`), the most
 up-to-date reference, which patches every FPS-dependent constant at startup in
 `src/options.cpp::setGameStyleVariables()`. (An older spreadsheet exists at
-`D:\Projects\SensibleSoccer\DOS\2_code comparison table of 70-50-60FPS
+`D:\Projects\SWOS\DOS\2_code comparison table of 70-50-60FPS
 version-r1.6.xlsx`, superseded by the source.)
 
 ## 1. Game-style / frame-rate selection

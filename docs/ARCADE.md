@@ -11,7 +11,7 @@ Gated behind an arcade flag (proposed `gArcadeMode`, set like `gDosGraphics` fro
 `[arcade] enabled=true` / `--arcade`). When off, nothing here is reachable and the
 normal build is unchanged.
 
-> Source spec: `D:\Projects\SensibleSoccer\OpenSWOS\Arcade\ARCADE_MODE.md`.
+> Source spec: `D:\Projects\SWOS\OpenSWOS\Arcade\ARCADE_MODE.md`.
 > Service-menu visual reference: NBA Hangtime
 > (`D:\Projects\Arcade\nba-hangtime\MAME\snap\nbahangt\*.png`).
 
@@ -30,7 +30,7 @@ normal build is unchanged.
 When idle (no credits, no game in progress) the cabinet runs an **attract loop**:
 
 - Plays back **special highlight files** — `.HIL` reels recorded for this purpose.
-  Source sets live in `D:\Projects\SensibleSoccer\DOS\save\*.zip`:
+  Source sets live in `D:\Projects\SWOS\DOS\save\*.zip`:
   - `2020 widescreen HIL files in DOS mode 70FPS.zip` ← primary (matches the
     arcade's 70 FPS DOS gameplay, see `docs/DOS_GAMEPLAY.md`)
   - `2020 widescreen HIL files in AMIGA mode 50FPS.zip`
