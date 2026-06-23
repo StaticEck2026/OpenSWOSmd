@@ -53,9 +53,31 @@ Two external trees drive this:
 4. **Refine** the shape in `glyphs.txt`, check `preview.png`, re-run until it looks right.
    (`glyphs.txt` is only seeded once; after that your edits there are the source of truth.)
 
-5. **Encode** `new_charset.png` back to the platform formats with **SwosGfx**:
-   - Amiga → `CHARSET.RAW` (4-bitplane + RNC).
-   - DOS → the DOS charset.
+5. **Encode** `new_charset.png` back to `CHARSET.RAW` with **SwosGfx** — verified commands
+   (`SwosGfx.exe` runs from WSL via interop *or* natively on Windows; run from `SWOS_Font/`):
+   ```sh
+   GFX="/mnt/c/Projects/GitHub/SwosGfx/SwosGfx/bin/Debug/net8.0/SwosGfx.exe"
+
+   # a) PNG -> 8-bit indexed BMP — SwosGfx encodes from a BMP, not a PNG.
+   python3 -c "from PIL import Image; Image.open('new_charset.png').save('new_charset.bmp')"
+
+   # b) Amiga OCS font (bin/grafs/CHARSET.RAW). CHARSET uses the "menu" palette; 4 bitplanes
+   #    + RNC are SwosGfx's defaults. -palette IS REQUIRED on encode (not auto-detected).
+   "$GFX" -amiga -bmp -output=raw -palette=menu  new_charset.bmp  CHARSET.RAW
+
+   # c) ALWAYS verify lossless: decode the new RAW back and diff indices vs the source BMP.
+   #    Must be 0-diff (pixel-identical) — proves the encode round-trips the exact sheet.
+   "$GFX" -amiga -raw -output=bmp  CHARSET.RAW  roundtrip.bmp
+   ```
+   Verify (c) in Python: `Image.open('new_charset.bmp').convert('P')` indices ==
+   `Image.open('roundtrip.bmp').convert('P')` indices, 0 differences.
+   - **AGA** (`bin/grafs_aga/CHARSET.RAW`): same, add `-bitplanes=8`.
+   - **DOS** (`bin/grafs_dos/CHARSET.DAT`, `bin/grafs_2020/charset.dat`): the per-sprite path
+     (`-dos -sprites-import <dir>` reading `sprNNNN.bmp`). The on-screen **text font is always
+     the Amiga `grafs/charset.raw`** even in DOS-graphics mode, so the OCS encode above is what
+     currency/menu glyphs need; the DOS `.dat` only matters for in-match digit overlays.
+   - **Deploy**: copy the verified `CHARSET.RAW` over `bin/grafs/CHARSET.RAW` (the file the game
+     loads — `strings_data.c`: `aGrafsCharsetRa = "grafs/charset.raw"`).
 
 6. **Apply `integration.txt`** to the game:
    - **Image-script**: append the `0xC000\|idx, …` lines (before the `0xFFFF` terminator) in
