@@ -36,6 +36,7 @@ extern uint16_t offerSwapSlotsUsed;
 extern uint16_t lastOfferPrimaryPlayerOrdinal;
 extern uint16_t offerNegotiationAttemptCount;
 extern uint16_t careerSeasonsCompleted;
+#include "career_params.h"
 extern uint16_t currentSeasonShowing;
 extern uint16_t seasonTransferQuota;
 extern uint16_t pendingForeignPlayerCount;
@@ -118,7 +119,7 @@ void _Career_InitSeasonTransferMarketState(void)
 
     /* Compute season transfer quota */
     uint16_t seasonsAdj = (uint16_t)(7 - careerSeasonsCompleted) * 16;  /* mulu #$10 */
-    uint16_t divisor = 20 - currentSeasonShowing;
+    uint16_t divisor = g_careerParams.num_seasons - currentSeasonShowing;
     int16_t numerator = (int16_t)(0x1B0 - numForeignMarketPlayers2 - seasonsAdj);
     /* ext.l + divu.w: sign-extend to 32-bit then unsigned divide by word */
     uint16_t quota = (uint16_t)((uint32_t)(int32_t)numerator / divisor);
@@ -278,7 +279,7 @@ extern void _InitCareerVariables(uint16_t gameTypeParam);
 __attribute__((used, externally_visible))
 void _ContinueCareer(void)
 {
-    if (currentSeasonShowing == 19) {
+    if (currentSeasonShowing == g_careerParams.num_seasons - 1) {
         _ShowRetirementMessage();
         _InitCareerVariables(0);
         _SetExitMenuFlag();
@@ -968,7 +969,7 @@ void _InitializeNewSeason(void)
                       (unsigned)selTeamNumber);
     teamsLoaded = 0;
     currentSeasonShowing++;
-    if (currentSeasonShowing == 20)
+    if (currentSeasonShowing == g_careerParams.num_seasons)
         currentSeasonShowing = 0;
 
     selTeamSelectedPlayerPosition = 0xFFFF;
@@ -1099,7 +1100,7 @@ void _InitializeNewSeason(void)
         uint16_t regionIdx = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte = country */
         int16_t regionOffset = (int16_t)(int8_t)regionIdx - 80;
         uint8_t *flagsArray = (uint8_t *)regionTable[regionOffset];
-        someTeamFlags = flagsArray[currentSeasonShowing];
+        someTeamFlags = flagsArray[currentSeasonShowing % 20];  /* flags = fixed 20-entry period-4 euro-cup rotation; wraps for 35-season careers */
 
 #ifdef SWOS_INJECT_WC
         /* DEBUG (SWOS_INJECT_WC, opt-in via `make SWOS_INJECT_WC=1`): force a
