@@ -336,7 +336,21 @@ update_cursor:
      * linker places these symbols at unrelated addresses, rendering
      * the comparison nonsensical (menuInsBank could be LOWER than
      * imageCmdWorkBuf). We skip the boundary check; run-away writes
-     * will be caught by normal segmentation faults instead. */
+     * will be caught by normal segmentation faults instead -- EXCEPT we now also detect a
+     * real overflow of imageCmdWorkBuf itself (the documented sprite-pool overflow that
+     * corrupts adjacent BSS, e.g. stb's vertical-flip flag), and trap so a debugger catches
+     * the exact decode in the backtrace. TEMP diagnostic. */
+    {
+        extern char imageCmdWorkBuf[];
+        long used = (long)((const uint8_t *)pixelPtr - (const uint8_t *)imageCmdWorkBuf);
+        if (used > 0x200000L && used <= 0x1000000L) {
+            fprintf(stderr,
+                    "[OVERFLOW] imageCmdWorkBuf decode cursor is %ld bytes (%ld KB) past the "
+                    "2048 KB buffer end -- trapping for a backtrace of the overflowing decode\n",
+                    used, used / 1024);
+            __builtin_trap();
+        }
+    }
     imageStreamBytesLeft = 0x40000;
 #else
     if (playGame == 0 && playHighlightFlag == 0) {
