@@ -643,6 +643,15 @@ static void write_screenshot(const uint32_t *argb)
     }
     char path[64];
     snprintf(path, sizeof(path), "swos_shot%03d.png", s_screenshot_index++);
+    {   /* TEMP diagnostic: correlate orientation with camera/buffer state per shot. */
+        extern uint16_t cameraYMod320, useAltBaseFlag, usePlaneOffsetFlag;
+        extern volatile uintptr_t frontbufferBasePtr, frontbufferBaseAltPtr;
+        fprintf(stderr,
+                "[screenshot] %s  cameraYMod320=%u useAltBase=%u usePlaneOffset=%u "
+                "basePtr=%p altPtr=%p\n",
+                path, cameraYMod320, useAltBaseFlag, usePlaneOffsetFlag,
+                (void *)frontbufferBasePtr, (void *)frontbufferBaseAltPtr);
+    }
     if (stbi_write_png(path, g_screen_width, PLATFORM_SCREEN_H, 4,
                        rgba, g_screen_width * 4))
         fprintf(stderr, "[screenshot] wrote %s\n", path);
