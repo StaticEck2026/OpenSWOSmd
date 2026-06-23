@@ -6,6 +6,9 @@
 #include "adverts.h"
 #include "game_types.h"
 #include "swos_types.h"
+#ifdef SWOS_SDL_BUILD
+#include "display.h"   /* WIDE_MARGIN — the second corner flag is widescreen-only */
+#endif
 
 /* Sprite image indices */
 #define SPR_ADVERT_1_PART_1     113
@@ -50,6 +53,9 @@ extern uint16_t bigSIndex;
 /* Sprite arrays in data section */
 extern Sprite   advertInGameSprites[8]; /* 8 * SPRITE_SIZE bytes */
 extern Sprite   cornerFlagSprite;       /* SPRITE_SIZE bytes */
+#ifdef SWOS_SDL_BUILD
+extern Sprite   cornerFlagSprite2;      /* widescreen 2nd corner flag — sprite_data.c */
+#endif
 extern Sprite   big_S_Sprite;           /* SPRITE_SIZE bytes */
 extern uint8_t  cornerFlagPictureIndices[32];
 
@@ -311,6 +317,24 @@ void _UpdateCornerFlagSprite(void)
     d0 = (frameCount >> 1) & 0x1F;
     d0 = (uint16_t)cornerFlagPictureIndices[d0] + SPR_CORNER_FLAG_FRAME_0;
     spr->imageIndex = (int16_t)d0;
+
+#ifdef SWOS_SDL_BUILD
+    /* Widescreen shows the full pitch width, so both side corners on the camera's current
+     * row are visible — but the single camera-tracked flag above can only animate one of
+     * them. Drive a second flag at the opposite-side corner (same row, same frame) so it
+     * waves too. In 4:3 / Amiga (WIDE_MARGIN == 0) the far corner is off-screen anyway, so
+     * we just hide it (imageIndex = -1) — this is purely a widescreen extra. */
+    {
+        Sprite *spr2 = &cornerFlagSprite2;
+        if (WIDE_MARGIN > 0) {
+            spr2->x.s.i      = (spr->x.s.i == 81) ? 590 : 81;  /* opposite side */
+            spr2->y.s.i      = spr->y.s.i;                     /* same row as the primary */
+            spr2->imageIndex = spr->imageIndex;                /* in sync with the primary */
+        } else {
+            spr2->imageIndex = -1;                             /* hidden */
+        }
+    }
+#endif
 }
 
 /* ================================================================

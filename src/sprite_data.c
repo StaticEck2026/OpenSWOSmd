@@ -711,6 +711,15 @@ Sprite cornerFlagSprite
     = { 3, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
           { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, -1,
           0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
+#ifdef SWOS_SDL_BUILD
+/* Widescreen-only second corner-flag sprite. The full pitch width shows both side corners
+ * at once, but cornerFlagSprite can only track one; _UpdateCornerFlagSprite drives this one
+ * at the opposite corner. Hidden (imageIndex = -1) outside widescreen. */
+Sprite cornerFlagSprite2
+    = { 3, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
+          { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, -1,
+          0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
+#endif
 Sprite advertInGameSprites[8] = {
     { 0, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
         { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, -1, 0,
@@ -1063,6 +1072,9 @@ Sprite* teamSpritesTable[101] = {
     &team1ScorerSprite[6], &team2ScorerSprite[6],
     &team1ScorerSprite[7], &team2ScorerSprite[7],
     &refereeSprite, &cornerFlagSprite,
+#ifdef SWOS_SDL_BUILD
+    &cornerFlagSprite2,
+#endif
     &big_S_Sprite, &currentPlayerNameSprite, advertInGameSprites,
     &advertInGameSprites[0x1], &advertInGameSprites[0x2],
     &advertInGameSprites[0x3], &advertInGameSprites[0x4],
