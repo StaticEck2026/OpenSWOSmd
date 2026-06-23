@@ -691,6 +691,10 @@ vblank_return_dispatch:
     _InjuryUpdateTickGuard();
     _UpdateCornerFlagSprite();
     _SpinBig_S_Sprite();
+    /* Widescreen: the in-match world (ads, animated patterns, players/ball) draws at
+     * offset 0 — the pitch fills the whole frame. Menu/HUD centering is re-established
+     * by _DrawMenu when the frontend draws again. */
+    g_menu_draw_x_offset = 0;
     _ManageAdvertisements();
     _DoGoalkeeperSprites();
     _UpdateControlledPlayerNumbers();

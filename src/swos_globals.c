@@ -95,9 +95,19 @@ volatile uint32_t bitPlane7BasePtr;
  *   SDL  : 8bpp chunky, 1 byte per pixel = palette index. */
 /* Frontbuffers also need chip RAM on Amiga — copper-list BPLPT entries
  * point at these for the main display area. */
-SWOS_CHIP_BSS uint8_t frontbufferBase[FRONTBUFFER_SIZE_TOTAL_BYTES];
-SWOS_CHIP_BSS uint8_t frontbufferBaseAlt[FRONTBUFFER_SIZE_TOTAL_BYTES];
-SWOS_CHIP_BSS uint8_t frontbufferMaskBuffer[FRONTBUFFER_SIZE_TOTAL_BYTES];
+/* Sized at the MAX (widescreen) stride so the array is big enough whatever the
+ * runtime g_screen_width is; the live frame uses g_screen_width as its row stride. */
+SWOS_CHIP_BSS uint8_t frontbufferBase[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t frontbufferBaseAlt[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+#ifdef SWOS_SDL_BUILD
+/* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
+ * set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
+int g_screen_width = SCREEN_WIDTH;
+#endif
+/* Per-draw X shift for centering 336-wide menu content in a widescreen frame. Set to
+ * WIDE_MARGIN only around the menu entry-draw loop; 0 everywhere else (and on Amiga). */
+int g_menu_draw_x_offset = 0;
 /* These store live pointers to frontbuffer memory. On 32-bit they
  * are word-sized for layout compatibility with the Amiga port (where
  * the asm reads them as long words). On 64-bit they must be wide

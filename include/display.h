@@ -242,13 +242,24 @@ extern volatile struct Custom *custom;
 #endif
 
 /* ---- Frontbuffer layout ---- */
+/* Amiga has no widescreen: g_screen_width folds to the fixed visible width at compile
+ * time, so the synced per-site culls / camera math are identical to before. (The SDL
+ * build makes these runtime; this is the back-ported Amiga branch.) */
+#define g_screen_width                  SCREEN_WIDTH
 #define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
+#define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)
 #define FRONTBUFFER_SIZE_VISIBLE_BYTES  (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_VISIBLE_LINES)
 #define FRONTBUFFER_SIZE_TOTAL_BYTES    (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
+/* Compile-time max allocation (max stride) for the frontbuffer array declarations. */
+#define FRONTBUFFER_ALLOC_TOTAL_BYTES   (FRONTBUFFER_MAX_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
 #define FB_COPY_WORDS_MINUS1            ((FRONTBUFFER_SIZE_TOTAL_BYTES >> 1) - 1)
 #define FB_BLT_MOD_AFTER_1_WORD         (FRONTBUFFER_ROW_STRIDE_BYTES - 2)
+/* Widescreen menu centering (SDL only). On Amiga WIDE_MARGIN folds to 0 and
+ * g_menu_draw_x_offset stays 0, so the synced menu/primitive code is a no-op. */
+#define WIDE_MARGIN                     ((g_screen_width - SCREEN_WIDTH) / 2)
+extern int g_menu_draw_x_offset;
 
 /* ---- Tile / scroll-blit constants ---- */
 #define TILE_STRIDE                 14
