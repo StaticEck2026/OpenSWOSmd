@@ -1032,7 +1032,11 @@ Sprite team2Player11Sprite = { 2, 11, 0, (AnimTable *)-1, -1, 0xFF, 0, 0, 0, 0, 
  * The `.equ` aliases must live in the same TU as the array definition
  * or GAS won't emit a global symbol for them (same gotcha as
  * careerFileBufferBuf — see swos_globals_career_overlay.c). */
+#ifdef SWOS_SDL_BUILD
+Sprite* teamSpritesTable[102] = {   /* 101 + 1 slot for the widescreen-only cornerFlagSprite2 below */
+#else
 Sprite* teamSpritesTable[101] = {
+#endif
     /* [0..10]  — team1SpritesTable */
     &goalie1Sprite, &team1Player2Sprite, &team1Player3Sprite,
     &team1Player4Sprite, &team1Player5Sprite, &team1Player6Sprite,
