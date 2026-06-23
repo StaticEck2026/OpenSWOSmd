@@ -126,6 +126,15 @@ void _DrawReplayOrExitMenu(void)
 __attribute__((used, externally_visible))
 void _ReplayExitMenuAfterFriendly(void)
 {
+    /* Widescreen: centre the menu over the (centred) background. The match loop left
+     * g_menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
+     * draws below all read it via _FillRectangle / blitStringToFrontBuffer, so without this
+     * they'd sit at the screen's left edge while menubg2 (which bakes WIDE_MARGIN into its
+     * own frontbuffer position) is centred. Restored before returning. WIDE_MARGIN is 0 on
+     * Amiga / non-widescreen, so this is a no-op there. */
+    int saved_x_offset = g_menu_draw_x_offset;
+    g_menu_draw_x_offset = WIDE_MARGIN;
+
     /* Load menu background image. On Amiga, _LoadFileEx writes bitplane
      * data directly into frontbufferMaskBuffer (which is bitplane-format
      * there). On SDL, frontbufferMaskBuffer is chunky 8bpp, so we have to
@@ -214,6 +223,7 @@ void _ReplayExitMenuAfterFriendly(void)
             if (fire != 0)
             {
                 _FadeOutToBlack();
+                g_menu_draw_x_offset = saved_x_offset;
                 return;
             }
             /* No fire, just wait */
