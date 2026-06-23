@@ -30,7 +30,8 @@
  *
  * Audited: all access is bounded row-addressing — seasonInformationsArray + off
  * (job_offers / statistics) and ((SeasonInformations *)…)[currentSeasonNumber]
- * (currentSeasonNumber < 20) — nothing walks past the array into
+ * (currentSeasonNumber < CAREER_MAX_SEASONS = 35, bounded by currentSeasonShowing) —
+ * nothing walks past the array into
  * lastFinancialWeekIndex. Emitted via __asm__ real label (overlay style) so the
  * conflicting element-type externs across TUs (uint8_t[] vs SeasonInformations*)
  * resolve to raw-byte storage, exactly as when it lived in the overlay.
