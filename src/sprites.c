@@ -1384,8 +1384,22 @@ static int16_t plane23BandTopY_local;
 /* Occlusion buckets: In asm, occlMinYBuckets (5 words) and occlMinYBucketsActive
    (26 words) are contiguous. Negative bucket indices (from sprites partially off
    the left screen edge) read/write into the guard region (occlMinYBuckets).
-   We MUST keep them contiguous to avoid undefined behavior from index -1 writes. */
-static int16_t occlBuckets_combined[5 + 26]; /* 31 words, matching asm layout */
+   We MUST keep them contiguous to avoid undefined behavior from index -1 writes.
+
+   SDL widescreen: 26 active buckets only cover 26*16 = 416 px. With a widescreen
+   render (g_screen_width up to PITCH_VIEW_MAX_WIDTH = 672 = 42 columns) a sprite
+   near the right edge indexes past the array, and the `a3[col] = d2` write below
+   corrupts whatever the linker placed next in BSS — it was stomping stb's
+   stbi__flip_vertically_on_write flag, which silently inverted every in-match
+   screenshot while leaving the live display correct. Size the active region for the
+   max render width plus a wide-sprite margin (and clamp the span below as a
+   belt-and-braces guard). Amiga keeps the exact 26-word asm layout. */
+#ifdef SWOS_SDL_BUILD
+#define OCCL_ACTIVE_BUCKETS 48   /* >= ceil(PITCH_VIEW_MAX_WIDTH/16)=42 cols + edge margin */
+#else
+#define OCCL_ACTIVE_BUCKETS 26   /* original asm layout (336 px screen) */
+#endif
+static int16_t occlBuckets_combined[5 + OCCL_ACTIVE_BUCKETS];
 #define occlMinYBuckets_local   (occlBuckets_combined)
 #define occlMinYBucketsActive_local (occlBuckets_combined + 5)
 
@@ -1400,10 +1414,11 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
     uint8_t *a5 = (uint8_t *)plane23RenderStackBase;
     uint8_t *a6loc = (uint8_t *)renderStackBase;
 
-    /* Initialize all 31 occlusion bucket words to 0x7FFF (matching asm: 31 move.w's) */
+    /* Initialize all occlusion bucket words to 0x7FFF (asm did 31 move.w's; on SDL the
+     * active region is larger for widescreen, so initialize the whole array). */
     {
-        int16_t i;
-        for (i = 0; i < 31; i++)
+        int i;
+        for (i = 0; i < (int)(sizeof(occlBuckets_combined) / sizeof(occlBuckets_combined[0])); i++)
             occlBuckets_combined[i] = 0x7FFF;
     }
 
@@ -1497,6 +1512,13 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
             /* Wide sprite: update occlusion buckets and go to general stack */
             int16_t leftBucket = (d1 >> 4) << 1;
             int16_t rightBucket = ((d1 + a0->pixWidth - 1) >> 4) << 1;
+#ifdef SWOS_SDL_BUILD
+            /* Clamp the column span to the occlusion array. a3 = occlBuckets_combined+5,
+             * so the valid a3 index is [-5, OCCL_ACTIVE_BUCKETS-1]; a sprite spanning past
+             * the (widescreen) right edge or far off the left edge must not write past it. */
+            if (leftBucket  < -10)                            leftBucket  = -10;
+            if (rightBucket > 2 * (OCCL_ACTIVE_BUCKETS - 1))  rightBucket = 2 * (OCCL_ACTIVE_BUCKETS - 1);
+#endif
             int16_t d3 = leftBucket;
             while (d3 <= rightBucket) {
                 if (d2 < a3[d3 >> 1])
