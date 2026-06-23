@@ -147,6 +147,7 @@ extern volatile uint16_t currentGameTick;
 extern void _Int3TimerHandler(void);   /* the real Amiga VBlank ISR body */
 
 static void pump_quit_only(void);      /* defined below; used by tick_timer_cb */
+static void render_frame_impl(int pump_full);   /* below; pump_full=0 on the SDL timer thread */
 
 static SDL_TimerID s_tick_timer;
 static SDL_mutex  *s_isr_mtx;          /* serialises _Int3TimerHandler */
@@ -230,7 +231,11 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
      * is purely cosmetic. */
     if (!s_renderer_is_hw &&
         (s_last_main_render_ms == 0 || since > 60)) {
-        Platform_RenderFrame();
+        /* Worker-thread render: pump_full=0 — do NOT call SDL_PollEvent/SDL_PumpEvents here.
+         * Those pull from the OS window message queue and are main-thread-only on Windows;
+         * doing them from this worker deadlocks the main thread. QUIT/WINDOW are drained via
+         * pump_quit_only (SDL_PeepEvents, thread-safe) inside render_frame_impl. */
+        render_frame_impl(0);
     } else {
         pump_quit_only();
     }
@@ -816,9 +821,19 @@ static void pump_quit_only(void)
     }
 }
 
-void Platform_RenderFrame(void)
+static void render_frame_impl(int pump_full)
 {
-    pump_events_any_thread();
+    /* SDL_PollEvent -> SDL_PumpEvents pulls from the OS window message queue, which on
+     * Windows MUST run on the window-owning (main) thread. The SDL_AddTimer worker calls
+     * this as a software-renderer fallback (tick_timer_cb) when the main thread stalls
+     * >60ms, so off the main thread we pass pump_full=0 and only drain already-queued
+     * QUIT/WINDOW events (pump_quit_only / SDL_PeepEvents, thread-safe). Doing the full pump
+     * from the worker deadlocks the main thread; an F12 screenshot (which holds s_render_mtx
+     * across the blocking PNG file write, stalling main past 60ms) was the reliable trigger. */
+    if (pump_full)
+        pump_events_any_thread();
+    else
+        pump_quit_only();
     AudioSDL_Tick();
 
     if (!s_renderer || !s_texture) return;
@@ -861,6 +876,11 @@ void Platform_RenderFrame(void)
     SDL_RenderPresent(s_renderer);
 
     SDL_UnlockMutex(s_render_mtx);
+}
+
+void Platform_RenderFrame(void)
+{
+    render_frame_impl(1);   /* public entry: runs on the main thread, full SDL event pump */
 }
 
 /* ---- Full vblank: render + 50 Hz pacing ---------------------------
