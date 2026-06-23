@@ -79,13 +79,23 @@ Two external trees drive this:
    - **Deploy**: copy the verified `CHARSET.RAW` over `bin/grafs/CHARSET.RAW` (the file the game
      loads — `strings_data.c`: `aGrafsCharsetRa = "grafs/charset.raw"`).
 
-6. **Apply `integration.txt`** to the game:
-   - **Image-script**: append the `0xC000\|idx, …` lines (before the `0xFFFF` terminator) in
-     `intro_menu_image_script_cmds.inc`.
-   - **conversionTable**: set the `small.conv[idx]` / `big.conv[idx]` entries in `swos_globals.c`
-     (and, for letters, the lowercase→uppercase mappings the file also emits).
-   - **> 0xFF codepoints**: add a `tr_dup` in `src/translations.c` mapping the UTF-8 codepoint
-     to the spare byte, so translated text (French `Œ`, `€`, …) round-trips through `tr()`.
+6. **Apply `integration.txt`** to the game — `scripts/gen_font_ext.py` does the mechanical part:
+   ```sh
+   python3 scripts/gen_font_ext.py   # integration.txt -> src/font_ext_script.inc + font_ext_conv.inc
+   ```
+   It regenerates the image-script rects (`font_ext_script.inc`, appended to `introMenuImageScript`)
+   and the `conversionTable` `SB(idx, small, big)` entries (`font_ext_conv.inc`, `#include`d by
+   `FontExt_ApplyConv` in `swos_globals.c`). Then, by hand:
+   - **> 0xFF codepoints only**: add the spare-byte case to `tr_dup` (`src/translations.c`) —
+     e.g. `cp == 0x20AC ? 0x9D` for `€` — so translated text round-trips through `tr()`.
+   - **Deploy**: copy the re-encoded `CHARSET.RAW` over `bin/grafs/CHARSET.RAW`, then rebuild.
+
+   > **Glyph order is logical, NOT minimal-diff.** Put each new glyph where it reads naturally
+   > (`€` next to `$`, etc.). Inserting one shifts the sprite indices below it — that's expected
+   > and fine: `gen_font_ext.py` regenerates the FULL wiring from `integration.txt`, so the
+   > `.inc`s always match the sheet. **The sheet (`CHARSET.RAW`) and the `.inc`s are a matched
+   > pair** — re-encode AND re-run `gen_font_ext.py` together and redeploy `CHARSET.RAW`, or the
+   > glyphs misalign. The same applies to every charset you ship (AGA, DOS) — re-encode each.
 
 ---
 
