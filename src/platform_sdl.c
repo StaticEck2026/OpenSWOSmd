@@ -643,6 +643,16 @@ static void write_screenshot(const uint32_t *argb)
     }
     char path[64];
     snprintf(path, sizeof(path), "swos_shot%03d.png", s_screenshot_index++);
+    /* stb has a process-global vertical-flip flag (stbi__flip_vertically_on_write, a static
+     * in the stb TU). Nothing in our code sets it, but force it off here: if it ever gets
+     * flipped — a stray call, or a buffer overflow stomping that global in the stb TU's BSS
+     * (we have a known imageCmdWorkBuf / sprite-pool overflow that engages during in-match
+     * rendering) — it would invert EVERY PNG while leaving the live display untouched, which
+     * matches the in-match flip exactly. If this clears it, the flag was being corrupted. */
+    {
+        extern void stbi_flip_vertically_on_write(int);
+        stbi_flip_vertically_on_write(0);
+    }
     if (stbi_write_png(path, g_screen_width, PLATFORM_SCREEN_H, 4,
                        rgba, g_screen_width * 4))
         fprintf(stderr, "[screenshot] wrote %s\n", path);
