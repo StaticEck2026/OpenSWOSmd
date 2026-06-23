@@ -1,7 +1,9 @@
 #ifndef CAREER_PARAMS_H
 #define CAREER_PARAMS_H
 
-#include <stdint.h>
+/* swos_types.h, NOT <stdint.h>: the Amiga toolchain has no libc <stdint.h> (it provides the
+ * int*_t types itself). Including <stdint.h> here breaks the Amiga build. */
+#include "swos_types.h"
 
 /* Hard ceiling on career length = the compile-time size of seasonInformationsArray.
  * num_seasons (below) must be <= this. */

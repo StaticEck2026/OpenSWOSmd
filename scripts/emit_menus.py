@@ -22,13 +22,17 @@ REV = {jo: (cmd, fields) for cmd, (jo, fields) in exp.OPCODES.items()}   # json_
 
 
 def _ptr(v, key=None):
+    # int sentinel and dotted name-buffer refs only ever land in a char* text-pointer field,
+    # so they need a (char *) cast — without it the Amiga build (GCC 15) errors on the
+    # int8_t(*)[36] name buffers and int sentinels. func/table/sprite operands are symbols
+    # (never int/dotted) and the header funcs come through key=None, so neither is affected.
     if v is None:
         return "0"
     if isinstance(v, int):
-        return str(v)
-    if "." in v:                # dotted field ref (buffer) -> &
-        return "&" + v
-    if key == "sprite":         # MENU_CMD_SPRITE_COPY operand is a struct -> &
+        return "(char *)%d" % v     # int in a pointer field = char* text sentinel
+    if "." in v:                    # dotted field ref = name buffer used as char* text
+        return "(char *)&" + v
+    if key == "sprite":             # MENU_CMD_SPRITE_COPY operand is a struct -> &
         return "&" + v
     return v                    # function / string / table name decays to a pointer
 
@@ -114,8 +118,24 @@ def _leaf_count(tree):
     return sum(_leaf_count(x) if isinstance(x, list) else 1 for x in tree)
 
 
+# A leading C cast like "(char *)" on the original leaf. The brace template discards the
+# original leaf's value, but we must keep its cast — without it the Amiga build (GCC 15,
+# no -Wno-incompatible-pointer-types/-Wint-conversion) errors on the name-buffer text
+# pointers (int8_t(*)[36]) and int sentinels. SDL suppresses those warnings; Amiga doesn't.
+_CAST_RE = re.compile(r'^\(\s*[A-Za-z_][\w ]*\*\s*\)')
+
 def _substitute(tree, vals):
-    return [_substitute(x, vals) if isinstance(x, list) else next(vals) for x in tree]
+    out = []
+    for x in tree:
+        if isinstance(x, list):
+            out.append(_substitute(x, vals))
+        else:
+            new = next(vals)
+            m = _CAST_RE.match(x)             # original leaf token (may carry a (TYPE *) cast)
+            if m and new != "0" and not new.startswith("("):
+                new = m.group(0) + new        # restore the cast the JSON value dropped
+            out.append(new)
+    return out
 
 
 def _emit_braced(node, indent):
