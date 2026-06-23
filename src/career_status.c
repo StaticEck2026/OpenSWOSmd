@@ -43,6 +43,7 @@ extern uint16_t _Rand(void);
 extern uint16_t _Rand2(void);
 extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
 extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
+#include "career_params.h"
 extern uint16_t _CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
 extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
 
@@ -1007,8 +1008,8 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx 
     } else {
         d0 = getTeamValueForGateReceipts(team1);
     }
-    d0 = (uint16_t)(d0 / 4000);    /* divu #$FA0 */
-    d0 = (uint32_t)(uint16_t)d0 * 10000;  /* mulu #$2710 */
+    d0 = (uint16_t)(d0 / g_careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * g_careerParams.gate_league_mult_home;
     uint32_t d7 = d0;
 
     /* team2 value */
@@ -1017,8 +1018,8 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx 
     } else {
         d0 = getTeamValueForGateReceipts(team2);
     }
-    d0 = (uint16_t)(d0 / 4000);    /* divu #$FA0 */
-    d0 = (uint32_t)(uint16_t)d0 * 2000;   /* mulu #$7D0 */
+    d0 = (uint16_t)(d0 / g_careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * g_careerParams.gate_league_mult_away;
     d7 += d0;
 
     d7 >>= 4;   /* lsr.l #4 */
@@ -1052,8 +1053,8 @@ static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *te
     } else {
         d0 = getTeamValueForGateReceipts(team1);
     }
-    d0 = (uint16_t)(d0 / 4000);    /* divu #$FA0 */
-    d0 = (uint32_t)(uint16_t)d0 * 6000;   /* mulu #$1770 */
+    d0 = (uint16_t)(d0 / g_careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * g_careerParams.gate_cup_mult;
     uint32_t d7 = d0;
 
     if (team2 == &careerTeam) {
@@ -1061,8 +1062,8 @@ static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *te
     } else {
         d0 = getTeamValueForGateReceipts(team2);
     }
-    d0 = (uint16_t)(d0 / 4000);
-    d0 = (uint32_t)(uint16_t)d0 * 6000;
+    d0 = (uint16_t)(d0 / g_careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * g_careerParams.gate_cup_mult;
     d7 += d0;
 
     d7 >>= 4;
@@ -2238,17 +2239,17 @@ void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
     uint8_t someFlag = (uint8_t)pf->form;
 
     if (someFlag == PLAYER_FORM_TRIALIST) {
-        /* Trialist: reduce wage to 33% */
-        avgBase = (uint16_t)((uint32_t)avgBase * 33 / 100);
+        /* Trialist: reduce wage (default 33%) */
+        avgBase = (uint16_t)((uint32_t)avgBase * g_careerParams.wage_trialist_pct / 100);
     } else if (someFlag == PLAYER_FORM_RESERVE) {
-        /* Youth: reduce wage to 66% */
-        avgBase = (uint16_t)((uint32_t)avgBase * 66 / 100);
+        /* Youth: reduce wage (default 66%) */
+        avgBase = (uint16_t)((uint32_t)avgBase * g_careerParams.wage_reserve_pct / 100);
     }
 
-    /* Scale: value * 1000 / 768 * 96 / wageScalingDivisor */
+    /* Scale: value * 1000 / 768 * scale / wageScalingDivisor */
     uint32_t wage = (uint32_t)avgBase * 1000;
     wage = wage / 768;
-    wage = wage * 96;
+    wage = wage * g_careerParams.wage_scale;
     wage = wage / (uint32_t)wageScalingDivisor;
     wage &= 0xFFFF;  /* keep 16-bit quotient (68k divu behavior) */
 
@@ -2344,13 +2345,13 @@ uint32_t _CalculateStartingBalance(uint16_t teamNumber)
     TeamFileEx *teamPtr = _GetTeamPointer(teamNumber);
     uint16_t avgPrice = _GetAveragePlayerPrice(teamPtr);
     uint16_t baseValue = _GetTeamValueBase(avgPrice);
-    uint16_t base3 = (uint16_t)(baseValue * 3);     /* mulu.w #3 + move.w truncation */
+    uint16_t base3 = (uint16_t)(baseValue * g_careerParams.start_balance_value_mult);
     uint16_t r = _Rand2();
-    uint16_t randFactor = (uint16_t)((uint16_t)(r * 40) >> 8);  /* 0-39 */
-    uint16_t pct = (uint16_t)(randFactor + 80);                  /* 80-119 */
+    uint16_t randFactor = (uint16_t)((uint16_t)(r * g_careerParams.start_balance_pct_range) >> 8);
+    uint16_t pct = (uint16_t)(randFactor + g_careerParams.start_balance_pct_min);  /* default 80-119 */
     uint32_t product = (uint32_t)pct * (uint32_t)base3;
     uint16_t divided = (uint16_t)(product / 100);                /* divu.w quotient */
-    return (uint32_t)divided * 1000;
+    return (uint32_t)divided * g_careerParams.start_balance_scale;
 }
 
 /* ================================================================
