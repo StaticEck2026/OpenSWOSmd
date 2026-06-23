@@ -849,7 +849,14 @@ static void render_frame_impl(int pump_full)
         chunky_to_rgba((uint32_t *)pixels, pitch / 4);
         if (s_dump_frames && (pitch == g_screen_width * 4))
             maybe_dump_frame((uint32_t *)pixels);
-        if (s_screenshot_request && (pitch == g_screen_width * 4)) {
+        /* Only write the F12 screenshot from the main-thread render (pump_full). The
+         * SDL_AddTimer worker renders as a software-renderer fallback when the main thread
+         * stalls — e.g. across the previous screenshot's blocking PNG write — and at that
+         * moment it can grab the alternate double-buffer, whose own cameraYMod320 scroll/redraw
+         * state differs, which is what produced the every-other-shot vertical flip. Deferring
+         * to the main thread makes every capture read the same just-completed buffer the
+         * display does. The request flag persists until the main thread services it. */
+        if (pump_full && s_screenshot_request && (pitch == g_screen_width * 4)) {
             write_screenshot((uint32_t *)pixels);
             s_screenshot_request = 0;
         }
