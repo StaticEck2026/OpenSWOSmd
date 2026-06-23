@@ -10,6 +10,7 @@
 #include "play_match_menu.h"
 #include "input_text.h"
 #include "endian_helpers.h"
+#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the stats overlay in widescreen */
 #include "auto_skip_debug.h"
 
 /* ---- External globals ---- */
@@ -156,6 +157,13 @@ void _DrawStatistics(void)
     uint16_t y;
     uint16_t d7;
 
+    /* Widescreen: the stats overlay is laid out on 336-frame coords (the _DrawGrid /
+     * _DrawMenuTextCentered / writeStatsNumber x's below — 16/80/168/256/304). Shift the
+     * draw base by WIDE_MARGIN so the whole panel centers, same as the menus; restored on
+     * exit. WIDE_MARGIN folds to 0 on Amiga / non-widescreen (no shift). */
+    const int saved_x_offset = g_menu_draw_x_offset;
+    g_menu_draw_x_offset = WIDE_MARGIN;
+
     /* Draw title grid (80, 35, 176, 16) */
     _DrawGrid(80, 35, 176, 16);
 
@@ -274,6 +282,8 @@ void _DrawStatistics(void)
     _DrawMenuTextCentered(168, y, color, aSendingsOff, charTable);
     writeStatsNumber((uint16_t)a5->sendingsOff, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->sendingsOff, 256, y, color, charTable);
+
+    g_menu_draw_x_offset = saved_x_offset;
 }
 
 

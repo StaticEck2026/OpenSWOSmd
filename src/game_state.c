@@ -6,6 +6,7 @@
 #include "game_state.h"
 #include "game_types.h"
 #include "endian_helpers.h"
+#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
 
 /* ---- External globals ---- */
 extern uint16_t isGoalAttempt;
@@ -545,8 +546,12 @@ position_sprites:
     if (d7 > (int16_t)0xFFF2)   /* -14 */
         d7 = (int16_t)0xFFF2;
 
+    /* Widescreen: each HUD sprite below sets x = cameraX + screen_pos (so after
+     * _DrawSpriteInCameraView subtracts cameraX it lands at the fixed screen_pos). Adding
+     * WIDE_MARGIN to every one shifts the whole score panel / clock into the centered 336
+     * region, matching the menus. WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
     /* --- Position team1NameSprite --- */
-    team1NameSprite.x.s.i = cameraX.s.i + 136 - (int16_t)team1NameLength;
+    team1NameSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)team1NameLength;
     team1NameSprite.y.s.i = cameraY.s.i + 246 + d7 + 10000;
     team1NameSprite.z.s.i = 10000;
 
@@ -554,40 +559,40 @@ position_sprites:
     d0 = team1NameSprite.y.s.i - 1015;
 
     /* Grid upper row */
-    gridUpperRowLeftSprite.x.s.i = cameraX.s.i;
+    gridUpperRowLeftSprite.x.s.i = cameraX.s.i + WIDE_MARGIN;
     gridUpperRowLeftSprite.y.s.i = d0;
     gridUpperRowLeftSprite.z.s.i = 9000;
-    gridUpperRowRightSprite.x.s.i = cameraX.s.i + 168;
+    gridUpperRowRightSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
     gridUpperRowRightSprite.y.s.i = d0;
     gridUpperRowRightSprite.z.s.i = 9000;
 
     d0 += 32;
 
     /* Grid middle row */
-    gridMiddleRowLeftSprite.x.s.i = cameraX.s.i;
+    gridMiddleRowLeftSprite.x.s.i = cameraX.s.i + WIDE_MARGIN;
     gridMiddleRowLeftSprite.y.s.i = d0;
     gridMiddleRowLeftSprite.z.s.i = 9000;
-    gridMiddleRowRightSprite.x.s.i = cameraX.s.i + 168;
+    gridMiddleRowRightSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
     gridMiddleRowRightSprite.y.s.i = d0;
     gridMiddleRowRightSprite.z.s.i = 9000;
 
     d0 += 32;
 
     /* Grid bottom row */
-    gridBottomRowLeftSprite.x.s.i = cameraX.s.i;
+    gridBottomRowLeftSprite.x.s.i = cameraX.s.i + WIDE_MARGIN;
     gridBottomRowLeftSprite.y.s.i = d0;
     gridBottomRowLeftSprite.z.s.i = 9000;
-    gridBottomRowRightSprite.x.s.i = cameraX.s.i + 168;
+    gridBottomRowRightSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
     gridBottomRowRightSprite.y.s.i = d0;
     gridBottomRowRightSprite.z.s.i = 9000;
 
     /* --- Position team2NameSprite --- */
-    team2NameSprite.x.s.i = cameraX.s.i + 200;
+    team2NameSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 200;
     team2NameSprite.y.s.i = team1NameSprite.y.s.i;
     team2NameSprite.z.s.i = 10000;
 
     /* --- Team 1 goals digit 2 (units) --- */
-    team1GoalsDigit2Sprite.x.s.i = cameraX.s.i + 151;
+    team1GoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 151;
     team1GoalsDigit2Sprite.y.s.i = cameraY.s.i + 241 + d7 + 10000;
     team1GoalsDigit2Sprite.z.s.i = 10000;
     team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + team1GoalsDigit2;
@@ -608,7 +613,7 @@ position_sprites:
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        team1TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + 158;
+        team1TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 158;
         if (d1 == 1)
             team1TotalGoalsDigit2Sprite.x.s.i += 4;
         team1TotalGoalsDigit2Sprite.y.s.i = cameraY.s.i + 263 + d7 + 10002;
@@ -627,7 +632,7 @@ position_sprites:
     }
 
     /* --- Team 2 goals digit 2 (units) --- */
-    team2GoalsDigit2Sprite.x.s.i = cameraX.s.i + 173;
+    team2GoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 173;
     team2GoalsDigit2Sprite.y.s.i = cameraY.s.i + 241 + d7 + 10000;
     team2GoalsDigit2Sprite.z.s.i = 10000;
     team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + team2GoalsDigit2;
@@ -649,7 +654,7 @@ position_sprites:
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        team2TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + 171;
+        team2TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 171;
         team2TotalGoalsDigit2Sprite.y.s.i = cameraY.s.i + 263 + d7 + 10002;
         team2TotalGoalsDigit2Sprite.z.s.i = 10002;
         team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
@@ -670,7 +675,7 @@ position_sprites:
     }
 
     /* --- Dash sprite --- */
-    dashSprite.x.s.i = cameraX.s.i + 165;
+    dashSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 165;
     dashSprite.y.s.i = cameraY.s.i + 249 + d7 + 10000;
     dashSprite.z.s.i = 10000;
 
@@ -683,7 +688,7 @@ position_sprites:
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = cameraX.s.i + 136 - (int16_t)*(widths);
+            spr->x.s.i = cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)*(widths);
             spr->y.s.i = cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
@@ -701,7 +706,7 @@ position_sprites:
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = cameraX.s.i + 200;
+            spr->x.s.i = cameraX.s.i + WIDE_MARGIN + 200;
             spr->y.s.i = cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
@@ -712,7 +717,7 @@ position_sprites:
 
     /* --- Position halftime/fulltime result banners --- */
     d0 = gridUpperRowLeftSprite.y.s.i + 990;
-    resultOnHalftimeSprite.x.s.i = cameraX.s.i + 168;
+    resultOnHalftimeSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
     resultOnHalftimeSprite.y.s.i = d0;
     resultOnHalftimeSprite.z.s.i = 10000;
     resultAfterTheGameSprite.x.s.i = resultOnHalftimeSprite.x.s.i;
@@ -1026,7 +1031,7 @@ not_end_of_second_extra:
 set_time_sprite_x:
     {
         /* Position time sprite relative to camera */
-        currentTimeSprite.x.s.i = cameraX.s.i + 0x14;
+        currentTimeSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 0x14;
         currentTimeSprite.y.s.i = cameraY.s.i + 0x2721;
 
         /* If player indicator is at position 4, shift time down by 8 */

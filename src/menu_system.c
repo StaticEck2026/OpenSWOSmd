@@ -468,7 +468,13 @@ void _DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w,
 __attribute__((used, externally_visible))
 void _DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    _RectRowMaskedApplyScreenOffset(x, y, w, h, frontbufferMaskBuffer, (uint8_t *)frontbufferBasePtr);
+    /* Widescreen: align the masked (transparent) background with the centered
+     * frame/text/items, which draw at x + g_menu_draw_x_offset via the base-shifted
+     * primitives. Both the mask read and the front write shift by the offset. Without
+     * this the masked bg lands un-centered (corrupt menu item in masked-bg states).
+     * Same fix as _BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
+    _RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
+                                    frontbufferMaskBuffer, (uint8_t *)frontbufferBasePtr);
 }
 
 /* ================================================================
@@ -1306,6 +1312,10 @@ void _DrawMenu(void)
 
     menuStatus = 0;
     menuTextBlinkCounter = 0;
+    /* Widescreen: center all menu drawing. Set once here; every partial redraw
+     * (_CallDrawMenuItem, _DrawMultipleItems, selector, custom callbacks, ...)
+     * inherits it. The in-match game loop resets it to 0 for the world. */
+    g_menu_draw_x_offset = WIDE_MARGIN;
 
     _BlitterCopyPanelToScreen2();
     _DrawMenuPanelBackground();
@@ -1324,7 +1334,7 @@ void _DrawMenu(void)
         _CallMenuCallback((void *)onDrawPtr);
     }
 
-    /* Draw all entries */
+    /* Draw all entries (centered via the persistent g_menu_draw_x_offset). */
     entry = (MenuEntry *)menuEntries;
     count = (int16_t)menu->numEntries;
     for (i = 0; i < count; i++) {
@@ -1867,7 +1877,12 @@ __attribute__((used, externally_visible))
 void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     extern volatile uintptr_t frontbufferBaseAltPtr;
-    _RectRowMaskedApplyScreenOffset(x, y, w, h, (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
+    /* Widescreen: the items were drawn centered (x + g_menu_draw_x_offset via the
+     * base-shifted primitives), so sync the SAME region between the two buffers.
+     * Without this the rect copies the un-offset region and leaves stale/garbage
+     * exactly where the centered items are (corrupt menu element). 0 if not widescreen. */
+    _RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
+                                    (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
 }
 
 /* ================================================================
