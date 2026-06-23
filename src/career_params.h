@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/* Hard ceiling on career length = the compile-time size of seasonInformationsArray.
+ * num_seasons (below) must be <= this. */
+#define CAREER_MAX_SEASONS 35
+
 /* Tunable career-mode balance knobs.
  *
  * The defaults (career_params.c) reproduce the original hard-coded SWOS values, so the
@@ -43,6 +47,10 @@ typedef struct {
     uint16_t board_secondary_top2_bonus; /* 2    secondary-cup top-2 finish improves verdict */
     uint16_t board_tertiary_top2_bonus;  /* 2    tertiary-cup top-2 */
     uint16_t board_euro_top2_bonus;      /* 3    euro-cup top-2 */
+
+    /* ---- Career length ---- */
+    uint16_t num_seasons;                /* 20 (default) or up to CAREER_MAX_SEASONS (35) — the
+                                          * career retires after this many seasons */
 } CareerParams;
 
 extern CareerParams g_careerParams;

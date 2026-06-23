@@ -372,7 +372,8 @@ static int json_out_emit(const char *chunk, int chunk_len, void *ud)
  * SI_* defines but local so we don't drag statistics.c into the
  * include graph. */
 #define SAVE_SI_ENTRY_SIZE       106u
-#define SAVE_SI_ENTRY_COUNT       20u
+#define SAVE_SI_ENTRY_COUNT       35u   /* = CAREER_MAX_SEASONS; reader is index-bounded so old
+                                         * 20-entry saves still load (extra rows stay zeroed) */
 #define SAVE_SI_CLUBNO             0u
 #define SAVE_SI_CLUBNAME           2u
 #define SAVE_SI_TROPHYFLAGS       20u
@@ -2822,8 +2823,11 @@ void DataJson_LoadCareerParams(void)
     LDU("$.board_secondary_top2_bonus", board_secondary_top2_bonus);
     LDU("$.board_tertiary_top2_bonus",  board_tertiary_top2_bonus);
     LDU("$.board_euro_top2_bonus",      board_euro_top2_bonus);
+    LDU("$.num_seasons",                num_seasons);
     #undef LDU
     #undef LDS
+    if (g_careerParams.num_seasons < 1) g_careerParams.num_seasons = 1;
+    if (g_careerParams.num_seasons > CAREER_MAX_SEASONS) g_careerParams.num_seasons = CAREER_MAX_SEASONS;
     free(j);
     fprintf(stderr, "[data-json] career params loaded from data_json/career_params.json\n");
 }

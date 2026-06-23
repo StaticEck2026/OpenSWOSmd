@@ -33,4 +33,7 @@ CareerParams g_careerParams = {
     .board_secondary_top2_bonus = 2,
     .board_tertiary_top2_bonus  = 2,
     .board_euro_top2_bonus      = 3,
+
+    /* career length */
+    .num_seasons = 20,
 };
