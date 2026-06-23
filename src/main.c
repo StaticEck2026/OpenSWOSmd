@@ -286,10 +286,10 @@ int main(int argc, char **argv)
     {
         extern void Translations_Load(const char *lang);
         extern void Countries_Localize(void);
-        extern void Currency_SetDollar(int dollar);
+        extern void Currency_Set(const char *name);
         Translations_Load(opts.language);
         Countries_Localize();
-        Currency_SetDollar(opts.currency[0] == 'd' || opts.currency[0] == 'D');
+        Currency_Set(opts.currency);   /* pound (stock £) | dollar ($) | euro (€) */
     }
 
     if (gDosGraphics)

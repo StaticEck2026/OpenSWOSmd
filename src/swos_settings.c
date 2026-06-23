@@ -179,7 +179,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "[general]\n"
         "; language: en | de | fr | es | it | nl\n"
         "language=%s\n"
-        "; currency: pound | dollar\n"
+        "; currency: pound | dollar | euro\n"
         "currency=%s\n",
         renderer_str(opts->renderer),
         opts->vsync ? "on" : "off",

@@ -15,16 +15,24 @@ extern uint8_t nullString_0[]; /* "" (0x00) */
 
 /* Money symbol. The pound (byte 0x9C) is hard-coded at the start of every money
  * format string: aPound (used by _Int2Pounds for balances/wages/transfers) and
- * the K/M player-value strings a1k/a0m/a01m. SWOS.ini [general] currency=dollar
- * patches that leading byte to '$' (0x24) in all of them. The '$' glyph is in the
- * font extension; the pound glyph is the stock 0x9C. */
-void Currency_SetDollar(int dollar)
+ * the K/M player-value strings a1k/a0m/a01m. SWOS.ini [general] currency= patches that
+ * leading byte in all of them: pound -> 0x9C (stock), dollar -> '$' 0x24, euro -> '€' 0x9D.
+ * The '$' and '€' glyphs live in the font extension (see docs/FONTS.md); the pound glyph is
+ * the stock 0x9C. */
+void Currency_Set(const char *name)
 {
     extern char a1k[], a0m[], a01m[];
-    char sym = dollar ? '$' : (char)0x9C;
-    aPound[0] = (uint8_t)sym;
-    a1k[0] = a0m[0] = a01m[0] = sym;
+    uint8_t sym = 0x9C;                                       /* pound (default/stock) */
+    if (name) {
+        if (name[0] == 'd' || name[0] == 'D') sym = 0x24;     /* dollar '$' */
+        else if (name[0] == 'e' || name[0] == 'E') sym = 0x9D; /* euro '€' */
+    }
+    aPound[0] = sym;
+    a1k[0] = a0m[0] = a01m[0] = (char)sym;
 }
+
+/* Back-compat shim for any caller still passing a bool. */
+void Currency_SetDollar(int dollar) { Currency_Set(dollar ? "dollar" : "pound"); }
 extern uint8_t aBank[];        /* "BANK" */
 extern int32_t newBalance;
 
