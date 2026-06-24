@@ -18,9 +18,9 @@
 /* SDL doesn't link the Amiga bootstrap; provide empty stubs so the
  * SWOS.c hardware-takeover path links cleanly. On Amiga these live
  * in resload.c (with real Exec/DOS calls) and we must NOT redefine. */
-void _SafeStart(void)        {}
-void _LoadDosLibrary(void)   {}
-void _DetachOSDisplay(void)  {}
+void SafeStart(void)        {}
+void LoadDosLibrary(void)   {}
+void DetachOSDisplay(void)  {}
 #endif
 
 /* The Int*Handler entries are direct m68k vector-table entries: the
@@ -121,19 +121,19 @@ void Int5Handler(void)         {}
  * order before calling a menu callback. On SDL we just call the
  * function pointer directly with host calling convention. This is
  * what enables onInit / onSelect / beforeDraw callbacks -- without
- * these the main menu never runs _SWOSMainMenuInit so things like
+ * these the main menu never runs SWOSMainMenuInit so things like
  * the START and SAVE buttons never get hidden. */
-void _CallMenuCallback(void *funcPtr)
+void CallMenuCallback(void *funcPtr)
 {
     if (funcPtr) ((void (*)(void))funcPtr)();
 }
 
-void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y)
+void CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y)
 {
     if (funcPtr) ((void (*)(uint16_t, uint16_t))funcPtr)(x, y);
 }
 
-void _CallMenuOnSelect(void *funcPtr, void *selectedEntry)
+void CallMenuOnSelect(void *funcPtr, void *selectedEntry)
 {
     if (funcPtr) ((void (*)(void *))funcPtr)(selectedEntry);
 }

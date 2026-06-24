@@ -12,10 +12,10 @@ typedef unsigned int uint32_t;
 typedef short int16_t;
 typedef int int32_t;
 
-uint16_t _Rand(void);
-uint16_t _Rand2(void);
-uint16_t _GetRandomWord(void);
-void _SaveRand2State(void);
-void _RestoreRand2State(void);
+uint16_t Rand(void);
+uint16_t Rand2(void);
+uint16_t GetRandomWord(void);
+void SaveRand2State(void);
+void RestoreRand2State(void);
 
 #endif

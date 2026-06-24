@@ -23,8 +23,8 @@
 #define LEVEL_5_VEC     0x74u
 
 /* ---- External symbols from resload.c ---- */
-extern void _FixSnoopBug(void);
-extern uint8_t _KBHook(void);       /* returns raw CIAA_SDR byte in d0 */
+extern void FixSnoopBug(void);
+extern uint8_t KBHook(void);       /* returns raw CIAA_SDR byte in d0 */
 extern uint32_t S_VBR;
 
 /* ---- External symbols from SWOS2.s (kept in asm) ---- */
@@ -53,23 +53,23 @@ extern FixedPoint cameraX;
 extern FixedPoint cameraY;
 
 /* ---- External C functions called from Int3TimerHandler ---- */
-extern void _UpdatePlanePtrsAndBlitParams(void);
-extern void _SwapBuffersAndCameraViewState(void);
-extern void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
-extern void _FadeOutTick(void);
-extern void _FadeInTick(void);
-extern uint8_t _AudioIRQUpdateChannels(void);
+extern void UpdatePlanePtrsAndBlitParams(void);
+extern void SwapBuffersAndCameraViewState(void);
+extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
+extern void FadeOutTick(void);
+extern void FadeInTick(void);
+extern uint8_t AudioIRQUpdateChannels(void);
 
 /* ================================================================
- * _InitHardwareAtFrameStart  (SWOS2.s:5431-5446)
+ * InitHardwareAtFrameStart  (SWOS2.s:5431-5446)
  *
  * Called during startup. Waits for the raster to reach the top
  * of the frame, then disables all interrupts and DMA.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitHardwareAtFrameStart(void)
+void InitHardwareAtFrameStart(void)
 {
-    _FixSnoopBug();
+    FixSnoopBug();
 
     /* Clear BPLCON0 — use absolute address (not in struct, at offset 0x100) */
     *(volatile uint16_t *)(CUSTOM_BASE + BPLCON0_OFF) = 0;
@@ -90,7 +90,7 @@ void _InitHardwareAtFrameStart(void)
 }
 
 /* ================================================================
- * _SetupInterrupts  (SWOS2.s:6056-6065)
+ * SetupInterrupts  (SWOS2.s:6056-6065)
  *
  * Installs interrupt handlers into the vector table:
  *   - Saves old Level 3 vector to Level 1
@@ -99,7 +99,7 @@ void _InitHardwareAtFrameStart(void)
  * Then enables Master + RBF + VBlank + Software interrupts.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetupInterrupts(void)
+void SetupInterrupts(void)
 {
     /* S_VBR is the m68k Vector Base Register — dead address on SDL.
      * Widen through uintptr_t to silence Wint-to-pointer-cast on 64-bit. */
@@ -142,7 +142,7 @@ void _Int2KeyboardHandler(void)
         goto ack;
 
     /* KBHook reads CIAA_SDR, checks for DEL exit key, returns raw byte in d0 */
-    d0 = _KBHook();
+    d0 = KBHook();
 
     /* Start keyboard handshake: set bit 6 of CIAA_CRA */
     *(volatile uint8_t *)CIAA_CRA_ADDR |= (1u << 6);
@@ -207,26 +207,26 @@ void _Int3TimerHandler(void)
         if (delta >= writeOnly01)
         {
             lastVBlankServiceTick = currentGameTick;
-            _UpdatePlanePtrsAndBlitParams();
+            UpdatePlanePtrsAndBlitParams();
 
             int16_t camX = cameraX.s.i;
             int16_t camY = cameraY.s.i;
 
-            _SwapBuffersAndCameraViewState();
-            _SetCameraCoordinates(camX, camY);
+            SwapBuffersAndCameraViewState();
+            SetCameraCoordinates(camX, camY);
 
             waitingInterrupt = 0;
             didSwapThisFrame = 1;
         }
     }
 
-    _FadeOutTick();
-    _FadeInTick();
+    FadeOutTick();
+    FadeInTick();
 
     audioDbgFlagA = 0;
     if (audioActive != 0)
     {
-        audioDbgFlagA = _AudioIRQUpdateChannels();
+        audioDbgFlagA = AudioIRQUpdateChannels();
     }
 
     /* debugMode LINE-A trap skipped (dead code in non-debug builds) */

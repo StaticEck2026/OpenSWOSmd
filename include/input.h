@@ -11,8 +11,8 @@ typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef short int16_t;
 
-void _Player1StatusProc(void);
-void _Player2StatusProc(void);
+void Player1StatusProc(void);
+void Player2StatusProc(void);
 
 /* SDL-only — set when SPACE (keyboard) or the second button on a
  * controller / raw joystick is pressed. Auto-advance pause loops can

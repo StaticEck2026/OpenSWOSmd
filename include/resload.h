@@ -13,19 +13,19 @@ typedef signed short int16_t;
 typedef int int32_t;
 
 /* --- Initialization / cleanup --- */
-void _SafeStart(void);
-void _DetachOSDisplay(void);
-void _LoadDosLibrary(void);
-void _CloseDosLibrary(void);
-void _ExitToDos(void);
-uint8_t *_AllocMemAny(uint32_t size);
+void SafeStart(void);
+void DetachOSDisplay(void);
+void LoadDosLibrary(void);
+void CloseDosLibrary(void);
+void ExitToDos(void);
+uint8_t *AllocMemAny(uint32_t size);
 
 /* --- Hardware helpers --- */
-void _FixSnoopBug(void);
-void _FixMemoryRoutine(void);
-uint8_t _KBHook(void);
+void FixSnoopBug(void);
+void FixMemoryRoutine(void);
+uint8_t KBHook(void);
 
 /* --- RobNorthenLoader C implementation (called via asm bridge) --- */
-uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf);
+uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf);
 
 #endif /* RESLOAD_H */

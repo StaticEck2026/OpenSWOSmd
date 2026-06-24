@@ -85,7 +85,7 @@ static inline __attribute__((always_inline)) void waitBlit(void)
  * into the frontbuffer, then copies that column to the mask buffer.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ScrollXUpdateColumnsAndBlit(void)
+void ScrollXUpdateColumnsAndBlit(void)
 {
 #ifdef SWOS_SDL_BUILD
     /* Amiga's incremental scroll updates (blit one new column of pitch
@@ -93,7 +93,7 @@ void _ScrollXUpdateColumnsAndBlit(void)
      * interleaved pitch-tile data + Amiga blitter word writes. On SDL
      * the pitch data is being migrated to 8bpp chunky, and the whole
      * visible pitch gets redrawn each frame (matching swos-port-c's
-     * _DrawSprites approach). No-op this on SDL; the chunky redraw
+     * DrawSprites approach). No-op this on SDL; the chunky redraw
      * handles scroll transparently. */
     return;
 #else
@@ -257,10 +257,10 @@ void _ScrollXUpdateColumnsAndBlit(void)
  * Blitter-based mask copy from frontbuffer to mask buffer.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ScrollYUpdateRowsAndBlit(void)
+void ScrollYUpdateRowsAndBlit(void)
 {
 #ifdef SWOS_SDL_BUILD
-    /* See _ScrollXUpdateColumnsAndBlit above — same rationale. */
+    /* See ScrollXUpdateColumnsAndBlit above — same rationale. */
     return;
 #else
     int16_t deltaY;

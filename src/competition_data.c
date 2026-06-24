@@ -1918,9 +1918,9 @@ uint8_t careerRegionPickWeightsTable2[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
  * ORIGINAL_CUSTOM_TEAMS), 100 (customsTable for EDITED_CUSTOM_TEAMS),
  * 80–85 (region tables), 252–254 (qualifying-group / world tables).
  *
- * Without this, _SelectTeamsFinalMenu reads competitionsTable[254]=0 for
+ * Without this, SelectTeamsFinalMenu reads competitionsTable[254]=0 for
  * the CLUB_TEAMS path, panics with code 0x8632, and falls into
- * _PanicHaltLoop → _FadeOutToBlack → spin forever waiting for both
+ * PanicHaltLoop → FadeOutToBlack → spin forever waiting for both
  * players' fire buttons (looks like a black screen on SDL). Layout
  * transcribed verbatim from SWOS2.s lines 124186–124443. */
 void *competitionsTable[256] = {

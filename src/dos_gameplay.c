@@ -12,14 +12,14 @@ extern uint16_t kKeeperSaveDistance[1];      /* Amiga 24 / DOS 16 (dive/save thr
 extern uint32_t kGoalkeeperDiveDeltas[8];    /* keeper reach table; DOS = Amiga - 0x8000 */
 
 /* ---- Ball physics — ALREADY named globals (swos_amiga_data_imports.c), read by
- * ball_physics.c (_UpdateBall) and match_setup.c. We just write the per-style value;
+ * ball_physics.c (UpdateBall) and match_setup.c. We just write the per-style value;
  * no consumer change needed. Defaults there are the Amiga values. ---------------- */
 extern uint16_t kBallGroundConstant[1];      /* Amiga 16 / DOS 13 — ground friction */
 extern uint16_t kBallAirConstant[1];         /* Amiga 10 / DOS 4  — air friction (z>0) */
 extern uint32_t kGravityConstant[1];         /* Amiga 4608 / DOS 3291 — z-velocity decr */
 extern uint16_t kPitchBallSpeedInfluence[7]; /* first 3 entries differ DOS vs Amiga */
 
-/* ---- Match clock — GS_54_49. WIRED: game_state.c:_UpdateTime reads this for the
+/* ---- Match clock — GS_54_49. WIRED: game_state.c:UpdateTime reads this for the
  * per-in-game-second accumulator reload, which sets the whole match-clock cadence. */
 int16_t  gsFramesPerGameSecond = 49;         /* Amiga 49 / DOS 54 — clock reload */
 

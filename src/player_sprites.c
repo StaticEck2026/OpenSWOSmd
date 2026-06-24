@@ -39,7 +39,7 @@ extern uint8_t smallCharsTable[];
  * Returns pointer to surnameBuf or original name if it fits.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags)
+uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags)
 {
     uint8_t *origName = name;
     uint16_t maxLen = maxLenAndFlags;
@@ -57,7 +57,7 @@ uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags)
     flags = maxLenAndFlags & 0xC000;
     if (flags == 0) {
         /* No flags: check if name fits within maxLen */
-        uint16_t len = _GetStringLength(name);
+        uint16_t len = GetStringLength(name);
         if (len <= maxLen)
             return origName;
         /* Doesn't fit, fall through to build abbreviated */
@@ -179,7 +179,7 @@ terminate:
  * Counts frequency of each face type (0-2) across 16 players.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CountFaces(TeamGame *team)
+void CountFaces(TeamGame *team)
 {
     int16_t i;
 
@@ -202,7 +202,7 @@ void _CountFaces(TeamGame *team)
  * Each pair: (index, value) uint16_t, terminated by negative index.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ConvertColorTableToSkinColor(uint16_t color, uint16_t *destTable)
+void ConvertColorTableToSkinColor(uint16_t color, uint16_t *destTable)
 {
     int16_t colorIdx = (int16_t)(int8_t)(color & 0xFF);
     uint16_t *convTable;
@@ -227,7 +227,7 @@ void _ConvertColorTableToSkinColor(uint16_t color, uint16_t *destTable)
  * Goalkeepers are prioritized; non-GK faces fill remaining slots.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DetermineGoalieFaces(TeamGame *team, uint8_t *gkFaceToIndex, uint8_t *gkFaceIndices)
+void DetermineGoalieFaces(TeamGame *team, uint8_t *gkFaceToIndex, uint8_t *gkFaceIndices)
 {
     uint16_t slotIdx = 0;
     int16_t i;
@@ -280,7 +280,7 @@ void _DetermineGoalieFaces(TeamGame *team, uint8_t *gkFaceToIndex, uint8_t *gkFa
  * multiplier 0x3A (58), outfield use multiplier 0x65 (101).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitializePlayerSpriteFrameIndices(void)
+void InitializePlayerSpriteFrameIndices(void)
 {
     int16_t d1;
     uint16_t idx = 0;
@@ -337,7 +337,7 @@ static uint16_t makePlayerNameSprite(uint16_t playerNumber, uint8_t *shortName,
     uint16_t textWidth;
 
     /* Write player number to numberBuffer */
-    _Int2Ascii(playerNumber, numberBuffer);
+    Int2Ascii(playerNumber, numberBuffer);
 
     /* Find end of number string and append space */
     p = numberBuffer;
@@ -346,16 +346,16 @@ static uint16_t makePlayerNameSprite(uint16_t playerNumber, uint8_t *shortName,
     *p++ = ' ';
 
     /* Clear the destination sprite */
-    _HWSprite_LoadFromSpriteGraphics(spriteIdx);
+    HWSprite_LoadFromSpriteGraphics(spriteIdx);
 
     /* Extract surname (bit14=skip firstname, max 11 chars) */
-    surname = _ExtractSurname(shortName, 0x400B);
+    surname = ExtractSurname(shortName, 0x400B);
 
     /* Copy surname after "NN " */
-    _StringCopy(surname, p);
+    StringCopy(surname, p);
 
     /* Render text into sprite */
-    _Text2Sprite(0, 0, spriteIdx, numberBuffer, smallCharsTable, 2, &textWidth);
+    Text2Sprite(0, 0, spriteIdx, numberBuffer, smallCharsTable, 2, &textWidth);
 
     *nameLenOut = (uint8_t)textWidth;
     return spriteIdx + 1;
@@ -368,7 +368,7 @@ static uint16_t makePlayerNameSprite(uint16_t playerNumber, uint8_t *shortName,
  * Starting at SPR_TEAM1_PLAYER_NAMES_START (0x8D).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MakeSpritesFromPlayerNames(TeamGame *leftTeam, TeamGame *rightTeam)
+void MakeSpritesFromPlayerNames(TeamGame *leftTeam, TeamGame *rightTeam)
 {
     uint8_t *nameLenPtr = plNamesLengthTable;
     uint16_t sprIdx = SPR_TEAM1_PLAYER_NAMES_START;

@@ -41,326 +41,325 @@ static inline DIYTeamStats *diy_standings_row_from_raw(uint8_t *compRaw, int idx
 #define DIY_STANDINGS_OFFSET  (offsetof(DIYCompetitionEx, leagueStandings))
 
 /* --- National team competition check (Chunk 151) --- */
-uint16_t _IsNationalTeamCompetitionOrQualification(uint32_t key);
+uint16_t IsNationalTeamCompetitionOrQualification(uint32_t key);
 
 /* --- Player Price Utilities --- */
-uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
-uint32_t _GetLowestAndHighestPlayerPrice(void);
-uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
+uint16_t GetAveragePlayerPrice(TeamFileEx *team);
+uint32_t GetLowestAndHighestPlayerPrice(void);
+uint16_t CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
                               uint16_t price, const uint8_t *curQuadDistFactor,
                               const uint8_t *playerPositions, const uint8_t *coordToQuad);
 
 /* --- DIY Team Shuffling --- */
-void _DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot);
-void _DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot);
-void _DIY_ShuffleLeagueTeamOrder(void);
+void DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot);
+void DIY_SortAndShuffleTeamsByValue(uint8_t *diy, uint8_t *slot);
+void DIY_ShuffleLeagueTeamOrder(void);
 
 /* --- DIY Initialization --- */
-void _InitDIYTournament(void);
-void _DIY_InitCompetitionDefaults(void);
-void _DIY_ResetCompetitionProgressAndShuffle(void);
-void _DIYTournament_RecalculateMatchesPerTeam(void);
+void InitDIYTournament(void);
+void DIY_InitCompetitionDefaults(void);
+void DIY_ResetCompetitionProgressAndShuffle(void);
+void DIYTournament_RecalculateMatchesPerTeam(void);
 
 /* --- DIY Team Management --- */
-void _DIY_CacheSelectedTeamPointers(void);
-uint16_t _DIY_CountUnselectedTeams(void);
+void DIY_CacheSelectedTeamPointers(void);
+uint16_t DIY_CountUnselectedTeams(void);
 
 /* --- DIY League Table --- */
-void _DIY_SortLeagueTableByStandings(void);
+void DIY_SortLeagueTableByStandings(void);
 
 /* --- DIY Strength/Bracket --- */
-uint32_t _DIY_ComputeAverageTeamStrengthTier(uint16_t count, uint8_t *table);
-void _DIY_InitCupBracketProgressionTable(void);
-void _DIYTournament_BuildMatchesPerTeamProgressionTable(void);
+uint32_t DIY_ComputeAverageTeamStrengthTier(uint16_t count, uint8_t *table);
+void DIY_InitCupBracketProgressionTable(void);
+void DIYTournament_BuildMatchesPerTeamProgressionTable(void);
 
 /* --- Cup Round String Utilities --- */
-uint16_t _GetNextCupRoundStringIndex(uint16_t cur, uint16_t n, uint16_t add);
-const char *_GetNextCupRoundString(uint16_t cur, uint16_t n, uint16_t add);
-uint16_t _GetCupRoundStringIndex(uint16_t cur, uint16_t flag, uint16_t idx,
+uint16_t GetNextCupRoundStringIndex(uint16_t cur, uint16_t n, uint16_t add);
+const char *GetNextCupRoundString(uint16_t cur, uint16_t n, uint16_t add);
+uint16_t GetCupRoundStringIndex(uint16_t cur, uint16_t flag, uint16_t idx,
                                   uint16_t stage, uint16_t opt);
-const char *_GetCupRoundString(uint16_t cur, uint16_t flag, uint16_t idx,
+const char *GetCupRoundString(uint16_t cur, uint16_t flag, uint16_t idx,
                                 uint16_t stage, uint16_t opt);
 
 /* --- DIY League Scratch Buffer --- */
-void _DIY_LoadLeagueScratchFromTable(void);
-void _DIY_SaveLeagueScratchToTable(void);
+void DIY_LoadLeagueScratchFromTable(void);
+void DIY_SaveLeagueScratchToTable(void);
 
 /* --- DIY Cup Init & Helpers --- */
-void _InitDIYCup(void);
-void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
-void _InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table);
-void _InitDIYCupFromRecord(uint8_t *cupRec);
-void _InitDIYLeagueFromRecord(uint8_t *leagueRec);
-void _DIY_ShuffleTeamOrderList(void);
-void _DIY_ShuffleTeamGridPairs(void);
-void _DIY_SyncProgressToDiyFileBufferCopy(void);
-void _DIY_ValidateLeagueScratchBuffer(void);
+void InitDIYCup(void);
+void InitCompetitionFromRecord(uint16_t index, uint8_t *record);
+void InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table);
+void InitDIYCupFromRecord(uint8_t *cupRec);
+void InitDIYLeagueFromRecord(uint8_t *leagueRec);
+void DIY_ShuffleTeamOrderList(void);
+void DIY_ShuffleTeamGridPairs(void);
+void DIY_SyncProgressToDiyFileBufferCopy(void);
+void DIY_ValidateLeagueScratchBuffer(void);
 
 /* --- DIY Cup Bracket & Team Grid --- */
-void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void);
-void _DIY_ReorderTeamGridByOrderList(void);
-void _DIY_RecountMissingTeamsInTeamGrid(void);
-void _DIY_BuildTeamSelectionPointerCache(void);
-void _DIY_InitCupBracketState(void);
+void DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void);
+void DIY_ReorderTeamGridByOrderList(void);
+void DIY_RecountMissingTeamsInTeamGrid(void);
+void DIY_BuildTeamSelectionPointerCache(void);
+void DIY_InitCupBracketState(void);
 
 /* --- DIY Buffer Copy Operations --- */
-void _SaveDIYTournament(void);
-void _RestoreDIYTournament(void);
-void _DIY_CopyCompetitionFileBufferToDiyFileBufferCopy(void);
-void _DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer(void);
-void _DIY_CopyCompetitionFileBufferToCompetitionStart(void);
-void _DIY_CopyCompetitionStartToCompetitionFileBuffer(void);
-void _DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void);
-void _DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void);
-void _SaveDIYLeague(void);
-void _RestoreDIYLeague(void);
-void _DIY_SaveCompetitionFileBufferToDIYCompetition(void);
-void _DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
+void SaveDIYTournament(void);
+void RestoreDIYTournament(void);
+void DIY_CopyCompetitionFileBufferToDiyFileBufferCopy(void);
+void DIY_CopyDiyFileBufferCopyToCompetitionFileBuffer(void);
+void DIY_CopyCompetitionFileBufferToCompetitionStart(void);
+void DIY_CopyCompetitionStartToCompetitionFileBuffer(void);
+void DIY_CopyCompetitionFileBufferToCompetitionStart_Alt(void);
+void DIY_CopyCompetitionStartToCompetitionFileBuffer_Alt(void);
+void SaveDIYLeague(void);
+void RestoreDIYLeague(void);
+void DIY_SaveCompetitionFileBufferToDIYCompetition(void);
+void DIY_RestoreCompetitionFileBufferFromDIYCompetition(void);
 
 /* --- Competition Derived Fields & Fixture Helpers --- */
-void _DIY_RecomputeCompetitionDerivedFields(void);
-void _DIY_GetCurrentFixtureTeamPtrs(void);
-void _DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2);
-uint16_t _DIY_GetCurrentFixtureTeamClass(void);
+void DIY_RecomputeCompetitionDerivedFields(void);
+void DIY_GetCurrentFixtureTeamPtrs(void);
+void DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2);
+uint16_t DIY_GetCurrentFixtureTeamClass(void);
 
 /* --- Qualified Team List Building --- */
-void _DIY_BuildQualifiedTeamListFromSortedTable(uint16_t count, uint8_t *out);
-void _DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out);
-void _DIY_SyncCompetitionTeamGridOrBuildBracket(void);
+void DIY_BuildQualifiedTeamListFromSortedTable(uint16_t count, uint8_t *out);
+void DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out);
+void DIY_SyncCompetitionTeamGridOrBuildBracket(void);
 
 /* --- Competition Team Index & Promotion/Relegation --- */
 /* Returns advanced cursor; caller chains across per-division calls so
  * promotion lists accumulate rather than overwrite. See definition. */
-uint8_t *_DIY_CopyCompetitionTeamIndexTable(uint8_t *dst);
-void _DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights);
-void _DIY_UpdatePromotionRelegationScratchCounts(void);
+uint8_t *DIY_CopyCompetitionTeamIndexTable(uint8_t *dst);
+void DIY_ApplyPromotionRelegationWeightsToScratch(const uint8_t *weights);
+void DIY_UpdatePromotionRelegationScratchCounts(void);
 
 /* --- Career Team Search (Chunk 89) --- */
-uint32_t _Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *endPtr);
-uint32_t _Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *endPtr);
+uint32_t Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *endPtr);
+uint32_t Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *endPtr);
 
 /* --- Chunk 96: DIY Competition Slot Editing & Progress --- */
-void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
-void _DIY_ReorderTeamsBySelectionFlags(void);
-void _DIY_UpdateCompetitionProgress(void);
-void _DIY_RecordCupBracketProgress(void);
-void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
-void _DIY_RecordLeagueFixtureResultAndAdvanceProgress(void);
-void _DIY_RebuildCompetitionAndTeamSelectionCaches(void);
+void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+void DIY_ReorderTeamsBySelectionFlags(void);
+void DIY_UpdateCompetitionProgress(void);
+void DIY_RecordCupBracketProgress(void);
+void DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
+void DIY_RecordLeagueFixtureResultAndAdvanceProgress(void);
+void DIY_RebuildCompetitionAndTeamSelectionCaches(void);
 
 /* --- Career post-load dispatch (loc_12D4B0) --- */
-void _DIY_PostLoadCompetitionDispatch(void);
+void DIY_PostLoadCompetitionDispatch(void);
 
 /* --- Chunk 97: DIY Competition Setup Functions --- */
-void _DIY_LoadCurrentCompetitionSlot(void);
-void _DIY_ResetAndLoadCurrentCompetitionSlot(void);
-void _DIY_InitCupFromTeamGridAndValidateTeams(void);
-void _DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
+void DIY_LoadCurrentCompetitionSlot(void);
+void DIY_ResetAndLoadCurrentCompetitionSlot(void);
+void DIY_InitCupFromTeamGridAndValidateTeams(void);
+void DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
                                             uint8_t *comp, uint8_t *comp5);
-void _DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
+void DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
                                      uint8_t *comp4, uint8_t *comp);
-void _DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
+void DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
                                      uint8_t *comp, uint8_t *comp5);
-void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
+void DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
                                              uint8_t *comp4, uint8_t *comp);
-void _DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp);
+void DIY_AdjustWorldCupBracketScores(uint8_t *diy, uint8_t *slot, uint8_t *comp);
 
 /* ---- DIY selection menu callbacks (Chunk 108) ---- */
-void _SelectDiyLeagueMenu(void);
-void _SelectDiyCupMenu(void);
-void _SelectDiyTournamentMenu(void);
-void _SelectDiyExitMenu(void);
+void SelectDiyLeagueMenu(void);
+void SelectDiyCupMenu(void);
+void SelectDiyTournamentMenu(void);
+void SelectDiyExitMenu(void);
 
 /* ---- DIY Design Menu functions (Chunk 120) ---- */
-void _ShowDesignDIYLeagueMenu(void);
-void _ShowLeagueInfo(void);
-void _DesignDIYLeagueOK(void);
-void _SetNumberOfTeamsToSelect(void);
-void _ShowDesignDIYCupMenu(void);
-void _ShowCupInfo(void);
-void _DesignDIYCupOK(void);
-void _DesignDIYCup_UpdateMinSubstitutesAndPointsStrings(void);
-void _DesignDIYCup_UpdateSelectTeamsPrompt(void);
-void _ShowDesignDIYTournamentMenu(void);
-void _ShowTournamentInfo(void);
-void _DesignDIYTournamentOK(void);
-void _DesignDIYTournament_UpdateTwoNumericFieldsText(void);
-void _DesignDIYTournament_UpdateSelectTeamsPrompt(void);
+void ShowDesignDIYLeagueMenu(void);
+void ShowLeagueInfo(void);
+void DesignDIYLeagueOK(void);
+void SetNumberOfTeamsToSelect(void);
+void ShowDesignDIYCupMenu(void);
+void ShowCupInfo(void);
+void DesignDIYCupOK(void);
+void DesignDIYCup_UpdateMinSubstitutesAndPointsStrings(void);
+void DesignDIYCup_UpdateSelectTeamsPrompt(void);
+void ShowDesignDIYTournamentMenu(void);
+void ShowTournamentInfo(void);
+void DesignDIYTournamentOK(void);
+void DesignDIYTournament_UpdateTwoNumericFieldsText(void);
+void DesignDIYTournament_UpdateSelectTeamsPrompt(void);
 
 /* ---- DesignDIYLeague Change Callbacks (Chunk 126) ---- */
 #include "menu_system.h"
-void _DesignDIYLeagueInit(void);
-void _DesignDIYLeagueSetName(MenuEntry *entry);
-void _DesignDIYLeagueChangePitchType(MenuEntry *entry);
-void _DesignDIYLeagueChangeStartMonth(MenuEntry *entry);
-void _DesignDIYLeagueChangeEndMonth(MenuEntry *entry);
-void _DesignDIYLeagueChangeNumberOfTeams(MenuEntry *entry);
-void _SetPlayEachTeamString(MenuEntry *entry);
-void _DesignDIYLeagueChangePlayEachTeam(MenuEntry *entry);
-void _DesignDIYLeagueChangeNumPointsForWin(MenuEntry *entry);
-void _ConvertMinMaxSubstitutesNumbers(void);
-void _DesignDIYLeagueChangeMinSubstitutes(MenuEntry *entry);
-void _DesignDIYLeagueChangeMaxSubstitutes(MenuEntry *entry);
+void DesignDIYLeagueInit(void);
+void DesignDIYLeagueSetName(MenuEntry *entry);
+void DesignDIYLeagueChangePitchType(MenuEntry *entry);
+void DesignDIYLeagueChangeStartMonth(MenuEntry *entry);
+void DesignDIYLeagueChangeEndMonth(MenuEntry *entry);
+void DesignDIYLeagueChangeNumberOfTeams(MenuEntry *entry);
+void SetPlayEachTeamString(MenuEntry *entry);
+void DesignDIYLeagueChangePlayEachTeam(MenuEntry *entry);
+void DesignDIYLeagueChangeNumPointsForWin(MenuEntry *entry);
+void ConvertMinMaxSubstitutesNumbers(void);
+void DesignDIYLeagueChangeMinSubstitutes(MenuEntry *entry);
+void DesignDIYLeagueChangeMaxSubstitutes(MenuEntry *entry);
 
 /* ---- DesignDIYCup Callbacks & Helpers (Chunk 127) ---- */
-void _DesignDIYCup_UpdateStartEndMonthIndices(void);
-void _DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility(void);
-void _DesignDIYCup_SetupTeamsSelectionUI(void);
-void _DesignDIYCupReinit(void);
-void _DesignDIYCupInit(void);
-void _DesignDIYCupOnSelect2(MenuEntry *entry);
-void _DesignDIYCupOnSelect3(MenuEntry *entry);
-void _DesignDIYCupOnSelect4(MenuEntry *entry);
-void _DesignDIYCupOnSelect5(MenuEntry *entry);
-void _DesignDIYCupOnSelect7(MenuEntry *entry);
-void _DesignDIYCupOnSelect9(MenuEntry *entry);
-void _DesignDIYCupOnSelect11(MenuEntry *entry);
-void _DesignDIYCupOnSelect13(MenuEntry *entry);
-void _DesignDIYCupOnSelect15(MenuEntry *entry);
-void _DesignDIYCupOnSelect20(MenuEntry *entry);
-void _DesignDIYCupOnSelect21(MenuEntry *entry);
-void _DesignDIYCupOnSelect22(MenuEntry *entry);
+void DesignDIYCup_UpdateStartEndMonthIndices(void);
+void DesignDIYCup_UpdatePitchTypeOrSeasonSelectionVisibility(void);
+void DesignDIYCup_SetupTeamsSelectionUI(void);
+void DesignDIYCupReinit(void);
+void DesignDIYCupInit(void);
+void DesignDIYCupOnSelect2(MenuEntry *entry);
+void DesignDIYCupOnSelect3(MenuEntry *entry);
+void DesignDIYCupOnSelect4(MenuEntry *entry);
+void DesignDIYCupOnSelect5(MenuEntry *entry);
+void DesignDIYCupOnSelect7(MenuEntry *entry);
+void DesignDIYCupOnSelect9(MenuEntry *entry);
+void DesignDIYCupOnSelect11(MenuEntry *entry);
+void DesignDIYCupOnSelect13(MenuEntry *entry);
+void DesignDIYCupOnSelect15(MenuEntry *entry);
+void DesignDIYCupOnSelect20(MenuEntry *entry);
+void DesignDIYCupOnSelect21(MenuEntry *entry);
+void DesignDIYCupOnSelect22(MenuEntry *entry);
 
 /* ---- DesignDIYTournament Callbacks & Helpers (Chunk 128) ---- */
-void _DesignDIYTournament_UpdateMonthPageIndices(void);
-void _DesignDIYTournament_ApplyInactiveMenuColors(void);
-void _DesignDIYTournament_UpdatePitchTypeSeasonalUI(void);
-void _DesignDIYTournamentReinit(void);
-void _DesignDIYTournamentInit(void);
-void _DesignDIYTournamentOnSelect2(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect3(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect4(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect5(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect7(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect9(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect11(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect13(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect21(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect24(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect25(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect26(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect28(MenuEntry *entry);
+void DesignDIYTournament_UpdateMonthPageIndices(void);
+void DesignDIYTournament_ApplyInactiveMenuColors(void);
+void DesignDIYTournament_UpdatePitchTypeSeasonalUI(void);
+void DesignDIYTournamentReinit(void);
+void DesignDIYTournamentInit(void);
+void DesignDIYTournamentOnSelect2(MenuEntry *entry);
+void DesignDIYTournamentOnSelect3(MenuEntry *entry);
+void DesignDIYTournamentOnSelect4(MenuEntry *entry);
+void DesignDIYTournamentOnSelect5(MenuEntry *entry);
+void DesignDIYTournamentOnSelect7(MenuEntry *entry);
+void DesignDIYTournamentOnSelect9(MenuEntry *entry);
+void DesignDIYTournamentOnSelect11(MenuEntry *entry);
+void DesignDIYTournamentOnSelect13(MenuEntry *entry);
+void DesignDIYTournamentOnSelect21(MenuEntry *entry);
+void DesignDIYTournamentOnSelect24(MenuEntry *entry);
+void DesignDIYTournamentOnSelect25(MenuEntry *entry);
+void DesignDIYTournamentOnSelect26(MenuEntry *entry);
+void DesignDIYTournamentOnSelect28(MenuEntry *entry);
 
 /* ---- DesignDIYTournament Remaining (Chunk 129) ---- */
-void _DesignDIYTournamentOnDraw(void);
-void _DesignDIYTournamentOnSelect23(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect20(MenuEntry *entry);
-void _DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry);
-void _DesignDIYTournament_CacheStageSelection(MenuEntry *entry);
-void _DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count);
-void _DIYTournament_RecalculateNumStages(void);
+void DesignDIYTournamentOnDraw(void);
+void DesignDIYTournamentOnSelect23(MenuEntry *entry);
+void DesignDIYTournamentOnSelect20(MenuEntry *entry);
+void DesignDIYTournament_AdjustStageQualifiers(MenuEntry *entry);
+void DesignDIYTournament_CacheStageSelection(MenuEntry *entry);
+void DesignDIYTournament_RedrawStageItemsFromBlock(uint8_t *blk, uint16_t count);
+void DIYTournament_RecalculateNumStages(void);
 
 /* ---- DesignDIYCup Draw & Helpers (Chunk 130) ---- */
-void _DesignDIYCup_BuildMatchListEntryStrings(void);
-void _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void);
-void _DesignDIYCupOnDraw(void);
-void _DesignDIYCupOnSelect48(void);
-void _DesignDIYCup_UpdateRoundOptionsVisibility(void);
-void _DesignDIYCup_BuildMenuTitleString(void);
-void _DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void);
-void _DesignDIYCup_DrawCurrentMatchTeamEntries(void);
-void _DesignDIYCup_HideCurrentMatchTeamEntries(void);
-int16_t _DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void);
-void _DesignDIYCup_UpdateMatchListAndRedrawIfNeeded(void);
-void _DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void);
+void DesignDIYCup_BuildMatchListEntryStrings(void);
+void DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection(void);
+void DesignDIYCupOnDraw(void);
+void DesignDIYCupOnSelect48(void);
+void DesignDIYCup_UpdateRoundOptionsVisibility(void);
+void DesignDIYCup_BuildMenuTitleString(void);
+void DesignDIYCup_UpdateCurrentMatchTeamEntryStrings(void);
+void DesignDIYCup_DrawCurrentMatchTeamEntries(void);
+void DesignDIYCup_HideCurrentMatchTeamEntries(void);
+int16_t DesignDIYCup_UpdateMatchListScrollAndRebuildStrings(void);
+void DesignDIYCup_UpdateMatchListAndRedrawIfNeeded(void);
+void DesignDIYCup_UpdateCurrentMatchResultHeaderEntries(void);
 
 /* ---- DesignDIYLeague remaining + DIYCup menu helpers (Chunk 131) ---- */
-void _DIYSetMonthsOrPitchTypeEntries(void);
-void _DIYLeagueSetVariousFields(void);
-void _DIYLeagueOKSelected(void);
-void _DesignDIYLeagueUpdatePromotionRelegationText(void);
-void _DesignDIYLeagueFinish(void);
-void _DesignDIYLeagueChooseTeams(void);
-void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
-void _DIYCupFinish(void);
-void _DIYCupInit(void);
-void _DIYCupOnSelect10(void);
-void _DIYCupOnSelect16(void);
-void _DIYCupOnSelect17(void);
+void DIYSetMonthsOrPitchTypeEntries(void);
+void DIYLeagueSetVariousFields(void);
+void DIYLeagueOKSelected(void);
+void DesignDIYLeagueUpdatePromotionRelegationText(void);
+void DesignDIYLeagueFinish(void);
+void DesignDIYLeagueChooseTeams(void);
+void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+void DIYCupFinish(void);
+void DIYCupInit(void);
+void DIYCupOnSelect10(void);
+void DIYCupOnSelect16(void);
+void DIYCupOnSelect17(void);
 
 /* ---- DIYCup/League/Tournament select callbacks (Chunk 132) ---- */
-void _DIYLeagueChangePitchTypeOrSeason(void);
-void _DIYCupOnSelect1(void);
-void _DIYCupOnSelect3(MenuEntry *entry);
-void _DIYCupOnSelect4(MenuEntry *entry);
-void _DIYCupOnSelect5(MenuEntry *entry);
-void _DIYCupOnSelect6(MenuEntry *entry);
-void _DIYCupOnSelect7(MenuEntry *entry);
-void _DIYCupOnSelect8(MenuEntry *entry);
-void _DesignDIYTournamentOnSelect89(void);
+void DIYLeagueChangePitchTypeOrSeason(void);
+void DIYCupOnSelect1(void);
+void DIYCupOnSelect3(MenuEntry *entry);
+void DIYCupOnSelect4(MenuEntry *entry);
+void DIYCupOnSelect5(MenuEntry *entry);
+void DIYCupOnSelect6(MenuEntry *entry);
+void DIYCupOnSelect7(MenuEntry *entry);
+void DIYCupOnSelect8(MenuEntry *entry);
+void DesignDIYTournamentOnSelect89(void);
 
 /* ---- DIY Competition Stats Menu (Chunk 141) ---- */
-void _SetupDIYCompetitionStatsMenu(void);
+void SetupDIYCompetitionStatsMenu(void);
 
 /* ---- OpenDiy* + ShowDiyCompetitionForSource (Chunk 116) ---- */
-void _ShowDiyCompetitionForSource(uint8_t *header);
-void _OpenDiyFromFile(void);
-void _OpenDiyPreset1(void);
-void _OpenDiyPreset2(void);
-void _OpenDiyPreset3(void);
+void ShowDiyCompetitionForSource(uint8_t *header);
+void OpenDiyFromFile(void);
+void OpenDiyPreset1(void);
+void OpenDiyPreset2(void);
+void OpenDiyPreset3(void);
 
 /* --- Choose teams helpers (Chunk 148) --- */
-void _ChooseTeamsSetHeader(void);
-void _CheckNumTeamsAllowed(void);
-void _Bureaucracy(void);
+void ChooseTeamsSetHeader(void);
+void CheckNumTeamsAllowed(void);
+void Bureaucracy(void);
 
 /* --- DIY League/Tournament Menu (Chunk 150) --- */
-void _jmp_SetExitMenuFlag_7(void);
-void _DIYLeagueTournamentStats(void);
-void _DIYLeagueTournamentExit(void);
-void _DIYLeagueTournament_UpdateViewOptionsAvailability(void);
-void _DIYSetTeamNamesAndResults(void);
-void _DIYLeagueTournamentScrollUp(void);
-void _DIYLeagueTournamentScrollDown(void);
-void _DIYLeagueTournament_ScrollFixtureListToCurrentFixture(void);
-uint16_t _DIYLeagueTournament_EnsureCurrentFixtureVisible(void);
-void _DIYLeagueTournament_SetupCurrentFixtureTeamNames(void);
-void _DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void);
-void _DIYLeagueTournamentNextMatch(void);
-void _DIYLeagueTournamentInit(void);
+void DIYLeagueTournamentStats(void);
+void DIYLeagueTournamentExit(void);
+void DIYLeagueTournament_UpdateViewOptionsAvailability(void);
+void DIYSetTeamNamesAndResults(void);
+void DIYLeagueTournamentScrollUp(void);
+void DIYLeagueTournamentScrollDown(void);
+void DIYLeagueTournament_ScrollFixtureListToCurrentFixture(void);
+uint16_t DIYLeagueTournament_EnsureCurrentFixtureVisible(void);
+void DIYLeagueTournament_SetupCurrentFixtureTeamNames(void);
+void DIYLeagueTournament_DrawPlayMatchAndFixtureHeader(void);
+void DIYLeagueTournamentNextMatch(void);
+void DIYLeagueTournamentInit(void);
 
 /* --- DIY League/Tournament Match Callbacks & Visibility (Chunk 152) --- */
-void _DIYLeagueTournamentMatch(MenuEntry *entry);
-void _DIYLeagueTournamentOnSelect4(MenuEntry *entry);
-void _DIYLeagueTournamentResult(MenuEntry *entry);
-void _DIYLeagueTournamentViewMatch(MenuEntry *entry);
-void _DIYLeagueTournamentViewHighlights(MenuEntry *entry);
-void _DIYLeagueTournamentViewResult(MenuEntry *entry);
-void _DIYLeagueTournamentMatchCommon(uint16_t action);
-void _DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
+void DIYLeagueTournamentMatch(MenuEntry *entry);
+void DIYLeagueTournamentOnSelect4(MenuEntry *entry);
+void DIYLeagueTournamentResult(MenuEntry *entry);
+void DIYLeagueTournamentViewMatch(MenuEntry *entry);
+void DIYLeagueTournamentViewHighlights(MenuEntry *entry);
+void DIYLeagueTournamentViewResult(MenuEntry *entry);
+void DIYLeagueTournamentMatchCommon(uint16_t action);
+void DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
 
 /* --- DIYLeagueTournamentOnRestore + DIYLeagueTournament16BeforeDraw (Chunk 229) --- */
-void _DIYLeagueTournamentOnRestore(void);
-void _DIYLeagueTournament16BeforeDraw(MenuEntry *entry);
+void DIYLeagueTournamentOnRestore(void);
+void DIYLeagueTournament16BeforeDraw(MenuEntry *entry);
 
 /* --- ShowDiyLeaguesTournamentMenu (Chunk 153) --- */
-void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
 
 /* --- GetMoreExpensiveTeamsCount (Chunk 171) --- */
-uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp);
+uint16_t GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp);
 
 /* --- InitializeNewSeason_BuildTeamBudgetRankTable (Chunk 172) --- */
-void _InitializeNewSeason_BuildTeamBudgetRankTable(void);
+void InitializeNewSeason_BuildTeamBudgetRankTable(void);
 
 /* --- FindTeamInDIY (Chunk 173) --- */
-uint16_t _FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
+uint16_t FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
 
 /* --- DIY_RecomputeCompetitionDerivedProgressionTable (Chunk 175) --- */
-void _DIY_RecomputeCompetitionDerivedProgressionTable(void);
+void DIY_RecomputeCompetitionDerivedProgressionTable(void);
 
 /* --- DIY_GetCurrentMatchTeamSlots, DIY_CompareCurrentMatchTeamCategories (Chunk 191) --- */
-void _DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2);
-uint16_t _DIY_CompareCurrentMatchTeamCategories(void);
+void DIY_GetCurrentMatchTeamSlots(uint8_t **outSlot1, uint8_t **outSlot2);
+uint16_t DIY_CompareCurrentMatchTeamCategories(void);
 
 /* --- Match Play & Result Caching --- */
-uint16_t _PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
+uint16_t PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
                                             int16_t allowSquadChanges, int16_t mode);
-uint16_t _PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
+uint16_t PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
                                            int16_t allowSquadChanges, int16_t mode);
 
 /* --- Match Orchestration (Chunk 193) --- */
-uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
-uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
+uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
+uint16_t DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
 
 /* --- DIY team-selection resolvers (step-4 phase 2) ---
  * Resolve a DIY team-selection value (DIYTeamStats.teamSelOffset /
@@ -371,9 +370,9 @@ uint8_t *diy_resolve_team_name(int32_t teamSel);
 int32_t  diy_team_to_identity(const uint8_t *teamPtr);
 
 /* --- Match Result Processing (Chunk 190) --- */
-void _ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
+void ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
     uint16_t *outGoals1, uint16_t *outGoals2, uint16_t *outFlags);
-void _ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
+void ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *team2,
     uint16_t inFirstLegTeam1, uint16_t inFirstLegTeam2,
     uint16_t *outPackedGoals, uint16_t *outPackedAggregate,
     uint16_t *outPackedPenalty, uint16_t *outFlags);

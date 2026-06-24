@@ -9,9 +9,9 @@
 /* ---- External globals (in SWOS2.s code section) ---- */
 /* shirtColorTable: 10-entry kit-color index → palette-index LUT.
  * Transcribed from the Amiga C port data module (Data.c:1846). Every
- * call to _ConvertTeamColor (stripes/basic/shorts/socks) routes through
+ * call to ConvertTeamColor (stripes/basic/shorts/socks) routes through
  * this, and the result lands in team->prShirtCol et al., which in turn
- * feeds team{1,2}PlayersColorTable[10..15] used by _ConvertSpriteColors.
+ * feeds team{1,2}PlayersColorTable[10..15] used by ConvertSpriteColors.
  * Kept as a definition here (not an auto-generated 4K zero stub) so kit
  * colors actually survive the first conversion. */
 uint8_t shirtColorTable[10] = { 1, 2, 3, 6, 10, 11, 12, 13, 14, 15 };
@@ -65,7 +65,7 @@ extern TeamGame bottomTeamInGame;
  * Original: ConvertTeamColor in SWOS2.s (line 45843)
  */
 uint16_t __attribute__((used, externally_visible))
-_ConvertTeamColor(uint16_t color)
+ConvertTeamColor(uint16_t color)
 {
     return (uint16_t)shirtColorTable[color & 0xFF];
 }
@@ -79,7 +79,7 @@ _ConvertTeamColor(uint16_t color)
  * Original: AreBasicColorsConflicting in SWOS2.s (line 43406)
  */
 int16_t __attribute__((used, externally_visible))
-_AreBasicColorsConflicting(uint16_t color1, uint16_t color2)
+AreBasicColorsConflicting(uint16_t color1, uint16_t color2)
 {
     uint16_t mask = conflictingBasicTeamColorsTable[color1 & 0xFF];
     return (mask >> (color2 & 0xFF)) & 1;
@@ -94,7 +94,7 @@ _AreBasicColorsConflicting(uint16_t color1, uint16_t color2)
  * Original: AreShortsAndStripeColorsConflicting in SWOS2.s (line 43417)
  */
 int16_t __attribute__((used, externally_visible))
-_AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2)
+AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2)
 {
     uint16_t mask = conflictingShortsTeamColorsTable[color1 & 0xFF];
     return (mask >> (color2 & 0xFF)) & 1;
@@ -102,7 +102,7 @@ _AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2)
 
 
 /* ============================================================
- * _GetTeamKitsSimilarityFactor
+ * GetTeamKitsSimilarityFactor
  * ============================================================
  * Computes how similar two team kits are.
  * Returns similarity factor in range [0..99]:
@@ -111,14 +111,14 @@ _AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2)
  *   0..~35 = detailed scoring (lower = more different)
  *   <11 triggers lookup-table-based kit replacement loop
  * The result is clamped to >= 0.
- * Original: _GetTeamKitsSimilarityFactor in SWOS2.s (line 43145)
+ * Original: GetTeamKitsSimilarityFactor in SWOS2.s (line 43145)
  *
  * Register mapping:
  *   d0 = shirtType1, d1 = stripesColor1, d2 = basicColor1, d3 = shortsColor1
  *   d4 = shirtType2, d5 = stripesColor2, d6 = basicColor2, d7 = shortsColor2(->result)
  */
 int16_t __attribute__((used, externally_visible))
-_GetTeamKitsSimilarityFactor(
+GetTeamKitsSimilarityFactor(
     uint16_t d0_shirtType1, uint8_t d1_stripes1, uint8_t d2_basic1, uint8_t d3_shorts1,
     uint16_t d4_shirtType2, uint8_t d5_stripes2, uint8_t d6_basic2, uint8_t d7_shorts2)
 {
@@ -151,16 +151,16 @@ restart:
     similarityFactor = 99;
 
     /* Test d1 vs d5 (stripes1 vs stripes2) */
-    if (_AreBasicColorsConflicting(d1, d5)) {
+    if (AreBasicColorsConflicting(d1, d5)) {
         /* also test d2 vs d6 (basic1 vs basic2) */
-        if (_AreBasicColorsConflicting(d2, d6))
+        if (AreBasicColorsConflicting(d2, d6))
             goto done;  /* both basic pairs conflict -> kits are different enough */
     }
 
     /* Test d1 vs d6 (stripes1 vs basic2) */
-    if (_AreBasicColorsConflicting(d1, d6)) {
+    if (AreBasicColorsConflicting(d1, d6)) {
         /* also test d2 vs d5 (basic1 vs stripes2) */
-        if (_AreBasicColorsConflicting(d2, d5))
+        if (AreBasicColorsConflicting(d2, d5))
             goto done;
     }
 
@@ -169,8 +169,8 @@ restart:
      * check shorts-vs-stripe combinations */
     if ((st1 == SHIRT_COLORED_SLEEVES && st2 == SHIRT_ORDINARY) ||
         (st1 == SHIRT_ORDINARY && st2 == SHIRT_COLORED_SLEEVES)) {
-        if (_AreShortsAndStripeColorsConflicting(d1, d7) &&
-            _AreShortsAndStripeColorsConflicting(d3, d5)) {
+        if (AreShortsAndStripeColorsConflicting(d1, d7) &&
+            AreShortsAndStripeColorsConflicting(d3, d5)) {
             similarityFactor = 88;
             goto done;
         }
@@ -180,9 +180,9 @@ restart:
     if ((st1 == SHIRT_VERTICAL_STRIPES || st1 == SHIRT_HORIZONTAL_STRIPES) &&
         (st2 == SHIRT_VERTICAL_STRIPES || st2 == SHIRT_HORIZONTAL_STRIPES)) {
         /* test shorts1 vs stripes2 OR shorts1 vs basic2 */
-        if (_AreBasicColorsConflicting(d3, d5) || _AreBasicColorsConflicting(d3, d6)) {
+        if (AreBasicColorsConflicting(d3, d5) || AreBasicColorsConflicting(d3, d6)) {
             /* test shorts2 vs stripes1 OR shorts2 vs basic1 */
-            if (_AreBasicColorsConflicting(d7, d1) || _AreBasicColorsConflicting(d7, d2)) {
+            if (AreBasicColorsConflicting(d7, d1) || AreBasicColorsConflicting(d7, d2)) {
                 similarityFactor = 77;
                 goto done;
             }
@@ -191,7 +191,7 @@ restart:
 
     /* ---- Phase 4: both teams have COLORED_SLEEVES ---- */
     if (st1 == SHIRT_COLORED_SLEEVES && st2 == SHIRT_COLORED_SLEEVES) {
-        if (_AreBasicColorsConflicting(d1, d5)) {
+        if (AreBasicColorsConflicting(d1, d5)) {
             similarityFactor = 66;
             goto done;
         }
@@ -230,31 +230,31 @@ restart:
 
     /* Cross-product: compare all color pairs */
     /* d1 vs d5 */
-    if (_AreBasicColorsConflicting(d1, d5))
+    if (AreBasicColorsConflicting(d1, d5))
         similarityFactor += 5;
     /* d1 vs d6 */
-    if (_AreBasicColorsConflicting(d1, d6))
+    if (AreBasicColorsConflicting(d1, d6))
         similarityFactor += 5;
     /* d1 vs d7 */
-    if (_AreBasicColorsConflicting(d1, d7))
+    if (AreBasicColorsConflicting(d1, d7))
         similarityFactor += 2;
     /* d2 vs d5 */
-    if (_AreBasicColorsConflicting(d2, d5))
+    if (AreBasicColorsConflicting(d2, d5))
         similarityFactor += 5;
     /* d2 vs d6 */
-    if (_AreBasicColorsConflicting(d2, d6))
+    if (AreBasicColorsConflicting(d2, d6))
         similarityFactor += 5;
     /* d2 vs d7 */
-    if (_AreBasicColorsConflicting(d2, d7))
+    if (AreBasicColorsConflicting(d2, d7))
         similarityFactor += 2;
     /* d3 vs d5 */
-    if (_AreBasicColorsConflicting(d3, d5))
+    if (AreBasicColorsConflicting(d3, d5))
         similarityFactor += 2;
     /* d3 vs d6 */
-    if (_AreBasicColorsConflicting(d3, d6))
+    if (AreBasicColorsConflicting(d3, d6))
         similarityFactor += 2;
     /* d3 vs d7 */
-    if (_AreBasicColorsConflicting(d3, d7))
+    if (AreBasicColorsConflicting(d3, d7))
         similarityFactor += 5;
 
 done:
@@ -316,10 +316,10 @@ done:
  * Original: MeasureTeamKitsSimilarity in SWOS2.s (line 43569)
  */
 void __attribute__((used, externally_visible))
-_MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2)
+MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2)
 {
     /* team1 primary vs team2 primary */
-    teamKitsSimilarity[0] = (uint8_t)_GetTeamKitsSimilarityFactor(
+    teamKitsSimilarity[0] = (uint8_t)GetTeamKitsSimilarityFactor(
         team1->prShirtType,
         team1->prStripesColor,
         team1->prBasicColor,
@@ -330,7 +330,7 @@ _MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2)
         team2->prShortsColor);
 
     /* team1 primary vs team2 secondary */
-    teamKitsSimilarity[1] = (uint8_t)_GetTeamKitsSimilarityFactor(
+    teamKitsSimilarity[1] = (uint8_t)GetTeamKitsSimilarityFactor(
         team1->prShirtType,
         team1->prStripesColor,
         team1->prBasicColor,
@@ -341,7 +341,7 @@ _MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2)
         team2->secShortsColor);
 
     /* team1 secondary vs team2 primary */
-    teamKitsSimilarity[2] = (uint8_t)_GetTeamKitsSimilarityFactor(
+    teamKitsSimilarity[2] = (uint8_t)GetTeamKitsSimilarityFactor(
         team1->secShirtType,
         team1->secStripesColor,
         team1->secBasicColor,
@@ -352,7 +352,7 @@ _MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2)
         team2->prShortsColor);
 
     /* team1 secondary vs team2 secondary */
-    teamKitsSimilarity[3] = (uint8_t)_GetTeamKitsSimilarityFactor(
+    teamKitsSimilarity[3] = (uint8_t)GetTeamKitsSimilarityFactor(
         team1->secShirtType,
         team1->secStripesColor,
         team1->secBasicColor,
@@ -372,23 +372,23 @@ _MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2)
  * Original: ConvertTeamKitColors in SWOS2.s (line 45790)
  */
 void __attribute__((used, externally_visible))
-_ConvertTeamKitColors(
+ConvertTeamKitColors(
     uint16_t shirtType, uint8_t stripesColor, uint8_t basicColor,
     uint8_t shortsColor, uint8_t socksColor, TeamGame *team)
 {
     int16_t st = (int16_t)(int8_t)(uint8_t)shirtType;  /* ext.w d0 (sign-extend byte to word) */
     team->prShirtType = st;
 
-    uint16_t col = _ConvertTeamColor(stripesColor);
+    uint16_t col = ConvertTeamColor(stripesColor);
     team->prShirtCol = col;
 
     if (st != SHIRT_ORDINARY) {
-        col = _ConvertTeamColor(basicColor);
+        col = ConvertTeamColor(basicColor);
     }
     team->prStripesCol = col;
 
-    team->prShortsCol = _ConvertTeamColor(shortsColor);
-    team->prSocksCol  = _ConvertTeamColor(socksColor);
+    team->prShortsCol = ConvertTeamColor(shortsColor);
+    team->prSocksCol  = ConvertTeamColor(socksColor);
 }
 
 
@@ -399,23 +399,23 @@ _ConvertTeamKitColors(
  * Original: SetTeamSecondaryColors in SWOS2.s (line 45819)
  */
 void __attribute__((used, externally_visible))
-_SetTeamSecondaryColors(
+SetTeamSecondaryColors(
     uint16_t shirtType, uint8_t stripesColor, uint8_t basicColor,
     uint8_t shortsColor, uint8_t socksColor, TeamGame *team)
 {
     int16_t st = (int16_t)(int8_t)(uint8_t)shirtType;  /* ext.w d0 */
     team->secShirtType = st;
 
-    uint16_t col = _ConvertTeamColor(stripesColor);
+    uint16_t col = ConvertTeamColor(stripesColor);
     team->secShirtCol = col;
 
     if (team->secShirtType != SHIRT_ORDINARY) {
-        col = _ConvertTeamColor(basicColor);
+        col = ConvertTeamColor(basicColor);
     }
     team->secStripesCol = col;
 
-    team->secShortsCol = _ConvertTeamColor(shortsColor);
-    team->secSocksCol  = _ConvertTeamColor(socksColor);
+    team->secShortsCol = ConvertTeamColor(shortsColor);
+    team->secSocksCol  = ConvertTeamColor(socksColor);
 }
 
 
@@ -435,7 +435,7 @@ isSingleColorKitSimilar(uint8_t color, TeamFile *team2File)
     uint8_t d6 = team2File->prBasicColor;
     uint8_t d7 = team2File->prShortsColor;
 
-    int16_t sim = _GetTeamKitsSimilarityFactor(
+    int16_t sim = GetTeamKitsSimilarityFactor(
         SHIRT_ORDINARY, color, color, color,
         d4, d5, d6, d7);
 
@@ -458,10 +458,10 @@ convertTeamKitColorsWithFixedColors(uint8_t shirtType, uint8_t color, uint8_t ba
                                      uint8_t shortsColor, TeamFile *topTeamFile)
 {
     /* Bottom team gets the single-color kit (d4=socksColor=d1=color) */
-    _ConvertTeamKitColors(shirtType, color, basicColor, shortsColor, color, &bottomTeamInGame);
+    ConvertTeamKitColors(shirtType, color, basicColor, shortsColor, color, &bottomTeamInGame);
 
     /* Top team gets its primary colors */
-    _ConvertTeamKitColors(
+    ConvertTeamKitColors(
         topTeamFile->prShirtType,
         topTeamFile->prStripesColor,
         topTeamFile->prBasicColor,
@@ -486,7 +486,7 @@ resolveTeamKitColorConflict(TeamFile *topTeamFile)
 
     while (*tbl != 0xFF) {
         uint8_t color = *tbl++;
-        int16_t sim = _GetTeamKitsSimilarityFactor(
+        int16_t sim = GetTeamKitsSimilarityFactor(
             SHIRT_ORDINARY,
             color, color, color,
             topTeamFile->prShirtType,
@@ -496,8 +496,8 @@ resolveTeamKitColorConflict(TeamFile *topTeamFile)
 
         if (sim < 11) {
             /* Found a non-conflicting color */
-            _ConvertTeamKitColors(SHIRT_ORDINARY, color, color, color, color, &bottomTeamInGame);
-            _ConvertTeamKitColors(
+            ConvertTeamKitColors(SHIRT_ORDINARY, color, color, color, color, &bottomTeamInGame);
+            ConvertTeamKitColors(
                 topTeamFile->prShirtType,
                 topTeamFile->prStripesColor,
                 topTeamFile->prBasicColor,
@@ -509,8 +509,8 @@ resolveTeamKitColorConflict(TeamFile *topTeamFile)
     }
 
     /* Fallback: top = red(4), bottom = blue(5) */
-    _ConvertTeamKitColors(SHIRT_ORDINARY, 4, 4, 1, 4, &topTeamInGame);
-    _ConvertTeamKitColors(SHIRT_ORDINARY, 5, 5, 1, 5, &bottomTeamInGame);
+    ConvertTeamKitColors(SHIRT_ORDINARY, 4, 4, 1, 4, &topTeamInGame);
+    ConvertTeamKitColors(SHIRT_ORDINARY, 5, 5, 1, 5, &bottomTeamInGame);
 }
 
 
@@ -533,7 +533,7 @@ resolveTeamKitColorConflict(TeamFile *topTeamFile)
  * Actually re-reading asm: bit 1 tested first for a2(top), bit 0 for a3(bottom).
  */
 void __attribute__((used, externally_visible))
-_SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *team2File)
+SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *team2File)
 {
     uint8_t d0, d1_s, d2_s, d3_s, d4_s;
 
@@ -552,7 +552,7 @@ _SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *
         d3_s = team1File->prShortsColor;
         d4_s = team1File->prSocksColor;
     }
-    _ConvertTeamKitColors(d0, d1_s, d2_s, d3_s, d4_s, &topTeamInGame);
+    ConvertTeamKitColors(d0, d1_s, d2_s, d3_s, d4_s, &topTeamInGame);
 
     /* Bottom team (a3 = team2File) */
     if (secondaryKitFlags & 1) {
@@ -568,7 +568,7 @@ _SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *
         d3_s = team2File->prShortsColor;
         d4_s = team2File->prSocksColor;
     }
-    _ConvertTeamKitColors(d0, d1_s, d2_s, d3_s, d4_s, &bottomTeamInGame);
+    ConvertTeamKitColors(d0, d1_s, d2_s, d3_s, d4_s, &bottomTeamInGame);
 }
 
 
@@ -587,30 +587,30 @@ _SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *
  *   4. If still nothing, use ResolveTeamKitColorConflict (tie-break table)
  */
 void __attribute__((used, externally_visible))
-_SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File)
+SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File)
 {
     /* a2=team1File(top), a3=team2File(bottom) -- matching asm register assignment */
-    _MeasureTeamKitsSimilarity(team1File, team2File);
+    MeasureTeamKitsSimilarity(team1File, team2File);
 
     /* a6 points into teamKitsSimilarity, incremented after each check */
     /* Check combo 0: both primary (d7=0) */
     if (teamKitsSimilarity[0] < 11) {
-        _SetInGameTeamColors(0, team1File, team2File);
+        SetInGameTeamColors(0, team1File, team2File);
         return;
     }
     /* Check combo 1: team1 primary, team2 secondary (d7=1) */
     if (teamKitsSimilarity[1] < 11) {
-        _SetInGameTeamColors(1, team1File, team2File);
+        SetInGameTeamColors(1, team1File, team2File);
         return;
     }
     /* Check combo 2: team1 secondary, team2 primary (d7=2) */
     if (teamKitsSimilarity[2] < 11) {
-        _SetInGameTeamColors(2, team1File, team2File);
+        SetInGameTeamColors(2, team1File, team2File);
         return;
     }
     /* Check combo 3: both secondary (d7=3) */
     if (teamKitsSimilarity[3] < 11) {
-        _SetInGameTeamColors(3, team1File, team2File);
+        SetInGameTeamColors(3, team1File, team2File);
         return;
     }
 
@@ -698,7 +698,7 @@ _SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File)
  * Original: ConvertPlayerDressColor in SWOS2.s (line 88608)
  */
 uint16_t __attribute__((used, externally_visible))
-_ConvertPlayerDressColor(uint16_t color)
+ConvertPlayerDressColor(uint16_t color)
 {
     /* ext.w d0: sign-extend low byte to word */
     int16_t idx = (int16_t)(int8_t)(uint8_t)color;

@@ -18,13 +18,13 @@
  * in SWOS2.s (e.g. `dc.l aTspvhcfstpvhcf+$7`). The master string
  * aTspvhcfstpvhcf packs all per-position-group skill letters into one
  * contiguous buffer. The auto-extractor doesn't handle base+offset, so
- * these are hand-emitted. Without them _FormTopSkillsString reads NULL
+ * these are hand-emitted. Without them FormTopSkillsString reads NULL
  * and segfaults at letters[i]. */
 extern uint16_t bigNumbersColorConversionTable[];
 /* skinAndHairColorConversionTable: pointer table indexed by skin
  * color (0-2). Entries are byte-offsets ($60/$7A/$94) into the
  * bigNumbersColorConversionTable int16 array — i.e. int16 indices
- * 48/61/74. Without this _FillSkinColorConversionTable reads NULL
+ * 48/61/74. Without this FillSkinColorConversionTable reads NULL
  * and segfaults. */
 void *skinAndHairColorConversionTable[3] = {
     (bigNumbersColorConversionTable + 48),
@@ -595,14 +595,14 @@ void *trainingPosOrderTables[8] = {
     trainingPosOrder7,
 };
 /* ---- String tables for MENU_CMD_STRING_TABLE entries ----------------
- * Layout (per SWOS2.s and the C unpacker in _DrawMenuItem):
+ * Layout (per SWOS2.s and the C unpacker in DrawMenuItem):
  *   +0  uint32_t  indexPtr     ; pointer to a uint16_t holding current index
  *   +4  uint16_t  base         ; subtracted from current to get list offset
  *   +6  uint32_t  entries[N]   ; pointers to the strings to display
  *
  * The auto-extractor that originally produced this file emitted only the
  * first 4-byte field, so every STRING_TABLE-typed menu entry crashed in
- * _DrawMenuItem when it tried to follow the (out-of-bounds) entries[]
+ * DrawMenuItem when it tried to follow the (out-of-bounds) entries[]
  * array. Hand-rebuild each one from SWOS2.s with the exact same byte
  * layout via a packed struct. */
 extern const char aJan[], aFeb[], aMar[], aApr[], aMay[], aJun[];
@@ -1030,7 +1030,7 @@ void *sellExchangeStrings[4] = {
  * (menu_system.c:632 ENTRY_STRING_TABLE) reads at +0 (indexPtr),
  * +4 (base, i16), and +6 (4-byte string pointers indexed by
  * `*indexPtr - base`). With the truncated form, the +6 read landed
- * in adjacent BSS and produced NULL/garbage — _DrawMenuTextCentered
+ * in adjacent BSS and produced NULL/garbage — DrawMenuTextCentered
  * (entry 4 of the player-market menu) crashed on the position
  * filter when ShowPlayerMarketInit ran.
  *
@@ -1310,7 +1310,7 @@ void *nationalTeamCompetitionsAndQualifications1[39] = {
  *   ... repeated ...
  *   dc.b $FF,$FF,$FF,$FF   ; terminator
  *
- * _Career_FillRandomTeamListExcludingSelected reads (ptr, size, count)
+ * Career_FillRandomTeamListExcludingSelected reads (ptr, size, count)
  * tuples and breaks on 0xFFFFFFFF. The previous SDL stub had only the
  * first ptr and no metadata or terminator, so the function read garbage
  * size/count words, ran the inner shuffle on bogus indices, and SIGSEGV'd

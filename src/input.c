@@ -66,7 +66,7 @@ extern uint16_t pl1Direction;
  *   0xFFFF=no direction
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Player1StatusProc(void)
+void Player1StatusProc(void)
 {
     uint16_t joy, decoded;
 
@@ -235,7 +235,7 @@ extern uint16_t pl2Direction;
  * and CIAA_PRA bit 6 (second fire button), writing to pl2* globals.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Player2StatusProc(void)
+void Player2StatusProc(void)
 {
     uint16_t joy, decoded;
 

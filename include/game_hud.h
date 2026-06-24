@@ -8,8 +8,8 @@
 
 #include "game_types.h"
 
-void _UpdateControlledPlayerNumbers(void);
-void _MarkPlayer(void);
-void _SetCurrentPlayerName(void);
+void UpdateControlledPlayerNumbers(void);
+void MarkPlayer(void);
+void SetCurrentPlayerName(void);
 
 #endif

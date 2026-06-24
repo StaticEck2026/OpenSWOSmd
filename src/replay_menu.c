@@ -28,7 +28,7 @@ extern uint8_t aReplay[];           /* "REPLAY" */
 extern uint8_t aExit[];             /* "EXIT" */
 
 /* ---- External functions ---- */
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
 /* ================================================================
  * DrawMenuBack150x20  (SWOS2.s line 18456)
@@ -36,12 +36,12 @@ extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSi
  * Draws a 150x20 menu background box with outer frame.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuBack150x20(uint16_t color, uint16_t x, uint16_t y)
+void DrawMenuBack150x20(uint16_t color, uint16_t x, uint16_t y)
 {
     uint16_t w = 150;
     uint16_t h = 20;
-    _DrawMenuItemBackground(color, x, y, w, h);
-    _DrawMenuItemOuterFrame(color, x, y, w, h);
+    DrawMenuItemBackground(color, x, y, w, h);
+    DrawMenuItemOuterFrame(color, x, y, w, h);
 }
 
 /* ================================================================
@@ -58,7 +58,7 @@ void _DrawMenuBack150x20(uint16_t color, uint16_t x, uint16_t y)
  *   - Right vertical line:    (x+0x95, y, 1, 0x14)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawReplayContinueShiningFrame(int16_t x, int16_t y)
+void DrawReplayContinueShiningFrame(int16_t x, int16_t y)
 {
     uint16_t idx;
     uint16_t color;
@@ -69,13 +69,13 @@ void _DrawReplayContinueShiningFrame(int16_t x, int16_t y)
     color = kColorTableShine[idx];
 
     /* Top horizontal line */
-    _FillRectangle((uint16_t)x, (uint16_t)y, 0x96, 1, color);
+    FillRectangle((uint16_t)x, (uint16_t)y, 0x96, 1, color);
     /* Bottom horizontal line */
-    _FillRectangle((uint16_t)x, (uint16_t)(y + 0x13), 0x96, 1, color);
+    FillRectangle((uint16_t)x, (uint16_t)(y + 0x13), 0x96, 1, color);
     /* Left vertical line */
-    _FillRectangle((uint16_t)x, (uint16_t)y, 1, 0x14, color);
+    FillRectangle((uint16_t)x, (uint16_t)y, 1, 0x14, color);
     /* Right vertical line */
-    _FillRectangle((uint16_t)(x + 0x95), (uint16_t)y, 1, 0x14, color);
+    FillRectangle((uint16_t)(x + 0x95), (uint16_t)y, 1, 0x14, color);
 }
 
 /* ================================================================
@@ -86,21 +86,21 @@ void _DrawReplayContinueShiningFrame(int16_t x, int16_t y)
  * labels, then waits for VBlank.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawReplayOrExitMenu(void)
+void DrawReplayOrExitMenu(void)
 {
     int16_t d7;
 
     for (d7 = 1; d7 >= 0; d7--)
     {
         /* REPLAY background (color 14, x=101, y=106) */
-        _DrawMenuBack150x20(14, 101, 106);
+        DrawMenuBack150x20(14, 101, 106);
         /* EXIT background (color 12, x=101, y=136) */
-        _DrawMenuBack150x20(12, 101, 136);
+        DrawMenuBack150x20(12, 101, 136);
 
         /* "REPLAY" text centered (x center=176, y=112, color index=2) */
-        _DrawMenuTextCentered(176, 112, 2, aReplay, bigCharsTable);
+        DrawMenuTextCentered(176, 112, 2, aReplay, bigCharsTable);
         /* "EXIT" text centered (x center=176, y=142, color index=2) */
-        _DrawMenuTextCentered(176, 142, 2, aExit, bigCharsTable);
+        DrawMenuTextCentered(176, 142, 2, aExit, bigCharsTable);
 
         /* Wait for VBlank */
         waitingInterrupt = 1;
@@ -117,7 +117,7 @@ void _DrawReplayOrExitMenu(void)
  * handling up/down navigation and fire to select.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ReplayExitMenuAfterFriendly(void)
+void ReplayExitMenuAfterFriendly(void)
 {
     /* Widescreen: centre the menu over the (centred) background. The match loop left
      * g_menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
@@ -128,27 +128,27 @@ void _ReplayExitMenuAfterFriendly(void)
     g_menu_draw_x_offset = WIDE_MARGIN;
 
     /* Load menu background image */
-    _LoadFileEx(aGrafsMenubg2Ra, frontbufferMaskBuffer, (uint32_t *)0);
+    LoadFileEx(aGrafsMenubg2Ra, frontbufferMaskBuffer, (uint32_t *)0);
 
-    _ProcessSpriteBlitQueue();
-    _BlitterCopyPanelToScreen();
+    ProcessSpriteBlitQueue();
+    BlitterCopyPanelToScreen();
 
     /* Reset camera and double-buffer swap */
-    _SetCameraCoordinates(0, 0);
-    _SwapBuffersAndCameraViewState();
-    _UpdatePlanePtrsAndBlitParams();
-    _ProcessSpriteBlitQueue();
-    _BlitterCopyPanelToScreen();
-    _SwapBuffersAndCameraViewState();
-    _UpdatePlanePtrsAndBlitParams();
+    SetCameraCoordinates(0, 0);
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
+    ProcessSpriteBlitQueue();
+    BlitterCopyPanelToScreen();
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
 
     /* Initialize state */
     replaySelected = 1;
     paletteIndex = 0;
 
     /* Draw initial menu and fade in */
-    _DrawReplayOrExitMenu();
-    _FadeIn();
+    DrawReplayOrExitMenu();
+    FadeIn();
 
     /* Main event loop.
      * Assembly has two entry points:
@@ -162,7 +162,7 @@ void _ReplayExitMenuAfterFriendly(void)
         {
             if (needsRedraw)
             {
-                _DrawReplayOrExitMenu();
+                DrawReplayOrExitMenu();
                 needsRedraw = 0;
             }
 
@@ -173,12 +173,12 @@ void _ReplayExitMenuAfterFriendly(void)
 
             /* Draw shining frame on selected item */
             if (replaySelected != 0)
-                _DrawReplayContinueShiningFrame(0x65, 0x6A);
+                DrawReplayContinueShiningFrame(0x65, 0x6A);
             else
-                _DrawReplayContinueShiningFrame(0x65, 0x88);
+                DrawReplayContinueShiningFrame(0x65, 0x88);
 
             /* Process input */
-            _MenuCheckControls();
+            MenuCheckControls();
 
             if (menuControlsDirection == 0)
             {
@@ -203,7 +203,7 @@ void _ReplayExitMenuAfterFriendly(void)
             /* Other direction (up/left/right) — check fire */
             if (fire != 0)
             {
-                _FadeOutToBlack();
+                FadeOutToBlack();
                 g_menu_draw_x_offset = saved_x_offset;
                 return;
             }

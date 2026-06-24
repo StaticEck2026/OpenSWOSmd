@@ -17,7 +17,7 @@ extern uint16_t cameraXMod320;
 extern uint16_t cameraYMod320;
 extern volatile uint16_t panicReasonCode;
 
-extern void _PanicHaltLoop(void) __attribute__((noreturn));
+extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 
 /* ---- Helper: wait for blitter idle ---- */
@@ -131,7 +131,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     /* Glyph must have mask (type == 0) */
     if (spr->type != 0) {
         panicReasonCode = 0x1556;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     uint8_t *dstBase = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
@@ -171,7 +171,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     /* Glyph must have mask pointer */
     if (spr->maskPtr == 0) {
         panicReasonCode = 0x1556;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     /* Compute vertical wrap */
@@ -295,7 +295,7 @@ restart_blit_span:
  * Measures the pixel width of a text string using a CharTable.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetTextWidth(uint8_t *text, uint8_t *charsTable)
+uint16_t GetTextWidth(uint8_t *text, uint8_t *charsTable)
 {
     CharsTableHeader *ct = (CharsTableHeader *)charsTable;
     uint16_t sprIdxOff = (uint16_t)ct->spriteIndexOffset;
@@ -335,7 +335,7 @@ uint16_t _GetTextWidth(uint8_t *text, uint8_t *charsTable)
  * Returns the final x position (next character would start here).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
+uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
                        uint8_t *text, uint8_t *charsTable)
 {
     CharsTableHeader *ct = (CharsTableHeader *)charsTable;
@@ -391,12 +391,12 @@ uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
  * Measures text width, then draws right-aligned at x.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _DrawMenuTextRightAligned(uint16_t x, uint16_t y, uint16_t color,
+uint16_t DrawMenuTextRightAligned(uint16_t x, uint16_t y, uint16_t color,
                                    uint8_t *text, uint8_t *charsTable)
 {
-    uint16_t textWidth = _GetTextWidth(text, charsTable);
+    uint16_t textWidth = GetTextWidth(text, charsTable);
     uint16_t startX = x - textWidth + 1;
-    return _DrawMenuText(startX, y, color, text, charsTable);
+    return DrawMenuText(startX, y, color, text, charsTable);
 }
 
 /* ================================================================
@@ -405,11 +405,11 @@ uint16_t _DrawMenuTextRightAligned(uint16_t x, uint16_t y, uint16_t color,
  * Measures text width, then draws centered at x.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color,
+uint16_t DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color,
                                uint8_t *text, uint8_t *charsTable)
 {
-    uint16_t textWidth = _GetTextWidth(text, charsTable);
+    uint16_t textWidth = GetTextWidth(text, charsTable);
     uint16_t halfWidth = (textWidth + 1) >> 1;
     uint16_t startX = x - halfWidth;
-    return _DrawMenuText(startX, y, color, text, charsTable);
+    return DrawMenuText(startX, y, color, text, charsTable);
 }

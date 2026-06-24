@@ -18,7 +18,7 @@
  * the ad-hoc x86/MSVC list — that list missed ARM Linux (which is
  * little-endian by default but defines neither __i386__ nor
  * __x86_64__), so on the armhf cross-build the LE constant fell
- * through to the BE branch and `_LoadRNCToBufferNoBlit` panicked
+ * through to the BE branch and `LoadRNCToBufferNoBlit` panicked
  * loading sound/hero.ins on every Pi 3 run.
  *
  * MSVC doesn't define __BYTE_ORDER__, so keep an explicit fallback

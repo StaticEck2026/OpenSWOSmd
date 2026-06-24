@@ -20,7 +20,7 @@
  *     careerLoadedFlag   ds.b $2
  *     teamTacticsUSERA..F ds.b $172 each  (= 370; six TeamTactics records)
  *     gameLength autoReplays menuMusic autoSaveHighlights allPlayerTeamsEqual
- *     pitchType          ds.b $2 each  (the 6 uint16 _SaveOptions/_RestoreOptions
+ *     pitchType          ds.b $2 each  (the 6 uint16 SaveOptions/RestoreOptions
  *                                       copy as one block from &gameLength)
  *     seed2 randXorIndex2 randXorKey2 newRandomSeedCopy ds.b $1 each (uint8)
  *     randomSeed         ds.b $2
@@ -30,7 +30,7 @@
  * (&teamTacticsUSERA … &teamTacticsUSERF collected into pointer tables in
  * menus.c / edit_tactics.c / tactics_data.c — never a &USERA + i*370 walk), so
  * no cross-table adjacency is required; the only intentional adjacency walk is
- * _SaveOptions/_RestoreOptions over the six gameLength..pitchType uint16, which
+ * SaveOptions/RestoreOptions over the six gameLength..pitchType uint16, which
  * this struct keeps contiguous. All fields are &symbol-addressed in the save
  * (FX scalars + FA team_tactics_user_* 370 FLD_BYTES), so the format is
  * unchanged; no raw careerFileBuffer+offset. sizeof(TeamTactics)==370 is

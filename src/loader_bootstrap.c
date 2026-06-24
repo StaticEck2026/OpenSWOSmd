@@ -12,8 +12,8 @@ extern uint16_t assetIndexStartBytes;    /* index start bytes (word) */
 extern uint32_t irqCookieObfuscated;     /* IRQ cookie for tamper check */
 
 /* ---- External asm functions (C-callable bridges) ---- */
-extern int16_t _AssetSvcLoaderOp(void);
-extern int16_t _AssetSvcLoaderOp3(void);
+extern int16_t AssetSvcLoaderOp(void);
+extern int16_t AssetSvcLoaderOp3(void);
 
 /* ================================================================
  * InstallAndInitLoaderBootstrap  (SWOS2.s line 10018)
@@ -28,7 +28,7 @@ extern int16_t _AssetSvcLoaderOp3(void);
  *   $CFD1EFE7 xor $CFD1F9CF = $1628  ✓
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InstallAndInitLoaderBootstrap(void)
+void InstallAndInitLoaderBootstrap(void)
 {
 
     /* Body removed: the original Amiga blob is anti-tamper bootstrap
@@ -59,7 +59,7 @@ void _InstallAndInitLoaderBootstrap(void)
  *   $71583EFC xor $715828D4 = $1628  ✓
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InstallAndRunLoaderBootstrap_Op3(void)
+void InstallAndRunLoaderBootstrap_Op3(void)
 {
     uint32_t savedCookie;
     uint8_t *src;
@@ -70,7 +70,7 @@ void _InstallAndRunLoaderBootstrap_Op3(void)
     savedCookie = irqCookieObfuscated;
 
     /* Poll until asset service op3 is idle */
-    while (_AssetSvcLoaderOp3() != 0)
+    while (AssetSvcLoaderOp3() != 0)
     {
         /* spin */
     }

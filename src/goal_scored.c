@@ -49,9 +49,9 @@ extern uint8_t  smallCharsTable[];
 extern uint8_t  gameTime[];
 
 /* ---- external functions ---- */
-extern void _PanicHaltLoop(void);
-extern void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
-extern uint16_t _Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
+extern void PanicHaltLoop(void);
+extern void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
+extern uint16_t Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
                              uint8_t *text, uint8_t *charsTable, uint16_t planeMask,
                              uint16_t *outTotalWidth);
 
@@ -79,7 +79,7 @@ static char *firstGoalScoredTable[3] = {
 };
 
 /* ================================================================
- * _GoalScored
+ * GoalScored
  * (SWOS2.s line 12091)
  *
  * Updates goal counters and builds scorer list sprites.
@@ -87,7 +87,7 @@ static char *firstGoalScoredTable[3] = {
  * scorerSprite: pointer to the Sprite struct of the scorer
  * ================================================================ */
 void __attribute__((used, externally_visible))
-_GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
+GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
 {
     TeamGame       *a2;         /* team file data: scorer's team (for player lookup) */
     TeamGame       *a1_team;    /* team file data: opponent team (for own goal stat) */
@@ -169,7 +169,7 @@ skip_if_penalties:
     /* null check scorer sprite */
     if (scorerSprite == (Sprite *)0) {
         panicReasonCode = 9;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     /* ---- determine goal type ---- */
@@ -308,7 +308,7 @@ team_ptrs_done:
 
         /* ---- load sprite graphics for current scorer sprite ---- */
         d4 = (uint16_t)a5->imageIndex;
-        _HWSprite_LoadFromSpriteGraphics(d4);
+        HWSprite_LoadFromSpriteGraphics(d4);
 
         /* ---- find player short name ---- */
         spriteOrdinal = (uint16_t)scorerSprite->playerOrdinal;
@@ -327,7 +327,7 @@ team_ptrs_done:
 
         /* ---- render player name into sprite ---- */
         xOff = 0;
-        overflow = _Text2Sprite(0, 0, d4, playerName, smallCharsTable, 2, &totalWidth);
+        overflow = Text2Sprite(0, 0, d4, playerName, smallCharsTable, 2, &totalWidth);
         (void)overflow;
         xOff = totalWidth + 5;  /* space between name and goal list */
 
@@ -366,7 +366,7 @@ team_ptrs_done:
                 }
 
                 /* render time string into sprite */
-                overflow = _Text2Sprite(xOff, 0, d4, renderStart, smallCharsTable, 2, &totalWidth);
+                overflow = Text2Sprite(xOff, 0, d4, renderStart, smallCharsTable, 2, &totalWidth);
             }
             xOff = totalWidth;
 
@@ -420,7 +420,7 @@ team_ptrs_done:
             }
 
             /* load sprite graphics for new row */
-            _HWSprite_LoadFromSpriteGraphics(d4);
+            HWSprite_LoadFromSpriteGraphics(d4);
             xOff = 0;
             goto write_time_field_loop;
         }

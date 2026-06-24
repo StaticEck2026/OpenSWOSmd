@@ -11,12 +11,12 @@
 #include "game_types.h"
 
 /* ---- Chairman memo functions ---- */
-void _ShowChairmanMessage(void);
-void _ChairmanMemosInit(void);
-void _ChairmanMemosOnReturn(void);
-void _ChairmanMemosContinue(void);
+void ShowChairmanMessage(void);
+void ChairmanMemosInit(void);
+void ChairmanMemosOnReturn(void);
+void ChairmanMemosContinue(void);
 
 /* ---- Club business ---- */
-void _ShowClubBussinesMenu(void);
+void ShowClubBussinesMenu(void);
 
 #endif /* CHAIRMAN_MEMO_H */

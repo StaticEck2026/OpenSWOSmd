@@ -1049,7 +1049,7 @@ static void serviceOneChannel(AudioChannel *chan)
  * Returns channelChangeFlags in d0 (used by caller).
  */
 __attribute__((used, externally_visible))
-uint8_t _AudioIRQUpdateChannels(void)
+uint8_t AudioIRQUpdateChannels(void)
 {
     uint16_t counter;
 

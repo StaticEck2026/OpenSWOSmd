@@ -9,7 +9,7 @@
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uintptr_t assetLoaderWorkPtr;
-extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
+extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 /* Head of the cache linked-list. Storage retyped to uintptr_t so that on
  * 64-bit hosts (LP64 / LLP64) a real pointer round-trips. */
 extern uintptr_t assetLoaderCacheFlag;
@@ -23,12 +23,12 @@ extern uint16_t assetCurrentIndex;
 extern volatile uint16_t currentGameTick;
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 extern volatile uint16_t panicReasonCode;
-extern int16_t _CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
-extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
-extern void _RncDecompressV1(uint8_t *src, uint8_t *dest);
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern int16_t CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
+extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
+extern void RncDecompressV1(uint8_t *src, uint8_t *dest);
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
 /* ---- Constants matching asm EQU ---- */
 #define ASSET_OP_SELECT_AND_OPEN    14
@@ -85,7 +85,7 @@ static inline void cache_node_set_next(uint8_t *node, uint8_t *next)
 }
 
 /* ---- Forward declarations ---- */
-extern void _InstallAndInitLoaderBootstrap(void);
+extern void InstallAndInitLoaderBootstrap(void);
 
 /* ================================================================
  * assetCacheAllocInternal  (SWOS2.s line 9831, AssetCacheAlloc)
@@ -206,7 +206,7 @@ static uint8_t *cacheNodeFindByName(const uint8_t *name, uint32_t *outDataSize)
  * Returns the data size on success, or -1 (0xFFFFFFFF) if not found.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int32_t _AssetCacheFindByName(const uint8_t *name)
+int32_t AssetCacheFindByName(const uint8_t *name)
 {
     uint32_t dataSize;
     uint8_t *node = cacheNodeFindByName(name, &dataSize);
@@ -226,7 +226,7 @@ int32_t _AssetCacheFindByName(const uint8_t *name)
  * back to byte-copy otherwise. We use byte-copy for simplicity.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-int16_t _AssetCacheCopyByName(uint8_t *name, uint8_t *dest, uint32_t *outFileSize)
+int16_t AssetCacheCopyByName(uint8_t *name, uint8_t *dest, uint32_t *outFileSize)
 {
     uint32_t dataSize;
     uint8_t *node;
@@ -265,7 +265,7 @@ int16_t _AssetCacheCopyByName(uint8_t *name, uint8_t *dest, uint32_t *outFileSiz
  * Returns: 0 = success, 1 = alloc failed, 0xFF = asset system error
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
+int16_t AssetCacheLoadFromAssetSys(const uint8_t *name)
 {
     uint32_t fileSize;
     int16_t result;
@@ -275,7 +275,7 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
     const uint8_t *srcName;
 
     /* Query file size */
-    result = _CAssetSys_DispatchGetSize(ASSET_OP_5_THEN_MAYBE_6, 0, (void *)name, (void *)0, &fileSize);
+    result = CAssetSys_DispatchGetSize(ASSET_OP_5_THEN_MAYBE_6, 0, (void *)name, (void *)0, &fileSize);
     if (result != 0) {
 #ifdef SWOS_SDL_BUILD
         SWOS_DBG("[cacheload] %s: size-query failed r=%d\n", (const char *)name, result);
@@ -294,7 +294,7 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
 
     /* Load file data into node payload */
     payload = node + CACHE_NODE_HEADER_SIZE;
-    result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, (void *)name, payload);
+    result = CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, (void *)name, payload);
     if (result != 0) {
 #ifdef SWOS_SDL_BUILD
         SWOS_DBG("[cacheload] %s: load failed r=%d\n", (const char *)name, result);
@@ -324,7 +324,7 @@ int16_t _AssetCacheLoadFromAssetSys(const uint8_t *name)
  * Silently returns if allocation fails.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size)
+void AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size)
 {
     uint8_t *node;
     uint8_t *payload;
@@ -366,7 +366,7 @@ void _AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size)
  *   offset 10+: data length / payload / name
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
+void AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
 {
     uint8_t **cacheHead;
     uint8_t *node;
@@ -375,7 +375,7 @@ void _AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
     if (size & 1u)
     {
         panicReasonCode = 0x2332u;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         /* never returns */
     }
 
@@ -424,18 +424,18 @@ extern uint8_t *g_earlyAllocCacheMem;
 extern uint32_t g_earlyAllocCacheSize;
 
 __attribute__((used, externally_visible))
-void _AssetLoaderInitAltPathAndBanks(void)
+void AssetLoaderInitAltPathAndBanks(void)
 {
     assetLoaderAltPathReady = 1;
     assetLoaderCacheFlag = 0;
 
     /* Register surnameBuf as placeholder (size 0 → will be skipped inside) */
-    _AssetLoaderRegisterRegion(0, surnameBuf);
+    AssetLoaderRegisterRegion(0, surnameBuf);
 
     /* Use cache memory that was pre-allocated in _start (before hardware takeover) */
     if (g_earlyAllocCacheMem != (uint8_t *)0 && g_earlyAllocCacheSize > 0)
     {
-        _AssetLoaderRegisterRegion(g_earlyAllocCacheSize, g_earlyAllocCacheMem);
+        AssetLoaderRegisterRegion(g_earlyAllocCacheSize, g_earlyAllocCacheMem);
     }
 }
 
@@ -480,12 +480,12 @@ static const uint8_t * const kMenuPrecacheTable[] = {
  * from the asset system repeatedly until successful or empty.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AssetPrecacheOneCore(const uint8_t *assetName)
+void AssetPrecacheOneCore(const uint8_t *assetName)
 {
     int32_t result;
     int16_t status;
 
-    result = _AssetCacheFindByName(assetName);
+    result = AssetCacheFindByName(assetName);
 
     if (result != (int32_t)0xFFFFFFFFu)
         return; /* already cached */
@@ -493,7 +493,7 @@ void _AssetPrecacheOneCore(const uint8_t *assetName)
     /* Load until cached or no more data */
     do
     {
-        status = _AssetCacheLoadFromAssetSys(assetName);
+        status = AssetCacheLoadFromAssetSys(assetName);
     } while (status != 0);
 }
 
@@ -504,11 +504,11 @@ void _AssetPrecacheOneCore(const uint8_t *assetName)
  * the core precache table (sfx + sprite map).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AssetPrecacheCore(void)
+void AssetPrecacheCore(void)
 {
     const uint8_t * const *entry;
 
-    _InstallAndInitLoaderBootstrap();
+    InstallAndInitLoaderBootstrap();
 
     if (assetLoaderCacheFlag == 0)
         return;
@@ -516,7 +516,7 @@ void _AssetPrecacheCore(void)
     entry = kCorePrecacheTable;
     while (*entry != (const uint8_t *)0)
     {
-        _AssetPrecacheOneCore(*entry);
+        AssetPrecacheOneCore(*entry);
         entry++;
     }
 }
@@ -527,18 +527,18 @@ void _AssetPrecacheCore(void)
  * Same pattern as AssetPrecacheOneCore but for menu assets.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AssetPrecacheOneMenu(const uint8_t *assetName)
+void AssetPrecacheOneMenu(const uint8_t *assetName)
 {
     int32_t result;
     int16_t status;
 
-    result = _AssetCacheFindByName(assetName);
+    result = AssetCacheFindByName(assetName);
     if (result != (int32_t)0xFFFFFFFFu)
         return; /* already cached */
 
     do
     {
-        status = _AssetCacheLoadFromAssetSys(assetName);
+        status = AssetCacheLoadFromAssetSys(assetName);
     } while (status != 0);
 }
 
@@ -548,7 +548,7 @@ void _AssetPrecacheOneMenu(const uint8_t *assetName)
  * Precaches all entries in the menu precache table.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AssetPrecacheMenuPack(void)
+void AssetPrecacheMenuPack(void)
 {
     const uint8_t * const *entry;
 
@@ -558,7 +558,7 @@ void _AssetPrecacheMenuPack(void)
     entry = kMenuPrecacheTable;
     while (*entry != (const uint8_t *)0)
     {
-        _AssetPrecacheOneMenu(*entry);
+        AssetPrecacheOneMenu(*entry);
         entry++;
     }
 
@@ -572,9 +572,9 @@ void _AssetPrecacheMenuPack(void)
  * Sets assetCurrentIndex = 1 and returns 0 on success.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _AssetSvcLoaderOp(void)
+int16_t AssetSvcLoaderOp(void)
 {
-    return _CAssetSys_Dispatch(ASSET_OP_SELECT_AND_OPEN, 1, (void *)0, (void *)0);
+    return CAssetSys_Dispatch(ASSET_OP_SELECT_AND_OPEN, 1, (void *)0, (void *)0);
 }
 
 /* ================================================================
@@ -583,9 +583,9 @@ int16_t _AssetSvcLoaderOp(void)
  * Selects and opens asset source 2 via AssetSys_Dispatch.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _AssetSvcLoaderOp2(void)
+int16_t AssetSvcLoaderOp2(void)
 {
-    return _CAssetSys_Dispatch(ASSET_OP_SELECT_AND_OPEN, 2, (void *)0, (void *)0);
+    return CAssetSys_Dispatch(ASSET_OP_SELECT_AND_OPEN, 2, (void *)0, (void *)0);
 }
 
 /* ================================================================
@@ -594,9 +594,9 @@ int16_t _AssetSvcLoaderOp2(void)
  * Selects and opens asset source 3 via AssetSys_Dispatch.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _AssetSvcLoaderOp3(void)
+int16_t AssetSvcLoaderOp3(void)
 {
-    return _CAssetSys_Dispatch(ASSET_OP_SELECT_AND_OPEN, 3, (void *)0, (void *)0);
+    return CAssetSys_Dispatch(ASSET_OP_SELECT_AND_OPEN, 3, (void *)0, (void *)0);
 }
 
 /* ================================================================
@@ -609,7 +609,7 @@ int16_t _AssetSvcLoaderOp3(void)
  * On error, retries after 50-tick delay unless assetCurrentIndex == 4.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _PlaySong(uint8_t *name, uint8_t *dest)
+int16_t PlaySong(uint8_t *name, uint8_t *dest)
 {
     uint32_t fileSize;
     int16_t result;
@@ -620,21 +620,21 @@ int16_t _PlaySong(uint8_t *name, uint8_t *dest)
     {
         if (assetCurrentIndex == 4)
         {
-            return _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
+            return CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
         }
 
         if (assetLoaderCacheFlag != 0)
         {
-            if (_AssetCacheCopyByName(name, dest, (uint32_t *)0) == 0)
+            if (AssetCacheCopyByName(name, dest, (uint32_t *)0) == 0)
                 return 0;
         }
 
-        result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, name, dest, &fileSize);
+        result = CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, name, dest, &fileSize);
         if (result == 0)
         {
             if (assetLoaderCacheFlag != 0 && assetLoaderAltPathReady != 0)
             {
-                _AssetCacheStoreFromMemory(name, dest, fileSize);
+                AssetCacheStoreFromMemory(name, dest, fileSize);
             }
             return 0;
         }
@@ -645,7 +645,7 @@ int16_t _PlaySong(uint8_t *name, uint8_t *dest)
 
         /* Wait 50 ticks before retry */
         for (i = FPS_50HZ; i >= 0; i--) {
-            _WaitForVSync();
+            WaitForVSync();
         }
     }
 }
@@ -657,7 +657,7 @@ int16_t _PlaySong(uint8_t *name, uint8_t *dest)
  * Loads an asset, tries cache first, retries on failure.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
+int16_t AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
 {
     int16_t result;
     int16_t i;
@@ -666,15 +666,15 @@ int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
     for (;;)
     {
         if (assetCurrentIndex == 4)
-            return _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
+            return CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
 
         if (assetLoaderCacheFlag != 0)
         {
-            if (_AssetCacheCopyByName(name, dest, (uint32_t *)0) == 0)
+            if (AssetCacheCopyByName(name, dest, (uint32_t *)0) == 0)
                 return 0;
         }
 
-        result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
+        result = CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
         if (result == 0)
             return 0;
 
@@ -685,7 +685,7 @@ int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
         
         /* Wait 50 ticks before retry */
         for (i = FPS_50HZ; i >= 0; i--) {
-            _WaitForVSync();
+            WaitForVSync();
         }
     }
 }
@@ -699,13 +699,13 @@ int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
  * Panics if loaded data is not RNC v1 format.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest)
+int16_t LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest)
 {
     int16_t result;
     int16_t i;
     uint16_t tick;
 
-    result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
+    result = CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
     if (result != 0)
     {
         /* Load failed */
@@ -714,19 +714,19 @@ int16_t _LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest)
 
         /* Wait 50 ticks then fall back to LoadFile */
         for (i = 49; i >= 0; i--) {
-            _WaitForVSync();
+            WaitForVSync();
         }
-        return _LoadFileEx(name, dest, (uint32_t *)0);
+        return LoadFileEx(name, dest, (uint32_t *)0);
     }
 
     /* Check for RNC v1 magic */
     if (*(uint32_t *)dest != RNC_MAGIC_V1)
     {
         panicReasonCode = 0xE002u;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     /* Decompress RNC v1 in-place */
-    _RncDecompressV1(dest, dest);
+    RncDecompressV1(dest, dest);
     return 0;
 }

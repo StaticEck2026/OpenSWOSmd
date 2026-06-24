@@ -102,12 +102,12 @@ void swos_io_free(void *p)
 
 #else  /* !SWOS_SDL_BUILD — Amiga */
 
-extern uint8_t *_AllocMemAny(uint32_t sz);
-extern void     _FreeMemAny(void *addr, uint32_t sz);
+extern uint8_t *AllocMemAny(uint32_t sz);
+extern void     FreeMemAny(void *addr, uint32_t sz);
 
 void *swos_io_alloc(uint32_t sz)
 {
-    uint8_t *block = _AllocMemAny(sz + SWOS_HDR_SIZE);
+    uint8_t *block = AllocMemAny(sz + SWOS_HDR_SIZE);
     if (!block) return (void *)0;
     *(uint32_t *)block = sz + SWOS_HDR_SIZE;
     return block + SWOS_HDR_SIZE;
@@ -126,7 +126,7 @@ void *swos_io_realloc(void *p, uint32_t new_sz)
     uint32_t copy_n = (old_payload < new_sz) ? old_payload : new_sz;
     if (copy_n) memcpy(out, p, copy_n);
 
-    _FreeMemAny(block, old_size);
+    FreeMemAny(block, old_size);
     return out;
 }
 
@@ -135,7 +135,7 @@ void swos_io_free(void *p)
     if (!p) return;
     uint8_t *block = (uint8_t *)p - SWOS_HDR_SIZE;
     uint32_t sz = *(uint32_t *)block;
-    _FreeMemAny(block, sz);
+    FreeMemAny(block, sz);
 }
 
 #endif
@@ -193,7 +193,7 @@ int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
 
 #else  /* Amiga */
 
-extern uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1,
+extern uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1,
                                     uint8_t *name, uint8_t *buf);
 
 #define ROBN_LOAD      0u
@@ -202,13 +202,13 @@ extern uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1,
 
 int swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_size)
 {
-    uint32_t sz = _RobNorthenLoader_C(ROBN_GET_SIZE, 0, (uint8_t *)name, (uint8_t *)0);
+    uint32_t sz = RobNorthenLoader_C(ROBN_GET_SIZE, 0, (uint8_t *)name, (uint8_t *)0);
     if (sz == 0) return 1;
 
     uint8_t *buf = (uint8_t *)swos_io_alloc(sz + 1u);
     if (!buf) return 1;
 
-    uint32_t rc = _RobNorthenLoader_C(ROBN_LOAD, 0, (uint8_t *)name, buf);
+    uint32_t rc = RobNorthenLoader_C(ROBN_LOAD, 0, (uint8_t *)name, buf);
     if (rc != 0) { swos_io_free(buf); return 1; }
     buf[sz] = '\0';
 
@@ -219,7 +219,7 @@ int swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_siz
 
 int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
 {
-    uint32_t rc = _RobNorthenLoader_C(ROBN_SAVE, size, (uint8_t *)name,
+    uint32_t rc = RobNorthenLoader_C(ROBN_SAVE, size, (uint8_t *)name,
                                       (uint8_t *)buf);
     return (rc == 0) ? 0 : 1;
 }

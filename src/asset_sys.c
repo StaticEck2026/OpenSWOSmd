@@ -7,7 +7,7 @@
  * asset_sys.c — C port of AssetSys_Dispatch and all AssetSys_* functions
  *
  * Previously these were the last block of live assembly code in SWOS2.s.
- * All dispatch goes through _RobNorthenLoader_C (HDD file I/O).
+ * All dispatch goes through RobNorthenLoader_C (HDD file I/O).
  *
  * The original floppy-era code probed drives, built drive prefix strings,
  * and had complex source-slot management. In HDD mode, most of this is
@@ -22,9 +22,9 @@
 extern uint8_t diskImageContext;
 
 /* ---- External C functions ---- */
-extern uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf);
+extern uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf);
 extern uint32_t _rnl_d1_return;
-extern void _InstallAndInitLoaderBootstrap(void);
+extern void InstallAndInitLoaderBootstrap(void);
 
 /* ---- AssetSys private state ----
  * These were PC-relative data in SWOS2.s. Now C globals.
@@ -69,10 +69,10 @@ static void assetSysPrepCopyParams(const uint8_t *filename)
 
     /* Copy source prefix (drive path) if non-null */
     if (srcAddr != 0)
-        dst = _StringCopy((const uint8_t *)srcAddr, dst);
+        dst = StringCopy((const uint8_t *)srcAddr, dst);
 
     /* Append the filename */
-    _StringCopy(filename, dst);
+    StringCopy(filename, dst);
 }
 
 /* ================================================================
@@ -114,7 +114,7 @@ static int16_t assetSys_InitContext(uint8_t *loaderBase, const uint8_t *disk0,
 static int32_t assetSys_InitSource0(const uint8_t *filename, uint8_t *dest)
 {
     assetSysPrepCopyParams(filename);
-    int32_t r = (int32_t)_RobNorthenLoader_C(0, 0, assetFilename, dest);
+    int32_t r = (int32_t)RobNorthenLoader_C(0, 0, assetFilename, dest);
     return r;
 }
 
@@ -125,7 +125,7 @@ static int32_t assetSys_InitSource0(const uint8_t *filename, uint8_t *dest)
 static int32_t assetSys_LoadFileOp(const uint8_t *filename, uint8_t *src, uint32_t arg1)
 {
     assetSysPrepCopyParams(filename);
-    return (int32_t)_RobNorthenLoader_C(1, arg1, assetFilename, src);
+    return (int32_t)RobNorthenLoader_C(1, arg1, assetFilename, src);
 }
 
 /* ================================================================
@@ -134,7 +134,7 @@ static int32_t assetSys_LoadFileOp(const uint8_t *filename, uint8_t *src, uint32
 static int32_t assetSys_InitSource2(const uint8_t *filename, uint8_t *dest)
 {
     assetSysPrepCopyParams(filename);
-    return (int32_t)_RobNorthenLoader_C(2, 0, assetFilename, dest);
+    return (int32_t)RobNorthenLoader_C(2, 0, assetFilename, dest);
 }
 
 /* ================================================================
@@ -155,7 +155,7 @@ static int32_t assetSys_ResolveAssetList(uint8_t *listBuf)
     a4 = listBuf;
 
     /* Dispatch cmd=3 (list directory) */
-    result = (int32_t)_RobNorthenLoader_C(3, 0, assetFilename, a4 + 2);
+    result = (int32_t)RobNorthenLoader_C(3, 0, assetFilename, a4 + 2);
     d1val = _rnl_d1_return;
     if (result != 0)
         return result;
@@ -197,22 +197,22 @@ static int32_t assetSys_ResolveAssetList(uint8_t *listBuf)
             else
             {
                 if (assetSource0 != 0 &&
-                    _StringEquals(a2 + 4, (const uint8_t *)assetSource0) == 0)
+                    StringEquals(a2 + 4, (const uint8_t *)assetSource0) == 0)
                 {
                     drop = 1;
                 }
                 else if (assetSource1 != 0 &&
-                    _StringEquals(a2 + 4, (const uint8_t *)assetSource1) == 0)
+                    StringEquals(a2 + 4, (const uint8_t *)assetSource1) == 0)
                 {
                     drop = 1;
                 }
                 else if (assetSource2 != 0 &&
-                    _StringEquals(a2 + 4, (const uint8_t *)assetSource2) == 0)
+                    StringEquals(a2 + 4, (const uint8_t *)assetSource2) == 0)
                 {
                     drop = 1;
                 }
                 else if (assetSource3 != 0 &&
-                    _StringEquals(a2 + 4, (const uint8_t *)assetSource3) == 0)
+                    StringEquals(a2 + 4, (const uint8_t *)assetSource3) == 0)
                 {
                     drop = 1;
                 }
@@ -225,7 +225,7 @@ static int32_t assetSys_ResolveAssetList(uint8_t *listBuf)
             else
             {
                 if (a2 != a3)
-                    _StringCopy(a2 + 4, a3 + 4);
+                    StringCopy(a2 + 4, a3 + 4);
                 a3 += 32;
             }
             a2 += 32;
@@ -251,7 +251,7 @@ static int32_t assetSys_DoCriticalOp(const uint8_t *filename, uint8_t *dest)
     /* Disable interrupts */
     *(volatile uint16_t *)INTENA_ADDR = 0x4000;
 
-    result = (int32_t)_RobNorthenLoader_C(4, 0, assetFilename, dest);
+    result = (int32_t)RobNorthenLoader_C(4, 0, assetFilename, dest);
 
     /* Re-enable interrupts */
     *(volatile uint16_t *)INTENA_ADDR = 0xC000;
@@ -269,7 +269,7 @@ static int32_t assetSys_Op5ThenMaybe6(const uint8_t *sourceDesc)
     int32_t result;
     assetSysPrepCopyParams(sourceDesc);
 
-    result = (int32_t)_RobNorthenLoader_C(5, 0, assetFilename, (uint8_t *)assetAltBasePtr);
+    result = (int32_t)RobNorthenLoader_C(5, 0, assetFilename, (uint8_t *)assetAltBasePtr);
     if (result != 0)
     {
         /* Op 5 returned non-zero — do op 6 with it */
@@ -277,7 +277,7 @@ static int32_t assetSys_Op5ThenMaybe6(const uint8_t *sourceDesc)
          * pointer. Double-cast preserves the zero-extended 32-bit value
          * on 64-bit (matching the Amiga behaviour where pointer == 32-bit
          * uint). Only used by asset-loader paths that are dead on SDL. */
-        _RobNorthenLoader_C(6, 0, (uint8_t *)(uintptr_t)(uint32_t)result, (uint8_t *)0);
+        RobNorthenLoader_C(6, 0, (uint8_t *)(uintptr_t)(uint32_t)result, (uint8_t *)0);
         return 0;
     }
     return 1;
@@ -315,14 +315,14 @@ static int16_t assetSys_OpenAnySource(void)
 }
 
 /* ================================================================
- * _CAssetSys_Dispatch — replaces the asm bridge in swos2_unit.s
+ * CAssetSys_Dispatch — replaces the asm bridge in swos2_unit.s
  *
  * C callers pass: opcode, param, name, dest
  * The asm bridge previously shuffled these into d7/d0/a0/a1 for
  * the asm jump table. Now we dispatch directly.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest)
+int16_t CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest)
 {
     int16_t result;
 
@@ -345,24 +345,24 @@ int16_t _CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *d
 }
 
 /* ================================================================
- * _CAssetSys_DispatchGetSize — like Dispatch but also returns
+ * CAssetSys_DispatchGetSize — like Dispatch but also returns
  * file size via _rnl_d1_return → *outFileSize
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize)
+int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize)
 {
-    int16_t result = _CAssetSys_Dispatch(opcode, param, name, dest);
+    int16_t result = CAssetSys_Dispatch(opcode, param, name, dest);
     if (outFileSize)
         *outFileSize = _rnl_d1_return;
     return result;
 }
 
 /* ================================================================
- * _CAssetSys_DispatchWrite — write variant, passes file size as arg1
+ * CAssetSys_DispatchWrite — write variant, passes file size as arg1
  * opcode is always LOAD_FILE (4), arg1=size goes to RNL cmd=1
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uint32_t size)
+int16_t CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uint32_t size)
 {
     int16_t result;
 
@@ -374,16 +374,16 @@ int16_t _CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uin
 }
 
 /* ================================================================
- * _AssetSys_InitDiskImageSources  (replaces asm wrapper)
+ * AssetSys_InitDiskImageSources  (replaces asm wrapper)
  *
- * Called from _mainC during boot. Sets up the asset system with
+ * Called from mainC during boot. Sets up the asset system with
  * disk image paths, then installs the loader bootstrap.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AssetSys_InitDiskImageSources(void)
+void AssetSys_InitDiskImageSources(void)
 {
     assetSys_InitContext(&diskImageContext,
                          kSwos4Dk1, kSwos4Dk2,
                          kGrafsDisk2Raw, kSwos4Dku);
-    _InstallAndInitLoaderBootstrap();
+    InstallAndInitLoaderBootstrap();
 }

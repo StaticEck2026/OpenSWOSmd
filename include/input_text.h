@@ -23,7 +23,7 @@ struct MenuEntry;
  * nums: array of 7 uint16_t values (mapped to %0..%6)
  * strA/strB/strC: strings for %a, %b, %c
  */
-void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                      uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
                      uint16_t n4, uint16_t n5, uint16_t n6,
                      const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
@@ -34,24 +34,24 @@ void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
  * entry: current menu entry (string type, fg field = string ptr)
  * Returns: 0 = committed (enter/fire), 1 = cancelled (escape)
  */
-uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entry);
+uint16_t InputText(uint16_t maxLenPlus1, uint8_t *entry);
 
 /* ---- InsertCharacter ----
  * Inserts a character at pos in inMenuKeyboardBuffer, shifting right.
  * pos: pointer within inMenuKeyboardBuffer
  * ch: character to insert
  */
-void _InsertCharacter(uint8_t *pos, uint8_t ch);
+void InsertCharacter(uint8_t *pos, uint8_t ch);
 
 /* ---- InputTextDeleteCharAtCursor ----
  * Deletes the character at pos, shifting left.
  */
-void _InputTextDeleteCharAtCursor(uint8_t *pos);
+void InputTextDeleteCharAtCursor(uint8_t *pos);
 
 /* ---- InputTextFilterKey ----
  * Filters currentKey to allowed charset (A-Z, 0-9, control chars).
  * Returns: the key if allowed, 0 if not allowed.
  */
-uint16_t _InputTextFilterKey(void);
+uint16_t InputTextFilterKey(void);
 
 #endif

@@ -33,8 +33,8 @@ extern uint16_t fadeOutChantTimer;
 extern uint16_t crowdChantVolume;
 
 /* ---- External C/asm functions ---- */
-extern uint16_t _Rand(void);
-/* _AudioSetChannelVolume, _AudioApplyPresetToChannels, _AudioChannelQueueNextWaveIfEnabled from audio.h */
+extern uint16_t Rand(void);
+/* AudioSetChannelVolume, AudioApplyPresetToChannels, AudioChannelQueueNextWaveIfEnabled from audio.h */
 
 /* ================================================================
  * CrowdResetMatchState  (SWOS2.s line 9083)
@@ -42,7 +42,7 @@ extern uint16_t _Rand(void);
  * Clears all crowd/SFX state at the start of a match.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CrowdResetMatchState(void)
+void CrowdResetMatchState(void)
 {
     patternsGoalCounter = 0;
     showFansCounter = 0;
@@ -61,13 +61,13 @@ void _CrowdResetMatchState(void)
  * Enables crowd chants: resets timers, sets volume to 0, enables flag.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TurnCrowdChantsOn(void)
+void TurnCrowdChantsOn(void)
 {
     fadeInChantTimer = 0;
     nextChantTimer = 0;
     fadeOutChantTimer = 0;
     crowdChantsOn = 1;
-    _AudioSetChannelVolume(2, 0);
+    AudioSetChannelVolume(2, 0);
     crowdChantVolume = 0;
 }
 
@@ -77,10 +77,10 @@ void _TurnCrowdChantsOn(void)
  * Disables crowd chants: clears flag and volume.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TurnCrowdChantsOff(void)
+void TurnCrowdChantsOff(void)
 {
     crowdChantsOn = 0;
-    _AudioSetChannelVolume(2, 0);
+    AudioSetChannelVolume(2, 0);
     crowdChantVolume = 0;
 }
 
@@ -95,7 +95,7 @@ void _TurnCrowdChantsOff(void)
  *   - Otherwise: random chance to start new chant event
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayCrowdChants(void)
+void PlayCrowdChants(void)
 {
     uint16_t rnd, vol;
 
@@ -112,17 +112,17 @@ void _PlayCrowdChants(void)
         goto crowd_fadeout_tick;
 
     /* Idle state: random chance to start a chant */
-    rnd = _Rand();
+    rnd = Rand();
     if (rnd < 128)
     {
         /* Start new chant event */
         crowdChantVolume = 0;
-        _AudioSetChannelVolume(2, 0);
+        AudioSetChannelVolume(2, 0);
 
         /* Pick a crowd sample */
         if (currentCrowdSample != 0xFFFF)
         {
-            rnd = _Rand();
+            rnd = Rand();
             if (rnd >= 0x80)
                 goto pick_new_sample;
             /* else keep current sample */
@@ -130,15 +130,15 @@ void _PlayCrowdChants(void)
         else
         {
 pick_new_sample:
-            rnd = _Rand();
+            rnd = Rand();
             rnd &= 6;  /* 0, 2, 4, or 6 */
             currentCrowdSample = crowdSamples[rnd >> 1];
         }
 
-        _AudioChannelQueueNextWaveIfEnabled(2, currentCrowdSample);
+        AudioChannelQueueNextWaveIfEnabled(2, currentCrowdSample);
 
         fadeInChantTimer = 128;
-        rnd = _Rand();
+        rnd = Rand();
         nextChantTimer = (uint16_t)((rnd << 1) + 500);
         fadeOutChantTimer = 128;
         return;
@@ -146,7 +146,7 @@ pick_new_sample:
     else
     {
         /* No chant this time, set cooldown */
-        rnd = _Rand();
+        rnd = Rand();
         nextChantTimer = (uint16_t)((rnd << 2) + 0x1F4);
         return;
     }
@@ -159,14 +159,14 @@ crowd_fadeout_tick:
     fadeOutChantTimer--;
     vol = fadeOutChantTimer >> 1;
     crowdChantVolume = vol;
-    _AudioSetChannelVolume(2, vol);
+    AudioSetChannelVolume(2, vol);
     return;
 
 crowd_fadein_tick:
     fadeInChantTimer--;
     vol = (uint16_t)(0x80 - fadeInChantTimer) >> 1;
     crowdChantVolume = vol;
-    _AudioSetChannelVolume(2, vol);
+    AudioSetChannelVolume(2, vol);
     return;
 }
 
@@ -177,14 +177,14 @@ crowd_fadein_tick:
  * waiting 1 tick per step.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MuteAllAudioChannelsWithDelay(void)
+void MuteAllAudioChannelsWithDelay(void)
 {
     uint16_t vol;
     uint16_t tick;
 
     for (vol = 0; vol <= 0x40; vol += 4)
     {
-        _AudioSetChannelVolume(0xFFFF, vol);
+        AudioSetChannelVolume(0xFFFF, vol);
 
         /* Wait 1 tick (dbf d1 with d1=0 loops once) */
         tick = currentGameTick;
@@ -203,7 +203,7 @@ void _MuteAllAudioChannelsWithDelay(void)
  * Final: Set all channels to 0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AudioFadeCrowdDownThenPulseMusic(void)
+void AudioFadeCrowdDownThenPulseMusic(void)
 {
     int16_t vol;
     uint16_t tick;
@@ -214,7 +214,7 @@ void _AudioFadeCrowdDownThenPulseMusic(void)
     {
         while (vol >= 0)
         {
-            _AudioSetChannelVolume(2, (uint16_t)vol);
+            AudioSetChannelVolume(2, (uint16_t)vol);
 
             tick = currentGameTick;
             while (currentGameTick == tick)
@@ -224,15 +224,15 @@ void _AudioFadeCrowdDownThenPulseMusic(void)
 
             vol -= 2;
         }
-        _AudioSetChannelVolume(2, 0);
+        AudioSetChannelVolume(2, 0);
     }
 
     /* Phase 2: Pulse music channels (0, 1, 3) down */
     for (vol = 0x40; vol >= 0; vol -= 2)
     {
-        _AudioSetChannelVolume(0, (uint16_t)vol);
-        _AudioSetChannelVolume(1, (uint16_t)vol);
-        _AudioSetChannelVolume(3, (uint16_t)vol);
+        AudioSetChannelVolume(0, (uint16_t)vol);
+        AudioSetChannelVolume(1, (uint16_t)vol);
+        AudioSetChannelVolume(3, (uint16_t)vol);
 
         tick = currentGameTick;
         while (currentGameTick == tick)
@@ -242,7 +242,7 @@ void _AudioFadeCrowdDownThenPulseMusic(void)
     }
 
     /* Final: all channels to 0 */
-    _AudioSetChannelVolume(0xFFFF, 0);
+    AudioSetChannelVolume(0xFFFF, 0);
 }
 
 /* ================================================================
@@ -252,14 +252,14 @@ void _AudioFadeCrowdDownThenPulseMusic(void)
  * waiting 1 tick per step. Final: set volume to 0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AudioMuteAllWithFrameRamp(void)
+void AudioMuteAllWithFrameRamp(void)
 {
     int16_t vol;
     uint16_t tick;
 
     for (vol = 0x40; vol >= 0; vol -= 2)
     {
-        _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
+        AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
 
         tick = currentGameTick;
         while (currentGameTick == tick)
@@ -268,7 +268,7 @@ void _AudioMuteAllWithFrameRamp(void)
         }
     }
 
-    _AudioSetChannelVolume(0xFFFF, 0);
+    AudioSetChannelVolume(0xFFFF, 0);
 }
 
 /* ================================================================
@@ -278,14 +278,14 @@ void _AudioMuteAllWithFrameRamp(void)
  * samples when they reach zero.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayEnqueuedSamples(void)
+void PlayEnqueuedSamples(void)
 {
     if (endOfHalfWriteOnly != 0)
     {
         endOfHalfWriteOnly--;
         if (endOfHalfWriteOnly == 0)
         {
-            _PlayPenaltySample();
+            PlayPenaltySample();
             sfxQueueWriteIdx = 0xFA;
         }
     }
@@ -294,14 +294,14 @@ void _PlayEnqueuedSamples(void)
     {
         goalCounter--;
         if (goalCounter == 0)
-            _PlaySample4IfNotTraining();
+            PlaySample4IfNotTraining();
     }
 
     if (sfxQueueWriteIdx != 0)
     {
         sfxQueueWriteIdx--;
         if (sfxQueueWriteIdx == 0)
-            _PlaySample7IfNotTraining();
+            PlaySample7IfNotTraining();
     }
 
     if (crowdEventFlags != 0)
@@ -311,10 +311,10 @@ void _PlayEnqueuedSamples(void)
     {
         sfxQueueCount--;
         if (sfxQueueCount == 0)
-            _PlayCornerKickSample();
+            PlayCornerKickSample();
     }
 
-    _PlayCrowdChants();
+    PlayCrowdChants();
 }
 
 /* ================================================================
@@ -323,11 +323,11 @@ void _PlayEnqueuedSamples(void)
  * If not training: play sample preset 6.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayPenaltySample(void)
+void PlayPenaltySample(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample(6);
+    PlaySample(6);
 }
 
 /* ================================================================
@@ -336,11 +336,11 @@ void _PlayPenaltySample(void)
  * If not training: play sample preset 7.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample7IfNotTraining(void)
+void PlaySample7IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample(7);
+    PlaySample(7);
 }
 
 /* ================================================================
@@ -349,9 +349,9 @@ void _PlaySample7IfNotTraining(void)
  * GateKickSampleAndCrowd with sfxId=$10, channel=3.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySfxSample16(void)
+void PlaySfxSample16(void)
 {
-    _GateKickSampleAndCrowd(3, 0x10);
+    GateKickSampleAndCrowd(3, 0x10);
 }
 
 /* ================================================================
@@ -360,9 +360,9 @@ void _PlaySfxSample16(void)
  * GateKickSampleAndCrowd with sfxId=$27, channel=3.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayGoodPassSample(void)
+void PlayGoodPassSample(void)
 {
-    _GateKickSampleAndCrowd(3, 0x27);
+    GateKickSampleAndCrowd(3, 0x27);
 }
 
 /* ================================================================
@@ -372,7 +372,7 @@ void _PlayGoodPassSample(void)
  * Then calls GateKickSampleAndCrowd(3, sfxId).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayKickSample(void)
+void PlayKickSample(void)
 {
     uint16_t sfxId = 0x25;
 
@@ -380,7 +380,7 @@ void _PlayKickSample(void)
     if (((uint8_t)currentGameTick) & 0x02)
         sfxId = 0x28;
 
-    _GateKickSampleAndCrowd(3, sfxId);
+    GateKickSampleAndCrowd(3, sfxId);
 }
 
 /* ================================================================
@@ -391,7 +391,7 @@ void _PlayKickSample(void)
  * HandleKickSampleAndCrowd.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
+void GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 {
     /* If audioDbgFlagA bit 7 is set, apply gating */
     if (audioDbgFlagA & 0x80)
@@ -400,54 +400,54 @@ void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
             return;
     }
 
-    _HandleKickSampleAndCrowd(channel, sfxId);
+    HandleKickSampleAndCrowd(channel, sfxId);
 }
 
 /* ================================================================
  * PlayRefereeWhistleSample  (SWOS2.s line 9444)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayRefereeWhistleSample(void)
+void PlayRefereeWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, 0x31);
+    HandleKickSampleAndCrowd(3, 0x31);
 }
 
 /* ================================================================
  * PlayFoulWhistleSample  (SWOS2.s line 9452)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayFoulWhistleSample(void)
+void PlayFoulWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, 4);
+    HandleKickSampleAndCrowd(3, 4);
 }
 
 /* ================================================================
  * PlayEndGameWhistleSample  (SWOS2.s line 9457)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayEndGameWhistleSample(void)
+void PlayEndGameWhistleSample(void)
 {
-    _HandleKickSampleAndCrowd(3, 0x16);
+    HandleKickSampleAndCrowd(3, 0x16);
 }
 
 /* ================================================================
  * PlaySample1IfNotTraining  (SWOS2.s line 9464)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample1IfNotTraining(void)
+void PlaySample1IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample(1);
+    PlaySample(1);
 }
 
 /* ================================================================
  * PlaySample1  (SWOS2.s line 9471)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample1(void)
+void PlaySample1(void)
 {
-    _PlaySample(1);
+    PlaySample(1);
 }
 
 /* ================================================================
@@ -457,12 +457,12 @@ void _PlaySample1(void)
  * (Original: falls through to PlaySample3 label)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample2IfNotTraining(void)
+void PlaySample2IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
     pendingSampleId3_4 = 0x3E8;
-    _PlaySample(3);
+    PlaySample(3);
 }
 
 /* ================================================================
@@ -472,12 +472,12 @@ void _PlaySample2IfNotTraining(void)
  * (Original: falls through to PlaySample4 label)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample4IfNotTraining(void)
+void PlaySample4IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
     pendingSampleId3_4 = 0x190;
-    _PlaySample(4);
+    PlaySample(4);
 }
 
 /* ================================================================
@@ -486,12 +486,12 @@ void _PlaySample4IfNotTraining(void)
  * If not training: set sfxQueueCount=$A, GateKick($2C, 3).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample3IfNotTraining(void)
+void PlaySample3IfNotTraining(void)
 {
     if (trainingGame != 0)
         return;
     sfxQueueCount = 0x0A;
-    _GateKickSampleAndCrowd(3, 0x2C);
+    GateKickSampleAndCrowd(3, 0x2C);
 }
 
 /* ================================================================
@@ -500,12 +500,12 @@ void _PlaySample3IfNotTraining(void)
  * If not training: set sfxQueueCount=$A, HandleKick($26, 3).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayMissGoalSample(void)
+void PlayMissGoalSample(void)
 {
     if (trainingGame != 0)
         return;
     sfxQueueCount = 0x0A;
-    _HandleKickSampleAndCrowd(3, 0x26);
+    HandleKickSampleAndCrowd(3, 0x26);
 }
 
 /* ================================================================
@@ -514,11 +514,11 @@ void _PlayMissGoalSample(void)
  * If not training: play penalty sample, set sfxQueueWriteIdx=$8C.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayPenalty(void)
+void PlayPenalty(void)
 {
     if (trainingGame != 0)
         return;
-    _PlayPenaltySample();
+    PlayPenaltySample();
     sfxQueueWriteIdx = 0x8C;
 }
 
@@ -531,7 +531,7 @@ void _PlayPenalty(void)
  *   - Set sfxQueueWriteIdx = $96
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayGameStateWhistleSample(void)
+void PlayGameStateWhistleSample(void)
 {
     if (trainingGame != 0)
         return;
@@ -542,7 +542,7 @@ void _PlayGameStateWhistleSample(void)
             goto queue_whistle;
     }
 
-    _PlayPenaltySample();
+    PlayPenaltySample();
 
 queue_whistle:
     sfxQueueWriteIdx = 0x96;
@@ -554,11 +554,11 @@ queue_whistle:
  * If not training: calls PlaySample2IfNotTraining.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayGoalReplayBottomSample(void)
+void PlayGoalReplayBottomSample(void)
 {
     if (trainingGame != 0)
         return;
-    _PlaySample2IfNotTraining();
+    PlaySample2IfNotTraining();
 }
 
 /* ================================================================
@@ -568,11 +568,11 @@ void _PlayGoalReplayBottomSample(void)
  * set crowdEventFlags = $39.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayGoalKickOffSample(void)
+void PlayGoalKickOffSample(void)
 {
     if (trainingGame != 0)
         return;
-    if (_HandleKickSampleAndCrowd(3, 0x12) != 0)
+    if (HandleKickSampleAndCrowd(3, 0x12) != 0)
         return;
     crowdEventFlags = 0x39;
 }
@@ -584,11 +584,11 @@ void _PlayGoalKickOffSample(void)
  * set crowdEventFlags = $32.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayCornerKickSample(void)
+void PlayCornerKickSample(void)
 {
     if (trainingGame != 0)
         return;
-    if (_HandleKickSampleAndCrowd(3, 0x0F) != 0)
+    if (HandleKickSampleAndCrowd(3, 0x0F) != 0)
         return;
     crowdEventFlags = 0x32;
 }
@@ -602,7 +602,7 @@ void _PlayCornerKickSample(void)
  * returns 0 (played).
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
+int16_t HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
 {
     if (sfxId != 0x16)
     {
@@ -611,7 +611,7 @@ int16_t _HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
     }
 
     lastKickSampleTick = (int16_t)sfxId;
-    _AudioChannelQueueNextWaveIfEnabled(mode, sfxId);
+    AudioChannelQueueNextWaveIfEnabled(mode, sfxId);
     return 0;  /* played */
 }
 
@@ -621,7 +621,7 @@ int16_t _HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
  * Wrapper for AudioApplyPresetToChannels.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlaySample(uint16_t preset)
+void PlaySample(uint16_t preset)
 {
-    _AudioApplyPresetToChannels(preset);
+    AudioApplyPresetToChannels(preset);
 }

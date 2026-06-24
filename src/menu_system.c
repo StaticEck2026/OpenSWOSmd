@@ -13,7 +13,7 @@
 
 /* ---- Callback function pointer type ---- */
 typedef void (*VoidFunc)(void);
-/* VoidFuncD1D2 removed: FUNC1/FUNC2 callbacks now use _CallMenuFuncWithXY */
+/* VoidFuncD1D2 removed: FUNC1/FUNC2 callbacks now use CallMenuFuncWithXY */
 
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -31,7 +31,7 @@ extern volatile uint16_t seasonUpdateInProgress;
                                Amiga side and breaks the HLOG calls below */
 #include "auto_skip_debug.h"
 #include "input.h"  /* pauseSkipRequested -- SPACE / second controller button */
-#include <string.h>  /* memcpy in _UnpackMenu — Amiga string.h is partial,
+#include <string.h>  /* memcpy in UnpackMenu — Amiga string.h is partial,
                       * include early so the prototype is in scope before
                       * the first call site. */
 
@@ -67,7 +67,7 @@ extern volatile uint16_t seasonUpdateInProgress;
  * menu for SEASON_UPDATE_MENU_HOLD_FRAMES iterations (50 Hz pacing) so the
  * user can read each result like on the original.
  *
- * Counter resets in _ActivateMenu (per-menu boundary); _MenuProc gates the
+ * Counter resets in ActivateMenu (per-menu boundary); MenuProc gates the
  * auto-fire dispatch behind it when seasonUpdateInProgress is set. Only
  * applies to controlMask==0xFFFF entries — every other dispatch path
  * (normal fire-only, navigation, etc.) is unaffected. */
@@ -98,7 +98,7 @@ extern uint32_t irqCookieObfuscated;
 extern char *errorMessagePtr;
 extern uint16_t forceDrawTransparentMenuItems;
 
-/* _MenuCheckControls globals */
+/* MenuCheckControls globals */
 extern volatile uint16_t currentKey;
 extern uint16_t lastFrameTicks;
 extern int16_t fireCounter;
@@ -140,7 +140,7 @@ extern uint16_t deadVar03;
 extern uint8_t *spriteGraphicsPtr;
 
 /* Platform quit flag: set by Platform_RequestQuit on SDL_QUIT / ESC /
- * X button click. _ShowMenu loops check it to break out of nested menus. */
+ * X button click. ShowMenu loops check it to break out of nested menus. */
 extern uint16_t g_quitToDos;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -211,15 +211,15 @@ extern volatile uint8_t diyLeagueScratchBuffer[];
 extern void loc_1215BC(void);
 
 /* ---- External asm functions (C-to-asm bridges still needed) ---- */
-/* _DrawSprite16Pixels declared in sprites.h */
+/* DrawSprite16Pixels declared in sprites.h */
 
 /* External C functions (already ported) */
-extern void _WaitForVSync(void);
-extern void _FadeIn(void);
-extern void _BlitterCopyPanelToScreen2(void);
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _PanicHaltLoop(void);
+extern void WaitForVSync(void);
+extern void FadeIn(void);
+extern void BlitterCopyPanelToScreen2(void);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void PanicHaltLoop(void);
 
 /* ---- String constant for stack overflow ---- */
 extern uint8_t aStackOverflow[];
@@ -229,7 +229,7 @@ extern uint8_t aStackOverflow[];
  * CalcMenuEntryAddress
  * ================================================================ */
 __attribute__((used, externally_visible))
-MenuEntry *_CalcMenuEntryAddress(uint16_t ordinal)
+MenuEntry *CalcMenuEntryAddress(uint16_t ordinal)
 {
     return (MenuEntry *)(currentMenu + MENU_HEADER_SIZE + (uint32_t)ordinal * MENUENTRY_STRIDE);
 }
@@ -238,7 +238,7 @@ MenuEntry *_CalcMenuEntryAddress(uint16_t ordinal)
  * SetExitMenuFlag
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetExitMenuFlag(void)
+void SetExitMenuFlag(void)
 {
     SWOS_AUTOSKIP_LOG("SetExitMenuFlag: caller=%p exitMenu now 1",
                       __builtin_return_address(0));
@@ -249,9 +249,9 @@ void _SetExitMenuFlag(void)
  * SetCurrentEntry
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetCurrentEntry(uint16_t index)
+void SetCurrentEntry(uint16_t index)
 {
-    MenuEntry *entry = _CalcMenuEntryAddress(index);
+    MenuEntry *entry = CalcMenuEntryAddress(index);
     Menu *menu = (Menu *)currentMenu;
     menu->selectedEntry = entry;
     SWOS_AUTOSKIP_LOG("SetCurrentEntry(%u) caller=%p ctrlMask=0x%04x onSelect=%p",
@@ -264,7 +264,7 @@ void _SetCurrentEntry(uint16_t index)
  * Int2Ascii — convert uint16 to decimal ASCII string
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Int2Ascii(uint16_t value, uint8_t *out)
+void Int2Ascii(uint16_t value, uint8_t *out)
 {
     uint16_t d0 = value;
     uint16_t q;
@@ -295,7 +295,7 @@ void _Int2Ascii(uint16_t value, uint8_t *out)
  * globals since they are now exported via xdef.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetKey(void)
+uint16_t GetKey(void)
 {
     uint16_t d0;
 
@@ -352,10 +352,10 @@ read_next_key:
  * onto whatever `frontbufferBasePtr` currently points at. */
 #include <string.h>
 __attribute__((used, externally_visible))
-void _BlitterCopyOverlayToScreen(void)
+void BlitterCopyOverlayToScreen(void)
 {
-    /* Called at the end of _DrawMenu (and at the end of _LoadFileEx).
-     * By that point _WaitForVSync has already swapped buffers, so
+    /* Called at the end of DrawMenu (and at the end of LoadFileEx).
+     * By that point WaitForVSync has already swapped buffers, so
      * `frontbufferBasePtr` points at the POST-swap buffer (the one the
      * SDL renderer will now read from), while the OTHER buffer still
      * holds the freshly-drawn menu. We propagate the drawing forward
@@ -375,7 +375,7 @@ void _BlitterCopyOverlayToScreen(void)
 }
 #else
 __attribute__((used, externally_visible))
-void _BlitterCopyOverlayToScreen(void)
+void BlitterCopyOverlayToScreen(void)
 {
     uint32_t srcAddr;
 
@@ -457,23 +457,23 @@ void _BlitterCopyOverlayToScreen(void)
  * Reorders to: x, y, w, h, color, buffer
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    _FillRectangle(x, y, w, h, color);
+    FillRectangle(x, y, w, h, color);
 }
 
 /* ================================================================
  * DrawMenuItemBackgroundMasked — masked rectangle
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     /* Widescreen: align the masked (transparent) background with the centered
      * frame/text/items, which draw at x + g_menu_draw_x_offset via the base-shifted
      * primitives. Both the mask read and the front write shift by the offset. Without
      * this the masked bg lands un-centered (corrupt menu item in masked-bg states).
-     * Same fix as _BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
-    _RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
+     * Same fix as BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
                                     frontbufferMaskBuffer, (uint8_t *)frontbufferBasePtr);
 }
 
@@ -483,23 +483,23 @@ void _DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t 
  * d0=color, d1=x, d2=y, d3=width, d4=height
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItemInnerFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void DrawMenuItemInnerFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     /* Top border (full width, height=1) */
-    _DrawMenuItemBackground(color, x, y, w, 1);
+    DrawMenuItemBackground(color, x, y, w, 1);
     /* Left border (width=1, full height) */
-    _DrawMenuItemBackground(color, x, y, 1, h);
+    DrawMenuItemBackground(color, x, y, 1, h);
     /* Bottom border (full width, height=1) */
-    _DrawMenuItemBackground(color, x, y + h - 1, w, 1);
+    DrawMenuItemBackground(color, x, y + h - 1, w, 1);
     /* Right border (width=1, full height) */
-    _DrawMenuItemBackground(color, x + w - 1, y, 1, h);
+    DrawMenuItemBackground(color, x + w - 1, y, 1, h);
 }
 
 /* ================================================================
  * DrawMenuItemOuterFrame — 4-pixel colored frame using color table
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     uint8_t topLeftColor, bottomRightColor;
 
@@ -507,20 +507,20 @@ void _DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w,
     bottomRightColor = outerFrameColorsTable[color * 2 + 1];
 
     /* Top border (full width, height=1) */
-    _DrawMenuItemBackground((uint16_t)(int8_t)topLeftColor, x, y, w, 1);
+    DrawMenuItemBackground((uint16_t)(int8_t)topLeftColor, x, y, w, 1);
     /* Left border (width=1, full height) */
-    _DrawMenuItemBackground((uint16_t)(int8_t)topLeftColor, x, y, 1, h);
+    DrawMenuItemBackground((uint16_t)(int8_t)topLeftColor, x, y, 1, h);
     /* Bottom border (full width, height=1) */
-    _DrawMenuItemBackground((uint16_t)(int8_t)bottomRightColor, x, y + h - 1, w, 1);
+    DrawMenuItemBackground((uint16_t)(int8_t)bottomRightColor, x, y + h - 1, w, 1);
     /* Right border (width=1, full height) */
-    _DrawMenuItemBackground((uint16_t)(int8_t)bottomRightColor, x + w - 1, y, 1, h);
+    DrawMenuItemBackground((uint16_t)(int8_t)bottomRightColor, x + w - 1, y, 1, h);
 }
 
 /* ================================================================
  * DrawMenuBackWithCheck — conditional background erase
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuBackWithCheck(MenuEntry *entry)
+void DrawMenuBackWithCheck(MenuEntry *entry)
 {
     if (entry->isInvisible == 0)
         return;
@@ -535,9 +535,9 @@ void _DrawMenuBackWithCheck(MenuEntry *entry)
         return;
 
     if (forceDrawTransparentMenuItems) {
-        _DrawMenuItemBackground(15, entry->x, entry->y, entry->dwWidth, entry->dwHeight);
+        DrawMenuItemBackground(15, entry->x, entry->y, entry->dwWidth, entry->dwHeight);
     } else {
-        _DrawMenuItemBackgroundMasked(entry->x, entry->y, entry->dwWidth, entry->dwHeight);
+        DrawMenuItemBackgroundMasked(entry->x, entry->y, entry->dwWidth, entry->dwHeight);
     }
 }
 
@@ -545,14 +545,14 @@ void _DrawMenuBackWithCheck(MenuEntry *entry)
  * DrawBackAllItems — draw background for invisible items
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry)
+void DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry)
 {
     int16_t i;
     MenuEntry *entry = firstEntry;
 
     for (i = (int16_t)maxItems - 1; i >= 0; i--) {
         if (entry->isInvisible != 0) {
-            _DrawMenuBackWithCheck(entry);
+            DrawMenuBackWithCheck(entry);
         }
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
@@ -562,7 +562,7 @@ void _DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry)
  * CallDrawMenuItem — double-buffered draw with vsync
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CallDrawMenuItem(MenuEntry *entry)
+void CallDrawMenuItem(MenuEntry *entry)
 {
 #ifdef SWOS_SDL_BUILD
     /* The Amiga "double-flush" pattern (draw, vsync, draw, vsync) is
@@ -571,9 +571,9 @@ void _CallDrawMenuItem(MenuEntry *entry)
      * makes the OTHER buffer the new drawing target, so a second draw
      * lands in it too.
      *
-     * On SDL each `_WaitForVSync` is a visible frame present. Doing
+     * On SDL each `WaitForVSync` is a visible frame present. Doing
      * the double-flush emits TWO present cycles per partial redraw,
-     * and a transition like _PlayMatchChangeTactics chains 5+ of
+     * and a transition like PlayMatchChangeTactics chains 5+ of
      * these — every present shows slightly different intermediate
      * state and the user sees flicker.
      *
@@ -581,17 +581,17 @@ void _CallDrawMenuItem(MenuEntry *entry)
      * presents the new state), then memcpy the displayed buffer to
      * the now-drawing-target buffer so both are in sync. No second
      * present required. */
-    _DrawMenuBackWithCheck(entry);
-    _DrawMenuItem(entry);
-    _WaitForVSync();
-    _BlitterCopyOverlayToScreen();
+    DrawMenuBackWithCheck(entry);
+    DrawMenuItem(entry);
+    WaitForVSync();
+    BlitterCopyOverlayToScreen();
 #else
-    _DrawMenuBackWithCheck(entry);
-    _DrawMenuItem(entry);
-    _WaitForVSync();
-    _DrawMenuBackWithCheck(entry);
-    _DrawMenuItem(entry);
-    _WaitForVSync();
+    DrawMenuBackWithCheck(entry);
+    DrawMenuItem(entry);
+    WaitForVSync();
+    DrawMenuBackWithCheck(entry);
+    DrawMenuItem(entry);
+    WaitForVSync();
 #endif
 }
 
@@ -599,7 +599,7 @@ void _CallDrawMenuItem(MenuEntry *entry)
  * DrawMenuItem — main menu item renderer
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItem(MenuEntry *entry)
+void DrawMenuItem(MenuEntry *entry)
 {
     uint16_t bg, content;
     uint16_t sprIdx;
@@ -616,7 +616,7 @@ void _DrawMenuItem(MenuEntry *entry)
 
     /* Call beforeDraw callback — a5 = entry in original asm */
     if (entry->beforeDraw != 0) {
-        _CallMenuOnSelect((void *)entry->beforeDraw, entry);
+        CallMenuOnSelect((void *)entry->beforeDraw, entry);
         if (entry->isInvisible)
             return;
     }
@@ -638,37 +638,37 @@ void _DrawMenuItem(MenuEntry *entry)
 
             if (bgColor == 0) {
                 if (forceDrawTransparentMenuItems) {
-                    _DrawMenuItemBackground(YELLOW_GREEN_BLACK_15, x, y, w, h);
+                    DrawMenuItemBackground(YELLOW_GREEN_BLACK_15, x, y, w, h);
                 } else {
-                    _DrawMenuItemBackgroundMasked(x, y, w, h);
+                    DrawMenuItemBackgroundMasked(x, y, w, h);
                 }
             } else {
                 if (h <= 8) {
-                    _DrawMenuItemBackground(bgColor, x, y, w, h);
+                    DrawMenuItemBackground(bgColor, x, y, w, h);
                 } else {
-                    _DrawMenuItemBackground(bgColor, x, y, w, h);
-                    _DrawMenuItemOuterFrame(bgColor, x, y, w, h);
+                    DrawMenuItemBackground(bgColor, x, y, w, h);
+                    DrawMenuItemOuterFrame(bgColor, x, y, w, h);
                 }
 
                 /* Inner frame if high nibble is non-zero */
                 {
                     uint16_t frameColor = (entry->bgColor & 0xF0) >> 4;
                     if (frameColor != 0) {
-                        _DrawMenuItemInnerFrame(frameColor, x + 1, y + 1, w - 2, h - 2);
+                        DrawMenuItemInnerFrame(frameColor, x + 1, y + 1, w - 2, h - 2);
                     }
                 }
             }
         } else if (bg == ENTRY_SPRITE1) {
             uint16_t sprIdx = entry->bgColor;
-            _DrawSprite16Pixels(sprIdx, entry->x, entry->y);
+            DrawSprite16Pixels(sprIdx, entry->x, entry->y);
         } else if (bg == ENTRY_FUNC1) {
             /* Original asm passes x in d1, y in d2 as register params.
              * The unpacker stored the function pointer as a 32-bit value
              * in the bg slot; reading the field directly is portable. */
-            _CallMenuFuncWithXY((void *)entry->bg, entry->x, entry->y);
+            CallMenuFuncWithXY((void *)entry->bg, entry->x, entry->y);
         } else {
             panicReasonCode = 0x1209;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
         }
     }
@@ -755,7 +755,7 @@ void _DrawMenuItem(MenuEntry *entry)
                 textColor = flags & STR_COLOR_MASK;
                 if (textColor == 0)
                     textColor = 2;
-                _DrawMenuTextCentered(textX, mlY, textColor, multiData, charTable);
+                DrawMenuTextCentered(textX, mlY, textColor, multiData, charTable);
                 mlY += (uint16_t)lineSpacing;
                 /* Skip to next null-terminated string */
                 while (*multiData != 0)
@@ -767,14 +767,14 @@ void _DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_NUMBER) {
-        _Int2Ascii(entry->fgWord, numbersBuffer);
+        Int2Ascii(entry->fgWord, numbersBuffer);
         textPtr = numbersBuffer;
         goto fg_text_common;
     }
 
     if (content == ENTRY_FUNC2) {
         /* Original asm passes x in d1, y in d2 as register params */
-        _CallMenuFuncWithXY((void *)entry->fg, entry->x, entry->y);
+        CallMenuFuncWithXY((void *)entry->fg, entry->x, entry->y);
         goto post_draw_callback;
     }
 
@@ -783,8 +783,8 @@ void _DrawMenuItem(MenuEntry *entry)
         uint16_t srcIdx = *(uint16_t *)copyData;
         uint16_t dstIdx = *(uint16_t *)(copyData + 2);
 
-        _CopySprite(srcIdx, dstIdx, 0, 0);
-        _ConvertSpriteColors(dstIdx, (uint16_t *)(copyData + 4));
+        CopySprite(srcIdx, dstIdx, 0, 0);
+        ConvertSpriteColors(dstIdx, (uint16_t *)(copyData + 4));
 
         sprIdx = dstIdx;
         goto fg_sprite_draw;
@@ -792,7 +792,7 @@ void _DrawMenuItem(MenuEntry *entry)
 
     /* Unknown content type */
     panicReasonCode = 0x1209;
-    _PanicHaltLoop();
+    PanicHaltLoop();
     return;
 
 fg_sprite_draw:
@@ -816,7 +816,7 @@ fg_sprite_draw:
         cx = (entry->dwWidth >> 1) + entry->x - ((uint16_t)sprEntry->pixWidth >> 1);
         cy = (entry->dwHeight >> 1) + entry->y - ((uint16_t)sprEntry->nlines >> 1);
 
-        _DrawSprite16Pixels(sprIdx, cx, cy);
+        DrawSprite16Pixels(sprIdx, cx, cy);
         goto post_draw_callback;
     }
 
@@ -864,7 +864,7 @@ fg_text_common:
             textX += 2;
         if (textColor == 0)
             textColor = 2;
-        _DrawMenuText(textX, textY, textColor, textPtr, charTable);
+        DrawMenuText(textX, textY, textColor, textPtr, charTable);
     } else if (flags & (1 << 14)) {
         /* Bit 14 set: right-aligned */
         textX = entry->x + entry->dwWidth - 1;
@@ -872,18 +872,18 @@ fg_text_common:
             textX -= 2;
         if (textColor == 0)
             textColor = 2;
-        _DrawMenuTextRightAligned(textX, textY, textColor, textPtr, charTable);
+        DrawMenuTextRightAligned(textX, textY, textColor, textPtr, charTable);
     } else {
         /* Default: centered */
         textX = (entry->dwWidth >> 1) + entry->x;
         if (textColor == 0)
             textColor = 2;
-        _DrawMenuTextCentered(textX, textY, textColor, textPtr, charTable);
+        DrawMenuTextCentered(textX, textY, textColor, textPtr, charTable);
     }
 
 post_draw_callback:
     if (entry->afterDrawCb != 0) {
-        _CallMenuOnSelect((void *)entry->afterDrawCb, entry);
+        CallMenuOnSelect((void *)entry->afterDrawCb, entry);
     }
 }
 
@@ -937,7 +937,7 @@ static inline uintptr_t unpackReadPtr(uint8_t **pp)
  * dest: destination buffer (currentMenu)
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _UnpackMenu(uint8_t *packed, uint8_t *dest)
+void UnpackMenu(uint8_t *packed, uint8_t *dest)
 {
     uint8_t *a0 = packed;  /* source pointer */
     uint8_t *a1 = dest;    /* destination / current entry write pointer */
@@ -961,7 +961,7 @@ void _UnpackMenu(uint8_t *packed, uint8_t *dest)
      *
      * On 32-bit the pointer slots are 4 bytes; on 64-bit they grow to 8.
      * The 4th source field is a uint32_t ordinal that ActivateMenu later
-     * resolves to a real MenuEntry* via _CalcMenuEntryAddress, so we copy
+     * resolves to a real MenuEntry* via CalcMenuEntryAddress, so we copy
      * just the 4 ordinal bytes into the low half of selectedEntry. Use
      * field-typed access so the pointer width round-trips for both
      * targets without a per-bitness branch. */
@@ -1271,17 +1271,17 @@ finish_menu:
  * DrawMenuPanelBackground
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuPanelBackground(void)
+void DrawMenuPanelBackground(void)
 {
     if (forceDrawTransparentMenuItems != 0)
-        _DrawMenuItemBackground(7, 24, 36, 304, 200);
+        DrawMenuItemBackground(7, 24, 36, 304, 200);
 }
 
 /* ================================================================
  * DrawSelectedMenuItemFrame
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _DrawSelectedMenuItemFrame(void)
+void DrawSelectedMenuItemFrame(void)
 {
     Menu *menu = (Menu *)currentMenu;
     MenuEntry *sel = menu->selectedEntry;
@@ -1296,14 +1296,14 @@ void _DrawSelectedMenuItemFrame(void)
         return;
 
     color = kColorTableShine[(menuCursorFrame & 14) >> 1];
-    _DrawMenuItemInnerFrame(color, sel->x, sel->y, w, h);
+    DrawMenuItemInnerFrame(color, sel->x, sel->y, w, h);
 }
 
 /* ================================================================
  * DrawMenu
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _DrawMenu(void)
+void DrawMenu(void)
 {
     Menu *menu = (Menu *)currentMenu;
     MenuEntry *entry;
@@ -1313,12 +1313,12 @@ void _DrawMenu(void)
     menuStatus = 0;
     menuTextBlinkCounter = 0;
     /* Widescreen: center all menu drawing. Set once here; every partial redraw
-     * (_CallDrawMenuItem, _DrawMultipleItems, selector, custom callbacks, ...)
+     * (CallDrawMenuItem, DrawMultipleItems, selector, custom callbacks, ...)
      * inherits it. The in-match game loop resets it to 0 for the world. */
     g_menu_draw_x_offset = WIDE_MARGIN;
 
-    _BlitterCopyPanelToScreen2();
-    _DrawMenuPanelBackground();
+    BlitterCopyPanelToScreen2();
+    DrawMenuPanelBackground();
 
     /* Clear all alreadyDrawn flags */
     count = (int16_t)menu->numEntries;
@@ -1331,25 +1331,25 @@ void _DrawMenu(void)
     /* Call onDraw callback if present */
     onDrawPtr = menu->onDraw;
     if (onDrawPtr != 0) {
-        _CallMenuCallback((void *)onDrawPtr);
+        CallMenuCallback((void *)onDrawPtr);
     }
 
     /* Draw all entries (centered via the persistent g_menu_draw_x_offset). */
     entry = (MenuEntry *)menuEntries;
     count = (int16_t)menu->numEntries;
     for (i = 0; i < count; i++) {
-        _DrawMenuItem(entry);
+        DrawMenuItem(entry);
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
-    _WaitForVSync();
-    _BlitterCopyOverlayToScreen();
+    WaitForVSync();
+    BlitterCopyOverlayToScreen();
 }
 
 /* ================================================================
  * UpdateBlinkingMenuText
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateBlinkingMenuText(void)
+void UpdateBlinkingMenuText(void)
 {
     Menu *menu = (Menu *)currentMenu;
     int16_t d6, d5, d7, i;
@@ -1369,14 +1369,14 @@ void _UpdateBlinkingMenuText(void)
                 uint16_t flags = entry->stringFlags;
                 if (flags & (1 << 13)) {
                     if (counter == 0) {
-                        _DrawMenuBackWithCheck(entry);
-                        _DrawMenuItem(entry);
+                        DrawMenuBackWithCheck(entry);
+                        DrawMenuItem(entry);
                         d5++;
                     } else if (counter == 24) {
                         uint16_t savedContent = entry->content;
                         entry->content = 0;
-                        _DrawMenuBackWithCheck(entry);
-                        _DrawMenuItem(entry);
+                        DrawMenuBackWithCheck(entry);
+                        DrawMenuItem(entry);
                         d5++;
                         entry->content = savedContent;
                     }
@@ -1387,19 +1387,19 @@ void _UpdateBlinkingMenuText(void)
 
         if (d5 == 0)
             return;
-        _WaitForVSync();
+        WaitForVSync();
     }
 }
 
 /* ================================================================
- * _MenuCheckControls
+ * MenuCheckControls
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MenuCheckControls(void)
+void MenuCheckControls(void)
 {
     uint16_t d2;
 
-    _GetKey();
+    GetKey();
 
     d2 = lastFrameTicks;
 
@@ -1417,7 +1417,7 @@ void _MenuCheckControls(void)
         menuControlsDirection = -1;
         menuControlsDirection2 = -1;
     } else {
-        _Player1StatusProc();
+        Player1StatusProc();
 
         if (pl1FireCounter != 0) {
             fireCounter = pl1FireCounter;
@@ -1448,7 +1448,7 @@ void _MenuCheckControls(void)
     pl2Fire = 0;
 
     if (!player2ClearFlag && twoPlayers) {
-        _Player2StatusProc();
+        Player2StatusProc();
 
         if (pl2FireCounter != 0) {
             fireCounter = pl2FireCounter;
@@ -1533,7 +1533,7 @@ void _MenuCheckControls(void)
 /* ================================================================
  * MenuInputInjectPoint — STABLE breakpoint anchor for the test harness.
  *
- * Called from _MenuProc immediately after _MenuCheckControls() (which sets the
+ * Called from MenuProc immediately after MenuCheckControls() (which sets the
  * frame's input globals) and before the d7/onSelect dispatch. The harness breaks
  * on this SYMBOL to inject menu input — robust to line-number shifts, unlike the
  * old hardcoded `menu_system.c:<line>` breakpoint which silently broke whenever
@@ -1542,7 +1542,7 @@ void _MenuCheckControls(void)
  * See scripts/swos_plugin.py (MENU_INJECT_SYMBOL).
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _MenuInputInjectPoint(void)
+void MenuInputInjectPoint(void)
 {
     __asm__ volatile("" ::: "memory");
 }
@@ -1551,7 +1551,7 @@ void _MenuInputInjectPoint(void)
  * MenuProc
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _MenuProc(void)
+void MenuProc(void)
 {
     Menu *menu;
     MenuEntry *selectedEntry;
@@ -1561,7 +1561,7 @@ void _MenuProc(void)
 
 #ifdef SWOS_SDL_BUILD
     /* If Platform_RequestQuit flagged a quit from the SDL event pump,
-     * longjmp back to _FrontEndMainLoop now — short-circuits the entire
+     * longjmp back to FrontEndMainLoop now — short-circuits the entire
      * nested menu state machine so we don't flicker between submenus
      * as they each return and re-activate on the way out. */
     extern void Platform_CheckQuitRequest(void);
@@ -1575,12 +1575,12 @@ void _MenuProc(void)
     if (seasonUpdateInProgress == 0)
         s_seasonSkipLatched = 0;
 
-    _ReadTimerDelta();
+    ReadTimerDelta();
 
     if (magicValue != 0x12345678) {
         panicReasonCode = 0x9999;
         errorMessagePtr = (char *)aStackOverflow;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -1588,23 +1588,23 @@ void _MenuProc(void)
         return;
 
     if (menuStatus == 0) {
-        _DrawSelectedMenuItemFrame();
-        _WaitForVSync();
+        DrawSelectedMenuItemFrame();
+        WaitForVSync();
     }
 
     menuCursorFrame++;
 
     if (menuStatus != 0)
-        _DrawMenu();
+        DrawMenu();
 
     if (menuFade != 0) {
-        _FadeIn();
+        FadeIn();
         menuFade = 0;
     }
 
-    _UpdateBlinkingMenuText();
-    _MenuCheckControls();
-    _MenuInputInjectPoint();   /* stable harness input-injection anchor — break here by SYMBOL */
+    UpdateBlinkingMenuText();
+    MenuCheckControls();
+    MenuInputInjectPoint();   /* stable harness input-injection anchor — break here by SYMBOL */
 
     menu = (Menu *)currentMenu;
     selectedEntry = menu->selectedEntry;
@@ -1670,7 +1670,7 @@ void _MenuProc(void)
             s_seasonSkipLatched = 1;
 #else
         /* Amiga: SPACE is post-LUT 0x20 in currentKey (NOT the raw 0x40 in
-         * keyIn). _MenuCheckControls already called _GetKey() this frame, so
+         * keyIn). MenuCheckControls already called GetKey() this frame, so
          * currentKey reflects the latest key. */
         if (currentKey == 0x20)
             s_seasonSkipLatched = 1;
@@ -1687,12 +1687,12 @@ void _MenuProc(void)
     }
 
     controlMask = d7;
-    SWOS_AUTOSKIP_LOG("MenuProc: -> _CallMenuOnSelect (exitMenu before=%u)", (unsigned)exitMenu);
+    SWOS_AUTOSKIP_LOG("MenuProc: -> CallMenuOnSelect (exitMenu before=%u)", (unsigned)exitMenu);
     /* Original asm MenuProc kept a5 = selectedEntry when calling onSelect.
        Many callbacks (SelectTeamsCommon, SelectLeaguesCommon etc.) read a5
        to get the entry's ordinal and string pointer. */
-    _CallMenuOnSelect((void *)onSelectPtr, (void *)selectedEntry);
-    SWOS_AUTOSKIP_LOG("MenuProc: <- _CallMenuOnSelect (exitMenu after=%u)", (unsigned)exitMenu);
+    CallMenuOnSelect((void *)onSelectPtr, (void *)selectedEntry);
+    SWOS_AUTOSKIP_LOG("MenuProc: <- CallMenuOnSelect (exitMenu after=%u)", (unsigned)exitMenu);
 
 no_event_or_done:
     if (fire != 0)
@@ -1713,14 +1713,14 @@ no_event_or_done:
             return;
 
         for (;;) {
-            MenuEntry *cand = _CalcMenuEntryAddress((uint16_t)(uint8_t)navOrd);
+            MenuEntry *cand = CalcMenuEntryAddress((uint16_t)(uint8_t)navOrd);
 
             if (cand->isDisabled == 0 && cand->isInvisible == 0) {
                 menu->selectedEntry = cand;
                 if (selectedEntry->background == NO_BACKGROUND)
-                    _DrawMenu();
+                    DrawMenu();
                 else
-                    _CallDrawMenuItem(selectedEntry);
+                    CallDrawMenuItem(selectedEntry);
                 return;
             }
 
@@ -1743,7 +1743,7 @@ no_event_or_done:
  * ActivateMenu
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _ActivateMenu(uint8_t *packedMenu)
+void ActivateMenu(uint8_t *packedMenu)
 {
     Menu *menu;
     uintptr_t selEntryVal;
@@ -1752,34 +1752,34 @@ void _ActivateMenu(uint8_t *packedMenu)
     currentMenuPtr = (uintptr_t)packedMenu;
     s_seasonUpdateHoldCounter = 0;
 
-    _UnpackMenu(packedMenu, currentMenu);
+    UnpackMenu(packedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
     /* The unpacker may write either an ordinal (0..65535) or a real
-     * pointer into this slot; resolve ordinals via _CalcMenuEntryAddress
+     * pointer into this slot; resolve ordinals via CalcMenuEntryAddress
      * before any consumer reads it as a MenuEntry *. */
     selEntryVal = (uintptr_t)menu->selectedEntry;
 
     if (selEntryVal <= 0xFFFF) {
-        menu->selectedEntry = _CalcMenuEntryAddress((uint16_t)selEntryVal);
+        menu->selectedEntry = CalcMenuEntryAddress((uint16_t)selEntryVal);
     }
 
     onInitPtr = menu->onInit;
     HLOG("ActivateMenu onInit=%p\n", (void *)onInitPtr);
     if (onInitPtr != 0) {
-        _CallMenuCallback((void *)onInitPtr);
+        CallMenuCallback((void *)onInitPtr);
     }
     if (exitMenu != 0)
         return;
 
-    _DrawMenu();
+    DrawMenu();
 }
 
 /* ================================================================
  * ShowMenu
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowMenu(uint8_t *packedMenu)
+void ShowMenu(uint8_t *packedMenu)
 {
     /* If a quit was already requested, skip rendering this menu entirely
      * and propagate exitMenu = 1 to any outer ShowMenu still on the
@@ -1798,7 +1798,7 @@ void _ShowMenu(uint8_t *packedMenu)
     }
 
     Menu *menu = (Menu *)currentMenu;
-    /* volatile as safety: _CallMenuCallback saves/restores all regs around asm
+    /* volatile as safety: CallMenuCallback saves/restores all regs around asm
        callbacks, but keep volatile in case any callback path is missed. */
     /* Save+restore as MenuEntry * (the new struct field type). */
     MenuEntry * volatile oldSelectedEntry = menu->selectedEntry;
@@ -1809,7 +1809,7 @@ void _ShowMenu(uint8_t *packedMenu)
 
     SWOS_AUTOSKIP_LOG("ShowMenu: ENTER packedMenu=%p (%s)", packedMenu,
                       swos_autoskip_menu_name(packedMenu));
-    _ActivateMenu(packedMenu);
+    ActivateMenu(packedMenu);
     SWOS_AUTOSKIP_LOG("ShowMenu: post-Activate exitMenu=%u", (unsigned)exitMenu);
 
     if (exitMenu == 0) {
@@ -1817,7 +1817,7 @@ void _ShowMenu(uint8_t *packedMenu)
         unsigned proc_iters = 0;
 #endif
         do {
-            _MenuProc();
+            MenuProc();
 #ifdef SWOS_DEBUG_AUTOSKIP
             proc_iters++;
             if (proc_iters <= 3 || proc_iters == 50 || proc_iters == 200 || proc_iters % 1000 == 0) {
@@ -1838,27 +1838,27 @@ void _ShowMenu(uint8_t *packedMenu)
     if (!g_quitToDos)
         exitMenu = 0;
 
-    _RestorePreviousMenu(oldSelectedEntry, (uint8_t *)oldPackedMenu);
+    RestorePreviousMenu(oldSelectedEntry, (uint8_t *)oldPackedMenu);
 }
 
 /* ================================================================
  * RestorePreviousMenu
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
+void RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
 {
     Menu *menu;
     MenuVoidFn afterDrawPtr;
 
     currentMenuPtr = (uintptr_t)oldPackedMenu;
-    _UnpackMenu(oldPackedMenu, currentMenu);
+    UnpackMenu(oldPackedMenu, currentMenu);
 
     menu = (Menu *)currentMenu;
     menu->selectedEntry = oldSelectedEntry;
 
     afterDrawPtr = menu->afterDraw;
     if (afterDrawPtr != 0) {
-        _CallMenuCallback((void *)afterDrawPtr);
+        CallMenuCallback((void *)afterDrawPtr);
     }
 }
 
@@ -1874,14 +1874,14 @@ void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
  *   uses: frontbufferBaseAltPtr (src), frontbufferBasePtr (dst)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
+void BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     extern volatile uintptr_t frontbufferBaseAltPtr;
     /* Widescreen: the items were drawn centered (x + g_menu_draw_x_offset via the
      * base-shifted primitives), so sync the SAME region between the two buffers.
      * Without this the rect copies the un-offset region and leaves stale/garbage
      * exactly where the centered items are (corrupt menu element). 0 if not widescreen. */
-    _RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
                                     (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
 }
 
@@ -1896,7 +1896,7 @@ void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
  *   in:  a0 = pointer to int16_t list terminated by negative value
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItemsFromList(const int16_t *list)
+void DrawMenuItemsFromList(const int16_t *list)
 {
     const int16_t *iter;
     int16_t ordinal;
@@ -1908,9 +1908,9 @@ void _DrawMenuItemsFromList(const int16_t *list)
         ordinal = *iter++;
         if (ordinal < 0)
             break;
-        entry = _CalcMenuEntryAddress((uint16_t)ordinal);
+        entry = CalcMenuEntryAddress((uint16_t)ordinal);
         if (entry->isInvisible != 0) {
-            _DrawMenuBackWithCheck(entry);
+            DrawMenuBackWithCheck(entry);
         }
     }
 
@@ -1920,8 +1920,8 @@ void _DrawMenuItemsFromList(const int16_t *list)
         ordinal = *iter++;
         if (ordinal < 0)
             break;
-        entry = _CalcMenuEntryAddress((uint16_t)ordinal);
-        _DrawMenuItem(entry);
+        entry = CalcMenuEntryAddress((uint16_t)ordinal);
+        DrawMenuItem(entry);
     }
 }
 
@@ -1935,16 +1935,16 @@ void _DrawMenuItemsFromList(const int16_t *list)
  *   in:  d0 = number of items, a5 = first MenuEntry pointer
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
+void DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
 {
     int16_t i;
     MenuEntry *entry;
 
-    _DrawBackAllItems(maxItems, firstEntry);
+    DrawBackAllItems(maxItems, firstEntry);
 
     entry = firstEntry;
     for (i = (int16_t)maxItems - 1; i >= 0; i--) {
-        _DrawMenuItem(entry);
+        DrawMenuItem(entry);
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
 }
@@ -1958,20 +1958,20 @@ void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
  *   in:  a0 = pointer to int16_t list terminated by negative value
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawMenuItemsWaitForVSync(const int16_t *list)
+void DrawMenuItemsWaitForVSync(const int16_t *list)
 {
 #ifdef SWOS_SDL_BUILD
-    /* See _CallDrawMenuItem comment — collapse the Amiga double-flush
+    /* See CallDrawMenuItem comment — collapse the Amiga double-flush
      * to single vsync + memcpy sync on SDL so we present once instead
      * of twice per partial redraw. */
-    _DrawMenuItemsFromList(list);
-    _WaitForVSync();
-    _BlitterCopyOverlayToScreen();
+    DrawMenuItemsFromList(list);
+    WaitForVSync();
+    BlitterCopyOverlayToScreen();
 #else
-    _DrawMenuItemsFromList(list);
-    _WaitForVSync();
-    _DrawMenuItemsFromList(list);
-    _WaitForVSync();
+    DrawMenuItemsFromList(list);
+    WaitForVSync();
+    DrawMenuItemsFromList(list);
+    WaitForVSync();
 #endif
 }
 
@@ -1984,18 +1984,18 @@ void _DrawMenuItemsWaitForVSync(const int16_t *list)
  *   in:  d0 = number of items, a5 = first MenuEntry pointer
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
+void CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
 {
 #ifdef SWOS_SDL_BUILD
-    /* See _CallDrawMenuItem comment — collapse double-flush. */
-    _DrawMultipleItems(maxItems, firstEntry);
-    _WaitForVSync();
-    _BlitterCopyOverlayToScreen();
+    /* See CallDrawMenuItem comment — collapse double-flush. */
+    DrawMultipleItems(maxItems, firstEntry);
+    WaitForVSync();
+    BlitterCopyOverlayToScreen();
 #else
-    _DrawMultipleItems(maxItems, firstEntry);
-    _WaitForVSync();
-    _DrawMultipleItems(maxItems, firstEntry);
-    _WaitForVSync();
+    DrawMultipleItems(maxItems, firstEntry);
+    WaitForVSync();
+    DrawMultipleItems(maxItems, firstEntry);
+    WaitForVSync();
 #endif
 }
 
@@ -2012,10 +2012,10 @@ void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry)
  *   in:  d0 = number of items (implicit), a5 = first MenuEntry ptr
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CallDrawMultipleItemsRect(uint16_t maxItems, MenuEntry *firstEntry)
+void CallDrawMultipleItemsRect(uint16_t maxItems, MenuEntry *firstEntry)
 {
-    _DrawMultipleItems(maxItems, firstEntry);
-    _WaitForVSync();
-    _BlitMaskedRectAltToFront(firstEntry->x, firstEntry->y, firstEntry->dwWidth, firstEntry->dwHeight);
-    _WaitForVSync();
+    DrawMultipleItems(maxItems, firstEntry);
+    WaitForVSync();
+    BlitMaskedRectAltToFront(firstEntry->x, firstEntry->y, firstEntry->dwWidth, firstEntry->dwHeight);
+    WaitForVSync();
 }

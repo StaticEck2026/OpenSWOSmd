@@ -42,7 +42,7 @@ uint8_t careerIntlPlayerSelectedTeamName[18] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 // uint8_t careerUnavailablePlayerList[16];
 /* competitionFileBuffer: backing storage moved to swos_globals.c
  * (see diyFileBufferCopyBuf comment) — sized big enough for the
- * 2900-byte word-copy in _SaveDIYTournament. */
+ * 2900-byte word-copy in SaveDIYTournament. */
 uint8_t competitionFilename[14];
 uint8_t cornerFlagPictureIndices[32] = { 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3 };
 uint8_t countriesStack[10] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
@@ -51,13 +51,13 @@ uint8_t cupWinnersCupEligibleCompetitionIds[33] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 // uint8_t currentMatchPlayers[32];
 /* diyCompetitionContext: 62-byte stub; backing storage in
  * swos_globals.c. On Amiga it heads a ~1 KB adjacent BSS run, and
- * `_Career_StoreCompetitionSlotStateToBuffer(slotState)` writes up to
+ * `Career_StoreCompetitionSlotStateToBuffer(slotState)` writes up to
  * 1844 bytes here for slot 4 (the path that was stomping
  * careerNumPlayers in our linker layout). */
 /* diyCupTeamIds: backing storage moved to swos_globals.c — on
  * Amiga BSS this label sits at `diyCompetitionStart + 0x24E`, so
  * writes via the global must coincide with reads via offset 0x24E
- * in _DIY_BuildTeamSelectionPointerCache etc. */
+ * in DIY_BuildTeamSelectionPointerCache etc. */
 uint8_t diyGroupPatternLookup[76] = { 15, 0, 2, 3, 1, 23, 1, 2, 0, 3, 39, 1, 2, 0, 3, 27, 1, 2, 0, 3, 43, 1, 2, 0, 3, 51, 1, 2, 0, 3, 29, 0, 1, 2, 3, 45, 0, 1, 2, 3, 53, 3, 1, 0, 2, 57, 3, 1, 0, 2, 30, 0, 1, 2, 3, 46, 0, 1, 2, 3, 54, 0, 2, 1, 3, 58, 0, 2, 1, 3, 60, 3, 0, 1, 2, 255 };
 uint8_t diyLeagueScratchBuffer[2000];
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): diyLeagueSeasonStateTable */
@@ -65,7 +65,7 @@ uint8_t diyLeagueScratchBuffer[2000];
 /* diyLeagueTeamIds: backing storage moved to swos_globals.c — on
  * Amiga BSS this label sits at `diyCompetitionStart + 0x12E`, so the
  * ASM-translated code that writes here and the code that reads via
- * `diyCompetitionStart + 0x12E` (e.g. _DIY_CacheSelectedTeamPointers)
+ * `diyCompetitionStart + 0x12E` (e.g. DIY_CacheSelectedTeamPointers)
  * must hit the same memory. .equ alias resolves it. */
 int8_t diyLeagueTeamShuffleMap[16] = { 4, -1, 1, 5, 0, -1, 3, 11, 2, -1, 10, 9, 6, -1, 8, 7 };
 /* diyPresetNameOfCompetition: backing storage in swos_globals.c — on
@@ -84,14 +84,14 @@ uint8_t diyTeamShuffleScratch[64] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x
 uint8_t diyTournamentShuffleOrder8[8] = { 6, 1, 5, 4, 2, 3, 7, 0 };
 /* diyTournamentTeamIds: on Amiga the label sits at `diyFileBufferCopy + 0x9A`
  * — the same memory the `(uint16_t *)(a2 + 0x9A)` reads in
- * _DIY_LoadCurrentCompetitionSlot's team-ID copy resolve to. Without the
- * overlap, _PresetCompetitionMenu's _CopySelectedTeamNumbers writes to a
+ * DIY_LoadCurrentCompetitionSlot's team-ID copy resolve to. Without the
+ * overlap, PresetCompetitionMenu's CopySelectedTeamNumbers writes to a
  * standalone global and the load-slot path reads zeros from
  * diyFileBufferCopy+0x9A → leagueTeamIds[idx] = 0 →
- * _VerifyTeamLoaded(0) panic. Alias to the same bytes. */
+ * VerifyTeamLoaded(0) panic. Alias to the same bytes. */
 /* uint16_t diyTournamentTeamIds[451];  -- see swos_globals.c .equ alias */
 /* dwArrayCountries: per-team teamName pointer cache used by
- * _ChooseTeamForEditTactics for the alphabetical name sort. Amiga sized
+ * ChooseTeamForEditTactics for the alphabetical name sort. Amiga sized
  * this as 256 bytes = 64 entries × 4-byte pointers. On 64-bit each
  * entry is 8 bytes, so widen to a typed `void *[64]` so writes/reads
  * carry the full pointer and consumers can index without truncation. */
@@ -130,7 +130,7 @@ uint8_t gameName[100];
 uint8_t gameTime[4] = { 0 };
 int8_t goalScoredChances[16] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0 };
 /* hilFileBuffer / hilGameName / hilGameRound: MOVED to hilBackingBuf in
- * swos_globals.c. On Amiga these labels were adjacent BSS — _LoadHilFile
+ * swos_globals.c. On Amiga these labels were adjacent BSS — LoadHilFile
  * writes the entire file at hilFileBuffer and intentionally overflows
  * across hilGameName/hilGameRound/hilNumGoals/hilTeam1Goals/hilTeam2Goals/
  * hilPitchNumber/hilMaxSubstitutes/hilStartOfGoalsBuffer/inGameHilBuffer.
@@ -268,7 +268,7 @@ uint8_t teamNumbersIndices[64] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
  * and only the first 32 entries had room — see
  * project_uint32_pointer_storage_trap.md. */
 uintptr_t teamPointers[64];
-/* 64-entry TeamFileEx* table used during _Career_SortTeamFilePtrsByAvgPlayerPrice.
+/* 64-entry TeamFileEx* table used during Career_SortTeamFilePtrsByAvgPlayerPrice.
  * Same fix as teamPointers above — needs uintptr_t[64] (512 B on 64-bit)
  * instead of uint8_t[256] (only fits 32 pointers). After sort the buffer
  * is reused as a uint16_t[] ID list (consumers in career_season.c cast

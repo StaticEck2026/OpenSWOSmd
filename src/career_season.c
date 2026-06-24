@@ -78,7 +78,7 @@ extern uint8_t uefaCupEligibleCompetitionIds[];
  * against (selTeamNumber >> 8).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
+void Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
                                                   uint8_t *table, uint8_t *compIds)
 {
     /* move.b (selTeamNumber).l,d0 — reads MSB on big-endian 68k */
@@ -113,7 +113,7 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
         if (groupSize != copyCount) {
             uint16_t n = groupSize;     /* d3 = groupSize */
             for (int16_t i = (int16_t)(groupSize - 1); i >= 0; i--) {
-                uint16_t r = _Rand2();
+                uint16_t r = Rand2();
                 /* mulu.w d3,d0; lsr.w #8,d0 — index = low_word(r * n) >> 8 */
                 uint16_t idx = (uint16_t)((uint32_t)r * n) >> 8;
                 /* Swap groupPtr[i] and groupPtr[idx] */
@@ -169,7 +169,7 @@ void _Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
  * Saves and restores both selTeamNumber and isNationalSelector.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_PrepareEuropeanCupQualificationState(void)
+void Career_PrepareEuropeanCupQualificationState(void)
 {
     /* Save state — asm: move.w (selTeamNumber),-(sp); move.w (isNationalSelector),-(sp) */
     uint16_t savedSelTeam = selTeamNumber;
@@ -194,9 +194,9 @@ void _Career_PrepareEuropeanCupQualificationState(void)
          * `char *text[2]` pair between the descriptor and unk1[]; on 64-bit
          * those two pointers widen 8->16 bytes, pushing unk1[] +8. Without
          * this delta the list pointer lands inside text[1], the qualified
-         * teams overwrite the name pointer, and _DrawMenuText later
+         * teams overwrite the name pointer, and DrawMenuText later
          * dereferences team-id bytes as a string (SIGSEGV). Same
-         * compensation as _Career_SelectEuroCupSlotIfTeamParticipates
+         * compensation as Career_SelectEuroCupSlotIfTeamParticipates
          * (career_init.c) and the AltTableHeader readers (career_teams.c). */
         uint16_t offset = base[7] + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint8_t *teamList = &base[7 + offset];
@@ -212,7 +212,7 @@ void _Career_PrepareEuropeanCupQualificationState(void)
                 excludeCount = 1;
             }
         }
-        _Career_FillRandomTeamListExcludingSelected(excludeCount,
+        Career_FillRandomTeamListExcludingSelected(excludeCount,
             euroCupQualGroupSeedLists_4_6_11, euroCupEligibleCompetitionIds);
     }
 
@@ -234,7 +234,7 @@ void _Career_PrepareEuropeanCupQualificationState(void)
                 excludeCount = 1;
             }
         }
-        _Career_FillRandomTeamListExcludingSelected(excludeCount,
+        Career_FillRandomTeamListExcludingSelected(excludeCount,
             euroCupQualGroupSeedListsReduced_4_6_11, cupWinnersCupEligibleCompetitionIds);
     }
 
@@ -264,7 +264,7 @@ void _Career_PrepareEuropeanCupQualificationState(void)
                 bucketData++;
             }
         }
-        _Career_FillRandomTeamListExcludingSelected(excludeCount,
+        Career_FillRandomTeamListExcludingSelected(excludeCount,
             euroCupQualGroupSeedBuckets_15_18_22, uefaCupEligibleCompetitionIds);
     }
 
@@ -293,10 +293,10 @@ extern uint8_t invitationTournamentCopy[];
 extern uint8_t tourCopy[];
 
 extern uint16_t panicReasonCode;
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 
 __attribute__((used, externally_visible))
-uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition)
+uint8_t *GetCompetitionAbbrevStr(uint8_t *competition)
 {
     if (competition == 0)
         return (uint8_t *)"FR";
@@ -328,7 +328,7 @@ uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition)
         return (uint8_t *)"TR";
 
     panicReasonCode = 0x2184;
-    _PanicHaltLoop();
+    PanicHaltLoop();
     return (uint8_t *)"FR"; /* unreachable */
 }
 
@@ -338,7 +338,7 @@ uint8_t *_GetCompetitionAbbrevStr(uint8_t *competition)
  * Maps the season review score (0-4+) to a chairman message constant
  * and calls ShowChairmanMessage.
  * ================================================================ */
-extern void _ShowChairmanMessage(void);
+extern void ShowChairmanMessage(void);
 
 #define EXCELLENT_JOB_THIS_SEASON   27
 #define GOOD_SEASON                 28
@@ -347,7 +347,7 @@ extern void _ShowChairmanMessage(void);
 #define VERY_DISSAPOINTING_SEASON   31
 
 __attribute__((used, externally_visible))
-void _ShowSeasonOpinion(void)
+void ShowSeasonOpinion(void)
 {
     uint16_t d6 = seasonReview;
     uint16_t msg;
@@ -363,7 +363,7 @@ void _ShowSeasonOpinion(void)
         msg = EXCELLENT_JOB_THIS_SEASON;
 
     currentMessage = msg;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ================================================================
@@ -377,17 +377,17 @@ void _ShowSeasonOpinion(void)
  * ================================================================ */
 extern uint8_t  plNationality;
 extern uint16_t lastNationalityCall;
-extern int16_t _GetNationalTeamNumber(uint16_t nationality);
-extern int16_t _GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId);
+extern int16_t GetNationalTeamNumber(uint16_t nationality);
+extern int16_t GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId);
 
 __attribute__((used, externally_visible))
-uint16_t _Career_UpdateLastNationalityCall(void)
+uint16_t Career_UpdateLastNationalityCall(void)
 {
     int16_t d0;
     uint8_t nat = plNationality;
 
     if (nat != 0xFF) {
-        d0 = _GetNationalTeamNumber((uint16_t)nat);
+        d0 = GetNationalTeamNumber((uint16_t)nat);
         if (d0 != (int16_t)0xFFFF)
             goto check_self;
     }
@@ -399,7 +399,7 @@ uint16_t _Career_UpdateLastNationalityCall(void)
 
     /* move.b (selTeamNumber).l,d0 — reads high byte on big-endian 68k.
      * This extracts the team file ID (country file index) from selTeamNumber. */
-    d0 = _GetNationalTeamNumberFromTeamFileId(selTeamNumber >> 8);
+    d0 = GetNationalTeamNumberFromTeamFileId(selTeamNumber >> 8);
 
 check_self:
     /* If the national team IS the selected team, set to 0xFFFF (no call-up) */
@@ -417,7 +417,7 @@ check_self:
  * 4 functions:
  *   SeasonReview_AdjustWeightsForCompetition (static helper)
  *   SeasonReview_ComputeCategoryForCompetition (static helper)
- *   _SeasonFinished_ComputeSeasonReview
+ *   SeasonFinished_ComputeSeasonReview
  *   ShowChairmanOpinionAboutTheSeason
  * ================================================================ */
 
@@ -438,7 +438,7 @@ extern uint16_t findTeamInDIY_SuppressSideEffectsFlag;
 /* ---- SeasonReview_AdjustWeightsForCompetition (SWOS2.s line 35686) ----
  * Classifies a competition by comparing its pointer against known addresses,
  * then multiplies the category by a weight factor and accumulates the weight.
- * Only called from _SeasonFinished_ComputeSeasonReview (static). */
+ * Only called from SeasonFinished_ComputeSeasonReview (static). */
 static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
                                          uint16_t *weightedCategory)
 {
@@ -448,7 +448,7 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
         *weightAccum += 8;
         return;
     }
-    /* _Friendly / Invitation Tournament / Tour: weight 1, d7 NOT multiplied */
+    /* Friendly / Invitation Tournament / Tour: weight 1, d7 NOT multiplied */
     if (compPtr == friendlyCopy || compPtr == invitationTournamentCopy ||
         compPtr == tourCopy) {
         *weightAccum += 1;
@@ -476,17 +476,17 @@ static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
 
 /* ---- SeasonReview_ComputeCategoryForCompetition (SWOS2.s line 35733) ----
  * Computes season review category (0=best, 4=worst) for a competition buffer.
- * Returns -1 if team not found. Only called from _SeasonFinished_ComputeSeasonReview. */
+ * Returns -1 if team not found. Only called from SeasonFinished_ComputeSeasonReview. */
 static int16_t computeCategoryForCompetition(uint8_t *comp)
 {
     findTeamInDIY_SuppressSideEffectsFlag = 1;
-    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)comp);
+    int16_t position = (int16_t)FindTeamInDIY(selTeamNumber, (DIYCompetition *)comp);
     findTeamInDIY_SuppressSideEffectsFlag = 0;
 
     if (position < 0)
         return -1;
 
-    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
+    uint16_t rank = GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
     uint16_t numTeams = (uint16_t)((DIYCompetition *)comp)->numTeams;  /* 0x32; typed access auto-corrects the 64-bit namePtr shift */
 
     /* ratio = (rank - position) * 100 / numTeams (signed) */
@@ -522,12 +522,12 @@ static int16_t computeCategoryForCompetition(uint8_t *comp)
     return category;
 }
 
-/* ---- _SeasonFinished_ComputeSeasonReview (SWOS2.s line 35638) ----
+/* ---- SeasonFinished_ComputeSeasonReview (SWOS2.s line 35638) ----
  * Computes weighted average season review from primary and secondary
  * competitions, with bonuses for World Cup / Continental Cup wins.
  * Stores result in seasonReview global. */
 __attribute__((used, externally_visible))
-void _SeasonFinished_ComputeSeasonReview(void)
+void SeasonFinished_ComputeSeasonReview(void)
 {
     uint16_t d5 = 0;  /* weight accumulator */
     uint16_t d6 = 0;  /* weighted score accumulator */
@@ -597,18 +597,18 @@ void _SeasonFinished_ComputeSeasonReview(void)
 #include "career_params.h"
 
 __attribute__((used, externally_visible))
-void _ShowChairmanOpinionAboutTheSeason(void)
+void ShowChairmanOpinionAboutTheSeason(void)
 {
     /* National teams → use season review score */
     if (isNationalSelector != 0) {
-        _ShowSeasonOpinion();
+        ShowSeasonOpinion();
         return;
     }
 
     /* --- Compute category for primary competition (inline) --- */
     uint8_t *comp = (uint8_t *)&primaryCompetitionBuf;
-    int16_t position = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)comp);
-    uint16_t rank = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
+    int16_t position = (int16_t)FindTeamInDIY(selTeamNumber, (DIYCompetition *)comp);
+    uint16_t rank = GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)comp);
     uint16_t numTeams = (uint16_t)((DIYCompetition *)comp)->numTeams;  /* 0x32; typed access auto-corrects the 64-bit namePtr shift */
 
     int32_t product = (int32_t)(int16_t)((int16_t)rank - position) * 100;
@@ -638,21 +638,21 @@ void _ShowChairmanOpinionAboutTheSeason(void)
 
     /* Secondary competition: top-2 finish → -2 */
     if (secondaryCompetitionPtr != 0) {
-        int16_t pos2 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
+        int16_t pos2 = (int16_t)FindTeamInDIY(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
         if ((uint16_t)pos2 < 2)
             d7 -= g_careerParams.board_secondary_top2_bonus;
     }
 
     /* Tertiary competition: top-2 finish → -2 */
     if (tertiaryCompetitionPtr != 0) {
-        int16_t pos3 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
+        int16_t pos3 = (int16_t)FindTeamInDIY(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
         if ((uint16_t)pos3 < 2)
             d7 -= g_careerParams.board_tertiary_top2_bonus;
     }
 
     /* Quaternary competition (Euro cups): top-2 finish → -3 */
     if (quaternaryCompetitionPtr != 0) {
-        int16_t pos4 = (int16_t)_FindTeamInDIY(selTeamNumber, (DIYCompetition *)&euroCupsCompetitionContextBuf);
+        int16_t pos4 = (int16_t)FindTeamInDIY(selTeamNumber, (DIYCompetition *)&euroCupsCompetitionContextBuf);
         if ((uint16_t)pos4 < 2)
             d7 -= g_careerParams.board_euro_top2_bonus;
     }
@@ -675,7 +675,7 @@ void _ShowChairmanOpinionAboutTheSeason(void)
         msg = CHAIRMAN_MSG_EXCELLENT;
 
     currentMessage = msg;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ---- Chunk 181: BeginContractNegotiationSequence ---- */
@@ -686,7 +686,7 @@ extern uint16_t lastOfferPrimaryPlayerOrdinal;
 extern uint16_t offerNegotiationAttemptCount;
 extern uint16_t financeTotalsNeedResetFlag;
 
-extern void _Career_MaybeGenerateJobOffer(void);
+extern void Career_MaybeGenerateJobOffer(void);
 
 /* BeginContractNegotiationSequence (SWOS2.s line 28035)
  * Called after a career match to begin contract negotiation phase.
@@ -694,18 +694,18 @@ extern void _Career_MaybeGenerateJobOffer(void);
  * and potentially generates a new job offer.
  * a0=comp (diyCompetitionStart), a1=team ptr passed through to UpdateCareerFinancesAfterMatch. */
 __attribute__((used, externally_visible))
-void _BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team)
+void BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team)
 {
     contractNegotiationActive = 1;
     timeToNegotiate = 2;
     lastOfferPrimaryPlayerOrdinal = 0xFFFF;
     offerNegotiationAttemptCount = 0;
-    _Career_CommitNewBalanceAndResetFinanceTotals();
+    Career_CommitNewBalanceAndResetFinanceTotals();
     financeTotalsNeedResetFlag = 1;
-    _UpdateCareerFinancesAfterMatch(comp, team);
-    _ProcessOfferExpiryCountdown();
-    _JobOffers_MaybeExpireSomeNewOffers();
-    _Career_MaybeGenerateJobOffer();
+    UpdateCareerFinancesAfterMatch(comp, team);
+    ProcessOfferExpiryCountdown();
+    JobOffers_MaybeExpireSomeNewOffers();
+    Career_MaybeGenerateJobOffer();
 }
 
 /* ---- Chunk 182: Competition Season Processing ---- */
@@ -725,44 +725,44 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition);
  * Process secondary competition for next season: if active, edit interactively;
  * otherwise auto-advance as cup and cache qualified grid. */
 __attribute__((used, externally_visible))
-void _Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
+void Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition)
 {
     if (((Competition *)competition)->type != 1) {
         panicReasonCode = 0x3003;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
     if (competition == secondaryCompetitionPtr) {
-        _RestoreSelectedTeams();
-        _Career_CopyCompetitionContextToOrFromActive();
-        _ShowDIYCupMenuWithParams(1, 1, 0);
-        _DIY_CacheSecondaryQualifiedTeamsGrid();
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        Career_CopyCompetitionContextToOrFromActive();
+        ShowDIYCupMenuWithParams(1, 1, 0);
+        DIY_CacheSecondaryQualifiedTeamsGrid();
+        SaveSelectedTeams();
     } else {
-        _Career_AutoAdvanceCupCompetitionFromRecord(competition);
-        _DIY_CacheSecondaryQualifiedTeamsGrid();
+        Career_AutoAdvanceCupCompetitionFromRecord(competition);
+        DIY_CacheSecondaryQualifiedTeamsGrid();
     }
 }
 
 /* Career_ProcessTertiaryCompetitionForNextSeason (SWOS2.s line 32000)
  * Same pattern for tertiary competition. */
 __attribute__((used, externally_visible))
-void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
+void Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
 {
     if (((Competition *)competition)->type != 1) {
         panicReasonCode = 0x3003;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
     if (competition == tertiaryCompetitionPtr) {
-        _RestoreSelectedTeams();
-        _Career_CopyTertiaryCompetitionContextToOrFromActive();
-        _ShowDIYCupMenuWithParams(1, 1, 0);
-        _DIY_CacheTertiaryQualifiedTeamGrid();
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        Career_CopyTertiaryCompetitionContextToOrFromActive();
+        ShowDIYCupMenuWithParams(1, 1, 0);
+        DIY_CacheTertiaryQualifiedTeamGrid();
+        SaveSelectedTeams();
     } else {
-        _Career_AutoAdvanceCupCompetitionFromRecord(competition);
-        _DIY_CacheTertiaryQualifiedTeamGrid();
+        Career_AutoAdvanceCupCompetitionFromRecord(competition);
+        DIY_CacheTertiaryQualifiedTeamGrid();
     }
 }
 
@@ -770,7 +770,7 @@ void _Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
  * Main dispatcher: processes primary, secondary, tertiary competitions.
  * d0 = competition ID. */
 __attribute__((used, externally_visible))
-void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
+void Career_ProcessCompetitionForNextSeason(uint16_t compId)
 {
     currentCompetitionId = (uint8_t)compId;
     cachedTertiaryQualifiedTeamId = 0xFFFF;
@@ -785,15 +785,15 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
 
     uint8_t *secondary = (uint8_t *)tableEntry[2];
     if (secondary != (uint8_t *)(uintptr_t)-1) {
-        _Career_ProcessSecondaryCompetitionForNextSeason(secondary);
+        Career_ProcessSecondaryCompetitionForNextSeason(secondary);
 
         uint8_t *tertiary = (uint8_t *)tableEntry[3];
         if (tertiary != (uint8_t *)(uintptr_t)-1) {
-            _Career_ProcessTertiaryCompetitionForNextSeason(tertiary);
+            Career_ProcessTertiaryCompetitionForNextSeason(tertiary);
         }
     }
 
-    _DIY_ValidateLeagueScratchBuffer();
+    DIY_ValidateLeagueScratchBuffer();
 }
 
 /* ================================================================
@@ -802,7 +802,7 @@ void _Career_ProcessCompetitionForNextSeason(uint16_t compId)
  * 13 functions: pickRandomNationalTeamId, fillWorldCupQualifyingGroupTeams,
  * setupWorldCupQualifyingGroups, setCupPickListCommon (helper for 5 regions),
  * setCupPickList_Europe, setupFriendlyCupTeams, setupInvitationTournamentTeams,
- * setupTourCupTeams, _Career_SetCupPickList_ForSelectedRegion (exported).
+ * setupTourCupTeams, Career_SetCupPickList_ForSelectedRegion (exported).
  * ================================================================ */
 
 /* --- Additional externs for Chunk 185 --- */
@@ -818,7 +818,7 @@ extern uint8_t nationalTeams[];
  * holds the national-coach cup-pick-list comp records (copied from the
  * cupPick* tables, which competition_data.c defines as CompetitionCup *[5]).
  * Was extern'd uint32_t[] here, which truncated the 64-bit pointers and made
- * _Rebuild_CompetitionSlotPointers (reads it as void**) deref garbage. Now a
+ * Rebuild_CompetitionSlotPointers (reads it as void**) deref garbage. Now a
  * pointer array; see the standalone definition in swos_data_typed_stubs.c. */
 extern void *careerCupPickList[];
 extern TeamFileEx careerTeam;
@@ -905,7 +905,7 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
 {
     int16_t retries = 99;
     for (;;) {
-        uint16_t r = _Rand();
+        uint16_t r = Rand();
         uint32_t idx = (uint32_t)r * natTeamsRandLimit2;
         idx >>= 8;
         NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams + (uint16_t)idx;
@@ -956,7 +956,7 @@ static uint16_t pickRandomNationalTeamId(uint16_t minPrice, uint16_t maxPrice,
 static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
                                               uint16_t **teamListPtr)
 {
-    _Career_SortTeamFilePtrsByAvgPlayerPrice(regionCode);
+    Career_SortTeamFilePtrsByAvgPlayerPrice(regionCode);
     /* Sort leaves a6=teamSortBuffer in the asm; re-point our explicit
      * teamListPtr at the same buffer the sort just populated so the
      * `*(*teamListPtr)++` reads walk the sorted team ids for this
@@ -972,7 +972,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
         teamCount = (int8_t)group[0xF];
     } else {
         panicReasonCode = 0x7623;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -1000,7 +1000,7 @@ static void fillWorldCupQualifyingGroupTeams(uint8_t regionCode, uint8_t *group,
 
     /* Slot writes use BE byte order to match the static-init `dc.b
      * country,ordinal` competition data — downstream
-     * _AppendTeamsToSelectionFromTmdOrTeamFile reads each slot with
+     * AppendTeamsToSelectionFromTmdOrTeamFile reads each slot with
      * BE_READ_U16, so host-native writes on LE produced byte-swapped
      * ids (Playaveli's GERMANY.CAR repro: VerifyTeamLoaded(0x0350)
      * panic after the new sort fix had stored the correct 0x5003 in
@@ -1040,12 +1040,12 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
         d5--;
     worldCupQualifyingGroup8Copy[0xD] = (uint8_t)d5;
 
-    _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
     /* Sort leaves a6=teamSortBuffer in the asm — see comment in
      * fillWorldCupQualifyingGroupTeams. Re-point teamListPtr at the
      * just-populated buffer. */
     *teamListPtr = (uint16_t *)teamSortBuffer;
-    uint16_t randOff = _Rand2() & 0x1C;
+    uint16_t randOff = Rand2() & 0x1C;
     uint8_t *selectedGroup = (uint8_t *)worldCupQualifyingGroupsTable[randOff >> 2];
     int16_t slotsRemaining = 0x30 - 6 + d5;
     d5 <<= 1;
@@ -1131,7 +1131,7 @@ static void setCupPickListCommon(void **worldCupFriendly, void **worldCupInvite,
         if (!(someTeamFlags & 0x02)) {
             if (someTeamFlags != 0) {
                 panicReasonCode = 0x3775;
-                _PanicHaltLoop();
+                PanicHaltLoop();
                 return;
             }
             src = inviteFriendly;
@@ -1144,7 +1144,7 @@ static void setCupPickListCommon(void **worldCupFriendly, void **worldCupInvite,
     careerCupPickList[3] = src[3];
     careerCupPickList[4] = src[4];
 
-    _Career_RandomizeInvitationTournamentCup();
+    Career_RandomizeInvitationTournamentCup();
     setupWorldCupQualifyingGroups(teamListPtr);
 }
 
@@ -1171,7 +1171,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
             src = cupPickEuropeNoCupFriendly;
     } else {
         panicReasonCode = 0x3775;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -1181,14 +1181,14 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
     careerCupPickList[3] = src[3];
     careerCupPickList[4] = src[4];
 
-    _Career_RandomizeInvitationTournamentCup();
+    Career_RandomizeInvitationTournamentCup();
     setupWorldCupQualifyingGroups(teamListPtr);
 
     /* EC group filling (only during EC qualifying year, bit 0) */
     if (!(someTeamFlags & 0x01))
         return;
 
-    _Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
+    Career_SortTeamFilePtrsByAvgPlayerPrice(0x50);
     /* Asm "register-return" pattern: Career_SortTeamFilePtrsByAvgPlayerPrice's
      * final instruction is `lea (teamSortBuffer).l,a6` and its movem doesn't
      * restore a6, so the sort intentionally leaks a6 = teamSortBuffer to the
@@ -1197,7 +1197,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
      * threaded a teamListPtr through but the outer caller passes NULL — fix
      * by pointing it at teamSortBuffer here, after the sort populates it. */
     *teamListPtr = (uint16_t *)teamSortBuffer;
-    uint16_t randIdx = (uint16_t)((uint32_t)_Rand2() * 7 >> 8);
+    uint16_t randIdx = (uint16_t)((uint32_t)Rand2() * 7 >> 8);
     uint8_t *selectedGroup = (uint8_t *)ecQualifyingGroupsTable[randIdx];
     int16_t slotsRemaining = 0x2E; /* 46 */
     int16_t colOffset = 0;
@@ -1247,7 +1247,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
  * Fills the friendly competition team list with teams of similar strength. */
 static void setupFriendlyCupTeams(void)
 {
-    uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
+    uint16_t avgPrice = GetAveragePlayerPrice(&careerTeam);
     uint16_t minPrice = (uint16_t)((uint32_t)avgPrice * 75 / 100);
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
@@ -1257,7 +1257,7 @@ static void setupFriendlyCupTeams(void)
     uint16_t *listBase = teamList;
 
     /* BE writes so the slot bytes match the static-init dc.b layout
-     * (downstream _AppendTeamsToSelectionFromTmdOrTeamFile reads with
+     * (downstream AppendTeamsToSelectionFromTmdOrTeamFile reads with
      * BE_READ_U16). pickRandomNationalTeamId's dup-check also reads
      * via BE_READ_U16. */
     BE_WRITE_U16(teamList, selTeamNumber); teamList++;
@@ -1274,7 +1274,7 @@ static void setupFriendlyCupTeams(void)
  * Fills the invitation tournament team list (same pattern as friendly). */
 static void setupInvitationTournamentTeams(void)
 {
-    uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
+    uint16_t avgPrice = GetAveragePlayerPrice(&careerTeam);
     uint16_t minPrice = (uint16_t)((uint32_t)avgPrice * 75 / 100);
     uint16_t maxPrice = (uint16_t)((uint32_t)avgPrice * 125 / 100);
 
@@ -1298,7 +1298,7 @@ static void setupInvitationTournamentTeams(void)
  * Sets up the tour cup with a random region's teams. */
 static void setupTourCupTeams(void)
 {
-    uint16_t randRegion = (uint16_t)((uint32_t)_Rand() * 6 >> 8);
+    uint16_t randRegion = (uint16_t)((uint32_t)Rand() * 6 >> 8);
     uint8_t regionCode = (uint8_t)(randRegion + 0x50);
 
     uint8_t *tour = tourCopy;
@@ -1329,7 +1329,7 @@ static void setupTourCupTeams(void)
  * Dispatches to the regional cup pick list function based on team region,
  * then sets up friendly, invitation tournament, and tour cup teams. */
 __attribute__((used, externally_visible))
-void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList)
+void Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList)
 {
     uint8_t region = (uint8_t)(selTeamNumber >> 8);
     uint16_t **tlp = &teamList;
@@ -1365,7 +1365,7 @@ void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList)
         break;
     default:
         panicReasonCode = 0x4434;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -1502,11 +1502,11 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
          * the post-list region. */
         teamIdxList += (int16_t)count * 2;
 
-        _RestoreSelectedTeams();
-        _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&diyCompetitionContextBuf);
-        _ShowDIYCupMenuWithParams(1, 1, 0);
-        _DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&diyCompetitionContextBuf);
+        ShowDIYCupMenuWithParams(1, 1, 0);
+        DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
+        SaveSelectedTeams();
     } else {
         HLOG("promotion-playoff auto: index=%u teams=%d\n", (unsigned)index, (int)count);
         /* Not player's competition — auto-fill teams from qualification indices. */
@@ -1520,7 +1520,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
          * statics all have comp.teamListOffset=17, so 0 should never appear. */
         if (comp_team_seed_list(&qualComp->comp) == NULL) {
             panicReasonCode = 0x3003;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
         }
 
@@ -1546,8 +1546,8 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
         }
 
         /* Auto-advance this competition via cup competition path. */
-        _Career_AutoAdvanceCupCompetitionFromRecord((uint8_t *)qualComp);
-        _DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
+        Career_AutoAdvanceCupCompetitionFromRecord((uint8_t *)qualComp);
+        DIY_ApplyPromotionRelegationWeightsToScratch(teamIdxList);
 
         careerTeam.team.teamControls = savedCtrl;
         selTeamNumber = savedSelTeam;
@@ -1565,14 +1565,14 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
     if (compType == 2) {
         /* Cup competition */
         if (competition == currentCompetitionPtr) {
-            _RestoreSelectedTeams();
-            _Career_CopyCompetitionFileBufferToOrFromActive();
-            _DIY_EditCompetitionSlot(1, 1, 0);
-            _SaveSelectedTeams();
+            RestoreSelectedTeams();
+            Career_CopyCompetitionFileBufferToOrFromActive();
+            DIY_EditCompetitionSlot(1, 1, 0);
+            SaveSelectedTeams();
         } else {
             /* Auto-advance via league competition record path
              * (asm calls Career_AutoAdvanceLeagueCompetitionFromRecord even for cups) */
-            _Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
+            Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
         }
         return;
     }
@@ -1580,7 +1580,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
     if (compType != 0) {
         /* Unknown type → panic */
         panicReasonCode = 0x3003;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -1594,7 +1594,7 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
      * list (matches Career_ProcessPrimaryCompetitionForNextSeason at
      * SWOS2.s line 57992 / loc_12BDC8). Resetting to base each call
      * caused only the last division's data to be visible — and the
-     * qualification-loop's _Career_AutoAdvanceCupCompetitionFromRecord
+     * qualification-loop's Career_AutoAdvanceCupCompetitionFromRecord
      * picked teams from the wrong division, putting promotion weights
      * into wrong scratch slots and tripping the 0x5555 validate panic. */
     uint8_t numDivisions = (uint8_t)((CompLeagueHeader *)competition)->divisionsCount;
@@ -1605,20 +1605,20 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
         if (competition == currentCompetitionPtr &&
             d7 == currentDivisionIndex) {
             /* Player's current division — interactive */
-            _RestoreSelectedTeams();
-            _Career_CopyCompetitionFileBufferToOrFromActive();
-            _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+            RestoreSelectedTeams();
+            Career_CopyCompetitionFileBufferToOrFromActive();
+            ShowDiyLeaguesTournamentMenu(1, 1, 0);
             if (d7 == 0)
-                _DIY_CachePrimaryQualifiedTeamsGrid();
-            _SaveSelectedTeams();
+                DIY_CachePrimaryQualifiedTeamsGrid();
+            SaveSelectedTeams();
         } else {
             /* Other division — auto-advance */
-            _Career_AutoAdvanceInternationalCompetitionFixtures(competition, d7);
+            Career_AutoAdvanceInternationalCompetitionFixtures(competition, d7);
             if (d7 == 0)
-                _DIY_CachePrimaryQualifiedTeamsGrid();
+                DIY_CachePrimaryQualifiedTeamsGrid();
         }
-        _DIY_UpdatePromotionRelegationScratchCounts();
-        qualCursor = _DIY_CopyCompetitionTeamIndexTable(qualCursor);
+        DIY_UpdatePromotionRelegationScratchCounts();
+        qualCursor = DIY_CopyCompetitionTeamIndexTable(qualCursor);
     }
 
     /* Process qualification entries for all divisions */
@@ -1632,34 +1632,34 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
  * Main season transition function. Updates all competition slots,
  * processes next season, and handles European cup draws. */
 __attribute__((used, externally_visible))
-void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
+void Career_AdvanceToNextSeason_UpdateCompetitions(void)
 {
-    _DIY_LoadLeagueScratchFromTable();
+    DIY_LoadLeagueScratchFromTable();
 
     playPromotedAnimation = 0;
     playRelegatedAnimation = 0;
 
-    _Career_PrepareEuropeanCupQualificationState();
-    _SaveSelectedTeams();
+    Career_PrepareEuropeanCupQualificationState();
+    SaveSelectedTeams();
 
     seasonUpdateInProgress = 1;
 
     if (isNationalSelector) {
         if ((uint8_t)(selTeamNumber >> 8) == 0x50)
-            _Career_UpdateEuropeanChampionshipCompetitions();
-        _Career_UpdateWorldCupCompetitions();
+            Career_UpdateEuropeanChampionshipCompetitions();
+        Career_UpdateWorldCupCompetitions();
     }
 
-    _Career_UpdateEuroCupCompetitionSlot();
-    _Career_UpdateCupWinnersCupCompetitionSlot();
-    _Career_UpdateUefaCupCompetitionSlot();
+    Career_UpdateEuroCupCompetitionSlot();
+    Career_UpdateCupWinnersCupCompetitionSlot();
+    Career_UpdateUefaCupCompetitionSlot();
 
     careerFileBuffer = 0;
 
     if (!isNationalSelector) {
         uint16_t compId = (uint8_t)(selTeamNumber >> 8);
-        _Career_ProcessCompetitionForNextSeason(compId);
-        _Career_ProcessCompetitionForEuropeanCupQualification();
+        Career_ProcessCompetitionForNextSeason(compId);
+        Career_ProcessCompetitionForEuropeanCupQualification();
     }
 
     /* Loop through all competition IDs in the remap table */
@@ -1670,27 +1670,27 @@ void _Career_AdvanceToNextSeason_UpdateCompetitions(void)
             break;
         if (!isNationalSelector && compByte == (uint8_t)(selTeamNumber >> 8))
             continue;
-        _Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
-        _Career_ProcessCompetitionForEuropeanCupQualification();
+        Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
+        Career_ProcessCompetitionForEuropeanCupQualification();
     }
 
     if (careerFileBuffer == 0x50) {
-        _Career_DrawEuropeanCupTeamsAndCopyGrids();
+        Career_DrawEuropeanCupTeamsAndCopyGrids();
         seasonUpdateInProgress = 0;
-        _RestoreSelectedTeams();
+        RestoreSelectedTeams();
 
         if (euroCupQualifiedTeamCount == 16 &&
             cupWinnersCupQualifiedTeamCount == 32 &&
             uefaCupQualifiedTeamCount == 32 &&
             careerFileBuffer == 0x50) {
-            _Career_StorePromotionRelegationInSeasonInfo();
+            Career_StorePromotionRelegationInSeasonInfo();
             return;
         }
         panicReasonCode = 0x8998;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
     panicReasonCode = 0x8999;
-    _PanicHaltLoop();
+    PanicHaltLoop();
 }

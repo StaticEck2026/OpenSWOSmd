@@ -8,10 +8,10 @@
 
 #include "game_types.h"
 
-void _InitRefereeAnimationTable(uint8_t *animTable);
-void _ActivateReferee(void);
-void _SetRefereeToLeavingState(void);
-void _UpdateReferee(void);
-void _UpdateBookedPlayerNumberSprite(void);
+void InitRefereeAnimationTable(uint8_t *animTable);
+void ActivateReferee(void);
+void SetRefereeToLeavingState(void);
+void UpdateReferee(void);
+void UpdateBookedPlayerNumberSprite(void);
 
 #endif

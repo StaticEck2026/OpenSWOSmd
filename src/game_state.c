@@ -100,20 +100,20 @@ extern TeamGeneralInfo topTeamData;
 extern TeamGeneralInfo bottomTeamData;
 
 /* C-to-asm bridges */
-extern void _InitDisplaySprites(void);
+extern void InitDisplaySprites(void);
 
 /* Match state transitions (now in match_setup.c) */
-extern void _EndFirstHalf(void);
-extern void _EndFirstExtraTime(void);
-extern void _EndOfGame(void);
-extern void _StartFirstExtraTime(void);
-extern void _StartPenalties(void);
+extern void EndFirstHalf(void);
+extern void EndFirstExtraTime(void);
+extern void EndOfGame(void);
+extern void StartFirstExtraTime(void);
+extern void StartPenalties(void);
 
 /* Already-ported functions used by UpdateTime */
-extern void _PlayEndGameWhistleSample(void);
-extern void _CopySprite(uint16_t srcIdx, uint16_t dstIdx, uint16_t xOff, uint16_t yOff);
-extern void _BlitSpritePlanar_Long_StridedDest(uint16_t sprIdx);
-extern void _BlitSpritePlanar_Word_StridedDest(uint16_t sprIdx);
+extern void PlayEndGameWhistleSample(void);
+extern void CopySprite(uint16_t srcIdx, uint16_t dstIdx, uint16_t xOff, uint16_t yOff);
+extern void BlitSpritePlanar_Long_StridedDest(uint16_t sprIdx);
+extern void BlitSpritePlanar_Word_StridedDest(uint16_t sprIdx);
 
 /* ---- Sprite image index constants (NOT struct offsets) ---- */
 #define SPR_BIG_0               173
@@ -140,7 +140,7 @@ extern void _BlitSpritePlanar_Word_StridedDest(uint16_t sprIdx);
  * ResetGoalAttempt  (SWOS2.s line 18697)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ResetGoalAttempt(void)
+void ResetGoalAttempt(void)
 {
     isGoalAttempt = 0;
 }
@@ -152,7 +152,7 @@ void _ResetGoalAttempt(void)
  * Negates resultTimer to make any visible result go away.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AllowStatistics(void)
+void AllowStatistics(void)
 {
     showStats = 1;
     overlayActiveFlag = 1;
@@ -164,7 +164,7 @@ void _AllowStatistics(void)
  * StatisticsOff  (SWOS2.s line 18712)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _StatisticsOff(void)
+void StatisticsOff(void)
 {
     statsTimer = 0;
     showingUserStats = 0;
@@ -177,7 +177,7 @@ void _StatisticsOff(void)
  * Clears game clock and sets the time sprite to the initial state.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ResetTime(void)
+void ResetTime(void)
 {
     gameSeconds = 0;
     gameTime = 0;
@@ -207,7 +207,7 @@ static void bumpPlayerHalfStart(PlayerInfo *player)
  * Iterates both teams' 11 players, marking half-start.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _BumpPlayersLastPlayedHalfAtHalfStart(void)
+void BumpPlayersLastPlayedHalfAtHalfStart(void)
 {
     int16_t i;
 
@@ -238,7 +238,7 @@ static void bumpPlayerHalfEnd(PlayerInfo *player)
  * Iterates both teams' 11 players, marking half-end.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _BumpPlayersLastPlayedHalfAtHalfEnd(void)
+void BumpPlayersLastPlayedHalfAtHalfEnd(void)
 {
     int16_t i;
 
@@ -257,7 +257,7 @@ void _BumpPlayersLastPlayedHalfAtHalfEnd(void)
  * sequential indices 0-15 at both offset 0 and offset 16.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CopyPlayerNameLengths(void)
+void CopyPlayerNameLengths(void)
 {
     uint16_t d0;
 
@@ -276,7 +276,7 @@ void _CopyPlayerNameLengths(void)
  * Sets saveSprite=1 for goal1TopSprite and goal2BottomSprite.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ClearSaveFlagForGoalSprites(void)
+void ClearSaveFlagForGoalSprites(void)
 {
     goal1TopSprite.saveSprite = 1;
     goal2BottomSprite.saveSprite = 1;
@@ -294,7 +294,7 @@ extern uint16_t replayState;
 extern uint16_t throwInDeadVar;
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InitCurrentGoalHighlight(void)
+void InitCurrentGoalHighlight(void)
 {
     uint32_t *p = (uint32_t *)goalBasePtr;
     int16_t i;
@@ -311,7 +311,7 @@ void _InitCurrentGoalHighlight(void)
  * Hides all result/score display sprites and clears scorer data.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ResetResultSprites(void)
+void ResetResultSprites(void)
 {
     int16_t i;
     Sprite *s1, *s2;
@@ -364,7 +364,7 @@ void _ResetResultSprites(void)
         sc2++;
     }
 
-    _InitDisplaySprites();
+    InitDisplaySprites();
 }
 
 /* ================================================================
@@ -374,7 +374,7 @@ void _ResetResultSprites(void)
  * positions them based on camera coordinates, updates per-frame.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowResult(void)
+void ShowResult(void)
 {
     int16_t d0, d1, d2, d7;
     Sprite *s;
@@ -475,7 +475,7 @@ show_sprites:
         s++;
     }
 
-    _InitDisplaySprites();
+    InitDisplaySprites();
 
 countdown:
     /* Decrement timer by lastFrameTicks */
@@ -530,7 +530,7 @@ hide_result:
         }
     }
 
-    _InitDisplaySprites();
+    InitDisplaySprites();
     return;
 
 position_sprites:
@@ -547,7 +547,7 @@ position_sprites:
         d7 = (int16_t)0xFFF2;
 
     /* Widescreen: each HUD sprite below sets x = cameraX + screen_pos (so after
-     * _DrawSpriteInCameraView subtracts cameraX it lands at the fixed screen_pos). Adding
+     * DrawSpriteInCameraView subtracts cameraX it lands at the fixed screen_pos). Adding
      * WIDE_MARGIN to every one shifts the whole score panel / clock into the centered 336
      * region, matching the menus. WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
     /* --- Position team1NameSprite --- */
@@ -735,7 +735,7 @@ position_sprites:
  * - Builds and positions the time display sprite
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateTime(void)
+void UpdateTime(void)
 {
     uint16_t d0u;
 
@@ -753,7 +753,7 @@ void _UpdateTime(void)
     if (currentTimeSprite.visible == 0)
     {
         currentTimeSprite.visible = 1;
-        _InitDisplaySprites();
+        InitDisplaySprites();
     }
 
     /* --- Time update section (time_invisible) --- */
@@ -804,11 +804,11 @@ check_game_end:
      * (e.g. 0x900 = minute 90); HOST_TO_BE32 swaps them on LE so the
      * uint32_t comparison sees the correct byte pattern. */
     if (gameTime == HOST_TO_BE32(0x00000001))
-        _BumpPlayersLastPlayedHalfAtHalfStart();
+        BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 46: mark second-half start */
     if (gameTime == HOST_TO_BE32(0x00000406))
-        _BumpPlayersLastPlayedHalfAtHalfStart();
+        BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 45: half-time */
     if (gameTime == HOST_TO_BE32(0x00000405))
@@ -816,9 +816,9 @@ check_game_end:
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
         gameSeconds = 0;
-        _PlayEndGameWhistleSample();
-        _EndFirstHalf();
-        _BumpPlayersLastPlayedHalfAtHalfEnd();
+        PlayEndGameWhistleSample();
+        EndFirstHalf();
+        BumpPlayersLastPlayedHalfAtHalfEnd();
         goto not_end_of_second_extra;
     }
 
@@ -828,8 +828,8 @@ check_game_end:
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
         gameSeconds = 0;
-        _PlayEndGameWhistleSample();
-        _BumpPlayersLastPlayedHalfAtHalfEnd();
+        PlayEndGameWhistleSample();
+        BumpPlayersLastPlayedHalfAtHalfEnd();
         statsTeam1GoalsCopy = statsTeam1Goals;
         statsTeam2GoalsCopy = statsTeam2Goals;
 
@@ -858,19 +858,19 @@ check_game_end:
         if (extraTimeState)
         {
             extraTimeState = (int16_t)0xFFFF;
-            _StartFirstExtraTime();
+            StartFirstExtraTime();
             goto not_end_of_second_extra;
         }
         /* Check penalties */
         if (penaltiesState)
         {
             penaltiesState = (int16_t)0xFFFF;
-            _StartPenalties();
+            StartPenalties();
             goto not_end_of_second_extra;
         }
         /* Draw with no tiebreaker -> clear winner, end game */
         winningTeamPtr = (TeamGame *)0;
-        _EndOfGame();
+        EndOfGame();
         goto not_end_of_second_extra;
     }
 
@@ -880,8 +880,8 @@ check_game_end:
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
         gameSeconds = 0;
-        _PlayEndGameWhistleSample();
-        _EndFirstExtraTime();
+        PlayEndGameWhistleSample();
+        EndFirstExtraTime();
         goto not_end_of_second_extra;
     }
 
@@ -891,7 +891,7 @@ check_game_end:
         if ((int16_t)gameSeconds >= 0)
             goto last_cycle;
         gameSeconds = 0;
-        _PlayEndGameWhistleSample();
+        PlayEndGameWhistleSample();
 
         d0u = team1TotalGoals;
         if (d0u != team2TotalGoals)
@@ -914,12 +914,12 @@ check_game_end:
         if (penaltiesState)
         {
             penaltiesState = (int16_t)0xFFFF;
-            _StartPenalties();
+            StartPenalties();
             goto not_end_of_second_extra;
         }
         /* No penalties -> draw, end game */
         winningTeamPtr = (TeamGame *)0;
-        _EndOfGame();
+        EndOfGame();
         goto not_end_of_second_extra;
     }
 
@@ -935,7 +935,7 @@ team2_wins:
 team1_wins:
     winningTeamPtr = &topTeamInGame;
 end_game:
-    _EndOfGame();
+    EndOfGame();
     goto not_end_of_second_extra;
 
 last_cycle:
@@ -1008,22 +1008,22 @@ not_end_of_second_extra:
 
         /* Copy tens digit */
         digitSprite = SPR_CUP_WINNER + GAMETIME_TENS;
-        _CopySprite(digitSprite, sprIdx, xOff, yOff);
+        CopySprite(digitSprite, sprIdx, xOff, yOff);
         xOff += 6;
 
     copy_last_digit:
         /* Copy ones digit */
         digitSprite = SPR_CUP_WINNER + GAMETIME_ONES;
-        _CopySprite(digitSprite, sprIdx, xOff, yOff);
+        CopySprite(digitSprite, sprIdx, xOff, yOff);
 
         /* Set sprite image index */
         currentTimeSprite.imageIndex = sprIdx;
 
         /* Blit the assembled time sprite */
         if (sprIdx == SPR_INVITATION_TOURNAMENT)
-            _BlitSpritePlanar_Long_StridedDest(sprIdx);
+            BlitSpritePlanar_Long_StridedDest(sprIdx);
         else
-            _BlitSpritePlanar_Word_StridedDest(sprIdx);
+            BlitSpritePlanar_Word_StridedDest(sprIdx);
 
         copyTimeSprite = 0;
     }

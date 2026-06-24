@@ -20,10 +20,10 @@ typedef unsigned int uint32_t;
  * src=compressed data (with RNC header), dst=output buffer.
  * Panics on decompression error.
  * Returns uncompressed size. */
-void _RncDecompressV1(uint8_t *src, uint8_t *dst);
+void RncDecompressV1(uint8_t *src, uint8_t *dst);
 
 /* RNC v2 decompressor - bit-stream LZ variant.
  * src=compressed data (with RNC header), dst=output buffer. */
-void _RncDecompressV2(uint8_t *src, uint8_t *dst);
+void RncDecompressV2(uint8_t *src, uint8_t *dst);
 
 #endif /* RNC_H */

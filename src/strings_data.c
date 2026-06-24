@@ -650,12 +650,12 @@ const char aPen_0[] = "****(PEN),";
  *
  * Each entry points to a string starting with a leading 0 byte, then the
  * country name, NUL, the nationality adjective, NUL (e.g. aAlbania =
- * "\0ALBANIA\0ALBANIAN"). _GetCountryName does `entry + 1` to skip the
+ * "\0ALBANIA\0ALBANIAN"). GetCountryName does `entry + 1` to skip the
  * leading byte, so the consumer sees a normal C string at "ALBANIA".
  *
- * Without this, _GetCountryName reads countriesTable[d0]=NULL, computes
+ * Without this, GetCountryName reads countriesTable[d0]=NULL, computes
  * (NULL + 1) = 0x1, stores it in curCountryStr, and the next consumer
- * (_GetStringLength etc.) segfaults dereferencing 0x1.
+ * (GetStringLength etc.) segfaults dereferencing 0x1.
  *
  * Layout transcribed verbatim from SWOS2.s lines 117594–117857. */
 #include "swos_types.h"

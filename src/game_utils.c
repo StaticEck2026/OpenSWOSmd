@@ -22,7 +22,7 @@ extern uint16_t lastGameTick;
 extern uint16_t lastFrameTicks;
 
 __attribute__((used, externally_visible))
-void _AssetLoaderResetState(void)
+void AssetLoaderResetState(void)
 {
     assetLoaderCacheFlag = 0;
     assetLoaderWorkPtr = 0;
@@ -31,16 +31,16 @@ void _AssetLoaderResetState(void)
 #ifdef SWOS_SDL_BUILD
 extern FixedPoint cameraX;
 extern FixedPoint cameraY;
-extern void _SwapBuffersAndCameraViewState(void);
-extern void _SetCameraCoordinates(int16_t x, int16_t y);
+extern void SwapBuffersAndCameraViewState(void);
+extern void SetCameraCoordinates(int16_t x, int16_t y);
 extern int Platform_VBlank(void);
 #endif
 
 __attribute__((used, externally_visible))
-void _WaitForVSync(void)
+void WaitForVSync(void)
 {
 #ifdef SWOS_SDL_BUILD
-    /* On the Amiga, _WaitForVSync was a busy spin on `waitingInterrupt`
+    /* On the Amiga, WaitForVSync was a busy spin on `waitingInterrupt`
      * which the Level-3 ISR cleared after running the buffer-swap +
      * camera-restore sequence. On the SDL host we run the buffer swap
      * inline on the same (main) thread, then hand control to
@@ -53,8 +53,8 @@ void _WaitForVSync(void)
      * does fade ticks / audio / currentGameTick. */
     int16_t cx = cameraX.s.i;
     int16_t cy = cameraY.s.i;
-    _SwapBuffersAndCameraViewState();
-    _SetCameraCoordinates(cx, cy);
+    SwapBuffersAndCameraViewState();
+    SetCameraCoordinates(cx, cy);
     Platform_VBlank();
 #else
     waitingInterrupt = 1;
@@ -66,7 +66,7 @@ void _WaitForVSync(void)
 }
 
 __attribute__((used, externally_visible))
-void _InitSkinAndDefaultPointers(void)
+void InitSkinAndDefaultPointers(void)
 {
     useIndividualPlayerSkinColor = 1;
     goalBasePtr = goalBase;
@@ -74,10 +74,10 @@ void _InitSkinAndDefaultPointers(void)
      * `goalBase` buffer, so &nextGoal == goalBase+19000 was the natural
      * "end-of-buffer" sentinel for highlight pointer wrapping. On SDL the
      * linker places `nextGoal` anywhere in BSS, so the wrap test
-     * `if (a1 == nextGoalPtr)` in _SaveCoordinatesForHighlights never matches
+     * `if (a1 == nextGoalPtr)` in SaveCoordinatesForHighlights never matches
      * and `currentHilPtr` walks past goalBase's end, stomping adjacent
      * globals (e.g. renderStackBase) and producing bogus sprite pointers.
-     * Match _HandleInstantReplayStateSwitch (game_loop.c:1005) which uses
+     * Match HandleInstantReplayStateSwitch (game_loop.c:1005) which uses
      * baseAddr+19000 explicitly. */
     nextGoalPtr = goalBase + 19000;
     spriteGraphicsPtr = spriteGraphics;
@@ -91,7 +91,7 @@ void _InitSkinAndDefaultPointers(void)
  * Returns the delta in d0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _ReadTimerDelta(void)
+uint16_t ReadTimerDelta(void)
 {
     uint16_t delta = currentGameTick - lastGameTick;
     lastFrameTicks = delta;
@@ -114,7 +114,7 @@ extern uint8_t randXorKey2;
 extern uint8_t kRandomTable[257];
 
 __attribute__((used, externally_visible))
-void _Randomize2(uint16_t val)
+void Randomize2(uint16_t val)
 {
     uint16_t result = val ^ randomSeed;
     /* Original asm: move.w d0,(seed2) — word write across seed2 + randXorIndex2 */
@@ -124,7 +124,7 @@ void _Randomize2(uint16_t val)
 }
 
 __attribute__((used, externally_visible))
-void _BuildPaletteFromColors(const uint8_t *src, uint16_t *dst)
+void BuildPaletteFromColors(const uint8_t *src, uint16_t *dst)
 {
     int16_t i;
     for (i = 15; i >= 0; i--)

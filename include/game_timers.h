@@ -8,7 +8,7 @@
 
 #include "game_types.h"
 
-void _UpdateGameTimersAndCameraBreakMode(void);
-void _CheckIfBallOutOfPlay(void);
+void UpdateGameTimersAndCameraBreakMode(void);
+void CheckIfBallOutOfPlay(void);
 
 #endif

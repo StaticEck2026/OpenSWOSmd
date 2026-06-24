@@ -81,13 +81,13 @@ extern int16_t      breakState;
 #ifdef DETERMINISTIC_MODE
 #include "deterministic.h"
 extern volatile uint16_t panicReasonCode;
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 extern Sprite **team2SpritesTable;
 /* Trap: detect when t2p6 destX > 600 — encode line number in panic code */
 #define T2P6_DESTX_TRAP(lineid) do { \
     if (frameCount > 400 && player == team2SpritesTable[6] && player->destX > 600) { \
         panicReasonCode = (uint16_t)(lineid); \
-        _PanicHaltLoop(); \
+        PanicHaltLoop(); \
     } \
 } while(0)
 #else
@@ -194,10 +194,10 @@ static const int16_t freeKickFactorsX_data[7] = {0, 3, 4, 5, 4, 3, 0};
 static int16_t freeKickDestX_local;
 
 /* ==================================================================
- * _UpdatePlayers — per-frame update for all 11 players on a team
+ * UpdatePlayers — per-frame update for all 11 players on a team
  * ================================================================== */
 __attribute__((used, externally_visible))
-void _UpdatePlayers(TeamGeneralInfo *team) {
+void UpdatePlayers(TeamGeneralInfo *team) {
     Sprite *ball = &ballSprite;
     Sprite **sprPtr;
     int16_t i;
@@ -239,7 +239,7 @@ void _UpdatePlayers(TeamGeneralInfo *team) {
         team->playerSwitchTimer--;
 
     /* ---- Apply aftertouch ---- */
-    _ApplyBallAfterTouch(team);
+    ApplyBallAfterTouch(team);
 
     /* ---- Penalty area checks ---- */
     ballX = ball->x.s.i;
@@ -392,7 +392,7 @@ not_in_penalty:
 
         /* Should not reach here */
         panicReasonCode = 2;
-        _PanicHaltLoop();
+        PanicHaltLoop();
 
     /* ============================================================
      * GOALKEEPER section
@@ -403,7 +403,7 @@ not_in_penalty:
                 goto finalize;
         }
 
-        _UpdatePlayerShotChanceTable(player, team);
+        UpdatePlayerShotChanceTable(player, team);
 
         if (goalkeeperSkipFlag)
             goto return_last_player_block;
@@ -464,8 +464,8 @@ not_in_penalty:
         if (player == lastPlayerPlayed)
             goto return_last_player_block;
 
-        _UpdateBallVariables(player, ball, team);
-        _CalculateBallNextGroundXYPositions(ball);
+        UpdateBallVariables(player, ball, team);
+        CalculateBallNextGroundXYPositions(ball);
 
         if (ballInGoalkeeperArea)
             goto ball_in_lower_goalkeeper_area;
@@ -704,11 +704,11 @@ not_in_penalty:
                 int16_t finishingSkill = 0;
                 Sprite *attacker = opp->lastHeadingTacklingPlayer;
                 if (attacker != (Sprite *)0) {
-                    PlayerInfo *attackerInfo = _GetPlayerPointerFromShirtNumber(attacker, team);
+                    PlayerInfo *attackerInfo = GetPlayerPointerFromShirtNumber(attacker, team);
                     finishingSkill = attackerInfo->finishing;
                 }
                 {
-                    PlayerInfo *goalieInfo = _GetPlayerPointerFromShirtNumber(player, team);
+                    PlayerInfo *goalieInfo = GetPlayerPointerFromShirtNumber(player, team);
                     finishingSkill -= goalieInfo->goalieSkill;
                 }
                 {
@@ -731,7 +731,7 @@ not_in_penalty:
                             opp->spinTimer = (int16_t)0xFFFF;
                             if (ballSprite.speed > 1536)
                                 ballSprite.speed = 1536;
-                            _GoalkeeperJumping(d0, d1, d3, player, ball, team);
+                            GoalkeeperJumping(d0, d1, d3, player, ball, team);
                             ballSpeedAfterSave = ballSprite.speed;
                             team->passKickTimer = 0;
                             team->passingKickingPlayer = (Sprite *)0;
@@ -747,7 +747,7 @@ not_in_penalty:
 
     goalie_save_attempt_entry:
         {
-            int16_t attemptSave = _ShouldGoalkeeperDive(player, ball, team);
+            int16_t attemptSave = ShouldGoalkeeperDive(player, ball, team);
             if (!attemptSave)
                 goto save_not_attempted_set_run_speed;
 
@@ -782,7 +782,7 @@ not_in_penalty:
 
             apply_facing_then_jump:
                 player->direction = d0;
-                _GoalkeeperJumping(d0, d1, d3, player, ball, team);
+                GoalkeeperJumping(d0, d1, d3, player, ball, team);
                 team->passKickTimer = 0;
                 team->passingKickingPlayer = (Sprite *)0;
                 goto clamp_keeper_y_min;
@@ -843,7 +843,7 @@ not_in_penalty:
             int16_t dy = player->y.s.i - ballDefensiveY;
             if (dy > 12 || dy < -12) goto cannot_catch_exit;
         }
-        _GoalkeeperCaughtTheBall(player, team);
+        GoalkeeperCaughtTheBall(player, team);
 
     cannot_catch_exit:
         if (player == lastPlayerPlayed)
@@ -862,7 +862,7 @@ not_in_penalty:
         player->destY = player->y.s.i;
         if (team == lastTeamPlayed && !playerHadBall) {
             /* Goalkeeper gets ball as a player */
-            _UpdateBallWithControllingGoalkeeper(player);
+            UpdateBallWithControllingGoalkeeper(player);
             team->controlledPlayer = player;
             team->passToPlayerPtr = (Sprite *)0;
             team->playerSwitchTimer = 25;
@@ -889,8 +889,8 @@ not_in_penalty:
         lastPlayerPlayed = player;
         penalty = 0;
         playerHadBall = 0;
-        _UpdateBallWithControllingGoalkeeper(player);
-        _GoalkeeperClaimedTheBall(player, ball, team);
+        UpdateBallWithControllingGoalkeeper(player);
+        GoalkeeperClaimedTheBall(player, ball, team);
 
     clamp_keeper_y_min:
         if (player->destY < 129)
@@ -923,13 +923,13 @@ not_in_penalty:
             goto finalize;
         /* booking_finish_reset_state */
         player->playerState = PL_NORMAL;
-        _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+        SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         goto finalize;
 
     player_sad_or_happy:
         if (gameState == ST_GOING_TO_HALFTIME || gameState == ST_PLAYERS_GOING_TO_SHOWER) {
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         }
         goto finalize;
 
@@ -937,7 +937,7 @@ not_in_penalty:
         player->playerDownTimer--;
         if (player->playerDownTimer == 0) {
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         }
         goto finalize;
 
@@ -945,11 +945,11 @@ not_in_penalty:
         player->playerDownTimer--;
         if (player->playerDownTimer == 0) {
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
             if (team->goalkeeperDivingLeft) {
                 team->goalkeeperDivingLeft = 0;
-                _UpdateBallWithControllingGoalkeeper(player);
-                _GoalkeeperClaimedTheBall(player, ball, team);
+                UpdateBallWithControllingGoalkeeper(player);
+                GoalkeeperClaimedTheBall(player, ball, team);
                 ball->z.s.i = 5;
             }
             goto finalize;
@@ -969,10 +969,10 @@ not_in_penalty:
                 player->speed = 0;
                 ball->speed = 0;
                 team->goalkeeperDivingLeft = 1;
-                _GoalkeeperClaimedTheBall(player, ball, team);
+                GoalkeeperClaimedTheBall(player, ball, team);
                 goto finalize;
             }
-            _GoalkeeperDeflectedBall(ball, team);
+            GoalkeeperDeflectedBall(ball, team);
         }
         goto finalize;
 
@@ -980,7 +980,7 @@ not_in_penalty:
         player->playerDownTimer--;
         if (player->playerDownTimer == 0) {
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         }
         goto finalize;
 
@@ -989,15 +989,15 @@ not_in_penalty:
         if (player->playerDownTimer == 0) {
         recover_to_stand_after_dive:
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
             goto snap_dest;
         }
         /* diving_right_claim_window */
         if (team->goalkeeperDivingRight) {
             if ((uint8_t)player->playerDownTimer <= 42) {
                 team->goalkeeperDivingRight = 0;
-                _UpdateBallWithControllingGoalkeeper(player);
-                _GoalkeeperClaimedTheBall(player, ball, team);
+                UpdateBallWithControllingGoalkeeper(player);
+                GoalkeeperClaimedTheBall(player, ball, team);
                 ball->z.s.i = 5;
                 goto recover_to_stand_after_dive;
             }
@@ -1137,7 +1137,7 @@ not_in_penalty:
                     opp->teamStatsPtr->goalAttempts++;
                 }
 
-                _ResetBothTeamSpinTimers();
+                ResetBothTeamSpinTimers();
 
                 /* Comment timing logic */
                 {
@@ -1159,8 +1159,8 @@ not_in_penalty:
                         ball->destY = ball->y.s.i;
                         ball->speed = 0;
                         team->goalkeeperDivingRight = 1;
-                        _GoalkeeperClaimedTheBall(player, ball, team);
-                        _PlayMissGoalSample();
+                        GoalkeeperClaimedTheBall(player, ball, team);
+                        PlayMissGoalSample();
                         goto finalize;
                     }
                     d1 -= gs->field_2;
@@ -1243,7 +1243,7 @@ not_in_penalty:
                 if (team->goalkeeperSavedCommentTimer >= 0)
                     opp->passingKickingPlayer = (Sprite *)0;
             }
-            _PlayMissGoalSample();
+            PlayMissGoalSample();
             goto finalize;
         }
 
@@ -1258,7 +1258,7 @@ not_in_penalty:
 
         /* AI controls */
         if (team->playerNumber == 0) {
-            _AI_SetControlsDirection(team);
+            AI_SetControlsDirection(team);
         }
 
         /* update_control_flags_from_ball_state */
@@ -1339,7 +1339,7 @@ not_in_penalty:
                 goto ensure_dest_matches_pos_when_unset;
             }
             player->direction = d0;
-            _UpdatePlayerWithBall(player);
+            UpdatePlayerWithBall(player);
         }
 
     ensure_dest_matches_pos_when_unset:
@@ -1396,7 +1396,7 @@ not_in_penalty:
             team->headerOrTackle = 1;
             {
                 int16_t d = player->direction;
-                _AttemptStaticHeader(player, d);
+                AttemptStaticHeader(player, d);
             }
             team->lastHeadingTacklingPlayer = player;
             team->ballCanBeControlled = 0;
@@ -1441,7 +1441,7 @@ not_in_penalty:
             if (opp->playerHasBall)
                 playerHadBall = 1;
 
-            _CalculateIfPlayerWinsBall(d0, player, team);
+            CalculateIfPlayerWinsBall(d0, player, team);
             opp->spinTimer = (int16_t)0xFFFF;
             opp->passingToPlayer = 0;
             opp->passingKickingPlayer = (Sprite *)0;
@@ -1469,11 +1469,11 @@ not_in_penalty:
             penalty = 0;
             playerHadBall = 0;
             ball->z.s.i = 0;
-            _DoPass(player, team);
+            DoPass(player, team);
             team->lastHeadingTacklingPlayer = player;
 
             if (gameStatePl != ST_GAME_IN_PROGRESS) {
-                _ThrowInDeadProc();
+                ThrowInDeadProc();
                 gameNotInProgressCounterWriteOnly = 0;
             }
             if (gameState == ST_PENALTY)
@@ -1521,11 +1521,11 @@ not_in_penalty:
             lastPlayerPlayed = player;
             penalty = 0;
             playerHadBall = 0;
-            _PlayerKickingBall(player, team);
+            PlayerKickingBall(player, team);
             team->lastHeadingTacklingPlayer = player;
 
             if (gameStatePl != ST_GAME_IN_PROGRESS) {
-                _ThrowInDeadProc();
+                ThrowInDeadProc();
                 gameNotInProgressCounterWriteOnly = 0;
             }
             if (gameState == ST_PENALTY)
@@ -1563,7 +1563,7 @@ not_in_penalty:
                 if (passTarget == (Sprite *)0 ||
                     passTarget->ballDistance >= player->ballDistance) {
                     team->headerOrTackle = 1;
-                    _PlayerBeginTackling(team->currentAllowedDirection, player, team);
+                    PlayerBeginTackling(team->currentAllowedDirection, player, team);
                     team->ballCanBeControlled = 0;
                     goto finalize;
                 }
@@ -1576,7 +1576,7 @@ not_in_penalty:
             if (team->plVeryCloseToBall || team->plCloseToBall || team->plNotFarFromBall) {
                 if (team->ball8To12 || team->ball12To17 || team->ballAbove17) {
                     team->headerOrTackle = 1;
-                    _PlayerAttemptingJumpHeader(team->currentAllowedDirection, player);
+                    PlayerAttemptingJumpHeader(team->currentAllowedDirection, player);
                     team->lastHeadingTacklingPlayer = player;
                     team->ballCanBeControlled = 0;
                     goto finalize;
@@ -1622,7 +1622,7 @@ not_in_penalty:
      * ============================================================ */
     throw_in_state_handler:
         if (team->playerNumber == 0)
-            _AI_SetControlsDirection(team);
+            AI_SetControlsDirection(team);
 
         /* align_throw_in_facing_with_flags */
         {
@@ -1662,7 +1662,7 @@ not_in_penalty:
                 goto throw_in_reset_to_idle;
             if ((uint8_t)player->playerDownTimer == 18) {
                 if (inSubstitutesMenu) {
-                    _SetPlayerAnimationTable(&aboutToThrowInAnimTable, player);
+                    SetPlayerAnimationTable(&aboutToThrowInAnimTable, player);
                     player->playerState = PL_THROW_IN;
                     player->playerDownTimer = 0;
                     goto manage_throw_in_ui;
@@ -1710,8 +1710,8 @@ not_in_penalty:
                 }
                 if (d0 != player->direction) {
                     player->direction = d0;
-                    _SetThrowInPlayerDestinationCoordinates(player);
-                    _SetPlayerAnimationTable(&aboutToThrowInAnimTable, player);
+                    SetThrowInPlayerDestinationCoordinates(player);
+                    SetPlayerAnimationTable(&aboutToThrowInAnimTable, player);
                     player->playerState = PL_THROW_IN;
                     player->playerDownTimer = 0;
                 }
@@ -1724,7 +1724,7 @@ not_in_penalty:
             if (team->quickFire) {
                 if ((1 << d0) & playerTurnFlags) {
                     throwInPassOrKick = 1;
-                    _SetPlayerAnimationTable(&throwInPassAnimTable, player);
+                    SetPlayerAnimationTable(&throwInPassAnimTable, player);
                     player->playerDownTimer = 20;
                     goto finalize;
                 }
@@ -1734,7 +1734,7 @@ not_in_penalty:
             if (team->normalFire) {
                 if ((1 << d0) & playerTurnFlags) {
                     throwInPassOrKick = 0;
-                    _SetPlayerAnimationTable(&throwInKickAnimTable, player);
+                    SetPlayerAnimationTable(&throwInKickAnimTable, player);
                     player->playerDownTimer = 25;
                 }
             }
@@ -1745,11 +1745,11 @@ not_in_penalty:
         lastTeamPlayed = team;
         lastPlayerPlayed = player;
         playerHadBall = 1;
-        _DoPass(player, team);
+        DoPass(player, team);
         team->lastHeadingTacklingPlayer = player;
         ball->deltaZ.raw = 1;
         if (gameStatePl != ST_GAME_IN_PROGRESS) {
-            _ThrowInDeadProc();
+            ThrowInDeadProc();
             gameNotInProgressCounterWriteOnly = 0;
         }
         goto throw_in_post_state_setup;
@@ -1758,10 +1758,10 @@ not_in_penalty:
         lastTeamPlayed = team;
         lastPlayerPlayed = player;
         playerHadBall = 1;
-        _PlayerKickingBall(player, team);
+        PlayerKickingBall(player, team);
         team->lastHeadingTacklingPlayer = player;
         if (gameStatePl != ST_GAME_IN_PROGRESS) {
-            _ThrowInDeadProc();
+            ThrowInDeadProc();
             gameNotInProgressCounterWriteOnly = 0;
         }
 
@@ -1791,7 +1791,7 @@ not_in_penalty:
         hideBall = 0;
     throw_in_reset_to_idle:
         player->playerState = PL_NORMAL;
-        _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+        SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         goto finalize;
 
     /* ============================================================
@@ -1804,7 +1804,7 @@ not_in_penalty:
         player->playerDownTimer--;
         if (player->playerDownTimer == 0) {
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
             goto snap_dest;
         }
 
@@ -1822,7 +1822,7 @@ not_in_penalty:
         player->speed -= kPlayerGroundConstant;
         if (player->speed <= 0) {
             player->speed = 0;
-            _SetPlayerDowntimeAfterTackle(player, team);
+            SetPlayerDowntimeAfterTackle(player, team);
             goto finalize;
         }
 
@@ -1865,9 +1865,9 @@ not_in_penalty:
                     playerHadBall = 1;
             }
             if (player->tacklingTimer == (int16_t)0xFFFF)
-                _PlayerTackledTheBallWeak(player, team);
+                PlayerTackledTheBallWeak(player, team);
             else
-                _PlayerTackledTheBallStrong(player, team);
+                PlayerTackledTheBallStrong(player, team);
 
             team->lastHeadingTacklingPlayer = player;
             team->passKickTimer = 25;
@@ -1883,7 +1883,7 @@ not_in_penalty:
 
     tackle_off_ball_foul_check:
         if (player->speed >= 512)
-            _PlayerTacklingTestFoul(player, team);
+            PlayerTacklingTestFoul(player, team);
         goto finalize;
 
     tackle_edge_slowdown:
@@ -1900,12 +1900,12 @@ not_in_penalty:
         player->playerDownTimer--;
         if (player->playerDownTimer == 0) {
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
             goto snap_dest;
         }
         player->speed -= 16;
         if (player->speed < 0) player->speed = 0;
-        _SetStaticHeaderDirection(player, team);
+        SetStaticHeaderDirection(player, team);
         if (gameStatePl != ST_GAME_IN_PROGRESS) goto finalize;
         if (player->heading) goto finalize;
         if ((uint32_t)player->ballDistance > 64) goto finalize;
@@ -1917,7 +1917,7 @@ not_in_penalty:
             lastPlayerPlayed = player;
             penalty = 0;
             playerHadBall = 1;
-            _PlayerHittingStaticHeader(player, team);
+            PlayerHittingStaticHeader(player, team);
             team->passKickTimer = 25;
             {
                 TeamGeneralInfo *opp = team->opponentsTeam;
@@ -1933,7 +1933,7 @@ not_in_penalty:
             goto heading_reset_to_idle;
 
         if (player->speed != 0) {
-            _SetJumpHeaderHitAnimTable(player);
+            SetJumpHeaderHitAnimTable(player);
             if (player->animationTable == &jumpHeaderAttemptAnimTable) {
                 if ((uint8_t)player->playerDownTimer > 37)
                     goto apply_air_drag;
@@ -1988,7 +1988,7 @@ not_in_penalty:
             lastPlayerPlayed = player;
             penalty = 0;
             playerHadBall = 1;
-            _PlayerHittingJumpHeader(player, team);
+            PlayerHittingJumpHeader(player, team);
             team->passKickTimer = 25;
             {
                 TeamGeneralInfo *opp = team->opponentsTeam;
@@ -2000,7 +2000,7 @@ not_in_penalty:
 
     heading_reset_to_idle:
         player->playerState = PL_NORMAL;
-        _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+        SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         goto snap_dest;
 
     heading_oob_slowdown:
@@ -2022,7 +2022,7 @@ not_in_penalty:
         if (player->playerDownTimer != 0)
             goto finalize;
         player->playerState = PL_NORMAL;
-        _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+        SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         goto snap_dest;
 
     player_tackled_state:
@@ -2032,11 +2032,11 @@ not_in_penalty:
                 player->speed = 0;
                 player->playerState = PL_ROLLING_INJURED;
                 player->playerDownTimer = (int8_t)player->injuryLevel;
-                _SetPlayerAnimationTable(&plInjuredAnimTable, player);
+                SetPlayerAnimationTable(&plInjuredAnimTable, player);
                 goto finalize;
             }
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
             goto snap_dest;
         }
         /* tackled_ground_deceleration */
@@ -2123,7 +2123,7 @@ not_in_penalty:
 
     post_pass_assist:
         if (team->playerNumber == 0)
-            _AI_Kick(player, team);
+            AI_Kick(player, team);
 
         /* breakplay_control_setup_entry */
         if (gameStatePl != ST_GAME_IN_PROGRESS) {
@@ -2154,14 +2154,14 @@ not_in_penalty:
             lastPlayerPlayed = player;
             penalty = 0;
             playerHadBall = 0;
-            _UpdatePlayerWithBall(player);
+            UpdatePlayerWithBall(player);
             team->passKickTimer = 0;
             team->passingKickingPlayer = (Sprite *)0;
             team->field_74 = 0;
 
             if (gameState >= ST_THROW_IN_FORWARD_RIGHT && gameState <= ST_THROW_IN_BACK_LEFT) {
-                _SetThrowInPlayerDestinationCoordinates(player);
-                _SetPlayerAnimationTable(&aboutToThrowInAnimTable, player);
+                SetThrowInPlayerDestinationCoordinates(player);
+                SetPlayerAnimationTable(&aboutToThrowInAnimTable, player);
                 player->playerState = PL_THROW_IN;
                 player->playerDownTimer = 0;
                 hideBall = 1;
@@ -2176,7 +2176,7 @@ not_in_penalty:
                 Sprite *ctrl = team->controlledPlayer;
                 if (ctrl == (Sprite *)0 || ctrl->ballDistance >= player->ballDistance) {
                     team->headerOrTackle = 1;
-                    _PlayerBeginTackling(team->currentAllowedDirection, player, team);
+                    PlayerBeginTackling(team->currentAllowedDirection, player, team);
                     team->ballCanBeControlled = 0;
                     {
                         TeamGeneralInfo *opp = team->opponentsTeam;
@@ -2209,9 +2209,9 @@ not_in_penalty:
         player->destY = player->y.s.i;
 
         if (player->playerOrdinal == 1)
-            _UpdateBallWithControllingGoalkeeper(player);
+            UpdateBallWithControllingGoalkeeper(player);
         else
-            _UpdateControllingPlayer(player);
+            UpdateControllingPlayer(player);
 
         team->passKickTimer = 0;
         team->passingKickingPlayer = (Sprite *)0;
@@ -2223,7 +2223,7 @@ not_in_penalty:
                 team->goaliePlayingOrOut = 1;
                 team->ballOutOfPlayOrKeeper = 1;
             } else {
-                _GoalkeeperClaimedTheBall(player, ball, team);
+                GoalkeeperClaimedTheBall(player, ball, team);
             }
         }
         lastTeamPlayed = team;
@@ -2303,12 +2303,12 @@ not_in_penalty:
             if (gameState == ST_GAME_ENDED && winningTeamPtr != (int32_t *)0) {
                 if (player->playerState == PL_NORMAL && player->playerOrdinal != 1) {
                     if (player->deltaX.raw == 0 && player->deltaY.raw == 0) {
-                        if (_Rand() <= 64) {
+                        if (Rand() <= 64) {
                             if ((int32_t *)team->inGameTeamPtr == winningTeamPtr) {
-                                _SetPlayerAnimationTable(&playerWinningReactionAnimTable, player);
+                                SetPlayerAnimationTable(&playerWinningReactionAnimTable, player);
                                 player->playerState = PL_HAPPY;
                             } else {
-                                _SetPlayerAnimationTable(&playerLosingReactionAnimTable, player);
+                                SetPlayerAnimationTable(&playerLosingReactionAnimTable, player);
                                 player->playerState = PL_SAD;
                             }
                         }
@@ -2337,7 +2337,7 @@ not_in_penalty:
         /* maybe_ai_set_controls_dir */
         if (team->controlledPlayer == (Sprite *)0) {
             if (team->playerNumber == 0)
-                _AI_SetControlsDirection(team);
+                AI_SetControlsDirection(team);
         }
 
         /* booking_process_entry */
@@ -2353,14 +2353,14 @@ not_in_penalty:
                 goto finalize;
             refState = REF_ABOUT_TO_GIVE_CARD;
             if (whichCard == CARD_YELLOW)
-                _SetPlayerAnimationTable(&plGettingYellowCardAnimTable, player);
+                SetPlayerAnimationTable(&plGettingYellowCardAnimTable, player);
             else if (whichCard == CARD_RED)
-                _SetPlayerAnimationTable(&plGettingRedCardAnimTable, player);
+                SetPlayerAnimationTable(&plGettingRedCardAnimTable, player);
             else
-                _SetPlayerAnimationTable(&plGetting2ndYellowCardAnimTable, player);
+                SetPlayerAnimationTable(&plGetting2ndYellowCardAnimTable, player);
             player->playerState = PL_BOOKED;
             player->playerDownTimer = 1;
-            _PlayGameStateWhistleSample();
+            PlayGameStateWhistleSample();
             goto finalize;
         }
 
@@ -2412,7 +2412,7 @@ not_in_penalty:
         }
 
         if (gameStatePl == ST_GAME_IN_PROGRESS) {
-            _SetPlayerWithNoBallDestination(player, team, ball->x.s.i, ball->y.s.i);
+            SetPlayerWithNoBallDestination(player, team, ball->x.s.i, ball->y.s.i);
             T2P6_DESTX_TRAP(0xD002);
             goto enforce_free_kick_distance;
         }
@@ -2437,7 +2437,7 @@ not_in_penalty:
             if (gameState == ST_KEEPER_HOLDS_BALL ||
                 gameState == ST_GOAL_OUT_LEFT ||
                 gameState == ST_GOAL_OUT_RIGHT) {
-                _SetPlayerWithNoBallDestination(player, team, ballX, ballY);
+                SetPlayerWithNoBallDestination(player, team, ballX, ballY);
                 goto enforce_free_kick_distance;
             }
 
@@ -2470,7 +2470,7 @@ not_in_penalty:
             lookup_positions:
                 positions = posTable[gs];
                 if (positions == (int16_t *)0) {
-                    _SetPlayerWithNoBallDestination(player, team, ballX, ballY);
+                    SetPlayerWithNoBallDestination(player, team, ballX, ballY);
                     goto enforce_free_kick_distance;
                 }
 
@@ -2516,7 +2516,7 @@ not_in_penalty:
                 {
                     int16_t idx = (ordinal - 1) * 2;
                     if (positions[idx] == 22222) {
-                        _SetPlayerWithNoBallDestination(player, team, ballX, ballY);
+                        SetPlayerWithNoBallDestination(player, team, ballX, ballY);
                         goto enforce_free_kick_distance;
                     }
 
@@ -2601,12 +2601,12 @@ not_in_penalty:
 
     finalize:
         /* UpdatePlayerSpeed */
-        _UpdatePlayerSpeed(player, team);
+        UpdatePlayerSpeed(player, team);
 
         /* Calculate delta X/Y from dest, current pos, speed */
         {
             int32_t outDX, outDY;
-            int16_t dir = (int16_t)_CalculateDeltaXAndY(
+            int16_t dir = (int16_t)CalculateDeltaXAndY(
                 player->destX, player->destY,
                 player->x.s.i, player->y.s.i,
                 player->speed, &outDX, &outDY);
@@ -2653,7 +2653,7 @@ not_in_penalty:
             }
             {
                 int32_t dummyDX, dummyDY;
-                int16_t fullDir = (int16_t)_CalculateDeltaXAndY(
+                int16_t fullDir = (int16_t)CalculateDeltaXAndY(
                     player->x.s.i, player->y.s.i,
                     targetX, targetY,
                     256, &dummyDX, &dummyDY);
@@ -2680,9 +2680,9 @@ not_in_penalty:
 
         switch_anim:
             if (nowMoving)
-                _SetPlayerAnimationTable(&playerRunningAnimTable, player);
+                SetPlayerAnimationTable(&playerRunningAnimTable, player);
             else
-                _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+                SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         }
 
     next_player:

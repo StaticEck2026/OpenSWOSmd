@@ -37,7 +37,7 @@ uint8_t  ciaa_pra = 0xFF;
  * MenuEntry layout is:
  *   +8  leftEntry   +9  rightEntry   +10 upEntry   +11 downEntry
  * so the deltas relative to +8 are 0/1/2/3 for left/right/up/down.
- * _MenuProc indexes this with dir>>1, so the array order is
+ * MenuProc indexes this with dir>>1, so the array order is
  * Up/Right/Down/Left -> 2/1/3/0. */
 uint16_t nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
 
@@ -117,8 +117,8 @@ volatile uintptr_t frontbufferBasePtr;
 volatile uintptr_t frontbufferBaseAltPtr;
 
 #ifdef SWOS_SDL_BUILD
-/* SDL-only scratch buffer used by `_ProcessImageCommandStream` and
- * `_LoadOverlayToFrontbuffer` to receive raw RNC-decompressed bitplane
+/* SDL-only scratch buffer used by `ProcessImageCommandStream` and
+ * `LoadOverlayToFrontbuffer` to receive raw RNC-decompressed bitplane
  * file loads. The Amiga build wrote bitplane data directly into
  * `frontbufferMaskBuffer`, but we now keep that buffer in chunky 8bpp
  * format (matching the frontbuffer), so we need a separate area for the
@@ -146,7 +146,7 @@ uint16_t menuPalette[16] = {
 };
 
 /* ---- Title color tables: 16 RGB triplets (48 bytes) each.
- * `_BuildPaletteFromColors` compresses each triplet into a 12-bit Amiga
+ * `BuildPaletteFromColors` compresses each triplet into a 12-bit Amiga
  * colour word and writes into titleLogoPalette / titleScreenPalette /
  * titleTextPalette. Originally defined in SWOS2.s. */
 uint8_t kTitleLogoColors[48] = {
@@ -172,7 +172,7 @@ uint8_t kTitleTextColors[48] = {
  * embedded filename-pointer halves replaced by zero placeholders.
  * The IDA exporter emitted the Amiga runtime address of
  * `aGrafsCharsetRa` as two magic integers (`16, 6594`); those bytes
- * are overwritten at startup by `_SwosSDL_InitImageScripts()` below
+ * are overwritten at startup by `SwosSDL_InitImageScripts()` below
  * with the low/high halves of the real host symbol.
  *
  * The remaining 340 integer words are plain data (sprite coords,
@@ -194,7 +194,7 @@ uint16_t introMenuImageScript[] = {
  * then loads grafs/menus2.raw and extracts the rest. Pointer slots:
  *   [1..2]    -> &aGrafsMenusRaw   (first  0x7000 opcode at index 0)
  *   [393..394]-> &aGrafsMenus2Raw  (second 0x7000 opcode at index 392)
- * Both slots are written by _SwosSDL_InitImageScripts() below. */
+ * Both slots are written by SwosSDL_InitImageScripts() below. */
 uint16_t menuBGImageCmdStream[406] = {
 #include "menu_bg_image_script_cmds.inc"
 };
@@ -259,7 +259,7 @@ static void image_script_emit_ptr(uint16_t *stream, uint32_t off, const void *p)
     memcpy(&stream[off], &enc, sizeof(enc));
 }
 
-void _SwosSDL_InitImageScripts(void)
+void SwosSDL_InitImageScripts(void)
 {
     /* Reset the side-table cursor on each init call (only matters on
      * 64-bit; the 32-bit path doesn't touch the table). */
@@ -286,7 +286,7 @@ void _SwosSDL_InitImageScripts(void)
 }
 
 /* menuColorAndTextScript — 5166-word image-command script run from
- * _ConvertColorsAndTextSprites at match setup. Loads grafs/cjcgrafs.raw
+ * ConvertColorsAndTextSprites at match setup. Loads grafs/cjcgrafs.raw
  * and extracts ~300 reserve-player / score-digit / team-name sprite
  * slots into spriteGraphics[0x71..0xE2]. 7 slots are absolute
  * pointers (dc.l) that need to be patched at init with the address
@@ -308,11 +308,11 @@ uint16_t menuColorAndTextScript[5166] = {
  * On Amiga, SWOS2.s laid these out as:
  *   currentMenu:  ds.b $16         ; 22-byte Menu header
  *   menuEntries:  ds.b $14000      ; 80 KiB of MenuEntry[100]
- * immediately consecutive in BSS. The menu unpacker (_UnpackMenu)
+ * immediately consecutive in BSS. The menu unpacker (UnpackMenu)
  * writes the Menu header into `dest` (currentMenu) and then entries
  * starting at dest+22 -- which on Amiga lands inside menuEntries.
  * Our SDL build placed symbols wherever the linker liked, so the
- * unpacker's dest+22 writes fell OUTSIDE menuEntries and _DrawMenu
+ * unpacker's dest+22 writes fell OUTSIDE menuEntries and DrawMenu
  * read zeros/garbage.
  *
  * Fix: one backing buffer declared in a dedicated named section;
@@ -369,7 +369,7 @@ __asm__(
  * reads a 36-byte contiguous struct starting there:
  *
  *   +0..+1   src sprite index (stadiumMenuLittlePlayer — written at
- *            runtime by _StadiumPlayerSpritesBeforeDraw)
+ *            runtime by StadiumPlayerSpritesBeforeDraw)
  *   +2..+3   dst sprite index (littlePlayerSpriteGeneric = 0x00D6 / 214)
  *   +4..+35  littlePlayersColorTable (16 × uint16_t palette indices)
  *
@@ -428,7 +428,7 @@ __attribute__((used, aligned(2)))
 GoalieFaceState goalieFaces = {0};
 
 /* ---- Memory boundary marker -----------------------------------------
- * Amiga BSS boundary symbol. _ShowLoaderIntroSequence does a vestigial
+ * Amiga BSS boundary symbol. ShowLoaderIntroSequence does a vestigial
  * `if ((uintptr_t)&memBoundaryMarker > 0x100000u) { }` layout sanity check
  * (empty body — a no-op on both ports). At -O2 the dead check is eliminated
  * and the symbol is never referenced, but at -O0 the `&memBoundaryMarker`
@@ -445,14 +445,14 @@ uint32_t memBoundaryMarker;
  *   kSpriteBlitQueueSentinel_B:  ds.b $2
  *   BSS_00_2DA8C:                ds.b $BB6    ; 3000-byte queue buffer B
  *
- * Shared between SDL and Amiga because `_DrawSprite_entry2` (in
+ * Shared between SDL and Amiga because `DrawSprite_entry2` (in
  * sprites.c) is compiled for both targets and does a 4-byte
  * `*(uint32_t *)savedQueue = BLT_BLITQ_END;` against what was a
  * 2-byte uint16 — that overflow silently corrupted whatever
  * follows the sentinel symbol on SDL too. On Amiga the sprite-write
  * paths additionally fill the queue with 12-byte entries; without
  * the 3000-byte buffer those entries overflow into bootTemp0 /
- * bottomTeamInGame, _ProcessSpriteBlitQueue reads garbage as srcPtr
+ * bottomTeamInGame, ProcessSpriteBlitQueue reads garbage as srcPtr
  * and faults. */
 #define SPRITE_BLIT_QUEUE_BYTES   (2 + 0xBB6)
 __attribute__((used, aligned(4)))
@@ -550,7 +550,7 @@ __attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondarySocks  =
  * `(uint8_t*)&selTeamsPtr + offset` for dynamic offsets (see e.g.
  * career_teams.c:1660 which stores selTeamsPtr-relative offsets in
  * competition slot fields). Previously selTeamsPtr was defined as
- * `TeamFile *selTeamsPtr` (a 4-byte pointer), so `_AddTeamToBuffer`
+ * `TeamFile *selTeamsPtr` (a 4-byte pointer), so `AddTeamToBuffer`
  * writing 684 bytes to `&selTeamsPtr` stomped whatever global the
  * linker had placed next — corrupting state and hanging the menu
  * after the first team was selected in "CHOOSE TEAMS FOR FRIENDLY".
@@ -581,7 +581,7 @@ __attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondarySocks  =
  *
  * Total = 2254 + 19000 + 171000 = 192254 bytes (= K_HIL_FILE_MAXSZ).
  *
- * `_LoadHilFile` calls `_LoadFileEx(hilFileBuffer, …)` which writes the
+ * `LoadHilFile` calls `LoadFileEx(hilFileBuffer, …)` which writes the
  * entire HIL file starting at `hilFileBuffer`. The first 8 bytes are the
  * magic-sig and max-size, the next 2036 are the two teams, the next 200
  * are gameName+gameRound, the next 10 bytes are the per-match header
@@ -592,7 +592,7 @@ __attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondarySocks  =
  *
  * The highlight system also addresses hilStartOfGoalsBuffer/inGameHilBuffer
  * as one combined pool:
- *   _SaveHighlightScene writes 19000-byte scenes at
+ *   SaveHighlightScene writes 19000-byte scenes at
  *     `hilStartOfGoalsBuffer + N * 19000` for N in 0..HIL_MAX_SCENES-1, and
  *   game_loop.c:1003 sets goalBasePtr to the same offset for replay. */
 #define HIL_BACKING_BUF_SIZE 192254
@@ -706,7 +706,7 @@ __asm__(".globl " _ASM_PFX "poolplyrDatBuffer\n"
 /* ---- Menu font tables (small + big) --------------------------------
  * Each CharTable is a 14-byte header (unk1, charHeight, unk2, charSpacing,
  * spaceWidth, spriteIndexOffset) + a 224-entry ASCII→sprite conversion table.
- * _DrawMenuTextCentered reads charHeight/spaceWidth and indexes into
+ * DrawMenuTextCentered reads charHeight/spaceWidth and indexes into
  * spriteGraphicsPtr via `conversionTable[c] + spriteIndexOffset`. Values
  * transcribed verbatim from the Amiga C port's Data.c. conversionTable is
  * uint16 (was uint8) so glyph slots can exceed 255 — needed for the font
@@ -779,7 +779,7 @@ void FontExt_ApplyConv(void)
 #undef SB
 }
 
-/* 2-entry pointer table read by _DrawMenuItem etc:
+/* 2-entry pointer table read by DrawMenuItem etc:
  *   charTables[0] = &smallCharsTable
  *   charTables[1] = &bigCharsTable
  * Index is derived from the menu entry's stringFlags (see menu_system.c). */
@@ -789,7 +789,7 @@ void *charTables[2] = {
 };
 
 /* ---- outerFrameColorsTable: 16 background-colour pairs (top-left,
- * bottom-right) used by `_DrawMenuItemOuterFrame` to give each menu
+ * bottom-right) used by `DrawMenuItemOuterFrame` to give each menu
  * button a beveled edge. Transcribed from Amiga Data.c. */
 uint8_t outerFrameColorsTable[32] = {
     1, 9, 1, 9, 1, 9, 1, 9, 5, 9, 6, 4, 2, 4, 1, 9,
@@ -797,14 +797,14 @@ uint8_t outerFrameColorsTable[32] = {
 };
 
 /* ---- kColorTableShine: 8-entry palette cycle used by
- * `_DrawSelectedMenuItemFrame` to draw the animated shine on the
+ * `DrawSelectedMenuItemFrame` to draw the animated shine on the
  * currently-selected menu entry. Indexed by `(menuCursorFrame & 14) >> 1`.
  * Transcribed from Amiga Data.c. */
 uint16_t kColorTableShine[8] = { 2, 2, 1, 1, 7, 7, 1, 1 };
 
 /* ---- Friendly-game STRING_TABLE entries -----------------------------
  * The friendly menu's pitch-type/season cycler stores its choices in a
- * compact table format read by _DrawMenuItem (ENTRY_STRING_TABLE branch):
+ * compact table format read by DrawMenuItem (ENTRY_STRING_TABLE branch):
  *   +0: pointer to the index variable (uint16 read from this address)
  *   +4: uint16 base value subtracted from the index
  *   +6: array of N string pointers, indexed by (idx - base)
@@ -852,7 +852,7 @@ struct __attribute__((packed)) {
 };
 
 /* ---- bureaucracyMenuItems ----
- * Redraw list passed to _DrawMenuItemsWaitForVSync from _Bureaucracy
+ * Redraw list passed to DrawMenuItemsWaitForVSync from Bureaucracy
  * (called after each team selection). The function reads int16 entry
  * ordinals terminated by a NEGATIVE value. Without the real terminator
  * the 4 KiB zero stub iterates 2048 times redrawing entry 0 (the menu
@@ -862,7 +862,7 @@ struct __attribute__((packed)) {
  * Transcribed from SWOS2.s line 65223. */
 int16_t bureaucracyMenuItems[5] = { 58, 57, 55, 0, -1 };
 
-/* ---- Other _DrawMenuItemsWaitForVSync redraw lists.
+/* ---- Other DrawMenuItemsWaitForVSync redraw lists.
  * Same pattern as bureaucracyMenuItems: int16 ordinals terminated by a
  * negative value, called from various menu callbacks. Stubs of zeros
  * cause the draw loop to walk 2048 entries redrawing entry 0.
@@ -879,9 +879,9 @@ int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[4] = { 77, 76, 74, -1 };
 /* ---- savedRandState / savedRandStatePtr ----
  * SWOS2.s line 21645 defines a uint8[15] save-stack buffer and a
  * pointer into it that's pre-initialised to the buffer's address.
- * _SaveRand2State / _RestoreRand2State push/pop 3 bytes at a time.
+ * SaveRand2State / RestoreRand2State push/pop 3 bytes at a time.
  * Without this definition the linker resolves savedRandState to 0,
- * the pointer ends up NULL, and `*ptr++ = seed2` in _SaveRand2State
+ * the pointer ends up NULL, and `*ptr++ = seed2` in SaveRand2State
  * segfaults on the first match-start push. */
 uint8_t savedRandState[15];
 uint8_t *savedRandStatePtr = savedRandState;
@@ -899,7 +899,7 @@ FixedPoint cameraY = {0};
 /* ---- kGoalieSkill[0..7]Table + kGoalieSkillTables ----
  * 8 GoalieSkill lookup tables (30 int16 fields each). Indexed at
  * runtime by the goalkeeper's skill rating via kGoalieSkillTables[].
- * Without these _UpdatePlayers dereferences a NULL shotChanceTable.
+ * Without these UpdatePlayers dereferences a NULL shotChanceTable.
  * Transcribed from SWOS2.s lines 28755–29017. */
 int16_t kGoalieSkill7Table[30] = { 0x0063, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0002, 0x0003, 0x0009, 0x0006, 0x0001, 0x000C, 0x0004, 0x0009, 0x0006, 0x0001, 0x000C };
 int16_t kGoalieSkill6Table[30] = { 0x0001, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0002, 0x0003, 0x0004, 0x0008, 0x0006, 0x0002, 0x000B, 0x0005, 0x0008, 0x0006, 0x0002, 0x000B };
@@ -937,7 +937,7 @@ void *kGoalieSkillTables[8] = {
 };
 
 /* ---- diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer ----
- * `_SaveDIYTournament` does a word-copy of 1449 entries (2898 bytes) from
+ * `SaveDIYTournament` does a word-copy of 1449 entries (2898 bytes) from
  * `competitionFileBuffer` into `diyFileBufferCopy`. The auto-extractor
  * sized them as a 2-byte stub and a 1508-byte DIYCompetitionEx, so the
  * copy overflowed and stomped `magicValue` (which sits ~0xC08 past
@@ -965,7 +965,7 @@ void *kGoalieSkillTables[8] = {
  * BSS region, the four title-holder/tertiary grids in another at
  * 0x2C0-byte stride), so the walker stepped past tertiary into
  * unrelated globals (diyCompetitionStartBuf etc.), read garbage as
- * team ids, and tripped _Career_AppendTeamToTmdTeamPool's 0x3443
+ * team ids, and tripped Career_AppendTeamToTmdTeamPool's 0x3443
  * panic. Pack the whole region into one buffer matching the Amiga
  * BSS run and expose each slot via inline-asm .equ alias. */
 __asm__(
@@ -1000,7 +1000,7 @@ __asm__(
 
 /* gameRound: on Amiga the 1-byte gameRound label is followed by an
  * unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s) that the
- * round-name string buffer extends into. _StringCopy(roundStr, &gameRound)
+ * round-name string buffer extends into. StringCopy(roundStr, &gameRound)
  * in PlayDIYLeagueMatchAndCacheResult writes "FIRST ROUND" / "QUARTER FINAL"
  * etc., overrunning the 1-byte typed definition and stomping magicValue
  * (which sits adjacent on SDL). highlight.c also iterates 40 bytes
@@ -1072,7 +1072,7 @@ __asm__(
  * diyCompetitionStart is its OWN standalone buffer now (the old
  * diyFileBufferCopyBuf + 0x420 adjacency is retired): the four
  * tournament <-> competitionFileBuffer copies field-map explicitly, and
- * _FindTeamInDIY reaches the current-stage record by symbol, so no
+ * FindTeamInDIY reaches the current-stage record by symbol, so no
  * contiguity is required. Its league standings table still extends past
  * sizeof(DIYCompetitionEx) into the aliased sub-regions below
  * (clearLeagueTableStats writes to +0x734), so the backing buffer stays
@@ -1099,7 +1099,7 @@ __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
 /* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
  * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing
  * buffer that used to live here meant DIY/preset writes never reached
- * the career save body — and `_LoadPresetFile` would load a 4 KB file
+ * the career save body — and `LoadPresetFile` would load a 4 KB file
  * into a buffer that overflows past everything else. The overlay puts
  * it back inside the 256 KB careerFileBufferBuf at the right offset. */
 
@@ -1150,11 +1150,11 @@ __asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
 
 /* numberOfFiles + foundFilenamesBuffer: contiguous BSS run on Amiga.
  * AssetSys_ResolveAssetList receives &numberOfFiles as the destination
- * pointer (passed via _CAssetSys_Dispatch from _FindFilesExtensionPresent),
+ * pointer (passed via CAssetSys_Dispatch from FindFilesExtensionPresent),
  * writes the file count at offset 0..1, and packs 32-byte entries
  * starting at offset 0 (so entry 0's name field at offset 4 lands at
  * &numberOfFiles + 4 = foundFilenamesBuffer + 0, entry 1 name at
- * foundFilenamesBuffer + 32, etc.). _GetFilenameAndExtension then
+ * foundFilenamesBuffer + 32, etc.). GetFilenameAndExtension then
  * iterates `foundFilenamesBuffer` with a 32-byte stride and scans
  * each slot for the '.' that starts the file extension. The Amiga
  * sized this run as numberOfFiles(2) + 2 pad + foundFilenamesBuffer($77E)

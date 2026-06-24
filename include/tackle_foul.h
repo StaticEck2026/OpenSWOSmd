@@ -9,16 +9,16 @@
 #include "game_types.h"
 
 /* ---- Exported functions ---- */
-void    _PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team);
-void    _SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team);
-void    _PlayerTackled(Sprite *player, TeamGeneralInfo *team);
-int16_t _TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team);
-int16_t _TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team);
-void    _SendPlayerAway(Sprite *player, TeamGeneralInfo *team);
-void    _PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team);
-void    _GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team);
-void    _PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team);
-void    _TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team);
-void    _PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team);
+void    PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team);
+void    SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team);
+void    PlayerTackled(Sprite *player, TeamGeneralInfo *team);
+int16_t TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team);
+int16_t TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team);
+void    SendPlayerAway(Sprite *player, TeamGeneralInfo *team);
+void    PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team);
+void    GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team);
+void    PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team);
+void    TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team);
+void    PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team);
 
 #endif

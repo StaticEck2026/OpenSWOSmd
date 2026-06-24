@@ -38,7 +38,7 @@
 #define DETERMINISTIC_SPRITE_LIMIT 0
 
 #ifdef DETERMINISTIC_MODE
-void _InitDeterministicMode(void);
+void InitDeterministicMode(void);
 #endif
 
 #ifdef DETERMINISTIC_DUMP_FRAME
@@ -58,7 +58,7 @@ extern uint16_t rngDumpActive;
     } \
 } while(0)
 
-void _RngDumpCheck(void);
+void RngDumpCheck(void);
 #else
 #define RNG_LOG(which, val)
 #endif

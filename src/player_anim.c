@@ -25,7 +25,7 @@ extern AnimTable         playerNormalStandingAnimTable;
 extern uint16_t          panicReasonCode;
 
 /* ---- External C functions ---- */
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 
 /* ================================================================
  * setNextPlayerFrame  (SWOS2.s line 9561)
@@ -196,18 +196,18 @@ static void movePlayer(Sprite *s)
 
     /* Switch to standing anim if not already using it */
     if (s->animationTable != &playerNormalStandingAnimTable) {
-        _SetPlayerAnimationTable(&playerNormalStandingAnimTable, s);
+        SetPlayerAnimationTable(&playerNormalStandingAnimTable, s);
     }
 }
 
 /* ================================================================
- * _MovePlayers  (SWOS2.s line 9536)
+ * MovePlayers  (SWOS2.s line 9536)
  *
  * Iterates all 22 players (team1 + team2) and calls
  * setNextPlayerFrame + movePlayer for each.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MovePlayers(void)
+void MovePlayers(void)
 {
     int16_t i;
 
@@ -243,12 +243,12 @@ static uint16_t computeAnimSlot(Sprite *s)
 }
 
 /* ================================================================
- * _SetPlayerAnimationTable  (SWOS2.s line 9788)
+ * SetPlayerAnimationTable  (SWOS2.s line 9788)
  *
  * Sets animation table and resets frame state for restart.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
+void SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
 {
     s->animationTable = animTable;
 
@@ -261,7 +261,7 @@ void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
 
     if (frameIndicesPtr == 0) {
         panicReasonCode = 0x000E;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -272,13 +272,13 @@ void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
 }
 
 /* ================================================================
- * _SetPlayerAnimationTableAndPictureIndex  (SWOS2.s line 9748)
+ * SetPlayerAnimationTableAndPictureIndex  (SWOS2.s line 9748)
  *
  * Sets animation table without resetting frame state, and
  * immediately updates imageIndex from current frame.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *s)
+void SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *s)
 {
     s->animationTable = animTable;
 
@@ -291,7 +291,7 @@ void _SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *s)
 
     if (frameIndicesPtr == 0) {
         panicReasonCode = 0x000E;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 

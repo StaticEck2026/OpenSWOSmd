@@ -9,7 +9,7 @@
 
 #include "game_types.h"
 
-void _UpdatePlayers(TeamGeneralInfo *team)
+void UpdatePlayers(TeamGeneralInfo *team)
     __attribute__((used, externally_visible));
 
 #endif /* UPDATE_PLAYERS_H */

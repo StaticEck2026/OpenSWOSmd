@@ -12,7 +12,7 @@
 #include <stdio.h>
 int g_debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
 __attribute__((constructor))
-static void _unbuf_stderr(void) { setbuf(stderr, NULL); }
+static void unbuf_stderr(void) { setbuf(stderr, NULL); }
 #endif
 
 /* ---- Byte-packed field reads ----
@@ -59,8 +59,8 @@ extern uint8_t rawAssetLoadBuffer[];
 #endif
 
 /* ---- External functions ---- */
-extern void _PanicHaltLoop(void) __attribute__((noreturn));
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern void PanicHaltLoop(void) __attribute__((noreturn));
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
 
 /* ================================================================
@@ -99,7 +99,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     /* Panic if mask selector is zero */
     if (maskSel == 0) {
         panicReasonCode = 0x00C6;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     /* ---- Sprite index filtering (game mode only) ---- */
@@ -344,21 +344,21 @@ update_cursor:
         imageStreamBytesLeft = (uint32_t)((uint8_t *)menuInsBank - pixelPtr);
         if (pixelPtr >= (uint8_t *)menuInsBank) {
             panicReasonCode = 0x0008;
-            _PanicHaltLoop();
+            PanicHaltLoop();
         }
     } else {
         /* Game mode: check against imageStreamCursor itself (static buffer end) */
         imageStreamBytesLeft = (uint32_t)((uint8_t *)&imageStreamCursor - pixelPtr);
         if (pixelPtr >= (uint8_t *)&imageStreamCursor) {
             panicReasonCode = 0x0008;
-            _PanicHaltLoop();
+            PanicHaltLoop();
         }
     }
 #endif
 }
 
 /* ================================================================
- * _ProcessImageCommandStream  (SWOS2.s line 6253)
+ * ProcessImageCommandStream  (SWOS2.s line 6253)
  *
  * Image command stream interpreter. Reads opcodes from cmdBuffer,
  * dispatches drawing operations via blitDispatch, and finishes by
@@ -372,7 +372,7 @@ update_cursor:
  *   workBuffer (a3) - destination buffer for sprite data
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
+void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 {
     const uint8_t *a0 = (const uint8_t *)cmdBuffer;
     uint16_t opcode, opcodeType;
@@ -406,7 +406,7 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             const uint8_t *savedA0 = a0 + 4;  /* skip the pointer long */
             /* On 32-bit the slot holds a raw pointer; on 64-bit it
              * holds an index into imageScriptPtrTable (see
-             * swos_globals.c::_SwosSDL_InitImageScripts for why). */
+             * swos_globals.c::SwosSDL_InitImageScripts for why). */
 #if UINTPTR_MAX == 0xFFFFFFFFu
             const uint8_t *filename = *(const uint8_t *const *)a0;
 #else
@@ -426,10 +426,10 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
              * `frontbufferMaskBuffer` isn't clobbered between sprite
              * extractions. */
 #ifdef SWOS_SDL_BUILD
-            while (_LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)
                 ;
 #else
-            while (_LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
                 ;
 #endif
 
@@ -457,10 +457,10 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 #endif
 
 #ifdef SWOS_SDL_BUILD
-            while (_LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)
                 ;
 #else
-            while (_LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
                 ;
 #endif
 
@@ -614,7 +614,7 @@ void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 
         /* ---- Unknown opcode ---- */
         panicReasonCode = 0x0378;
-        _PanicHaltLoop();
+        PanicHaltLoop();
 
         /* ---- Shared dispatch entry points (using goto) ---- */
     /* dispatch_pack_*: the stream packs [w][h] into one BE uint16_t and

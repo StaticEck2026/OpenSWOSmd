@@ -17,7 +17,7 @@
  * no rebuild. See docs/DATA_PIPELINE.md. Compiled on both ports; only the JSON *loader*
  * is SDL-only (Amiga always uses the defaults). */
 typedef struct {
-    /* ---- Finances: starting balance (_CalculateStartingBalance) ----
+    /* ---- Finances: starting balance (CalculateStartingBalance) ----
      * balance = trunc16(teamValueBase * value_mult)
      *         * (pct_min + (rand8 * pct_range >> 8)) / 100 * scale */
     uint16_t start_balance_value_mult;   /* 3 */
@@ -32,13 +32,13 @@ typedef struct {
     uint16_t gate_league_mult_away;      /* 2000 */
     uint16_t gate_cup_mult;              /* 6000 (both teams) */
 
-    /* ---- Finances: player wages (_Career_UpdatePlayerWeeklyWageCache) ----
+    /* ---- Finances: player wages (Career_UpdatePlayerWeeklyWageCache) ----
      * wage = avgValue (×trialist%/reserve% if applicable) * 1000 / 768 * scale / wageScalingDivisor */
     uint16_t wage_trialist_pct;          /* 33 */
     uint16_t wage_reserve_pct;           /* 66 */
     uint16_t wage_scale;                 /* 96 */
 
-    /* ---- Board / chairman expectations (_ShowChairmanOpinionAboutTheSeason) ----
+    /* ---- Board / chairman expectations (ShowChairmanOpinionAboutTheSeason) ----
      * verdict category from ratio = (rank - leaguePosition) * 100 / numTeams (lower position = better) */
     int16_t  board_ratio_ok;             /* 30   ratio <  ok       -> at least cat 1 */
     int16_t  board_ratio_good;           /* 10   ratio <  good     -> at least cat 2 */

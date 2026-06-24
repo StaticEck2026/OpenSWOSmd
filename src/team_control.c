@@ -37,15 +37,15 @@ extern int16_t    pl2FireCounter;
 extern int16_t    pl2Direction;
 
 /* ---- External functions ---- */
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _UpdateGameTimersAndCameraBreakMode(void);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void UpdateGameTimersAndCameraBreakMode(void);
 
 /* UpdatePlayers is now ported to C */
 #include "update_players.h"
 
 /* ==================================================================
- * _UpdateControlledPlayer — find nearest player to ball for team
+ * UpdateControlledPlayer — find nearest player to ball for team
  *
  * Scans all 11 players, computes squared distance to ball,
  * stores in SPRITE_BALLDISTANCE. Selects nearest eligible player
@@ -55,7 +55,7 @@ extern void _UpdateGameTimersAndCameraBreakMode(void);
  * pass target.
  * ================================================================== */
 __attribute__((used, externally_visible))
-void _UpdateControlledPlayer(TeamGeneralInfo *team) {
+void UpdateControlledPlayer(TeamGeneralInfo *team) {
     Sprite *ball = &ballSprite;
     int16_t ballX = ball->x.s.i;
     int16_t ballY = ball->y.s.i;
@@ -151,14 +151,14 @@ void _UpdateControlledPlayer(TeamGeneralInfo *team) {
 }
 
 /* ==================================================================
- * _UpdatePlayerBeingPassedTo — find closest secondary player
+ * UpdatePlayerBeingPassedTo — find closest secondary player
  *
  * Two code paths: game in progress vs game stopped.
  * Game in progress: checks onScreen, various exclusions.
  * Game stopped: skips onScreen check but otherwise similar.
  * ================================================================== */
 __attribute__((used, externally_visible))
-void _UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
+void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
     Sprite *ball = &ballSprite;
 
     if (gameStatePl != ST_GAME_IN_PROGRESS) {
@@ -386,7 +386,7 @@ static int16_t processInputForPlayer(TeamGeneralInfo *team,
     }
 
     /* Call UpdatePlayers */
-    _UpdatePlayers(team);
+    UpdatePlayers(team);
 
     /* Check headerOrTackle */
     if (team->headerOrTackle) {
@@ -399,24 +399,24 @@ static int16_t processInputForPlayer(TeamGeneralInfo *team,
 }
 
 /* ==================================================================
- * _UpdateAndApplyTeamControls — per-frame input dispatch
+ * UpdateAndApplyTeamControls — per-frame input dispatch
  *
  * Called from GameLoop. Alternates between top and bottom team
  * each frame (frameCount bit 0). Polls joystick, sets direction/fire
  * on TeamGeneralInfo, calls UpdatePlayers.
  * ================================================================== */
 __attribute__((used, externally_visible))
-void _UpdateAndApplyTeamControls(void) {
+void UpdateAndApplyTeamControls(void) {
     TeamGeneralInfo *team;
 
-    _UpdateGameTimersAndCameraBreakMode();
+    UpdateGameTimersAndCameraBreakMode();
 
     /* Fire blocking: wait until both fire buttons released */
     if (fireBlocked) {
-        _Player1StatusProc();
+        Player1StatusProc();
         if (pl1Fire)
             return;
-        _Player2StatusProc();
+        Player2StatusProc();
         if (pl2Fire)
             return;
         fireBlocked = 0;
@@ -433,8 +433,8 @@ void _UpdateAndApplyTeamControls(void) {
     }
 
     /* Update controlled player and pass target */
-    _UpdateControlledPlayer(team);
-    _UpdatePlayerBeingPassedTo(team);
+    UpdateControlledPlayer(team);
+    UpdatePlayerBeingPassedTo(team);
 
     /* Dispatch based on playerNumber */
     if (team->playerNumber == 0) {
@@ -453,7 +453,7 @@ void _UpdateAndApplyTeamControls(void) {
             team->fireCounter = 0;
         }
 
-        _UpdatePlayers(team);
+        UpdatePlayers(team);
 
         if (team->headerOrTackle) {
             team->headerOrTackle = 0;
@@ -464,14 +464,14 @@ void _UpdateAndApplyTeamControls(void) {
 
     if (team->playerNumber == 2) {
         /* Player 2 controls this team */
-        _Player2StatusProc();
+        Player2StatusProc();
         processInputForPlayer(team, pl2Direction, pl2ShortFire, pl2Fire,
                               &pl2FireCounter);
         return;
     }
 
     /* Player 1 controls this team (playerNumber == 1 or other) */
-    _Player1StatusProc();
+    Player1StatusProc();
     processInputForPlayer(team, pl1Direction, pl1ShortFire, pl1Fire,
                           &pl1FireCounter);
 }

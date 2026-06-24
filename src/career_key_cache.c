@@ -20,7 +20,7 @@
  * the full 20014-byte span to &teamSelectionKeyCacheEnd (straight through the
  * foreign-market region) as accidental slack; once the two no longer share
  * memory that 18 KB of dead tail only served to SWALLOW a genuine overflow
- * instead of tripping _TeamSelectionKeyCache_InsertSpaceSorted's `ptr >
+ * instead of tripping TeamSelectionKeyCache_InsertSpaceSorted's `ptr >
  * &teamSelectionKeyCacheEnd` panic (0x8889) — counter to "panics are signals".
  * The high-water-mark probe measured real usage at ~1188 bytes over full
  * careers, and the analytical heavy case (24-team league + domestic cup +
@@ -38,7 +38,7 @@
  * cache data or reads the cache byte as the bias, so it is promoted here to an
  * independent scalar (removes a latent clobber footgun). It now has its own
  * save descriptor; old JSON saves that carried it as cache-blob byte 1 load it
- * as 0 and it is re-derived in _InitCareer.
+ * as 0 and it is re-derived in InitCareer.
  *
  * Real labels (not .equ) so every reader and the save FX/FA descriptors
  * (addressed by &symbol) keep working unchanged.

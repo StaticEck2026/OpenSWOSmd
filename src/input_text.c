@@ -23,18 +23,18 @@ extern uint16_t allowExtraCharsFlag;
 extern uint8_t inputAllowedControlKeys[];
 
 /* ---- External functions ---- */
-extern void _PanicHaltLoop(void);
-extern void _MenuCheckControls(void);
-extern void _CallDrawMenuItem(MenuEntry *entry);
+extern void PanicHaltLoop(void);
+extern void MenuCheckControls(void);
+extern void CallDrawMenuItem(MenuEntry *entry);
 
 /* ============================================================
- * _PrintFormatted
+ * PrintFormatted
  * Format string printer: %0..%6 = decimal numbers, %a/%b/%c = strings.
  * Uses goto-based fall-through to match 68k digit emission behavior
  * (once we enter at a digit level, all lower digits are always emitted).
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                      uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
                      uint16_t n4, uint16_t n5, uint16_t n6,
                      const uint8_t *strA, const uint8_t *strB, const uint8_t *strC)
@@ -80,7 +80,7 @@ void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
         else if (spec == '6') val = n6;
         else {
             panicReasonCode = 0x5916u;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
         }
 
@@ -115,12 +115,12 @@ void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
 }
 
 /* ============================================================
- * _InputTextFilterKey
+ * InputTextFilterKey
  * Filters currentKey to allowed charset.
  * Returns: key value if allowed, 0 if not.
  * ============================================================ */
 __attribute__((used, externally_visible))
-uint16_t _InputTextFilterKey(void)
+uint16_t InputTextFilterKey(void)
 {
     uint16_t key = currentKey;
 
@@ -153,15 +153,15 @@ uint16_t _InputTextFilterKey(void)
 }
 
 /* ============================================================
- * _InsertCharacter
+ * InsertCharacter
  * Inserts ch at pos within inMenuKeyboardBuffer, shifting bytes right.
  * Note: GetStringLength stub returns a0 = buffer + len (at NUL),
  * so the shift starts from the NUL and moves everything right.
  * ============================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InsertCharacter(uint8_t *pos, uint8_t ch)
+void InsertCharacter(uint8_t *pos, uint8_t ch)
 {
-    uint16_t len = _GetStringLength(inMenuKeyboardBuffer);
+    uint16_t len = GetStringLength(inMenuKeyboardBuffer);
     uint8_t *p = inMenuKeyboardBuffer + len; /* points to NUL (matching asm stub: adda.w d0,a0) */
 
     /* Shift bytes right from p down to pos (do-while matches asm: shift first, then check) */
@@ -175,11 +175,11 @@ void _InsertCharacter(uint8_t *pos, uint8_t ch)
 }
 
 /* ============================================================
- * _InputTextDeleteCharAtCursor
+ * InputTextDeleteCharAtCursor
  * Deletes char at pos, shifting remaining chars left.
  * ============================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InputTextDeleteCharAtCursor(uint8_t *pos)
+void InputTextDeleteCharAtCursor(uint8_t *pos)
 {
     if (*pos == 0)
         return;
@@ -192,14 +192,14 @@ void _InputTextDeleteCharAtCursor(uint8_t *pos)
 }
 
 /* ============================================================
- * _InputText
+ * InputText
  * Interactive text editor using the menu system.
  * maxLenPlus1: max input length + 1 (for NUL), must be <= 99
  * entryRaw: pointer to MenuEntry (passed as uint8_t* from asm)
  * Returns: 0 = committed (enter/fire), 1 = cancelled (escape)
  * ============================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
+uint16_t InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
 {
     MenuEntry *entry = (MenuEntry *)entryRaw;
 
@@ -207,7 +207,7 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
 
     if (maxLenPlus1 > 99) {
         panicReasonCode = 0x1197u;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return 0;
     }
 
@@ -215,23 +215,23 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
 
     /* Save original string pointer, copy to edit buffer */
     uint8_t *origStr = (uint8_t *)entry->fg;
-    _StringCopy(origStr, inMenuKeyboardBuffer);
+    StringCopy(origStr, inMenuKeyboardBuffer);
     entry->fg = (uintptr_t)inMenuKeyboardBuffer;
 
     /* Cursor starts at end of string (at the NUL terminator).
      * Asm: GetStringLength stub sets a0 = buffer + len (at NUL). */
-    uint16_t initLen = _GetStringLength(inMenuKeyboardBuffer);
+    uint16_t initLen = GetStringLength(inMenuKeyboardBuffer);
     uint8_t *pos = inMenuKeyboardBuffer + initLen;
 
     deadInputTextVar = 0;
 
     for (;;) {
-        _MenuCheckControls();
+        MenuCheckControls();
 
         if (shortFire != 0)
             goto commit;
 
-        uint16_t key = _InputTextFilterKey();
+        uint16_t key = InputTextFilterKey();
 
         if (key == 0) {
             goto insert_cursor;
@@ -257,7 +257,7 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
 
         if (key == 27) { /* Escape — cancel */
             entry->fg = (uintptr_t)origStr;
-            _CallDrawMenuItem(entry);
+            CallDrawMenuItem(entry);
             deadVar02 = 0;
             return 1;
         }
@@ -265,36 +265,36 @@ uint16_t _InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
         if (key == 127) { /* Backspace — delete char to the left */
             if (pos > inMenuKeyboardBuffer) {
                 pos--;
-                _InputTextDeleteCharAtCursor(pos);
+                InputTextDeleteCharAtCursor(pos);
             }
             goto insert_cursor;
         }
 
         if (key == 126) { /* 0x7E — delete at cursor (like Delete key) */
-            _InputTextDeleteCharAtCursor(pos);
+            InputTextDeleteCharAtCursor(pos);
             goto insert_cursor;
         }
 
         /* Printable character (0x20..0x7F) — insert if not full */
         if (key >= 0x20 && key <= 0x7F) {
-            uint16_t curLen = _GetStringLength(inMenuKeyboardBuffer);
+            uint16_t curLen = GetStringLength(inMenuKeyboardBuffer);
             if (curLen != maxLen) {
-                _InsertCharacter(pos, (uint8_t)key);
+                InsertCharacter(pos, (uint8_t)key);
                 pos++;
             }
         }
 
     insert_cursor:
         /* Show cursor: insert 0xFF at pos, draw, then remove it */
-        _InsertCharacter(pos, 0xFF);
-        _CallDrawMenuItem(entry);
-        _InputTextDeleteCharAtCursor(pos);
+        InsertCharacter(pos, 0xFF);
+        CallDrawMenuItem(entry);
+        InputTextDeleteCharAtCursor(pos);
     }
 
 commit:
-    _StringCopy(inMenuKeyboardBuffer, origStr);
+    StringCopy(inMenuKeyboardBuffer, origStr);
     entry->fg = (uintptr_t)origStr;
-    _CallDrawMenuItem(entry);
+    CallDrawMenuItem(entry);
     deadVar02 = 0;
     return 0;
 }

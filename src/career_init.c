@@ -9,7 +9,7 @@
  */
 
 #include "game_types.h"
-#include <string.h>   /* memcpy in _Rebuild_CupRecordNameSourcePointers */
+#include <string.h>   /* memcpy in Rebuild_CupRecordNameSourcePointers */
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "input_text.h"
@@ -86,14 +86,14 @@ extern uint16_t isNationalSelector;
  * offsets (0..15) used during transfer market initialization.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitTransferMarketState(void)
+void Career_InitTransferMarketState(void)
 {
     numPlayersOnTransferMarket = 0;
     numForeignMarketPlayers2 = 0;
-    transferMarketRandOffset1 = _Rand2() & 0xF;
-    transferMarketRandOffset2 = _Rand2() & 0xF;
+    transferMarketRandOffset1 = Rand2() & 0xF;
+    transferMarketRandOffset2 = Rand2() & 0xF;
     transferMarketPhase = 0;
-    transferMarketRandOffset0 = _Rand2() & 0xF;
+    transferMarketRandOffset0 = Rand2() & 0xF;
 }
 
 /* ================================================================
@@ -108,7 +108,7 @@ void _Career_InitTransferMarketState(void)
  *   quota     = (uint32_t)(int32_t)(int16_t)numerator / divisor
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitSeasonTransferMarketState(void)
+void Career_InitSeasonTransferMarketState(void)
 {
     timeToNegotiate = 6;
     numOffers = 0;
@@ -146,14 +146,14 @@ void _Career_InitSeasonTransferMarketState(void)
  * replace it with tourCopy (randomized via Rand).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_RandomizeInvitationTournamentCup(void)
+void Career_RandomizeInvitationTournamentCup(void)
 {
     void **pickList = careerCupPickList;
     int16_t i;
 
     for (i = 4; i >= 0; i--) {
         if (pickList[i] == (void *)invitationTournamentCopy) {
-            if (_Rand() & 1)
+            if (Rand() & 1)
                 pickList[i] = (void *)tourCopy;
         }
     }
@@ -169,7 +169,7 @@ void _Career_RandomizeInvitationTournamentCup(void)
  * for menu entry 9 based on coachOrPlayer toggle.
  * The low nibble of the bg color word holds the color palette index. */
 __attribute__((used, externally_visible))
-void _SetPlayerCoachFieldColor(void)
+void SetPlayerCoachFieldColor(void)
 {
     MenuEntry *e = &menuEntries[9];
     e->bgColor = (e->bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
@@ -179,48 +179,48 @@ void _SetPlayerCoachFieldColor(void)
 
 /* CheckSex: copy "MR" or "MS" to managerSexBuffer based on mrOrMs toggle */
 __attribute__((used, externally_visible))
-void _CheckSex(void)
+void CheckSex(void)
 {
     uint8_t *src = aMr;
     if (mrOrMs != 0)
         src = aMs;
-    _StringCopy(src, managerSexBuffer);
+    StringCopy(src, managerSexBuffer);
 }
 
 /* ChangeSex: toggle mrOrMs, update sex string, redraw current menu item.
  * entry = a5 from menu system (current MenuEntry). */
 __attribute__((used, externally_visible))
-void _ChangeSex(MenuEntry *entry)
+void ChangeSex(MenuEntry *entry)
 {
     mrOrMs ^= 1;
-    _CheckSex();
-    _CallDrawMenuItem(entry);
+    CheckSex();
+    CallDrawMenuItem(entry);
 }
 
 /* SetName: start text input for first name field (max 9 chars).
  * entry = a5 from menu system; InputText reads entry->fg itself. */
 __attribute__((used, externally_visible))
-void _SetName(MenuEntry *entry)
+void SetName(MenuEntry *entry)
 {
-    _InputText(9, (uint8_t *)entry);
+    InputText(9, (uint8_t *)entry);
 }
 
 /* SetSurname: start text input for surname field (max 13 chars).
  * entry = a5 from menu system; InputText reads entry->fg itself. */
 __attribute__((used, externally_visible))
-void _SetSurname(MenuEntry *entry)
+void SetSurname(MenuEntry *entry)
 {
-    _InputText(13, (uint8_t *)entry);
+    InputText(13, (uint8_t *)entry);
 }
 
 /* CoachOrPlayerCoach: toggle coach/player-coach mode, update color, redraw.
  * entry = a5 from menu system (current MenuEntry). */
 __attribute__((used, externally_visible))
-void _CoachOrPlayerCoach(MenuEntry *entry)
+void CoachOrPlayerCoach(MenuEntry *entry)
 {
     coachOrPlayer ^= 1;
-    _SetPlayerCoachFieldColor();
-    _CallDrawMenuItem(entry);
+    SetPlayerCoachFieldColor();
+    CallDrawMenuItem(entry);
 }
 
 /* ================================================================
@@ -228,42 +228,42 @@ void _CoachOrPlayerCoach(MenuEntry *entry)
  * ================================================================ */
 
 extern uint8_t contestMenu[];
-extern void _ActivateMenu(uint8_t *menu);
-extern void _SetExitMenuFlag(void);
+extern void ActivateMenu(uint8_t *menu);
+extern void SetExitMenuFlag(void);
 
 /* Forward declarations for Chunk 197 functions (defined later in this file) */
-void _InitCareer(uint16_t teamNo);
-void _ContinueCareerNextSeason(void);
-void _InitializeNewSeason(void);
-void _DIY_SelectCompetitionSlot4FromCurrentDivision(void);
-uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex);
+void InitCareer(uint16_t teamNo);
+void ContinueCareerNextSeason(void);
+void InitializeNewSeason(void);
+void DIY_SelectCompetitionSlot4FromCurrentDivision(void);
+uint16_t Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex);
 
 extern uint16_t selectedTeamCountryNumber;
 extern TeamFileEx *selectedTeamPtr;
-void _SelectTeamToManage(void);
+void SelectTeamToManage(void);
 
 /* ChooseTeamAndStartCareer: let user pick a team, then start career.
  * Called as menu onSelect callback. */
 __attribute__((used, externally_visible))
-void _ChooseTeamAndStartCareer(void)
+void ChooseTeamAndStartCareer(void)
 {
-    _SelectTeamToManage();
+    SelectTeamToManage();
     if (selectedTeamPtr == 0) {
-        _SetExitMenuFlag();
+        SetExitMenuFlag();
         return;
     }
-    _InitCareer(selectedTeamCountryNumber);
-    _ActivateMenu(contestMenu);
+    InitCareer(selectedTeamCountryNumber);
+    ActivateMenu(contestMenu);
 }
 
 /* LoadLiverpool: debug/cheat — start career with Liverpool (team 0x811).
  * Called as menu onSelect callback. */
 __attribute__((used, externally_visible))
-void _LoadLiverpool(void)
+void LoadLiverpool(void)
 {
     coachOrPlayer = 1;
-    _InitCareer(0x811);
-    _ActivateMenu(contestMenu);
+    InitCareer(0x811);
+    ActivateMenu(contestMenu);
 }
 
 /* ================================================================
@@ -273,19 +273,19 @@ void _LoadLiverpool(void)
  * Otherwise advance to next season and re-activate contest menu.
  * ================================================================ */
 
-extern void _ShowRetirementMessage(void);
-extern void _InitCareerVariables(uint16_t gameTypeParam);
+extern void ShowRetirementMessage(void);
+extern void InitCareerVariables(uint16_t gameTypeParam);
 
 __attribute__((used, externally_visible))
-void _ContinueCareer(void)
+void ContinueCareer(void)
 {
     if (currentSeasonShowing == g_careerParams.num_seasons - 1) {
-        _ShowRetirementMessage();
-        _InitCareerVariables(0);
-        _SetExitMenuFlag();
+        ShowRetirementMessage();
+        InitCareerVariables(0);
+        SetExitMenuFlag();
     } else {
-        _ContinueCareerNextSeason();
-        _ActivateMenu(contestMenu);
+        ContinueCareerNextSeason();
+        ActivateMenu(contestMenu);
     }
 }
 
@@ -305,18 +305,18 @@ extern uint16_t numSelectedTeams;
 extern uint16_t careerFileBuffer;
 extern uint16_t numNeededTeams;
 
-extern void _LoadSomeEuroCup(uint8_t *whichCup);
-extern void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *base, uint16_t idx);
-extern void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *base);
-extern void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *base);
+extern void LoadSomeEuroCup(uint8_t *whichCup);
+extern void Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *base, uint16_t idx);
+extern void Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *base);
+extern void Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *base);
 
 __attribute__((used, externally_visible))
-uint16_t _InitCompetitionTeamSelectionFromTableEntry(uint16_t idx, uint8_t *base)
+uint16_t InitCompetitionTeamSelectionFromTableEntry(uint16_t idx, uint8_t *base)
 {
     careerFileBuffer = 0;
-    _LoadSomeEuroCup(base);
+    LoadSomeEuroCup(base);
     numSelectedTeams = 0;
-    _Career_InitCompetitionTeamSelectionFromTableEntrySpec(base, idx);
+    Career_InitCompetitionTeamSelectionFromTableEntrySpec(base, idx);
 
     /* numNeededTeams = record byte at offset 0xD in idx'th 6-byte entry */
     uint16_t offset = idx * 6;
@@ -325,24 +325,24 @@ uint16_t _InitCompetitionTeamSelectionFromTableEntry(uint16_t idx, uint8_t *base
 }
 
 __attribute__((used, externally_visible))
-uint16_t _InitCompetitionTeamSelectionFromTableHeader(uint8_t *base)
+uint16_t InitCompetitionTeamSelectionFromTableHeader(uint8_t *base)
 {
     careerFileBuffer = 0;
-    _LoadSomeEuroCup(base);
+    LoadSomeEuroCup(base);
     numSelectedTeams = 0;
-    _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(base);
+    Career_InitCompetitionTeamSelectionFromTableHeaderSpec(base);
 
     numNeededTeams = (int8_t)base[0xA];
     return 0;
 }
 
 __attribute__((used, externally_visible))
-uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base)
+uint16_t InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base)
 {
     careerFileBuffer = 0;
-    _LoadSomeEuroCup(base);
+    LoadSomeEuroCup(base);
     numSelectedTeams = 0;
-    _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(base);
+    Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(base);
 
     numNeededTeams = (int8_t)base[0xF];
     return 0;
@@ -358,11 +358,11 @@ uint16_t _InitCompetitionTeamSelectionFromAltTableHeader(uint8_t *base)
  *
  * Asm: d0=teamNumber (uint16), d1=startingBalance (int32)
  * ================================================================ */
-extern int16_t _GetTeamLeague(uint16_t teamNumber);
-extern TeamFileEx *_GetTeamPointer(uint16_t teamId);
+extern int16_t GetTeamLeague(uint16_t teamNumber);
+extern TeamFileEx *GetTeamPointer(uint16_t teamId);
 
 __attribute__((used, externally_visible))
-void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32_t balance)
+void Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32_t balance)
 {
     startingBalance = balance;
     teamNoOfferAccepted = 0xFFFF;
@@ -370,10 +370,10 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
     numSelectedTeams = 0;
 
     /* Get team league for career tracking */
-    careerTeamLeague = (uint16_t)_GetTeamLeague(teamNumber);
+    careerTeamLeague = (uint16_t)GetTeamLeague(teamNumber);
 
     /* Get pointer to team file data and copy to both buffers */
-    TeamFileEx *teamPtr = _GetTeamPointer(teamNumber);
+    TeamFileEx *teamPtr = GetTeamPointer(teamNumber);
     selTeamNumber = teamNumber;
 
     /* Copy 342 words (684 bytes = one TeamFileEx) to both careerTeam and selTeamsPtr */
@@ -394,7 +394,7 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
     selectedTeams->team.teamControls = controlByte;
 
     /* Copy 16 bytes of playerNumbers (TeamFile.playerNumbers) to currentMatchPlayers */
-    teamPtr = _GetTeamPointer(selTeamNumber);
+    teamPtr = GetTeamPointer(selTeamNumber);
     for (int16_t i = 15; i >= 0; i--) {
         currentMatchPlayers[i] = teamPtr->team.playerNumbers[i];
     }
@@ -416,30 +416,30 @@ void _Career_InitializeSelectedTeamAndStartingBalance(uint16_t teamNumber, int32
  *
  * Asm: d0=teamNumber (uint16), d1=baseFunds (uint32)
  * ================================================================ */
-extern void _Career_BuildForeignMarketPoolFromSelectedTeam(void);
-extern uint16_t _Rand2(void);
+extern void Career_BuildForeignMarketPoolFromSelectedTeam(void);
+extern uint16_t Rand2(void);
 
 __attribute__((used, externally_visible))
-void _Career_ContinueToNextSeasonInitTeamAndFunds(uint16_t teamNumber, uint32_t baseFunds)
+void Career_ContinueToNextSeasonInitTeamAndFunds(uint16_t teamNumber, uint32_t baseFunds)
 {
     numPlayersOnTransferMarket = 0;
     careerSeasonsCompleted++;
 
     if (isNationalSelector == 0) {
-        _Career_BuildForeignMarketPoolFromSelectedTeam();
+        Career_BuildForeignMarketPoolFromSelectedTeam();
     }
 
     /* Apply random jitter to funds: 80-104% of original
      * Formula: ((baseFunds / 1000) * (80 + rand25pct)) / 100 * 1000
      * where rand25pct = (Rand2() * 25) >> 8 = 0..24 */
     uint16_t fundsDiv = (uint16_t)(baseFunds / 1000);
-    uint16_t rand = _Rand2();
+    uint16_t rand = Rand2();
     uint16_t jitterPct = ((rand * 25) >> 8) + 80;
     uint32_t adjusted = (uint32_t)fundsDiv * (uint32_t)jitterPct;
     uint16_t adjustedDiv = (uint16_t)(adjusted / 100);
     uint32_t finalFunds = (uint32_t)adjustedDiv * 1000;
 
-    _Career_InitializeSelectedTeamAndStartingBalance(teamNumber, (int32_t)finalFunds);
+    Career_InitializeSelectedTeamAndStartingBalance(teamNumber, (int32_t)finalFunds);
 }
 
 /* ================================================================
@@ -504,8 +504,8 @@ extern uint8_t  seasonPlaying;
 
 extern uint16_t poolplyrLoaded;
 
-extern void _DIY_LoadLeagueScratchFromTable(void);
-extern uint32_t _CalculateStartingBalance(uint16_t teamNumber);
+extern void DIY_LoadLeagueScratchFromTable(void);
+extern uint32_t CalculateStartingBalance(uint16_t teamNumber);
 
 /* --- InitializeNewSeason externs --- */
 extern uint16_t selTeamSelectedPlayerPosition;
@@ -587,29 +587,29 @@ extern uint8_t  teamSelectionKeyCache[];
 extern uint32_t teamFundsAccepted;
 extern uint8_t  nationalTeamFileCode;
 
-extern uint8_t *_GetCurrentSeasonPointer(void);
-extern void _DIY_SaveLeagueScratchToTable(void);
-extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNo);
-extern void _InitTeams(void);
-extern void _FillForeignMarketPlayers(void);
-extern void _FillCareerTeamPlayers(void);
-extern void _Career_InitializeNewSeasonFinances(void);
-extern void _InitializeCareerSeasonFinancials(void);
-extern void _ShowEnjoyLastSeasonMessage(void);
-extern void _ShowWishYouSuccessMessage(void);
-extern void _ShowLastSeasonMessage(void);
-extern void _ShowGreetingMessage(void);
-extern void _ShowLeavingMessage(void);
-extern void _TrainingMatch_AddTrialPlayersForNewSeason(void);
-extern void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr);
-extern void _Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);
-extern void _Career_UpdateLastNationalityCall(void);
-extern void _InitializeNewSeason_BuildTeamBudgetRankTable(void);
-extern void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams);
-extern void _ShowChairmanOpinionAboutTheSeason(void);
-extern void _InitializeStartingBalanceForNewSeason(void);
-extern void _Career_AdvanceToNextSeason_UpdateCompetitions(void);
-extern uint32_t _GetNationalityAndTeamFile(uint16_t teamNo);
+extern uint8_t *GetCurrentSeasonPointer(void);
+extern void DIY_SaveLeagueScratchToTable(void);
+extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNo);
+extern void InitTeams(void);
+extern void FillForeignMarketPlayers(void);
+extern void FillCareerTeamPlayers(void);
+extern void Career_InitializeNewSeasonFinances(void);
+extern void InitializeCareerSeasonFinancials(void);
+extern void ShowEnjoyLastSeasonMessage(void);
+extern void ShowWishYouSuccessMessage(void);
+extern void ShowLastSeasonMessage(void);
+extern void ShowGreetingMessage(void);
+extern void ShowLeavingMessage(void);
+extern void TrainingMatch_AddTrialPlayersForNewSeason(void);
+extern void Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr);
+extern void Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);
+extern void Career_UpdateLastNationalityCall(void);
+extern void InitializeNewSeason_BuildTeamBudgetRankTable(void);
+extern void Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams);
+extern void ShowChairmanOpinionAboutTheSeason(void);
+extern void InitializeStartingBalanceForNewSeason(void);
+extern void Career_AdvanceToNextSeason_UpdateCompetitions(void);
+extern uint32_t GetNationalityAndTeamFile(uint16_t teamNo);
 
 /* ================================================================
  * InitCareer  (SWOS2.s line 31722)
@@ -619,7 +619,7 @@ extern uint32_t _GetNationalityAndTeamFile(uint16_t teamNo);
  * slot states, then calls InitializeNewSeason.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitCareer(uint16_t teamNo)
+void InitCareer(uint16_t teamNo)
 {
     worldCupHostTeam = 20994;
 
@@ -630,7 +630,7 @@ void _InitCareer(uint16_t teamNo)
             *p++ = 0;
     }
 
-    _DIY_LoadLeagueScratchFromTable();
+    DIY_LoadLeagueScratchFromTable();
 
     sameNationalCallFlag = 0;
     careerSeasonsCompleted = 0;
@@ -669,17 +669,17 @@ void _InitCareer(uint16_t teamNo)
     qualifyingStage2PendingFlag1 = 0;
     wonInvitationTournament = 0;
 
-    _Career_InitTransferMarketState();
-    _InitCareerVariables(4);
+    Career_InitTransferMarketState();
+    InitCareerVariables(4);
 
-    uint32_t balance = _CalculateStartingBalance(teamNo);
-    _Career_InitializeSelectedTeamAndStartingBalance(teamNo, (int32_t)balance);
+    uint32_t balance = CalculateStartingBalance(teamNo);
+    Career_InitializeSelectedTeamAndStartingBalance(teamNo, (int32_t)balance);
 
     careerFileBuffer = 0;
 
-    _LoadSomeEuroCup(euroCup);
-    _LoadSomeEuroCup(cupWinnersCup);
-    _LoadSomeEuroCup(uefaCup);
+    LoadSomeEuroCup(euroCup);
+    LoadSomeEuroCup(cupWinnersCup);
+    LoadSomeEuroCup(uefaCup);
 
     /* Copy careerContests table entries: {src, dest, count} until
      * src == 0xFFFFFFFF. Iterate as the typed CompetitionCareer[]
@@ -713,7 +713,7 @@ void _InitCareer(uint16_t teamNo)
     euroCupsCompetitionContextBuf.tourn.header.slotStateC = 8;
     currentSeasonShowing = 0xFFFF;
     seasonPlaying--;
-    _InitializeNewSeason();
+    InitializeNewSeason();
     careerLoadedFlag = 0;
 }
 
@@ -726,7 +726,7 @@ void _InitCareer(uint16_t teamNo)
  * starting balance, then init new season.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ContinueCareerNextSeason(void)
+void ContinueCareerNextSeason(void)
 {
     extern uint16_t gameType;
     SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason ENTER: youreSacked=%u "
@@ -736,21 +736,21 @@ void _ContinueCareerNextSeason(void)
                       (unsigned)gameType);
     if (teamNoOfferAccepted != 0xFFFF) {
         if (youreSacked == 0) {
-            _ShowLeavingMessage();
+            ShowLeavingMessage();
         }
         SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason: offer-accepted branch");
-        _Career_AdvanceToNextSeason_UpdateCompetitions();
-        _Career_ContinueToNextSeasonInitTeamAndFunds(teamNoOfferAccepted, teamFundsAccepted);
-        _InitializeNewSeason();
+        Career_AdvanceToNextSeason_UpdateCompetitions();
+        Career_ContinueToNextSeasonInitTeamAndFunds(teamNoOfferAccepted, teamFundsAccepted);
+        InitializeNewSeason();
     } else {
         SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason: chairman branch (no offer accepted)");
-        _ShowChairmanOpinionAboutTheSeason();
+        ShowChairmanOpinionAboutTheSeason();
         SWOS_AUTOSKIP_LOG("[bug1] back from ShowChairmanOpinion: youreSacked=%u", (unsigned)youreSacked);
-        _Career_AdvanceToNextSeason_UpdateCompetitions();
+        Career_AdvanceToNextSeason_UpdateCompetitions();
         SWOS_AUTOSKIP_LOG("[bug1] back from AdvanceToNextSeason: youreSacked=%u", (unsigned)youreSacked);
-        _InitializeStartingBalanceForNewSeason();
+        InitializeStartingBalanceForNewSeason();
         SWOS_AUTOSKIP_LOG("[bug1] back from InitStartingBalance: youreSacked=%u", (unsigned)youreSacked);
-        _InitializeNewSeason();
+        InitializeNewSeason();
         SWOS_AUTOSKIP_LOG("[bug1] back from InitializeNewSeason: youreSacked=%u", (unsigned)youreSacked);
     }
     SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason EXIT");
@@ -761,11 +761,11 @@ void _ContinueCareerNextSeason(void)
  *
  * Returns 1 if selTeamNumber is in cupCopy's static team list (the player's
  * club plays this euro cup), else 0. Shared by the season-init enrolment
- * (_Career_SelectEuroCupSlotIfTeamParticipates) and the load-time slot-3
- * re-derivation (_RebuildPointersAfterLoad) so both agree on participation —
+ * (Career_SelectEuroCupSlotIfTeamParticipates) and the load-time slot-3
+ * re-derivation (RebuildPointersAfterLoad) so both agree on participation —
  * see the load-fixup site for why a divergence panics 0x6006.
  * ================================================================ */
-static int _Career_TeamInEuroCup(uint8_t *cupCopy)
+static int Career_TeamInEuroCup(uint8_t *cupCopy)
 {
     /* team list = cupCopy + 7 + cupCopy[7], with the 64-bit text[2] widening
      * compensation (the static competition's unk1[] is packed BE (country,
@@ -793,26 +793,26 @@ static int _Career_TeamInEuroCup(uint8_t *cupCopy)
     return 0;           /* not in this cup */
 }
 
-/* _Career_TeamInLoadedEuroSlot — non-panicking membership probe for the LOADED
+/* Career_TeamInLoadedEuroSlot — non-panicking membership probe for the LOADED
  * slot-3 buffer (a DIYCompetition), used by the load-time slot-3 re-derivation.
  *
  * It answers "is selTeamNumber genuinely a participant in this euro cup?" using
- * the SAME list `_FindTeamInDIY` searches — the loaded buffer's team list
+ * the SAME list `FindTeamInDIY` searches — the loaded buffer's team list
  * (teamIds for a type-2 tournament, cupTeamIds for a type-1 cup, each via the
  * buffer's own index table). This is the AUTHORITATIVE source for the loaded
  * season: the slot-3 buffer is saved (FA blob) so it holds the season's real
  * euro field, whereas `euroCupCopy` is reconstructed from its STATIC template on
  * load (save_format_json.c comp_copy_region) and holds DEFAULT teams — so
- * `_Career_TeamInEuroCup(euroCupCopy)` gives a FALSE NEGATIVE for a club that's
+ * `Career_TeamInEuroCup(euroCupCopy)` gives a FALSE NEGATIVE for a club that's
  * in the saved season's cup but not the default template, leaving
  * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list row in
- * `_CareerGameListCommon` on `compInfo[5]`. Gating on the buffer keeps this
- * consistent with `_FindTeamInDIY`: gate-pass => `_FindTeamInDIY(team, buffer)`
+ * `CareerGameListCommon` on `compInfo[5]`. Gating on the buffer keeps this
+ * consistent with `FindTeamInDIY`: gate-pass => `FindTeamInDIY(team, buffer)`
  * also finds the team (no 0x6006); gate-fail => slot stays inactive (preserves
  * 940603f's protection — a true non-participant is in neither buffer nor
- * template). Mirrors `_FindTeamInDIY`'s per-type search but returns found/
+ * template). Mirrors `FindTeamInDIY`'s per-type search but returns found/
  * not-found instead of panicking. */
-static int _Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
+static int Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
 {
     uint16_t numTeams = (uint16_t)comp->numTeams;
     uint16_t target   = selTeamNumber;
@@ -851,11 +851,11 @@ static int _Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
  * out: d0 = 0 if participating, 1 if not
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex)
+uint16_t Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t euroCupIndex)
 {
     /* Participation test (shared with the load-time slot-3 re-derivation in
-     * _RebuildPointersAfterLoad). */
-    if (!_Career_TeamInEuroCup(cupCopy))
+     * RebuildPointersAfterLoad). */
+    if (!Career_TeamInEuroCup(cupCopy))
         return 1;  /* not participating */
     {
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -869,11 +869,11 @@ uint16_t _Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t 
         uint16_t savedC = euroCupsCompetitionContextBuf.tourn.header.slotStateC;
 
         /* Set slot 3 for this euro cup (d0=3, d1=euroCupIndex, d2=0) */
-        _Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0);
+        Career_SetCurrentCompetitionSlot(cupCopy, 3, 0, 0);
 
         /* quaternaryCompStringOffset == euroCupsCompetitionContext+0x28
          * namePtr on Amiga (slot 3). */
-        ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr3 =
+        ((SeasonInformations *)GetCurrentSeasonPointer())->strPtr3 =
             ((DIYCompetition *)careerCompetitionSlotPtrTable[3])->namePtr;
 
         /* Restore quaternary slot state */
@@ -899,7 +899,7 @@ extern CompetitionLeague englishLeague;
 extern Leagues englishLeagues1, englishLeagues2, englishLeagues3;
 
 __attribute__((used, externally_visible))
-void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
+void DIY_SelectCompetitionSlot4FromCurrentDivision(void)
 {
     uint8_t *comp = (uint8_t *)currentCompetitionPtr;
     if (((Competition *)comp)->type != 0)   /* type at offset 1; 0 == league */
@@ -946,7 +946,7 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
     }
 
     diyCompetitionTablePtr = (uint32_t *)diyTable;
-    _Career_SetCurrentCompetitionSlot(diyComp, 4, 0, 0);
+    Career_SetCurrentCompetitionSlot(diyComp, 4, 0, 0);
 }
 
 /* ================================================================
@@ -960,7 +960,7 @@ void _DIY_SelectCompetitionSlot4FromCurrentDivision(void)
  * and shows chairman message.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitializeNewSeason(void)
+void InitializeNewSeason(void)
 {
     SWOS_AUTOSKIP_LOG("[bug1] InitializeNewSeason ENTER: youreSacked=%u "
                       "teamNoOfferAccepted=0x%04X selTeamNumber=0x%04X",
@@ -994,7 +994,7 @@ void _InitializeNewSeason(void)
     if (seasonPlaying == 100)
         seasonPlaying = 0;
 
-    _DIY_SaveLeagueScratchToTable();
+    DIY_SaveLeagueScratchToTable();
 
     boardConfidenceMod0 = 0;
     boardConfidenceMod1 = 0;
@@ -1010,7 +1010,7 @@ void _InitializeNewSeason(void)
     boardConfidenceMod9 = 0;
 
     /* Get current season info pointer and fill it */
-    SeasonInformations *si = (SeasonInformations *)_GetCurrentSeasonPointer();
+    SeasonInformations *si = (SeasonInformations *)GetCurrentSeasonPointer();
     si->clubNo            = selTeamNumber;
     si->leagueStrPtr      = 0;
     si->strPtr1           = 0;
@@ -1024,10 +1024,10 @@ void _InitializeNewSeason(void)
     si->managerStatus     = 0;
 
     /* Copy team name to season info CLUBNAME */
-    _StringCopy((uint8_t *)careerTeam.team.teamName, (uint8_t *)si->clubName);
+    StringCopy((uint8_t *)careerTeam.team.teamName, (uint8_t *)si->clubName);
 
     /* Verify team loaded and get current division index */
-    TeamFileEx *teamFile = _VerifyTeamLoaded(selTeamNumber);
+    TeamFileEx *teamFile = VerifyTeamLoaded(selTeamNumber);
     uint16_t globalTeamNo = teamFile->team.globalTeamNumber;
     int8_t diyLeagueState = (int8_t)diyLeagueSeasonStateTable[globalTeamNo];
     int16_t divIdx = (int16_t)diyLeagueState + (int16_t)careerTeamLeague;
@@ -1036,7 +1036,7 @@ void _InitializeNewSeason(void)
 
     contractNegotiationActive = 0;
     removedPlayerStatAccum = 0;
-    _Career_InitSeasonTransferMarketState();
+    Career_InitSeasonTransferMarketState();
 
     teamSelectionKeyCacheEnd = 0;
     isCareer = 0;
@@ -1108,7 +1108,7 @@ void _InitializeNewSeason(void)
          * 4-year cycle, so the national-coach WC path runs every season — used
          * to reproduce the season-transition 0x8888 backup-clobber
          * (project_eurocup_national_backup_clobber). 0x80 selects the WC-year
-         * branch in _Career_SetCupPickList_ForSelectedRegion (called below);
+         * branch in Career_SetCupPickList_ForSelectedRegion (called below);
          * qualifyingStage1PendingFlag0 = 0 picks the *invited/finals* pick list
          * (the actual WC tournament) rather than WC-qualifier friendlies — 0x80
          * alone would leave the team in friendlies with no WC. Flip the flag to
@@ -1121,7 +1121,7 @@ void _InitializeNewSeason(void)
 #endif
 
         /* Get nationality and team file */
-        uint32_t natResult = _GetNationalityAndTeamFile(selTeamNumber);
+        uint32_t natResult = GetNationalityAndTeamFile(selTeamNumber);
         nationalTeamNationality = (uint8_t)(natResult >> 16);  /* d0 */
         nationalTeamFileId = (uint8_t)(natResult & 0xFF);       /* d1 */
 
@@ -1131,7 +1131,7 @@ void _InitializeNewSeason(void)
         euroChampionshipQualTeam = seasonCycleNationalFlagsB[cycleIdx >> 1];
 
         /* Set cup pick list for selected region (param unused, function writes to global) */
-        _Career_SetCupPickList_ForSelectedRegion(0);
+        Career_SetCupPickList_ForSelectedRegion(0);
 
         compTablePtr = (void **)&careerCupPickList;
     } else {
@@ -1142,7 +1142,7 @@ void _InitializeNewSeason(void)
         compTablePtr = (void **)competitionsTable[tableIdx];
     }
 
-    _Career_UpdateLastNationalityCall();
+    Career_UpdateLastNationalityCall();
 
     /* Set up primary competition (slot 0) */
     {
@@ -1152,14 +1152,14 @@ void _InitializeNewSeason(void)
 
         uint8_t *comp = (uint8_t *)*compTablePtr;
         compTablePtr++;
-        _Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 0);
+        Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 0);
 
         /* SWOS2.s reads (primaryCompStringOffset), which on Amiga IS
          * competitionFileBuffer+0x28 = the comp namePtr that
-         * _Career_SetCurrentCompetitionSlot just wrote. Our standalone
+         * Career_SetCurrentCompetitionSlot just wrote. Our standalone
          * primaryCompStringOffset global is never populated (only zeroed),
          * so read the slot-0 buffer's namePtr directly. */
-        ((SeasonInformations *)_GetCurrentSeasonPointer())->leagueStrPtr =
+        ((SeasonInformations *)GetCurrentSeasonPointer())->leagueStrPtr =
             ((DIYCompetition *)careerCompetitionSlotPtrTable[0])->namePtr;
 
         primaryCompetitionBuf.tourn.header.slotStateC = savedC;
@@ -1179,11 +1179,11 @@ void _InitializeNewSeason(void)
 
         uint8_t *comp = (uint8_t *)*compTablePtr;
         compTablePtr++;
-        _Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
+        Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
 
         /* secondaryCompStringOffset == competitionContextBuf+0x28 namePtr on
          * Amiga (slot 1); read the buffer namePtr directly. */
-        ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr1 =
+        ((SeasonInformations *)GetCurrentSeasonPointer())->strPtr1 =
             ((DIYCompetition *)careerCompetitionSlotPtrTable[1])->namePtr;
 
         competitionContextBuf.tourn.header.slotStateC = savedC;
@@ -1197,11 +1197,11 @@ void _InitializeNewSeason(void)
             uint16_t savedC2 = tertiaryCompetitionContextBuf.tourn.header.slotStateC;
 
             comp = (uint8_t *)*compTablePtr;
-            _Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
+            Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
 
             /* tertiaryCompStringOffset == tertiaryCompetitionContextBuf+0x28
              * namePtr on Amiga (slot 2). */
-            ((SeasonInformations *)_GetCurrentSeasonPointer())->strPtr2 =
+            ((SeasonInformations *)GetCurrentSeasonPointer())->strPtr2 =
                 ((DIYCompetition *)careerCompetitionSlotPtrTable[2])->namePtr;
 
             tertiaryCompetitionContextBuf.tourn.header.slotStateC = savedC2;
@@ -1211,16 +1211,16 @@ void _InitializeNewSeason(void)
     }
 
     /* Try euro cups for slot 3 (quaternary) */
-    if (_Career_SelectEuroCupSlotIfTeamParticipates(euroCupCopy, 0) != 0) {
-        if (_Career_SelectEuroCupSlotIfTeamParticipates(cupWinnersCupCopy, 1) != 0) {
-            _Career_SelectEuroCupSlotIfTeamParticipates(uefaCupCopy, 2);
+    if (Career_SelectEuroCupSlotIfTeamParticipates(euroCupCopy, 0) != 0) {
+        if (Career_SelectEuroCupSlotIfTeamParticipates(cupWinnersCupCopy, 1) != 0) {
+            Career_SelectEuroCupSlotIfTeamParticipates(uefaCupCopy, 2);
         }
     }
 
     /* Set up DIY competition for slot 4 */
-    _DIY_SelectCompetitionSlot4FromCurrentDivision();
+    DIY_SelectCompetitionSlot4FromCurrentDivision();
 
-    _InitializeNewSeason_BuildTeamBudgetRankTable();
+    InitializeNewSeason_BuildTeamBudgetRankTable();
 
     /* Determine leagueFirstRoundNumber */
     {
@@ -1255,45 +1255,45 @@ void _InitializeNewSeason(void)
 
     lastFinancialWeekIndex = careerJobOfferPhaseBias;
 
-    _InitTeams();
+    InitTeams();
 
     /* Copy manager name into the team's coach-name slot */
-    teamFile = _VerifyTeamLoaded(selTeamNumber);
+    teamFile = VerifyTeamLoaded(selTeamNumber);
     {
         uint8_t *namePos = (uint8_t *)teamFile->team.coachName;
-        _StringCopy(managerNameBuffer, namePos);
+        StringCopy(managerNameBuffer, namePos);
         /* Find end of copied name and add space + surname */
         while (*namePos != 0)
             namePos++;
         *namePos++ = 0x20;  /* space */
-        _StringCopy(managerSurnameBuffer, namePos);
+        StringCopy(managerSurnameBuffer, namePos);
     }
 
-    _FillForeignMarketPlayers();
-    _FillCareerTeamPlayers();
-    _Career_InitializeNewSeasonFinances();
-    _InitializeCareerSeasonFinancials();
+    FillForeignMarketPlayers();
+    FillCareerTeamPlayers();
+    Career_InitializeNewSeasonFinances();
+    InitializeCareerSeasonFinancials();
 
     /* Show appropriate chairman message */
     if (stayingInOldClub != 0) {
         if (currentSeasonShowing == 0x13) {
-            _ShowEnjoyLastSeasonMessage();
+            ShowEnjoyLastSeasonMessage();
         } else {
-            _ShowWishYouSuccessMessage();
+            ShowWishYouSuccessMessage();
         }
     } else {
         if (currentSeasonShowing == 0x13) {
-            _ShowLastSeasonMessage();
+            ShowLastSeasonMessage();
         } else {
-            _ShowGreetingMessage();
+            ShowGreetingMessage();
         }
     }
 
     /* Post-message: trial players and international squad setup */
     if (stayingInOldClub == 0) {
-        _TrainingMatch_AddTrialPlayersForNewSeason();
+        TrainingMatch_AddTrialPlayersForNewSeason();
         if (isNationalSelector != 0) {
-            _Career_InitInternationalSquadAndLookupTablesForNewSeason((TeamFileEx *)0);
+            Career_InitInternationalSquadAndLookupTablesForNewSeason((TeamFileEx *)0);
         }
     }
 
@@ -1309,7 +1309,7 @@ void _InitializeNewSeason(void)
  * in:  a0 = source comp record, d1 = divisionIndex
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
+void InitNewSeason(uint8_t *src, uint16_t divisionIndex)
 {
     retired = 0;
     uint8_t compTableIdx = (uint8_t)((Competition *)src)->teamNumber;
@@ -1336,13 +1336,13 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     /* Look up competitions table by index — entries are full-width
      * pointers (8 B on 64-bit, 4 B on Amiga). Iterate as `void **` so
      * stride/sentinel scale with pointer width — see equivalent walker
-     * in `_InitializeNewSeason`. */
+     * in `InitializeNewSeason`. */
     void **compTable = (void **)competitionsTable[compTableIdx & 0xFF];
 
     /* Slot 0: primary competition */
     uint8_t *comp = (uint8_t *)*compTable;
     compTable++;
-    _Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 1);
+    Career_SetCurrentCompetitionSlot(comp, 0, currentDivisionIndex, 1);
 
     /* Skip the per-primary divisionIndex slot (one pointer entry, -2 = "none"). */
     compTable++;
@@ -1351,12 +1351,12 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
     if ((uintptr_t)*compTable != (uintptr_t)-1) {
         comp = (uint8_t *)*compTable;
         compTable++;
-        _Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
+        Career_SetCurrentCompetitionSlot(comp, 1, 0, 0);
 
         /* Slot 2: tertiary competition (if present) */
         if ((uintptr_t)*compTable != (uintptr_t)-1) {
             comp = (uint8_t *)*compTable;
-            _Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
+            Career_SetCurrentCompetitionSlot(comp, 2, 0, 0);
         }
     }
 
@@ -1381,11 +1381,11 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
         careerFinished = 1;
 
     viewRandomPhase = careerJobOfferPhaseBias;
-    _InitTeams();
+    InitTeams();
 }
 
 /* ================================================================
- * _RebuildPointersAfterLoad  (no asm equivalent — new code)
+ * RebuildPointersAfterLoad  (no asm equivalent — new code)
  *
  * Several fields in the careerFileBuffer overlay region (see SAVE_DATA.md)
  * are typed as absolute pointers — valid when the save was written but
@@ -1422,7 +1422,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  *      tertiaryCompetitionPtr / diyCompetitionPtr /
  *      diyCompetitionTablePtr`. Re-derived from competitionsTable +
  *      saved selTeamNumber (or careerCupPickList for national
- *      selectors), mirroring `_InitializeNewSeason` lines 994-1067
+ *      selectors), mirroring `InitializeNewSeason` lines 994-1067
  *      but without re-initialising slot state.
  *
  * Not yet handled (will be layered in as we hit menus that read
@@ -1441,7 +1441,7 @@ void _InitNewSeason(uint8_t *src, uint16_t divisionIndex)
  * neither port pins data at fixed addresses anymore, so both need the
  * same rebuild.
  * ================================================================ */
-extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+extern void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
 /* declared at top of file (line 615) — uint16_t *teamList */
 
 /* Step 3 helper: walk careerContests and re-derive each *Copy
@@ -1456,7 +1456,7 @@ extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
  * The static template carries the canonical pointer values for the
  * current build; the saved *Copy carries stale values from the
  * saving build. Copy both pointers from src→dest. */
-static void _Rebuild_CupRecordNameSourcePointers(void)
+static void Rebuild_CupRecordNameSourcePointers(void)
 {
     /* Iterate as typed CompetitionCareer[] — entry stride is 10 on
      * 32-bit, 18 on 64-bit. The text[] copy reads/writes two pointer-
@@ -1479,8 +1479,8 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
 
 /* Step 4 helper: re-derive the top-level competition slot pointers.
  *
- * Mirrors the lookup in `_InitializeNewSeason` (lines 994-1067) but
- * does NOT call `_Career_SetCurrentCompetitionSlot` — that helper is
+ * Mirrors the lookup in `InitializeNewSeason` (lines 994-1067) but
+ * does NOT call `Career_SetCurrentCompetitionSlot` — that helper is
  * destructive (resets slot state from the static comp template,
  * losing the loaded season's progress). Here we only re-establish
  * the pointer values; the slot state itself is already correctly
@@ -1489,8 +1489,8 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
  * National-selector careers populate these pointers via
  * `careerCupPickList` instead of competitionsTable. The pickList is
  * inside the saved overlay, so its entries are stale too — rebuild
- * via `_Career_SetCupPickList_ForSelectedRegion(0)` first. */
-static void _Rebuild_CompetitionSlotPointers(void)
+ * via `Career_SetCupPickList_ForSelectedRegion(0)` first. */
+static void Rebuild_CompetitionSlotPointers(void)
 {
     /* Country / pickList tables are `Competition *[]` — 8 bytes per
      * entry on 64-bit. The Amiga path walked them as `uint32_t *`
@@ -1502,7 +1502,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
     void **compTablePtr;
 
     if (isNationalSelector != 0) {
-        _Career_SetCupPickList_ForSelectedRegion(0);
+        Career_SetCupPickList_ForSelectedRegion(0);
         compTablePtr = (void **)&careerCupPickList;
     } else {
         uint16_t tableIdx = (selTeamNumber == 0xFFFF)
@@ -1533,7 +1533,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
     }
 
     /* Slot 4 (DIY) — derive from primary comp's DIY link. Mirrors
-     * `_DIY_SelectCompetitionSlot4FromCurrentDivision`. The diyEntry
+     * `DIY_SelectCompetitionSlot4FromCurrentDivision`. The diyEntry
      * payload is two pointers (diy comp ptr + diy table ptr) — 8 B
      * stride on 64-bit. Use `void **` read instead of the old
      * `*(uint32_t *)` which truncated. */
@@ -1560,9 +1560,9 @@ static void _Rebuild_CompetitionSlotPointers(void)
      * a pointer-to-disk field). The previous gate `quaternaryCompetitionPtr
      * != 0` therefore read the stale pre-load value — 0 on a fresh-start
      * load — and left an ACTIVE euro-cup slot inactive. The careerMenu then
-     * draws the slot-3 schedule entry, _CareerGameListCommon sets
+     * draws the slot-3 schedule entry, CareerGameListCommon sets
      * compInfo = quaternaryCompetitionPtr = NULL, and `compInfo[5]` SIGSEGVs
-     * (Playaveli's CLAUDE.CAR repro, in _CareerGameListCommon menus.c:6687).
+     * (Playaveli's CLAUDE.CAR repro, in CareerGameListCommon menus.c:6687).
      *
      * Reliable saved signal: the slot-3 context (euroCupsCompetitionContext)
      * is persisted and restored on load. Its competitionType (+0x00) and
@@ -1572,7 +1572,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
      * selects which of the three cups; we then VALIDATE that the saved
      * context's type agrees with that cup, so a stale euroCupSlotIndex (it
      * is only written on qualification) or a stale context can't activate a
-     * mismatched slot — the original _FindTeamInDIY-panic concern. */
+     * mismatched slot — the original FindTeamInDIY-panic concern. */
     {
         uint8_t *euroCup3 = 0;
         if (euroCupSlotIndex == 0)      euroCup3 = euroCupCopy;        /* type 2 */
@@ -1581,13 +1581,13 @@ static void _Rebuild_CompetitionSlotPointers(void)
 
         DIYCompetition *q3 = (DIYCompetition *)careerCompetitionSlotPtrTable[3];
         /* Participation gate: euroCupSlotIndex is only written on qualification
-         * (_Career_SelectEuroCupSlotIfTeamParticipates) and is SAVED, so it can
+         * (Career_SelectEuroCupSlotIfTeamParticipates) and is SAVED, so it can
          * be stale from a prior season when the club DID qualify. The euro cup
          * is contested every season by the qualifying clubs, so its slot-3
          * context can be active + type-matching while the player's club is NOT
          * in it. Without the participation check the fixup re-activates slot 3
          * for a non-participant, and ShowChairmanOpinionAboutTheSeason then
-         * calls _FindTeamInDIY(selTeamNumber, euroCupsCompetitionContext) which
+         * calls FindTeamInDIY(selTeamNumber, euroCupsCompetitionContext) which
          * hard-panics 0x6006 for a club coach (team not found). Mirror the
          * season-init enrolment: only activate if the club is actually in the
          * cup's team list. (gdb-confirmed 2026-06-10: club 5141 in SERIE A, euro
@@ -1596,17 +1596,17 @@ static void _Rebuild_CompetitionSlotPointers(void)
         /* Gate on the LOADED BUFFER's team list (q3), NOT the static euroCupCopy
          * template. euroCupCopy is reconstructed from its static template on load
          * (default teams, NOT the saved season's qualifiers), so
-         * _Career_TeamInEuroCup(euroCup3) gives a FALSE NEGATIVE for a club that's
+         * Career_TeamInEuroCup(euroCup3) gives a FALSE NEGATIVE for a club that's
          * in the saved season's cup but not the default template — leaving
          * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list
-         * row in _CareerGameListCommon on compInfo[5]. The saved slot-3 buffer is
-         * the season's authoritative field; _Career_TeamInLoadedEuroSlot checks it
-         * with the same search _FindTeamInDIY uses (gate-pass => no 0x6006). euroCup3
+         * row in CareerGameListCommon on compInfo[5]. The saved slot-3 buffer is
+         * the season's authoritative field; Career_TeamInLoadedEuroSlot checks it
+         * with the same search FindTeamInDIY uses (gate-pass => no 0x6006). euroCup3
          * (the static record) is still the pointer TARGET — it carries the name
          * table the game list reads. */
         if (euroCup3 != 0 && q3->isActive != 0 &&
             q3->competitionType == ((Competition *)euroCup3)->type &&
-            _Career_TeamInLoadedEuroSlot(q3)) {
+            Career_TeamInLoadedEuroSlot(q3)) {
             quaternaryCompetitionPtr = euroCup3;
         } else {
             quaternaryCompetitionPtr = 0;  /* slot 3 inactive / club not in it this season */
@@ -1618,7 +1618,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
  *
  * These are stale absolute pointers into the strings table (saved
  * verbatim from the saving binary's runtime address space). The only
- * consumer is `_InitializeNewSeason` which copies them into the
+ * consumer is `InitializeNewSeason` which copies them into the
  * SeasonInformations buffer at offsets 0x16/0x1A/0x1E/0x22 to display
  * the previous season's competition names on the season-end summary.
  * If we zero them, the summary may show empty strings for the prior
@@ -1628,7 +1628,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
  * looking up the comp record's `text[0]` field (same source as the
  * cup-record nameSource). Deferred until we have a save that exposes
  * a visible regression here. */
-static void _Rebuild_CompStringOffsets(void)
+static void Rebuild_CompStringOffsets(void)
 {
     primaryCompStringOffset    = 0;
     secondaryCompStringOffset  = 0;
@@ -1637,10 +1637,10 @@ static void _Rebuild_CompStringOffsets(void)
 }
 
 __attribute__((used, externally_visible))
-void _RebuildPointersAfterLoad(void)
+void RebuildPointersAfterLoad(void)
 {
     /* Step 1: refresh careerCompetitionSlotPtrTable[0..4]. Same five
-     * lines as `_InitNewSeason` lines 1165-1169 — but this time after
+     * lines as `InitNewSeason` lines 1165-1169 — but this time after
      * load, so the saved (now stale) pointer values get replaced with
      * the current run's competition-buffer addresses. */
     careerCompetitionSlotPtrTable[0] = (uint8_t *)&primaryCompetitionBuf;
@@ -1653,14 +1653,14 @@ void _RebuildPointersAfterLoad(void)
      *
      * namePtr is a pointer-to-disk field: at save time it holds the
      * SAVING binary's absolute address of the division/cup name string
-     * (e.g. divisionStringTable[d7], assigned in _InitDIYLeagueFromRecord
-     * diy_competition.c:8869 / _InitDIYCupFromRecord:8924). The JSON save
+     * (e.g. divisionStringTable[d7], assigned in InitDIYLeagueFromRecord
+     * diy_competition.c:8869 / InitDIYCupFromRecord:8924). The JSON save
      * stores it as raw bytes (primary_name_ptr), so after a cross-target
      * load it's a foreign address — on the Amiga a 64-bit-SDL value like
      * 0x1_004A70B8 truncates to a ~garbage 32-bit pointer. It then flows
      * into SeasonInformations.leagueStrPtr (line ~1067 below) and is
      * dereferenced by the season-recap renderer (statistics.c:2184,
-     * _StringCopy/RenderCompLine), which walks it to a NUL — off a wild
+     * StringCopy/RenderCompLine), which walks it to a NUL — off a wild
      * address that smashes the stack (observed: wild PC + "SWOS2" string
      * bytes on the stack walking past the comp buffer).
      *
@@ -1697,18 +1697,18 @@ void _RebuildPointersAfterLoad(void)
      * diyCompetitionStart and not in the saved overlay slot.
      *
      * VIEW SQUADS already worked without this step because that path
-     * goes through `_Career_OpenCompetitionSlotMenuAndApplyChanges`,
-     * which calls _Career_LoadCompetitionSlotStateFromBuffer itself.
+     * goes through `Career_OpenCompetitionSlotMenuAndApplyChanges`,
+     * which calls Career_LoadCompetitionSlotStateFromBuffer itself.
      * The Play Match / Next Match menus skip that helper, so we
      * have to populate diyCompetitionStart up-front at load time. */
-    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&primaryCompetitionBuf);
+    Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&primaryCompetitionBuf);
 
     /* Step 3: walk careerContests and rewrite each *Copy record's
      * embedded nameSource pointer at (record + 5 + nameOffset).
-     * Without this, `_InitDIYLeagueFromRecord` SIGSEGVs on a stale
+     * Without this, `InitDIYLeagueFromRecord` SIGSEGVs on a stale
      * string pointer when auto-advancing euroCupCopy /
      * cupWinnersCupCopy / uefaCupCopy after a cross-build load. */
-    _Rebuild_CupRecordNameSourcePointers();
+    Rebuild_CupRecordNameSourcePointers();
 
     /* Step 4: re-derive top-level competition slot pointers
      * (`currentCompetitionPtr` / `secondaryCompetitionPtr` /
@@ -1716,13 +1716,13 @@ void _RebuildPointersAfterLoad(void)
      * `diyCompetitionPtr` / `diyCompetitionTablePtr`) from
      * competitionsTable + selTeamNumber + euroCupSlotIndex. Saved
      * values were stale BSS addresses from the saving build. */
-    _Rebuild_CompetitionSlotPointers();
+    Rebuild_CompetitionSlotPointers();
 
     /* Step 5: zero the four *CompStringOffset fields. They held
      * stale absolute pointers into the strings table; downstream
-     * consumers (_InitializeNewSeason → SeasonInformations) will
+     * consumers (InitializeNewSeason → SeasonInformations) will
      * tolerate NULL by displaying empty text. */
-    _Rebuild_CompStringOffsets();
+    Rebuild_CompStringOffsets();
 }
 
 /* ================================================================
@@ -1744,18 +1744,18 @@ extern uint8_t worldCup2Copy[];
  * 6 bytes before careerContests[0] — the loop skips 6 bytes then reads
  * 4 bytes per iteration, matching the 10-byte careerContests entries. */
 
-extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
-extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
-extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
-extern void _SaveSelectedTeams(void);
-extern void _RestoreSelectedTeams(void);
-extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
-extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
-extern void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
-extern void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
+extern void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+extern void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+extern void SaveSelectedTeams(void);
+extern void RestoreSelectedTeams(void);
+extern void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+extern void Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
+extern void Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record);
+extern void Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
 
 __attribute__((used, externally_visible))
-void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
+void Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
 {
     /* Step 1: Map competition pointer to its career copy via the
      * typed CompetitionCareer[] — entry stride differs by bitness
@@ -1797,30 +1797,30 @@ void _Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
         goto found_slot;
 
     /* Not in any active slot — auto-advance this external competition */
-    _SaveSelectedTeams();
+    SaveSelectedTeams();
     {
         int8_t compType = ((Competition *)comp)->type;
         if (compType == 1) {
-            _Career_AutoAdvanceCupCompetitionFromRecord(comp);
+            Career_AutoAdvanceCupCompetitionFromRecord(comp);
         } else if (compType == 2) {
-            _Career_AutoAdvanceLeagueCompetitionFromRecord(comp);
+            Career_AutoAdvanceLeagueCompetitionFromRecord(comp);
         } else {
-            _Career_AutoAdvanceInternationalCompetitionFixtures(comp, sel);
+            Career_AutoAdvanceInternationalCompetitionFixtures(comp, sel);
         }
     }
-    _RestoreSelectedTeams();
+    RestoreSelectedTeams();
     return;
 
 found_slot:
-    _Career_LoadCompetitionSlotStateFromBuffer(slotCtx);
+    Career_LoadCompetitionSlotStateFromBuffer(slotCtx);
     {
         uint8_t compType = slotCtx[1];
         if (compType == 1) {
-            _ShowDIYCupMenuWithParams(1, 1, 0);
+            ShowDIYCupMenuWithParams(1, 1, 0);
         } else if (compType == 2) {
-            _DIY_EditCompetitionSlot(1, 1, 0);
+            DIY_EditCompetitionSlot(1, 1, 0);
         } else {
-            _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+            ShowDiyLeaguesTournamentMenu(1, 1, 0);
         }
     }
 }

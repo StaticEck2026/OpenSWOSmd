@@ -267,7 +267,7 @@
 /* allowShorterMenuItemsWithFrames: real data in swos_amiga_data_imports.c */
 /* animPatternsIndex: real data in swos_amiga_data_imports.c */
 /* animPatternsRandomTable: real data in animated_patterns.c (uint8_t[64]
- * permutation table — `_DrawAnimatedPatterns` picks a pitch tile index
+ * permutation table — `DrawAnimatedPatterns` picks a pitch tile index
  * from it each frame to drive fan animations). Zero stub left every
  * slot stuck at 0, so the same tile animated forever / not at all. */
 /* animPatternsState: real data in swos_amiga_data_imports.c */
@@ -917,7 +917,7 @@ char goalBase[0x4A38];
  * whatever the linker placed next — previously that was editTeamsBuffer
  * (43 KB) which was quiet, but once we moved editTeamsBuffer into the
  * selTeams backing buffer the adjacent neighbour became hilStartOfGoalsBuffer
- * + goalBase + editTeamsSaveVarsArea, and _InitCurrentGoalHighlight
+ * + goalBase + editTeamsSaveVarsArea, and InitCurrentGoalHighlight
  * zeroing 19000 bytes at goalBase stomped any sprite that had overflowed
  * there. Runtime inspection showed the ball's SpriteGraphics header
  * landed ~740 KB past imageCmdWorkBuf start, so size this buffer big
@@ -1565,8 +1565,8 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* sfxQueueCount: real data in swos_amiga_data_imports.c */
 /* sfxQueueWriteIdx: real data in swos_amiga_data_imports.c */
 /* shirtColorTable: real data in team_colors.c (10-byte palette-index LUT).
- * Was a zero-filled 4K stub which made _ConvertTeamColor always return 0,
- * so every kit color fed to _ConvertSpriteColors mapped to transparent —
+ * Was a zero-filled 4K stub which made ConvertTeamColor always return 0,
+ * so every kit color fed to ConvertSpriteColors mapped to transparent —
  * that's why player bodies were see-through on the pitch. */
 /* shirtType1: typed definition in swos_data_typed_stubs.c */
 /* shirtType2: typed definition in swos_data_typed_stubs.c */

@@ -713,7 +713,7 @@ Sprite cornerFlagSprite
           0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
 #ifdef SWOS_SDL_BUILD
 /* Widescreen-only second corner-flag sprite. The full pitch width shows both side corners
- * at once, but cornerFlagSprite can only track one; _UpdateCornerFlagSprite drives this one
+ * at once, but cornerFlagSprite can only track one; UpdateCornerFlagSprite drives this one
  * at the opposite corner. Hidden (imageIndex = -1) outside widescreen. */
 Sprite cornerFlagSprite2
     = { 3, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },

@@ -39,9 +39,9 @@ extern uint8_t aThePresident[];           /* "THE PRESIDENT" */
  * Loads the chairman memos menu and shows it.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowChairmanMessage(void)
+void ShowChairmanMessage(void)
 {
-    _ShowMenu(chairmanMemosMenu);
+    ShowMenu(chairmanMemosMenu);
 }
 
 /* ================================================================
@@ -52,7 +52,7 @@ void _ShowChairmanMessage(void)
  * to OnReturn to render the memo content.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ChairmanMemosInit(void)
+void ChairmanMemosInit(void)
 {
     fireResetFlag = 1;
 
@@ -64,7 +64,7 @@ void _ChairmanMemosInit(void)
     }
 
     /* Fall through to OnReturn */
-    _ChairmanMemosOnReturn();
+    ChairmanMemosOnReturn();
 }
 
 /* ================================================================
@@ -75,10 +75,10 @@ void _ChairmanMemosInit(void)
  * menu, waits 100 VBlanks, then shows the "Continue" button.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ChairmanMemosOnReturn(void)
+void ChairmanMemosOnReturn(void)
 {
     /* Format "DEAR %a %b" into entry 1's text buffer */
-    _PrintFormatted(aDearAB_0, (uint8_t *)menuEntries[1].fg,
+    PrintFormatted(aDearAB_0, (uint8_t *)menuEntries[1].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     managerSexBuffer, managerSurnameBuffer, (void *)0);
 
@@ -91,19 +91,19 @@ void _ChairmanMemosOnReturn(void)
     int16_t msgIdx = (int16_t)(currentMessage - 1) * 2;
 
     /* Format message line 1 into entry 2's text buffer */
-    _PrintFormatted((const uint8_t *)clubMessagesTable[msgIdx],
+    PrintFormatted((const uint8_t *)clubMessagesTable[msgIdx],
                     (uint8_t *)menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
 
     /* Format message line 2 into entry 3's text buffer */
-    _PrintFormatted((const uint8_t *)clubMessagesTable[msgIdx + 1],
+    PrintFormatted((const uint8_t *)clubMessagesTable[msgIdx + 1],
                     (uint8_t *)menuEntries[3].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
 
     /* Draw the menu */
-    _DrawMenu();
+    DrawMenu();
 
     /* Wait 100 VBlanks */
     for (int16_t i = 99; i >= 0; i--) {
@@ -116,7 +116,7 @@ void _ChairmanMemosOnReturn(void)
     menuEntries[6].isInvisible = 0;
 
     /* Redraw */
-    _DrawMenu();
+    DrawMenu();
 }
 
 /* ================================================================
@@ -126,10 +126,10 @@ void _ChairmanMemosOnReturn(void)
  * exits the menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ChairmanMemosContinue(void)
+void ChairmanMemosContinue(void)
 {
     currentMessage = 0;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
@@ -138,8 +138,8 @@ void _ChairmanMemosContinue(void)
  * Entry point for the club business/bank statement menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowClubBussinesMenu(void)
+void ShowClubBussinesMenu(void)
 {
     clubBusinessActive = 0;
-    _ShowMenu(clubBusinessMenu);
+    ShowMenu(clubBusinessMenu);
 }

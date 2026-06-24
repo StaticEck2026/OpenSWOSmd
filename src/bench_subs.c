@@ -187,21 +187,21 @@ extern void *teamTacticsTable[];
 extern uint8_t  aFormation[];
 
 /* ---- external functions ---- */
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _InitCurrentGoalHighlight(void);
-extern void _CheckIfGoalkeeperClaimedTheBall(void);
-extern void _InitializePlayerSpriteFrameIndices(void);
-extern void _ApplyTeamTactics(TeamGame *teamGame);
-/* _SetPlayerAnimationTable declared in player_anim.h */
-extern void _StopAllPlayers(void);
-extern void _DrawSprite16Pixels(uint16_t spriteIndex, uint16_t x, uint16_t y);
-extern void _DrawSpriteInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
-extern void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
-extern void _FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
-extern uint16_t _DrawMenuText(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable);
-extern uint16_t _DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable);
-extern void _PanicHaltLoop(void);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void InitCurrentGoalHighlight(void);
+extern void CheckIfGoalkeeperClaimedTheBall(void);
+extern void InitializePlayerSpriteFrameIndices(void);
+extern void ApplyTeamTactics(TeamGame *teamGame);
+/* SetPlayerAnimationTable declared in player_anim.h */
+extern void StopAllPlayers(void);
+extern void DrawSprite16Pixels(uint16_t spriteIndex, uint16_t x, uint16_t y);
+extern void DrawSpriteInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
+extern void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, uint16_t x, uint16_t y);
+extern void FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
+extern uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable);
+extern uint16_t DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color, uint8_t *text, uint8_t *charsTable);
+extern void PanicHaltLoop(void);
 
 /* ---- forward declarations ---- */
 static void leaveSubsMenu(void);
@@ -233,13 +233,13 @@ static void drawFormationMenu(void);
 static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t entryColor, uint16_t entryIndex);
 
 /* ================================================================
- * _BenchCheckControls
+ * BenchCheckControls
  * (SWOS2.s line 12131)
  *
  * Per-frame substitution controls check. Called from GameLoop.
  * ================================================================ */
 void __attribute__((used, externally_visible))
-_BenchCheckControls(void)
+BenchCheckControls(void)
 {
     TeamGeneralInfo *a6;
 
@@ -262,13 +262,13 @@ _BenchCheckControls(void)
         }
 
     read_pl1_input:
-        _Player1StatusProc();
+        Player1StatusProc();
         subsDirection = pl1Direction;
         subsFire = pl1Fire;
         goto menu_active_phase;
 
     read_pl2_input:
-        _Player2StatusProc();
+        Player2StatusProc();
         subsDirection = pl2Direction;
         subsFire = pl2Fire;
         goto menu_active_phase;
@@ -335,13 +335,13 @@ _BenchCheckControls(void)
         return;
 
     if ((uint16_t)a6->playerCoachNumber != 2) {
-        _Player1StatusProc();
+        Player1StatusProc();
         subsDirection = pl1Direction;
         subsFire = pl1Fire;
         goto check_double_tap;
     }
 
-    _Player2StatusProc();
+    Player2StatusProc();
     subsDirection = pl2Direction;
     subsFire = pl2Fire;
     goto check_double_tap;
@@ -584,11 +584,11 @@ menu_active_phase:
  * ================================================================ */
 static void leaveSubsMenu(void)
 {
-    _InitCurrentGoalHighlight();
+    InitCurrentGoalHighlight();
     benchOff = 1;
     cameraLeavingSubsTimer = 50;
     leavingSubsMenu = 1;
-    _CheckIfGoalkeeperClaimedTheBall();
+    CheckIfGoalkeeperClaimedTheBall();
     bench1Called = 0;
     bench2Called = 0;
     inSubstitutesMenu = 0;
@@ -917,11 +917,11 @@ static void checkForThrowInAndGoalkeepersBall(void)
         if (a1->playerState == PL_THROW_IN) {
             hideBall = 0;
             a1->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, a1);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, a1);
         }
     }
 
-    _CheckIfGoalkeeperClaimedTheBall();
+    CheckIfGoalkeeperClaimedTheBall();
 }
 
 /* ================================================================
@@ -977,8 +977,8 @@ substitutePlayer(void)
         }
     }
 
-    _InitializePlayerSpriteFrameIndices();
-    _ApplyTeamTactics((TeamGame *)benchTeamGame);
+    InitializePlayerSpriteFrameIndices();
+    ApplyTeamTactics((TeamGame *)benchTeamGame);
 
     waitForPlayerToGoInTimer = 100;
     subsBlockFire = 1;
@@ -1116,8 +1116,8 @@ markPlayersMenuHandler(void)
                     spr2->playerOrdinal = ordTmp;
                 }
 
-                _InitializePlayerSpriteFrameIndices();
-                _ApplyTeamTactics((TeamGame *)benchTeamGame);
+                InitializePlayerSpriteFrameIndices();
+                ApplyTeamTactics((TeamGame *)benchTeamGame);
 
                 selectedPlayerInSubs = 0xFFFF;
                 overlayActiveFlag = 0;
@@ -1147,7 +1147,7 @@ static void handleFormationMenuControls(void)
             pl2Tactics = selectedFormationEntry;
         }
 
-        _ApplyTeamTactics((TeamGame *)benchTeamGame);
+        ApplyTeamTactics((TeamGame *)benchTeamGame);
         subsBenchOff();
         return;
     }
@@ -1436,13 +1436,13 @@ static PlayerInfo *getBenchPlayerPointer(uint16_t index, uint16_t *outOrdinal)
 }
 
 /* ================================================================
- * _DrawBenchAndSubsMenu (SWOS2.s line 13159)
+ * DrawBenchAndSubsMenu (SWOS2.s line 13159)
  *
  * Main drawing entry for bench/substitutes menu.
  * Called from GameLoop each frame when bench is active.
  * ================================================================ */
 void __attribute__((used, externally_visible))
-_DrawBenchAndSubsMenu(void)
+DrawBenchAndSubsMenu(void)
 {
     uint16_t d0, d1, d2;
 
@@ -1498,7 +1498,7 @@ skip_opponent_1:
 
     if (goToSubsTimer == 0 && substituteInProgress == 0 && subsState == 0) {
         uint16_t save_d1 = d1;
-        _DrawSpriteInCameraView(SPR_SELECT_SUBSTITUTE_ARROW, d1, d2);
+        DrawSpriteInCameraView(SPR_SELECT_SUBSTITUTE_ARROW, d1, d2);
         d1 = save_d1;
     }
 
@@ -1605,7 +1605,7 @@ static void drawBenchPlayersAndCoach(TeamGame *teamGame, TeamGeneralInfo *team, 
             if (subsTrainingTopTeam == 0)
                 coach_d2 += 14;
         }
-        _DrawSpriteHotspotInCameraView(d0, d1, coach_d2);
+        DrawSpriteHotspotInCameraView(d0, d1, coach_d2);
     }
 
     if (trainingGame != 0) {
@@ -1688,7 +1688,7 @@ skip_coach:
         }
         d0 += d3;
         d0 += d6;
-        _DrawSpriteHotspotInCameraView(d0, d1, d2);
+        DrawSpriteHotspotInCameraView(d0, d1, d2);
 
     next_player:
         d2 += 7;
@@ -1776,9 +1776,9 @@ skip_formation_entry:
     {
         uint16_t saved_d2 = d2;
         uint16_t bx = subsMenuX - cameraX.s.i + 43;
-        _FillRectangle(bx, d2, 41, 33, 8);
-        _FillRectangle(bx - 2, d2 - 2, 41, 33, subsMenuBackgroundColor);
-        _FillRectangle(bx - 1, d2 - 1, 39, 31, subsMenuHighlightColor);
+        FillRectangle(bx, d2, 41, 33, 8);
+        FillRectangle(bx - 2, d2 - 2, 41, 33, subsMenuBackgroundColor);
+        FillRectangle(bx - 1, d2 - 1, 39, 31, subsMenuHighlightColor);
 
         /* draw title sprite */
         {
@@ -1787,9 +1787,9 @@ skip_formation_entry:
             uint16_t spr = SPR_SUBSTITUTES;
             if (subsState != 1 && subsState != 4) {
                 panicReasonCode = 0x4554;
-                _PanicHaltLoop();
+                PanicHaltLoop();
             }
-            _DrawSprite16Pixels(spr, tx, ty);
+            DrawSprite16Pixels(spr, tx, ty);
         }
         d2 = saved_d2;
     }
@@ -1840,19 +1840,19 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
 
     /* draw shadow rectangle */
     x0 = subsMenuX - cameraX.s.i;
-    _FillRectangle(x0, y, 126, 11, 8);
+    FillRectangle(x0, y, 126, 11, 8);
 
     /* draw frame rectangle */
-    _FillRectangle(x0 - 2, y - 2, 126, 11, subsMenuEntryFrameColor);
+    FillRectangle(x0 - 2, y - 2, 126, 11, subsMenuEntryFrameColor);
 
     /* draw background rectangle */
-    _FillRectangle(x0 - 1, y - 1, 124, 9, baseColor);
+    FillRectangle(x0 - 1, y - 1, 124, 9, baseColor);
 
     /* "FORMATION" entry (d7 == -1 in state 4) */
     if (subsState == 4 && d7 == -1) {
         uint16_t cx = subsMenuX - cameraX.s.i + 63;
         y += 1;
-        _DrawMenuTextCentered(cx, y, 2, aFormation, charsTable);
+        DrawMenuTextCentered(cx, y, 2, aFormation, charsTable);
         y -= 1;
         return;
     }
@@ -1879,7 +1879,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
                         goto skip_face;
                 }
             }
-            _DrawSprite16Pixels(faceSpr, fx, y);
+            DrawSprite16Pixels(faceSpr, fx, y);
         }
     skip_face:;
     }
@@ -1893,7 +1893,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
             uint16_t ix = subsMenuX - cameraX.s.i;
             if (useIndividualPlayerSkinColor != 0)
                 ix += 9;
-            _DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
+            DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
             goto draw_name;
         }
     }
@@ -1917,7 +1917,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
             *p = 0;
 
             y += 1;
-            _DrawMenuTextCentered(nx, y, 2, numStr, charsTable);
+            DrawMenuTextCentered(nx, y, 2, numStr, charsTable);
         }
     }
 
@@ -1939,7 +1939,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
                 uint16_t cx = subsMenuX - cameraX.s.i;
                 if (useIndividualPlayerSkinColor != 0)
                     cx += 9;
-                _DrawSprite16Pixels(cardSpr, cx, y);
+                DrawSprite16Pixels(cardSpr, cx, y);
             }
             y += 1;
         }
@@ -1952,7 +1952,7 @@ draw_name:
         uint16_t nameX = subsMenuX - cameraX.s.i + 9;
         if (useIndividualPlayerSkinColor != 0)
             nameX += 9;
-        _DrawMenuText(nameX, y, 2, (uint8_t *)pi->shortName, charsTable);
+        DrawMenuText(nameX, y, 2, (uint8_t *)pi->shortName, charsTable);
     }
 
     /* draw position string */
@@ -1960,7 +1960,7 @@ draw_name:
         PlayerInfo *pi = piFromOffset(teamGame, d6);
         uint8_t *posStr = (uint8_t *)playerPositionsStringTable[(uint16_t)(int16_t)(int8_t)pi->position];
         uint16_t posX = subsMenuX - cameraX.s.i + 116;
-        _DrawMenuTextCentered(posX, y, 2, posStr, charsTable);
+        DrawMenuTextCentered(posX, y, 2, posStr, charsTable);
     }
     y -= 1;
 
@@ -1981,7 +1981,7 @@ draw_name:
     draw_injury:
         {
             uint16_t ix = subsMenuX - cameraX.s.i + 101;
-            _DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
+            DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
         }
     }
 }
@@ -2042,15 +2042,15 @@ static void drawFormationMenu(void)
     {
         uint16_t saved_d2 = d2;
         uint16_t bx = formationMenuX - cameraX.s.i + 10;
-        _FillRectangle(bx, d2, 41, 33, 8);
-        _FillRectangle(bx - 2, d2 - 2, 41, 33, subsMenuBackgroundColor);
-        _FillRectangle(bx - 1, d2 - 1, 39, 31, subsMenuHighlightColor);
+        FillRectangle(bx, d2, 41, 33, 8);
+        FillRectangle(bx - 2, d2 - 2, 41, 33, subsMenuBackgroundColor);
+        FillRectangle(bx - 1, d2 - 1, 39, 31, subsMenuHighlightColor);
 
         /* draw title sprite */
         {
             uint16_t tx = bx - 1 + 2;
             uint16_t ty = d2 - 1 + 2;
-            _DrawSprite16Pixels(SPR_FORMATION, tx, ty);
+            DrawSprite16Pixels(SPR_FORMATION, tx, ty);
         }
         d2 = saved_d2;
     }
@@ -2080,13 +2080,13 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
 
     /* draw shadow */
     x0 = formationMenuX - cameraX.s.i;
-    _FillRectangle(x0, y, 60, 11, 8);
+    FillRectangle(x0, y, 60, 11, 8);
 
     /* draw frame */
-    _FillRectangle(x0 - 2, y - 2, 60, 11, subsMenuEntryFrameColor);
+    FillRectangle(x0 - 2, y - 2, 60, 11, subsMenuEntryFrameColor);
 
     /* draw background */
-    _FillRectangle(x0 - 1, y - 1, 58, 9, entryColor);
+    FillRectangle(x0 - 1, y - 1, 58, 9, entryColor);
 
     /* get formation name string */
     if (entryIndex < 12) {
@@ -2098,7 +2098,7 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
     /* draw centered text */
     {
         uint16_t tx = formationMenuX - cameraX.s.i + 30;
-        _DrawMenuTextCentered(tx, y, 2, textStr, charsTable);
+        DrawMenuTextCentered(tx, y, 2, textStr, charsTable);
     }
 }
 
@@ -2108,7 +2108,7 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
 
 /* ShowFormationMenu — set state to show formation selection overlay (SWOS2.s line 10015) */
 __attribute__((used, externally_visible))
-void _ShowFormationMenu(void)
+void ShowFormationMenu(void)
 {
     subsState = 2;
     subsBlockFire = 1;
@@ -2119,7 +2119,7 @@ void _ShowFormationMenu(void)
 
 /* SubsBenchOff — dismiss bench/subs overlay (SWOS2.s line 10025) */
 __attribute__((used, externally_visible))
-void _SubsBenchOff(void)
+void SubsBenchOff(void)
 {
     subsState = 0;
     subsBlockDirections = 1;
@@ -2143,7 +2143,7 @@ void _SubsBenchOff(void)
 uint8_t *benchPlayerResultA0;
 
 __attribute__((used, externally_visible))
-uint16_t _GetBenchPlayerPointer(uint16_t index)
+uint16_t GetBenchPlayerPointer(uint16_t index)
 {
     uint16_t tactics = pl1Tactics;
     TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
@@ -2166,9 +2166,9 @@ uint16_t _GetBenchPlayerPointer(uint16_t index)
  * the position ordinal, and stores result in plToBeSubstitutedPos.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdatePlayerToBeSubstitutedPosition(void)
+void UpdatePlayerToBeSubstitutedPosition(void)
 {
-    plToBeSubstitutedPos = _GetBenchPlayerPointer(plToBeSubstitutedOrd);
+    plToBeSubstitutedPos = GetBenchPlayerPointer(plToBeSubstitutedOrd);
 }
 
 /* ================================================================
@@ -2178,7 +2178,7 @@ void _UpdatePlayerToBeSubstitutedPosition(void)
  * Returns: 1 = ok to substitute, 0 = do not substitute.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _IsPlayerOkToSubstitute(void)
+uint16_t IsPlayerOkToSubstitute(void)
 {
     if (subsState == 4) {
         /* In state 4, only ordinal 0 (goalkeeper) is ok */
@@ -2212,7 +2212,7 @@ uint16_t _IsPlayerOkToSubstitute(void)
  * available. Sets plToBeSubstitutedOrd and plToBeSubstitutedPos.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FindInitialPlayerToBeSubstituted(void)
+void FindInitialPlayerToBeSubstituted(void)
 {
     TeamGame *tg = (TeamGame *)benchTeamGame;
 
@@ -2225,7 +2225,7 @@ void _FindInitialPlayerToBeSubstituted(void)
     int16_t groupMatch = -1;       /* d4 */
 
     for (uint16_t i = 0; i < 11; i++) {
-        _GetBenchPlayerPointer(i);
+        GetBenchPlayerPointer(i);
         PlayerInfo *pi = (PlayerInfo *)(benchPlayerResultA0 + TEAMGAME_PLAYERS_OFFSET);
 
         /* Skip red-carded players */
@@ -2268,7 +2268,7 @@ void _FindInitialPlayerToBeSubstituted(void)
         selected = firstAvailable;
 
     plToBeSubstitutedOrd = (uint16_t)selected;
-    plToBeSubstitutedPos = _GetBenchPlayerPointer((uint16_t)selected);
+    plToBeSubstitutedPos = GetBenchPlayerPointer((uint16_t)selected);
 }
 
 /* ================================================================
@@ -2279,7 +2279,7 @@ void _FindInitialPlayerToBeSubstituted(void)
  * Up/down call SubsBenchOff to exit.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _HandleFormationMenuMovement(void)
+void HandleFormationMenuMovement(void)
 {
     uint16_t dir = subsDirection;
 
@@ -2311,7 +2311,7 @@ void _HandleFormationMenuMovement(void)
 
     if (dir == 2 || dir == 6) {
         /* Up or down press — exit formation menu */
-        _SubsBenchOff();
+        SubsBenchOff();
         return;
     }
 
@@ -2325,7 +2325,7 @@ void _HandleFormationMenuMovement(void)
  * arrays. If the bench team is the bottom team, uses offset +16.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
+void SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
 {
     uint8_t *ordinals = (uint8_t *)&plOrdinalsTable;
     uint8_t *nameLens = (uint8_t *)&plNamesLengthTableCopy;
@@ -2357,7 +2357,7 @@ void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex)
  * and updates benchTeamGame pointer.
  */
 __attribute__((used, externally_visible))
-void _TrainingSwapBenchTeams(void)
+void TrainingSwapBenchTeams(void)
 {
     subsTeamsSwapped ^= 1;
     subsTrainingTopTeam ^= 1;
@@ -2385,13 +2385,13 @@ void _TrainingSwapBenchTeams(void)
  * Falls through to loc_10CF6E which clears deadBenchVar.
  */
 __attribute__((used, externally_visible))
-void _LeaveSubsMenu(void)
+void LeaveSubsMenu(void)
 {
-    _InitCurrentGoalHighlight();
+    InitCurrentGoalHighlight();
     benchOff = 1;
     cameraLeavingSubsTimer = 50;
     leavingSubsMenu = 1;
-    _CheckIfGoalkeeperClaimedTheBall();
+    CheckIfGoalkeeperClaimedTheBall();
     bench1Called = 0;
     bench2Called = 0;
     inSubstitutesMenu = 0;
@@ -2415,17 +2415,17 @@ void _LeaveSubsMenu(void)
  * transition them back to normal. Then check if goalkeeper claimed ball.
  */
 __attribute__((used, externally_visible))
-void _CheckForThrowInAndGoalkeepersBall(void)
+void CheckForThrowInAndGoalkeepersBall(void)
 {
     Sprite *player = lastTeamPlayedBeforeBreak->controlledPlayer;
     if (player != 0) {
         if (player->playerState == PL_THROW_IN) {
             hideBall = 0;
             player->playerState = PL_NORMAL;
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, player);
         }
     }
-    _CheckIfGoalkeeperClaimedTheBall();
+    CheckIfGoalkeeperClaimedTheBall();
 }
 
 /* ================================================================
@@ -2439,7 +2439,7 @@ void _CheckForThrowInAndGoalkeepersBall(void)
  * Returns 0 = OK, -1 = not OK. Caller checks sign flag (bmi).
  */
 __attribute__((used, externally_visible))
-int16_t _IsThisPlayerOkToSelect(void)
+int16_t IsThisPlayerOkToSelect(void)
 {
     uint16_t numSubs = team1NumSubs;
     TeamGeneralInfo *team = (TeamGeneralInfo *)benchTeam;
@@ -2476,7 +2476,7 @@ int16_t _IsThisPlayerOkToSelect(void)
  * benchPlayerIndex >= 1: starts substitution (state 1).
  */
 __attribute__((used, externally_visible))
-void _FirePressedInSubsMenu(void)
+void FirePressedInSubsMenu(void)
 {
     uint16_t idx = benchPlayerIndex;
 
@@ -2516,7 +2516,7 @@ void _FirePressedInSubsMenu(void)
         return;
     }
 
-    _FindInitialPlayerToBeSubstituted();
+    FindInitialPlayerToBeSubstituted();
 }
 
 /* ---- HandleFormationMenuControls  (SWOS2.s line 10216) ----
@@ -2524,11 +2524,11 @@ void _FirePressedInSubsMenu(void)
  * Fire applies the selected formation; otherwise delegates to movement.
  */
 __attribute__((used, externally_visible))
-void _HandleFormationMenuControls(void)
+void HandleFormationMenuControls(void)
 {
     if (subsFire == 0) {
         /* No fire — handle movement */
-        _HandleFormationMenuMovement();
+        HandleFormationMenuMovement();
         return;
     }
 
@@ -2542,8 +2542,8 @@ void _HandleFormationMenuControls(void)
     else
         pl2Tactics = selectedFormationEntry;
 
-    _ApplyTeamTactics((TeamGame *)benchTeamGame);
-    _SubsBenchOff();
+    ApplyTeamTactics((TeamGame *)benchTeamGame);
+    SubsBenchOff();
 }
 
 /* ---- UpdateSubstitutePlayerIndices  (SWOS2.s line 10243) ----
@@ -2552,13 +2552,13 @@ void _HandleFormationMenuControls(void)
  * Scans forward/backward with wrap-around to find valid candidates.
  */
 __attribute__((used, externally_visible))
-void _UpdateSubstitutePlayerIndices(void)
+void UpdateSubstitutePlayerIndices(void)
 {
     uint16_t dir = subsDirection;
 
     /* Left/right = exit bench */
     if (dir == 2 || dir == 6) {
-        _SubsBenchOff();
+        SubsBenchOff();
         return;
     }
 
@@ -2579,7 +2579,7 @@ select_next:
     subsBlockDirections = 1;
     if (subsState == 4 && (int16_t)plToBeSubstitutedOrd < 0) {
         plToBeSubstitutedOrd = 1;
-        _UpdatePlayerToBeSubstitutedPosition();
+        UpdatePlayerToBeSubstitutedPosition();
         return;
     }
     if (plToBeSubstitutedOrd == 10)
@@ -2605,8 +2605,8 @@ inc_forward:
     plToBeSubstitutedOrd++;
     if (plToBeSubstitutedOrd == 11)
         goto dec_backward;
-    _UpdatePlayerToBeSubstitutedPosition();
-    if (_IsPlayerOkToSubstitute() != 0)
+    UpdatePlayerToBeSubstitutedPosition();
+    if (IsPlayerOkToSubstitute() != 0)
         goto inc_forward;
     return;
 
@@ -2614,8 +2614,8 @@ dec_backward:
     plToBeSubstitutedOrd--;
     if ((int16_t)plToBeSubstitutedOrd < 0)
         goto inc_forward;
-    _UpdatePlayerToBeSubstitutedPosition();
-    if (_IsPlayerOkToSubstitute() != 0)
+    UpdatePlayerToBeSubstitutedPosition();
+    if (IsPlayerOkToSubstitute() != 0)
         goto dec_backward;
 }
 
@@ -2623,9 +2623,9 @@ dec_backward:
  * Thin wrapper that calls UpdateSubstitutePlayerIndices.
  */
 __attribute__((used, externally_visible))
-void _CallUpdateSubstitutePlayerIndices(void)
+void CallUpdateSubstitutePlayerIndices(void)
 {
-    _UpdateSubstitutePlayerIndices();
+    UpdateSubstitutePlayerIndices();
 }
 
 /* ---- state3_handle_fire_press  (SWOS2.s line 10089) ----
@@ -2635,13 +2635,13 @@ void _CallUpdateSubstitutePlayerIndices(void)
  * Note: dead code after bra.w in original asm is omitted.
  */
 __attribute__((used, externally_visible))
-void _state3_handle_fire_press(void)
+void state3_handle_fire_press(void)
 {
     if (subsFire != 0) {
         overlayActiveFlag = 0;
         return;
     }
-    _UpdateSubstitutePlayerIndices();
+    UpdateSubstitutePlayerIndices();
 }
 
 /* ================================================================
@@ -2656,10 +2656,10 @@ void _state3_handle_fire_press(void)
  * No fire: delegates to CallUpdateSubstitutePlayerIndices.
  */
 __attribute__((used, externally_visible))
-void _SelectPlayerToSubstituteMenuHandler(void)
+void SelectPlayerToSubstituteMenuHandler(void)
 {
     if (subsFire == 0) {
-        _CallUpdateSubstitutePlayerIndices();
+        CallUpdateSubstitutePlayerIndices();
         return;
     }
 
@@ -2708,7 +2708,7 @@ void _SelectPlayerToSubstituteMenuHandler(void)
  *   - Leaves the subs menu
  */
 __attribute__((used, externally_visible))
-void _SubstitutePlayer(void)
+void SubstitutePlayer(void)
 {
     Sprite *sprite = substitutedPlSprite;
     sprite->injuryLevel = 0;
@@ -2727,7 +2727,7 @@ void _SubstitutePlayer(void)
             tg->markedPlayer = (int16_t)leaving;
     }
 
-    _SwapPlayerNameData(entering, leaving);
+    SwapPlayerNameData(entering, leaving);
 
     /* Look up raw byte offsets */
     uint16_t enterOff = ingameTeamPlayerOffsets[entering];
@@ -2746,11 +2746,11 @@ void _SubstitutePlayer(void)
         pL[i] = tmp;
     }
 
-    _InitializePlayerSpriteFrameIndices();
-    _ApplyTeamTactics((TeamGame *)benchTeamGame);
+    InitializePlayerSpriteFrameIndices();
+    ApplyTeamTactics((TeamGame *)benchTeamGame);
     waitForPlayerToGoInTimer = 100;
     subsBlockFire = 1;
-    _LeaveSubsMenu();
+    LeaveSubsMenu();
 }
 
 /* ---- MarkPlayersMenuHandler  (SWOS2.s line 10022) ----
@@ -2762,7 +2762,7 @@ void _SubstitutePlayer(void)
  * No fire: delegates to UpdateSubstitutePlayerIndices.
  */
 __attribute__((used, externally_visible))
-void _MarkPlayersMenuHandler(void)
+void MarkPlayersMenuHandler(void)
 {
     /* Check if current player can be marked (no red card) and fire held long enough */
     uint16_t offset = ingameTeamPlayerOffsets[plToBeSubstitutedPos];
@@ -2781,14 +2781,14 @@ void _MarkPlayersMenuHandler(void)
 
     /* Fire not pressed — delegate to movement/scanning */
     if (subsFire == 0) {
-        _UpdateSubstitutePlayerIndices();
+        UpdateSubstitutePlayerIndices();
         return;
     }
 
     /* Fire pressed with negative ord → formation menu */
     if ((int16_t)plToBeSubstitutedOrd < 0) {
         subsWriteOnly = 2;
-        _ShowFormationMenu();
+        ShowFormationMenu();
         return;
     }
 
@@ -2823,7 +2823,7 @@ void _MarkPlayersMenuHandler(void)
         tg->markedPlayer = (int16_t)player2;
     }
 
-    _SwapPlayerNameData(player2, player1);
+    SwapPlayerNameData(player2, player1);
 
     /* Swap PlayerInfo data (61 bytes) */
     uint16_t off1 = ingameTeamPlayerOffsets[player2];
@@ -2853,11 +2853,11 @@ void _MarkPlayersMenuHandler(void)
     sprite1->playerOrdinal = sprite2->playerOrdinal;
     sprite2->playerOrdinal = tmpOrd;
 
-    _InitializePlayerSpriteFrameIndices();
-    _ApplyTeamTactics((TeamGame *)benchTeamGame);
+    InitializePlayerSpriteFrameIndices();
+    ApplyTeamTactics((TeamGame *)benchTeamGame);
     selectedPlayerInSubs = 0xFFFF;
     overlayActiveFlag = 0;
-    _SubsBenchOff();
+    SubsBenchOff();
 }
 
 /* ================================================================
@@ -2870,25 +2870,25 @@ void _MarkPlayersMenuHandler(void)
  * In idle state (0): handles direction, fire, training team swap.
  */
 __attribute__((used, externally_visible))
-void _BenchMenuHandleControls(void)
+void BenchMenuHandleControls(void)
 {
     if (substituteInProgress != 0)
         return;
 
     /* Dispatch based on current subs menu state */
     if (subsState != 0) {
-        if (subsState == 1) { _SelectPlayerToSubstituteMenuHandler(); return; }
-        if (subsState == 3) { _state3_handle_fire_press(); return; }
-        if (subsState == 2) { _HandleFormationMenuControls(); return; }
-        if (subsState == 4) { _MarkPlayersMenuHandler(); return; }
+        if (subsState == 1) { SelectPlayerToSubstituteMenuHandler(); return; }
+        if (subsState == 3) { state3_handle_fire_press(); return; }
+        if (subsState == 2) { HandleFormationMenuControls(); return; }
+        if (subsState == 4) { MarkPlayersMenuHandler(); return; }
         return;
     }
 
     /* subsState == 0: bench idle — check if bench was dismissed */
     if (benchTeam == (uintptr_t)&topTeamData) {
-        if (bench1Called != 0) { _LeaveSubsMenu(); return; }
+        if (bench1Called != 0) { LeaveSubsMenu(); return; }
     } else {
-        if (bench2Called != 0) { _LeaveSubsMenu(); return; }
+        if (bench2Called != 0) { LeaveSubsMenu(); return; }
     }
 
     uint16_t dir = subsDirection;
@@ -2903,8 +2903,8 @@ void _BenchMenuHandleControls(void)
     }
 
     /* Left/right = leave, fire = start substitution */
-    if (dir == 2 || dir == 6) { _LeaveSubsMenu(); return; }
-    if (subsFire != 0) { _FirePressedInSubsMenu(); return; }
+    if (dir == 2 || dir == 6) { LeaveSubsMenu(); return; }
+    if (subsFire != 0) { FirePressedInSubsMenu(); return; }
     return;
 
 handle_inc:
@@ -2917,7 +2917,7 @@ handle_inc:
 inc_scan:
     benchPlayerIndex++;
     if (benchPlayerIndex == 6) goto dec_scan;  /* wrap around */
-    if (_IsThisPlayerOkToSelect() < 0) goto inc_scan;
+    if (IsThisPlayerOkToSelect() < 0) goto inc_scan;
     return;
 
 handle_dec:
@@ -2928,11 +2928,11 @@ handle_dec:
     subsBlockDirections = 1;
     if (benchPlayerIndex != 0) goto dec_scan;
     /* At index 0 in training: swap teams */
-    if (trainingGame != 0) _TrainingSwapBenchTeams();
+    if (trainingGame != 0) TrainingSwapBenchTeams();
     return;
 
 dec_scan:
     benchPlayerIndex--;
     if (benchPlayerIndex == 0) return;
-    if (_IsThisPlayerOkToSelect() < 0) goto dec_scan;
+    if (IsThisPlayerOkToSelect() < 0) goto dec_scan;
 }

@@ -35,7 +35,7 @@ extern uint16_t selTeamSelectedPlayerPosition;
 extern uint16_t panicReasonCode;
 
 /* ---- C-callable ASM bridges ---- */
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
 
 /* Shirt number offset from GetPlayer result: TEAMFILE_PLAYERS(76) + PLAYERFILE_SHIRTNUMBER(2) */
 #define GETPLAYER_SHIRTNUMBER_OFF  0x4E
@@ -47,7 +47,7 @@ extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
  * array at the position given by careerNumPlayers.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrainingMatch_SaveSelectedPlayerId(uint16_t value)
+void TrainingMatch_SaveSelectedPlayerId(uint16_t value)
 {
     trainingMatchSavedPlayers[careerNumPlayers] = (uint8_t)value;
 }
@@ -62,7 +62,7 @@ void _TrainingMatch_SaveSelectedPlayerId(uint16_t value)
  * compact and marks the last slot as 0xAA (unused).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
+void TrainingMatch_RemoveSavedPlayerId(uint16_t value)
 {
     /* Clear saved player position if it matches */
     if (value == trainingMatchSavedPlayerPos)
@@ -79,7 +79,7 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
     }
     if (foundIdx < 0) {
         panicReasonCode = 0x1231;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -88,7 +88,7 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
     /* If in starting 11 (index < 11), find best replacement from subs */
     if (foundIdx < 11) {
         /* Get position group of the removed player */
-        uint8_t *targetPlayer = _GetPlayer(selTeamNumber, value);
+        uint8_t *targetPlayer = GetPlayer(selTeamNumber, value);
         PlayerFile *targetPf = (PlayerFile *)(targetPlayer + sizeof(TeamFile));
         uint8_t targetPosGroup = (targetPf->positionAndFace & PF_POSITION_MASK) >> 5;
 
@@ -142,11 +142,11 @@ void _TrainingMatch_RemoveSavedPlayerId(uint16_t value)
  * original asm behavior.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _TrainingMatch_SaveLastMatchState(void)
+void TrainingMatch_SaveLastMatchState(void)
 {
     /* Save shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = GetPlayer(selTeamNumber, (uint16_t)i);
         lastMatchSavedShirtNums[i] = player[GETPLAYER_SHIRTNUMBER_OFF];
     }
 
@@ -168,7 +168,7 @@ void _TrainingMatch_SaveLastMatchState(void)
  * Restores the previously saved match lineup state.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _TrainingMatch_RestoreLastMatchState(void)
+void TrainingMatch_RestoreLastMatchState(void)
 {
     /* Restore coach mode, team controls, player position, tactics */
     coachOrPlayer = lastMatchSavedCoachOrPlayer;
@@ -183,7 +183,7 @@ void _TrainingMatch_RestoreLastMatchState(void)
 
     /* Restore shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = GetPlayer(selTeamNumber, (uint16_t)i);
         player[GETPLAYER_SHIRTNUMBER_OFF] = lastMatchSavedShirtNums[i];
     }
 }
@@ -194,7 +194,7 @@ void _TrainingMatch_RestoreLastMatchState(void)
  * Restores team selection state from training match saved data.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _TrainingMatch_RestoreSavedTeamSelectionState(void)
+void TrainingMatch_RestoreSavedTeamSelectionState(void)
 {
     /* Copy trainingMatchSavedPlayers to currentMatchPlayers */
     for (int16_t i = 0; i < 32; i++) {
@@ -207,7 +207,7 @@ void _TrainingMatch_RestoreSavedTeamSelectionState(void)
 
     /* Restore shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = GetPlayer(selTeamNumber, (uint16_t)i);
         player[GETPLAYER_SHIRTNUMBER_OFF] = trainingMatchSavedShirtNums[i];
     }
 }
@@ -218,7 +218,7 @@ void _TrainingMatch_RestoreSavedTeamSelectionState(void)
  * Saves current team selection state for training match.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _TrainingMatch_SaveTeamSelectionState(void)
+void TrainingMatch_SaveTeamSelectionState(void)
 {
     /* Copy currentMatchPlayers to trainingMatchSavedPlayers */
     for (int16_t i = 0; i < 32; i++) {
@@ -231,7 +231,7 @@ void _TrainingMatch_SaveTeamSelectionState(void)
 
     /* Save shirt numbers via GetPlayer for all 32 indices */
     for (int16_t i = 31; i >= 0; i--) {
-        uint8_t *player = _GetPlayer(selTeamNumber, (uint16_t)i);
+        uint8_t *player = GetPlayer(selTeamNumber, (uint16_t)i);
         trainingMatchSavedShirtNums[i] = player[GETPLAYER_SHIRTNUMBER_OFF];
     }
 }
@@ -246,7 +246,7 @@ void _TrainingMatch_SaveTeamSelectionState(void)
  * Returns: 0 if same (Z set in asm), 1 if different (Z clear).
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _CheckIfTeamIsChanged(void)
+int16_t CheckIfTeamIsChanged(void)
 {
     /* Compare first 11 player entries */
     for (int16_t i = 0; i <= 10; i++) {
@@ -272,8 +272,8 @@ int16_t _CheckIfTeamIsChanged(void)
 /* Additional externs for Chunk 176 */
 extern uint16_t isNationalSelector;
 extern TeamFileEx currentTeam;
-extern uint16_t _Rand2(void);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint16_t Rand2(void);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 
 /* ================================================================
  * isPlayerBetterSwapCandidate (static)  (SWOS2.s line 36086)
@@ -351,7 +351,7 @@ static SubSwapResult findBestSubSwapCandidates(void)
     uint8_t *best2Ptr = 0;
 
     for (uint16_t i = 11; i != careerNumPlayers; i++) {
-        uint8_t *player = _GetPlayerAtIndex(selTeamNumber, i);
+        uint8_t *player = GetPlayerAtIndex(selTeamNumber, i);
         PlayerFile *pf = (PlayerFile *)(player + 76);
 
         /* Extract position from positionAndFace (bits 7:5) */
@@ -394,9 +394,9 @@ static SubSwapResult findBestSubSwapCandidates(void)
  * of the trainingMatchSavedPlayers array.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void)
+void TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void)
 {
-    _TrainingMatch_SaveTeamSelectionState();
+    TrainingMatch_SaveTeamSelectionState();
 
     /* Copy tactics byte from careerTeam to currentTeam */
     currentTeam.team.tactics = careerTeam.team.tactics;
@@ -427,10 +427,10 @@ void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void)
  * recalculates their weekly wage.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position)
+void TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position)
 {
-    uint8_t *player = _TrainingMatch_AddTrialPlayerAtPosition(position);
-    uint16_t r = _Rand2();
+    uint8_t *player = TrainingMatch_AddTrialPlayerAtPosition(position);
+    uint16_t r = Rand2();
     if (r < 0x99)
         return;
 
@@ -442,7 +442,7 @@ void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position)
      * AddTrialPlayerAtPosition saved freeSlot at index (careerNumPlayers-1)
      * via _CTrainingMatch_SaveSelectedPlayerId before incrementing count. */
     uint16_t playerIndex = trainingMatchSavedPlayers[careerNumPlayers - 1];
-    _Career_UpdatePlayerWeeklyWageCache(playerIndex);
+    Career_UpdatePlayerWeeklyWageCache(playerIndex);
 }
 
 /* ================================================================
@@ -452,23 +452,23 @@ void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position)
  * (2,1,5,4,3,3,6,6,7,7), then applies team swap with best substitutes.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrainingMatch_AddTrialPlayersForNewSeason(void)
+void TrainingMatch_AddTrialPlayersForNewSeason(void)
 {
     if (isNationalSelector != 0)
         return;
 
-    _TrainingMatch_TryAddTrialPlayerAtPosition(2);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(1);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(5);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(4);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(3);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(3);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(6);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(6);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(7);
-    _TrainingMatch_TryAddTrialPlayerAtPosition(7);
+    TrainingMatch_TryAddTrialPlayerAtPosition(2);
+    TrainingMatch_TryAddTrialPlayerAtPosition(1);
+    TrainingMatch_TryAddTrialPlayerAtPosition(5);
+    TrainingMatch_TryAddTrialPlayerAtPosition(4);
+    TrainingMatch_TryAddTrialPlayerAtPosition(3);
+    TrainingMatch_TryAddTrialPlayerAtPosition(3);
+    TrainingMatch_TryAddTrialPlayerAtPosition(6);
+    TrainingMatch_TryAddTrialPlayerAtPosition(6);
+    TrainingMatch_TryAddTrialPlayerAtPosition(7);
+    TrainingMatch_TryAddTrialPlayerAtPosition(7);
 
-    _TrainingMatch_ApplyUseMatchTeamAndSwapSubs();
+    TrainingMatch_ApplyUseMatchTeamAndSwapSubs();
 }
 
 /* ================================================================
@@ -491,13 +491,13 @@ extern uint16_t friendlyPitchType;
 extern uint16_t friendlySeason;
 extern uint16_t minSubstitutes;
 extern uint16_t maxSubstitutes;
-extern void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
-extern void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern uint16_t _GetStringLength(const uint8_t *str);
-extern void _PanicHaltLoop(void);
+extern void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
+extern void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
+extern uint16_t GetStringLength(const uint8_t *str);
+extern void PanicHaltLoop(void);
 
 /* ================================================================
  * TrainingMatch_BuildCurrentTeamFromCareerTeam  (SWOS2.s line 32807)
@@ -511,7 +511,7 @@ extern void _PanicHaltLoop(void);
  * 5. Builds team A/B names for the training match
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
+void TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
 {
     uint8_t *a5 = (uint8_t *)&careerTeam;
     uint8_t *a6 = (uint8_t *)&currentTeam;
@@ -542,9 +542,9 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
 
     /* Loop from careerNumPlayers-1 down to 13 (inclusive) */
     while ((uint16_t)d7 >= 13) {
-        uint8_t *playerBase = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d7);
+        uint8_t *playerBase = GetPlayerAtIndex(selTeamNumber, (uint16_t)d7);
 
-        if (_IsPlayerInjured((PlayerFile *)playerBase, 0) == 0) {
+        if (IsPlayerInjured((PlayerFile *)playerBase, 0) == 0) {
             /* Not injured — copy 38 bytes (sizeof(PlayerFile)) from player data */
             PlayerFile *srcPf = (PlayerFile *)(playerBase + 76);
             volatile uint8_t *srcV = (volatile uint8_t *)srcPf;
@@ -589,7 +589,7 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
             if (targetPos < 0) {
                 /* No valid position order entry — panic */
                 panicReasonCode = 0x2323;
-                _PanicHaltLoop();
+                PanicHaltLoop();
                 return;
             }
 
@@ -602,7 +602,7 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
                 if (assignedMask & (1u << d1))
                     continue; /* player slot already assigned */
 
-                uint8_t *player = _GetPlayerAtIndex(currentTeamNumber, (uint16_t)d1);
+                uint8_t *player = GetPlayerAtIndex(currentTeamNumber, (uint16_t)d1);
                 PlayerFile *pf = (PlayerFile *)(player + 76);
                 uint8_t positionGroup = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
                 if (positionGroup != (uint8_t)targetPos)
@@ -658,14 +658,14 @@ void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void)
 allAssigned:
     /* Assign shirt numbers to players 0-12 */
     for (int16_t d1 = 12; d1 >= 0; d1--) {
-        uint8_t *player = _GetPlayerAtIndex(currentTeamNumber, (uint16_t)d1);
+        uint8_t *player = GetPlayerAtIndex(currentTeamNumber, (uint16_t)d1);
         PlayerFile *pf = (PlayerFile *)(player + 76);
         pf->shirtNumber = (int8_t)(d1 + 1);
     }
 
     /* Build team A name */
-    _StringCopy((const uint8_t *)(a5 + 5), teamAName); /* careerTeam + TEAMFILE_TEAMNAME(5) */
-    uint16_t len = _GetStringLength(teamAName);
+    StringCopy((const uint8_t *)(a5 + 5), teamAName); /* careerTeam + TEAMFILE_TEAMNAME(5) */
+    uint16_t len = GetStringLength(teamAName);
     uint8_t *p = teamAName + len; /* points to null terminator */
     if (len > 14) {
         if (len == 16)
@@ -679,7 +679,7 @@ allAssigned:
     *p = 0;
 
     /* Build team B name (copy A, replace 'A' with 'B') */
-    uint8_t *endPos = _StringCopy(teamAName, teamBName);
+    uint8_t *endPos = StringCopy(teamAName, teamBName);
     *(endPos - 1) = 'B';
 }
 
@@ -695,14 +695,14 @@ allAssigned:
  * 6. Cleans up
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayTrainingGame(void)
+void PlayTrainingGame(void)
 {
     trainingGame = 1;
 
-    _TrainingMatch_AdjustSelectedTeamRosterForTrialists(1, 2, &careerTeam);
-    _TrainingMatch_SaveLastMatchState();
-    _TrainingMatch_RestoreSavedTeamSelectionState();
-    _TrainingMatch_BuildCurrentTeamFromCareerTeam();
+    TrainingMatch_AdjustSelectedTeamRosterForTrialists(1, 2, &careerTeam);
+    TrainingMatch_SaveLastMatchState();
+    TrainingMatch_RestoreSavedTeamSelectionState();
+    TrainingMatch_BuildCurrentTeamFromCareerTeam();
 
     pitchTypeOrSeason = 0;
     friendlyPitchType = 0xFFFF; /* RANDOM */
@@ -710,11 +710,11 @@ void _PlayTrainingGame(void)
     minSubstitutes = 2;
     maxSubstitutes = 2;
 
-    _InitAndPlayGame(&careerTeam, &currentTeam);
+    InitAndPlayGame(&careerTeam, &currentTeam);
 
     currentTeamNumber = 0xFFFF;
     trainingGame = 0;
 
-    _TrainingMatch_SaveTeamSelectionState();
-    _TrainingMatch_RestoreLastMatchState();
+    TrainingMatch_SaveTeamSelectionState();
+    TrainingMatch_RestoreLastMatchState();
 }

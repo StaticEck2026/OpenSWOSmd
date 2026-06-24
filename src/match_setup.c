@@ -127,29 +127,29 @@ extern AnimTable_12 refWaitingAnimTable;
 extern AnimTable playerNormalStandingAnimTable;
 
 /* ---- External C functions (already ported) ---- */
-extern void _InitTeamsData(void);
-extern void _InitDisplaySprites(void);
-extern void _InitCurrentGoalHighlight(void);
-extern void _ResetTime(void);
-extern void _ResetResultSprites(void);
-extern void _ClearSaveFlagForGoalSprites(void);
-extern void _ResetGoalAttempt(void);
-extern void _CrowdResetMatchState(void);
-extern void _CopyPlayerNameLengths(void);
-extern void _InitializePlayerSpriteFrameIndices(void);
-extern void _InitAdvertisements(void);
-extern void _PlayPenaltySample(void);
-extern void _PlaySample1IfNotTraining(void);
-extern void _FadeOutToBlack(void);
-extern void _UpdatePlanePtrsAndBlitParams(void);
-extern uint16_t _Rand(void);
+extern void InitTeamsData(void);
+extern void InitDisplaySprites(void);
+extern void InitCurrentGoalHighlight(void);
+extern void ResetTime(void);
+extern void ResetResultSprites(void);
+extern void ClearSaveFlagForGoalSprites(void);
+extern void ResetGoalAttempt(void);
+extern void CrowdResetMatchState(void);
+extern void CopyPlayerNameLengths(void);
+extern void InitializePlayerSpriteFrameIndices(void);
+extern void InitAdvertisements(void);
+extern void PlayPenaltySample(void);
+extern void PlaySample1IfNotTraining(void);
+extern void FadeOutToBlack(void);
+extern void UpdatePlanePtrsAndBlitParams(void);
+extern uint16_t Rand(void);
 
 /* ---- C-to-asm bridges (for unported asm functions) ---- */
-extern void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
-extern void _InitRefereeAnimationTable(uint8_t *animTable);
-extern void _ApplyTeamTactics(uint8_t *playerInfos);
-extern void _NextPenalty(void);
-extern void _ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
+extern void SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
+extern void InitRefereeAnimationTable(uint8_t *animTable);
+extern void ApplyTeamTactics(uint8_t *playerInfos);
+extern void NextPenalty(void);
+extern void ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
 
 /* ================================================================
  * SetBallPosition  (SWOS2.s line 10505)
@@ -157,7 +157,7 @@ extern void _ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
  * Stop ball and set position to (ballX, ballY), z=0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetBallPosition(int16_t ballX, int16_t ballY)
+void SetBallPosition(int16_t ballX, int16_t ballY)
 {
     ballSprite.speed      = 0;
     ballSprite.x.s.i      = ballX;
@@ -194,7 +194,7 @@ static void resetPlayerPassingKicking(TeamGeneralInfo *team)
  * for both teams, clears goalkeeperPlaying on bottom team.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ResetBothTeamsPlayerPassingKicking(void)
+void ResetBothTeamsPlayerPassingKicking(void)
 {
     lastCameraDirection = cameraDirection;
     lastPlayerTurnFlags = playerTurnFlags;
@@ -232,7 +232,7 @@ static void stopPlayers(TeamGeneralInfo *team)
  * resets passing/kicking for both teams, clears goalkeeperPlaying.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _StopAllPlayers(void)
+void StopAllPlayers(void)
 {
     lastCameraDirection = cameraDirection;
     lastPlayerTurnFlags = playerTurnFlags;
@@ -251,7 +251,7 @@ void _StopAllPlayers(void)
  * Makes referee invisible, resets position and animation state.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _RemoveReferee(void)
+void RemoveReferee(void)
 {
     refState                    = 0;
     refereeSprite.visible       = 0;
@@ -267,7 +267,7 @@ void _RemoveReferee(void)
     refereeSprite.imageIndex    = (int16_t)0xFFFF;
     refereeSprite.direction     = 0;
     refereeSprite.onScreen      = 1;
-    _InitRefereeAnimationTable((uint8_t *)&refWaitingAnimTable); /* TODO: update when _InitRefereeAnimationTable takes AnimTable* */
+    InitRefereeAnimationTable((uint8_t *)&refWaitingAnimTable); /* TODO: update when InitRefereeAnimationTable takes AnimTable* */
 }
 
 /* ================================================================
@@ -276,7 +276,7 @@ void _RemoveReferee(void)
  * Clears the 8-entry animated patterns array and resets counters.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitAnimatedPatterns(void)
+void InitAnimatedPatterns(void)
 {
     int16_t i;
     for (i = 0; i < 8; i++) {
@@ -318,9 +318,9 @@ static const int16_t kTeamsStartingCoordinates[44] = {
 };
 
 __attribute__((used, externally_visible))
-void _InitPlayersBeforeEnteringPitch(void)
+void InitPlayersBeforeEnteringPitch(void)
 {
-    _RemoveReferee();
+    RemoveReferee();
     /* nullsub_21 — no-op */
 
     Sprite **spritesTableA;
@@ -340,7 +340,7 @@ void _InitPlayersBeforeEnteringPitch(void)
             sprite->y.s.i  = *coords++ + 449;
 
             /* Add random jitter 0..7 to X */
-            uint8_t r = _Rand();
+            uint8_t r = Rand();
             sprite->x.s.i += (int16_t)(r & 7);
 
             sprite->destX            = sprite->x.s.i;
@@ -361,7 +361,7 @@ void _InitPlayersBeforeEnteringPitch(void)
                 sprite->injuryLevel = 0;
             }
 
-            _SetPlayerAnimationTable(
+            SetPlayerAnimationTable(
                 &playerNormalStandingAnimTable,
                 sprite
             );
@@ -404,12 +404,12 @@ static void clearCameraVelocity(void)
  * StartingMatch  (SWOS2.s line 22465)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _StartingMatch(void)
+void StartingMatch(void)
 {
     halfNumber = 1;
-    _SetBallPosition(1672, 449);
+    SetBallPosition(1672, 449);
     hideBall = 0;
-    _InitTeamsData();
+    InitTeamsData();
     stoppageEventTimer = 100;
     gameState = ST_STARTING_GAME;
     breakCameraMode = 0xFFFF;
@@ -419,26 +419,26 @@ void _StartingMatch(void)
     lastTeamPlayedBeforeBreak = &topTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
     cameraMoveToShowerLatch = 1;
-    _InitPlayersBeforeEnteringPitch();
+    InitPlayersBeforeEnteringPitch();
 }
 
 /* ================================================================
  * SetCameraMovingToShowerState  (SWOS2.s line 22490)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetCameraMovingToShowerState(void)
+void SetCameraMovingToShowerState(void)
 {
     halfNumber = 2;
     /* Invert teamPlayingUp: neg + add 3 (1->2, 2->1) */
     teamPlayingUp = (uint16_t)(3 - teamPlayingUp);
     teamStarting = (uint16_t)(3 - teamStarting);
 
-    _SetBallPosition(1672, 449);
+    SetBallPosition(1672, 449);
     hideBall = 0;
-    _InitTeamsData();
+    InitTeamsData();
     stoppageEventTimer = 100;
     gameState = ST_CAMERA_GOING_TO_SHOWERS;
     breakCameraMode = 0xFFFF;
@@ -448,26 +448,26 @@ void _SetCameraMovingToShowerState(void)
     lastTeamPlayedBeforeBreak = &topTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
     cameraMoveToShowerLatch = 1;
 
     if (playGame != 0) {
-        _PlayPenaltySample();
+        PlayPenaltySample();
         sfxQueueWriteIdx = 350;
     }
 
-    _InitPlayersBeforeEnteringPitch();
+    InitPlayersBeforeEnteringPitch();
 }
 
 /* ================================================================
  * EndFirstHalf  (SWOS2.s line 22523)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _EndFirstHalf(void)
+void EndFirstHalf(void)
 {
     setBreakState(ST_FIRST_HALF_ENDED, ST_STOPPED, 100);
-    _ResetBothTeamsPlayerPassingKicking();
+    ResetBothTeamsPlayerPassingKicking();
     clearCameraVelocity();
     if (playGame != 0 && goalCounter == 0) {
         endOfHalfWriteOnly = 25;
@@ -478,7 +478,7 @@ void _EndFirstHalf(void)
  * FirstHalfJustEnded  (SWOS2.s line 22547)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FirstHalfJustEnded(void)
+void FirstHalfJustEnded(void)
 {
     hideBall = 0;
     stoppageEventTimer = 250;
@@ -490,7 +490,7 @@ void _FirstHalfJustEnded(void)
     lastTeamPlayedBeforeBreak = &topTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -498,10 +498,10 @@ void _FirstHalfJustEnded(void)
  * EndOfGame  (SWOS2.s line 22565)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _EndOfGame(void)
+void EndOfGame(void)
 {
     setBreakState(ST_GAME_ENDED, ST_STOPPED, 150);
-    _ResetBothTeamsPlayerPassingKicking();
+    ResetBothTeamsPlayerPassingKicking();
     clearCameraVelocity();
     if (playGame != 0 && goalCounter == 0) {
         endOfHalfWriteOnly = 25;
@@ -512,7 +512,7 @@ void _EndOfGame(void)
  * PlayersLeavingPitch  (SWOS2.s line 22589)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayersLeavingPitch(void)
+void PlayersLeavingPitch(void)
 {
     hideBall = 0;
     stoppageEventTimer = 250;
@@ -524,7 +524,7 @@ void _PlayersLeavingPitch(void)
     lastTeamPlayedBeforeBreak = &topTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -532,9 +532,9 @@ void _PlayersLeavingPitch(void)
  * GoToHalftime  (SWOS2.s line 22607)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _GoToHalftime(void)
+void GoToHalftime(void)
 {
-    _SetBallPosition(1672, 449);
+    SetBallPosition(1672, 449);
     resultTimer = 30000;
     timeVar = 32000;
     stoppageEventTimer = 700;
@@ -546,7 +546,7 @@ void _GoToHalftime(void)
     lastTeamPlayedBeforeBreak = &topTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -554,19 +554,19 @@ void _GoToHalftime(void)
  * GameOver  (SWOS2.s line 22629)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _GameOver(void)
+void GameOver(void)
 {
-    _FadeOutToBlack();
+    FadeOutToBlack();
 
     int16_t viewX = 168;
     int16_t viewY = 80;
     if (trainingGame == 0) {
         viewY = 16;
     }
-    _ReplayUpdateCameraAndSwapBuffers(viewX, viewY);
-    _UpdatePlanePtrsAndBlitParams();
+    ReplayUpdateCameraAndSwapBuffers(viewX, viewY);
+    UpdatePlanePtrsAndBlitParams();
 
-    _SetBallPosition(1672, 449);
+    SetBallPosition(1672, 449);
     resultTimer = 30000;
     timeVar = 32000;
     stoppageEventTimer = 1500;
@@ -578,7 +578,7 @@ void _GameOver(void)
     lastTeamPlayedBeforeBreak = &topTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -586,16 +586,16 @@ void _GameOver(void)
  * StartFirstExtraTime  (SWOS2.s line 22660)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _StartFirstExtraTime(void)
+void StartFirstExtraTime(void)
 {
     halfNumber = 1;
 
     /* Random teamPlayingUp and teamStarting */
-    teamPlayingUp = (uint16_t)((_Rand() & 1) + 1);
-    teamStarting = (uint16_t)((_Rand() & 1) + 1);
+    teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
+    teamStarting = (uint16_t)((Rand() & 1) + 1);
 
     hideBall = 0;
-    _InitTeamsData();
+    InitTeamsData();
     stoppageEventTimer = 100;
     gameState = ST_FIRST_EXTRA_STARTING;
     breakCameraMode = 0xFFFF;
@@ -612,7 +612,7 @@ void _StartFirstExtraTime(void)
 
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -620,14 +620,14 @@ void _StartFirstExtraTime(void)
  * EndFirstExtraTime  (SWOS2.s line 22694)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _EndFirstExtraTime(void)
+void EndFirstExtraTime(void)
 {
     halfNumber = 2;
     teamPlayingUp = (uint16_t)(3 - teamPlayingUp);
     teamStarting = (uint16_t)(3 - teamStarting);
 
     hideBall = 0;
-    _InitTeamsData();
+    InitTeamsData();
     stoppageEventTimer = 100;
     gameState = ST_FIRST_EXTRA_ENDED;
     breakCameraMode = 0xFFFF;
@@ -643,7 +643,7 @@ void _EndFirstExtraTime(void)
 
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -651,9 +651,9 @@ void _EndFirstExtraTime(void)
  * PrepareForInitialKick  (SWOS2.s line 22724)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PrepareForInitialKick(void)
+void PrepareForInitialKick(void)
 {
-    _SetBallPosition(336, 449);
+    SetBallPosition(336, 449);
 
     TeamGeneralInfo *kickoffTeam = &topTeamData;
     int16_t direction = 4;             /* south */
@@ -676,7 +676,7 @@ void _PrepareForInitialKick(void)
     lastTeamPlayedBeforeBreak = kickoffTeam;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     clearCameraVelocity();
 }
 
@@ -684,7 +684,7 @@ void _PrepareForInitialKick(void)
  * StartPenalties  (SWOS2.s line 19467)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _StartPenalties(void)
+void StartPenalties(void)
 {
     penaltiesState = 0xFFFF;
     savedTeam1Goals = statsTeam1Goals;
@@ -698,8 +698,8 @@ void _StartPenalties(void)
     team1PenaltyGoals = 0;
     team2PenaltyGoals = 0;
 
-    teamPlayingUp = (uint16_t)((_Rand() & 1) + 1);
-    teamStarting = (uint16_t)((_Rand() & 1) + 1);
+    teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
+    teamStarting = (uint16_t)((Rand() & 1) + 1);
 
     team1PenaltyShooterIndex = 11;
     team2PenaltyShooterIndex = 11;
@@ -721,7 +721,7 @@ void _StartPenalties(void)
         sprite->sentAway = 0;
     }
 
-    _NextPenalty();
+    NextPenalty();
 }
 
 /* ================================================================
@@ -732,15 +732,15 @@ void _StartPenalties(void)
  * per-match stats/state, then calls StartingMatch.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InitGameRestoreTeams(void)
+void InitGameRestoreTeams(void)
 {
-    _InitAdvertisements();
-    _CopyPlayerNameLengths();
+    InitAdvertisements();
+    CopyPlayerNameLengths();
 
     /* Pick player card chance from table based on game length */
     uint16_t lenIdx = gameLengthInGame;
     uint16_t *cardChanceTable = (uint16_t *)playerCardChancesPerGameLength[lenIdx];
-    uint8_t r = _Rand();
+    uint8_t r = Rand();
     playerCardChance = cardChanceTable[(r & 0x1E) >> 1];
 
     overlayActiveFlag = 0;
@@ -756,7 +756,7 @@ void _InitGameRestoreTeams(void)
         *dst2++ = *src2++;
     }
 
-    _InitializePlayerSpriteFrameIndices();
+    InitializePlayerSpriteFrameIndices();
 
 #ifdef DETERMINISTIC_MODE
     {
@@ -764,23 +764,23 @@ void _InitGameRestoreTeams(void)
         extern uint16_t currentTick;
         currentGameTick = 0;
         currentTick = 0;
-        _InitDeterministicMode();
+        InitDeterministicMode();
     }
 #endif
-    gameRandValue = _Rand();
+    gameRandValue = Rand();
 
     /* Apply tactics for both teams */
-    _ApplyTeamTactics((uint8_t *)&topTeamInGame);
-    _ApplyTeamTactics((uint8_t *)&bottomTeamInGame);
+    ApplyTeamTactics((uint8_t *)&topTeamInGame);
+    ApplyTeamTactics((uint8_t *)&bottomTeamInGame);
 
     paletteIndex = 2;
     /* nullsub_5 — no-op */
 
-    _CrowdResetMatchState();
+    CrowdResetMatchState();
 
     /* Random teamPlayingUp and teamStarting */
-    teamPlayingUp = (uint16_t)((_Rand() & 1) + 1);
-    teamStarting = (uint16_t)((_Rand() & 1) + 1);
+    teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
+    teamStarting = (uint16_t)((Rand() & 1) + 1);
 
     /* Set time delta from game length table */
     timeDelta = *(uint16_t *)((uint8_t *)gameLenSecondsTable + (gameLengthInGame << 1));
@@ -879,18 +879,18 @@ apply_palette_and_pitch:
     team2StatsData.goalAttempts   = 0;
     team2StatsData.onTarget       = 0;
 
-    _InitDisplaySprites();
-    _InitCurrentGoalHighlight();
-    _ResetTime();
-    _ResetResultSprites();
-    _ClearSaveFlagForGoalSprites();
-    _ResetGoalAttempt();
-    _InitAnimatedPatterns();
-    _StartingMatch();
-    _PlaySample1IfNotTraining();
+    InitDisplaySprites();
+    InitCurrentGoalHighlight();
+    ResetTime();
+    ResetResultSprites();
+    ClearSaveFlagForGoalSprites();
+    ResetGoalAttempt();
+    InitAnimatedPatterns();
+    StartingMatch();
+    PlaySample1IfNotTraining();
 
     if (playGame != 0) {
-        _PlayPenaltySample();
+        PlayPenaltySample();
         sfxQueueWriteIdx = 500;
         if (trainingGame == 0) {
             showFansCounter = 100;

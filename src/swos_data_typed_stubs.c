@@ -105,7 +105,7 @@ uint32_t magicValue;
 /* gameRound: backing buffer in swos_globals.c. On Amiga the label is 1 byte
  * but is followed by an unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s)
  * that the round-name string ("FIRST ROUND", etc.) overflows into. Without a
- * proper backing buffer the _StringCopy at PlayDIYLeagueMatchAndCacheResult
+ * proper backing buffer the StringCopy at PlayDIYLeagueMatchAndCacheResult
  * stomps magicValue. See alias in swos_globals.c. */
 uint8_t diskImageContext;
 uint16_t nextGoal;
@@ -119,7 +119,7 @@ uint16_t bootTemp6;
 /* kSpriteBlitQueueSentinel_A / _B: backing storage moved to
  * swos_globals.c (3000-byte queue buffer per sentinel, matching
  * SWOS2.s lines 2790-2796). Shared between targets — SDL also
- * calls _DrawSprite_entry2 which does `*(uint32_t *)savedQueue =
+ * calls DrawSprite_entry2 which does `*(uint32_t *)savedQueue =
  * BLT_BLITQ_END;` (a 4-byte write to what was a 2-byte uint16_t),
  * silently overflowing into adjacent globals before the backing
  * buffer was added. */
@@ -132,7 +132,7 @@ uint16_t offerSearchRetryCount;
 uint16_t goalkeeperDiveAttemptCount;
 /* diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer:
  * backing storage moved to swos_globals.c, sized big enough for the
- * 2900-byte word-copy in _SaveDIYTournament (was clobbering magicValue
+ * 2900-byte word-copy in SaveDIYTournament (was clobbering magicValue
  * when only 1508 bytes were allocated). diyFileBufferCopy is now the
  * typed `DIYTournamentState` struct (header / teamIds / groupMap / slots
  * / teamIndexOrder fields) defined in swos_globals.c, so all access is
@@ -149,7 +149,7 @@ uint16_t goalkeeperDiveAttemptCount;
  * Only the diy* ARRAY aliases (diyLeagueTeamIds / diyCupTeamIds /
  * diyTeamEntryOffsetsByIndex / diyTeamShuffleIndices) remain in swos_globals.c. */
 /* tempTeamBuffer: must be sized as TeamFileEx (684 bytes), not TeamFile (76).
- * _Career_BuildForeignMarketPoolFromSelectedTeam in transfer_market.c copies
+ * Career_BuildForeignMarketPoolFromSelectedTeam in transfer_market.c copies
  * careerTeam (a TeamFileEx, 0x2AC=684 bytes) into here. The 76-byte definition
  * overflowed 608 bytes past the end and stomped magicValue at +0x70, panicking
  * MenuProc with reasonCode=0x9999 (aStackOverflow). Now sized correctly. */
@@ -187,7 +187,7 @@ uint16_t numSpritesToRender;
 /* hilNumGoals / hilTeam1Goals / hilTeam2Goals / hilPitchNumber /
  * hilMaxSubstitutes: aliased into hilBackingBuf in swos_globals.c — they
  * sit immediately after hilGameName/hilGameRound in the Amiga BSS run
- * and _LoadHilFile relies on overflowing hilFileBuffer through them to
+ * and LoadHilFile relies on overflowing hilFileBuffer through them to
  * deserialize the HIL header (otherwise hilNumGoals stays 0 after load
  * and VIEW HIGHLIGHTS stays greyed out). */
 uint8_t audioDbgFlagA  = 0;
@@ -277,7 +277,7 @@ DIYStage diyTournamentStages[6];
 uint8_t nationalityOrdinal  = 0;
 /* diskMenu: real packed-menu blob in menu_data.c. The auto-extractor
  * mis-classified it as a scalar with the SWOS2.s file offset (1312736)
- * as its value, so any _ShowMenu(diskMenu) crashed in _UnpackMenu
+ * as its value, so any ShowMenu(diskMenu) crashed in UnpackMenu
  * when it walked off the end of the 4-byte allocation. */
 /* trialistNameBufTerminator: in SWOS2.s this was a 1-byte BSS label
  * placed immediately AFTER `trialistNameBuffer[22]`, used by
@@ -481,7 +481,7 @@ uint16_t team2SelectedPlayerIndex;
 /* careerCupPickList: 5-entry array of national-coach cup-pick-list COMPETITION
  * POINTERS. Standalone (NOT in the careerFileBuffer overlay): it holds
  * pointer-sized entries (8 bytes on 64-bit) that don't fit the legacy 20-byte
- * overlay slot, and it's re-derived on load (_RebuildPointersAfterLoad), not
+ * overlay slot, and it's re-derived on load (RebuildPointersAfterLoad), not
  * saved. The overlay keeps a 20-byte reserved gap where it used to live. */
 void *careerCupPickList[5];
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupHostTeam */
@@ -587,7 +587,7 @@ void *careerCupPickList[5];
 /* careerTeam: backing storage moved to swos_globals.c. On Amiga the
  * label is `ds.b $50C` (1292 bytes — TeamFile + 32 PlayerFile slots),
  * but our TeamFileEx struct only declares 16 players (684 bytes). The
- * `_InitTeams` -> `teamInit(&careerTeam, 31)` path walks 32 player
+ * `InitTeams` -> `teamInit(&careerTeam, 31)` path walks 32 player
  * slots, and on the SDL build the upper 16 slots overflow into adjacent
  * globals (most visibly stomping selTeamNumber). The .equ alias points
  * `careerTeam` at a properly sized 1292-byte buffer; struct field
@@ -631,7 +631,7 @@ void *careerCupPickList[5];
 // uint16_t seasonNumberOfSquads;
 /* competitionContext: 4-byte stub; backing storage in swos_globals.c.
  * On Amiga it heads a ~2.8 KB adjacent BSS run, and
- * `_Career_StoreCompetitionSlotStateToBuffer(slotState)` writes up to
+ * `Career_StoreCompetitionSlotStateToBuffer(slotState)` writes up to
  * 1844 bytes here for slot 1. Size accordingly to avoid stomping
  * neighboring globals (most visibly careerNumPlayers). */
 /* secondaryCompStringOffset: defined standalone below (~line 846) as a
@@ -789,10 +789,10 @@ uint32_t saveFileMagic2;
 uint32_t saveFileMagic3;
 uint32_t saveFileAmigaType;
 /* numSelectedTeams: aliased to careerFileBuffer + 98476 in
- * swos_globals.c. _SaveCareerFile computes the on-disk file size as
+ * swos_globals.c. SaveCareerFile computes the on-disk file size as
  * `(&numSelectedTeams - &careerFileBuffer) + numSelectedTeams*684 + 2`,
  * which only produces a sensible value if numSelectedTeams sits at
- * the Amiga's fixed offset within the career-file buffer. _LoadFileEx
+ * the Amiga's fixed offset within the career-file buffer. LoadFileEx
  * then loads that count back into the same byte. */
 /* selTeamNameBase: alias into selTeamsBackingBuf + 5 (see swos_globals.c) */
 /* Trailing misc — UNTANGLE 2026-06-10: lifted out of the careerFileBuffer
@@ -859,7 +859,7 @@ char *sellExchangeResponseStrings[12] = {
  *
  * The .CAR save format is now JSON (SaveJson_WriteCareer / LoadCareer)
  * which does NOT persist these pointers — they're re-derived after
- * load by _RebuildPointersAfterLoad from stable identities
+ * load by RebuildPointersAfterLoad from stable identities
  * (competition IDs, slot offsets, etc.). So the overlay layout no
  * longer matters for serialization, and we can give each one a
  * proper standalone definition with native pointer width. */

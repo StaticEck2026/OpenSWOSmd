@@ -158,40 +158,40 @@ typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
 #define SPRITEGRAPHICS_NLINES     12
 
 /* ---- Asm helpers (save/restore all regs around callback) ---- */
-extern void _CallMenuCallback(void *funcPtr);
-extern void _CallMenuOnSelect(void *funcPtr, void *selectedEntry);
-extern void _CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y);
+extern void CallMenuCallback(void *funcPtr);
+extern void CallMenuOnSelect(void *funcPtr, void *selectedEntry);
+extern void CallMenuFuncWithXY(void *funcPtr, uint16_t x, uint16_t y);
 
 /* ---- Ported functions ---- */
-void _MenuProc(void);
-void _ActivateMenu(uint8_t *packedMenu);
-void _ShowMenu(uint8_t *packedMenu);
-void _RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu);
-void _DrawMenu(void);
-void _MenuCheckControls(void);
-void _DrawSelectedMenuItemFrame(void);
-void _UpdateBlinkingMenuText(void);
-void _DrawMenuPanelBackground(void);
-void _SetExitMenuFlag(void);
-MenuEntry *_CalcMenuEntryAddress(uint16_t ordinal);
-void _UnpackMenu(uint8_t *packed, uint8_t *dest);
-void _DrawMenuItem(MenuEntry *entry);
-void _CallDrawMenuItem(MenuEntry *entry);
-void _DrawMenuItemInnerFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-void _DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-void _DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-void _DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-void _DrawMenuBackWithCheck(MenuEntry *entry);
-void _DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry);
-uint16_t _GetKey(void);
-void _BlitterCopyOverlayToScreen(void);
-void _Int2Ascii(uint16_t value, uint8_t *out);
-void _SetCurrentEntry(uint16_t index);
-void _BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-void _DrawMenuItemsFromList(const int16_t *list);
-void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
-void _DrawMenuItemsWaitForVSync(const int16_t *list);
-void _CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
-void _CallDrawMultipleItemsRect(uint16_t maxItems, MenuEntry *firstEntry);
+void MenuProc(void);
+void ActivateMenu(uint8_t *packedMenu);
+void ShowMenu(uint8_t *packedMenu);
+void RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu);
+void DrawMenu(void);
+void MenuCheckControls(void);
+void DrawSelectedMenuItemFrame(void);
+void UpdateBlinkingMenuText(void);
+void DrawMenuPanelBackground(void);
+void SetExitMenuFlag(void);
+MenuEntry *CalcMenuEntryAddress(uint16_t ordinal);
+void UnpackMenu(uint8_t *packed, uint8_t *dest);
+void DrawMenuItem(MenuEntry *entry);
+void CallDrawMenuItem(MenuEntry *entry);
+void DrawMenuItemInnerFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void DrawMenuBackWithCheck(MenuEntry *entry);
+void DrawBackAllItems(uint16_t maxItems, MenuEntry *firstEntry);
+uint16_t GetKey(void);
+void BlitterCopyOverlayToScreen(void);
+void Int2Ascii(uint16_t value, uint8_t *out);
+void SetCurrentEntry(uint16_t index);
+void BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void DrawMenuItemsFromList(const int16_t *list);
+void DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
+void DrawMenuItemsWaitForVSync(const int16_t *list);
+void CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
+void CallDrawMultipleItemsRect(uint16_t maxItems, MenuEntry *firstEntry);
 
 #endif

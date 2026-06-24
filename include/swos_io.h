@@ -13,8 +13,8 @@
  *
  *   SDL backing:   fopen/fread (load), fwrite (save), malloc/realloc/
  *                  free, snprintf.
- *   Amiga backing: _RobNorthenLoader_C dispatch + AllocMem/FreeMem
- *                  (via _AllocMemAny / _FreeMemAny in resload.c),
+ *   Amiga backing: RobNorthenLoader_C dispatch + AllocMem/FreeMem
+ *                  (via AllocMemAny / FreeMemAny in resload.c),
  *                  plus a minimal %s/%d snprintf implementation.
  *
  * All functions return 0 / non-NULL on success.

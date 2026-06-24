@@ -193,25 +193,25 @@ typedef struct {
 typedef char _audiochannel_size_check[(sizeof(AudioChannel) == AUDIO_CHANNEL_SIZE) ? 1 : -1];
 
 /* ---- Previously ported functions ---- */
-void _InitMenuMusic(void);
-void _TryPlayMusic(void);
-void _AudioBeepAllShort(void);
-void _ClearAudioActiveFlag(void);
-void _StopAudioAndClearFlags(void);
-void _LoadSfxResources(void);
-void _EnsureSfxLoadedAndStart(void);
-void _TryRestartingMusic(void);
-void _StopMusic(void);
-void _CycleMenuMusic(void);
+void InitMenuMusic(void);
+void TryPlayMusic(void);
+void AudioBeepAllShort(void);
+void ClearAudioActiveFlag(void);
+void StopAudioAndClearFlags(void);
+void LoadSfxResources(void);
+void EnsureSfxLoadedAndStart(void);
+void TryRestartingMusic(void);
+void StopMusic(void);
+void CycleMenuMusic(void);
 
 /* ---- Chunk 25: Audio system core ---- */
-void _StopAllAudioChannels(void);
-void _AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume);
-void _AudioSetMode(uint16_t modeFlags);
-void _InitAudioState(uint8_t *bankBase, uint8_t *songPtr);
-void _AudioApplyPresetToChannels(uint16_t presetId);
-void _AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId);
-void _AudioDisableDMAForChannel(AudioChannel *chan);
-void _AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId);
+void StopAllAudioChannels(void);
+void AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume);
+void AudioSetMode(uint16_t modeFlags);
+void InitAudioState(uint8_t *bankBase, uint8_t *songPtr);
+void AudioApplyPresetToChannels(uint16_t presetId);
+void AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId);
+void AudioDisableDMAForChannel(AudioChannel *chan);
+void AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId);
 
 #endif

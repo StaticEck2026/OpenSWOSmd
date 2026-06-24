@@ -25,7 +25,7 @@
 
 /* ---- Externs ---- */
 extern volatile uint16_t panicReasonCode;
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 
 /* ======================================================================
  *  V1 (Huffman) decompressor
@@ -250,7 +250,7 @@ static uint32_t v1DecodeBlock(uint8_t *src, uint8_t *dst)
      * input and the compressed tail must be relocated above the output
      * region first.
      *
-     * Our SDL `_LoadFileEx` always decompresses cross-buffer
+     * Our SDL `LoadFileEx` always decompresses cross-buffer
      * (`s_rnc_scratch` → caller's dest). `dst < a4` then just compares
      * unrelated addresses — on 32-bit Linux the BSS layout incidentally
      * makes it false, on Cygwin64 it goes true and the relocation
@@ -381,12 +381,12 @@ static uint32_t v1DecodeBlock(uint8_t *src, uint8_t *dst)
 
 /* RncDecompressV1 — entry point with error check */
 __attribute__((used, externally_visible))
-void _RncDecompressV1(uint8_t *src, uint8_t *dst)
+void RncDecompressV1(uint8_t *src, uint8_t *dst)
 {
     uint32_t result = v1DecodeBlock(src, dst);
     if (result == 0 || result == 0xFFFFFFFFu || result == 0xFFFFFFFEu) {
         panicReasonCode = 0xE003u;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 }
 
@@ -426,7 +426,7 @@ static inline int v2Bit(V2Bits *bs)
 /* RncDecodeV2Body — V2 decompression engine.
  * Uses goto-based control flow matching the asm branch structure. */
 __attribute__((used, externally_visible, noinline))
-void _RncDecompressV2(uint8_t *src, uint8_t *dst)
+void RncDecompressV2(uint8_t *src, uint8_t *dst)
 {
     uint8_t *a1 = dst;
     V2Bits bs;

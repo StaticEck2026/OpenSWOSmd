@@ -30,7 +30,7 @@ void Countries_Localize(void);
 /* Localize a compiled message-string POINTER for display: returns the active
  * language's text for `s` (the address of a compiled UI string), or `s` itself if
  * untranslated/unknown. Wrap the format/message argument of code that shows a
- * string BY POINTER (e.g. _PrintFormatted into a buffer) — the menu loader only
+ * string BY POINTER (e.g. PrintFormatted into a buffer) — the menu loader only
  * localizes static menu-entry text, and the renderer only tr_ptr's entry pointers,
  * so text formatted into a runtime buffer needs this at the point of use. No-op on
  * the Amiga (tr_ptr returns NULL there) -> keeps the English original. */

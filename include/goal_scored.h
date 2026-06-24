@@ -13,6 +13,6 @@
  * scoringTeam: 1 or 2
  * scorerSprite: pointer to in-game Sprite struct of the scorer
  */
-void _GoalScored(int16_t scoringTeam, Sprite *scorerSprite);
+void GoalScored(int16_t scoringTeam, Sprite *scorerSprite);
 
 #endif

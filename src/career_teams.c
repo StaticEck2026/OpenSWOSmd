@@ -62,7 +62,7 @@ extern uint8_t aDataUefacupTmd[];     /* "data/uefacup.tmd" */
 
 /* Globals for NationalTeamAddPlayer callbacks (Chunk 108) */
 extern uint16_t careerNationalTeamAddPlayerType;
-extern void _SetExitMenuFlag(void);
+extern void SetExitMenuFlag(void);
 
 /* ================================================================
  * findTeamInCache — look up a team number in the team cache.
@@ -118,13 +118,13 @@ static int16_t findTeamInCache(uint16_t teamNum, TeamFileEx **teamOut, uint16_t 
 }
 
 /* ================================================================
- * _VerifyTeamLoaded — look up team, panic if not found.
+ * VerifyTeamLoaded — look up team, panic if not found.
  * Asm: VerifyTeamLoaded
  *
  * Returns pointer to team data.
  * ================================================================ */
 __attribute__((used, externally_visible))
-TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
+TeamFileEx *VerifyTeamLoaded(uint16_t teamNum)
 {
     TeamFileEx *team;
     uint16_t idx;
@@ -136,7 +136,7 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
         extern uint16_t numSelectedTeams;
         extern uint16_t selTeamNumber;
         SWOS_DBG(
-                "[verify] _VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
+                "[verify] VerifyTeamLoaded(0x%04X) FAIL: country=0x%02X team=0x%02X "
                 "selTeamNumber=0x%04X numSelectedTeams=%u\n",
                 (unsigned)teamNum,
                 (unsigned)((teamNum >> 8) & 0xFF), (unsigned)(teamNum & 0xFF),
@@ -156,23 +156,23 @@ TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum)
             SWOS_DBG(" %04X", (unsigned)diyFileBufferCopy.teamIds[i]);
         SWOS_DBG("\n");
         SWOS_DBG_FLUSH();
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
     return team;
 }
 
 /* ================================================================
- * _GetTeamPointer — look up a team by its ID.
+ * GetTeamPointer — look up a team by its ID.
  * Asm: GetTeamPointer (d0=teamId → a0=teamPtr)
  *
  * Search order: currentTeam → careerTeam → selTeamsPtr → TMD pool → team file.
  * If loaded from team file, applies foreign market player patches.
  * ================================================================ */
-extern void _Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
+extern void Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
 static TeamFileEx *findTeamInTmdBuffer(uint16_t teamId);
 
 __attribute__((used, externally_visible))
-TeamFileEx *_GetTeamPointer(uint16_t teamId)
+TeamFileEx *GetTeamPointer(uint16_t teamId)
 {
     TeamFileEx *teamOut;
     uint16_t indexOut;
@@ -190,25 +190,25 @@ TeamFileEx *_GetTeamPointer(uint16_t teamId)
      * teamFileBuffer contains TeamFileEx-sized records (684 bytes each).
      * teamId is packed (countryNumber<<8 | teamOrdinal), matching the
      * first word of each record. */
-    _LoadTeamFile((uint16_t)(teamId >> 8));
+    LoadTeamFile((uint16_t)(teamId >> 8));
     TeamFileEx *ptr = (TeamFileEx *)((uint8_t *)(&teamFileBuffer) + 2);  /* skip 2-byte count header */
     while (PACK_BE_U16(ptr->team.countryNumber, ptr->team.teamOrdinal) != teamId)
         ptr++;
 
     /* Apply foreign market player patches */
-    _Career_PatchTeamWithForeignMarketPlayers(ptr);
+    Career_PatchTeamWithForeignMarketPlayers(ptr);
     return ptr;
 }
 
 /* ================================================================
- * _CopySelectedTeamNumbers — copy first word of each team record.
+ * CopySelectedTeamNumbers — copy first word of each team record.
  * Asm: CopySelectedTeamNumbers (d0=count, a0=dest)
  *
  * Copies the team number (first word) from each selected team
  * record to the destination buffer, with stride sizeof(TeamFileEx).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
+void CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
 {
     /* Each TeamFileEx in the selTeamsPtr buffer starts with (countryNumber,
      * teamOrdinal) as two adjacent bytes. The Amiga m68k `move.w (a0)` read
@@ -216,9 +216,9 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
      * `(countryNumber << 8) | teamOrdinal`. A naive `*(uint16_t *)src` on a
      * little-endian SDL host swaps the bytes — an Italian team
      * (countryNumber=0x0E, teamOrdinal=0x2C, real id 0x0E2C / 3628) reads
-     * back as 0x2C0E (11278) and _VerifyTeamLoaded panics on the bogus id.
+     * back as 0x2C0E (11278) and VerifyTeamLoaded panics on the bogus id.
      * Use PACK_BE_U16 so both builds produce the BE-flavour id every other
-     * site (findTeamInCache / _VerifyTeamLoaded etc.) compares against. */
+     * site (findTeamInCache / VerifyTeamLoaded etc.) compares against. */
     volatile uint8_t *src = (volatile uint8_t *)&selTeamsPtr;
     uint8_t *dst = dest;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
@@ -227,7 +227,7 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
          * with the same in-memory layout on LE — matching the
          * BE-packed convention the diyCompetitionStart.matchData.league.leagueTeamIds / diyCompetitionStart.cupTeamIds /
          * diyFileBufferCopy.teamIds arrays use and that
-         * _DIY_ComputeAverageTeamStrengthTier consumes via BE_READ_U16. */
+         * DIY_ComputeAverageTeamStrengthTier consumes via BE_READ_U16. */
         BE_WRITE_U16(dst, PACK_BE_U16(src[0], src[1]));
         dst += 2;
         src += sizeof(TeamFileEx);
@@ -235,7 +235,7 @@ void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest)
 }
 
 /* ================================================================
- * _SaveSelectedTeams / _RestoreSelectedTeams
+ * SaveSelectedTeams / RestoreSelectedTeams
  * Asm: SaveSelectedTeams / RestoreSelectedTeams
  *
  * Save: copies 0x5582 bytes from numSelectedTeams to backup buffer,
@@ -254,7 +254,7 @@ static uint8_t savedTeamsBackupBuffer[SAVE_SIZE];
  * byte-for-byte identical to the old single 0x5582 copy from &numSelectedTeams
  * while the two are still adjacent, and stays correct once the array moves. */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _SaveSelectedTeams(void)
+void SaveSelectedTeams(void)
 {
     volatile uint16_t *dst = (volatile uint16_t *)savedTeamsBackupBuffer;
     *dst++ = numSelectedTeams;                              /* count -> backup[0] */
@@ -268,10 +268,10 @@ void _SaveSelectedTeams(void)
 }
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _RestoreSelectedTeams(void)
+void RestoreSelectedTeams(void)
 {
     if (numSelectedTeams > 32) {
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
     volatile uint16_t *src = (volatile uint16_t *)savedTeamsBackupBuffer;
     numSelectedTeams = *src++;                              /* count from backup[0] */
@@ -299,7 +299,7 @@ void _RestoreSelectedTeams(void)
  * Panics if the insertion would exceed teamSelectionKeyCacheEnd.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_TeamSelectionKeyCache_InsertSpaceSorted(uint16_t key, uint16_t insertionBytes)
+uint8_t *TeamSelectionKeyCache_InsertSpaceSorted(uint16_t key, uint16_t insertionBytes)
 {
     uint8_t *ptr = teamSelectionKeyCache;
     int16_t count = (int16_t)teamSelectionKeyCacheCount;
@@ -353,7 +353,7 @@ found_insert_point:
 
 panic:
     panicReasonCode = 0x8889;
-    _PanicHaltLoop();
+    PanicHaltLoop();
     return ptr;  /* unreachable, satisfies compiler */
 }
 
@@ -367,7 +367,7 @@ panic:
  * (Original asm returns via Z flag: set=found, clear=not found)
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _SearchTeamInTmdFile(uint16_t teamNo)
+int16_t SearchTeamInTmdFile(uint16_t teamNo)
 {
     uint16_t count = careerFileBuffer;
     if (count == 0)
@@ -393,14 +393,14 @@ int16_t _SearchTeamInTmdFile(uint16_t teamNo)
  * Shifts remaining entries left to fill the gap.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
+void Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
 {
     uint16_t count = careerFileBuffer;
     if (count == 0)
         return;
 
     TeamFileEx *ptr = (TeamFileEx *)&tmdFileBuffer;
-    /* See note in _SearchTeamInTmdFile — same BE-packed teamNo vs
+    /* See note in SearchTeamInTmdFile — same BE-packed teamNo vs
      * adjacent {country, ordinal} bytes. */
     for (uint16_t i = 0; i < count; i++) {
         if (PACK_BE_U16(ptr->team.countryNumber,
@@ -430,14 +430,14 @@ void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNo)
  * Copies sizeof(TeamFileEx) (684) bytes from team to end of pool.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
+void Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
 {
     /* Verify team is not already in pool */
     uint16_t teamNo = PACK_BE_U16(team->team.countryNumber, team->team.teamOrdinal);
-    if (_SearchTeamInTmdFile(teamNo) == 0) {
+    if (SearchTeamInTmdFile(teamNo) == 0) {
         /* Already in pool — panic */
         panicReasonCode = 0x3443;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     /* Append at end of pool */
@@ -461,10 +461,10 @@ void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team)
  * ================================================================ */
 
 /* --- Forward declarations for Chunk 90 asm functions --- */
-extern uint16_t _Rand2(void);
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
-extern uint32_t _Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *endPtr);
-extern uint32_t _Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *endPtr);
+extern uint16_t Rand2(void);
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern uint32_t Career_IsTeamIdNotInListOrReturnSentinel(uint16_t teamId, uint16_t *endPtr);
+extern uint32_t Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *endPtr);
 
 /* ---- Static helpers ---- */
 
@@ -538,9 +538,9 @@ static uint8_t *appendTeamToSelection(uint8_t *selDst, const uint8_t *teamSrc)
  * in: extNumber = team file extension number (d0 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
+void Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
 {
-    _LoadTeamFile(extNumber);
+    LoadTeamFile(extNumber);
 
     uint16_t count = *(uint16_t *)&teamFileBuffer;
     TeamFileEx *team = (TeamFileEx *)(&teamFileBuffer + 2);
@@ -559,8 +559,8 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
         uintptr_t *p = sortBuf;
         int16_t j;
         for (j = pass; j >= 0; j--) {
-            uint16_t price1 = _GetAveragePlayerPrice((TeamFileEx *)p[0]);
-            uint16_t price2 = _GetAveragePlayerPrice((TeamFileEx *)p[1]);
+            uint16_t price1 = GetAveragePlayerPrice((TeamFileEx *)p[0]);
+            uint16_t price2 = GetAveragePlayerPrice((TeamFileEx *)p[1]);
             if (price1 < price2) {
                 /* bcc.s: branch if carry clear = price1 >= price2 (unsigned) */
                 uintptr_t tmp = p[0];
@@ -574,7 +574,7 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
     /* Random shuffle: ~25% chance to swap adjacent pairs */
     uintptr_t *p2 = sortBuf;
     for (pass = (int16_t)(count - 2); pass >= 0; pass--) {
-        if ((_Rand2() & 3) == 0) {
+        if ((Rand2() & 3) == 0) {
             uintptr_t tmp = p2[0];
             p2[0] = p2[1];
             p2[1] = tmp;
@@ -611,7 +611,7 @@ void _Career_SortTeamFilePtrsByAvgPlayerPrice(uint16_t extNumber)
  * in: whichCup = pointer to euroCup/cupWinnersCup/uefaCup struct
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _LoadSomeEuroCup(uint8_t *whichCup)
+void LoadSomeEuroCup(uint8_t *whichCup)
 {
     uint8_t *filename;
 
@@ -629,12 +629,12 @@ void _LoadSomeEuroCup(uint8_t *whichCup)
     TeamFileEx *dest = (TeamFileEx *)&tmdFileBuffer + existingCount;
 
     uint32_t fileSize = 0;
-    _LoadFileEx(filename, (uint8_t *)dest, &fileSize);
+    LoadFileEx(filename, (uint8_t *)dest, &fileSize);
 
     uint16_t loadedCount = (uint16_t)(fileSize / sizeof(TeamFileEx));
     careerFileBuffer += loadedCount;
 
-    _SetTeamGlobalNumbers(loadedCount, (uint8_t *)dest);
+    SetTeamGlobalNumbers(loadedCount, (uint8_t *)dest);
 }
 
 /* ================================================================
@@ -649,7 +649,7 @@ void _LoadSomeEuroCup(uint8_t *whichCup)
  *     count   = number of team IDs (d7 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, uint16_t count)
+void AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, uint16_t count)
 {
     uint8_t *flags = teamIdSelectionProcessedFlags;
 
@@ -661,7 +661,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
      * teamOrdinal)` in findTeamInCache, the byte order in the team file
      * record at offset 0..1, etc.). On x86 LE the raw uint16_t read
      * comes out byte-swapped, so `teamId >> 8` returns the ordinal
-     * instead of the country, _LoadTeamFile loads the wrong (or panics
+     * instead of the country, LoadTeamFile loads the wrong (or panics
      * on a missing) file, findTeamInTeamFileBuffer never matches, and
      * the for(;;) loop spins forever — exactly the EUROPEAN
      * CHAMPIONSHIPS infinite-loop symptom. Decode each entry once via
@@ -715,7 +715,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
         }
 
         uint16_t extNum = teamId >> 8;
-        _LoadTeamFile(extNum);
+        LoadTeamFile(extNum);
         uint8_t loadedExt = lastLoadedExtNumber;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -779,7 +779,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
      * (diyCompetitionStart.matchData.league.leagueTeamIds / diyCompetitionStart.cupTeamIds / diyFileBufferCopy.teamIds) hold
      * BE-packed `{country, ordinal}` byte pairs — the same convention
      * the static dc.b competition data uses and that downstream code
-     * like _DIY_ComputeAverageTeamStrengthTier reads via BE_READ_U16
+     * like DIY_ComputeAverageTeamStrengthTier reads via BE_READ_U16
      * to match m68k `move.w` semantics. Write BE bytes so both endians
      * land at the same in-memory layout the asm produces. */
     for (i = 0; i < count; i++) {
@@ -802,7 +802,7 @@ void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds, 
 static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueFilter,
                                              int16_t expectedCount)
 {
-    _LoadTeamFile(extNumber);
+    LoadTeamFile(extNumber);
 
     TeamFileEx *tfBase = (TeamFileEx *)(&teamFileBuffer + 2);
     uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
@@ -823,7 +823,7 @@ static void fillLeagueTeamSelectionFromFile(uint16_t extNumber, uint16_t leagueF
                 (int)expectedCount, (unsigned)actualCount, (unsigned)tfCount);
         SWOS_DBG_FLUSH();
         panicReasonCode = 0x8885;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     /* Fill selection with matching teams. The output array
@@ -872,7 +872,7 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
     if (*pRemaining == 0)
         return;
 
-    uint16_t rnd = _Rand2();
+    uint16_t rnd = Rand2();
     uint16_t idx = (uint16_t)(((uint32_t)rnd * tfCount) >> 8);
     TeamFileEx *team = &tfBase[idx];
 
@@ -881,7 +881,7 @@ static void tryAddRandomTeamByRegion_Cup(uint16_t **pIdOut, uint8_t **pSelOut,
 
     uint16_t teamId = PACK_BE_U16(team->team.countryNumber,
                                   team->team.teamOrdinal);
-    uint32_t result = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, *pIdOut);
+    uint32_t result = Career_IsTeamIdNotInListOrReturnSentinel(teamId, *pIdOut);
     if ((result & 0x10000) == 0)
         return;  /* already in list */
 
@@ -913,7 +913,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
     uint16_t initialCount = (uint16_t)teamCount;
     uint16_t *idOut = diyCompetitionStart.cupTeamIds;
 
-    _LoadTeamFile(extNumber);
+    LoadTeamFile(extNumber);
 
     /* selDst stays uint8_t * here because tryAddRandomTeamByRegion_Cup
      * takes a uint8_t ** in/out parameter and reassigns it across calls. */
@@ -935,14 +935,14 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
             TeamFileEx *selBase = selectedTeams;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
-                uint16_t rnd = _Rand2();
+                uint16_t rnd = Rand2();
                 uint16_t idx = (uint16_t)(((uint32_t)rnd * numSel) >> 8);
                 TeamFileEx *selTeam = &selBase[idx];
                 if (selTeam->team.teamControls == 1)
                     continue;  /* skip user-controlled teams */
                 uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
                                               selTeam->team.teamOrdinal);
-                uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
+                uint32_t sentinel = Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;  /* already in list */
                 BE_WRITE_U16(idOut, teamId); idOut++;
@@ -962,7 +962,7 @@ static void fillCupTeamSelectionFromFile(uint16_t extNumber, int16_t teamCount)
             for (k = 0; k < numSel; k++) {
                 uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
                                               selTeam->team.teamOrdinal);
-                uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
+                uint32_t sentinel = Career_IsTeamIdNotInListOrReturnSentinel(teamId, idOut);
                 if ((sentinel & 0x10000) != 0) {
                     BE_WRITE_U16(idOut, teamId); idOut++;
                     remaining--;
@@ -1001,7 +1001,7 @@ weighted_pick:
         uint8_t *weights = careerRegionPickWeightsTable;
         /* Reload team file base for region checks */
         while (remaining > 0) {
-            uint16_t rnd = _Rand2();
+            uint16_t rnd = Rand2();
             uint16_t region = weights[rnd & 0x1F];
             tryAddRandomTeamByRegion_Cup(&idOut, &selDst, (uint16_t *)&remaining, region);
         }
@@ -1023,7 +1023,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
     int16_t remaining = teamCount;
     uint16_t *idOut = diyFileBufferCopy.teamIds;
 
-    _LoadTeamFile(extNumber);
+    LoadTeamFile(extNumber);
 
     TeamFileEx *selDst = selectedTeams + numSelectedTeams;
 
@@ -1043,14 +1043,14 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
             TeamFileEx *selBase = selectedTeams;
             int16_t tries;
             for (tries = 0x3E8; tries >= 0; tries--) {
-                uint16_t rnd = _Rand2();
+                uint16_t rnd = Rand2();
                 uint16_t idx = (uint16_t)(((uint32_t)rnd * numSel) >> 8);
                 TeamFileEx *selTeam = &selBase[idx];
                 if (selTeam->team.teamControls == 1)
                     continue;
                 uint16_t teamId = PACK_BE_U16(selTeam->team.countryNumber,
                                               selTeam->team.teamOrdinal);
-                uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
+                uint32_t sentinel = Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
                 if ((sentinel & 0x10000) == 0)
                     continue;
                 BE_WRITE_U16(idOut, teamId); idOut++;
@@ -1068,10 +1068,10 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
         uint16_t tfCount = *(uint16_t *)&teamFileBuffer;
 
         while (remaining > 0) {
-            uint16_t rnd1 = _Rand2();
+            uint16_t rnd1 = Rand2();
             uint8_t region = weights[rnd1 & 0x1F];
 
-            uint16_t rnd2 = _Rand2();
+            uint16_t rnd2 = Rand2();
             uint16_t idx = (uint16_t)(((uint32_t)rnd2 * tfCount) >> 8);
             TeamFileEx *team = &tfBase[idx];
 
@@ -1080,7 +1080,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
 
             uint16_t teamId = PACK_BE_U16(team->team.countryNumber,
                                           team->team.teamOrdinal);
-            uint32_t sentinel = _Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
+            uint32_t sentinel = Career_IsTeamIdNotInListOrReturnSentinel2(teamId, idOut);
             if ((sentinel & 0x10000) == 0)
                 continue;
 
@@ -1106,7 +1106,7 @@ static void fillTournamentTeamSelectionFromFile(uint16_t extNumber, int16_t team
  * These are modified as side effects. The asm bridge handles this.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_TryAddRandomTeamByRegionToLists(void)
+void Career_TryAddRandomTeamByRegionToLists(void)
 {
     /* This function is only called from asm within loc_151628 (cup path),
        which is now ported to C (fillCupTeamSelectionFromFile).
@@ -1120,10 +1120,10 @@ void _Career_TryAddRandomTeamByRegionToLists(void)
  * Triggers a fatal error with panic code 0x1939.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FatalError(void)
+void FatalError(void)
 {
     panicReasonCode = 0x1939;
-    _PanicHaltLoop();
+    PanicHaltLoop();
 }
 
 /* ================================================================
@@ -1138,7 +1138,7 @@ void _FatalError(void)
  *     idx  = competition index (d1 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint16_t idx)
+void Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint16_t idx)
 {
     uint8_t teamIdsOffset = spec[7];
     if (teamIdsOffset != 0) {
@@ -1152,7 +1152,7 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
         uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         int16_t count = (int16_t)(int8_t)spec[13];  /* signed ext.w */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
-        _AppendTeamsToSelectionFromTmdOrTeamFile(diyCompetitionStart.matchData.league.leagueTeamIds, teamIds, (uint16_t)count);
+        AppendTeamsToSelectionFromTmdOrTeamFile(diyCompetitionStart.matchData.league.leagueTeamIds, teamIds, (uint16_t)count);
     } else {
         /* Load by league from team file */
         uint16_t entryOff = idx * 6;
@@ -1182,7 +1182,7 @@ void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *spec, uint1
  * in: spec = pointer to competition spec data (a0 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *spec)
+void Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *spec)
 {
     uint8_t teamIdsOffset = spec[7];
     if (teamIdsOffset != 0) {
@@ -1190,7 +1190,7 @@ void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *spec)
         uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint16_t count = spec[10];  /* andi.w #$FF,d7 — unsigned byte */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
-        _AppendTeamsToSelectionFromTmdOrTeamFile(diyCompetitionStart.cupTeamIds, teamIds, count);
+        AppendTeamsToSelectionFromTmdOrTeamFile(diyCompetitionStart.cupTeamIds, teamIds, count);
     } else {
         uint16_t extNumber = spec[2];
         int16_t teamCount = (int16_t)(int8_t)spec[10];  /* ext.w d1 — signed */
@@ -1206,7 +1206,7 @@ void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *spec)
  * in: spec = pointer to competition spec data (a0 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *spec)
+void Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *spec)
 {
     uint8_t teamIdsOffset = spec[7];
     if (teamIdsOffset != 0) {
@@ -1214,7 +1214,7 @@ void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *spec)
         uint16_t idsOff = teamIdsOffset + 2u * (sizeof(char *) - sizeof(uint32_t));
         uint16_t count = spec[15];  /* andi.w #$FF,d7 — unsigned byte */
         uint16_t *teamIds = (uint16_t *)(spec + 7 + idsOff);
-        _AppendTeamsToSelectionFromTmdOrTeamFile(diyFileBufferCopy.teamIds, teamIds, count);
+        AppendTeamsToSelectionFromTmdOrTeamFile(diyFileBufferCopy.teamIds, teamIds, count);
     } else {
         uint16_t extNumber = spec[2];
         int16_t teamCount = (int16_t)(int8_t)spec[15];  /* ext.w d1 — signed */
@@ -1232,15 +1232,15 @@ void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *spec)
  *     idx  = competition index (d1 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx)
+void Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx)
 {
     uint8_t type = spec[1];
     if (type == 0)
-        _Career_InitCompetitionTeamSelectionFromTableEntrySpec(spec, idx);
+        Career_InitCompetitionTeamSelectionFromTableEntrySpec(spec, idx);
     else if (type == 1)
-        _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(spec);
+        Career_InitCompetitionTeamSelectionFromTableHeaderSpec(spec);
     else
-        _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(spec);
+        Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(spec);
 }
 
 /* ================================================================
@@ -1268,11 +1268,11 @@ extern uint16_t homeMarketUpdateBacklog;
 extern uint16_t foreignMarketUpdateBacklog;
 extern uint16_t offerExpiryIterationsRemaining;
 
-extern void _ApplyWeeklyFinancialDeductions(void);
-extern void _Career_FillCurrentSeasonInfo(void);
+extern void ApplyWeeklyFinancialDeductions(void);
+extern void Career_FillCurrentSeasonInfo(void);
 
 /* ================================================================
- * _Career_LoadCompetitionSlotStateFromBuffer  (SWOS2.s line 36092)
+ * Career_LoadCompetitionSlotStateFromBuffer  (SWOS2.s line 36092)
  *
  * Copies competition state from a buffer to the active area.
  * Type 0: sizeof(DIYCompetitionEx)/2 words to diyCompetitionStart — the
@@ -1293,17 +1293,17 @@ extern void _Career_FillCurrentSeasonInfo(void);
  *          (teamIndexOrder @0x41E) and diyCompetitionStart a standalone
  *          buffer, so a flat copy now both MISALIGNS the differing layouts
  *          and overruns the master struct into pitchChunkyBuffer. Use the
- *          same field-map the preset path uses (_DIY_CfbBufToTournament),
+ *          same field-map the preset path uses (DIY_CfbBufToTournament),
  *          parameterised by the slot base.
  *
  * in: src = pointer to competition buffer (a0 in asm)
  * ================================================================ */
-extern void _DIY_CfbBufToTournament(const uint8_t *cfb);
-extern void _DIY_TournamentToCfbBuf(uint8_t *cfb);
-extern void _DIY_BuildTeamSelectionPointerCache(void);
+extern void DIY_CfbBufToTournament(const uint8_t *cfb);
+extern void DIY_TournamentToCfbBuf(uint8_t *cfb);
+extern void DIY_BuildTeamSelectionPointerCache(void);
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
+void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
 {
     uint16_t type = *(uint16_t *)src;
     volatile uint16_t *s = (volatile uint16_t *)src;
@@ -1322,7 +1322,7 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
         for (int16_t i = (int16_t)(DIY_CUP_COPY_WORDS - 1); i >= 0; i--)
             *d++ = *s++;
     } else {
-        _DIY_CfbBufToTournament(src);
+        DIY_CfbBufToTournament(src);
     }
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -1344,7 +1344,7 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
 }
 
 /* ================================================================
- * _Career_StoreCompetitionSlotStateToBuffer  (SWOS2.s line 36120)
+ * Career_StoreCompetitionSlotStateToBuffer  (SWOS2.s line 36120)
  *
  * Copies competition state from the active area to a buffer.
  * Type determined by the first word of the buffer.
@@ -1353,13 +1353,13 @@ void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
  * Type 1: 546 words from diyCompetitionStart
  * Type 2+: tournament — field-map diyFileBufferCopy (master) +
  *          diyCompetitionStart (current-stage standings) INTO the slot via
- *          _DIY_TournamentToCfbBuf. See the load counterpart above for why a
+ *          DIY_TournamentToCfbBuf. See the load counterpart above for why a
  *          flat 1450-word copy no longer works post-untangle.
  *
  * in: dst = pointer to competition buffer (a0 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
+void Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
 {
     uint16_t type = *(uint16_t *)dst;
     volatile uint16_t *d = (volatile uint16_t *)dst;
@@ -1382,51 +1382,51 @@ void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst)
         for (int16_t i = (int16_t)(DIY_CUP_COPY_WORDS - 1); i >= 0; i--)
             *d++ = *s++;
     } else {
-        _DIY_TournamentToCfbBuf(dst);
+        DIY_TournamentToCfbBuf(dst);
     }
 }
 
 /* ================================================================
- * _Career_CopyCompetitionFileBufferToOrFromActive  (SWOS2.s line 36060)
+ * Career_CopyCompetitionFileBufferToOrFromActive  (SWOS2.s line 36060)
  *
  * Loads competition state from competitionFileBuffer.
  * Note: the "Store" path after the bra.w is dead code.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_CopyCompetitionFileBufferToOrFromActive(void)
+void Career_CopyCompetitionFileBufferToOrFromActive(void)
 {
-    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&primaryCompetitionBuf);
+    Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&primaryCompetitionBuf);
 }
 
 /* ================================================================
- * _Career_CopyCompetitionContextToOrFromActive  (SWOS2.s line 36068)
+ * Career_CopyCompetitionContextToOrFromActive  (SWOS2.s line 36068)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_CopyCompetitionContextToOrFromActive(void)
+void Career_CopyCompetitionContextToOrFromActive(void)
 {
-    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&competitionContextBuf);
+    Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&competitionContextBuf);
 }
 
 /* ================================================================
- * _Career_CopyTertiaryCompetitionContextToOrFromActive  (SWOS2.s line 36076)
+ * Career_CopyTertiaryCompetitionContextToOrFromActive  (SWOS2.s line 36076)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_CopyTertiaryCompetitionContextToOrFromActive(void)
+void Career_CopyTertiaryCompetitionContextToOrFromActive(void)
 {
-    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&tertiaryCompetitionContextBuf);
+    Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&tertiaryCompetitionContextBuf);
 }
 
 /* ================================================================
- * _Career_CopyEuroCupsCompetitionContextToOrFromActive  (SWOS2.s line 36084)
+ * Career_CopyEuroCupsCompetitionContextToOrFromActive  (SWOS2.s line 36084)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_CopyEuroCupsCompetitionContextToOrFromActive(void)
+void Career_CopyEuroCupsCompetitionContextToOrFromActive(void)
 {
-    _Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&euroCupsCompetitionContextBuf);
+    Career_LoadCompetitionSlotStateFromBuffer((uint8_t *)&euroCupsCompetitionContextBuf);
 }
 
 /* ================================================================
- * _TeamSelectionKeyCache_GetListPtr  (SWOS2.s line 36436)
+ * TeamSelectionKeyCache_GetListPtr  (SWOS2.s line 36436)
  *
  * Walks the team selection key cache to find the entry at the
  * given list index. Each entry has a stride word at offset 2.
@@ -1435,7 +1435,7 @@ void _Career_CopyEuroCupsCompetitionContextToOrFromActive(void)
  * returns: pointer to the entry (a0 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
+uint8_t *TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
 {
     uint8_t *ptr = teamSelectionKeyCache;
     uint16_t idx = listIndex & 0xFF;
@@ -1443,7 +1443,7 @@ uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
         return ptr;
     for (int16_t i = (int16_t)(idx - 1); i >= 0; i--) {
         /* Stride bounds check — same defence as
-         * _BuildGameListArrayFromTeamSelectionKeyCache. The career-mode
+         * BuildGameListArrayFromTeamSelectionKeyCache. The career-mode
          * writer overflows the 22-byte slot and stomps slot[N+1]'s stride
          * field with team-ID bytes (`0E 0A` on the player's team), which
          * reads as 0x0A0E=2574 on LE. Walking via that stride lands deep
@@ -1463,7 +1463,7 @@ uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
 }
 
 /* ================================================================
- * _TeamSelectionKeyCache_GetListElementPtr  (SWOS2.s line 36426)
+ * TeamSelectionKeyCache_GetListElementPtr  (SWOS2.s line 36426)
  *
  * Gets a specific element within a key cache list entry.
  * Elements are 12 bytes each.
@@ -1473,28 +1473,28 @@ uint8_t *_TeamSelectionKeyCache_GetListPtr(uint16_t listIndex)
  * returns: pointer to the element (a1 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_TeamSelectionKeyCache_GetListElementPtr(uint16_t listIndex, uint16_t elementIndex)
+uint8_t *TeamSelectionKeyCache_GetListElementPtr(uint16_t listIndex, uint16_t elementIndex)
 {
-    uint8_t *listPtr = _TeamSelectionKeyCache_GetListPtr(listIndex);
+    uint8_t *listPtr = TeamSelectionKeyCache_GetListPtr(listIndex);
     uint32_t offset = (uint32_t)(elementIndex & 0xFF) * 12;
     return listPtr + offset;
 }
 
 /* ================================================================
- * _TeamSelectionKeyCache_GetCurrentListPtr  (SWOS2.s line 36468)
+ * TeamSelectionKeyCache_GetCurrentListPtr  (SWOS2.s line 36468)
  *
  * Returns pointer to the current entry in the key cache.
  *
  * returns: pointer to current entry (a0 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void)
+uint8_t *TeamSelectionKeyCache_GetCurrentListPtr(void)
 {
     return teamSelectionKeyCache + teamSelectionKeyCacheOffset;
 }
 
 /* ================================================================
- * _TeamSelectionKeyCache_GetCurrentSelectedElementPtr  (SWOS2.s line 36449)
+ * TeamSelectionKeyCache_GetCurrentSelectedElementPtr  (SWOS2.s line 36449)
  *
  * Returns pointer to the current selected element within the
  * current cache entry. Adjusts by (byte[5] - byte[6]) * 12 if
@@ -1503,7 +1503,7 @@ uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void)
  * returns: pointer to element (a1 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
+uint8_t *TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
 {
     uint8_t *ptr = teamSelectionKeyCache + teamSelectionKeyCacheOffset;
     uint8_t *result = ptr;
@@ -1520,7 +1520,7 @@ uint8_t *_TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
 }
 
 /* ================================================================
- * _TeamSelectionKeyCache_GetCurrentMatchSlot — typed wrapper for the
+ * TeamSelectionKeyCache_GetCurrentMatchSlot — typed wrapper for the
  * post-Phase-1F struct-named match-slot access.
  *
  * The asm helper above returns `entry + diff*12`, which is 10 bytes
@@ -1533,14 +1533,14 @@ uint8_t *_TeamSelectionKeyCache_GetCurrentSelectedElementPtr(void)
  * remainingElements is 0 or negative the slot resolves to entry+sizeof, as the
  * original does, instead of faulting.
  * ================================================================ */
-TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void)
+TeamSelectionKeyCacheMatchSlot *TeamSelectionKeyCache_GetCurrentMatchSlot(void)
 {
     TeamSelectionKeyCacheEntry *entry =
         (TeamSelectionKeyCacheEntry *)(teamSelectionKeyCache + teamSelectionKeyCacheOffset);
     /* Match the asm GetCurrentSelectedElementPtr (SWOS2.s:60723): its `bmi`
      * branch returns a1 = entry (diff folded to 0) when remainingElements is
      * negative — a valid pointer, NEVER null. The SDL port added a `return NULL`
-     * here, which the sole caller (_Career_UpdateStatsAfterMatch) dereferences
+     * here, which the sole caller (Career_UpdateStatsAfterMatch) dereferences
      * unguarded → an SDL-only SIGSEGV on a two-leg cup tie whose VIEW-RESULT
      * replays drive remainingElements past 0 (the Amiga survives the same path).
      * This is a C-vs-asm divergence fix, not a panic patch-out. NOTE: the deeper
@@ -1557,14 +1557,14 @@ TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void)
 }
 
 /* ================================================================
- * _Career_UpdateCareerFinishedFlag  (SWOS2.s line 36148)
+ * Career_UpdateCareerFinishedFlag  (SWOS2.s line 36148)
  *
  * Checks if all remaining key cache entries have been processed.
  * Sets careerFinished = 1 if season is over or no entries with
  * byte[4]==0 have byte[6]!=0. Sets careerFinished = 0 otherwise.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_UpdateCareerFinishedFlag(void)
+void Career_UpdateCareerFinishedFlag(void)
 {
     if (seasonFinished != 0) {
         careerFinished = 1;
@@ -1572,14 +1572,14 @@ void _Career_UpdateCareerFinishedFlag(void)
     }
 
     TeamSelectionKeyCacheEntry *entry =
-        (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+        (TeamSelectionKeyCacheEntry *)TeamSelectionKeyCache_GetCurrentListPtr();
     if (entry->remainingElements != 0) {
         careerFinished = 0;
         return;
     }
 
     /* Walk from current entry to end of cache */
-    entry = (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+    entry = (TeamSelectionKeyCacheEntry *)TeamSelectionKeyCache_GetCurrentListPtr();
     uint16_t idx = teamSelectionKeyCacheIndex;
 
     for (;;) {
@@ -1599,7 +1599,7 @@ void _Career_UpdateCareerFinishedFlag(void)
 }
 
 /* ================================================================
- * _Career_AdvanceToNextTeamSelectionKeyCacheEntry  (SWOS2.s line 36477)
+ * Career_AdvanceToNextTeamSelectionKeyCacheEntry  (SWOS2.s line 36477)
  *
  * Advances to the next unprocessed entry in the key cache.
  * If gameType==4 (career), increments financial counters and
@@ -1608,13 +1608,13 @@ void _Career_UpdateCareerFinishedFlag(void)
  * and fills season info.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
+void Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
 {
     if (gameType == 4) {
         homeMarketUpdateBacklog++;
         foreignMarketUpdateBacklog++;
         offerExpiryIterationsRemaining++;
-        _ApplyWeeklyFinancialDeductions();
+        ApplyWeeklyFinancialDeductions();
     }
 
     careerSlotProcessingInProgress = 0;
@@ -1633,10 +1633,10 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
 #endif
             seasonFinished = 1;
             careerFinished = 1;
-            _Career_FillCurrentSeasonInfo();
+            Career_FillCurrentSeasonInfo();
             return;
         }
-        /* Stride bounds check — see _TeamSelectionKeyCache_GetListPtr for
+        /* Stride bounds check — see TeamSelectionKeyCache_GetListPtr for
          * the full story (career-mode 22-byte slot overflow corrupts the
          * stride field). If we'd step outside the legitimate slot-size
          * range, treat the season as finished early rather than walking
@@ -1645,7 +1645,7 @@ void _Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
         if (stride < 10 || stride > 256) {
             seasonFinished = 1;
             careerFinished = 1;
-            _Career_FillCurrentSeasonInfo();
+            Career_FillCurrentSeasonInfo();
             return;
         }
         ptr += stride;
@@ -1669,31 +1669,31 @@ extern uint8_t *careerCompetitionSlotPtrTable[];
 extern uint16_t careerMatchSimulatedFlag;
 extern uint8_t viewRandomPhase;
 
-extern void _DIY_UpdateCompetitionProgress(void);
+extern void DIY_UpdateCompetitionProgress(void);
 
 /* C functions for menu/competition dispatch */
-extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
-extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
-extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+extern void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+extern void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 
 /* C functions for match sim */
-extern uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
-extern uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
-extern void _DIY_LoadCurrentCompetitionSlot(void);
+extern uint16_t DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
+extern uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
+extern void DIY_LoadCurrentCompetitionSlot(void);
 
 /* C functions for bracket/team grid (called from DIY_AdvanceToNextCompetitionSlot) */
-extern void _DIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3,
+extern void DIY_BuildSeededBracketAndUpdateScores(uint8_t *a2, uint8_t *a3,
                                                      uint8_t *a4, uint8_t *a5);
-extern void _DIY_CopyTeamGridFromCompToDIY(uint8_t *a2, uint8_t *a3,
+extern void DIY_CopyTeamGridFromCompToDIY(uint8_t *a2, uint8_t *a3,
                                               uint8_t *a4, uint8_t *a5);
 
 /* Already-ported C functions used here */
-extern void _BuildCareerTeamUnavailablePlayerList(void);
-extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
-extern void _ClearCareerMatchPlayerStatusBucket(void);
+extern void BuildCareerTeamUnavailablePlayerList(void);
+extern uint16_t ShouldApplyRandomPlayerStatusAfterSim(void);
+extern void ClearCareerMatchPlayerStatusBucket(void);
 
 /* ================================================================
- * _Career_ProcessCurrentCompetitionSlotForMatch  (SWOS2.s line 36288)
+ * Career_ProcessCurrentCompetitionSlotForMatch  (SWOS2.s line 36288)
  *
  * Gets the current competition slot, loads its state, dispatches
  * to the appropriate auto-simulate function by type, then stores
@@ -1704,27 +1704,27 @@ extern void _ClearCareerMatchPlayerStatusBucket(void);
  * Type 2 (hybrid): AutoSimulatePendingMatchUntilHumanTeam
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_ProcessCurrentCompetitionSlotForMatch(void)
+void Career_ProcessCurrentCompetitionSlotForMatch(void)
 {
-    uint8_t *entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    uint8_t *entry = TeamSelectionKeyCache_GetCurrentListPtr();
     int16_t slotIdx = (int16_t)(int8_t)entry[0];
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
-    _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
+    Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
     uint16_t type = *(uint16_t *)slotPtr;
     if (type == 1)
-        _Career_AutoSimulateCupMatchesUntilHumanTeam();
+        Career_AutoSimulateCupMatchesUntilHumanTeam();
     else if (type == 2)
-        _Career_AutoSimulatePendingMatchUntilHumanTeam();
+        Career_AutoSimulatePendingMatchUntilHumanTeam();
     else
-        _Career_AutoSimulateLeagueFixturesUntilHumanTeam();
+        Career_AutoSimulateLeagueFixturesUntilHumanTeam();
 
-    _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
+    Career_StoreCompetitionSlotStateToBuffer(slotPtr);
 }
 
 /* ================================================================
- * _Career_ProcessCurrentCompetitionSlotAfterMatch  (SWOS2.s line 36320)
+ * Career_ProcessCurrentCompetitionSlotAfterMatch  (SWOS2.s line 36320)
  *
  * Processes the current slot after a match. Panics if
  * careerSlotProcessingInProgress is set. Dispatches by type:
@@ -1733,31 +1733,31 @@ void _Career_ProcessCurrentCompetitionSlotForMatch(void)
  * Type 2: UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
+void Career_ProcessCurrentCompetitionSlotAfterMatch(void)
 {
-    uint8_t *entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    uint8_t *entry = TeamSelectionKeyCache_GetCurrentListPtr();
 
     if (careerSlotProcessingInProgress != 0) {
         panicReasonCode = 0x3490;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     int16_t slotIdx = (int16_t)(int8_t)entry[0];
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
-    _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
+    Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
     uint16_t type = *(uint16_t *)slotPtr;
     if (type == 1) {
-        _Career_AutoPlayCupMatchAndAdvanceLoop();
-        _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
+        Career_AutoPlayCupMatchAndAdvanceLoop();
+        Career_StoreCompetitionSlotStateToBuffer(slotPtr);
     } else if (type == 2) {
-        _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot();
-        _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
+        Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot();
+        Career_StoreCompetitionSlotStateToBuffer(slotPtr);
     } else {
         /* Type 0: league */
-        _Career_AutoPlayOrSimulateLeagueFixtureLoop();
-        _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
+        Career_AutoPlayOrSimulateLeagueFixtureLoop();
+        Career_StoreCompetitionSlotStateToBuffer(slotPtr);
         /* slotPtr+0x2C = compId/slotId word (DIYCompetition.compId field) */
         if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
             return;
@@ -1765,12 +1765,12 @@ void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
          * region = minSubstitutes */
         if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
             return;
-        _DIY_RebuildCompetitionAndTeamSelectionCaches();
+        DIY_RebuildCompetitionAndTeamSelectionCaches();
     }
 }
 
 /* ================================================================
- * _Career_OpenCompetitionSlotMenuAndApplyChanges  (SWOS2.s line 36216)
+ * Career_OpenCompetitionSlotMenuAndApplyChanges  (SWOS2.s line 36216)
  *
  * Opens the competition slot menu for the current entry, applies
  * any changes (match sim, cup progress, etc.), then stores state
@@ -1779,20 +1779,20 @@ void _Career_ProcessCurrentCompetitionSlotAfterMatch(void)
  * in: d2 = menu parameter (1 from PlayMatchMenuLoop, 0 from NextMatch)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
+void Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
 {
     careerMatchSimulatedFlag = 0;
 
-    uint8_t *entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    uint8_t *entry = TeamSelectionKeyCache_GetCurrentListPtr();
     viewRandomPhase = entry[1];
 
     int16_t slotIdx = (int16_t)(int8_t)entry[0];
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
-    _Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
+    Career_LoadCompetitionSlotStateFromBuffer(slotPtr);
 
     /* Slot type is stored as a native uint16 word — same byte order
-     * that _Career_LoadCompetitionSlotStateFromBuffer / _Career_StoreCompetitionSlotStateToBuffer
+     * that Career_LoadCompetitionSlotStateFromBuffer / Career_StoreCompetitionSlotStateToBuffer
      * read/write. Using BE_READ_U16 here mis-routes cup slots to the
      * league menu on LE hosts, which then crashes sorting an
      * uninitialized league table. */
@@ -1822,19 +1822,19 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
          * guarded the selTeams-index staleness — the careerFileBuffer overlay
          * repopulated selTeams between a cup slot store and load, so slots 62/63
          * pointed at selTeams[0] (locked VIEW RESULT / squadChangesAllowed=0, and
-         * the 0x6666 keycache desync _DIY_RecordCupBracketProgress walks) — but
+         * the 0x6666 keycache desync DIY_RecordCupBracketProgress walks) — but
          * Part B retired that overlay, killing the staleness root (same as the
          * 3ac95cf / be8ac25 removals, validated 10/10 + 14/14). Production no
          * longer rebuilds; debug keeps the shared non-writing regression check. */
 #ifdef SWOS_DEBUG_AUTOSKIP
-        extern void _DIY_TotRebuildRegressionCheck(const char *site);
-        _DIY_TotRebuildRegressionCheck("career_teams cup-menu");
+        extern void DIY_TotRebuildRegressionCheck(const char *site);
+        DIY_TotRebuildRegressionCheck("career_teams cup-menu");
 #endif
         /* Auto-simulate CPU-only fixtures BEFORE the menu draws so that
          * currentMatchIndex points at the career team's fixture when the
-         * cup menu first opens. Otherwise _DIY_CompareCurrentMatchTeamCategories
+         * cup menu first opens. Otherwise DIY_CompareCurrentMatchTeamCategories
          * sees a CPU-vs-CPU pair (both teamControls=1), returns 1, and
-         * _DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection takes the
+         * DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection takes the
          * VIEW branch — landing the cursor on aViewResult instead of aMatch.
          *
          * Gate on entry[6] (count of human-team fixtures in this round).
@@ -1854,29 +1854,29 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
          * Career_ProcessCurrentCompetitionSlotForMatch, reached only when
          * entry[6] > 0). Gating here matches that condition. */
         TeamSelectionKeyCacheEntry *cacheEntry =
-            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+            (TeamSelectionKeyCacheEntry *)TeamSelectionKeyCache_GetCurrentListPtr();
         if (cacheEntry->remainingElements != 0) {
-            _Career_AutoSimulateCupMatchesUntilHumanTeam();
+            Career_AutoSimulateCupMatchesUntilHumanTeam();
         }
-        _ShowDIYCupMenuWithParams(1, 0, d2);
+        ShowDIYCupMenuWithParams(1, 0, d2);
         if (diyCompetitionStart.base.roundComplete != 0)
-            _DIY_UpdateCompetitionProgress();
+            DIY_UpdateCompetitionProgress();
     } else if (type == 2) {
         /* Hybrid */
-        _DIY_EditCompetitionSlot(1, 0, d2);
+        DIY_EditCompetitionSlot(1, 0, d2);
         if (diyFileBufferCopy.header.competitionFinished != 0)
-            _DIY_AdvanceToNextCompetitionSlot();
+            DIY_AdvanceToNextCompetitionSlot();
     } else {
         /* League */
-        _ShowDiyLeaguesTournamentMenu(1, 0, d2);
+        ShowDiyLeaguesTournamentMenu(1, 0, d2);
     }
 
-    _Career_StoreCompetitionSlotStateToBuffer(slotPtr);
+    Career_StoreCompetitionSlotStateToBuffer(slotPtr);
 
     if (careerMatchSimulatedFlag != 0) {
-        _BuildCareerTeamUnavailablePlayerList();
-        if (_ShouldApplyRandomPlayerStatusAfterSim() == 0)
-            _ClearCareerMatchPlayerStatusBucket();
+        BuildCareerTeamUnavailablePlayerList();
+        if (ShouldApplyRandomPlayerStatusAfterSim() == 0)
+            ClearCareerMatchPlayerStatusBucket();
     }
 
     /* Rebuild caches if competition is done (type==0, no round/phase left) */
@@ -1886,69 +1886,69 @@ void _Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
         return;
     if (((DIYCompetitionEx *)slotPtr)->minSubstitutes != 0)
         return;
-    _DIY_RebuildCompetitionAndTeamSelectionCaches();
+    DIY_RebuildCompetitionAndTeamSelectionCaches();
 }
 
 /* ================================================================
- * _CareerPlayMatch  (SWOS2.s line 36120)
+ * CareerPlayMatch  (SWOS2.s line 36120)
  *
  * Post-match loop: processes remaining competition slots and
  * advances until the season is finished. Panics if careerFinished
  * is 0 (no more matches flagged).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CareerPlayMatch(void)
+void CareerPlayMatch(void)
 {
     if (careerFinished == 0) {
         panicReasonCode = 0x8342;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
     if (careerSlotProcessingInProgress == 0) {
-        _Career_ProcessCurrentCompetitionSlotAfterMatch();
+        Career_ProcessCurrentCompetitionSlotAfterMatch();
     }
 
-    _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
+    Career_AdvanceToNextTeamSelectionKeyCacheEntry();
 
     while (seasonFinished == 0) {
-        _Career_ProcessCurrentCompetitionSlotAfterMatch();
-        _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
+        Career_ProcessCurrentCompetitionSlotAfterMatch();
+        Career_AdvanceToNextTeamSelectionKeyCacheEntry();
     }
 }
 
 /* ================================================================
- * _Career_PlayMatchMenuLoop  (SWOS2.s line 36138)
+ * Career_PlayMatchMenuLoop  (SWOS2.s line 36138)
  *
  * Interactive match menu loop. Skips auto-processed slots,
  * opens the competition menu for the current slot, then handles
  * post-menu state. Panics if careerFinished != 0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_PlayMatchMenuLoop(void)
+void Career_PlayMatchMenuLoop(void)
 {
     if (careerFinished != 0) {
         panicReasonCode = 0x8340;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
-    uint8_t *entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    uint8_t *entry = TeamSelectionKeyCache_GetCurrentListPtr();
 
     /* Skip auto-processed slots (byte[6] <= 0 or negative) */
     for (;;) {
         int8_t b6 = (int8_t)entry[6];
         if (b6 > 0)
             break;  /* found an active slot */
-        _Career_ProcessCurrentCompetitionSlotAfterMatch();
-        _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
-        /* Season-end exit. _Career_AdvanceToNextTeamSelectionKeyCacheEntry sets
+        Career_ProcessCurrentCompetitionSlotAfterMatch();
+        Career_AdvanceToNextTeamSelectionKeyCacheEntry();
+        /* Season-end exit. Career_AdvanceToNextTeamSelectionKeyCacheEntry sets
          * seasonFinished ONLY when it runs off the end of the keycache (no entry
          * left) — and at end-of-cache it does NOT update the cursor index
-         * (asm-identical), so _TeamSelectionKeyCache_GetCurrentListPtr keeps
+         * (asm-identical), so TeamSelectionKeyCache_GetCurrentListPtr keeps
          * returning the same finished trailing entry (a cup/playoff round the
          * player isn't in: phaseFlag==0, remaining==0xFF). With no seasonFinished
          * check the loop re-processes that entry forever — the "career hang at a
-         * season transition" (task #7). Return so _PlayMatchMenu's seasonFinished
-         * gate runs _SeasonFinished() on the next interaction.
+         * season transition" (task #7). Return so PlayMatchMenu's seasonFinished
+         * gate runs SeasonFinished() on the next interaction.
          *
          * This was previously deferred because a desync (the teamOffsetTable
          * copy-truncation bug) could leave the player's real match unmarked, and
@@ -1958,72 +1958,72 @@ void _Career_PlayMatchMenuLoop(void)
          * end (verified live: 0 entries with remaining>0 when it triggers). */
         if (seasonFinished != 0)
             return;
-        entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+        entry = TeamSelectionKeyCache_GetCurrentListPtr();
     }
 
     /* Process for match and open menu */
-    _Career_ProcessCurrentCompetitionSlotForMatch();
-    _Career_OpenCompetitionSlotMenuAndApplyChanges(1);
+    Career_ProcessCurrentCompetitionSlotForMatch();
+    Career_OpenCompetitionSlotMenuAndApplyChanges(1);
 
     if (careerSlotProcessingInProgress == 0) {
-        entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+        entry = TeamSelectionKeyCache_GetCurrentListPtr();
         int8_t b6 = (int8_t)entry[6];
         if (b6 > 0) {
-            _Career_ProcessCurrentCompetitionSlotForMatch();
+            Career_ProcessCurrentCompetitionSlotForMatch();
             goto done_no_advance_pml;
         }
-        _Career_ProcessCurrentCompetitionSlotAfterMatch();
+        Career_ProcessCurrentCompetitionSlotAfterMatch();
     }
-    _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
+    Career_AdvanceToNextTeamSelectionKeyCacheEntry();
 
 done_no_advance_pml:
-    _Career_UpdateCareerFinishedFlag();
-    entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    Career_UpdateCareerFinishedFlag();
+    entry = TeamSelectionKeyCache_GetCurrentListPtr();
     viewRandomPhase = entry[1];
 }
 
 /* ================================================================
- * _Career_NextMatch  (SWOS2.s line 36177)
+ * Career_NextMatch  (SWOS2.s line 36177)
  *
  * Advances to the next match in the career. Panics if
  * seasonFinished is set. Checks current slot type and dispatches
  * to either PlayMatchMenuLoop or opens the slot menu directly.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_NextMatch(void)
+void Career_NextMatch(void)
 {
     if (seasonFinished != 0) {
         panicReasonCode = 0x8341;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 
-    uint8_t *entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    uint8_t *entry = TeamSelectionKeyCache_GetCurrentListPtr();
     int16_t slotIdx = (int16_t)(int8_t)entry[0];
     uint8_t *slotPtr = careerCompetitionSlotPtrTable[slotIdx];
 
     /* If type==0 (league) and league.hasGroupsDiy != 0, use PlayMatchMenuLoop */
     if (*(uint16_t *)slotPtr == 0 &&
         ((DIYCompetitionEx *)slotPtr)->matchData.league.hasGroupsDiy != 0) {
-        _Career_PlayMatchMenuLoop();
+        Career_PlayMatchMenuLoop();
         return;
     }
 
-    _Career_OpenCompetitionSlotMenuAndApplyChanges(0);
+    Career_OpenCompetitionSlotMenuAndApplyChanges(0);
 
     if (careerSlotProcessingInProgress == 0) {
-        entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+        entry = TeamSelectionKeyCache_GetCurrentListPtr();
         int8_t b6 = (int8_t)entry[6];
         if (b6 > 0) {
-            _Career_ProcessCurrentCompetitionSlotForMatch();
+            Career_ProcessCurrentCompetitionSlotForMatch();
             goto done_no_advance_next;
         }
-        _Career_ProcessCurrentCompetitionSlotAfterMatch();
+        Career_ProcessCurrentCompetitionSlotAfterMatch();
     }
-    _Career_AdvanceToNextTeamSelectionKeyCacheEntry();
+    Career_AdvanceToNextTeamSelectionKeyCacheEntry();
 
 done_no_advance_next:
-    _Career_UpdateCareerFinishedFlag();
-    entry = _TeamSelectionKeyCache_GetCurrentListPtr();
+    Career_UpdateCareerFinishedFlag();
+    entry = TeamSelectionKeyCache_GetCurrentListPtr();
     viewRandomPhase = entry[1];
 }
 
@@ -2033,22 +2033,22 @@ done_no_advance_next:
  * 8 functions ported from SWOS2.s lines 36261–36366, 31498–31536.
  * ================================================================ */
 
-/* fixtureTeam1CompPtr / fixtureTeam2CompPtr set by _DIY_GetCurrentFixtureTeamPtrs */
+/* fixtureTeam1CompPtr / fixtureTeam2CompPtr set by DIY_GetCurrentFixtureTeamPtrs */
 extern uint8_t *fixtureTeam1CompPtr;
 extern uint8_t *fixtureTeam2CompPtr;
 
 /* ================================================================
- * _Career_AutoSimulateLeagueFixturesUntilHumanTeam (SWOS2.s line 36261)
+ * Career_AutoSimulateLeagueFixturesUntilHumanTeam (SWOS2.s line 36261)
  *
  * Loop: get current fixture teams, if both are AI (controls != 1)
  * then simulate the fixture and repeat. Stops when a human team
  * is involved in the current fixture.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
+void Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
 {
     for (;;) {
-        _DIY_GetCurrentFixtureTeamPtrs();
+        DIY_GetCurrentFixtureTeamPtrs();
         uint8_t *comp1 = fixtureTeam1CompPtr;
         uint8_t *comp2 = fixtureTeam2CompPtr;
 
@@ -2061,7 +2061,7 @@ void _Career_AutoSimulateLeagueFixturesUntilHumanTeam(void)
         if (team2->teamControls != 1) return;  /* human team found */
 
         /* Both AI: simulate */
-        _DIY_PlayOrSimulateLeagueFixture(0, 0);
+        DIY_PlayOrSimulateLeagueFixture(0, 0);
     }
 }
 
@@ -2098,14 +2098,14 @@ static void getCurrentMatchTeamSlotIndices(int16_t *slot1Idx, int16_t *slot2Idx)
 }
 
 /* ================================================================
- * _Career_AutoSimulateCupMatchesUntilHumanTeam (SWOS2.s line 36279)
+ * Career_AutoSimulateCupMatchesUntilHumanTeam (SWOS2.s line 36279)
  *
  * Loop: get current cup match team slots, if both are AI then
  * simulate the cup match and repeat. Stops when a human team
  * is involved.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
+void Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     int iter = 0;
@@ -2155,7 +2155,7 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
             return;
         }
 #endif
-        _DIY_PlayCupMatchAndAdvance(0, 0);
+        DIY_PlayCupMatchAndAdvance(0, 0);
 
         /* The asm loop exits ONLY when a human/coach team appears in the next
          * fixture. On SDL the career team can be absent from the round this loop
@@ -2163,10 +2163,10 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
          * about which round holds the player's match, and draw->replay cups
          * (roundPenalties==2) leave matches unresolved so the round never clears
          * normally — so no human is ever found and the loop re-sims the same
-         * round forever (cup freeze). _DIY_PlayCupMatchAndAdvance sets
+         * round forever (cup freeze). DIY_PlayCupMatchAndAdvance sets
          * roundComplete (and wraps currentMatchIndex to 0) once every fixture in
          * the round has been simulated; return on that so the caller
-         * (_Career_OpenCompetitionSlotMenuAndApplyChanges) runs the round-advance
+         * (Career_OpenCompetitionSlotMenuAndApplyChanges) runs the round-advance
          * / replay setup and the cup actually progresses to the player's round
          * (or finishes). In the normal case the human team is found mid-round and
          * we return above before roundComplete is set, so this never fires. */
@@ -2176,13 +2176,13 @@ void _Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 }
 
 /* ================================================================
- * _Career_AutoSimulatePendingMatchUntilHumanTeam (SWOS2.s line 36297)
+ * Career_AutoSimulatePendingMatchUntilHumanTeam (SWOS2.s line 36297)
  *
  * Checks the current competition slot type and dispatches to
  * either league or cup auto-simulate.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
+void Career_AutoSimulatePendingMatchUntilHumanTeam(void)
 {
     DIYCompetition *bufComp = &diyFileBufferCopy.header;
     uint8_t *buf = (uint8_t *)&diyFileBufferCopy;
@@ -2190,13 +2190,13 @@ void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
     DIYTournamentSlot *slot = (DIYTournamentSlot *)(buf + (uint32_t)slotIdx * 0x76 + 0x15A);
 
     if (slot->isLeagueFormat != 0)
-        _Career_AutoSimulateLeagueFixturesUntilHumanTeam();
+        Career_AutoSimulateLeagueFixturesUntilHumanTeam();
     else
-        _Career_AutoSimulateCupMatchesUntilHumanTeam();
+        Career_AutoSimulateCupMatchesUntilHumanTeam();
 }
 
 /* ================================================================
- * _Career_AutoPlayOrSimulateLeagueFixtureLoop (SWOS2.s line 36308)
+ * Career_AutoPlayOrSimulateLeagueFixtureLoop (SWOS2.s line 36308)
  *
  * Loop: simulate league fixtures until the competition reaches
  * a state where careerSlotProcessingInProgress is set (indicating
@@ -2204,25 +2204,25 @@ void _Career_AutoSimulatePendingMatchUntilHumanTeam(void)
  * nonzero (fixtures remain).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
+void Career_AutoPlayOrSimulateLeagueFixtureLoop(void)
 {
     for (;;) {
         uint16_t field1C0 = diyCompetitionStart.leagueCurrentSlot;
         if (field1C0 != 0 && careerSlotProcessingInProgress != 0)
             return;
-        _DIY_PlayOrSimulateLeagueFixture(0, 0);
+        DIY_PlayOrSimulateLeagueFixture(0, 0);
     }
 }
 
 /* ================================================================
- * _Career_AutoPlayCupMatchAndAdvanceLoop (SWOS2.s line 36325)
+ * Career_AutoPlayCupMatchAndAdvanceLoop (SWOS2.s line 36325)
  *
  * Loop: simulate cup matches until careerSlotProcessingInProgress
  * is set and the cup's $54 field is nonzero. On exit, calls
  * DIY_UpdateCompetitionProgress.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
+void Career_AutoPlayCupMatchAndAdvanceLoop(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     int iter = 0;
@@ -2245,7 +2245,7 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
             SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop EXIT (round complete + processing) "
                               "iter=%d", iter);
 #endif
-            _DIY_UpdateCompetitionProgress();
+            DIY_UpdateCompetitionProgress();
             return;
         }
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -2258,12 +2258,12 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
             return;
         }
 #endif
-        _DIY_PlayCupMatchAndAdvance(0, 0);
+        DIY_PlayCupMatchAndAdvance(0, 0);
     }
 }
 
 /* ================================================================
- * _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
+ * Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
  * (SWOS2.s line 36341)
  *
  * For hybrid competition slots: checks slot type and dispatches
@@ -2272,7 +2272,7 @@ void _Career_AutoPlayCupMatchAndAdvanceLoop(void)
  * advances to the next competition slot.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
+void Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 {
     DIYCompetition *bufComp = &diyFileBufferCopy.header;
     uint8_t *buf = (uint8_t *)&diyFileBufferCopy;
@@ -2283,7 +2283,7 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 
     if (slot->isLeagueFormat != 0) {
         /* League type slot */
-        _Career_AutoPlayOrSimulateLeagueFixtureLoop();
+        Career_AutoPlayOrSimulateLeagueFixtureLoop();
 
         /* Copy progress fields: comp→buf */
         bufComp->matchStarted = comp->matchStarted;
@@ -2292,10 +2292,10 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 
         /* Advance if diyCompetitionStart.minSubstitutes == 0 */
         if (diyCompetitionStart.minSubstitutes == 0)
-            _DIY_AdvanceToNextCompetitionSlot();
+            DIY_AdvanceToNextCompetitionSlot();
     } else {
         /* Cup type slot */
-        _Career_AutoPlayCupMatchAndAdvanceLoop();
+        Career_AutoPlayCupMatchAndAdvanceLoop();
 
         /* Copy progress fields: comp→buf (4 fields) */
         bufComp->matchStarted  = comp->matchStarted;
@@ -2305,12 +2305,12 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
 
         /* Advance if competition finished */
         if (comp->competitionFinished != 0)
-            _DIY_AdvanceToNextCompetitionSlot();
+            DIY_AdvanceToNextCompetitionSlot();
     }
 }
 
 /* ================================================================
- * _DIY_AdvanceToNextCompetitionSlot (SWOS2.s line 31498)
+ * DIY_AdvanceToNextCompetitionSlot (SWOS2.s line 31498)
  *
  * Advances to the next competition slot in the diyFileBufferCopy.
  * If max slots reached, marks competition as finished. Otherwise
@@ -2319,7 +2319,7 @@ void _Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot(void)
  * processing via the asm dispatch.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DIY_AdvanceToNextCompetitionSlot(void)
+void DIY_AdvanceToNextCompetitionSlot(void)
 {
     uint8_t *buf = (uint8_t *)&diyFileBufferCopy;
     DIYCompetition *bufComp = &diyFileBufferCopy.header;
@@ -2345,24 +2345,24 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
 
     if (slotRec->isLeagueFormat != 0) {
         /* League type: build seeded bracket */
-        _DIY_BuildSeededBracketAndUpdateScores(buf, slot, comp, comp);
+        DIY_BuildSeededBracketAndUpdateScores(buf, slot, comp, comp);
     } else {
         /* Cup type: copy team grid */
-        _DIY_CopyTeamGridFromCompToDIY(buf, slot, comp, comp);
+        DIY_CopyTeamGridFromCompToDIY(buf, slot, comp, comp);
     }
 
     /* Increment current slot index */
     bufComp->roundComplete = currentSlot + 1;
 
     /* Load the new slot */
-    _DIY_LoadCurrentCompetitionSlot();
+    DIY_LoadCurrentCompetitionSlot();
 
     if (careerLoadedFlag != 0)
         return;
 
     /* Career modes: additional post-load processing (was loc_12D4B0) */
     if (gameType == 4 || gameType == 3)
-        _DIY_PostLoadCompetitionDispatch();
+        DIY_PostLoadCompetitionDispatch();
 }
 
 /* ================================================================
@@ -2372,24 +2372,24 @@ void _DIY_AdvanceToNextCompetitionSlot(void)
  *      NationalTeamAddPlayerExit
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _NationalTeamAddPlayerHomeOnSelect(void)
+void NationalTeamAddPlayerHomeOnSelect(void)
 {
     careerNationalTeamAddPlayerType = 0;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 __attribute__((used, externally_visible))
-void _NationalTeamAddPlayerAbroadOnSelect(void)
+void NationalTeamAddPlayerAbroadOnSelect(void)
 {
     careerNationalTeamAddPlayerType = 1;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 __attribute__((used, externally_visible))
-void _NationalTeamAddPlayerExit(void)
+void NationalTeamAddPlayerExit(void)
 {
     careerNationalTeamAddPlayerType = 0xFFFF;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
@@ -2407,16 +2407,16 @@ extern uint8_t aSelect0MoreInt[];      /* "SELECT %0 MORE INTERNATIONAL SQUAD PL
 extern uint8_t aRemovePlayer[];        /* "REMOVE PLAYER" */
 extern uint8_t aRemovePlayers[];       /* "REMOVE PLAYERS" */
 
-extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+extern void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                             uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
                             uint16_t n4, uint16_t n5, uint16_t n6,
                             const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
 
 /* Career_UpdateNationalTeamMenuEntries: update visibility of national team
  * squad menu entries based on careerNumPlayers and pending add state. */
 __attribute__((used, externally_visible))
-void _Career_UpdateNationalTeamMenuEntries(void)
+void Career_UpdateNationalTeamMenuEntries(void)
 {
     /* Initially hide entries 24 and 25 */
     menuEntries[24].isInvisible = 1;
@@ -2431,7 +2431,7 @@ void _Career_UpdateNationalTeamMenuEntries(void)
     }
 
     /* Format "%a SQUAD" with team name into entry 0 */
-    _PrintFormatted(aASquad, (uint8_t *)menuEntries[0].fg,
+    PrintFormatted(aASquad, (uint8_t *)menuEntries[0].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     (const uint8_t *)&careerTeam.team.teamName[0], 0, 0);
 
@@ -2458,9 +2458,9 @@ void _Career_UpdateNationalTeamMenuEntries(void)
         uint8_t *dst = (uint8_t *)menuEntries[1].fg;
         uint16_t remaining = 0x14 - careerNumPlayers;
         if (remaining == 1) {
-            _StringCopy(aSelect1MoreInt, dst);
+            StringCopy(aSelect1MoreInt, dst);
         } else {
-            _PrintFormatted(tr_fmt(aSelect0MoreInt), dst,
+            PrintFormatted(tr_fmt(aSelect0MoreInt), dst,
                             remaining, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     }
@@ -2469,7 +2469,7 @@ void _Career_UpdateNationalTeamMenuEntries(void)
 /* Career_UpdateRemovePlayersMenuEntry: show/hide "REMOVE PLAYER(S)" entry
  * based on careerIntlPlayersRemoveMask bit count. */
 __attribute__((used, externally_visible))
-void _Career_UpdateRemovePlayersMenuEntry(void)
+void Career_UpdateRemovePlayersMenuEntry(void)
 {
     menuEntries[6].isInvisible = 1;
 
@@ -2506,12 +2506,12 @@ void _Career_UpdateRemovePlayersMenuEntry(void)
  * teamFileBuffer, returns the league byte from that team record.
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _GetTeamLeague(uint16_t teamNumber)
+int16_t GetTeamLeague(uint16_t teamNumber)
 {
     uint16_t extNumber = teamNumber >> 8;
     teamsLoaded = 0;
     skipLeagueNumbers = 1;
-    _LoadTeamFile(extNumber);
+    LoadTeamFile(extNumber);
     skipLeagueNumbers = 0;
     teamsLoaded = 0;
 
@@ -2539,16 +2539,16 @@ int16_t _GetTeamLeague(uint16_t teamNumber)
 extern uint8_t careerUnavailablePlayerNames[];
 extern uint8_t careerUnavailablePlayerLookupTable[];
 
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern void _SetBenchPlayersNumbers(TeamFileEx *team);
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
+extern void SetBenchPlayersNumbers(TeamFileEx *team);
 
 __attribute__((used, externally_visible))
-void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *dstTeam,
+void Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *dstTeam,
     uint8_t *srcName, uint16_t srcTeamNumber, uint16_t srcPlayerIndex, uint16_t dstSlotIndex)
 {
     /* Copy player name to careerUnavailablePlayerNames (17-byte entries) */
     uint8_t *namesDst = careerUnavailablePlayerNames + (uint16_t)(dstSlotIndex * 17);
-    _StringCopy(srcName, namesDst);
+    StringCopy(srcName, namesDst);
 
     /* Store team number and player index in lookup table. Each slot is
      * 4 bytes: { uint16 teamNumber, uint16 playerIndex }. */
@@ -2580,7 +2580,7 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
     dstPf->goalStats[3] = 0;
 
     /* Update bench player numbers for the career team */
-    _SetBenchPlayersNumbers(&careerTeam);
+    SetBenchPlayersNumbers(&careerTeam);
 }
 
 /* ================================================================
@@ -2595,14 +2595,14 @@ void _Career_CopyUnavailablePlayerToCareerTeamSlot(uint8_t *srcPlayer, uint8_t *
 extern uint8_t currentMatchPlayers[];
 
 __attribute__((used, externally_visible))
-uint16_t _GetPlayerPositionFromCurrent(uint16_t playerIndex)
+uint16_t GetPlayerPositionFromCurrent(uint16_t playerIndex)
 {
     for (uint16_t i = 0; i < 20; i++) {
         if (currentMatchPlayers[i] == (uint8_t)playerIndex)
             return i;
     }
     panicReasonCode = 0x5771;
-    _PanicHaltLoop();
+    PanicHaltLoop();
     /* not reached */
 }
 
@@ -2621,7 +2621,7 @@ uint16_t _GetPlayerPositionFromCurrent(uint16_t playerIndex)
  * Asm: in d0 = removeMask (32-bit)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
+void Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
 {
     uint8_t *slot = (uint8_t *)&careerTeam;
 
@@ -2632,7 +2632,7 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
             uplBase[i * 2] = 0xFFFF;
 
             /* Find position of this player slot in currentMatchPlayers */
-            uint16_t pos = _GetPlayerPositionFromCurrent(i);
+            uint16_t pos = GetPlayerPositionFromCurrent(i);
 
             if (pos >= 16) {
                 /* Shift currentMatchPlayers entries down from pos+1,
@@ -2681,10 +2681,10 @@ void _Career_RemoveInternationalPlayersByMask(uint32_t removeMask)
  * Asm: in a0 = teamPtr (unused/dead parameter)
  * ================================================================ */
 extern uint8_t careerDefaultInternationalSquadSlotsTable[];
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
 __attribute__((used, externally_visible))
-void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr)
+void Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr)
 {
     (void)teamPtr;  /* dead parameter in original asm */
 
@@ -2700,7 +2700,7 @@ void _Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamP
         currentMatchPlayers[i] = (uint8_t)i;
 
         /* Get player pointer for this slot */
-        uint8_t *player = _GetPlayer(selTeamNumber, i);
+        uint8_t *player = GetPlayer(selTeamNumber, i);
         PlayerFile *pf = (PlayerFile *)(player + 76);  /* PlayerFile at TeamFileEx offset 0x4C */
 
         /* Mark player as removed (playerName[0] = 0xFF) */
@@ -2738,13 +2738,13 @@ extern uint16_t teamSelectionKeyCacheOffset;
 extern uint16_t teamSelectionKeyCacheIndex;
 extern DIYTournamentState diyFileBufferCopy;
 extern DIYCompetitionEx diyCompetitionStart;
-extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
-extern void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
-extern void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx);
-extern void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
-extern void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
-extern void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
-extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
+extern void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+extern void Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
+extern void Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx);
+extern void Career_ApplyForeignMarketPlayersToSelectedTeams(void);
+extern void InitCompetitionFromRecord(uint16_t index, uint8_t *record);
+extern void DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
+extern void CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
 
 /* ================================================================
  * _TeamSelectionKeyCache_AddNextRoundCupEntry
@@ -2761,14 +2761,14 @@ static uint8_t *addNextRoundCupEntry(uint8_t **srcPtr, uint16_t idx, uint16_t to
 {
     uint8_t *src = *srcPtr;
     uint8_t key = *src;
-    uint8_t *out = _TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
+    uint8_t *out = TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
     TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
     teamSelectionKeyCacheCount++;
     e->sortKey = *src;
     (*srcPtr)++;
 
     /* GetNextCupRoundStringIndex(idx, total, subRoundCounter) */
-    uint16_t cupRoundIdx = _GetNextCupRoundStringIndex(idx, total, ((DIYCompetition *)base)->subRoundCounter);
+    uint16_t cupRoundIdx = GetNextCupRoundStringIndex(idx, total, ((DIYCompetition *)base)->subRoundCounter);
     e->cupRoundStringIdx = (uint8_t)cupRoundIdx;
     e->roundIdx          = (uint8_t)idx;
     e->compId            = (uint8_t)teamId;
@@ -2794,7 +2794,7 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
 {
     uint8_t *src = *srcPtr;
     uint8_t key = *src;
-    uint8_t *out = _TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
+    uint8_t *out = TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
     TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
     teamSelectionKeyCacheCount++;
     e->sortKey = *src;
@@ -2803,7 +2803,7 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
     /* GetCupRoundStringIndex: d0=round, d1=slot.isLeagueFormat, d2=total,
      * d3=slot.numTeams, d4=opt. base+0x15A = current slot record. */
     DIYTournamentSlot *slotRec = (DIYTournamentSlot *)(base + 0x15A);
-    uint16_t cupRoundIdx = _GetCupRoundStringIndex(roundIdx,
+    uint16_t cupRoundIdx = GetCupRoundStringIndex(roundIdx,
                                                     slotRec->isLeagueFormat,
                                                     total,
                                                     slotRec->numTeams,
@@ -2820,7 +2820,7 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
 }
 
 /* ================================================================
- * _TeamSelectionKeyCache_BuildFromCompetitionBlock
+ * TeamSelectionKeyCache_BuildFromCompetitionBlock
  * (SWOS2.s line 31190)
  *
  * Builds the team selection key cache from a competition block.
@@ -2830,7 +2830,7 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
  *   other = multi-slot competition
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
+void TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 {
     DIYCompetition *comp = (DIYCompetition *)blk;
     uint16_t type = comp->competitionType;
@@ -2858,7 +2858,7 @@ void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
 
         while (i >= 0) {
             uint8_t key = *src;
-            uint8_t *out = _TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
+            uint8_t *out = TeamSelectionKeyCache_InsertSpaceSorted(key, slotLen);
             TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
             teamSelectionKeyCacheCount++;
             e->sortKey = *src++;

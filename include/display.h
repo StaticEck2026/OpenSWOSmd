@@ -297,19 +297,19 @@ extern int g_menu_draw_x_offset;
 #define COPPER_W(offset) (*(volatile uint16_t *)((uint8_t *)copperListBuffer + (offset)))
 
 /* ---- Function declarations ---- */
-void _InitDisplayAndCopper(void);
-void _UpdatePlanePtrsAndBlitParams(void);
-void _SwapBuffersAndCameraViewState(void);
-void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
-void _DoubleBufferSwapSequence(void);
-void _BlitterCopyPanelToScreen2(void);
-void _ProcessSpriteBlitQueue(void);
-void _BlitterCopyPanelToScreen(void);
-void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
-void _FlashColor0Delay(uint32_t loopCount, uint16_t color);
-void _WriteCopperPalette(const uint16_t *palette);
+void InitDisplayAndCopper(void);
+void UpdatePlanePtrsAndBlitParams(void);
+void SwapBuffersAndCameraViewState(void);
+void SetCameraCoordinates(int16_t targetX, int16_t targetY);
+void DoubleBufferSwapSequence(void);
+void BlitterCopyPanelToScreen2(void);
+void ProcessSpriteBlitQueue(void);
+void BlitterCopyPanelToScreen(void);
+void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
+void FlashColor0Delay(uint32_t loopCount, uint16_t color);
+void WriteCopperPalette(const uint16_t *palette);
 #ifdef AGA
-void _WriteCopperPitchPalette(void);
+void WriteCopperPitchPalette(void);
 #endif
 
 #endif

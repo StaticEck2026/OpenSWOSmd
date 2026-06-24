@@ -12,49 +12,49 @@
  * Per-frame substitution controls check.
  * Called from GameLoop each frame.
  */
-void _BenchCheckControls(void);
+void BenchCheckControls(void);
 
 /* ---- DrawBenchAndSubsMenu ----
  * Draws bench player sprites, coach, and subs/formation menus.
  * Called from GameLoop each frame when bench is active.
  */
-void _DrawBenchAndSubsMenu(void);
+void DrawBenchAndSubsMenu(void);
 
 /* --- Chunk 117: Formation/bench state --- */
-void _ShowFormationMenu(void);
-void _SubsBenchOff(void);
+void ShowFormationMenu(void);
+void SubsBenchOff(void);
 
 /* --- Chunk 153: Bench player pointer lookup --- */
-uint16_t _GetBenchPlayerPointer(uint16_t index);
-void _UpdatePlayerToBeSubstitutedPosition(void);
+uint16_t GetBenchPlayerPointer(uint16_t index);
+void UpdatePlayerToBeSubstitutedPosition(void);
 
 /* --- Chunk 154: Substitution eligibility & initial selection --- */
-uint16_t _IsPlayerOkToSubstitute(void);
-void _FindInitialPlayerToBeSubstituted(void);
+uint16_t IsPlayerOkToSubstitute(void);
+void FindInitialPlayerToBeSubstituted(void);
 
 /* --- Chunk 155: Formation movement & player data swap --- */
-void _HandleFormationMenuMovement(void);
-void _SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex);
+void HandleFormationMenuMovement(void);
+void SwapPlayerNameData(uint16_t enterIndex, uint16_t leaveIndex);
 
 /* --- Chunk 156: Training swap, leave subs, throw-in/keeper check --- */
-void _TrainingSwapBenchTeams(void);
-void _LeaveSubsMenu(void);
-void _CheckForThrowInAndGoalkeepersBall(void);
+void TrainingSwapBenchTeams(void);
+void LeaveSubsMenu(void);
+void CheckForThrowInAndGoalkeepersBall(void);
 
 /* --- Chunk 157: Bench menu handlers & substitute scanning --- */
-int16_t _IsThisPlayerOkToSelect(void);
-void _FirePressedInSubsMenu(void);
-void _HandleFormationMenuControls(void);
-void _UpdateSubstitutePlayerIndices(void);
-void _CallUpdateSubstitutePlayerIndices(void);
-void _state3_handle_fire_press(void);
+int16_t IsThisPlayerOkToSelect(void);
+void FirePressedInSubsMenu(void);
+void HandleFormationMenuControls(void);
+void UpdateSubstitutePlayerIndices(void);
+void CallUpdateSubstitutePlayerIndices(void);
+void state3_handle_fire_press(void);
 
 /* --- Chunk 158: Substitution confirm, execution & mark/swap --- */
-void _SelectPlayerToSubstituteMenuHandler(void);
-void _SubstitutePlayer(void);
-void _MarkPlayersMenuHandler(void);
+void SelectPlayerToSubstituteMenuHandler(void);
+void SubstitutePlayer(void);
+void MarkPlayersMenuHandler(void);
 
 /* --- Chunk 159: Main bench menu dispatcher --- */
-void _BenchMenuHandleControls(void);
+void BenchMenuHandleControls(void);
 
 #endif

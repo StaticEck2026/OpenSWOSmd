@@ -43,6 +43,6 @@ void *memmove(void *dest, const void *src, unsigned long len) {
 
 int main(void)
 {
-    _startShim();
+    startShim();
     return 0;
 }

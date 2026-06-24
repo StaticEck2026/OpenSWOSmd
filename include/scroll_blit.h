@@ -8,7 +8,7 @@
 
 #include "game_types.h"
 
-void _ScrollXUpdateColumnsAndBlit(void);
-void _ScrollYUpdateRowsAndBlit(void);
+void ScrollXUpdateColumnsAndBlit(void);
+void ScrollYUpdateRowsAndBlit(void);
 
 #endif

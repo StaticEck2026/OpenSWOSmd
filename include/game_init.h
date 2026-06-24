@@ -8,31 +8,31 @@
 
 #include "game_types.h"
 
-void _InitTeamsData(void);
-void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam);
+void InitTeamsData(void);
+void InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam);
 
 /* --- Player init & post-match utilities (Chunk 103) --- */
-void _UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase);
-void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
+void UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase);
+void AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
                                         uint16_t statOffset);
-void _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi);
-void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
+void SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi);
+void InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
                         uint8_t *playerBase, PlayerInfo *pi);
-void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase);
-void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase);
+void ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase);
+void UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase);
 
 /* --- Full team game structure init (Chunk 104) --- */
-void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
+void InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
                                 int16_t *avgPricePct);
 
 /* --- InitializeInGameTeamsAndStartGame (Chunk 214) --- */
-void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
+void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     int16_t maxSubs, int16_t paramD3, int16_t paramD7,
     TeamFile *team1, TeamFile *team2);
 
 /* --- SetupPlayers & InitAndPlayGame (Chunk 191) --- */
-void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
+void SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
                    int16_t excludeFlags, int16_t allowSquadChanges, int16_t mode);
-void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
+void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
 
 #endif

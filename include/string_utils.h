@@ -13,16 +13,16 @@ typedef short int16_t;
 typedef int int32_t;
 
 /* ---- String utility functions ---- */
-uint16_t _GetStringLength(const uint8_t *str);
-int16_t _StringEquals(const uint8_t *s1, const uint8_t *s2);
-uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-uint8_t *_StringCopyUntilChar(const uint8_t *src, uint8_t *dst, uint8_t stopChar);
+uint16_t GetStringLength(const uint8_t *str);
+int16_t StringEquals(const uint8_t *s1, const uint8_t *s2);
+uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
+uint8_t *StringCopyUntilChar(const uint8_t *src, uint8_t *dst, uint8_t stopChar);
 
 /* ---- Number formatting (Chunk 100) ---- */
-void _Int2Pounds(uint32_t pounds, uint8_t *dst);
-void _Int2PoundsSigned(int32_t pounds, uint8_t *dst);
-void _WriteAccountBalance(int32_t delta, uint8_t *dst);
-void _GetBankBalance(uint8_t *dst);
-void _PrepareMenuForFadeIn(void);
+void Int2Pounds(uint32_t pounds, uint8_t *dst);
+void Int2PoundsSigned(int32_t pounds, uint8_t *dst);
+void WriteAccountBalance(int32_t delta, uint8_t *dst);
+void GetBankBalance(uint8_t *dst);
+void PrepareMenuForFadeIn(void);
 
 #endif

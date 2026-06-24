@@ -47,41 +47,41 @@
 #define TEAMFILE_PLAYERNUMBERS  60
 
 /* --- Top skills string builder (Chunk 151) --- */
-void _FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile);
+void FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile);
 
 /* --- Chunk 98: Play Match Menu Functions --- */
-void _PlayMatchMenuInit(void);
-void _PlayMatchMenuReinit(void);
-void _SetCurrentSelectedPlayerIndexPointer(void);
-void _OnSwapPlayer(MenuEntry *menuEntry);
-void _PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t selectedSlot, int16_t destSlot);
-int16_t _HandleSquadSwapSelectionToggle(int16_t menuPos);
-void _PlayMatchChangeTactics(MenuEntry *menuEntry);
-void _ExitPlayMatch(void);
-void _PlayMatchSelected(void);
-void _EditTacticsInPlayMatchMenu(void);
-void _ViewOpponentsSelect(void);
-void _ReturnFromViewOpponent(void);
-void _PlayMatchOnSelect30(void);
-void _PlayMatch30AfterDraw(void);
-void _UpdateTeamCheckmark(void);
-void _SetGameStartButtonText(void);
-void _ShowOrHidePlayMatchButton(void);
-void _SetUpTacticsButtons(void);
-void _SetPlayerSurnamesOnSidePitch(void);
-void _ShowUseMatchTeamIfTraining(void);
-void _SetVariableButtons(void);
-void _DrawPlayerEntries(MenuEntry *entry);
-void _RedrawPlayerNames(void);
-void _UpdateLittleCheckmark(void);
-void _SavePositionsAndUpdateLittleCheckmark(void);
-void _UpdateCheckMarkSprite(void);
-void _UseMatchTeamSelect(void);
-void _TogglePlayerCoach(void);
+void PlayMatchMenuInit(void);
+void PlayMatchMenuReinit(void);
+void SetCurrentSelectedPlayerIndexPointer(void);
+void OnSwapPlayer(MenuEntry *menuEntry);
+void PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t selectedSlot, int16_t destSlot);
+int16_t HandleSquadSwapSelectionToggle(int16_t menuPos);
+void PlayMatchChangeTactics(MenuEntry *menuEntry);
+void ExitPlayMatch(void);
+void PlayMatchSelected(void);
+void EditTacticsInPlayMatchMenu(void);
+void ViewOpponentsSelect(void);
+void ReturnFromViewOpponent(void);
+void PlayMatchOnSelect30(void);
+void PlayMatch30AfterDraw(void);
+void UpdateTeamCheckmark(void);
+void SetGameStartButtonText(void);
+void ShowOrHidePlayMatchButton(void);
+void SetUpTacticsButtons(void);
+void SetPlayerSurnamesOnSidePitch(void);
+void ShowUseMatchTeamIfTraining(void);
+void SetVariableButtons(void);
+void DrawPlayerEntries(MenuEntry *entry);
+void RedrawPlayerNames(void);
+void UpdateLittleCheckmark(void);
+void SavePositionsAndUpdateLittleCheckmark(void);
+void UpdateCheckMarkSprite(void);
+void UseMatchTeamSelect(void);
+void TogglePlayerCoach(void);
 
 /* --- Chunk 212: ShowPlayMatchMenu --- */
 #define GAME_TYPE_SEASON     3
-int16_t _ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
+int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
                             int16_t excludeFlags, int16_t isFirstPlayer,
                             int16_t squadChanges, TeamFileEx *team1, TeamFileEx *team2);
 

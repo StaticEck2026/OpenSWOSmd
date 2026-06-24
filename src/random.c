@@ -17,7 +17,7 @@ extern uint8_t randXorIndex2;         /* secondary XOR key index (BSS) */
 extern uint8_t randXorKey2;           /* secondary XOR key (BSS) */
 extern uint8_t *savedRandStatePtr;    /* pointer into savedRandState buffer */
 extern uint16_t panicReasonCode;
-extern void _PanicHaltLoop(void) __attribute__((noreturn));
+extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 /* ================================================================
  * Rand  (SWOS2.s line 18116)
@@ -26,7 +26,7 @@ extern void _PanicHaltLoop(void) __attribute__((noreturn));
  * Returns 0-255 in d0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _Rand(void)
+uint16_t Rand(void)
 {
     uint16_t d0 = seed & 0xFFu;
 
@@ -48,7 +48,7 @@ uint16_t _Rand(void)
  * Returns 0-255 in d0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _Rand2(void)
+uint16_t Rand2(void)
 {
     uint16_t d0 = seed2 & 0xFFu;
 
@@ -70,10 +70,10 @@ uint16_t _Rand2(void)
  * Low byte from first call, high byte from second call.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetRandomWord(void)
+uint16_t GetRandomWord(void)
 {
-    uint16_t lo = _Rand2();
-    uint16_t hi = _Rand2();
+    uint16_t lo = Rand2();
+    uint16_t hi = Rand2();
     return (uint16_t)((hi << 8) | lo);
 }
 
@@ -87,7 +87,7 @@ uint16_t _GetRandomWord(void)
 extern uint8_t savedRandState[];
 
 __attribute__((used, externally_visible))
-void _SaveRand2State(void)
+void SaveRand2State(void)
 {
     uint8_t *ptr = savedRandStatePtr;
 
@@ -104,7 +104,7 @@ void _SaveRand2State(void)
     if (ptr >= savedRandState + 15)
     {
         panicReasonCode = 0x9793;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 }
 
@@ -115,7 +115,7 @@ void _SaveRand2State(void)
  * stack-style buffer, restoring seed2/randXorIndex2/randXorKey2.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _RestoreRand2State(void)
+void RestoreRand2State(void)
 {
     uint8_t *ptr = savedRandStatePtr;
 
@@ -141,7 +141,7 @@ extern uint8_t  savedRandState[];
 uint16_t deterministicTick = 0;
 
 __attribute__((used, externally_visible))
-void _InitDeterministicMode(void)
+void InitDeterministicMode(void)
 {
     /* Primary PRNG */
     seed = (uint8_t)(DETERMINISTIC_SEED & 0xFF);
@@ -188,7 +188,7 @@ static int16_t frameLog[FRAME_LOG_MAX * FRAME_LOG_FIELDS];
 
 static uint16_t frameLogCount = 0;
 
-extern void _PanicHaltLoop(void) __attribute__((noreturn));
+extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 /* Inline DOS calls for file dump (dosBase from Resload) */
 extern uint32_t S_DosBase;
@@ -256,7 +256,7 @@ static void dumpSpriteSnapshot(uint16_t frameNum)
 }
 
 __attribute__((used, externally_visible))
-void _RngDumpCheck(void)
+void RngDumpCheck(void)
 {
     if (!rngDumpActive)
         return;
@@ -326,6 +326,6 @@ void _RngDumpCheck(void)
 
     /* Halt so user can collect the file */
     panicReasonCode = 0xE000 | (frameLogCount & 0xFFF);
-    _PanicHaltLoop();
+    PanicHaltLoop();
 }
 #endif

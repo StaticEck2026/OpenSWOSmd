@@ -74,7 +74,7 @@ extern uint8_t  pitchChunkyBuffer[];
 #define ANIM_MAX_TILE_OFFSET  MAX_FAN_TILE_OFFSET
 #endif
 /* animPatternsRandomTable: 64-byte permutation table (entries 0..62
- * plus a trailing 0) that `_DrawAnimatedPatterns` walks to pick pitch
+ * plus a trailing 0) that `DrawAnimatedPatterns` walks to pick pitch
  * tile indices for the per-frame fan animations. The table is shuffled
  * in-place by `swapTwoRandomIndicesFromAnimPatternsTable`. Transcribed
  * from the Amiga C port's Data.c:2221 — with a zero stub, every pick
@@ -91,9 +91,9 @@ extern uint16_t otherTeamScored;
 
 
 /* ---- external functions ---- */
-extern uint16_t _Rand(void);
-extern void _PanicHaltLoop(void);
-extern void _DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y);
+extern uint16_t Rand(void);
+extern void PanicHaltLoop(void);
+extern void DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y);
 
 /* ================================================================
  * swapTwoRandomIndicesFromAnimPatternsTable
@@ -105,8 +105,8 @@ static void swapTwoRandomIndicesFromAnimPatternsTable(void)
     uint16_t r1, r2;
     uint8_t tmp;
 
-    r1 = (uint16_t)((_Rand() * 63) >> 8);
-    r2 = (uint16_t)((_Rand() * 63) >> 8);
+    r1 = (uint16_t)((Rand() * 63) >> 8);
+    r2 = (uint16_t)((Rand() * 63) >> 8);
 
     tmp = animPatternsRandomTable[r2];
     animPatternsRandomTable[r2] = animPatternsRandomTable[r1];
@@ -141,13 +141,13 @@ static void drawPatternFromIndex(uint16_t patternIndex)
      * SpriteGraphics pointer (zero-extended to an unmapped low-32
      * address) and the write through it segfaulted. Use the typed
      * pointer table for the sprite header, and the matching side table
-     * for the chunky tile pointer (populated by _FixupAndColorPitchFile
+     * for the chunky tile pointer (populated by FixupAndColorPitchFile
      * Step 1b, see pitch.c). */
 #ifdef SWOS_SDL_BUILD
     {
         /* s_pitchFullPtrs is the pitch.c side table that holds the
          * full-width chunky-tile pointer per slot — populated in
-         * _FixupAndColorPitchFile Step 1b. The 4-byte slots in
+         * FixupAndColorPitchFile Step 1b. The 4-byte slots in
          * pitchDatBuffer can't round-trip a 64-bit address. */
         extern uint8_t *s_pitchFullPtrs[];
         SpriteGraphics *spr = ((SpriteGraphics **)spriteGraphicsPtr)[137];
@@ -181,7 +181,7 @@ static void drawPatternFromIndex(uint16_t patternIndex)
         return;
 
     /* draw to frontbuffer */
-    _DrawSprite16Pixels(137, screenX, screenY);
+    DrawSprite16Pixels(137, screenX, screenY);
 
     /* draw to mask buffer (swap frontbuffer ptr temporarily). The
      * pointer slot is uintptr_t on both targets — save/restore at
@@ -189,7 +189,7 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     {
         uintptr_t savedFbPtr = frontbufferBasePtr;
         frontbufferBasePtr = (uintptr_t)frontbufferMaskBuffer;
-        _DrawSprite16Pixels(137, screenX, screenY);
+        DrawSprite16Pixels(137, screenX, screenY);
         frontbufferBasePtr = savedFbPtr;
     }
 }
@@ -220,7 +220,7 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
             *a0 -= ANIM_TILE_SIZE;
 #ifdef SWOS_SDL_BUILD
             /* Mirror the toggle into s_pitchFullPtrs — see comment in
-             * _DrawAnimatedPatterns. The slot index is the byte offset
+             * DrawAnimatedPatterns. The slot index is the byte offset
              * of `a0` from the pitchDatBuffer base divided by 4. */
             {
                 ptrdiff_t slotIdx = a0 - pitchBase;
@@ -241,7 +241,7 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 }
 
 /* ================================================================
- * _ResetAnimatedPatternsForBothTeams
+ * ResetAnimatedPatternsForBothTeams
  * (SWOS2.s line 53547)
  *
  * Resets animated tiles for both top and bottom fan sections.
@@ -249,7 +249,7 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
  * Bottom section: pitchDatBuffer + 0x2178/4 = entry 2142, count 126
  * ================================================================ */
 void __attribute__((used, externally_visible))
-_ResetAnimatedPatternsForBothTeams(void)
+ResetAnimatedPatternsForBothTeams(void)
 {
     if (trainingGame != 0)
         return;
@@ -262,7 +262,7 @@ _ResetAnimatedPatternsForBothTeams(void)
 }
 
 /* ================================================================
- * _DrawAnimatedPatterns
+ * DrawAnimatedPatterns
  * (SWOS2.s line 53273)
  *
  * Per-frame animated pattern update. 8-state machine that determines
@@ -277,7 +277,7 @@ _ResetAnimatedPatternsForBothTeams(void)
  * width. When the full pitch is visible the right half never animates. For every cell the
  * loop touches we mirror it into the +21-column cell so the right half animates in lock-step.
  * do_toggle flips the mirror's OWN tile (fill path); the active path just redraws it. Both
- * bounds- and parity-checked WITHOUT _PanicHaltLoop: the mirror can fall outside the 2310-slot
+ * bounds- and parity-checked WITHOUT PanicHaltLoop: the mirror can fall outside the 2310-slot
  * table or land on a non-fan tile near the pitch edge, so we skip rather than animate garbage.
  * Because the mirror is derived from d3 (which the base loop already tracks) and toggled with
  * the same d4, it stays in sync without its own animatedPatterns[] slot. */
@@ -320,7 +320,7 @@ static void drawFanMirror(int16_t baseIdx, int do_toggle, uint16_t d4)
 #endif
 
 void __attribute__((used, externally_visible))
-_DrawAnimatedPatterns(void)
+DrawAnimatedPatterns(void)
 {
     int16_t d6;       /* max patterns to update */
     uint16_t d0;      /* animate flag (0 = de-animate, non-zero = animate) */
@@ -425,7 +425,7 @@ _DrawAnimatedPatterns(void)
             return;
 #else
             panicReasonCode = 0x5665;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
 #endif
         }
@@ -562,7 +562,7 @@ pattern_loop:
             if ((uintptr_t)tileEntryPtr < (uintptr_t)pitchDatBuffer ||
                 (uintptr_t)tileEntryPtr >= (uintptr_t)pitchDatBuffer + 2310u * 4) {
                 panicReasonCode = 0x2772;
-                _PanicHaltLoop();
+                PanicHaltLoop();
             }
 
             /* read tile entry and check if it's an animated tile */

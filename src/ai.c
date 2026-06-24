@@ -54,9 +54,9 @@ extern int16_t  inSubstitutesMenu;
 extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
 extern TeamGeneralInfo *lastTeamPlayed;
 
-extern uint16_t _Rand(void);
+extern uint16_t Rand(void);
 
-/* Written by _FindClosestPlayerToBallFacing, read by asm stub to return in d2 */
+/* Written by FindClosestPlayerToBallFacing, read by asm stub to return in d2 */
 int32_t __attribute__((used, externally_visible)) findClosestBallDist;
 
 
@@ -68,7 +68,7 @@ int32_t __attribute__((used, externally_visible)) findClosestBallDist;
  * Original: SWOS2.s lines 19776-19809
  */
 void __attribute__((used, externally_visible))
-_AI_SetDirectionTowardOpponentsGoal(TeamGeneralInfo *team)
+AI_SetDirectionTowardOpponentsGoal(TeamGeneralInfo *team)
 {
     int16_t ballX, dir;
 
@@ -112,7 +112,7 @@ _AI_SetDirectionTowardOpponentsGoal(TeamGeneralInfo *team)
  * Original: SWOS2.s lines 19939-19974
  */
 void __attribute__((used, externally_visible))
-_AI_Kick(Sprite *player, TeamGeneralInfo *team)
+AI_Kick(Sprite *player, TeamGeneralInfo *team)
 {
     TeamGeneralInfo *opponent;
     Sprite *opponentPlayer;
@@ -174,7 +174,7 @@ _AI_Kick(Sprite *player, TeamGeneralInfo *team)
  * Original: SWOS2.s lines 19819-19879
  */
 int16_t __attribute__((used, externally_visible))
-_AI_DecideWhetherToTriggerFire(Sprite *player, TeamGeneralInfo *team, int16_t dir)
+AI_DecideWhetherToTriggerFire(Sprite *player, TeamGeneralInfo *team, int16_t dir)
 {
     uint16_t reverseDir, roundedDir;
 
@@ -251,7 +251,7 @@ _AI_DecideWhetherToTriggerFire(Sprite *player, TeamGeneralInfo *team, int16_t di
  * Original: SWOS2.s lines 19986-20021
  */
 Sprite * __attribute__((used, externally_visible))
-_FindClosestPlayerToBallFacing(uint16_t fullDir, TeamGeneralInfo *team)
+FindClosestPlayerToBallFacing(uint16_t fullDir, TeamGeneralInfo *team)
 {
     Sprite *bestPlayer = (Sprite *)0xFFFFFFFF;
     int32_t bestDist = -1; /* 0xFFFFFFFF as unsigned = max value */
@@ -323,7 +323,7 @@ _FindClosestPlayerToBallFacing(uint16_t fullDir, TeamGeneralInfo *team)
  *   d2 = direction delta (byte arithmetic)
  */
 void __attribute__((used, externally_visible))
-_AI_SetControlsDirection(TeamGeneralInfo *team)
+AI_SetControlsDirection(TeamGeneralInfo *team)
 {
     Sprite *a5;             /* controlled player */
     Sprite *a4;             /* pass-to player */
@@ -352,7 +352,7 @@ _AI_SetControlsDirection(TeamGeneralInfo *team)
         aiResumePlayTimer--;
 
     /* Generate random value for this frame */
-    aiRand = (int16_t)_Rand();
+    aiRand = (int16_t)Rand();
 
     /* Increment AI timer, clear all control outputs */
     team->AI_timer++;
@@ -386,7 +386,7 @@ _AI_SetControlsDirection(TeamGeneralInfo *team)
     d6 = dx32 * dx32 + dy32 * dy32;
 
     /* Calculate angle from ball toward center of opponent's goal */
-    direction = (int16_t)_CalculateDeltaXAndY(
+    direction = (int16_t)CalculateDeltaXAndY(
         336, goalY, ballX, ballY, 256, &outDeltaX, &outDeltaY);
     if (direction < 0)
         direction = 0;
@@ -497,7 +497,7 @@ _AI_SetControlsDirection(TeamGeneralInfo *team)
 
     /* AI counter direction toward goal */
     if (aiCounter != 0)
-        _AI_SetDirectionTowardOpponentsGoal(team);
+        AI_SetDirectionTowardOpponentsGoal(team);
 
     /* Need a controlled player */
     if (a5 == (Sprite *)0)
@@ -516,7 +516,7 @@ _AI_SetControlsDirection(TeamGeneralInfo *team)
 
     /* ---- theres_a_player_near ---- */
 theres_a_player_near:
-    if (_AI_DecideWhetherToTriggerFire(a5, team, d7) == 0)
+    if (AI_DecideWhetherToTriggerFire(a5, team, d7) == 0)
         return;  /* firing */
 
     /* deadVarAlways0 check (always 0 in practice) */
@@ -574,7 +574,7 @@ distance_and_random_fire_gate:
 no_fire_fallback_flow:
     if (team->field_84 != 0) {
         team->field_84--;
-        closestPlayer = _FindClosestPlayerToBallFacing(
+        closestPlayer = FindClosestPlayerToBallFacing(
             (uint16_t)(d7 << 5), team);
         if (closestPlayer != (Sprite *)0xFFFFFFFF &&
             a5->teamNumber == closestPlayer->teamNumber)
@@ -616,7 +616,7 @@ use_pass_target_if_valid:
 evaluate_closest_facing_player_midrange:
     if (d6 > 180000)
         goto decide_immediate_turn_or_gate;
-    closestPlayer = _FindClosestPlayerToBallFacing(
+    closestPlayer = FindClosestPlayerToBallFacing(
         (uint16_t)(d7 << 5), team);
     if (closestPlayer == (Sprite *)0xFFFFFFFF)
         goto gate_field84_cooldown_and_set;
@@ -632,7 +632,7 @@ far_distance_decision_gate:
     /* tick_gated_closest_facing_check */
     if ((currentGameTick & 0xC) != 0)
         goto choose_dir_when_not_very_close;
-    closestPlayer = _FindClosestPlayerToBallFacing(
+    closestPlayer = FindClosestPlayerToBallFacing(
         (uint16_t)(d7 << 5), team);
     if (closestPlayer == (Sprite *)0xFFFFFFFF)
         goto gate_field84_cooldown_and_set;
@@ -802,7 +802,7 @@ apply_turn_delta_from_angle:
     goto prep_aftertouch_and_fire_decision;
 
 check_closest_player_facing:
-    closestPlayer = _FindClosestPlayerToBallFacing(
+    closestPlayer = FindClosestPlayerToBallFacing(
         (uint16_t)(d7 << 5), team);
     if (closestPlayer != (Sprite *)0xFFFFFFFF &&
         a5 != (Sprite *)0 &&
@@ -968,7 +968,7 @@ resume_play_and_apply_turn_bias:
 
     /* ---- noone_near path ---- */
 noone_near:
-    if (_AI_DecideWhetherToTriggerFire(a5, team, d7) == 0)
+    if (AI_DecideWhetherToTriggerFire(a5, team, d7) == 0)
         return;
 
     /* Check pass-to player distance difference */

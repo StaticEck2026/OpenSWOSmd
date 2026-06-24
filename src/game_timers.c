@@ -107,26 +107,26 @@ extern AnimTable playerNormalStandingAnimTable;
 extern AnimTable aboutToThrowInAnimTable;
 
 /* ---- Extern function declarations ---- */
-extern void _NextPenalty(void);
-extern void _PrepareForInitialKick(void);
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _SetCameraMovingToShowerState(void);
-extern void _FirstHalfJustEnded(void);
-extern void _GoToHalftime(void);
-extern void _PlayersLeavingPitch(void);
-extern void _GameOver(void);
-extern void _SetBallPosition(int16_t ballX, int16_t ballY);
-extern void _ResetAnimatedPatternsForBothTeams(void);
-extern void _CheckIfGoalkeeperClaimedTheBall(void);
-extern void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
-extern void _PlayRefereeWhistleSample(void);
-extern void _PanicHaltLoop(void);
-extern void _GoalScored(int16_t teamGoalType, Sprite *lastPlayer);
-extern void _PlayGoalReplayBottomSample(void);
-extern void _PlayGoalKickOffSample(void);
-extern uint16_t _Rand(void);
-extern void _StopAllPlayers(void);
+extern void NextPenalty(void);
+extern void PrepareForInitialKick(void);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void SetCameraMovingToShowerState(void);
+extern void FirstHalfJustEnded(void);
+extern void GoToHalftime(void);
+extern void PlayersLeavingPitch(void);
+extern void GameOver(void);
+extern void SetBallPosition(int16_t ballX, int16_t ballY);
+extern void ResetAnimatedPatternsForBothTeams(void);
+extern void CheckIfGoalkeeperClaimedTheBall(void);
+extern void SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
+extern void PlayRefereeWhistleSample(void);
+extern void PanicHaltLoop(void);
+extern void GoalScored(int16_t teamGoalType, Sprite *lastPlayer);
+extern void PlayGoalReplayBottomSample(void);
+extern void PlayGoalKickOffSample(void);
+extern uint16_t Rand(void);
+extern void StopAllPlayers(void);
 
 
 /* ---- Helper: negate result/time/stats timers ---- */
@@ -142,8 +142,8 @@ static void __attribute__((noinline)) handleEndGameTransmission(void)
 {
     if (gameState == ST_RESULT_ON_HALFTIME) {
         negateTimers();
-        _SetCameraMovingToShowerState();
-        _PrepareForInitialKick();
+        SetCameraMovingToShowerState();
+        PrepareForInitialKick();
         stoppageEventTimer = 0;
         return;
     }
@@ -155,12 +155,12 @@ static void __attribute__((noinline)) handleEndGameTransmission(void)
     }
     if (gameState == ST_STARTING_GAME) {
         showFansCounter = 0;
-        _PrepareForInitialKick();
+        PrepareForInitialKick();
         stoppageEventTimer = 0;
         return;
     }
     if (gameState == ST_CAMERA_GOING_TO_SHOWERS) {
-        _PrepareForInitialKick();
+        PrepareForInitialKick();
         stoppageEventTimer = 0;
         return;
     }
@@ -180,23 +180,23 @@ static int __attribute__((noinline)) checkFirePressedForEndGame(void)
 
     if (topTeamData.playerCoachNumber == 1 ||
         bottomTeamData.playerCoachNumber == 1) {
-        _Player1StatusProc();
+        Player1StatusProc();
         if (pl1Fire != 0)
             return 1;
     }
 
     if (topTeamData.playerCoachNumber == 2 ||
         bottomTeamData.playerCoachNumber == 2) {
-        _Player2StatusProc();
+        Player2StatusProc();
         if (pl2Fire != 0)
             return 1;
     }
 
     if (gameState == ST_RESULT_AFTER_THE_GAME) {
-        _Player1StatusProc();
+        Player1StatusProc();
         if (pl1Fire != 0)
             return 1;
-        _Player2StatusProc();
+        Player2StatusProc();
         if (pl2Fire != 0)
             return 1;
     }
@@ -209,7 +209,7 @@ static void __attribute__((noinline)) handleStoppedState(void)
 {
     if (gameState == ST_RESULT_ON_HALFTIME) {
         negateTimers();
-        _SetCameraMovingToShowerState();
+        SetCameraMovingToShowerState();
         return;
     }
     if (gameState == ST_RESULT_AFTER_THE_GAME) {
@@ -218,36 +218,36 @@ static void __attribute__((noinline)) handleStoppedState(void)
         return;
     }
     if (gameState == ST_STARTING_GAME) {
-        _PrepareForInitialKick();
+        PrepareForInitialKick();
         return;
     }
     if (gameState == ST_CAMERA_GOING_TO_SHOWERS) {
-        _PrepareForInitialKick();
+        PrepareForInitialKick();
         return;
     }
     if (gameState == ST_FIRST_HALF_ENDED) {
-        _FirstHalfJustEnded();
+        FirstHalfJustEnded();
         return;
     }
     if (gameState == ST_GOING_TO_HALFTIME) {
         negateTimers();
-        _GoToHalftime();
+        GoToHalftime();
         return;
     }
     if (gameState == ST_GAME_ENDED) {
-        _PlayersLeavingPitch();
+        PlayersLeavingPitch();
         return;
     }
     if (gameState == ST_PLAYERS_GOING_TO_SHOWER) {
-        _GameOver();
+        GameOver();
         return;
     }
     if (gameState == ST_FIRST_EXTRA_STARTING) {
-        _PrepareForInitialKick();
+        PrepareForInitialKick();
         return;
     }
     if (gameState == ST_FIRST_EXTRA_ENDED) {
-        _PrepareForInitialKick();
+        PrepareForInitialKick();
         return;
     }
 
@@ -306,7 +306,7 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
         if (playingPenalties != 0 && gameState != ST_PENALTIES)
             break;
         if (gameState != ST_KEEPER_HOLDS_BALL)
-            _SetBallPosition((int16_t)foulXCoordinate, (int16_t)foulYCoordinate);
+            SetBallPosition((int16_t)foulXCoordinate, (int16_t)foulYCoordinate);
         breakCameraMode = 2;
         break;
 
@@ -371,7 +371,7 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
         }
         runSlower = 0;
         if (goalCameraMode != 0)
-            _ResetAnimatedPatternsForBothTeams();
+            ResetAnimatedPatternsForBothTeams();
         breakCameraMode = 5;
         break;
 
@@ -395,7 +395,7 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             deadCameraBreakVar01 += 1;
             deadCameraBreakVar02 = gameStatePl;
             deadCameraBreakVar03 = gameState;
-            _CheckIfGoalkeeperClaimedTheBall();
+            CheckIfGoalkeeperClaimedTheBall();
             deadCameraBreakVar04 += 1;
             break;
         }
@@ -403,9 +403,9 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             break;
         a1 = a6->controlledPlayer;
         if (a1->playerState == PL_THROW_IN)
-            _SetPlayerAnimationTable(&aboutToThrowInAnimTable, a1);
+            SetPlayerAnimationTable(&aboutToThrowInAnimTable, a1);
         else
-            _SetPlayerAnimationTable(&playerNormalStandingAnimTable, a1);
+            SetPlayerAnimationTable(&playerNormalStandingAnimTable, a1);
         a6->ballOutOfPlay = 1;
         breakCameraMode = 8;
         if (gameState == ST_KEEPER_HOLDS_BALL)
@@ -418,7 +418,7 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
     case 8: /* whistle and set waiting on player */
         stoppageAuxFlag = 0;
         if (gameState != ST_KEEPER_HOLDS_BALL)
-            _PlayRefereeWhistleSample();
+            PlayRefereeWhistleSample();
         goalCameraMode = 0;
         gameStatePl = ST_WAITING_ON_PLAYER;
         inGameCounter = 0;
@@ -428,20 +428,20 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
     default:
         /* assert_failed: unknown breakCameraMode */
         panicReasonCode = 0x0B;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         break;
     }
 }
 
 
 /* ===========================================================================
- * _UpdateGameTimersAndCameraBreakMode
+ * UpdateGameTimersAndCameraBreakMode
  *
  * Main game timer dispatcher and break camera mode state machine.
  * Called once per frame from the game loop.
  * =========================================================================== */
 __attribute__((used, externally_visible))
-void _UpdateGameTimersAndCameraBreakMode(void)
+void UpdateGameTimersAndCameraBreakMode(void)
 {
     TeamGeneralInfo *a6;
     uint16_t d0;
@@ -451,7 +451,7 @@ void _UpdateGameTimersAndCameraBreakMode(void)
         if (gameState != ST_PENALTIES) {
             penaltiesTimer += 1;
             if (penaltiesTimer == gsPenaltyTimer)   /* GS_110_100 */
-                _NextPenalty();
+                NextPenalty();
         }
     }
 
@@ -471,7 +471,7 @@ void _UpdateGameTimersAndCameraBreakMode(void)
         a6 = lastTeamPlayedBeforeBreak;
         if (a6->playerNumber == 0) {
             if (stoppageTimerActive >= gsKickoffStoppage) {   /* GS_825_750 */
-                _PrepareForInitialKick();
+                PrepareForInitialKick();
                 initialKickWriteOnlyTicks += 1;
             }
         }
@@ -521,7 +521,7 @@ static void __attribute__((noinline)) writeRestartGlobalsAndStopPlayers(
     lastTeamPlayedBeforeBreak = team;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     cameraXVelocity = 0;
     cameraYVelocity = 0;
 }
@@ -539,7 +539,7 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
     }
     statsTeam1GoalsCopy2 = statsTeam1Goals;
     statsTeam2GoalsCopy2 = statsTeam2Goals;
-    _GoalScored((int16_t)goalType, a0);
+    GoalScored((int16_t)goalType, a0);
     goalCameraMode = 1;
     teamNumThatScored = teamNum;
 
@@ -560,11 +560,11 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
             turnFlags = 199;
         }
 
-        _PlayGoalReplayBottomSample();
+        PlayGoalReplayBottomSample();
         playRefereeWhistle = 0;
 
         /* Goal counter bias system */
-        d0 = (int16_t)_Rand();
+        d0 = (int16_t)Rand();
         d0 = (uint16_t)d0 >> 1;
         d0 += 100;
         d1 = d0;
@@ -588,7 +588,7 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
                     d1 = 100;
                 }
             }
-            d1 += (int16_t)_Rand();
+            d1 += (int16_t)Rand();
         }
 
         goalCounter = (uint16_t)d1;
@@ -602,13 +602,13 @@ static void __attribute__((noinline)) handleGoalScored(TeamGeneralInfo *teamData
 
 
 /* ===========================================================================
- * _CheckIfBallOutOfPlay
+ * CheckIfBallOutOfPlay
  *
  * Detects when the ball has left the pitch boundaries and determines the
  * restart type: goal, corner kick, goal kick, or throw-in.
  * =========================================================================== */
 __attribute__((used, externally_visible))
-void _CheckIfBallOutOfPlay(void)
+void CheckIfBallOutOfPlay(void)
 {
     int16_t d1, d2, d3;
     uint8_t d4;
@@ -620,7 +620,7 @@ void _CheckIfBallOutOfPlay(void)
     if (gameStatePl == ST_STOPPED) {
         /* exit_check_whistle */
         if (playRefereeWhistle != 0)
-            _PlayRefereeWhistleSample();
+            PlayRefereeWhistleSample();
         return;
     }
 
@@ -652,7 +652,7 @@ void _CheckIfBallOutOfPlay(void)
         }
         /* writeRestartGlobalsAndStopPlayers was called inside handleGoalScored */
         if (playRefereeWhistle != 0)
-            _PlayRefereeWhistleSample();
+            PlayRefereeWhistleSample();
         return;
     }
 
@@ -665,7 +665,7 @@ void _CheckIfBallOutOfPlay(void)
     /* Check if ball is near goal area for goal-kick sample */
     if (ballSprite.speed >= 768 &&
         d1 >= 290 && d1 <= 381 && d3 <= 25) {
-        _PlayGoalKickOffSample();
+        PlayGoalKickOffSample();
         playRefereeWhistle = 0;
     }
 
@@ -707,7 +707,7 @@ void _CheckIfBallOutOfPlay(void)
         }
         writeRestartGlobalsAndStopPlayers(a6, d1, d2, d3, d4);
         if (playRefereeWhistle != 0)
-            _PlayRefereeWhistleSample();
+            PlayRefereeWhistleSample();
         return;
     }
 
@@ -772,7 +772,7 @@ void _CheckIfBallOutOfPlay(void)
         }
         writeRestartGlobalsAndStopPlayers(a6, d1, d2, d3, d4);
         if (playRefereeWhistle != 0)
-            _PlayRefereeWhistleSample();
+            PlayRefereeWhistleSample();
         return;
     }
 
@@ -824,5 +824,5 @@ void _CheckIfBallOutOfPlay(void)
     writeRestartGlobalsAndStopPlayers(a6, d1, d2, d3, d4);
 
     if (playRefereeWhistle != 0)
-        _PlayRefereeWhistleSample();
+        PlayRefereeWhistleSample();
 }

@@ -16,7 +16,7 @@ extern uint8_t rawAssetLoadBuffer[];
 extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                                const uint8_t *ins_data,  int ins_size,
                                int subsong);
-extern void _AudioSetChannelVolume(uint16_t mask, uint16_t vol);
+extern void AudioSetChannelVolume(uint16_t mask, uint16_t vol);
 /* Sizes of the buffers used to stage hero.sng / hero.ins. The actual
  * file payload is smaller; RJP1_Load parses headers internally and
  * uses only what it needs. */
@@ -28,7 +28,7 @@ extern void _AudioSetChannelVolume(uint16_t mask, uint16_t vol);
 extern uint16_t paletteIndex;
 extern uint16_t g_quitToDos;
 extern volatile uint16_t currentGameTick;
-extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
+extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t pl1Fire;
 extern volatile uintptr_t frontbufferBaseAltPtr;
 extern volatile uintptr_t frontbufferBasePtr;
@@ -49,10 +49,10 @@ extern uint8_t aSoundHeroIns[];
 static uint8_t heroSongBuffer[4 * 1024];
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
-/* _Player1StatusProc declared in input.h */
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
-extern int16_t _AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest);  /* asset_loader.c */
-extern int16_t _LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest);     /* asset_loader.c */
+/* Player1StatusProc declared in input.h */
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern int16_t AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest);  /* asset_loader.c */
+extern int16_t LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest);     /* asset_loader.c */
 
 /* ================================================================
  * LoaderIntroEnsureMenuMusicPlaying  (SWOS2.s line 21035)
@@ -65,13 +65,13 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
 {
 #ifdef SWOS_SDL_BUILD
     /* SDL build: route through the RJP1 player + SDL audio callback
-     * (same mechanism _TryPlayMusic uses for the menu song). The Amiga
-     * `_InitAudioState` is stubbed on SDL because it parses a 68k-BE
+     * (same mechanism TryPlayMusic uses for the menu song). The Amiga
+     * `InitAudioState` is stubbed on SDL because it parses a 68k-BE
      * bank header we don't byte-swap, so calling it here would leave
      * the hero music silent. Hand the loaded hero.sng / hero.ins to
      * the player instead, then ramp the master volume in. */
     if (audioBankLoaded == 0) {
-        _StopAllAudioChannels();
+        StopAllAudioChannels();
         /* HERO has 5 subsongs; the reference rjp1player plays subsong 0
          * (the full mix with vocals). Subsong 1 has the singing channel
          * sequence byte zeroed, so passing 1 here was the cause of the
@@ -84,24 +84,24 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
         audioBankLoaded = 1;
     }
 
-    _AudioSetChannelVolume(0xFFFF, 0);
+    AudioSetChannelVolume(0xFFFF, 0);
     audioActive = 1;
     /* Ramp the master volume from 0 to 0x23 over a few vblanks so the
      * song fades in instead of starting at full volume mid-note. Mirror
-     * of _TryPlayMusic's ramp on the menu song. */
+     * of TryPlayMusic's ramp on the menu song. */
     for (uint16_t vol = 0; vol <= 0x22; vol += 2) {
-        _AudioSetChannelVolume(0xFFFF, vol);
-        _WaitForVSync();
+        AudioSetChannelVolume(0xFFFF, vol);
+        WaitForVSync();
     }
-    _AudioSetChannelVolume(0xFFFF, 0x23);
+    AudioSetChannelVolume(0xFFFF, 0x23);
 #else
     if (audioBankLoaded == 0)
     {
-        _StopAllAudioChannels();
-        _InitAudioState(heroSongBuffer, audioInstrumentBank);
+        StopAllAudioChannels();
+        InitAudioState(heroSongBuffer, audioInstrumentBank);
         audioBankLoaded = 1;
     }
-    _AudioApplyPresetToChannels(0);
+    AudioApplyPresetToChannels(0);
     audioActive = 1;
 #endif
 }
@@ -112,7 +112,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
  * Beeps all channels down to silence, stops audio, and clears
  * the active/loaded flags.
  *
- * SDL deviation: the asm `_AudioBeepAllShort` jumps master volume
+ * SDL deviation: the asm `AudioBeepAllShort` jumps master volume
  * to 0x40 (max) and ramps down to 0 — emitting a brief loud blip
  * that's part of the original Amiga's "click" between intro and
  * menu music. On SDL with our queued audio path that blip lands as
@@ -125,15 +125,15 @@ static void loaderIntroStopMusicAndResetAudio(void)
 {
 #ifdef SWOS_SDL_BUILD
     for (int16_t vol = 0x23; vol >= 0; vol--) {
-        _AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
-        _WaitForVSync();
+        AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
+        WaitForVSync();
         if (g_quitToDos) break;
     }
-    _AudioSetChannelVolume(0xFFFF, 0);
+    AudioSetChannelVolume(0xFFFF, 0);
 #else
-    _AudioBeepAllShort();
+    AudioBeepAllShort();
 #endif
-    _StopAllAudioChannels();
+    StopAllAudioChannels();
     audioActive = 0;
     audioBankLoaded = 0;
 }
@@ -149,9 +149,9 @@ static void loaderIntroLoadHeroAudioBank(void)
 {
 retry:
     audioBankLoaded = 0;
-    if (_AssetEnsureReadyWithRetry(aSoundHeroSng, heroSongBuffer) != 0)
+    if (AssetEnsureReadyWithRetry(aSoundHeroSng, heroSongBuffer) != 0)
         goto retry;
-    if (_LoadRNCToBufferNoBlit(aSoundHeroIns, audioInstrumentBank) != 0)
+    if (LoadRNCToBufferNoBlit(aSoundHeroIns, audioInstrumentBank) != 0)
         goto retry;
 }
 
@@ -167,7 +167,7 @@ retry:
  *   byte) so writing raw bitplane bytes there makes
  *   `chunky_to_rgba` paint garbage. Stage the file through
  *   `rawAssetLoadBuffer` and decode NUM_PLANES interleaved planes
- *   into chunky bytes — same loop _LoadOverlayToFrontbuffer uses
+ *   into chunky bytes — same loop LoadOverlayToFrontbuffer uses
  *   for menubg.raw. Frame layout matches the menu BG: PLANE_STRIDE
  *   bytes/plane row, NUM_PLANES planes, decode SCREEN_WIDTH pixels
  *   per scanline.
@@ -175,7 +175,7 @@ retry:
 static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
 {
 #ifdef SWOS_SDL_BUILD
-    _LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0);
+    LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0);
 
     uint8_t *dstAlt  = (uint8_t *)frontbufferBaseAltPtr;
     uint8_t *dstBase = (uint8_t *)frontbufferBasePtr;
@@ -199,7 +199,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
 
     /* Mirror alt → base so the post-swap frame the renderer reads is
      * always the decoded image, not whatever stale chunky data was in
-     * the other buffer. _LoadFileEx does the same mirror when dest is
+     * the other buffer. LoadFileEx does the same mirror when dest is
      * alt; we have to do it ourselves here because we staged through
      * rawAssetLoadBuffer to run the bitplane decode. Without this the
      * intro frame appears for ~1/50 s then gets replaced by the prior
@@ -208,7 +208,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
         memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #else
-    _LoadFileEx((uint8_t *)filename, (uint8_t *)frontbufferBaseAltPtr, (uint32_t *)0);
+    LoadFileEx((uint8_t *)filename, (uint8_t *)frontbufferBaseAltPtr, (uint32_t *)0);
 #endif
 }
 
@@ -230,14 +230,14 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
     {
         uint16_t tick;
 
-        _Player1StatusProc();
+        Player1StatusProc();
 
         if (pl1Fire != 0)
             return 1;
         if (g_quitToDos != 0)
             return 1;
 
-        _WaitForVSync();
+        WaitForVSync();
 
         remaining--;
     }
@@ -258,7 +258,7 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
 
     loaderIntroLoadFrameToFrontbufferAlt(filename);
 #ifndef AGA
-    _FadeIn();
+    FadeIn();
 #endif
 
     if (loaderIntroWaitForFireOrTimeout(timeout) != 0)
@@ -268,7 +268,7 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
     /* Skip the fade-out if the user closed the window — it just adds
      * ~1 s of unresponsive black-screen between the click and exit. */
     if (g_quitToDos == 0)
-        _FadeOutToBlack();
+        FadeOutToBlack();
 #endif
     return 0;
 }
@@ -286,7 +286,7 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
     loaderIntroLoadFrameToFrontbufferAlt(filename);
     loaderIntroEnsureMenuMusicPlaying();
 #ifndef AGA
-    _FadeIn();
+    FadeIn();
 #endif
 
     if (loaderIntroWaitForFireOrTimeout(timeout) != 0)
@@ -294,7 +294,7 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
 
 #ifndef AGA
     if (g_quitToDos == 0)
-        _FadeOutToBlack();
+        FadeOutToBlack();
 #endif
     return 0;
 }
@@ -321,17 +321,17 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
  *     then stop music
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowLoaderIntroSequence(void)
+void ShowLoaderIntroSequence(void)
 {
     if ((uintptr_t)&memBoundaryMarker > 0x100000u) { }
 
-    _SetCameraCoordinates(0, 0);
-    _SwapBuffersAndCameraViewState();
-    _UpdatePlanePtrsAndBlitParams();
-    _SwapBuffersAndCameraViewState();
-    _UpdatePlanePtrsAndBlitParams();
+    SetCameraCoordinates(0, 0);
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
 
-    _Player1StatusProc();
+    Player1StatusProc();
     if (pl1Fire != 0)
     {
         /* Fire pressed path: just show loader1.raw and fade in */
@@ -339,7 +339,7 @@ void _ShowLoaderIntroSequence(void)
         paletteIndex = 3;
 #endif
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
-        _FadeIn();
+        FadeIn();
         return;
     }
 
@@ -404,15 +404,15 @@ exit_cleanup:
      * is likely still holding the key when control returns. Without
      * this, the next MenuProc iteration sees fire=1 and immediately
      * fires the highlighted main-menu entry (FRIENDLY GAME by
-     * default). fireResetFlag tells _MenuCheckControls to suppress
+     * default). fireResetFlag tells MenuCheckControls to suppress
      * fire/shortFire until the key is released, then auto-clears.
      *
      * Also drain the keyboard FIFO. The skip ENTER landed as
      * AKEY_ENTER in keyBuffer when SDL pumped the KEYDOWN event, and
-     * nothing called _GetKey() during the rest of the loader phases
+     * nothing called GetKey() during the rest of the loader phases
      * (asset precache / disk-image fade / op3 polling) — so the
      * scancode is still queued when MenuProc finally runs. The
-     * `currentKey == 0x0D` path inside _MenuCheckControls runs AFTER
+     * `currentKey == 0x0D` path inside MenuCheckControls runs AFTER
      * the fireResetFlag clear and would set fire=1 from that stale
      * scancode, which is what dropped the user into FRIENDLY GAME on
      * intro skip. Zero the count + currentKey so the buffer can't
@@ -426,23 +426,23 @@ load_fail_mid:
     /* Fire pressed → show loader1 splash and continue.
      * Window-X pressed → bypass the splash and exit fast. */
     if (g_quitToDos == 0) {
-        _FadeOutToBlack();
+        FadeOutToBlack();
 #ifndef AGA
         paletteIndex = 3;
 #endif
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
-        _FadeIn();
+        FadeIn();
     }
     goto exit_cleanup;
 
 load_fail_early:
     if (g_quitToDos == 0) {
-        _FadeOutToBlack();
+        FadeOutToBlack();
 #ifndef AGA
         paletteIndex = 3;
 #endif
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
-        _FadeIn();
+        FadeIn();
     }
     /* See exit_cleanup for the rationale. */
     fireResetFlag = 1;
