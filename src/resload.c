@@ -265,7 +265,7 @@ uint8_t KBHook(void) { return 0; }
  * resload.c — C port of Resload.s
  *
  * AmigaOS library calls use inline asm with register-specified variables.
- * Data (S_DosBase, S_VBR, etc.) stays in Resload.s (Phase 1).
+ * Data (S_DosBase, _S_VBR, etc.) stays in Resload.s (Phase 1).
  */
 #include "resload.h"
 #include "display.h"
@@ -318,7 +318,7 @@ extern uint32_t S_SavedInt3;
 extern uint32_t S_SavedInt4;
 extern uint32_t S_SavedInt5;
 extern uint32_t size;       /* file size global used by rob_* functions */
-extern uint16_t _quitToDos;
+extern uint16_t __quitToDos;
 extern uint8_t _keyexit;   /* DEL key code = 0x46 */
 
 /* ---- External asm functions ---- */
@@ -1502,7 +1502,7 @@ uint8_t KBHook(void)
     keycode = (keycode >> 1) | (keycode << 7);
 
     if (keycode == _keyexit) {
-        _quitToDos = 1;
+        __quitToDos = 1;
     }
 
     return raw;

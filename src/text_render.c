@@ -134,7 +134,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
         PanicHaltLoop();
     }
 
-    uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
+    uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr + __menu_draw_x_offset;
     uint16_t glyphHeight = (uint16_t)spr->nlines;
 
     /* Apply camera offset */

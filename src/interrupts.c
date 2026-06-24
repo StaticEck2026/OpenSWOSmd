@@ -101,7 +101,7 @@ void InitHardwareAtFrameStart(void)
 __attribute__((used, externally_visible))
 void SetupInterrupts(void)
 {
-    /* S_VBR is the m68k Vector Base Register — dead address on SDL.
+    /* _S_VBR is the m68k Vector Base Register — dead address on SDL.
      * Widen through uintptr_t to silence Wint-to-pointer-cast on 64-bit. */
     volatile uint32_t *vectors = (volatile uint32_t *)(uintptr_t)_S_VBR;
 

@@ -192,7 +192,7 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 /* Inline DOS calls for file dump (dosBase from Resload) */
 extern uint32_t S_DosBase;
-extern uint32_t S_VBR;
+extern uint32_t _S_VBR;
 extern uint32_t S_SavedInt2;
 extern void Int2KeyboardHandler(void);
 extern Sprite ballSprite;
@@ -239,7 +239,7 @@ static void dumpSpriteSnapshot(uint16_t frameNum)
 {
     if (frameNum != 490) return;
 
-    volatile uint32_t *vec = (volatile uint32_t *)(S_VBR + 0x68);
+    volatile uint32_t *vec = (volatile uint32_t *)(_S_VBR + 0x68);
     *vec = S_SavedInt2;
 
     uint32_t fh = dumpDosOpen((const uint8_t *)"PROGDIR:sprite_snap.bin", 1006);
@@ -311,7 +311,7 @@ void RngDumpCheck(void)
         return;
 
     /* Swap int2 to OS handler before DOS calls */
-    volatile uint32_t *vec = (volatile uint32_t *)(S_VBR + LEVEL_2_VEC);
+    volatile uint32_t *vec = (volatile uint32_t *)(_S_VBR + LEVEL_2_VEC);
     *vec = S_SavedInt2;
 
     /* Write frame state dump */

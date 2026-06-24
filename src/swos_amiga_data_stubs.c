@@ -930,7 +930,7 @@ char _goalBase[0x4A38];
  * enough memory"). If overflow recurs on Amiga, address it via
  * pool-write bounds checking, not a bigger buffer. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-SWOS_CHIP_BSS char imageCmdWorkBuf[0x3FFB0];
+SWOS_CHIP_BSS char _imageCmdWorkBuf[0x3FFB0];
 #else
 SWOS_CHIP_BSS char _imageCmdWorkBuf[0x200000];
 #endif

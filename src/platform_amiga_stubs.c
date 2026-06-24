@@ -124,7 +124,7 @@ extern void mainC(void);
 #ifdef SWOS_SDL_BUILD
 uint16_t _quitToDos = 0;
 #else
-extern uint16_t _quitToDos;
+extern uint16_t __quitToDos;
 #endif
 
 void Platform_RequestQuit(void)
@@ -238,7 +238,7 @@ void startShim(void)
  * =================================================================== */
 
 /* ---- VBR (vector base register) shadow ------------------------------
- * On Amiga S_VBR is defined by Resload.s (included via resload_unit.s),
+ * On Amiga _S_VBR is defined by Resload.s (included via resload_unit.s),
  * so the SDL-side stub must NOT collide with it. */
 #ifdef SWOS_SDL_BUILD
 uint32_t _S_VBR = 0;
