@@ -941,19 +941,19 @@ void CloseDosLibrary(void)
  * AllocMemAny — C-callable wrapper for Exec AllocMem(MEMF_PUBLIC)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_AllocMemAny(uint32_t sz)
+uint8_t *AllocMemAny(uint32_t sz)
 {
     return (uint8_t *)os_AllocMem(sz, MEMF_PUBLIC);
 }
 
 /* ================================================================
  * FreeMemAny — C-callable wrapper for Exec FreeMem. Pair with
- * _AllocMemAny: the caller must remember the size that was passed
+ * AllocMemAny: the caller must remember the size that was passed
  * to AllocMem (Exec doesn't track block sizes). swos_io.c stores
  * the size in a 4-byte header at the front of each block.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FreeMemAny(void *addr, uint32_t sz)
+void FreeMemAny(void *addr, uint32_t sz)
 {
     os_FreeMem(addr, sz);
 }
@@ -964,7 +964,7 @@ void _FreeMemAny(void *addr, uint32_t sz)
  * NOTE: SP restore is handled by startShim in asm.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ExitToDos(void)
+void ExitToDos(void)
 {
     /* Restore interrupt vectors */
     volatile uint32_t *vbr = (volatile uint32_t *)S_VBR;
@@ -1238,7 +1238,7 @@ static uint32_t resload_listfiles(uint32_t buffersize, uint8_t *dirname, uint8_t
 
 /* Debug dump: write raw buffer to file */
 __attribute__((used, externally_visible))
-void _DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size)
+void DebugDumpToFile(uint8_t *filename, uint8_t *data, uint32_t size)
 {
     disable_vblank_and_wait();
     swap_int2_to_os();

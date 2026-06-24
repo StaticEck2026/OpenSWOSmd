@@ -141,7 +141,7 @@ extern uint8_t  savedRandState[];
 uint16_t deterministicTick = 0;
 
 __attribute__((used, externally_visible))
-void _InitDeterministicMode(void)
+void InitDeterministicMode(void)
 {
     /* Primary PRNG */
     seed = (uint8_t)(DETERMINISTIC_SEED & 0xFF);
@@ -256,7 +256,7 @@ static void dumpSpriteSnapshot(uint16_t frameNum)
 }
 
 __attribute__((used, externally_visible))
-void _RngDumpCheck(void)
+void RngDumpCheck(void)
 {
     if (!rngDumpActive)
         return;

@@ -61,7 +61,7 @@ extern uint16_t frontbufferMaskBuffer;
 extern uint8_t *g_earlyAllocCacheMem;
 extern uint32_t g_earlyAllocCacheSize;
 
-extern uint8_t *_AllocMemAny(uint32_t size);
+extern uint8_t *AllocMemAny(uint32_t size);
 
 SWOS_CHIP_BSS volatile uint32_t g_swos_chip_bss_anchor;
 SWOS_FAST_BSS volatile uint32_t g_swos_fast_bss_anchor;
@@ -141,7 +141,7 @@ __attribute__((used, externally_visible)) void swos_c_start(void)
     set_vector(S_VBR, LEVEL_3_INTERRUPT_AUTOVECTOR, Int3TimerHandler);
 
 #ifdef DETERMINISTIC_MODE
-    _InitDeterministicMode();
+    InitDeterministicMode();
 #endif
     set_vector(S_VBR, LEVEL_4_INTERRUPT_AUTOVECTOR, Int4Handler);
 

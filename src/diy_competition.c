@@ -485,7 +485,7 @@ void DIY_ResetCompetitionProgressAndShuffle(void)
 {
     /* Reseed random from current tick */
 #ifdef DETERMINISTIC_MODE
-    _InitDeterministicMode();
+    InitDeterministicMode();
 #else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick >> 8);
@@ -1648,7 +1648,7 @@ void DIY_BuildTeamSelectionPointerCache(void)
  * which Part B's overlay retirement was supposed to have killed). Used by every
  * removed rebuild site so debug builds keep catching a regression while
  * production carries no rebuild. */
-void _DIY_TotRebuildRegressionCheck(const char *site)
+void DIY_TotRebuildRegressionCheck(const char *site)
 {
     int16_t ri = diyCompetitionStart.base.roundIterator;
     int32_t tot[64];
@@ -4482,7 +4482,7 @@ void DIY_ResetAndLoadCurrentCompetitionSlot(void)
 {
     /* Reseed random from current tick */
 #ifdef DETERMINISTIC_MODE
-    _InitDeterministicMode();
+    InitDeterministicMode();
 #else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick >> 8);
@@ -4522,7 +4522,7 @@ void DIY_InitCupFromTeamGridAndValidateTeams(void)
 {
     /* Reseed random from current tick */
 #ifdef DETERMINISTIC_MODE
-    _InitDeterministicMode();
+    InitDeterministicMode();
 #else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick >> 8);

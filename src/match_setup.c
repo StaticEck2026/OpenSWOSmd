@@ -764,7 +764,7 @@ void InitGameRestoreTeams(void)
         extern uint16_t currentTick;
         currentGameTick = 0;
         currentTick = 0;
-        _InitDeterministicMode();
+        InitDeterministicMode();
     }
 #endif
     gameRandValue = Rand();

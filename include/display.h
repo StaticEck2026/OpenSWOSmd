@@ -340,7 +340,7 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex);
 void FlashColor0Delay(uint32_t loopCount, uint16_t color);
 void WriteCopperPalette(const uint16_t *palette);
 #ifdef AGA
-void _WriteCopperPitchPalette(void);
+void WriteCopperPitchPalette(void);
 #endif
 
 #endif

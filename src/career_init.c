@@ -9,7 +9,7 @@
  */
 
 #include "game_types.h"
-#include <string.h>   /* memcpy in _Rebuild_CupRecordNameSourcePointers */
+#include <string.h>   /* memcpy in Rebuild_CupRecordNameSourcePointers */
 #include "endian_helpers.h"
 #include "menu_system.h"
 #include "input_text.h"
@@ -765,7 +765,7 @@ void ContinueCareerNextSeason(void)
  * re-derivation (RebuildPointersAfterLoad) so both agree on participation —
  * see the load-fixup site for why a divergence panics 0x6006.
  * ================================================================ */
-static int _Career_TeamInEuroCup(uint8_t *cupCopy)
+static int Career_TeamInEuroCup(uint8_t *cupCopy)
 {
     /* team list = cupCopy + 7 + cupCopy[7], with the 64-bit text[2] widening
      * compensation (the static competition's unk1[] is packed BE (country,
@@ -793,7 +793,7 @@ static int _Career_TeamInEuroCup(uint8_t *cupCopy)
     return 0;           /* not in this cup */
 }
 
-/* _Career_TeamInLoadedEuroSlot — non-panicking membership probe for the LOADED
+/* Career_TeamInLoadedEuroSlot — non-panicking membership probe for the LOADED
  * slot-3 buffer (a DIYCompetition), used by the load-time slot-3 re-derivation.
  *
  * It answers "is selTeamNumber genuinely a participant in this euro cup?" using
@@ -803,7 +803,7 @@ static int _Career_TeamInEuroCup(uint8_t *cupCopy)
  * season: the slot-3 buffer is saved (FA blob) so it holds the season's real
  * euro field, whereas `euroCupCopy` is reconstructed from its STATIC template on
  * load (save_format_json.c comp_copy_region) and holds DEFAULT teams — so
- * `_Career_TeamInEuroCup(euroCupCopy)` gives a FALSE NEGATIVE for a club that's
+ * `Career_TeamInEuroCup(euroCupCopy)` gives a FALSE NEGATIVE for a club that's
  * in the saved season's cup but not the default template, leaving
  * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list row in
  * `CareerGameListCommon` on `compInfo[5]`. Gating on the buffer keeps this
@@ -812,7 +812,7 @@ static int _Career_TeamInEuroCup(uint8_t *cupCopy)
  * 940603f's protection — a true non-participant is in neither buffer nor
  * template). Mirrors `FindTeamInDIY`'s per-type search but returns found/
  * not-found instead of panicking. */
-static int _Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
+static int Career_TeamInLoadedEuroSlot(DIYCompetition *comp)
 {
     uint16_t numTeams = (uint16_t)comp->numTeams;
     uint16_t target   = selTeamNumber;
@@ -855,7 +855,7 @@ uint16_t Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t e
 {
     /* Participation test (shared with the load-time slot-3 re-derivation in
      * RebuildPointersAfterLoad). */
-    if (!_Career_TeamInEuroCup(cupCopy))
+    if (!Career_TeamInEuroCup(cupCopy))
         return 1;  /* not participating */
     {
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -1456,7 +1456,7 @@ extern void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
  * The static template carries the canonical pointer values for the
  * current build; the saved *Copy carries stale values from the
  * saving build. Copy both pointers from src→dest. */
-static void _Rebuild_CupRecordNameSourcePointers(void)
+static void Rebuild_CupRecordNameSourcePointers(void)
 {
     /* Iterate as typed CompetitionCareer[] — entry stride is 10 on
      * 32-bit, 18 on 64-bit. The text[] copy reads/writes two pointer-
@@ -1490,7 +1490,7 @@ static void _Rebuild_CupRecordNameSourcePointers(void)
  * `careerCupPickList` instead of competitionsTable. The pickList is
  * inside the saved overlay, so its entries are stale too — rebuild
  * via `Career_SetCupPickList_ForSelectedRegion(0)` first. */
-static void _Rebuild_CompetitionSlotPointers(void)
+static void Rebuild_CompetitionSlotPointers(void)
 {
     /* Country / pickList tables are `Competition *[]` — 8 bytes per
      * entry on 64-bit. The Amiga path walked them as `uint32_t *`
@@ -1596,17 +1596,17 @@ static void _Rebuild_CompetitionSlotPointers(void)
         /* Gate on the LOADED BUFFER's team list (q3), NOT the static euroCupCopy
          * template. euroCupCopy is reconstructed from its static template on load
          * (default teams, NOT the saved season's qualifiers), so
-         * _Career_TeamInEuroCup(euroCup3) gives a FALSE NEGATIVE for a club that's
+         * Career_TeamInEuroCup(euroCup3) gives a FALSE NEGATIVE for a club that's
          * in the saved season's cup but not the default template — leaving
          * quaternaryCompetitionPtr NULL and crashing the cached slot-3 game-list
          * row in CareerGameListCommon on compInfo[5]. The saved slot-3 buffer is
-         * the season's authoritative field; _Career_TeamInLoadedEuroSlot checks it
+         * the season's authoritative field; Career_TeamInLoadedEuroSlot checks it
          * with the same search FindTeamInDIY uses (gate-pass => no 0x6006). euroCup3
          * (the static record) is still the pointer TARGET — it carries the name
          * table the game list reads. */
         if (euroCup3 != 0 && q3->isActive != 0 &&
             q3->competitionType == ((Competition *)euroCup3)->type &&
-            _Career_TeamInLoadedEuroSlot(q3)) {
+            Career_TeamInLoadedEuroSlot(q3)) {
             quaternaryCompetitionPtr = euroCup3;
         } else {
             quaternaryCompetitionPtr = 0;  /* slot 3 inactive / club not in it this season */
@@ -1628,7 +1628,7 @@ static void _Rebuild_CompetitionSlotPointers(void)
  * looking up the comp record's `text[0]` field (same source as the
  * cup-record nameSource). Deferred until we have a save that exposes
  * a visible regression here. */
-static void _Rebuild_CompStringOffsets(void)
+static void Rebuild_CompStringOffsets(void)
 {
     primaryCompStringOffset    = 0;
     secondaryCompStringOffset  = 0;
@@ -1708,7 +1708,7 @@ void RebuildPointersAfterLoad(void)
      * Without this, `InitDIYLeagueFromRecord` SIGSEGVs on a stale
      * string pointer when auto-advancing euroCupCopy /
      * cupWinnersCupCopy / uefaCupCopy after a cross-build load. */
-    _Rebuild_CupRecordNameSourcePointers();
+    Rebuild_CupRecordNameSourcePointers();
 
     /* Step 4: re-derive top-level competition slot pointers
      * (`currentCompetitionPtr` / `secondaryCompetitionPtr` /
@@ -1716,13 +1716,13 @@ void RebuildPointersAfterLoad(void)
      * `diyCompetitionPtr` / `diyCompetitionTablePtr`) from
      * competitionsTable + selTeamNumber + euroCupSlotIndex. Saved
      * values were stale BSS addresses from the saving build. */
-    _Rebuild_CompetitionSlotPointers();
+    Rebuild_CompetitionSlotPointers();
 
     /* Step 5: zero the four *CompStringOffset fields. They held
      * stale absolute pointers into the strings table; downstream
      * consumers (InitializeNewSeason → SeasonInformations) will
      * tolerate NULL by displaying empty text. */
-    _Rebuild_CompStringOffsets();
+    Rebuild_CompStringOffsets();
 }
 
 /* ================================================================

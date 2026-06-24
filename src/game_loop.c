@@ -731,7 +731,7 @@ vblank_return_dispatch:
 wait_for_vblank_sync:
     waitVBlankSync(0xCFD1F9BDu, 0x165Au);
 #ifdef DETERMINISTIC_DUMP_FRAME
-    _RngDumpCheck();
+    RngDumpCheck();
 #endif
     goto vblank_return_dispatch;
 
@@ -773,7 +773,7 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
     SetPitchTypeAndNumber();
     InitGameSaveTeams(topTeam, bottomTeam);
 #ifdef AGA
-    _WriteCopperPitchPalette();
+    WriteCopperPitchPalette();
 #endif
     InitGameRestoreTeams();
     GameLoop();

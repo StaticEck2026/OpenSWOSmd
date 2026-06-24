@@ -218,7 +218,7 @@ void startShim(void)
         "lea     s_swos_stack+%c0,%%sp     \n"
         "jsr     swos_c_start             \n"
         "jsr     mainC                    \n"
-        "jsr     _ExitToDos                \n"
+        "jsr     ExitToDos                \n"
         "movea.l S_SavedSP,%%sp            \n"
         "moveq   #0,%%d0                   \n"
         "rts                               \n"
@@ -232,7 +232,7 @@ void startShim(void)
  * C definition anywhere in the ported source.
  *
  * The bigger functions (SafeStart, LoadDosLibrary, DetachOSDisplay,
- * InitHardwareAtFrameStart, SetupInterrupts, Int*Handler, _AllocMemAny)
+ * InitHardwareAtFrameStart, SetupInterrupts, Int*Handler, AllocMemAny)
  * already live in the ported C files (resload.c, interrupts.c, ...) so
  * we must NOT redefine them here.
  * =================================================================== */

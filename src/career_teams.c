@@ -1827,8 +1827,8 @@ void Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
          * 3ac95cf / be8ac25 removals, validated 10/10 + 14/14). Production no
          * longer rebuilds; debug keeps the shared non-writing regression check. */
 #ifdef SWOS_DEBUG_AUTOSKIP
-        extern void _DIY_TotRebuildRegressionCheck(const char *site);
-        _DIY_TotRebuildRegressionCheck("career_teams cup-menu");
+        extern void DIY_TotRebuildRegressionCheck(const char *site);
+        DIY_TotRebuildRegressionCheck("career_teams cup-menu");
 #endif
         /* Auto-simulate CPU-only fixtures BEFORE the menu draws so that
          * currentMatchIndex points at the career team's fixture when the

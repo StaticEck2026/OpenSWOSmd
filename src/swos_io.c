@@ -102,12 +102,12 @@ void swos_io_free(void *p)
 
 #else  /* !SWOS_SDL_BUILD — Amiga */
 
-extern uint8_t *_AllocMemAny(uint32_t sz);
-extern void     _FreeMemAny(void *addr, uint32_t sz);
+extern uint8_t *AllocMemAny(uint32_t sz);
+extern void     FreeMemAny(void *addr, uint32_t sz);
 
 void *swos_io_alloc(uint32_t sz)
 {
-    uint8_t *block = _AllocMemAny(sz + SWOS_HDR_SIZE);
+    uint8_t *block = AllocMemAny(sz + SWOS_HDR_SIZE);
     if (!block) return (void *)0;
     *(uint32_t *)block = sz + SWOS_HDR_SIZE;
     return block + SWOS_HDR_SIZE;
@@ -126,7 +126,7 @@ void *swos_io_realloc(void *p, uint32_t new_sz)
     uint32_t copy_n = (old_payload < new_sz) ? old_payload : new_sz;
     if (copy_n) memcpy(out, p, copy_n);
 
-    _FreeMemAny(block, old_size);
+    FreeMemAny(block, old_size);
     return out;
 }
 
@@ -135,7 +135,7 @@ void swos_io_free(void *p)
     if (!p) return;
     uint8_t *block = (uint8_t *)p - SWOS_HDR_SIZE;
     uint32_t sz = *(uint32_t *)block;
-    _FreeMemAny(block, sz);
+    FreeMemAny(block, sz);
 }
 
 #endif

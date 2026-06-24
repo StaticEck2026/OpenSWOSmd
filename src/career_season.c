@@ -818,7 +818,7 @@ extern uint8_t nationalTeams[];
  * holds the national-coach cup-pick-list comp records (copied from the
  * cupPick* tables, which competition_data.c defines as CompetitionCup *[5]).
  * Was extern'd uint32_t[] here, which truncated the 64-bit pointers and made
- * _Rebuild_CompetitionSlotPointers (reads it as void**) deref garbage. Now a
+ * Rebuild_CompetitionSlotPointers (reads it as void**) deref garbage. Now a
  * pointer array; see the standalone definition in swos_data_typed_stubs.c. */
 extern void *careerCupPickList[];
 extern TeamFileEx careerTeam;

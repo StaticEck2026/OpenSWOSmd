@@ -1155,7 +1155,7 @@ extern const uint16_t *pitchPalettePtrs[];
 extern uint8_t paletteIndices[];
 
 __attribute__((used, externally_visible))
-void _WriteCopperPitchPalette(void)
+void WriteCopperPitchPalette(void)
 {
     /* pitchNumberAndType packs pitch *number* in the high byte and pitch
      * *type* in the low byte. The palette lookup uses only the type, so

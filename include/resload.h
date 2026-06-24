@@ -17,8 +17,8 @@ void SafeStart(void);
 void DetachOSDisplay(void);
 void LoadDosLibrary(void);
 void CloseDosLibrary(void);
-void _ExitToDos(void);
-uint8_t *_AllocMemAny(uint32_t size);
+void ExitToDos(void);
+uint8_t *AllocMemAny(uint32_t size);
 
 /* --- Hardware helpers --- */
 void FixSnoopBug(void);

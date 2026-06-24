@@ -26,7 +26,7 @@
 extern uint8_t *currentCompetitionPtr;
 
 /* Country-code byte of the primary competition's static struct at save
- * time. _Rebuild_CompetitionSlotPointers uses this when selTeamNumber
+ * time. Rebuild_CompetitionSlotPointers uses this when selTeamNumber
  * is the 0xFFFF "no team" sentinel — i.e. season mode with all-CPU
  * teams, where there's no human team identifying the league. Without
  * this scalar the rebuild can't re-derive currentCompetitionPtr from
@@ -199,7 +199,7 @@ static int16_t verify_reload_highlights(uint8_t *f)
  * Delegate to swos_io.c, which bypasses the asset-loader staging and
  * returns a freshly-allocated buffer:
  *   SDL:   malloc + stdio read.
- *   Amiga: _AllocMemAny + RobNorthenLoader_C dispatch. */
+ *   Amiga: AllocMemAny + RobNorthenLoader_C dispatch. */
 static int read_save_file_heap(const uint8_t *filename,
                                uint8_t **out_buf, uint32_t *out_size)
 {
@@ -6629,7 +6629,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     /* primaryCompStringOffset is intentionally NOT saved — it's a
      * stale absolute pointer into the strings table that the legacy
      * format dumped verbatim. The career load path zeroes it in
-     * _Rebuild_CompStringOffsets and InitializeNewSeason tolerates
+     * Rebuild_CompStringOffsets and InitializeNewSeason tolerates
      * the resulting empty string in the season-end summary. Preset/
      * DIY loads land in the same place after load_competition_buf
      * zeroes the comp-tagged fields, so nothing here needs to write it. */

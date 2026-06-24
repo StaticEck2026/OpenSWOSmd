@@ -353,7 +353,7 @@ __attribute__((used, externally_visible))
 void InitCareerVariables(uint16_t gameTypeParam)
 {
 #ifdef DETERMINISTIC_MODE
-    _InitDeterministicMode();
+    InitDeterministicMode();
 #else
     randomSeed = currentTick;
     newRandomSeedCopy = (uint8_t)(currentTick & 0xFF);
@@ -6231,12 +6231,12 @@ extern uint16_t inEditTactics;
 extern DIYCompetitionEx diyCompetitionStart;
 
 /* ================================================================
- * _ShowSquadMenuForTeam  (SWOS2.s loc_1391C4)
+ * ShowSquadMenuForTeam  (SWOS2.s loc_1391C4)
  *
  * Common helper: sets up squad menu state and shows it.
  * teamPtr = pointer to team file, rowMode = squad display mode.
  * ================================================================ */
-static void _ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
+static void ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
 {
     squadTeamFilePtr = (uintptr_t)teamPtr;
     squadRowMode = rowMode;
@@ -6272,7 +6272,7 @@ void SelectAndShowSquadToView(uint16_t *teamNumbers, uint16_t numTeams, uint16_t
     TeamFileEx *teamPtr = ChooseTeamForEditTactics(aSelectSquadToV, teamNumbers, numTeams);
     if (teamPtr == 0)
         return;
-    _ShowSquadMenuForTeam((uint8_t *)teamPtr, rowMode);
+    ShowSquadMenuForTeam((uint8_t *)teamPtr, rowMode);
 }
 
 /* ================================================================
@@ -6284,7 +6284,7 @@ __attribute__((used, externally_visible))
 void SelectAndShowSquadToView_Direct(uint16_t rowMode)
 {
     TeamFileEx *teamPtr = VerifyTeamLoaded(selTeamNumber);
-    _ShowSquadMenuForTeam((uint8_t *)teamPtr, rowMode);
+    ShowSquadMenuForTeam((uint8_t *)teamPtr, rowMode);
 }
 
 /* ================================================================
@@ -6335,7 +6335,7 @@ void SquadMenu(void)
         if (seasonNumberOfSquads == 1) {
             /* Load that team and go to direct squad view */
             TeamFileEx *teamPtr = VerifyTeamLoaded(seasonSquadTeamNumbers[0]);
-            _ShowSquadMenuForTeam((uint8_t *)teamPtr, rowMode);
+            ShowSquadMenuForTeam((uint8_t *)teamPtr, rowMode);
             return;
         }
         /* Multiple squads: show selection from squad team numbers */
