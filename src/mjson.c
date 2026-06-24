@@ -532,8 +532,8 @@ int mjson_next(const char *s, int n, int off, int *koff, int *klen, int *voff,
 #if MJSON_ENABLE_PRINT
 int mjson_print_fixed_buf(const char *ptr, int len, void *fn_data) {
   struct mjson_fixedbuf *fb = (struct mjson_fixedbuf *) fn_data;
-  int i, left = fb->size - 1 - fb->len;
-  if (left < len) len = left;
+  int i, _left = fb->size - 1 - fb->len;
+  if (_left < len) len = _left;
   for (i = 0; i < len; i++) fb->ptr[fb->len + i] = ptr[i];
   fb->len += len;
   fb->ptr[fb->len] = '\0';

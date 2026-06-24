@@ -18,26 +18,26 @@ import time
 from harness_lib import GdbHarness, _write_png
 
 # Menu input-injection point: the no-op MenuInputInjectPoint() in MenuProc(),
-# called right after MenuCheckControls() (which sets the frame's input globals)
+# called _right after MenuCheckControls() (which sets the frame's input globals)
 # and BEFORE the d7/onSelect dispatch and the nav read. Setting the input globals
-# here replicates real input for the whole frame: fire feeds the onSelect d7
-# bitmask; menuControlsDirection feeds the nav.
+# here replicates real input for the whole frame: _fire feeds the onSelect d7
+# bitmask; _menuControlsDirection feeds the nav.
 #
 # This is a SYMBOL, not a line number, on purpose: a hardcoded `menu_system.c:NNN`
 # silently broke whenever code above MenuProc moved (e.g. the i18n render hook
-# pushed MenuCheckControls past the old inject line, so the injected fire was
+# pushed MenuCheckControls past the old inject line, so the injected _fire was
 # overwritten and every career season-transition "stuck"). gdb resolves the
 # symbol wherever it lands.
 INJECT_LINE = "MenuInputInjectPoint"
 
-# menuControlsDirection encoding: (dir & 6) >> 1 indexes nextEntryDirectionOffsets.
+# _menuControlsDirection encoding: (dir & 6) >> 1 indexes _nextEntryDirectionOffsets.
 # Verified against the live table [2,1,3,0] + neighbor links.
-DIR = {"up": 0, "right": 2, "down": 4, "left": 6}
-DIR_GLOBAL = {"up": "up", "right": "right", "down": "down", "left": "left"}
+DIR = {"_up": 0, "_right": 2, "_down": 4, "_left": 6}
+DIR_GLOBAL = {"_up": "_up", "_right": "_right", "_down": "_down", "_left": "_left"}
 
-MENU = "((Menu *)currentMenu)->selectedEntry"
+MENU = "((Menu *)_currentMenu)->selectedEntry"
 # Scratch global to stage a filename string (visible on both builds).
-FILENAME_SCRATCH = "menuSongData"
+FILENAME_SCRATCH = "_menuSongData"
 
 # Framebuffer geometry. SDL is 8bpp chunky (stride == width). The Amiga build
 # is interleaved bitplanes (src/include/display.h): each scanline holds
@@ -58,7 +58,7 @@ class SwosHarness:
         The result is CACHED only on a CONFIDENT answer. A timed-out/empty
         response (possible when the daemon is under load) is retried, never
         cached — caching a false 'Amiga' here misroutes screencap() to the
-        Amiga bitplane decoder (the 'dump gamePalette' wrong-path bug)."""
+        Amiga bitplane decoder (the 'dump _gamePalette' wrong-path bug)."""
         if self._is_sdl is None:
             for _ in range(3):
                 r = self.h.cmd("print &s_palette", timeout=15)
@@ -90,7 +90,7 @@ class SwosHarness:
         return self.h.int_value(f"{MENU}->ordinal")
 
     def num_entries(self):
-        return self.h.int_value("((Menu *)currentMenu)->numEntries")
+        return self.h.int_value("((Menu *)_currentMenu)->numEntries")
 
     def action(self):
         return self.h.symbol(f"{MENU}->onSelect")
@@ -108,49 +108,49 @@ class SwosHarness:
 
     # ---- input injection (drives SDL + Amiga) -----------------------------
     def nav(self, direction):
-        """One directional step. direction in up/down/left/right."""
+        """One directional step. direction in _up/_down/_left/_right."""
         self.prime()
-        self.h.set_var("menuControlsDirection", DIR[direction])
+        self.h.set_var("_menuControlsDirection", DIR[direction])
         self.h.set_var(DIR_GLOBAL[direction], 1)
-        self.h.set_var("fire", 0)
+        self.h.set_var("_fire", 0)
         self.h.cont(20)            # consume this frame; lands back on inject bp
         return self.where()
 
-    def fire(self):
-        """Press fire on the current entry (activates its onSelect). Sets BOTH
-        fire (d7 bit 0) and shortFire (bit 5): most menu *selections* (CONTINUE
-        buttons, etc.) gate on shortFire via the entry's controlMask, not fire.
+    def _fire(self):
+        """Press _fire on the current entry (activates its onSelect). Sets BOTH
+        _fire (d7 bit 0) and _shortFire (bit 5): most menu *selections* (CONTINUE
+        buttons, etc.) gate on _shortFire via the entry's _controlMask, not _fire.
 
-        The press is a SINGLE-FRAME PULSE: fire/shortFire are cleared after the
-        frame. A *held* fire mis-drives a nested modal entered by the press —
-        e.g. firing CAREER opens careerMenu (a ShowMenu do/while loop), and a
-        still-set fire makes careerMenu immediately re-fire/exit its default
-        entry on the next frame (the careerMenu 'bounce/hang' bug)."""
+        The press is a SINGLE-FRAME PULSE: _fire/_shortFire are cleared after the
+        frame. A *held* _fire mis-drives a nested modal entered by the press —
+        e.g. firing CAREER opens _careerMenu (a ShowMenu do/while loop), and a
+        still-set _fire makes _careerMenu immediately re-_fire/exit its default
+        entry on the next frame (the _careerMenu 'bounce/hang' bug)."""
         self.prime()
-        self.h.set_var("fire", 1)
-        self.h.set_var("shortFire", 1)
+        self.h.set_var("_fire", 1)
+        self.h.set_var("_shortFire", 1)
         self.h.cont(20)
-        self.h.set_var("fire", 0)
-        self.h.set_var("shortFire", 0)
+        self.h.set_var("_fire", 0)
+        self.h.set_var("_shortFire", 0)
         return self.where()
 
     def combo(self, controls):
-        """Hold several controls for one frame (e.g. ['fire','left'] -> OTHER
-        nationality). controls = subset of fire/up/down/left/right."""
+        """Hold several controls for one frame (e.g. ['_fire','_left'] -> OTHER
+        nationality). controls = subset of _fire/_up/_down/_left/_right."""
         self.prime()
-        if "fire" in controls:
-            self.h.set_var("fire", 1)
-            self.h.set_var("shortFire", 1)
-        for d in ("up", "down", "left", "right"):
+        if "_fire" in controls:
+            self.h.set_var("_fire", 1)
+            self.h.set_var("_shortFire", 1)
+        for d in ("_up", "_down", "_left", "_right"):
             if d in controls:
                 self.h.set_var(DIR_GLOBAL[d], 1)
-                self.h.set_var("menuControlsDirection", DIR[d])
+                self.h.set_var("_menuControlsDirection", DIR[d])
         self.h.cont(20)
         return self.where()
 
     # ---- direct selection (no path-finding; uses a memory write) ----------
     def goto(self, symbol):
-        """Move selection to the entry whose onSelect == symbol (no fire)."""
+        """Move selection to the entry whose onSelect == symbol (no _fire)."""
         self.ensure_stopped()
         n = self.num_entries() or 0
         target = next((i for i in range(n) if self.entry_action(i) == symbol), None)
@@ -160,10 +160,10 @@ class SwosHarness:
         return target if self.action() == symbol else None
 
     def select(self, symbol, tries=12):
-        """goto(symbol) then fire, RETRYING until the menu actually transitions
-        (its onInit changes). The single-frame fire() pulse is occasionally
+        """goto(symbol) then _fire, RETRYING until the menu actually transitions
+        (its onInit changes). The single-frame _fire() pulse is occasionally
         dropped — the input isn't present at the dispatch frame, so a one-shot
-        fire silently no-ops and the caller hangs. The season-loop drivers are
+        _fire silently no-ops and the caller hangs. The season-loop drivers are
         robust precisely because they re-assert the press every iteration; this
         brings menu *selection* to the same robustness. Re-goto each try because
         a redraw can reset the selection. Returns True once onInit changes, False
@@ -172,7 +172,7 @@ class SwosHarness:
         for _ in range(tries):
             if self.goto(symbol) is None:
                 return False
-            self.fire()
+            self._fire()
             if self._current_init() != before:
                 return True
         return False
@@ -221,16 +221,16 @@ class SwosHarness:
         return None
 
     def fire_ordinal(self, ordinal, timeout=20):
-        """Select `ordinal` by memory write, then a single-frame fire pulse.
+        """Select `ordinal` by memory write, then a single-frame _fire pulse.
         Use a long timeout on the press that triggers InitCareer (~30-60s)."""
         self.h.cmd(f"call (void)SetCurrentEntry({ordinal})")
-        self.h.set_var("fire", 1)
-        self.h.set_var("shortFire", 1)
-        for v in ("up", "down", "left", "right"):
+        self.h.set_var("_fire", 1)
+        self.h.set_var("_shortFire", 1)
+        for v in ("_up", "_down", "_left", "_right"):
             self.h.set_var(v, 0)
         self.h.cont(timeout)
-        self.h.set_var("fire", 0)
-        self.h.set_var("shortFire", 0)
+        self.h.set_var("_fire", 0)
+        self.h.set_var("_shortFire", 0)
 
     def fire_text(self, label, timeout=20):
         """find_text(label) then fire_ordinal. Returns the ordinal, or None."""
@@ -249,7 +249,7 @@ class SwosHarness:
 
     def screencap(self, out_png):
         if self.is_sdl():
-            return self.h.screencap(out_png, "frontbufferBaseAltPtr",
+            return self.h.screencap(out_png, "_frontbufferBaseAltPtr",
                                     SCREEN_W, SCREEN_H, SCREEN_STRIDE,
                                     palette_expr="&s_palette[0]", pal_fmt="rgba")
         return self._screencap_amiga(out_png)
@@ -257,15 +257,15 @@ class SwosHarness:
     def screencap_oriented(self, out_png):
         """Screenshot with the selection cursor pinned BRIGHT and blink-text
         visible, so the image reliably shows which entry is selected (the cursor
-        normally pulses kColorTableShine={2,2,1,1,7,7,1,1} via menuCursorFrame and
-        is faint on some frames). menuCursorFrame=8 -> after the frame's ++ -> 9
+        normally pulses _kColorTableShine={2,2,1,1,7,7,1,1} via _menuCursorFrame and
+        is faint on some frames). _menuCursorFrame=8 -> after the frame's ++ -> 9
         -> index (9&14)>>1=4 -> colour 7 (brightest). One input-free frame is
         consumed to re-render with the pinned values. Use this to ORIENT — see
         docs/HARNESS.md 'Navigating by screenshot'."""
         self.prime()
-        self.h.set_var("menuCursorFrame", 8)
-        self.h.set_var("menuTextBlinkCounter", 0)
-        for v in ("fire", "shortFire", "up", "down", "left", "right"):
+        self.h.set_var("_menuCursorFrame", 8)
+        self.h.set_var("_menuTextBlinkCounter", 0)
+        for v in ("_fire", "_shortFire", "_up", "_down", "_left", "_right"):
             self.h.set_var(v, 0)
         self.h.cont(20)            # re-render one frame with cursor pinned bright
         return self.screencap(out_png)
@@ -279,15 +279,15 @@ class SwosHarness:
         w, h, ps = SCREEN_W, SCREEN_H, AMIGA_PLANE_STRIDE
         row_stride = ps * planes
         # Displayed base (matches UpdatePlanePtrsAndBlitParams selection).
-        if self.h.int_value("usePlaneOffsetFlag"):
-            base = "frontbufferMaskBuffer"
-        elif self.h.int_value("useAltBaseFlag"):
-            base = "frontbufferBaseAltPtr"
+        if self.h.int_value("_usePlaneOffsetFlag"):
+            base = "_frontbufferMaskBuffer"
+        elif self.h.int_value("_useAltBaseFlag"):
+            base = "_frontbufferBaseAltPtr"
         else:
-            base = "frontbufferBasePtr"
+            base = "_frontbufferBasePtr"
         fb = self.h.dump_mem(base, row_stride * h, "/tmp/harness_amiga_fb.bin")
-        # gamePalette: big-endian uint16, 12-bit 0x0RGB -> 8-bit RGB (nibble*0x11)
-        praw = self.h.dump_mem("&gamePalette[0]", ncolors * 2,
+        # _gamePalette: big-endian uint16, 12-bit 0x0RGB -> 8-bit RGB (nibble*0x11)
+        praw = self.h.dump_mem("&_gamePalette[0]", ncolors * 2,
                                "/tmp/harness_amiga_pal.bin")
         pal = []
         for i in range(ncolors):
@@ -312,7 +312,7 @@ class SwosHarness:
 
     # ---- cold boot + fresh-career start (the NORMAL flow) -----------------
     def boot(self, timeout=180):
-        """Cold-boot the inferior to the MAIN MENU. Assumes the daemon is up in
+        """Cold-boot the inferior to the MAIN MENU. Assumes the daemon is _up in
         SDL mode with a HEADLESS env (SDL_VIDEODRIVER=dummy /
         SDL_AUDIODRIVER=dummy) + the season-loop flags
         (SWOS_TEST_NO_INJURIES_CARDS=1, SWOS_SAVE_FORMAT_JSON_VERIFY=0) — see
@@ -336,7 +336,7 @@ class SwosHarness:
         self.h.waitstop(timeout)
         return self._current_init()
 
-    # Default fresh-career drill-down through the team picker, BY LABEL:
+    # Default fresh-career drill-_down through the team picker, BY LABEL:
     #   continent -> country -> league division -> club.
     FRESH_CAREER_PATH = ("EUROPE", "ENGLAND", "PREMIER LEAGUE", "ARSENAL")
 
@@ -366,15 +366,15 @@ class SwosHarness:
             print("start_fresh_career: CAREER entry not found")
             return None
         # CHOOSE TEAM AND START CAREER opens the team picker (SelectTeamsInit).
-        # Retry until the menu transitions — the fire pulse is occasionally
-        # dropped (see select()); a one-shot fire silently no-ops and hangs.
+        # Retry until the menu transitions — the _fire pulse is occasionally
+        # dropped (see select()); a one-shot _fire silently no-ops and hangs.
         before = self._current_init()
         opened = False
         for _ in range(12):
             if self.goto("ChooseTeamAndStartCareer") is None:
                 print("start_fresh_career: CHOOSE TEAM entry not found")
                 return None
-            self.fire()
+            self._fire()
             if self._current_init() != before:
                 opened = True
                 break
@@ -414,9 +414,9 @@ class SwosHarness:
         for _ in range(6):
             if self._current_init() != self.MEMO_INIT:
                 break
-            self.h.set_var("shortFire", 1)
+            self.h.set_var("_shortFire", 1)
             self.h.cont(20)
-            self.h.set_var("shortFire", 0)
+            self.h.set_var("_shortFire", 0)
         return self._current_init()
 
     # ---- season-loop driver -----------------------------------------------
@@ -425,14 +425,14 @@ class SwosHarness:
     # taking a DIFFERENT input. Using the wrong one is exactly what made the
     # driver appear to "wedge" — it was NEVER gdb / multithread instability:
     #
-    #  1. Season TRANSITION (seasonUpdateInProgress != 0): the cup/league result
+    #  1. Season TRANSITION (_seasonUpdateInProgress != 0): the cup/league result
     #     displays are AUTO-ADVANCE menus — DIYCupInit pre-selects entry-66
-    #     (controlMask 0xFFFF; see Career_AutoAdvanceCupMatches). Setting
+    #     (_controlMask 0xFFFF; see Career_AutoAdvanceCupMatches). Setting
     #     s_seasonSkipLatched=1 drains the WHOLE chain at once; the latch persists
-    #     until seasonUpdateInProgress drops to 0. DO NOT move the selection
+    #     until _seasonUpdateInProgress drops to 0. DO NOT move the selection
     #     (that clobbers entry-66 and the modal sticks — the original bug). The
     #     ONLY screen in the chain that needs a keypress is the chairman memo
-    #     (ChairmanMemosInit, a plain modal): shortFire on its Continue button.
+    #     (ChairmanMemosInit, a plain modal): _shortFire on its Continue button.
     #     The transition ends at the season increment (InitializeNewSeason).
     #
     #     The OLD driver free-ran straight to the increment line — which hangs
@@ -441,11 +441,11 @@ class SwosHarness:
     #     exists. Skip-latch + a conditional memo breakpoint = no free-run into
     #     an input-waiting screen, no wedge, threads untouched.
     #
-    #  2. In-season menus (memo / contest hub / match-day list): shortFire.
+    #  2. In-season menus (memo / contest hub / match-day list): _shortFire.
     #
     #  3. The pre-match SQUAD screen (PlayMatchMenuInit): PlayMatchSelected
-    #     gates on the RAW joystick fire pl1Fire (NOT the menu shortFire). Set
-    #     pl1Fire=1 to start/sim the fixture (CPU-vs-CPU -> instant result).
+    #     gates on the RAW joystick _fire _pl1Fire (NOT the menu _shortFire). Set
+    #     _pl1Fire=1 to start/sim the fixture (CPU-vs-CPU -> instant result).
     SEASON_INCR_LINE = "career_init.c:974"
     MEMO_INIT = "ChairmanMemosInit"
     SQUAD_INIT = "PlayMatchMenuInit"
@@ -454,8 +454,8 @@ class SwosHarness:
 
     def _current_init(self):
         """onInit symbol of the active menu (identifies the screen). ONE read,
-        O(1) — reliable, unlike currentMenuPtr (which shifts in sub-menus)."""
-        return self.h.symbol("((Menu *)currentMenu)->onInit")
+        O(1) — reliable, unlike _currentMenuPtr (which shifts in sub-menus)."""
+        return self.h.symbol("((Menu *)_currentMenu)->onInit")
 
     def at_contest_menu(self):
         """True at the season-end hub (onInit == CareerOverInit)."""
@@ -482,23 +482,23 @@ class SwosHarness:
     # ---- the season transition (skip-latch; NO free-run into a modal) ------
     def drive_transition(self, max_stops=80, timeout=14):
         """Drive ONE season transition to the next season's increment. Assumes
-        CONTINUE CAREER was just fired at the hub (or seasonUpdateInProgress is
-        already set). Returns the new currentSeasonShowing, or None if it stuck
+        CONTINUE CAREER was just fired at the hub (or _seasonUpdateInProgress is
+        already set). Returns the new _currentSeasonShowing, or None if it stuck
         on an unanticipated input-waiter (call stack printed to stdout).
 
         Mechanism (see the class comment): s_seasonSkipLatched drains the
         cup/league auto-advance displays; a CONDITIONAL breakpoint catches only
-        chairman-memo frames (shortFire dismisses them); a code breakpoint at the
+        chairman-memo frames (_shortFire dismisses them); a code breakpoint at the
         season increment ends the drive. No blind free-run, so no wedge — this is
         the proven-reliable core (season 3->4 verified, health OK throughout,
         threads untouched)."""
         h = self.h
-        start = h.int_value("currentSeasonShowing")
+        start = h.int_value("_currentSeasonShowing")
         h.set_var("s_seasonSkipLatched", 1)
         h.delete_breakpoints()
         h.break_at(self.SEASON_INCR_LINE)
         h.cmd(f'break {INJECT_LINE} '
-              f'if ((Menu*)currentMenu)->onInit == {self.MEMO_INIT}')
+              f'if ((Menu*)_currentMenu)->onInit == {self.MEMO_INIT}')
         for _ in range(max_stops):
             h.set_var("s_seasonSkipLatched", 1)    # keep latched across screens
             h.cont(timeout)
@@ -506,11 +506,11 @@ class SwosHarness:
                 self._interrupt()
                 print("drive_transition: stuck (unknown waiter)\n" + h.cmd("bt"))
                 return None
-            s = h.int_value("currentSeasonShowing")
+            s = h.int_value("_currentSeasonShowing")
             if s is not None and s != start:
                 return s                            # hit the season increment
             if self._current_init() == self.MEMO_INIT:
-                h.set_var("shortFire", 1)           # dismiss the chairman memo
+                h.set_var("_shortFire", 1)           # dismiss the chairman memo
         return None
 
     # ---- the in-season fixtures (auto-sim via teamControls=1) --------------
@@ -519,8 +519,8 @@ class SwosHarness:
         """Drive the current season to the season-end hub (CareerOverInit).
         Returns True if the hub was reached.
 
-        SIM MODE (default): set careerTeam.team.teamControls = TEAM_COMPUTER(1)
-        so the player's OWN fixtures auto-SIMULATE on shortFire like the AI
+        SIM MODE (default): set _careerTeam.team.teamControls = TEAM_COMPUTER(1)
+        so the player's OWN fixtures auto-SIMULATE on _shortFire like the AI
         fixtures (the game computes a result; no squad, no real-time in-game
         match). A human-controlled club team (teamControls 2/3) instead PLAYS
         each fixture in the real-time in-game loop (>2 min each, never returning
@@ -528,7 +528,7 @@ class SwosHarness:
         unattended. Sim mode is re-asserted every step.
 
         STUCK DETECTION keys on (matchesPlayedCount, currentRoundIndex,
-        currentSeasonShowing, seasonFinished), NOT the screen — the league
+        _currentSeasonShowing, _seasonFinished), NOT the screen — the league
         match-day keeps onInit=DIYLeagueTournamentInit + ordinal=3 constant
         across fixtures, so the old (screen, ordinal) key false-stopped while
         matches were in fact playing. matchesPlayedCount (DIYCompetitionEx 0x1BE)
@@ -554,15 +554,15 @@ class SwosHarness:
 
         def progress():
             # structural signal — does NOT include the (wandering) screen
-            return (h.int_value("diyCompetitionStart.matchesPlayedCount"),
-                    h.int_value("diyCompetitionStart.base.currentRoundIndex"),
-                    h.int_value("currentSeasonShowing"),
-                    h.int_value("seasonFinished"))
+            return (h.int_value("_diyCompetitionStart.matchesPlayedCount"),
+                    h.int_value("_diyCompetitionStart.base.currentRoundIndex"),
+                    h.int_value("_currentSeasonShowing"),
+                    h.int_value("_seasonFinished"))
 
         last_prog, same = None, 0
         for _ in range(max_steps):
             if sim_mode:
-                h.set_var("careerTeam.team.teamControls", 1)  # auto-sim my fixtures
+                h.set_var("_careerTeam.team.teamControls", 1)  # auto-sim my fixtures
             h.cont(timeout)
             if not h.is_stopped():                  # a match/menu over-ran timeout
                 self._interrupt()
@@ -578,19 +578,19 @@ class SwosHarness:
                       f"steps at {init} prog={prog} (see KNOWN LIMITATION)")
                 return False
             if init == self.SQUAD_INIT:
-                h.set_var("pl1Fire", 1)             # fallback when sim_mode=False
-            h.set_var("shortFire", 1)              # advance menu / state machine
+                h.set_var("_pl1Fire", 1)             # fallback when sim_mode=False
+            h.set_var("_shortFire", 1)              # advance menu / state machine
         return self.at_contest_menu()
 
     def advance_one_season(self):
-        """From a season-end hub: fire CONTINUE -> drive the transition to the
+        """From a season-end hub: _fire CONTINUE -> drive the transition to the
         season increment -> drive the new season's fixtures to the next hub.
-        Returns the new currentSeasonShowing (at the increment), or None."""
+        Returns the new _currentSeasonShowing (at the increment), or None."""
         if not self.at_contest_menu():
             return None
-        # fire CONTINUE CAREER (selections gate on shortFire, bit 5)
+        # _fire CONTINUE CAREER (selections gate on _shortFire, bit 5)
         self.goto(self.HUB_CONTINUE)
-        self.h.set_var("shortFire", 1)
+        self.h.set_var("_shortFire", 1)
         s = self.drive_transition()
         if s is None:
             return None
@@ -598,7 +598,7 @@ class SwosHarness:
         return s
 
     def run_seasons(self, n):
-        """Advance up to n full seasons. Returns the list of season numbers
+        """Advance _up to n full seasons. Returns the list of season numbers
         reached (None marks a season that stuck). Drives to a season-end hub
         first."""
         self.prime()
@@ -671,7 +671,7 @@ class SwosHarness:
 
     def enter_career(self):
         """Enter the loaded career's UI from a cold boot. The game's load path
-        runs StartContest() -> ShowMenu(contestMenu) (modal). Calling it with
+        runs StartContest() -> ShowMenu(_contestMenu) (modal). Calling it with
         the inject breakpoint set makes the inferior call break INSIDE the now-
         active contest menu (the correct nested context the whole career runs
         in). Returns the active menu's onInit symbol afterwards."""

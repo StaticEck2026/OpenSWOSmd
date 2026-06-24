@@ -13,18 +13,18 @@
 #endif
 
 /* FrontEndMainLoop */
-extern uint16_t g_quitToDos;
+extern uint16_t _g_quitToDos;
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 extern void MenuProc(void);
 
-extern uint16_t menuMusic;
-extern uint16_t menuFade;
-extern uint8_t frontbufferMaskBuffer[];
-extern volatile uint16_t currentGameTick;
+extern uint16_t _menuMusic;
+extern uint16_t _menuFade;
+extern uint8_t _frontbufferMaskBuffer[];
+extern volatile uint16_t _currentGameTick;
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 #ifdef SWOS_SDL_BUILD
-extern uint8_t rawAssetLoadBuffer[];
+extern uint8_t _rawAssetLoadBuffer[];
 #endif
 
 /* ================================================================
@@ -43,7 +43,7 @@ __attribute__((used, externally_visible))
 void LoadOverlayToFrontbuffer(const uint8_t *path)
 {
 #ifdef SWOS_SDL_BUILD
-    LoadFileEx((uint8_t *)path, rawAssetLoadBuffer, (uint32_t *)0);
+    LoadFileEx((uint8_t *)path, _rawAssetLoadBuffer, (uint32_t *)0);
 
     /* Decode NUM_PLANES-plane interleaved bitplane data → 8bpp chunky.
      * Full-screen overlay images (MENUBG.RAW = 47872 bytes) are stored
@@ -52,10 +52,10 @@ void LoadOverlayToFrontbuffer(const uint8_t *path)
      * decode SCREEN_WIDTH pixels (the visible portion of PLANE_STRIDE*8
      * = 352 source bits). Sprite-source images use a smaller stride and
      * go through `blitDispatch`, not this path. */
-    memset(frontbufferMaskBuffer, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    memset(_frontbufferMaskBuffer, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        const uint8_t *rowSrc = rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
-        uint8_t       *rowDst = frontbufferMaskBuffer + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + WIDE_MARGIN;
+        const uint8_t *rowSrc = _rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        uint8_t       *rowDst = _frontbufferMaskBuffer + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + WIDE_MARGIN;
         for (int px = 0; px < SCREEN_WIDTH; px++) {
             int bit = 7 - (px & 7);
             int byte = px >> 3;
@@ -107,12 +107,12 @@ void FrontEndPreLoopSetup(void)
     PrepareMenuBackground();
     InitMainMenuStuff();
 
-    if (menuMusic != 0)
+    if (_menuMusic != 0)
     {
         TryPlayMusic();
     }
 
-    menuFade = 1;
+    _menuFade = 1;
 }
 
 /* ================================================================
@@ -130,5 +130,5 @@ void FrontEndMainLoop(void)
     do
     {
         MenuProc();
-    } while (g_quitToDos == 0);
+    } while (_g_quitToDos == 0);
 }

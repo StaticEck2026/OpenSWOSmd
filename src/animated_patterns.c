@@ -22,38 +22,38 @@
 #include "display.h"
 
 /* ---- external asm globals ---- */
-extern uint16_t replayState;
-extern uint16_t animPatternsState;
-extern uint16_t currentGameTick;
-extern uint16_t trainingGame;
-extern uint16_t goalCounter;
-extern uint16_t patternsGoalCounter;
-extern uint16_t showFansCounter;
-extern uint16_t animPatternsIndex;
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t gameStatePl;
-extern uint16_t gameState;
-extern uint16_t fansSidesSwapped;
-extern uint16_t panicReasonCode;
-extern int16_t  animatedPatterns[];
-extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
-extern TeamGame *teamScoredGamePtr;
-extern TeamGame topTeamInGame;
-extern TeamGame bottomTeamInGame;
-extern uint8_t  *spriteGraphicsPtr;
-extern uint8_t  pitchDatBuffer[];
-extern volatile uintptr_t frontbufferBasePtr;
-extern uint8_t  frontbufferMaskBuffer[];
-extern uint8_t  currentMenu[];
+extern uint16_t _replayState;
+extern uint16_t _animPatternsState;
+extern uint16_t _currentGameTick;
+extern uint16_t _trainingGame;
+extern uint16_t _goalCounter;
+extern uint16_t _patternsGoalCounter;
+extern uint16_t _showFansCounter;
+extern uint16_t _animPatternsIndex;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _gameStatePl;
+extern uint16_t _gameState;
+extern uint16_t _fansSidesSwapped;
+extern uint16_t _panicReasonCode;
+extern int16_t  _animatedPatterns[];
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
+extern TeamGame *_teamScoredGamePtr;
+extern TeamGame _topTeamInGame;
+extern TeamGame _bottomTeamInGame;
+extern uint8_t  *_spriteGraphicsPtr;
+extern uint8_t  _pitchDatBuffer[];
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint8_t  _frontbufferMaskBuffer[];
+extern uint8_t  _currentMenu[];
 #ifdef SWOS_SDL_BUILD
-extern uint8_t  pitchChunkyBuffer[];
+extern uint8_t  _pitchChunkyBuffer[];
 /* On SDL the pitch tile pointers live in pitchChunkyBuffer with 256-byte
  * stride per tile (vs Amiga's 128-byte bitplane stride). Pitch.c arranges
  * chunky tiles to be indexed by the *original* Amiga tile index
  * (offset / 128), so the same `(entry - base) / stride` math still
  * recovers the tile-pair index used by the static/animated swap. */
-#define ANIM_TILE_BASE        ((uintptr_t)pitchChunkyBuffer)
+#define ANIM_TILE_BASE        ((uintptr_t)_pitchChunkyBuffer)
 #define ANIM_TILE_SIZE        256u
 #define ANIM_TILE_SIZE_SHIFT  8
 #define ANIM_MAX_TILE_OFFSET  (MAX_FAN_TILE_INDEX * ANIM_TILE_SIZE)
@@ -80,14 +80,14 @@ extern uint8_t  pitchChunkyBuffer[];
  * from the Amiga C port's Data.c:2221 — with a zero stub, every pick
  * was index 0 so the same tile "animated" forever and the rest never
  * moved. */
-uint8_t animPatternsRandomTable[64] = {
+uint8_t _animPatternsRandomTable[64] = {
      0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
     32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
     48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,  0
 };
-extern uint16_t patternStatic;
-extern uint16_t otherTeamScored;
+extern uint16_t _patternStatic;
+extern uint16_t _otherTeamScored;
 
 
 /* ---- external functions ---- */
@@ -108,9 +108,9 @@ static void swapTwoRandomIndicesFromAnimPatternsTable(void)
     r1 = (uint16_t)((Rand() * 63) >> 8);
     r2 = (uint16_t)((Rand() * 63) >> 8);
 
-    tmp = animPatternsRandomTable[r2];
-    animPatternsRandomTable[r2] = animPatternsRandomTable[r1];
-    animPatternsRandomTable[r1] = tmp;
+    tmp = _animPatternsRandomTable[r2];
+    _animPatternsRandomTable[r2] = _animPatternsRandomTable[r1];
+    _animPatternsRandomTable[r1] = tmp;
 }
 
 /* ================================================================
@@ -149,10 +149,10 @@ static void drawPatternFromIndex(uint16_t patternIndex)
          * full-width chunky-tile pointer per slot — populated in
          * FixupAndColorPitchFile Step 1b. The 4-byte slots in
          * pitchDatBuffer can't round-trip a 64-bit address. */
-        extern uint8_t *s_pitchFullPtrs[];
-        SpriteGraphics *spr = ((SpriteGraphics **)spriteGraphicsPtr)[137];
+        extern uint8_t *_s_pitchFullPtrs[];
+        SpriteGraphics *spr = ((SpriteGraphics **)_spriteGraphicsPtr)[137];
         if (spr && patternIndex < 2310) {
-            uint8_t *tile = s_pitchFullPtrs[patternIndex];
+            uint8_t *tile = _s_pitchFullPtrs[patternIndex];
             if (tile) spr->sprData = tile;
         }
     }
@@ -166,13 +166,13 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 #endif
 
     /* compute screen-relative coordinates */
-    screenX = pixelX - (int16_t)cameraX.s.i;
-    screenY = pixelY - (int16_t)cameraY.s.i;
+    screenX = pixelX - (int16_t)_cameraX.s.i;
+    screenY = pixelY - (int16_t)_cameraY.s.i;
 
     /* bounds check. Widescreen draws fan cells across the full frontbuffer width, not just
      * the 4:3 336px window; g_screen_width == 336 on 4:3 / Amiga so this is unchanged there. */
 #ifdef SWOS_SDL_BUILD
-    if (screenX >= g_screen_width || screenY >= SCREEN_HEIGHT)
+    if (screenX >= _g_screen_width || screenY >= SCREEN_HEIGHT)
 #else
     if (screenX >= 336 || screenY >= SCREEN_HEIGHT)
 #endif
@@ -187,10 +187,10 @@ static void drawPatternFromIndex(uint16_t patternIndex)
      * pointer slot is uintptr_t on both targets — save/restore at
      * native width so we don't truncate the swap. */
     {
-        uintptr_t savedFbPtr = frontbufferBasePtr;
-        frontbufferBasePtr = (uintptr_t)frontbufferMaskBuffer;
+        uintptr_t savedFbPtr = _frontbufferBasePtr;
+        _frontbufferBasePtr = (uintptr_t)_frontbufferMaskBuffer;
         DrawSprite16Pixels(137, screenX, screenY);
-        frontbufferBasePtr = savedFbPtr;
+        _frontbufferBasePtr = savedFbPtr;
     }
 }
 
@@ -208,9 +208,9 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
     int16_t i;
     uint32_t baseAddr = ANIM_TILE_BASE;
 #ifdef SWOS_SDL_BUILD
-    extern uint8_t *s_pitchFullPtrs[];
-    extern uint8_t pitchChunkyBuffer[];
-    uint32_t *pitchBase = (uint32_t *)(void *)pitchDatBuffer;
+    extern uint8_t *_s_pitchFullPtrs[];
+    extern uint8_t _pitchChunkyBuffer[];
+    uint32_t *pitchBase = (uint32_t *)(void *)_pitchDatBuffer;
 #endif
 
     for (i = count; i >= 0; i--) {
@@ -226,7 +226,7 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
                 ptrdiff_t slotIdx = a0 - pitchBase;
                 uint32_t newTileIdx = (d0 - ANIM_TILE_SIZE) >> ANIM_TILE_SIZE_SHIFT;
                 if (slotIdx >= 0 && slotIdx < 2310 && newTileIdx < 2310) {
-                    s_pitchFullPtrs[slotIdx] = pitchChunkyBuffer + (size_t)newTileIdx * 256;
+                    _s_pitchFullPtrs[slotIdx] = _pitchChunkyBuffer + (size_t)newTileIdx * 256;
                 }
             }
 #endif
@@ -236,7 +236,7 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 
     /* clear animatedPatterns array */
     for (i = 0; i < 8; i++) {
-        animatedPatterns[i] = (int16_t)0xFFFF;
+        _animatedPatterns[i] = (int16_t)0xFFFF;
     }
 }
 
@@ -251,14 +251,14 @@ static void resetAnimatedPatterns(uint32_t *a0, int16_t count)
 void __attribute__((used, externally_visible))
 ResetAnimatedPatternsForBothTeams(void)
 {
-    if (trainingGame != 0)
+    if (_trainingGame != 0)
         return;
 
     /* top fans section: offset 0xA8 bytes = 42 longs, 126 entries */
-    resetAnimatedPatterns((uint32_t *)((uint8_t *)pitchDatBuffer + 0xA8), 125);
+    resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0xA8), 125);
 
     /* bottom fans section: offset 0x2178 bytes = 2142 longs, 126 entries */
-    resetAnimatedPatterns((uint32_t *)((uint8_t *)pitchDatBuffer + 0x2178), 125);
+    resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0x2178), 125);
 }
 
 /* ================================================================
@@ -283,8 +283,8 @@ ResetAnimatedPatternsForBothTeams(void)
  * the same d4, it stays in sync without its own animatedPatterns[] slot. */
 static void drawFanMirror(int16_t baseIdx, int do_toggle, uint16_t d4)
 {
-    extern uint8_t *s_pitchFullPtrs[];
-    extern uint8_t  pitchChunkyBuffer[];
+    extern uint8_t *_s_pitchFullPtrs[];
+    extern uint8_t  _pitchChunkyBuffer[];
     /* Mirror is +21 columns within the SAME 42-column row — compute via row/col, not a flat
      * +21, so a scrolled camera (16:9) can't spill the mirror into the next row's left edge. */
     int32_t row    = (int32_t)baseIdx / 42;
@@ -298,7 +298,7 @@ static void drawFanMirror(int16_t baseIdx, int do_toggle, uint16_t d4)
         return;
 
     if (do_toggle) {
-        uint32_t *p = ((uint32_t *)(void *)pitchDatBuffer) + mirrorIdx;
+        uint32_t *p = ((uint32_t *)(void *)_pitchDatBuffer) + mirrorIdx;
         int32_t tileIndex =
             (int32_t)(((uint32_t)(*p - ANIM_TILE_BASE)) >> ANIM_TILE_SIZE_SHIFT);
         int32_t newIndex;
@@ -313,7 +313,7 @@ static void drawFanMirror(int16_t baseIdx, int do_toggle, uint16_t d4)
             newIndex = tileIndex - 1; /* even (animated) -> odd (static) */
         }
         *p = ANIM_TILE_BASE + ((uint32_t)newIndex << ANIM_TILE_SIZE_SHIFT);
-        s_pitchFullPtrs[mirrorIdx] = pitchChunkyBuffer + (size_t)newIndex * 256;
+        _s_pitchFullPtrs[mirrorIdx] = _pitchChunkyBuffer + (size_t)newIndex * 256;
     }
     drawPatternFromIndex((uint16_t)mirrorIdx);
 }
@@ -329,35 +329,35 @@ DrawAnimatedPatterns(void)
     (void)baseAddr;
 
     /* ---- state 0: replayState == 0 → no game ---- */
-    if (replayState == 0) {
-        animPatternsState = 0;
+    if (_replayState == 0) {
+        _animPatternsState = 0;
 
-        if (trainingGame != 0)
+        if (_trainingGame != 0)
             return;
 
         /* track goal celebration timer */
-        if (patternsGoalCounter != 0) {
-            patternsGoalCounter++;
-            if (patternsGoalCounter >= 300)
-                patternsGoalCounter = 0;
+        if (_patternsGoalCounter != 0) {
+            _patternsGoalCounter++;
+            if (_patternsGoalCounter >= 300)
+                _patternsGoalCounter = 0;
         } else {
-            if (goalCounter != 0)
-                patternsGoalCounter = 1;
+            if (_goalCounter != 0)
+                _patternsGoalCounter = 1;
         }
 
-        if (showFansCounter != 0)
-            showFansCounter--;
+        if (_showFansCounter != 0)
+            _showFansCounter--;
 
-        otherTeamScored = 0;
+        _otherTeamScored = 0;
 
-        if (showFansCounter != 0)
+        if (_showFansCounter != 0)
             goto game_hasnt_started;
 
-        if (gameStatePl == ST_GAME_IN_PROGRESS)
+        if (_gameStatePl == ST_GAME_IN_PROGRESS)
             goto game_in_progress;
 
-        if (gameState == ST_KEEPER_HOLDS_BALL) {
-            TeamGeneralInfo *teamPtr = lastTeamPlayedBeforeBreak;
+        if (_gameState == ST_KEEPER_HOLDS_BALL) {
+            TeamGeneralInfo *teamPtr = _lastTeamPlayedBeforeBreak;
             if (teamPtr != (void *)0) {
                 Sprite *controlledPlayer = teamPtr->controlledPlayer;
                 (void)controlledPlayer;
@@ -367,47 +367,47 @@ DrawAnimatedPatterns(void)
             goto game_in_progress;
         }
 
-        if (patternsGoalCounter == 0)
+        if (_patternsGoalCounter == 0)
             goto ball_out_of_play;
 
         {
-            TeamGame *scoredTeamPtr = teamScoredGamePtr;
-            if ((int16_t)cameraY.s.i > 440) {
+            TeamGame *scoredTeamPtr = _teamScoredGamePtr;
+            if ((int16_t)_cameraY.s.i > 440) {
                 /* bottom of pitch */
-                if (fansSidesSwapped != 0)
+                if (_fansSidesSwapped != 0)
                     goto check_top_team;
                 goto check_bottom_team;
             } else {
                 /* top of pitch */
-                if (fansSidesSwapped != 0)
+                if (_fansSidesSwapped != 0)
                     goto check_bottom_team;
             check_top_team:
-                if (scoredTeamPtr == &topTeamInGame)
+                if (scoredTeamPtr == &_topTeamInGame)
                     goto check_cheers_phase;
                 goto other_team_scored_be_still;
             check_bottom_team:
-                if (scoredTeamPtr == &bottomTeamInGame)
+                if (scoredTeamPtr == &_bottomTeamInGame)
                     goto check_cheers_phase;
                 goto other_team_scored_be_still;
             }
 
         check_cheers_phase:
-            if (patternsGoalCounter < 25)
+            if (_patternsGoalCounter < 25)
                 goto greatest_cheers;
-            if (patternsGoalCounter < 200)
+            if (_patternsGoalCounter < 200)
                 goto middle_cheers;
-            if (patternsGoalCounter < 225)
+            if (_patternsGoalCounter < 225)
                 goto cheers_fading;
             /* patternsGoalCounter >= 225: fall through to ball_out_of_play */
         }
     } else {
         /* replayState != 0 */
-        if (animPatternsState == 0)
+        if (_animPatternsState == 0)
             return;
 
-        otherTeamScored = 0;
+        _otherTeamScored = 0;
 
-        switch (animPatternsState) {
+        switch (_animPatternsState) {
         case 1: goto ball_out_of_play;
         case 2: goto greatest_cheers;
         case 3: goto middle_cheers;
@@ -421,7 +421,7 @@ DrawAnimatedPatterns(void)
              * so the state word read from it may be garbage in (1..7).
              * Rather than panicking, treat unknown states as "no pattern
              * update" — matches the animPatternsState==0 early-return. */
-            animPatternsState = 0;
+            _animPatternsState = 0;
             return;
 #else
             panicReasonCode = 0x5665;
@@ -432,67 +432,67 @@ DrawAnimatedPatterns(void)
     }
 
 ball_out_of_play:
-    animPatternsState = 1;
+    _animPatternsState = 1;
     d6 = 5;
-    d0 = currentGameTick & 31;
+    d0 = _currentGameTick & 31;
     if (d0 <= 25)
         d0 = 0;
     goto pattern_loop;
 
 greatest_cheers:
-    animPatternsState = 2;
+    _animPatternsState = 2;
     d6 = 8;
     d0 = 1;
     goto pattern_loop;
 
 middle_cheers:
-    animPatternsState = 3;
+    _animPatternsState = 3;
     d6 = 8;
-    d0 = currentGameTick & 0xF;
+    d0 = _currentGameTick & 0xF;
     if (d0 <= 4)
         d0 = 0;
     goto pattern_loop;
 
 other_team_scored_be_still:
-    animPatternsState = 4;
+    _animPatternsState = 4;
     d6 = 1;
-    d0 = currentGameTick & 31;
-    otherTeamScored = 1;
+    d0 = _currentGameTick & 31;
+    _otherTeamScored = 1;
     if (d0 <= 15)
         d0 = 0;
     goto pattern_loop;
 
 cheers_fading:
-    animPatternsState = 5;
+    _animPatternsState = 5;
     d6 = 8;
     d0 = 0;
     goto pattern_loop;
 
 game_hasnt_started:
-    animPatternsState = 6;
+    _animPatternsState = 6;
     d6 = 8;
-    d0 = currentGameTick & 0x1F;
+    d0 = _currentGameTick & 0x1F;
     if (d0 <= 0xF)
         d0 = 0;
     goto pattern_loop;
 
 game_in_progress:
-    animPatternsState = 7;
+    _animPatternsState = 7;
     d6 = 1;
-    d0 = currentGameTick & 0x1F;
+    d0 = _currentGameTick & 0x1F;
     if (d0 <= 0x19)
         d0 = 0;
     /* fall through */
 
 pattern_loop:
-    patternStatic = d0;
+    _patternStatic = d0;
 
     for (d7 = 7; d7 >= 0; d7--) {
-        int16_t d3 = animatedPatterns[7 - d7];
+        int16_t d3 = _animatedPatterns[7 - d7];
 
         if (d3 >= 0) {
             /* active pattern entry: draw once then clear */
-            animatedPatterns[7 - d7] = (int16_t)0xFFFF;
+            _animatedPatterns[7 - d7] = (int16_t)0xFFFF;
             drawPatternFromIndex((uint16_t)d3);
 #ifdef SWOS_SDL_BUILD
             if (WIDE_MARGIN > 0)
@@ -506,7 +506,7 @@ pattern_loop:
             continue;
 
         {
-            uint16_t d4 = patternStatic;
+            uint16_t d4 = _patternStatic;
             int16_t randomVal;
             int16_t spriteIdx;
             int16_t row, col;
@@ -516,25 +516,25 @@ pattern_loop:
             int32_t tileOffset;
             int32_t tileIndex;
 
-            animPatternsIndex++;
-            if (animPatternsIndex >= 64)
-                animPatternsIndex = 0;
+            _animPatternsIndex++;
+            if (_animPatternsIndex >= 64)
+                _animPatternsIndex = 0;
 
             /* check camera Y to determine which fan section */
-            if ((int16_t)cameraY.s.i < 64) {
+            if ((int16_t)_cameraY.s.i < 64) {
                 /* top of pitch: sprite range 21..83 */
                 swapTwoRandomIndicesFromAnimPatternsTable();
-                randomVal = (int8_t)animPatternsRandomTable[animPatternsIndex];
+                randomVal = (int8_t)_animPatternsRandomTable[_animPatternsIndex];
 
                 /* if other team scored and random index is in [21,42), suppress animation */
-                if (otherTeamScored != 0 && randomVal >= 21 && randomVal < 42)
+                if (_otherTeamScored != 0 && randomVal >= 21 && randomVal < 42)
                     d4 = 0;
 
                 spriteIdx = randomVal + 21;
-            } else if ((int16_t)cameraY.s.i >= 544) {
+            } else if ((int16_t)_cameraY.s.i >= 544) {
                 /* bottom of pitch: sprite range 1071..1133 */
                 swapTwoRandomIndicesFromAnimPatternsTable();
-                randomVal = (int8_t)animPatternsRandomTable[animPatternsIndex];
+                randomVal = (int8_t)_animPatternsRandomTable[_animPatternsIndex];
                 spriteIdx = randomVal + 1071;
             } else {
                 /* middle of pitch: fans not visible, skip */
@@ -544,7 +544,7 @@ pattern_loop:
             /* decompose spriteIdx into row/col and compute pitchDatBuffer index */
             row = spriteIdx / 21;
             col = spriteIdx % 21;
-            pitchIdx = row * 42 + col + ((int16_t)cameraX.s.i >> 4);
+            pitchIdx = row * 42 + col + ((int16_t)_cameraX.s.i >> 4);
             d3 = pitchIdx;
 
             /* bounds check: tileEntryPtr must be within the 9240-byte
@@ -558,10 +558,10 @@ pattern_loop:
              * linker happens to place currentMenu *before*
              * pitchDatBuffer, making the original check fail
              * unconditionally. */
-            tileEntryPtr = ((uint32_t *)(void *)pitchDatBuffer) + pitchIdx;
-            if ((uintptr_t)tileEntryPtr < (uintptr_t)pitchDatBuffer ||
-                (uintptr_t)tileEntryPtr >= (uintptr_t)pitchDatBuffer + 2310u * 4) {
-                panicReasonCode = 0x2772;
+            tileEntryPtr = ((uint32_t *)(void *)_pitchDatBuffer) + pitchIdx;
+            if ((uintptr_t)tileEntryPtr < (uintptr_t)_pitchDatBuffer ||
+                (uintptr_t)tileEntryPtr >= (uintptr_t)_pitchDatBuffer + 2310u * 4) {
+                _panicReasonCode = 0x2772;
                 PanicHaltLoop();
             }
 
@@ -588,7 +588,7 @@ pattern_loop:
                     newIndex = tileIndex - 1;  /* switch to static (odd) */
                 }
 
-                animatedPatterns[7 - d7] = d3;
+                _animatedPatterns[7 - d7] = d3;
                 *tileEntryPtr = ANIM_TILE_BASE + ((uint32_t)newIndex << ANIM_TILE_SIZE_SHIFT);
 #ifdef SWOS_SDL_BUILD
                 /* On SDL `drawPatternFromIndex` renders from
@@ -601,10 +601,10 @@ pattern_loop:
                  * appears frozen. Mirror the toggle into the side
                  * table so reader and writer stay in sync. */
                 {
-                    extern uint8_t *s_pitchFullPtrs[];
-                    extern uint8_t pitchChunkyBuffer[];
+                    extern uint8_t *_s_pitchFullPtrs[];
+                    extern uint8_t _pitchChunkyBuffer[];
                     if (d3 >= 0 && d3 < 2310) {
-                        s_pitchFullPtrs[d3] = pitchChunkyBuffer + (size_t)newIndex * 256;
+                        _s_pitchFullPtrs[d3] = _pitchChunkyBuffer + (size_t)newIndex * 256;
                     }
                 }
 #endif

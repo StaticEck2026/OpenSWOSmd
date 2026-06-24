@@ -13,7 +13,7 @@ typedef short int16_t;
 typedef int int32_t;
 
 /* ---- Asset loader region management ---- */
-void AssetLoaderRegisterRegion(uint32_t size, uint8_t *region);
+void AssetLoaderRegisterRegion(uint32_t _size, uint8_t *region);
 void AssetLoaderInitAltPathAndBanks(void);
 
 /* ---- Asset precaching ---- */

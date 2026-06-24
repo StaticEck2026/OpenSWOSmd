@@ -15,26 +15,26 @@
  * ================================================================== */
 
 /* ---- External globals ---- */
-extern Sprite     ballSprite;
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
+extern Sprite     _ballSprite;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
 
-extern int16_t    gameStatePl;
-extern int16_t    playingPenalties;
-extern Sprite    *penaltyShooterSprite;
-extern int16_t    fireBlocked;
-extern int16_t    inSubstitutesMenu;
-extern uint16_t   frameCount;
+extern int16_t    _gameStatePl;
+extern int16_t    _playingPenalties;
+extern Sprite    *_penaltyShooterSprite;
+extern int16_t    _fireBlocked;
+extern int16_t    _inSubstitutesMenu;
+extern uint16_t   _frameCount;
 
 /* Input state (in SWOS2.s code section) */
-extern int8_t     pl1Fire;
-extern int8_t     pl1ShortFire;
-extern int16_t    pl1FireCounter;
-extern int16_t    pl1Direction;
-extern int8_t     pl2Fire;
-extern int8_t     pl2ShortFire;
-extern int16_t    pl2FireCounter;
-extern int16_t    pl2Direction;
+extern int8_t     _pl1Fire;
+extern int8_t     _pl1ShortFire;
+extern int16_t    _pl1FireCounter;
+extern int16_t    _pl1Direction;
+extern int8_t     _pl2Fire;
+extern int8_t     _pl2ShortFire;
+extern int16_t    _pl2FireCounter;
+extern int16_t    _pl2Direction;
 
 /* ---- External functions ---- */
 extern void Player1StatusProc(void);
@@ -56,7 +56,7 @@ extern void UpdateGameTimersAndCameraBreakMode(void);
  * ================================================================== */
 __attribute__((used, externally_visible))
 void UpdateControlledPlayer(TeamGeneralInfo *team) {
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     int16_t ballX = ball->x.s.i;
     int16_t ballY = ball->y.s.i;
     Sprite **sprTable = team->spritesTable;
@@ -72,7 +72,7 @@ void UpdateControlledPlayer(TeamGeneralInfo *team) {
         pl->ballDistance = dist;
 
         /* Skip filtering when game not in progress */
-        if (gameStatePl == ST_GAME_IN_PROGRESS) {
+        if (_gameStatePl == ST_GAME_IN_PROGRESS) {
             if (!pl->onScreen)
                 continue;
         }
@@ -112,8 +112,8 @@ void UpdateControlledPlayer(TeamGeneralInfo *team) {
     }
 
     /* During penalties + game in progress: skip controlled player update */
-    if (playingPenalties) {
-        if (gameStatePl == ST_GAME_IN_PROGRESS)
+    if (_playingPenalties) {
+        if (_gameStatePl == ST_GAME_IN_PROGRESS)
             return;
     }
 
@@ -159,9 +159,9 @@ void UpdateControlledPlayer(TeamGeneralInfo *team) {
  * ================================================================== */
 __attribute__((used, externally_visible))
 void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
 
-    if (gameStatePl != ST_GAME_IN_PROGRESS) {
+    if (_gameStatePl != ST_GAME_IN_PROGRESS) {
         /* ----- Stopped path ----- */
         team->ballX = ball->x.s.i;
         team->ballY = ball->y.s.i;
@@ -177,10 +177,10 @@ void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
         }
 
         /* Penalties special case */
-        if (playingPenalties) {
-            if (gameStatePl != ST_PENALTIES)
+        if (_playingPenalties) {
+            if (_gameStatePl != ST_PENALTIES)
                 return;
-            Sprite *shooter = penaltyShooterSprite;
+            Sprite *shooter = _penaltyShooterSprite;
             team->ballInPlay = 0;
             team->passToPlayerPtr = shooter;
             return;
@@ -245,10 +245,10 @@ void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
     }
 
     /* Penalties special case */
-    if (playingPenalties) {
-        if (gameStatePl != ST_PENALTIES)
+    if (_playingPenalties) {
+        if (_gameStatePl != ST_PENALTIES)
             return;
-        Sprite *shooter = penaltyShooterSprite;
+        Sprite *shooter = _penaltyShooterSprite;
         team->ballInPlay = 0;
         team->passToPlayerPtr = shooter;
         return;
@@ -317,16 +317,16 @@ void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
  * Returns: 1 if should exit early, 0 otherwise.
  * ================================================================== */
 static int16_t processInputForPlayer(TeamGeneralInfo *team,
-                                     int16_t direction, int8_t shortFire,
-                                     int8_t fire, int16_t *fireCounterPtr) {
+                                     int16_t direction, int8_t _shortFire,
+                                     int8_t _fire, int16_t *fireCounterPtr) {
     int16_t fc;
 
     team->currentAllowedDirection = direction;
     team->direction = direction;
-    team->fireThisFrame = shortFire;
-    team->firePressed = fire;
+    team->fireThisFrame = _shortFire;
+    team->firePressed = _fire;
 
-    if (fire) {
+    if (_fire) {
         team->fireCounter++;
     } else {
         team->fireCounter = 0;
@@ -376,7 +376,7 @@ static int16_t processInputForPlayer(TeamGeneralInfo *team,
         return 1;
 
     /* If in substitutes menu, clear all controls */
-    if (inSubstitutesMenu) {
+    if (_inSubstitutesMenu) {
         team->currentAllowedDirection = -1;
         team->quickFire = 0;
         team->normalFire = 0;
@@ -412,24 +412,24 @@ void UpdateAndApplyTeamControls(void) {
     UpdateGameTimersAndCameraBreakMode();
 
     /* Fire blocking: wait until both fire buttons released */
-    if (fireBlocked) {
+    if (_fireBlocked) {
         Player1StatusProc();
-        if (pl1Fire)
+        if (_pl1Fire)
             return;
         Player2StatusProc();
-        if (pl2Fire)
+        if (_pl2Fire)
             return;
-        fireBlocked = 0;
-        pl1FireCounter = 0;
-        pl2FireCounter = 0;
+        _fireBlocked = 0;
+        _pl1FireCounter = 0;
+        _pl2FireCounter = 0;
         return;
     }
 
     /* Alternate teams each frame */
-    if (frameCount & 1) {
-        team = &topTeamData;
+    if (_frameCount & 1) {
+        team = &_topTeamData;
     } else {
-        team = &bottomTeamData;
+        team = &_bottomTeamData;
     }
 
     /* Update controlled player and pass target */
@@ -444,7 +444,7 @@ void UpdateAndApplyTeamControls(void) {
             return;
 
         /* Subs menu override */
-        if (inSubstitutesMenu) {
+        if (_inSubstitutesMenu) {
             team->currentAllowedDirection = -1;
             team->quickFire = 0;
             team->normalFire = 0;
@@ -465,13 +465,13 @@ void UpdateAndApplyTeamControls(void) {
     if (team->playerNumber == 2) {
         /* Player 2 controls this team */
         Player2StatusProc();
-        processInputForPlayer(team, pl2Direction, pl2ShortFire, pl2Fire,
-                              &pl2FireCounter);
+        processInputForPlayer(team, _pl2Direction, _pl2ShortFire, _pl2Fire,
+                              &_pl2FireCounter);
         return;
     }
 
     /* Player 1 controls this team (playerNumber == 1 or other) */
     Player1StatusProc();
-    processInputForPlayer(team, pl1Direction, pl1ShortFire, pl1Fire,
-                          &pl1FireCounter);
+    processInputForPlayer(team, _pl1Direction, _pl1ShortFire, _pl1Fire,
+                          &_pl1FireCounter);
 }

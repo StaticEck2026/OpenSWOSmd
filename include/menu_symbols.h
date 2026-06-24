@@ -13,8 +13,8 @@ typedef struct {
     unsigned char  kind;   /* MenuSymbolKind */
 } MenuSymbol;
 
-extern const MenuSymbol menuSymbols[];
-extern const int        menuSymbolsCount;
+extern const MenuSymbol _menuSymbols[];
+extern const int        _menuSymbolsCount;
 
 /* Resolve a menu symbol name to its address (NULL if unknown). */
 void              *menu_resolve(const char *name);

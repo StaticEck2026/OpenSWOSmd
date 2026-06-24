@@ -167,9 +167,9 @@ LICENSE
 #endif
 
 #ifndef STB_IMAGE_WRITE_STATIC  // C++ forbids static forward declarations
-STBIWDEF int stbi_write_tga_with_rle;
-STBIWDEF int stbi_write_png_compression_level;
-STBIWDEF int stbi_write_force_png_filter;
+STBIWDEF int _stbi_write_tga_with_rle;
+STBIWDEF int _stbi_write_png_compression_level;
+STBIWDEF int _stbi_write_force_png_filter;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -184,7 +184,7 @@ STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const w
 #endif
 #endif
 
-typedef void stbi_write_func(void *context, void *data, int size);
+typedef void stbi_write_func(void *context, void *data, int _size);
 
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
@@ -252,9 +252,9 @@ static int stbi_write_png_compression_level = 8;
 static int stbi_write_tga_with_rle = 1;
 static int stbi_write_force_png_filter = -1;
 #else
-int stbi_write_png_compression_level = 8;
-int stbi_write_tga_with_rle = 1;
-int stbi_write_force_png_filter = -1;
+int _stbi_write_png_compression_level = 8;
+int _stbi_write_tga_with_rle = 1;
+int _stbi_write_force_png_filter = -1;
 #endif
 
 static int stbi__flip_vertically_on_write = 0;
@@ -538,7 +538,7 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
    if (y < 0 || x < 0)
       return 0;
 
-   if (!stbi_write_tga_with_rle) {
+   if (!_stbi_write_tga_with_rle) {
       return stbiw__outfile(s, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
          "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
    } else {
@@ -1127,7 +1127,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
 
 STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
-   int force_filter = stbi_write_force_png_filter;
+   int force_filter = _stbi_write_force_png_filter;
    int ctype[5] = { -1, 0, 4, 2, 6 };
    unsigned char sig[8] = { 137,80,78,71,13,10,26,10 };
    unsigned char *out,*o, *filt, *zlib;
@@ -1173,7 +1173,7 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
       STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
    STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_compression_level);
+   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, _stbi_write_png_compression_level);
    STBIW_FREE(filt);
    if (!zlib) return 0;
 

@@ -34,24 +34,24 @@ extern void ConvertColorTableToSkinColor(uint16_t color, uint16_t *destTable);
 extern void DetermineGoalieFaces(TeamGame *team, uint8_t *gkFaceToIndex, uint8_t *gkFaceIndices);
 
 /* ---- External globals ---- */
-extern void *teamFilenamesTable[];
-extern uintptr_t team1Filename;
-extern uintptr_t team2Filename;
-extern uint16_t menuColorAndTextScript[];
-extern uint8_t *menuImageStreamBaseEnd;
-extern uint8_t bigCharsTable[];
-extern uint16_t team1NameLength;
-extern uint16_t team2NameLength;
-extern uint16_t team1PlayersColorTable[];
-extern uint16_t team2PlayersColorTable[];
-extern uint16_t colorTableReserves[];
-extern int16_t bigNumbersColorConversionTable[];
-extern uint16_t useIndividualPlayerSkinColor;
-extern uint16_t team1MostFrequentFace;
-extern uint16_t team2MostFrequentFace;
-extern uint8_t facesFrequency[];
-extern void *skinAndHairColorConversionTable[];
-extern GoalieFaceState goalieFaces;     /* GK face/skin state (was 4+2 adjacency-aliased globals) */
+extern void *_teamFilenamesTable[];
+extern uintptr_t _team1Filename;
+extern uintptr_t _team2Filename;
+extern uint16_t _menuColorAndTextScript[];
+extern uint8_t *_menuImageStreamBaseEnd;
+extern uint8_t _bigCharsTable[];
+extern uint16_t _team1NameLength;
+extern uint16_t _team2NameLength;
+extern uint16_t _team1PlayersColorTable[];
+extern uint16_t _team2PlayersColorTable[];
+extern uint16_t _colorTableReserves[];
+extern int16_t _bigNumbersColorConversionTable[];
+extern uint16_t _useIndividualPlayerSkinColor;
+extern uint16_t _team1MostFrequentFace;
+extern uint16_t _team2MostFrequentFace;
+extern uint8_t _facesFrequency[];
+extern void *_skinAndHairColorConversionTable[];
+extern GoalieFaceState _goalieFaces;     /* GK face/skin state (was 4+2 adjacency-aliased globals) */
 
 #ifdef SWOS_SDL_BUILD
 /* ================================================================
@@ -83,7 +83,7 @@ extern GoalieFaceState goalieFaces;     /* GK face/skin state (was 4+2 adjacency
  * so the per-match conversions always start from the un-recoloured template
  * (otherwise successive matches would stack remaps and corrupt the kit).
  * ================================================================ */
-extern uint8_t *spriteGraphicsPtr;
+extern uint8_t *_spriteGraphicsPtr;
 extern int16_t  LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
 #define DOS_SPRITE_TABLE_SLOTS  1220   /* spriteGraphics[] backing = 1220 ptrs */
@@ -103,7 +103,7 @@ static void dos_build_sprite_dat(const char *name, int dosStart, int count)
     static uint8_t staging[64 * 1024];   /* >= largest game .dat (team*=45648) */
     uint32_t fileSize = 0;
 
-    snprintf(path, sizeof path, "%s/%s", gDosGraphicsDir, name);
+    snprintf(path, sizeof path, "%s/%s", _gDosGraphicsDir, name);
     LoadFileEx((uint8_t *)path, staging, &fileSize);
     if (fileSize == 0 || fileSize > sizeof staging)
         return;
@@ -187,7 +187,7 @@ static void dos_build_all_sprites(void)
  * Call this BEFORE those conversions (they recolour the pixels in place). */
 static void dos_prepare_sprites(void)
 {
-    SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
     if (!table) return;
     if (!s_dosSpritesBuilt) dos_build_all_sprites();
 
@@ -221,18 +221,18 @@ static uint16_t findMostFrequentFaceAndApplyLUT(TeamGame *team, uint16_t *colorT
     /* Find face with highest frequency */
     d0 = 0;
     {
-        uint8_t best = facesFrequency[0];
-        if (facesFrequency[1] > best) {
-            best = facesFrequency[1];
+        uint8_t best = _facesFrequency[0];
+        if (_facesFrequency[1] > best) {
+            best = _facesFrequency[1];
             d0 = 1;
         }
-        if (facesFrequency[2] > best) {
+        if (_facesFrequency[2] > best) {
             d0 = 2;
         }
     }
 
     /* Apply skin/hair color conversion from LUT */
-    lutPtr = (int16_t *)skinAndHairColorConversionTable[d0];
+    lutPtr = (int16_t *)_skinAndHairColorConversionTable[d0];
     for (;;) {
         int16_t idx = *lutPtr++;
         if (idx < 0)
@@ -261,13 +261,13 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
 
     /* Set team filenames from shirt type index */
     d0 = (uint16_t)team1->prShirtType;
-    team1Filename = (uintptr_t)teamFilenamesTable[d0];
+    _team1Filename = (uintptr_t)_teamFilenamesTable[d0];
     d0 = (uint16_t)team2->prShirtType;
-    team2Filename = (uintptr_t)teamFilenamesTable[d0];
+    _team2Filename = (uintptr_t)_teamFilenamesTable[d0];
 
     /* Process image command stream (colors menu graphics) */
     /* Force read from memory — LTO must not use a stale cached value */
-    ProcessImageCommandStream(menuColorAndTextScript, *(uint8_t * volatile *)&menuImageStreamBaseEnd);
+    ProcessImageCommandStream(_menuColorAndTextScript, *(uint8_t * volatile *)&_menuImageStreamBaseEnd);
 
 #ifdef SWOS_SDL_BUILD
     /* PC-only: drop the DOS player/keeper/bench sprites into the table NOW —
@@ -275,7 +275,7 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
      * recolour the DOS sprites (16-colour, same kit indices as the Amiga)
      * instead of the Amiga ones we just loaded. dos_prepare_sprites resets the
      * sprites to their pristine decode first, so per-match remaps don't stack. */
-    if (gDosGraphics)
+    if (_gDosGraphics)
         dos_prepare_sprites();
 #endif
 
@@ -287,59 +287,59 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
 
     /* --- Big number / result sprites --- */
     /* Set bigNumbersColorConversionTable indices 10 and 11 to 2 */
-    bigNumbersColorConversionTable[11] = 2;
-    bigNumbersColorConversionTable[10] = 2;
+    _bigNumbersColorConversionTable[11] = 2;
+    _bigNumbersColorConversionTable[10] = 2;
 
     /* Convert big dash sprite */
-    ConvertSpriteColors(SPR_BIG_DASH, (uint16_t *)bigNumbersColorConversionTable);
+    ConvertSpriteColors(SPR_BIG_DASH, (uint16_t *)_bigNumbersColorConversionTable);
 
     /* Convert big digit sprites (SPR_BIG_0 through SPR_RESULT_BIG_0-1) */
-    convertSpriteRange(SPR_BIG_0, SPR_RESULT_BIG_0, (uint16_t *)bigNumbersColorConversionTable);
+    convertSpriteRange(SPR_BIG_0, SPR_RESULT_BIG_0, (uint16_t *)_bigNumbersColorConversionTable);
 
     /* Convert result digit sprites (SPR_RESULT_BIG_0 through SPR_TEAM1_NAME-1) */
-    convertSpriteRange(SPR_RESULT_BIG_0, SPR_TEAM1_NAME, (uint16_t *)bigNumbersColorConversionTable);
+    convertSpriteRange(SPR_RESULT_BIG_0, SPR_TEAM1_NAME, (uint16_t *)_bigNumbersColorConversionTable);
 
     /* --- Team 1 name sprite --- */
     HWSprite_LoadFromSpriteGraphics(SPR_TEAM1_NAME);
     Text2Sprite(0, 0, SPR_TEAM1_NAME, (uint8_t *)team1->teamName,
-                 bigCharsTable, 2, &totalWidth);
-    team1NameLength = totalWidth;
+                 _bigCharsTable, 2, &totalWidth);
+    _team1NameLength = totalWidth;
 
     /* --- Team 2 name sprite --- */
     HWSprite_LoadFromSpriteGraphics(SPR_TEAM2_NAME);
     Text2Sprite(0, 0, SPR_TEAM2_NAME, (uint8_t *)team2->teamName,
-                 bigCharsTable, 2, &totalWidth);
-    team2NameLength = totalWidth;
+                 _bigCharsTable, 2, &totalWidth);
+    _team2NameLength = totalWidth;
 
     /* --- Reserve player sprites for team 1 --- */
-    colorTableReserves[15] = (uint16_t)team1->prShirtCol;
+    _colorTableReserves[15] = (uint16_t)team1->prShirtCol;
     {
         uint16_t stripesCol = (uint16_t)team1->prStripesCol;
         if (stripesCol == (uint16_t)team1->prShirtCol)
             stripesCol = (uint16_t)team1->prShortsCol;
-        colorTableReserves[11] = stripesCol;
+        _colorTableReserves[11] = stripesCol;
     }
-    convertSpriteRange(1196, 1208, colorTableReserves);
+    convertSpriteRange(1196, 1208, _colorTableReserves);
 
     /* --- Reserve player sprites for team 2 --- */
-    colorTableReserves[15] = (uint16_t)team2->prShirtCol;
+    _colorTableReserves[15] = (uint16_t)team2->prShirtCol;
     {
         uint16_t stripesCol = (uint16_t)team2->prStripesCol;
         if (stripesCol == (uint16_t)team2->prShirtCol)
             stripesCol = (uint16_t)team2->prShortsCol;
-        colorTableReserves[11] = stripesCol;
+        _colorTableReserves[11] = stripesCol;
     }
-    convertSpriteRange(1208, 1220, colorTableReserves);
+    convertSpriteRange(1208, 1220, _colorTableReserves);
 
     /* --- Determine goalkeeper faces for both teams --- */
-    DetermineGoalieFaces(team1, goalieFaces.team1FaceToPosition, goalieFaces.team1Faces);
-    DetermineGoalieFaces(team2, goalieFaces.team2FaceToPosition, goalieFaces.team2Faces);
+    DetermineGoalieFaces(team1, _goalieFaces.team1FaceToPosition, _goalieFaces.team1Faces);
+    DetermineGoalieFaces(team2, _goalieFaces.team2FaceToPosition, _goalieFaces.team2Faces);
 
     /* --- Team color tables: skin/hair from face frequency --- */
-    if (useIndividualPlayerSkinColor == 0) {
+    if (_useIndividualPlayerSkinColor == 0) {
         /* Use most frequent face for both teams */
-        team1MostFrequentFace = findMostFrequentFaceAndApplyLUT(team1, team1PlayersColorTable);
-        team2MostFrequentFace = findMostFrequentFaceAndApplyLUT(team2, team2PlayersColorTable);
+        _team1MostFrequentFace = findMostFrequentFaceAndApplyLUT(team1, _team1PlayersColorTable);
+        _team2MostFrequentFace = findMostFrequentFaceAndApplyLUT(team2, _team2PlayersColorTable);
     }
 
     /* --- Team 1 shirt/stripes/shorts/socks colors --- */
@@ -350,27 +350,27 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
         if ((uint16_t)team1->prShirtType == 2) {
             uint16_t tmp = d1; d1 = d2; d2 = tmp;
         }
-        team1PlayersColorTable[11] = d1;
-        team1PlayersColorTable[10] = d2;
-        team1PlayersColorTable[14] = (uint16_t)team1->prShortsCol;
-        team1PlayersColorTable[15] = (uint16_t)team1->prSocksCol;
+        _team1PlayersColorTable[11] = d1;
+        _team1PlayersColorTable[10] = d2;
+        _team1PlayersColorTable[14] = (uint16_t)team1->prShortsCol;
+        _team1PlayersColorTable[15] = (uint16_t)team1->prSocksCol;
     }
 
     /* Team 1 skin 0: convert sprites 227-327 */
-    if (useIndividualPlayerSkinColor != 0)
-        ConvertColorTableToSkinColor(0, team1PlayersColorTable);
-    convertSpriteRange(227, 328, team1PlayersColorTable);
+    if (_useIndividualPlayerSkinColor != 0)
+        ConvertColorTableToSkinColor(0, _team1PlayersColorTable);
+    convertSpriteRange(227, 328, _team1PlayersColorTable);
 
     /* Team 1 skin 1: convert sprites 328-428 */
-    if (useIndividualPlayerSkinColor != 0) {
-        ConvertColorTableToSkinColor(1, team1PlayersColorTable);
-        convertSpriteRange(328, 429, team1PlayersColorTable);
+    if (_useIndividualPlayerSkinColor != 0) {
+        ConvertColorTableToSkinColor(1, _team1PlayersColorTable);
+        convertSpriteRange(328, 429, _team1PlayersColorTable);
     }
 
     /* Team 1 skin 2: convert sprites 429-529 */
-    if (useIndividualPlayerSkinColor != 0) {
-        ConvertColorTableToSkinColor(2, team1PlayersColorTable);
-        convertSpriteRange(429, 530, team1PlayersColorTable);
+    if (_useIndividualPlayerSkinColor != 0) {
+        ConvertColorTableToSkinColor(2, _team1PlayersColorTable);
+        convertSpriteRange(429, 530, _team1PlayersColorTable);
     }
 
     /* Team 1 goalkeeper: convert sprites 833-890.
@@ -381,21 +381,21 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
      * walking random memory writing (idx,value) pairs and corrupting
      * unrelated globals (we hit `bigCharsTable + 64`, which silently broke
      * the 'R' and 'S' glyph lookups). */
-    if (useIndividualPlayerSkinColor != 0) {
-        int8_t face = (int8_t)goalieFaces.team1Faces[0];
+    if (_useIndividualPlayerSkinColor != 0) {
+        int8_t face = (int8_t)_goalieFaces.team1Faces[0];
         if (face >= 0)
-            ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, team1PlayersColorTable);
+            ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, _team1PlayersColorTable);
     }
-    convertSpriteRange(833, 891, team1PlayersColorTable);
+    convertSpriteRange(833, 891, _team1PlayersColorTable);
 
     /* Team 1 goalkeeper reserve: sprites 891-948
      * Only converted when useIndividualPlayerSkinColor != 0 AND face >= 0.
      * Note: this is team 1's reserve GK face (team1Faces[1]). */
-    if (useIndividualPlayerSkinColor != 0) {
-        int8_t face2 = (int8_t)goalieFaces.team1Faces[1];
+    if (_useIndividualPlayerSkinColor != 0) {
+        int8_t face2 = (int8_t)_goalieFaces.team1Faces[1];
         if (face2 >= 0) {
-            ConvertColorTableToSkinColor((uint16_t)(uint8_t)face2, team1PlayersColorTable);
-            convertSpriteRange(891, 949, team1PlayersColorTable);
+            ConvertColorTableToSkinColor((uint16_t)(uint8_t)face2, _team1PlayersColorTable);
+            convertSpriteRange(891, 949, _team1PlayersColorTable);
         }
     }
 
@@ -406,45 +406,45 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
         if ((uint16_t)team2->prShirtType == 2) {
             uint16_t tmp = d1; d1 = d2; d2 = tmp;
         }
-        team2PlayersColorTable[11] = d1;
-        team2PlayersColorTable[10] = d2;
-        team2PlayersColorTable[14] = (uint16_t)team2->prShortsCol;
-        team2PlayersColorTable[15] = (uint16_t)team2->prSocksCol;
+        _team2PlayersColorTable[11] = d1;
+        _team2PlayersColorTable[10] = d2;
+        _team2PlayersColorTable[14] = (uint16_t)team2->prShortsCol;
+        _team2PlayersColorTable[15] = (uint16_t)team2->prSocksCol;
     }
 
     /* Team 2 skin 0: convert sprites 530-630 */
-    if (useIndividualPlayerSkinColor != 0)
-        ConvertColorTableToSkinColor(0, team2PlayersColorTable);
-    convertSpriteRange(0x212, 0x277, team2PlayersColorTable);
+    if (_useIndividualPlayerSkinColor != 0)
+        ConvertColorTableToSkinColor(0, _team2PlayersColorTable);
+    convertSpriteRange(0x212, 0x277, _team2PlayersColorTable);
 
     /* Team 2 skin 1: convert sprites 631-731 */
-    if (useIndividualPlayerSkinColor != 0) {
-        ConvertColorTableToSkinColor(1, team2PlayersColorTable);
-        convertSpriteRange(0x277, 0x2DC, team2PlayersColorTable);
+    if (_useIndividualPlayerSkinColor != 0) {
+        ConvertColorTableToSkinColor(1, _team2PlayersColorTable);
+        convertSpriteRange(0x277, 0x2DC, _team2PlayersColorTable);
     }
 
     /* Team 2 skin 2: convert sprites 732-832 */
-    if (useIndividualPlayerSkinColor != 0) {
-        ConvertColorTableToSkinColor(2, team2PlayersColorTable);
-        convertSpriteRange(0x2DC, 833, team2PlayersColorTable);
+    if (_useIndividualPlayerSkinColor != 0) {
+        ConvertColorTableToSkinColor(2, _team2PlayersColorTable);
+        convertSpriteRange(0x2DC, 833, _team2PlayersColorTable);
     }
 
     /* Team 2 goalkeeper: convert sprites 949-1006.
      * Same 0xFF-sentinel guard as team 1's main goalkeeper above. */
-    if (useIndividualPlayerSkinColor != 0) {
-        int8_t face = (int8_t)goalieFaces.team2Faces[0];
+    if (_useIndividualPlayerSkinColor != 0) {
+        int8_t face = (int8_t)_goalieFaces.team2Faces[0];
         if (face >= 0)
-            ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, team2PlayersColorTable);
+            ConvertColorTableToSkinColor((uint16_t)(uint8_t)face, _team2PlayersColorTable);
     }
-    convertSpriteRange(949, 1007, team2PlayersColorTable);
+    convertSpriteRange(949, 1007, _team2PlayersColorTable);
 
     /* Team 2 goalkeeper reserve: sprites 1007-1064
      * Only converted when useIndividualPlayerSkinColor != 0 AND face >= 0. */
-    if (useIndividualPlayerSkinColor != 0) {
-        int8_t reserveFace = (int8_t)goalieFaces.team2Faces[1];
+    if (_useIndividualPlayerSkinColor != 0) {
+        int8_t reserveFace = (int8_t)_goalieFaces.team2Faces[1];
         if (reserveFace >= 0) {
-            ConvertColorTableToSkinColor((uint16_t)(uint8_t)reserveFace, team2PlayersColorTable);
-            convertSpriteRange(1007, 1065, team2PlayersColorTable);
+            ConvertColorTableToSkinColor((uint16_t)(uint8_t)reserveFace, _team2PlayersColorTable);
+            convertSpriteRange(1007, 1065, _team2PlayersColorTable);
         }
     }
 }

@@ -296,7 +296,7 @@
  * address space); putting the instrument bank in fast RAM means
  * AUDxLC pointers index unreachable memory and Paula plays silence
  * or garbage. Mirrors the bitplane/frontbuffer CHIP placement. */
-SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
+SWOS_CHIP_BSS char _audioInstrumentBank[512 * 1024];
 /* audioState: real data in swos_data_bulk_imports.c */
 /* autoReplays: typed definition in swos_data_typed_stubs.c */
 /* autoReplaysStrTable: real data in swos_amiga_ptr_imports.c */
@@ -861,14 +861,14 @@ SWOS_CHIP_BSS char audioInstrumentBank[512 * 1024];
 /* gameTeam2: real data in swos_amiga_data_imports.c */
 /* gameTime: real data in swos_data_bulk_imports.c */
 /* gameType: typed definition in swos_data_typed_stubs.c */
-/* gameTypeStr: real data in swos_amiga_data_imports.c */
+/* _gameTypeStr: real data in swos_amiga_data_imports.c */
 /* gamesPlayed: typed definition in swos_data_typed_stubs.c */
 /* gateReceipts: typed definition in swos_data_typed_stubs.c */
 /* gateReceiptsFactor: typed definition in swos_data_typed_stubs.c */
 /* generalRunningCosts: typed definition in swos_data_typed_stubs.c */
 /* goIntoHighlightsLoop: real data in swos_amiga_data_imports.c */
 /* goToSubsTimer: real data in swos_amiga_data_imports.c */
-char goalBase[0x4A38];
+char _goalBase[0x4A38];
 /* goalBasePtr: real data in swos_amiga_data_imports.c */
 /* goalCameraMode: real data in swos_amiga_data_imports.c */
 /* goalCounter: real data in swos_amiga_data_imports.c */
@@ -932,7 +932,7 @@ char goalBase[0x4A38];
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
 SWOS_CHIP_BSS char imageCmdWorkBuf[0x3FFB0];
 #else
-SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
+SWOS_CHIP_BSS char _imageCmdWorkBuf[0x200000];
 #endif
 /* imageStreamBytesLeft: typed definition in swos_data_typed_stubs.c */
 /* imageStreamCursor: typed definition in swos_data_typed_stubs.c */
@@ -1138,7 +1138,7 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* managerSurnameBuffer: real data in swos_data_bulk_imports.c */
 /* markedPlayerNumber: real data in swos_amiga_data_imports.c */
 /* maxSubsPerTeam: real data in swos_amiga_data_imports.c */
-/* maxSubstitutes: real data in swos_amiga_data_imports.c */
+/* _maxSubstitutes: real data in swos_amiga_data_imports.c */
 /* maxSubstitutesEntries: real data in swos_amiga_data_imports.c */
 /* menuControlsDirection: real data in swos_amiga_data_imports.c */
 /* menuControlsDirection2: real data in swos_amiga_data_imports.c */
@@ -1372,7 +1372,7 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* playRefereeWhistle: real data in swos_amiga_data_imports.c */
 /* playRelegatedAnimation: typed definition in swos_data_typed_stubs.c */
 /* playSeason: real data in swos_amiga_data_imports.c */
-/* playWhatStr: real data in swos_amiga_data_imports.c */
+/* _playWhatStr: real data in swos_amiga_data_imports.c */
 /* playWinCupAnimation: typed definition in swos_data_typed_stubs.c */
 /* player1ClearFlag: typed definition in swos_data_typed_stubs.c */
 /* player2ClearFlag: typed definition in swos_data_typed_stubs.c */
@@ -1393,7 +1393,7 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 /* playerMarketVisibleItemCount: real data in swos_amiga_data_imports.c */
 /* playerMarketVisibleItems: real data in swos_amiga_data_imports.c */
 /* playerNumThatStarted: real data in swos_amiga_data_imports.c */
-/* playerPositions: real data in swos_data_bulk_imports.c */
+/* _playerPositions: real data in swos_data_bulk_imports.c */
 /* playerPositionsStringTable: real data in swos_amiga_ptr_imports.c */
 /* playerPurchases: typed definition in swos_data_typed_stubs.c */
 /* playerRatingFilterThresholds: real data in swos_data_bulk_imports.c */
@@ -1568,8 +1568,8 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
  * Was a zero-filled 4K stub which made ConvertTeamColor always return 0,
  * so every kit color fed to ConvertSpriteColors mapped to transparent —
  * that's why player bodies were see-through on the pitch. */
-/* shirtType1: typed definition in swos_data_typed_stubs.c */
-/* shirtType2: typed definition in swos_data_typed_stubs.c */
+/* _shirtType1: typed definition in swos_data_typed_stubs.c */
+/* _shirtType2: typed definition in swos_data_typed_stubs.c */
 /* shirtTypesTable: real data in swos_data_bulk_imports.c */
 /* shirtsIndexTable: real data in swos_data_bulk_imports.c */
 /* shortCountryNames: real data in swos_data_bulk_imports.c */
@@ -1620,7 +1620,7 @@ SWOS_CHIP_BSS char imageCmdWorkBuf[0x200000];
 #if UINTPTR_MAX == 0xFFFFFFFFu
 SWOS_CHIP_BSS char spriteGraphics[1310 * 4];          /* 1310 ptrs × 4 B = 5240 */
 #else
-SWOS_CHIP_BSS char spriteGraphics[1310 * 8];          /* 1310 ptrs × 8 B = 10480 */
+SWOS_CHIP_BSS char _spriteGraphics[1310 * 8];          /* 1310 ptrs × 8 B = 10480 */
 #endif
 /* spriteGraphicsPtr: real data in swos_amiga_data_imports.c */
 /* squadChangesAllowed: real data in swos_amiga_data_imports.c */
@@ -1735,7 +1735,7 @@ SWOS_CHIP_BSS char spriteGraphics[1310 * 8];          /* 1310 ptrs × 8 B = 1048
 /* teamBName: real data in swos_data_bulk_imports.c */
 /* teamBudgetRankTable: typed definition in swos_data_typed_stubs.c */
 /* teamDepthLevel: real data in swos_amiga_data_imports.c */
-char teamFileBuffer[0xFA0E];
+char _teamFileBuffer[0xFA0E];
 /* teamFileDataSize: typed definition in swos_data_typed_stubs.c */
 /* teamFileTeamCount: typed definition in swos_data_typed_stubs.c */
 /* teamFilenameBuffer: real data in swos_data_bulk_imports.c */

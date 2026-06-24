@@ -110,8 +110,8 @@ def main():
                 "    void          *ptr;\n"
                 "    unsigned char  kind;   /* MenuSymbolKind */\n"
                 "} MenuSymbol;\n\n"
-                "extern const MenuSymbol menuSymbols[];\n"
-                "extern const int        menuSymbolsCount;\n\n"
+                "extern const MenuSymbol _menuSymbols[];\n"
+                "extern const int        _menuSymbolsCount;\n\n"
                 "/* Resolve a menu symbol name to its address (NULL if unknown). */\n"
                 "void              *menu_resolve(const char *name);\n"
                 "const MenuSymbol  *menu_symbol_lookup(const char *name);\n\n"
@@ -134,20 +134,20 @@ def main():
         for ln in extern_lines:
             if not (ln.startswith("extern void ") and ln.endswith("(void);")):
                 c.write(ln + "\n")
-        c.write("\nconst MenuSymbol menuSymbols[] = {\n")
+        c.write("\nconst MenuSymbol _menuSymbols[] = {\n")
         for name, expr, kind in rows:
             c.write('    { "%s", %s, %s },\n' % (name, expr, kind))
         c.write("};\n"
-                "const int menuSymbolsCount =\n"
-                "    (int)(sizeof(menuSymbols) / sizeof(menuSymbols[0]));\n\n"
+                "const int _menuSymbolsCount =\n"
+                "    (int)(sizeof(_menuSymbols) / sizeof(_menuSymbols[0]));\n\n"
                 "static int menu_symbol_cmp(const void *key, const void *elem)\n"
                 "{\n"
                 "    return strcmp((const char *)key, ((const MenuSymbol *)elem)->name);\n"
                 "}\n\n"
                 "const MenuSymbol *menu_symbol_lookup(const char *name)\n"
                 "{\n"
-                "    return (const MenuSymbol *)bsearch(name, menuSymbols,\n"
-                "        (size_t)menuSymbolsCount, sizeof(menuSymbols[0]), menu_symbol_cmp);\n"
+                "    return (const MenuSymbol *)bsearch(name, _menuSymbols,\n"
+                "        (size_t)_menuSymbolsCount, sizeof(_menuSymbols[0]), menu_symbol_cmp);\n"
                 "}\n\n"
                 "void *menu_resolve(const char *name)\n"
                 "{\n"

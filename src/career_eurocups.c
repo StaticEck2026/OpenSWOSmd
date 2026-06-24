@@ -17,38 +17,38 @@
 #include "panic.h"
 
 /* ---- ASM externs (globals defined in assembly) ---- */
-extern DIYCompetitionEx diyCompetitionStart;
-extern uint8_t primaryQualifiedTeamGrids[];
-extern uint8_t tertiaryQualifiedTeamGrid[];
-extern uint8_t euroCupTitleHolderGrid[];
-extern uint8_t cupWinnersCupTitleHolderGrid[];
-extern uint8_t uefaCupTitleHolderGrid[];
+extern DIYCompetitionEx _diyCompetitionStart;
+extern uint8_t _primaryQualifiedTeamGrids[];
+extern uint8_t _tertiaryQualifiedTeamGrid[];
+extern uint8_t _euroCupTitleHolderGrid[];
+extern uint8_t _cupWinnersCupTitleHolderGrid[];
+extern uint8_t _uefaCupTitleHolderGrid[];
 
-extern uint16_t euroCupTitleHolderTeamId;
-extern uint16_t cupWinnersCupTitleHolderTeamId;
-extern uint16_t uefaCupTitleHolderTeamId;
-extern uint16_t cachedPrimaryQualifiedTeamIds[];
-extern uint16_t cachedSecondaryQualifiedTeamIds[];
-extern uint16_t cachedTertiaryQualifiedTeamId;
+extern uint16_t _euroCupTitleHolderTeamId;
+extern uint16_t _cupWinnersCupTitleHolderTeamId;
+extern uint16_t _uefaCupTitleHolderTeamId;
+extern uint16_t _cachedPrimaryQualifiedTeamIds[];
+extern uint16_t _cachedSecondaryQualifiedTeamIds[];
+extern uint16_t _cachedTertiaryQualifiedTeamId;
 
-extern uint8_t euroCupEligibleCompetitionIds[];
-extern uint8_t cupWinnersCupEligibleCompetitionIds[];
-extern uint8_t uefaCupEligibleCompetitionIds[];
+extern uint8_t _euroCupEligibleCompetitionIds[];
+extern uint8_t _cupWinnersCupEligibleCompetitionIds[];
+extern uint8_t _uefaCupEligibleCompetitionIds[];
 
-extern uint8_t currentCompetitionId;
-extern uint16_t euroCupQualifiedTeamCount;
-extern uint16_t cupWinnersCupQualifiedTeamCount;
-extern uint16_t uefaCupQualifiedTeamCount;
+extern uint8_t _currentCompetitionId;
+extern uint16_t _euroCupQualifiedTeamCount;
+extern uint16_t _cupWinnersCupQualifiedTeamCount;
+extern uint16_t _uefaCupQualifiedTeamCount;
 
-extern uint8_t *euroCupTeamListPtr;
-extern uint8_t *cupWinnersCupTeamListPtr;
-extern uint8_t *uefaCupTeamListPtr;
-extern uint8_t *euroCupTeamListWritePtr;
-extern uint8_t *cupWinnersCupTeamListWritePtr;
-extern uint8_t *uefaCupTeamListWritePtr;
+extern uint8_t *_euroCupTeamListPtr;
+extern uint8_t *_cupWinnersCupTeamListPtr;
+extern uint8_t *_uefaCupTeamListPtr;
+extern uint8_t *_euroCupTeamListWritePtr;
+extern uint8_t *_cupWinnersCupTeamListWritePtr;
+extern uint8_t *_uefaCupTeamListWritePtr;
 
-extern void *countriesTable[];
-extern uint16_t selTeamNumber;
+extern void *_countriesTable[];
+extern uint16_t _selTeamNumber;
 
 /* C-to-asm bridges */
 extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNum);
@@ -110,7 +110,7 @@ static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t
  * Asm: TryConsumeCompetitionIdFromList */
 static int16_t tryConsumeCompetitionIdFromList(uint8_t *list)
 {
-    uint8_t id = currentCompetitionId;
+    uint8_t id = _currentCompetitionId;
     while (*list != 0xFF) {
         if (*list == id) {
             *list = 0xFE;
@@ -125,30 +125,30 @@ static int16_t tryConsumeCompetitionIdFromList(uint8_t *list)
  * Asm: IsTeamInCupWinnersCupList */
 static int16_t isTeamInCupWinnersCupList(uint16_t team)
 {
-    return isTeamInList(team, cupWinnersCupTeamListPtr, cupWinnersCupQualifiedTeamCount);
+    return isTeamInList(team, _cupWinnersCupTeamListPtr, _cupWinnersCupQualifiedTeamCount);
 }
 
 /* isTeamInUefaCupList — checks if team d0 is in the UEFA Cup qualified list.
  * Asm: IsTeamInUefaCupList */
 static int16_t isTeamInUefaCupList(uint16_t team)
 {
-    return isTeamInList(team, uefaCupTeamListPtr, uefaCupQualifiedTeamCount);
+    return isTeamInList(team, _uefaCupTeamListPtr, _uefaCupQualifiedTeamCount);
 }
 
 /* clearEuropeanCupTitleHolderIfMatchTeam — clears the matching title holder.
  * Asm: Career_ClearEuropeanCupTitleHolderIfMatchTeam */
 static void clearEuropeanCupTitleHolderIfMatchTeam(uint16_t team)
 {
-    if (team == euroCupTitleHolderTeamId) {
-        euroCupTitleHolderTeamId = 0xFFFF;
+    if (team == _euroCupTitleHolderTeamId) {
+        _euroCupTitleHolderTeamId = 0xFFFF;
         return;
     }
-    if (team == cupWinnersCupTitleHolderTeamId) {
-        cupWinnersCupTitleHolderTeamId = 0xFFFF;
+    if (team == _cupWinnersCupTitleHolderTeamId) {
+        _cupWinnersCupTitleHolderTeamId = 0xFFFF;
         return;
     }
-    if (team == uefaCupTitleHolderTeamId) {
-        uefaCupTitleHolderTeamId = 0xFFFF;
+    if (team == _uefaCupTitleHolderTeamId) {
+        _uefaCupTitleHolderTeamId = 0xFFFF;
     }
 }
 
@@ -156,21 +156,21 @@ static void clearEuropeanCupTitleHolderIfMatchTeam(uint16_t team)
  * Asm: AppendTeamToEuroCupList */
 static void appendTeamToEuroCupList(uint8_t *teamGrid)
 {
-    appendTeamToList(teamGrid, &euroCupTeamListWritePtr, &euroCupQualifiedTeamCount);
+    appendTeamToList(teamGrid, &_euroCupTeamListWritePtr, &_euroCupQualifiedTeamCount);
 }
 
 /* appendTeamToCupWinnersCupList — appends team grid to CWC list.
  * Asm: AppendTeamToCupWinnersCupList */
 static void appendTeamToCupWinnersCupList(uint8_t *teamGrid)
 {
-    appendTeamToList(teamGrid, &cupWinnersCupTeamListWritePtr, &cupWinnersCupQualifiedTeamCount);
+    appendTeamToList(teamGrid, &_cupWinnersCupTeamListWritePtr, &_cupWinnersCupQualifiedTeamCount);
 }
 
 /* appendTeamToUefaCupList — appends team grid to UEFA Cup list.
  * Asm: AppendTeamToUefaCupList */
 static void appendTeamToUefaCupList(uint8_t *teamGrid)
 {
-    appendTeamToList(teamGrid, &uefaCupTeamListWritePtr, &uefaCupQualifiedTeamCount);
+    appendTeamToList(teamGrid, &_uefaCupTeamListWritePtr, &_uefaCupQualifiedTeamCount);
 }
 
 /* ================================================================
@@ -182,9 +182,9 @@ static void appendTeamToUefaCupList(uint8_t *teamGrid)
  * Asm: Career_QualifyTeamForEuroCup_IfEligibleCompetition */
 static void qualifyTeamForEuroCup(void)
 {
-    if (!tryConsumeCompetitionIdFromList(euroCupEligibleCompetitionIds))
+    if (!tryConsumeCompetitionIdFromList(_euroCupEligibleCompetitionIds))
         return;
-    uint8_t *a5 = primaryQualifiedTeamGrids;
+    uint8_t *a5 = _primaryQualifiedTeamGrids;
     /* See note on BE_READ_U16 in qualifyTeamForCupWinnersCup. */
     uint16_t team = BE_READ_U16(a5);
     clearEuropeanCupTitleHolderIfMatchTeam(team);
@@ -205,18 +205,18 @@ static void qualifyTeamForEuroCup(void)
  * Career_AppendTeamToTmdTeamPool's 0x3443 panic. Use BE_READ_U16. */
 static void qualifyTeamForCupWinnersCup(void)
 {
-    if (!tryConsumeCompetitionIdFromList(cupWinnersCupEligibleCompetitionIds))
+    if (!tryConsumeCompetitionIdFromList(_cupWinnersCupEligibleCompetitionIds))
         return;
     /* Start at slot 8 (primaryQualifiedTeamGrids + 0x1560), advance to find
      * a team that doesn't match the primary cached team or Euro Cup holder.
      * Boundary spill: walks through contiguous BSS buffers. */
-    uint8_t *a5 = primaryQualifiedTeamGrids + (8 * sizeof(TeamFileEx));
+    uint8_t *a5 = _primaryQualifiedTeamGrids + (8 * sizeof(TeamFileEx));
     for (;;) {
         a5 += sizeof(TeamFileEx);
         uint16_t team = BE_READ_U16(a5);
-        if (team == cachedPrimaryQualifiedTeamIds[0])
+        if (team == _cachedPrimaryQualifiedTeamIds[0])
             continue;
-        if (team == euroCupTitleHolderTeamId)
+        if (team == _euroCupTitleHolderTeamId)
             continue;
         break;
     }
@@ -231,28 +231,28 @@ static void qualifyTeamForCupWinnersCup(void)
 static void qualifyTeamsForUefaCup(void)
 {
     uint8_t *a5;
-    if (cachedTertiaryQualifiedTeamId != 0xFFFF) {
-        a5 = tertiaryQualifiedTeamGrid;
+    if (_cachedTertiaryQualifiedTeamId != 0xFFFF) {
+        a5 = _tertiaryQualifiedTeamGrid;
     } else {
-        a5 = primaryQualifiedTeamGrids + sizeof(TeamFileEx); /* slot 1 */
+        a5 = _primaryQualifiedTeamGrids + sizeof(TeamFileEx); /* slot 1 */
     }
     a5 -= sizeof(TeamFileEx);
 
-    while (tryConsumeCompetitionIdFromList(uefaCupEligibleCompetitionIds)) {
+    while (tryConsumeCompetitionIdFromList(_uefaCupEligibleCompetitionIds)) {
         for (;;) {
             a5 += sizeof(TeamFileEx);
-            if (a5 == euroCupTitleHolderGrid) {
-                a5 = primaryQualifiedTeamGrids + sizeof(TeamFileEx); /* wrap to slot 1 */
+            if (a5 == _euroCupTitleHolderGrid) {
+                a5 = _primaryQualifiedTeamGrids + sizeof(TeamFileEx); /* wrap to slot 1 */
             }
             /* See note on BE_READ_U16 in qualifyTeamForCupWinnersCup. */
             uint16_t team = BE_READ_U16(a5);
-            if (team == cachedPrimaryQualifiedTeamIds[0])
+            if (team == _cachedPrimaryQualifiedTeamIds[0])
                 continue;
-            if (team == cachedSecondaryQualifiedTeamIds[0])
+            if (team == _cachedSecondaryQualifiedTeamIds[0])
                 continue;
-            if (team == euroCupTitleHolderTeamId)
+            if (team == _euroCupTitleHolderTeamId)
                 continue;
-            if (team == cupWinnersCupTitleHolderTeamId)
+            if (team == _cupWinnersCupTitleHolderTeamId)
                 continue;
             if (isTeamInCupWinnersCupList(team))
                 continue;
@@ -274,8 +274,8 @@ __attribute__((used, externally_visible))
 void Career_ProcessCompetitionForEuropeanCupQualification(void)
 {
     /* countriesTable is uint32_t[] (pointer table); index by competition ID */
-    uint16_t idx = (uint8_t)currentCompetitionId;
-    uint8_t *countryPtr = (uint8_t *)countriesTable[idx];
+    uint16_t idx = (uint8_t)_currentCompetitionId;
+    uint8_t *countryPtr = (uint8_t *)_countriesTable[idx];
     if (*countryPtr != 0)
         return; /* not European (first byte != 0) → skip */
     qualifyTeamForEuroCup();
@@ -300,9 +300,9 @@ static void copyTeamGridWords(uint8_t *src, uint8_t *dst, uint16_t wordCount)
 __attribute__((used, externally_visible))
 void DIY_CachePrimaryQualifiedTeamsGrid(void)
 {
-    uint8_t *dst = primaryQualifiedTeamGrids;
-    uint16_t *cachedIds = cachedPrimaryQualifiedTeamIds;
-    DIYCompetitionEx *comp = &diyCompetitionStart;
+    uint8_t *dst = _primaryQualifiedTeamGrids;
+    uint16_t *cachedIds = _cachedPrimaryQualifiedTeamIds;
+    DIYCompetitionEx *comp = &_diyCompetitionStart;
     uint16_t *leaguePositions = comp->matchData.league.teamEntryOffsets;
     uint16_t *teamIdsTable = comp->matchData.league.leagueTeamIds;
     uint16_t count = 9;
@@ -329,17 +329,17 @@ void DIY_CacheSecondaryQualifiedTeamsGrid(void)
 {
     DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
     /* asm: lea (primaryQualifiedTeamGrids+0x180C),a1 — slot 9 (0x2AC * 9 = 0x180C) */
-    uint8_t *dst = primaryQualifiedTeamGrids + 0x180C;
-    uint16_t *cachedIds = cachedSecondaryQualifiedTeamIds;
+    uint8_t *dst = _primaryQualifiedTeamGrids + 0x180C;
+    uint16_t *cachedIds = _cachedSecondaryQualifiedTeamIds;
     /* See copyTitleHolderGrid below for why these go through typed
      * struct access instead of `compRaw + 0xNN` byte offsets. */
-    uint8_t *grid = diyCompetitionStart.teamGridPairings;
+    uint8_t *grid = _diyCompetitionStart.teamGridPairings;
 
     for (int16_t i = 2; i >= 0; i--) {
         int8_t gridByte = (int8_t)*grid++;
         int16_t idx = gridByte;
         /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
-        uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
+        uint16_t teamNum = BE_READ_U16((uint8_t *)_diyCompetitionStart.cupTeamIds + (idx << 1));
         *cachedIds++ = teamNum;
         TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
@@ -353,13 +353,13 @@ void DIY_CacheTertiaryQualifiedTeamGrid(void)
     DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
     /* See copyTitleHolderGrid below — typed access avoids the +4
      * struct-field shift bug that hit copyTitleHolderGrid on 64-bit. */
-    int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
+    int8_t gridByte = (int8_t)_diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
     /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
-    uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
-    cachedTertiaryQualifiedTeamId = teamNum;
+    uint16_t teamNum = BE_READ_U16((uint8_t *)_diyCompetitionStart.cupTeamIds + (idx << 1));
+    _cachedTertiaryQualifiedTeamId = teamNum;
     TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
-    copyTeamGridWords((uint8_t *)teamData, tertiaryQualifiedTeamGrid, 0x155);
+    copyTeamGridWords((uint8_t *)teamData, _tertiaryQualifiedTeamGrid, 0x155);
 }
 
 /* ================================================================
@@ -378,13 +378,13 @@ void DIY_CacheTertiaryQualifiedTeamGrid(void)
 static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolderGrid)
 {
     DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
-    int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
+    int8_t gridByte = (int8_t)_diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
     /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs per the
      * 4e5f378 convention; read with BE_READ_U16 so titleHolderTeamId
      * holds the packed value the rest of the code expects. The byte
      * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
-    uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
+    uint16_t teamNum = BE_READ_U16((uint8_t *)_diyCompetitionStart.cupTeamIds + (idx << 1));
     *titleHolderTeamId = teamNum;
     TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
@@ -393,34 +393,34 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
 __attribute__((used, externally_visible))
 void Career_CopyEuroCupTeamGridAndTitleHolder(void)
 {
-    copyTitleHolderGrid(&euroCupTitleHolderTeamId, euroCupTitleHolderGrid);
+    copyTitleHolderGrid(&_euroCupTitleHolderTeamId, _euroCupTitleHolderGrid);
 }
 
 __attribute__((used, externally_visible))
 void Career_CopyCupWinnersCupTeamGridAndTitleHolder(void)
 {
-    copyTitleHolderGrid(&cupWinnersCupTitleHolderTeamId, cupWinnersCupTitleHolderGrid);
+    copyTitleHolderGrid(&_cupWinnersCupTitleHolderTeamId, _cupWinnersCupTitleHolderGrid);
 }
 
 __attribute__((used, externally_visible))
 void Career_CopyUefaCupTeamGridAndTitleHolder(void)
 {
-    copyTitleHolderGrid(&uefaCupTitleHolderTeamId, uefaCupTitleHolderGrid);
+    copyTitleHolderGrid(&_uefaCupTitleHolderTeamId, _uefaCupTitleHolderGrid);
 }
 
 /* ---- Chunk 181: Euro Cup Slot Update functions ---- */
 
-extern uint8_t euroCupCopy[];
-extern uint8_t cupWinnersCupCopy[];
-extern uint8_t uefaCupCopy[];
-extern uint8_t *quaternaryCompetitionPtr;
+extern uint8_t _euroCupCopy[];
+extern uint8_t _cupWinnersCupCopy[];
+extern uint8_t _uefaCupCopy[];
+extern uint8_t *_quaternaryCompetitionPtr;
 
 extern void SaveSelectedTeams(void);
 extern void RestoreSelectedTeams(void);
 extern void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
 extern void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
 
-extern uint16_t numSelectedTeams;
+extern uint16_t _numSelectedTeams;
 extern void AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds,
                                                      uint16_t count);
 
@@ -451,11 +451,11 @@ extern void AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *tea
  * the Amiga build, which has the identical loaded-career gap. */
 static void reloadEuroCupTeamSelectionFromRestoredField(void)
 {
-    numSelectedTeams = 0;
+    _numSelectedTeams = 0;
     AppendTeamsToSelectionFromTmdOrTeamFile(
-        (uint16_t *)diyCompetitionStart.cupTeamIds,
-        (uint16_t *)diyCompetitionStart.cupTeamIds,
-        (uint16_t)diyCompetitionStart.base.numTeams);
+        (uint16_t *)_diyCompetitionStart.cupTeamIds,
+        (uint16_t *)_diyCompetitionStart.cupTeamIds,
+        (uint16_t)_diyCompetitionStart.base.numTeams);
 }
 
 /* Career_UpdateEuroCupCompetitionSlot (SWOS2.s line 31764)
@@ -464,7 +464,7 @@ static void reloadEuroCupTeamSelectionFromRestoredField(void)
 __attribute__((used, externally_visible))
 void Career_UpdateEuroCupCompetitionSlot(void)
 {
-    uint8_t *a4 = euroCupCopy;
+    uint8_t *a4 = _euroCupCopy;
     /* Branch purely on whether this euro cup is the player's quaternary
      * competition — matches SWOS2.s Career_UpdateEuroCupCompetitionSlot @57397
      * (cmpa.l quaternaryCompetitionPtr,a4 / bne). A club->national transition
@@ -473,7 +473,7 @@ void Career_UpdateEuroCupCompetitionSlot(void)
      * resurfaces here, the root cause is a STALE quaternaryCompetitionPtr, not
      * this branch — fix THAT, don't re-gate. See
      * project_eurocup_national_backup_clobber. */
-    if (a4 == quaternaryCompetitionPtr) {
+    if (a4 == _quaternaryCompetitionPtr) {
         RestoreSelectedTeams();
         Career_CopyEuroCupsCompetitionContextToOrFromActive();
         DIY_EditCompetitionSlot(1, 1, 0);
@@ -490,8 +490,8 @@ void Career_UpdateEuroCupCompetitionSlot(void)
 __attribute__((used, externally_visible))
 void Career_UpdateCupWinnersCupCompetitionSlot(void)
 {
-    uint8_t *a4 = cupWinnersCupCopy;
-    if (a4 == quaternaryCompetitionPtr) {
+    uint8_t *a4 = _cupWinnersCupCopy;
+    if (a4 == _quaternaryCompetitionPtr) {
         RestoreSelectedTeams();
         Career_CopyEuroCupsCompetitionContextToOrFromActive();
         reloadEuroCupTeamSelectionFromRestoredField();
@@ -520,8 +520,8 @@ void Career_UpdateCupWinnersCupCompetitionSlot(void)
 __attribute__((used, externally_visible))
 void Career_UpdateUefaCupCompetitionSlot(void)
 {
-    uint8_t *a4 = uefaCupCopy;
-    if (a4 == quaternaryCompetitionPtr) {
+    uint8_t *a4 = _uefaCupCopy;
+    if (a4 == _quaternaryCompetitionPtr) {
         RestoreSelectedTeams();
         Career_CopyEuroCupsCompetitionContextToOrFromActive();
         reloadEuroCupTeamSelectionFromRestoredField();
@@ -541,9 +541,9 @@ void Career_UpdateUefaCupCompetitionSlot(void)
 
 /* ---- Chunk 183: European Cup Team Draw ---- */
 
-extern uint16_t teamNoOfferAccepted;
-extern uint16_t careerFileBuffer;
-extern uint16_t panicReasonCode;
+extern uint16_t _teamNoOfferAccepted;
+extern uint16_t _careerFileBuffer;
+extern uint16_t _panicReasonCode;
 
 extern uint16_t Rand2(void);
 extern void Career_RemoveTeamFromTmdTeamPool(uint16_t teamNum);
@@ -582,11 +582,11 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
         if (selectedCountry == titleHolderCountry)
             continue;
 
-        if (teamNoOfferAccepted != 0xFFFF) {
-            if (selectedCountry == (uint8_t)(teamNoOfferAccepted >> 8))
+        if (_teamNoOfferAccepted != 0xFFFF) {
+            if (selectedCountry == (uint8_t)(_teamNoOfferAccepted >> 8))
                 continue;
         } else {
-            if (selectedCountry == (uint8_t)(selTeamNumber >> 8))
+            if (selectedCountry == (uint8_t)(_selTeamNumber >> 8))
                 continue;
         }
         break;
@@ -597,11 +597,11 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
     uint16_t removedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
     BE_WRITE_U16(&listBytes[randIdx * 2], titleHolder);
 
-    uint16_t savedCareerFile = careerFileBuffer;
+    uint16_t savedCareerFile = _careerFileBuffer;
     Career_RemoveTeamFromTmdTeamPool(removedTeam);
     Career_AppendTeamToTmdTeamPool((TeamFileEx *)dstGrid);
-    if (savedCareerFile != careerFileBuffer) {
-        panicReasonCode = 0x8997;
+    if (savedCareerFile != _careerFileBuffer) {
+        _panicReasonCode = 0x8997;
         PanicHaltLoop();
     }
 }
@@ -612,49 +612,49 @@ __attribute__((used, externally_visible))
 void Career_DrawEuropeanCupTeamsAndCopyGrids(void)
 {
     drawRandomTeamFromPoolAndCopyGrid(
-        euroCupTitleHolderTeamId, euroCupTitleHolderGrid,
-        (uint16_t *)euroCupTeamListPtr, euroCupQualifiedTeamCount);
+        _euroCupTitleHolderTeamId, _euroCupTitleHolderGrid,
+        (uint16_t *)_euroCupTeamListPtr, _euroCupQualifiedTeamCount);
 
     drawRandomTeamFromPoolAndCopyGrid(
-        cupWinnersCupTitleHolderTeamId, cupWinnersCupTitleHolderGrid,
-        (uint16_t *)cupWinnersCupTeamListPtr, cupWinnersCupQualifiedTeamCount);
+        _cupWinnersCupTitleHolderTeamId, _cupWinnersCupTitleHolderGrid,
+        (uint16_t *)_cupWinnersCupTeamListPtr, _cupWinnersCupQualifiedTeamCount);
 
     drawRandomTeamFromPoolAndCopyGrid(
-        uefaCupTitleHolderTeamId, uefaCupTitleHolderGrid,
-        (uint16_t *)uefaCupTeamListPtr, uefaCupQualifiedTeamCount);
+        _uefaCupTitleHolderTeamId, _uefaCupTitleHolderGrid,
+        (uint16_t *)_uefaCupTeamListPtr, _uefaCupQualifiedTeamCount);
 }
 
 /* ---- Chunk 184: European Championship + World Cup Competition Updates ---- */
 
-extern uint8_t *currentCompetitionPtr;
-extern uint8_t someTeamFlags;
-extern uint16_t euroChampionshipQualTeam;
-extern uint8_t europeanChampionships2Copy[];
-extern uint8_t ecQualifyingGroup1Copy[];
-extern uint8_t ecQualifyingGroup2Copy[];
-extern uint8_t ecQualifyingGroup3Copy[];
-extern uint8_t ecQualifyingGroup4Copy[];
-extern uint8_t ecQualifyingGroup5Copy[];
-extern uint8_t ecQualifyingGroup6Copy[];
-extern uint8_t ecQualifyingGroup7Copy[];
-extern uint8_t ecQualifyingGroup8Copy[];
+extern uint8_t *_currentCompetitionPtr;
+extern uint8_t _someTeamFlags;
+extern uint16_t _euroChampionshipQualTeam;
+extern uint8_t _europeanChampionships2Copy[];
+extern uint8_t _ecQualifyingGroup1Copy[];
+extern uint8_t _ecQualifyingGroup2Copy[];
+extern uint8_t _ecQualifyingGroup3Copy[];
+extern uint8_t _ecQualifyingGroup4Copy[];
+extern uint8_t _ecQualifyingGroup5Copy[];
+extern uint8_t _ecQualifyingGroup6Copy[];
+extern uint8_t _ecQualifyingGroup7Copy[];
+extern uint8_t _ecQualifyingGroup8Copy[];
 
-extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
-extern uint16_t worldCupHostTeam;
-extern uint8_t worldCup2Copy[];
-extern uint8_t worldCupQualifyingGroup1Copy[];
-extern uint8_t worldCupQualifyingGroup2Copy[];
-extern uint8_t worldCupQualifyingGroup3Copy[];
-extern uint8_t worldCupQualifyingGroup4Copy[];
-extern uint8_t worldCupQualifyingGroup5Copy[];
-extern uint8_t worldCupQualifyingGroup6Copy[];
-extern uint8_t worldCupQualifyingGroup7Copy[];
-extern uint8_t worldCupQualifyingGroup8Copy[];
-extern uint8_t northAmericaWorldCupQualificationCopy[];
-extern uint8_t southAmericaWorldCupQualificationCopy[];
-extern uint8_t africaWorldCupQualificationCopy[];
-extern uint8_t asiaWorldCupQualificationCopy[];
-extern uint8_t oceaniaWorldCupQualificationCopy[];
+extern CompetitionSlotBuffer _primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
+extern uint16_t _worldCupHostTeam;
+extern uint8_t _worldCup2Copy[];
+extern uint8_t _worldCupQualifyingGroup1Copy[];
+extern uint8_t _worldCupQualifyingGroup2Copy[];
+extern uint8_t _worldCupQualifyingGroup3Copy[];
+extern uint8_t _worldCupQualifyingGroup4Copy[];
+extern uint8_t _worldCupQualifyingGroup5Copy[];
+extern uint8_t _worldCupQualifyingGroup6Copy[];
+extern uint8_t _worldCupQualifyingGroup7Copy[];
+extern uint8_t _worldCupQualifyingGroup8Copy[];
+extern uint8_t _northAmericaWorldCupQualificationCopy[];
+extern uint8_t _southAmericaWorldCupQualificationCopy[];
+extern uint8_t _africaWorldCupQualificationCopy[];
+extern uint8_t _asiaWorldCupQualificationCopy[];
+extern uint8_t _oceaniaWorldCupQualificationCopy[];
 
 extern void Career_CopyCompetitionFileBufferToOrFromActive(void);
 extern void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
@@ -667,7 +667,7 @@ extern void Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, 
  * If active competition, edit interactively; else auto-advance. */
 static void updateECSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
-    if (competition == currentCompetitionPtr) {
+    if (competition == _currentCompetitionPtr) {
         RestoreSelectedTeams();
         Career_CopyCompetitionFileBufferToOrFromActive();
         ShowDiyLeaguesTournamentMenu(1, 1, 0);
@@ -683,10 +683,10 @@ static void updateECSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 __attribute__((used, externally_visible))
 void Career_UpdateEuropeanChampionshipCompetitions(void)
 {
-    if (!(someTeamFlags & 0x01))
+    if (!(_someTeamFlags & 0x01))
         return;
 
-    uint8_t *a5 = europeanChampionships2Copy;
+    uint8_t *a5 = _europeanChampionships2Copy;
     /* qualifier list = the cup *Copy's embedded teamSeedList. comp_team_seed_list
      * handles base+7+offset and the 64-bit name[2] pointer-growth delta — without
      * it the writes would land in name[1] and corrupt the comp name pointer
@@ -696,7 +696,7 @@ void Career_UpdateEuropeanChampionshipCompetitions(void)
      * Use BE_WRITE_U16 so the destination byte order matches the rest
      * of europeanChampionships2Copy.unk1 (BE-packed `{country, ordinal}`
      * per the 4e5f378 convention). */
-    BE_WRITE_U16(a5, euroChampionshipQualTeam);
+    BE_WRITE_U16(a5, _euroChampionshipQualTeam);
     a5 += 2;
 
     /* Asm uses `(a5)+` inside DIY_BuildQualifiedTeamListFromSortedTable_EC,
@@ -705,14 +705,14 @@ void Career_UpdateEuropeanChampionshipCompetitions(void)
      * advance the caller's pointer explicitly after each call. Without
      * this, all 8 group calls overwrite the same first slots and entries
      * past index 2 stay stale. */
-    updateECSlot(ecQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
-    updateECSlot(ecQualifyingGroup8Copy, 1, a5);
+    updateECSlot(_ecQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
+    updateECSlot(_ecQualifyingGroup8Copy, 1, a5);
 }
 
 /* Career_UpdateWorldCupCompetitionSlot (SWOS2.s line 31638)
@@ -720,7 +720,7 @@ void Career_UpdateEuropeanChampionshipCompetitions(void)
 static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
     int8_t compType = ((Competition *)competition)->type;
-    if (competition == currentCompetitionPtr) {
+    if (competition == _currentCompetitionPtr) {
         RestoreSelectedTeams();
         if (compType == 2) {
             Career_CopyCompetitionFileBufferToOrFromActive();
@@ -733,7 +733,7 @@ static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
             DIY_BuildQualifiedTeamListFromSortedTable(count, out);
             SaveSelectedTeams();
         } else {
-            panicReasonCode = 0x1991;
+            _panicReasonCode = 0x1991;
             PanicHaltLoop();
         }
     } else {
@@ -744,7 +744,7 @@ static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
             Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
             DIY_BuildQualifiedTeamListFromSortedTable(count, out);
         } else {
-            panicReasonCode = 0x1992;
+            _panicReasonCode = 0x1992;
             PanicHaltLoop();
         }
     }
@@ -754,19 +754,19 @@ static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 __attribute__((used, externally_visible))
 void Career_UpdateWorldCupCompetitions(void)
 {
-    if (someTeamFlags & 0x80)
-        worldCupHostTeam = primaryCompetitionBuf.tourn.header.winnerTeam;
+    if (_someTeamFlags & 0x80)
+        _worldCupHostTeam = _primaryCompetitionBuf.tourn.header.winnerTeam;
 
-    if (!(someTeamFlags & 0x40))
+    if (!(_someTeamFlags & 0x40))
         return;
 
-    uint8_t *a5 = worldCup2Copy;
+    uint8_t *a5 = _worldCup2Copy;
     /* qualifier list = the cup *Copy's embedded teamSeedList — see the EC variant
      * above. comp_team_seed_list handles the offset + 64-bit delta. */
     a5 = (uint8_t *)comp_team_seed_list((Competition *)a5);
     /* BE write — matches the eurochampionship variant above and the
      * BE-packed convention for *.unk1 team-id lists (4e5f378). */
-    BE_WRITE_U16(a5, worldCupHostTeam);
+    BE_WRITE_U16(a5, _worldCupHostTeam);
     a5 += 2;
 
     /* a5 is shared across slot calls in the m68k version because the
@@ -774,17 +774,17 @@ void Career_UpdateWorldCupCompetitions(void)
      * DIY_BuildQualifiedTeamListFromSortedTable_WC / FromDiyFileBuffer.
      * Advance the C pointer by `count * 2` bytes after each call so all
      * 13 group qualifiers land in distinct slots of worldCup2Copy.unk1. */
-    updateWCSlot(worldCupQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(worldCupQualifyingGroup8Copy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(northAmericaWorldCupQualificationCopy, 3, a5); a5 += 3 * 2;
-    updateWCSlot(southAmericaWorldCupQualificationCopy, 4, a5); a5 += 4 * 2;
-    updateWCSlot(africaWorldCupQualificationCopy, 5, a5); a5 += 5 * 2;
-    updateWCSlot(asiaWorldCupQualificationCopy, 2, a5); a5 += 2 * 2;
-    updateWCSlot(oceaniaWorldCupQualificationCopy, 1, a5);
+    updateWCSlot(_worldCupQualifyingGroup1Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup2Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup3Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup4Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup5Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup6Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup7Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_worldCupQualifyingGroup8Copy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_northAmericaWorldCupQualificationCopy, 3, a5); a5 += 3 * 2;
+    updateWCSlot(_southAmericaWorldCupQualificationCopy, 4, a5); a5 += 4 * 2;
+    updateWCSlot(_africaWorldCupQualificationCopy, 5, a5); a5 += 5 * 2;
+    updateWCSlot(_asiaWorldCupQualificationCopy, 2, a5); a5 += 2 * 2;
+    updateWCSlot(_oceaniaWorldCupQualificationCopy, 1, a5);
 }

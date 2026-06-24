@@ -8,7 +8,7 @@ through. en.json IS the English baseline (text identical to the compiled
 strings); other languages are copies of it with the values translated.
 
 This is the string analogue of the menu/competition JSON: the data files carry
-the symbol NAME (e.g. "aDivision1"), never the literal text, and the language
+the symbol NAME (e.g. "_aDivision1"), never the literal text, and the language
 file maps name -> text. bin/data_json is gitignored/regenerated; this script is
 the source of truth.
 
@@ -23,13 +23,13 @@ SRCS = [os.path.join(REPO, "src", "strings_data.c"),
         os.path.join(REPO, "src", "swos_amiga_strings.c")]
 OUT_DIR = os.path.join(REPO, "bin", "data_json", "translations")
 
-# `[const] char NAME[opt-size] = "BODY";` on one line. BODY allows C escapes.
+# `[const] char NAME[opt-_size] = "BODY";` on one line. BODY allows C escapes.
 DEF = re.compile(r'^\s*(?:const\s+)?char\s+([A-Za-z_]\w*)\s*\[\s*\d*\s*\]\s*=\s*'
                  r'"((?:[^"\\]|\\.)*)"\s*;', re.M)
 
 
 def decode_c(body: str) -> str:
-    """Decode the C escapes that show up in SWOS strings, including the octal
+    """Decode the C escapes that show _up in SWOS strings, including the octal
     (\\NNN) and hex (\\xNN) escapes the packed country names use."""
     out = []
     i = 0
@@ -59,8 +59,8 @@ def split_country(v: str):
     plain "strings" section, where its leading byte + embedded NUL got JSON-escaped
     (\\u0002…\\u0000…) and rendered as literal garbage ("⌧0002SOUTH AMERICA").
     Any non-printable leading byte (< 0x20) before a NAME\\0NAT pair is a packed
-    country. countriesTable[] entries point at these; consumers read `str + 1`
-    (skip the region byte) up to the NUL, so it must be decomposed here, never
+    country. _countriesTable[] entries point at these; consumers read `str + 1`
+    (skip the region byte) _up to the NUL, so it must be decomposed here, never
     emitted as a raw string with binary bytes in it."""
     if len(v) >= 2 and ord(v[0]) < 0x20 and '\x00' in v[1:]:
         parts = v[1:].split('\x00')

@@ -19,7 +19,7 @@
 #include "swos_types.h"  /* uintptr_t */
 
 /* ---- External globals (from SWOS2.s data) ---- */
-extern uint8_t diskImageContext;
+extern uint8_t _diskImageContext;
 
 /* ---- External C functions ---- */
 extern uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf);
@@ -41,11 +41,11 @@ static uintptr_t assetSource2;
 static uintptr_t assetSource3;
 
 /* Exported globals — referenced by asset_loader.c, file_io.c, loader_bootstrap.c */
-uint16_t assetCurrentIndex;
-uint16_t assetCurrentSourceSlot;
-uintptr_t assetSourceVec[4];
-uint16_t assetIndexStartBytes;  /* treated as 4-byte block in asm: 2 x uint16_t */
-uint16_t assetParamBlock;
+uint16_t _assetCurrentIndex;
+uint16_t _assetCurrentSourceSlot;
+uintptr_t _assetSourceVec[4];
+uint16_t _assetIndexStartBytes;  /* treated as 4-byte block in asm: 2 x uint16_t */
+uint16_t _assetParamBlock;
 
 static uint16_t assetSelect;
 static uint16_t assetSavedSourceSlot;
@@ -64,7 +64,7 @@ static void assetSysPrepCopyParams(const uint8_t *filename)
     uint8_t *dst;
     uintptr_t srcAddr;
 
-    srcAddr = assetSourceVec[assetCurrentSourceSlot];
+    srcAddr = _assetSourceVec[_assetCurrentSourceSlot];
     dst = assetFilename;
 
     /* Copy source prefix (drive path) if non-null */
@@ -97,13 +97,13 @@ static int16_t assetSys_InitContext(uint8_t *loaderBase, const uint8_t *disk0,
 
     /* In HDD mode, no floppy drives — sourceVec stays NULL */
     for (i = 0; i < 4; i++)
-        assetSourceVec[i] = 0;
+        _assetSourceVec[i] = 0;
 
     /* Clear state */
-    assetIndexStartBytes = 0;
-    assetParamBlock = 0;
-    assetCurrentSourceSlot = 0;
-    assetCurrentIndex = 0;
+    _assetIndexStartBytes = 0;
+    _assetParamBlock = 0;
+    _assetCurrentSourceSlot = 0;
+    _assetCurrentIndex = 0;
 
     return 0;
 }
@@ -291,7 +291,7 @@ static int32_t assetSys_Op5ThenMaybe6(const uint8_t *sourceDesc)
  * ================================================================ */
 static int16_t assetSys_SelectAndOpen(uint16_t param)
 {
-    assetCurrentIndex = param;
+    _assetCurrentIndex = param;
     return 0;
 }
 
@@ -310,7 +310,7 @@ static int16_t assetSys_OpenAnySource(void)
      * fail, leaving assetCurrentIndex = 4 (set before probing). This
      * enables direct file dispatch (no frontbuffer staging) which is
      * required for files larger than the frontbuffer (e.g. career saves). */
-    assetCurrentIndex = 4;
+    _assetCurrentIndex = 4;
     return 0;
 }
 
@@ -382,7 +382,7 @@ int16_t CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uint
 __attribute__((used, externally_visible))
 void AssetSys_InitDiskImageSources(void)
 {
-    assetSys_InitContext(&diskImageContext,
+    assetSys_InitContext(&_diskImageContext,
                          kSwos4Dk1, kSwos4Dk2,
                          kGrafsDisk2Raw, kSwos4Dku);
     InstallAndInitLoaderBootstrap();

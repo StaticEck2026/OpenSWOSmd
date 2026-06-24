@@ -8,23 +8,23 @@
 #include "swos_types.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uintptr_t assetLoaderWorkPtr;
+extern uintptr_t _assetLoaderWorkPtr;
 extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 /* Head of the cache linked-list. Storage retyped to uintptr_t so that on
  * 64-bit hosts (LP64 / LLP64) a real pointer round-trips. */
-extern uintptr_t assetLoaderCacheFlag;
-extern uint16_t assetLoaderAltPathReady;
-extern uint32_t loaderMemTop;
-extern uint32_t loaderBankBitmap;
-extern uint8_t surnameBuf[];
+extern uintptr_t _assetLoaderCacheFlag;
+extern uint16_t _assetLoaderAltPathReady;
+extern uint32_t _loaderMemTop;
+extern uint32_t _loaderBankBitmap;
+extern uint8_t _surnameBuf[];
 extern uint8_t assetLoaderMainRegion[];
 extern uint8_t assetLoaderBank0Base[];
-extern uint16_t assetCurrentIndex;
-extern volatile uint16_t currentGameTick;
+extern uint16_t _assetCurrentIndex;
+extern volatile uint16_t _currentGameTick;
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 extern void PanicHaltLoop(void);
-extern volatile uint16_t panicReasonCode;
+extern volatile uint16_t _panicReasonCode;
 extern int16_t CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
 extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
 extern void RncDecompressV1(uint8_t *src, uint8_t *dest);
@@ -108,7 +108,7 @@ static uint8_t *assetCacheAllocInternal(uint32_t size)
     /* Align size up to even */
     alignedSize = (size + 1u) & 0xFFFFFFFEu;
 
-    node = (uint8_t *)assetLoaderCacheFlag;
+    node = (uint8_t *)_assetLoaderCacheFlag;
     if (node == (uint8_t *)0)
         return (uint8_t *)0;
 
@@ -137,7 +137,7 @@ static uint8_t *assetCacheAllocInternal(uint32_t size)
                     *(uint16_t *)(splitNode + CACHE_OFF_ISFREE)    = 1;
                 }
 
-                assetLoaderWorkPtr -= alignedSize;
+                _assetLoaderWorkPtr -= alignedSize;
                 return node;
             }
         }
@@ -163,7 +163,7 @@ static uint8_t *cacheNodeFindByName(const uint8_t *name, uint32_t *outDataSize)
     const uint8_t *s1;
     const uint8_t *s2;
 
-    node = (uint8_t *)assetLoaderCacheFlag;
+    node = (uint8_t *)_assetLoaderCacheFlag;
     if (node == (uint8_t *)0)
         return (uint8_t *)0;
 
@@ -374,7 +374,7 @@ void AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
     /* Panic if size is odd */
     if (size & 1u)
     {
-        panicReasonCode = 0x2332u;
+        _panicReasonCode = 0x2332u;
         PanicHaltLoop();
         /* never returns */
     }
@@ -385,14 +385,14 @@ void AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
     size -= 48u;
 
     /* Accumulate total available space */
-    assetLoaderWorkPtr += size;
+    _assetLoaderWorkPtr += size;
 
     /* Walk linked list to find tail */
-    node = (uint8_t *)assetLoaderCacheFlag;
+    node = (uint8_t *)_assetLoaderCacheFlag;
     if (node == (uint8_t *)0)
     {
         /* First node — set cache head */
-        assetLoaderCacheFlag = (uintptr_t)region;
+        _assetLoaderCacheFlag = (uintptr_t)region;
     }
     else
     {
@@ -420,22 +420,22 @@ void AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
  * BSS is hunk-allocated with no guaranteed free space after it.
  * ================================================================ */
 /* Pre-allocated cache memory (set in _start before hardware takeover) */
-extern uint8_t *g_earlyAllocCacheMem;
-extern uint32_t g_earlyAllocCacheSize;
+extern uint8_t *_g_earlyAllocCacheMem;
+extern uint32_t _g_earlyAllocCacheSize;
 
 __attribute__((used, externally_visible))
 void AssetLoaderInitAltPathAndBanks(void)
 {
-    assetLoaderAltPathReady = 1;
-    assetLoaderCacheFlag = 0;
+    _assetLoaderAltPathReady = 1;
+    _assetLoaderCacheFlag = 0;
 
     /* Register surnameBuf as placeholder (size 0 → will be skipped inside) */
-    AssetLoaderRegisterRegion(0, surnameBuf);
+    AssetLoaderRegisterRegion(0, _surnameBuf);
 
     /* Use cache memory that was pre-allocated in _start (before hardware takeover) */
-    if (g_earlyAllocCacheMem != (uint8_t *)0 && g_earlyAllocCacheSize > 0)
+    if (_g_earlyAllocCacheMem != (uint8_t *)0 && _g_earlyAllocCacheSize > 0)
     {
-        AssetLoaderRegisterRegion(g_earlyAllocCacheSize, g_earlyAllocCacheMem);
+        AssetLoaderRegisterRegion(_g_earlyAllocCacheSize, _g_earlyAllocCacheMem);
     }
 }
 
@@ -510,7 +510,7 @@ void AssetPrecacheCore(void)
 
     InstallAndInitLoaderBootstrap();
 
-    if (assetLoaderCacheFlag == 0)
+    if (_assetLoaderCacheFlag == 0)
         return;
 
     entry = kCorePrecacheTable;
@@ -552,7 +552,7 @@ void AssetPrecacheMenuPack(void)
 {
     const uint8_t * const *entry;
 
-    if (assetLoaderCacheFlag == 0)
+    if (_assetLoaderCacheFlag == 0)
         return;
 
     entry = kMenuPrecacheTable;
@@ -618,12 +618,12 @@ int16_t PlaySong(uint8_t *name, uint8_t *dest)
 
     for (;;)
     {
-        if (assetCurrentIndex == 4)
+        if (_assetCurrentIndex == 4)
         {
             return CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
         }
 
-        if (assetLoaderCacheFlag != 0)
+        if (_assetLoaderCacheFlag != 0)
         {
             if (AssetCacheCopyByName(name, dest, (uint32_t *)0) == 0)
                 return 0;
@@ -632,7 +632,7 @@ int16_t PlaySong(uint8_t *name, uint8_t *dest)
         result = CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, name, dest, &fileSize);
         if (result == 0)
         {
-            if (assetLoaderCacheFlag != 0 && assetLoaderAltPathReady != 0)
+            if (_assetLoaderCacheFlag != 0 && _assetLoaderAltPathReady != 0)
             {
                 AssetCacheStoreFromMemory(name, dest, fileSize);
             }
@@ -640,7 +640,7 @@ int16_t PlaySong(uint8_t *name, uint8_t *dest)
         }
 
         /* Error: give up if assetCurrentIndex == 4 */
-        if (assetCurrentIndex == 4)
+        if (_assetCurrentIndex == 4)
             return result;
 
         /* Wait 50 ticks before retry */
@@ -665,10 +665,10 @@ int16_t AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
 
     for (;;)
     {
-        if (assetCurrentIndex == 4)
+        if (_assetCurrentIndex == 4)
             return CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE0, 0, name, dest);
 
-        if (assetLoaderCacheFlag != 0)
+        if (_assetLoaderCacheFlag != 0)
         {
             if (AssetCacheCopyByName(name, dest, (uint32_t *)0) == 0)
                 return 0;
@@ -679,7 +679,7 @@ int16_t AssetEnsureReadyWithRetry(uint8_t *name, uint8_t *dest)
             return 0;
 
         /* Error: give up if assetCurrentIndex == 4 */
-        if (assetCurrentIndex == 4)
+        if (_assetCurrentIndex == 4)
             return result;
 
         
@@ -709,7 +709,7 @@ int16_t LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest)
     if (result != 0)
     {
         /* Load failed */
-        if (assetCurrentIndex == 4)
+        if (_assetCurrentIndex == 4)
             return result;
 
         /* Wait 50 ticks then fall back to LoadFile */
@@ -722,7 +722,7 @@ int16_t LoadRNCToBufferNoBlit(uint8_t *name, uint8_t *dest)
     /* Check for RNC v1 magic */
     if (*(uint32_t *)dest != RNC_MAGIC_V1)
     {
-        panicReasonCode = 0xE002u;
+        _panicReasonCode = 0xE002u;
         PanicHaltLoop();
     }
 

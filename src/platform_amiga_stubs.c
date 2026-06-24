@@ -24,14 +24,14 @@
 #endif
 
 /* ---- Global panic code referenced from the C source ---------------- */
-volatile uint16_t panicReasonCode = 0;
+volatile uint16_t _panicReasonCode = 0;
 
-/* The C source declares `_panicReasonCode = &panicReasonCode` in
+/* The C source declares `_pPanicReasonCode = &panicReasonCode` in
  * main.c on the Amiga port. SDL has its own main.c which doesn't, so
  * we keep a definition here for SDL — gated to prevent a multi-def
  * link error on Amiga where main.c is authoritative. */
 #ifdef SWOS_SDL_BUILD
-volatile uint16_t *_panicReasonCode = &panicReasonCode;
+volatile uint16_t *_pPanicReasonCode = &_panicReasonCode;
 #endif
 
 /* ---- The fake "Custom chip" surface --------------------------------- */
@@ -53,8 +53,8 @@ struct Custom *Platform_GetCustomStorage(void) { return &s_custom_storage; }
  * first _Int3TimerHandler invocation lands in valid memory. */
 void Platform_RewireCustom(void)
 {
-    extern volatile struct Custom *custom;
-    custom = (volatile struct Custom *)&s_custom_storage;
+    extern volatile struct Custom *_custom;
+    _custom = (volatile struct Custom *)&s_custom_storage;
 }
 #endif
 
@@ -68,12 +68,12 @@ void Platform_RewireCustom(void)
  * paletteTable[0]. Pre-arm the sentinels here. */
 void Platform_PreArmIsrGlobals(void)
 {
-    extern volatile uint16_t fadeCommand;
-    extern volatile uint16_t fadeInitFlag;
-    extern volatile uint16_t fadeState;
-    fadeCommand  = 0x03E7u; /* FADE_SENTINEL */
-    fadeInitFlag = 0x03E7u; /* FADE_SENTINEL */
-    fadeState    = 0;       /* idle */
+    extern volatile uint16_t _fadeCommand;
+    extern volatile uint16_t _fadeInitFlag;
+    extern volatile uint16_t _fadeState;
+    _fadeCommand  = 0x03E7u; /* FADE_SENTINEL */
+    _fadeInitFlag = 0x03E7u; /* FADE_SENTINEL */
+    _fadeState    = 0;       /* idle */
 
     /* The Amiga `_start()` set these, then we skip `_start()` on SDL
      * because it pokes raw chip registers. Set the survivors here:
@@ -82,30 +82,30 @@ void Platform_PreArmIsrGlobals(void)
      *                       the Amiga bootstrap writes 0xCFD1EFE7 so
      *                       the check resolves to 0x1754.
      */
-    extern uint32_t magicValue;
-    extern uint32_t irqCookieObfuscated;
-    magicValue = 0x12345678u;
-    irqCookieObfuscated = 0xCFD1EFE7u;
+    extern uint32_t _magicValue;
+    extern uint32_t _irqCookieObfuscated;
+    _magicValue = 0x12345678u;
+    _irqCookieObfuscated = 0xCFD1EFE7u;
 
     /* paletteTable: array of 7 pointers to uint16_t[16] palettes.
      * Originally initialised in SWOS2.s; on SDL we need to set them
      * up at runtime so fade ticks have somewhere to write. Order
      * matches the Amiga layout exactly. */
-    extern void *paletteTable[];
-    extern uint8_t  menuPalette[];
-    extern uint8_t  blackPalette[];
-    extern uint8_t  gamePalette[];
-    extern uint8_t  titleScreenPalette[];
-    extern uint8_t  panicPalette[];
-    extern uint8_t  titleTextPalette[];
-    extern uint8_t  titleLogoPalette[];
-    paletteTable[0] = menuPalette;
-    paletteTable[1] = blackPalette;
-    paletteTable[2] = gamePalette;
-    paletteTable[3] = titleScreenPalette;
-    paletteTable[4] = panicPalette;
-    paletteTable[5] = titleTextPalette;
-    paletteTable[6] = titleLogoPalette;
+    extern void *_paletteTable[];
+    extern uint8_t  _menuPalette[];
+    extern uint8_t  _blackPalette[];
+    extern uint8_t  _gamePalette[];
+    extern uint8_t  _titleScreenPalette[];
+    extern uint8_t  _panicPalette[];
+    extern uint8_t  _titleTextPalette[];
+    extern uint8_t  _titleLogoPalette[];
+    _paletteTable[0] = _menuPalette;
+    _paletteTable[1] = _blackPalette;
+    _paletteTable[2] = _gamePalette;
+    _paletteTable[3] = _titleScreenPalette;
+    _paletteTable[4] = _panicPalette;
+    _paletteTable[5] = _titleTextPalette;
+    _paletteTable[6] = _titleLogoPalette;
 }
 #endif  /* SWOS_SDL_BUILD */
 
@@ -122,7 +122,7 @@ extern void mainC(void);
 /* SDL: defined here (was in SWOS2.s; SDL doesn't link SWOS2.s).
  * Amiga: defined by Resload.s, included via resload_unit.s. */
 #ifdef SWOS_SDL_BUILD
-uint16_t g_quitToDos = 0;
+uint16_t _g_quitToDos = 0;
 #else
 extern uint16_t g_quitToDos;
 #endif
@@ -133,7 +133,7 @@ void Platform_RequestQuit(void)
     if (!g_quitToDos)
         fprintf(stderr, "[autoskip] Platform_RequestQuit: g_quitToDos was 0, now setting 1\n");
 #endif
-    g_quitToDos = 1;
+    _g_quitToDos = 1;
 }
 
 /* Called from MenuProc each tick on the main thread. When a quit has
@@ -150,13 +150,13 @@ void Platform_RequestQuit(void)
  * target doesn't implement, breaking the Windows/Cygwin build.
  * Cooperative unwinding via the game's existing abort flag is
  * portable and doesn't require setjmp. */
-extern uint16_t exitMenu;
-extern uint16_t abortSelectTeams;
-extern uint16_t chooseTeamsResult;
+extern uint16_t _exitMenu;
+extern uint16_t _abortSelectTeams;
+extern uint16_t _chooseTeamsResult;
 
 void Platform_CheckQuitRequest(void)
 {
-    if (!g_quitToDos) return;
+    if (!_g_quitToDos) return;
 #if defined(SWOS_DEBUG_AUTOSKIP) && defined(SWOS_SDL_BUILD)
     static int once;
     if (!once) {
@@ -164,9 +164,9 @@ void Platform_CheckQuitRequest(void)
         fprintf(stderr, "[autoskip] Platform_CheckQuitRequest: FIRST observation that g_quitToDos=1\n");
     }
 #endif
-    exitMenu = 1;
-    abortSelectTeams = 1;
-    chooseTeamsResult = 0;
+    _exitMenu = 1;
+    _abortSelectTeams = 1;
+    _chooseTeamsResult = 0;
 }
 
 /* ---- startShim ----------------------------------------------------- */
@@ -181,8 +181,8 @@ void startShim(void)
     /* Re-point `custom` (defined in display.c with a 0xDFF000 initializer)
      * at our heap-backed stub buffer so any subsequent register pokes
      * land in valid memory. */
-    extern volatile struct Custom *custom;
-    custom = (volatile struct Custom *)&s_custom_storage;
+    extern volatile struct Custom *_custom;
+    _custom = (volatile struct Custom *)&s_custom_storage;
 
     mainC();
 }
@@ -241,7 +241,7 @@ void startShim(void)
  * On Amiga S_VBR is defined by Resload.s (included via resload_unit.s),
  * so the SDL-side stub must NOT collide with it. */
 #ifdef SWOS_SDL_BUILD
-uint32_t S_VBR = 0;
+uint32_t _S_VBR = 0;
 #endif
 
 
@@ -269,5 +269,5 @@ uint32_t S_VBR = 0;
  * budget. The cache is read by C code only; decompression targets
  * (frontbufferMaskBuffer etc.) keep their CHIP placement. */
 static uint8_t s_early_cache[EARLY_CACHE_BYTES] __attribute__((aligned(4)));
-uint8_t *g_earlyAllocCacheMem = s_early_cache;
-uint32_t g_earlyAllocCacheSize = EARLY_CACHE_BYTES;
+uint8_t *_g_earlyAllocCacheMem = s_early_cache;
+uint32_t _g_earlyAllocCacheSize = EARLY_CACHE_BYTES;

@@ -14,25 +14,25 @@
 #include "translations.h"   /* tr_ptr — localize the by-pointer memo body text */
 
 /* ---- ASM externs (globals) ---- */
-extern MenuEntry menuEntries[];
-extern uint16_t fireResetFlag;
-extern uint16_t isNationalSelector;
-extern volatile uint16_t currentMessage;
-extern uint8_t *plNameForMessage;
-extern volatile uint16_t currentGameTick;
-extern uint16_t clubBusinessActive;
+extern MenuEntry _menuEntries[];
+extern uint16_t _fireResetFlag;
+extern uint16_t _isNationalSelector;
+extern volatile uint16_t _currentMessage;
+extern uint8_t *_plNameForMessage;
+extern volatile uint16_t _currentGameTick;
+extern uint16_t _clubBusinessActive;
 extern void WaitForVSync(void);
 
 /* ---- ASM externs (data labels) ---- */
-extern uint8_t chairmanMemosMenu[];
-extern uint8_t clubBusinessMenu[];
-extern uint8_t *clubMessagesTable[];       /* array of string pointers, 2 per message */
-extern uint8_t managerSexBuffer[];
-extern uint8_t managerSurnameBuffer[];
-extern uint8_t managerNameBuffer[];
-extern uint8_t aDearAB_0[];               /* "DEAR %a %b" */
-extern uint8_t aMemoFromThePre[];         /* "MEMO FROM THE PRESIDENT" */
-extern uint8_t aThePresident[];           /* "THE PRESIDENT" */
+extern uint8_t _chairmanMemosMenu[];
+extern uint8_t _clubBusinessMenu[];
+extern uint8_t *_clubMessagesTable[];       /* array of string pointers, 2 per message */
+extern uint8_t _managerSexBuffer[];
+extern uint8_t _managerSurnameBuffer[];
+extern uint8_t _managerNameBuffer[];
+extern uint8_t _aDearAB_0[];               /* "DEAR %a %b" */
+extern uint8_t _aMemoFromThePre[];         /* "MEMO FROM THE PRESIDENT" */
+extern uint8_t _aThePresident[];           /* "THE PRESIDENT" */
 
 /* ================================================================
  * ShowChairmanMessage  (SWOS2.s line 85422)
@@ -43,7 +43,7 @@ extern uint8_t aThePresident[];           /* "THE PRESIDENT" */
 __attribute__((used, externally_visible))
 void ShowChairmanMessage(void)
 {
-    ShowMenu(chairmanMemosMenu);
+    ShowMenu(_chairmanMemosMenu);
 }
 
 /* ================================================================
@@ -56,13 +56,13 @@ void ShowChairmanMessage(void)
 __attribute__((used, externally_visible))
 void ChairmanMemosInit(void)
 {
-    fireResetFlag = 1;
+    _fireResetFlag = 1;
 
-    if (isNationalSelector) {
+    if (_isNationalSelector) {
         /* Change menu title to "MEMO FROM THE PRESIDENT" */
-        menuEntries[0].fg = (uintptr_t)aMemoFromThePre;
+        _menuEntries[0].fg = (uintptr_t)_aMemoFromThePre;
         /* Change sign-off to "THE PRESIDENT" (entry 5 = offset $118/56) */
-        menuEntries[5].fg = (uintptr_t)aThePresident;
+        _menuEntries[5].fg = (uintptr_t)_aThePresident;
     }
 
     /* Fall through to OnReturn */
@@ -80,36 +80,36 @@ __attribute__((used, externally_visible))
 void ChairmanMemosOnReturn(void)
 {
     /* Format "DEAR %a %b" into entry 1's text buffer */
-    PrintFormatted(tr_fmt(aDearAB_0), (uint8_t *)menuEntries[1].fg,
+    PrintFormatted(tr_fmt(_aDearAB_0), (uint8_t *)_menuEntries[1].fg,
                     0, 0, 0, 0, 0, 0, 0,
-                    managerSexBuffer, managerSurnameBuffer, (void *)0);
+                    _managerSexBuffer, _managerSurnameBuffer, (void *)0);
 
     /* Look up message pair from clubMessagesTable (1-based, 2 pointers per message).
      * Guard against currentMessage being 0 or out of range (38 messages max).
      * Can happen if the chairman memo menu is triggered with stale state. */
-    if (currentMessage == 0 || currentMessage > 38)
+    if (_currentMessage == 0 || _currentMessage > 38)
         return;
 
-    int16_t msgIdx = (int16_t)(currentMessage - 1) * 2;
+    int16_t msgIdx = (int16_t)(_currentMessage - 1) * 2;
 
     /* Format message line 1 into entry 2's text buffer */
-    PrintFormatted(tr_fmt(clubMessagesTable[msgIdx]),
-                    (uint8_t *)menuEntries[2].fg,
+    PrintFormatted(tr_fmt(_clubMessagesTable[msgIdx]),
+                    (uint8_t *)_menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
-                    managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
+                    _managerNameBuffer, (const uint8_t *)_plNameForMessage, (void *)0);
 
     /* Format message line 2 into entry 3's text buffer */
-    PrintFormatted(tr_fmt(clubMessagesTable[msgIdx + 1]),
-                    (uint8_t *)menuEntries[3].fg,
+    PrintFormatted(tr_fmt(_clubMessagesTable[msgIdx + 1]),
+                    (uint8_t *)_menuEntries[3].fg,
                     0, 0, 0, 0, 0, 0, 0,
-                    managerNameBuffer, (const uint8_t *)plNameForMessage, (void *)0);
+                    _managerNameBuffer, (const uint8_t *)_plNameForMessage, (void *)0);
 
     /* SDL build skips the original Amiga 100-VBlank (~2s) dwell before
      * the Continue button appears. With a series of chairman messages
      * during a season-end review, the cumulative wait was painful and
      * users have no way to short-circuit it on the original hardware
      * either — so we just show Continue immediately. */
-    menuEntries[6].isInvisible = 0;
+    _menuEntries[6].isInvisible = 0;
     DrawMenu();
 }
 
@@ -122,7 +122,7 @@ void ChairmanMemosOnReturn(void)
 __attribute__((used, externally_visible))
 void ChairmanMemosContinue(void)
 {
-    currentMessage = 0;
+    _currentMessage = 0;
     SetExitMenuFlag();
 }
 
@@ -134,6 +134,6 @@ void ChairmanMemosContinue(void)
 __attribute__((used, externally_visible))
 void ShowClubBussinesMenu(void)
 {
-    clubBusinessActive = 0;
-    ShowMenu(clubBusinessMenu);
+    _clubBusinessActive = 0;
+    ShowMenu(_clubBusinessMenu);
 }

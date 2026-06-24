@@ -5,7 +5,7 @@ See docs/MENUS.md. This is the Python bootstrap exporter described in §7a: it
 parses the 46 hand-written `Menu_Foo foo = { ... };` static initializers in
 src/menu_data.c and emits one JSON file per menu to bin/data_json/menus/, plus a
 `_symbols.json` listing every distinct callback / string / table / sprite-copy /
-buffer name the menus reference (the seed for the generated menu_symbols.c
+buffer name the menus reference (the _seed for the generated menu_symbols.c
 registry).
 
 Why a flat re-parse instead of brace-walking: the C initializers are the IDA
@@ -42,8 +42,8 @@ OUT_DIR = os.path.join(REPO, "bin", "data_json", "menus")
 # The trailing MENU_CMD_END (0) closes the entry and is handled by the walker.
 OPCODES = {
     "MENU_CMD_INVISIBLE":     ("invisible",     []),
-    "MENU_CMD_NAV":           ("nav",           [("left", "int"), ("right", "int"),
-                                                  ("up", "int"), ("down", "int")]),
+    "MENU_CMD_NAV":           ("nav",           [("_left", "int"), ("_right", "int"),
+                                                  ("_up", "int"), ("_down", "int")]),
     "MENU_CMD_BG_FUNC":       ("bg_func",       [("func", "ptr")]),
     "MENU_CMD_COLORS":        ("colors",        [("value", "colorpair")]),
     "MENU_CMD_BG_SPRITE":     ("sprite_bg",     [("index", "int")]),
@@ -115,7 +115,7 @@ def parse_ptr(tok, symbols, kind):
     """A pointer slot -> None | symbol-name str | numeric literal int.
 
     Casts ((char*)/(int8_t*)/...) and a leading '&' are stripped; dotted
-    field refs (diyCompetitionStart.base.competitionName) are kept whole and
+    field refs (_diyCompetitionStart.base.competitionName) are kept whole and
     treated as buffers. Collects discovered symbols into `symbols`."""
     t = CAST_RE.sub("", tok.strip())
     had_cast = t != tok.strip()

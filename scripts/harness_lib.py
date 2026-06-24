@@ -12,7 +12,7 @@ Layers (see docs/HARNESS.md):
                    health, SDL (native) or Amiga (FS-UAE remote) mode.
   harness_lib.py — THIS: generic primitives (read/write vars, breakpoints,
                    input injection = break+set+continue, framebuffer capture).
-  <game>_plugin  — game knowledge (symbols, menu layout, nav/fire injection).
+  <game>_plugin  — game knowledge (symbols, menu layout, nav/_fire injection).
   <game>_harness — thin CLI.
 
 Memory/register WRITES require a write-capable gdb stub. Native SDL gdb is fine;
@@ -34,7 +34,7 @@ DEFAULT_PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py"
 # inferior's per-frame timer thread starves and conts balloon to 10-120 s
 # (reads stay fast — it's the inferior frame, not command latency). Surface
 # that the MOMENT it starts, not after a 40-step stuck-out, so the operator
-# can act (verify TURBO is on; `wsl --shutdown` to reset a long-up VM).
+# can act (verify TURBO is on; `wsl --shutdown` to reset a long-_up VM).
 CONT_SLOW_WARN_S = 4.0
 
 
@@ -68,7 +68,7 @@ class GdbHarness:
 
     # ---- value reads -------------------------------------------------------
     def value(self, expr, timeout=None):
-        """`print expr` -> the right-hand side string, or None."""
+        """`print expr` -> the _right-hand side string, or None."""
         m = re.search(r"\$\d+\s*=\s*(.+)", self.cmd(f"print {expr}", timeout))
         return m.group(1).strip() if m else None
 
@@ -137,7 +137,7 @@ class GdbHarness:
     def inject(self, assignments, settle_timeout=20):
         """Apply {var: value} at the current stop, then continue one cycle.
 
-        The caller is responsible for being stopped at the right injection
+        The caller is responsible for being stopped at the _right injection
         breakpoint first (the value reaches whatever reads it before the next
         breakpoint hit). Returns the continue output."""
         for var, val in assignments.items():

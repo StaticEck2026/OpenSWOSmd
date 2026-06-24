@@ -84,11 +84,11 @@ static char* ini_find_chars_or_comment(const char* s, const char* chars)
 
 /* Similar to strncpy, but ensures dest (size bytes) is
    NUL-terminated, and doesn't pad with NULs. */
-static char* ini_strncpy0(char* dest, const char* src, size_t size)
+static char* ini_strncpy0(char* dest, const char* src, size_t _size)
 {
     /* Could use strncpy internally, but it causes gcc warnings (see issue #91) */
     size_t i;
-    for (i = 0; i < size - 1 && src[i]; i++)
+    for (i = 0; i < _size - 1 && src[i]; i++)
         dest[i] = src[i];
     dest[i] = '\0';
     return dest;

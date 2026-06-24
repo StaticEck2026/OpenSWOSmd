@@ -23,77 +23,77 @@
 /* ST_KEEPER_HOLDS_BALL == 3, ST_PENALTIES == 31, ST_STOPPED == 101 */
 
 /* ---- External asm globals ---- */
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
-extern Sprite          ballSprite;
-extern TeamGame        topTeamInGame;
-extern TeamGame        bottomTeamInGame;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
+extern Sprite          _ballSprite;
+extern TeamGame        _topTeamInGame;
+extern TeamGame        _bottomTeamInGame;
 
-extern uint16_t currentGameTick;
-extern int16_t  playingPenalties;
-extern int16_t  penalty;
-extern int16_t  cameraDirection;
-extern uint8_t  playerTurnFlags;
-extern int16_t  forceLeftTeam;
-extern int16_t  gameState;
-extern int16_t  breakCameraMode;
-extern int16_t  foulXCoordinate;
-extern int16_t  foulYCoordinate;
-extern int16_t  gameStatePl;
-extern int16_t  gameNotInProgressCounterWriteOnly;
-extern int16_t  stoppageTimerTotal;
-extern int16_t  stoppageTimerActive;
-extern int16_t  cameraXVelocity;
-extern int16_t  cameraYVelocity;
-extern int16_t  hideBall;
-extern int16_t  teamPlayingUp;
-extern int16_t  teamStarting;
-extern int16_t  penaltiesTimer;
-extern int16_t  statsTeam1Goals;
-extern int16_t  statsTeam2Goals;
+extern uint16_t _currentGameTick;
+extern int16_t  _playingPenalties;
+extern int16_t  _penalty;
+extern int16_t  _cameraDirection;
+extern uint8_t  _playerTurnFlags;
+extern int16_t  _forceLeftTeam;
+extern int16_t  _gameState;
+extern int16_t  _breakCameraMode;
+extern int16_t  _foulXCoordinate;
+extern int16_t  _foulYCoordinate;
+extern int16_t  _gameStatePl;
+extern int16_t  _gameNotInProgressCounterWriteOnly;
+extern int16_t  _stoppageTimerTotal;
+extern int16_t  _stoppageTimerActive;
+extern int16_t  _cameraXVelocity;
+extern int16_t  _cameraYVelocity;
+extern int16_t  _hideBall;
+extern int16_t  _teamPlayingUp;
+extern int16_t  _teamStarting;
+extern int16_t  _penaltiesTimer;
+extern int16_t  _statsTeam1Goals;
+extern int16_t  _statsTeam2Goals;
 
-extern Sprite           *lastPlayerPlayed;
-extern TeamGeneralInfo  *lastTeamPlayed;
-extern Sprite           *lastPlayerBeforeGoalkeeper;
-extern TeamGeneralInfo  *lastTeamScored;
-extern TeamGeneralInfo  *lastTeamPlayedBeforeBreak;
-extern TeamGame         *winningTeamPtr;
-extern Sprite           *penaltyShooterSprite;
+extern Sprite           *_lastPlayerPlayed;
+extern TeamGeneralInfo  *_lastTeamPlayed;
+extern Sprite           *_lastPlayerBeforeGoalkeeper;
+extern TeamGeneralInfo  *_lastTeamScored;
+extern TeamGeneralInfo  *_lastTeamPlayedBeforeBreak;
+extern TeamGame         *_winningTeamPtr;
+extern Sprite           *_penaltyShooterSprite;
 
-extern int16_t  team1PenaltyGoals;
-extern int16_t  team2PenaltyGoals;
-extern int16_t  team1PenaltyAttempts;
-extern int16_t  team2PenaltyAttempts;
-extern int16_t  savedTeam1Goals;
-extern int16_t  savedTeam2Goals;
-extern int16_t  team1PenaltyShooterIndex;
-extern int16_t  team2PenaltyShooterIndex;
+extern int16_t  _team1PenaltyGoals;
+extern int16_t  _team2PenaltyGoals;
+extern int16_t  _team1PenaltyAttempts;
+extern int16_t  _team2PenaltyAttempts;
+extern int16_t  _savedTeam1Goals;
+extern int16_t  _savedTeam2Goals;
+extern int16_t  _team1PenaltyShooterIndex;
+extern int16_t  _team2PenaltyShooterIndex;
 
-extern int16_t  ballDefensiveX;
-extern int16_t  goalkeeperDiveAttemptCount;
+extern int16_t  _ballDefensiveX;
+extern int16_t  _goalkeeperDiveAttemptCount;
 
-extern int16_t  kDefaultDestinations[16];
+extern int16_t  _kDefaultDestinations[16];
 
-extern int16_t  kGoalkeeperNearJumpSpeed;
-extern int16_t  kGoalkeeperFarJumpSpeed;
-extern int16_t  kGoalkeeperFarJumpSlowerSpeed;
-extern int16_t  ballNotHighZ;
+extern int16_t  _kGoalkeeperNearJumpSpeed;
+extern int16_t  _kGoalkeeperFarJumpSpeed;
+extern int16_t  _kGoalkeeperFarJumpSlowerSpeed;
+extern int16_t  _ballNotHighZ;
 
 /* Animation tables */
-extern AnimTable leftGoalieJumpingLowAnimTable;
-extern AnimTable rightGoalieJumpingLowAnimTable;
-extern AnimTable leftGoalieJumpingHighAnimTable;
-extern AnimTable rightGoalieJumpingHighAnimTable;
+extern AnimTable _leftGoalieJumpingLowAnimTable;
+extern AnimTable _rightGoalieJumpingLowAnimTable;
+extern AnimTable _leftGoalieJumpingHighAnimTable;
+extern AnimTable _rightGoalieJumpingHighAnimTable;
 
 /* Data tables */
-extern int16_t  kKeeperPenaltySaveDistanceFar;
-extern int16_t  kKeeperPenaltySaveDistanceNear;
-extern int16_t  kKeeperSaveDistance;
-extern int32_t  kGoalkeeperDiveDeltas[8];
-extern int16_t  kGoalkeeperStrongDeflectBallSpeed;
-extern int16_t  kGoalkeeperMediumDeflectBallSpeed;
-extern int16_t  kGoalkeeperWeakDeflectBallSpeed;
-extern int32_t  kGoalkeeperDeflectDeltaZ;
+extern int16_t  _kKeeperPenaltySaveDistanceFar;
+extern int16_t  _kKeeperPenaltySaveDistanceNear;
+extern int16_t  _kKeeperSaveDistance;
+extern int32_t  _kGoalkeeperDiveDeltas[8];
+extern int16_t  _kGoalkeeperStrongDeflectBallSpeed;
+extern int16_t  _kGoalkeeperMediumDeflectBallSpeed;
+extern int16_t  _kGoalkeeperWeakDeflectBallSpeed;
+extern int32_t  _kGoalkeeperDeflectDeltaZ;
 
 /* Functions from other modules */
 extern uint16_t Rand(void);
@@ -168,7 +168,7 @@ ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 
     /* Compute signed distance ball.Y - keeper.Y, negate for bottom team */
     dy = ball->y.s.i - keeper->y.s.i;
-    if (team != &topTeamData)
+    if (team != &_topTeamData)
         dy = -dy;
 
     /* Ball in front of keeper (dy < 0): if within 10 pixels, dive */
@@ -183,11 +183,11 @@ ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
         return 0;       /* unreachable but mirrors asm bmi branch */
 
     /* Penalty distance gate */
-    if (playingPenalties || penalty) {
-        threshold = kKeeperPenaltySaveDistanceFar;
+    if (_playingPenalties || _penalty) {
+        threshold = _kKeeperPenaltySaveDistanceFar;
         randVal = (int16_t)Rand();
         if (randVal & 0x18) {
-            threshold = kKeeperPenaltySaveDistanceNear;
+            threshold = _kKeeperPenaltySaveDistanceNear;
         }
         if (dy > threshold)
             return 0;
@@ -195,7 +195,7 @@ ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     }
 
     /* Open play distance gate */
-    threshold = kKeeperSaveDistance;
+    threshold = _kKeeperSaveDistance;
     if (dy > threshold)
         return 0;
 
@@ -210,7 +210,7 @@ ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     }
 
     /* Compute frames for keeper to reach ballDefensiveX */
-    dx = ballDefensiveX - keeper->x.s.i;
+    dx = _ballDefensiveX - keeper->x.s.i;
     if (dx < 0) dx = -dx;
 
     framesX = getFramesNeededToCoverDistance(keeper->deltaX.raw, dx);
@@ -222,15 +222,15 @@ ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
         return 0;
 
     /* Evaluate dive using goalkeeper skill from shot chance table */
-    dx = ballDefensiveX - keeper->x.s.i;
+    dx = _ballDefensiveX - keeper->x.s.i;
     if (dx < 0) dx = -dx;
 
     shotTable = team->shotChanceTable;
     /* tick & 0x3C → 0,4,8,...,60; >> 2 → 0,1,2,...,15 word index into skill index table */
-    skillIndex = shotTable->index[((uint16_t)currentGameTick & 0x3C) >> 2];
+    skillIndex = shotTable->index[((uint16_t)_currentGameTick & 0x3C) >> 2];
 
-    diveDelta = kGoalkeeperDiveDeltas[skillIndex];
-    goalkeeperDiveAttemptCount++;
+    diveDelta = _kGoalkeeperDiveDeltas[skillIndex];
+    _goalkeeperDiveAttemptCount++;
 
     framesDive = getFramesNeededToCoverDistance(diveDelta, dx);
     if (framesDive == 0)
@@ -264,43 +264,43 @@ GoalkeeperDeflectedBall(Sprite *ball, TeamGeneralInfo *team)
 
     /* Pick base direction: bottom team = index 0, top team = index 4 */
     baseDir = 0;
-    if (team != &bottomTeamData)
+    if (team != &_bottomTeamData)
         baseDir = 4;
 
     /* kDefaultDestinations: 8 pairs of (dx, dy) */
-    destX = ball->x.s.i + kDefaultDestinations[baseDir * 2];
+    destX = ball->x.s.i + _kDefaultDestinations[baseDir * 2];
     ball->destX = destX;
-    destY = ball->y.s.i + kDefaultDestinations[baseDir * 2 + 1];
+    destY = ball->y.s.i + _kDefaultDestinations[baseDir * 2 + 1];
     ball->destY = destY;
 
     /* Random X scatter: (tick & 0x1F) * 32 - 512 */
-    scatter = (int16_t)(((uint16_t)currentGameTick & 0x1F) << 5) - 512;
+    scatter = (int16_t)(((uint16_t)_currentGameTick & 0x1F) << 5) - 512;
     ball->destX = (int16_t)(ball->destX + scatter);
 
     /* Pick deflect speed based on goalkeeper skill */
     shotTable = team->shotChanceTable;
-    d1 = (int16_t)(((uint16_t)currentGameTick & 0x3C) >> 2);
+    d1 = (int16_t)(((uint16_t)_currentGameTick & 0x3C) >> 2);
     d1 -= shotTable->field_34;
     if (d1 < 0) {
-        speed = kGoalkeeperStrongDeflectBallSpeed;
+        speed = _kGoalkeeperStrongDeflectBallSpeed;
     } else {
         d1 -= shotTable->field_36;
         if (d1 < 0) {
-            speed = kGoalkeeperMediumDeflectBallSpeed;
+            speed = _kGoalkeeperMediumDeflectBallSpeed;
         } else {
-            speed = kGoalkeeperWeakDeflectBallSpeed;
+            speed = _kGoalkeeperWeakDeflectBallSpeed;
         }
     }
 
     /* Add random speed variation: (tick & 0x1FF) - 256 + speed */
     {
-        int16_t randSpeed = (int16_t)((uint16_t)currentGameTick & 0x1FF) - 256;
+        int16_t randSpeed = (int16_t)((uint16_t)_currentGameTick & 0x1FF) - 256;
         ball->speed = (int16_t)(randSpeed + speed);
     }
 
     /* Compute delta Z with random scatter */
-    deltaZ = kGoalkeeperDeflectDeltaZ;
-    randZ = (int32_t)((uint32_t)currentGameTick & 0x7F) << 8;
+    deltaZ = _kGoalkeeperDeflectDeltaZ;
+    randZ = (int32_t)((uint32_t)_currentGameTick & 0x7F) << 8;
     randZ -= 16384;
     deltaZ += randZ;
     ball->deltaZ.raw = deltaZ;
@@ -323,60 +323,60 @@ NextPenalty(void)
     int16_t totalAttempts;
     int16_t *shooterIdx;
 
-    totalAttempts = team1PenaltyAttempts + team2PenaltyAttempts;
+    totalAttempts = _team1PenaltyAttempts + _team2PenaltyAttempts;
 
     if (totalAttempts >= 10) {
         /* After 10 total attempts, check if both teams have taken equal */
-        if (team1PenaltyAttempts != team2PenaltyAttempts)
+        if (_team1PenaltyAttempts != _team2PenaltyAttempts)
             goto setup_next;
         /* Equal attempts: end if goals differ */
-        if (team1PenaltyGoals != team2PenaltyGoals)
+        if (_team1PenaltyGoals != _team2PenaltyGoals)
             goto end_shootout;
         goto setup_next;
     }
 
     /* Before 10 attempts: check if either team can't catch up */
     {
-        int16_t team1Remaining = 5 - team1PenaltyAttempts + team1PenaltyGoals;
-        if ((uint16_t)team1Remaining < (uint16_t)team2PenaltyGoals)
+        int16_t team1Remaining = 5 - _team1PenaltyAttempts + _team1PenaltyGoals;
+        if ((uint16_t)team1Remaining < (uint16_t)_team2PenaltyGoals)
             goto end_shootout;
 
-        int16_t team2Remaining = 5 - team2PenaltyAttempts + team2PenaltyGoals;
-        if ((uint16_t)team2Remaining < (uint16_t)team1PenaltyGoals)
+        int16_t team2Remaining = 5 - _team2PenaltyAttempts + _team2PenaltyGoals;
+        if ((uint16_t)team2Remaining < (uint16_t)_team1PenaltyGoals)
             goto end_shootout;
     }
 
 setup_next:
-    ballSprite.z.s.i = 0;
+    _ballSprite.z.s.i = 0;
 
     /* Toggle teamPlayingUp: neg then add 3 (flips 1↔2) */
-    teamPlayingUp = -teamPlayingUp + 3;
-    teamStarting  = -teamStarting + 3;
+    _teamPlayingUp = -_teamPlayingUp + 3;
+    _teamStarting  = -_teamStarting + 3;
 
-    hideBall = 0;
+    _hideBall = 0;
     InitTeamsData();
 
-    gameState = ST_PENALTIES;
-    breakCameraMode = -1;
-    cameraDirection = 0;          /* north */
-    playerTurnFlags = 0x83;       /* NW, N, NE */
-    foulXCoordinate = 336;        /* upper white spot */
-    foulYCoordinate = 187;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
+    _gameState = ST_PENALTIES;
+    _breakCameraMode = -1;
+    _cameraDirection = 0;          /* north */
+    _playerTurnFlags = 0x83;       /* NW, N, NE */
+    _foulXCoordinate = 336;        /* upper white spot */
+    _foulYCoordinate = 187;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
 
-    lastTeamPlayedBeforeBreak = &bottomTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _lastTeamPlayedBeforeBreak = &_bottomTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
-    penaltiesTimer = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
+    _penaltiesTimer = 0;
 
     /* Pick shooter index: decrement, wrap 0→10 */
-    shooterIdx = &team1PenaltyShooterIndex;
-    if (bottomTeamData.teamNumber != 1)
-        shooterIdx = &team2PenaltyShooterIndex;
+    shooterIdx = &_team1PenaltyShooterIndex;
+    if (_bottomTeamData.teamNumber != 1)
+        shooterIdx = &_team2PenaltyShooterIndex;
 
     (*shooterIdx)--;
     if (*shooterIdx == 0)
@@ -385,26 +385,26 @@ setup_next:
     /* Load penalty shooter sprite pointer */
     {
         int16_t idx = *shooterIdx;
-        penaltyShooterSprite = bottomTeamData.spritesTable[idx];
+        _penaltyShooterSprite = _bottomTeamData.spritesTable[idx];
     }
 
     /* Increment attempt counter for the appropriate team */
-    if (bottomTeamData.teamNumber == 1)
-        team1PenaltyAttempts++;
+    if (_bottomTeamData.teamNumber == 1)
+        _team1PenaltyAttempts++;
     else
-        team2PenaltyAttempts++;
+        _team2PenaltyAttempts++;
     return;
 
 end_shootout:
-    playingPenalties = 0;
-    statsTeam1Goals = savedTeam1Goals;
-    statsTeam2Goals = savedTeam2Goals;
+    _playingPenalties = 0;
+    _statsTeam1Goals = _savedTeam1Goals;
+    _statsTeam2Goals = _savedTeam2Goals;
 
     /* Determine winner */
-    if (team1PenaltyGoals > team2PenaltyGoals)
-        winningTeamPtr = &topTeamInGame;
+    if (_team1PenaltyGoals > _team2PenaltyGoals)
+        _winningTeamPtr = &_topTeamInGame;
     else
-        winningTeamPtr = &bottomTeamInGame;
+        _winningTeamPtr = &_bottomTeamInGame;
 
     EndOfGame();
 }
@@ -421,36 +421,36 @@ end_shootout:
 void __attribute__((used, externally_visible))
 GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 {
-    lastPlayerBeforeGoalkeeper = lastPlayerPlayed;
-    lastTeamScored = lastTeamPlayed;
+    _lastPlayerBeforeGoalkeeper = _lastPlayerPlayed;
+    _lastTeamScored = _lastTeamPlayed;
 
     ball->speed = 0;
 
-    if (team == &bottomTeamData) {
-        cameraDirection = 0;         /* north */
-        playerTurnFlags = 0xC7;      /* left/right/up combo */
+    if (team == &_bottomTeamData) {
+        _cameraDirection = 0;         /* north */
+        _playerTurnFlags = 0xC7;      /* left/right/up combo */
     } else {
-        cameraDirection = 4;         /* south */
-        playerTurnFlags = 0x7C;      /* left/right/down combo */
+        _cameraDirection = 4;         /* south */
+        _playerTurnFlags = 0x7C;      /* left/right/down combo */
     }
 
     /* If no human player, mask off left+right from turn flags */
     if (team->playerNumber == 0)
-        playerTurnFlags &= 0xBB;     /* clear bits for left and right */
+        _playerTurnFlags &= 0xBB;     /* clear bits for left and right */
 
     /* forceLeftTeam override */
-    if (forceLeftTeam == 1)
-        team = &topTeamData;
+    if (_forceLeftTeam == 1)
+        team = &_topTeamData;
 
-    gameState = ST_KEEPER_HOLDS_BALL;
-    breakCameraMode = -1;
-    foulXCoordinate = ballSprite.x.s.i;
-    foulYCoordinate = ballSprite.y.s.i;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    lastTeamPlayedBeforeBreak = team;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _gameState = ST_KEEPER_HOLDS_BALL;
+    _breakCameraMode = -1;
+    _foulXCoordinate = _ballSprite.x.s.i;
+    _foulYCoordinate = _ballSprite.y.s.i;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _lastTeamPlayedBeforeBreak = team;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
 
     /* If keeper is not currently diving, give control to keeper */
@@ -461,12 +461,12 @@ GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 
     team->controlledPlayer = keeper;
     team->ballOutOfPlayOrKeeper = 1;
-    keeper->direction = (int16_t)cameraDirection;
+    keeper->direction = (int16_t)_cameraDirection;
     team->goaliePlayingOrOut = 1;
     UpdatePlayerWithBall((uint8_t *)keeper);
 
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
 }
 
 
@@ -480,22 +480,22 @@ GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 void __attribute__((used, externally_visible))
 CheckIfGoalkeeperClaimedTheBall(void)
 {
-    if (gameState == ST_KEEPER_HOLDS_BALL) {
-        TeamGeneralInfo *team = lastTeamPlayedBeforeBreak;
+    if (_gameState == ST_KEEPER_HOLDS_BALL) {
+        TeamGeneralInfo *team = _lastTeamPlayedBeforeBreak;
         Sprite *keeper = team->spritesTable[0];  /* first sprite = goalkeeper */
-        GoalkeeperClaimedTheBall(keeper, &ballSprite, team);
+        GoalkeeperClaimedTheBall(keeper, &_ballSprite, team);
         return;
     }
 
     /* enter_break_idle_state */
-    breakCameraMode = -1;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _breakCameraMode = -1;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
 }
 
 
@@ -515,14 +515,14 @@ GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
 {
     /* Set speed based on ball distance and speed variant */
     if (keeper->ballDistance <= 128) {
-        keeper->speed = kGoalkeeperNearJumpSpeed;
+        keeper->speed = _kGoalkeeperNearJumpSpeed;
     } else {
-        keeper->speed = kGoalkeeperFarJumpSpeed;
+        keeper->speed = _kGoalkeeperFarJumpSpeed;
         if (speedVariant != 0) {
-            keeper->speed = kGoalkeeperFarJumpSlowerSpeed;
+            keeper->speed = _kGoalkeeperFarJumpSlowerSpeed;
             if (speedVariant != 1) {
-                int16_t spd = (int16_t)(currentGameTick & 0xFF);
-                spd += kGoalkeeperNearJumpSpeed;
+                int16_t spd = (int16_t)(_currentGameTick & 0xFF);
+                spd += _kGoalkeeperNearJumpSpeed;
                 keeper->speed = spd;
             }
         }
@@ -533,20 +533,20 @@ GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
     team->goalkeeperDivingRight = 0;
 
     /* Choose dive animation based on ballNotHighZ */
-    if (ballNotHighZ > 5) {
+    if (_ballNotHighZ > 5) {
         /* High dive */
         keeper->playerState = (uint8_t)PL_GOALIE_DIVING_HIGH;
-        if (team == &bottomTeamData)
-            SetPlayerAnimationTable(&rightGoalieJumpingHighAnimTable, keeper);
+        if (team == &_bottomTeamData)
+            SetPlayerAnimationTable(&_rightGoalieJumpingHighAnimTable, keeper);
         else
-            SetPlayerAnimationTable(&leftGoalieJumpingHighAnimTable, keeper);
+            SetPlayerAnimationTable(&_leftGoalieJumpingHighAnimTable, keeper);
     } else {
         /* Low dive */
         keeper->playerState = (uint8_t)PL_GOALIE_DIVING_LOW;
-        if (team == &bottomTeamData)
-            SetPlayerAnimationTable(&rightGoalieJumpingLowAnimTable, keeper);
+        if (team == &_bottomTeamData)
+            SetPlayerAnimationTable(&_rightGoalieJumpingLowAnimTable, keeper);
         else
-            SetPlayerAnimationTable(&leftGoalieJumpingLowAnimTable, keeper);
+            SetPlayerAnimationTable(&_leftGoalieJumpingLowAnimTable, keeper);
     }
 
     /* Set downtime and controlled player direction */
@@ -555,6 +555,6 @@ GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
 
     /* Set destination from kDefaultDestinations using destDir */
     int16_t destIdx = destDir * 2;
-    keeper->destX = keeper->x.s.i + kDefaultDestinations[destIdx];
-    keeper->destY = keeper->y.s.i + kDefaultDestinations[destIdx + 1];
+    keeper->destX = keeper->x.s.i + _kDefaultDestinations[destIdx];
+    keeper->destY = keeper->y.s.i + _kDefaultDestinations[destIdx + 1];
 }

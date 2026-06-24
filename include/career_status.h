@@ -112,4 +112,4 @@ void UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team1
 /* --- Career stats update after match (Chunk 189) --- */
 void Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
                                     uint16_t packedGoals, uint16_t aggregate,
-                                    uint16_t penalty, uint16_t flags);
+                                    uint16_t _penalty, uint16_t flags);

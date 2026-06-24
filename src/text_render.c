@@ -11,11 +11,11 @@
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t *spriteGraphicsPtr;
-extern volatile uintptr_t frontbufferBasePtr;
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern volatile uint16_t panicReasonCode;
+extern uint8_t *_spriteGraphicsPtr;
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern volatile uint16_t _panicReasonCode;
 
 extern void PanicHaltLoop(void) __attribute__((noreturn));
 
@@ -23,11 +23,11 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 /* ---- Helper: wait for blitter idle ---- */
 static inline __attribute__((always_inline)) void waitBlit(void)
 {
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 /* ================================================================
@@ -60,12 +60,12 @@ static inline __attribute__((always_inline)) void waitBlit(void)
 static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
                                uint16_t color)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[sprIdx];
     if (!spr) return;
 
     const uint8_t *data = (const uint8_t *)(uintptr_t)spr->sprData;
-    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr + g_menu_draw_x_offset;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)_frontbufferBasePtr + _g_menu_draw_x_offset;
     if (!data || !dstBase) return;
 
     int16_t glyphW = spr->pixWidth;
@@ -81,7 +81,7 @@ static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
 
         for (int16_t px = 0; px < glyphW; px++) {
             int16_t dx = dstX + px;
-            if (dx < 0 || dx >= g_screen_width) continue;
+            if (dx < 0 || dx >= _g_screen_width) continue;
 
             uint8_t src = srcRow[px];
             uint8_t bodyBit   = (uint8_t)((src >> 1) & 1u);
@@ -302,7 +302,7 @@ uint16_t GetTextWidth(uint8_t *text, uint8_t *charsTable)
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
     uint16_t *convTable = (uint16_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
 
     uint16_t width = 0;
     uint8_t ch;
@@ -343,7 +343,7 @@ uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
     uint16_t charSpacing = (uint16_t)ct->charSpacing;
     uint16_t *convTable = (uint16_t *)(ct + 1);
     uint16_t spaceWidth = (uint16_t)ct->spaceWidth;
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
 
     int16_t curX = (int16_t)x;
     int16_t nextX = curX;

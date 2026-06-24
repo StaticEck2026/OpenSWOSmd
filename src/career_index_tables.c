@@ -34,14 +34,14 @@
 #include "swos_types.h"
 #include "swos_platform.h"
 
-extern uint8_t  teamBudgetRankTable[128];
-extern uint8_t  careerLastMatchIndexByCompetitionSlot[162];
-extern uint16_t seasonSquadTeamNumbers[24];
+extern uint8_t  _teamBudgetRankTable[128];
+extern uint8_t  _careerLastMatchIndexByCompetitionSlot[162];
+extern uint16_t _seasonSquadTeamNumbers[24];
 
-_Static_assert(sizeof(teamBudgetRankTable) == 128, "teamBudgetRankTable 128 B");
-_Static_assert(sizeof(careerLastMatchIndexByCompetitionSlot) == 162,
+_Static_assert(sizeof(_teamBudgetRankTable) == 128, "teamBudgetRankTable 128 B");
+_Static_assert(sizeof(_careerLastMatchIndexByCompetitionSlot) == 162,
                "careerLastMatchIndexByCompetitionSlot 162 B");
-_Static_assert(sizeof(seasonSquadTeamNumbers) == 48, "seasonSquadTeamNumbers 48 B");
+_Static_assert(sizeof(_seasonSquadTeamNumbers) == 48, "seasonSquadTeamNumbers 48 B");
 
 __asm__(
 #if defined(__APPLE__)
@@ -50,14 +50,14 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "teamBudgetRankTable\n"
-    _ASM_PFX "teamBudgetRankTable:\n"
+    ".globl " _ASM_PFX "_teamBudgetRankTable\n"
+    _ASM_PFX "_teamBudgetRankTable:\n"
     ".skip 128\n"
-    ".globl " _ASM_PFX "careerLastMatchIndexByCompetitionSlot\n"
-    _ASM_PFX "careerLastMatchIndexByCompetitionSlot:\n"
+    ".globl " _ASM_PFX "_careerLastMatchIndexByCompetitionSlot\n"
+    _ASM_PFX "_careerLastMatchIndexByCompetitionSlot:\n"
     ".skip 162\n"
-    ".globl " _ASM_PFX "seasonSquadTeamNumbers\n"
-    _ASM_PFX "seasonSquadTeamNumbers:\n"
+    ".globl " _ASM_PFX "_seasonSquadTeamNumbers\n"
+    _ASM_PFX "_seasonSquadTeamNumbers:\n"
     ".skip 48\n"
     ".text\n"
 );

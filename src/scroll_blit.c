@@ -46,16 +46,16 @@
 #endif
 
 /* ---- External globals ---- */
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern int16_t  oldCameraX;
-extern int16_t  oldCameraY;
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern uint16_t cameraCoordinatesValid;
-extern volatile uintptr_t frontbufferBasePtr;
-extern uint8_t  frontbufferMaskBuffer[];
-extern uint8_t  pitchDatBuffer[];
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern int16_t  _oldCameraX;
+extern int16_t  _oldCameraY;
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern uint16_t _cameraCoordinatesValid;
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint8_t  _frontbufferMaskBuffer[];
+extern uint8_t  _pitchDatBuffer[];
 
 /* ---- Scroll-blit-specific constants ---- */
 #define SCROLL_RIGHT_EDGE_X         335
@@ -70,11 +70,11 @@ static uint16_t maskBlitPendingBytesB;
 /* ---- Wait for blitter idle ---- */
 static inline __attribute__((always_inline)) void waitBlit(void)
 {
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 /* ================================================================

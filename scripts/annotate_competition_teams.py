@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Annotate the TeamId seed lists in src/competition_data.c.
+"""Annotate the TeamId _seed lists in src/competition_data.c.
 
 For every CompetitionCup / CompetitionTournament `teamSeedList` (the LAST aggregate of
 each initializer), rewrite each {country, ordinal} pair so the country is its
@@ -13,7 +13,7 @@ number, so the change is byte-identical to the compiler — only readability
 changes.  Scoped structurally to the last brace group, so Round records, the
 9-int Competition base, roundRuleFlags and the Playoffs struct are never touched.
 
-    annotate_competition_teams.py            # dry-run: summary + euroCup preview
+    annotate_competition_teams.py            # dry-run: summary + _euroCup preview
     annotate_competition_teams.py --apply     # rewrite the file in place
 """
 import argparse
@@ -111,12 +111,12 @@ def main():
 
     src = open(SRC).read()
     out, n_lists, n_pairs = process(src)
-    print("seed lists rewritten: %d   team-id pairs annotated: %d" % (n_lists, n_pairs))
+    print("_seed lists rewritten: %d   team-id pairs annotated: %d" % (n_lists, n_pairs))
 
-    # preview the euroCup seed list
-    m = re.search(r"CompetitionTournament euroCup =.*?\n\};", out, re.S)
+    # preview the _euroCup _seed list
+    m = re.search(r"CompetitionTournament _euroCup =.*?\n\};", out, re.S)
     if m:
-        print("\n--- euroCup (after) ---")
+        print("\n--- _euroCup (after) ---")
         print(m.group(0))
 
     if args.apply:

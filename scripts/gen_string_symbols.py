@@ -6,7 +6,7 @@ translations.c joins this (name -> &symbol) with translations/<lang>.json
 (name -> text) to build an ADDRESS -> translated-text map, so tr_ptr(&aSymbol)
 returns the localized text. That lets the renderer localize strings it only sees
 as a POINTER — e.g. the menu string_table option values (entries[] hold
-(void*)a3Mins …) — with no per-call-site change and NO length limit (the pointer
+(void*)_a3Mins …) — with no per-call-site change and NO length limit (the pointer
 is swapped for a pool string of any length).
 
 Mirrors scripts/export_translations.py's scan. Committed (like menu_symbols.c),
@@ -36,8 +36,8 @@ def main():
          " * Address registry of every compiled UI string; see translations.c. */",
          "#ifndef STRING_SYMBOLS_H", "#define STRING_SYMBOLS_H", "",
          "typedef struct { const char *name; void *addr; } StringSymbol;",
-         "extern const StringSymbol stringSymbols[];",
-         "extern const int          stringSymbolsCount;", "",
+         "extern const StringSymbol _stringSymbols[];",
+         "extern const int          _stringSymbolsCount;", "",
          "#endif /* STRING_SYMBOLS_H */", ""]
     open(os.path.join(REPO, "include", "string_symbols.h"), "w").write("\n".join(h))
 
@@ -50,11 +50,11 @@ def main():
     for i in range(0, len(ext), 3):
         c.append("".join("%-46s" % e for e in ext[i:i + 3]).rstrip())
     c.append("")
-    c.append("const StringSymbol stringSymbols[] = {")
+    c.append("const StringSymbol _stringSymbols[] = {")
     for n in names:
         c.append('    { "%s", (void *)%s },' % (n, n))
     c.append("};")
-    c.append("const int stringSymbolsCount = (int)(sizeof stringSymbols / sizeof stringSymbols[0]);")
+    c.append("const int _stringSymbolsCount = (int)(sizeof _stringSymbols / sizeof _stringSymbols[0]);")
     c.append("")
     open(os.path.join(REPO, "src", "string_symbols.c"), "w").write("\n".join(c))
     print("wrote src/string_symbols.c + .h (%d string symbols)" % len(names))

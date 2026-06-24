@@ -31,10 +31,10 @@
 #include "swos_platform.h"
 #include "game_types.h"     /* MarketPlayer */
 
-extern MarketPlayer careerForeignMarketPlayers[432];
+extern MarketPlayer _careerForeignMarketPlayers[432];
 
 _Static_assert(sizeof(MarketPlayer) == 42, "MarketPlayer must stay 42 bytes");
-_Static_assert(sizeof(careerForeignMarketPlayers) == 18144,
+_Static_assert(sizeof(_careerForeignMarketPlayers) == 18144,
                "careerForeignMarketPlayers must stay 432*42 = 18144 bytes "
                "(named 352 + unnamed 80-entry tail, one pool)");
 
@@ -45,8 +45,8 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "careerForeignMarketPlayers\n"
-    _ASM_PFX "careerForeignMarketPlayers:\n"
+    ".globl " _ASM_PFX "_careerForeignMarketPlayers\n"
+    _ASM_PFX "_careerForeignMarketPlayers:\n"
     ".skip 18144\n"     /* 432 * 42 */
     ".text\n"
 );

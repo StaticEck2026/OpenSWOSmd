@@ -9,92 +9,92 @@
 #define SPR_BALL_SHADOW             1069
 
 /* ---- External globals (asm data) ---- */
-extern Sprite ballSprite;               /* 110-byte sprite */
-extern Sprite ballShadowSprite;         /* 110-byte sprite */
-extern TeamGeneralInfo topTeamData;     /* TeamGeneralInfo */
-extern TeamGeneralInfo bottomTeamData;  /* TeamGeneralInfo */
-extern Sprite goalie1Sprite;            /* 110-byte sprite */
-extern Sprite goalie2Sprite;            /* 110-byte sprite */
+extern Sprite _ballSprite;               /* 110-byte sprite */
+extern Sprite _ballShadowSprite;         /* 110-byte sprite */
+extern TeamGeneralInfo _topTeamData;     /* TeamGeneralInfo */
+extern TeamGeneralInfo _bottomTeamData;  /* TeamGeneralInfo */
+extern Sprite _goalie1Sprite;            /* 110-byte sprite */
+extern Sprite _goalie2Sprite;            /* 110-byte sprite */
 
 /* Storage is uint16_t [N] in swos_amiga_data_imports.c, but the
  * frame-table walker reads the entries as int16_t (the -1 terminator
  * needs sign semantics). Re-declared here with the matching type so
  * `(int16_t *)ballMovingFrameIndices` decays the array to a pointer
  * correctly rather than going through `&scalar` indirection. */
-extern int16_t ballStaticFrameIndices[];
-extern int16_t ballMovingFrameIndices[];
+extern int16_t _ballStaticFrameIndices[];
+extern int16_t _ballMovingFrameIndices[];
 
-extern int16_t  kBallGroundConstant;
-extern int16_t  kBallAirConstant;
-extern int32_t  kGravityConstant;
-extern uint16_t ballSpeedBounceFactor;
-extern uint16_t ballBounceFactor;
-extern int16_t  pitchBallSpeedFactor;
-extern uint16_t writeOnlyVar04;
+extern int16_t  _kBallGroundConstant;
+extern int16_t  _kBallAirConstant;
+extern int32_t  _kGravityConstant;
+extern uint16_t _ballSpeedBounceFactor;
+extern uint16_t _ballBounceFactor;
+extern int16_t  _pitchBallSpeedFactor;
+extern uint16_t _writeOnlyVar04;
 
-extern int16_t  goalkeeperDiveBallHeights[];  /* 28 entries */
-extern int16_t  kGoalKeeperClaimingBallHeight[];  /* 7 entries */
+extern int16_t  _goalkeeperDiveBallHeights[];  /* 28 entries */
+extern int16_t  _kGoalKeeperClaimingBallHeight[];  /* 7 entries */
 
-extern uint16_t hideBall;
-extern uint16_t gameState;
-extern uint16_t gameStatePl;
-extern uint16_t substituteInProgress;
-extern uintptr_t teamThatSubstitutes;     /* TeamGeneralInfo*-shaped pointer; retyped uintptr_t for 64-bit. */
-extern TeamGeneralInfo *lastTeamPlayedBeforeBreak; /* pointer to team */
+extern uint16_t _hideBall;
+extern uint16_t _gameState;
+extern uint16_t _gameStatePl;
+extern uint16_t _substituteInProgress;
+extern uintptr_t _teamThatSubstitutes;     /* TeamGeneralInfo*-shaped pointer; retyped uintptr_t for 64-bit. */
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak; /* pointer to team */
 
-extern int16_t  foulXCoordinate;
-extern int16_t  foulYCoordinate;
+extern int16_t  _foulXCoordinate;
+extern int16_t  _foulYCoordinate;
 
-extern int16_t  ballNextX;
-extern int16_t  ballNextY;
+extern int16_t  _ballNextX;
+extern int16_t  _ballNextY;
 
-extern uint16_t currentGameTick;
+extern uint16_t _currentGameTick;
 
-extern uint16_t injuriesForever;
+extern uint16_t _injuriesForever;
 
-extern uint16_t panicReasonCode;
+extern uint16_t _panicReasonCode;
 
 /* quadrant data labels (in SWOS2.s code section) */
-extern int16_t  ballXQuadrantLimits[];   /* 5 entries + 1 pad */
-extern int16_t  ballYQuadrantLimits[];   /* 6 entries + 1 pad */
-extern int16_t  ballQuadrantIndex;
-extern int16_t  ballXQuadrantDead;
-extern int16_t  ballYQuadrantDead;
-extern int16_t  playerXQuadrantOffset;
-extern int16_t  playerYQuadrantOffset;
+extern int16_t  _ballXQuadrantLimits[];   /* 5 entries + 1 pad */
+extern int16_t  _ballYQuadrantLimits[];   /* 6 entries + 1 pad */
+extern int16_t  _ballQuadrantIndex;
+extern int16_t  _ballXQuadrantDead;
+extern int16_t  _ballYQuadrantDead;
+extern int16_t  _playerXQuadrantOffset;
+extern int16_t  _playerYQuadrantOffset;
 
 /* player offset tables (in SWOS2.s code section) */
-extern int16_t  kBallPlOffsets[];        /* 16 entries */
-extern int16_t  kPlayerWithBallOffsets[]; /* 16 entries */
+extern int16_t  _kBallPlOffsets[];        /* 16 entries */
+extern int16_t  _kPlayerWithBallOffsets[]; /* 16 entries */
 
 /* ingameTeamPlayerOffsets (in SWOS2.s data section) */
-extern uint16_t ingameTeamPlayerOffsets[];
+extern uint16_t _ingameTeamPlayerOffsets[];
 
 /* ---- Ball prediction globals ---- */
-extern int16_t  ballDefensiveX;
-extern int16_t  ballDefensiveY;
-extern int16_t  ballDefensiveZ;
-extern int16_t  ballNotHighX;
-extern int16_t  ballNotHighY;
-extern int16_t  ballNotHighZ;
-extern int16_t  strikeDestX;
-extern int16_t  strikeDestY;
-extern int16_t  strikeDestZ;
+extern int16_t  _ballDefensiveX;
+extern int16_t  _ballDefensiveY;
+extern int16_t  _ballDefensiveZ;
+extern int16_t  _ballNotHighX;
+extern int16_t  _ballNotHighY;
+extern int16_t  _ballNotHighZ;
+extern int16_t  _strikeDestX;
+extern int16_t  _strikeDestY;
+extern int16_t  _strikeDestZ;
 
-extern int16_t  ballNextGroundX;
-extern int16_t  ballNextYGroundY;
-extern int16_t  ballNextZDeadVar;
+extern int16_t  _ballNextGroundX;
+extern int16_t  _ballNextYGroundY;
+extern int16_t  _ballNextZDeadVar;
 
 /* ---- Spin/aftertouch tables ---- */
-extern int16_t  kKickSpinFactor[];         /* 8 dirs × 2 entries (left/right) × 2 (dx,dy) = 32 words.
+extern int16_t  _kKickSpinFactor[];         /* 8 dirs × 2 entries (left/right) × 2 (dx,dy) = 32 words.
                                              * ASM data uses dc.b but reads with move.w — byte pairs
                                              * form big-endian int16_t values. int16_t[] is correct. */
-extern int16_t  kPassingSpinFactor[];      /* 8 dirs × 4 entries = 32 words */
-extern int16_t  kSpinMultiplierFactor[];   /* 10 entries */
-extern int32_t  kHighKickDeltaZ;
-extern int16_t  kHighKickBallSpeed;
-extern int32_t  kNormalKickDeltaZ;
-extern int16_t  kNormalKickBallSpeed;
+extern int16_t  _kPassingSpinFactor[];      /* 8 dirs × 4 entries = 32 words */
+extern int16_t  _kSpinMultiplierFactor[];   /* 10 entries */
+extern int32_t  _kHighKickDeltaZ;
+extern int16_t  _kHighKickBallSpeed;
+extern int32_t  _kNormalKickDeltaZ;
+extern int16_t  _kNormalKickBallSpeed;
 
 /* ---- Extern function declarations ---- */
 extern void CheckIfBallOutOfPlay(void);
@@ -131,8 +131,8 @@ static void reverseDestYDirection(Sprite *spr, int32_t savedY)
 void __attribute__((used, externally_visible))
 ResetBothTeamSpinTimers(void)
 {
-    topTeamData.spinTimer = (int16_t)0xFFFF;
-    bottomTeamData.spinTimer = (int16_t)0xFFFF;
+    _topTeamData.spinTimer = (int16_t)0xFFFF;
+    _bottomTeamData.spinTimer = (int16_t)0xFFFF;
 }
 
 
@@ -166,10 +166,10 @@ UpdateControllingPlayer(Sprite *playerSprite)
 {
     int16_t dir = playerSprite->direction;
     int16_t idx = dir * 2; /* pairs of (x,y) */
-    int16_t d1 = playerSprite->x.s.i + kBallPlOffsets[idx];
-    int16_t d2 = playerSprite->y.s.i + kBallPlOffsets[idx + 1];
+    int16_t d1 = playerSprite->x.s.i + _kBallPlOffsets[idx];
+    int16_t d2 = playerSprite->y.s.i + _kBallPlOffsets[idx + 1];
 
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     ball->speed = (int16_t)0;
     ball->x.s.i = d1;
     ball->y.s.i = d2;
@@ -198,10 +198,10 @@ UpdateBallWithControllingGoalkeeper(Sprite *playerSprite)
 {
     int16_t dir = playerSprite->direction;
     int16_t idx = dir * 2;
-    int16_t d1 = playerSprite->x.s.i + kBallPlOffsets[idx];
-    int16_t d2 = playerSprite->y.s.i + kBallPlOffsets[idx + 1];
+    int16_t d1 = playerSprite->x.s.i + _kBallPlOffsets[idx];
+    int16_t d2 = playerSprite->y.s.i + _kBallPlOffsets[idx + 1];
 
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     ball->speed = (int16_t)0;
     ball->x.s.i = d1;
     ball->y.s.i = d2;
@@ -228,13 +228,13 @@ UpdateBallWithControllingGoalkeeper(Sprite *playerSprite)
 void __attribute__((used, externally_visible))
 UpdatePlayerWithBall(Sprite *playerSprite)
 {
-    int16_t d1 = ballSprite.x.s.i;
-    int16_t d2 = ballSprite.y.s.i;
+    int16_t d1 = _ballSprite.x.s.i;
+    int16_t d2 = _ballSprite.y.s.i;
 
     int16_t dir = playerSprite->direction;
     int16_t idx = dir * 2;
-    d1 += kPlayerWithBallOffsets[idx];
-    d2 += kPlayerWithBallOffsets[idx + 1];
+    d1 += _kPlayerWithBallOffsets[idx];
+    d2 += _kPlayerWithBallOffsets[idx + 1];
 
     playerSprite->x.s.i = d1;
     playerSprite->y.s.i = d2;
@@ -254,7 +254,7 @@ UpdatePlayerWithBall(Sprite *playerSprite)
 void __attribute__((used, externally_visible))
 SetThrowInPlayerDestinationCoordinates(Sprite *playerSprite)
 {
-    int16_t d1 = ballSprite.x.s.i;
+    int16_t d1 = _ballSprite.x.s.i;
     if ((uint16_t)d1 < 336)
         d1 -= 3;
     else
@@ -263,7 +263,7 @@ SetThrowInPlayerDestinationCoordinates(Sprite *playerSprite)
     playerSprite->x.s.i = d1;
     playerSprite->destX = d1;
 
-    int16_t by = ballSprite.y.s.i;
+    int16_t by = _ballSprite.y.s.i;
     playerSprite->y.s.i = by;
     playerSprite->destY = by;
 }
@@ -284,7 +284,7 @@ InjuryUpdateTickGuard(void)
        Since the injury update code following this is still in asm,
        this C function is the complete guard; the asm stub will handle
        the fall-through case. */
-    (void)injuriesForever; /* nothing to do in C — asm stub handles flow */
+    (void)_injuriesForever; /* nothing to do in C — asm stub handles flow */
 }
 
 
@@ -298,7 +298,7 @@ InjuryUpdateTickGuard(void)
 void __attribute__((used, externally_visible))
 CalculateNextBallPosition(void)
 {
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     int32_t d5 = ball->x.raw;
     int32_t d6 = ball->y.raw;
     int32_t d7 = ball->z.raw;
@@ -310,7 +310,7 @@ CalculateNextBallPosition(void)
         int32_t d1 = ball->deltaX.raw;
         int32_t d2 = ball->deltaY.raw;
         int32_t d3 = ball->deltaZ.raw;
-        int32_t d4 = kGravityConstant;
+        int32_t d4 = _kGravityConstant;
 
         if (d3 > 0)
             goto scale8;
@@ -375,8 +375,8 @@ CalculateNextBallPosition(void)
 
 store:
     /* swap words to get integer part */
-    ballNextX = (int16_t)((uint32_t)d5 >> 16);
-    ballNextY = (int16_t)((uint32_t)d6 >> 16);
+    _ballNextX = (int16_t)((uint32_t)d5 >> 16);
+    _ballNextY = (int16_t)((uint32_t)d6 >> 16);
 }
 
 
@@ -395,7 +395,7 @@ DoGoalkeeperSprites(void)
     int16_t baseImgIdx;
 
     /* Check top team diving right */
-    team = &topTeamData;
+    team = &_topTeamData;
     if (team->goalkeeperDivingRight != 0) {
         yOff = 1;
         goto diving_right;
@@ -404,7 +404,7 @@ DoGoalkeeperSprites(void)
         goto goalie1_diving_left;
 
     /* Check bottom team */
-    team = &bottomTeamData;
+    team = &_bottomTeamData;
     if (team->goalkeeperDivingRight != 0) {
         yOff = -1;
         goto diving_right;
@@ -416,7 +416,7 @@ DoGoalkeeperSprites(void)
 
 diving_right:
     /* Determine which goalie sprite and base image index */
-    gkSprite = &goalie1Sprite;
+    gkSprite = &_goalie1Sprite;
     baseImgIdx = 0x359;
     {
         int16_t img = gkSprite->imageIndex;
@@ -424,7 +424,7 @@ diving_right:
             baseImgIdx = 0x393;
     }
     if (team->teamNumber != 1) {
-        gkSprite = &goalie2Sprite;
+        gkSprite = &_goalie2Sprite;
         baseImgIdx = 0x3CD;
         {
             int16_t img = gkSprite->imageIndex;
@@ -440,49 +440,49 @@ goalie1_diving_left:
 goalie2_diving_left:
     yOff = -1;
 diving_left_common:
-    gkSprite = &goalie1Sprite;
+    gkSprite = &_goalie1Sprite;
     baseImgIdx = 0x359;
     if (team->teamNumber != 1) {
-        gkSprite = &goalie2Sprite;
+        gkSprite = &_goalie2Sprite;
         baseImgIdx = 0x3CD;
     }
     {
         /* Ball position from keeper sprite */
-        ballSprite.x.raw = gkSprite->x.raw;
+        _ballSprite.x.raw = gkSprite->x.raw;
         int16_t bally = gkSprite->y.s.i + yOff;
-        ballSprite.y.s.i = bally;
-        ballSprite.z.s.i = (int16_t)0;
-        ballSprite.deltaZ.raw = (int32_t)0;
-        ballSprite.speed = (int16_t)0;
+        _ballSprite.y.s.i = bally;
+        _ballSprite.z.s.i = (int16_t)0;
+        _ballSprite.deltaZ.raw = (int32_t)0;
+        _ballSprite.speed = (int16_t)0;
 
         /* Look up ball height from claiming table using frameSwitchCounter */
         int16_t fsc = gkSprite->frameSwitchCounter;
-        int16_t ballZ = kGoalKeeperClaimingBallHeight[fsc];
-        ballSprite.z.s.i = ballZ;
+        int16_t ballZ = _kGoalKeeperClaimingBallHeight[fsc];
+        _ballSprite.z.s.i = ballZ;
     }
     return;
 
 position_ball_diving:
     {
         /* Ball position from keeper sprite */
-        ballSprite.x.raw = gkSprite->x.raw;
+        _ballSprite.x.raw = gkSprite->x.raw;
         int16_t bally = gkSprite->y.s.i + yOff;
-        ballSprite.y.s.i = bally;
-        ballSprite.z.s.i = (int16_t)0;
-        ballSprite.deltaZ.raw = (int32_t)0;
-        ballSprite.speed = (int16_t)0;
+        _ballSprite.y.s.i = bally;
+        _ballSprite.z.s.i = (int16_t)0;
+        _ballSprite.deltaZ.raw = (int32_t)0;
+        _ballSprite.speed = (int16_t)0;
 
         /* Compute frame offset from base */
         int16_t frameOff = gkSprite->imageIndex - baseImgIdx;
         if ((uint16_t)frameOff >= 28) { /* 28 entries in goalkeeperDiveBallHeights */
             /* frame offset out of range — panic */
-            panicReasonCode = 0x237;
+            _panicReasonCode = 0x237;
             PanicHaltLoop();
         }
 
         /* Look up ball height from dive table */
-        int16_t ballZ = goalkeeperDiveBallHeights[frameOff];
-        ballSprite.z.s.i = ballZ;
+        int16_t ballZ = _goalkeeperDiveBallHeights[frameOff];
+        _ballSprite.z.s.i = ballZ;
     }
 }
 
@@ -500,29 +500,29 @@ position_ball_diving:
 void __attribute__((used, externally_visible))
 UpdateBall(void)
 {
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
 
     /* ---- Hide ball if requested ---- */
-    if (hideBall) {
+    if (_hideBall) {
         ball->imageIndex = (int16_t)-1;
-        ballShadowSprite.imageIndex = (int16_t)-1;
+        _ballShadowSprite.imageIndex = (int16_t)-1;
         goto has_picture;
     }
 
     /* ---- Show shadow ---- */
-    ballShadowSprite.imageIndex = SPR_BALL_SHADOW;
+    _ballShadowSprite.imageIndex = SPR_BALL_SHADOW;
 
     /* ---- Select frame table (static vs moving) ---- */
     if (ball->deltaX.raw != 0 || ball->deltaY.raw != 0) {
         /* ball is moving */
-        if (ball->frameIndicesTable != ballMovingFrameIndices) {
-            ball->frameIndicesTable = ballMovingFrameIndices;
+        if (ball->frameIndicesTable != _ballMovingFrameIndices) {
+            ball->frameIndicesTable = _ballMovingFrameIndices;
             ball->frameIndex = (int16_t)0;
         }
     } else {
         /* ball is stationary */
-        if (ball->frameIndicesTable != ballStaticFrameIndices) {
-            ball->frameIndicesTable = ballStaticFrameIndices;
+        if (ball->frameIndicesTable != _ballStaticFrameIndices) {
+            ball->frameIndicesTable = _ballStaticFrameIndices;
             ball->frameIndex = (int16_t)0;
         }
     }
@@ -590,13 +590,13 @@ has_picture:
 
     /* ---- Apply friction ---- */
     {
-        int16_t friction = kBallGroundConstant;
-        if (topTeamData.playerHasBall == 0 &&
-            bottomTeamData.playerHasBall == 0) {
-            friction += pitchBallSpeedFactor;
+        int16_t friction = _kBallGroundConstant;
+        if (_topTeamData.playerHasBall == 0 &&
+            _bottomTeamData.playerHasBall == 0) {
+            friction += _pitchBallSpeedFactor;
         }
         if (ball->z.s.i != 0) {
-            friction = kBallAirConstant;
+            friction = _kBallAirConstant;
         }
         int16_t spd = ball->speed - friction;
         if (spd < 0) spd = 0;
@@ -613,10 +613,10 @@ has_picture:
         ball->y.raw = ball->y.raw + dy;
 
         /* ---- Keeper holds ball: special Z handling ---- */
-        if (gameState == ST_KEEPER_HOLDS_BALL) {
-            if (substituteInProgress) {
-                TeamGeneralInfo *subTeam = (TeamGeneralInfo *)teamThatSubstitutes;
-                if (subTeam == lastTeamPlayedBeforeBreak) {
+        if (_gameState == ST_KEEPER_HOLDS_BALL) {
+            if (_substituteInProgress) {
+                TeamGeneralInfo *subTeam = (TeamGeneralInfo *)_teamThatSubstitutes;
+                if (subTeam == _lastTeamPlayedBeforeBreak) {
                     Sprite *ctrlPl = subTeam->controlledPlayer;
                     if (ctrlPl == 0) {
                         ball->z.s.i = (int16_t)0;
@@ -627,8 +627,8 @@ has_picture:
 
             /* Keeper holds ball: move ball with player */
             if ((uint16_t)ball->speed != 0) {
-                writeOnlyVar04++;
-                Sprite *ctrlPlayer = lastTeamPlayedBeforeBreak->controlledPlayer;
+                _writeOnlyVar04++;
+                Sprite *ctrlPlayer = _lastTeamPlayedBeforeBreak->controlledPlayer;
                 UpdateBallWithControllingGoalkeeper(ctrlPlayer);
             }
 
@@ -648,7 +648,7 @@ has_picture:
         if (dz == 0)
             goto after_z;
 
-        dz -= kGravityConstant;
+        dz -= _kGravityConstant;
         dz |= 1;
 
     apply_z:
@@ -659,7 +659,7 @@ has_picture:
         /* Ball hit the ground — bounce */
         {
             uint16_t spd = (uint16_t)ball->speed;
-            uint32_t decr = ((uint32_t)spd * (uint32_t)ballSpeedBounceFactor) >> 8;
+            uint32_t decr = ((uint32_t)spd * (uint32_t)_ballSpeedBounceFactor) >> 8;
             ball->speed = (int16_t)(spd - (uint16_t)decr);
         }
         ball->z.s.i = (int16_t)0;
@@ -668,7 +668,7 @@ has_picture:
         dz = -dz;
         {
             int32_t frac = dz >> 8;
-            uint32_t dampen = (uint32_t)(uint16_t)frac * (uint32_t)ballBounceFactor;
+            uint32_t dampen = (uint32_t)(uint16_t)frac * (uint32_t)_ballBounceFactor;
             dz -= (int32_t)dampen;
             dz |= 1;
         }
@@ -689,7 +689,7 @@ has_picture:
     }
 
     /* ---- Out-of-play boundary checks when game not in progress ---- */
-    if (gameStatePl != ST_GAME_IN_PROGRESS) {
+    if (_gameStatePl != ST_GAME_IN_PROGRESS) {
         /* X boundary */
         int16_t bx = ball->x.s.i;
         if (bx < 53 || bx > 618) {
@@ -830,7 +830,7 @@ has_picture:
 
 skip_goal_collision:
     /* ---- Goalpost deflection (game in progress) ---- */
-    if (gameStatePl == ST_GAME_IN_PROGRESS) {
+    if (_gameStatePl == ST_GAME_IN_PROGRESS) {
         int16_t bx = ball->x.s.i - 1;
         int16_t by = ball->y.s.i;
         int16_t bz = ball->z.s.i;
@@ -855,7 +855,7 @@ skip_goal_collision:
 
         /* Ball above post level but below crossbar — random deflection */
         {
-            int16_t d4 = (int16_t)(currentGameTick & 0x1F);
+            int16_t d4 = (int16_t)(_currentGameTick & 0x1F);
             d4 = (int16_t)((d4 << 4) - 0x100);
 
             int32_t deltaY = ball->deltaY.raw;
@@ -886,7 +886,7 @@ skip_goal_collision:
 
     goalpost_hit:
         {
-            int16_t d4 = (int16_t)(currentGameTick & 0x1F);
+            int16_t d4 = (int16_t)(_currentGameTick & 0x1F);
             d4 = (int16_t)((d4 << 4) - 0x100);
 
             int32_t deltaY = ball->deltaY.raw;
@@ -926,7 +926,7 @@ skip_goal_collision:
 
 after_goalpost:
     /* ---- Check if ball out of play (game in progress only) ---- */
-    if (gameStatePl == ST_GAME_IN_PROGRESS) {
+    if (_gameStatePl == ST_GAME_IN_PROGRESS) {
         int16_t bx = ball->x.s.i;
         int16_t by = ball->y.s.i;
         if (bx < 81 || bx > 590 || by < 129 || by > 769) {
@@ -936,7 +936,7 @@ after_goalpost:
 
     /* ---- Update ball shadow position ---- */
     {
-        Sprite *shadow = &ballShadowSprite;
+        Sprite *shadow = &_ballShadowSprite;
         uint16_t halfZ = (uint16_t)ball->z.s.i >> 1;
         int16_t sx = ball->x.s.i + (int16_t)halfZ + 1;
         shadow->x.s.i = sx;
@@ -953,17 +953,17 @@ after_goalpost:
     {
         int16_t qx, qy;
 
-        if (gameStatePl == ST_GAME_IN_PROGRESS ||
-            gameState == ST_FIRST_HALF_ENDED ||
-            gameState == ST_GAME_ENDED) {
-            qx = ballNextX;
-            qy = ballNextY;
+        if (_gameStatePl == ST_GAME_IN_PROGRESS ||
+            _gameState == ST_FIRST_HALF_ENDED ||
+            _gameState == ST_GAME_ENDED) {
+            qx = _ballNextX;
+            qy = _ballNextY;
         } else {
-            qx = foulXCoordinate;
-            qy = foulYCoordinate;
-            if (gameState == ST_KEEPER_HOLDS_BALL ||
-                gameState == ST_GOAL_OUT_LEFT ||
-                gameState == ST_GOAL_OUT_RIGHT) {
+            qx = _foulXCoordinate;
+            qy = _foulYCoordinate;
+            if (_gameState == ST_KEEPER_HOLDS_BALL ||
+                _gameState == ST_GOAL_OUT_LEFT ||
+                _gameState == ST_GOAL_OUT_RIGHT) {
                 qx = 336;
                 qy = 449;
             }
@@ -979,7 +979,7 @@ after_goalpost:
         {
             int16_t i;
             for (i = 0; i < 4; i++) {
-                if ((uint16_t)qx < (uint16_t)ballXQuadrantLimits[i])
+                if ((uint16_t)qx < (uint16_t)_ballXQuadrantLimits[i])
                     break;
                 xQuad++;
                 d3++;
@@ -987,12 +987,12 @@ after_goalpost:
             if (i == 0)
                 xRefLimit = 81; /* pad_111202 data: dc.b 0,81 -> word 0x0051 */
             else if (i == 4)
-                xRefLimit = ballXQuadrantLimits[3]; /* lea 2(a1),a1 then -4(a1) */
+                xRefLimit = _ballXQuadrantLimits[3]; /* lea 2(a1),a1 then -4(a1) */
             else
-                xRefLimit = ballXQuadrantLimits[i - 1];
+                xRefLimit = _ballXQuadrantLimits[i - 1];
         }
-        ballXQuadrantDead = xQuad;
-        playerXQuadrantOffset = (int16_t)(((int16_t)(qx - xRefLimit - 51) * 5) / 15);
+        _ballXQuadrantDead = xQuad;
+        _playerXQuadrantOffset = (int16_t)(((int16_t)(qx - xRefLimit - 51) * 5) / 15);
 
         /* Y quadrant: 6 thresholds -> quadrant 0..6, d3 increments by 5 each */
         int16_t yQuad = 0;
@@ -1000,21 +1000,21 @@ after_goalpost:
         {
             int16_t i;
             for (i = 0; i < 6; i++) {
-                if ((uint16_t)qy < (uint16_t)ballYQuadrantLimits[i])
+                if ((uint16_t)qy < (uint16_t)_ballYQuadrantLimits[i])
                     break;
                 yQuad++;
                 d3 += 5;
             }
             if (i == 0)
-                yRefLimit = ballYQuadrantLimits[0]; /* fallback */
+                yRefLimit = _ballYQuadrantLimits[0]; /* fallback */
             else if (i == 6)
-                yRefLimit = ballYQuadrantLimits[5]; /* lea 2(a1),a1 then -4(a1) */
+                yRefLimit = _ballYQuadrantLimits[5]; /* lea 2(a1),a1 then -4(a1) */
             else
-                yRefLimit = ballYQuadrantLimits[i - 1];
+                yRefLimit = _ballYQuadrantLimits[i - 1];
         }
-        ballYQuadrantDead = yQuad;
-        playerYQuadrantOffset = (int16_t)(((int16_t)(qy - yRefLimit - 45) * 5) / 15);
-        ballQuadrantIndex = d3;
+        _ballYQuadrantDead = yQuad;
+        _playerYQuadrantOffset = (int16_t)(((int16_t)(qy - yRefLimit - 45) * 5) / 15);
+        _ballQuadrantIndex = d3;
     }
 }
 
@@ -1040,7 +1040,7 @@ UpdateBallVariables(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     int32_t d4 = ball->deltaX.raw;
     int32_t d5 = ball->deltaY.raw;
     int32_t d6 = ball->deltaZ.raw;
-    int32_t d7 = kGravityConstant;
+    int32_t d7 = _kGravityConstant;
 
     /* Check ball Y velocity direction */
     if (d5 < (int32_t)0xFFFF0000)
@@ -1055,7 +1055,7 @@ UpdateBallVariables(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     goto sample_defense_at_current_ball_pos;
 
 ball_moving_toward_top_goal:
-    if (team != &topTeamData)
+    if (team != &_topTeamData)
         goto sample_defense_at_current_ball_pos;
     d2 -= keeper->y.raw;
     if (d2 >= 0) {
@@ -1072,16 +1072,16 @@ ball_moving_toward_top_goal:
         d2 += keeper->y.raw;
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-            ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
-            ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
+            _ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
+            _ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
             if (zi < 0) zi = 0;
-            ballDefensiveZ = zi;
+            _ballDefensiveZ = zi;
         }
     } else {
         /* Ball already past keeper Y */
-        ballDefensiveX = ball->x.s.i;
-        ballDefensiveY = ball->y.s.i;
-        ballDefensiveZ = ball->z.s.i;
+        _ballDefensiveX = ball->x.s.i;
+        _ballDefensiveY = ball->y.s.i;
+        _ballDefensiveZ = ball->z.s.i;
         d2 += keeper->y.raw;
     }
 
@@ -1100,16 +1100,16 @@ ball_moving_toward_top_goal:
         d2 = (int32_t)0x870000; /* set to 135.0 */
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-            ballNotHighX = (int16_t)((uint32_t)d1 >> 16);
-            ballNotHighY = (int16_t)((uint32_t)d2 >> 16);
+            _ballNotHighX = (int16_t)((uint32_t)d1 >> 16);
+            _ballNotHighY = (int16_t)((uint32_t)d2 >> 16);
             if (zi < 0) zi = 0;
-            ballNotHighZ = zi;
+            _ballNotHighZ = zi;
         }
     } else {
         /* Already within 135px window */
-        ballNotHighX = ballDefensiveX;
-        ballNotHighY = ballDefensiveY;
-        ballNotHighZ = ballDefensiveZ;
+        _ballNotHighX = _ballDefensiveX;
+        _ballNotHighY = _ballDefensiveY;
+        _ballNotHighZ = _ballDefensiveZ;
         d2 += (int32_t)0x870000;
     }
 
@@ -1128,20 +1128,20 @@ ball_moving_toward_top_goal:
         d2 = (int32_t)0x810000;
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-            strikeDestX = (int16_t)((uint32_t)d1 >> 16);
-            strikeDestY = (int16_t)((uint32_t)d2 >> 16);
+            _strikeDestX = (int16_t)((uint32_t)d1 >> 16);
+            _strikeDestY = (int16_t)((uint32_t)d2 >> 16);
             if (zi < 0) zi = 0;
-            strikeDestZ = zi;
+            _strikeDestZ = zi;
         }
     } else {
-        strikeDestX = 0;
-        strikeDestY = 0;
-        strikeDestZ = 0;
+        _strikeDestX = 0;
+        _strikeDestY = 0;
+        _strikeDestZ = 0;
     }
     return;
 
 ball_moving_toward_bottom_goal:
-    if (team != &bottomTeamData)
+    if (team != &_bottomTeamData)
         goto sample_defense_at_current_ball_pos;
     d2 -= keeper->y.raw;
     if (d2 < 0) {
@@ -1158,16 +1158,16 @@ ball_moving_toward_bottom_goal:
         d2 += keeper->y.raw;
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-            ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
-            ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
+            _ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
+            _ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
             if (zi < 0) zi = 0;
-            ballDefensiveZ = zi;
+            _ballDefensiveZ = zi;
         }
     } else {
         /* Ball already past keeper Y */
-        ballDefensiveX = ball->x.s.i;
-        ballDefensiveY = ball->y.s.i;
-        ballDefensiveZ = ball->z.s.i;
+        _ballDefensiveX = ball->x.s.i;
+        _ballDefensiveY = ball->y.s.i;
+        _ballDefensiveZ = ball->z.s.i;
         d2 += keeper->y.raw;
     }
 
@@ -1186,16 +1186,16 @@ ball_moving_toward_bottom_goal:
         d2 = (int32_t)0x2FB0000; /* set to 763.0 */
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-            ballNotHighX = (int16_t)((uint32_t)d1 >> 16);
-            ballNotHighY = (int16_t)((uint32_t)d2 >> 16);
+            _ballNotHighX = (int16_t)((uint32_t)d1 >> 16);
+            _ballNotHighY = (int16_t)((uint32_t)d2 >> 16);
             if (zi < 0) zi = 0;
-            ballNotHighZ = zi;
+            _ballNotHighZ = zi;
         }
     } else {
         /* Already past 763px window */
-        ballNotHighX = ballDefensiveX;
-        ballNotHighY = ballDefensiveY;
-        ballNotHighZ = ballDefensiveZ;
+        _ballNotHighX = _ballDefensiveX;
+        _ballNotHighY = _ballDefensiveY;
+        _ballNotHighZ = _ballDefensiveZ;
         d2 += (int32_t)0x2FB0000;
     }
 
@@ -1214,15 +1214,15 @@ ball_moving_toward_bottom_goal:
         d2 = (int32_t)0x3010000;
         {
             int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-            strikeDestX = (int16_t)((uint32_t)d1 >> 16);
-            strikeDestY = (int16_t)((uint32_t)d2 >> 16);
+            _strikeDestX = (int16_t)((uint32_t)d1 >> 16);
+            _strikeDestY = (int16_t)((uint32_t)d2 >> 16);
             if (zi < 0) zi = 0;
-            strikeDestZ = zi;
+            _strikeDestZ = zi;
         }
     } else {
-        strikeDestX = 0;
-        strikeDestY = 0;
-        strikeDestZ = 0;
+        _strikeDestX = 0;
+        _strikeDestY = 0;
+        _strikeDestZ = 0;
     }
     return;
 
@@ -1246,10 +1246,10 @@ ball_going_left:
     d1 += keeper->x.raw;
     {
         int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-        ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
-        ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
+        _ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
+        _ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
         if (zi < 0) zi = 0;
-        ballDefensiveZ = zi;
+        _ballDefensiveZ = zi;
     }
     goto finalize_not_high_and_clear_strike;
 
@@ -1273,24 +1273,24 @@ ball_going_right:
     d1 += keeper->x.raw;
     {
         int16_t zi = (int16_t)((uint32_t)d3 >> 16);
-        ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
-        ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
+        _ballDefensiveX = (int16_t)((uint32_t)d1 >> 16);
+        _ballDefensiveY = (int16_t)((uint32_t)d2 >> 16);
         if (zi < 0) zi = 0;
-        ballDefensiveZ = zi;
+        _ballDefensiveZ = zi;
     }
     goto finalize_not_high_and_clear_strike;
 
 sample_defense_at_current_ball_pos:
-    ballDefensiveX = ball->x.s.i;
-    ballDefensiveY = ball->y.s.i;
-    ballDefensiveZ = ball->z.s.i;
+    _ballDefensiveX = ball->x.s.i;
+    _ballDefensiveY = ball->y.s.i;
+    _ballDefensiveZ = ball->z.s.i;
 finalize_not_high_and_clear_strike:
-    ballNotHighX = ballDefensiveX;
-    ballNotHighY = ballDefensiveY;
-    ballNotHighZ = ballDefensiveZ;
-    strikeDestX = 0;
-    strikeDestY = 0;
-    strikeDestZ = 0;
+    _ballNotHighX = _ballDefensiveX;
+    _ballNotHighY = _ballDefensiveY;
+    _ballNotHighZ = _ballDefensiveZ;
+    _strikeDestX = 0;
+    _strikeDestY = 0;
+    _strikeDestZ = 0;
 }
 
 
@@ -1317,7 +1317,7 @@ CalculateBallNextGroundXYPositions(Sprite *ball)
         d4 < -(int32_t)0x10000 || d4 > (int32_t)0x10000) {
         /* ball_moving */
         int32_t d6 = ball->deltaZ.raw;
-        int32_t d7 = kGravityConstant;
+        int32_t d7 = _kGravityConstant;
         int32_t d0 = (int32_t)0x140000; /* 20.0 */
 
         /* Try decreasing Z subtraction values */
@@ -1326,7 +1326,7 @@ CalculateBallNextGroundXYPositions(Sprite *ball)
             if (d3 >= 0)
                 break; /* z_in_range */
             if (d0 == (int32_t)0xD0000) { /* 13.0 */
-                ballNextGroundX = -1;
+                _ballNextGroundX = -1;
                 return;
             }
             d3 += d0;
@@ -1342,14 +1342,14 @@ CalculateBallNextGroundXYPositions(Sprite *ball)
         } while (d3 >= 0);
 
         d3 += d0;
-        ballNextGroundX = (int16_t)((uint32_t)d1 >> 16);
-        ballNextYGroundY = (int16_t)((uint32_t)d2 >> 16);
-        ballNextZDeadVar = 0;
+        _ballNextGroundX = (int16_t)((uint32_t)d1 >> 16);
+        _ballNextYGroundY = (int16_t)((uint32_t)d2 >> 16);
+        _ballNextZDeadVar = 0;
         return;
     }
 
     /* ball_standing */
-    ballNextGroundX = -1;
+    _ballNextGroundX = -1;
 }
 
 
@@ -1378,8 +1378,8 @@ ApplyBallAfterTouch(TeamGeneralInfo *team)
         TeamGeneralInfo *oppTeam = team->opponentsTeam;
         if (oppTeam->goalkeeperSavedCommentTimer < 0)
             goto kick_reset_spin;
-        if (gameStatePl != ST_GAME_IN_PROGRESS) {
-            if (gameState == ST_KEEPER_HOLDS_BALL)
+        if (_gameStatePl != ST_GAME_IN_PROGRESS) {
+            if (_gameState == ST_KEEPER_HOLDS_BALL)
                 goto kick_reset_spin;
         }
     }
@@ -1394,7 +1394,7 @@ ApplyBallAfterTouch(TeamGeneralInfo *team)
         }
     }
 
-    ball = &ballSprite;
+    ball = &_ballSprite;
 
     if (team->leftSpin != 0) {
         spinSide = 0;
@@ -1429,10 +1429,10 @@ kick_calc_spin:
     {
         int16_t dir = team->controlledPlDirection;
         int16_t tableIdx = dir * 4 + (spinSide >> 1);
-        int16_t multiplier = kSpinMultiplierFactor[team->spinTimer];
-        int16_t spinDx = kKickSpinFactor[tableIdx];
+        int16_t multiplier = _kSpinMultiplierFactor[team->spinTimer];
+        int16_t spinDx = _kKickSpinFactor[tableIdx];
         ball->destX += (int16_t)(spinDx * multiplier);
-        int16_t spinDy = kKickSpinFactor[tableIdx + 1];
+        int16_t spinDy = _kKickSpinFactor[tableIdx + 1];
         ball->destY += (int16_t)(spinDy * multiplier);
     }
 
@@ -1454,14 +1454,14 @@ kick_not_starting_spin:
         if ((uint16_t)diff < 3 || (uint16_t)diff > 5)
             goto kick_increase_timer;
         /* High kick */
-        ball->deltaZ.raw = kHighKickDeltaZ;
-        ball->speed = kHighKickBallSpeed;
+        ball->deltaZ.raw = _kHighKickDeltaZ;
+        ball->speed = _kHighKickBallSpeed;
         goto kick_speed_adjust;
     }
 
 kick_normal_not_high:
-    ball->deltaZ.raw = kNormalKickDeltaZ;
-    ball->speed = kNormalKickBallSpeed;
+    ball->deltaZ.raw = _kNormalKickDeltaZ;
+    ball->speed = _kNormalKickBallSpeed;
 
 kick_speed_adjust:
     {
@@ -1498,8 +1498,8 @@ passing_now:
         TeamGeneralInfo *oppTeam = team->opponentsTeam;
         if (oppTeam->goalkeeperSavedCommentTimer < 0)
             goto pass_reset_spin;
-        if (gameStatePl != ST_GAME_IN_PROGRESS) {
-            if (gameState == ST_KEEPER_HOLDS_BALL)
+        if (_gameStatePl != ST_GAME_IN_PROGRESS) {
+            if (_gameState == ST_KEEPER_HOLDS_BALL)
                 goto pass_reset_spin;
         }
     }
@@ -1516,7 +1516,7 @@ passing_now:
         }
     }
 
-    ball = &ballSprite;
+    ball = &_ballSprite;
 
     if (team->leftSpin != 0) {
         spinSide = 0;
@@ -1549,12 +1549,12 @@ passing_now:
 
 pass_calc_spin:
     {
-        int16_t ballDir = ballSprite.direction;
+        int16_t ballDir = _ballSprite.direction;
         int16_t tableIdx = ballDir * 4 + (spinSide >> 1);
-        int16_t multiplier = kSpinMultiplierFactor[team->spinTimer];
-        int16_t spinDx = kPassingSpinFactor[tableIdx];
+        int16_t multiplier = _kSpinMultiplierFactor[team->spinTimer];
+        int16_t spinDx = _kPassingSpinFactor[tableIdx];
         ball->destX += (int16_t)(spinDx * multiplier);
-        int16_t spinDy = kPassingSpinFactor[tableIdx + 1];
+        int16_t spinDy = _kPassingSpinFactor[tableIdx + 1];
         ball->destY += (int16_t)(spinDy * multiplier);
     }
 

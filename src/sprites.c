@@ -39,39 +39,39 @@
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t *spriteGraphicsPtr;
-extern volatile uint16_t panicReasonCode;
+extern uint8_t *_spriteGraphicsPtr;
+extern volatile uint16_t _panicReasonCode;
 
-extern Sprite **allSpritesArray;      /* Null-terminated ((Sprite *)-1) pointer array */
-extern Sprite *sortedSprites[];        /* 78 entries max */
-extern uint16_t numSpritesToRender;
+extern Sprite **_allSpritesArray;      /* Null-terminated ((Sprite *)-1) pointer array */
+extern Sprite *_sortedSprites[];        /* 78 entries max */
+extern uint16_t _numSpritesToRender;
 
-extern volatile uintptr_t spriteBlitQueue;         /* 4-byte var holding pointer to blit queue */
-extern volatile uintptr_t frontbufferBasePtr;      /* 4-byte var holding pointer to frontbuffer */
-extern uint8_t frontbufferMaskBuffer[];  /* BSS label: mask buffer base address */
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern uint16_t overlayActiveFlag;
+extern volatile uintptr_t _spriteBlitQueue;         /* 4-byte var holding pointer to blit queue */
+extern volatile uintptr_t _frontbufferBasePtr;      /* 4-byte var holding pointer to frontbuffer */
+extern uint8_t _frontbufferMaskBuffer[];  /* BSS label: mask buffer base address */
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern uint16_t _overlayActiveFlag;
 
 /* Render stacks: xxxPtr are 4-byte pointer vars, xxxBase are BSS labels */
-extern uint8_t *renderStackPtr;
-extern uint8_t renderStackBase[];
-extern uint8_t *plane01RenderStackPtr;
-extern uint8_t plane01RenderStackBase[];
-extern uint8_t *plane23RenderStackPtr;
-extern uint8_t plane23RenderStackBase[];
+extern uint8_t *_renderStackPtr;
+extern uint8_t _renderStackBase[];
+extern uint8_t *_plane01RenderStackPtr;
+extern uint8_t _plane01RenderStackBase[];
+extern uint8_t *_plane23RenderStackPtr;
+extern uint8_t _plane23RenderStackBase[];
 
 /* Copper list plane pointers (4-byte vars) */
-extern volatile uint32_t bitPlane0BasePtr;
-extern volatile uint32_t bitPlane1BasePtr;
-extern volatile uint32_t bitPlane2BasePtr;
-extern volatile uint32_t bitPlane3BasePtr;
-extern uint32_t copperZeroLong;
+extern volatile uint32_t _bitPlane0BasePtr;
+extern volatile uint32_t _bitPlane1BasePtr;
+extern volatile uint32_t _bitPlane2BasePtr;
+extern volatile uint32_t _bitPlane3BasePtr;
+extern uint32_t _copperZeroLong;
 
 /* Player sprite identification for DrawQueuedSprites */
-extern Sprite goalie1Sprite;
+extern Sprite _goalie1Sprite;
 
 extern void PanicHaltLoop(void) __attribute__((noreturn));
 extern void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y);
@@ -80,11 +80,11 @@ extern void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x
 /* ---- Helper: wait for blitter idle ---- */
 static inline __attribute__((always_inline)) void waitBlit(void)
 {
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 /* ================================================================
@@ -102,7 +102,7 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
                  uint16_t xOffset, uint16_t yOffset)
 {
 
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
 
     /* Load destination sprite header */
     SpriteGraphics *dstHdr = sprGfxTable[dstSprite];
@@ -167,11 +167,11 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         blitWords--;
     }
 
-    BLT_W(custom->bltalwm, lastWordMask);
-    BLT_W(custom->bltafwm, 0xFFFF);
+    BLT_W(_custom->bltalwm, lastWordMask);
+    BLT_W(_custom->bltafwm, 0xFFFF);
     /* BLTCON1: shift amount in bits 12-15 */
     uint16_t shiftVal = bitShift << 12;
-    BLT_W(custom->bltcon1, shiftVal);
+    BLT_W(_custom->bltcon1, shiftVal);
     /* Check if source has mask data (offset 4) */
     uintptr_t srcMaskPtr = (uintptr_t)srcHdr->maskPtr;
     uint16_t bltcon0;
@@ -181,9 +181,9 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     } else {
         /* Single mode: straight copy, no mask (A = all 1s via BLTADAT) */
         bltcon0 = shiftVal | BLTCON0_BASE_SINGLE;
-        BLT_W(custom->bltadat, 0xFFFF);
+        BLT_W(_custom->bltadat, 0xFFFF);
     }
-    BLT_W(custom->bltcon0, bltcon0);
+    BLT_W(_custom->bltcon0, bltcon0);
     /* Compute destination byte offset for xOffset */
     uint32_t wordByteOff = (uint32_t)((xOffset >> 3) & 0xFFFE);
 
@@ -192,8 +192,8 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     uint32_t yByteOff = (uint32_t)yOffset * dstInterleavedStride;
     uint32_t dstAddr = (uintptr_t)dstData + yByteOff + wordByteOff;
 
-    BLT_L(custom->bltcpt, dstAddr);
-    BLT_L(custom->bltdpt, dstAddr);
+    BLT_L(_custom->bltcpt, dstAddr);
+    BLT_L(_custom->bltdpt, dstAddr);
     /* Source sprite type: offset 8 */
     uint16_t srcType = srcHdr->type;
     uint16_t blitWidthBytes = blitWords << 1;
@@ -205,16 +205,16 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
 
         /* Source A/B modulo */
         uint16_t srcStride = (uint16_t)srcHdr->wquads << 1;
-        BLT_W(custom->bltamod, srcStride - blitWidthBytes);
-        BLT_W(custom->bltbmod, srcStride - blitWidthBytes);
+        BLT_W(_custom->bltamod, srcStride - blitWidthBytes);
+        BLT_W(_custom->bltbmod, srcStride - blitWidthBytes);
         /* Destination C/D modulo */
-        BLT_W(custom->bltcmod, dstStrideBytes - blitWidthBytes);
-        BLT_W(custom->bltdmod, dstStrideBytes - blitWidthBytes);
+        BLT_W(_custom->bltcmod, dstStrideBytes - blitWidthBytes);
+        BLT_W(_custom->bltdmod, dstStrideBytes - blitWidthBytes);
         /* Source pointers */
-        BLT_L(custom->bltbpt, (uint32_t)(uintptr_t)srcHdr->sprData);
-        BLT_L(custom->bltapt, (uint32_t)srcMaskPtr);
+        BLT_L(_custom->bltbpt, (uint32_t)(uintptr_t)srcHdr->sprData);
+        BLT_L(_custom->bltapt, (uint32_t)srcMaskPtr);
         /* Kick blit */
-        BLT_W(custom->bltsize, bltsize);
+        BLT_W(_custom->bltsize, bltsize);
     } else {
         /* ---- Four separate planes path ---- */
         uint16_t nlines = (uint16_t)srcHdr->nlines;
@@ -223,14 +223,14 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         /* B modulo: src interleaved stride (4 planes) - blit width */
         uint16_t srcWquads = (uint16_t)srcHdr->wquads;
         uint16_t srcBmod = (srcWquads << NUM_PLANES_SHIFT_PLUS1) - blitWidthBytes;
-        BLT_W(custom->bltbmod, srcBmod);
+        BLT_W(_custom->bltbmod, srcBmod);
         /* A modulo: per-plane stride - blit width */
         uint16_t srcAmod = (srcWquads << 1) - blitWidthBytes;
-        BLT_W(custom->bltamod, srcAmod);
+        BLT_W(_custom->bltamod, srcAmod);
         /* C/D modulo: dst interleaved stride - blit width */
         uint16_t dstCDmod = (dstStrideBytes << NUM_PLANES_SHIFT) - blitWidthBytes;
-        BLT_W(custom->bltcmod, dstCDmod);
-        BLT_W(custom->bltdmod, dstCDmod);
+        BLT_W(_custom->bltcmod, dstCDmod);
+        BLT_W(_custom->bltdmod, dstCDmod);
         /* Source data and mask pointers */
         uintptr_t srcDataPtr = (uintptr_t)srcHdr->sprData;
         uintptr_t srcMask = (uintptr_t)srcHdr->maskPtr;  /* may be 0 for single-plane */
@@ -240,42 +240,42 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         uint32_t srcPlaneStep = (uint32_t)(srcWquads << 1);
 
         /* Pass 1 */
-        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
-        BLT_L(custom->bltapt, (uint32_t)srcMask);
-        BLT_W(custom->bltsize, bltsize);
+        BLT_L(_custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(_custom->bltapt, (uint32_t)srcMask);
+        BLT_W(_custom->bltsize, bltsize);
         /* Advance to plane 1 */
         dstAddr += dstPlaneStep;
         srcDataPtr += srcPlaneStep;
 
         /* Pass 2 */
         waitBlit();
-        BLT_L(custom->bltcpt, dstAddr);
-        BLT_L(custom->bltdpt, dstAddr);
-        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
-        BLT_L(custom->bltapt, (uint32_t)srcMask);
-        BLT_W(custom->bltsize, bltsize);
+        BLT_L(_custom->bltcpt, dstAddr);
+        BLT_L(_custom->bltdpt, dstAddr);
+        BLT_L(_custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(_custom->bltapt, (uint32_t)srcMask);
+        BLT_W(_custom->bltsize, bltsize);
         /* Advance to plane 2 */
         dstAddr += dstPlaneStep;
         srcDataPtr += srcPlaneStep;
 
         /* Pass 3 */
         waitBlit();
-        BLT_L(custom->bltcpt, dstAddr);
-        BLT_L(custom->bltdpt, dstAddr);
-        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
-        BLT_L(custom->bltapt, (uint32_t)srcMask);
-        BLT_W(custom->bltsize, bltsize);
+        BLT_L(_custom->bltcpt, dstAddr);
+        BLT_L(_custom->bltdpt, dstAddr);
+        BLT_L(_custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(_custom->bltapt, (uint32_t)srcMask);
+        BLT_W(_custom->bltsize, bltsize);
         /* Advance to plane 3 */
         dstAddr += dstPlaneStep;
         srcDataPtr += srcPlaneStep;
 
         /* Pass 4 */
         waitBlit();
-        BLT_L(custom->bltcpt, dstAddr);
-        BLT_L(custom->bltdpt, dstAddr);
-        BLT_L(custom->bltbpt, (uint32_t)srcDataPtr);
-        BLT_L(custom->bltapt, (uint32_t)srcMask);
-        BLT_W(custom->bltsize, bltsize);
+        BLT_L(_custom->bltcpt, dstAddr);
+        BLT_L(_custom->bltdpt, dstAddr);
+        BLT_L(_custom->bltbpt, (uint32_t)srcDataPtr);
+        BLT_L(_custom->bltapt, (uint32_t)srcMask);
+        BLT_W(_custom->bltsize, bltsize);
     }
 }
 
@@ -304,7 +304,7 @@ void CopyWholeSprite(uint16_t srcSprite, uint16_t dstSprite)
 __attribute__((used, externally_visible))
 void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
 #ifdef SWOS_SDL_BUILD
@@ -375,11 +375,11 @@ void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
 __attribute__((used, externally_visible))
 void SortSprites(void)
 {
-    int16_t n = (int16_t)numSpritesToRender - 2;
+    int16_t n = (int16_t)_numSpritesToRender - 2;
     if (n < 0)
         return;
 
-    Sprite **base = sortedSprites;
+    Sprite **base = _sortedSprites;
 
     /* Assembly does NOT shrink the inner loop — always a full pass of n+1
      * comparisons, repeating until no swaps occur (pure unoptimized bubble sort). */
@@ -415,8 +415,8 @@ __attribute__((used, externally_visible))
 void InitDisplaySprites(void)
 {
     uint16_t count = 0;
-    Sprite **dst = sortedSprites;
-    Sprite **src = allSpritesArray;
+    Sprite **dst = _sortedSprites;
+    Sprite **src = _allSpritesArray;
 
     for (;;) {
         Sprite *spr = *src++;
@@ -431,7 +431,7 @@ void InitDisplaySprites(void)
         *dst++ = spr;
         count++;
     }
-    numSpritesToRender = count;
+    _numSpritesToRender = count;
     SortSprites();
 }
 
@@ -618,7 +618,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 {
     if (!a0) return;
     const uint8_t *data = (const uint8_t *)(uintptr_t)a0->sprData;
-    uint8_t *dstBase = (uint8_t *)(uintptr_t)frontbufferBasePtr + g_menu_draw_x_offset;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)_frontbufferBasePtr + _g_menu_draw_x_offset;
     if (!data || !dstBase) return;
 
     int16_t sprW  = a0->pixWidth;
@@ -635,7 +635,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
      * below is not enough when dstX is so negative that `dx` wraps into
      * the visible range for huge sprites (replay frame path was passing
      * dstX=-384). */
-    if (dstX >= g_screen_width || dstY >= SCREEN_HEIGHT) return;
+    if (dstX >= _g_screen_width || dstY >= SCREEN_HEIGHT) return;
     if (dstX + sprW <= 0 || dstY + sprH <= 0) return;
 
     /* cameraXMod320/cameraYMod320 are Amiga hardware-scroll wrap
@@ -654,7 +654,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 
         for (int16_t px = 0; px < sprW; px++) {
             int16_t dx = dstX + px;
-            if (dx < 0 || dx >= g_screen_width) continue;
+            if (dx < 0 || dx >= _g_screen_width) continue;
             uint8_t src = srcRow[px];
             if (src) dstRow[dx] = src;
         }
@@ -1033,9 +1033,9 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 __attribute__((used, externally_visible))
 void DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
-    uintptr_t savedQueue = spriteBlitQueue;
+    uintptr_t savedQueue = _spriteBlitQueue;
     DrawSpriteClipped(a0, d1, d2);
-    spriteBlitQueue = savedQueue;
+    _spriteBlitQueue = savedQueue;
     *(uint32_t *)savedQueue = BLT_BLITQ_END;
 }
 
@@ -1047,7 +1047,7 @@ void DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
 __attribute__((used, externally_visible))
 void DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     DrawSprite_entry2(spr, x, y);
 }
@@ -1061,7 +1061,7 @@ void DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     x -= spr->centerX;
     y -= spr->centerY;
@@ -1077,14 +1077,14 @@ void DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
-    x -= cameraX.s.i;
-    y -= cameraY.s.i;
+    x -= _cameraX.s.i;
+    y -= _cameraY.s.i;
 
     /* Cull if completely off-screen */
-    if (x >= g_screen_width)
+    if (x >= _g_screen_width)
         return;
     if (y >= SCREEN_HEIGHT)
         return;
@@ -1111,17 +1111,17 @@ void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
     x -= spr->centerX;
     y -= spr->centerY;
 
     /* Fall through to DrawSpriteInCameraView logic (with spr already resolved) */
-    x -= cameraX.s.i;
-    y -= cameraY.s.i;
+    x -= _cameraX.s.i;
+    y -= _cameraY.s.i;
 
-    if (x >= g_screen_width)
+    if (x >= _g_screen_width)
         return;
     if (y >= SCREEN_HEIGHT)
         return;
@@ -1151,7 +1151,7 @@ void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     DrawSpriteClipped(spr, x, y);
 }
@@ -1172,13 +1172,13 @@ void DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
 __attribute__((used, externally_visible))
 void DrawQueuedSprites(void)
 {
-    uint8_t *a2 = (uint8_t *)renderStackPtr;
+    uint8_t *a2 = (uint8_t *)_renderStackPtr;
 
     /* Stack entry on disk: [Sprite *a1][SpriteGraphics *a0][int16 d1][int16 d2]
      * On 32-bit each pointer is 4 B (total 12 B/entry); on 64-bit each is 8 B
      * (total 20 B/entry). Reads back must use sizeof(void *) — earlier
      * a2 -= 4 unconditionally was reading half a pointer on 64-bit. */
-    while (a2 != renderStackBase) {
+    while (a2 != _renderStackBase) {
         a2 -= 2;
         int16_t d2 = *(int16_t *)a2;
         a2 -= 2;
@@ -1259,15 +1259,15 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
     /* Blit sprite data into copper list buffers */
     /* First plane pair */
     waitBlit();
-    BLT_L(custom->bltapt, (uint32_t)(uintptr_t)sprGfx->sprData);
-    BLT_L(custom->bltdpt, (uint32_t)(uintptr_t)a4);
-    BLT_W(custom->bltsize, sprGfx->bltsize);
+    BLT_L(_custom->bltapt, (uint32_t)(uintptr_t)sprGfx->sprData);
+    BLT_L(_custom->bltdpt, (uint32_t)(uintptr_t)a4);
+    BLT_W(_custom->bltsize, sprGfx->bltsize);
     /* Second plane pair: source at data+4 */
     uintptr_t srcPlane2 = (uintptr_t)sprGfx->sprData + 4;
     waitBlit();
-    BLT_L(custom->bltapt, (uint32_t)srcPlane2);
-    BLT_L(custom->bltdpt, (uint32_t)(uintptr_t)a5);
-    BLT_W(custom->bltsize, sprGfx->bltsize);
+    BLT_L(_custom->bltapt, (uint32_t)srcPlane2);
+    BLT_L(_custom->bltdpt, (uint32_t)(uintptr_t)a5);
+    BLT_W(_custom->bltsize, sprGfx->bltsize);
     /* Advance past sprite data: nlines * 4 bytes (2 words per line) */
     uint16_t nlines = (uint16_t)sprGfx->nlines;
     uint16_t dataBytes = nlines << 2;
@@ -1406,13 +1406,13 @@ static int16_t occlBuckets_combined[5 + OCCL_ACTIVE_BUCKETS];
 __attribute__((used, externally_visible))
 void BuildSpriteBandAndGeneralRenderStacks(void)
 {
-    int16_t d7 = (int16_t)numSpritesToRender;
+    int16_t d7 = (int16_t)_numSpritesToRender;
     if (d7 == 0)
         return;
 
-    uint8_t *a4 = (uint8_t *)plane01RenderStackBase;
-    uint8_t *a5 = (uint8_t *)plane23RenderStackBase;
-    uint8_t *a6loc = (uint8_t *)renderStackBase;
+    uint8_t *a4 = (uint8_t *)_plane01RenderStackBase;
+    uint8_t *a5 = (uint8_t *)_plane23RenderStackBase;
+    uint8_t *a6loc = (uint8_t *)_renderStackBase;
 
     /* Initialize all occlusion bucket words to 0x7FFF (asm did 31 move.w's; on SDL the
      * active region is larger for widescreen, so initialize the whole array). */
@@ -1428,14 +1428,14 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
     int16_t *a3 = occlMinYBucketsActive_local;
 
     /* Walk sorted sprites from back to front (highest index first) */
-    Sprite **a2 = sortedSprites + d7;
+    Sprite **a2 = _sortedSprites + d7;
     d7--;
 
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_SPRITE_LIMIT > 0
     int16_t spritesEnqueued = 0;
 #endif
 
-    while (a2 != sortedSprites) {
+    while (a2 != _sortedSprites) {
         a2--;
         Sprite *a1 = *a2;
 
@@ -1448,16 +1448,16 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         }
 
         /* Look up sprite graphics */
-        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
         SpriteGraphics *a0 = sprGfxTable[(uint16_t)sprIdx];
 
         /* Camera-relative position with hotspot adjustment */
-        int16_t d1 = a1->x.s.i - a0->centerX - cameraX.s.i;
-        int16_t d2 = a1->y.s.i - a0->centerY - cameraY.s.i;
+        int16_t d1 = a1->x.s.i - a0->centerX - _cameraX.s.i;
+        int16_t d2 = a1->y.s.i - a0->centerY - _cameraY.s.i;
         d2 -= a1->z.s.i;
 
         /* Cull if off-screen */
-        if (d1 >= g_screen_width || d2 >= SCREEN_HEIGHT) {
+        if (d1 >= _g_screen_width || d2 >= SCREEN_HEIGHT) {
             a1->onScreen = 0;
             d7--;
             if (d7 < 0) break;
@@ -1599,9 +1599,9 @@ post_enqueue:
     }
 
     /* Commit stack pointers */
-    plane01RenderStackPtr = a4;
-    plane23RenderStackPtr = a5;
-    renderStackPtr = a6loc;
+    _plane01RenderStackPtr = a4;
+    _plane23RenderStackPtr = a5;
+    _renderStackPtr = a6loc;
 }
 
 /* ================================================================

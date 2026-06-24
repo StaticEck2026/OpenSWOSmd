@@ -46,7 +46,7 @@ _Static_assert(sizeof(SeasonInformations) * 35 ==
                (UINTPTR_MAX != 0xFFFFFFFFu ? 4270u : 3710u),
                "seasonInformationsArray reservation must equal 35 * sizeof(SeasonInformations) (CAREER_MAX_SEASONS)");
 
-extern SeasonInformations seasonInformationsArray[35];
+extern SeasonInformations _seasonInformationsArray[35];
 
 __asm__(
 #if defined(__APPLE__)
@@ -55,9 +55,9 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "seasonInformationsArray\n"
-    _ASM_PFX "seasonInformationsArray:\n"
-    ".skip 3710\n"   /* 35 * 106 (CAREER_MAX_SEASONS rows, 32-bit struct size) */
+    ".globl " _ASM_PFX "_seasonInformationsArray\n"
+    _ASM_PFX "_seasonInformationsArray:\n"
+    ".skip 3710\n"   /* 35 * 106 (CAREER_MAX_SEASONS rows, 32-bit struct _size) */
 #if UINTPTR_MAX != 0xFFFFFFFFu
     /* SeasonInformations grows 106 -> 122 bytes per row on 64-bit (4 pointer
      * fields); reserve 35 * 16 = 560 extra bytes for the full struct size. */

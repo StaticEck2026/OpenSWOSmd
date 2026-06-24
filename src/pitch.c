@@ -15,17 +15,17 @@
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern void *swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */
-extern uint8_t pitchDatBuffer[];        /* 9240 bytes (2310 longs) */
-extern uint8_t currentMenu[];           /* BSS base for pointer relocation */
-extern uint16_t panicReasonCode;
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern TeamGame topTeamInGame;
-extern TeamGame bottomTeamInGame;
-extern uint16_t fansSidesSwapped;
+extern void *_swcPitchMapFiles[];     /* char *[6] -- pitch map filenames */
+extern uint8_t _pitchDatBuffer[];        /* 9240 bytes (2310 longs) */
+extern uint8_t _currentMenu[];           /* BSS base for pointer relocation */
+extern uint16_t _panicReasonCode;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern TeamGame _topTeamInGame;
+extern TeamGame _bottomTeamInGame;
+extern uint16_t _fansSidesSwapped;
 
 /* ---- External functions ---- */
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
@@ -47,7 +47,7 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 /* Non-static so animated_patterns.c can read it directly (declared
  * extern there). Same shape: index = slot, value = full chunky-tile
  * pointer (NULL if not yet decoded). */
-uint8_t *s_pitchFullPtrs[PITCH_POINTER_COUNT];
+uint8_t *_s_pitchFullPtrs[PITCH_POINTER_COUNT];
 
 /* pitchFansConvertTable: color remap table for fan sprites.
  * Indices 10,11 get replaced with team kit colors. */
@@ -139,7 +139,7 @@ void AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
  * PITCH1..PITCH6; mapIndex is 0-based (swcPitchMapFiles order), so the
  * DOS number is mapIndex + 1.
  * ================================================================ */
-extern uint8_t pitchChunkyBuffer[];
+extern uint8_t _pitchChunkyBuffer[];
 /* Direct asset dispatch (writes straight to dest, no frontbuffer staging).
  * ASSET_OP_INIT_SOURCE0 == 2 (see file_io.c / asset_loader.c). */
 extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
@@ -163,16 +163,16 @@ static void dos_load_pitch(uint16_t mapIndex)
      * banks are 190–545 KB, so they MUST bypass that staging. The direct
      * dispatch writes straight into pitchChunkyBuffer (591360 B = 2310 tiles);
      * the 2020 set's largest is pitch6 at 545536 B (2131 tiles), which fits. */
-    snprintf(name, sizeof name, "%s/PITCH%d.BLK", gDosGraphicsDir, pitchNum);
+    snprintf(name, sizeof name, "%s/PITCH%d.BLK", _gDosGraphicsDir, pitchNum);
     CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, name,
-                               pitchChunkyBuffer, &blkSize);
+                               _pitchChunkyBuffer, &blkSize);
 
     /* Tile map — stage into pitchDatBuffer, then parse the LE offsets. */
-    snprintf(name, sizeof name, "%s/PITCH%d.DAT", gDosGraphicsDir, pitchNum);
-    LoadFileEx((uint8_t *)name, pitchDatBuffer, &datSize);
+    snprintf(name, sizeof name, "%s/PITCH%d.DAT", _gDosGraphicsDir, pitchNum);
+    LoadFileEx((uint8_t *)name, _pitchDatBuffer, &datSize);
 
     static uint16_t tileMap[PITCH_POINTER_COUNT];
-    int n = DosGfx_ParsePitchMap(pitchDatBuffer, datSize, tileMap,
+    int n = DosGfx_ParsePitchMap(_pitchDatBuffer, datSize, tileMap,
                                  PITCH_POINTER_COUNT);
 
     uint32_t tileCount = blkSize / DOS_TILE_BYTES;
@@ -181,10 +181,10 @@ static void dos_load_pitch(uint16_t mapIndex)
     if (tileCount > DOS_PITCH_BANK_MAX_TILES) tileCount = DOS_PITCH_BANK_MAX_TILES;
     for (int i = 0; i < PITCH_POINTER_COUNT; i++) {
         if (i < n && (uint32_t)tileMap[i] < tileCount)
-            s_pitchFullPtrs[i] = pitchChunkyBuffer +
+            _s_pitchFullPtrs[i] = _pitchChunkyBuffer +
                                  (size_t)tileMap[i] * DOS_TILE_BYTES;
         else
-            s_pitchFullPtrs[i] = (uint8_t *)0;   /* unmapped → surround */
+            _s_pitchFullPtrs[i] = (uint8_t *)0;   /* unmapped → surround */
     }
 
     /* Mirror the Amiga SDL pitch fixup (Step 1b in FixupAndColorPitchFile):
@@ -196,9 +196,9 @@ static void dos_load_pitch(uint16_t mapIndex)
      * DOS tile bank stores those pairs at adjacent indices just like the Amiga,
      * so the same toggle works. Without this the slots would hold raw .DAT
      * bytes and the toggle math would read garbage. */
-    uint32_t *slots = (uint32_t *)pitchDatBuffer;
+    uint32_t *slots = (uint32_t *)_pitchDatBuffer;
     for (int i = 0; i < PITCH_POINTER_COUNT; i++)
-        slots[i] = (uint32_t)(uintptr_t)s_pitchFullPtrs[i];
+        slots[i] = (uint32_t)(uintptr_t)_s_pitchFullPtrs[i];
 }
 #endif /* SWOS_SDL_BUILD */
 
@@ -212,21 +212,21 @@ __attribute__((used, externally_visible))
 void LoadPitchMap(uint16_t mapIndex)
 {
 #ifdef SWOS_SDL_BUILD
-    if (gDosGraphics) {
+    if (_gDosGraphics) {
         dos_load_pitch(mapIndex);
         return;
     }
 #endif
-    uint8_t *filename = (uint8_t *)swcPitchMapFiles[mapIndex];
+    uint8_t *filename = (uint8_t *)_swcPitchMapFiles[mapIndex];
     uint32_t fileSize = 0;
     int16_t result;
 
-    result = LoadFileEx(filename, pitchDatBuffer, &fileSize);
+    result = LoadFileEx(filename, _pitchDatBuffer, &fileSize);
     (void)result;
 
     if (fileSize > PITCHFILE_MAX_SIZE)
     {
-        panicReasonCode = 3;
+        _panicReasonCode = 3;
         PanicHaltLoop();
     }
 }
@@ -249,23 +249,23 @@ void FixupAndColorPitchFile(void)
      * it aliased the same RAM block as pitchDatBuffer; our C build keeps
      * them separate, so we must compute the tile-data base from the
      * actual pitch buffer for both targets. */
-    uint32_t baseAddr = (uint32_t)(uintptr_t)(pitchDatBuffer + PITCH_POINTER_COUNT * 4);
+    uint32_t baseAddr = (uint32_t)(uintptr_t)(_pitchDatBuffer + PITCH_POINTER_COUNT * 4);
     TeamGame *teamData;
     uint16_t kitPrimary, kitSecondary, kitTertiary;
 
 #ifdef SWOS_SDL_BUILD
-    if (gDosGraphics) {
+    if (_gDosGraphics) {
         /* DOS pitch: s_pitchFullPtrs was already built in LoadPitchMap
          * from the BLK tile bank + DAT tile map. There is no bitplane
          * pointer table to relocate or decode, and the Amiga fan-kit
          * recolor (AdjustFanColor) doesn't apply to 256-colour DOS tiles
          * — it indexes a 16-entry LUT with pixel values that can be 0..255.
          * Just reset the camera and skip the rest. */
-        cameraX.s.i = 0;
-        cameraY.s.i = 0;
-        cameraXMod320 = 0;
-        cameraYMod320 = 0;
-        fansSidesSwapped = 0;
+        _cameraX.s.i = 0;
+        _cameraY.s.i = 0;
+        _cameraXMod320 = 0;
+        _cameraYMod320 = 0;
+        _fansSidesSwapped = 0;
         return;
     }
 #endif
@@ -275,7 +275,7 @@ void FixupAndColorPitchFile(void)
      * big-endian byte offset into the tile-data region. On x86 LE
      * a native uint32 load would byte-swap the value (offset 0x80
      * becomes 0x80000000), so read each entry via BE_READ_U32. */
-    pitchPtrs = (uint32_t *)pitchDatBuffer;
+    pitchPtrs = (uint32_t *)_pitchDatBuffer;
     /* Count UP, not down. The backward loop made GCC use
      * `pitchDatBuffer - 4` (a negative-addend symbol reference) as the
      * loop terminator. On the m68k-amiga-elf toolchain that produces a
@@ -312,10 +312,10 @@ void FixupAndColorPitchFile(void)
      * Each scanline is `plane0_word, plane1_word, plane2_word, plane3_word`
      * packing 16 horizontal pixels as bit N of each plane word. */
     {
-        extern uint8_t pitchChunkyBuffer[];
-        uint8_t *bufStart    = pitchDatBuffer;
-        uint8_t *bufEnd      = pitchDatBuffer + 64 * 1024;
-        uint8_t *tileDataBase = pitchDatBuffer + PITCH_POINTER_COUNT * 4;
+        extern uint8_t _pitchChunkyBuffer[];
+        uint8_t *bufStart    = _pitchDatBuffer;
+        uint8_t *bufEnd      = _pitchDatBuffer + 64 * 1024;
+        uint8_t *tileDataBase = _pitchDatBuffer + PITCH_POINTER_COUNT * 4;
         /* Track which tile-type indices have been decoded already. */
         static uint8_t tileDecoded[PITCH_POINTER_COUNT];
         for (i = 0; i < PITCH_POINTER_COUNT; i++)
@@ -344,24 +344,24 @@ void FixupAndColorPitchFile(void)
                 /* Fall back to per-entry indexing for invalid pointers
                  * so we at least don't share garbage between tiles. */
                 uint32_t safeIdx = (uint32_t)i;
-                uint8_t *chunky = pitchChunkyBuffer + safeIdx * 256;
+                uint8_t *chunky = _pitchChunkyBuffer + safeIdx * 256;
                 for (int k = 0; k < 256; k++) chunky[k] = 0;
                 pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
-                s_pitchFullPtrs[i] = chunky;
+                _s_pitchFullPtrs[i] = chunky;
                 continue;
             }
 
             uint32_t tileIdx = (uint32_t)((bitplane - tileDataBase) / 128);
             if (tileIdx >= PITCH_POINTER_COUNT) {
                 /* offset out of bounds → safe fallback */
-                uint8_t *chunky = pitchChunkyBuffer + (size_t)i * 256;
+                uint8_t *chunky = _pitchChunkyBuffer + (size_t)i * 256;
                 for (int k = 0; k < 256; k++) chunky[k] = 0;
                 pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
-                s_pitchFullPtrs[i] = chunky;
+                _s_pitchFullPtrs[i] = chunky;
                 continue;
             }
 
-            uint8_t *chunky = pitchChunkyBuffer + (size_t)tileIdx * 256;
+            uint8_t *chunky = _pitchChunkyBuffer + (size_t)tileIdx * 256;
 
             if (!tileDecoded[tileIdx]) {
                 for (int row = 0; row < 16; row++) {
@@ -384,16 +384,16 @@ void FixupAndColorPitchFile(void)
                 tileDecoded[tileIdx] = 1;
             }
             pitchPtrs[i] = (uint32_t)(uintptr_t)chunky;
-            s_pitchFullPtrs[i] = chunky;
+            _s_pitchFullPtrs[i] = chunky;
         }
     }
 #endif
 
     /* Step 2: Reset camera */
-    cameraX.s.i = 0;
-    cameraY.s.i = 0;
-    cameraXMod320 = 0;
-    cameraYMod320 = 0;
+    _cameraX.s.i = 0;
+    _cameraY.s.i = 0;
+    _cameraXMod320 = 0;
+    _cameraYMod320 = 0;
 
     /* Step 3: Set up fan pointer groups.
      *
@@ -406,25 +406,25 @@ void FixupAndColorPitchFile(void)
      * out) — use the in-buffer slot table directly, matching the
      * original asm. */
 #ifdef SWOS_SDL_BUILD
-    uint8_t **fanGroupA = &s_pitchFullPtrs[0];
-    uint8_t **fanGroupB = &s_pitchFullPtrs[FAN_PTR_TABLE_OFFSET / 4];
+    uint8_t **fanGroupA = &_s_pitchFullPtrs[0];
+    uint8_t **fanGroupB = &_s_pitchFullPtrs[FAN_PTR_TABLE_OFFSET / 4];
 #else
     uint8_t **fanGroupA = (uint8_t **)pitchDatBuffer;
     uint8_t **fanGroupB = (uint8_t **)(pitchDatBuffer + FAN_PTR_TABLE_OFFSET);
 #endif
 
-    fansSidesSwapped = 0;
+    _fansSidesSwapped = 0;
     /* If topTeamInGame's team name first byte is odd, swap groups */
-    if (topTeamInGame.teamName[0] & 1)
+    if (_topTeamInGame.teamName[0] & 1)
     {
         uint8_t **tmp = fanGroupA;
         fanGroupA = fanGroupB;
         fanGroupB = tmp;
-        fansSidesSwapped = 1;
+        _fansSidesSwapped = 1;
     }
 
     /* Step 4: Recolor top team fans (21 sprites) */
-    teamData = &topTeamInGame;
+    teamData = &_topTeamInGame;
     kitPrimary = (uint16_t)teamData->secShirtCol;
     kitSecondary = (uint16_t)teamData->secStripesCol;
     kitTertiary = (uint16_t)teamData->secShortsCol;
@@ -441,7 +441,7 @@ void FixupAndColorPitchFile(void)
     }
 
     /* Step 5: Recolor bottom team fans (21 sprites) */
-    teamData = &bottomTeamInGame;
+    teamData = &_bottomTeamInGame;
     kitPrimary = (uint16_t)teamData->secShirtCol;
     kitSecondary = (uint16_t)teamData->secStripesCol;
     kitTertiary = (uint16_t)teamData->secShortsCol;
@@ -485,22 +485,22 @@ void FixupAndColorPitchFile(void)
 #define PITCH_GRID_ROWS     55
 #define PITCH_TILE_SIZE     16
 
-extern uint8_t pitchDatBuffer[];
-extern volatile uintptr_t frontbufferBasePtr;
+extern uint8_t _pitchDatBuffer[];
+extern volatile uintptr_t _frontbufferBasePtr;
 
 __attribute__((used, externally_visible))
 void DrawChunkyPitch(void)
 {
-    uint8_t  *fb        = (uint8_t *)(uintptr_t)frontbufferBasePtr;
+    uint8_t  *fb        = (uint8_t *)(uintptr_t)_frontbufferBasePtr;
     if (!fb) return;
 
     const int fbW = FRONTBUFFER_ROW_STRIDE_BYTES;   /* SDL = SCREEN_WIDTH = 320 */
     const int fbH = SCREEN_HEIGHT;                  /* 200 */
 
-    int startTileX = (int)cameraX.s.i / PITCH_TILE_SIZE;
-    int startTileY = (int)cameraY.s.i / PITCH_TILE_SIZE;
-    int offsetX    = (int)cameraX.s.i % PITCH_TILE_SIZE;
-    int offsetY    = (int)cameraY.s.i % PITCH_TILE_SIZE;
+    int startTileX = (int)_cameraX.s.i / PITCH_TILE_SIZE;
+    int startTileY = (int)_cameraY.s.i / PITCH_TILE_SIZE;
+    int offsetX    = (int)_cameraX.s.i % PITCH_TILE_SIZE;
+    int offsetY    = (int)_cameraY.s.i % PITCH_TILE_SIZE;
     if (offsetX < 0) { offsetX += PITCH_TILE_SIZE; startTileX--; }
     if (offsetY < 0) { offsetY += PITCH_TILE_SIZE; startTileY--; }
 
@@ -520,7 +520,7 @@ void DrawChunkyPitch(void)
                 gridY >= 0 && gridY < PITCH_GRID_ROWS) {
                 int ptrIdx = PITCH_PTR_START + gridY * PITCH_GRID_COLS + gridX;
                 tile = (ptrIdx >= 0 && ptrIdx < PITCH_POINTER_COUNT)
-                         ? s_pitchFullPtrs[ptrIdx] : (uint8_t *)0;
+                         ? _s_pitchFullPtrs[ptrIdx] : (uint8_t *)0;
             }
 
             for (int row = 0; row < PITCH_TILE_SIZE; row++) {

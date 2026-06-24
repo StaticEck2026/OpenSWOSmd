@@ -75,15 +75,15 @@ int RJP1_Load(RJP1_Player *p,
     const uint8_t *end = song_data + song_size;
     for (int i = 0; i < 7; ++i) {
         if (q + 4 > end) return 0;
-        uint32_t size = be32(q); q += 4;
+        uint32_t _size = be32(q); q += 4;
         p->vars.song_data[i] = q;
-        if (q + size > end) return 0;
+        if (q + _size > end) return 0;
         switch (i) {
-        case 0: p->instruments_count = (int)(size / 32); break;
-        case 2: p->subsongs_count    = (int)(size /  4); break;
+        case 0: p->instruments_count = (int)(_size / 32); break;
+        case 2: p->subsongs_count    = (int)(_size /  4); break;
         default: break;
         }
-        q += size;
+        q += _size;
     }
     memset(p->channels, 0, sizeof(p->channels));
     p->vars.active_channels_mask = 0;

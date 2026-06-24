@@ -31,7 +31,7 @@ _Static_assert(offsetof(ManagerIdentity, managerNameBuffer)    ==  6, "mgr layou
 _Static_assert(offsetof(ManagerIdentity, managerSurnameBuffer) == 15, "mgr layout");
 _Static_assert(offsetof(ManagerIdentity, plNationality)        == 28, "mgr layout");
 
-extern ManagerIdentity managerIdentity;
+extern ManagerIdentity _managerIdentity;
 
 __asm__(
 #if defined(__APPLE__)
@@ -40,22 +40,22 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "managerIdentity\n"
-    _ASM_PFX "managerIdentity:\n"
-    ".globl " _ASM_PFX "mrOrMs\n"
-    _ASM_PFX "mrOrMs:\n"
+    ".globl " _ASM_PFX "_managerIdentity\n"
+    _ASM_PFX "_managerIdentity:\n"
+    ".globl " _ASM_PFX "_mrOrMs\n"
+    _ASM_PFX "_mrOrMs:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "managerSexBuffer\n"
-    _ASM_PFX "managerSexBuffer:\n"
+    ".globl " _ASM_PFX "_managerSexBuffer\n"
+    _ASM_PFX "_managerSexBuffer:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "managerNameBuffer\n"
-    _ASM_PFX "managerNameBuffer:\n"
+    ".globl " _ASM_PFX "_managerNameBuffer\n"
+    _ASM_PFX "_managerNameBuffer:\n"
     ".skip 9\n"
-    ".globl " _ASM_PFX "managerSurnameBuffer\n"
-    _ASM_PFX "managerSurnameBuffer:\n"
+    ".globl " _ASM_PFX "_managerSurnameBuffer\n"
+    _ASM_PFX "_managerSurnameBuffer:\n"
     ".skip 13\n"
-    ".globl " _ASM_PFX "plNationality\n"
-    _ASM_PFX "plNationality:\n"
+    ".globl " _ASM_PFX "_plNationality\n"
+    _ASM_PFX "_plNationality:\n"
     ".skip 2\n"
     ".text\n"
 );

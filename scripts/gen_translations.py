@@ -97,7 +97,7 @@ TR = {
 }
 
 # Spanish kept separate so the TR tuples stay 3-wide. english value -> es (UPPERCASE,
-# accented: Á É Í Ó Ú Ñ ¿ ¡ all exist in the font extension).
+# accented: Á É Í Ó Ú Ñ ¿ ¡ all exist in the font _extension).
 ES = {
  "ABORT":"ABORTAR", "ACCEPT":"ACEPTAR", "ACCEPT OFFER":"ACEPTAR OFERTA",
  "CANCEL":"CANCELAR", "CONTINUE":"CONTINUAR", "EXIT":"SALIR", "YES":"SÍ", "NO":"NO",

@@ -31,27 +31,27 @@ extern void AudioSDL_SetMasterVolume(int vol_0_64);
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint16_t audioBankLoaded;
-extern volatile uint16_t audioActive;
-extern uint8_t menuSongData[];
-extern uint8_t menuInsBank[];
-extern uint8_t aSoundMenuSng[];
-extern uint8_t aSoundMenuIns[];
-extern uint8_t sfxSongData[];
-extern uint8_t poolplyrDatBuffer[];
-extern uint8_t sfxInsBank2[];
-extern uint8_t aSoundSfxSng[];
-extern uint8_t aSoundSfxIn1[];
-extern uint8_t aSoundSfxIn2[];
-extern volatile uint16_t currentGameTick;
+extern uint16_t _audioBankLoaded;
+extern volatile uint16_t _audioActive;
+extern uint8_t _menuSongData[];
+extern uint8_t _menuInsBank[];
+extern uint8_t _aSoundMenuSng[];
+extern uint8_t _aSoundMenuIns[];
+extern uint8_t _sfxSongData[];
+extern uint8_t _poolplyrDatBuffer[];
+extern uint8_t _sfxInsBank2[];
+extern uint8_t _aSoundSfxSng[];
+extern uint8_t _aSoundSfxIn1[];
+extern uint8_t _aSoundSfxIn2[];
+extern volatile uint16_t _currentGameTick;
 extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 
 /* Audio system data (PC-relative in SWOS2.s code section) */
-extern AudioState audioState;
-extern AudioChannel audioChannel0;
-extern AudioChannel audioChannel1;
-extern AudioChannel audioChannel2;
-extern AudioChannel audioChannel3;
+extern AudioState _audioState;
+extern AudioChannel _audioChannel0;
+extern AudioChannel _audioChannel1;
+extern AudioChannel _audioChannel2;
+extern AudioChannel _audioChannel3;
 
 /* ---- External C functions ---- */
 extern int16_t PlaySong(uint8_t *name, uint8_t *dest);  /* asset_loader.c */
@@ -61,10 +61,10 @@ static AudioChannel *audioChannels[4];
 
 static void ensureChannelPtrs(void)
 {
-    audioChannels[0] = &audioChannel0;
-    audioChannels[1] = &audioChannel1;
-    audioChannels[2] = &audioChannel2;
-    audioChannels[3] = &audioChannel3;
+    audioChannels[0] = &_audioChannel0;
+    audioChannels[1] = &_audioChannel1;
+    audioChannels[2] = &_audioChannel2;
+    audioChannels[3] = &_audioChannel3;
 }
 
 /* ================================================================
@@ -75,7 +75,7 @@ static void ensureChannelPtrs(void)
  * ================================================================ */
 static uint8_t *accessRelocate(uint8_t *ptr)
 {
-    return (uint8_t *)(((uintptr_t)ptr + (uintptr_t)audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
+    return (uint8_t *)(((uintptr_t)ptr + (uintptr_t)_audioState.bankSectionPtrs[5]) & 0x00FFFFFFu);
 }
 
 /* ================================================================
@@ -87,11 +87,11 @@ static uint8_t *accessRelocate(uint8_t *ptr)
 __attribute__((used, externally_visible))
 void StopAllAudioChannels(void)
 {
-    audioState.masterVolume = 0;
-    audioState.modeFlags = 0;
+    _audioState.masterVolume = 0;
+    _audioState.modeFlags = 0;
 
     /* Disable DMA for all 4 audio channels (bits 0-3 of DMACON) */
-    custom->dmacon = 0x000F;
+    _custom->dmacon = 0x000F;
 
     /* Zero all 4 channel volumes — use absolute addresses (not in struct) */
     *(volatile uint16_t *)(CUSTOM_BASE + AUD0VOL_OFF) = 0;
@@ -121,10 +121,10 @@ void AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
     if (channelOrAll & 0x80)
     {
         /* Apply to all channels */
-        audioState.channelVolume[0] = vol;
-        audioState.channelVolume[1] = vol;
-        audioState.channelVolume[2] = vol;
-        audioState.channelVolume[3] = vol;
+        _audioState.channelVolume[0] = vol;
+        _audioState.channelVolume[1] = vol;
+        _audioState.channelVolume[2] = vol;
+        _audioState.channelVolume[3] = vol;
 #ifdef SWOS_SDL_BUILD
         AudioSDL_SetMasterVolume(vol);
         /* Also push the per-channel attenuation to the RJP1 player so a
@@ -149,7 +149,7 @@ void AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
     }
     else
     {
-        audioState.channelVolume[channelOrAll & 3] = vol;
+        _audioState.channelVolume[channelOrAll & 3] = vol;
 #ifdef SWOS_SDL_BUILD
         /* Without this the per-channel volume only updated the
          * Amiga-side state byte and never reached the SDL audio
@@ -173,15 +173,15 @@ __attribute__((used, externally_visible))
 void AudioSetMode(uint16_t mode)
 {
     mode &= 0x0F;
-    audioState.modeFlags = mode;
-    audioState.toggleFlag = 0;
-    audioState.primaryChanEnable = 0xFF;
-    audioState.secondaryChanEnable = 0xFF;
+    _audioState.modeFlags = mode;
+    _audioState.toggleFlag = 0;
+    _audioState.primaryChanEnable = 0xFF;
+    _audioState.secondaryChanEnable = 0xFF;
 
     if (!(mode & 0x08))
-        audioState.primaryChanEnable = 0;
+        _audioState.primaryChanEnable = 0;
     if (!(mode & 0x04))
-        audioState.secondaryChanEnable = 0;
+        _audioState.secondaryChanEnable = 0;
 }
 
 /* ================================================================
@@ -232,11 +232,11 @@ void InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     (void)songPtr;
     /* Clear audio state so later ISR tick doesn't see garbage. */
     {
-        uint8_t *p = (uint8_t *)&audioState;
-        for (unsigned i = 0; i < sizeof(audioState); ++i) p[i] = 0;
+        uint8_t *p = (uint8_t *)&_audioState;
+        for (unsigned i = 0; i < sizeof(_audioState); ++i) p[i] = 0;
     }
-    audioState.masterVolume = 0;
-    audioState.modeFlags    = 0;
+    _audioState.masterVolume = 0;
+    _audioState.modeFlags    = 0;
 
     /* Even though we don't parse the bank, the IRQ ticks will run and
      * may dispatch to channels later (e.g. after AudioSetMode flips
@@ -246,25 +246,25 @@ void InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
      * already-allocated s_custom_storage on the SDL host. */
     ensureChannelPtrs();
 
-    clearAudioChannelStruct(&audioChannel0);
-    audioChannel0.hwRegBase = AUD0LC_ADDR;
-    audioChannel0.pvDmaBit = 1;
-    audioChannel0.svDmaBit = 1;
+    clearAudioChannelStruct(&_audioChannel0);
+    _audioChannel0.hwRegBase = AUD0LC_ADDR;
+    _audioChannel0.pvDmaBit = 1;
+    _audioChannel0.svDmaBit = 1;
 
-    clearAudioChannelStruct(&audioChannel1);
-    audioChannel1.hwRegBase = AUD1LC_ADDR;
-    audioChannel1.pvDmaBit = 2;
-    audioChannel1.svDmaBit = 2;
+    clearAudioChannelStruct(&_audioChannel1);
+    _audioChannel1.hwRegBase = AUD1LC_ADDR;
+    _audioChannel1.pvDmaBit = 2;
+    _audioChannel1.svDmaBit = 2;
 
-    clearAudioChannelStruct(&audioChannel2);
-    audioChannel2.hwRegBase = AUD2LC_ADDR;
-    audioChannel2.pvDmaBit = 4;
-    audioChannel2.svDmaBit = 4;
+    clearAudioChannelStruct(&_audioChannel2);
+    _audioChannel2.hwRegBase = AUD2LC_ADDR;
+    _audioChannel2.pvDmaBit = 4;
+    _audioChannel2.svDmaBit = 4;
 
-    clearAudioChannelStruct(&audioChannel3);
-    audioChannel3.hwRegBase = AUD3LC_ADDR;
-    audioChannel3.pvDmaBit = 8;
-    audioChannel3.svDmaBit = 8;
+    clearAudioChannelStruct(&_audioChannel3);
+    _audioChannel3.hwRegBase = AUD3LC_ADDR;
+    _audioChannel3.pvDmaBit = 8;
+    _audioChannel3.svDmaBit = 8;
     return;
 #else
     uint8_t *src;
@@ -376,7 +376,7 @@ void InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
 __attribute__((used, externally_visible))
 void AudioDisableDMAForChannel(AudioChannel *chan)
 {
-    custom->dmacon = chan->pvDmaBit;
+    _custom->dmacon = chan->pvDmaBit;
 }
 
 /* ================================================================
@@ -404,7 +404,7 @@ void AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
     ensureChannelPtrs();
 
     /* Set channel change bit */
-    audioState.channelChangeFlags |= (uint8_t)(1 << (channel & 3));
+    _audioState.channelChangeFlags |= (uint8_t)(1 << (channel & 3));
 
     /* Get channel pointer */
     chan = audioChannels[channel & 3];
@@ -418,7 +418,7 @@ void AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
     }
 
     /* Look up note data from bank section 3 */
-    noteTable = audioState.bankSectionPtrs[3];  /* offset 0x10 from state */
+    noteTable = _audioState.bankSectionPtrs[3];  /* offset 0x10 from state */
     noteOffset = noteId * 4;
     noteData = *(uint8_t **)(noteTable + noteOffset);
 
@@ -430,10 +430,10 @@ void AudioChannelNoteOnOff(uint16_t channel, uint16_t noteId)
     chan->pvNoteScript = (uintptr_t)noteData;
 
     /* Look up wave data from bank section 4, relocate with section 6 */
-    waveTable = audioState.bankSectionPtrs[4];  /* offset 0x14 from state */
+    waveTable = _audioState.bankSectionPtrs[4];  /* offset 0x14 from state */
     waveOffset = (uint32_t)waveIdx * 4;
     waveData = *(uint8_t **)(waveTable + waveOffset);
-    waveData = (uint8_t *)((uintptr_t)waveData + (uintptr_t)audioState.bankSectionPtrs[6]);
+    waveData = (uint8_t *)((uintptr_t)waveData + (uintptr_t)_audioState.bankSectionPtrs[6]);
 
     chan->pvWaveData = (uintptr_t)waveData;
     chan->pvStepPeriod = 6;
@@ -575,11 +575,11 @@ __attribute__((used, externally_visible))
 void InitMenuMusic(void)
 {
 retry:
-    audioBankLoaded = 0;
-    audioActive = 0;
-    if (PlaySong(aSoundMenuSng, menuSongData) != 0)
+    _audioBankLoaded = 0;
+    _audioActive = 0;
+    if (PlaySong(_aSoundMenuSng, _menuSongData) != 0)
         goto retry;
-    if (PlaySong(aSoundMenuIns, menuInsBank) != 0)
+    if (PlaySong(_aSoundMenuIns, _menuInsBank) != 0)
         goto retry;
 }
 
@@ -596,28 +596,28 @@ void TryPlayMusic(void)
      * this gate, pressing X mid-match causes the menu unwind to call
      * CycleMenuMusic → TryPlayMusic, starting the menu song just
      * before the process exits — audible as a brief musical blip. */
-    extern uint16_t g_quitToDos;
-    if (g_quitToDos != 0)
+    extern uint16_t _g_quitToDos;
+    if (_g_quitToDos != 0)
         return;
 
-    if (audioActive != 0)
+    if (_audioActive != 0)
         return;
 
 #ifdef SWOS_SDL_BUILD
     /* On SDL the RJP1 player produces samples directly into the SDL
      * audio callback. Load (once) and start subsong 1, then fade in via
      * the master-volume ramp. */
-    if (audioBankLoaded == 0) {
-        if (AudioSDL_StartSong(menuSongData, MENU_SONG_DATA_BYTES,
-                               menuInsBank,  MENU_INS_BANK_BYTES, 1) != 0) {
+    if (_audioBankLoaded == 0) {
+        if (AudioSDL_StartSong(_menuSongData, MENU_SONG_DATA_BYTES,
+                               _menuInsBank,  MENU_INS_BANK_BYTES, 1) != 0) {
             /* Load failed — keep audio silent but mark "loaded" so we
              * don't hammer the loader every vblank. */
         }
-        audioBankLoaded = 1;
+        _audioBankLoaded = 1;
     }
 
     AudioSetChannelVolume(0xFFFF, 0);
-    audioActive = 1;
+    _audioActive = 1;
 
     for (vol = 0; vol <= 0x22; vol += 2) {
         AudioSetChannelVolume(0xFFFF, vol);
@@ -653,7 +653,7 @@ void TryPlayMusic(void)
 __attribute__((used, externally_visible))
 void ClearAudioActiveFlag(void)
 {
-    audioActive = 0;
+    _audioActive = 0;
 }
 
 /* ================================================================
@@ -663,8 +663,8 @@ __attribute__((used, externally_visible))
 void StopAudioAndClearFlags(void)
 {
     StopAllAudioChannels();
-    audioActive = 0;
-    audioBankLoaded = 0;
+    _audioActive = 0;
+    _audioBankLoaded = 0;
 }
 
 /* ================================================================
@@ -675,8 +675,8 @@ void LoadSfxResources(void)
 {
 retry:
     StopAllAudioChannels();
-    audioBankLoaded = 0;
-    if (PlaySong(aSoundSfxSng, sfxSongData) != 0)
+    _audioBankLoaded = 0;
+    if (PlaySong(_aSoundSfxSng, _sfxSongData) != 0)
         goto retry;
 #ifndef SWOS_SDL_BUILD
     /* Amiga path: SFX.IN1 / SFX.IN2 are loaded into poolplyrDatBuffer
@@ -714,11 +714,11 @@ retry:
     extern int16_t LoadFileEx(uint8_t *, uint8_t *, uint32_t *);
     static uint8_t s_sfx_combined_ins[256 * 1024];
     uint32_t in1_size = 0, in2_size = 0;
-    if (LoadFileEx(aSoundSfxIn1, s_sfx_combined_ins, &in1_size) != 0)
+    if (LoadFileEx(_aSoundSfxIn1, s_sfx_combined_ins, &in1_size) != 0)
         goto retry;
     if (in1_size + 1 >= sizeof(s_sfx_combined_ins))
         goto retry;   /* impossible with sized files, but defensive */
-    if (LoadFileEx(aSoundSfxIn2, s_sfx_combined_ins + in1_size, &in2_size) != 0)
+    if (LoadFileEx(_aSoundSfxIn2, s_sfx_combined_ins + in1_size, &in2_size) != 0)
         goto retry;
 
     /* Hand the combined bank to the RJP1 player so AudioSDL_TriggerSfx
@@ -726,7 +726,7 @@ retry:
      * AudioChannelQueueNextWaveIfEnabled) has samples to fire. The
      * Amiga byte-poking engine in audio_irq.c is stubbed on SDL —
      * this is what makes in-match SFX audible. */
-    AudioSDL_LoadSfxBank(sfxSongData, SFX_SONG_DATA_BYTES,
+    AudioSDL_LoadSfxBank(_sfxSongData, SFX_SONG_DATA_BYTES,
                          s_sfx_combined_ins, in1_size + in2_size);
 #endif
 }
@@ -737,14 +737,14 @@ retry:
 __attribute__((used, externally_visible))
 void EnsureSfxLoadedAndStart(void)
 {
-    if (audioBankLoaded == 0)
+    if (_audioBankLoaded == 0)
     {
         StopAllAudioChannels();
-        InitAudioState(sfxSongData, poolplyrDatBuffer);
-        audioBankLoaded = 1;
+        InitAudioState(_sfxSongData, _poolplyrDatBuffer);
+        _audioBankLoaded = 1;
     }
     AudioSetChannelVolume(0xFFFF, 0x40);
-    audioActive = 1;
+    _audioActive = 1;
 }
 
 /* ================================================================
@@ -755,7 +755,7 @@ void StopMusic(void)
 {
     int16_t vol;
 
-    if (audioActive == 0)
+    if (_audioActive == 0)
         return;
 
     for (vol = 0x23; vol >= 0; vol--)
@@ -770,10 +770,10 @@ void StopMusic(void)
     }
 
     AudioSetChannelVolume(0xFFFF, 0);
-    audioActive = 0;
+    _audioActive = 0;
 #ifdef SWOS_SDL_BUILD
     AudioSDL_StopSong();
-    audioBankLoaded = 0;   /* next TryPlayMusic will re-load the song */
+    _audioBankLoaded = 0;   /* next TryPlayMusic will re-load the song */
 #endif
 }
 
@@ -783,8 +783,8 @@ void StopMusic(void)
 __attribute__((used, externally_visible))
 void CycleMenuMusic(void)
 {
-    extern uint16_t menuMusic;
-    if (menuMusic == 0)
+    extern uint16_t _menuMusic;
+    if (_menuMusic == 0)
         StopMusic();
     else
         TryPlayMusic();
@@ -796,7 +796,7 @@ void CycleMenuMusic(void)
 __attribute__((used, externally_visible))
 void TryRestartingMusic(void)
 {
-    if (audioActive == 0)
+    if (_audioActive == 0)
         TryPlayMusic();
     else
         StopMusic();

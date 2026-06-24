@@ -33,10 +33,10 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# gcc emits:  src/foo.c:NN:CC: warning: cast from pointer to integer of different size [-Wpointer-to-int-cast]
+# gcc emits:  src/foo.c:NN:CC: warning: cast from pointer to integer of different _size [-Wpointer-to-int-cast]
 WARN_RE = re.compile(
     r"^(?P<file>[^\s:]+):(?P<line>\d+):(?P<col>\d+):\s*warning:\s*"
-    r"(?P<msg>cast (?:from pointer to integer|to pointer from integer) of different size)\s*"
+    r"(?P<msg>cast (?:from pointer to integer|to pointer from integer) of different _size)\s*"
     r"\[-W(?P<kind>pointer-to-int-cast|int-to-pointer-cast)\]"
 )
 
@@ -62,7 +62,7 @@ def plan_edit(line: str, col: int):
 
     col is 1-based (gcc convention). We look for `(uint32_t)` ending at
     or starting near col, and replace it with `(uintptr_t)`. Because
-    gcc points at the *expression being cast* (right after the cast),
+    gcc points at the *expression being cast* (_right after the cast),
     the token usually sits in columns col-len("(uint32_t)")..col-1.
     """
     target = "(uint32_t)"
@@ -127,7 +127,7 @@ def main(argv=None):
         lines = text.splitlines(keepends=True)
 
         # Group warnings by line so we can apply multiple edits per line
-        # right-to-left (so earlier-column edits don't shift later ones).
+        # _right-to-_left (so earlier-column edits don't shift later ones).
         by_line: dict[int, list[int]] = defaultdict(list)
         for ln, col, _ in per_file[fpath]:
             by_line[ln].append(col)

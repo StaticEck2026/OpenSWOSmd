@@ -14,65 +14,65 @@
 #define TS_GOOD_TACKLE              2
 
 /* ---- External globals ---- */
-extern Sprite   ballSprite;
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
+extern Sprite   _ballSprite;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
 
-extern int16_t  kDefaultDestinations[];     /* 8 direction deltas: dx,dy pairs */
-extern uint16_t ingameTeamPlayerOffsets[];
+extern int16_t  _kDefaultDestinations[];     /* 8 direction deltas: dx,dy pairs */
+extern uint16_t _ingameTeamPlayerOffsets[];
 
-extern int16_t  gameState;
-extern int16_t  gameStatePl;
-extern int16_t  breakCameraMode;
-extern int16_t  gameNotInProgressCounterWriteOnly;
-extern int16_t  stoppageTimerTotal;
-extern int16_t  stoppageTimerActive;
-extern int16_t  cameraXVelocity;
-extern int16_t  cameraYVelocity;
-extern int16_t  cameraDirection;
-extern uint8_t  playerTurnFlags;
-extern int16_t  foulXCoordinate;
-extern int16_t  foulYCoordinate;
-extern int16_t  forceLeftTeam;
-extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
+extern int16_t  _gameState;
+extern int16_t  _gameStatePl;
+extern int16_t  _breakCameraMode;
+extern int16_t  _gameNotInProgressCounterWriteOnly;
+extern int16_t  _stoppageTimerTotal;
+extern int16_t  _stoppageTimerActive;
+extern int16_t  _cameraXVelocity;
+extern int16_t  _cameraYVelocity;
+extern int16_t  _cameraDirection;
+extern uint8_t  _playerTurnFlags;
+extern int16_t  _foulXCoordinate;
+extern int16_t  _foulYCoordinate;
+extern int16_t  _forceLeftTeam;
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
 
-extern int16_t  plgD3Param;
-extern int16_t  whichCard;
-extern int16_t  refTimer;
-extern TeamGeneralInfo *lastTeamBooked;
-extern Sprite  *bookedPlayer;
-extern int16_t  team1NumAllowedInjuries;
-extern int16_t  team2NumAllowedInjuries;
+extern int16_t  _plgD3Param;
+extern int16_t  _whichCard;
+extern int16_t  _refTimer;
+extern TeamGeneralInfo *_lastTeamBooked;
+extern Sprite  *_bookedPlayer;
+extern int16_t  _team1NumAllowedInjuries;
+extern int16_t  _team2NumAllowedInjuries;
 
-extern int16_t  cardsDisallowed;
-extern int16_t  trainingGame;
-extern int16_t  gameLengthInGame;
-extern uint16_t currentGameTick;
-extern int16_t  playerCardChance;
-extern void    *nearestTeammatePtr;
+extern int16_t  _cardsDisallowed;
+extern int16_t  _trainingGame;
+extern int16_t  _gameLengthInGame;
+extern uint16_t _currentGameTick;
+extern int16_t  _playerCardChance;
+extern void    *_nearestTeammatePtr;
 
-extern int16_t  ballNextGroundX;
-extern int16_t  ballNextYGroundY;
+extern int16_t  _ballNextGroundX;
+extern int16_t  _ballNextYGroundY;
 
 /* Inline data tables from SWOS2.s */
-extern int16_t  kPlayerTacklingDownTime[];
-extern int16_t  kComputerTacklingDownTime[];
-extern uint8_t  cardAnimStatesNoFlag[];
-extern uint8_t  cardAnimStatesWithFlag[];
+extern int16_t  _kPlayerTacklingDownTime[];
+extern int16_t  _kComputerTacklingDownTime[];
+extern uint8_t  _cardAnimStatesNoFlag[];
+extern uint8_t  _cardAnimStatesWithFlag[];
 
 /* Animation tables */
-extern AnimTable_20 playerTackledAnimTable;
-extern AnimTable    plTacklingAnimTable;
-extern AnimTable    goalieCatchingBallAnimTable;
-extern int16_t  kGoalkeeperCatchSpeed;
-extern int16_t  kPlayerTacklingSpeed;
+extern AnimTable_20 _playerTackledAnimTable;
+extern AnimTable    _plTacklingAnimTable;
+extern AnimTable    _goalieCatchingBallAnimTable;
+extern int16_t  _kGoalkeeperCatchSpeed;
+extern int16_t  _kPlayerTacklingSpeed;
 
 /* Injury lookup tables from SWOS2.s */
-extern uint8_t  kInjuryLevels[];
-extern uint8_t  kInjuryLevelAlreadyInjured[];
-extern int16_t  kInjuryRecoveryTime[];
-extern uint8_t  kTackleInjuryProbability[];
-extern uint8_t  kTackleInjuryProbabilityAlreadyInjured[];
+extern uint8_t  _kInjuryLevels[];
+extern uint8_t  _kInjuryLevelAlreadyInjured[];
+extern int16_t  _kInjuryRecoveryTime[];
+extern uint8_t  _kTackleInjuryProbability[];
+extern uint8_t  _kTackleInjuryProbabilityAlreadyInjured[];
 
 /* ---- External functions ---- */
 extern void     PlayKickSample(void);
@@ -93,7 +93,7 @@ extern void     SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
 void __attribute__((used, externally_visible))
 PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
 {
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     int16_t inputDir = team->currentAllowedDirection;
     int16_t playerDir, diff, finalDir;
     int16_t dx, dy;
@@ -121,8 +121,8 @@ PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
     team->controlledPlDirection = (int16_t)finalDir;
 
     /* Set ball destination from direction table */
-    dx = kDefaultDestinations[finalDir * 2];
-    dy = kDefaultDestinations[finalDir * 2 + 1];
+    dx = _kDefaultDestinations[finalDir * 2];
+    dy = _kDefaultDestinations[finalDir * 2 + 1];
     ball->destX = ball->x.s.i + dx;
     ball->destY = ball->y.s.i + dy;
 
@@ -168,9 +168,9 @@ SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team)
     int16_t downtime;
 
     if ((uint16_t)player->tacklingTimer == 0xFFFF)
-        table = kComputerTacklingDownTime;
+        table = _kComputerTacklingDownTime;
     else
-        table = kPlayerTacklingDownTime;
+        table = _kPlayerTacklingDownTime;
 
     tackleSkill = pi->tackling;
     downtime = table[tackleSkill];
@@ -196,7 +196,7 @@ PlayerTackled(Sprite *player, TeamGeneralInfo *team)
     int16_t i;
 
     /* Training game: 25% chance of any injury processing */
-    if (trainingGame != 0) {
+    if (_trainingGame != 0) {
         roll = Rand();
         if ((roll & 3) != 0)
             goto set_tackled;
@@ -205,26 +205,26 @@ PlayerTackled(Sprite *player, TeamGeneralInfo *team)
     /* Check injury quota for this team */
     teamNum = team->teamNumber;
     if (teamNum == 1) {
-        if (team1NumAllowedInjuries == 0)
+        if (_team1NumAllowedInjuries == 0)
             goto set_tackled;
     } else {
-        if (team2NumAllowedInjuries == 0)
+        if (_team2NumAllowedInjuries == 0)
             goto set_tackled;
     }
 
     /* Get player info and check existing injury status */
     {
         int16_t ordinal = (uint16_t)player->playerOrdinal - 1;
-        uint16_t offset = ingameTeamPlayerOffsets[ordinal];
+        uint16_t offset = _ingameTeamPlayerOffsets[ordinal];
         pi = (PlayerInfo *)((uint8_t *)team->inGameTeamPtr + offset + 42);
     }
 
-    gameLen = gameLengthInGame;
-    probTable = kTackleInjuryProbability;
+    gameLen = _gameLengthInGame;
+    probTable = _kTackleInjuryProbability;
 
     injBitfield = pi->injuriesBitfield & 0xE0;
     if (injBitfield == 0x20) {
-        probTable = kTackleInjuryProbabilityAlreadyInjured;
+        probTable = _kTackleInjuryProbabilityAlreadyInjured;
     }
 
     /* Roll for injury */
@@ -233,10 +233,10 @@ PlayerTackled(Sprite *player, TeamGeneralInfo *team)
         goto set_tackled;
 
     /* Injury! Determine severity bucket */
-    sevTable = kInjuryLevels;
+    sevTable = _kInjuryLevels;
     injBitfield = pi->injuriesBitfield & 0xE0;
     if (injBitfield == 0x20) {
-        sevTable = kInjuryLevelAlreadyInjured;
+        sevTable = _kInjuryLevelAlreadyInjured;
     }
 
     roll = Rand();
@@ -262,19 +262,19 @@ apply_injury:
     /* Map severity to recovery time */
     {
         int16_t sevIdx = (severity & 0xE0) >> 5;
-        player->injuryLevel = (int16_t)kInjuryRecoveryTime[sevIdx];
+        player->injuryLevel = (int16_t)_kInjuryRecoveryTime[sevIdx];
     }
 
     /* Decrement injury quota for team */
     if (teamNum == 1)
-        team1NumAllowedInjuries--;
+        _team1NumAllowedInjuries--;
     else
-        team2NumAllowedInjuries--;
+        _team2NumAllowedInjuries--;
 
 set_tackled:
     player->playerState = (uint8_t)PL_TACKLED;
     player->playerDownTimer = (int8_t)0x32;
-    SetPlayerAnimationTable((AnimTable *)&playerTackledAnimTable, player);
+    SetPlayerAnimationTable((AnimTable *)&_playerTackledAnimTable, player);
 }
 
 /* ========================================================================
@@ -296,7 +296,7 @@ TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
     return 1;  /* Beta-test mode: never book — eligibility=no */
 #endif
 
-    if (plgD3Param != 0) {
+    if (_plgD3Param != 0) {
         /* Highlight mode */
         if (team->playerNumber == 0 &&
             team->playerCoachNumber == 0) {
@@ -315,29 +315,29 @@ TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
     /* If player already has a card, check injury quota for second yellow / red */
     if ((uint16_t)player->cards != 0) {
         if (team->teamNumber == 1) {
-            if (team1NumAllowedInjuries == 0)
+            if (_team1NumAllowedInjuries == 0)
                 return 1;
         } else {
-            if (team2NumAllowedInjuries == 0)
+            if (_team2NumAllowedInjuries == 0)
                 return 1;
         }
     }
 
     /* Resolve player in-game slot */
     ordinal = (uint16_t)player->playerOrdinal - 1;
-    offset = ingameTeamPlayerOffsets[ordinal];
+    offset = _ingameTeamPlayerOffsets[ordinal];
     pi = (PlayerInfo *)((uint8_t *)team->inGameTeamPtr + offset + 42);
 
     cards = (uint16_t)player->cards;
     cards++;
 
-    if (plgD3Param == 0) {
+    if (_plgD3Param == 0) {
         /* Normal mode: use LUT based on previous card history */
         uint8_t *lutTable;
         if (pi->previousCards == 0)
-            lutTable = cardAnimStatesNoFlag;
+            lutTable = _cardAnimStatesNoFlag;
         else
-            lutTable = cardAnimStatesWithFlag;
+            lutTable = _cardAnimStatesWithFlag;
         pi->numYellowCards = lutTable[cards];
     } else {
         /* Highlight mode: simplified card state */
@@ -349,25 +349,25 @@ TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
 
     /* Commit booking */
     player->cards = (int16_t)((uint16_t)player->cards + 1);
-    lastTeamBooked = team;
-    bookedPlayer = player;
-    refTimer = 0;
+    _lastTeamBooked = team;
+    _bookedPlayer = player;
+    _refTimer = 0;
 
     if ((uint16_t)player->cards == 2) {
         /* Second yellow = red card (second yellow) */
-        whichCard = CARD_SECOND_YELLOW;
+        _whichCard = CARD_SECOND_YELLOW;
         stats = team->teamStatsPtr;
         stats->bookings--;
         stats->sendingsOff++;
         if (team->teamNumber == 1)
-            team1NumAllowedInjuries--;
+            _team1NumAllowedInjuries--;
         else
-            team2NumAllowedInjuries--;
+            _team2NumAllowedInjuries--;
         return 0;
     }
 
     /* First yellow */
-    whichCard = CARD_YELLOW;
+    _whichCard = CARD_YELLOW;
     stats = team->teamStatsPtr;
     stats->bookings++;
     return 0;
@@ -399,29 +399,29 @@ TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
 
     /* Check injury quota */
     if (team->teamNumber == 1) {
-        if (team1NumAllowedInjuries == 0)
+        if (_team1NumAllowedInjuries == 0)
             return 1;
     } else {
-        if (team2NumAllowedInjuries == 0)
+        if (_team2NumAllowedInjuries == 0)
             return 1;
     }
 
     /* Resolve player in-game slot */
     ordinal = (uint16_t)player->playerOrdinal - 1;
-    offset = ingameTeamPlayerOffsets[ordinal];
+    offset = _ingameTeamPlayerOffsets[ordinal];
     pi = (PlayerInfo *)((uint8_t *)team->inGameTeamPtr + offset + 42);
 
     /* d0 = cards ^ 1 + 3 */
     cards = (uint16_t)player->cards;
     cards = (cards ^ 1) + 3;
 
-    if (plgD3Param == 0) {
+    if (_plgD3Param == 0) {
         /* Normal mode: use LUT */
         uint8_t *lutTable;
         if (pi->previousCards == 0)
-            lutTable = cardAnimStatesNoFlag;
+            lutTable = _cardAnimStatesNoFlag;
         else
-            lutTable = cardAnimStatesWithFlag;
+            lutTable = _cardAnimStatesWithFlag;
         pi->numYellowCards = lutTable[cards];
     } else {
         /* Highlight mode: force card state 3 */
@@ -429,10 +429,10 @@ TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
     }
 
     /* Finalize straight red */
-    lastTeamBooked = team;
-    bookedPlayer = player;
-    refTimer = 0;
-    whichCard = CARD_RED;
+    _lastTeamBooked = team;
+    _bookedPlayer = player;
+    _refTimer = 0;
+    _whichCard = CARD_RED;
 
     stats = team->teamStatsPtr;
     if ((uint16_t)player->cards == 1) {
@@ -442,9 +442,9 @@ TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
     stats->sendingsOff++;
 
     if (team->teamNumber == 1)
-        team1NumAllowedInjuries--;
+        _team1NumAllowedInjuries--;
     else
-        team2NumAllowedInjuries--;
+        _team2NumAllowedInjuries--;
 
     return 0;
 }
@@ -544,7 +544,7 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
     stats->foulsConceded++;
 
     /* Check if cards are allowed */
-    if (cardsDisallowed != 0 || trainingGame != 0)
+    if (_cardsDisallowed != 0 || _trainingGame != 0)
         goto foul_no_card;
 
     /* Discipline zone check: victim inside main playing area? */
@@ -554,7 +554,7 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
 
         if (vx >= 193 && vx <= 478 && vy >= 129 && vy <= 769) {
             /* In the main zone -- check penalty area */
-            if (team == &topTeamData) {
+            if (team == &_topTeamData) {
                 if (vy <= 216)
                     goto maybe_card;
                 /* else fall through to nearest-teammate search */
@@ -574,7 +574,7 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
             Sprite **sprTable;
             int16_t i;
 
-            if (team == &topTeamData)
+            if (team == &_topTeamData)
                 refY = 129;
             else
                 refY = 769;
@@ -603,7 +603,7 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
                 }
             }
 
-            nearestTeammatePtr = nearest;
+            _nearestTeammatePtr = nearest;
 
             if (nearest == victim) {
                 /* Same player is nearest: swap card probabilities */
@@ -617,8 +617,8 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
 
 maybe_card:
     {
-        int16_t tickChance = (currentGameTick & 0x1E) >> 1;
-        if (tickChance >= playerCardChance)
+        int16_t tickChance = (_currentGameTick & 0x1E) >> 1;
+        if (tickChance >= _playerCardChance)
             goto foul_no_card;
     }
 
@@ -652,18 +652,18 @@ foul_no_card:
 void __attribute__((used, externally_visible))
 GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
 {
-    if (team == &topTeamData)
+    if (team == &_topTeamData)
         keeper->direction = (int16_t)4;
     else
         keeper->direction = (int16_t)0;
 
     team->goalkeeperDivingLeft = 0;
-    SetPlayerAnimationTable(&goalieCatchingBallAnimTable, keeper);
+    SetPlayerAnimationTable(&_goalieCatchingBallAnimTable, keeper);
     keeper->playerState = (uint8_t)PL_GOALIE_CATCHING_BALL;
     keeper->playerDownTimer = (int8_t)15;
-    keeper->speed = kGoalkeeperCatchSpeed;
-    keeper->destX = ballNextGroundX;
-    keeper->destY = ballNextYGroundY;
+    keeper->speed = _kGoalkeeperCatchSpeed;
+    keeper->destX = _ballNextGroundX;
+    keeper->destY = _ballNextYGroundY;
 
     /* Clamp Y destination to pitch bounds */
     if (keeper->destY < 137)
@@ -679,7 +679,7 @@ GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
 void __attribute__((used, externally_visible))
 PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
 {
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     int16_t inputDir = team->currentAllowedDirection;
     int16_t playerDir, diff, finalDir;
     int16_t dx, dy;
@@ -705,8 +705,8 @@ PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
     team->controlledPlDirection = (int16_t)finalDir;
 
     /* Set ball destination from direction table */
-    dx = kDefaultDestinations[finalDir * 2];
-    dy = kDefaultDestinations[finalDir * 2 + 1];
+    dx = _kDefaultDestinations[finalDir * 2];
+    dy = _kDefaultDestinations[finalDir * 2 + 1];
     ball->destX = ball->x.s.i + dx;
     ball->destY = ball->y.s.i + dy;
 
@@ -757,7 +757,7 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
 {
     int16_t vx, vy;
 
-    if (gameStatePl == ST_STOPPED)
+    if (_gameStatePl == ST_STOPPED)
         return;
 
     PlayFoulWhistleSample();
@@ -766,17 +766,17 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
     vx = victim->x.s.i;
     vy = victim->y.s.i;
 
-    if (team == &topTeamData) {
+    if (team == &_topTeamData) {
         /* Top team fouled -- camera direction 0 (up) */
-        cameraDirection = 0;
+        _cameraDirection = 0;
 
         /* Check penalty area: y <= 216, 193 <= x <= 478 */
         if (vy <= 216 && vx >= 193 && vx <= 478) {
-            gameState = ST_PENALTY;
-            breakCameraMode = -1;
-            playerTurnFlags = 0x83;
-            foulXCoordinate = 336;
-            foulYCoordinate = 187;
+            _gameState = ST_PENALTY;
+            _breakCameraMode = -1;
+            _playerTurnFlags = 0x83;
+            _foulXCoordinate = 336;
+            _foulYCoordinate = 187;
             PlayPenalty();
             goto apply_break;
         }
@@ -787,15 +787,15 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
         goto select_fk_quadrant;
     } else {
         /* Bottom team fouled -- camera direction 4 (down) */
-        cameraDirection = 4;
+        _cameraDirection = 4;
 
         /* Check penalty area: y >= 682, 193 <= x <= 478 */
         if (vy >= 682 && vx >= 193 && vx <= 478) {
-            gameState = ST_PENALTY;
-            breakCameraMode = -1;
-            playerTurnFlags = 0x38;
-            foulXCoordinate = 336;
-            foulYCoordinate = 711;
+            _gameState = ST_PENALTY;
+            _breakCameraMode = -1;
+            _playerTurnFlags = 0x38;
+            _foulXCoordinate = 336;
+            _foulYCoordinate = 711;
             PlayPenalty();
             goto apply_break;
         }
@@ -806,7 +806,7 @@ TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
     }
 
 select_fk_quadrant:
-    if (team == &bottomTeamData) {
+    if (team == &_bottomTeamData) {
         /* Bottom team: mirrored quadrant assignment */
         if (vx < 153) goto fk_right3;
         if (vx < 261) goto fk_right2;
@@ -826,35 +826,35 @@ select_fk_quadrant:
         goto fk_right3;
     }
 
-fk_left1:  gameState = ST_FREE_KICK_LEFT1;  goto commit_foul;
-fk_left2:  gameState = ST_FREE_KICK_LEFT2;  goto commit_foul;
-fk_left3:  gameState = ST_FREE_KICK_LEFT3;  goto commit_foul;
-fk_center: gameState = ST_FREE_KICK_CENTER; goto commit_foul;
-fk_right1: gameState = ST_FREE_KICK_RIGHT1; goto commit_foul;
-fk_right2: gameState = ST_FREE_KICK_RIGHT2; goto commit_foul;
-fk_right3: gameState = ST_FREE_KICK_RIGHT3; goto commit_foul;
+fk_left1:  _gameState = ST_FREE_KICK_LEFT1;  goto commit_foul;
+fk_left2:  _gameState = ST_FREE_KICK_LEFT2;  goto commit_foul;
+fk_left3:  _gameState = ST_FREE_KICK_LEFT3;  goto commit_foul;
+fk_center: _gameState = ST_FREE_KICK_CENTER; goto commit_foul;
+fk_right1: _gameState = ST_FREE_KICK_RIGHT1; goto commit_foul;
+fk_right2: _gameState = ST_FREE_KICK_RIGHT2; goto commit_foul;
+fk_right3: _gameState = ST_FREE_KICK_RIGHT3; goto commit_foul;
 
 set_foul:
-    gameState = ST_FOUL;
+    _gameState = ST_FOUL;
 
 commit_foul:
-    breakCameraMode = -1;
-    playerTurnFlags = 0xFF;
-    foulXCoordinate = vx;
-    foulYCoordinate = vy;
+    _breakCameraMode = -1;
+    _playerTurnFlags = 0xFF;
+    _foulXCoordinate = vx;
+    _foulYCoordinate = vy;
 
 apply_break:
-    if (forceLeftTeam == 1)
-        team = &bottomTeamData;
+    if (_forceLeftTeam == 1)
+        team = &_bottomTeamData;
 
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    lastTeamPlayedBeforeBreak = team->opponentsTeam;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _lastTeamPlayedBeforeBreak = team->opponentsTeam;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
 }
 
 
@@ -874,14 +874,14 @@ PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team)
     team->controlledPlDirection = pressedDir;
     player->direction = pressedDir;
 
-    SetPlayerAnimationTable(&plTacklingAnimTable, player);
+    SetPlayerAnimationTable(&_plTacklingAnimTable, player);
     player->playerState = (uint8_t)PL_TACKLING;
     player->playerDownTimer = (int8_t)50;
 
     /* Look up player info to check fasterTackle */
     {
         int16_t ordinal = player->playerOrdinal - 1;
-        uint16_t offset = ingameTeamPlayerOffsets[ordinal];
+        uint16_t offset = _ingameTeamPlayerOffsets[ordinal];
         uint8_t *pihBase = (uint8_t *)team->inGameTeamPtr + offset;
         PlayerInfo *pi = (PlayerInfo *)(pihBase + 42);
         if (pi->field_8 != 0) {
@@ -894,9 +894,9 @@ PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team)
 
     /* Set destination from kDefaultDestinations */
     int16_t destIdx = pressedDir * 2;
-    player->destX = player->x.s.i + kDefaultDestinations[destIdx];
-    player->destY = player->y.s.i + kDefaultDestinations[destIdx + 1];
+    player->destX = player->x.s.i + _kDefaultDestinations[destIdx];
+    player->destY = player->y.s.i + _kDefaultDestinations[destIdx + 1];
 
-    player->speed = kPlayerTacklingSpeed;
+    player->speed = _kPlayerTacklingSpeed;
     player->tacklingTimer = 0;
 }

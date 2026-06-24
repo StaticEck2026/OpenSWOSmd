@@ -60,111 +60,111 @@
 #include "match_sim.h"
 
 /* ---- Menu entries (defined in asm) ---- */
-extern MenuEntry menuEntries[];
+extern MenuEntry _menuEntries[];
 
 /* ---- Tactics data (defined in asm) ---- */
-extern TeamTactics teamTacticsUSERA;    /* start of USER A tactics (name at offset 0) */
-extern TeamTactics teamTacticsUSERB;
-extern TeamTactics teamTacticsUSERC;
-extern TeamTactics teamTacticsUSERD;
-extern TeamTactics teamTacticsUSERE;
-extern TeamTactics teamTacticsUSERF;
+extern TeamTactics _teamTacticsUSERA;    /* start of USER A tactics (name at offset 0) */
+extern TeamTactics _teamTacticsUSERB;
+extern TeamTactics _teamTacticsUSERC;
+extern TeamTactics _teamTacticsUSERD;
+extern TeamTactics _teamTacticsUSERE;
+extern TeamTactics _teamTacticsUSERF;
 
-extern void *teamTacticsTable[];  /* pointer table indexed by chosenTactics */
-extern TeamTactics editTacticsCurrentTactics;  /* 370-byte tactics buffer */
-extern uint8_t savedCurrentTactics;        /* 370-byte saved tactics buffer */
+extern void *_teamTacticsTable[];  /* pointer table indexed by chosenTactics */
+extern TeamTactics _editTacticsCurrentTactics;  /* 370-byte tactics buffer */
+extern uint8_t _savedCurrentTactics;        /* 370-byte saved tactics buffer */
 
 /* ---- Globals (defined in asm) ---- */
-extern uint16_t chosenTactics;
-extern uint16_t flipOnOff;
-extern TeamFileEx *chooseTacticsTeamPtr;
-extern uint16_t selTeamNumber;
-extern uint16_t inEditTactics;
-extern uint16_t careerNumPlayers;
-extern uint16_t editTacticsNumPlayers;
-extern uint16_t editTacticsSelectedPairSlotIndex;
-extern MenuEntry *editTacticsSelectedPlayerMenuEntryPtr;
-extern uint16_t editTacticsSelectedPlayerNameIndex;
-extern uint16_t oldPlayerSkill;
-extern uint16_t newPlayerSkill;
+extern uint16_t _chosenTactics;
+extern uint16_t _flipOnOff;
+extern TeamFileEx *_chooseTacticsTeamPtr;
+extern uint16_t _selTeamNumber;
+extern uint16_t _inEditTactics;
+extern uint16_t _careerNumPlayers;
+extern uint16_t _editTacticsNumPlayers;
+extern uint16_t _editTacticsSelectedPairSlotIndex;
+extern MenuEntry *_editTacticsSelectedPlayerMenuEntryPtr;
+extern uint16_t _editTacticsSelectedPlayerNameIndex;
+extern uint16_t _oldPlayerSkill;
+extern uint16_t _newPlayerSkill;
 
 /* ---- Globals for Chunk 84 ---- */
-extern uint16_t tacticsChangedFlag;
-extern uint8_t importTacticsMenu[];
-extern uint8_t selectedFilename[];
-extern uintptr_t extension;              /* file extension from GetFilenameAndExtension */
-extern uint8_t importTacticsFilename;   /* filename buffer */
+extern uint16_t _tacticsChangedFlag;
+extern uint8_t _importTacticsMenu[];
+extern uint8_t _selectedFilename[];
+extern uintptr_t _extension;              /* file extension from GetFilenameAndExtension */
+extern uint8_t _importTacticsFilename;   /* filename buffer */
 
 /* ---- String literals (defined in asm) ---- */
-extern uint8_t aLoadEditedTact[];               /* "LOAD EDITED TACTICS" */
-extern uint8_t aNotATacticsFil[];               /* "NOT A TACTICS FILE" */
-extern uint8_t aEditTactics[];                  /* "EDIT TACTICS" */
-extern uint8_t aEditedTacticsWillBeLost[];      /* "\x01EDITED TACTICS WILL BE LOST" */
-extern uint8_t aContinue[];                     /* "CONTINUE" */
-extern uint8_t aAbort[];                        /* "ABORT" */
-extern uint8_t aSaveEditedTact[];               /* "SAVE EDITED TACTICS" */
-extern uint8_t aTacticsHaveBeenChanged[];       /* "\x01TACTICS HAVE BEEN CHANGED" */
-extern uint8_t aSave[];                         /* "SAVE" */
-extern uint8_t aExit[];                         /* "EXIT" */
-extern int16_t editTacticsRotateRedrawList[];   /* {10, 27, -1} */
+extern uint8_t _aLoadEditedTact[];               /* "LOAD EDITED TACTICS" */
+extern uint8_t _aNotATacticsFil[];               /* "NOT A TACTICS FILE" */
+extern uint8_t _aEditTactics[];                  /* "EDIT TACTICS" */
+extern uint8_t _aEditedTacticsWillBeLost[];      /* "\x01EDITED TACTICS WILL BE LOST" */
+extern uint8_t _aContinue[];                     /* "CONTINUE" */
+extern uint8_t _aAbort[];                        /* "ABORT" */
+extern uint8_t _aSaveEditedTact[];               /* "SAVE EDITED TACTICS" */
+extern uint8_t _aTacticsHaveBeenChanged[];       /* "\x01TACTICS HAVE BEEN CHANGED" */
+extern uint8_t _aSave[];                         /* "SAVE" */
+extern uint8_t _aExit[];                         /* "EXIT" */
+extern int16_t _editTacticsRotateRedrawList[];   /* {10, 27, -1} */
 
 /* ---- Globals for Chunk 85 ---- */
-extern uint16_t editTacticsPitchStatus;
-extern uint16_t markedPlayerNumber;
-extern uint16_t ballRow;
-extern uint16_t ballColumn;
-extern uint16_t editTacticsBallLocation;
-extern uint16_t editTacticsLastBallLocation;
-extern uint16_t editTacticsPlayerX;
-extern uint16_t editTacticsBallRow;
-extern uint16_t editTacticsBallColumn;
-extern uint16_t editTacticsDisableLittlePlayersAndBallDraw;
-extern uint16_t editTacticsTransitionActive;
-extern uint16_t editTacticsLastTick;
-extern int16_t editTacticsPlayerPositions[];    /* 12 entries: -1,0,1,...,10 */
-extern uintptr_t editTacticsPlayerNumbers;       /* uint8_t*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
-extern int16_t playerAreas[];                   /* 35 entries: 0..34 */
-extern uint16_t menuControlsDirection;
-extern uint16_t menuControlsDirection2;
-extern volatile uint16_t fire;
-extern uint16_t currentGameTick;
-extern uint16_t panicReasonCode;
+extern uint16_t _editTacticsPitchStatus;
+extern uint16_t _markedPlayerNumber;
+extern uint16_t _ballRow;
+extern uint16_t _ballColumn;
+extern uint16_t _editTacticsBallLocation;
+extern uint16_t _editTacticsLastBallLocation;
+extern uint16_t _editTacticsPlayerX;
+extern uint16_t _editTacticsBallRow;
+extern uint16_t _editTacticsBallColumn;
+extern uint16_t _editTacticsDisableLittlePlayersAndBallDraw;
+extern uint16_t _editTacticsTransitionActive;
+extern uint16_t _editTacticsLastTick;
+extern int16_t _editTacticsPlayerPositions[];    /* 12 entries: -1,0,1,...,10 */
+extern uintptr_t _editTacticsPlayerNumbers;       /* uint8_t*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
+extern int16_t _playerAreas[];                   /* 35 entries: 0..34 */
+extern uint16_t _menuControlsDirection;
+extern uint16_t _menuControlsDirection2;
+extern volatile uint16_t _fire;
+extern uint16_t _currentGameTick;
+extern uint16_t _panicReasonCode;
 
 /* ---- Lookup tables (defined in asm) ---- */
-extern int16_t ballXQuadrantCoordinates[];      /* 5 entries */
-extern int16_t ballYQuadrantCoordinates[];      /* 7 entries */
-extern int16_t xQuadrantToCoordinates[];        /* 15 entries */
-extern int16_t yQuadrantToCoordinates[];        /* 16 entries */
-extern int8_t arrowSpritesOffsets[];             /* 16 bytes (8 pairs of x,y) */
-extern uint16_t tacticCursorFrames[];            /* 4 entries */
-extern uint8_t editTacticsDirectionDeltaTable[]; /* 16 bytes (8 pairs) */
+extern int16_t _ballXQuadrantCoordinates[];      /* 5 entries */
+extern int16_t _ballYQuadrantCoordinates[];      /* 7 entries */
+extern int16_t _xQuadrantToCoordinates[];        /* 15 entries */
+extern int16_t _yQuadrantToCoordinates[];        /* 16 entries */
+extern int8_t _arrowSpritesOffsets[];             /* 16 bytes (8 pairs of x,y) */
+extern uint16_t _tacticCursorFrames[];            /* 4 entries */
+extern uint8_t _editTacticsDirectionDeltaTable[]; /* 16 bytes (8 pairs) */
 
 /* ---- Globals for Chunk 86 ---- */
-extern uint16_t littlePlayersConvertTable[];    /* 16-word color conversion table */
-extern uint8_t currentMatchPlayers[];           /* player number array for career team */
-extern TeamFileEx careerTeam;                    /* start of career team data */
+extern uint16_t _littlePlayersConvertTable[];    /* 16-word color conversion table */
+extern uint8_t _currentMatchPlayers[];           /* player number array for career team */
+extern TeamFileEx _careerTeam;                    /* start of career team data */
 
 /* ---- Globals for Chunk 87 ---- */
-extern int16_t fireCounter;
-extern uint8_t up;
-extern uint8_t down;
-extern uint8_t left;
-extern uint8_t right;
-extern uint16_t editTacticsInputRepeatCounter;
-extern uint16_t editTacticsNearestSelectPitchWidth;
+extern int16_t _fireCounter;
+extern uint8_t _up;
+extern uint8_t _down;
+extern uint8_t _left;
+extern uint8_t _right;
+extern uint16_t _editTacticsInputRepeatCounter;
+extern uint16_t _editTacticsNearestSelectPitchWidth;
 
 /* ---- Globals for Chunk 88 ---- */
-extern void *positionsTable[];       /* pointer table indexed by formation */
-extern uint16_t editTacticsSelectedPlayerSlotIndex;
-extern MenuEntry *editTacticsSelectedPairMenuEntryPtr;
-extern uint16_t gameType;
-extern uint8_t playerPositions[];       /* player positions translation table (current team) */
+extern void *_positionsTable[];       /* pointer table indexed by formation */
+extern uint16_t _editTacticsSelectedPlayerSlotIndex;
+extern MenuEntry *_editTacticsSelectedPairMenuEntryPtr;
+extern uint16_t _gameType;
+extern uint8_t _playerPositions[];       /* player positions translation table (current team) */
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 
 /* ---- Menu definitions (defined in asm) ---- */
-extern uint8_t chooseTacticsMenu[];
-extern uint8_t editTacticsMenu[];
+extern uint8_t _chooseTacticsMenu[];
+extern uint8_t _editTacticsMenu[];
 
 /* ---- C-callable bridges for asm functions (defined in swos2_unit.s) ---- */
 extern void SetBenchPlayersNumbers(TeamFileEx *team);
@@ -191,12 +191,12 @@ __attribute__((used, externally_visible))
 void ChooseTacticsInit(void)
 {
     CheckIsTeamNational();
-    menuEntries[1].fg = (uintptr_t)&teamTacticsUSERA;
-    menuEntries[2].fg = (uintptr_t)&teamTacticsUSERB;
-    menuEntries[3].fg = (uintptr_t)&teamTacticsUSERC;
-    menuEntries[4].fg = (uintptr_t)&teamTacticsUSERD;
-    menuEntries[5].fg = (uintptr_t)&teamTacticsUSERE;
-    menuEntries[6].fg = (uintptr_t)&teamTacticsUSERF;
+    _menuEntries[1].fg = (uintptr_t)&_teamTacticsUSERA;
+    _menuEntries[2].fg = (uintptr_t)&_teamTacticsUSERB;
+    _menuEntries[3].fg = (uintptr_t)&_teamTacticsUSERC;
+    _menuEntries[4].fg = (uintptr_t)&_teamTacticsUSERD;
+    _menuEntries[5].fg = (uintptr_t)&_teamTacticsUSERE;
+    _menuEntries[6].fg = (uintptr_t)&_teamTacticsUSERF;
 }
 
 /* ================================================================
@@ -210,15 +210,15 @@ void ChooseTacticsInit(void)
 __attribute__((used, externally_visible))
 void ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
 {
-    chooseTacticsTeamPtr = teamPtr;
-    ShowMenu(chooseTacticsMenu);
+    _chooseTacticsTeamPtr = teamPtr;
+    ShowMenu(_chooseTacticsMenu);
 
-    if (chosenTactics != 0xFFFF) {
+    if (_chosenTactics != 0xFFFF) {
         InitLittlePlayerSprites();
-        ShowMenu(editTacticsMenu);
+        ShowMenu(_editTacticsMenu);
     }
 
-    chooseTacticsTeamPtr = (TeamFileEx *)0;
+    _chooseTacticsTeamPtr = (TeamFileEx *)0;
 }
 
 /* ================================================================
@@ -232,20 +232,20 @@ void ShowStandardChooseTacticsMenu(TeamFileEx *teamPtr)
 __attribute__((used, externally_visible))
 void EditTacticsInit(void)
 {
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
     SetBenchPlayersNumbers(teamEx);
 
-    uint16_t numPlayers;
-    if (selTeamNumber == 0xFFFF || PACK_BE_U16(teamEx->team.countryNumber, teamEx->team.teamOrdinal) != selTeamNumber) {
-        numPlayers = 16;
+    uint16_t _numPlayers;
+    if (_selTeamNumber == 0xFFFF || PACK_BE_U16(teamEx->team.countryNumber, teamEx->team.teamOrdinal) != _selTeamNumber) {
+        _numPlayers = 16;
     } else {
-        numPlayers = careerNumPlayers;
+        _numPlayers = _careerNumPlayers;
     }
-    editTacticsNumPlayers = numPlayers;
+    _editTacticsNumPlayers = _numPlayers;
 
-    editTacticsSelectedPairSlotIndex = 0xFFFF;
-    editTacticsSelectedPlayerMenuEntryPtr = (MenuEntry *)0;
-    editTacticsSelectedPlayerNameIndex = 0xFFFF;
+    _editTacticsSelectedPairSlotIndex = 0xFFFF;
+    _editTacticsSelectedPlayerMenuEntryPtr = (MenuEntry *)0;
+    _editTacticsSelectedPlayerNameIndex = 0xFFFF;
 
     EditTactics_CommitPlayerPositionsAndRecalcSkill();
     EditTacticsMenuSavePlayerPositions();
@@ -285,9 +285,9 @@ void EnableOrDisablePlayerFacesItems(void)
 {
     /* menuEntries + 0x658 = entry at byte offset 1624 = index 29
      * (0x658 / 56 = 29) */
-    MenuEntry *entry = &menuEntries[29];
+    MenuEntry *entry = &_menuEntries[29];
     for (int16_t i = 9; i >= 0; i--) {
-        if (flipOnOff == 0) {
+        if (_flipOnOff == 0) {
             entry->isDisabled = 1;
         } else {
             entry->isDisabled = 0;
@@ -306,17 +306,17 @@ __attribute__((used, externally_visible))
 void CopyCurrentTacticName(void)
 {
     /* menuEntries[1].fg holds a pointer to the output string buffer */
-    uint8_t *dst = (uint8_t *)menuEntries[1].fg;
+    uint8_t *dst = (uint8_t *)_menuEntries[1].fg;
 
     /* Copy "EDIT TACTICS" */
-    dst = StringCopy(aEditTactics, dst);
+    dst = StringCopy(_aEditTactics, dst);
 
     /* Append " (" */
     *dst++ = ' ';
     *dst++ = '(';
 
     /* Copy current tactics name */
-    dst = StringCopy((uint8_t *)editTacticsCurrentTactics.name, dst);
+    dst = StringCopy((uint8_t *)_editTacticsCurrentTactics.name, dst);
 
     /* Append ")" and NUL */
     *dst++ = ')';
@@ -339,21 +339,21 @@ __attribute__((used, externally_visible))
 void EditTactics_UpdateExtraPlayerMenuVisibility(void)
 {
     /* Start with both invisible */
-    menuEntries[27].isInvisible = 1;
-    menuEntries[28].isInvisible = 1;
+    _menuEntries[27].isInvisible = 1;
+    _menuEntries[28].isInvisible = 1;
 
-    int16_t extra = (int16_t)(editTacticsNumPlayers - 16);
+    int16_t extra = (int16_t)(_editTacticsNumPlayers - 16);
     if (extra == 0)
         return;
 
     /* At least 1 extra player - show entry 27 */
-    menuEntries[27].isInvisible = 0;
+    _menuEntries[27].isInvisible = 0;
 
     if (extra == 1)
         return;
 
     /* 2 extra players - show entry 28 */
-    menuEntries[28].isInvisible = 0;
+    _menuEntries[28].isInvisible = 0;
 }
 
 /* ================================================================
@@ -368,17 +368,17 @@ void EditTactics_UpdateExtraPlayerMenuVisibility(void)
 __attribute__((used, externally_visible))
 void SetBigCheckSprite(void)
 {
-    MenuEntry *entry = &menuEntries[0];
+    MenuEntry *entry = &_menuEntries[0];
 
     /* Start invisible, clear bit 13 of stringFlags */
     entry->isInvisible = 1;
     entry->stringFlags &= ~(1u << 13);
 
-    if (oldPlayerSkill == newPlayerSkill)
+    if (_oldPlayerSkill == _newPlayerSkill)
         return;
 
     /* Determine which sprite to show */
-    if (oldPlayerSkill > newPlayerSkill) {
+    if (_oldPlayerSkill > _newPlayerSkill) {
         /* Skill decreased - show red X */
         entry->fgWord = SPR_CHECK_BIG;
     } else {
@@ -402,8 +402,8 @@ void CopyCurrentTactics(void)
 {
     /* volatile: LTO with -Ofast may eliminate this copy because
      * teamTacticsTable[18] aliases editTacticsCurrentTactics. */
-    volatile uint8_t *src = (volatile uint8_t *)teamTacticsTable[chosenTactics];
-    volatile uint8_t *dst = (volatile uint8_t *)&editTacticsCurrentTactics;
+    volatile uint8_t *src = (volatile uint8_t *)_teamTacticsTable[_chosenTactics];
+    volatile uint8_t *dst = (volatile uint8_t *)&_editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -420,8 +420,8 @@ void CopyCurrentTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void ApplyCurrentEditedTactics(void)
 {
-    volatile uint8_t *dst = (volatile uint8_t *)teamTacticsTable[chosenTactics];
-    volatile uint8_t *src = (volatile uint8_t *)&editTacticsCurrentTactics;
+    volatile uint8_t *dst = (volatile uint8_t *)_teamTacticsTable[_chosenTactics];
+    volatile uint8_t *src = (volatile uint8_t *)&_editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -439,8 +439,8 @@ void ApplyCurrentEditedTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void SaveCurrentTactics(void)
 {
-    volatile uint8_t *src = (volatile uint8_t *)&editTacticsCurrentTactics;
-    volatile uint8_t *dst = (volatile uint8_t *)&savedCurrentTactics;
+    volatile uint8_t *src = (volatile uint8_t *)&_editTacticsCurrentTactics;
+    volatile uint8_t *dst = (volatile uint8_t *)&_savedCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -456,8 +456,8 @@ void SaveCurrentTactics(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void RestoreTactics(void)
 {
-    volatile uint8_t *src = (volatile uint8_t *)&savedCurrentTactics;
-    volatile uint8_t *dst = (volatile uint8_t *)&editTacticsCurrentTactics;
+    volatile uint8_t *src = (volatile uint8_t *)&_savedCurrentTactics;
+    volatile uint8_t *dst = (volatile uint8_t *)&_editTacticsCurrentTactics;
 
     for (int16_t i = 369; i >= 0; i--) {
         *dst++ = *src++;
@@ -474,9 +474,9 @@ void RestoreTactics(void)
 __attribute__((used, externally_visible))
 void DrawPlayerNamesAndFaces(void)
 {
-    CallDrawMenuItem(&menuEntries[11]);
-    CallDrawMultipleItems(10, &menuEntries[29]);
-    CallDrawMenuItem(&menuEntries[0]);
+    CallDrawMenuItem(&_menuEntries[11]);
+    CallDrawMultipleItems(10, &_menuEntries[29]);
+    CallDrawMenuItem(&_menuEntries[0]);
 }
 
 /* ================================================================
@@ -486,15 +486,15 @@ void DrawPlayerNamesAndFaces(void)
  * sets newPlayerSkill = oldPlayerSkill, then calls SetBigCheckSprite.
  * Note: original asm does full d0-d7/a0-a6 save/restore internally.
  * ================================================================ */
-extern uint8_t playerPositionsArray;   /* 32-byte array */
-extern uint8_t oldPlayerPositionsArray; /* 32-byte array */
+extern uint8_t _playerPositionsArray;   /* 32-byte array */
+extern uint8_t _oldPlayerPositionsArray; /* 32-byte array */
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void EditTacticsMenuSavePlayerPositions(void)
 {
-    newPlayerSkill = oldPlayerSkill;
-    uint8_t *src = &playerPositionsArray;
-    uint8_t *dst = &oldPlayerPositionsArray;
+    _newPlayerSkill = _oldPlayerSkill;
+    uint8_t *src = &_playerPositionsArray;
+    uint8_t *dst = &_oldPlayerPositionsArray;
     for (int16_t i = 31; i >= 0; i--) {
         *dst++ = *src++;
     }
@@ -515,14 +515,14 @@ extern uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t go
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void EditTactics_CommitPlayerPositionsAndRecalcSkill(void)
 {
-    newPlayerSkill = oldPlayerSkill;
-    uint8_t *src = &playerPositionsArray;
-    uint8_t *dst = &oldPlayerPositionsArray;
+    _newPlayerSkill = _oldPlayerSkill;
+    uint8_t *src = &_playerPositionsArray;
+    uint8_t *dst = &_oldPlayerPositionsArray;
     for (int16_t i = 31; i >= 0; i--) {
         *dst++ = *src++;
     }
 
-    TeamFileEx *teamPtr = (TeamFileEx *)chooseTacticsTeamPtr;
+    TeamFileEx *teamPtr = (TeamFileEx *)_chooseTacticsTeamPtr;
     teamPtr->team.playerValuesDirty = TEAM_VALUES_DIRTY;
 
     /* Temporarily set tactics byte to 0x12, compute skill, restore */
@@ -554,12 +554,12 @@ void ImportTacticsInit(void)
  * selected entry and entry 1 (base), stores in importMenuSelectedTactics,
  * then exits the menu.
  * ================================================================ */
-extern uint16_t importMenuSelectedTactics;
+extern uint16_t _importMenuSelectedTactics;
 
 __attribute__((used, externally_visible))
 void ImportTacticsSelectTactics(MenuEntry *cur)
 {
-    importMenuSelectedTactics = cur->ordinal - menuEntries[1].ordinal;
+    _importMenuSelectedTactics = cur->ordinal - _menuEntries[1].ordinal;
     SetExitMenuFlag();
 }
 
@@ -571,7 +571,7 @@ void ImportTacticsSelectTactics(MenuEntry *cur)
 __attribute__((used, externally_visible))
 void ExitImportTactics(void)
 {
-    importMenuSelectedTactics = 0xFFFF;
+    _importMenuSelectedTactics = 0xFFFF;
     SetExitMenuFlag();
 }
 
@@ -582,25 +582,25 @@ void ExitImportTactics(void)
  * matches chosenTactics with the "tactics changed" flag.
  * ================================================================ */
 
-extern uint16_t numSelectedTeams;
-extern uint8_t selTeamsPtr;        /* start of selected teams array, stride = 0x2AC = 684 bytes */
+extern uint16_t _numSelectedTeams;
+extern uint8_t _selTeamsPtr;        /* start of selected teams array, stride = 0x2AC = 684 bytes */
 
 #define SELECTED_TEAM_STRIDE   684
 
 __attribute__((used, externally_visible))
 void MarkSelectedTeamsTacticsChanged(void)
 {
-    if (selTeamNumber != 0xFFFF) {
-        careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    if (_selTeamNumber != 0xFFFF) {
+        _careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
     }
 
-    uint16_t count = numSelectedTeams;
+    uint16_t count = _numSelectedTeams;
     if (count == 0)
         return;
 
-    TeamFileEx *team = selectedTeams;
+    TeamFileEx *team = _selectedTeams;
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
-        if (team->team.tactics == (uint8_t)chosenTactics) {
+        if (team->team.tactics == (uint8_t)_chosenTactics) {
             team->team.playerValuesDirty = TEAM_VALUES_DIRTY;
         }
         team = (TeamFileEx *)((uint8_t *)team + SELECTED_TEAM_STRIDE);
@@ -614,7 +614,7 @@ void MarkSelectedTeamsTacticsChanged(void)
  * conversion table. Reads entries from the table until a negative
  * terminator is encountered.
  * ================================================================ */
-extern void *skinAndHairColorConversionTable[];  /* array of pointers to conversion subtables */
+extern void *_skinAndHairColorConversionTable[];  /* array of pointers to conversion subtables */
 
 __attribute__((used, externally_visible))
 void FillSkinColorConversionTable(uint16_t skinColor, uint16_t *convertTable)
@@ -631,7 +631,7 @@ void FillSkinColorConversionTable(uint16_t skinColor, uint16_t *convertTable)
      * the garbage walk didn't touch their palette index). */
     if (idx < 0)
         return;
-    int16_t *subtable = (int16_t *)skinAndHairColorConversionTable[idx];
+    int16_t *subtable = (int16_t *)_skinAndHairColorConversionTable[idx];
 
     for (;;) {
         int16_t entry = *subtable++;
@@ -663,7 +663,7 @@ __attribute__((used, externally_visible))
 void UndoTactics(void)
 {
     RestoreTactics();
-    CallDrawMenuItem(&menuEntries[2]);
+    CallDrawMenuItem(&_menuEntries[2]);
     EditTactics_CommitPlayerPositionsAndRecalcSkill();
     DrawPlayerNamesAndFaces();
 }
@@ -680,12 +680,12 @@ __attribute__((used, externally_visible))
 void AbortEditTactics(void)
 {
     EditTacticsMenuSavePlayerPositions();
-    if (tacticsChangedFlag != 0) {
+    if (_tacticsChangedFlag != 0) {
         int16_t result = DoContinueAbortMenu(
-            aEditTactics,
-            aEditedTacticsWillBeLost,
-            aContinue,
-            aAbort,
+            _aEditTactics,
+            _aEditedTacticsWillBeLost,
+            _aContinue,
+            _aAbort,
             1
         );
         if (result != 0)
@@ -704,7 +704,7 @@ __attribute__((used, externally_visible))
 void FlipOnOff(void)
 {
     EditTacticsMenuSavePlayerPositions();
-    flipOnOff ^= 1;
+    _flipOnOff ^= 1;
     EnableOrDisablePlayerFacesItems();
     DrawMenu();
 }
@@ -725,27 +725,27 @@ void ImportTactics(void)
 {
     EditTacticsMenuSavePlayerPositions();
 
-    ShowMenu(importTacticsMenu);
+    ShowMenu(_importTacticsMenu);
 
-    int16_t selected = (int16_t)importMenuSelectedTactics;
+    int16_t selected = (int16_t)_importMenuSelectedTactics;
     if (selected < 0)
         return;
 
     if (selected != TACTIC_IMPORTED) {
         SaveCurrentTactics();
-        tacticsChangedFlag = 1;
+        _tacticsChangedFlag = 1;
 
         /* Copy positions + pairIds + ballOutOfPlay from the selected tactic (361 bytes) */
-        TeamTactics *srcTactics = (TeamTactics *)teamTacticsTable[selected];
+        TeamTactics *srcTactics = (TeamTactics *)_teamTacticsTable[selected];
         uint8_t *src = (uint8_t *)srcTactics->positions;
-        uint8_t *dst = (uint8_t *)editTacticsCurrentTactics.positions;
+        uint8_t *dst = (uint8_t *)_editTacticsCurrentTactics.positions;
         for (int16_t i = 369; i >= 0; i--) {
             *dst++ = *src++;
         }
     }
 
     /* Mark team as changed */
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
     teamEx->team.playerValuesDirty = TEAM_VALUES_DIRTY;
     MarkSelectedTeamsTacticsChanged();
     CopyCurrentTacticName();
@@ -765,26 +765,26 @@ void SaveAndExitEditTactics(void)
 {
     EditTacticsMenuSavePlayerPositions();
 
-    if (tacticsChangedFlag != 0) {
+    if (_tacticsChangedFlag != 0) {
         ApplyCurrentEditedTactics();
         MarkSelectedTeamsTacticsChanged();
 
         int16_t result = DoContinueAbortMenu(
-            aSaveEditedTact,
-            aTacticsHaveBeenChanged,
-            aSave,
-            aExit,
+            _aSaveEditedTact,
+            _aTacticsHaveBeenChanged,
+            _aSave,
+            _aExit,
             0
         );
 
         if (result == 0) {
             /* User chose "SAVE" — proceed to file save dialog */
-            if (Asset_PromptInsertSaveDiskDf0(aSaveEditedTact) != 0)
+            if (Asset_PromptInsertSaveDiskDf0(_aSaveEditedTact) != 0)
                 return;
 
             /* Build default filename: tactics name + ".TAC" */
-            uint8_t *end = StringCopy((uint8_t *)editTacticsCurrentTactics.name,
-                                       &importTacticsFilename);
+            uint8_t *end = StringCopy((uint8_t *)_editTacticsCurrentTactics.name,
+                                       &_importTacticsFilename);
             *end++ = '.';
             *end++ = 'T';
             *end++ = 'A';
@@ -793,28 +793,28 @@ void SaveAndExitEditTactics(void)
 
             /* Show file selection dialog */
             if (SelectFileToSaveDialog(0x2E544143,
-                                        &importTacticsFilename,
-                                        aSaveEditedTact) != 0)
+                                        &_importTacticsFilename,
+                                        _aSaveEditedTact) != 0)
                 goto cleanup;
 
             /* Copy selected filename (without extension) as new tactics name */
-            StringCopyUntilChar(selectedFilename,
-                                 (uint8_t *)editTacticsCurrentTactics.name, 0x2E);
+            StringCopyUntilChar(_selectedFilename,
+                                 (uint8_t *)_editTacticsCurrentTactics.name, 0x2E);
 
             /* Write the tactics file */
-            if (WriteTacticsFile(selectedFilename,
-                                  (uint8_t *)&editTacticsCurrentTactics) != 0)
+            if (WriteTacticsFile(_selectedFilename,
+                                  (uint8_t *)&_editTacticsCurrentTactics) != 0)
                 goto cleanup;
 
             CopyCurrentTacticName();
-            StringCopy(selectedFilename, &importTacticsFilename);
+            StringCopy(_selectedFilename, &_importTacticsFilename);
             ApplyCurrentEditedTactics();
-            ShowInsertDisk2Dialog(aSaveEditedTact);
+            ShowInsertDisk2Dialog(_aSaveEditedTact);
             SetExitMenuFlag();
             return;
 
 cleanup:
-            ShowInsertDisk2Dialog(aSaveEditedTact);
+            ShowInsertDisk2Dialog(_aSaveEditedTact);
             return;
         }
     }
@@ -830,8 +830,8 @@ cleanup:
 __attribute__((used, externally_visible))
 void EditTacticsOnSelect28(void)
 {
-    RotatePlayersLeft((TeamFileEx *)chooseTacticsTeamPtr, 5);
-    DrawMenuItemsWaitForVSync(editTacticsRotateRedrawList);
+    RotatePlayersLeft((TeamFileEx *)_chooseTacticsTeamPtr, 5);
+    DrawMenuItemsWaitForVSync(_editTacticsRotateRedrawList);
 }
 
 /* ================================================================
@@ -846,7 +846,7 @@ void EditTacticsAfterDrawPlayerFace(MenuEntry *cur)
 {
     uint16_t playerIdx = cur->ordinal - 29 + 1;
     EditTactics_ApplyPlayerRowHighlighting((int16_t)playerIdx, cur);
-    DrawMenuItem(&menuEntries[39]);
+    DrawMenuItem(&_menuEntries[39]);
 }
 
 /* ================================================================
@@ -858,7 +858,7 @@ void EditTacticsAfterDrawPlayerFace(MenuEntry *cur)
 __attribute__((used, externally_visible))
 void EditTactics28AfterDraw(void)
 {
-    DrawMenuItem(&menuEntries[27]);
+    DrawMenuItem(&_menuEntries[27]);
 }
 
 /* ================================================================
@@ -889,7 +889,7 @@ __attribute__((used, externally_visible))
 void GetPlayerQuadrant(uint16_t player, uint16_t ballLoc,
                         int16_t *outXQuad, int16_t *outYQuad)
 {
-    uint8_t *positions = (uint8_t *)editTacticsCurrentTactics.positions;
+    uint8_t *positions = (uint8_t *)_editTacticsCurrentTactics.positions;
     uint16_t offset = (player - 1) * 35 + ballLoc;
     uint16_t val = positions[offset];
     *outXQuad = (int16_t)(val >> 4);
@@ -906,8 +906,8 @@ __attribute__((used, externally_visible))
 void SetPlayerQuadrant(uint16_t player, int16_t xQuad, int16_t yQuad,
                         uint16_t ballLoc)
 {
-    tacticsChangedFlag = 1;
-    uint8_t *positions = (uint8_t *)editTacticsCurrentTactics.positions;
+    _tacticsChangedFlag = 1;
+    uint8_t *positions = (uint8_t *)_editTacticsCurrentTactics.positions;
     uint16_t offset = (player - 1) * 35 + ballLoc;
     positions[offset] = (uint8_t)((xQuad << 4) | yQuad);
 }
@@ -936,8 +936,8 @@ __attribute__((used, externally_visible))
 void GetBallXYPositionFromQuadrant(int16_t row, int16_t col,
                                      int16_t *outX, int16_t *outY)
 {
-    *outX = 129 - ballXQuadrantCoordinates[row] + 22;
-    *outY = 199 - ballYQuadrantCoordinates[col] + 36;
+    *outX = 129 - _ballXQuadrantCoordinates[row] + 22;
+    *outY = 199 - _ballYQuadrantCoordinates[col] + 36;
 }
 
 /* ================================================================
@@ -963,8 +963,8 @@ void GetPlayerXYPositionFromQuadrant(uint16_t player, uint16_t ballLoc,
         return;
     }
 
-    *outX = 0x81 - xQuadrantToCoordinates[xQuad] + 0x16;
-    *outY = 0xC7 - yQuadrantToCoordinates[yQuad] + 0x24;
+    *outX = 0x81 - _xQuadrantToCoordinates[xQuad] + 0x16;
+    *outY = 0xC7 - _yQuadrantToCoordinates[yQuad] + 0x24;
 }
 
 /* ================================================================
@@ -979,10 +979,10 @@ void EditTactics_GetDirectionDelta(int16_t *outDx, int16_t *outDy)
 {
     *outDx = 0;
     *outDy = 0;
-    int16_t dir = (int16_t)menuControlsDirection2;
+    int16_t dir = (int16_t)_menuControlsDirection2;
     if (dir < 0)
         return;
-    uint8_t *table = editTacticsDirectionDeltaTable;
+    uint8_t *table = _editTacticsDirectionDeltaTable;
     uint16_t idx = (uint16_t)dir * 2;
     *outDx = -((int8_t)table[idx]);
     *outDy = -((int8_t)table[idx + 1]);
@@ -1001,21 +1001,21 @@ __attribute__((used, externally_visible))
 void GetEditTacticsItemXYPosition(int16_t idx, int16_t *outX, int16_t *outY)
 {
     if (idx < 0) {
-        GetBallXYPositionFromQuadrant((int16_t)editTacticsBallRow,
-                                        (int16_t)editTacticsBallColumn,
+        GetBallXYPositionFromQuadrant((int16_t)_editTacticsBallRow,
+                                        (int16_t)_editTacticsBallColumn,
                                         outX, outY);
         return;
     }
     if (idx == 0) {
-        GetBallXYPositionFromQuadrant((int16_t)ballRow,
-                                        (int16_t)ballColumn,
+        GetBallXYPositionFromQuadrant((int16_t)_ballRow,
+                                        (int16_t)_ballColumn,
                                         outX, outY);
         return;
     }
     /* idx > 0: player */
-    uint16_t bl = editTacticsBallLocation;
-    if (editTacticsPitchStatus == 6)
-        bl = editTacticsPlayerX;
+    uint16_t bl = _editTacticsBallLocation;
+    if (_editTacticsPitchStatus == 6)
+        bl = _editTacticsPlayerX;
     GetPlayerXYPositionFromQuadrant((uint16_t)idx, bl, outX, outY);
 }
 
@@ -1080,7 +1080,7 @@ void EditTactics_SetAllPlayersQuadrantForBallLoc(uint16_t ballLoc,
 __attribute__((used, externally_visible))
 void EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
 {
-    if (flipOnOff == 0)
+    if (_flipOnOff == 0)
         return;
 
     /* Check if area is in center column (remainder == 2 from /5) */
@@ -1088,8 +1088,8 @@ void EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
     if (rem == 2)
         return;
 
-    uint8_t *positions = (uint8_t *)editTacticsCurrentTactics.positions;
-    uint8_t *pairIds = editTacticsCurrentTactics.pairIds;
+    uint8_t *positions = (uint8_t *)_editTacticsCurrentTactics.positions;
+    uint8_t *pairIds = _editTacticsCurrentTactics.pairIds;
 
     /* Mirror X positions for 10 outfield players */
     uint8_t *p = positions;
@@ -1114,7 +1114,7 @@ void EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
                     k--;
                 }
                 if (k < 0) {
-                    panicReasonCode = 0x1387;
+                    _panicReasonCode = 0x1387;
                     PanicHaltLoop();
                 }
                 /* Swap positions between player j and k at this area */
@@ -1139,7 +1139,7 @@ void EditTactics_FlipMaybe_MirrorPlayersInArea(uint16_t areaIdx)
 __attribute__((used, externally_visible))
 void EditTactics_FlipMaybe_MirrorBallArea(uint16_t ballLoc)
 {
-    if (flipOnOff == 0)
+    if (_flipOnOff == 0)
         return;
 
     uint16_t loc = ballLoc;
@@ -1165,9 +1165,9 @@ void EditTactics_FlipMaybe_MirrorBallArea(uint16_t ballLoc)
 __attribute__((used, externally_visible))
 void EditTactics_CommitDraggedPlayerPosition(void)
 {
-    tacticsChangedFlag = 1;
-    uint16_t playerX = editTacticsPlayerX;
-    uint16_t ballLoc = editTacticsBallLocation;
+    _tacticsChangedFlag = 1;
+    uint16_t playerX = _editTacticsPlayerX;
+    uint16_t ballLoc = _editTacticsBallLocation;
     EditTactics_SetAllPlayersQuadrantForBallLoc(playerX, ballLoc);
 
     /* Check if mirroring is needed based on column positions */
@@ -1207,7 +1207,7 @@ doMirrorBall:
 __attribute__((used, externally_visible))
 void SortEditTacticsDrawOrderByY(void)
 {
-    int16_t *arr = editTacticsPlayerPositions;
+    int16_t *arr = _editTacticsPlayerPositions;
     int16_t swapped;
     do {
         swapped = 0;
@@ -1223,7 +1223,7 @@ void SortEditTacticsDrawOrderByY(void)
             }
             arr++;
         }
-        arr = editTacticsPlayerPositions;
+        arr = _editTacticsPlayerPositions;
     } while (swapped);
 }
 
@@ -1236,15 +1236,15 @@ void SortEditTacticsDrawOrderByY(void)
 __attribute__((used, externally_visible))
 void SortPlayerAreasByY(void)
 {
-    int16_t *arr = playerAreas;
+    int16_t *arr = _playerAreas;
     int16_t swapped;
     do {
         swapped = 0;
         for (int16_t i = 33; i >= 0; i--) {
             int16_t x1, y1, x2, y2;
-            GetPlayerXYPositionFromQuadrant(markedPlayerNumber, (uint16_t)arr[0],
+            GetPlayerXYPositionFromQuadrant(_markedPlayerNumber, (uint16_t)arr[0],
                                               &x1, &y1);
-            GetPlayerXYPositionFromQuadrant(markedPlayerNumber, (uint16_t)arr[1],
+            GetPlayerXYPositionFromQuadrant(_markedPlayerNumber, (uint16_t)arr[1],
                                               &x2, &y2);
             if (y2 < y1) {
                 int16_t tmp = arr[0];
@@ -1254,7 +1254,7 @@ void SortPlayerAreasByY(void)
             }
             arr++;
         }
-        arr = playerAreas;
+        arr = _playerAreas;
     } while (swapped);
 }
 
@@ -1268,24 +1268,24 @@ void SortPlayerAreasByY(void)
 __attribute__((used, externally_visible))
 void EditTacticsDrawCursor(void)
 {
-    if (editTacticsPitchStatus != 2)
+    if (_editTacticsPitchStatus != 2)
         return;
 
     int16_t x, y;
-    if (markedPlayerNumber != 0) {
-        GetPlayerXYPositionFromQuadrant(markedPlayerNumber,
-                                          editTacticsBallLocation,
+    if (_markedPlayerNumber != 0) {
+        GetPlayerXYPositionFromQuadrant(_markedPlayerNumber,
+                                          _editTacticsBallLocation,
                                           &x, &y);
         y += 1;
     } else {
-        GetBallXYPositionFromQuadrant((int16_t)ballRow, (int16_t)ballColumn,
+        GetBallXYPositionFromQuadrant((int16_t)_ballRow, (int16_t)_ballColumn,
                                         &x, &y);
         y -= 1;
     }
 
     /* Animate cursor: 4 frames, cycling every 4 ticks */
-    uint16_t frame = (currentGameTick >> 2) & 3;
-    uint16_t spriteId = tacticCursorFrames[frame];
+    uint16_t frame = (_currentGameTick >> 2) & 3;
+    uint16_t spriteId = _tacticCursorFrames[frame];
     DrawSpriteCentered(spriteId, x, y);
 }
 
@@ -1299,20 +1299,20 @@ void EditTacticsDrawCursor(void)
 __attribute__((used, externally_visible))
 void DrawPlayerDirections(void)
 {
-    if (editTacticsPitchStatus != 3)
+    if (_editTacticsPitchStatus != 3)
         return;
 
-    if (editTacticsBallLocation == editTacticsLastBallLocation)
+    if (_editTacticsBallLocation == _editTacticsLastBallLocation)
         return;
 
     for (uint16_t p = 1; p <= 10; p++) {
         /* Get position at current ball location */
         int16_t curX, curY;
-        GetPlayerXYPositionFromQuadrant(p, editTacticsBallLocation,
+        GetPlayerXYPositionFromQuadrant(p, _editTacticsBallLocation,
                                           &curX, &curY);
         /* Get position at previous ball location */
         int16_t prevX, prevY;
-        GetPlayerXYPositionFromQuadrant(p, editTacticsLastBallLocation,
+        GetPlayerXYPositionFromQuadrant(p, _editTacticsLastBallLocation,
                                           &prevX, &prevY);
 
         /* Calculate direction from prev to cur */
@@ -1328,8 +1328,8 @@ void DrawPlayerDirections(void)
         uint16_t arrowIdx = dirByte >> 5;
 
         /* Apply arrow offset */
-        int16_t drawX = curX + (int8_t)arrowSpritesOffsets[arrowIdx * 2];
-        int16_t drawY = curY + (int8_t)arrowSpritesOffsets[arrowIdx * 2 + 1];
+        int16_t drawX = curX + (int8_t)_arrowSpritesOffsets[arrowIdx * 2];
+        int16_t drawY = curY + (int8_t)_arrowSpritesOffsets[arrowIdx * 2 + 1];
 
         uint16_t spriteId = 173 + arrowIdx;
         DrawSpriteCentered(spriteId, drawX, drawY);
@@ -1348,43 +1348,43 @@ void DrawPlayerDirections(void)
 __attribute__((used, externally_visible))
 void InitLittlePlayerSprites(void)
 {
-    editTacticsTransitionActive = 0;
-    tacticsChangedFlag = 0;
-    markedPlayerNumber = 0;
-    ballRow = 2;
-    ballColumn = 3;
-    editTacticsBallLocation = 17;
+    _editTacticsTransitionActive = 0;
+    _tacticsChangedFlag = 0;
+    _markedPlayerNumber = 0;
+    _ballRow = 2;
+    _ballColumn = 3;
+    _editTacticsBallLocation = 17;
 
     CopyCurrentTactics();
     SaveCurrentTactics();
 
     /* Set up player numbers pointer */
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
     uint8_t *playerNums = teamEx->team.playerNumbers;
-    if (teamEx == &careerTeam) {
-        playerNums = currentMatchPlayers;
+    if (teamEx == &_careerTeam) {
+        playerNums = _currentMatchPlayers;
     }
-    editTacticsPlayerNumbers = (uintptr_t)playerNums;
+    _editTacticsPlayerNumbers = (uintptr_t)playerNums;
 
     /* Convert dress colors into the little players color table */
     uint16_t stripesColor = ConvertPlayerDressColor(
         (uint16_t)teamEx->team.prStripesColor);
-    littlePlayersConvertTable[11] = stripesColor;   /* offset 0x16 */
+    _littlePlayersConvertTable[11] = stripesColor;   /* offset 0x16 */
 
     uint16_t basicColor = ConvertPlayerDressColor(
         (uint16_t)teamEx->team.prBasicColor);
     if (teamEx->team.prShirtType == SHIRT_ORDINARY_VAL) {
         basicColor = stripesColor;
     }
-    littlePlayersConvertTable[10] = basicColor;     /* offset 0x14 */
+    _littlePlayersConvertTable[10] = basicColor;     /* offset 0x14 */
 
     uint16_t shortsColor = ConvertPlayerDressColor(
         (uint16_t)teamEx->team.prShortsColor);
-    littlePlayersConvertTable[14] = shortsColor;    /* offset 0x1C */
+    _littlePlayersConvertTable[14] = shortsColor;    /* offset 0x1C */
 
     uint16_t socksColor = ConvertPlayerDressColor(
         (uint16_t)teamEx->team.prSocksColor);
-    littlePlayersConvertTable[15] = socksColor;     /* offset 0x1E */
+    _littlePlayersConvertTable[15] = socksColor;     /* offset 0x1E */
 
     /* Copy and colorize outfield player sprites (3 skin tones) */
     uint16_t shirtType = (uint16_t)(int8_t)teamEx->team.prShirtType;
@@ -1394,18 +1394,18 @@ void InitLittlePlayerSprites(void)
     CopyWholeSprite(srcBase + 1, 125);
     CopyWholeSprite(srcBase + 2, 126);
 
-    ConvertSpriteColors(124, littlePlayersConvertTable);
-    ConvertSpriteColors(125, littlePlayersConvertTable);
-    ConvertSpriteColors(126, littlePlayersConvertTable);
+    ConvertSpriteColors(124, _littlePlayersConvertTable);
+    ConvertSpriteColors(125, _littlePlayersConvertTable);
+    ConvertSpriteColors(126, _littlePlayersConvertTable);
 
     /* Copy and colorize goalkeeper sprites (3 skin tones) */
     CopyWholeSprite(142, 127);
     CopyWholeSprite(143, 128);
     CopyWholeSprite(144, 129);
 
-    ConvertSpriteColors(127, littlePlayersConvertTable);
-    ConvertSpriteColors(128, littlePlayersConvertTable);
-    ConvertSpriteColors(129, littlePlayersConvertTable);
+    ConvertSpriteColors(127, _littlePlayersConvertTable);
+    ConvertSpriteColors(128, _littlePlayersConvertTable);
+    ConvertSpriteColors(129, _littlePlayersConvertTable);
 }
 
 /* ================================================================
@@ -1423,46 +1423,46 @@ void InitLittlePlayerSprites(void)
 __attribute__((used, externally_visible))
 void DrawLittlePlayersAndBall(void)
 {
-    if (editTacticsDisableLittlePlayersAndBallDraw != 0)
+    if (_editTacticsDisableLittlePlayersAndBallDraw != 0)
         return;
 
     SortEditTacticsDrawOrderByY();
 
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
-    int16_t *posArr = editTacticsPlayerPositions;
-    uint8_t *playerNums = (uint8_t *)editTacticsPlayerNumbers;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
+    int16_t *posArr = _editTacticsPlayerPositions;
+    uint8_t *playerNums = (uint8_t *)_editTacticsPlayerNumbers;
 
     for (int16_t iter = 11; iter >= 0; iter--) {
         int16_t idx = *posArr++;
 
         if (idx < 0) {
             /* Ghost ball (idx == -1): only in status 3 */
-            if (editTacticsPitchStatus != 3)
+            if (_editTacticsPitchStatus != 3)
                 goto nextIter;
-            if (editTacticsBallLocation == editTacticsBallRow)
+            if (_editTacticsBallLocation == _editTacticsBallRow)
                 goto nextIter;
             /* Blink: skip if tick & 2 == 0 */
-            if ((currentGameTick & 2) == 0)
+            if ((_currentGameTick & 2) == 0)
                 goto nextIter;
             int16_t gx, gy;
-            GetBallXYPositionFromQuadrant((int16_t)editTacticsBallRow,
-                                           (int16_t)editTacticsBallColumn, &gx, &gy);
+            GetBallXYPositionFromQuadrant((int16_t)_editTacticsBallRow,
+                                           (int16_t)_editTacticsBallColumn, &gx, &gy);
             DrawSpriteCentered(SPR_BALL_SMALL, gx, gy);
             goto nextIter;
         }
 
         if (idx == 0) {
             /* Real ball */
-            if (editTacticsPitchStatus == 6 || editTacticsPitchStatus == 4) {
-                if (markedPlayerNumber == 0) {
+            if (_editTacticsPitchStatus == 6 || _editTacticsPitchStatus == 4) {
+                if (_markedPlayerNumber == 0) {
                     /* Ball is selected -> blink */
-                    if ((currentGameTick & 4) == 0)
+                    if ((_currentGameTick & 4) == 0)
                         goto nextIter;
                 }
             }
             int16_t bx, by;
-            GetBallXYPositionFromQuadrant((int16_t)ballRow,
-                                           (int16_t)ballColumn, &bx, &by);
+            GetBallXYPositionFromQuadrant((int16_t)_ballRow,
+                                           (int16_t)_ballColumn, &bx, &by);
             DrawSpriteCentered(SPR_BALL_SMALL, bx, by);
             goto nextIter;
         }
@@ -1471,15 +1471,15 @@ void DrawLittlePlayersAndBall(void)
         int8_t playerNum = (int8_t)playerNums[idx];
 
         /* In status 5, only draw the marked player */
-        if (editTacticsPitchStatus == 5) {
-            if ((uint16_t)idx != markedPlayerNumber)
+        if (_editTacticsPitchStatus == 5) {
+            if ((uint16_t)idx != _markedPlayerNumber)
                 goto nextIter;
         }
 
         /* Get player position */
-        uint16_t ballLoc = editTacticsBallLocation;
-        if (editTacticsPitchStatus == 6)
-            ballLoc = editTacticsPlayerX;
+        uint16_t ballLoc = _editTacticsBallLocation;
+        if (_editTacticsPitchStatus == 6)
+            ballLoc = _editTacticsPlayerX;
 
         int16_t px, py;
         GetPlayerXYPositionFromQuadrant((uint16_t)idx, ballLoc, &px, &py);
@@ -1491,8 +1491,8 @@ void DrawLittlePlayersAndBall(void)
         DrawSpriteCentered(playerSprite, px, py);
 
         /* Check if we should skip shirt number (blinking) */
-        if (editTacticsPitchStatus == 4 && (uint16_t)idx == markedPlayerNumber) {
-            if ((currentGameTick & 4) == 0)
+        if (_editTacticsPitchStatus == 4 && (uint16_t)idx == _markedPlayerNumber) {
+            if ((_currentGameTick & 4) == 0)
                 goto nextIter;
         }
 
@@ -1524,19 +1524,19 @@ __attribute__((used, externally_visible))
 void DrawEditTacticsHighlightedPlayerRoute(void)
 {
     /* Only draw when little players are disabled (route view active) */
-    if (editTacticsDisableLittlePlayersAndBallDraw == 0)
+    if (_editTacticsDisableLittlePlayersAndBallDraw == 0)
         return;
-    if (markedPlayerNumber == 0)
+    if (_markedPlayerNumber == 0)
         return;
 
     SortPlayerAreasByY();
 
-    int16_t *areas = playerAreas;
-    uint8_t *playerNums = (uint8_t *)editTacticsPlayerNumbers;
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    int16_t *areas = _playerAreas;
+    uint8_t *playerNums = (uint8_t *)_editTacticsPlayerNumbers;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
 
     /* Get marked player's info */
-    uint16_t markedIdx = markedPlayerNumber;
+    uint16_t markedIdx = _markedPlayerNumber;
     int8_t markedNum = (int8_t)playerNums[markedIdx];
 
     /* Determine skin color sprite for the player */
@@ -1560,9 +1560,9 @@ void DrawEditTacticsHighlightedPlayerRoute(void)
         DrawSpriteCentered(playerSprite, px, py);
 
         /* Check if we should skip the number (blinking in status 4) */
-        if (editTacticsPitchStatus == 4 &&
-            areaIdx == editTacticsBallLocation) {
-            if ((currentGameTick & 4) == 0)
+        if (_editTacticsPitchStatus == 4 &&
+            areaIdx == _editTacticsBallLocation) {
+            if ((_currentGameTick & 4) == 0)
                 continue;
         }
 
@@ -1608,34 +1608,34 @@ void DrawEditTacticsPitchAndPlayers(void)
 __attribute__((used, externally_visible))
 void HandlePlayersOrBallInEditTactics(void)
 {
-    if ((int16_t)menuControlsDirection < 0)
+    if ((int16_t)_menuControlsDirection < 0)
         return;
 
     /* Get current selection's position */
     int16_t selX, selY;
-    if (markedPlayerNumber != 0) {
-        GetPlayerXYPositionFromQuadrant(markedPlayerNumber,
-                                          editTacticsBallLocation, &selX, &selY);
+    if (_markedPlayerNumber != 0) {
+        GetPlayerXYPositionFromQuadrant(_markedPlayerNumber,
+                                          _editTacticsBallLocation, &selX, &selY);
     } else {
-        GetBallXYPositionFromQuadrant((int16_t)ballRow,
-                                        (int16_t)ballColumn, &selX, &selY);
+        GetBallXYPositionFromQuadrant((int16_t)_ballRow,
+                                        (int16_t)_ballColumn, &selX, &selY);
     }
 
     int16_t bestIdx = -1;
     int32_t bestDist = -1;  /* 0xFFFFFFFF unsigned, treated as max */
-    editTacticsNearestSelectPitchWidth = 384;
+    _editTacticsNearestSelectPitchWidth = 384;
 
 outerLoop:
     for (uint16_t i = 0; i < 11; i++) {
-        if (i == markedPlayerNumber)
+        if (i == _markedPlayerNumber)
             continue;
 
         int16_t px, py;
         if (i == 0) {
-            GetBallXYPositionFromQuadrant((int16_t)ballRow,
-                                            (int16_t)ballColumn, &px, &py);
+            GetBallXYPositionFromQuadrant((int16_t)_ballRow,
+                                            (int16_t)_ballColumn, &px, &py);
         } else {
-            GetPlayerXYPositionFromQuadrant(i, editTacticsBallLocation,
+            GetPlayerXYPositionFromQuadrant(i, _editTacticsBallLocation,
                                               &px, &py);
         }
 
@@ -1643,8 +1643,8 @@ outerLoop:
         int16_t dy = py - selY;
 
         /* Direction-based cone filter */
-        uint16_t dirBits = menuControlsDirection & 6;
-        int16_t width = (int16_t)editTacticsNearestSelectPitchWidth;
+        uint16_t dirBits = _menuControlsDirection & 6;
+        int16_t width = (int16_t)_editTacticsNearestSelectPitchWidth;
 
         if (dirBits == 0) {
             /* Up */
@@ -1682,24 +1682,24 @@ outerLoop:
 
     if (bestIdx < 0) {
         /* Widen cone and retry */
-        editTacticsNearestSelectPitchWidth += 64;
-        if (editTacticsNearestSelectPitchWidth < 1280)
+        _editTacticsNearestSelectPitchWidth += 64;
+        if (_editTacticsNearestSelectPitchWidth < 1280)
             goto outerLoop;
-        editTacticsNearestSelectPitchWidth += 192;
-        if (editTacticsNearestSelectPitchWidth < 7680)
+        _editTacticsNearestSelectPitchWidth += 192;
+        if (_editTacticsNearestSelectPitchWidth < 7680)
             goto outerLoop;
 
         /* Still nothing found: exit pitch editing if pressing RIGHT or DOWN
          * (menu items are below/right of pitch). UP/LEFT stay in pitch. */
-        uint16_t dirBits = menuControlsDirection & 6;
+        uint16_t dirBits = _menuControlsDirection & 6;
         if (dirBits >= 2 && dirBits <= 4) {
-            editTacticsPitchStatus = 0xFFFF;
+            _editTacticsPitchStatus = 0xFFFF;
             return;
         }
         return;
     }
 
-    markedPlayerNumber = (uint16_t)bestIdx;
+    _markedPlayerNumber = (uint16_t)bestIdx;
 }
 
 /* ================================================================
@@ -1711,93 +1711,93 @@ outerLoop:
 __attribute__((used, externally_visible))
 void EditTacticsReadControls(void)
 {
-    if (editTacticsPitchStatus == 6) {
+    if (_editTacticsPitchStatus == 6) {
         /* Status 6: dragging player - fire releases */
-        if (fire != 0) {
+        if (_fire != 0) {
             SaveCurrentTactics();
             EditTactics_CommitDraggedPlayerPosition();
-            editTacticsPitchStatus = 0xFFFF;
+            _editTacticsPitchStatus = 0xFFFF;
             return;
         }
         goto moveBallCursor;
     }
 
-    if (editTacticsPitchStatus == 3) {
+    if (_editTacticsPitchStatus == 3) {
         /* Status 3: browsing ball areas */
-        if (fire != 0) goto tryMoveBallArea;
+        if (_fire != 0) goto tryMoveBallArea;
         /* Fire released: commit ball position */
-        ballRow = editTacticsBallRow;
-        ballColumn = editTacticsBallColumn;
-        editTacticsBallLocation = editTacticsLastBallLocation;
+        _ballRow = _editTacticsBallRow;
+        _ballColumn = _editTacticsBallColumn;
+        _editTacticsBallLocation = _editTacticsLastBallLocation;
         goto setStatus2;
     }
 
-    if (editTacticsPitchStatus == 4) {
+    if (_editTacticsPitchStatus == 4) {
         /* Status 4: player/ball selected, fire handling */
-        if (fire != 0) {
-            if (fireCounter <= -7) goto startBallAreaBrowse;
+        if (_fire != 0) {
+            if (_fireCounter <= -7) goto startBallAreaBrowse;
             goto moveBallCursor;
         }
-        if (fireCounter == 0) goto moveBallCursor;
-        if (fireCounter <= 7) goto setStatus2;
+        if (_fireCounter == 0) goto moveBallCursor;
+        if (_fireCounter <= 7) goto setStatus2;
         goto moveBallCursor;
     }
 
     /* Default status (2): idle, waiting for input */
-    if (fire == 0) {
-        if (fireCounter == 0) {
+    if (_fire == 0) {
+        if (_fireCounter == 0) {
             HandlePlayersOrBallInEditTactics();
             return;
         }
-        if (fireCounter <= 7) goto setStatus4;
+        if (_fireCounter <= 7) goto setStatus4;
         return;
     }
     /* fire != 0 */
-    if (fireCounter <= -7) goto startBallAreaBrowse;
+    if (_fireCounter <= -7) goto startBallAreaBrowse;
     return;
 
 setStatus4:
-    editTacticsPitchStatus = 4;
+    _editTacticsPitchStatus = 4;
     return;
 
 startBallAreaBrowse:
-    editTacticsBallRow = ballRow;
-    editTacticsBallColumn = ballColumn;
-    editTacticsLastBallLocation = editTacticsBallLocation;
-    editTacticsPitchStatus = 3;
+    _editTacticsBallRow = _ballRow;
+    _editTacticsBallColumn = _ballColumn;
+    _editTacticsLastBallLocation = _editTacticsBallLocation;
+    _editTacticsPitchStatus = 3;
     return;
 
 setStatus2:
-    editTacticsPitchStatus = 2;
+    _editTacticsPitchStatus = 2;
     return;
 
 tryMoveBallArea:
-    if ((int16_t)menuControlsDirection < 0)
+    if ((int16_t)_menuControlsDirection < 0)
         return;
     {
         int16_t outRow, outCol, outBallLoc;
         uint16_t noMove = EditTactics_TryMoveQuadrantCursor(
-            (int16_t)editTacticsBallRow, (int16_t)editTacticsBallColumn,
+            (int16_t)_editTacticsBallRow, (int16_t)_editTacticsBallColumn,
             &outRow, &outCol, &outBallLoc);
         if (noMove != 0) return;
-        editTacticsBallRow = (uint16_t)outRow;
-        editTacticsBallColumn = (uint16_t)outCol;
-        editTacticsLastBallLocation = (uint16_t)outBallLoc;
+        _editTacticsBallRow = (uint16_t)outRow;
+        _editTacticsBallColumn = (uint16_t)outCol;
+        _editTacticsLastBallLocation = (uint16_t)outBallLoc;
     }
     return;
 
 moveBallCursor:
-    if ((int16_t)menuControlsDirection < 0)
+    if ((int16_t)_menuControlsDirection < 0)
         return;
     {
         int16_t outRow, outCol, outBallLoc;
         uint16_t noMove = EditTactics_TryMoveQuadrantCursor(
-            (int16_t)ballRow, (int16_t)ballColumn,
+            (int16_t)_ballRow, (int16_t)_ballColumn,
             &outRow, &outCol, &outBallLoc);
         if (noMove != 0) return;
-        ballRow = (uint16_t)outRow;
-        ballColumn = (uint16_t)outCol;
-        editTacticsBallLocation = (uint16_t)outBallLoc;
+        _ballRow = (uint16_t)outRow;
+        _ballColumn = (uint16_t)outCol;
+        _editTacticsBallLocation = (uint16_t)outBallLoc;
     }
 }
 
@@ -1811,84 +1811,84 @@ moveBallCursor:
 __attribute__((used, externally_visible))
 void EditTactics_HandlePitchInput(void)
 {
-    if (editTacticsPitchStatus == 4) goto status4;
-    if (editTacticsPitchStatus == 5) goto status5;
+    if (_editTacticsPitchStatus == 4) goto status4;
+    if (_editTacticsPitchStatus == 5) goto status5;
 
     /* Default status (2): waiting for fire press/release */
-    if (fire == 0) {
-        if (fireCounter == 0) {
+    if (_fire == 0) {
+        if (_fireCounter == 0) {
             HandlePlayersOrBallInEditTactics();
             return;
         }
-        if (fireCounter <= 7) goto saveAndSetStatus4;
+        if (_fireCounter <= 7) goto saveAndSetStatus4;
         return;
     }
     /* fire != 0 */
-    if (fireCounter <= -14) goto startStatus5;
+    if (_fireCounter <= -14) goto startStatus5;
     return;
 
 status5:
     /* Ball area browsing with marked player */
-    if (fire == 0 && fireCounter != 0) {
-        if (fireCounter <= 7) goto backToStatus2;
+    if (_fire == 0 && _fireCounter != 0) {
+        if (_fireCounter <= 7) goto backToStatus2;
     }
 
     /* Repeat counter for ball area scrolling */
-    editTacticsInputRepeatCounter++;
-    editTacticsInputRepeatCounter &= 7;
-    if (editTacticsInputRepeatCounter != 0)
+    _editTacticsInputRepeatCounter++;
+    _editTacticsInputRepeatCounter &= 7;
+    if (_editTacticsInputRepeatCounter != 0)
         return;
 
     /* Check direction keys for ball area navigation */
     {
         int16_t newLoc;
-        if (up) {
-            newLoc = (int16_t)editTacticsBallLocation + 5;
+        if (_up) {
+            newLoc = (int16_t)_editTacticsBallLocation + 5;
             if (newLoc >= 35) {
                 newLoc -= 34;
                 if (newLoc == 5) newLoc = 0;
             }
-        } else if (down) {
-            newLoc = (int16_t)editTacticsBallLocation - 5;
+        } else if (_down) {
+            newLoc = (int16_t)_editTacticsBallLocation - 5;
             if (newLoc < 0) {
                 newLoc += 34;
                 if (newLoc == 29) newLoc = 34;
             }
-        } else if (left) {
-            newLoc = (int16_t)editTacticsBallLocation + 1;
+        } else if (_left) {
+            newLoc = (int16_t)_editTacticsBallLocation + 1;
             if (newLoc == 35) newLoc = 0;
-        } else if (right) {
-            newLoc = (int16_t)editTacticsBallLocation - 1;
+        } else if (_right) {
+            newLoc = (int16_t)_editTacticsBallLocation - 1;
             if (newLoc < 0) newLoc = 34;
         } else {
             return;
         }
 
-        editTacticsBallLocation = (uint16_t)newLoc;
+        _editTacticsBallLocation = (uint16_t)newLoc;
         uint32_t divResult = (uint32_t)(uint16_t)newLoc;
-        ballColumn = (uint16_t)(divResult / 5);
-        ballRow = (uint16_t)(divResult % 5);
+        _ballColumn = (uint16_t)(divResult / 5);
+        _ballRow = (uint16_t)(divResult % 5);
     }
     return;
 
 status4:
     /* Player selected, moving quadrant position */
-    if (fire == 0) {
-        if (fireCounter == 0) goto movePlayerQuadrant;
-        if (fireCounter <= 7) goto commitAndDone;
+    if (_fire == 0) {
+        if (_fireCounter == 0) goto movePlayerQuadrant;
+        if (_fireCounter <= 7) goto commitAndDone;
         goto movePlayerQuadrant;
     }
-    if (fireCounter <= -14) goto startStatus5;
+    if (_fireCounter <= -14) goto startStatus5;
 
 movePlayerQuadrant:
-    if ((int16_t)menuControlsDirection < 0)
+    if ((int16_t)_menuControlsDirection < 0)
         return;
     {
         int16_t dx, dy;
         EditTactics_GetDirectionDelta(&dx, &dy);
 
         int16_t xQuad, yQuad;
-        GetPlayerQuadrant(markedPlayerNumber, editTacticsBallLocation,
+        GetPlayerQuadrant(_markedPlayerNumber, _editTacticsBallLocation,
                            &xQuad, &yQuad);
 
         /* Try to move X */
@@ -1906,38 +1906,38 @@ movePlayerQuadrant:
         int16_t targetY = yQuad;
         for (uint16_t p = 1; p < 11; p++) {
             int16_t px, py;
-            GetPlayerQuadrant(p, editTacticsBallLocation, &px, &py);
+            GetPlayerQuadrant(p, _editTacticsBallLocation, &px, &py);
             if (px == targetX && py == targetY)
                 return;  /* Occupied, don't move */
         }
 
         /* Position is free: commit */
-        SetPlayerQuadrant(markedPlayerNumber, targetX, targetY,
-                           editTacticsBallLocation);
-        EditTactics_FlipMaybe_MirrorBallArea(editTacticsBallLocation);
+        SetPlayerQuadrant(_markedPlayerNumber, targetX, targetY,
+                           _editTacticsBallLocation);
+        EditTactics_FlipMaybe_MirrorBallArea(_editTacticsBallLocation);
     }
     return;
 
 saveAndSetStatus4:
     SaveCurrentTactics();
-    editTacticsPitchStatus = 4;
+    _editTacticsPitchStatus = 4;
     EditTacticsMenuSavePlayerPositions();
     DrawPlayerNamesAndFaces();
     return;
 
 commitAndDone:
-    editTacticsPitchStatus = 7;
-    CallDrawMenuItem(&menuEntries[2]);
+    _editTacticsPitchStatus = 7;
+    CallDrawMenuItem(&_menuEntries[2]);
     EditTactics_CommitPlayerPositionsAndRecalcSkill();
     DrawPlayerNamesAndFaces();
 
 backToStatus2:
-    editTacticsPitchStatus = 2;
+    _editTacticsPitchStatus = 2;
     return;
 
 startStatus5:
-    editTacticsInputRepeatCounter = 0;
-    editTacticsPitchStatus = 5;
+    _editTacticsInputRepeatCounter = 0;
+    _editTacticsPitchStatus = 5;
 }
 
 /* ================================================================
@@ -1950,38 +1950,38 @@ startStatus5:
 __attribute__((used, externally_visible))
 void EditTacticsStatus(uint16_t status)
 {
-    if (editTacticsTransitionActive == 0) {
-        editTacticsPitchStatus = status;
-        markedPlayerNumber = 0;
-        editTacticsLastTick = currentGameTick;
-        editTacticsTransitionActive = 1;
+    if (_editTacticsTransitionActive == 0) {
+        _editTacticsPitchStatus = status;
+        _markedPlayerNumber = 0;
+        _editTacticsLastTick = _currentGameTick;
+        _editTacticsTransitionActive = 1;
     }
 
     /* Advance tick tracking */
-    editTacticsLastTick = currentGameTick;
+    _editTacticsLastTick = _currentGameTick;
 
     /* Status 0: wait for fire release */
-    if (editTacticsPitchStatus == 0) {
-        if (fire != 0)
+    if (_editTacticsPitchStatus == 0) {
+        if (_fire != 0)
             goto drawAndReturn;
-        editTacticsPitchStatus = 2;
+        _editTacticsPitchStatus = 2;
     }
 
     /* Status 1: wait for fire release (copy tactics mode) */
-    if (editTacticsPitchStatus == 1) {
-        if (fire != 0)
+    if (_editTacticsPitchStatus == 1) {
+        if (_fire != 0)
             goto drawAndReturn;
-        editTacticsPitchStatus = 6;
+        _editTacticsPitchStatus = 6;
     }
 
     /* Status -1 (0xFFFF): done */
-    if (editTacticsPitchStatus == 0xFFFF) {
-        editTacticsTransitionActive = 0;
+    if (_editTacticsPitchStatus == 0xFFFF) {
+        _editTacticsTransitionActive = 0;
         return;
     }
 
     /* Dispatch based on whether a player is marked */
-    if (markedPlayerNumber != 0) {
+    if (_markedPlayerNumber != 0) {
         EditTactics_HandlePitchInput();
     } else {
         EditTacticsReadControls();
@@ -2000,14 +2000,14 @@ drawAndReturn:
 __attribute__((used, externally_visible))
 void EditTacicsMovePlayersOrBall(void)
 {
-    if (editTacticsTransitionActive == 0) {
+    if (_editTacticsTransitionActive == 0) {
         EditTacticsMenuSavePlayerPositions();
         DrawPlayerNamesAndFaces();
     }
     EditTacticsStatus(0);
-    if (editTacticsTransitionActive != 0)
+    if (_editTacticsTransitionActive != 0)
         return;
-    CallDrawMenuItem(&menuEntries[2]);
+    CallDrawMenuItem(&_menuEntries[2]);
     SetCurrentEntry(4);
 }
 
@@ -2025,22 +2025,22 @@ void EditTacicsMovePlayersOrBall(void)
 __attribute__((used, externally_visible))
 void CopyTactics(void)
 {
-    if (editTacticsTransitionActive == 0) {
+    if (_editTacticsTransitionActive == 0) {
         /* Set entry 4's bg color to pink */
-        menuEntries[4].bgColor = (menuEntries[4].bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN;
-        CallDrawMenuItem(&menuEntries[4]);
+        _menuEntries[4].bgColor = (_menuEntries[4].bgColor & 0xFFF0) | COLOR_PINK_TO_BROWN;
+        CallDrawMenuItem(&_menuEntries[4]);
         EditTacticsMenuSavePlayerPositions();
         DrawPlayerNamesAndFaces();
-        editTacticsPlayerX = editTacticsBallLocation;
+        _editTacticsPlayerX = _editTacticsBallLocation;
     }
     EditTacticsStatus(1);
-    if (editTacticsTransitionActive != 0)
+    if (_editTacticsTransitionActive != 0)
         return;
-    CallDrawMenuItem(&menuEntries[2]);
+    CallDrawMenuItem(&_menuEntries[2]);
     /* Restore entry 4's bg color to yellow-green */
-    menuEntries[4].bgColor = (menuEntries[4].bgColor & 0xFFF0) | COLOR_YELLOW_GREEN_BLK;
+    _menuEntries[4].bgColor = (_menuEntries[4].bgColor & 0xFFF0) | COLOR_YELLOW_GREEN_BLK;
     SetCurrentEntry(COLOR_ORANGE_TO_BROWN);
-    CallDrawMenuItem(&menuEntries[4]);
+    CallDrawMenuItem(&_menuEntries[4]);
     EditTactics_CommitPlayerPositionsAndRecalcSkill();
     DrawPlayerNamesAndFaces();
 }
@@ -2063,9 +2063,9 @@ uint8_t *GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot,
     uint16_t slot = requestedSlot;
     if (slot < 11) {
         int16_t tacticsIdx = (int8_t)teamPtr->team.tactics;
-        TeamTactics *tactics = (TeamTactics *)teamTacticsTable[tacticsIdx];
+        TeamTactics *tactics = (TeamTactics *)_teamTacticsTable[tacticsIdx];
         int16_t formIdx = (int8_t)tactics->ballOutOfPlayTactics;
-        uint8_t *positions = (uint8_t *)positionsTable[formIdx];
+        uint8_t *positions = (uint8_t *)_positionsTable[formIdx];
         slot = (uint8_t)(positions[requestedSlot] - 1);
     }
     uint16_t teamNumber = PACK_BE_U16(teamPtr->team.countryNumber, teamPtr->team.teamOrdinal);
@@ -2085,7 +2085,7 @@ uint8_t *GetPlayerInfoBreakPosition(TeamFileEx *teamPtr, uint16_t requestedSlot,
 __attribute__((used, externally_visible))
 uint16_t EditTactics_FindFreePairId(void)
 {
-    uint8_t *table = editTacticsCurrentTactics.pairIds;
+    uint8_t *table = _editTacticsCurrentTactics.pairIds;
     uint16_t used = 0;
     int16_t i;
     for (i = 9; i >= 0; i--) {
@@ -2109,7 +2109,7 @@ uint16_t EditTactics_FindFreePairId(void)
 __attribute__((used, externally_visible))
 void EditTactics_ClearPairId(uint16_t value)
 {
-    uint8_t *table = editTacticsCurrentTactics.pairIds;
+    uint8_t *table = _editTacticsCurrentTactics.pairIds;
     int16_t i;
     for (i = 9; i >= 0; i--) {
         if (table[i] == (uint8_t)value)
@@ -2128,7 +2128,7 @@ void EditTactics_ClearPairId(uint16_t value)
 __attribute__((used, externally_visible))
 void EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
 {
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
 
     /* Check if we need to do the GetPlayerAtIndex-based swap.
      * Skip when both slots are in the same category:
@@ -2154,9 +2154,9 @@ void EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
         uint16_t fileIdx2 = _cGetPlayerAtIndexFileIdx;
 
         /* Swap position bytes in playerPositionsArray */
-        uint8_t tmp = (&playerPositionsArray)[fileIdx2];
-        (&playerPositionsArray)[fileIdx2] = (&playerPositionsArray)[fileIdx1];
-        (&playerPositionsArray)[fileIdx1] = tmp;
+        uint8_t tmp = (&_playerPositionsArray)[fileIdx2];
+        (&_playerPositionsArray)[fileIdx2] = (&_playerPositionsArray)[fileIdx1];
+        (&_playerPositionsArray)[fileIdx1] = tmp;
 
         /* Swap shirt numbers between players */
         int8_t tmp2 = pf2->shirtNumber;
@@ -2165,10 +2165,10 @@ void EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
     }
 
     /* Swap entries in the player number mapping array */
-    if (gameType == 4) {
-        uint8_t tmp = currentMatchPlayers[slot2];
-        currentMatchPlayers[slot2] = currentMatchPlayers[slot1];
-        currentMatchPlayers[slot1] = tmp;
+    if (_gameType == 4) {
+        uint8_t tmp = _currentMatchPlayers[slot2];
+        _currentMatchPlayers[slot2] = _currentMatchPlayers[slot1];
+        _currentMatchPlayers[slot1] = tmp;
     } else {
         uint8_t *numbers = teamEx->team.playerNumbers;
         uint8_t tmp = numbers[slot2];
@@ -2188,62 +2188,62 @@ void EditTactics_SwapPlayersInSlots(uint16_t slot1, uint16_t slot2)
 __attribute__((used, externally_visible))
 void EditTacticsCommon(MenuEntry *cur)
 {
-    if ((int16_t)editTacticsSelectedPlayerNameIndex >= 0)
+    if ((int16_t)_editTacticsSelectedPlayerNameIndex >= 0)
         return;
 
     /* Compute relative index: current entry vs menuEntries[29] */
-    uint16_t relIdx = cur->ordinal - menuEntries[29].ordinal + 1;
+    uint16_t relIdx = cur->ordinal - _menuEntries[29].ordinal + 1;
     uint16_t savedRelIdx = relIdx;
 
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
     uint8_t savedTactics = teamEx->team.tactics;
-    teamEx->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
+    teamEx->team.tactics = _editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     GetPlayerInfoBreakPosition(teamEx, relIdx, &slot, &playerIndex);
 
-    teamEx = chooseTacticsTeamPtr;
+    teamEx = _chooseTacticsTeamPtr;
     teamEx->team.tactics = savedTactics;
     slot -= 1;
 
-    if ((int16_t)editTacticsSelectedPairSlotIndex < 0) {
+    if ((int16_t)_editTacticsSelectedPairSlotIndex < 0) {
         /* No previous selection - start new selection */
-        editTacticsSelectedPairSlotIndex = slot;
+        _editTacticsSelectedPairSlotIndex = slot;
         MenuEntry *entry = CalcMenuEntryAddress(11 + savedRelIdx);
-        editTacticsSelectedPairMenuEntryPtr = entry;
+        _editTacticsSelectedPairMenuEntryPtr = entry;
         CallDrawMenuItem(entry);
         return;
     }
 
-    if (editTacticsSelectedPairSlotIndex == slot) {
+    if (_editTacticsSelectedPairSlotIndex == slot) {
         /* Same slot clicked again - cancel selection */
-        editTacticsSelectedPairSlotIndex = 0xFFFF;
-        CallDrawMenuItem(editTacticsSelectedPairMenuEntryPtr);
+        _editTacticsSelectedPairSlotIndex = 0xFFFF;
+        CallDrawMenuItem(_editTacticsSelectedPairMenuEntryPtr);
         return;
     }
 
     /* Different slot - link/unlink pair */
-    uint8_t *pairIds = editTacticsCurrentTactics.pairIds;
+    uint8_t *pairIds = _editTacticsCurrentTactics.pairIds;
     uint8_t pairIdCurrent = pairIds[slot];
-    uint8_t pairIdPrevious = pairIds[editTacticsSelectedPairSlotIndex];
+    uint8_t pairIdPrevious = pairIds[_editTacticsSelectedPairSlotIndex];
 
     /* Clear both pair IDs from the table */
     EditTactics_ClearPairId((uint16_t)pairIds[slot]);
-    EditTactics_ClearPairId((uint16_t)pairIds[editTacticsSelectedPairSlotIndex]);
+    EditTactics_ClearPairId((uint16_t)pairIds[_editTacticsSelectedPairSlotIndex]);
 
     /* Assign new pair ID unless both already had the same valid ID */
     if ((int8_t)pairIdCurrent < 0 || (int8_t)pairIdPrevious < 0 ||
         pairIdCurrent != pairIdPrevious) {
         uint16_t newPairId = EditTactics_FindFreePairId();
         pairIds[slot] = (uint8_t)newPairId;
-        pairIds[editTacticsSelectedPairSlotIndex] = (uint8_t)newPairId;
+        pairIds[_editTacticsSelectedPairSlotIndex] = (uint8_t)newPairId;
     }
 
-    editTacticsSelectedPairSlotIndex = 0xFFFF;
+    _editTacticsSelectedPairSlotIndex = 0xFFFF;
 
     /* Redraw the selected pair entry and all pair entries */
-    CallDrawMenuItem(editTacticsSelectedPairMenuEntryPtr);
-    CallDrawMultipleItems(10, &menuEntries[29]);
+    CallDrawMenuItem(_editTacticsSelectedPairMenuEntryPtr);
+    CallDrawMultipleItems(10, &_menuEntries[29]);
 }
 
 /* ================================================================
@@ -2257,47 +2257,47 @@ void EditTacticsCommon(MenuEntry *cur)
 __attribute__((used, externally_visible))
 void EditTacticsPlayerNamesCommon(MenuEntry *cur)
 {
-    if ((int16_t)editTacticsSelectedPairSlotIndex >= 0)
+    if ((int16_t)_editTacticsSelectedPairSlotIndex >= 0)
         return;
 
     /* Compute relative index: current entry vs menuEntries[11] */
-    uint16_t relIdx = cur->ordinal - menuEntries[11].ordinal;
+    uint16_t relIdx = cur->ordinal - _menuEntries[11].ordinal;
 
-    TeamFileEx *teamEx = chooseTacticsTeamPtr;
+    TeamFileEx *teamEx = _chooseTacticsTeamPtr;
     uint8_t savedTactics = teamEx->team.tactics;
-    teamEx->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
+    teamEx->team.tactics = _editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     GetPlayerInfoBreakPosition(teamEx, relIdx, &slot, &playerIndex);
 
-    teamEx = chooseTacticsTeamPtr;
+    teamEx = _chooseTacticsTeamPtr;
     teamEx->team.tactics = savedTactics;
 
-    if ((int16_t)editTacticsSelectedPlayerNameIndex >= 0) {
-        if (editTacticsSelectedPlayerNameIndex == playerIndex) {
+    if ((int16_t)_editTacticsSelectedPlayerNameIndex >= 0) {
+        if (_editTacticsSelectedPlayerNameIndex == playerIndex) {
             /* Same player - cancel by setting to 0xFFFF */
             playerIndex = 0xFFFF;
             /* Fall through to update selection state */
         } else {
             /* Different player - swap them */
             EditTactics_SwapPlayersInSlots(
-                editTacticsSelectedPlayerSlotIndex, slot);
-            SetBenchPlayersNumbers(chooseTacticsTeamPtr);
-            teamEx = chooseTacticsTeamPtr;
+                _editTacticsSelectedPlayerSlotIndex, slot);
+            SetBenchPlayersNumbers(_chooseTacticsTeamPtr);
+            teamEx = _chooseTacticsTeamPtr;
             teamEx->team.playerValuesDirty = TEAM_VALUES_DIRTY;
             EditTactics_CommitPlayerPositionsAndRecalcSkill();
-            editTacticsSelectedPlayerNameIndex = 0xFFFF;
+            _editTacticsSelectedPlayerNameIndex = 0xFFFF;
             DrawMenu();
             return;
         }
     }
 
     /* Start or update selection */
-    editTacticsSelectedPlayerNameIndex = playerIndex;
-    editTacticsSelectedPlayerSlotIndex = slot;
+    _editTacticsSelectedPlayerNameIndex = playerIndex;
+    _editTacticsSelectedPlayerSlotIndex = slot;
 
-    MenuEntry *prevEntry = editTacticsSelectedPlayerMenuEntryPtr;
-    editTacticsSelectedPlayerMenuEntryPtr = cur;
+    MenuEntry *prevEntry = _editTacticsSelectedPlayerMenuEntryPtr;
+    _editTacticsSelectedPlayerMenuEntryPtr = cur;
 
     if (prevEntry != (MenuEntry *)0) {
         CallDrawMenuItem(prevEntry);
@@ -2319,30 +2319,30 @@ void EditTacticsPlayerNamesCommon(MenuEntry *cur)
 __attribute__((used, externally_visible))
 void LoadTactics(void)
 {
-    importMenuSelectedTactics = 0xFFFF;
+    _importMenuSelectedTactics = 0xFFFF;
 
-    if (Asset_PromptInsertSaveDiskDf0(aLoadEditedTact) != 0)
+    if (Asset_PromptInsertSaveDiskDf0(_aLoadEditedTact) != 0)
         goto end;
 
-    if (GetFilenameAndExtension(0, aLoadEditedTact, aLoadEditedTact) != 0)
+    if (GetFilenameAndExtension(0, _aLoadEditedTact, _aLoadEditedTact) != 0)
         goto cleanup;
 
-    if (extension != 0x2E544143u) { /* '.TAC' */
-        ShowErrorMenu(aNotATacticsFil);
+    if (_extension != 0x2E544143u) { /* '.TAC' */
+        ShowErrorMenu(_aNotATacticsFil);
         goto cleanup;
     }
 
     SaveCurrentTactics();
 
-    if (ReadTacticsFile(selectedFilename) != 0)
+    if (ReadTacticsFile(_selectedFilename) != 0)
         goto cleanup;
 
-    StringCopy(selectedFilename, &importTacticsFilename);
-    importMenuSelectedTactics = 1000;
-    tacticsChangedFlag = 1;
+    StringCopy(_selectedFilename, &_importTacticsFilename);
+    _importMenuSelectedTactics = 1000;
+    _tacticsChangedFlag = 1;
 
 cleanup:
-    ShowInsertDisk2Dialog(aLoadEditedTact);
+    ShowInsertDisk2Dialog(_aLoadEditedTact);
 end:
     SetExitMenuFlag();
 }
@@ -2356,40 +2356,40 @@ end:
  * ================================================================ */
 
 /* --- Externs for EditTeams --- */
-extern uint8_t *editTeamsSelectedTeam;   /* pointer to source team data */
-extern uint16_t saveCustomTeams;
-extern uint16_t teamIsImported;
-extern uint16_t controlMask;
-extern uint16_t kTeamColorsTable[];      /* 10 word entries */
+extern uint8_t *_editTeamsSelectedTeam;   /* pointer to source team data */
+extern uint16_t _saveCustomTeams;
+extern uint16_t _teamIsImported;
+extern uint16_t _controlMask;
+extern uint16_t _kTeamColorsTable[];      /* 10 word entries */
 /* edit-teams kit sprite-copy descriptors; .colTable[16] is the palette remap
  * (was the editTeams*ColTable .equ aliases at descriptor +4). */
-extern EditTeamsSpriteCopy editTeamsPrimaryShirts;
-extern EditTeamsSpriteCopy editTeamsShorts;
-extern EditTeamsSpriteCopy editTeamsSocks;
-extern EditTeamsSpriteCopy editTeamsSecondaryShirt;
-extern EditTeamsSpriteCopy editTeamsSecondaryShorts;
-extern EditTeamsSpriteCopy editTeamsSecondarySocks;
-extern uint16_t shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt types) */
-extern uint16_t shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
-extern void *playerPositionsStringTable[];       /* 8 string pointers */
+extern EditTeamsSpriteCopy _editTeamsPrimaryShirts;
+extern EditTeamsSpriteCopy _editTeamsShorts;
+extern EditTeamsSpriteCopy _editTeamsSocks;
+extern EditTeamsSpriteCopy _editTeamsSecondaryShirt;
+extern EditTeamsSpriteCopy _editTeamsSecondaryShorts;
+extern EditTeamsSpriteCopy _editTeamsSecondarySocks;
+extern uint16_t _shirtTypesTable[];       /* 4 entries of 8 words each (4 shirt types) */
+extern uint16_t _shirtsIndexTable[];      /* 8 word entries (byte offsets into color table) */
+extern void *_playerPositionsStringTable[];       /* 8 string pointers */
 
 /* EditTeamsGetPlayerPointer — return PlayerFile pointer for player N in selTeamsPtr */
 static PlayerFile *EditTeamsGetPlayerFileC(MenuEntry *entry)
 {
     uint16_t idx = entry->ordinal - 23;
-    TeamFileEx *team = selectedTeams;
+    TeamFileEx *team = _selectedTeams;
     return &team->players[idx];
 }
 
 /* PrimaryKitColorConversion — build primary shirt/shorts/socks color tables */
 static void PrimaryKitColorConversionC(void)
 {
-    TeamFile *tf = &selectedTeams->team;
-    uint16_t *colTable = editTeamsPrimaryShirts.colTable;
-    uint16_t stripesCol = kTeamColorsTable[tf->prStripesColor];
-    uint16_t basicCol = kTeamColorsTable[tf->prBasicColor];
-    uint16_t *types = &shirtTypesTable[tf->prShirtType * 8];
-    uint16_t *indices = shirtsIndexTable;
+    TeamFile *tf = &_selectedTeams->team;
+    uint16_t *colTable = _editTeamsPrimaryShirts.colTable;
+    uint16_t stripesCol = _kTeamColorsTable[tf->prStripesColor];
+    uint16_t basicCol = _kTeamColorsTable[tf->prBasicColor];
+    uint16_t *types = &_shirtTypesTable[tf->prShirtType * 8];
+    uint16_t *indices = _shirtsIndexTable;
 
     for (int16_t i = 7; i >= 0; i--) {
         uint16_t idx = *indices++;
@@ -2400,23 +2400,23 @@ static void PrimaryKitColorConversionC(void)
     }
 
     /* Shorts */
-    uint16_t shortsCol = kTeamColorsTable[tf->prShortsColor];
-    editTeamsShorts.colTable[11] = shortsCol;   /* slot 11 */
+    uint16_t shortsCol = _kTeamColorsTable[tf->prShortsColor];
+    _editTeamsShorts.colTable[11] = shortsCol;   /* slot 11 */
 
     /* Socks */
-    uint16_t socksCol = kTeamColorsTable[tf->prSocksColor];
-    editTeamsSocks.colTable[11] = socksCol;   /* slot 11 */
+    uint16_t socksCol = _kTeamColorsTable[tf->prSocksColor];
+    _editTeamsSocks.colTable[11] = socksCol;   /* slot 11 */
 }
 
 /* SecondaryKitColorConversion — build secondary shirt/shorts/socks color tables */
 static void SecondaryKitColorConversionC(void)
 {
-    TeamFile *tf = &selectedTeams->team;
-    uint16_t *colTable = editTeamsSecondaryShirt.colTable;
-    uint16_t stripesCol = kTeamColorsTable[tf->secStripesColor];
-    uint16_t basicCol = kTeamColorsTable[tf->secBasicColor];
-    uint16_t *types = &shirtTypesTable[tf->secShirtType * 8];
-    uint16_t *indices = shirtsIndexTable;
+    TeamFile *tf = &_selectedTeams->team;
+    uint16_t *colTable = _editTeamsSecondaryShirt.colTable;
+    uint16_t stripesCol = _kTeamColorsTable[tf->secStripesColor];
+    uint16_t basicCol = _kTeamColorsTable[tf->secBasicColor];
+    uint16_t *types = &_shirtTypesTable[tf->secShirtType * 8];
+    uint16_t *indices = _shirtsIndexTable;
 
     for (int16_t i = 7; i >= 0; i--) {
         uint16_t idx = *indices++;
@@ -2427,19 +2427,19 @@ static void SecondaryKitColorConversionC(void)
     }
 
     /* Shorts */
-    uint16_t shortsCol = kTeamColorsTable[tf->secShortsColor];
-    editTeamsSecondaryShorts.colTable[11] = shortsCol;   /* slot 11 */
+    uint16_t shortsCol = _kTeamColorsTable[tf->secShortsColor];
+    _editTeamsSecondaryShorts.colTable[11] = shortsCol;   /* slot 11 */
 
     /* Socks */
-    uint16_t socksCol = kTeamColorsTable[tf->secSocksColor];
-    editTeamsSecondarySocks.colTable[11] = socksCol;   /* slot 11 */
+    uint16_t socksCol = _kTeamColorsTable[tf->secSocksColor];
+    _editTeamsSecondarySocks.colTable[11] = socksCol;   /* slot 11 */
 }
 
 /* MarkFirstKitShirt — highlight selected primary shirt type in menu */
 static void MarkFirstKitShirtC(void)
 {
-    TeamFile *tf = &selectedTeams->team;
-    MenuEntry *e = &menuEntries[0x348 / 56]; /* menuEntries + $348 / 56 = entry 15 */
+    TeamFile *tf = &_selectedTeams->team;
+    MenuEntry *e = &_menuEntries[0x348 / 56]; /* menuEntries + $348 / 56 = entry 15 */
     uint8_t shirtType = tf->prShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
@@ -2453,8 +2453,8 @@ static void MarkFirstKitShirtC(void)
 /* MarkSecondKitShirt — highlight selected secondary shirt type in menu */
 static void MarkSecondKitShirtC(void)
 {
-    TeamFile *tf = &selectedTeams->team;
-    MenuEntry *e = &menuEntries[0x428 / 56]; /* entry 19 */
+    TeamFile *tf = &_selectedTeams->team;
+    MenuEntry *e = &_menuEntries[0x428 / 56]; /* entry 19 */
     uint8_t shirtType = tf->secShirtType;
 
     for (int16_t i = 3; i >= 0; i--) {
@@ -2469,11 +2469,11 @@ static void MarkSecondKitShirtC(void)
 __attribute__((used, externally_visible))
 void EditTeamsInit(void)
 {
-    uint16_t *src = (uint16_t *)editTeamsSelectedTeam;
-    uint16_t *dst = (uint16_t *)&selTeamsPtr;
+    uint16_t *src = (uint16_t *)_editTeamsSelectedTeam;
+    uint16_t *dst = (uint16_t *)&_selTeamsPtr;
     for (int16_t i = 341; i >= 0; i--)
         *dst++ = *src++;
-    teamIsImported = 0;
+    _teamIsImported = 0;
     EditTeamsFinish();
 }
 
@@ -2489,9 +2489,9 @@ void EditTeamsFinish(void)
 __attribute__((used, externally_visible))
 void EditTeamsUndo(void)
 {
-    teamIsImported = 0;
-    uint16_t *src = (uint16_t *)editTeamsSelectedTeam;
-    uint16_t *dst = (uint16_t *)&selTeamsPtr;
+    _teamIsImported = 0;
+    uint16_t *src = (uint16_t *)_editTeamsSelectedTeam;
+    uint16_t *dst = (uint16_t *)&_selTeamsPtr;
     for (int16_t i = 341; i >= 0; i--)
         *dst++ = *src++;
     InitEditTeamsMenu();
@@ -2502,15 +2502,15 @@ void EditTeamsUndo(void)
 __attribute__((used, externally_visible))
 void EditTeamsOK(void)
 {
-    uint16_t *src = (uint16_t *)editTeamsSelectedTeam;
-    uint16_t *cmp = (uint16_t *)&selTeamsPtr;
+    uint16_t *src = (uint16_t *)_editTeamsSelectedTeam;
+    uint16_t *cmp = (uint16_t *)&_selTeamsPtr;
 
     for (int16_t i = 341; i >= 0; i--) {
         if (*src++ != *cmp++) {
             /* Teams differ — save changes */
-            saveCustomTeams = 1;
-            uint16_t *dst = (uint16_t *)editTeamsSelectedTeam;
-            uint16_t *from = (uint16_t *)&selTeamsPtr;
+            _saveCustomTeams = 1;
+            uint16_t *dst = (uint16_t *)_editTeamsSelectedTeam;
+            uint16_t *from = (uint16_t *)&_selTeamsPtr;
             for (int16_t j = 341; j >= 0; j--)
                 *dst++ = *from++;
             SetExitMenuFlag();
@@ -2525,18 +2525,18 @@ void EditTeamsOK(void)
 __attribute__((used, externally_visible))
 void EditTeamsChangeShirtsPrimary(void)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     uint8_t d0;
 
-    if (controlMask == 0x41) {          /* left+fire */
+    if (_controlMask == 0x41) {          /* left+fire */
         d0 = tf->prStripesColor;
         d0 = (d0 == 0) ? 9 : d0 - 1;
         tf->prStripesColor = d0;
-    } else if (controlMask == 0x81) {   /* right+fire */
+    } else if (_controlMask == 0x81) {   /* right+fire */
         d0 = tf->prStripesColor;
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
         tf->prStripesColor = d0;
-    } else if (controlMask == 0x101) {  /* up+fire */
+    } else if (_controlMask == 0x101) {  /* up+fire */
         if (tf->prShirtType == 0) {  /* SHIRT_ORDINARY */
             d0 = tf->prStripesColor;
             d0 = (d0 == 0) ? 9 : d0 - 1;
@@ -2546,7 +2546,7 @@ void EditTeamsChangeShirtsPrimary(void)
             d0 = (d0 == 0) ? 9 : d0 - 1;
             tf->prBasicColor = d0;
         }
-    } else if (controlMask == 0x201) {  /* down+fire */
+    } else if (_controlMask == 0x201) {  /* down+fire */
         if (tf->prShirtType == 0) {  /* SHIRT_ORDINARY */
             d0 = tf->prStripesColor;
             d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
@@ -2562,25 +2562,25 @@ void EditTeamsChangeShirtsPrimary(void)
 
     PrimaryKitColorConversionC();
     /* nullsub_16 */
-    CallDrawMultipleItems(1, &menuEntries[0x118 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x118 / 56]);
 }
 
 /* EditTeamsChangeShirtsSecondary — change secondary shirt color on joystick input */
 __attribute__((used, externally_visible))
 void EditTeamsChangeShirtsSecondary(void)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     uint8_t d0;
 
-    if (controlMask == 0x41) {          /* left+fire */
+    if (_controlMask == 0x41) {          /* left+fire */
         d0 = tf->secStripesColor;
         d0 = (d0 == 0) ? 9 : d0 - 1;
         tf->secStripesColor = d0;
-    } else if (controlMask == 0x81) {   /* right+fire */
+    } else if (_controlMask == 0x81) {   /* right+fire */
         d0 = tf->secStripesColor;
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
         tf->secStripesColor = d0;
-    } else if (controlMask == 0x101) {  /* up+fire */
+    } else if (_controlMask == 0x101) {  /* up+fire */
         if (tf->secShirtType == 0) {
             d0 = tf->secStripesColor;
             d0 = (d0 == 0) ? 9 : d0 - 1;
@@ -2590,7 +2590,7 @@ void EditTeamsChangeShirtsSecondary(void)
             d0 = (d0 == 0) ? 9 : d0 - 1;
             tf->secBasicColor = d0;
         }
-    } else if (controlMask == 0x201) {  /* down+fire */
+    } else if (_controlMask == 0x201) {  /* down+fire */
         if (tf->secShirtType == 0) {
             d0 = tf->secStripesColor;
             d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
@@ -2606,19 +2606,19 @@ void EditTeamsChangeShirtsSecondary(void)
 
     SecondaryKitColorConversionC();
     /* nullsub_16 */
-    CallDrawMultipleItems(1, &menuEntries[0x1F8 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x1F8 / 56]);
 }
 
 /* EditTeamsChangeShortsPrimary — change primary shorts color */
 __attribute__((used, externally_visible))
 void EditTeamsChangeShortsPrimary(void)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     uint8_t d0 = tf->prShortsColor;
 
-    if (controlMask == 0x41 || controlMask == 0x101) {
+    if (_controlMask == 0x41 || _controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
-    } else if (controlMask == 0x81 || controlMask == 0x201) {
+    } else if (_controlMask == 0x81 || _controlMask == 0x201) {
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
     } else {
         return;
@@ -2627,19 +2627,19 @@ void EditTeamsChangeShortsPrimary(void)
     tf->prShortsColor = d0;
     PrimaryKitColorConversionC();
     /* nullsub_16 */
-    CallDrawMultipleItems(1, &menuEntries[0x150 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x150 / 56]);
 }
 
 /* EditTeamsChangeShortsSecondary — change secondary shorts color */
 __attribute__((used, externally_visible))
 void EditTeamsChangeShortsSecondary(void)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     uint8_t d0 = tf->secShortsColor;
 
-    if (controlMask == 0x41 || controlMask == 0x101) {
+    if (_controlMask == 0x41 || _controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
-    } else if (controlMask == 0x81 || controlMask == 0x201) {
+    } else if (_controlMask == 0x81 || _controlMask == 0x201) {
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
     } else {
         return;
@@ -2648,19 +2648,19 @@ void EditTeamsChangeShortsSecondary(void)
     tf->secShortsColor = d0;
     SecondaryKitColorConversionC();
     /* nullsub_16 */
-    CallDrawMultipleItems(1, &menuEntries[0x230 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x230 / 56]);
 }
 
 /* EditTeamsChangeSocksPrimary — change primary socks color */
 __attribute__((used, externally_visible))
 void EditTeamsChangeSocksPrimary(void)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     uint8_t d0 = tf->prSocksColor;
 
-    if (controlMask == 0x41 || controlMask == 0x101) {
+    if (_controlMask == 0x41 || _controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
-    } else if (controlMask == 0x81 || controlMask == 0x201) {
+    } else if (_controlMask == 0x81 || _controlMask == 0x201) {
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
     } else {
         return;
@@ -2668,19 +2668,19 @@ void EditTeamsChangeSocksPrimary(void)
 
     tf->prSocksColor = d0;
     PrimaryKitColorConversionC();
-    CallDrawMultipleItems(1, &menuEntries[0x188 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x188 / 56]);
 }
 
 /* EditTeamsChangeSocksSecondary — change secondary socks color */
 __attribute__((used, externally_visible))
 void EditTeamsChangeSocksSecondary(void)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     uint8_t d0 = tf->secSocksColor;
 
-    if (controlMask == 0x41 || controlMask == 0x101) {
+    if (_controlMask == 0x41 || _controlMask == 0x101) {
         d0 = (d0 == 0) ? 9 : d0 - 1;
-    } else if (controlMask == 0x81 || controlMask == 0x201) {
+    } else if (_controlMask == 0x81 || _controlMask == 0x201) {
         d0 = (d0 + 1 == 10) ? 0 : d0 + 1;
     } else {
         return;
@@ -2688,33 +2688,33 @@ void EditTeamsChangeSocksSecondary(void)
 
     tf->secSocksColor = d0;
     SecondaryKitColorConversionC();
-    CallDrawMultipleItems(1, &menuEntries[0x268 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x268 / 56]);
 }
 
 /* EditTeamsSelectPrimaryShirtType — set primary shirt type from menu ordinal */
 __attribute__((used, externally_visible))
 void EditTeamsSelectPrimaryShirtType(MenuEntry *entry)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     tf->prShirtType = (uint8_t)(entry->ordinal - 12);
     MarkFirstKitShirtC();
     PrimaryKitColorConversionC();
     /* nullsub_16 */
-    CallDrawMultipleItems(4, &menuEntries[0x2A0 / 56]);
-    CallDrawMultipleItems(1, &menuEntries[0x118 / 56]);
+    CallDrawMultipleItems(4, &_menuEntries[0x2A0 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x118 / 56]);
 }
 
 /* EditTeamsSelectSecondaryShirtType — set secondary shirt type from menu ordinal */
 __attribute__((used, externally_visible))
 void EditTeamsSelectSecondaryShirtType(MenuEntry *entry)
 {
-    TeamFile *tf = &selectedTeams->team;
+    TeamFile *tf = &_selectedTeams->team;
     tf->secShirtType = (uint8_t)(entry->ordinal - 16);
     MarkSecondKitShirtC();
     SecondaryKitColorConversionC();
     /* nullsub_16 */
-    CallDrawMultipleItems(4, &menuEntries[0x380 / 56]);
-    CallDrawMultipleItems(1, &menuEntries[0x1F8 / 56]);
+    CallDrawMultipleItems(4, &_menuEntries[0x380 / 56]);
+    CallDrawMultipleItems(1, &_menuEntries[0x1F8 / 56]);
 }
 
 /* EditTeamsChangePlayerName — edit player name via text input */
@@ -2762,17 +2762,17 @@ __attribute__((used, externally_visible))
 void InitEditTeamsMenu(void)
 {
     /* Show/hide import entry based on teamIsImported */
-    menuEntries[0x460 / 56].isInvisible = 0;
-    if (teamIsImported != 0)
-        menuEntries[0x460 / 56].isInvisible = 1;
+    _menuEntries[0x460 / 56].isInvisible = 0;
+    if (_teamIsImported != 0)
+        _menuEntries[0x460 / 56].isInvisible = 1;
 
-    TeamFileEx *teamEx = selectedTeams;
+    TeamFileEx *teamEx = _selectedTeams;
 
     /* Team name → entry 0 */
-    menuEntries[0].fg = (uintptr_t)(uint8_t *)teamEx->team.teamName;
+    _menuEntries[0].fg = (uintptr_t)(uint8_t *)teamEx->team.teamName;
 
     /* Coach name → entry at offset 0xA8 */
-    menuEntries[0xA8 / 56].fg = (uintptr_t)(uint8_t *)teamEx->team.coachName;
+    _menuEntries[0xA8 / 56].fg = (uintptr_t)(uint8_t *)teamEx->team.coachName;
 
     PrimaryKitColorConversionC();
     SecondaryKitColorConversionC();
@@ -2780,8 +2780,8 @@ void InitEditTeamsMenu(void)
     MarkSecondKitShirtC();
 
     /* Set player faces and names */
-    MenuEntry *faceEntry = &menuEntries[0x508 / 56];
-    MenuEntry *nameEntry = &menuEntries[0x888 / 56];
+    MenuEntry *faceEntry = &_menuEntries[0x508 / 56];
+    MenuEntry *nameEntry = &_menuEntries[0x888 / 56];
 
     for (int16_t i = 15; i >= 0; i--) {
         PlayerFile *pf = &teamEx->players[15 - i];
@@ -2800,13 +2800,13 @@ __attribute__((used, externally_visible))
 void EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 {
     uint16_t playerIdx = entry->ordinal - 23;
-    TeamFileEx *teamEx = selectedTeams;
+    TeamFileEx *teamEx = _selectedTeams;
     PlayerFile *pf = &teamEx->players[playerIdx];
 
     uint8_t posAndFace = pf->positionAndFace;
     int16_t y = entry->y;
 
-    MenuEntry *e = &menuEntries[0xC08 / 56];
+    MenuEntry *e = &_menuEntries[0xC08 / 56];
 
     /* Player number (shirt number) */
     uint8_t shirtNum = (uint8_t)pf->shirtNumber;
@@ -2820,7 +2820,7 @@ void EditTeamsPlayersBeforeDraw(MenuEntry *entry)
 
     /* Position string */
     uint16_t posIdx = (posAndFace & PF_POSITION_MASK) >> 3;  /* extract top 3 bits, shift to word index */
-    e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
+    e->fg = (uintptr_t)_playerPositionsStringTable[posIdx / 4];
     e->y = y;
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
@@ -2839,14 +2839,14 @@ void EditTeamsPlayersBeforeDraw(MenuEntry *entry)
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);
 
     /* Draw all 6 entries */
-    DrawMultipleItems(6, &menuEntries[0xC08 / 56]);
+    DrawMultipleItems(6, &_menuEntries[0xC08 / 56]);
 }
 
 /* ================================================================
  * Chunk 148: EditTeamsCallback
  * ================================================================ */
 
-extern uint8_t editTeamsMenu[];
+extern uint8_t _editTeamsMenu[];
 extern void ShowMenu(uint8_t *menu);
 
 /* EditTeamsCallback: called when a team is selected from team selection.
@@ -2855,8 +2855,8 @@ extern void ShowMenu(uint8_t *menu);
 __attribute__((used, externally_visible))
 void EditTeamsCallback(TeamFileEx *team)
 {
-    editTeamsSelectedTeam = (uint8_t *)team;
-    ShowMenu(editTeamsMenu);
+    _editTeamsSelectedTeam = (uint8_t *)team;
+    ShowMenu(_editTeamsMenu);
 }
 
 
@@ -2865,20 +2865,20 @@ void EditTeamsCallback(TeamFileEx *team)
  * (SWOS2.s lines 44496-44537, 45967-46026)
  * ========================================================================== */
 
-extern uint16_t numSelectedTeams;
-extern uint8_t  lastLoadedExtNumber;
-extern uint8_t  teamFileBuffer[];
-extern uint8_t  editTeamsBuffer[];
-extern uint8_t  lastSelectedTeam[];
-extern uint8_t  editTeamsSaveVarsArea[];
-extern uint8_t  selTeamImportField;
-extern uint8_t  aEditCustomTeam[];
-extern uint8_t  aSelectTeamToEd[];
-extern uint8_t  aCustomTeamsChanged[];
-extern uint8_t  aCustomsEdt[];
-extern uint8_t  aSave[];
-extern uint8_t  aAbort[];
-extern uint8_t  aSelectTeamToIm[];
+extern uint16_t _numSelectedTeams;
+extern uint8_t  _lastLoadedExtNumber;
+extern uint8_t  _teamFileBuffer[];
+extern uint8_t  _editTeamsBuffer[];
+extern uint8_t  _lastSelectedTeam[];
+extern uint8_t  _editTeamsSaveVarsArea[];
+extern uint8_t  _selTeamImportField;
+extern uint8_t  _aEditCustomTeam[];
+extern uint8_t  _aSelectTeamToEd[];
+extern uint8_t  _aCustomTeamsChanged[];
+extern uint8_t  _aCustomsEdt[];
+extern uint8_t  _aSave[];
+extern uint8_t  _aAbort[];
+extern uint8_t  _aSelectTeamToIm[];
 
 extern int16_t CheckContinueAbortPrompt(uint8_t *header);
 extern int16_t DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
@@ -2893,23 +2893,23 @@ extern void ShowInsertDisk2Dialog(uint8_t *header);
 __attribute__((used, externally_visible))
 void EditCustomTeam(void)
 {
-    if (CheckContinueAbortPrompt(aEditCustomTeam) != 0)
+    if (CheckContinueAbortPrompt(_aEditCustomTeam) != 0)
         return;
 
-    numSelectedTeams = 0;
-    saveCustomTeams = 0;
-    ChooseTeamsDialog(0, 0, 1, aSelectTeamToEd, (void *)EditTeamsCallback);
+    _numSelectedTeams = 0;
+    _saveCustomTeams = 0;
+    ChooseTeamsDialog(0, 0, 1, _aSelectTeamToEd, (void *)EditTeamsCallback);
 
-    if (saveCustomTeams == 0)
+    if (_saveCustomTeams == 0)
         goto done;
 
 retry:
-    if (DoContinueAbortMenu(aEditCustomTeam, aCustomTeamsChanged,
-                              aSave, aAbort, 0) != 0)
+    if (DoContinueAbortMenu(_aEditCustomTeam, _aCustomTeamsChanged,
+                              _aSave, _aAbort, 0) != 0)
         goto done;
 
     /* Prompt for save disk */
-    if (Asset_PromptInsertSaveDiskDf0(aEditCustomTeam) != 0)
+    if (Asset_PromptInsertSaveDiskDf0(_aEditCustomTeam) != 0)
         goto retry;
 
     /* Write team file: size = teamCount * 684 + 2 (for the count word).
@@ -2924,7 +2924,7 @@ retry:
      * back to BE before WriteFile and restore host-native after, so
      * any subsequent in-game uses of teamFileBuffer keep working. */
     {
-        uint16_t teamCount = *(uint16_t *)teamFileBuffer;
+        uint16_t teamCount = *(uint16_t *)_teamFileBuffer;
         uint32_t fileSize = (uint32_t)teamCount * 684 + 2;
 #ifdef SWOS_SDL_BUILD
         /* Convert host-native → BE in-place before write. Pre-fix bug
@@ -2936,7 +2936,7 @@ retry:
         extern void byteswap_loaded_team_file(void);
         byteswap_team_file_to_disk();
 #endif
-        int16_t result = WriteFile(aCustomsEdt, teamFileBuffer, fileSize);
+        int16_t result = WriteFile(_aCustomsEdt, _teamFileBuffer, fileSize);
 #ifdef SWOS_SDL_BUILD
         /* Restore host-native after write — buffer is BE-on-disk now
          * (just-written bytes), so re-swap with the load-time helper. */
@@ -2949,8 +2949,8 @@ retry:
     }
 
 done:
-    lastLoadedExtNumber = 0xFF;
-    ShowInsertDisk2Dialog(aEditCustomTeam);
+    _lastLoadedExtNumber = 0xFF;
+    ShowInsertDisk2Dialog(_aEditCustomTeam);
 }
 
 /* ImportTeamsMenu — import a team from club/national teams into the editor buffer. */
@@ -2959,12 +2959,12 @@ void ImportTeamsMenu(void)
 {
     /* Save teamFileBuffer to editTeamsBuffer */
     {
-        uint16_t *src = (uint16_t *)teamFileBuffer;
+        uint16_t *src = (uint16_t *)_teamFileBuffer;
         uint16_t teamCount = *src;
         uint32_t wordCount = (uint32_t)teamCount * 684 + 2;
         wordCount >>= 1; /* convert bytes to words */
         volatile uint16_t *s = (volatile uint16_t *)src;
-        volatile uint16_t *d = (volatile uint16_t *)editTeamsBuffer;
+        volatile uint16_t *d = (volatile uint16_t *)_editTeamsBuffer;
         while (wordCount > 0) {
             *d++ = *s++;
             wordCount--;
@@ -2973,57 +2973,57 @@ void ImportTeamsMenu(void)
 
     /* Save lastSelectedTeam area (0xF6 words = 246 words = 492 bytes) */
     {
-        volatile uint16_t *src = (volatile uint16_t *)lastSelectedTeam;
-        volatile uint16_t *dst = (volatile uint16_t *)editTeamsSaveVarsArea;
+        volatile uint16_t *src = (volatile uint16_t *)_lastSelectedTeam;
+        volatile uint16_t *dst = (volatile uint16_t *)_editTeamsSaveVarsArea;
         for (int16_t i = 0xF5; i >= 0; i--)
             *dst++ = *src++;
     }
 
-    ShowInsertDisk2Dialog(aSelectTeamToIm);
+    ShowInsertDisk2Dialog(_aSelectTeamToIm);
 
     /* Show team selection dialog (club + national, no custom) */
-    ChooseTeamsDialog(1, 1, 0, aSelectTeamToIm, (void *)0);
+    ChooseTeamsDialog(1, 1, 0, _aSelectTeamToIm, (void *)0);
 
-    extern uint16_t selectedTeamCountryNumber;
-    extern TeamFileEx *selectedTeamPtr;
+    extern uint16_t _selectedTeamCountryNumber;
+    extern TeamFileEx *_selectedTeamPtr;
 
-    if ((int16_t)selectedTeamCountryNumber != -1) {
+    if ((int16_t)_selectedTeamCountryNumber != -1) {
         /* Save selTeamsPtr team number and selTeamImportField, copy selected team data */
-        uint16_t savedTeamNum = *(uint16_t *)&selectedTeams->team.countryNumber;
-        uint8_t savedImportField = selTeamImportField;
+        uint16_t savedTeamNum = *(uint16_t *)&_selectedTeams->team.countryNumber;
+        uint8_t savedImportField = _selTeamImportField;
 
         /* Copy 342 words (684 bytes) from selectedTeamPtr to selTeamsPtr */
-        volatile uint16_t *src = (volatile uint16_t *)selectedTeamPtr;
-        volatile uint16_t *dst = (volatile uint16_t *)&selTeamsPtr;
+        volatile uint16_t *src = (volatile uint16_t *)_selectedTeamPtr;
+        volatile uint16_t *dst = (volatile uint16_t *)&_selTeamsPtr;
         for (int16_t i = 341; i >= 0; i--)
             *dst++ = *src++;
 
         /* Restore saved values */
-        selTeamImportField = savedImportField;
-        *(uint16_t *)&selectedTeams->team.countryNumber = savedTeamNum;
+        _selTeamImportField = savedImportField;
+        *(uint16_t *)&_selectedTeams->team.countryNumber = savedTeamNum;
 
-        teamIsImported = 1;
+        _teamIsImported = 1;
         SetCurrentEntry(21);
     }
 
     /* Restore lastSelectedTeam area from editTeamsSaveVarsArea */
     {
-        volatile uint16_t *src = (volatile uint16_t *)editTeamsSaveVarsArea;
-        volatile uint16_t *dst = (volatile uint16_t *)lastSelectedTeam;
+        volatile uint16_t *src = (volatile uint16_t *)_editTeamsSaveVarsArea;
+        volatile uint16_t *dst = (volatile uint16_t *)_lastSelectedTeam;
         for (int16_t i = 245; i >= 0; i--)
             *dst++ = *src++;
     }
 
-    lastLoadedExtNumber = 0xFF;
+    _lastLoadedExtNumber = 0xFF;
 
     /* Restore teamFileBuffer from editTeamsBuffer */
     {
-        uint16_t *srcBuf = (uint16_t *)editTeamsBuffer;
+        uint16_t *srcBuf = (uint16_t *)_editTeamsBuffer;
         uint16_t teamCount = *srcBuf;
         uint32_t wordCount = (uint32_t)teamCount * 684 + 2;
         wordCount >>= 1;
         volatile uint16_t *s = (volatile uint16_t *)srcBuf;
-        volatile uint16_t *d = (volatile uint16_t *)teamFileBuffer;
+        volatile uint16_t *d = (volatile uint16_t *)_teamFileBuffer;
         while (wordCount > 0) {
             *d++ = *s++;
             wordCount--;
@@ -3051,22 +3051,22 @@ static void setBgColor(MenuEntry *e, uint16_t colorIdx) {
  *      d0 = number of teams
  * out: a0 = team pointer (or NULL)
  * ================================================================ */
-extern uintptr_t chooseTeamMenuName;
-extern uint16_t numTeamsCountryBuffer;
-extern void *dwArrayCountries[];
-extern uint8_t indexCountries[];
-extern uint8_t selectTeamsForTacticsMenu[];
-extern uint16_t teamSelected;
+extern uintptr_t _chooseTeamMenuName;
+extern uint16_t _numTeamsCountryBuffer;
+extern void *_dwArrayCountries[];
+extern uint8_t _indexCountries[];
+extern uint8_t _selectTeamsForTacticsMenu[];
+extern uint16_t _teamSelected;
 
 __attribute__((used, externally_visible))
 TeamFileEx *ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
                                       uint16_t numTeams)
 {
-    chooseTeamMenuName = (uintptr_t)menuTitle;
-    numTeamsCountryBuffer = numTeams;
+    _chooseTeamMenuName = (uintptr_t)menuTitle;
+    _numTeamsCountryBuffer = numTeams;
 
-    void **nameArray = dwArrayCountries;
-    uint8_t *idxArray = indexCountries;
+    void **nameArray = _dwArrayCountries;
+    uint8_t *idxArray = _indexCountries;
     uint16_t count = 0;
 
     uint16_t *teamNums = teamNumbers;
@@ -3115,11 +3115,11 @@ TeamFileEx *ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
     }
 
     /* Show the selection menu */
-    ShowMenu(selectTeamsForTacticsMenu);
+    ShowMenu(_selectTeamsForTacticsMenu);
 
-    int16_t selected = (int16_t)teamSelected;
+    int16_t selected = (int16_t)_teamSelected;
     if (selected >= 0) {
-        uint8_t finalIdx = indexCountries[selected];
+        uint8_t finalIdx = _indexCountries[selected];
         uint16_t teamNum = teamNumbers[finalIdx];
         return VerifyTeamLoaded(teamNum);
     }
@@ -3136,33 +3136,33 @@ TeamFileEx *ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
  * - With one team: uses that team
  * - No teams: loads default team (Leicester City)
  * ================================================================ */
-extern uint8_t aEditTacticsSel[];  /* "EDIT TACTICS - SELECT TEAM" */
-extern uint8_t editTacticsCountryBuffer[];
-extern uint8_t teamFileBuffer[];
+extern uint8_t _aEditTacticsSel[];  /* "EDIT TACTICS - SELECT TEAM" */
+extern uint8_t _editTacticsCountryBuffer[];
+extern uint8_t _teamFileBuffer[];
 
 __attribute__((used, externally_visible))
 void EditTactics(void)
 {
-    inEditTactics = 1;
+    _inEditTactics = 1;
 
-    TeamFileEx *teamPtr = &careerTeam;
+    TeamFileEx *teamPtr = &_careerTeam;
 
-    if (gameType == GAME_TYPE_CAREER) {
+    if (_gameType == GAME_TYPE_CAREER) {
         /* Career mode: use career team directly */
         goto show_menu;
     }
 
-    if (numSelectedTeams == 0) {
+    if (_numSelectedTeams == 0) {
         goto no_teams;
     }
 
     {
-        TeamFileEx *selPtr = selectedTeams;
-        uint16_t *countryBuf = (uint16_t *)editTacticsCountryBuffer;
+        TeamFileEx *selPtr = _selectedTeams;
+        uint16_t *countryBuf = (uint16_t *)_editTacticsCountryBuffer;
         uint16_t found = 0;
         TeamFileEx *lastNonComputer = (TeamFileEx *)0;
 
-        for (uint16_t i = 0; i < numSelectedTeams; i++) {
+        for (uint16_t i = 0; i < _numSelectedTeams; i++) {
             TeamFileEx *t = (TeamFileEx *)selPtr + i;
             if (t->team.teamControls != TEAM_COMPUTER) {
                 *countryBuf++ = PACK_BE_U16(t->team.countryNumber, t->team.teamOrdinal);
@@ -3172,7 +3172,7 @@ void EditTactics(void)
         }
 
         if (found == 0) {
-            if (numSelectedTeams != 0) {
+            if (_numSelectedTeams != 0) {
                 goto check_sel_team;
             }
             goto no_teams;
@@ -3185,8 +3185,8 @@ void EditTactics(void)
         }
 
         /* Multiple non-computer teams: show selection */
-        teamPtr = ChooseTeamForEditTactics(aEditTacticsSel,
-                    (uint16_t *)editTacticsCountryBuffer, found);
+        teamPtr = ChooseTeamForEditTactics(_aEditTacticsSel,
+                    (uint16_t *)_editTacticsCountryBuffer, found);
         if (teamPtr != (TeamFileEx *)0) {
             goto show_menu;
         }
@@ -3196,18 +3196,18 @@ void EditTactics(void)
 no_teams:
     /* Load English Premier Division and pick Leicester City (18th team) */
     LoadTeamFile(8);
-    AddTeamToBuffer((TeamFileEx *)(teamFileBuffer + 0x2D6E));
+    AddTeamToBuffer((TeamFileEx *)(_teamFileBuffer + 0x2D6E));
     InitTeams();
     goto show_menu_from_sel;
 
 check_sel_team:
-    teamPtr = &careerTeam;
-    if (selTeamNumber != 0xFFFF) {
+    teamPtr = &_careerTeam;
+    if (_selTeamNumber != 0xFFFF) {
         goto show_menu;
     }
 
 show_menu_from_sel:
-    teamPtr = selectedTeams;
+    teamPtr = _selectedTeams;
 
 show_menu:
     ShowStandardChooseTacticsMenu(teamPtr);
@@ -3223,12 +3223,12 @@ show_menu:
  * in:  d7 = player ordinal (0-16)
  *      a5 = current menu entry
  * ================================================================ */
-extern uint16_t editTacticsFlipPairColorTable[];
+extern uint16_t _editTacticsFlipPairColorTable[];
 
 __attribute__((used, externally_visible))
 void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cur)
 {
-    MenuEntry *entry39 = &menuEntries[39];
+    MenuEntry *entry39 = &_menuEntries[39];
 
     if (playerOrdinal == 16) {
         setBgColor(entry39, BLUE_TO_BLACK_8);
@@ -3245,15 +3245,15 @@ void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cu
     }
 
     /* Save/restore tactics byte, get player info */
-    TeamFileEx *teamBase = chooseTacticsTeamPtr;
+    TeamFileEx *teamBase = _chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase->team.tactics;
-    teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
+    teamBase->team.tactics = _editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t slot, playerIndex;
     uint8_t *playerPtr = GetPlayerInfoBreakPosition(teamBase, (uint16_t)playerOrdinal, &slot, &playerIndex);
     PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = chooseTacticsTeamPtr;
+    teamBase = _chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
     /* Check cardsInjuries for injury */
@@ -3263,25 +3263,25 @@ void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cu
     }
 
     /* Selected player highlight */
-    if (playerIndex == editTacticsSelectedPlayerNameIndex) {
+    if (playerIndex == _editTacticsSelectedPlayerNameIndex) {
         setBgColor(entry39, ORANGE_TO_BROWN_6);
     }
 
     /* Pair swap highlight */
-    if ((int16_t)editTacticsSelectedPairSlotIndex >= 0) {
-        uint16_t pairSlot = editTacticsSelectedPairSlotIndex + 1;
+    if ((int16_t)_editTacticsSelectedPairSlotIndex >= 0) {
+        uint16_t pairSlot = _editTacticsSelectedPairSlotIndex + 1;
         if (slot == pairSlot) {
             setBgColor(entry39, ORANGE_TO_BROWN_12);
         }
     }
 
     /* Flip-on pair coloring */
-    if (flipOnOff != 0) {
+    if (_flipOnOff != 0) {
         if (slot != 0 && slot < 11) {
-            uint8_t *pairIds = editTacticsCurrentTactics.pairIds;
+            uint8_t *pairIds = _editTacticsCurrentTactics.pairIds;
             int8_t pairVal = (int8_t)pairIds[slot - 1];
             if (pairVal >= 0) {
-                uint16_t colorIdx = editTacticsFlipPairColorTable[pairVal];
+                uint16_t colorIdx = _editTacticsFlipPairColorTable[pairVal];
                 setBgColor(entry39, colorIdx);
             } else {
                 setBgColor(entry39, PINK_TO_BROWN_0);
@@ -3297,8 +3297,8 @@ void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cu
 
     /* Check position changes (only for first 11 players) */
     if (slot < 11) {
-        uint8_t *posArray = &playerPositionsArray;
-        uint8_t *oldPosArray = &oldPlayerPositionsArray;
+        uint8_t *posArray = &_playerPositionsArray;
+        uint8_t *oldPosArray = &_oldPlayerPositionsArray;
         uint8_t curPos = posArray[playerIndex];
         uint8_t oldPos = oldPosArray[playerIndex];
         if (curPos > oldPos) {
@@ -3318,7 +3318,7 @@ void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cu
  *
  * in:  a5 = current menu entry
  * ================================================================ */
-extern uint8_t fundsBuffer[];
+extern uint8_t _fundsBuffer[];
 
 __attribute__((used, externally_visible))
 void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
@@ -3327,7 +3327,7 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
 
     EditTactics_ApplyPlayerRowHighlighting((int16_t)d7, cur);
 
-    MenuEntry *entry41 = &menuEntries[41];
+    MenuEntry *entry41 = &_menuEntries[41];
     uint16_t d5; /* flag: 1 if slot 16 (no player details) */
 
     if (d7 == 0x10) {
@@ -3346,37 +3346,37 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     }
 
     /* Get player info */
-    TeamFileEx *teamBase = chooseTacticsTeamPtr;
+    TeamFileEx *teamBase = _chooseTacticsTeamPtr;
     uint8_t savedTactics = teamBase->team.tactics;
-    teamBase->team.tactics = editTacticsCurrentTactics.ballOutOfPlayTactics;
+    teamBase->team.tactics = _editTacticsCurrentTactics.ballOutOfPlayTactics;
 
     uint16_t d7_slot, d1_fileIdx;
     uint8_t *playerPtr = GetPlayerInfoBreakPosition(teamBase, d7, &d7_slot, &d1_fileIdx);
     PlayerFile *pf = (PlayerFile *)(playerPtr + 76);
 
-    teamBase = chooseTacticsTeamPtr;
+    teamBase = _chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
     /* Check if player is injured */
-    if (IsPlayerInjured((PlayerFile *)playerPtr, (int16_t)inEditTactics)) {
+    if (IsPlayerInjured((PlayerFile *)playerPtr, (int16_t)_inEditTactics)) {
         setBgColor(entry41, RED_10);
     }
 
     /* Check if this player is selected */
-    if (d1_fileIdx == editTacticsSelectedPlayerNameIndex) {
+    if (d1_fileIdx == _editTacticsSelectedPlayerNameIndex) {
         setBgColor(entry41, ORANGE_TO_BROWN_6);
     }
 
     /* Check pair swap highlight */
-    if ((int16_t)editTacticsSelectedPairSlotIndex >= 0) {
-        uint16_t pairSlot = editTacticsSelectedPairSlotIndex + 1;
+    if ((int16_t)_editTacticsSelectedPairSlotIndex >= 0) {
+        uint16_t pairSlot = _editTacticsSelectedPairSlotIndex + 1;
         if (d7_slot == pairSlot) {
             setBgColor(entry41, ORANGE_TO_BROWN_12);
         }
     }
 
     /* Set up detail entries (40-44) */
-    MenuEntry *e = &menuEntries[40];
+    MenuEntry *e = &_menuEntries[40];
     uint16_t entryY = cur->y;
 
     /* Entry 40: shirt number */
@@ -3397,7 +3397,7 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     /* Entry 42: position string */
     uint8_t posAndFace = pf->positionAndFace;
     uint16_t posIdx = ((uint16_t)posAndFace & PF_POSITION_MASK) >> 3;
-    e->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
+    e->fg = (uintptr_t)_playerPositionsStringTable[posIdx / 4];
     e->y = entryY;
     e = (MenuEntry *)((uint8_t *)e + MENUENTRY_STRIDE);  /* entry 43 */
 
@@ -3410,11 +3410,11 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     e->isInvisible = 1;
     e->y = entryY;
 
-    if (IsTeamNational(chooseTacticsTeamPtr)) {
+    if (IsTeamNational(_chooseTacticsTeamPtr)) {
         InitPlayerValueDisplayStruct(playerPtr, (uint8_t *)e);
     } else {
-        FormatPlayerValueOrStatusText(playerPtr, fundsBuffer);
-        e->fg = (uintptr_t)fundsBuffer;
+        FormatPlayerValueOrStatusText(playerPtr, _fundsBuffer);
+        e->fg = (uintptr_t)_fundsBuffer;
     }
     e->isInvisible = 0;
 
@@ -3433,5 +3433,5 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
 
     e->stringFlags = (e->stringFlags & 0xFFF0) | colorVal;
 
-    DrawMultipleItems(6, &menuEntries[39]);
+    DrawMultipleItems(6, &_menuEntries[39]);
 }

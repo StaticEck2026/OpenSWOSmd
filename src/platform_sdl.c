@@ -56,22 +56,22 @@ void InputSDL_ClearKeyState(void);
  * swap) as 8bpp chunky pixels — 1 byte per pixel = palette index, row
  * stride = SCREEN_WIDTH. `frontbufferBasePtr` is the live pointer to
  * the buffer the game last drew into. */
-extern volatile uintptr_t frontbufferBasePtr;
-extern volatile uintptr_t frontbufferBaseAltPtr;
-extern uint8_t  frontbufferBase[];
-extern uint8_t  frontbufferBaseAlt[];
-extern uint8_t  frontbufferMaskBuffer[];
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern uint16_t useAltBaseFlag;
-extern uint16_t usePlaneOffsetFlag;
+extern volatile uintptr_t _frontbufferBasePtr;
+extern volatile uintptr_t _frontbufferBaseAltPtr;
+extern uint8_t  _frontbufferBase[];
+extern uint8_t  _frontbufferBaseAlt[];
+extern uint8_t  _frontbufferMaskBuffer[];
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern uint16_t _useAltBaseFlag;
+extern uint16_t _usePlaneOffsetFlag;
 
 /* The copperlist holds the live palette in Amiga 0xRGB nibbles. We
  * snapshot it into a 256-entry RGBA palette each frame. */
-extern uint8_t copperListBuffer[];
+extern uint8_t _copperListBuffer[];
 
 /* g_quitToDos lives in platform_amiga_stubs.c */
-extern uint16_t g_quitToDos;
+extern uint16_t _g_quitToDos;
 
 /* ---- SDL state ----------------------------------------------------- */
 static SDL_Window   *s_window;
@@ -143,7 +143,7 @@ static int           s_harness_turbo;
  * matching the PAL VBlank rate SWOS was designed for. The timer runs
  * on SDL's own thread, so the busy-wait loops in the game code see
  * the value change. */
-extern volatile uint16_t currentGameTick;
+extern volatile uint16_t _currentGameTick;
 extern void _Int3TimerHandler(void);   /* the real Amiga VBlank ISR body */
 
 static void pump_quit_only(void);      /* defined below; used by tick_timer_cb */
@@ -295,7 +295,7 @@ int Platform_Init(const PlatformInitOptions *opts)
     s_window = SDL_CreateWindow(
         SWOS_WINDOW_TITLE,
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        g_screen_width * win_scale, PLATFORM_SCREEN_H * win_scale,
+        _g_screen_width * win_scale, PLATFORM_SCREEN_H * win_scale,
         wflags);
     if (!s_window) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
@@ -347,7 +347,7 @@ int Platform_Init(const PlatformInitOptions *opts)
         }
     }
 
-    SDL_RenderSetLogicalSize(s_renderer, g_screen_width, PLATFORM_SCREEN_H);
+    SDL_RenderSetLogicalSize(s_renderer, _g_screen_width, PLATFORM_SCREEN_H);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_EventState(SDL_MOUSEMOTION, SDL_DISABLE);
 
@@ -355,7 +355,7 @@ int Platform_Init(const PlatformInitOptions *opts)
         s_renderer,
         SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING,
-        g_screen_width, PLATFORM_SCREEN_H);
+        _g_screen_width, PLATFORM_SCREEN_H);
     if (!s_texture) {
         fprintf(stderr, "SDL_CreateTexture: %s\n", SDL_GetError());
         return -1;
@@ -437,7 +437,7 @@ void Platform_ToggleFullscreen(void)
         SDL_SetWindowFullscreen(s_window, 0);
         /* Restore windowed size from the persisted scale. */
         SDL_SetWindowSize(s_window,
-            g_screen_width * s_win_scale_current,
+            _g_screen_width * s_win_scale_current,
             PLATFORM_SCREEN_H * s_win_scale_current);
         SDL_ShowCursor(SDL_ENABLE);
     } else {
@@ -487,7 +487,7 @@ void Platform_SetWindowScale(int scale)
     Uint32 flags = SDL_GetWindowFlags(s_window);
     if ((flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) == 0) {
         SDL_SetWindowSize(s_window,
-            g_screen_width * scale,
+            _g_screen_width * scale,
             PLATFORM_SCREEN_H * scale);
         /* Re-centre on the desktop after a size change so a 4× window
          * doesn't end up clipped against the bottom-right of the screen. */
@@ -509,13 +509,13 @@ static void refresh_palette_from_copper(void)
      * wrong colours (olive backgrounds etc.). playGame is set at kickoff and
      * cleared when the match ends, so it cleanly scopes the DOS palette to the
      * in-match pitch/players. (DOS menu backgrounds are a separate follow-up.) */
-    extern volatile uint16_t playGame;
-    if (gDosGraphics && playGame) {
+    extern volatile uint16_t _playGame;
+    if (_gDosGraphics && _playGame) {
         /* The pitch-condition overlay keys off the low byte of
          * pitchNumberAndType (the high byte is which pitch graphic). */
-        extern uint16_t pitchNumberAndType;
+        extern uint16_t _pitchNumberAndType;
         uint8_t rgb[768];
-        DosGfx_BuildPalette((int)(pitchNumberAndType & 0xFF), rgb);
+        DosGfx_BuildPalette((int)(_pitchNumberAndType & 0xFF), rgb);
         for (int i = 0; i < 256; ++i) {
             s_palette[i].r = rgb[i * 3 + 0];
             s_palette[i].g = rgb[i * 3 + 1];
@@ -530,9 +530,9 @@ static void refresh_palette_from_copper(void)
 #else
     /* OCS: two palette blocks of 16 colours immediately at known offsets.
      * Each MOVE pair is 4 bytes [reg_word][value_word], we want value_word. */
-    const uint16_t *cop = (const uint16_t *)copperListBuffer;
+    const uint16_t *cop = (const uint16_t *)_copperListBuffer;
     /* Bank 0 starts at COP_PAL_B0_C0_VAL_OFF (0x72). Each entry is 4 bytes. */
-    const uint16_t *bank0 = (const uint16_t *)(copperListBuffer + 0x72);
+    const uint16_t *bank0 = (const uint16_t *)(_copperListBuffer + 0x72);
     for (int i = 0; i < 16; ++i) {
         uint16_t v = bank0[i * 2];          /* skip the [reg] word */
         uint8_t  r = (uint8_t)(((v >> 8) & 0x0F) * 17);
@@ -570,12 +570,12 @@ static void chunky_to_rgba(uint32_t *dst, int dst_pitch_pixels)
      * game code wants to display the drawing target directly (used by
      * transient overlay paths). */
     const uint8_t *fb;
-    if (usePlaneOffsetFlag != 0)
-        fb = frontbufferMaskBuffer;
-    else if (useAltBaseFlag != 0)
-        fb = (const uint8_t *)(uintptr_t)frontbufferBasePtr;
+    if (_usePlaneOffsetFlag != 0)
+        fb = _frontbufferMaskBuffer;
+    else if (_useAltBaseFlag != 0)
+        fb = (const uint8_t *)(uintptr_t)_frontbufferBasePtr;
     else
-        fb = (const uint8_t *)(uintptr_t)frontbufferBaseAltPtr;
+        fb = (const uint8_t *)(uintptr_t)_frontbufferBaseAltPtr;
     if (!fb) return;
 
     /* Originally applied the Amiga copper Y offset:
@@ -590,12 +590,12 @@ static void chunky_to_rgba(uint32_t *dst, int dst_pitch_pixels)
      * schemes and produces "two pitch views stitched vertically"
      * flicker. Always read from line 0 on SDL; cameraYMod320 is
      * irrelevant to the chunky frontbuffer. */
-    (void)cameraYMod320;
+    (void)_cameraYMod320;
 
     for (int y = 0; y < PLATFORM_SCREEN_H; ++y) {
         const uint8_t *line = fb + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
         uint32_t      *out  = dst + (size_t)y * dst_pitch_pixels;
-        for (int x = 0; x < g_screen_width; ++x) {
+        for (int x = 0; x < _g_screen_width; ++x) {
             SDL_Color c = s_palette[line[x]];
             out[x] = ((uint32_t)0xFFu << 24) |
                      ((uint32_t)c.r  << 16) |
@@ -628,7 +628,7 @@ static void write_screenshot(const uint32_t *argb)
     /* stb_image_write wants RGBA byte order in memory. Our ARGB8888 SDL
      * buffer stores pixels as 0xAARRGGBB uint32, which on LE is bytes
      * BB,GG,RR,AA — i.e. BGRA in memory. Convert to RGBA before write. */
-    const int N = g_screen_width * PLATFORM_SCREEN_H;
+    const int N = _g_screen_width * PLATFORM_SCREEN_H;
     uint8_t *rgba = (uint8_t *)malloc((size_t)N * 4);
     if (!rgba) {
         fprintf(stderr, "[screenshot] malloc failed\n");
@@ -643,8 +643,8 @@ static void write_screenshot(const uint32_t *argb)
     }
     char path[64];
     snprintf(path, sizeof(path), "swos_shot%03d.png", s_screenshot_index++);
-    if (stbi_write_png(path, g_screen_width, PLATFORM_SCREEN_H, 4,
-                       rgba, g_screen_width * 4))
+    if (stbi_write_png(path, _g_screen_width, PLATFORM_SCREEN_H, 4,
+                       rgba, _g_screen_width * 4))
         fprintf(stderr, "[screenshot] wrote %s\n", path);
     else
         fprintf(stderr, "[screenshot] stbi_write_png %s failed\n", path);
@@ -661,8 +661,8 @@ static void maybe_dump_frame(const uint32_t *argb)
     snprintf(path, sizeof(path), "/tmp/swos_frame_%04d.ppm", n);
     FILE *f = fopen(path, "wb");
     if (!f) return;
-    fprintf(f, "P6\n%d %d\n255\n", g_screen_width, PLATFORM_SCREEN_H);
-    for (int i = 0; i < g_screen_width * PLATFORM_SCREEN_H; ++i) {
+    fprintf(f, "P6\n%d %d\n255\n", _g_screen_width, PLATFORM_SCREEN_H);
+    for (int i = 0; i < _g_screen_width * PLATFORM_SCREEN_H; ++i) {
         uint32_t p = argb[i];
         uint8_t rgb[3] = { (uint8_t)(p >> 16), (uint8_t)(p >> 8), (uint8_t)p };
         fwrite(rgb, 1, 3, f);
@@ -672,8 +672,8 @@ static void maybe_dump_frame(const uint32_t *argb)
     /* Single-line summary: count distinct colors on a mid-screen row. */
     int d = 0;
     uint32_t seen[16] = {0}; int sn = 0;
-    const uint32_t *mid = argb + (PLATFORM_SCREEN_H / 2) * g_screen_width;
-    for (int i = 0; i < g_screen_width; ++i) {
+    const uint32_t *mid = argb + (PLATFORM_SCREEN_H / 2) * _g_screen_width;
+    for (int i = 0; i < _g_screen_width; ++i) {
         uint32_t p = mid[i] & 0xFFFFFF;
         int found = 0;
         for (int j = 0; j < sn; ++j) if (seen[j] == p) { found = 1; break; }
@@ -739,9 +739,9 @@ static void pump_events_any_thread(void)
              * else it stays passed through to the menu/game-loop layer
              * (in-game pause/end-match menu, sub-menus' EXIT, etc.). */
             if (ev.key.repeat == 0 && ev.key.keysym.sym == SDLK_ESCAPE) {
-                extern volatile uintptr_t currentMenuPtr;
-                extern uint8_t swosMainMenu[];
-                if (currentMenuPtr == (uintptr_t)swosMainMenu) {
+                extern volatile uintptr_t _currentMenuPtr;
+                extern uint8_t _swosMainMenu[];
+                if (_currentMenuPtr == (uintptr_t)_swosMainMenu) {
                     Platform_RequestQuit();
                     if (s_window) SDL_HideWindow(s_window);
                     AudioSDL_PauseAndClear();
@@ -847,7 +847,7 @@ static void render_frame_impl(int pump_full)
     int    pitch;
     if (SDL_LockTexture(s_texture, NULL, &pixels, &pitch) == 0) {
         chunky_to_rgba((uint32_t *)pixels, pitch / 4);
-        if (s_dump_frames && (pitch == g_screen_width * 4))
+        if (s_dump_frames && (pitch == _g_screen_width * 4))
             maybe_dump_frame((uint32_t *)pixels);
         /* Only write the F12 screenshot from the main-thread render (pump_full). The
          * SDL_AddTimer worker renders as a software-renderer fallback when the main thread
@@ -856,11 +856,11 @@ static void render_frame_impl(int pump_full)
          * state differs, which is what produced the every-other-shot vertical flip. Deferring
          * to the main thread makes every capture read the same just-completed buffer the
          * display does. The request flag persists until the main thread services it. */
-        if (pump_full && s_screenshot_request && (pitch == g_screen_width * 4)) {
+        if (pump_full && s_screenshot_request && (pitch == _g_screen_width * 4)) {
             write_screenshot((uint32_t *)pixels);
             s_screenshot_request = 0;
         }
-        if (s_screenshot_interval > 0 && (pitch == g_screen_width * 4)) {
+        if (s_screenshot_interval > 0 && (pitch == _g_screen_width * 4)) {
             static int frame_mod;
             if (++frame_mod >= s_screenshot_interval) {
                 frame_mod = 0;
@@ -927,7 +927,7 @@ int Platform_VBlank(void)
      * SDL_Delay + spin removes the per-frame real-time cost that
      * "timer-thread starvation" was ballooning to 10–120 s per cont. */
     if (s_harness_turbo)
-        return g_quitToDos ? 1 : 0;
+        return _g_quitToDos ? 1 : 0;
 
     /* Read the frame rate live so an in-game DOS-gameplay toggle re-paces. */
     k_frame_secs = 1.0 / (double)DosGameplay_TargetFps();
@@ -953,7 +953,7 @@ int Platform_VBlank(void)
         }
     }
 
-    return g_quitToDos ? 1 : 0;
+    return _g_quitToDos ? 1 : 0;
 }
 
 Uint64 Platform_NowMs(void)

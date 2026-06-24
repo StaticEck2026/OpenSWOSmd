@@ -17,13 +17,13 @@ typedef void (*VoidFunc)(void);
 
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t currentMenu[];
-extern MenuEntry menuEntries[];
-extern uintptr_t currentMenuPtr;
-extern volatile uint16_t menuStatus;
-extern uint16_t menuFade;
-extern volatile uint16_t exitMenu;
-extern volatile uint16_t seasonUpdateInProgress;
+extern uint8_t _currentMenu[];
+extern MenuEntry _menuEntries[];
+extern uintptr_t _currentMenuPtr;
+extern volatile uint16_t _menuStatus;
+extern uint16_t _menuFade;
+extern volatile uint16_t _exitMenu;
+extern volatile uint16_t _seasonUpdateInProgress;
 
 #include "swos_types.h"
 #include "swos_platform.h"   /* HLOG (real on SDL, no-op on Amiga) — don't rely on
@@ -79,69 +79,69 @@ static uint16_t s_seasonUpdateHoldCounter;
  * skip persists across every remaining menu in the chain. Auto-clears
  * when seasonUpdateInProgress drops back to 0. */
 static uint16_t s_seasonSkipLatched;
-extern uint16_t menuCursorFrame;
-extern uint16_t menuTextBlinkCounter;
-extern uint16_t controlMask;
-extern volatile uint16_t fire;
-extern volatile uint16_t shortFire;
-extern uint8_t left;
-extern uint8_t right;
-extern uint8_t up;
-extern uint8_t down;
-extern int16_t menuControlsDirection;
-extern int16_t menuControlsDirection2;
-extern uint16_t kColorTableShine[];
-extern uint16_t nextEntryDirectionOffsets[];
-extern uint32_t magicValue;
-extern uint16_t panicReasonCode;
-extern uint32_t irqCookieObfuscated;
-extern char *errorMessagePtr;
-extern uint16_t forceDrawTransparentMenuItems;
+extern uint16_t _menuCursorFrame;
+extern uint16_t _menuTextBlinkCounter;
+extern uint16_t _controlMask;
+extern volatile uint16_t _fire;
+extern volatile uint16_t _shortFire;
+extern uint8_t _left;
+extern uint8_t _right;
+extern uint8_t _up;
+extern uint8_t _down;
+extern int16_t _menuControlsDirection;
+extern int16_t _menuControlsDirection2;
+extern uint16_t _kColorTableShine[];
+extern uint16_t _nextEntryDirectionOffsets[];
+extern uint32_t _magicValue;
+extern uint16_t _panicReasonCode;
+extern uint32_t _irqCookieObfuscated;
+extern char *_errorMessagePtr;
+extern uint16_t _forceDrawTransparentMenuItems;
 
 /* MenuCheckControls globals */
-extern volatile uint16_t currentKey;
-extern uint16_t lastFrameTicks;
-extern int16_t fireCounter;
-extern uint16_t player1ClearFlag;
-extern uint16_t player2ClearFlag;
-extern uint16_t twoPlayers;
-extern uint16_t fireResetFlag;
-extern uint8_t pl1Fire;
-extern uint8_t pl1ShortFire;
-extern int16_t pl1FireCounter;
-extern uint16_t pl1SkipFireCounter;
-extern int16_t pl1Direction;
-extern uint8_t pl1Left;
-extern uint8_t pl1Right;
-extern uint8_t pl1Up;
-extern uint8_t pl1Down;
-extern uint8_t pl2Fire;
-extern uint8_t pl2ShortFire;
-extern int16_t pl2FireCounter;
-extern uint16_t pl2SkipFireCounter;
-extern int16_t pl2Direction;
-extern uint8_t pl2Left;
-extern uint8_t pl2Right;
-extern uint8_t pl2Up;
-extern uint8_t pl2Down;
-extern int16_t lastControls;
-extern uint16_t controlsHeldTimer;
-extern uint16_t longFireTime;
-extern uint16_t longFireFlag;
-extern uint32_t allowShorterMenuItemsWithFrames;
+extern volatile uint16_t _currentKey;
+extern uint16_t _lastFrameTicks;
+extern int16_t _fireCounter;
+extern uint16_t _player1ClearFlag;
+extern uint16_t _player2ClearFlag;
+extern uint16_t _twoPlayers;
+extern uint16_t _fireResetFlag;
+extern uint8_t _pl1Fire;
+extern uint8_t _pl1ShortFire;
+extern int16_t _pl1FireCounter;
+extern uint16_t _pl1SkipFireCounter;
+extern int16_t _pl1Direction;
+extern uint8_t _pl1Left;
+extern uint8_t _pl1Right;
+extern uint8_t _pl1Up;
+extern uint8_t _pl1Down;
+extern uint8_t _pl2Fire;
+extern uint8_t _pl2ShortFire;
+extern int16_t _pl2FireCounter;
+extern uint16_t _pl2SkipFireCounter;
+extern int16_t _pl2Direction;
+extern uint8_t _pl2Left;
+extern uint8_t _pl2Right;
+extern uint8_t _pl2Up;
+extern uint8_t _pl2Down;
+extern int16_t _lastControls;
+extern uint16_t _controlsHeldTimer;
+extern uint16_t _longFireTime;
+extern uint16_t _longFireFlag;
+extern uint32_t _allowShorterMenuItemsWithFrames;
 
 /* UnpackMenu globals */
-extern uint16_t menuX;
-extern uint16_t menuY;
-extern uint8_t templateMenuEntry[];
-extern uint32_t menuFreeSpace;
-extern uint32_t menuDataOffset;
-extern uint16_t deadVar03;
-extern uint8_t *spriteGraphicsPtr;
+extern uint16_t _menuX;
+extern uint16_t _menuY;
+extern uint8_t _templateMenuEntry[];
+extern uint32_t _menuFreeSpace;
+extern uint32_t _menuDataOffset;
+extern uint16_t _deadVar03;
+extern uint8_t *_spriteGraphicsPtr;
 
 /* Platform quit flag: set by Platform_RequestQuit on SDL_QUIT / ESC /
  * X button click. ShowMenu loops check it to break out of nested menus. */
-extern uint16_t g_quitToDos;
+extern uint16_t _g_quitToDos;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 /* Map a packed-menu pointer to a human name for the autoskip log. */
@@ -186,26 +186,26 @@ static inline const char *swos_autoskip_menu_name(const void *p) { (void)p; retu
 #endif
 
 /* GetKey globals */
-extern volatile uint16_t keyCount;
-extern volatile uint8_t keyBuffer[];
-extern uint8_t keycodeLut[];
+extern volatile uint16_t _keyCount;
+extern volatile uint8_t _keyBuffer[];
+extern uint8_t _keycodeLut[];
 
 /* BlitterCopyOverlayToScreen globals */
-extern volatile uintptr_t frontbufferBasePtr;
-extern uint8_t frontbufferBase[];
-extern uint8_t frontbufferBaseAlt[];
-extern uint8_t frontbufferMaskBuffer[];
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint8_t _frontbufferBase[];
+extern uint8_t _frontbufferBaseAlt[];
+extern uint8_t _frontbufferMaskBuffer[];
 
 /* DrawMenuItemOuterFrame data */
-extern uint8_t outerFrameColorsTable[];
+extern uint8_t _outerFrameColorsTable[];
 
 /* DrawMenuItem data */
-extern void *charTables[];
-extern uint8_t numbersBuffer[];
-extern uint32_t smallCharsTable[];
+extern void *_charTables[];
+extern uint8_t _numbersBuffer[];
+extern uint32_t _smallCharsTable[];
 
 /* diyLeagueScratchBuffer boundary marker */
-extern volatile uint8_t diyLeagueScratchBuffer[];
+extern volatile uint8_t _diyLeagueScratchBuffer[];
 
 /* loc_1215BC label (anti-tamper jump target in RestorePreviousMenu stub) */
 extern void loc_1215BC(void);
@@ -222,7 +222,7 @@ extern void Player2StatusProc(void);
 extern void PanicHaltLoop(void);
 
 /* ---- String constant for stack overflow ---- */
-extern uint8_t aStackOverflow[];
+extern uint8_t _aStackOverflow[];
 
 
 /* ================================================================
@@ -231,7 +231,7 @@ extern uint8_t aStackOverflow[];
 __attribute__((used, externally_visible))
 MenuEntry *CalcMenuEntryAddress(uint16_t ordinal)
 {
-    return (MenuEntry *)(currentMenu + MENU_HEADER_SIZE + (uint32_t)ordinal * MENUENTRY_STRIDE);
+    return (MenuEntry *)(_currentMenu + MENU_HEADER_SIZE + (uint32_t)ordinal * MENUENTRY_STRIDE);
 }
 
 /* ================================================================
@@ -242,7 +242,7 @@ void SetExitMenuFlag(void)
 {
     SWOS_AUTOSKIP_LOG("SetExitMenuFlag: caller=%p exitMenu now 1",
                       __builtin_return_address(0));
-    exitMenu = 1;
+    _exitMenu = 1;
 }
 
 /* ================================================================
@@ -252,7 +252,7 @@ __attribute__((used, externally_visible))
 void SetCurrentEntry(uint16_t index)
 {
     MenuEntry *entry = CalcMenuEntryAddress(index);
-    Menu *menu = (Menu *)currentMenu;
+    Menu *menu = (Menu *)_currentMenu;
     menu->selectedEntry = entry;
     SWOS_AUTOSKIP_LOG("SetCurrentEntry(%u) caller=%p ctrlMask=0x%04x onSelect=%p",
                       (unsigned)index, __builtin_return_address(0),
@@ -301,41 +301,41 @@ uint16_t GetKey(void)
 
     d0 = 0;
 
-    currentKey = keyCount;
-    if (keyCount == 0)
+    _currentKey = _keyCount;
+    if (_keyCount == 0)
         return 0;
 
 read_next_key:
     /* Disable keyboard interrupt */
-    custom->intena = 8;
+    _custom->intena = 8;
 
-    d0 = (uint16_t)keyBuffer[0];
+    d0 = (uint16_t)_keyBuffer[0];
 
     /* Shift buffer down (9 bytes) */
-    keyBuffer[0] = keyBuffer[1];
-    keyBuffer[1] = keyBuffer[2];
-    keyBuffer[2] = keyBuffer[3];
-    keyBuffer[3] = keyBuffer[4];
-    keyBuffer[4] = keyBuffer[5];
-    keyBuffer[5] = keyBuffer[6];
-    keyBuffer[6] = keyBuffer[7];
-    keyBuffer[7] = keyBuffer[8];
-    keyBuffer[8] = keyBuffer[9];
+    _keyBuffer[0] = _keyBuffer[1];
+    _keyBuffer[1] = _keyBuffer[2];
+    _keyBuffer[2] = _keyBuffer[3];
+    _keyBuffer[3] = _keyBuffer[4];
+    _keyBuffer[4] = _keyBuffer[5];
+    _keyBuffer[5] = _keyBuffer[6];
+    _keyBuffer[6] = _keyBuffer[7];
+    _keyBuffer[7] = _keyBuffer[8];
+    _keyBuffer[8] = _keyBuffer[9];
 
-    keyCount--;
+    _keyCount--;
 
     /* Re-enable keyboard interrupt */
-    custom->intena = 0x8008;
+    _custom->intena = 0x8008;
 
-    d0 = (uint16_t)keycodeLut[d0];
+    d0 = (uint16_t)_keycodeLut[d0];
     if (d0 == 0x3F) {
         /* Invalid key — skip and try next */
-        if (keyCount != 0)
+        if (_keyCount != 0)
             goto read_next_key;
         d0 = 0;
     }
 
-    currentKey = d0;
+    _currentKey = d0;
     return d0;
 }
 
@@ -366,10 +366,10 @@ void BlitterCopyOverlayToScreen(void)
      * works there because the bitplane pointers still point at the
      * just-drawn buffer post-swap -- on our SDL renderer that
      * isn't true, so we need the full sync. */
-    uint8_t *src = (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
-                       ? frontbufferBaseAlt
-                       : frontbufferBase;
-    uint8_t *dst = (uint8_t *)frontbufferBasePtr;
+    uint8_t *src = (_frontbufferBasePtr != (uintptr_t)_frontbufferBaseAlt)
+                       ? _frontbufferBaseAlt
+                       : _frontbufferBase;
+    uint8_t *dst = (uint8_t *)_frontbufferBasePtr;
     if (src && dst && src != dst)
         memcpy(dst, src, FRONTBUFFER_SIZE_TOTAL_BYTES);
 }
@@ -473,8 +473,8 @@ void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h
      * primitives. Both the mask read and the front write shift by the offset. Without
      * this the masked bg lands un-centered (corrupt menu item in masked-bg states).
      * Same fix as BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
-    RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
-                                    frontbufferMaskBuffer, (uint8_t *)frontbufferBasePtr);
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + _g_menu_draw_x_offset), y, w, h,
+                                    _frontbufferMaskBuffer, (uint8_t *)_frontbufferBasePtr);
 }
 
 /* ================================================================
@@ -503,8 +503,8 @@ void DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, 
 {
     uint8_t topLeftColor, bottomRightColor;
 
-    topLeftColor = outerFrameColorsTable[color * 2];
-    bottomRightColor = outerFrameColorsTable[color * 2 + 1];
+    topLeftColor = _outerFrameColorsTable[color * 2];
+    bottomRightColor = _outerFrameColorsTable[color * 2 + 1];
 
     /* Top border (full width, height=1) */
     DrawMenuItemBackground((uint16_t)(int8_t)topLeftColor, x, y, w, 1);
@@ -534,7 +534,7 @@ void DrawMenuBackWithCheck(MenuEntry *entry)
     if (entry->dwHeight == 0)
         return;
 
-    if (forceDrawTransparentMenuItems) {
+    if (_forceDrawTransparentMenuItems) {
         DrawMenuItemBackground(15, entry->x, entry->y, entry->dwWidth, entry->dwHeight);
     } else {
         DrawMenuItemBackgroundMasked(entry->x, entry->y, entry->dwWidth, entry->dwHeight);
@@ -622,7 +622,7 @@ void DrawMenuItem(MenuEntry *entry)
     }
 
     /* deadVar03 check — if set, skip to afterDraw */
-    if (deadVar03 != 0)
+    if (_deadVar03 != 0)
         goto post_draw_callback;
 
     /* ---- Background rendering ---- */
@@ -637,7 +637,7 @@ void DrawMenuItem(MenuEntry *entry)
             uint16_t bgColor = entry->bgColor & 0xF;
 
             if (bgColor == 0) {
-                if (forceDrawTransparentMenuItems) {
+                if (_forceDrawTransparentMenuItems) {
                     DrawMenuItemBackground(YELLOW_GREEN_BLACK_15, x, y, w, h);
                 } else {
                     DrawMenuItemBackgroundMasked(x, y, w, h);
@@ -667,7 +667,7 @@ void DrawMenuItem(MenuEntry *entry)
              * in the bg slot; reading the field directly is portable. */
             CallMenuFuncWithXY((void *)entry->bg, entry->x, entry->y);
         } else {
-            panicReasonCode = 0x1209;
+            _panicReasonCode = 0x1209;
             PanicHaltLoop();
             return;
         }
@@ -729,7 +729,7 @@ void DrawMenuItem(MenuEntry *entry)
 
         flags = entry->stringFlags;
         flagsMask = (flags & STR_FLAGS_MASK) >> 2;
-        charTable = (uint8_t *)charTables[flagsMask / 4];
+        charTable = (uint8_t *)_charTables[flagsMask / 4];
         charHeight = *(uint16_t *)(charTable + CHARTABLE_CHARHEIGHT);
 
         multiData = (uint8_t *)entry->fg;
@@ -767,8 +767,8 @@ void DrawMenuItem(MenuEntry *entry)
     }
 
     if (content == ENTRY_NUMBER) {
-        Int2Ascii(entry->fgWord, numbersBuffer);
-        textPtr = numbersBuffer;
+        Int2Ascii(entry->fgWord, _numbersBuffer);
+        textPtr = _numbersBuffer;
         goto fg_text_common;
     }
 
@@ -791,13 +791,13 @@ void DrawMenuItem(MenuEntry *entry)
     }
 
     /* Unknown content type */
-    panicReasonCode = 0x1209;
+    _panicReasonCode = 0x1209;
     PanicHaltLoop();
     return;
 
 fg_sprite_draw:
     {
-        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
         SpriteGraphics *sprEntry;
         uint16_t cx, cy;
 
@@ -835,7 +835,7 @@ fg_text_common:
     /* Common text rendering path */
     flags = entry->stringFlags;
     flagsMask = (flags & STR_FLAGS_MASK) >> 2;
-    charTable = (uint8_t *)charTables[flagsMask / 4];
+    charTable = (uint8_t *)_charTables[flagsMask / 4];
 #ifdef SWOS_SDL_BUILD
     if (!charTable) goto post_draw_callback;
 #endif
@@ -941,7 +941,7 @@ void UnpackMenu(uint8_t *packed, uint8_t *dest)
 {
     uint8_t *a0 = packed;  /* source pointer */
     uint8_t *a1 = dest;    /* destination / current entry write pointer */
-    MenuEntry *tmpl = (MenuEntry *)templateMenuEntry;
+    MenuEntry *tmpl = (MenuEntry *)_templateMenuEntry;
     MenuEntry *savedA1 = (MenuEntry *)0;  /* for compact-mode restore (a5) */
     uint8_t *menuBase = dest;  /* a6 = menu base */
     uint16_t compactMode = 0;  /* d2 */
@@ -949,8 +949,8 @@ void UnpackMenu(uint8_t *packed, uint8_t *dest)
     uint16_t opcode;
     MenuEntry *curEntry;
 
-    menuX = 0;
-    menuY = 0;
+    _menuX = 0;
+    _menuY = 0;
     initMenuEntry(tmpl);
 
     /* Copy menu header.
@@ -990,8 +990,8 @@ parse_loop:
     /* Check for set_xy command (64538 = 0xFC1A) */
     if (*(uint16_t *)a0 == 64538) {
         a0 += 2;
-        menuX = *(uint16_t *)a0; a0 += 2;
-        menuY = *(uint16_t *)a0; a0 += 2;
+        _menuX = *(uint16_t *)a0; a0 += 2;
+        _menuY = *(uint16_t *)a0; a0 += 2;
         goto parse_loop;
     }
 
@@ -1051,9 +1051,9 @@ apply_template_and_parse_type:
     if (compactMode) {
         /* Compact: 4 bytes (x, y, w, h as uint8) */
         uint16_t val;
-        val = (uint16_t)*a0++; val += 24; val += menuX;
+        val = (uint16_t)*a0++; val += 24; val += _menuX;
         curEntry->x = val;
-        val = (uint16_t)*a0++; val += 36; val += menuY;
+        val = (uint16_t)*a0++; val += 36; val += _menuY;
         curEntry->y = val;
         val = (uint16_t)*a0++;
         curEntry->dwWidth = val;
@@ -1061,8 +1061,8 @@ apply_template_and_parse_type:
         curEntry->dwHeight = val;
     } else {
         /* Normal: 8 bytes (x, y, w, h as uint16) */
-        curEntry->x = *(uint16_t *)a0 + 24 + menuX; a0 += 2;
-        curEntry->y = *(uint16_t *)a0 + 36 + menuY; a0 += 2;
+        curEntry->x = *(uint16_t *)a0 + 24 + _menuX; a0 += 2;
+        curEntry->y = *(uint16_t *)a0 + 36 + _menuY; a0 += 2;
         curEntry->dwWidth = *(uint16_t *)a0; a0 += 2;
         curEntry->dwHeight = *(uint16_t *)a0; a0 += 2;
     }
@@ -1253,12 +1253,12 @@ finish_menu:
         }
 
         menu->endOfMenuPtr = (uintptr_t)a1;
-        menuFreeSpace = (uintptr_t)diyLeagueScratchBuffer - (uintptr_t)a1;
-        menuDataOffset = (uintptr_t)a1 - (uintptr_t)currentMenu;
+        _menuFreeSpace = (uintptr_t)_diyLeagueScratchBuffer - (uintptr_t)a1;
+        _menuDataOffset = (uintptr_t)a1 - (uintptr_t)_currentMenu;
 
         /* Anti-tamper check */
         {
-            uint32_t cookie = irqCookieObfuscated ^ 0xCFD1F8C5;
+            uint32_t cookie = _irqCookieObfuscated ^ 0xCFD1F8C5;
             if (cookie != 0x1722) {
                 //loc_1215BC();
                 return;
@@ -1273,7 +1273,7 @@ finish_menu:
 __attribute__((used, externally_visible))
 void DrawMenuPanelBackground(void)
 {
-    if (forceDrawTransparentMenuItems != 0)
+    if (_forceDrawTransparentMenuItems != 0)
         DrawMenuItemBackground(7, 24, 36, 304, 200);
 }
 
@@ -1283,7 +1283,7 @@ void DrawMenuPanelBackground(void)
 __attribute__((used, externally_visible, noinline))
 void DrawSelectedMenuItemFrame(void)
 {
-    Menu *menu = (Menu *)currentMenu;
+    Menu *menu = (Menu *)_currentMenu;
     MenuEntry *sel = menu->selectedEntry;
     uint16_t w, h, color;
 
@@ -1295,7 +1295,7 @@ void DrawSelectedMenuItemFrame(void)
     if (h == 0 && w == 0)
         return;
 
-    color = kColorTableShine[(menuCursorFrame & 14) >> 1];
+    color = _kColorTableShine[(_menuCursorFrame & 14) >> 1];
     DrawMenuItemInnerFrame(color, sel->x, sel->y, w, h);
 }
 
@@ -1305,24 +1305,24 @@ void DrawSelectedMenuItemFrame(void)
 __attribute__((used, externally_visible, noinline))
 void DrawMenu(void)
 {
-    Menu *menu = (Menu *)currentMenu;
+    Menu *menu = (Menu *)_currentMenu;
     MenuEntry *entry;
     int16_t i, count;
     MenuVoidFn onDrawPtr;
 
-    menuStatus = 0;
-    menuTextBlinkCounter = 0;
+    _menuStatus = 0;
+    _menuTextBlinkCounter = 0;
     /* Widescreen: center all menu drawing. Set once here; every partial redraw
      * (CallDrawMenuItem, DrawMultipleItems, selector, custom callbacks, ...)
      * inherits it. The in-match game loop resets it to 0 for the world. */
-    g_menu_draw_x_offset = WIDE_MARGIN;
+    _g_menu_draw_x_offset = WIDE_MARGIN;
 
     BlitterCopyPanelToScreen2();
     DrawMenuPanelBackground();
 
     /* Clear all alreadyDrawn flags */
     count = (int16_t)menu->numEntries;
-    entry = (MenuEntry *)menuEntries;
+    entry = (MenuEntry *)_menuEntries;
     for (i = 0; i < count; i++) {
         entry->alreadyDrawn = 0;
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
@@ -1335,7 +1335,7 @@ void DrawMenu(void)
     }
 
     /* Draw all entries (centered via the persistent g_menu_draw_x_offset). */
-    entry = (MenuEntry *)menuEntries;
+    entry = (MenuEntry *)_menuEntries;
     count = (int16_t)menu->numEntries;
     for (i = 0; i < count; i++) {
         DrawMenuItem(entry);
@@ -1351,18 +1351,18 @@ void DrawMenu(void)
 __attribute__((used, externally_visible))
 void UpdateBlinkingMenuText(void)
 {
-    Menu *menu = (Menu *)currentMenu;
+    Menu *menu = (Menu *)_currentMenu;
     int16_t d6, d5, d7, i;
     MenuEntry *entry;
     uint16_t counter;
 
-    menuTextBlinkCounter = (menuTextBlinkCounter + 1) & 0x1F;
-    counter = menuTextBlinkCounter;
+    _menuTextBlinkCounter = (_menuTextBlinkCounter + 1) & 0x1F;
+    counter = _menuTextBlinkCounter;
 
     for (d6 = 1; d6 >= 0; d6--) {
         d5 = 0;
         d7 = (int16_t)menu->numEntries;
-        entry = (MenuEntry *)menuEntries;
+        entry = (MenuEntry *)_menuEntries;
 
         for (i = 0; i < d7; i++) {
             if (entry->content != NO_FOREGROUND) {
@@ -1401,131 +1401,131 @@ void MenuCheckControls(void)
 
     GetKey();
 
-    d2 = lastFrameTicks;
+    d2 = _lastFrameTicks;
 
-    if (fireCounter > 0)
-        fireCounter = 0;
+    if (_fireCounter > 0)
+        _fireCounter = 0;
 
-    if (player1ClearFlag) {
-        pl1Fire = 0;
-        shortFire = 0;
-        fire = 0;
-        left = 0;
-        right = 0;
-        up = 0;
-        down = 0;
-        menuControlsDirection = -1;
-        menuControlsDirection2 = -1;
+    if (_player1ClearFlag) {
+        _pl1Fire = 0;
+        _shortFire = 0;
+        _fire = 0;
+        _left = 0;
+        _right = 0;
+        _up = 0;
+        _down = 0;
+        _menuControlsDirection = -1;
+        _menuControlsDirection2 = -1;
     } else {
         Player1StatusProc();
 
-        if (pl1FireCounter != 0) {
-            fireCounter = pl1FireCounter;
-            if (pl1FireCounter > 0)
-                pl1FireCounter = 0;
+        if (_pl1FireCounter != 0) {
+            _fireCounter = _pl1FireCounter;
+            if (_pl1FireCounter > 0)
+                _pl1FireCounter = 0;
         }
 
-        if (pl1Fire == 0) {
-            if ((allowShorterMenuItemsWithFrames & 0xFFFF) != 0) {
-                pl1SkipFireCounter++;
-                pl1Fire = ((uint8_t)pl1SkipFireCounter) & 1;
+        if (_pl1Fire == 0) {
+            if ((_allowShorterMenuItemsWithFrames & 0xFFFF) != 0) {
+                _pl1SkipFireCounter++;
+                _pl1Fire = ((uint8_t)_pl1SkipFireCounter) & 1;
             }
-            if ((allowShorterMenuItemsWithFrames >> 16) != 0) {
-                pl1Fire = 1;
+            if ((_allowShorterMenuItemsWithFrames >> 16) != 0) {
+                _pl1Fire = 1;
             }
         }
 
-        shortFire = (uint16_t)pl1ShortFire;
-        fire = (uint16_t)pl1Fire;
-        left = pl1Left;
-        right = pl1Right;
-        up = pl1Up;
-        down = pl1Down;
-        menuControlsDirection = pl1Direction;
-        menuControlsDirection2 = pl1Direction;
+        _shortFire = (uint16_t)_pl1ShortFire;
+        _fire = (uint16_t)_pl1Fire;
+        _left = _pl1Left;
+        _right = _pl1Right;
+        _up = _pl1Up;
+        _down = _pl1Down;
+        _menuControlsDirection = _pl1Direction;
+        _menuControlsDirection2 = _pl1Direction;
     }
 
-    pl2Fire = 0;
+    _pl2Fire = 0;
 
-    if (!player2ClearFlag && twoPlayers) {
+    if (!_player2ClearFlag && _twoPlayers) {
         Player2StatusProc();
 
-        if (pl2FireCounter != 0) {
-            fireCounter = pl2FireCounter;
-            if (pl2FireCounter > 0)
-                pl2FireCounter = 0;
+        if (_pl2FireCounter != 0) {
+            _fireCounter = _pl2FireCounter;
+            if (_pl2FireCounter > 0)
+                _pl2FireCounter = 0;
         }
 
-        if (pl2Fire == 0 && pl2SkipFireCounter != 0) {
-            pl2Fire = 1;
+        if (_pl2Fire == 0 && _pl2SkipFireCounter != 0) {
+            _pl2Fire = 1;
         }
 
-        shortFire |= (uint16_t)pl2ShortFire;
-        fire |= (uint16_t)pl2Fire;
-        left |= pl2Left;
-        right |= pl2Right;
-        up |= pl2Up;
-        down |= pl2Down;
+        _shortFire |= (uint16_t)_pl2ShortFire;
+        _fire |= (uint16_t)_pl2Fire;
+        _left |= _pl2Left;
+        _right |= _pl2Right;
+        _up |= _pl2Up;
+        _down |= _pl2Down;
 
-        if (pl1Direction < 0) {
-            menuControlsDirection = pl2Direction;
-            menuControlsDirection2 = pl2Direction;
+        if (_pl1Direction < 0) {
+            _menuControlsDirection = _pl2Direction;
+            _menuControlsDirection2 = _pl2Direction;
         }
     }
 
-    if (fireResetFlag) {
-        if (fire == 0)
-            fireResetFlag = 0;
+    if (_fireResetFlag) {
+        if (_fire == 0)
+            _fireResetFlag = 0;
         else {
-            fire = 0;
-            shortFire = 0;
+            _fire = 0;
+            _shortFire = 0;
         }
     }
 
-    if (shortFire != 0) {
-        longFireTime = 0;
-        longFireFlag = 0;
-    } else if (fire != 0) {
-        longFireTime += d2;
-        if (longFireTime >= 0x18) {
-            longFireTime = 0x10;
-            longFireFlag++;
-            shortFire = 1;
+    if (_shortFire != 0) {
+        _longFireTime = 0;
+        _longFireFlag = 0;
+    } else if (_fire != 0) {
+        _longFireTime += d2;
+        if (_longFireTime >= 0x18) {
+            _longFireTime = 0x10;
+            _longFireFlag++;
+            _shortFire = 1;
         }
     }
 
     {
-        int16_t curDir = menuControlsDirection;
-        uint16_t threshold = (fire != 0) ? 0x18 : 0x0C;
-        uint16_t resetVal = (fire != 0) ? 0x10 : 8;
+        int16_t curDir = _menuControlsDirection;
+        uint16_t threshold = (_fire != 0) ? 0x18 : 0x0C;
+        uint16_t resetVal = (_fire != 0) ? 0x10 : 8;
 
-        if (curDir == lastControls) {
-            controlsHeldTimer += d2;
-            if (controlsHeldTimer >= threshold) {
-                controlsHeldTimer = resetVal;
-                menuControlsDirection = curDir;
+        if (curDir == _lastControls) {
+            _controlsHeldTimer += d2;
+            if (_controlsHeldTimer >= threshold) {
+                _controlsHeldTimer = resetVal;
+                _menuControlsDirection = curDir;
             } else {
-                menuControlsDirection = -1;
+                _menuControlsDirection = -1;
             }
         } else {
-            controlsHeldTimer = 0;
-            lastControls = curDir;
+            _controlsHeldTimer = 0;
+            _lastControls = curDir;
         }
     }
 
-    if (fire == 0 && menuControlsDirection < 0) {
-        uint16_t key = currentKey;
+    if (_fire == 0 && _menuControlsDirection < 0) {
+        uint16_t key = _currentKey;
         if (key == 0x10) {
-            menuControlsDirection = 0;
+            _menuControlsDirection = 0;
         } else if (key == 0x12) {
-            menuControlsDirection = 2;
+            _menuControlsDirection = 2;
         } else if (key == 0x11) {
-            menuControlsDirection = 4;
+            _menuControlsDirection = 4;
         } else if (key == 0x13) {
-            menuControlsDirection = 6;
+            _menuControlsDirection = 6;
         } else if (key == 0x0D) {
-            shortFire = 1;
-            fire = 1;
+            _shortFire = 1;
+            _fire = 1;
         }
     }
 }
@@ -1572,57 +1572,57 @@ void MenuProc(void)
      * next chain (e.g. start of the next season-end review) gets the
      * full per-screen dwell unless the user presses SPACE / button 2
      * again. */
-    if (seasonUpdateInProgress == 0)
+    if (_seasonUpdateInProgress == 0)
         s_seasonSkipLatched = 0;
 
     ReadTimerDelta();
 
-    if (magicValue != 0x12345678) {
-        panicReasonCode = 0x9999;
-        errorMessagePtr = (char *)aStackOverflow;
+    if (_magicValue != 0x12345678) {
+        _panicReasonCode = 0x9999;
+        _errorMessagePtr = (char *)_aStackOverflow;
         PanicHaltLoop();
         return;
     }
 
-    if ((irqCookieObfuscated ^ 0xCFD1F8B3) != 0x1754)
+    if ((_irqCookieObfuscated ^ 0xCFD1F8B3) != 0x1754)
         return;
 
-    if (menuStatus == 0) {
+    if (_menuStatus == 0) {
         DrawSelectedMenuItemFrame();
         WaitForVSync();
     }
 
-    menuCursorFrame++;
+    _menuCursorFrame++;
 
-    if (menuStatus != 0)
+    if (_menuStatus != 0)
         DrawMenu();
 
-    if (menuFade != 0) {
+    if (_menuFade != 0) {
         FadeIn();
-        menuFade = 0;
+        _menuFade = 0;
     }
 
     UpdateBlinkingMenuText();
     MenuCheckControls();
     MenuInputInjectPoint();   /* stable harness input-injection anchor — break here by SYMBOL */
 
-    menu = (Menu *)currentMenu;
+    menu = (Menu *)_currentMenu;
     selectedEntry = menu->selectedEntry;
-    controlMask = 0;
+    _controlMask = 0;
 
     onSelectPtr = selectedEntry->onSelect;
     if (onSelectPtr == 0)
         goto no_event_or_done;
 
     d7 = 0;
-    if (shortFire) d7 |= (1 << 5);
-    if (fire)      d7 |= (1 << 0);
-    if (left)      d7 |= (1 << 1);
-    if (right)     d7 |= (1 << 2);
-    if (up)        d7 |= (1 << 3);
-    if (down)      d7 |= (1 << 4);
+    if (_shortFire) d7 |= (1 << 5);
+    if (_fire)      d7 |= (1 << 0);
+    if (_left)      d7 |= (1 << 1);
+    if (_right)     d7 |= (1 << 2);
+    if (_up)        d7 |= (1 << 3);
+    if (_down)      d7 |= (1 << 4);
 
-    dir = menuControlsDirection;
+    dir = _menuControlsDirection;
     if (dir >= 0) {
         uint16_t diagIdx = (uint16_t)dir >> 1;
         switch (diagIdx) {
@@ -1634,7 +1634,7 @@ void MenuProc(void)
     }
 
     {
-        int ord = swos_autoskip_entry_ordinal((void *)selectedEntry, menuEntries);
+        int ord = swos_autoskip_entry_ordinal((void *)selectedEntry, _menuEntries);
         SWOS_AUTOSKIP_LOG("MenuProc: dispatch entry=%d ctrlMask=0x%04x d7=0x%04x onSelect=%p "
                           "(short-circuit=%s)",
                           ord,
@@ -1654,7 +1654,7 @@ void MenuProc(void)
             SWOS_AUTOSKIP_LOG("MenuProc: skipping onSelect (d7 & mask == 0)");
             goto no_event_or_done;
         }
-    } else if (seasonUpdateInProgress != 0) {
+    } else if (_seasonUpdateInProgress != 0) {
         /* Hold the menu visible for ~1 s so the user can read each
          * cup/league result during a season transition. Without this the
          * controlMask=0xFFFF entry fires on iteration 1 and the chain
@@ -1666,7 +1666,7 @@ void MenuProc(void)
          * drops to 0 (see top of MenuProc), so a single press skips the whole
          * sequence without the user having to hold the button. */
 #ifdef SWOS_SDL_BUILD
-        if (pauseSkipRequested)
+        if (_pauseSkipRequested)
             s_seasonSkipLatched = 1;
 #else
         /* Amiga: SPACE is post-LUT 0x20 in currentKey (NOT the raw 0x40 in
@@ -1686,7 +1686,7 @@ void MenuProc(void)
         }
     }
 
-    controlMask = d7;
+    _controlMask = d7;
     SWOS_AUTOSKIP_LOG("MenuProc: -> CallMenuOnSelect (exitMenu before=%u)", (unsigned)exitMenu);
     /* Original asm MenuProc kept a5 = selectedEntry when calling onSelect.
        Many callbacks (SelectTeamsCommon, SelectLeaguesCommon etc.) read a5
@@ -1695,16 +1695,16 @@ void MenuProc(void)
     SWOS_AUTOSKIP_LOG("MenuProc: <- CallMenuOnSelect (exitMenu after=%u)", (unsigned)exitMenu);
 
 no_event_or_done:
-    if (fire != 0)
+    if (_fire != 0)
         return;
 
-    dir = menuControlsDirection;
+    dir = _menuControlsDirection;
     if (dir < 0)
         return;
 
     {
         uint16_t dirIdx = (uint16_t)dir & 6;
-        uint16_t fieldOff = nextEntryDirectionOffsets[dirIdx >> 1];
+        uint16_t fieldOff = _nextEntryDirectionOffsets[dirIdx >> 1];
         uint8_t *navBase = (uint8_t *)selectedEntry;
         int8_t navOrd;
 
@@ -1749,12 +1749,12 @@ void ActivateMenu(uint8_t *packedMenu)
     uintptr_t selEntryVal;
     MenuVoidFn onInitPtr;
 
-    currentMenuPtr = (uintptr_t)packedMenu;
+    _currentMenuPtr = (uintptr_t)packedMenu;
     s_seasonUpdateHoldCounter = 0;
 
-    UnpackMenu(packedMenu, currentMenu);
+    UnpackMenu(packedMenu, _currentMenu);
 
-    menu = (Menu *)currentMenu;
+    menu = (Menu *)_currentMenu;
     /* The unpacker may write either an ordinal (0..65535) or a real
      * pointer into this slot; resolve ordinals via CalcMenuEntryAddress
      * before any consumer reads it as a MenuEntry *. */
@@ -1769,7 +1769,7 @@ void ActivateMenu(uint8_t *packedMenu)
     if (onInitPtr != 0) {
         CallMenuCallback((void *)onInitPtr);
     }
-    if (exitMenu != 0)
+    if (_exitMenu != 0)
         return;
 
     DrawMenu();
@@ -1790,29 +1790,29 @@ void ShowMenu(uint8_t *packedMenu)
      * the program actually exits. The same cascade is also visible on
      * the season-transition path where multiple cup result menus
      * stack up. */
-    if (g_quitToDos) {
+    if (_g_quitToDos) {
         SWOS_AUTOSKIP_LOG("ShowMenu: SKIPPED packedMenu=%p (%s) — g_quitToDos set",
                           packedMenu, swos_autoskip_menu_name(packedMenu));
-        exitMenu = 1;
+        _exitMenu = 1;
         return;
     }
 
-    Menu *menu = (Menu *)currentMenu;
+    Menu *menu = (Menu *)_currentMenu;
     /* volatile as safety: CallMenuCallback saves/restores all regs around asm
        callbacks, but keep volatile in case any callback path is missed. */
     /* Save+restore as MenuEntry * (the new struct field type). */
     MenuEntry * volatile oldSelectedEntry = menu->selectedEntry;
-    volatile uintptr_t oldPackedMenu = currentMenuPtr;
+    volatile uintptr_t oldPackedMenu = _currentMenuPtr;
 
-    menuStatus = 0;
-    exitMenu = 0;
+    _menuStatus = 0;
+    _exitMenu = 0;
 
     SWOS_AUTOSKIP_LOG("ShowMenu: ENTER packedMenu=%p (%s)", packedMenu,
                       swos_autoskip_menu_name(packedMenu));
     ActivateMenu(packedMenu);
     SWOS_AUTOSKIP_LOG("ShowMenu: post-Activate exitMenu=%u", (unsigned)exitMenu);
 
-    if (exitMenu == 0) {
+    if (_exitMenu == 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
         unsigned proc_iters = 0;
 #endif
@@ -1828,15 +1828,15 @@ void ShowMenu(uint8_t *packedMenu)
                                   (unsigned)fire, (unsigned)shortFire);
             }
 #endif
-        } while (exitMenu == 0);
+        } while (_exitMenu == 0);
     }
     SWOS_AUTOSKIP_LOG("ShowMenu: loop exited exitMenu=%u", (unsigned)exitMenu);
 
-    menuStatus = 1;
+    _menuStatus = 1;
     /* Don't clear exitMenu if quit propagation is in flight — leave it
      * set so the outer ShowMenu's `while (exitMenu == 0)` exits too. */
-    if (!g_quitToDos)
-        exitMenu = 0;
+    if (!_g_quitToDos)
+        _exitMenu = 0;
 
     RestorePreviousMenu(oldSelectedEntry, (uint8_t *)oldPackedMenu);
 }
@@ -1850,10 +1850,10 @@ void RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
     Menu *menu;
     MenuVoidFn afterDrawPtr;
 
-    currentMenuPtr = (uintptr_t)oldPackedMenu;
-    UnpackMenu(oldPackedMenu, currentMenu);
+    _currentMenuPtr = (uintptr_t)oldPackedMenu;
+    UnpackMenu(oldPackedMenu, _currentMenu);
 
-    menu = (Menu *)currentMenu;
+    menu = (Menu *)_currentMenu;
     menu->selectedEntry = oldSelectedEntry;
 
     afterDrawPtr = menu->afterDraw;
@@ -1876,13 +1876,13 @@ void RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
 __attribute__((used, externally_visible))
 void BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
-    extern volatile uintptr_t frontbufferBaseAltPtr;
+    extern volatile uintptr_t _frontbufferBaseAltPtr;
     /* Widescreen: the items were drawn centered (x + g_menu_draw_x_offset via the
      * base-shifted primitives), so sync the SAME region between the two buffers.
      * Without this the rect copies the un-offset region and leaves stale/garbage
      * exactly where the centered items are (corrupt menu element). 0 if not widescreen. */
-    RectRowMaskedApplyScreenOffset((uint16_t)(x + g_menu_draw_x_offset), y, w, h,
-                                    (uint8_t *)frontbufferBaseAltPtr, (uint8_t *)frontbufferBasePtr);
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + _g_menu_draw_x_offset), y, w, h,
+                                    (uint8_t *)_frontbufferBaseAltPtr, (uint8_t *)_frontbufferBasePtr);
 }
 
 /* ================================================================

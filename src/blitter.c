@@ -43,11 +43,11 @@
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t *spriteGraphicsPtr;
-extern volatile uintptr_t frontbufferBasePtr;
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern volatile uint16_t panicReasonCode;
+extern uint8_t *_spriteGraphicsPtr;
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern volatile uint16_t _panicReasonCode;
 
 extern void PanicHaltLoop(void) __attribute__((noreturn));
 
@@ -56,11 +56,11 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 static inline __attribute__((always_inline)) void waitBlit(void)
 {
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 }
 
 /* ================================================================
@@ -130,19 +130,19 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
            BLTBDAT holds ~mask (span pixels) even though USEB=0;
            the blitter uses BLTBDAT as constant B input in the minterm. */
         waitBlit();
-        BLT_W(custom->bltafwm, d7);
-        BLT_W(custom->bltalwm, d7);
+        BLT_W(_custom->bltafwm, d7);
+        BLT_W(_custom->bltalwm, d7);
         d7 = ~d7;
-        BLT_W(custom->bltbdat, d7);
-        BLT_L(custom->bltapt, (uintptr_t)plane);
-        BLT_L(custom->bltdpt, (uintptr_t)plane);
-        BLT_W(custom->bltamod, FB_BLT_MOD_AFTER_1_WORD);
-        BLT_W(custom->bltdmod, FB_BLT_MOD_AFTER_1_WORD);
-        BLT_W(custom->bltcon0, d5);
-        BLT_W(custom->bltcon1, 0);
+        BLT_W(_custom->bltbdat, d7);
+        BLT_L(_custom->bltapt, (uintptr_t)plane);
+        BLT_L(_custom->bltdpt, (uintptr_t)plane);
+        BLT_W(_custom->bltamod, FB_BLT_MOD_AFTER_1_WORD);
+        BLT_W(_custom->bltdmod, FB_BLT_MOD_AFTER_1_WORD);
+        BLT_W(_custom->bltcon0, d5);
+        BLT_W(_custom->bltcon1, 0);
         {
             uint16_t blitsize = (height << 6) | 1;
-            BLT_W(custom->bltsize, blitsize);
+            BLT_W(_custom->bltsize, blitsize);
         }
 
         plane += 2;
@@ -157,13 +157,13 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
         uint16_t mod = ROW_STRIDE_BYTES - d0 * 2;
 
         waitBlit();
-        BLT_L(custom->bltdpt, (uintptr_t)plane);
-        BLT_W(custom->bltdmod, mod);
-        BLT_W(custom->bltcon0, d6);
-        BLT_W(custom->bltcon1, 0);
+        BLT_L(_custom->bltdpt, (uintptr_t)plane);
+        BLT_W(_custom->bltdmod, mod);
+        BLT_W(_custom->bltcon0, d6);
+        BLT_W(_custom->bltcon1, 0);
         {
             uint16_t blitsize = (height << 6) | d0;
-            BLT_W(custom->bltsize, blitsize);
+            BLT_W(_custom->bltsize, blitsize);
         }
 
         plane += d0 * 2;
@@ -176,19 +176,19 @@ static void blitterSpanCore(uint8_t *plane, uint16_t xBit, uint16_t width,
             d7 = ~tailMaskTable[tail];
 
             waitBlit();
-            BLT_W(custom->bltafwm, d7);
-            BLT_W(custom->bltalwm, d7);
+            BLT_W(_custom->bltafwm, d7);
+            BLT_W(_custom->bltalwm, d7);
             d7 = ~d7;
-            BLT_W(custom->bltbdat, d7);
-            BLT_L(custom->bltapt, (uintptr_t)plane);
-            BLT_L(custom->bltdpt, (uintptr_t)plane);
-            BLT_W(custom->bltamod, FB_BLT_MOD_AFTER_1_WORD);
-            BLT_W(custom->bltdmod, FB_BLT_MOD_AFTER_1_WORD);
-            BLT_W(custom->bltcon0, d5);
-            BLT_W(custom->bltcon1, 0);
+            BLT_W(_custom->bltbdat, d7);
+            BLT_L(_custom->bltapt, (uintptr_t)plane);
+            BLT_L(_custom->bltdpt, (uintptr_t)plane);
+            BLT_W(_custom->bltamod, FB_BLT_MOD_AFTER_1_WORD);
+            BLT_W(_custom->bltdmod, FB_BLT_MOD_AFTER_1_WORD);
+            BLT_W(_custom->bltcon0, d5);
+            BLT_W(_custom->bltcon1, 0);
             {
                 uint16_t blitsize = (height << 6) | 1;
-                BLT_W(custom->bltsize, blitsize);
+                BLT_W(_custom->bltsize, blitsize);
             }
         }
     }
@@ -288,7 +288,7 @@ static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
         uint8_t *row = buf + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
         for (uint16_t dx = 0; dx < w; dx++) {
             uint16_t xx = (uint16_t)(x0 + dx);
-            if (xx >= g_screen_width) continue;
+            if (xx >= _g_screen_width) continue;
             row[xx] = pixel;
         }
     }
@@ -298,7 +298,7 @@ static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
 __attribute__((used, externally_visible))
 void FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
-    uint8_t *buf = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
+    uint8_t *buf = (uint8_t *)_frontbufferBasePtr + _g_menu_draw_x_offset;
     uint16_t wrapRows;
     int16_t overflow;
 
@@ -382,7 +382,7 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
             const uint8_t *srcRow = mask + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
             uint8_t       *dstRow = buf  + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
             uint16_t       copyW  = w;
-            if ((uint32_t)x + copyW > g_screen_width) copyW = (uint16_t)(g_screen_width - x);
+            if ((uint32_t)x + copyW > _g_screen_width) copyW = (uint16_t)(_g_screen_width - x);
             memcpy(dstRow + x, srcRow + x, copyW);
         }
     }
@@ -737,12 +737,12 @@ __attribute__((used, externally_visible))
 void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
                               uint16_t planeMask, uint16_t dstSpriteIndex)
 {
-    SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)_spriteGraphicsPtr;
     SpriteGraphics *srcHdr = table[glyphIndex];
     SpriteGraphics *dstHdr = table[dstSpriteIndex];
     {
-        extern int g_debug_sprite_load;
-        if (g_debug_sprite_load) {
+        extern int _g_debug_sprite_load;
+        if (_g_debug_sprite_load) {
             SWOS_DBG("[blit] glyph=0x%03X -> dst=0x%03X @(%u,%u) pm=%u srcHdr=%p dstHdr=%p\n",
                     glyphIndex, dstSpriteIndex, xOff, yOff, planeMask,
                     (void*)srcHdr, (void*)dstHdr);
@@ -997,7 +997,7 @@ uint16_t Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
                       uint8_t *text, uint8_t *charsTable, uint16_t planeMask,
                       uint16_t *outTotalWidth)
 {
-    SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *dstHdr;
     uint16_t textWidth;
     uint16_t spriteIndexOffset;
@@ -1016,8 +1016,8 @@ uint16_t Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
      * so the stride is correct on both targets. */
     dstHdr = table[dstSpriteIndex];
     {
-        extern int g_debug_sprite_load;
-        if (g_debug_sprite_load) {
+        extern int _g_debug_sprite_load;
+        if (_g_debug_sprite_load) {
             SWOS_DBG("[text] dstIdx=0x%03X text='%.16s' width=%u dstPixW=%d dstHdr=%p\n",
                     dstSpriteIndex, (const char *)text, textWidth,
                     dstHdr ? dstHdr->pixWidth : -1, (void*)dstHdr);
@@ -1047,7 +1047,7 @@ uint16_t Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
             glyphIdx = (uint16_t)convTable[ch - ' '] + spriteIndexOffset;
 
             /* Get glyph pixel width */
-            glyphHdr = ((SpriteGraphics **)spriteGraphicsPtr)[glyphIdx];
+            glyphHdr = ((SpriteGraphics **)_spriteGraphicsPtr)[glyphIdx];
             glyphWidth = (uint16_t)glyphHdr->pixWidth;
             nextX = xOff + glyphWidth + charSpacing;
 

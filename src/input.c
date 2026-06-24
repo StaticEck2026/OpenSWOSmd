@@ -10,12 +10,12 @@
  * registers. On the SDL build we redirect them to software state that
  * input_sdl.c writes once per SDL_PollEvent pass. */
 #ifdef SWOS_SDL_BUILD
-extern uint16_t joy0Dat;
-extern uint16_t joy1Dat;
-extern uint8_t  ciaa_pra;
-#define HW_JOY0DAT  joy0Dat
-#define HW_JOY1DAT  joy1Dat
-#define HW_CIAA_PRA ciaa_pra
+extern uint16_t _joy0Dat;
+extern uint16_t _joy1Dat;
+extern uint8_t  _ciaa_pra;
+#define HW_JOY0DAT  _joy0Dat
+#define HW_JOY1DAT  _joy1Dat
+#define HW_CIAA_PRA _ciaa_pra
 #else
 #define HW_JOY0DAT  (*(volatile uint16_t *)0x00DFF00A)
 #define HW_JOY1DAT  (*(volatile uint16_t *)0x00DFF00C)
@@ -23,27 +23,27 @@ extern uint8_t  ciaa_pra;
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t pl1Right;
-extern uint8_t pl1Left;
-extern uint8_t pl1Down;
-extern uint8_t pl1Up;
-extern uint8_t pl1Fire;
-extern uint8_t pl1UpRight;
-extern uint8_t pl1DownRight;
-extern uint8_t pl1DownLeft;
-extern uint8_t pl1UpLeft;
-extern uint8_t pl1LastFired;
-extern uint8_t pl1ShortFire;
-extern uint16_t pl1FireCounter;
-extern uint8_t pl1LeftPress;
-extern uint8_t pl1WasLeft;
-extern uint8_t pl1RightPress;
-extern uint8_t pl1WasRight;
-extern uint8_t pl1UpPress;
-extern uint8_t pl1WasUp;
-extern uint8_t pl1DownPress;
-extern uint8_t pl1WasDown;
-extern uint16_t pl1Direction;
+extern uint8_t _pl1Right;
+extern uint8_t _pl1Left;
+extern uint8_t _pl1Down;
+extern uint8_t _pl1Up;
+extern uint8_t _pl1Fire;
+extern uint8_t _pl1UpRight;
+extern uint8_t _pl1DownRight;
+extern uint8_t _pl1DownLeft;
+extern uint8_t _pl1UpLeft;
+extern uint8_t _pl1LastFired;
+extern uint8_t _pl1ShortFire;
+extern uint16_t _pl1FireCounter;
+extern uint8_t _pl1LeftPress;
+extern uint8_t _pl1WasLeft;
+extern uint8_t _pl1RightPress;
+extern uint8_t _pl1WasRight;
+extern uint8_t _pl1UpPress;
+extern uint8_t _pl1WasUp;
+extern uint8_t _pl1DownPress;
+extern uint8_t _pl1WasDown;
+extern uint16_t _pl1Direction;
 
 /* ================================================================
  * Player1StatusProc  (SWOS2.s line 5562)
@@ -74,155 +74,155 @@ void Player1StatusProc(void)
     joy = HW_JOY1DAT;
 
     /* sne: set 0xFF if bit set, 0x00 otherwise */
-    pl1Right = (joy & (1 << 1)) ? 0xFF : 0x00;
-    pl1Left  = (joy & (1 << 9)) ? 0xFF : 0x00;
+    _pl1Right = (joy & (1 << 1)) ? 0xFF : 0x00;
+    _pl1Left  = (joy & (1 << 9)) ? 0xFF : 0x00;
 
     /* XOR trick for vertical: d1 = d0 >> 1; d0 ^= d1 */
     decoded = joy ^ (joy >> 1);
-    pl1Down = (decoded & (1 << 0)) ? 0xFF : 0x00;
-    pl1Up   = (decoded & (1 << 8)) ? 0xFF : 0x00;
+    _pl1Down = (decoded & (1 << 0)) ? 0xFF : 0x00;
+    _pl1Up   = (decoded & (1 << 8)) ? 0xFF : 0x00;
 
     /* Fire button: CIAA_PRA bit 7, active low (seq = set if equal/zero) */
-    pl1Fire = (HW_CIAA_PRA & (1 << 7)) ? 0x00 : 0xFF;
+    _pl1Fire = (HW_CIAA_PRA & (1 << 7)) ? 0x00 : 0xFF;
 
     /* ---- Compute diagonal combinations ---- */
-    pl1UpRight  = pl1Up   & pl1Right;
-    pl1DownRight = pl1Down & pl1Right;
-    pl1DownLeft  = pl1Down & pl1Left;
-    pl1UpLeft    = pl1Up   & pl1Left;
+    _pl1UpRight  = _pl1Up   & _pl1Right;
+    _pl1DownRight = _pl1Down & _pl1Right;
+    _pl1DownLeft  = _pl1Down & _pl1Left;
+    _pl1UpLeft    = _pl1Up   & _pl1Left;
 
     /* ---- Fire button press/release tracking ---- */
-    if (pl1LastFired != 0)
+    if (_pl1LastFired != 0)
     {
         /* Was previously pressed */
-        pl1ShortFire = 0;
-        if (pl1Fire == 0)
+        _pl1ShortFire = 0;
+        if (_pl1Fire == 0)
         {
             /* Released now */
-            pl1LastFired = 0;
-            pl1FireCounter = (uint16_t)(-(int16_t)pl1FireCounter);
+            _pl1LastFired = 0;
+            _pl1FireCounter = (uint16_t)(-(int16_t)_pl1FireCounter);
         }
         else
         {
             /* Still held */
-            if (pl1FireCounter != 0)
+            if (_pl1FireCounter != 0)
             {
-                pl1FireCounter--;
+                _pl1FireCounter--;
             }
         }
     }
     else
     {
         /* Was not previously pressed */
-        pl1ShortFire = pl1Fire;
-        pl1LastFired = pl1Fire;
-        if (pl1Fire != 0)
+        _pl1ShortFire = _pl1Fire;
+        _pl1LastFired = _pl1Fire;
+        if (_pl1Fire != 0)
         {
-            pl1FireCounter = 0xFFFF;
+            _pl1FireCounter = 0xFFFF;
         }
     }
 
     /* ---- Left press/release tracking ---- */
-    if (pl1WasLeft != 0)
+    if (_pl1WasLeft != 0)
     {
-        pl1LeftPress = 0;
-        if (pl1Left == 0)
-            pl1WasLeft = 0;
+        _pl1LeftPress = 0;
+        if (_pl1Left == 0)
+            _pl1WasLeft = 0;
     }
-    if (pl1WasLeft == 0)
+    if (_pl1WasLeft == 0)
     {
-        pl1LeftPress = pl1Left;
-        pl1WasLeft = pl1Left;
+        _pl1LeftPress = _pl1Left;
+        _pl1WasLeft = _pl1Left;
     }
 
     /* ---- Right press/release tracking ---- */
-    if (pl1WasRight != 0)
+    if (_pl1WasRight != 0)
     {
-        pl1RightPress = 0;
-        if (pl1Right == 0)
-            pl1WasRight = 0;
+        _pl1RightPress = 0;
+        if (_pl1Right == 0)
+            _pl1WasRight = 0;
     }
-    if (pl1WasRight == 0)
+    if (_pl1WasRight == 0)
     {
-        pl1RightPress = pl1Right;
-        pl1WasRight = pl1Right;
+        _pl1RightPress = _pl1Right;
+        _pl1WasRight = _pl1Right;
     }
 
     /* ---- Up press/release tracking ---- */
-    if (pl1WasUp != 0)
+    if (_pl1WasUp != 0)
     {
-        pl1UpPress = 0;
-        if (pl1Up == 0)
-            pl1WasUp = 0;
+        _pl1UpPress = 0;
+        if (_pl1Up == 0)
+            _pl1WasUp = 0;
     }
-    if (pl1WasUp == 0)
+    if (_pl1WasUp == 0)
     {
-        pl1UpPress = pl1Up;
-        pl1WasUp = pl1Up;
+        _pl1UpPress = _pl1Up;
+        _pl1WasUp = _pl1Up;
     }
 
     /* ---- Down press/release tracking ---- */
-    if (pl1WasDown != 0)
+    if (_pl1WasDown != 0)
     {
-        pl1DownPress = 0;
-        if (pl1Down == 0)
-            pl1WasDown = 0;
+        _pl1DownPress = 0;
+        if (_pl1Down == 0)
+            _pl1WasDown = 0;
     }
-    if (pl1WasDown == 0)
+    if (_pl1WasDown == 0)
     {
-        pl1DownPress = pl1Down;
-        pl1WasDown = pl1Down;
+        _pl1DownPress = _pl1Down;
+        _pl1WasDown = _pl1Down;
     }
 
     /* ---- Compute compass direction ---- */
     {
         uint16_t dir;
 
-        if (pl1UpRight)
+        if (_pl1UpRight)
             dir = 1;
-        else if (pl1DownRight)
+        else if (_pl1DownRight)
             dir = 3;
-        else if (pl1DownLeft)
+        else if (_pl1DownLeft)
             dir = 5;
-        else if (pl1UpLeft)
+        else if (_pl1UpLeft)
             dir = 7;
-        else if (pl1Up)
+        else if (_pl1Up)
             dir = 0;
-        else if (pl1Right)
+        else if (_pl1Right)
             dir = 2;
-        else if (pl1Down)
+        else if (_pl1Down)
             dir = 4;
-        else if (pl1Left)
+        else if (_pl1Left)
             dir = 6;
         else
             dir = 0xFFFF;
 
-        pl1Direction = dir;
+        _pl1Direction = dir;
     }
 }
 
 /* ---- Player 2 globals (all live in SWOS2.s) ---- */
-extern uint8_t pl2Right;
-extern uint8_t pl2Left;
-extern uint8_t pl2Down;
-extern uint8_t pl2Up;
-extern uint8_t pl2Fire;
-extern uint8_t pl2UpRight;
-extern uint8_t pl2DownRight;
-extern uint8_t pl2DownLeft;
-extern uint8_t pl2UpLeft;
-extern uint8_t pl2LastFired;
-extern uint8_t pl2ShortFire;
-extern uint16_t pl2FireCounter;
-extern uint8_t pl2LeftPress;
-extern uint8_t pl2WasLeft;
-extern uint8_t pl2RightPress;
-extern uint8_t pl2WasRight;
-extern uint8_t pl2UpPress;
-extern uint8_t pl2WasUp;
-extern uint8_t pl2DownPress;
-extern uint8_t pl2WasDown;
-extern uint16_t pl2Direction;
+extern uint8_t _pl2Right;
+extern uint8_t _pl2Left;
+extern uint8_t _pl2Down;
+extern uint8_t _pl2Up;
+extern uint8_t _pl2Fire;
+extern uint8_t _pl2UpRight;
+extern uint8_t _pl2DownRight;
+extern uint8_t _pl2DownLeft;
+extern uint8_t _pl2UpLeft;
+extern uint8_t _pl2LastFired;
+extern uint8_t _pl2ShortFire;
+extern uint16_t _pl2FireCounter;
+extern uint8_t _pl2LeftPress;
+extern uint8_t _pl2WasLeft;
+extern uint8_t _pl2RightPress;
+extern uint8_t _pl2WasRight;
+extern uint8_t _pl2UpPress;
+extern uint8_t _pl2WasUp;
+extern uint8_t _pl2DownPress;
+extern uint8_t _pl2WasDown;
+extern uint16_t _pl2Direction;
 
 /* ================================================================
  * Player2StatusProc  (SWOS2.s line 5580)
@@ -242,124 +242,124 @@ void Player2StatusProc(void)
     /* ---- Read JOY0DAT and decode directions ---- */
     joy = HW_JOY0DAT;
 
-    pl2Right = (joy & (1 << 1)) ? 0xFF : 0x00;
-    pl2Left  = (joy & (1 << 9)) ? 0xFF : 0x00;
+    _pl2Right = (joy & (1 << 1)) ? 0xFF : 0x00;
+    _pl2Left  = (joy & (1 << 9)) ? 0xFF : 0x00;
 
     decoded = joy ^ (joy >> 1);
-    pl2Down = (decoded & (1 << 0)) ? 0xFF : 0x00;
-    pl2Up   = (decoded & (1 << 8)) ? 0xFF : 0x00;
+    _pl2Down = (decoded & (1 << 0)) ? 0xFF : 0x00;
+    _pl2Up   = (decoded & (1 << 8)) ? 0xFF : 0x00;
 
     /* Fire button: CIAA_PRA bit 6, active low */
-    pl2Fire = (HW_CIAA_PRA & (1 << 6)) ? 0x00 : 0xFF;
+    _pl2Fire = (HW_CIAA_PRA & (1 << 6)) ? 0x00 : 0xFF;
 
     /* ---- Compute diagonal combinations ---- */
-    pl2UpRight   = pl2Up   & pl2Right;
-    pl2DownRight = pl2Down & pl2Right;
-    pl2DownLeft  = pl2Down & pl2Left;
-    pl2UpLeft    = pl2Up   & pl2Left;
+    _pl2UpRight   = _pl2Up   & _pl2Right;
+    _pl2DownRight = _pl2Down & _pl2Right;
+    _pl2DownLeft  = _pl2Down & _pl2Left;
+    _pl2UpLeft    = _pl2Up   & _pl2Left;
 
     /* ---- Fire button press/release tracking ---- */
-    if (pl2LastFired != 0)
+    if (_pl2LastFired != 0)
     {
-        pl2ShortFire = 0;
-        if (pl2Fire == 0)
+        _pl2ShortFire = 0;
+        if (_pl2Fire == 0)
         {
-            pl2LastFired = 0;
-            pl2FireCounter = (uint16_t)(-(int16_t)pl2FireCounter);
+            _pl2LastFired = 0;
+            _pl2FireCounter = (uint16_t)(-(int16_t)_pl2FireCounter);
         }
         else
         {
-            if (pl2FireCounter != 0)
+            if (_pl2FireCounter != 0)
             {
-                pl2FireCounter--;
+                _pl2FireCounter--;
             }
         }
     }
     else
     {
-        pl2ShortFire = pl2Fire;
-        pl2LastFired = pl2Fire;
-        if (pl2Fire != 0)
+        _pl2ShortFire = _pl2Fire;
+        _pl2LastFired = _pl2Fire;
+        if (_pl2Fire != 0)
         {
-            pl2FireCounter = 0xFFFF;
+            _pl2FireCounter = 0xFFFF;
         }
     }
 
     /* ---- Left press/release tracking ---- */
-    if (pl2WasLeft != 0)
+    if (_pl2WasLeft != 0)
     {
-        pl2LeftPress = 0;
-        if (pl2Left == 0)
-            pl2WasLeft = 0;
+        _pl2LeftPress = 0;
+        if (_pl2Left == 0)
+            _pl2WasLeft = 0;
     }
-    if (pl2WasLeft == 0)
+    if (_pl2WasLeft == 0)
     {
-        pl2LeftPress = pl2Left;
-        pl2WasLeft = pl2Left;
+        _pl2LeftPress = _pl2Left;
+        _pl2WasLeft = _pl2Left;
     }
 
     /* ---- Right press/release tracking ---- */
-    if (pl2WasRight != 0)
+    if (_pl2WasRight != 0)
     {
-        pl2RightPress = 0;
-        if (pl2Right == 0)
-            pl2WasRight = 0;
+        _pl2RightPress = 0;
+        if (_pl2Right == 0)
+            _pl2WasRight = 0;
     }
-    if (pl2WasRight == 0)
+    if (_pl2WasRight == 0)
     {
-        pl2RightPress = pl2Right;
-        pl2WasRight = pl2Right;
+        _pl2RightPress = _pl2Right;
+        _pl2WasRight = _pl2Right;
     }
 
     /* ---- Up press/release tracking ---- */
-    if (pl2WasUp != 0)
+    if (_pl2WasUp != 0)
     {
-        pl2UpPress = 0;
-        if (pl2Up == 0)
-            pl2WasUp = 0;
+        _pl2UpPress = 0;
+        if (_pl2Up == 0)
+            _pl2WasUp = 0;
     }
-    if (pl2WasUp == 0)
+    if (_pl2WasUp == 0)
     {
-        pl2UpPress = pl2Up;
-        pl2WasUp = pl2Up;
+        _pl2UpPress = _pl2Up;
+        _pl2WasUp = _pl2Up;
     }
 
     /* ---- Down press/release tracking ---- */
-    if (pl2WasDown != 0)
+    if (_pl2WasDown != 0)
     {
-        pl2DownPress = 0;
-        if (pl2Down == 0)
-            pl2WasDown = 0;
+        _pl2DownPress = 0;
+        if (_pl2Down == 0)
+            _pl2WasDown = 0;
     }
-    if (pl2WasDown == 0)
+    if (_pl2WasDown == 0)
     {
-        pl2DownPress = pl2Down;
-        pl2WasDown = pl2Down;
+        _pl2DownPress = _pl2Down;
+        _pl2WasDown = _pl2Down;
     }
 
     /* ---- Compute compass direction ---- */
     {
         uint16_t dir;
 
-        if (pl2UpRight)
+        if (_pl2UpRight)
             dir = 1;
-        else if (pl2DownRight)
+        else if (_pl2DownRight)
             dir = 3;
-        else if (pl2DownLeft)
+        else if (_pl2DownLeft)
             dir = 5;
-        else if (pl2UpLeft)
+        else if (_pl2UpLeft)
             dir = 7;
-        else if (pl2Up)
+        else if (_pl2Up)
             dir = 0;
-        else if (pl2Right)
+        else if (_pl2Right)
             dir = 2;
-        else if (pl2Down)
+        else if (_pl2Down)
             dir = 4;
-        else if (pl2Left)
+        else if (_pl2Left)
             dir = 6;
         else
             dir = 0xFFFF;
 
-        pl2Direction = dir;
+        _pl2Direction = dir;
     }
 }

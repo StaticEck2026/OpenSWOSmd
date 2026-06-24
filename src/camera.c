@@ -8,11 +8,11 @@
 #include "scroll_blit.h"
 
 /* ---- External globals ---- */
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern uint16_t cameraCoordinatesValid;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern uint16_t _cameraCoordinatesValid;
 
 /* ---- External C functions ---- */
 extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
@@ -26,7 +26,7 @@ extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
 __attribute__((used, externally_visible))
 void ScrollToCurrent(void)
 {
-    cameraCoordinatesValid = 1;
+    _cameraCoordinatesValid = 1;
 #ifdef SWOS_SDL_BUILD
     /* SDL: incremental scroll blits are no-ops (see scroll_blit.c).
      * Instead, redraw the whole visible pitch from the chunky tile
@@ -61,40 +61,40 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
      * blitted — critical for replay camera panning. */
     for (;;) {
         ScrollToCurrent();
-        if (cameraX.s.i == newScreenX)
+        if (_cameraX.s.i == newScreenX)
             break;
-        if (cameraX.s.i < newScreenX) {
+        if (_cameraX.s.i < newScreenX) {
             /* Move right */
-            cameraX.s.i += 1;
-            cameraXMod320 += 1;
-            if (cameraXMod320 == 352)
-                cameraXMod320 = 0;
+            _cameraX.s.i += 1;
+            _cameraXMod320 += 1;
+            if (_cameraXMod320 == 352)
+                _cameraXMod320 = 0;
         } else {
             /* Move left */
-            cameraX.s.i -= 1;
-            cameraXMod320 -= 1;
-            if ((int16_t)cameraXMod320 < 0)
-                cameraXMod320 = 351;
+            _cameraX.s.i -= 1;
+            _cameraXMod320 -= 1;
+            if ((int16_t)_cameraXMod320 < 0)
+                _cameraXMod320 = 351;
         }
     }
 
     /* ---- Phase 2: move Y ---- */
     for (;;) {
         ScrollToCurrent();
-        if (cameraY.s.i == newScreenY)
+        if (_cameraY.s.i == newScreenY)
             break;
-        if (cameraY.s.i < newScreenY) {
+        if (_cameraY.s.i < newScreenY) {
             /* Move down */
-            cameraY.s.i += 1;
-            cameraYMod320 += 1;
-            if (cameraYMod320 == 272)
-                cameraYMod320 = 0;
+            _cameraY.s.i += 1;
+            _cameraYMod320 += 1;
+            if (_cameraYMod320 == 272)
+                _cameraYMod320 = 0;
         } else {
             /* Move up */
-            cameraY.s.i -= 1;
-            cameraYMod320 -= 1;
-            if ((int16_t)cameraYMod320 < 0)
-                cameraYMod320 = 271;
+            _cameraY.s.i -= 1;
+            _cameraYMod320 -= 1;
+            if ((int16_t)_cameraYMod320 < 0)
+                _cameraYMod320 = 271;
         }
     }
 }
@@ -117,9 +117,9 @@ void InitCameraMoveView(int16_t targetX, int16_t targetY)
     ScrollToCurrent();
 
     /* Second pass: set camera to (cameraX.s.i, 0), scroll */
-    SetCameraCoordinates(cameraX.s.i, 0);
+    SetCameraCoordinates(_cameraX.s.i, 0);
     ScrollToCurrent();
 
     /* Final: iteratively move to (cameraX.s.i, targetY) */
-    MoveView(cameraX.s.i, targetY);
+    MoveView(_cameraX.s.i, targetY);
 }

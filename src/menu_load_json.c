@@ -413,71 +413,71 @@ int MenuJson_BuildPacked(const char *j, int jl, uint8_t *out, int outcap)
 
 /* --- the 47 compiled static menus, by name (still authoritative until the
  *     round-trip is proven green and menu_data.c is retired) --- */
-extern uint8_t buyOtherPlayersMenu[];       extern uint8_t buyPlayerMenu[];             extern uint8_t careerMenu[];
-extern uint8_t careerOverMenu[];            extern uint8_t chairmanMemosMenu[];         extern uint8_t chooseTacticsMenu[];
-extern uint8_t chooseTeamsFriendlyMenu[];   extern uint8_t chooseTeamsFriendlyMenu2[];  extern uint8_t chooseTeamsMenu[];
-extern uint8_t clubBusinessMenu[];          extern uint8_t competitionStatsMenu[];      extern uint8_t competitionTopGoalScorersMenu[];
-extern uint8_t contestMenu[];               extern uint8_t continueAbortMenu[];         extern uint8_t continueMenu[];
-extern uint8_t designDiyCupMenu[];          extern uint8_t designDiyLeagueMenu[];       extern uint8_t designDiyTournamentMenu[];
-extern uint8_t diyCupMenu[];                extern uint8_t diyLeagueTournamentMenu[];   extern uint8_t editTacticsMenu[];
-extern uint8_t editTeamsMenu[];             extern uint8_t friendlyGameMenu[];          extern uint8_t gotJobOfferMenu[];
-extern uint8_t highlightsMenu[];            extern uint8_t importTacticsMenu[];         extern uint8_t jobOffersMenu[];
-extern uint8_t managementRecordMenu[];      extern uint8_t nationalTeamAddPlayerMenu[]; extern uint8_t offersMenu[];
-extern uint8_t optionsMenu[];               extern uint8_t playMatchMenu[];             extern uint8_t playerOffersMenu[];
-extern uint8_t playerTransferMenu[];        extern uint8_t selectFilesMenu[];           extern uint8_t selectNationalTeamMenu[];
-extern uint8_t selectTeamsForTacticsMenu[]; extern uint8_t selectTeamsMenu[];           extern uint8_t showPlayerMarketMenu[];
-extern uint8_t squadMenu[];                 extern uint8_t stadiumMenu[];               extern uint8_t swosMainMenu[];
-extern uint8_t thirdPartyOfferMenu[];       extern uint8_t topGoalScorersMenu[];        extern uint8_t transferMarketMenu[];
-extern uint8_t viewCompetitionsMenu[];      extern uint8_t viewSquadMenu[];
+extern uint8_t _buyOtherPlayersMenu[];       extern uint8_t _buyPlayerMenu[];             extern uint8_t _careerMenu[];
+extern uint8_t _careerOverMenu[];            extern uint8_t _chairmanMemosMenu[];         extern uint8_t _chooseTacticsMenu[];
+extern uint8_t _chooseTeamsFriendlyMenu[];   extern uint8_t _chooseTeamsFriendlyMenu2[];  extern uint8_t _chooseTeamsMenu[];
+extern uint8_t _clubBusinessMenu[];          extern uint8_t _competitionStatsMenu[];      extern uint8_t _competitionTopGoalScorersMenu[];
+extern uint8_t _contestMenu[];               extern uint8_t _continueAbortMenu[];         extern uint8_t _continueMenu[];
+extern uint8_t _designDiyCupMenu[];          extern uint8_t _designDiyLeagueMenu[];       extern uint8_t _designDiyTournamentMenu[];
+extern uint8_t _diyCupMenu[];                extern uint8_t _diyLeagueTournamentMenu[];   extern uint8_t _editTacticsMenu[];
+extern uint8_t _editTeamsMenu[];             extern uint8_t _friendlyGameMenu[];          extern uint8_t _gotJobOfferMenu[];
+extern uint8_t _highlightsMenu[];            extern uint8_t _importTacticsMenu[];         extern uint8_t _jobOffersMenu[];
+extern uint8_t _managementRecordMenu[];      extern uint8_t _nationalTeamAddPlayerMenu[]; extern uint8_t _offersMenu[];
+extern uint8_t _optionsMenu[];               extern uint8_t _playMatchMenu[];             extern uint8_t _playerOffersMenu[];
+extern uint8_t _playerTransferMenu[];        extern uint8_t _selectFilesMenu[];           extern uint8_t _selectNationalTeamMenu[];
+extern uint8_t _selectTeamsForTacticsMenu[]; extern uint8_t _selectTeamsMenu[];           extern uint8_t _showPlayerMarketMenu[];
+extern uint8_t _squadMenu[];                 extern uint8_t _stadiumMenu[];               extern uint8_t _swosMainMenu[];
+extern uint8_t _thirdPartyOfferMenu[];       extern uint8_t _topGoalScorersMenu[];        extern uint8_t _transferMarketMenu[];
+extern uint8_t _viewCompetitionsMenu[];      extern uint8_t _viewSquadMenu[];
 
 static const struct { const char *name; uint8_t *menu; } s_staticMenus[] = {
-    { "buyOtherPlayersMenu", buyOtherPlayersMenu },
-    { "buyPlayerMenu", buyPlayerMenu },
-    { "careerMenu", careerMenu },
-    { "careerOverMenu", careerOverMenu },
-    { "chairmanMemosMenu", chairmanMemosMenu },
-    { "chooseTacticsMenu", chooseTacticsMenu },
-    { "chooseTeamsFriendlyMenu", chooseTeamsFriendlyMenu },
-    { "chooseTeamsFriendlyMenu2", chooseTeamsFriendlyMenu2 },
-    { "chooseTeamsMenu", chooseTeamsMenu },
-    { "clubBusinessMenu", clubBusinessMenu },
-    { "competitionStatsMenu", competitionStatsMenu },
-    { "competitionTopGoalScorersMenu", competitionTopGoalScorersMenu },
-    { "contestMenu", contestMenu },
-    { "continueAbortMenu", continueAbortMenu },
-    { "continueMenu", continueMenu },
-    { "designDiyCupMenu", designDiyCupMenu },
-    { "designDiyLeagueMenu", designDiyLeagueMenu },
-    { "designDiyTournamentMenu", designDiyTournamentMenu },
-    { "diyCupMenu", diyCupMenu },
-    { "diyLeagueTournamentMenu", diyLeagueTournamentMenu },
-    { "editTacticsMenu", editTacticsMenu },
-    { "editTeamsMenu", editTeamsMenu },
-    { "friendlyGameMenu", friendlyGameMenu },
-    { "gotJobOfferMenu", gotJobOfferMenu },
-    { "highlightsMenu", highlightsMenu },
-    { "importTacticsMenu", importTacticsMenu },
-    { "jobOffersMenu", jobOffersMenu },
-    { "managementRecordMenu", managementRecordMenu },
-    { "nationalTeamAddPlayerMenu", nationalTeamAddPlayerMenu },
-    { "offersMenu", offersMenu },
-    { "optionsMenu", optionsMenu },
-    { "playMatchMenu", playMatchMenu },
-    { "playerOffersMenu", playerOffersMenu },
-    { "playerTransferMenu", playerTransferMenu },
-    { "selectFilesMenu", selectFilesMenu },
-    { "selectNationalTeamMenu", selectNationalTeamMenu },
-    { "selectTeamsForTacticsMenu", selectTeamsForTacticsMenu },
-    { "selectTeamsMenu", selectTeamsMenu },
-    { "showPlayerMarketMenu", showPlayerMarketMenu },
-    { "squadMenu", squadMenu },
-    { "stadiumMenu", stadiumMenu },
-    { "swosMainMenu", swosMainMenu },
-    { "thirdPartyOfferMenu", thirdPartyOfferMenu },
-    { "topGoalScorersMenu", topGoalScorersMenu },
-    { "transferMarketMenu", transferMarketMenu },
-    { "viewCompetitionsMenu", viewCompetitionsMenu },
-    { "viewSquadMenu", viewSquadMenu },
+    { "buyOtherPlayersMenu", _buyOtherPlayersMenu },
+    { "buyPlayerMenu", _buyPlayerMenu },
+    { "careerMenu", _careerMenu },
+    { "careerOverMenu", _careerOverMenu },
+    { "chairmanMemosMenu", _chairmanMemosMenu },
+    { "chooseTacticsMenu", _chooseTacticsMenu },
+    { "chooseTeamsFriendlyMenu", _chooseTeamsFriendlyMenu },
+    { "chooseTeamsFriendlyMenu2", _chooseTeamsFriendlyMenu2 },
+    { "chooseTeamsMenu", _chooseTeamsMenu },
+    { "clubBusinessMenu", _clubBusinessMenu },
+    { "competitionStatsMenu", _competitionStatsMenu },
+    { "competitionTopGoalScorersMenu", _competitionTopGoalScorersMenu },
+    { "contestMenu", _contestMenu },
+    { "continueAbortMenu", _continueAbortMenu },
+    { "continueMenu", _continueMenu },
+    { "designDiyCupMenu", _designDiyCupMenu },
+    { "designDiyLeagueMenu", _designDiyLeagueMenu },
+    { "designDiyTournamentMenu", _designDiyTournamentMenu },
+    { "diyCupMenu", _diyCupMenu },
+    { "diyLeagueTournamentMenu", _diyLeagueTournamentMenu },
+    { "editTacticsMenu", _editTacticsMenu },
+    { "editTeamsMenu", _editTeamsMenu },
+    { "friendlyGameMenu", _friendlyGameMenu },
+    { "gotJobOfferMenu", _gotJobOfferMenu },
+    { "highlightsMenu", _highlightsMenu },
+    { "importTacticsMenu", _importTacticsMenu },
+    { "jobOffersMenu", _jobOffersMenu },
+    { "managementRecordMenu", _managementRecordMenu },
+    { "nationalTeamAddPlayerMenu", _nationalTeamAddPlayerMenu },
+    { "offersMenu", _offersMenu },
+    { "optionsMenu", _optionsMenu },
+    { "playMatchMenu", _playMatchMenu },
+    { "playerOffersMenu", _playerOffersMenu },
+    { "playerTransferMenu", _playerTransferMenu },
+    { "selectFilesMenu", _selectFilesMenu },
+    { "selectNationalTeamMenu", _selectNationalTeamMenu },
+    { "selectTeamsForTacticsMenu", _selectTeamsForTacticsMenu },
+    { "selectTeamsMenu", _selectTeamsMenu },
+    { "showPlayerMarketMenu", _showPlayerMarketMenu },
+    { "squadMenu", _squadMenu },
+    { "stadiumMenu", _stadiumMenu },
+    { "swosMainMenu", _swosMainMenu },
+    { "thirdPartyOfferMenu", _thirdPartyOfferMenu },
+    { "topGoalScorersMenu", _topGoalScorersMenu },
+    { "transferMarketMenu", _transferMarketMenu },
+    { "viewCompetitionsMenu", _viewCompetitionsMenu },
+    { "viewSquadMenu", _viewSquadMenu },
 };
 #define NUM_STATIC_MENUS ((int)(sizeof s_staticMenus / sizeof s_staticMenus[0]))
 

@@ -29,16 +29,16 @@
 #include <string.h>
 
 /* ---- Game-side globals (defined in swos_globals.c) ---- */
-extern uint8_t  keyState[128];
-extern uint16_t joy0Dat;
-extern uint16_t joy1Dat;
-extern uint8_t  ciaa_pra;
+extern uint8_t  _keyState[128];
+extern uint16_t _joy0Dat;
+extern uint16_t _joy1Dat;
+extern uint8_t  _ciaa_pra;
 /* gameState transitions into the ST_STARTING_GAME (21) … ST_PENALTIES (31)
  * range while a match is on screen; everything else (frontend, season-end
  * menus, edit screens, text entry) is outside that window. Used to gate
  * the SPACE multi-role binding so SPACE during a live match falls through
  * to the Amiga highlight-capture path only, not the menu fire/skip path. */
-extern uint16_t gameState;
+extern uint16_t _gameState;
 
 /* ---- Keyboard FIFO consumed by GetKey() ----
  * The Amiga build's level-2 ISR pushes raw scan codes into keyBuffer
@@ -46,8 +46,8 @@ extern uint16_t gameState;
  * keycodeLut[] to get ASCII, and exposes that as currentKey for menu
  * input + InputTextFilterKey. On SDL we have no ISR, so we push
  * directly here from SDL_KEYDOWN. */
-extern volatile uint8_t  keyBuffer[12];
-extern volatile uint16_t keyCount;
+extern volatile uint8_t  _keyBuffer[12];
+extern volatile uint16_t _keyCount;
 
 /* ---- Amiga raw-scancode table (full set, used by both
  * keyState[] and keyBuffer FIFO). keycodeLut[] in
@@ -157,12 +157,12 @@ static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
  * (e.g. season-end menu chains, future auto-advance pauses) can bail
  * early. Independent of fire so it doesn't interfere with menu select. */
 static int s_kbd_skip;
-volatile uint16_t pauseSkipRequested;
+volatile uint16_t _pauseSkipRequested;
 /* Set during the season-end / catch-up transition (_Career_AdvanceToNextSeason_
  * UpdateCompetitions). While set there is no live interactive match on screen —
  * used to let SPACE drive the season-skip even though gameState can be left
  * lingering in the match-state range (21..31) after the player's last match. */
-extern uint16_t seasonUpdateInProgress;
+extern uint16_t _seasonUpdateInProgress;
 
 /* Up to two game controllers, mapped to players 1 and 2 respectively.
  * Pad 0 is shared with the keyboard for player 1; pad 1 drives player 2
@@ -220,10 +220,10 @@ static int pad_find_slot_for_instance(SDL_JoystickID id)
 
 int InputSDL_Init(void)
 {
-    memset(keyState, 0, sizeof(keyState));
-    joy0Dat = 0;
-    joy1Dat = 0;
-    ciaa_pra = 0xFF;                  /* both fire bits set (idle) */
+    memset(_keyState, 0, sizeof(_keyState));
+    _joy0Dat = 0;
+    _joy1Dat = 0;
+    _ciaa_pra = 0xFF;                  /* both fire bits set (idle) */
 
     /* Load extra controller mappings if the user dropped a
      * gamecontrollerdb.txt next to the binary. Without a matching
@@ -313,22 +313,22 @@ void InputSDL_HandleEvent(const SDL_Event *e)
             /* Don't record keyState, don't push to keyBuffer, don't
              * trigger fire. Alt is purely a modifier on this build. */
         } else if (a >= 0 && !is_movement_arrow) {
-            keyState[a] = 1;
+            _keyState[a] = 1;
             /* Push into the FIFO consumed by GetKey() — but only on
              * the initial press (SDL re-fires KEYDOWN for OS key-repeat,
              * and the Amiga ISR uses its own keyDelay/repeat logic that
              * we don't currently emulate; ignoring repeats prevents
              * runaway double-inserts in InputText). Drop the event when
              * the buffer is full. */
-            if (e->key.repeat == 0 && keyCount < (sizeof(keyBuffer) - 3)) {
-                keyBuffer[keyCount] = (uint8_t)a;
-                keyCount++;
+            if (e->key.repeat == 0 && _keyCount < (sizeof(_keyBuffer) - 3)) {
+                _keyBuffer[_keyCount] = (uint8_t)a;
+                _keyCount++;
             }
         } else if (a >= 0) {
             /* Arrow keys: still record key-down in keyState (some game
              * code polls keyState[AKEY_UP] etc.) but skip the keyBuffer
              * FIFO so GetKey doesn't see them as menu/hotkey input. */
-            keyState[a] = 1;
+            _keyState[a] = 1;
         }
         switch (e->key.keysym.sym) {
         case SDLK_UP:    s_kbd_up    = 1; break;
@@ -361,9 +361,9 @@ void InputSDL_HandleEvent(const SDL_Event *e)
              * playback. That playback is exactly when the user wants to
              * press SPACE to skip — and there is no live match then — so
              * `seasonUpdateInProgress` overrides the gameState gate. */
-            if (seasonUpdateInProgress != 0 ||
-                !(gameState >= 21 /*ST_STARTING_GAME*/ &&
-                  gameState <= 31 /*ST_PENALTIES*/)) {
+            if (_seasonUpdateInProgress != 0 ||
+                !(_gameState >= 21 /*ST_STARTING_GAME*/ &&
+                  _gameState <= 31 /*ST_PENALTIES*/)) {
                 s_kbd_skip = 1;
             }
             break;
@@ -374,7 +374,7 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int a = sdl_to_amiga(e->key.keysym.sym);
         int is_alt = (e->key.keysym.sym == SDLK_LALT ||
                       e->key.keysym.sym == SDLK_RALT);
-        if (!is_alt && a >= 0) keyState[a] = 0;
+        if (!is_alt && a >= 0) _keyState[a] = 0;
         switch (e->key.keysym.sym) {
         case SDLK_UP:    s_kbd_up    = 0; break;
         case SDLK_DOWN:  s_kbd_down  = 0; break;
@@ -429,8 +429,8 @@ void InputSDL_HandleEvent(const SDL_Event *e)
  * button index 1 on raw joysticks) is pressed — used for the SDL-only
  * "skip auto-advance pause" feature, independent of fire. */
 static void read_pad_state(int slot,
-                           int *up, int *down, int *left, int *right,
-                           int *fire, int *skip)
+                           int *_up, int *_down, int *left, int *right,
+                           int *_fire, int *skip)
 {
     SDL_GameController *pad = s_pads[slot];
     SDL_Joystick *raw = s_raw_pads[slot];
@@ -438,13 +438,13 @@ static void read_pad_state(int slot,
     if (pad) {
         Sint16 ax = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX);
         Sint16 ay = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTY);
-        if (ay < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *up    = 1;
-        if (ay >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *down  = 1;
+        if (ay < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_UP))    *_up    = 1;
+        if (ay >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_DOWN))  *_down  = 1;
         if (ax < -8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_LEFT))  *left  = 1;
         if (ax >  8000 || SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_DPAD_RIGHT)) *right = 1;
         if (SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_A) ||
             SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
-            *fire = 1;
+            *_fire = 1;
         if (skip && SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_B))
             *skip = 1;
         return;
@@ -466,19 +466,19 @@ static void read_pad_state(int slot,
             Sint16 ay = SDL_JoystickGetAxis(raw, 1);
             if (ax < -8000) *left  = 1;
             if (ax >  8000) *right = 1;
-            if (ay < -8000) *up    = 1;
-            if (ay >  8000) *down  = 1;
+            if (ay < -8000) *_up    = 1;
+            if (ay >  8000) *_down  = 1;
         }
         if (nhats >= 1) {
             Uint8 h = SDL_JoystickGetHat(raw, 0);
-            if (h & SDL_HAT_UP)    *up    = 1;
-            if (h & SDL_HAT_DOWN)  *down  = 1;
+            if (h & SDL_HAT_UP)    *_up    = 1;
+            if (h & SDL_HAT_DOWN)  *_down  = 1;
             if (h & SDL_HAT_LEFT)  *left  = 1;
             if (h & SDL_HAT_RIGHT) *right = 1;
         }
         for (int b = 0; b < nbtns; ++b) {
             if (SDL_JoystickGetButton(raw, b)) {
-                *fire = 1;
+                *_fire = 1;
                 break;
             }
         }
@@ -540,12 +540,12 @@ static uint16_t encode_joydat(int up, int down, int left, int right)
  * fire/select button down. */
 void InputSDL_ClearKeyState(void)
 {
-    memset(keyState, 0, sizeof(keyState));
-    memset((void *)keyBuffer, 0, sizeof(keyBuffer));
-    keyCount = 0;
+    memset(_keyState, 0, sizeof(_keyState));
+    memset((void *)_keyBuffer, 0, sizeof(_keyBuffer));
+    _keyCount = 0;
     s_kbd_up = s_kbd_down = s_kbd_left = s_kbd_right = s_kbd_fire = 0;
     s_kbd_skip = 0;
-    pauseSkipRequested = 0;
+    _pauseSkipRequested = 0;
     /* joy0Dat / joy1Dat / ciaa_pra are recomputed each frame by
      * InputSDL_PostFrame from the cleared s_kbd_* + read_pad_state, so
      * they don't need explicit clearing here. */
@@ -565,21 +565,21 @@ void InputSDL_PostFrame(void)
     int p2_up = 0, p2_down = 0, p2_left = 0, p2_right = 0, p2_fire = 0;
     read_pad_state(1, &p2_up, &p2_down, &p2_left, &p2_right, &p2_fire, &skip);
 
-    pauseSkipRequested = (uint16_t)(skip ? 1 : 0);
+    _pauseSkipRequested = (uint16_t)(skip ? 1 : 0);
 
     /* SWOS reads P1 from JOY1DAT (Amiga Port 1) and P2 from JOY0DAT
      * (Port 0). The port numbering is reversed from the player number —
      * see input.c Player1StatusProc/Player2StatusProc. */
-    joy1Dat = encode_joydat(p1_up, p1_down, p1_left, p1_right);
-    joy0Dat = encode_joydat(p2_up, p2_down, p2_left, p2_right);
+    _joy1Dat = encode_joydat(p1_up, p1_down, p1_left, p1_right);
+    _joy0Dat = encode_joydat(p2_up, p2_down, p2_left, p2_right);
 
     /* CIAA Port A fire bits (active low):
      *   bit 7 = Port 0 fire = Player 1 fire
      *   bit 6 = Port 1 fire = Player 2 fire
      * Clear bit to signal press; set to signal release. Other bits
      * stay at their default (1). */
-    if (p1_fire) ciaa_pra &= (uint8_t)~(1u << 7);
-    else         ciaa_pra |= (uint8_t)(1u << 7);
-    if (p2_fire) ciaa_pra &= (uint8_t)~(1u << 6);
-    else         ciaa_pra |= (uint8_t)(1u << 6);
+    if (p1_fire) _ciaa_pra &= (uint8_t)~(1u << 7);
+    else         _ciaa_pra |= (uint8_t)(1u << 7);
+    if (p2_fire) _ciaa_pra &= (uint8_t)~(1u << 6);
+    else         _ciaa_pra |= (uint8_t)(1u << 6);
 }

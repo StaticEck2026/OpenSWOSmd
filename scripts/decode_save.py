@@ -14,12 +14,12 @@ Usage:
     scripts/decode_save.py --standings <save-file> ...  # name-resolved league/
                                                         # group tables only
 
-The --standings view resolves each row's stored team identity (-1 careerTeam,
+The --standings view resolves each row's stored team identity (-1 _careerTeam,
 else selected_teams index) to a team name and prints the league/group table the
 way the in-game screen shows it — for eyeballing an SDL save against an Amiga
 (big-endian) load during cross-target verification.
 
-Career (.CAR) saves carry a `comp_slots` object with up to five named slots
+Career (.CAR) saves carry a `comp_slots` object with _up to five named slots
 (primary/secondary/tertiary/diy/euro). Preset/DIY (.PRE/.DIY) saves carry a
 single top-level `comp_slot`. Both are handled.
 """
@@ -166,7 +166,7 @@ def print_stage(doc):
 
 def build_name_resolver(doc):
     """Return resolve(identity) -> team-name string, mirroring diy_resolve_team:
-    identity -1 == careerTeam, >= 0 == index into the selected_teams array.
+    identity -1 == _careerTeam, >= 0 == index into the selected_teams array.
     This is what turns a standings row's stored team identity into the name the
     Amiga league/group screen prints, so the two can be eyeballed side by side."""
     sel = doc.get("selected_teams")
@@ -210,7 +210,7 @@ def _print_table(title, rows, resolve, id_keys, note="", sort=False):
     Saved rows are in storage (alphabetical/entry) order; the in-game league
     screen sorts by points > goal-diff > goals-for > name (see
     DIY_SortLeagueTableByStandings). sort=True mirrors that so a single-table
-    league lines up row-for-row with the Amiga screen. Group comps keep storage
+    league lines _up row-for-row with the Amiga screen. Group comps keep storage
     order (a global sort across multiple groups would be misleading) — compare
     those by team name."""
     decorated = []
@@ -322,7 +322,7 @@ def _team_label(entry):
 
 def _count_populated(lst):
     """Count entries with any truthy scalar field — a rough 'in use' count for
-    the fixed-size tables (offers/market/reserves) that pad with empty records."""
+    the fixed-_size tables (offers/market/reserves) that pad with empty records."""
     if not isinstance(lst, list):
         return 0
     n = 0

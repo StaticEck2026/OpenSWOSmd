@@ -8,15 +8,15 @@
 #include "game_types.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t kRandomTable[];        /* 257-byte lookup table */
-extern uint8_t seed;                  /* primary PRNG seed/counter (in code section) */
-extern uint8_t randXorIndex;          /* primary XOR key index (adjacent to seed) */
-extern uint8_t randXorKey;            /* primary XOR key */
-extern uint8_t seed2;                 /* secondary PRNG seed/counter (BSS) */
-extern uint8_t randXorIndex2;         /* secondary XOR key index (BSS) */
-extern uint8_t randXorKey2;           /* secondary XOR key (BSS) */
-extern uint8_t *savedRandStatePtr;    /* pointer into savedRandState buffer */
-extern uint16_t panicReasonCode;
+extern uint8_t _kRandomTable[];        /* 257-byte lookup table */
+extern uint8_t _seed;                  /* primary PRNG seed/counter (in code section) */
+extern uint8_t _randXorIndex;          /* primary XOR key index (adjacent to seed) */
+extern uint8_t _randXorKey;            /* primary XOR key */
+extern uint8_t _seed2;                 /* secondary PRNG seed/counter (BSS) */
+extern uint8_t _randXorIndex2;         /* secondary XOR key index (BSS) */
+extern uint8_t _randXorKey2;           /* secondary XOR key (BSS) */
+extern uint8_t *_savedRandStatePtr;    /* pointer into savedRandState buffer */
+extern uint16_t _panicReasonCode;
 extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 /* ================================================================
@@ -28,16 +28,16 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 __attribute__((used, externally_visible))
 uint16_t Rand(void)
 {
-    uint16_t d0 = seed & 0xFFu;
+    uint16_t d0 = _seed & 0xFFu;
 
     if (d0 == 0)
     {
-        randXorIndex++;
-        randXorKey = kRandomTable[randXorIndex & 0xFF];
+        _randXorIndex++;
+        _randXorKey = _kRandomTable[_randXorIndex & 0xFF];
     }
 
-    d0 = (uint16_t)((kRandomTable[d0] ^ randXorKey) & 0xFFu);
-    seed++;
+    d0 = (uint16_t)((_kRandomTable[d0] ^ _randXorKey) & 0xFFu);
+    _seed++;
     return d0;
 }
 
@@ -50,16 +50,16 @@ uint16_t Rand(void)
 __attribute__((used, externally_visible))
 uint16_t Rand2(void)
 {
-    uint16_t d0 = seed2 & 0xFFu;
+    uint16_t d0 = _seed2 & 0xFFu;
 
     if (d0 == 0)
     {
-        randXorIndex2++;
-        randXorKey2 = kRandomTable[randXorIndex2 & 0xFF];
+        _randXorIndex2++;
+        _randXorKey2 = _kRandomTable[_randXorIndex2 & 0xFF];
     }
 
-    d0 = (uint16_t)((kRandomTable[d0] ^ randXorKey2) & 0xFFu);
-    seed2++;
+    d0 = (uint16_t)((_kRandomTable[d0] ^ _randXorKey2) & 0xFFu);
+    _seed2++;
     return d0;
 }
 
@@ -84,26 +84,26 @@ uint16_t GetRandomWord(void)
  * randXorKey2) onto the savedRandState stack-style buffer.
  * Panics if the buffer overflows into kRandomTable.
  * ================================================================ */
-extern uint8_t savedRandState[];
+extern uint8_t _savedRandState[];
 
 __attribute__((used, externally_visible))
 void SaveRand2State(void)
 {
-    uint8_t *ptr = savedRandStatePtr;
+    uint8_t *ptr = _savedRandStatePtr;
 
-    *ptr++ = seed2;
-    *ptr++ = randXorIndex2;
-    *ptr++ = randXorKey2;
-    savedRandStatePtr = ptr;
+    *ptr++ = _seed2;
+    *ptr++ = _randXorIndex2;
+    *ptr++ = _randXorKey2;
+    _savedRandStatePtr = ptr;
 
     /* Original asm compared against kRandomTable because on the Amiga
      * savedRandState and kRandomTable are adjacent in the BSS — walking
      * past the 15-byte save buffer would land in the RNG table and the
      * check catches it. On SDL they're in unrelated linker locations,
      * so compare against the explicit end of savedRandState. */
-    if (ptr >= savedRandState + 15)
+    if (ptr >= _savedRandState + 15)
     {
-        panicReasonCode = 0x9793;
+        _panicReasonCode = 0x9793;
         PanicHaltLoop();
     }
 }
@@ -117,15 +117,15 @@ void SaveRand2State(void)
 __attribute__((used, externally_visible))
 void RestoreRand2State(void)
 {
-    uint8_t *ptr = savedRandStatePtr;
+    uint8_t *ptr = _savedRandStatePtr;
 
     ptr--;
-    randXorKey2 = *ptr;
+    _randXorKey2 = *ptr;
     ptr--;
-    randXorIndex2 = *ptr;
+    _randXorIndex2 = *ptr;
     ptr--;
-    seed2 = *ptr;
-    savedRandStatePtr = ptr;
+    _seed2 = *ptr;
+    _savedRandStatePtr = ptr;
 }
 
 /* ================================================================

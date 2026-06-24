@@ -12,14 +12,14 @@
 typedef signed short int16_t;
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint16_t panicReasonCode;
+extern uint16_t _panicReasonCode;
 extern uint32_t panicRegDumpBlock[];    /* 15 longs (d0-d7/a0-a6), written by asm stub */
-extern uint16_t paletteIndex;
-extern uint8_t bigCharsTable[];         /* CharTable font data */
-extern volatile uint8_t pl1Fire;
-extern volatile int16_t pl1Direction;
-extern volatile uint8_t pl2Fire;
-extern volatile int16_t pl2Direction;
+extern uint16_t _paletteIndex;
+extern uint8_t _bigCharsTable[];         /* CharTable font data */
+extern volatile uint8_t _pl1Fire;
+extern volatile int16_t _pl1Direction;
+extern volatile uint8_t _pl2Fire;
+extern volatile int16_t _pl2Direction;
 
 /* ---- External C functions ---- */
 extern void FadeOutToBlack(void);
@@ -79,13 +79,13 @@ void PanicHaltLoop(void)
      * The Amiga build is freestanding (no stdio) and wants the original
      * fade-and-spin-with-hex-code behaviour below, so this is gated out. */
     fprintf(stderr, "[PANIC] reasonCode=0x%04X (game halted, screen will fade to black)\n",
-            panicReasonCode);
+            _panicReasonCode);
     fflush(stderr);
     __builtin_trap();
 #endif
 
     /* Convert panic code to hex string → panicOutBuf equivalent */
-    uint8_t *hexStr = panicLookupMessagePtr(panicReasonCode);
+    uint8_t *hexStr = panicLookupMessagePtr(_panicReasonCode);
 
     /* The asm version uses PrintFormatted with format "%a" and a2 = hexStr.
        "%a" just copies the a2 string, so we can copy directly. */
@@ -102,25 +102,25 @@ void PanicHaltLoop(void)
     /* Wait for both joystick fire buttons pressed with no directional input */
     for (;;) {
         Player1StatusProc();
-        if (pl1Fire == 0)
+        if (_pl1Fire == 0)
             continue;
-        if (pl1Direction != 0)
+        if (_pl1Direction != 0)
             continue;
         Player2StatusProc();
-        if (pl2Fire == 0)
+        if (_pl2Fire == 0)
             continue;
-        if (pl2Direction != 0)
+        if (_pl2Direction != 0)
             continue;
         break;
     }
 
     /* Draw the panic hex code centered on screen */
     /* d1=0x98 (x), d2=0xE1 (y), d3=0x0F (color=15) */
-    DrawMenuTextCentered(0x98, 0xE1, 0x0F, panicOutBuf, bigCharsTable);
+    DrawMenuTextCentered(0x98, 0xE1, 0x0F, panicOutBuf, _bigCharsTable);
 
     /* Wait for vsync and fade in */
     WaitForVSync();
-    paletteIndex = 4;
+    _paletteIndex = 4;
     FadeIn();
 
     /* Infinite loop — system is halted */

@@ -619,14 +619,14 @@ typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
  * over the historical `(TeamFileEx *)&selTeamsPtr` cast (STRUCT_CONSOLIDATE /
  * SELECTED_TEAMS_UNTANGLE phase 3). The raw `(uint8_t*)&selTeamsPtr + offset`
  * identity-resolve sites stay as-is (teamSelOffset is a byte-offset identity). */
-extern TeamFileEx selectedTeams[];
+extern TeamFileEx _selectedTeams[];
 
 /* The careerTeam and currentTeam buffers are each a TeamFileEx (16 active
  * players) immediately followed by 16 reserve PlayerFile entries = 1292 bytes.
  * Use this for "is this player pointer inside the career/current team buffer?"
  * range checks (e.g. GetDisplayedPlayerValue) instead of bounding on the next
  * BSS symbol — the latter is a fragile adjacency that breaks once those
- * neighbours (playerPositions, careerNumPlayers) are lifted out of the overlay.
+ * neighbours (_playerPositions, careerNumPlayers) are lifted out of the overlay.
  * See docs/CAREERTEAM_STEP4_REWORK.md. */
 #define CAREER_TEAM_BUF_SIZE (sizeof(TeamFileEx) + 16 * sizeof(PlayerFile))
 
@@ -1260,7 +1260,7 @@ typedef struct __attribute__((packed)) EuroCupQualSeedBucketBlock {
     uint8_t bucket22Full[23];
 } EuroCupQualSeedBucketBlock;
 typedef char _eurocupseedbucket_size_check[(sizeof(EuroCupQualSeedBucketBlock) == 78) ? 1 : -1];
-extern EuroCupQualSeedBucketBlock euroCupQualSeedBucketBlock;
+extern EuroCupQualSeedBucketBlock _euroCupQualSeedBucketBlock;
 
 /* ==================================================================
  * NationalTeamRecord — 6 bytes, pack(1)

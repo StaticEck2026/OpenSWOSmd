@@ -107,7 +107,7 @@ void EditTacticsCommon(MenuEntry *cur);
 void EditTacticsPlayerNamesCommon(MenuEntry *cur);
 
 /* --- Chunk 213: EditTactics, ChooseTeamForEditTactics, AfterDraw, Highlighting --- */
-TeamFileEx *ChooseTeamForEditTactics(uint8_t *menuTitle, uint16_t *teamNumbers,
+TeamFileEx *ChooseTeamForEditTactics(uint8_t *_menuTitle, uint16_t *teamNumbers,
                                       uint16_t numTeams);
 void EditTactics(void);
 void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cur);

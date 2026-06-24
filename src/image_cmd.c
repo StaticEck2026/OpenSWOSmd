@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-int g_debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
+int _g_debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
 __attribute__((constructor))
 static void unbuf_stderr(void) { setbuf(stderr, NULL); }
 #endif
@@ -43,19 +43,19 @@ static void unbuf_stderr(void) { setbuf(stderr, NULL); }
  * imageStreamCursor, frontbufferBasePtr, spriteGraphicsPtr are pointers stored
  * as uint32_t in asm. We declare them matching other C files and cast in use.
  */
-extern uint8_t *imageStreamCursor;           /* matches typed storage in swos_data_typed_stubs.c */
-extern uint8_t frontbufferMaskBuffer[];
-extern volatile uintptr_t frontbufferBasePtr;         /* actually uint8_t*, match display.c */
-extern uint16_t panicReasonCode;
-extern uint8_t *spriteGraphicsPtr;          /* actually uint32_t*[], match game_utils.c */
-extern int16_t currentSpriteIndex;
-extern volatile uint16_t playGame;
-extern volatile uint16_t playHighlightFlag;
-extern uint16_t useIndividualPlayerSkinColor;
-extern uint32_t imageStreamBytesLeft;
-extern uint8_t menuInsBank[];
+extern uint8_t *_imageStreamCursor;           /* matches typed storage in swos_data_typed_stubs.c */
+extern uint8_t _frontbufferMaskBuffer[];
+extern volatile uintptr_t _frontbufferBasePtr;         /* actually uint8_t*, match display.c */
+extern uint16_t _panicReasonCode;
+extern uint8_t *_spriteGraphicsPtr;          /* actually uint32_t*[], match game_utils.c */
+extern int16_t _currentSpriteIndex;
+extern volatile uint16_t _playGame;
+extern volatile uint16_t _playHighlightFlag;
+extern uint16_t _useIndividualPlayerSkinColor;
+extern uint32_t _imageStreamBytesLeft;
+extern uint8_t _menuInsBank[];
 #ifdef SWOS_SDL_BUILD
-extern uint8_t rawAssetLoadBuffer[];
+extern uint8_t _rawAssetLoadBuffer[];
 #endif
 
 /* ---- External functions ---- */
@@ -98,12 +98,12 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
     /* Panic if mask selector is zero */
     if (maskSel == 0) {
-        panicReasonCode = 0x00C6;
+        _panicReasonCode = 0x00C6;
         PanicHaltLoop();
     }
 
     /* ---- Sprite index filtering (game mode only) ---- */
-    if (playGame != 0 && useIndividualPlayerSkinColor == 0) {
+    if (_playGame != 0 && _useIndividualPlayerSkinColor == 0) {
         if (spriteIndex >= 0x148 && spriteIndex <= 0x1AC) return;
         if (spriteIndex >= 0x1AD && spriteIndex <= 0x211) return;
         if (spriteIndex >= 0x277 && spriteIndex <= 0x2DB) return;
@@ -113,12 +113,12 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     }
 
     /* ---- Write sprite table entry pointer ---- */
-    headerBase = (SpriteGraphics *)imageStreamCursor;
-    ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex] = headerBase;
+    headerBase = (SpriteGraphics *)_imageStreamCursor;
+    ((SpriteGraphics **)_spriteGraphicsPtr)[spriteIndex] = headerBase;
 #ifdef SWOS_SDL_BUILD
     {
-        extern int g_debug_sprite_load;
-        if (g_debug_sprite_load) {
+        extern int _g_debug_sprite_load;
+        if (_g_debug_sprite_load) {
             fprintf(stderr, "[sprite] extract idx=0x%03X w=%u h=%u at 0x%08x src=%s\n",
                     spriteIndex, width, height, (unsigned)(uintptr_t)headerBase,
                     src == (uint8_t *)0 ? "CHECKERBOARD" : "buf");
@@ -128,7 +128,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
     /* ---- Write SpriteGraphics header ---- */
     headerBase->ordinal       = (int16_t)spriteIndex;
-    currentSpriteIndex        = (int16_t)spriteIndex;
+    _currentSpriteIndex        = (int16_t)spriteIndex;
     headerBase->centerX       = dstX;
     headerBase->centerY       = dstY;
     headerBase->pixWidth      = (int16_t)width;
@@ -327,7 +327,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
 update_cursor:
     /* ---- Update stream cursor and check bounds ---- */
-    imageStreamCursor = pixelPtr;
+    _imageStreamCursor = pixelPtr;
 
 #ifdef SWOS_SDL_BUILD
     /* The Amiga check depended on `menuInsBank` living immediately
@@ -337,7 +337,7 @@ update_cursor:
      * the comparison nonsensical (menuInsBank could be LOWER than
      * imageCmdWorkBuf). We skip the boundary check; run-away writes
      * will be caught by normal segmentation faults instead. */
-    imageStreamBytesLeft = 0x40000;
+    _imageStreamBytesLeft = 0x40000;
 #else
     if (playGame == 0 && playHighlightFlag == 0) {
         /* Menu mode: check against menuInsBank boundary */
@@ -385,12 +385,12 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
      * `rawAssetLoadBuffer` so `frontbufferMaskBuffer` can remain in
      * chunky format. All subsequent blitDispatch calls read from the
      * staging buffer. */
-    uint8_t *const imageSrcBuf = rawAssetLoadBuffer;
+    uint8_t *const imageSrcBuf = _rawAssetLoadBuffer;
 #else
     uint8_t *const imageSrcBuf = frontbufferMaskBuffer;
 #endif
 
-    imageStreamCursor = workBuffer;
+    _imageStreamCursor = workBuffer;
 
     for (;;) {
         opcode = *(const uint16_t *)a0;
@@ -410,13 +410,13 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 #if UINTPTR_MAX == 0xFFFFFFFFu
             const uint8_t *filename = *(const uint8_t *const *)a0;
 #else
-            extern const void *imageScriptPtrTable[];
+            extern const void *_imageScriptPtrTable[];
             uint32_t idx = (uint32_t)a0[0] | ((uint32_t)a0[1] << 8) |
                            ((uint32_t)a0[2] << 16) | ((uint32_t)a0[3] << 24);
-            const uint8_t *filename = (const uint8_t *)imageScriptPtrTable[idx];
+            const uint8_t *filename = (const uint8_t *)_imageScriptPtrTable[idx];
 #endif
 #ifdef SWOS_SDL_BUILD
-            if (g_debug_sprite_load)
+            if (_g_debug_sprite_load)
                 fprintf(stderr, "[sprite] LOAD filename=%s\n",
                         filename ? (const char *)filename : "(null)");
 #endif
@@ -426,7 +426,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
              * `frontbufferMaskBuffer` isn't clobbered between sprite
              * extractions. */
 #ifdef SWOS_SDL_BUILD
-            while (LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0) != 0)
                 ;
 #else
             while (LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
@@ -449,15 +449,15 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             const uint8_t *ptr = *(const uint8_t *const *)a0;
             const uint8_t *filename = *(const uint8_t *const *)ptr;
 #else
-            extern const void *imageScriptPtrTable[];
+            extern const void *_imageScriptPtrTable[];
             uint32_t idx = (uint32_t)a0[0] | ((uint32_t)a0[1] << 8) |
                            ((uint32_t)a0[2] << 16) | ((uint32_t)a0[3] << 24);
-            const uint8_t *ptr = (const uint8_t *)imageScriptPtrTable[idx];
+            const uint8_t *ptr = (const uint8_t *)_imageScriptPtrTable[idx];
             const uint8_t *filename = *(const uint8_t *const *)ptr;
 #endif
 
 #ifdef SWOS_SDL_BUILD
-            while (LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0) != 0)
                 ;
 #else
             while (LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
@@ -613,7 +613,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
         }
 
         /* ---- Unknown opcode ---- */
-        panicReasonCode = 0x0378;
+        _panicReasonCode = 0x0378;
         PanicHaltLoop();
 
         /* ---- Shared dispatch entry points (using goto) ---- */

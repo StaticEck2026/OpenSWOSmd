@@ -137,13 +137,13 @@ def emit_career(rec):
     for c in rec["contests"]:
         comp, copy = c["competition"], c["competition_copy"]
         if not comp:                                  # sentinel terminator: InitCareer's
-            # careerContests copy loop stops on competition == 0xFFFFFFFF, NOT 0 — emitting
+            # _careerContests copy loop stops on competition == 0xFFFFFFFF, NOT 0 — emitting
             # { 0, 0, 0 } here makes it walk off the end (SIGSEGV starting a career).
             rows.append("    { (Competition *)0xFFFFFFFFu, (Competition *)0, 0 },  /* sentinel */")
         else:
             rows.append("    { (Competition *)&%s, (Competition *)&%s, sizeof(%s) }," %
                         (comp, copy if copy else "0", comp))
-    return "CompetitionCareer careerContests[35] = {\n" + "\n".join(rows) + "\n};"
+    return "CompetitionCareer _careerContests[35] = {\n" + "\n".join(rows) + "\n};"
 
 
 def emit_country_table(c):
@@ -156,7 +156,7 @@ def emit_country_table(c):
 
 
 def emit_comp_index(countries):
-    """void *competitionsTable[256] = { [n] = table, ... }. Array tables (normal countries)
+    """void *_competitionsTable[256] = { [n] = table, ... }. Array tables (normal countries)
     decay to a pointer; QualifyingGroup 'tables' (customs/regions/quals, no leagues) need &."""
     lines = []
     for c in sorted(countries, key=lambda c: c["number"]):
@@ -164,7 +164,7 @@ def emit_comp_index(countries):
             continue
         amp = "" if c.get("leagues") else "&"
         lines.append("    [%d] = %s%s," % (c["number"], amp, c["table"]))
-    return "void *competitionsTable[256] = {\n" + "\n".join(lines) + "\n};"
+    return "void *_competitionsTable[256] = {\n" + "\n".join(lines) + "\n};"
 
 
 def splice_country(src_text, countries):
@@ -178,7 +178,7 @@ def splice_country(src_text, countries):
         if not k:
             print("  WARN: country table %s not found" % c["table"])
         edits += k
-    src_text, ki = re.subn(r'void\s*\*\s*competitionsTable\s*\[\d+\]\s*=\s*\{[^}]*\};',
+    src_text, ki = re.subn(r'void\s*\*\s*_competitionsTable\s*\[\d+\]\s*=\s*\{[^}]*\};',
                            lambda m: emit_comp_index(countries), src_text)
     return src_text, edits + ki
 
@@ -225,7 +225,7 @@ def main():
     playoffs = _load("playoffs.json")["playoffs"]
     qualifying = _load("qualifying.json")["groups"]
     league_blocks = _load("league_blocks.json")["groups"]
-    career_rec = {"id": "careerContests", "contests": _load("career.json")["contests"]}
+    career_rec = {"id": "_careerContests", "contests": _load("career.json")["contests"]}
     src_text = open(exp.SRC, encoding="latin1").read()
 
     spliced, n = splice(src_text, [

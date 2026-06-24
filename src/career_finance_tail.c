@@ -76,7 +76,7 @@ _Static_assert(offsetof(CareerFinanceTail, additionalInvestments)         == 180
 _Static_assert(offsetof(CareerFinanceTail, teamValueDivisor)              == 186, "ft layout");
 _Static_assert(offsetof(CareerFinanceTail, expectedLeagueRankIndex)       == 188, "ft layout");
 
-extern CareerFinanceTail careerFinanceTail;
+extern CareerFinanceTail _careerFinanceTail;
 
 __asm__(
 #if defined(__APPLE__)
@@ -85,39 +85,39 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "careerFinanceTail\n"
-    _ASM_PFX "careerFinanceTail:\n"
-    ".globl " _ASM_PFX "financeTotalsNeedResetFlag\n"
-    _ASM_PFX "financeTotalsNeedResetFlag:\n"
+    ".globl " _ASM_PFX "_careerFinanceTail\n"
+    _ASM_PFX "_careerFinanceTail:\n"
+    ".globl " _ASM_PFX "_financeTotalsNeedResetFlag\n"
+    _ASM_PFX "_financeTotalsNeedResetFlag:\n"
     ".skip 2\n"
     ".skip 4\n"   /* BSS_01_164A14 unnamed hole */
-    ".globl " _ASM_PFX "weeklyRunningCosts\n"
-    _ASM_PFX "weeklyRunningCosts:\n"
+    ".globl " _ASM_PFX "_weeklyRunningCosts\n"
+    _ASM_PFX "_weeklyRunningCosts:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "weeklyPlayerWages\n"
-    _ASM_PFX "weeklyPlayerWages:\n"
+    ".globl " _ASM_PFX "_weeklyPlayerWages\n"
+    _ASM_PFX "_weeklyPlayerWages:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "totalTeamValue\n"
-    _ASM_PFX "totalTeamValue:\n"
+    ".globl " _ASM_PFX "_totalTeamValue\n"
+    _ASM_PFX "_totalTeamValue:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "weeklyWageByPlayerIndex\n"
-    _ASM_PFX "weeklyWageByPlayerIndex:\n"
+    ".globl " _ASM_PFX "_weeklyWageByPlayerIndex\n"
+    _ASM_PFX "_weeklyWageByPlayerIndex:\n"
     ".skip 128\n"
-    ".globl " _ASM_PFX "playerFormModifiers\n"
-    _ASM_PFX "playerFormModifiers:\n"
+    ".globl " _ASM_PFX "_playerFormModifiers\n"
+    _ASM_PFX "_playerFormModifiers:\n"
     ".skip 32\n"
-    ".globl " _ASM_PFX "sensisoftPlcSponsorshipFactor\n"
-    _ASM_PFX "sensisoftPlcSponsorshipFactor:\n"
+    ".globl " _ASM_PFX "_sensisoftPlcSponsorshipFactor\n"
+    _ASM_PFX "_sensisoftPlcSponsorshipFactor:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "additionalInvestments\n"
-    _ASM_PFX "additionalInvestments:\n"
+    ".globl " _ASM_PFX "_additionalInvestments\n"
+    _ASM_PFX "_additionalInvestments:\n"
     ".skip 2\n"
     ".skip 4\n"   /* BSS_01_164AC8 unnamed hole */
-    ".globl " _ASM_PFX "teamValueDivisor\n"
-    _ASM_PFX "teamValueDivisor:\n"
+    ".globl " _ASM_PFX "_teamValueDivisor\n"
+    _ASM_PFX "_teamValueDivisor:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "expectedLeagueRankIndex\n"
-    _ASM_PFX "expectedLeagueRankIndex:\n"
+    ".globl " _ASM_PFX "_expectedLeagueRankIndex\n"
+    _ASM_PFX "_expectedLeagueRankIndex:\n"
     ".skip 2\n"
     ".text\n"
 );

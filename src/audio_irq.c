@@ -9,11 +9,11 @@
                           * Amiga audio engine's plain-integer ptr fields */
 
 /* ---- External data (SWOS2.s code section) ---- */
-extern AudioState audioState;
-extern AudioChannel audioChannel0;
-extern AudioChannel audioChannel1;
-extern AudioChannel audioChannel2;
-extern AudioChannel audioChannel3;
+extern AudioState _audioState;
+extern AudioChannel _audioChannel0;
+extern AudioChannel _audioChannel1;
+extern AudioChannel _audioChannel2;
+extern AudioChannel _audioChannel3;
 
 /* ---- Amiga note period table (36 entries, from SWOS2.s line 9884) ---- */
 static const uint16_t kAmigaNotePeriodTable[36] = {
@@ -54,7 +54,7 @@ static inline void writeAudxVol(volatile uint8_t *audx, uint16_t vol)
 
 static inline void writeDMACON(uint16_t val)
 {
-    custom->dmacon = val;
+    _custom->dmacon = val;
 }
 
 /* =================================================================
@@ -195,7 +195,7 @@ static void applyBeepVolumeAndWriteAUDxVOL(AudioChannel *chan)
     vol = (int16_t)((int32_t)vol * (int32_t)(int16_t)chan->pvVolScale);
     vol >>= 6;
     /* muls.w masterVolume,d0 -> asr.w #6,d0 */
-    vol = (int16_t)((int32_t)vol * (int32_t)(int16_t)audioState.masterVolume);
+    vol = (int16_t)((int32_t)vol * (int32_t)(int16_t)_audioState.masterVolume);
     vol >>= 6;
     chan->pvCurVol = (uint16_t)vol;
 
@@ -301,7 +301,7 @@ static void noteOnInitChannel(AudioChannel *chan, uint16_t amigaPeriod)
     chan->pvPitchslideAccum = 0;
 
     /* a3 = bankSectionPtrs[1] + envDataOffset (sign-extended via adda.w in asm) */
-    envData = audioState.bankSectionPtrs[1] + variantDesc->envDataOffset;
+    envData = _audioState.bankSectionPtrs[1] + variantDesc->envDataOffset;
     chan->pvEnvDataPtr = (uintptr_t)envData;
 
     /* Init envelope: target = envData[1], delta = envData[1] - envData[0] */
@@ -338,7 +338,7 @@ static void selectVariant(AudioChannel *chan, uint8_t variantId)
     chan->pvVariantId = variantId;
 
     /* desc = bankSectionPtrs[0] + variantId * 32 */
-    desc = (VariantDescriptor *)(audioState.bankSectionPtrs[0] + ((uint16_t)variantId << 5));
+    desc = (VariantDescriptor *)(_audioState.bankSectionPtrs[0] + ((uint16_t)variantId << 5));
     chan->pvVariantDesc = (uintptr_t)desc;
 
     /* Copy descriptor fields to channel. The pvSample{Slot,Offset,Length}
@@ -388,7 +388,7 @@ static uint8_t loadAUDxPtrLenIfReloadNeeded(AudioChannel *chan)
         writeAudxLen(audx, chan->pvSampleLength);
     }
 
-    return audioState.irqSubtick;
+    return _audioState.irqSubtick;
 }
 
 /* EnableDMAIfStartFlag — primary voice DMA enable */
@@ -415,7 +415,7 @@ static void runChannelScriptStep(AudioChannel *chan, uint8_t loopCount)
 
         if (scriptPtr != 0)
         {
-            if (audioState.toggleFlag != 0)
+            if (_audioState.toggleFlag != 0)
                 goto next_iter;
 
             chan->pvScriptTimer--;
@@ -460,9 +460,9 @@ fetch_cmd:
                         uint8_t *noteData;
 
                         chan->pvNoteScript = (uintptr_t)trackPtr;
-                        noteTable = (uint8_t **)audioState.bankSectionPtrs[4];
+                        noteTable = (uint8_t **)_audioState.bankSectionPtrs[4];
                         noteData = noteTable[noteRef];
-                        script = (uint8_t *)((uintptr_t)noteData + (uintptr_t)audioState.bankSectionPtrs[6]);
+                        script = (uint8_t *)((uintptr_t)noteData + (uintptr_t)_audioState.bankSectionPtrs[6]);
                         goto fetch_cmd;
                     }
 
@@ -473,16 +473,16 @@ fetch_cmd:
                         /* End of track — disable channel */
                         script = (uint8_t *)0;
                         chan->pvEnabled = 0;
-                        audioState.channelChangeFlags &= ~(1 << audioState.currentChannelIdx);
+                        _audioState.channelChangeFlags &= ~(1 << _audioState.currentChannelIdx);
                         goto save_and_reload;
                     }
                     else if (noteRef & 0x80)
                     {
                         /* Indirect jump: next byte is index */
                         uint8_t jumpIdx = trackPtr[1];
-                        uint8_t **jumpTable = (uint8_t **)audioState.bankSectionPtrs[3];
+                        uint8_t **jumpTable = (uint8_t **)_audioState.bankSectionPtrs[3];
                         trackPtr = jumpTable[jumpIdx];
-                        trackPtr = (uint8_t *)((uintptr_t)trackPtr + (uintptr_t)audioState.bankSectionPtrs[5]);
+                        trackPtr = (uint8_t *)((uintptr_t)trackPtr + (uintptr_t)_audioState.bankSectionPtrs[5]);
                     }
                     else
                     {
@@ -701,7 +701,7 @@ static void applyVolumeAndWriteAUDxVOL(AudioChannel *chan)
     vol = (int16_t)((int32_t)vol * (int32_t)(int16_t)chan->svVolScale);
     vol >>= 6;
     /* muls.w masterVolume,d0 -> asr.w #6,d0 */
-    vol = (int16_t)((int32_t)vol * (int32_t)(int16_t)audioState.masterVolume);
+    vol = (int16_t)((int32_t)vol * (int32_t)(int16_t)_audioState.masterVolume);
     vol >>= 6;
     chan->svCurVol = (uint16_t)vol;
 
@@ -789,7 +789,7 @@ static void initPitchEnv(AudioChannel *chan, uint16_t amigaPeriod)
     chan->svPitchslideAccum = 0;
 
     /* adda.w sign-extends the 16-bit operand before adding to address */
-    envData = audioState.bankSectionPtrs[1] + variantDesc->envDataOffset;
+    envData = _audioState.bankSectionPtrs[1] + variantDesc->envDataOffset;
     chan->svEnvDataPtr = (uintptr_t)envData;
 
     chan->svEnvTarget = envData[1];
@@ -840,7 +840,7 @@ static void selectInstrument(AudioChannel *chan, uint8_t instrId)
 
     chan->svVariantId = instrId;
 
-    desc = (VariantDescriptor *)(audioState.bankSectionPtrs[0] + ((uint16_t)instrId << 5));
+    desc = (VariantDescriptor *)(_audioState.bankSectionPtrs[0] + ((uint16_t)instrId << 5));
     chan->svVariantDesc = (uintptr_t)desc;
 
     /* Same name-only mismatch as the PV side: sv*Sample{Slot,Offset,Length}
@@ -888,7 +888,7 @@ static uint8_t loadAUDxPtrLenIfReloadNeeded2(AudioChannel *chan)
         writeAudxLen(audx, chan->svSampleLength);
     }
 
-    return audioState.irqSubtick;
+    return _audioState.irqSubtick;
 }
 
 /* EnableDMAIfStartFlag2 — secondary voice DMA enable */
@@ -911,14 +911,14 @@ static void runModCommandStream(AudioChannel *chan)
     uint8_t cmdByte;
 
     /* Check modeFlags bit 2 (secondary processing enabled) */
-    if (!(audioState.modeFlags & 0x04))
+    if (!(_audioState.modeFlags & 0x04))
         return;
 
     streamPtr = chan->svWaveData;
     if (streamPtr == 0)
         return;
 
-    if (audioState.toggleFlag != 0)
+    if (_audioState.toggleFlag != 0)
         return;
 
     chan->svScriptTimer--;
@@ -943,8 +943,8 @@ fetch_cmd:
         case 0: /* cmd 0x80: end of mod stream — disable secondary voice */
             stream = (uint8_t *)0;
             {
-                uint8_t bit = audioState.currentChannelIdx + 4;
-                audioState.channelChangeFlags &= ~(1 << bit);
+                uint8_t bit = _audioState.currentChannelIdx + 4;
+                _audioState.channelChangeFlags &= ~(1 << bit);
             }
             goto save_and_reload;
 
@@ -1016,7 +1016,7 @@ reload_timer:
 static void serviceOneChannel(AudioChannel *chan)
 {
     /* Check if secondary voice is active */
-    if (chan->svWaveData != 0 && audioState.secondaryChanEnable != 0)
+    if (chan->svWaveData != 0 && _audioState.secondaryChanEnable != 0)
     {
         /* Secondary voice path */
         uint8_t loopCount = loadAUDxPtrLenIfReloadNeeded2(chan);
@@ -1029,7 +1029,7 @@ static void serviceOneChannel(AudioChannel *chan)
     }
 
     /* Primary (beep) voice path */
-    if (audioState.primaryChanEnable == 0)
+    if (_audioState.primaryChanEnable == 0)
         return;
     if (chan->pvEnabled == 0)
         return;
@@ -1054,36 +1054,36 @@ uint8_t AudioIRQUpdateChannels(void)
     uint16_t counter;
 
     /* Read modeFlags bottom 2 bits as a speed counter */
-    counter = audioState.modeFlags & 3;
+    counter = _audioState.modeFlags & 3;
     if (counter == 0)
     {
         /* Toggle flag when counter is 0 */
-        audioState.toggleFlag ^= 1;
+        _audioState.toggleFlag ^= 1;
         counter = 1;
     }
 
     /* irqSubtick = counter - 1 (used as dbf loop count) */
-    audioState.irqSubtick = (uint8_t)(counter - 1);
+    _audioState.irqSubtick = (uint8_t)(counter - 1);
 
     /* Channel 0: move.b $28(a5),$21(a5) — per-channel vol to masterVolume low byte */
-    audioState.masterVolume = (audioState.masterVolume & 0xFF00u) | (uint16_t)audioState.channelVolume[0];
-    audioState.currentChannelIdx = 0;
-    serviceOneChannel(&audioChannel0);
+    _audioState.masterVolume = (_audioState.masterVolume & 0xFF00u) | (uint16_t)_audioState.channelVolume[0];
+    _audioState.currentChannelIdx = 0;
+    serviceOneChannel(&_audioChannel0);
 
     /* Channel 1 */
-    audioState.masterVolume = (audioState.masterVolume & 0xFF00u) | (uint16_t)audioState.channelVolume[1];
-    audioState.currentChannelIdx = 1;
-    serviceOneChannel(&audioChannel1);
+    _audioState.masterVolume = (_audioState.masterVolume & 0xFF00u) | (uint16_t)_audioState.channelVolume[1];
+    _audioState.currentChannelIdx = 1;
+    serviceOneChannel(&_audioChannel1);
 
     /* Channel 2 */
-    audioState.masterVolume = (audioState.masterVolume & 0xFF00u) | (uint16_t)audioState.channelVolume[2];
-    audioState.currentChannelIdx = 2;
-    serviceOneChannel(&audioChannel2);
+    _audioState.masterVolume = (_audioState.masterVolume & 0xFF00u) | (uint16_t)_audioState.channelVolume[2];
+    _audioState.currentChannelIdx = 2;
+    serviceOneChannel(&_audioChannel2);
 
     /* Channel 3 */
-    audioState.masterVolume = (audioState.masterVolume & 0xFF00u) | (uint16_t)audioState.channelVolume[3];
-    audioState.currentChannelIdx = 3;
-    serviceOneChannel(&audioChannel3);
+    _audioState.masterVolume = (_audioState.masterVolume & 0xFF00u) | (uint16_t)_audioState.channelVolume[3];
+    _audioState.currentChannelIdx = 3;
+    serviceOneChannel(&_audioChannel3);
 
-    return audioState.channelChangeFlags;
+    return _audioState.channelChangeFlags;
 }

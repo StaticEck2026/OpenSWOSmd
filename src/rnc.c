@@ -24,7 +24,7 @@
                           * intermediate decode pointers below */
 
 /* ---- Externs ---- */
-extern volatile uint16_t panicReasonCode;
+extern volatile uint16_t _panicReasonCode;
 extern void PanicHaltLoop(void);
 
 /* ======================================================================
@@ -385,7 +385,7 @@ void RncDecompressV1(uint8_t *src, uint8_t *dst)
 {
     uint32_t result = v1DecodeBlock(src, dst);
     if (result == 0 || result == 0xFFFFFFFFu || result == 0xFFFFFFFEu) {
-        panicReasonCode = 0xE003u;
+        _panicReasonCode = 0xE003u;
         PanicHaltLoop();
     }
 }

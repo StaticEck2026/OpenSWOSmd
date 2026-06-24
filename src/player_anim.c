@@ -13,16 +13,16 @@
 /* ST_GAME_IN_PROGRESS defined in game_types.h */
 
 /* ---- External globals ---- */
-extern Sprite **team1SpritesTable;
-extern Sprite **team2SpritesTable;
-extern uint16_t          goalScored;
-extern uint16_t          lastTeamScoredNumber;
-extern Sprite           *lastPlayerScored;
-extern uint16_t          currentGameTick;
-extern uint16_t          gameStatePl;
-extern uint16_t          breakCameraMode;
-extern AnimTable         playerNormalStandingAnimTable;
-extern uint16_t          panicReasonCode;
+extern Sprite **_team1SpritesTable;
+extern Sprite **_team2SpritesTable;
+extern uint16_t          _goalScored;
+extern uint16_t          _lastTeamScoredNumber;
+extern Sprite           *_lastPlayerScored;
+extern uint16_t          _currentGameTick;
+extern uint16_t          _gameStatePl;
+extern uint16_t          _breakCameraMode;
+extern AnimTable         _playerNormalStandingAnimTable;
+extern uint16_t          _panicReasonCode;
 
 /* ---- External C functions ---- */
 extern void PanicHaltLoop(void);
@@ -59,23 +59,23 @@ static void setNextPlayerFrame(Sprite *s)
             picIdx += s->frameOffset;
 
             /* Goal celebration check */
-            if (goalScored != 0
+            if (_goalScored != 0
                 && s->playerState == PL_NORMAL)
             {
                 uint16_t dir = (uint16_t)s->direction;
                 if (dir == 0 || dir == 4) {
-                    if (lastTeamScoredNumber == (uint16_t)s->teamNumber
+                    if (_lastTeamScoredNumber == (uint16_t)s->teamNumber
                         && (uint16_t)s->playerOrdinal != 1u)
                     {
-                        if (s == lastPlayerScored) {
+                        if (s == _lastPlayerScored) {
                             /* Scorer: celebrate when (tick & 0x7F) <= 100 */
-                            if ((currentGameTick & 0x7Fu) <= 100u) {
+                            if ((_currentGameTick & 0x7Fu) <= 100u) {
                                 picIdx += 24;
                             }
                         } else {
                             /* Non-scorer: staggered flash */
                             uint16_t v = (uint16_t)(((uint16_t)s->playerOrdinal << 2)
-                                         + currentGameTick);
+                                         + _currentGameTick);
                             if ((v & 63u) <= 31u) {
                                 picIdx += 24;
                             }
@@ -165,7 +165,7 @@ static void movePlayer(Sprite *s)
 {
     if (s->onScreen == 0) {
         /* Off-screen: only move when game in progress, no anim switch */
-        if (gameStatePl == ST_GAME_IN_PROGRESS) {
+        if (_gameStatePl == ST_GAME_IN_PROGRESS) {
             clampAxis(s->x, s->deltaX, s->destX);
             clampAxis(s->y, s->deltaY, s->destY);
             return;
@@ -186,8 +186,8 @@ static void movePlayer(Sprite *s)
         return;
 
     /* Player has stopped. Check for DESTREACHEDSTATE update. */
-    if (gameStatePl != ST_GAME_IN_PROGRESS) {
-        if (breakCameraMode == 3) {
+    if (_gameStatePl != ST_GAME_IN_PROGRESS) {
+        if (_breakCameraMode == 3) {
             if (s->destReachedState == 2) {
                 s->destReachedState = 3;
             }
@@ -195,8 +195,8 @@ static void movePlayer(Sprite *s)
     }
 
     /* Switch to standing anim if not already using it */
-    if (s->animationTable != &playerNormalStandingAnimTable) {
-        SetPlayerAnimationTable(&playerNormalStandingAnimTable, s);
+    if (s->animationTable != &_playerNormalStandingAnimTable) {
+        SetPlayerAnimationTable(&_playerNormalStandingAnimTable, s);
     }
 }
 
@@ -213,14 +213,14 @@ void MovePlayers(void)
 
     /* Team 1 sprites */
     for (i = 0; i < 11; i++) {
-        Sprite *s = team1SpritesTable[i];
+        Sprite *s = _team1SpritesTable[i];
         setNextPlayerFrame(s);
         movePlayer(s);
     }
 
     /* Team 2 sprites */
     for (i = 0; i < 11; i++) {
-        Sprite *s = team2SpritesTable[i];
+        Sprite *s = _team2SpritesTable[i];
         setNextPlayerFrame(s);
         movePlayer(s);
     }
@@ -260,7 +260,7 @@ void SetPlayerAnimationTable(AnimTable *animTable, Sprite *s)
     s->frameIndicesTable = frameIndicesPtr;
 
     if (frameIndicesPtr == 0) {
-        panicReasonCode = 0x000E;
+        _panicReasonCode = 0x000E;
         PanicHaltLoop();
         return;
     }
@@ -290,7 +290,7 @@ void SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *s)
     s->frameIndicesTable = frameIndicesPtr;
 
     if (frameIndicesPtr == 0) {
-        panicReasonCode = 0x000E;
+        _panicReasonCode = 0x000E;
         PanicHaltLoop();
         return;
     }

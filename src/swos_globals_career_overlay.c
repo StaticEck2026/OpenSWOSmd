@@ -33,8 +33,8 @@
 
 /* TMD team-pool count. Manipulated as a plain count (career_teams.c
  * increments/decrements it); saved as the JSON `tmd_team_count` scalar. */
-uint16_t careerFileBuffer = 0;
+uint16_t _careerFileBuffer = 0;
 
 /* Count of selected teams. Saved as `num_selected_teams` and re-derived
  * on .DIY/.PRE load from primaryCompetitionBuf.tourn.header.numTeams. */
-uint16_t numSelectedTeams = 0;
+uint16_t _numSelectedTeams = 0;

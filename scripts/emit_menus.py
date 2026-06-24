@@ -5,7 +5,7 @@ Regenerates each `Menu_<Type> <name> = { ... };` initializer in menu_data.c from
 bin/data_json/menus/*.json, recombining the split colors byte (frame/background nibbles).
 Emits FULLY-FLAT initializers: the C compiler fills each bespoke per-menu struct
 field-by-field in declaration order, so one uniform form works for all 102 menu types
-(continueMenu's flat layout, buyOtherPlayers' wrapped entries, ...). menu_data.h (the
+(_continueMenu's flat layout, buyOtherPlayers' wrapped entries, ...). menu_data.h (the
 types) and the file preamble/stubs are kept; only the `{ ... }` bodies are replaced.
 
 Verifies via the export round-trip (emit -> splice -> re-export -> diff the JSON). Final

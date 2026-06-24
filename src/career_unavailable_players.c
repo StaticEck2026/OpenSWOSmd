@@ -49,7 +49,7 @@ _Static_assert(offsetof(CareerUnavailablePlayers, list)        ==  0, "up layout
 _Static_assert(offsetof(CareerUnavailablePlayers, lookupTable) == 16, "up layout");
 _Static_assert(offsetof(CareerUnavailablePlayers, names)       == 96, "up layout");
 
-extern CareerUnavailablePlayers careerUnavailablePlayers;
+extern CareerUnavailablePlayers _careerUnavailablePlayers;
 
 __asm__(
 #if defined(__APPLE__)
@@ -58,20 +58,20 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayers\n"
-    _ASM_PFX "careerUnavailablePlayers:\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayerList\n"
-    _ASM_PFX "careerUnavailablePlayerList:\n"
+    ".globl " _ASM_PFX "_careerUnavailablePlayers\n"
+    _ASM_PFX "_careerUnavailablePlayers:\n"
+    ".globl " _ASM_PFX "_careerUnavailablePlayerList\n"
+    _ASM_PFX "_careerUnavailablePlayerList:\n"
     ".skip 16\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayerLookupTable\n"
-    _ASM_PFX "careerUnavailablePlayerLookupTable:\n"
+    ".globl " _ASM_PFX "_careerUnavailablePlayerLookupTable\n"
+    _ASM_PFX "_careerUnavailablePlayerLookupTable:\n"
     ".skip 80\n"
-    ".globl " _ASM_PFX "careerUnavailablePlayerNames\n"
-    _ASM_PFX "careerUnavailablePlayerNames:\n"
+    ".globl " _ASM_PFX "_careerUnavailablePlayerNames\n"
+    _ASM_PFX "_careerUnavailablePlayerNames:\n"
     ".skip 340\n"
     /* adjacent neighbour, separate symbol (not part of the struct) */
-    ".globl " _ASM_PFX "currentMatchPlayers\n"
-    _ASM_PFX "currentMatchPlayers:\n"
+    ".globl " _ASM_PFX "_currentMatchPlayers\n"
+    _ASM_PFX "_currentMatchPlayers:\n"
     ".skip 32\n"
     ".text\n"
 );

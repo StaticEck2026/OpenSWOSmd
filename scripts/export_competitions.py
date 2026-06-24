@@ -167,7 +167,7 @@ def sentinel_array(tok: str, term):
 
 
 def resolve_name(tok: str, strings: dict):
-    """Emit the string SYMBOL name (e.g. 'aDivision1') for a competition name
+    """Emit the string SYMBOL name (e.g. '_aDivision1') for a competition name
     slot — NOT the resolved text. The loader localizes it at load time via tr()
     against data_json/translations/<lang>.json, so competition names follow the
     selected language. `strings` is kept only to sanity-check the symbol exists.
@@ -313,7 +313,7 @@ def parse_qualifying(name: str, body: str) -> dict:
 
 
 def parse_career(name: str, body: str) -> list:
-    # careerContests[35]: { &competition, &competitionCopy, sizeof(...) } — size derived on load
+    # _careerContests[35]: { &competition, &competitionCopy, sizeof(...) } — _size derived on load
     out = []
     for e in split_top(body):
         t = split_top(inner(e))
@@ -391,7 +391,7 @@ def parse_country_tables(text: str) -> dict:
 
 
 def parse_comp_index(text: str) -> dict:
-    """void *competitionsTable[256] = { [n] = <tableSymbol>, ... } -> {country_number: symbol}."""
+    """void *_competitionsTable[256] = { [n] = <tableSymbol>, ... } -> {country_number: symbol}."""
     m = re.search(r'\bcompetitionsTable\s*\[\d*\]\s*=\s*\{([^}]*)\}', text, re.S)
     out = {}
     if m:
@@ -424,7 +424,7 @@ def main():
     dump("qualifying.json", "qualifying_groups", "groups",
          [parse_qualifying(n, b) for n, b in find_defs(text, "QualifyingGroup")])
 
-    # league blocks: the standalone Leagues groups (englishLeagues1/2/3 are now
+    # league blocks: the standalone Leagues groups (_englishLeagues1/2/3 are now
     # regular groups here too, after the EnglishLeaguesBlock consolidation).
     dump("league_blocks.json", "league_blocks", "groups",
          [parse_leagues(n, b) for n, b in find_defs(text, "Leagues")])
@@ -435,7 +435,7 @@ def main():
         contests = parse_career(n, b)
     dump("career.json", "career_index", "contests", contests)
 
-    # country competitions — competitionsTable[country] -> {leagues, cups} (the
+    # country competitions — _competitionsTable[country] -> {leagues, cups} (the
     # per-country competition mapping; region/qualifying slots reference a group).
     ctabs = parse_country_tables(text)
     cidx = parse_comp_index(text)
@@ -462,13 +462,13 @@ def main():
     country_lists = {}
     for n, b in find_defs(text, "CountryNumbers"):
         country_lists[n] = [country_entry(num(x)) for x in split_top(b)]
-    master = country_lists.get("allCountriesList", [])
+    master = country_lists.get("_allCountriesList", [])
     with open(os.path.join(OUT_DIR, "countries.json"), "w") as f:
         json.dump({"type": "countries", "count": len(master), "countries": master},
                   f, indent=2, ensure_ascii=False)
     print("wrote %-20s (%d countries master)" % ("countries.json", len(master)))
 
-    # euro-cup qualification seed buckets: the UEFA Cup berth allocation by
+    # euro-cup qualification _seed buckets: the UEFA Cup berth allocation by
     # country coefficient tier. Raw form repeats a country number once per berth
     # (Germany×4 = 4 UEFA teams); re-express as readable {country, berths} runs
     # (order preserved — the draw walks them in order). 0xFF = end sentinel.
@@ -487,7 +487,7 @@ def main():
     buckets = []
     for n, b in find_defs(text, "EuroCupQualSeedBucketBlock"):
         d = parse_designated_arrays(n, b)
-        buckets = [{"tier": k, "size": len(v), "allocation": berths_of(v)}
+        buckets = [{"tier": k, "_size": len(v), "allocation": berths_of(v)}
                    for k, v in d.items() if k != "id"]
 
     payload = {"type": "seed_buckets",
@@ -495,8 +495,8 @@ def main():
                            "coefficient tier; order matters; re-expanded to repeated "
                            "country numbers + 0xFF sentinel on load. See docs/DATA_CUSTOMIZE.md.",
                "euro_cup_qual_seed_buckets": buckets}
-    # any country-number tables other than the allCountriesList master (none today)
-    extra = [{"id": n, "countries": v} for n, v in country_lists.items() if n != "allCountriesList"]
+    # any country-number tables other than the _allCountriesList master (none today)
+    extra = [{"id": n, "countries": v} for n, v in country_lists.items() if n != "_allCountriesList"]
     if extra:
         payload["country_lists"] = extra
     with open(os.path.join(OUT_DIR, "seed_buckets.json"), "w") as f:

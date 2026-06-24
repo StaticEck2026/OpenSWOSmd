@@ -4,7 +4,7 @@
 Covers all three record-based data files (all RNC-ProPack compressed):
 
   * TEAM.<country>  RNC v1: [u16 BE count] + count * 684-byte TeamFileEx records
-  * *.TMD           RNC v2: bare TeamFileEx[] (no count; N = size / 684)
+  * *.TMD           RNC v2: bare TeamFileEx[] (no count; N = _size / 684)
                     EUROCUP(16) / EUROCWC(32) / UEFACUP(32) — the European cups
   * POOLPLYR.DAT    RNC v2: bare PoolPlayer[] (no count; 58 B each, 900 records)
 
@@ -108,7 +108,7 @@ def rnc_pack(raw: bytes, method: int = 1) -> bytes:
 # helpers
 # ======================================================================
 def _decode_str(raw: bytes) -> str:
-    """Faithful name decode: bytes up to the first NUL, latin1.  No stripping/
+    """Faithful name decode: bytes _up to the first NUL, latin1.  No stripping/
     filtering so the value round-trips exactly (names may keep trailing spaces;
     a name that fills the whole field has no NUL and is terminated by the next
     struct field, e.g. PlayerFile.player_name[23] -> position_and_face)."""
@@ -305,7 +305,7 @@ def encode_blob(teams: list) -> bytes:
 
 # ======================================================================
 # TMD (EUROCUP/EUROCWC/UEFACUP)  —  bare TeamFileEx[] array, no count header
-# (loaded into tmdFileBuffer = TeamFileEx[80]; count = filesize / 684)
+# (loaded into _tmdFileBuffer = TeamFileEx[80]; count = filesize / 684)
 # ======================================================================
 def parse_tmd_blob(blob: bytes) -> list:
     n = len(blob) // TEAM_REC_SIZE

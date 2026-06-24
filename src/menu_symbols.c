@@ -380,286 +380,286 @@ extern void ViewWorldMenu(void);
 extern void locret_139AE2(void);
 
 /* ---- data symbols (decls harvested verbatim from menu_data.c) ---- */
-extern char a343[];
-extern char a352[];
-extern char a424[];
-extern char a433[];
-extern char a442[];
-extern char a451[];
-extern char a523[];
-extern char a532[];
-extern char a541[];
-extern char aA_0[];
-extern char aAbort[];
-extern char aAccept[];
-extern char aAcceptOffer[];
-extern char aAddInternation[];
-extern char aAddInternation_0[];
-extern char aAddPlayer[];
-extern char aAdditionalInve_0[];
-extern char aAllMatches[];
-extern char aAllPlayerTeams[];
-extern char aAskForMore[];
-extern char aAttack[];
-extern char aAutoReplays[];
-extern char aAutoSaveHighli[];
-extern char aAwayGoals[];
-extern char aBankStatement[];
-extern char aBestRegards[];
-extern char aBuyOtherDomest[];
-extern char aBuyOtherForeig[];
-extern char aBuyPlayer[];
-extern char aCareerTotal[];
-extern char aCareer_1[];
-extern char aChooseTeam[];
-extern char aChooseTeams[];
-extern char aClubBusiness[];
-extern char aClubTeams[];
-extern char aCoach[];
-extern char aCoach_3[];
-extern char aCoach_4[];
-extern char aCompetitionBon[];
-extern char aCompetitionInf[];
-extern char aComputer[];
-extern char aConfirmOffer[];
-extern char aConsider[];
-extern char aContinue[];
-extern char aContinueCareer[];
-extern char aCopy[];
-extern char aCriteria[];
-extern char aCup1[];
-extern char aCup2[];
-extern char aCup_3[];
-extern char aCups[];
-extern char aD[];
-extern char aDearSirMadam[];
-extern char aDefend[];
-extern char aDescription[];
-extern char aDesignDiyCup[];
-extern char aDesignDiyLeagu[];
-extern char aDesignDiyTourn[];
-extern char aDiyCompetition_0[];
-extern char aEditCustomTeam[];
-extern char aEditTactics[];
-extern char aEditedCustomTe_0[];
-extern char aExPlayerGoals[];
-extern char aExit[];
-extern char aF[];
-extern char aFilename[];
-extern char aFirstKit[];
-extern char aFixPitchType[];
-extern char aForm[];
-extern char aFriendlyDiyGam[];
-extern char aFriendly_1[];
-extern char aFrom[];
-extern char aGateReceipts[];
-extern char aGeneralRunning[];
-extern char aGiveFreeTransf[];
-extern char aGoals[];
-extern char aHighestScorerL[];
-extern char aHighlights[];
-extern char aHighlights_0[];
-extern char aHyphen[];
-extern char aImport[];
-extern char aImportTactics[];
-extern char aJobOffer[];
-extern char aJobOffers[];
-extern char aJobOffersBeing[];
-extern char aL[];
-extern char aLeadingCompeti[];
-extern char aLge[];
-extern char aLge_0[];
-extern char aList[];
-extern char aLoad[];
-extern char aLoadHighlights[];
-extern char aLoadLiverpool[];
-extern char aLoadOldCompeti[];
-extern char aMakeImprovedOf[];
-extern char aMakeOffer[];
-extern char aManagementReco_0[];
-extern char aMatch[];
-extern char aMemoFromTheClu[];
-extern char aMenuMusic[];
-extern char aName[];
-extern char aNat[];
-extern char aNationalTeams[];
-extern char aNationality[];
-extern char aNewBalance[];
-extern char aNextMatch[];
-extern char aNumberOfTeams[];
-extern char aOffers[];
-extern char aOk[];
-extern char aOldBalance[];
-extern char aOptions[];
-extern char aOriginalCustom[];
-extern char aOwnGoals[];
-extern char aPl[];
-extern char aPlayEachTeam[];
-extern char aPlayMatch[];
-extern char aPlayerCoach[];
-extern char aPlayerPurchase[];
-extern char aPlayerSales[];
-extern char aPlayerWagesBil[];
-extern char aPlayersCurrent[];
-extern char aPlus[];
-extern char aPointsForAWin[];
-extern char aPresetCompetit_0[];
-extern char aPts[];
-extern char aPutPlayerOnTra_0[];
-extern char aReject[];
-extern char aRejectOffer[];
-extern char aRemovePlayers[];
-extern char aResponseToOffe[];
-extern char aResult[];
-extern char aRounds[];
-extern char aSacked[];
-extern char aSave[];
-extern char aSaveCareer[];
-extern char aSaveDiskFiling[];
-extern char aSaveExit[];
-extern char aSaveHighlights[];
-extern char aSeason_1[];
-extern char aSecondKit[];
-extern char aSeeded[];
-extern char aSkills[];
-extern char aSquad[];
-extern char aStar[];
-extern char aStartCareerAs[];
-extern char aStatistics[];
-extern char aStats[];
-extern char aSubstitutes[];
-extern char aSweep[];
-extern char aSwosVersion152[];
-extern char aTakeOffMarket[];
-extern char aTeams[];
-extern char aThirdPartyOffe[];
-extern char aToReplace[];
-extern char aTopGoalScorers[];
-extern char aTot[];
-extern char aTot_0[];
-extern char aTotalProfit[];
-extern char aTraining[];
-extern char aTransferMarket[];
-extern char aTransfers[];
-extern char aType[];
-extern char aUndo[];
-extern char aUseMatchTeam[];
-extern char aV[];
-extern char aViewCompetitio[];
-extern char aViewDomesticPl[];
-extern char aViewForeignPla[];
-extern char aViewHighlights[];
-extern char aViewHighlights_0[];
-extern char aViewLeague[];
-extern char aViewMatch[];
-extern char aViewOffers[];
-extern char aViewOppo[];
-extern char aViewResult[];
-extern char aViewSelectedTe[];
-extern char aViewSquad[];
-extern char aViewSquads[];
-extern char aViewTeam[];
-extern char aViewWorld[];
-extern char aW[];
-extern char aYourCareerIsOv[];
-extern char aYourChairman[];
-extern char* allPlTeamsEqualStrTable[];
-extern char asc_131FF2[];
-extern char asc_135D96[];
-extern char* autoReplaysStrTable[];
-extern char* autoSaveHlStrTable[];
-extern char* diyAwayGoalsStrTab[];
-extern DIYCompetitionEx diyCompetitionStart;
-extern char* diyCupAwayGoalsStringTable[];
-extern char* diyCupEndMonthStringTable[];
-extern char* diyCupExtraTimeStringTable0[];
-extern char* diyCupExtraTimeStringTable1[];
-extern char* diyCupExtraTimeStringTable2[];
-extern char* diyCupExtraTimeStringTable3[];
-extern char* diyCupExtraTimeStringTable4[];
-extern char* diyCupExtraTimeStringTable5[];
-extern char* diyCupLegsStringTable0[];
-extern char* diyCupLegsStringTable1[];
-extern char* diyCupLegsStringTable2[];
-extern char* diyCupLegsStringTable3[];
-extern char* diyCupLegsStringTable4[];
-extern char* diyCupLegsStringTable5[];
-extern char* diyCupPenaltiesStringTable0[];
-extern char* diyCupPenaltiesStringTable1[];
-extern char* diyCupPenaltiesStringTable2[];
-extern char* diyCupPenaltiesStringTable3[];
-extern char* diyCupPenaltiesStringTable4[];
-extern char* diyCupPenaltiesStringTable5[];
-extern char* diyCupPitchTypeOrSeasonStringTable[];
-extern char* diyCupPitchTypeStringTable[];
-extern char* diyCupStartMonthStringTable[];
-extern char* diyEndMonthStrTab[];
-extern DIYTournamentState diyFileBufferCopy;
-extern char* diyLeagueEndingMonthStrTable[];
-extern char* diyLeagueMonthsStrTable[];
-extern char* diyLeaguePitchTypeStrTable[];
-extern char* diyPitchSeasonStrTab[];
-extern char* diyPitchTypeOrSeasonStrTable[];
-extern char* diyPitchTypeStringTable[];
-extern char* diyStage1ExtraTimeStrTab[];
-extern char* diyStage1LegsStrTab[];
-extern char* diyStage1PenaltiesStrTab[];
-extern char* diyStage1PlayCountStrTab[];
-extern char* diyStage1PtsForWinStrTab[];
-extern char* diyStage2ExtraTimeStrTab[];
-extern char* diyStage2LegsStrTab[];
-extern char* diyStage2PenaltiesStrTab[];
-extern char* diyStage2PlayCountStrTab[];
-extern char* diyStage2PtsForWinStrTab[];
-extern char* diyStage3ExtraTimeStrTab[];
-extern char* diyStage3LegsStrTab[];
-extern char* diyStage3PenaltiesStrTab[];
-extern char* diyStage3PlayCountStrTab[];
-extern char* diyStage3PtsForWinStrTab[];
-extern char* diyStage4ExtraTimeStrTab[];
-extern char* diyStage4LegsStrTab[];
-extern char* diyStage4PenaltiesStrTab[];
-extern char* diyStage4PlayCountStrTab[];
-extern char* diyStage4PtsForWinStrTab[];
-extern char* diyStage5ExtraTimeStrTab[];
-extern char* diyStage5LegsStrTab[];
-extern char* diyStage5PenaltiesStrTab[];
-extern char* diyStage5PlayCountStrTab[];
-extern char* diyStage5PtsForWinStrTab[];
-extern char* diyStage6ExtraTimeStrTab[];
-extern char* diyStage6LegsStrTab[];
-extern char* diyStage6PenaltiesStrTab[];
-extern char* diyStage6PlayCountStrTab[];
-extern char* diyStage6PtsForWinStrTab[];
-extern char* diyStartMonthStrTab[];
-extern EditTeamsSpriteCopy editTeamsPrimaryShirts;
-extern EditTeamsSpriteCopy editTeamsSecondaryShirt;
-extern EditTeamsSpriteCopy editTeamsSecondaryShorts;
-extern EditTeamsSpriteCopy editTeamsSecondarySocks;
-extern EditTeamsSpriteCopy editTeamsShorts;
-extern EditTeamsSpriteCopy editTeamsSocks;
-extern char* flipStrTable[];
-extern char* friendlyPitchTypeTable[];
-extern char* gameLengthStrTable[];
-extern char managerNameBuffer[];
-extern char managerSexBuffer[];
-extern char managerSurnameBuffer[];
-extern char* menuMusicStrTable[];
-extern char offsetCoachOrPlayer[];
-extern char* pitchTypeOrSeasonTable[];
-extern char* pitchTypeStrTable[];
-extern char* positionFilterStringTable[];
-extern char saveFileTitle[];
-extern char* skillFilterStringTable[];
-extern EditTeamsSpriteCopy stadiumMenuLittlePlayerSpriteCopy;
-extern char teamTacticsUSERA[];
-extern char teamTacticsUSERB[];
-extern char teamTacticsUSERC[];
-extern char teamTacticsUSERD[];
-extern char teamTacticsUSERE[];
-extern char teamTacticsUSERF[];
+extern char _a343[];
+extern char _a352[];
+extern char _a424[];
+extern char _a433[];
+extern char _a442[];
+extern char _a451[];
+extern char _a523[];
+extern char _a532[];
+extern char _a541[];
+extern char _aA_0[];
+extern char _aAbort[];
+extern char _aAccept[];
+extern char _aAcceptOffer[];
+extern char _aAddInternation[];
+extern char _aAddInternation_0[];
+extern char _aAddPlayer[];
+extern char _aAdditionalInve_0[];
+extern char _aAllMatches[];
+extern char _aAllPlayerTeams[];
+extern char _aAskForMore[];
+extern char _aAttack[];
+extern char _aAutoReplays[];
+extern char _aAutoSaveHighli[];
+extern char _aAwayGoals[];
+extern char _aBankStatement[];
+extern char _aBestRegards[];
+extern char _aBuyOtherDomest[];
+extern char _aBuyOtherForeig[];
+extern char _aBuyPlayer[];
+extern char _aCareerTotal[];
+extern char _aCareer_1[];
+extern char _aChooseTeam[];
+extern char _aChooseTeams[];
+extern char _aClubBusiness[];
+extern char _aClubTeams[];
+extern char _aCoach[];
+extern char _aCoach_3[];
+extern char _aCoach_4[];
+extern char _aCompetitionBon[];
+extern char _aCompetitionInf[];
+extern char _aComputer[];
+extern char _aConfirmOffer[];
+extern char _aConsider[];
+extern char _aContinue[];
+extern char _aContinueCareer[];
+extern char _aCopy[];
+extern char _aCriteria[];
+extern char _aCup1[];
+extern char _aCup2[];
+extern char _aCup_3[];
+extern char _aCups[];
+extern char _aD[];
+extern char _aDearSirMadam[];
+extern char _aDefend[];
+extern char _aDescription[];
+extern char _aDesignDiyCup[];
+extern char _aDesignDiyLeagu[];
+extern char _aDesignDiyTourn[];
+extern char _aDiyCompetition_0[];
+extern char _aEditCustomTeam[];
+extern char _aEditTactics[];
+extern char _aEditedCustomTe_0[];
+extern char _aExPlayerGoals[];
+extern char _aExit[];
+extern char _aF[];
+extern char _aFilename[];
+extern char _aFirstKit[];
+extern char _aFixPitchType[];
+extern char _aForm[];
+extern char _aFriendlyDiyGam[];
+extern char _aFriendly_1[];
+extern char _aFrom[];
+extern char _aGateReceipts[];
+extern char _aGeneralRunning[];
+extern char _aGiveFreeTransf[];
+extern char _aGoals[];
+extern char _aHighestScorerL[];
+extern char _aHighlights[];
+extern char _aHighlights_0[];
+extern char _aHyphen[];
+extern char _aImport[];
+extern char _aImportTactics[];
+extern char _aJobOffer[];
+extern char _aJobOffers[];
+extern char _aJobOffersBeing[];
+extern char _aL[];
+extern char _aLeadingCompeti[];
+extern char _aLge[];
+extern char _aLge_0[];
+extern char _aList[];
+extern char _aLoad[];
+extern char _aLoadHighlights[];
+extern char _aLoadLiverpool[];
+extern char _aLoadOldCompeti[];
+extern char _aMakeImprovedOf[];
+extern char _aMakeOffer[];
+extern char _aManagementReco_0[];
+extern char _aMatch[];
+extern char _aMemoFromTheClu[];
+extern char _aMenuMusic[];
+extern char _aName[];
+extern char _aNat[];
+extern char _aNationalTeams[];
+extern char _aNationality[];
+extern char _aNewBalance[];
+extern char _aNextMatch[];
+extern char _aNumberOfTeams[];
+extern char _aOffers[];
+extern char _aOk[];
+extern char _aOldBalance[];
+extern char _aOptions[];
+extern char _aOriginalCustom[];
+extern char _aOwnGoals[];
+extern char _aPl[];
+extern char _aPlayEachTeam[];
+extern char _aPlayMatch[];
+extern char _aPlayerCoach[];
+extern char _aPlayerPurchase[];
+extern char _aPlayerSales[];
+extern char _aPlayerWagesBil[];
+extern char _aPlayersCurrent[];
+extern char _aPlus[];
+extern char _aPointsForAWin[];
+extern char _aPresetCompetit_0[];
+extern char _aPts[];
+extern char _aPutPlayerOnTra_0[];
+extern char _aReject[];
+extern char _aRejectOffer[];
+extern char _aRemovePlayers[];
+extern char _aResponseToOffe[];
+extern char _aResult[];
+extern char _aRounds[];
+extern char _aSacked[];
+extern char _aSave[];
+extern char _aSaveCareer[];
+extern char _aSaveDiskFiling[];
+extern char _aSaveExit[];
+extern char _aSaveHighlights[];
+extern char _aSeason_1[];
+extern char _aSecondKit[];
+extern char _aSeeded[];
+extern char _aSkills[];
+extern char _aSquad[];
+extern char _aStar[];
+extern char _aStartCareerAs[];
+extern char _aStatistics[];
+extern char _aStats[];
+extern char _aSubstitutes[];
+extern char _aSweep[];
+extern char _aSwosVersion152[];
+extern char _aTakeOffMarket[];
+extern char _aTeams[];
+extern char _aThirdPartyOffe[];
+extern char _aToReplace[];
+extern char _aTopGoalScorers[];
+extern char _aTot[];
+extern char _aTot_0[];
+extern char _aTotalProfit[];
+extern char _aTraining[];
+extern char _aTransferMarket[];
+extern char _aTransfers[];
+extern char _aType[];
+extern char _aUndo[];
+extern char _aUseMatchTeam[];
+extern char _aV[];
+extern char _aViewCompetitio[];
+extern char _aViewDomesticPl[];
+extern char _aViewForeignPla[];
+extern char _aViewHighlights[];
+extern char _aViewHighlights_0[];
+extern char _aViewLeague[];
+extern char _aViewMatch[];
+extern char _aViewOffers[];
+extern char _aViewOppo[];
+extern char _aViewResult[];
+extern char _aViewSelectedTe[];
+extern char _aViewSquad[];
+extern char _aViewSquads[];
+extern char _aViewTeam[];
+extern char _aViewWorld[];
+extern char _aW[];
+extern char _aYourCareerIsOv[];
+extern char _aYourChairman[];
+extern char* _allPlTeamsEqualStrTable[];
+extern char _asc_131FF2[];
+extern char _asc_135D96[];
+extern char* _autoReplaysStrTable[];
+extern char* _autoSaveHlStrTable[];
+extern char* _diyAwayGoalsStrTab[];
+extern DIYCompetitionEx _diyCompetitionStart;
+extern char* _diyCupAwayGoalsStringTable[];
+extern char* _diyCupEndMonthStringTable[];
+extern char* _diyCupExtraTimeStringTable0[];
+extern char* _diyCupExtraTimeStringTable1[];
+extern char* _diyCupExtraTimeStringTable2[];
+extern char* _diyCupExtraTimeStringTable3[];
+extern char* _diyCupExtraTimeStringTable4[];
+extern char* _diyCupExtraTimeStringTable5[];
+extern char* _diyCupLegsStringTable0[];
+extern char* _diyCupLegsStringTable1[];
+extern char* _diyCupLegsStringTable2[];
+extern char* _diyCupLegsStringTable3[];
+extern char* _diyCupLegsStringTable4[];
+extern char* _diyCupLegsStringTable5[];
+extern char* _diyCupPenaltiesStringTable0[];
+extern char* _diyCupPenaltiesStringTable1[];
+extern char* _diyCupPenaltiesStringTable2[];
+extern char* _diyCupPenaltiesStringTable3[];
+extern char* _diyCupPenaltiesStringTable4[];
+extern char* _diyCupPenaltiesStringTable5[];
+extern char* _diyCupPitchTypeOrSeasonStringTable[];
+extern char* _diyCupPitchTypeStringTable[];
+extern char* _diyCupStartMonthStringTable[];
+extern char* _diyEndMonthStrTab[];
+extern DIYTournamentState _diyFileBufferCopy;
+extern char* _diyLeagueEndingMonthStrTable[];
+extern char* _diyLeagueMonthsStrTable[];
+extern char* _diyLeaguePitchTypeStrTable[];
+extern char* _diyPitchSeasonStrTab[];
+extern char* _diyPitchTypeOrSeasonStrTable[];
+extern char* _diyPitchTypeStringTable[];
+extern char* _diyStage1ExtraTimeStrTab[];
+extern char* _diyStage1LegsStrTab[];
+extern char* _diyStage1PenaltiesStrTab[];
+extern char* _diyStage1PlayCountStrTab[];
+extern char* _diyStage1PtsForWinStrTab[];
+extern char* _diyStage2ExtraTimeStrTab[];
+extern char* _diyStage2LegsStrTab[];
+extern char* _diyStage2PenaltiesStrTab[];
+extern char* _diyStage2PlayCountStrTab[];
+extern char* _diyStage2PtsForWinStrTab[];
+extern char* _diyStage3ExtraTimeStrTab[];
+extern char* _diyStage3LegsStrTab[];
+extern char* _diyStage3PenaltiesStrTab[];
+extern char* _diyStage3PlayCountStrTab[];
+extern char* _diyStage3PtsForWinStrTab[];
+extern char* _diyStage4ExtraTimeStrTab[];
+extern char* _diyStage4LegsStrTab[];
+extern char* _diyStage4PenaltiesStrTab[];
+extern char* _diyStage4PlayCountStrTab[];
+extern char* _diyStage4PtsForWinStrTab[];
+extern char* _diyStage5ExtraTimeStrTab[];
+extern char* _diyStage5LegsStrTab[];
+extern char* _diyStage5PenaltiesStrTab[];
+extern char* _diyStage5PlayCountStrTab[];
+extern char* _diyStage5PtsForWinStrTab[];
+extern char* _diyStage6ExtraTimeStrTab[];
+extern char* _diyStage6LegsStrTab[];
+extern char* _diyStage6PenaltiesStrTab[];
+extern char* _diyStage6PlayCountStrTab[];
+extern char* _diyStage6PtsForWinStrTab[];
+extern char* _diyStartMonthStrTab[];
+extern EditTeamsSpriteCopy _editTeamsPrimaryShirts;
+extern EditTeamsSpriteCopy _editTeamsSecondaryShirt;
+extern EditTeamsSpriteCopy _editTeamsSecondaryShorts;
+extern EditTeamsSpriteCopy _editTeamsSecondarySocks;
+extern EditTeamsSpriteCopy _editTeamsShorts;
+extern EditTeamsSpriteCopy _editTeamsSocks;
+extern char* _flipStrTable[];
+extern char* _friendlyPitchTypeTable[];
+extern char* _gameLengthStrTable[];
+extern char _managerNameBuffer[];
+extern char _managerSexBuffer[];
+extern char _managerSurnameBuffer[];
+extern char* _menuMusicStrTable[];
+extern char _offsetCoachOrPlayer[];
+extern char* _pitchTypeOrSeasonTable[];
+extern char* _pitchTypeStrTable[];
+extern char* _positionFilterStringTable[];
+extern char _saveFileTitle[];
+extern char* _skillFilterStringTable[];
+extern EditTeamsSpriteCopy _stadiumMenuLittlePlayerSpriteCopy;
+extern char _teamTacticsUSERA[];
+extern char _teamTacticsUSERB[];
+extern char _teamTacticsUSERC[];
+extern char _teamTacticsUSERD[];
+extern char _teamTacticsUSERE[];
+extern char _teamTacticsUSERF[];
 
-const MenuSymbol menuSymbols[] = {
+const MenuSymbol _menuSymbols[] = {
     { "AbortChooseTeamsFriendly", (void*)AbortChooseTeamsFriendly, SYM_FUNC },
     { "AbortEditTactics", (void*)AbortEditTactics, SYM_FUNC },
     { "AbortSaveFile", (void*)AbortSaveFile, SYM_FUNC },
@@ -1030,288 +1030,288 @@ const MenuSymbol menuSymbols[] = {
     { "ViewSquadInit", (void*)ViewSquadInit, SYM_FUNC },
     { "ViewSquadOnSelect21", (void*)ViewSquadOnSelect21, SYM_FUNC },
     { "ViewWorldMenu", (void*)ViewWorldMenu, SYM_FUNC },
-    { "a343", (void*)a343, SYM_STRING },
-    { "a352", (void*)a352, SYM_STRING },
-    { "a424", (void*)a424, SYM_STRING },
-    { "a433", (void*)a433, SYM_STRING },
-    { "a442", (void*)a442, SYM_STRING },
-    { "a451", (void*)a451, SYM_STRING },
-    { "a523", (void*)a523, SYM_STRING },
-    { "a532", (void*)a532, SYM_STRING },
-    { "a541", (void*)a541, SYM_STRING },
-    { "aA_0", (void*)aA_0, SYM_STRING },
-    { "aAbort", (void*)aAbort, SYM_STRING },
-    { "aAccept", (void*)aAccept, SYM_STRING },
-    { "aAcceptOffer", (void*)aAcceptOffer, SYM_STRING },
-    { "aAddInternation", (void*)aAddInternation, SYM_STRING },
-    { "aAddInternation_0", (void*)aAddInternation_0, SYM_STRING },
-    { "aAddPlayer", (void*)aAddPlayer, SYM_STRING },
-    { "aAdditionalInve_0", (void*)aAdditionalInve_0, SYM_STRING },
-    { "aAllMatches", (void*)aAllMatches, SYM_STRING },
-    { "aAllPlayerTeams", (void*)aAllPlayerTeams, SYM_STRING },
-    { "aAskForMore", (void*)aAskForMore, SYM_STRING },
-    { "aAttack", (void*)aAttack, SYM_STRING },
-    { "aAutoReplays", (void*)aAutoReplays, SYM_STRING },
-    { "aAutoSaveHighli", (void*)aAutoSaveHighli, SYM_STRING },
-    { "aAwayGoals", (void*)aAwayGoals, SYM_STRING },
-    { "aBankStatement", (void*)aBankStatement, SYM_STRING },
-    { "aBestRegards", (void*)aBestRegards, SYM_STRING },
-    { "aBuyOtherDomest", (void*)aBuyOtherDomest, SYM_STRING },
-    { "aBuyOtherForeig", (void*)aBuyOtherForeig, SYM_STRING },
-    { "aBuyPlayer", (void*)aBuyPlayer, SYM_STRING },
-    { "aCareerTotal", (void*)aCareerTotal, SYM_STRING },
-    { "aCareer_1", (void*)aCareer_1, SYM_STRING },
-    { "aChooseTeam", (void*)aChooseTeam, SYM_STRING },
-    { "aChooseTeams", (void*)aChooseTeams, SYM_STRING },
-    { "aClubBusiness", (void*)aClubBusiness, SYM_STRING },
-    { "aClubTeams", (void*)aClubTeams, SYM_STRING },
-    { "aCoach", (void*)aCoach, SYM_STRING },
-    { "aCoach_3", (void*)aCoach_3, SYM_STRING },
-    { "aCoach_4", (void*)aCoach_4, SYM_STRING },
-    { "aCompetitionBon", (void*)aCompetitionBon, SYM_STRING },
-    { "aCompetitionInf", (void*)aCompetitionInf, SYM_STRING },
-    { "aComputer", (void*)aComputer, SYM_STRING },
-    { "aConfirmOffer", (void*)aConfirmOffer, SYM_STRING },
-    { "aConsider", (void*)aConsider, SYM_STRING },
-    { "aContinue", (void*)aContinue, SYM_STRING },
-    { "aContinueCareer", (void*)aContinueCareer, SYM_STRING },
-    { "aCopy", (void*)aCopy, SYM_STRING },
-    { "aCriteria", (void*)aCriteria, SYM_STRING },
-    { "aCup1", (void*)aCup1, SYM_STRING },
-    { "aCup2", (void*)aCup2, SYM_STRING },
-    { "aCup_3", (void*)aCup_3, SYM_STRING },
-    { "aCups", (void*)aCups, SYM_STRING },
-    { "aD", (void*)aD, SYM_STRING },
-    { "aDearSirMadam", (void*)aDearSirMadam, SYM_STRING },
-    { "aDefend", (void*)aDefend, SYM_STRING },
-    { "aDescription", (void*)aDescription, SYM_STRING },
-    { "aDesignDiyCup", (void*)aDesignDiyCup, SYM_STRING },
-    { "aDesignDiyLeagu", (void*)aDesignDiyLeagu, SYM_STRING },
-    { "aDesignDiyTourn", (void*)aDesignDiyTourn, SYM_STRING },
-    { "aDiyCompetition_0", (void*)aDiyCompetition_0, SYM_STRING },
-    { "aEditCustomTeam", (void*)aEditCustomTeam, SYM_STRING },
-    { "aEditTactics", (void*)aEditTactics, SYM_STRING },
-    { "aEditedCustomTe_0", (void*)aEditedCustomTe_0, SYM_STRING },
-    { "aExPlayerGoals", (void*)aExPlayerGoals, SYM_STRING },
-    { "aExit", (void*)aExit, SYM_STRING },
-    { "aF", (void*)aF, SYM_STRING },
-    { "aFilename", (void*)aFilename, SYM_STRING },
-    { "aFirstKit", (void*)aFirstKit, SYM_STRING },
-    { "aFixPitchType", (void*)aFixPitchType, SYM_STRING },
-    { "aForm", (void*)aForm, SYM_STRING },
-    { "aFriendlyDiyGam", (void*)aFriendlyDiyGam, SYM_STRING },
-    { "aFriendly_1", (void*)aFriendly_1, SYM_STRING },
-    { "aFrom", (void*)aFrom, SYM_STRING },
-    { "aGateReceipts", (void*)aGateReceipts, SYM_STRING },
-    { "aGeneralRunning", (void*)aGeneralRunning, SYM_STRING },
-    { "aGiveFreeTransf", (void*)aGiveFreeTransf, SYM_STRING },
-    { "aGoals", (void*)aGoals, SYM_STRING },
-    { "aHighestScorerL", (void*)aHighestScorerL, SYM_STRING },
-    { "aHighlights", (void*)aHighlights, SYM_STRING },
-    { "aHighlights_0", (void*)aHighlights_0, SYM_STRING },
-    { "aHyphen", (void*)aHyphen, SYM_STRING },
-    { "aImport", (void*)aImport, SYM_STRING },
-    { "aImportTactics", (void*)aImportTactics, SYM_STRING },
-    { "aJobOffer", (void*)aJobOffer, SYM_STRING },
-    { "aJobOffers", (void*)aJobOffers, SYM_STRING },
-    { "aJobOffersBeing", (void*)aJobOffersBeing, SYM_STRING },
-    { "aL", (void*)aL, SYM_STRING },
-    { "aLeadingCompeti", (void*)aLeadingCompeti, SYM_STRING },
-    { "aLge", (void*)aLge, SYM_STRING },
-    { "aLge_0", (void*)aLge_0, SYM_STRING },
-    { "aList", (void*)aList, SYM_STRING },
-    { "aLoad", (void*)aLoad, SYM_STRING },
-    { "aLoadHighlights", (void*)aLoadHighlights, SYM_STRING },
-    { "aLoadLiverpool", (void*)aLoadLiverpool, SYM_STRING },
-    { "aLoadOldCompeti", (void*)aLoadOldCompeti, SYM_STRING },
-    { "aMakeImprovedOf", (void*)aMakeImprovedOf, SYM_STRING },
-    { "aMakeOffer", (void*)aMakeOffer, SYM_STRING },
-    { "aManagementReco_0", (void*)aManagementReco_0, SYM_STRING },
-    { "aMatch", (void*)aMatch, SYM_STRING },
-    { "aMemoFromTheClu", (void*)aMemoFromTheClu, SYM_STRING },
-    { "aMenuMusic", (void*)aMenuMusic, SYM_STRING },
-    { "aName", (void*)aName, SYM_STRING },
-    { "aNat", (void*)aNat, SYM_STRING },
-    { "aNationalTeams", (void*)aNationalTeams, SYM_STRING },
-    { "aNationality", (void*)aNationality, SYM_STRING },
-    { "aNewBalance", (void*)aNewBalance, SYM_STRING },
-    { "aNextMatch", (void*)aNextMatch, SYM_STRING },
-    { "aNumberOfTeams", (void*)aNumberOfTeams, SYM_STRING },
-    { "aOffers", (void*)aOffers, SYM_STRING },
-    { "aOk", (void*)aOk, SYM_STRING },
-    { "aOldBalance", (void*)aOldBalance, SYM_STRING },
-    { "aOptions", (void*)aOptions, SYM_STRING },
-    { "aOriginalCustom", (void*)aOriginalCustom, SYM_STRING },
-    { "aOwnGoals", (void*)aOwnGoals, SYM_STRING },
-    { "aPl", (void*)aPl, SYM_STRING },
-    { "aPlayEachTeam", (void*)aPlayEachTeam, SYM_STRING },
-    { "aPlayMatch", (void*)aPlayMatch, SYM_STRING },
-    { "aPlayerCoach", (void*)aPlayerCoach, SYM_STRING },
-    { "aPlayerPurchase", (void*)aPlayerPurchase, SYM_STRING },
-    { "aPlayerSales", (void*)aPlayerSales, SYM_STRING },
-    { "aPlayerWagesBil", (void*)aPlayerWagesBil, SYM_STRING },
-    { "aPlayersCurrent", (void*)aPlayersCurrent, SYM_STRING },
-    { "aPlus", (void*)aPlus, SYM_STRING },
-    { "aPointsForAWin", (void*)aPointsForAWin, SYM_STRING },
-    { "aPresetCompetit_0", (void*)aPresetCompetit_0, SYM_STRING },
-    { "aPts", (void*)aPts, SYM_STRING },
-    { "aPutPlayerOnTra_0", (void*)aPutPlayerOnTra_0, SYM_STRING },
-    { "aReject", (void*)aReject, SYM_STRING },
-    { "aRejectOffer", (void*)aRejectOffer, SYM_STRING },
-    { "aRemovePlayers", (void*)aRemovePlayers, SYM_STRING },
-    { "aResponseToOffe", (void*)aResponseToOffe, SYM_STRING },
-    { "aResult", (void*)aResult, SYM_STRING },
-    { "aRounds", (void*)aRounds, SYM_STRING },
-    { "aSacked", (void*)aSacked, SYM_STRING },
-    { "aSave", (void*)aSave, SYM_STRING },
-    { "aSaveCareer", (void*)aSaveCareer, SYM_STRING },
-    { "aSaveDiskFiling", (void*)aSaveDiskFiling, SYM_STRING },
-    { "aSaveExit", (void*)aSaveExit, SYM_STRING },
-    { "aSaveHighlights", (void*)aSaveHighlights, SYM_STRING },
-    { "aSeason_1", (void*)aSeason_1, SYM_STRING },
-    { "aSecondKit", (void*)aSecondKit, SYM_STRING },
-    { "aSeeded", (void*)aSeeded, SYM_STRING },
-    { "aSkills", (void*)aSkills, SYM_STRING },
-    { "aSquad", (void*)aSquad, SYM_STRING },
-    { "aStar", (void*)aStar, SYM_STRING },
-    { "aStartCareerAs", (void*)aStartCareerAs, SYM_STRING },
-    { "aStatistics", (void*)aStatistics, SYM_STRING },
-    { "aStats", (void*)aStats, SYM_STRING },
-    { "aSubstitutes", (void*)aSubstitutes, SYM_STRING },
-    { "aSweep", (void*)aSweep, SYM_STRING },
-    { "aSwosVersion152", (void*)aSwosVersion152, SYM_STRING },
-    { "aTakeOffMarket", (void*)aTakeOffMarket, SYM_STRING },
-    { "aTeams", (void*)aTeams, SYM_STRING },
-    { "aThirdPartyOffe", (void*)aThirdPartyOffe, SYM_STRING },
-    { "aToReplace", (void*)aToReplace, SYM_STRING },
-    { "aTopGoalScorers", (void*)aTopGoalScorers, SYM_STRING },
-    { "aTot", (void*)aTot, SYM_STRING },
-    { "aTot_0", (void*)aTot_0, SYM_STRING },
-    { "aTotalProfit", (void*)aTotalProfit, SYM_STRING },
-    { "aTraining", (void*)aTraining, SYM_STRING },
-    { "aTransferMarket", (void*)aTransferMarket, SYM_STRING },
-    { "aTransfers", (void*)aTransfers, SYM_STRING },
-    { "aType", (void*)aType, SYM_STRING },
-    { "aUndo", (void*)aUndo, SYM_STRING },
-    { "aUseMatchTeam", (void*)aUseMatchTeam, SYM_STRING },
-    { "aV", (void*)aV, SYM_STRING },
-    { "aViewCompetitio", (void*)aViewCompetitio, SYM_STRING },
-    { "aViewDomesticPl", (void*)aViewDomesticPl, SYM_STRING },
-    { "aViewForeignPla", (void*)aViewForeignPla, SYM_STRING },
-    { "aViewHighlights", (void*)aViewHighlights, SYM_STRING },
-    { "aViewHighlights_0", (void*)aViewHighlights_0, SYM_STRING },
-    { "aViewLeague", (void*)aViewLeague, SYM_STRING },
-    { "aViewMatch", (void*)aViewMatch, SYM_STRING },
-    { "aViewOffers", (void*)aViewOffers, SYM_STRING },
-    { "aViewOppo", (void*)aViewOppo, SYM_STRING },
-    { "aViewResult", (void*)aViewResult, SYM_STRING },
-    { "aViewSelectedTe", (void*)aViewSelectedTe, SYM_STRING },
-    { "aViewSquad", (void*)aViewSquad, SYM_STRING },
-    { "aViewSquads", (void*)aViewSquads, SYM_STRING },
-    { "aViewTeam", (void*)aViewTeam, SYM_STRING },
-    { "aViewWorld", (void*)aViewWorld, SYM_STRING },
-    { "aW", (void*)aW, SYM_STRING },
-    { "aYourCareerIsOv", (void*)aYourCareerIsOv, SYM_STRING },
-    { "aYourChairman", (void*)aYourChairman, SYM_STRING },
-    { "allPlTeamsEqualStrTable", (void*)allPlTeamsEqualStrTable, SYM_TABLE },
-    { "asc_131FF2", (void*)asc_131FF2, SYM_STRING },
-    { "asc_135D96", (void*)asc_135D96, SYM_STRING },
-    { "autoReplaysStrTable", (void*)autoReplaysStrTable, SYM_TABLE },
-    { "autoSaveHlStrTable", (void*)autoSaveHlStrTable, SYM_TABLE },
-    { "diyAwayGoalsStrTab", (void*)diyAwayGoalsStrTab, SYM_TABLE },
-    { "diyCompetitionStart.base.competitionName", (void*)diyCompetitionStart.base.competitionName, SYM_BUFFER },
-    { "diyCupAwayGoalsStringTable", (void*)diyCupAwayGoalsStringTable, SYM_TABLE },
-    { "diyCupEndMonthStringTable", (void*)diyCupEndMonthStringTable, SYM_TABLE },
-    { "diyCupExtraTimeStringTable0", (void*)diyCupExtraTimeStringTable0, SYM_TABLE },
-    { "diyCupExtraTimeStringTable1", (void*)diyCupExtraTimeStringTable1, SYM_TABLE },
-    { "diyCupExtraTimeStringTable2", (void*)diyCupExtraTimeStringTable2, SYM_TABLE },
-    { "diyCupExtraTimeStringTable3", (void*)diyCupExtraTimeStringTable3, SYM_TABLE },
-    { "diyCupExtraTimeStringTable4", (void*)diyCupExtraTimeStringTable4, SYM_TABLE },
-    { "diyCupExtraTimeStringTable5", (void*)diyCupExtraTimeStringTable5, SYM_TABLE },
-    { "diyCupLegsStringTable0", (void*)diyCupLegsStringTable0, SYM_TABLE },
-    { "diyCupLegsStringTable1", (void*)diyCupLegsStringTable1, SYM_TABLE },
-    { "diyCupLegsStringTable2", (void*)diyCupLegsStringTable2, SYM_TABLE },
-    { "diyCupLegsStringTable3", (void*)diyCupLegsStringTable3, SYM_TABLE },
-    { "diyCupLegsStringTable4", (void*)diyCupLegsStringTable4, SYM_TABLE },
-    { "diyCupLegsStringTable5", (void*)diyCupLegsStringTable5, SYM_TABLE },
-    { "diyCupPenaltiesStringTable0", (void*)diyCupPenaltiesStringTable0, SYM_TABLE },
-    { "diyCupPenaltiesStringTable1", (void*)diyCupPenaltiesStringTable1, SYM_TABLE },
-    { "diyCupPenaltiesStringTable2", (void*)diyCupPenaltiesStringTable2, SYM_TABLE },
-    { "diyCupPenaltiesStringTable3", (void*)diyCupPenaltiesStringTable3, SYM_TABLE },
-    { "diyCupPenaltiesStringTable4", (void*)diyCupPenaltiesStringTable4, SYM_TABLE },
-    { "diyCupPenaltiesStringTable5", (void*)diyCupPenaltiesStringTable5, SYM_TABLE },
-    { "diyCupPitchTypeOrSeasonStringTable", (void*)diyCupPitchTypeOrSeasonStringTable, SYM_TABLE },
-    { "diyCupPitchTypeStringTable", (void*)diyCupPitchTypeStringTable, SYM_TABLE },
-    { "diyCupStartMonthStringTable", (void*)diyCupStartMonthStringTable, SYM_TABLE },
-    { "diyEndMonthStrTab", (void*)diyEndMonthStrTab, SYM_TABLE },
-    { "diyFileBufferCopy.header.competitionName", (void*)diyFileBufferCopy.header.competitionName, SYM_BUFFER },
-    { "diyLeagueEndingMonthStrTable", (void*)diyLeagueEndingMonthStrTable, SYM_TABLE },
-    { "diyLeagueMonthsStrTable", (void*)diyLeagueMonthsStrTable, SYM_TABLE },
-    { "diyLeaguePitchTypeStrTable", (void*)diyLeaguePitchTypeStrTable, SYM_TABLE },
-    { "diyPitchSeasonStrTab", (void*)diyPitchSeasonStrTab, SYM_TABLE },
-    { "diyPitchTypeOrSeasonStrTable", (void*)diyPitchTypeOrSeasonStrTable, SYM_TABLE },
-    { "diyPitchTypeStringTable", (void*)diyPitchTypeStringTable, SYM_TABLE },
-    { "diyStage1ExtraTimeStrTab", (void*)diyStage1ExtraTimeStrTab, SYM_TABLE },
-    { "diyStage1LegsStrTab", (void*)diyStage1LegsStrTab, SYM_TABLE },
-    { "diyStage1PenaltiesStrTab", (void*)diyStage1PenaltiesStrTab, SYM_TABLE },
-    { "diyStage1PlayCountStrTab", (void*)diyStage1PlayCountStrTab, SYM_TABLE },
-    { "diyStage1PtsForWinStrTab", (void*)diyStage1PtsForWinStrTab, SYM_TABLE },
-    { "diyStage2ExtraTimeStrTab", (void*)diyStage2ExtraTimeStrTab, SYM_TABLE },
-    { "diyStage2LegsStrTab", (void*)diyStage2LegsStrTab, SYM_TABLE },
-    { "diyStage2PenaltiesStrTab", (void*)diyStage2PenaltiesStrTab, SYM_TABLE },
-    { "diyStage2PlayCountStrTab", (void*)diyStage2PlayCountStrTab, SYM_TABLE },
-    { "diyStage2PtsForWinStrTab", (void*)diyStage2PtsForWinStrTab, SYM_TABLE },
-    { "diyStage3ExtraTimeStrTab", (void*)diyStage3ExtraTimeStrTab, SYM_TABLE },
-    { "diyStage3LegsStrTab", (void*)diyStage3LegsStrTab, SYM_TABLE },
-    { "diyStage3PenaltiesStrTab", (void*)diyStage3PenaltiesStrTab, SYM_TABLE },
-    { "diyStage3PlayCountStrTab", (void*)diyStage3PlayCountStrTab, SYM_TABLE },
-    { "diyStage3PtsForWinStrTab", (void*)diyStage3PtsForWinStrTab, SYM_TABLE },
-    { "diyStage4ExtraTimeStrTab", (void*)diyStage4ExtraTimeStrTab, SYM_TABLE },
-    { "diyStage4LegsStrTab", (void*)diyStage4LegsStrTab, SYM_TABLE },
-    { "diyStage4PenaltiesStrTab", (void*)diyStage4PenaltiesStrTab, SYM_TABLE },
-    { "diyStage4PlayCountStrTab", (void*)diyStage4PlayCountStrTab, SYM_TABLE },
-    { "diyStage4PtsForWinStrTab", (void*)diyStage4PtsForWinStrTab, SYM_TABLE },
-    { "diyStage5ExtraTimeStrTab", (void*)diyStage5ExtraTimeStrTab, SYM_TABLE },
-    { "diyStage5LegsStrTab", (void*)diyStage5LegsStrTab, SYM_TABLE },
-    { "diyStage5PenaltiesStrTab", (void*)diyStage5PenaltiesStrTab, SYM_TABLE },
-    { "diyStage5PlayCountStrTab", (void*)diyStage5PlayCountStrTab, SYM_TABLE },
-    { "diyStage5PtsForWinStrTab", (void*)diyStage5PtsForWinStrTab, SYM_TABLE },
-    { "diyStage6ExtraTimeStrTab", (void*)diyStage6ExtraTimeStrTab, SYM_TABLE },
-    { "diyStage6LegsStrTab", (void*)diyStage6LegsStrTab, SYM_TABLE },
-    { "diyStage6PenaltiesStrTab", (void*)diyStage6PenaltiesStrTab, SYM_TABLE },
-    { "diyStage6PlayCountStrTab", (void*)diyStage6PlayCountStrTab, SYM_TABLE },
-    { "diyStage6PtsForWinStrTab", (void*)diyStage6PtsForWinStrTab, SYM_TABLE },
-    { "diyStartMonthStrTab", (void*)diyStartMonthStrTab, SYM_TABLE },
-    { "editTeamsPrimaryShirts", (void*)&editTeamsPrimaryShirts, SYM_SPRITE_COPY },
-    { "editTeamsSecondaryShirt", (void*)&editTeamsSecondaryShirt, SYM_SPRITE_COPY },
-    { "editTeamsSecondaryShorts", (void*)&editTeamsSecondaryShorts, SYM_SPRITE_COPY },
-    { "editTeamsSecondarySocks", (void*)&editTeamsSecondarySocks, SYM_SPRITE_COPY },
-    { "editTeamsShorts", (void*)&editTeamsShorts, SYM_SPRITE_COPY },
-    { "editTeamsSocks", (void*)&editTeamsSocks, SYM_SPRITE_COPY },
-    { "flipStrTable", (void*)flipStrTable, SYM_TABLE },
-    { "friendlyPitchTypeTable", (void*)friendlyPitchTypeTable, SYM_TABLE },
-    { "gameLengthStrTable", (void*)gameLengthStrTable, SYM_TABLE },
+    { "a343", (void*)_a343, SYM_STRING },
+    { "a352", (void*)_a352, SYM_STRING },
+    { "a424", (void*)_a424, SYM_STRING },
+    { "a433", (void*)_a433, SYM_STRING },
+    { "a442", (void*)_a442, SYM_STRING },
+    { "a451", (void*)_a451, SYM_STRING },
+    { "a523", (void*)_a523, SYM_STRING },
+    { "a532", (void*)_a532, SYM_STRING },
+    { "a541", (void*)_a541, SYM_STRING },
+    { "aA_0", (void*)_aA_0, SYM_STRING },
+    { "aAbort", (void*)_aAbort, SYM_STRING },
+    { "aAccept", (void*)_aAccept, SYM_STRING },
+    { "aAcceptOffer", (void*)_aAcceptOffer, SYM_STRING },
+    { "aAddInternation", (void*)_aAddInternation, SYM_STRING },
+    { "aAddInternation_0", (void*)_aAddInternation_0, SYM_STRING },
+    { "aAddPlayer", (void*)_aAddPlayer, SYM_STRING },
+    { "aAdditionalInve_0", (void*)_aAdditionalInve_0, SYM_STRING },
+    { "aAllMatches", (void*)_aAllMatches, SYM_STRING },
+    { "aAllPlayerTeams", (void*)_aAllPlayerTeams, SYM_STRING },
+    { "aAskForMore", (void*)_aAskForMore, SYM_STRING },
+    { "aAttack", (void*)_aAttack, SYM_STRING },
+    { "aAutoReplays", (void*)_aAutoReplays, SYM_STRING },
+    { "aAutoSaveHighli", (void*)_aAutoSaveHighli, SYM_STRING },
+    { "aAwayGoals", (void*)_aAwayGoals, SYM_STRING },
+    { "aBankStatement", (void*)_aBankStatement, SYM_STRING },
+    { "aBestRegards", (void*)_aBestRegards, SYM_STRING },
+    { "aBuyOtherDomest", (void*)_aBuyOtherDomest, SYM_STRING },
+    { "aBuyOtherForeig", (void*)_aBuyOtherForeig, SYM_STRING },
+    { "aBuyPlayer", (void*)_aBuyPlayer, SYM_STRING },
+    { "aCareerTotal", (void*)_aCareerTotal, SYM_STRING },
+    { "aCareer_1", (void*)_aCareer_1, SYM_STRING },
+    { "aChooseTeam", (void*)_aChooseTeam, SYM_STRING },
+    { "aChooseTeams", (void*)_aChooseTeams, SYM_STRING },
+    { "aClubBusiness", (void*)_aClubBusiness, SYM_STRING },
+    { "aClubTeams", (void*)_aClubTeams, SYM_STRING },
+    { "aCoach", (void*)_aCoach, SYM_STRING },
+    { "aCoach_3", (void*)_aCoach_3, SYM_STRING },
+    { "aCoach_4", (void*)_aCoach_4, SYM_STRING },
+    { "aCompetitionBon", (void*)_aCompetitionBon, SYM_STRING },
+    { "aCompetitionInf", (void*)_aCompetitionInf, SYM_STRING },
+    { "aComputer", (void*)_aComputer, SYM_STRING },
+    { "aConfirmOffer", (void*)_aConfirmOffer, SYM_STRING },
+    { "aConsider", (void*)_aConsider, SYM_STRING },
+    { "aContinue", (void*)_aContinue, SYM_STRING },
+    { "aContinueCareer", (void*)_aContinueCareer, SYM_STRING },
+    { "aCopy", (void*)_aCopy, SYM_STRING },
+    { "aCriteria", (void*)_aCriteria, SYM_STRING },
+    { "aCup1", (void*)_aCup1, SYM_STRING },
+    { "aCup2", (void*)_aCup2, SYM_STRING },
+    { "aCup_3", (void*)_aCup_3, SYM_STRING },
+    { "aCups", (void*)_aCups, SYM_STRING },
+    { "aD", (void*)_aD, SYM_STRING },
+    { "aDearSirMadam", (void*)_aDearSirMadam, SYM_STRING },
+    { "aDefend", (void*)_aDefend, SYM_STRING },
+    { "aDescription", (void*)_aDescription, SYM_STRING },
+    { "aDesignDiyCup", (void*)_aDesignDiyCup, SYM_STRING },
+    { "aDesignDiyLeagu", (void*)_aDesignDiyLeagu, SYM_STRING },
+    { "aDesignDiyTourn", (void*)_aDesignDiyTourn, SYM_STRING },
+    { "aDiyCompetition_0", (void*)_aDiyCompetition_0, SYM_STRING },
+    { "aEditCustomTeam", (void*)_aEditCustomTeam, SYM_STRING },
+    { "aEditTactics", (void*)_aEditTactics, SYM_STRING },
+    { "aEditedCustomTe_0", (void*)_aEditedCustomTe_0, SYM_STRING },
+    { "aExPlayerGoals", (void*)_aExPlayerGoals, SYM_STRING },
+    { "aExit", (void*)_aExit, SYM_STRING },
+    { "aF", (void*)_aF, SYM_STRING },
+    { "aFilename", (void*)_aFilename, SYM_STRING },
+    { "aFirstKit", (void*)_aFirstKit, SYM_STRING },
+    { "aFixPitchType", (void*)_aFixPitchType, SYM_STRING },
+    { "aForm", (void*)_aForm, SYM_STRING },
+    { "aFriendlyDiyGam", (void*)_aFriendlyDiyGam, SYM_STRING },
+    { "aFriendly_1", (void*)_aFriendly_1, SYM_STRING },
+    { "aFrom", (void*)_aFrom, SYM_STRING },
+    { "aGateReceipts", (void*)_aGateReceipts, SYM_STRING },
+    { "aGeneralRunning", (void*)_aGeneralRunning, SYM_STRING },
+    { "aGiveFreeTransf", (void*)_aGiveFreeTransf, SYM_STRING },
+    { "aGoals", (void*)_aGoals, SYM_STRING },
+    { "aHighestScorerL", (void*)_aHighestScorerL, SYM_STRING },
+    { "aHighlights", (void*)_aHighlights, SYM_STRING },
+    { "aHighlights_0", (void*)_aHighlights_0, SYM_STRING },
+    { "aHyphen", (void*)_aHyphen, SYM_STRING },
+    { "aImport", (void*)_aImport, SYM_STRING },
+    { "aImportTactics", (void*)_aImportTactics, SYM_STRING },
+    { "aJobOffer", (void*)_aJobOffer, SYM_STRING },
+    { "aJobOffers", (void*)_aJobOffers, SYM_STRING },
+    { "aJobOffersBeing", (void*)_aJobOffersBeing, SYM_STRING },
+    { "aL", (void*)_aL, SYM_STRING },
+    { "aLeadingCompeti", (void*)_aLeadingCompeti, SYM_STRING },
+    { "aLge", (void*)_aLge, SYM_STRING },
+    { "aLge_0", (void*)_aLge_0, SYM_STRING },
+    { "aList", (void*)_aList, SYM_STRING },
+    { "aLoad", (void*)_aLoad, SYM_STRING },
+    { "aLoadHighlights", (void*)_aLoadHighlights, SYM_STRING },
+    { "aLoadLiverpool", (void*)_aLoadLiverpool, SYM_STRING },
+    { "aLoadOldCompeti", (void*)_aLoadOldCompeti, SYM_STRING },
+    { "aMakeImprovedOf", (void*)_aMakeImprovedOf, SYM_STRING },
+    { "aMakeOffer", (void*)_aMakeOffer, SYM_STRING },
+    { "aManagementReco_0", (void*)_aManagementReco_0, SYM_STRING },
+    { "aMatch", (void*)_aMatch, SYM_STRING },
+    { "aMemoFromTheClu", (void*)_aMemoFromTheClu, SYM_STRING },
+    { "aMenuMusic", (void*)_aMenuMusic, SYM_STRING },
+    { "aName", (void*)_aName, SYM_STRING },
+    { "aNat", (void*)_aNat, SYM_STRING },
+    { "aNationalTeams", (void*)_aNationalTeams, SYM_STRING },
+    { "aNationality", (void*)_aNationality, SYM_STRING },
+    { "aNewBalance", (void*)_aNewBalance, SYM_STRING },
+    { "aNextMatch", (void*)_aNextMatch, SYM_STRING },
+    { "aNumberOfTeams", (void*)_aNumberOfTeams, SYM_STRING },
+    { "aOffers", (void*)_aOffers, SYM_STRING },
+    { "aOk", (void*)_aOk, SYM_STRING },
+    { "aOldBalance", (void*)_aOldBalance, SYM_STRING },
+    { "aOptions", (void*)_aOptions, SYM_STRING },
+    { "aOriginalCustom", (void*)_aOriginalCustom, SYM_STRING },
+    { "aOwnGoals", (void*)_aOwnGoals, SYM_STRING },
+    { "aPl", (void*)_aPl, SYM_STRING },
+    { "aPlayEachTeam", (void*)_aPlayEachTeam, SYM_STRING },
+    { "aPlayMatch", (void*)_aPlayMatch, SYM_STRING },
+    { "aPlayerCoach", (void*)_aPlayerCoach, SYM_STRING },
+    { "aPlayerPurchase", (void*)_aPlayerPurchase, SYM_STRING },
+    { "aPlayerSales", (void*)_aPlayerSales, SYM_STRING },
+    { "aPlayerWagesBil", (void*)_aPlayerWagesBil, SYM_STRING },
+    { "aPlayersCurrent", (void*)_aPlayersCurrent, SYM_STRING },
+    { "aPlus", (void*)_aPlus, SYM_STRING },
+    { "aPointsForAWin", (void*)_aPointsForAWin, SYM_STRING },
+    { "aPresetCompetit_0", (void*)_aPresetCompetit_0, SYM_STRING },
+    { "aPts", (void*)_aPts, SYM_STRING },
+    { "aPutPlayerOnTra_0", (void*)_aPutPlayerOnTra_0, SYM_STRING },
+    { "aReject", (void*)_aReject, SYM_STRING },
+    { "aRejectOffer", (void*)_aRejectOffer, SYM_STRING },
+    { "aRemovePlayers", (void*)_aRemovePlayers, SYM_STRING },
+    { "aResponseToOffe", (void*)_aResponseToOffe, SYM_STRING },
+    { "aResult", (void*)_aResult, SYM_STRING },
+    { "aRounds", (void*)_aRounds, SYM_STRING },
+    { "aSacked", (void*)_aSacked, SYM_STRING },
+    { "aSave", (void*)_aSave, SYM_STRING },
+    { "aSaveCareer", (void*)_aSaveCareer, SYM_STRING },
+    { "aSaveDiskFiling", (void*)_aSaveDiskFiling, SYM_STRING },
+    { "aSaveExit", (void*)_aSaveExit, SYM_STRING },
+    { "aSaveHighlights", (void*)_aSaveHighlights, SYM_STRING },
+    { "aSeason_1", (void*)_aSeason_1, SYM_STRING },
+    { "aSecondKit", (void*)_aSecondKit, SYM_STRING },
+    { "aSeeded", (void*)_aSeeded, SYM_STRING },
+    { "aSkills", (void*)_aSkills, SYM_STRING },
+    { "aSquad", (void*)_aSquad, SYM_STRING },
+    { "aStar", (void*)_aStar, SYM_STRING },
+    { "aStartCareerAs", (void*)_aStartCareerAs, SYM_STRING },
+    { "aStatistics", (void*)_aStatistics, SYM_STRING },
+    { "aStats", (void*)_aStats, SYM_STRING },
+    { "aSubstitutes", (void*)_aSubstitutes, SYM_STRING },
+    { "aSweep", (void*)_aSweep, SYM_STRING },
+    { "aSwosVersion152", (void*)_aSwosVersion152, SYM_STRING },
+    { "aTakeOffMarket", (void*)_aTakeOffMarket, SYM_STRING },
+    { "aTeams", (void*)_aTeams, SYM_STRING },
+    { "aThirdPartyOffe", (void*)_aThirdPartyOffe, SYM_STRING },
+    { "aToReplace", (void*)_aToReplace, SYM_STRING },
+    { "aTopGoalScorers", (void*)_aTopGoalScorers, SYM_STRING },
+    { "aTot", (void*)_aTot, SYM_STRING },
+    { "aTot_0", (void*)_aTot_0, SYM_STRING },
+    { "aTotalProfit", (void*)_aTotalProfit, SYM_STRING },
+    { "aTraining", (void*)_aTraining, SYM_STRING },
+    { "aTransferMarket", (void*)_aTransferMarket, SYM_STRING },
+    { "aTransfers", (void*)_aTransfers, SYM_STRING },
+    { "aType", (void*)_aType, SYM_STRING },
+    { "aUndo", (void*)_aUndo, SYM_STRING },
+    { "aUseMatchTeam", (void*)_aUseMatchTeam, SYM_STRING },
+    { "aV", (void*)_aV, SYM_STRING },
+    { "aViewCompetitio", (void*)_aViewCompetitio, SYM_STRING },
+    { "aViewDomesticPl", (void*)_aViewDomesticPl, SYM_STRING },
+    { "aViewForeignPla", (void*)_aViewForeignPla, SYM_STRING },
+    { "aViewHighlights", (void*)_aViewHighlights, SYM_STRING },
+    { "aViewHighlights_0", (void*)_aViewHighlights_0, SYM_STRING },
+    { "aViewLeague", (void*)_aViewLeague, SYM_STRING },
+    { "aViewMatch", (void*)_aViewMatch, SYM_STRING },
+    { "aViewOffers", (void*)_aViewOffers, SYM_STRING },
+    { "aViewOppo", (void*)_aViewOppo, SYM_STRING },
+    { "aViewResult", (void*)_aViewResult, SYM_STRING },
+    { "aViewSelectedTe", (void*)_aViewSelectedTe, SYM_STRING },
+    { "aViewSquad", (void*)_aViewSquad, SYM_STRING },
+    { "aViewSquads", (void*)_aViewSquads, SYM_STRING },
+    { "aViewTeam", (void*)_aViewTeam, SYM_STRING },
+    { "aViewWorld", (void*)_aViewWorld, SYM_STRING },
+    { "aW", (void*)_aW, SYM_STRING },
+    { "aYourCareerIsOv", (void*)_aYourCareerIsOv, SYM_STRING },
+    { "aYourChairman", (void*)_aYourChairman, SYM_STRING },
+    { "allPlTeamsEqualStrTable", (void*)_allPlTeamsEqualStrTable, SYM_TABLE },
+    { "asc_131FF2", (void*)_asc_131FF2, SYM_STRING },
+    { "asc_135D96", (void*)_asc_135D96, SYM_STRING },
+    { "autoReplaysStrTable", (void*)_autoReplaysStrTable, SYM_TABLE },
+    { "autoSaveHlStrTable", (void*)_autoSaveHlStrTable, SYM_TABLE },
+    { "diyAwayGoalsStrTab", (void*)_diyAwayGoalsStrTab, SYM_TABLE },
+    { "diyCompetitionStart.base.competitionName", (void*)_diyCompetitionStart.base.competitionName, SYM_BUFFER },
+    { "diyCupAwayGoalsStringTable", (void*)_diyCupAwayGoalsStringTable, SYM_TABLE },
+    { "diyCupEndMonthStringTable", (void*)_diyCupEndMonthStringTable, SYM_TABLE },
+    { "diyCupExtraTimeStringTable0", (void*)_diyCupExtraTimeStringTable0, SYM_TABLE },
+    { "diyCupExtraTimeStringTable1", (void*)_diyCupExtraTimeStringTable1, SYM_TABLE },
+    { "diyCupExtraTimeStringTable2", (void*)_diyCupExtraTimeStringTable2, SYM_TABLE },
+    { "diyCupExtraTimeStringTable3", (void*)_diyCupExtraTimeStringTable3, SYM_TABLE },
+    { "diyCupExtraTimeStringTable4", (void*)_diyCupExtraTimeStringTable4, SYM_TABLE },
+    { "diyCupExtraTimeStringTable5", (void*)_diyCupExtraTimeStringTable5, SYM_TABLE },
+    { "diyCupLegsStringTable0", (void*)_diyCupLegsStringTable0, SYM_TABLE },
+    { "diyCupLegsStringTable1", (void*)_diyCupLegsStringTable1, SYM_TABLE },
+    { "diyCupLegsStringTable2", (void*)_diyCupLegsStringTable2, SYM_TABLE },
+    { "diyCupLegsStringTable3", (void*)_diyCupLegsStringTable3, SYM_TABLE },
+    { "diyCupLegsStringTable4", (void*)_diyCupLegsStringTable4, SYM_TABLE },
+    { "diyCupLegsStringTable5", (void*)_diyCupLegsStringTable5, SYM_TABLE },
+    { "diyCupPenaltiesStringTable0", (void*)_diyCupPenaltiesStringTable0, SYM_TABLE },
+    { "diyCupPenaltiesStringTable1", (void*)_diyCupPenaltiesStringTable1, SYM_TABLE },
+    { "diyCupPenaltiesStringTable2", (void*)_diyCupPenaltiesStringTable2, SYM_TABLE },
+    { "diyCupPenaltiesStringTable3", (void*)_diyCupPenaltiesStringTable3, SYM_TABLE },
+    { "diyCupPenaltiesStringTable4", (void*)_diyCupPenaltiesStringTable4, SYM_TABLE },
+    { "diyCupPenaltiesStringTable5", (void*)_diyCupPenaltiesStringTable5, SYM_TABLE },
+    { "diyCupPitchTypeOrSeasonStringTable", (void*)_diyCupPitchTypeOrSeasonStringTable, SYM_TABLE },
+    { "diyCupPitchTypeStringTable", (void*)_diyCupPitchTypeStringTable, SYM_TABLE },
+    { "diyCupStartMonthStringTable", (void*)_diyCupStartMonthStringTable, SYM_TABLE },
+    { "diyEndMonthStrTab", (void*)_diyEndMonthStrTab, SYM_TABLE },
+    { "diyFileBufferCopy.header.competitionName", (void*)_diyFileBufferCopy.header.competitionName, SYM_BUFFER },
+    { "diyLeagueEndingMonthStrTable", (void*)_diyLeagueEndingMonthStrTable, SYM_TABLE },
+    { "diyLeagueMonthsStrTable", (void*)_diyLeagueMonthsStrTable, SYM_TABLE },
+    { "diyLeaguePitchTypeStrTable", (void*)_diyLeaguePitchTypeStrTable, SYM_TABLE },
+    { "diyPitchSeasonStrTab", (void*)_diyPitchSeasonStrTab, SYM_TABLE },
+    { "diyPitchTypeOrSeasonStrTable", (void*)_diyPitchTypeOrSeasonStrTable, SYM_TABLE },
+    { "diyPitchTypeStringTable", (void*)_diyPitchTypeStringTable, SYM_TABLE },
+    { "diyStage1ExtraTimeStrTab", (void*)_diyStage1ExtraTimeStrTab, SYM_TABLE },
+    { "diyStage1LegsStrTab", (void*)_diyStage1LegsStrTab, SYM_TABLE },
+    { "diyStage1PenaltiesStrTab", (void*)_diyStage1PenaltiesStrTab, SYM_TABLE },
+    { "diyStage1PlayCountStrTab", (void*)_diyStage1PlayCountStrTab, SYM_TABLE },
+    { "diyStage1PtsForWinStrTab", (void*)_diyStage1PtsForWinStrTab, SYM_TABLE },
+    { "diyStage2ExtraTimeStrTab", (void*)_diyStage2ExtraTimeStrTab, SYM_TABLE },
+    { "diyStage2LegsStrTab", (void*)_diyStage2LegsStrTab, SYM_TABLE },
+    { "diyStage2PenaltiesStrTab", (void*)_diyStage2PenaltiesStrTab, SYM_TABLE },
+    { "diyStage2PlayCountStrTab", (void*)_diyStage2PlayCountStrTab, SYM_TABLE },
+    { "diyStage2PtsForWinStrTab", (void*)_diyStage2PtsForWinStrTab, SYM_TABLE },
+    { "diyStage3ExtraTimeStrTab", (void*)_diyStage3ExtraTimeStrTab, SYM_TABLE },
+    { "diyStage3LegsStrTab", (void*)_diyStage3LegsStrTab, SYM_TABLE },
+    { "diyStage3PenaltiesStrTab", (void*)_diyStage3PenaltiesStrTab, SYM_TABLE },
+    { "diyStage3PlayCountStrTab", (void*)_diyStage3PlayCountStrTab, SYM_TABLE },
+    { "diyStage3PtsForWinStrTab", (void*)_diyStage3PtsForWinStrTab, SYM_TABLE },
+    { "diyStage4ExtraTimeStrTab", (void*)_diyStage4ExtraTimeStrTab, SYM_TABLE },
+    { "diyStage4LegsStrTab", (void*)_diyStage4LegsStrTab, SYM_TABLE },
+    { "diyStage4PenaltiesStrTab", (void*)_diyStage4PenaltiesStrTab, SYM_TABLE },
+    { "diyStage4PlayCountStrTab", (void*)_diyStage4PlayCountStrTab, SYM_TABLE },
+    { "diyStage4PtsForWinStrTab", (void*)_diyStage4PtsForWinStrTab, SYM_TABLE },
+    { "diyStage5ExtraTimeStrTab", (void*)_diyStage5ExtraTimeStrTab, SYM_TABLE },
+    { "diyStage5LegsStrTab", (void*)_diyStage5LegsStrTab, SYM_TABLE },
+    { "diyStage5PenaltiesStrTab", (void*)_diyStage5PenaltiesStrTab, SYM_TABLE },
+    { "diyStage5PlayCountStrTab", (void*)_diyStage5PlayCountStrTab, SYM_TABLE },
+    { "diyStage5PtsForWinStrTab", (void*)_diyStage5PtsForWinStrTab, SYM_TABLE },
+    { "diyStage6ExtraTimeStrTab", (void*)_diyStage6ExtraTimeStrTab, SYM_TABLE },
+    { "diyStage6LegsStrTab", (void*)_diyStage6LegsStrTab, SYM_TABLE },
+    { "diyStage6PenaltiesStrTab", (void*)_diyStage6PenaltiesStrTab, SYM_TABLE },
+    { "diyStage6PlayCountStrTab", (void*)_diyStage6PlayCountStrTab, SYM_TABLE },
+    { "diyStage6PtsForWinStrTab", (void*)_diyStage6PtsForWinStrTab, SYM_TABLE },
+    { "diyStartMonthStrTab", (void*)_diyStartMonthStrTab, SYM_TABLE },
+    { "editTeamsPrimaryShirts", (void*)&_editTeamsPrimaryShirts, SYM_SPRITE_COPY },
+    { "editTeamsSecondaryShirt", (void*)&_editTeamsSecondaryShirt, SYM_SPRITE_COPY },
+    { "editTeamsSecondaryShorts", (void*)&_editTeamsSecondaryShorts, SYM_SPRITE_COPY },
+    { "editTeamsSecondarySocks", (void*)&_editTeamsSecondarySocks, SYM_SPRITE_COPY },
+    { "editTeamsShorts", (void*)&_editTeamsShorts, SYM_SPRITE_COPY },
+    { "editTeamsSocks", (void*)&_editTeamsSocks, SYM_SPRITE_COPY },
+    { "flipStrTable", (void*)_flipStrTable, SYM_TABLE },
+    { "friendlyPitchTypeTable", (void*)_friendlyPitchTypeTable, SYM_TABLE },
+    { "gameLengthStrTable", (void*)_gameLengthStrTable, SYM_TABLE },
     { "locret_139AE2", (void*)locret_139AE2, SYM_FUNC },
-    { "managerNameBuffer", (void*)managerNameBuffer, SYM_BUFFER },
-    { "managerSexBuffer", (void*)managerSexBuffer, SYM_BUFFER },
-    { "managerSurnameBuffer", (void*)managerSurnameBuffer, SYM_BUFFER },
-    { "menuMusicStrTable", (void*)menuMusicStrTable, SYM_TABLE },
-    { "offsetCoachOrPlayer", (void*)offsetCoachOrPlayer, SYM_BUFFER },
-    { "pitchTypeOrSeasonTable", (void*)pitchTypeOrSeasonTable, SYM_TABLE },
-    { "pitchTypeStrTable", (void*)pitchTypeStrTable, SYM_TABLE },
-    { "positionFilterStringTable", (void*)positionFilterStringTable, SYM_TABLE },
-    { "saveFileTitle", (void*)saveFileTitle, SYM_BUFFER },
-    { "skillFilterStringTable", (void*)skillFilterStringTable, SYM_TABLE },
-    { "stadiumMenuLittlePlayerSpriteCopy", (void*)&stadiumMenuLittlePlayerSpriteCopy, SYM_BUFFER },
-    { "teamTacticsUSERA", (void*)teamTacticsUSERA, SYM_BUFFER },
-    { "teamTacticsUSERB", (void*)teamTacticsUSERB, SYM_BUFFER },
-    { "teamTacticsUSERC", (void*)teamTacticsUSERC, SYM_BUFFER },
-    { "teamTacticsUSERD", (void*)teamTacticsUSERD, SYM_BUFFER },
-    { "teamTacticsUSERE", (void*)teamTacticsUSERE, SYM_BUFFER },
-    { "teamTacticsUSERF", (void*)teamTacticsUSERF, SYM_BUFFER },
+    { "managerNameBuffer", (void*)_managerNameBuffer, SYM_BUFFER },
+    { "managerSexBuffer", (void*)_managerSexBuffer, SYM_BUFFER },
+    { "managerSurnameBuffer", (void*)_managerSurnameBuffer, SYM_BUFFER },
+    { "menuMusicStrTable", (void*)_menuMusicStrTable, SYM_TABLE },
+    { "offsetCoachOrPlayer", (void*)_offsetCoachOrPlayer, SYM_BUFFER },
+    { "pitchTypeOrSeasonTable", (void*)_pitchTypeOrSeasonTable, SYM_TABLE },
+    { "pitchTypeStrTable", (void*)_pitchTypeStrTable, SYM_TABLE },
+    { "positionFilterStringTable", (void*)_positionFilterStringTable, SYM_TABLE },
+    { "saveFileTitle", (void*)_saveFileTitle, SYM_BUFFER },
+    { "skillFilterStringTable", (void*)_skillFilterStringTable, SYM_TABLE },
+    { "stadiumMenuLittlePlayerSpriteCopy", (void*)&_stadiumMenuLittlePlayerSpriteCopy, SYM_BUFFER },
+    { "teamTacticsUSERA", (void*)_teamTacticsUSERA, SYM_BUFFER },
+    { "teamTacticsUSERB", (void*)_teamTacticsUSERB, SYM_BUFFER },
+    { "teamTacticsUSERC", (void*)_teamTacticsUSERC, SYM_BUFFER },
+    { "teamTacticsUSERD", (void*)_teamTacticsUSERD, SYM_BUFFER },
+    { "teamTacticsUSERE", (void*)_teamTacticsUSERE, SYM_BUFFER },
+    { "teamTacticsUSERF", (void*)_teamTacticsUSERF, SYM_BUFFER },
 };
-const int menuSymbolsCount =
-    (int)(sizeof(menuSymbols) / sizeof(menuSymbols[0]));
+const int _menuSymbolsCount =
+    (int)(sizeof(_menuSymbols) / sizeof(_menuSymbols[0]));
 
 static int menu_symbol_cmp(const void *key, const void *elem)
 {
@@ -1320,8 +1320,8 @@ static int menu_symbol_cmp(const void *key, const void *elem)
 
 const MenuSymbol *menu_symbol_lookup(const char *name)
 {
-    return (const MenuSymbol *)bsearch(name, menuSymbols,
-        (size_t)menuSymbolsCount, sizeof(menuSymbols[0]), menu_symbol_cmp);
+    return (const MenuSymbol *)bsearch(name, _menuSymbols,
+        (size_t)_menuSymbolsCount, sizeof(_menuSymbols[0]), menu_symbol_cmp);
 }
 
 void *menu_resolve(const char *name)

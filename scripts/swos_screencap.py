@@ -12,9 +12,9 @@ The target must be STOPPED (gdb all-stop) when this runs. Interrupt first:
   Amiga: pkill -INT -f '[m]68k-amiga-elf-gdb'  then  gdb_proxy.py waitstop 8
 
 What it reads (matches platform_sdl.c chunky_to_rgba):
-  - frame: frontbufferBaseAltPtr's buffer (the *displayed* frame), 336x272,
-    row stride 336, one byte/pixel = palette index. (usePlaneOffsetFlag /
-    useAltBaseFlag pick a different buffer in some transient paths; we read the
+  - frame: _frontbufferBaseAltPtr's buffer (the *displayed* frame), 336x272,
+    row stride 336, one byte/pixel = palette index. (_usePlaneOffsetFlag /
+    _useAltBaseFlag pick a different buffer in some transient paths; we read the
     default Alt buffer, correct for menus — the harness's use case.)
   - palette: SDL s_palette[256] (RGBA). Amiga palette (from the copperlist) is
     a TODO — pass --pal-amiga once that's wired.
@@ -79,8 +79,8 @@ def main(argv):
 
     nbytes = STRIDE * H
     r = gdb(a.proxy, f'dump binary memory {FB_BIN} '
-                     f'(char*)frontbufferBaseAltPtr '
-                     f'((char*)frontbufferBaseAltPtr + {nbytes})')
+                     f'(char*)_frontbufferBaseAltPtr '
+                     f'((char*)_frontbufferBaseAltPtr + {nbytes})')
     if "error" in r.lower() or "No symbol" in r:
         print("FB dump failed:\n" + r)
         return 1

@@ -37,8 +37,8 @@
 #include "swos_types.h"
 #include "swos_platform.h"
 
-extern uint8_t diyLeagueSeasonStateTable[2000];
-_Static_assert(sizeof(diyLeagueSeasonStateTable) == 2000,
+extern uint8_t _diyLeagueSeasonStateTable[2000];
+_Static_assert(sizeof(_diyLeagueSeasonStateTable) == 2000,
                "diyLeagueSeasonStateTable must stay 2000 bytes");
 
 __asm__(
@@ -48,12 +48,12 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "lastFinancialWeekIndex\n"
-    _ASM_PFX "lastFinancialWeekIndex:\n"
+    ".globl " _ASM_PFX "_lastFinancialWeekIndex\n"
+    _ASM_PFX "_lastFinancialWeekIndex:\n"
     ".skip 1\n"
     ".skip 1\n"   /* pad_165CE1 unnamed pad */
-    ".globl " _ASM_PFX "diyLeagueSeasonStateTable\n"
-    _ASM_PFX "diyLeagueSeasonStateTable:\n"
+    ".globl " _ASM_PFX "_diyLeagueSeasonStateTable\n"
+    _ASM_PFX "_diyLeagueSeasonStateTable:\n"
     ".skip 2000\n"
     ".text\n"
 );

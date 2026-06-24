@@ -48,7 +48,7 @@ uint16_t GetAveragePlayerPrice(TeamFileEx *team);
 uint32_t GetLowestAndHighestPlayerPrice(void);
 uint16_t CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
                               uint16_t price, const uint8_t *curQuadDistFactor,
-                              const uint8_t *playerPositions, const uint8_t *coordToQuad);
+                              const uint8_t *_playerPositions, const uint8_t *coordToQuad);
 
 /* --- DIY Team Shuffling --- */
 void DIY_ShuffleTeams(uint8_t *diy, uint8_t *slot);

@@ -31,7 +31,7 @@ int DosGfx_DecodePlanarSprite(const uint8_t *planar, int nlines, int wquads,
 
 /* Build the active DOS palette: base game palette + pitch-condition overlay for
  * pitchType (0..6, clamped). Writes 256 RGB triples (8-bit) to rgb888Out[768]. */
-void DosGfx_BuildPalette(int pitchType, uint8_t *rgb888Out);
+void DosGfx_BuildPalette(int _pitchType, uint8_t *rgb888Out);
 
 /* Arcade service-menu palette: 16 true-8-bit RGB entries (from SVCFONT.bmp's
  * embedded palette / DosPalette.Service). Writes 16 RGB triples to

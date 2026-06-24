@@ -14,18 +14,18 @@
 #define SPR_TEAM1_PLAYER_NAMES_START    0x8D
 
 /* ---- External globals (in SWOS2.s / data section) ---- */
-extern uint8_t surnameBuf[];
-extern uint8_t facesFrequency[];
-extern void *skinAndHairColorConversionTable[];
-extern GoalieFaceState goalieFaces;     /* GK face/skin state (was adjacency-aliased globals) */
-extern uint16_t useIndividualPlayerSkinColor;
-extern TeamGame *topTeamPtr;
-extern TeamGame *bottomTeamPtr;
-extern Sprite **team1SpritesTable;
-extern Sprite **team2SpritesTable;
-extern uint8_t plNamesLengthTable[];
-extern uint8_t numberBuffer[];
-extern uint8_t smallCharsTable[];
+extern uint8_t _surnameBuf[];
+extern uint8_t _facesFrequency[];
+extern void *_skinAndHairColorConversionTable[];
+extern GoalieFaceState _goalieFaces;     /* GK face/skin state (was adjacency-aliased globals) */
+extern uint16_t _useIndividualPlayerSkinColor;
+extern TeamGame *_topTeamPtr;
+extern TeamGame *_bottomTeamPtr;
+extern Sprite **_team1SpritesTable;
+extern Sprite **_team2SpritesTable;
+extern uint8_t _plNamesLengthTable[];
+extern uint8_t _numberBuffer[];
+extern uint8_t _smallCharsTable[];
 
 /* ================================================================
  * ExtractSurname  (SWOS2.s line 45863)
@@ -72,7 +72,7 @@ uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags)
     }
 
     /* Build into surnameBuf */
-    out = surnameBuf;
+    out = _surnameBuf;
     charCount = 0;
     p = origName;
 
@@ -81,8 +81,8 @@ uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags)
         p++;
 
     if (*p == 0) {
-        surnameBuf[0] = 0;
-        return surnameBuf;
+        _surnameBuf[0] = 0;
+        return _surnameBuf;
     }
 
     /* Find end of first word */
@@ -170,7 +170,7 @@ copy_remainder:
 
 terminate:
     *out = 0;
-    return surnameBuf;
+    return _surnameBuf;
 }
 
 /* ================================================================
@@ -183,13 +183,13 @@ void CountFaces(TeamGame *team)
 {
     int16_t i;
 
-    facesFrequency[0] = 0;
-    facesFrequency[1] = 0;
-    facesFrequency[2] = 0;
+    _facesFrequency[0] = 0;
+    _facesFrequency[1] = 0;
+    _facesFrequency[2] = 0;
 
     for (i = 0; i < 16; i++) {
         int16_t face = (int16_t)team->players[i].face;
-        facesFrequency[face]++;
+        _facesFrequency[face]++;
     }
 }
 
@@ -208,7 +208,7 @@ void ConvertColorTableToSkinColor(uint16_t color, uint16_t *destTable)
     uint16_t *convTable;
     int16_t idx;
 
-    convTable = (uint16_t *)skinAndHairColorConversionTable[colorIdx];
+    convTable = (uint16_t *)_skinAndHairColorConversionTable[colorIdx];
 
     for (;;) {
         idx = (int16_t)*convTable++;
@@ -286,16 +286,16 @@ void InitializePlayerSpriteFrameIndices(void)
     uint16_t idx = 0;
 
     for (d1 = 10; d1 >= 0; d1--, idx++) {
-        Sprite *spr1 = team1SpritesTable[idx];
-        Sprite *spr2 = team2SpritesTable[idx];
+        Sprite *spr1 = _team1SpritesTable[idx];
+        Sprite *spr2 = _team2SpritesTable[idx];
 
         /* Team 1 */
         spr1->frameOffset = 0;
-        if (useIndividualPlayerSkinColor != 0) {
-            int16_t face = (int16_t)topTeamPtr->players[idx].face;
+        if (_useIndividualPlayerSkinColor != 0) {
+            int16_t face = (int16_t)_topTeamPtr->players[idx].face;
             if (d1 == 10) {
                 /* Goalkeeper: use face-to-position lookup */
-                face = (int16_t)(int8_t)goalieFaces.team1FaceToPosition[face];
+                face = (int16_t)(int8_t)_goalieFaces.team1FaceToPosition[face];
                 if (face == -1)
                     face = 0;
                 face = face * 0x3A;
@@ -307,10 +307,10 @@ void InitializePlayerSpriteFrameIndices(void)
 
         /* Team 2 */
         spr2->frameOffset = 0;
-        if (useIndividualPlayerSkinColor != 0) {
-            int16_t face = (int16_t)bottomTeamPtr->players[idx].face;
+        if (_useIndividualPlayerSkinColor != 0) {
+            int16_t face = (int16_t)_bottomTeamPtr->players[idx].face;
             if (d1 == 10) {
-                face = (int16_t)(int8_t)goalieFaces.team2FaceToPosition[face];
+                face = (int16_t)(int8_t)_goalieFaces.team2FaceToPosition[face];
                 if (face == -1)
                     face = 0;
                 face = face * 0x3A;
@@ -337,10 +337,10 @@ static uint16_t makePlayerNameSprite(uint16_t playerNumber, uint8_t *shortName,
     uint16_t textWidth;
 
     /* Write player number to numberBuffer */
-    Int2Ascii(playerNumber, numberBuffer);
+    Int2Ascii(playerNumber, _numberBuffer);
 
     /* Find end of number string and append space */
-    p = numberBuffer;
+    p = _numberBuffer;
     while (*p)
         p++;
     *p++ = ' ';
@@ -355,7 +355,7 @@ static uint16_t makePlayerNameSprite(uint16_t playerNumber, uint8_t *shortName,
     StringCopy(surname, p);
 
     /* Render text into sprite */
-    Text2Sprite(0, 0, spriteIdx, numberBuffer, smallCharsTable, 2, &textWidth);
+    Text2Sprite(0, 0, spriteIdx, _numberBuffer, _smallCharsTable, 2, &textWidth);
 
     *nameLenOut = (uint8_t)textWidth;
     return spriteIdx + 1;
@@ -370,7 +370,7 @@ static uint16_t makePlayerNameSprite(uint16_t playerNumber, uint8_t *shortName,
 __attribute__((used, externally_visible))
 void MakeSpritesFromPlayerNames(TeamGame *leftTeam, TeamGame *rightTeam)
 {
-    uint8_t *nameLenPtr = plNamesLengthTable;
+    uint8_t *nameLenPtr = _plNamesLengthTable;
     uint16_t sprIdx = SPR_TEAM1_PLAYER_NAMES_START;
     int16_t i;
 

@@ -8,123 +8,123 @@
 #include "deterministic.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
-extern Sprite             ballSprite;
-extern TeamGeneralInfo    topTeamData;
-extern TeamGeneralInfo    bottomTeamData;
-extern Sprite             refereeSprite;
-extern Sprite **team1SpritesTable;
-extern Sprite **team2SpritesTable;
-extern TeamGame           topTeamInGame;
-extern TeamGame           bottomTeamInGame;
-extern TeamGame           topTeamSaved;
-extern TeamGame           bottomTeamSaved;
-extern TeamStatisticsData team1StatsData;
-extern TeamStatisticsData team2StatsData;
+extern Sprite             _ballSprite;
+extern TeamGeneralInfo    _topTeamData;
+extern TeamGeneralInfo    _bottomTeamData;
+extern Sprite             _refereeSprite;
+extern Sprite **_team1SpritesTable;
+extern Sprite **_team2SpritesTable;
+extern TeamGame           _topTeamInGame;
+extern TeamGame           _bottomTeamInGame;
+extern TeamGame           _topTeamSaved;
+extern TeamGame           _bottomTeamSaved;
+extern TeamStatisticsData _team1StatsData;
+extern TeamStatisticsData _team2StatsData;
 
 /* Match state */
-extern uint16_t gameState;
-extern uint16_t gameStatePl;
-extern uint16_t breakCameraMode;
-extern uint16_t gameNotInProgressCounterWriteOnly;
-extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
-extern uint16_t stoppageTimerTotal;
-extern uint16_t stoppageTimerActive;
-extern uint16_t stoppageEventTimer;
-extern uint16_t halfNumber;
-extern uint16_t teamStarting;
-extern uint16_t teamPlayingUp;
-extern uint16_t cameraDirection;
-extern uint8_t  playerTurnFlags;
-extern uint16_t lastCameraDirection;
-extern uint8_t  lastPlayerTurnFlags;
-extern uint16_t cameraXVelocity;
-extern uint16_t cameraYVelocity;
-extern uint16_t cameraMoveToShowerLatch;
-extern uint16_t hideBall;
-extern volatile uint16_t playGame;
-extern uint16_t trainingGame;
-extern uint16_t goalCounter;
-extern uint16_t endOfHalfWriteOnly;
-extern uint16_t sfxQueueWriteIdx;
-extern uint16_t showFansCounter;
-extern uint16_t resultTimer;
-extern uint16_t timeVar;
-extern uint16_t refState;
-extern uint16_t foulXCoordinate;
-extern uint16_t foulYCoordinate;
-extern uint16_t playRefereeWhistle;
+extern uint16_t _gameState;
+extern uint16_t _gameStatePl;
+extern uint16_t _breakCameraMode;
+extern uint16_t _gameNotInProgressCounterWriteOnly;
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
+extern uint16_t _stoppageTimerTotal;
+extern uint16_t _stoppageTimerActive;
+extern uint16_t _stoppageEventTimer;
+extern uint16_t _halfNumber;
+extern uint16_t _teamStarting;
+extern uint16_t _teamPlayingUp;
+extern uint16_t _cameraDirection;
+extern uint8_t  _playerTurnFlags;
+extern uint16_t _lastCameraDirection;
+extern uint8_t  _lastPlayerTurnFlags;
+extern uint16_t _cameraXVelocity;
+extern uint16_t _cameraYVelocity;
+extern uint16_t _cameraMoveToShowerLatch;
+extern uint16_t _hideBall;
+extern volatile uint16_t _playGame;
+extern uint16_t _trainingGame;
+extern uint16_t _goalCounter;
+extern uint16_t _endOfHalfWriteOnly;
+extern uint16_t _sfxQueueWriteIdx;
+extern uint16_t _showFansCounter;
+extern uint16_t _resultTimer;
+extern uint16_t _timeVar;
+extern uint16_t _refState;
+extern uint16_t _foulXCoordinate;
+extern uint16_t _foulYCoordinate;
+extern uint16_t _playRefereeWhistle;
 
 /* InitGameRestoreTeams globals */
-extern uint16_t gameLengthInGame;
-extern uint16_t playerCardChance;
-extern uint16_t overlayActiveFlag;
-extern uint16_t gameRandValue;
-extern uint16_t paletteIndex;
-extern volatile uint16_t playHighlightFlag;
-extern uint8_t  gamePalette[];
-extern void *paletteTable[];
-extern uint16_t pitchBallSpeedFactor;
-extern uint16_t ballSpeedBounceFactor;
-extern uint16_t ballBounceFactor;
-extern uint16_t pitchNumberAndType;
-extern uint16_t playingPenalties;
-extern uint16_t dontShowScorers;
-extern uint16_t statsTimer;
-extern uint16_t showStats;
-extern uint16_t showingUserStats;
-extern uint16_t subsTeamsSwapped;
-extern uint16_t inSubstitutesMenu;
-extern uint16_t cameraLeavingSubsTimer;
-extern uint16_t benchOff;
-extern uint16_t leavingSubsMenu;
-extern uint16_t waitForPlayerToGoInTimer;
-extern uint16_t substituteInProgress;
-extern uint16_t statsTeam1Goals;
-extern uint16_t team1GoalsDigit1;
-extern uint16_t team1GoalsDigit2;
-extern uint16_t statsTeam2Goals;
-extern uint16_t team2GoalsDigit1;
-extern uint16_t team2GoalsDigit2;
-extern uint16_t team1TotalGoals;
-extern uint16_t team2TotalGoals;
-extern uint16_t secondLeg;
-extern uint16_t team1GoalsFirstLeg;
-extern uint16_t team2GoalsFirstLeg;
-extern uint16_t team1NumSubs;
-extern uint16_t team2NumSubs;
-extern uint16_t team1GoalkeeperReplaced;
-extern uint16_t team2GoalkeeperReplaced;
+extern uint16_t _gameLengthInGame;
+extern uint16_t _playerCardChance;
+extern uint16_t _overlayActiveFlag;
+extern uint16_t _gameRandValue;
+extern uint16_t _paletteIndex;
+extern volatile uint16_t _playHighlightFlag;
+extern uint8_t  _gamePalette[];
+extern void *_paletteTable[];
+extern uint16_t _pitchBallSpeedFactor;
+extern uint16_t _ballSpeedBounceFactor;
+extern uint16_t _ballBounceFactor;
+extern uint16_t _pitchNumberAndType;
+extern uint16_t _playingPenalties;
+extern uint16_t _dontShowScorers;
+extern uint16_t _statsTimer;
+extern uint16_t _showStats;
+extern uint16_t _showingUserStats;
+extern uint16_t _subsTeamsSwapped;
+extern uint16_t _inSubstitutesMenu;
+extern uint16_t _cameraLeavingSubsTimer;
+extern uint16_t _benchOff;
+extern uint16_t _leavingSubsMenu;
+extern uint16_t _waitForPlayerToGoInTimer;
+extern uint16_t _substituteInProgress;
+extern uint16_t _statsTeam1Goals;
+extern uint16_t _team1GoalsDigit1;
+extern uint16_t _team1GoalsDigit2;
+extern uint16_t _statsTeam2Goals;
+extern uint16_t _team2GoalsDigit1;
+extern uint16_t _team2GoalsDigit2;
+extern uint16_t _team1TotalGoals;
+extern uint16_t _team2TotalGoals;
+extern uint16_t _secondLeg;
+extern uint16_t _team1GoalsFirstLeg;
+extern uint16_t _team2GoalsFirstLeg;
+extern uint16_t _team1NumSubs;
+extern uint16_t _team2NumSubs;
+extern uint16_t _team1GoalkeeperReplaced;
+extern uint16_t _team2GoalkeeperReplaced;
 
 /* StartPenalties globals */
-extern uint16_t penaltiesState;
-extern uint16_t savedTeam1Goals;
-extern uint16_t savedTeam2Goals;
-extern uint16_t team1PenaltyGoals;
-extern uint16_t team2PenaltyGoals;
-extern uint16_t team1PenaltyShooterIndex;
-extern uint16_t team2PenaltyShooterIndex;
-extern uint16_t team1PenaltyAttempts;
-extern uint16_t team2PenaltyAttempts;
+extern uint16_t _penaltiesState;
+extern uint16_t _savedTeam1Goals;
+extern uint16_t _savedTeam2Goals;
+extern uint16_t _team1PenaltyGoals;
+extern uint16_t _team2PenaltyGoals;
+extern uint16_t _team1PenaltyShooterIndex;
+extern uint16_t _team2PenaltyShooterIndex;
+extern uint16_t _team1PenaltyAttempts;
+extern uint16_t _team2PenaltyAttempts;
 
 /* InitAnimatedPatterns */
-extern int16_t  animatedPatterns[];
-extern uint16_t animPatternsIndex;
-extern uint16_t patternsGoalCounter;
+extern int16_t  _animatedPatterns[];
+extern uint16_t _animPatternsIndex;
+extern uint16_t _patternsGoalCounter;
 
 /* Data tables (in SWOS2.s code section, PC-relative) */
-extern void *playerCardChancesPerGameLength[];
-extern int16_t  gameLenSecondsTable[];
-extern const uint16_t *pitchPalettePtrs[];
-extern int16_t  kPitchBallSpeedInfluence[];
-extern int16_t  kBallSpeedBounceFactorTable[];
-extern int16_t  kBallBounceFactorTable[];
-extern uint16_t timeDelta;
-extern TeamGame *topTeamPtr;
-extern TeamGame *bottomTeamPtr;
-extern uint16_t pl1Tactics;
-extern uint16_t pl2Tactics;
-extern AnimTable_12 refWaitingAnimTable;
-extern AnimTable playerNormalStandingAnimTable;
+extern void *_playerCardChancesPerGameLength[];
+extern int16_t  _gameLenSecondsTable[];
+extern const uint16_t *_pitchPalettePtrs[];
+extern int16_t  _kPitchBallSpeedInfluence[];
+extern int16_t  _kBallSpeedBounceFactorTable[];
+extern int16_t  _kBallBounceFactorTable[];
+extern uint16_t _timeDelta;
+extern TeamGame *_topTeamPtr;
+extern TeamGame *_bottomTeamPtr;
+extern uint16_t _pl1Tactics;
+extern uint16_t _pl2Tactics;
+extern AnimTable_12 _refWaitingAnimTable;
+extern AnimTable _playerNormalStandingAnimTable;
 
 /* ---- External C functions (already ported) ---- */
 extern void InitTeamsData(void);
@@ -159,15 +159,15 @@ extern void ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
 __attribute__((used, externally_visible))
 void SetBallPosition(int16_t ballX, int16_t ballY)
 {
-    ballSprite.speed      = 0;
-    ballSprite.x.s.i      = ballX;
-    ballSprite.x.s.frac   = 0;
-    ballSprite.y.s.i      = ballY;
-    ballSprite.y.s.frac   = 0;
-    ballSprite.destX      = ballX;
-    ballSprite.destY      = ballY;
-    ballSprite.z.raw      = 0;
-    ballSprite.deltaZ.raw = 0;
+    _ballSprite.speed      = 0;
+    _ballSprite.x.s.i      = ballX;
+    _ballSprite.x.s.frac   = 0;
+    _ballSprite.y.s.i      = ballY;
+    _ballSprite.y.s.frac   = 0;
+    _ballSprite.destX      = ballX;
+    _ballSprite.destY      = ballY;
+    _ballSprite.z.raw      = 0;
+    _ballSprite.deltaZ.raw = 0;
 }
 
 /* ================================================================
@@ -196,11 +196,11 @@ static void resetPlayerPassingKicking(TeamGeneralInfo *team)
 __attribute__((used, externally_visible))
 void ResetBothTeamsPlayerPassingKicking(void)
 {
-    lastCameraDirection = cameraDirection;
-    lastPlayerTurnFlags = playerTurnFlags;
-    resetPlayerPassingKicking(&topTeamData);
-    resetPlayerPassingKicking(&bottomTeamData);
-    bottomTeamData.goalkeeperPlaying = 0;
+    _lastCameraDirection = _cameraDirection;
+    _lastPlayerTurnFlags = _playerTurnFlags;
+    resetPlayerPassingKicking(&_topTeamData);
+    resetPlayerPassingKicking(&_bottomTeamData);
+    _bottomTeamData.goalkeeperPlaying = 0;
 }
 
 /* ================================================================
@@ -234,15 +234,15 @@ static void stopPlayers(TeamGeneralInfo *team)
 __attribute__((used, externally_visible))
 void StopAllPlayers(void)
 {
-    lastCameraDirection = cameraDirection;
-    lastPlayerTurnFlags = playerTurnFlags;
+    _lastCameraDirection = _cameraDirection;
+    _lastPlayerTurnFlags = _playerTurnFlags;
 
-    stopPlayers(&topTeamData);
-    resetPlayerPassingKicking(&topTeamData);
+    stopPlayers(&_topTeamData);
+    resetPlayerPassingKicking(&_topTeamData);
 
-    stopPlayers(&bottomTeamData);
-    resetPlayerPassingKicking(&bottomTeamData);
-    bottomTeamData.goalkeeperPlaying = 0;
+    stopPlayers(&_bottomTeamData);
+    resetPlayerPassingKicking(&_bottomTeamData);
+    _bottomTeamData.goalkeeperPlaying = 0;
 }
 
 /* ================================================================
@@ -253,21 +253,21 @@ void StopAllPlayers(void)
 __attribute__((used, externally_visible))
 void RemoveReferee(void)
 {
-    refState                    = 0;
-    refereeSprite.visible       = 0;
-    refereeSprite.x.s.i         = 276;
-    refereeSprite.y.s.i         = 439;
-    refereeSprite.destX         = refereeSprite.x.s.i;
-    refereeSprite.destY         = refereeSprite.y.s.i;
-    refereeSprite.z.raw         = 0;
-    refereeSprite.speed         = 0;
-    refereeSprite.playerDownTimer = 0;
-    refereeSprite.frameIndex    = (int16_t)0xFFFF;
-    refereeSprite.cycleFramesTimer = 1;
-    refereeSprite.imageIndex    = (int16_t)0xFFFF;
-    refereeSprite.direction     = 0;
-    refereeSprite.onScreen      = 1;
-    InitRefereeAnimationTable((uint8_t *)&refWaitingAnimTable); /* TODO: update when InitRefereeAnimationTable takes AnimTable* */
+    _refState                    = 0;
+    _refereeSprite.visible       = 0;
+    _refereeSprite.x.s.i         = 276;
+    _refereeSprite.y.s.i         = 439;
+    _refereeSprite.destX         = _refereeSprite.x.s.i;
+    _refereeSprite.destY         = _refereeSprite.y.s.i;
+    _refereeSprite.z.raw         = 0;
+    _refereeSprite.speed         = 0;
+    _refereeSprite.playerDownTimer = 0;
+    _refereeSprite.frameIndex    = (int16_t)0xFFFF;
+    _refereeSprite.cycleFramesTimer = 1;
+    _refereeSprite.imageIndex    = (int16_t)0xFFFF;
+    _refereeSprite.direction     = 0;
+    _refereeSprite.onScreen      = 1;
+    InitRefereeAnimationTable((uint8_t *)&_refWaitingAnimTable); /* TODO: update when InitRefereeAnimationTable takes AnimTable* */
 }
 
 /* ================================================================
@@ -280,10 +280,10 @@ void InitAnimatedPatterns(void)
 {
     int16_t i;
     for (i = 0; i < 8; i++) {
-        animatedPatterns[i] = (int16_t)0xFFFF;
+        _animatedPatterns[i] = (int16_t)0xFFFF;
     }
-    patternsGoalCounter = 0;
-    animPatternsIndex = 0;
+    _patternsGoalCounter = 0;
+    _animPatternsIndex = 0;
 }
 
 /* ================================================================
@@ -324,10 +324,10 @@ void InitPlayersBeforeEnteringPitch(void)
     /* nullsub_21 — no-op */
 
     Sprite **spritesTableA;
-    if (teamPlayingUp == 1) {
-        spritesTableA = team1SpritesTable;
+    if (_teamPlayingUp == 1) {
+        spritesTableA = _team1SpritesTable;
     } else {
-        spritesTableA = team2SpritesTable;
+        spritesTableA = _team2SpritesTable;
     }
 
     const int16_t *coords = kTeamsStartingCoordinates;
@@ -355,23 +355,23 @@ void InitPlayersBeforeEnteringPitch(void)
             sprite->direction        = 0;
             sprite->onScreen         = 1;
 
-            if (gameState == ST_STARTING_GAME) {
+            if (_gameState == ST_STARTING_GAME) {
                 sprite->sentAway    = 0;
                 sprite->cards       = 0;
                 sprite->injuryLevel = 0;
             }
 
             SetPlayerAnimationTable(
-                &playerNormalStandingAnimTable,
+                &_playerNormalStandingAnimTable,
                 sprite
             );
         }
 
         /* Second pass: other team (coords continues from where it left off) */
-        if (teamPlayingUp == 2) {
-            spritesTableA = team1SpritesTable;
+        if (_teamPlayingUp == 2) {
+            spritesTableA = _team1SpritesTable;
         } else {
-            spritesTableA = team2SpritesTable;
+            spritesTableA = _team2SpritesTable;
         }
     }
 }
@@ -382,22 +382,22 @@ void InitPlayersBeforeEnteringPitch(void)
 static void setBreakState(uint16_t newGameState, uint16_t newGameStatePl,
                           uint16_t stoppageTimer)
 {
-    hideBall = 0;
-    stoppageEventTimer = stoppageTimer;
-    gameState = newGameState;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = newGameStatePl;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _hideBall = 0;
+    _stoppageEventTimer = stoppageTimer;
+    _gameState = newGameState;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = newGameStatePl;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
 }
 
 static void clearCameraVelocity(void)
 {
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
 }
 
 /* ================================================================
@@ -406,22 +406,22 @@ static void clearCameraVelocity(void)
 __attribute__((used, externally_visible))
 void StartingMatch(void)
 {
-    halfNumber = 1;
+    _halfNumber = 1;
     SetBallPosition(1672, 449);
-    hideBall = 0;
+    _hideBall = 0;
     InitTeamsData();
-    stoppageEventTimer = 100;
-    gameState = ST_STARTING_GAME;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = 101;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _stoppageEventTimer = 100;
+    _gameState = ST_STARTING_GAME;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = 101;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
-    cameraMoveToShowerLatch = 1;
+    _cameraMoveToShowerLatch = 1;
     InitPlayersBeforeEnteringPitch();
 }
 
@@ -431,30 +431,30 @@ void StartingMatch(void)
 __attribute__((used, externally_visible))
 void SetCameraMovingToShowerState(void)
 {
-    halfNumber = 2;
+    _halfNumber = 2;
     /* Invert teamPlayingUp: neg + add 3 (1->2, 2->1) */
-    teamPlayingUp = (uint16_t)(3 - teamPlayingUp);
-    teamStarting = (uint16_t)(3 - teamStarting);
+    _teamPlayingUp = (uint16_t)(3 - _teamPlayingUp);
+    _teamStarting = (uint16_t)(3 - _teamStarting);
 
     SetBallPosition(1672, 449);
-    hideBall = 0;
+    _hideBall = 0;
     InitTeamsData();
-    stoppageEventTimer = 100;
-    gameState = ST_CAMERA_GOING_TO_SHOWERS;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = 101;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _stoppageEventTimer = 100;
+    _gameState = ST_CAMERA_GOING_TO_SHOWERS;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = 101;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
-    cameraMoveToShowerLatch = 1;
+    _cameraMoveToShowerLatch = 1;
 
-    if (playGame != 0) {
+    if (_playGame != 0) {
         PlayPenaltySample();
-        sfxQueueWriteIdx = 350;
+        _sfxQueueWriteIdx = 350;
     }
 
     InitPlayersBeforeEnteringPitch();
@@ -469,8 +469,8 @@ void EndFirstHalf(void)
     setBreakState(ST_FIRST_HALF_ENDED, ST_STOPPED, 100);
     ResetBothTeamsPlayerPassingKicking();
     clearCameraVelocity();
-    if (playGame != 0 && goalCounter == 0) {
-        endOfHalfWriteOnly = 25;
+    if (_playGame != 0 && _goalCounter == 0) {
+        _endOfHalfWriteOnly = 25;
     }
 }
 
@@ -480,16 +480,16 @@ void EndFirstHalf(void)
 __attribute__((used, externally_visible))
 void FirstHalfJustEnded(void)
 {
-    hideBall = 0;
-    stoppageEventTimer = 250;
-    gameState = ST_GOING_TO_HALFTIME;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _hideBall = 0;
+    _stoppageEventTimer = 250;
+    _gameState = ST_GOING_TO_HALFTIME;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -503,8 +503,8 @@ void EndOfGame(void)
     setBreakState(ST_GAME_ENDED, ST_STOPPED, 150);
     ResetBothTeamsPlayerPassingKicking();
     clearCameraVelocity();
-    if (playGame != 0 && goalCounter == 0) {
-        endOfHalfWriteOnly = 25;
+    if (_playGame != 0 && _goalCounter == 0) {
+        _endOfHalfWriteOnly = 25;
     }
 }
 
@@ -514,16 +514,16 @@ void EndOfGame(void)
 __attribute__((used, externally_visible))
 void PlayersLeavingPitch(void)
 {
-    hideBall = 0;
-    stoppageEventTimer = 250;
-    gameState = ST_PLAYERS_GOING_TO_SHOWER;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = 0x65;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _hideBall = 0;
+    _stoppageEventTimer = 250;
+    _gameState = ST_PLAYERS_GOING_TO_SHOWER;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = 0x65;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -535,17 +535,17 @@ __attribute__((used, externally_visible))
 void GoToHalftime(void)
 {
     SetBallPosition(1672, 449);
-    resultTimer = 30000;
-    timeVar = 32000;
-    stoppageEventTimer = 700;
-    gameState = ST_RESULT_ON_HALFTIME;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _resultTimer = 30000;
+    _timeVar = 32000;
+    _stoppageEventTimer = 700;
+    _gameState = ST_RESULT_ON_HALFTIME;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -560,24 +560,24 @@ void GameOver(void)
 
     int16_t viewX = 168;
     int16_t viewY = 80;
-    if (trainingGame == 0) {
+    if (_trainingGame == 0) {
         viewY = 16;
     }
     ReplayUpdateCameraAndSwapBuffers(viewX, viewY);
     UpdatePlanePtrsAndBlitParams();
 
     SetBallPosition(1672, 449);
-    resultTimer = 30000;
-    timeVar = 32000;
-    stoppageEventTimer = 1500;
-    gameState = ST_RESULT_AFTER_THE_GAME;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
-    lastTeamPlayedBeforeBreak = &topTeamData;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _resultTimer = 30000;
+    _timeVar = 32000;
+    _stoppageEventTimer = 1500;
+    _gameState = ST_RESULT_AFTER_THE_GAME;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
+    _lastTeamPlayedBeforeBreak = &_topTeamData;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -588,30 +588,30 @@ void GameOver(void)
 __attribute__((used, externally_visible))
 void StartFirstExtraTime(void)
 {
-    halfNumber = 1;
+    _halfNumber = 1;
 
     /* Random teamPlayingUp and teamStarting */
-    teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
-    teamStarting = (uint16_t)((Rand() & 1) + 1);
+    _teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
+    _teamStarting = (uint16_t)((Rand() & 1) + 1);
 
-    hideBall = 0;
+    _hideBall = 0;
     InitTeamsData();
-    stoppageEventTimer = 100;
-    gameState = ST_FIRST_EXTRA_STARTING;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
+    _stoppageEventTimer = 100;
+    _gameState = ST_FIRST_EXTRA_STARTING;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
 
     /* Select kickoff team: if teamStarting == teamPlayingUp, use top, else bottom */
-    if (teamStarting == teamPlayingUp) {
-        lastTeamPlayedBeforeBreak = &topTeamData;
+    if (_teamStarting == _teamPlayingUp) {
+        _lastTeamPlayedBeforeBreak = &_topTeamData;
     } else {
-        lastTeamPlayedBeforeBreak = &bottomTeamData;
+        _lastTeamPlayedBeforeBreak = &_bottomTeamData;
     }
 
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -622,27 +622,27 @@ void StartFirstExtraTime(void)
 __attribute__((used, externally_visible))
 void EndFirstExtraTime(void)
 {
-    halfNumber = 2;
-    teamPlayingUp = (uint16_t)(3 - teamPlayingUp);
-    teamStarting = (uint16_t)(3 - teamStarting);
+    _halfNumber = 2;
+    _teamPlayingUp = (uint16_t)(3 - _teamPlayingUp);
+    _teamStarting = (uint16_t)(3 - _teamStarting);
 
-    hideBall = 0;
+    _hideBall = 0;
     InitTeamsData();
-    stoppageEventTimer = 100;
-    gameState = ST_FIRST_EXTRA_ENDED;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    cameraDirection = 0xFFFF;
+    _stoppageEventTimer = 100;
+    _gameState = ST_FIRST_EXTRA_ENDED;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _cameraDirection = 0xFFFF;
 
-    if (teamStarting == teamPlayingUp) {
-        lastTeamPlayedBeforeBreak = &topTeamData;
+    if (_teamStarting == _teamPlayingUp) {
+        _lastTeamPlayedBeforeBreak = &_topTeamData;
     } else {
-        lastTeamPlayedBeforeBreak = &bottomTeamData;
+        _lastTeamPlayedBeforeBreak = &_bottomTeamData;
     }
 
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -655,27 +655,27 @@ void PrepareForInitialKick(void)
 {
     SetBallPosition(336, 449);
 
-    TeamGeneralInfo *kickoffTeam = &topTeamData;
+    TeamGeneralInfo *kickoffTeam = &_topTeamData;
     int16_t direction = 4;             /* south */
     uint8_t turnFlags = 0x7C;          /* only allow E, SE, S, SW, W */
 
-    if (teamStarting != teamPlayingUp) {
-        kickoffTeam = &bottomTeamData;
+    if (_teamStarting != _teamPlayingUp) {
+        kickoffTeam = &_bottomTeamData;
         direction = 0;                 /* north */
         turnFlags = 0xC7;              /* only allow E, NE, N, NW, W */
     }
 
-    gameState = ST_PLAYERS_TO_INITIAL_POSITIONS;
-    breakCameraMode = 0xFFFF;
-    gameStatePl = ST_STOPPED;
-    gameNotInProgressCounterWriteOnly = 0;
-    foulXCoordinate = 0x150;
-    foulYCoordinate = 0x1C1;
-    cameraDirection = direction;
-    playerTurnFlags = turnFlags;
-    lastTeamPlayedBeforeBreak = kickoffTeam;
-    stoppageTimerTotal = 0;
-    stoppageTimerActive = 0;
+    _gameState = ST_PLAYERS_TO_INITIAL_POSITIONS;
+    _breakCameraMode = 0xFFFF;
+    _gameStatePl = ST_STOPPED;
+    _gameNotInProgressCounterWriteOnly = 0;
+    _foulXCoordinate = 0x150;
+    _foulYCoordinate = 0x1C1;
+    _cameraDirection = direction;
+    _playerTurnFlags = turnFlags;
+    _lastTeamPlayedBeforeBreak = kickoffTeam;
+    _stoppageTimerTotal = 0;
+    _stoppageTimerActive = 0;
     StopAllPlayers();
     clearCameraVelocity();
 }
@@ -686,37 +686,37 @@ void PrepareForInitialKick(void)
 __attribute__((used, externally_visible))
 void StartPenalties(void)
 {
-    penaltiesState = 0xFFFF;
-    savedTeam1Goals = statsTeam1Goals;
-    savedTeam2Goals = statsTeam2Goals;
-    statsTeam1Goals = 0;
-    team1GoalsDigit1 = 0;
-    team1GoalsDigit2 = 0;
-    statsTeam2Goals = 0;
-    team2GoalsDigit1 = 0;
-    team2GoalsDigit2 = 0;
-    team1PenaltyGoals = 0;
-    team2PenaltyGoals = 0;
+    _penaltiesState = 0xFFFF;
+    _savedTeam1Goals = _statsTeam1Goals;
+    _savedTeam2Goals = _statsTeam2Goals;
+    _statsTeam1Goals = 0;
+    _team1GoalsDigit1 = 0;
+    _team1GoalsDigit2 = 0;
+    _statsTeam2Goals = 0;
+    _team2GoalsDigit1 = 0;
+    _team2GoalsDigit2 = 0;
+    _team1PenaltyGoals = 0;
+    _team2PenaltyGoals = 0;
 
-    teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
-    teamStarting = (uint16_t)((Rand() & 1) + 1);
+    _teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
+    _teamStarting = (uint16_t)((Rand() & 1) + 1);
 
-    team1PenaltyShooterIndex = 11;
-    team2PenaltyShooterIndex = 11;
-    team1PenaltyAttempts = 0;
-    team2PenaltyAttempts = 0;
-    playingPenalties = 1;
-    dontShowScorers = 1;
+    _team1PenaltyShooterIndex = 11;
+    _team2PenaltyShooterIndex = 11;
+    _team1PenaltyAttempts = 0;
+    _team2PenaltyAttempts = 0;
+    _playingPenalties = 1;
+    _dontShowScorers = 1;
 
     /* Clear cards/sentaway for both teams */
     int16_t i;
     for (i = 10; i >= 0; i--) {
-        Sprite *sprite = team1SpritesTable[i];
+        Sprite *sprite = _team1SpritesTable[i];
         sprite->cards   = 0;
         sprite->sentAway = 0;
     }
     for (i = 10; i >= 0; i--) {
-        Sprite *sprite = team2SpritesTable[i];
+        Sprite *sprite = _team2SpritesTable[i];
         sprite->cards   = 0;
         sprite->sentAway = 0;
     }
@@ -738,18 +738,18 @@ void InitGameRestoreTeams(void)
     CopyPlayerNameLengths();
 
     /* Pick player card chance from table based on game length */
-    uint16_t lenIdx = gameLengthInGame;
-    uint16_t *cardChanceTable = (uint16_t *)playerCardChancesPerGameLength[lenIdx];
+    uint16_t lenIdx = _gameLengthInGame;
+    uint16_t *cardChanceTable = (uint16_t *)_playerCardChancesPerGameLength[lenIdx];
     uint8_t r = Rand();
-    playerCardChance = cardChanceTable[(r & 0x1E) >> 1];
+    _playerCardChance = cardChanceTable[(r & 0x1E) >> 1];
 
-    overlayActiveFlag = 0;
+    _overlayActiveFlag = 0;
 
     /* Restore team data from snapshots (1018 bytes each) */
-    uint8_t *src1 = (uint8_t *)&topTeamSaved;
-    uint8_t *dst1 = (uint8_t *)&topTeamInGame;
-    uint8_t *src2 = (uint8_t *)&bottomTeamSaved;
-    uint8_t *dst2 = (uint8_t *)&bottomTeamInGame;
+    uint8_t *src1 = (uint8_t *)&_topTeamSaved;
+    uint8_t *dst1 = (uint8_t *)&_topTeamInGame;
+    uint8_t *src2 = (uint8_t *)&_bottomTeamSaved;
+    uint8_t *dst2 = (uint8_t *)&_bottomTeamInGame;
     int16_t i;
     for (i = 1017; i >= 0; i--) {
         *dst1++ = *src1++;
@@ -767,25 +767,25 @@ void InitGameRestoreTeams(void)
         InitDeterministicMode();
     }
 #endif
-    gameRandValue = Rand();
+    _gameRandValue = Rand();
 
     /* Apply tactics for both teams */
-    ApplyTeamTactics((uint8_t *)&topTeamInGame);
-    ApplyTeamTactics((uint8_t *)&bottomTeamInGame);
+    ApplyTeamTactics((uint8_t *)&_topTeamInGame);
+    ApplyTeamTactics((uint8_t *)&_bottomTeamInGame);
 
-    paletteIndex = 2;
+    _paletteIndex = 2;
     /* nullsub_5 — no-op */
 
     CrowdResetMatchState();
 
     /* Random teamPlayingUp and teamStarting */
-    teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
-    teamStarting = (uint16_t)((Rand() & 1) + 1);
+    _teamPlayingUp = (uint16_t)((Rand() & 1) + 1);
+    _teamStarting = (uint16_t)((Rand() & 1) + 1);
 
     /* Set time delta from game length table */
-    timeDelta = *(uint16_t *)((uint8_t *)gameLenSecondsTable + (gameLengthInGame << 1));
+    _timeDelta = *(uint16_t *)((uint8_t *)_gameLenSecondsTable + (_gameLengthInGame << 1));
 
-    if (playHighlightFlag != 0) {
+    if (_playHighlightFlag != 0) {
         goto apply_palette_and_pitch;
     }
     /* bne.w *+4 — when playHighlightFlag != 0, skip to palette setup */
@@ -793,10 +793,10 @@ void InitGameRestoreTeams(void)
 apply_palette_and_pitch:
     {
         /* Apply pitch palette */
-        uint16_t pitchIdx = pitchNumberAndType & 0xFF;
+        uint16_t pitchIdx = _pitchNumberAndType & 0xFF;
 
         /* paletteTable[2] = &gamePalette (offset 8 in paletteTable is index 2) */
-        paletteTable[2] = gamePalette;
+        _paletteTable[2] = _gamePalette;
 
 #ifdef AGA
         {
@@ -813,71 +813,71 @@ apply_palette_and_pitch:
 #else
         {
             /* OCS: copy 3 palette entries to fixed positions */
-            uint16_t *palPtr = (uint16_t *)pitchPalettePtrs[pitchIdx];
-            *(uint16_t *)(gamePalette) = palPtr[0];
-            *(uint16_t *)(gamePalette + 0xE) = palPtr[1];
-            *(uint16_t *)(gamePalette + 0x12) = palPtr[2];
+            uint16_t *palPtr = (uint16_t *)_pitchPalettePtrs[pitchIdx];
+            *(uint16_t *)(_gamePalette) = palPtr[0];
+            *(uint16_t *)(_gamePalette + 0xE) = palPtr[1];
+            *(uint16_t *)(_gamePalette + 0x12) = palPtr[2];
         }
 #endif
 
         /* Pitch physics factors (pitchIdx >> 1 for word-indexed tables) */
         uint16_t physIdx = pitchIdx;
-        pitchBallSpeedFactor = kPitchBallSpeedInfluence[physIdx];
-        ballSpeedBounceFactor = kBallSpeedBounceFactorTable[physIdx];
-        ballBounceFactor = kBallBounceFactorTable[physIdx];
+        _pitchBallSpeedFactor = _kPitchBallSpeedInfluence[physIdx];
+        _ballSpeedBounceFactor = _kBallSpeedBounceFactorTable[physIdx];
+        _ballBounceFactor = _kBallBounceFactorTable[physIdx];
     }
 
     /* Clear match state */
-    playingPenalties = 0;
-    dontShowScorers = 0;
-    statsTimer = 0;
-    showStats = 0;
-    showingUserStats = 0;
-    subsTeamsSwapped = 0;
-    inSubstitutesMenu = 0;
-    cameraLeavingSubsTimer = 0;
-    benchOff = 0;
-    leavingSubsMenu = 0;
-    waitForPlayerToGoInTimer = 0;
-    substituteInProgress = 0;
+    _playingPenalties = 0;
+    _dontShowScorers = 0;
+    _statsTimer = 0;
+    _showStats = 0;
+    _showingUserStats = 0;
+    _subsTeamsSwapped = 0;
+    _inSubstitutesMenu = 0;
+    _cameraLeavingSubsTimer = 0;
+    _benchOff = 0;
+    _leavingSubsMenu = 0;
+    _waitForPlayerToGoInTimer = 0;
+    _substituteInProgress = 0;
 
     /* Clear goal scores */
-    statsTeam1Goals = 0;
-    team1GoalsDigit1 = 0;
-    team1GoalsDigit2 = 0;
-    statsTeam2Goals = 0;
-    team2GoalsDigit1 = 0;
-    team2GoalsDigit2 = 0;
-    team1TotalGoals = 0;
-    team2TotalGoals = 0;
+    _statsTeam1Goals = 0;
+    _team1GoalsDigit1 = 0;
+    _team1GoalsDigit2 = 0;
+    _statsTeam2Goals = 0;
+    _team2GoalsDigit1 = 0;
+    _team2GoalsDigit2 = 0;
+    _team1TotalGoals = 0;
+    _team2TotalGoals = 0;
 
-    if (secondLeg != 0) {
-        team1TotalGoals = team1GoalsFirstLeg;
-        team2TotalGoals = team2GoalsFirstLeg;
+    if (_secondLeg != 0) {
+        _team1TotalGoals = _team1GoalsFirstLeg;
+        _team2TotalGoals = _team2GoalsFirstLeg;
     }
 
     /* Clear substitution and goalkeeper replacement counts */
-    team1NumSubs = 0;
-    team2NumSubs = 0;
-    team1GoalkeeperReplaced = 0;
-    team2GoalkeeperReplaced = 0;
+    _team1NumSubs = 0;
+    _team2NumSubs = 0;
+    _team1GoalkeeperReplaced = 0;
+    _team2GoalkeeperReplaced = 0;
 
     /* Clear team stats */
-    team1StatsData.ballPossession = 0;
-    team1StatsData.cornersWon     = 0;
-    team1StatsData.foulsConceded  = 0;
-    team1StatsData.bookings       = 0;
-    team1StatsData.sendingsOff    = 0;
-    team1StatsData.goalAttempts   = 0;
-    team1StatsData.onTarget       = 0;
+    _team1StatsData.ballPossession = 0;
+    _team1StatsData.cornersWon     = 0;
+    _team1StatsData.foulsConceded  = 0;
+    _team1StatsData.bookings       = 0;
+    _team1StatsData.sendingsOff    = 0;
+    _team1StatsData.goalAttempts   = 0;
+    _team1StatsData.onTarget       = 0;
 
-    team2StatsData.ballPossession = 0;
-    team2StatsData.cornersWon     = 0;
-    team2StatsData.foulsConceded  = 0;
-    team2StatsData.bookings       = 0;
-    team2StatsData.sendingsOff    = 0;
-    team2StatsData.goalAttempts   = 0;
-    team2StatsData.onTarget       = 0;
+    _team2StatsData.ballPossession = 0;
+    _team2StatsData.cornersWon     = 0;
+    _team2StatsData.foulsConceded  = 0;
+    _team2StatsData.bookings       = 0;
+    _team2StatsData.sendingsOff    = 0;
+    _team2StatsData.goalAttempts   = 0;
+    _team2StatsData.onTarget       = 0;
 
     InitDisplaySprites();
     InitCurrentGoalHighlight();
@@ -889,11 +889,11 @@ apply_palette_and_pitch:
     StartingMatch();
     PlaySample1IfNotTraining();
 
-    if (playGame != 0) {
+    if (_playGame != 0) {
         PlayPenaltySample();
-        sfxQueueWriteIdx = 500;
-        if (trainingGame == 0) {
-            showFansCounter = 100;
+        _sfxQueueWriteIdx = 500;
+        if (_trainingGame == 0) {
+            _showFansCounter = 100;
         }
     }
 }

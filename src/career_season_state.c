@@ -47,7 +47,7 @@ _Static_assert(sizeof(CareerSeasonState) == 8,
 _Static_assert(offsetof(CareerSeasonState, seasonFinished)       == 0, "ss layout");
 _Static_assert(offsetof(CareerSeasonState, seasonNumberOfSquads) == 6, "ss layout");
 
-extern CareerSeasonState careerSeasonState;
+extern CareerSeasonState _careerSeasonState;
 
 __asm__(
 #if defined(__APPLE__)
@@ -56,19 +56,19 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "careerSeasonState\n"
-    _ASM_PFX "careerSeasonState:\n"
-    ".globl " _ASM_PFX "seasonFinished\n"
-    _ASM_PFX "seasonFinished:\n"
+    ".globl " _ASM_PFX "_careerSeasonState\n"
+    _ASM_PFX "_careerSeasonState:\n"
+    ".globl " _ASM_PFX "_seasonFinished\n"
+    _ASM_PFX "_seasonFinished:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "careerFinished\n"
-    _ASM_PFX "careerFinished:\n"
+    ".globl " _ASM_PFX "_careerFinished\n"
+    _ASM_PFX "_careerFinished:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "euroCupSlotIndex\n"
-    _ASM_PFX "euroCupSlotIndex:\n"
+    ".globl " _ASM_PFX "_euroCupSlotIndex\n"
+    _ASM_PFX "_euroCupSlotIndex:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "seasonNumberOfSquads\n"
-    _ASM_PFX "seasonNumberOfSquads:\n"
+    ".globl " _ASM_PFX "_seasonNumberOfSquads\n"
+    _ASM_PFX "_seasonNumberOfSquads:\n"
     ".skip 2\n"
     ".text\n"
 );
