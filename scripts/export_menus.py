@@ -42,8 +42,8 @@ OUT_DIR = os.path.join(REPO, "bin", "data_json", "menus")
 # The trailing MENU_CMD_END (0) closes the entry and is handled by the walker.
 OPCODES = {
     "MENU_CMD_INVISIBLE":     ("invisible",     []),
-    "MENU_CMD_NAV":           ("nav",           [("_left", "int"), ("_right", "int"),
-                                                  ("_up", "int"), ("_down", "int")]),
+    "MENU_CMD_NAV":           ("nav",           [("left", "int"), ("right", "int"),
+                                                  ("up", "int"), ("down", "int")]),
     "MENU_CMD_BG_FUNC":       ("bg_func",       [("func", "ptr")]),
     "MENU_CMD_COLORS":        ("colors",        [("value", "colorpair")]),
     "MENU_CMD_BG_SPRITE":     ("sprite_bg",     [("index", "int")]),

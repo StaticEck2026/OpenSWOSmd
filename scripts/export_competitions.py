@@ -487,7 +487,7 @@ def main():
     buckets = []
     for n, b in find_defs(text, "EuroCupQualSeedBucketBlock"):
         d = parse_designated_arrays(n, b)
-        buckets = [{"tier": k, "_size": len(v), "allocation": berths_of(v)}
+        buckets = [{"tier": k, "size": len(v), "allocation": berths_of(v)}
                    for k, v in d.items() if k != "id"]
 
     payload = {"type": "seed_buckets",
