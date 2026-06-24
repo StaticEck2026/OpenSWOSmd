@@ -95,14 +95,14 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
     }
     AudioSetChannelVolume(0xFFFF, 0x23);
 #else
-    if (audioBankLoaded == 0)
+    if (_audioBankLoaded == 0)
     {
         StopAllAudioChannels();
-        InitAudioState(heroSongBuffer, audioInstrumentBank);
-        audioBankLoaded = 1;
+        InitAudioState(heroSongBuffer, _audioInstrumentBank);
+        _audioBankLoaded = 1;
     }
     AudioApplyPresetToChannels(0);
-    audioActive = 1;
+    _audioActive = 1;
 #endif
 }
 
@@ -208,7 +208,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
         memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #else
-    LoadFileEx((uint8_t *)filename, (uint8_t *)frontbufferBaseAltPtr, (uint32_t *)0);
+    LoadFileEx((uint8_t *)filename, (uint8_t *)_frontbufferBaseAltPtr, (uint32_t *)0);
 #endif
 }
 

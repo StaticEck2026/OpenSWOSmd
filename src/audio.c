@@ -274,7 +274,7 @@ void InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     uint16_t descriptorSize;
 
     /* songPtr + 4 -> audioState.songPtr */
-    audioState.songPtr = songPtr + 4;
+    _audioState.songPtr = songPtr + 4;
 
     /* Parse bank header: skip 8-byte header, then 7 sections
      * each prefixed by a 4-byte size field. The bank format is
@@ -287,29 +287,29 @@ void InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
          * on Amiga BE host, byte-swaps on x86 LE. */
         uint32_t sectionSize = BE_READ_U32(src);
         src += 4;
-        audioState.bankSectionPtrs[i] = src;
+        _audioState.bankSectionPtrs[i] = src;
         src += sectionSize;
     }
 
     /* Default master volume and mode */
-    audioState.masterVolume = 0x40;
-    audioState.channelVolume[0] = 0x40;
-    audioState.channelVolume[1] = 0x40;
-    audioState.channelVolume[2] = 0x40;
-    audioState.channelVolume[3] = 0x40;
-    audioState.modeFlags = 0x000D;
-    audioState.irqSubtick = 0;
-    audioState.toggleFlag = 0;
-    audioState.primaryChanEnable = 0xFF;
-    audioState.secondaryChanEnable = 0xFF;
+    _audioState.masterVolume = 0x40;
+    _audioState.channelVolume[0] = 0x40;
+    _audioState.channelVolume[1] = 0x40;
+    _audioState.channelVolume[2] = 0x40;
+    _audioState.channelVolume[3] = 0x40;
+    _audioState.modeFlags = 0x000D;
+    _audioState.irqSubtick = 0;
+    _audioState.toggleFlag = 0;
+    _audioState.primaryChanEnable = 0xFF;
+    _audioState.secondaryChanEnable = 0xFF;
 
     /* Relocate bank descriptors:
      * descriptors = bankSectionPtrs[0]
      * relocBase = songPtr (after +4 offset)
      * descriptorSize = word before descriptors (at descriptors[-4])
      * Each descriptor is 0x20 bytes with 3 pointers to relocate. */
-    descriptors = audioState.bankSectionPtrs[0];
-    relocBase = audioState.songPtr;
+    descriptors = _audioState.bankSectionPtrs[0];
+    relocBase = _audioState.songPtr;
     /* asm: move.l -4(a2),d1 loads 32-bit, but subi.w #$20,d1 / bne
      * tests only the low 16 bits. Read low word of the 32-bit field. */
     descriptorSize = (uint16_t)(*(uint32_t *)(descriptors - 4));
@@ -345,25 +345,25 @@ void InitAudioState(uint8_t *bankBase, uint8_t *songPtr)
     /* Initialize all 4 audio channels */
     ensureChannelPtrs();
 
-    clearAudioChannelStruct(&audioChannel0);
-    audioChannel0.hwRegBase = AUD0LC_ADDR;
-    audioChannel0.pvDmaBit = 1;
-    audioChannel0.svDmaBit = 1;
+    clearAudioChannelStruct(&_audioChannel0);
+    _audioChannel0.hwRegBase = AUD0LC_ADDR;
+    _audioChannel0.pvDmaBit = 1;
+    _audioChannel0.svDmaBit = 1;
 
-    clearAudioChannelStruct(&audioChannel1);
-    audioChannel1.hwRegBase = AUD1LC_ADDR;
-    audioChannel1.pvDmaBit = 2;
-    audioChannel1.svDmaBit = 2;
+    clearAudioChannelStruct(&_audioChannel1);
+    _audioChannel1.hwRegBase = AUD1LC_ADDR;
+    _audioChannel1.pvDmaBit = 2;
+    _audioChannel1.svDmaBit = 2;
 
-    clearAudioChannelStruct(&audioChannel2);
-    audioChannel2.hwRegBase = AUD2LC_ADDR;
-    audioChannel2.pvDmaBit = 4;
-    audioChannel2.svDmaBit = 4;
+    clearAudioChannelStruct(&_audioChannel2);
+    _audioChannel2.hwRegBase = AUD2LC_ADDR;
+    _audioChannel2.pvDmaBit = 4;
+    _audioChannel2.svDmaBit = 4;
 
-    clearAudioChannelStruct(&audioChannel3);
-    audioChannel3.hwRegBase = AUD3LC_ADDR;
-    audioChannel3.pvDmaBit = 8;
-    audioChannel3.svDmaBit = 8;
+    clearAudioChannelStruct(&_audioChannel3);
+    _audioChannel3.hwRegBase = AUD3LC_ADDR;
+    _audioChannel3.pvDmaBit = 8;
+    _audioChannel3.svDmaBit = 8;
 #endif /* !SWOS_SDL_BUILD */
 }
 
@@ -468,7 +468,7 @@ void AudioApplyPresetToChannels(uint16_t presetId)
     presetId &= 0x3F;
 
     /* bankSectionPtrs[2] is the preset table pointer */
-    presetTable = audioState.bankSectionPtrs[2];
+    presetTable = _audioState.bankSectionPtrs[2];
     preset = presetTable + (uint32_t)presetId * 4;
 
     /* Channel 0 */
@@ -518,21 +518,21 @@ void AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
     uint8_t *waveData;
 
     /* Check modeFlags bit 2 (audioFlags bit 2 in asm) */
-    if (!(audioState.modeFlags & 0x04))
+    if (!(_audioState.modeFlags & 0x04))
         return;
 
     ensureChannelPtrs();
 
     /* Set channel change bit (upper nibble: bit d0+4) */
-    audioState.channelChangeFlags |= (uint8_t)(1 << ((channel & 3) + 4));
+    _audioState.channelChangeFlags |= (uint8_t)(1 << ((channel & 3) + 4));
 
     chan = audioChannels[channel & 3];
 
     /* Look up wave data */
-    waveTable = audioState.bankSectionPtrs[4];
+    waveTable = _audioState.bankSectionPtrs[4];
     waveOffset = (uint32_t)waveId * 4;
     waveData = *(uint8_t **)(waveTable + waveOffset);
-    waveData = (uint8_t *)((uint32_t)waveData + (uint32_t)audioState.bankSectionPtrs[6]);
+    waveData = (uint8_t *)((uint32_t)waveData + (uint32_t)_audioState.bankSectionPtrs[6]);
 
     chan->svWaveData = (uint32_t)waveData;
     chan->svStepPeriod = 6;
@@ -626,16 +626,16 @@ void TryPlayMusic(void)
     AudioSetChannelVolume(0xFFFF, 0x23);
     return;
 #else
-    if (audioBankLoaded == 0)
+    if (_audioBankLoaded == 0)
     {
         StopAllAudioChannels();
-        InitAudioState(menuSongData, menuInsBank);
-        audioBankLoaded = 1;
+        InitAudioState(_menuSongData, _menuInsBank);
+        _audioBankLoaded = 1;
     }
 
     AudioSetChannelVolume(0xFFFF, 0);
     AudioApplyPresetToChannels(0);
-    audioActive = 1;
+    _audioActive = 1;
 
     for (vol = 0; vol <= 0x22; vol += 2)
     {
@@ -689,9 +689,9 @@ retry:
      * and the next foreign-market visit walks SFX bytes interpreted
      * as PoolPlayer records, eventually SIGSEGV'ing in
      * FindPoolplyrDatPlayer past the buffer end. */
-    if (PlaySong(aSoundSfxIn1, poolplyrDatBuffer) != 0)
+    if (PlaySong(_aSoundSfxIn1, _poolplyrDatBuffer) != 0)
         goto retry;
-    if (PlaySong(aSoundSfxIn2, sfxInsBank2) != 0)
+    if (PlaySong(_aSoundSfxIn2, _sfxInsBank2) != 0)
         goto retry;
 #endif
 

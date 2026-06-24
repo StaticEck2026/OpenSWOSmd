@@ -123,23 +123,23 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
 #else
 static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint16_t planeMask)
 {
-    SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
 
     /* Look up glyph sprite header */
     SpriteGraphics *spr = sprGfxTable[sprIdx];
 
     /* Glyph must have mask (type == 0) */
     if (spr->type != 0) {
-        panicReasonCode = 0x1556;
+        _panicReasonCode = 0x1556;
         PanicHaltLoop();
     }
 
-    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr + g_menu_draw_x_offset;
+    uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr + _g_menu_draw_x_offset;
     uint16_t glyphHeight = (uint16_t)spr->nlines;
 
     /* Apply camera offset */
-    x += (int16_t)cameraXMod320;
-    y += (int16_t)cameraYMod320;
+    x += (int16_t)_cameraXMod320;
+    y += (int16_t)_cameraYMod320;
     if (y >= SCREEN_HEIGHT)
         y -= SCREEN_HEIGHT;
 
@@ -161,16 +161,16 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
         blitWords--;
     }
 
-    custom->bltalwm = lastWordMask;
-    custom->bltafwm = 0xFFFF;
+    _custom->bltalwm = lastWordMask;
+    _custom->bltafwm = 0xFFFF;
 
     /* BLTCON1: shift amount in bits 12-15 */
     uint16_t shiftVal = bitShift << 12;
-    custom->bltcon1 = shiftVal;
+    _custom->bltcon1 = shiftVal;
 
     /* Glyph must have mask pointer */
     if (spr->maskPtr == 0) {
-        panicReasonCode = 0x1556;
+        _panicReasonCode = 0x1556;
         PanicHaltLoop();
     }
 
@@ -198,12 +198,12 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     uint16_t srcStrideBytes = srcWquads << 1;
     uint16_t srcInterleavedBytes = srcStrideBytes << NUM_PLANES_SHIFT;
 
-    custom->bltamod = srcStrideBytes - blitWidthBytes;
-    custom->bltbmod = srcInterleavedBytes - blitWidthBytes;
+    _custom->bltamod = srcStrideBytes - blitWidthBytes;
+    _custom->bltbmod = srcInterleavedBytes - blitWidthBytes;
 
     uint16_t dstMod = PLANE_STRIDE - blitWidthBytes + PITCH_DEST_MOD_UNALIGNED;
-    custom->bltcmod = dstMod;
-    custom->bltdmod = dstMod;
+    _custom->bltcmod = dstMod;
+    _custom->bltdmod = dstMod;
 
     /* Source data pointers */
     uint32_t maskPtr   = (uint32_t)spr->maskPtr;
@@ -223,21 +223,21 @@ restart_blit_span:
 
         if (bit) {
             /* Color bit set → cookie cut glyph through mask */
-            custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
-            custom->bltapt = maskPtr;
-            custom->bltbpt = plane1Ptr;
-            custom->bltcpt = (uint32_t)dst;
-            custom->bltdpt = (uint32_t)dst;
+            _custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
+            _custom->bltapt = maskPtr;
+            _custom->bltbpt = plane1Ptr;
+            _custom->bltcpt = (uint32_t)dst;
+            _custom->bltdpt = (uint32_t)dst;
         } else {
             /* Color bit clear → clear through mask */
-            custom->bltcon0 = shiftVal | BLTCON0_CLEAR_MASK;
-            custom->bltapt = maskPtr;
-            custom->bltcpt = (uint32_t)dst;
-            custom->bltdpt = (uint32_t)dst;
+            _custom->bltcon0 = shiftVal | BLTCON0_CLEAR_MASK;
+            _custom->bltapt = maskPtr;
+            _custom->bltcpt = (uint32_t)dst;
+            _custom->bltdpt = (uint32_t)dst;
         }
 
         /* Kick blit and wait */
-        custom->bltsize = bltsize;
+        _custom->bltsize = bltsize;
         waitBlit();
 
         dst += PLANE_STRIDE;
@@ -249,21 +249,21 @@ restart_blit_span:
 
         if (bitLast) {
             /* Color bit set → OR mask into dest (set all masked pixels) */
-            custom->bltcon0 = shiftVal | BLTCON0_OR_MASK;
-            custom->bltapt = maskPtr;
-            custom->bltcpt = (uint32_t)dst;
-            custom->bltdpt = (uint32_t)dst;
+            _custom->bltcon0 = shiftVal | BLTCON0_OR_MASK;
+            _custom->bltapt = maskPtr;
+            _custom->bltcpt = (uint32_t)dst;
+            _custom->bltdpt = (uint32_t)dst;
         } else {
             /* Color bit clear → cookie cut last plane glyph data */
-            custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
-            custom->bltapt = maskPtr;
-            custom->bltbpt = planeLastPtr;
-            custom->bltcpt = (uint32_t)dst;
-            custom->bltdpt = (uint32_t)dst;
+            _custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
+            _custom->bltapt = maskPtr;
+            _custom->bltbpt = planeLastPtr;
+            _custom->bltcpt = (uint32_t)dst;
+            _custom->bltdpt = (uint32_t)dst;
         }
 
         /* Kick final blit */
-        custom->bltsize = bltsize;
+        _custom->bltsize = bltsize;
     }
 
     /* Handle vertical wrap */

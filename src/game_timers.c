@@ -77,8 +77,8 @@ extern Sprite         *_teamSpritesTable[];
  * carries team1 and team2 as separate adjacent arrays. SDL aliases
  * both into one 22-entry slice via sprite_data.c, but on Amiga we
  * just dispatch by index. */
-extern Sprite **team1SpritesTable;
-extern Sprite **team2SpritesTable;
+extern Sprite **_team1SpritesTable;
+extern Sprite **_team2SpritesTable;
 #endif
 
 extern uint8_t  _pl1Fire;
@@ -357,8 +357,8 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
 #ifdef SWOS_SDL_BUILD
             a1 = _teamSpritesTable[i];
 #else
-            a1 = (i < 11) ? team1SpritesTable[i]
-                          : team2SpritesTable[i - 11];
+            a1 = (i < 11) ? _team1SpritesTable[i]
+                          : _team2SpritesTable[i - 11];
 #endif
             if (_gameState != ST_PLAYERS_TO_INITIAL_POSITIONS &&
                 _gameState != ST_PENALTY &&

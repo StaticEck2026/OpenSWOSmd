@@ -194,8 +194,8 @@ static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
         Platform_VBlank();
     }
 #else
-    waitingInterrupt = 1;
-    while (waitingInterrupt != 0) {}
+    _waitingInterrupt = 1;
+    while (_waitingInterrupt != 0) {}
 #endif
 }
 
@@ -230,8 +230,8 @@ static void pauseSpinWaitOneTick(void)
 #else
     uint16_t d0;
     /* dbf d1 with d1=0 means 1 iteration */
-    d0 = currentTick;
-    while (currentTick == d0) {}
+    d0 = _currentTick;
+    while (_currentTick == d0) {}
 #endif
 }
 

@@ -299,10 +299,10 @@ void InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
 #else
     for (;;) {
         Player1StatusProc();
-        if (pl1Fire)
+        if (_pl1Fire)
             continue;
         Player2StatusProc();
-        if (!pl2Fire)
+        if (!_pl2Fire)
             break;
     }
 #endif

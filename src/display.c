@@ -825,64 +825,64 @@ __attribute__((used, externally_visible))
 void BlitterCopyPanelToScreen2(void)
 {
     /* Enable blitter DMA and wait for idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
     {
         /* wait */
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure blitter for A→D copy */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
-    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
     {
-        uint8_t *srcPlane = frontbufferMaskBuffer;
-        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        uint8_t *srcPlane = _frontbufferMaskBuffer;
+        uint8_t *dstPlane = (uint8_t *)_frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (custom->dmaconr & (1u << 14)) {}
-            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+            _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (_custom->dmaconr & (1u << 14)) {}
+            _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            BLT_L(custom->bltapt, (uint32_t)srcPlane);
-            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
-            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
+            BLT_L(_custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
     /* Wait for last blit */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, 0);
     /* Set source and destination pointers */
-    BLT_L(custom->bltapt, (uint32_t)frontbufferMaskBuffer);
-    BLT_L(custom->bltdpt, frontbufferBasePtr);
+    BLT_L(_custom->bltapt, (uint32_t)_frontbufferMaskBuffer);
+    BLT_L(_custom->bltdpt, _frontbufferBasePtr);
     /* Kick the blit (writing BLTSIZE starts it) */
-    BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
+    BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
     /* Wait for blit to complete, then disable blitter DMA */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
     {
         /* wait */
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size to small default */
-    BLT_W(custom->bltsize, 0x0016u);
+    BLT_W(_custom->bltsize, 0x0016u);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
@@ -968,54 +968,54 @@ __attribute__((used, externally_visible))
 void BlitterCopyPanelToScreen(void)
 {
     /* Wait for blitter idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: A→D copy, full masks */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
-    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
     {
-        uint8_t *srcPlane = frontbufferMaskBuffer;
-        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        uint8_t *srcPlane = _frontbufferMaskBuffer;
+        uint8_t *dstPlane = (uint8_t *)_frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (custom->dmaconr & (1u << 14)) {}
-            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+            _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (_custom->dmaconr & (1u << 14)) {}
+            _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            BLT_L(custom->bltapt, (uint32_t)srcPlane);
-            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
-            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
+            BLT_L(_custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, 0);
     /* Source = frontbufferMaskBuffer, Dest = frontbuffer */
-    BLT_L(custom->bltapt, (uint32_t)frontbufferMaskBuffer);
-    BLT_L(custom->bltdpt, frontbufferBasePtr);
-    BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
+    BLT_L(_custom->bltapt, (uint32_t)_frontbufferMaskBuffer);
+    BLT_L(_custom->bltdpt, _frontbufferBasePtr);
+    BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
     /* Wait, then kick small trailing blit */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
-    BLT_W(custom->bltsize, 0x0016u);
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    BLT_W(_custom->bltsize, 0x0016u);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
@@ -1045,7 +1045,7 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     size_t bytes = (size_t)spr->wquads * 16 * (size_t)spr->nlines;
     memset(data, 0, bytes);
 #else
-    uint32_t *gfxTable = (uint32_t *)spriteGraphicsPtr;
+    uint32_t *gfxTable = (uint32_t *)_spriteGraphicsPtr;
     uint8_t *sprEntry;
     uint32_t destPtr;
     uint16_t height;
@@ -1055,26 +1055,26 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     sprEntry = (uint8_t *)gfxTable[spriteIndex];
 
     /* Wait for blitter idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: D-only fill (LF=F0 with no source channels) */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USED_LF_F0);
-    BLT_W(custom->bltadat, 0); /* fill with zeros */
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USED_LF_F0);
+    BLT_W(_custom->bltadat, 0); /* fill with zeros */
+    BLT_W(_custom->bltdmod, 0);
     /* Dest = sprite data pointer (first long of sprite entry) */
     destPtr = *(uint32_t *)sprEntry;
-    BLT_L(custom->bltdpt, destPtr);
+    BLT_L(_custom->bltdpt, destPtr);
     /* BLTSIZE = (height << 8) | stride */
     height = *(uint16_t *)(sprEntry + 12);
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
     blitSize = (uint16_t)((height << (NUM_PLANES_SHIFT + 6)) | stride);
-    BLT_W(custom->bltsize, blitSize);
+    BLT_W(_custom->bltsize, blitSize);
 #endif
 }
 

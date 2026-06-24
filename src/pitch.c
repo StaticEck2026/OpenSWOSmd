@@ -409,8 +409,8 @@ void FixupAndColorPitchFile(void)
     uint8_t **fanGroupA = &_s_pitchFullPtrs[0];
     uint8_t **fanGroupB = &_s_pitchFullPtrs[FAN_PTR_TABLE_OFFSET / 4];
 #else
-    uint8_t **fanGroupA = (uint8_t **)pitchDatBuffer;
-    uint8_t **fanGroupB = (uint8_t **)(pitchDatBuffer + FAN_PTR_TABLE_OFFSET);
+    uint8_t **fanGroupA = (uint8_t **)_pitchDatBuffer;
+    uint8_t **fanGroupB = (uint8_t **)(_pitchDatBuffer + FAN_PTR_TABLE_OFFSET);
 #endif
 
     _fansSidesSwapped = 0;

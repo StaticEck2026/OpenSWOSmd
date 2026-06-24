@@ -68,7 +68,7 @@ void LoadOverlayToFrontbuffer(const uint8_t *path)
         }
     }
 #else
-    LoadFileEx((uint8_t *)path, frontbufferMaskBuffer, (uint32_t *)0);
+    LoadFileEx((uint8_t *)path, _frontbufferMaskBuffer, (uint32_t *)0);
 #endif
 }
 

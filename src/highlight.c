@@ -632,7 +632,7 @@ after_decode:
 #else
         uint16_t i;
         for (i = 0; i < 2; i++) {
-            volatile uint16_t *tickPtr = &currentGameTick;
+            volatile uint16_t *tickPtr = &_currentGameTick;
             uint16_t tick = *tickPtr;
             while (*tickPtr == tick)
                 ;  /* busy-wait for next tick */

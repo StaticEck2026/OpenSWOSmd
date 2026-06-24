@@ -260,7 +260,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 
     if ((int16_t)maskSel > 0) {
         /* Positive maskSel: copy mask pointer from another sprite */
-        SpriteGraphics *otherSprite = ((SpriteGraphics **)spriteGraphicsPtr)[maskSel];
+        SpriteGraphics *otherSprite = ((SpriteGraphics **)_spriteGraphicsPtr)[maskSel];
         headerBase->maskPtr = otherSprite->maskPtr;
         goto update_cursor;
     }
@@ -339,18 +339,18 @@ update_cursor:
      * will be caught by normal segmentation faults instead. */
     _imageStreamBytesLeft = 0x40000;
 #else
-    if (playGame == 0 && playHighlightFlag == 0) {
+    if (_playGame == 0 && _playHighlightFlag == 0) {
         /* Menu mode: check against menuInsBank boundary */
-        imageStreamBytesLeft = (uint32_t)((uint8_t *)menuInsBank - pixelPtr);
-        if (pixelPtr >= (uint8_t *)menuInsBank) {
-            panicReasonCode = 0x0008;
+        _imageStreamBytesLeft = (uint32_t)((uint8_t *)_menuInsBank - pixelPtr);
+        if (pixelPtr >= (uint8_t *)_menuInsBank) {
+            _panicReasonCode = 0x0008;
             PanicHaltLoop();
         }
     } else {
         /* Game mode: check against imageStreamCursor itself (static buffer end) */
-        imageStreamBytesLeft = (uint32_t)((uint8_t *)&imageStreamCursor - pixelPtr);
-        if (pixelPtr >= (uint8_t *)&imageStreamCursor) {
-            panicReasonCode = 0x0008;
+        _imageStreamBytesLeft = (uint32_t)((uint8_t *)&_imageStreamCursor - pixelPtr);
+        if (pixelPtr >= (uint8_t *)&_imageStreamCursor) {
+            _panicReasonCode = 0x0008;
             PanicHaltLoop();
         }
     }
@@ -387,7 +387,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
      * staging buffer. */
     uint8_t *const imageSrcBuf = _rawAssetLoadBuffer;
 #else
-    uint8_t *const imageSrcBuf = frontbufferMaskBuffer;
+    uint8_t *const imageSrcBuf = _frontbufferMaskBuffer;
 #endif
 
     _imageStreamCursor = workBuffer;
@@ -429,7 +429,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0) != 0)
                 ;
 #else
-            while (LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, _frontbufferMaskBuffer, (uint32_t *)0) != 0)
                 ;
 #endif
 
@@ -460,7 +460,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0) != 0)
                 ;
 #else
-            while (LoadFileEx((uint8_t *)filename, frontbufferMaskBuffer, (uint32_t *)0) != 0)
+            while (LoadFileEx((uint8_t *)filename, _frontbufferMaskBuffer, (uint32_t *)0) != 0)
                 ;
 #endif
 
@@ -687,8 +687,8 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
      * frontbuffer. Skip it. */
 #ifndef SWOS_SDL_BUILD
     {
-        const uint16_t *srcPtr = (const uint16_t *)frontbufferBasePtr;
-        uint16_t *dstPtr = (uint16_t *)frontbufferMaskBuffer;
+        const uint16_t *srcPtr = (const uint16_t *)_frontbufferBasePtr;
+        uint16_t *dstPtr = (uint16_t *)_frontbufferMaskBuffer;
         uint16_t count;
         for (count = 0; count <= FB_COPY_WORDS_MINUS1; count++) {
             *dstPtr++ = *srcPtr++;

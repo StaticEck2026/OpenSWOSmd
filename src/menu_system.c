@@ -380,72 +380,72 @@ void BlitterCopyOverlayToScreen(void)
     uint32_t srcAddr;
 
     /* Enable blitter DMA */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
 
     /* Wait for blitter idle (dummy read + busy-wait) */
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
 
     /* Disable blitter DMA for setup */
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Setup blitter registers */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
     /* Select source: if frontbuffer is Alt, use Base; else use Alt */
-    srcAddr = (uintptr_t)frontbufferBase;
-    if (frontbufferBasePtr != (uintptr_t)frontbufferBaseAlt)
-        srcAddr = (uintptr_t)frontbufferBaseAlt;
+    srcAddr = (uintptr_t)_frontbufferBase;
+    if (_frontbufferBasePtr != (uintptr_t)_frontbufferBaseAlt)
+        srcAddr = (uintptr_t)_frontbufferBaseAlt;
 
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
-    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
     {
         uint8_t *srcPlane = (uint8_t *)srcAddr;
-        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        uint8_t *dstPlane = (uint8_t *)_frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (custom->dmaconr & (1u << 14)) {}
-            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+            _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (_custom->dmaconr & (1u << 14)) {}
+            _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            BLT_L(custom->bltapt, (uint32_t)srcPlane);
-            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
-            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
+            BLT_L(_custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
     /* Wait for last blit */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, 0);
     /* Set destination to current frontbuffer */
-    BLT_L(custom->bltdpt, frontbufferBasePtr);
-    BLT_L(custom->bltapt, srcAddr);
+    BLT_L(_custom->bltdpt, _frontbufferBasePtr);
+    BLT_L(_custom->bltapt, srcAddr);
     /* Start blit */
-    BLT_W(custom->bltsize, BLTSIZE_OVERLAY_PANEL);
+    BLT_W(_custom->bltsize, BLTSIZE_OVERLAY_PANEL);
     /* Enable blitter DMA */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
 
     /* Wait for blit to finish (dummy read + busy-wait) */
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
 
     /* Disable blitter DMA */
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size */
-    BLT_W(custom->bltsize, 0x16);
+    BLT_W(_custom->bltsize, 0x16);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
@@ -1672,7 +1672,7 @@ void MenuProc(void)
         /* Amiga: SPACE is post-LUT 0x20 in currentKey (NOT the raw 0x40 in
          * keyIn). MenuCheckControls already called GetKey() this frame, so
          * currentKey reflects the latest key. */
-        if (currentKey == 0x20)
+        if (_currentKey == 0x20)
             s_seasonSkipLatched = 1;
 #endif
         if (s_seasonSkipLatched) {

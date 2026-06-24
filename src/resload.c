@@ -306,7 +306,7 @@ extern uint32_t S_DosBase;
 extern uint32_t S_GfxBase;
 extern uint16_t S_FromWB;
 extern uint32_t S_WBMsg;
-extern uint32_t S_VBR;
+extern uint32_t _S_VBR;
 extern uint32_t S_SavedView;
 extern uint16_t S_SavedDmaCon;
 extern uint16_t S_SavedIntEna;
@@ -318,7 +318,7 @@ extern uint32_t S_SavedInt3;
 extern uint32_t S_SavedInt4;
 extern uint32_t S_SavedInt5;
 extern uint32_t size;       /* file size global used by rob_* functions */
-extern uint16_t g_quitToDos;
+extern uint16_t _g_quitToDos;
 extern uint8_t _keyexit;   /* DEL key code = 0x46 */
 
 /* ---- External asm functions ---- */
@@ -786,22 +786,22 @@ static uint8_t *make_data_path(uint8_t *name)
 /* Swap interrupt vector 2 to OS (restore saved) */
 static void swap_int2_to_os(void)
 {
-    volatile uint32_t *vec = (volatile uint32_t *)(S_VBR + LEVEL_2_VEC);
+    volatile uint32_t *vec = (volatile uint32_t *)(_S_VBR + LEVEL_2_VEC);
     *vec = S_SavedInt2;
 }
 
 /* Swap interrupt vector 2 back to game handler */
 static void swap_int2_to_game(void)
 {
-    volatile uint32_t *vec = (volatile uint32_t *)(S_VBR + LEVEL_2_VEC);
+    volatile uint32_t *vec = (volatile uint32_t *)(_S_VBR + LEVEL_2_VEC);
     *vec = (uint32_t)Int2KeyboardHandler;
 }
 
 /* Wait for blitter idle */
 static inline __attribute__((always_inline)) void wait_blitter(void)
 {
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
         ;
 }
 
@@ -818,7 +818,7 @@ static inline __attribute__((always_inline)) void wait_blitter(void)
 static void disable_vblank_and_wait(void)
 {
     /* Disable VBlank interrupt (clear bit 5 — writing without SET bit clears) */
-    custom->intena = (1u << 5);
+    _custom->intena = (1u << 5);
 
     /* Wait for blitter to finish — ISR may have started a blit */
     wait_blitter();
@@ -834,7 +834,7 @@ static void disable_vblank_and_wait(void)
 static void enable_vblank(void)
 {
     /* Re-enable VBlank interrupt (SET bit + bit 5) */
-    custom->intena = 0x8000u | (1u << 5);
+    _custom->intena = 0x8000u | (1u << 5);
 }
 
 
@@ -863,17 +863,17 @@ void SafeStart(void)
         }
     }
 
-    S_VBR = 0;
+    _S_VBR = 0;
 
     /* Check for 68010+ (AttnFlags bit 0) */
     uint8_t *execPtr = (uint8_t *)exec_base();
     if (execPtr[EXEC_ATTNFLAGS + 1] & 1) {
         /* 68010+ : get VBR via Supervisor mode */
-        S_VBR = os_Supervisor(_S_GetVBR);
+        _S_VBR = os_Supervisor(_S_GetVBR);
     }
 
     /* Save original interrupt vectors */
-    volatile uint32_t *vbr = (volatile uint32_t *)S_VBR;
+    volatile uint32_t *vbr = (volatile uint32_t *)_S_VBR;
     S_SavedInt1 = vbr[LEVEL_1_VEC / 4];
     S_SavedInt2 = vbr[LEVEL_2_VEC / 4];
     S_SavedInt3 = vbr[LEVEL_3_VEC / 4];
@@ -902,16 +902,16 @@ void DetachOSDisplay(void)
     os_GfxWaitTOF(gfxBase);
 
     /* Save DMACONR/INTENAR/ADKCONR with SET bit for later restore */
-    S_SavedDmaCon = custom->dmaconr | 0x8000u;
-    S_SavedIntEna = custom->intenar | 0x8000u;
-    S_SavedAdkCon = custom->adkconr | 0x8000u;
+    S_SavedDmaCon = _custom->dmaconr | 0x8000u;
+    S_SavedIntEna = _custom->intenar | 0x8000u;
+    S_SavedAdkCon = _custom->adkconr | 0x8000u;
 
     /* Wait for blitter idle */
     wait_blitter();
 
     /* Disable all DMA and interrupts */
-    custom->dmacon = 0x01FFu;
-    custom->intena = 0x3FFFu;
+    _custom->dmacon = 0x01FFu;
+    _custom->intena = 0x3FFFu;
 }
 
 
@@ -967,7 +967,7 @@ __attribute__((used, externally_visible))
 void ExitToDos(void)
 {
     /* Restore interrupt vectors */
-    volatile uint32_t *vbr = (volatile uint32_t *)S_VBR;
+    volatile uint32_t *vbr = (volatile uint32_t *)_S_VBR;
     vbr[LEVEL_1_VEC / 4] = S_SavedInt1;
     vbr[LEVEL_2_VEC / 4] = S_SavedInt2;
     vbr[LEVEL_3_VEC / 4] = S_SavedInt3;
@@ -979,14 +979,14 @@ void ExitToDos(void)
 
     /* Restore copper list from gfx base */
     void *gfxBase = (void *)S_GfxBase;
-    custom->cop1lc = *(uint32_t *)((uint8_t *)gfxBase + GFX_COPINIT);
-    custom->cop2lc = *(uint32_t *)((uint8_t *)gfxBase + GFX_LOFLIST);
-    custom->copjmp1 = 0;
+    _custom->cop1lc = *(uint32_t *)((uint8_t *)gfxBase + GFX_COPINIT);
+    _custom->cop2lc = *(uint32_t *)((uint8_t *)gfxBase + GFX_LOFLIST);
+    _custom->copjmp1 = 0;
 
     /* Restore DMA / interrupts / ADKCON */
-    custom->dmacon = S_SavedDmaCon;
-    custom->intena = S_SavedIntEna;
-    custom->adkcon = S_SavedAdkCon;
+    _custom->dmacon = S_SavedDmaCon;
+    _custom->intena = S_SavedIntEna;
+    _custom->adkcon = S_SavedAdkCon;
 
     /* Restore original view via graphics.library */
     void *savedView = (void *)S_SavedView;
@@ -1040,7 +1040,7 @@ static uint32_t resload_loadfile(uint8_t *name, uint8_t *dest, uint32_t *outErro
     void *dosBase = (void *)S_DosBase;
     uint32_t handle = os_DosOpen(dosBase, name, MODE_OLDFILE);
     if (handle == 0) {
-        custom->color[0] = 0x0F00u; /* red flash */
+        _custom->color[0] = 0x0F00u; /* red flash */
         print_file_error(name);
         if (outError) *outError = 1;
         return 0;
@@ -1050,7 +1050,7 @@ static uint32_t resload_loadfile(uint8_t *name, uint8_t *dest, uint32_t *outErro
     os_DosClose(dosBase, handle);
 
     if (bytesRead <= 0) {
-        custom->color[0] = 0x0F00u;
+        _custom->color[0] = 0x0F00u;
         print_file_error(name);
         if (outError) *outError = 1;
         return 0;
@@ -1502,7 +1502,7 @@ uint8_t KBHook(void)
     keycode = (keycode >> 1) | (keycode << 7);
 
     if (keycode == _keyexit) {
-        g_quitToDos = 1;
+        _g_quitToDos = 1;
     }
 
     return raw;

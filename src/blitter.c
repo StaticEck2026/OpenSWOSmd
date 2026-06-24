@@ -314,8 +314,8 @@ void FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t colo
      * (substitutes panel, formation menu, bench overlays) had their
      * coloured backgrounds shifted ~7 pixels lower than the text
      * inside them. */
-    x += cameraXMod320;
-    y += cameraYMod320;
+    x += _cameraXMod320;
+    y += _cameraYMod320;
 
     if (y >= SCREEN_HEIGHT)
         y -= SCREEN_HEIGHT;
@@ -424,20 +424,20 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
 
     wordSpan += 1;
 
-    BLT_W(custom->bltcon0, BLTCON0_USEA_USEB_USED_LF_FC);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltafwm, fwm);
-    BLT_W(custom->bltalwm, lwm);
-    BLT_L(custom->bltapt, (uint32_t)mask);
-    BLT_L(custom->bltbpt, (uint32_t)buf);
-    BLT_L(custom->bltdpt, (uint32_t)buf);
+    BLT_W(_custom->bltcon0, BLTCON0_USEA_USEB_USED_LF_FC);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltafwm, fwm);
+    BLT_W(_custom->bltalwm, lwm);
+    BLT_L(_custom->bltapt, (uint32_t)mask);
+    BLT_L(_custom->bltbpt, (uint32_t)buf);
+    BLT_L(_custom->bltdpt, (uint32_t)buf);
     mod = PLANE_STRIDE - wordSpan * 2;
-    BLT_W(custom->bltamod, mod);
-    BLT_W(custom->bltbmod, mod);
-    BLT_W(custom->bltdmod, mod);
+    BLT_W(_custom->bltamod, mod);
+    BLT_W(_custom->bltbmod, mod);
+    BLT_W(_custom->bltdmod, mod);
     {
         uint16_t blitsize = (h << 6) | wordSpan;
-        BLT_W(custom->bltsize, blitsize);
+        BLT_W(_custom->bltsize, blitsize);
     }
 #endif
 }
@@ -462,8 +462,8 @@ void RectRowMaskedApplyScreenOffset(uint16_t x, uint16_t y, uint16_t w, uint16_t
      * write, so the old entry pixels (e.g. "SELECT 2 MORE TEAMS") stay
      * visible underneath the new text ("SELECT 1 MORE TEAM"). */
 #else
-    x += cameraXMod320;
-    y += cameraYMod320;
+    x += _cameraXMod320;
+    y += _cameraYMod320;
 #endif
     blitterRectRowMasked(x, y, w, h, mask, buf);
 }
@@ -487,7 +487,7 @@ void BlitSpritePlanar_Word(uint16_t spriteIndex)
     (void)spriteIndex;
     return;
 #else
-    uint8_t *base = spriteGraphicsPtr;
+    uint8_t *base = _spriteGraphicsPtr;
     SpriteGraphics *hdr;
     uint16_t type;
     uint8_t *srcData;
@@ -497,7 +497,7 @@ void BlitSpritePlanar_Word(uint16_t spriteIndex)
     int32_t advance;
     int16_t row, col;
 
-    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
+    hdr = ((SpriteGraphics **)_spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
     srcData = hdr->sprData;
     dstMask = hdr->maskPtr;
@@ -596,7 +596,7 @@ void BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
     (void)spriteIndex;
     return;
 #else
-    uint8_t *base = spriteGraphicsPtr;
+    uint8_t *base = _spriteGraphicsPtr;
     SpriteGraphics *hdr;
     uint16_t type;
     uint8_t *srcData, *dstMask;
@@ -605,7 +605,7 @@ void BlitSpritePlanar_Word_StridedDest(uint16_t spriteIndex)
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
-    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
+    hdr = ((SpriteGraphics **)_spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
     srcData = hdr->sprData;
     dstMask = hdr->maskPtr;
@@ -657,7 +657,7 @@ void BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
     (void)spriteIndex;
     return;
 #else
-    uint8_t *base = spriteGraphicsPtr;
+    uint8_t *base = _spriteGraphicsPtr;
     SpriteGraphics *hdr;
     uint16_t type;
     uint8_t *srcData, *dstMask;
@@ -666,7 +666,7 @@ void BlitSpritePlanar_Long_StridedDest(uint16_t spriteIndex)
     int32_t srcAdvance, dstAdvance;
     int16_t row;
 
-    hdr = ((SpriteGraphics **)spriteGraphicsPtr)[spriteIndex];
+    hdr = ((SpriteGraphics **)_spriteGraphicsPtr)[spriteIndex];
     type = hdr->type;
     srcData = hdr->sprData;
     dstMask = hdr->maskPtr;
@@ -806,7 +806,7 @@ __attribute__((used, externally_visible))
 void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
                               uint16_t planeMask, uint16_t dstSpriteIndex)
 {
-    uint8_t *base = spriteGraphicsPtr;
+    uint8_t *base = _spriteGraphicsPtr;
     SpriteGraphics *srcHdr, *dstHdr;
     uint8_t *dstBase;
     uint16_t dstRowBytes;
@@ -824,16 +824,16 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     int16_t i;
 
     /* Look up source glyph header */
-    srcHdr = ((SpriteGraphics **)spriteGraphicsPtr)[glyphIndex];
+    srcHdr = ((SpriteGraphics **)_spriteGraphicsPtr)[glyphIndex];
 
     /* Validate: type must be 0 (separate planes) */
     if (srcHdr->type != 0) {
-        panicReasonCode = 0x1566;
+        _panicReasonCode = 0x1566;
         PanicHaltLoop();
     }
 
     /* Look up destination sprite header */
-    dstHdr = ((SpriteGraphics **)spriteGraphicsPtr)[dstSpriteIndex];
+    dstHdr = ((SpriteGraphics **)_spriteGraphicsPtr)[dstSpriteIndex];
 
     /* Destination row stride in bytes (per plane) */
     dstRowBytes = (uint16_t)dstHdr->wquads * 2;
@@ -867,15 +867,15 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         blitWords -= 1;
     }
 
-    BLT_W(custom->bltalwm, lastWordMask);
-    BLT_W(custom->bltafwm, 0xFFFF);
+    BLT_W(_custom->bltalwm, lastWordMask);
+    BLT_W(_custom->bltafwm, 0xFFFF);
     /* Shift amount → bltcon1 (descending=0, shift in bits 12-15 of con0) */
     bltconShift = xBit << 12;
-    BLT_W(custom->bltcon1, bltconShift);
+    BLT_W(_custom->bltcon1, bltconShift);
     /* Validate mask pointer exists */
     maskPtr = srcHdr->maskPtr;
     if (maskPtr == 0) {
-        panicReasonCode = 0x1567;
+        _panicReasonCode = 0x1567;
         PanicHaltLoop();
     }
 
@@ -902,12 +902,12 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     /* Source B (glyph) modulo: stride2 * NUM_PLANES - blitWords */
     srcBMod = srcStride2 * NUM_PLANES - blitWords;
 
-    BLT_W(custom->bltamod, srcAMod);
-    BLT_W(custom->bltbmod, srcBMod);
+    BLT_W(_custom->bltamod, srcAMod);
+    BLT_W(_custom->bltbmod, srcBMod);
     /* Dest modulo: dstRowBytes * NUM_PLANES - blitWords */
     dstMod = dstRowBytes * NUM_PLANES - blitWords;
-    BLT_W(custom->bltcmod, dstMod);
-    BLT_W(custom->bltdmod, dstMod);
+    BLT_W(_custom->bltcmod, dstMod);
+    BLT_W(_custom->bltdmod, dstMod);
     /* Glyph data: advance to plane 1, and compute last plane pointer */
     glyphData = srcHdr->sprData;      /* sprData (plane 0 start) */
     glyphData += (int32_t)srcStride2;            /* advance to plane 1 */
@@ -923,22 +923,22 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
         if (bit) {
             /* Cookie-cut: D = (A & B) | (~A & C), BLTCON0 = $FCA + shift */
             uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
-            BLT_W(custom->bltcon0, con0);
-            BLT_L(custom->bltapt, (uint32_t)maskPtr);
-            BLT_L(custom->bltbpt, (uint32_t)glyphData);
-            BLT_L(custom->bltcpt, (uint32_t)dstPtr);
-            BLT_L(custom->bltdpt, (uint32_t)dstPtr);
+            BLT_W(_custom->bltcon0, con0);
+            BLT_L(_custom->bltapt, (uint32_t)maskPtr);
+            BLT_L(_custom->bltbpt, (uint32_t)glyphData);
+            BLT_L(_custom->bltcpt, (uint32_t)dstPtr);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPtr);
         } else {
             /* Clear-through-mask: D = ~A & C, BLTCON0 = $B0A + shift */
             uint16_t con0 = bltconShift + BLTCON0_CLEAR_MASK;
-            BLT_W(custom->bltcon0, con0);
-            BLT_L(custom->bltapt, (uint32_t)maskPtr);
-            BLT_L(custom->bltcpt, (uint32_t)dstPtr);
-            BLT_L(custom->bltdpt, (uint32_t)dstPtr);
+            BLT_W(_custom->bltcon0, con0);
+            BLT_L(_custom->bltapt, (uint32_t)maskPtr);
+            BLT_L(_custom->bltcpt, (uint32_t)dstPtr);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPtr);
         }
 
         /* Kick blit */
-        BLT_W(custom->bltsize, blitsize);
+        BLT_W(_custom->bltsize, blitsize);
         /* Wait for blit to complete */
         waitBlit();
 
@@ -954,22 +954,22 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     if (bit3) {
         /* OR-mask: D = (A & B) | C, BLTCON0 = $BFA + shift */
         uint16_t con0 = bltconShift + BLTCON0_OR_MASK;
-        BLT_W(custom->bltcon0, con0);
-        BLT_L(custom->bltapt, (uint32_t)maskPtr);
-        BLT_L(custom->bltcpt, (uint32_t)dstPtr);
-        BLT_L(custom->bltdpt, (uint32_t)dstPtr);
+        BLT_W(_custom->bltcon0, con0);
+        BLT_L(_custom->bltapt, (uint32_t)maskPtr);
+        BLT_L(_custom->bltcpt, (uint32_t)dstPtr);
+        BLT_L(_custom->bltdpt, (uint32_t)dstPtr);
     } else {
         /* Cookie-cut with last plane data: D = (A & B) | (~A & C), use glyphPlane3 */
         uint16_t con0 = bltconShift + BLTCON0_BASE_LINKED;
-        BLT_W(custom->bltcon0, con0);
-        BLT_L(custom->bltapt, (uint32_t)maskPtr);
-        BLT_L(custom->bltbpt, (uint32_t)glyphPlane3);
-        BLT_L(custom->bltcpt, (uint32_t)dstPtr);
-        BLT_L(custom->bltdpt, (uint32_t)dstPtr);
+        BLT_W(_custom->bltcon0, con0);
+        BLT_L(_custom->bltapt, (uint32_t)maskPtr);
+        BLT_L(_custom->bltbpt, (uint32_t)glyphPlane3);
+        BLT_L(_custom->bltcpt, (uint32_t)dstPtr);
+        BLT_L(_custom->bltdpt, (uint32_t)dstPtr);
     }
 
     /* Kick final blit (no wait — caller or next operation will sync) */
-    BLT_W(custom->bltsize, blitsize);
+    BLT_W(_custom->bltsize, blitsize);
     }
 }
 #endif /* !SWOS_SDL_BUILD for BlitGlyphToSpriteBitmap */

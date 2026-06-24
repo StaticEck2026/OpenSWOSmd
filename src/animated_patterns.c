@@ -68,7 +68,7 @@ extern uint8_t  _pitchChunkyBuffer[];
  * `*a0 - base` is a random non-offset value, the static/animated
  * check fails, and the crowd never animates. */
 #define ANIM_PITCH_POINTER_COUNT 2310u
-#define ANIM_TILE_BASE        ((uint32_t)(uintptr_t)(pitchDatBuffer + ANIM_PITCH_POINTER_COUNT * 4))
+#define ANIM_TILE_BASE        ((uint32_t)(uintptr_t)(_pitchDatBuffer + ANIM_PITCH_POINTER_COUNT * 4))
 #define ANIM_TILE_SIZE        TILE_SIZE
 #define ANIM_TILE_SIZE_SHIFT  TILE_SIZE_SHIFT
 #define ANIM_MAX_TILE_OFFSET  MAX_FAN_TILE_OFFSET
@@ -158,8 +158,8 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     }
 #else
     {
-        uint32_t *sprGfx     = (uint32_t *)(void *)spriteGraphicsPtr;
-        uint32_t *tileEntries = (uint32_t *)(void *)pitchDatBuffer;
+        uint32_t *sprGfx     = (uint32_t *)(void *)_spriteGraphicsPtr;
+        uint32_t *tileEntries = (uint32_t *)(void *)_pitchDatBuffer;
         uint32_t spriteAddr   = sprGfx[137];
         *(uint32_t *)spriteAddr = tileEntries[patternIndex];
     }
@@ -424,7 +424,7 @@ DrawAnimatedPatterns(void)
             _animPatternsState = 0;
             return;
 #else
-            panicReasonCode = 0x5665;
+            _panicReasonCode = 0x5665;
             PanicHaltLoop();
             return;
 #endif

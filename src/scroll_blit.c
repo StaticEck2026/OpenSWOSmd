@@ -103,65 +103,65 @@ void ScrollXUpdateColumnsAndBlit(void)
     uint8_t *a1;
 
     /* Check if camera moved horizontally */
-    d0 = cameraX.s.i;
-    if (d0 == oldCameraX)
+    d0 = _cameraX.s.i;
+    if (d0 == _oldCameraX)
         return;
 
-    if (d0 >= oldCameraX) {
+    if (d0 >= _oldCameraX) {
         /* Moved right */
         d5 = SCROLL_RIGHT_EDGE_X;
-        d0 = oldCameraX + SCROLL_RIGHT_EDGE_X;
+        d0 = _oldCameraX + SCROLL_RIGHT_EDGE_X;
         d0 >>= TILE_SHIFT_X;  /* asr.w */
-        d1 = cameraX.s.i + SCROLL_RIGHT_EDGE_X;
+        d1 = _cameraX.s.i + SCROLL_RIGHT_EDGE_X;
         d1 >>= TILE_SHIFT_X;  /* asr.w */
     } else {
         /* Moved left */
         d5 = 0;
-        d0 = oldCameraX >> TILE_SHIFT_X;  /* asr.w (signed) */
-        d1 = cameraX.s.i >> TILE_SHIFT_X;     /* asr.w (signed) */
+        d0 = _oldCameraX >> TILE_SHIFT_X;  /* asr.w (signed) */
+        d1 = _cameraX.s.i >> TILE_SHIFT_X;     /* asr.w (signed) */
     }
 
     /* Did we cross a tile boundary? */
     if (d1 == d0) {
         /* No tile boundary crossed — just update oldCameraX */
-        oldCameraX = cameraX.s.i;
-        cameraCoordinatesValid = 0;
+        _oldCameraX = _cameraX.s.i;
+        _cameraCoordinatesValid = 0;
         return;
     }
 
     /* Tile boundary crossed — do the column blit */
-    cameraCoordinatesValid = 0;
-    oldCameraX = cameraX.s.i;
+    _cameraCoordinatesValid = 0;
+    _oldCameraX = _cameraX.s.i;
 
     /* Compute pitch data pointer for the tile column */
     {
-        uint16_t tileRow = (uint16_t)cameraY.s.i >> TILE_SHIFT_X;  /* lsr.w */
+        uint16_t tileRow = (uint16_t)_cameraY.s.i >> TILE_SHIFT_X;  /* lsr.w */
         uint32_t pitchOff = (uint32_t)tileRow * PITCH_PTR_ROW_BYTES;
-        uint16_t tileCol = ((uint16_t)(cameraX.s.i + d5)) >> TILE_SHIFT_X;  /* lsr.w */
+        uint16_t tileCol = ((uint16_t)(_cameraX.s.i + d5)) >> TILE_SHIFT_X;  /* lsr.w */
         tileCol <<= 2;
         pitchOff += tileCol;
-        a1 = pitchDatBuffer + pitchOff;
+        a1 = _pitchDatBuffer + pitchOff;
     }
 
     /* Compute frontbuffer destination pointer */
     {
-        uint32_t xByteOff = ((uint16_t)(cameraXMod320 + d5)) >> 3;
+        uint32_t xByteOff = ((uint16_t)(_cameraXMod320 + d5)) >> 3;
         xByteOff &= WORD_ALIGN_EVEN_MASK;
-        uint32_t yByteOff = (uint32_t)cameraYMod320 * ROW_STRIDE_BYTES;
-        a0 = (uint8_t *)frontbufferBasePtr + xByteOff + yByteOff;
+        uint32_t yByteOff = (uint32_t)_cameraYMod320 * ROW_STRIDE_BYTES;
+        a0 = (uint8_t *)_frontbufferBasePtr + xByteOff + yByteOff;
     }
 
     /* Set up blitter for column copy (A → D, no shift) */
     waitBlit();
-    BLT_L(custom->bltdpt, (uint32_t)a0);
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, BLTDMOD_PLANE_STEP);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
+    BLT_L(_custom->bltdpt, (uint32_t)a0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, BLTDMOD_PLANE_STEP);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
     /* ---- Phase 1: top of frontbuffer (from cameraYMod320 to SCREEN_HEIGHT) ---- */
-    d2 = cameraYMod320;
+    d2 = _cameraYMod320;
     d1 = d2 & TILE_MASK;
 
     if (d1 != 0) {
@@ -180,8 +180,8 @@ void ScrollXUpdateColumnsAndBlit(void)
         a1 += PITCH_PTR_ROW_BYTES;
 
         waitBlit();
-        BLT_L(custom->bltapt, (uint32_t)a0);
-        BLT_W(custom->bltsize, bltsize);
+        BLT_L(_custom->bltapt, (uint32_t)a0);
+        BLT_W(_custom->bltsize, bltsize);
     }
 
     /* Blit full tiles until we reach SCREEN_HEIGHT */
@@ -190,31 +190,31 @@ void ScrollXUpdateColumnsAndBlit(void)
         a1 += PITCH_PTR_ROW_BYTES;
 
         waitBlit();
-        BLT_L(custom->bltapt, (uint32_t)a0);
-        BLT_W(custom->bltsize, BLTSIZE_TILE_COL);
+        BLT_L(_custom->bltapt, (uint32_t)a0);
+        BLT_W(_custom->bltsize, BLTSIZE_TILE_COL);
         d2 += TILE_HEIGHT;
     }
 
     /* ---- Phase 2: wrap to top of frontbuffer ---- */
     /* Reset destination to top of column (no Y offset) */
     {
-        uint32_t xByteOff = ((uint16_t)(cameraXMod320 + d5)) >> 3;
+        uint32_t xByteOff = ((uint16_t)(_cameraXMod320 + d5)) >> 3;
         xByteOff &= WORD_ALIGN_EVEN_MASK;
-        a0 = (uint8_t *)frontbufferBasePtr + xByteOff;
+        a0 = (uint8_t *)_frontbufferBasePtr + xByteOff;
     }
 
     waitBlit();
-    BLT_L(custom->bltdpt, (uint32_t)a0);
+    BLT_L(_custom->bltdpt, (uint32_t)a0);
     /* Blit full tiles from wrap point down to cameraYMod320 */
-    d2 = cameraYMod320;
+    d2 = _cameraYMod320;
     if (d2 >= TILE_HEIGHT) {
         do {
             a0 = *(uint8_t **)a1;
             a1 += PITCH_PTR_ROW_BYTES;
 
             waitBlit();
-            BLT_L(custom->bltapt, (uint32_t)a0);
-            BLT_W(custom->bltsize, BLTSIZE_TILE_COL);
+            BLT_L(_custom->bltapt, (uint32_t)a0);
+            BLT_W(_custom->bltsize, BLTSIZE_TILE_COL);
             d2 -= TILE_HEIGHT;
         } while (d2 >= TILE_HEIGHT);
     }
@@ -225,27 +225,27 @@ void ScrollXUpdateColumnsAndBlit(void)
         uint16_t bltsize = ((d2 << NUM_PLANES_SHIFT) << 6) | 1;
 
         waitBlit();
-        BLT_L(custom->bltapt, (uint32_t)a0);
-        BLT_W(custom->bltsize, bltsize);
+        BLT_L(_custom->bltapt, (uint32_t)a0);
+        BLT_W(_custom->bltsize, bltsize);
     }
 
     /* ---- Phase 3: copy column from frontbuffer to mask buffer ---- */
     {
-        uint32_t fbColOff = ((uint16_t)(cameraXMod320 + d5)) >> 3;
+        uint32_t fbColOff = ((uint16_t)(_cameraXMod320 + d5)) >> 3;
         fbColOff &= WORD_ALIGN_EVEN_MASK;
-        uint32_t srcAddr = frontbufferBasePtr + fbColOff;
-        uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
+        uint32_t srcAddr = _frontbufferBasePtr + fbColOff;
+        uint32_t dstAddr = srcAddr - _frontbufferBasePtr + (uint32_t)_frontbufferMaskBuffer;
 
         waitBlit();
-        BLT_L(custom->bltapt, srcAddr);
-        BLT_L(custom->bltdpt, dstAddr);
-        BLT_W(custom->bltamod, BLTDMOD_PLANE_STEP);
-        BLT_W(custom->bltsize, BLTSIZE_TILE_COL);
+        BLT_L(_custom->bltapt, srcAddr);
+        BLT_L(_custom->bltdpt, dstAddr);
+        BLT_W(_custom->bltamod, BLTDMOD_PLANE_STEP);
+        BLT_W(_custom->bltsize, BLTSIZE_TILE_COL);
     }
 
     /* ---- Final: 1-word dummy blit ---- */
     waitBlit();
-    BLT_W(custom->bltsize, 1);
+    BLT_W(_custom->bltsize, 1);
 #endif /* !SWOS_SDL_BUILD */
 }
 
@@ -277,7 +277,7 @@ void ScrollYUpdateRowsAndBlit(void)
 #endif
 
     /* Check if camera moved vertically */
-    deltaY = cameraY.s.i - oldCameraY;
+    deltaY = _cameraY.s.i - _oldCameraY;
     if (deltaY == 0)
         return;
 
@@ -290,28 +290,28 @@ void ScrollYUpdateRowsAndBlit(void)
         deltaY = -deltaY;
     }
 
-    oldCameraY = cameraY.s.i;
-    cameraCoordinatesValid = 0;
+    _oldCameraY = _cameraY.s.i;
+    _cameraCoordinatesValid = 0;
 
     /* ---- Compute pitch data pointer ---- */
-    a1 = pitchDatBuffer;
+    a1 = _pitchDatBuffer;
     {
-        uint16_t tileRow = (uint16_t)(cameraY.s.i + d5) >> TILE_SHIFT_X;
+        uint16_t tileRow = (uint16_t)(_cameraY.s.i + d5) >> TILE_SHIFT_X;
         uint32_t pitchRowOff = (uint32_t)tileRow * PITCH_PTR_ROW_BYTES;
         a1 += pitchRowOff;
-        uint16_t tileCol = (uint16_t)cameraX.s.i >> TILE_SHIFT_X;
+        uint16_t tileCol = (uint16_t)_cameraX.s.i >> TILE_SHIFT_X;
         tileCol <<= 2;
         int32_t colOff = (int32_t)(int16_t)tileCol;  /* ext.l d0 */
         a1 += colOff;
     }
 
     /* ---- Compute frontbuffer dest base ---- */
-    a3 = (uint8_t *)frontbufferBasePtr;
+    a3 = (uint8_t *)_frontbufferBasePtr;
     {
-        uint32_t xByteOff = (uint16_t)cameraXMod320 >> 3;
+        uint32_t xByteOff = (uint16_t)_cameraXMod320 >> 3;
         xByteOff &= WORD_ALIGN_EVEN_MASK;
         a3 += xByteOff;
-        uint16_t yWrapped = cameraYMod320 + d5;
+        uint16_t yWrapped = _cameraYMod320 + d5;
         if (yWrapped >= SCREEN_HEIGHT)
             yWrapped -= SCREEN_HEIGHT;
         uint32_t yByteOff = (uint32_t)yWrapped * ROW_STRIDE_BYTES;
@@ -319,7 +319,7 @@ void ScrollYUpdateRowsAndBlit(void)
     }
 
     /* ---- Determine word count and dest stride per row ---- */
-    if (((uint16_t)cameraX.s.i & 0xF) != 0) {
+    if (((uint16_t)_cameraX.s.i & 0xF) != 0) {
         d6 = 0x15;  /* 21 words (unaligned) */
         d7 = PITCH_DEST_MOD_UNALIGNED;
     } else {
@@ -335,7 +335,7 @@ void ScrollYUpdateRowsAndBlit(void)
 #endif
 
     /* ---- Compute wrapped dest Y position ---- */
-    d4 = cameraYMod320 + d5;
+    d4 = _cameraYMod320 + d5;
     if (d4 >= SCREEN_HEIGHT)
         d4 -= SCREEN_HEIGHT;
 
@@ -347,7 +347,7 @@ void ScrollYUpdateRowsAndBlit(void)
     maskBlitSecondStreamPtr = 0;
 
     /* ---- Compute source scanline offset within tile ---- */
-    d3 = (int32_t)(uint16_t)(((uint16_t)(cameraY.s.i + d5)) & TILE_MASK);
+    d3 = (int32_t)(uint16_t)(((uint16_t)(_cameraY.s.i + d5)) & TILE_MASK);
     d3 <<= NUM_PLANES_SHIFT_PLUS1;  /* * 8 bytes per scanline */
 
     /* ---- CPU row copy loop ---- */
@@ -427,14 +427,14 @@ void ScrollYUpdateRowsAndBlit(void)
 
     /* ---- Blitter mask copy: frontbuffer → mask buffer ---- */
     waitBlit();
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
     {
         uint16_t modVal = (PLANE_STRIDE_DIV2 - blitWordCount) * 2;
-        BLT_W(custom->bltamod, modVal);
-        BLT_W(custom->bltdmod, modVal);
+        BLT_W(_custom->bltamod, modVal);
+        BLT_W(_custom->bltdmod, modVal);
     }
 
     /* If there's a second stream, subtract its bytes from stream A */
@@ -445,11 +445,11 @@ void ScrollYUpdateRowsAndBlit(void)
     /* Set up source and dest for stream A */
     {
         uint32_t srcAddr = maskBlitDestPtr;
-        uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
+        uint32_t dstAddr = srcAddr - _frontbufferBasePtr + (uint32_t)_frontbufferMaskBuffer;
 
         waitBlit();
-        BLT_L(custom->bltapt, srcAddr);
-        BLT_L(custom->bltdpt, dstAddr);
+        BLT_L(_custom->bltapt, srcAddr);
+        BLT_L(_custom->bltdpt, dstAddr);
     }
 
     /* ---- Stream A: blit in batches of max 0x400 rows ---- */
@@ -464,7 +464,7 @@ void ScrollYUpdateRowsAndBlit(void)
         uint16_t bltsize = (batch << 6) | blitWordCount;
 
         waitBlit();
-        BLT_W(custom->bltsize, bltsize);
+        BLT_W(_custom->bltsize, bltsize);
     }
 
     /* ---- Stream B (if Y-wrap occurred) ---- */
@@ -475,11 +475,11 @@ void ScrollYUpdateRowsAndBlit(void)
 
     {
         uint32_t srcAddr = maskBlitSecondStreamPtr;
-        uint32_t dstAddr = srcAddr - frontbufferBasePtr + (uint32_t)frontbufferMaskBuffer;
+        uint32_t dstAddr = srcAddr - _frontbufferBasePtr + (uint32_t)_frontbufferMaskBuffer;
 
         waitBlit();
-        BLT_L(custom->bltapt, srcAddr);
-        BLT_L(custom->bltdpt, dstAddr);
+        BLT_L(_custom->bltapt, srcAddr);
+        BLT_L(_custom->bltdpt, dstAddr);
     }
 
     /* ---- Stream B batches ---- */
@@ -494,7 +494,7 @@ void ScrollYUpdateRowsAndBlit(void)
         uint16_t bltsize = (batch << 6) | blitWordCount;
 
         waitBlit();
-        BLT_W(custom->bltsize, bltsize);
+        BLT_W(_custom->bltsize, bltsize);
     }
 #endif /* !SWOS_SDL_BUILD */
 }

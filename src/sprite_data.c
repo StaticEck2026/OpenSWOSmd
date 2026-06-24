@@ -1035,7 +1035,7 @@ Sprite _team2Player11Sprite = { 2, 11, 0, (AnimTable *)-1, -1, 0xFF, 0, 0, 0, 0,
 #ifdef SWOS_SDL_BUILD
 Sprite* _teamSpritesTable[102] = {   /* 101 + 1 slot for the widescreen-only cornerFlagSprite2 below */
 #else
-Sprite* teamSpritesTable[101] = {
+Sprite* _teamSpritesTable[101] = {
 #endif
     /* [0..10]  — team1SpritesTable */
     &_goalie1Sprite, &_team1Player2Sprite, &_team1Player3Sprite,

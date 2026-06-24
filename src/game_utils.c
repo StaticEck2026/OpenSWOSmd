@@ -57,8 +57,8 @@ void WaitForVSync(void)
     SetCameraCoordinates(cx, cy);
     Platform_VBlank();
 #else
-    waitingInterrupt = 1;
-    while (waitingInterrupt != 0)
+    _waitingInterrupt = 1;
+    while (_waitingInterrupt != 0)
     {
         /* spin — cleared by VBlank ISR */
     }

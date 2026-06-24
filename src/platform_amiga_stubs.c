@@ -124,7 +124,7 @@ extern void mainC(void);
 #ifdef SWOS_SDL_BUILD
 uint16_t _g_quitToDos = 0;
 #else
-extern uint16_t g_quitToDos;
+extern uint16_t _g_quitToDos;
 #endif
 
 void Platform_RequestQuit(void)
