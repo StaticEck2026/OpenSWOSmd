@@ -4,7 +4,7 @@
 #define STRING_SYMBOLS_H
 
 typedef struct { const char *name; void *addr; } StringSymbol;
-extern const StringSymbol stringSymbols[];
-extern const int          stringSymbolsCount;
+extern const StringSymbol _stringSymbols[];
+extern const int          _stringSymbolsCount;
 
 #endif /* STRING_SYMBOLS_H */

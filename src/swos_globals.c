@@ -24,11 +24,11 @@
 #include "swos_types.h"
 
 /* ---- Input state shared with input_sdl.c --------------------------- */
-uint8_t  keyState[128];
-uint16_t joy0Dat;
-uint16_t joy1Dat;
+uint8_t  _keyState[128];
+uint16_t _joy0Dat;
+uint16_t _joy1Dat;
 /* CIAA PRA bit 7 = fire button (active low). 0xFF = idle (no buttons). */
-uint8_t  ciaa_pra = 0xFF;
+uint8_t  _ciaa_pra = 0xFF;
 
 /* ---- nextEntryDirectionOffsets ----
  * Maps menu cursor direction (0=Up, 2=Right, 4=Down, 6=Left, after
@@ -39,7 +39,7 @@ uint8_t  ciaa_pra = 0xFF;
  * so the deltas relative to +8 are 0/1/2/3 for left/right/up/down.
  * MenuProc indexes this with dir>>1, so the array order is
  * Up/Right/Down/Left -> 2/1/3/0. */
-uint16_t nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
+uint16_t _nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
 
 /* ---- Framebuffer / bitplane storage -------------------------------- *
  * On the real hardware the Amiga kept the bitplanes in chip RAM, with
@@ -56,20 +56,20 @@ uint16_t nextEntryDirectionOffsets[4] = { 2, 1, 3, 0 };
  * only fetch from chip memory. SWOS_CHIP_BSS routes these into the
  * .BSSInChip.MEMF_CHIP section the linker maps to chip RAM. On SDL the
  * attribute is a no-op (regular BSS). */
-SWOS_CHIP_BSS uint8_t bitPlane0Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane1Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane2Base[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane3Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane0Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane1Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane2Base[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane3Base[BITPLANE_BYTES];
 #ifdef AGA
 SWOS_CHIP_BSS uint8_t bitPlane4Base[BITPLANE_BYTES];
 SWOS_CHIP_BSS uint8_t bitPlane5Base[BITPLANE_BYTES];
 SWOS_CHIP_BSS uint8_t bitPlane6Base[BITPLANE_BYTES];
 SWOS_CHIP_BSS uint8_t bitPlane7Base[BITPLANE_BYTES];
 #endif
-SWOS_CHIP_BSS uint8_t bitPlane0BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane1BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane2BaseAlt[BITPLANE_BYTES];
-SWOS_CHIP_BSS uint8_t bitPlane3BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane0BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane1BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane2BaseAlt[BITPLANE_BYTES];
+SWOS_CHIP_BSS uint8_t _bitPlane3BaseAlt[BITPLANE_BYTES];
 #ifdef AGA
 SWOS_CHIP_BSS uint8_t bitPlane4BaseAlt[BITPLANE_BYTES];
 SWOS_CHIP_BSS uint8_t bitPlane5BaseAlt[BITPLANE_BYTES];
@@ -79,10 +79,10 @@ SWOS_CHIP_BSS uint8_t bitPlane7BaseAlt[BITPLANE_BYTES];
 
 /* Bitplane base "pointers" — the Amiga sets these to the address of
  * each bitplane for the copper. On the host we store raw addresses. */
-volatile uint32_t bitPlane0BasePtr;
-volatile uint32_t bitPlane1BasePtr;
-volatile uint32_t bitPlane2BasePtr;
-volatile uint32_t bitPlane3BasePtr;
+volatile uint32_t _bitPlane0BasePtr;
+volatile uint32_t _bitPlane1BasePtr;
+volatile uint32_t _bitPlane2BasePtr;
+volatile uint32_t _bitPlane3BasePtr;
 #ifdef AGA
 volatile uint32_t bitPlane4BasePtr;
 volatile uint32_t bitPlane5BasePtr;
@@ -96,25 +96,25 @@ volatile uint32_t bitPlane7BasePtr;
 /* Frontbuffers also need chip RAM on Amiga — copper-list BPLPT entries
  * point at these for the main display area. */
 /* Sized at the MAX (widescreen) stride so the array is big enough whatever the
- * runtime g_screen_width is; the live frame uses g_screen_width as its row stride. */
-SWOS_CHIP_BSS uint8_t frontbufferBase[FRONTBUFFER_ALLOC_TOTAL_BYTES];
-SWOS_CHIP_BSS uint8_t frontbufferBaseAlt[FRONTBUFFER_ALLOC_TOTAL_BYTES];
-SWOS_CHIP_BSS uint8_t frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+ * runtime _screen_width is; the live frame uses _screen_width as its row stride. */
+SWOS_CHIP_BSS uint8_t _frontbufferBase[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t _frontbufferBaseAlt[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t _frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 #ifdef SWOS_SDL_BUILD
 /* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
  * set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
-int g_screen_width = SCREEN_WIDTH;
+int _screen_width = SCREEN_WIDTH;
 #endif
 /* Per-draw X shift for centering 336-wide menu content in a widescreen frame. Set to
  * WIDE_MARGIN only around the menu entry-draw loop; 0 everywhere else (and on Amiga). */
-int g_menu_draw_x_offset = 0;
+int _menu_draw_x_offset = 0;
 /* These store live pointers to frontbuffer memory. On 32-bit they
  * are word-sized for layout compatibility with the Amiga port (where
  * the asm reads them as long words). On 64-bit they must be wide
  * enough to hold a real heap/BSS pointer — uintptr_t keeps both
  * targets working without retyping every consumer. */
-volatile uintptr_t frontbufferBasePtr;
-volatile uintptr_t frontbufferBaseAltPtr;
+volatile uintptr_t _frontbufferBasePtr;
+volatile uintptr_t _frontbufferBaseAltPtr;
 
 #ifdef SWOS_SDL_BUILD
 /* SDL-only scratch buffer used by `ProcessImageCommandStream` and
@@ -125,13 +125,13 @@ volatile uintptr_t frontbufferBaseAltPtr;
  * raw bitplane data the loader produces. 128 KB covers the largest
  * single-asset load (HERO.INS at ~286 KB is split, the largest single
  * grafs file is well under 128 KB). */
-uint8_t rawAssetLoadBuffer[128 * 1024];
+uint8_t _rawAssetLoadBuffer[128 * 1024];
 #endif
 
 /* Copper list (OCS 320 bytes / AGA 1316 bytes). Must be in chip RAM
  * because the copper hardware fetches from it via DMA. */
-SWOS_CHIP_BSS uint8_t  copperListBuffer[COPPERLIST_SIZE_BYTES];
-SWOS_CHIP_BSS uint32_t copperZeroLong;
+SWOS_CHIP_BSS uint8_t  _copperListBuffer[COPPERLIST_SIZE_BYTES];
+SWOS_CHIP_BSS uint32_t _copperZeroLong;
 
 /* ---- menuPalette: 16-entry OCS palette referenced by SWOS.c (AGA path)
  * and Platform_PreArmIsrGlobals. The Amiga build had this in SWOS2.s
@@ -140,7 +140,7 @@ SWOS_CHIP_BSS uint32_t copperZeroLong;
  * took the first 16 AGA entries by mistake (which is why the menu bg
  * came out grey -- indices 1/7/8/9 were pure greys in the AGA table and
  * the menubg image pixel values are tuned to map to the OCS blues). */
-uint16_t menuPalette[16] = {
+uint16_t _menuPalette[16] = {
     0x0001, 0x0AAB, 0x0FFF, 0x0102, 0x0621, 0x0A40, 0x0F71, 0x0667,
     0x0204, 0x0445, 0x0F00, 0x000F, 0x0702, 0x088F, 0x0380, 0x0FF0
 };
@@ -149,19 +149,19 @@ uint16_t menuPalette[16] = {
  * `BuildPaletteFromColors` compresses each triplet into a 12-bit Amiga
  * colour word and writes into titleLogoPalette / titleScreenPalette /
  * titleTextPalette. Originally defined in SWOS2.s. */
-uint8_t kTitleLogoColors[48] = {
+uint8_t _kTitleLogoColors[48] = {
     0x00,0x00,0x22, 0xAA,0x00,0x00, 0xFF,0xBB,0x00, 0x33,0x33,0x33,
     0x44,0x33,0xAA, 0x00,0x88,0x00, 0xCC,0xCC,0xCC, 0x88,0x88,0x88,
     0x55,0x55,0x55, 0xFF,0xFF,0x99, 0xDD,0xDD,0x88, 0xBB,0xBB,0x77,
     0x99,0x99,0x66, 0x77,0x77,0x44, 0x55,0x55,0x33, 0x33,0x33,0x22
 };
-uint8_t kTitleScreenColors[48] = {
+uint8_t _kTitleScreenColors[48] = {
     0x00,0x00,0x23, 0x00,0x00,0x00, 0x23,0x23,0x23, 0x47,0x47,0x47,
     0x77,0x77,0x77, 0x9B,0x9B,0x9B, 0xCF,0xCF,0xCF, 0xEF,0xEF,0xEF,
     0x00,0x33,0xAB, 0x00,0x8B,0xCF, 0xEF,0xCF,0x33, 0x8B,0x00,0x00,
     0xAB,0x00,0x00, 0xDF,0x00,0x00, 0x00,0x67,0x00, 0xFF,0xFF,0xFF
 };
-uint8_t kTitleTextColors[48] = {
+uint8_t _kTitleTextColors[48] = {
     0x00,0x00,0x22, 0xFF,0x00,0x44, 0xFF,0x00,0x44, 0x00,0x00,0x44,
     0xFF,0x00,0x44, 0xFF,0x00,0x44, 0xFF,0x00,0x44, 0xFF,0x00,0x44,
     0x00,0x00,0x66, 0xFF,0xFF,0x99, 0xDD,0xDD,0x88, 0xBB,0xBB,0x77,
@@ -177,11 +177,11 @@ uint8_t kTitleTextColors[48] = {
  *
  * The remaining 340 integer words are plain data (sprite coords,
  * widths, heights) and don't need any relocation. */
-extern const char aGrafsCharsetRa[];
-extern const char aGrafsMenusRaw[];
-extern const char aGrafsMenus2Raw[];
+extern const char _aGrafsCharsetRa[];
+extern const char _aGrafsMenusRaw[];
+extern const char _aGrafsMenus2Raw[];
 
-uint16_t introMenuImageScript[] = {
+uint16_t _introMenuImageScript[] = {
     0x7000, 0, 0,            /* filename ptr halves filled at init */
 #include "intro_menu_image_script_cmds.inc"
 #include "font_ext_script.inc"   /* accented / full-ASCII / $ glyph extracts */
@@ -195,18 +195,18 @@ uint16_t introMenuImageScript[] = {
  *   [1..2]    -> &aGrafsMenusRaw   (first  0x7000 opcode at index 0)
  *   [393..394]-> &aGrafsMenus2Raw  (second 0x7000 opcode at index 392)
  * Both slots are written by SwosSDL_InitImageScripts() below. */
-uint16_t menuBGImageCmdStream[406] = {
+uint16_t _menuBGImageCmdStream[406] = {
 #include "menu_bg_image_script_cmds.inc"
 };
 
-extern uint16_t menuColorAndTextScript[];  /* defined below */
-extern const char aGrafsCjcgrafsR[];
-extern const char aGrafsCjcteamgR[];
-extern const char aGrafsCjcbitsRa[];
-extern const char aGrafsSoccerSRa[];
-extern const char aGrafsCjcbenchR[];
-extern uintptr_t team1Filename;
-extern uintptr_t team2Filename;
+extern uint16_t _menuColorAndTextScript[];  /* defined below */
+extern const char _aGrafsCjcgrafsR[];
+extern const char _aGrafsCjcteamgR[];
+extern const char _aGrafsCjcbitsRa[];
+extern const char _aGrafsSoccerSRa[];
+extern const char _aGrafsCjcbenchR[];
+extern uintptr_t _team1Filename;
+extern uintptr_t _team2Filename;
 
 #include "swos_types.h"
 
@@ -224,7 +224,7 @@ extern uintptr_t team2Filename;
  * stream slot; image_cmd.c reads the slot, looks up the table on
  * 64-bit, dereferences directly on 32-bit. Bitness-conditional via
  * UINTPTR_MAX so the 32-bit code path is unchanged. */
-const void *imageScriptPtrTable[32];
+const void *_imageScriptPtrTable[32];
 
 static uint16_t s_imageScriptPtrCount = 0;
 static uint32_t image_script_register_ptr(const void *p)
@@ -234,12 +234,12 @@ static uint32_t image_script_register_ptr(const void *p)
 #if UINTPTR_MAX == 0xFFFFFFFFu
     return (uint32_t)(uintptr_t)p;
 #else
-    if (s_imageScriptPtrCount >= sizeof(imageScriptPtrTable) /
-                                 sizeof(imageScriptPtrTable[0])) {
+    if (s_imageScriptPtrCount >= sizeof(_imageScriptPtrTable) /
+                                 sizeof(_imageScriptPtrTable[0])) {
         /* Out of slots — bump the table size in the header. */
         return 0xFFFFFFFFu;
     }
-    imageScriptPtrTable[s_imageScriptPtrCount] = p;
+    _imageScriptPtrTable[s_imageScriptPtrCount] = p;
     return (uint32_t)s_imageScriptPtrCount++;
 #endif
 }
@@ -265,23 +265,23 @@ void SwosSDL_InitImageScripts(void)
      * 64-bit; the 32-bit path doesn't touch the table). */
     s_imageScriptPtrCount = 0;
 
-    image_script_emit_ptr(introMenuImageScript,    1, aGrafsCharsetRa);
-    image_script_emit_ptr(menuBGImageCmdStream,    1, aGrafsMenusRaw);
-    image_script_emit_ptr(menuBGImageCmdStream,  393, aGrafsMenus2Raw);
+    image_script_emit_ptr(_introMenuImageScript,    1, _aGrafsCharsetRa);
+    image_script_emit_ptr(_menuBGImageCmdStream,    1, _aGrafsMenusRaw);
+    image_script_emit_ptr(_menuBGImageCmdStream,  393, _aGrafsMenus2Raw);
 
     /* menuColorAndTextScript pointer slots. The .inc file lists the
      * word offsets as comments. */
     struct { uint32_t off; const void *val; } mcts[] = {
-        {    1, aGrafsCjcgrafsR },
-        {  406, &team1Filename  },
-        { 1877, &team2Filename  },
-        { 3419, aGrafsCjcteamgR },
-        { 4548, aGrafsCjcbitsRa },
-        { 4695, aGrafsSoccerSRa },
-        { 4890, aGrafsCjcbenchR },
+        {    1, _aGrafsCjcgrafsR },
+        {  406, &_team1Filename  },
+        { 1877, &_team2Filename  },
+        { 3419, _aGrafsCjcteamgR },
+        { 4548, _aGrafsCjcbitsRa },
+        { 4695, _aGrafsSoccerSRa },
+        { 4890, _aGrafsCjcbenchR },
     };
     for (size_t i = 0; i < sizeof(mcts) / sizeof(mcts[0]); i++) {
-        image_script_emit_ptr(menuColorAndTextScript, mcts[i].off, mcts[i].val);
+        image_script_emit_ptr(_menuColorAndTextScript, mcts[i].off, mcts[i].val);
     }
 }
 
@@ -293,14 +293,14 @@ void SwosSDL_InitImageScripts(void)
  * of the host-side C symbol (filename string or team1Filename /
  * team2Filename globals). Body transcribed from SWOS2.s line 32848;
  * pointer slot indices are noted in the .inc. */
-extern const char aGrafsCjcgrafsR[];
-extern const char aGrafsCjcteamgR[];
-extern const char aGrafsCjcbitsRa[];
-extern const char aGrafsSoccerSRa[];
-extern const char aGrafsCjcbenchR[];
-extern uintptr_t team1Filename;
-extern uintptr_t team2Filename;
-uint16_t menuColorAndTextScript[5166] = {
+extern const char _aGrafsCjcgrafsR[];
+extern const char _aGrafsCjcteamgR[];
+extern const char _aGrafsCjcbitsRa[];
+extern const char _aGrafsSoccerSRa[];
+extern const char _aGrafsCjcbenchR[];
+extern uintptr_t _team1Filename;
+extern uintptr_t _team2Filename;
+uint16_t _menuColorAndTextScript[5166] = {
 #include "menu_color_text_script_cmds.inc"
 };
 
@@ -353,11 +353,11 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "currentMenu\n"
-    _ASM_PFX "currentMenu:\n"
+    ".globl " _ASM_PFX "_currentMenu\n"
+    _ASM_PFX "_currentMenu:\n"
     ".skip " _MENU_HDR_STR(MENU_HEADER_SIZE) "\n"
-    ".globl " _ASM_PFX "menuEntries\n"
-    _ASM_PFX "menuEntries:\n"
+    ".globl " _ASM_PFX "_menuEntries\n"
+    _ASM_PFX "_menuEntries:\n"
     ".skip " _MENU_HDR_STR((8 * 1024 + 80 * 1024) - MENU_HEADER_SIZE) "\n"
     ".data\n"
 );
@@ -391,7 +391,7 @@ __asm__(
  * uint16[] typing, preserved here). srcSprite (+0) is set at runtime; dstSprite
  * (+2) = 0xD6 (was littlePlayerSpriteGeneric); colTable identity 0..15. */
 __attribute__((used, aligned(2)))
-EditTeamsSpriteCopy stadiumMenuLittlePlayerSpriteCopy = {
+EditTeamsSpriteCopy _stadiumMenuLittlePlayerSpriteCopy = {
     0x0000, 0x00D6, { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
 };
 
@@ -412,7 +412,7 @@ EditTeamsSpriteCopy stadiumMenuLittlePlayerSpriteCopy = {
  * comment. transfer_market.c is the sole consumer (transient menu state,
  * not serialized). */
 __attribute__((used, aligned(2)))
-OfferOrdinals offerOrdinals = {0};
+OfferOrdinals _offerOrdinals = {0};
 
 /* ---- Goalkeeper face / skin state --------------------------------
  *
@@ -425,7 +425,7 @@ OfferOrdinals offerOrdinals = {0};
  * pinned byte-identical to the old backing buffer by the offsetof
  * static asserts on the struct. */
 __attribute__((used, aligned(2)))
-GoalieFaceState goalieFaces = {0};
+GoalieFaceState _goalieFaces = {0};
 
 /* ---- Memory boundary marker -----------------------------------------
  * Amiga BSS boundary symbol. ShowLoaderIntroSequence does a vestigial
@@ -435,7 +435,7 @@ GoalieFaceState goalieFaces = {0};
  * reference survives and the link fails undefined unless the symbol exists.
  * Define it so the build links at any optimization level. */
 __attribute__((used))
-uint32_t memBoundaryMarker;
+uint32_t _memBoundaryMarker;
 
 /* ---- Sprite blit queues (each = sentinel + 3000-byte buffer) ----
  *
@@ -456,13 +456,13 @@ uint32_t memBoundaryMarker;
  * and faults. */
 #define SPRITE_BLIT_QUEUE_BYTES   (2 + 0xBB6)
 __attribute__((used, aligned(4)))
-uint8_t spriteBlitQueueA_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
+uint8_t _spriteBlitQueueA_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
 __attribute__((used, aligned(4)))
-uint8_t spriteBlitQueueB_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
-__asm__(".globl " _ASM_PFX "kSpriteBlitQueueSentinel_A\n"
-        ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_A, " _ASM_PFX "spriteBlitQueueA_backing\n"
-        ".globl " _ASM_PFX "kSpriteBlitQueueSentinel_B\n"
-        ".equ   " _ASM_PFX "kSpriteBlitQueueSentinel_B, " _ASM_PFX "spriteBlitQueueB_backing\n");
+uint8_t _spriteBlitQueueB_backing[SPRITE_BLIT_QUEUE_BYTES] = {0};
+__asm__(".globl " _ASM_PFX "_kSpriteBlitQueueSentinel_A\n"
+        ".equ   " _ASM_PFX "_kSpriteBlitQueueSentinel_A, " _ASM_PFX "_spriteBlitQueueA_backing\n"
+        ".globl " _ASM_PFX "_kSpriteBlitQueueSentinel_B\n"
+        ".equ   " _ASM_PFX "_kSpriteBlitQueueSentinel_B, " _ASM_PFX "_spriteBlitQueueB_backing\n");
 
 /* trialistNameBufTerminator overflow check: handled directly in
  * transfer_market.c via `&trialistNameBuffer[22]`. The `.equ`
@@ -510,12 +510,12 @@ __asm__(".globl " _ASM_PFX "kSpriteBlitQueueSentinel_A\n"
 #define COL_SHIRT  { 0, 1, 0, 3, 4, 5, 6, 7, 8, 9, 0, 0, 12, 13, 0, 15 }
 #define COL_SHORTS { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0, 12, 13, 14, 15 }
 
-__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsPrimaryShirts   = { 190, 193, COL_SHIRT };
-__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsShorts          = { 191, 194, COL_SHORTS };
-__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSocks           = { 192, 195, COL_SHORTS };
-__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondaryShirt  = { 190, 196, COL_SHIRT };
-__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondaryShorts = { 191, 197, COL_SHORTS };
-__attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondarySocks  = { 192, 198, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsPrimaryShirts   = { 190, 193, COL_SHIRT };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsShorts          = { 191, 194, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsSocks           = { 192, 195, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsSecondaryShirt  = { 190, 196, COL_SHIRT };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsSecondaryShorts = { 191, 197, COL_SHORTS };
+__attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsSecondarySocks  = { 192, 198, COL_SHORTS };
 
 #undef COL_SHIRT
 #undef COL_SHORTS
@@ -585,7 +585,7 @@ __attribute__((used, aligned(2))) EditTeamsSpriteCopy editTeamsSecondarySocks  =
  * entire HIL file starting at `hilFileBuffer`. The first 8 bytes are the
  * magic-sig and max-size, the next 2036 are the two teams, the next 200
  * are gameName+gameRound, the next 10 bytes are the per-match header
- * (numGoals/team1Goals/team2Goals/pitchNumber/maxSubstitutes), and the
+ * (numGoals/team1Goals/team2Goals/pitchNumber/_maxSubstitutes), and the
  * remaining bytes are the goal scenes. The Amiga build relies on these
  * being one contiguous BSS run — separate stubs leave hilNumGoals at
  * zero after load, disabling the VIEW HIGHLIGHTS entry.
@@ -618,37 +618,37 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "hilBackingBuf\n"
-    _ASM_PFX "hilBackingBuf:\n"
-    ".globl " _ASM_PFX "hilFileBuffer\n"
-    _ASM_PFX "hilFileBuffer:\n"
+    ".globl " _ASM_PFX "_hilBackingBuf\n"
+    _ASM_PFX "_hilBackingBuf:\n"
+    ".globl " _ASM_PFX "_hilFileBuffer\n"
+    _ASM_PFX "_hilFileBuffer:\n"
     ".skip 2044\n"
-    ".globl " _ASM_PFX "hilGameName\n"
-    _ASM_PFX "hilGameName:\n"
+    ".globl " _ASM_PFX "_hilGameName\n"
+    _ASM_PFX "_hilGameName:\n"
     ".skip 100\n"
-    ".globl " _ASM_PFX "hilGameRound\n"
-    _ASM_PFX "hilGameRound:\n"
+    ".globl " _ASM_PFX "_hilGameRound\n"
+    _ASM_PFX "_hilGameRound:\n"
     ".skip 100\n"
-    ".globl " _ASM_PFX "hilNumGoals\n"
-    _ASM_PFX "hilNumGoals:\n"
+    ".globl " _ASM_PFX "_hilNumGoals\n"
+    _ASM_PFX "_hilNumGoals:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "hilTeam1Goals\n"
-    _ASM_PFX "hilTeam1Goals:\n"
+    ".globl " _ASM_PFX "_hilTeam1Goals\n"
+    _ASM_PFX "_hilTeam1Goals:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "hilTeam2Goals\n"
-    _ASM_PFX "hilTeam2Goals:\n"
+    ".globl " _ASM_PFX "_hilTeam2Goals\n"
+    _ASM_PFX "_hilTeam2Goals:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "hilPitchNumber\n"
-    _ASM_PFX "hilPitchNumber:\n"
+    ".globl " _ASM_PFX "_hilPitchNumber\n"
+    _ASM_PFX "_hilPitchNumber:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "hilMaxSubstitutes\n"
-    _ASM_PFX "hilMaxSubstitutes:\n"
+    ".globl " _ASM_PFX "_hilMaxSubstitutes\n"
+    _ASM_PFX "_hilMaxSubstitutes:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "hilStartOfGoalsBuffer\n"
-    _ASM_PFX "hilStartOfGoalsBuffer:\n"
+    ".globl " _ASM_PFX "_hilStartOfGoalsBuffer\n"
+    _ASM_PFX "_hilStartOfGoalsBuffer:\n"
     ".skip 19000\n"               /* 0x4A38 */
-    ".globl " _ASM_PFX "inGameHilBuffer\n"
-    _ASM_PFX "inGameHilBuffer:\n"
+    ".globl " _ASM_PFX "_inGameHilBuffer\n"
+    _ASM_PFX "_inGameHilBuffer:\n"
     ".skip 171000\n"              /* 192254 - 21254 */
     ".text\n"
 );
@@ -669,9 +669,9 @@ __asm__(
  *
  * Note: sound/sfx.in1 (71500 bytes) loads into poolplyrDatBuffer
  * (52200 bytes) — which overruns by ~19 KB. Fix when sfx path lights up. */
-uint8_t menuSongData[8  * 1024];
-SWOS_CHIP_BSS uint8_t menuInsBank [64 * 1024];
-uint8_t sfxSongData [8  * 1024];
+uint8_t _menuSongData[8  * 1024];
+SWOS_CHIP_BSS uint8_t _menuInsBank [64 * 1024];
+uint8_t _sfxSongData [8  * 1024];
 
 /* ---- SFX instrument bank (IN1 + IN2 contiguous in CHIP RAM) ----
  *
@@ -697,11 +697,11 @@ uint8_t sfxSongData [8  * 1024];
  * `audioBankLoaded`). */
 #define SFX_BANK_BACKING_BYTES   (192 * 1024)
 #define SFX_BANK_IN2_OFFSET      71500u
-SWOS_CHIP_BSS uint8_t sfxInsBankBacking[SFX_BANK_BACKING_BYTES];
-__asm__(".globl " _ASM_PFX "poolplyrDatBuffer\n"
-        ".equ   " _ASM_PFX "poolplyrDatBuffer, " _ASM_PFX "sfxInsBankBacking\n"
-        ".globl " _ASM_PFX "sfxInsBank2\n"
-        ".equ   " _ASM_PFX "sfxInsBank2, "      _ASM_PFX "sfxInsBankBacking + 71500\n");
+SWOS_CHIP_BSS uint8_t _sfxInsBankBacking[SFX_BANK_BACKING_BYTES];
+__asm__(".globl " _ASM_PFX "_poolplyrDatBuffer\n"
+        ".equ   " _ASM_PFX "_poolplyrDatBuffer, " _ASM_PFX "_sfxInsBankBacking\n"
+        ".globl " _ASM_PFX "_sfxInsBank2\n"
+        ".equ   " _ASM_PFX "_sfxInsBank2, "      _ASM_PFX "_sfxInsBankBacking + 71500\n");
 
 /* ---- Menu font tables (small + big) --------------------------------
  * Each CharTable is a 14-byte header (unk1, charHeight, unk2, charSpacing,
@@ -730,7 +730,7 @@ typedef struct CharTable {
  *   31=48, 33-47=18-32, 48-58=33-43, 96=47 ('£' = 0x9C), 110=53,
  *   121=55, 122=54, 124=46, 127=56, 223=44 (cursor)
  * The table is 224 bytes (16 cols × 14 rows). */
-CharTable smallCharsTable = {
+CharTable _smallCharsTable = {
     6, 6, 327685, 0, 3, 0,
     { 0, 0, 0, 0, 0, 51, 0, 1, 2, 3, 45, 50, 4, 5, 6, 7,             /*  0- 15 */
       8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 49, 52, 0, 0, 0, 48,     /* 16- 31 */
@@ -748,7 +748,7 @@ CharTable smallCharsTable = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44 }              /*208-223 */
 };
 
-CharTable bigCharsTable = {
+CharTable _bigCharsTable = {
     8, 8, 458759, 0, 4, 57,
     { 0, 0, 0, 0, 0, 51, 0, 1, 2, 3, 45, 50, 4, 5, 6, 7,             /*  0- 15 */
       8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 49, 52, 0, 0, 0, 48,     /* 16- 31 */
@@ -773,8 +773,8 @@ CharTable bigCharsTable = {
  * mappings live in font_ext_conv.inc (from SWOS_Font/integration.txt). */
 void FontExt_ApplyConv(void)
 {
-#define SB(i, s, b) do { smallCharsTable.conversionTable[(i)] = (uint16_t)(s); \
-                         bigCharsTable.conversionTable[(i)]   = (uint16_t)(b); } while (0)
+#define SB(i, s, b) do { _smallCharsTable.conversionTable[(i)] = (uint16_t)(s); \
+                         _bigCharsTable.conversionTable[(i)]   = (uint16_t)(b); } while (0)
 #include "font_ext_conv.inc"
 #undef SB
 }
@@ -783,15 +783,15 @@ void FontExt_ApplyConv(void)
  *   charTables[0] = &smallCharsTable
  *   charTables[1] = &bigCharsTable
  * Index is derived from the menu entry's stringFlags (see menu_system.c). */
-void *charTables[2] = {
-    &smallCharsTable,
-    &bigCharsTable
+void *_charTables[2] = {
+    &_smallCharsTable,
+    &_bigCharsTable
 };
 
 /* ---- outerFrameColorsTable: 16 background-colour pairs (top-left,
  * bottom-right) used by `DrawMenuItemOuterFrame` to give each menu
  * button a beveled edge. Transcribed from Amiga Data.c. */
-uint8_t outerFrameColorsTable[32] = {
+uint8_t _outerFrameColorsTable[32] = {
     1, 9, 1, 9, 1, 9, 1, 9, 5, 9, 6, 4, 2, 4, 1, 9,
     1, 9, 1, 3, 6, 9, 13, 8, 10, 8, 1, 9, 1, 9, 1, 9
 };
@@ -800,7 +800,7 @@ uint8_t outerFrameColorsTable[32] = {
  * `DrawSelectedMenuItemFrame` to draw the animated shine on the
  * currently-selected menu entry. Indexed by `(menuCursorFrame & 14) >> 1`.
  * Transcribed from Amiga Data.c. */
-uint16_t kColorTableShine[8] = { 2, 2, 1, 1, 7, 7, 1, 1 };
+uint16_t _kColorTableShine[8] = { 2, 2, 1, 1, 7, 7, 1, 1 };
 
 /* ---- Friendly-game STRING_TABLE entries -----------------------------
  * The friendly menu's pitch-type/season cycler stores its choices in a
@@ -813,42 +813,42 @@ uint16_t kColorTableShine[8] = { 2, 2, 1, 1, 7, 7, 1, 1 };
  * with 4 KiB zero-filled buffers, which segfaults at the very first deref
  * (`*(uint16_t *)indexPtr` with indexPtr = 0). Transcribed verbatim from
  * SWOS2.s lines 77666–77696. */
-extern char pitchTypeOrSeason[];
-extern char friendlyPitchType[];
-extern char friendlySeason[];
-extern const char aPitchType[], aSeason_1[];
-extern const char aRandom[], aFrozen[], aMuddy[], aWet[],
-                  aSoft[], aNormal[], aDry[], aHard[];
-extern const char aJan[], aFeb[], aMar[], aApr[], aMay[], aJun[],
-                  aJul[], aAug[], aSep[], aOct[], aNov[], aDec[];
+extern char _pitchTypeOrSeason[];
+extern char _friendlyPitchType[];
+extern char _friendlySeason[];
+extern const char _aPitchType[], _aSeason_1[];
+extern const char _aRandom[], _aFrozen[], _aMuddy[], _aWet[],
+                  _aSoft[], _aNormal[], _aDry[], _aHard[];
+extern const char _aJan[], _aFeb[], _aMar[], _aApr[], _aMay[], _aJun[],
+                  _aJul[], _aAug[], _aSep[], _aOct[], _aNov[], _aDec[];
 
 struct __attribute__((packed)) {
     void    *indexPtr;
     uint16_t base;
     void    *strs[2];
-} pitchTypeOrSeasonTable = {
-    pitchTypeOrSeason, 0, { (void *)aPitchType, (void *)aSeason_1 }
+} _pitchTypeOrSeasonTable = {
+    _pitchTypeOrSeason, 0, { (void *)_aPitchType, (void *)_aSeason_1 }
 };
 
 struct __attribute__((packed)) {
     void    *indexPtr;
     uint16_t base;
     void    *strs[8];
-} friendlyPitchTypeTable = {
-    friendlyPitchType, (uint16_t)-1,
-    { (void *)aRandom, (void *)aFrozen, (void *)aMuddy, (void *)aWet,
-      (void *)aSoft,   (void *)aNormal, (void *)aDry,   (void *)aHard }
+} _friendlyPitchTypeTable = {
+    _friendlyPitchType, (uint16_t)-1,
+    { (void *)_aRandom, (void *)_aFrozen, (void *)_aMuddy, (void *)_aWet,
+      (void *)_aSoft,   (void *)_aNormal, (void *)_aDry,   (void *)_aHard }
 };
 
 struct __attribute__((packed)) {
     void    *indexPtr;
     uint16_t base;
     void    *strs[12];
-} friendly_season_table = {
-    friendlySeason, 0,
-    { (void *)aJan, (void *)aFeb, (void *)aMar, (void *)aApr,
-      (void *)aMay, (void *)aJun, (void *)aJul, (void *)aAug,
-      (void *)aSep, (void *)aOct, (void *)aNov, (void *)aDec }
+} _friendly_season_table = {
+    _friendlySeason, 0,
+    { (void *)_aJan, (void *)_aFeb, (void *)_aMar, (void *)_aApr,
+      (void *)_aMay, (void *)_aJun, (void *)_aJul, (void *)_aAug,
+      (void *)_aSep, (void *)_aOct, (void *)_aNov, (void *)_aDec }
 };
 
 /* ---- bureaucracyMenuItems ----
@@ -860,21 +860,21 @@ struct __attribute__((packed)) {
  * real targets — 58 (numTeamsPrompt), 57, 55 — never get refreshed,
  * so "SELECT N MORE TEAMS" never updates after a selection.
  * Transcribed from SWOS2.s line 65223. */
-int16_t bureaucracyMenuItems[5] = { 58, 57, 55, 0, -1 };
+int16_t _bureaucracyMenuItems[5] = { 58, 57, 55, 0, -1 };
 
 /* ---- Other DrawMenuItemsWaitForVSync redraw lists.
  * Same pattern as bureaucracyMenuItems: int16 ordinals terminated by a
  * negative value, called from various menu callbacks. Stubs of zeros
  * cause the draw loop to walk 2048 entries redrawing entry 0.
  * Transcribed from SWOS2.s. */
-int16_t editTacticsRotateRedrawList[3]      = { 10, 27, -1 };
-int16_t filterMenuRedrawList[3]             = {  4,  6, -1 };
-int16_t playMatchRedrawList[3]              = { 12, 29, -1 };
-int16_t togglePlayerCoachRedrawItemList[4]  = {  9,  1,  6, -1 };
+int16_t _editTacticsRotateRedrawList[3]      = { 10, 27, -1 };
+int16_t _filterMenuRedrawList[3]             = {  4,  6, -1 };
+int16_t _playMatchRedrawList[3]              = { 12, 29, -1 };
+int16_t _togglePlayerCoachRedrawItemList[4]  = {  9,  1,  6, -1 };
 /* This one is dc.l in SWOS2.s — pairs of int16 packed as little-endian
  * within each long word: $004D004C,$004AFFFF reads (BE 68k load) as
  * 0x004D, 0x004C, 0x004A, 0xFFFF i.e. ordinals 77, 76, 74, terminator. */
-int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[4] = { 77, 76, 74, -1 };
+int16_t _chooseTeamsFriendly_changeTeamsPromptDrawList[4] = { 77, 76, 74, -1 };
 
 /* ---- savedRandState / savedRandStatePtr ----
  * SWOS2.s line 21645 defines a uint8[15] save-stack buffer and a
@@ -883,8 +883,8 @@ int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[4] = { 77, 76, 74, -1 };
  * Without this definition the linker resolves savedRandState to 0,
  * the pointer ends up NULL, and `*ptr++ = seed2` in SaveRand2State
  * segfaults on the first match-start push. */
-uint8_t savedRandState[15];
-uint8_t *savedRandStatePtr = savedRandState;
+uint8_t _savedRandState[15];
+uint8_t *_savedRandStatePtr = _savedRandState;
 
 /* Camera position as FixedPoint unions (16.16 fixed-point) — matches the
  * Amiga m68k layout where `cameraX` was a 4-byte dc.l accessed via both
@@ -893,22 +893,22 @@ uint8_t *savedRandStatePtr = savedRandState;
  * and FixedPoint.raw the full 32-bit value. The union overlay in
  * game_types.h handles the LE/BE byte-order swap so each half lives at
  * the expected memory offset on both hosts. */
-FixedPoint cameraX = {0};
-FixedPoint cameraY = {0};
+FixedPoint _cameraX = {0};
+FixedPoint _cameraY = {0};
 
 /* ---- kGoalieSkill[0..7]Table + kGoalieSkillTables ----
  * 8 GoalieSkill lookup tables (30 int16 fields each). Indexed at
  * runtime by the goalkeeper's skill rating via kGoalieSkillTables[].
  * Without these UpdatePlayers dereferences a NULL shotChanceTable.
  * Transcribed from SWOS2.s lines 28755–29017. */
-int16_t kGoalieSkill7Table[30] = { 0x0063, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0002, 0x0003, 0x0009, 0x0006, 0x0001, 0x000C, 0x0004, 0x0009, 0x0006, 0x0001, 0x000C };
-int16_t kGoalieSkill6Table[30] = { 0x0001, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0002, 0x0003, 0x0004, 0x0008, 0x0006, 0x0002, 0x000B, 0x0005, 0x0008, 0x0006, 0x0002, 0x000B };
-int16_t kGoalieSkill5Table[30] = { 0x0002, 0x04DC, 0x00B4, 0x03E0, 0x00F0, 0x0000, 0x0001, 0x0001, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0003, 0x0004, 0x0005, 0x0007, 0x0006, 0x0003, 0x000A, 0x0006, 0x0007, 0x0006, 0x0003, 0x000A };
-int16_t kGoalieSkill4Table[30] = { 0x0003, 0x0438, 0x0086, 0x03C0, 0x00E0, 0x0000, 0x0001, 0x0002, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0004, 0x0005, 0x0006, 0x0006, 0x0006, 0x0004, 0x0009, 0x0007, 0x0006, 0x0006, 0x0004, 0x0009 };
-int16_t kGoalieSkill3Table[30] = { 0x0004, 0x0394, 0x0058, 0x03A0, 0x00D0, 0x0001, 0x0002, 0x0003, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0005, 0x0006, 0x0007, 0x0006, 0x0005, 0x0005, 0x0008, 0x0008, 0x0005, 0x0006, 0x0005, 0x0008 };
-int16_t kGoalieSkill2Table[30] = { 0x0005, 0x02F0, 0x002A, 0x0380, 0x00C0, 0x0002, 0x0003, 0x0004, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0006, 0x0007, 0x0007, 0x0005, 0x0005, 0x0006, 0x0007, 0x0009, 0x0004, 0x0006, 0x0006, 0x0007 };
-int16_t kGoalieSkill1Table[30] = { 0x0006, 0x024C, -4,     0x0360, 0x00B0, 0x0003, 0x0004, 0x0005, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0007, 0x0007, 0x0007, 0x0004, 0x0005, 0x0007, 0x0006, 0x000A, 0x0003, 0x0006, 0x0007, 0x0006 };
-int16_t kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x0004, 0x0005, 0x0006, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0003, 0x0005, 0x0008, 0x0005, 0x000B, 0x0002, 0x0006, 0x0008, 0x0005 };
+int16_t _kGoalieSkill7Table[30] = { 0x0063, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0001, 0x0002, 0x0003, 0x0009, 0x0006, 0x0001, 0x000C, 0x0004, 0x0009, 0x0006, 0x0001, 0x000C };
+int16_t _kGoalieSkill6Table[30] = { 0x0001, 0x0580, 0x00E2, 0x0400, 0x0100, 0x0000, 0x0000, 0x0000, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0001, 0x0002, 0x0003, 0x0004, 0x0008, 0x0006, 0x0002, 0x000B, 0x0005, 0x0008, 0x0006, 0x0002, 0x000B };
+int16_t _kGoalieSkill5Table[30] = { 0x0002, 0x04DC, 0x00B4, 0x03E0, 0x00F0, 0x0000, 0x0001, 0x0001, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0002, 0x0003, 0x0004, 0x0005, 0x0007, 0x0006, 0x0003, 0x000A, 0x0006, 0x0007, 0x0006, 0x0003, 0x000A };
+int16_t _kGoalieSkill4Table[30] = { 0x0003, 0x0438, 0x0086, 0x03C0, 0x00E0, 0x0000, 0x0001, 0x0002, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0003, 0x0004, 0x0005, 0x0006, 0x0006, 0x0006, 0x0004, 0x0009, 0x0007, 0x0006, 0x0006, 0x0004, 0x0009 };
+int16_t _kGoalieSkill3Table[30] = { 0x0004, 0x0394, 0x0058, 0x03A0, 0x00D0, 0x0001, 0x0002, 0x0003, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0004, 0x0005, 0x0006, 0x0007, 0x0006, 0x0005, 0x0005, 0x0008, 0x0008, 0x0005, 0x0006, 0x0005, 0x0008 };
+int16_t _kGoalieSkill2Table[30] = { 0x0005, 0x02F0, 0x002A, 0x0380, 0x00C0, 0x0002, 0x0003, 0x0004, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0005, 0x0006, 0x0007, 0x0007, 0x0005, 0x0005, 0x0006, 0x0007, 0x0009, 0x0004, 0x0006, 0x0006, 0x0007 };
+int16_t _kGoalieSkill1Table[30] = { 0x0006, 0x024C, -4,     0x0360, 0x00B0, 0x0003, 0x0004, 0x0005, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0006, 0x0007, 0x0007, 0x0007, 0x0004, 0x0005, 0x0007, 0x0006, 0x000A, 0x0003, 0x0006, 0x0007, 0x0006 };
+int16_t _kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x0004, 0x0005, 0x0006, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0007, 0x0003, 0x0005, 0x0008, 0x0005, 0x000B, 0x0002, 0x0006, 0x0008, 0x0005 };
 /* ---- pitchDatBuffer + pitchChunkyBuffer ----
  * Amiga pitch files pack 2310 tile-pointer offsets followed by
  * bitplane tile data. The Amiga build's original 9240-byte buffer
@@ -922,18 +922,18 @@ int16_t kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x000
  * table the Amiga code already uses. */
 #define PITCH_POINTER_COUNT 2310
 #define PITCH_CHUNKY_TILE_BYTES 256   /* 16 px * 16 rows * 1 byte/px */
-SWOS_CHIP_BSS uint8_t pitchDatBuffer[64 * 1024];
-uint8_t pitchChunkyBuffer[PITCH_POINTER_COUNT * PITCH_CHUNKY_TILE_BYTES];
+SWOS_CHIP_BSS uint8_t _pitchDatBuffer[64 * 1024];
+uint8_t _pitchChunkyBuffer[PITCH_POINTER_COUNT * PITCH_CHUNKY_TILE_BYTES];
 
-void *kGoalieSkillTables[8] = {
-    kGoalieSkill0Table,
-    kGoalieSkill1Table,
-    kGoalieSkill2Table,
-    kGoalieSkill3Table,
-    kGoalieSkill4Table,
-    kGoalieSkill5Table,
-    kGoalieSkill6Table,
-    kGoalieSkill7Table,
+void *_kGoalieSkillTables[8] = {
+    _kGoalieSkill0Table,
+    _kGoalieSkill1Table,
+    _kGoalieSkill2Table,
+    _kGoalieSkill3Table,
+    _kGoalieSkill4Table,
+    _kGoalieSkill5Table,
+    _kGoalieSkill6Table,
+    _kGoalieSkill7Table,
 };
 
 /* ---- diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer ----
@@ -977,22 +977,22 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "qualifiedTeamGridsBlock\n"
-    _ASM_PFX "qualifiedTeamGridsBlock:\n"
-    ".globl " _ASM_PFX "primaryQualifiedTeamGrids\n"
-    _ASM_PFX "primaryQualifiedTeamGrids:\n"
+    ".globl " _ASM_PFX "_qualifiedTeamGridsBlock\n"
+    _ASM_PFX "_qualifiedTeamGridsBlock:\n"
+    ".globl " _ASM_PFX "_primaryQualifiedTeamGrids\n"
+    _ASM_PFX "_primaryQualifiedTeamGrids:\n"
     ".skip 8208\n"
-    ".globl " _ASM_PFX "tertiaryQualifiedTeamGrid\n"
-    _ASM_PFX "tertiaryQualifiedTeamGrid:\n"
+    ".globl " _ASM_PFX "_tertiaryQualifiedTeamGrid\n"
+    _ASM_PFX "_tertiaryQualifiedTeamGrid:\n"
     ".skip 684\n"
-    ".globl " _ASM_PFX "euroCupTitleHolderGrid\n"
-    _ASM_PFX "euroCupTitleHolderGrid:\n"
+    ".globl " _ASM_PFX "_euroCupTitleHolderGrid\n"
+    _ASM_PFX "_euroCupTitleHolderGrid:\n"
     ".skip 684\n"
-    ".globl " _ASM_PFX "cupWinnersCupTitleHolderGrid\n"
-    _ASM_PFX "cupWinnersCupTitleHolderGrid:\n"
+    ".globl " _ASM_PFX "_cupWinnersCupTitleHolderGrid\n"
+    _ASM_PFX "_cupWinnersCupTitleHolderGrid:\n"
     ".skip 684\n"
-    ".globl " _ASM_PFX "uefaCupTitleHolderGrid\n"
-    _ASM_PFX "uefaCupTitleHolderGrid:\n"
+    ".globl " _ASM_PFX "_uefaCupTitleHolderGrid\n"
+    _ASM_PFX "_uefaCupTitleHolderGrid:\n"
     ".skip 684\n"
     ".text\n"
 );
@@ -1015,10 +1015,10 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "gameRoundBuf\n"
-    _ASM_PFX "gameRoundBuf:\n"
-    ".globl " _ASM_PFX "gameRound\n"
-    _ASM_PFX "gameRound:\n"
+    ".globl " _ASM_PFX "_gameRoundBuf\n"
+    _ASM_PFX "_gameRoundBuf:\n"
+    ".globl " _ASM_PFX "_gameRound\n"
+    _ASM_PFX "_gameRound:\n"
     ".skip 100\n"
     ".text\n"
 );
@@ -1078,7 +1078,7 @@ __asm__(
  * (clearLeagueTableStats writes to +0x734), so the backing buffer stays
  * oversized.
  * --------------------------------------------------------------------- */
-DIYTournamentState diyFileBufferCopy;
+DIYTournamentState _diyFileBufferCopy;
 
 __asm__(
 #if defined(__APPLE__)
@@ -1087,14 +1087,14 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "diyCompetitionStartBuf\n"
-    _ASM_PFX "diyCompetitionStartBuf:\n"
+    ".globl " _ASM_PFX "_diyCompetitionStartBuf\n"
+    _ASM_PFX "_diyCompetitionStartBuf:\n"
     ".skip 7136\n"
     ".text\n"
 );
 
-__asm__(".globl " _ASM_PFX "diyCompetitionStart\n"
-        ".equ   " _ASM_PFX "diyCompetitionStart, " _ASM_PFX "diyCompetitionStartBuf\n");
+__asm__(".globl " _ASM_PFX "_diyCompetitionStart\n"
+        ".equ   " _ASM_PFX "_diyCompetitionStart, " _ASM_PFX "_diyCompetitionStartBuf\n");
 
 /* competitionFileBuffer: overlays careerFileBufferBuf at offset 93308.
  * Aliased in swos_globals_career_overlay.c. The 4 KB standalone backing
@@ -1168,13 +1168,13 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "numberOfFilesBuf\n"
-    _ASM_PFX "numberOfFilesBuf:\n"
-    ".globl " _ASM_PFX "numberOfFiles\n"
-    _ASM_PFX "numberOfFiles:\n"
+    ".globl " _ASM_PFX "_numberOfFilesBuf\n"
+    _ASM_PFX "_numberOfFilesBuf:\n"
+    ".globl " _ASM_PFX "_numberOfFiles\n"
+    _ASM_PFX "_numberOfFiles:\n"
     ".skip 4\n"
-    ".globl " _ASM_PFX "foundFilenamesBuffer\n"
-    _ASM_PFX "foundFilenamesBuffer:\n"
+    ".globl " _ASM_PFX "_foundFilenamesBuffer\n"
+    _ASM_PFX "_foundFilenamesBuffer:\n"
     ".skip 1918\n"
     ".text\n"
 );

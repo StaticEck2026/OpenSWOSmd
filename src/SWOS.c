@@ -45,26 +45,26 @@ extern void Int2KeyboardHandler(void);
 extern void Int3TimerHandler(void);
 extern void Int4Handler(void);
 
-extern uint32_t S_VBR;
-extern uint32_t loaderBankBitmap;
-extern uint16_t chipRamBitmapEnd;
-extern uint16_t pitchDatBuffer;
-extern uint16_t currentMenu;
-extern uint32_t magicValue;
-extern uint32_t loaderMemTop;
-extern uint32_t loaderParam;
-extern uint16_t frontbufferBase;
-extern uint16_t frontbufferBaseAlt;
-extern uint16_t frontbufferMaskBuffer;
+extern uint32_t _S_VBR;
+extern uint32_t _loaderBankBitmap;
+extern uint16_t _chipRamBitmapEnd;
+extern uint16_t _pitchDatBuffer;
+extern uint16_t _currentMenu;
+extern uint32_t _magicValue;
+extern uint32_t _loaderMemTop;
+extern uint32_t _loaderParam;
+extern uint16_t _frontbufferBase;
+extern uint16_t _frontbufferBaseAlt;
+extern uint16_t _frontbufferMaskBuffer;
 
 /* Pre-allocated cache memory (defined in SWOS2.s BSS, filled before hardware takeover) */
-extern uint8_t *g_earlyAllocCacheMem;
-extern uint32_t g_earlyAllocCacheSize;
+extern uint8_t *_earlyAllocCacheMem;
+extern uint32_t _earlyAllocCacheSize;
 
 extern uint8_t *AllocMemAny(uint32_t size);
 
-SWOS_CHIP_BSS volatile uint32_t g_swos_chip_bss_anchor;
-SWOS_FAST_BSS volatile uint32_t g_swos_fast_bss_anchor;
+SWOS_CHIP_BSS volatile uint32_t _swos_chip_bss_anchor;
+SWOS_FAST_BSS volatile uint32_t _swos_fast_bss_anchor;
 
 /* m68k exception-vector table installer. Dead code on SDL (no real
  * VBR), but kept for the Amiga port. uintptr_t so the cast to
@@ -107,25 +107,25 @@ __attribute__((used, externally_visible)) void swos_c_start(void)
      * uintptr_t locals so the global addresses don't truncate on
      * 64-bit before being cast back to volatile uint16_t* for the
      * byte-by-byte zero-fill (kept for when this comes back). */
-    (void)&loaderBankBitmap;
-    (void)&chipRamBitmapEnd;
-    (void)&pitchDatBuffer;
-    (void)&currentMenu;
+    (void)&_loaderBankBitmap;
+    (void)&_chipRamBitmapEnd;
+    (void)&_pitchDatBuffer;
+    (void)&_currentMenu;
 
-    magicValue = SWOS_MAGIC_VALUE;
+    _magicValue = SWOS_MAGIC_VALUE;
     /* Bank scan disabled: assetLoaderBank0Base is in BSS (relocated),
      * so computed bank addresses (base + N*0x80000) point to invalid memory.
      * Set loaderMemTop = 0 to skip the bank scan in AssetLoaderInitAltPathAndBanks.
      * The main 195KB cache region is sufficient. */
-    loaderMemTop = 0;
-    *(volatile uint32_t *)&loaderBankBitmap = 0;
-    loaderParam = SWOS_FASTBITS;
+    _loaderMemTop = 0;
+    *(volatile uint32_t *)&_loaderBankBitmap = 0;
+    _loaderParam = SWOS_FASTBITS;
 
-    custom->color[0] = 0x0u;
+    _custom->color[0] = 0x0u;
 
-    volatile uint16_t *front = &frontbufferBase;
-    volatile uint16_t *alt = &frontbufferBaseAlt;
-    volatile uint16_t *mask = &frontbufferMaskBuffer;
+    volatile uint16_t *front = &_frontbufferBase;
+    volatile uint16_t *alt = &_frontbufferBaseAlt;
+    volatile uint16_t *mask = &_frontbufferMaskBuffer;
 
     for (uint32_t bytes = FRONTBUFFER_SIZE_TOTAL_BYTES; bytes != 0u; bytes -= 2u)
     {
@@ -134,21 +134,21 @@ __attribute__((used, externally_visible)) void swos_c_start(void)
         *mask++ = 0xF0F0u;
     }
 
-    custom->dmacon = 0x8340u;
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = 0x8340u;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-    set_vector(S_VBR, LEVEL_2_INTERRUPT_AUTOVECTOR, Int2KeyboardHandler);
-    set_vector(S_VBR, LEVEL_3_INTERRUPT_AUTOVECTOR, Int3TimerHandler);
+    set_vector(_S_VBR, LEVEL_2_INTERRUPT_AUTOVECTOR, Int2KeyboardHandler);
+    set_vector(_S_VBR, LEVEL_3_INTERRUPT_AUTOVECTOR, Int3TimerHandler);
 
 #ifdef DETERMINISTIC_MODE
     InitDeterministicMode();
 #endif
-    set_vector(S_VBR, LEVEL_4_INTERRUPT_AUTOVECTOR, Int4Handler);
+    set_vector(_S_VBR, LEVEL_4_INTERRUPT_AUTOVECTOR, Int4Handler);
 
     SetupInterrupts();
 
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x88u;
-    custom->intena = 0xC008u;
+    _custom->intena = 0xC008u;
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x82u;
     *(volatile uint8_t *)CIAA_DDRA_ADDR |= 0x02u;
     *(volatile uint8_t *)CIAA_PRA_ADDR |= 0x02u;
@@ -158,34 +158,34 @@ __attribute__((used, externally_visible)) void swos_c_start(void)
 #define FPS_50HZ 49
 
 /* ---- External globals for mainC ---- */
-extern uint16_t assetLoaderAltPathReady;
-extern uint16_t paletteIndex;
-extern uint16_t loaderModeFlag;
-extern uint16_t hilNumGoals;
-extern volatile uint16_t currentGameTick;
+extern uint16_t _assetLoaderAltPathReady;
+extern uint16_t _paletteIndex;
+extern uint16_t _loaderModeFlag;
+extern uint16_t _hilNumGoals;
+extern volatile uint16_t _currentGameTick;
 
-extern uint8_t kTitleLogoColors[];
-extern uint8_t kTitleScreenColors[];
-extern uint8_t kTitleTextColors[];
+extern uint8_t _kTitleLogoColors[];
+extern uint8_t _kTitleScreenColors[];
+extern uint8_t _kTitleTextColors[];
 
-extern uint16_t titleLogoPalette[];
-extern uint16_t titleScreenPalette[];
-extern uint16_t titleTextPalette[];
+extern uint16_t _titleLogoPalette[];
+extern uint16_t _titleScreenPalette[];
+extern uint16_t _titleTextPalette[];
 
-extern uint16_t bootTemp0;
-extern uint16_t bootTemp1;
-extern uint16_t bootTemp2;
-extern uint16_t bootTemp3;
-extern uint16_t bootTemp4;
-extern uint16_t bootTemp5;
-extern uint16_t bootTemp6;
+extern uint16_t _bootTemp0;
+extern uint16_t _bootTemp1;
+extern uint16_t _bootTemp2;
+extern uint16_t _bootTemp3;
+extern uint16_t _bootTemp4;
+extern uint16_t _bootTemp5;
+extern uint16_t _bootTemp6;
 
-extern uint16_t introMenuImageScript[];
-extern uint8_t imageCmdWorkBuf[];
-extern uint8_t *imageStreamCursor;
-extern uint8_t *menuImageStreamBaseEnd;
+extern uint16_t _introMenuImageScript[];
+extern uint8_t _imageCmdWorkBuf[];
+extern uint8_t *_imageStreamCursor;
+extern uint8_t *_menuImageStreamBaseEnd;
 
-extern uint16_t g_quitToDos;
+extern uint16_t _quitToDos;
 
 extern void AssetSys_InitDiskImageSources(void);
 extern int16_t AssetSvcLoaderOp2(void);
@@ -201,8 +201,8 @@ extern void WaitForVSync(void);
 
 static void delay_ticks(uint16_t ticks)
 {
-    currentGameTick = 0;
-    while (currentGameTick < ticks)
+    _currentGameTick = 0;
+    while (_currentGameTick < ticks)
         WaitForVSync();
 }
 
@@ -218,7 +218,7 @@ void mainC(void)
 {
     /* ---- Phase 1: Hardware init ---- */
     AssetLoaderResetState();
-    assetLoaderAltPathReady = 0;
+    _assetLoaderAltPathReady = 0;
     InitDisplayAndCopper();
     AssetSys_InitDiskImageSources();
     InitSkinAndDefaultPointers();
@@ -231,39 +231,39 @@ void mainC(void)
         WriteCopperPalette(menuPalette);
     }
 #else
-    BuildPaletteFromColors(kTitleLogoColors, titleLogoPalette);
-    BuildPaletteFromColors(kTitleScreenColors, titleScreenPalette);
-    BuildPaletteFromColors(kTitleTextColors, titleTextPalette);
+    BuildPaletteFromColors(_kTitleLogoColors, _titleLogoPalette);
+    BuildPaletteFromColors(_kTitleScreenColors, _titleScreenPalette);
+    BuildPaletteFromColors(_kTitleTextColors, _titleTextPalette);
 #endif
 
     /* ---- Phase 3: Boot temps ---- */
 
-    bootTemp0 = 1;
-    bootTemp1 = 0;
-    bootTemp2 = 0;
-    bootTemp3 = 0;
-    bootTemp4 = 0;
-    bootTemp5 = 0;
-    bootTemp6 = 0;
+    _bootTemp0 = 1;
+    _bootTemp1 = 0;
+    _bootTemp2 = 0;
+    _bootTemp3 = 0;
+    _bootTemp4 = 0;
+    _bootTemp5 = 0;
+    _bootTemp6 = 0;
 
     /* ---- Phase 4: Loader intro ---- */
-    loaderModeFlag = 1;
+    _loaderModeFlag = 1;
     ShowLoaderIntroSequence();
     AssetLoaderInitAltPathAndBanks();
     AssetPrecacheCore();
     InstallAndInitLoaderBootstrap();
     FadeOutToBlack();
-    loaderModeFlag = 0;
+    _loaderModeFlag = 0;
 
     /* ---- Phase 5: Show title screens ---- */
     DoubleBufferSwapSequence();
-    paletteIndex = 0;
+    _paletteIndex = 0;
     LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "olddisk1.raw");
     BlitterCopyPanelToScreen2();
     WaitForVSync();
 
     LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "disk22.raw");
-    paletteIndex = 0;
+    _paletteIndex = 0;
     FadeIn();
 
     /* ---- Phase 6: Poll loader op3 with 50Hz delays ---- */
@@ -282,7 +282,7 @@ void mainC(void)
     {
         BlitterCopyPanelToScreen2();
         WaitForVSync();
-        paletteIndex = 0;
+        _paletteIndex = 0;
         FadeIn();
 
         do
@@ -307,17 +307,17 @@ void mainC(void)
      * an empty filename fails. */
     extern void SwosSDL_InitImageScripts(void);
     SwosSDL_InitImageScripts();
-    ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
+    ProcessImageCommandStream(_introMenuImageScript, _imageCmdWorkBuf);
     /* Map the font-extension glyphs (accented capitals, full ASCII, $) into the
      * char tables now that their sprites have been extracted by the script. */
     { extern void FontExt_ApplyConv(void); FontExt_ApplyConv(); }
     /* Force this write through to memory — LTO must not eliminate it.
      * menuImageStreamBaseEnd is read later by ConvertColorsAndTextSprites. */
-    *(uint8_t * volatile *)&menuImageStreamBaseEnd =
-        *(uint8_t * volatile *)&imageStreamCursor;
+    *(uint8_t * volatile *)&_menuImageStreamBaseEnd =
+        *(uint8_t * volatile *)&_imageStreamCursor;
     AssetPrecacheMenuPack();
-    assetLoaderAltPathReady = 1;
-    hilNumGoals = 0;
+    _assetLoaderAltPathReady = 1;
+    _hilNumGoals = 0;
 
     /* ---- Phase 9: Enter front-end loop ---- */
     FrontEndMainLoop();

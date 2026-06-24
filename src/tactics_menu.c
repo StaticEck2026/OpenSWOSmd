@@ -12,7 +12,7 @@
 #include "menu_system.h"
 
 /* ---- ASM externs ---- */
-extern uint16_t chosenTactics;
+extern uint16_t _chosenTactics;
 
 /* Tactic ID constants */
 #define TACTIC_USER_A  12
@@ -29,7 +29,7 @@ extern uint16_t chosenTactics;
 __attribute__((used, externally_visible))
 void User_A_Tactics(void)
 {
-    chosenTactics = TACTIC_USER_A;
+    _chosenTactics = TACTIC_USER_A;
     SetExitMenuFlag();
 }
 
@@ -39,7 +39,7 @@ void User_A_Tactics(void)
 __attribute__((used, externally_visible))
 void User_B_Tactics(void)
 {
-    chosenTactics = TACTIC_USER_B;
+    _chosenTactics = TACTIC_USER_B;
     SetExitMenuFlag();
 }
 
@@ -49,7 +49,7 @@ void User_B_Tactics(void)
 __attribute__((used, externally_visible))
 void User_C_Tactics(void)
 {
-    chosenTactics = TACTIC_USER_C;
+    _chosenTactics = TACTIC_USER_C;
     SetExitMenuFlag();
 }
 
@@ -59,7 +59,7 @@ void User_C_Tactics(void)
 __attribute__((used, externally_visible))
 void User_D_Tactics(void)
 {
-    chosenTactics = TACTIC_USER_D;
+    _chosenTactics = TACTIC_USER_D;
     SetExitMenuFlag();
 }
 
@@ -69,7 +69,7 @@ void User_D_Tactics(void)
 __attribute__((used, externally_visible))
 void User_E_Tactics(void)
 {
-    chosenTactics = TACTIC_USER_E;
+    _chosenTactics = TACTIC_USER_E;
     SetExitMenuFlag();
 }
 
@@ -79,7 +79,7 @@ void User_E_Tactics(void)
 __attribute__((used, externally_visible))
 void User_F_Tactics(void)
 {
-    chosenTactics = TACTIC_USER_F;
+    _chosenTactics = TACTIC_USER_F;
     SetExitMenuFlag();
 }
 
@@ -90,6 +90,6 @@ void User_F_Tactics(void)
 __attribute__((used, externally_visible))
 void ExitChooseTacticsMenu(void)
 {
-    chosenTactics = 0xFFFF;
+    _chosenTactics = 0xFFFF;
     SetExitMenuFlag();
 }

@@ -7,30 +7,30 @@
 #include "game_types.h"
 #include "deterministic.h"
 
-extern uintptr_t assetLoaderCacheFlag;
-extern uintptr_t assetLoaderWorkPtr;
-extern volatile int16_t waitingInterrupt;
-extern uint16_t useIndividualPlayerSkinColor;
-extern uint8_t goalBase[];
-extern uint8_t *goalBasePtr;
-extern uint16_t nextGoal;
-extern uint8_t *nextGoalPtr;
-extern uint8_t spriteGraphics[];
-extern uint8_t *spriteGraphicsPtr;
-extern volatile uint16_t currentGameTick;
-extern uint16_t lastGameTick;
-extern uint16_t lastFrameTicks;
+extern uintptr_t _assetLoaderCacheFlag;
+extern uintptr_t _assetLoaderWorkPtr;
+extern volatile int16_t _waitingInterrupt;
+extern uint16_t _useIndividualPlayerSkinColor;
+extern uint8_t _goalBase[];
+extern uint8_t *_goalBasePtr;
+extern uint16_t _nextGoal;
+extern uint8_t *_nextGoalPtr;
+extern uint8_t _spriteGraphics[];
+extern uint8_t *_spriteGraphicsPtr;
+extern volatile uint16_t _currentGameTick;
+extern uint16_t _lastGameTick;
+extern uint16_t _lastFrameTicks;
 
 __attribute__((used, externally_visible))
 void AssetLoaderResetState(void)
 {
-    assetLoaderCacheFlag = 0;
-    assetLoaderWorkPtr = 0;
+    _assetLoaderCacheFlag = 0;
+    _assetLoaderWorkPtr = 0;
 }
 
 #ifdef SWOS_SDL_BUILD
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
 extern void SwapBuffersAndCameraViewState(void);
 extern void SetCameraCoordinates(int16_t x, int16_t y);
 extern int Platform_VBlank(void);
@@ -51,14 +51,14 @@ void WaitForVSync(void)
      * branch that swaps buffers gates on `waitingInterrupt`, which we
      * never set here -- so the timer thread skips the swap and only
      * does fade ticks / audio / currentGameTick. */
-    int16_t cx = cameraX.s.i;
-    int16_t cy = cameraY.s.i;
+    int16_t cx = _cameraX.s.i;
+    int16_t cy = _cameraY.s.i;
     SwapBuffersAndCameraViewState();
     SetCameraCoordinates(cx, cy);
     Platform_VBlank();
 #else
-    waitingInterrupt = 1;
-    while (waitingInterrupt != 0)
+    _waitingInterrupt = 1;
+    while (_waitingInterrupt != 0)
     {
         /* spin — cleared by VBlank ISR */
     }
@@ -68,8 +68,8 @@ void WaitForVSync(void)
 __attribute__((used, externally_visible))
 void InitSkinAndDefaultPointers(void)
 {
-    useIndividualPlayerSkinColor = 1;
-    goalBasePtr = goalBase;
+    _useIndividualPlayerSkinColor = 1;
+    _goalBasePtr = _goalBase;
     /* On Amiga, `nextGoal` was the label immediately following the 19000-byte
      * `goalBase` buffer, so &nextGoal == goalBase+19000 was the natural
      * "end-of-buffer" sentinel for highlight pointer wrapping. On SDL the
@@ -79,8 +79,8 @@ void InitSkinAndDefaultPointers(void)
      * globals (e.g. renderStackBase) and producing bogus sprite pointers.
      * Match HandleInstantReplayStateSwitch (game_loop.c:1005) which uses
      * baseAddr+19000 explicitly. */
-    nextGoalPtr = goalBase + 19000;
-    spriteGraphicsPtr = spriteGraphics;
+    _nextGoalPtr = _goalBase + 19000;
+    _spriteGraphicsPtr = _spriteGraphics;
 }
 
 /* ================================================================
@@ -93,9 +93,9 @@ void InitSkinAndDefaultPointers(void)
 __attribute__((used, externally_visible))
 uint16_t ReadTimerDelta(void)
 {
-    uint16_t delta = currentGameTick - lastGameTick;
-    lastFrameTicks = delta;
-    lastGameTick = currentGameTick;
+    uint16_t delta = _currentGameTick - _lastGameTick;
+    _lastFrameTicks = delta;
+    _lastGameTick = _currentGameTick;
     return delta;
 }
 
@@ -107,20 +107,20 @@ uint16_t ReadTimerDelta(void)
  * low byte to randXorIndex2 (original asm writes a word across both),
  * then updates randXorKey2 from kRandomTable.
  * ================================================================ */
-extern uint16_t randomSeed;
-extern uint8_t seed2;
-extern uint8_t randXorIndex2;
-extern uint8_t randXorKey2;
-extern uint8_t kRandomTable[257];
+extern uint16_t _randomSeed;
+extern uint8_t _seed2;
+extern uint8_t _randXorIndex2;
+extern uint8_t _randXorKey2;
+extern uint8_t _kRandomTable[257];
 
 __attribute__((used, externally_visible))
 void Randomize2(uint16_t val)
 {
-    uint16_t result = val ^ randomSeed;
+    uint16_t result = val ^ _randomSeed;
     /* Original asm: move.w d0,(seed2) — word write across seed2 + randXorIndex2 */
-    seed2 = (uint8_t)(result >> 8);
-    randXorIndex2 = (uint8_t)(result & 0xFF);
-    randXorKey2 = kRandomTable[randXorIndex2];
+    _seed2 = (uint8_t)(result >> 8);
+    _randXorIndex2 = (uint8_t)(result & 0xFF);
+    _randXorKey2 = _kRandomTable[_randXorIndex2];
 }
 
 __attribute__((used, externally_visible))

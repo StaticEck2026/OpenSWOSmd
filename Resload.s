@@ -21,7 +21,7 @@ _S_GetVBR:
         xdef    S_SavedInt3
         xdef    S_SavedInt4
         xdef    S_SavedInt5
-        xdef    S_VBR
+        xdef    _S_VBR
         xdef    S_DosBase
         xdef    S_GfxBase
         xdef    S_FromWB
@@ -31,7 +31,7 @@ _S_GetVBR:
         xdef    S_SavedIntEna
         xdef    S_SavedAdkCon
         xdef    size
-        xdef    g_quitToDos
+        xdef    _quitToDos
         xdef    _keyexit
 
 S_DosVer     dc.w    39
@@ -42,7 +42,7 @@ S_GfxName:   dc.b    "graphics.library",0
 S_DosName:   dc.b    "dos.library",0
 S_FromWB:    dc.w    0
 S_WBMsg:     dc.l    0
-S_VBR:       dc.l    0
+_S_VBR:       dc.l    0
 S_SavedView:    dc.l 0
 S_SavedDmaCon:  dc.w 0
 S_SavedIntEna:  dc.w 0
@@ -61,7 +61,7 @@ NewLine:
 size:     dc.l  0
 _resload: dc.l  0
 _keyexit: dc.b  $46
-g_quitToDos:
+_quitToDos:
         dc.w    0
 
         even

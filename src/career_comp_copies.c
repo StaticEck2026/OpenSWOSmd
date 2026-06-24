@@ -45,208 +45,208 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "careerCompCopies\n"
-    _ASM_PFX "careerCompCopies:\n"
-    ".globl " _ASM_PFX "euroCupCopy\n"
-    _ASM_PFX "euroCupCopy:\n"
+    ".globl " _ASM_PFX "_careerCompCopies\n"
+    _ASM_PFX "_careerCompCopies:\n"
+    ".globl " _ASM_PFX "_euroCupCopy\n"
+    _ASM_PFX "_euroCupCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "cupWinnersCupCopy\n"
-    _ASM_PFX "cupWinnersCupCopy:\n"
+    ".globl " _ASM_PFX "_cupWinnersCupCopy\n"
+    _ASM_PFX "_cupWinnersCupCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "uefaCupCopy\n"
-    _ASM_PFX "uefaCupCopy:\n"
+    ".globl " _ASM_PFX "_uefaCupCopy\n"
+    _ASM_PFX "_uefaCupCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "invitationTournamentCopy\n"
-    _ASM_PFX "invitationTournamentCopy:\n"
+    ".globl " _ASM_PFX "_invitationTournamentCopy\n"
+    _ASM_PFX "_invitationTournamentCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "tourCopy\n"
-    _ASM_PFX "tourCopy:\n"
+    ".globl " _ASM_PFX "_tourCopy\n"
+    _ASM_PFX "_tourCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "friendlyCopy\n"
-    _ASM_PFX "friendlyCopy:\n"
+    ".globl " _ASM_PFX "_friendlyCopy\n"
+    _ASM_PFX "_friendlyCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "europeanChampionships2Copy\n"
-    _ASM_PFX "europeanChampionships2Copy:\n"
+    ".globl " _ASM_PFX "_europeanChampionships2Copy\n"
+    _ASM_PFX "_europeanChampionships2Copy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup1Copy\n"
-    _ASM_PFX "ecQualifyingGroup1Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup1Copy\n"
+    _ASM_PFX "_ecQualifyingGroup1Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup2Copy\n"
-    _ASM_PFX "ecQualifyingGroup2Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup2Copy\n"
+    _ASM_PFX "_ecQualifyingGroup2Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup3Copy\n"
-    _ASM_PFX "ecQualifyingGroup3Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup3Copy\n"
+    _ASM_PFX "_ecQualifyingGroup3Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup4Copy\n"
-    _ASM_PFX "ecQualifyingGroup4Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup4Copy\n"
+    _ASM_PFX "_ecQualifyingGroup4Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup5Copy\n"
-    _ASM_PFX "ecQualifyingGroup5Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup5Copy\n"
+    _ASM_PFX "_ecQualifyingGroup5Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup6Copy\n"
-    _ASM_PFX "ecQualifyingGroup6Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup6Copy\n"
+    _ASM_PFX "_ecQualifyingGroup6Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup7Copy\n"
-    _ASM_PFX "ecQualifyingGroup7Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup7Copy\n"
+    _ASM_PFX "_ecQualifyingGroup7Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "ecQualifyingGroup8Copy\n"
-    _ASM_PFX "ecQualifyingGroup8Copy:\n"
+    ".globl " _ASM_PFX "_ecQualifyingGroup8Copy\n"
+    _ASM_PFX "_ecQualifyingGroup8Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "copaAmericaCopy\n"
-    _ASM_PFX "copaAmericaCopy:\n"
+    ".globl " _ASM_PFX "_copaAmericaCopy\n"
+    _ASM_PFX "_copaAmericaCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "africanNationsCupCopy\n"
-    _ASM_PFX "africanNationsCupCopy:\n"
+    ".globl " _ASM_PFX "_africanNationsCupCopy\n"
+    _ASM_PFX "_africanNationsCupCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "northAmericanCupCopy\n"
-    _ASM_PFX "northAmericanCupCopy:\n"
+    ".globl " _ASM_PFX "_northAmericanCupCopy\n"
+    _ASM_PFX "_northAmericanCupCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "asianCupCopy\n"
-    _ASM_PFX "asianCupCopy:\n"
+    ".globl " _ASM_PFX "_asianCupCopy\n"
+    _ASM_PFX "_asianCupCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "oceaniaCupCopy\n"
-    _ASM_PFX "oceaniaCupCopy:\n"
+    ".globl " _ASM_PFX "_oceaniaCupCopy\n"
+    _ASM_PFX "_oceaniaCupCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCup2Copy\n"
-    _ASM_PFX "worldCup2Copy:\n"
+    ".globl " _ASM_PFX "_worldCup2Copy\n"
+    _ASM_PFX "_worldCup2Copy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup1Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup1Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup1Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup1Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup2Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup2Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup2Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup2Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup3Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup3Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup3Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup3Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup4Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup4Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup4Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup4Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup5Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup5Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup5Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup5Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup6Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup6Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup6Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup6Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup7Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup7Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup7Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup7Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "worldCupQualifyingGroup8Copy\n"
-    _ASM_PFX "worldCupQualifyingGroup8Copy:\n"
+    ".globl " _ASM_PFX "_worldCupQualifyingGroup8Copy\n"
+    _ASM_PFX "_worldCupQualifyingGroup8Copy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "northAmericaWorldCupQualificationCopy\n"
-    _ASM_PFX "northAmericaWorldCupQualificationCopy:\n"
+    ".globl " _ASM_PFX "_northAmericaWorldCupQualificationCopy\n"
+    _ASM_PFX "_northAmericaWorldCupQualificationCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "southAmericaWorldCupQualificationCopy\n"
-    _ASM_PFX "southAmericaWorldCupQualificationCopy:\n"
+    ".globl " _ASM_PFX "_southAmericaWorldCupQualificationCopy\n"
+    _ASM_PFX "_southAmericaWorldCupQualificationCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "africaWorldCupQualificationCopy\n"
-    _ASM_PFX "africaWorldCupQualificationCopy:\n"
+    ".globl " _ASM_PFX "_africaWorldCupQualificationCopy\n"
+    _ASM_PFX "_africaWorldCupQualificationCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "asiaWorldCupQualificationCopy\n"
-    _ASM_PFX "asiaWorldCupQualificationCopy:\n"
+    ".globl " _ASM_PFX "_asiaWorldCupQualificationCopy\n"
+    _ASM_PFX "_asiaWorldCupQualificationCopy:\n"
     ".skip 112\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */
 #endif
-    ".globl " _ASM_PFX "oceaniaWorldCupQualificationCopy\n"
-    _ASM_PFX "oceaniaWorldCupQualificationCopy:\n"
+    ".globl " _ASM_PFX "_oceaniaWorldCupQualificationCopy\n"
+    _ASM_PFX "_oceaniaWorldCupQualificationCopy:\n"
     ".skip 92\n"
 #if UINTPTR_MAX != 0xFFFFFFFFu
     ".skip 8\n"   /* text[2] 64-bit growth */

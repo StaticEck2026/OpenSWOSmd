@@ -10,52 +10,52 @@
 #include "play_match_menu.h"
 #include "input_text.h"
 #include "endian_helpers.h"
-#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the stats overlay in widescreen */
+#include "display.h"    /* _screen_width, WIDE_MARGIN — center the stats overlay in widescreen */
 #include "auto_skip_debug.h"
 
 /* ---- External globals ---- */
-extern uint16_t showStats;
-extern uint16_t overlayActiveFlag;
-extern uint16_t statsTimer;
-extern uint16_t showingUserStats;
-extern uint16_t isGoalAttempt;
+extern uint16_t _showStats;
+extern uint16_t _overlayActiveFlag;
+extern uint16_t _statsTimer;
+extern uint16_t _showingUserStats;
+extern uint16_t _isGoalAttempt;
 
-extern uint16_t gameStatePl;
-extern uint16_t playingPenalties;
-extern uint16_t lastFrameTicks;
-extern uint16_t fireBlocked;
-extern uint16_t trainingGame;
+extern uint16_t _gameStatePl;
+extern uint16_t _playingPenalties;
+extern uint16_t _lastFrameTicks;
+extern uint16_t _fireBlocked;
+extern uint16_t _trainingGame;
 
-extern uint8_t  pl1Fire;
-extern uint8_t  pl2Fire;
+extern uint8_t  _pl1Fire;
+extern uint8_t  _pl2Fire;
 
-extern TeamGeneralInfo *lastTeamPlayed;
-extern TeamGeneralInfo  topTeamData;
-extern TeamGeneralInfo  bottomTeamData;
-extern TeamGame         topTeamInGame;
-extern TeamGame         bottomTeamInGame;
+extern TeamGeneralInfo *_lastTeamPlayed;
+extern TeamGeneralInfo  _topTeamData;
+extern TeamGeneralInfo  _bottomTeamData;
+extern TeamGame         _topTeamInGame;
+extern TeamGame         _bottomTeamInGame;
 
-extern Sprite      ballSprite;
-extern uint16_t ballInGoalkeeperArea;
-extern uint16_t strikeDestX;
+extern Sprite      _ballSprite;
+extern uint16_t _ballInGoalkeeperArea;
+extern uint16_t _strikeDestX;
 
-extern uint16_t statsTeam1Goals;
-extern uint16_t statsTeam2Goals;
-extern uint8_t  statsNumber[];      /* 6-byte buffer in asm data section */
+extern uint16_t _statsTeam1Goals;
+extern uint16_t _statsTeam2Goals;
+extern uint8_t  _statsNumber[];      /* 6-byte buffer in asm data section */
 
-extern uint8_t  bigCharsTable[];
+extern uint8_t  _bigCharsTable[];
 
 /* ---- External string constants ---- */
-extern uint8_t  aMATCHSTATS[];      /* "M A T C H   S T A T S" */
-extern uint8_t  aGoals[];           /* "GOALS" */
-extern uint8_t  aPossession[];      /* "POSSESSION" */
-extern uint8_t  aMinus[];           /* "-" */
-extern uint8_t  aGoalAttempts[];    /* "GOAL ATTEMPTS" */
-extern uint8_t  aOnTarget[];        /* "ON TARGET" */
-extern uint8_t  aCornersWon[];      /* "CORNERS WON" */
-extern uint8_t  aFoulsConceded[];   /* "FOULS CONCEDED" */
-extern uint8_t  aBookings[];        /* "BOOKINGS" */
-extern uint8_t  aSendingsOff[];     /* "SENDINGS OFF" */
+extern uint8_t  _aMATCHSTATS[];      /* "M A T C H   S T A T S" */
+extern uint8_t  _aGoals[];           /* "GOALS" */
+extern uint8_t  _aPossession[];      /* "POSSESSION" */
+extern uint8_t  _aMinus[];           /* "-" */
+extern uint8_t  _aGoalAttempts[];    /* "GOAL ATTEMPTS" */
+extern uint8_t  _aOnTarget[];        /* "ON TARGET" */
+extern uint8_t  _aCornersWon[];      /* "CORNERS WON" */
+extern uint8_t  _aFoulsConceded[];   /* "FOULS CONCEDED" */
+extern uint8_t  _aBookings[];        /* "BOOKINGS" */
+extern uint8_t  _aSendingsOff[];     /* "SENDINGS OFF" */
 
 /* ---- External functions ---- */
 extern void Player1StatusProc(void);
@@ -108,8 +108,8 @@ void DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 static void writeStatsNumber(uint16_t number, uint16_t x, uint16_t y,
                              uint16_t color, uint8_t *charTable)
 {
-    Int2Ascii(number, statsNumber);
-    DrawMenuTextCentered(x, y, color, statsNumber, charTable);
+    Int2Ascii(number, _statsNumber);
+    DrawMenuTextCentered(x, y, color, _statsNumber, charTable);
 }
 
 
@@ -123,16 +123,16 @@ static void writeStatsPercent(uint16_t number, uint16_t x, uint16_t y,
 {
     uint8_t *p;
 
-    Int2Ascii(number, statsNumber);
+    Int2Ascii(number, _statsNumber);
 
     /* Find end of string (Int2Ascii leaves pointer at terminator via a1) */
-    p = statsNumber;
+    p = _statsNumber;
     while (*p)
         p++;
     *p++ = '%';
     *p = 0;
 
-    DrawMenuTextCentered(x, y, color, statsNumber, charTable);
+    DrawMenuTextCentered(x, y, color, _statsNumber, charTable);
 }
 
 
@@ -152,7 +152,7 @@ void DrawStatistics(void)
     TeamGeneralInfo *botInfo;    /* team stats pointer for bottom/second team */
     TeamStatisticsData *a5;      /* stats for top team */
     TeamStatisticsData *a6;      /* stats for bottom team */
-    uint8_t *charTable = bigCharsTable;
+    uint8_t *charTable = _bigCharsTable;
     uint16_t color = 2;
     uint16_t y;
     uint16_t d7;
@@ -161,8 +161,8 @@ void DrawStatistics(void)
      * DrawMenuTextCentered / writeStatsNumber x's below — 16/80/168/256/304). Shift the
      * draw base by WIDE_MARGIN so the whole panel centers, same as the menus; restored on
      * exit. WIDE_MARGIN folds to 0 on Amiga / non-widescreen (no shift). */
-    const int saved_x_offset = g_menu_draw_x_offset;
-    g_menu_draw_x_offset = WIDE_MARGIN;
+    const int saved_x_offset = _menu_draw_x_offset;
+    _menu_draw_x_offset = WIDE_MARGIN;
 
     /* Draw title grid (80, 35, 176, 16) */
     DrawGrid(80, 35, 176, 16);
@@ -194,9 +194,9 @@ void DrawStatistics(void)
     DrawGrid(16, y, 304, 16);
 
     /* Determine team order: topInfo = team whose inGameTeamPtr matches topTeamInGame */
-    topInfo = &topTeamData;
-    botInfo = &bottomTeamData;
-    if (topInfo->inGameTeamPtr != &topTeamInGame)
+    topInfo = &_topTeamData;
+    botInfo = &_bottomTeamData;
+    if (topInfo->inGameTeamPtr != &_topTeamInGame)
     {
         /* Swap */
         TeamGeneralInfo *tmp = topInfo;
@@ -208,37 +208,37 @@ void DrawStatistics(void)
 
     /* Title: "M A T C H   S T A T S" at y=39 */
     y = 39;
-    DrawMenuTextCentered(168, y, color, aMATCHSTATS, charTable);
+    DrawMenuTextCentered(168, y, color, _aMATCHSTATS, charTable);
 
     /* Team names at y=59 */
     y += 20;
     {
         uint16_t topX = 80;
-        if (trainingGame)
+        if (_trainingGame)
             topX += 5;
-        DrawMenuTextCentered(topX, y, color, (uint8_t *)topTeamInGame.teamName, charTable);
+        DrawMenuTextCentered(topX, y, color, (uint8_t *)_topTeamInGame.teamName, charTable);
     }
     {
         uint16_t botX = 256;
-        if (trainingGame)
+        if (_trainingGame)
             botX -= 5;
-        DrawMenuTextCentered(botX, y, color, (uint8_t *)bottomTeamInGame.teamName, charTable);
+        DrawMenuTextCentered(botX, y, color, (uint8_t *)_bottomTeamInGame.teamName, charTable);
     }
 
     /* GOALS at y=77 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aGoals, charTable);
-    writeStatsNumber(statsTeam1Goals, 80, y, color, charTable);
-    writeStatsNumber(statsTeam2Goals, 256, y, color, charTable);
+    DrawMenuTextCentered(168, y, color, _aGoals, charTable);
+    writeStatsNumber(_statsTeam1Goals, 80, y, color, charTable);
+    writeStatsNumber(_statsTeam2Goals, 256, y, color, charTable);
 
     /* POSSESSION at y=95 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aPossession, charTable);
+    DrawMenuTextCentered(168, y, color, _aPossession, charTable);
     d7 = (uint16_t)a5->ballPossession + (uint16_t)a6->ballPossession;
     if (d7 == 0)
     {
-        DrawMenuTextCentered(80, y, color, aMinus, charTable);
-        DrawMenuTextCentered(256, y, color, aMinus, charTable);
+        DrawMenuTextCentered(80, y, color, _aMinus, charTable);
+        DrawMenuTextCentered(256, y, color, _aMinus, charTable);
     }
     else
     {
@@ -249,41 +249,41 @@ void DrawStatistics(void)
 
     /* GOAL ATTEMPTS at y=113 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aGoalAttempts, charTable);
+    DrawMenuTextCentered(168, y, color, _aGoalAttempts, charTable);
     writeStatsNumber((uint16_t)a5->goalAttempts, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->goalAttempts, 256, y, color, charTable);
 
     /* ON TARGET at y=131 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aOnTarget, charTable);
+    DrawMenuTextCentered(168, y, color, _aOnTarget, charTable);
     writeStatsNumber((uint16_t)a5->onTarget, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->onTarget, 256, y, color, charTable);
 
     /* CORNERS WON at y=149 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aCornersWon, charTable);
+    DrawMenuTextCentered(168, y, color, _aCornersWon, charTable);
     writeStatsNumber((uint16_t)a5->cornersWon, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->cornersWon, 256, y, color, charTable);
 
     /* FOULS CONCEDED at y=167 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aFoulsConceded, charTable);
+    DrawMenuTextCentered(168, y, color, _aFoulsConceded, charTable);
     writeStatsNumber((uint16_t)a5->foulsConceded, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->foulsConceded, 256, y, color, charTable);
 
     /* BOOKINGS at y=185 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aBookings, charTable);
+    DrawMenuTextCentered(168, y, color, _aBookings, charTable);
     writeStatsNumber((uint16_t)a5->bookings, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->bookings, 256, y, color, charTable);
 
     /* SENDINGS OFF at y=203 */
     y += 18;
-    DrawMenuTextCentered(168, y, color, aSendingsOff, charTable);
+    DrawMenuTextCentered(168, y, color, _aSendingsOff, charTable);
     writeStatsNumber((uint16_t)a5->sendingsOff, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->sendingsOff, 256, y, color, charTable);
 
-    g_menu_draw_x_offset = saved_x_offset;
+    _menu_draw_x_offset = saved_x_offset;
 }
 
 
@@ -299,28 +299,28 @@ __attribute__((used, externally_visible))
 void UpdateAndDrawStatistics(void)
 {
     /* If showStats just set, trigger user stats display */
-    if (showStats)
+    if (_showStats)
     {
-        showStats = 0;
-        showingUserStats = 1;
-        statsTimer = 32000;
+        _showStats = 0;
+        _showingUserStats = 1;
+        _statsTimer = 32000;
         DrawStatistics();
     }
 
     /* While showing user stats, poll inputs */
-    if (showingUserStats)
+    if (_showingUserStats)
     {
         Player1StatusProc();
         Player2StatusProc();
-        if (pl1Fire)
+        if (_pl1Fire)
         {
-            fireBlocked = 1;
+            _fireBlocked = 1;
             StatisticsOff();
             return;
         }
-        if (pl2Fire)
+        if (_pl2Fire)
         {
-            fireBlocked = 1;
+            _fireBlocked = 1;
             StatisticsOff();
             return;
         }
@@ -328,13 +328,13 @@ void UpdateAndDrawStatistics(void)
     }
 
     /* -- Shot tracking logic (only when not in penalties) -- */
-    if (!playingPenalties)
+    if (!_playingPenalties)
     {
         /* Increment possession counter for last team that touched ball */
-        if (gameStatePl == ST_GAME_IN_PROGRESS)
+        if (_gameStatePl == ST_GAME_IN_PROGRESS)
         {
-            TeamGeneralInfo *team = lastTeamPlayed;
-            if (team == &topTeamData || team == &bottomTeamData)
+            TeamGeneralInfo *team = _lastTeamPlayed;
+            if (team == &_topTeamData || team == &_bottomTeamData)
             {
                 TeamStatisticsData *statsPtr = team->teamStatsPtr;
                 statsPtr->ballPossession++;
@@ -342,110 +342,110 @@ void UpdateAndDrawStatistics(void)
         }
 
         /* Goal attempt tracking */
-        if (gameStatePl == ST_GAME_IN_PROGRESS)
+        if (_gameStatePl == ST_GAME_IN_PROGRESS)
         {
-            if (isGoalAttempt)
+            if (_isGoalAttempt)
             {
                 /* isGoalAttempt is set — check if ball is moving away from goal */
-                TeamGeneralInfo *team = &topTeamData;
-                int32_t deltaY = ballSprite.deltaY.raw;
-                if (ballSprite.y.s.i >= 449)
+                TeamGeneralInfo *team = &_topTeamData;
+                int32_t deltaY = _ballSprite.deltaY.raw;
+                if (_ballSprite.y.s.i >= 449)
                 {
-                    team = &bottomTeamData;
+                    team = &_bottomTeamData;
                     deltaY = -deltaY;
                 }
-                if (team == lastTeamPlayed || deltaY >= 0)
+                if (team == _lastTeamPlayed || deltaY >= 0)
                 {
                     /* Ball moving away or same team → clear attempt */
-                    isGoalAttempt = 0;
+                    _isGoalAttempt = 0;
                     goto check_show_stats_flag;
                 }
                 goto check_show_stats_flag;
             }
 
             /* Check if ball is in goalkeeper area */
-            if (ballInGoalkeeperArea)
+            if (_ballInGoalkeeperArea)
             {
-                TeamGeneralInfo *team = &topTeamData;
-                int32_t deltaY = ballSprite.deltaY.raw;
-                if (ballSprite.y.s.i > 449)
+                TeamGeneralInfo *team = &_topTeamData;
+                int32_t deltaY = _ballSprite.deltaY.raw;
+                if (_ballSprite.y.s.i > 449)
                 {
                     /* Ball in lower half — keep topTeamData */
                 }
                 else
                 {
                     /* Ball in upper half */
-                    team = &bottomTeamData;
+                    team = &_bottomTeamData;
                     deltaY = -deltaY;
                 }
 
                 /* deltaY > 0 means ball moving toward goal */
                 if (deltaY > 0
-                    && team == lastTeamPlayed
+                    && team == _lastTeamPlayed
                     && team->playerHasBall == 0
-                    && strikeDestX >= 240
-                    && strikeDestX <= 431)
+                    && _strikeDestX >= 240
+                    && _strikeDestX <= 431)
                 {
                     /* Check if on target (between goalposts at 303-367) */
-                    if (strikeDestX >= 303 && strikeDestX <= 367)
+                    if (_strikeDestX >= 303 && _strikeDestX <= 367)
                     {
                         /* On target — increment on-target stat for attacking team */
                         TeamStatisticsData *statsPtr;
-                        if (ballSprite.y.s.i > 449)
-                            statsPtr = topTeamData.teamStatsPtr;
+                        if (_ballSprite.y.s.i > 449)
+                            statsPtr = _topTeamData.teamStatsPtr;
                         else
-                            statsPtr = bottomTeamData.teamStatsPtr;
+                            statsPtr = _bottomTeamData.teamStatsPtr;
                         statsPtr->onTarget++;
                     }
 
                     /* Increment goal attempts for attacking team */
                     {
                         TeamStatisticsData *statsPtr;
-                        if (ballSprite.y.s.i > 449)
-                            statsPtr = topTeamData.teamStatsPtr;
+                        if (_ballSprite.y.s.i > 449)
+                            statsPtr = _topTeamData.teamStatsPtr;
                         else
-                            statsPtr = bottomTeamData.teamStatsPtr;
+                            statsPtr = _bottomTeamData.teamStatsPtr;
                         statsPtr->goalAttempts++;
                     }
 
-                    isGoalAttempt = 1;
+                    _isGoalAttempt = 1;
                 }
             }
         }
         else
         {
             /* Not in game → clear goal attempt */
-            isGoalAttempt = 0;
+            _isGoalAttempt = 0;
         }
     }
 
 check_show_stats_flag:
     /* Check if showStats was set during this frame */
-    if (showStats)
+    if (_showStats)
     {
-        showStats = 0;
-        showingUserStats = 1;
+        _showStats = 0;
+        _showingUserStats = 1;
     }
 
     /* Stats timer management */
-    if (statsTimer == 0)
+    if (_statsTimer == 0)
         return;
 
-    if ((int16_t)statsTimer < 0)
+    if ((int16_t)_statsTimer < 0)
     {
         StatisticsOff();
         return;
     }
 
-    if (statsTimer == 32000)
+    if (_statsTimer == 32000)
     {
-        statsTimer = 30000;
-        overlayActiveFlag = 1;
+        _statsTimer = 30000;
+        _overlayActiveFlag = 1;
     }
     else
     {
-        statsTimer -= lastFrameTicks;
-        if ((int16_t)statsTimer <= 0)
+        _statsTimer -= _lastFrameTicks;
+        if ((int16_t)_statsTimer <= 0)
         {
             StatisticsOff();
             return;
@@ -470,27 +470,27 @@ check_show_stats_flag:
  * ================================================================ */
 
 /* ---- Additional external globals for top goal scorers ---- */
-extern uint8_t  highestScorersTable[];   /* 92 bytes BSS */
-extern uintptr_t diyStatsName;            /* pointer stored as uint32_t */
-extern uint16_t numSelectedTeams;
-extern uint16_t selTeamNumber;
-extern uint8_t  selTeamsPtr;             /* start of selected teams, stride=684 */
-extern uint16_t gameType;
-extern uint16_t careerLoadedFlag;
-extern TeamFileEx careerTeam;
-extern uint16_t careerNumPlayers;
-extern uint8_t *secondaryCompetitionPtr;
-extern uint8_t *tertiaryCompetitionPtr;
-extern uint8_t *diyNameOfCompetitionPtr;
-extern uint16_t diyUnknownWord_2C;
-extern MenuEntry menuEntries[];
-extern uint8_t  aLparen[];              /* "(" */
-extern uint8_t  aRparen[];              /* ")" */
-extern uint8_t  aCup_10[];              /* "\x04C\x00U\x00P\x00 " */
+extern uint8_t  _highestScorersTable[];   /* 92 bytes BSS */
+extern uintptr_t _diyStatsName;            /* pointer stored as uint32_t */
+extern uint16_t _numSelectedTeams;
+extern uint16_t _selTeamNumber;
+extern uint8_t  _selTeamsPtr;             /* start of selected teams, stride=684 */
+extern uint16_t _gameType;
+extern uint16_t _careerLoadedFlag;
+extern TeamFileEx _careerTeam;
+extern uint16_t _careerNumPlayers;
+extern uint8_t *_secondaryCompetitionPtr;
+extern uint8_t *_tertiaryCompetitionPtr;
+extern uint8_t *_diyNameOfCompetitionPtr;
+extern uint16_t _diyUnknownWord_2C;
+extern MenuEntry _menuEntries[];
+extern uint8_t  _aLparen[];              /* "(" */
+extern uint8_t  _aRparen[];              /* ")" */
+extern uint8_t  _aCup_10[];              /* "\x04C\x00U\x00P\x00 " */
 
 /* Menu data (declared in SWOS2.s, used as a6 for ShowMenu) */
-extern uint8_t  competitionTopGoalScorersMenu[];
-extern uint8_t  topGoalScorersMenu[];
+extern uint8_t  _competitionTopGoalScorersMenu[];
+extern uint8_t  _topGoalScorersMenu[];
 
 /* ---- External functions ---- */
 extern void ShowMenu(uint8_t *menu);
@@ -512,7 +512,7 @@ extern void DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
  * ================================================================ */
 static void InitHighestScorersTable(void)
 {
-    uint8_t *base = highestScorersTable;
+    uint8_t *base = _highestScorersTable;
     uint16_t idx = 0;
     int16_t i;
     uint16_t *sortPtr = (uint16_t *)base;
@@ -629,12 +629,12 @@ static uint8_t *FindReplaceableLowestScorerSlot(uint8_t *base, uint8_t minScore)
 static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
                                                  uint8_t *teamPtr)
 {
-    uint8_t *base = highestScorersTable;
+    uint8_t *base = _highestScorersTable;
     uint8_t *playerBase;
     uint8_t *teamBase;
     uint16_t teamNumber;
     uint8_t minScore;
-    int16_t numPlayers;
+    int16_t _numPlayers;
     int16_t playerIdx;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -645,7 +645,7 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
     /* For DIY game types with negative statIndex, verify team is in DIY list */
     if (statIndex < 0)
     {
-        if (gameType == 3 || gameType == 4)
+        if (_gameType == 3 || _gameType == 4)
         {
             if (FindTeamIdInDiyTeamsList((uint16_t *)teamPtr) != 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -665,22 +665,22 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
     minScore = base[30];  /* current minScore */
 
     /* Determine number of players to iterate */
-    numPlayers = 15;  /* default: 16 players (dbf loop 15→0) */
-    if (teamNumber == selTeamNumber)
+    _numPlayers = 15;  /* default: 16 players (dbf loop 15→0) */
+    if (teamNumber == _selTeamNumber)
     {
-        numPlayers = (int16_t)careerNumPlayers - 1;
+        _numPlayers = (int16_t)_careerNumPlayers - 1;
     }
 
     playerIdx = 0;
 
-    for (; numPlayers >= 0; numPlayers--)
+    for (; _numPlayers >= 0; _numPlayers--)
     {
         uint16_t score;
 
         /* For career team, use GetPlayerAtIndex to remap */
-        if (teamNumber == selTeamNumber)
+        if (teamNumber == _selTeamNumber)
         {
-            playerBase = GetPlayerAtIndex(teamNumber, (uint16_t)numPlayers);
+            playerBase = GetPlayerAtIndex(teamNumber, (uint16_t)_numPlayers);
             /* GetPlayerAtIndex stores fileIndex in _cGetPlayerAtIndexFileIdx */
             /* In asm, d1 returns the file index → stored in d7 (playerIdx) */
             extern uint16_t _cGetPlayerAtIndexFileIdx;
@@ -753,7 +753,7 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
         }
 
 next_player:
-        if (teamNumber != selTeamNumber)
+        if (teamNumber != _selTeamNumber)
         {
             /* Non-career: advance playerBase by 38 (PlayerFile size) */
             playerBase += 0x26;
@@ -777,8 +777,8 @@ next_player:
  * ================================================================ */
 static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
 {
-    TeamFileEx *teamsPtr = selectedTeams;
-    uint16_t numTeams = numSelectedTeams;
+    TeamFileEx *teamsPtr = _selectedTeams;
+    uint16_t numTeams = _numSelectedTeams;
     uint16_t careerTeamNum;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -788,7 +788,7 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
     if (numTeams == 0)
         return;
 
-    careerTeamNum = selTeamNumber;
+    careerTeamNum = _selTeamNumber;
     numTeams--;
 
     for (; (int16_t)numTeams >= 0; numTeams--)
@@ -803,11 +803,11 @@ static void PopulateHighestScorersTableFromSelectedTeams(int16_t statIndex)
     }
 
     /* In Career mode with careerLoadedFlag==0, add career team too */
-    if (gameType == GAME_TYPE_CAREER)
+    if (_gameType == GAME_TYPE_CAREER)
     {
-        if (careerLoadedFlag != 0)
+        if (_careerLoadedFlag != 0)
             return;
-        AddTeamScorersToHighestScorersTable(statIndex, (uint8_t *)&careerTeam);
+        AddTeamScorersToHighestScorersTable(statIndex, (uint8_t *)&_careerTeam);
     }
 }
 
@@ -852,7 +852,7 @@ static uint8_t *GetScorerSurname(uint8_t *entryBase)
 
 static void SortHighestScorerTable(void)
 {
-    uint8_t *base = highestScorersTable;
+    uint8_t *base = _highestScorersTable;
     uint16_t *sortArray = (uint16_t *)base;
     int16_t outer, inner;
 
@@ -931,9 +931,9 @@ static void ShowCompetitionTopScorers(int16_t statIndex, uint8_t *namePtr)
 
     InitHighestScorersTable();
     PopulateHighestScorersTableFromSelectedTeams(statIndex);
-    diyStatsName = (uintptr_t)namePtr;
+    _diyStatsName = (uintptr_t)namePtr;
     SortHighestScorerTable();
-    ShowMenu(competitionTopGoalScorersMenu);
+    ShowMenu(_competitionTopGoalScorersMenu);
 }
 
 
@@ -948,14 +948,14 @@ void TopGoalScorersMenu_0(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        extern CompetitionSlotBuffer primaryCompetitionBuf;  /* slot-0 untangle (S6): block-local (file-scope decl is below this fn) */
-        uint16_t compTypeWord = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
+        extern CompetitionSlotBuffer _primaryCompetitionBuf;  /* slot-0 untangle (S6): block-local (file-scope decl is below this fn) */
+        uint16_t compTypeWord = (uint16_t)_primaryCompetitionBuf.tourn.header.competitionType;
         SWOS_AUTOSKIP_LOG("[bug2-scorers] TopGoalScorersMenu_0 ENTER statIdx=-1 "
                           "numSelectedTeams=%u numDiyTeams=%u gameType=%u "
                           "careerLoadedFlag=%u compTypeWord=0x%04X selTeamNumber=0x%04X",
-                          (unsigned)numSelectedTeams, (unsigned)primaryCompetitionBuf.tourn.header.numTeams,
-                          (unsigned)gameType, (unsigned)careerLoadedFlag,
-                          (unsigned)compTypeWord, (unsigned)selTeamNumber);
+                          (unsigned)_numSelectedTeams, (unsigned)_primaryCompetitionBuf.tourn.header.numTeams,
+                          (unsigned)_gameType, (unsigned)_careerLoadedFlag,
+                          (unsigned)compTypeWord, (unsigned)_selTeamNumber);
     }
 #endif
     InitHighestScorersTable();
@@ -963,7 +963,7 @@ void TopGoalScorersMenu_0(void)
     SortHighestScorerTable();
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        uint8_t *base = highestScorersTable;
+        uint8_t *base = _highestScorersTable;
         uint16_t *sortArray = (uint16_t *)base;
         int validCount = 0;
         int totalGoals = 0;
@@ -977,7 +977,7 @@ void TopGoalScorersMenu_0(void)
                           "filledEntries=%d/15 totalGoals=%d", validCount, totalGoals);
     }
 #endif
-    ShowMenu(topGoalScorersMenu);
+    ShowMenu(_topGoalScorersMenu);
 }
 
 
@@ -990,8 +990,8 @@ void TopGoalScorersMenu_0(void)
 __attribute__((used, externally_visible))
 void StatsHighestScorerList(void)
 {
-    uint8_t *namePtr = diyNameOfCompetitionPtr;
-    int16_t statIdx = (int16_t)diyUnknownWord_2C;
+    uint8_t *namePtr = _diyNameOfCompetitionPtr;
+    int16_t statIdx = (int16_t)_diyUnknownWord_2C;
     ShowCompetitionTopScorers(statIdx, namePtr);
 }
 
@@ -1005,16 +1005,16 @@ void StatsHighestScorerList(void)
 __attribute__((used, externally_visible))
 void CompetitionTopGoalScorersInit(void)
 {
-    MenuEntry *a5 = &menuEntries[0];
-    uint8_t *base = highestScorersTable;
+    MenuEntry *a5 = &_menuEntries[0];
+    uint8_t *base = _highestScorersTable;
     uint16_t *sortArray = (uint16_t *)base;
     int16_t i;
 
     /* First entry: set title text pointer from diyStatsName */
-    a5->fg = diyStatsName;
+    a5->fg = _diyStatsName;
 
     /* Skip to entry at offset 0xA8/56 = 3 */
-    a5 = &menuEntries[3];
+    a5 = &_menuEntries[3];
 
     for (i = 14; i >= 0; i--)
     {
@@ -1067,9 +1067,9 @@ void CompetitionTopGoalScorersInit(void)
             dest = (uint8_t *)a5->fg;
             {
                 uint8_t *d = dest;
-                d = StringCopy(aLparen, d);
+                d = StringCopy(_aLparen, d);
                 d = StringCopy(teamName, d);
-                d = StringCopy(aRparen, d);
+                d = StringCopy(_aRparen, d);
                 *d = 0;
             }
 
@@ -1096,44 +1096,44 @@ __attribute__((used, externally_visible))
 void TopGoalScorersInit(void)
 {
     /* If no tertiary competition, shift entries down */
-    if (tertiaryCompetitionPtr == 0)
+    if (_tertiaryCompetitionPtr == 0)
     {
         /* Shift column headers: move entry[23]→entry[22], entry[24]→entry[23] */
-        MenuEntry *e22 = &menuEntries[0x508 / 56];  /* entry 22 (at +$508) */
-        MenuEntry *e23 = &menuEntries[0x540 / 56];  /* entry 23 (at +$540) */
-        MenuEntry *e24 = &menuEntries[0x578 / 56];  /* entry 24 (at +$578) */
+        MenuEntry *e22 = &_menuEntries[0x508 / 56];  /* entry 22 (at +$508) */
+        MenuEntry *e23 = &_menuEntries[0x540 / 56];  /* entry 23 (at +$540) */
+        MenuEntry *e24 = &_menuEntries[0x578 / 56];  /* entry 24 (at +$578) */
         e22->x = e23->x;
         e23->x = e24->x;
 
         /* Shift row label entries similarly */
-        MenuEntry *e1 = &menuEntries[0x38 / 56];   /* entry 1 (at +$38) */
-        MenuEntry *e2 = &menuEntries[0x70 / 56];   /* entry 2 (at +$70) */
-        MenuEntry *e3 = &menuEntries[0xA8 / 56];   /* entry 3 (at +$A8) */
+        MenuEntry *e1 = &_menuEntries[0x38 / 56];   /* entry 1 (at +$38) */
+        MenuEntry *e2 = &_menuEntries[0x70 / 56];   /* entry 2 (at +$70) */
+        MenuEntry *e3 = &_menuEntries[0xA8 / 56];   /* entry 3 (at +$A8) */
         e1->x = e2->x;
         e2->x = e3->x;
 
         /* Hide entry 3 */
-        menuEntries[0xA8 / 56].isInvisible = 1;
+        _menuEntries[0xA8 / 56].isInvisible = 1;
 
         /* Set CUP label on entry 2 */
-        MenuEntry *cupEntry = &menuEntries[0x70 / 56];
-        cupEntry->fg = (uintptr_t)aCup_10;
+        MenuEntry *cupEntry = &_menuEntries[0x70 / 56];
+        cupEntry->fg = (uintptr_t)_aCup_10;
     }
 
     /* If no secondary competition, shift further */
-    if (secondaryCompetitionPtr == 0)
+    if (_secondaryCompetitionPtr == 0)
     {
-        MenuEntry *e22 = &menuEntries[0x508 / 56];
-        MenuEntry *e23 = &menuEntries[0x540 / 56];
+        MenuEntry *e22 = &_menuEntries[0x508 / 56];
+        MenuEntry *e23 = &_menuEntries[0x540 / 56];
         e22->x = e23->x;
 
-        MenuEntry *e1 = &menuEntries[0x38 / 56];
-        MenuEntry *e2 = &menuEntries[0x70 / 56];
+        MenuEntry *e1 = &_menuEntries[0x38 / 56];
+        MenuEntry *e2 = &_menuEntries[0x70 / 56];
         e1->x = e2->x;
 
         /* Hide entries 2 and 1 */
-        menuEntries[0x70 / 56].isInvisible = 1;
-        menuEntries[0x38 / 56].isInvisible = 1;
+        _menuEntries[0x70 / 56].isInvisible = 1;
+        _menuEntries[0x38 / 56].isInvisible = 1;
     }
 }
 
@@ -1149,12 +1149,12 @@ void TopGoalScorersInit(void)
 __attribute__((used, externally_visible))
 void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
 {
-    uint8_t *base = highestScorersTable;
+    uint8_t *base = _highestScorersTable;
     uint16_t ordinal = entry->ordinal;
     int16_t sortPos = (int16_t)(ordinal - 6);
     int16_t sortOffset = sortPos * 2;  /* word offset into sort array */
     uint16_t yCoord = entry->y;
-    MenuEntry *a4 = &menuEntries[0x498 / 56];  /* entry 21 */
+    MenuEntry *a4 = &_menuEntries[0x498 / 56];  /* entry 21 */
     uint16_t sortIdx;
     uint8_t *scorerEntry;
 
@@ -1197,7 +1197,7 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         TeamFileEx *teamData;
         uint8_t *teamName;
         uint8_t *playerPtr;  /* result of GetPlayer, a5 in asm */
-        uint8_t *surnameBuf;
+        uint8_t *_surnameBuf;
         uint8_t *dest;
         uint16_t d0val;
 
@@ -1207,10 +1207,10 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         playerPtr = GetPlayer(teamId, (uint16_t)playerIdxSigned);
 
         /* Extract surname using ExtractSurname (name at offset 0x4F, maxLen 0x15=21) */
-        surnameBuf = ExtractSurname(playerPtr + 0x4F, 0x15);
+        _surnameBuf = ExtractSurname(playerPtr + 0x4F, 0x15);
 
         /* Entry 0: player surname */
-        a4->fg = (uintptr_t)surnameBuf;
+        a4->fg = (uintptr_t)_surnameBuf;
         a4->y = yCoord;
         a4->isInvisible = 0;
         a4 += 1;
@@ -1219,9 +1219,9 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         dest = (uint8_t *)a4->fg;
         {
             uint8_t *d = dest;
-            d = StringCopy(aLparen, d);
+            d = StringCopy(_aLparen, d);
             d = StringCopy(teamName, d);
-            d = StringCopy(aRparen, d);
+            d = StringCopy(_aRparen, d);
             *d = 0;
         }
         a4->y = yCoord;
@@ -1231,7 +1231,7 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         /* Entry 2: league goals (from secondaryCompetitionPtr) */
         d0val = 0;
         a4->isInvisible = 1;
-        if (secondaryCompetitionPtr != 0)
+        if (_secondaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6D);     /* goalStats[0] */
             a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
@@ -1242,7 +1242,7 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
 
         /* Entry 3: cup goals (from secondaryCompetitionPtr) */
         a4->isInvisible = 1;
-        if (secondaryCompetitionPtr != 0)
+        if (_secondaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6E);     /* goalStats[1] */
             a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
@@ -1253,7 +1253,7 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
 
         /* Entry 4: tertiary competition goals */
         a4->isInvisible = 1;
-        if (tertiaryCompetitionPtr != 0)
+        if (_tertiaryCompetitionPtr != 0)
         {
             d0val = *(playerPtr + 0x6F);     /* goalStats[2] */
             a4->fgWord = d0val;  /* ENTRY_NUMBER: write high word */
@@ -1274,7 +1274,7 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
 
         /* Draw all 6 overlay entries starting from entry 21 */
         {
-            MenuEntry *drawStart = &menuEntries[0x498 / 56];
+            MenuEntry *drawStart = &_menuEntries[0x498 / 56];
             DrawMultipleItems(6, drawStart);
         }
     }
@@ -1286,23 +1286,23 @@ void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
  * ================================================================ */
 
 /* Externs for Chunk 137 */
-extern uint16_t currentSeasonNumber;
-extern uint16_t currentSeasonShowing;
-extern uint8_t  seasonInformationsArray[];
-extern uint16_t youreSacked;
-extern uint16_t gamesPlayed;
-extern uint16_t numWins;
-extern uint16_t numDrawn;
-extern uint16_t numLost;
-extern uint16_t goalsScored;
-extern uint16_t goalsTaken;
-extern uint8_t  aManagementReco[];     /* "MANAGEMENT RECORD OF %a %b" */
-extern uint8_t  aPl0W1D2L3F4A5[];     /* "PL %0    W %1    D %2    L %3    F %4  "... */
-extern uint8_t  aDash[];              /* "-" */
-extern uint8_t  managerNameBuffer[];
-extern uint8_t  managerSurnameBuffer[];
-extern uint16_t playPromotedAnimation;
-extern uint16_t playRelegatedAnimation;
+extern uint16_t _currentSeasonNumber;
+extern uint16_t _currentSeasonShowing;
+extern uint8_t  _seasonInformationsArray[];
+extern uint16_t _youreSacked;
+extern uint16_t _gamesPlayed;
+extern uint16_t _numWins;
+extern uint16_t _numDrawn;
+extern uint16_t _numLost;
+extern uint16_t _goalsScored;
+extern uint16_t _goalsTaken;
+extern uint8_t  _aManagementReco[];     /* "MANAGEMENT RECORD OF %a %b" */
+extern uint8_t  _aPl0W1D2L3F4A5[];     /* "PL %0    W %1    D %2    L %3    F %4  "... */
+extern uint8_t  _aDash[];              /* "-" */
+extern uint8_t  _managerNameBuffer[];
+extern uint8_t  _managerSurnameBuffer[];
+extern uint16_t _playPromotedAnimation;
+extern uint16_t _playRelegatedAnimation;
 
 extern void DrawMenu(void);
 
@@ -1320,9 +1320,9 @@ extern void DrawMenu(void);
 __attribute__((used, externally_visible))
 uint8_t *GetCurrentSeasonPointer(void)
 {
-    uint16_t idx = currentSeasonShowing;
+    uint16_t idx = _currentSeasonShowing;
     uint32_t off = (uint32_t)idx * (uint32_t)sizeof(SeasonInformations);
-    return seasonInformationsArray + off;
+    return _seasonInformationsArray + off;
 }
 
 
@@ -1336,30 +1336,30 @@ void ManagementRecordInit(void)
 {
     uint8_t *dest;
 
-    currentSeasonNumber = currentSeasonShowing;
+    _currentSeasonNumber = _currentSeasonShowing;
 
     /* Format title: "MANAGEMENT RECORD OF <name> <surname>" */
-    dest = (uint8_t *)menuEntries[0].fg;
-    PrintFormatted(tr_fmt(aManagementReco), dest,
+    dest = (uint8_t *)_menuEntries[0].fg;
+    PrintFormatted(tr_fmt(_aManagementReco), dest,
                     0, 0, 0, 0, 0, 0, 0,
-                    managerNameBuffer, managerSurnameBuffer, (const uint8_t *)0);
+                    _managerNameBuffer, _managerSurnameBuffer, (const uint8_t *)0);
 
     /* Format stats line (entry at offset $380 = entry 16) */
     {
-        MenuEntry *statsEntry = &menuEntries[0x380 / 56];
+        MenuEntry *statsEntry = &_menuEntries[0x380 / 56];
         dest = (uint8_t *)statsEntry->fg;
 
-        if (gamesPlayed == 0)
+        if (_gamesPlayed == 0)
         {
-            PrintFormatted(aDash, dest,
+            PrintFormatted(_aDash, dest,
                             0, 0, 0, 0, 0, 0, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
         }
         else
         {
-            PrintFormatted(aPl0W1D2L3F4A5, dest,
-                            gamesPlayed, numWins, numDrawn, numLost,
-                            goalsScored, goalsTaken, 0,
+            PrintFormatted(_aPl0W1D2L3F4A5, dest,
+                            _gamesPlayed, _numWins, _numDrawn, _numLost,
+                            _goalsScored, _goalsTaken, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
         }
     }
@@ -1375,9 +1375,9 @@ void ManagementRecordInit(void)
 __attribute__((used, externally_visible))
 void ManagementArrowUpSelect(void)
 {
-    if (currentSeasonNumber == 0)
+    if (_currentSeasonNumber == 0)
         return;
-    currentSeasonNumber -= 1;
+    _currentSeasonNumber -= 1;
     DrawMenu();
 }
 
@@ -1391,9 +1391,9 @@ void ManagementArrowUpSelect(void)
 __attribute__((used, externally_visible))
 void ManagementArrowDownSelect(void)
 {
-    if (currentSeasonShowing == currentSeasonNumber)
+    if (_currentSeasonShowing == _currentSeasonNumber)
         return;
-    currentSeasonNumber += 1;
+    _currentSeasonNumber += 1;
     DrawMenu();
 }
 
@@ -1439,12 +1439,12 @@ void Career_StorePromotionRelegationInSeasonInfo(void)
 {
     uint8_t flag;
 
-    if (youreSacked != 0)
+    if (_youreSacked != 0)
         return;
 
-    if (playPromotedAnimation != 0)
+    if (_playPromotedAnimation != 0)
         flag = 3;
-    else if (playRelegatedAnimation != 0)
+    else if (_playRelegatedAnimation != 0)
         flag = 4;
     else
         return;
@@ -1457,47 +1457,47 @@ void Career_StorePromotionRelegationInSeasonInfo(void)
  * ================================================================ */
 
 /* ---- Externs for Chunk 199 ---- */
-extern uint16_t wonWorldCup;
-extern uint16_t wonContinentalCup;
-extern uint16_t majorTrophyBonusActive;
-extern uint16_t cupBonus2Active;
-extern uint16_t cupBonus1Active;
-extern uint16_t playWinCupAnimation;
-extern uint16_t currentDivisionIndex;
-extern uint16_t minorTrophyBonusActive;
-extern uint16_t leagueTitleBonusActive;
-extern uint16_t wonInvitationTournament;
-extern uint16_t seasonFinished;
-extern uint16_t boardConfidenceMod0;
-extern uint16_t boardConfidenceMod1;
-extern uint16_t boardConfidenceMod2;
-extern uint16_t boardConfidenceMod3;
-extern uint16_t boardConfidenceValue0;
-extern uint16_t boardConfidenceValue1;
-extern uint16_t boardConfidenceMod4;
-extern uint16_t boardConfidenceMod5;
-extern uint16_t boardConfidenceMod6;
-extern uint16_t boardConfidenceMod7;
-extern uint16_t boardConfidenceMod8;
-extern uint16_t boardConfidenceMod9;
-extern uint8_t *currentCompetitionPtr;
-extern uint8_t *secondaryCompetitionPtr;
-extern uint8_t *tertiaryCompetitionPtr;
-extern uint8_t *quaternaryCompetitionPtr;
-extern CompetitionSlotBuffer primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
-extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
-extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
-extern uint16_t qualifyingStage1PendingFlag0;
-extern uint16_t qualifyingStage1PendingFlag1;
-extern uint16_t qualifyingStage2PendingFlag0;
-extern uint16_t qualifyingStage2PendingFlag1;
-extern uint16_t diyFoundTeamIndex;
-extern uint8_t  aSeveral[];             /* "SEVERAL" */
-extern uint8_t  worldCupQualifyingGroup1Copy[];
-extern uint8_t  oceaniaWorldCupQualificationCopy[];
-extern uint8_t  ecQualifyingGroup1Copy[];
-extern uint8_t  ecQualifyingGroup8Copy[];
+extern uint16_t _wonWorldCup;
+extern uint16_t _wonContinentalCup;
+extern uint16_t _majorTrophyBonusActive;
+extern uint16_t _cupBonus2Active;
+extern uint16_t _cupBonus1Active;
+extern uint16_t _playWinCupAnimation;
+extern uint16_t _currentDivisionIndex;
+extern uint16_t _minorTrophyBonusActive;
+extern uint16_t _leagueTitleBonusActive;
+extern uint16_t _wonInvitationTournament;
+extern uint16_t _seasonFinished;
+extern uint16_t _boardConfidenceMod0;
+extern uint16_t _boardConfidenceMod1;
+extern uint16_t _boardConfidenceMod2;
+extern uint16_t _boardConfidenceMod3;
+extern uint16_t _boardConfidenceValue0;
+extern uint16_t _boardConfidenceValue1;
+extern uint16_t _boardConfidenceMod4;
+extern uint16_t _boardConfidenceMod5;
+extern uint16_t _boardConfidenceMod6;
+extern uint16_t _boardConfidenceMod7;
+extern uint16_t _boardConfidenceMod8;
+extern uint16_t _boardConfidenceMod9;
+extern uint8_t *_currentCompetitionPtr;
+extern uint8_t *_secondaryCompetitionPtr;
+extern uint8_t *_tertiaryCompetitionPtr;
+extern uint8_t *_quaternaryCompetitionPtr;
+extern CompetitionSlotBuffer _primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
+extern CompetitionSlotBuffer _competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
+extern CompetitionSlotBuffer _tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
+extern CompetitionSlotBuffer _euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
+extern uint16_t _qualifyingStage1PendingFlag0;
+extern uint16_t _qualifyingStage1PendingFlag1;
+extern uint16_t _qualifyingStage2PendingFlag0;
+extern uint16_t _qualifyingStage2PendingFlag1;
+extern uint16_t _diyFoundTeamIndex;
+extern uint8_t  _aSeveral[];             /* "SEVERAL" */
+extern uint8_t  _worldCupQualifyingGroup1Copy[];
+extern uint8_t  _oceaniaWorldCupQualificationCopy[];
+extern uint8_t  _ecQualifyingGroup1Copy[];
+extern uint8_t  _ecQualifyingGroup8Copy[];
 
 extern void UpdateBoardConfidenceModifiers(void);
 extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
@@ -1540,13 +1540,13 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
             return -106;   /* league not started/invalid */
 
         /* Check if compDef is a World Cup qualifying group */
-        if ((uintptr_t)compDef >= (uintptr_t)worldCupQualifyingGroup1Copy &&
-            (uintptr_t)compDef <= (uintptr_t)oceaniaWorldCupQualificationCopy)
+        if ((uintptr_t)compDef >= (uintptr_t)_worldCupQualifyingGroup1Copy &&
+            (uintptr_t)compDef <= (uintptr_t)_oceaniaWorldCupQualificationCopy)
             goto negate;
 
         /* Check if compDef is a European Championship qualifying group */
-        if ((uintptr_t)compDef >= (uintptr_t)ecQualifyingGroup1Copy &&
-            (uintptr_t)compDef <= (uintptr_t)ecQualifyingGroup8Copy)
+        if ((uintptr_t)compDef >= (uintptr_t)_ecQualifyingGroup1Copy &&
+            (uintptr_t)compDef <= (uintptr_t)_ecQualifyingGroup8Copy)
             goto negate;
 
         /* Check finished flag at extended +0x60 (minSubstitutes) */
@@ -1561,8 +1561,8 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
         /* --- Cup path --- */
         if (comp->competitionFinished == 0) {
             /* Cup not finished — check if team is still in it */
-            FindTeamInDIY(selTeamNumber, comp);
-            if (diyFoundTeamIndex == 0)
+            FindTeamInDIY(_selTeamNumber, comp);
+            if (_diyFoundTeamIndex == 0)
                 return -104;   /* team not found in cup */
         }
 
@@ -1590,8 +1590,8 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
     /* --- Tournament/Groups path (type >= 2) --- */
     if (comp->currentRoundIndex == 0) {
         /* Tournament not finished — check if team is still in it */
-        FindTeamInDIY(selTeamNumber, comp);
-        if (diyFoundTeamIndex == 0)
+        FindTeamInDIY(_selTeamNumber, comp);
+        if (_diyFoundTeamIndex == 0)
             return -104;   /* team not found */
     }
 
@@ -1666,7 +1666,7 @@ void Career_FillCurrentSeasonInfo(void)
     uint16_t d0;
     int16_t d1;
 
-    if (gameType != 4)
+    if (_gameType != 4)
         return;
 
     UpdateBoardConfidenceModifiers();
@@ -1674,42 +1674,42 @@ void Career_FillCurrentSeasonInfo(void)
 
     /* --- Build trophy flags word --- */
     d0 = 0;
-    if (wonWorldCup != 0)              d0 |= (1 << 0);
-    if (wonContinentalCup != 0)        d0 |= (1 << 1);
-    if (majorTrophyBonusActive != 0)   d0 |= (1 << 2);
-    if (cupBonus2Active != 0)          d0 |= (1 << 3);
-    if (cupBonus1Active != 0)          d0 |= (1 << 4);
-    if (playWinCupAnimation != 0) {
-        if (currentDivisionIndex == 0)
+    if (_wonWorldCup != 0)              d0 |= (1 << 0);
+    if (_wonContinentalCup != 0)        d0 |= (1 << 1);
+    if (_majorTrophyBonusActive != 0)   d0 |= (1 << 2);
+    if (_cupBonus2Active != 0)          d0 |= (1 << 3);
+    if (_cupBonus1Active != 0)          d0 |= (1 << 4);
+    if (_playWinCupAnimation != 0) {
+        if (_currentDivisionIndex == 0)
             d0 |= (1 << 5);
         else
             d0 |= (1 << 6);
     }
-    if (minorTrophyBonusActive != 0)   d0 |= (1 << 7);
-    if (leagueTitleBonusActive != 0)   d0 |= (1 << 8);
-    if (wonInvitationTournament != 0)  d0 |= (1 << 9);
+    if (_minorTrophyBonusActive != 0)   d0 |= (1 << 7);
+    if (_leagueTitleBonusActive != 0)   d0 |= (1 << 8);
+    if (_wonInvitationTournament != 0)  d0 |= (1 << 9);
 
     a5->trophyFlags = d0;
 
     /* --- Manager status for final season / sacked --- */
-    if (currentSeasonShowing == 0x13 && seasonFinished != 0)
+    if (_currentSeasonShowing == 0x13 && _seasonFinished != 0)
         a5->managerStatus = 2;
-    if (youreSacked != 0)
+    if (_youreSacked != 0)
         a5->managerStatus = (int8_t)0xFF;
 
     /* --- Board confidence modifiers and values --- */
-    a5->totalGames        = (uint8_t)boardConfidenceMod0;
-    a5->totalWins         = (uint8_t)boardConfidenceMod1;
-    a5->totalDrawn        = (uint8_t)boardConfidenceMod2;
-    a5->totalLost         = (uint8_t)boardConfidenceMod3;
-    a5->totalGoalsScored  = boardConfidenceValue0;
-    a5->totalGoalsTaken   = boardConfidenceValue1;
-    a5->friendlyWins      = (uint8_t)boardConfidenceMod4;
-    a5->friendlyDraws     = (uint8_t)boardConfidenceMod5;
-    a5->friendlyLost      = (uint8_t)boardConfidenceMod6;
-    a5->tourWins          = (uint8_t)boardConfidenceMod7;
-    a5->tourDraws         = (uint8_t)boardConfidenceMod8;
-    a5->tourLost          = (uint8_t)boardConfidenceMod9;
+    a5->totalGames        = (uint8_t)_boardConfidenceMod0;
+    a5->totalWins         = (uint8_t)_boardConfidenceMod1;
+    a5->totalDrawn        = (uint8_t)_boardConfidenceMod2;
+    a5->totalLost         = (uint8_t)_boardConfidenceMod3;
+    a5->totalGoalsScored  = _boardConfidenceValue0;
+    a5->totalGoalsTaken   = _boardConfidenceValue1;
+    a5->friendlyWins      = (uint8_t)_boardConfidenceMod4;
+    a5->friendlyDraws     = (uint8_t)_boardConfidenceMod5;
+    a5->friendlyLost      = (uint8_t)_boardConfidenceMod6;
+    a5->tourWins          = (uint8_t)_boardConfidenceMod7;
+    a5->tourDraws         = (uint8_t)_boardConfidenceMod8;
+    a5->tourLost          = (uint8_t)_boardConfidenceMod9;
 
     /* --- Find best-skilled player(s) --- */
     {
@@ -1717,10 +1717,10 @@ void Career_FillCurrentSeasonInfo(void)
         uint16_t bestCount = 0;   /* d4 */
         uint8_t *bestPlayer = 0;  /* a1 */
         uint8_t *best2nd = 0;     /* a2 */
-        int16_t i = (int16_t)careerNumPlayers - 1;
+        int16_t i = (int16_t)_careerNumPlayers - 1;
 
         while (i >= 0) {
-            uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
             PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
             uint16_t skill = (uint16_t)pf->goalStats[0] + (uint16_t)pf->goalStats[1]
                            + (uint16_t)pf->goalStats[2] + (uint16_t)pf->goalStats[3];
@@ -1747,7 +1747,7 @@ void Career_FillCurrentSeasonInfo(void)
             StringCopy(best2nd    + 0x4F, (uint8_t *)a5->secondScorerName);
         } else {
             /* 3+ players tied: "SEVERAL" */
-            StringCopy(aSeveral, (uint8_t *)a5->bestScorerName);
+            StringCopy(_aSeveral, (uint8_t *)a5->bestScorerName);
             a5->secondScorerName[0] = 0;
         }
     }
@@ -1757,28 +1757,28 @@ void Career_FillCurrentSeasonInfo(void)
 
     /* Primary competition */
     {
-        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
-                                      (DIYCompetition *)&primaryCompetitionBuf);
-        uint8_t *compDef = currentCompetitionPtr;
+        d1 = (int16_t)FindTeamInDIY(_selTeamNumber,
+                                      (DIYCompetition *)&_primaryCompetitionBuf);
+        uint8_t *compDef = _currentCompetitionPtr;
 
         if (d1 >= 0) {
             d1 = EncodeCompetitionPositionForSeasonInfo_impl(
-                d1, (uint8_t *)&primaryCompetitionBuf, compDef);
+                d1, (uint8_t *)&_primaryCompetitionBuf, compDef);
             a5->comp1Result = (int8_t)d1;
 
             /* Check qualifying stage status */
-            if (((uintptr_t)compDef >= (uintptr_t)worldCupQualifyingGroup1Copy &&
-                 (uintptr_t)compDef <= (uintptr_t)oceaniaWorldCupQualificationCopy) ||
-                ((uintptr_t)compDef >= (uintptr_t)ecQualifyingGroup1Copy &&
-                 (uintptr_t)compDef <= (uintptr_t)ecQualifyingGroup8Copy))
+            if (((uintptr_t)compDef >= (uintptr_t)_worldCupQualifyingGroup1Copy &&
+                 (uintptr_t)compDef <= (uintptr_t)_oceaniaWorldCupQualificationCopy) ||
+                ((uintptr_t)compDef >= (uintptr_t)_ecQualifyingGroup1Copy &&
+                 (uintptr_t)compDef <= (uintptr_t)_ecQualifyingGroup8Copy))
             {
                 a5->tournamentStatus = 1;
-                if (qualifyingStage1PendingFlag0 == 0 &&
-                    qualifyingStage1PendingFlag1 == 0)
+                if (_qualifyingStage1PendingFlag0 == 0 &&
+                    _qualifyingStage1PendingFlag1 == 0)
                 {
                     a5->tournamentStatus = 2;
-                    if (qualifyingStage2PendingFlag0 == 0 &&
-                        qualifyingStage2PendingFlag1 == 0)
+                    if (_qualifyingStage2PendingFlag0 == 0 &&
+                        _qualifyingStage2PendingFlag1 == 0)
                     {
                         a5->tournamentStatus = 0;
                     }
@@ -1789,31 +1789,31 @@ void Career_FillCurrentSeasonInfo(void)
 
     /* Secondary competition */
     if (a5->strPtr1 != 0) {
-        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
-                                      (DIYCompetition *)&competitionContextBuf);
-        uint8_t *compDef = secondaryCompetitionPtr;
+        d1 = (int16_t)FindTeamInDIY(_selTeamNumber,
+                                      (DIYCompetition *)&_competitionContextBuf);
+        uint8_t *compDef = _secondaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
-            d1, (uint8_t *)&competitionContextBuf, compDef);
+            d1, (uint8_t *)&_competitionContextBuf, compDef);
         a5->comp2Result = (int8_t)d1;
     }
 
     /* Tertiary competition */
     if (a5->strPtr2 != 0) {
-        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
-                                      (DIYCompetition *)&tertiaryCompetitionContextBuf);
-        uint8_t *compDef = tertiaryCompetitionPtr;
+        d1 = (int16_t)FindTeamInDIY(_selTeamNumber,
+                                      (DIYCompetition *)&_tertiaryCompetitionContextBuf);
+        uint8_t *compDef = _tertiaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
-            d1, (uint8_t *)&tertiaryCompetitionContextBuf, compDef);
+            d1, (uint8_t *)&_tertiaryCompetitionContextBuf, compDef);
         a5->comp3Result = (int8_t)d1;
     }
 
     /* Quaternary competition */
     if (a5->strPtr3 != 0) {
-        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
-                                      (DIYCompetition *)&euroCupsCompetitionContextBuf);
-        uint8_t *compDef = quaternaryCompetitionPtr;
+        d1 = (int16_t)FindTeamInDIY(_selTeamNumber,
+                                      (DIYCompetition *)&_euroCupsCompetitionContextBuf);
+        uint8_t *compDef = _quaternaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
-            d1, (uint8_t *)&euroCupsCompetitionContextBuf, compDef);
+            d1, (uint8_t *)&_euroCupsCompetitionContextBuf, compDef);
         a5->comp4Result = (int8_t)d1;
     }
 }
@@ -1824,36 +1824,36 @@ void Career_FillCurrentSeasonInfo(void)
  * ================================================================ */
 
 /* --- String externs for Chunk 138 --- */
-extern uint8_t aFriendly[];          /* "FRIENDLY" */
-extern uint8_t aFriendlies[];        /* "FRIENDLIES" */
-extern uint8_t aWon0Drawn1Lost[];    /* "WON %0  DRAWN %1  LOST %2" */
-extern uint8_t aEuropeanTour[];      /* "EUROPEAN TOUR" */
-extern uint8_t aOceaniaTour[];       /* "OCEANIA TOUR" */
-extern uint8_t aWinners[];           /* "WINNERS" */
-extern uint8_t aRunnerUp[];          /* "RUNNER-UP" */
-extern uint8_t aFinalist[];          /* "FINALIST" */
-extern uint8_t aReachedSemiFin[];    /* "REACHED SEMI-FINAL" */
-extern uint8_t aReachedQuarter[];    /* "REACHED QUARTER-FINAL" */
-extern uint8_t aThirdPlace[];        /* "THIRD PLACE" */
-extern uint8_t aFourthPlace[];       /* "FOURTH PLACE" */
-extern uint8_t aStillInCompeti[];    /* "STILL IN COMPETITION" */
-extern uint8_t aKnockedOutInRo[];    /* "KNOCKED OUT IN ROUND %0" */
-extern uint8_t aPosition0[];         /* "POSITION: %0" */
-extern uint8_t aQualified[];         /* "(QUALIFIED)" */
-extern uint8_t aNotQualified[];      /* "(NOT QUALIFIED)" */
-extern uint8_t aPromoted[];          /* "(PROMOTED)" */
-extern uint8_t aRelegated[];         /* "(RELEGATED)" */
-extern uint8_t a12Season[];          /* "%1/%2 SEASON" */
-extern uint8_t a102Season[];         /* "%1/0%2 SEASON" */
-extern uint8_t aNational[];          /* "NATIONAL" */
-extern uint8_t aA[];                 /* "(%a)" */
-extern uint8_t aA0[];                /* "%a  %0" */
-extern uint8_t aSeasonSTopScor[];    /* "SEASON'S TOP SCORER" */
-extern uint8_t aSeasonSTopScor_0[];  /* "SEASON'S TOP SCORERS" */
-extern uint8_t aResigned[];          /* "- RESIGNED -" */
-extern uint8_t aRetired[];           /* "- RETIRED -" */
-extern void *countriesTable[];
-extern uint16_t trophySprites[];
+extern uint8_t _aFriendly[];          /* "FRIENDLY" */
+extern uint8_t _aFriendlies[];        /* "FRIENDLIES" */
+extern uint8_t _aWon0Drawn1Lost[];    /* "WON %0  DRAWN %1  LOST %2" */
+extern uint8_t _aEuropeanTour[];      /* "EUROPEAN TOUR" */
+extern uint8_t _aOceaniaTour[];       /* "OCEANIA TOUR" */
+extern uint8_t _aWinners[];           /* "WINNERS" */
+extern uint8_t _aRunnerUp[];          /* "RUNNER-UP" */
+extern uint8_t _aFinalist[];          /* "FINALIST" */
+extern uint8_t _aReachedSemiFin[];    /* "REACHED SEMI-FINAL" */
+extern uint8_t _aReachedQuarter[];    /* "REACHED QUARTER-FINAL" */
+extern uint8_t _aThirdPlace[];        /* "THIRD PLACE" */
+extern uint8_t _aFourthPlace[];       /* "FOURTH PLACE" */
+extern uint8_t _aStillInCompeti[];    /* "STILL IN COMPETITION" */
+extern uint8_t _aKnockedOutInRo[];    /* "KNOCKED OUT IN ROUND %0" */
+extern uint8_t _aPosition0[];         /* "POSITION: %0" */
+extern uint8_t _aQualified[];         /* "(QUALIFIED)" */
+extern uint8_t _aNotQualified[];      /* "(NOT QUALIFIED)" */
+extern uint8_t _aPromoted[];          /* "(PROMOTED)" */
+extern uint8_t _aRelegated[];         /* "(RELEGATED)" */
+extern uint8_t _a12Season[];          /* "%1/%2 SEASON" */
+extern uint8_t _a102Season[];         /* "%1/0%2 SEASON" */
+extern uint8_t _aNational[];          /* "NATIONAL" */
+extern uint8_t _aA[];                 /* "(%a)" */
+extern uint8_t _aA0[];                /* "%a  %0" */
+extern uint8_t _aSeasonSTopScor[];    /* "SEASON'S TOP SCORER" */
+extern uint8_t _aSeasonSTopScor_0[];  /* "SEASON'S TOP SCORERS" */
+extern uint8_t _aResigned[];          /* "- RESIGNED -" */
+extern uint8_t _aRetired[];           /* "- RETIRED -" */
+extern void *_countriesTable[];
+extern uint16_t _trophySprites[];
 
 #define CN_EUROPE   80
 #define CN_OCEANIA  85
@@ -1867,10 +1867,10 @@ extern uint16_t trophySprites[];
  * ================================================================ */
 static MenuEntry *SetTrophySprite_Internal(uint16_t trophyIndex, MenuEntry *slot)
 {
-    MenuEntry *base = &menuEntries[17]; /* entry at $3B8/56 = 17 */
+    MenuEntry *base = &_menuEntries[17]; /* entry at $3B8/56 = 17 */
 
     /* Set sprite ID in high word of fg (68k big-endian: move.w to offset 38) */
-    slot->fgWord = trophySprites[trophyIndex];
+    slot->fgWord = _trophySprites[trophyIndex];
 
     /* Make this slot visible */
     slot->isInvisible = 0;
@@ -1895,7 +1895,7 @@ static MenuEntry *SetTrophySprite_Internal(uint16_t trophyIndex, MenuEntry *slot
  * ================================================================ */
 static void SetTrophySprites_Internal(SeasonInformations *si)
 {
-    MenuEntry *base = &menuEntries[17]; /* entry at $3B8/56 = 17 */
+    MenuEntry *base = &_menuEntries[17]; /* entry at $3B8/56 = 17 */
     uint16_t d0;
     uint16_t flags;
     uint16_t bit;
@@ -1920,7 +1920,7 @@ static void SetTrophySprites_Internal(SeasonInformations *si)
         return;
 
     /* Loop through bits 0-9, set sprite for each trophy */
-    slot = &menuEntries[17];
+    slot = &_menuEntries[17];
     for (bit = 0; bit < 10; bit++)
     {
         if (flags & (1 << bit))
@@ -1953,12 +1953,12 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
         return;
 
     /* Entry 7 = competition name line */
-    entry7 = &menuEntries[7]; /* $188/56 = 7 */
+    entry7 = &_menuEntries[7]; /* $188/56 = 7 */
     entry7->y = *pY;
 
     /* Change "FRIENDLY" to "FRIENDLIES" for the header */
-    if (compName == aFriendly)
-        compName = aFriendlies;
+    if (compName == _aFriendly)
+        compName = _aFriendlies;
 
     /* Copy competition name to entry 7's string buffer */
     dest = (uint8_t *)entry7->fg;
@@ -1968,14 +1968,14 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
     resultCode = (int16_t)resultCodeByte;
 
     /* Entry 8 = result/status line */
-    entry8 = &menuEntries[8]; /* $1C0/56 = 8 */
+    entry8 = &_menuEntries[8]; /* $1C0/56 = 8 */
     entry8->y = *pY;
 
     /* Set color to 2 (clear low nibble, set to 2) */
     entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | 2;
 
     /* Default format = dash */
-    fmt = aDash;
+    fmt = _aDash;
 
     if (resultCode == 0)
     {
@@ -1984,26 +1984,26 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
     }
 
     /* --- FRIENDLY path --- */
-    if (origCompName == aFriendly)
+    if (origCompName == _aFriendly)
     {
         n0 = (uint16_t)(int16_t)(int8_t)si->friendlyWins;
         n1 = (uint16_t)(int16_t)(int8_t)si->friendlyDraws;
         n2 = (uint16_t)(int16_t)(int8_t)si->friendlyLost;
-        fmt = aDash;
+        fmt = _aDash;
         if (n0 != 0 || n1 != 0 || n2 != 0)
-            fmt = aWon0Drawn1Lost;
+            fmt = _aWon0Drawn1Lost;
         goto do_print;
     }
 
     /* --- TOUR path (European Tour .. Oceania Tour) --- */
-    if (origCompName >= aEuropeanTour && origCompName <= aOceaniaTour)
+    if (origCompName >= _aEuropeanTour && origCompName <= _aOceaniaTour)
     {
         n0 = (uint16_t)(int16_t)(int8_t)si->tourWins;
         n1 = (uint16_t)(int16_t)(int8_t)si->tourDraws;
         n2 = (uint16_t)(int16_t)(int8_t)si->tourLost;
-        fmt = aDash;
+        fmt = _aDash;
         if (n0 != 0 || n1 != 0 || n2 != 0)
-            fmt = aWon0Drawn1Lost;
+            fmt = _aWon0Drawn1Lost;
         goto do_print;
     }
 
@@ -2014,29 +2014,29 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
         entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | 0xF;
     }
 
-    fmt = aWinners;
+    fmt = _aWinners;
     if (resultCode == 1)         goto do_print;
-    fmt = aRunnerUp;
+    fmt = _aRunnerUp;
     if (resultCode == 2)         goto do_print;
-    fmt = aFinalist;
+    fmt = _aFinalist;
     if (resultCode == -100)      goto do_print;
-    fmt = aReachedSemiFin;
+    fmt = _aReachedSemiFin;
     if (resultCode == -101)      goto do_print;
-    fmt = aReachedQuarter;
+    fmt = _aReachedQuarter;
     if (resultCode == -102)      goto do_print;
-    fmt = aThirdPlace;
+    fmt = _aThirdPlace;
     if (resultCode == -103)      goto do_print;
-    fmt = aFourthPlace;
+    fmt = _aFourthPlace;
     if (resultCode == -105)      goto do_print;
-    fmt = aStillInCompeti;
+    fmt = _aStillInCompeti;
     if (resultCode == -104)      goto do_print;
-    fmt = aDash;
+    fmt = _aDash;
     if (resultCode == -106)      goto do_print;
 
     if (resultCode >= 0)
     {
         /* Positive position */
-        fmt = aPosition0;
+        fmt = _aPosition0;
         n0 = (uint16_t)resultCode;
         goto do_print;
     }
@@ -2044,7 +2044,7 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
     if (resultCode > -110)
     {
         /* Negative position (unknown code): display as positive */
-        fmt = aPosition0;
+        fmt = _aPosition0;
         n0 = (uint16_t)(-resultCode);
         goto do_print;
     }
@@ -2053,7 +2053,7 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
     {
         int16_t round = resultCode + 110;
         n0 = (uint16_t)(-round);
-        fmt = aKnockedOutInRo;
+        fmt = _aKnockedOutInRo;
     }
 
 do_print:
@@ -2064,7 +2064,7 @@ do_print:
                     (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
 
     /* Draw 2 entries (entry 7 and entry 8) */
-    DrawMultipleItems(2, &menuEntries[7]);
+    DrawMultipleItems(2, &_menuEntries[7]);
 
     *pY += 10;
 
@@ -2072,7 +2072,7 @@ do_print:
     if (qualFlag == 0)
         return;
 
-    entry8 = &menuEntries[8];
+    entry8 = &_menuEntries[8];
     entry8->y = *pY;
 
     /* Clear output buffer first byte */
@@ -2081,22 +2081,22 @@ do_print:
 
     if (qualFlag == 1)
     {
-        fmt = aQualified;
+        fmt = _aQualified;
         colorBits = 6;
     }
     else if (qualFlag == 2)
     {
-        fmt = aNotQualified;
+        fmt = _aNotQualified;
         colorBits = 10;
     }
     else if (qualFlag == 3)
     {
-        fmt = aPromoted;
+        fmt = _aPromoted;
         colorBits = 6;
     }
     else
     {
-        fmt = aRelegated;
+        fmt = _aRelegated;
         colorBits = 10;
     }
 
@@ -2104,7 +2104,7 @@ do_print:
     entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | colorBits;
 
     /* Draw 2 entries again (with qualification text) */
-    DrawMultipleItems(2, &menuEntries[7]);
+    DrawMultipleItems(2, &_menuEntries[7]);
 
     *pY += 10;
 }
@@ -2127,7 +2127,7 @@ void FillManagementRecordInfo(void)
     uint16_t yearLo;
 
     /* Compute season info pointer */
-    si = &((SeasonInformations *)seasonInformationsArray)[currentSeasonNumber];
+    si = &((SeasonInformations *)_seasonInformationsArray)[_currentSeasonNumber];
 
     /* Initialize trophy sprites */
     SetTrophySprites_Internal(si);
@@ -2135,10 +2135,10 @@ void FillManagementRecordInfo(void)
     d5 = 55; /* starting Y */
 
     /* --- Season title line (entry 6) --- */
-    entry = &menuEntries[6]; /* $150/56 = 6 */
+    entry = &_menuEntries[6]; /* $150/56 = 6 */
     dest = (uint8_t *)entry->fg;
     {
-        uint16_t seasonNum = currentSeasonNumber;
+        uint16_t seasonNum = _currentSeasonNumber;
         uint16_t d0 = seasonNum + 1;
         uint16_t d1 = seasonNum + 1996;
         uint16_t d2 = seasonNum + 97;
@@ -2148,9 +2148,9 @@ void FillManagementRecordInfo(void)
             d2 -= 100;
 
         if (d2 >= 10)
-            fmt = a12Season;     /* "%1/%2 SEASON" */
+            fmt = _a12Season;     /* "%1/%2 SEASON" */
         else
-            fmt = a102Season;    /* "%1/0%2 SEASON" */
+            fmt = _a102Season;    /* "%1/0%2 SEASON" */
 
         PrintFormatted(fmt, dest,
                         d0, d1, d2, 0, 0, 0, 0,
@@ -2160,14 +2160,14 @@ void FillManagementRecordInfo(void)
     d5 += 15;
 
     /* --- Club name line (entry 4) --- */
-    entry = &menuEntries[4]; /* $E0/56 = 4 */
+    entry = &_menuEntries[4]; /* $E0/56 = 4 */
     dest = (uint8_t *)entry->fg;
     StringCopy((uint8_t *)si->clubName, dest);
     entry->y = d5;
     d5 += 10;
 
     /* --- Country line (entry 5) --- */
-    entry = &menuEntries[5]; /* $118/56 = 5 */
+    entry = &_menuEntries[5]; /* $118/56 = 5 */
     dest = (uint8_t *)entry->fg;
     {
         uint8_t countryCode = (uint8_t)si->clubNo;
@@ -2175,15 +2175,15 @@ void FillManagementRecordInfo(void)
 
         if (countryCode >= CN_EUROPE && countryCode <= CN_OCEANIA)
         {
-            countryStr = aNational;
+            countryStr = _aNational;
         }
         else
         {
-            const uint8_t *cPtr = (const uint8_t *)(countriesTable[countryCode]);
+            const uint8_t *cPtr = (const uint8_t *)(_countriesTable[countryCode]);
             countryStr = cPtr + 1; /* skip first byte */
         }
 
-        PrintFormatted(aA, dest,
+        PrintFormatted(_aA, dest,
                         0, 0, 0, 0, 0, 0, 0,
                         countryStr, (const uint8_t *)0, (const uint8_t *)0);
     }
@@ -2203,18 +2203,18 @@ void FillManagementRecordInfo(void)
     d5 += 8;
 
     /* --- Overall stats header (entry 10) --- */
-    entry = &menuEntries[10]; /* $230/56 = 10 */
+    entry = &_menuEntries[10]; /* $230/56 = 10 */
     entry->y = d5;
     d5 += 9;
 
     /* --- Overall stats line (entry 11) --- */
-    entry = &menuEntries[11]; /* $268/56 = 11 */
+    entry = &_menuEntries[11]; /* $268/56 = 11 */
     dest = (uint8_t *)entry->fg;
 
     if (si->bestScorerName[0] == 0)
     {
         /* No scorer name — show dash */
-        StringCopy(aDash, dest);
+        StringCopy(_aDash, dest);
     }
     else
     {
@@ -2224,7 +2224,7 @@ void FillManagementRecordInfo(void)
 
         if (totalGames == 0)
         {
-            fmt = aDash;
+            fmt = _aDash;
             PrintFormatted(fmt, dest,
                             0, 0, 0, 0, 0, 0, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
@@ -2236,7 +2236,7 @@ void FillManagementRecordInfo(void)
             uint16_t tl = (uint16_t)si->totalLost;
             uint16_t gs = si->totalGoalsScored;
             uint16_t gt = si->totalGoalsTaken;
-            PrintFormatted(aPl0W1D2L3F4A5, dest,
+            PrintFormatted(_aPl0W1D2L3F4A5, dest,
                             totalGames, tw, td, tl, gs, gt, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
         }
@@ -2246,20 +2246,20 @@ void FillManagementRecordInfo(void)
     entry->y = d5;
 
     /* Draw overall stats block (entries 10-11) */
-    DrawMultipleItems(2, &menuEntries[10]);
+    DrawMultipleItems(2, &_menuEntries[10]);
 
     d5 += 13;
 
     /* --- Manager status (entry 9) --- */
-    menuEntries[9].isInvisible = 1;
+    _menuEntries[9].isInvisible = 1;
 
     if (si->managerStatus != 0)
     {
         uint16_t color;
         int8_t status = si->managerStatus;
 
-        menuEntries[9].isInvisible = 0;
-        entry = &menuEntries[9]; /* $1F8/56 = 9 */
+        _menuEntries[9].isInvisible = 0;
+        entry = &_menuEntries[9]; /* $1F8/56 = 9 */
         entry->y = d5;
 
         color = 10;
@@ -2267,11 +2267,11 @@ void FillManagementRecordInfo(void)
         {
             /* Not sacked — check resigned/retired */
             color = 6;
-            entry->fg = (uintptr_t)aResigned;
+            entry->fg = (uintptr_t)_aResigned;
             if (status != 1)
             {
                 color = 15;
-                entry->fg = (uintptr_t)aRetired;
+                entry->fg = (uintptr_t)_aRetired;
             }
         }
 
@@ -2284,25 +2284,25 @@ void FillManagementRecordInfo(void)
         }
 
         /* Draw manager status entry */
-        DrawMultipleItems(1, &menuEntries[9]);
+        DrawMultipleItems(1, &_menuEntries[9]);
     }
 
     d5 += 13;
 
     /* --- Top scorer header (entry 12) --- */
-    entry = &menuEntries[12]; /* $2A0/56 = 12 */
-    entry->fg = (uintptr_t)aSeasonSTopScor; /* "SEASON'S TOP SCORER" */
+    entry = &_menuEntries[12]; /* $2A0/56 = 12 */
+    entry->fg = (uintptr_t)_aSeasonSTopScor; /* "SEASON'S TOP SCORER" */
 
     if (si->bestScorerName[0] != 0 && si->secondScorerName[0] != 0)
     {
-        entry->fg = (uintptr_t)aSeasonSTopScor_0; /* "SEASON'S TOP SCORERS" */
+        entry->fg = (uintptr_t)_aSeasonSTopScor_0; /* "SEASON'S TOP SCORERS" */
     }
 
     entry->y = d5;
     d5 += 10;
 
     /* --- Top scorer line 1 (entry 13) --- */
-    entry = &menuEntries[13]; /* $2D8/56 = 13 */
+    entry = &_menuEntries[13]; /* $2D8/56 = 13 */
     dest = (uint8_t *)entry->fg;
 
     {
@@ -2310,12 +2310,12 @@ void FillManagementRecordInfo(void)
 
         if (numGoals == 0 || si->bestScorerName[0] == 0)
         {
-            StringCopy(aDash, dest);
+            StringCopy(_aDash, dest);
         }
         else
         {
             const uint8_t *scorerName = (const uint8_t *)si->bestScorerName;
-            PrintFormatted(aA0, dest,
+            PrintFormatted(_aA0, dest,
                             numGoals, 0, 0, 0, 0, 0, 0,
                             scorerName, (const uint8_t *)0, (const uint8_t *)0);
         }
@@ -2324,31 +2324,31 @@ void FillManagementRecordInfo(void)
     entry->y = d5;
 
     /* Draw top scorer block (entries 12-13) */
-    DrawMultipleItems(2, &menuEntries[12]);
+    DrawMultipleItems(2, &_menuEntries[12]);
 
     d5 += 8;
 
     /* --- Top scorer line 2 / second scorer (entry 14) --- */
-    menuEntries[14].isInvisible = 1; /* $310/56 = 14 */
+    _menuEntries[14].isInvisible = 1; /* $310/56 = 14 */
 
     if (si->bestScorerName[0] != 0 && si->secondScorerName[0] != 0)
     {
         uint16_t numGoals;
 
-        menuEntries[14].isInvisible = 0;
-        entry = &menuEntries[14];
+        _menuEntries[14].isInvisible = 0;
+        entry = &_menuEntries[14];
         dest = (uint8_t *)entry->fg;
 
         numGoals = si->bestScorerNumGoals;
 
-        PrintFormatted(aA0, dest,
+        PrintFormatted(_aA0, dest,
                         numGoals, 0, 0, 0, 0, 0, 0,
                         (const uint8_t *)si->secondScorerName,
                         (const uint8_t *)0, (const uint8_t *)0);
 
         entry->y = d5;
 
-        DrawMultipleItems(1, &menuEntries[14]);
+        DrawMultipleItems(1, &_menuEntries[14]);
 
         d5 += 10;
     }
@@ -2362,9 +2362,9 @@ void FillManagementRecordInfo(void)
      * and reads ~2.4 KB out of bounds, leaving the trophy row Y stale). */
     if (si->trophyFlags != 0)
     {
-        menuEntries[17].y = d5;
-        menuEntries[18].y = d5;
-        menuEntries[19].y = d5;
-        menuEntries[20].y = d5;
+        _menuEntries[17].y = d5;
+        _menuEntries[18].y = d5;
+        _menuEntries[19].y = d5;
+        _menuEntries[20].y = d5;
     }
 }

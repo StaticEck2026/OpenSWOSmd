@@ -5,7 +5,7 @@
  */
 #include "game_hud.h"
 #include "game_types.h"
-#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the controlled-player name in widescreen */
+#include "display.h"    /* _screen_width, WIDE_MARGIN — center the controlled-player name in widescreen */
 
 /* ---- Sprite indices ---- */
 #define SPR_CORNER_FLAG_FRAME_3         1073
@@ -13,32 +13,32 @@
 #define SPR_TEAM2_PLAYER_NAMES_START    0x9D
 
 /* ---- External globals ---- */
-extern Sprite team1CurPlayerNumSprite;
-extern Sprite team2CurPlayerNumSprite;
-extern Sprite playerMarkSprite;
-extern Sprite currentPlayerNameSprite;
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
-extern TeamGame topTeamInGame;
-extern uint16_t currentGameTick;
-extern uint16_t trainingGame;
-extern uint16_t currentPlayerIndicatorPosition;
-extern uint16_t resultTimer;
-extern uintptr_t currentScorer;
-extern TeamGeneralInfo *lastTeamScored;
-extern Sprite  *lastPlayerBeforeGoalkeeper;
-extern Sprite  *lastPlayerPlayed;
-extern TeamGeneralInfo *lastTeamPlayed;
-extern uint16_t whichCard;
-extern Sprite  *bookedPlayer;
-extern TeamGeneralInfo *lastTeamBooked;
-extern uint16_t nobodysBallTimer;
-extern uint16_t nobodysBallLastFrame;
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint8_t plNamesLengthTableCopy[];
-extern uint8_t plOrdinalsTable[];
-extern uint16_t gameStatePl;
+extern Sprite _team1CurPlayerNumSprite;
+extern Sprite _team2CurPlayerNumSprite;
+extern Sprite _playerMarkSprite;
+extern Sprite _currentPlayerNameSprite;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
+extern TeamGame _topTeamInGame;
+extern uint16_t _currentGameTick;
+extern uint16_t _trainingGame;
+extern uint16_t _currentPlayerIndicatorPosition;
+extern uint16_t _resultTimer;
+extern uintptr_t _currentScorer;
+extern TeamGeneralInfo *_lastTeamScored;
+extern Sprite  *_lastPlayerBeforeGoalkeeper;
+extern Sprite  *_lastPlayerPlayed;
+extern TeamGeneralInfo *_lastTeamPlayed;
+extern uint16_t _whichCard;
+extern Sprite  *_bookedPlayer;
+extern TeamGeneralInfo *_lastTeamBooked;
+extern uint16_t _nobodysBallTimer;
+extern uint16_t _nobodysBallLastFrame;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint8_t _plNamesLengthTableCopy[];
+extern uint8_t _plOrdinalsTable[];
+extern uint16_t _gameStatePl;
 
 /* ================================================================
  * UpdateControlledPlayerNumbers  (SWOS2.s line 12642)
@@ -57,15 +57,15 @@ void UpdateControlledPlayerNumbers(void)
     int16_t          d7;
 
     d7 = 1;
-    sprPtr   = &team1CurPlayerNumSprite;
-    teamInfo = &topTeamData;
+    sprPtr   = &_team1CurPlayerNumSprite;
+    teamInfo = &_topTeamData;
     teamGame = teamInfo->inGameTeamPtr;
 
     for (;;) {
         /* Check if team has a human player or is in training mode */
         if ((uint16_t)teamInfo->isPlCoach != 0
             || (uint16_t)teamInfo->playerNumber != 0
-            || trainingGame != 0) {
+            || _trainingGame != 0) {
 
             Sprite *controlledPlayer = teamInfo->controlledPlayer;
             if (controlledPlayer != (Sprite *)0) {
@@ -74,7 +74,7 @@ void UpdateControlledPlayerNumbers(void)
 
                 /* If controlled player == marked player, apply blink */
                 if (ordinal == teamGame->markedPlayer) {
-                    uint8_t tickBit4 = ((uint8_t *)&currentGameTick)[1] & 0x10;
+                    uint8_t tickBit4 = ((uint8_t *)&_currentGameTick)[1] & 0x10;
                     if (d7 != 0) {
                         /* Team 1: hide when bit4 is clear */
                         if (!tickBit4)
@@ -102,8 +102,8 @@ void UpdateControlledPlayerNumbers(void)
 hide:
         sprPtr->imageIndex = -1;
 next:
-        sprPtr   = &team2CurPlayerNumSprite;
-        teamInfo = &bottomTeamData;
+        sprPtr   = &_team2CurPlayerNumSprite;
+        teamInfo = &_bottomTeamData;
         teamGame = teamInfo->inGameTeamPtr;
         d7--;
         if (d7 < 0)
@@ -123,13 +123,13 @@ void MarkPlayer(void)
 {
     TeamGeneralInfo *teamInfo;
     TeamGame        *teamGame;
-    Sprite          *spr = &playerMarkSprite;
+    Sprite          *spr = &_playerMarkSprite;
     int16_t          markedIdx;
 
     /* Select team based on tick bit 4 */
-    teamInfo = &topTeamData;
-    if (((uint8_t *)&currentGameTick)[1] & 0x10)
-        teamInfo = &bottomTeamData;
+    teamInfo = &_topTeamData;
+    if (((uint8_t *)&_currentGameTick)[1] & 0x10)
+        teamInfo = &_bottomTeamData;
 
     teamGame = teamInfo->inGameTeamPtr;
     spr->imageIndex = -1;
@@ -170,53 +170,53 @@ void MarkPlayer(void)
 __attribute__((used, externally_visible))
 void SetCurrentPlayerName(void)
 {
-    Sprite          *spr = &currentPlayerNameSprite;
+    Sprite          *spr = &_currentPlayerNameSprite;
     TeamGeneralInfo *a1;    /* TeamGeneralInfo ptr */
     Sprite          *a2;    /* Sprite ptr */
     int16_t          d0, d1, d2;
 
     spr->visible = 1;
 
-    if (currentPlayerIndicatorPosition == 0)
+    if (_currentPlayerIndicatorPosition == 0)
         goto hide_and_clear;
 
     /* If result is showing and position <= 2, hide */
-    if (resultTimer != 0) {
-        if (currentPlayerIndicatorPosition <= 2)
+    if (_resultTimer != 0) {
+        if (_currentPlayerIndicatorPosition <= 2)
             goto hide_and_clear;
     }
 
     /* Priority 1: current scorer */
-    if (currentScorer != 0) {
-        a2 = (Sprite *)currentScorer;
-        a1 = lastTeamScored;
+    if (_currentScorer != 0) {
+        a2 = (Sprite *)_currentScorer;
+        a1 = _lastTeamScored;
         /* Blink: hide when bit 3 of tick LSB is clear */
-        if (!(((uint8_t *)&currentGameTick)[1] & 0x08))
+        if (!(((uint8_t *)&_currentGameTick)[1] & 0x08))
             goto hide_and_clear;
         goto position_name;
     }
 
     /* Priority 2: booked player */
-    if (whichCard != 0) {
-        a2 = bookedPlayer;
-        a1 = lastTeamBooked;
-        if (!(((uint8_t *)&currentGameTick)[1] & 0x08))
+    if (_whichCard != 0) {
+        a2 = _bookedPlayer;
+        a1 = _lastTeamBooked;
+        if (!(((uint8_t *)&_currentGameTick)[1] & 0x08))
             goto hide_and_clear;
         goto position_name;
     }
 
     /* Priority 3: last player before goalkeeper */
-    if (lastPlayerBeforeGoalkeeper != (Sprite *)0) {
-        a2 = lastPlayerBeforeGoalkeeper;
-        a1 = lastTeamScored;
+    if (_lastPlayerBeforeGoalkeeper != (Sprite *)0) {
+        a2 = _lastPlayerBeforeGoalkeeper;
+        a1 = _lastTeamScored;
         goto check_timer;
     }
 
     /* Priority 4: last player who touched ball */
-    a2 = lastPlayerPlayed;
-    a1 = lastTeamPlayed;
+    a2 = _lastPlayerPlayed;
+    a1 = _lastTeamPlayed;
 
-    if (gameStatePl != ST_GAME_IN_PROGRESS) {
+    if (_gameStatePl != ST_GAME_IN_PROGRESS) {
         /* Not in play — check for null pointer or no controlled player */
         if (a2 == (Sprite *)0)
             goto set_delay_and_hide;
@@ -224,8 +224,8 @@ void SetCurrentPlayerName(void)
             goto set_delay_and_hide;
 
         /* Wait for nobodysBallLastFrame to count down */
-        if (nobodysBallLastFrame != 0) {
-            nobodysBallLastFrame--;
+        if (_nobodysBallLastFrame != 0) {
+            _nobodysBallLastFrame--;
             goto hide_and_clear;
         }
         goto set_timer_and_check;
@@ -240,25 +240,25 @@ void SetCurrentPlayerName(void)
         goto check_timer;
 
 set_timer_and_check:
-    nobodysBallTimer = 50;
+    _nobodysBallTimer = 50;
 
 check_timer:
-    if (nobodysBallTimer == 0)
+    if (_nobodysBallTimer == 0)
         goto hide_and_clear;
-    nobodysBallTimer--;
+    _nobodysBallTimer--;
 
 position_name:
     /* Look up player name sprite index and width */
     d0 = a2->playerOrdinal - 1;
 
-    d2 = (int16_t)(int8_t)plNamesLengthTableCopy[d0];
-    d1 = (int16_t)(int8_t)plOrdinalsTable[d0];
+    d2 = (int16_t)(int8_t)_plNamesLengthTableCopy[d0];
+    d1 = (int16_t)(int8_t)_plOrdinalsTable[d0];
     d1 += SPR_TEAM1_PLAYER_NAMES_START;
 
     /* Check if this is the bottom team */
-    if (a1->inGameTeamPtr != &topTeamInGame) {
-        d2 = (int16_t)(int8_t)plNamesLengthTableCopy[d0 + 16];
-        d1 = (int16_t)(int8_t)plOrdinalsTable[d0 + 16];
+    if (a1->inGameTeamPtr != &_topTeamInGame) {
+        d2 = (int16_t)(int8_t)_plNamesLengthTableCopy[d0 + 16];
+        d1 = (int16_t)(int8_t)_plOrdinalsTable[d0 + 16];
         d1 += SPR_TEAM2_PLAYER_NAMES_START;
     }
 
@@ -267,11 +267,11 @@ position_name:
     /* Widescreen: shift the controlled-player name into the centered 336 region (the
      * per-corner offsets below — +10/+20 left, +326-width right — key off this base).
      * WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
-    spr->x.s.i      = (int16_t)cameraX.s.i + WIDE_MARGIN;
-    spr->y.s.i      = (int16_t)cameraY.s.i + 8000;
+    spr->x.s.i      = (int16_t)_cameraX.s.i + WIDE_MARGIN;
+    spr->y.s.i      = (int16_t)_cameraY.s.i + 8000;
     spr->z.s.i      = 8000;
 
-    switch (currentPlayerIndicatorPosition) {
+    switch (_currentPlayerIndicatorPosition) {
     case 1:
         /* Bottom-left */
         spr->x.s.i += 10;
@@ -297,7 +297,7 @@ position_name:
     }
 
 set_delay_and_hide:
-    nobodysBallLastFrame = 1;
+    _nobodysBallLastFrame = 1;
     /* fall through to hide_and_clear */
 
 hide_and_clear:
@@ -305,5 +305,5 @@ hide_and_clear:
     spr->x.s.i      = 25000;
     spr->y.s.i      = 25000;
     spr->z.s.i      = 25000;
-    lastPlayerBeforeGoalkeeper = (Sprite *)0;
+    _lastPlayerBeforeGoalkeeper = (Sprite *)0;
 }

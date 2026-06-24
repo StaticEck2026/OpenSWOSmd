@@ -12,7 +12,7 @@
 #include "audio.h"
 #ifdef SWOS_SDL_BUILD
 #include <string.h>
-extern uint8_t rawAssetLoadBuffer[];
+extern uint8_t _rawAssetLoadBuffer[];
 extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                                const uint8_t *ins_data,  int ins_size,
                                int subsong);
@@ -25,22 +25,22 @@ extern void AudioSetChannelVolume(uint16_t mask, uint16_t vol);
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint16_t paletteIndex;
-extern uint16_t g_quitToDos;
-extern volatile uint16_t currentGameTick;
+extern uint16_t _paletteIndex;
+extern uint16_t _quitToDos;
+extern volatile uint16_t _currentGameTick;
 extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
-extern uint8_t pl1Fire;
-extern volatile uintptr_t frontbufferBaseAltPtr;
-extern volatile uintptr_t frontbufferBasePtr;
-extern uint32_t memBoundaryMarker;
-extern uint16_t audioBankLoaded;
-extern volatile uint16_t audioActive;
-extern uint16_t fireResetFlag;
-extern volatile uint16_t keyCount;
-extern volatile uint16_t currentKey;
-extern uint8_t audioInstrumentBank[];
-extern uint8_t aSoundHeroSng[];
-extern uint8_t aSoundHeroIns[];
+extern uint8_t _pl1Fire;
+extern volatile uintptr_t _frontbufferBaseAltPtr;
+extern volatile uintptr_t _frontbufferBasePtr;
+extern uint32_t _memBoundaryMarker;
+extern uint16_t _audioBankLoaded;
+extern volatile uint16_t _audioActive;
+extern uint16_t _fireResetFlag;
+extern volatile uint16_t _keyCount;
+extern volatile uint16_t _currentKey;
+extern uint8_t _audioInstrumentBank[];
+extern uint8_t _aSoundHeroSng[];
+extern uint8_t _aSoundHeroIns[];
 
 /* Dedicated 4 KB staging buffer for hero.sng. This used to borrow
  * diyFileBufferCopy (an 8 KB raw BSS buffer at the time). After the step-3
@@ -70,22 +70,22 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
      * bank header we don't byte-swap, so calling it here would leave
      * the hero music silent. Hand the loaded hero.sng / hero.ins to
      * the player instead, then ramp the master volume in. */
-    if (audioBankLoaded == 0) {
+    if (_audioBankLoaded == 0) {
         StopAllAudioChannels();
         /* HERO has 5 subsongs; the reference rjp1player plays subsong 0
          * (the full mix with vocals). Subsong 1 has the singing channel
          * sequence byte zeroed, so passing 1 here was the cause of the
          * "music plays but no singing" symptom. */
         if (AudioSDL_StartSong(heroSongBuffer, HERO_SONG_BUFFER_BYTES,
-                               audioInstrumentBank, HERO_INS_BANK_BYTES, 0) != 0) {
+                               _audioInstrumentBank, HERO_INS_BANK_BYTES, 0) != 0) {
             /* Load failed — keep audio silent but mark "loaded" so we
              * don't hammer the player every vblank. */
         }
-        audioBankLoaded = 1;
+        _audioBankLoaded = 1;
     }
 
     AudioSetChannelVolume(0xFFFF, 0);
-    audioActive = 1;
+    _audioActive = 1;
     /* Ramp the master volume from 0 to 0x23 over a few vblanks so the
      * song fades in instead of starting at full volume mid-note. Mirror
      * of TryPlayMusic's ramp on the menu song. */
@@ -95,14 +95,14 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
     }
     AudioSetChannelVolume(0xFFFF, 0x23);
 #else
-    if (audioBankLoaded == 0)
+    if (_audioBankLoaded == 0)
     {
         StopAllAudioChannels();
-        InitAudioState(heroSongBuffer, audioInstrumentBank);
-        audioBankLoaded = 1;
+        InitAudioState(heroSongBuffer, _audioInstrumentBank);
+        _audioBankLoaded = 1;
     }
     AudioApplyPresetToChannels(0);
-    audioActive = 1;
+    _audioActive = 1;
 #endif
 }
 
@@ -127,15 +127,15 @@ static void loaderIntroStopMusicAndResetAudio(void)
     for (int16_t vol = 0x23; vol >= 0; vol--) {
         AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
         WaitForVSync();
-        if (g_quitToDos) break;
+        if (_quitToDos) break;
     }
     AudioSetChannelVolume(0xFFFF, 0);
 #else
     AudioBeepAllShort();
 #endif
     StopAllAudioChannels();
-    audioActive = 0;
-    audioBankLoaded = 0;
+    _audioActive = 0;
+    _audioBankLoaded = 0;
 }
 
 /* ================================================================
@@ -148,10 +148,10 @@ static void loaderIntroStopMusicAndResetAudio(void)
 static void loaderIntroLoadHeroAudioBank(void)
 {
 retry:
-    audioBankLoaded = 0;
-    if (AssetEnsureReadyWithRetry(aSoundHeroSng, heroSongBuffer) != 0)
+    _audioBankLoaded = 0;
+    if (AssetEnsureReadyWithRetry(_aSoundHeroSng, heroSongBuffer) != 0)
         goto retry;
-    if (LoadRNCToBufferNoBlit(aSoundHeroIns, audioInstrumentBank) != 0)
+    if (LoadRNCToBufferNoBlit(_aSoundHeroIns, _audioInstrumentBank) != 0)
         goto retry;
 }
 
@@ -175,15 +175,15 @@ retry:
 static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
 {
 #ifdef SWOS_SDL_BUILD
-    LoadFileEx((uint8_t *)filename, rawAssetLoadBuffer, (uint32_t *)0);
+    LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0);
 
-    uint8_t *dstAlt  = (uint8_t *)frontbufferBaseAltPtr;
-    uint8_t *dstBase = (uint8_t *)frontbufferBasePtr;
+    uint8_t *dstAlt  = (uint8_t *)_frontbufferBaseAltPtr;
+    uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr;
     if (!dstAlt) return;
 
     memset(dstAlt, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        const uint8_t *rowSrc = rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        const uint8_t *rowSrc = _rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
         uint8_t       *rowDst = dstAlt + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + WIDE_MARGIN;
         for (int px = 0; px < SCREEN_WIDTH; px++) {
             int bit  = 7 - (px & 7);
@@ -208,7 +208,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
         memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #else
-    LoadFileEx((uint8_t *)filename, (uint8_t *)frontbufferBaseAltPtr, (uint32_t *)0);
+    LoadFileEx((uint8_t *)filename, (uint8_t *)_frontbufferBaseAltPtr, (uint32_t *)0);
 #endif
 }
 
@@ -216,7 +216,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
  * LoaderIntroWaitForFireOrTimeout  (SWOS2.s line 21337)
  *
  * Polls player 1 input each frame. Returns non-zero if fire was
- * pressed or g_quitToDos set; returns 0 if the timeout (d7 frames)
+ * pressed or _quitToDos set; returns 0 if the timeout (d7 frames)
  * expired without interruption.
  *
  * Original asm: d7 = timeout count (dbf-style, so iterates d7+1 times).
@@ -232,9 +232,9 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
 
         Player1StatusProc();
 
-        if (pl1Fire != 0)
+        if (_pl1Fire != 0)
             return 1;
-        if (g_quitToDos != 0)
+        if (_quitToDos != 0)
             return 1;
 
         WaitForVSync();
@@ -254,7 +254,7 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
  * ================================================================ */
 static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t timeout)
 {
-    if (g_quitToDos != 0) return 1;
+    if (_quitToDos != 0) return 1;
 
     loaderIntroLoadFrameToFrontbufferAlt(filename);
 #ifndef AGA
@@ -267,7 +267,7 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
 #ifndef AGA
     /* Skip the fade-out if the user closed the window — it just adds
      * ~1 s of unresponsive black-screen between the click and exit. */
-    if (g_quitToDos == 0)
+    if (_quitToDos == 0)
         FadeOutToBlack();
 #endif
     return 0;
@@ -281,7 +281,7 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
  * ================================================================ */
 static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t timeout)
 {
-    if (g_quitToDos != 0) return 1;
+    if (_quitToDos != 0) return 1;
 
     loaderIntroLoadFrameToFrontbufferAlt(filename);
     loaderIntroEnsureMenuMusicPlaying();
@@ -293,7 +293,7 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
         return 1;
 
 #ifndef AGA
-    if (g_quitToDos == 0)
+    if (_quitToDos == 0)
         FadeOutToBlack();
 #endif
     return 0;
@@ -323,7 +323,7 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
 __attribute__((used, externally_visible))
 void ShowLoaderIntroSequence(void)
 {
-    if ((uintptr_t)&memBoundaryMarker > 0x100000u) { }
+    if ((uintptr_t)&_memBoundaryMarker > 0x100000u) { }
 
     SetCameraCoordinates(0, 0);
     SwapBuffersAndCameraViewState();
@@ -332,11 +332,11 @@ void ShowLoaderIntroSequence(void)
     UpdatePlanePtrsAndBlitParams();
 
     Player1StatusProc();
-    if (pl1Fire != 0)
+    if (_pl1Fire != 0)
     {
         /* Fire pressed path: just show loader1.raw and fade in */
 #ifndef AGA
-        paletteIndex = 3;
+        _paletteIndex = 3;
 #endif
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
         FadeIn();
@@ -346,7 +346,7 @@ void ShowLoaderIntroSequence(void)
     loaderIntroLoadHeroAudioBank();
 
 #ifndef AGA
-    paletteIndex = 6;
+    _paletteIndex = 6;
 #endif
 
     if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader00.raw", 0xFA) != 0)
@@ -358,14 +358,14 @@ void ShowLoaderIntroSequence(void)
 
     /* Frame 2: loader1.raw (with music) */
 #ifndef AGA
-    paletteIndex = 3;
+    _paletteIndex = 3;
 #endif
     if (loaderIntroShowFrameWithMusic((const uint8_t *)GRAFS "loader1.raw", 0xFA) != 0)
         goto exit_cleanup;
 
     /* Frame 3: loader2.raw */
 #ifndef AGA
-    paletteIndex = 5;
+    _paletteIndex = 5;
 #endif
     if (loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader2.raw", 0xFA) != 0)
         goto load_fail_mid;
@@ -393,7 +393,7 @@ void ShowLoaderIntroSequence(void)
 
     /* Final frame: loader1.raw with extended timeout (0x6D6 = 1750 frames) */
 #ifndef AGA
-    paletteIndex = 3;
+    _paletteIndex = 3;
 #endif
     loaderIntroShowFrameFadeInOut((const uint8_t *)GRAFS "loader1.raw", 0x6D6);
     /* Fall through to exit_cleanup (ignore return value) */
@@ -417,18 +417,18 @@ exit_cleanup:
      * scancode, which is what dropped the user into FRIENDLY GAME on
      * intro skip. Zero the count + currentKey so the buffer can't
      * retroactively trigger anything. */
-    fireResetFlag = 1;
-    keyCount = 0;
-    currentKey = 0;
+    _fireResetFlag = 1;
+    _keyCount = 0;
+    _currentKey = 0;
     return;
 
 load_fail_mid:
     /* Fire pressed → show loader1 splash and continue.
      * Window-X pressed → bypass the splash and exit fast. */
-    if (g_quitToDos == 0) {
+    if (_quitToDos == 0) {
         FadeOutToBlack();
 #ifndef AGA
-        paletteIndex = 3;
+        _paletteIndex = 3;
 #endif
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
         FadeIn();
@@ -436,17 +436,17 @@ load_fail_mid:
     goto exit_cleanup;
 
 load_fail_early:
-    if (g_quitToDos == 0) {
+    if (_quitToDos == 0) {
         FadeOutToBlack();
 #ifndef AGA
-        paletteIndex = 3;
+        _paletteIndex = 3;
 #endif
         loaderIntroLoadFrameToFrontbufferAlt((const uint8_t *)GRAFS "loader1.raw");
         FadeIn();
     }
     /* See exit_cleanup for the rationale. */
-    fireResetFlag = 1;
-    keyCount = 0;
-    currentKey = 0;
+    _fireResetFlag = 1;
+    _keyCount = 0;
+    _currentKey = 0;
     return;
 }

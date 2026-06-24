@@ -19,7 +19,7 @@
  * adjacencies (see docs/CAREERTEAM_STEP4_REWORK.md):
  *   - phase 1: the "is this player inside the team buffer?" range checks now
  *     bound on CAREER_TEAM_BUF_SIZE, not the next BSS symbol
- *     (careerNumPlayers / playerPositions).
+ *     (careerNumPlayers / _playerPositions).
  *   - phases 2-3: DIY standings / cup brackets store a team IDENTITY (-1 ==
  *     careerTeam) resolved by a branch in diy_resolve_team(), never
  *     `&selTeamsPtr + (careerTeam offset)` — so careerTeam no longer has to
@@ -46,20 +46,20 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "careerTeam\n"
-    _ASM_PFX "careerTeam:\n"
+    ".globl " _ASM_PFX "_careerTeam\n"
+    _ASM_PFX "_careerTeam:\n"
     ".skip 1292\n"
-    ".globl " _ASM_PFX "currentTeam\n"
-    _ASM_PFX "currentTeam:\n"
+    ".globl " _ASM_PFX "_currentTeam\n"
+    _ASM_PFX "_currentTeam:\n"
     ".skip 1292\n"
-    /* tmdFileBuffer — the TMD team pool: TeamFileEx[80] (80*684 = 54720 B),
-     * lifted out of the careerFileBuffer overlay (UNTANGLE step 3, 2026-06-10).
-     * Addressed as (TeamFileEx *)&tmdFileBuffer + i; saved as the typed
-     * `tmd_teams` JSON array (same emit_team_file_ex_body path as selectedTeams),
+    /* _tmdFileBuffer — the TMD team pool: TeamFileEx[80] (80*684 = 54720 B),
+     * lifted out of the _careerFileBuffer overlay (UNTANGLE step 3, 2026-06-10).
+     * Addressed as (TeamFileEx *)&_tmdFileBuffer + i; saved as the typed
+     * `tmd_teams` JSON array (same emit_team_file_ex_body path as _selectedTeams),
      * so this is save-format-neutral. Raw-byte label so the typed-but-undersized
-     * externs (extern uint8_t tmdFileBuffer / tmdFileBuffer[]) resolve. */
-    ".globl " _ASM_PFX "tmdFileBuffer\n"
-    _ASM_PFX "tmdFileBuffer:\n"
+     * externs (extern uint8_t _tmdFileBuffer / _tmdFileBuffer[]) resolve. */
+    ".globl " _ASM_PFX "_tmdFileBuffer\n"
+    _ASM_PFX "_tmdFileBuffer:\n"
     ".skip 54720\n"
     ".text\n"
 );

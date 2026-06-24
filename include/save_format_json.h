@@ -25,7 +25,7 @@ extern "C" {
 /* Returns 1 if the buffer's first non-whitespace byte is '{', else 0.
  * Used by file_io.c to dispatch JSON vs legacy after LoadFileEx
  * reads the file into the destination buffer. */
-int  SaveJson_BufferIsJson(const uint8_t *buf, uint32_t size);
+int  SaveJson_BufferIsJson(const uint8_t *buf, uint32_t _size);
 
 /* Same check via stdio on `save/<filename>` — used when the file
  * size could exceed careerFileBuffer's capacity (JSON saves can be

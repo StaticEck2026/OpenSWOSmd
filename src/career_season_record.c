@@ -49,7 +49,7 @@ _Static_assert(offsetof(CareerSeasonRecord, goalsTaken)   == 10, "rec layout");
 /* Typed base symbol (offset 0, coincident with gamesPlayed). Available for
  * new/migrated code; the flat field labels below remain valid until consumers
  * move to careerSeasonRecord.<field>. */
-extern CareerSeasonRecord careerSeasonRecord;
+extern CareerSeasonRecord _careerSeasonRecord;
 
 /* Standalone backing storage — zero-init BSS, real labels at each field offset
  * (see header comment for why real labels, not .equ). Mirrors the section
@@ -63,25 +63,25 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "careerSeasonRecord\n"
-    _ASM_PFX "careerSeasonRecord:\n"
-    ".globl " _ASM_PFX "gamesPlayed\n"
-    _ASM_PFX "gamesPlayed:\n"
+    ".globl " _ASM_PFX "_careerSeasonRecord\n"
+    _ASM_PFX "_careerSeasonRecord:\n"
+    ".globl " _ASM_PFX "_gamesPlayed\n"
+    _ASM_PFX "_gamesPlayed:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "numWins\n"
-    _ASM_PFX "numWins:\n"
+    ".globl " _ASM_PFX "_numWins\n"
+    _ASM_PFX "_numWins:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "numDrawn\n"
-    _ASM_PFX "numDrawn:\n"
+    ".globl " _ASM_PFX "_numDrawn\n"
+    _ASM_PFX "_numDrawn:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "numLost\n"
-    _ASM_PFX "numLost:\n"
+    ".globl " _ASM_PFX "_numLost\n"
+    _ASM_PFX "_numLost:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "goalsScored\n"
-    _ASM_PFX "goalsScored:\n"
+    ".globl " _ASM_PFX "_goalsScored\n"
+    _ASM_PFX "_goalsScored:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "goalsTaken\n"
-    _ASM_PFX "goalsTaken:\n"
+    ".globl " _ASM_PFX "_goalsTaken\n"
+    _ASM_PFX "_goalsTaken:\n"
     ".skip 2\n"
     ".text\n"
 );

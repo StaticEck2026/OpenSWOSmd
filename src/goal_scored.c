@@ -13,40 +13,40 @@
 #include "game_types.h"
 
 /* ---- external asm globals ---- */
-extern uint16_t goalScored;
-extern uint16_t runSlower;
-extern uint16_t lastTeamScoredNumber;
-extern Sprite  *lastPlayerScored;
-extern uintptr_t currentScorer;
-extern TeamGame        topTeamInGame;
-extern TeamGame        bottomTeamInGame;
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
-extern TeamGeneralInfo *lastTeamScored;
-extern uint16_t team1TotalGoals;
-extern uint16_t team2TotalGoals;
-extern uint16_t playingPenalties;
-extern uint16_t team1PenaltyGoals;
-extern uint16_t team2PenaltyGoals;
-extern uint16_t statsTeam1Goals;
-extern uint16_t statsTeam2Goals;
-extern uint16_t team1GoalsDigit1;
-extern uint16_t team1GoalsDigit2;
-extern uint16_t team2GoalsDigit1;
-extern uint16_t team2GoalsDigit2;
-extern uint16_t penalty;
-extern uint16_t panicReasonCode;
-extern ScorerInfo      team1Scorers[];
-extern ScorerInfo      team2Scorers[];
-extern Sprite          team1ScorerSprite[];
-extern Sprite          team2ScorerSprite[];
-extern uint16_t team1ScorerSpritesWidths[];
-extern uint16_t team2ScorerSpritesWidths[];
-extern TeamGame       *topTeamPtr;
-extern TeamGame       *bottomTeamPtr;
-extern uint16_t ingameTeamPlayerOffsets[];
-extern uint8_t  smallCharsTable[];
-extern uint8_t  gameTime[];
+extern uint16_t _goalScored;
+extern uint16_t _runSlower;
+extern uint16_t _lastTeamScoredNumber;
+extern Sprite  *_lastPlayerScored;
+extern uintptr_t _currentScorer;
+extern TeamGame        _topTeamInGame;
+extern TeamGame        _bottomTeamInGame;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
+extern TeamGeneralInfo *_lastTeamScored;
+extern uint16_t _team1TotalGoals;
+extern uint16_t _team2TotalGoals;
+extern uint16_t _playingPenalties;
+extern uint16_t _team1PenaltyGoals;
+extern uint16_t _team2PenaltyGoals;
+extern uint16_t _statsTeam1Goals;
+extern uint16_t _statsTeam2Goals;
+extern uint16_t _team1GoalsDigit1;
+extern uint16_t _team1GoalsDigit2;
+extern uint16_t _team2GoalsDigit1;
+extern uint16_t _team2GoalsDigit2;
+extern uint16_t _penalty;
+extern uint16_t _panicReasonCode;
+extern ScorerInfo      _team1Scorers[];
+extern ScorerInfo      _team2Scorers[];
+extern Sprite          _team1ScorerSprite[];
+extern Sprite          _team2ScorerSprite[];
+extern uint16_t _team1ScorerSpritesWidths[];
+extern uint16_t _team2ScorerSpritesWidths[];
+extern TeamGame       *_topTeamPtr;
+extern TeamGame       *_bottomTeamPtr;
+extern uint16_t _ingameTeamPlayerOffsets[];
+extern uint8_t  _smallCharsTable[];
+extern uint8_t  _gameTime[];
 
 /* ---- external functions ---- */
 extern void PanicHaltLoop(void);
@@ -105,70 +105,70 @@ GoalScored(int16_t scoringTeam, Sprite *scorerSprite)
     uint16_t        xOff;       /* d1: current x offset in sprite */
 
     /* ---- set global goal flags ---- */
-    goalScored = 1;
-    runSlower = 1;
-    lastTeamScoredNumber = (uint16_t)scoringTeam;
-    lastPlayerScored = scorerSprite;
-    currentScorer = (uintptr_t)scorerSprite;
+    _goalScored = 1;
+    _runSlower = 1;
+    _lastTeamScoredNumber = (uint16_t)scoringTeam;
+    _lastPlayerScored = scorerSprite;
+    _currentScorer = (uintptr_t)scorerSprite;
 
     /* ---- find in-game team matching scorer's side ---- */
-    inGameTeam = &topTeamInGame;
+    inGameTeam = &_topTeamInGame;
     if (scorerSprite->teamNumber != 1)
-        inGameTeam = &bottomTeamInGame;
+        inGameTeam = &_bottomTeamInGame;
 
     /* ---- find team general info matching the in-game team ---- */
-    a2 = (TeamGame *)topTeamData.inGameTeamPtr;
-    if ((uintptr_t)inGameTeam != (uintptr_t)topTeamData.inGameTeamPtr)
-        a2 = (TeamGame *)bottomTeamData.inGameTeamPtr;
+    a2 = (TeamGame *)_topTeamData.inGameTeamPtr;
+    if ((uintptr_t)inGameTeam != (uintptr_t)_topTeamData.inGameTeamPtr)
+        a2 = (TeamGame *)_bottomTeamData.inGameTeamPtr;
 
     /* a2 should be the TeamGame that matches the scorer's side;
      * lastTeamScored stores the TeamGeneralInfo pointer for the scoring team.
      * ASM uses inGameTeamPtr comparison (not teamNumber) to handle teamPlayingUp swap. */
-    if ((uintptr_t)inGameTeam == (uintptr_t)topTeamData.inGameTeamPtr)
-        lastTeamScored = &topTeamData;
+    if ((uintptr_t)inGameTeam == (uintptr_t)_topTeamData.inGameTeamPtr)
+        _lastTeamScored = &_topTeamData;
     else
-        lastTeamScored = &bottomTeamData;
+        _lastTeamScored = &_bottomTeamData;
 
     /* ---- increment goal counters ---- */
     if (scoringTeam == 2)
         goto inc_team2;
 
     /* team 1 */
-    if (team1TotalGoals == 99)
+    if (_team1TotalGoals == 99)
         return;
-    if (playingPenalties != 0)
-        team1PenaltyGoals++;
+    if (_playingPenalties != 0)
+        _team1PenaltyGoals++;
     else
-        team1TotalGoals++;
-    statsTeam1Goals++;
-    team1GoalsDigit2++;
-    if (team1GoalsDigit2 == 10) {
-        team1GoalsDigit1++;
-        team1GoalsDigit2 = 0;
+        _team1TotalGoals++;
+    _statsTeam1Goals++;
+    _team1GoalsDigit2++;
+    if (_team1GoalsDigit2 == 10) {
+        _team1GoalsDigit1++;
+        _team1GoalsDigit2 = 0;
     }
     goto skip_if_penalties;
 
 inc_team2:
-    if (team2TotalGoals == 99)
+    if (_team2TotalGoals == 99)
         return;
-    if (playingPenalties != 0)
-        team2PenaltyGoals++;
+    if (_playingPenalties != 0)
+        _team2PenaltyGoals++;
     else
-        team2TotalGoals++;
-    statsTeam2Goals++;
-    team2GoalsDigit2++;
-    if (team2GoalsDigit2 == 10) {
-        team2GoalsDigit1++;
-        team2GoalsDigit2 = 0;
+        _team2TotalGoals++;
+    _statsTeam2Goals++;
+    _team2GoalsDigit2++;
+    if (_team2GoalsDigit2 == 10) {
+        _team2GoalsDigit1++;
+        _team2GoalsDigit2 = 0;
     }
 
 skip_if_penalties:
-    if (playingPenalties != 0)
+    if (_playingPenalties != 0)
         return;
 
     /* null check scorer sprite */
     if (scorerSprite == (Sprite *)0) {
-        panicReasonCode = 9;
+        _panicReasonCode = 9;
         PanicHaltLoop();
     }
 
@@ -176,34 +176,34 @@ skip_if_penalties:
     goalType = GT_NORMAL;
     if (scorerSprite->teamNumber != scoringTeam)
         goalType = GT_OWN_GOAL;
-    if (penalty != 0)
+    if (_penalty != 0)
         goalType = GT_PENALTY;
 
     /* ---- select scorer tables by team ---- */
     if (scoringTeam == 1) {
-        scorers = team1Scorers;
-        scorerSprites = team1ScorerSprite;
-        sprWidths = team1ScorerSpritesWidths;
+        scorers = _team1Scorers;
+        scorerSprites = _team1ScorerSprite;
+        sprWidths = _team1ScorerSpritesWidths;
         if (goalType == GT_OWN_GOAL)
             goto own_goal_ptrs;
         goto normal_ptrs;
     } else {
-        scorers = team2Scorers;
-        scorerSprites = team2ScorerSprite;
-        sprWidths = team2ScorerSpritesWidths;
+        scorers = _team2Scorers;
+        scorerSprites = _team2ScorerSprite;
+        sprWidths = _team2ScorerSpritesWidths;
         if (goalType == GT_OWN_GOAL)
             goto normal_ptrs;
         goto own_goal_ptrs;
     }
 
 normal_ptrs:
-    a2 = topTeamPtr;
-    a1_team = bottomTeamPtr;
+    a2 = _topTeamPtr;
+    a1_team = _bottomTeamPtr;
     goto team_ptrs_done;
 
 own_goal_ptrs:
-    a2 = bottomTeamPtr;
-    a1_team = topTeamPtr;
+    a2 = _bottomTeamPtr;
+    a1_team = _topTeamPtr;
 
 team_ptrs_done:
     /* ---- own goal: increment own goal count and clear lastPlayerScored ---- */
@@ -212,7 +212,7 @@ team_ptrs_done:
 
         if (goalType == GT_OWN_GOAL) {
             a1_team->numOwnGoals += 1;
-            lastPlayerScored = (Sprite *)0;
+            _lastPlayerScored = (Sprite *)0;
         }
 
         /* ---- compute player data offset and update stats ---- */
@@ -297,10 +297,10 @@ team_ptrs_done:
             gi->goalType = goalType;
 
             /* copy game time and convert digits to ASCII */
-            gi->time[0] = (int8_t)gameTime[0];
-            gi->time[1] = (int8_t)gameTime[1];
-            gi->time[2] = (int8_t)gameTime[2];
-            gi->time[3] = (int8_t)gameTime[3];
+            gi->time[0] = (int8_t)_gameTime[0];
+            gi->time[1] = (int8_t)_gameTime[1];
+            gi->time[2] = (int8_t)_gameTime[2];
+            gi->time[3] = (int8_t)_gameTime[3];
             gi->time[1] += '0';
             gi->time[2] += '0';
             gi->time[3] += '0';
@@ -312,7 +312,7 @@ team_ptrs_done:
 
         /* ---- find player short name ---- */
         spriteOrdinal = (uint16_t)scorerSprite->playerOrdinal;
-        playerDataOff = ingameTeamPlayerOffsets[spriteOrdinal - 1];
+        playerDataOff = _ingameTeamPlayerOffsets[spriteOrdinal - 1];
         /* playerDataOff is a byte offset from TeamGame base to the PlayerInfo entry.
          * shortName is at offset 12 within PlayerInfo, and players[] starts at offset 42
          * in TeamGame, so we use raw byte arithmetic here (playerDataOff already includes
@@ -327,7 +327,7 @@ team_ptrs_done:
 
         /* ---- render player name into sprite ---- */
         xOff = 0;
-        overflow = Text2Sprite(0, 0, d4, playerName, smallCharsTable, 2, &totalWidth);
+        overflow = Text2Sprite(0, 0, d4, playerName, _smallCharsTable, 2, &totalWidth);
         (void)overflow;
         xOff = totalWidth + 5;  /* space between name and goal list */
 
@@ -366,7 +366,7 @@ team_ptrs_done:
                 }
 
                 /* render time string into sprite */
-                overflow = Text2Sprite(xOff, 0, d4, renderStart, smallCharsTable, 2, &totalWidth);
+                overflow = Text2Sprite(xOff, 0, d4, renderStart, _smallCharsTable, 2, &totalWidth);
             }
             xOff = totalWidth;
 

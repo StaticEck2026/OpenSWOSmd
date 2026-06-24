@@ -42,50 +42,50 @@ typedef uint16_t GameTypes;
 typedef DIYCompetition DIY_Competition;
 
 /* ---- 42 Position arrays (Amiga formation / set-piece player positions) + 2 pointer tables ---- */
-Position bottomCornerLeftPositions[11] = { { 250, 5 }, { 100, 600 }, { 200, 277 }, { 300, 277 }, { 490, 600 }, { 150, 500 }, { 250, 600 }, { 350, 500 }, { 450, 555 }, { 210, 611 }, { 290, 611 } };
-Position topCornerLeftPositions[11] = { { 250, 2 }, { 175, 38 }, { 225, 22 }, { 275, 22 }, { 325, 38 }, { 150, 111 }, { 200, 55 }, { 300, 83 }, { 400, 166 }, { 200, 300 }, { 300, 300 } };
-Position bottomCornerRightPositions[11] = { { 250, 5 }, { 10, 600 }, { 200, 277 }, { 300, 277 }, { 400, 277 }, { 50, 555 }, { 150, 500 }, { 250, 600 }, { 350, 500 }, { 210, 611 }, { 290, 611 } };
-Position topCornerRightPositions[11] = { { 250, 2 }, { 175, 38 }, { 225, 22 }, { 275, 22 }, { 325, 38 }, { 100, 166 }, { 200, 83 }, { 300, 55 }, { 350, 111 }, { 200, 300 }, { 300, 300 } };
-Position bottomGoalOutLeftPositions[11] = { { 290, 10 }, { 100, 166 }, { 200, 133 }, { 300, 133 }, { 400, 166 }, { 100, 355 }, { 200, 277 }, { 300, 277 }, { 400, 355 }, { 200, 444 }, { 300, 444 } };
-Position topGoalOutLeftPositions[11] = { { 250, 11 }, { 100, 144 }, { 200, 144 }, { 300, 144 }, { 400, 144 }, { 100, 244 }, { 200, 277 }, { 300, 277 }, { 400, 244 }, { 200, 444 }, { 300, 444 } };
-Position bottomGoalOutRightPositions[11] = { { 210, 10 }, { 100, 166 }, { 200, 133 }, { 300, 133 }, { 400, 166 }, { 100, 355 }, { 200, 277 }, { 300, 277 }, { 400, 355 }, { 200, 444 }, { 300, 444 } };
-Position topGoalOutRightPositions[11] = { { 250, 11 }, { 100, 144 }, { 200, 144 }, { 300, 144 }, { 400, 144 }, { 100, 244 }, { 200, 277 }, { 300, 277 }, { 400, 244 }, { 200, 444 }, { 300, 444 } };
-Position bottomKeeperHoldsBallPositions[11] = { { 1000, 0 }, { 100, 166 }, { 200, 133 }, { 300, 133 }, { 400, 166 }, { 100, 355 }, { 200, 277 }, { 300, 277 }, { 400, 355 }, { 200, 444 }, { 300, 444 } };
-Position topKeeperHoldsBallPositions[11] = { { 250, 11 }, { 100, 144 }, { 200, 144 }, { 300, 144 }, { 400, 144 }, { 100, 244 }, { 200, 277 }, { 300, 277 }, { 400, 244 }, { 200, 444 }, { 300, 444 } };
-Position bottomStartingPositions[11] = { { 250, 1 }, { 100, 155 }, { 200, 133 }, { 300, 133 }, { 400, 155 }, { 60, 320 }, { 190, 244 }, { 310, 244 }, { 355, 320 }, { 220, 320 }, { 260, 316 } };
-Position topStartingPositions[11] = { { 250, 11 }, { 120, 133 }, { 210, 133 }, { 290, 133 }, { 380, 133 }, { 90, 244 }, { 220, 200 }, { 280, 200 }, { 410, 244 }, { 200, 277 }, { 300, 277 } };
-Position topFreeKickCenterPositions[11] = { { 250, 2 }, { -1015, -54 }, { -1005, -55 }, { 1005, -55 }, { 1015, -54 }, { -1080, 20 }, { -1050, -55 }, { 1060, -45 }, { 1070, 40 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickCenterPositions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1090, 20 }, { -1035, -35 }, { 1020, -60 }, { 1120, 30 }, { -1020, -10 }, { 1040, -15 } };
-Position topFreeKickRight3Positions[11] = { { 250, 2 }, { 290, 22 }, { 220, 27 }, { -1048, -29 }, { -1043, -37 }, { 160, 88 }, { 160, 50 }, { 250, 27 }, { 310, 22 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickRight3Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1000, -15 }, { 1030, -25 }, { 200, 500 }, { 340, 522 }, { 220, 605 }, { 260, 611 } };
-Position topFreeKickLeft1Positions[11] = { { 250, 2 }, { 1043, -37 }, { 1048, -29 }, { 280, 27 }, { 210, 22 }, { 190, 22 }, { 250, 27 }, { 340, 50 }, { 340, 88 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickLeft1Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 160, 522 }, { 300, 500 }, { -1030, -25 }, { 1000, -15 }, { 240, 611 }, { 280, 605 } };
-Position topFreeKickRight2Positions[11] = { { 250, 2 }, { -1048, -26 }, { -1043, -31 }, { -1037, -36 }, { -1030, -41 }, { 190, 11 }, { 220, 38 }, { 250, 33 }, { 300, 22 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickRight2Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1000, -15 }, { 1030, -25 }, { 250, 411 }, { 340, 522 }, { 220, 611 }, { 260, 611 } };
-Position topFreeKickLeft2Positions[11] = { { 250, 2 }, { 1030, -41 }, { 1037, -36 }, { 1043, -31 }, { 1048, -26 }, { 200, 22 }, { 250, 33 }, { 280, 38 }, { 310, 11 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickLeft2Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 160, 522 }, { 250, 411 }, { -1030, -25 }, { 1000, -15 }, { 240, 611 }, { 280, 611 } };
-Position topFreeKickRight1Positions[11] = { { 250, 2 }, { -1038, -44 }, { -1031, -47 }, { -1023, -50 }, { -1014, -53 }, { 190, 11 }, { 220, 38 }, { 250, 33 }, { 300, 22 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickRight1Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1000, -15 }, { 1030, -25 }, { 250, 411 }, { 340, 522 }, { 220, 611 }, { 260, 611 } };
-Position topFreeKickLeft3Positions[11] = { { 250, 2 }, { 1014, -53 }, { 1023, -50 }, { 1031, -47 }, { 1038, -44 }, { 200, 22 }, { 250, 33 }, { 280, 38 }, { 310, 11 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomFreeKickLeft3Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 160, 522 }, { 250, 411 }, { -1030, -25 }, { 1000, -15 }, { 240, 611 }, { 280, 611 } };
-Position bottomPenaltyPositions[11] = { { 250, 5 }, { 100, 277 }, { 200, 277 }, { 300, 277 }, { 400, 277 }, { 100, 500 }, { 200, 500 }, { 300, 500 }, { 400, 500 }, { 220, 555 }, { 250, 522 } };
-Position topPenaltyPositions[11] = { { 250, 2 }, { 175, 88 }, { 225, 122 }, { 275, 122 }, { 325, 88 }, { 70, 155 }, { 200, 166 }, { 300, 166 }, { 430, 155 }, { 150, 300 }, { 300, 300 } };
-Position bottomThrowInForwardRightPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1075, 0 }, { -1025, 0 }, { 22222, 22222 }, { 22222, 22222 }, { -1075, 50 }, { -1050, 75 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomThrowInCenterRightPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1100, 25 }, { -1075, -20 }, { -1025, -25 }, { 22222, 22222 }, { -1075, 75 } };
-Position bottomThrowInBackRightPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1075, -50 }, { -1075, 0 }, { -1025, 0 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomThrowInForwardLeftPositions[11] = { { 22222, 22222 }, { 1025, 0 }, { 1075, 0 }, { 22222, 22222 }, { 22222, 22222 }, { 1075, 50 }, { 1050, 75 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomThrowInCenterLeftPositions[12] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 1025, -25 }, { 1075, -20 }, { 1100, 25 }, { 22222, 22222 }, { 22222, 22222 }, { 1075, 75 }, { 22222, 22222 } };
-Position bottomThrowInBackLeftPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 1025, 0 }, { 1075, 0 }, { 1075, -50 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 } };
-Position bottomStartingGamePositions[11] = { { 380, 255 }, { 365, 261 }, { 350, 266 }, { 335, 272 }, { 320, 277 }, { 305, 283 }, { 290, 288 }, { 275, 294 }, { 260, 300 }, { 245, 305 }, { 230, 311 } };
-Position topStartingGamePositions[11] = { { 120, 255 }, { 135, 261 }, { 150, 266 }, { 165, 272 }, { 180, 277 }, { 195, 283 }, { 210, 288 }, { 225, 294 }, { 240, 300 }, { 255, 305 }, { 270, 311 } };
-Position bottomLeavingPitchPositions[11] = { { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 } };
-Position topLeavingPitchPositions[11] = { { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 } };
-Position bottomFirstExtraStartingPositions[11] = { { 250, 1 }, { 100, 155 }, { 200, 133 }, { 300, 133 }, { 400, 155 }, { 60, 320 }, { 190, 244 }, { 310, 244 }, { 355, 320 }, { 220, 320 }, { 260, 316 } };
-Position topFirstExtraStartingPositions[11] = { { 250, 11 }, { 120, 133 }, { 210, 133 }, { 290, 133 }, { 380, 133 }, { 90, 244 }, { 220, 200 }, { 280, 200 }, { 410, 244 }, { 200, 277 }, { 300, 277 } };
-Position bottomPenaltiesPositions[11] = { { 200, 522 }, { 260, 344 }, { 280, 333 }, { 300, 333 }, { 320, 344 }, { 260, 366 }, { 280, 355 }, { 300, 355 }, { 320, 366 }, { 280, 377 }, { 300, 377 } };
-Position topPenaltiesPositions[11] = { { 250, 2 }, { 260, 277 }, { 280, 266 }, { 300, 266 }, { 320, 277 }, { 260, 300 }, { 280, 288 }, { 300, 288 }, { 320, 300 }, { 280, 311 }, { 300, 311 } };
-Position * bottomBallOutOfPlayPositions[32] = { bottomStartingPositions, bottomGoalOutLeftPositions, bottomGoalOutRightPositions, bottomKeeperHoldsBallPositions, bottomCornerLeftPositions, bottomCornerRightPositions, bottomFreeKickLeft1Positions, bottomFreeKickLeft2Positions, bottomFreeKickLeft3Positions, bottomFreeKickCenterPositions, bottomFreeKickRight1Positions, bottomFreeKickRight2Positions, bottomFreeKickRight3Positions, 0, bottomPenaltyPositions, bottomThrowInForwardRightPositions, bottomThrowInCenterRightPositions, bottomThrowInBackRightPositions, bottomThrowInForwardLeftPositions, bottomThrowInCenterLeftPositions, bottomThrowInBackLeftPositions, bottomStartingGamePositions, bottomStartingGamePositions, bottomLeavingPitchPositions, bottomLeavingPitchPositions, bottomLeavingPitchPositions, bottomLeavingPitchPositions, bottomFirstExtraStartingPositions, bottomFirstExtraStartingPositions, 0, 0, bottomPenaltiesPositions };
-Position * topBallOutOfPlayPositions[32] = { topStartingPositions, topGoalOutLeftPositions, topGoalOutRightPositions, topKeeperHoldsBallPositions, topCornerLeftPositions, topCornerRightPositions, topFreeKickLeft1Positions, topFreeKickLeft2Positions, topFreeKickLeft3Positions, topFreeKickCenterPositions, topFreeKickRight1Positions, topFreeKickRight2Positions, topFreeKickRight3Positions, 0, topPenaltyPositions, 0, 0, 0, 0, 0, 0, topStartingGamePositions, topStartingGamePositions, topLeavingPitchPositions, topLeavingPitchPositions, topLeavingPitchPositions, topLeavingPitchPositions, topFirstExtraStartingPositions, topFirstExtraStartingPositions, 0, 0, topPenaltiesPositions };
+Position _bottomCornerLeftPositions[11] = { { 250, 5 }, { 100, 600 }, { 200, 277 }, { 300, 277 }, { 490, 600 }, { 150, 500 }, { 250, 600 }, { 350, 500 }, { 450, 555 }, { 210, 611 }, { 290, 611 } };
+Position _topCornerLeftPositions[11] = { { 250, 2 }, { 175, 38 }, { 225, 22 }, { 275, 22 }, { 325, 38 }, { 150, 111 }, { 200, 55 }, { 300, 83 }, { 400, 166 }, { 200, 300 }, { 300, 300 } };
+Position _bottomCornerRightPositions[11] = { { 250, 5 }, { 10, 600 }, { 200, 277 }, { 300, 277 }, { 400, 277 }, { 50, 555 }, { 150, 500 }, { 250, 600 }, { 350, 500 }, { 210, 611 }, { 290, 611 } };
+Position _topCornerRightPositions[11] = { { 250, 2 }, { 175, 38 }, { 225, 22 }, { 275, 22 }, { 325, 38 }, { 100, 166 }, { 200, 83 }, { 300, 55 }, { 350, 111 }, { 200, 300 }, { 300, 300 } };
+Position _bottomGoalOutLeftPositions[11] = { { 290, 10 }, { 100, 166 }, { 200, 133 }, { 300, 133 }, { 400, 166 }, { 100, 355 }, { 200, 277 }, { 300, 277 }, { 400, 355 }, { 200, 444 }, { 300, 444 } };
+Position _topGoalOutLeftPositions[11] = { { 250, 11 }, { 100, 144 }, { 200, 144 }, { 300, 144 }, { 400, 144 }, { 100, 244 }, { 200, 277 }, { 300, 277 }, { 400, 244 }, { 200, 444 }, { 300, 444 } };
+Position _bottomGoalOutRightPositions[11] = { { 210, 10 }, { 100, 166 }, { 200, 133 }, { 300, 133 }, { 400, 166 }, { 100, 355 }, { 200, 277 }, { 300, 277 }, { 400, 355 }, { 200, 444 }, { 300, 444 } };
+Position _topGoalOutRightPositions[11] = { { 250, 11 }, { 100, 144 }, { 200, 144 }, { 300, 144 }, { 400, 144 }, { 100, 244 }, { 200, 277 }, { 300, 277 }, { 400, 244 }, { 200, 444 }, { 300, 444 } };
+Position _bottomKeeperHoldsBallPositions[11] = { { 1000, 0 }, { 100, 166 }, { 200, 133 }, { 300, 133 }, { 400, 166 }, { 100, 355 }, { 200, 277 }, { 300, 277 }, { 400, 355 }, { 200, 444 }, { 300, 444 } };
+Position _topKeeperHoldsBallPositions[11] = { { 250, 11 }, { 100, 144 }, { 200, 144 }, { 300, 144 }, { 400, 144 }, { 100, 244 }, { 200, 277 }, { 300, 277 }, { 400, 244 }, { 200, 444 }, { 300, 444 } };
+Position _bottomStartingPositions[11] = { { 250, 1 }, { 100, 155 }, { 200, 133 }, { 300, 133 }, { 400, 155 }, { 60, 320 }, { 190, 244 }, { 310, 244 }, { 355, 320 }, { 220, 320 }, { 260, 316 } };
+Position _topStartingPositions[11] = { { 250, 11 }, { 120, 133 }, { 210, 133 }, { 290, 133 }, { 380, 133 }, { 90, 244 }, { 220, 200 }, { 280, 200 }, { 410, 244 }, { 200, 277 }, { 300, 277 } };
+Position _topFreeKickCenterPositions[11] = { { 250, 2 }, { -1015, -54 }, { -1005, -55 }, { 1005, -55 }, { 1015, -54 }, { -1080, 20 }, { -1050, -55 }, { 1060, -45 }, { 1070, 40 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickCenterPositions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1090, 20 }, { -1035, -35 }, { 1020, -60 }, { 1120, 30 }, { -1020, -10 }, { 1040, -15 } };
+Position _topFreeKickRight3Positions[11] = { { 250, 2 }, { 290, 22 }, { 220, 27 }, { -1048, -29 }, { -1043, -37 }, { 160, 88 }, { 160, 50 }, { 250, 27 }, { 310, 22 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickRight3Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1000, -15 }, { 1030, -25 }, { 200, 500 }, { 340, 522 }, { 220, 605 }, { 260, 611 } };
+Position _topFreeKickLeft1Positions[11] = { { 250, 2 }, { 1043, -37 }, { 1048, -29 }, { 280, 27 }, { 210, 22 }, { 190, 22 }, { 250, 27 }, { 340, 50 }, { 340, 88 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickLeft1Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 160, 522 }, { 300, 500 }, { -1030, -25 }, { 1000, -15 }, { 240, 611 }, { 280, 605 } };
+Position _topFreeKickRight2Positions[11] = { { 250, 2 }, { -1048, -26 }, { -1043, -31 }, { -1037, -36 }, { -1030, -41 }, { 190, 11 }, { 220, 38 }, { 250, 33 }, { 300, 22 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickRight2Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1000, -15 }, { 1030, -25 }, { 250, 411 }, { 340, 522 }, { 220, 611 }, { 260, 611 } };
+Position _topFreeKickLeft2Positions[11] = { { 250, 2 }, { 1030, -41 }, { 1037, -36 }, { 1043, -31 }, { 1048, -26 }, { 200, 22 }, { 250, 33 }, { 280, 38 }, { 310, 11 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickLeft2Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 160, 522 }, { 250, 411 }, { -1030, -25 }, { 1000, -15 }, { 240, 611 }, { 280, 611 } };
+Position _topFreeKickRight1Positions[11] = { { 250, 2 }, { -1038, -44 }, { -1031, -47 }, { -1023, -50 }, { -1014, -53 }, { 190, 11 }, { 220, 38 }, { 250, 33 }, { 300, 22 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickRight1Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1000, -15 }, { 1030, -25 }, { 250, 411 }, { 340, 522 }, { 220, 611 }, { 260, 611 } };
+Position _topFreeKickLeft3Positions[11] = { { 250, 2 }, { 1014, -53 }, { 1023, -50 }, { 1031, -47 }, { 1038, -44 }, { 200, 22 }, { 250, 33 }, { 280, 38 }, { 310, 11 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomFreeKickLeft3Positions[11] = { { 250, 5 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 160, 522 }, { 250, 411 }, { -1030, -25 }, { 1000, -15 }, { 240, 611 }, { 280, 611 } };
+Position _bottomPenaltyPositions[11] = { { 250, 5 }, { 100, 277 }, { 200, 277 }, { 300, 277 }, { 400, 277 }, { 100, 500 }, { 200, 500 }, { 300, 500 }, { 400, 500 }, { 220, 555 }, { 250, 522 } };
+Position _topPenaltyPositions[11] = { { 250, 2 }, { 175, 88 }, { 225, 122 }, { 275, 122 }, { 325, 88 }, { 70, 155 }, { 200, 166 }, { 300, 166 }, { 430, 155 }, { 150, 300 }, { 300, 300 } };
+Position _bottomThrowInForwardRightPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1075, 0 }, { -1025, 0 }, { 22222, 22222 }, { 22222, 22222 }, { -1075, 50 }, { -1050, 75 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomThrowInCenterRightPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1100, 25 }, { -1075, -20 }, { -1025, -25 }, { 22222, 22222 }, { -1075, 75 } };
+Position _bottomThrowInBackRightPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { -1075, -50 }, { -1075, 0 }, { -1025, 0 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomThrowInForwardLeftPositions[11] = { { 22222, 22222 }, { 1025, 0 }, { 1075, 0 }, { 22222, 22222 }, { 22222, 22222 }, { 1075, 50 }, { 1050, 75 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomThrowInCenterLeftPositions[12] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 1025, -25 }, { 1075, -20 }, { 1100, 25 }, { 22222, 22222 }, { 22222, 22222 }, { 1075, 75 }, { 22222, 22222 } };
+Position _bottomThrowInBackLeftPositions[11] = { { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 }, { 1025, 0 }, { 1075, 0 }, { 1075, -50 }, { 22222, 22222 }, { 22222, 22222 }, { 22222, 22222 } };
+Position _bottomStartingGamePositions[11] = { { 380, 255 }, { 365, 261 }, { 350, 266 }, { 335, 272 }, { 320, 277 }, { 305, 283 }, { 290, 288 }, { 275, 294 }, { 260, 300 }, { 245, 305 }, { 230, 311 } };
+Position _topStartingGamePositions[11] = { { 120, 255 }, { 135, 261 }, { 150, 266 }, { 165, 272 }, { 180, 277 }, { 195, 283 }, { 210, 288 }, { 225, 294 }, { 240, 300 }, { 255, 305 }, { 270, 311 } };
+Position _bottomLeavingPitchPositions[11] = { { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 }, { 550, 277 } };
+Position _topLeavingPitchPositions[11] = { { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 }, { -50, 377 } };
+Position _bottomFirstExtraStartingPositions[11] = { { 250, 1 }, { 100, 155 }, { 200, 133 }, { 300, 133 }, { 400, 155 }, { 60, 320 }, { 190, 244 }, { 310, 244 }, { 355, 320 }, { 220, 320 }, { 260, 316 } };
+Position _topFirstExtraStartingPositions[11] = { { 250, 11 }, { 120, 133 }, { 210, 133 }, { 290, 133 }, { 380, 133 }, { 90, 244 }, { 220, 200 }, { 280, 200 }, { 410, 244 }, { 200, 277 }, { 300, 277 } };
+Position _bottomPenaltiesPositions[11] = { { 200, 522 }, { 260, 344 }, { 280, 333 }, { 300, 333 }, { 320, 344 }, { 260, 366 }, { 280, 355 }, { 300, 355 }, { 320, 366 }, { 280, 377 }, { 300, 377 } };
+Position _topPenaltiesPositions[11] = { { 250, 2 }, { 260, 277 }, { 280, 266 }, { 300, 266 }, { 320, 277 }, { 260, 300 }, { 280, 288 }, { 300, 288 }, { 320, 300 }, { 280, 311 }, { 300, 311 } };
+Position * _bottomBallOutOfPlayPositions[32] = { _bottomStartingPositions, _bottomGoalOutLeftPositions, _bottomGoalOutRightPositions, _bottomKeeperHoldsBallPositions, _bottomCornerLeftPositions, _bottomCornerRightPositions, _bottomFreeKickLeft1Positions, _bottomFreeKickLeft2Positions, _bottomFreeKickLeft3Positions, _bottomFreeKickCenterPositions, _bottomFreeKickRight1Positions, _bottomFreeKickRight2Positions, _bottomFreeKickRight3Positions, 0, _bottomPenaltyPositions, _bottomThrowInForwardRightPositions, _bottomThrowInCenterRightPositions, _bottomThrowInBackRightPositions, _bottomThrowInForwardLeftPositions, _bottomThrowInCenterLeftPositions, _bottomThrowInBackLeftPositions, _bottomStartingGamePositions, _bottomStartingGamePositions, _bottomLeavingPitchPositions, _bottomLeavingPitchPositions, _bottomLeavingPitchPositions, _bottomLeavingPitchPositions, _bottomFirstExtraStartingPositions, _bottomFirstExtraStartingPositions, 0, 0, _bottomPenaltiesPositions };
+Position * _topBallOutOfPlayPositions[32] = { _topStartingPositions, _topGoalOutLeftPositions, _topGoalOutRightPositions, _topKeeperHoldsBallPositions, _topCornerLeftPositions, _topCornerRightPositions, _topFreeKickLeft1Positions, _topFreeKickLeft2Positions, _topFreeKickLeft3Positions, _topFreeKickCenterPositions, _topFreeKickRight1Positions, _topFreeKickRight2Positions, _topFreeKickRight3Positions, 0, _topPenaltyPositions, 0, 0, 0, 0, 0, 0, _topStartingGamePositions, _topStartingGamePositions, _topLeavingPitchPositions, _topLeavingPitchPositions, _topLeavingPitchPositions, _topLeavingPitchPositions, _topFirstExtraStartingPositions, _topFirstExtraStartingPositions, 0, 0, _topPenaltiesPositions };
 
 /* primaryQualifiedTeamGrids + BSS_00_695C + tertiaryQualifiedTeamGrid +
  * euroCupTitleHolderGrid + cupWinnersCupTitleHolderGrid + uefaCupTitleHolderGrid
@@ -94,28 +94,28 @@ Position * topBallOutOfPlayPositions[32] = { topStartingPositions, topGoalOutLef
  * walker relies on `a5 == euroCupTitleHolderGrid` as a wrap boundary
  * after walking past tertiaryQualifiedTeamGrid, which only works if the
  * five grids sit consecutively in BSS the way SWOS2.s lays them out. */
-uint32_t teamFileDataSize;
-uint16_t teamFileTeamCount;
-uint8_t lastLoadedExtNumber;
-TeamGame topTeamSaved;
-TeamGame bottomTeamSaved;
-TeamGame topTeamInGame;
-TeamGame bottomTeamInGame;
-uint32_t magicValue;
+uint32_t _teamFileDataSize;
+uint16_t _teamFileTeamCount;
+uint8_t _lastLoadedExtNumber;
+TeamGame _topTeamSaved;
+TeamGame _bottomTeamSaved;
+TeamGame _topTeamInGame;
+TeamGame _bottomTeamInGame;
+uint32_t _magicValue;
 /* gameRound: backing buffer in swos_globals.c. On Amiga the label is 1 byte
  * but is followed by an unnamed 99-byte BSS region (BSS_00_CD54 in SWOS2.s)
  * that the round-name string ("FIRST ROUND", etc.) overflows into. Without a
  * proper backing buffer the StringCopy at PlayDIYLeagueMatchAndCacheResult
  * stomps magicValue. See alias in swos_globals.c. */
-uint8_t diskImageContext;
-uint16_t nextGoal;
-uint16_t bootTemp0;
-uint16_t bootTemp1;
-uint16_t bootTemp2;
-uint16_t bootTemp3;
-uint16_t bootTemp4;
-uint16_t bootTemp5;
-uint16_t bootTemp6;
+uint8_t _diskImageContext;
+uint16_t _nextGoal;
+uint16_t _bootTemp0;
+uint16_t _bootTemp1;
+uint16_t _bootTemp2;
+uint16_t _bootTemp3;
+uint16_t _bootTemp4;
+uint16_t _bootTemp5;
+uint16_t _bootTemp6;
 /* kSpriteBlitQueueSentinel_A / _B: backing storage moved to
  * swos_globals.c (3000-byte queue buffer per sentinel, matching
  * SWOS2.s lines 2790-2796). Shared between targets — SDL also
@@ -123,13 +123,13 @@ uint16_t bootTemp6;
  * BLT_BLITQ_END;` (a 4-byte write to what was a 2-byte uint16_t),
  * silently overflowing into adjacent globals before the backing
  * buffer was added. */
-uint16_t ballSpeed;
-uint16_t ballSpeedAfterSave;
-uint16_t gateReceiptsFactor;
-uint16_t foreignMarketRandomPickRetries;
-uint16_t homeMarketRandomPickRetries;
-uint16_t offerSearchRetryCount;
-uint16_t goalkeeperDiveAttemptCount;
+uint16_t _ballSpeed;
+uint16_t _ballSpeedAfterSave;
+uint16_t _gateReceiptsFactor;
+uint16_t _foreignMarketRandomPickRetries;
+uint16_t _homeMarketRandomPickRetries;
+uint16_t _offerSearchRetryCount;
+uint16_t _goalkeeperDiveAttemptCount;
 /* diyFileBufferCopy / diyCompetitionStart / competitionFileBuffer:
  * backing storage moved to swos_globals.c, sized big enough for the
  * 2900-byte word-copy in SaveDIYTournament (was clobbering magicValue
@@ -153,7 +153,7 @@ uint16_t goalkeeperDiveAttemptCount;
  * careerTeam (a TeamFileEx, 0x2AC=684 bytes) into here. The 76-byte definition
  * overflowed 608 bytes past the end and stomped magicValue at +0x70, panicking
  * MenuProc with reasonCode=0x9999 (aStackOverflow). Now sized correctly. */
-TeamFileEx tempTeamBuffer;
+TeamFileEx _tempTeamBuffer;
 /* numberOfFiles: backing storage moved to swos_globals.c. On Amiga
  * the label overlaps the start of foundFilenamesBuffer's BSS run —
  * AssetSys_ResolveAssetList writes the file count at &numberOfFiles
@@ -161,15 +161,15 @@ TeamFileEx tempTeamBuffer;
  * IS foundFilenamesBuffer on Amiga). The .equ alias mirrors that
  * overlap so reads via foundFilenamesBuffer see the entries the
  * writer just produced. */
-uint8_t poolPlayerStrideRef;
-uint32_t imageStreamBytesLeft;
-uint16_t replayState;
-uint16_t userRequestedReplay;
-uint16_t throwInDeadVar;
-uint16_t savedCameraX;
-uint16_t savedCameraY;
-uint16_t teamsLoaded;
-uint16_t poolplyrLoaded;
+uint8_t _poolPlayerStrideRef;
+uint32_t _imageStreamBytesLeft;
+uint16_t _replayState;
+uint16_t _userRequestedReplay;
+uint16_t _throwInDeadVar;
+uint16_t _savedCameraX;
+uint16_t _savedCameraY;
+uint16_t _teamsLoaded;
+uint16_t _poolplyrLoaded;
 /* highestScorersTable: 92-byte struct (see statistics.c:450-457 layout).
  * The auto-extractor labeled the Amiga symbol as ds.b $1 because the
  * label is followed by an unnamed BSS_00_996E6 continuation that holds
@@ -178,77 +178,77 @@ uint16_t poolplyrLoaded;
  * poolplyrLoaded / teamsLoaded / savedCameraX/Y / replayState (which
  * sat at +2, +4, ... after the original auto-extractor squashed them
  * adjacent). Allocate the full 92 bytes here. */
-uint8_t highestScorersTable[92];
-uint32_t menuDataOffset;
-uint32_t menuFreeSpace;
-MenuEntry templateMenuEntry;
-uint16_t exitMenu;
-uint16_t numSpritesToRender;
+uint8_t _highestScorersTable[92];
+uint32_t _menuDataOffset;
+uint32_t _menuFreeSpace;
+MenuEntry _templateMenuEntry;
+uint16_t _exitMenu;
+uint16_t _numSpritesToRender;
 /* hilNumGoals / hilTeam1Goals / hilTeam2Goals / hilPitchNumber /
  * hilMaxSubstitutes: aliased into hilBackingBuf in swos_globals.c — they
  * sit immediately after hilGameName/hilGameRound in the Amiga BSS run
  * and LoadHilFile relies on overflowing hilFileBuffer through them to
  * deserialize the HIL header (otherwise hilNumGoals stays 0 after load
  * and VIEW HIGHLIGHTS stays greyed out). */
-uint8_t audioDbgFlagA  = 0;
+uint8_t _audioDbgFlagA  = 0;
 /* team1GoalieFaces / team2GoalieSkinType: untangled (roadmap step 3) into
  * GoalieFaceState goalieFaces (swos_globals.c). The old 6-symbol adjacency
  * overlay is gone — each team's main/reserve GK face is now team{1,2}Faces
  * [0]/[1] of a 2-byte array, so the reserve write is in-bounds, not an
  * overrun into an adjacent named global. */
-uint8_t subsFire  = 0;
-uint8_t pl1WasLeft  = 0;
-uint8_t pl1WasRight  = 0;
-uint8_t pl1WasUp  = 0;
-uint8_t pl1WasDown  = 0;
-uint8_t pl1LastFired  = 0;
-uint8_t pl1Left  = 0;
-uint8_t pl1Right  = 0;
-uint8_t pl1Up  = 0;
-uint8_t pl1Down  = 0;
-uint8_t pl1Fire  = 0;
-uint8_t pl1UpRight  = 0;
-uint8_t pl1UpLeft  = 0;
-uint8_t pl1DownRight  = 0;
-uint8_t pl1DownLeft  = 0;
-uint8_t pl1LeftPress  = 0;
-uint8_t pl1RightPress  = 0;
-uint8_t pl1UpPress  = 0;
-uint8_t pl1DownPress  = 0;
-uint8_t pl1ShortFire  = 0;
-uint8_t pl2WasLeft  = 0;
-uint8_t pl2WasRight  = 0;
-uint8_t pl2WasUp  = 0;
-uint8_t pl2WasDown  = 0;
-uint8_t pl2LastFired  = 0;
-uint8_t pl2Left  = 0;
-uint8_t pl2Right  = 0;
-uint8_t pl2Up  = 0;
-uint8_t pl2Down  = 0;
-uint8_t pl2Fire  = 0;
-uint8_t pl2UpRight  = 0;
-uint8_t pl2UpLeft  = 0;
-uint8_t pl2DownRight  = 0;
-uint8_t pl2DownLeft  = 0;
-uint8_t pl2LeftPress  = 0;
-uint8_t pl2RightPress  = 0;
-uint8_t pl2UpPress  = 0;
-uint8_t pl2DownPress  = 0;
-uint8_t pl2ShortFire  = 0;
-uint8_t keyIn  = 0;
-uint8_t seed  = 0;
-uint8_t randXorIndex  = 0;
-uint8_t randXorKey  = 0;
-TeamGeneralInfo topTeamData = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-TeamGeneralInfo bottomTeamData = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-uint8_t playerTurnFlags  = 0;
-uint8_t up  = 0;
-uint8_t down  = 0;
-uint8_t left  = 0;
-uint8_t right  = 0;
-uint8_t shirtType1  = 0;
-uint8_t shirtType2  = 0;
-uint8_t currentCompetitionId  = 0;
+uint8_t _subsFire  = 0;
+uint8_t _pl1WasLeft  = 0;
+uint8_t _pl1WasRight  = 0;
+uint8_t _pl1WasUp  = 0;
+uint8_t _pl1WasDown  = 0;
+uint8_t _pl1LastFired  = 0;
+uint8_t _pl1Left  = 0;
+uint8_t _pl1Right  = 0;
+uint8_t _pl1Up  = 0;
+uint8_t _pl1Down  = 0;
+uint8_t _pl1Fire  = 0;
+uint8_t _pl1UpRight  = 0;
+uint8_t _pl1UpLeft  = 0;
+uint8_t _pl1DownRight  = 0;
+uint8_t _pl1DownLeft  = 0;
+uint8_t _pl1LeftPress  = 0;
+uint8_t _pl1RightPress  = 0;
+uint8_t _pl1UpPress  = 0;
+uint8_t _pl1DownPress  = 0;
+uint8_t _pl1ShortFire  = 0;
+uint8_t _pl2WasLeft  = 0;
+uint8_t _pl2WasRight  = 0;
+uint8_t _pl2WasUp  = 0;
+uint8_t _pl2WasDown  = 0;
+uint8_t _pl2LastFired  = 0;
+uint8_t _pl2Left  = 0;
+uint8_t _pl2Right  = 0;
+uint8_t _pl2Up  = 0;
+uint8_t _pl2Down  = 0;
+uint8_t _pl2Fire  = 0;
+uint8_t _pl2UpRight  = 0;
+uint8_t _pl2UpLeft  = 0;
+uint8_t _pl2DownRight  = 0;
+uint8_t _pl2DownLeft  = 0;
+uint8_t _pl2LeftPress  = 0;
+uint8_t _pl2RightPress  = 0;
+uint8_t _pl2UpPress  = 0;
+uint8_t _pl2DownPress  = 0;
+uint8_t _pl2ShortFire  = 0;
+uint8_t _keyIn  = 0;
+uint8_t _seed  = 0;
+uint8_t _randXorIndex  = 0;
+uint8_t _randXorKey  = 0;
+TeamGeneralInfo _topTeamData = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+TeamGeneralInfo _bottomTeamData = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8_t _playerTurnFlags  = 0;
+uint8_t _up  = 0;
+uint8_t _down  = 0;
+uint8_t _left  = 0;
+uint8_t _right  = 0;
+uint8_t _shirtType1  = 0;
+uint8_t _shirtType2  = 0;
+uint8_t _currentCompetitionId  = 0;
 /* diyLeaguePitchTypeStrTable: real packed-struct definition in
  * swos_amiga_ptr_imports.c. The auto-extractor mis-classified it as a
  * scalar with the SWOS2.s file offset (188198) as its value. */
@@ -265,7 +265,7 @@ uint8_t currentCompetitionId  = 0;
  * symbol by name; the StringTable indexPtrs reach it via
  * `diyTournamentStages + N*0xA + offset`. Each DIYStage = 10 bytes:
  * legs(0), extraTime(2), penalties(4), ptsForWin(6), playCount(8). */
-DIYStage diyTournamentStages[6];
+DIYStage _diyTournamentStages[6];
 
 /* diyTournamentCompetition: REMOVED — folded into the typed
  * `DIYTournamentState diyFileBufferCopy` struct in swos_globals.c. What
@@ -274,7 +274,7 @@ DIYStage diyTournamentStages[6];
  * BSS_00_2DAD0 disassembler-split story. */
 /* diyCompetitionMenu: real packed-menu blob in menu_data.c (same
  * auto-extractor mis-classification as diskMenu). */
-uint8_t nationalityOrdinal  = 0;
+uint8_t _nationalityOrdinal  = 0;
 /* diskMenu: real packed-menu blob in menu_data.c. The auto-extractor
  * mis-classified it as a scalar with the SWOS2.s file offset (1312736)
  * as its value, so any ShowMenu(diskMenu) crashed in UnpackMenu
@@ -287,23 +287,23 @@ uint8_t nationalityOrdinal  = 0;
  * so the check fired on the very first character write and the
  * function spun forever via `goto restart` (career init froze after
  * the chairman's memo). Alias it at trialistNameBuffer+22 instead. */
-uint32_t loaderBankBitmap;
-uint32_t loaderParam;
-uint32_t loaderMemTop;
-uint16_t menuCursorFrame;
-uint16_t twoPlayers;
-uint16_t player1ClearFlag;
-uint16_t player2ClearFlag;
-uint16_t deadVar01;
-uint16_t deadVar02;
-uint16_t internationalAutoAdvanceFlag;
-uint16_t seasonUpdateInProgress;
-uint16_t writeOnlyVar01;
-uint16_t highlightedLeagueTeamId;
-uint16_t oldPlayerSkill;
-uint16_t newPlayerSkill;
-uint16_t team1SelectedPlayerIndex;
-uint16_t team2SelectedPlayerIndex;
+uint32_t _loaderBankBitmap;
+uint32_t _loaderParam;
+uint32_t _loaderMemTop;
+uint16_t _menuCursorFrame;
+uint16_t _twoPlayers;
+uint16_t _player1ClearFlag;
+uint16_t _player2ClearFlag;
+uint16_t _deadVar01;
+uint16_t _deadVar02;
+uint16_t _internationalAutoAdvanceFlag;
+uint16_t _seasonUpdateInProgress;
+uint16_t _writeOnlyVar01;
+uint16_t _highlightedLeagueTeamId;
+uint16_t _oldPlayerSkill;
+uint16_t _newPlayerSkill;
+uint16_t _team1SelectedPlayerIndex;
+uint16_t _team2SelectedPlayerIndex;
 /* careerFileBuffer: backing storage moved to swos_globals.c. On
  * Amiga the label is a 2-byte ds.b at the head of a ~98 KB BSS run
  * that the save-file header overlays — saveFileVersion, the three
@@ -483,7 +483,7 @@ uint16_t team2SelectedPlayerIndex;
  * pointer-sized entries (8 bytes on 64-bit) that don't fit the legacy 20-byte
  * overlay slot, and it's re-derived on load (RebuildPointersAfterLoad), not
  * saved. The overlay keeps a 20-byte reserved gap where it used to live. */
-void *careerCupPickList[5];
+void *_careerCupPickList[5];
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupHostTeam */
 // uint16_t worldCupHostTeam;
 /* MOVED to careerFileBufferBuf overlay (see swos_globals_career_overlay.c): worldCupQualifyingTeam */
@@ -783,11 +783,11 @@ void *careerCupPickList[5];
  * &symbol; saveFileMagic1..3 are set/verified in file_io.c at write/read time,
  * individually — not a block), so these no longer need to live inside the dumped
  * file buffer. */
-uint16_t saveFileVersion;
-uint32_t saveFileMagic1;
-uint32_t saveFileMagic2;
-uint32_t saveFileMagic3;
-uint32_t saveFileAmigaType;
+uint16_t _saveFileVersion;
+uint32_t _saveFileMagic1;
+uint32_t _saveFileMagic2;
+uint32_t _saveFileMagic3;
+uint32_t _saveFileAmigaType;
 /* numSelectedTeams: aliased to careerFileBuffer + 98476 in
  * swos_globals.c. SaveCareerFile computes the on-disk file size as
  * `(&numSelectedTeams - &careerFileBuffer) + numSelectedTeams*684 + 2`,
@@ -801,10 +801,10 @@ uint32_t saveFileAmigaType;
  * is a 6x uint16 save/restore scratch (menus.c) declared uint8_t[] by consumers;
  * chipRamBitmapEnd is a clear-region end marker whose clear loop is disabled
  * (SWOS.c:94), referenced only as &chipRamBitmapEnd. */
-uint8_t  saveGameLength[12];
-uint32_t irqCookieObfuscated;
-uint16_t chipRamBitmapEnd;
-SWOS_CHIP_BSS Sprite * sortedSprites[78];
+uint8_t  _saveGameLength[12];
+uint32_t _irqCookieObfuscated;
+uint16_t _chipRamBitmapEnd;
+SWOS_CHIP_BSS Sprite * _sortedSprites[78];
 /* ---- Chairman sell/exchange response string tables ----
  *
  * Both arrays index chairman-negotiation lines by an offer-outcome
@@ -813,39 +813,39 @@ SWOS_CHIP_BSS Sprite * sortedSprites[78];
  * aAsThesePlayers and aAndWeWillAccep — the chairman engine prepends
  * byte 0 as a status glyph, and the +1 entry points past it to the
  * plain ASCII run. Transcribed from Data.c:2931/2936. */
-extern const char aAsThisPlayerIs[];
-extern uint8_t    aAsThesePlayers[35];
-extern uint8_t    aAndWeWillAccep[38];
-extern const char aThisPlayerFrom[];
-extern const char aAndWeWillAccep_0[];
-extern const char aThesePlayersFr[];
-extern const char aButWeWouldBeHa[];
-extern const char aFavourableOffe[];
+extern const char _aAsThisPlayerIs[];
+extern uint8_t    _aAsThesePlayers[35];
+extern uint8_t    _aAndWeWillAccep[38];
+extern const char _aThisPlayerFrom[];
+extern const char _aAndWeWillAccep_0[];
+extern const char _aThesePlayersFr[];
+extern const char _aButWeWouldBeHa[];
+extern const char _aFavourableOffe[];
 
-char *exchangeFmtLine2b[9] = {
+char *_exchangeFmtLine2b[9] = {
     0,
-    (char *)aAsThisPlayerIs,
-    (char *)aAsThesePlayers,
-    (char *)(aAsThesePlayers + 1),
-    (char *)aAndWeWillAccep,
-    (char *)(aAndWeWillAccep + 1),
-    (char *)aThisPlayerFrom,
-    (char *)aAndWeWillAccep_0,
-    (char *)aThisPlayerFrom,
+    (char *)_aAsThisPlayerIs,
+    (char *)_aAsThesePlayers,
+    (char *)(_aAsThesePlayers + 1),
+    (char *)_aAndWeWillAccep,
+    (char *)(_aAndWeWillAccep + 1),
+    (char *)_aThisPlayerFrom,
+    (char *)_aAndWeWillAccep_0,
+    (char *)_aThisPlayerFrom,
 };
 
-char *sellExchangeResponseStrings[12] = {
+char *_sellExchangeResponseStrings[12] = {
     0, 0,
-    (char *)aAsThisPlayerIs,
-    (char *)aAsThesePlayers,
-    (char *)(aAsThesePlayers + 1),
-    (char *)aAndWeWillAccep,
-    (char *)(aAndWeWillAccep + 1),
-    (char *)aThisPlayerFrom,
-    (char *)aAndWeWillAccep_0,
-    (char *)aThesePlayersFr,
-    (char *)aButWeWouldBeHa,
-    (char *)aFavourableOffe,
+    (char *)_aAsThisPlayerIs,
+    (char *)_aAsThesePlayers,
+    (char *)(_aAsThesePlayers + 1),
+    (char *)_aAndWeWillAccep,
+    (char *)(_aAndWeWillAccep + 1),
+    (char *)_aThisPlayerFrom,
+    (char *)_aAndWeWillAccep_0,
+    (char *)_aThesePlayersFr,
+    (char *)_aButWeWouldBeHa,
+    (char *)_aFavourableOffe,
 };
 /* ---- Career competition pointer state -----------------------------
  *
@@ -863,33 +863,33 @@ char *sellExchangeResponseStrings[12] = {
  * (competition IDs, slot offsets, etc.). So the overlay layout no
  * longer matters for serialization, and we can give each one a
  * proper standalone definition with native pointer width. */
-uint8_t  *currentCompetitionPtr;
-uint8_t  *secondaryCompetitionPtr;
-uint8_t  *tertiaryCompetitionPtr;
-uint8_t  *quaternaryCompetitionPtr;
-uint8_t  *diyCompetitionPtr;
-uint32_t *diyCompetitionTablePtr;
-uint8_t  *careerCompetitionSlotPtrTable[5];
-uint8_t  *primaryCompStringOffset;
-uint8_t  *secondaryCompStringOffset;
-uint8_t  *tertiaryCompStringOffset;
-uint8_t  *quaternaryCompStringOffset;
-void * nearestTeammatePtr;
+uint8_t  *_currentCompetitionPtr;
+uint8_t  *_secondaryCompetitionPtr;
+uint8_t  *_tertiaryCompetitionPtr;
+uint8_t  *_quaternaryCompetitionPtr;
+uint8_t  *_diyCompetitionPtr;
+uint32_t *_diyCompetitionTablePtr;
+uint8_t  *_careerCompetitionSlotPtrTable[5];
+uint8_t  *_primaryCompStringOffset;
+uint8_t  *_secondaryCompStringOffset;
+uint8_t  *_tertiaryCompStringOffset;
+uint8_t  *_quaternaryCompStringOffset;
+void * _nearestTeammatePtr;
 /* saveFileAmigaType: aliased to careerFileBuffer + 98472 in swos_globals.c. */
-uint32_t * currentGoalPtr;
-uint32_t * currentHilPtr;
-uint8_t * renderStackPtr;
-uint8_t * plane01RenderStackPtr;
-uint8_t * plane23RenderStackPtr;
-uint8_t * menuImageStreamBaseEnd;
-uint8_t * imageStreamCursor;
-uint8_t * stringDataEnd;
-char    * errorMessagePtr;
+uint32_t * _currentGoalPtr;
+uint32_t * _currentHilPtr;
+uint8_t * _renderStackPtr;
+uint8_t * _plane01RenderStackPtr;
+uint8_t * _plane23RenderStackPtr;
+uint8_t * _menuImageStreamBaseEnd;
+uint8_t * _imageStreamCursor;
+uint8_t * _stringDataEnd;
+char    * _errorMessagePtr;
 /* selTeamsPtr: alias into selTeamsBackingBuf + 0 (see swos_globals.c).
  * Previously defined here as `TeamFile *` — the 4-byte definition
  * didn't match the ~45 KB buffer the game actually writes through it. */
-ScorerInfo team1Scorers[8];
-ScorerInfo team2Scorers[8];
+ScorerInfo _team1Scorers[8];
+ScorerInfo _team2Scorers[8];
 /* careerDefaultInternationalSquadSlotsTable: 12 shirt-numbers assigned
  * to the starting XI of a freshly-initialised international team. The
  * actual bytes from SWOS2.s line 105503 are
@@ -899,17 +899,17 @@ ScorerInfo team2Scorers[8];
  * code and used the assembled opcode bytes (0x42, 0x49, 0x4A) instead,
  * which Playaveli's GERMANY national-team squad surfaced as shirt
  * numbers "65/66/73/74" on the first matchday. */
-uint8_t careerDefaultInternationalSquadSlotsTable[12] = {
+uint8_t _careerDefaultInternationalSquadSlotsTable[12] = {
     0x01, 0x02, 0x05, 0x06, 0x03, 0x09, 0x04, 0x07, 0x0B, 0x0A, 0x08, 0x00
 };
-volatile uintptr_t spriteBlitQueue;
+volatile uintptr_t _spriteBlitQueue;
 
 /* audioState: properly-sized AudioState struct (0x2E = 46 bytes). The
  * auto-extractor truncated the BSS dump to 12 bytes, so writes/reads at
  * offsets 0x26 (primaryChanEnable) and 0x27 (secondaryChanEnable) were
  * sliding into the next BSS symbol — non-deterministically letting the
  * audio IRQ enter the secondary-voice path with garbage state. */
-AudioState audioState;
+AudioState _audioState;
 
 /* editTeams* sprite-copy blocks and their ColTable counterparts live
  * in swos_globals.c as six 36-byte adjacent-globals backing buffers —

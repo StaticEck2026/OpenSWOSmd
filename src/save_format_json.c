@@ -23,7 +23,7 @@
 #include "endian_helpers.h"
 #include "translations.h"   /* tr() — localize competition name symbols */
 
-extern uint8_t *currentCompetitionPtr;
+extern uint8_t *_currentCompetitionPtr;
 
 /* Country-code byte of the primary competition's static struct at save
  * time. Rebuild_CompetitionSlotPointers uses this when selTeamNumber
@@ -88,19 +88,19 @@ extern int    atoi(const char *s);
  * was historically declared uint8_t here (a "stub" for the old byte-memset);
  * it is really a uint16, so declare it as such — `careerFileBuffer = 0` must
  * clear both bytes, and tmd_team_count reads it FLD_U16. */
-extern uint16_t careerFileBuffer;
-extern uint16_t numSelectedTeams;
-extern uint8_t  selTeamsPtr;
+extern uint16_t _careerFileBuffer;
+extern uint16_t _numSelectedTeams;
+extern uint8_t  _selTeamsPtr;
 /* step-4 phase 3: standings/bracket team-selection fields hold a team IDENTITY
  * (-1 == careerTeam, >= 0 == selTeamsPtr index), not a byte offset. The load
  * reconstruction below must store the identity, via this helper (diy_competition.c). */
 extern int32_t  diy_team_to_identity(const uint8_t *teamPtr);
-extern uint8_t  seasonInformationsArray[];
+extern uint8_t  _seasonInformationsArray[];
 
 /* Externs for the other save buffers — used by future sub-files but
  * referenced here so the linker keeps the symbols available.
  * (competitionFileBuffer retired → primaryCompetitionBuf, declared below; S6) */
-extern DIYTournamentState diyFileBufferCopy;
+extern DIYTournamentState _diyFileBufferCopy;
 
 /* file_io.c writer helper. */
 extern int16_t WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
@@ -452,7 +452,7 @@ static void load_string_field(const char *buf, int buflen, const char *path,
 static void emit_season_informations(mjson_print_fn_t fn, void *fnd)
 {
     const SeasonInformations *arr =
-        (const SeasonInformations *)seasonInformationsArray;
+        (const SeasonInformations *)_seasonInformationsArray;
     mjson_printf(fn, fnd, "%Q:[", "season_informations");
     for (uint32_t i = 0; i < SAVE_SI_ENTRY_COUNT; i++) {
         const SeasonInformations *e = &arr[i];
@@ -534,7 +534,7 @@ static void load_season_informations(const char *buf, int buflen)
     /* Walk the array via mjson_next so each iteration is O(1) in
      * array position. Indexed "$[i]" finds re-walk from the start
      * each time → O(n²) over the whole array. */
-    SeasonInformations *si_arr = (SeasonInformations *)seasonInformationsArray;
+    SeasonInformations *si_arr = (SeasonInformations *)_seasonInformationsArray;
     long num = 0.0;
     int pos = 0, koff, klen, voff, vlen, vt;
     uint32_t i = 0;
@@ -720,184 +720,184 @@ static void verify_roundtrip_fields(const char *label, const FieldDesc *table,
  * make these visible to the linker; taking their address gives a
  * stable relocatable address resolvable at link time, so the table
  * entries below remain valid static initializers. */
-extern uint16_t currentSeasonShowing;
-extern uint16_t stayingInOldClub;
-extern uint16_t overdraftStreak;
-extern uint16_t overdraftWarningState;
-extern uint16_t performanceWarningState;
-extern uint16_t overdraftWarningCooldown;
-extern uint16_t performanceWarningCooldown;
-extern uint16_t youreSacked;
-extern uint16_t retired;
-extern uint16_t competitionSlotUpdatedFlag;
-extern uint16_t careerTeamLostMatch;
-extern uint16_t clubBusinessActive;
-extern int32_t  newBalance;
-extern int32_t  old_balance;
-extern int32_t  playerPurchases;
-extern int32_t  playerSales;
-extern int32_t  generalRunningCosts;
-extern int32_t  playerWagesBill;
-extern int32_t  gateReceipts;
-extern int32_t  startingBalance;
-extern int32_t  startingBalanceCopy;
-extern int32_t  competitionBonuses;
-extern int32_t  sensisoftPlcSponsorship;
-extern uint16_t financeTotalsNeedResetFlag;
-extern uint32_t weeklyRunningCosts;
-extern uint32_t weeklyPlayerWages;
-extern int32_t  totalTeamValue;
-extern uint8_t  weeklyWageByPlayerIndex[];
-extern uint8_t  playerFormModifiers[];
-extern uint16_t sensisoftPlcSponsorshipFactor;
-extern uint16_t additionalInvestments;
-extern uint16_t teamValueDivisor;
-extern uint16_t expectedLeagueRankIndex;
-extern uint16_t boardConfidenceHistory0;
-extern uint16_t boardConfidenceScore;
-extern uint16_t previousBoardConfidence;
-extern uint16_t playWinCupAnimation;
-extern uint16_t minorTrophyBonusActive;
-extern uint16_t leagueTitleBonusActive;
-extern uint16_t majorTrophyBonusActive;
-extern uint16_t cupBonus1Active;
-extern uint16_t cupBonus2Active;
-extern uint16_t wonWorldCup;
-extern uint16_t wonContinentalCup;
-extern uint16_t wonInvitationTournament;
-extern uint16_t qualifyingStage1PendingFlag0;
-extern uint16_t qualifyingStage1PendingFlag1;
-extern uint16_t qualifyingStage2PendingFlag0;
-extern uint16_t qualifyingStage2PendingFlag1;
-extern uint16_t isCareer;
-extern uint16_t careerMatchSimulatedFlag;
-extern uint16_t gamesPlayed;
-extern uint16_t numWins;
-extern uint16_t numDrawn;
-extern uint16_t numLost;
-extern uint16_t goalsScored;
-extern uint16_t goalsTaken;
-extern uint16_t boardConfidenceMod0;
-extern uint16_t boardConfidenceMod1;
-extern uint16_t boardConfidenceMod2;
-extern uint16_t boardConfidenceMod3;
-extern uint16_t boardConfidenceValue0;
-extern uint16_t boardConfidenceValue1;
-extern uint16_t boardConfidenceMod4;
-extern uint16_t boardConfidenceMod5;
-extern uint16_t boardConfidenceMod6;
-extern uint16_t boardConfidenceMod7;
-extern uint16_t boardConfidenceMod8;
-extern uint16_t boardConfidenceMod9;
-extern uint16_t contractNegotiationActive;
-extern uint16_t wageScalingDivisor;
-extern uint16_t teamNoOfferAccepted;
-extern int32_t  teamFundsAccepted;
-extern uint16_t isNationalSelector;
-extern uint8_t  someTeamFlags;
-extern uint16_t lastNationalityCall;
-extern uint8_t  nationalTeamNationality;
-extern uint8_t  nationalTeamFileId;
-extern uint16_t sameNationalCallFlag;
-extern uint16_t sackedReputationScore;
-extern uint16_t nationalSelectorReputationPoints;
-extern uint8_t  nationalTeamFileCode;
-extern uint16_t seasonReview;
-extern uint16_t worldCupHostTeam;
-extern uint16_t worldCupQualifyingTeam;
-extern uint16_t euroChampionshipQualTeam;
-extern uint16_t selTeamNumber;
-extern uint16_t coachOrPlayer;
-extern uint16_t careerTeamLeague;
-extern uint16_t currentDivisionIndex;
-extern uint16_t leagueFirstRoundNumber;
-extern uint16_t playPromotedAnimation;
-extern uint16_t playRelegatedAnimation;
-extern uint16_t mrOrMs;
-extern uint8_t  managerSexBuffer[];
-extern uint8_t  managerNameBuffer[];
-extern uint8_t  managerSurnameBuffer[];
-extern uint8_t  plNationality;
-extern uint16_t winCupBonusCount;
-extern uint16_t minorTrophyBonusCount;
-extern uint16_t majorTrophyBonusCount;
-extern int16_t  careerReputationPoints;
-extern uint16_t removedOfferPlayersFromSelectedTeamCount;
-extern uint16_t removedOfferPlayersFromOtherTeamsCount;
-extern uint16_t homeMarketUpdateBacklog;
-extern uint16_t foreignMarketUpdateBacklog;
-extern uint16_t offerExpiryIterationsRemaining;
-extern uint16_t numForeignMarketPlayers;
-extern uint16_t numHomeMarketPlayers;
-extern uint16_t numOffers;
-extern uint16_t careerSeasonsCompleted;
-extern uint16_t numForeignMarketPlayers2;
-extern uint16_t pendingForeignPlayerCount;
-extern uint16_t seasonTransferQuota;
-extern uint16_t transferPoolSlotLimit;
-extern uint16_t offerSwapSlotLimit;
-extern uint16_t transferPoolSlotsUsed;
-extern uint16_t offerSwapSlotsUsed;
-extern uint16_t numNewJobOffers;
-extern uint16_t numJobOffers;
-extern uint16_t timeToNegotiate;
-extern uint16_t numPlayersOnTransferMarket;
-extern uint16_t lastOfferPrimaryPlayerOrdinal;
-extern uint16_t lastOfferExtraPlayersWanted;
-extern uint16_t lastOfferSwapPlayerOrdinal;
-extern uint16_t lastOfferExtraPlayerOrdinal;
-extern uint16_t offerNegotiationAttemptCount;
-extern uint16_t transferMarketRandOffset0;
-extern uint16_t transferMarketRandOffset1;
-extern uint16_t transferMarketRandOffset2;
-extern uint16_t transferMarketPhase;
-extern uint16_t careerNumPlayers;
-extern uint16_t selTeamSelectedPlayerPosition;
-extern uint8_t  lastFinancialWeekIndex;
-extern uint16_t numPlayers;
-extern uint16_t currentTeamNumber;
-extern uint16_t currentTeamSelectedPlayerPosition;
-extern uint16_t trainingMatchSavedPlayerPos;
-extern uint16_t lastMatchSavedPlayerPos;
-extern uint16_t lastMatchSavedCoachOrPlayer;
-extern uint8_t  currentTactics;
-extern uint8_t  lastMatchSavedTeamControls;
-extern uint16_t seasonFinished;
-extern uint16_t careerFinished;
-extern uint16_t euroCupSlotIndex;
-extern uint16_t seasonNumberOfSquads;
-extern uint16_t teamSelectionKeyCacheIndex;
-extern uint16_t teamSelectionKeyCacheOffset;
-extern uint16_t teamSelectionKeyCacheCount;
-extern uint16_t careerSlotProcessingInProgress;
-extern uint16_t teamSelectionKeyCacheEnd;
-extern uint8_t  careerJobOfferPhaseBias;     /* promoted from cache-blob byte 1 */
+extern uint16_t _currentSeasonShowing;
+extern uint16_t _stayingInOldClub;
+extern uint16_t _overdraftStreak;
+extern uint16_t _overdraftWarningState;
+extern uint16_t _performanceWarningState;
+extern uint16_t _overdraftWarningCooldown;
+extern uint16_t _performanceWarningCooldown;
+extern uint16_t _youreSacked;
+extern uint16_t _retired;
+extern uint16_t _competitionSlotUpdatedFlag;
+extern uint16_t _careerTeamLostMatch;
+extern uint16_t _clubBusinessActive;
+extern int32_t  _newBalance;
+extern int32_t  _old_balance;
+extern int32_t  _playerPurchases;
+extern int32_t  _playerSales;
+extern int32_t  _generalRunningCosts;
+extern int32_t  _playerWagesBill;
+extern int32_t  _gateReceipts;
+extern int32_t  _startingBalance;
+extern int32_t  _startingBalanceCopy;
+extern int32_t  _competitionBonuses;
+extern int32_t  _sensisoftPlcSponsorship;
+extern uint16_t _financeTotalsNeedResetFlag;
+extern uint32_t _weeklyRunningCosts;
+extern uint32_t _weeklyPlayerWages;
+extern int32_t  _totalTeamValue;
+extern uint8_t  _weeklyWageByPlayerIndex[];
+extern uint8_t  _playerFormModifiers[];
+extern uint16_t _sensisoftPlcSponsorshipFactor;
+extern uint16_t _additionalInvestments;
+extern uint16_t _teamValueDivisor;
+extern uint16_t _expectedLeagueRankIndex;
+extern uint16_t _boardConfidenceHistory0;
+extern uint16_t _boardConfidenceScore;
+extern uint16_t _previousBoardConfidence;
+extern uint16_t _playWinCupAnimation;
+extern uint16_t _minorTrophyBonusActive;
+extern uint16_t _leagueTitleBonusActive;
+extern uint16_t _majorTrophyBonusActive;
+extern uint16_t _cupBonus1Active;
+extern uint16_t _cupBonus2Active;
+extern uint16_t _wonWorldCup;
+extern uint16_t _wonContinentalCup;
+extern uint16_t _wonInvitationTournament;
+extern uint16_t _qualifyingStage1PendingFlag0;
+extern uint16_t _qualifyingStage1PendingFlag1;
+extern uint16_t _qualifyingStage2PendingFlag0;
+extern uint16_t _qualifyingStage2PendingFlag1;
+extern uint16_t _isCareer;
+extern uint16_t _careerMatchSimulatedFlag;
+extern uint16_t _gamesPlayed;
+extern uint16_t _numWins;
+extern uint16_t _numDrawn;
+extern uint16_t _numLost;
+extern uint16_t _goalsScored;
+extern uint16_t _goalsTaken;
+extern uint16_t _boardConfidenceMod0;
+extern uint16_t _boardConfidenceMod1;
+extern uint16_t _boardConfidenceMod2;
+extern uint16_t _boardConfidenceMod3;
+extern uint16_t _boardConfidenceValue0;
+extern uint16_t _boardConfidenceValue1;
+extern uint16_t _boardConfidenceMod4;
+extern uint16_t _boardConfidenceMod5;
+extern uint16_t _boardConfidenceMod6;
+extern uint16_t _boardConfidenceMod7;
+extern uint16_t _boardConfidenceMod8;
+extern uint16_t _boardConfidenceMod9;
+extern uint16_t _contractNegotiationActive;
+extern uint16_t _wageScalingDivisor;
+extern uint16_t _teamNoOfferAccepted;
+extern int32_t  _teamFundsAccepted;
+extern uint16_t _isNationalSelector;
+extern uint8_t  _someTeamFlags;
+extern uint16_t _lastNationalityCall;
+extern uint8_t  _nationalTeamNationality;
+extern uint8_t  _nationalTeamFileId;
+extern uint16_t _sameNationalCallFlag;
+extern uint16_t _sackedReputationScore;
+extern uint16_t _nationalSelectorReputationPoints;
+extern uint8_t  _nationalTeamFileCode;
+extern uint16_t _seasonReview;
+extern uint16_t _worldCupHostTeam;
+extern uint16_t _worldCupQualifyingTeam;
+extern uint16_t _euroChampionshipQualTeam;
+extern uint16_t _selTeamNumber;
+extern uint16_t _coachOrPlayer;
+extern uint16_t _careerTeamLeague;
+extern uint16_t _currentDivisionIndex;
+extern uint16_t _leagueFirstRoundNumber;
+extern uint16_t _playPromotedAnimation;
+extern uint16_t _playRelegatedAnimation;
+extern uint16_t _mrOrMs;
+extern uint8_t  _managerSexBuffer[];
+extern uint8_t  _managerNameBuffer[];
+extern uint8_t  _managerSurnameBuffer[];
+extern uint8_t  _plNationality;
+extern uint16_t _winCupBonusCount;
+extern uint16_t _minorTrophyBonusCount;
+extern uint16_t _majorTrophyBonusCount;
+extern int16_t  _careerReputationPoints;
+extern uint16_t _removedOfferPlayersFromSelectedTeamCount;
+extern uint16_t _removedOfferPlayersFromOtherTeamsCount;
+extern uint16_t _homeMarketUpdateBacklog;
+extern uint16_t _foreignMarketUpdateBacklog;
+extern uint16_t _offerExpiryIterationsRemaining;
+extern uint16_t _numForeignMarketPlayers;
+extern uint16_t _numHomeMarketPlayers;
+extern uint16_t _numOffers;
+extern uint16_t _careerSeasonsCompleted;
+extern uint16_t _numForeignMarketPlayers2;
+extern uint16_t _pendingForeignPlayerCount;
+extern uint16_t _seasonTransferQuota;
+extern uint16_t _transferPoolSlotLimit;
+extern uint16_t _offerSwapSlotLimit;
+extern uint16_t _transferPoolSlotsUsed;
+extern uint16_t _offerSwapSlotsUsed;
+extern uint16_t _numNewJobOffers;
+extern uint16_t _numJobOffers;
+extern uint16_t _timeToNegotiate;
+extern uint16_t _numPlayersOnTransferMarket;
+extern uint16_t _lastOfferPrimaryPlayerOrdinal;
+extern uint16_t _lastOfferExtraPlayersWanted;
+extern uint16_t _lastOfferSwapPlayerOrdinal;
+extern uint16_t _lastOfferExtraPlayerOrdinal;
+extern uint16_t _offerNegotiationAttemptCount;
+extern uint16_t _transferMarketRandOffset0;
+extern uint16_t _transferMarketRandOffset1;
+extern uint16_t _transferMarketRandOffset2;
+extern uint16_t _transferMarketPhase;
+extern uint16_t _careerNumPlayers;
+extern uint16_t _selTeamSelectedPlayerPosition;
+extern uint8_t  _lastFinancialWeekIndex;
+extern uint16_t _numPlayers;
+extern uint16_t _currentTeamNumber;
+extern uint16_t _currentTeamSelectedPlayerPosition;
+extern uint16_t _trainingMatchSavedPlayerPos;
+extern uint16_t _lastMatchSavedPlayerPos;
+extern uint16_t _lastMatchSavedCoachOrPlayer;
+extern uint8_t  _currentTactics;
+extern uint8_t  _lastMatchSavedTeamControls;
+extern uint16_t _seasonFinished;
+extern uint16_t _careerFinished;
+extern uint16_t _euroCupSlotIndex;
+extern uint16_t _seasonNumberOfSquads;
+extern uint16_t _teamSelectionKeyCacheIndex;
+extern uint16_t _teamSelectionKeyCacheOffset;
+extern uint16_t _teamSelectionKeyCacheCount;
+extern uint16_t _careerSlotProcessingInProgress;
+extern uint16_t _teamSelectionKeyCacheEnd;
+extern uint8_t  _careerJobOfferPhaseBias;     /* promoted from cache-blob byte 1 */
 /* primaryComp* slot-0 scalars (competitionOver, diyPresetNameOfCompetition,
  * majorTrophyBonusValue, numDiyTeams, primaryCompWinnerTeam, primaryCompSquadViewParam,
  * primaryCompSlotStateA-C, diyTeamMinDivisionIndex, diyTeamMaxDivisionOffset,
  * leaguePromotionCount, leagueRelegationCount, leagueWarningsEnabled) migrated to
  * primaryCompetitionBuf.tourn.header.* (and .tourn.leagueWarningsEnabled) -- slot-0
  * untangle, S6. Aliases retired. */
-extern uint8_t  viewRandomPhase;
-extern uint8_t  seasonPlaying;
-extern uint16_t inFriendlyMenu;
-extern uint16_t isNationalTeam;
-extern uint16_t gameType;
-extern uint16_t contestStarted;
-extern uint16_t careerLoadedFlag;
-extern uint16_t gameLength;
-extern uint16_t autoReplays;
-extern uint16_t menuMusic;
-extern uint16_t autoSaveHighlights;
-extern uint16_t allPlayerTeamsEqual;
-extern uint16_t pitchType;
-extern uint8_t  seed2;
-extern uint8_t  randXorIndex2;
-extern uint8_t  randXorKey2;
-extern uint8_t  newRandomSeedCopy;
-extern uint16_t randomSeed;
-extern uint16_t saveFileVersion;
-extern uint32_t saveFileAmigaType;
+extern uint8_t  _viewRandomPhase;
+extern uint8_t  _seasonPlaying;
+extern uint16_t _inFriendlyMenu;
+extern uint16_t _isNationalTeam;
+extern uint16_t _gameType;
+extern uint16_t _contestStarted;
+extern uint16_t _careerLoadedFlag;
+extern uint16_t _gameLength;
+extern uint16_t _autoReplays;
+extern uint16_t _menuMusic;
+extern uint16_t _autoSaveHighlights;
+extern uint16_t _allPlayerTeamsEqual;
+extern uint16_t _pitchType;
+extern uint8_t  _seed2;
+extern uint8_t  _randXorIndex2;
+extern uint8_t  _randXorKey2;
+extern uint8_t  _newRandomSeedCopy;
+extern uint16_t _randomSeed;
+extern uint16_t _saveFileVersion;
+extern uint32_t _saveFileAmigaType;
 /* numSelectedTeams already declared at file top. */
 
 /* secondaryComp* (name/minorTrophyBonusValue/winnerTeam/slotStateA-C/finished) migrated to
@@ -907,49 +907,49 @@ extern uint32_t saveFileAmigaType;
 /* diyCompSlotStateA/B/C migrated to diyCompetitionContextBuf.tourn.header.slotState* (slot-4 untangle, S2) */
 /* quaternaryComp* (name/majorTrophyOrCupBonusValue/winnerTeam/slotStateA-C) migrated to
  * euroCupsCompetitionContextBuf.tourn.header.* (slot-3 untangle, S5) */
-extern uint16_t removedPlayerStatAccum;
-extern uint8_t  careerUnavailablePlayerList[];
-extern uint8_t  currentMatchPlayers[];
-extern uint8_t  seasonSquadTeamNumbers[];
-extern uint8_t  playerPositions[];
-extern uint8_t  trainingMatchSavedPlayers[];
-extern uint8_t  trainingMatchSavedShirtNums[];
-extern uint8_t  trainingMatchSavedTactics[];
-extern uint8_t  lastMatchPlayers[];
-extern uint8_t  lastMatchSavedShirtNums[];
-extern uint8_t  careerLastMatchIndexByCompetitionSlot[];
-extern uint8_t  teamBudgetRankTable[];
-extern uint8_t  playersOnTransferMarket[];
-extern uint8_t  foreignMarketPlayers[];
-extern uint8_t  homeMarketPlayers[];
-extern uint8_t  transferOfferTable[];
-extern uint8_t  newJobOffers[];
-extern uint8_t  jobOffers[];
+extern uint16_t _removedPlayerStatAccum;
+extern uint8_t  _careerUnavailablePlayerList[];
+extern uint8_t  _currentMatchPlayers[];
+extern uint8_t  _seasonSquadTeamNumbers[];
+extern uint8_t  _playerPositions[];
+extern uint8_t  _trainingMatchSavedPlayers[];
+extern uint8_t  _trainingMatchSavedShirtNums[];
+extern uint8_t  _trainingMatchSavedTactics[];
+extern uint8_t  _lastMatchPlayers[];
+extern uint8_t  _lastMatchSavedShirtNums[];
+extern uint8_t  _careerLastMatchIndexByCompetitionSlot[];
+extern uint8_t  _teamBudgetRankTable[];
+extern uint8_t  _playersOnTransferMarket[];
+extern uint8_t  _foreignMarketPlayers[];
+extern uint8_t  _homeMarketPlayers[];
+extern uint8_t  _transferOfferTable[];
+extern uint8_t  _newJobOffers[];
+extern uint8_t  _jobOffers[];
 
 /* careerCompetitionSlotPtrTable entry buffers — declared further down
  * for the named-blob section but needed earlier for the per-slot type
  * scalars at the top of the s_career_scalars table. */
-extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
-extern CompetitionSlotBuffer competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
-extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
-extern CompetitionSlotBuffer euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
-extern CompetitionSlotBuffer diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
+extern CompetitionSlotBuffer _primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer */
+extern CompetitionSlotBuffer _competitionContextBuf;          /* slot-1 untangle (S4): typed buffer */
+extern CompetitionSlotBuffer _tertiaryCompetitionContextBuf;   /* slot-2 untangle (S3): typed buffer */
+extern CompetitionSlotBuffer _euroCupsCompetitionContextBuf;   /* slot-3 untangle (S5): typed buffer */
+extern CompetitionSlotBuffer _diyCompetitionContextBuf;   /* slot-4 untangle (S2): typed buffer */
 
 /* Other career-overlay byte regions referenced by the scalar table —
  * declared further down for the per-region section but needed earlier
  * for static initialiser address resolution. */
-extern uint8_t  diyLeagueSeasonStateTable[];
+extern uint8_t  _diyLeagueSeasonStateTable[];
 /* diyTeamIdListType0/1/2 reached via primaryCompetitionBuf casts now (S6). */
-extern uint8_t  careerUnavailablePlayerLookupTable[];
-extern uint8_t  careerUnavailablePlayerNames[];
-extern uint8_t  teamSelectionKeyCache[];
-extern uint8_t  teamTacticsUSERA[];
-extern uint8_t  teamTacticsUSERB[];
-extern uint8_t  teamTacticsUSERC[];
-extern uint8_t  teamTacticsUSERD[];
-extern uint8_t  teamTacticsUSERE[];
-extern uint8_t  teamTacticsUSERF[];
-extern uint8_t  euroCupCopy[];
+extern uint8_t  _careerUnavailablePlayerLookupTable[];
+extern uint8_t  _careerUnavailablePlayerNames[];
+extern uint8_t  _teamSelectionKeyCache[];
+extern uint8_t  _teamTacticsUSERA[];
+extern uint8_t  _teamTacticsUSERB[];
+extern uint8_t  _teamTacticsUSERC[];
+extern uint8_t  _teamTacticsUSERD[];
+extern uint8_t  _teamTacticsUSERE[];
+extern uint8_t  _teamTacticsUSERF[];
+extern uint8_t  _euroCupCopy[];
 
 /* Career meta / flags / finance / market state.
  * Address-based: each entry takes &symbol so the table is
@@ -1028,7 +1028,7 @@ static const FieldDesc s_career_scalars[] = {
      * of populated TeamFileEx records in the TMD pool that follows at
      * tmdFileBuffer (= &careerFileBuffer + 2). Consumed by
      * SearchTeamInTmdFile and friends in career_teams.c. */
-    FXC("tmd_team_count",                 careerFileBuffer,            FLD_U16),
+    FXC("tmd_team_count",                 _careerFileBuffer,            FLD_U16),
 
     /* Per-slot type bytes — first int16 of each careerCompetitionSlotPtrTable
      * entry (= DIYCompetition.competitionType field). Saved explicitly so
@@ -1037,74 +1037,74 @@ static const FieldDesc s_career_scalars[] = {
      * (b20b070) which broke when the saved in-memory state disagreed with
      * the pointer; an explicit field is authoritative and survives any
      * future struct reshuffles. */
-    FXC("primary_slot_type",              primaryCompetitionBuf.tourn.header.competitionType, FLD_S16),
-    FX("secondary_slot_type",             competitionContextBuf.tourn.header.competitionType, FLD_S16),
-    FX("tertiary_slot_type",              tertiaryCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
-    FX("quaternary_slot_type",            euroCupsCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
-    FX("diy_slot_type",                   diyCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
+    FXC("primary_slot_type",              _primaryCompetitionBuf.tourn.header.competitionType, FLD_S16),
+    FX("secondary_slot_type",             _competitionContextBuf.tourn.header.competitionType, FLD_S16),
+    FX("tertiary_slot_type",              _tertiaryCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
+    FX("quaternary_slot_type",            _euroCupsCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
+    FX("diy_slot_type",                   _diyCompetitionContextBuf.tourn.header.competitionType, FLD_S16),
 
-    FX("current_season_showing",          currentSeasonShowing,        FLD_U16),
-    FX("staying_in_old_club",             stayingInOldClub,            FLD_U16),
-    FX("overdraft_streak",                overdraftStreak,             FLD_U16),
-    FX("overdraft_warning_state",         overdraftWarningState,       FLD_U16),
-    FX("performance_warning_state",       performanceWarningState,     FLD_U16),
-    FX("overdraft_warning_cooldown",      overdraftWarningCooldown,    FLD_U16),
-    FX("performance_warning_cooldown",    performanceWarningCooldown,  FLD_U16),
-    FX("youre_sacked",                    youreSacked,                 FLD_U16),
-    FX("retired",                         retired,                     FLD_U16),
-    FX("competition_slot_updated_flag",   competitionSlotUpdatedFlag,  FLD_U16),
-    FX("career_team_lost_match",          careerTeamLostMatch,         FLD_U16),
-    FX("club_business_active",            clubBusinessActive,          FLD_U16),
-    FX("new_balance",                     newBalance,                  FLD_S32),
-    FX("old_balance",                     old_balance,                 FLD_S32),
-    FX("player_purchases",                playerPurchases,             FLD_S32),
-    FX("player_sales",                    playerSales,                 FLD_S32),
-    FX("general_running_costs",           generalRunningCosts,         FLD_S32),
-    FX("player_wages_bill",               playerWagesBill,             FLD_S32),
-    FX("gate_receipts",                   gateReceipts,                FLD_S32),
-    FX("starting_balance",                startingBalance,             FLD_S32),
-    FX("starting_balance_copy",           startingBalanceCopy,         FLD_S32),
-    FX("competition_bonuses",             competitionBonuses,          FLD_S32),
-    FX("sensisoft_plc_sponsorship",       sensisoftPlcSponsorship,     FLD_S32),
-    FX("finance_totals_need_reset_flag",  financeTotalsNeedResetFlag,  FLD_U16),
-    FX("weekly_running_costs",            weeklyRunningCosts,          FLD_U32),
-    FX("weekly_player_wages",             weeklyPlayerWages,           FLD_U32),
-    FX("total_team_value",                totalTeamValue,              FLD_S32),
+    FX("current_season_showing",          _currentSeasonShowing,        FLD_U16),
+    FX("staying_in_old_club",             _stayingInOldClub,            FLD_U16),
+    FX("overdraft_streak",                _overdraftStreak,             FLD_U16),
+    FX("overdraft_warning_state",         _overdraftWarningState,       FLD_U16),
+    FX("performance_warning_state",       _performanceWarningState,     FLD_U16),
+    FX("overdraft_warning_cooldown",      _overdraftWarningCooldown,    FLD_U16),
+    FX("performance_warning_cooldown",    _performanceWarningCooldown,  FLD_U16),
+    FX("youre_sacked",                    _youreSacked,                 FLD_U16),
+    FX("retired",                         _retired,                     FLD_U16),
+    FX("competition_slot_updated_flag",   _competitionSlotUpdatedFlag,  FLD_U16),
+    FX("career_team_lost_match",          _careerTeamLostMatch,         FLD_U16),
+    FX("club_business_active",            _clubBusinessActive,          FLD_U16),
+    FX("new_balance",                     _newBalance,                  FLD_S32),
+    FX("old_balance",                     _old_balance,                 FLD_S32),
+    FX("player_purchases",                _playerPurchases,             FLD_S32),
+    FX("player_sales",                    _playerSales,                 FLD_S32),
+    FX("general_running_costs",           _generalRunningCosts,         FLD_S32),
+    FX("player_wages_bill",               _playerWagesBill,             FLD_S32),
+    FX("gate_receipts",                   _gateReceipts,                FLD_S32),
+    FX("starting_balance",                _startingBalance,             FLD_S32),
+    FX("starting_balance_copy",           _startingBalanceCopy,         FLD_S32),
+    FX("competition_bonuses",             _competitionBonuses,          FLD_S32),
+    FX("sensisoft_plc_sponsorship",       _sensisoftPlcSponsorship,     FLD_S32),
+    FX("finance_totals_need_reset_flag",  _financeTotalsNeedResetFlag,  FLD_U16),
+    FX("weekly_running_costs",            _weeklyRunningCosts,          FLD_U32),
+    FX("weekly_player_wages",             _weeklyPlayerWages,           FLD_U32),
+    FX("total_team_value",                _totalTeamValue,              FLD_S32),
     /* int32_t[32] in game code (career_status.c) — NOT bytes. FLD_BYTES
      * byte-swapped each wage cross-target (64-bit LE save → BE Amiga),
      * summing to garbage → totalTeamValue overflow → gate-receipts panic.
      * Saved as endian-neutral 32-bit decimals. (Live-gdb-confirmed bug.) */
-    FA("weekly_wage_by_player_index",     weeklyWageByPlayerIndex, 128,FLD_U32_ARRAY),
-    FA("player_form_modifiers",           playerFormModifiers,     32, FLD_BYTES),
-    FX("sensisoft_plc_sponsorship_factor",sensisoftPlcSponsorshipFactor,FLD_U16),
-    FX("additional_investments",          additionalInvestments,       FLD_U16),
-    FX("team_value_divisor",              teamValueDivisor,            FLD_U16),
-    FX("expected_league_rank_index",      expectedLeagueRankIndex,     FLD_U16),
+    FA("weekly_wage_by_player_index",     _weeklyWageByPlayerIndex, 128,FLD_U32_ARRAY),
+    FA("player_form_modifiers",           _playerFormModifiers,     32, FLD_BYTES),
+    FX("sensisoft_plc_sponsorship_factor",_sensisoftPlcSponsorshipFactor,FLD_U16),
+    FX("additional_investments",          _additionalInvestments,       FLD_U16),
+    FX("team_value_divisor",              _teamValueDivisor,            FLD_U16),
+    FX("expected_league_rank_index",      _expectedLeagueRankIndex,     FLD_U16),
     /* int16_t[4] in game code — endian-neutral 16-bit decimals, not bytes. */
-    FA("board_confidence_history",        boardConfidenceHistory0, 8,  FLD_U16_ARRAY),
-    FX("board_confidence_score",          boardConfidenceScore,        FLD_U16),
-    FX("previous_board_confidence",       previousBoardConfidence,     FLD_U16),
-    FX("play_win_cup_animation",          playWinCupAnimation,         FLD_U16),
-    FX("minor_trophy_bonus_active",       minorTrophyBonusActive,      FLD_U16),
-    FX("league_title_bonus_active",       leagueTitleBonusActive,      FLD_U16),
-    FX("major_trophy_bonus_active",       majorTrophyBonusActive,      FLD_U16),
-    FX("cup_bonus_1_active",              cupBonus1Active,             FLD_U16),
-    FX("cup_bonus_2_active",              cupBonus2Active,             FLD_U16),
-    FX("won_world_cup",                   wonWorldCup,                 FLD_U16),
-    FX("won_continental_cup",             wonContinentalCup,           FLD_U16),
-    FX("won_invitation_tournament",       wonInvitationTournament,     FLD_U16),
-    FX("qualifying_stage_1_pending_flag0",qualifyingStage1PendingFlag0,FLD_U16),
-    FX("qualifying_stage_1_pending_flag1",qualifyingStage1PendingFlag1,FLD_U16),
-    FX("qualifying_stage_2_pending_flag0",qualifyingStage2PendingFlag0,FLD_U16),
-    FX("qualifying_stage_2_pending_flag1",qualifyingStage2PendingFlag1,FLD_U16),
-    FX("is_career",                       isCareer,                    FLD_U16),
-    FX("career_match_simulated_flag",     careerMatchSimulatedFlag,    FLD_U16),
-    FX("games_played",                    gamesPlayed,                 FLD_U16),
-    FX("num_wins",                        numWins,                     FLD_U16),
-    FX("num_drawn",                       numDrawn,                    FLD_U16),
-    FX("num_lost",                        numLost,                     FLD_U16),
-    FX("goals_scored",                    goalsScored,                 FLD_U16),
-    FX("goals_taken",                     goalsTaken,                  FLD_U16),
+    FA("board_confidence_history",        _boardConfidenceHistory0, 8,  FLD_U16_ARRAY),
+    FX("board_confidence_score",          _boardConfidenceScore,        FLD_U16),
+    FX("previous_board_confidence",       _previousBoardConfidence,     FLD_U16),
+    FX("play_win_cup_animation",          _playWinCupAnimation,         FLD_U16),
+    FX("minor_trophy_bonus_active",       _minorTrophyBonusActive,      FLD_U16),
+    FX("league_title_bonus_active",       _leagueTitleBonusActive,      FLD_U16),
+    FX("major_trophy_bonus_active",       _majorTrophyBonusActive,      FLD_U16),
+    FX("cup_bonus_1_active",              _cupBonus1Active,             FLD_U16),
+    FX("cup_bonus_2_active",              _cupBonus2Active,             FLD_U16),
+    FX("won_world_cup",                   _wonWorldCup,                 FLD_U16),
+    FX("won_continental_cup",             _wonContinentalCup,           FLD_U16),
+    FX("won_invitation_tournament",       _wonInvitationTournament,     FLD_U16),
+    FX("qualifying_stage_1_pending_flag0",_qualifyingStage1PendingFlag0,FLD_U16),
+    FX("qualifying_stage_1_pending_flag1",_qualifyingStage1PendingFlag1,FLD_U16),
+    FX("qualifying_stage_2_pending_flag0",_qualifyingStage2PendingFlag0,FLD_U16),
+    FX("qualifying_stage_2_pending_flag1",_qualifyingStage2PendingFlag1,FLD_U16),
+    FX("is_career",                       _isCareer,                    FLD_U16),
+    FX("career_match_simulated_flag",     _careerMatchSimulatedFlag,    FLD_U16),
+    FX("games_played",                    _gamesPlayed,                 FLD_U16),
+    FX("num_wins",                        _numWins,                     FLD_U16),
+    FX("num_drawn",                       _numDrawn,                    FLD_U16),
+    FX("num_lost",                        _numLost,                     FLD_U16),
+    FX("goals_scored",                    _goalsScored,                 FLD_U16),
+    FX("goals_taken",                     _goalsTaken,                  FLD_U16),
     /* Board-confidence mods (10 x uint16) are INTERLEAVED with value_0/1 in BSS
      * (Mod0-3, Value0, Value1, Mod4-9 — see career_board_confidence.c). Serialize
      * each by NAME, in struct order. The old single FA(...Mod0, 20, FLD_U16_ARRAY)
@@ -1112,194 +1112,194 @@ static const FieldDesc s_career_scalars[] = {
      * 20-byte/10-u16 window) so they were never saved; it also overlapped the
      * value_0/1 FX, which the round-trip verify flagged as a false mismatch.
      * Endian-neutral 16-bit decimals. */
-    FX("board_confidence_mod_0",          boardConfidenceMod0,         FLD_U16),
-    FX("board_confidence_mod_1",          boardConfidenceMod1,         FLD_U16),
-    FX("board_confidence_mod_2",          boardConfidenceMod2,         FLD_U16),
-    FX("board_confidence_mod_3",          boardConfidenceMod3,         FLD_U16),
-    FX("board_confidence_value_0",        boardConfidenceValue0,       FLD_U16),
-    FX("board_confidence_value_1",        boardConfidenceValue1,       FLD_U16),
-    FX("board_confidence_mod_4",          boardConfidenceMod4,         FLD_U16),
-    FX("board_confidence_mod_5",          boardConfidenceMod5,         FLD_U16),
-    FX("board_confidence_mod_6",          boardConfidenceMod6,         FLD_U16),
-    FX("board_confidence_mod_7",          boardConfidenceMod7,         FLD_U16),
-    FX("board_confidence_mod_8",          boardConfidenceMod8,         FLD_U16),
-    FX("board_confidence_mod_9",          boardConfidenceMod9,         FLD_U16),
-    FX("contract_negotiation_active",     contractNegotiationActive,   FLD_U16),
-    FX("wage_scaling_divisor",            wageScalingDivisor,          FLD_U16),
-    FX("team_no_offer_accepted",          teamNoOfferAccepted,         FLD_U16),
-    FX("team_funds_accepted",             teamFundsAccepted,           FLD_S32),
-    FX("is_national_selector",            isNationalSelector,          FLD_U16),
-    FX("some_team_flags",                 someTeamFlags,               FLD_U8 ),
-    FX("last_nationality_call",           lastNationalityCall,         FLD_U16),
-    FX("national_team_nationality",       nationalTeamNationality,     FLD_U8 ),
-    FX("national_team_file_id",           nationalTeamFileId,          FLD_U8 ),
-    FX("same_national_call_flag",         sameNationalCallFlag,        FLD_U16),
-    FX("sacked_reputation_score",         sackedReputationScore,       FLD_U16),
-    FX("national_selector_reputation_points",nationalSelectorReputationPoints,FLD_U16),
-    FX("national_team_file_code",         nationalTeamFileCode,        FLD_U8 ),
-    FX("season_review",                   seasonReview,                FLD_U16),
-    FX("world_cup_host_team",             worldCupHostTeam,            FLD_U16),
-    FX("world_cup_qualifying_team",       worldCupQualifyingTeam,      FLD_U16),
-    FX("euro_championship_qual_team",     euroChampionshipQualTeam,    FLD_U16),
-    FX("sel_team_number",                 selTeamNumber,               FLD_U16),
-    FX("coach_or_player",                 coachOrPlayer,               FLD_U16),
-    FX("career_team_league",              careerTeamLeague,            FLD_U16),
-    FX("current_division_index",          currentDivisionIndex,        FLD_U16),
-    FX("league_first_round_number",       leagueFirstRoundNumber,      FLD_U16),
-    FX("play_promoted_animation",         playPromotedAnimation,       FLD_U16),
-    FX("play_relegated_animation",        playRelegatedAnimation,      FLD_U16),
-    FX("mr_or_ms",                        mrOrMs,                      FLD_U16),
-    FA("manager_sex_buffer",              managerSexBuffer, 4,         FLD_STR ),
-    FA("manager_name_buffer",             managerNameBuffer, 9,        FLD_STR ),
-    FA("manager_surname_buffer",          managerSurnameBuffer, 13,    FLD_STR ),
-    FX("pl_nationality",                  plNationality,               FLD_U8 ),
-    FX("win_cup_bonus_count",             winCupBonusCount,            FLD_U16),
-    FX("minor_trophy_bonus_count",        minorTrophyBonusCount,       FLD_U16),
-    FX("major_trophy_bonus_count",        majorTrophyBonusCount,       FLD_U16),
-    FX("career_reputation_points",        careerReputationPoints,      FLD_S16),
-    FX("removed_offer_players_from_selected_team_count",removedOfferPlayersFromSelectedTeamCount,FLD_U16),
-    FX("removed_offer_players_from_other_teams_count",  removedOfferPlayersFromOtherTeamsCount,  FLD_U16),
-    FX("home_market_update_backlog",      homeMarketUpdateBacklog,     FLD_U16),
-    FX("foreign_market_update_backlog",   foreignMarketUpdateBacklog,  FLD_U16),
-    FX("offer_expiry_iterations_remaining",offerExpiryIterationsRemaining,FLD_U16),
-    FX("num_foreign_market_players",      numForeignMarketPlayers,     FLD_U16),
-    FX("num_home_market_players",         numHomeMarketPlayers,        FLD_U16),
-    FX("num_offers",                      numOffers,                   FLD_U16),
-    FX("career_seasons_completed",        careerSeasonsCompleted,      FLD_U16),
-    FX("num_foreign_market_players_2",    numForeignMarketPlayers2,    FLD_U16),
-    FX("pending_foreign_player_count",    pendingForeignPlayerCount,   FLD_U16),
-    FX("season_transfer_quota",           seasonTransferQuota,         FLD_U16),
-    FX("transfer_pool_slot_limit",        transferPoolSlotLimit,       FLD_U16),
-    FX("offer_swap_slot_limit",           offerSwapSlotLimit,          FLD_U16),
-    FX("transfer_pool_slots_used",        transferPoolSlotsUsed,       FLD_U16),
-    FX("offer_swap_slots_used",           offerSwapSlotsUsed,          FLD_U16),
-    FX("num_new_job_offers",              numNewJobOffers,             FLD_U16),
-    FX("num_job_offers",                  numJobOffers,                FLD_U16),
-    FX("time_to_negotiate",               timeToNegotiate,             FLD_U16),
-    FX("num_players_on_transfer_market",  numPlayersOnTransferMarket,  FLD_U16),
-    FX("last_offer_primary_player_ordinal",lastOfferPrimaryPlayerOrdinal,FLD_U16),
-    FX("last_offer_extra_players_wanted", lastOfferExtraPlayersWanted, FLD_U16),
-    FX("last_offer_swap_player_ordinal",  lastOfferSwapPlayerOrdinal,  FLD_U16),
-    FX("last_offer_extra_player_ordinal", lastOfferExtraPlayerOrdinal, FLD_U16),
-    FX("offer_negotiation_attempt_count", offerNegotiationAttemptCount,FLD_U16),
-    FX("transfer_market_rand_offset_0",   transferMarketRandOffset0,   FLD_U16),
-    FX("transfer_market_rand_offset_1",   transferMarketRandOffset1,   FLD_U16),
-    FX("transfer_market_rand_offset_2",   transferMarketRandOffset2,   FLD_U16),
-    FX("transfer_market_phase",           transferMarketPhase,         FLD_U16),
-    FX("career_num_players",              careerNumPlayers,            FLD_U16),
-    FX("sel_team_selected_player_position",selTeamSelectedPlayerPosition,FLD_U16),
-    FX("last_financial_week_index",       lastFinancialWeekIndex,      FLD_U8 ),
-    FX("num_players",                     numPlayers,                  FLD_U16),
-    FX("current_team_number",             currentTeamNumber,           FLD_U16),
-    FX("current_team_selected_player_position",currentTeamSelectedPlayerPosition,FLD_U16),
-    FX("training_match_saved_player_pos", trainingMatchSavedPlayerPos, FLD_U16),
-    FX("last_match_saved_player_pos",     lastMatchSavedPlayerPos,     FLD_U16),
-    FX("last_match_saved_coach_or_player",lastMatchSavedCoachOrPlayer, FLD_U16),
-    FX("current_tactics",                 currentTactics,              FLD_U8 ),
-    FX("last_match_saved_team_controls",  lastMatchSavedTeamControls,  FLD_U8 ),
-    FX("season_finished",                 seasonFinished,              FLD_U16),
-    FX("career_finished",                 careerFinished,              FLD_U16),
-    FX("euro_cup_slot_index",             euroCupSlotIndex,            FLD_U16),
-    FX("season_number_of_squads",         seasonNumberOfSquads,        FLD_U16),
-    FX("team_selection_key_cache_index",  teamSelectionKeyCacheIndex,  FLD_U16),
-    FX("team_selection_key_cache_offset", teamSelectionKeyCacheOffset, FLD_U16),
-    FX("team_selection_key_cache_count",  teamSelectionKeyCacheCount,  FLD_U16),
-    FX("career_slot_processing_in_progress",careerSlotProcessingInProgress,FLD_U16),
-    FX("team_selection_key_cache_end",    teamSelectionKeyCacheEnd,    FLD_U16),
+    FX("board_confidence_mod_0",          _boardConfidenceMod0,         FLD_U16),
+    FX("board_confidence_mod_1",          _boardConfidenceMod1,         FLD_U16),
+    FX("board_confidence_mod_2",          _boardConfidenceMod2,         FLD_U16),
+    FX("board_confidence_mod_3",          _boardConfidenceMod3,         FLD_U16),
+    FX("board_confidence_value_0",        _boardConfidenceValue0,       FLD_U16),
+    FX("board_confidence_value_1",        _boardConfidenceValue1,       FLD_U16),
+    FX("board_confidence_mod_4",          _boardConfidenceMod4,         FLD_U16),
+    FX("board_confidence_mod_5",          _boardConfidenceMod5,         FLD_U16),
+    FX("board_confidence_mod_6",          _boardConfidenceMod6,         FLD_U16),
+    FX("board_confidence_mod_7",          _boardConfidenceMod7,         FLD_U16),
+    FX("board_confidence_mod_8",          _boardConfidenceMod8,         FLD_U16),
+    FX("board_confidence_mod_9",          _boardConfidenceMod9,         FLD_U16),
+    FX("contract_negotiation_active",     _contractNegotiationActive,   FLD_U16),
+    FX("wage_scaling_divisor",            _wageScalingDivisor,          FLD_U16),
+    FX("team_no_offer_accepted",          _teamNoOfferAccepted,         FLD_U16),
+    FX("team_funds_accepted",             _teamFundsAccepted,           FLD_S32),
+    FX("is_national_selector",            _isNationalSelector,          FLD_U16),
+    FX("some_team_flags",                 _someTeamFlags,               FLD_U8 ),
+    FX("last_nationality_call",           _lastNationalityCall,         FLD_U16),
+    FX("national_team_nationality",       _nationalTeamNationality,     FLD_U8 ),
+    FX("national_team_file_id",           _nationalTeamFileId,          FLD_U8 ),
+    FX("same_national_call_flag",         _sameNationalCallFlag,        FLD_U16),
+    FX("sacked_reputation_score",         _sackedReputationScore,       FLD_U16),
+    FX("national_selector_reputation_points",_nationalSelectorReputationPoints,FLD_U16),
+    FX("national_team_file_code",         _nationalTeamFileCode,        FLD_U8 ),
+    FX("season_review",                   _seasonReview,                FLD_U16),
+    FX("world_cup_host_team",             _worldCupHostTeam,            FLD_U16),
+    FX("world_cup_qualifying_team",       _worldCupQualifyingTeam,      FLD_U16),
+    FX("euro_championship_qual_team",     _euroChampionshipQualTeam,    FLD_U16),
+    FX("sel_team_number",                 _selTeamNumber,               FLD_U16),
+    FX("coach_or_player",                 _coachOrPlayer,               FLD_U16),
+    FX("career_team_league",              _careerTeamLeague,            FLD_U16),
+    FX("current_division_index",          _currentDivisionIndex,        FLD_U16),
+    FX("league_first_round_number",       _leagueFirstRoundNumber,      FLD_U16),
+    FX("play_promoted_animation",         _playPromotedAnimation,       FLD_U16),
+    FX("play_relegated_animation",        _playRelegatedAnimation,      FLD_U16),
+    FX("mr_or_ms",                        _mrOrMs,                      FLD_U16),
+    FA("manager_sex_buffer",              _managerSexBuffer, 4,         FLD_STR ),
+    FA("manager_name_buffer",             _managerNameBuffer, 9,        FLD_STR ),
+    FA("manager_surname_buffer",          _managerSurnameBuffer, 13,    FLD_STR ),
+    FX("pl_nationality",                  _plNationality,               FLD_U8 ),
+    FX("win_cup_bonus_count",             _winCupBonusCount,            FLD_U16),
+    FX("minor_trophy_bonus_count",        _minorTrophyBonusCount,       FLD_U16),
+    FX("major_trophy_bonus_count",        _majorTrophyBonusCount,       FLD_U16),
+    FX("career_reputation_points",        _careerReputationPoints,      FLD_S16),
+    FX("removed_offer_players_from_selected_team_count",_removedOfferPlayersFromSelectedTeamCount,FLD_U16),
+    FX("removed_offer_players_from_other_teams_count",  _removedOfferPlayersFromOtherTeamsCount,  FLD_U16),
+    FX("home_market_update_backlog",      _homeMarketUpdateBacklog,     FLD_U16),
+    FX("foreign_market_update_backlog",   _foreignMarketUpdateBacklog,  FLD_U16),
+    FX("offer_expiry_iterations_remaining",_offerExpiryIterationsRemaining,FLD_U16),
+    FX("num_foreign_market_players",      _numForeignMarketPlayers,     FLD_U16),
+    FX("num_home_market_players",         _numHomeMarketPlayers,        FLD_U16),
+    FX("num_offers",                      _numOffers,                   FLD_U16),
+    FX("career_seasons_completed",        _careerSeasonsCompleted,      FLD_U16),
+    FX("num_foreign_market_players_2",    _numForeignMarketPlayers2,    FLD_U16),
+    FX("pending_foreign_player_count",    _pendingForeignPlayerCount,   FLD_U16),
+    FX("season_transfer_quota",           _seasonTransferQuota,         FLD_U16),
+    FX("transfer_pool_slot_limit",        _transferPoolSlotLimit,       FLD_U16),
+    FX("offer_swap_slot_limit",           _offerSwapSlotLimit,          FLD_U16),
+    FX("transfer_pool_slots_used",        _transferPoolSlotsUsed,       FLD_U16),
+    FX("offer_swap_slots_used",           _offerSwapSlotsUsed,          FLD_U16),
+    FX("num_new_job_offers",              _numNewJobOffers,             FLD_U16),
+    FX("num_job_offers",                  _numJobOffers,                FLD_U16),
+    FX("time_to_negotiate",               _timeToNegotiate,             FLD_U16),
+    FX("num_players_on_transfer_market",  _numPlayersOnTransferMarket,  FLD_U16),
+    FX("last_offer_primary_player_ordinal",_lastOfferPrimaryPlayerOrdinal,FLD_U16),
+    FX("last_offer_extra_players_wanted", _lastOfferExtraPlayersWanted, FLD_U16),
+    FX("last_offer_swap_player_ordinal",  _lastOfferSwapPlayerOrdinal,  FLD_U16),
+    FX("last_offer_extra_player_ordinal", _lastOfferExtraPlayerOrdinal, FLD_U16),
+    FX("offer_negotiation_attempt_count", _offerNegotiationAttemptCount,FLD_U16),
+    FX("transfer_market_rand_offset_0",   _transferMarketRandOffset0,   FLD_U16),
+    FX("transfer_market_rand_offset_1",   _transferMarketRandOffset1,   FLD_U16),
+    FX("transfer_market_rand_offset_2",   _transferMarketRandOffset2,   FLD_U16),
+    FX("transfer_market_phase",           _transferMarketPhase,         FLD_U16),
+    FX("career_num_players",              _careerNumPlayers,            FLD_U16),
+    FX("sel_team_selected_player_position",_selTeamSelectedPlayerPosition,FLD_U16),
+    FX("last_financial_week_index",       _lastFinancialWeekIndex,      FLD_U8 ),
+    FX("num_players",                     _numPlayers,                  FLD_U16),
+    FX("current_team_number",             _currentTeamNumber,           FLD_U16),
+    FX("current_team_selected_player_position",_currentTeamSelectedPlayerPosition,FLD_U16),
+    FX("training_match_saved_player_pos", _trainingMatchSavedPlayerPos, FLD_U16),
+    FX("last_match_saved_player_pos",     _lastMatchSavedPlayerPos,     FLD_U16),
+    FX("last_match_saved_coach_or_player",_lastMatchSavedCoachOrPlayer, FLD_U16),
+    FX("current_tactics",                 _currentTactics,              FLD_U8 ),
+    FX("last_match_saved_team_controls",  _lastMatchSavedTeamControls,  FLD_U8 ),
+    FX("season_finished",                 _seasonFinished,              FLD_U16),
+    FX("career_finished",                 _careerFinished,              FLD_U16),
+    FX("euro_cup_slot_index",             _euroCupSlotIndex,            FLD_U16),
+    FX("season_number_of_squads",         _seasonNumberOfSquads,        FLD_U16),
+    FX("team_selection_key_cache_index",  _teamSelectionKeyCacheIndex,  FLD_U16),
+    FX("team_selection_key_cache_offset", _teamSelectionKeyCacheOffset, FLD_U16),
+    FX("team_selection_key_cache_count",  _teamSelectionKeyCacheCount,  FLD_U16),
+    FX("career_slot_processing_in_progress",_careerSlotProcessingInProgress,FLD_U16),
+    FX("team_selection_key_cache_end",    _teamSelectionKeyCacheEnd,    FLD_U16),
     /* Promoted out of the cache blob (was teamSelectionKeyCache byte 1, the
      * Amiga cache/phase-bias overlap). Old saves lack this key -> loads as 0,
      * re-derived in InitCareer. See project_keycache_cluster_design. */
-    FX("career_job_offer_phase_bias",     careerJobOfferPhaseBias,     FLD_U8 ),
+    FX("career_job_offer_phase_bias",     _careerJobOfferPhaseBias,     FLD_U8 ),
     /* Slot-0 (primary) header scalars — SLOT_ALIAS untangle S6. Same addresses as
      * the retired competitionOver/diyPresetNameOfCompetition/.../leagueRelegationCount
      * aliases (typed primaryCompetitionBuf.tourn.header.* paths), so byte-identical.
      * major_trophy_bonus_value keeps FLD_U16 over the .trophyBonusValue byte@0x30
      * (reads 0x30-0x31, the legacy alias width — S4 precedent, do not "fix"). */
-    FXC("competition_over",               primaryCompetitionBuf.tourn.header.competitionOver, FLD_U16),
-    FAC("diy_preset_name_of_competition", primaryCompetitionBuf.tourn.header.competitionName, 36, FLD_STR),
-    FXC("major_trophy_bonus_value",       primaryCompetitionBuf.tourn.header.trophyBonusValue, FLD_U16),
-    FXC("num_diy_teams",                  primaryCompetitionBuf.tourn.header.numTeams, FLD_U16),
-    FXC("primary_comp_winner_team",       primaryCompetitionBuf.tourn.header.winnerTeam, FLD_U16),
-    FXC("primary_comp_squad_view_param",  primaryCompetitionBuf.tourn.header.squadViewParam, FLD_U16),
-    FXC("primary_comp_slot_state_a",      primaryCompetitionBuf.tourn.header.slotStateA, FLD_U16),
-    FXC("primary_comp_slot_state_b",      primaryCompetitionBuf.tourn.header.slotStateB, FLD_U16),
-    FXC("primary_comp_slot_state_c",      primaryCompetitionBuf.tourn.header.slotStateC, FLD_U16),
-    FXC("diy_team_min_division_index",    primaryCompetitionBuf.tourn.header.minDivisionIndex, FLD_U16),
-    FXC("diy_team_max_division_offset",   primaryCompetitionBuf.tourn.header.maxDivisionOffset, FLD_U16),
-    FXC("league_promotion_count",         primaryCompetitionBuf.tourn.header.promotionCount, FLD_U16),
-    FXC("league_relegation_count",        primaryCompetitionBuf.tourn.header.relegationCount, FLD_U16),
-    FXC("league_warnings_enabled",        primaryCompetitionBuf.tourn.leagueWarningsEnabled, FLD_U16),
-    FX("view_random_phase",               viewRandomPhase,             FLD_U8 ),
-    FX("season_playing",                  seasonPlaying,               FLD_U8 ),
-    FX("in_friendly_menu",                inFriendlyMenu,              FLD_U16),
-    FX("is_national_team",                isNationalTeam,              FLD_U16),
-    FX("game_type",                       gameType,                    FLD_U16),
-    FX("contest_started",                 contestStarted,              FLD_U16),
-    FX("career_loaded_flag",              careerLoadedFlag,            FLD_U16),
-    FX("game_length",                     gameLength,                  FLD_U16),
-    FX("auto_replays",                    autoReplays,                 FLD_U16),
-    FX("menu_music",                      menuMusic,                   FLD_U16),
-    FX("auto_save_highlights",            autoSaveHighlights,          FLD_U16),
-    FX("all_player_teams_equal",          allPlayerTeamsEqual,         FLD_U16),
-    FX("pitch_type",                      pitchType,                   FLD_U16),
-    FX("seed_2",                          seed2,                       FLD_U8 ),
-    FX("rand_xor_index_2",                randXorIndex2,               FLD_U8 ),
-    FX("rand_xor_key_2",                  randXorKey2,                 FLD_U8 ),
-    FX("new_random_seed_copy",            newRandomSeedCopy,           FLD_U8 ),
-    FX("random_seed",                     randomSeed,                  FLD_U16),
-    FXC("save_file_version",              saveFileVersion,             FLD_U16),
-    FXC("save_file_amiga_type",           saveFileAmigaType,           FLD_U32),
-    FXC("num_selected_teams_inner",       numSelectedTeams,            FLD_U16),
+    FXC("competition_over",               _primaryCompetitionBuf.tourn.header.competitionOver, FLD_U16),
+    FAC("diy_preset_name_of_competition", _primaryCompetitionBuf.tourn.header.competitionName, 36, FLD_STR),
+    FXC("major_trophy_bonus_value",       _primaryCompetitionBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FXC("num_diy_teams",                  _primaryCompetitionBuf.tourn.header.numTeams, FLD_U16),
+    FXC("primary_comp_winner_team",       _primaryCompetitionBuf.tourn.header.winnerTeam, FLD_U16),
+    FXC("primary_comp_squad_view_param",  _primaryCompetitionBuf.tourn.header.squadViewParam, FLD_U16),
+    FXC("primary_comp_slot_state_a",      _primaryCompetitionBuf.tourn.header.slotStateA, FLD_U16),
+    FXC("primary_comp_slot_state_b",      _primaryCompetitionBuf.tourn.header.slotStateB, FLD_U16),
+    FXC("primary_comp_slot_state_c",      _primaryCompetitionBuf.tourn.header.slotStateC, FLD_U16),
+    FXC("diy_team_min_division_index",    _primaryCompetitionBuf.tourn.header.minDivisionIndex, FLD_U16),
+    FXC("diy_team_max_division_offset",   _primaryCompetitionBuf.tourn.header.maxDivisionOffset, FLD_U16),
+    FXC("league_promotion_count",         _primaryCompetitionBuf.tourn.header.promotionCount, FLD_U16),
+    FXC("league_relegation_count",        _primaryCompetitionBuf.tourn.header.relegationCount, FLD_U16),
+    FXC("league_warnings_enabled",        _primaryCompetitionBuf.tourn.leagueWarningsEnabled, FLD_U16),
+    FX("view_random_phase",               _viewRandomPhase,             FLD_U8 ),
+    FX("season_playing",                  _seasonPlaying,               FLD_U8 ),
+    FX("in_friendly_menu",                _inFriendlyMenu,              FLD_U16),
+    FX("is_national_team",                _isNationalTeam,              FLD_U16),
+    FX("game_type",                       _gameType,                    FLD_U16),
+    FX("contest_started",                 _contestStarted,              FLD_U16),
+    FX("career_loaded_flag",              _careerLoadedFlag,            FLD_U16),
+    FX("game_length",                     _gameLength,                  FLD_U16),
+    FX("auto_replays",                    _autoReplays,                 FLD_U16),
+    FX("menu_music",                      _menuMusic,                   FLD_U16),
+    FX("auto_save_highlights",            _autoSaveHighlights,          FLD_U16),
+    FX("all_player_teams_equal",          _allPlayerTeamsEqual,         FLD_U16),
+    FX("pitch_type",                      _pitchType,                   FLD_U16),
+    FX("seed_2",                          _seed2,                       FLD_U8 ),
+    FX("rand_xor_index_2",                _randXorIndex2,               FLD_U8 ),
+    FX("rand_xor_key_2",                  _randXorKey2,                 FLD_U8 ),
+    FX("new_random_seed_copy",            _newRandomSeedCopy,           FLD_U8 ),
+    FX("random_seed",                     _randomSeed,                  FLD_U16),
+    FXC("save_file_version",              _saveFileVersion,             FLD_U16),
+    FXC("save_file_amiga_type",           _saveFileAmigaType,           FLD_U32),
+    FXC("num_selected_teams_inner",       _numSelectedTeams,            FLD_U16),
 
     /* Comp context names + slot states (secondary/tertiary/quaternary). */
-    FA("secondary_competition_name",      competitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
-    FX("minor_trophy_bonus_value",        competitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
-    FX("secondary_comp_winner_team",      competitionContextBuf.tourn.header.winnerTeam, FLD_U16),
-    FX("secondary_comp_slot_state_a",     competitionContextBuf.tourn.header.slotStateA, FLD_U16),
-    FX("secondary_comp_slot_state_b",     competitionContextBuf.tourn.header.slotStateB, FLD_U16),
-    FX("secondary_comp_slot_state_c",     competitionContextBuf.tourn.header.slotStateC, FLD_U16),
-    FX("secondary_comp_finished",         competitionContextBuf.tourn.header.compFinished, FLD_U16),
-    FA("tertiary_competition_name",       tertiaryCompetitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
-    FX("league_title_bonus_value",        tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
-    FX("tertiary_comp_winner_team",       tertiaryCompetitionContextBuf.tourn.header.winnerTeam, FLD_U16),
-    FX("tertiary_comp_slot_state_a",      tertiaryCompetitionContextBuf.tourn.header.slotStateA, FLD_U16),
-    FX("tertiary_comp_slot_state_b",      tertiaryCompetitionContextBuf.tourn.header.slotStateB, FLD_U16),
-    FX("tertiary_comp_slot_state_c",      tertiaryCompetitionContextBuf.tourn.header.slotStateC, FLD_U16),
-    FX("tertiary_comp_finished",          tertiaryCompetitionContextBuf.tourn.header.compFinished, FLD_U16),
-    FX("diy_comp_slot_state_a",           diyCompetitionContextBuf.tourn.header.slotStateA, FLD_U16),
-    FX("diy_comp_slot_state_b",           diyCompetitionContextBuf.tourn.header.slotStateB, FLD_U16),
-    FX("diy_comp_slot_state_c",           diyCompetitionContextBuf.tourn.header.slotStateC, FLD_U16),
-    FA("quaternary_competition_name",     euroCupsCompetitionContextBuf.tourn.header.competitionName, 36,FLD_STR),
-    FX("major_trophy_or_cup_bonus_value", euroCupsCompetitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
-    FX("quaternary_comp_winner_team",     euroCupsCompetitionContextBuf.tourn.header.winnerTeam, FLD_U16),
-    FX("quaternary_comp_slot_state_a",    euroCupsCompetitionContextBuf.tourn.header.slotStateA, FLD_U16),
-    FX("quaternary_comp_slot_state_b",    euroCupsCompetitionContextBuf.tourn.header.slotStateB, FLD_U16),
-    FX("quaternary_comp_slot_state_c",    euroCupsCompetitionContextBuf.tourn.header.slotStateC, FLD_U16),
+    FA("secondary_competition_name",      _competitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
+    FX("minor_trophy_bonus_value",        _competitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FX("secondary_comp_winner_team",      _competitionContextBuf.tourn.header.winnerTeam, FLD_U16),
+    FX("secondary_comp_slot_state_a",     _competitionContextBuf.tourn.header.slotStateA, FLD_U16),
+    FX("secondary_comp_slot_state_b",     _competitionContextBuf.tourn.header.slotStateB, FLD_U16),
+    FX("secondary_comp_slot_state_c",     _competitionContextBuf.tourn.header.slotStateC, FLD_U16),
+    FX("secondary_comp_finished",         _competitionContextBuf.tourn.header.compFinished, FLD_U16),
+    FA("tertiary_competition_name",       _tertiaryCompetitionContextBuf.tourn.header.competitionName, 36, FLD_STR),
+    FX("league_title_bonus_value",        _tertiaryCompetitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FX("tertiary_comp_winner_team",       _tertiaryCompetitionContextBuf.tourn.header.winnerTeam, FLD_U16),
+    FX("tertiary_comp_slot_state_a",      _tertiaryCompetitionContextBuf.tourn.header.slotStateA, FLD_U16),
+    FX("tertiary_comp_slot_state_b",      _tertiaryCompetitionContextBuf.tourn.header.slotStateB, FLD_U16),
+    FX("tertiary_comp_slot_state_c",      _tertiaryCompetitionContextBuf.tourn.header.slotStateC, FLD_U16),
+    FX("tertiary_comp_finished",          _tertiaryCompetitionContextBuf.tourn.header.compFinished, FLD_U16),
+    FX("diy_comp_slot_state_a",           _diyCompetitionContextBuf.tourn.header.slotStateA, FLD_U16),
+    FX("diy_comp_slot_state_b",           _diyCompetitionContextBuf.tourn.header.slotStateB, FLD_U16),
+    FX("diy_comp_slot_state_c",           _diyCompetitionContextBuf.tourn.header.slotStateC, FLD_U16),
+    FA("quaternary_competition_name",     _euroCupsCompetitionContextBuf.tourn.header.competitionName, 36,FLD_STR),
+    FX("major_trophy_or_cup_bonus_value", _euroCupsCompetitionContextBuf.tourn.header.trophyBonusValue, FLD_U16),
+    FX("quaternary_comp_winner_team",     _euroCupsCompetitionContextBuf.tourn.header.winnerTeam, FLD_U16),
+    FX("quaternary_comp_slot_state_a",    _euroCupsCompetitionContextBuf.tourn.header.slotStateA, FLD_U16),
+    FX("quaternary_comp_slot_state_b",    _euroCupsCompetitionContextBuf.tourn.header.slotStateB, FLD_U16),
+    FX("quaternary_comp_slot_state_c",    _euroCupsCompetitionContextBuf.tourn.header.slotStateC, FLD_U16),
 
     /* Small named arrays / packed records. */
     /* uint16_t in game code — endian-neutral 16-bit decimal. */
-    FA("removed_player_stat_accum",       removedPlayerStatAccum, 2,   FLD_U16_ARRAY),
-    FA("career_unavailable_player_list",  careerUnavailablePlayerList, 16, FLD_BYTES),
-    FA("current_match_players",           currentMatchPlayers, 32,     FLD_BYTES),
+    FA("removed_player_stat_accum",       _removedPlayerStatAccum, 2,   FLD_U16_ARRAY),
+    FA("career_unavailable_player_list",  _careerUnavailablePlayerList, 16, FLD_BYTES),
+    FA("current_match_players",           _currentMatchPlayers, 32,     FLD_BYTES),
     /* uint16[24] packed team ids — endian-neutral words (was FLD_BYTES, which
      * byte-swapped these host-native uint16s on an LE<->BE cross-target load). */
-    FA("season_squad_team_numbers",       seasonSquadTeamNumbers, 48,  FLD_U16_ARRAY),
-    FA("player_positions",                playerPositions, 32,         FLD_BYTES),
-    FA("training_match_saved_players",    trainingMatchSavedPlayers, 32, FLD_BYTES),
-    FA("training_match_saved_shirt_nums", trainingMatchSavedShirtNums, 32, FLD_BYTES),
-    FA("training_match_saved_tactics",    trainingMatchSavedTactics, 2,FLD_BYTES),
-    FA("last_match_players",              lastMatchPlayers, 32,        FLD_BYTES),
-    FA("last_match_saved_shirt_nums",     lastMatchSavedShirtNums, 32, FLD_BYTES),
+    FA("season_squad_team_numbers",       _seasonSquadTeamNumbers, 48,  FLD_U16_ARRAY),
+    FA("player_positions",                _playerPositions, 32,         FLD_BYTES),
+    FA("training_match_saved_players",    _trainingMatchSavedPlayers, 32, FLD_BYTES),
+    FA("training_match_saved_shirt_nums", _trainingMatchSavedShirtNums, 32, FLD_BYTES),
+    FA("training_match_saved_tactics",    _trainingMatchSavedTactics, 2,FLD_BYTES),
+    FA("last_match_players",              _lastMatchPlayers, 32,        FLD_BYTES),
+    FA("last_match_saved_shirt_nums",     _lastMatchSavedShirtNums, 32, FLD_BYTES),
     FA("career_last_match_index_by_competition_slot",
-                                          careerLastMatchIndexByCompetitionSlot, 162, FLD_BYTES),
-    FA("team_budget_rank_table",          teamBudgetRankTable, 128,    FLD_BYTES),
-    FA("players_on_transfer_market",      playersOnTransferMarket, 10, FLD_BYTES),
+                                          _careerLastMatchIndexByCompetitionSlot, 162, FLD_BYTES),
+    FA("team_budget_rank_table",          _teamBudgetRankTable, 128,    FLD_BYTES),
+    FA("players_on_transfer_market",      _playersOnTransferMarket, 10, FLD_BYTES),
 
     /* Market player slot tables — byte arrays of compact records. The
      * team-id fields are explicit BE byte pairs (id>>8 / id), so they are
      * endian-stable as raw bytes — safe as FLD_BYTES. */
-    FA("foreign_market_players",          foreignMarketPlayers, 60,    FLD_BYTES),
-    FA("home_market_players",             homeMarketPlayers, 100,      FLD_BYTES),
+    FA("foreign_market_players",          _foreignMarketPlayers, 60,    FLD_BYTES),
+    FA("home_market_players",             _homeMarketPlayers, 100,      FLD_BYTES),
     /* transfer_offer_table / job_offers / new_job_offers were FLD_BYTES but
      * hold host-native multi-byte fields (uint16/uint32) that byte-swap on a
      * cross-target load. They are now emitted as typed arrays-of-objects in
@@ -1309,7 +1309,7 @@ static const FieldDesc s_career_scalars[] = {
      * globalTeamNumber, read in teams.c:setLeagueNumbers and
      * career_init.c when deriving currentDivisionIndex. Editable via the
      * DIY-edit-leagues menu's scratch buffer. Flat int8[2000]. */
-    FA("diy_league_season_state_table",   diyLeagueSeasonStateTable, 2000, FLD_BYTES),
+    FA("diy_league_season_state_table",   _diyLeagueSeasonStateTable, 2000, FLD_BYTES),
 
     /* DIY team-id lists per competition type (league/cup/hybrid). Each
      * is an array of BE byte-pairs [country, ordinal] — see
@@ -1323,9 +1323,9 @@ static const FieldDesc s_career_scalars[] = {
      * views of teamIds/groupMap/slots/teamIndexOrder + stageSnapshot). FLD_BYTES =
      * raw copy from the anchor address — byte-identical to the retired aliases
      * (offsets verified; VERIFY=0 gate). */
-    FAC("diy_team_id_list_type_0",        ((DIYCompetitionEx *)&primaryCompetitionBuf)->matchData.league.leagueTeamIds, 288, FLD_BYTES),
-    FAC("diy_team_id_list_type_1",        ((DIYCompetitionEx *)&primaryCompetitionBuf)->cupTeamIds, 2310, FLD_BYTES),
-    FAC("diy_team_id_list_type_2",        primaryCompetitionBuf.tourn.teamIds, 148, FLD_BYTES),
+    FAC("diy_team_id_list_type_0",        ((DIYCompetitionEx *)&_primaryCompetitionBuf)->matchData.league.leagueTeamIds, 288, FLD_BYTES),
+    FAC("diy_team_id_list_type_1",        ((DIYCompetitionEx *)&_primaryCompetitionBuf)->cupTeamIds, 2310, FLD_BYTES),
+    FAC("diy_team_id_list_type_2",        _primaryCompetitionBuf.tourn.teamIds, 148, FLD_BYTES),
 
     /* Per-career-slot competition contexts. Each is a snapshot of
      * diyCompetitionStart / diyFileBufferCopy at the moment
@@ -1351,7 +1351,7 @@ static const FieldDesc s_career_scalars[] = {
      * safety) are superseded by emit_comp_slot, which corrects every cross-
      * target-sensitive field on load AFTER this blob. namePtr rides the blob
      * (stale absolute pointer) and is re-derived by RebuildPointersAfterLoad. */
-    FAC("primary_competition_context",    primaryCompetitionBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FAC("primary_competition_context",    _primaryCompetitionBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
     /* Context-slot raw blobs — UNTANGLE step A4. The 4 *Context slots are now
      * standalone typed CompetitionSlotBuffer { DIYTournamentState tourn;
      * uint8_t stageSnapshot[DIY_STAGE_SNAPSHOT_LEN]; } (swos_competition_slots.c),
@@ -1365,10 +1365,10 @@ static const FieldDesc s_career_scalars[] = {
      * those slots lost their seed order + standings across save/load. The
      * comp_slots typed serializer still overrides the cross-target-sensitive
      * header on load; this blob carries the (same-arch) tail. */
-    FA("competition_context",          competitionContextBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
-    FA("tertiary_competition_context", tertiaryCompetitionContextBuf, sizeof(CompetitionSlotBuffer), FLD_BYTES),
-    FA("diy_competition_context",      diyCompetitionContextBuf,    sizeof(CompetitionSlotBuffer), FLD_BYTES),
-    FA("euro_cups_competition_context",euroCupsCompetitionContextBuf, sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("competition_context",          _competitionContextBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("tertiary_competition_context", _tertiaryCompetitionContextBuf, sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("diy_competition_context",      _diyCompetitionContextBuf,    sizeof(CompetitionSlotBuffer), FLD_BYTES),
+    FA("euro_cups_competition_context",_euroCupsCompetitionContextBuf, sizeof(CompetitionSlotBuffer), FLD_BYTES),
 
     /* Team selection key cache — a list of teamSelectionKeyCacheCount
      * variable-length entries. Each entry header: out[0]=teamSlot,
@@ -1383,18 +1383,18 @@ static const FieldDesc s_career_scalars[] = {
      * fixture on the Amiga from a 64-bit cup save). The blob still carries
      * everything correctly; cache_strides (below) re-lays the strides
      * host-native on load. See fixup_cache_strides_on_load. */
-    FA("team_selection_key_cache",    teamSelectionKeyCache,      1870, FLD_BYTES),
+    FA("team_selection_key_cache",    _teamSelectionKeyCache,      1870, FLD_BYTES),
 
     /* Six user-saved tactic slots (teamTacticsUSERA..F). Same 370-byte
      * TeamTactics shape as a .TAC file (see write_tactics_buf). Saved
      * as flat bytes here for table compactness; structured promotion is
      * a candidate follow-up using the existing emit/load helpers. */
-    FA("team_tactics_user_a",         teamTacticsUSERA,            370, FLD_BYTES),
-    FA("team_tactics_user_b",         teamTacticsUSERB,            370, FLD_BYTES),
-    FA("team_tactics_user_c",         teamTacticsUSERC,            370, FLD_BYTES),
-    FA("team_tactics_user_d",         teamTacticsUSERD,            370, FLD_BYTES),
-    FA("team_tactics_user_e",         teamTacticsUSERE,            370, FLD_BYTES),
-    FA("team_tactics_user_f",         teamTacticsUSERF,            370, FLD_BYTES),
+    FA("team_tactics_user_a",         _teamTacticsUSERA,            370, FLD_BYTES),
+    FA("team_tactics_user_b",         _teamTacticsUSERB,            370, FLD_BYTES),
+    FA("team_tactics_user_c",         _teamTacticsUSERC,            370, FLD_BYTES),
+    FA("team_tactics_user_d",         _teamTacticsUSERD,            370, FLD_BYTES),
+    FA("team_tactics_user_e",         _teamTacticsUSERE,            370, FLD_BYTES),
+    FA("team_tactics_user_f",         _teamTacticsUSERF,            370, FLD_BYTES),
 
     /* NOTE: the *Copy competition record region (euroCupCopy..oceania
      * WorldCupQualificationCopy, 34 records) is NO LONGER saved as a raw
@@ -1405,9 +1405,9 @@ static const FieldDesc s_career_scalars[] = {
 
     /* Small unstructured tables — internal layout not yet modelled. */
     FA("career_unavailable_player_lookup_table",
-                                       careerUnavailablePlayerLookupTable, 80,  FLD_BYTES),
+                                       _careerUnavailablePlayerLookupTable, 80,  FLD_BYTES),
     FA("career_unavailable_player_names",
-                                       careerUnavailablePlayerNames,     340, FLD_BYTES),
+                                       _careerUnavailablePlayerNames,     340, FLD_BYTES),
 
     { NULL, NULL, 0, FLD_END },
 };
@@ -2078,38 +2078,38 @@ static void load_scalar_table(const char *buf, int buflen,
  * both struct layouts are packed (no padding to shift).
  */
 
-extern uint8_t careerTeam;       /* TeamFileEx at careerFileBuffer + 56190 */
-extern uint8_t currentTeam;      /* TeamFileEx at careerFileBuffer + 61610 */
+extern uint8_t _careerTeam;       /* TeamFileEx at careerFileBuffer + 56190 */
+extern uint8_t _currentTeam;      /* TeamFileEx at careerFileBuffer + 61610 */
 
 /* Large opaque region externs — emitted as named base64 sub-blobs
  * so the JSON has navigable structure for each region instead of
  * one big opaque_data field. Bodies stay byte-identical to legacy;
  * future promotions replace each named blob with a typed encoder. */
-extern uint8_t tmdFileBuffer[];                     /* +2,     54720 B */
-extern uint8_t careerUnavailablePlayerLookupTable[];/* +55738, 80 B  */
-extern uint8_t careerUnavailablePlayerNames[];      /* +55818, 340 B */
-extern uint8_t diyLeagueSeasonStateTable[];         /* +59610, 2000 B */
-extern CompetitionSlotBuffer competitionContextBuf;         /* slot-1 untangle (S4): typed buffer (was +63340, 2900 B) */
-extern CompetitionSlotBuffer tertiaryCompetitionContextBuf;  /* slot-2 untangle (S3): typed buffer (was +66240, 1092 B) */
-extern CompetitionSlotBuffer diyCompetitionContextBuf;  /* slot-4 untangle (S2): typed buffer (was +67332, 1092 B) */
-extern CompetitionSlotBuffer euroCupsCompetitionContextBuf; /* slot-3 untangle (S5): typed buffer (was +68424, 2900 B) */
-extern uint8_t teamSelectionKeyCache[];             /* +73292, ~1870 B */
-extern uint8_t careerForeignMarketPlayers[];        /* +75162, 18144 B */
+extern uint8_t _tmdFileBuffer[];                     /* +2,     54720 B */
+extern uint8_t _careerUnavailablePlayerLookupTable[];/* +55738, 80 B  */
+extern uint8_t _careerUnavailablePlayerNames[];      /* +55818, 340 B */
+extern uint8_t _diyLeagueSeasonStateTable[];         /* +59610, 2000 B */
+extern CompetitionSlotBuffer _competitionContextBuf;         /* slot-1 untangle (S4): typed buffer (was +63340, 2900 B) */
+extern CompetitionSlotBuffer _tertiaryCompetitionContextBuf;  /* slot-2 untangle (S3): typed buffer (was +66240, 1092 B) */
+extern CompetitionSlotBuffer _diyCompetitionContextBuf;  /* slot-4 untangle (S2): typed buffer (was +67332, 1092 B) */
+extern CompetitionSlotBuffer _euroCupsCompetitionContextBuf; /* slot-3 untangle (S5): typed buffer (was +68424, 2900 B) */
+extern uint8_t _teamSelectionKeyCache[];             /* +73292, ~1870 B */
+extern uint8_t _careerForeignMarketPlayers[];        /* +75162, 18144 B */
 /* diyTeamIdListType2/0/1 reached via primaryCompetitionBuf casts now (S6). */
-extern uint8_t teamTacticsUSERA[];                  /* +96220, 370 B */
-extern uint8_t teamTacticsUSERB[];                  /* +96590, 370 B */
-extern uint8_t teamTacticsUSERC[];                  /* +96960, 370 B */
-extern uint8_t teamTacticsUSERD[];                  /* +97330, 370 B */
-extern uint8_t teamTacticsUSERE[];                  /* +97700, 370 B */
-extern uint8_t teamTacticsUSERF[];                  /* +98070, 370 B */
-extern uint8_t editTeamsBuffer[];                   /* +99846, ~43.7 KB */
-extern uint8_t editTeamsSaveVarsArea[];             /* +143624, ~23.2 KB */
+extern uint8_t _teamTacticsUSERA[];                  /* +96220, 370 B */
+extern uint8_t _teamTacticsUSERB[];                  /* +96590, 370 B */
+extern uint8_t _teamTacticsUSERC[];                  /* +96960, 370 B */
+extern uint8_t _teamTacticsUSERD[];                  /* +97330, 370 B */
+extern uint8_t _teamTacticsUSERE[];                  /* +97700, 370 B */
+extern uint8_t _teamTacticsUSERF[];                  /* +98070, 370 B */
+extern uint8_t _editTeamsBuffer[];                   /* +99846, ~43.7 KB */
+extern uint8_t _editTeamsSaveVarsArea[];             /* +143624, ~23.2 KB */
 
 /* *Copy slot region — one big contiguous block at +71452, 1832 B.
  * Individual records resolvable via careerContests; we emit the
  * whole region as one blob since the nameSource pointers (the only
  * pointer-typed fields) are already promoted separately. */
-extern uint8_t euroCupCopy[];                       /* +71452 */
+extern uint8_t _euroCupCopy[];                       /* +71452 */
 
 /* Helpers for writing/reading fields at struct offsets. */
 static void emit_str_at(mjson_print_fn_t fn, void *fnd,
@@ -2801,8 +2801,8 @@ void DataJson_LoadCareerParams(void)
     if (!j)
         return;
     double v;
-    #define LDU(path, f) do { if (mjson_get_number(j, len, path, &v)) g_careerParams.f = (uint16_t)v; } while (0)
-    #define LDS(path, f) do { if (mjson_get_number(j, len, path, &v)) g_careerParams.f = (int16_t)v;  } while (0)
+    #define LDU(path, f) do { if (mjson_get_number(j, len, path, &v)) _careerParams.f = (uint16_t)v; } while (0)
+    #define LDS(path, f) do { if (mjson_get_number(j, len, path, &v)) _careerParams.f = (int16_t)v;  } while (0)
     LDU("$.start_balance_value_mult",   start_balance_value_mult);
     LDU("$.start_balance_pct_min",      start_balance_pct_min);
     LDU("$.start_balance_pct_range",    start_balance_pct_range);
@@ -2826,8 +2826,8 @@ void DataJson_LoadCareerParams(void)
     LDU("$.num_seasons",                num_seasons);
     #undef LDU
     #undef LDS
-    if (g_careerParams.num_seasons < 1) g_careerParams.num_seasons = 1;
-    if (g_careerParams.num_seasons > CAREER_MAX_SEASONS) g_careerParams.num_seasons = CAREER_MAX_SEASONS;
+    if (_careerParams.num_seasons < 1) _careerParams.num_seasons = 1;
+    if (_careerParams.num_seasons > CAREER_MAX_SEASONS) _careerParams.num_seasons = CAREER_MAX_SEASONS;
     free(j);
     fprintf(stderr, "[data-json] career params loaded from data_json/career_params.json\n");
 }
@@ -3412,7 +3412,7 @@ void DataJson_InstallCompetitionGraph(void)
     int len = 0;
     char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
     if (!fb) { fprintf(stderr, "[data-json] graph install: cannot open country_competitions.json\n"); return; }
-    extern void *competitionsTable[];
+    extern void *_competitionsTable[];
     const char *arr; int al; int tableN = 0, swapped = 0, inPlace = 0;
     if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
         int pos = 0, voff, vlen, vt; double v;
@@ -3431,7 +3431,7 @@ void DataJson_InstallCompetitionGraph(void)
                globals IN PLACE, leaving competitionsTable pointing at the compiled
                table. */
             if (hasL && dj_graph_country_is_complex(lj, ljl, reg, regN)) {
-                Competition **ctab = (Competition **)competitionsTable[number];
+                Competition **ctab = (Competition **)_competitionsTable[number];
                 if (!ctab) continue;
                 Competition *cL[DJ_TABLE_SLOTS], *cC[DJ_TABLE_SLOTS]; int nLg = 0, nCp = 0, sep = 0;
                 for (int i = 0; i < DJ_TABLE_SLOTS; i++) {
@@ -3460,7 +3460,7 @@ void DataJson_InstallCompetitionGraph(void)
             if (hasC && !dj_graph_append_ids(cj, cjl, reg, regN, tbl, &k, DJ_TABLE_SLOTS - 1))
                 continue;                            /* unresolved id — leave compiled */
             tbl[k++] = (Competition *)(intptr_t)-1;  /* terminator */
-            competitionsTable[number] = tbl;         /* install over the compiled pointer */
+            _competitionsTable[number] = tbl;         /* install over the compiled pointer */
             tableN++; swapped++;
         }
     }
@@ -3476,35 +3476,35 @@ void DataJson_InstallCompetitionGraph(void)
        by-name/by-address game plumbing depends on. id == global symbol name. */
     int nTour = 0, nPlay = 0;
     {
-        extern CompetitionTournament euroCup, worldCup, worldCup2,
-            northAmericaWorldCupQualification, southAmericaWorldCupQualification,
-            africaWorldCupQualification, asiaWorldCupQualification,
-            europeanChampionships, europeanChampionships2,
-            copaAmerica, africanNationsCup, northAmericanCup, asianCup;
-        extern Playoffs div1Playoffs, div2Playoffs, div3Playoffs,
-            dutchPlayoffs, scottishPlayoffs, spanishPlayoffs, uruguayanPlayoffs;
+        extern CompetitionTournament _euroCup, _worldCup, _worldCup2,
+            _northAmericaWorldCupQualification, _southAmericaWorldCupQualification,
+            _africaWorldCupQualification, _asiaWorldCupQualification,
+            _europeanChampionships, _europeanChampionships2,
+            _copaAmerica, _africanNationsCup, _northAmericanCup, _asianCup;
+        extern Playoffs _div1Playoffs, _div2Playoffs, _div3Playoffs,
+            _dutchPlayoffs, _scottishPlayoffs, _spanishPlayoffs, _uruguayanPlayoffs;
         enum { GK_TOUR, GK_PLAYOFF };
         static const struct { const char *id; void *g; int kind; } sg[] = {
-            { "euroCup",                          &euroCup,                          GK_TOUR },
-            { "worldCup",                         &worldCup,                         GK_TOUR },
-            { "worldCup2",                        &worldCup2,                        GK_TOUR },
-            { "northAmericaWorldCupQualification", &northAmericaWorldCupQualification, GK_TOUR },
-            { "southAmericaWorldCupQualification", &southAmericaWorldCupQualification, GK_TOUR },
-            { "africaWorldCupQualification",      &africaWorldCupQualification,      GK_TOUR },
-            { "asiaWorldCupQualification",        &asiaWorldCupQualification,        GK_TOUR },
-            { "europeanChampionships",            &europeanChampionships,            GK_TOUR },
-            { "europeanChampionships2",           &europeanChampionships2,           GK_TOUR },
-            { "copaAmerica",                      &copaAmerica,                      GK_TOUR },
-            { "africanNationsCup",                &africanNationsCup,                GK_TOUR },
-            { "northAmericanCup",                 &northAmericanCup,                 GK_TOUR },
-            { "asianCup",                         &asianCup,                         GK_TOUR },
-            { "div1Playoffs",      &div1Playoffs,      GK_PLAYOFF },
-            { "div2Playoffs",      &div2Playoffs,      GK_PLAYOFF },
-            { "div3Playoffs",      &div3Playoffs,      GK_PLAYOFF },
-            { "dutchPlayoffs",     &dutchPlayoffs,     GK_PLAYOFF },
-            { "scottishPlayoffs",  &scottishPlayoffs,  GK_PLAYOFF },
-            { "spanishPlayoffs",   &spanishPlayoffs,   GK_PLAYOFF },
-            { "uruguayanPlayoffs", &uruguayanPlayoffs, GK_PLAYOFF },
+            { "euroCup",                          &_euroCup,                          GK_TOUR },
+            { "worldCup",                         &_worldCup,                         GK_TOUR },
+            { "worldCup2",                        &_worldCup2,                        GK_TOUR },
+            { "northAmericaWorldCupQualification", &_northAmericaWorldCupQualification, GK_TOUR },
+            { "southAmericaWorldCupQualification", &_southAmericaWorldCupQualification, GK_TOUR },
+            { "africaWorldCupQualification",      &_africaWorldCupQualification,      GK_TOUR },
+            { "asiaWorldCupQualification",        &_asiaWorldCupQualification,        GK_TOUR },
+            { "europeanChampionships",            &_europeanChampionships,            GK_TOUR },
+            { "europeanChampionships2",           &_europeanChampionships2,           GK_TOUR },
+            { "copaAmerica",                      &_copaAmerica,                      GK_TOUR },
+            { "africanNationsCup",                &_africanNationsCup,                GK_TOUR },
+            { "northAmericanCup",                 &_northAmericanCup,                 GK_TOUR },
+            { "asianCup",                         &_asianCup,                         GK_TOUR },
+            { "div1Playoffs",      &_div1Playoffs,      GK_PLAYOFF },
+            { "div2Playoffs",      &_div2Playoffs,      GK_PLAYOFF },
+            { "div3Playoffs",      &_div3Playoffs,      GK_PLAYOFF },
+            { "dutchPlayoffs",     &_dutchPlayoffs,     GK_PLAYOFF },
+            { "scottishPlayoffs",  &_scottishPlayoffs,  GK_PLAYOFF },
+            { "spanishPlayoffs",   &_spanishPlayoffs,   GK_PLAYOFF },
+            { "uruguayanPlayoffs", &_uruguayanPlayoffs, GK_PLAYOFF },
         };
         for (unsigned gi = 0; gi < sizeof sg / sizeof sg[0]; gi++) {
             if (poolIdx >= DJ_MAX_RECS) break;
@@ -3545,43 +3545,43 @@ void DataJson_InstallCompetitionGraph(void)
        block every Competition record (162/162) is JSON-driven. */
     int nSpec = 0;
     {
-        extern CompetitionCup cupWinnersCup, uefaCup, oceaniaCup,
-            oceaniaWorldCupQualification, invitationTournament, tour, friendly,
-            englishCup_1, englishLeagueCup_1,
-            worldCupQualifyingGroup1, worldCupQualifyingGroup2, worldCupQualifyingGroup3,
-            worldCupQualifyingGroup4, worldCupQualifyingGroup5, worldCupQualifyingGroup6,
-            worldCupQualifyingGroup7, worldCupQualifyingGroup8,
-            ecQualifyingGroup1, ecQualifyingGroup2, ecQualifyingGroup3, ecQualifyingGroup4,
-            ecQualifyingGroup5, ecQualifyingGroup6, ecQualifyingGroup7, ecQualifyingGroup8;
-        extern CompetitionLeague customsLeague;
+        extern CompetitionCup _cupWinnersCup, _uefaCup, _oceaniaCup,
+            _oceaniaWorldCupQualification, _invitationTournament, _tour, _friendly,
+            _englishCup_1, _englishLeagueCup_1,
+            _worldCupQualifyingGroup1, _worldCupQualifyingGroup2, _worldCupQualifyingGroup3,
+            _worldCupQualifyingGroup4, _worldCupQualifyingGroup5, _worldCupQualifyingGroup6,
+            _worldCupQualifyingGroup7, _worldCupQualifyingGroup8,
+            _ecQualifyingGroup1, _ecQualifyingGroup2, _ecQualifyingGroup3, _ecQualifyingGroup4,
+            _ecQualifyingGroup5, _ecQualifyingGroup6, _ecQualifyingGroup7, _ecQualifyingGroup8;
+        extern CompetitionLeague _customsLeague;
         enum { SK_CUP, SK_LEAGUE };
         static const struct { const char *id; void *g; int kind; } sp[] = {
-            { "cupWinnersCup",                &cupWinnersCup,                SK_CUP },
-            { "uefaCup",                      &uefaCup,                      SK_CUP },
-            { "oceaniaCup",                   &oceaniaCup,                   SK_CUP },
-            { "oceaniaWorldCupQualification", &oceaniaWorldCupQualification, SK_CUP },
-            { "invitationTournament",         &invitationTournament,         SK_CUP },
-            { "tour",                         &tour,                         SK_CUP },
-            { "friendly",                     &friendly,                     SK_CUP },
-            { "englishCup_1",                 &englishCup_1,                 SK_CUP },
-            { "englishLeagueCup_1",           &englishLeagueCup_1,           SK_CUP },
-            { "worldCupQualifyingGroup1",     &worldCupQualifyingGroup1,     SK_CUP },
-            { "worldCupQualifyingGroup2",     &worldCupQualifyingGroup2,     SK_CUP },
-            { "worldCupQualifyingGroup3",     &worldCupQualifyingGroup3,     SK_CUP },
-            { "worldCupQualifyingGroup4",     &worldCupQualifyingGroup4,     SK_CUP },
-            { "worldCupQualifyingGroup5",     &worldCupQualifyingGroup5,     SK_CUP },
-            { "worldCupQualifyingGroup6",     &worldCupQualifyingGroup6,     SK_CUP },
-            { "worldCupQualifyingGroup7",     &worldCupQualifyingGroup7,     SK_CUP },
-            { "worldCupQualifyingGroup8",     &worldCupQualifyingGroup8,     SK_CUP },
-            { "ecQualifyingGroup1",           &ecQualifyingGroup1,           SK_CUP },
-            { "ecQualifyingGroup2",           &ecQualifyingGroup2,           SK_CUP },
-            { "ecQualifyingGroup3",           &ecQualifyingGroup3,           SK_CUP },
-            { "ecQualifyingGroup4",           &ecQualifyingGroup4,           SK_CUP },
-            { "ecQualifyingGroup5",           &ecQualifyingGroup5,           SK_CUP },
-            { "ecQualifyingGroup6",           &ecQualifyingGroup6,           SK_CUP },
-            { "ecQualifyingGroup7",           &ecQualifyingGroup7,           SK_CUP },
-            { "ecQualifyingGroup8",           &ecQualifyingGroup8,           SK_CUP },
-            { "customsLeague",                &customsLeague,                SK_LEAGUE },
+            { "cupWinnersCup",                &_cupWinnersCup,                SK_CUP },
+            { "uefaCup",                      &_uefaCup,                      SK_CUP },
+            { "oceaniaCup",                   &_oceaniaCup,                   SK_CUP },
+            { "oceaniaWorldCupQualification", &_oceaniaWorldCupQualification, SK_CUP },
+            { "invitationTournament",         &_invitationTournament,         SK_CUP },
+            { "tour",                         &_tour,                         SK_CUP },
+            { "friendly",                     &_friendly,                     SK_CUP },
+            { "englishCup_1",                 &_englishCup_1,                 SK_CUP },
+            { "englishLeagueCup_1",           &_englishLeagueCup_1,           SK_CUP },
+            { "worldCupQualifyingGroup1",     &_worldCupQualifyingGroup1,     SK_CUP },
+            { "worldCupQualifyingGroup2",     &_worldCupQualifyingGroup2,     SK_CUP },
+            { "worldCupQualifyingGroup3",     &_worldCupQualifyingGroup3,     SK_CUP },
+            { "worldCupQualifyingGroup4",     &_worldCupQualifyingGroup4,     SK_CUP },
+            { "worldCupQualifyingGroup5",     &_worldCupQualifyingGroup5,     SK_CUP },
+            { "worldCupQualifyingGroup6",     &_worldCupQualifyingGroup6,     SK_CUP },
+            { "worldCupQualifyingGroup7",     &_worldCupQualifyingGroup7,     SK_CUP },
+            { "worldCupQualifyingGroup8",     &_worldCupQualifyingGroup8,     SK_CUP },
+            { "ecQualifyingGroup1",           &_ecQualifyingGroup1,           SK_CUP },
+            { "ecQualifyingGroup2",           &_ecQualifyingGroup2,           SK_CUP },
+            { "ecQualifyingGroup3",           &_ecQualifyingGroup3,           SK_CUP },
+            { "ecQualifyingGroup4",           &_ecQualifyingGroup4,           SK_CUP },
+            { "ecQualifyingGroup5",           &_ecQualifyingGroup5,           SK_CUP },
+            { "ecQualifyingGroup6",           &_ecQualifyingGroup6,           SK_CUP },
+            { "ecQualifyingGroup7",           &_ecQualifyingGroup7,           SK_CUP },
+            { "ecQualifyingGroup8",           &_ecQualifyingGroup8,           SK_CUP },
+            { "customsLeague",                &_customsLeague,                SK_LEAGUE },
         };
         for (unsigned si = 0; si < sizeof sp / sizeof sp[0]; si++) {
             if (poolIdx >= DJ_MAX_RECS) break;
@@ -3628,62 +3628,62 @@ void DataJson_InstallCompetitionGraph(void)
        data-relocation with zero behaviour/save-format change. */
     int nRegion = 0, regionMiss = 0;
     {
-        extern CompetitionTournament euroCup, worldCup, europeanChampionships,
-            northAmericaWorldCupQualification, southAmericaWorldCupQualification,
-            africaWorldCupQualification, asiaWorldCupQualification,
-            copaAmerica, africanNationsCup, northAmericanCup, asianCup;
-        extern CompetitionCup cupWinnersCup, uefaCup, oceaniaCup,
-            oceaniaWorldCupQualification,
-            worldCupQualifyingGroup1, worldCupQualifyingGroup2, worldCupQualifyingGroup3,
-            worldCupQualifyingGroup4, worldCupQualifyingGroup5, worldCupQualifyingGroup6,
-            worldCupQualifyingGroup7, worldCupQualifyingGroup8,
-            ecQualifyingGroup1, ecQualifyingGroup2, ecQualifyingGroup3, ecQualifyingGroup4,
-            ecQualifyingGroup5, ecQualifyingGroup6, ecQualifyingGroup7, ecQualifyingGroup8;
-        extern CompetitionLeague customsLeague;
-        extern QualifyingGroup worldCupQualifyingGroups, ecQualifyingGroups, customsTable,
-            worldTable, europeTable, africaTable, southAmericaTable, northAmericaTable,
-            asiaTable, oceaniaTable;
+        extern CompetitionTournament _euroCup, _worldCup, _europeanChampionships,
+            _northAmericaWorldCupQualification, _southAmericaWorldCupQualification,
+            _africaWorldCupQualification, _asiaWorldCupQualification,
+            _copaAmerica, _africanNationsCup, _northAmericanCup, _asianCup;
+        extern CompetitionCup _cupWinnersCup, _uefaCup, _oceaniaCup,
+            _oceaniaWorldCupQualification,
+            _worldCupQualifyingGroup1, _worldCupQualifyingGroup2, _worldCupQualifyingGroup3,
+            _worldCupQualifyingGroup4, _worldCupQualifyingGroup5, _worldCupQualifyingGroup6,
+            _worldCupQualifyingGroup7, _worldCupQualifyingGroup8,
+            _ecQualifyingGroup1, _ecQualifyingGroup2, _ecQualifyingGroup3, _ecQualifyingGroup4,
+            _ecQualifyingGroup5, _ecQualifyingGroup6, _ecQualifyingGroup7, _ecQualifyingGroup8;
+        extern CompetitionLeague _customsLeague;
+        extern QualifyingGroup _worldCupQualifyingGroups, _ecQualifyingGroups, _customsTable,
+            _worldTable, _europeTable, _africaTable, _southAmericaTable, _northAmericaTable,
+            _asiaTable, _oceaniaTable;
         /* competition-id -> &global, for every comp a region table can reference */
         static const struct { const char *id; void *g; } R[] = {
-            { "worldCup", &worldCup }, { "euroCup", &euroCup },
-            { "europeanChampionships", &europeanChampionships },
-            { "cupWinnersCup", &cupWinnersCup }, { "uefaCup", &uefaCup },
-            { "africaWorldCupQualification", &africaWorldCupQualification },
-            { "africanNationsCup", &africanNationsCup },
-            { "southAmericaWorldCupQualification", &southAmericaWorldCupQualification },
-            { "copaAmerica", &copaAmerica },
-            { "northAmericaWorldCupQualification", &northAmericaWorldCupQualification },
-            { "northAmericanCup", &northAmericanCup },
-            { "asiaWorldCupQualification", &asiaWorldCupQualification },
-            { "asianCup", &asianCup },
-            { "oceaniaWorldCupQualification", &oceaniaWorldCupQualification },
-            { "oceaniaCup", &oceaniaCup }, { "customsLeague", &customsLeague },
-            { "worldCupQualifyingGroup1", &worldCupQualifyingGroup1 },
-            { "worldCupQualifyingGroup2", &worldCupQualifyingGroup2 },
-            { "worldCupQualifyingGroup3", &worldCupQualifyingGroup3 },
-            { "worldCupQualifyingGroup4", &worldCupQualifyingGroup4 },
-            { "worldCupQualifyingGroup5", &worldCupQualifyingGroup5 },
-            { "worldCupQualifyingGroup6", &worldCupQualifyingGroup6 },
-            { "worldCupQualifyingGroup7", &worldCupQualifyingGroup7 },
-            { "worldCupQualifyingGroup8", &worldCupQualifyingGroup8 },
-            { "ecQualifyingGroup1", &ecQualifyingGroup1 },
-            { "ecQualifyingGroup2", &ecQualifyingGroup2 },
-            { "ecQualifyingGroup3", &ecQualifyingGroup3 },
-            { "ecQualifyingGroup4", &ecQualifyingGroup4 },
-            { "ecQualifyingGroup5", &ecQualifyingGroup5 },
-            { "ecQualifyingGroup6", &ecQualifyingGroup6 },
-            { "ecQualifyingGroup7", &ecQualifyingGroup7 },
-            { "ecQualifyingGroup8", &ecQualifyingGroup8 },
+            { "worldCup", &_worldCup }, { "euroCup", &_euroCup },
+            { "europeanChampionships", &_europeanChampionships },
+            { "cupWinnersCup", &_cupWinnersCup }, { "uefaCup", &_uefaCup },
+            { "africaWorldCupQualification", &_africaWorldCupQualification },
+            { "africanNationsCup", &_africanNationsCup },
+            { "southAmericaWorldCupQualification", &_southAmericaWorldCupQualification },
+            { "copaAmerica", &_copaAmerica },
+            { "northAmericaWorldCupQualification", &_northAmericaWorldCupQualification },
+            { "northAmericanCup", &_northAmericanCup },
+            { "asiaWorldCupQualification", &_asiaWorldCupQualification },
+            { "asianCup", &_asianCup },
+            { "oceaniaWorldCupQualification", &_oceaniaWorldCupQualification },
+            { "oceaniaCup", &_oceaniaCup }, { "customsLeague", &_customsLeague },
+            { "worldCupQualifyingGroup1", &_worldCupQualifyingGroup1 },
+            { "worldCupQualifyingGroup2", &_worldCupQualifyingGroup2 },
+            { "worldCupQualifyingGroup3", &_worldCupQualifyingGroup3 },
+            { "worldCupQualifyingGroup4", &_worldCupQualifyingGroup4 },
+            { "worldCupQualifyingGroup5", &_worldCupQualifyingGroup5 },
+            { "worldCupQualifyingGroup6", &_worldCupQualifyingGroup6 },
+            { "worldCupQualifyingGroup7", &_worldCupQualifyingGroup7 },
+            { "worldCupQualifyingGroup8", &_worldCupQualifyingGroup8 },
+            { "ecQualifyingGroup1", &_ecQualifyingGroup1 },
+            { "ecQualifyingGroup2", &_ecQualifyingGroup2 },
+            { "ecQualifyingGroup3", &_ecQualifyingGroup3 },
+            { "ecQualifyingGroup4", &_ecQualifyingGroup4 },
+            { "ecQualifyingGroup5", &_ecQualifyingGroup5 },
+            { "ecQualifyingGroup6", &_ecQualifyingGroup6 },
+            { "ecQualifyingGroup7", &_ecQualifyingGroup7 },
+            { "ecQualifyingGroup8", &_ecQualifyingGroup8 },
         };
         /* region-table id -> &global QualifyingGroup target */
         static const struct { const char *id; QualifyingGroup *g; } QT[] = {
-            { "worldCupQualifyingGroups", &worldCupQualifyingGroups },
-            { "ecQualifyingGroups", &ecQualifyingGroups },
-            { "customsTable", &customsTable }, { "worldTable", &worldTable },
-            { "europeTable", &europeTable }, { "africaTable", &africaTable },
-            { "southAmericaTable", &southAmericaTable },
-            { "northAmericaTable", &northAmericaTable },
-            { "asiaTable", &asiaTable }, { "oceaniaTable", &oceaniaTable },
+            { "worldCupQualifyingGroups", &_worldCupQualifyingGroups },
+            { "ecQualifyingGroups", &_ecQualifyingGroups },
+            { "customsTable", &_customsTable }, { "worldTable", &_worldTable },
+            { "europeTable", &_europeTable }, { "africaTable", &_africaTable },
+            { "southAmericaTable", &_southAmericaTable },
+            { "northAmericaTable", &_northAmericaTable },
+            { "asiaTable", &_asiaTable }, { "oceaniaTable", &_oceaniaTable },
         };
         int qlen = 0;
         char *qfb = dj_slurp("data_json/competitions/qualifying.json", &qlen);
@@ -3864,7 +3864,7 @@ static int dj_selftest_graph(void)
     int len = 0;
     char *fb = dj_slurp("data_json/competitions/country_competitions.json", &len);
     if (!fb) { printf("[data-json] graph: cannot open country_competitions.json\n"); return 0; }
-    extern void *competitionsTable[];
+    extern void *_competitionsTable[];
     const char *arr; int al; int ok = 1, countries = 0, mismatches = 0;
     if (mjson_find(fb, len, "$.countries", &arr, &al) == MJSON_TOK_ARRAY) {
         int pos = 0, voff, vlen, vt; double v;
@@ -3876,7 +3876,7 @@ static int dj_selftest_graph(void)
             if (!hasL && !hasC) continue;   /* region/special table — skip */
             int number = mjson_get_number(arr + voff, vlen, "$.number", &v) ? (int)v : -1;
             if (number < 0 || number > 255) continue;
-            Competition **tbl = (Competition **)competitionsTable[number];
+            Competition **tbl = (Competition **)_competitionsTable[number];
             if (!tbl) { printf("[data-json]   graph FAIL: number %d has no compiled table\n", number); ok = 0; mismatches++; continue; }
             /* Walk the compiled Competition*[] table: entries before the (-2)
                separator are leagues, after it are cups, (-1) terminates. */
@@ -3949,7 +3949,7 @@ int DataJson_SelfTest(void)
     /* ---- competition record loader: load cups.json's "cupWinnersCup" and
        verify the parse against the compiled global of the same name. ---- */
     int cok = 1;
-    extern CompetitionCup cupWinnersCup;   /* compiled record */
+    extern CompetitionCup _cupWinnersCup;   /* compiled record */
     char *cj = NULL; { FILE *cf = fopen("data_json/competitions/cups.json", "rb");
         if (cf) { fseek(cf,0,SEEK_END); long cn2=ftell(cf); fseek(cf,0,SEEK_SET);
             cj=(char*)malloc((size_t)cn2+1); if (cj && fread(cj,1,(size_t)cn2,cf)==(size_t)cn2) cj[cn2]='\0'; else { free(cj); cj=NULL; }
@@ -3974,16 +3974,16 @@ int DataJson_SelfTest(void)
     free(cj);
 #define CCHK(c) do { if (!(c)) { printf("[data-json]   comp FAIL: %s\n", #c); cok = 0; } } while (0)
     CCHK(found);
-    CCHK(loaded.header.comp.compNumber == cupWinnersCup.header.comp.compNumber);
-    CCHK(loaded.header.comp.type == cupWinnersCup.header.comp.type);
-    CCHK(loaded.header.comp.seedReorderFlag == cupWinnersCup.header.comp.seedReorderFlag);
-    CCHK(loaded.header.teams == cupWinnersCup.header.teams);
-    CCHK(loaded.roundRuleFlags[0] == cupWinnersCup.roundRuleFlags[0]);
-    CCHK(loaded.name[0] && cupWinnersCup.name[0] && strcmp(loaded.name[0], cupWinnersCup.name[0]) == 0);
-    CCHK(loaded.name[1] && cupWinnersCup.name[1] && strcmp(loaded.name[1], cupWinnersCup.name[1]) == 0);
-    CCHK(loaded.teamSeedList[0].countryNumber == cupWinnersCup.teamSeedList[0].countryNumber);
-    CCHK(loaded.teamSeedList[0].teamOrdinal   == cupWinnersCup.teamSeedList[0].teamOrdinal);
-    CCHK(loaded.teamSeedList[4].countryNumber == cupWinnersCup.teamSeedList[4].countryNumber);
+    CCHK(loaded.header.comp.compNumber == _cupWinnersCup.header.comp.compNumber);
+    CCHK(loaded.header.comp.type == _cupWinnersCup.header.comp.type);
+    CCHK(loaded.header.comp.seedReorderFlag == _cupWinnersCup.header.comp.seedReorderFlag);
+    CCHK(loaded.header.teams == _cupWinnersCup.header.teams);
+    CCHK(loaded.roundRuleFlags[0] == _cupWinnersCup.roundRuleFlags[0]);
+    CCHK(loaded.name[0] && _cupWinnersCup.name[0] && strcmp(loaded.name[0], _cupWinnersCup.name[0]) == 0);
+    CCHK(loaded.name[1] && _cupWinnersCup.name[1] && strcmp(loaded.name[1], _cupWinnersCup.name[1]) == 0);
+    CCHK(loaded.teamSeedList[0].countryNumber == _cupWinnersCup.teamSeedList[0].countryNumber);
+    CCHK(loaded.teamSeedList[0].teamOrdinal   == _cupWinnersCup.teamSeedList[0].teamOrdinal);
+    CCHK(loaded.teamSeedList[4].countryNumber == _cupWinnersCup.teamSeedList[4].countryNumber);
 #undef CCHK
     printf("[data-json] selftest comp: cupWinnersCup %s\n", cok ? "PASS" : "FAIL");
     printf("[data-json]   teams=%d name0=%.30s seed[0]=%u/%u seed[4]=%u/%u\n",
@@ -3993,7 +3993,7 @@ int DataJson_SelfTest(void)
 
     /* ---- tournament loader: load tournaments.json's "euroCup" and verify ---- */
     int tok = 1;
-    extern CompetitionTournament euroCup;   /* compiled record */
+    extern CompetitionTournament _euroCup;   /* compiled record */
     { char *tj = NULL; const char *to; int tol;
       if (dj_find_comp_record("data_json/competitions/tournaments.json", "competitions",
                               "euroCup", &tj, &to, &tol)) {
@@ -4001,17 +4001,17 @@ int DataJson_SelfTest(void)
         DataJson_LoadCompetitionTournament(to, tol, &tl, tsp, (int)sizeof tsp);
         free(tj);
 #define TCHK(c) do { if (!(c)) { printf("[data-json]   tour FAIL: %s\n", #c); tok = 0; } } while (0)
-        TCHK(tl.header.comp.compNumber == euroCup.header.comp.compNumber);
-        TCHK(tl.header.comp.type == euroCup.header.comp.type);     /* 2 */
-        TCHK(tl.header.seedingType == euroCup.header.seedingType);
-        TCHK(tl.header.playEachTeam == euroCup.header.playEachTeam);
-        TCHK(tl.header.roundStringBase == euroCup.header.roundStringBase);
-        TCHK(tl.header.rounds[0].teamCount == euroCup.header.rounds[0].teamCount);
-        TCHK(tl.header.rounds[0].groupCount == euroCup.header.rounds[0].groupCount);
-        TCHK(tl.header.rounds[1].teamCount == euroCup.header.rounds[1].teamCount);
-        TCHK(tl.name[0] && euroCup.name[0] && strcmp(tl.name[0], euroCup.name[0]) == 0);
-        TCHK(tl.teamSeedList[0].countryNumber == euroCup.teamSeedList[0].countryNumber);
-        TCHK(tl.teamSeedList[0].teamOrdinal   == euroCup.teamSeedList[0].teamOrdinal);
+        TCHK(tl.header.comp.compNumber == _euroCup.header.comp.compNumber);
+        TCHK(tl.header.comp.type == _euroCup.header.comp.type);     /* 2 */
+        TCHK(tl.header.seedingType == _euroCup.header.seedingType);
+        TCHK(tl.header.playEachTeam == _euroCup.header.playEachTeam);
+        TCHK(tl.header.roundStringBase == _euroCup.header.roundStringBase);
+        TCHK(tl.header.rounds[0].teamCount == _euroCup.header.rounds[0].teamCount);
+        TCHK(tl.header.rounds[0].groupCount == _euroCup.header.rounds[0].groupCount);
+        TCHK(tl.header.rounds[1].teamCount == _euroCup.header.rounds[1].teamCount);
+        TCHK(tl.name[0] && _euroCup.name[0] && strcmp(tl.name[0], _euroCup.name[0]) == 0);
+        TCHK(tl.teamSeedList[0].countryNumber == _euroCup.teamSeedList[0].countryNumber);
+        TCHK(tl.teamSeedList[0].teamOrdinal   == _euroCup.teamSeedList[0].teamOrdinal);
 #undef TCHK
         printf("[data-json] selftest comp: euroCup %s — type=%d seed=%d r0=%d/%d name0=%.30s seed[0]=%u/%u\n",
                tok ? "PASS" : "FAIL", tl.header.comp.type, tl.header.seedingType,
@@ -4023,7 +4023,7 @@ int DataJson_SelfTest(void)
 
     /* ---- league loader: load leagues.json's "englishLeague" and verify ---- */
     int lok = 1;
-    extern CompetitionLeague englishLeague;   /* compiled record */
+    extern CompetitionLeague _englishLeague;   /* compiled record */
     { char *lj = NULL; const char *lo; int lol;
       if (dj_find_comp_record("data_json/competitions/leagues.json", "leagues",
                               "englishLeague", &lj, &lo, &lol)) {
@@ -4031,18 +4031,18 @@ int DataJson_SelfTest(void)
         DataJson_LoadCompetitionLeague(lo, lol, &ll, lsp, (int)sizeof lsp);
         free(lj);
 #define LCHK(c) do { if (!(c)) { printf("[data-json]   leag FAIL: %s\n", #c); lok = 0; } } while (0)
-        LCHK(ll.header.comp.compNumber == englishLeague.header.comp.compNumber);
-        LCHK(ll.header.comp.type == englishLeague.header.comp.type);   /* 0 */
-        LCHK(ll.header.divisionsCount == englishLeague.header.divisionsCount);
-        LCHK(ll.header.pointsForWin == englishLeague.header.pointsForWin);
-        LCHK(ll.header.subsAndMaxSubs == englishLeague.header.subsAndMaxSubs);
-        LCHK(ll.divisions[0].teams == englishLeague.divisions[0].teams);
-        LCHK(ll.divisions[0].relegated == englishLeague.divisions[0].relegated);
-        LCHK(ll.divisions[1].teams == englishLeague.divisions[1].teams);
-        LCHK(ll.name[0] && englishLeague.name[0] && strcmp(ll.name[0], englishLeague.name[0]) == 0);
-        LCHK(ll.name[2] && englishLeague.name[2] && strcmp(ll.name[2], englishLeague.name[2]) == 0);
-        LCHK(ll.promotionLinkData[3] == englishLeague.promotionLinkData[3]);
-        LCHK(ll.promotionLinkData[8] == englishLeague.promotionLinkData[8]); /* 0xFF sentinel */
+        LCHK(ll.header.comp.compNumber == _englishLeague.header.comp.compNumber);
+        LCHK(ll.header.comp.type == _englishLeague.header.comp.type);   /* 0 */
+        LCHK(ll.header.divisionsCount == _englishLeague.header.divisionsCount);
+        LCHK(ll.header.pointsForWin == _englishLeague.header.pointsForWin);
+        LCHK(ll.header.subsAndMaxSubs == _englishLeague.header.subsAndMaxSubs);
+        LCHK(ll.divisions[0].teams == _englishLeague.divisions[0].teams);
+        LCHK(ll.divisions[0].relegated == _englishLeague.divisions[0].relegated);
+        LCHK(ll.divisions[1].teams == _englishLeague.divisions[1].teams);
+        LCHK(ll.name[0] && _englishLeague.name[0] && strcmp(ll.name[0], _englishLeague.name[0]) == 0);
+        LCHK(ll.name[2] && _englishLeague.name[2] && strcmp(ll.name[2], _englishLeague.name[2]) == 0);
+        LCHK(ll.promotionLinkData[3] == _englishLeague.promotionLinkData[3]);
+        LCHK(ll.promotionLinkData[8] == _englishLeague.promotionLinkData[8]); /* 0xFF sentinel */
 #undef LCHK
         printf("[data-json] selftest comp: englishLeague %s — type=%d divs=%d d0.teams=%d name0=%.30s plink[3]=%u plink[8]=%u\n",
                lok ? "PASS" : "FAIL", ll.header.comp.type, ll.header.divisionsCount,
@@ -4086,7 +4086,7 @@ int DataJson_SelfTest(void)
  * The 0xFFFFFFFF src value terminates the table.
  */
 
-extern CompetitionCareer careerContests[];
+extern CompetitionCareer _careerContests[];
 
 /* ---------- *Copy struct text[2] pointers ----------
  *
@@ -4118,8 +4118,8 @@ static void restore_comp_copy_text_ptrs_from_template(void)
      * a low-32 pattern (the static table stores
      * `(CompetitionCup *)0xFFFFFFFFu` which zero-extends to
      * 0x00000000FFFFFFFFu on 64-bit). */
-    extern CompetitionCareer careerContests[];
-    for (CompetitionCareer *e = careerContests;
+    extern CompetitionCareer _careerContests[];
+    for (CompetitionCareer *e = _careerContests;
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         const uint8_t *src  = (const uint8_t *)e->competition;
         uint8_t       *dest = (uint8_t *)e->competitionCopy;
@@ -4155,13 +4155,13 @@ static void restore_comp_copy_text_ptrs_from_template(void)
  * *Copy on load (host-correct sizes, immune to layout by construction),
  * then re-apply the two saved dynamic bytes, then fix the text pointers.
  * This drops the blob entirely and is layout-safe on every target. */
-extern uint8_t worldCupQualifyingGroup8Copy[];
-extern uint8_t oceaniaWorldCupQualificationCopy[];
+extern uint8_t _worldCupQualifyingGroup8Copy[];
+extern uint8_t _oceaniaWorldCupQualificationCopy[];
 
 static void reconstruct_comp_copy_region_from_templates(void)
 {
-    extern CompetitionCareer careerContests[];
-    for (CompetitionCareer *e = careerContests;
+    extern CompetitionCareer _careerContests[];
+    for (CompetitionCareer *e = _careerContests;
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         const uint8_t *src = (const uint8_t *)e->competition;
         uint8_t       *dst = (uint8_t *)e->competitionCopy;
@@ -4175,8 +4175,8 @@ static void reconstruct_comp_copy_region_from_templates(void)
 static void emit_comp_copy_dynamic(mjson_print_fn_t fn, void *fnd)
 {
     mjson_printf(fn, fnd, "%Q:{%Q:%u,%Q:%u}", "comp_copy_dynamic",
-                 "wc_group8_teams",  (unsigned)worldCupQualifyingGroup8Copy[0xD],
-                 "oceania_qual_teams",(unsigned)oceaniaWorldCupQualificationCopy[0xD]);
+                 "wc_group8_teams",  (unsigned)_worldCupQualifyingGroup8Copy[0xD],
+                 "oceania_qual_teams",(unsigned)_oceaniaWorldCupQualificationCopy[0xD]);
 }
 
 /* Save each *Copy competition record's per-career dynamic team-list region
@@ -4199,10 +4199,10 @@ static void emit_comp_copy_dynamic(mjson_print_fn_t fn, void *fnd)
  * past the record) emit []. */
 static void emit_comp_copy_teamlists(mjson_print_fn_t fn, void *fnd)
 {
-    extern CompetitionCareer careerContests[];
+    extern CompetitionCareer _careerContests[];
     mjson_printf(fn, fnd, "%Q:[", "comp_copy_teamlists");
     int first = 1;
-    for (CompetitionCareer *e = careerContests;
+    for (CompetitionCareer *e = _careerContests;
          (uintptr_t)e->competition != 0xFFFFFFFFu; e++) {
         const uint8_t *base = (const uint8_t *)e->competitionCopy;
         int8_t nameOffset = (int8_t)base[5];
@@ -4239,9 +4239,9 @@ static void load_comp_copy_region(const char *buf, int buflen)
             == MJSON_TOK_OBJECT) {
         long v;
         if (mjson_get_long(o, olen, "$.wc_group8_teams", &v) > 0)
-            worldCupQualifyingGroup8Copy[0xD] = (uint8_t)v;
+            _worldCupQualifyingGroup8Copy[0xD] = (uint8_t)v;
         if (mjson_get_long(o, olen, "$.oceania_qual_teams", &v) > 0)
-            oceaniaWorldCupQualificationCopy[0xD] = (uint8_t)v;
+            _oceaniaWorldCupQualificationCopy[0xD] = (uint8_t)v;
     }
 
     /* Restore the per-career *Copy team-list regions OVER the just-reconstructed
@@ -4252,12 +4252,12 @@ static void load_comp_copy_region(const char *buf, int buflen)
      * on emit (base[5]/base[7] are static descriptor fields, so identical after
      * reconstruct); the guard keeps us past text[2] and inside the record. */
     {
-        extern CompetitionCareer careerContests[];
+        extern CompetitionCareer _careerContests[];
         const char *arr = NULL; int alen = 0;
         if (mjson_find(buf, buflen, "$.comp_copy_teamlists", &arr, &alen)
                 == MJSON_TOK_ARRAY) {
             int pos = 0, voff, vlen, vt;
-            CompetitionCareer *e = careerContests;
+            CompetitionCareer *e = _careerContests;
             while ((uintptr_t)e->competition != 0xFFFFFFFFu &&
                    (pos = fast_array_next(arr, alen, pos, &voff, &vlen, &vt)) != 0) {
                 if (vt == MJSON_TOK_ARRAY) {
@@ -4298,14 +4298,14 @@ static void load_comp_copy_region(const char *buf, int buflen)
  * decimals (packed,agg,pen) per game record, flattened in walk order.
  * Both walks use the LIVE/just-restored strides + numGames; bounds-guarded
  * (stride [10,256], stay within TSKC_SIZE) so corrupt data can't overrun. */
-extern uint16_t teamSelectionKeyCacheCount;
+extern uint16_t _teamSelectionKeyCacheCount;
 #define TSKC_SIZE 1870u
 #define TSKC_GAMEREC_OFF 0x0A      /* game records start here within an entry */
 
 static void emit_cache_strides(mjson_print_fn_t fn, void *fnd)
 {
-    uint8_t *base = teamSelectionKeyCache;
-    int count = (int)(int16_t)teamSelectionKeyCacheCount;
+    uint8_t *base = _teamSelectionKeyCache;
+    int count = (int)(int16_t)_teamSelectionKeyCacheCount;
 
     /* Pass 1: strides (one per entry). */
     mjson_printf(fn, fnd, "%Q:[", "cache_strides");
@@ -4347,7 +4347,7 @@ static void emit_cache_strides(mjson_print_fn_t fn, void *fnd)
 
 static void fixup_cache_strides_on_load(const char *buf, int buflen)
 {
-    uint8_t *base = teamSelectionKeyCache;
+    uint8_t *base = _teamSelectionKeyCache;
 
     /* Pass 1: re-lay strides host-native (must come first — the score
      * walk needs correct strides + numGames). */
@@ -4373,7 +4373,7 @@ static void fixup_cache_strides_on_load(const char *buf, int buflen)
     if (mjson_find(buf, buflen, "$.cache_scores", &sarr, &salen) != MJSON_TOK_ARRAY)
         return;                          /* pre-v3 save: scores stay as blob */
     {
-        int count = (int)(int16_t)teamSelectionKeyCacheCount;
+        int count = (int)(int16_t)_teamSelectionKeyCacheCount;
         int pos = 0, voff, vlen, vt;
         uint32_t off = 0;
         for (int i = 0; i < count; i++) {
@@ -5163,7 +5163,7 @@ static void load_comp_slot(const char *parent, int plen,
  * so the loader can branch without guessing. */
 static void emit_competition_overrides(mjson_print_fn_t fn, void *fnd)
 {
-    DIYCompetitionEx *comp = (DIYCompetitionEx *)&primaryCompetitionBuf;
+    DIYCompetitionEx *comp = (DIYCompetitionEx *)&_primaryCompetitionBuf;
     int16_t type = comp->base.competitionType;
 
     mjson_printf(fn, fnd, "%Q:{", "competition_overrides");
@@ -5213,7 +5213,7 @@ static void load_competition_overrides(const char *buf, int buflen)
                    &rows, &rows_len) != MJSON_TOK_ARRAY)
         return;
 
-    DIYCompetitionEx *comp = (DIYCompetitionEx *)&primaryCompetitionBuf;
+    DIYCompetitionEx *comp = (DIYCompetitionEx *)&_primaryCompetitionBuf;
     int pos = 0, voff, vlen, vt, i = 0;
     while (i < DIY_OVR_LEAGUE_ROWS &&
            (pos = fast_array_next(rows, rows_len, pos, &voff, &vlen, &vt)) != 0) {
@@ -5508,7 +5508,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         "  %Q: %d,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
         "file_kind",      KIND_CAREER,
-        "num_selected_teams", (int)numSelectedTeams);
+        "num_selected_teams", (int)_numSelectedTeams);
 
     emit_season_informations(json_out_emit, &out);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
@@ -5524,8 +5524,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * load. 0xFF when no comp is active (career not yet started). */
     {
         uint8_t pcc = 0xFF;
-        if (currentCompetitionPtr) {
-            pcc = (uint8_t)((Competition *)currentCompetitionPtr)->teamNumber;
+        if (_currentCompetitionPtr) {
+            pcc = (uint8_t)((Competition *)_currentCompetitionPtr)->teamNumber;
         }
         mjson_printf(json_out_emit, &out,
                      "%Q:%d,\n  ",
@@ -5566,19 +5566,19 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%Q:%d", "comp_slots_present", 1);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "primary",
-                   (const DIYCompetitionEx *)&primaryCompetitionBuf);
+                   (const DIYCompetitionEx *)&_primaryCompetitionBuf);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "secondary",
-                   (const DIYCompetitionEx *)&competitionContextBuf);
+                   (const DIYCompetitionEx *)&_competitionContextBuf);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "tertiary",
-                   (const DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_tertiaryCompetitionContextBuf);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "diy",
-                   (const DIYCompetitionEx *)&diyCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_diyCompetitionContextBuf);
     mjson_printf(json_out_emit, &out, "%s", ",");
     emit_comp_slot(json_out_emit, &out, "euro",
-                   (const DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_euroCupsCompetitionContextBuf);
     mjson_printf(json_out_emit, &out, "%s", "}");
 
     /* TYPE-2 tournament current-STAGE (cross-target) — mirrors the preset
@@ -5594,16 +5594,16 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * is rebuilt careerTeam-aware via VerifyTeamLoaded (SaveJson_LoadCareer),
      * so a managed national team (careerTeam, negative selTeamsPtr offset)
      * resolves correctly cross-target. */
-    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
+    if (((const DIYCompetitionEx *)&_primaryCompetitionBuf)
             ->base.competitionType == 2) {
         const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
-            ((const uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((const uint8_t *)&_primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
         emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
+                           ((const DIYCompetitionEx *)&_primaryCompetitionBuf)->base.numTeams);
         if (diy_stage_is_league(stage)) {
-            uint16_t nrows = primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
+            uint16_t nrows = _primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", "stage_standings");
             for (uint16_t i = 0; i < nrows; i++) {
                 DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
@@ -5640,25 +5640,25 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * Each emits "<slot>_comp_slot_stage" only if that slot is a type-2
      * tournament; no-op otherwise (no dangling comma). */
     emit_ctx_stage(json_out_emit, &out, "secondary_comp_slot_stage",
-                   (const DIYCompetitionEx *)&competitionContextBuf);
+                   (const DIYCompetitionEx *)&_competitionContextBuf);
     emit_ctx_stage(json_out_emit, &out, "tertiary_comp_slot_stage",
-                   (const DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_tertiaryCompetitionContextBuf);
     emit_ctx_stage(json_out_emit, &out, "diy_comp_slot_stage",
-                   (const DIYCompetitionEx *)&diyCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_diyCompetitionContextBuf);
     emit_ctx_stage(json_out_emit, &out, "euro_comp_slot_stage",
-                   (const DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_euroCupsCompetitionContextBuf);
 
     /* TYPE-0 *Context slots' league standings — cross-target fix (see
      * emit_ctx_league_standings). Emits "<slot>_league_rows" only for a type-0
      * context league with teams (e.g. a national FRIENDLY); no-op otherwise. */
     emit_ctx_league_standings(json_out_emit, &out, "secondary",
-                   (const DIYCompetitionEx *)&competitionContextBuf);
+                   (const DIYCompetitionEx *)&_competitionContextBuf);
     emit_ctx_league_standings(json_out_emit, &out, "tertiary",
-                   (const DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_tertiaryCompetitionContextBuf);
     emit_ctx_league_standings(json_out_emit, &out, "diy",
-                   (const DIYCompetitionEx *)&diyCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_diyCompetitionContextBuf);
     emit_ctx_league_standings(json_out_emit, &out, "euro",
-                   (const DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+                   (const DIYCompetitionEx *)&_euroCupsCompetitionContextBuf);
 
     /* teamSelectionKeyCache stride list (endian-neutral) — paired with the
      * raw cache blob; re-lays the host-native +2 strides on load. */
@@ -5669,15 +5669,15 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * the variable-length selTeamsPtr array following
      * numSelectedTeams in the save. */
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_team_file_ex(json_out_emit, &out, "career_team",  &careerTeam);
+    emit_team_file_ex(json_out_emit, &out, "career_team",  &_careerTeam);
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
-    emit_team_file_ex(json_out_emit, &out, "current_team", &currentTeam);
+    emit_team_file_ex(json_out_emit, &out, "current_team", &_currentTeam);
 
     mjson_printf(json_out_emit, &out, ",\n  %Q:[", "selected_teams");
-    for (uint16_t i = 0; i < numSelectedTeams; i++) {
+    for (uint16_t i = 0; i < _numSelectedTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
-                               (uint8_t *)(selectedTeams + i));
+                               (uint8_t *)(_selectedTeams + i));
     }
     mjson_printf(json_out_emit, &out, "%s", "]");
 
@@ -5685,12 +5685,12 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * scalar = uint16 at &careerFileBuffer + 0). Empty trailing slots
      * are reconstructed by careerFileBufferBuf memset on load. */
     {
-        uint16_t tmd_count = *(uint16_t *)&careerFileBuffer;
+        uint16_t tmd_count = *(uint16_t *)&_careerFileBuffer;
         mjson_printf(json_out_emit, &out, ",\n  %Q:[", "tmd_teams");
         for (uint16_t i = 0; i < tmd_count; i++) {
             if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
             emit_team_file_ex_body(json_out_emit, &out,
-                                   (uint8_t *)((TeamFileEx *)tmdFileBuffer + i));
+                                   (uint8_t *)((TeamFileEx *)_tmdFileBuffer + i));
         }
         mjson_printf(json_out_emit, &out, "%s", "]");
     }
@@ -5703,7 +5703,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         for (uint32_t i = 0; i < 432; i++) {
             if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
             emit_market_player_body(json_out_emit, &out,
-                                    careerForeignMarketPlayers + i * sizeof(MarketPlayer));
+                                    _careerForeignMarketPlayers + i * sizeof(MarketPlayer));
         }
         mjson_printf(json_out_emit, &out, "%s", "]");
     }
@@ -5715,13 +5715,13 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         for (uint32_t i = 0; i < 5; i++) {
             if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
             emit_struct_object(json_out_emit, &out,
-                               transferOfferTable + i * sizeof(TransferOfferEntry),
+                               _transferOfferTable + i * sizeof(TransferOfferEntry),
                                s_transfer_offer_fields);
         }
         mjson_printf(json_out_emit, &out, "%s", "]");
 
         const struct { const char *key; const uint8_t *base; } jobTabs[2] = {
-            { "new_job_offers", newJobOffers }, { "job_offers", jobOffers },
+            { "new_job_offers", _newJobOffers }, { "job_offers", _jobOffers },
         };
         for (int t = 0; t < 2; t++) {
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", jobTabs[t].key);
@@ -5740,8 +5740,8 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * to the on-disk 32-player slot. */
     {
         const char *keys[2] = { "career_team_reserves", "current_team_reserves" };
-        const uint8_t *bases[2] = { (uint8_t *)&careerTeam  + 684,
-                                    (uint8_t *)&currentTeam + 684 };
+        const uint8_t *bases[2] = { (uint8_t *)&_careerTeam  + 684,
+                                    (uint8_t *)&_currentTeam + 684 };
         for (int t = 0; t < 2; t++) {
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", keys[t]);
             for (int i = 0; i < 16; i++) {
@@ -5879,15 +5879,15 @@ static void apply_semantic_load(const char *src, int src_size)
         if (mjson_find(src, src_size, "$.comp_slots", &cs, &cslen)
                 == MJSON_TOK_OBJECT) {
             load_comp_slot(cs, cslen, "primary",
-                           (DIYCompetitionEx *)&primaryCompetitionBuf);
+                           (DIYCompetitionEx *)&_primaryCompetitionBuf);
             load_comp_slot(cs, cslen, "secondary",
-                           (DIYCompetitionEx *)&competitionContextBuf);
+                           (DIYCompetitionEx *)&_competitionContextBuf);
             load_comp_slot(cs, cslen, "tertiary",
-                           (DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+                           (DIYCompetitionEx *)&_tertiaryCompetitionContextBuf);
             load_comp_slot(cs, cslen, "diy",
-                           (DIYCompetitionEx *)&diyCompetitionContextBuf);
+                           (DIYCompetitionEx *)&_diyCompetitionContextBuf);
             load_comp_slot(cs, cslen, "euro",
-                           (DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+                           (DIYCompetitionEx *)&_euroCupsCompetitionContextBuf);
         }
     }
 
@@ -5899,19 +5899,19 @@ static void apply_semantic_load(const char *src, int src_size)
      * cup teamOffsetTable is rebuilt careerTeam-aware below, after the
      * selected_teams load (it needs selTeamsPtr). Absent in pre-fix saves ->
      * mjson_find misses -> no-op, blob bytes stand. */
-    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
+    if (((const DIYCompetitionEx *)&_primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&_primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot(src, src_size, "comp_slot_stage", stage);
         load_stage_cupfull(src, src_size, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
+                           ((const DIYCompetitionEx *)&_primaryCompetitionBuf)->base.numTeams);
         if (diy_stage_is_league(stage)) {
             const char *rows = NULL; int rows_len = 0;
             if (mjson_find(src, src_size, "$.stage_standings", &rows, &rows_len)
                     == MJSON_TOK_ARRAY) {
                 int pos = 0, voff, vlen, vt; uint16_t i = 0;
-                while (i < primaryCompetitionBuf.tourn.header.numTeams && i < 64 &&
+                while (i < _primaryCompetitionBuf.tourn.header.numTeams && i < 64 &&
                        (pos = fast_array_next(rows, rows_len, pos,
                                               &voff, &vlen, &vt)) != 0) {
                     if (vt != MJSON_TOK_OBJECT) { i++; continue; }
@@ -5966,31 +5966,31 @@ static void apply_semantic_load(const char *src, int src_size)
      * typed stage overwrites the mis-positioned blob bytes. No-op for non-type-2
      * slots and pre-fix saves. */
     load_ctx_stage((const char *)src, (int)src_size, "secondary_comp_slot_stage",
-                   (DIYCompetitionEx *)&competitionContextBuf);
+                   (DIYCompetitionEx *)&_competitionContextBuf);
     load_ctx_stage((const char *)src, (int)src_size, "tertiary_comp_slot_stage",
-                   (DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+                   (DIYCompetitionEx *)&_tertiaryCompetitionContextBuf);
     load_ctx_stage((const char *)src, (int)src_size, "diy_comp_slot_stage",
-                   (DIYCompetitionEx *)&diyCompetitionContextBuf);
+                   (DIYCompetitionEx *)&_diyCompetitionContextBuf);
     load_ctx_stage((const char *)src, (int)src_size, "euro_comp_slot_stage",
-                   (DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+                   (DIYCompetitionEx *)&_euroCupsCompetitionContextBuf);
 
     /* TYPE-0 *Context slots' league standings — cross-target fix (see
      * load_ctx_league_standings). Slot competitionType is loaded and the raw
      * blob already applied, so the typed rows overwrite the mis-positioned
      * (8-byte-shifted) blob bytes. No-op for non-type-0 slots / pre-fix saves. */
     load_ctx_league_standings((const char *)src, (int)src_size, "secondary",
-                   (DIYCompetitionEx *)&competitionContextBuf);
+                   (DIYCompetitionEx *)&_competitionContextBuf);
     load_ctx_league_standings((const char *)src, (int)src_size, "tertiary",
-                   (DIYCompetitionEx *)&tertiaryCompetitionContextBuf);
+                   (DIYCompetitionEx *)&_tertiaryCompetitionContextBuf);
     load_ctx_league_standings((const char *)src, (int)src_size, "diy",
-                   (DIYCompetitionEx *)&diyCompetitionContextBuf);
+                   (DIYCompetitionEx *)&_diyCompetitionContextBuf);
     load_ctx_league_standings((const char *)src, (int)src_size, "euro",
-                   (DIYCompetitionEx *)&euroCupsCompetitionContextBuf);
+                   (DIYCompetitionEx *)&_euroCupsCompetitionContextBuf);
     PROF_END(comp_slots, "career-load");
 
     PROF_START(team_ce);
-    load_team_file_ex(src, src_size, "$.career_team",  &careerTeam);
-    load_team_file_ex(src, src_size, "$.current_team", &currentTeam);
+    load_team_file_ex(src, src_size, "$.career_team",  &_careerTeam);
+    load_team_file_ex(src, src_size, "$.current_team", &_currentTeam);
     PROF_END(team_ce, "career-load");
 
     /* numSelectedTeams comes through career_scalars
@@ -6005,12 +6005,12 @@ static void apply_semantic_load(const char *src, int src_size)
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
         int pos = 0, voff, vlen, vt;
         uint16_t i = 0;
-        while (i < numSelectedTeams &&
+        while (i < _numSelectedTeams &&
                (pos = fast_array_next(teams_arr, teams_arr_len, pos,
                                       &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
-                                    (uint8_t *)(selectedTeams + i));
+                                    (uint8_t *)(_selectedTeams + i));
             i++;
         }
     }
@@ -6025,12 +6025,12 @@ static void apply_semantic_load(const char *src, int src_size)
      * giving the correct NEGATIVE offset — so the R16 bracket names resolve
      * correctly cross-target. League stages skip this (standings rebuilt
      * earlier). Runs before RebuildPointersAfterLoad copies the stage. */
-    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
+    if (((const DIYCompetitionEx *)&_primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&_primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         if (!diy_stage_is_league(stage)) {
-            uint16_t n = primaryCompetitionBuf.tourn.header.numTeams; if (n > 51) n = 51;
+            uint16_t n = _primaryCompetitionBuf.tourn.header.numTeams; if (n > 51) n = 51;
             for (uint16_t k = 0; k < n; k++) {
                 uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
                 if (teamNum == 0) continue;
@@ -6050,7 +6050,7 @@ static void apply_semantic_load(const char *src, int src_size)
         int tmd_arr_len = 0;
         if (mjson_find(src, src_size, "$.tmd_teams",
                        &tmd_arr, &tmd_arr_len) == MJSON_TOK_ARRAY) {
-            uint16_t tmd_count = *(uint16_t *)&careerFileBuffer;
+            uint16_t tmd_count = *(uint16_t *)&_careerFileBuffer;
             int pos = 0, voff, vlen, vt;
             uint16_t i = 0;
             while (i < tmd_count &&
@@ -6058,7 +6058,7 @@ static void apply_semantic_load(const char *src, int src_size)
                                           &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_team_file_ex_slice(tmd_arr + voff, vlen,
-                                        (uint8_t *)((TeamFileEx *)tmdFileBuffer + i));
+                                        (uint8_t *)((TeamFileEx *)_tmdFileBuffer + i));
                 i++;
             }
         }
@@ -6079,7 +6079,7 @@ static void apply_semantic_load(const char *src, int src_size)
                                           &voff, &vlen, &vt)) != 0) {
                 if (vt != MJSON_TOK_OBJECT) { i++; continue; }
                 load_market_player_body(mp_arr + voff, vlen,
-                                        careerForeignMarketPlayers + i * sizeof(MarketPlayer));
+                                        _careerForeignMarketPlayers + i * sizeof(MarketPlayer));
                 i++;
             }
         }
@@ -6091,9 +6091,9 @@ static void apply_semantic_load(const char *src, int src_size)
     {
         const struct { const char *path; uint8_t *base; size_t stride;
                        const StructFieldDesc *table; } offerTabs[3] = {
-            { "$.transfer_offer_table", transferOfferTable, sizeof(TransferOfferEntry), s_transfer_offer_fields },
-            { "$.new_job_offers",       newJobOffers,        sizeof(JobOffer),           s_job_offer_fields },
-            { "$.job_offers",           jobOffers,           sizeof(JobOffer),           s_job_offer_fields },
+            { "$.transfer_offer_table", _transferOfferTable, sizeof(TransferOfferEntry), s_transfer_offer_fields },
+            { "$.new_job_offers",       _newJobOffers,        sizeof(JobOffer),           s_job_offer_fields },
+            { "$.job_offers",           _jobOffers,           sizeof(JobOffer),           s_job_offer_fields },
         };
         for (int t = 0; t < 3; t++) {
             const char *arr = NULL; int arr_len = 0;
@@ -6115,8 +6115,8 @@ static void apply_semantic_load(const char *src, int src_size)
     PROF_START(reserves);
     {
         const char *paths[2] = { "$.career_team_reserves", "$.current_team_reserves" };
-        uint8_t *bases[2] = { (uint8_t *)&careerTeam  + 684,
-                              (uint8_t *)&currentTeam + 684 };
+        uint8_t *bases[2] = { (uint8_t *)&_careerTeam  + 684,
+                              (uint8_t *)&_currentTeam + 684 };
         for (int t = 0; t < 2; t++) {
             const char *arr = NULL; int arr_len = 0;
             if (mjson_find(src, src_size, paths[t], &arr, &arr_len) != MJSON_TOK_ARRAY)
@@ -6191,8 +6191,8 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * no longer a contiguous region to zero; just reset these two (the load's
      * tmd_team_count / num_selected_teams paths set them right after). */
     PROF_START(memset_buf);
-    careerFileBuffer = 0;
-    numSelectedTeams = 0;
+    _careerFileBuffer = 0;
+    _numSelectedTeams = 0;
     PROF_END(memset_buf, "career-load");
 
     PROF_START(apply_semantic);
@@ -6608,7 +6608,7 @@ static int diy_stage_is_league(const DIYCompetitionEx *stage)
 {
     (void)stage;
     return diy_stage_is_league_master(
-        (const DIYTournamentState *)&primaryCompetitionBuf);
+        (const DIYTournamentState *)&_primaryCompetitionBuf);
 }
 
 /* Shared write body for preset / DIY — they share competitionFileBuffer
@@ -6624,7 +6624,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         "{\n  %Q:%d,\n  %Q:%Q,\n  %Q:%u,\n  ",
         "schema_version", SAVE_JSON_SCHEMA_VERSION,
         "file_kind",      kind,
-        "num_diy_teams",  (unsigned)primaryCompetitionBuf.tourn.header.numTeams);
+        "num_diy_teams",  (unsigned)_primaryCompetitionBuf.tourn.header.numTeams);
 
     /* primaryCompStringOffset is intentionally NOT saved — it's a
      * stale absolute pointer into the strings table that the legacy
@@ -6647,7 +6647,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
      * proves identical same-target bytes), mirroring the career path. */
     mjson_printf(json_out_emit, &out, ",\n  ");
     emit_comp_slot(json_out_emit, &out, "comp_slot",
-                   (const DIYCompetitionEx *)&primaryCompetitionBuf);
+                   (const DIYCompetitionEx *)&_primaryCompetitionBuf);
 
     /* Cross-target league-standings override (teamSelOffset -> team identity),
      * the SAME endian-neutral re-lay the career path uses (SaveJson_WriteCareer).
@@ -6678,14 +6678,14 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
      * for either phase. Struct-anchored, so it also corrects the 64-bit
      * namePtr offset shift. Only tournaments carry this stage (a plain
      * league/cup preset IS the primary slot), so gate on the master type. */
-    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
+    if (((const DIYCompetitionEx *)&_primaryCompetitionBuf)
             ->base.competitionType == 2) {
         const DIYCompetitionEx *stage = (const DIYCompetitionEx *)
-            ((const uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((const uint8_t *)&_primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         mjson_printf(json_out_emit, &out, ",\n  ");
         emit_comp_slot(json_out_emit, &out, "comp_slot_stage", stage);
         emit_stage_cupfull(json_out_emit, &out, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
+                           ((const DIYCompetitionEx *)&_primaryCompetitionBuf)->base.numTeams);
 
         /* GROUP-phase stage standings. The 64-row DIYTeamStats table in the
          * stage's relocated leagueStandings[] field (DIY_STANDINGS_OFFSET) holds
@@ -6708,7 +6708,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * stale data. competitionType is 0 for both, so route off
          * the slot type. */
         if (diy_stage_is_league(stage)) {
-            uint16_t nrows = primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
+            uint16_t nrows = _primaryCompetitionBuf.tourn.header.numTeams; if (nrows > 64) nrows = 64;
             mjson_printf(json_out_emit, &out, ",\n  %Q:[", "stage_standings");
             for (uint16_t i = 0; i < nrows; i++) {
                 DIYTeamStats *r = diy_ovr_row((DIYCompetitionEx *)stage, i);
@@ -6750,10 +6750,10 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     /* DIY teams array — primaryCompetitionBuf.tourn.header.numTeams TeamFileEx records at
      * &selTeamsPtr. Same record layout as the career selected_teams. */
     mjson_printf(json_out_emit, &out, ",\n  %Q:[", "diy_teams");
-    for (uint16_t i = 0; i < primaryCompetitionBuf.tourn.header.numTeams; i++) {
+    for (uint16_t i = 0; i < _primaryCompetitionBuf.tourn.header.numTeams; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_team_file_ex_body(json_out_emit, &out,
-                               (uint8_t *)(selectedTeams + i));
+                               (uint8_t *)(_selectedTeams + i));
     }
     mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
 
@@ -6799,7 +6799,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * mismatches. The diy-teams append (selTeamsPtr) is no longer
          * contiguous after the buffer — it round-trips via "$.diy_teams" and is
          * not part of this region. See project_diy_preset_load_memset_gap. */
-        verify_roundtrip_region(kind, (uint8_t *)&primaryCompetitionBuf,
+        verify_roundtrip_region(kind, (uint8_t *)&_primaryCompetitionBuf,
                                 (uint32_t)sizeof(CompetitionSlotBuffer),
                                 fn, filename, NULL);
     }
@@ -6874,7 +6874,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * Absent in pre-serializer .PRE/.DIY saves → load_comp_slot is a
      * no-op (mjson_find returns non-object), so older saves still load. */
     load_comp_slot((const char *)src, (int)src_size, "comp_slot",
-                   (DIYCompetitionEx *)&primaryCompetitionBuf);
+                   (DIYCompetitionEx *)&_primaryCompetitionBuf);
 
     /* Cross-target league-standings override — apply AFTER load_comp_slot/blob
      * so it corrects the struct-correct positions (same as the career path's
@@ -6891,14 +6891,14 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * copies the stageSnapshot -> diyCompetitionStart (so the corrected bytes are
      * what gets copied). Absent in pre-fix saves -> mjson_find misses ->
      * load_comp_slot is a no-op, blob bytes stand. */
-    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
+    if (((const DIYCompetitionEx *)&_primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&_primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         load_comp_slot((const char *)src, (int)src_size, "comp_slot_stage",
                        stage);
         load_stage_cupfull((const char *)src, (int)src_size, "comp_slot_stage", stage,
-                           ((const DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams);
+                           ((const DIYCompetitionEx *)&_primaryCompetitionBuf)->base.numTeams);
 
         /* Rebuild the GROUP-phase standings (see write_competition_buf):
          * RECONSTRUCT each row's derived teamSelOffset = i (the team identity;
@@ -6913,7 +6913,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                            "$.stage_standings", &rows, &rows_len)
                     == MJSON_TOK_ARRAY) {
                 int pos = 0, voff, vlen, vt; uint16_t i = 0;
-                while (i < primaryCompetitionBuf.tourn.header.numTeams && i < 64 &&
+                while (i < _primaryCompetitionBuf.tourn.header.numTeams && i < 64 &&
                        (pos = fast_array_next(rows, rows_len, pos,
                                               &voff, &vlen, &vt)) != 0) {
                     if (vt != MJSON_TOK_OBJECT) { i++; continue; }
@@ -6973,12 +6973,12 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
                    &teams_arr, &teams_arr_len) == MJSON_TOK_ARRAY) {
         int pos = 0, koff, klen, voff, vlen, vt;
         uint16_t i = 0;
-        while (i < primaryCompetitionBuf.tourn.header.numTeams &&
+        while (i < _primaryCompetitionBuf.tourn.header.numTeams &&
                (pos = mjson_next(teams_arr, teams_arr_len, pos,
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_team_file_ex_slice(teams_arr + voff, vlen,
-                                    (uint8_t *)(selectedTeams + i));
+                                    (uint8_t *)(_selectedTeams + i));
             i++;
         }
     }
@@ -6992,7 +6992,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * on the 32-bit Amiga, silently dropping the field → 0 → findTeamInCache
      * bails → cup VerifyTeamLoaded panic). We still re-derive from numTeams here
      * as the canonical, target-independent value. */
-    numSelectedTeams = primaryCompetitionBuf.tourn.header.numTeams;
+    _numSelectedTeams = _primaryCompetitionBuf.tourn.header.numTeams;
 
     /* TYPE-2 tournament KNOCKOUT stage: rebuild the cup bracket
      * teamOffsetTable from cupTeamIds. teamOffsetTable[k] is a DERIVED
@@ -7007,12 +7007,12 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * selTeamsPtr (diy_teams) is loaded. cupTeamIds[0..primaryCompetitionBuf.tourn.header.numTeams-1] are the
      * tournament teams (kept below the standings overlay at index 51).
      * LEAGUE/group stages skip this — their standings were rebuilt above. */
-    if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
+    if (((const DIYCompetitionEx *)&_primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
-            ((uint8_t *)&primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
+            ((uint8_t *)&_primaryCompetitionBuf + offsetof(CompetitionSlotBuffer, stageSnapshot));
         if (!diy_stage_is_league(stage)) {
-            uint16_t n = primaryCompetitionBuf.tourn.header.numTeams; if (n > 51) n = 51;
+            uint16_t n = _primaryCompetitionBuf.tourn.header.numTeams; if (n > 51) n = 51;
             for (uint16_t k = 0; k < n; k++) {
                 uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
                 if (teamNum == 0) continue;
@@ -7075,7 +7075,7 @@ int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
  *   +2246   team1Goals        u16
  *   +2248   team2Goals        u16
  *   +2250   pitchNumber       u16
- *   +2252   maxSubstitutes    u16
+ *   +2252   _maxSubstitutes    u16
  *   +2254   scenes[numGoals]  each scene = 19000-byte ring of frames
  *
  * Scene format (per SaveCoordinatesForHighlights / DrawReplayFrame):
@@ -7091,10 +7091,10 @@ int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
  *     as a "trailing" byte array so round-trip is bit-exact).
  */
 
-extern uint8_t  hilFileBuffer[];
-extern uint16_t hilNumGoals;
-extern uint8_t  hilGameName[];
-extern uint8_t  hilGameRound[];
+extern uint8_t  _hilFileBuffer[];
+extern uint16_t _hilNumGoals;
+extern uint8_t  _hilGameName[];
+extern uint8_t  _hilGameRound[];
 
 /* On-disk .HIL header — 2254 bytes total. Matches the byte layout
  * the legacy save/load and SetHilFileHeader / SaveCoordinatesForHighlights
@@ -7535,7 +7535,7 @@ static void load_scene_slice(const char *scene_buf, int scene_buflen,
 int16_t SaveJson_WriteHighlights(uint8_t *filename)
 {
     PROF_START(total);
-    uint16_t num_goals = hilNumGoals;
+    uint16_t num_goals = _hilNumGoals;
     uint32_t data_size = HIL_HEADER_SIZE + (uint32_t)num_goals * HIL_SCENE_SIZE;
 
     JsonOutBuf out = { NULL, 0, 0, 0 };
@@ -7549,13 +7549,13 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
 
     mjson_printf(json_out_emit, &out, "%Q:%lu,\n  %Q:%lu,\n  ",
                  "signature",
-                 (long)(uint32_t)BE_READ_U32((uint8_t *)hilFileBuffer
+                 (long)(uint32_t)BE_READ_U32((uint8_t *)_hilFileBuffer
                                              + offsetof(HilFileHeader, signature)),
                  "max_size",
-                 (long)(uint32_t)BE_READ_U32((uint8_t *)hilFileBuffer
+                 (long)(uint32_t)BE_READ_U32((uint8_t *)_hilFileBuffer
                                              + offsetof(HilFileHeader, max_size)));
 
-    HilFileHeader *hdr = (HilFileHeader *)hilFileBuffer;
+    HilFileHeader *hdr = (HilFileHeader *)_hilFileBuffer;
 
     emit_team_game(json_out_emit, &out, "top_team",
                    (uint8_t *)&hdr->top_team);
@@ -7565,12 +7565,12 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
 
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_str_at(json_out_emit, &out, "game_name",
-                (uint8_t *)hilFileBuffer,
+                (uint8_t *)_hilFileBuffer,
                 offsetof(HilFileHeader, game_name),
                 sizeof(hdr->game_name));
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     emit_str_at(json_out_emit, &out, "game_round",
-                (uint8_t *)hilFileBuffer,
+                (uint8_t *)_hilFileBuffer,
                 offsetof(HilFileHeader, game_round),
                 sizeof(hdr->game_round));
 
@@ -7588,7 +7588,7 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
     for (uint16_t i = 0; i < num_goals; i++) {
         if (i > 0) mjson_printf(json_out_emit, &out, "%s", ",");
         emit_scene(json_out_emit, &out,
-                   hilFileBuffer + HIL_HEADER_SIZE
+                   _hilFileBuffer + HIL_HEADER_SIZE
                                  + (uint32_t)i * HIL_SCENE_SIZE);
     }
     mjson_printf(json_out_emit, &out, "%s", "]\n}\n");
@@ -7617,7 +7617,7 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
     verify_roundtrip_region("highlights",
-                            hilFileBuffer, data_size,
+                            _hilFileBuffer, data_size,
                             verify_reload_highlights, filename, NULL);
 #endif
 
@@ -7661,7 +7661,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     string_pool_reset();
     long num = 0.0;
 
-    HilFileHeader *hdr = (HilFileHeader *)hilFileBuffer;
+    HilFileHeader *hdr = (HilFileHeader *)_hilFileBuffer;
 
     PROF_START(header);
     if (mjson_get_long((const char *)src, (int)src_size,
@@ -7702,7 +7702,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     if (mjson_get_long((const char *)src, (int)src_size,
                          "$.num_goals", &num) > 0) num_goals = (uint16_t)num;
     hdr->num_goals = num_goals;
-    hilNumGoals    = num_goals;
+    _hilNumGoals    = num_goals;
 
 #define HDR_U16(key, field) do { \
         if (mjson_get_long((const char *)src, (int)src_size, \
@@ -7718,7 +7718,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     /* Zero scene area then decode each scene. Slice the scenes
      * array once so per-scene mjson_find lookups scan a single
      * scene's slice instead of the whole file each iteration. */
-    memset(hilFileBuffer + HIL_HEADER_SIZE, 0,
+    memset(_hilFileBuffer + HIL_HEADER_SIZE, 0,
            (size_t)num_goals * HIL_SCENE_SIZE);
 
     PROF_START(scenes);
@@ -7735,7 +7735,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
                                  &koff, &klen, &voff, &vlen, &vt)) != 0) {
             if (vt != MJSON_TOK_OBJECT) { i++; continue; }
             load_scene_slice(scenes_arr + voff, vlen,
-                             hilFileBuffer + HIL_HEADER_SIZE
+                             _hilFileBuffer + HIL_HEADER_SIZE
                                            + (uint32_t)i * HIL_SCENE_SIZE);
             i++;
         }

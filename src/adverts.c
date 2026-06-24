@@ -23,41 +23,41 @@
 #define ST_GAME_IN_PROGRESS         100
 
 /* ---- External globals (BSS / data section) ---- */
-extern uint16_t trainingGame;
-extern uint16_t gameState;
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t showingUserStats;
-extern uint16_t statsTimer;
-extern uint16_t inSubstitutesMenu;
-extern uint16_t subsState;
-extern uint16_t currentPlayerIndicatorPosition;
-extern uint8_t *spriteGraphicsPtr;
-extern uint16_t frameCount;
-extern uint16_t lastFrameTicks;
+extern uint16_t _trainingGame;
+extern uint16_t _gameState;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _showingUserStats;
+extern uint16_t _statsTimer;
+extern uint16_t _inSubstitutesMenu;
+extern uint16_t _subsState;
+extern uint16_t _currentPlayerIndicatorPosition;
+extern uint8_t *_spriteGraphicsPtr;
+extern uint16_t _frameCount;
+extern uint16_t _lastFrameTicks;
 
 /* ---- Data labels in SWOS2.s code section ---- */
-extern uint16_t advertIndex;
-extern uint16_t advertSlideTimer;
-extern uint16_t currentAnimatedAdLine;
-extern uint8_t *advert1Pointers[8];
-extern uint8_t *advert2Pointers[8];
-extern uint8_t *advert3Pointers[8];
-extern uint16_t blockAdvertisements;
-extern uint16_t gameStatePl;
-extern volatile uint16_t goalCameraMode;
-extern uint16_t foulXCoordinate;
-extern uint16_t spinBigS;
-extern uint16_t bigSIndex;
+extern uint16_t _advertIndex;
+extern uint16_t _advertSlideTimer;
+extern uint16_t _currentAnimatedAdLine;
+extern uint8_t *_advert1Pointers[8];
+extern uint8_t *_advert2Pointers[8];
+extern uint8_t *_advert3Pointers[8];
+extern uint16_t _blockAdvertisements;
+extern uint16_t _gameStatePl;
+extern volatile uint16_t _goalCameraMode;
+extern uint16_t _foulXCoordinate;
+extern uint16_t _spinBigS;
+extern uint16_t _bigSIndex;
 
 /* Sprite arrays in data section */
-extern Sprite   advertInGameSprites[8]; /* 8 * SPRITE_SIZE bytes */
-extern Sprite   cornerFlagSprite;       /* SPRITE_SIZE bytes */
+extern Sprite   _advertInGameSprites[8]; /* 8 * SPRITE_SIZE bytes */
+extern Sprite   _cornerFlagSprite;       /* SPRITE_SIZE bytes */
 #ifdef SWOS_SDL_BUILD
-extern Sprite   cornerFlagSprite2;      /* widescreen 2nd corner flag — sprite_data.c */
+extern Sprite   _cornerFlagSprite2;      /* widescreen 2nd corner flag — sprite_data.c */
 #endif
-extern Sprite   big_S_Sprite;           /* SPRITE_SIZE bytes */
-extern uint8_t  cornerFlagPictureIndices[32];
+extern Sprite   _big_S_Sprite;           /* SPRITE_SIZE bytes */
+extern uint8_t  _cornerFlagPictureIndices[32];
 
 /* ---- External C/asm functions ---- */
 extern void     InitDisplaySprites(void);
@@ -79,15 +79,15 @@ extern uint16_t Rand(void);
 __attribute__((used, externally_visible))
 void CopyAdvertisementsData(void)
 {
-    SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
     int i;
 
     for (i = 0; i < 8; i++)
-        advert1Pointers[i] = table[113 + i]->sprData;
+        _advert1Pointers[i] = table[113 + i]->sprData;
     for (i = 0; i < 8; i++)
-        advert2Pointers[i] = table[121 + i]->sprData;
+        _advert2Pointers[i] = table[121 + i]->sprData;
     for (i = 0; i < 8; i++)
-        advert3Pointers[i] = table[129 + i]->sprData;
+        _advert3Pointers[i] = table[129 + i]->sprData;
 }
 
 /* ================================================================
@@ -98,9 +98,9 @@ void CopyAdvertisementsData(void)
 __attribute__((used, externally_visible))
 void InitAdvertisements(void)
 {
-    advertIndex = 0;
-    advertSlideTimer = 0;
-    currentAnimatedAdLine = 0;
+    _advertIndex = 0;
+    _advertSlideTimer = 0;
+    _currentAnimatedAdLine = 0;
     SetAdvertisementsInvisible();
 }
 
@@ -115,7 +115,7 @@ void SetAdvertisementsVisible(void)
 {
     int i;
     for (i = 0; i < 8; i++) {
-        advertInGameSprites[i].visible = 1;
+        _advertInGameSprites[i].visible = 1;
     }
     InitDisplaySprites();
 }
@@ -131,7 +131,7 @@ void SetAdvertisementsInvisible(void)
 {
     int i;
     for (i = 0; i < 8; i++) {
-        advertInGameSprites[i].visible = 0;
+        _advertInGameSprites[i].visible = 0;
     }
     InitDisplaySprites();
 }
@@ -152,73 +152,73 @@ void ManageAdvertisements(void)
     Sprite *spr;
 
     /* Bail out conditions */
-    if (trainingGame != 0)
+    if (_trainingGame != 0)
         return;
-    if (gameStatePl == ST_GAME_IN_PROGRESS)
+    if (_gameStatePl == ST_GAME_IN_PROGRESS)
         goto reset_ads_for_gameplay_state;
-    if (cameraY.s.i > 84)
+    if (_cameraY.s.i > 84)
         goto reset_ads_for_gameplay_state;
-    if (blockAdvertisements != 0)
+    if (_blockAdvertisements != 0)
         return;
-    if (goalCameraMode != 0)
+    if (_goalCameraMode != 0)
         return;
-    if ((int16_t)advertIndex < 0)
+    if ((int16_t)_advertIndex < 0)
         return;
-    if (gameState == ST_KEEPER_HOLDS_BALL)
+    if (_gameState == ST_KEEPER_HOLDS_BALL)
         return;
-    if (gameState == ST_RESULT_AFTER_THE_GAME)
+    if (_gameState == ST_RESULT_AFTER_THE_GAME)
         return;
 
     /* If advertIndex == 0, try to start a new ad cycle */
-    if (advertIndex == 0) {
+    if (_advertIndex == 0) {
         d0 = Rand();
         if (d0 > 128)
             goto stop_ad_cycle;
 
         /* If advert sprites not yet visible, make them visible */
-        if ((uint16_t)advertInGameSprites[0].visible == 0)
+        if ((uint16_t)_advertInGameSprites[0].visible == 0)
             SetAdvertisementsVisible();
 
         /* Pick which advert strip to show based on foulXCoordinate */
         d0 = Rand();
         d0 = (d0 & 1) + 1;   /* d0 = 1..2 */
-        if (foulXCoordinate >= 326) {
+        if (_foulXCoordinate >= 326) {
             d0 += 1;           /* d0 = 2..3 */
-            if (foulXCoordinate <= 346) {
+            if (_foulXCoordinate <= 346) {
                 d0 = Rand();
                 d0 = (uint16_t)((uint16_t)(d0 * 3) >> 8) + 1;  /* d0 = 1..3 */
             }
         }
-        advertIndex = d0;
+        _advertIndex = d0;
     }
 
     /* Route to selected ad setup */
-    if (advertIndex == 2) {
+    if (_advertIndex == 2) {
         d7 = SPR_ADVERT_2_PART_1;
-        a6 = advert2Pointers;
+        a6 = _advert2Pointers;
         d1 = 0x111;
-    } else if (advertIndex == 3) {
+    } else if (_advertIndex == 3) {
         d7 = SPR_ADVERT_3_PART_1;
-        a6 = advert3Pointers;
+        a6 = _advert3Pointers;
         d1 = 0x1B0;
     } else {
         /* advertIndex == 1 (default) */
         d7 = SPR_ADVERT_1_PART_1;
-        a6 = advert1Pointers;
+        a6 = _advert1Pointers;
         d1 = 112;
     }
 
     /* Check slide timer or advance animation */
-    if (advertSlideTimer != 0) {
-        advertSlideTimer -= 1;
+    if (_advertSlideTimer != 0) {
+        _advertSlideTimer -= 1;
     } else {
         /* Only advance on every 8th frame */
-        d0 = frameCount & 7;
+        d0 = _frameCount & 7;
         if (d0 == 0) {
-            currentAnimatedAdLine += 1;
-            if (currentAnimatedAdLine == 6) {
-                advertSlideTimer = 0x28;    /* pause for 40 frames */
-            } else if (currentAnimatedAdLine == 0x0D) {
+            _currentAnimatedAdLine += 1;
+            if (_currentAnimatedAdLine == 6) {
+                _advertSlideTimer = 0x28;    /* pause for 40 frames */
+            } else if (_currentAnimatedAdLine == 0x0D) {
                 goto stop_ad_cycle;
             }
         }
@@ -233,11 +233,11 @@ void ManageAdvertisements(void)
      * SpriteGraphics** at slot d7 instead, which is pointer-width
      * correct on both targets. */
     {
-        SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr + (uint16_t)d7;
+        SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr + (uint16_t)d7;
         int16_t imgIdx = d7;
         for (d2 = 0; d2 < 8; d2++) {
             SpriteGraphics *gfx = sprGfxTable[d2];
-            spr = &advertInGameSprites[d2];
+            spr = &_advertInGameSprites[d2];
             spr->imageIndex = (int16_t)imgIdx;
             spr->x.s.i = (int16_t)d1;
             spr->y.s.i = 0x5A;
@@ -263,7 +263,7 @@ void ManageAdvertisements(void)
                  * load time by CopyAdvertisementsData. Now stored as a
                  * real uint8_t* (advertNPointers retyped to uint8_t*[8]),
                  * so the scroll offset just adds onto it directly. */
-                uint32_t scrollOffset = (uint32_t)currentAnimatedAdLine * lineBytes;
+                uint32_t scrollOffset = (uint32_t)_currentAnimatedAdLine * lineBytes;
                 gfx->sprData = a6[d2] + scrollOffset;
             }
             d1 += 0x10;
@@ -273,18 +273,18 @@ void ManageAdvertisements(void)
     return;
 
 stop_ad_cycle:
-    advertIndex = 0xFFFF;
+    _advertIndex = 0xFFFF;
     goto teardown_ads_and_reset_counters;
 
 reset_ads_for_gameplay_state:
-    advertIndex = 0;
+    _advertIndex = 0;
     /* fall through */
 
 teardown_ads_and_reset_counters:
-    if ((uint16_t)advertInGameSprites[0].visible != 0)
+    if ((uint16_t)_advertInGameSprites[0].visible != 0)
         SetAdvertisementsInvisible();
-    advertSlideTimer = 0;
-    currentAnimatedAdLine = 0;
+    _advertSlideTimer = 0;
+    _currentAnimatedAdLine = 0;
 }
 
 /* ================================================================
@@ -297,25 +297,25 @@ __attribute__((used, externally_visible))
 void UpdateCornerFlagSprite(void)
 {
     int16_t d0;
-    Sprite *spr = &cornerFlagSprite;
+    Sprite *spr = &_cornerFlagSprite;
 
     /* X position: if cameraX.s.i + 168 >= 336, hide far right; else show at x=81 */
-    d0 = cameraX.s.i + 168;
+    d0 = _cameraX.s.i + 168;
     if ((uint16_t)d0 >= 336)
         spr->x.s.i = 590;
     else
         spr->x.s.i = 81;
 
     /* Y position: if cameraY.s.i + 136 >= 449, hide far bottom; else show at y=129 */
-    d0 = cameraY.s.i + 136;
+    d0 = _cameraY.s.i + 136;
     if ((uint16_t)d0 >= 449)
         spr->y.s.i = 769;
     else
         spr->y.s.i = 129;
 
     /* Animation: 32-entry lookup table indexed by (frameCount >> 1) & 0x1F */
-    d0 = (frameCount >> 1) & 0x1F;
-    d0 = (uint16_t)cornerFlagPictureIndices[d0] + SPR_CORNER_FLAG_FRAME_0;
+    d0 = (_frameCount >> 1) & 0x1F;
+    d0 = (uint16_t)_cornerFlagPictureIndices[d0] + SPR_CORNER_FLAG_FRAME_0;
     spr->imageIndex = (int16_t)d0;
 
 #ifdef SWOS_SDL_BUILD
@@ -325,7 +325,7 @@ void UpdateCornerFlagSprite(void)
      * waves too. In 4:3 / Amiga (WIDE_MARGIN == 0) the far corner is off-screen anyway, so
      * we just hide it (imageIndex = -1) — this is purely a widescreen extra. */
     {
-        Sprite *spr2 = &cornerFlagSprite2;
+        Sprite *spr2 = &_cornerFlagSprite2;
         if (WIDE_MARGIN > 0) {
             spr2->x.s.i      = (spr->x.s.i == 81) ? 590 : 81;  /* opposite side */
             spr2->y.s.i      = spr->y.s.i;                     /* same row as the primary */
@@ -346,38 +346,38 @@ void UpdateCornerFlagSprite(void)
 __attribute__((used, externally_visible))
 void SpinBig_S_Sprite(void)
 {
-    Sprite *spr = &big_S_Sprite;
+    Sprite *spr = &_big_S_Sprite;
     int16_t d0;
 
     /* Default: set imageIndex to -1 (invisible) */
     spr->imageIndex = -1;
 
-    if (spinBigS == 0)
+    if (_spinBigS == 0)
         return;
 
     /* Advance spin index unless in substitutes menu or showing stats */
-    if (inSubstitutesMenu != 0) {
-        if (subsState != 0)
+    if (_inSubstitutesMenu != 0) {
+        if (_subsState != 0)
             goto skip_advance;
     }
-    if (showingUserStats != 0)
+    if (_showingUserStats != 0)
         goto skip_advance;
-    if (statsTimer != 0)
+    if (_statsTimer != 0)
         goto skip_advance;
 
     /* Advance by lastFrameTicks, wrap at 64 */
-    bigSIndex = (bigSIndex + lastFrameTicks) & 0x3F;
+    _bigSIndex = (_bigSIndex + _lastFrameTicks) & 0x3F;
 
 skip_advance:
-    d0 = bigSIndex >> 1;
+    d0 = _bigSIndex >> 1;
     d0 += BIG_S_FRAME_00;
     spr->imageIndex = (int16_t)d0;
 
     /* Position relative to camera */
-    spr->x.s.i = cameraX.s.i + 0x12D;
-    spr->y.s.i = cameraY.s.i + 0x271E;
+    spr->x.s.i = _cameraX.s.i + 0x12D;
+    spr->y.s.i = _cameraY.s.i + 0x271E;
 
-    if (currentPlayerIndicatorPosition == 3)
+    if (_currentPlayerIndicatorPosition == 3)
         spr->y.s.i += 0x0A;
 
     spr->z.s.i = 10000;

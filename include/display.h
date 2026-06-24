@@ -94,7 +94,7 @@ struct Custom {
  * Must be volatile so reads/writes to HW registers aren't optimized away.
  * NOT packed — GCC generates byte-by-byte access for packed volatile structs.
  * The struct is naturally word-aligned (all Amiga custom regs are). */
-extern volatile struct Custom *custom;
+extern volatile struct Custom *_custom;
 
 /* ---- Blitter register offsets from CUSTOM_BASE (kept for asm compat) ---- */
 #define BLTCON0_OFF         0x40
@@ -242,10 +242,10 @@ extern volatile struct Custom *custom;
 #endif
 
 /* ---- Frontbuffer layout ---- */
-/* Amiga has no widescreen: g_screen_width folds to the fixed visible width at compile
+/* Amiga has no widescreen: _screen_width folds to the fixed visible width at compile
  * time, so the synced per-site culls / camera math are identical to before. (The SDL
  * build makes these runtime; this is the back-ported Amiga branch.) */
-#define g_screen_width                  SCREEN_WIDTH
+#define _screen_width                  SCREEN_WIDTH
 #define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
@@ -257,9 +257,9 @@ extern volatile struct Custom *custom;
 #define FB_COPY_WORDS_MINUS1            ((FRONTBUFFER_SIZE_TOTAL_BYTES >> 1) - 1)
 #define FB_BLT_MOD_AFTER_1_WORD         (FRONTBUFFER_ROW_STRIDE_BYTES - 2)
 /* Widescreen menu centering (SDL only). On Amiga WIDE_MARGIN folds to 0 and
- * g_menu_draw_x_offset stays 0, so the synced menu/primitive code is a no-op. */
-#define WIDE_MARGIN                     ((g_screen_width - SCREEN_WIDTH) / 2)
-extern int g_menu_draw_x_offset;
+ * _menu_draw_x_offset stays 0, so the synced menu/primitive code is a no-op. */
+#define WIDE_MARGIN                     ((_screen_width - SCREEN_WIDTH) / 2)
+extern int _menu_draw_x_offset;
 
 /* ---- Tile / scroll-blit constants ---- */
 #define TILE_STRIDE                 14

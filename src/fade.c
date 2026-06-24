@@ -45,14 +45,14 @@ static inline void fade_wait_one_isr_tick(void)
 #define FADE_SPIN_BODY() ((void)0)
 #endif
 
-extern volatile uint16_t fadeState;
-extern volatile uint16_t fadeCommand;
-extern volatile uint16_t fadeInitFlag;
-extern uint16_t g_quitToDos;
-extern uint16_t loaderModeFlag;
-extern uint16_t paletteIndex;
-extern uint8_t copperListBuffer[];
-extern void *paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
+extern volatile uint16_t _fadeState;
+extern volatile uint16_t _fadeCommand;
+extern volatile uint16_t _fadeInitFlag;
+extern uint16_t _quitToDos;
+extern uint16_t _loaderModeFlag;
+extern uint16_t _paletteIndex;
+extern uint8_t _copperListBuffer[];
+extern void *_paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
 
 /* FadeOutToBlack (SWOS2.s line 6781)
  *
@@ -64,24 +64,24 @@ extern void *paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes *
 __attribute__((used, externally_visible))
 void FadeOutToBlack(void)
 {
-    if (fadeInitFlag != FADE_SENTINEL)
+    if (_fadeInitFlag != FADE_SENTINEL)
     {
-        while (fadeState == 0)
+        while (_fadeState == 0)
         {
-            if (g_quitToDos) return;
+            if (_quitToDos) return;
             FADE_SPIN_BODY();
         }
     }
 
-    if (fadeState == 0)
+    if (_fadeState == 0)
         return;
 
-    if (fadeCommand == FADE_SENTINEL)
-        fadeCommand = 0xFFFFu;
+    if (_fadeCommand == FADE_SENTINEL)
+        _fadeCommand = 0xFFFFu;
 
-    while (fadeState != 0)
+    while (_fadeState != 0)
     {
-        if (g_quitToDos) return;
+        if (_quitToDos) return;
         FADE_SPIN_BODY();
     }
 }
@@ -96,25 +96,25 @@ void FadeOutToBlack(void)
 __attribute__((used, externally_visible))
 void FadeIn(void)
 {
-    if (fadeCommand != FADE_SENTINEL)
+    if (_fadeCommand != FADE_SENTINEL)
     {
-        while (fadeState != 0)
+        while (_fadeState != 0)
         {
-            if (g_quitToDos) return;
+            if (_quitToDos) return;
             FADE_SPIN_BODY();
         }
         FadeOutToBlack();
     }
 
-    if (fadeState != 0)
+    if (_fadeState != 0)
         return;
 
-    if (fadeInitFlag == FADE_SENTINEL)
-        fadeInitFlag = 0xFFFFu;
+    if (_fadeInitFlag == FADE_SENTINEL)
+        _fadeInitFlag = 0xFFFFu;
 
-    while (fadeState == 0)
+    while (_fadeState == 0)
     {
-        if (g_quitToDos) return;
+        if (_quitToDos) return;
         FADE_SPIN_BODY();
     }
 }
@@ -173,7 +173,7 @@ void ApplyFadeStep(uint16_t fadeLevel)
 
     idx = (fadeLevel >> 5) * 2; /* index into shift/mask pairs */
 
-    if (loaderModeFlag == 0)
+    if (_loaderModeFlag == 0)
     {
         /* Normal path */
         shift = kFadeShiftMaskTable[idx];
@@ -186,7 +186,7 @@ void ApplyFadeStep(uint16_t fadeLevel)
         mask  = fadeShiftMaskTable[idx + 1];
     }
 
-    palette = (const uint16_t *)paletteTable[paletteIndex];
+    palette = (const uint16_t *)_paletteTable[_paletteIndex];
 
 #ifdef AGA
     {
@@ -217,10 +217,10 @@ void ApplyFadeStep(uint16_t fadeLevel)
         }
     }
 #else
-    palA = (volatile uint16_t *)(copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
-    palB = (volatile uint16_t *)(copperListBuffer + COP_PAL_B1_C0_VAL_OFF);
+    palA = (volatile uint16_t *)(_copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
+    palB = (volatile uint16_t *)(_copperListBuffer + COP_PAL_B1_C0_VAL_OFF);
 
-    if (loaderModeFlag == 0)
+    if (_loaderModeFlag == 0)
     {
         /* Normal: shift and mask each color */
         for (i = 15; i >= 0; i--)
@@ -266,24 +266,24 @@ void FadeOutTick(void)
 {
     uint16_t level;
 
-    if (fadeCommand == FADE_SENTINEL)
+    if (_fadeCommand == FADE_SENTINEL)
         return;
 
-    level = fadeCommand;
+    level = _fadeCommand;
     if ((int16_t)level < 0)
     {
         /* First tick: start at FADE_MAX */
-        fadeCommand = FADE_MAX;
+        _fadeCommand = FADE_MAX;
         level = FADE_MAX;
     }
 
     ApplyFadeStep(level);
 
-    fadeCommand -= FADE_STEP;
-    if ((int16_t)fadeCommand < 0)
+    _fadeCommand -= FADE_STEP;
+    if ((int16_t)_fadeCommand < 0)
     {
-        fadeCommand = FADE_SENTINEL;
-        fadeState = 0;
+        _fadeCommand = FADE_SENTINEL;
+        _fadeState = 0;
     }
 }
 
@@ -298,23 +298,23 @@ void FadeInTick(void)
 {
     uint16_t level;
 
-    if (fadeInitFlag == FADE_SENTINEL)
+    if (_fadeInitFlag == FADE_SENTINEL)
         return;
 
-    level = fadeInitFlag;
+    level = _fadeInitFlag;
     if ((int16_t)level < 0)
     {
         /* First tick: start at 0 */
-        fadeInitFlag = 0;
+        _fadeInitFlag = 0;
         level = 0;
     }
 
     ApplyFadeStep(level);
 
-    fadeInitFlag += FADE_STEP;
-    if (fadeInitFlag > FADE_MAX)
+    _fadeInitFlag += FADE_STEP;
+    if (_fadeInitFlag > FADE_MAX)
     {
-        fadeInitFlag = FADE_SENTINEL;
-        fadeState = 1;
+        _fadeInitFlag = FADE_SENTINEL;
+        _fadeState = 1;
     }
 }

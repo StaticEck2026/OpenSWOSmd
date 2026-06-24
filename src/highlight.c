@@ -28,54 +28,54 @@
 #define K_HIL_FILE_MAXSZ  192254u
 
 /* ---- External globals ---- */
-extern volatile uint16_t numScenesInHilFile;
-extern uint16_t gamePitchTypeOrSeason;
-extern int16_t  gamePitchType;
-extern uint16_t gameSeason;
-extern uint16_t currentGameTick;
-extern uint16_t plgD0Param;
-extern TeamGame topTeamInGame;
-extern TeamGame bottomTeamInGame;
-extern uint16_t trainingGame;
-extern uint16_t pitchNumberAndType;
-extern uint16_t hilNumGoals;
-extern uint16_t hilPitchNumber;
-extern uint8_t  hilFileBuffer[];
-extern uint8_t  gameName[];
-extern uint8_t  gameRound[];
-extern uint8_t  hilGameName[];
-extern uint8_t  hilGameRound[];
-extern uint16_t hilTeam1Goals;
-extern uint16_t hilTeam2Goals;
-extern uint16_t statsTeam1Goals;
-extern uint16_t statsTeam2Goals;
-extern uint16_t gameMaxSubstitutes;
-extern uint16_t hilMaxSubstitutes;
-extern uint16_t normalReplayRunning;
-extern uint8_t *goalBasePtr;
-extern uint8_t *nextGoalPtr;
-extern uint8_t *currentHilPtr;
-extern uint8_t *currentGoalPtr;
-extern volatile uint16_t goIntoHighlightsLoop;
-extern uint16_t hilSceneNumber;
-extern uintptr_t savedCurrentHilPtr;
-extern uintptr_t savedCurrentGoalPtr;
-extern uintptr_t savedGoalBasePtr;
-extern uintptr_t savedNextGoalPtr;
-extern uint8_t  hilStartOfGoalsBuffer[];
-extern uint8_t  inGameHilBuffer[];
-extern uint16_t throwInDeadVar;
-extern uint16_t team1TotalGoals;
-extern uint16_t team2TotalGoals;
-extern uint16_t animPatternsState;
-extern uint16_t replayState;
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern int16_t  savedCameraX;
-extern int16_t  savedCameraY;
-extern uint16_t hilLeftTeamGoals;
-extern uint16_t hilRightTeamGoals;
-extern uint16_t paused;
+extern volatile uint16_t _numScenesInHilFile;
+extern uint16_t _gamePitchTypeOrSeason;
+extern int16_t  _gamePitchType;
+extern uint16_t _gameSeason;
+extern uint16_t _currentGameTick;
+extern uint16_t _plgD0Param;
+extern TeamGame _topTeamInGame;
+extern TeamGame _bottomTeamInGame;
+extern uint16_t _trainingGame;
+extern uint16_t _pitchNumberAndType;
+extern uint16_t _hilNumGoals;
+extern uint16_t _hilPitchNumber;
+extern uint8_t  _hilFileBuffer[];
+extern uint8_t  _gameName[];
+extern uint8_t  _gameRound[];
+extern uint8_t  _hilGameName[];
+extern uint8_t  _hilGameRound[];
+extern uint16_t _hilTeam1Goals;
+extern uint16_t _hilTeam2Goals;
+extern uint16_t _statsTeam1Goals;
+extern uint16_t _statsTeam2Goals;
+extern uint16_t _gameMaxSubstitutes;
+extern uint16_t _hilMaxSubstitutes;
+extern uint16_t _normalReplayRunning;
+extern uint8_t *_goalBasePtr;
+extern uint8_t *_nextGoalPtr;
+extern uint8_t *_currentHilPtr;
+extern uint8_t *_currentGoalPtr;
+extern volatile uint16_t _goIntoHighlightsLoop;
+extern uint16_t _hilSceneNumber;
+extern uintptr_t _savedCurrentHilPtr;
+extern uintptr_t _savedCurrentGoalPtr;
+extern uintptr_t _savedGoalBasePtr;
+extern uintptr_t _savedNextGoalPtr;
+extern uint8_t  _hilStartOfGoalsBuffer[];
+extern uint8_t  _inGameHilBuffer[];
+extern uint16_t _throwInDeadVar;
+extern uint16_t _team1TotalGoals;
+extern uint16_t _team2TotalGoals;
+extern uint16_t _animPatternsState;
+extern uint16_t _replayState;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern int16_t  _savedCameraX;
+extern int16_t  _savedCameraY;
+extern uint16_t _hilLeftTeamGoals;
+extern uint16_t _hilRightTeamGoals;
+extern uint16_t _paused;
 
 /* ---- External functions ---- */
 extern uint16_t Rand(void);
@@ -88,7 +88,7 @@ extern void MoveView(int16_t newScreenX, int16_t newScreenY);
 extern void DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
 extern void ResetAnimatedPatternsForBothTeams(void);
 extern void DrawAnimatedPatterns(void);
-extern uint16_t panicReasonCode;
+extern uint16_t _panicReasonCode;
 
 /* ---- Local probability tables (matching asm data) ---- */
 
@@ -128,24 +128,24 @@ static const uint8_t pitchNumProbs[] = {
 /* Wrap pointer forward in ring buffer (matches ValidateHilPointerAdd) */
 static uint8_t *wrapPointerFwd(uint8_t *p)
 {
-    if (p == nextGoalPtr)
-        p = goalBasePtr;
+    if (p == _nextGoalPtr)
+        p = _goalBasePtr;
     return p;
 }
 
 /* Wrap pointer backward in ring buffer (matches ValidateHilPointerSub) */
 static uint8_t *wrapPointerBack(uint8_t *p)
 {
-    if (p < goalBasePtr)
-        p = nextGoalPtr;
+    if (p < _goalBasePtr)
+        p = _nextGoalPtr;
     return p;
 }
 
 /* Wrap a1-style pointer (IncrementHilBufferPointer) — same as wrapPointerFwd */
 static uint8_t *wrapHilPtr(uint8_t *p)
 {
-    if (p == nextGoalPtr)
-        p = goalBasePtr;
+    if (p == _nextGoalPtr)
+        p = _goalBasePtr;
     return p;
 }
 
@@ -155,23 +155,23 @@ static uint8_t *wrapHilPtr(uint8_t *p)
 __attribute__((used, externally_visible))
 void SetPitchTypeAndNumber(void)
 {
-    numScenesInHilFile = 0;
+    _numScenesInHilFile = 0;
 
-    int16_t pitchType;
+    int16_t _pitchType;
     const uint8_t *probs;
     int needChoose = 0;
 
-    if (gamePitchTypeOrSeason == 0) {
+    if (_gamePitchTypeOrSeason == 0) {
         /* Fixed pitch type mode */
-        pitchType = gamePitchType;
-        if (pitchType < 0) {
+        _pitchType = _gamePitchType;
+        if (_pitchType < 0) {
             /* Negative = auto-select from standard probabilities */
             probs = pitchTypeProbs;
             needChoose = 1;
         }
     } else {
         /* Seasonal pitch type mode */
-        probs = pitchTypeSeasonalProbs + (uint16_t)gameSeason * 7;
+        probs = pitchTypeSeasonalProbs + (uint16_t)_gameSeason * 7;
         needChoose = 1;
     }
 
@@ -179,10 +179,10 @@ void SetPitchTypeAndNumber(void)
         /* Random selection based on cumulative probabilities */
         uint16_t r = Rand();
         uint8_t d0 = (uint8_t)((uint32_t)r * 100 / 256);
-        pitchType = 0;
+        _pitchType = 0;
         while (d0 >= *probs) {
             d0 -= *probs++;
-            pitchType++;
+            _pitchType++;
         }
     }
 
@@ -190,22 +190,22 @@ void SetPitchTypeAndNumber(void)
      * Note: asm has 3 dead instructions here (currentGameTick & 0x10 << 4)
      * that get immediately overwritten in both branches. Omitted. */
     uint16_t pitchNum;
-    if (plgD0Param != 0) {
+    if (_plgD0Param != 0) {
         pitchNum = Rand() & 0xF;
     } else {
         /* Derive from team data */
-        uint16_t v = *(uint16_t *)topTeamInGame.teamName;
-        v ^= (uint16_t)topTeamInGame.prShirtCol;
-        v ^= (uint16_t)topTeamInGame.prShortsCol;
+        uint16_t v = *(uint16_t *)_topTeamInGame.teamName;
+        v ^= (uint16_t)_topTeamInGame.prShirtCol;
+        v ^= (uint16_t)_topTeamInGame.prShortsCol;
         pitchNum = v & 0xF;
     }
 
     uint16_t d0 = (uint16_t)pitchNumProbs[pitchNum] << 8;
 
-    if (trainingGame != 0)
+    if (_trainingGame != 0)
         d0 = 0x500;
 
-    pitchNumberAndType = (uint16_t)pitchType + d0;
+    _pitchNumberAndType = (uint16_t)_pitchType + d0;
 
 #ifdef DETERMINISTIC_MODE
     /* Force fixed pitch to ensure ASM and C versions match */
@@ -219,15 +219,15 @@ void SetPitchTypeAndNumber(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void CopyTeamsAndHeader(void)
 {
-    numScenesInHilFile = hilNumGoals;
-    pitchNumberAndType = hilPitchNumber;
+    _numScenesInHilFile = _hilNumGoals;
+    _pitchNumberAndType = _hilPitchNumber;
 
     /* Copy team data from hil file buffer (offset 8) */
-    uint8_t *src = &hilFileBuffer[8];
+    uint8_t *src = &_hilFileBuffer[8];
     uint16_t i;
     for (i = 0; i < 1018; i++) {
-        ((uint8_t *)&bottomTeamInGame)[i] = src[1018 + i];
-        ((uint8_t *)&topTeamInGame)[i] = src[i];
+        ((uint8_t *)&_bottomTeamInGame)[i] = src[1018 + i];
+        ((uint8_t *)&_topTeamInGame)[i] = src[i];
     }
 
     /* The TeamGame header has 11 int16 fields at offsets 0..21 (kit
@@ -238,8 +238,8 @@ void CopyTeamsAndHeader(void)
      * (teamName + per-player fields) and don't need swapping.
      * BE16_TO_HOST is a no-op on the Amiga BE build. */
     {
-        int16_t *topHdr = (int16_t *)&topTeamInGame;
-        int16_t *botHdr = (int16_t *)&bottomTeamInGame;
+        int16_t *topHdr = (int16_t *)&_topTeamInGame;
+        int16_t *botHdr = (int16_t *)&_bottomTeamInGame;
         for (i = 0; i < 11; i++) {
             topHdr[i] = BE16_TO_HOST((uint16_t)topHdr[i]);
             botHdr[i] = BE16_TO_HOST((uint16_t)botHdr[i]);
@@ -248,8 +248,8 @@ void CopyTeamsAndHeader(void)
 
     /* Copy game name and round */
     for (i = 0; i < 40; i++) {
-        gameName[i] = hilGameName[i];
-        gameRound[i] = hilGameRound[i];
+        _gameName[i] = _hilGameName[i];
+        _gameRound[i] = _hilGameRound[i];
     }
 }
 
@@ -262,40 +262,40 @@ void SetHilFileHeader(void)
     /* HIL header is big-endian on disk to match Amiga m68k. BE_WRITE_U32
      * is a no-op on Amiga BE host, byteswap on x86 LE — so saves from the
      * SDL build are now Amiga-compatible. */
-    BE_WRITE_U32(hilFileBuffer, K_HIL_FILE_SIG);
-    BE_WRITE_U32(&hilFileBuffer[4], K_HIL_FILE_MAXSZ);
+    BE_WRITE_U32(_hilFileBuffer, K_HIL_FILE_SIG);
+    BE_WRITE_U32(&_hilFileBuffer[4], K_HIL_FILE_MAXSZ);
 
     /* Pack team data into hil file buffer at offset 8. The first 22 bytes
      * of each TeamGame are 11 int16 kit/marker fields — byteswap host→BE
      * as we copy so the on-disk format matches Amiga m68k. The remaining
      * 996 bytes are byte-sized and copy verbatim. */
-    uint8_t *dst = &hilFileBuffer[8];
+    uint8_t *dst = &_hilFileBuffer[8];
     uint16_t i;
     {
-        int16_t *topHdr = (int16_t *)&topTeamInGame;
-        int16_t *botHdr = (int16_t *)&bottomTeamInGame;
+        int16_t *topHdr = (int16_t *)&_topTeamInGame;
+        int16_t *botHdr = (int16_t *)&_bottomTeamInGame;
         for (i = 0; i < 11; i++) {
             ((uint16_t *)dst)[i]            = HOST_TO_BE16((uint16_t)topHdr[i]);
             ((uint16_t *)(dst + 1018))[i]   = HOST_TO_BE16((uint16_t)botHdr[i]);
         }
     }
     for (i = 22; i < 1018; i++) {
-        dst[1018 + i] = ((uint8_t *)&bottomTeamInGame)[i];
-        dst[i] = ((uint8_t *)&topTeamInGame)[i];
+        dst[1018 + i] = ((uint8_t *)&_bottomTeamInGame)[i];
+        dst[i] = ((uint8_t *)&_topTeamInGame)[i];
     }
 
     /* Copy game name and round */
     for (i = 0; i < 40; i++) {
-        hilGameName[i] = gameName[i];
-        hilGameRound[i] = gameRound[i];
+        _hilGameName[i] = _gameName[i];
+        _hilGameRound[i] = _gameRound[i];
     }
 
-    hilNumGoals = numScenesInHilFile;
+    _hilNumGoals = _numScenesInHilFile;
 
-    hilTeam1Goals = statsTeam1Goals;
-    hilTeam2Goals = statsTeam2Goals;
-    hilPitchNumber = pitchNumberAndType;
-    hilMaxSubstitutes = gameMaxSubstitutes;
+    _hilTeam1Goals = _statsTeam1Goals;
+    _hilTeam2Goals = _statsTeam2Goals;
+    _hilPitchNumber = _pitchNumberAndType;
+    _hilMaxSubstitutes = _gameMaxSubstitutes;
 }
 
 /* ============================================================
@@ -304,16 +304,16 @@ void SetHilFileHeader(void)
 __attribute__((used, externally_visible))
 void SaveHighlightsPointers(void)
 {
-    if (numScenesInHilFile == 0)
+    if (_numScenesInHilFile == 0)
         return;
 
-    normalReplayRunning = 1;
-    savedGoalBasePtr = (uintptr_t)goalBasePtr;
-    savedNextGoalPtr = (uintptr_t)nextGoalPtr;
-    savedCurrentHilPtr = (uintptr_t)currentHilPtr;
-    savedCurrentGoalPtr = (uintptr_t)currentGoalPtr;
-    goIntoHighlightsLoop = 1;
-    hilSceneNumber = 0xFFFF;
+    _normalReplayRunning = 1;
+    _savedGoalBasePtr = (uintptr_t)_goalBasePtr;
+    _savedNextGoalPtr = (uintptr_t)_nextGoalPtr;
+    _savedCurrentHilPtr = (uintptr_t)_currentHilPtr;
+    _savedCurrentGoalPtr = (uintptr_t)_currentGoalPtr;
+    _goIntoHighlightsLoop = 1;
+    _hilSceneNumber = 0xFFFF;
 }
 
 /* ============================================================
@@ -322,12 +322,12 @@ void SaveHighlightsPointers(void)
 __attribute__((used, externally_visible))
 void RestoreHighlightPointers(void)
 {
-    normalReplayRunning = 0;
-    goalBasePtr = (uint8_t *)savedGoalBasePtr;
-    nextGoalPtr = (uint8_t *)savedNextGoalPtr;
-    currentHilPtr = (uint8_t *)savedCurrentHilPtr;
-    currentGoalPtr = (uint8_t *)savedCurrentGoalPtr;
-    goIntoHighlightsLoop = 0;
+    _normalReplayRunning = 0;
+    _goalBasePtr = (uint8_t *)_savedGoalBasePtr;
+    _nextGoalPtr = (uint8_t *)_savedNextGoalPtr;
+    _currentHilPtr = (uint8_t *)_savedCurrentHilPtr;
+    _currentGoalPtr = (uint8_t *)_savedCurrentGoalPtr;
+    _goIntoHighlightsLoop = 0;
 }
 
 /* ============================================================
@@ -352,10 +352,10 @@ void SaveHighlightScene(void)
 {
     /* Asm: move.w #10,d0; beq locret — the beq is dead (10 != 0). Omitted. */
 
-    if (numScenesInHilFile == HIL_MAX_SCENES) {
+    if (_numScenesInHilFile == HIL_MAX_SCENES) {
         /* Buffer full — shift scenes 1..9 into slots 0..8 */
-        uint32_t *src = (uint32_t *)inGameHilBuffer;
-        uint32_t *dst = (uint32_t *)hilStartOfGoalsBuffer;
+        uint32_t *src = (uint32_t *)_inGameHilBuffer;
+        uint32_t *dst = (uint32_t *)_hilStartOfGoalsBuffer;
         int16_t block;
         uint16_t j;
         for (block = 8; block >= 0; block--) {
@@ -363,36 +363,36 @@ void SaveHighlightScene(void)
                 *dst++ = *src++;
             }
         }
-        numScenesInHilFile--;
+        _numScenesInHilFile--;
     }
 
     /* Scan forward from currentHilPtr for a frame-start marker (bit 7 of first byte set).
      * Scan at most 19000 bytes (4750 longs). */
     uint32_t count = 0;
-    uint8_t *p = currentHilPtr;
+    uint8_t *p = _currentHilPtr;
 
     for (;;) {
         if (count == HIL_SCENE_BYTES)
             return;  /* Not found within range */
         count += 4;
         p += 4;
-        if (p == nextGoalPtr)
-            p = goalBasePtr;
+        if (p == _nextGoalPtr)
+            p = _goalBasePtr;
         if (*p & 0x80)
             break;  /* Found frame-start marker */
     }
 
     /* Copy 19000 bytes from ring buffer (starting at p) into goals buffer slot */
-    uint32_t *dest = (uint32_t *)(hilStartOfGoalsBuffer +
-                                   (uint32_t)numScenesInHilFile * HIL_SCENE_BYTES);
+    uint32_t *dest = (uint32_t *)(_hilStartOfGoalsBuffer +
+                                   (uint32_t)_numScenesInHilFile * HIL_SCENE_BYTES);
     uint16_t i;
     for (i = 0; i < HIL_SCENE_LONGS; i++) {
         *dest++ = *(uint32_t *)p;
         p += 4;
-        if (p == nextGoalPtr)
-            p = goalBasePtr;
+        if (p == _nextGoalPtr)
+            p = _goalBasePtr;
     }
-    numScenesInHilFile++;
+    _numScenesInHilFile++;
 }
 
 /* ============================================================
@@ -401,7 +401,7 @@ void SaveHighlightScene(void)
 __attribute__((used, externally_visible))
 void ThrowInDeadProc(void)
 {
-    throwInDeadVar = 1;
+    _throwInDeadVar = 1;
 }
 
 /* ============================================================
@@ -410,7 +410,7 @@ void ThrowInDeadProc(void)
 __attribute__((used, externally_visible))
 void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y)
 {
-    uint8_t *a1 = currentHilPtr;
+    uint8_t *a1 = _currentHilPtr;
 
     if (spriteIndexOrMarker >= 0) {
         /* Pack sprite data: (index << 20) | (x << 10) | y, with bit 31 clear.
@@ -425,9 +425,9 @@ void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint1
         packed &= ~(1u << 31);  /* bclr #31 */
         BE_WRITE_U32(a1, packed);
         a1 += 4;
-        if (a1 == nextGoalPtr)
-            a1 = goalBasePtr;
-        currentHilPtr = a1;
+        if (a1 == _nextGoalPtr)
+            a1 = _goalBasePtr;
+        _currentHilPtr = a1;
         return;
     }
 
@@ -449,20 +449,20 @@ void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint1
     BE_WRITE_U16(a1 + 2, (uint16_t)y);
     a1 += 4;
     a1 = wrapHilPtr(a1);
-    currentHilPtr = a1;
+    _currentHilPtr = a1;
 
     /* Write team goals (BE for cross-build .HIL file interchange) */
-    BE_WRITE_U16(a1,     team1TotalGoals);
-    BE_WRITE_U16(a1 + 2, team2TotalGoals);
+    BE_WRITE_U16(a1,     _team1TotalGoals);
+    BE_WRITE_U16(a1 + 2, _team2TotalGoals);
     a1 += 4;
     a1 = wrapHilPtr(a1);
 
     /* Write animated patterns state (duplicated in both words) */
-    BE_WRITE_U16(a1,     animPatternsState);
-    BE_WRITE_U16(a1 + 2, animPatternsState);
+    BE_WRITE_U16(a1,     _animPatternsState);
+    BE_WRITE_U16(a1 + 2, _animPatternsState);
     a1 += 4;
     a1 = wrapHilPtr(a1);
-    currentHilPtr = a1;
+    _currentHilPtr = a1;
 
     /* Write end-of-frame marker */
     BE_WRITE_U32(a1, 0xFFFFFFFFu);
@@ -480,14 +480,14 @@ void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint1
 __attribute__((used, externally_visible))
 void DrawReplayFrame(void)
 {
-    uint8_t *a0 = currentGoalPtr;
+    uint8_t *a0 = _currentGoalPtr;
     uint32_t d0;
 
-    if (replayState == 1) {
+    if (_replayState == 1) {
         /* STATE 1 → 2: Initialize replay */
-        replayState = 2;
-        savedCameraX = cameraX.s.i;
-        savedCameraY = cameraY.s.i;
+        _replayState = 2;
+        _savedCameraX = _cameraX.s.i;
+        _savedCameraY = _cameraY.s.i;
 
         /* Read first frame data (without advancing a0) for camera init.
          * Buffer is stored big-endian — BE_READ_U32 is a no-op on Amiga
@@ -512,14 +512,14 @@ void DrawReplayFrame(void)
     MoveView((int16_t)(d0 >> 16), (int16_t)(d0 & 0xFFFF));
 
     /* Read team goals */
-    hilLeftTeamGoals = BE_READ_U16(a0);
-    hilRightTeamGoals = BE_READ_U16(a0 + 2);
+    _hilLeftTeamGoals = BE_READ_U16(a0);
+    _hilRightTeamGoals = BE_READ_U16(a0 + 2);
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
     /* Read animated patterns state (stored as two identical words) */
-    animPatternsState = BE_READ_U16(a0);
-    animPatternsState = BE_READ_U16(a0 + 2);
+    _animPatternsState = BE_READ_U16(a0);
+    _animPatternsState = BE_READ_U16(a0 + 2);
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
@@ -561,12 +561,12 @@ check_next:
     /* Next frame-start marker — back up, save pointer for next call */
     a0 -= 4;
     a0 = wrapPointerBack(a0);
-    currentGoalPtr = a0;
+    _currentGoalPtr = a0;
     goto after_decode;
 
 end_replay:
     /* loc_10C4C4 */
-    replayState = 0;
+    _replayState = 0;
     return;
 
 after_decode:
@@ -574,18 +574,18 @@ after_decode:
 
     /* Show replay icon (spinning R) when NOT in normal replay. Add WIDE_MARGIN so the icon
      * tracks the centred HUD in widescreen instead of sitting at the screen's left edge. */
-    if (normalReplayRunning == 0) {
-        uint16_t frame = (currentGameTick >> 1) & 0x1F;
+    if (_normalReplayRunning == 0) {
+        uint16_t frame = (_currentGameTick >> 1) & 0x1F;
         DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB + WIDE_MARGIN, 0xE);
     }
 
     /* Show score overlay during normal replay (same playfield-relative offset). */
-    if (normalReplayRunning != 0) {
+    if (_normalReplayRunning != 0) {
         uint16_t bx = 17 + WIDE_MARGIN;   /* d1 = 0xD + 4 */
         uint16_t by = 17;                 /* d2 = 0xD + 4 */
 
         /* Left team goals (using SPR_BIG_0 digit sprites) */
-        uint16_t leftGoals = hilLeftTeamGoals;
+        uint16_t leftGoals = _hilLeftTeamGoals;
         uint16_t tens = leftGoals / 10;
         uint16_t units = leftGoals % 10;
 
@@ -603,7 +603,7 @@ after_decode:
         bx += 8;
 
         /* Right team goals (using SPR_BIG_0_ALT digit sprites) */
-        uint16_t rightGoals = hilRightTeamGoals;
+        uint16_t rightGoals = _hilRightTeamGoals;
         tens = rightGoals / 10;
         units = rightGoals % 10;
 
@@ -624,7 +624,7 @@ after_decode:
      * which is exactly the stutter testers hear during R-then-R
      * slomo. Use Platform_VBlank instead so we both pace at 50 Hz AND
      * keep AudioSDL_Tick firing on every wait iteration. */
-    if (replayState == 3 && paused == 0) {
+    if (_replayState == 3 && _paused == 0) {
 #ifdef SWOS_SDL_BUILD
         extern int Platform_VBlank(void);
         Platform_VBlank();
@@ -632,7 +632,7 @@ after_decode:
 #else
         uint16_t i;
         for (i = 0; i < 2; i++) {
-            volatile uint16_t *tickPtr = &currentGameTick;
+            volatile uint16_t *tickPtr = &_currentGameTick;
             uint16_t tick = *tickPtr;
             while (*tickPtr == tick)
                 ;  /* busy-wait for next tick */
@@ -659,7 +659,7 @@ void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
 __attribute__((used, externally_visible))
 void HandleInstantReplayStateSwitch(void)
 {
-    if (replayState == 0) {
+    if (_replayState == 0) {
         /* Search for frame-start marker in ring buffer.
          * Entries are stored big-endian (see frame-marker write in
          * SaveCoordinatesForHighlights), so the high byte of the uint32
@@ -667,30 +667,30 @@ void HandleInstantReplayStateSwitch(void)
          * host endian. `*p & 0x80` therefore detects the marker on both
          * BE (Amiga) and LE (SDL) hosts. */
         uint32_t count = 0;
-        uint8_t *p = currentHilPtr;
+        uint8_t *p = _currentHilPtr;
 
         for (;;) {
             if (count == HIL_SCENE_BYTES)
                 return;  /* Not found */
             count += 4;
             p += 4;
-            if (p == nextGoalPtr)
-                p = goalBasePtr;
+            if (p == _nextGoalPtr)
+                p = _goalBasePtr;
             if (*p & 0x80) {
                 /* Found frame start */
-                currentGoalPtr = p;
-                replayState = 1;
+                _currentGoalPtr = p;
+                _replayState = 1;
                 return;
             }
         }
     }
 
-    if (replayState == 3) {
-        replayState = 2;
+    if (_replayState == 3) {
+        _replayState = 2;
         return;
     }
-    if (replayState == 2) {
-        replayState = 3;
+    if (_replayState == 2) {
+        _replayState = 3;
         return;
     }
 }
@@ -701,9 +701,9 @@ void HandleInstantReplayStateSwitch(void)
 __attribute__((used, externally_visible))
 void RestoreCameraPosition(void)
 {
-    replayState = 0;
-    int16_t x = savedCameraX;
-    int16_t y = savedCameraY;
+    _replayState = 0;
+    int16_t x = _savedCameraX;
+    int16_t y = _savedCameraY;
     ResetAnimatedPatternsForBothTeams();
     ReplayUpdateCameraAndSwapBuffers(x, y);
 }

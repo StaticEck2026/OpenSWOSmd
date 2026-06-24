@@ -16,48 +16,48 @@
 #include "game_types.h"
 #include "math68k.h"
 
-extern Sprite          ballSprite;
-extern int16_t         gsResultAutoAdvance;   /* GS_660_600 600/660 — dos_gameplay.c */
-extern int16_t         gsHalftimeStoppage;    /* GS_385_350 350/385 — dos_gameplay.c */
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
-extern uint16_t        currentGameTick;
-extern int16_t         aiCounter;
-extern int16_t         aiAttackHalf;
-extern int16_t         aiCounterWriteOnly;
-extern int16_t         deadVarAlways0;
-extern TeamGeneralInfo *playerKickerPtr;
+extern Sprite          _ballSprite;
+extern int16_t         _gsResultAutoAdvance;   /* GS_660_600 600/660 — dos_gameplay.c */
+extern int16_t         _gsHalftimeStoppage;    /* GS_385_350 350/385 — dos_gameplay.c */
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
+extern uint16_t        _currentGameTick;
+extern int16_t         _aiCounter;
+extern int16_t         _aiAttackHalf;
+extern int16_t         _aiCounterWriteOnly;
+extern int16_t         _deadVarAlways0;
+extern TeamGeneralInfo *_playerKickerPtr;
 
 /* AI_SetControlsDirection globals — declared in SWOS2.s data section */
-extern int16_t  aiTurnDirection;
-extern int16_t  aiResumePlayTimer;
-extern int16_t  aiRand;
-extern int16_t  aiRandomRotateTable[2];
-extern int16_t  aiLeftSpinTable[3];
-extern int16_t  aiRotateRightTable[3];
-extern int16_t  aiLongKickTable[3];
-extern uint8_t  aiThrowInDirections[6];
-extern int16_t  AI_maxStoppageTime;
-extern int16_t  gameState;
-extern int16_t  gameStatePl;
-extern int16_t  resultTimer;
-extern int16_t  stoppageTimerActive;
-extern int16_t  stoppageTimerTotal;
-extern int16_t  team1Computer;
-extern int16_t  team2Computer;
-extern int16_t  playingPenalties;
-extern int16_t  penalty;
-extern int16_t  cameraDirection;
-extern uint8_t  playerTurnFlags;
-extern int16_t  frameCount;
-extern int16_t  inSubstitutesMenu;
-extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
-extern TeamGeneralInfo *lastTeamPlayed;
+extern int16_t  _aiTurnDirection;
+extern int16_t  _aiResumePlayTimer;
+extern int16_t  _aiRand;
+extern int16_t  _aiRandomRotateTable[2];
+extern int16_t  _aiLeftSpinTable[3];
+extern int16_t  _aiRotateRightTable[3];
+extern int16_t  _aiLongKickTable[3];
+extern uint8_t  _aiThrowInDirections[6];
+extern int16_t  _AI_maxStoppageTime;
+extern int16_t  _gameState;
+extern int16_t  _gameStatePl;
+extern int16_t  _resultTimer;
+extern int16_t  _stoppageTimerActive;
+extern int16_t  _stoppageTimerTotal;
+extern int16_t  _team1Computer;
+extern int16_t  _team2Computer;
+extern int16_t  _playingPenalties;
+extern int16_t  _penalty;
+extern int16_t  _cameraDirection;
+extern uint8_t  _playerTurnFlags;
+extern int16_t  _frameCount;
+extern int16_t  _inSubstitutesMenu;
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
+extern TeamGeneralInfo *_lastTeamPlayed;
 
 extern uint16_t Rand(void);
 
 /* Written by FindClosestPlayerToBallFacing, read by asm stub to return in d2 */
-int32_t __attribute__((used, externally_visible)) findClosestBallDist;
+int32_t __attribute__((used, externally_visible)) _findClosestBallDist;
 
 
 /* ===== AI_SetDirectionTowardOpponentsGoal =====
@@ -72,14 +72,14 @@ AI_SetDirectionTowardOpponentsGoal(TeamGeneralInfo *team)
 {
     int16_t ballX, dir;
 
-    if (aiCounter == 0)
+    if (_aiCounter == 0)
         return;
 
-    ballX = ballSprite.x.s.i;
+    ballX = _ballSprite.x.s.i;
 
-    if (aiAttackHalf == 1) {
+    if (_aiAttackHalf == 1) {
         /* Bottom team attacks upward: directions 7, 0, 1 */
-        if (team != &bottomTeamData)
+        if (team != &_bottomTeamData)
             return;
         if (ballX < 300)
             dir = 1;
@@ -89,7 +89,7 @@ AI_SetDirectionTowardOpponentsGoal(TeamGeneralInfo *team)
             dir = 0;
     } else {
         /* Top team attacks downward: directions 3, 4, 5 */
-        if (team != &topTeamData)
+        if (team != &_topTeamData)
             return;
         if (ballX < 300)
             dir = 3;
@@ -121,11 +121,11 @@ AI_Kick(Sprite *player, TeamGeneralInfo *team)
     int8_t sdiff;
 
     /* deadVarAlways0 is always 0, so this path is never taken */
-    if (deadVarAlways0 != 0) {
-        if (team == (TeamGeneralInfo *)playerKickerPtr)
+    if (_deadVarAlways0 != 0) {
+        if (team == (TeamGeneralInfo *)_playerKickerPtr)
             return;
         opponent = team->opponentsTeam;
-        if (opponent == (TeamGeneralInfo *)playerKickerPtr)
+        if (opponent == (TeamGeneralInfo *)_playerKickerPtr)
             return;
     }
 
@@ -183,7 +183,7 @@ AI_DecideWhetherToTriggerFire(Sprite *player, TeamGeneralInfo *team, int16_t dir
         return 1;
 
     /* Check if player is facing toward opponent's goal */
-    if (team == &topTeamData) {
+    if (team == &_topTeamData) {
         /* Top team: must face downward (directions 3, 4, 5) */
         if (dir != 3 && dir != 4 && dir != 5)
             return 1;
@@ -198,13 +198,13 @@ AI_DecideWhetherToTriggerFire(Sprite *player, TeamGeneralInfo *team, int16_t dir
         return 1;
 
     /* Check ball height based on vertical movement */
-    if (ballSprite.deltaZ.raw < 0) {
+    if (_ballSprite.deltaZ.raw < 0) {
         /* Ball descending: wider height window [12..20] */
-        if (ballSprite.z.s.i < 12 || ballSprite.z.s.i > 20)
+        if (_ballSprite.z.s.i < 12 || _ballSprite.z.s.i > 20)
             return 1;
     } else {
         /* Ball going up or on ground: height window [8..14] */
-        if (ballSprite.z.s.i < 8 || ballSprite.z.s.i > 14)
+        if (_ballSprite.z.s.i < 8 || _ballSprite.z.s.i > 14)
             return 1;
     }
 
@@ -225,12 +225,12 @@ AI_DecideWhetherToTriggerFire(Sprite *player, TeamGeneralInfo *team, int16_t dir
         return 1;
 
     team->currentAllowedDirection = (int16_t)roundedDir;
-    aiCounter = 15;
-    aiCounterWriteOnly = (int16_t)roundedDir;
-    aiAttackHalf = 2;
+    _aiCounter = 15;
+    _aiCounterWriteOnly = (int16_t)roundedDir;
+    _aiAttackHalf = 2;
 
-    if (team != &topTeamData)
-        aiAttackHalf = 1;
+    if (team != &_topTeamData)
+        _aiAttackHalf = 1;
 
     return 0; /* firing */
 }
@@ -259,7 +259,7 @@ FindClosestPlayerToBallFacing(uint16_t fullDir, TeamGeneralInfo *team)
     int16_t i, t;
     TeamGeneralInfo *scanTeam;
 
-    scanTeam = &topTeamData;
+    scanTeam = &_topTeamData;
 
     for (t = 0; t < 2; t++) {
         sprites = scanTeam->spritesTable;
@@ -296,10 +296,10 @@ FindClosestPlayerToBallFacing(uint16_t fullDir, TeamGeneralInfo *team)
             ;
         }
 
-        scanTeam = &bottomTeamData;
+        scanTeam = &_bottomTeamData;
     }
 
-    findClosestBallDist = bestDist;
+    _findClosestBallDist = bestDist;
     return bestPlayer;
 }
 
@@ -346,13 +346,13 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
         return;
 
     /* Decrement AI counters */
-    if (aiCounter != 0)
-        aiCounter--;
-    if (aiResumePlayTimer != 0)
-        aiResumePlayTimer--;
+    if (_aiCounter != 0)
+        _aiCounter--;
+    if (_aiResumePlayTimer != 0)
+        _aiResumePlayTimer--;
 
     /* Generate random value for this frame */
-    aiRand = (int16_t)Rand();
+    _aiRand = (int16_t)Rand();
 
     /* Increment AI timer, clear all control outputs */
     team->AI_timer++;
@@ -363,7 +363,7 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
     team->normalFire = 0;
 
     /* Don't process AI during substitutes menu */
-    if (inSubstitutesMenu != 0)
+    if (_inSubstitutesMenu != 0)
         return;
 
     /* Load controlled player and pass target */
@@ -374,13 +374,13 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
         d7 = a5->direction;
 
     /* Compute goal coordinates and squared distance */
-    if (team == &bottomTeamData)
+    if (team == &_bottomTeamData)
         goalY = 129;    /* upper goal line (bottom team attacks up) */
     else
         goalY = 769;    /* lower goal line (top team attacks down) */
 
-    ballX = ballSprite.x.s.i;
-    ballY = ballSprite.y.s.i;
+    ballX = _ballSprite.x.s.i;
+    ballY = _ballSprite.y.s.i;
     dx32 = (int32_t)(int16_t)(ballX - 336);
     dy32 = (int32_t)(int16_t)(ballY - goalY);
     d6 = dx32 * dx32 + dy32 * dy32;
@@ -393,23 +393,23 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
     d5 = direction;
 
     /* ---- Game NOT in progress ---- */
-    if (gameStatePl != ST_GAME_IN_PROGRESS) {
+    if (_gameStatePl != ST_GAME_IN_PROGRESS) {
 
         /* Only the team that last played gets AI control */
-        if (team != lastTeamPlayedBeforeBreak)
+        if (team != _lastTeamPlayedBeforeBreak)
             return;
 
         /* Check if showing result screen (both teams computer) */
-        if (gameState >= ST_STARTING_GAME && gameState <= ST_GAME_ENDED &&
-            team1Computer != 0 && team2Computer != 0) {
+        if (_gameState >= ST_STARTING_GAME && _gameState <= ST_GAME_ENDED &&
+            _team1Computer != 0 && _team2Computer != 0) {
 
-            if (gameState == ST_RESULT_ON_HALFTIME ||
-                gameState == ST_RESULT_AFTER_THE_GAME) {
-                if (stoppageTimerTotal < gsResultAutoAdvance)   /* GS_660_600 */
+            if (_gameState == ST_RESULT_ON_HALFTIME ||
+                _gameState == ST_RESULT_AFTER_THE_GAME) {
+                if (_stoppageTimerTotal < _gsResultAutoAdvance)   /* GS_660_600 */
                     return;
             } else {
                 /* 350 ticks for other result states */
-                if (stoppageTimerTotal < gsHalftimeStoppage)   /* GS_385_350 */
+                if (_stoppageTimerTotal < _gsHalftimeStoppage)   /* GS_385_350 */
                     return;
             }
             /* Simulate fire press to dismiss result */
@@ -418,23 +418,23 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
         }
 
         /* game_not_over: check stoppage timer threshold */
-        d0 = (currentGameTick & 0x3F) + 100;
-        if (stoppageTimerActive < (uint16_t)d0)
+        d0 = (_currentGameTick & 0x3F) + 100;
+        if (_stoppageTimerActive < (uint16_t)d0)
             goto set_direction;
 
         /* Check penalties */
-        if (playingPenalties != 0 || gameState == ST_PENALTY)
+        if (_playingPenalties != 0 || _gameState == ST_PENALTY)
             goto penalties_after_the_game;
 
         /* Keeper holds ball / goal out */
-        if (gameState == ST_KEEPER_HOLDS_BALL ||
-            gameState == ST_GOAL_OUT_LEFT ||
-            gameState == ST_GOAL_OUT_RIGHT) {
+        if (_gameState == ST_KEEPER_HOLDS_BALL ||
+            _gameState == ST_GOAL_OUT_LEFT ||
+            _gameState == ST_GOAL_OUT_RIGHT) {
             /* keepers_ball */
-            if ((aiRand & 1) != 0) {
-                if ((uint16_t)d7 == (uint16_t)cameraDirection)
+            if ((_aiRand & 1) != 0) {
+                if ((uint16_t)d7 == (uint16_t)_cameraDirection)
                     goto apply_turn_delta_from_angle;
-                if (ballSprite.x.s.i <= 336) {
+                if (_ballSprite.x.s.i <= 336) {
                     if (d7 == 1 || d7 == 3)
                         goto apply_turn_delta_from_angle;
                 } else {
@@ -446,33 +446,33 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
         }
 
         /* Players to initial positions (goal scored) */
-        if (gameState == ST_PLAYERS_TO_INITIAL_POSITIONS) {
+        if (_gameState == ST_PLAYERS_TO_INITIAL_POSITIONS) {
             /* goal_scored */
-            if (stoppageTimerActive < 150)
+            if (_stoppageTimerActive < 150)
                 goto check_closest_player_facing;
-            if ((uint16_t)d7 == (uint16_t)cameraDirection)
+            if ((uint16_t)d7 == (uint16_t)_cameraDirection)
                 goto apply_turn_delta_from_angle;
             goto check_closest_player_facing;
         }
 
         /* Free kicks */
-        if (gameState >= ST_FREE_KICK_LEFT1 && gameState <= ST_FREE_KICK_RIGHT3)
+        if (_gameState >= ST_FREE_KICK_LEFT1 && _gameState <= ST_FREE_KICK_RIGHT3)
             goto foul;
 
         /* Throw-ins */
-        if (gameState >= ST_THROW_IN_FORWARD_RIGHT &&
-            gameState <= ST_THROW_IN_BACK_LEFT) {
+        if (_gameState >= ST_THROW_IN_FORWARD_RIGHT &&
+            _gameState <= ST_THROW_IN_BACK_LEFT) {
             uint8_t throwBits;
-            d1 = gameState - ST_THROW_IN_FORWARD_RIGHT;
-            throwBits = aiThrowInDirections[d1];
-            if (team != &bottomTeamData) {
+            d1 = _gameState - ST_THROW_IN_FORWARD_RIGHT;
+            throwBits = _aiThrowInDirections[d1];
+            if (team != &_bottomTeamData) {
                 /* ror.b #4,d1 → swap nibbles */
                 throwBits = (uint8_t)((throwBits << 4) | (throwBits >> 4));
             }
             goto decide_throw_in_direction_bits_entry;
 
             decide_throw_in_direction_bits_entry:
-            if ((aiRand & 0xF) != 0)
+            if ((_aiRand & 0xF) != 0)
                 goto check_closest_player_facing;
             if (d7 >= 0 && d7 <= 7 && (throwBits & (1 << (d7 & 7))) != 0)
                 goto apply_turn_delta_from_angle;
@@ -480,7 +480,7 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
         }
 
         /* Foul */
-        if (gameState == ST_FOUL)
+        if (_gameState == ST_FOUL)
             goto foul;
 
         /* Default: apply turn from angle */
@@ -490,13 +490,13 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
     /* ---- Game in progress ---- */
 
     /* Penalty check */
-    if (playingPenalties != 0 || penalty != 0) {
+    if (_playingPenalties != 0 || _penalty != 0) {
         if (team->spinTimer >= 0)
             goto we_have_ball_spin;
     }
 
     /* AI counter direction toward goal */
-    if (aiCounter != 0)
+    if (_aiCounter != 0)
         AI_SetDirectionTowardOpponentsGoal(team);
 
     /* Need a controlled player */
@@ -520,8 +520,8 @@ theres_a_player_near:
         return;  /* firing */
 
     /* deadVarAlways0 check (always 0 in practice) */
-    if (deadVarAlways0 != 0) {
-        if (team->opponentsTeam == (TeamGeneralInfo *)playerKickerPtr) {
+    if (_deadVarAlways0 != 0) {
+        if (team->opponentsTeam == (TeamGeneralInfo *)_playerKickerPtr) {
             if (team->opponentsTeam->playerHasBall != 0)
                 return;
         }
@@ -530,11 +530,11 @@ theres_a_player_near:
     /* check_direction_and_field_half_gates */
     if (a5->direction == 2 || a5->direction == 6) {
         /* horizontal_dir_half_gate */
-        if (team == &topTeamData) {
-            if (ballSprite.y.s.i < 740)
+        if (team == &_topTeamData) {
+            if (_ballSprite.y.s.i < 740)
                 goto no_fire_fallback_flow;
         } else {
-            if (ballSprite.y.s.i > 158)
+            if (_ballSprite.y.s.i > 158)
                 goto no_fire_fallback_flow;
         }
         goto distance_and_random_fire_gate;
@@ -544,7 +544,7 @@ distance_and_random_fire_gate:
     if (d6 > 28800)
         goto no_fire_fallback_flow;
     if (d6 >= 12800) {
-        if ((aiRand & 3) != 0)
+        if ((_aiRand & 3) != 0)
             goto no_fire_fallback_flow;
     }
 
@@ -564,7 +564,7 @@ distance_and_random_fire_gate:
     }
 
     /* angle_within_tolerance_action */
-    if (aiResumePlayTimer != 0)
+    if (_aiResumePlayTimer != 0)
         return;
     if (team->passKickTimer >= 13)  /* AI_ResumeGameDelay: bcc = passKickTimer >= 13 */
         return;
@@ -625,12 +625,12 @@ evaluate_closest_facing_player_midrange:
     goto gate_field84_cooldown_and_set;
 
 far_distance_decision_gate:
-    if (aiRand <= 8) {
+    if (_aiRand <= 8) {
         if (d6 > 48400)
             goto decide_immediate_turn_or_gate;
     }
     /* tick_gated_closest_facing_check */
-    if ((currentGameTick & 0xC) != 0)
+    if ((_currentGameTick & 0xC) != 0)
         goto choose_dir_when_not_very_close;
     closestPlayer = FindClosestPlayerToBallFacing(
         (uint16_t)(d7 << 5), team);
@@ -643,14 +643,14 @@ far_distance_decision_gate:
 gate_field84_cooldown_and_set:
     if (team->field_84 != 0)
         goto choose_dir_when_not_very_close;
-    if (((uint16_t)frameCount & 0x7F) >= 0x20)
+    if (((uint16_t)_frameCount & 0x7F) >= 0x20)
         goto choose_dir_when_not_very_close;
     team->field_84 = 4;
 
 closest_facing_player_not_ours:
     if (team->plVeryCloseToBall == 0)
         goto copy_current_direction_as_allowed;
-    if ((uint8_t)(currentGameTick) & 0x80) {
+    if ((uint8_t)(_currentGameTick) & 0x80) {
         /* CW turn */
         d0 = (a5->direction + 1) & 7;
     } else {
@@ -680,7 +680,7 @@ derive_allowed_dir_from_full_angle:
         computedDir = (uint16_t)(((uint8_t)(a5->fullDirection + 128) + 16) & 0xFF) >> 5;
         if (computedDir != (uint16_t)a5->direction &&
             a5->ballDistance >= 800 &&
-            (currentGameTick & 0xE) != 0) {
+            (_currentGameTick & 0xE) != 0) {
             team->currentAllowedDirection = a5->direction;
             return;
         }
@@ -690,15 +690,15 @@ derive_allowed_dir_from_full_angle:
 
 our_player_closest:
     team->field_84 = 0;
-    if (aiResumePlayTimer != 0)
+    if (_aiResumePlayTimer != 0)
         return;
     if (team->passKickTimer >= 13)  /* AI_ResumeGameDelay */
         return;
-    aiResumePlayTimer = 15;
+    _aiResumePlayTimer = 15;
     team->currentAllowedDirection = d7;
     team->quickFire = 1;
-    if (AI_maxStoppageTime <= stoppageTimerActive)
-        AI_maxStoppageTime = stoppageTimerActive;
+    if (_AI_maxStoppageTime <= _stoppageTimerActive)
+        _AI_maxStoppageTime = _stoppageTimerActive;
     return;
 
 decide_immediate_turn_or_gate:
@@ -718,24 +718,24 @@ setup_resume_play_and_turn_bias:
     team->currentAllowedDirection = d7;
     team->normalFire = 1;
     d2_byte = (int8_t)((uint8_t)(d7 << 5) - (uint8_t)d5);
-    aiResumePlayTimer = 15;
+    _aiResumePlayTimer = 15;
     d0 = -1;
     if (d2_byte < 0)
         d0 = 1;
 
     /* adjust_turn_by_ball_motion */
-    if (ballSprite.deltaY.raw < 0) {
-        if (ballSprite.y.s.i < 342)
+    if (_ballSprite.deltaY.raw < 0) {
+        if (_ballSprite.y.s.i < 342)
             goto commit_turn_to_ai_state;
     } else {
-        if (ballSprite.y.s.i > 555)
+        if (_ballSprite.y.s.i > 555)
             goto commit_turn_to_ai_state;
     }
 
     /* time_bucket_and_ballx_branch */
     {
-        int16_t timeBucket = (currentGameTick & 0x1C) >> 2;
-        int16_t bx = ballSprite.x.s.i;
+        int16_t timeBucket = (_currentGameTick & 0x1C) >> 2;
+        int16_t bx = _ballSprite.x.s.i;
 
         if (bx >= 193 && bx <= 478) {
             /* mid_right_x_gate */
@@ -772,8 +772,8 @@ commit_turn_to_ai_state:
     /* ---- Penalty path (game not in progress) ---- */
 penalties_after_the_game:
     {
-        int16_t randDir = aiRand & 7;
-        if (playerTurnFlags & (1 << randDir)) {
+        int16_t randDir = _aiRand & 7;
+        if (_playerTurnFlags & (1 << randDir)) {
             team->currentAllowedDirection = randDir;
             return;
         }
@@ -784,7 +784,7 @@ penalties_after_the_game:
     goto apply_turn_delta_from_angle;
 
 foul:
-    if ((aiRand & 0xF) == 0)
+    if ((_aiRand & 0xF) == 0)
         goto check_closest_player_facing;
     /* compute_allowed_dir_from_angle_bucket */
     {
@@ -813,49 +813,49 @@ check_closest_player_facing:
     goto no_player_facing;
 
 no_player_facing:
-    if ((currentGameTick & 0xE) != 0)
+    if ((_currentGameTick & 0xE) != 0)
         return;
 
-    if (aiTurnDirection < 0) {
-        if (aiTurnDirection != -1) {
-            aiTurnDirection++;
-            if (aiTurnDirection != -1)
+    if (_aiTurnDirection < 0) {
+        if (_aiTurnDirection != -1) {
+            _aiTurnDirection++;
+            if (_aiTurnDirection != -1)
                 return;
         }
         d1 = 1;
     } else {
-        if (aiTurnDirection != 1) {
-            aiTurnDirection--;
-            if (aiTurnDirection != 1)
+        if (_aiTurnDirection != 1) {
+            _aiTurnDirection--;
+            if (_aiTurnDirection != 1)
                 return;
         }
         d1 = -1;
     }
 
     /* try_apply_turn_step */
-    d0 = (d7 + aiTurnDirection) & 7;
-    if (playerTurnFlags & (1 << d0)) {
+    d0 = (d7 + _aiTurnDirection) & 7;
+    if (_playerTurnFlags & (1 << d0)) {
         team->currentAllowedDirection = d0;
         return;
     }
     /* commit_turn_direction_and_return */
-    aiTurnDirection = d1;
+    _aiTurnDirection = d1;
     return;
 
 set_direction:
     /* set_direction_core */
-    if (resultTimer != 0)
+    if (_resultTimer != 0)
         return;
-    if (gameState == ST_GOAL_OUT_LEFT ||
-        gameState == ST_GOAL_OUT_RIGHT ||
-        gameState == ST_KEEPER_HOLDS_BALL)
+    if (_gameState == ST_GOAL_OUT_LEFT ||
+        _gameState == ST_GOAL_OUT_RIGHT ||
+        _gameState == ST_KEEPER_HOLDS_BALL)
         goto no_player_facing;
-    if (gameState >= ST_THROW_IN_FORWARD_RIGHT &&
-        gameState <= ST_THROW_IN_BACK_LEFT)
+    if (_gameState >= ST_THROW_IN_FORWARD_RIGHT &&
+        _gameState <= ST_THROW_IN_BACK_LEFT)
         goto no_player_facing;
-    if (gameState == ST_FOUL)
+    if (_gameState == ST_FOUL)
         goto foul_or_free_kick_set_dir;
-    if (gameState < ST_FREE_KICK_LEFT1 || gameState > ST_FREE_KICK_RIGHT3)
+    if (_gameState < ST_FREE_KICK_LEFT1 || _gameState > ST_FREE_KICK_RIGHT3)
         return;
 
 foul_or_free_kick_set_dir:
@@ -865,25 +865,25 @@ foul_or_free_kick_set_dir:
 
     /* ---- Aftertouch and fire decision ---- */
 prep_aftertouch_and_fire_decision:
-    if (AI_maxStoppageTime <= stoppageTimerActive)
-        AI_maxStoppageTime = stoppageTimerActive;
-    aiResumePlayTimer = 15;
+    if (_AI_maxStoppageTime <= _stoppageTimerActive)
+        _AI_maxStoppageTime = _stoppageTimerActive;
+    _aiResumePlayTimer = 15;
 
-    if (gameState == ST_PENALTY || gameState == ST_PENALTIES) {
+    if (_gameState == ST_PENALTY || _gameState == ST_PENALTIES) {
         team->AI_afterTouchStrength = 0;
         goto apply_dir_and_normal_fire;
     }
 
-    if (gameState >= ST_FREE_KICK_LEFT1 && gameState <= ST_FREE_KICK_RIGHT3)
+    if (_gameState >= ST_FREE_KICK_LEFT1 && _gameState <= ST_FREE_KICK_RIGHT3)
         goto aftertouch_by_distance;
 
-    if (gameState == ST_CORNER_LEFT || gameState == ST_CORNER_RIGHT) {
+    if (_gameState == ST_CORNER_LEFT || _gameState == ST_CORNER_RIGHT) {
         team->AI_afterTouchStrength = 1;
         goto apply_dir_and_normal_fire;
     }
 
     /* non_setpiece_random_branch */
-    if ((aiRand & 0x18) != 0)
+    if ((_aiRand & 0x18) != 0)
         goto aftertouch_by_distance;
     /* Fall through to set_aftertouch_strong */
     team->AI_afterTouchStrength = 2;
@@ -903,14 +903,14 @@ apply_dir_and_normal_fire:
     team->normalFire = 1;
 
     /* Penalty/penalties: zero spin and return */
-    if (gameState == ST_PENALTY || gameState == ST_PENALTIES) {
+    if (_gameState == ST_PENALTY || _gameState == ST_PENALTIES) {
         team->AI_ballSpinDirection = 0;
         return;
     }
 
     /* Corner: random spin direction */
-    if (gameState == ST_CORNER_LEFT || gameState == ST_CORNER_RIGHT) {
-        int16_t randVal = aiRand & 7;
+    if (_gameState == ST_CORNER_LEFT || _gameState == ST_CORNER_RIGHT) {
+        int16_t randVal = _aiRand & 7;
         int16_t spinDir;
         int16_t testDir;
         if (randVal < 3) {
@@ -923,7 +923,7 @@ apply_dir_and_normal_fire:
             team->AI_ballSpinDirection = 0;
             return;
         }
-        if (playerTurnFlags & (1 << testDir)) {
+        if (_playerTurnFlags & (1 << testDir)) {
             team->AI_ballSpinDirection = spinDir;
             return;
         }
@@ -932,13 +932,13 @@ apply_dir_and_normal_fire:
     }
 
     /* General foul/free kick: compute turn from angle sign */
-    aiResumePlayTimer = 15;
+    _aiResumePlayTimer = 15;
     team->currentAllowedDirection = d7;
     team->normalFire = 1;
     wVar = 0;
 
-    if (gameState == ST_FOUL && a2 != (Sprite *)0) {
-        if (team == &topTeamData) {
+    if (_gameState == ST_FOUL && a2 != (Sprite *)0) {
+        if (team == &_topTeamData) {
             if (a2->y.s.i >= 682)
                 goto apply_turn_and_return;
         } else {
@@ -957,7 +957,7 @@ apply_turn_and_return:
     return;
 
 resume_play_and_apply_turn_bias:
-    aiResumePlayTimer = 15;
+    _aiResumePlayTimer = 15;
     team->currentAllowedDirection = d7;
     team->normalFire = 1;
     d0 = -1;
@@ -987,10 +987,10 @@ noone_near:
         goto derive_allowed_dir_from_full_angle;
 
     /* deadVarAlways0 is always 0 */
-    if (deadVarAlways0 != 0)
+    if (_deadVarAlways0 != 0)
         goto set_allowed_dir_from_angle_bucket;
 
-    if (topTeamData.playerNumber != 0 || bottomTeamData.playerNumber != 0)
+    if (_topTeamData.playerNumber != 0 || _bottomTeamData.playerNumber != 0)
         goto derive_allowed_dir_from_full_angle;
 
     /* random_rotate_when_no_target: both teams are computer */
@@ -999,15 +999,15 @@ noone_near:
         if (a5->x.s.i < 273 || a5->x.s.i > 398 ||
             a5->y.s.i <= 158 || a5->y.s.i >= 740) {
             /* Player on edges: chance of random rotate */
-            if ((currentGameTick & 0x18) != 0) {
+            if ((_currentGameTick & 0x18) != 0) {
                 /* 87.5%: use base direction */
                 team->currentAllowedDirection = d7;
                 return;
             }
             /* 12.5%: random rotate */
             {
-                int16_t rotateIdx = (aiRand & 2);  /* 0 or 2 = byte offset */
-                int16_t rotateOffset = aiRandomRotateTable[rotateIdx >> 1];
+                int16_t rotateIdx = (_aiRand & 2);  /* 0 or 2 = byte offset */
+                int16_t rotateOffset = _aiRandomRotateTable[rotateIdx >> 1];
                 uint8_t rotated = (uint8_t)(a5->fullDirection + rotateOffset);
                 rotated = (uint8_t)(rotated + 128);  /* flip 180 degrees (byte add) */
                 d0 = (int16_t)(((uint16_t)(rotated + 16)) & 0xFF) >> 5;
@@ -1022,8 +1022,8 @@ noone_near:
 we_have_ball_spin:
     d1 = team->controlledPlDirection;
 
-    if (playingPenalties == 0 && penalty == 0) {
-        if ((aiRand & 1) == 0)
+    if (_playingPenalties == 0 && _penalty == 0) {
+        if ((_aiRand & 1) == 0)
             goto apply_spin_quick_or_copy_dir;
         if (team->AI_ballSpinDirection < 0) {
             /* use_left_spin_table */
@@ -1031,7 +1031,7 @@ we_have_ball_spin:
             {
                 int16_t tableIdx = team->AI_afterTouchStrength;
                 if (tableIdx > 2) tableIdx = 2;
-                d1 = (d1 + aiLeftSpinTable[tableIdx]) & 7;
+                d1 = (d1 + _aiLeftSpinTable[tableIdx]) & 7;
             }
             team->currentAllowedDirection = d1;
             return;
@@ -1042,7 +1042,7 @@ we_have_ball_spin:
             {
                 int16_t tableIdx = team->AI_afterTouchStrength;
                 if (tableIdx > 2) tableIdx = 2;
-                d1 = (d1 + aiRotateRightTable[tableIdx]) & 7;
+                d1 = (d1 + _aiRotateRightTable[tableIdx]) & 7;
             }
             team->currentAllowedDirection = d1;
             return;
@@ -1059,7 +1059,7 @@ apply_spin_quick_or_copy_dir:
     {
         int16_t tableIdx = team->AI_afterTouchStrength;
         if (tableIdx > 2) tableIdx = 2;
-        d1 = (d1 + aiLongKickTable[tableIdx]) & 7;
+        d1 = (d1 + _aiLongKickTable[tableIdx]) & 7;
     }
     team->currentAllowedDirection = d1;
     return;

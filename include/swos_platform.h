@@ -97,8 +97,8 @@ typedef __UINTPTR_TYPE__ uintptr_t;
  * a forward declaration here so the extern compiles in translation
  * units that include this header before display.h. */
 struct Custom;
-extern volatile struct Custom *custom;
-#define CUSTOM_BASE ((unsigned long)(custom))
+extern volatile struct Custom *_custom;
+#define CUSTOM_BASE ((unsigned long)(_custom))
 
 /* ------------------------------------------------------------------
  * HLOG — harness diagnostic log. Writes "[harness] ..." to stderr

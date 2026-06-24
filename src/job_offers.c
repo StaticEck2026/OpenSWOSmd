@@ -22,45 +22,45 @@
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
 /* ---- ASM externs ---- */
-extern uint16_t numJobOffers;
-extern JobOffer jobOffers[];         /* 5-entry job offers queue (in SWOS2.s BSS) */
-extern uint16_t numNewJobOffers;
-extern JobOffer newJobOffers[];      /* 5-entry new job offers queue (in SWOS2.s BSS) */
-extern uint8_t fundsBuffer[];        /* temporary buffer for team name during offer conversion */
-extern MenuEntry menuEntries[];
-extern uint16_t teamNoOfferAccepted;
-extern uint32_t teamFundsAccepted;
-extern uint16_t youreSacked;
-extern uint16_t highlightedLeagueTeamId;
+extern uint16_t _numJobOffers;
+extern JobOffer _jobOffers[];         /* 5-entry job offers queue (in SWOS2.s BSS) */
+extern uint16_t _numNewJobOffers;
+extern JobOffer _newJobOffers[];      /* 5-entry new job offers queue (in SWOS2.s BSS) */
+extern uint8_t _fundsBuffer[];        /* temporary buffer for team name during offer conversion */
+extern MenuEntry _menuEntries[];
+extern uint16_t _teamNoOfferAccepted;
+extern uint32_t _teamFundsAccepted;
+extern uint16_t _youreSacked;
+extern uint16_t _highlightedLeagueTeamId;
 
 /* Additional externs for Career_MaybeGenerateJobOffer */
-extern uint16_t careerSeasonsCompleted;
-extern uint16_t currentSeasonShowing;
-extern uint16_t careerJobOfferMode;
-extern uint8_t  viewRandomPhase;
-extern int8_t   careerJobOfferPhaseBias;
-extern uint16_t wageScalingDivisor;
-extern uint16_t sameNationalCallFlag;
-extern uint16_t lastNationalityCall;
-extern int16_t  boardConfidenceScore;
-extern int16_t  sackedReputationScore;
-extern int16_t  nationalSelectorReputationPoints;
+extern uint16_t _careerSeasonsCompleted;
+extern uint16_t _currentSeasonShowing;
+extern uint16_t _careerJobOfferMode;
+extern uint8_t  _viewRandomPhase;
+extern int8_t   _careerJobOfferPhaseBias;
+extern uint16_t _wageScalingDivisor;
+extern uint16_t _sameNationalCallFlag;
+extern uint16_t _lastNationalityCall;
+extern int16_t  _boardConfidenceScore;
+extern int16_t  _sackedReputationScore;
+extern int16_t  _nationalSelectorReputationPoints;
 /* majorTrophyBonusValue migrated to primaryCompetitionBuf.tourn.header.trophyBonusValue (slot-0 untangle, S6) */
-extern uint16_t isNationalSelector;
-extern uint16_t selTeamNumber;
-extern uint16_t numSelectedTeams;
-extern uint8_t  selTeamsPtr;
-extern uint16_t currentDivisionIndex;
-extern CompetitionSlotBuffer primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
+extern uint16_t _isNationalSelector;
+extern uint16_t _selTeamNumber;
+extern uint16_t _numSelectedTeams;
+extern uint8_t  _selTeamsPtr;
+extern uint16_t _currentDivisionIndex;
+extern CompetitionSlotBuffer _primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
 /* numDiyTeams migrated to primaryCompetitionBuf.tourn.header.numTeams (slot-0 untangle, S6) */
 /* diyTeamMinDivisionIndex migrated to primaryCompetitionBuf.tourn.header.minDivisionIndex (slot-0 untangle, S6) */
 /* diyTeamMaxDivisionOffset migrated to primaryCompetitionBuf.tourn.header.maxDivisionOffset (slot-0 untangle, S6) */
-extern uint16_t nat_teams_rand_limit1;
-extern uint8_t  nationalTeams[];
-extern uint8_t  nationalTeamFileCode;
-extern uint8_t  teamFileBuffer;
-extern uint16_t careerFileBuffer;
-extern uint8_t  tmdFileBuffer;
+extern uint16_t _nat_teams_rand_limit1;
+extern uint8_t  _nationalTeams[];
+extern uint8_t  _nationalTeamFileCode;
+extern uint8_t  _teamFileBuffer;
+extern uint16_t _careerFileBuffer;
+extern uint8_t  _tmdFileBuffer;
 
 extern uint16_t Rand(void);
 extern uint16_t GetAveragePlayerPrice(TeamFileEx *team);
@@ -75,50 +75,50 @@ extern uint32_t CalculateStartingBalance(uint16_t teamId);
 extern void     LoadTeamFile(uint16_t code);
 
 /* Job offer menu data (in SWOS2.s) */
-extern uint16_t jobOffersFromRetired;
-extern int16_t  jobOfferOrdinal;
-extern int16_t  oldJobOfferOrdinal;
-extern uint16_t selectedOldJobOfferOrdinal;
-extern uint16_t teamNoOfferingJob;
-extern uintptr_t teamOfferingJobPtr;
-extern int32_t  jobOfferFunds;
-extern uint16_t viewFutureTeamModeFlag;
+extern uint16_t _jobOffersFromRetired;
+extern int16_t  _jobOfferOrdinal;
+extern int16_t  _oldJobOfferOrdinal;
+extern uint16_t _selectedOldJobOfferOrdinal;
+extern uint16_t _teamNoOfferingJob;
+extern uintptr_t _teamOfferingJobPtr;
+extern int32_t  _jobOfferFunds;
+extern uint16_t _viewFutureTeamModeFlag;
 
 /* String constants */
-extern uint8_t aRetire[];
-extern uint8_t aInternationalJ[];
-extern uint8_t aNewJob[];
-extern uint8_t aDearAB[];
-extern uint8_t aWeHereAtAWould[];
-extern uint8_t aCoachingJobAtO[];
-extern uint8_t aWeCanOfferYouA[];
-extern uint8_t aWeHopeToBeAble[];
-extern uint8_t aInTheRegionOfA[];
-extern uint8_t aWeLookForwardT_1[];
-extern uint8_t aTheMembersOfTh[];
-extern uint8_t aOfAWouldLikeTo[];
-extern uint8_t aAsCoachOfTheNa[];
-extern uint8_t aWeCanPromiseYo[];
-extern uint8_t aAnAnnuallyRevi[];
-extern uint8_t aWeLookForwardT[];
-extern uint8_t aWeHereAtAAreDe[];
-extern uint8_t aHaveAcceptedTh[];
-extern uint8_t aFromTheStartOf_0[];
-extern uint8_t aWeHopeToBeAble_0[];
-extern uint8_t aInTheRegionOfA_0[];
-extern uint8_t aAndWeLookForwa[];
-extern uint8_t aTheMembersOfTh_0[];
-extern uint8_t aOfAAreDelighte[];
-extern uint8_t aAcceptedThePos[];
-extern uint8_t aFromTheStartOf[];
-extern uint8_t aWeLookForwardT_0[];
-extern uint8_t managerSexBuffer[];
-extern uint8_t managerSurnameBuffer[];
-extern uint8_t aViewTeam[];
+extern uint8_t _aRetire[];
+extern uint8_t _aInternationalJ[];
+extern uint8_t _aNewJob[];
+extern uint8_t _aDearAB[];
+extern uint8_t _aWeHereAtAWould[];
+extern uint8_t _aCoachingJobAtO[];
+extern uint8_t _aWeCanOfferYouA[];
+extern uint8_t _aWeHopeToBeAble[];
+extern uint8_t _aInTheRegionOfA[];
+extern uint8_t _aWeLookForwardT_1[];
+extern uint8_t _aTheMembersOfTh[];
+extern uint8_t _aOfAWouldLikeTo[];
+extern uint8_t _aAsCoachOfTheNa[];
+extern uint8_t _aWeCanPromiseYo[];
+extern uint8_t _aAnAnnuallyRevi[];
+extern uint8_t _aWeLookForwardT[];
+extern uint8_t _aWeHereAtAAreDe[];
+extern uint8_t _aHaveAcceptedTh[];
+extern uint8_t _aFromTheStartOf_0[];
+extern uint8_t _aWeHopeToBeAble_0[];
+extern uint8_t _aInTheRegionOfA_0[];
+extern uint8_t _aAndWeLookForwa[];
+extern uint8_t _aTheMembersOfTh_0[];
+extern uint8_t _aOfAAreDelighte[];
+extern uint8_t _aAcceptedThePos[];
+extern uint8_t _aFromTheStartOf[];
+extern uint8_t _aWeLookForwardT_0[];
+extern uint8_t _managerSexBuffer[];
+extern uint8_t _managerSurnameBuffer[];
+extern uint8_t _aViewTeam[];
 
-extern void *competitionsTable[];
-extern uint8_t seasonInformationsArray[];
-extern uint16_t currentSeasonShowing;
+extern void *_competitionsTable[];
+extern uint8_t _seasonInformationsArray[];
+extern uint16_t _currentSeasonShowing;
 
 /* Season info row stride uses sizeof so 64-bit pointer-field growth in
  * SeasonInformations (106 → 122 bytes) is picked up automatically.
@@ -144,8 +144,8 @@ extern void Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel);
 
 /* Helper: GetCurrentSeasonPointer */
 static inline uint8_t *getCurrentSeasonPointer(void) {
-    return seasonInformationsArray +
-           (uint16_t)currentSeasonShowing * (uint32_t)sizeof(SeasonInformations);
+    return _seasonInformationsArray +
+           (uint16_t)_currentSeasonShowing * (uint32_t)sizeof(SeasonInformations);
 }
 
 
@@ -158,12 +158,12 @@ static inline uint8_t *getCurrentSeasonPointer(void) {
 __attribute__((used, externally_visible))
 int16_t IsOldJobOffer(uint16_t teamNumber)
 {
-    uint16_t count = numJobOffers;
+    uint16_t count = _numJobOffers;
     if (count == 0)
         return 1;
 
     for (uint16_t i = 0; i < count; i++) {
-        if (jobOffers[i].teamNo == teamNumber)
+        if (_jobOffers[i].teamNo == teamNumber)
             return 0;  /* found */
     }
     return 1;  /* not found */
@@ -177,7 +177,7 @@ int16_t IsOldJobOffer(uint16_t teamNumber)
 __attribute__((used, externally_visible))
 JobOffer *GetJobOfferPtr(uint16_t index)
 {
-    return &jobOffers[index];
+    return &_jobOffers[index];
 }
 
 /* ================================================================
@@ -189,14 +189,14 @@ JobOffer *GetJobOfferPtr(uint16_t index)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void AddJobOffer(uint16_t teamNumber, uint32_t initialFunds)
 {
-    if (numNewJobOffers >= 5)
+    if (_numNewJobOffers >= 5)
         return;
 
-    uint16_t count = numNewJobOffers;
+    uint16_t count = _numNewJobOffers;
 
     /* Shift existing entries right by 26 bytes (word-at-a-time, backwards) */
     if (count > 0) {
-        volatile uint16_t *base = (volatile uint16_t *)newJobOffers;
+        volatile uint16_t *base = (volatile uint16_t *)_newJobOffers;
         uint16_t totalWords = count * (sizeof(JobOffer) / 2);
         for (int16_t i = (int16_t)(totalWords - 1); i >= 0; i--) {
             base[i + (sizeof(JobOffer) / 2)] = base[i];
@@ -204,10 +204,10 @@ void AddJobOffer(uint16_t teamNumber, uint32_t initialFunds)
     }
 
     /* Write new entry at position 0 */
-    newJobOffers[0].teamNo = teamNumber;
-    newJobOffers[0].amountOffered = initialFunds;
-    *(uint8_t *)newJobOffers[0].teamName = 0xFF;
-    numNewJobOffers++;
+    _newJobOffers[0].teamNo = teamNumber;
+    _newJobOffers[0].amountOffered = initialFunds;
+    *(uint8_t *)_newJobOffers[0].teamName = 0xFF;
+    _numNewJobOffers++;
 }
 
 /* ================================================================
@@ -219,17 +219,17 @@ void AddJobOffer(uint16_t teamNumber, uint32_t initialFunds)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void RemoveJobOffer(uint16_t teamNumber)
 {
-    uint16_t count = numNewJobOffers;
+    uint16_t count = _numNewJobOffers;
     if (count == 0)
         return;
 
     for (uint16_t i = 0; i < count; i++) {
-        if (newJobOffers[i].teamNo == teamNumber) {
-            numNewJobOffers--;
+        if (_newJobOffers[i].teamNo == teamNumber) {
+            _numNewJobOffers--;
             uint16_t remaining = count - 1 - i;
             if (remaining > 0) {
-                volatile uint16_t *src = (volatile uint16_t *)&newJobOffers[i + 1];
-                volatile uint16_t *dst = (volatile uint16_t *)&newJobOffers[i];
+                volatile uint16_t *src = (volatile uint16_t *)&_newJobOffers[i + 1];
+                volatile uint16_t *dst = (volatile uint16_t *)&_newJobOffers[i];
                 uint16_t words = remaining * (sizeof(JobOffer) / 2);
                 for (uint16_t w = 0; w < words; w++) {
                     *dst++ = *src++;
@@ -249,12 +249,12 @@ void RemoveJobOffer(uint16_t teamNumber)
 __attribute__((used, externally_visible))
 int16_t IsNewJobOffer(uint16_t teamNumber)
 {
-    uint16_t count = numNewJobOffers;
+    uint16_t count = _numNewJobOffers;
     if (count == 0)
         return 1;
 
     for (uint16_t i = 0; i < count; i++) {
-        if (newJobOffers[i].teamNo == teamNumber)
+        if (_newJobOffers[i].teamNo == teamNumber)
             return 0;  /* found */
     }
     return 1;  /* not found */
@@ -268,7 +268,7 @@ int16_t IsNewJobOffer(uint16_t teamNumber)
 __attribute__((used, externally_visible))
 JobOffer *GetNewJobOfferPtr(uint16_t index)
 {
-    return &newJobOffers[index];
+    return &_newJobOffers[index];
 }
 
 /* ================================================================
@@ -281,16 +281,16 @@ JobOffer *GetNewJobOfferPtr(uint16_t index)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void JobOffers_RemoveOffer(uint16_t teamNumber)
 {
-    uint16_t count = numJobOffers;
+    uint16_t count = _numJobOffers;
     if (count == 0)
         return;
 
     for (uint16_t i = 0; i < count; i++) {
-        if (jobOffers[i].teamNo == teamNumber) {
-            numJobOffers--;
+        if (_jobOffers[i].teamNo == teamNumber) {
+            _numJobOffers--;
             /* Shift remaining entries left by 26 bytes (word-at-a-time) */
             uint16_t wordsToShift = (count - 1 - i) * (sizeof(JobOffer) / 2);
-            volatile uint16_t *dst = (volatile uint16_t *)&jobOffers[i];
+            volatile uint16_t *dst = (volatile uint16_t *)&_jobOffers[i];
             for (uint16_t j = 0; j < wordsToShift; j++) {
                 dst[j] = dst[j + (sizeof(JobOffer) / 2)];
             }
@@ -308,13 +308,13 @@ void JobOffers_RemoveOffer(uint16_t teamNumber)
 __attribute__((used, externally_visible))
 void JobOffers_MaybeExpireSomeNewOffers(void)
 {
-    uint16_t count = numNewJobOffers;
+    uint16_t count = _numNewJobOffers;
     if (count == 0)
         return;
 
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
         if (Rand2() < 0x20) {
-            newJobOffers[i].amountOffered = 0;
+            _newJobOffers[i].amountOffered = 0;
         }
     }
 }
@@ -328,12 +328,12 @@ void JobOffers_MaybeExpireSomeNewOffers(void)
 __attribute__((used, externally_visible))
 void JobOffers_FillMissingNewOfferTeamNames(void)
 {
-    uint16_t count = numNewJobOffers;
+    uint16_t count = _numNewJobOffers;
     if (count == 0)
         return;
 
     for (int16_t i = (int16_t)(count - 1); i >= 0; i--) {
-        JobOffer *offer = &newJobOffers[i];
+        JobOffer *offer = &_newJobOffers[i];
         if (*(uint8_t *)offer->teamName != 0xFF)
             continue;
 
@@ -353,16 +353,16 @@ __attribute__((used, externally_visible))
 void JobOffers_RemoveExpiredOffers(void)
 {
     /* Remove expired from old offers (jobOffers) */
-    for (int16_t i = (int16_t)(numJobOffers - 1); i >= 0; i--) {
-        if (jobOffers[i].amountOffered == 0) {
-            JobOffers_RemoveOffer(jobOffers[i].teamNo);
+    for (int16_t i = (int16_t)(_numJobOffers - 1); i >= 0; i--) {
+        if (_jobOffers[i].amountOffered == 0) {
+            JobOffers_RemoveOffer(_jobOffers[i].teamNo);
         }
     }
 
     /* Remove expired from new offers (newJobOffers) */
-    for (int16_t i = (int16_t)(numNewJobOffers - 1); i >= 0; i--) {
-        if (newJobOffers[i].amountOffered == 0) {
-            RemoveJobOffer(newJobOffers[i].teamNo);
+    for (int16_t i = (int16_t)(_numNewJobOffers - 1); i >= 0; i--) {
+        if (_newJobOffers[i].amountOffered == 0) {
+            RemoveJobOffer(_newJobOffers[i].teamNo);
         }
     }
 }
@@ -378,10 +378,10 @@ __attribute__((used, externally_visible))
 void JobOffers_ConvertNewOfferToOffer(uint16_t teamNumber, uint32_t initialFunds)
 {
     /* Find the new offer entry and copy its team name to fundsBuffer */
-    uint16_t count = numNewJobOffers;
+    uint16_t count = _numNewJobOffers;
     for (uint16_t i = 0; i < count; i++) {
-        if (newJobOffers[i].teamNo == teamNumber) {
-            StringCopy((uint8_t *)newJobOffers[i].teamName, fundsBuffer);
+        if (_newJobOffers[i].teamNo == teamNumber) {
+            StringCopy((uint8_t *)_newJobOffers[i].teamName, _fundsBuffer);
             break;
         }
     }
@@ -390,14 +390,14 @@ void JobOffers_ConvertNewOfferToOffer(uint16_t teamNumber, uint32_t initialFunds
     RemoveJobOffer(teamNumber);
 
     /* Add to old offers (max 5) */
-    if (numJobOffers >= 5)
+    if (_numJobOffers >= 5)
         return;
 
-    JobOffer *dest = &jobOffers[numJobOffers];
+    JobOffer *dest = &_jobOffers[_numJobOffers];
     dest->teamNo = teamNumber;
     dest->amountOffered = initialFunds;
-    StringCopy(fundsBuffer, (uint8_t *)dest->teamName);
-    numJobOffers++;
+    StringCopy(_fundsBuffer, (uint8_t *)dest->teamName);
+    _numJobOffers++;
 }
 
 /* ================================================================
@@ -406,7 +406,7 @@ void JobOffers_ConvertNewOfferToOffer(uint16_t teamNumber, uint32_t initialFunds
 
 /* Helper: format string into menu entry's text buffer */
 static inline void printToEntry(uint16_t entryIdx, const uint8_t *fmt, const uint8_t *a, const uint8_t *b) {
-    MenuEntry *e = &menuEntries[entryIdx];
+    MenuEntry *e = &_menuEntries[entryIdx];
     uint8_t *out = (uint8_t *)e->fg;
     PrintFormatted(fmt, out, 0,0,0,0,0,0,0, a, b, 0);
 }
@@ -416,19 +416,19 @@ static inline void printToEntry(uint16_t entryIdx, const uint8_t *fmt, const uin
  * ================================================================ */
 __attribute__((used, externally_visible))
 void GotJobOfferInit(void) {
-    teamNoOfferingJob = teamNoOfferAccepted;
-    jobOfferFunds = (int32_t)teamFundsAccepted;
+    _teamNoOfferingJob = _teamNoOfferAccepted;
+    _jobOfferFunds = (int32_t)_teamFundsAccepted;
 
-    if (teamNoOfferAccepted == 0xFFFF) {
+    if (_teamNoOfferAccepted == 0xFFFF) {
         JobOffer *offer;
-        if (jobOfferOrdinal >= 0) {
-            offer = GetNewJobOfferPtr((uint16_t)jobOfferOrdinal);
+        if (_jobOfferOrdinal >= 0) {
+            offer = GetNewJobOfferPtr((uint16_t)_jobOfferOrdinal);
         } else {
-            offer = GetJobOfferPtr((uint16_t)oldJobOfferOrdinal);
+            offer = GetJobOfferPtr((uint16_t)_oldJobOfferOrdinal);
         }
-        teamNoOfferingJob = offer->teamNo;
-        jobOfferFunds = (int32_t)offer->amountOffered;
-        if (jobOfferOrdinal < 0) {
+        _teamNoOfferingJob = offer->teamNo;
+        _jobOfferFunds = (int32_t)offer->amountOffered;
+        if (_jobOfferOrdinal < 0) {
             SetCurrentEntry(11);
         }
     } else {
@@ -447,167 +447,167 @@ void GotJobOfferInit(void) {
 __attribute__((used, externally_visible))
 void GotJobOfferFinish(void) {
     /* If sacked and only 1 total offer, change exit to "RETIRE" with red color */
-    if (youreSacked) {
-        if ((uint16_t)(numNewJobOffers + numJobOffers) == 1) {
-            MenuEntry *exitEntry = &menuEntries[8];
-            exitEntry->fg = (uintptr_t)aRetire;
+    if (_youreSacked) {
+        if ((uint16_t)(_numNewJobOffers + _numJobOffers) == 1) {
+            MenuEntry *exitEntry = &_menuEntries[8];
+            exitEntry->fg = (uintptr_t)_aRetire;
             exitEntry->bgColor = (exitEntry->bgColor & 0xFFF0) | 10; /* RED_10 */
         }
     }
 
     /* International job offer adjustments */
-    if (jobOfferFunds == -1) {
-        MenuEntry *e0 = &menuEntries[0];
-        e0->fg = (uintptr_t)aInternationalJ;
+    if (_jobOfferFunds == -1) {
+        MenuEntry *e0 = &_menuEntries[0];
+        e0->fg = (uintptr_t)_aInternationalJ;
         e0->x -= 30;
         e0->dwWidth += 60;
-        menuEntries[8].x += 65;
-        menuEntries[13].x -= 65;
-        menuEntries[9].isInvisible = 1;
-        menuEntries[12].isInvisible = 1;
+        _menuEntries[8].x += 65;
+        _menuEntries[13].x -= 65;
+        _menuEntries[9].isInvisible = 1;
+        _menuEntries[12].isInvisible = 1;
     }
 
-    if (teamNoOfferAccepted != 0xFFFF) {
+    if (_teamNoOfferAccepted != 0xFFFF) {
         /* ---- Accepted job path ---- */
         goto acceptedJobPath;
     }
 
     /* ---- New/existing offer path ---- */
     /* loc_14A400 */
-    if (jobOfferOrdinal >= 0) {
-        menuEntries[11].isInvisible = 1;
+    if (_jobOfferOrdinal >= 0) {
+        _menuEntries[11].isInvisible = 1;
     } else {
-        menuEntries[10].isInvisible = 1;
+        _menuEntries[10].isInvisible = 1;
     }
 
-    if (!jobOffersFromRetired) {
-        MenuEntry *acceptBtn = &menuEntries[13];
+    if (!_jobOffersFromRetired) {
+        MenuEntry *acceptBtn = &_menuEntries[13];
         acceptBtn->isDisabled = 1;
         acceptBtn->bgColor = (acceptBtn->bgColor & 0xFFF0) | 9; /* PINK_TO_BROWN_9 */
     }
 
     /* Set up team pointer and format strings */
-    teamOfferingJobPtr = (uintptr_t)GetTeamPointer(teamNoOfferingJob);
+    _teamOfferingJobPtr = (uintptr_t)GetTeamPointer(_teamNoOfferingJob);
 
     /* Format "DEAR %a %b" with manager sex and surname */
     {
-        uint8_t *out = (uint8_t *)menuEntries[1].fg;
-        PrintFormatted(tr_fmt(aDearAB), out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
+        uint8_t *out = (uint8_t *)_menuEntries[1].fg;
+        PrintFormatted(tr_fmt(_aDearAB), out, 0,0,0,0,0,0,0, _managerSexBuffer, _managerSurnameBuffer, 0);
     }
 
-    if (jobOfferFunds != -1) {
+    if (_jobOfferFunds != -1) {
         /* Domestic club offer */
-        uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
+        uint8_t *teamName = ((uint8_t *)_teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            PrintFormatted(&aWeHereAtAWould[1], out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[2].fg;
+            PrintFormatted(&_aWeHereAtAWould[1], out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(3, aCoachingJobAtO, 0, 0);
+        printToEntry(3, _aCoachingJobAtO, 0, 0);
 
-        Int2Pounds((uint32_t)jobOfferFunds, fundsBuffer);
+        Int2Pounds((uint32_t)_jobOfferFunds, _fundsBuffer);
 
         {
-            uint8_t *out = (uint8_t *)menuEntries[4].fg;
-            PrintFormatted(tr_fmt(aWeCanOfferYouA), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[4].fg;
+            PrintFormatted(tr_fmt(_aWeCanOfferYouA), out, 0,0,0,0,0,0,0, _fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)menuEntries[5].fg;
-            PrintFormatted(tr_fmt(aWeHopeToBeAble), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[5].fg;
+            PrintFormatted(tr_fmt(_aWeHopeToBeAble), out, 0,0,0,0,0,0,0, _fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)menuEntries[6].fg;
-            PrintFormatted(tr_fmt(aInTheRegionOfA), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[6].fg;
+            PrintFormatted(tr_fmt(_aInTheRegionOfA), out, 0,0,0,0,0,0,0, _fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)menuEntries[7].fg;
-            PrintFormatted(tr_fmt(aWeLookForwardT_1), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[7].fg;
+            PrintFormatted(tr_fmt(_aWeLookForwardT_1), out, 0,0,0,0,0,0,0, _fundsBuffer, 0, 0);
         }
     } else {
         /* International offer */
-        MenuEntry *e0xA8 = &menuEntries[3];
+        MenuEntry *e0xA8 = &_menuEntries[3];
         int16_t newY = e0xA8->y + 10;
-        menuEntries[4].y = newY;
+        _menuEntries[4].y = newY;
 
-        uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
+        uint8_t *teamName = ((uint8_t *)_teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            PrintFormatted(tr_fmt(aTheMembersOfTh), out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[2].fg;
+            PrintFormatted(tr_fmt(_aTheMembersOfTh), out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(3, aOfAWouldLikeTo, teamName, 0);
-        printToEntry(4, aAsCoachOfTheNa, 0, 0);
-        printToEntry(5, aWeCanPromiseYo, 0, 0);
-        printToEntry(6, aAnAnnuallyRevi, 0, 0);
-        printToEntry(7, aWeLookForwardT, 0, 0);
+        printToEntry(3, _aOfAWouldLikeTo, teamName, 0);
+        printToEntry(4, _aAsCoachOfTheNa, 0, 0);
+        printToEntry(5, _aWeCanPromiseYo, 0, 0);
+        printToEntry(6, _aAnAnnuallyRevi, 0, 0);
+        printToEntry(7, _aWeLookForwardT, 0, 0);
     }
     return;
 
 acceptedJobPath:
     /* loc_14A5D0: team already accepted */
-    menuEntries[0].fg = (uintptr_t)aNewJob;
+    _menuEntries[0].fg = (uintptr_t)_aNewJob;
     {
-        int16_t newY = menuEntries[3].y + 10;
-        menuEntries[4].y = newY;
+        int16_t newY = _menuEntries[3].y + 10;
+        _menuEntries[4].y = newY;
     }
-    menuEntries[10].isInvisible = 1;
-    menuEntries[13].isInvisible = 1;
-    menuEntries[8].isInvisible = 1;
+    _menuEntries[10].isInvisible = 1;
+    _menuEntries[13].isInvisible = 1;
+    _menuEntries[8].isInvisible = 1;
 
-    teamOfferingJobPtr = (uintptr_t)GetTeamPointer(teamNoOfferAccepted);
+    _teamOfferingJobPtr = (uintptr_t)GetTeamPointer(_teamNoOfferAccepted);
 
     {
-        uint8_t *out = (uint8_t *)menuEntries[1].fg;
-        PrintFormatted(tr_fmt(aDearAB), out, 0,0,0,0,0,0,0, managerSexBuffer, managerSurnameBuffer, 0);
+        uint8_t *out = (uint8_t *)_menuEntries[1].fg;
+        PrintFormatted(tr_fmt(_aDearAB), out, 0,0,0,0,0,0,0, _managerSexBuffer, _managerSurnameBuffer, 0);
     }
 
-    if (jobOfferFunds != -1) {
+    if (_jobOfferFunds != -1) {
         /* Domestic accepted */
-        uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
+        uint8_t *teamName = ((uint8_t *)_teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            PrintFormatted(tr_fmt(aWeHereAtAAreDe), out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[2].fg;
+            PrintFormatted(tr_fmt(_aWeHereAtAAreDe), out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(3, aHaveAcceptedTh, 0, 0);
+        printToEntry(3, _aHaveAcceptedTh, 0, 0);
 
-        Int2Pounds(teamFundsAccepted, fundsBuffer);
+        Int2Pounds(_teamFundsAccepted, _fundsBuffer);
 
-        printToEntry(4, aFromTheStartOf_0, fundsBuffer, 0);
+        printToEntry(4, _aFromTheStartOf_0, _fundsBuffer, 0);
         {
-            uint8_t *out = (uint8_t *)menuEntries[5].fg;
-            PrintFormatted(tr_fmt(aWeHopeToBeAble_0), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[5].fg;
+            PrintFormatted(tr_fmt(_aWeHopeToBeAble_0), out, 0,0,0,0,0,0,0, _fundsBuffer, 0, 0);
         }
         {
-            uint8_t *out = (uint8_t *)menuEntries[6].fg;
-            PrintFormatted(tr_fmt(aInTheRegionOfA_0), out, 0,0,0,0,0,0,0, fundsBuffer, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[6].fg;
+            PrintFormatted(tr_fmt(_aInTheRegionOfA_0), out, 0,0,0,0,0,0,0, _fundsBuffer, 0, 0);
         }
-        printToEntry(7, aAndWeLookForwa, fundsBuffer, 0);
+        printToEntry(7, _aAndWeLookForwa, _fundsBuffer, 0);
     } else {
         /* International accepted */
         {
-            int16_t newY = menuEntries[4].y + 10;
-            menuEntries[5].y = newY;
+            int16_t newY = _menuEntries[4].y + 10;
+            _menuEntries[5].y = newY;
         }
-        menuEntries[7].y -= 15;
+        _menuEntries[7].y -= 15;
 
-        uint8_t *teamName = ((uint8_t *)teamOfferingJobPtr) + 5;
+        uint8_t *teamName = ((uint8_t *)_teamOfferingJobPtr) + 5;
 
         {
-            uint8_t *out = (uint8_t *)menuEntries[2].fg;
-            PrintFormatted(tr_fmt(aTheMembersOfTh_0), out, 0,0,0,0,0,0,0, teamName, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[2].fg;
+            PrintFormatted(tr_fmt(_aTheMembersOfTh_0), out, 0,0,0,0,0,0,0, teamName, 0, 0);
         }
-        printToEntry(3, aOfAAreDelighte, teamName, 0);
-        printToEntry(4, aAcceptedThePos, 0, 0);
-        printToEntry(5, aFromTheStartOf, 0, 0);
+        printToEntry(3, _aOfAAreDelighte, teamName, 0);
+        printToEntry(4, _aAcceptedThePos, 0, 0);
+        printToEntry(5, _aFromTheStartOf, 0, 0);
         {
-            uint8_t *out = (uint8_t *)menuEntries[6].fg;
-            PrintFormatted(tr_fmt(aWeLookForwardT_0), out, 0,0,0,0,0,0,0, 0, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[6].fg;
+            PrintFormatted(tr_fmt(_aWeLookForwardT_0), out, 0,0,0,0,0,0,0, 0, 0, 0);
         }
         {
             /* asm uses (aWeLookForwardT_0+1) which skips the leading \x00 byte */
-            uint8_t *out = (uint8_t *)menuEntries[7].fg;
-            PrintFormatted(&aWeLookForwardT_0[1], out, 0,0,0,0,0,0,0, 0, 0, 0);
+            uint8_t *out = (uint8_t *)_menuEntries[7].fg;
+            PrintFormatted(&_aWeLookForwardT_0[1], out, 0,0,0,0,0,0,0, 0, 0, 0);
         }
     }
 }
@@ -618,15 +618,15 @@ acceptedJobPath:
 __attribute__((used, externally_visible))
 void AcceptJobOffer(void) {
     JobOffer *offer;
-    if (jobOfferOrdinal >= 0) {
-        offer = GetNewJobOfferPtr((uint16_t)jobOfferOrdinal);
+    if (_jobOfferOrdinal >= 0) {
+        offer = GetNewJobOfferPtr((uint16_t)_jobOfferOrdinal);
     } else {
-        offer = GetJobOfferPtr((uint16_t)oldJobOfferOrdinal);
+        offer = GetJobOfferPtr((uint16_t)_oldJobOfferOrdinal);
     }
-    teamNoOfferAccepted = offer->teamNo;
-    teamFundsAccepted = offer->amountOffered;
-    numNewJobOffers = 0;
-    numJobOffers = 0;
+    _teamNoOfferAccepted = offer->teamNo;
+    _teamFundsAccepted = offer->amountOffered;
+    _numNewJobOffers = 0;
+    _numJobOffers = 0;
 
     /* GetCurrentSeasonPointer + check manager status */
     SeasonInformations *season = (SeasonInformations *)getCurrentSeasonPointer();
@@ -642,8 +642,8 @@ void AcceptJobOffer(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void RejectJobOffer(void) {
-    uint16_t teamNo = teamNoOfferingJob;
-    if (jobOfferOrdinal < 0) {
+    uint16_t teamNo = _teamNoOfferingJob;
+    if (_jobOfferOrdinal < 0) {
         JobOffers_RemoveOffer(teamNo);
     } else {
         RemoveJobOffer(teamNo);
@@ -656,9 +656,9 @@ void RejectJobOffer(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void ViewFutureTeam(void) {
-    viewFutureTeamModeFlag = 1;
-    ShowSquad((TeamFile *)teamOfferingJobPtr, aViewTeam, 0, 0, 1, -1);
-    viewFutureTeamModeFlag = 0;
+    _viewFutureTeamModeFlag = 1;
+    ShowSquad((TeamFile *)_teamOfferingJobPtr, _aViewTeam, 0, 0, 1, -1);
+    _viewFutureTeamModeFlag = 0;
     GotJobOfferFinish();
 }
 
@@ -667,19 +667,19 @@ void ViewFutureTeam(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void ViewFutureTeamLeague(void) {
-    TeamFile *teamPtr = (TeamFile *)teamOfferingJobPtr;
+    TeamFile *teamPtr = (TeamFile *)_teamOfferingJobPtr;
     int16_t d7 = (int8_t)teamPtr->league;
     uint8_t countryIdx = teamPtr->countryNumber;
     /* competitionsTable is `void *[]` (native-width pointers).
      * Walk as `void **` so each slot is sizeof(void*), not 4. The
      * legacy `uint32_t *` cast read half a pointer on 64-bit. */
-    void **compTable = competitionsTable;
+    void **compTable = _competitionsTable;
     uint8_t *compEntry = (uint8_t *)compTable[countryIdx];
     uint8_t *comp = *(uint8_t **)compEntry;
 
-    highlightedLeagueTeamId = BE_READ_U16(teamPtr);
+    _highlightedLeagueTeamId = BE_READ_U16(teamPtr);
     Career_ViewOrEditCompetitionSlot(comp, (uint16_t)d7);
-    highlightedLeagueTeamId = 0xFFFF;
+    _highlightedLeagueTeamId = 0xFFFF;
     GotJobOfferFinish();
 }
 
@@ -688,8 +688,8 @@ void ViewFutureTeamLeague(void) {
  * ================================================================ */
 __attribute__((used, externally_visible))
 void ConsiderJobOffer(void) {
-    if (jobOfferOrdinal >= 0) {
-        JobOffer *offer = GetNewJobOfferPtr((uint16_t)jobOfferOrdinal);
+    if (_jobOfferOrdinal >= 0) {
+        JobOffer *offer = GetNewJobOfferPtr((uint16_t)_jobOfferOrdinal);
         JobOffers_ConvertNewOfferToOffer(offer->teamNo, offer->amountOffered);
     }
     SetExitMenuFlag();
@@ -700,7 +700,7 @@ void ConsiderJobOffer(void) {
  *            JobOffersCommon, OldJobOffersCommon, JobOffersExit
  * ================================================================ */
 
-extern uint8_t gotJobOfferMenu[];
+extern uint8_t _gotJobOfferMenu[];
 
 /* JobOffers_UpdateMenuEntryLayout — position old offer menu entries
  * based on number of new/old offers (SWOS2.s line 81335) */
@@ -708,33 +708,33 @@ __attribute__((used, externally_visible))
 void JobOffers_UpdateMenuEntryLayout(void)
 {
     /* Hide entries 13,14 and 15,16 */
-    menuEntries[13].isInvisible = 1;
-    menuEntries[14].isInvisible = 1;
-    menuEntries[15].isInvisible = 1;
-    menuEntries[16].isInvisible = 1;
+    _menuEntries[13].isInvisible = 1;
+    _menuEntries[14].isInvisible = 1;
+    _menuEntries[15].isInvisible = 1;
+    _menuEntries[16].isInvisible = 1;
 
     /* Hide entry 6 (old offers header) */
-    menuEntries[6].isInvisible = 1;
+    _menuEntries[6].isInvisible = 1;
 
-    if (numJobOffers == 0)
+    if (_numJobOffers == 0)
         return;
 
     /* Show entry 6 */
-    menuEntries[6].isInvisible = 0;
+    _menuEntries[6].isInvisible = 0;
 
     /* Calculate y position: start from entry 1's y, offset by new offers */
-    uint16_t yPos = menuEntries[1].y;
-    yPos += (uint16_t)(numNewJobOffers * 0xF);
+    uint16_t yPos = _menuEntries[1].y;
+    yPos += (uint16_t)(_numNewJobOffers * 0xF);
     yPos += 0x1E;
 
     /* Entry 6: old offers header */
-    menuEntries[6].y = yPos;
+    _menuEntries[6].y = yPos;
     yPos += 0x14;
 
     /* Entries 7-11: old offer lines (5 entries, each 0xF apart) */
     int16_t i;
     for (i = 0; i < 5; i++) {
-        menuEntries[7 + i].y = yPos;
+        _menuEntries[7 + i].y = yPos;
         yPos += 0xF;
     }
 }
@@ -756,17 +756,17 @@ void JobOffersFinish(void)
 __attribute__((used, externally_visible))
 void JobOffersCommon(MenuEntry *entry)
 {
-    uint16_t baseOrdinal = menuEntries[1].ordinal;
+    uint16_t baseOrdinal = _menuEntries[1].ordinal;
     int16_t d7 = (int16_t)(entry->ordinal - baseOrdinal);
-    jobOfferOrdinal = d7;
-    oldJobOfferOrdinal = 0xFFFF;
-    ShowMenu(gotJobOfferMenu);
+    _jobOfferOrdinal = d7;
+    _oldJobOfferOrdinal = 0xFFFF;
+    ShowMenu(_gotJobOfferMenu);
 
-    if (teamNoOfferAccepted != 0xFFFF) {
+    if (_teamNoOfferAccepted != 0xFFFF) {
         SetExitMenuFlag();
         return;
     }
-    if (numNewJobOffers != 0 || numJobOffers != 0) {
+    if (_numNewJobOffers != 0 || _numJobOffers != 0) {
         SetCurrentEntry(0xC);
         return;
     }
@@ -778,17 +778,17 @@ void JobOffersCommon(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void OldJobOffersCommon(MenuEntry *entry)
 {
-    uint16_t baseOrdinal = menuEntries[7].ordinal;
+    uint16_t baseOrdinal = _menuEntries[7].ordinal;
     int16_t d7 = (int16_t)(entry->ordinal - baseOrdinal);
-    jobOfferOrdinal = 0xFFFF;
-    oldJobOfferOrdinal = d7;
-    ShowMenu(gotJobOfferMenu);
+    _jobOfferOrdinal = 0xFFFF;
+    _oldJobOfferOrdinal = d7;
+    ShowMenu(_gotJobOfferMenu);
 
-    if (teamNoOfferAccepted != 0xFFFF) {
+    if (_teamNoOfferAccepted != 0xFFFF) {
         SetExitMenuFlag();
         return;
     }
-    if (numNewJobOffers != 0 || numJobOffers != 0) {
+    if (_numNewJobOffers != 0 || _numJobOffers != 0) {
         SetCurrentEntry(0xC);
         return;
     }
@@ -808,10 +808,10 @@ void JobOffersExit(void)
  *             JobOffersAfterDrawCommon
  * ================================================================ */
 
-extern uint32_t irqCookieObfuscated;
-extern uint8_t aInternationalJ_0[];  /* "INTERNATIONAL JOB OFFER FROM %a" */
-extern uint8_t aJobOfferFromA[];     /* "JOB OFFER FROM %a" */
-extern uint8_t aJobOfferFromAW[];    /* "JOB OFFER FROM %a WITHDRAWN" */
+extern uint32_t _irqCookieObfuscated;
+extern uint8_t _aInternationalJ_0[];  /* "INTERNATIONAL JOB OFFER FROM %a" */
+extern uint8_t _aJobOfferFromA[];     /* "JOB OFFER FROM %a" */
+extern uint8_t _aJobOfferFromAW[];    /* "JOB OFFER FROM %a WITHDRAWN" */
 
 /* ================================================================
  * JobOffersInit  (SWOS2.s line 72959)
@@ -825,12 +825,12 @@ __attribute__((used, externally_visible))
 void JobOffersInit(void)
 {
     /* Anti-piracy check: irqCookieObfuscated XOR 0xCFD1F80D must equal 0x17EA */
-    uint32_t d0 = irqCookieObfuscated ^ 0xCFD1F80Du;
+    uint32_t d0 = _irqCookieObfuscated ^ 0xCFD1F80Du;
     if (d0 != 0x17EA)
         return;  /* In original asm this would crash; safe no-op here */
 
     JobOffers_FillMissingNewOfferTeamNames();
-    selectedOldJobOfferOrdinal = 0xFFFF;
+    _selectedOldJobOfferOrdinal = 0xFFFF;
 
     /* Fall through to JobOffersFinish */
     JobOffersFinish();
@@ -852,40 +852,40 @@ void JobOffers_DrawOldOfferLine(void *entryPtr)
     a5->isDisabled = 1;
 
     /* d7 = a5->ordinal - entries[7].ordinal (entry 7 = 0x188/0x38) */
-    int16_t d7 = (int16_t)a5->ordinal - (int16_t)menuEntries[7].ordinal;
+    int16_t d7 = (int16_t)a5->ordinal - (int16_t)_menuEntries[7].ordinal;
 
-    if ((uint16_t)d7 >= numJobOffers)
+    if ((uint16_t)d7 >= _numJobOffers)
         return;
 
     a5->isDisabled = 0;
 
     /* Show entries 15 and 16 (asm offsets $348/$380) */
-    menuEntries[15].isInvisible = 0;
-    menuEntries[16].isInvisible = 0;
+    _menuEntries[15].isInvisible = 0;
+    _menuEntries[16].isInvisible = 0;
 
     /* d5 = highlight color (0 = normal, 0xD = selected) */
     uint16_t d5 = 0;
-    if ((uint16_t)d7 == selectedOldJobOfferOrdinal)
+    if ((uint16_t)d7 == _selectedOldJobOfferOrdinal)
         d5 = 0xD;
 
     /* Apply d5 to bg color bits (low 4) of entries 15 and 16 */
     {
-        uint32_t bg15 = menuEntries[15].bg;
-        menuEntries[15].bg = (bg15 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
+        uint32_t bg15 = _menuEntries[15].bg;
+        _menuEntries[15].bg = (bg15 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
     }
     {
-        uint32_t bg16 = menuEntries[16].bg;
-        menuEntries[16].bg = (bg16 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
+        uint32_t bg16 = _menuEntries[16].bg;
+        _menuEntries[16].bg = (bg16 & 0xFFF0FFFF) | ((uint32_t)d5 << 16);
     }
 
     /* Entry 15 (a3): set stringFlags base, y, number */
-    MenuEntry *a3 = &menuEntries[15];
+    MenuEntry *a3 = &_menuEntries[15];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     a3->fgWord = (uint16_t)(d7 + 1);  /* ENTRY_NUMBER: write high word */
 
     /* Entry 16 (a4): set stringFlags base, y, get dest buffer */
-    MenuEntry *a4 = &menuEntries[16];
+    MenuEntry *a4 = &_menuEntries[16];
     uint16_t d4 = a4->stringFlags & 0xFFF0;
     a4->y = a5->y;
     uint8_t *destBuf = (uint8_t *)a4->fg;
@@ -896,13 +896,13 @@ void JobOffers_DrawOldOfferLine(void *entryPtr)
 
     uint8_t *fmtStr;
     if (offer->amountOffered == 0xFFFFFFFF)
-        fmtStr = aInternationalJ_0;  /* "INTERNATIONAL JOB OFFER FROM %a" */
+        fmtStr = _aInternationalJ_0;  /* "INTERNATIONAL JOB OFFER FROM %a" */
     else
-        fmtStr = aJobOfferFromA;     /* "JOB OFFER FROM %a" */
+        fmtStr = _aJobOfferFromA;     /* "JOB OFFER FROM %a" */
 
     /* If withdrawn (funds == 0), use withdrawn text and color 6 */
     if (offer->amountOffered == 0) {
-        fmtStr = aJobOfferFromAW;    /* "JOB OFFER FROM %a WITHDRAWN" */
+        fmtStr = _aJobOfferFromAW;    /* "JOB OFFER FROM %a WITHDRAWN" */
         d3 |= 6;
         d4 |= 6;
         a5->isDisabled = 1;
@@ -915,7 +915,7 @@ void JobOffers_DrawOldOfferLine(void *entryPtr)
     a4->stringFlags = d4;
 
     /* Draw entries 15-16 */
-    DrawMultipleItems(2, &menuEntries[15]);
+    DrawMultipleItems(2, &_menuEntries[15]);
 }
 
 /* ================================================================
@@ -934,26 +934,26 @@ void JobOffersAfterDrawCommon(void *entryPtr)
     a5->isDisabled = 1;
 
     /* d7 = a5->ordinal - entries[1].ordinal (entry 1 = 0x38/0x38) */
-    int16_t d7 = (int16_t)a5->ordinal - (int16_t)menuEntries[1].ordinal;
+    int16_t d7 = (int16_t)a5->ordinal - (int16_t)_menuEntries[1].ordinal;
 
-    if ((uint16_t)d7 >= numNewJobOffers)
+    if ((uint16_t)d7 >= _numNewJobOffers)
         return;
 
     a5->isDisabled = 0;
 
     /* Show entries 13 and 14 (asm offsets $2D8/$310) */
-    menuEntries[13].isInvisible = 0;
-    menuEntries[14].isInvisible = 0;
+    _menuEntries[13].isInvisible = 0;
+    _menuEntries[14].isInvisible = 0;
 
     /* Entry 13 (a3): set stringFlags base, y, number */
-    MenuEntry *a3 = &menuEntries[13];
+    MenuEntry *a3 = &_menuEntries[13];
     uint16_t d3 = a3->stringFlags & 0xFFF0;
     a3->y = a5->y;
     uint16_t numVal = (uint16_t)d7 + 1;
     a3->fgWord = numVal;  /* ENTRY_NUMBER: write high word */
 
     /* Entry 14 (a4): set stringFlags base, y, get dest buffer */
-    MenuEntry *a4 = &menuEntries[14];
+    MenuEntry *a4 = &_menuEntries[14];
     uint16_t d4 = a4->stringFlags & 0xFFF0;
     a4->y = a5->y;
     uint8_t *destBuf = (uint8_t *)a4->fg;
@@ -964,13 +964,13 @@ void JobOffersAfterDrawCommon(void *entryPtr)
 
     uint8_t *fmtStr;
     if (offer->amountOffered == 0xFFFFFFFF)
-        fmtStr = aInternationalJ_0;  /* "INTERNATIONAL JOB OFFER FROM %a" */
+        fmtStr = _aInternationalJ_0;  /* "INTERNATIONAL JOB OFFER FROM %a" */
     else
-        fmtStr = aJobOfferFromA;     /* "JOB OFFER FROM %a" */
+        fmtStr = _aJobOfferFromA;     /* "JOB OFFER FROM %a" */
 
     /* If withdrawn (funds == 0), use withdrawn text and color 6 */
     if (offer->amountOffered == 0) {
-        fmtStr = aJobOfferFromAW;    /* "JOB OFFER FROM %a WITHDRAWN" */
+        fmtStr = _aJobOfferFromAW;    /* "JOB OFFER FROM %a WITHDRAWN" */
         d3 |= 6;
         d4 |= 6;
         a5->isDisabled = 1;
@@ -983,7 +983,7 @@ void JobOffersAfterDrawCommon(void *entryPtr)
     a4->stringFlags = d4;
 
     /* Draw entries 13-14 */
-    DrawMultipleItems(2, &menuEntries[13]);
+    DrawMultipleItems(2, &_menuEntries[13]);
 }
 
 /* ================================================================
@@ -1002,17 +1002,17 @@ void Career_MaybeGenerateJobOffer(void)
 {
     uint16_t foundTeamId = 0;
 
-    if (teamNoOfferAccepted != 0xFFFF)
+    if (_teamNoOfferAccepted != 0xFFFF)
         return;
-    if (careerSeasonsCompleted == 7)
+    if (_careerSeasonsCompleted == 7)
         return;
 
-    int16_t maxNewOffers = 5 - (int16_t)numJobOffers;
+    int16_t maxNewOffers = 5 - (int16_t)_numJobOffers;
     if (maxNewOffers == 0)
         return;
-    if ((int16_t)numNewJobOffers >= maxNewOffers)
+    if ((int16_t)_numNewJobOffers >= maxNewOffers)
         return;
-    if (currentSeasonShowing == 0x13)
+    if (_currentSeasonShowing == 0x13)
         return;
 
 #ifdef SWOS_INJECT_WC
@@ -1037,30 +1037,30 @@ void Career_MaybeGenerateJobOffer(void)
     }
 #endif
 
-    if (careerJobOfferMode == 1)
+    if (_careerJobOfferMode == 1)
         goto searchDomestic;
-    if (careerJobOfferMode == 2)
+    if (_careerJobOfferMode == 2)
         goto checkNational;
-    if (youreSacked != 0)
+    if (_youreSacked != 0)
         goto searchDomestic;
 
     /* Random phase check */
     {
-        int8_t d0 = (int8_t)viewRandomPhase - careerJobOfferPhaseBias;
+        int8_t d0 = (int8_t)_viewRandomPhase - _careerJobOfferPhaseBias;
         int16_t d0w = (int16_t)d0;
         int32_t d0l = (int32_t)(d0w << 2);
-        uint16_t divided = (uint16_t)((uint32_t)d0l / (uint32_t)wageScalingDivisor);
+        uint16_t divided = (uint16_t)((uint32_t)d0l / (uint32_t)_wageScalingDivisor);
         if (divided != 3)
             return;
     }
 
 checkNational:
     /* Try national team offer */
-    if (sameNationalCallFlag == 0) {
-        uint16_t natCall = lastNationalityCall;
+    if (_sameNationalCallFlag == 0) {
+        uint16_t natCall = _lastNationalityCall;
         if (natCall != 0xFFFF) {
-            if (careerJobOfferMode != 2) {
-                if (boardConfidenceScore == 0)
+            if (_careerJobOfferMode != 2) {
+                if (_boardConfidenceScore == 0)
                     goto noNational;
             }
             /* Check if already offered */
@@ -1068,7 +1068,7 @@ checkNational:
                 goto noNational;
             if (IsOldJobOffer(natCall) == 0)
                 goto noNational;
-            if (careerJobOfferMode != 2) {
+            if (_careerJobOfferMode != 2) {
                 int16_t conf = GetBoardConfidenceScore();
                 if (conf < 0xC8)
                     goto noNational;
@@ -1084,7 +1084,7 @@ checkNational:
     }
 
 noNational:
-    if (careerJobOfferMode == 2)
+    if (_careerJobOfferMode == 2)
         return;
 
     /* Random chance to generate offer */
@@ -1100,33 +1100,33 @@ searchDomestic:
     uint16_t repLow, repHigh;
     uint16_t repScore;
 
-    if (youreSacked != 0 && isNationalSelector != 0) {
-        repScore = (uint16_t)sackedReputationScore;
-    } else if (isNationalSelector != 0) {
-        repScore = (uint16_t)nationalSelectorReputationPoints;
+    if (_youreSacked != 0 && _isNationalSelector != 0) {
+        repScore = (uint16_t)_sackedReputationScore;
+    } else if (_isNationalSelector != 0) {
+        repScore = (uint16_t)_nationalSelectorReputationPoints;
     } else {
         /* Calculate from major trophy bonus and league position */
-        uint16_t mtb = (uint16_t)(uint8_t)primaryCompetitionBuf.tourn.header.trophyBonusValue;
+        uint16_t mtb = (uint16_t)(uint8_t)_primaryCompetitionBuf.tourn.header.trophyBonusValue;
         uint16_t low75 = (uint16_t)((uint16_t)(mtb * 0x4B) / 100);
         uint16_t high150 = (uint16_t)((uint16_t)(mtb * 0x96) / 100);
 
         /* Find team position in DIY table */
-        int16_t pos = FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+        int16_t pos = FindTeamInDIY(_selTeamNumber, (DIYCompetition *)&_primaryCompetitionBuf);
 
-        uint16_t posPct = (uint16_t)((uint16_t)((uint16_t)pos * 100) / (primaryCompetitionBuf.tourn.header.numTeams - 1));
+        uint16_t posPct = (uint16_t)((uint16_t)((uint16_t)pos * 100) / (_primaryCompetitionBuf.tourn.header.numTeams - 1));
         uint16_t invPct = 100 - posPct;
 
         uint16_t range = high150 - low75;
         uint16_t adj = (uint16_t)((uint16_t)(range * invPct) / 100);
         repScore = adj + low75;
 
-        if (isNationalSelector == 0) {
-            sackedReputationScore = (int16_t)repScore;
-            nationalSelectorReputationPoints = (int16_t)repScore;
+        if (_isNationalSelector == 0) {
+            _sackedReputationScore = (int16_t)repScore;
+            _nationalSelectorReputationPoints = (int16_t)repScore;
         }
     }
 
-    if (youreSacked == 0) {
+    if (_youreSacked == 0) {
         repHigh = repScore;
         repLow = (uint16_t)((uint16_t)(repHigh * 0x4B) / 100);
     } else {
@@ -1134,10 +1134,10 @@ searchDomestic:
         repLow = (uint16_t)((uint16_t)(repHigh * 0) / 100);  /* mulu #0 */
     }
 
-    if (careerJobOfferMode == 1)
+    if (_careerJobOfferMode == 1)
         goto searchNational;
 
-    if (youreSacked != 0 && isNationalSelector != 0)
+    if (_youreSacked != 0 && _isNationalSelector != 0)
         goto searchSacked;
 
     /* Try domestic (selected teams) first */
@@ -1145,7 +1145,7 @@ searchDomestic:
         uint16_t rnd = Rand();
         if (rnd < 0x15) {
             /* Try national team selector offer */
-            if (isNationalSelector != 0)
+            if (_isNationalSelector != 0)
                 goto searchNational;
 
             /* Random chance for national team if player qualifies */
@@ -1159,16 +1159,16 @@ searchDomestic:
         }
 
         /* Search among selected teams (home division) */
-        if (isNationalSelector != 0)
+        if (_isNationalSelector != 0)
             return;
 
-        uint16_t selTeam = selTeamNumber;
+        uint16_t selTeam = _selTeamNumber;
         uint8_t *a0;
 
         for (int16_t tries = 99; tries >= 0; tries--) {
             rnd = Rand();
-            uint16_t idx = (uint16_t)((uint16_t)(rnd * numSelectedTeams) >> 8);
-            a0 = &selTeamsPtr + (uint32_t)idx * 0x2AC;
+            uint16_t idx = (uint16_t)((uint16_t)(rnd * _numSelectedTeams) >> 8);
+            a0 = &_selTeamsPtr + (uint32_t)idx * 0x2AC;
 
             /* Skip custom teams (type 4) */
             TeamFile *a0tf = (TeamFile *)a0;
@@ -1181,7 +1181,7 @@ searchDomestic:
              * home-country job-offer search effectively never found a
              * candidate, and offers only ever showed up via the
              * `searchForeign` fallback that triggers when youreSacked. */
-            if ((uint8_t)(selTeamNumber >> 8) != a0tf->countryNumber)
+            if ((uint8_t)(_selTeamNumber >> 8) != a0tf->countryNumber)
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
@@ -1199,15 +1199,15 @@ searchDomestic:
                 continue;
 
             /* Check division index match */
-            uint16_t divIdx = currentDivisionIndex;
+            uint16_t divIdx = _currentDivisionIndex;
             if ((uint8_t)divIdx != a0tf->league) {
                 foundTeamId = teamId;
                 goto foundWithBalance;
             }
 
             /* Same division — check league position */
-            FindTeamInDIY(teamId, (DIYCompetition *)&primaryCompetitionBuf);
-            uint16_t minDiv = primaryCompetitionBuf.tourn.header.minDivisionIndex + primaryCompetitionBuf.tourn.header.maxDivisionOffset;
+            FindTeamInDIY(teamId, (DIYCompetition *)&_primaryCompetitionBuf);
+            uint16_t minDiv = _primaryCompetitionBuf.tourn.header.minDivisionIndex + _primaryCompetitionBuf.tourn.header.maxDivisionOffset;
             if ((uint16_t)divIdx < minDiv)
                 continue;
 
@@ -1215,7 +1215,7 @@ searchDomestic:
             goto foundWithBalance;
         }
 
-        if (youreSacked != 0)
+        if (_youreSacked != 0)
             goto searchForeign;
         return;
     }
@@ -1223,12 +1223,12 @@ searchDomestic:
 searchForeign:
     /* Search among TMD (foreign) teams */
     {
-        uint16_t selTeam = selTeamNumber;
-        uint8_t *base = &tmdFileBuffer;
+        uint16_t selTeam = _selTeamNumber;
+        uint8_t *base = &_tmdFileBuffer;
 
         for (int16_t tries = 99; tries >= 0; tries--) {
             uint16_t rnd = Rand();
-            uint16_t idx = (uint16_t)((uint16_t)(rnd * careerFileBuffer) >> 8);
+            uint16_t idx = (uint16_t)((uint16_t)(rnd * _careerFileBuffer) >> 8);
             uint8_t *a0 = base + (uint32_t)idx * 0x2AC;
 
             TeamFile *a0tf = (TeamFile *)a0;
@@ -1239,7 +1239,7 @@ searchForeign:
              * byte-read pre-fix used the ordinal, so the skip rarely
              * fired and same-country teams accidentally counted as
              * foreign candidates. */
-            if ((uint8_t)(selTeamNumber >> 8) == a0tf->countryNumber)
+            if ((uint8_t)(_selTeamNumber >> 8) == a0tf->countryNumber)
                 continue;
 
             /* Asm: move.w (a0),d3 — reads packed team number at offset 0 */
@@ -1268,9 +1268,9 @@ searchNational:
         for (;;) {
             for (int16_t tries = 99; tries >= 0; tries--) {
                 uint16_t rnd = Rand();
-                uint32_t idx32 = (uint32_t)rnd * (uint32_t)nat_teams_rand_limit1;
+                uint32_t idx32 = (uint32_t)rnd * (uint32_t)_nat_teams_rand_limit1;
                 uint16_t idx = (uint16_t)(idx32 >> 8);
-                NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams + (uint32_t)idx;
+                NationalTeamRecord *rec = (NationalTeamRecord *)_nationalTeams + (uint32_t)idx;
 
                 /* teamId is compared against selTeamNumber (BE-packed)
                  * below — compose the same form via PACK_BE_U16. */
@@ -1279,9 +1279,9 @@ searchNational:
 
                 if (skill < repLow || skill > repHigh)
                     continue;
-                if (teamId == selTeamNumber)
+                if (teamId == _selTeamNumber)
                     continue;
-                if (teamId == lastNationalityCall)
+                if (teamId == _lastNationalityCall)
                     continue;
 
                 if (IsTeamCodeOkForNationalSelector(rec->countryNumber) == 0)
@@ -1307,17 +1307,17 @@ searchNational:
 
 searchSacked:
     /* Sacked + national selector: search teamFileBuffer */
-    LoadTeamFile(nationalTeamFileCode);
+    LoadTeamFile(_nationalTeamFileCode);
     repLow = repHigh >> 1;
 
     for (;;) {
-        uint16_t selTeam = selTeamNumber;
+        uint16_t selTeam = _selTeamNumber;
 
         for (int16_t tries = 99; tries >= 0; tries--) {
             uint16_t rnd = Rand();
-            uint16_t numTeams = *(uint16_t *)&teamFileBuffer;
+            uint16_t numTeams = *(uint16_t *)&_teamFileBuffer;
             uint16_t idx = (uint16_t)((uint16_t)(rnd * numTeams) >> 8);
-            uint8_t *a0 = (&teamFileBuffer + 2) + (uint32_t)idx * 0x2AC;
+            uint8_t *a0 = (&_teamFileBuffer + 2) + (uint32_t)idx * 0x2AC;
 
             TeamFile *a0tf2 = (TeamFile *)a0;
             if (a0tf2->league == 4)

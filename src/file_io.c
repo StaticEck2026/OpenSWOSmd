@@ -31,70 +31,70 @@
 static uint8_t s_rnc_scratch[256 * 1024];
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint16_t assetCurrentIndex;
-extern uintptr_t assetLoaderCacheFlag;
-extern uint16_t assetLoaderAltPathReady;
-extern volatile uintptr_t frontbufferBasePtr;
+extern uint16_t _assetCurrentIndex;
+extern uintptr_t _assetLoaderCacheFlag;
+extern uint16_t _assetLoaderAltPathReady;
+extern volatile uintptr_t _frontbufferBasePtr;
 #ifdef SWOS_SDL_BUILD
-extern volatile uintptr_t frontbufferBaseAltPtr;
-extern uint8_t frontbufferBaseAlt[];
+extern volatile uintptr_t _frontbufferBaseAltPtr;
+extern uint8_t _frontbufferBaseAlt[];
 #endif
-extern volatile uint16_t currentGameTick;
+extern volatile uint16_t _currentGameTick;
 extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
-extern volatile uint16_t panicReasonCode;
-extern uint16_t hilNumGoals;
-extern uint16_t hilTeam1Goals;
-extern uint16_t hilTeam2Goals;
-extern uint16_t hilPitchNumber;
-extern uint16_t hilMaxSubstitutes;
-extern uint8_t editTacticsCurrentTactics[370]; /* TeamTactics — must match edit_tactics.c */
-extern uint8_t hilFileBuffer[];
+extern volatile uint16_t _panicReasonCode;
+extern uint16_t _hilNumGoals;
+extern uint16_t _hilTeam1Goals;
+extern uint16_t _hilTeam2Goals;
+extern uint16_t _hilPitchNumber;
+extern uint16_t _hilMaxSubstitutes;
+extern uint8_t _editTacticsCurrentTactics[370]; /* TeamTactics — must match edit_tactics.c */
+extern uint8_t _hilFileBuffer[];
 
 /* Error strings (all in SWOS2.s data section) */
-extern uint8_t aDiskWriteProte[];
-extern uint8_t aNoDiskInDrive[];
-extern uint8_t aFileNotFound[];
-extern uint8_t aDiskFull[];
-extern uint8_t aCannotFormatGa[];
-extern uint8_t aDiskError[];
-extern uint8_t aCompetitionFil[];
-extern uint8_t aFileSavedByDif[];
+extern uint8_t _aDiskWriteProte[];
+extern uint8_t _aNoDiskInDrive[];
+extern uint8_t _aFileNotFound[];
+extern uint8_t _aDiskFull[];
+extern uint8_t _aCannotFormatGa[];
+extern uint8_t _aDiskError[];
+extern uint8_t _aCompetitionFil[];
+extern uint8_t _aFileSavedByDif[];
 
 /* String constants (in SWOS2.s data section) */
-extern uint8_t aContinue[];          /* "CONTINUE" */
-extern uint8_t aAbort[];             /* "ABORT" */
+extern uint8_t _aContinue[];          /* "CONTINUE" */
+extern uint8_t _aAbort[];             /* "ABORT" */
 
 /* Insert disk / file dialog globals */
-extern uint8_t aInsertSwosDisk_0[];  /* "\x01INSERT SWOS DISK 2 IN ANY DRIVE" */
-extern uint8_t aOk[];               /* "OK" */
-extern uint8_t aInsertGameSave[];    /* "\x01INSERT GAME SAVE DISK IN DF0:" */
-extern uint8_t aInsertBlankDis[];    /* "\x01INSERT BLANK DISK IN DF0:" */
-extern uint8_t aFormatSaveDisk[];    /* "FORMAT SAVE DISK" */
-extern uint8_t aDeleteFile[];        /* "DELETE FILE" */
-extern uint8_t aSwosu[];            /* "SWOSU" */
-extern uint8_t aSwos4Dku[];         /* "swos4.dku" */
-extern uint16_t saveFileBuffer;
-extern uint16_t menuMusic;
+extern uint8_t _aInsertSwosDisk_0[];  /* "\x01INSERT SWOS DISK 2 IN ANY DRIVE" */
+extern uint8_t _aOk[];               /* "OK" */
+extern uint8_t _aInsertGameSave[];    /* "\x01INSERT GAME SAVE DISK IN DF0:" */
+extern uint8_t _aInsertBlankDis[];    /* "\x01INSERT BLANK DISK IN DF0:" */
+extern uint8_t _aFormatSaveDisk[];    /* "FORMAT SAVE DISK" */
+extern uint8_t _aDeleteFile[];        /* "DELETE FILE" */
+extern uint8_t _aSwosu[];            /* "SWOSU" */
+extern uint8_t _aSwos4Dku[];         /* "swos4.dku" */
+extern uint16_t _saveFileBuffer;
+extern uint16_t _menuMusic;
 
 /* File selection dialog globals */
-extern uintptr_t extension;
-extern uintptr_t menuTitle;
-extern uint8_t inputSaveFilename[];
-extern uint16_t numberOfFiles;
-extern uint16_t totalNumberOfFiles;
-extern uint16_t numMatchedFiles;
-extern uint8_t foundFilenamesBuffer[];
-extern void *foundFilesPtrTable[];
-extern uint32_t extensionsBuffer[];
-extern uint16_t savingFile;
-extern uint8_t selectFilesMenu[];
-extern uint8_t selectedFilename[];
-extern uint16_t selFilesColumn1NumItems;
-extern uint16_t selFilesColumn2NumItems;
-extern uint16_t selFilesColumn3NumItems;
-extern uint16_t selFilesColumnStartY;
-extern uint16_t selFilesColumnEndY;
-extern MenuEntry menuEntries[];
+extern uintptr_t _extension;
+extern uintptr_t _menuTitle;
+extern uint8_t _inputSaveFilename[];
+extern uint16_t _numberOfFiles;
+extern uint16_t _totalNumberOfFiles;
+extern uint16_t _numMatchedFiles;
+extern uint8_t _foundFilenamesBuffer[];
+extern void *_foundFilesPtrTable[];
+extern uint32_t _extensionsBuffer[];
+extern uint16_t _savingFile;
+extern uint8_t _selectFilesMenu[];
+extern uint8_t _selectedFilename[];
+extern uint16_t _selFilesColumn1NumItems;
+extern uint16_t _selFilesColumn2NumItems;
+extern uint16_t _selFilesColumn3NumItems;
+extern uint16_t _selFilesColumnStartY;
+extern uint16_t _selFilesColumnEndY;
+extern MenuEntry _menuEntries[];
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
@@ -165,7 +165,7 @@ int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
 
     for (;;) {
         /* Direct dispatch if assetCurrentIndex == 4 */
-        if (assetCurrentIndex == 4) {
+        if (_assetCurrentIndex == 4) {
             result = CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, dest, &fileSize);
             /* The original Amiga asm disk pipeline stripped RNC headers
              * here, but the C asset dispatch returns RAW bytes on BOTH
@@ -203,11 +203,11 @@ int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
              * loader wrote directly to the displayed buffer. On SDL,
              * mirror that by stamping the displayed buffer if `dest`
              * is the alt buffer. */
-            if (result == 0 && (uint8_t *)frontbufferBasePtr != dest &&
-                ((uintptr_t)dest == (uintptr_t)frontbufferBaseAlt ||
-                 (uintptr_t)dest == frontbufferBaseAltPtr)) {
+            if (result == 0 && (uint8_t *)_frontbufferBasePtr != dest &&
+                ((uintptr_t)dest == (uintptr_t)_frontbufferBaseAlt ||
+                 (uintptr_t)dest == _frontbufferBaseAltPtr)) {
                 uint32_t cap = FRONTBUFFER_SIZE_TOTAL_BYTES;
-                memcpy((void *)frontbufferBasePtr, dest,
+                memcpy((void *)_frontbufferBasePtr, dest,
                        fileSize < cap ? fileSize : cap);
             }
 #endif
@@ -217,10 +217,10 @@ int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
         }
 
         /* Stage load through frontbuffer */
-        frontbuf = (uint8_t *)frontbufferBasePtr;
+        frontbuf = (uint8_t *)_frontbufferBasePtr;
 
         /* Try cache first */
-        if (assetLoaderCacheFlag != 0) {
+        if (_assetLoaderCacheFlag != 0) {
             if (AssetCacheCopyByName(filename, frontbuf, &fileSize) == 0)
                 goto size_check_and_decode;
         }
@@ -229,7 +229,7 @@ int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
         result = CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, frontbuf, &fileSize);
         if (result != 0) {
             /* Load failed — retry if not index 4 */
-            if (assetCurrentIndex == 4) {
+            if (_assetCurrentIndex == 4) {
                 if (outFileSize)
                     *outFileSize = fileSize;
                 return result;
@@ -243,14 +243,14 @@ int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
         }
 
         /* On success, store to cache if appropriate */
-        if (assetLoaderCacheFlag != 0 && assetLoaderAltPathReady != 0) {
+        if (_assetLoaderCacheFlag != 0 && _assetLoaderAltPathReady != 0) {
             AssetCacheStoreFromMemory(filename, frontbuf, fileSize);
         }
 
     size_check_and_decode:
         /* Check file size vs frontbuffer capacity */
         if (fileSize > FRONTBUFFER_SIZE_TOTAL_BYTES) {
-            panicReasonCode = 0xE000u;
+            _panicReasonCode = 0xE000u;
             PanicHaltLoop();
             /* never returns */
         }
@@ -347,17 +347,17 @@ void ShowFsErrorByCode(uint16_t errCode)
     uint8_t *msg;
 
     if (errCode == 0x1C)
-        msg = aDiskWriteProte;
+        msg = _aDiskWriteProte;
     else if (errCode == 0x1D)
-        msg = aNoDiskInDrive;
+        msg = _aNoDiskInDrive;
     else if (errCode == 0xCD)
-        msg = aFileNotFound;
+        msg = _aFileNotFound;
     else if (errCode == 0xDD)
-        msg = aDiskFull;
+        msg = _aDiskFull;
     else if (errCode == 0xFF9C)
-        msg = aCannotFormatGa;
+        msg = _aCannotFormatGa;
     else
-        msg = aDiskError;
+        msg = _aDiskError;
 
     ShowErrorMenu(msg);
 }
@@ -387,7 +387,7 @@ int16_t LoadCareerFile(uint8_t *filename)
      * SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadCareer(filename, NULL, 0) != 0) {
-        ShowErrorMenu(aFileSavedByDif);
+        ShowErrorMenu(_aFileSavedByDif);
         RestoreOptions();
         InitUserTactics();
         return 1;
@@ -438,8 +438,8 @@ int16_t LoadPresetFile(uint8_t *filename)
      * careerCompetitionSlotPtrTable / currentCompetitionPtr. Only caller
      * (LoadOldCompetitionMenu) resets gameType=0 on our failure return, so
      * setting it up-front is safe. See project_diy_preset_load_gametype. */
-    extern uint16_t gameType;
-    gameType = 2; /* GAME_TYPE_PRESET_COMPETITION (menus.c:2216) */
+    extern uint16_t _gameType;
+    _gameType = 2; /* GAME_TYPE_PRESET_COMPETITION (menus.c:2216) */
 
     /* JSON is the only preset format. The legacy raw read loaded a whole
      * careerFileBuffer-overlay-region .PRE dump into the now-standalone
@@ -453,7 +453,7 @@ int16_t LoadPresetFile(uint8_t *filename)
      * docs/SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadPreset(filename, NULL, 0) != 0) {
-        ShowErrorMenu(aFileSavedByDif);
+        ShowErrorMenu(_aFileSavedByDif);
         RestoreOptions();
         InitUserTactics();
         return 1;
@@ -496,8 +496,8 @@ int16_t LoadDIYFile(uint8_t *filename)
 
     /* Route a loaded DIY competition to the DIY menu, not the career
      * contestMenu — see the gameType note in LoadPresetFile. */
-    extern uint16_t gameType;
-    gameType = 1; /* GAME_TYPE_DIY_COMPETITION (menus.c:2215) */
+    extern uint16_t _gameType;
+    _gameType = 1; /* GAME_TYPE_DIY_COMPETITION (menus.c:2215) */
 
     /* JSON is the only DIY format. The legacy raw read loaded a whole
      * careerFileBuffer-overlay-region .DIY dump into the now-standalone
@@ -511,7 +511,7 @@ int16_t LoadDIYFile(uint8_t *filename)
      * docs/SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadDIY(filename, NULL, 0) != 0) {
-        ShowErrorMenu(aFileSavedByDif);
+        ShowErrorMenu(_aFileSavedByDif);
         RestoreOptions();
         InitUserTactics();
         return 1;
@@ -557,7 +557,7 @@ int16_t SaveDIYFile(uint8_t *filename)
 __attribute__((used, externally_visible))
 int16_t FindFilesExtensionPresent(uint8_t *ext)
 {
-    int16_t r = CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)&numberOfFiles);
+    int16_t r = CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)&_numberOfFiles);
     return r;
 }
 
@@ -579,16 +579,16 @@ int16_t ReadTacticsFile(uint8_t *filename)
 
     /* JSON path: parse directly from disk into editTacticsCurrentTactics. */
     if (SaveJson_FileIsJson(filename) == 1) {
-        int16_t jr = SaveJson_LoadTactics(filename, editTacticsCurrentTactics,
+        int16_t jr = SaveJson_LoadTactics(filename, _editTacticsCurrentTactics,
                                           TACTICS_SIZE);
         if (jr != 0) {
-            ShowErrorMenu(aFileSavedByDif);
+            ShowErrorMenu(_aFileSavedByDif);
             return 1;
         }
         return 0;
     }
 
-    result = LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
+    result = LoadFileEx(filename, (uint8_t *)_frontbufferBasePtr, (uint32_t *)0);
     if (result != 0) {
         BlitterCopyOverlayToScreen();
         ShowFsErrorByCode((uint16_t)result);
@@ -596,8 +596,8 @@ int16_t ReadTacticsFile(uint8_t *filename)
     }
 
     {
-        uint8_t *src = (uint8_t *)frontbufferBasePtr;
-        uint8_t *dst = editTacticsCurrentTactics;
+        uint8_t *src = (uint8_t *)_frontbufferBasePtr;
+        uint8_t *dst = _editTacticsCurrentTactics;
         for (i = TACTICS_SIZE - 1; i >= 0; i--) {
             *dst++ = *src++;
         }
@@ -657,14 +657,14 @@ int16_t LoadHilFile(uint8_t *filename)
     if (SaveJson_FileIsJson(filename) == 1) {
         int16_t jr = SaveJson_LoadHighlights(filename, NULL, 0);
         if (jr != 0) {
-            hilNumGoals = 0;
-            ShowErrorMenu(aFileSavedByDif);
+            _hilNumGoals = 0;
+            ShowErrorMenu(_aFileSavedByDif);
             return 1;
         }
         return 0;
     }
 
-    result = LoadFileEx(filename, hilFileBuffer, (uint32_t *)0);
+    result = LoadFileEx(filename, _hilFileBuffer, (uint32_t *)0);
     if (result == 0) {
         /* Legacy on-disk format stores the 5 header u16s in BE (Amiga
          * m68k). The original loader left them BE in memory and
@@ -672,15 +672,15 @@ int16_t LoadHilFile(uint8_t *filename)
          * swap. Doing the swap right here means JSON loads — which
          * write host-native directly — can skip it, and there's a
          * single canonical place for the byte-order normalisation. */
-        hilNumGoals       = BE16_TO_HOST(hilNumGoals);
-        hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
-        hilTeam2Goals     = BE16_TO_HOST(hilTeam2Goals);
-        hilPitchNumber    = BE16_TO_HOST(hilPitchNumber);
-        hilMaxSubstitutes = BE16_TO_HOST(hilMaxSubstitutes);
+        _hilNumGoals       = BE16_TO_HOST(_hilNumGoals);
+        _hilTeam1Goals     = BE16_TO_HOST(_hilTeam1Goals);
+        _hilTeam2Goals     = BE16_TO_HOST(_hilTeam2Goals);
+        _hilPitchNumber    = BE16_TO_HOST(_hilPitchNumber);
+        _hilMaxSubstitutes = BE16_TO_HOST(_hilMaxSubstitutes);
         return 0;
     }
 
-    hilNumGoals = 0;
+    _hilNumGoals = 0;
     ShowFsErrorByCode((uint16_t)result);
     return 1;
 }
@@ -709,25 +709,25 @@ int16_t DoSaveHighlights(uint8_t *filename)
     }
 #endif
 
-    size = (uint32_t)hilNumGoals * 19000u + 2254u;
+    size = (uint32_t)_hilNumGoals * 19000u + 2254u;
 
     /* HIL file header is big-endian on disk for Amiga compatibility.
      * Swap the 5 uint16 header fields host→BE for the duration of the
      * write, then swap back so in-memory state stays in host order for
      * the rest of the game. No-op on the Amiga BE build. */
-    hilNumGoals       = HOST_TO_BE16(hilNumGoals);
-    hilTeam1Goals     = HOST_TO_BE16(hilTeam1Goals);
-    hilTeam2Goals     = HOST_TO_BE16(hilTeam2Goals);
-    hilPitchNumber    = HOST_TO_BE16(hilPitchNumber);
-    hilMaxSubstitutes = HOST_TO_BE16(hilMaxSubstitutes);
+    _hilNumGoals       = HOST_TO_BE16(_hilNumGoals);
+    _hilTeam1Goals     = HOST_TO_BE16(_hilTeam1Goals);
+    _hilTeam2Goals     = HOST_TO_BE16(_hilTeam2Goals);
+    _hilPitchNumber    = HOST_TO_BE16(_hilPitchNumber);
+    _hilMaxSubstitutes = HOST_TO_BE16(_hilMaxSubstitutes);
 
-    result = WriteFile(filename, hilFileBuffer, size);
+    result = WriteFile(filename, _hilFileBuffer, size);
 
-    hilNumGoals       = BE16_TO_HOST(hilNumGoals);
-    hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
-    hilTeam2Goals     = BE16_TO_HOST(hilTeam2Goals);
-    hilPitchNumber    = BE16_TO_HOST(hilPitchNumber);
-    hilMaxSubstitutes = BE16_TO_HOST(hilMaxSubstitutes);
+    _hilNumGoals       = BE16_TO_HOST(_hilNumGoals);
+    _hilTeam1Goals     = BE16_TO_HOST(_hilTeam1Goals);
+    _hilTeam2Goals     = BE16_TO_HOST(_hilTeam2Goals);
+    _hilPitchNumber    = BE16_TO_HOST(_hilPitchNumber);
+    _hilMaxSubstitutes = BE16_TO_HOST(_hilMaxSubstitutes);
 
     if (result == 0)
         return 0;
@@ -764,7 +764,7 @@ void ShowInsertDisk2Dialog(uint8_t *header)
         if (AssetSvcLoaderOp2() == 0)
             return; /* disk ready */
         /* Show prompt — no abort button (null), always retry */
-        DoContinueAbortMenu(header, aInsertSwosDisk_0, aOk, (uint8_t *)0, 1);
+        DoContinueAbortMenu(header, _aInsertSwosDisk_0, _aOk, (uint8_t *)0, 1);
     }
 }
 
@@ -786,8 +786,8 @@ int16_t Asset_PromptInsertSaveDiskDf0(uint8_t *title)
     int16_t result;
 
     for (;;) {
-        result = DoContinueAbortMenu(title, aInsertGameSave,
-                                      aOk, (uint8_t *)aAbort, 0);
+        result = DoContinueAbortMenu(title, _aInsertGameSave,
+                                      _aOk, (uint8_t *)_aAbort, 0);
         if (result != 0)
             return result; /* user aborted */
 
@@ -814,10 +814,10 @@ void FormatSaveDiskMenu(void)
     int16_t result;
 
     for (;;) {
-        result = DoContinueAbortMenu((uint8_t *)aFormatSaveDisk,
-                                      aInsertBlankDis,
-                                      (uint8_t *)aContinue,
-                                      (uint8_t *)aAbort, 1);
+        result = DoContinueAbortMenu((uint8_t *)_aFormatSaveDisk,
+                                      _aInsertBlankDis,
+                                      (uint8_t *)_aContinue,
+                                      (uint8_t *)_aAbort, 1);
         if (result != 0)
             return; /* user aborted */
 
@@ -834,8 +834,8 @@ void FormatSaveDiskMenu(void)
     /* Disk ready — format (DO_CRITICAL) */
     StopMusic();
     result = CAssetSys_Dispatch(ASSET_OP_DO_CRITICAL, 0,
-                                 (void *)aSwosu, (void *)0);
-    if (menuMusic != 0) {
+                                 (void *)_aSwosu, (void *)0);
+    if (_menuMusic != 0) {
         TryPlayMusic();
     }
     if (result != 0) {
@@ -845,8 +845,8 @@ void FormatSaveDiskMenu(void)
 
     /* Load swos4.dku save file header (2 bytes) */
     result = CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE,
-                                      (void *)aSwos4Dku,
-                                      (void *)&saveFileBuffer, 2);
+                                      (void *)_aSwos4Dku,
+                                      (void *)&_saveFileBuffer, 2);
     if (result != 0) {
         ShowFsErrorByCode((uint16_t)result);
     }
@@ -866,10 +866,10 @@ void DeleteFileMenu(void)
 {
     int16_t result;
 
-    if (Asset_PromptInsertSaveDiskDf0(aDeleteFile) != 0)
+    if (Asset_PromptInsertSaveDiskDf0(_aDeleteFile) != 0)
         return;
 
-    if (GetFilenameAndExtension(0, aDeleteFile, aDeleteFile) != 0)
+    if (GetFilenameAndExtension(0, _aDeleteFile, _aDeleteFile) != 0)
         return;
 
     result = CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE2, 0,
@@ -890,7 +890,7 @@ void DeleteFileMenu(void)
 __attribute__((used, externally_visible))
 void ExitDisk(void)
 {
-    ShowInsertDisk2Dialog(aFormatSaveDisk);
+    ShowInsertDisk2Dialog(_aFormatSaveDisk);
     SetExitMenuFlag();
 }
 
@@ -921,9 +921,9 @@ int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
     uint32_t ext;
     uint16_t i;
 
-    extension = filterExt;
-    menuTitle = (uintptr_t)menuTitleStr;
-    StringCopy(defaultFilename, inputSaveFilename);
+    _extension = filterExt;
+    _menuTitle = (uintptr_t)menuTitleStr;
+    StringCopy(defaultFilename, _inputSaveFilename);
 
     result = FindFilesExtensionPresent((uint8_t *)0);
     if (result != 0) {
@@ -931,15 +931,15 @@ int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
         return 1;
     }
 
-    totalNumberOfFiles = 0;
-    numMatchedFiles = 0;
-    count = numberOfFiles;
+    _totalNumberOfFiles = 0;
+    _numMatchedFiles = 0;
+    count = _numberOfFiles;
 
     if (count != 0) {
         count--;
-        fileEntry = foundFilenamesBuffer;
-        ptrTableCursor = foundFilesPtrTable;
-        extTableCursor = extensionsBuffer;
+        fileEntry = _foundFilenamesBuffer;
+        ptrTableCursor = _foundFilesPtrTable;
+        extTableCursor = _extensionsBuffer;
 
         for (i = count; ; i--) {
             /* Find the '.' in the filename */
@@ -961,9 +961,9 @@ int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
                 ext == 0x2E544143u || /* .TAC */
                 ext == 0x2E48494Cu)   /* .HIL */
             {
-                totalNumberOfFiles++;
-                if (ext == extension) {
-                    numMatchedFiles++;
+                _totalNumberOfFiles++;
+                if (ext == _extension) {
+                    _numMatchedFiles++;
                     *ptrTableCursor++ = fileEntry;
                     *extTableCursor++ = ext;
                 }
@@ -974,10 +974,10 @@ int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
         }
     }
 
-    savingFile = 1;
-    ShowMenu(selectFilesMenu);
+    _savingFile = 1;
+    ShowMenu(_selectFilesMenu);
 
-    if (selectedFilename[0] != 0)
+    if (_selectedFilename[0] != 0)
         return 0; /* file selected */
 
     return 1; /* no selection */
@@ -1010,9 +1010,9 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
     uint32_t ext;
     uint16_t i;
 
-    extension = preferredExt;
-    menuTitle = (uintptr_t)menuTitleStr;
-    StringCopy(defaultFilename, inputSaveFilename);
+    _extension = preferredExt;
+    _menuTitle = (uintptr_t)menuTitleStr;
+    StringCopy(defaultFilename, _inputSaveFilename);
 
     result = FindFilesExtensionPresent((uint8_t *)0);
     if (result != 0) {
@@ -1020,15 +1020,15 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
         return 1;
     }
 
-    totalNumberOfFiles = 0;
-    numMatchedFiles = 0;
-    count = numberOfFiles;
+    _totalNumberOfFiles = 0;
+    _numMatchedFiles = 0;
+    count = _numberOfFiles;
 
     if (count != 0) {
         count--;
-        fileEntry = foundFilenamesBuffer;
-        ptrTableCursor = foundFilesPtrTable;
-        extTableCursor = extensionsBuffer;
+        fileEntry = _foundFilenamesBuffer;
+        ptrTableCursor = _foundFilesPtrTable;
+        extTableCursor = _extensionsBuffer;
 
         for (i = count; ; i--) {
             /* Find the '.' in the filename */
@@ -1050,8 +1050,8 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
                 ext == 0x2E544143u || /* .TAC */
                 ext == 0x2E48494Cu)   /* .HIL */
             {
-                totalNumberOfFiles++;
-                numMatchedFiles++;
+                _totalNumberOfFiles++;
+                _numMatchedFiles++;
                 *ptrTableCursor++ = fileEntry;
                 *extTableCursor++ = ext;
             }
@@ -1061,10 +1061,10 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
         }
     }
 
-    savingFile = 0;
-    ShowMenu(selectFilesMenu);
+    _savingFile = 0;
+    ShowMenu(_selectFilesMenu);
 
-    if (selectedFilename[0] != 0)
+    if (_selectedFilename[0] != 0)
         return 0; /* file selected */
 
     return 1; /* no selection */
@@ -1078,9 +1078,9 @@ extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
 /* Copy filename to selectedFilename, extract 3-char extension into packed uint32_t,
    and signal menu exit. Extension is packed as: '.', c1, c2, c3 (big-endian). */
 static void CopyFilenameExtensionAndSetExitMenuFlag(uint8_t *filename) {
-    StringCopy(filename, selectedFilename);
+    StringCopy(filename, _selectedFilename);
     /* Scan for '.' in the copied filename */
-    uint8_t *p = selectedFilename;
+    uint8_t *p = _selectedFilename;
     while (*p++ != '.')
         ;
     /* Build packed 4-byte extension: '.', char1, char2, char3 */
@@ -1088,14 +1088,14 @@ static void CopyFilenameExtensionAndSetExitMenuFlag(uint8_t *filename) {
     ext = (ext << 8) | *p++;
     ext = (ext << 8) | *p++;
     ext = (ext << 8) | *p++;
-    extension = ext;
+    _extension = ext;
     SetExitMenuFlag();
 }
 
 /* Menu callback: select the save filename and exit the menu. */
 __attribute__((used, externally_visible))
 void SelectFilenameToSaveAndExit(void) {
-    CopyFilenameExtensionAndSetExitMenuFlag(inputSaveFilename);
+    CopyFilenameExtensionAndSetExitMenuFlag(_inputSaveFilename);
 }
 
 /* Append the stored extension to filename, copy to selectedFilename, and signal menu exit.
@@ -1108,11 +1108,11 @@ void SelectFilenameToSaveAndExit(void) {
    an LE host (e.g. "RAC." appended after the user's "TEST"). */
 __attribute__((used, externally_visible))
 void AddExtension(uint8_t *filename) {
-    uint8_t *p = StringCopy(filename, selectedFilename);
-    *p++ = (uint8_t)(extension >> 24); /* '.' */
-    *p++ = (uint8_t)(extension >> 16);
-    *p++ = (uint8_t)(extension >> 8);
-    *p++ = (uint8_t)(extension);
+    uint8_t *p = StringCopy(filename, _selectedFilename);
+    *p++ = (uint8_t)(_extension >> 24); /* '.' */
+    *p++ = (uint8_t)(_extension >> 16);
+    *p++ = (uint8_t)(_extension >> 8);
+    *p++ = (uint8_t)(_extension);
     *p = 0;
     SetExitMenuFlag();
 }
@@ -1125,13 +1125,13 @@ void SelFilesOnSelectCommon(MenuEntry *entry) {
     idx -= 1;
     if (idx >= 30) {
         idx -= 15;
-        idx += selFilesColumn2NumItems;
+        idx += _selFilesColumn2NumItems;
     }
     if (idx >= 15) {
         idx -= 15;
-        idx += selFilesColumn1NumItems;
+        idx += _selFilesColumn1NumItems;
     }
-    uint8_t *filename = (uint8_t *)foundFilesPtrTable[idx];
+    uint8_t *filename = (uint8_t *)_foundFilesPtrTable[idx];
     CopyFilenameExtensionAndSetExitMenuFlag(filename);
 }
 
@@ -1140,32 +1140,32 @@ void SelFilesOnSelectCommon(MenuEntry *entry) {
 __attribute__((used, externally_visible))
 void RepositionSelectFileEntries(void) {
     /* Find maximum items across all 3 columns */
-    uint16_t maxItems = selFilesColumn1NumItems;
-    if (selFilesColumn2NumItems > maxItems)
-        maxItems = selFilesColumn2NumItems;
-    if (selFilesColumn3NumItems > maxItems)
-        maxItems = selFilesColumn3NumItems;
+    uint16_t maxItems = _selFilesColumn1NumItems;
+    if (_selFilesColumn2NumItems > maxItems)
+        maxItems = _selFilesColumn2NumItems;
+    if (_selFilesColumn3NumItems > maxItems)
+        maxItems = _selFilesColumn3NumItems;
 
     /* Column start Y: entry[0].y, plus height if entry[0] is visible */
-    uint16_t startY = menuEntries[0].y;
-    if (!menuEntries[0].isInvisible)
-        startY += menuEntries[0].dwHeight;
-    selFilesColumnStartY = startY;
+    uint16_t startY = _menuEntries[0].y;
+    if (!_menuEntries[0].isInvisible)
+        startY += _menuEntries[0].dwHeight;
+    _selFilesColumnStartY = startY;
 
     /* Column end Y: from entry[48] if saving, entry[50] otherwise */
-    if (savingFile)
-        selFilesColumnEndY = menuEntries[48].y;
+    if (_savingFile)
+        _selFilesColumnEndY = _menuEntries[48].y;
     else
-        selFilesColumnEndY = menuEntries[50].y;
+        _selFilesColumnEndY = _menuEntries[50].y;
 
     /* Calculate centered Y start */
     uint16_t totalHeight = maxItems * 9;
-    uint16_t availableHeight = selFilesColumnEndY - selFilesColumnStartY;
+    uint16_t availableHeight = _selFilesColumnEndY - _selFilesColumnStartY;
     uint16_t yOffset = (uint16_t)(availableHeight - totalHeight) >> 1;
-    uint16_t colStartY = selFilesColumnStartY + yOffset;
+    uint16_t colStartY = _selFilesColumnStartY + yOffset;
 
     /* Position entries: 3 columns × 15 entries, starting at menuEntries[1] */
-    MenuEntry *e = &menuEntries[1];
+    MenuEntry *e = &_menuEntries[1];
     uint16_t col;
     for (col = 0; col < 3; col++) {
         uint16_t y = colStartY;
@@ -1186,15 +1186,15 @@ void SelFilesDrawItemDescription(MenuEntry *entry) {
     idx -= 1;
     if (idx >= 30) {
         idx -= 15;
-        idx += selFilesColumn2NumItems;
+        idx += _selFilesColumn2NumItems;
     }
     if (idx >= 15) {
         idx -= 15;
-        idx += selFilesColumn1NumItems;
+        idx += _selFilesColumn1NumItems;
     }
 
-    uint32_t ext = extensionsBuffer[idx];
-    MenuEntry *descEntry = &menuEntries[46];
+    uint32_t ext = _extensionsBuffer[idx];
+    MenuEntry *descEntry = &_menuEntries[46];
 
     const uint8_t *descStr;
     if (ext == 0x2E444959)       /* '.DIY' */
@@ -1220,20 +1220,20 @@ void SelFilesDrawItemDescription(MenuEntry *entry) {
 
 /* ---- Chunk 142: SelectFilesInputSaveFilenameOnSelect ---- */
 /* SWOS2.s line 63964 — handle save filename input in file selection dialog */
-extern uint16_t allowExtraCharsFlag;
+extern uint16_t _allowExtraCharsFlag;
 
 __attribute__((used, externally_visible))
 void SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
 {
-    if (totalNumberOfFiles == 45) {
+    if (_totalNumberOfFiles == 45) {
         ShowErrorMenu((uint8_t *)"CAN ONLY SAVE MAXIMUM 45 FILES ON DISK");
         return;
     }
 
     uint8_t *filename = (uint8_t *)entry->fg;
-    allowExtraCharsFlag = 1;
+    _allowExtraCharsFlag = 1;
     uint16_t result = InputText(9, (uint8_t *)entry);
-    allowExtraCharsFlag = 0;
+    _allowExtraCharsFlag = 0;
 
     if (result != 0)
         return;
@@ -1249,9 +1249,9 @@ void SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
     }
 
     /* All spaces or empty — restore default name from inputSaveFilename */
-    MenuEntry *entry48 = &menuEntries[48];
+    MenuEntry *entry48 = &_menuEntries[48];
     uint8_t *dst = (uint8_t *)entry48->fg;
-    StringCopyUntilChar(inputSaveFilename, dst, '.');
+    StringCopyUntilChar(_inputSaveFilename, dst, '.');
     CallDrawMenuItem(entry48);
 }
 
@@ -1266,54 +1266,54 @@ __attribute__((used, externally_visible))
 void SelectFilesOnReturn(void)
 {
     /* Set menu title in entry 0 */
-    menuEntries[0].fg = menuTitle;
+    _menuEntries[0].fg = _menuTitle;
 
-    if (savingFile != 0) {
+    if (_savingFile != 0) {
         /* Show save filename entry (entry 48) */
-        menuEntries[48].isInvisible = 0;
-        uint8_t *str = (uint8_t *)menuEntries[48].fg;
+        _menuEntries[48].isInvisible = 0;
+        uint8_t *str = (uint8_t *)_menuEntries[48].fg;
         *str = 0;
-        StringCopyUntilChar(inputSaveFilename, str, '.');
+        StringCopyUntilChar(_inputSaveFilename, str, '.');
 
         /* Show input box (entry 47) */
-        menuEntries[47].isInvisible = 0;
+        _menuEntries[47].isInvisible = 0;
 
-        if (inputSaveFilename[0] != 0) {
+        if (_inputSaveFilename[0] != 0) {
             /* Show save button (entry 49) */
-            menuEntries[49].isInvisible = 0;
+            _menuEntries[49].isInvisible = 0;
         }
     }
     /* note: the "not saving + no files" case still falls through to column calc */
 
     /* Calculate 3-column layout */
-    if (numMatchedFiles <= 8) {
-        selFilesColumn1NumItems = 0;
-        selFilesColumn2NumItems = numMatchedFiles;
-        selFilesColumn3NumItems = 0;
+    if (_numMatchedFiles <= 8) {
+        _selFilesColumn1NumItems = 0;
+        _selFilesColumn2NumItems = _numMatchedFiles;
+        _selFilesColumn3NumItems = 0;
     } else {
-        uint16_t perCol = numMatchedFiles / 3;
-        uint16_t remainder = numMatchedFiles % 3;
-        selFilesColumn1NumItems = perCol;
-        selFilesColumn2NumItems = perCol;
-        selFilesColumn3NumItems = perCol;
+        uint16_t perCol = _numMatchedFiles / 3;
+        uint16_t remainder = _numMatchedFiles % 3;
+        _selFilesColumn1NumItems = perCol;
+        _selFilesColumn2NumItems = perCol;
+        _selFilesColumn3NumItems = perCol;
         if (remainder == 1) {
-            selFilesColumn2NumItems++;
+            _selFilesColumn2NumItems++;
         } else if (remainder == 2) {
-            selFilesColumn1NumItems++;
-            selFilesColumn2NumItems++;
+            _selFilesColumn1NumItems++;
+            _selFilesColumn2NumItems++;
         }
     }
 
     RepositionSelectFileEntries();
     /* Assign filenames to menu entries */
-    void **filePtr = foundFilesPtrTable;
-    MenuEntry *entry = &menuEntries[1]; /* entry at offset 0x38 = index 1 */
+    void **filePtr = _foundFilesPtrTable;
+    MenuEntry *entry = &_menuEntries[1]; /* entry at offset 0x38 = index 1 */
     uint16_t d6 = 0;
 
     for (;;) {
         entry->isInvisible = 1;
 
-        if (d6 >= numberOfFiles)
+        if (d6 >= _numberOfFiles)
             goto nextEntry;
 
         /* Find the right column slot for this file */
@@ -1325,11 +1325,11 @@ void SelectFilesOnReturn(void)
 
             uint16_t colMax;
             if (col == 0) {
-                colMax = selFilesColumn1NumItems;
+                colMax = _selFilesColumn1NumItems;
             } else if (col == 1) {
-                colMax = selFilesColumn2NumItems;
+                colMax = _selFilesColumn2NumItems;
             } else {
-                colMax = selFilesColumn3NumItems;
+                colMax = _selFilesColumn3NumItems;
             }
 
             if (row >= colMax) {
@@ -1377,24 +1377,24 @@ __attribute__((used, externally_visible))
 void SelectFilesInit(void)
 {
     /* Set initial menu entry based on mode */
-    if (savingFile != 0) {
-        if (inputSaveFilename[0] != 0)
+    if (_savingFile != 0) {
+        if (_inputSaveFilename[0] != 0)
             SetCurrentEntry(49);
         else
             SetCurrentEntry(48);
     } else {
-        if (numMatchedFiles == 0)
+        if (_numMatchedFiles == 0)
             SetCurrentEntry(50);
     }
 
     /* Bubble sort files by extension then name */
-    int16_t count = (int16_t)numMatchedFiles - 2;
+    int16_t count = (int16_t)_numMatchedFiles - 2;
     if (count >= 0) {
         uint16_t swapped;
         do {
             swapped = 0;
-            void **ptrCur = foundFilesPtrTable;
-            uint32_t *extCur = extensionsBuffer;
+            void **ptrCur = _foundFilesPtrTable;
+            uint32_t *extCur = _extensionsBuffer;
 
             for (int16_t i = count; i >= 0; i--) {
                 uint8_t *name1 = (uint8_t *)ptrCur[0];

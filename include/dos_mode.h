@@ -13,13 +13,13 @@
 #ifndef SWOS_DOS_MODE_H
 #define SWOS_DOS_MODE_H
 
-extern int gDosGraphics;
-extern int gDosGameplay;
-extern int gWidescreen;   /* 1 = wider 16:9 pitch view (SDL); 0 on Amiga */
+extern int _gDosGraphics;
+extern int _gDosGameplay;
+extern int _gWidescreen;   /* 1 = wider 16:9 pitch view (SDL); 0 on Amiga */
 
 /* Directory the DOS assets are loaded from, relative to the working dir (bin/).
  * Default "grafs_dos"; override via [dos] directory=... or --dos-dir=... to test
  * alternate sets (e.g. a SWOS-2020 graphics folder). No trailing slash. */
-extern char gDosGraphicsDir[256];
+extern char _gDosGraphicsDir[256];
 
 #endif /* SWOS_DOS_MODE_H */

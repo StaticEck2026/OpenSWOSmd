@@ -29,33 +29,33 @@
 #define GAME_TYPE_CAREER        4
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint16_t transferPoolSlotLimit;
-extern uint16_t transferPoolSlotsUsed;
-extern uint16_t offerSwapSlotLimit;
-extern uint16_t offerSwapSlotsUsed;
-extern uint16_t numOffers;
-extern uint8_t  transferOfferTable[];
-extern uint16_t careerNumPlayers;
-extern uint16_t numHomeMarketPlayers;
-extern uint8_t  homeMarketPlayers[];
-extern uint16_t numForeignMarketPlayers;
-extern uint8_t  foreignMarketPlayers[];
-extern uint16_t selTeamNumber;
-extern uint16_t gameType;
-extern uint16_t numForeignMarketPlayers2;
-extern MarketPlayer careerForeignMarketPlayers[];
-extern PoolPlayer   poolplyrDatBuffer[];
-extern uint16_t poolplyrLoaded;
-extern uint8_t  aDataPoolplyrDa[];
-extern PoolPlayer   poolPlayerStrideRef[];
-extern uint16_t isNationalSelector;
-extern uint16_t numSelectedTeams;
-extern uint8_t  selTeamsPtr;
-extern uint16_t homeMarketUpdateBacklog;
-extern uint16_t foreignMarketUpdateBacklog;
-extern uint16_t homeMarketRandomPickRetries;
-extern uint16_t foreignMarketRandomPickRetries;
-extern uint16_t selTeamSelectedPlayerPosition;
+extern uint16_t _transferPoolSlotLimit;
+extern uint16_t _transferPoolSlotsUsed;
+extern uint16_t _offerSwapSlotLimit;
+extern uint16_t _offerSwapSlotsUsed;
+extern uint16_t _numOffers;
+extern uint8_t  _transferOfferTable[];
+extern uint16_t _careerNumPlayers;
+extern uint16_t _numHomeMarketPlayers;
+extern uint8_t  _homeMarketPlayers[];
+extern uint16_t _numForeignMarketPlayers;
+extern uint8_t  _foreignMarketPlayers[];
+extern uint16_t _selTeamNumber;
+extern uint16_t _gameType;
+extern uint16_t _numForeignMarketPlayers2;
+extern MarketPlayer _careerForeignMarketPlayers[];
+extern PoolPlayer   _poolplyrDatBuffer[];
+extern uint16_t _poolplyrLoaded;
+extern uint8_t  _aDataPoolplyrDa[];
+extern PoolPlayer   _poolPlayerStrideRef[];
+extern uint16_t _isNationalSelector;
+extern uint16_t _numSelectedTeams;
+extern uint8_t  _selTeamsPtr;
+extern uint16_t _homeMarketUpdateBacklog;
+extern uint16_t _foreignMarketUpdateBacklog;
+extern uint16_t _homeMarketRandomPickRetries;
+extern uint16_t _foreignMarketRandomPickRetries;
+extern uint16_t _selTeamSelectedPlayerPosition;
 
 /* Already-ported functions called from this module */
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
@@ -64,7 +64,7 @@ extern uint16_t GetRandomWord(void);
 extern uint32_t GetLowestAndHighestPlayerPrice(void);
 
 /* ---- Additional externs for Chunk 74/75 ---- */
-extern CompetitionSlotBuffer primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer (was competitionFileBuffer + diyTeamIdListType0/1/2 + numDiyTeams) */
+extern CompetitionSlotBuffer _primaryCompetitionBuf;          /* slot-0 untangle (S6): typed buffer (was competitionFileBuffer + diyTeamIdListType0/1/2 + numDiyTeams) */
 
 /* Pin the two trialist-insert-position fields (see _AddTrialist... below), which
  * replaced raw 0x4E/0x66 reads. Both sit past DIYCompetition.namePtr@0x28, so the
@@ -91,27 +91,27 @@ _Static_assert(offsetof(DIYCompetitionEx, matchData.league.leagueMaxSubstitutes)
  * from the offerOrdinalsBackingBuf .equ overlay into a typed struct
  * (OfferOrdinals, game_types.h). All access below is offerOrdinals.<field>;
  * offerOrdinals.offerNegotiationStep1Amount is the 7th field (was a separate extern). */
-extern OfferOrdinals offerOrdinals;
-extern uint16_t removedOfferPlayersFromSelectedTeamCount;
-extern uint16_t removedOfferPlayersFromOtherTeamsCount;
+extern OfferOrdinals _offerOrdinals;
+extern uint16_t _removedOfferPlayersFromSelectedTeamCount;
+extern uint16_t _removedOfferPlayersFromOtherTeamsCount;
 
 /* ---- Additional externs for Chunk 75 ---- */
-extern uint16_t numPlayersOnTransferMarket;
-extern uint16_t playersOnTransferMarket[];
-extern uint16_t financeTotalsNeedResetFlag;
-extern int32_t  newBalance;
-extern int32_t  old_balance;
-extern int32_t  playerPurchases;
-extern int32_t  playerSales;
-extern int32_t  playerWagesBill;
-extern int32_t  generalRunningCosts;
-extern int32_t  gateReceipts;
-extern int32_t  startingBalanceCopy;
-extern int32_t  competitionBonuses;
-extern uint16_t pendingForeignPlayerCount;
-extern uint8_t  lastLoadedExtNumber;
-extern uint8_t  viewRandomPhase;
-extern uint16_t offerExpiryIterationsRemaining;
+extern uint16_t _numPlayersOnTransferMarket;
+extern uint16_t _playersOnTransferMarket[];
+extern uint16_t _financeTotalsNeedResetFlag;
+extern int32_t  _newBalance;
+extern int32_t  _old_balance;
+extern int32_t  _playerPurchases;
+extern int32_t  _playerSales;
+extern int32_t  _playerWagesBill;
+extern int32_t  _generalRunningCosts;
+extern int32_t  _gateReceipts;
+extern int32_t  _startingBalanceCopy;
+extern int32_t  _competitionBonuses;
+extern uint16_t _pendingForeignPlayerCount;
+extern uint8_t  _lastLoadedExtNumber;
+extern uint8_t  _viewRandomPhase;
+extern uint16_t _offerExpiryIterationsRemaining;
 
 /* C-callable bridge for asm GetPlayerAtIndex (in swos2_unit.s) */
 extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
@@ -130,7 +130,7 @@ uint16_t _cGetPlayerAtIndexFileIdx __attribute__((used, externally_visible));
 __attribute__((used, externally_visible))
 uint16_t GetRemainingTransferPoolSlots(void)
 {
-    return transferPoolSlotLimit - transferPoolSlotsUsed;
+    return _transferPoolSlotLimit - _transferPoolSlotsUsed;
 }
 
 /* ================================================================
@@ -144,7 +144,7 @@ uint16_t GetRemainingTransferPoolSlots(void)
 __attribute__((used, externally_visible))
 uint16_t GetRemainingOfferSwapSlots(void)
 {
-    return offerSwapSlotLimit - offerSwapSlotsUsed;
+    return _offerSwapSlotLimit - _offerSwapSlotsUsed;
 }
 
 /* ================================================================
@@ -162,17 +162,17 @@ void RemoveTransferOfferAtIndex(uint16_t offerIndex)
     int32_t remaining;
     int32_t i;
 
-    remaining = (int16_t)((int16_t)numOffers - (int16_t)offerIndex - 2);  /* sub.w d0,d1; subq.w #2,d1 */
+    remaining = (int16_t)((int16_t)_numOffers - (int16_t)offerIndex - 2);  /* sub.w d0,d1; subq.w #2,d1 */
 
     if (remaining >= 0) {
-        TransferOfferEntry *table = (TransferOfferEntry *)transferOfferTable;
+        TransferOfferEntry *table = (TransferOfferEntry *)_transferOfferTable;
         /* Shift subsequent entries down one slot (overwrites entry offerIndex).
          * asm walked this byte-by-byte; one struct copy per slot is equivalent. */
         for (i = 0; i <= remaining; i++)
             table[offerIndex + i] = table[offerIndex + i + 1];
     }
 
-    numOffers--;                                                /* subq.w #1,(numOffers) */
+    _numOffers--;                                                /* subq.w #1,(numOffers) */
 }
 
 /* ================================================================
@@ -198,20 +198,20 @@ void PrunePlayerOffersAgainstRosterLimits(void)
 
     /* Phase 1: Check swap slot and pool slot limits */
 restart_phase1:
-    if (numOffers == 0)
+    if (_numOffers == 0)
         goto phase2;
 
     swapSlots = GetRemainingOfferSwapSlots();
     if (swapSlots == 0) {
-        numOffers = 0;                              /* no swap slots → clear all offers */
+        _numOffers = 0;                              /* no swap slots → clear all offers */
         goto phase2;
     }
 
     poolSlots = GetRemainingTransferPoolSlots();
     idx = 0;
-    offer = (TransferOfferEntry *)transferOfferTable;
+    offer = (TransferOfferEntry *)_transferOfferTable;
 
-    while (idx != numOffers) {
+    while (idx != _numOffers) {
         /* second wanted player non-negative (a player being offered in swap) */
         if (offer->secondPlayerOrdinal >= 0) {
             if (swapSlots == 1)                     /* only 1 swap slot left → remove */
@@ -240,17 +240,17 @@ restart_phase1:
 
     /* Phase 2: If career roster full (>= 32 players), remove buy-only offers */
 phase2:
-    if (careerNumPlayers < 0x20)
+    if (_careerNumPlayers < 0x20)
         return;
 
 restart_phase2:
-    if (numOffers == 0)
+    if (_numOffers == 0)
         return;
 
     idx = 0;
-    offer = (TransferOfferEntry *)transferOfferTable;
+    offer = (TransferOfferEntry *)_transferOfferTable;
 
-    while (idx != numOffers) {
+    while (idx != _numOffers) {
         /* Remove offers that buy (extra player present) but don't sell (no second wanted) */
         if (offer->extraPlayerOrdinal >= 0 && offer->secondPlayerOrdinal < 0) {
             RemoveTransferOfferAtIndex(idx);
@@ -278,11 +278,11 @@ int16_t IsPlayerInCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
     uint8_t *entry;
     uint16_t i;
 
-    if (numHomeMarketPlayers == 0)
+    if (_numHomeMarketPlayers == 0)
         return -1;
 
-    entry = homeMarketPlayers;
-    for (i = 0; i < numHomeMarketPlayers; i++) {
+    entry = _homeMarketPlayers;
+    for (i = 0; i < _numHomeMarketPlayers; i++) {
         /* Each entry stores [countryByte, ordinalByte, playerOrdByte, _].
          * Read as PACK_BE_U16 so the resulting uint16 has country in
          * the high byte (matching findTeamInCache's PACK_BE_U16 lookup
@@ -314,11 +314,11 @@ uint16_t AddPlayerToCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
     uint8_t *entry;
     uint32_t offset;
 
-    if (numHomeMarketPlayers >= HOME_MARKET_MAX)
+    if (_numHomeMarketPlayers >= HOME_MARKET_MAX)
         return 0;                                   /* full */
 
-    offset = (uint32_t)numHomeMarketPlayers * MARKET_ENTRY_SIZE;
-    entry = homeMarketPlayers + offset;
+    offset = (uint32_t)_numHomeMarketPlayers * MARKET_ENTRY_SIZE;
+    entry = _homeMarketPlayers + offset;
     /* teamNumber is in PACK_BE_U16 format (country << 8 | ordinal).
      * Write byte-wise so byte[0]=country, byte[1]=ordinal, matching
      * the file format — a `*(uint16_t *)entry = teamNumber` on LE
@@ -326,7 +326,7 @@ uint16_t AddPlayerToCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
     entry[0] = (uint8_t)(teamNumber >> 8);          /* country */
     entry[1] = (uint8_t)teamNumber;                  /* ordinal */
     entry[2] = (uint8_t)playerOrdinal;              /* move.b d1,2(a1) */
-    numHomeMarketPlayers++;                          /* addq.w #1 → clears Z */
+    _numHomeMarketPlayers++;                          /* addq.w #1 → clears Z */
 
     return 1;                                       /* added OK (non-zero → Z clear) */
 }
@@ -349,9 +349,9 @@ void RemovePlayerFromCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
         return;                                     /* not found */
 
     /* If not the last entry, shift remaining entries left */
-    if ((uint16_t)(idx + 1) != numHomeMarketPlayers) {
-        uint16_t entriesToMove = numHomeMarketPlayers - (uint16_t)(idx + 1);
-        volatile uint32_t *ldst = (volatile uint32_t *)(homeMarketPlayers + (uint16_t)idx * MARKET_ENTRY_SIZE);
+    if ((uint16_t)(idx + 1) != _numHomeMarketPlayers) {
+        uint16_t entriesToMove = _numHomeMarketPlayers - (uint16_t)(idx + 1);
+        volatile uint32_t *ldst = (volatile uint32_t *)(_homeMarketPlayers + (uint16_t)idx * MARKET_ENTRY_SIZE);
         volatile uint32_t *lsrc = ldst + 1;
         uint16_t i;
         /* Each entry is 4 bytes = 1 longword; use volatile to prevent memmove */
@@ -360,7 +360,7 @@ void RemovePlayerFromCareerContest(uint16_t teamNumber, uint16_t playerOrdinal)
         }
     }
 
-    numHomeMarketPlayers--;
+    _numHomeMarketPlayers--;
 }
 
 /* ================================================================
@@ -379,11 +379,11 @@ int16_t FindForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
     uint8_t *entry;
     uint16_t i;
 
-    if (numForeignMarketPlayers == 0)
+    if (_numForeignMarketPlayers == 0)
         return -1;
 
-    entry = foreignMarketPlayers;
-    for (i = 0; i < numForeignMarketPlayers; i++) {
+    entry = _foreignMarketPlayers;
+    for (i = 0; i < _numForeignMarketPlayers; i++) {
         /* PACK_BE_U16 read — see IsPlayerInCareerContest comment. */
         if (PACK_BE_U16(entry[0], entry[1]) == teamId &&
             entry[2] == (uint8_t)playerOrdinal)
@@ -410,16 +410,16 @@ uint16_t AddForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
     uint8_t *entry;
     uint32_t offset;
 
-    if (numForeignMarketPlayers >= FOREIGN_MARKET_MAX)
+    if (_numForeignMarketPlayers >= FOREIGN_MARKET_MAX)
         return 0;                                   /* full */
 
-    offset = (uint32_t)numForeignMarketPlayers * MARKET_ENTRY_SIZE;
-    entry = foreignMarketPlayers + offset;
+    offset = (uint32_t)_numForeignMarketPlayers * MARKET_ENTRY_SIZE;
+    entry = _foreignMarketPlayers + offset;
     /* Byte-wise PACK_BE_U16 write — see AddPlayerToCareerContest. */
     entry[0] = (uint8_t)(teamId >> 8);              /* country */
     entry[1] = (uint8_t)teamId;                      /* ordinal */
     entry[2] = (uint8_t)playerOrdinal;              /* move.b d1,2(a1) */
-    numForeignMarketPlayers++;
+    _numForeignMarketPlayers++;
 
     return 1;                                       /* added OK */
 }
@@ -442,9 +442,9 @@ void RemoveForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
         return;                                     /* not found */
 
     /* If not the last entry, shift remaining entries left */
-    if ((uint16_t)(idx + 1) != numForeignMarketPlayers) {
-        uint16_t entriesToMove = numForeignMarketPlayers - (uint16_t)(idx + 1);
-        volatile uint32_t *ldst = (volatile uint32_t *)(foreignMarketPlayers + (uint16_t)idx * MARKET_ENTRY_SIZE);
+    if ((uint16_t)(idx + 1) != _numForeignMarketPlayers) {
+        uint16_t entriesToMove = _numForeignMarketPlayers - (uint16_t)(idx + 1);
+        volatile uint32_t *ldst = (volatile uint32_t *)(_foreignMarketPlayers + (uint16_t)idx * MARKET_ENTRY_SIZE);
         volatile uint32_t *lsrc = ldst + 1;
         uint16_t i;
         /* Each entry is 4 bytes = 1 longword; use volatile to prevent memmove */
@@ -453,7 +453,7 @@ void RemoveForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal)
         }
     }
 
-    numForeignMarketPlayers--;
+    _numForeignMarketPlayers--;
 }
 
 /* ================================================================
@@ -495,15 +495,15 @@ void RemovePlayerFromTransferOffers(uint16_t teamNumber, uint16_t playerOrdinal)
     TransferOfferEntry *offer;
 
 restart:
-    if (numOffers == 0)
+    if (_numOffers == 0)
         return;
 
     idx = 0;
-    offer = (TransferOfferEntry *)transferOfferTable;
+    offer = (TransferOfferEntry *)_transferOfferTable;
 
-    while (idx != numOffers) {
+    while (idx != _numOffers) {
         /* Check if this is an offer from selTeamNumber */
-        if (teamNumber == selTeamNumber) {
+        if (teamNumber == _selTeamNumber) {
             /* Check the two wanted players (raw byte compare) */
             if ((uint8_t)offer->primaryPlayerOrdinal == ord ||
                 (uint8_t)offer->secondPlayerOrdinal == ord) {
@@ -544,15 +544,15 @@ void FillForeignMarketPlayersData(void)
     MarketPlayer *marketEntry;
     PoolPlayer *poolEntry;
 
-    if (gameType != GAME_TYPE_CAREER)
+    if (_gameType != GAME_TYPE_CAREER)
         return;
 
-    count = numForeignMarketPlayers2;
+    count = _numForeignMarketPlayers2;
     if (count == 0)
         return;
 
-    countrySel = (uint8_t)(selTeamNumber >> 8);  /* move.b (selTeamNumber).l,d5 — high byte on big-endian */
-    marketEntry = careerForeignMarketPlayers;
+    countrySel = (uint8_t)(_selTeamNumber >> 8);  /* move.b (selTeamNumber).l,d5 — high byte on big-endian */
+    marketEntry = _careerForeignMarketPlayers;
 
     for (i = count - 1; ; i--) {
         /* Skip if same country as selected team */
@@ -561,7 +561,7 @@ void FillForeignMarketPlayersData(void)
             int8_t playerOrd = marketEntry->playerOrdinal;
 
             /* Search poolplyrDatBuffer for matching player */
-            poolEntry = poolplyrDatBuffer;
+            poolEntry = _poolplyrDatBuffer;
             for (j = POOLPLAYER_COUNT - 1; ; j--) {
                 if (poolEntry->teamId == teamId &&
                     poolEntry->playerOrdinal == playerOrd) {
@@ -595,10 +595,10 @@ void FillForeignMarketPlayersData(void)
 __attribute__((used, externally_visible))
 void LoadPoolplyrDat(void)
 {
-    if (poolplyrLoaded == 0) {
+    if (_poolplyrLoaded == 0) {
         uint32_t fileSize;
-        poolplyrLoaded = 1;
-        LoadFileEx(aDataPoolplyrDa, (uint8_t *)poolplyrDatBuffer, &fileSize);
+        _poolplyrLoaded = 1;
+        LoadFileEx(_aDataPoolplyrDa, (uint8_t *)_poolplyrDatBuffer, &fileSize);
     }
     FillForeignMarketPlayersData();
 }
@@ -634,7 +634,7 @@ PoolPlayer *FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal)
      * 58-byte records) so a not-found lookup returns NULL instead
      * of walking off the end. Callers handle NULL by skipping /
      * disabling the row. */
-    PoolPlayer *entry = poolplyrDatBuffer;
+    PoolPlayer *entry = _poolplyrDatBuffer;
     for (int i = 0; i < POOLPLAYER_COUNT; i++) {
         /* poolplyr.dat stores teamId as the BE byte pair
          * [country, ordinal]. On BE Amiga `entry->teamId` reads as
@@ -673,25 +673,25 @@ void AddCareerTeamPlayer(void)
     uint16_t playerOrd;
 
     highestPrice += 3;                                      /* addq.w #3,d5 */
-    homeCountry = (uint8_t)(selTeamNumber >> 8);             /* move.b (selTeamNumber).l,d3 — high byte on big-endian */
+    homeCountry = (uint8_t)(_selTeamNumber >> 8);             /* move.b (selTeamNumber).l,d3 — high byte on big-endian */
 
     attemptsLeft = 1;                                       /* move.w #1,d6 */
     rand = Rand2();
     if ((rand & 1) == 0) {                                  /* btst #0,d0; beq */
-        attemptsLeft = numSelectedTeams >> 1;               /* lsr.w #1,d6 */
+        attemptsLeft = _numSelectedTeams >> 1;               /* lsr.w #1,d6 */
     }
 
 retry:
     attemptsLeft--;
     if (attemptsLeft == 0) {                                /* tst.w d6; bne skip */
-        homeMarketRandomPickRetries++;
+        _homeMarketRandomPickRetries++;
     }
 
     /* Pick a random team from selected teams */
     rand = Rand2();
-    teamIdx = (uint16_t)(((uint32_t)rand * numSelectedTeams) >> 8);  /* mulu+lsr */
+    teamIdx = (uint16_t)(((uint32_t)rand * _numSelectedTeams) >> 8);  /* mulu+lsr */
     teamIdx = (uint16_t)((uint32_t)teamIdx * sizeof(TeamFileEx));
-    teamEntry = &selTeamsPtr + teamIdx;
+    teamEntry = &_selTeamsPtr + teamIdx;
 
     /* Must be same country but different team. teamEntry points at
      * a TeamFile so byte[0]=country, byte[1]=ordinal. Read teamNum
@@ -704,7 +704,7 @@ retry:
     if (*teamEntry != homeCountry)                          /* cmp.b (a0),d3 */
         goto retry;
     teamNum = PACK_BE_U16(teamEntry[0], teamEntry[1]);
-    if (teamNum == selTeamNumber)                            /* cmp.w (selTeamNumber).l,d1 */
+    if (teamNum == _selTeamNumber)                            /* cmp.w (selTeamNumber).l,d1 */
         goto retry;
 
     /* Pick a random player (0-15) */
@@ -744,12 +744,12 @@ void FillCareerTeamPlayers(void)
     uint16_t numToAdd;
     uint16_t rand;
 
-    numHomeMarketPlayers = 0;
+    _numHomeMarketPlayers = 0;
 
-    if (isNationalSelector != 0)
+    if (_isNationalSelector != 0)
         return;
 
-    numToAdd = (uint16_t)(((uint32_t)numSelectedTeams * 16) / 40);  /* mulu #$10; divu #$28 */
+    numToAdd = (uint16_t)(((uint32_t)_numSelectedTeams * 16) / 40);  /* mulu #$10; divu #$28 */
     if (numToAdd == 0)
         return;
 
@@ -792,7 +792,7 @@ void AddRandomForeignMarketPlayer(void)
     uint8_t playerOrd;
 
     highestPrice += 3;                                      /* addq.w #3,d5 */
-    homeCountry = (uint8_t)(selTeamNumber >> 8);             /* move.b (selTeamNumber).l — high byte on big-endian */
+    homeCountry = (uint8_t)(_selTeamNumber >> 8);             /* move.b (selTeamNumber).l — high byte on big-endian */
 
     attemptsLeft = 1;                                       /* move.w #1,d6 */
     rand = Rand2();
@@ -802,12 +802,12 @@ void AddRandomForeignMarketPlayer(void)
 retry:
     attemptsLeft--;
     if (attemptsLeft == 0)                                  /* tst.w d6; bne skip */
-        foreignMarketRandomPickRetries++;
+        _foreignMarketRandomPickRetries++;
 
     /* Pick random pool entry using GetRandomWord for full 16-bit random */
     rand = GetRandomWord();
     poolIdx = (uint16_t)((uint32_t)rand * POOLPLAYER_COUNT >> 16);  /* mulu #900; lsr.l #8; lsr.l #8 */
-    poolEntry = &poolplyrDatBuffer[poolIdx];
+    poolEntry = &_poolplyrDatBuffer[poolIdx];
 
     /* Must be different country. Byte access at offset 0 is endian-
      * safe (the file format stores [country, ordinal] bytes). */
@@ -855,9 +855,9 @@ void FillForeignMarketPlayers(void)
 
     LoadPoolplyrDat();
 
-    numForeignMarketPlayers = 0;
+    _numForeignMarketPlayers = 0;
 
-    if (isNationalSelector != 0)
+    if (_isNationalSelector != 0)
         return;
 
     numToAdd = 15;                                          /* move.w #$F,d7 */
@@ -881,15 +881,15 @@ __attribute__((used, externally_visible))
 void UpdateHomeMarketPlayers(void)
 {
 restart:
-    if (isNationalSelector != 0)
+    if (_isNationalSelector != 0)
         return;
-    if (homeMarketUpdateBacklog == 0)
+    if (_homeMarketUpdateBacklog == 0)
         return;
 
-    homeMarketUpdateBacklog--;
+    _homeMarketUpdateBacklog--;
 
     {
-        uint16_t numChanges = numHomeMarketPlayers;
+        uint16_t numChanges = _numHomeMarketPlayers;
         uint16_t numRemoves;
         int16_t i;
         uint16_t rand;
@@ -905,12 +905,12 @@ restart:
         /* Remove phase: randomly pick and remove players */
         numRemoves = numChanges;
         for (i = (int16_t)numRemoves - 1; i >= 0; i--) {
-            if (numHomeMarketPlayers == 0)
+            if (_numHomeMarketPlayers == 0)
                 goto add_phase;
             rand = Rand2();
             {
-                uint16_t pickIdx = (uint16_t)(((uint32_t)rand * numHomeMarketPlayers) >> 8);
-                uint8_t *entry = homeMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
+                uint16_t pickIdx = (uint16_t)(((uint32_t)rand * _numHomeMarketPlayers) >> 8);
+                uint8_t *entry = _homeMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
                 uint16_t teamNum = PACK_BE_U16(entry[0], entry[1]);
                 uint8_t playerOrd = entry[2];
                 RemovePlayerFromCareerContest(teamNum, playerOrd);
@@ -920,7 +920,7 @@ restart:
     add_phase:
         /* Add phase: add random players until full or done */
         for (i = (int16_t)numChanges - 1; i >= 0; i--) {
-            if (numHomeMarketPlayers >= HOME_MARKET_MAX)
+            if (_numHomeMarketPlayers >= HOME_MARKET_MAX)
                 goto restart;                               /* beq.s → re-enter */
             AddCareerTeamPlayer();
         }
@@ -939,15 +939,15 @@ __attribute__((used, externally_visible))
 void UpdateForeignMarketPlayers(void)
 {
 restart:
-    if (isNationalSelector != 0)
+    if (_isNationalSelector != 0)
         return;
-    if (foreignMarketUpdateBacklog == 0)
+    if (_foreignMarketUpdateBacklog == 0)
         return;
 
-    foreignMarketUpdateBacklog--;
+    _foreignMarketUpdateBacklog--;
 
     {
-        uint16_t numChanges = numForeignMarketPlayers;
+        uint16_t numChanges = _numForeignMarketPlayers;
         uint16_t numRemoves;
         int16_t i;
         uint16_t rand;
@@ -963,12 +963,12 @@ restart:
         /* Remove phase */
         numRemoves = numChanges;
         for (i = (int16_t)numRemoves - 1; i >= 0; i--) {
-            if (numForeignMarketPlayers == 0)
+            if (_numForeignMarketPlayers == 0)
                 goto add_phase;
             rand = Rand2();
             {
-                uint16_t pickIdx = (uint16_t)(((uint32_t)rand * numForeignMarketPlayers) >> 8);
-                uint8_t *entry = foreignMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
+                uint16_t pickIdx = (uint16_t)(((uint32_t)rand * _numForeignMarketPlayers) >> 8);
+                uint8_t *entry = _foreignMarketPlayers + (uint32_t)pickIdx * MARKET_ENTRY_SIZE;
                 uint16_t teamId = PACK_BE_U16(entry[0], entry[1]);
                 uint8_t playerOrd = entry[2];
                 RemoveForeignMarketPlayer(teamId, playerOrd);
@@ -978,7 +978,7 @@ restart:
     add_phase:
         /* Add phase */
         for (i = (int16_t)numChanges - 1; i >= 0; i--) {
-            if (numForeignMarketPlayers >= FOREIGN_MARKET_MAX)
+            if (_numForeignMarketPlayers >= FOREIGN_MARKET_MAX)
                 goto restart;
             AddRandomForeignMarketPlayer();
         }
@@ -1003,14 +1003,14 @@ int16_t FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
     /* slot-0 untangle (S6, D-A1): the three legacy diyTeamIdList* views are the
      * cup/league/tournament team-id regions of primaryCompetitionBuf. Access stays
      * BE_READ_U16 below — only the base symbol changes. */
-    if (primaryCompetitionBuf.tourn.header.competitionType == 1)
-        list = (uint8_t *)((DIYCompetitionEx *)&primaryCompetitionBuf)->cupTeamIds;            /* diyTeamIdListType1 @0x24E */
-    else if (primaryCompetitionBuf.tourn.header.competitionType == 2)
-        list = (uint8_t *)((DIYTournamentState *)&primaryCompetitionBuf)->teamIds;             /* diyTeamIdListType2 @0x9A */
+    if (_primaryCompetitionBuf.tourn.header.competitionType == 1)
+        list = (uint8_t *)((DIYCompetitionEx *)&_primaryCompetitionBuf)->cupTeamIds;            /* diyTeamIdListType1 @0x24E */
+    else if (_primaryCompetitionBuf.tourn.header.competitionType == 2)
+        list = (uint8_t *)((DIYTournamentState *)&_primaryCompetitionBuf)->teamIds;             /* diyTeamIdListType2 @0x9A */
     else
-        list = (uint8_t *)((DIYCompetitionEx *)&primaryCompetitionBuf)->matchData.league.leagueTeamIds; /* diyTeamIdListType0 @0x12E */
+        list = (uint8_t *)((DIYCompetitionEx *)&_primaryCompetitionBuf)->matchData.league.leagueTeamIds; /* diyTeamIdListType0 @0x12E */
 
-    count = (int16_t)(primaryCompetitionBuf.tourn.header.numTeams - 1);
+    count = (int16_t)(_primaryCompetitionBuf.tourn.header.numTeams - 1);
     /* Both sides read via BE_READ_U16 so they normalise to the same
      * (country<<8)|ord encoding on every host.
      *
@@ -1046,7 +1046,7 @@ int16_t FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr)
 __attribute__((used, externally_visible))
 int16_t IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx)
 {
-    int16_t count = (int16_t)numOffers;
+    int16_t count = (int16_t)_numOffers;
     TransferOfferEntry *entry;
     int16_t i;
     uint8_t pidx = (uint8_t)playerIdx;
@@ -1054,7 +1054,7 @@ int16_t IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx)
     if (count == 0)
         return 1;  /* no offers → unique */
 
-    entry = (TransferOfferEntry *)transferOfferTable;
+    entry = (TransferOfferEntry *)_transferOfferTable;
     for (i = count - 1; i >= 0; i--) {
         /* asm: cmp.w (a1),d0 — host-native WORD compare of the team id.
          * The offer builder writes the entry's teamOffering host-native (whole word), so
@@ -1094,7 +1094,7 @@ int16_t IsTeamEligibleForOfferByRefSkill(TeamFileEx *team, uint16_t refSkill)
     uint8_t ref = (uint8_t)refSkill;
 
     /* Same as selected team → not eligible */
-    if (teamNum == selTeamNumber)
+    if (teamNum == _selTeamNumber)
         return 1;
 
     /* League type 4 → not eligible */
@@ -1129,10 +1129,10 @@ void RemoveOfferPlayerFromMarketsAndCount(uint16_t teamId, uint16_t playerIndex)
     RemovePlayerFromCareerContest(teamId, playerIndex);
     RemoveForeignMarketPlayer(teamId, playerIndex);
 
-    if ((teamId >> 8) == (selTeamNumber >> 8))
-        removedOfferPlayersFromSelectedTeamCount++;
+    if ((teamId >> 8) == (_selTeamNumber >> 8))
+        _removedOfferPlayersFromSelectedTeamCount++;
     else
-        removedOfferPlayersFromOtherTeamsCount++;
+        _removedOfferPlayersFromOtherTeamsCount++;
 }
 
 /* ================================================================
@@ -1146,9 +1146,9 @@ void RemoveOfferPlayerFromMarketsAndCount(uint16_t teamId, uint16_t playerIndex)
 __attribute__((used, externally_visible))
 void RemoveNegotiatedOfferPlayersFromMarkets(void)
 {
-    RemoveOfferPlayerFromMarketsAndCount(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
-    if ((int16_t)offerOrdinals.numExtraPlayersWanted >= 0)
-        RemoveOfferPlayerFromMarketsAndCount(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted);
+    RemoveOfferPlayerFromMarketsAndCount(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
+    if ((int16_t)_offerOrdinals.numExtraPlayersWanted >= 0)
+        RemoveOfferPlayerFromMarketsAndCount(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted);
 }
 
 /* ================================================================
@@ -1168,17 +1168,17 @@ int16_t PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill)
 
     for (retries = 15; retries >= 0; retries--) {
         uint16_t rand = Rand2();
-        uint16_t ordinal = (uint16_t)(((uint32_t)rand * careerNumPlayers) >> 8);
+        uint16_t ordinal = (uint16_t)(((uint32_t)rand * _careerNumPlayers) >> 8);
         uint8_t *player;
         uint16_t fileIdx;
 
-        player = GetPlayerAtIndex(selTeamNumber, ordinal);
+        player = GetPlayerAtIndex(_selTeamNumber, ordinal);
         fileIdx = _cGetPlayerAtIndexFileIdx;
         {
         PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
 
         /* Skip if same as primary player */
-        if (fileIdx == offerOrdinals.offerPrimaryPlayerOrdinal)
+        if (fileIdx == _offerOrdinals.offerPrimaryPlayerOrdinal)
             continue;
 
         /* Skip if on transfer list (bit 1 of positionAndFace) */
@@ -1221,8 +1221,8 @@ int16_t PickRandomEligibleSwapPlayerOrdinalFromTeam(TeamFileEx *teamBlock, int16
     int16_t retries;
 
     /* Phase 1: Find min/max skill in selected team */
-    for (i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-        uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+    for (i = (int16_t)(_careerNumPlayers - 1); i >= 0; i--) {
+        uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
         PlayerFile *pf1 = (PlayerFile *)(player + PF_OFF);
         uint8_t skill = (uint8_t)pf1->price;
         if (skill < minSkill)
@@ -1280,14 +1280,14 @@ int16_t PickRandomEligibleSwapPlayerOrdinalFromTeam(TeamFileEx *teamBlock, int16
 __attribute__((used, externally_visible))
 int16_t FindPlayerOnTransferMarket(uint16_t playerId)
 {
-    uint16_t count = numPlayersOnTransferMarket;
+    uint16_t count = _numPlayersOnTransferMarket;
     uint16_t *p;
     uint16_t i;
 
     if (count == 0)
         return 1;
 
-    p = playersOnTransferMarket;
+    p = _playersOnTransferMarket;
     for (i = 0; i < count; i++) {
         if (p[i] == playerId)
             return 0;   /* found */
@@ -1308,12 +1308,12 @@ void AddPlayerToTransferMarket(uint16_t playerId)
 {
     uint16_t count;
 
-    if (numPlayersOnTransferMarket >= 5)
+    if (_numPlayersOnTransferMarket >= 5)
         return;
 
-    count = numPlayersOnTransferMarket;
-    playersOnTransferMarket[count] = playerId;
-    numPlayersOnTransferMarket = count + 1;
+    count = _numPlayersOnTransferMarket;
+    _playersOnTransferMarket[count] = playerId;
+    _numPlayersOnTransferMarket = count + 1;
 }
 
 /* ================================================================
@@ -1328,8 +1328,8 @@ void AddPlayerToTransferMarket(uint16_t playerId)
 __attribute__((used, externally_visible))
 void RemovePlayerFromTransferMarket(uint16_t playerId)
 {
-    uint16_t count = numPlayersOnTransferMarket;
-    uint16_t *p = playersOnTransferMarket;
+    uint16_t count = _numPlayersOnTransferMarket;
+    uint16_t *p = _playersOnTransferMarket;
     uint16_t i;
     int16_t foundIdx = -1;
 
@@ -1353,7 +1353,7 @@ void RemovePlayerFromTransferMarket(uint16_t playerId)
         for (j = 0; j < remaining; j++)
             dst[j] = dst[j + 1];
     }
-    numPlayersOnTransferMarket = count - 1;
+    _numPlayersOnTransferMarket = count - 1;
 }
 
 /* ================================================================
@@ -1367,14 +1367,14 @@ void RemovePlayerFromTransferMarket(uint16_t playerId)
 __attribute__((used, externally_visible))
 int16_t CheckForTransferOffers(void)
 {
-    uint16_t count = numOffers;
+    uint16_t count = _numOffers;
     TransferOfferEntry *p;
     uint16_t i;
 
     if (count == 0)
         return 1;
 
-    p = (TransferOfferEntry *)transferOfferTable;
+    p = (TransferOfferEntry *)_transferOfferTable;
     for (i = 0; i < count; i++) {
         if (p->seenFlag == 0)
             return 0;   /* found an active offer (seen flag at byte 0x0D) */
@@ -1392,18 +1392,18 @@ int16_t CheckForTransferOffers(void)
 __attribute__((used, externally_visible))
 void Career_CommitNewBalanceAndResetFinanceTotals(void)
 {
-    if (financeTotalsNeedResetFlag == 0)
+    if (_financeTotalsNeedResetFlag == 0)
         return;
 
-    financeTotalsNeedResetFlag = 0;
-    old_balance = newBalance;
-    playerPurchases = 0;
-    playerSales = 0;
-    playerWagesBill = 0;
-    generalRunningCosts = 0;
-    gateReceipts = 0;
-    startingBalanceCopy = 0;
-    competitionBonuses = 0;
+    _financeTotalsNeedResetFlag = 0;
+    _old_balance = _newBalance;
+    _playerPurchases = 0;
+    _playerSales = 0;
+    _playerWagesBill = 0;
+    _generalRunningCosts = 0;
+    _gateReceipts = 0;
+    _startingBalanceCopy = 0;
+    _competitionBonuses = 0;
 }
 
 /* ================================================================
@@ -1419,8 +1419,8 @@ void Career_CommitNewBalanceAndResetFinanceTotals(void)
 __attribute__((used, externally_visible))
 void AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile *playerFile)
 {
-    uint16_t idx = numForeignMarketPlayers2;
-    MarketPlayer *entry = &careerForeignMarketPlayers[idx];
+    uint16_t idx = _numForeignMarketPlayers2;
+    MarketPlayer *entry = &_careerForeignMarketPlayers[idx];
     volatile uint16_t *dst;
     uint16_t *src;
     uint16_t i;
@@ -1428,7 +1428,7 @@ void AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile
     /* Header: team number (word), player ordinal (byte), randomPhase (byte) */
     entry->teamId = teamNumber;
     entry->playerOrdinal = (int8_t)playerOrdinal;
-    entry->padding = (int8_t)viewRandomPhase;
+    entry->padding = (int8_t)_viewRandomPhase;
 
     /* Copy 19 words (38 bytes) of player data from players[] offset */
     dst = (volatile uint16_t *)&entry->player;
@@ -1436,9 +1436,9 @@ void AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile
     for (i = 0; i < 19; i++)
         dst[i] = src[i];
 
-    numForeignMarketPlayers2 = idx + 1;
-    pendingForeignPlayerCount = pendingForeignPlayerCount + 1;
-    lastLoadedExtNumber = 255;
+    _numForeignMarketPlayers2 = idx + 1;
+    _pendingForeignPlayerCount = _pendingForeignPlayerCount + 1;
+    _lastLoadedExtNumber = 255;
 }
 
 /* ================================================================
@@ -1459,10 +1459,10 @@ void Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr)
     uint16_t i;
     uint8_t teamHi, teamLo;
 
-    if (gameType != GAME_TYPE_CAREER)
+    if (_gameType != GAME_TYPE_CAREER)
         return;
 
-    count = numForeignMarketPlayers2;
+    count = _numForeignMarketPlayers2;
     if (count == 0)
         return;
 
@@ -1470,7 +1470,7 @@ void Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr)
     teamHi = teamPtr->team.countryNumber;
     teamLo = teamPtr->team.teamOrdinal;
 
-    entry = careerForeignMarketPlayers;
+    entry = _careerForeignMarketPlayers;
     for (i = 0; i < count; i++) {
         if (*(uint8_t *)&entry->teamId == teamHi && *((uint8_t *)&entry->teamId + 1) == teamLo) {
             uint8_t playerOrd = (uint8_t)entry->playerOrdinal;
@@ -1495,20 +1495,20 @@ static void applyForeignMarketPlayersToTeams(uint16_t count)
     MarketPlayer *entry;
     uint16_t i;
 
-    if (gameType != GAME_TYPE_CAREER)
+    if (_gameType != GAME_TYPE_CAREER)
         return;
 
     if (count == 0)
         return;
 
-    entry = careerForeignMarketPlayers;
+    entry = _careerForeignMarketPlayers;
     for (i = 0; i < count; i++) {
         uint8_t entryHi = *(uint8_t *)&entry->teamId;
         uint8_t entryLo = *((uint8_t *)&entry->teamId + 1);
-        TeamFileEx *team = selectedTeams;
+        TeamFileEx *team = _selectedTeams;
         uint16_t t;
 
-        for (t = 0; t < numSelectedTeams; t++) {
+        for (t = 0; t < _numSelectedTeams; t++) {
             if (team->team.countryNumber == entryHi &&
                 team->team.teamOrdinal  == entryLo) {
                 uint8_t playerOrd = (uint8_t)entry->playerOrdinal;
@@ -1533,7 +1533,7 @@ static void applyForeignMarketPlayersToTeams(uint16_t count)
 __attribute__((used, externally_visible))
 void Career_ApplyForeignMarketPlayersToSelectedTeams(void)
 {
-    applyForeignMarketPlayersToTeams(numForeignMarketPlayers2);
+    applyForeignMarketPlayersToTeams(_numForeignMarketPlayers2);
 }
 
 /* ================================================================
@@ -1545,8 +1545,8 @@ void Career_ApplyForeignMarketPlayersToSelectedTeams(void)
 __attribute__((used, externally_visible))
 void Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void)
 {
-    uint16_t total = numForeignMarketPlayers2;
-    uint16_t pending = pendingForeignPlayerCount;
+    uint16_t total = _numForeignMarketPlayers2;
+    uint16_t pending = _pendingForeignPlayerCount;
     uint16_t applied = total - pending;
     applyForeignMarketPlayersToTeams(applied);
 }
@@ -1561,16 +1561,16 @@ void Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void)
 __attribute__((used, externally_visible))
 void DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi)
 {
-    if (gameType != GAME_TYPE_CAREER)
+    if (_gameType != GAME_TYPE_CAREER)
         return;
 
-    uint16_t pending = pendingForeignPlayerCount;
+    uint16_t pending = _pendingForeignPlayerCount;
     if (pending == 0)
         return;
 
     /* Point to the start of pending entries (after non-pending ones) */
-    uint16_t nonPending = numForeignMarketPlayers2 - pendingForeignPlayerCount;
-    MarketPlayer *entry = &careerForeignMarketPlayers[nonPending];
+    uint16_t nonPending = _numForeignMarketPlayers2 - _pendingForeignPlayerCount;
+    MarketPlayer *entry = &_careerForeignMarketPlayers[nonPending];
 
     uint16_t i;
     for (i = 0; i < pending; i++) {
@@ -1580,10 +1580,10 @@ void DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi)
         if (phase >= (uint8_t)lo && phase <= (uint8_t)hi) {
             uint8_t entryHi = *(uint8_t *)&entry->teamId;       /* team number high byte */
             uint8_t entryLo = *((uint8_t *)&entry->teamId + 1); /* team number low byte */
-            TeamFileEx *team = selectedTeams;
+            TeamFileEx *team = _selectedTeams;
             uint16_t t;
 
-            for (t = 0; t < numSelectedTeams; t++) {
+            for (t = 0; t < _numSelectedTeams; t++) {
                 if (team->team.countryNumber == entryHi &&
                     team->team.teamOrdinal  == entryLo) {
                     /* Found matching team — copy player data */
@@ -1615,10 +1615,10 @@ void Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd
 {
     RemovePlayerFromTransferOffers(teamNumber, playerOrd);
 
-    if (teamNumber == selTeamNumber) {
+    if (teamNumber == _selTeamNumber) {
         RemovePlayerFromTransferMarket(playerOrd);
-        if (playerOrd == selTeamSelectedPlayerPosition) {
-            selTeamSelectedPlayerPosition = 0xFFFF;
+        if (playerOrd == _selTeamSelectedPlayerPosition) {
+            _selTeamSelectedPlayerPosition = 0xFFFF;
         }
     } else {
         RemovePlayerFromCareerContest(teamNumber, playerOrd);
@@ -1630,14 +1630,14 @@ void Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd
  * Transfer/Offer menu callbacks (Chunk 113, SWOS2.s lines 71942-72592)
  * ================================================================ */
 
-extern uint16_t transferPlayerMenuResult;
-extern uint16_t thirdPartyOfferResult;
+extern uint16_t _transferPlayerMenuResult;
+extern uint16_t _thirdPartyOfferResult;
 
 /* TransferPlayerOnSelect10: reject transfer (0xFFFF) */
 __attribute__((used, externally_visible))
 void TransferPlayerOnSelect10(void)
 {
-    transferPlayerMenuResult = 0xFFFF;
+    _transferPlayerMenuResult = 0xFFFF;
     SetExitMenuFlag();
 }
 
@@ -1645,7 +1645,7 @@ void TransferPlayerOnSelect10(void)
 __attribute__((used, externally_visible))
 void TransferPlayerOnSelect11(void)
 {
-    transferPlayerMenuResult = 0;
+    _transferPlayerMenuResult = 0;
     SetExitMenuFlag();
 }
 
@@ -1653,7 +1653,7 @@ void TransferPlayerOnSelect11(void)
 __attribute__((used, externally_visible))
 void TransferPlayerOnSelect12(void)
 {
-    transferPlayerMenuResult = 1;
+    _transferPlayerMenuResult = 1;
     SetExitMenuFlag();
 }
 
@@ -1661,7 +1661,7 @@ void TransferPlayerOnSelect12(void)
 __attribute__((used, externally_visible))
 void AcceptOffer(void)
 {
-    thirdPartyOfferResult = 1;
+    _thirdPartyOfferResult = 1;
     SetExitMenuFlag();
 }
 
@@ -1669,7 +1669,7 @@ void AcceptOffer(void)
 __attribute__((used, externally_visible))
 void RejectOffer(void)
 {
-    thirdPartyOfferResult = 2;
+    _thirdPartyOfferResult = 2;
     SetExitMenuFlag();
 }
 
@@ -1677,7 +1677,7 @@ void RejectOffer(void)
 __attribute__((used, externally_visible))
 void AskForMore(void)
 {
-    thirdPartyOfferResult = 3;
+    _thirdPartyOfferResult = 3;
     SetExitMenuFlag();
 }
 
@@ -1685,7 +1685,7 @@ void AskForMore(void)
 __attribute__((used, externally_visible))
 void ConsiderOffer(void)
 {
-    thirdPartyOfferResult = 0;
+    _thirdPartyOfferResult = 0;
     SetExitMenuFlag();
 }
 
@@ -1693,7 +1693,7 @@ void ConsiderOffer(void)
 __attribute__((used, externally_visible))
 void ThirdPartyOfferMenuExit(void)
 {
-    thirdPartyOfferResult = 0;
+    _thirdPartyOfferResult = 0;
     SetExitMenuFlag();
 }
 
@@ -1701,7 +1701,7 @@ void ThirdPartyOfferMenuExit(void)
  * Chunk 117: Transfer Menu Helpers
  * ================================================================ */
 
-extern MenuEntry menuEntries[];
+extern MenuEntry _menuEntries[];
 extern void GetBankBalance(uint8_t *dst);
 extern void CheckNumPlayersOnTransferMarket(void);  /* still in asm */
 extern void CheckIfPlayerSelected(void);             /* still in asm */
@@ -1711,7 +1711,7 @@ extern void EnableDisableOffers(void);               /* still in asm */
 __attribute__((used, externally_visible))
 void TransferMenuSetBankState(void)
 {
-    uint8_t *str = (uint8_t *)menuEntries[1].fg;
+    uint8_t *str = (uint8_t *)_menuEntries[1].fg;
     GetBankBalance(str);
 }
 
@@ -1719,7 +1719,7 @@ void TransferMenuSetBankState(void)
 __attribute__((used, externally_visible))
 void BuyPlayerInit(void)
 {
-    uint8_t *str = (uint8_t *)menuEntries[1].fg;
+    uint8_t *str = (uint8_t *)_menuEntries[1].fg;
     GetBankBalance(str);
 }
 
@@ -1734,31 +1734,31 @@ void TransferMarketFinish(void)
 }
 
 /* ShowDomesticPlayerMarket — update home market, show market menu (SWOS2.s line 70638) */
-extern uint16_t showDomesticPlayerMarket;
-extern uint8_t showPlayerMarketMenu[];
+extern uint16_t _showDomesticPlayerMarket;
+extern uint8_t _showPlayerMarketMenu[];
 
 __attribute__((used, externally_visible))
 void ShowDomesticPlayerMarket(void)
 {
     UpdateHomeMarketPlayers();
-    showDomesticPlayerMarket = 1;
-    ShowMenu(showPlayerMarketMenu);
+    _showDomesticPlayerMarket = 1;
+    ShowMenu(_showPlayerMarketMenu);
 }
 
 /* ---- Chunk 142: ViewDomesticPlayerMarket ---- */
 /* SWOS2.s line 71089 — show domestic market, check if transfer completed */
-extern uint16_t transferCompleted;
+extern uint16_t _transferCompleted;
 
 __attribute__((used, externally_visible))
 void ViewDomesticPlayerMarket(void)
 {
     ShowDomesticPlayerMarket();
     /* Original asm has duplicate check — preserve as-is */
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
@@ -1770,13 +1770,13 @@ __attribute__((used, externally_visible))
 void ShowForeignPlayerMarket(void)
 {
     LoadPoolplyrDat();
-    if (removedOfferPlayersFromOtherTeamsCount != 0) {
-        removedOfferPlayersFromOtherTeamsCount--;
+    if (_removedOfferPlayersFromOtherTeamsCount != 0) {
+        _removedOfferPlayersFromOtherTeamsCount--;
         AddRandomForeignMarketPlayer();
     }
     UpdateForeignMarketPlayers();
-    showDomesticPlayerMarket = 0;
-    ShowMenu(showPlayerMarketMenu);
+    _showDomesticPlayerMarket = 0;
+    ShowMenu(_showPlayerMarketMenu);
 }
 
 /* ---- Chunk 144: ViewForeignPlayerMarket ---- */
@@ -1786,11 +1786,11 @@ void ViewForeignPlayerMarket(void)
 {
     ShowForeignPlayerMarket();
     /* Original asm has duplicate check — preserve as-is */
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
@@ -1801,9 +1801,9 @@ void ViewForeignPlayerMarket(void)
 __attribute__((used, externally_visible))
 void PlayerOffersUpdateOfferAmountText(void)
 {
-    MenuEntry *entry = &menuEntries[9]; /* 0x1F8 / 56 = 9 */
+    MenuEntry *entry = &_menuEntries[9]; /* 0x1F8 / 56 = 9 */
     uint8_t *dst = (uint8_t *)entry->fg;
-    uint32_t amount = (uint32_t)offerOrdinals.offerAmount * 1000;
+    uint32_t amount = (uint32_t)_offerOrdinals.offerAmount * 1000;
     Int2Pounds(amount, dst);
 }
 
@@ -1812,46 +1812,46 @@ void PlayerOffersUpdateOfferAmountText(void)
 __attribute__((used, externally_visible))
 void UpdatePlayerOfferMenuIndicators(void)
 {
-    extern uint8_t aPlus[];   /* "+" */
-    extern uint8_t aMinus[];  /* "-" */
+    extern uint8_t _aPlus[];   /* "+" */
+    extern uint8_t _aMinus[];  /* "-" */
 
     /* Entry 8 (0x1C0/56): toggle +/- based on offerOrdinals.numExtraPlayersWanted sign */
-    MenuEntry *entry8 = &menuEntries[8];
-    entry8->fg = (uintptr_t)aPlus;
-    if (offerOrdinals.numExtraPlayersWanted >= 0) {
-        entry8->fg = (uintptr_t)aMinus;
+    MenuEntry *entry8 = &_menuEntries[8];
+    entry8->fg = (uintptr_t)_aPlus;
+    if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+        entry8->fg = (uintptr_t)_aMinus;
     }
 
     /* Entries 10,11 (0x230/56, 0x268/56): toggle +/- based on swap/extra player state */
-    MenuEntry *entry10 = &menuEntries[10];
-    MenuEntry *entry11 = &menuEntries[11];
-    entry10->fg = (uintptr_t)aPlus;
-    entry11->fg = (uintptr_t)aPlus;
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
-        entry10->fg = (uintptr_t)aMinus;
-        if (offerOrdinals.offerExtraPlayerOrdinal >= 0) {
-            entry11->fg = (uintptr_t)aMinus;
+    MenuEntry *entry10 = &_menuEntries[10];
+    MenuEntry *entry11 = &_menuEntries[11];
+    entry10->fg = (uintptr_t)_aPlus;
+    entry11->fg = (uintptr_t)_aPlus;
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+        entry10->fg = (uintptr_t)_aMinus;
+        if (_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+            entry11->fg = (uintptr_t)_aMinus;
         }
     }
 
     /* Entry 5 (0x118/56): hide if offerOrdinals.numExtraPlayersWanted < 0 */
-    menuEntries[5].isInvisible = 1;
-    if (offerOrdinals.numExtraPlayersWanted >= 0) {
-        menuEntries[5].isInvisible = 0;
+    _menuEntries[5].isInvisible = 1;
+    if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+        _menuEntries[5].isInvisible = 0;
     }
 
     /* Entries 6,11 (0x150/56, 0x268/56): hide if offerOrdinals.offerSwapPlayerOrdinal < 0 */
-    menuEntries[6].isInvisible = 1;
-    menuEntries[11].isInvisible = 1;
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
-        menuEntries[6].isInvisible = 0;
-        menuEntries[11].isInvisible = 0;
+    _menuEntries[6].isInvisible = 1;
+    _menuEntries[11].isInvisible = 1;
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+        _menuEntries[6].isInvisible = 0;
+        _menuEntries[11].isInvisible = 0;
     }
 
     /* Entry 7 (0x188/56): hide if offerOrdinals.offerExtraPlayerOrdinal < 0 */
-    menuEntries[7].isInvisible = 1;
-    if (offerOrdinals.offerExtraPlayerOrdinal >= 0) {
-        menuEntries[7].isInvisible = 0;
+    _menuEntries[7].isInvisible = 1;
+    if (_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+        _menuEntries[7].isInvisible = 0;
     }
 }
 
@@ -1864,22 +1864,22 @@ void PlayerOffersInit(void)
     PlayerOffersUpdateOfferAmountText();
 
     /* Entry 1 (0x38/56): bank balance text */
-    MenuEntry *entry1 = &menuEntries[1];
+    MenuEntry *entry1 = &_menuEntries[1];
     uint8_t *bankDst = (uint8_t *)entry1->fg;
     GetBankBalance(bankDst);
 
     /* Entry 3 (0xA8/56): "WE HERE AT %a WISH TO BUY" with our team name */
-    TeamFileEx *ourTeam = GetTeamPointer(selTeamNumber);
+    TeamFileEx *ourTeam = GetTeamPointer(_selTeamNumber);
     uint8_t *ourName = (uint8_t *)ourTeam->team.teamName;
-    MenuEntry *entry3 = &menuEntries[3];
+    MenuEntry *entry3 = &_menuEntries[3];
     uint8_t *dst3 = (uint8_t *)entry3->fg;
     PrintFormatted((const uint8_t *)"WE HERE AT %a WISH TO BUY", dst3,
                     0, 0, 0, 0, 0, 0, 0, ourName, 0, 0);
 
     /* Entry 4 (0xE0/56): "FROM %a IN EXCHANGE FOR" with offering team name */
-    TeamFileEx *offeringTeam = GetTeamPointer(offerOrdinals.teamOffering);
+    TeamFileEx *offeringTeam = GetTeamPointer(_offerOrdinals.teamOffering);
     uint8_t *offeringName = (uint8_t *)offeringTeam->team.teamName;
-    MenuEntry *entry4 = &menuEntries[4];
+    MenuEntry *entry4 = &_menuEntries[4];
     uint8_t *dst4 = (uint8_t *)entry4->fg;
     PrintFormatted((const uint8_t *)"FROM %a IN EXCHANGE FOR", dst4,
                     0, 0, 0, 0, 0, 0, 0, offeringName, 0, 0);
@@ -1897,29 +1897,29 @@ __attribute__((used, externally_visible))
 void GenerateRandomTransferOffers(void)
 {
     uint16_t startIdx = Rand2();
-    startIdx = (uint16_t)((uint32_t)startIdx * careerNumPlayers >> 8);
+    startIdx = (uint16_t)((uint32_t)startIdx * _careerNumPlayers >> 8);
     uint16_t idx = startIdx;
-    int16_t count = careerNumPlayers - 1;
+    int16_t count = _careerNumPlayers - 1;
 
     SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers ENTER: careerNumPlayers=%u "
                       "numOffers=%u numPlayersOnTransferMarket=%u startIdx=%u",
-                      (unsigned)careerNumPlayers, (unsigned)numOffers,
-                      (unsigned)numPlayersOnTransferMarket, (unsigned)startIdx);
+                      (unsigned)_careerNumPlayers, (unsigned)_numOffers,
+                      (unsigned)_numPlayersOnTransferMarket, (unsigned)startIdx);
     /* Show what player ordinals the user has listed */
-    for (uint16_t k = 0; k < numPlayersOnTransferMarket; k++) {
+    for (uint16_t k = 0; k < _numPlayersOnTransferMarket; k++) {
         SWOS_AUTOSKIP_LOG("[bug2]   playersOnTransferMarket[%u] = %u",
-                          (unsigned)k, (unsigned)playersOnTransferMarket[k]);
+                          (unsigned)k, (unsigned)_playersOnTransferMarket[k]);
     }
 
     int boostedFound = 0;
     int offersCreated = 0;
     while (count >= 0) {
-        if (numOffers == 5) {
+        if (_numOffers == 5) {
             SWOS_AUTOSKIP_LOG("[bug2]   numOffers reached 5, stopping");
             return;
         }
 
-        uint8_t *player = GetPlayerAtIndex(selTeamNumber, idx);
+        uint8_t *player = GetPlayerAtIndex(_selTeamNumber, idx);
         PlayerFile *pf = (PlayerFile *)(player + PF_OFF);
         uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
         /* Check bit 1 of positionAndFace — skip if on transfer list */
@@ -1962,12 +1962,12 @@ void GenerateRandomTransferOffers(void)
         }
 
         idx++;
-        if (idx == careerNumPlayers)
+        if (idx == _careerNumPlayers)
             idx = 0;
         count--;
     }
     SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers EXIT: boostedFound=%d offersCreated=%d numOffers=%u",
-                      boostedFound, offersCreated, (unsigned)numOffers);
+                      boostedFound, offersCreated, (unsigned)_numOffers);
 }
 
 /* ---- Chunk 146: UpdateAndExpireTransferOffers ---- */
@@ -1979,11 +1979,11 @@ void UpdateAndExpireTransferOffers(void)
     if (GetRemainingOfferSwapSlots() == 0)
         return;
 
-    if (numOffers != 0) {
-        TransferOfferEntry *entry = (TransferOfferEntry *)transferOfferTable;
+    if (_numOffers != 0) {
+        TransferOfferEntry *entry = (TransferOfferEntry *)_transferOfferTable;
         uint16_t i = 0;
 
-        while (i < numOffers) {
+        while (i < _numOffers) {
             entry->lifespan--;  /* decrement expiry counter (0x0C) */
             if (entry->lifespan == 0) {
                 RemoveTransferOfferAtIndex(i);
@@ -2004,34 +2004,34 @@ void UpdateAndExpireTransferOffers(void)
 __attribute__((used, externally_visible))
 void ProcessOfferExpiryCountdown(void)
 {
-    if (isNationalSelector != 0)
+    if (_isNationalSelector != 0)
         return;
 
-    while (offerExpiryIterationsRemaining != 0) {
-        offerExpiryIterationsRemaining--;
+    while (_offerExpiryIterationsRemaining != 0) {
+        _offerExpiryIterationsRemaining--;
         UpdateAndExpireTransferOffers();
     }
 }
 
 /* ---- Chunk 147: BuyOtherPlayersInit + BuyOtherPlayersFinish ---- */
 /* SWOS2.s line 69577/69584 — init/return callbacks for Buy Other Players menu */
-extern TeamFileEx *buyOtherPlayersTeamPtr;
-extern uint8_t *buyOtherPlayersTitlePtr;
+extern TeamFileEx *_buyOtherPlayersTeamPtr;
+extern uint8_t *_buyOtherPlayersTitlePtr;
 
 /* BuyOtherPlayersFinish: set menu entry 0 title and entry 1 team name */
 __attribute__((used, externally_visible))
 void BuyOtherPlayersFinish(void)
 {
-    menuEntries[0].fg = (uintptr_t)buyOtherPlayersTitlePtr;
-    uint8_t *teamName = buyOtherPlayersTeamPtr->team.teamName;
-    menuEntries[1].fg = (uintptr_t)teamName;
+    _menuEntries[0].fg = (uintptr_t)_buyOtherPlayersTitlePtr;
+    uint8_t *teamName = _buyOtherPlayersTeamPtr->team.teamName;
+    _menuEntries[1].fg = (uintptr_t)teamName;
 }
 
 /* BuyOtherPlayersInit: get team pointer from offerOrdinals.teamOffering, store it, then finish */
 __attribute__((used, externally_visible))
 void BuyOtherPlayersInit(void)
 {
-    buyOtherPlayersTeamPtr = GetTeamPointer(offerOrdinals.teamOffering);
+    _buyOtherPlayersTeamPtr = GetTeamPointer(_offerOrdinals.teamOffering);
     BuyOtherPlayersFinish();
 }
 
@@ -2041,18 +2041,18 @@ void BuyOtherPlayersInit(void)
  * Shows the offers menu. If a transfer was completed, exits menu.
  * Otherwise if no offers exist, jumps to entry 6 and redraws.
  * ================================================================ */
-extern uint16_t transferCompleted;
-extern uint8_t offersMenu[];
+extern uint16_t _transferCompleted;
+extern uint8_t _offersMenu[];
 
 __attribute__((used, externally_visible))
 void ViewOffersMenu(void)
 {
-    ShowMenu(offersMenu);
-    if (transferCompleted != 0) {
+    ShowMenu(_offersMenu);
+    if (_transferCompleted != 0) {
         SetExitMenuFlag();
         return;
     }
-    if (numOffers == 0) {
+    if (_numOffers == 0) {
         SetCurrentEntry(6);
         DrawMenu();
     }
@@ -2066,12 +2066,12 @@ void ViewOffersMenu(void)
  * GiveFreeTransfer, TakeOffMarketMenu, TransferMarketCommon
  * ================================================================ */
 
-extern uint16_t playerSelected;
-extern volatile uint16_t currentMessage;
-extern uint8_t  buyPlayerMenu[];
-extern uint8_t  buyPlayerRedrawList[];
-extern uint8_t  aNoOffers[];
-extern uint16_t selTeamNumber;
+extern uint16_t _playerSelected;
+extern volatile uint16_t _currentMessage;
+extern uint8_t  _buyPlayerMenu[];
+extern uint8_t  _buyPlayerRedrawList[];
+extern uint8_t  _aNoOffers[];
+extern uint16_t _selTeamNumber;
 
 /* Menu entry offset constants for the transfer market menu entries.
  * These correspond to menuEntries[N] where N = byteOffset / sizeof(MenuEntry).
@@ -2127,13 +2127,13 @@ extern void ShowChairmanMessage(void);
  * ================================================================ */
 static void checkNumPlayersOnTransferMarket(void)
 {
-    if (numPlayersOnTransferMarket >= 5) {
-        menuEntries[4].isInvisible = 1;
+    if (_numPlayersOnTransferMarket >= 5) {
+        _menuEntries[4].isInvisible = 1;
     } else {
-        menuEntries[4].isInvisible = 0;
+        _menuEntries[4].isInvisible = 0;
     }
-    if (numPlayersOnTransferMarket == 0) {
-        menuEntries[8].isInvisible = 1;
+    if (_numPlayersOnTransferMarket == 0) {
+        _menuEntries[8].isInvisible = 1;
     }
 }
 
@@ -2151,12 +2151,12 @@ void CheckNumPlayersOnTransferMarket(void)
  * ================================================================ */
 static void checkIfPlayerSelected(void)
 {
-    if ((int16_t)playerSelected < 0) {
-        menuEntries[5].isInvisible = 1;
-        menuEntries[7].isInvisible = 1;
+    if ((int16_t)_playerSelected < 0) {
+        _menuEntries[5].isInvisible = 1;
+        _menuEntries[7].isInvisible = 1;
     } else {
-        menuEntries[5].isInvisible = 0;
-        menuEntries[7].isInvisible = 0;
+        _menuEntries[5].isInvisible = 0;
+        _menuEntries[7].isInvisible = 0;
     }
 }
 
@@ -2177,15 +2177,15 @@ __attribute__((used, externally_visible))
 void EnableDisableOffers(void)
 {
     /* Entry at offset 0xA8: (8 + 0xA8) = 0xB0 / 0x38 = 3.14... entry 3 */
-    MenuEntry *entry = &menuEntries[3];
+    MenuEntry *entry = &_menuEntries[3];
 
     if (CheckForTransferOffers() == 0) {
         /* No offers eligible — set bit 13 of stringFlags */
         entry->stringFlags |= (1 << 13);
     }
 
-    if (numOffers == 0) {
-        entry->fg = (uintptr_t)aNoOffers;
+    if (_numOffers == 0) {
+        entry->fg = (uintptr_t)_aNoOffers;
         entry->isDisabled = 1;
         uint16_t color = entry->bgColor;
         color = (color & 0xFFF0) + PINK_TO_BROWN_9;
@@ -2203,8 +2203,8 @@ void EnableDisableOffers(void)
 __attribute__((used, externally_visible))
 void TransferMarketInit(void)
 {
-    transferCompleted = 0;
-    playerSelected = 0xFFFF;
+    _transferCompleted = 0;
+    _playerSelected = 0xFFFF;
     checkNumPlayersOnTransferMarket();
     if (CheckForTransferOffers() == 0) {
         SetCurrentEntry(3);
@@ -2224,13 +2224,13 @@ void BuyPlayerMenu(void)
 {
     uint16_t slots = GetRemainingTransferPoolSlots();
     if (slots < 2) {
-        currentMessage = CLUB_UNWILLING_TO_PURCHASE_PLAYERS;
+        _currentMessage = CLUB_UNWILLING_TO_PURCHASE_PLAYERS;
         ShowChairmanMessage();
         return;
     }
-    transferCompleted = 0;
-    ShowMenu(buyPlayerMenu);
-    if (transferCompleted == 1) {
+    _transferCompleted = 0;
+    ShowMenu(_buyPlayerMenu);
+    if (_transferCompleted == 1) {
         SetExitMenuFlag();
     }
 }
@@ -2244,10 +2244,10 @@ void BuyPlayerMenu(void)
 __attribute__((used, externally_visible))
 void GiveFreeTransfer(void)
 {
-    uint16_t idx = playerSelected;
-    uint16_t playerOrd = playersOnTransferMarket[idx];
+    uint16_t idx = _playerSelected;
+    uint16_t playerOrd = _playersOnTransferMarket[idx];
     RemovePlayerFromTeam(playerOrd);
-    playerSelected = 0xFFFF;
+    _playerSelected = 0xFFFF;
     checkNumPlayersOnTransferMarket();
     checkIfPlayerSelected();
     EnableDisableOffers();
@@ -2264,10 +2264,10 @@ void GiveFreeTransfer(void)
 __attribute__((used, externally_visible))
 void TakeOffMarketMenu(void)
 {
-    uint16_t idx = playerSelected;
-    uint16_t playerOrd = playersOnTransferMarket[idx];
+    uint16_t idx = _playerSelected;
+    uint16_t playerOrd = _playersOnTransferMarket[idx];
     RemovePlayerFromTransferMarket(playerOrd);
-    playerSelected = 0xFFFF;
+    _playerSelected = 0xFFFF;
     checkNumPlayersOnTransferMarket();
     checkIfPlayerSelected();
     SetCurrentEntry(6);
@@ -2288,12 +2288,12 @@ void TransferMarketCommon(void *entryPtr)
     /* Compute relative index: entry ordinal minus base entry ordinal */
     /* Base entry is at menuEntries + MENUENTRY_ALREADYDRAWN + 0x1F8
      * = entry (8+0x1F8)/0x38 = 0x200/0x38 = 9.14... = entry 9 */
-    uint16_t d7 = entry->ordinal - menuEntries[9].ordinal;
-    if (d7 == playerSelected)
+    uint16_t d7 = entry->ordinal - _menuEntries[9].ordinal;
+    if (d7 == _playerSelected)
         d7 = 0xFFFF;
 
-    uint16_t oldSel = playerSelected;
-    playerSelected = d7;
+    uint16_t oldSel = _playerSelected;
+    _playerSelected = d7;
 
     /* If old selection was valid, redraw that entry */
     if ((int16_t)oldSel >= 0) {
@@ -2307,7 +2307,7 @@ void TransferMarketCommon(void *entryPtr)
     checkIfPlayerSelected();
 
     /* Redraw specific entries from buyPlayerRedrawList */
-    DrawMenuItemsWaitForVSync((int16_t *)buyPlayerRedrawList);
+    DrawMenuItemsWaitForVSync((int16_t *)_buyPlayerRedrawList);
 }
 
 /* ================================================================
@@ -2320,11 +2320,11 @@ void TransferMarketCommon(void *entryPtr)
  * BuyOtherDomesticPlayer, BuyOtherForeignPlayer, BuyPlayerViewSquad
  * ================================================================ */
 
-extern uint8_t  fundsBuffer[];
-extern void *playerPositionsStringTable[];
-extern uint8_t  shortCountryNames[];
-extern uint16_t isNationalSelector;
-extern uint16_t viewFutureTeamModeFlag;
+extern uint8_t  _fundsBuffer[];
+extern void *_playerPositionsStringTable[];
+extern uint8_t  _shortCountryNames[];
+extern uint16_t _isNationalSelector;
+extern uint16_t _viewFutureTeamModeFlag;
 
 extern uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
 extern void FormTopSkillsString(uint8_t *dst, PlayerFile *playerFile);
@@ -2440,7 +2440,7 @@ void BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     /* Entry 5: Position */
     {
         uint16_t posIdx = (pf->positionAndFace & PF_POSITION_MASK) >> 3;
-        a0->fg = (uintptr_t)playerPositionsStringTable[posIdx / 4];
+        a0->fg = (uintptr_t)_playerPositionsStringTable[posIdx / 4];
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2472,7 +2472,7 @@ void BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
         uint8_t *dst = (uint8_t *)a0->fg;
         uint16_t countryIdx = (uint8_t)pf->nationality;
         uint16_t offset = countryIdx * 3;
-        uint8_t *src = shortCountryNames + offset;
+        uint8_t *src = _shortCountryNames + offset;
         *dst++ = '(';
         *dst++ = src[0];
         *dst++ = src[1];
@@ -2485,11 +2485,11 @@ void BuildTransferPlayerMenuEntry(void *itemPtr, uint8_t *player,
     a0++;
 
     /* Entry 11: Value/status text */
-    if (isNationalSelector != 0 && viewFutureTeamModeFlag == 0) {
+    if (_isNationalSelector != 0 && _viewFutureTeamModeFlag == 0) {
         InitPlayerValueDisplayStruct(player, (uint8_t *)a0);
     } else {
-        FormatPlayerValueOrStatusText(player, fundsBuffer);
-        a0->fg = (uintptr_t)fundsBuffer;
+        FormatPlayerValueOrStatusText(player, _fundsBuffer);
+        a0->fg = (uintptr_t)_fundsBuffer;
     }
     a0->y = y;
     a0->isInvisible = 0;
@@ -2526,10 +2526,10 @@ void TransferMarketAfterDrawCommon(void *entryPtr)
 {
     MenuEntry *entry = (MenuEntry *)entryPtr;
     /* Base entry is menuEntries[9] */
-    uint16_t d6 = entry->ordinal - menuEntries[9].ordinal;
+    uint16_t d6 = entry->ordinal - _menuEntries[9].ordinal;
     uint8_t *player;
 
-    if (d6 >= numPlayersOnTransferMarket) {
+    if (d6 >= _numPlayersOnTransferMarket) {
         /* Out of bounds — disable this entry, use NULL player */
         entry->isDisabled = 1;
         player = 0;
@@ -2537,26 +2537,26 @@ void TransferMarketAfterDrawCommon(void *entryPtr)
         /* Valid player index */
         entry->isDisabled = 0;
         uint16_t style = 0;
-        if (d6 == playerSelected)
+        if (d6 == _playerSelected)
             style = 0xD;
 
-        uint16_t playerOrd = playersOnTransferMarket[d6];
-        player = GetPlayer(selTeamNumber, playerOrd);
+        uint16_t playerOrd = _playersOnTransferMarket[d6];
+        player = GetPlayer(_selTeamNumber, playerOrd);
         d6++;   /* 1-based index for display */
 
         uint16_t yCoord = entry->y;
-        BuildTransferPlayerMenuEntry(&menuEntries[14], player, yCoord,
+        BuildTransferPlayerMenuEntry(&_menuEntries[14], player, yCoord,
                                        (int16_t)d6, style, 0);
         /* Draw 12 entries starting from menuEntries[14] */
-        DrawMultipleItems(12, &menuEntries[14]);
+        DrawMultipleItems(12, &_menuEntries[14]);
         return;
     }
 
     /* NULL player path */
     uint16_t yCoord = entry->y;
-    BuildTransferPlayerMenuEntry(&menuEntries[14], player, yCoord,
+    BuildTransferPlayerMenuEntry(&_menuEntries[14], player, yCoord,
                                    (int16_t)d6, 0, 0);
-    DrawMultipleItems(12, &menuEntries[14]);
+    DrawMultipleItems(12, &_menuEntries[14]);
 }
 
 /* =============================================================== */
@@ -2564,18 +2564,18 @@ void TransferMarketAfterDrawCommon(void *entryPtr)
 /*                      helpers, BuyOtherPlayers common             */
 /* =============================================================== */
 
-extern uint8_t playerOffersMenu[];
-extern uint8_t aPlayersOnForei[];
-extern uint8_t aPlayersOnDomes[];
-extern uint8_t aMore[];
-extern uint8_t aList[];
-extern uint16_t playerMarketFilterPosition;
-extern uint16_t playerMarketFilterRatingIndex;
-extern uint16_t playerMarketFilterAgeGroup;
-extern uint16_t playerMarketFilterCountry;
-extern uint16_t playerMarketTotalMatchCount;
-extern uint16_t playerMarketVisibleItemCount;
-extern uint16_t playerMarketListScrollOffset;
+extern uint8_t _playerOffersMenu[];
+extern uint8_t _aPlayersOnForei[];
+extern uint8_t _aPlayersOnDomes[];
+extern uint8_t _aMore[];
+extern uint8_t _aList[];
+extern uint16_t _playerMarketFilterPosition;
+extern uint16_t _playerMarketFilterRatingIndex;
+extern uint16_t _playerMarketFilterAgeGroup;
+extern uint16_t _playerMarketFilterCountry;
+extern uint16_t _playerMarketTotalMatchCount;
+extern uint16_t _playerMarketVisibleItemCount;
+extern uint16_t _playerMarketListScrollOffset;
 
 extern TeamFileEx *GetTeamPointer(uint16_t teamId);
 extern uint16_t GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t playerIndex);
@@ -2592,23 +2592,23 @@ __attribute__((used, externally_visible))
 void ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal)
 {
     TeamFileEx *teamPtr = GetTeamPointer(teamNumber);
-    offerOrdinals.teamOffering = PACK_BE_U16(teamPtr->team.countryNumber, teamPtr->team.teamOrdinal);
-    offerOrdinals.offerPrimaryPlayerOrdinal = playerOrdinal;
-    offerOrdinals.numExtraPlayersWanted = (int16_t)-1;
-    offerOrdinals.offerSwapPlayerOrdinal = (int16_t)-1;
-    offerOrdinals.offerExtraPlayerOrdinal = (int16_t)-1;
+    _offerOrdinals.teamOffering = PACK_BE_U16(teamPtr->team.countryNumber, teamPtr->team.teamOrdinal);
+    _offerOrdinals.offerPrimaryPlayerOrdinal = playerOrdinal;
+    _offerOrdinals.numExtraPlayersWanted = (int16_t)-1;
+    _offerOrdinals.offerSwapPlayerOrdinal = (int16_t)-1;
+    _offerOrdinals.offerExtraPlayerOrdinal = (int16_t)-1;
 
-    uint16_t avgValue = GetAvgTeamValueBaseForCurrentPlayer(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+    uint16_t avgValue = GetAvgTeamValueBaseForCurrentPlayer(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
     uint32_t total = (uint32_t)avgValue * 1000;
-    if ((int32_t)total <= newBalance) {
-        offerOrdinals.offerAmount = avgValue;
+    if ((int32_t)total <= _newBalance) {
+        _offerOrdinals.offerAmount = avgValue;
     } else {
-        int32_t bal = newBalance;
+        int32_t bal = _newBalance;
         if (bal < 0)
             bal = 0;
-        offerOrdinals.offerAmount = (uint16_t)((uint32_t)bal / 1000);
+        _offerOrdinals.offerAmount = (uint16_t)((uint32_t)bal / 1000);
     }
-    ShowMenu(playerOffersMenu);
+    ShowMenu(_playerOffersMenu);
 }
 
 /* ShowPlayerMarketInit (Chunk 163)
@@ -2625,13 +2625,13 @@ void ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal)
 __attribute__((used, externally_visible))
 void ShowPlayerMarketInit(void)
 {
-    playerMarketFilterPosition = 0xFFFF;
-    playerMarketFilterRatingIndex = 0xFFFF;
-    playerMarketFilterAgeGroup = 0xFFFF;
-    playerMarketFilterCountry = 6;
-    playerMarketTotalMatchCount = 0;
-    playerMarketVisibleItemCount = 0;
-    playerMarketListScrollOffset = 0;
+    _playerMarketFilterPosition = 0xFFFF;
+    _playerMarketFilterRatingIndex = 0xFFFF;
+    _playerMarketFilterAgeGroup = 0xFFFF;
+    _playerMarketFilterCountry = 6;
+    _playerMarketTotalMatchCount = 0;
+    _playerMarketVisibleItemCount = 0;
+    _playerMarketListScrollOffset = 0;
     ShowPlayerMarket();   /* SWOS2.s `bra.w *+4` fall-through */
 }
 
@@ -2640,8 +2640,8 @@ void ShowPlayerMarketInit(void)
 __attribute__((used, externally_visible))
 void PlayerMarketUpdateFilterMenuEntryState(void)
 {
-    MenuEntry *entry = &menuEntries[6]; /* 0x150/56 = 6 */
-    if (playerMarketFilterPosition != 0) {
+    MenuEntry *entry = &_menuEntries[6]; /* 0x150/56 = 6 */
+    if (_playerMarketFilterPosition != 0) {
         /* Active: bright blue, enabled */
         entry->bgColor = (entry->bgColor & 0xFFF0) | 13; /* BRIGHT_BLUE_TO_BLUE_13 */
         entry->isDisabled = 0;
@@ -2657,13 +2657,13 @@ __attribute__((used, externally_visible))
 void ShowPlayerMarket(void)
 {
     uint8_t *title;
-    if (showDomesticPlayerMarket)
-        title = aPlayersOnDomes;
+    if (_showDomesticPlayerMarket)
+        title = _aPlayersOnDomes;
     else
-        title = aPlayersOnForei;
+        title = _aPlayersOnForei;
 
-    menuEntries[0].fg = (uintptr_t)title;
-    uint8_t *balanceBuf = (uint8_t *)menuEntries[1].fg;
+    _menuEntries[0].fg = (uintptr_t)title;
+    uint8_t *balanceBuf = (uint8_t *)_menuEntries[1].fg;
     GetBankBalance(balanceBuf);
     PlayerMarketUpdateFilterMenuEntryState();
 }
@@ -2672,15 +2672,15 @@ void ShowPlayerMarket(void)
 /* Player Market menu callbacks — ported from loc_* asm blocks     */
 /* =============================================================== */
 
-extern int16_t filterMenuRedrawList[];
-extern uintptr_t playerMarketVisibleItems[];
+extern int16_t _filterMenuRedrawList[];
+extern uintptr_t _playerMarketVisibleItems[];
 static void showSquadWithTransferMarketMask(void);
 
 /* Helper: update filter entry states and redraw filter entries (was loc_14506E) */
 static void playerMarketUpdateFiltersAndRedraw(void)
 {
     PlayerMarketUpdateFilterMenuEntryState();
-    DrawMenuItemsWaitForVSync(filterMenuRedrawList);
+    DrawMenuItemsWaitForVSync(_filterMenuRedrawList);
 }
 
 /* PlayerMarketFilterPositionOnSelect (was loc_144EFC)
@@ -2689,9 +2689,9 @@ __attribute__((used, externally_visible))
 void PlayerMarketFilterPositionOnSelect(MenuEntry *entry)
 {
     (void)entry;
-    playerMarketFilterPosition++;
-    if (playerMarketFilterPosition == 4)
-        playerMarketFilterPosition = 0xFFFF;
+    _playerMarketFilterPosition++;
+    if (_playerMarketFilterPosition == 4)
+        _playerMarketFilterPosition = 0xFFFF;
     PlayerMarketResetListState();
     playerMarketUpdateFiltersAndRedraw();
 }
@@ -2702,9 +2702,9 @@ __attribute__((used, externally_visible))
 void PlayerMarketFilterAgeGroupOnSelect(MenuEntry *entry)
 {
     (void)entry;
-    playerMarketFilterAgeGroup++;
-    if (playerMarketFilterAgeGroup == 7)
-        playerMarketFilterAgeGroup = 0xFFFF;
+    _playerMarketFilterAgeGroup++;
+    if (_playerMarketFilterAgeGroup == 7)
+        _playerMarketFilterAgeGroup = 0xFFFF;
     PlayerMarketResetListState();
     playerMarketUpdateFiltersAndRedraw();
 }
@@ -2716,13 +2716,13 @@ void PlayerMarketScrollOnSelect(MenuEntry *entry)
 {
     (void)entry;
     uint16_t d0 = 0;
-    uint16_t total = playerMarketTotalMatchCount;
+    uint16_t total = _playerMarketTotalMatchCount;
     if (total != 0) {
-        d0 = playerMarketListScrollOffset + 10;
+        d0 = _playerMarketListScrollOffset + 10;
         if (d0 >= total)
             d0 = 0;
     }
-    playerMarketListScrollOffset = d0;
+    _playerMarketListScrollOffset = d0;
     PlayerMarketBuildVisiblePlayerList();
     PlayerMarketUpdateMoreListLabel();
     DrawMenu();
@@ -2743,16 +2743,16 @@ __attribute__((used, externally_visible))
 void PlayerMarketItemOnSelect(MenuEntry *entry)
 {
     /* Compute relative index from entry ordinal vs base entry 10 */
-    uint16_t relIdx = entry->ordinal - menuEntries[10].ordinal;
+    uint16_t relIdx = entry->ordinal - _menuEntries[10].ordinal;
 
     /* Get the visible item pointer */
-    uint8_t *item = (uint8_t *)playerMarketVisibleItems[relIdx];
+    uint8_t *item = (uint8_t *)_playerMarketVisibleItems[relIdx];
     uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
     int16_t playerOrd = (int8_t)item[2];
 
     ShowPlayerOfferMenuForPlayer(teamNum, (uint16_t)playerOrd);
 
-    if (transferCompleted) {
+    if (_transferCompleted) {
         SetExitMenuFlag();
         return;
     }
@@ -2769,18 +2769,18 @@ void PlayerMarketItemBeforeDraw(MenuEntry *entry)
     entry->isDisabled = 0;
 
     /* Compute relative index from entry ordinal vs base entry 10 */
-    uint16_t relIdx = entry->ordinal - menuEntries[10].ordinal;
+    uint16_t relIdx = entry->ordinal - _menuEntries[10].ordinal;
     uint8_t *player = 0;
     uint8_t *extra = 0;
 
-    if (relIdx >= playerMarketVisibleItemCount) {
+    if (relIdx >= _playerMarketVisibleItemCount) {
         /* Beyond visible count — disable entry */
         entry->isDisabled = 1;
         player = 0;
     } else {
-        uint8_t *item = (uint8_t *)playerMarketVisibleItems[relIdx];
+        uint8_t *item = (uint8_t *)_playerMarketVisibleItems[relIdx];
 
-        if (showDomesticPlayerMarket) {
+        if (_showDomesticPlayerMarket) {
             /* Domestic player */
             uint16_t teamNum = PACK_BE_U16(item[0], item[1]);
             TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
@@ -2806,12 +2806,12 @@ void PlayerMarketItemBeforeDraw(MenuEntry *entry)
     }
 
     /* Build the menu entry for this player */
-    uint16_t idx = relIdx + 1 + playerMarketListScrollOffset;
+    uint16_t idx = relIdx + 1 + _playerMarketListScrollOffset;
     uint16_t yCoord = entry->y;
 
-    BuildTransferPlayerMenuEntry(&menuEntries[20], player, yCoord,
+    BuildTransferPlayerMenuEntry(&_menuEntries[20], player, yCoord,
                                    (int16_t)idx, 0, extra);
-    DrawMultipleItems(12, &menuEntries[20]);
+    DrawMultipleItems(12, &_menuEntries[20]);
 }
 
 /* PlayerMarketUpdateMoreListLabel (Chunk 163)
@@ -2819,24 +2819,24 @@ void PlayerMarketItemBeforeDraw(MenuEntry *entry)
 __attribute__((used, externally_visible))
 void PlayerMarketUpdateMoreListLabel(void)
 {
-    uint16_t total = playerMarketTotalMatchCount;
-    MenuEntry *entry = &menuEntries[7]; /* 0x188/56 = 7 */
-    uint16_t offset = playerMarketListScrollOffset + 10;
+    uint16_t total = _playerMarketTotalMatchCount;
+    MenuEntry *entry = &_menuEntries[7]; /* 0x188/56 = 7 */
+    uint16_t offset = _playerMarketListScrollOffset + 10;
     if (offset < total)
-        entry->fg = (uintptr_t)aMore;
+        entry->fg = (uintptr_t)_aMore;
     else
-        entry->fg = (uintptr_t)aList;
+        entry->fg = (uintptr_t)_aList;
 }
 
 /* PlayerMarketResetListState (Chunk 163) */
 __attribute__((used, externally_visible))
 void PlayerMarketResetListState(void)
 {
-    if (playerMarketTotalMatchCount == 0)
+    if (_playerMarketTotalMatchCount == 0)
         return;
-    playerMarketTotalMatchCount = 0;
-    playerMarketVisibleItemCount = 0;
-    playerMarketListScrollOffset = 0;
+    _playerMarketTotalMatchCount = 0;
+    _playerMarketVisibleItemCount = 0;
+    _playerMarketListScrollOffset = 0;
     PlayerMarketUpdateMoreListLabel();
     DrawMenu();
 }
@@ -2847,15 +2847,15 @@ __attribute__((used, externally_visible))
 void BuyOtherPlayersCommon(void *entryPtr)
 {
     MenuEntry *a5 = (MenuEntry *)entryPtr;
-    MenuEntry *entry3 = &menuEntries[3]; /* 0xA8/56 = 3 */
+    MenuEntry *entry3 = &_menuEntries[3]; /* 0xA8/56 = 3 */
     uint16_t relIdx = a5->ordinal - entry3->ordinal;
 
     uint16_t outSlot, outPlayerIndex;
-    GetPlayerInfoBreakPosition((uint8_t *)buyOtherPlayersTeamPtr, relIdx, &outSlot, &outPlayerIndex);
+    GetPlayerInfoBreakPosition((uint8_t *)_buyOtherPlayersTeamPtr, relIdx, &outSlot, &outPlayerIndex);
 
-    ShowPlayerOfferMenuForPlayer(offerOrdinals.teamOffering, outPlayerIndex);
+    ShowPlayerOfferMenuForPlayer(_offerOrdinals.teamOffering, outPlayerIndex);
 
-    if (transferCompleted) {
+    if (_transferCompleted) {
         SetExitMenuFlag();
         return;
     }
@@ -2869,27 +2869,27 @@ __attribute__((used, externally_visible))
 void BuyOtherPlayersAfterDrawCommon(void *entryPtr)
 {
     MenuEntry *a5 = (MenuEntry *)entryPtr;
-    MenuEntry *entry3 = &menuEntries[3]; /* 0xA8/56 = 3 */
+    MenuEntry *entry3 = &_menuEntries[3]; /* 0xA8/56 = 3 */
     uint16_t d6 = a5->ordinal - entry3->ordinal;
     uint16_t d1 = d6;
     d6++;
 
     uint16_t outSlot, outPlayerIndex;
-    uint8_t *player = GetPlayerInfoBreakPosition((uint8_t *)buyOtherPlayersTeamPtr,
+    uint8_t *player = GetPlayerInfoBreakPosition((uint8_t *)_buyOtherPlayersTeamPtr,
                                                     d1, &outSlot, &outPlayerIndex);
 
     uint16_t yCoord = a5->y;
-    BuildTransferPlayerMenuEntry(&menuEntries[19], player, yCoord,
+    BuildTransferPlayerMenuEntry(&_menuEntries[19], player, yCoord,
                                    (int16_t)d6, 0, 0);
-    DrawMultipleItems(12, &menuEntries[19]);
+    DrawMultipleItems(12, &_menuEntries[19]);
 }
 
 /* =============================================================== */
 /* Chunk 164: ShowSquad callers + OffersInit                       */
 /* =============================================================== */
 
-extern TeamFileEx careerTeam;
-extern uint8_t aViewSquad[];
+extern TeamFileEx _careerTeam;
+extern uint8_t _aViewSquad[];
 extern int16_t ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                            uint32_t maskHi, uint16_t arg2, uint16_t arg3);
 
@@ -2897,13 +2897,13 @@ extern int16_t ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
 static void showSquadWithTransferMarketMask(void)
 {
     uint32_t mask = 0;
-    uint16_t n = numPlayersOnTransferMarket;
+    uint16_t n = _numPlayersOnTransferMarket;
     if (n) {
         uint16_t i;
         for (i = 0; i < n; i++)
-            mask |= (1u << playersOnTransferMarket[i]);
+            mask |= (1u << _playersOnTransferMarket[i]);
     }
-    ShowSquad((TeamFile *)&careerTeam, aViewSquad, mask, 0, 1, 0xFFFF);
+    ShowSquad((TeamFile *)&_careerTeam, _aViewSquad, mask, 0, 1, 0xFFFF);
 }
 
 /* ThirdPartyOfferViewSquad (Chunk 164) */
@@ -2932,17 +2932,17 @@ void OffersInit(void)
 /*            callbacks + TransferPlayerInit + ThirdPartyOfferInit  */
 /* =============================================================== */
 
-extern uint16_t offerStatus;
-extern uint16_t timeToNegotiate;
-extern uint16_t lastOfferPrimaryPlayerOrdinal;
-extern uint16_t lastOfferExtraPlayersWanted;
-extern uint16_t lastOfferSwapPlayerOrdinal;
-extern uint16_t lastOfferExtraPlayerOrdinal;
-extern uint16_t offerNegotiationAttemptCount;
-extern uint16_t controlMask;
-extern uint8_t thirdPartyOfferMenu[];
-extern uint8_t aSelectPlayerTo[];
-extern uint8_t aSelectPlayerTo_0[];
+extern uint16_t _offerStatus;
+extern uint16_t _timeToNegotiate;
+extern uint16_t _lastOfferPrimaryPlayerOrdinal;
+extern uint16_t _lastOfferExtraPlayersWanted;
+extern uint16_t _lastOfferSwapPlayerOrdinal;
+extern uint16_t _lastOfferExtraPlayerOrdinal;
+extern uint16_t _offerNegotiationAttemptCount;
+extern uint16_t _controlMask;
+extern uint8_t _thirdPartyOfferMenu[];
+extern uint8_t _aSelectPlayerTo[];
+extern uint8_t _aSelectPlayerTo_0[];
 
 extern void DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 extern void CallDrawMenuItem(MenuEntry *entry);
@@ -2960,20 +2960,20 @@ static void offerAfterDrawCommonShared(MenuEntry *a5,
                                         uint16_t targetEntryIdx,
                                         uint16_t reverseTeam)
 {
-    MenuEntry *baseEntry = &menuEntries[baseEntryIdx];
+    MenuEntry *baseEntry = &_menuEntries[baseEntryIdx];
     int16_t d7 = a5->ordinal - baseEntry->ordinal;
 
     uint16_t teamId;
     if (d7 < 2) {
-        teamId = reverseTeam ? selTeamNumber : offerOrdinals.teamOffering;
+        teamId = reverseTeam ? _selTeamNumber : _offerOrdinals.teamOffering;
     } else {
-        teamId = reverseTeam ? offerOrdinals.teamOffering : selTeamNumber;
+        teamId = reverseTeam ? _offerOrdinals.teamOffering : _selTeamNumber;
     }
 
     /* Access contiguous offer ordinals as array:
        offerOrdinals.offerPrimaryPlayerOrdinal, offerOrdinals.numExtraPlayersWanted,
        offerOrdinals.offerSwapPlayerOrdinal, offerOrdinals.offerExtraPlayerOrdinal */
-    int16_t *ordinals = (int16_t *)&offerOrdinals.offerPrimaryPlayerOrdinal;
+    int16_t *ordinals = (int16_t *)&_offerOrdinals.offerPrimaryPlayerOrdinal;
     int16_t playerOrd = ordinals[d7];
 
     uint8_t *playerData = (uint8_t *)0;  /* NULL = no player */
@@ -2982,7 +2982,7 @@ static void offerAfterDrawCommonShared(MenuEntry *a5,
     }
 
     uint16_t yCoord = a5->y;
-    MenuEntry *targetEntry = &menuEntries[targetEntryIdx];
+    MenuEntry *targetEntry = &_menuEntries[targetEntryIdx];
     BuildTransferPlayerMenuEntry(targetEntry, playerData, yCoord,
                                    (int16_t)0xFFFF, 0xD, (uint8_t *)0);
     DrawMultipleItems(12, targetEntry);
@@ -3025,12 +3025,12 @@ __attribute__((used, externally_visible))
 void OffersCommon(void *entryPtr)
 {
     MenuEntry *a5 = (MenuEntry *)entryPtr;
-    MenuEntry *baseEntry = &menuEntries[2];  /* menuEntries + 0x70/0x38 = entry 2 */
+    MenuEntry *baseEntry = &_menuEntries[2];  /* menuEntries + 0x70/0x38 = entry 2 */
     int16_t d7 = a5->ordinal - baseEntry->ordinal;
 
 restart:;
     /* Index into transferOfferTable: each entry is 14 bytes */
-    TransferOfferEntry *offerEntry = &((TransferOfferEntry *)transferOfferTable)[(uint16_t)d7];
+    TransferOfferEntry *offerEntry = &((TransferOfferEntry *)_transferOfferTable)[(uint16_t)d7];
 
     /* Determine offer status from the negotiation-step sentinels */
     uint16_t status = 3;
@@ -3050,19 +3050,19 @@ restart:;
         }
     }
 
-    offerStatus = status;
-    offerOrdinals.teamOffering = offerEntry->teamOffering;
-    offerOrdinals.offerAmount = offerEntry->offerAmount;
+    _offerStatus = status;
+    _offerOrdinals.teamOffering = offerEntry->teamOffering;
+    _offerOrdinals.offerAmount = offerEntry->offerAmount;
 
     /* Sign-extend the ordinal bytes to word */
-    offerOrdinals.offerPrimaryPlayerOrdinal = (uint16_t)(int16_t)offerEntry->primaryPlayerOrdinal;
-    offerOrdinals.numExtraPlayersWanted = (int16_t)offerEntry->secondPlayerOrdinal;
-    offerOrdinals.offerSwapPlayerOrdinal = (int16_t)offerEntry->swapPlayerOrdinal;
-    offerOrdinals.offerExtraPlayerOrdinal = (int16_t)offerEntry->extraPlayerOrdinal;
+    _offerOrdinals.offerPrimaryPlayerOrdinal = (uint16_t)(int16_t)offerEntry->primaryPlayerOrdinal;
+    _offerOrdinals.numExtraPlayersWanted = (int16_t)offerEntry->secondPlayerOrdinal;
+    _offerOrdinals.offerSwapPlayerOrdinal = (int16_t)offerEntry->swapPlayerOrdinal;
+    _offerOrdinals.offerExtraPlayerOrdinal = (int16_t)offerEntry->extraPlayerOrdinal;
 
-    ShowMenu(thirdPartyOfferMenu);
+    ShowMenu(_thirdPartyOfferMenu);
 
-    uint16_t result = thirdPartyOfferResult;
+    uint16_t result = _thirdPartyOfferResult;
     if (result == 0) {
         /* Consider: mark this offer as "seen" */
         offerEntry->seenFlag = 1;
@@ -3071,8 +3071,8 @@ restart:;
     if (result == 1) {
         /* Accept */
         Career_AcceptOffer_SellPlayer();
-        timeToNegotiate--;
-        transferCompleted = 1;
+        _timeToNegotiate--;
+        _transferCompleted = 1;
         SetExitMenuFlag();
         return;
     }
@@ -3112,13 +3112,13 @@ restart:;
     }
 
     /* Withdraw offer */
-    offerStatus = 0xFFFF;
-    ShowMenu(thirdPartyOfferMenu);
+    _offerStatus = 0xFFFF;
+    ShowMenu(_thirdPartyOfferMenu);
     /* Fall through to removeOffer */
 
 removeOffer:
     RemoveTransferOfferAtIndex(d7);
-    if (numOffers == 0) {
+    if (_numOffers == 0) {
         SetExitMenuFlag();
         return;
     }
@@ -3130,24 +3130,24 @@ removeOffer:
 __attribute__((used, externally_visible))
 void PlayerOffersOnSelect8(void)
 {
-    TeamFileEx *teamPtr = GetTeamPointer(offerOrdinals.teamOffering);
-    uint8_t *title = aSelectPlayerTo;  /* "SELECT PLAYER TO MAKE OFFER ON" */
+    TeamFileEx *teamPtr = GetTeamPointer(_offerOrdinals.teamOffering);
+    uint8_t *title = _aSelectPlayerTo;  /* "SELECT PLAYER TO MAKE OFFER ON" */
     uint32_t maskLo = 0;
     uint32_t maskHi = 0;
-    uint16_t d2 = (uint16_t)offerOrdinals.offerPrimaryPlayerOrdinal;
+    uint16_t d2 = (uint16_t)_offerOrdinals.offerPrimaryPlayerOrdinal;
 
     /* Set bit for the primary player ordinal */
     maskLo |= (1u << d2);
 
-    if (offerOrdinals.numExtraPlayersWanted >= 0) {
+    if (_offerOrdinals.numExtraPlayersWanted >= 0) {
         /* Extra player slot occupied: clear it */
-        offerOrdinals.numExtraPlayersWanted = -1;
+        _offerOrdinals.numExtraPlayersWanted = -1;
     } else {
         /* Show squad to pick a player */
         int16_t result = ShowSquad((TeamFile *)teamPtr, title, maskLo, maskHi,
                                      0, 0xFFFF);
         if (result >= 0) {
-            offerOrdinals.numExtraPlayersWanted = result;
+            _offerOrdinals.numExtraPlayersWanted = result;
         }
     }
 
@@ -3159,16 +3159,16 @@ void PlayerOffersOnSelect8(void)
 __attribute__((used, externally_visible))
 void PlayerOffersOnSelect10(void)
 {
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
         /* Already have a swap player: shift extra into swap, clear extra */
-        offerOrdinals.offerSwapPlayerOrdinal = offerOrdinals.offerExtraPlayerOrdinal;
-        offerOrdinals.offerExtraPlayerOrdinal = -1;
+        _offerOrdinals.offerSwapPlayerOrdinal = _offerOrdinals.offerExtraPlayerOrdinal;
+        _offerOrdinals.offerExtraPlayerOrdinal = -1;
     } else {
         /* Build mask of ineligible players (goalies, injured, on transfer list) */
         uint32_t d7mask = 0;
-        int16_t i = careerNumPlayers - 1;
+        int16_t i = _careerNumPlayers - 1;
         while (i >= 0) {
-            uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
             PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
             /* Check if player is a trialist (0x9B) or reserve (0x9A) */
             if ((uint8_t)plf->form == PLAYER_FORM_TRIALIST || (uint8_t)plf->form == PLAYER_FORM_RESERVE) {
@@ -3180,11 +3180,11 @@ void PlayerOffersOnSelect10(void)
             i--;
         }
 
-        TeamFileEx *teamPtr = GetTeamPointer(selTeamNumber);
-        int16_t result = ShowSquad((TeamFile *)teamPtr, aSelectPlayerTo_0,
+        TeamFileEx *teamPtr = GetTeamPointer(_selTeamNumber);
+        int16_t result = ShowSquad((TeamFile *)teamPtr, _aSelectPlayerTo_0,
                                      d7mask, 0, 0, 0xFFFF);
         if (result >= 0) {
-            offerOrdinals.offerSwapPlayerOrdinal = result;
+            _offerOrdinals.offerSwapPlayerOrdinal = result;
         }
     }
 
@@ -3198,18 +3198,18 @@ void PlayerOffersOnSelect11(void)
 {
     uint32_t d7mask = 0;
     /* Mark the current swap player as ineligible */
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
-        d7mask |= (1u << (uint16_t)offerOrdinals.offerSwapPlayerOrdinal);
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+        d7mask |= (1u << (uint16_t)_offerOrdinals.offerSwapPlayerOrdinal);
     }
 
-    if (offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+    if (_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
         /* Already have an extra player: clear it */
-        offerOrdinals.offerExtraPlayerOrdinal = -1;
+        _offerOrdinals.offerExtraPlayerOrdinal = -1;
     } else {
         /* Build mask of ineligible players */
-        int16_t i = careerNumPlayers - 1;
+        int16_t i = _careerNumPlayers - 1;
         while (i >= 0) {
-            uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
             PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
             if ((uint8_t)plf->form == PLAYER_FORM_TRIALIST || (uint8_t)plf->form == PLAYER_FORM_RESERVE) {
                 d7mask |= (1u << i);
@@ -3219,11 +3219,11 @@ void PlayerOffersOnSelect11(void)
             i--;
         }
 
-        TeamFileEx *teamPtr = GetTeamPointer(selTeamNumber);
-        int16_t result = ShowSquad((TeamFile *)teamPtr, aSelectPlayerTo_0,
+        TeamFileEx *teamPtr = GetTeamPointer(_selTeamNumber);
+        int16_t result = ShowSquad((TeamFile *)teamPtr, _aSelectPlayerTo_0,
                                      d7mask, 0, 0, 0xFFFF);
         if (result >= 0) {
-            offerOrdinals.offerExtraPlayerOrdinal = result;
+            _offerOrdinals.offerExtraPlayerOrdinal = result;
         }
     }
 
@@ -3236,20 +3236,20 @@ __attribute__((used, externally_visible))
 void PlayerOffersOnSelect12(void)
 {
     /* Check if offer parameters changed from last time */
-    if (offerOrdinals.offerPrimaryPlayerOrdinal != lastOfferPrimaryPlayerOrdinal ||
-        (uint16_t)offerOrdinals.numExtraPlayersWanted != lastOfferExtraPlayersWanted ||
-        (uint16_t)offerOrdinals.offerSwapPlayerOrdinal != lastOfferSwapPlayerOrdinal ||
-        (uint16_t)offerOrdinals.offerExtraPlayerOrdinal != lastOfferExtraPlayerOrdinal) {
+    if (_offerOrdinals.offerPrimaryPlayerOrdinal != _lastOfferPrimaryPlayerOrdinal ||
+        (uint16_t)_offerOrdinals.numExtraPlayersWanted != _lastOfferExtraPlayersWanted ||
+        (uint16_t)_offerOrdinals.offerSwapPlayerOrdinal != _lastOfferSwapPlayerOrdinal ||
+        (uint16_t)_offerOrdinals.offerExtraPlayerOrdinal != _lastOfferExtraPlayerOrdinal) {
 
-        offerNegotiationAttemptCount = 0;
-        timeToNegotiate--;
-        lastOfferPrimaryPlayerOrdinal = offerOrdinals.offerPrimaryPlayerOrdinal;
-        lastOfferExtraPlayersWanted = (uint16_t)offerOrdinals.numExtraPlayersWanted;
-        lastOfferSwapPlayerOrdinal = (uint16_t)offerOrdinals.offerSwapPlayerOrdinal;
-        lastOfferExtraPlayerOrdinal = (uint16_t)offerOrdinals.offerExtraPlayerOrdinal;
+        _offerNegotiationAttemptCount = 0;
+        _timeToNegotiate--;
+        _lastOfferPrimaryPlayerOrdinal = _offerOrdinals.offerPrimaryPlayerOrdinal;
+        _lastOfferExtraPlayersWanted = (uint16_t)_offerOrdinals.numExtraPlayersWanted;
+        _lastOfferSwapPlayerOrdinal = (uint16_t)_offerOrdinals.offerSwapPlayerOrdinal;
+        _lastOfferExtraPlayerOrdinal = (uint16_t)_offerOrdinals.offerExtraPlayerOrdinal;
     }
 
-    offerNegotiationAttemptCount++;
+    _offerNegotiationAttemptCount++;
     int16_t result = EvaluateTransferOfferNegotiation();
     if (result < 0) {
         /* Rejected: set current entry to 9 */
@@ -3259,7 +3259,7 @@ void PlayerOffersOnSelect12(void)
     if (result > 0) {
         /* Accepted: finalize the purchase */
         Career_AcceptOffer_BuyPlayer();
-        transferCompleted = 1;
+        _transferCompleted = 1;
     }
     /* result == 0 or > 0: exit menu */
     SetExitMenuFlag();
@@ -3269,14 +3269,14 @@ void PlayerOffersOnSelect12(void)
 __attribute__((used, externally_visible))
 void PlayerOffersAdjustOfferAmount(void)
 {
-    uint16_t amount = offerOrdinals.offerAmount;
-    int32_t bal = newBalance;
+    uint16_t amount = _offerOrdinals.offerAmount;
+    int32_t bal = _newBalance;
     if (bal < 0)
         bal = 0;
     uint16_t maxAmount = (uint16_t)((uint32_t)bal / 1000u);
 
     /* Determine direction from controlMask */
-    if (controlMask == 0x81 || controlMask == 0x101) {
+    if (_controlMask == 0x81 || _controlMask == 0x101) {
         /* Right/increase */
         uint16_t step = 5;
         if (amount >= 100) step = 10;
@@ -3291,7 +3291,7 @@ void PlayerOffersAdjustOfferAmount(void)
             amount = 50000;
         if (amount > maxAmount)
             amount = maxAmount;
-    } else if (controlMask == 0x41 || controlMask == 0x201) {
+    } else if (_controlMask == 0x41 || _controlMask == 0x201) {
         /* Left/decrease */
         uint16_t step = 5;
         if (amount > 100) step = 10;
@@ -3319,35 +3319,35 @@ void PlayerOffersAdjustOfferAmount(void)
     }
 
 done:
-    offerOrdinals.offerAmount = amount;
+    _offerOrdinals.offerAmount = amount;
     PlayerOffersUpdateOfferAmountText();
-    CallDrawMenuItem(&menuEntries[9]);
+    CallDrawMenuItem(&_menuEntries[9]);
 }
 
 /* =============================================================== */
 /* Chunk 166: TransferPlayerInit + ThirdPartyOfferMenuInit          */
 /* =============================================================== */
 
-extern int16_t  teamWillingToSellOrExchange;
-extern uint8_t  managerSexBuffer[];
-extern uint8_t  managerSurnameBuffer[];
-extern void *sellExchangeStrings[];
-extern char    *sellExchangeResponseStrings[];  /* native-width pointer table; storage is char *[12] in swos_data_typed_stubs.c */
-extern uint8_t  aDearAB[];
-extern uint8_t  aInADealWithAFo[];
-extern uint8_t  aUnlessTheOffer[];
-extern uint8_t  aWeHereAtAWould[];
-extern uint8_t  fundsBuffer[];
-extern uint8_t  aWeHereAtAWishT[];
-extern uint8_t  aWeHereAtAWishT_0[];
-extern uint8_t  aOurOfferToBuy[];
-extern uint8_t  aWeHereAtAWishT_1[];
-extern uint8_t  aImproveOurOffe[];
-extern uint8_t  aWeHereAtARefus[];
-extern uint8_t  aImproveOnOurOf[];
-extern uint8_t  aWeHereAtAWithd[];
-extern uint8_t  aOfferOn[];
-extern uint8_t  aFromAInExchang[];
+extern int16_t  _teamWillingToSellOrExchange;
+extern uint8_t  _managerSexBuffer[];
+extern uint8_t  _managerSurnameBuffer[];
+extern void *_sellExchangeStrings[];
+extern char    *_sellExchangeResponseStrings[];  /* native-width pointer table; storage is char *[12] in swos_data_typed_stubs.c */
+extern uint8_t  _aDearAB[];
+extern uint8_t  _aInADealWithAFo[];
+extern uint8_t  _aUnlessTheOffer[];
+extern uint8_t  _aWeHereAtAWould[];
+extern uint8_t  _fundsBuffer[];
+extern uint8_t  _aWeHereAtAWishT[];
+extern uint8_t  _aWeHereAtAWishT_0[];
+extern uint8_t  _aOurOfferToBuy[];
+extern uint8_t  _aWeHereAtAWishT_1[];
+extern uint8_t  _aImproveOurOffe[];
+extern uint8_t  _aWeHereAtARefus[];
+extern uint8_t  _aImproveOnOurOf[];
+extern uint8_t  _aWeHereAtAWithd[];
+extern uint8_t  _aOfferOn[];
+extern uint8_t  _aFromAInExchang[];
 
 extern void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                             uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
@@ -3364,100 +3364,100 @@ void TransferPlayerInit(void *entryPtr)
     (void)entryPtr;
 
     /* Handle menu entry visibility based on teamWillingToSellOrExchange */
-    if (teamWillingToSellOrExchange >= 1 && teamWillingToSellOrExchange <= 4) {
+    if (_teamWillingToSellOrExchange >= 1 && _teamWillingToSellOrExchange <= 4) {
         /* Willing to sell/exchange: hide entry 10, shift entry 11 left */
-        menuEntries[10].isInvisible = 1;
-        menuEntries[11].x -= 0x3C;
-    } else if (teamWillingToSellOrExchange == 0) {
+        _menuEntries[10].isInvisible = 1;
+        _menuEntries[11].x -= 0x3C;
+    } else if (_teamWillingToSellOrExchange == 0) {
         /* Not willing at all: hide 10+11, show 12, select entry 12 */
-        menuEntries[10].isInvisible = 1;
-        menuEntries[11].isInvisible = 1;
-        menuEntries[12].isInvisible = 0;
+        _menuEntries[10].isInvisible = 1;
+        _menuEntries[11].isInvisible = 1;
+        _menuEntries[12].isInvisible = 0;
         SetCurrentEntry(12);
     }
 
     /* Format "DEAR %a %b" into entry 1 */
-    PrintFormatted(aDearAB, (uint8_t *)menuEntries[1].fg,
+    PrintFormatted(_aDearAB, (uint8_t *)_menuEntries[1].fg,
                     0, 0, 0, 0, 0, 0, 0,
-                    managerSexBuffer, managerSurnameBuffer, 0);
+                    _managerSexBuffer, _managerSurnameBuffer, 0);
 
     /* Select appropriate sell/exchange string from table. The table is
      * `void *[4]` (native pointer width), so walk as `void **` — was
      * `uint32_t *` which read half-pointers on 64-bit and warned at the
      * (uint8_t *)<u32> cast below. */
-    void **strPair = sellExchangeStrings;
-    if (teamWillingToSellOrExchange != 0)
+    void **strPair = _sellExchangeStrings;
+    if (_teamWillingToSellOrExchange != 0)
         strPair += 2;
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0)
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0)
         strPair += 1;
 
     /* Get offering team name and format into entry 2 */
-    TeamFileEx *teamPtr = GetTeamPointer(offerOrdinals.teamOffering);
+    TeamFileEx *teamPtr = GetTeamPointer(_offerOrdinals.teamOffering);
     uint8_t *teamName = (uint8_t *)teamPtr->team.teamName;
     PrintFormatted((const uint8_t *)*strPair,
-                    (uint8_t *)menuEntries[2].fg,
+                    (uint8_t *)_menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     teamName, 0, 0);
 
     /* Get our team name and format "IN A DEAL WITH %a FOR" into entry 3 */
-    teamPtr = GetTeamPointer(selTeamNumber);
+    teamPtr = GetTeamPointer(_selTeamNumber);
     teamName = (uint8_t *)teamPtr->team.teamName;
-    PrintFormatted(aInADealWithAFo, (uint8_t *)menuEntries[3].fg,
+    PrintFormatted(_aInADealWithAFo, (uint8_t *)_menuEntries[3].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     teamName, 0, 0);
 
-    int16_t twse = teamWillingToSellOrExchange;
+    int16_t twse = _teamWillingToSellOrExchange;
     if (twse < 0) {
         /* Negative: team wants more money. Amount = -twse * 1000 */
         uint16_t amountNeeded = (uint16_t)(-twse);
-        Int2Pounds((uint32_t)amountNeeded * 1000, fundsBuffer);
+        Int2Pounds((uint32_t)amountNeeded * 1000, _fundsBuffer);
 
         /* Show entry 4: "UNLESS THE OFFER IS RAISED BY %a" */
-        menuEntries[4].isInvisible = 0;
-        PrintFormatted(aUnlessTheOffer, (uint8_t *)menuEntries[4].fg,
+        _menuEntries[4].isInvisible = 0;
+        PrintFormatted(_aUnlessTheOffer, (uint8_t *)_menuEntries[4].fg,
                         0, 0, 0, 0, 0, 0, 0,
-                        fundsBuffer, 0, 0);
+                        _fundsBuffer, 0, 0);
 
         /* Show entry 5: "WE HERE AT %a WOULD LIKE TO OFFER..." */
-        menuEntries[5].isInvisible = 0;
-        PrintFormatted(aWeHereAtAWould, (uint8_t *)menuEntries[5].fg,
+        _menuEntries[5].isInvisible = 0;
+        PrintFormatted(_aWeHereAtAWould, (uint8_t *)_menuEntries[5].fg,
                         0, 0, 0, 0, 0, 0, 0,
-                        fundsBuffer, 0, 0);
+                        _fundsBuffer, 0, 0);
     } else {
         /* Non-negative: use response string lookup table.
          * Walk as `char **` (native width); was `uint32_t *` which
          * read half-pointers on 64-bit. */
-        char **respPair = sellExchangeResponseStrings + (twse * 2);
+        char **respPair = _sellExchangeResponseStrings + (twse * 2);
         if (respPair[0] != 0) {
-            menuEntries[4].isInvisible = 0;
+            _menuEntries[4].isInvisible = 0;
             StringCopy((const uint8_t *)respPair[0],
-                        (uint8_t *)menuEntries[4].fg);
+                        (uint8_t *)_menuEntries[4].fg);
         }
         if (respPair[1] != 0) {
-            menuEntries[5].isInvisible = 0;
+            _menuEntries[5].isInvisible = 0;
             StringCopy((const uint8_t *)respPair[1],
-                        (uint8_t *)menuEntries[5].fg);
+                        (uint8_t *)_menuEntries[5].fg);
         }
     }
 
     /* Format offer amount into entry 9's fg string buffer */
-    Int2Pounds((uint32_t)offerOrdinals.offerAmount * 1000,
-                (uint8_t *)menuEntries[9].fg);
+    Int2Pounds((uint32_t)_offerOrdinals.offerAmount * 1000,
+                (uint8_t *)_menuEntries[9].fg);
 
     /* Entry 6 (plus marker): visible only if offerOrdinals.numExtraPlayersWanted >= 0 */
-    menuEntries[6].isInvisible = 1;
-    if (offerOrdinals.numExtraPlayersWanted >= 0)
-        menuEntries[6].isInvisible = 0;
+    _menuEntries[6].isInvisible = 1;
+    if (_offerOrdinals.numExtraPlayersWanted >= 0)
+        _menuEntries[6].isInvisible = 0;
 
     /* Entry 7 (swap player plus): visible only if offerOrdinals.offerSwapPlayerOrdinal >= 0 */
-    menuEntries[7].isInvisible = 1;
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0)
-        menuEntries[7].isInvisible = 0;
+    _menuEntries[7].isInvisible = 1;
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0)
+        _menuEntries[7].isInvisible = 0;
 
     /* Entry 8 (extra player plus): visible only if offerOrdinals.offerExtraPlayerOrdinal >= 0 */
-    menuEntries[8].isInvisible = 1;
-    if (offerOrdinals.offerExtraPlayerOrdinal >= 0)
-        menuEntries[8].isInvisible = 0;
+    _menuEntries[8].isInvisible = 1;
+    if (_offerOrdinals.offerExtraPlayerOrdinal >= 0)
+        _menuEntries[8].isInvisible = 0;
 }
 
 /* ThirdPartyOfferMenuInit (Chunk 166) — init for thirdPartyOfferMenu */
@@ -3467,78 +3467,78 @@ void ThirdPartyOfferMenuInit(void *entryPtr)
     (void)entryPtr;
 
     /* Format offer amount into entry 8's fg string buffer */
-    Int2Pounds((uint32_t)offerOrdinals.offerAmount * 1000,
-                (uint8_t *)menuEntries[8].fg);
+    Int2Pounds((uint32_t)_offerOrdinals.offerAmount * 1000,
+                (uint8_t *)_menuEntries[8].fg);
 
     /* "DEAR %a %b" into entry 1 */
-    PrintFormatted(aDearAB, (uint8_t *)menuEntries[1].fg,
+    PrintFormatted(_aDearAB, (uint8_t *)_menuEntries[1].fg,
                     0, 0, 0, 0, 0, 0, 0,
-                    managerSexBuffer, managerSurnameBuffer, 0);
+                    _managerSexBuffer, _managerSurnameBuffer, 0);
 
     /* Get offering team name */
-    TeamFileEx *teamPtr = GetTeamPointer(offerOrdinals.teamOffering);
+    TeamFileEx *teamPtr = GetTeamPointer(_offerOrdinals.teamOffering);
     uint8_t *teamName = (uint8_t *)teamPtr->team.teamName;
 
-    if (offerStatus == 0) {
+    if (_offerStatus == 0) {
         /* "WE HERE AT %a WISH TO BUY" into entry 2 */
-        PrintFormatted(aWeHereAtAWishT, (uint8_t *)menuEntries[2].fg,
+        PrintFormatted(_aWeHereAtAWishT, (uint8_t *)_menuEntries[2].fg,
                         0, 0, 0, 0, 0, 0, 0,
                         teamName, 0, 0);
     } else {
         /* Improved/further/refused/withdrawn offer — entry 2 adjusted */
-        menuEntries[2].y -= 8;
+        _menuEntries[2].y -= 8;
 
         const uint8_t *fmtLine1;
         const uint8_t *fmtLine2;
-        if (offerStatus == 1) {
-            fmtLine1 = aWeHereAtAWishT_0;  /* "WE HERE AT %a WISH TO IMPROVE" */
-            fmtLine2 = aOurOfferToBuy;      /* "OUR OFFER TO BUY" */
-        } else if (offerStatus == 2) {
-            fmtLine1 = aWeHereAtAWishT_1;  /* "WE HERE AT %a WISH TO FURTHER" */
-            fmtLine2 = aImproveOurOffe;    /* "IMPROVE OUR OFFER TO BUY" */
-        } else if (offerStatus == 3) {
-            fmtLine1 = aWeHereAtARefus;    /* "WE HERE AT %a REFUSE TO FURTHER" */
-            fmtLine2 = aImproveOnOurOf;    /* "IMPROVE ON OUR OFFER TO BUY" */
+        if (_offerStatus == 1) {
+            fmtLine1 = _aWeHereAtAWishT_0;  /* "WE HERE AT %a WISH TO IMPROVE" */
+            fmtLine2 = _aOurOfferToBuy;      /* "OUR OFFER TO BUY" */
+        } else if (_offerStatus == 2) {
+            fmtLine1 = _aWeHereAtAWishT_1;  /* "WE HERE AT %a WISH TO FURTHER" */
+            fmtLine2 = _aImproveOurOffe;    /* "IMPROVE OUR OFFER TO BUY" */
+        } else if (_offerStatus == 3) {
+            fmtLine1 = _aWeHereAtARefus;    /* "WE HERE AT %a REFUSE TO FURTHER" */
+            fmtLine2 = _aImproveOnOurOf;    /* "IMPROVE ON OUR OFFER TO BUY" */
         } else {
-            fmtLine1 = aWeHereAtAWithd;    /* "WE HERE AT %a WITHDRAW OUR" */
-            fmtLine2 = aOfferOn;           /* "OFFER ON" */
+            fmtLine1 = _aWeHereAtAWithd;    /* "WE HERE AT %a WITHDRAW OUR" */
+            fmtLine2 = _aOfferOn;           /* "OFFER ON" */
         }
 
-        PrintFormatted(fmtLine1, (uint8_t *)menuEntries[2].fg,
+        PrintFormatted(fmtLine1, (uint8_t *)_menuEntries[2].fg,
                         0, 0, 0, 0, 0, 0, 0,
                         teamName, 0, 0);
 
         /* Show entry 3 with line 2 text */
-        menuEntries[3].isInvisible = 0;
-        PrintFormatted(fmtLine2, (uint8_t *)menuEntries[3].fg,
+        _menuEntries[3].isInvisible = 0;
+        PrintFormatted(fmtLine2, (uint8_t *)_menuEntries[3].fg,
                         0, 0, 0, 0, 0, 0, 0,
                         teamName, 0, 0);
 
         /* Shift entry 1 up by 8 */
-        menuEntries[1].y -= 8;
+        _menuEntries[1].y -= 8;
     }
 
     /* "FROM %a IN EXCHANGE FOR" into entry 4 */
-    teamPtr = GetTeamPointer(selTeamNumber);
+    teamPtr = GetTeamPointer(_selTeamNumber);
     teamName = (uint8_t *)teamPtr->team.teamName;
-    PrintFormatted(aFromAInExchang, (uint8_t *)menuEntries[4].fg,
+    PrintFormatted(_aFromAInExchang, (uint8_t *)_menuEntries[4].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     teamName, 0, 0);
 
     /* Entry 5: visible only if offerOrdinals.numExtraPlayersWanted >= 0 */
-    menuEntries[5].isInvisible = 1;
-    if (offerOrdinals.numExtraPlayersWanted >= 0)
-        menuEntries[5].isInvisible = 0;
+    _menuEntries[5].isInvisible = 1;
+    if (_offerOrdinals.numExtraPlayersWanted >= 0)
+        _menuEntries[5].isInvisible = 0;
 
     /* Entry 6: visible only if offerOrdinals.offerSwapPlayerOrdinal >= 0 */
-    menuEntries[6].isInvisible = 1;
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0)
-        menuEntries[6].isInvisible = 0;
+    _menuEntries[6].isInvisible = 1;
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0)
+        _menuEntries[6].isInvisible = 0;
 
     /* Entry 7: visible only if offerOrdinals.offerExtraPlayerOrdinal >= 0 */
-    menuEntries[7].isInvisible = 1;
-    if (offerOrdinals.offerExtraPlayerOrdinal >= 0)
-        menuEntries[7].isInvisible = 0;
+    _menuEntries[7].isInvisible = 1;
+    if (_offerOrdinals.offerExtraPlayerOrdinal >= 0)
+        _menuEntries[7].isInvisible = 0;
 
     /* Handle offerStatus < 0 (negative): withdrawn offer — hide most entries.
      *
@@ -3548,28 +3548,28 @@ void ThirdPartyOfferMenuInit(void *entryPtr)
      * those three action buttons even though the offer has been
      * withdrawn, instead of being left with only EXIT as the Amiga
      * intended. */
-    if ((int16_t)offerStatus < 0) {
-        menuEntries[4].isInvisible = 1;
-        menuEntries[6].isInvisible = 1;
-        menuEntries[7].isInvisible = 1;
-        menuEntries[8].isInvisible = 1;
-        menuEntries[9].isInvisible = 1;
-        menuEntries[10].isInvisible = 1; /* ACCEPT OFFER */
-        menuEntries[11].isInvisible = 1; /* ASK FOR MORE */
-        menuEntries[12].isInvisible = 1; /* REJECT OFFER */
-        menuEntries[13].isInvisible = 1;
-        menuEntries[17].isInvisible = 1;
-        menuEntries[18].isInvisible = 1;
-        menuEntries[14].isInvisible = 0; /* EXIT */
+    if ((int16_t)_offerStatus < 0) {
+        _menuEntries[4].isInvisible = 1;
+        _menuEntries[6].isInvisible = 1;
+        _menuEntries[7].isInvisible = 1;
+        _menuEntries[8].isInvisible = 1;
+        _menuEntries[9].isInvisible = 1;
+        _menuEntries[10].isInvisible = 1; /* ACCEPT OFFER */
+        _menuEntries[11].isInvisible = 1; /* ASK FOR MORE */
+        _menuEntries[12].isInvisible = 1; /* REJECT OFFER */
+        _menuEntries[13].isInvisible = 1;
+        _menuEntries[17].isInvisible = 1;
+        _menuEntries[18].isInvisible = 1;
+        _menuEntries[14].isInvisible = 0; /* EXIT */
         SetCurrentEntry(14);
     }
 
     /* Handle offerStatus == 3: refuse to improve further — hide askForMore, widen accept/reject */
-    if (offerStatus == 3) {
-        menuEntries[11].isInvisible = 1;
-        menuEntries[10].dwWidth += 0x32;
-        menuEntries[12].x -= 0x33;
-        menuEntries[12].dwWidth += 0x33;
+    if (_offerStatus == 3) {
+        _menuEntries[11].isInvisible = 1;
+        _menuEntries[10].dwWidth += 0x32;
+        _menuEntries[12].x -= 0x33;
+        _menuEntries[12].dwWidth += 0x33;
     }
 }
 
@@ -3578,58 +3578,58 @@ void ThirdPartyOfferMenuInit(void *entryPtr)
  * ================================================================ */
 
 /* Format string pointer globals (BSS in asm — 12 pointers) */
-extern uintptr_t offerFmtSinglePlayer;
-extern uintptr_t offerFmtTwoPlayers;
-extern uintptr_t exchangeFmtSinglePlayer;
-extern uintptr_t exchangeFmtTwoPlayers;
-extern uintptr_t offerFmtLine1a;
-extern uintptr_t offerFmtLine2a;
-extern uintptr_t offerFmtLine1b;
-extern uintptr_t offerFmtLine2b;
-extern uintptr_t exchangeFmtLine1a;
-extern uintptr_t exchangeFmtLine2a;
-extern uintptr_t exchangeFmtLine1b;
-extern uintptr_t exchangeFmtLine2b;
+extern uintptr_t _offerFmtSinglePlayer;
+extern uintptr_t _offerFmtTwoPlayers;
+extern uintptr_t _exchangeFmtSinglePlayer;
+extern uintptr_t _exchangeFmtTwoPlayers;
+extern uintptr_t _offerFmtLine1a;
+extern uintptr_t _offerFmtLine2a;
+extern uintptr_t _offerFmtLine1b;
+extern uintptr_t _offerFmtLine2b;
+extern uintptr_t _exchangeFmtLine1a;
+extern uintptr_t _exchangeFmtLine2a;
+extern uintptr_t _exchangeFmtLine1b;
+extern uintptr_t _exchangeFmtLine2b;
 
 /* Format string labels */
-extern uint8_t aAOfferForB[];
-extern uint8_t aAOfferForBAndC[];
-extern uint8_t aAExchangeOffer[];
-extern uint8_t aAExchangeOffer_0[];
-extern uint8_t aAOfferFor[];
-extern uint8_t aB[];
-extern uint8_t aAOfferFor_0[];
-extern uint8_t aBAndC[];
-extern uint8_t aAExchangeOffer_1[];
-extern uint8_t aB_0[];
-extern uint8_t aAExchangeOffer_2[];
-extern uint8_t aBAndC_0[];
-extern uint8_t aAFurtherImprov[];
-extern uint8_t aAFurtherImprov_0[];
-extern uint8_t aAFurtherImprov_1[];
-extern uint8_t aAFurtherImprov_2[];
-extern uint8_t aAFurtherImprov_3[];
-extern uint8_t aB_3[];
-extern uint8_t aAFurtherImprov_4[];
-extern uint8_t aBAndC_3[];
-extern uint8_t aAFurtherImprov_5[];
-extern uint8_t aOfferForB[];
-extern uint8_t aAFurtherImprov_6[];
-extern uint8_t aBAndC_4[];
-extern uint8_t aAImprovedOffer[];
-extern uint8_t aAImprovedOffer_0[];
-extern uint8_t aAImprovedExcha[];
-extern uint8_t aAImprovedExcha_0[];
-extern uint8_t aAImprovedOffer_1[];
-extern uint8_t aB_1[];
-extern uint8_t aAImprovedOffer_2[];
-extern uint8_t aBAndC_1[];
-extern uint8_t aAImprovedExcha_1[];
-extern uint8_t aB_2[];
-extern uint8_t aAImprovedExcha_2[];
-extern uint8_t aBAndC_2[];
+extern uint8_t _aAOfferForB[];
+extern uint8_t _aAOfferForBAndC[];
+extern uint8_t _aAExchangeOffer[];
+extern uint8_t _aAExchangeOffer_0[];
+extern uint8_t _aAOfferFor[];
+extern uint8_t _aB[];
+extern uint8_t _aAOfferFor_0[];
+extern uint8_t _aBAndC[];
+extern uint8_t _aAExchangeOffer_1[];
+extern uint8_t _aB_0[];
+extern uint8_t _aAExchangeOffer_2[];
+extern uint8_t _aBAndC_0[];
+extern uint8_t _aAFurtherImprov[];
+extern uint8_t _aAFurtherImprov_0[];
+extern uint8_t _aAFurtherImprov_1[];
+extern uint8_t _aAFurtherImprov_2[];
+extern uint8_t _aAFurtherImprov_3[];
+extern uint8_t _aB_3[];
+extern uint8_t _aAFurtherImprov_4[];
+extern uint8_t _aBAndC_3[];
+extern uint8_t _aAFurtherImprov_5[];
+extern uint8_t _aOfferForB[];
+extern uint8_t _aAFurtherImprov_6[];
+extern uint8_t _aBAndC_4[];
+extern uint8_t _aAImprovedOffer[];
+extern uint8_t _aAImprovedOffer_0[];
+extern uint8_t _aAImprovedExcha[];
+extern uint8_t _aAImprovedExcha_0[];
+extern uint8_t _aAImprovedOffer_1[];
+extern uint8_t _aB_1[];
+extern uint8_t _aAImprovedOffer_2[];
+extern uint8_t _aBAndC_1[];
+extern uint8_t _aAImprovedExcha_1[];
+extern uint8_t _aB_2[];
+extern uint8_t _aAImprovedExcha_2[];
+extern uint8_t _aBAndC_2[];
 
-extern uint8_t fundsBuffer[];
+extern uint8_t _fundsBuffer[];
 extern uint16_t GetStringLength(const uint8_t *str);
 
 /* ================================================================
@@ -3648,39 +3648,39 @@ void OffersAfterDrawCommon(void *entryPtr)
     MenuEntry *a5 = (MenuEntry *)entryPtr;
 
     /* Calculate offer index: d7 = a5->ordinal - entries[2].ordinal */
-    int16_t d7 = (int16_t)a5->ordinal - (int16_t)menuEntries[2].ordinal;
+    int16_t d7 = (int16_t)a5->ordinal - (int16_t)_menuEntries[2].ordinal;
 
     /* Set y-positions and make entries 7-10 invisible (initially) */
-    menuEntries[7].y = a5->y;
-    menuEntries[7].isInvisible = 1;
+    _menuEntries[7].y = a5->y;
+    _menuEntries[7].isInvisible = 1;
 
-    menuEntries[8].y = a5->y + 2;
-    menuEntries[8].isInvisible = 1;
+    _menuEntries[8].y = a5->y + 2;
+    _menuEntries[8].isInvisible = 1;
 
-    menuEntries[9].y = a5->y + 11;
-    menuEntries[9].isInvisible = 1;
+    _menuEntries[9].y = a5->y + 11;
+    _menuEntries[9].isInvisible = 1;
 
-    menuEntries[10].y = a5->y + 7;
-    menuEntries[10].isInvisible = 1;
+    _menuEntries[10].y = a5->y + 7;
+    _menuEntries[10].isInvisible = 1;
 
     /* ENTRY_NUMBER: store offer index+1 in entry 10's fg-word. */
-    menuEntries[10].fgWord = (uint16_t)(d7 + 1);
+    _menuEntries[10].fgWord = (uint16_t)(d7 + 1);
 
     /* Mark current entry as disabled */
     a5->isDisabled = 1;
 
     /* If d7 >= numOffers, skip offer rendering */
-    if ((uint16_t)d7 >= numOffers)
+    if ((uint16_t)d7 >= _numOffers)
         goto drawAndReturn;
 
     /* Point to the offer in transferOfferTable */
-    TransferOfferEntry *offer = &((TransferOfferEntry *)transferOfferTable)[(uint16_t)d7];
+    TransferOfferEntry *offer = &((TransferOfferEntry *)_transferOfferTable)[(uint16_t)d7];
 
     a5->isDisabled = 0;
-    menuEntries[7].isInvisible = 0;
-    menuEntries[8].isInvisible = 0;
-    menuEntries[9].isInvisible = 0;
-    menuEntries[10].isInvisible = 0;
+    _menuEntries[7].isInvisible = 0;
+    _menuEntries[8].isInvisible = 0;
+    _menuEntries[9].isInvisible = 0;
+    _menuEntries[10].isInvisible = 0;
 
     /* Set color based on offer seen flag (byte 0x0D) */
     uint16_t colorBits = 0;
@@ -3689,58 +3689,58 @@ void OffersAfterDrawCommon(void *entryPtr)
 
     /* Apply color to stringFlags of entries 7-10 (low 4 bits) */
     for (int i = 0; i < 4; i++) {
-        MenuEntry *e = &menuEntries[7 + i];
+        MenuEntry *e = &_menuEntries[7 + i];
         uint16_t sf = e->stringFlags;
         sf = (sf & 0xFFF0) | colorBits;
         e->stringFlags = sf;
     }
 
     /* Reset entry 7's y to match a5's y */
-    menuEntries[7].y = a5->y;
+    _menuEntries[7].y = a5->y;
 
     /* Set up format string pointers: default (normal offer) */
-    offerFmtSinglePlayer   = (uintptr_t)aAOfferForB;
-    offerFmtTwoPlayers     = (uintptr_t)aAOfferForBAndC;
-    exchangeFmtSinglePlayer = (uintptr_t)aAExchangeOffer;
-    exchangeFmtTwoPlayers   = (uintptr_t)aAExchangeOffer_0;
-    offerFmtLine1a          = (uintptr_t)aAOfferFor;
-    offerFmtLine2a          = (uintptr_t)aB;
-    offerFmtLine1b          = (uintptr_t)aAOfferFor_0;
-    offerFmtLine2b          = (uintptr_t)aBAndC;
-    exchangeFmtLine1a       = (uintptr_t)aAExchangeOffer_1;
-    exchangeFmtLine2a       = (uintptr_t)aB_0;
-    exchangeFmtLine1b       = (uintptr_t)aAExchangeOffer_2;
-    exchangeFmtLine2b       = (uintptr_t)aBAndC_0;
+    _offerFmtSinglePlayer   = (uintptr_t)_aAOfferForB;
+    _offerFmtTwoPlayers     = (uintptr_t)_aAOfferForBAndC;
+    _exchangeFmtSinglePlayer = (uintptr_t)_aAExchangeOffer;
+    _exchangeFmtTwoPlayers   = (uintptr_t)_aAExchangeOffer_0;
+    _offerFmtLine1a          = (uintptr_t)_aAOfferFor;
+    _offerFmtLine2a          = (uintptr_t)_aB;
+    _offerFmtLine1b          = (uintptr_t)_aAOfferFor_0;
+    _offerFmtLine2b          = (uintptr_t)_aBAndC;
+    _exchangeFmtLine1a       = (uintptr_t)_aAExchangeOffer_1;
+    _exchangeFmtLine2a       = (uintptr_t)_aB_0;
+    _exchangeFmtLine1b       = (uintptr_t)_aAExchangeOffer_2;
+    _exchangeFmtLine2b       = (uintptr_t)_aBAndC_0;
 
     /* Check for "further improved" (negotiationStep2Amount == 0xFFFF) */
     if (offer->negotiationStep2Amount == (int16_t)0xFFFF) {
-        offerFmtSinglePlayer   = (uintptr_t)aAFurtherImprov;
-        offerFmtTwoPlayers     = (uintptr_t)aAFurtherImprov_0;
-        exchangeFmtSinglePlayer = (uintptr_t)aAFurtherImprov_1;
-        exchangeFmtTwoPlayers   = (uintptr_t)aAFurtherImprov_2;
-        offerFmtLine1a          = (uintptr_t)aAFurtherImprov_3;
-        offerFmtLine2a          = (uintptr_t)aB_3;
-        offerFmtLine1b          = (uintptr_t)aAFurtherImprov_4;
-        offerFmtLine2b          = (uintptr_t)aBAndC_3;
-        exchangeFmtLine1a       = (uintptr_t)aAFurtherImprov_5;
-        exchangeFmtLine2a       = (uintptr_t)aOfferForB;
-        exchangeFmtLine1b       = (uintptr_t)aAFurtherImprov_6;
-        exchangeFmtLine2b       = (uintptr_t)aBAndC_4;
+        _offerFmtSinglePlayer   = (uintptr_t)_aAFurtherImprov;
+        _offerFmtTwoPlayers     = (uintptr_t)_aAFurtherImprov_0;
+        _exchangeFmtSinglePlayer = (uintptr_t)_aAFurtherImprov_1;
+        _exchangeFmtTwoPlayers   = (uintptr_t)_aAFurtherImprov_2;
+        _offerFmtLine1a          = (uintptr_t)_aAFurtherImprov_3;
+        _offerFmtLine2a          = (uintptr_t)_aB_3;
+        _offerFmtLine1b          = (uintptr_t)_aAFurtherImprov_4;
+        _offerFmtLine2b          = (uintptr_t)_aBAndC_3;
+        _exchangeFmtLine1a       = (uintptr_t)_aAFurtherImprov_5;
+        _exchangeFmtLine2a       = (uintptr_t)_aOfferForB;
+        _exchangeFmtLine1b       = (uintptr_t)_aAFurtherImprov_6;
+        _exchangeFmtLine2b       = (uintptr_t)_aBAndC_4;
     }
     /* Check for "improved" (negotiationStep1Amount == 0xFFFF) */
     else if (offer->negotiationStep1Amount == (int16_t)0xFFFF) {
-        offerFmtSinglePlayer   = (uintptr_t)aAImprovedOffer;
-        offerFmtTwoPlayers     = (uintptr_t)aAImprovedOffer_0;
-        exchangeFmtSinglePlayer = (uintptr_t)aAImprovedExcha;
-        exchangeFmtTwoPlayers   = (uintptr_t)aAImprovedExcha_0;
-        offerFmtLine1a          = (uintptr_t)aAImprovedOffer_1;
-        offerFmtLine2a          = (uintptr_t)aB_1;
-        offerFmtLine1b          = (uintptr_t)aAImprovedOffer_2;
-        offerFmtLine2b          = (uintptr_t)aBAndC_1;
-        exchangeFmtLine1a       = (uintptr_t)aAImprovedExcha_1;
-        exchangeFmtLine2a       = (uintptr_t)aB_2;
-        exchangeFmtLine1b       = (uintptr_t)aAImprovedExcha_2;
-        exchangeFmtLine2b       = (uintptr_t)aBAndC_2;
+        _offerFmtSinglePlayer   = (uintptr_t)_aAImprovedOffer;
+        _offerFmtTwoPlayers     = (uintptr_t)_aAImprovedOffer_0;
+        _exchangeFmtSinglePlayer = (uintptr_t)_aAImprovedExcha;
+        _exchangeFmtTwoPlayers   = (uintptr_t)_aAImprovedExcha_0;
+        _offerFmtLine1a          = (uintptr_t)_aAImprovedOffer_1;
+        _offerFmtLine2a          = (uintptr_t)_aB_1;
+        _offerFmtLine1b          = (uintptr_t)_aAImprovedOffer_2;
+        _offerFmtLine2b          = (uintptr_t)_aBAndC_1;
+        _exchangeFmtLine1a       = (uintptr_t)_aAImprovedExcha_1;
+        _exchangeFmtLine2a       = (uintptr_t)_aB_2;
+        _exchangeFmtLine1b       = (uintptr_t)_aAImprovedExcha_2;
+        _exchangeFmtLine2b       = (uintptr_t)_aBAndC_2;
     }
 
     /* Get team name pointer (offset 5 from team data = teamName field) */
@@ -3754,64 +3754,64 @@ void OffersAfterDrawCommon(void *entryPtr)
 
     if (offer->secondPlayerOrdinal < 0) {
         /* Single player */
-        fmtStr = (uint8_t *)offerFmtSinglePlayer;
+        fmtStr = (uint8_t *)_offerFmtSinglePlayer;
         if (offer->swapPlayerOrdinal >= 0)
-            fmtStr = (uint8_t *)exchangeFmtSinglePlayer;
+            fmtStr = (uint8_t *)_exchangeFmtSinglePlayer;
 
-        uint8_t *p = GetPlayer(selTeamNumber, (uint16_t)offer->primaryPlayerOrdinal);
+        uint8_t *p = GetPlayer(_selTeamNumber, (uint16_t)offer->primaryPlayerOrdinal);
         PlayerFile *namePf = (PlayerFile *)(p + PF_OFF);
         playerNameA = (uint8_t *)namePf->playerName;
     } else {
         /* Two players */
-        fmtStr = (uint8_t *)offerFmtTwoPlayers;
+        fmtStr = (uint8_t *)_offerFmtTwoPlayers;
         if (offer->swapPlayerOrdinal >= 0)
-            fmtStr = (uint8_t *)exchangeFmtTwoPlayers;
+            fmtStr = (uint8_t *)_exchangeFmtTwoPlayers;
 
-        uint8_t *p1 = GetPlayer(selTeamNumber, (uint16_t)offer->primaryPlayerOrdinal);
+        uint8_t *p1 = GetPlayer(_selTeamNumber, (uint16_t)offer->primaryPlayerOrdinal);
         PlayerFile *namePf1 = (PlayerFile *)(p1 + PF_OFF);
         playerNameA = (uint8_t *)namePf1->playerName;
 
-        uint8_t *p2 = GetPlayer(selTeamNumber, (uint16_t)offer->secondPlayerOrdinal);
+        uint8_t *p2 = GetPlayer(_selTeamNumber, (uint16_t)offer->secondPlayerOrdinal);
         PlayerFile *namePf2 = (PlayerFile *)(p2 + PF_OFF);
         playerNameB = (uint8_t *)namePf2->playerName;
     }
 
     /* Format the offer text into fundsBuffer using PrintFormatted
      * a0=fmt, a1=dest(fundsBuffer), a2=teamName, a3=playerNameA, a4=playerNameB */
-    PrintFormatted(fmtStr, fundsBuffer, 0, 0, 0, 0, 0, 0, 0,
+    PrintFormatted(fmtStr, _fundsBuffer, 0, 0, 0, 0, 0, 0, 0,
                     teamName, playerNameA, playerNameB);
 
     /* Check if formatted text fits on one line (<=47 chars) */
-    uint16_t len = GetStringLength(fundsBuffer);
+    uint16_t len = GetStringLength(_fundsBuffer);
     if (len <= 47) {
         /* Single line: copy to entry 8's fg string, adjust y */
-        menuEntries[8].y += 5;
-        uint8_t *dst8 = (uint8_t *)menuEntries[8].fg;
-        StringCopy(fundsBuffer, dst8);
+        _menuEntries[8].y += 5;
+        uint8_t *dst8 = (uint8_t *)_menuEntries[8].fg;
+        StringCopy(_fundsBuffer, dst8);
 
         /* Clear entry 9's string */
-        uint8_t *dst9 = (uint8_t *)menuEntries[9].fg;
+        uint8_t *dst9 = (uint8_t *)_menuEntries[9].fg;
         *dst9 = 0;
     } else {
         /* Two lines: determine which format variant was used */
         uint8_t *line1Fmt;
         uint8_t *line2Fmt;
-        uint8_t *dst8str = (uint8_t *)menuEntries[8].fg;
-        uint8_t *dst9str = (uint8_t *)menuEntries[9].fg;
+        uint8_t *dst8str = (uint8_t *)_menuEntries[8].fg;
+        uint8_t *dst9str = (uint8_t *)_menuEntries[9].fg;
 
-        if (fmtStr == (uint8_t *)offerFmtTwoPlayers) {
-            line1Fmt = (uint8_t *)offerFmtLine1b;
-            line2Fmt = (uint8_t *)offerFmtLine2b;
-        } else if (fmtStr == (uint8_t *)exchangeFmtSinglePlayer) {
-            line1Fmt = (uint8_t *)exchangeFmtLine1a;
-            line2Fmt = (uint8_t *)exchangeFmtLine2a;
-        } else if (fmtStr == (uint8_t *)exchangeFmtTwoPlayers) {
-            line1Fmt = (uint8_t *)exchangeFmtLine1b;
-            line2Fmt = (uint8_t *)exchangeFmtLine2b;
+        if (fmtStr == (uint8_t *)_offerFmtTwoPlayers) {
+            line1Fmt = (uint8_t *)_offerFmtLine1b;
+            line2Fmt = (uint8_t *)_offerFmtLine2b;
+        } else if (fmtStr == (uint8_t *)_exchangeFmtSinglePlayer) {
+            line1Fmt = (uint8_t *)_exchangeFmtLine1a;
+            line2Fmt = (uint8_t *)_exchangeFmtLine2a;
+        } else if (fmtStr == (uint8_t *)_exchangeFmtTwoPlayers) {
+            line1Fmt = (uint8_t *)_exchangeFmtLine1b;
+            line2Fmt = (uint8_t *)_exchangeFmtLine2b;
         } else {
             /* Default: single-player offer */
-            line1Fmt = (uint8_t *)offerFmtLine1a;
-            line2Fmt = (uint8_t *)offerFmtLine2a;
+            line1Fmt = (uint8_t *)_offerFmtLine1a;
+            line2Fmt = (uint8_t *)_offerFmtLine2a;
         }
 
         /* Format line 1 into entry 8's string */
@@ -3825,7 +3825,7 @@ void OffersAfterDrawCommon(void *entryPtr)
 
 drawAndReturn:
     /* Draw entries 7-10 (4 entries starting from entry 7) */
-    DrawMultipleItems(4, &menuEntries[7]);
+    DrawMultipleItems(4, &_menuEntries[7]);
 }
 
 /* ================================================================
@@ -3834,23 +3834,23 @@ drawAndReturn:
  * ================================================================ */
 
 /* ---- Additional externs for Chunk 167 ---- */
-extern uint8_t  tempTeamBuffer[];          /* 0x2AC-byte team buffer */
-extern uint8_t  selTeamPlayerIndices[];    /* 16-byte player index mapping */
-extern uint8_t *transferReplacementPriorityTable[]; /* 8 pointers to priority lists */
-extern volatile uint16_t currentMessage;
-extern uint16_t trainingGame;
-extern uint16_t careerFileBuffer;          /* count of teams in TMD pool */
-extern uint8_t  tmdFileBuffer;             /* start of TMD team pool */
-extern uint8_t  trialistNameBuffer[];      /* 23-byte trialist name buffer */
+extern uint8_t  _tempTeamBuffer[];          /* 0x2AC-byte team buffer */
+extern uint8_t  _selTeamPlayerIndices[];    /* 16-byte player index mapping */
+extern uint8_t *_transferReplacementPriorityTable[]; /* 8 pointers to priority lists */
+extern volatile uint16_t _currentMessage;
+extern uint16_t _trainingGame;
+extern uint16_t _careerFileBuffer;          /* count of teams in TMD pool */
+extern uint8_t  _tmdFileBuffer;             /* start of TMD team pool */
+extern uint8_t  _trialistNameBuffer[];      /* 23-byte trialist name buffer */
 /* trialistNameBufTerminator was a SWOS2.s 1-byte BSS label sitting at
  * `trialistNameBuffer + 22`. Reference the buffer end directly instead
  * of relying on adjacency — see swos_data_typed_stubs.c comment. */
-#define TRIALIST_NAME_BUF_END (&trialistNameBuffer[22])
-extern uint8_t  trialistSkillDistribution[];   /* 20 bytes cumulative prob weights */
-extern uint8_t  trialistSkillTemplates[];  /* 512 bytes packed skill nibbles */
-extern uint8_t  trialistSkillBitMasks[];   /* 32 bytes skill bit masks per position */
-extern uint8_t  currentMatchPlayers[];     /* player ordinal mapping */
-extern uint16_t panicReasonCode;
+#define TRIALIST_NAME_BUF_END (&_trialistNameBuffer[22])
+extern uint8_t  _trialistSkillDistribution[];   /* 20 bytes cumulative prob weights */
+extern uint8_t  _trialistSkillTemplates[];  /* 512 bytes packed skill nibbles */
+extern uint8_t  _trialistSkillBitMasks[];   /* 32 bytes skill bit masks per position */
+extern uint8_t  _currentMatchPlayers[];     /* player ordinal mapping */
+extern uint16_t _panicReasonCode;
 
 extern void ClampNewBalanceAndUpdateClubStatus(void);
 extern void ClearOverdraftStateIfRecovered(void);
@@ -3888,55 +3888,55 @@ void Career_BuildForeignMarketPoolFromSelectedTeam(void)
     int16_t i, j;
 
     /* Copy careerTeam (0x2AC bytes) to tempTeamBuffer */
-    src = (uint8_t *)&careerTeam;
-    dst = tempTeamBuffer;
+    src = (uint8_t *)&_careerTeam;
+    dst = _tempTeamBuffer;
     for (i = 0x2AB; i >= 0; i--)
         *dst++ = *src++;
 
     /* Rearrange players: for each ordinal 0-15, get the player data from
        selTeamPlayerIndices[ordinal] and copy 0x26 bytes of player data */
-    uint8_t *indices = selTeamPlayerIndices;
+    uint8_t *indices = _selTeamPlayerIndices;
     for (i = 0; i < 16; i++) {
-        uint8_t *playerSrc = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        uint8_t *playerSrc = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
         playerSrc += PF_OFF;  /* point to actual PlayerFile data */
 
         uint8_t idx = *indices++;
         uint16_t off = (uint16_t)((int8_t)idx) * 0x26;  /* ext.w d0; mulu.w #$26,d0 */
-        uint8_t *playerDst = tempTeamBuffer + PF_OFF + off;
+        uint8_t *playerDst = _tempTeamBuffer + PF_OFF + off;
 
         for (j = 0x25; j >= 0; j--)
             *playerDst++ = *playerSrc++;
     }
 
     /* Copy tempTeamBuffer back to careerTeam */
-    src = tempTeamBuffer;
-    dst = (uint8_t *)&careerTeam;
+    src = _tempTeamBuffer;
+    dst = (uint8_t *)&_careerTeam;
     for (i = 0x2AB; i >= 0; i--)
         *dst++ = *src++;
 
     /* Copy selTeamPlayerIndices to currentMatchPlayers */
-    src = selTeamPlayerIndices;
-    dst = currentMatchPlayers;
+    src = _selTeamPlayerIndices;
+    dst = _currentMatchPlayers;
     for (i = 0xF; i >= 0; i--)
         *dst++ = *src++;
 
-    careerNumPlayers = 16;
+    _careerNumPlayers = 16;
 
     /* Clear flags on all 16 players and add to career pool */
     for (i = 15; i >= 0; i--) {
-        uint8_t *p = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        uint8_t *p = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
         PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
         pf->positionAndFace &= ~PF_LOAN;  /* bclr #1 */
         pf->cardsInjuries = 0;
         pf->positionAndFace &= ~PF_INFORM;  /* bclr #0 */
         pf->form = 0;
-        AddCareerPoolPlayer(selTeamNumber, (uint16_t)i, (PlayerFile *)p);
+        AddCareerPoolPlayer(_selTeamNumber, (uint16_t)i, (PlayerFile *)p);
     }
 
     /* If team found in TMD file, remove and re-add with updated data */
-    if (SearchTeamInTmdFile(selTeamNumber) == 0) {
-        Career_RemoveTeamFromTmdTeamPool(selTeamNumber);
-        Career_AppendTeamToTmdTeamPool(&careerTeam);
+    if (SearchTeamInTmdFile(_selTeamNumber) == 0) {
+        Career_RemoveTeamFromTmdTeamPool(_selTeamNumber);
+        Career_AppendTeamToTmdTeamPool(&_careerTeam);
     }
 }
 
@@ -3956,17 +3956,17 @@ void Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16
     uint16_t d6 = sourceTeam;
 
     /* Remove player from selected team's internal roster */
-    Career_RemovePlayerFromTeamInternal(selTeamNumber, playerOrd);
+    Career_RemovePlayerFromTeamInternal(_selTeamNumber, playerOrd);
 
     /* Get the player being transferred (from selected team) */
-    uint8_t *transferredBase = GetPlayer(selTeamNumber, playerOrd);
+    uint8_t *transferredBase = GetPlayer(_selTeamNumber, playerOrd);
     PlayerFile *transferredPf = (PlayerFile *)(transferredBase + PF_OFF);
 
     /* Get position group (bits 7-5 of positionAndFace) */
     uint16_t posGroup = ((uint16_t)transferredPf->positionAndFace & PF_POSITION_MASK) >> 3;
     /* posGroup is now index*4 into the priority table (lsr.w #3) */
 
-    uint8_t *priorityList = (uint8_t *)transferReplacementPriorityTable[posGroup >> 2];
+    uint8_t *priorityList = (uint8_t *)_transferReplacementPriorityTable[posGroup >> 2];
 
     /* Get source team pointer */
     TeamFileEx *teamPtr = GetTeamPointer(d6);
@@ -3975,7 +3975,7 @@ void Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16
         uint8_t targetRole = *priorityList++;
         if ((int8_t)targetRole < 0) {
             /* No replacement found — panic */
-            panicReasonCode = 0x7272;
+            _panicReasonCode = 0x7272;
             PanicHaltLoop();
             return;
         }
@@ -4037,7 +4037,7 @@ void Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16
         /* Remove from source team and add to career pool */
         Career_RemovePlayerFromTeamInternal(d6, bestOrdinal);
         AddCareerPoolPlayer(d6, bestOrdinal, (PlayerFile *)bestPlayer);
-        offerSwapSlotsUsed++;
+        _offerSwapSlotsUsed++;
 
         /* Remove from selected team roster */
         Career_RemovePlayerFromSelectedTeamRoster(savedOrd);
@@ -4056,48 +4056,48 @@ void Career_AcceptOffer_SellPlayer(void)
 {
     Career_CommitNewBalanceAndResetFinanceTotals();
 
-    uint32_t saleAmount = (uint32_t)offerOrdinals.offerAmount * 1000;
-    newBalance += (int32_t)saleAmount;
-    playerSales += (int32_t)saleAmount;
+    uint32_t saleAmount = (uint32_t)_offerOrdinals.offerAmount * 1000;
+    _newBalance += (int32_t)saleAmount;
+    _playerSales += (int32_t)saleAmount;
 
     ClampNewBalanceAndUpdateClubStatus();
     ClearOverdraftStateIfRecovered();
 
-    if ((int16_t)offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+    if ((int16_t)_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
         /* Swap player: remove from offering team as trialist, transfer primary */
-        Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.offerSwapPlayerOrdinal);
-        Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+        Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.offerSwapPlayerOrdinal);
+        Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
     } else {
         /* No swap: just transfer the primary player */
-        Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+        Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
     }
 
     /* Handle extra player */
-    if ((int16_t)offerOrdinals.numExtraPlayersWanted < 0) {
+    if ((int16_t)_offerOrdinals.numExtraPlayersWanted < 0) {
         /* Extra player wanted by us (offerOrdinals.numExtraPlayersWanted < 0) */
-        if ((int16_t)offerOrdinals.offerExtraPlayerOrdinal >= 0) {
-            Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.offerExtraPlayerOrdinal);
+        if ((int16_t)_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+            Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.offerExtraPlayerOrdinal);
         }
     } else {
         /* Extra player offered by them (offerOrdinals.numExtraPlayersWanted >= 0) */
-        if ((int16_t)offerOrdinals.offerExtraPlayerOrdinal >= 0) {
-            Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.offerExtraPlayerOrdinal);
-            Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.numExtraPlayersWanted);
+        if ((int16_t)_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+            Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.offerExtraPlayerOrdinal);
+            Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.numExtraPlayersWanted);
         } else {
-            Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.numExtraPlayersWanted);
+            Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.numExtraPlayersWanted);
         }
     }
 
     /* Flag both teams as changed */
-    TeamFileEx *tp = GetTeamPointer(offerOrdinals.teamOffering);
+    TeamFileEx *tp = GetTeamPointer(_offerOrdinals.teamOffering);
     tp->team.playerValuesDirty = TEAM_VALUES_DIRTY;
-    careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    _careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
 
     PrunePlayerOffersAgainstRosterLimits();
 
     if (GetRemainingOfferSwapSlots() == 0) {
-        numOffers = 0;
-        currentMessage = 4;
+        _numOffers = 0;
+        _currentMessage = 4;
         ShowChairmanMessage();
     }
 }
@@ -4113,42 +4113,42 @@ void Career_AcceptOffer_BuyPlayer(void)
 {
     Career_CommitNewBalanceAndResetFinanceTotals();
 
-    uint32_t purchaseAmount = (uint32_t)offerOrdinals.offerAmount * 1000;
-    newBalance -= (int32_t)purchaseAmount;
-    playerPurchases += (int32_t)purchaseAmount;
+    uint32_t purchaseAmount = (uint32_t)_offerOrdinals.offerAmount * 1000;
+    _newBalance -= (int32_t)purchaseAmount;
+    _playerPurchases += (int32_t)purchaseAmount;
 
     ClampNewBalanceAndUpdateClubStatus();
     ClearOverdraftStateIfRecovered();
 
-    if ((int16_t)offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+    if ((int16_t)_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
         /* Swap: remove primary as trialist, transfer swap player */
-        Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
-        Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.offerSwapPlayerOrdinal);
+        Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
+        Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.offerSwapPlayerOrdinal);
     } else {
         /* No swap: remove primary as trialist */
-        Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+        Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
     }
 
     /* Handle extra player */
-    if ((int16_t)offerOrdinals.numExtraPlayersWanted < 0) {
+    if ((int16_t)_offerOrdinals.numExtraPlayersWanted < 0) {
         /* Extra player wanted by us */
-        if ((int16_t)offerOrdinals.offerExtraPlayerOrdinal >= 0) {
-            Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.offerExtraPlayerOrdinal);
+        if ((int16_t)_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+            Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.offerExtraPlayerOrdinal);
         }
     } else {
         /* Extra player offered by them */
-        if ((int16_t)offerOrdinals.offerExtraPlayerOrdinal >= 0) {
-            Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.numExtraPlayersWanted);
-            Career_TransferPlayerAndAddReplacedToMarketPool(offerOrdinals.teamOffering, offerOrdinals.offerExtraPlayerOrdinal);
+        if ((int16_t)_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+            Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.numExtraPlayersWanted);
+            Career_TransferPlayerAndAddReplacedToMarketPool(_offerOrdinals.teamOffering, _offerOrdinals.offerExtraPlayerOrdinal);
         } else {
-            Career_RemovePlayerAndAddAsTrialist(offerOrdinals.teamOffering, offerOrdinals.numExtraPlayersWanted);
+            Career_RemovePlayerAndAddAsTrialist(_offerOrdinals.teamOffering, _offerOrdinals.numExtraPlayersWanted);
         }
     }
 
     /* Flag both teams as changed */
-    TeamFileEx *tp = GetTeamPointer(offerOrdinals.teamOffering);
+    TeamFileEx *tp = GetTeamPointer(_offerOrdinals.teamOffering);
     tp->team.playerValuesDirty = TEAM_VALUES_DIRTY;
-    careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    _careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
 
     PrunePlayerOffersAgainstRosterLimits();
 }
@@ -4179,9 +4179,9 @@ void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd
     uint16_t freeSlot = 0;
     while (1) {
         int16_t found = 0;
-        int16_t numPl = (int16_t)careerNumPlayers - 1;
+        int16_t numPl = (int16_t)_careerNumPlayers - 1;
         while (numPl >= 0) {
-            if (currentMatchPlayers[numPl] == (uint8_t)freeSlot) {
+            if (_currentMatchPlayers[numPl] == (uint8_t)freeSlot) {
                 freeSlot++;
                 found = 1;
                 break;
@@ -4193,7 +4193,7 @@ void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd
     }
 
     /* Get the destination slot in selected team */
-    uint8_t *dstBase = GetPlayer(selTeamNumber, freeSlot);
+    uint8_t *dstBase = GetPlayer(_selTeamNumber, freeSlot);
     TrainingMatch_SaveSelectedPlayerId(freeSlot);
 
     /* Mark source player as trialist */
@@ -4223,7 +4223,7 @@ void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd
      *          original read matchData+2 regardless of type).
      * Typed access auto-adjusts per target: byte-identical on 32-bit, correct on
      * 64-bit. */
-    DIYCompetitionEx *comp = (DIYCompetitionEx *)&primaryCompetitionBuf;
+    DIYCompetitionEx *comp = (DIYCompetitionEx *)&_primaryCompetitionBuf;
     uint16_t insertPos;
     if (comp->base.competitionType == 2) {
         insertPos = (uint16_t)comp->base.numTeamsInStage;
@@ -4233,8 +4233,8 @@ void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd
     insertPos += 11;  /* addi.w #$B,d2 */
 
     /* Shift currentMatchPlayers entries right to make room */
-    uint8_t *cmp = currentMatchPlayers;
-    uint16_t numPl = careerNumPlayers;
+    uint8_t *cmp = _currentMatchPlayers;
+    uint16_t numPl = _careerNumPlayers;
     uint8_t *insertPtr = cmp + numPl;  /* end of array */
     int16_t shiftCount = (int16_t)(numPl - insertPos);
     if (shiftCount > 0) {
@@ -4249,9 +4249,9 @@ void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd
     *insertPtr = (uint8_t)freeSlot;
 
     /* Set bench player numbers */
-    SetBenchPlayersNumbers(&careerTeam);
+    SetBenchPlayersNumbers(&_careerTeam);
 
-    careerNumPlayers++;
+    _careerNumPlayers++;
     Career_UpdatePlayerWeeklyWageCache(freeSlot);
 
     /* Convert player to trialist using source name */
@@ -4279,11 +4279,11 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
          * produces the Amiga BE-packed id on either host so the
          * word-level avoid check matches. Reading host-native would
          * give (ordinal<<8)|country on LE and never match. */
-        if (careerFileBuffer != 0) {
+        if (_careerFileBuffer != 0) {
             uint16_t r = Rand2();
-            uint32_t idx = (uint32_t)r * (uint32_t)careerFileBuffer;
+            uint32_t idx = (uint32_t)r * (uint32_t)_careerFileBuffer;
             idx >>= 8;
-            result = (TeamFileEx *)&tmdFileBuffer + idx;
+            result = (TeamFileEx *)&_tmdFileBuffer + idx;
 
             uint16_t candTeamId = PACK_BE_U16(result->team.countryNumber,
                                               result->team.teamOrdinal);
@@ -4297,9 +4297,9 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
 
         /* Try selected teams — same byte-pair fix as above. */
         uint16_t r = Rand2();
-        uint32_t idx = (uint32_t)r * (uint32_t)numSelectedTeams;
+        uint32_t idx = (uint32_t)r * (uint32_t)_numSelectedTeams;
         idx >>= 8;
-        result = selectedTeams + idx;
+        result = _selectedTeams + idx;
 
         uint16_t candTeamId2 = PACK_BE_U16(result->team.countryNumber,
                                            result->team.teamOrdinal);
@@ -4331,7 +4331,7 @@ static uint32_t pickRandomTrialistOriginValue(uint8_t avoidTeamByte, uint16_t av
     uint8_t posFlags;
 
 restart:;
-    uint8_t *nameDst = trialistNameBuffer;
+    uint8_t *nameDst = _trialistNameBuffer;
 
     /* Pick random team, then random player from it */
     uint8_t *team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, avoidTeamByte);
@@ -4445,15 +4445,15 @@ restart:;
 __attribute__((used, externally_visible))
 void Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
 {
-    uint16_t d4 = selTeamNumber;
-    uint16_t d5 = selTeamNumber;
+    uint16_t d4 = _selTeamNumber;
+    uint16_t d5 = _selTeamNumber;
     uint16_t d6 = playerIndex;
 
-    uint8_t *base = GetPlayer(selTeamNumber, playerIndex);
+    uint8_t *base = GetPlayer(_selTeamNumber, playerIndex);
     PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
 
-    uint8_t avoidByte = (uint8_t)(selTeamNumber >> 8);  /* move.b — high byte */
-    uint16_t avoidWord = selTeamNumber;
+    uint8_t avoidByte = (uint8_t)(_selTeamNumber >> 8);  /* move.b — high byte */
+    uint16_t avoidWord = _selTeamNumber;
 
     uint32_t result = pickRandomTrialistOriginValue(avoidByte, avoidWord);
     uint8_t nationality = (uint8_t)(result & 0xFF);
@@ -4467,7 +4467,7 @@ void Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
     pf->positionAndFace = posAndFace;
 
     /* Copy name from trialistNameBuffer */
-    StringCopy(trialistNameBuffer, (uint8_t *)pf->playerName);
+    StringCopy(_trialistNameBuffer, (uint8_t *)pf->playerName);
 
     /* Clear stats */
     pf->goalStats[0] = 0;
@@ -4497,13 +4497,13 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
 {
     /* Save current player data to tempTeamBuffer */
     uint8_t *src = (uint8_t *)pf;
-    uint8_t *dst = tempTeamBuffer;
+    uint8_t *dst = _tempTeamBuffer;
     for (int16_t i = 0x25; i >= 0; i--)
         *dst++ = *src++;
 
     /* Calculate average price of players with same position (or all if same team) */
-    uint16_t numPl = careerNumPlayers;
-    if (sourceTeam != selTeamNumber)
+    uint16_t numPl = _careerNumPlayers;
+    if (sourceTeam != _selTeamNumber)
         numPl = 16;
 
     int16_t iter = (int16_t)numPl - 1;
@@ -4515,7 +4515,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
         uint8_t *p = GetPlayerAtIndex(sourceTeam, (uint16_t)iter);
         PlayerFile *ppf = (PlayerFile *)(p + PF_OFF);
 
-        if (sourceTeam == selTeamNumber) {
+        if (sourceTeam == _selTeamNumber) {
             /* Same team: count all players */
             totalPrice += (uint8_t)ppf->price;
             count++;
@@ -4537,7 +4537,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
     if (skillLevel > 15)
         skillLevel = 15;
 
-    if (sourceTeam != selTeamNumber) {
+    if (sourceTeam != _selTeamNumber) {
         /* Foreign team: add random -1 to +2 adjustment */
         uint16_t r = Rand2();
         int16_t adj = (int16_t)(r & 3) - 1;
@@ -4547,11 +4547,11 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
         uint8_t *randomTeam;
         do {
             uint16_t r = Rand2();
-            uint32_t tidx = (uint32_t)r * (uint32_t)numSelectedTeams;
+            uint32_t tidx = (uint32_t)r * (uint32_t)_numSelectedTeams;
             tidx >>= 8;
             tidx *= 0x2AC;
-            randomTeam = &selTeamsPtr + tidx;
-        } while ((uint8_t)(selTeamNumber >> 8) != *randomTeam);  /* bne: loop until SAME country */
+            randomTeam = &_selTeamsPtr + tidx;
+        } while ((uint8_t)(_selTeamNumber >> 8) != *randomTeam);  /* bne: loop until SAME country */
 
         uint16_t r = Rand2();
         uint16_t pidx = (r & 0xF) * 0x26;
@@ -4563,7 +4563,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
         r = Rand2();
         uint16_t roll = (uint16_t)((uint32_t)r * 100) >> 8;
         int16_t adjust = -90;  /* 0xFFA6 as int16_t */
-        uint8_t *distrib = trialistSkillDistribution;
+        uint8_t *distrib = _trialistSkillDistribution;
         while (roll >= *distrib) {
             roll -= *distrib;
             distrib++;
@@ -4571,7 +4571,7 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
         }
 
         /* Get average player price for career team */
-        uint16_t avgTeamPrice = GetAveragePlayerPrice(&careerTeam);
+        uint16_t avgTeamPrice = GetAveragePlayerPrice(&_careerTeam);
         int16_t factor = (int16_t)(avgTeamPrice * 2) + adjust;
         if (factor < 0 || factor > 100)
             factor -= adjust;
@@ -4590,15 +4590,15 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
 
     /* Look up skill template */
     uint16_t templateOffset = skillLevel << 5;  /* 32 bytes per level */
-    uint8_t *tmpl = trialistSkillTemplates + templateOffset;
+    uint8_t *tmpl = _trialistSkillTemplates + templateOffset;
 
     uint16_t posIdx = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
     uint16_t posOff = posIdx << 2;
     uint32_t skills = *(uint32_t *)(tmpl + posOff);
-    uint32_t masks = *(uint32_t *)(trialistSkillBitMasks + posOff);
+    uint32_t masks = *(uint32_t *)(_trialistSkillBitMasks + posOff);
 
     /* Restore saved player data from tempTeamBuffer */
-    src = tempTeamBuffer;
+    src = _tempTeamBuffer;
     dst = (uint8_t *)pf;
     for (int16_t i = 0x25; i >= 0; i--)
         *dst++ = *src++;
@@ -4656,7 +4656,7 @@ void Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t player
     pf->positionAndFace = posAndFace;
 
     /* Copy name from trialistNameBuffer */
-    StringCopy(trialistNameBuffer, (uint8_t *)pf->playerName);
+    StringCopy(_trialistNameBuffer, (uint8_t *)pf->playerName);
 
     /* Clear stats */
     pf->goalStats[0] = 0;
@@ -4668,7 +4668,7 @@ void Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t player
     /* Init skill attributes */
     careerInitTrialistAttributes(pf, d5);
 
-    if (d5 == selTeamNumber) {
+    if (d5 == _selTeamNumber) {
         /* Same team: set as goalkeeper sub and clear trialist/other flags */
         pf->form = (int8_t)PLAYER_FORM_TRIALIST;
         pf->positionAndFace &= ~PF_LOAN;  /* bclr #1 */
@@ -4677,7 +4677,7 @@ void Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t player
     } else {
         /* Different team: add to career pool */
         AddCareerPoolPlayer(d5, d6, (PlayerFile *)base);
-        transferPoolSlotsUsed++;
+        _transferPoolSlotsUsed++;
     }
 }
 
@@ -4696,9 +4696,9 @@ void TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role)
     uint16_t freeSlot = 0;
     while (1) {
         int16_t found = 0;
-        int16_t numPl = (int16_t)careerNumPlayers - 1;
+        int16_t numPl = (int16_t)_careerNumPlayers - 1;
         while (numPl >= 0) {
-            if (currentMatchPlayers[numPl] == (uint8_t)freeSlot) {
+            if (_currentMatchPlayers[numPl] == (uint8_t)freeSlot) {
                 freeSlot++;
                 found = 1;
                 break;
@@ -4710,7 +4710,7 @@ void TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role)
     }
 
     /* Get player slot and set it up */
-    uint8_t *base = GetPlayer(selTeamNumber, freeSlot);
+    uint8_t *base = GetPlayer(_selTeamNumber, freeSlot);
     TrainingMatch_SaveSelectedPlayerId(freeSlot);
 
     PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
@@ -4724,8 +4724,8 @@ void TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role)
     Career_GenerateTrialistForTeamPlayer(freeSlot);
 
     /* Add to currentMatchPlayers */
-    currentMatchPlayers[careerNumPlayers] = (uint8_t)freeSlot;
-    careerNumPlayers++;
+    _currentMatchPlayers[_careerNumPlayers] = (uint8_t)freeSlot;
+    _careerNumPlayers++;
 
     Career_UpdatePlayerWeeklyWageCache(freeSlot);
 }
@@ -4741,23 +4741,23 @@ void TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role)
 __attribute__((used, externally_visible))
 void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr)
 {
-    if (isNationalSelector != 0)
+    if (_isNationalSelector != 0)
         return;
 
-    if (trainingGame != 0)
+    if (_trainingGame != 0)
         baseCount <<= 1;  /* lsl.w #1,d1 */
 
     uint16_t d4 = teamNum;
     uint16_t d5 = baseCount;
 
-    if (trainingGame == 0) {
+    if (_trainingGame == 0) {
         /* Non-training: remove excess goalkeepers if more than 2 subs */
         uint32_t subsResult = GetNumberOfAvailableSubstitutes(teamPtr, 0);
         uint16_t subs = (uint16_t)(subsResult & 0xFFFF);
         if (subs > 2) {
-            int16_t d2 = (int16_t)careerNumPlayers - 1;
+            int16_t d2 = (int16_t)_careerNumPlayers - 1;
             while (d2 >= 0) {
-                uint8_t *p = GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
+                uint8_t *p = GetPlayerAtIndex(_selTeamNumber, (uint16_t)d2);
                 PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
                 uint16_t pos = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
                 if (pos == 0) {
@@ -4778,9 +4778,9 @@ void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16
         uint32_t startResult = GetNumberOfAvailableStartingPlayers(teamPtr, 0);
         uint16_t starters = (uint16_t)(startResult & 0xFFFF);
         if (starters > 16) {
-            int16_t d2 = (int16_t)careerNumPlayers - 1;
+            int16_t d2 = (int16_t)_careerNumPlayers - 1;
             while (d2 >= 0) {
-                uint8_t *p = GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
+                uint8_t *p = GetPlayerAtIndex(_selTeamNumber, (uint16_t)d2);
                 PlayerFile *pf = (PlayerFile *)(p + PF_OFF);
                 uint16_t pos = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
                 if (pos == 0) {
@@ -4801,7 +4801,7 @@ void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16
     }
 
     /* Add trial GK if needed: ensure at least 2 goalkeeper subs */
-    while (careerNumPlayers < 30) {
+    while (_careerNumPlayers < 30) {
         uint32_t subsResult = GetNumberOfAvailableSubstitutes(teamPtr, 0);
         uint16_t subs = (uint16_t)(subsResult & 0xFFFF);
         if (subs >= 2)
@@ -4818,12 +4818,12 @@ void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16
     }
 
     /* Add trial field players if needed: fill to required starter count */
-    while (careerNumPlayers < 30) {
+    while (_careerNumPlayers < 30) {
         uint32_t startResult = GetNumberOfAvailableStartingPlayers(teamPtr, 0);
         uint16_t starters = (uint16_t)(startResult & 0xFFFF);
 
         uint16_t required = 11;
-        if (trainingGame != 0)
+        if (_trainingGame != 0)
             required = 22;
         required += d5 - 2;
 
@@ -4844,9 +4844,9 @@ void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16
  * on/off the transfer market (max 5). Loops until user cancels or
  * 5 players are on market. Then updates transfer market UI state.
  * ================================================================ */
-extern uint32_t viewSquadFlags;
-extern volatile int16_t viewSquadSelectedTeam;
-extern uint8_t aPutPlayerOnTra[];  /* "PUT PLAYER ON TRANSFER MARKET" */
+extern uint32_t _viewSquadFlags;
+extern volatile int16_t _viewSquadSelectedTeam;
+extern uint8_t _aPutPlayerOnTra[];  /* "PUT PLAYER ON TRANSFER MARKET" */
 
 __attribute__((used, externally_visible))
 void PutPlayerOnMarketMenu(void)
@@ -4858,28 +4858,28 @@ void PutPlayerOnMarketMenu(void)
          * ASM uses the FILE INDEX (d1 from GetPlayerAtIndex) for the bitfield,
          * not the loop counter. _cGetPlayerAtIndexFileIdx holds this value. */
         uint32_t eligible = 0;
-        for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-            uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        for (int16_t i = (int16_t)(_careerNumPlayers - 1); i >= 0; i--) {
+            uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
             PlayerFile *pf = (PlayerFile *)(player + 76);
             if (pf->positionAndFace & PF_LOAN)
                 eligible |= (1u << (uint16_t)_cGetPlayerAtIndexFileIdx);
         }
 
         /* Get team pointer */
-        TeamFileEx *teamPtr = GetTeamPointer(selTeamNumber);
+        TeamFileEx *teamPtr = GetTeamPointer(_selTeamNumber);
 
         /* Build transfer market bitfield */
         uint32_t marketMask = 0;
-        uint16_t numOnMarket = numPlayersOnTransferMarket;
+        uint16_t numOnMarket = _numPlayersOnTransferMarket;
         for (uint16_t i = 0; i < numOnMarket; i++) {
-            uint16_t pid = playersOnTransferMarket[i];
+            uint16_t pid = _playersOnTransferMarket[i];
             marketMask |= (1u << pid);
         }
 
         /* Show squad selection (clears viewSquadFlags as per ShowSquad entry point) */
-        viewSquadFlags = 0;
-        int16_t selected = ShowSquad((TeamFile *)teamPtr, aPutPlayerOnTra, eligible, marketMask, 0, preselect);
-        preselect = (uint16_t)viewSquadSelectedTeam;
+        _viewSquadFlags = 0;
+        int16_t selected = ShowSquad((TeamFile *)teamPtr, _aPutPlayerOnTra, eligible, marketMask, 0, preselect);
+        preselect = (uint16_t)_viewSquadSelectedTeam;
 
         /* If cancelled (ShowSquad returns d0 < 0), exit loop.
          * ASM checks d0 (viewSquadSelectedPlayer) via bmi, not d3 (viewSquadSelectedTeam). */
@@ -4894,14 +4894,14 @@ void PutPlayerOnMarketMenu(void)
         } else {
             /* Not on market — add */
             AddPlayerToTransferMarket(playerIdx);
-            if (numPlayersOnTransferMarket == 5)
+            if (_numPlayersOnTransferMarket == 5)
                 break;
         }
     }
 
     /* Update transfer market UI state */
     CheckNumPlayersOnTransferMarket();
-    if (numPlayersOnTransferMarket == 5)
+    if (_numPlayersOnTransferMarket == 5)
         SetCurrentEntry(6);
 }
 
@@ -4911,10 +4911,10 @@ void PutPlayerOnMarketMenu(void)
  * (SWOS2.s lines 63572-63613)
  * ========================================================================== */
 
-extern uint16_t selectedTeamCountryNumber;
-extern uint8_t  aBuyOtherDomest[];
-extern uint8_t  aBuyOtherForeig[];
-extern uint8_t  buyOtherPlayersMenu[];
+extern uint16_t _selectedTeamCountryNumber;
+extern uint8_t  _aBuyOtherDomest[];
+extern uint8_t  _aBuyOtherForeig[];
+extern uint8_t  _buyOtherPlayersMenu[];
 
 /* BuyOtherDomesticPlayer — open dialog to buy player from another domestic team.
  * Calls ChooseTeamsDialogWithNationality with selTeamNumber nationality,
@@ -4923,19 +4923,19 @@ __attribute__((used, externally_visible))
 void BuyOtherDomesticPlayer(void)
 {
     /* move.b (selTeamNumber).l,d0 — reads HIGH byte on big-endian = country code */
-    uint16_t nationality = (uint8_t)(selTeamNumber >> 8);
-    ChooseTeamsDialogWithNationality(nationality, 1, 0, 0, aBuyOtherDomest, (void *)0);
-    if ((int16_t)selectedTeamCountryNumber == -1)
+    uint16_t nationality = (uint8_t)(_selTeamNumber >> 8);
+    ChooseTeamsDialogWithNationality(nationality, 1, 0, 0, _aBuyOtherDomest, (void *)0);
+    if ((int16_t)_selectedTeamCountryNumber == -1)
         return;
-    offerOrdinals.teamOffering = selectedTeamCountryNumber;
-    buyOtherPlayersTitlePtr = (uint8_t *)aBuyOtherDomest;
-    ShowMenu(buyOtherPlayersMenu);
+    _offerOrdinals.teamOffering = _selectedTeamCountryNumber;
+    _buyOtherPlayersTitlePtr = (uint8_t *)_aBuyOtherDomest;
+    ShowMenu(_buyOtherPlayersMenu);
     /* Original asm has duplicate check — preserve as-is */
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
@@ -4946,18 +4946,18 @@ void BuyOtherDomesticPlayer(void)
 __attribute__((used, externally_visible))
 void BuyOtherForeignPlayer(void)
 {
-    ChooseTeamsDialog(1, 0, 0, aBuyOtherForeig, (void *)0);
-    if ((int16_t)selectedTeamCountryNumber == -1)
+    ChooseTeamsDialog(1, 0, 0, _aBuyOtherForeig, (void *)0);
+    if ((int16_t)_selectedTeamCountryNumber == -1)
         return;
-    offerOrdinals.teamOffering = selectedTeamCountryNumber;
-    buyOtherPlayersTitlePtr = (uint8_t *)aBuyOtherForeig;
-    ShowMenu(buyOtherPlayersMenu);
+    _offerOrdinals.teamOffering = _selectedTeamCountryNumber;
+    _buyOtherPlayersTitlePtr = (uint8_t *)_aBuyOtherForeig;
+    ShowMenu(_buyOtherPlayersMenu);
     /* Original asm has duplicate check — preserve as-is */
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
-    if (transferCompleted != 0) {
+    if (_transferCompleted != 0) {
         BuyPlayerExit();
         return;
     }
@@ -4968,9 +4968,9 @@ void BuyOtherForeignPlayer(void)
 /*            PlayerMarketPlayerMatchesFilters                     */
 /* =============================================================== */
 
-extern uint8_t *positionGroupTable[];   /* 4 pointers to position group byte arrays (0xFF terminated) */
-extern uint8_t  playerRatingFilterThresholds[];  /* 17-byte lookup: filter index → min rating */
-extern uintptr_t playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
+extern uint8_t *_positionGroupTable[];   /* 4 pointers to position group byte arrays (0xFF terminated) */
+extern uint8_t  _playerRatingFilterThresholds[];  /* 17-byte lookup: filter index → min rating */
+extern uintptr_t _playerMarketVisibleItems[];      /* up to 10 pointers to market entries */
 
 /* PlayerMarketPlayerMatchesFilters — filter predicate for player market.
  * blockPtr uses the "block pointer" convention: blockPtr + 0x4C = PlayerFile start.
@@ -5011,7 +5011,7 @@ static int16_t playerMarketPlayerMatchesFilters(uint8_t *blockPtr, int16_t ratin
     }
 
     /* --- Specific position skill bit filter --- */
-    if (playerMarketFilterPosition != 0 && skillBitIndex >= 0) {
+    if (_playerMarketFilterPosition != 0 && skillBitIndex >= 0) {
         uint8_t posGroup = (uint8_t)((pf->positionAndFace & PF_POSITION_MASK) >> 5);
         if (posGroup == 0)
             return 1;                           /* goalkeepers excluded */
@@ -5037,43 +5037,43 @@ void PlayerMarketBuildVisiblePlayerList(void)
 {
     /* --- Set up position group list (a6) --- */
     uint8_t *positionList = (uint8_t *)0;
-    int16_t filterPos = (int16_t)playerMarketFilterPosition;
+    int16_t filterPos = (int16_t)_playerMarketFilterPosition;
     if (filterPos >= 0) {
-        positionList = positionGroupTable[filterPos];
+        positionList = _positionGroupTable[filterPos];
     }
 
     /* --- Set up skill bit index (d6) from age group filter --- */
-    int16_t skillBitIndex = (int16_t)playerMarketFilterAgeGroup;
+    int16_t skillBitIndex = (int16_t)_playerMarketFilterAgeGroup;
     if (skillBitIndex >= 0) {
-        skillBitIndex = 6 - (int16_t)playerMarketFilterAgeGroup;
+        skillBitIndex = 6 - (int16_t)_playerMarketFilterAgeGroup;
         skillBitIndex = skillBitIndex * 4 + 3;
     }
 
     /* --- Set up rating threshold (d4) --- */
-    int16_t ratingThreshold = (int16_t)playerMarketFilterRatingIndex;
+    int16_t ratingThreshold = (int16_t)_playerMarketFilterRatingIndex;
     if (ratingThreshold >= 0) {
-        ratingThreshold = (int16_t)(uint8_t)playerRatingFilterThresholds[ratingThreshold];
+        ratingThreshold = (int16_t)(uint8_t)_playerRatingFilterThresholds[ratingThreshold];
     }
 
     /* --- Set up country range pointer (a5) --- */
     uint8_t *countryRange = (uint8_t *)0;
-    if (showDomesticPlayerMarket == 0) {
-        uint16_t countryFilter = playerMarketFilterCountry;
+    if (_showDomesticPlayerMarket == 0) {
+        uint16_t countryFilter = _playerMarketFilterCountry;
         if (countryFilter != 6) {
-            countryRange = &shortCountryNames[0x1CB] + countryFilter;
+            countryRange = &_shortCountryNames[0x1CB] + countryFilter;
         }
     }
 
     /* --- Reset counters --- */
-    playerMarketTotalMatchCount = 0;
-    playerMarketVisibleItemCount = 0;
+    _playerMarketTotalMatchCount = 0;
+    _playerMarketVisibleItemCount = 0;
 
-    uintptr_t *visPtr = playerMarketVisibleItems;
+    uintptr_t *visPtr = _playerMarketVisibleItems;
 
-    if (showDomesticPlayerMarket != 0) {
+    if (_showDomesticPlayerMarket != 0) {
         /* ---- Domestic market path ---- */
-        uint8_t *a1 = homeMarketPlayers;
-        uint16_t count = numHomeMarketPlayers;
+        uint8_t *a1 = _homeMarketPlayers;
+        uint16_t count = _numHomeMarketPlayers;
         if (count == 0)
             return;
         uint16_t i = count;
@@ -5092,12 +5092,12 @@ void PlayerMarketBuildVisiblePlayerList(void)
             if (playerMarketPlayerMatchesFilters(blockPtr, ratingThreshold,
                                                   countryRange, positionList,
                                                   skillBitIndex) == 0) {
-                playerMarketTotalMatchCount++;
-                uint16_t scrollOff = playerMarketListScrollOffset;
-                if (scrollOff < playerMarketTotalMatchCount &&
-                    scrollOff + 10 >= playerMarketTotalMatchCount) {
+                _playerMarketTotalMatchCount++;
+                uint16_t scrollOff = _playerMarketListScrollOffset;
+                if (scrollOff < _playerMarketTotalMatchCount &&
+                    scrollOff + 10 >= _playerMarketTotalMatchCount) {
                     *visPtr++ = (uintptr_t)a1;
-                    playerMarketVisibleItemCount++;
+                    _playerMarketVisibleItemCount++;
                 }
             }
             a1 += 4;
@@ -5105,8 +5105,8 @@ void PlayerMarketBuildVisiblePlayerList(void)
         } while (i != 0);
     } else {
         /* ---- Foreign market path ---- */
-        uint8_t *a1 = foreignMarketPlayers;
-        uint16_t count = numForeignMarketPlayers;
+        uint8_t *a1 = _foreignMarketPlayers;
+        uint16_t count = _numForeignMarketPlayers;
         if (count == 0)
             return;
         uint16_t i = count;
@@ -5128,12 +5128,12 @@ void PlayerMarketBuildVisiblePlayerList(void)
             if (playerMarketPlayerMatchesFilters(blockPtr, ratingThreshold,
                                                   countryRange, positionList,
                                                   skillBitIndex) == 0) {
-                playerMarketTotalMatchCount++;
-                uint16_t scrollOff = playerMarketListScrollOffset;
-                if (scrollOff < playerMarketTotalMatchCount &&
-                    scrollOff + 10 >= playerMarketTotalMatchCount) {
+                _playerMarketTotalMatchCount++;
+                uint16_t scrollOff = _playerMarketListScrollOffset;
+                if (scrollOff < _playerMarketTotalMatchCount &&
+                    scrollOff + 10 >= _playerMarketTotalMatchCount) {
                     *visPtr++ = (uintptr_t)a1;
-                    playerMarketVisibleItemCount++;
+                    _playerMarketVisibleItemCount++;
                 }
             }
             a1 += 4;
@@ -5155,38 +5155,38 @@ void PlayerMarketBuildVisiblePlayerList(void)
  *        d7.b = ref skill (for team eligibility)
  *   out: none (offer written to transferOfferTable)
  * ================================================================ */
-extern uint16_t offerSearchRetryCount;
-extern uint16_t offerPrimaryPositionMask;
-extern uint16_t offerExtraPositionMask;
-extern uint16_t offerTargetValueBase;
-extern uint16_t offerValueBaseSum;
-extern uint16_t offerSwapValueBaseSum;
-extern uint8_t  offerCandidateTeamIndexBuffer[];
-extern uint8_t  offerLifespanTable[];
+extern uint16_t _offerSearchRetryCount;
+extern uint16_t _offerPrimaryPositionMask;
+extern uint16_t _offerExtraPositionMask;
+extern uint16_t _offerTargetValueBase;
+extern uint16_t _offerValueBaseSum;
+extern uint16_t _offerSwapValueBaseSum;
+extern uint8_t  _offerCandidateTeamIndexBuffer[];
+extern uint8_t  _offerLifespanTable[];
 /* offerNegotiationStep1Amount is now offerOrdinals.offerNegotiationStep1Amount */
-extern uint16_t offerNegotiationStep2Amount;
-extern uint16_t swapPlayerValueRandom;
-extern uint16_t extraPlayerValueRandom;
+extern uint16_t _offerNegotiationStep2Amount;
+extern uint16_t _swapPlayerValueRandom;
+extern uint16_t _extraPlayerValueRandom;
 
 extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern uint16_t SnapToNearestAvgTeamValueBase(uint16_t value);
 extern uint16_t SnapUpToAvgTeamValueBase(uint16_t value);
 extern void SaveRand2State(void);
 extern void RestoreRand2State(void);
-extern void Randomize2(uint16_t seed);
+extern void Randomize2(uint16_t _seed);
 extern uint16_t GetPlayerRandomNum(PlayerFile *playerFile);
 
 __attribute__((used, externally_visible))
 void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 {
-    offerOrdinals.offerPrimaryPlayerOrdinal = playerOrdinal;
+    _offerOrdinals.offerPrimaryPlayerOrdinal = playerOrdinal;
 
     /* Get value base for the primary player */
-    uint16_t avgVal = GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, playerOrdinal);
-    offerValueBaseSum = avgVal;
+    uint16_t avgVal = GetAvgTeamValueBaseForCurrentPlayer(_selTeamNumber, playerOrdinal);
+    _offerValueBaseSum = avgVal;
 
     /* Get player data and check injury */
-    uint8_t *playerEntry = GetPlayer(selTeamNumber, playerOrdinal);
+    uint8_t *playerEntry = GetPlayer(_selTeamNumber, playerOrdinal);
     PlayerFile *pfEntry = (PlayerFile *)(playerEntry + PF_OFF);
     uint16_t refSkill = (uint8_t)pfEntry->price;
     if (IsPlayerInjured((PlayerFile *)playerEntry, -1) != 0) {
@@ -5197,7 +5197,7 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     /* Get position mask */
     uint16_t posMask = (uint16_t)pfEntry->positionAndFace & PF_POSITION_MASK;
-    offerPrimaryPositionMask = posMask;
+    _offerPrimaryPositionMask = posMask;
 
     /* Decide home vs foreign market */
     uint16_t rnd = Rand2();
@@ -5206,8 +5206,8 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     if (rnd >= 8) {
         /* Home market path */
-        homeMarketRandomPickRetries++;
-        uint8_t *a0 = &selTeamsPtr;
+        _homeMarketRandomPickRetries++;
+        uint8_t *a0 = &_selTeamsPtr;
         teamsBase = a0;
         uint16_t d5 = 0;
         uint16_t d4 = 0;
@@ -5217,11 +5217,11 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
          * x86 *(uint8_t *)&selTeamNumber would read the *ordinal* instead
          * and the home-market scan would almost never match, leaving
          * teamCount=0 and the function bailing at "no eligible buyer". */
-        uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
-        while (d4 < numSelectedTeams) {
+        uint8_t selTeamByte = (uint8_t)(_selTeamNumber >> 8);
+        while (d4 < _numSelectedTeams) {
             if (selTeamByte == *a0) {
                 if (IsTeamEligibleForOfferByRefSkill((TeamFileEx *)a0, refSkill) == 0) {
-                    offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
+                    _offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
                     d5++;
                 }
             }
@@ -5231,22 +5231,22 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         teamCount = d5;
     } else {
         /* Foreign market path */
-        offerSearchRetryCount++;
-        uint8_t *a0 = &tmdFileBuffer;
+        _offerSearchRetryCount++;
+        uint8_t *a0 = &_tmdFileBuffer;
         teamsBase = a0;
         uint16_t d5 = 0;
         uint16_t d4 = 0;
-        uint16_t numCareerTeams = careerFileBuffer;
+        uint16_t numCareerTeams = _careerFileBuffer;
         /* MSB of selTeamNumber = country byte (see same fix in home-market
          * branch above). The foreign path wants country != candidate, so the
          * pre-fix LE byte read mostly accepted anything (ordinal byte rarely
          * coincides with another country code) and the foreign offer rate
          * was only "broken into mostly working", but it's still wrong. */
-        uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
+        uint8_t selTeamByte = (uint8_t)(_selTeamNumber >> 8);
         while (d4 < numCareerTeams) {
             if (selTeamByte != *a0) {
                 if (IsTeamEligibleForOfferByRefSkill((TeamFileEx *)a0, refSkill) == 0) {
-                    offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
+                    _offerCandidateTeamIndexBuffer[d5] = (uint8_t)d4;
                     d5++;
                 }
             }
@@ -5260,7 +5260,7 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — no eligible buyer team "
                           "(numSelectedTeams=%u refSkill=%u home/foreign rnd=%u)",
                           (unsigned)playerOrdinal,
-                          (unsigned)numSelectedTeams,
+                          (unsigned)_numSelectedTeams,
                           (unsigned)refSkill,
                           (unsigned)rnd);
         return;
@@ -5269,7 +5269,7 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     /* Pick a random team from candidates */
     rnd = Rand2();
     uint16_t idx = (uint16_t)((uint16_t)(rnd * teamCount) >> 8);
-    uint8_t teamIdx = offerCandidateTeamIndexBuffer[idx];
+    uint8_t teamIdx = _offerCandidateTeamIndexBuffer[idx];
     uint8_t *teamBlock = teamsBase + (uint32_t)teamIdx * 0x2AC;
 
     /* Check uniqueness. teamBlock[0..1] = {countryNumber, teamOrdinal}
@@ -5279,16 +5279,16 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
      * downstream offer record is then stored with the wrong country
      * byte at offset 0. */
     uint16_t offTeamId = PACK_BE_U16(teamBlock[0], teamBlock[1]);
-    if (IsOfferTeamPlayerPairUnique(offTeamId, offerOrdinals.offerPrimaryPlayerOrdinal) == 0) {
+    if (IsOfferTeamPlayerPairUnique(offTeamId, _offerOrdinals.offerPrimaryPlayerOrdinal) == 0) {
         SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — duplicate offer "
                           "(team=0x%04X already has offer)",
                           (unsigned)playerOrdinal, (unsigned)offTeamId);
         return;
     }
 
-    offerOrdinals.teamOffering = offTeamId;
-    offerExtraPositionMask = 0xFFFF;
-    offerOrdinals.numExtraPlayersWanted = -1;
+    _offerOrdinals.teamOffering = offTeamId;
+    _offerExtraPositionMask = 0xFFFF;
+    _offerOrdinals.numExtraPlayersWanted = -1;
 
     /* Try to add an extra player wanted */
     uint16_t swapSlots = GetRemainingOfferSwapSlots();
@@ -5310,21 +5310,21 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         rnd = Rand2();
         if (rnd < 0x19) {
             int16_t extraOrd = PickRandomEligibleExtraPlayerOrdinal(refSkill);
-            offerOrdinals.numExtraPlayersWanted = extraOrd;
+            _offerOrdinals.numExtraPlayersWanted = extraOrd;
             if (extraOrd >= 0) {
                 /* Check uniqueness for extra player */
                 if (IsOfferTeamPlayerPairUnique(offTeamId, (uint16_t)extraOrd) == 0) {
-                    offerOrdinals.numExtraPlayersWanted = -1;
+                    _offerOrdinals.numExtraPlayersWanted = -1;
                 } else {
                     /* Add extra player's value */
-                    uint16_t extraVal = GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, (uint16_t)extraOrd);
-                    offerValueBaseSum += extraVal;
+                    uint16_t extraVal = GetAvgTeamValueBaseForCurrentPlayer(_selTeamNumber, (uint16_t)extraOrd);
+                    _offerValueBaseSum += extraVal;
 
                     /* Get extra player entry and check injury + position */
-                    uint8_t *extraEntry = GetPlayer(selTeamNumber, (uint16_t)extraOrd);
+                    uint8_t *extraEntry = GetPlayer(_selTeamNumber, (uint16_t)extraOrd);
                     PlayerFile *extraPf = (PlayerFile *)(extraEntry + PF_OFF);
                     uint16_t extraPos = (uint16_t)extraPf->positionAndFace & PF_POSITION_MASK;
-                    offerExtraPositionMask = extraPos;
+                    _offerExtraPositionMask = extraPos;
                     if (IsPlayerInjured((PlayerFile *)extraEntry, -1) != 0)
                         return;
                 }
@@ -5337,13 +5337,13 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
      * intermediate to avoid overflow for players valued > £650K. */
     rnd = Rand2();
     uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x23) >> 8) + 0x55;
-    uint16_t targetVal = (uint16_t)((uint32_t)pct * (uint32_t)offerValueBaseSum / 100);
-    offerTargetValueBase = targetVal;
+    uint16_t targetVal = (uint16_t)((uint32_t)pct * (uint32_t)_offerValueBaseSum / 100);
+    _offerTargetValueBase = targetVal;
 
     /* Initialize swap player fields */
-    offerSwapValueBaseSum = 0;
-    offerOrdinals.offerSwapPlayerOrdinal = -1;
-    offerOrdinals.offerExtraPlayerOrdinal = -1;
+    _offerSwapValueBaseSum = 0;
+    _offerOrdinals.offerSwapPlayerOrdinal = -1;
+    _offerOrdinals.offerExtraPlayerOrdinal = -1;
 
     /* Try to add a swap player */
     uint16_t poolSlots = GetRemainingTransferPoolSlots();
@@ -5353,10 +5353,10 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
             int16_t swapOrd = PickRandomEligibleSwapPlayerOrdinalFromTeam(
                 (TeamFileEx *)teamBlock, -1);
             if (swapOrd >= 0) {
-                uint16_t swapVal = GetAvgTeamValueBaseForCurrentPlayer(offerOrdinals.teamOffering, (uint16_t)swapOrd);
-                if (swapVal <= offerTargetValueBase) {
-                    offerSwapValueBaseSum = swapVal;
-                    offerOrdinals.offerSwapPlayerOrdinal = swapOrd;
+                uint16_t swapVal = GetAvgTeamValueBaseForCurrentPlayer(_offerOrdinals.teamOffering, (uint16_t)swapOrd);
+                if (swapVal <= _offerTargetValueBase) {
+                    _offerSwapValueBaseSum = swapVal;
+                    _offerOrdinals.offerSwapPlayerOrdinal = swapOrd;
 
                     /* Try to add an extra swap player */
                     poolSlots = GetRemainingTransferPoolSlots();
@@ -5367,11 +5367,11 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
                                 (TeamFileEx *)teamBlock, swapOrd);
                             if (extraSwapOrd >= 0) {
                                 uint16_t extraSwapVal = GetAvgTeamValueBaseForCurrentPlayer(
-                                    offerOrdinals.teamOffering, (uint16_t)extraSwapOrd);
-                                uint16_t combined = extraSwapVal + offerSwapValueBaseSum;
-                                if (combined <= offerTargetValueBase) {
-                                    offerSwapValueBaseSum += extraSwapVal;
-                                    offerOrdinals.offerExtraPlayerOrdinal = extraSwapOrd;
+                                    _offerOrdinals.teamOffering, (uint16_t)extraSwapOrd);
+                                uint16_t combined = extraSwapVal + _offerSwapValueBaseSum;
+                                if (combined <= _offerTargetValueBase) {
+                                    _offerSwapValueBaseSum += extraSwapVal;
+                                    _offerOrdinals.offerExtraPlayerOrdinal = extraSwapOrd;
                                 }
                             }
                         }
@@ -5382,34 +5382,34 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
     }
 
     /* Calculate offer amount = targetValue - swapValue, with 15% floor */
-    uint16_t cashOffer = offerTargetValueBase - offerSwapValueBaseSum;
-    uint16_t floor15pct = (uint16_t)((uint16_t)(offerTargetValueBase * 15) / 100);
+    uint16_t cashOffer = _offerTargetValueBase - _offerSwapValueBaseSum;
+    uint16_t floor15pct = (uint16_t)((uint16_t)(_offerTargetValueBase * 15) / 100);
     if (cashOffer < floor15pct)
         cashOffer = 0;
     cashOffer = SnapToNearestAvgTeamValueBase(cashOffer);
-    offerOrdinals.offerAmount = cashOffer;
+    _offerOrdinals.offerAmount = cashOffer;
 
     /* Generate negotiation steps */
     rnd = Rand2();
-    offerOrdinals.offerNegotiationStep1Amount = 0;
-    offerNegotiationStep2Amount = 0;
+    _offerOrdinals.offerNegotiationStep1Amount = 0;
+    _offerNegotiationStep2Amount = 0;
 
     if (rnd & 1) {
         /* Step 1: random 105-112% of offer amount */
         uint16_t step1pct = (uint16_t)((uint16_t)(rnd * 0x14) >> 8) + 0x69;
-        uint16_t step1 = (uint16_t)((uint32_t)step1pct * (uint32_t)offerOrdinals.offerAmount / 100);
+        uint16_t step1 = (uint16_t)((uint32_t)step1pct * (uint32_t)_offerOrdinals.offerAmount / 100);
         step1 = SnapToNearestAvgTeamValueBase(step1);
-        if (step1 != offerOrdinals.offerAmount) {
-            offerOrdinals.offerNegotiationStep1Amount = step1;
+        if (step1 != _offerOrdinals.offerAmount) {
+            _offerOrdinals.offerNegotiationStep1Amount = step1;
 
             rnd = Rand2();
             if (rnd & 1) {
                 /* Step 2: random 105-112% of step1 */
                 uint16_t step2pct = (uint16_t)((uint16_t)(rnd * 0x14) >> 8) + 0x69;
-                uint16_t step2 = (uint16_t)((uint32_t)step2pct * (uint32_t)offerOrdinals.offerNegotiationStep1Amount / 100);
+                uint16_t step2 = (uint16_t)((uint32_t)step2pct * (uint32_t)_offerOrdinals.offerNegotiationStep1Amount / 100);
                 step2 = SnapToNearestAvgTeamValueBase(step2);
-                if (step2 != offerOrdinals.offerNegotiationStep1Amount) {
-                    offerNegotiationStep2Amount = step2;
+                if (step2 != _offerOrdinals.offerNegotiationStep1Amount) {
+                    _offerNegotiationStep2Amount = step2;
                 }
             }
         }
@@ -5417,44 +5417,44 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     /* Check roster size constraint */
     int16_t rosterDelta = -1; /* start at 0xFFFF = -1 (will add primary player) */
-    if (offerOrdinals.numExtraPlayersWanted >= 0)
+    if (_offerOrdinals.numExtraPlayersWanted >= 0)
         rosterDelta--;  /* losing an extra player */
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
         rosterDelta++;  /* gaining a swap player */
-        if (offerOrdinals.offerExtraPlayerOrdinal >= 0)
+        if (_offerOrdinals.offerExtraPlayerOrdinal >= 0)
             rosterDelta++;  /* gaining extra swap player */
     }
-    int16_t newTotal = rosterDelta + (int16_t)careerNumPlayers;
+    int16_t newTotal = rosterDelta + (int16_t)_careerNumPlayers;
     if (newTotal > 30) {
         SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — roster overflow "
                           "(newTotal=%d careerNumPlayers=%u)",
                           (unsigned)playerOrdinal,
-                          (int)newTotal, (unsigned)careerNumPlayers);
+                          (int)newTotal, (unsigned)_careerNumPlayers);
         return;
     }
 
     /* Write offer to table */
-    uint16_t offerIdx = numOffers;
-    TransferOfferEntry *entry = &((TransferOfferEntry *)transferOfferTable)[offerIdx];
-    entry->offerAmount            = offerOrdinals.offerAmount;
-    entry->negotiationStep1Amount = (int16_t)offerOrdinals.offerNegotiationStep1Amount;
-    entry->negotiationStep2Amount = (int16_t)offerNegotiationStep2Amount;
-    entry->teamOffering           = offerOrdinals.teamOffering;
-    entry->primaryPlayerOrdinal   = (int8_t)offerOrdinals.offerPrimaryPlayerOrdinal;
-    entry->secondPlayerOrdinal    = (int8_t)offerOrdinals.numExtraPlayersWanted;
-    entry->swapPlayerOrdinal      = (int8_t)offerOrdinals.offerSwapPlayerOrdinal;
-    entry->extraPlayerOrdinal     = (int8_t)offerOrdinals.offerExtraPlayerOrdinal;
+    uint16_t offerIdx = _numOffers;
+    TransferOfferEntry *entry = &((TransferOfferEntry *)_transferOfferTable)[offerIdx];
+    entry->offerAmount            = _offerOrdinals.offerAmount;
+    entry->negotiationStep1Amount = (int16_t)_offerOrdinals.offerNegotiationStep1Amount;
+    entry->negotiationStep2Amount = (int16_t)_offerNegotiationStep2Amount;
+    entry->teamOffering           = _offerOrdinals.teamOffering;
+    entry->primaryPlayerOrdinal   = (int8_t)_offerOrdinals.offerPrimaryPlayerOrdinal;
+    entry->secondPlayerOrdinal    = (int8_t)_offerOrdinals.numExtraPlayersWanted;
+    entry->swapPlayerOrdinal      = (int8_t)_offerOrdinals.offerSwapPlayerOrdinal;
+    entry->extraPlayerOrdinal     = (int8_t)_offerOrdinals.offerExtraPlayerOrdinal;
 
     /* Random lifespan from table */
     rnd = Rand2();
-    entry->lifespan = offerLifespanTable[rnd & 0xF];
+    entry->lifespan = _offerLifespanTable[rnd & 0xF];
     entry->seenFlag = 0;
 
-    numOffers++;
+    _numOffers++;
     SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: STORED — team=0x%04X amount=%u numOffers=%u",
-                      (unsigned)offerOrdinals.offerPrimaryPlayerOrdinal,
-                      (unsigned)offerOrdinals.teamOffering, (unsigned)offerOrdinals.offerAmount,
-                      (unsigned)numOffers);
+                      (unsigned)_offerOrdinals.offerPrimaryPlayerOrdinal,
+                      (unsigned)_offerOrdinals.teamOffering, (unsigned)_offerOrdinals.offerAmount,
+                      (unsigned)_numOffers);
 }
 
 /* ================================================================
@@ -5468,23 +5468,23 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
  *   in:  globals (offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal, etc.)
  *   out: d0.w = transferPlayerMenuResult
  * ================================================================ */
-extern uint8_t  playerTransferMenu[];
+extern uint8_t  _playerTransferMenu[];
 
 __attribute__((used, externally_visible))
 int16_t EvaluateTransferOfferNegotiation(void)
 {
     /* Check roster size constraint */
     int16_t rosterDelta = 1;  /* gaining the primary player */
-    if (offerOrdinals.numExtraPlayersWanted >= 0)
+    if (_offerOrdinals.numExtraPlayersWanted >= 0)
         rosterDelta++;  /* losing an extra player → gaining one more */
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0)
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0)
         rosterDelta--;  /* giving away swap player */
-    if (offerOrdinals.offerExtraPlayerOrdinal >= 0)
+    if (_offerOrdinals.offerExtraPlayerOrdinal >= 0)
         rosterDelta--;  /* giving away extra swap player */
 
-    int16_t newTotal = rosterDelta + (int16_t)careerNumPlayers;
+    int16_t newTotal = rosterDelta + (int16_t)_careerNumPlayers;
     if ((uint16_t)newTotal > 30) {
-        currentMessage = 2;
+        _currentMessage = 2;
         ShowChairmanMessage();
         return 0;
     }
@@ -5492,7 +5492,7 @@ int16_t EvaluateTransferOfferNegotiation(void)
     /* Save random state, seed with player-specific random */
     SaveRand2State();
 
-    uint8_t *playerEntry = GetPlayer(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+    uint8_t *playerEntry = GetPlayer(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
     uint16_t playerRand = GetPlayerRandomNum((PlayerFile *)playerEntry);
     Randomize2(playerRand);
 
@@ -5504,17 +5504,17 @@ int16_t EvaluateTransferOfferNegotiation(void)
     uint16_t d1val = 0x60 / divisor;
 
     /* XOR with viewRandomPhase mod d1val, then re-randomize */
-    uint16_t phase = (uint16_t)(uint8_t)viewRandomPhase;
+    uint16_t phase = (uint16_t)(uint8_t)_viewRandomPhase;
     uint16_t phasemod = (d1val != 0) ? (phase % d1val) : 0;
-    uint16_t seed2 = phasemod ^ d2;
-    Randomize2(seed2);
+    uint16_t _seed2 = phasemod ^ d2;
+    Randomize2(_seed2);
 
     /* Check if swap players can be accepted */
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
         uint16_t slots = GetRemainingOfferSwapSlots();
         if (slots == 0)
             goto reject;
-        if (offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+        if (_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
             slots = GetRemainingOfferSwapSlots();
             if (slots < 2)
                 goto reject;
@@ -5524,7 +5524,7 @@ int16_t EvaluateTransferOfferNegotiation(void)
     /* Random values for swap/extra player valuation */
     Rand2();  /* discard one */
     Rand2();
-    swapPlayerValueRandom = Rand2();  /* actually: rnd→discard, rnd→swap, rnd→extra */
+    _swapPlayerValueRandom = Rand2();  /* actually: rnd→discard, rnd→swap, rnd→extra */
     /* Wait, let me re-read the asm more carefully:
        jsr Rand2          ; discard
        jsr Rand2
@@ -5542,36 +5542,36 @@ int16_t EvaluateTransferOfferNegotiation(void)
     /* Let me re-do this properly */
     {
         Rand2();  /* line 63804 - result discarded */
-        swapPlayerValueRandom = Rand2();  /* line 63805-63806 */
-        extraPlayerValueRandom = Rand2(); /* line 63807-63808 */
+        _swapPlayerValueRandom = Rand2();  /* line 63805-63806 */
+        _extraPlayerValueRandom = Rand2(); /* line 63807-63808 */
     }
 
     /* Get primary player demand value */
-    uint16_t demandValue = GetAvgTeamValueBaseForCurrentPlayer(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+    uint16_t demandValue = GetAvgTeamValueBaseForCurrentPlayer(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
     uint16_t d7demand = demandValue;
 
     /* Add extra player wanted demand */
-    if (offerOrdinals.numExtraPlayersWanted >= 0) {
-        uint16_t extraDemand = GetAvgTeamValueBaseForCurrentPlayer(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted);
+    if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+        uint16_t extraDemand = GetAvgTeamValueBaseForCurrentPlayer(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted);
         d7demand += extraDemand;
     }
 
     /* Calculate total offer value (cash + swap players) */
-    uint16_t totalOffer = offerOrdinals.offerAmount;
+    uint16_t totalOffer = _offerOrdinals.offerAmount;
 
-    if (offerOrdinals.offerSwapPlayerOrdinal >= 0) {
+    if (_offerOrdinals.offerSwapPlayerOrdinal >= 0) {
         /* Swap player valuation with random multiplier */
-        uint16_t swapVal = GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, (uint16_t)offerOrdinals.offerSwapPlayerOrdinal);
-        uint16_t swapRnd = swapPlayerValueRandom;
+        uint16_t swapVal = GetAvgTeamValueBaseForCurrentPlayer(_selTeamNumber, (uint16_t)_offerOrdinals.offerSwapPlayerOrdinal);
+        uint16_t swapRnd = _swapPlayerValueRandom;
         uint16_t swapPct = (uint16_t)((uint16_t)(swapRnd * 0x4B) >> 8) + 0x32;
         uint16_t adjustedSwap = (uint16_t)((uint16_t)(swapPct * swapVal) / 100);
         adjustedSwap = SnapToNearestAvgTeamValueBase(adjustedSwap);
         totalOffer += adjustedSwap;
 
-        if (offerOrdinals.offerExtraPlayerOrdinal >= 0) {
+        if (_offerOrdinals.offerExtraPlayerOrdinal >= 0) {
             /* Extra swap player valuation */
-            uint16_t extraSwapVal = GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, (uint16_t)offerOrdinals.offerExtraPlayerOrdinal);
-            uint16_t extraRnd = extraPlayerValueRandom;
+            uint16_t extraSwapVal = GetAvgTeamValueBaseForCurrentPlayer(_selTeamNumber, (uint16_t)_offerOrdinals.offerExtraPlayerOrdinal);
+            uint16_t extraRnd = _extraPlayerValueRandom;
             uint16_t extraPct = (uint16_t)((uint16_t)(extraRnd * 0x32) >> 8) + 0x32;
             uint16_t adjustedExtra = (uint16_t)((uint16_t)(extraPct * extraSwapVal) / 100);
             adjustedExtra = SnapToNearestAvgTeamValueBase(adjustedExtra);
@@ -5587,20 +5587,20 @@ int16_t EvaluateTransferOfferNegotiation(void)
      * read LE byte[0] = ordinal, so the cross-division check fired for
      * any team whose country byte differed from the user's ordinal — i.e.
      * almost every offer routed through the "different division" branch. */
-    uint16_t offTeamHigh = offerOrdinals.teamOffering >> 8;
-    uint8_t selTeamByte = (uint8_t)(selTeamNumber >> 8);
+    uint16_t offTeamHigh = _offerOrdinals.teamOffering >> 8;
+    uint8_t selTeamByte = (uint8_t)(_selTeamNumber >> 8);
     if (offTeamHigh != selTeamByte) {
         /* Different division — check average player price */
-        uint16_t avgPrice = GetAveragePlayerPrice(&careerTeam);
+        uint16_t avgPrice = GetAveragePlayerPrice(&_careerTeam);
         uint16_t threshold = (uint16_t)((uint16_t)(avgPrice * 0x8C) / 100);
 
         /* Get primary player's skill and check against threshold */
-        uint8_t *primEntry = GetPlayer(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+        uint8_t *primEntry = GetPlayer(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
         PlayerFile *primPf = (PlayerFile *)(primEntry + PF_OFF);
         if (threshold >= (uint8_t)primPf->price) {
             /* Primary player below threshold, check extra */
-            if (offerOrdinals.numExtraPlayersWanted >= 0) {
-                uint8_t *extraEntry = GetPlayer(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted);
+            if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+                uint8_t *extraEntry = GetPlayer(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted);
                 PlayerFile *extraPfEval = (PlayerFile *)(extraEntry + PF_OFF);
                 if (threshold < (uint8_t)extraPfEval->price) {
                     goto highDemand;
@@ -5621,14 +5621,14 @@ int16_t EvaluateTransferOfferNegotiation(void)
 checkMarket:
     /* Check if player(s) are on the transfer market */
     {
-        int16_t primOnMarket = (FindPlayerInCareerOrForeignMarket(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal) == 0);
+        int16_t primOnMarket = (FindPlayerInCareerOrForeignMarket(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal) == 0);
         int16_t allOnMarket = 0;
 
         if (primOnMarket) {
-            if (offerOrdinals.numExtraPlayersWanted < 0) {
+            if (_offerOrdinals.numExtraPlayersWanted < 0) {
                 allOnMarket = 1;  /* only primary, and it's on market */
             } else {
-                int16_t extraOnMarket = (FindPlayerInCareerOrForeignMarket(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted) == 0);
+                int16_t extraOnMarket = (FindPlayerInCareerOrForeignMarket(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted) == 0);
                 if (extraOnMarket)
                     allOnMarket = 1;  /* both on market */
                 /* else: primary on market, extra not → check transfer list */
@@ -5646,13 +5646,13 @@ checkMarket:
 
         /* At least one player NOT on market — check transfer list flag */
         {
-            uint8_t *prim2 = GetPlayer(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+            uint8_t *prim2 = GetPlayer(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
             PlayerFile *primPf2 = (PlayerFile *)(prim2 + PF_OFF);
             if (primPf2->cardsInjuries & 0x04)
                 goto onTransferList;
 
-            if (offerOrdinals.numExtraPlayersWanted >= 0) {
-                uint8_t *extra2 = GetPlayer(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted);
+            if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+                uint8_t *extra2 = GetPlayer(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted);
                 PlayerFile *extraPf3 = (PlayerFile *)(extra2 + PF_OFF);
                 if (extraPf3->cardsInjuries & 0x04)
                     goto onTransferList;
@@ -5688,10 +5688,10 @@ checkMarket:
 compareOffer:
     if (totalOffer >= askingPrice) {
         /* Offer meets asking price — willing to sell */
-        teamWillingToSellOrExchange = 0;
+        _teamWillingToSellOrExchange = 0;
     } else {
         /* Check if close enough (within 20%) and negotiation attempts <= 3 */
-        if (offerNegotiationAttemptCount > 3)
+        if (_offerNegotiationAttemptCount > 3)
             goto reject;
 
         uint16_t diff = askingPrice - totalOffer;
@@ -5706,55 +5706,55 @@ compareOffer:
         counterVal = SnapUpToAvgTeamValueBase(counterVal);
         int16_t counterDiff = (int16_t)(counterVal - totalOffer);
         counterDiff = -counterDiff;
-        teamWillingToSellOrExchange = counterDiff;
+        _teamWillingToSellOrExchange = counterDiff;
     }
     goto showMenu;
 
 reject:
     /* Rejection — determine reason */
     {
-        int16_t primFound = FindPlayerInCareerOrForeignMarket(offerOrdinals.teamOffering, offerOrdinals.offerPrimaryPlayerOrdinal);
+        int16_t primFound = FindPlayerInCareerOrForeignMarket(_offerOrdinals.teamOffering, _offerOrdinals.offerPrimaryPlayerOrdinal);
         if (primFound == 0) {
             /* Primary not on market */
-            if (offerOrdinals.numExtraPlayersWanted >= 0) {
-                int16_t extraFound = FindPlayerInCareerOrForeignMarket(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted);
+            if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+                int16_t extraFound = FindPlayerInCareerOrForeignMarket(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted);
                 if (extraFound == 0) {
                     /* Neither on market → willing=4 */
-                    teamWillingToSellOrExchange = 4;
+                    _teamWillingToSellOrExchange = 4;
                     RemoveNegotiatedOfferPlayersFromMarkets();
                     goto showMenu;
                 }
                 /* Primary not on market, extra IS on market → willing=4 */
-                teamWillingToSellOrExchange = 4;
+                _teamWillingToSellOrExchange = 4;
                 RemoveNegotiatedOfferPlayersFromMarkets();
                 goto showMenu;
             }
             /* Primary not on market, no extra → willing=3 */
-            teamWillingToSellOrExchange = 3;
+            _teamWillingToSellOrExchange = 3;
             RemoveNegotiatedOfferPlayersFromMarkets();
             goto showMenu;
         }
         /* Primary IS on market */
-        if (offerOrdinals.numExtraPlayersWanted >= 0) {
-            int16_t extraFound = FindPlayerInCareerOrForeignMarket(offerOrdinals.teamOffering, (uint16_t)offerOrdinals.numExtraPlayersWanted);
+        if (_offerOrdinals.numExtraPlayersWanted >= 0) {
+            int16_t extraFound = FindPlayerInCareerOrForeignMarket(_offerOrdinals.teamOffering, (uint16_t)_offerOrdinals.numExtraPlayersWanted);
             if (extraFound == 0) {
                 /* Extra not on market → willing=4 */
-                teamWillingToSellOrExchange = 4;
+                _teamWillingToSellOrExchange = 4;
                 RemoveNegotiatedOfferPlayersFromMarkets();
                 goto showMenu;
             }
             /* Both on market but rejected → willing=2 */
-            teamWillingToSellOrExchange = 2;
+            _teamWillingToSellOrExchange = 2;
             goto showMenu;
         }
         /* Primary on market, no extra → willing=1 */
-        teamWillingToSellOrExchange = 1;
+        _teamWillingToSellOrExchange = 1;
     }
 
 showMenu:
     RestoreRand2State();
-    ShowMenu(playerTransferMenu);
-    return (int16_t)transferPlayerMenuResult;
+    ShowMenu(_playerTransferMenu);
+    return (int16_t)_transferPlayerMenuResult;
 }
 
 /* ================================================================
@@ -5771,7 +5771,7 @@ showMenu:
 __attribute__((used, externally_visible))
 uint16_t ApplyOfferDemandMultipliersForSwapAndExtraPlayers(uint16_t demandValue)
 {
-    if (offerOrdinals.offerSwapPlayerOrdinal < 0)
+    if (_offerOrdinals.offerSwapPlayerOrdinal < 0)
         return demandValue;
 
     /* Swap player: random 100-139% */
@@ -5779,7 +5779,7 @@ uint16_t ApplyOfferDemandMultipliersForSwapAndExtraPlayers(uint16_t demandValue)
     uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x64) >> 8) + 0x64;
     demandValue = (uint16_t)((uint16_t)(pct * demandValue) / 100);
 
-    if (offerOrdinals.offerExtraPlayerOrdinal < 0)
+    if (_offerOrdinals.offerExtraPlayerOrdinal < 0)
         return demandValue;
 
     /* Extra player: random 100-149% */

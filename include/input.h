@@ -19,6 +19,6 @@ void Player2StatusProc(void);
  * test this to bail out of dwell waits early. Not present on the
  * Amiga build; gate any use behind a stub or `#ifdef` if back-porting
  * a routine that reads it. */
-extern volatile uint16_t pauseSkipRequested;
+extern volatile uint16_t _pauseSkipRequested;
 
 #endif

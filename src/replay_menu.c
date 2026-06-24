@@ -11,21 +11,21 @@
 #include "fade.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern volatile int16_t waitingInterrupt;
-extern volatile uint16_t currentGameTick;
-extern uint16_t paletteIndex;
-extern uint16_t replaySelected;
-extern uint16_t menuControlsDirection;
-extern volatile uint16_t fire;
+extern volatile int16_t _waitingInterrupt;
+extern volatile uint16_t _currentGameTick;
+extern uint16_t _paletteIndex;
+extern uint16_t _replaySelected;
+extern uint16_t _menuControlsDirection;
+extern volatile uint16_t _fire;
 
-extern uint8_t frontbufferMaskBuffer[];
-extern uint8_t bigCharsTable[];
-extern uint16_t kColorTableShine[];
+extern uint8_t _frontbufferMaskBuffer[];
+extern uint8_t _bigCharsTable[];
+extern uint16_t _kColorTableShine[];
 
 /* String constants in SWOS2.s */
-extern uint8_t aGrafsMenubg2Ra[];   /* "grafs/menubg2.raw" */
-extern uint8_t aReplay[];           /* "REPLAY" */
-extern uint8_t aExit[];             /* "EXIT" */
+extern uint8_t _aGrafsMenubg2Ra[];   /* "grafs/menubg2.raw" */
+extern uint8_t _aReplay[];           /* "REPLAY" */
+extern uint8_t _aExit[];             /* "EXIT" */
 
 /* ---- External functions ---- */
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
@@ -48,7 +48,7 @@ void DrawMenuBack150x20(uint16_t color, uint16_t x, uint16_t y)
  * DrawReplayContinueShiningFrame  (SWOS2.s line 18513)
  *
  * Draws an animated shining frame around a 150x20 box.
- * Uses currentGameTick to cycle through kColorTableShine colors.
+ * Uses _currentGameTick to cycle through _kColorTableShine colors.
  *   D0 = x position, D1 = y position
  *
  * Frame consists of 4 FillRectangle calls:
@@ -64,9 +64,9 @@ void DrawReplayContinueShiningFrame(int16_t x, int16_t y)
     uint16_t color;
 
     /* Compute animated color from tick */
-    idx = currentGameTick >> 1;
+    idx = _currentGameTick >> 1;
     idx &= 7;
-    color = kColorTableShine[idx];
+    color = _kColorTableShine[idx];
 
     /* Top horizontal line */
     FillRectangle((uint16_t)x, (uint16_t)y, 0x96, 1, color);
@@ -98,13 +98,13 @@ void DrawReplayOrExitMenu(void)
         DrawMenuBack150x20(12, 101, 136);
 
         /* "REPLAY" text centered (x center=176, y=112, color index=2) */
-        DrawMenuTextCentered(176, 112, 2, aReplay, bigCharsTable);
+        DrawMenuTextCentered(176, 112, 2, _aReplay, _bigCharsTable);
         /* "EXIT" text centered (x center=176, y=142, color index=2) */
-        DrawMenuTextCentered(176, 142, 2, aExit, bigCharsTable);
+        DrawMenuTextCentered(176, 142, 2, _aExit, _bigCharsTable);
 
         /* Wait for VBlank */
-        waitingInterrupt = 1;
-        while (waitingInterrupt != 0)
+        _waitingInterrupt = 1;
+        while (_waitingInterrupt != 0)
             ;
     }
 }
@@ -114,21 +114,21 @@ void DrawReplayOrExitMenu(void)
  *
  * Shows the post-friendly-match "REPLAY / EXIT" menu.
  * Loads background image, sets up display, then runs an event loop
- * handling up/down navigation and fire to select.
+ * handling up/down navigation and _fire to select.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void ReplayExitMenuAfterFriendly(void)
 {
     /* Widescreen: centre the menu over the (centred) background. The match loop left
-     * g_menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
+     * _menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
      * draws below all read it, so without this they'd sit at the screen's left edge while the
      * background is centred. Restored before returning. WIDE_MARGIN is 0 on Amiga, so this is
      * a no-op here. */
-    int saved_x_offset = g_menu_draw_x_offset;
-    g_menu_draw_x_offset = WIDE_MARGIN;
+    int saved_x_offset = _menu_draw_x_offset;
+    _menu_draw_x_offset = WIDE_MARGIN;
 
     /* Load menu background image */
-    LoadFileEx(aGrafsMenubg2Ra, frontbufferMaskBuffer, (uint32_t *)0);
+    LoadFileEx(_aGrafsMenubg2Ra, _frontbufferMaskBuffer, (uint32_t *)0);
 
     ProcessSpriteBlitQueue();
     BlitterCopyPanelToScreen();
@@ -143,8 +143,8 @@ void ReplayExitMenuAfterFriendly(void)
     UpdatePlanePtrsAndBlitParams();
 
     /* Initialize state */
-    replaySelected = 1;
-    paletteIndex = 0;
+    _replaySelected = 1;
+    _paletteIndex = 0;
 
     /* Draw initial menu and fade in */
     DrawReplayOrExitMenu();
@@ -167,12 +167,12 @@ void ReplayExitMenuAfterFriendly(void)
             }
 
             /* Wait for VBlank */
-            waitingInterrupt = 1;
-            while (waitingInterrupt != 0)
+            _waitingInterrupt = 1;
+            while (_waitingInterrupt != 0)
                 ;
 
             /* Draw shining frame on selected item */
-            if (replaySelected != 0)
+            if (_replaySelected != 0)
                 DrawReplayContinueShiningFrame(0x65, 0x6A);
             else
                 DrawReplayContinueShiningFrame(0x65, 0x88);
@@ -180,34 +180,34 @@ void ReplayExitMenuAfterFriendly(void)
             /* Process input */
             MenuCheckControls();
 
-            if (menuControlsDirection == 0)
+            if (_menuControlsDirection == 0)
             {
                 /* No direction pressed */
-                if (replaySelected != 0)
+                if (_replaySelected != 0)
                     continue;           /* on REPLAY, just wait */
-                replaySelected = 1;     /* snap back to REPLAY */
+                _replaySelected = 1;     /* snap back to REPLAY */
                 needsRedraw = 1;
                 continue;
             }
 
-            if (menuControlsDirection == 4)
+            if (_menuControlsDirection == 4)
             {
                 /* Down pressed */
-                if (replaySelected == 0)
+                if (_replaySelected == 0)
                     continue;           /* already on EXIT, just wait */
-                replaySelected = 0;     /* switch to EXIT */
+                _replaySelected = 0;     /* switch to EXIT */
                 needsRedraw = 1;
                 continue;
             }
 
-            /* Other direction (up/left/right) — check fire */
-            if (fire != 0)
+            /* Other direction (up/left/right) — check _fire */
+            if (_fire != 0)
             {
                 FadeOutToBlack();
-                g_menu_draw_x_offset = saved_x_offset;
+                _menu_draw_x_offset = saved_x_offset;
                 return;
             }
-            /* No fire, just wait */
+            /* No _fire, just wait */
         }
     }
 }

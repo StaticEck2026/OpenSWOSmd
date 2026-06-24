@@ -3,1437 +3,1437 @@
  * this with translations/<lang>.json to localize by pointer (tr_ptr). */
 #include "string_symbols.h"
 
-extern char a0611961355Asm6[];                extern char aCodedByAndiSmi[];                extern char aCopyrightC1994[];
-extern char aCopyrightC1994_0[];              extern char aSensibleWorldO[];                extern char aCjcHelp[];
-extern char aDataTeam008[];                   extern char aGrafsCharsetRa[];                extern char aGrafsCjcbenchR[];
-extern char aGrafsCjcbitsRa[];                extern char aGrafsCjcgrafsR[];                extern char aGrafsCjcteam1R[];
-extern char aGrafsCjcteam2R[];                extern char aGrafsCjcteam3R[];                extern char aGrafsCjcteamgR[];
-extern char aGrafsDisk22Raw[];                extern char aGrafsDisk2Raw[];                 extern char aGrafsLoader00R[];
-extern char aGrafsLoader01R[];                extern char aGrafsLoader10R[];                extern char aGrafsLoader1Ra[];
-extern char aGrafsLoader2Ra[];                extern char aGrafsLoader3Ra[];                extern char aGrafsLoader4Ra[];
-extern char aGrafsLoader5Ra[];                extern char aGrafsLoader6Ra[];                extern char aGrafsLoader7Ra[];
-extern char aGrafsLoader8aR[];                extern char aGrafsLoader8bR[];                extern char aGrafsLoader9Ra[];
-extern char aGrafsMenus2Raw[];                extern char aGrafsMenusRaw[];                 extern char aGrafsOlddisk1R[];
-extern char aGrafsSoccerSRa[];                extern char aGrafsSocpicRaw[];                extern char aGrafsSwcpich1M[];
-extern char aGrafsSwcpich2M[];                extern char aGrafsSwcpich3M[];                extern char aGrafsSwcpich4M[];
-extern char aGrafsSwcpich5M[];                extern char aGrafsSwcpich6M[];                extern char aGrafsTacticsRa[];
-extern char aGrafsWinscrnRa[];                extern char aSwos4Dk1[];                      extern char aSwos4Dk2[];
-extern char aBoxall[];                        extern char aChapman[];                       extern char aChris[];
-extern char aDavid[];                         extern char aDavid_0[];                       extern char aDearsley[];
-extern char aGraeme[];                        extern char aHare[];                          extern char aJon[];
-extern char aMark[];                          extern char aNottingham[];                    extern char aSwosDate0[];
-extern char aWilkin[];                        extern char aAlbania[];                       extern char aAlgeria[];
-extern char aArgentina[];                     extern char aAustralia[];                     extern char aAustria[];
-extern char aBelarus[];                       extern char aBelgium[];                       extern char aBolivia[];
-extern char aBrazil[];                        extern char aBulgaria[];                      extern char aChile[];
-extern char aColombia[];                      extern char aCroatia[];                       extern char aCustom[];
-extern char aCyprus[];                        extern char aCzechRepublic[];                 extern char aDenmark[];
-extern char aEcuador[];                       extern char aElSalvadore[];                   extern char aEngland[];
-extern char aEngland_0[];                     extern char aEstonia[];                       extern char aFaroeIslands[];
-extern char aFinland[];                       extern char aFrance[];                        extern char aGermany[];
-extern char aGhana[];                         extern char aGreece[];                        extern char aHolland[];
-extern char aHungary[];                       extern char aIceland[];                       extern char aIndia[];
-extern char aIsrael[];                        extern char aItaly[];                         extern char aJapan[];
-extern char aLatvia[];                        extern char aLithuania[];                     extern char aLuxembourg[];
-extern char aMalta[];                         extern char aMexico[];                        extern char aNewZealand[];
-extern char aNorthernIreland[];               extern char aNorway[];                        extern char aParaguay[];
-extern char aPeru[];                          extern char aPoland[];                        extern char aPortugal[];
-extern char aRepublicIreland[];               extern char aRomania[];                       extern char aRussia[];
-extern char aSanMarino[];                     extern char aScotland[];                      extern char aSlovakia[];
-extern char aSlovenia[];                      extern char aSouthAfrica[];                   extern char aSpain[];
-extern char aSurinam[];                       extern char aSweden[];                        extern char aSwitzerland[];
-extern char aTaiwan[];                        extern char aTurkey[];                        extern char aUSA[];
-extern char aUkraine[];                       extern char aUruguay[];                       extern char aVenezuela[];
-extern char aWales[];                         extern char aYugoslavia[];                    extern char aAfr[];
-extern char aAfr_0[];                         extern char aAfrica[];                        extern char aAfrican[];
-extern char aAfrican_0[];                     extern char aAsi[];                           extern char aAsi_0[];
-extern char aAsia[];                          extern char aAsian[];                         extern char aAsian_0[];
-extern char aEditedCustoms[];                 extern char aEur[];                           extern char aEuro[];
-extern char aEurope[];                        extern char aEuropean[];                      extern char aEuropean_0[];
-extern char aNam[];                           extern char aNam_0[];                         extern char aNorthAmerica[];
-extern char aNorthAmerican[];                 extern char aNorthAmerican_0[];               extern char aOce[];
-extern char aOce_0[];                         extern char aOceania[];                       extern char aOceanian[];
-extern char aOceanian_0[];                    extern char aSam[];                           extern char aSam_0[];
-extern char aSouthAmerica[];                  extern char aSouthAmerican[];                 extern char aSouthAmerican_0[];
-extern char aWorld_1[];                       extern char a1Liga[];                         extern char a1stDivision[];
-extern char a2Liga[];                         extern char aCentral[];                       extern char aCentralRegion[];
-extern char aDeuxieme[];                      extern char aDeuxiemeDivisi[];                extern char aDiv1[];
-extern char aDiv1Playoffs[];                  extern char aDiv2[];                          extern char aDiv2Playoffs[];
-extern char aDiv3[];                          extern char aDiv3Playoffs[];                  extern char aDivision1[];
-extern char aDivision1_0[];                   extern char aDivision2[];                     extern char aDivision2_0[];
-extern char aDivision3[];                     extern char aDivision3_0[];                   extern char aDivisionOne[];
-extern char aDivisionThree[];                 extern char aDivisionTwo[];                   extern char aJLeague[];
-extern char aJLeague_0[];                     extern char aLeague_2[];                      extern char aLeague_3[];
-extern char aNorthern[];                      extern char aNorthernRegion[];                extern char aNsw[];
-extern char aNswDivision[];                   extern char aPremDiv[];                       extern char aPremier[];
-extern char aPremierDivisio[];                extern char aPremierLeague[];                 extern char aPremiere[];
-extern char aPremiereDivisi[];                extern char aPrimera[];                       extern char aPrimeraDivisio[];
-extern char aQueensland[];                    extern char aQueenslandDivi[];                extern char aSegunda[];
-extern char aSegundaDivisio[];                extern char aSerieA[];                        extern char aSerieB[];
-extern char aSouthDivision[];                 extern char aSouthDivision_0[];               extern char aSouthern[];
-extern char aSouthernRegion[];                extern char aAc[];                            extern char aAfricanCup[];
-extern char aAfricanNations[];                extern char aAfricanTour[];                   extern char aAnc[];
-extern char aAsianCup[];                      extern char aAsianCup_0[];                    extern char aAsianTour[];
-extern char aCa[];                            extern char aCopa[];                          extern char aCopaAmerica[];
-extern char aCopaAmerica_0[];                 extern char aCopa_0[];                        extern char aCoppa[];
-extern char aCoppaItalia[];                   extern char aCoupe[];                         extern char aCoupeDeFrance[];
-extern char aCup[];                           extern char aCup_4[];                         extern char aCup_5[];
-extern char aCup_6[];                         extern char aCup_7[];                         extern char aCup_8[];
-extern char aCup_9[];                         extern char aDFBPokal[];                      extern char aECFinals[];
-extern char aECQualifier[];                   extern char aECQualifier_0[];                 extern char aECQualifyingGr[];
-extern char aECQualifyingGr_0[];              extern char aECQualifyingGr_1[];              extern char aECQualifyingGr_2[];
-extern char aECQualifyingGr_3[];              extern char aECQualifyingGr_4[];              extern char aECQualifyingGr_5[];
-extern char aECQualifyingGr_6[];              extern char aEc[];                            extern char aEcq[];
-extern char aEmpCup[];                        extern char aEmperorSCup[];                   extern char aEufaCup[];
-extern char aEufaCup_0[];                     extern char aEuroCwCup[];                     extern char aEuropeanChampi_0[];
-extern char aEuropeanChampi_1[];              extern char aEuropeanChampionship[];          extern char aEuropeanCup[];
-extern char aEuropeanCupWin[];                extern char aFinal[];                         extern char aFinalGroups[];
-extern char aFinalGroups_0[];                 extern char aFinal_0[];                       extern char aFinal_1[];
-extern char aFinal_2[];                       extern char aFinal_3[];                       extern char aFr[];
-extern char aFriendly_0[];                    extern char aInvTournament[];                 extern char aInvitationTour[];
-extern char aLeague[];                        extern char aLeagueCup[];                     extern char aLeagueCup_0[];
-extern char aLeagueCup_1[];                   extern char aLeagueCup_2[];                   extern char aLeague_0[];
-extern char aNAmericanCup[];                  extern char aNac[];                           extern char aNorthAmericanC[];
-extern char aNorthAmericanT[];                extern char aOc[];                            extern char aOceaniaCup[];
-extern char aOceaniaCup_0[];                  extern char aPokal[];                         extern char aSouthAmericanC[];
-extern char aSouthAmericanT[];                extern char aTnm[];                           extern char aTour[];
-extern char aTournament[];                    extern char aTr[];                            extern char aWCQualifier[];
-extern char aWCQualifier_0[];                 extern char aWc[];                            extern char aWcq[];
-extern char aWorld[];                         extern char aWorldClub[];                     extern char aWorldClubChamp[];
-extern char aWorldCup[];                      extern char aWorldCupQualif[];                extern char aWorldCupQualif_1[];
-extern char aWorldCupQualif_2[];              extern char aWorldCupQualif_3[];              extern char aWorldCupQualif_4[];
-extern char aWorldCupQualif_5[];              extern char aWorldCupQualif_6[];              extern char aWorldCupQualif_7[];
-extern char aWorldCupQualif_8[];              extern char aWorldCupQualif_9[];              extern char aWorldCupQualification[];
-extern char aWorldCup_0[];                    extern char aWorld_0[];                       extern char a1stLeg01_0[];
-extern char a23OnAgg_0[];                     extern char aAET90Mins23Rep_0[];              extern char aAET90Mins23_0[];
-extern char aAETReplay_0[];                   extern char aAET_0[];                         extern char aAWin01OnPensAE_0[];
-extern char aAWin01OnPensAE_2[];              extern char aAWin01OnPensAE_4[];              extern char aAWin01OnPensAE_6[];
-extern char aAWin01OnPensAE_7[];              extern char aAWin01OnPens_0[];                extern char aAWin01OnPens_1[];
-extern char aAWin01OnPens_2[];                extern char aAWin23OnAggAET_0[];              extern char aAWin23OnAgg_0[];
-extern char aAWinOnAwayGoal[];                extern char aAWinOnAwayGoal_0[];              extern char aEuro_0[];
-extern char aInt_0[];                         extern char aReplay_1[];                      extern char a3rd[];
-extern char aFifthRound[];                    extern char aFinalGroup[];                    extern char aFinalGroup_0[];
-extern char aFirstRound[];                    extern char aFourthRound[];                   extern char aGroupA[];
-extern char aGroupB[];                        extern char aGroupC[];                        extern char aGroupD[];
-extern char aGroupE[];                        extern char aGroupF[];                        extern char aGroupG[];
-extern char aGroupH[];                        extern char aHigh[];                          extern char aQF[];
-extern char aQFinal[];                        extern char aRnd1[];                          extern char aRnd2[];
-extern char aRnd3[];                          extern char aRnd4[];                          extern char aRnd5[];
-extern char aRnd6[];                          extern char aRound1[];                        extern char aRound2[];
-extern char aRound3[];                        extern char aRound4[];                        extern char aRound5[];
-extern char aRound6[];                        extern char aSF[];                            extern char aSFinal[];
-extern char aSecondRound[];                   extern char aSixthRound[];                    extern char aThirdPlacePlay[];
-extern char aThirdRound[];                    extern char a3MatchesToTurn[];                extern char aAGoodSeasonAWe[];
-extern char aAGoodSeasonAWe_0[];              extern char aAVeryDisappoin[];                extern char aAVeryDisappoin_0[];
-extern char aAnUpAndDownSea[];                extern char aAnUpAndDownSea_0[];              extern char aAndWeWillAccep_0[];
-extern char aAnyFurtherPlay[];                extern char aAnyFurtherPlay_0[];              extern char aAsThisPlayerIs[];
-extern char aBHasLeftTheClu[];                extern char aBHasLeftTheClu_0[];              extern char aBeforeHandingT[];
-extern char aBeforeHandingT_0[];              extern char aButWeWouldBeHa[];                extern char aCanImproveOnTh[];
-extern char aCanImproveOnTh_0[];              extern char aCareer[];                        extern char aCareer_0[];
-extern char aClearTheOverdr[];                extern char aComeOnAWeCanno[];                extern char aDecidedToRelie[];
-extern char aDecidedToRelie_0[];              extern char aDemandsMuchBet[];                extern char aDistinguishedC[];
-extern char aDistinguishedC_0[];              extern char aEnsureThatItIs[];                extern char aEnsureThatWeCl[];
-extern char aFavourableOffe[];                extern char aFollowingACris[];                extern char aFollowingAVote[];
-extern char aHasJoinedTheCl[];                extern char aImproveOnOurPe[];                extern char aImproveTheTeam[];
-extern char aItIsWithGreatR[];                extern char aItIsWithGreatR_0[];              extern char aItIsWithGreatR_1[];
-extern char aJustANoteToWis[];                extern char aJustANoteToWis_0[];              extern char aJustAReminderT[];
-extern char aManageMatch[];                   extern char aMoreTimeToNego[];                extern char aMuchBetterFrom[];
-extern char aMuchSuccessFro[];                extern char aNewSeason[];                     extern char aNewSeason_0[];
-extern char aNotAVeryGoodSe[];                extern char aNotAVeryGoodSe_0[];              extern char aOrTheWageBillW[];
-extern char aOrWeWillHaveTo[];                extern char aPleaseNoteATha[];                extern char aPleaseNoteATha_0[];
-extern char aPleaseNoteATha_1[];              extern char aPleaseNoteATha_2[];              extern char aPleaseTakeNote[];
-extern char aPleaseTakeNote_0[];              extern char aPleasedWithYou[];                extern char aPleasedWithYou_0[];
-extern char aRememberUnless[];                extern char aRenewYourContr[];                extern char aSeason[];
-extern char aSeasonInManage[];                extern char aSeasonInManage_0[];              extern char aSeason_0[];
-extern char aSeasonal[];                      extern char aSorryAAreUnwil[];                extern char aSorryAAreUnwil_0[];
-extern char aSorryAButTheCl[];                extern char aSorryAButTheDi[];                extern char aSuccessFromOur[];
-extern char aThanksForAllYo[];                extern char aThanksForAllYo_0[];              extern char aThesePlayersFr[];
-extern char aThisPlayerFrom[];                extern char aThisSeasonAndW[];                extern char aThisSeasonAndW_0[];
-extern char aTspvhcfstpvhcf[];                extern char aWeAllHopeYouEn[];                extern char aWeAllHopeYouEn_0[];
-extern char aWeAllWishYouTh[];                extern char aWeAllWishYouTh_0[];              extern char aWeHereAtAAreHa[];
-extern char aWeHereAtAAreHa_0[];              extern char aWeWillHaveToRe[];                extern char aWelcomeAWeHope[];
-extern char aWelcomeAWeLook[];                extern char aWelcomeToOurCl[];                extern char aWelcomeToOurCl_0[];
-extern char aWellDoneAYouDi[];                extern char aWellDoneAYouDi_0[];              extern char aYouWellInYourN[];
-extern char aYouWellInYourN_0[];              extern char a1Leg[];                          extern char a2Legs[];
-extern char a2PtsForAWin[];                   extern char a2ndReplay[];                     extern char a2ndReplays[];
-extern char a3PtsForAWin[];                   extern char a3rdReplay[];                     extern char a3rdReplays[];
-extern char aAfter90Mins[];                   extern char aAfterExtraTime[];                extern char aBallInPlay[];
-extern char aBallOutOfPlay[];                 extern char aCanOnlySaveMax[];                extern char aCancel[];
-extern char aDiy[];                           extern char aDiyCompetition[];                extern char aETIfReplay[];
-extern char aExtraTime[];                     extern char aFlipOff[];                       extern char aFlipOn[];
-extern char aMakeNewCompeti[];                extern char aMakeNewDiyCup[];                 extern char aMakeNewDiyLeag[];
-extern char aMakeNewDiyTour[];                extern char aNoExtraTime[];                   extern char aNoPenalties[];
-extern char aOff[];                           extern char aOn[];                            extern char aPenalties[];
-extern char aPensIfReplay[];                  extern char aPlayEachTeamX1[];                extern char aPlayEachTeamX2[];
-extern char aPlayEachTeamX3[];                extern char aPlayEachTeamX4[];                extern char aPreset[];
-extern char aPresetCompetit[];                extern char aSelectDiyCompe[];                extern char aTact[];
-extern char aTactics[];                       extern char aWinners_0[];                     extern char a10Mins[];
-extern char a3Mins[];                         extern char a5Mins[];                         extern char a7Mins[];
-extern char aDry[];                           extern char aEnglish[];                       extern char aFrench[];
-extern char aFrozen[];                        extern char aGameLength[];                    extern char aGerman[];
-extern char aHard[];                          extern char aInt[];                           extern char aItalian[];
-extern char aLanguage[];                      extern char aMuddy[];                         extern char aNormal[];
-extern char aPitchType[];                     extern char aPlay[];                          extern char aRandom[];
-extern char aSoft[];                          extern char aSpanish[];                       extern char aWet[];
-extern char aApr[];                           extern char aAug[];                           extern char aDec[];
-extern char aFeb[];                           extern char aJan[];                           extern char aJul[];
-extern char aJun[];                           extern char aMar[];                           extern char aMay[];
-extern char aNov[];                           extern char aOct[];                           extern char aSep[];
-extern char a2Gk[];                           extern char a3Gk[];                           extern char a4Gk[];
-extern char aA_1[];                           extern char aAttacker[];                      extern char aCoach_0[];
-extern char aCoach_2[];                       extern char aD_0[];                           extern char aDefender[];
-extern char aG[];                             extern char aGoalkeeper[];                    extern char aLb[];
-extern char aLw[];                            extern char aM[];                             extern char aMidfielder[];
-extern char aPlayer[];                        extern char aPlayerCoach_0[];                 extern char aPlayer_0[];
-extern char aRb[];                            extern char aRw[];                            extern char aAttack_0[];
-extern char aDefend_0[];                      extern char aAny[];                           extern char aApproxValue[];
-extern char aBallControl[];                   extern char aDiscardOffer[];                  extern char aFinishing[];
-extern char aFitness[];                       extern char aHeading[];                       extern char aPassing[];
-extern char aShooting[];                      extern char aSpeed[];                         extern char aTackling[];
-extern char a100k[];                          extern char a10m[];                           extern char a150k[];
-extern char a15m[];                           extern char a15m_0[];                         extern char a1m[];
-extern char a200k[];                          extern char a25k[];                           extern char a2m[];
-extern char a300k[];                          extern char a3m[];                            extern char a500k[];
-extern char a50k[];                           extern char a5m[];                            extern char a750k[];
-extern char a75k[];                           extern char aAsc_0[];                         extern char aAsc_1[];
-extern char aAsc_2[];                         extern char aOg[];                            extern char aPen[];
-extern char aPen_0[];                         extern char aSwosVersion152[];                extern char aSoundMenuSng[];
-extern char aSoundMenuIns[];                  extern char aSoundHeroSng[];                  extern char aSoundHeroIns[];
-extern char aSoundSfxSng[];                   extern char aSoundSfxIn1[];                   extern char aSoundSfxIn2[];
-extern char aDataPoolplyrDa[];                extern char aGrafsMenubgRaw[];                extern char aGrafsMenubg2Ra[];
-extern char aHighlights_0[];                  extern char aOptions[];                       extern char aFriendly_1[];
-extern char aSeason_1[];                      extern char aCareer_1[];                      extern char aDataEurocupTmd[];
-extern char aDataEurocwcTmd[];                extern char aDataTeamNnn[];                   extern char aLoadLiverpool[];
-extern char aResigned[];                      extern char a12Season[];                      extern char a102Season[];
-extern char aManagementReco[];                extern char aNotQualified[];                  extern char aPosition0[];
-extern char aFourthPlace[];                   extern char aReachedSemiFin[];                extern char aReachedQuarter[];
-extern char aKnockedOutInRo[];                extern char aStillInCompeti[];                extern char aCareerTotal[];
-extern char aPl0W1D2L3F4A5[];                 extern char aWon0Drawn1Lost[];                extern char aWinnerQualifie[];
-extern char aTop0Qualify[];                   extern char aPlayCoachMatch[];                extern char aAndWeLookForwa[];
-extern char aMemoFromThePre[];                extern char aThePresident[];                  extern char aViewOtherTeam[];
-extern char aTheMembersOfTh[];                extern char aOfAWouldLikeTo[];                extern char aAsCoachOfTheNa[];
-extern char aWeCanPromiseYo[];                extern char aAnAnnuallyRevi[];                extern char aWeLookForwardT[];
-extern char aTheMembersOfTh_0[];              extern char aOfAAreDelighte[];                extern char aAcceptedThePos[];
-extern char aFromTheStartOf[];                extern char aInternationalJ[];                extern char aInternationalJ_0[];
-extern char aAddInternation[];                extern char aAddInternation_0[];              extern char aRemovePlayer[];
-extern char aRemovePlayers[];                 extern char aSelect1MoreInt[];                extern char aSelect0MoreInt[];
-extern char aChangeSquad[];                   extern char aSelectSquad[];                   extern char aSquadSelected[];
-extern char aCannotPlayOldV[];                extern char aUseMatchTeam[];                  extern char aEuropeanTour[];
-extern char aOceaniaTour[];                   extern char aPlayerCoach[];                   extern char aComputer[];
-extern char aCoach[];                         extern char aStartCareerAs[];                 extern char aFileSavedByDif[];
-extern char aFileSavedOnDif[];                extern char aAllPlayerTeams[];                extern char aFriendlyDiyGam[];
-extern char aContinueCareer[];                extern char aYourCareerIsOv[];                extern char aLoadHighlights[];
-extern char aSaveHighlights[];                extern char aViewHighlights[];                extern char aNotAHighlights[];
-extern char aNotACompetitio[];                extern char aCompetitionFil_0[];              extern char aTeamsPromoted0[];
-extern char aTeamsPromoted0_0[];              extern char aTeamsRelegated[];                extern char aTeamsRelegated_0[];
-extern char aYourChairman[];                  extern char a01Season[];                      extern char a001Season[];
-extern char a0EndSeason[];                    extern char aViewCompetitio[];                extern char aMATCHSTATS[];
-extern char aGoalAttempts[];                  extern char aFoulsConceded[];                 extern char aSendingsOff[];
-extern char aAOfferForB[];                    extern char aAOfferForBAndC[];                extern char aAExchangeOffer[];
-extern char aAExchangeOffer_0[];              extern char aAOfferFor[];                     extern char aAOfferFor_0[];
-extern char aAExchangeOffer_1[];              extern char aAExchangeOffer_2[];              extern char aAImprovedOffer[];
-extern char aAImprovedOffer_0[];              extern char aAImprovedExcha[];                extern char aAImprovedExcha_0[];
-extern char aAImprovedOffer_1[];              extern char aAImprovedOffer_2[];              extern char aAImprovedExcha_1[];
-extern char aAImprovedExcha_2[];              extern char aAFurtherImprov[];                extern char aAFurtherImprov_0[];
-extern char aAFurtherImprov_1[];              extern char aAFurtherImprov_2[];              extern char aAFurtherImprov_3[];
-extern char aAFurtherImprov_4[];              extern char aAFurtherImprov_5[];              extern char aOfferForB[];
-extern char aAFurtherImprov_6[];              extern char aJobOfferFromA[];                 extern char aJobOfferFromAW[];
-extern char aDearSirMadam[];                  extern char aWeHereAtAWishT[];                extern char aWeHereAtAWishT_0[];
-extern char aOurOfferToBuy[];                 extern char aWeHereAtAWishT_1[];              extern char aImproveOurOffe[];
-extern char aFromAInExchang[];                extern char aWeHereAtAWithd[];                extern char aWeHereAtARefus[];
-extern char aImproveOnOurOf[];                extern char aInADealWithAFo[];                extern char aUnlessTheOffer[];
-extern char aCoachingJobAtO[];                extern char aWeCanOfferYouA[];                extern char aWeHopeToBeAble[];
-extern char aInTheRegionOfA[];                extern char aWeLookForwardT_1[];              extern char aWeHereAtAAreDe[];
-extern char aHaveAcceptedTh[];                extern char aFromTheStartOf_0[];              extern char aWeHopeToBeAble_0[];
-extern char aInTheRegionOfA_0[];              extern char aMemoFromTheClu[];                extern char aBestRegards[];
-extern char aBankStatement[];                 extern char aOldBalance[];                    extern char aNewBalance[];
-extern char aBalanceAtStart[];                extern char aBalanceAtEndOf[];                extern char aTotalProfit[];
-extern char aPlayerSales[];                   extern char aPlayerPurchase[];                extern char aGateReceipts[];
-extern char aGeneralRunning[];                extern char aAdditionalInve[];                extern char aAdditionalInve_0[];
-extern char aCompetitionBon[];                extern char aSponsorshipFor[];                extern char aSeasonFromSens[];
-extern char aPlayerWagesBil[];                extern char a1GroupOf1[];                     extern char a0GroupsOf1[];
-extern char aWinnersOfEachG[];                extern char aWinnersOfEachG_0[];              extern char aWinnersOfEachG_1[];
-extern char aTop0InEachGrou[];                extern char aTop0InEachGrou_0[];              extern char aTop0InEachGrou_1[];
-extern char aMatchWinnersQu[];                extern char aMatchWinnersOn[];                extern char aTop0InGroupQua[];
-extern char aMatchWinnerWin[];                extern char aMatchWinnerOnA[];                extern char aGroupWinnerWin[];
-extern char aNationalTeams[];                 extern char aOriginalCustom[];                extern char aEditedCustomTe_0[];
-extern char aClubTeams[];                     extern char aExit[];                          extern char aOk[];
-extern char aFrom[];                          extern char aSubstitutes[];                   extern char aPlayTournament[];
-extern char aPlayFriendly[];                  extern char aViewSelectedTe[];                extern char aNextRoundDraw[];
-extern char aPlayReplays[];                   extern char a2ndLegRound[];                   extern char aSelect0Teams[];
-extern char aSelect0MoreTea[];                extern char aSelect1MoreTea[];                extern char aSelect0LessTea[];
-extern char aSelect1LessTea[];                extern char aChooseCompetit[];                extern char aChoosePresetCo[];
-extern char aChooseSeason[];                  extern char aSelectTeamToEd[];                extern char aChooseTeamsFor[];
-extern char aChangeTeamsFor[];                extern char aAllSelectedTea[];                extern char aTransferMarket[];
-extern char aBuyOtherDomest[];                extern char aBuyOtherForeig[];                extern char aSelectTeamToMa[];
-extern char aSelectTeamToIm[];                extern char aSelectSquadToV[];                extern char aDiyCompetition_0[];
-extern char aDiyTournament[];                 extern char aDesignDiyLeagu[];                extern char aDesignDiyCup[];
-extern char aDesignDiyTourn[];                extern char aClubBusiness[];                  extern char aNoJobOffers[];
-extern char aJobOffersBeing[];                extern char aFinishSeason[];                  extern char aEditTactics[];
-extern char aEditTacticsSel[];                extern char aImportTactics[];                 extern char aLoadEditedTact[];
-extern char aSaveEditedTact[];                extern char aNumberOfTeams[];                 extern char aPlayEachTeam[];
-extern char aPointsForAWin[];                 extern char aChooseTeams[];                   extern char aChangeTeams[];
-extern char aViewHighlights_0[];              extern char aLeadingCompeti[];                extern char aTopGoalScorers[];
-extern char aHighestScorerL[];                extern char aCompetitionInf[];                extern char aManagementReco_0[];
-extern char aEditCustomTeam[];                extern char aPresetCompetit_0[];              extern char aQuarterFinal[];
-extern char a3rdPlayOff[];                    extern char aFixPitchType[];                  extern char aAutoReplays[];
-extern char aAutoSaveHighli[];                extern char aExPlayerGoals[];                 extern char aLoadOldCompeti[];
-extern char aDiskWriteProte[];                extern char aNoDiskInDrive[];                 extern char aFileNotFound[];
-extern char aCannotFormatGa[];                extern char aNotATacticsFil[];                extern char aEditedCustomTe[];
-extern char aSaveDiskFiling[];                extern char aFormatSaveDisk[];                extern char aPlayersOnDomes[];
-extern char aPlayersOnForei[];                extern char aSelectPlayerTo[];                extern char aSelectPlayerTo_0[];
-extern char aPutPlayerOnTra[];                extern char aViewDomesticPl[];                extern char aViewForeignPla[];
-extern char aGiveFreeTransf[];                extern char aTakeOffMarket[];                 extern char aPlayersCurrent[];
-extern char aPutPlayerOnTra_0[];              extern char aConfirmOffer[];                  extern char aThirdPartyOffe[];
-extern char aAcceptOffer[];                   extern char aRejectOffer[];                   extern char aAskForMore[];
-extern char aResponseToOffe[];                extern char aMakeImprovedOf[];                extern char aReplay_0[];
-extern char aAET[];                           extern char aAET90Mins23[];                   extern char aAWin01OnPens[];
-extern char aAWin01OnPensAE[];                extern char aAWin01OnPensAE_1[];              extern char aAETReplay[];
-extern char aAET90Mins23Rep[];                extern char aAWin01OnPensRe[];                extern char aAWin01OnPensAE_3[];
-extern char aAWin01OnPensAE_5[];              extern char a1stLeg01[];                      extern char aAWin23OnAgg[];
-extern char aAWin23OnAggAET[];                extern char a23OnAggAWinOnA[];                extern char a23OnAggAWinOnA_0[];
-extern char a23OnAggAWin01O[];                extern char a23OnAggAWin01O_0[];              extern char a23OnAgg[];
-extern char aCj0611143807[];                  extern char aDf0[];                           extern char aDf1[];
-extern char aDf2[];                           extern char aDf3[];                           extern char aSwos4Dku[];
-extern char aHyphen[];                        extern char aStar[];                          extern char aSwosu[];
-extern char aDataUefacupTmd[];                extern char aCustomsEdt[];                    extern char aError[];
-extern char aRetired[];                       extern char aNational[];                      extern char aA[];
-extern char aQualified[];                     extern char aPromoted[];                      extern char aRelegated[];
-extern char aWinners[];                       extern char aRunnerUp[];                      extern char aFinalist[];
-extern char aThirdPlace[];                    extern char aSacked[];                        extern char aSeasonSTopScor[];
-extern char aSeasonSTopScor_0[];              extern char aA0[];                            extern char aAllMatches[];
-extern char aDash[];                          extern char aSeveral[];                       extern char aCoachMatch[];
-extern char aOther[];                         extern char aClubs[];                         extern char aAddPlayer[];
-extern char aToReplace[];                     extern char aASquad[];                        extern char aTraining[];
-extern char aRes[];                           extern char aTrial[];                         extern char aViewATeam[];
-extern char aViewBTeam[];                     extern char aFriendly[];                      extern char aFriendlies[];
-extern char aViewResult[];                    extern char aMatch[];                         extern char aResult[];
-extern char aHighlights[];                    extern char aFormation[];                     extern char aCompetitionFil[];
-extern char aReject[];                        extern char aRetire[];                        extern char aSaveCareer[];
-extern char aLoan[];                          extern char aContinueA[];                     extern char aReplayA[];
-extern char aSaveA[];                         extern char aViewOppo[];                      extern char aPossession[];
-extern char aOnTarget[];                      extern char aCornersWon[];                    extern char aBookings[];
-extern char aSweep[];                         extern char aAttack[];                        extern char aDefend[];
-extern char aUSER_A[];                        extern char aUSER_B[];                        extern char aUSER_C[];
-extern char aUSER_D[];                        extern char aUSER_E[];                        extern char aUSER_F[];
-extern char aLparen[];                        extern char aRparen[];                        extern char aB[];
-extern char aBAndC[];                         extern char aB_0[];                           extern char aBAndC_0[];
-extern char aB_1[];                           extern char aBAndC_1[];                       extern char aB_2[];
-extern char aBAndC_2[];                       extern char aB_3[];                           extern char aBAndC_3[];
-extern char aBAndC_4[];                       extern char aDearAB[];                        extern char aOfferOn[];
-extern char aDearAB_0[];                      extern char aTotalLoss[];                     extern char aName[];
-extern char aMr[];                            extern char aMs[];                            extern char aOr[];
-extern char aKnockout[];                      extern char aSeeded[];                        extern char aPlayCup[];
-extern char aPlayLeague[];                    extern char aPlaySeason[];                    extern char aPl[];
-extern char aW[];                             extern char aD[];                             extern char aL[];
-extern char aF[];                             extern char aA_0[];                           extern char aPts[];
-extern char aNextRound[];                     extern char aDraw[];                          extern char aReplay[];
-extern char aReplays[];                       extern char aNat[];                           extern char aNationality[];
-extern char aBuyPlayer[];                     extern char aContinue[];                      extern char aCopy[];
-extern char aUndo[];                          extern char aImport[];                        extern char aDiyLeague[];
-extern char aDiyCup[];                        extern char aAbort[];                         extern char aV[];
-extern char aPlus[];                          extern char aMinus[];                         extern char aNewJob[];
-extern char aJobOffers[];                     extern char aPlayMatch[];                     extern char aNextMatch[];
-extern char aSquad[];                         extern char aSquads[];                        extern char aTransfers[];
-extern char aViewWorld[];                     extern char aTeams[];                         extern char aDescription[];
-extern char aX0[];                            extern char aLeg1[];                          extern char aLeg2[];
-extern char aAwayGoals[];                     extern char aCup_0[];                         extern char aCup_1[];
-extern char aCup_2[];                         extern char aLeague_1[];                      extern char aPlayoffs[];
-extern char aChooseTeam[];                    extern char aRounds[];                        extern char aFirstKit[];
-extern char aSecondKit[];                     extern char aCoach_3[];                       extern char aCoach_4[];
-extern char aViewMatch[];                     extern char aStats[];                         extern char aStatistics[];
-extern char aViewSquads[];                    extern char aViewSquad[];                     extern char aBank[];
-extern char aH[];                             extern char aA_2[];                           extern char aSemiFinal[];
-extern char aFinal_4[];                       extern char aMenuMusic[];                     extern char aGoals[];
-extern char aForm[];                          extern char aLge[];                           extern char aCups[];
-extern char aCup_3[];                         extern char aTot[];                           extern char aOwnGoals[];
-extern char aLoad[];                          extern char aSave[];                          extern char aSaveExit[];
-extern char aFilename[];                      extern char aDiskError[];                     extern char aDiskFull[];
-extern char aDeleteFile[];                    extern char aCriteria[];                      extern char aType[];
-extern char aSkills[];                        extern char aList[];                          extern char aMore[];
-extern char aOffers[];                        extern char aMakeOffer[];                     extern char aViewOffers[];
-extern char aNoOffers[];                      extern char aJobOffer[];                      extern char aAccept[];
-extern char aConsider[];                      extern char aViewTeam[];                      extern char aViewLeague[];
-extern char aCoach_1[];                       extern char aCup1[];                          extern char aCup2[];
-extern char aCup_10[];                        extern char aLge_0[];                         extern char aPound[];
-extern char aTot_0[];                         extern char aCareerPrompt[];                  extern char aCustomTeamsChanged[];
-extern char aDiyCompetitionPrompt[];          extern char aEditedTacticsWillBeLost[];       extern char aInsertBlankDis[];
-extern char aInsertGameSave[];                extern char aInsertSwosDisk_0[];              extern char aPresetCompetitionPrompt[];
-extern char aSeasonPrompt[];                  extern char aTacticsHaveBeenChanged[];        extern char aWeHereAtAWould[];
-extern char aWeLookForwardT_0[];
+extern char _a0611961355Asm6[];               extern char _aCodedByAndiSmi[];               extern char _aCopyrightC1994[];
+extern char _aCopyrightC1994_0[];             extern char _aSensibleWorldO[];               extern char _aCjcHelp[];
+extern char _aDataTeam008[];                  extern char _aGrafsCharsetRa[];               extern char _aGrafsCjcbenchR[];
+extern char _aGrafsCjcbitsRa[];               extern char _aGrafsCjcgrafsR[];               extern char _aGrafsCjcteam1R[];
+extern char _aGrafsCjcteam2R[];               extern char _aGrafsCjcteam3R[];               extern char _aGrafsCjcteamgR[];
+extern char _aGrafsDisk22Raw[];               extern char _aGrafsDisk2Raw[];                extern char _aGrafsLoader00R[];
+extern char _aGrafsLoader01R[];               extern char _aGrafsLoader10R[];               extern char _aGrafsLoader1Ra[];
+extern char _aGrafsLoader2Ra[];               extern char _aGrafsLoader3Ra[];               extern char _aGrafsLoader4Ra[];
+extern char _aGrafsLoader5Ra[];               extern char _aGrafsLoader6Ra[];               extern char _aGrafsLoader7Ra[];
+extern char _aGrafsLoader8aR[];               extern char _aGrafsLoader8bR[];               extern char _aGrafsLoader9Ra[];
+extern char _aGrafsMenus2Raw[];               extern char _aGrafsMenusRaw[];                extern char _aGrafsOlddisk1R[];
+extern char _aGrafsSoccerSRa[];               extern char _aGrafsSocpicRaw[];               extern char _aGrafsSwcpich1M[];
+extern char _aGrafsSwcpich2M[];               extern char _aGrafsSwcpich3M[];               extern char _aGrafsSwcpich4M[];
+extern char _aGrafsSwcpich5M[];               extern char _aGrafsSwcpich6M[];               extern char _aGrafsTacticsRa[];
+extern char _aGrafsWinscrnRa[];               extern char _aSwos4Dk1[];                     extern char _aSwos4Dk2[];
+extern char _aBoxall[];                       extern char _aChapman[];                      extern char _aChris[];
+extern char _aDavid[];                        extern char _aDavid_0[];                      extern char _aDearsley[];
+extern char _aGraeme[];                       extern char _aHare[];                         extern char _aJon[];
+extern char _aMark[];                         extern char _aNottingham[];                   extern char _aSwosDate0[];
+extern char _aWilkin[];                       extern char _aAlbania[];                      extern char _aAlgeria[];
+extern char _aArgentina[];                    extern char _aAustralia[];                    extern char _aAustria[];
+extern char _aBelarus[];                      extern char _aBelgium[];                      extern char _aBolivia[];
+extern char _aBrazil[];                       extern char _aBulgaria[];                     extern char _aChile[];
+extern char _aColombia[];                     extern char _aCroatia[];                      extern char _aCustom[];
+extern char _aCyprus[];                       extern char _aCzechRepublic[];                extern char _aDenmark[];
+extern char _aEcuador[];                      extern char _aElSalvadore[];                  extern char _aEngland[];
+extern char _aEngland_0[];                    extern char _aEstonia[];                      extern char _aFaroeIslands[];
+extern char _aFinland[];                      extern char _aFrance[];                       extern char _aGermany[];
+extern char _aGhana[];                        extern char _aGreece[];                       extern char _aHolland[];
+extern char _aHungary[];                      extern char _aIceland[];                      extern char _aIndia[];
+extern char _aIsrael[];                       extern char _aItaly[];                        extern char _aJapan[];
+extern char _aLatvia[];                       extern char _aLithuania[];                    extern char _aLuxembourg[];
+extern char _aMalta[];                        extern char _aMexico[];                       extern char _aNewZealand[];
+extern char _aNorthernIreland[];              extern char _aNorway[];                       extern char _aParaguay[];
+extern char _aPeru[];                         extern char _aPoland[];                       extern char _aPortugal[];
+extern char _aRepublicIreland[];              extern char _aRomania[];                      extern char _aRussia[];
+extern char _aSanMarino[];                    extern char _aScotland[];                     extern char _aSlovakia[];
+extern char _aSlovenia[];                     extern char _aSouthAfrica[];                  extern char _aSpain[];
+extern char _aSurinam[];                      extern char _aSweden[];                       extern char _aSwitzerland[];
+extern char _aTaiwan[];                       extern char _aTurkey[];                       extern char _aUSA[];
+extern char _aUkraine[];                      extern char _aUruguay[];                      extern char _aVenezuela[];
+extern char _aWales[];                        extern char _aYugoslavia[];                   extern char _aAfr[];
+extern char _aAfr_0[];                        extern char _aAfrica[];                       extern char _aAfrican[];
+extern char _aAfrican_0[];                    extern char _aAsi[];                          extern char _aAsi_0[];
+extern char _aAsia[];                         extern char _aAsian[];                        extern char _aAsian_0[];
+extern char _aEditedCustoms[];                extern char _aEur[];                          extern char _aEuro[];
+extern char _aEurope[];                       extern char _aEuropean[];                     extern char _aEuropean_0[];
+extern char _aNam[];                          extern char _aNam_0[];                        extern char _aNorthAmerica[];
+extern char _aNorthAmerican[];                extern char _aNorthAmerican_0[];              extern char _aOce[];
+extern char _aOce_0[];                        extern char _aOceania[];                      extern char _aOceanian[];
+extern char _aOceanian_0[];                   extern char _aSam[];                          extern char _aSam_0[];
+extern char _aSouthAmerica[];                 extern char _aSouthAmerican[];                extern char _aSouthAmerican_0[];
+extern char _aWorld_1[];                      extern char _a1Liga[];                        extern char _a1stDivision[];
+extern char _a2Liga[];                        extern char _aCentral[];                      extern char _aCentralRegion[];
+extern char _aDeuxieme[];                     extern char _aDeuxiemeDivisi[];               extern char _aDiv1[];
+extern char _aDiv1Playoffs[];                 extern char _aDiv2[];                         extern char _aDiv2Playoffs[];
+extern char _aDiv3[];                         extern char _aDiv3Playoffs[];                 extern char _aDivision1[];
+extern char _aDivision1_0[];                  extern char _aDivision2[];                    extern char _aDivision2_0[];
+extern char _aDivision3[];                    extern char _aDivision3_0[];                  extern char _aDivisionOne[];
+extern char _aDivisionThree[];                extern char _aDivisionTwo[];                  extern char _aJLeague[];
+extern char _aJLeague_0[];                    extern char _aLeague_2[];                     extern char _aLeague_3[];
+extern char _aNorthern[];                     extern char _aNorthernRegion[];               extern char _aNsw[];
+extern char _aNswDivision[];                  extern char _aPremDiv[];                      extern char _aPremier[];
+extern char _aPremierDivisio[];               extern char _aPremierLeague[];                extern char _aPremiere[];
+extern char _aPremiereDivisi[];               extern char _aPrimera[];                      extern char _aPrimeraDivisio[];
+extern char _aQueensland[];                   extern char _aQueenslandDivi[];               extern char _aSegunda[];
+extern char _aSegundaDivisio[];               extern char _aSerieA[];                       extern char _aSerieB[];
+extern char _aSouthDivision[];                extern char _aSouthDivision_0[];              extern char _aSouthern[];
+extern char _aSouthernRegion[];               extern char _aAc[];                           extern char _aAfricanCup[];
+extern char _aAfricanNations[];               extern char _aAfricanTour[];                  extern char _aAnc[];
+extern char _aAsianCup[];                     extern char _aAsianCup_0[];                   extern char _aAsianTour[];
+extern char _aCa[];                           extern char _aCopa[];                         extern char _aCopaAmerica[];
+extern char _aCopaAmerica_0[];                extern char _aCopa_0[];                       extern char _aCoppa[];
+extern char _aCoppaItalia[];                  extern char _aCoupe[];                        extern char _aCoupeDeFrance[];
+extern char _aCup[];                          extern char _aCup_4[];                        extern char _aCup_5[];
+extern char _aCup_6[];                        extern char _aCup_7[];                        extern char _aCup_8[];
+extern char _aCup_9[];                        extern char _aDFBPokal[];                     extern char _aECFinals[];
+extern char _aECQualifier[];                  extern char _aECQualifier_0[];                extern char _aECQualifyingGr[];
+extern char _aECQualifyingGr_0[];             extern char _aECQualifyingGr_1[];             extern char _aECQualifyingGr_2[];
+extern char _aECQualifyingGr_3[];             extern char _aECQualifyingGr_4[];             extern char _aECQualifyingGr_5[];
+extern char _aECQualifyingGr_6[];             extern char _aEc[];                           extern char _aEcq[];
+extern char _aEmpCup[];                       extern char _aEmperorSCup[];                  extern char _aEufaCup[];
+extern char _aEufaCup_0[];                    extern char _aEuroCwCup[];                    extern char _aEuropeanChampi_0[];
+extern char _aEuropeanChampi_1[];             extern char _aEuropeanChampionship[];         extern char _aEuropeanCup[];
+extern char _aEuropeanCupWin[];               extern char _aFinal[];                        extern char _aFinalGroups[];
+extern char _aFinalGroups_0[];                extern char _aFinal_0[];                      extern char _aFinal_1[];
+extern char _aFinal_2[];                      extern char _aFinal_3[];                      extern char _aFr[];
+extern char _aFriendly_0[];                   extern char _aInvTournament[];                extern char _aInvitationTour[];
+extern char _aLeague[];                       extern char _aLeagueCup[];                    extern char _aLeagueCup_0[];
+extern char _aLeagueCup_1[];                  extern char _aLeagueCup_2[];                  extern char _aLeague_0[];
+extern char _aNAmericanCup[];                 extern char _aNac[];                          extern char _aNorthAmericanC[];
+extern char _aNorthAmericanT[];               extern char _aOc[];                           extern char _aOceaniaCup[];
+extern char _aOceaniaCup_0[];                 extern char _aPokal[];                        extern char _aSouthAmericanC[];
+extern char _aSouthAmericanT[];               extern char _aTnm[];                          extern char _aTour[];
+extern char _aTournament[];                   extern char _aTr[];                           extern char _aWCQualifier[];
+extern char _aWCQualifier_0[];                extern char _aWc[];                           extern char _aWcq[];
+extern char _aWorld[];                        extern char _aWorldClub[];                    extern char _aWorldClubChamp[];
+extern char _aWorldCup[];                     extern char _aWorldCupQualif[];               extern char _aWorldCupQualif_1[];
+extern char _aWorldCupQualif_2[];             extern char _aWorldCupQualif_3[];             extern char _aWorldCupQualif_4[];
+extern char _aWorldCupQualif_5[];             extern char _aWorldCupQualif_6[];             extern char _aWorldCupQualif_7[];
+extern char _aWorldCupQualif_8[];             extern char _aWorldCupQualif_9[];             extern char _aWorldCupQualification[];
+extern char _aWorldCup_0[];                   extern char _aWorld_0[];                      extern char _a1stLeg01_0[];
+extern char _a23OnAgg_0[];                    extern char _aAET90Mins23Rep_0[];             extern char _aAET90Mins23_0[];
+extern char _aAETReplay_0[];                  extern char _aAET_0[];                        extern char _aAWin01OnPensAE_0[];
+extern char _aAWin01OnPensAE_2[];             extern char _aAWin01OnPensAE_4[];             extern char _aAWin01OnPensAE_6[];
+extern char _aAWin01OnPensAE_7[];             extern char _aAWin01OnPens_0[];               extern char _aAWin01OnPens_1[];
+extern char _aAWin01OnPens_2[];               extern char _aAWin23OnAggAET_0[];             extern char _aAWin23OnAgg_0[];
+extern char _aAWinOnAwayGoal[];               extern char _aAWinOnAwayGoal_0[];             extern char _aEuro_0[];
+extern char _aInt_0[];                        extern char _aReplay_1[];                     extern char _a3rd[];
+extern char _aFifthRound[];                   extern char _aFinalGroup[];                   extern char _aFinalGroup_0[];
+extern char _aFirstRound[];                   extern char _aFourthRound[];                  extern char _aGroupA[];
+extern char _aGroupB[];                       extern char _aGroupC[];                       extern char _aGroupD[];
+extern char _aGroupE[];                       extern char _aGroupF[];                       extern char _aGroupG[];
+extern char _aGroupH[];                       extern char _aHigh[];                         extern char _aQF[];
+extern char _aQFinal[];                       extern char _aRnd1[];                         extern char _aRnd2[];
+extern char _aRnd3[];                         extern char _aRnd4[];                         extern char _aRnd5[];
+extern char _aRnd6[];                         extern char _aRound1[];                       extern char _aRound2[];
+extern char _aRound3[];                       extern char _aRound4[];                       extern char _aRound5[];
+extern char _aRound6[];                       extern char _aSF[];                           extern char _aSFinal[];
+extern char _aSecondRound[];                  extern char _aSixthRound[];                   extern char _aThirdPlacePlay[];
+extern char _aThirdRound[];                   extern char _a3MatchesToTurn[];               extern char _aAGoodSeasonAWe[];
+extern char _aAGoodSeasonAWe_0[];             extern char _aAVeryDisappoin[];               extern char _aAVeryDisappoin_0[];
+extern char _aAnUpAndDownSea[];               extern char _aAnUpAndDownSea_0[];             extern char _aAndWeWillAccep_0[];
+extern char _aAnyFurtherPlay[];               extern char _aAnyFurtherPlay_0[];             extern char _aAsThisPlayerIs[];
+extern char _aBHasLeftTheClu[];               extern char _aBHasLeftTheClu_0[];             extern char _aBeforeHandingT[];
+extern char _aBeforeHandingT_0[];             extern char _aButWeWouldBeHa[];               extern char _aCanImproveOnTh[];
+extern char _aCanImproveOnTh_0[];             extern char _aCareer[];                       extern char _aCareer_0[];
+extern char _aClearTheOverdr[];               extern char _aComeOnAWeCanno[];               extern char _aDecidedToRelie[];
+extern char _aDecidedToRelie_0[];             extern char _aDemandsMuchBet[];               extern char _aDistinguishedC[];
+extern char _aDistinguishedC_0[];             extern char _aEnsureThatItIs[];               extern char _aEnsureThatWeCl[];
+extern char _aFavourableOffe[];               extern char _aFollowingACris[];               extern char _aFollowingAVote[];
+extern char _aHasJoinedTheCl[];               extern char _aImproveOnOurPe[];               extern char _aImproveTheTeam[];
+extern char _aItIsWithGreatR[];               extern char _aItIsWithGreatR_0[];             extern char _aItIsWithGreatR_1[];
+extern char _aJustANoteToWis[];               extern char _aJustANoteToWis_0[];             extern char _aJustAReminderT[];
+extern char _aManageMatch[];                  extern char _aMoreTimeToNego[];               extern char _aMuchBetterFrom[];
+extern char _aMuchSuccessFro[];               extern char _aNewSeason[];                    extern char _aNewSeason_0[];
+extern char _aNotAVeryGoodSe[];               extern char _aNotAVeryGoodSe_0[];             extern char _aOrTheWageBillW[];
+extern char _aOrWeWillHaveTo[];               extern char _aPleaseNoteATha[];               extern char _aPleaseNoteATha_0[];
+extern char _aPleaseNoteATha_1[];             extern char _aPleaseNoteATha_2[];             extern char _aPleaseTakeNote[];
+extern char _aPleaseTakeNote_0[];             extern char _aPleasedWithYou[];               extern char _aPleasedWithYou_0[];
+extern char _aRememberUnless[];               extern char _aRenewYourContr[];               extern char _aSeason[];
+extern char _aSeasonInManage[];               extern char _aSeasonInManage_0[];             extern char _aSeason_0[];
+extern char _aSeasonal[];                     extern char _aSorryAAreUnwil[];               extern char _aSorryAAreUnwil_0[];
+extern char _aSorryAButTheCl[];               extern char _aSorryAButTheDi[];               extern char _aSuccessFromOur[];
+extern char _aThanksForAllYo[];               extern char _aThanksForAllYo_0[];             extern char _aThesePlayersFr[];
+extern char _aThisPlayerFrom[];               extern char _aThisSeasonAndW[];               extern char _aThisSeasonAndW_0[];
+extern char _aTspvhcfstpvhcf[];               extern char _aWeAllHopeYouEn[];               extern char _aWeAllHopeYouEn_0[];
+extern char _aWeAllWishYouTh[];               extern char _aWeAllWishYouTh_0[];             extern char _aWeHereAtAAreHa[];
+extern char _aWeHereAtAAreHa_0[];             extern char _aWeWillHaveToRe[];               extern char _aWelcomeAWeHope[];
+extern char _aWelcomeAWeLook[];               extern char _aWelcomeToOurCl[];               extern char _aWelcomeToOurCl_0[];
+extern char _aWellDoneAYouDi[];               extern char _aWellDoneAYouDi_0[];             extern char _aYouWellInYourN[];
+extern char _aYouWellInYourN_0[];             extern char _a1Leg[];                         extern char _a2Legs[];
+extern char _a2PtsForAWin[];                  extern char _a2ndReplay[];                    extern char _a2ndReplays[];
+extern char _a3PtsForAWin[];                  extern char _a3rdReplay[];                    extern char _a3rdReplays[];
+extern char _aAfter90Mins[];                  extern char _aAfterExtraTime[];               extern char _aBallInPlay[];
+extern char _aBallOutOfPlay[];                extern char _aCanOnlySaveMax[];               extern char _aCancel[];
+extern char _aDiy[];                          extern char _aDiyCompetition[];               extern char _aETIfReplay[];
+extern char _aExtraTime[];                    extern char _aFlipOff[];                      extern char _aFlipOn[];
+extern char _aMakeNewCompeti[];               extern char _aMakeNewDiyCup[];                extern char _aMakeNewDiyLeag[];
+extern char _aMakeNewDiyTour[];               extern char _aNoExtraTime[];                  extern char _aNoPenalties[];
+extern char _aOff[];                          extern char _aOn[];                           extern char _aPenalties[];
+extern char _aPensIfReplay[];                 extern char _aPlayEachTeamX1[];               extern char _aPlayEachTeamX2[];
+extern char _aPlayEachTeamX3[];               extern char _aPlayEachTeamX4[];               extern char _aPreset[];
+extern char _aPresetCompetit[];               extern char _aSelectDiyCompe[];               extern char _aTact[];
+extern char _aTactics[];                      extern char _aWinners_0[];                    extern char _a10Mins[];
+extern char _a3Mins[];                        extern char _a5Mins[];                        extern char _a7Mins[];
+extern char _aDry[];                          extern char _aEnglish[];                      extern char _aFrench[];
+extern char _aFrozen[];                       extern char _aGameLength[];                   extern char _aGerman[];
+extern char _aHard[];                         extern char _aInt[];                          extern char _aItalian[];
+extern char _aLanguage[];                     extern char _aMuddy[];                        extern char _aNormal[];
+extern char _aPitchType[];                    extern char _aPlay[];                         extern char _aRandom[];
+extern char _aSoft[];                         extern char _aSpanish[];                      extern char _aWet[];
+extern char _aApr[];                          extern char _aAug[];                          extern char _aDec[];
+extern char _aFeb[];                          extern char _aJan[];                          extern char _aJul[];
+extern char _aJun[];                          extern char _aMar[];                          extern char _aMay[];
+extern char _aNov[];                          extern char _aOct[];                          extern char _aSep[];
+extern char _a2Gk[];                          extern char _a3Gk[];                          extern char _a4Gk[];
+extern char _aA_1[];                          extern char _aAttacker[];                     extern char _aCoach_0[];
+extern char _aCoach_2[];                      extern char _aD_0[];                          extern char _aDefender[];
+extern char _aG[];                            extern char _aGoalkeeper[];                   extern char _aLb[];
+extern char _aLw[];                           extern char _aM[];                            extern char _aMidfielder[];
+extern char _aPlayer[];                       extern char _aPlayerCoach_0[];                extern char _aPlayer_0[];
+extern char _aRb[];                           extern char _aRw[];                           extern char _aAttack_0[];
+extern char _aDefend_0[];                     extern char _aAny[];                          extern char _aApproxValue[];
+extern char _aBallControl[];                  extern char _aDiscardOffer[];                 extern char _aFinishing[];
+extern char _aFitness[];                      extern char _aHeading[];                      extern char _aPassing[];
+extern char _aShooting[];                     extern char _aSpeed[];                        extern char _aTackling[];
+extern char _a100k[];                         extern char _a10m[];                          extern char _a150k[];
+extern char _a15m[];                          extern char _a15m_0[];                        extern char _a1m[];
+extern char _a200k[];                         extern char _a25k[];                          extern char _a2m[];
+extern char _a300k[];                         extern char _a3m[];                           extern char _a500k[];
+extern char _a50k[];                          extern char _a5m[];                           extern char _a750k[];
+extern char _a75k[];                          extern char _aAsc_0[];                        extern char _aAsc_1[];
+extern char _aAsc_2[];                        extern char _aOg[];                           extern char _aPen[];
+extern char _aPen_0[];                        extern char _aSwosVersion152[];               extern char _aSoundMenuSng[];
+extern char _aSoundMenuIns[];                 extern char _aSoundHeroSng[];                 extern char _aSoundHeroIns[];
+extern char _aSoundSfxSng[];                  extern char _aSoundSfxIn1[];                  extern char _aSoundSfxIn2[];
+extern char _aDataPoolplyrDa[];               extern char _aGrafsMenubgRaw[];               extern char _aGrafsMenubg2Ra[];
+extern char _aHighlights_0[];                 extern char _aOptions[];                      extern char _aFriendly_1[];
+extern char _aSeason_1[];                     extern char _aCareer_1[];                     extern char _aDataEurocupTmd[];
+extern char _aDataEurocwcTmd[];               extern char _aDataTeamNnn[];                  extern char _aLoadLiverpool[];
+extern char _aResigned[];                     extern char _a12Season[];                     extern char _a102Season[];
+extern char _aManagementReco[];               extern char _aNotQualified[];                 extern char _aPosition0[];
+extern char _aFourthPlace[];                  extern char _aReachedSemiFin[];               extern char _aReachedQuarter[];
+extern char _aKnockedOutInRo[];               extern char _aStillInCompeti[];               extern char _aCareerTotal[];
+extern char _aPl0W1D2L3F4A5[];                extern char _aWon0Drawn1Lost[];               extern char _aWinnerQualifie[];
+extern char _aTop0Qualify[];                  extern char _aPlayCoachMatch[];               extern char _aAndWeLookForwa[];
+extern char _aMemoFromThePre[];               extern char _aThePresident[];                 extern char _aViewOtherTeam[];
+extern char _aTheMembersOfTh[];               extern char _aOfAWouldLikeTo[];               extern char _aAsCoachOfTheNa[];
+extern char _aWeCanPromiseYo[];               extern char _aAnAnnuallyRevi[];               extern char _aWeLookForwardT[];
+extern char _aTheMembersOfTh_0[];             extern char _aOfAAreDelighte[];               extern char _aAcceptedThePos[];
+extern char _aFromTheStartOf[];               extern char _aInternationalJ[];               extern char _aInternationalJ_0[];
+extern char _aAddInternation[];               extern char _aAddInternation_0[];             extern char _aRemovePlayer[];
+extern char _aRemovePlayers[];                extern char _aSelect1MoreInt[];               extern char _aSelect0MoreInt[];
+extern char _aChangeSquad[];                  extern char _aSelectSquad[];                  extern char _aSquadSelected[];
+extern char _aCannotPlayOldV[];               extern char _aUseMatchTeam[];                 extern char _aEuropeanTour[];
+extern char _aOceaniaTour[];                  extern char _aPlayerCoach[];                  extern char _aComputer[];
+extern char _aCoach[];                        extern char _aStartCareerAs[];                extern char _aFileSavedByDif[];
+extern char _aFileSavedOnDif[];               extern char _aAllPlayerTeams[];               extern char _aFriendlyDiyGam[];
+extern char _aContinueCareer[];               extern char _aYourCareerIsOv[];               extern char _aLoadHighlights[];
+extern char _aSaveHighlights[];               extern char _aViewHighlights[];               extern char _aNotAHighlights[];
+extern char _aNotACompetitio[];               extern char _aCompetitionFil_0[];             extern char _aTeamsPromoted0[];
+extern char _aTeamsPromoted0_0[];             extern char _aTeamsRelegated[];               extern char _aTeamsRelegated_0[];
+extern char _aYourChairman[];                 extern char _a01Season[];                     extern char _a001Season[];
+extern char _a0EndSeason[];                   extern char _aViewCompetitio[];               extern char _aMATCHSTATS[];
+extern char _aGoalAttempts[];                 extern char _aFoulsConceded[];                extern char _aSendingsOff[];
+extern char _aAOfferForB[];                   extern char _aAOfferForBAndC[];               extern char _aAExchangeOffer[];
+extern char _aAExchangeOffer_0[];             extern char _aAOfferFor[];                    extern char _aAOfferFor_0[];
+extern char _aAExchangeOffer_1[];             extern char _aAExchangeOffer_2[];             extern char _aAImprovedOffer[];
+extern char _aAImprovedOffer_0[];             extern char _aAImprovedExcha[];               extern char _aAImprovedExcha_0[];
+extern char _aAImprovedOffer_1[];             extern char _aAImprovedOffer_2[];             extern char _aAImprovedExcha_1[];
+extern char _aAImprovedExcha_2[];             extern char _aAFurtherImprov[];               extern char _aAFurtherImprov_0[];
+extern char _aAFurtherImprov_1[];             extern char _aAFurtherImprov_2[];             extern char _aAFurtherImprov_3[];
+extern char _aAFurtherImprov_4[];             extern char _aAFurtherImprov_5[];             extern char _aOfferForB[];
+extern char _aAFurtherImprov_6[];             extern char _aJobOfferFromA[];                extern char _aJobOfferFromAW[];
+extern char _aDearSirMadam[];                 extern char _aWeHereAtAWishT[];               extern char _aWeHereAtAWishT_0[];
+extern char _aOurOfferToBuy[];                extern char _aWeHereAtAWishT_1[];             extern char _aImproveOurOffe[];
+extern char _aFromAInExchang[];               extern char _aWeHereAtAWithd[];               extern char _aWeHereAtARefus[];
+extern char _aImproveOnOurOf[];               extern char _aInADealWithAFo[];               extern char _aUnlessTheOffer[];
+extern char _aCoachingJobAtO[];               extern char _aWeCanOfferYouA[];               extern char _aWeHopeToBeAble[];
+extern char _aInTheRegionOfA[];               extern char _aWeLookForwardT_1[];             extern char _aWeHereAtAAreDe[];
+extern char _aHaveAcceptedTh[];               extern char _aFromTheStartOf_0[];             extern char _aWeHopeToBeAble_0[];
+extern char _aInTheRegionOfA_0[];             extern char _aMemoFromTheClu[];               extern char _aBestRegards[];
+extern char _aBankStatement[];                extern char _aOldBalance[];                   extern char _aNewBalance[];
+extern char _aBalanceAtStart[];               extern char _aBalanceAtEndOf[];               extern char _aTotalProfit[];
+extern char _aPlayerSales[];                  extern char _aPlayerPurchase[];               extern char _aGateReceipts[];
+extern char _aGeneralRunning[];               extern char _aAdditionalInve[];               extern char _aAdditionalInve_0[];
+extern char _aCompetitionBon[];               extern char _aSponsorshipFor[];               extern char _aSeasonFromSens[];
+extern char _aPlayerWagesBil[];               extern char _a1GroupOf1[];                    extern char _a0GroupsOf1[];
+extern char _aWinnersOfEachG[];               extern char _aWinnersOfEachG_0[];             extern char _aWinnersOfEachG_1[];
+extern char _aTop0InEachGrou[];               extern char _aTop0InEachGrou_0[];             extern char _aTop0InEachGrou_1[];
+extern char _aMatchWinnersQu[];               extern char _aMatchWinnersOn[];               extern char _aTop0InGroupQua[];
+extern char _aMatchWinnerWin[];               extern char _aMatchWinnerOnA[];               extern char _aGroupWinnerWin[];
+extern char _aNationalTeams[];                extern char _aOriginalCustom[];               extern char _aEditedCustomTe_0[];
+extern char _aClubTeams[];                    extern char _aExit[];                         extern char _aOk[];
+extern char _aFrom[];                         extern char _aSubstitutes[];                  extern char _aPlayTournament[];
+extern char _aPlayFriendly[];                 extern char _aViewSelectedTe[];               extern char _aNextRoundDraw[];
+extern char _aPlayReplays[];                  extern char _a2ndLegRound[];                  extern char _aSelect0Teams[];
+extern char _aSelect0MoreTea[];               extern char _aSelect1MoreTea[];               extern char _aSelect0LessTea[];
+extern char _aSelect1LessTea[];               extern char _aChooseCompetit[];               extern char _aChoosePresetCo[];
+extern char _aChooseSeason[];                 extern char _aSelectTeamToEd[];               extern char _aChooseTeamsFor[];
+extern char _aChangeTeamsFor[];               extern char _aAllSelectedTea[];               extern char _aTransferMarket[];
+extern char _aBuyOtherDomest[];               extern char _aBuyOtherForeig[];               extern char _aSelectTeamToMa[];
+extern char _aSelectTeamToIm[];               extern char _aSelectSquadToV[];               extern char _aDiyCompetition_0[];
+extern char _aDiyTournament[];                extern char _aDesignDiyLeagu[];               extern char _aDesignDiyCup[];
+extern char _aDesignDiyTourn[];               extern char _aClubBusiness[];                 extern char _aNoJobOffers[];
+extern char _aJobOffersBeing[];               extern char _aFinishSeason[];                 extern char _aEditTactics[];
+extern char _aEditTacticsSel[];               extern char _aImportTactics[];                extern char _aLoadEditedTact[];
+extern char _aSaveEditedTact[];               extern char _aNumberOfTeams[];                extern char _aPlayEachTeam[];
+extern char _aPointsForAWin[];                extern char _aChooseTeams[];                  extern char _aChangeTeams[];
+extern char _aViewHighlights_0[];             extern char _aLeadingCompeti[];               extern char _aTopGoalScorers[];
+extern char _aHighestScorerL[];               extern char _aCompetitionInf[];               extern char _aManagementReco_0[];
+extern char _aEditCustomTeam[];               extern char _aPresetCompetit_0[];             extern char _aQuarterFinal[];
+extern char _a3rdPlayOff[];                   extern char _aFixPitchType[];                 extern char _aAutoReplays[];
+extern char _aAutoSaveHighli[];               extern char _aExPlayerGoals[];                extern char _aLoadOldCompeti[];
+extern char _aDiskWriteProte[];               extern char _aNoDiskInDrive[];                extern char _aFileNotFound[];
+extern char _aCannotFormatGa[];               extern char _aNotATacticsFil[];               extern char _aEditedCustomTe[];
+extern char _aSaveDiskFiling[];               extern char _aFormatSaveDisk[];               extern char _aPlayersOnDomes[];
+extern char _aPlayersOnForei[];               extern char _aSelectPlayerTo[];               extern char _aSelectPlayerTo_0[];
+extern char _aPutPlayerOnTra[];               extern char _aViewDomesticPl[];               extern char _aViewForeignPla[];
+extern char _aGiveFreeTransf[];               extern char _aTakeOffMarket[];                extern char _aPlayersCurrent[];
+extern char _aPutPlayerOnTra_0[];             extern char _aConfirmOffer[];                 extern char _aThirdPartyOffe[];
+extern char _aAcceptOffer[];                  extern char _aRejectOffer[];                  extern char _aAskForMore[];
+extern char _aResponseToOffe[];               extern char _aMakeImprovedOf[];               extern char _aReplay_0[];
+extern char _aAET[];                          extern char _aAET90Mins23[];                  extern char _aAWin01OnPens[];
+extern char _aAWin01OnPensAE[];               extern char _aAWin01OnPensAE_1[];             extern char _aAETReplay[];
+extern char _aAET90Mins23Rep[];               extern char _aAWin01OnPensRe[];               extern char _aAWin01OnPensAE_3[];
+extern char _aAWin01OnPensAE_5[];             extern char _a1stLeg01[];                     extern char _aAWin23OnAgg[];
+extern char _aAWin23OnAggAET[];               extern char _a23OnAggAWinOnA[];               extern char _a23OnAggAWinOnA_0[];
+extern char _a23OnAggAWin01O[];               extern char _a23OnAggAWin01O_0[];             extern char _a23OnAgg[];
+extern char _aCj0611143807[];                 extern char _aDf0[];                          extern char _aDf1[];
+extern char _aDf2[];                          extern char _aDf3[];                          extern char _aSwos4Dku[];
+extern char _aHyphen[];                       extern char _aStar[];                         extern char _aSwosu[];
+extern char _aDataUefacupTmd[];               extern char _aCustomsEdt[];                   extern char _aError[];
+extern char _aRetired[];                      extern char _aNational[];                     extern char _aA[];
+extern char _aQualified[];                    extern char _aPromoted[];                     extern char _aRelegated[];
+extern char _aWinners[];                      extern char _aRunnerUp[];                     extern char _aFinalist[];
+extern char _aThirdPlace[];                   extern char _aSacked[];                       extern char _aSeasonSTopScor[];
+extern char _aSeasonSTopScor_0[];             extern char _aA0[];                           extern char _aAllMatches[];
+extern char _aDash[];                         extern char _aSeveral[];                      extern char _aCoachMatch[];
+extern char _aOther[];                        extern char _aClubs[];                        extern char _aAddPlayer[];
+extern char _aToReplace[];                    extern char _aASquad[];                       extern char _aTraining[];
+extern char _aRes[];                          extern char _aTrial[];                        extern char _aViewATeam[];
+extern char _aViewBTeam[];                    extern char _aFriendly[];                     extern char _aFriendlies[];
+extern char _aViewResult[];                   extern char _aMatch[];                        extern char _aResult[];
+extern char _aHighlights[];                   extern char _aFormation[];                    extern char _aCompetitionFil[];
+extern char _aReject[];                       extern char _aRetire[];                       extern char _aSaveCareer[];
+extern char _aLoan[];                         extern char _aContinueA[];                    extern char _aReplayA[];
+extern char _aSaveA[];                        extern char _aViewOppo[];                     extern char _aPossession[];
+extern char _aOnTarget[];                     extern char _aCornersWon[];                   extern char _aBookings[];
+extern char _aSweep[];                        extern char _aAttack[];                       extern char _aDefend[];
+extern char _aUSER_A[];                       extern char _aUSER_B[];                       extern char _aUSER_C[];
+extern char _aUSER_D[];                       extern char _aUSER_E[];                       extern char _aUSER_F[];
+extern char _aLparen[];                       extern char _aRparen[];                       extern char _aB[];
+extern char _aBAndC[];                        extern char _aB_0[];                          extern char _aBAndC_0[];
+extern char _aB_1[];                          extern char _aBAndC_1[];                      extern char _aB_2[];
+extern char _aBAndC_2[];                      extern char _aB_3[];                          extern char _aBAndC_3[];
+extern char _aBAndC_4[];                      extern char _aDearAB[];                       extern char _aOfferOn[];
+extern char _aDearAB_0[];                     extern char _aTotalLoss[];                    extern char _aName[];
+extern char _aMr[];                           extern char _aMs[];                           extern char _aOr[];
+extern char _aKnockout[];                     extern char _aSeeded[];                       extern char _aPlayCup[];
+extern char _aPlayLeague[];                   extern char _aPlaySeason[];                   extern char _aPl[];
+extern char _aW[];                            extern char _aD[];                            extern char _aL[];
+extern char _aF[];                            extern char _aA_0[];                          extern char _aPts[];
+extern char _aNextRound[];                    extern char _aDraw[];                         extern char _aReplay[];
+extern char _aReplays[];                      extern char _aNat[];                          extern char _aNationality[];
+extern char _aBuyPlayer[];                    extern char _aContinue[];                     extern char _aCopy[];
+extern char _aUndo[];                         extern char _aImport[];                       extern char _aDiyLeague[];
+extern char _aDiyCup[];                       extern char _aAbort[];                        extern char _aV[];
+extern char _aPlus[];                         extern char _aMinus[];                        extern char _aNewJob[];
+extern char _aJobOffers[];                    extern char _aPlayMatch[];                    extern char _aNextMatch[];
+extern char _aSquad[];                        extern char _aSquads[];                       extern char _aTransfers[];
+extern char _aViewWorld[];                    extern char _aTeams[];                        extern char _aDescription[];
+extern char _aX0[];                           extern char _aLeg1[];                         extern char _aLeg2[];
+extern char _aAwayGoals[];                    extern char _aCup_0[];                        extern char _aCup_1[];
+extern char _aCup_2[];                        extern char _aLeague_1[];                     extern char _aPlayoffs[];
+extern char _aChooseTeam[];                   extern char _aRounds[];                       extern char _aFirstKit[];
+extern char _aSecondKit[];                    extern char _aCoach_3[];                      extern char _aCoach_4[];
+extern char _aViewMatch[];                    extern char _aStats[];                        extern char _aStatistics[];
+extern char _aViewSquads[];                   extern char _aViewSquad[];                    extern char _aBank[];
+extern char _aH[];                            extern char _aA_2[];                          extern char _aSemiFinal[];
+extern char _aFinal_4[];                      extern char _aMenuMusic[];                    extern char _aGoals[];
+extern char _aForm[];                         extern char _aLge[];                          extern char _aCups[];
+extern char _aCup_3[];                        extern char _aTot[];                          extern char _aOwnGoals[];
+extern char _aLoad[];                         extern char _aSave[];                         extern char _aSaveExit[];
+extern char _aFilename[];                     extern char _aDiskError[];                    extern char _aDiskFull[];
+extern char _aDeleteFile[];                   extern char _aCriteria[];                     extern char _aType[];
+extern char _aSkills[];                       extern char _aList[];                         extern char _aMore[];
+extern char _aOffers[];                       extern char _aMakeOffer[];                    extern char _aViewOffers[];
+extern char _aNoOffers[];                     extern char _aJobOffer[];                     extern char _aAccept[];
+extern char _aConsider[];                     extern char _aViewTeam[];                     extern char _aViewLeague[];
+extern char _aCoach_1[];                      extern char _aCup1[];                         extern char _aCup2[];
+extern char _aCup_10[];                       extern char _aLge_0[];                        extern char _aPound[];
+extern char _aTot_0[];                        extern char _aCareerPrompt[];                 extern char _aCustomTeamsChanged[];
+extern char _aDiyCompetitionPrompt[];         extern char _aEditedTacticsWillBeLost[];      extern char _aInsertBlankDis[];
+extern char _aInsertGameSave[];               extern char _aInsertSwosDisk_0[];             extern char _aPresetCompetitionPrompt[];
+extern char _aSeasonPrompt[];                 extern char _aTacticsHaveBeenChanged[];       extern char _aWeHereAtAWould[];
+extern char _aWeLookForwardT_0[];
 
-const StringSymbol stringSymbols[] = {
-    { "a0611961355Asm6", (void *)a0611961355Asm6 },
-    { "aCodedByAndiSmi", (void *)aCodedByAndiSmi },
-    { "aCopyrightC1994", (void *)aCopyrightC1994 },
-    { "aCopyrightC1994_0", (void *)aCopyrightC1994_0 },
-    { "aSensibleWorldO", (void *)aSensibleWorldO },
-    { "aCjcHelp", (void *)aCjcHelp },
-    { "aDataTeam008", (void *)aDataTeam008 },
-    { "aGrafsCharsetRa", (void *)aGrafsCharsetRa },
-    { "aGrafsCjcbenchR", (void *)aGrafsCjcbenchR },
-    { "aGrafsCjcbitsRa", (void *)aGrafsCjcbitsRa },
-    { "aGrafsCjcgrafsR", (void *)aGrafsCjcgrafsR },
-    { "aGrafsCjcteam1R", (void *)aGrafsCjcteam1R },
-    { "aGrafsCjcteam2R", (void *)aGrafsCjcteam2R },
-    { "aGrafsCjcteam3R", (void *)aGrafsCjcteam3R },
-    { "aGrafsCjcteamgR", (void *)aGrafsCjcteamgR },
-    { "aGrafsDisk22Raw", (void *)aGrafsDisk22Raw },
-    { "aGrafsDisk2Raw", (void *)aGrafsDisk2Raw },
-    { "aGrafsLoader00R", (void *)aGrafsLoader00R },
-    { "aGrafsLoader01R", (void *)aGrafsLoader01R },
-    { "aGrafsLoader10R", (void *)aGrafsLoader10R },
-    { "aGrafsLoader1Ra", (void *)aGrafsLoader1Ra },
-    { "aGrafsLoader2Ra", (void *)aGrafsLoader2Ra },
-    { "aGrafsLoader3Ra", (void *)aGrafsLoader3Ra },
-    { "aGrafsLoader4Ra", (void *)aGrafsLoader4Ra },
-    { "aGrafsLoader5Ra", (void *)aGrafsLoader5Ra },
-    { "aGrafsLoader6Ra", (void *)aGrafsLoader6Ra },
-    { "aGrafsLoader7Ra", (void *)aGrafsLoader7Ra },
-    { "aGrafsLoader8aR", (void *)aGrafsLoader8aR },
-    { "aGrafsLoader8bR", (void *)aGrafsLoader8bR },
-    { "aGrafsLoader9Ra", (void *)aGrafsLoader9Ra },
-    { "aGrafsMenus2Raw", (void *)aGrafsMenus2Raw },
-    { "aGrafsMenusRaw", (void *)aGrafsMenusRaw },
-    { "aGrafsOlddisk1R", (void *)aGrafsOlddisk1R },
-    { "aGrafsSoccerSRa", (void *)aGrafsSoccerSRa },
-    { "aGrafsSocpicRaw", (void *)aGrafsSocpicRaw },
-    { "aGrafsSwcpich1M", (void *)aGrafsSwcpich1M },
-    { "aGrafsSwcpich2M", (void *)aGrafsSwcpich2M },
-    { "aGrafsSwcpich3M", (void *)aGrafsSwcpich3M },
-    { "aGrafsSwcpich4M", (void *)aGrafsSwcpich4M },
-    { "aGrafsSwcpich5M", (void *)aGrafsSwcpich5M },
-    { "aGrafsSwcpich6M", (void *)aGrafsSwcpich6M },
-    { "aGrafsTacticsRa", (void *)aGrafsTacticsRa },
-    { "aGrafsWinscrnRa", (void *)aGrafsWinscrnRa },
-    { "aSwos4Dk1", (void *)aSwos4Dk1 },
-    { "aSwos4Dk2", (void *)aSwos4Dk2 },
-    { "aBoxall", (void *)aBoxall },
-    { "aChapman", (void *)aChapman },
-    { "aChris", (void *)aChris },
-    { "aDavid", (void *)aDavid },
-    { "aDavid_0", (void *)aDavid_0 },
-    { "aDearsley", (void *)aDearsley },
-    { "aGraeme", (void *)aGraeme },
-    { "aHare", (void *)aHare },
-    { "aJon", (void *)aJon },
-    { "aMark", (void *)aMark },
-    { "aNottingham", (void *)aNottingham },
-    { "aSwosDate0", (void *)aSwosDate0 },
-    { "aWilkin", (void *)aWilkin },
-    { "aAlbania", (void *)aAlbania },
-    { "aAlgeria", (void *)aAlgeria },
-    { "aArgentina", (void *)aArgentina },
-    { "aAustralia", (void *)aAustralia },
-    { "aAustria", (void *)aAustria },
-    { "aBelarus", (void *)aBelarus },
-    { "aBelgium", (void *)aBelgium },
-    { "aBolivia", (void *)aBolivia },
-    { "aBrazil", (void *)aBrazil },
-    { "aBulgaria", (void *)aBulgaria },
-    { "aChile", (void *)aChile },
-    { "aColombia", (void *)aColombia },
-    { "aCroatia", (void *)aCroatia },
-    { "aCustom", (void *)aCustom },
-    { "aCyprus", (void *)aCyprus },
-    { "aCzechRepublic", (void *)aCzechRepublic },
-    { "aDenmark", (void *)aDenmark },
-    { "aEcuador", (void *)aEcuador },
-    { "aElSalvadore", (void *)aElSalvadore },
-    { "aEngland", (void *)aEngland },
-    { "aEngland_0", (void *)aEngland_0 },
-    { "aEstonia", (void *)aEstonia },
-    { "aFaroeIslands", (void *)aFaroeIslands },
-    { "aFinland", (void *)aFinland },
-    { "aFrance", (void *)aFrance },
-    { "aGermany", (void *)aGermany },
-    { "aGhana", (void *)aGhana },
-    { "aGreece", (void *)aGreece },
-    { "aHolland", (void *)aHolland },
-    { "aHungary", (void *)aHungary },
-    { "aIceland", (void *)aIceland },
-    { "aIndia", (void *)aIndia },
-    { "aIsrael", (void *)aIsrael },
-    { "aItaly", (void *)aItaly },
-    { "aJapan", (void *)aJapan },
-    { "aLatvia", (void *)aLatvia },
-    { "aLithuania", (void *)aLithuania },
-    { "aLuxembourg", (void *)aLuxembourg },
-    { "aMalta", (void *)aMalta },
-    { "aMexico", (void *)aMexico },
-    { "aNewZealand", (void *)aNewZealand },
-    { "aNorthernIreland", (void *)aNorthernIreland },
-    { "aNorway", (void *)aNorway },
-    { "aParaguay", (void *)aParaguay },
-    { "aPeru", (void *)aPeru },
-    { "aPoland", (void *)aPoland },
-    { "aPortugal", (void *)aPortugal },
-    { "aRepublicIreland", (void *)aRepublicIreland },
-    { "aRomania", (void *)aRomania },
-    { "aRussia", (void *)aRussia },
-    { "aSanMarino", (void *)aSanMarino },
-    { "aScotland", (void *)aScotland },
-    { "aSlovakia", (void *)aSlovakia },
-    { "aSlovenia", (void *)aSlovenia },
-    { "aSouthAfrica", (void *)aSouthAfrica },
-    { "aSpain", (void *)aSpain },
-    { "aSurinam", (void *)aSurinam },
-    { "aSweden", (void *)aSweden },
-    { "aSwitzerland", (void *)aSwitzerland },
-    { "aTaiwan", (void *)aTaiwan },
-    { "aTurkey", (void *)aTurkey },
-    { "aUSA", (void *)aUSA },
-    { "aUkraine", (void *)aUkraine },
-    { "aUruguay", (void *)aUruguay },
-    { "aVenezuela", (void *)aVenezuela },
-    { "aWales", (void *)aWales },
-    { "aYugoslavia", (void *)aYugoslavia },
-    { "aAfr", (void *)aAfr },
-    { "aAfr_0", (void *)aAfr_0 },
-    { "aAfrica", (void *)aAfrica },
-    { "aAfrican", (void *)aAfrican },
-    { "aAfrican_0", (void *)aAfrican_0 },
-    { "aAsi", (void *)aAsi },
-    { "aAsi_0", (void *)aAsi_0 },
-    { "aAsia", (void *)aAsia },
-    { "aAsian", (void *)aAsian },
-    { "aAsian_0", (void *)aAsian_0 },
-    { "aEditedCustoms", (void *)aEditedCustoms },
-    { "aEur", (void *)aEur },
-    { "aEuro", (void *)aEuro },
-    { "aEurope", (void *)aEurope },
-    { "aEuropean", (void *)aEuropean },
-    { "aEuropean_0", (void *)aEuropean_0 },
-    { "aNam", (void *)aNam },
-    { "aNam_0", (void *)aNam_0 },
-    { "aNorthAmerica", (void *)aNorthAmerica },
-    { "aNorthAmerican", (void *)aNorthAmerican },
-    { "aNorthAmerican_0", (void *)aNorthAmerican_0 },
-    { "aOce", (void *)aOce },
-    { "aOce_0", (void *)aOce_0 },
-    { "aOceania", (void *)aOceania },
-    { "aOceanian", (void *)aOceanian },
-    { "aOceanian_0", (void *)aOceanian_0 },
-    { "aSam", (void *)aSam },
-    { "aSam_0", (void *)aSam_0 },
-    { "aSouthAmerica", (void *)aSouthAmerica },
-    { "aSouthAmerican", (void *)aSouthAmerican },
-    { "aSouthAmerican_0", (void *)aSouthAmerican_0 },
-    { "aWorld_1", (void *)aWorld_1 },
-    { "a1Liga", (void *)a1Liga },
-    { "a1stDivision", (void *)a1stDivision },
-    { "a2Liga", (void *)a2Liga },
-    { "aCentral", (void *)aCentral },
-    { "aCentralRegion", (void *)aCentralRegion },
-    { "aDeuxieme", (void *)aDeuxieme },
-    { "aDeuxiemeDivisi", (void *)aDeuxiemeDivisi },
-    { "aDiv1", (void *)aDiv1 },
-    { "aDiv1Playoffs", (void *)aDiv1Playoffs },
-    { "aDiv2", (void *)aDiv2 },
-    { "aDiv2Playoffs", (void *)aDiv2Playoffs },
-    { "aDiv3", (void *)aDiv3 },
-    { "aDiv3Playoffs", (void *)aDiv3Playoffs },
-    { "aDivision1", (void *)aDivision1 },
-    { "aDivision1_0", (void *)aDivision1_0 },
-    { "aDivision2", (void *)aDivision2 },
-    { "aDivision2_0", (void *)aDivision2_0 },
-    { "aDivision3", (void *)aDivision3 },
-    { "aDivision3_0", (void *)aDivision3_0 },
-    { "aDivisionOne", (void *)aDivisionOne },
-    { "aDivisionThree", (void *)aDivisionThree },
-    { "aDivisionTwo", (void *)aDivisionTwo },
-    { "aJLeague", (void *)aJLeague },
-    { "aJLeague_0", (void *)aJLeague_0 },
-    { "aLeague_2", (void *)aLeague_2 },
-    { "aLeague_3", (void *)aLeague_3 },
-    { "aNorthern", (void *)aNorthern },
-    { "aNorthernRegion", (void *)aNorthernRegion },
-    { "aNsw", (void *)aNsw },
-    { "aNswDivision", (void *)aNswDivision },
-    { "aPremDiv", (void *)aPremDiv },
-    { "aPremier", (void *)aPremier },
-    { "aPremierDivisio", (void *)aPremierDivisio },
-    { "aPremierLeague", (void *)aPremierLeague },
-    { "aPremiere", (void *)aPremiere },
-    { "aPremiereDivisi", (void *)aPremiereDivisi },
-    { "aPrimera", (void *)aPrimera },
-    { "aPrimeraDivisio", (void *)aPrimeraDivisio },
-    { "aQueensland", (void *)aQueensland },
-    { "aQueenslandDivi", (void *)aQueenslandDivi },
-    { "aSegunda", (void *)aSegunda },
-    { "aSegundaDivisio", (void *)aSegundaDivisio },
-    { "aSerieA", (void *)aSerieA },
-    { "aSerieB", (void *)aSerieB },
-    { "aSouthDivision", (void *)aSouthDivision },
-    { "aSouthDivision_0", (void *)aSouthDivision_0 },
-    { "aSouthern", (void *)aSouthern },
-    { "aSouthernRegion", (void *)aSouthernRegion },
-    { "aAc", (void *)aAc },
-    { "aAfricanCup", (void *)aAfricanCup },
-    { "aAfricanNations", (void *)aAfricanNations },
-    { "aAfricanTour", (void *)aAfricanTour },
-    { "aAnc", (void *)aAnc },
-    { "aAsianCup", (void *)aAsianCup },
-    { "aAsianCup_0", (void *)aAsianCup_0 },
-    { "aAsianTour", (void *)aAsianTour },
-    { "aCa", (void *)aCa },
-    { "aCopa", (void *)aCopa },
-    { "aCopaAmerica", (void *)aCopaAmerica },
-    { "aCopaAmerica_0", (void *)aCopaAmerica_0 },
-    { "aCopa_0", (void *)aCopa_0 },
-    { "aCoppa", (void *)aCoppa },
-    { "aCoppaItalia", (void *)aCoppaItalia },
-    { "aCoupe", (void *)aCoupe },
-    { "aCoupeDeFrance", (void *)aCoupeDeFrance },
-    { "aCup", (void *)aCup },
-    { "aCup_4", (void *)aCup_4 },
-    { "aCup_5", (void *)aCup_5 },
-    { "aCup_6", (void *)aCup_6 },
-    { "aCup_7", (void *)aCup_7 },
-    { "aCup_8", (void *)aCup_8 },
-    { "aCup_9", (void *)aCup_9 },
-    { "aDFBPokal", (void *)aDFBPokal },
-    { "aECFinals", (void *)aECFinals },
-    { "aECQualifier", (void *)aECQualifier },
-    { "aECQualifier_0", (void *)aECQualifier_0 },
-    { "aECQualifyingGr", (void *)aECQualifyingGr },
-    { "aECQualifyingGr_0", (void *)aECQualifyingGr_0 },
-    { "aECQualifyingGr_1", (void *)aECQualifyingGr_1 },
-    { "aECQualifyingGr_2", (void *)aECQualifyingGr_2 },
-    { "aECQualifyingGr_3", (void *)aECQualifyingGr_3 },
-    { "aECQualifyingGr_4", (void *)aECQualifyingGr_4 },
-    { "aECQualifyingGr_5", (void *)aECQualifyingGr_5 },
-    { "aECQualifyingGr_6", (void *)aECQualifyingGr_6 },
-    { "aEc", (void *)aEc },
-    { "aEcq", (void *)aEcq },
-    { "aEmpCup", (void *)aEmpCup },
-    { "aEmperorSCup", (void *)aEmperorSCup },
-    { "aEufaCup", (void *)aEufaCup },
-    { "aEufaCup_0", (void *)aEufaCup_0 },
-    { "aEuroCwCup", (void *)aEuroCwCup },
-    { "aEuropeanChampi_0", (void *)aEuropeanChampi_0 },
-    { "aEuropeanChampi_1", (void *)aEuropeanChampi_1 },
-    { "aEuropeanChampionship", (void *)aEuropeanChampionship },
-    { "aEuropeanCup", (void *)aEuropeanCup },
-    { "aEuropeanCupWin", (void *)aEuropeanCupWin },
-    { "aFinal", (void *)aFinal },
-    { "aFinalGroups", (void *)aFinalGroups },
-    { "aFinalGroups_0", (void *)aFinalGroups_0 },
-    { "aFinal_0", (void *)aFinal_0 },
-    { "aFinal_1", (void *)aFinal_1 },
-    { "aFinal_2", (void *)aFinal_2 },
-    { "aFinal_3", (void *)aFinal_3 },
-    { "aFr", (void *)aFr },
-    { "aFriendly_0", (void *)aFriendly_0 },
-    { "aInvTournament", (void *)aInvTournament },
-    { "aInvitationTour", (void *)aInvitationTour },
-    { "aLeague", (void *)aLeague },
-    { "aLeagueCup", (void *)aLeagueCup },
-    { "aLeagueCup_0", (void *)aLeagueCup_0 },
-    { "aLeagueCup_1", (void *)aLeagueCup_1 },
-    { "aLeagueCup_2", (void *)aLeagueCup_2 },
-    { "aLeague_0", (void *)aLeague_0 },
-    { "aNAmericanCup", (void *)aNAmericanCup },
-    { "aNac", (void *)aNac },
-    { "aNorthAmericanC", (void *)aNorthAmericanC },
-    { "aNorthAmericanT", (void *)aNorthAmericanT },
-    { "aOc", (void *)aOc },
-    { "aOceaniaCup", (void *)aOceaniaCup },
-    { "aOceaniaCup_0", (void *)aOceaniaCup_0 },
-    { "aPokal", (void *)aPokal },
-    { "aSouthAmericanC", (void *)aSouthAmericanC },
-    { "aSouthAmericanT", (void *)aSouthAmericanT },
-    { "aTnm", (void *)aTnm },
-    { "aTour", (void *)aTour },
-    { "aTournament", (void *)aTournament },
-    { "aTr", (void *)aTr },
-    { "aWCQualifier", (void *)aWCQualifier },
-    { "aWCQualifier_0", (void *)aWCQualifier_0 },
-    { "aWc", (void *)aWc },
-    { "aWcq", (void *)aWcq },
-    { "aWorld", (void *)aWorld },
-    { "aWorldClub", (void *)aWorldClub },
-    { "aWorldClubChamp", (void *)aWorldClubChamp },
-    { "aWorldCup", (void *)aWorldCup },
-    { "aWorldCupQualif", (void *)aWorldCupQualif },
-    { "aWorldCupQualif_1", (void *)aWorldCupQualif_1 },
-    { "aWorldCupQualif_2", (void *)aWorldCupQualif_2 },
-    { "aWorldCupQualif_3", (void *)aWorldCupQualif_3 },
-    { "aWorldCupQualif_4", (void *)aWorldCupQualif_4 },
-    { "aWorldCupQualif_5", (void *)aWorldCupQualif_5 },
-    { "aWorldCupQualif_6", (void *)aWorldCupQualif_6 },
-    { "aWorldCupQualif_7", (void *)aWorldCupQualif_7 },
-    { "aWorldCupQualif_8", (void *)aWorldCupQualif_8 },
-    { "aWorldCupQualif_9", (void *)aWorldCupQualif_9 },
-    { "aWorldCupQualification", (void *)aWorldCupQualification },
-    { "aWorldCup_0", (void *)aWorldCup_0 },
-    { "aWorld_0", (void *)aWorld_0 },
-    { "a1stLeg01_0", (void *)a1stLeg01_0 },
-    { "a23OnAgg_0", (void *)a23OnAgg_0 },
-    { "aAET90Mins23Rep_0", (void *)aAET90Mins23Rep_0 },
-    { "aAET90Mins23_0", (void *)aAET90Mins23_0 },
-    { "aAETReplay_0", (void *)aAETReplay_0 },
-    { "aAET_0", (void *)aAET_0 },
-    { "aAWin01OnPensAE_0", (void *)aAWin01OnPensAE_0 },
-    { "aAWin01OnPensAE_2", (void *)aAWin01OnPensAE_2 },
-    { "aAWin01OnPensAE_4", (void *)aAWin01OnPensAE_4 },
-    { "aAWin01OnPensAE_6", (void *)aAWin01OnPensAE_6 },
-    { "aAWin01OnPensAE_7", (void *)aAWin01OnPensAE_7 },
-    { "aAWin01OnPens_0", (void *)aAWin01OnPens_0 },
-    { "aAWin01OnPens_1", (void *)aAWin01OnPens_1 },
-    { "aAWin01OnPens_2", (void *)aAWin01OnPens_2 },
-    { "aAWin23OnAggAET_0", (void *)aAWin23OnAggAET_0 },
-    { "aAWin23OnAgg_0", (void *)aAWin23OnAgg_0 },
-    { "aAWinOnAwayGoal", (void *)aAWinOnAwayGoal },
-    { "aAWinOnAwayGoal_0", (void *)aAWinOnAwayGoal_0 },
-    { "aEuro_0", (void *)aEuro_0 },
-    { "aInt_0", (void *)aInt_0 },
-    { "aReplay_1", (void *)aReplay_1 },
-    { "a3rd", (void *)a3rd },
-    { "aFifthRound", (void *)aFifthRound },
-    { "aFinalGroup", (void *)aFinalGroup },
-    { "aFinalGroup_0", (void *)aFinalGroup_0 },
-    { "aFirstRound", (void *)aFirstRound },
-    { "aFourthRound", (void *)aFourthRound },
-    { "aGroupA", (void *)aGroupA },
-    { "aGroupB", (void *)aGroupB },
-    { "aGroupC", (void *)aGroupC },
-    { "aGroupD", (void *)aGroupD },
-    { "aGroupE", (void *)aGroupE },
-    { "aGroupF", (void *)aGroupF },
-    { "aGroupG", (void *)aGroupG },
-    { "aGroupH", (void *)aGroupH },
-    { "aHigh", (void *)aHigh },
-    { "aQF", (void *)aQF },
-    { "aQFinal", (void *)aQFinal },
-    { "aRnd1", (void *)aRnd1 },
-    { "aRnd2", (void *)aRnd2 },
-    { "aRnd3", (void *)aRnd3 },
-    { "aRnd4", (void *)aRnd4 },
-    { "aRnd5", (void *)aRnd5 },
-    { "aRnd6", (void *)aRnd6 },
-    { "aRound1", (void *)aRound1 },
-    { "aRound2", (void *)aRound2 },
-    { "aRound3", (void *)aRound3 },
-    { "aRound4", (void *)aRound4 },
-    { "aRound5", (void *)aRound5 },
-    { "aRound6", (void *)aRound6 },
-    { "aSF", (void *)aSF },
-    { "aSFinal", (void *)aSFinal },
-    { "aSecondRound", (void *)aSecondRound },
-    { "aSixthRound", (void *)aSixthRound },
-    { "aThirdPlacePlay", (void *)aThirdPlacePlay },
-    { "aThirdRound", (void *)aThirdRound },
-    { "a3MatchesToTurn", (void *)a3MatchesToTurn },
-    { "aAGoodSeasonAWe", (void *)aAGoodSeasonAWe },
-    { "aAGoodSeasonAWe_0", (void *)aAGoodSeasonAWe_0 },
-    { "aAVeryDisappoin", (void *)aAVeryDisappoin },
-    { "aAVeryDisappoin_0", (void *)aAVeryDisappoin_0 },
-    { "aAnUpAndDownSea", (void *)aAnUpAndDownSea },
-    { "aAnUpAndDownSea_0", (void *)aAnUpAndDownSea_0 },
-    { "aAndWeWillAccep_0", (void *)aAndWeWillAccep_0 },
-    { "aAnyFurtherPlay", (void *)aAnyFurtherPlay },
-    { "aAnyFurtherPlay_0", (void *)aAnyFurtherPlay_0 },
-    { "aAsThisPlayerIs", (void *)aAsThisPlayerIs },
-    { "aBHasLeftTheClu", (void *)aBHasLeftTheClu },
-    { "aBHasLeftTheClu_0", (void *)aBHasLeftTheClu_0 },
-    { "aBeforeHandingT", (void *)aBeforeHandingT },
-    { "aBeforeHandingT_0", (void *)aBeforeHandingT_0 },
-    { "aButWeWouldBeHa", (void *)aButWeWouldBeHa },
-    { "aCanImproveOnTh", (void *)aCanImproveOnTh },
-    { "aCanImproveOnTh_0", (void *)aCanImproveOnTh_0 },
-    { "aCareer", (void *)aCareer },
-    { "aCareer_0", (void *)aCareer_0 },
-    { "aClearTheOverdr", (void *)aClearTheOverdr },
-    { "aComeOnAWeCanno", (void *)aComeOnAWeCanno },
-    { "aDecidedToRelie", (void *)aDecidedToRelie },
-    { "aDecidedToRelie_0", (void *)aDecidedToRelie_0 },
-    { "aDemandsMuchBet", (void *)aDemandsMuchBet },
-    { "aDistinguishedC", (void *)aDistinguishedC },
-    { "aDistinguishedC_0", (void *)aDistinguishedC_0 },
-    { "aEnsureThatItIs", (void *)aEnsureThatItIs },
-    { "aEnsureThatWeCl", (void *)aEnsureThatWeCl },
-    { "aFavourableOffe", (void *)aFavourableOffe },
-    { "aFollowingACris", (void *)aFollowingACris },
-    { "aFollowingAVote", (void *)aFollowingAVote },
-    { "aHasJoinedTheCl", (void *)aHasJoinedTheCl },
-    { "aImproveOnOurPe", (void *)aImproveOnOurPe },
-    { "aImproveTheTeam", (void *)aImproveTheTeam },
-    { "aItIsWithGreatR", (void *)aItIsWithGreatR },
-    { "aItIsWithGreatR_0", (void *)aItIsWithGreatR_0 },
-    { "aItIsWithGreatR_1", (void *)aItIsWithGreatR_1 },
-    { "aJustANoteToWis", (void *)aJustANoteToWis },
-    { "aJustANoteToWis_0", (void *)aJustANoteToWis_0 },
-    { "aJustAReminderT", (void *)aJustAReminderT },
-    { "aManageMatch", (void *)aManageMatch },
-    { "aMoreTimeToNego", (void *)aMoreTimeToNego },
-    { "aMuchBetterFrom", (void *)aMuchBetterFrom },
-    { "aMuchSuccessFro", (void *)aMuchSuccessFro },
-    { "aNewSeason", (void *)aNewSeason },
-    { "aNewSeason_0", (void *)aNewSeason_0 },
-    { "aNotAVeryGoodSe", (void *)aNotAVeryGoodSe },
-    { "aNotAVeryGoodSe_0", (void *)aNotAVeryGoodSe_0 },
-    { "aOrTheWageBillW", (void *)aOrTheWageBillW },
-    { "aOrWeWillHaveTo", (void *)aOrWeWillHaveTo },
-    { "aPleaseNoteATha", (void *)aPleaseNoteATha },
-    { "aPleaseNoteATha_0", (void *)aPleaseNoteATha_0 },
-    { "aPleaseNoteATha_1", (void *)aPleaseNoteATha_1 },
-    { "aPleaseNoteATha_2", (void *)aPleaseNoteATha_2 },
-    { "aPleaseTakeNote", (void *)aPleaseTakeNote },
-    { "aPleaseTakeNote_0", (void *)aPleaseTakeNote_0 },
-    { "aPleasedWithYou", (void *)aPleasedWithYou },
-    { "aPleasedWithYou_0", (void *)aPleasedWithYou_0 },
-    { "aRememberUnless", (void *)aRememberUnless },
-    { "aRenewYourContr", (void *)aRenewYourContr },
-    { "aSeason", (void *)aSeason },
-    { "aSeasonInManage", (void *)aSeasonInManage },
-    { "aSeasonInManage_0", (void *)aSeasonInManage_0 },
-    { "aSeason_0", (void *)aSeason_0 },
-    { "aSeasonal", (void *)aSeasonal },
-    { "aSorryAAreUnwil", (void *)aSorryAAreUnwil },
-    { "aSorryAAreUnwil_0", (void *)aSorryAAreUnwil_0 },
-    { "aSorryAButTheCl", (void *)aSorryAButTheCl },
-    { "aSorryAButTheDi", (void *)aSorryAButTheDi },
-    { "aSuccessFromOur", (void *)aSuccessFromOur },
-    { "aThanksForAllYo", (void *)aThanksForAllYo },
-    { "aThanksForAllYo_0", (void *)aThanksForAllYo_0 },
-    { "aThesePlayersFr", (void *)aThesePlayersFr },
-    { "aThisPlayerFrom", (void *)aThisPlayerFrom },
-    { "aThisSeasonAndW", (void *)aThisSeasonAndW },
-    { "aThisSeasonAndW_0", (void *)aThisSeasonAndW_0 },
-    { "aTspvhcfstpvhcf", (void *)aTspvhcfstpvhcf },
-    { "aWeAllHopeYouEn", (void *)aWeAllHopeYouEn },
-    { "aWeAllHopeYouEn_0", (void *)aWeAllHopeYouEn_0 },
-    { "aWeAllWishYouTh", (void *)aWeAllWishYouTh },
-    { "aWeAllWishYouTh_0", (void *)aWeAllWishYouTh_0 },
-    { "aWeHereAtAAreHa", (void *)aWeHereAtAAreHa },
-    { "aWeHereAtAAreHa_0", (void *)aWeHereAtAAreHa_0 },
-    { "aWeWillHaveToRe", (void *)aWeWillHaveToRe },
-    { "aWelcomeAWeHope", (void *)aWelcomeAWeHope },
-    { "aWelcomeAWeLook", (void *)aWelcomeAWeLook },
-    { "aWelcomeToOurCl", (void *)aWelcomeToOurCl },
-    { "aWelcomeToOurCl_0", (void *)aWelcomeToOurCl_0 },
-    { "aWellDoneAYouDi", (void *)aWellDoneAYouDi },
-    { "aWellDoneAYouDi_0", (void *)aWellDoneAYouDi_0 },
-    { "aYouWellInYourN", (void *)aYouWellInYourN },
-    { "aYouWellInYourN_0", (void *)aYouWellInYourN_0 },
-    { "a1Leg", (void *)a1Leg },
-    { "a2Legs", (void *)a2Legs },
-    { "a2PtsForAWin", (void *)a2PtsForAWin },
-    { "a2ndReplay", (void *)a2ndReplay },
-    { "a2ndReplays", (void *)a2ndReplays },
-    { "a3PtsForAWin", (void *)a3PtsForAWin },
-    { "a3rdReplay", (void *)a3rdReplay },
-    { "a3rdReplays", (void *)a3rdReplays },
-    { "aAfter90Mins", (void *)aAfter90Mins },
-    { "aAfterExtraTime", (void *)aAfterExtraTime },
-    { "aBallInPlay", (void *)aBallInPlay },
-    { "aBallOutOfPlay", (void *)aBallOutOfPlay },
-    { "aCanOnlySaveMax", (void *)aCanOnlySaveMax },
-    { "aCancel", (void *)aCancel },
-    { "aDiy", (void *)aDiy },
-    { "aDiyCompetition", (void *)aDiyCompetition },
-    { "aETIfReplay", (void *)aETIfReplay },
-    { "aExtraTime", (void *)aExtraTime },
-    { "aFlipOff", (void *)aFlipOff },
-    { "aFlipOn", (void *)aFlipOn },
-    { "aMakeNewCompeti", (void *)aMakeNewCompeti },
-    { "aMakeNewDiyCup", (void *)aMakeNewDiyCup },
-    { "aMakeNewDiyLeag", (void *)aMakeNewDiyLeag },
-    { "aMakeNewDiyTour", (void *)aMakeNewDiyTour },
-    { "aNoExtraTime", (void *)aNoExtraTime },
-    { "aNoPenalties", (void *)aNoPenalties },
-    { "aOff", (void *)aOff },
-    { "aOn", (void *)aOn },
-    { "aPenalties", (void *)aPenalties },
-    { "aPensIfReplay", (void *)aPensIfReplay },
-    { "aPlayEachTeamX1", (void *)aPlayEachTeamX1 },
-    { "aPlayEachTeamX2", (void *)aPlayEachTeamX2 },
-    { "aPlayEachTeamX3", (void *)aPlayEachTeamX3 },
-    { "aPlayEachTeamX4", (void *)aPlayEachTeamX4 },
-    { "aPreset", (void *)aPreset },
-    { "aPresetCompetit", (void *)aPresetCompetit },
-    { "aSelectDiyCompe", (void *)aSelectDiyCompe },
-    { "aTact", (void *)aTact },
-    { "aTactics", (void *)aTactics },
-    { "aWinners_0", (void *)aWinners_0 },
-    { "a10Mins", (void *)a10Mins },
-    { "a3Mins", (void *)a3Mins },
-    { "a5Mins", (void *)a5Mins },
-    { "a7Mins", (void *)a7Mins },
-    { "aDry", (void *)aDry },
-    { "aEnglish", (void *)aEnglish },
-    { "aFrench", (void *)aFrench },
-    { "aFrozen", (void *)aFrozen },
-    { "aGameLength", (void *)aGameLength },
-    { "aGerman", (void *)aGerman },
-    { "aHard", (void *)aHard },
-    { "aInt", (void *)aInt },
-    { "aItalian", (void *)aItalian },
-    { "aLanguage", (void *)aLanguage },
-    { "aMuddy", (void *)aMuddy },
-    { "aNormal", (void *)aNormal },
-    { "aPitchType", (void *)aPitchType },
-    { "aPlay", (void *)aPlay },
-    { "aRandom", (void *)aRandom },
-    { "aSoft", (void *)aSoft },
-    { "aSpanish", (void *)aSpanish },
-    { "aWet", (void *)aWet },
-    { "aApr", (void *)aApr },
-    { "aAug", (void *)aAug },
-    { "aDec", (void *)aDec },
-    { "aFeb", (void *)aFeb },
-    { "aJan", (void *)aJan },
-    { "aJul", (void *)aJul },
-    { "aJun", (void *)aJun },
-    { "aMar", (void *)aMar },
-    { "aMay", (void *)aMay },
-    { "aNov", (void *)aNov },
-    { "aOct", (void *)aOct },
-    { "aSep", (void *)aSep },
-    { "a2Gk", (void *)a2Gk },
-    { "a3Gk", (void *)a3Gk },
-    { "a4Gk", (void *)a4Gk },
-    { "aA_1", (void *)aA_1 },
-    { "aAttacker", (void *)aAttacker },
-    { "aCoach_0", (void *)aCoach_0 },
-    { "aCoach_2", (void *)aCoach_2 },
-    { "aD_0", (void *)aD_0 },
-    { "aDefender", (void *)aDefender },
-    { "aG", (void *)aG },
-    { "aGoalkeeper", (void *)aGoalkeeper },
-    { "aLb", (void *)aLb },
-    { "aLw", (void *)aLw },
-    { "aM", (void *)aM },
-    { "aMidfielder", (void *)aMidfielder },
-    { "aPlayer", (void *)aPlayer },
-    { "aPlayerCoach_0", (void *)aPlayerCoach_0 },
-    { "aPlayer_0", (void *)aPlayer_0 },
-    { "aRb", (void *)aRb },
-    { "aRw", (void *)aRw },
-    { "aAttack_0", (void *)aAttack_0 },
-    { "aDefend_0", (void *)aDefend_0 },
-    { "aAny", (void *)aAny },
-    { "aApproxValue", (void *)aApproxValue },
-    { "aBallControl", (void *)aBallControl },
-    { "aDiscardOffer", (void *)aDiscardOffer },
-    { "aFinishing", (void *)aFinishing },
-    { "aFitness", (void *)aFitness },
-    { "aHeading", (void *)aHeading },
-    { "aPassing", (void *)aPassing },
-    { "aShooting", (void *)aShooting },
-    { "aSpeed", (void *)aSpeed },
-    { "aTackling", (void *)aTackling },
-    { "a100k", (void *)a100k },
-    { "a10m", (void *)a10m },
-    { "a150k", (void *)a150k },
-    { "a15m", (void *)a15m },
-    { "a15m_0", (void *)a15m_0 },
-    { "a1m", (void *)a1m },
-    { "a200k", (void *)a200k },
-    { "a25k", (void *)a25k },
-    { "a2m", (void *)a2m },
-    { "a300k", (void *)a300k },
-    { "a3m", (void *)a3m },
-    { "a500k", (void *)a500k },
-    { "a50k", (void *)a50k },
-    { "a5m", (void *)a5m },
-    { "a750k", (void *)a750k },
-    { "a75k", (void *)a75k },
-    { "aAsc_0", (void *)aAsc_0 },
-    { "aAsc_1", (void *)aAsc_1 },
-    { "aAsc_2", (void *)aAsc_2 },
-    { "aOg", (void *)aOg },
-    { "aPen", (void *)aPen },
-    { "aPen_0", (void *)aPen_0 },
-    { "aSwosVersion152", (void *)aSwosVersion152 },
-    { "aSoundMenuSng", (void *)aSoundMenuSng },
-    { "aSoundMenuIns", (void *)aSoundMenuIns },
-    { "aSoundHeroSng", (void *)aSoundHeroSng },
-    { "aSoundHeroIns", (void *)aSoundHeroIns },
-    { "aSoundSfxSng", (void *)aSoundSfxSng },
-    { "aSoundSfxIn1", (void *)aSoundSfxIn1 },
-    { "aSoundSfxIn2", (void *)aSoundSfxIn2 },
-    { "aDataPoolplyrDa", (void *)aDataPoolplyrDa },
-    { "aGrafsMenubgRaw", (void *)aGrafsMenubgRaw },
-    { "aGrafsMenubg2Ra", (void *)aGrafsMenubg2Ra },
-    { "aHighlights_0", (void *)aHighlights_0 },
-    { "aOptions", (void *)aOptions },
-    { "aFriendly_1", (void *)aFriendly_1 },
-    { "aSeason_1", (void *)aSeason_1 },
-    { "aCareer_1", (void *)aCareer_1 },
-    { "aDataEurocupTmd", (void *)aDataEurocupTmd },
-    { "aDataEurocwcTmd", (void *)aDataEurocwcTmd },
-    { "aDataTeamNnn", (void *)aDataTeamNnn },
-    { "aLoadLiverpool", (void *)aLoadLiverpool },
-    { "aResigned", (void *)aResigned },
-    { "a12Season", (void *)a12Season },
-    { "a102Season", (void *)a102Season },
-    { "aManagementReco", (void *)aManagementReco },
-    { "aNotQualified", (void *)aNotQualified },
-    { "aPosition0", (void *)aPosition0 },
-    { "aFourthPlace", (void *)aFourthPlace },
-    { "aReachedSemiFin", (void *)aReachedSemiFin },
-    { "aReachedQuarter", (void *)aReachedQuarter },
-    { "aKnockedOutInRo", (void *)aKnockedOutInRo },
-    { "aStillInCompeti", (void *)aStillInCompeti },
-    { "aCareerTotal", (void *)aCareerTotal },
-    { "aPl0W1D2L3F4A5", (void *)aPl0W1D2L3F4A5 },
-    { "aWon0Drawn1Lost", (void *)aWon0Drawn1Lost },
-    { "aWinnerQualifie", (void *)aWinnerQualifie },
-    { "aTop0Qualify", (void *)aTop0Qualify },
-    { "aPlayCoachMatch", (void *)aPlayCoachMatch },
-    { "aAndWeLookForwa", (void *)aAndWeLookForwa },
-    { "aMemoFromThePre", (void *)aMemoFromThePre },
-    { "aThePresident", (void *)aThePresident },
-    { "aViewOtherTeam", (void *)aViewOtherTeam },
-    { "aTheMembersOfTh", (void *)aTheMembersOfTh },
-    { "aOfAWouldLikeTo", (void *)aOfAWouldLikeTo },
-    { "aAsCoachOfTheNa", (void *)aAsCoachOfTheNa },
-    { "aWeCanPromiseYo", (void *)aWeCanPromiseYo },
-    { "aAnAnnuallyRevi", (void *)aAnAnnuallyRevi },
-    { "aWeLookForwardT", (void *)aWeLookForwardT },
-    { "aTheMembersOfTh_0", (void *)aTheMembersOfTh_0 },
-    { "aOfAAreDelighte", (void *)aOfAAreDelighte },
-    { "aAcceptedThePos", (void *)aAcceptedThePos },
-    { "aFromTheStartOf", (void *)aFromTheStartOf },
-    { "aInternationalJ", (void *)aInternationalJ },
-    { "aInternationalJ_0", (void *)aInternationalJ_0 },
-    { "aAddInternation", (void *)aAddInternation },
-    { "aAddInternation_0", (void *)aAddInternation_0 },
-    { "aRemovePlayer", (void *)aRemovePlayer },
-    { "aRemovePlayers", (void *)aRemovePlayers },
-    { "aSelect1MoreInt", (void *)aSelect1MoreInt },
-    { "aSelect0MoreInt", (void *)aSelect0MoreInt },
-    { "aChangeSquad", (void *)aChangeSquad },
-    { "aSelectSquad", (void *)aSelectSquad },
-    { "aSquadSelected", (void *)aSquadSelected },
-    { "aCannotPlayOldV", (void *)aCannotPlayOldV },
-    { "aUseMatchTeam", (void *)aUseMatchTeam },
-    { "aEuropeanTour", (void *)aEuropeanTour },
-    { "aOceaniaTour", (void *)aOceaniaTour },
-    { "aPlayerCoach", (void *)aPlayerCoach },
-    { "aComputer", (void *)aComputer },
-    { "aCoach", (void *)aCoach },
-    { "aStartCareerAs", (void *)aStartCareerAs },
-    { "aFileSavedByDif", (void *)aFileSavedByDif },
-    { "aFileSavedOnDif", (void *)aFileSavedOnDif },
-    { "aAllPlayerTeams", (void *)aAllPlayerTeams },
-    { "aFriendlyDiyGam", (void *)aFriendlyDiyGam },
-    { "aContinueCareer", (void *)aContinueCareer },
-    { "aYourCareerIsOv", (void *)aYourCareerIsOv },
-    { "aLoadHighlights", (void *)aLoadHighlights },
-    { "aSaveHighlights", (void *)aSaveHighlights },
-    { "aViewHighlights", (void *)aViewHighlights },
-    { "aNotAHighlights", (void *)aNotAHighlights },
-    { "aNotACompetitio", (void *)aNotACompetitio },
-    { "aCompetitionFil_0", (void *)aCompetitionFil_0 },
-    { "aTeamsPromoted0", (void *)aTeamsPromoted0 },
-    { "aTeamsPromoted0_0", (void *)aTeamsPromoted0_0 },
-    { "aTeamsRelegated", (void *)aTeamsRelegated },
-    { "aTeamsRelegated_0", (void *)aTeamsRelegated_0 },
-    { "aYourChairman", (void *)aYourChairman },
-    { "a01Season", (void *)a01Season },
-    { "a001Season", (void *)a001Season },
-    { "a0EndSeason", (void *)a0EndSeason },
-    { "aViewCompetitio", (void *)aViewCompetitio },
-    { "aMATCHSTATS", (void *)aMATCHSTATS },
-    { "aGoalAttempts", (void *)aGoalAttempts },
-    { "aFoulsConceded", (void *)aFoulsConceded },
-    { "aSendingsOff", (void *)aSendingsOff },
-    { "aAOfferForB", (void *)aAOfferForB },
-    { "aAOfferForBAndC", (void *)aAOfferForBAndC },
-    { "aAExchangeOffer", (void *)aAExchangeOffer },
-    { "aAExchangeOffer_0", (void *)aAExchangeOffer_0 },
-    { "aAOfferFor", (void *)aAOfferFor },
-    { "aAOfferFor_0", (void *)aAOfferFor_0 },
-    { "aAExchangeOffer_1", (void *)aAExchangeOffer_1 },
-    { "aAExchangeOffer_2", (void *)aAExchangeOffer_2 },
-    { "aAImprovedOffer", (void *)aAImprovedOffer },
-    { "aAImprovedOffer_0", (void *)aAImprovedOffer_0 },
-    { "aAImprovedExcha", (void *)aAImprovedExcha },
-    { "aAImprovedExcha_0", (void *)aAImprovedExcha_0 },
-    { "aAImprovedOffer_1", (void *)aAImprovedOffer_1 },
-    { "aAImprovedOffer_2", (void *)aAImprovedOffer_2 },
-    { "aAImprovedExcha_1", (void *)aAImprovedExcha_1 },
-    { "aAImprovedExcha_2", (void *)aAImprovedExcha_2 },
-    { "aAFurtherImprov", (void *)aAFurtherImprov },
-    { "aAFurtherImprov_0", (void *)aAFurtherImprov_0 },
-    { "aAFurtherImprov_1", (void *)aAFurtherImprov_1 },
-    { "aAFurtherImprov_2", (void *)aAFurtherImprov_2 },
-    { "aAFurtherImprov_3", (void *)aAFurtherImprov_3 },
-    { "aAFurtherImprov_4", (void *)aAFurtherImprov_4 },
-    { "aAFurtherImprov_5", (void *)aAFurtherImprov_5 },
-    { "aOfferForB", (void *)aOfferForB },
-    { "aAFurtherImprov_6", (void *)aAFurtherImprov_6 },
-    { "aJobOfferFromA", (void *)aJobOfferFromA },
-    { "aJobOfferFromAW", (void *)aJobOfferFromAW },
-    { "aDearSirMadam", (void *)aDearSirMadam },
-    { "aWeHereAtAWishT", (void *)aWeHereAtAWishT },
-    { "aWeHereAtAWishT_0", (void *)aWeHereAtAWishT_0 },
-    { "aOurOfferToBuy", (void *)aOurOfferToBuy },
-    { "aWeHereAtAWishT_1", (void *)aWeHereAtAWishT_1 },
-    { "aImproveOurOffe", (void *)aImproveOurOffe },
-    { "aFromAInExchang", (void *)aFromAInExchang },
-    { "aWeHereAtAWithd", (void *)aWeHereAtAWithd },
-    { "aWeHereAtARefus", (void *)aWeHereAtARefus },
-    { "aImproveOnOurOf", (void *)aImproveOnOurOf },
-    { "aInADealWithAFo", (void *)aInADealWithAFo },
-    { "aUnlessTheOffer", (void *)aUnlessTheOffer },
-    { "aCoachingJobAtO", (void *)aCoachingJobAtO },
-    { "aWeCanOfferYouA", (void *)aWeCanOfferYouA },
-    { "aWeHopeToBeAble", (void *)aWeHopeToBeAble },
-    { "aInTheRegionOfA", (void *)aInTheRegionOfA },
-    { "aWeLookForwardT_1", (void *)aWeLookForwardT_1 },
-    { "aWeHereAtAAreDe", (void *)aWeHereAtAAreDe },
-    { "aHaveAcceptedTh", (void *)aHaveAcceptedTh },
-    { "aFromTheStartOf_0", (void *)aFromTheStartOf_0 },
-    { "aWeHopeToBeAble_0", (void *)aWeHopeToBeAble_0 },
-    { "aInTheRegionOfA_0", (void *)aInTheRegionOfA_0 },
-    { "aMemoFromTheClu", (void *)aMemoFromTheClu },
-    { "aBestRegards", (void *)aBestRegards },
-    { "aBankStatement", (void *)aBankStatement },
-    { "aOldBalance", (void *)aOldBalance },
-    { "aNewBalance", (void *)aNewBalance },
-    { "aBalanceAtStart", (void *)aBalanceAtStart },
-    { "aBalanceAtEndOf", (void *)aBalanceAtEndOf },
-    { "aTotalProfit", (void *)aTotalProfit },
-    { "aPlayerSales", (void *)aPlayerSales },
-    { "aPlayerPurchase", (void *)aPlayerPurchase },
-    { "aGateReceipts", (void *)aGateReceipts },
-    { "aGeneralRunning", (void *)aGeneralRunning },
-    { "aAdditionalInve", (void *)aAdditionalInve },
-    { "aAdditionalInve_0", (void *)aAdditionalInve_0 },
-    { "aCompetitionBon", (void *)aCompetitionBon },
-    { "aSponsorshipFor", (void *)aSponsorshipFor },
-    { "aSeasonFromSens", (void *)aSeasonFromSens },
-    { "aPlayerWagesBil", (void *)aPlayerWagesBil },
-    { "a1GroupOf1", (void *)a1GroupOf1 },
-    { "a0GroupsOf1", (void *)a0GroupsOf1 },
-    { "aWinnersOfEachG", (void *)aWinnersOfEachG },
-    { "aWinnersOfEachG_0", (void *)aWinnersOfEachG_0 },
-    { "aWinnersOfEachG_1", (void *)aWinnersOfEachG_1 },
-    { "aTop0InEachGrou", (void *)aTop0InEachGrou },
-    { "aTop0InEachGrou_0", (void *)aTop0InEachGrou_0 },
-    { "aTop0InEachGrou_1", (void *)aTop0InEachGrou_1 },
-    { "aMatchWinnersQu", (void *)aMatchWinnersQu },
-    { "aMatchWinnersOn", (void *)aMatchWinnersOn },
-    { "aTop0InGroupQua", (void *)aTop0InGroupQua },
-    { "aMatchWinnerWin", (void *)aMatchWinnerWin },
-    { "aMatchWinnerOnA", (void *)aMatchWinnerOnA },
-    { "aGroupWinnerWin", (void *)aGroupWinnerWin },
-    { "aNationalTeams", (void *)aNationalTeams },
-    { "aOriginalCustom", (void *)aOriginalCustom },
-    { "aEditedCustomTe_0", (void *)aEditedCustomTe_0 },
-    { "aClubTeams", (void *)aClubTeams },
-    { "aExit", (void *)aExit },
-    { "aOk", (void *)aOk },
-    { "aFrom", (void *)aFrom },
-    { "aSubstitutes", (void *)aSubstitutes },
-    { "aPlayTournament", (void *)aPlayTournament },
-    { "aPlayFriendly", (void *)aPlayFriendly },
-    { "aViewSelectedTe", (void *)aViewSelectedTe },
-    { "aNextRoundDraw", (void *)aNextRoundDraw },
-    { "aPlayReplays", (void *)aPlayReplays },
-    { "a2ndLegRound", (void *)a2ndLegRound },
-    { "aSelect0Teams", (void *)aSelect0Teams },
-    { "aSelect0MoreTea", (void *)aSelect0MoreTea },
-    { "aSelect1MoreTea", (void *)aSelect1MoreTea },
-    { "aSelect0LessTea", (void *)aSelect0LessTea },
-    { "aSelect1LessTea", (void *)aSelect1LessTea },
-    { "aChooseCompetit", (void *)aChooseCompetit },
-    { "aChoosePresetCo", (void *)aChoosePresetCo },
-    { "aChooseSeason", (void *)aChooseSeason },
-    { "aSelectTeamToEd", (void *)aSelectTeamToEd },
-    { "aChooseTeamsFor", (void *)aChooseTeamsFor },
-    { "aChangeTeamsFor", (void *)aChangeTeamsFor },
-    { "aAllSelectedTea", (void *)aAllSelectedTea },
-    { "aTransferMarket", (void *)aTransferMarket },
-    { "aBuyOtherDomest", (void *)aBuyOtherDomest },
-    { "aBuyOtherForeig", (void *)aBuyOtherForeig },
-    { "aSelectTeamToMa", (void *)aSelectTeamToMa },
-    { "aSelectTeamToIm", (void *)aSelectTeamToIm },
-    { "aSelectSquadToV", (void *)aSelectSquadToV },
-    { "aDiyCompetition_0", (void *)aDiyCompetition_0 },
-    { "aDiyTournament", (void *)aDiyTournament },
-    { "aDesignDiyLeagu", (void *)aDesignDiyLeagu },
-    { "aDesignDiyCup", (void *)aDesignDiyCup },
-    { "aDesignDiyTourn", (void *)aDesignDiyTourn },
-    { "aClubBusiness", (void *)aClubBusiness },
-    { "aNoJobOffers", (void *)aNoJobOffers },
-    { "aJobOffersBeing", (void *)aJobOffersBeing },
-    { "aFinishSeason", (void *)aFinishSeason },
-    { "aEditTactics", (void *)aEditTactics },
-    { "aEditTacticsSel", (void *)aEditTacticsSel },
-    { "aImportTactics", (void *)aImportTactics },
-    { "aLoadEditedTact", (void *)aLoadEditedTact },
-    { "aSaveEditedTact", (void *)aSaveEditedTact },
-    { "aNumberOfTeams", (void *)aNumberOfTeams },
-    { "aPlayEachTeam", (void *)aPlayEachTeam },
-    { "aPointsForAWin", (void *)aPointsForAWin },
-    { "aChooseTeams", (void *)aChooseTeams },
-    { "aChangeTeams", (void *)aChangeTeams },
-    { "aViewHighlights_0", (void *)aViewHighlights_0 },
-    { "aLeadingCompeti", (void *)aLeadingCompeti },
-    { "aTopGoalScorers", (void *)aTopGoalScorers },
-    { "aHighestScorerL", (void *)aHighestScorerL },
-    { "aCompetitionInf", (void *)aCompetitionInf },
-    { "aManagementReco_0", (void *)aManagementReco_0 },
-    { "aEditCustomTeam", (void *)aEditCustomTeam },
-    { "aPresetCompetit_0", (void *)aPresetCompetit_0 },
-    { "aQuarterFinal", (void *)aQuarterFinal },
-    { "a3rdPlayOff", (void *)a3rdPlayOff },
-    { "aFixPitchType", (void *)aFixPitchType },
-    { "aAutoReplays", (void *)aAutoReplays },
-    { "aAutoSaveHighli", (void *)aAutoSaveHighli },
-    { "aExPlayerGoals", (void *)aExPlayerGoals },
-    { "aLoadOldCompeti", (void *)aLoadOldCompeti },
-    { "aDiskWriteProte", (void *)aDiskWriteProte },
-    { "aNoDiskInDrive", (void *)aNoDiskInDrive },
-    { "aFileNotFound", (void *)aFileNotFound },
-    { "aCannotFormatGa", (void *)aCannotFormatGa },
-    { "aNotATacticsFil", (void *)aNotATacticsFil },
-    { "aEditedCustomTe", (void *)aEditedCustomTe },
-    { "aSaveDiskFiling", (void *)aSaveDiskFiling },
-    { "aFormatSaveDisk", (void *)aFormatSaveDisk },
-    { "aPlayersOnDomes", (void *)aPlayersOnDomes },
-    { "aPlayersOnForei", (void *)aPlayersOnForei },
-    { "aSelectPlayerTo", (void *)aSelectPlayerTo },
-    { "aSelectPlayerTo_0", (void *)aSelectPlayerTo_0 },
-    { "aPutPlayerOnTra", (void *)aPutPlayerOnTra },
-    { "aViewDomesticPl", (void *)aViewDomesticPl },
-    { "aViewForeignPla", (void *)aViewForeignPla },
-    { "aGiveFreeTransf", (void *)aGiveFreeTransf },
-    { "aTakeOffMarket", (void *)aTakeOffMarket },
-    { "aPlayersCurrent", (void *)aPlayersCurrent },
-    { "aPutPlayerOnTra_0", (void *)aPutPlayerOnTra_0 },
-    { "aConfirmOffer", (void *)aConfirmOffer },
-    { "aThirdPartyOffe", (void *)aThirdPartyOffe },
-    { "aAcceptOffer", (void *)aAcceptOffer },
-    { "aRejectOffer", (void *)aRejectOffer },
-    { "aAskForMore", (void *)aAskForMore },
-    { "aResponseToOffe", (void *)aResponseToOffe },
-    { "aMakeImprovedOf", (void *)aMakeImprovedOf },
-    { "aReplay_0", (void *)aReplay_0 },
-    { "aAET", (void *)aAET },
-    { "aAET90Mins23", (void *)aAET90Mins23 },
-    { "aAWin01OnPens", (void *)aAWin01OnPens },
-    { "aAWin01OnPensAE", (void *)aAWin01OnPensAE },
-    { "aAWin01OnPensAE_1", (void *)aAWin01OnPensAE_1 },
-    { "aAETReplay", (void *)aAETReplay },
-    { "aAET90Mins23Rep", (void *)aAET90Mins23Rep },
-    { "aAWin01OnPensRe", (void *)aAWin01OnPensRe },
-    { "aAWin01OnPensAE_3", (void *)aAWin01OnPensAE_3 },
-    { "aAWin01OnPensAE_5", (void *)aAWin01OnPensAE_5 },
-    { "a1stLeg01", (void *)a1stLeg01 },
-    { "aAWin23OnAgg", (void *)aAWin23OnAgg },
-    { "aAWin23OnAggAET", (void *)aAWin23OnAggAET },
-    { "a23OnAggAWinOnA", (void *)a23OnAggAWinOnA },
-    { "a23OnAggAWinOnA_0", (void *)a23OnAggAWinOnA_0 },
-    { "a23OnAggAWin01O", (void *)a23OnAggAWin01O },
-    { "a23OnAggAWin01O_0", (void *)a23OnAggAWin01O_0 },
-    { "a23OnAgg", (void *)a23OnAgg },
-    { "aCj0611143807", (void *)aCj0611143807 },
-    { "aDf0", (void *)aDf0 },
-    { "aDf1", (void *)aDf1 },
-    { "aDf2", (void *)aDf2 },
-    { "aDf3", (void *)aDf3 },
-    { "aSwos4Dku", (void *)aSwos4Dku },
-    { "aHyphen", (void *)aHyphen },
-    { "aStar", (void *)aStar },
-    { "aSwosu", (void *)aSwosu },
-    { "aDataUefacupTmd", (void *)aDataUefacupTmd },
-    { "aCustomsEdt", (void *)aCustomsEdt },
-    { "aError", (void *)aError },
-    { "aRetired", (void *)aRetired },
-    { "aNational", (void *)aNational },
-    { "aA", (void *)aA },
-    { "aQualified", (void *)aQualified },
-    { "aPromoted", (void *)aPromoted },
-    { "aRelegated", (void *)aRelegated },
-    { "aWinners", (void *)aWinners },
-    { "aRunnerUp", (void *)aRunnerUp },
-    { "aFinalist", (void *)aFinalist },
-    { "aThirdPlace", (void *)aThirdPlace },
-    { "aSacked", (void *)aSacked },
-    { "aSeasonSTopScor", (void *)aSeasonSTopScor },
-    { "aSeasonSTopScor_0", (void *)aSeasonSTopScor_0 },
-    { "aA0", (void *)aA0 },
-    { "aAllMatches", (void *)aAllMatches },
-    { "aDash", (void *)aDash },
-    { "aSeveral", (void *)aSeveral },
-    { "aCoachMatch", (void *)aCoachMatch },
-    { "aOther", (void *)aOther },
-    { "aClubs", (void *)aClubs },
-    { "aAddPlayer", (void *)aAddPlayer },
-    { "aToReplace", (void *)aToReplace },
-    { "aASquad", (void *)aASquad },
-    { "aTraining", (void *)aTraining },
-    { "aRes", (void *)aRes },
-    { "aTrial", (void *)aTrial },
-    { "aViewATeam", (void *)aViewATeam },
-    { "aViewBTeam", (void *)aViewBTeam },
-    { "aFriendly", (void *)aFriendly },
-    { "aFriendlies", (void *)aFriendlies },
-    { "aViewResult", (void *)aViewResult },
-    { "aMatch", (void *)aMatch },
-    { "aResult", (void *)aResult },
-    { "aHighlights", (void *)aHighlights },
-    { "aFormation", (void *)aFormation },
-    { "aCompetitionFil", (void *)aCompetitionFil },
-    { "aReject", (void *)aReject },
-    { "aRetire", (void *)aRetire },
-    { "aSaveCareer", (void *)aSaveCareer },
-    { "aLoan", (void *)aLoan },
-    { "aContinueA", (void *)aContinueA },
-    { "aReplayA", (void *)aReplayA },
-    { "aSaveA", (void *)aSaveA },
-    { "aViewOppo", (void *)aViewOppo },
-    { "aPossession", (void *)aPossession },
-    { "aOnTarget", (void *)aOnTarget },
-    { "aCornersWon", (void *)aCornersWon },
-    { "aBookings", (void *)aBookings },
-    { "aSweep", (void *)aSweep },
-    { "aAttack", (void *)aAttack },
-    { "aDefend", (void *)aDefend },
-    { "aUSER_A", (void *)aUSER_A },
-    { "aUSER_B", (void *)aUSER_B },
-    { "aUSER_C", (void *)aUSER_C },
-    { "aUSER_D", (void *)aUSER_D },
-    { "aUSER_E", (void *)aUSER_E },
-    { "aUSER_F", (void *)aUSER_F },
-    { "aLparen", (void *)aLparen },
-    { "aRparen", (void *)aRparen },
-    { "aB", (void *)aB },
-    { "aBAndC", (void *)aBAndC },
-    { "aB_0", (void *)aB_0 },
-    { "aBAndC_0", (void *)aBAndC_0 },
-    { "aB_1", (void *)aB_1 },
-    { "aBAndC_1", (void *)aBAndC_1 },
-    { "aB_2", (void *)aB_2 },
-    { "aBAndC_2", (void *)aBAndC_2 },
-    { "aB_3", (void *)aB_3 },
-    { "aBAndC_3", (void *)aBAndC_3 },
-    { "aBAndC_4", (void *)aBAndC_4 },
-    { "aDearAB", (void *)aDearAB },
-    { "aOfferOn", (void *)aOfferOn },
-    { "aDearAB_0", (void *)aDearAB_0 },
-    { "aTotalLoss", (void *)aTotalLoss },
-    { "aName", (void *)aName },
-    { "aMr", (void *)aMr },
-    { "aMs", (void *)aMs },
-    { "aOr", (void *)aOr },
-    { "aKnockout", (void *)aKnockout },
-    { "aSeeded", (void *)aSeeded },
-    { "aPlayCup", (void *)aPlayCup },
-    { "aPlayLeague", (void *)aPlayLeague },
-    { "aPlaySeason", (void *)aPlaySeason },
-    { "aPl", (void *)aPl },
-    { "aW", (void *)aW },
-    { "aD", (void *)aD },
-    { "aL", (void *)aL },
-    { "aF", (void *)aF },
-    { "aA_0", (void *)aA_0 },
-    { "aPts", (void *)aPts },
-    { "aNextRound", (void *)aNextRound },
-    { "aDraw", (void *)aDraw },
-    { "aReplay", (void *)aReplay },
-    { "aReplays", (void *)aReplays },
-    { "aNat", (void *)aNat },
-    { "aNationality", (void *)aNationality },
-    { "aBuyPlayer", (void *)aBuyPlayer },
-    { "aContinue", (void *)aContinue },
-    { "aCopy", (void *)aCopy },
-    { "aUndo", (void *)aUndo },
-    { "aImport", (void *)aImport },
-    { "aDiyLeague", (void *)aDiyLeague },
-    { "aDiyCup", (void *)aDiyCup },
-    { "aAbort", (void *)aAbort },
-    { "aV", (void *)aV },
-    { "aPlus", (void *)aPlus },
-    { "aMinus", (void *)aMinus },
-    { "aNewJob", (void *)aNewJob },
-    { "aJobOffers", (void *)aJobOffers },
-    { "aPlayMatch", (void *)aPlayMatch },
-    { "aNextMatch", (void *)aNextMatch },
-    { "aSquad", (void *)aSquad },
-    { "aSquads", (void *)aSquads },
-    { "aTransfers", (void *)aTransfers },
-    { "aViewWorld", (void *)aViewWorld },
-    { "aTeams", (void *)aTeams },
-    { "aDescription", (void *)aDescription },
-    { "aX0", (void *)aX0 },
-    { "aLeg1", (void *)aLeg1 },
-    { "aLeg2", (void *)aLeg2 },
-    { "aAwayGoals", (void *)aAwayGoals },
-    { "aCup_0", (void *)aCup_0 },
-    { "aCup_1", (void *)aCup_1 },
-    { "aCup_2", (void *)aCup_2 },
-    { "aLeague_1", (void *)aLeague_1 },
-    { "aPlayoffs", (void *)aPlayoffs },
-    { "aChooseTeam", (void *)aChooseTeam },
-    { "aRounds", (void *)aRounds },
-    { "aFirstKit", (void *)aFirstKit },
-    { "aSecondKit", (void *)aSecondKit },
-    { "aCoach_3", (void *)aCoach_3 },
-    { "aCoach_4", (void *)aCoach_4 },
-    { "aViewMatch", (void *)aViewMatch },
-    { "aStats", (void *)aStats },
-    { "aStatistics", (void *)aStatistics },
-    { "aViewSquads", (void *)aViewSquads },
-    { "aViewSquad", (void *)aViewSquad },
-    { "aBank", (void *)aBank },
-    { "aH", (void *)aH },
-    { "aA_2", (void *)aA_2 },
-    { "aSemiFinal", (void *)aSemiFinal },
-    { "aFinal_4", (void *)aFinal_4 },
-    { "aMenuMusic", (void *)aMenuMusic },
-    { "aGoals", (void *)aGoals },
-    { "aForm", (void *)aForm },
-    { "aLge", (void *)aLge },
-    { "aCups", (void *)aCups },
-    { "aCup_3", (void *)aCup_3 },
-    { "aTot", (void *)aTot },
-    { "aOwnGoals", (void *)aOwnGoals },
-    { "aLoad", (void *)aLoad },
-    { "aSave", (void *)aSave },
-    { "aSaveExit", (void *)aSaveExit },
-    { "aFilename", (void *)aFilename },
-    { "aDiskError", (void *)aDiskError },
-    { "aDiskFull", (void *)aDiskFull },
-    { "aDeleteFile", (void *)aDeleteFile },
-    { "aCriteria", (void *)aCriteria },
-    { "aType", (void *)aType },
-    { "aSkills", (void *)aSkills },
-    { "aList", (void *)aList },
-    { "aMore", (void *)aMore },
-    { "aOffers", (void *)aOffers },
-    { "aMakeOffer", (void *)aMakeOffer },
-    { "aViewOffers", (void *)aViewOffers },
-    { "aNoOffers", (void *)aNoOffers },
-    { "aJobOffer", (void *)aJobOffer },
-    { "aAccept", (void *)aAccept },
-    { "aConsider", (void *)aConsider },
-    { "aViewTeam", (void *)aViewTeam },
-    { "aViewLeague", (void *)aViewLeague },
-    { "aCoach_1", (void *)aCoach_1 },
-    { "aCup1", (void *)aCup1 },
-    { "aCup2", (void *)aCup2 },
-    { "aCup_10", (void *)aCup_10 },
-    { "aLge_0", (void *)aLge_0 },
-    { "aPound", (void *)aPound },
-    { "aTot_0", (void *)aTot_0 },
-    { "aCareerPrompt", (void *)aCareerPrompt },
-    { "aCustomTeamsChanged", (void *)aCustomTeamsChanged },
-    { "aDiyCompetitionPrompt", (void *)aDiyCompetitionPrompt },
-    { "aEditedTacticsWillBeLost", (void *)aEditedTacticsWillBeLost },
-    { "aInsertBlankDis", (void *)aInsertBlankDis },
-    { "aInsertGameSave", (void *)aInsertGameSave },
-    { "aInsertSwosDisk_0", (void *)aInsertSwosDisk_0 },
-    { "aPresetCompetitionPrompt", (void *)aPresetCompetitionPrompt },
-    { "aSeasonPrompt", (void *)aSeasonPrompt },
-    { "aTacticsHaveBeenChanged", (void *)aTacticsHaveBeenChanged },
-    { "aWeHereAtAWould", (void *)aWeHereAtAWould },
-    { "aWeLookForwardT_0", (void *)aWeLookForwardT_0 },
+const StringSymbol _stringSymbols[] = {
+    { "_a0611961355Asm6", (void *)_a0611961355Asm6 },
+    { "_aCodedByAndiSmi", (void *)_aCodedByAndiSmi },
+    { "_aCopyrightC1994", (void *)_aCopyrightC1994 },
+    { "_aCopyrightC1994_0", (void *)_aCopyrightC1994_0 },
+    { "_aSensibleWorldO", (void *)_aSensibleWorldO },
+    { "_aCjcHelp", (void *)_aCjcHelp },
+    { "_aDataTeam008", (void *)_aDataTeam008 },
+    { "_aGrafsCharsetRa", (void *)_aGrafsCharsetRa },
+    { "_aGrafsCjcbenchR", (void *)_aGrafsCjcbenchR },
+    { "_aGrafsCjcbitsRa", (void *)_aGrafsCjcbitsRa },
+    { "_aGrafsCjcgrafsR", (void *)_aGrafsCjcgrafsR },
+    { "_aGrafsCjcteam1R", (void *)_aGrafsCjcteam1R },
+    { "_aGrafsCjcteam2R", (void *)_aGrafsCjcteam2R },
+    { "_aGrafsCjcteam3R", (void *)_aGrafsCjcteam3R },
+    { "_aGrafsCjcteamgR", (void *)_aGrafsCjcteamgR },
+    { "_aGrafsDisk22Raw", (void *)_aGrafsDisk22Raw },
+    { "_aGrafsDisk2Raw", (void *)_aGrafsDisk2Raw },
+    { "_aGrafsLoader00R", (void *)_aGrafsLoader00R },
+    { "_aGrafsLoader01R", (void *)_aGrafsLoader01R },
+    { "_aGrafsLoader10R", (void *)_aGrafsLoader10R },
+    { "_aGrafsLoader1Ra", (void *)_aGrafsLoader1Ra },
+    { "_aGrafsLoader2Ra", (void *)_aGrafsLoader2Ra },
+    { "_aGrafsLoader3Ra", (void *)_aGrafsLoader3Ra },
+    { "_aGrafsLoader4Ra", (void *)_aGrafsLoader4Ra },
+    { "_aGrafsLoader5Ra", (void *)_aGrafsLoader5Ra },
+    { "_aGrafsLoader6Ra", (void *)_aGrafsLoader6Ra },
+    { "_aGrafsLoader7Ra", (void *)_aGrafsLoader7Ra },
+    { "_aGrafsLoader8aR", (void *)_aGrafsLoader8aR },
+    { "_aGrafsLoader8bR", (void *)_aGrafsLoader8bR },
+    { "_aGrafsLoader9Ra", (void *)_aGrafsLoader9Ra },
+    { "_aGrafsMenus2Raw", (void *)_aGrafsMenus2Raw },
+    { "_aGrafsMenusRaw", (void *)_aGrafsMenusRaw },
+    { "_aGrafsOlddisk1R", (void *)_aGrafsOlddisk1R },
+    { "_aGrafsSoccerSRa", (void *)_aGrafsSoccerSRa },
+    { "_aGrafsSocpicRaw", (void *)_aGrafsSocpicRaw },
+    { "_aGrafsSwcpich1M", (void *)_aGrafsSwcpich1M },
+    { "_aGrafsSwcpich2M", (void *)_aGrafsSwcpich2M },
+    { "_aGrafsSwcpich3M", (void *)_aGrafsSwcpich3M },
+    { "_aGrafsSwcpich4M", (void *)_aGrafsSwcpich4M },
+    { "_aGrafsSwcpich5M", (void *)_aGrafsSwcpich5M },
+    { "_aGrafsSwcpich6M", (void *)_aGrafsSwcpich6M },
+    { "_aGrafsTacticsRa", (void *)_aGrafsTacticsRa },
+    { "_aGrafsWinscrnRa", (void *)_aGrafsWinscrnRa },
+    { "_aSwos4Dk1", (void *)_aSwos4Dk1 },
+    { "_aSwos4Dk2", (void *)_aSwos4Dk2 },
+    { "_aBoxall", (void *)_aBoxall },
+    { "_aChapman", (void *)_aChapman },
+    { "_aChris", (void *)_aChris },
+    { "_aDavid", (void *)_aDavid },
+    { "_aDavid_0", (void *)_aDavid_0 },
+    { "_aDearsley", (void *)_aDearsley },
+    { "_aGraeme", (void *)_aGraeme },
+    { "_aHare", (void *)_aHare },
+    { "_aJon", (void *)_aJon },
+    { "_aMark", (void *)_aMark },
+    { "_aNottingham", (void *)_aNottingham },
+    { "_aSwosDate0", (void *)_aSwosDate0 },
+    { "_aWilkin", (void *)_aWilkin },
+    { "_aAlbania", (void *)_aAlbania },
+    { "_aAlgeria", (void *)_aAlgeria },
+    { "_aArgentina", (void *)_aArgentina },
+    { "_aAustralia", (void *)_aAustralia },
+    { "_aAustria", (void *)_aAustria },
+    { "_aBelarus", (void *)_aBelarus },
+    { "_aBelgium", (void *)_aBelgium },
+    { "_aBolivia", (void *)_aBolivia },
+    { "_aBrazil", (void *)_aBrazil },
+    { "_aBulgaria", (void *)_aBulgaria },
+    { "_aChile", (void *)_aChile },
+    { "_aColombia", (void *)_aColombia },
+    { "_aCroatia", (void *)_aCroatia },
+    { "_aCustom", (void *)_aCustom },
+    { "_aCyprus", (void *)_aCyprus },
+    { "_aCzechRepublic", (void *)_aCzechRepublic },
+    { "_aDenmark", (void *)_aDenmark },
+    { "_aEcuador", (void *)_aEcuador },
+    { "_aElSalvadore", (void *)_aElSalvadore },
+    { "_aEngland", (void *)_aEngland },
+    { "_aEngland_0", (void *)_aEngland_0 },
+    { "_aEstonia", (void *)_aEstonia },
+    { "_aFaroeIslands", (void *)_aFaroeIslands },
+    { "_aFinland", (void *)_aFinland },
+    { "_aFrance", (void *)_aFrance },
+    { "_aGermany", (void *)_aGermany },
+    { "_aGhana", (void *)_aGhana },
+    { "_aGreece", (void *)_aGreece },
+    { "_aHolland", (void *)_aHolland },
+    { "_aHungary", (void *)_aHungary },
+    { "_aIceland", (void *)_aIceland },
+    { "_aIndia", (void *)_aIndia },
+    { "_aIsrael", (void *)_aIsrael },
+    { "_aItaly", (void *)_aItaly },
+    { "_aJapan", (void *)_aJapan },
+    { "_aLatvia", (void *)_aLatvia },
+    { "_aLithuania", (void *)_aLithuania },
+    { "_aLuxembourg", (void *)_aLuxembourg },
+    { "_aMalta", (void *)_aMalta },
+    { "_aMexico", (void *)_aMexico },
+    { "_aNewZealand", (void *)_aNewZealand },
+    { "_aNorthernIreland", (void *)_aNorthernIreland },
+    { "_aNorway", (void *)_aNorway },
+    { "_aParaguay", (void *)_aParaguay },
+    { "_aPeru", (void *)_aPeru },
+    { "_aPoland", (void *)_aPoland },
+    { "_aPortugal", (void *)_aPortugal },
+    { "_aRepublicIreland", (void *)_aRepublicIreland },
+    { "_aRomania", (void *)_aRomania },
+    { "_aRussia", (void *)_aRussia },
+    { "_aSanMarino", (void *)_aSanMarino },
+    { "_aScotland", (void *)_aScotland },
+    { "_aSlovakia", (void *)_aSlovakia },
+    { "_aSlovenia", (void *)_aSlovenia },
+    { "_aSouthAfrica", (void *)_aSouthAfrica },
+    { "_aSpain", (void *)_aSpain },
+    { "_aSurinam", (void *)_aSurinam },
+    { "_aSweden", (void *)_aSweden },
+    { "_aSwitzerland", (void *)_aSwitzerland },
+    { "_aTaiwan", (void *)_aTaiwan },
+    { "_aTurkey", (void *)_aTurkey },
+    { "_aUSA", (void *)_aUSA },
+    { "_aUkraine", (void *)_aUkraine },
+    { "_aUruguay", (void *)_aUruguay },
+    { "_aVenezuela", (void *)_aVenezuela },
+    { "_aWales", (void *)_aWales },
+    { "_aYugoslavia", (void *)_aYugoslavia },
+    { "_aAfr", (void *)_aAfr },
+    { "_aAfr_0", (void *)_aAfr_0 },
+    { "_aAfrica", (void *)_aAfrica },
+    { "_aAfrican", (void *)_aAfrican },
+    { "_aAfrican_0", (void *)_aAfrican_0 },
+    { "_aAsi", (void *)_aAsi },
+    { "_aAsi_0", (void *)_aAsi_0 },
+    { "_aAsia", (void *)_aAsia },
+    { "_aAsian", (void *)_aAsian },
+    { "_aAsian_0", (void *)_aAsian_0 },
+    { "_aEditedCustoms", (void *)_aEditedCustoms },
+    { "_aEur", (void *)_aEur },
+    { "_aEuro", (void *)_aEuro },
+    { "_aEurope", (void *)_aEurope },
+    { "_aEuropean", (void *)_aEuropean },
+    { "_aEuropean_0", (void *)_aEuropean_0 },
+    { "_aNam", (void *)_aNam },
+    { "_aNam_0", (void *)_aNam_0 },
+    { "_aNorthAmerica", (void *)_aNorthAmerica },
+    { "_aNorthAmerican", (void *)_aNorthAmerican },
+    { "_aNorthAmerican_0", (void *)_aNorthAmerican_0 },
+    { "_aOce", (void *)_aOce },
+    { "_aOce_0", (void *)_aOce_0 },
+    { "_aOceania", (void *)_aOceania },
+    { "_aOceanian", (void *)_aOceanian },
+    { "_aOceanian_0", (void *)_aOceanian_0 },
+    { "_aSam", (void *)_aSam },
+    { "_aSam_0", (void *)_aSam_0 },
+    { "_aSouthAmerica", (void *)_aSouthAmerica },
+    { "_aSouthAmerican", (void *)_aSouthAmerican },
+    { "_aSouthAmerican_0", (void *)_aSouthAmerican_0 },
+    { "_aWorld_1", (void *)_aWorld_1 },
+    { "_a1Liga", (void *)_a1Liga },
+    { "_a1stDivision", (void *)_a1stDivision },
+    { "_a2Liga", (void *)_a2Liga },
+    { "_aCentral", (void *)_aCentral },
+    { "_aCentralRegion", (void *)_aCentralRegion },
+    { "_aDeuxieme", (void *)_aDeuxieme },
+    { "_aDeuxiemeDivisi", (void *)_aDeuxiemeDivisi },
+    { "_aDiv1", (void *)_aDiv1 },
+    { "_aDiv1Playoffs", (void *)_aDiv1Playoffs },
+    { "_aDiv2", (void *)_aDiv2 },
+    { "_aDiv2Playoffs", (void *)_aDiv2Playoffs },
+    { "_aDiv3", (void *)_aDiv3 },
+    { "_aDiv3Playoffs", (void *)_aDiv3Playoffs },
+    { "_aDivision1", (void *)_aDivision1 },
+    { "_aDivision1_0", (void *)_aDivision1_0 },
+    { "_aDivision2", (void *)_aDivision2 },
+    { "_aDivision2_0", (void *)_aDivision2_0 },
+    { "_aDivision3", (void *)_aDivision3 },
+    { "_aDivision3_0", (void *)_aDivision3_0 },
+    { "_aDivisionOne", (void *)_aDivisionOne },
+    { "_aDivisionThree", (void *)_aDivisionThree },
+    { "_aDivisionTwo", (void *)_aDivisionTwo },
+    { "_aJLeague", (void *)_aJLeague },
+    { "_aJLeague_0", (void *)_aJLeague_0 },
+    { "_aLeague_2", (void *)_aLeague_2 },
+    { "_aLeague_3", (void *)_aLeague_3 },
+    { "_aNorthern", (void *)_aNorthern },
+    { "_aNorthernRegion", (void *)_aNorthernRegion },
+    { "_aNsw", (void *)_aNsw },
+    { "_aNswDivision", (void *)_aNswDivision },
+    { "_aPremDiv", (void *)_aPremDiv },
+    { "_aPremier", (void *)_aPremier },
+    { "_aPremierDivisio", (void *)_aPremierDivisio },
+    { "_aPremierLeague", (void *)_aPremierLeague },
+    { "_aPremiere", (void *)_aPremiere },
+    { "_aPremiereDivisi", (void *)_aPremiereDivisi },
+    { "_aPrimera", (void *)_aPrimera },
+    { "_aPrimeraDivisio", (void *)_aPrimeraDivisio },
+    { "_aQueensland", (void *)_aQueensland },
+    { "_aQueenslandDivi", (void *)_aQueenslandDivi },
+    { "_aSegunda", (void *)_aSegunda },
+    { "_aSegundaDivisio", (void *)_aSegundaDivisio },
+    { "_aSerieA", (void *)_aSerieA },
+    { "_aSerieB", (void *)_aSerieB },
+    { "_aSouthDivision", (void *)_aSouthDivision },
+    { "_aSouthDivision_0", (void *)_aSouthDivision_0 },
+    { "_aSouthern", (void *)_aSouthern },
+    { "_aSouthernRegion", (void *)_aSouthernRegion },
+    { "_aAc", (void *)_aAc },
+    { "_aAfricanCup", (void *)_aAfricanCup },
+    { "_aAfricanNations", (void *)_aAfricanNations },
+    { "_aAfricanTour", (void *)_aAfricanTour },
+    { "_aAnc", (void *)_aAnc },
+    { "_aAsianCup", (void *)_aAsianCup },
+    { "_aAsianCup_0", (void *)_aAsianCup_0 },
+    { "_aAsianTour", (void *)_aAsianTour },
+    { "_aCa", (void *)_aCa },
+    { "_aCopa", (void *)_aCopa },
+    { "_aCopaAmerica", (void *)_aCopaAmerica },
+    { "_aCopaAmerica_0", (void *)_aCopaAmerica_0 },
+    { "_aCopa_0", (void *)_aCopa_0 },
+    { "_aCoppa", (void *)_aCoppa },
+    { "_aCoppaItalia", (void *)_aCoppaItalia },
+    { "_aCoupe", (void *)_aCoupe },
+    { "_aCoupeDeFrance", (void *)_aCoupeDeFrance },
+    { "_aCup", (void *)_aCup },
+    { "_aCup_4", (void *)_aCup_4 },
+    { "_aCup_5", (void *)_aCup_5 },
+    { "_aCup_6", (void *)_aCup_6 },
+    { "_aCup_7", (void *)_aCup_7 },
+    { "_aCup_8", (void *)_aCup_8 },
+    { "_aCup_9", (void *)_aCup_9 },
+    { "_aDFBPokal", (void *)_aDFBPokal },
+    { "_aECFinals", (void *)_aECFinals },
+    { "_aECQualifier", (void *)_aECQualifier },
+    { "_aECQualifier_0", (void *)_aECQualifier_0 },
+    { "_aECQualifyingGr", (void *)_aECQualifyingGr },
+    { "_aECQualifyingGr_0", (void *)_aECQualifyingGr_0 },
+    { "_aECQualifyingGr_1", (void *)_aECQualifyingGr_1 },
+    { "_aECQualifyingGr_2", (void *)_aECQualifyingGr_2 },
+    { "_aECQualifyingGr_3", (void *)_aECQualifyingGr_3 },
+    { "_aECQualifyingGr_4", (void *)_aECQualifyingGr_4 },
+    { "_aECQualifyingGr_5", (void *)_aECQualifyingGr_5 },
+    { "_aECQualifyingGr_6", (void *)_aECQualifyingGr_6 },
+    { "_aEc", (void *)_aEc },
+    { "_aEcq", (void *)_aEcq },
+    { "_aEmpCup", (void *)_aEmpCup },
+    { "_aEmperorSCup", (void *)_aEmperorSCup },
+    { "_aEufaCup", (void *)_aEufaCup },
+    { "_aEufaCup_0", (void *)_aEufaCup_0 },
+    { "_aEuroCwCup", (void *)_aEuroCwCup },
+    { "_aEuropeanChampi_0", (void *)_aEuropeanChampi_0 },
+    { "_aEuropeanChampi_1", (void *)_aEuropeanChampi_1 },
+    { "_aEuropeanChampionship", (void *)_aEuropeanChampionship },
+    { "_aEuropeanCup", (void *)_aEuropeanCup },
+    { "_aEuropeanCupWin", (void *)_aEuropeanCupWin },
+    { "_aFinal", (void *)_aFinal },
+    { "_aFinalGroups", (void *)_aFinalGroups },
+    { "_aFinalGroups_0", (void *)_aFinalGroups_0 },
+    { "_aFinal_0", (void *)_aFinal_0 },
+    { "_aFinal_1", (void *)_aFinal_1 },
+    { "_aFinal_2", (void *)_aFinal_2 },
+    { "_aFinal_3", (void *)_aFinal_3 },
+    { "_aFr", (void *)_aFr },
+    { "_aFriendly_0", (void *)_aFriendly_0 },
+    { "_aInvTournament", (void *)_aInvTournament },
+    { "_aInvitationTour", (void *)_aInvitationTour },
+    { "_aLeague", (void *)_aLeague },
+    { "_aLeagueCup", (void *)_aLeagueCup },
+    { "_aLeagueCup_0", (void *)_aLeagueCup_0 },
+    { "_aLeagueCup_1", (void *)_aLeagueCup_1 },
+    { "_aLeagueCup_2", (void *)_aLeagueCup_2 },
+    { "_aLeague_0", (void *)_aLeague_0 },
+    { "_aNAmericanCup", (void *)_aNAmericanCup },
+    { "_aNac", (void *)_aNac },
+    { "_aNorthAmericanC", (void *)_aNorthAmericanC },
+    { "_aNorthAmericanT", (void *)_aNorthAmericanT },
+    { "_aOc", (void *)_aOc },
+    { "_aOceaniaCup", (void *)_aOceaniaCup },
+    { "_aOceaniaCup_0", (void *)_aOceaniaCup_0 },
+    { "_aPokal", (void *)_aPokal },
+    { "_aSouthAmericanC", (void *)_aSouthAmericanC },
+    { "_aSouthAmericanT", (void *)_aSouthAmericanT },
+    { "_aTnm", (void *)_aTnm },
+    { "_aTour", (void *)_aTour },
+    { "_aTournament", (void *)_aTournament },
+    { "_aTr", (void *)_aTr },
+    { "_aWCQualifier", (void *)_aWCQualifier },
+    { "_aWCQualifier_0", (void *)_aWCQualifier_0 },
+    { "_aWc", (void *)_aWc },
+    { "_aWcq", (void *)_aWcq },
+    { "_aWorld", (void *)_aWorld },
+    { "_aWorldClub", (void *)_aWorldClub },
+    { "_aWorldClubChamp", (void *)_aWorldClubChamp },
+    { "_aWorldCup", (void *)_aWorldCup },
+    { "_aWorldCupQualif", (void *)_aWorldCupQualif },
+    { "_aWorldCupQualif_1", (void *)_aWorldCupQualif_1 },
+    { "_aWorldCupQualif_2", (void *)_aWorldCupQualif_2 },
+    { "_aWorldCupQualif_3", (void *)_aWorldCupQualif_3 },
+    { "_aWorldCupQualif_4", (void *)_aWorldCupQualif_4 },
+    { "_aWorldCupQualif_5", (void *)_aWorldCupQualif_5 },
+    { "_aWorldCupQualif_6", (void *)_aWorldCupQualif_6 },
+    { "_aWorldCupQualif_7", (void *)_aWorldCupQualif_7 },
+    { "_aWorldCupQualif_8", (void *)_aWorldCupQualif_8 },
+    { "_aWorldCupQualif_9", (void *)_aWorldCupQualif_9 },
+    { "_aWorldCupQualification", (void *)_aWorldCupQualification },
+    { "_aWorldCup_0", (void *)_aWorldCup_0 },
+    { "_aWorld_0", (void *)_aWorld_0 },
+    { "_a1stLeg01_0", (void *)_a1stLeg01_0 },
+    { "_a23OnAgg_0", (void *)_a23OnAgg_0 },
+    { "_aAET90Mins23Rep_0", (void *)_aAET90Mins23Rep_0 },
+    { "_aAET90Mins23_0", (void *)_aAET90Mins23_0 },
+    { "_aAETReplay_0", (void *)_aAETReplay_0 },
+    { "_aAET_0", (void *)_aAET_0 },
+    { "_aAWin01OnPensAE_0", (void *)_aAWin01OnPensAE_0 },
+    { "_aAWin01OnPensAE_2", (void *)_aAWin01OnPensAE_2 },
+    { "_aAWin01OnPensAE_4", (void *)_aAWin01OnPensAE_4 },
+    { "_aAWin01OnPensAE_6", (void *)_aAWin01OnPensAE_6 },
+    { "_aAWin01OnPensAE_7", (void *)_aAWin01OnPensAE_7 },
+    { "_aAWin01OnPens_0", (void *)_aAWin01OnPens_0 },
+    { "_aAWin01OnPens_1", (void *)_aAWin01OnPens_1 },
+    { "_aAWin01OnPens_2", (void *)_aAWin01OnPens_2 },
+    { "_aAWin23OnAggAET_0", (void *)_aAWin23OnAggAET_0 },
+    { "_aAWin23OnAgg_0", (void *)_aAWin23OnAgg_0 },
+    { "_aAWinOnAwayGoal", (void *)_aAWinOnAwayGoal },
+    { "_aAWinOnAwayGoal_0", (void *)_aAWinOnAwayGoal_0 },
+    { "_aEuro_0", (void *)_aEuro_0 },
+    { "_aInt_0", (void *)_aInt_0 },
+    { "_aReplay_1", (void *)_aReplay_1 },
+    { "_a3rd", (void *)_a3rd },
+    { "_aFifthRound", (void *)_aFifthRound },
+    { "_aFinalGroup", (void *)_aFinalGroup },
+    { "_aFinalGroup_0", (void *)_aFinalGroup_0 },
+    { "_aFirstRound", (void *)_aFirstRound },
+    { "_aFourthRound", (void *)_aFourthRound },
+    { "_aGroupA", (void *)_aGroupA },
+    { "_aGroupB", (void *)_aGroupB },
+    { "_aGroupC", (void *)_aGroupC },
+    { "_aGroupD", (void *)_aGroupD },
+    { "_aGroupE", (void *)_aGroupE },
+    { "_aGroupF", (void *)_aGroupF },
+    { "_aGroupG", (void *)_aGroupG },
+    { "_aGroupH", (void *)_aGroupH },
+    { "_aHigh", (void *)_aHigh },
+    { "_aQF", (void *)_aQF },
+    { "_aQFinal", (void *)_aQFinal },
+    { "_aRnd1", (void *)_aRnd1 },
+    { "_aRnd2", (void *)_aRnd2 },
+    { "_aRnd3", (void *)_aRnd3 },
+    { "_aRnd4", (void *)_aRnd4 },
+    { "_aRnd5", (void *)_aRnd5 },
+    { "_aRnd6", (void *)_aRnd6 },
+    { "_aRound1", (void *)_aRound1 },
+    { "_aRound2", (void *)_aRound2 },
+    { "_aRound3", (void *)_aRound3 },
+    { "_aRound4", (void *)_aRound4 },
+    { "_aRound5", (void *)_aRound5 },
+    { "_aRound6", (void *)_aRound6 },
+    { "_aSF", (void *)_aSF },
+    { "_aSFinal", (void *)_aSFinal },
+    { "_aSecondRound", (void *)_aSecondRound },
+    { "_aSixthRound", (void *)_aSixthRound },
+    { "_aThirdPlacePlay", (void *)_aThirdPlacePlay },
+    { "_aThirdRound", (void *)_aThirdRound },
+    { "_a3MatchesToTurn", (void *)_a3MatchesToTurn },
+    { "_aAGoodSeasonAWe", (void *)_aAGoodSeasonAWe },
+    { "_aAGoodSeasonAWe_0", (void *)_aAGoodSeasonAWe_0 },
+    { "_aAVeryDisappoin", (void *)_aAVeryDisappoin },
+    { "_aAVeryDisappoin_0", (void *)_aAVeryDisappoin_0 },
+    { "_aAnUpAndDownSea", (void *)_aAnUpAndDownSea },
+    { "_aAnUpAndDownSea_0", (void *)_aAnUpAndDownSea_0 },
+    { "_aAndWeWillAccep_0", (void *)_aAndWeWillAccep_0 },
+    { "_aAnyFurtherPlay", (void *)_aAnyFurtherPlay },
+    { "_aAnyFurtherPlay_0", (void *)_aAnyFurtherPlay_0 },
+    { "_aAsThisPlayerIs", (void *)_aAsThisPlayerIs },
+    { "_aBHasLeftTheClu", (void *)_aBHasLeftTheClu },
+    { "_aBHasLeftTheClu_0", (void *)_aBHasLeftTheClu_0 },
+    { "_aBeforeHandingT", (void *)_aBeforeHandingT },
+    { "_aBeforeHandingT_0", (void *)_aBeforeHandingT_0 },
+    { "_aButWeWouldBeHa", (void *)_aButWeWouldBeHa },
+    { "_aCanImproveOnTh", (void *)_aCanImproveOnTh },
+    { "_aCanImproveOnTh_0", (void *)_aCanImproveOnTh_0 },
+    { "_aCareer", (void *)_aCareer },
+    { "_aCareer_0", (void *)_aCareer_0 },
+    { "_aClearTheOverdr", (void *)_aClearTheOverdr },
+    { "_aComeOnAWeCanno", (void *)_aComeOnAWeCanno },
+    { "_aDecidedToRelie", (void *)_aDecidedToRelie },
+    { "_aDecidedToRelie_0", (void *)_aDecidedToRelie_0 },
+    { "_aDemandsMuchBet", (void *)_aDemandsMuchBet },
+    { "_aDistinguishedC", (void *)_aDistinguishedC },
+    { "_aDistinguishedC_0", (void *)_aDistinguishedC_0 },
+    { "_aEnsureThatItIs", (void *)_aEnsureThatItIs },
+    { "_aEnsureThatWeCl", (void *)_aEnsureThatWeCl },
+    { "_aFavourableOffe", (void *)_aFavourableOffe },
+    { "_aFollowingACris", (void *)_aFollowingACris },
+    { "_aFollowingAVote", (void *)_aFollowingAVote },
+    { "_aHasJoinedTheCl", (void *)_aHasJoinedTheCl },
+    { "_aImproveOnOurPe", (void *)_aImproveOnOurPe },
+    { "_aImproveTheTeam", (void *)_aImproveTheTeam },
+    { "_aItIsWithGreatR", (void *)_aItIsWithGreatR },
+    { "_aItIsWithGreatR_0", (void *)_aItIsWithGreatR_0 },
+    { "_aItIsWithGreatR_1", (void *)_aItIsWithGreatR_1 },
+    { "_aJustANoteToWis", (void *)_aJustANoteToWis },
+    { "_aJustANoteToWis_0", (void *)_aJustANoteToWis_0 },
+    { "_aJustAReminderT", (void *)_aJustAReminderT },
+    { "_aManageMatch", (void *)_aManageMatch },
+    { "_aMoreTimeToNego", (void *)_aMoreTimeToNego },
+    { "_aMuchBetterFrom", (void *)_aMuchBetterFrom },
+    { "_aMuchSuccessFro", (void *)_aMuchSuccessFro },
+    { "_aNewSeason", (void *)_aNewSeason },
+    { "_aNewSeason_0", (void *)_aNewSeason_0 },
+    { "_aNotAVeryGoodSe", (void *)_aNotAVeryGoodSe },
+    { "_aNotAVeryGoodSe_0", (void *)_aNotAVeryGoodSe_0 },
+    { "_aOrTheWageBillW", (void *)_aOrTheWageBillW },
+    { "_aOrWeWillHaveTo", (void *)_aOrWeWillHaveTo },
+    { "_aPleaseNoteATha", (void *)_aPleaseNoteATha },
+    { "_aPleaseNoteATha_0", (void *)_aPleaseNoteATha_0 },
+    { "_aPleaseNoteATha_1", (void *)_aPleaseNoteATha_1 },
+    { "_aPleaseNoteATha_2", (void *)_aPleaseNoteATha_2 },
+    { "_aPleaseTakeNote", (void *)_aPleaseTakeNote },
+    { "_aPleaseTakeNote_0", (void *)_aPleaseTakeNote_0 },
+    { "_aPleasedWithYou", (void *)_aPleasedWithYou },
+    { "_aPleasedWithYou_0", (void *)_aPleasedWithYou_0 },
+    { "_aRememberUnless", (void *)_aRememberUnless },
+    { "_aRenewYourContr", (void *)_aRenewYourContr },
+    { "_aSeason", (void *)_aSeason },
+    { "_aSeasonInManage", (void *)_aSeasonInManage },
+    { "_aSeasonInManage_0", (void *)_aSeasonInManage_0 },
+    { "_aSeason_0", (void *)_aSeason_0 },
+    { "_aSeasonal", (void *)_aSeasonal },
+    { "_aSorryAAreUnwil", (void *)_aSorryAAreUnwil },
+    { "_aSorryAAreUnwil_0", (void *)_aSorryAAreUnwil_0 },
+    { "_aSorryAButTheCl", (void *)_aSorryAButTheCl },
+    { "_aSorryAButTheDi", (void *)_aSorryAButTheDi },
+    { "_aSuccessFromOur", (void *)_aSuccessFromOur },
+    { "_aThanksForAllYo", (void *)_aThanksForAllYo },
+    { "_aThanksForAllYo_0", (void *)_aThanksForAllYo_0 },
+    { "_aThesePlayersFr", (void *)_aThesePlayersFr },
+    { "_aThisPlayerFrom", (void *)_aThisPlayerFrom },
+    { "_aThisSeasonAndW", (void *)_aThisSeasonAndW },
+    { "_aThisSeasonAndW_0", (void *)_aThisSeasonAndW_0 },
+    { "_aTspvhcfstpvhcf", (void *)_aTspvhcfstpvhcf },
+    { "_aWeAllHopeYouEn", (void *)_aWeAllHopeYouEn },
+    { "_aWeAllHopeYouEn_0", (void *)_aWeAllHopeYouEn_0 },
+    { "_aWeAllWishYouTh", (void *)_aWeAllWishYouTh },
+    { "_aWeAllWishYouTh_0", (void *)_aWeAllWishYouTh_0 },
+    { "_aWeHereAtAAreHa", (void *)_aWeHereAtAAreHa },
+    { "_aWeHereAtAAreHa_0", (void *)_aWeHereAtAAreHa_0 },
+    { "_aWeWillHaveToRe", (void *)_aWeWillHaveToRe },
+    { "_aWelcomeAWeHope", (void *)_aWelcomeAWeHope },
+    { "_aWelcomeAWeLook", (void *)_aWelcomeAWeLook },
+    { "_aWelcomeToOurCl", (void *)_aWelcomeToOurCl },
+    { "_aWelcomeToOurCl_0", (void *)_aWelcomeToOurCl_0 },
+    { "_aWellDoneAYouDi", (void *)_aWellDoneAYouDi },
+    { "_aWellDoneAYouDi_0", (void *)_aWellDoneAYouDi_0 },
+    { "_aYouWellInYourN", (void *)_aYouWellInYourN },
+    { "_aYouWellInYourN_0", (void *)_aYouWellInYourN_0 },
+    { "_a1Leg", (void *)_a1Leg },
+    { "_a2Legs", (void *)_a2Legs },
+    { "_a2PtsForAWin", (void *)_a2PtsForAWin },
+    { "_a2ndReplay", (void *)_a2ndReplay },
+    { "_a2ndReplays", (void *)_a2ndReplays },
+    { "_a3PtsForAWin", (void *)_a3PtsForAWin },
+    { "_a3rdReplay", (void *)_a3rdReplay },
+    { "_a3rdReplays", (void *)_a3rdReplays },
+    { "_aAfter90Mins", (void *)_aAfter90Mins },
+    { "_aAfterExtraTime", (void *)_aAfterExtraTime },
+    { "_aBallInPlay", (void *)_aBallInPlay },
+    { "_aBallOutOfPlay", (void *)_aBallOutOfPlay },
+    { "_aCanOnlySaveMax", (void *)_aCanOnlySaveMax },
+    { "_aCancel", (void *)_aCancel },
+    { "_aDiy", (void *)_aDiy },
+    { "_aDiyCompetition", (void *)_aDiyCompetition },
+    { "_aETIfReplay", (void *)_aETIfReplay },
+    { "_aExtraTime", (void *)_aExtraTime },
+    { "_aFlipOff", (void *)_aFlipOff },
+    { "_aFlipOn", (void *)_aFlipOn },
+    { "_aMakeNewCompeti", (void *)_aMakeNewCompeti },
+    { "_aMakeNewDiyCup", (void *)_aMakeNewDiyCup },
+    { "_aMakeNewDiyLeag", (void *)_aMakeNewDiyLeag },
+    { "_aMakeNewDiyTour", (void *)_aMakeNewDiyTour },
+    { "_aNoExtraTime", (void *)_aNoExtraTime },
+    { "_aNoPenalties", (void *)_aNoPenalties },
+    { "_aOff", (void *)_aOff },
+    { "_aOn", (void *)_aOn },
+    { "_aPenalties", (void *)_aPenalties },
+    { "_aPensIfReplay", (void *)_aPensIfReplay },
+    { "_aPlayEachTeamX1", (void *)_aPlayEachTeamX1 },
+    { "_aPlayEachTeamX2", (void *)_aPlayEachTeamX2 },
+    { "_aPlayEachTeamX3", (void *)_aPlayEachTeamX3 },
+    { "_aPlayEachTeamX4", (void *)_aPlayEachTeamX4 },
+    { "_aPreset", (void *)_aPreset },
+    { "_aPresetCompetit", (void *)_aPresetCompetit },
+    { "_aSelectDiyCompe", (void *)_aSelectDiyCompe },
+    { "_aTact", (void *)_aTact },
+    { "_aTactics", (void *)_aTactics },
+    { "_aWinners_0", (void *)_aWinners_0 },
+    { "_a10Mins", (void *)_a10Mins },
+    { "_a3Mins", (void *)_a3Mins },
+    { "_a5Mins", (void *)_a5Mins },
+    { "_a7Mins", (void *)_a7Mins },
+    { "_aDry", (void *)_aDry },
+    { "_aEnglish", (void *)_aEnglish },
+    { "_aFrench", (void *)_aFrench },
+    { "_aFrozen", (void *)_aFrozen },
+    { "_aGameLength", (void *)_aGameLength },
+    { "_aGerman", (void *)_aGerman },
+    { "_aHard", (void *)_aHard },
+    { "_aInt", (void *)_aInt },
+    { "_aItalian", (void *)_aItalian },
+    { "_aLanguage", (void *)_aLanguage },
+    { "_aMuddy", (void *)_aMuddy },
+    { "_aNormal", (void *)_aNormal },
+    { "_aPitchType", (void *)_aPitchType },
+    { "_aPlay", (void *)_aPlay },
+    { "_aRandom", (void *)_aRandom },
+    { "_aSoft", (void *)_aSoft },
+    { "_aSpanish", (void *)_aSpanish },
+    { "_aWet", (void *)_aWet },
+    { "_aApr", (void *)_aApr },
+    { "_aAug", (void *)_aAug },
+    { "_aDec", (void *)_aDec },
+    { "_aFeb", (void *)_aFeb },
+    { "_aJan", (void *)_aJan },
+    { "_aJul", (void *)_aJul },
+    { "_aJun", (void *)_aJun },
+    { "_aMar", (void *)_aMar },
+    { "_aMay", (void *)_aMay },
+    { "_aNov", (void *)_aNov },
+    { "_aOct", (void *)_aOct },
+    { "_aSep", (void *)_aSep },
+    { "_a2Gk", (void *)_a2Gk },
+    { "_a3Gk", (void *)_a3Gk },
+    { "_a4Gk", (void *)_a4Gk },
+    { "_aA_1", (void *)_aA_1 },
+    { "_aAttacker", (void *)_aAttacker },
+    { "_aCoach_0", (void *)_aCoach_0 },
+    { "_aCoach_2", (void *)_aCoach_2 },
+    { "_aD_0", (void *)_aD_0 },
+    { "_aDefender", (void *)_aDefender },
+    { "_aG", (void *)_aG },
+    { "_aGoalkeeper", (void *)_aGoalkeeper },
+    { "_aLb", (void *)_aLb },
+    { "_aLw", (void *)_aLw },
+    { "_aM", (void *)_aM },
+    { "_aMidfielder", (void *)_aMidfielder },
+    { "_aPlayer", (void *)_aPlayer },
+    { "_aPlayerCoach_0", (void *)_aPlayerCoach_0 },
+    { "_aPlayer_0", (void *)_aPlayer_0 },
+    { "_aRb", (void *)_aRb },
+    { "_aRw", (void *)_aRw },
+    { "_aAttack_0", (void *)_aAttack_0 },
+    { "_aDefend_0", (void *)_aDefend_0 },
+    { "_aAny", (void *)_aAny },
+    { "_aApproxValue", (void *)_aApproxValue },
+    { "_aBallControl", (void *)_aBallControl },
+    { "_aDiscardOffer", (void *)_aDiscardOffer },
+    { "_aFinishing", (void *)_aFinishing },
+    { "_aFitness", (void *)_aFitness },
+    { "_aHeading", (void *)_aHeading },
+    { "_aPassing", (void *)_aPassing },
+    { "_aShooting", (void *)_aShooting },
+    { "_aSpeed", (void *)_aSpeed },
+    { "_aTackling", (void *)_aTackling },
+    { "_a100k", (void *)_a100k },
+    { "_a10m", (void *)_a10m },
+    { "_a150k", (void *)_a150k },
+    { "_a15m", (void *)_a15m },
+    { "_a15m_0", (void *)_a15m_0 },
+    { "_a1m", (void *)_a1m },
+    { "_a200k", (void *)_a200k },
+    { "_a25k", (void *)_a25k },
+    { "_a2m", (void *)_a2m },
+    { "_a300k", (void *)_a300k },
+    { "_a3m", (void *)_a3m },
+    { "_a500k", (void *)_a500k },
+    { "_a50k", (void *)_a50k },
+    { "_a5m", (void *)_a5m },
+    { "_a750k", (void *)_a750k },
+    { "_a75k", (void *)_a75k },
+    { "_aAsc_0", (void *)_aAsc_0 },
+    { "_aAsc_1", (void *)_aAsc_1 },
+    { "_aAsc_2", (void *)_aAsc_2 },
+    { "_aOg", (void *)_aOg },
+    { "_aPen", (void *)_aPen },
+    { "_aPen_0", (void *)_aPen_0 },
+    { "_aSwosVersion152", (void *)_aSwosVersion152 },
+    { "_aSoundMenuSng", (void *)_aSoundMenuSng },
+    { "_aSoundMenuIns", (void *)_aSoundMenuIns },
+    { "_aSoundHeroSng", (void *)_aSoundHeroSng },
+    { "_aSoundHeroIns", (void *)_aSoundHeroIns },
+    { "_aSoundSfxSng", (void *)_aSoundSfxSng },
+    { "_aSoundSfxIn1", (void *)_aSoundSfxIn1 },
+    { "_aSoundSfxIn2", (void *)_aSoundSfxIn2 },
+    { "_aDataPoolplyrDa", (void *)_aDataPoolplyrDa },
+    { "_aGrafsMenubgRaw", (void *)_aGrafsMenubgRaw },
+    { "_aGrafsMenubg2Ra", (void *)_aGrafsMenubg2Ra },
+    { "_aHighlights_0", (void *)_aHighlights_0 },
+    { "_aOptions", (void *)_aOptions },
+    { "_aFriendly_1", (void *)_aFriendly_1 },
+    { "_aSeason_1", (void *)_aSeason_1 },
+    { "_aCareer_1", (void *)_aCareer_1 },
+    { "_aDataEurocupTmd", (void *)_aDataEurocupTmd },
+    { "_aDataEurocwcTmd", (void *)_aDataEurocwcTmd },
+    { "_aDataTeamNnn", (void *)_aDataTeamNnn },
+    { "_aLoadLiverpool", (void *)_aLoadLiverpool },
+    { "_aResigned", (void *)_aResigned },
+    { "_a12Season", (void *)_a12Season },
+    { "_a102Season", (void *)_a102Season },
+    { "_aManagementReco", (void *)_aManagementReco },
+    { "_aNotQualified", (void *)_aNotQualified },
+    { "_aPosition0", (void *)_aPosition0 },
+    { "_aFourthPlace", (void *)_aFourthPlace },
+    { "_aReachedSemiFin", (void *)_aReachedSemiFin },
+    { "_aReachedQuarter", (void *)_aReachedQuarter },
+    { "_aKnockedOutInRo", (void *)_aKnockedOutInRo },
+    { "_aStillInCompeti", (void *)_aStillInCompeti },
+    { "_aCareerTotal", (void *)_aCareerTotal },
+    { "_aPl0W1D2L3F4A5", (void *)_aPl0W1D2L3F4A5 },
+    { "_aWon0Drawn1Lost", (void *)_aWon0Drawn1Lost },
+    { "_aWinnerQualifie", (void *)_aWinnerQualifie },
+    { "_aTop0Qualify", (void *)_aTop0Qualify },
+    { "_aPlayCoachMatch", (void *)_aPlayCoachMatch },
+    { "_aAndWeLookForwa", (void *)_aAndWeLookForwa },
+    { "_aMemoFromThePre", (void *)_aMemoFromThePre },
+    { "_aThePresident", (void *)_aThePresident },
+    { "_aViewOtherTeam", (void *)_aViewOtherTeam },
+    { "_aTheMembersOfTh", (void *)_aTheMembersOfTh },
+    { "_aOfAWouldLikeTo", (void *)_aOfAWouldLikeTo },
+    { "_aAsCoachOfTheNa", (void *)_aAsCoachOfTheNa },
+    { "_aWeCanPromiseYo", (void *)_aWeCanPromiseYo },
+    { "_aAnAnnuallyRevi", (void *)_aAnAnnuallyRevi },
+    { "_aWeLookForwardT", (void *)_aWeLookForwardT },
+    { "_aTheMembersOfTh_0", (void *)_aTheMembersOfTh_0 },
+    { "_aOfAAreDelighte", (void *)_aOfAAreDelighte },
+    { "_aAcceptedThePos", (void *)_aAcceptedThePos },
+    { "_aFromTheStartOf", (void *)_aFromTheStartOf },
+    { "_aInternationalJ", (void *)_aInternationalJ },
+    { "_aInternationalJ_0", (void *)_aInternationalJ_0 },
+    { "_aAddInternation", (void *)_aAddInternation },
+    { "_aAddInternation_0", (void *)_aAddInternation_0 },
+    { "_aRemovePlayer", (void *)_aRemovePlayer },
+    { "_aRemovePlayers", (void *)_aRemovePlayers },
+    { "_aSelect1MoreInt", (void *)_aSelect1MoreInt },
+    { "_aSelect0MoreInt", (void *)_aSelect0MoreInt },
+    { "_aChangeSquad", (void *)_aChangeSquad },
+    { "_aSelectSquad", (void *)_aSelectSquad },
+    { "_aSquadSelected", (void *)_aSquadSelected },
+    { "_aCannotPlayOldV", (void *)_aCannotPlayOldV },
+    { "_aUseMatchTeam", (void *)_aUseMatchTeam },
+    { "_aEuropeanTour", (void *)_aEuropeanTour },
+    { "_aOceaniaTour", (void *)_aOceaniaTour },
+    { "_aPlayerCoach", (void *)_aPlayerCoach },
+    { "_aComputer", (void *)_aComputer },
+    { "_aCoach", (void *)_aCoach },
+    { "_aStartCareerAs", (void *)_aStartCareerAs },
+    { "_aFileSavedByDif", (void *)_aFileSavedByDif },
+    { "_aFileSavedOnDif", (void *)_aFileSavedOnDif },
+    { "_aAllPlayerTeams", (void *)_aAllPlayerTeams },
+    { "_aFriendlyDiyGam", (void *)_aFriendlyDiyGam },
+    { "_aContinueCareer", (void *)_aContinueCareer },
+    { "_aYourCareerIsOv", (void *)_aYourCareerIsOv },
+    { "_aLoadHighlights", (void *)_aLoadHighlights },
+    { "_aSaveHighlights", (void *)_aSaveHighlights },
+    { "_aViewHighlights", (void *)_aViewHighlights },
+    { "_aNotAHighlights", (void *)_aNotAHighlights },
+    { "_aNotACompetitio", (void *)_aNotACompetitio },
+    { "_aCompetitionFil_0", (void *)_aCompetitionFil_0 },
+    { "_aTeamsPromoted0", (void *)_aTeamsPromoted0 },
+    { "_aTeamsPromoted0_0", (void *)_aTeamsPromoted0_0 },
+    { "_aTeamsRelegated", (void *)_aTeamsRelegated },
+    { "_aTeamsRelegated_0", (void *)_aTeamsRelegated_0 },
+    { "_aYourChairman", (void *)_aYourChairman },
+    { "_a01Season", (void *)_a01Season },
+    { "_a001Season", (void *)_a001Season },
+    { "_a0EndSeason", (void *)_a0EndSeason },
+    { "_aViewCompetitio", (void *)_aViewCompetitio },
+    { "_aMATCHSTATS", (void *)_aMATCHSTATS },
+    { "_aGoalAttempts", (void *)_aGoalAttempts },
+    { "_aFoulsConceded", (void *)_aFoulsConceded },
+    { "_aSendingsOff", (void *)_aSendingsOff },
+    { "_aAOfferForB", (void *)_aAOfferForB },
+    { "_aAOfferForBAndC", (void *)_aAOfferForBAndC },
+    { "_aAExchangeOffer", (void *)_aAExchangeOffer },
+    { "_aAExchangeOffer_0", (void *)_aAExchangeOffer_0 },
+    { "_aAOfferFor", (void *)_aAOfferFor },
+    { "_aAOfferFor_0", (void *)_aAOfferFor_0 },
+    { "_aAExchangeOffer_1", (void *)_aAExchangeOffer_1 },
+    { "_aAExchangeOffer_2", (void *)_aAExchangeOffer_2 },
+    { "_aAImprovedOffer", (void *)_aAImprovedOffer },
+    { "_aAImprovedOffer_0", (void *)_aAImprovedOffer_0 },
+    { "_aAImprovedExcha", (void *)_aAImprovedExcha },
+    { "_aAImprovedExcha_0", (void *)_aAImprovedExcha_0 },
+    { "_aAImprovedOffer_1", (void *)_aAImprovedOffer_1 },
+    { "_aAImprovedOffer_2", (void *)_aAImprovedOffer_2 },
+    { "_aAImprovedExcha_1", (void *)_aAImprovedExcha_1 },
+    { "_aAImprovedExcha_2", (void *)_aAImprovedExcha_2 },
+    { "_aAFurtherImprov", (void *)_aAFurtherImprov },
+    { "_aAFurtherImprov_0", (void *)_aAFurtherImprov_0 },
+    { "_aAFurtherImprov_1", (void *)_aAFurtherImprov_1 },
+    { "_aAFurtherImprov_2", (void *)_aAFurtherImprov_2 },
+    { "_aAFurtherImprov_3", (void *)_aAFurtherImprov_3 },
+    { "_aAFurtherImprov_4", (void *)_aAFurtherImprov_4 },
+    { "_aAFurtherImprov_5", (void *)_aAFurtherImprov_5 },
+    { "_aOfferForB", (void *)_aOfferForB },
+    { "_aAFurtherImprov_6", (void *)_aAFurtherImprov_6 },
+    { "_aJobOfferFromA", (void *)_aJobOfferFromA },
+    { "_aJobOfferFromAW", (void *)_aJobOfferFromAW },
+    { "_aDearSirMadam", (void *)_aDearSirMadam },
+    { "_aWeHereAtAWishT", (void *)_aWeHereAtAWishT },
+    { "_aWeHereAtAWishT_0", (void *)_aWeHereAtAWishT_0 },
+    { "_aOurOfferToBuy", (void *)_aOurOfferToBuy },
+    { "_aWeHereAtAWishT_1", (void *)_aWeHereAtAWishT_1 },
+    { "_aImproveOurOffe", (void *)_aImproveOurOffe },
+    { "_aFromAInExchang", (void *)_aFromAInExchang },
+    { "_aWeHereAtAWithd", (void *)_aWeHereAtAWithd },
+    { "_aWeHereAtARefus", (void *)_aWeHereAtARefus },
+    { "_aImproveOnOurOf", (void *)_aImproveOnOurOf },
+    { "_aInADealWithAFo", (void *)_aInADealWithAFo },
+    { "_aUnlessTheOffer", (void *)_aUnlessTheOffer },
+    { "_aCoachingJobAtO", (void *)_aCoachingJobAtO },
+    { "_aWeCanOfferYouA", (void *)_aWeCanOfferYouA },
+    { "_aWeHopeToBeAble", (void *)_aWeHopeToBeAble },
+    { "_aInTheRegionOfA", (void *)_aInTheRegionOfA },
+    { "_aWeLookForwardT_1", (void *)_aWeLookForwardT_1 },
+    { "_aWeHereAtAAreDe", (void *)_aWeHereAtAAreDe },
+    { "_aHaveAcceptedTh", (void *)_aHaveAcceptedTh },
+    { "_aFromTheStartOf_0", (void *)_aFromTheStartOf_0 },
+    { "_aWeHopeToBeAble_0", (void *)_aWeHopeToBeAble_0 },
+    { "_aInTheRegionOfA_0", (void *)_aInTheRegionOfA_0 },
+    { "_aMemoFromTheClu", (void *)_aMemoFromTheClu },
+    { "_aBestRegards", (void *)_aBestRegards },
+    { "_aBankStatement", (void *)_aBankStatement },
+    { "_aOldBalance", (void *)_aOldBalance },
+    { "_aNewBalance", (void *)_aNewBalance },
+    { "_aBalanceAtStart", (void *)_aBalanceAtStart },
+    { "_aBalanceAtEndOf", (void *)_aBalanceAtEndOf },
+    { "_aTotalProfit", (void *)_aTotalProfit },
+    { "_aPlayerSales", (void *)_aPlayerSales },
+    { "_aPlayerPurchase", (void *)_aPlayerPurchase },
+    { "_aGateReceipts", (void *)_aGateReceipts },
+    { "_aGeneralRunning", (void *)_aGeneralRunning },
+    { "_aAdditionalInve", (void *)_aAdditionalInve },
+    { "_aAdditionalInve_0", (void *)_aAdditionalInve_0 },
+    { "_aCompetitionBon", (void *)_aCompetitionBon },
+    { "_aSponsorshipFor", (void *)_aSponsorshipFor },
+    { "_aSeasonFromSens", (void *)_aSeasonFromSens },
+    { "_aPlayerWagesBil", (void *)_aPlayerWagesBil },
+    { "_a1GroupOf1", (void *)_a1GroupOf1 },
+    { "_a0GroupsOf1", (void *)_a0GroupsOf1 },
+    { "_aWinnersOfEachG", (void *)_aWinnersOfEachG },
+    { "_aWinnersOfEachG_0", (void *)_aWinnersOfEachG_0 },
+    { "_aWinnersOfEachG_1", (void *)_aWinnersOfEachG_1 },
+    { "_aTop0InEachGrou", (void *)_aTop0InEachGrou },
+    { "_aTop0InEachGrou_0", (void *)_aTop0InEachGrou_0 },
+    { "_aTop0InEachGrou_1", (void *)_aTop0InEachGrou_1 },
+    { "_aMatchWinnersQu", (void *)_aMatchWinnersQu },
+    { "_aMatchWinnersOn", (void *)_aMatchWinnersOn },
+    { "_aTop0InGroupQua", (void *)_aTop0InGroupQua },
+    { "_aMatchWinnerWin", (void *)_aMatchWinnerWin },
+    { "_aMatchWinnerOnA", (void *)_aMatchWinnerOnA },
+    { "_aGroupWinnerWin", (void *)_aGroupWinnerWin },
+    { "_aNationalTeams", (void *)_aNationalTeams },
+    { "_aOriginalCustom", (void *)_aOriginalCustom },
+    { "_aEditedCustomTe_0", (void *)_aEditedCustomTe_0 },
+    { "_aClubTeams", (void *)_aClubTeams },
+    { "_aExit", (void *)_aExit },
+    { "_aOk", (void *)_aOk },
+    { "_aFrom", (void *)_aFrom },
+    { "_aSubstitutes", (void *)_aSubstitutes },
+    { "_aPlayTournament", (void *)_aPlayTournament },
+    { "_aPlayFriendly", (void *)_aPlayFriendly },
+    { "_aViewSelectedTe", (void *)_aViewSelectedTe },
+    { "_aNextRoundDraw", (void *)_aNextRoundDraw },
+    { "_aPlayReplays", (void *)_aPlayReplays },
+    { "_a2ndLegRound", (void *)_a2ndLegRound },
+    { "_aSelect0Teams", (void *)_aSelect0Teams },
+    { "_aSelect0MoreTea", (void *)_aSelect0MoreTea },
+    { "_aSelect1MoreTea", (void *)_aSelect1MoreTea },
+    { "_aSelect0LessTea", (void *)_aSelect0LessTea },
+    { "_aSelect1LessTea", (void *)_aSelect1LessTea },
+    { "_aChooseCompetit", (void *)_aChooseCompetit },
+    { "_aChoosePresetCo", (void *)_aChoosePresetCo },
+    { "_aChooseSeason", (void *)_aChooseSeason },
+    { "_aSelectTeamToEd", (void *)_aSelectTeamToEd },
+    { "_aChooseTeamsFor", (void *)_aChooseTeamsFor },
+    { "_aChangeTeamsFor", (void *)_aChangeTeamsFor },
+    { "_aAllSelectedTea", (void *)_aAllSelectedTea },
+    { "_aTransferMarket", (void *)_aTransferMarket },
+    { "_aBuyOtherDomest", (void *)_aBuyOtherDomest },
+    { "_aBuyOtherForeig", (void *)_aBuyOtherForeig },
+    { "_aSelectTeamToMa", (void *)_aSelectTeamToMa },
+    { "_aSelectTeamToIm", (void *)_aSelectTeamToIm },
+    { "_aSelectSquadToV", (void *)_aSelectSquadToV },
+    { "_aDiyCompetition_0", (void *)_aDiyCompetition_0 },
+    { "_aDiyTournament", (void *)_aDiyTournament },
+    { "_aDesignDiyLeagu", (void *)_aDesignDiyLeagu },
+    { "_aDesignDiyCup", (void *)_aDesignDiyCup },
+    { "_aDesignDiyTourn", (void *)_aDesignDiyTourn },
+    { "_aClubBusiness", (void *)_aClubBusiness },
+    { "_aNoJobOffers", (void *)_aNoJobOffers },
+    { "_aJobOffersBeing", (void *)_aJobOffersBeing },
+    { "_aFinishSeason", (void *)_aFinishSeason },
+    { "_aEditTactics", (void *)_aEditTactics },
+    { "_aEditTacticsSel", (void *)_aEditTacticsSel },
+    { "_aImportTactics", (void *)_aImportTactics },
+    { "_aLoadEditedTact", (void *)_aLoadEditedTact },
+    { "_aSaveEditedTact", (void *)_aSaveEditedTact },
+    { "_aNumberOfTeams", (void *)_aNumberOfTeams },
+    { "_aPlayEachTeam", (void *)_aPlayEachTeam },
+    { "_aPointsForAWin", (void *)_aPointsForAWin },
+    { "_aChooseTeams", (void *)_aChooseTeams },
+    { "_aChangeTeams", (void *)_aChangeTeams },
+    { "_aViewHighlights_0", (void *)_aViewHighlights_0 },
+    { "_aLeadingCompeti", (void *)_aLeadingCompeti },
+    { "_aTopGoalScorers", (void *)_aTopGoalScorers },
+    { "_aHighestScorerL", (void *)_aHighestScorerL },
+    { "_aCompetitionInf", (void *)_aCompetitionInf },
+    { "_aManagementReco_0", (void *)_aManagementReco_0 },
+    { "_aEditCustomTeam", (void *)_aEditCustomTeam },
+    { "_aPresetCompetit_0", (void *)_aPresetCompetit_0 },
+    { "_aQuarterFinal", (void *)_aQuarterFinal },
+    { "_a3rdPlayOff", (void *)_a3rdPlayOff },
+    { "_aFixPitchType", (void *)_aFixPitchType },
+    { "_aAutoReplays", (void *)_aAutoReplays },
+    { "_aAutoSaveHighli", (void *)_aAutoSaveHighli },
+    { "_aExPlayerGoals", (void *)_aExPlayerGoals },
+    { "_aLoadOldCompeti", (void *)_aLoadOldCompeti },
+    { "_aDiskWriteProte", (void *)_aDiskWriteProte },
+    { "_aNoDiskInDrive", (void *)_aNoDiskInDrive },
+    { "_aFileNotFound", (void *)_aFileNotFound },
+    { "_aCannotFormatGa", (void *)_aCannotFormatGa },
+    { "_aNotATacticsFil", (void *)_aNotATacticsFil },
+    { "_aEditedCustomTe", (void *)_aEditedCustomTe },
+    { "_aSaveDiskFiling", (void *)_aSaveDiskFiling },
+    { "_aFormatSaveDisk", (void *)_aFormatSaveDisk },
+    { "_aPlayersOnDomes", (void *)_aPlayersOnDomes },
+    { "_aPlayersOnForei", (void *)_aPlayersOnForei },
+    { "_aSelectPlayerTo", (void *)_aSelectPlayerTo },
+    { "_aSelectPlayerTo_0", (void *)_aSelectPlayerTo_0 },
+    { "_aPutPlayerOnTra", (void *)_aPutPlayerOnTra },
+    { "_aViewDomesticPl", (void *)_aViewDomesticPl },
+    { "_aViewForeignPla", (void *)_aViewForeignPla },
+    { "_aGiveFreeTransf", (void *)_aGiveFreeTransf },
+    { "_aTakeOffMarket", (void *)_aTakeOffMarket },
+    { "_aPlayersCurrent", (void *)_aPlayersCurrent },
+    { "_aPutPlayerOnTra_0", (void *)_aPutPlayerOnTra_0 },
+    { "_aConfirmOffer", (void *)_aConfirmOffer },
+    { "_aThirdPartyOffe", (void *)_aThirdPartyOffe },
+    { "_aAcceptOffer", (void *)_aAcceptOffer },
+    { "_aRejectOffer", (void *)_aRejectOffer },
+    { "_aAskForMore", (void *)_aAskForMore },
+    { "_aResponseToOffe", (void *)_aResponseToOffe },
+    { "_aMakeImprovedOf", (void *)_aMakeImprovedOf },
+    { "_aReplay_0", (void *)_aReplay_0 },
+    { "_aAET", (void *)_aAET },
+    { "_aAET90Mins23", (void *)_aAET90Mins23 },
+    { "_aAWin01OnPens", (void *)_aAWin01OnPens },
+    { "_aAWin01OnPensAE", (void *)_aAWin01OnPensAE },
+    { "_aAWin01OnPensAE_1", (void *)_aAWin01OnPensAE_1 },
+    { "_aAETReplay", (void *)_aAETReplay },
+    { "_aAET90Mins23Rep", (void *)_aAET90Mins23Rep },
+    { "_aAWin01OnPensRe", (void *)_aAWin01OnPensRe },
+    { "_aAWin01OnPensAE_3", (void *)_aAWin01OnPensAE_3 },
+    { "_aAWin01OnPensAE_5", (void *)_aAWin01OnPensAE_5 },
+    { "_a1stLeg01", (void *)_a1stLeg01 },
+    { "_aAWin23OnAgg", (void *)_aAWin23OnAgg },
+    { "_aAWin23OnAggAET", (void *)_aAWin23OnAggAET },
+    { "_a23OnAggAWinOnA", (void *)_a23OnAggAWinOnA },
+    { "_a23OnAggAWinOnA_0", (void *)_a23OnAggAWinOnA_0 },
+    { "_a23OnAggAWin01O", (void *)_a23OnAggAWin01O },
+    { "_a23OnAggAWin01O_0", (void *)_a23OnAggAWin01O_0 },
+    { "_a23OnAgg", (void *)_a23OnAgg },
+    { "_aCj0611143807", (void *)_aCj0611143807 },
+    { "_aDf0", (void *)_aDf0 },
+    { "_aDf1", (void *)_aDf1 },
+    { "_aDf2", (void *)_aDf2 },
+    { "_aDf3", (void *)_aDf3 },
+    { "_aSwos4Dku", (void *)_aSwos4Dku },
+    { "_aHyphen", (void *)_aHyphen },
+    { "_aStar", (void *)_aStar },
+    { "_aSwosu", (void *)_aSwosu },
+    { "_aDataUefacupTmd", (void *)_aDataUefacupTmd },
+    { "_aCustomsEdt", (void *)_aCustomsEdt },
+    { "_aError", (void *)_aError },
+    { "_aRetired", (void *)_aRetired },
+    { "_aNational", (void *)_aNational },
+    { "_aA", (void *)_aA },
+    { "_aQualified", (void *)_aQualified },
+    { "_aPromoted", (void *)_aPromoted },
+    { "_aRelegated", (void *)_aRelegated },
+    { "_aWinners", (void *)_aWinners },
+    { "_aRunnerUp", (void *)_aRunnerUp },
+    { "_aFinalist", (void *)_aFinalist },
+    { "_aThirdPlace", (void *)_aThirdPlace },
+    { "_aSacked", (void *)_aSacked },
+    { "_aSeasonSTopScor", (void *)_aSeasonSTopScor },
+    { "_aSeasonSTopScor_0", (void *)_aSeasonSTopScor_0 },
+    { "_aA0", (void *)_aA0 },
+    { "_aAllMatches", (void *)_aAllMatches },
+    { "_aDash", (void *)_aDash },
+    { "_aSeveral", (void *)_aSeveral },
+    { "_aCoachMatch", (void *)_aCoachMatch },
+    { "_aOther", (void *)_aOther },
+    { "_aClubs", (void *)_aClubs },
+    { "_aAddPlayer", (void *)_aAddPlayer },
+    { "_aToReplace", (void *)_aToReplace },
+    { "_aASquad", (void *)_aASquad },
+    { "_aTraining", (void *)_aTraining },
+    { "_aRes", (void *)_aRes },
+    { "_aTrial", (void *)_aTrial },
+    { "_aViewATeam", (void *)_aViewATeam },
+    { "_aViewBTeam", (void *)_aViewBTeam },
+    { "_aFriendly", (void *)_aFriendly },
+    { "_aFriendlies", (void *)_aFriendlies },
+    { "_aViewResult", (void *)_aViewResult },
+    { "_aMatch", (void *)_aMatch },
+    { "_aResult", (void *)_aResult },
+    { "_aHighlights", (void *)_aHighlights },
+    { "_aFormation", (void *)_aFormation },
+    { "_aCompetitionFil", (void *)_aCompetitionFil },
+    { "_aReject", (void *)_aReject },
+    { "_aRetire", (void *)_aRetire },
+    { "_aSaveCareer", (void *)_aSaveCareer },
+    { "_aLoan", (void *)_aLoan },
+    { "_aContinueA", (void *)_aContinueA },
+    { "_aReplayA", (void *)_aReplayA },
+    { "_aSaveA", (void *)_aSaveA },
+    { "_aViewOppo", (void *)_aViewOppo },
+    { "_aPossession", (void *)_aPossession },
+    { "_aOnTarget", (void *)_aOnTarget },
+    { "_aCornersWon", (void *)_aCornersWon },
+    { "_aBookings", (void *)_aBookings },
+    { "_aSweep", (void *)_aSweep },
+    { "_aAttack", (void *)_aAttack },
+    { "_aDefend", (void *)_aDefend },
+    { "_aUSER_A", (void *)_aUSER_A },
+    { "_aUSER_B", (void *)_aUSER_B },
+    { "_aUSER_C", (void *)_aUSER_C },
+    { "_aUSER_D", (void *)_aUSER_D },
+    { "_aUSER_E", (void *)_aUSER_E },
+    { "_aUSER_F", (void *)_aUSER_F },
+    { "_aLparen", (void *)_aLparen },
+    { "_aRparen", (void *)_aRparen },
+    { "_aB", (void *)_aB },
+    { "_aBAndC", (void *)_aBAndC },
+    { "_aB_0", (void *)_aB_0 },
+    { "_aBAndC_0", (void *)_aBAndC_0 },
+    { "_aB_1", (void *)_aB_1 },
+    { "_aBAndC_1", (void *)_aBAndC_1 },
+    { "_aB_2", (void *)_aB_2 },
+    { "_aBAndC_2", (void *)_aBAndC_2 },
+    { "_aB_3", (void *)_aB_3 },
+    { "_aBAndC_3", (void *)_aBAndC_3 },
+    { "_aBAndC_4", (void *)_aBAndC_4 },
+    { "_aDearAB", (void *)_aDearAB },
+    { "_aOfferOn", (void *)_aOfferOn },
+    { "_aDearAB_0", (void *)_aDearAB_0 },
+    { "_aTotalLoss", (void *)_aTotalLoss },
+    { "_aName", (void *)_aName },
+    { "_aMr", (void *)_aMr },
+    { "_aMs", (void *)_aMs },
+    { "_aOr", (void *)_aOr },
+    { "_aKnockout", (void *)_aKnockout },
+    { "_aSeeded", (void *)_aSeeded },
+    { "_aPlayCup", (void *)_aPlayCup },
+    { "_aPlayLeague", (void *)_aPlayLeague },
+    { "_aPlaySeason", (void *)_aPlaySeason },
+    { "_aPl", (void *)_aPl },
+    { "_aW", (void *)_aW },
+    { "_aD", (void *)_aD },
+    { "_aL", (void *)_aL },
+    { "_aF", (void *)_aF },
+    { "_aA_0", (void *)_aA_0 },
+    { "_aPts", (void *)_aPts },
+    { "_aNextRound", (void *)_aNextRound },
+    { "_aDraw", (void *)_aDraw },
+    { "_aReplay", (void *)_aReplay },
+    { "_aReplays", (void *)_aReplays },
+    { "_aNat", (void *)_aNat },
+    { "_aNationality", (void *)_aNationality },
+    { "_aBuyPlayer", (void *)_aBuyPlayer },
+    { "_aContinue", (void *)_aContinue },
+    { "_aCopy", (void *)_aCopy },
+    { "_aUndo", (void *)_aUndo },
+    { "_aImport", (void *)_aImport },
+    { "_aDiyLeague", (void *)_aDiyLeague },
+    { "_aDiyCup", (void *)_aDiyCup },
+    { "_aAbort", (void *)_aAbort },
+    { "_aV", (void *)_aV },
+    { "_aPlus", (void *)_aPlus },
+    { "_aMinus", (void *)_aMinus },
+    { "_aNewJob", (void *)_aNewJob },
+    { "_aJobOffers", (void *)_aJobOffers },
+    { "_aPlayMatch", (void *)_aPlayMatch },
+    { "_aNextMatch", (void *)_aNextMatch },
+    { "_aSquad", (void *)_aSquad },
+    { "_aSquads", (void *)_aSquads },
+    { "_aTransfers", (void *)_aTransfers },
+    { "_aViewWorld", (void *)_aViewWorld },
+    { "_aTeams", (void *)_aTeams },
+    { "_aDescription", (void *)_aDescription },
+    { "_aX0", (void *)_aX0 },
+    { "_aLeg1", (void *)_aLeg1 },
+    { "_aLeg2", (void *)_aLeg2 },
+    { "_aAwayGoals", (void *)_aAwayGoals },
+    { "_aCup_0", (void *)_aCup_0 },
+    { "_aCup_1", (void *)_aCup_1 },
+    { "_aCup_2", (void *)_aCup_2 },
+    { "_aLeague_1", (void *)_aLeague_1 },
+    { "_aPlayoffs", (void *)_aPlayoffs },
+    { "_aChooseTeam", (void *)_aChooseTeam },
+    { "_aRounds", (void *)_aRounds },
+    { "_aFirstKit", (void *)_aFirstKit },
+    { "_aSecondKit", (void *)_aSecondKit },
+    { "_aCoach_3", (void *)_aCoach_3 },
+    { "_aCoach_4", (void *)_aCoach_4 },
+    { "_aViewMatch", (void *)_aViewMatch },
+    { "_aStats", (void *)_aStats },
+    { "_aStatistics", (void *)_aStatistics },
+    { "_aViewSquads", (void *)_aViewSquads },
+    { "_aViewSquad", (void *)_aViewSquad },
+    { "_aBank", (void *)_aBank },
+    { "_aH", (void *)_aH },
+    { "_aA_2", (void *)_aA_2 },
+    { "_aSemiFinal", (void *)_aSemiFinal },
+    { "_aFinal_4", (void *)_aFinal_4 },
+    { "_aMenuMusic", (void *)_aMenuMusic },
+    { "_aGoals", (void *)_aGoals },
+    { "_aForm", (void *)_aForm },
+    { "_aLge", (void *)_aLge },
+    { "_aCups", (void *)_aCups },
+    { "_aCup_3", (void *)_aCup_3 },
+    { "_aTot", (void *)_aTot },
+    { "_aOwnGoals", (void *)_aOwnGoals },
+    { "_aLoad", (void *)_aLoad },
+    { "_aSave", (void *)_aSave },
+    { "_aSaveExit", (void *)_aSaveExit },
+    { "_aFilename", (void *)_aFilename },
+    { "_aDiskError", (void *)_aDiskError },
+    { "_aDiskFull", (void *)_aDiskFull },
+    { "_aDeleteFile", (void *)_aDeleteFile },
+    { "_aCriteria", (void *)_aCriteria },
+    { "_aType", (void *)_aType },
+    { "_aSkills", (void *)_aSkills },
+    { "_aList", (void *)_aList },
+    { "_aMore", (void *)_aMore },
+    { "_aOffers", (void *)_aOffers },
+    { "_aMakeOffer", (void *)_aMakeOffer },
+    { "_aViewOffers", (void *)_aViewOffers },
+    { "_aNoOffers", (void *)_aNoOffers },
+    { "_aJobOffer", (void *)_aJobOffer },
+    { "_aAccept", (void *)_aAccept },
+    { "_aConsider", (void *)_aConsider },
+    { "_aViewTeam", (void *)_aViewTeam },
+    { "_aViewLeague", (void *)_aViewLeague },
+    { "_aCoach_1", (void *)_aCoach_1 },
+    { "_aCup1", (void *)_aCup1 },
+    { "_aCup2", (void *)_aCup2 },
+    { "_aCup_10", (void *)_aCup_10 },
+    { "_aLge_0", (void *)_aLge_0 },
+    { "_aPound", (void *)_aPound },
+    { "_aTot_0", (void *)_aTot_0 },
+    { "_aCareerPrompt", (void *)_aCareerPrompt },
+    { "_aCustomTeamsChanged", (void *)_aCustomTeamsChanged },
+    { "_aDiyCompetitionPrompt", (void *)_aDiyCompetitionPrompt },
+    { "_aEditedTacticsWillBeLost", (void *)_aEditedTacticsWillBeLost },
+    { "_aInsertBlankDis", (void *)_aInsertBlankDis },
+    { "_aInsertGameSave", (void *)_aInsertGameSave },
+    { "_aInsertSwosDisk_0", (void *)_aInsertSwosDisk_0 },
+    { "_aPresetCompetitionPrompt", (void *)_aPresetCompetitionPrompt },
+    { "_aSeasonPrompt", (void *)_aSeasonPrompt },
+    { "_aTacticsHaveBeenChanged", (void *)_aTacticsHaveBeenChanged },
+    { "_aWeHereAtAWould", (void *)_aWeHereAtAWould },
+    { "_aWeLookForwardT_0", (void *)_aWeLookForwardT_0 },
 };
-const int stringSymbolsCount = (int)(sizeof stringSymbols / sizeof stringSymbols[0]);
+const int _stringSymbolsCount = (int)(sizeof _stringSymbols / sizeof _stringSymbols[0]);

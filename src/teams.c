@@ -37,134 +37,134 @@
 extern void SetExitMenuFlag(void);
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint16_t teamsLoaded;
-extern uint8_t lastLoadedExtNumber;
-extern uint8_t teamFileBuffer[];
-extern uint8_t teamFilenameBuffer[];
-extern uint16_t teamFileTeamCount;
-extern uint32_t teamFileDataSize;
-extern uint16_t gameType;
-extern uint16_t skipLeagueNumbers;
-extern uint8_t diyLeagueSeasonStateTable[];
-extern volatile uint16_t panicReasonCode;
-extern uint16_t isNationalTeam;
-extern uint16_t numSelectedTeams;
-extern uint8_t selTeamsPtr;
+extern uint16_t _teamsLoaded;
+extern uint8_t _lastLoadedExtNumber;
+extern uint8_t _teamFileBuffer[];
+extern uint8_t _teamFilenameBuffer[];
+extern uint16_t _teamFileTeamCount;
+extern uint32_t _teamFileDataSize;
+extern uint16_t _gameType;
+extern uint16_t _skipLeagueNumbers;
+extern uint8_t _diyLeagueSeasonStateTable[];
+extern volatile uint16_t _panicReasonCode;
+extern uint16_t _isNationalTeam;
+extern uint16_t _numSelectedTeams;
+extern uint8_t _selTeamsPtr;
 
 /* Data labels (mutable strings and tables in SWOS2.s) */
-extern uint8_t aDataTeamNnn[];      /* "data/team.nnn" */
-extern uint8_t aCustomsEdt[];       /* "CUSTOMS.EDT" */
-extern uint8_t aEditedCustomTe[];   /* "EDITED CUSTOM TEAMS FILE NOT FOUND" */
-extern uint16_t teamsCountryNumbers[];
-extern uint8_t avgTeamValues[];
-extern uint16_t avgTeamValueBases[];
+extern uint8_t _aDataTeamNnn[];      /* "data/team.nnn" */
+extern uint8_t _aCustomsEdt[];       /* "CUSTOMS.EDT" */
+extern uint8_t _aEditedCustomTe[];   /* "EDITED CUSTOM TEAMS FILE NOT FOUND" */
+extern uint16_t _teamsCountryNumbers[];
+extern uint8_t _avgTeamValues[];
+extern uint16_t _avgTeamValueBases[];
 
 /* Globals for GetPlayerRandomNum / GetDisplayedPlayerValue */
-extern uint16_t currentSeasonShowing;
-extern uint8_t newRandomSeedCopy;
-extern uint8_t kRandomTable[];
-extern uint8_t currentTeam[];
-extern uint8_t playerPositions[];
-extern TeamFileEx careerTeam;
-extern uint8_t careerNumPlayers[];
-extern uint8_t viewRandomPhase;
+extern uint16_t _currentSeasonShowing;
+extern uint8_t _newRandomSeedCopy;
+extern uint8_t _kRandomTable[];
+extern uint8_t _currentTeam[];
+extern uint8_t _playerPositions[];
+extern TeamFileEx _careerTeam;
+extern uint8_t _careerNumPlayers[];
+extern uint8_t _viewRandomPhase;
 extern uint8_t displayedPlayerValueRandomDeltaTable[];
 
 /* Globals for GetPlayer / GetPlayerAtIndex / GetPlayerSlotIndexByPlayerNumber */
-extern uint16_t currentTeamNumber;
-extern uint16_t selTeamNumber;
-extern uint8_t currentMatchPlayers[];
+extern uint16_t _currentTeamNumber;
+extern uint16_t _selTeamNumber;
+extern uint8_t _currentMatchPlayers[];
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 
 /* Globals for national selector functions */
-extern uint16_t careerJobOfferMode;
-extern uint32_t nationalSelectorSeasonMaskA;
-extern uint32_t nationalSelectorSeasonMaskB;
-extern uint8_t nationalTeams[];
-extern uint16_t numNationalTeams;
+extern uint16_t _careerJobOfferMode;
+extern uint32_t _nationalSelectorSeasonMaskA;
+extern uint32_t _nationalSelectorSeasonMaskB;
+extern uint8_t _nationalTeams[];
+extern uint16_t _numNationalTeams;
 
 /* Globals for team selection menu (Chunks 107-109) */
-extern uint16_t changeTeams;
-extern uint16_t chooseTeamsResult;
-extern uint16_t viewSelectedTeams;
-extern uint16_t abortSelectTeams;
-extern uint16_t exitSelectTeams;
-extern int16_t  topOfStackMark;
+extern uint16_t _changeTeams;
+extern uint16_t _chooseTeamsResult;
+extern uint16_t _viewSelectedTeams;
+extern uint16_t _abortSelectTeams;
+extern uint16_t _exitSelectTeams;
+extern int16_t  _topOfStackMark;
 
 /* Globals for SelectTeamsFinalMenu */
-extern uint8_t customsLeague[];
-extern void *competitionsTable[];
-extern void *teamNames[];
-extern void *leaguesPtrTable[];
-extern uint16_t leagueNumbersTable[];
-extern void *countryNames[];
-extern uint16_t numLeaguesInCountry;
-extern uint16_t chooseTeamsNumTeams;
-extern int16_t  selectedTeamIndex;
-extern int16_t  selectedLeagueIndex;
-extern uint16_t showCupsAndOther;
-extern uint16_t playSeason;
-extern uint16_t loadTeam;
-extern uint16_t stayInSelectTeams;
-extern uint16_t exitFlag;
-extern uint16_t isContestContinentalCup;
-extern uint16_t isCountryNumber;
-extern uint16_t gotCountryName;
-extern uint16_t numberOfLeagues;
-extern uintptr_t selectedContest;
-extern uint16_t selectTeamsNoLimit;
-extern uintptr_t chooseTeamsHeader1stPart;
-extern uintptr_t selectedTeamText;
-extern uintptr_t gameTypeStr;
-extern uintptr_t playWhatStr;
-extern uintptr_t entryText2;
-extern uint8_t  someTeamFlags;
-extern uint16_t isNationalSelector;
-extern uint16_t chooseCompetitionOnly;
-extern uint16_t countryNumber;
-extern uint16_t leagueNumber;
-extern uint16_t contestLeagueNumber;
-extern const char *divisionStringTable[];
-extern uint8_t  selectTeamsMenu[];
-extern uint8_t  chooseTeamsFriendlyMenu[];
-extern uint8_t  chooseTeamsFriendlyMenu2[];
-extern uint8_t  europeanChampionships[];
-extern uint8_t  worldCup[];
-extern uint8_t  africanNationsCup[];
-extern uint8_t  copaAmerica[];
-extern uint8_t  northAmericanCup[];
-extern uint8_t  asianCup[];
-extern uint8_t  oceaniaCup[];
-extern uint8_t  northAmericaWorldCupQualification[];
-extern uint8_t  southAmericaWorldCupQualification[];
-extern uint8_t  africaWorldCupQualification[];
-extern uint8_t  asiaWorldCupQualification[];
-extern uint8_t  oceaniaWorldCupQualification[];
-extern uint8_t  aEditedCustomTe_0[]; /* "EDITED CUSTOM TEAMS" */
-extern uint8_t  aPlaySeason[];       /* "PLAY SEASON" */
-extern uint8_t  aPlayTournament[];   /* "PLAY TOURNAMENT" */
-extern uint8_t  aPlayCup[];          /* "PLAY CUP" */
-extern uint8_t  aPlayLeague[];       /* "PLAY LEAGUE" */
-extern const char aCup_0[];          /* "CUP" */
-extern const char aLeague_1[];       /* "LEAGUE" */
-extern uint8_t  countriesStack[];
+extern uint8_t _customsLeague[];
+extern void *_competitionsTable[];
+extern void *_teamNames[];
+extern void *_leaguesPtrTable[];
+extern uint16_t _leagueNumbersTable[];
+extern void *_countryNames[];
+extern uint16_t _numLeaguesInCountry;
+extern uint16_t _chooseTeamsNumTeams;
+extern int16_t  _selectedTeamIndex;
+extern int16_t  _selectedLeagueIndex;
+extern uint16_t _showCupsAndOther;
+extern uint16_t _playSeason;
+extern uint16_t _loadTeam;
+extern uint16_t _stayInSelectTeams;
+extern uint16_t _exitFlag;
+extern uint16_t _isContestContinentalCup;
+extern uint16_t _isCountryNumber;
+extern uint16_t _gotCountryName;
+extern uint16_t _numberOfLeagues;
+extern uintptr_t _selectedContest;
+extern uint16_t _selectTeamsNoLimit;
+extern uintptr_t _chooseTeamsHeader1stPart;
+extern uintptr_t _selectedTeamText;
+extern uintptr_t _gameTypeStr;
+extern uintptr_t _playWhatStr;
+extern uintptr_t _entryText2;
+extern uint8_t  _someTeamFlags;
+extern uint16_t _isNationalSelector;
+extern uint16_t _chooseCompetitionOnly;
+extern uint16_t _countryNumber;
+extern uint16_t _leagueNumber;
+extern uint16_t _contestLeagueNumber;
+extern const char *_divisionStringTable[];
+extern uint8_t  _selectTeamsMenu[];
+extern uint8_t  _chooseTeamsFriendlyMenu[];
+extern uint8_t  _chooseTeamsFriendlyMenu2[];
+extern uint8_t  _europeanChampionships[];
+extern uint8_t  _worldCup[];
+extern uint8_t  _africanNationsCup[];
+extern uint8_t  _copaAmerica[];
+extern uint8_t  _northAmericanCup[];
+extern uint8_t  _asianCup[];
+extern uint8_t  _oceaniaCup[];
+extern uint8_t  _northAmericaWorldCupQualification[];
+extern uint8_t  _southAmericaWorldCupQualification[];
+extern uint8_t  _africaWorldCupQualification[];
+extern uint8_t  _asiaWorldCupQualification[];
+extern uint8_t  _oceaniaWorldCupQualification[];
+extern uint8_t  _aEditedCustomTe_0[]; /* "EDITED CUSTOM TEAMS" */
+extern uint8_t  _aPlaySeason[];       /* "PLAY SEASON" */
+extern uint8_t  _aPlayTournament[];   /* "PLAY TOURNAMENT" */
+extern uint8_t  _aPlayCup[];          /* "PLAY CUP" */
+extern uint8_t  _aPlayLeague[];       /* "PLAY LEAGUE" */
+extern const char _aCup_0[];          /* "CUP" */
+extern const char _aLeague_1[];       /* "LEAGUE" */
+extern uint8_t  _countriesStack[];
 
 /* Globals for team navigation stack (Chunk 109) */
-extern void *countriesTable[];
-extern uint8_t *curCountryStr;
-extern uint8_t *countryStackPtr;
-extern uint16_t teamDepthLevel;
-extern uint16_t selectedTeamsStack[];
-extern uint16_t lastSelectedTeam;
-extern uint16_t prevSelectedTeamEntry;
-extern uint16_t isCountryNumber;
-extern uint16_t gotCountryName;
-extern uint16_t numberOfLeagues;
-extern uint16_t isContestContinentalCup;
-extern uint32_t continentalCups[];
-extern uintptr_t selectedContest;
-extern uint16_t teamsType;
-extern uint32_t nationalTeamCompetitionsAndQualifications[];
+extern void *_countriesTable[];
+extern uint8_t *_curCountryStr;
+extern uint8_t *_countryStackPtr;
+extern uint16_t _teamDepthLevel;
+extern uint16_t _selectedTeamsStack[];
+extern uint16_t _lastSelectedTeam;
+extern uint16_t _prevSelectedTeamEntry;
+extern uint16_t _isCountryNumber;
+extern uint16_t _gotCountryName;
+extern uint16_t _numberOfLeagues;
+extern uint16_t _isContestContinentalCup;
+extern uint32_t _continentalCups[];
+extern uintptr_t _selectedContest;
+extern uint16_t _teamsType;
+extern uint32_t _nationalTeamCompetitionsAndQualifications[];
 
 /* ================================================================
  * SetTeamGlobalNumbers  (SWOS2.s line 112842)
@@ -192,7 +192,7 @@ void SetTeamGlobalNumbers(uint16_t numTeams, uint8_t *firstTeam)
         uint16_t globalNum;
 
         countryNum = countryNum << 1;   /* word index */
-        globalNum = *((uint16_t *)((uint8_t *)teamsCountryNumbers + countryNum));
+        globalNum = *((uint16_t *)((uint8_t *)_teamsCountryNumbers + countryNum));
 
         localNum = team->team.teamOrdinal & 0xFF;
         globalNum += localNum;
@@ -212,7 +212,7 @@ void SetTeamGlobalNumbers(uint16_t numTeams, uint8_t *firstTeam)
  * ================================================================ */
 static void setLeagueNumbers(void)
 {
-    uint8_t *teamBuf = teamFileBuffer;
+    uint8_t *teamBuf = _teamFileBuffer;
     uint16_t count = *((uint16_t *)teamBuf);
     TeamFileEx *team;
     uint16_t i;
@@ -223,7 +223,7 @@ static void setLeagueNumbers(void)
     team = (TeamFileEx *)(teamBuf + 2);
     for (i = count; i > 0; i--) {
         uint16_t globalNum = (uint16_t)team->team.globalTeamNumber;
-        uint8_t leagueAdj = diyLeagueSeasonStateTable[globalNum];
+        uint8_t leagueAdj = _diyLeagueSeasonStateTable[globalNum];
         team->team.league += leagueAdj;
         team++;
     }
@@ -237,8 +237,8 @@ static void setLeagueNumbers(void)
  * ================================================================ */
 static void setLoadedTeamsGlobalNumbers(void)
 {
-    uint16_t count = *((uint16_t *)teamFileBuffer);
-    SetTeamGlobalNumbers(count, teamFileBuffer + 2);
+    uint16_t count = *((uint16_t *)_teamFileBuffer);
+    SetTeamGlobalNumbers(count, _teamFileBuffer + 2);
 }
 
 /* ================================================================
@@ -273,7 +273,7 @@ static void setLoadedTeamsGlobalNumbers(void)
 void byteswap_loaded_team_file(void);
 void byteswap_loaded_team_file(void)
 {
-    uint8_t *buf = teamFileBuffer;
+    uint8_t *buf = _teamFileBuffer;
     uint16_t count = BE_READ_U16(buf);
     *(uint16_t *)buf = count;                      /* store in host order */
     TeamFileEx *rec = (TeamFileEx *)(buf + 2);
@@ -294,7 +294,7 @@ void byteswap_loaded_team_file(void)
 void byteswap_team_file_to_disk(void);
 void byteswap_team_file_to_disk(void)
 {
-    uint8_t *buf = teamFileBuffer;
+    uint8_t *buf = _teamFileBuffer;
     uint16_t count = *(uint16_t *)buf;             /* host-native read */
     TeamFileEx *rec = (TeamFileEx *)(buf + 2);
     for (uint16_t i = 0; i < count; i++) {
@@ -314,29 +314,29 @@ int16_t LoadTeamFile(uint16_t extNumber)
     uint32_t fileSize;
 
     /* Check if already loaded with same extension */
-    if (teamsLoaded != 0) {
-        if (lastLoadedExtNumber == ext8)
+    if (_teamsLoaded != 0) {
+        if (_lastLoadedExtNumber == ext8)
             return 0;   /* already loaded */
     }
 
-    teamsLoaded = 1;
+    _teamsLoaded = 1;
 
     if (ext8 == 100) {
         /* Custom teams file */
-        lastLoadedExtNumber = ext8;
-        result = LoadFileEx(aCustomsEdt, teamFileBuffer, &fileSize);
+        _lastLoadedExtNumber = ext8;
+        result = LoadFileEx(_aCustomsEdt, _teamFileBuffer, &fileSize);
         if (result != 0) {
             /* Custom file load failure */
             if ((uint16_t)result == 0xCD) {
-                ShowErrorMenu(aEditedCustomTe);
+                ShowErrorMenu(_aEditedCustomTe);
             } else {
                 ShowFsErrorByCode((uint16_t)result);
             }
-            teamsLoaded = 0;
+            _teamsLoaded = 0;
             return 1;
         }
         if (fileSize > 64000u) {
-            panicReasonCode = 0x1939;
+            _panicReasonCode = 0x1939;
             PanicHaltLoop();
         }
 #ifdef SWOS_SDL_BUILD
@@ -344,7 +344,7 @@ int16_t LoadTeamFile(uint16_t extNumber)
 #endif
         setLoadedTeamsGlobalNumbers();
     } else {
-        lastLoadedExtNumber = ext8;
+        _lastLoadedExtNumber = ext8;
 
         int json_loaded = 0;
 #ifdef SWOS_SDL_BUILD
@@ -357,7 +357,7 @@ int16_t LoadTeamFile(uint16_t extNumber)
         if (!(djv && djv[0] == '0' && djv[1] == '\0')) {
             extern int DataJson_LoadTeamFileForCountry(int, uint8_t *, int);
             /* teamFileBuffer is 0xFA0E bytes → (0xFA0E-2)/sizeof(TeamFileEx) ≈ 93 */
-            if (DataJson_LoadTeamFileForCountry((int)ext8, teamFileBuffer, 93) > 0)
+            if (DataJson_LoadTeamFileForCountry((int)ext8, _teamFileBuffer, 93) > 0)
                 json_loaded = 1;
         }
 #endif
@@ -373,21 +373,21 @@ int16_t LoadTeamFile(uint16_t extNumber)
             tens = (uint8_t)(val / 10);
             ones = (uint8_t)(val % 10);
 
-            aDataTeamNnn[0xA] = hundreds + '0';
-            aDataTeamNnn[0xB] = tens + '0';
-            aDataTeamNnn[0xC] = ones + '0';
+            _aDataTeamNnn[0xA] = hundreds + '0';
+            _aDataTeamNnn[0xB] = tens + '0';
+            _aDataTeamNnn[0xC] = ones + '0';
 
-            StringCopy(aDataTeamNnn, teamFilenameBuffer);
+            StringCopy(_aDataTeamNnn, _teamFilenameBuffer);
 
-            result = LoadFileEx(teamFilenameBuffer, teamFileBuffer, &fileSize);
+            result = LoadFileEx(_teamFilenameBuffer, _teamFileBuffer, &fileSize);
             if (result != 0) {
                 /* Non-custom file load failure: panic and halt */
-                panicReasonCode = 0x8008;
+                _panicReasonCode = 0x8008;
                 PanicHaltLoop();
                 /* never returns */
             }
             if (fileSize > 64000u) {
-                panicReasonCode = 0x1939;
+                _panicReasonCode = 0x1939;
                 PanicHaltLoop();
             }
 #ifdef SWOS_SDL_BUILD
@@ -399,16 +399,16 @@ int16_t LoadTeamFile(uint16_t extNumber)
         setLoadedTeamsGlobalNumbers();
 
         /* In career mode, also set league numbers */
-        if (gameType == GAME_TYPE_CAREER && skipLeagueNumbers == 0) {
+        if (_gameType == GAME_TYPE_CAREER && _skipLeagueNumbers == 0) {
             setLeagueNumbers();
         }
     }
 
     /* Update team count and data size */
     {
-        uint16_t count = *((uint16_t *)teamFileBuffer);
-        teamFileTeamCount = count;
-        teamFileDataSize = (uint32_t)count * sizeof(TeamFileEx) + 2;
+        uint16_t count = *((uint16_t *)_teamFileBuffer);
+        _teamFileTeamCount = count;
+        _teamFileDataSize = (uint32_t)count * sizeof(TeamFileEx) + 2;
     }
 
     return 0;
@@ -424,14 +424,14 @@ int16_t LoadTeamFile(uint16_t extNumber)
 __attribute__((used, externally_visible))
 void CheckIsTeamNational(void)
 {
-    isNationalTeam = 0;
-    if (numSelectedTeams == 0)
+    _isNationalTeam = 0;
+    if (_numSelectedTeams == 0)
         return;
-    if (selTeamsPtr < CN_EUROPE)
+    if (_selTeamsPtr < CN_EUROPE)
         return;
-    if (selTeamsPtr > CN_OCEANIA)
+    if (_selTeamsPtr > CN_OCEANIA)
         return;
-    isNationalTeam = 1;
+    _isNationalTeam = 1;
 }
 
 /* ================================================================
@@ -449,8 +449,8 @@ __attribute__((used, externally_visible))
 uint16_t GetTeamValueBase(uint16_t avgPrice)
 {
     int16_t index = (int16_t)(int8_t)(avgPrice & 0xFF);  /* ext.w d0 */
-    uint8_t tableVal = avgTeamValues[index];
-    return avgTeamValueBases[tableVal];
+    uint8_t tableVal = _avgTeamValues[index];
+    return _avgTeamValueBases[tableVal];
 }
 
 /* ================================================================
@@ -487,7 +487,7 @@ uint16_t CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice)
 __attribute__((used, externally_visible))
 uint16_t IsTeamNational(TeamFileEx *team)
 {
-    if (gameType != GAME_TYPE_CAREER)
+    if (_gameType != GAME_TYPE_CAREER)
         return 1;
     if (team->team.countryNumber < CN_EUROPE)
         return 0;
@@ -514,12 +514,12 @@ uint16_t GetAveragePlayerPriceInSelectedTeams(void)
     TeamFileEx *team;
     int32_t ext;
 
-    if (numSelectedTeams == 0)
+    if (_numSelectedTeams == 0)
         return 0;
 
-    team = selectedTeams;
+    team = _selectedTeams;
     total = 0;
-    for (i = numSelectedTeams - 1; ; i--) {
+    for (i = _numSelectedTeams - 1; ; i--) {
         total += GetAveragePlayerPrice(team);
         team++;
         if (i == 0) break;
@@ -527,7 +527,7 @@ uint16_t GetAveragePlayerPriceInSelectedTeams(void)
 
     /* ext.l d0 + divu.w: sign-extend total to 32-bit then unsigned divide */
     ext = (int32_t)(int16_t)total;
-    return (uint16_t)((uint32_t)ext / numSelectedTeams);
+    return (uint16_t)((uint32_t)ext / _numSelectedTeams);
 }
 
 /* ================================================================
@@ -556,12 +556,12 @@ uint16_t GetPlayerRandomNum(PlayerFile *playerFile)
     d0 ^= d1;                                       /* eor.b d1,d0 */
     d1 = (uint8_t)pf->playerName[10];              /* move.b PLAYERFILE_PLAYERNAME+$56(a0),d1 */
     d0 ^= d1;                                       /* eor.b d1,d0 */
-    d1 = (uint8_t)currentSeasonShowing;             /* move.w (currentSeasonShowing).l,d1; eor uses d1.b */
+    d1 = (uint8_t)_currentSeasonShowing;             /* move.w (currentSeasonShowing).l,d1; eor uses d1.b */
     d0 ^= d1;                                       /* eor.b d1,d0 */
-    d1 = newRandomSeedCopy;                         /* move.b (newRandomSeedCopy).l,d1 */
+    d1 = _newRandomSeedCopy;                         /* move.b (newRandomSeedCopy).l,d1 */
     d0 ^= d1;                                       /* eor.b d1,d0 */
 
-    return (uint16_t)kRandomTable[d0];              /* andi.w #$FF,d0; move.b (kRandomTable+d0.w),d0 */
+    return (uint16_t)_kRandomTable[d0];              /* andi.w #$FF,d0; move.b (kRandomTable+d0.w),d0 */
 }
 
 /* ================================================================
@@ -587,14 +587,14 @@ __attribute__((used, externally_visible))
 uint16_t GetDisplayedPlayerValue(uint8_t *ptr)
 {
     /* Check if ptr is within the currentTeam buffer (TeamFileEx + 16 reserves).
-     * Bound on the buffer's own size, not the next BSS symbol: playerPositions
+     * Bound on the buffer's own size, not the next BSS symbol: _playerPositions
      * was lifted out of the overlay (career_match_state.c), so it is no longer
      * &currentTeam + 1292. See docs/CAREERTEAM_STEP4_REWORK.md. */
-    if (ptr >= currentTeam && ptr < currentTeam + CAREER_TEAM_BUF_SIZE)
+    if (ptr >= _currentTeam && ptr < _currentTeam + CAREER_TEAM_BUF_SIZE)
         goto normal_path;
 
     /* Check if ptr is within the careerTeam buffer (TeamFileEx + 16 reserves). */
-    if (ptr >= (uint8_t *)&careerTeam && ptr < (uint8_t *)&careerTeam + CAREER_TEAM_BUF_SIZE)
+    if (ptr >= (uint8_t *)&_careerTeam && ptr < (uint8_t *)&_careerTeam + CAREER_TEAM_BUF_SIZE)
         goto normal_path;
 
     /* --- Random/career path (ptr not in currentTeam or careerTeam) --- */
@@ -616,7 +616,7 @@ uint16_t GetDisplayedPlayerValue(uint8_t *ptr)
         }
 
         {
-            uint8_t tableVal = avgTeamValues[priceIndex];
+            uint8_t tableVal = _avgTeamValues[priceIndex];
             /* d2.w = 0x00YY since priceIndex >= 0 → high byte from ext.w is 0x00 */
             uint16_t result = (uint16_t)tableVal;
 
@@ -635,7 +635,7 @@ normal_path:
         PlayerFile *pf = (PlayerFile *)(ptr + 76);
         uint8_t priceByte = (uint8_t)pf->price;
         int16_t priceIndex = (int16_t)(int8_t)priceByte;  /* ext.w d0 */
-        uint8_t tableVal = avgTeamValues[priceIndex];      /* move.b (avgTeamValues + d0.w),d0 */
+        uint8_t tableVal = _avgTeamValues[priceIndex];      /* move.b (avgTeamValues + d0.w),d0 */
         /* After move.b, d0.b = tableVal, d0 high byte preserved from ext.w.
            But then add.w d1,d0 adds formFactor to the FULL word d0.w.
            d0.w after move.b = (sign_byte : tableVal). Then d0.w += formFactor. */
@@ -699,7 +699,7 @@ uint16_t SnapToNearestAvgTeamValueBase(uint16_t value)
     if (value == 0)
         return 0;
 
-    p = avgTeamValueBases;
+    p = _avgTeamValueBases;
 
     /* Scan until we find an entry >= value */
     while (value > *p)                          /* cmp.w (a0)+,d0; bhi loop */
@@ -733,7 +733,7 @@ uint16_t SnapUpToAvgTeamValueBase(uint16_t value)
     if (value == 0)
         return 0;
 
-    p = avgTeamValueBases;
+    p = _avgTeamValueBases;
 
     /* Scan until we find an entry >= value */
     while (value > *p)                          /* cmp.w (a0)+,d0; bhi loop */
@@ -753,12 +753,12 @@ uint16_t SnapUpToAvgTeamValueBase(uint16_t value)
  *   in:  a0 = team pointer
  *        d0 = maximum number of substitutes
  *
- * If teamPtr == &currentTeam, uses playerPositions array.
+ * If teamPtr == &currentTeam, uses _playerPositions array.
  * If teamPtr == &careerTeam, uses currentMatchPlayers array.
  * Otherwise, uses teamPtr + 0x3C (TEAMFILE_PLAYERS).
  * ================================================================ */
-extern uint8_t currentMatchPlayers[];
-extern uint16_t numPlayers;
+extern uint8_t _currentMatchPlayers[];
+extern uint16_t _numPlayers;
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs)
@@ -766,12 +766,12 @@ void RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs)
     uint8_t *arr;
     int16_t count;
 
-    if ((uint8_t *)team == currentTeam) {
-        arr = playerPositions;
-        count = (int16_t)numPlayers;
-    } else if (team == &careerTeam) {
-        arr = currentMatchPlayers;
-        count = (int16_t)*(uint16_t *)careerNumPlayers;
+    if ((uint8_t *)team == _currentTeam) {
+        arr = _playerPositions;
+        count = (int16_t)_numPlayers;
+    } else if (team == &_careerTeam) {
+        arr = _currentMatchPlayers;
+        count = (int16_t)*(uint16_t *)_careerNumPlayers;
     } else {
         arr = team->team.playerNumbers;
         count = 0x10;
@@ -805,13 +805,13 @@ void RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 TeamFileEx *AddTeamToBuffer(TeamFileEx *team)
 {
-    TeamFileEx *dest = selectedTeams + numSelectedTeams;
+    TeamFileEx *dest = _selectedTeams + _numSelectedTeams;
     uint16_t *src16 = (uint16_t *)team;
     uint16_t *dst16 = (uint16_t *)dest;
     uint16_t i;
     for (i = 342; i != 0; i--)
         *dst16++ = *src16++;
-    numSelectedTeams++;
+    _numSelectedTeams++;
 
     return dest;
 }
@@ -840,11 +840,11 @@ TeamFileEx *FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount)
      * panicked with reasonCode 0x6987. */
     uint16_t teamId = PACK_BE_U16(((uint8_t *)teamToFind)[0],
                                   ((uint8_t *)teamToFind)[1]);
-    uint16_t count = numSelectedTeams;
+    uint16_t count = _numSelectedTeams;
     if (count == 0)
         goto panic;
     count--;
-    TeamFileEx *ptr = selectedTeams;
+    TeamFileEx *ptr = _selectedTeams;
     uint16_t remaining = count;
     while (1) {
         /* First 2 bytes of each TeamFileEx are {countryNumber, teamOrdinal}.
@@ -862,7 +862,7 @@ TeamFileEx *FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount)
         remaining--;
     }
 panic:
-    panicReasonCode = 0x6987;
+    _panicReasonCode = 0x6987;
     PanicHaltLoop();
     /* never reached */
     *outRemainingCount = 0;
@@ -892,7 +892,7 @@ void DeselectTeam(TeamFileEx *teamToRemove)
             words--;
         }
     }
-    numSelectedTeams--;
+    _numSelectedTeams--;
 }
 
 /* ================================================================
@@ -919,10 +919,10 @@ uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex)
 {
     uint8_t *teamBase;
 
-    if (teamNumber == currentTeamNumber)
-        teamBase = currentTeam;
-    else if (teamNumber == selTeamNumber)
-        teamBase = (uint8_t *)&careerTeam;
+    if (teamNumber == _currentTeamNumber)
+        teamBase = _currentTeam;
+    else if (teamNumber == _selTeamNumber)
+        teamBase = (uint8_t *)&_careerTeam;
     else
         teamBase = (uint8_t *)GetTeamPointer(teamNumber);
 
@@ -933,7 +933,7 @@ uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex)
  * GetPlayerAtIndex — get player pointer from team number + ordinal.
  * Asm: GetPlayerAtIndex (d0=teamNumber, d1=ordinal → a0=playerPtr, d1=fileIndex)
  *
- * Remaps ordinal through position table (playerPositions for currentTeam,
+ * Remaps ordinal through position table (_playerPositions for currentTeam,
  * currentMatchPlayers for selTeam, TEAMFILE_PLAYERNUMBERS for generic teams),
  * then calls GetPlayer with the remapped file index.
  *
@@ -944,13 +944,13 @@ uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal)
 {
     uint16_t fileIndex;
 
-    if (teamNumber == currentTeamNumber) {
-        fileIndex = (uint16_t)playerPositions[ordinal];
-    } else if (teamNumber == selTeamNumber) {
-        fileIndex = (uint16_t)currentMatchPlayers[ordinal];
+    if (teamNumber == _currentTeamNumber) {
+        fileIndex = (uint16_t)_playerPositions[ordinal];
+    } else if (teamNumber == _selTeamNumber) {
+        fileIndex = (uint16_t)_currentMatchPlayers[ordinal];
     } else {
         if (ordinal >= 16) {
-            panicReasonCode = 0x1146;
+            _panicReasonCode = 0x1146;
             PanicHaltLoop();
         }
         TeamFileEx *teamPtr = GetTeamPointer(teamNumber);
@@ -973,20 +973,20 @@ uint16_t GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerNu
 {
     uint16_t idx = 0;
 
-    if (teamNumber == selTeamNumber) {
+    if (teamNumber == _selTeamNumber) {
         /* Search currentMatchPlayers for matching player number */
-        uint16_t limit = *(uint16_t *)careerNumPlayers;
-        while (currentMatchPlayers[idx] != (uint8_t)playerNumber) {
+        uint16_t limit = *(uint16_t *)_careerNumPlayers;
+        while (_currentMatchPlayers[idx] != (uint8_t)playerNumber) {
             idx++;
             if (idx >= limit) {
-                panicReasonCode = 0x2617;
+                _panicReasonCode = 0x2617;
                 PanicHaltLoop();
             }
         }
     } else {
         /* Validate input */
         if (playerNumber >= 16) {
-            panicReasonCode = 0x2618;
+            _panicReasonCode = 0x2618;
             PanicHaltLoop();
         }
         /* Search team's player number table */
@@ -994,7 +994,7 @@ uint16_t GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerNu
         while (teamPtr->team.playerNumbers[idx] != (uint8_t)playerNumber) {
             idx++;
             if (idx >= 16) {
-                panicReasonCode = 0x2619;
+                _panicReasonCode = 0x2619;
                 PanicHaltLoop();
             }
         }
@@ -1010,8 +1010,8 @@ uint16_t GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerNu
 __attribute__((used, externally_visible))
 uint8_t *GetNationalityRecordPtr(uint16_t teamFileAndOrdinal)
 {
-    NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams;
-    uint16_t count = numNationalTeams;
+    NationalTeamRecord *rec = (NationalTeamRecord *)_nationalTeams;
+    uint16_t count = _numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
         /* countryNumber/teamOrdinal are a BE byte pair (caller passes
          * the BE-packed pair). PACK_BE_U16 produces the matching id on
@@ -1033,8 +1033,8 @@ uint8_t *GetNationalityRecordPtr(uint16_t teamFileAndOrdinal)
 __attribute__((used, externally_visible))
 int16_t GetNationalTeamNumber(uint16_t nationality)
 {
-    NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams;
-    uint16_t count = numNationalTeams;
+    NationalTeamRecord *rec = (NationalTeamRecord *)_nationalTeams;
+    uint16_t count = _numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
         if (rec->nationalityCode == (uint8_t)nationality)
             /* The packed national-team ID is the BE byte pair
@@ -1057,8 +1057,8 @@ int16_t GetNationalTeamNumber(uint16_t nationality)
 __attribute__((used, externally_visible))
 int16_t GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId)
 {
-    NationalTeamRecord *rec = (NationalTeamRecord *)nationalTeams;
-    uint16_t count = numNationalTeams;
+    NationalTeamRecord *rec = (NationalTeamRecord *)_nationalTeams;
+    uint16_t count = _numNationalTeams;
     for (uint16_t i = 0; i < count; i++) {
         if (rec->teamFileId == (uint8_t)teamFileId)
             /* Asm: `move.w (a0),d0` — on m68k BE this reads the
@@ -1086,7 +1086,7 @@ uint32_t GetNationalityAndTeamFile(uint16_t teamFileAndOrdinal)
 {
     NationalTeamRecord *rec = (NationalTeamRecord *)GetNationalityRecordPtr(teamFileAndOrdinal);
     if (!rec) {
-        panicReasonCode = 0x4543;
+        _panicReasonCode = 0x4543;
         PanicHaltLoop();
     }
     return ((uint32_t)rec->nationalityCode << 16) | (uint32_t)rec->teamFileId;
@@ -1105,18 +1105,18 @@ __attribute__((used, externally_visible))
 int16_t IsTeamCodeOkForNationalSelector(uint16_t code)
 {
     /* Early exit if not in job offer mode and season < 3 */
-    if (careerJobOfferMode == 0 && currentSeasonShowing < 3)
+    if (_careerJobOfferMode == 0 && _currentSeasonShowing < 3)
         return 0;
 
     /* Pick mask based on code */
     uint32_t mask;
     if ((uint8_t)code == 0x50)  /* 'P' */
-        mask = nationalSelectorSeasonMaskA;
+        mask = _nationalSelectorSeasonMaskA;
     else
-        mask = nationalSelectorSeasonMaskB;
+        mask = _nationalSelectorSeasonMaskB;
 
     /* Test bit currentSeasonShowing in mask */
-    uint16_t bit = currentSeasonShowing;
+    uint16_t bit = _currentSeasonShowing;
     return (int16_t)((mask >> bit) & 1);
 }
 
@@ -1132,15 +1132,15 @@ __attribute__((used, externally_visible))
 int16_t IsPlayerOkForNationalSelector(void)
 {
     /* Early exit if not in job offer mode and season < 3 */
-    if (careerJobOfferMode == 0 && currentSeasonShowing < 3)
+    if (_careerJobOfferMode == 0 && _currentSeasonShowing < 3)
         return 0;
 
-    uint16_t bit = currentSeasonShowing;
+    uint16_t bit = _currentSeasonShowing;
     /* Check mask A first */
-    if ((nationalSelectorSeasonMaskA >> bit) & 1)
+    if ((_nationalSelectorSeasonMaskA >> bit) & 1)
         return 1;
     /* Check mask B */
-    return (int16_t)((nationalSelectorSeasonMaskB >> bit) & 1);
+    return (int16_t)((_nationalSelectorSeasonMaskB >> bit) & 1);
 }
 
 /* ================================================================
@@ -1159,7 +1159,7 @@ extern void PrunePlayerOffersAgainstRosterLimits(void);
 extern void Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
 
 /* asm data externs */
-extern uint16_t removedPlayerStatAccum;
+extern uint16_t _removedPlayerStatAccum;
 
 
 /* ================================================================
@@ -1220,7 +1220,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
     uint16_t removedOrdinal, uint16_t rangeStart, uint16_t rangeEnd)
 {
     /* Get the removed player to determine its position */
-    uint8_t *removedPlayer = GetPlayerAtIndex(selTeamNumber, removedOrdinal);
+    uint8_t *removedPlayer = GetPlayerAtIndex(_selTeamNumber, removedOrdinal);
     PlayerFile *removedPf = (PlayerFile *)(removedPlayer + 76);
     uint16_t posIdx = (uint16_t)((removedPf->positionAndFace & PF_POSITION_MASK) >> 5);
     const uint8_t *searchOrder = replPosSearchOrderTable[posIdx];
@@ -1229,7 +1229,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
         uint8_t desiredPos = *searchOrder++;
         if (desiredPos == 0xFF) {
             /* Exhausted all position priorities — panic */
-            panicReasonCode = 0x2719;
+            _panicReasonCode = 0x2719;
             PanicHaltLoop();
         }
 
@@ -1239,7 +1239,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
 
         uint16_t i;
         for (i = rangeStart; i < rangeEnd; i++) {
-            uint8_t *candidate = GetPlayerAtIndex(selTeamNumber, i);
+            uint8_t *candidate = GetPlayerAtIndex(_selTeamNumber, i);
             PlayerFile *candPf = (PlayerFile *)(candidate + 76);
             uint8_t candPos = (uint8_t)((candPf->positionAndFace & PF_POSITION_MASK) >> 5);
 
@@ -1302,24 +1302,24 @@ void Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
     d1 = index;
 
     /* Get player record and accumulate stats */
-    player = GetPlayer(selTeamNumber, d1);
+    player = GetPlayer(_selTeamNumber, d1);
     {
         PlayerFile *pf = (PlayerFile *)(player + 76);
         d0 = (uint16_t)pf->goalStats[0];
-        removedPlayerStatAccum += d0;
+        _removedPlayerStatAccum += d0;
         d0 = (uint16_t)pf->goalStats[1];
-        removedPlayerStatAccum += d0;
+        _removedPlayerStatAccum += d0;
         d0 = (uint16_t)pf->goalStats[2];
-        removedPlayerStatAccum += d0;
+        _removedPlayerStatAccum += d0;
         d0 = (uint16_t)pf->goalStats[3];
-        removedPlayerStatAccum += d0;
+        _removedPlayerStatAccum += d0;
     }
 
     /* Remove weekly wage */
     Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages(d1);
 
     /* Get slot index by player number */
-    d1 = GetPlayerSlotIndexByPlayerNumber(selTeamNumber, d1);
+    d1 = GetPlayerSlotIndexByPlayerNumber(_selTeamNumber, d1);
 
     if (d1 < 0x0B) {
         /* Starting player (slots 0-10) */
@@ -1330,16 +1330,16 @@ void Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
 
         /* Swap in currentMatchPlayers */
         {
-            uint8_t tmp = currentMatchPlayers[d2];
-            currentMatchPlayers[d2] = currentMatchPlayers[d1];
-            currentMatchPlayers[d1] = tmp;
+            uint8_t tmp = _currentMatchPlayers[d2];
+            _currentMatchPlayers[d2] = _currentMatchPlayers[d1];
+            _currentMatchPlayers[d1] = tmp;
         }
 
         /* Swap shirt numbers between the two */
         {
-            uint8_t *p1 = GetPlayer(selTeamNumber, (uint16_t)(int8_t)currentMatchPlayers[d1]);
+            uint8_t *p1 = GetPlayer(_selTeamNumber, (uint16_t)(int8_t)_currentMatchPlayers[d1]);
             a1 = p1;
-            uint8_t *p2 = GetPlayer(selTeamNumber, (uint16_t)(int8_t)currentMatchPlayers[d2]);
+            uint8_t *p2 = GetPlayer(_selTeamNumber, (uint16_t)(int8_t)_currentMatchPlayers[d2]);
             PlayerFile *pf1 = (PlayerFile *)(a1 + 76);
             PlayerFile *pf2 = (PlayerFile *)(p2 + 76);
             int8_t tmpShirt = pf2->shirtNumber;
@@ -1356,9 +1356,9 @@ void Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
         /* Bench player (slots 11-15) */
         d2 = d1;
     bench_path:
-        if (*(uint16_t *)careerNumPlayers == 16) {
+        if (*(uint16_t *)_careerNumPlayers == 16) {
             /* Exactly 16 players — generate trialist replacement */
-            d1 = (uint16_t)(int8_t)currentMatchPlayers[d2];
+            d1 = (uint16_t)(int8_t)_currentMatchPlayers[d2];
             Career_GenerateTrialistForTeamPlayer(d1);
             Career_UpdatePlayerWeeklyWageCache(d1);
             return;
@@ -1369,21 +1369,21 @@ void Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
         {
             /* SelectReserveReplacementForBenchPlayer: range 16..careerNumPlayers */
             d1 = d2;
-            d2 = findReplacementPlayerByPositionOrder(d1, 0x10, *(uint16_t *)careerNumPlayers);
+            d2 = findReplacementPlayerByPositionOrder(d1, 0x10, *(uint16_t *)_careerNumPlayers);
         }
 
         /* Swap in currentMatchPlayers: d3 is bench slot, d2 is reserve slot */
         {
-            uint8_t tmp = currentMatchPlayers[d3];
-            currentMatchPlayers[d3] = currentMatchPlayers[d2];
-            currentMatchPlayers[d2] = tmp;
+            uint8_t tmp = _currentMatchPlayers[d3];
+            _currentMatchPlayers[d3] = _currentMatchPlayers[d2];
+            _currentMatchPlayers[d2] = tmp;
         }
 
         /* Swap shirt numbers */
         {
-            uint8_t *p1 = GetPlayer(selTeamNumber, (uint16_t)(int8_t)currentMatchPlayers[d2]);
+            uint8_t *p1 = GetPlayer(_selTeamNumber, (uint16_t)(int8_t)_currentMatchPlayers[d2]);
             a1 = p1;
-            uint8_t *p2 = GetPlayer(selTeamNumber, (uint16_t)(int8_t)currentMatchPlayers[d3]);
+            uint8_t *p2 = GetPlayer(_selTeamNumber, (uint16_t)(int8_t)_currentMatchPlayers[d3]);
             PlayerFile *pf1 = (PlayerFile *)(a1 + 76);
             PlayerFile *pf2 = (PlayerFile *)(p2 + 76);
             int8_t tmpShirt = pf2->shirtNumber;
@@ -1401,19 +1401,19 @@ void Career_RemovePlayerFromSelectedTeamRoster(uint16_t index)
          * ACCEPT OFFER (replacement reserve not in saved-players list)
          * and *ERR*-stomped the wrong player's name. */
         d3 = d2;  /* d3 = reserve slot to compact from */
-        d1 = (uint16_t)(int8_t)currentMatchPlayers[d3];
+        d1 = (uint16_t)(int8_t)_currentMatchPlayers[d3];
         goto compact;
     }
 
     /* Reserve player (slots 16+) */
     d3 = d1;
-    d1 = (uint16_t)(int8_t)currentMatchPlayers[d1];
+    d1 = (uint16_t)(int8_t)_currentMatchPlayers[d1];
 
 compact:
     /* Shift currentMatchPlayers array to fill the gap at d3 */
     {
-        uint16_t count = *(uint16_t *)careerNumPlayers - d3;
-        volatile uint8_t *va0 = &currentMatchPlayers[d3];
+        uint16_t count = *(uint16_t *)_careerNumPlayers - d3;
+        volatile uint8_t *va0 = &_currentMatchPlayers[d3];
         if (count >= 2) {
             uint16_t i;
             for (i = 0; i < count - 1; i++) {
@@ -1426,7 +1426,7 @@ compact:
 
     /* Write "*ERR* " into the removed player's name slot */
     {
-        uint8_t *pRem = GetPlayer(selTeamNumber, d1);
+        uint8_t *pRem = GetPlayer(_selTeamNumber, d1);
         PlayerFile *pf = (PlayerFile *)(pRem + 76);
         pf->playerName[0] = '*';
         pf->playerName[1] = 'E';
@@ -1437,7 +1437,7 @@ compact:
     }
 
     TrainingMatch_RemoveSavedPlayerId(d1);
-    *(uint16_t *)careerNumPlayers -= 1;
+    *(uint16_t *)_careerNumPlayers -= 1;
 }
 
 /* ================================================================
@@ -1448,9 +1448,9 @@ compact:
 __attribute__((used, externally_visible))
 void RemovePlayerFromTeam(uint16_t playerOrd)
 {
-    Career_RemovePlayerFromTeamInternal(selTeamNumber, playerOrd);
+    Career_RemovePlayerFromTeamInternal(_selTeamNumber, playerOrd);
     Career_RemovePlayerFromSelectedTeamRoster(playerOrd);
-    careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    _careerTeam.team.playerValuesDirty = TEAM_VALUES_DIRTY;
     PrunePlayerOffersAgainstRosterLimits();
 }
 
@@ -1463,12 +1463,12 @@ void RemovePlayerFromTeam(uint16_t playerOrd)
 __attribute__((used, externally_visible))
 void DeselectAllTeams(void)
 {
-    TeamFileEx *ptr = selectedTeams;
-    if (numSelectedTeams == 0)
+    TeamFileEx *ptr = _selectedTeams;
+    if (_numSelectedTeams == 0)
         return;
 
     uint16_t idx = 0;
-    while (idx < numSelectedTeams) {
+    while (idx < _numSelectedTeams) {
         if (ptr->team.teamControls == 0) {
             /* DeselectTeam removes this entry and shifts the rest down,
              * so don't advance the pointer or index. */
@@ -1489,11 +1489,11 @@ __attribute__((used, externally_visible))
 void ChangeTeams(void)
 {
     DeselectAllTeams();
-    changeTeams = 1;
-    chooseTeamsResult = 0;
-    viewSelectedTeams = 0;
-    abortSelectTeams = 0;
-    exitSelectTeams = 0;
+    _changeTeams = 1;
+    _chooseTeamsResult = 0;
+    _viewSelectedTeams = 0;
+    _abortSelectTeams = 0;
+    _exitSelectTeams = 0;
     SetExitMenuFlag();
 }
 
@@ -1506,11 +1506,11 @@ __attribute__((used, externally_visible))
 void AbortChooseTeamsFriendly(void)
 {
     DeselectAllTeams();
-    abortSelectTeams = 1;
-    changeTeams = 0;
-    chooseTeamsResult = 0;
-    viewSelectedTeams = 0;
-    exitSelectTeams = 0;
+    _abortSelectTeams = 1;
+    _changeTeams = 0;
+    _chooseTeamsResult = 0;
+    _viewSelectedTeams = 0;
+    _exitSelectTeams = 0;
     SetExitMenuFlag();
 }
 
@@ -1523,11 +1523,11 @@ __attribute__((used, externally_visible))
 void ChooseTeamsFriendlyOnSelect76(void)
 {
     DeselectAllTeams();
-    chooseTeamsResult = 1;
-    changeTeams = 0;
-    viewSelectedTeams = 0;
-    abortSelectTeams = 0;
-    exitSelectTeams = 0;
+    _chooseTeamsResult = 1;
+    _changeTeams = 0;
+    _viewSelectedTeams = 0;
+    _abortSelectTeams = 0;
+    _exitSelectTeams = 0;
     SetExitMenuFlag();
 }
 
@@ -1539,11 +1539,11 @@ void ChooseTeamsFriendlyOnSelect76(void)
 __attribute__((used, externally_visible))
 void ViewSelected(void)
 {
-    viewSelectedTeams = 1;
-    chooseTeamsResult = 0;
-    changeTeams = 0;
-    abortSelectTeams = 0;
-    exitSelectTeams = 0;
+    _viewSelectedTeams = 1;
+    _chooseTeamsResult = 0;
+    _changeTeams = 0;
+    _abortSelectTeams = 0;
+    _exitSelectTeams = 0;
     SetExitMenuFlag();
 }
 
@@ -1556,15 +1556,15 @@ void ViewSelected(void)
 __attribute__((used, externally_visible))
 void ExitChooseTeams2(void)
 {
-    chooseTeamsResult = 0;
-    viewSelectedTeams = 0;
-    changeTeams = 0;
-    if (topOfStackMark >= 0) {
-        exitSelectTeams = 1;
-        abortSelectTeams = 0;
+    _chooseTeamsResult = 0;
+    _viewSelectedTeams = 0;
+    _changeTeams = 0;
+    if (_topOfStackMark >= 0) {
+        _exitSelectTeams = 1;
+        _abortSelectTeams = 0;
     } else {
-        abortSelectTeams = 1;
-        exitSelectTeams = 0;
+        _abortSelectTeams = 1;
+        _exitSelectTeams = 0;
     }
     SetExitMenuFlag();
 }
@@ -1577,11 +1577,11 @@ void ExitChooseTeams2(void)
 __attribute__((used, externally_visible))
 void ChooseTeamsPlayMatchSelected(void)
 {
-    chooseTeamsResult = 1;
-    viewSelectedTeams = 0;
-    changeTeams = 0;
-    abortSelectTeams = 0;
-    exitSelectTeams = 0;
+    _chooseTeamsResult = 1;
+    _viewSelectedTeams = 0;
+    _changeTeams = 0;
+    _abortSelectTeams = 0;
+    _exitSelectTeams = 0;
     SetExitMenuFlag();
 }
 
@@ -1599,9 +1599,9 @@ void ChooseTeamsPlayMatchSelected(void)
 __attribute__((used, externally_visible))
 uint8_t *GetCountryName(uint16_t countryId)
 {
-    uint8_t *entry = (uint8_t *)countriesTable[countryId];
+    uint8_t *entry = (uint8_t *)_countriesTable[countryId];
     uint8_t *name = entry + 1;  /* skip length byte */
-    curCountryStr = name;
+    _curCountryStr = name;
     return name;
 }
 
@@ -1609,22 +1609,22 @@ uint8_t *GetCountryName(uint16_t countryId)
 __attribute__((used, externally_visible))
 void PushContinent(uint16_t countryId)
 {
-    uint8_t *ptr = countryStackPtr;
+    uint8_t *ptr = _countryStackPtr;
     *ptr++ = (uint8_t)countryId;
-    countryStackPtr = ptr;
-    teamDepthLevel++;
+    _countryStackPtr = ptr;
+    _teamDepthLevel++;
 }
 
 /* PopContinent: pop country id from continent stack */
 __attribute__((used, externally_visible))
 uint16_t PopContinent(void)
 {
-    uint8_t *ptr = countryStackPtr;
+    uint8_t *ptr = _countryStackPtr;
     ptr--;
     uint8_t val = *ptr;
     *ptr = CN_OCEANIA;  /* sentinel value */
-    countryStackPtr = ptr;
-    teamDepthLevel--;
+    _countryStackPtr = ptr;
+    _teamDepthLevel--;
     return (uint16_t)val;
 }
 
@@ -1632,39 +1632,39 @@ uint16_t PopContinent(void)
 __attribute__((used, externally_visible))
 void SetSelectedTeamsStackTop(void)
 {
-    selectedTeamsStack[teamDepthLevel] = 0xFFFF;
+    _selectedTeamsStack[_teamDepthLevel] = 0xFFFF;
 }
 
 /* PushLastSelectedTeam: store lastSelectedTeam at current depth */
 __attribute__((used, externally_visible))
 void PushLastSelectedTeam(void)
 {
-    selectedTeamsStack[teamDepthLevel] = lastSelectedTeam;
+    _selectedTeamsStack[_teamDepthLevel] = _lastSelectedTeam;
 }
 
 /* GetSelectedTeamsStackTop: read from stack into prevSelectedTeamEntry */
 __attribute__((used, externally_visible))
 void GetSelectedTeamsStackTop(void)
 {
-    prevSelectedTeamEntry = selectedTeamsStack[teamDepthLevel];
+    _prevSelectedTeamEntry = _selectedTeamsStack[_teamDepthLevel];
 }
 
 /* MarkSelectedTeamsStackLocation: set topOfStackMark based on state flags */
 __attribute__((used, externally_visible))
 void MarkSelectedTeamsStackLocation(void)
 {
-    topOfStackMark = (int16_t)teamDepthLevel;
+    _topOfStackMark = (int16_t)_teamDepthLevel;
 
-    if (isCountryNumber != 0)
-        topOfStackMark--;
+    if (_isCountryNumber != 0)
+        _topOfStackMark--;
 
-    if (gotCountryName != 0 && numberOfLeagues == 1) {
-        topOfStackMark = -1;
+    if (_gotCountryName != 0 && _numberOfLeagues == 1) {
+        _topOfStackMark = -1;
         return;
     }
 
-    if (isContestContinentalCup != 0) {
-        topOfStackMark = -1;
+    if (_isContestContinentalCup != 0) {
+        _topOfStackMark = -1;
     }
 }
 
@@ -1677,13 +1677,13 @@ void MarkSelectedTeamsStackLocation(void)
 __attribute__((used, externally_visible))
 void IsContestContinentalCup(void)
 {
-    uintptr_t *ptr = (uintptr_t *)continentalCups;
+    uintptr_t *ptr = (uintptr_t *)_continentalCups;
     for (;;) {
         uintptr_t entry = *ptr++;
         if (entry == (uintptr_t)-1 || entry == 0)
             return;
-        if (entry == selectedContest) {
-            isContestContinentalCup = 1;
+        if (entry == _selectedContest) {
+            _isContestContinentalCup = 1;
             return;
         }
     }
@@ -1697,7 +1697,7 @@ void IsContestContinentalCup(void)
 __attribute__((used, externally_visible))
 uint16_t IsClubTeamsContest(uintptr_t contest)
 {
-    uintptr_t *ptr = (uintptr_t *)nationalTeamCompetitionsAndQualifications;
+    uintptr_t *ptr = (uintptr_t *)_nationalTeamCompetitionsAndQualifications;
     while (*ptr != (uintptr_t)-1 && *ptr != 0) {
         if (*ptr == contest)
             return 0;
@@ -1710,9 +1710,9 @@ uint16_t IsClubTeamsContest(uintptr_t contest)
 __attribute__((used, externally_visible))
 void SetTeamsTypeForSelectedContest(void)
 {
-    teamsType = 1;
-    if (IsClubTeamsContest(selectedContest) == 0)
-        teamsType = 0;
+    _teamsType = 1;
+    if (IsClubTeamsContest(_selectedContest) == 0)
+        _teamsType = 0;
 }
 
 /* ================================================================
@@ -1728,12 +1728,12 @@ void SetTeamsTypeForSelectedContest(void)
  *   set -> "LOAN"
  * Otherwise: format as monetary value (K or M).
  * ================================================================ */
-extern const char aTrial[];     /* "TRIAL" */
-extern const char aRes[];       /* "RES" */
-extern const char aLoan[];      /* "LOAN" */
-extern const char a01m[];       /* "\x9C%0.%1M" */
-extern const char a0m[];        /* "\x9C%0M" */
-extern const char a1k[];        /* "\x9C%1K" */
+extern const char _aTrial[];     /* "TRIAL" */
+extern const char _aRes[];       /* "RES" */
+extern const char _aLoan[];      /* "LOAN" */
+extern const char _a01m[];       /* "\x9C%0.%1M" */
+extern const char _a0m[];        /* "\x9C%0M" */
+extern const char _a1k[];        /* "\x9C%1K" */
 
 __attribute__((used, externally_visible))
 void FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
@@ -1741,22 +1741,22 @@ void FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
     /* Check status byte (someFlag in PlayerFile) */
     PlayerFile *pf = (PlayerFile *)(base + sizeof(TeamFile));
     if ((uint8_t)pf->form == PLAYER_FORM_TRIALIST) {
-        StringCopy((const uint8_t *)aTrial, dst);
+        StringCopy((const uint8_t *)_aTrial, dst);
         return;
     }
     if ((uint8_t)pf->form == PLAYER_FORM_RESERVE) {
-        StringCopy((const uint8_t *)aRes, dst);
+        StringCopy((const uint8_t *)_aRes, dst);
         return;
     }
     /* Check loan flag (positionAndFace bit 1) */
     if (pf->positionAndFace & PF_LOAN) {
-        StringCopy((const uint8_t *)aLoan, dst);
+        StringCopy((const uint8_t *)_aLoan, dst);
         return;
     }
 
     /* Normal player: get displayed value, look up base price */
     uint16_t displayedVal = GetDisplayedPlayerValue(base);
-    uint16_t price = avgTeamValueBases[displayedVal];
+    uint16_t price = _avgTeamValueBases[displayedVal];
 
     /* loc_127414: format value as currency string.
      * price is in thousands of pounds. Split into millions and sub-millions. */
@@ -1765,10 +1765,10 @@ void FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
 
     if (millions == 0) {
         /* Less than 1M: format as "XK" — %1=price */
-        PrintFormatted((const uint8_t *)a1k, dst, 0, price, 0, 0, 0, 0, 0, 0, 0, 0);
+        PrintFormatted((const uint8_t *)_a1k, dst, 0, price, 0, 0, 0, 0, 0, 0, 0, 0);
     } else if (subK == 0) {
         /* Exact millions: format as "XM" — %0=millions */
-        PrintFormatted((const uint8_t *)a0m, dst, millions, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        PrintFormatted((const uint8_t *)_a0m, dst, millions, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     } else {
         /* Millions with decimal: check precision needed */
         uint16_t tens = subK / 10;      /* 2 most significant digits */
@@ -1777,68 +1777,68 @@ void FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst)
 
         if (tensRemainder != 0) {
             /* Two decimal places: "X.YZM" — %0=millions, %1=tens */
-            PrintFormatted((const uint8_t *)a01m, dst, millions, tens, 0, 0, 0, 0, 0, 0, 0, 0);
+            PrintFormatted((const uint8_t *)_a01m, dst, millions, tens, 0, 0, 0, 0, 0, 0, 0, 0);
         } else {
             /* One decimal place: "X.YM" — %0=millions, %1=hundreds */
-            PrintFormatted((const uint8_t *)a01m, dst, millions, hundreds, 0, 0, 0, 0, 0, 0, 0, 0);
+            PrintFormatted((const uint8_t *)_a01m, dst, millions, hundreds, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     }
 }
 
 /* ---- Chunk 219-220: ChooseTeams layout, team entries, selection ---- */
 
-extern MenuEntry menuEntries[];
-extern uint16_t chooseTeamsFriendly_leftListNumEntries;
-extern uint16_t chooseTeamsFriendly_middleListNumEntries;
-extern uint16_t chooseTeamsFriendly_rightListNumEntries;
-extern uint16_t chooseTeamsFriendly_menuTopY;
-extern uint16_t chooseTeamsFriendly_menuBottomY;
-extern uint16_t viewTeamsColumn1;
-extern uint16_t viewTeamsColumn2;
-extern uint16_t viewTeamsColumn3;
-extern uint16_t viewTeamsStartY;
-extern uint16_t viewTeamsAbortY;
-extern uint16_t selTeamsUpperBound;
-extern uint8_t teamNumbersIndices[];
-extern uintptr_t teamPointers[];
-extern uint16_t numSelectedTeamsCopy;
-extern uint16_t numNeededTeams;
-extern uintptr_t playWhatStr;
-extern uint8_t aChooseTeams[];
-extern uint8_t aChangeTeams[];
-extern uint8_t aSelect1MoreTea[];
-extern uint8_t aSelect0MoreTea[];
-extern uint8_t aSelect1LessTea[];
-extern uint8_t aSelect0LessTea[];
-extern uint8_t aError[];
-extern int16_t chooseTeamsFriendly_changeTeamsPromptDrawList[];
+extern MenuEntry _menuEntries[];
+extern uint16_t _chooseTeamsFriendly_leftListNumEntries;
+extern uint16_t _chooseTeamsFriendly_middleListNumEntries;
+extern uint16_t _chooseTeamsFriendly_rightListNumEntries;
+extern uint16_t _chooseTeamsFriendly_menuTopY;
+extern uint16_t _chooseTeamsFriendly_menuBottomY;
+extern uint16_t _viewTeamsColumn1;
+extern uint16_t _viewTeamsColumn2;
+extern uint16_t _viewTeamsColumn3;
+extern uint16_t _viewTeamsStartY;
+extern uint16_t _viewTeamsAbortY;
+extern uint16_t _selTeamsUpperBound;
+extern uint8_t _teamNumbersIndices[];
+extern uintptr_t _teamPointers[];
+extern uint16_t _numSelectedTeamsCopy;
+extern uint16_t _numNeededTeams;
+extern uintptr_t _playWhatStr;
+extern uint8_t _aChooseTeams[];
+extern uint8_t _aChangeTeams[];
+extern uint8_t _aSelect1MoreTea[];
+extern uint8_t _aSelect0MoreTea[];
+extern uint8_t _aSelect1LessTea[];
+extern uint8_t _aSelect0LessTea[];
+extern uint8_t _aError[];
+extern int16_t _chooseTeamsFriendly_changeTeamsPromptDrawList[];
 
 
 __attribute__((used, externally_visible))
 void ChooseTeamsFriendly_UpdateMenuEntryYLayout(void)
 {
-    uint16_t topY = menuEntries[0].y + menuEntries[0].dwHeight;
-    chooseTeamsFriendly_menuTopY = topY;
-    uint16_t bottomY = menuEntries[56].y;
-    chooseTeamsFriendly_menuBottomY = bottomY;
+    uint16_t topY = _menuEntries[0].y + _menuEntries[0].dwHeight;
+    _chooseTeamsFriendly_menuTopY = topY;
+    uint16_t bottomY = _menuEntries[56].y;
+    _chooseTeamsFriendly_menuBottomY = bottomY;
 
     /* d0 = max of left/middle/right list counts */
-    uint16_t d0 = chooseTeamsFriendly_leftListNumEntries;
-    if (d0 < chooseTeamsFriendly_middleListNumEntries)
-        d0 = chooseTeamsFriendly_middleListNumEntries;
-    if (d0 < chooseTeamsFriendly_rightListNumEntries)
-        d0 = chooseTeamsFriendly_rightListNumEntries;
+    uint16_t d0 = _chooseTeamsFriendly_leftListNumEntries;
+    if (d0 < _chooseTeamsFriendly_middleListNumEntries)
+        d0 = _chooseTeamsFriendly_middleListNumEntries;
+    if (d0 < _chooseTeamsFriendly_rightListNumEntries)
+        d0 = _chooseTeamsFriendly_rightListNumEntries;
 
     d0 *= 10;
     int16_t d1 = (int16_t)(bottomY - topY) - (int16_t)d0;
-    d1 -= (int16_t)menuEntries[1].dwHeight;
+    d1 -= (int16_t)_menuEntries[1].dwHeight;
     /* ext.l d1; divu #3,d1 — unsigned division of sign-extended value */
     d1 = (int16_t)((uint32_t)(int32_t)d1 / 3);
 
     int16_t d2 = d1 + (int16_t)topY;
 
     /* Set y of entries 1..6 */
-    MenuEntry *e = &menuEntries[1];
+    MenuEntry *e = &_menuEntries[1];
     int16_t i;
     for (i = 0; i < 6; i++) {
         e->y = (uint16_t)d2;
@@ -1846,11 +1846,11 @@ void ChooseTeamsFriendly_UpdateMenuEntryYLayout(void)
     }
 
     /* d2 += menuEntries[1].dwHeight, then d1 += d2 */
-    d2 += (int16_t)menuEntries[1].dwHeight;
+    d2 += (int16_t)_menuEntries[1].dwHeight;
     d1 += d2;
 
     /* 3 columns × 16 rows starting at entry 7 */
-    e = &menuEntries[7];
+    e = &_menuEntries[7];
     int16_t col;
     for (col = 0; col < 3; col++) {
         int16_t yPos = d1;
@@ -1867,18 +1867,18 @@ __attribute__((used, externally_visible))
 void ViewSelTeamsSetColumns(void)
 {
     /* d1 = max of column counts */
-    uint16_t d1 = viewTeamsColumn1;
-    if (d1 < viewTeamsColumn2)
-        d1 = viewTeamsColumn2;
-    if (d1 < viewTeamsColumn3)
-        d1 = viewTeamsColumn3;
+    uint16_t d1 = _viewTeamsColumn1;
+    if (d1 < _viewTeamsColumn2)
+        d1 = _viewTeamsColumn2;
+    if (d1 < _viewTeamsColumn3)
+        d1 = _viewTeamsColumn3;
 
-    uint16_t startY = menuEntries[0].y + menuEntries[0].dwHeight;
-    viewTeamsStartY = startY;
-    uint16_t abortY = menuEntries[75].y;
-    viewTeamsAbortY = abortY;
+    uint16_t startY = _menuEntries[0].y + _menuEntries[0].dwHeight;
+    _viewTeamsStartY = startY;
+    uint16_t abortY = _menuEntries[75].y;
+    _viewTeamsAbortY = abortY;
 
-    uint16_t headerHeight = menuEntries[2].dwHeight;
+    uint16_t headerHeight = _menuEntries[2].dwHeight;
     uint16_t d4 = 10;
 
     /* Find largest d4 where entries fit */
@@ -1897,7 +1897,7 @@ void ViewSelTeamsSetColumns(void)
     int16_t d2 = gap + (int16_t)startY;
 
     /* Set y of entries 2..7 */
-    MenuEntry *e = &menuEntries[2];
+    MenuEntry *e = &_menuEntries[2];
     int16_t i;
     for (i = 0; i < 6; i++) {
         e->y = (uint16_t)d2;
@@ -1905,11 +1905,11 @@ void ViewSelTeamsSetColumns(void)
     }
 
     /* d2 += menuEntries[2].dwHeight, then gap += d2 */
-    d2 += (int16_t)menuEntries[2].dwHeight;
+    d2 += (int16_t)_menuEntries[2].dwHeight;
     gap += d2;
 
     /* 3 columns × 22 rows starting at entry 8 */
-    e = &menuEntries[8];
+    e = &_menuEntries[8];
     int16_t col;
     for (col = 0; col < 3; col++) {
         int16_t yPos = gap;
@@ -1931,14 +1931,14 @@ void ViewSelTeamsSetColumns(void)
 __attribute__((used, externally_visible))
 void SetTeamEntriesStringsAndColors(void)
 {
-    uint8_t *indices = teamNumbersIndices;
-    MenuEntry *e = &menuEntries[8];
+    uint8_t *indices = _teamNumbersIndices;
+    MenuEntry *e = &_menuEntries[8];
     uint16_t d6 = 0;
 
     for (;;) {
         e->isInvisible = 1;
 
-        if (d6 < selTeamsUpperBound) {
+        if (d6 < _selTeamsUpperBound) {
             for (;;) {
                 uint16_t ord = e->ordinal;
                 ord -= 8;
@@ -1947,17 +1947,17 @@ void SetTeamEntriesStringsAndColors(void)
 
                 uint16_t colCount;
                 if (col == 0)
-                    colCount = viewTeamsColumn1;
+                    colCount = _viewTeamsColumn1;
                 else if (col == 1)
-                    colCount = viewTeamsColumn2;
+                    colCount = _viewTeamsColumn2;
                 else
-                    colCount = viewTeamsColumn3;
+                    colCount = _viewTeamsColumn3;
 
                 if (row < colCount) {
                     /* visible entry — set string and color */
                     e->isInvisible = 0;
                     int16_t idx = (int8_t)*indices++;
-                    TeamFileEx *team = (TeamFileEx *)teamPointers[idx];
+                    TeamFileEx *team = (TeamFileEx *)_teamPointers[idx];
                     e->fg = (uintptr_t)team->team.teamName;
 
                     uint16_t color = PINK_TO_BROWN_9;
@@ -1994,45 +1994,45 @@ __attribute__((used, externally_visible))
 void SetChooseChangeTeamsEntries(void)
 {
     /* Entry 74 (0x1030/0x38) = "CHOOSE TEAMS" / "CHANGE TEAMS" label */
-    MenuEntry *labelEntry = &menuEntries[74];
-    uint8_t *label = aChooseTeams;
-    if (numSelectedTeamsCopy == numNeededTeams)
-        label = aChangeTeams;
+    MenuEntry *labelEntry = &_menuEntries[74];
+    uint8_t *label = _aChooseTeams;
+    if (_numSelectedTeamsCopy == _numNeededTeams)
+        label = _aChangeTeams;
     labelEntry->fg = (uintptr_t)label;
 
     /* Entry 76 (0x10A0/0x38) = play prompt, Entry 77 (0x10D8/0x38) = select more/less */
-    MenuEntry *playEntry = &menuEntries[76];
-    MenuEntry *selectEntry = &menuEntries[77];
+    MenuEntry *playEntry = &_menuEntries[76];
+    MenuEntry *selectEntry = &_menuEntries[77];
 
-    if (numSelectedTeamsCopy == numNeededTeams) {
+    if (_numSelectedTeamsCopy == _numNeededTeams) {
         playEntry->isInvisible = 0;
         selectEntry->isInvisible = 1;
         playEntry->content = ENTRY_STRING;
-        playEntry->fg = playWhatStr;
+        playEntry->fg = _playWhatStr;
     } else {
         playEntry->isInvisible = 1;
         selectEntry->isInvisible = 0;
     }
 
     uint8_t *dst = (uint8_t *)selectEntry->fg;
-    int16_t diff = (int16_t)numSelectedTeamsCopy - (int16_t)numNeededTeams;
+    int16_t diff = (int16_t)_numSelectedTeamsCopy - (int16_t)_numNeededTeams;
     if (diff == 0) {
-        StringCopy(aError, dst);
+        StringCopy(_aError, dst);
         return;
     }
     if (diff < 0) {
         diff = -diff;
         if (diff == 1) {
-            StringCopy(aSelect1MoreTea, dst);
+            StringCopy(_aSelect1MoreTea, dst);
             return;
         }
-        PrintFormatted(aSelect0MoreTea, dst, (uint32_t)diff, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        PrintFormatted(_aSelect0MoreTea, dst, (uint32_t)diff, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     } else {
         if (diff == 1) {
-            StringCopy(aSelect1LessTea, dst);
+            StringCopy(_aSelect1LessTea, dst);
             return;
         }
-        PrintFormatted(aSelect0LessTea, dst, (uint32_t)diff, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        PrintFormatted(_aSelect0LessTea, dst, (uint32_t)diff, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     }
 }
 
@@ -2040,7 +2040,7 @@ __attribute__((used, externally_visible))
 void ChooseTeamsFriendly_DrawChangeTeamsPrompt(MenuEntry *savedA5)
 {
     SetChooseChangeTeamsEntries();
-    DrawMenuItemsWaitForVSync(chooseTeamsFriendly_changeTeamsPromptDrawList);
+    DrawMenuItemsWaitForVSync(_chooseTeamsFriendly_changeTeamsPromptDrawList);
 }
 
 __attribute__((used, externally_visible))
@@ -2052,21 +2052,21 @@ void ChooseTeamsFriendlyCommon(MenuEntry *entry)
     if (d0 >= 22) {
         if (d0 >= 44) {
             d0 -= 22;
-            d0 += viewTeamsColumn2;
+            d0 += _viewTeamsColumn2;
         }
         d0 -= 22;
-        d0 += viewTeamsColumn1;
+        d0 += _viewTeamsColumn1;
     }
 
-    int8_t idx = (int8_t)teamNumbersIndices[d0];
+    int8_t idx = (int8_t)_teamNumbersIndices[d0];
     int16_t idx16 = (int16_t)idx;
-    TeamFileEx *team = (TeamFileEx *)teamPointers[(uint16_t)idx16];
+    TeamFileEx *team = (TeamFileEx *)_teamPointers[(uint16_t)idx16];
     uint8_t ctrl = team->team.teamControls;
 
     if (ctrl == TEAM_NOT_SELECTED) {
         entry->bgColor = RED_10;
         team->team.teamControls = TEAM_COMPUTER;
-        numSelectedTeamsCopy++;
+        _numSelectedTeamsCopy++;
     } else if (ctrl == TEAM_COMPUTER) {
         team->team.teamControls = TEAM_PLAYER_COACH;
         entry->bgColor = BLUE_TO_PURPLE_11;
@@ -2076,7 +2076,7 @@ void ChooseTeamsFriendlyCommon(MenuEntry *entry)
     } else {
         entry->bgColor = PINK_TO_BROWN_9;
         team->team.teamControls = TEAM_NOT_SELECTED;
-        numSelectedTeamsCopy--;
+        _numSelectedTeamsCopy--;
     }
 
     ChooseTeamsFriendly_DrawChangeTeamsPrompt(entry);
@@ -2085,16 +2085,16 @@ void ChooseTeamsFriendlyCommon(MenuEntry *entry)
 
 /* ---- Chunk 221: ChooseTeamsFriendlyCommon2 ---- */
 
-extern uint8_t teamsIndex[];
-extern void *teamsPtrTable[];
-extern TeamFileEx *selectedTeamPtr;
-extern uint16_t selectedTeamCountryNumber;
-extern uintptr_t chooseTeamsFunc;
-extern uint16_t careerSquadScreenDidSelectPlayerFlag;
-extern uint16_t abortSelectTeams;
-extern uint16_t chooseTeamsResult;
-extern uint8_t teamsTable[];
-extern uint16_t numSelectedTeams;
+extern uint8_t _teamsIndex[];
+extern void *_teamsPtrTable[];
+extern TeamFileEx *_selectedTeamPtr;
+extern uint16_t _selectedTeamCountryNumber;
+extern uintptr_t _chooseTeamsFunc;
+extern uint16_t _careerSquadScreenDidSelectPlayerFlag;
+extern uint16_t _abortSelectTeams;
+extern uint16_t _chooseTeamsResult;
+extern uint8_t _teamsTable[];
+extern uint16_t _numSelectedTeams;
 
 extern void Bureaucracy(void);
 extern void SetExitMenuFlag(void);
@@ -2108,45 +2108,45 @@ void ChooseTeamsFriendlyCommon2(MenuEntry *entry)
     if (d0 >= 16) {
         if (d0 >= 32) {
             d0 -= 16;
-            d0 += chooseTeamsFriendly_middleListNumEntries;
+            d0 += _chooseTeamsFriendly_middleListNumEntries;
         }
         d0 -= 16;
-        d0 += chooseTeamsFriendly_leftListNumEntries;
+        d0 += _chooseTeamsFriendly_leftListNumEntries;
     }
 
-    int8_t idx = (int8_t)teamsIndex[d0];
+    int8_t idx = (int8_t)_teamsIndex[d0];
     int16_t idx16 = (int16_t)idx;
-    TeamFileEx *team = (TeamFileEx *)teamsPtrTable[(uint16_t)idx16];
-    selectedTeamPtr = team;
-    selectedTeamCountryNumber = BE_READ_U16(team);
+    TeamFileEx *team = (TeamFileEx *)_teamsPtrTable[(uint16_t)idx16];
+    _selectedTeamPtr = team;
+    _selectedTeamCountryNumber = BE_READ_U16(team);
 
-    if (chooseTeamsFunc != 0) {
+    if (_chooseTeamsFunc != 0) {
         /* Asm: a0 = team pointer when jsr (a6) is called */
-        void (*func)(uint8_t *) = (void (*)(uint8_t *))chooseTeamsFunc;
+        void (*func)(uint8_t *) = (void (*)(uint8_t *))_chooseTeamsFunc;
         func((uint8_t *)team);
-        if (careerSquadScreenDidSelectPlayerFlag != 0) {
-            abortSelectTeams = 1;
-            chooseTeamsResult = 0;
+        if (_careerSquadScreenDidSelectPlayerFlag != 0) {
+            _abortSelectTeams = 1;
+            _chooseTeamsResult = 0;
             SetExitMenuFlag();
             return;
         }
         return;
     }
 
-    if (careerSquadScreenDidSelectPlayerFlag != 0) {
-        abortSelectTeams = 1;
-        chooseTeamsResult = 0;
+    if (_careerSquadScreenDidSelectPlayerFlag != 0) {
+        _abortSelectTeams = 1;
+        _chooseTeamsResult = 0;
         SetExitMenuFlag();
         return;
     }
 
     uint8_t teamOrd = team->team.teamOrdinal;
-    uint8_t *tableEntry = &teamsTable[teamOrd];
+    uint8_t *tableEntry = &_teamsTable[teamOrd];
     uint8_t ctrl = *tableEntry;
 
     if (ctrl == 0) {
         /* unselected → select as CPU */
-        if (numSelectedTeams >= 64)
+        if (_numSelectedTeams >= 64)
             return;
         *tableEntry = 1;
         entry->bgColor = RED_10;
@@ -2177,16 +2177,16 @@ void ChooseTeamsFriendlyCommon2(MenuEntry *entry)
 
 /* ---- Chunk 222: ChooseTeamsFriendlyInit ---- */
 
-extern uint8_t selTeamsPtr;
-extern uint16_t numSelectedTeams;
-extern uint16_t viewSelectedTeams;
-extern uintptr_t chooseTeamsHeader1stPart;
-extern uintptr_t gameTypeStr;
-extern uint8_t *curCountryStr;
-extern uint16_t choosingPreset;
-extern uintptr_t selectedContest;
-extern uint8_t copaAmerica[];
-extern uint8_t aAllSelectedTea[];
+extern uint8_t _selTeamsPtr;
+extern uint16_t _numSelectedTeams;
+extern uint16_t _viewSelectedTeams;
+extern uintptr_t _chooseTeamsHeader1stPart;
+extern uintptr_t _gameTypeStr;
+extern uint8_t *_curCountryStr;
+extern uint16_t _choosingPreset;
+extern uintptr_t _selectedContest;
+extern uint8_t _copaAmerica[];
+extern uint8_t _aAllSelectedTea[];
 
 extern uint16_t GetStringLength(const uint8_t *str);
 extern void SetCurrentEntry(uint16_t entryIndex);
@@ -2194,31 +2194,31 @@ extern void SetCurrentEntry(uint16_t entryIndex);
 __attribute__((used, externally_visible))
 void ChooseTeamsFriendlyInit(void)
 {
-    numSelectedTeamsCopy = numSelectedTeams;
-    selTeamsUpperBound = numSelectedTeams;
+    _numSelectedTeamsCopy = _numSelectedTeams;
+    _selTeamsUpperBound = _numSelectedTeams;
 
     /* Build teamPointers[] and teamNumbersIndices[] from selTeamsPtr */
-    TeamFileEx *src = selectedTeams;
+    TeamFileEx *src = _selectedTeams;
     uint16_t i;
-    for (i = 0; i < selTeamsUpperBound; i++) {
-        teamPointers[i] = (uintptr_t)src;
-        teamNumbersIndices[i] = (uint8_t)i;
+    for (i = 0; i < _selTeamsUpperBound; i++) {
+        _teamPointers[i] = (uintptr_t)src;
+        _teamNumbersIndices[i] = (uint8_t)i;
         src++;
     }
 
     /* Bubble sort teams alphabetically by name */
-    if (selTeamsUpperBound >= 2) {
-        uint16_t n = selTeamsUpperBound - 2;
+    if (_selTeamsUpperBound >= 2) {
+        uint16_t n = _selTeamsUpperBound - 2;
         uint16_t swapped;
         do {
             swapped = 0;
-            uint8_t *idx = teamNumbersIndices;
+            uint8_t *idx = _teamNumbersIndices;
             uint16_t j;
             for (j = 0; j <= n; j++) {
                 int8_t i1 = (int8_t)idx[0];
-                uint8_t *name1 = (uint8_t *)((TeamFileEx *)teamPointers[(uint16_t)(int16_t)i1])->team.teamName;
+                uint8_t *name1 = (uint8_t *)((TeamFileEx *)_teamPointers[(uint16_t)(int16_t)i1])->team.teamName;
                 int8_t i2 = (int8_t)idx[1];
-                uint8_t *name2 = (uint8_t *)((TeamFileEx *)teamPointers[(uint16_t)(int16_t)i2])->team.teamName;
+                uint8_t *name2 = (uint8_t *)((TeamFileEx *)_teamPointers[(uint16_t)(int16_t)i2])->team.teamName;
 
                 uint8_t *p1 = name1;
                 uint8_t *p2 = name2;
@@ -2244,105 +2244,105 @@ void ChooseTeamsFriendlyInit(void)
     }
 
     /* Build header string */
-    uint8_t *headerDst = (uint8_t *)menuEntries[0].fg;
-    uint8_t *headerPrefix = (uint8_t *)chooseTeamsHeader1stPart;
+    uint8_t *headerDst = (uint8_t *)_menuEntries[0].fg;
+    uint8_t *headerPrefix = (uint8_t *)_chooseTeamsHeader1stPart;
     if (headerPrefix != (uint8_t *)0) {
         StringCopy(headerPrefix, headerDst);
     } else {
-        headerDst = StringCopy(aAllSelectedTea, headerDst);
-        uint8_t *gts = (uint8_t *)gameTypeStr;
+        headerDst = StringCopy(_aAllSelectedTea, headerDst);
+        uint8_t *gts = (uint8_t *)_gameTypeStr;
         if (gts != (uint8_t *)0) {
             headerDst = StringCopy(gts, headerDst);
         }
         /* Check if country name fits */
-        uint16_t hdrLen = GetStringLength((const uint8_t *)menuEntries[0].fg);
-        uint16_t countryLen = GetStringLength((const uint8_t *)curCountryStr);
+        uint16_t hdrLen = GetStringLength((const uint8_t *)_menuEntries[0].fg);
+        uint16_t countryLen = GetStringLength((const uint8_t *)_curCountryStr);
         if (hdrLen + countryLen <= 47) {
             *headerDst++ = ' ';
             *headerDst++ = '-';
             *headerDst++ = ' ';
-            StringCopy((const uint8_t *)curCountryStr, headerDst);
+            StringCopy((const uint8_t *)_curCountryStr, headerDst);
         }
     }
 
     /* Calculate column counts */
-    if (selTeamsUpperBound <= 8) {
-        viewTeamsColumn1 = 0;
-        viewTeamsColumn2 = selTeamsUpperBound;
-        viewTeamsColumn3 = 0;
+    if (_selTeamsUpperBound <= 8) {
+        _viewTeamsColumn1 = 0;
+        _viewTeamsColumn2 = _selTeamsUpperBound;
+        _viewTeamsColumn3 = 0;
     } else {
-        uint16_t base = selTeamsUpperBound / 3;
-        uint16_t rem = selTeamsUpperBound % 3;
-        viewTeamsColumn1 = base;
-        viewTeamsColumn2 = base;
-        viewTeamsColumn3 = base;
+        uint16_t base = _selTeamsUpperBound / 3;
+        uint16_t rem = _selTeamsUpperBound % 3;
+        _viewTeamsColumn1 = base;
+        _viewTeamsColumn2 = base;
+        _viewTeamsColumn3 = base;
         if (rem == 1) {
-            viewTeamsColumn2++;
+            _viewTeamsColumn2++;
         } else if (rem == 2) {
-            viewTeamsColumn1++;
-            viewTeamsColumn2++;
+            _viewTeamsColumn1++;
+            _viewTeamsColumn2++;
         }
     }
 
     ViewSelTeamsSetColumns();
 
     /* Handle choosingPreset / copaAmerica */
-    if (choosingPreset != 0) {
-        if (selectedContest == (uintptr_t)copaAmerica) {
-            menuEntries[74].isInvisible = 1;
+    if (_choosingPreset != 0) {
+        if (_selectedContest == (uintptr_t)_copaAmerica) {
+            _menuEntries[74].isInvisible = 1;
         }
     }
 
     SetChooseChangeTeamsEntries();
     SetTeamEntriesStringsAndColors();
 
-    if (viewSelectedTeams == 2) {
+    if (_viewSelectedTeams == 2) {
         SetCurrentEntry(76);
-    } else if (viewSelectedTeams == 1) {
+    } else if (_viewSelectedTeams == 1) {
         SetCurrentEntry(74);
     }
 }
 
 /* ---- Chunk 225: SelTeamForTacticsInit ---- */
 
-extern uintptr_t chooseTeamMenuName;
-extern uint16_t numTeamsCountryBuffer;
-extern uint16_t selTeamsColumn1;
-extern uint16_t selTeamsColumn2;
-extern uint16_t selTeamsColumn3;
-extern uint8_t indexCountries[];
-extern void *dwArrayCountries[];
+extern uintptr_t _chooseTeamMenuName;
+extern uint16_t _numTeamsCountryBuffer;
+extern uint16_t _selTeamsColumn1;
+extern uint16_t _selTeamsColumn2;
+extern uint16_t _selTeamsColumn3;
+extern uint8_t _indexCountries[];
+extern void *_dwArrayCountries[];
 
 extern void SelTeamForTactics_ReflowTeamListLayout(void);
 
 __attribute__((used, externally_visible))
 void SelTeamForTacticsInit(void)
 {
-    menuEntries[0].fg = chooseTeamMenuName;
+    _menuEntries[0].fg = _chooseTeamMenuName;
 
     /* Calculate column counts from numTeamsCountryBuffer */
-    if (numTeamsCountryBuffer >= 66) {
-        selTeamsColumn1 = 22;
-        selTeamsColumn2 = 21;
-        selTeamsColumn3 = 21;
-    } else if (numTeamsCountryBuffer <= 8) {
-        selTeamsColumn1 = 0;
-        selTeamsColumn2 = numTeamsCountryBuffer;
-        selTeamsColumn3 = 0;
+    if (_numTeamsCountryBuffer >= 66) {
+        _selTeamsColumn1 = 22;
+        _selTeamsColumn2 = 21;
+        _selTeamsColumn3 = 21;
+    } else if (_numTeamsCountryBuffer <= 8) {
+        _selTeamsColumn1 = 0;
+        _selTeamsColumn2 = _numTeamsCountryBuffer;
+        _selTeamsColumn3 = 0;
     } else {
-        uint16_t base = numTeamsCountryBuffer / 3;
-        uint16_t rem = numTeamsCountryBuffer % 3;
-        selTeamsColumn1 = base;
-        selTeamsColumn2 = base;
-        selTeamsColumn3 = base;
+        uint16_t base = _numTeamsCountryBuffer / 3;
+        uint16_t rem = _numTeamsCountryBuffer % 3;
+        _selTeamsColumn1 = base;
+        _selTeamsColumn2 = base;
+        _selTeamsColumn3 = base;
         if (rem == 1) {
-            if (numTeamsCountryBuffer == 64)
-                selTeamsColumn1++;
+            if (_numTeamsCountryBuffer == 64)
+                _selTeamsColumn1++;
             else
-                selTeamsColumn2++;
+                _selTeamsColumn2++;
         } else if (rem == 2) {
-            selTeamsColumn1++;
-            selTeamsColumn2++;
+            _selTeamsColumn1++;
+            _selTeamsColumn2++;
         }
     }
 
@@ -2350,14 +2350,14 @@ void SelTeamForTacticsInit(void)
     /* bra.w *+4 = NOP */
 
     /* Build menu entries from indexCountries/dwArrayCountries */
-    uint8_t *indices = indexCountries;
-    MenuEntry *e = &menuEntries[1]; /* 0x38/56=1 */
+    uint8_t *indices = _indexCountries;
+    MenuEntry *e = &_menuEntries[1]; /* 0x38/56=1 */
     uint16_t d6 = 0;
 
     for (;;) {
         e->isInvisible = 1;
 
-        if (d6 < numTeamsCountryBuffer) {
+        if (d6 < _numTeamsCountryBuffer) {
             for (;;) {
                 uint16_t ord = e->ordinal;
                 ord -= 1;
@@ -2366,17 +2366,17 @@ void SelTeamForTacticsInit(void)
 
                 uint16_t colCount;
                 if (col == 0)
-                    colCount = selTeamsColumn1;
+                    colCount = _selTeamsColumn1;
                 else if (col == 1)
-                    colCount = selTeamsColumn2;
+                    colCount = _selTeamsColumn2;
                 else
-                    colCount = selTeamsColumn3;
+                    colCount = _selTeamsColumn3;
 
                 if (row < colCount) {
                     /* Visible — set team name pointer */
                     e->isInvisible = 0;
                     int8_t idx = (int8_t)*indices++;
-                    e->fg = (uintptr_t)dwArrayCountries[(uint16_t)(int16_t)idx];
+                    e->fg = (uintptr_t)_dwArrayCountries[(uint16_t)(int16_t)idx];
                     break;
                 }
 
@@ -2396,45 +2396,45 @@ void SelTeamForTacticsInit(void)
 
 /* ---- Chunk 223: ChooseTeamsFriendlyInitFinish ---- */
 
-extern int16_t topOfStackMark;
-extern uint16_t selectTeamsNoLimit;
-extern uint8_t aAbort[];
-extern uint16_t inFriendlyMenu;
-extern uint16_t leagueNumber;
-extern uint16_t chooseTeamsFriendly_numTeamsInLeagueList;
-extern uint8_t lastLoadedExtNumber;
-extern uint8_t teamFileBuffer[];
+extern int16_t _topOfStackMark;
+extern uint16_t _selectTeamsNoLimit;
+extern uint8_t _aAbort[];
+extern uint16_t _inFriendlyMenu;
+extern uint16_t _leagueNumber;
+extern uint16_t _chooseTeamsFriendly_numTeamsInLeagueList;
+extern uint8_t _lastLoadedExtNumber;
+extern uint8_t _teamFileBuffer[];
 
 __attribute__((used, externally_visible))
 void ChooseTeamsFriendlyInitFinish(void)
 {
     /* If topOfStackMark < 0, set abort button */
-    if ((int16_t)topOfStackMark < 0) {
-        MenuEntry *abortEntry = &menuEntries[56]; /* 0xC40/56=56 */
-        abortEntry->fg = (uintptr_t)aAbort;
+    if ((int16_t)_topOfStackMark < 0) {
+        MenuEntry *abortEntry = &_menuEntries[56]; /* 0xC40/56=56 */
+        abortEntry->fg = (uintptr_t)_aAbort;
         uint16_t bgc = abortEntry->bgColor;
         bgc = (bgc & 0xFFF0) + RED_10;
         abortEntry->bgColor = bgc;
     }
 
     /* If selectTeamsNoLimit, hide entries 1-6 */
-    if (selectTeamsNoLimit != 0) {
-        menuEntries[1].isInvisible = 1;
-        menuEntries[2].isInvisible = 1;
-        menuEntries[3].isInvisible = 1;
-        menuEntries[4].isInvisible = 1;
-        menuEntries[5].isInvisible = 1;
-        menuEntries[6].isInvisible = 1;
+    if (_selectTeamsNoLimit != 0) {
+        _menuEntries[1].isInvisible = 1;
+        _menuEntries[2].isInvisible = 1;
+        _menuEntries[3].isInvisible = 1;
+        _menuEntries[4].isInvisible = 1;
+        _menuEntries[5].isInvisible = 1;
+        _menuEntries[6].isInvisible = 1;
     }
 
     /* Build teamsIndex[] and teamsPtrTable[] from teamFileBuffer */
-    uint8_t *idx = teamsIndex;
-    void   **ptrs = teamsPtrTable;
-    uint16_t numTeamsInFile = *(uint16_t *)teamFileBuffer;
-    TeamFileEx *teamRecord = (TeamFileEx *)(teamFileBuffer + 2);
-    uint8_t league = (uint8_t)leagueNumber;
+    uint8_t *idx = _teamsIndex;
+    void   **ptrs = _teamsPtrTable;
+    uint16_t numTeamsInFile = *(uint16_t *)_teamFileBuffer;
+    TeamFileEx *teamRecord = (TeamFileEx *)(_teamFileBuffer + 2);
+    uint8_t league = (uint8_t)_leagueNumber;
     uint16_t count = 0;
-    uint16_t selNum = selTeamNumber;
+    uint16_t selNum = _selTeamNumber;
     uint16_t i;
 
     for (i = 0; i < numTeamsInFile; i++) {
@@ -2444,7 +2444,7 @@ void ChooseTeamsFriendlyInitFinish(void)
              * out of the friendly-menu list on LE hosts (a raw
              * *(uint16_t *)teamRecord would give ordinal<<8|country
              * and the skip would never fire). */
-            if (inFriendlyMenu != 0 ||
+            if (_inFriendlyMenu != 0 ||
                 PACK_BE_U16(teamRecord->team.countryNumber,
                             teamRecord->team.teamOrdinal) != selNum) {
                 *idx++ = (uint8_t)count;
@@ -2454,7 +2454,7 @@ void ChooseTeamsFriendlyInitFinish(void)
         }
         teamRecord++;
     }
-    chooseTeamsFriendly_numTeamsInLeagueList = count;
+    _chooseTeamsFriendly_numTeamsInLeagueList = count;
 
     /* Bubble sort teamsIndex by team name */
     if (count >= 2) {
@@ -2462,13 +2462,13 @@ void ChooseTeamsFriendlyInitFinish(void)
         uint16_t swapped;
         do {
             swapped = 0;
-            uint8_t *si = teamsIndex;
+            uint8_t *si = _teamsIndex;
             uint16_t j;
             for (j = 0; j <= n; j++) {
                 int8_t i1 = (int8_t)si[0];
-                uint8_t *name1 = (uint8_t *)((TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)i1])->team.teamName;
+                uint8_t *name1 = (uint8_t *)((TeamFileEx *)_teamsPtrTable[(uint16_t)(int16_t)i1])->team.teamName;
                 int8_t i2 = (int8_t)si[1];
-                uint8_t *name2 = (uint8_t *)((TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)i2])->team.teamName;
+                uint8_t *name2 = (uint8_t *)((TeamFileEx *)_teamsPtrTable[(uint16_t)(int16_t)i2])->team.teamName;
 
                 uint8_t *p1 = name1;
                 uint8_t *p2 = name2;
@@ -2492,48 +2492,48 @@ void ChooseTeamsFriendlyInitFinish(void)
 
     /* Clear teamsTable (100 bytes) — use volatile to prevent memset optimization */
     {
-        volatile uint8_t *tt = (volatile uint8_t *)teamsTable;
+        volatile uint8_t *tt = (volatile uint8_t *)_teamsTable;
         for (i = 0; i < 100; i++)
             tt[i] = 0;
     }
 
     /* Mark previously selected teams in teamsTable */
-    if (numNeededTeams != 1 && numSelectedTeams != 0) {
-        uint8_t *selTeam = &selTeamsPtr;
-        uint8_t extNum = lastLoadedExtNumber;
-        uint8_t lg = (uint8_t)leagueNumber;
+    if (_numNeededTeams != 1 && _numSelectedTeams != 0) {
+        uint8_t *selTeam = &_selTeamsPtr;
+        uint8_t extNum = _lastLoadedExtNumber;
+        uint8_t lg = (uint8_t)_leagueNumber;
         uint16_t ns;
 
-        for (ns = 0; ns < numSelectedTeams; ns++) {
-            if (lastLoadedExtNumber == 0x64 ||
+        for (ns = 0; ns < _numSelectedTeams; ns++) {
+            if (_lastLoadedExtNumber == 0x64 ||
                 (*(selTeam) == extNum && *(selTeam + 0x19) == lg)) {
                 uint8_t ordinal = *(selTeam + 1);
-                teamsTable[ordinal] = *(selTeam + 4);
+                _teamsTable[ordinal] = *(selTeam + 4);
             }
             selTeam += 684;
         }
     }
 
     /* Calculate column counts */
-    if (chooseTeamsFriendly_numTeamsInLeagueList >= 48) {
-        chooseTeamsFriendly_leftListNumEntries = 16;
-        chooseTeamsFriendly_middleListNumEntries = 16;
-        chooseTeamsFriendly_rightListNumEntries = 16;
-    } else if (chooseTeamsFriendly_numTeamsInLeagueList <= 8) {
-        chooseTeamsFriendly_leftListNumEntries = 0;
-        chooseTeamsFriendly_middleListNumEntries = chooseTeamsFriendly_numTeamsInLeagueList;
-        chooseTeamsFriendly_rightListNumEntries = 0;
+    if (_chooseTeamsFriendly_numTeamsInLeagueList >= 48) {
+        _chooseTeamsFriendly_leftListNumEntries = 16;
+        _chooseTeamsFriendly_middleListNumEntries = 16;
+        _chooseTeamsFriendly_rightListNumEntries = 16;
+    } else if (_chooseTeamsFriendly_numTeamsInLeagueList <= 8) {
+        _chooseTeamsFriendly_leftListNumEntries = 0;
+        _chooseTeamsFriendly_middleListNumEntries = _chooseTeamsFriendly_numTeamsInLeagueList;
+        _chooseTeamsFriendly_rightListNumEntries = 0;
     } else {
-        uint16_t base = chooseTeamsFriendly_numTeamsInLeagueList / 3;
-        uint16_t rem = chooseTeamsFriendly_numTeamsInLeagueList % 3;
-        chooseTeamsFriendly_leftListNumEntries = base;
-        chooseTeamsFriendly_middleListNumEntries = base;
-        chooseTeamsFriendly_rightListNumEntries = base;
+        uint16_t base = _chooseTeamsFriendly_numTeamsInLeagueList / 3;
+        uint16_t rem = _chooseTeamsFriendly_numTeamsInLeagueList % 3;
+        _chooseTeamsFriendly_leftListNumEntries = base;
+        _chooseTeamsFriendly_middleListNumEntries = base;
+        _chooseTeamsFriendly_rightListNumEntries = base;
         if (rem == 1) {
-            chooseTeamsFriendly_middleListNumEntries++;
+            _chooseTeamsFriendly_middleListNumEntries++;
         } else if (rem == 2) {
-            chooseTeamsFriendly_leftListNumEntries++;
-            chooseTeamsFriendly_middleListNumEntries++;
+            _chooseTeamsFriendly_leftListNumEntries++;
+            _chooseTeamsFriendly_middleListNumEntries++;
         }
     }
 
@@ -2543,7 +2543,7 @@ void ChooseTeamsFriendlyInitFinish(void)
     /* bra.w *+4 = NOP (fall through) */
 
     /* Build menu entries from teamsIndex/teamsPtrTable */
-    MenuEntry *e = &menuEntries[7]; /* entry 7 = 0x188/0x38 */
+    MenuEntry *e = &_menuEntries[7]; /* entry 7 = 0x188/0x38 */
     uint16_t d6 = 0;
     uint16_t d5 = 0;
 
@@ -2559,11 +2559,11 @@ outer:
 
         uint16_t colCount;
         if (col == 0)
-            colCount = chooseTeamsFriendly_leftListNumEntries;
+            colCount = _chooseTeamsFriendly_leftListNumEntries;
         else if (col == 1)
-            colCount = chooseTeamsFriendly_middleListNumEntries;
+            colCount = _chooseTeamsFriendly_middleListNumEntries;
         else
-            colCount = chooseTeamsFriendly_rightListNumEntries;
+            colCount = _chooseTeamsFriendly_rightListNumEntries;
 
         if (row < colCount)
             break;
@@ -2575,16 +2575,16 @@ outer:
     }
 
     /* Entry is visible — populate it */
-    uint16_t defaultColor = selectTeamsNoLimit ? 5 : 9;
+    uint16_t defaultColor = _selectTeamsNoLimit ? 5 : 9;
     e->isInvisible = 0;
 
-    int8_t tidx = (int8_t)teamsIndex[d5];
-    TeamFileEx *team = (TeamFileEx *)teamsPtrTable[(uint16_t)(int16_t)tidx];
+    int8_t tidx = (int8_t)_teamsIndex[d5];
+    TeamFileEx *team = (TeamFileEx *)_teamsPtrTable[(uint16_t)(int16_t)tidx];
     uint8_t teamOrd = team->team.teamOrdinal;
     e->fg = (uintptr_t)team->team.teamName;
 
     uint16_t color = defaultColor;
-    uint8_t ctrl = teamsTable[teamOrd];
+    uint8_t ctrl = _teamsTable[teamOrd];
     if (ctrl != 0) {
         color = 10;
         if (ctrl != 1) {
@@ -2602,7 +2602,7 @@ outer:
             return;
         e->isInvisible = 1;
         d6++;
-        if (d6 < chooseTeamsFriendly_numTeamsInLeagueList) {
+        if (d6 < _chooseTeamsFriendly_numTeamsInLeagueList) {
             d5++;
             goto outer;
         }
@@ -2612,21 +2612,21 @@ outer:
 
 /* ---- Chunk 224: SetTeamsCoordinates, SelectTeamsReinit, SelectTeamsInit ---- */
 
-extern uint16_t numTeamsColumn1;
-extern uint16_t numTeamsColumn2;
-extern uint16_t numTeamsColumn3;
-extern uint16_t numLeaguesInCountry;
-extern uint16_t chooseTeamsNumTeams;
-extern uint16_t headerYPlusHeight;
-extern uint16_t exitY;
-extern uint16_t teamDepthLevel;
-extern uint16_t startingTeamIndex;
-extern uint16_t teamsLowerBound;
-extern uint16_t prevSelectedTeamEntry;
-extern uint16_t stayInSelectTeams;
-extern uint16_t exitFlag;
-extern uint8_t aChooseTeamsFor[];
-extern uint8_t aChangeTeamsFor[];
+extern uint16_t _numTeamsColumn1;
+extern uint16_t _numTeamsColumn2;
+extern uint16_t _numTeamsColumn3;
+extern uint16_t _numLeaguesInCountry;
+extern uint16_t _chooseTeamsNumTeams;
+extern uint16_t _headerYPlusHeight;
+extern uint16_t _exitY;
+extern uint16_t _teamDepthLevel;
+extern uint16_t _startingTeamIndex;
+extern uint16_t _teamsLowerBound;
+extern uint16_t _prevSelectedTeamEntry;
+extern uint16_t _stayInSelectTeams;
+extern uint16_t _exitFlag;
+extern uint8_t _aChooseTeamsFor[];
+extern uint8_t _aChangeTeamsFor[];
 
 extern void SetLeagueNames(void);
 extern void SetCountryNames(void);
@@ -2639,25 +2639,25 @@ __attribute__((used, externally_visible))
 void SetTeamsCoordinates(void)
 {
     /* d1 = max of column counts */
-    uint16_t d1 = numTeamsColumn1;
-    if (d1 < numTeamsColumn2) d1 = numTeamsColumn2;
-    if (d1 < numTeamsColumn3) d1 = numTeamsColumn3;
+    uint16_t d1 = _numTeamsColumn1;
+    if (d1 < _numTeamsColumn2) d1 = _numTeamsColumn2;
+    if (d1 < _numTeamsColumn3) d1 = _numTeamsColumn3;
 
-    d1 += numLeaguesInCountry;
+    d1 += _numLeaguesInCountry;
 
-    uint16_t topY = menuEntries[0].y + menuEntries[0].dwHeight;
-    headerYPlusHeight = topY;
-    exitY = menuEntries[88].y; /* 0x1340/56=88 */
+    uint16_t topY = _menuEntries[0].y + _menuEntries[0].dwHeight;
+    _headerYPlusHeight = topY;
+    _exitY = _menuEntries[88].y; /* 0x1340/56=88 */
 
     uint16_t totalHeight = d1 * 9;
-    int16_t space = (int16_t)(exitY - headerYPlusHeight) - (int16_t)totalHeight;
-    int16_t yPos = (space >> 1) + (int16_t)headerYPlusHeight;
+    int16_t space = (int16_t)(_exitY - _headerYPlusHeight) - (int16_t)totalHeight;
+    int16_t yPos = (space >> 1) + (int16_t)_headerYPlusHeight;
 
     /* Set league entry Y coordinates */
-    if (numLeaguesInCountry != 0) {
+    if (_numLeaguesInCountry != 0) {
         /* tst.w chooseTeamsNumTeams is a dead check (followed by unconditional lea) */
-        MenuEntry *e = &menuEntries[11]; /* 0x268/56=11 */
-        int16_t n = (int16_t)numLeaguesInCountry - 1;
+        MenuEntry *e = &_menuEntries[11]; /* 0x268/56=11 */
+        int16_t n = (int16_t)_numLeaguesInCountry - 1;
         int16_t j;
         for (j = 0; j <= n; j++) {
             e->y = (uint16_t)yPos;
@@ -2669,7 +2669,7 @@ void SetTeamsCoordinates(void)
 
     /* Set team entry Y coordinates: 3 columns × 22 entries starting at entry 21 */
     yPos += 2;
-    MenuEntry *e = &menuEntries[21]; /* 0x498/56=21 */
+    MenuEntry *e = &_menuEntries[21]; /* 0x498/56=21 */
     int16_t col;
     for (col = 0; col < 3; col++) {
         int16_t y = yPos;
@@ -2686,82 +2686,82 @@ __attribute__((used, externally_visible))
 void SelectTeamsReinit(void)
 {
     /* Adjust Y of entries 87-90 if too many teams+leagues */
-    uint16_t d0 = chooseTeamsNumTeams;
+    uint16_t d0 = _chooseTeamsNumTeams;
     d0 += 2;
     d0 = d0 / 3;
-    d0 += numLeaguesInCountry;
+    d0 += _numLeaguesInCountry;
     if (d0 > 18) {
         int16_t yAdj = 10;
         if (d0 != 19)
             yAdj = 15;
-        menuEntries[87].y += yAdj; /* 0x1308/56=87 */
-        menuEntries[88].y += yAdj; /* 0x1340/56=88 */
-        menuEntries[89].y += yAdj; /* 0x1378/56=89 */
-        menuEntries[90].y += yAdj; /* 0x13B0/56=90 */
+        _menuEntries[87].y += yAdj; /* 0x1308/56=87 */
+        _menuEntries[88].y += yAdj; /* 0x1340/56=88 */
+        _menuEntries[89].y += yAdj; /* 0x1378/56=89 */
+        _menuEntries[90].y += yAdj; /* 0x13B0/56=90 */
     }
 
     /* If at top of stack, show "ABORT" button */
-    if (teamDepthLevel == (uint16_t)topOfStackMark) {
-        MenuEntry *abortEntry = &menuEntries[88]; /* 0x1340/56=88 */
-        abortEntry->fg = (uintptr_t)aAbort;
+    if (_teamDepthLevel == (uint16_t)_topOfStackMark) {
+        MenuEntry *abortEntry = &_menuEntries[88]; /* 0x1340/56=88 */
+        abortEntry->fg = (uintptr_t)_aAbort;
         uint16_t bgc = abortEntry->bgColor;
         bgc = (bgc & 0xFFF0) + RED_10;
         abortEntry->bgColor = bgc;
     }
 
     /* Build header string */
-    uint8_t *headerDst = (uint8_t *)menuEntries[0].fg;
-    uint8_t *prefix = (uint8_t *)chooseTeamsHeader1stPart;
+    uint8_t *headerDst = (uint8_t *)_menuEntries[0].fg;
+    uint8_t *prefix = (uint8_t *)_chooseTeamsHeader1stPart;
     if (prefix != (uint8_t *)0) {
         headerDst = StringCopy(prefix, headerDst);
     } else {
-        uint8_t *label = aChooseTeamsFor;
-        if (numSelectedTeams == numNeededTeams)
-            label = aChangeTeamsFor;
+        uint8_t *label = _aChooseTeamsFor;
+        if (_numSelectedTeams == _numNeededTeams)
+            label = _aChangeTeamsFor;
         headerDst = StringCopy(label, headerDst);
     }
-    uint8_t *gts = (uint8_t *)gameTypeStr;
+    uint8_t *gts = (uint8_t *)_gameTypeStr;
     if (gts != (uint8_t *)0) {
         headerDst = StringCopy(gts, headerDst);
     }
 
     /* Check if country name fits (total <= 47) */
-    uint16_t hdrLen = GetStringLength((const uint8_t *)menuEntries[0].fg);
-    uint16_t countryLen = GetStringLength((const uint8_t *)curCountryStr);
+    uint16_t hdrLen = GetStringLength((const uint8_t *)_menuEntries[0].fg);
+    uint16_t countryLen = GetStringLength((const uint8_t *)_curCountryStr);
     if (hdrLen + countryLen <= 47) {
         *headerDst++ = ' ';
         *headerDst++ = '-';
         *headerDst++ = ' ';
-        StringCopy((const uint8_t *)curCountryStr, headerDst);
+        StringCopy((const uint8_t *)_curCountryStr, headerDst);
     }
 
     /* Initialize team display parameters */
-    startingTeamIndex = 0;
-    teamsLowerBound = 0;
+    _startingTeamIndex = 0;
+    _teamsLowerBound = 0;
 
     /* Calculate column counts */
-    if (chooseTeamsNumTeams >= 66) {
-        numTeamsColumn1 = 22;
-        numTeamsColumn2 = 21;
-        numTeamsColumn3 = 21;
-    } else if (chooseTeamsNumTeams <= 8) {
-        numTeamsColumn1 = 0;
-        numTeamsColumn2 = chooseTeamsNumTeams;
-        numTeamsColumn3 = 0;
+    if (_chooseTeamsNumTeams >= 66) {
+        _numTeamsColumn1 = 22;
+        _numTeamsColumn2 = 21;
+        _numTeamsColumn3 = 21;
+    } else if (_chooseTeamsNumTeams <= 8) {
+        _numTeamsColumn1 = 0;
+        _numTeamsColumn2 = _chooseTeamsNumTeams;
+        _numTeamsColumn3 = 0;
     } else {
-        uint16_t base = chooseTeamsNumTeams / 3;
-        uint16_t rem = chooseTeamsNumTeams % 3;
-        numTeamsColumn1 = base;
-        numTeamsColumn2 = base;
-        numTeamsColumn3 = base;
+        uint16_t base = _chooseTeamsNumTeams / 3;
+        uint16_t rem = _chooseTeamsNumTeams % 3;
+        _numTeamsColumn1 = base;
+        _numTeamsColumn2 = base;
+        _numTeamsColumn3 = base;
         if (rem == 1) {
-            if (chooseTeamsNumTeams == 64)
-                numTeamsColumn1++;
+            if (_chooseTeamsNumTeams == 64)
+                _numTeamsColumn1++;
             else
-                numTeamsColumn2++;
+                _numTeamsColumn2++;
         } else if (rem == 2) {
-            numTeamsColumn1++;
-            numTeamsColumn2++;
+            _numTeamsColumn1++;
+            _numTeamsColumn2++;
         }
     }
 
@@ -2770,7 +2770,7 @@ void SelectTeamsReinit(void)
     SetCountryNames();
 
     /* Set cursor to previous selection if valid */
-    uint16_t prevEntry = prevSelectedTeamEntry;
+    uint16_t prevEntry = _prevSelectedTeamEntry;
     if (prevEntry != 0xFFFF) {
         MenuEntry *e = CalcMenuEntryAddress(prevEntry);
         if (e->isInvisible != 0) {
@@ -2780,7 +2780,7 @@ void SelectTeamsReinit(void)
             goto doCheckTeams;
         }
     }
-    if (chooseTeamsNumTeams == 0) {
+    if (_chooseTeamsNumTeams == 0) {
         SetCurrentEntry(11);
     }
 doCheckTeams:
@@ -2788,48 +2788,48 @@ doCheckTeams:
 }
 
 /* ---- Chunk 226: ChooseTeamsInit ---- */
-extern uint16_t showClubTeams;
-extern uint16_t showNationalTeams;
-extern uint16_t showOrigCustomTeams;
+extern uint16_t _showClubTeams;
+extern uint16_t _showNationalTeams;
+extern uint16_t _showOrigCustomTeams;
 
 __attribute__((used, externally_visible))
 void ChooseTeamsInit(void)
 {
     /* d7 = half the vertical gap between entry 0 and entry 1 */
-    int16_t d7 = (int16_t)(menuEntries[1].y - menuEntries[0].y) >> 1;
+    int16_t d7 = (int16_t)(_menuEntries[1].y - _menuEntries[0].y) >> 1;
     int16_t d6 = 4; /* count of visible categories */
 
-    if (showClubTeams == 0) {
+    if (_showClubTeams == 0) {
         d6--;
-        menuEntries[0].isInvisible = 1;
-        menuEntries[1].y -= d7;
-        menuEntries[2].y -= d7;
-        menuEntries[3].y -= d7;
+        _menuEntries[0].isInvisible = 1;
+        _menuEntries[1].y -= d7;
+        _menuEntries[2].y -= d7;
+        _menuEntries[3].y -= d7;
         SetCurrentEntry(1);
     }
 
-    if (showNationalTeams == 0) {
+    if (_showNationalTeams == 0) {
         d6--;
-        menuEntries[1].isInvisible = 1;
-        menuEntries[0].y += d7;
-        menuEntries[2].y -= d7;
-        menuEntries[3].y -= d7;
-        if (showClubTeams == 0)
+        _menuEntries[1].isInvisible = 1;
+        _menuEntries[0].y += d7;
+        _menuEntries[2].y -= d7;
+        _menuEntries[3].y -= d7;
+        if (_showClubTeams == 0)
             SetCurrentEntry(2);
     }
 
-    if (showOrigCustomTeams == 0) {
+    if (_showOrigCustomTeams == 0) {
         d6 -= 2;
-        menuEntries[2].isInvisible = 1;
-        menuEntries[3].isInvisible = 1;
-        menuEntries[0].y += d7;
-        menuEntries[0].y += d7; /* asm adds d7 to y twice (offset 0x16) */
-        menuEntries[1].y += d7;
-        menuEntries[1].y += d7; /* same: y += 2*d7 total */
+        _menuEntries[2].isInvisible = 1;
+        _menuEntries[3].isInvisible = 1;
+        _menuEntries[0].y += d7;
+        _menuEntries[0].y += d7; /* asm adds d7 to y twice (offset 0x16) */
+        _menuEntries[1].y += d7;
+        _menuEntries[1].y += d7; /* same: y += 2*d7 total */
     }
 
     if (d6 == 1) {
-        if (showClubTeams != 0) {
+        if (_showClubTeams != 0) {
             ClubTeams();
         } else {
             NationalTeams();
@@ -2838,15 +2838,15 @@ void ChooseTeamsInit(void)
     }
 
     /* entry 5 = (menuEntries+MENUENTRY_ALREADYDRAWN+$118) = entry at offset 0x118/56 = 5 */
-    MenuEntry *headerEntry = &menuEntries[5];
+    MenuEntry *headerEntry = &_menuEntries[5];
     char *dst = (char *)headerEntry->fg;
-    char *src = (char *)chooseTeamsHeader1stPart;
+    char *src = (char *)_chooseTeamsHeader1stPart;
     if (src != 0) {
         dst = (char *)StringCopy((const uint8_t *)src, (uint8_t *)dst);
     } else {
-        dst = (char *)StringCopy(aChooseTeamsFor, (uint8_t *)dst);
+        dst = (char *)StringCopy(_aChooseTeamsFor, (uint8_t *)dst);
     }
-    src = (char *)gameTypeStr;
+    src = (char *)_gameTypeStr;
     if (src != 0) {
         StringCopy((const uint8_t *)src, (uint8_t *)dst);
     }
@@ -2856,10 +2856,10 @@ __attribute__((used, externally_visible))
 void SelectTeamsInit(void)
 {
     SelectTeamsReinit();
-    if (stayInSelectTeams != 0) {
-        SelectLeaguesCommon(&menuEntries[11]); /* entry 11 = 0x268/56 */
+    if (_stayInSelectTeams != 0) {
+        SelectLeaguesCommon(&_menuEntries[11]); /* entry 11 = 0x268/56 */
     } else {
-        if (exitFlag != 0)
+        if (_exitFlag != 0)
             ExitSelectTeams();
     }
 }
@@ -2911,80 +2911,80 @@ void SelectTeamsFinalMenu(uint16_t mode)
     uint16_t cidx;
     uint16_t countryByte;
 
-    leagueNumber = 0;
+    _leagueNumber = 0;
     HLOG("SelectTeamsFinalMenu enter mode=%u\n", (unsigned)mode);
 
     /* Initialize customsLeague: offset 9 = comp.divisionsCount, offset 0xD = divisions[0].teams */
-    customsLeague[9] = 3;
-    customsLeague[0xD] = 20;
+    _customsLeague[9] = 3;
+    _customsLeague[0xD] = 20;
 
-    if (teamsType == EDITED_CUSTOM_TEAMS) {
-        if (Asset_PromptInsertSaveDiskDf0(aEditedCustomTe_0) != 0)
+    if (_teamsType == EDITED_CUSTOM_TEAMS) {
+        if (Asset_PromptInsertSaveDiskDf0(_aEditedCustomTe_0) != 0)
             goto exit_clear;
         if (LoadTeamFile(100) != 0)
             goto exit_clear;
-        if (*(uint16_t *)teamFileBuffer == 0x30) {
-            customsLeague[9] = 1;
-            customsLeague[0xD] = 0x30;
+        if (*(uint16_t *)_teamFileBuffer == 0x30) {
+            _customsLeague[9] = 1;
+            _customsLeague[0xD] = 0x30;
         }
     }
 
     /* loc_13DF8E: always executed (unconditional in asm) */
-    customsLeague[9] = 1;
-    customsLeague[0xD] = 0x30;
+    _customsLeague[9] = 1;
+    _customsLeague[0xD] = 0x30;
 
-    exitSelectTeams = 0;
-    isCountryNumber = 0;
-    isContestContinentalCup = 0;
+    _exitSelectTeams = 0;
+    _isCountryNumber = 0;
+    _isContestContinentalCup = 0;
 
     if ((uint8_t)mode != 255) {
         d6 = (uint8_t)mode;
         d7 = (uint8_t)mode;
-        teamDepthLevel = 2;
-        topOfStackMark = 2;
+        _teamDepthLevel = 2;
+        _topOfStackMark = 2;
         goto loc_E004;
     }
 
     /* loc_13DFD4: default mode */
     d6 = 254;
-    if (teamsType == EDITED_CUSTOM_TEAMS) {
+    if (_teamsType == EDITED_CUSTOM_TEAMS) {
         d6 = 100;
-    } else if (teamsType == ORIGINAL_CUSTOM_TEAMS) {
+    } else if (_teamsType == ORIGINAL_CUSTOM_TEAMS) {
         d6 = 72;
     }
 
     /* loc_13DFF6: */
     d7 = (uint8_t)d6;
-    topOfStackMark = 0;
-    teamDepthLevel = 0;
+    _topOfStackMark = 0;
+    _teamDepthLevel = 0;
 
 loc_E004:
     SetSelectedTeamsStackTop();
-    countryStackPtr = countriesStack;
+    _countryStackPtr = _countriesStack;
 
 loc_E012:
     /* Main loop: enumerate competitions for country d7 */
     d7 &= 0xFF;
     countryForName = d7;
-    if (isCountryNumber != 0)
+    if (_isCountryNumber != 0)
         countryForName = d6;
     GetCountryName(countryForName);
 
-    gotCountryName = 0;
-    if (teamDepthLevel == 2 && isCountryNumber == 0)
-        gotCountryName = 1;
+    _gotCountryName = 0;
+    if (_teamDepthLevel == 2 && _isCountryNumber == 0)
+        _gotCountryName = 1;
 
     /* loc_13E046: enumerate competitions */
-    numberOfLeagues = 0;
-    compListAddr = competitionsTable[d7];
+    _numberOfLeagues = 0;
+    compListAddr = _competitionsTable[d7];
     if (compListAddr == 0) {
-        panicReasonCode = 0x8632;
+        _panicReasonCode = 0x8632;
         PanicHaltLoop();
     }
     compList = (void **)compListAddr;
-    teamNamesPtr = teamNames;
-    leaguesPtrOut = leaguesPtrTable;
-    leagueNumsOut = leagueNumbersTable;
+    teamNamesPtr = _teamNames;
+    leaguesPtrOut = _leaguesPtrTable;
+    leagueNumsOut = _leagueNumbersTable;
     d1 = 0;
     a5 = compList;
 
@@ -2998,47 +2998,47 @@ loc_E086:
         goto loc_E2D0;
 
     if (compEntry == (uint8_t *)(uintptr_t)-2) {
-        if (showCupsAndOther == 0)
+        if (_showCupsAndOther == 0)
             goto loc_E2D0;
         goto loc_E086;
     }
 
     /* Career mode continental cup filtering (loc_13E0A6) */
-    if (gameType == GAME_TYPE_CAREER) {
-        if (compEntry == africanNationsCup) {
-            if ((uint8_t)(selTeamNumber >> 8) != CN_AFRICA)
+    if (_gameType == GAME_TYPE_CAREER) {
+        if (compEntry == _africanNationsCup) {
+            if ((uint8_t)(_selTeamNumber >> 8) != CN_AFRICA)
                 goto loc_E086;
             goto loc_E114;
         }
-        if (compEntry == copaAmerica) {
-            if ((uint8_t)(selTeamNumber >> 8) != CN_SOUTH_AMERICA)
+        if (compEntry == _copaAmerica) {
+            if ((uint8_t)(_selTeamNumber >> 8) != CN_SOUTH_AMERICA)
                 goto loc_E086;
             goto loc_E114;
         }
-        if (compEntry == northAmericanCup) {
-            if ((uint8_t)(selTeamNumber >> 8) != CN_NORTH_AMERICA)
+        if (compEntry == _northAmericanCup) {
+            if ((uint8_t)(_selTeamNumber >> 8) != CN_NORTH_AMERICA)
                 goto loc_E086;
             goto loc_E114;
         }
-        if (compEntry == asianCup) {
-            if ((uint8_t)(selTeamNumber >> 8) != CN_ASIA)
+        if (compEntry == _asianCup) {
+            if ((uint8_t)(_selTeamNumber >> 8) != CN_ASIA)
                 goto loc_E086;
             goto loc_E114;
         }
-        if (compEntry == oceaniaCup) {
-            if ((uint8_t)(selTeamNumber >> 8) != CN_OCEANIA)
+        if (compEntry == _oceaniaCup) {
+            if ((uint8_t)(_selTeamNumber >> 8) != CN_OCEANIA)
                 goto loc_E086;
             goto loc_E114;
         }
     }
 
     /* loc_13E120: European Championships check */
-    if (compEntry == europeanChampionships) {
-        if (gameType == GAME_TYPE_CAREER) {
-            if ((uint8_t)(selTeamNumber >> 8) != CN_EUROPE)
+    if (compEntry == _europeanChampionships) {
+        if (_gameType == GAME_TYPE_CAREER) {
+            if ((uint8_t)(_selTeamNumber >> 8) != CN_EUROPE)
                 goto loc_E086;
-            if (!(someTeamFlags & (1 << 0))) {
-                if (!(someTeamFlags & (1 << 1)))
+            if (!(_someTeamFlags & (1 << 0))) {
+                if (!(_someTeamFlags & (1 << 1)))
                     goto loc_E086;
             }
         }
@@ -3046,41 +3046,41 @@ loc_E086:
 
     goto skip_continental_check;
 loc_E114:
-    if (!(someTeamFlags & (1 << 1)))
+    if (!(_someTeamFlags & (1 << 1)))
         goto loc_E086;
 skip_continental_check:
 
     /* loc_13E154: World Cup qualification checks */
     if ((uintptr_t)compEntry == 252 ||
-        compEntry == northAmericaWorldCupQualification ||
-        compEntry == southAmericaWorldCupQualification ||
-        compEntry == africaWorldCupQualification ||
-        compEntry == asiaWorldCupQualification ||
-        compEntry == oceaniaWorldCupQualification) {
+        compEntry == _northAmericaWorldCupQualification ||
+        compEntry == _southAmericaWorldCupQualification ||
+        compEntry == _africaWorldCupQualification ||
+        compEntry == _asiaWorldCupQualification ||
+        compEntry == _oceaniaWorldCupQualification) {
         /* loc_13E184: */
-        if (gameType != GAME_TYPE_CAREER)
+        if (_gameType != GAME_TYPE_CAREER)
             goto loc_E086;
-        if (isNationalSelector == 0)
+        if (_isNationalSelector == 0)
             goto loc_E086;
-        if (!(someTeamFlags & (1 << 6)))
+        if (!(_someTeamFlags & (1 << 6)))
             goto loc_E086;
     }
 
     /* loc_13E1A6: World Cup check */
-    if (compEntry == worldCup) {
-        if (gameType == GAME_TYPE_CAREER) {
-            if (isNationalSelector == 0)
+    if (compEntry == _worldCup) {
+        if (_gameType == GAME_TYPE_CAREER) {
+            if (_isNationalSelector == 0)
                 goto loc_E086;
-            if (!(someTeamFlags & (1 << 7)))
+            if (!(_someTeamFlags & (1 << 7)))
                 goto loc_E086;
         }
     }
 
     /* loc_13E1CE: depth level filtering */
-    if (showCupsAndOther == 0 &&
-        teamsType != ORIGINAL_CUSTOM_TEAMS &&
-        teamsType != EDITED_CUSTOM_TEAMS &&
-        teamDepthLevel != 2) {
+    if (_showCupsAndOther == 0 &&
+        _teamsType != ORIGINAL_CUSTOM_TEAMS &&
+        _teamsType != EDITED_CUSTOM_TEAMS &&
+        _teamDepthLevel != 2) {
         goto loc_E086;
     }
 
@@ -3088,7 +3088,7 @@ skip_continental_check:
     if ((uintptr_t)compEntry < 256) {
         /* Country entry: get country name from countriesTable */
         countryIdx = (uint16_t)(uintptr_t)compEntry;
-        ctEntry = (uint8_t *)countriesTable[countryIdx];
+        ctEntry = (uint8_t *)_countriesTable[countryIdx];
         *teamNamesPtr++ = (void *)(ctEntry + 1);
         *leaguesPtrOut++ = compEntry;
         *leagueNumsOut++ = 0xFFFF;
@@ -3117,7 +3117,7 @@ loc_E246:
             /* leagues: 2 char* per division (full name + abbreviation) */
             char **nameTbl = comp_name_table(compHdr);
             namePtr = nameTbl ? (uint8_t *)nameTbl[divIdx * 2]
-                              : (uint8_t *)divisionStringTable[divIdx];
+                              : (uint8_t *)_divisionStringTable[divIdx];
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3128,13 +3128,13 @@ loc_E246:
              (unsigned)(uint8_t)league->divisionsCount, (void *)compEntry);
         if ((uint8_t)divIdx != (uint8_t)league->divisionsCount)
             goto loc_E246;
-        numberOfLeagues = (int8_t)league->divisionsCount;
+        _numberOfLeagues = (int8_t)league->divisionsCount;
         goto loc_E086;
     } else if (compType == 1) {
         /* Cup — single name pointer at +5+off16 (1 entry, char *). */
         {
             char **nameTbl = comp_name_table(compHdr);
-            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)aCup_0;
+            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)_aCup_0;
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3145,7 +3145,7 @@ loc_E246:
         /* Tournament — same as Cup */
         {
             char **nameTbl = comp_name_table(compHdr);
-            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)aLeague_1;
+            namePtr = nameTbl ? (uint8_t *)nameTbl[0] : (uint8_t *)_aLeague_1;
         }
         *teamNamesPtr++ = (void *)namePtr;
         *leaguesPtrOut++ = compEntry;
@@ -3153,17 +3153,17 @@ loc_E246:
         d1++;
         goto loc_E086;
     } else {
-        panicReasonCode = 0x2209;
+        _panicReasonCode = 0x2209;
         PanicHaltLoop();
     }
     }
 
 loc_E2D0:
-    numLeaguesInCountry = d1;
+    _numLeaguesInCountry = d1;
     HLOG("enum done country=%u numLeagues=%u\n", (unsigned)(d7 & 0xFF), (unsigned)d1);
 
     /* Build country names list */
-    countryNamesPtr = countryNames;
+    countryNamesPtr = _countryNames;
     cnCount = 0;
 
     if (d7 == 254 || (d7 >= CN_EUROPE && d7 <= CN_OCEANIA)) {
@@ -3181,69 +3181,69 @@ loc_E2D0:
             if (cByte == 255)
                 break;
             cidx = (uint16_t)cByte;
-            ctEntry = (uint8_t *)countriesTable[cidx];
+            ctEntry = (uint8_t *)_countriesTable[cidx];
             *countryNamesPtr++ = (void *)(ctEntry + 1);
             cnCount++;
         }
     }
 
-    chooseTeamsNumTeams = cnCount;
+    _chooseTeamsNumTeams = cnCount;
 
     /* loc_13E318: prepare menu */
-    stayInSelectTeams = 0;
-    exitFlag = 0;
+    _stayInSelectTeams = 0;
+    _exitFlag = 0;
 
-    if (showCupsAndOther == 0 && chooseTeamsNumTeams == 0 &&
-        numLeaguesInCountry == 1) {
-        if (exitSelectTeams != 0) {
-            exitFlag = 1;
+    if (_showCupsAndOther == 0 && _chooseTeamsNumTeams == 0 &&
+        _numLeaguesInCountry == 1) {
+        if (_exitSelectTeams != 0) {
+            _exitFlag = 1;
         } else {
-            stayInSelectTeams = 1;
+            _stayInSelectTeams = 1;
         }
     }
 
     /* loc_13E35E: show menu */
     GetSelectedTeamsStackTop();
-    ShowMenu(selectTeamsMenu);
+    ShowMenu(_selectTeamsMenu);
 
-    if (chooseTeamsResult != 0)
+    if (_chooseTeamsResult != 0)
         goto exit_return;
-    if (abortSelectTeams != 0)
+    if (_abortSelectTeams != 0)
         goto exit_return;
 
     d6 = d7;
 
-    if (viewSelectedTeams != 0)
+    if (_viewSelectedTeams != 0)
         goto loc_E73A;
 
     /* Check selectedTeamIndex */
-    d7 = (uint16_t)selectedTeamIndex;
-    if (selectedTeamIndex >= 0)
+    d7 = (uint16_t)_selectedTeamIndex;
+    if (_selectedTeamIndex >= 0)
         goto loc_E3DC;
 
     /* selectedTeamIndex < 0: check selectedLeagueIndex */
-    d7 = (uint16_t)selectedLeagueIndex;
-    if (selectedLeagueIndex < 0) {
+    d7 = (uint16_t)_selectedLeagueIndex;
+    if (_selectedLeagueIndex < 0) {
         /* loc_13E3C4: go back */
-        if (teamDepthLevel == 0)
+        if (_teamDepthLevel == 0)
             goto exit_return;
-        isCountryNumber = 0;
+        _isCountryNumber = 0;
         d7 = PopContinent();
         goto loc_E012;
     }
 
     PushLastSelectedTeam();
 
-    if (loadTeam != 0)
+    if (_loadTeam != 0)
         goto loc_E6E4;
-    if (playSeason != 0)
+    if (_playSeason != 0)
         goto loc_E428;
     goto loc_E50A;
 
 loc_E3DC:
     PushLastSelectedTeam();
 
-    if (showCupsAndOther != 0 || playSeason != 0 || teamsType != 0) {
+    if (_showCupsAndOther != 0 || _playSeason != 0 || _teamsType != 0) {
         /* loc_13E3F8: push and navigate deeper */
         PushContinent(d6);
         d7 = ((uint8_t *)a5)[d7];
@@ -3254,41 +3254,41 @@ loc_E3DC:
     /* loc_13E408: direct team load */
     countryByte = ((uint8_t *)a5)[d7];
     GetCountryName(countryByte & 0xFF);
-    leagueNumber = 0;
+    _leagueNumber = 0;
     LoadTeamFile((uint8_t)countryByte);
     goto loc_E6F6;
 
 loc_E428:
     /* Play season: dispatch by competition type */
-    contest = (uint8_t *)leaguesPtrTable[d7];
-    selectedContest = (uintptr_t)contest;
+    contest = (uint8_t *)_leaguesPtrTable[d7];
+    _selectedContest = (uintptr_t)contest;
 
     if (contest[1] == 0) {
         /* League: loc_13E476 */
-        lnum = leagueNumbersTable[d7];
-        leagueNumber = lnum;
-        contestLeagueNumber = lnum;
+        lnum = _leagueNumbersTable[d7];
+        _leagueNumber = lnum;
+        _contestLeagueNumber = lnum;
         InitCompetitionTeamSelectionFromTableEntry(lnum, contest);
     } else if (contest[1] == 2) {
         /* Tournament: loc_13E45A */
-        leagueNumber = 0;
-        contestLeagueNumber = 0;
+        _leagueNumber = 0;
+        _contestLeagueNumber = 0;
         InitCompetitionTeamSelectionFromAltTableHeader(contest);
     } else {
-        panicReasonCode = 0x1789;
+        _panicReasonCode = 0x1789;
         PanicHaltLoop();
     }
 
     /* loc_13E49E: */
-    playWhatStr = (uintptr_t)aPlaySeason;
+    _playWhatStr = (uintptr_t)_aPlaySeason;
     MarkSelectedTeamsStackLocation();
-    selectTeamsNoLimit = 0;
-    playSeason = 0;
-    loadTeam = 1;
-    chooseTeamsHeader1stPart = 0;
-    teamsType = 1;
-    gameTypeStr = selectedTeamText;
-    viewSelectedTeams = 3;
+    _selectTeamsNoLimit = 0;
+    _playSeason = 0;
+    _loadTeam = 1;
+    _chooseTeamsHeader1stPart = 0;
+    _teamsType = 1;
+    _gameTypeStr = _selectedTeamText;
+    _viewSelectedTeams = 3;
     GetCountryName(d6);
     goto loc_E73A;
 
@@ -3298,22 +3298,22 @@ loc_E4EA:
     PushLastSelectedTeam();
     PushContinent(d6);
     SetSelectedTeamsStackTop();
-    isCountryNumber = 1;
-    countryNumber = d6;
+    _isCountryNumber = 1;
+    _countryNumber = d6;
     goto loc_E012;
 
 loc_E50A:
     /* Select league/competition: dispatch */
-    contest = (uint8_t *)leaguesPtrTable[d7];
+    contest = (uint8_t *)_leaguesPtrTable[d7];
 
     /* Career mode special checks (loc_13E50A) */
-    if (gameType == GAME_TYPE_CAREER) {
-        if (contest == europeanChampionships) {
-            if (someTeamFlags & (1 << 0))
+    if (_gameType == GAME_TYPE_CAREER) {
+        if (contest == _europeanChampionships) {
+            if (_someTeamFlags & (1 << 0))
                 contest = (uint8_t *)0xFD;
         }
-        if (contest == worldCup) {
-            if (someTeamFlags & (1 << 6))
+        if (contest == _worldCup) {
+            if (_someTeamFlags & (1 << 6))
                 contest = (uint8_t *)0xFC;
         }
     }
@@ -3322,7 +3322,7 @@ loc_E50A:
     if ((uintptr_t)contest < 256)
         goto loc_E4EA;
 
-    selectedContest = (uintptr_t)contest;
+    _selectedContest = (uintptr_t)contest;
 
     if (contest[1] == 0)
         goto loc_E65A;
@@ -3333,84 +3333,84 @@ loc_E50A:
 
 loc_E57A:
     /* Tournament setup */
-    if (chooseCompetitionOnly != 0) {
-        chooseTeamsResult = 1;
+    if (_chooseCompetitionOnly != 0) {
+        _chooseTeamsResult = 1;
         goto exit_return;
     }
-    InitCompetitionTeamSelectionFromAltTableHeader((uint8_t *)selectedContest);
-    playWhatStr = (uintptr_t)aPlayTournament;
+    InitCompetitionTeamSelectionFromAltTableHeader((uint8_t *)_selectedContest);
+    _playWhatStr = (uintptr_t)_aPlayTournament;
     SetTeamsTypeForSelectedContest();
     IsContestContinentalCup();
     MarkSelectedTeamsStackLocation();
-    selectTeamsNoLimit = 0;
-    showCupsAndOther = 0;
-    loadTeam = 1;
-    chooseTeamsHeader1stPart = 0;
-    gameTypeStr = selectedTeamText;
-    viewSelectedTeams = 2;
+    _selectTeamsNoLimit = 0;
+    _showCupsAndOther = 0;
+    _loadTeam = 1;
+    _chooseTeamsHeader1stPart = 0;
+    _gameTypeStr = _selectedTeamText;
+    _viewSelectedTeams = 2;
     GetCountryName(d6);
     goto loc_E73A;
 
 loc_E5EA:
     /* Cup setup */
-    if (chooseCompetitionOnly != 0) {
-        chooseTeamsResult = 1;
+    if (_chooseCompetitionOnly != 0) {
+        _chooseTeamsResult = 1;
         goto exit_return;
     }
-    InitCompetitionTeamSelectionFromTableHeader((uint8_t *)selectedContest);
-    playWhatStr = (uintptr_t)aPlayCup;
+    InitCompetitionTeamSelectionFromTableHeader((uint8_t *)_selectedContest);
+    _playWhatStr = (uintptr_t)_aPlayCup;
     SetTeamsTypeForSelectedContest();
     IsContestContinentalCup();
     MarkSelectedTeamsStackLocation();
-    selectTeamsNoLimit = 0;
-    showCupsAndOther = 0;
-    loadTeam = 1;
-    chooseTeamsHeader1stPart = 0;
-    gameTypeStr = selectedTeamText;
-    viewSelectedTeams = 2;
+    _selectTeamsNoLimit = 0;
+    _showCupsAndOther = 0;
+    _loadTeam = 1;
+    _chooseTeamsHeader1stPart = 0;
+    _gameTypeStr = _selectedTeamText;
+    _viewSelectedTeams = 2;
     GetCountryName(d6);
     goto loc_E73A;
 
 loc_E65A:
     /* League setup */
-    lnum = leagueNumbersTable[d7];
-    leagueNumber = lnum;
-    contestLeagueNumber = lnum;
+    lnum = _leagueNumbersTable[d7];
+    _leagueNumber = lnum;
+    _contestLeagueNumber = lnum;
 
-    if (chooseCompetitionOnly != 0) {
-        chooseTeamsResult = 1;
+    if (_chooseCompetitionOnly != 0) {
+        _chooseTeamsResult = 1;
         goto exit_return;
     }
-    InitCompetitionTeamSelectionFromTableEntry(lnum, (uint8_t *)selectedContest);
-    playWhatStr = (uintptr_t)aPlayLeague;
+    InitCompetitionTeamSelectionFromTableEntry(lnum, (uint8_t *)_selectedContest);
+    _playWhatStr = (uintptr_t)_aPlayLeague;
     SetTeamsTypeForSelectedContest();
     IsContestContinentalCup();
     MarkSelectedTeamsStackLocation();
-    selectTeamsNoLimit = 0;
-    showCupsAndOther = 0;
-    loadTeam = 1;
-    chooseTeamsHeader1stPart = 0;
-    gameTypeStr = selectedTeamText;
-    viewSelectedTeams = 2;
+    _selectTeamsNoLimit = 0;
+    _showCupsAndOther = 0;
+    _loadTeam = 1;
+    _chooseTeamsHeader1stPart = 0;
+    _gameTypeStr = _selectedTeamText;
+    _viewSelectedTeams = 2;
     GetCountryName(d6);
     goto loc_E73A;
 
 loc_E6E4:
     /* Load team file for selected league */
-    leagueNumber = d7;
+    _leagueNumber = d7;
     if (LoadTeamFile((uint8_t)d6) != 0)
         goto exit_clear;
 
 loc_E6F6:
     /* Show friendly menu */
-    entryText2 = selectedTeamText;
-    ShowMenu(chooseTeamsFriendlyMenu);
+    _entryText2 = _selectedTeamText;
+    ShowMenu(_chooseTeamsFriendlyMenu);
 
-    if (viewSelectedTeams != 0)
+    if (_viewSelectedTeams != 0)
         goto loc_E73A;
-    if (abortSelectTeams != 0)
+    if (_abortSelectTeams != 0)
         goto exit_return;
-    if (chooseTeamsResult != 0)
+    if (_chooseTeamsResult != 0)
         goto exit_return;
 
     /* loc_13E734: */
@@ -3419,26 +3419,26 @@ loc_E6F6:
 
 loc_E73A:
     /* Show friendly menu 2 (with country name if needed) */
-    if (isCountryNumber != 0)
-        GetCountryName(countryNumber);
-    entryText2 = selectedTeamText;
-    ShowMenu(chooseTeamsFriendlyMenu2);
+    if (_isCountryNumber != 0)
+        GetCountryName(_countryNumber);
+    _entryText2 = _selectedTeamText;
+    ShowMenu(_chooseTeamsFriendlyMenu2);
 
-    if (abortSelectTeams != 0)
+    if (_abortSelectTeams != 0)
         goto exit_return;
-    if (chooseTeamsResult != 0)
+    if (_chooseTeamsResult != 0)
         goto exit_return;
 
-    if (isCountryNumber != 0) {
-        isCountryNumber = 0;
+    if (_isCountryNumber != 0) {
+        _isCountryNumber = 0;
         d7 = PopContinent();
-        if (isContestContinentalCup != 0)
+        if (_isContestContinentalCup != 0)
             goto loc_E6F6;
         goto loc_E012;
     }
 
     /* loc_13E79A: */
-    if (isContestContinentalCup != 0)
+    if (_isContestContinentalCup != 0)
         goto loc_E6F6;
 
     /* loc_13E734: */
@@ -3447,7 +3447,7 @@ loc_E73A:
 
 exit_clear:
     /* loc_13E7A6: */
-    chooseTeamsResult = 0;
+    _chooseTeamsResult = 0;
 exit_return:
     /* locret_13E7AC: */
     return;

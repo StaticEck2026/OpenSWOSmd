@@ -38,7 +38,7 @@ int  swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_si
 
 /* Save `size` bytes from `buf` to file `name`. Overwrites if it
  * exists. Returns 0 on success, non-zero on failure. */
-int  swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size);
+int  swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t _size);
 
 /* ---- Heap (size-tagged allocations) ----
  *

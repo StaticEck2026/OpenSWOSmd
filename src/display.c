@@ -34,32 +34,32 @@
 #endif
 
 /* Custom chip base pointer — set once, used by all HW register access */
-volatile struct Custom *custom = (volatile struct Custom *)0xDFF000;
+volatile struct Custom *_custom = (volatile struct Custom *)0xDFF000;
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 
 /* Frontbuffer pointers */
-extern uint8_t frontbufferBase[];
-extern uint8_t frontbufferBaseAlt[];
-extern uint8_t frontbufferMaskBuffer[];
-extern volatile uintptr_t frontbufferBasePtr;
-extern volatile uintptr_t frontbufferBaseAltPtr;
+extern uint8_t _frontbufferBase[];
+extern uint8_t _frontbufferBaseAlt[];
+extern uint8_t _frontbufferMaskBuffer[];
+extern volatile uintptr_t _frontbufferBasePtr;
+extern volatile uintptr_t _frontbufferBaseAltPtr;
 
 /* Bitplane bases (BSSInChip, 0x384 bytes each) */
-extern uint8_t bitPlane0Base[];
-extern uint8_t bitPlane1Base[];
-extern uint8_t bitPlane2Base[];
-extern uint8_t bitPlane3Base[];
+extern uint8_t _bitPlane0Base[];
+extern uint8_t _bitPlane1Base[];
+extern uint8_t _bitPlane2Base[];
+extern uint8_t _bitPlane3Base[];
 #ifdef AGA
 extern uint8_t bitPlane4Base[];
 extern uint8_t bitPlane5Base[];
 extern uint8_t bitPlane6Base[];
 extern uint8_t bitPlane7Base[];
 #endif
-extern uint8_t bitPlane0BaseAlt[];
-extern uint8_t bitPlane1BaseAlt[];
-extern uint8_t bitPlane2BaseAlt[];
-extern uint8_t bitPlane3BaseAlt[];
+extern uint8_t _bitPlane0BaseAlt[];
+extern uint8_t _bitPlane1BaseAlt[];
+extern uint8_t _bitPlane2BaseAlt[];
+extern uint8_t _bitPlane3BaseAlt[];
 #ifdef AGA
 extern uint8_t bitPlane4BaseAlt[];
 extern uint8_t bitPlane5BaseAlt[];
@@ -68,10 +68,10 @@ extern uint8_t bitPlane7BaseAlt[];
 #endif
 
 /* Bitplane base pointers */
-extern volatile uint32_t bitPlane0BasePtr;
-extern volatile uint32_t bitPlane1BasePtr;
-extern volatile uint32_t bitPlane2BasePtr;
-extern volatile uint32_t bitPlane3BasePtr;
+extern volatile uint32_t _bitPlane0BasePtr;
+extern volatile uint32_t _bitPlane1BasePtr;
+extern volatile uint32_t _bitPlane2BasePtr;
+extern volatile uint32_t _bitPlane3BasePtr;
 #ifdef AGA
 extern volatile uint32_t bitPlane4BasePtr;
 extern volatile uint32_t bitPlane5BasePtr;
@@ -80,45 +80,45 @@ extern volatile uint32_t bitPlane7BasePtr;
 #endif
 
 /* Copper list */
-extern uint8_t copperListBuffer[];
-extern uint32_t copperZeroLong;
+extern uint8_t _copperListBuffer[];
+extern uint32_t _copperZeroLong;
 
 /* Sprite blit queue sentinels (4 bytes each: 2-byte sentinel + padding/queue) */
-extern uint32_t kSpriteBlitQueueSentinel_A;
-extern uint32_t kSpriteBlitQueueSentinel_B;
-extern volatile uintptr_t spriteBlitQueue;
+extern uint32_t _kSpriteBlitQueueSentinel_A;
+extern uint32_t _kSpriteBlitQueueSentinel_B;
+extern volatile uintptr_t _spriteBlitQueue;
 
 /* Camera state */
-extern FixedPoint cameraX;          /* dc.l but word-accessed (big-endian high word) */
-extern FixedPoint cameraY;          /* dc.l but word-accessed (big-endian high word) */
-extern uint16_t cameraXMod320;
-extern uint16_t cameraYMod320;
-extern int16_t oldCameraX;
-extern int16_t oldCameraY;
+extern FixedPoint _cameraX;          /* dc.l but word-accessed (big-endian high word) */
+extern FixedPoint _cameraY;          /* dc.l but word-accessed (big-endian high word) */
+extern uint16_t _cameraXMod320;
+extern uint16_t _cameraYMod320;
+extern int16_t _oldCameraX;
+extern int16_t _oldCameraY;
 
 /* Double-buffer saved camera state (slot 0) */
-extern uint16_t dstXByteOffsetSaved0;
-extern uint16_t dstYStartLinesSaved0;
-extern int16_t oldCameraXSaved0;
-extern int16_t oldCameraYSaved0;
-extern int16_t cameraXSaved0;
-extern int16_t cameraYSaved0;
+extern uint16_t _dstXByteOffsetSaved0;
+extern uint16_t _dstYStartLinesSaved0;
+extern int16_t _oldCameraXSaved0;
+extern int16_t _oldCameraYSaved0;
+extern int16_t _cameraXSaved0;
+extern int16_t _cameraYSaved0;
 
 /* Double-buffer saved camera state (slot 1) */
-extern uint16_t dstXByteOffsetSaved1;
-extern uint16_t dstYStartLinesSaved1;
-extern int16_t oldCameraXSaved1;
-extern int16_t oldCameraYSaved1;
-extern int16_t cameraXSaved1;
-extern int16_t cameraYSaved1;
+extern uint16_t _dstXByteOffsetSaved1;
+extern uint16_t _dstYStartLinesSaved1;
+extern int16_t _oldCameraXSaved1;
+extern int16_t _oldCameraYSaved1;
+extern int16_t _cameraXSaved1;
+extern int16_t _cameraYSaved1;
 
 /* Display flags */
-extern uint16_t usePlaneOffsetFlag;
-extern uint16_t useAltBaseFlag;
-extern uint16_t paletteIndex;
+extern uint16_t _usePlaneOffsetFlag;
+extern uint16_t _useAltBaseFlag;
+extern uint16_t _paletteIndex;
 
 /* Sprite graphics table pointer */
-extern uint8_t *spriteGraphicsPtr;
+extern uint8_t *_spriteGraphicsPtr;
 
 /* ================================================================
  * Helper: write a 32-bit pointer into a copper list entry.
@@ -320,17 +320,17 @@ void InitDisplayAndCopper(void)
     int16_t i;
 
     /* Set frontbuffer base pointers */
-    frontbufferBasePtr = (uintptr_t)frontbufferBase;
-    frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
+    _frontbufferBasePtr = (uintptr_t)_frontbufferBase;
+    _frontbufferBaseAltPtr = (uintptr_t)_frontbufferBaseAlt;
 
     /* Initialize sprite blit queue sentinels */
-    kSpriteBlitQueueSentinel_A = 0xFFFFFFFFu;
-    kSpriteBlitQueueSentinel_B = 0xFFFFFFFFu;
+    _kSpriteBlitQueueSentinel_A = 0xFFFFFFFFu;
+    _kSpriteBlitQueueSentinel_B = 0xFFFFFFFFu;
 
     /* Copy copper list template → buffer */
     {
         const uint8_t *src = (const uint8_t *)copperListTemplate;
-        uint8_t *dst = copperListBuffer;
+        uint8_t *dst = _copperListBuffer;
         for (i = COPPERLIST_SIZE_BYTES - 1; i >= 0; i--)
         {
             *dst++ = *src++;
@@ -338,28 +338,28 @@ void InitDisplayAndCopper(void)
     }
 
     /* Clear copperZeroLong */
-    copperZeroLong = 0;
+    _copperZeroLong = 0;
 
     /* Disable interrupts during vblank sync */
-    custom->intena = 0x4000u;
+    _custom->intena = 0x4000u;
 
     /* Wait for beam position <= line 10 (top of frame) */
     {
         uint32_t vpos;
         do
         {
-            vpos = *(volatile uint32_t *)&custom->vposr;
+            vpos = *(volatile uint32_t *)&_custom->vposr;
             vpos = (vpos & 0x1FFFFu) >> 8;
         } while (vpos > 0x0Au);
     }
 
     /* Re-enable interrupts */
-    custom->intena = 0xC000u;
+    _custom->intena = 0xC000u;
 
     /* Write copperZeroLong pointer into first 8 sprite pointer entries */
     {
-        uint8_t *entry = copperListBuffer + COP_SPR_B0_OFF;
-        uint32_t ptr = (uintptr_t)&copperZeroLong;
+        uint8_t *entry = _copperListBuffer + COP_SPR_B0_OFF;
+        uint32_t ptr = (uintptr_t)&_copperZeroLong;
         for (i = 7; i >= 0; i--)
         {
             copper_write_ptr(entry, ptr);
@@ -390,13 +390,13 @@ void InitDisplayAndCopper(void)
 #else
         /* OCS: clear 2 blocks x 16 colors */
         uint8_t *p;
-        p = copperListBuffer + COP_PAL_B0_C0_VAL_OFF;
+        p = _copperListBuffer + COP_PAL_B0_C0_VAL_OFF;
         for (i = 15; i >= 0; i--)
         {
             copper_write_word(p, 0);
             p += 4;
         }
-        p = copperListBuffer + COP_PAL_B1_C0_VAL_OFF;
+        p = _copperListBuffer + COP_PAL_B1_C0_VAL_OFF;
         for (i = 15; i >= 0; i--)
         {
             copper_write_word(p, 0);
@@ -406,10 +406,10 @@ void InitDisplayAndCopper(void)
     }
 
     /* Set bitplane base pointers */
-    bitPlane0BasePtr = (uintptr_t)bitPlane0Base;
-    bitPlane1BasePtr = (uintptr_t)bitPlane1Base;
-    bitPlane2BasePtr = (uintptr_t)bitPlane2Base;
-    bitPlane3BasePtr = (uintptr_t)bitPlane3Base;
+    _bitPlane0BasePtr = (uintptr_t)_bitPlane0Base;
+    _bitPlane1BasePtr = (uintptr_t)_bitPlane1Base;
+    _bitPlane2BasePtr = (uintptr_t)_bitPlane2Base;
+    _bitPlane3BasePtr = (uintptr_t)_bitPlane3Base;
 #ifdef AGA
     bitPlane4BasePtr = (uint32_t)bitPlane4Base;
     bitPlane5BasePtr = (uint32_t)bitPlane5Base;
@@ -418,10 +418,10 @@ void InitDisplayAndCopper(void)
 #endif
 
     /* Clear first long of each bitplane */
-    *(volatile uint32_t *)bitPlane0Base = copperZeroLong;
-    *(volatile uint32_t *)bitPlane1Base = copperZeroLong;
-    *(volatile uint32_t *)bitPlane2Base = copperZeroLong;
-    *(volatile uint32_t *)bitPlane3Base = copperZeroLong;
+    *(volatile uint32_t *)_bitPlane0Base = _copperZeroLong;
+    *(volatile uint32_t *)_bitPlane1Base = _copperZeroLong;
+    *(volatile uint32_t *)_bitPlane2Base = _copperZeroLong;
+    *(volatile uint32_t *)_bitPlane3Base = _copperZeroLong;
 #ifdef AGA
     *(volatile uint32_t *)bitPlane4Base = copperZeroLong;
     *(volatile uint32_t *)bitPlane5Base = copperZeroLong;
@@ -433,34 +433,34 @@ void InitDisplayAndCopper(void)
     UpdatePlanePtrsAndBlitParams();
 
     /* Install copper list */
-    custom->cop1lc = (uintptr_t)copperListBuffer;
+    _custom->cop1lc = (uintptr_t)_copperListBuffer;
 
     /* Strobe copper to start — original asm does: move.w (COPJMP1).l,d0
      * This is a pure read strobe; any access triggers copper PC reload. */
     {
-        volatile uint16_t dummy = custom->copjmp1;
+        volatile uint16_t dummy = _custom->copjmp1;
         (void)dummy;
     }
 
     /* Enable blitter DMA, wait for idle, disable */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
     {
         /* wait for blitter idle */
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Enable copper + bitplane DMA */
-    custom->dmacon = 0x8280u;
+    _custom->dmacon = 0x8280u;
     /* Enable sprite DMA */
-    custom->dmacon = 0x8220u;
+    _custom->dmacon = 0x8220u;
 
     /* Re-strobe copper after DMA is fully enabled.
      * Some emulators (FS-UAE) may ignore the pre-DMA strobe,
      * so re-trigger to ensure the copper starts from COP1LC. */
     {
-        volatile uint16_t dummy = custom->copjmp1;
+        volatile uint16_t dummy = _custom->copjmp1;
         (void)dummy;
     }
 }
@@ -479,10 +479,10 @@ void UpdatePlanePtrsAndBlitParams(void)
     int16_t i;
 
     /* Write bitplane base pointers into copper list sprite pointer slots */
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF, bitPlane0BasePtr);
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 8, bitPlane1BasePtr);
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 16, bitPlane2BasePtr);
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 24, bitPlane3BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF, _bitPlane0BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 8, _bitPlane1BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 16, _bitPlane2BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 24, _bitPlane3BasePtr);
 #ifdef AGA
     copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 32, bitPlane4BasePtr);
     copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 40, bitPlane5BasePtr);
@@ -491,63 +491,63 @@ void UpdatePlanePtrsAndBlitParams(void)
 #endif
 
     /* Handle horizontal scroll alignment */
-    d1 = cameraXMod320 & 0x0Fu;
+    d1 = _cameraXMod320 & 0x0Fu;
     if (d1 == 0)
     {
         /* Aligned case */
-        copper_write_word(copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_ALIGNED);
-        copper_write_word(copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_ALIGNED);
-        copper_write_word(copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0030u);
-        copper_write_word(copperListBuffer + COP_BPLCON1_VAL_OFF, 0);
+        copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_ALIGNED);
+        copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_ALIGNED);
+        copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0030u);
+        copper_write_word(_copperListBuffer + COP_BPLCON1_VAL_OFF, 0);
     }
     else
     {
         /* Unaligned case */
         uint16_t shift = 0x10u - d1;
-        copper_write_word(copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_UNALIGNED);
-        copper_write_word(copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_UNALIGNED);
-        copper_write_word(copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0028u);
-        copper_write_word(copperListBuffer + COP_BPLCON1_VAL_OFF, (uint16_t)(shift | (shift << 4)));
+        copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_UNALIGNED);
+        copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_UNALIGNED);
+        copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0028u);
+        copper_write_word(_copperListBuffer + COP_BPLCON1_VAL_OFF, (uint16_t)(shift | (shift << 4)));
     }
 
     /* Build plane pointer tables at copper BPL pointer blocks A and B */
     {
-        uint8_t *tableA = copperListBuffer + COP_BPLPTR_BLOCKA_OFF;
-        uint8_t *tableB = copperListBuffer + COP_BPLPTR_BLOCKB_OFF;
+        uint8_t *tableA = _copperListBuffer + COP_BPLPTR_BLOCKA_OFF;
+        uint8_t *tableB = _copperListBuffer + COP_BPLPTR_BLOCKB_OFF;
         uint32_t baseOffset;
         uint32_t altOffset;
 
         /* Compute Y offset */
-        baseOffset = (uint32_t)cameraYMod320 * ROW_STRIDE_BYTES;
+        baseOffset = (uint32_t)_cameraYMod320 * ROW_STRIDE_BYTES;
 
         /* Select base address */
-        if (usePlaneOffsetFlag != 0)
+        if (_usePlaneOffsetFlag != 0)
         {
-            baseOffset += (uintptr_t)frontbufferMaskBuffer;
+            baseOffset += (uintptr_t)_frontbufferMaskBuffer;
         }
-        else if (useAltBaseFlag != 0)
+        else if (_useAltBaseFlag != 0)
         {
-            baseOffset += frontbufferBaseAltPtr;
+            baseOffset += _frontbufferBaseAltPtr;
         }
         else
         {
-            baseOffset += frontbufferBasePtr;
+            baseOffset += _frontbufferBasePtr;
         }
 
         /* Add X byte offset */
-        d1 = cameraXMod320;
+        d1 = _cameraXMod320;
         d1 >>= 3;
         d1 &= 0xFFFEu; /* word-align */
         baseOffset += d1;
 
         /* Compute alt offset for second table */
-        if (usePlaneOffsetFlag != 0)
+        if (_usePlaneOffsetFlag != 0)
         {
-            altOffset = (uintptr_t)d1 + (uintptr_t)frontbufferMaskBuffer;
+            altOffset = (uintptr_t)d1 + (uintptr_t)_frontbufferMaskBuffer;
         }
         else
         {
-            altOffset = (uint32_t)d1 + frontbufferBasePtr;
+            altOffset = (uint32_t)d1 + _frontbufferBasePtr;
         }
 
         /* Write 4 plane pointer pairs */
@@ -564,17 +564,17 @@ void UpdatePlanePtrsAndBlitParams(void)
 
     /* Compute and write blit line count */
     {
-        uint16_t lineCount = SCREEN_HEIGHT - cameraYMod320 + 0x24u;
+        uint16_t lineCount = SCREEN_HEIGHT - _cameraYMod320 + 0x24u;
         if (lineCount > 0xFFu)
         {
-            copper_write_word(copperListBuffer + COP_WAIT_VHPOS, 0xFFE1u);
+            copper_write_word(_copperListBuffer + COP_WAIT_VHPOS, 0xFFE1u);
         }
         else
         {
-            copper_write_word(copperListBuffer + COP_WAIT_VHPOS, 1);
+            copper_write_word(_copperListBuffer + COP_WAIT_VHPOS, 1);
         }
         lineCount &= 0xFFu;
-        copper_write_word(copperListBuffer + COP_WAIT_WAIT, (uint16_t)((lineCount << 8) | 1u));
+        copper_write_word(_copperListBuffer + COP_WAIT_WAIT, (uint16_t)((lineCount << 8) | 1u));
     }
 }
 
@@ -587,13 +587,13 @@ void UpdatePlanePtrsAndBlitParams(void)
 __attribute__((used, externally_visible))
 void SwapBuffersAndCameraViewState(void)
 {
-    if (frontbufferBasePtr == (uintptr_t)frontbufferBase)
+    if (_frontbufferBasePtr == (uintptr_t)_frontbufferBase)
     {
         /* Currently using primary → swap to alt */
-        bitPlane0BasePtr = (uintptr_t)bitPlane0BaseAlt;
-        bitPlane1BasePtr = (uintptr_t)bitPlane1BaseAlt;
-        bitPlane2BasePtr = (uintptr_t)bitPlane2BaseAlt;
-        bitPlane3BasePtr = (uintptr_t)bitPlane3BaseAlt;
+        _bitPlane0BasePtr = (uintptr_t)_bitPlane0BaseAlt;
+        _bitPlane1BasePtr = (uintptr_t)_bitPlane1BaseAlt;
+        _bitPlane2BasePtr = (uintptr_t)_bitPlane2BaseAlt;
+        _bitPlane3BasePtr = (uintptr_t)_bitPlane3BaseAlt;
 #ifdef AGA
         bitPlane4BasePtr = (uint32_t)bitPlane4BaseAlt;
         bitPlane5BasePtr = (uint32_t)bitPlane5BaseAlt;
@@ -601,10 +601,10 @@ void SwapBuffersAndCameraViewState(void)
         bitPlane7BasePtr = (uint32_t)bitPlane7BaseAlt;
 #endif
 
-        *(volatile uint32_t *)bitPlane0BaseAlt = copperZeroLong;
-        *(volatile uint32_t *)bitPlane1BaseAlt = copperZeroLong;
-        *(volatile uint32_t *)bitPlane2BaseAlt = copperZeroLong;
-        *(volatile uint32_t *)bitPlane3BaseAlt = copperZeroLong;
+        *(volatile uint32_t *)_bitPlane0BaseAlt = _copperZeroLong;
+        *(volatile uint32_t *)_bitPlane1BaseAlt = _copperZeroLong;
+        *(volatile uint32_t *)_bitPlane2BaseAlt = _copperZeroLong;
+        *(volatile uint32_t *)_bitPlane3BaseAlt = _copperZeroLong;
 #ifdef AGA
         *(volatile uint32_t *)bitPlane4BaseAlt = copperZeroLong;
         *(volatile uint32_t *)bitPlane5BaseAlt = copperZeroLong;
@@ -612,9 +612,9 @@ void SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)bitPlane7BaseAlt = copperZeroLong;
 #endif
 
-        frontbufferBasePtr = (uintptr_t)frontbufferBaseAlt;
-        frontbufferBaseAltPtr = (uintptr_t)frontbufferBase;
-        spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_B;
+        _frontbufferBasePtr = (uintptr_t)_frontbufferBaseAlt;
+        _frontbufferBaseAltPtr = (uintptr_t)_frontbufferBase;
+        _spriteBlitQueue = (uintptr_t)&_kSpriteBlitQueueSentinel_B;
         /* DO NOT write 0xFFFFFFFF at the queue head here. The cursor
          * reset above is intentional — the previous frame's
          * DrawSprites calls left valid undraw entries between
@@ -624,28 +624,28 @@ void SwapBuffersAndCameraViewState(void)
          * defeats that, and sprites smear because no undraw runs. */
 
         /* Save current camera state to slot 0 */
-        dstXByteOffsetSaved0 = cameraXMod320;
-        dstYStartLinesSaved0 = cameraYMod320;
-        oldCameraXSaved0 = oldCameraX;
-        oldCameraYSaved0 = oldCameraY;
-        cameraXSaved0 = cameraX.s.i;
-        cameraYSaved0 = cameraY.s.i;
+        _dstXByteOffsetSaved0 = _cameraXMod320;
+        _dstYStartLinesSaved0 = _cameraYMod320;
+        _oldCameraXSaved0 = _oldCameraX;
+        _oldCameraYSaved0 = _oldCameraY;
+        _cameraXSaved0 = _cameraX.s.i;
+        _cameraYSaved0 = _cameraY.s.i;
 
         /* Restore camera state from slot 1 */
-        cameraXMod320 = dstXByteOffsetSaved1;
-        cameraYMod320 = dstYStartLinesSaved1;
-        oldCameraX = oldCameraXSaved1;
-        oldCameraY = oldCameraYSaved1;
-        cameraX.s.i = cameraXSaved1;
-        cameraY.s.i = cameraYSaved1;
+        _cameraXMod320 = _dstXByteOffsetSaved1;
+        _cameraYMod320 = _dstYStartLinesSaved1;
+        _oldCameraX = _oldCameraXSaved1;
+        _oldCameraY = _oldCameraYSaved1;
+        _cameraX.s.i = _cameraXSaved1;
+        _cameraY.s.i = _cameraYSaved1;
     }
     else
     {
         /* Currently using alt → swap to primary */
-        bitPlane0BasePtr = (uintptr_t)bitPlane0Base;
-        bitPlane1BasePtr = (uintptr_t)bitPlane1Base;
-        bitPlane2BasePtr = (uintptr_t)bitPlane2Base;
-        bitPlane3BasePtr = (uintptr_t)bitPlane3Base;
+        _bitPlane0BasePtr = (uintptr_t)_bitPlane0Base;
+        _bitPlane1BasePtr = (uintptr_t)_bitPlane1Base;
+        _bitPlane2BasePtr = (uintptr_t)_bitPlane2Base;
+        _bitPlane3BasePtr = (uintptr_t)_bitPlane3Base;
 #ifdef AGA
         bitPlane4BasePtr = (uint32_t)bitPlane4Base;
         bitPlane5BasePtr = (uint32_t)bitPlane5Base;
@@ -653,10 +653,10 @@ void SwapBuffersAndCameraViewState(void)
         bitPlane7BasePtr = (uint32_t)bitPlane7Base;
 #endif
 
-        *(volatile uint32_t *)bitPlane0Base = copperZeroLong;
-        *(volatile uint32_t *)bitPlane1Base = copperZeroLong;
-        *(volatile uint32_t *)bitPlane2Base = copperZeroLong;
-        *(volatile uint32_t *)bitPlane3Base = copperZeroLong;
+        *(volatile uint32_t *)_bitPlane0Base = _copperZeroLong;
+        *(volatile uint32_t *)_bitPlane1Base = _copperZeroLong;
+        *(volatile uint32_t *)_bitPlane2Base = _copperZeroLong;
+        *(volatile uint32_t *)_bitPlane3Base = _copperZeroLong;
 #ifdef AGA
         *(volatile uint32_t *)bitPlane4Base = copperZeroLong;
         *(volatile uint32_t *)bitPlane5Base = copperZeroLong;
@@ -664,27 +664,27 @@ void SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
 #endif
 
-        frontbufferBasePtr = (uintptr_t)frontbufferBase;
-        frontbufferBaseAltPtr = (uintptr_t)frontbufferBaseAlt;
-        spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_A;
+        _frontbufferBasePtr = (uintptr_t)_frontbufferBase;
+        _frontbufferBaseAltPtr = (uintptr_t)_frontbufferBaseAlt;
+        _spriteBlitQueue = (uintptr_t)&_kSpriteBlitQueueSentinel_A;
         /* Cursor reset only — do NOT clear the head sentinel here. See
          * comment in the alt-buffer branch above. */
 
         /* Save current camera state to slot 1 */
-        dstXByteOffsetSaved1 = cameraXMod320;
-        dstYStartLinesSaved1 = cameraYMod320;
-        oldCameraXSaved1 = oldCameraX;
-        oldCameraYSaved1 = oldCameraY;
-        cameraXSaved1 = cameraX.s.i;
-        cameraYSaved1 = cameraY.s.i;
+        _dstXByteOffsetSaved1 = _cameraXMod320;
+        _dstYStartLinesSaved1 = _cameraYMod320;
+        _oldCameraXSaved1 = _oldCameraX;
+        _oldCameraYSaved1 = _oldCameraY;
+        _cameraXSaved1 = _cameraX.s.i;
+        _cameraYSaved1 = _cameraY.s.i;
 
         /* Restore camera state from slot 0 */
-        cameraXMod320 = dstXByteOffsetSaved0;
-        cameraYMod320 = dstYStartLinesSaved0;
-        oldCameraX = oldCameraXSaved0;
-        oldCameraY = oldCameraYSaved0;
-        cameraX.s.i = cameraXSaved0;
-        cameraY.s.i = cameraYSaved0;
+        _cameraXMod320 = _dstXByteOffsetSaved0;
+        _cameraYMod320 = _dstYStartLinesSaved0;
+        _oldCameraX = _oldCameraXSaved0;
+        _oldCameraY = _oldCameraYSaved0;
+        _cameraX.s.i = _cameraXSaved0;
+        _cameraY.s.i = _cameraYSaved0;
     }
 }
 
@@ -698,53 +698,53 @@ void SwapBuffersAndCameraViewState(void)
 __attribute__((used, externally_visible))
 void SetCameraCoordinates(int16_t targetX, int16_t targetY)
 {
-    /* Keep the g_screen_width-wide view on the pitch for ANY caller — the kickoff/intro
+    /* Keep the _screen_width-wide view on the pitch for ANY caller — the kickoff/intro
      * and panel-restore set the camera directly, bypassing MoveCamera's clamp, so on a
      * wide view they'd run off the pitch edge until gameplay takes over. pitchWidth
-     * (0x2A0) - viewWidth = the max camera X. Folds to [0, 0x150] on Amiga (g_screen_width
+     * (0x2A0) - viewWidth = the max camera X. Folds to [0, 0x150] on Amiga (_screen_width
      * = 336), the original range — a no-op for the always-on-pitch classic view. */
     {
-        int16_t panRange = (int16_t)(0x2A0 - g_screen_width);
+        int16_t panRange = (int16_t)(0x2A0 - _screen_width);
         if (panRange < 0) panRange = 0;
         if (targetX < 0) targetX = 0;
         else if (targetX > panRange) targetX = panRange;
     }
 
     /* Move X toward target */
-    while (cameraX.s.i != targetX)
+    while (_cameraX.s.i != targetX)
     {
-        if (cameraX.s.i < targetX)
+        if (_cameraX.s.i < targetX)
         {
-            cameraX.s.i += 1;
-            cameraXMod320 += 1;
-            if (cameraXMod320 == 352)
-                cameraXMod320 = 0;
+            _cameraX.s.i += 1;
+            _cameraXMod320 += 1;
+            if (_cameraXMod320 == 352)
+                _cameraXMod320 = 0;
         }
         else
         {
-            cameraX.s.i -= 1;
-            cameraXMod320 -= 1;
-            if ((int16_t)cameraXMod320 < 0)
-                cameraXMod320 = 351;
+            _cameraX.s.i -= 1;
+            _cameraXMod320 -= 1;
+            if ((int16_t)_cameraXMod320 < 0)
+                _cameraXMod320 = 351;
         }
     }
 
     /* Move Y toward target */
-    while (cameraY.s.i != targetY)
+    while (_cameraY.s.i != targetY)
     {
-        if (cameraY.s.i < targetY)
+        if (_cameraY.s.i < targetY)
         {
-            cameraY.s.i += 1;
-            cameraYMod320 += 1;
-            if (cameraYMod320 == 272)
-                cameraYMod320 = 0;
+            _cameraY.s.i += 1;
+            _cameraYMod320 += 1;
+            if (_cameraYMod320 == 272)
+                _cameraYMod320 = 0;
         }
         else
         {
-            cameraY.s.i -= 1;
-            cameraYMod320 -= 1;
-            if ((int16_t)cameraYMod320 < 0)
-                cameraYMod320 = 271;
+            _cameraY.s.i -= 1;
+            _cameraYMod320 -= 1;
+            if ((int16_t)_cameraYMod320 < 0)
+                _cameraYMod320 = 271;
         }
     }
 
@@ -763,7 +763,7 @@ void SetCameraCoordinates(int16_t targetX, int16_t targetY)
 __attribute__((used, externally_visible))
 void DoubleBufferSwapSequence(void)
 {
-    paletteIndex = 0;
+    _paletteIndex = 0;
     SetCameraCoordinates(0, 0);
     SwapBuffersAndCameraViewState();
     UpdatePlanePtrsAndBlitParams();
@@ -813,76 +813,76 @@ void BlitterCopyPanelToScreen2(void)
      * Negligible at 50 Hz. */
     /* (frontbufferMaskBuffer is a static array, so its address is always
      * non-null — historical NULL guard removed.) */
-    uint8_t *dst = (uint8_t *)frontbufferBasePtr;
+    uint8_t *dst = (uint8_t *)_frontbufferBasePtr;
     if (dst)
-        memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
-    uint8_t *altDst = (uint8_t *)frontbufferBaseAltPtr;
+        memcpy(dst, _frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    uint8_t *altDst = (uint8_t *)_frontbufferBaseAltPtr;
     if (altDst && altDst != dst)
-        memcpy(altDst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+        memcpy(altDst, _frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
 }
 #else
 __attribute__((used, externally_visible))
 void BlitterCopyPanelToScreen2(void)
 {
     /* Enable blitter DMA and wait for idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
     {
         /* wait */
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure blitter for A→D copy */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
-    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
     {
-        uint8_t *srcPlane = frontbufferMaskBuffer;
-        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        uint8_t *srcPlane = _frontbufferMaskBuffer;
+        uint8_t *dstPlane = (uint8_t *)_frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (custom->dmaconr & (1u << 14)) {}
-            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+            _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (_custom->dmaconr & (1u << 14)) {}
+            _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            BLT_L(custom->bltapt, (uint32_t)srcPlane);
-            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
-            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
+            BLT_L(_custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
     /* Wait for last blit */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, 0);
     /* Set source and destination pointers */
-    BLT_L(custom->bltapt, (uint32_t)frontbufferMaskBuffer);
-    BLT_L(custom->bltdpt, frontbufferBasePtr);
+    BLT_L(_custom->bltapt, (uint32_t)_frontbufferMaskBuffer);
+    BLT_L(_custom->bltdpt, _frontbufferBasePtr);
     /* Kick the blit (writing BLTSIZE starts it) */
-    BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
+    BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
     /* Wait for blit to complete, then disable blitter DMA */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14))
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14))
     {
         /* wait */
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Reset blit size to small default */
-    BLT_W(custom->bltsize, 0x0016u);
+    BLT_W(_custom->bltsize, 0x0016u);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
@@ -903,17 +903,17 @@ void ProcessSpriteBlitQueue(void)
     volatile uint32_t *queue;
 
     /* Enable blitter and wait idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Set blitter config: A→D copy, full masks, no shift */
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
-    queue = (volatile uint32_t *)spriteBlitQueue;
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    queue = (volatile uint32_t *)_spriteBlitQueue;
 
     for (;;)
     {
@@ -921,28 +921,28 @@ void ProcessSpriteBlitQueue(void)
         uint16_t *entry16;
 
         /* Wait for blitter idle */
-        custom->dmacon = (uint16_t)DMACON_BLT_ON;
-        (void)(custom->dmaconr & (1u << 14));
-        while (custom->dmaconr & (1u << 14)) {}
-        custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+        _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+        (void)(_custom->dmaconr & (1u << 14));
+        while (_custom->dmaconr & (1u << 14)) {}
+        _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
         srcPtr = queue[0];
         if ((int32_t)srcPtr < 0)
             break; /* sentinel: end of queue */
 
-        BLT_L(custom->bltapt, srcPtr);
-        BLT_L(custom->bltdpt, queue[1]);
+        BLT_L(_custom->bltapt, srcPtr);
+        BLT_L(_custom->bltdpt, queue[1]);
         entry16 = (uint16_t *)queue;
-        BLT_W(custom->bltamod, entry16[4]); /* +8 */
-        BLT_W(custom->bltdmod, entry16[4]); /* same mod for A and D */
-        BLT_W(custom->bltsize, entry16[5]); /* +10, kicks blit */
+        BLT_W(_custom->bltamod, entry16[4]); /* +8 */
+        BLT_W(_custom->bltdmod, entry16[4]); /* same mod for A and D */
+        BLT_W(_custom->bltsize, entry16[5]); /* +10, kicks blit */
 
         queue = (volatile uint32_t *)((uint8_t *)queue + 12);
     }
 
     /* Reset queue: write sentinel at start */
     {
-        uint32_t *queueBase = (uint32_t *)spriteBlitQueue;
+        uint32_t *queueBase = (uint32_t *)_spriteBlitQueue;
         *queueBase = 0xFFFFFFFFu;
     }
 }
@@ -958,64 +958,64 @@ void ProcessSpriteBlitQueue(void)
 __attribute__((used, externally_visible))
 void BlitterCopyPanelToScreen(void)
 {
-    uint8_t *dst = (uint8_t *)frontbufferBasePtr;
+    uint8_t *dst = (uint8_t *)_frontbufferBasePtr;
     /* (frontbufferMaskBuffer is a static array, address always non-null.) */
     if (dst)
-        memcpy(dst, frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
+        memcpy(dst, _frontbufferMaskBuffer, FRONTBUFFER_SIZE_TOTAL_BYTES);
 }
 #else
 __attribute__((used, externally_visible))
 void BlitterCopyPanelToScreen(void)
 {
     /* Wait for blitter idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: A→D copy, full masks */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USEA_USED_LF_F0);
 #ifdef AGA
     /* AGA: per-plane blit with interleaved stride */
-    BLT_W(custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
-    BLT_W(custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltamod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
+    BLT_W(_custom->bltdmod, (uint16_t)(ROW_STRIDE_BYTES - PLANE_STRIDE));
     {
-        uint8_t *srcPlane = frontbufferMaskBuffer;
-        uint8_t *dstPlane = (uint8_t *)frontbufferBasePtr;
+        uint8_t *srcPlane = _frontbufferMaskBuffer;
+        uint8_t *dstPlane = (uint8_t *)_frontbufferBasePtr;
         int16_t plane;
         for (plane = NUM_PLANES_MINUS1; plane >= 0; plane--)
         {
-            custom->dmacon = (uint16_t)DMACON_BLT_ON;
-            while (custom->dmaconr & (1u << 14)) {}
-            custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+            _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+            while (_custom->dmaconr & (1u << 14)) {}
+            _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
-            BLT_L(custom->bltapt, (uint32_t)srcPlane);
-            BLT_L(custom->bltdpt, (uint32_t)dstPlane);
-            BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
+            BLT_L(_custom->bltapt, (uint32_t)srcPlane);
+            BLT_L(_custom->bltdpt, (uint32_t)dstPlane);
+            BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_TO_SCREEN);
             srcPlane += PLANE_STRIDE;
             dstPlane += PLANE_STRIDE;
         }
     }
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 #else
     /* OCS: single full-buffer blit */
-    BLT_W(custom->bltamod, 0);
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltamod, 0);
+    BLT_W(_custom->bltdmod, 0);
     /* Source = frontbufferMaskBuffer, Dest = frontbuffer */
-    BLT_L(custom->bltapt, (uint32_t)frontbufferMaskBuffer);
-    BLT_L(custom->bltdpt, frontbufferBasePtr);
-    BLT_W(custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
+    BLT_L(_custom->bltapt, (uint32_t)_frontbufferMaskBuffer);
+    BLT_L(_custom->bltdpt, _frontbufferBasePtr);
+    BLT_W(_custom->bltsize, (uint16_t)BLTSIZE_OVERLAY_PANEL);
     /* Wait, then kick small trailing blit */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
-    BLT_W(custom->bltsize, 0x0016u);
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    BLT_W(_custom->bltsize, 0x0016u);
 #endif
 }
 #endif /* SWOS_SDL_BUILD */
@@ -1037,7 +1037,7 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
      * BlitGlyphToSpriteBitmap calls stamp onto a clean background.
      * The Amiga version programs bltdpt + D-only fill; our sprite
      * data is a flat 8bpp byte array of `wquads * 16 * nlines` bytes. */
-    SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)spriteGraphicsPtr;
+    SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)_spriteGraphicsPtr;
     SpriteGraphics *spr = table[spriteIndex];
     if (!spr) return;
     uint8_t *data = spr->sprData;
@@ -1045,7 +1045,7 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     size_t bytes = (size_t)spr->wquads * 16 * (size_t)spr->nlines;
     memset(data, 0, bytes);
 #else
-    uint32_t *gfxTable = (uint32_t *)spriteGraphicsPtr;
+    uint32_t *gfxTable = (uint32_t *)_spriteGraphicsPtr;
     uint8_t *sprEntry;
     uint32_t destPtr;
     uint16_t height;
@@ -1055,26 +1055,26 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     sprEntry = (uint8_t *)gfxTable[spriteIndex];
 
     /* Wait for blitter idle */
-    custom->dmacon = (uint16_t)DMACON_BLT_ON;
-    (void)(custom->dmaconr & (1u << 14));
-    while (custom->dmaconr & (1u << 14)) {}
-    custom->dmacon = (uint16_t)DMACON_BLT_OFF;
+    _custom->dmacon = (uint16_t)DMACON_BLT_ON;
+    (void)(_custom->dmaconr & (1u << 14));
+    while (_custom->dmaconr & (1u << 14)) {}
+    _custom->dmacon = (uint16_t)DMACON_BLT_OFF;
 
     /* Configure: D-only fill (LF=F0 with no source channels) */
-    BLT_W(custom->bltalwm, BLT_FWM_ALL);
-    BLT_W(custom->bltafwm, BLT_FWM_ALL);
-    BLT_W(custom->bltcon1, 0);
-    BLT_W(custom->bltcon0, (uint16_t)BLTCON0_USED_LF_F0);
-    BLT_W(custom->bltadat, 0); /* fill with zeros */
-    BLT_W(custom->bltdmod, 0);
+    BLT_W(_custom->bltalwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltafwm, BLT_FWM_ALL);
+    BLT_W(_custom->bltcon1, 0);
+    BLT_W(_custom->bltcon0, (uint16_t)BLTCON0_USED_LF_F0);
+    BLT_W(_custom->bltadat, 0); /* fill with zeros */
+    BLT_W(_custom->bltdmod, 0);
     /* Dest = sprite data pointer (first long of sprite entry) */
     destPtr = *(uint32_t *)sprEntry;
-    BLT_L(custom->bltdpt, destPtr);
+    BLT_L(_custom->bltdpt, destPtr);
     /* BLTSIZE = (height << 8) | stride */
     height = *(uint16_t *)(sprEntry + 12);
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
     blitSize = (uint16_t)((height << (NUM_PLANES_SHIFT + 6)) | stride);
-    BLT_W(custom->bltsize, blitSize);
+    BLT_W(_custom->bltsize, blitSize);
 #endif
 }
 
@@ -1087,14 +1087,14 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
 __attribute__((used, externally_visible))
 void FlashColor0Delay(uint32_t loopCount, uint16_t color)
 {
-    volatile uint16_t *copperColor0 = (volatile uint16_t *)(copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
+    volatile uint16_t *copperColor0 = (volatile uint16_t *)(_copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
 
-    custom->color[0] = color;
+    _custom->color[0] = color;
     while (--loopCount != 0)
     {
-        custom->color[0] = color; /* keep writing to prevent optimizer from removing */
+        _custom->color[0] = color; /* keep writing to prevent optimizer from removing */
     }
-    custom->color[0] = *copperColor0;
+    _custom->color[0] = *copperColor0;
 }
 
 /* ================================================================
@@ -1127,8 +1127,8 @@ void WriteCopperPalette(const uint16_t *palette)
         }
     }
 #else
-    uint8_t *palA = copperListBuffer + COP_PAL_B0_C0_VAL_OFF;
-    uint8_t *palB = copperListBuffer + COP_PAL_B1_C0_VAL_OFF;
+    uint8_t *palA = _copperListBuffer + COP_PAL_B0_C0_VAL_OFF;
+    uint8_t *palB = _copperListBuffer + COP_PAL_B1_C0_VAL_OFF;
     int16_t i;
     for (i = 15; i >= 0; i--)
     {

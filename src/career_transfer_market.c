@@ -41,15 +41,15 @@
 #include "swos_types.h"
 #include "swos_platform.h"
 
-extern uint8_t foreignMarketPlayers[60];
-extern uint8_t homeMarketPlayers[100];
-extern uint8_t transferOfferTable[70];
-extern uint8_t newJobOffers[130];
-extern uint8_t jobOffers[130];
-extern uint8_t playersOnTransferMarket[10];
-_Static_assert(sizeof(foreignMarketPlayers)==60 && sizeof(homeMarketPlayers)==100
-            && sizeof(transferOfferTable)==70 && sizeof(newJobOffers)==130
-            && sizeof(jobOffers)==130 && sizeof(playersOnTransferMarket)==10,
+extern uint8_t _foreignMarketPlayers[60];
+extern uint8_t _homeMarketPlayers[100];
+extern uint8_t _transferOfferTable[70];
+extern uint8_t _newJobOffers[130];
+extern uint8_t _jobOffers[130];
+extern uint8_t _playersOnTransferMarket[10];
+_Static_assert(sizeof(_foreignMarketPlayers)==60 && sizeof(_homeMarketPlayers)==100
+            && sizeof(_transferOfferTable)==70 && sizeof(_newJobOffers)==130
+            && sizeof(_jobOffers)==130 && sizeof(_playersOnTransferMarket)==10,
                "transfer-market array sizes must match the overlay reservation");
 
 __asm__(
@@ -60,63 +60,63 @@ __asm__(
 #endif
     ".p2align 2\n"
     /* ---- run 1 ---- */
-    ".globl " _ASM_PFX "foreignMarketPlayers\n"
-    _ASM_PFX "foreignMarketPlayers:\n"
+    ".globl " _ASM_PFX "_foreignMarketPlayers\n"
+    _ASM_PFX "_foreignMarketPlayers:\n"
     ".skip 60\n"
-    ".globl " _ASM_PFX "homeMarketPlayers\n"
-    _ASM_PFX "homeMarketPlayers:\n"
+    ".globl " _ASM_PFX "_homeMarketPlayers\n"
+    _ASM_PFX "_homeMarketPlayers:\n"
     ".skip 100\n"
-    ".globl " _ASM_PFX "transferOfferTable\n"
-    _ASM_PFX "transferOfferTable:\n"
+    ".globl " _ASM_PFX "_transferOfferTable\n"
+    _ASM_PFX "_transferOfferTable:\n"
     ".skip 70\n"
     /* ---- run 2 ---- */
-    ".globl " _ASM_PFX "numNewJobOffers\n"
-    _ASM_PFX "numNewJobOffers:\n"
+    ".globl " _ASM_PFX "_numNewJobOffers\n"
+    _ASM_PFX "_numNewJobOffers:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "newJobOffers\n"
-    _ASM_PFX "newJobOffers:\n"
+    ".globl " _ASM_PFX "_newJobOffers\n"
+    _ASM_PFX "_newJobOffers:\n"
     ".skip 130\n"
-    ".globl " _ASM_PFX "numJobOffers\n"
-    _ASM_PFX "numJobOffers:\n"
+    ".globl " _ASM_PFX "_numJobOffers\n"
+    _ASM_PFX "_numJobOffers:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "jobOffers\n"
-    _ASM_PFX "jobOffers:\n"
+    ".globl " _ASM_PFX "_jobOffers\n"
+    _ASM_PFX "_jobOffers:\n"
     ".skip 130\n"
-    ".globl " _ASM_PFX "timeToNegotiate\n"
-    _ASM_PFX "timeToNegotiate:\n"
+    ".globl " _ASM_PFX "_timeToNegotiate\n"
+    _ASM_PFX "_timeToNegotiate:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "numPlayersOnTransferMarket\n"
-    _ASM_PFX "numPlayersOnTransferMarket:\n"
+    ".globl " _ASM_PFX "_numPlayersOnTransferMarket\n"
+    _ASM_PFX "_numPlayersOnTransferMarket:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "playersOnTransferMarket\n"
-    _ASM_PFX "playersOnTransferMarket:\n"
+    ".globl " _ASM_PFX "_playersOnTransferMarket\n"
+    _ASM_PFX "_playersOnTransferMarket:\n"
     ".skip 10\n"
-    ".globl " _ASM_PFX "lastOfferPrimaryPlayerOrdinal\n"
-    _ASM_PFX "lastOfferPrimaryPlayerOrdinal:\n"
+    ".globl " _ASM_PFX "_lastOfferPrimaryPlayerOrdinal\n"
+    _ASM_PFX "_lastOfferPrimaryPlayerOrdinal:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferExtraPlayersWanted\n"
-    _ASM_PFX "lastOfferExtraPlayersWanted:\n"
+    ".globl " _ASM_PFX "_lastOfferExtraPlayersWanted\n"
+    _ASM_PFX "_lastOfferExtraPlayersWanted:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferSwapPlayerOrdinal\n"
-    _ASM_PFX "lastOfferSwapPlayerOrdinal:\n"
+    ".globl " _ASM_PFX "_lastOfferSwapPlayerOrdinal\n"
+    _ASM_PFX "_lastOfferSwapPlayerOrdinal:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "lastOfferExtraPlayerOrdinal\n"
-    _ASM_PFX "lastOfferExtraPlayerOrdinal:\n"
+    ".globl " _ASM_PFX "_lastOfferExtraPlayerOrdinal\n"
+    _ASM_PFX "_lastOfferExtraPlayerOrdinal:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "offerNegotiationAttemptCount\n"
-    _ASM_PFX "offerNegotiationAttemptCount:\n"
+    ".globl " _ASM_PFX "_offerNegotiationAttemptCount\n"
+    _ASM_PFX "_offerNegotiationAttemptCount:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset0\n"
-    _ASM_PFX "transferMarketRandOffset0:\n"
+    ".globl " _ASM_PFX "_transferMarketRandOffset0\n"
+    _ASM_PFX "_transferMarketRandOffset0:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset1\n"
-    _ASM_PFX "transferMarketRandOffset1:\n"
+    ".globl " _ASM_PFX "_transferMarketRandOffset1\n"
+    _ASM_PFX "_transferMarketRandOffset1:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketRandOffset2\n"
-    _ASM_PFX "transferMarketRandOffset2:\n"
+    ".globl " _ASM_PFX "_transferMarketRandOffset2\n"
+    _ASM_PFX "_transferMarketRandOffset2:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "transferMarketPhase\n"
-    _ASM_PFX "transferMarketPhase:\n"
+    ".globl " _ASM_PFX "_transferMarketPhase\n"
+    _ASM_PFX "_transferMarketPhase:\n"
     ".skip 2\n"
     ".text\n"
 );

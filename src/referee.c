@@ -31,32 +31,32 @@
 #define SPR_CORNER_FLAG_FRAME_3 1073
 
 /* ---- Extern globals ---- */
-extern Sprite   refereeSprite;
-extern Sprite   bookedPlayerCardOrNumberSprite;
-extern uint16_t refState;
-extern uint16_t foulXCoordinate;
-extern uint16_t foulYCoordinate;
-extern FixedPoint cameraY;
-extern uint16_t kRefereeSpeed;
-extern uint16_t whichCard;
-extern Sprite          *bookedPlayer;
-extern TeamGeneralInfo *lastTeamBooked;
-extern uint16_t refTimer;
-extern uint16_t lastFrameTicks;
-extern uint16_t gameStatePl;
-extern uint16_t panicReasonCode;
+extern Sprite   _refereeSprite;
+extern Sprite   _bookedPlayerCardOrNumberSprite;
+extern uint16_t _refState;
+extern uint16_t _foulXCoordinate;
+extern uint16_t _foulYCoordinate;
+extern FixedPoint _cameraY;
+extern uint16_t _kRefereeSpeed;
+extern uint16_t _whichCard;
+extern Sprite          *_bookedPlayer;
+extern TeamGeneralInfo *_lastTeamBooked;
+extern uint16_t _refTimer;
+extern uint16_t _lastFrameTicks;
+extern uint16_t _gameStatePl;
+extern uint16_t _panicReasonCode;
 
 /* AnimTable data (in asm code section) */
-extern uint8_t refComingAnimTable[];
-extern uint8_t refWaitingAnimTable[];
-extern uint8_t refYellowCardAnimTable[];
-extern uint8_t refRedCardAnimTable[];
-extern uint8_t refSecondYellowAnimTable[];
+extern uint8_t _refComingAnimTable[];
+extern uint8_t _refWaitingAnimTable[];
+extern uint8_t _refYellowCardAnimTable[];
+extern uint8_t _refRedCardAnimTable[];
+extern uint8_t _refSecondYellowAnimTable[];
 
 /* Card display lookup tables (in asm code section, after UpdateBookedPlayerNumberSprite) */
-extern int8_t yellowCardTable[];    /* 30 entries */
-extern int8_t redCardTable[];       /* 30 entries */
-extern int8_t secondYellowTable[];  /* 46 entries */
+extern int8_t _yellowCardTable[];    /* 30 entries */
+extern int8_t _redCardTable[];       /* 30 entries */
+extern int8_t _secondYellowTable[];  /* 46 entries */
 
 /* ---- External functions ---- */
 extern uint16_t Rand(void);
@@ -83,7 +83,7 @@ extern void SendPlayerAway(uint8_t *playerSprite, uint8_t *teamData);
 __attribute__((used, externally_visible))
 void InitRefereeAnimationTable(uint8_t *animTable)
 {
-    Sprite *a0 = &refereeSprite;
+    Sprite *a0 = &_refereeSprite;
     uint16_t dir = (uint16_t)a0->direction;
     uint16_t frameDelay = *(uint16_t *)animTable;
     /* Frame table pointer at offset 2 + dir*4 */
@@ -93,7 +93,7 @@ void InitRefereeAnimationTable(uint8_t *animTable)
     a0->frameIndicesTable = frameTablePtr;
 
     if (frameTablePtr == 0) {
-        panicReasonCode = 0x1112;
+        _panicReasonCode = 0x1112;
         PanicHaltLoop();
         return;
     }
@@ -112,9 +112,9 @@ void InitRefereeAnimationTable(uint8_t *animTable)
 __attribute__((used, externally_visible))
 void ActivateReferee(void)
 {
-    Sprite *a0 = &refereeSprite;
-    int16_t d1 = (int16_t)foulXCoordinate + 28;
-    int16_t d2 = (int16_t)foulYCoordinate + 5;
+    Sprite *a0 = &_refereeSprite;
+    int16_t d1 = (int16_t)_foulXCoordinate + 28;
+    int16_t d2 = (int16_t)_foulYCoordinate + 5;
 
     a0->destX = d1;
     a0->destY = d2;
@@ -122,17 +122,17 @@ void ActivateReferee(void)
     uint16_t rval = Rand();
     int16_t d0 = (int16_t)(rval >> 3);
 
-    if (foulXCoordinate >= 336) {
+    if (_foulXCoordinate >= 336) {
         d0 = -d0;
     }
 
     /* Position above or below camera based on foul Y */
-    if (foulYCoordinate <= 449) {
+    if (_foulYCoordinate <= 449) {
         /* Foul in upper half: referee enters from bottom */
-        d2 = (int16_t)cameraY.s.i + 287;
+        d2 = (int16_t)_cameraY.s.i + 287;
     } else {
         /* Foul in lower half: referee enters from top */
-        d2 = (int16_t)cameraY.s.i - 20;
+        d2 = (int16_t)_cameraY.s.i - 20;
     }
 
     d1 = d1 + d0;
@@ -142,12 +142,12 @@ void ActivateReferee(void)
     a0->x.s.frac = 0;
     a0->y.s.frac = 0;
 
-    a0->speed   = (int16_t)kRefereeSpeed;
+    a0->speed   = (int16_t)_kRefereeSpeed;
     a0->visible = 1;
 
     InitDisplaySprites();
-    InitRefereeAnimationTable(refComingAnimTable);
-    refState = REF_INCOMING;
+    InitRefereeAnimationTable(_refComingAnimTable);
+    _refState = REF_INCOMING;
 }
 
 /* ================================================================
@@ -158,12 +158,12 @@ void ActivateReferee(void)
 __attribute__((used, externally_visible))
 void SetRefereeToLeavingState(void)
 {
-    Sprite *a0 = &refereeSprite;
+    Sprite *a0 = &_refereeSprite;
     uint16_t rval = Rand();
     int16_t d0 = (int16_t)(rval >> 2) - 32;   /* range -32..31 */
 
     int16_t d2;
-    if (foulYCoordinate <= 449) {
+    if (_foulYCoordinate <= 449) {
         d2 = 770;
     } else {
         d2 = 129;
@@ -173,8 +173,8 @@ void SetRefereeToLeavingState(void)
     a0->destX = d0;
     a0->destY = d2;
 
-    InitRefereeAnimationTable(refComingAnimTable);
-    refState = REF_LEAVING;
+    InitRefereeAnimationTable(_refComingAnimTable);
+    _refState = REF_LEAVING;
 }
 
 /* ================================================================
@@ -186,10 +186,10 @@ void SetRefereeToLeavingState(void)
 __attribute__((used, externally_visible))
 void UpdateReferee(void)
 {
-    if (refState == 0)
+    if (_refState == 0)
         return;
 
-    Sprite *a0 = &refereeSprite;
+    Sprite *a0 = &_refereeSprite;
 
     if (a0->visible == 0)
         return;
@@ -241,30 +241,30 @@ void UpdateReferee(void)
 
     /* ---- State dispatch ---- */
 state_dispatch:
-    if (refState == REF_ABOUT_TO_GIVE_CARD) {
+    if (_refState == REF_ABOUT_TO_GIVE_CARD) {
         /* Transition to REF_BOOKING with appropriate card animation */
-        refState = REF_BOOKING;
-        if (whichCard == CARD_RED) {
-            InitRefereeAnimationTable(refRedCardAnimTable);
-        } else if (whichCard == CARD_SECOND_YELLOW) {
-            InitRefereeAnimationTable(refSecondYellowAnimTable);
+        _refState = REF_BOOKING;
+        if (_whichCard == CARD_RED) {
+            InitRefereeAnimationTable(_refRedCardAnimTable);
+        } else if (_whichCard == CARD_SECOND_YELLOW) {
+            InitRefereeAnimationTable(_refSecondYellowAnimTable);
         } else {
-            InitRefereeAnimationTable(refYellowCardAnimTable);
+            InitRefereeAnimationTable(_refYellowCardAnimTable);
         }
         return;
     }
 
-    if (refState == REF_INCOMING) {
+    if (_refState == REF_INCOMING) {
         goto move_referee;
     }
 
-    if (refState != REF_LEAVING) {
+    if (_refState != REF_LEAVING) {
         return;
     }
 
     /* REF_LEAVING: if off-screen, hide and deactivate */
     if (a0->onScreen == 0) {
-        refState   = 0;
+        _refState   = 0;
         a0->visible = 0;
         InitDisplaySprites();
         return;
@@ -272,7 +272,7 @@ state_dispatch:
 
     /* ---- Move referee toward destination ---- */
 move_referee:;
-    a0->speed = (int16_t)kRefereeSpeed;
+    a0->speed = (int16_t)_kRefereeSpeed;
     uint16_t savedDir = (uint16_t)a0->direction;
 
     int16_t destX = a0->destX;
@@ -293,7 +293,7 @@ move_referee:;
     a0->direction = (int16_t)newDir;
 
     if (newDir != savedDir) {
-        InitRefereeAnimationTable(refComingAnimTable);
+        InitRefereeAnimationTable(_refComingAnimTable);
     }
 
     /* ---- Clamp X toward destX ---- */
@@ -338,14 +338,14 @@ move_referee:;
     if (a0->deltaX.raw != 0 || a0->deltaY.raw != 0)
         return;
 
-    refState      = REF_WAITING_PLAYER;
+    _refState      = REF_WAITING_PLAYER;
     a0->direction = 6;
-    InitRefereeAnimationTable(refWaitingAnimTable);
+    InitRefereeAnimationTable(_refWaitingAnimTable);
     return;
 
     /* ---- Off-screen position update (keep moving even when off-screen) ---- */
 off_screen_update:
-    if (gameStatePl != ST_GAME_IN_PROGRESS)
+    if (_gameStatePl != ST_GAME_IN_PROGRESS)
         goto state_dispatch;
 
     /* Clamp X */
@@ -403,30 +403,30 @@ off_screen_update:
 __attribute__((used, externally_visible))
 void UpdateBookedPlayerNumberSprite(void)
 {
-    Sprite *a0 = &bookedPlayerCardOrNumberSprite;
+    Sprite *a0 = &_bookedPlayerCardOrNumberSprite;
     a0->imageIndex = (int16_t)0xFFFF;  /* default: hide */
 
-    if (whichCard == 0)
+    if (_whichCard == 0)
         return;
-    if (refState != REF_BOOKING)
+    if (_refState != REF_BOOKING)
         return;
 
-    Sprite *playerSprite = bookedPlayer;
+    Sprite *playerSprite = _bookedPlayer;
     if (playerSprite->playerState != PL_BOOKED)
         return;
 
     /* Advance timer */
-    refTimer += lastFrameTicks;
-    uint16_t tableIdx = refTimer >> 3;
+    _refTimer += _lastFrameTicks;
+    uint16_t tableIdx = _refTimer >> 3;
 
     /* Select card display table */
     int8_t *table;
-    if (whichCard == CARD_YELLOW) {
-        table = yellowCardTable;
-    } else if (whichCard == CARD_RED) {
-        table = redCardTable;
+    if (_whichCard == CARD_YELLOW) {
+        table = _yellowCardTable;
+    } else if (_whichCard == CARD_RED) {
+        table = _redCardTable;
     } else {
-        table = secondYellowTable;
+        table = _secondYellowTable;
     }
 
     int8_t entry = table[tableIdx];
@@ -434,30 +434,30 @@ void UpdateBookedPlayerNumberSprite(void)
     if (entry == CARD_YELLOW) {
         /* Show yellow card image */
         a0->imageIndex = SPR_YELLOW_CARD;
-        playerSprite = bookedPlayer;
+        playerSprite = _bookedPlayer;
     } else if (entry == CARD_RED) {
         /* Show red card image */
         a0->imageIndex = SPR_RED_CARD;
-        playerSprite = bookedPlayer;
+        playerSprite = _bookedPlayer;
     } else if (entry < 0) {
         /* -1 sentinel: sequence done, referee leaves */
         SetRefereeToLeavingState();
 
         /* bit 1 of whichCard = red card → send player off */
-        if (whichCard & 2) {
-            SendPlayerAway((uint8_t *)bookedPlayer, (uint8_t *)lastTeamBooked);
+        if (_whichCard & 2) {
+            SendPlayerAway((uint8_t *)_bookedPlayer, (uint8_t *)_lastTeamBooked);
         }
 
-        whichCard    = 0;
-        bookedPlayer = 0;
+        _whichCard    = 0;
+        _bookedPlayer = 0;
         return;
     } else if (entry == 0) {
         /* 0 = show nothing */
         return;
     } else {
         /* Positive non-card value: show shirt number */
-        playerSprite = bookedPlayer;
-        TeamGeneralInfo *teamInfo  = lastTeamBooked;
+        playerSprite = _bookedPlayer;
+        TeamGeneralInfo *teamInfo  = _lastTeamBooked;
         TeamGame        *inGameTeam = teamInfo->inGameTeamPtr;
         uint16_t ordinal = (uint16_t)playerSprite->playerOrdinal;
         int8_t shirtNum = inGameTeam->players[ordinal - 1].shirtNumber;

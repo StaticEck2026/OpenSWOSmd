@@ -25,32 +25,32 @@
 /* ---- External symbols from resload.c ---- */
 extern void FixSnoopBug(void);
 extern uint8_t KBHook(void);       /* returns raw CIAA_SDR byte in d0 */
-extern uint32_t S_VBR;
+extern uint32_t _S_VBR;
 
 /* ---- External symbols from SWOS2.s (kept in asm) ---- */
 extern void Int3Handler(void);
 extern void Int5Handler(void);
 
 /* ---- Volatile globals from SWOS2.s inline data ---- */
-extern volatile int16_t keyDelay;
-extern volatile uint16_t keyCount;
-extern volatile uint8_t keyBuffer[];
-extern uint16_t writeOnly01;
-extern volatile uint16_t lastVBlankServiceTick;
-extern volatile uint8_t keyIn;
+extern volatile int16_t _keyDelay;
+extern volatile uint16_t _keyCount;
+extern volatile uint8_t _keyBuffer[];
+extern uint16_t _writeOnly01;
+extern volatile uint16_t _lastVBlankServiceTick;
+extern volatile uint8_t _keyIn;
 
 /* ---- Volatile globals from SWOS2.s BSS ---- */
-extern volatile int16_t waitingInterrupt;
-extern volatile uint16_t currentGameTick;
-extern volatile uint16_t currentTick;
-extern volatile uint16_t didSwapThisFrame;
-extern volatile uint8_t audioDbgFlagA;
-extern volatile uint16_t audioActive;
+extern volatile int16_t _waitingInterrupt;
+extern volatile uint16_t _currentGameTick;
+extern volatile uint16_t _currentTick;
+extern volatile uint16_t _didSwapThisFrame;
+extern volatile uint8_t _audioDbgFlagA;
+extern volatile uint16_t _audioActive;
 extern volatile uint16_t debugMode;
-extern volatile uint16_t showingUserStats;
-extern volatile uint16_t paused;
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
+extern volatile uint16_t _showingUserStats;
+extern volatile uint16_t _paused;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
 
 /* ---- External C functions called from Int3TimerHandler ---- */
 extern void UpdatePlanePtrsAndBlitParams(void);
@@ -78,13 +78,13 @@ void InitHardwareAtFrameStart(void)
     uint32_t pos;
     do
     {
-        pos = (*(volatile uint32_t *)&custom->vposr & 0x1FFFFu) >> 8;
+        pos = (*(volatile uint32_t *)&_custom->vposr & 0x1FFFFu) >> 8;
     } while (pos > 0x0Au);
 
     /* Disable all interrupts and DMA */
-    custom->intena = 0x7FFF;
-    custom->intreq = 0x7FFF;
-    custom->dmacon = 0x7FFF;
+    _custom->intena = 0x7FFF;
+    _custom->intreq = 0x7FFF;
+    _custom->dmacon = 0x7FFF;
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x7F;
     *(volatile uint8_t *)CIAB_ICR_ADDR = 0x7F;
 }
@@ -101,9 +101,9 @@ void InitHardwareAtFrameStart(void)
 __attribute__((used, externally_visible))
 void SetupInterrupts(void)
 {
-    /* S_VBR is the m68k Vector Base Register — dead address on SDL.
+    /* _S_VBR is the m68k Vector Base Register — dead address on SDL.
      * Widen through uintptr_t to silence Wint-to-pointer-cast on 64-bit. */
-    volatile uint32_t *vectors = (volatile uint32_t *)(uintptr_t)S_VBR;
+    volatile uint32_t *vectors = (volatile uint32_t *)(uintptr_t)_S_VBR;
 
     /* Save old Level 3 handler to Level 1 slot */
     vectors[LEVEL_1_VEC / 4] = vectors[LEVEL_3_VEC / 4];
@@ -116,7 +116,7 @@ void SetupInterrupts(void)
 
     /* Enable: SET(15) + Master(14) + RBF(11) + VERTB(5) + SOFTINT(2)
      * Binary: 1100 1000 0010 0100 = 0xC824 */
-    custom->intena = 0xC824;
+    _custom->intena = 0xC824;
 }
 
 /* ================================================================
@@ -130,7 +130,7 @@ __attribute__((used, externally_visible))
 void _Int2KeyboardHandler(void)
 {
     /* Check INTREQR bit 3 (I/O Ports and timers) */
-    uint16_t intreq = custom->intreqr;
+    uint16_t intreq = _custom->intreqr;
     if (!(intreq & (1u << 3)))
         return;
 
@@ -152,7 +152,7 @@ void _Int2KeyboardHandler(void)
         int16_t i;
         for (i = 300; i >= 0; i--)
         {
-            (void)*(volatile uint32_t *)&custom->vposr;
+            (void)*(volatile uint32_t *)&_custom->vposr;
         }
     }
 
@@ -163,25 +163,25 @@ void _Int2KeyboardHandler(void)
     d0 = ~d0;
     d0 = (uint8_t)((d0 >> 1) | (d0 << 7));
 
-    keyDelay = 0;
-    keyIn = d0;
+    _keyDelay = 0;
+    _keyIn = d0;
 
     /* If high bit set (key release), skip buffer insertion */
     if (d0 & 0x80)
         goto ack;
 
     /* Buffer full check (max 9 entries used out of 12) */
-    if (keyCount >= 9)
+    if (_keyCount >= 9)
         goto ack;
 
     /* Set key repeat delay and add to buffer */
-    keyDelay = (int16_t)0x800C;
-    keyBuffer[keyCount] = d0;
-    keyCount++;
+    _keyDelay = (int16_t)0x800C;
+    _keyBuffer[_keyCount] = d0;
+    _keyCount++;
 
 ack:
     /* Acknowledge I/O ports interrupt */
-    custom->intreq = 8;
+    _custom->intreq = 8;
 }
 
 /* ================================================================
@@ -201,57 +201,57 @@ void _Int3TimerHandler(void)
      * here was suppressing the next-frame swap signal, which left one
      * buffer stale at the top of the screen and showed as flicker on
      * the menu logo. */
-    if (waitingInterrupt != 0)
+    if (_waitingInterrupt != 0)
     {
-        uint16_t delta = (uint16_t)(currentGameTick - lastVBlankServiceTick);
-        if (delta >= writeOnly01)
+        uint16_t delta = (uint16_t)(_currentGameTick - _lastVBlankServiceTick);
+        if (delta >= _writeOnly01)
         {
-            lastVBlankServiceTick = currentGameTick;
+            _lastVBlankServiceTick = _currentGameTick;
             UpdatePlanePtrsAndBlitParams();
 
-            int16_t camX = cameraX.s.i;
-            int16_t camY = cameraY.s.i;
+            int16_t camX = _cameraX.s.i;
+            int16_t camY = _cameraY.s.i;
 
             SwapBuffersAndCameraViewState();
             SetCameraCoordinates(camX, camY);
 
-            waitingInterrupt = 0;
-            didSwapThisFrame = 1;
+            _waitingInterrupt = 0;
+            _didSwapThisFrame = 1;
         }
     }
 
     FadeOutTick();
     FadeInTick();
 
-    audioDbgFlagA = 0;
-    if (audioActive != 0)
+    _audioDbgFlagA = 0;
+    if (_audioActive != 0)
     {
-        audioDbgFlagA = AudioIRQUpdateChannels();
+        _audioDbgFlagA = AudioIRQUpdateChannels();
     }
 
     /* debugMode LINE-A trap skipped (dead code in non-debug builds) */
 
     /* isr_update_ticks_and_input */
-    currentTick++;
+    _currentTick++;
 
-    if (showingUserStats == 0 && paused == 0)
+    if (_showingUserStats == 0 && _paused == 0)
     {
-        currentGameTick++;
+        _currentGameTick++;
 
         /* Key repeat logic: keyDelay is negative when counting down */
-        if (keyDelay < 0)
+        if (_keyDelay < 0)
         {
-            keyDelay--;
-            if (keyDelay >= 0)
+            _keyDelay--;
+            if (_keyDelay >= 0)
             {
                 /* Repeat timer expired — insert key into buffer */
-                uint8_t key = keyIn;
-                if (keyCount < 9)
+                uint8_t key = _keyIn;
+                if (_keyCount < 9)
                 {
-                    keyBuffer[keyCount] = key;
-                    keyCount++;
+                    _keyBuffer[_keyCount] = key;
+                    _keyCount++;
                 }
-                keyDelay = (int16_t)0x8004;
+                _keyDelay = (int16_t)0x8004;
             }
         }
     }
@@ -260,5 +260,5 @@ void _Int3TimerHandler(void)
      * `clear_and_return:` from several early-return paths; the C
      * version structures the early-return as nested-if so the label
      * is no longer needed. */
-    custom->intreq = 0x0004;
+    _custom->intreq = 0x0004;
 }

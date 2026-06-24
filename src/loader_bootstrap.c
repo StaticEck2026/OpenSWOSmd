@@ -6,10 +6,10 @@
 #include "loader_bootstrap.h"
 
 /* ---- External globals (all live in SWOS2.s) ---- */
-extern uint8_t LoaderBootstrapBlobPI[];   /* 2226-byte bootstrap blob */
-extern uint8_t currentMenu[];             /* destination buffer (>= 2226 bytes, boundary-spill) */
-extern uint16_t assetIndexStartBytes;    /* index start bytes (word) */
-extern uint32_t irqCookieObfuscated;     /* IRQ cookie for tamper check */
+extern uint8_t _LoaderBootstrapBlobPI[];   /* 2226-byte bootstrap blob */
+extern uint8_t _currentMenu[];             /* destination buffer (>= 2226 bytes, boundary-spill) */
+extern uint16_t _assetIndexStartBytes;    /* index start bytes (word) */
+extern uint32_t _irqCookieObfuscated;     /* IRQ cookie for tamper check */
 
 /* ---- External asm functions (C-callable bridges) ---- */
 extern int16_t AssetSvcLoaderOp(void);
@@ -39,7 +39,7 @@ void InstallAndInitLoaderBootstrap(void)
      * function is dead. Skip and avoid spending startup time on a
      * 2226-byte copy + an asset-svc poll that might never return. */
     
-    irqCookieObfuscated = 0xCFD1EFE7u;  /* still set the cookie so any
+    _irqCookieObfuscated = 0xCFD1EFE7u;  /* still set the cookie so any
                                           remaining XOR-check that we
                                           haven't reached yet passes */
 
@@ -67,7 +67,7 @@ void InstallAndRunLoaderBootstrap_Op3(void)
     int16_t i;
 
     /* Save current IRQ cookie */
-    savedCookie = irqCookieObfuscated;
+    savedCookie = _irqCookieObfuscated;
 
     /* Poll until asset service op3 is idle */
     while (AssetSvcLoaderOp3() != 0)
@@ -76,8 +76,8 @@ void InstallAndRunLoaderBootstrap_Op3(void)
     }
 
     /* Copy 2226-byte bootstrap blob to currentMenu */
-    src = LoaderBootstrapBlobPI;
-    dst = currentMenu;
+    src = _LoaderBootstrapBlobPI;
+    dst = _currentMenu;
     for (i = 2225; i >= 0; i--)
     {
         *dst++ = *src++;
@@ -87,11 +87,11 @@ void InstallAndRunLoaderBootstrap_Op3(void)
      * then jsr (currentMenu+MENU_ONDRAW+2).l — COMMENTED OUT */
 
     /* Set magic cookie and verify */
-    irqCookieObfuscated = 0;
-    irqCookieObfuscated = 0x71583EFCu;
+    _irqCookieObfuscated = 0;
+    _irqCookieObfuscated = 0x71583EFCu;
 
     /* XOR check: $71583EFC ^ $715828D4 = $1628 — always passes */
 
     /* Restore saved IRQ cookie */
-    irqCookieObfuscated = savedCookie;
+    _irqCookieObfuscated = savedCookie;
 }

@@ -13,7 +13,7 @@
  * cascade). See project_career_overlay_extraction_recipe.
  *
  * Authoritative byte layout from SWOS2.s (BSS, ds.b):
- *     playerPositions                   ds.b $20 (32; play-match index -> team file)
+ *     _playerPositions                   ds.b $20 (32; play-match index -> team file)
  *     numPlayers                        ds.b $2
  *     currentTeamNumber                 ds.b $2
  *     currentTeamSelectedPlayerPosition ds.b $2
@@ -32,7 +32,7 @@
  * Audited (no consumer edits): the block sits between currentTeam (deferred) and
  * careerLastMatchIndexByCompetitionSlot (already a hole). currentTeam is only
  * touched via `== &currentTeam` equality checks or `(uint8_t *)&currentTeam`
- * within its own 1292 B — never `&currentTeam + 1292` into playerPositions. No
+ * within its own 1292 B — never `&currentTeam + 1292` into _playerPositions. No
  * &symbol walk spans the block; every field is &symbol-addressed in the save
  * (FX scalars + FA arrays; trainingMatchSavedTactics is FA 2 FLD_BYTES covering
  * the tactics byte + pad_166A27), so the format is unchanged. The uint16 fields
@@ -43,7 +43,7 @@
 #include "swos_platform.h"
 
 typedef struct {
-    uint8_t  playerPositions[32];                /*   0 */
+    uint8_t  _playerPositions[32];                /*   0 */
     uint16_t numPlayers;                         /*  32 */
     uint16_t currentTeamNumber;                  /*  34 */
     uint16_t currentTeamSelectedPlayerPosition;  /*  36 */
@@ -62,7 +62,7 @@ typedef struct {
 
 _Static_assert(sizeof(CareerMatchState) == 176,
                "CareerMatchState must stay 176 bytes (overlay-exact)");
-_Static_assert(offsetof(CareerMatchState, playerPositions)            ==   0, "ms layout");
+_Static_assert(offsetof(CareerMatchState, _playerPositions)            ==   0, "ms layout");
 _Static_assert(offsetof(CareerMatchState, numPlayers)                 ==  32, "ms layout");
 _Static_assert(offsetof(CareerMatchState, trainingMatchSavedPlayers)  ==  40, "ms layout");
 _Static_assert(offsetof(CareerMatchState, trainingMatchSavedTactics)  == 104, "ms layout");
@@ -70,7 +70,7 @@ _Static_assert(offsetof(CareerMatchState, lastMatchSavedPlayerPos)    == 106, "m
 _Static_assert(offsetof(CareerMatchState, lastMatchPlayers)           == 110, "ms layout");
 _Static_assert(offsetof(CareerMatchState, lastMatchSavedTeamControls) == 175, "ms layout");
 
-extern CareerMatchState careerMatchState;
+extern CareerMatchState _careerMatchState;
 
 __asm__(
 #if defined(__APPLE__)
@@ -79,50 +79,50 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "careerMatchState\n"
-    _ASM_PFX "careerMatchState:\n"
-    ".globl " _ASM_PFX "playerPositions\n"
-    _ASM_PFX "playerPositions:\n"
+    ".globl " _ASM_PFX "_careerMatchState\n"
+    _ASM_PFX "_careerMatchState:\n"
+    ".globl " _ASM_PFX "_playerPositions\n"
+    _ASM_PFX "_playerPositions:\n"
     ".skip 32\n"
-    ".globl " _ASM_PFX "numPlayers\n"
-    _ASM_PFX "numPlayers:\n"
+    ".globl " _ASM_PFX "_numPlayers\n"
+    _ASM_PFX "_numPlayers:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "currentTeamNumber\n"
-    _ASM_PFX "currentTeamNumber:\n"
+    ".globl " _ASM_PFX "_currentTeamNumber\n"
+    _ASM_PFX "_currentTeamNumber:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "currentTeamSelectedPlayerPosition\n"
-    _ASM_PFX "currentTeamSelectedPlayerPosition:\n"
+    ".globl " _ASM_PFX "_currentTeamSelectedPlayerPosition\n"
+    _ASM_PFX "_currentTeamSelectedPlayerPosition:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "trainingMatchSavedPlayerPos\n"
-    _ASM_PFX "trainingMatchSavedPlayerPos:\n"
+    ".globl " _ASM_PFX "_trainingMatchSavedPlayerPos\n"
+    _ASM_PFX "_trainingMatchSavedPlayerPos:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "trainingMatchSavedPlayers\n"
-    _ASM_PFX "trainingMatchSavedPlayers:\n"
+    ".globl " _ASM_PFX "_trainingMatchSavedPlayers\n"
+    _ASM_PFX "_trainingMatchSavedPlayers:\n"
     ".skip 32\n"
-    ".globl " _ASM_PFX "trainingMatchSavedShirtNums\n"
-    _ASM_PFX "trainingMatchSavedShirtNums:\n"
+    ".globl " _ASM_PFX "_trainingMatchSavedShirtNums\n"
+    _ASM_PFX "_trainingMatchSavedShirtNums:\n"
     ".skip 32\n"
-    ".globl " _ASM_PFX "trainingMatchSavedTactics\n"
-    _ASM_PFX "trainingMatchSavedTactics:\n"
+    ".globl " _ASM_PFX "_trainingMatchSavedTactics\n"
+    _ASM_PFX "_trainingMatchSavedTactics:\n"
     ".skip 1\n"
     ".skip 1\n"   /* pad_166A27 unnamed pad */
-    ".globl " _ASM_PFX "lastMatchSavedPlayerPos\n"
-    _ASM_PFX "lastMatchSavedPlayerPos:\n"
+    ".globl " _ASM_PFX "_lastMatchSavedPlayerPos\n"
+    _ASM_PFX "_lastMatchSavedPlayerPos:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "lastMatchSavedCoachOrPlayer\n"
-    _ASM_PFX "lastMatchSavedCoachOrPlayer:\n"
+    ".globl " _ASM_PFX "_lastMatchSavedCoachOrPlayer\n"
+    _ASM_PFX "_lastMatchSavedCoachOrPlayer:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "lastMatchPlayers\n"
-    _ASM_PFX "lastMatchPlayers:\n"
+    ".globl " _ASM_PFX "_lastMatchPlayers\n"
+    _ASM_PFX "_lastMatchPlayers:\n"
     ".skip 32\n"
-    ".globl " _ASM_PFX "lastMatchSavedShirtNums\n"
-    _ASM_PFX "lastMatchSavedShirtNums:\n"
+    ".globl " _ASM_PFX "_lastMatchSavedShirtNums\n"
+    _ASM_PFX "_lastMatchSavedShirtNums:\n"
     ".skip 32\n"
-    ".globl " _ASM_PFX "currentTactics\n"
-    _ASM_PFX "currentTactics:\n"
+    ".globl " _ASM_PFX "_currentTactics\n"
+    _ASM_PFX "_currentTactics:\n"
     ".skip 1\n"
-    ".globl " _ASM_PFX "lastMatchSavedTeamControls\n"
-    _ASM_PFX "lastMatchSavedTeamControls:\n"
+    ".globl " _ASM_PFX "_lastMatchSavedTeamControls\n"
+    _ASM_PFX "_lastMatchSavedTeamControls:\n"
     ".skip 1\n"
     ".text\n"
 );

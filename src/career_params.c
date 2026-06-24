@@ -5,7 +5,7 @@
  * (DataJson_LoadCareerParams in save_format_json.c, SDL build). Compiled on both ports. */
 #include "career_params.h"
 
-CareerParams g_careerParams = {
+CareerParams _careerParams = {
     /* finances: starting balance */
     .start_balance_value_mult = 3,
     .start_balance_pct_min    = 80,

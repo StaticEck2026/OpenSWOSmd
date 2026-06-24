@@ -12,31 +12,31 @@
  *   cameraX.s.i     = integer part (high word; same storage on both LE and BE)
  *   cameraX.s.frac  = fractional part (low word)
  * MoveCamera accumulates via .raw; position consumers use .s.i. */
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t cameraCoordinatesValid;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _cameraCoordinatesValid;
 
 /* ---- External globals ---- */
-extern uint16_t showFansCounter;
-extern Sprite   ballSprite;
-extern uint16_t whichCard;
-extern Sprite  *bookedPlayer;
-extern uint16_t playingPenalties;
-extern uint16_t waitForPlayerToGoInTimer;
-extern uint16_t leavingSubsMenu;
-extern uint16_t inSubstitutesMenu;
-extern Sprite   goal1TopSprite;
-extern Sprite   goal2BottomSprite;
-extern uint16_t substituteInProgress;
-extern uint16_t benchXLimit;
-extern uint16_t gameStatePl;
-extern uint16_t gameState;
-extern TeamGeneralInfo *lastTeamPlayedBeforeBreak;
-extern int16_t  cameraDirection;
-extern uint16_t trainingGame;
-extern int16_t  penaltiesState;
-extern uint16_t cameraXVelocity;
-extern uint16_t cameraYVelocity;
+extern uint16_t _showFansCounter;
+extern Sprite   _ballSprite;
+extern uint16_t _whichCard;
+extern Sprite  *_bookedPlayer;
+extern uint16_t _playingPenalties;
+extern uint16_t _waitForPlayerToGoInTimer;
+extern uint16_t _leavingSubsMenu;
+extern uint16_t _inSubstitutesMenu;
+extern Sprite   _goal1TopSprite;
+extern Sprite   _goal2BottomSprite;
+extern uint16_t _substituteInProgress;
+extern uint16_t _benchXLimit;
+extern uint16_t _gameStatePl;
+extern uint16_t _gameState;
+extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
+extern int16_t  _cameraDirection;
+extern uint16_t _trainingGame;
+extern int16_t  _penaltiesState;
+extern uint16_t _cameraXVelocity;
+extern uint16_t _cameraYVelocity;
 
 /* ---- External functions ---- */
 extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
@@ -79,70 +79,70 @@ void MoveCamera(void)
     int32_t ballDeltaX;      /* d3 in velocity path — 32-bit */
     int32_t ballDeltaY;      /* d4 in velocity path — 32-bit */
 
-    if (showFansCounter != 0)
+    if (_showFansCounter != 0)
         return;
 
     /* Default: load ball sprite deltas for velocity path */
-    ballDeltaX = ballSprite.deltaX.raw;
-    ballDeltaY = ballSprite.deltaY.raw;
+    ballDeltaX = _ballSprite.deltaX.raw;
+    ballDeltaY = _ballSprite.deltaY.raw;
 
     /* ---- Priority 1: Booking ---- */
-    if (whichCard != 0) {
-        Sprite *bookedSpr = bookedPlayer;
+    if (_whichCard != 0) {
+        Sprite *bookedSpr = _bookedPlayer;
         targetX = bookedSpr->x.s.i;
         targetY = bookedSpr->y.s.i;
-        cameraXVelocity = 0;
-        cameraYVelocity = 0;
+        _cameraXVelocity = 0;
+        _cameraYVelocity = 0;
         boundsMargin = 37;
         goto offset_and_clamp_to_view;
     }
 
     /* ---- Priority 2: Penalties ---- */
-    if (playingPenalties != 0) {
+    if (_playingPenalties != 0) {
         targetX = 336;
         targetY = 107;
-        cameraXVelocity = 0;
-        cameraYVelocity = 0;
+        _cameraXVelocity = 0;
+        _cameraYVelocity = 0;
         boundsMargin = 0;
         goto offset_and_clamp_to_view;
     }
 
     /* ---- Priority 3: Substitution timers ---- */
-    if (waitForPlayerToGoInTimer != 0)
+    if (_waitForPlayerToGoInTimer != 0)
         goto bench_camera_mode;
 
-    if (leavingSubsMenu != 0) {
+    if (_leavingSubsMenu != 0) {
         boundsMargin = 37;
         targetX = 211;
         targetY = 449;
-        cameraXVelocity = 0;
-        cameraYVelocity = 0;
+        _cameraXVelocity = 0;
+        _cameraYVelocity = 0;
         goto offset_and_clamp_to_view;
     }
 
     /* ---- Priority 4: Substitutes menu open ---- */
-    if (inSubstitutesMenu != 0) {
+    if (_inSubstitutesMenu != 0) {
         boundsMargin = 37;
         {
-            int16_t camY = (int16_t)(cameraY.raw >> 16);
+            int16_t camY = (int16_t)(_cameraY.raw >> 16);
             if (camY >= 303 && camY <= 323) {
                 /* Camera is near the right Y range */
                 boundsMargin = 37;
 
                 /* Check if goal1TopSprite is visible */
-                if (goal1TopSprite.imageIndex != (int16_t)0xFFFF) {
-                    if (goal1TopSprite.onScreen != 0)
+                if (_goal1TopSprite.imageIndex != (int16_t)0xFFFF) {
+                    if (_goal1TopSprite.onScreen != 0)
                         goto bench_camera_target_and_zero_vel;
                 }
 
                 /* Check if goal2BottomSprite is visible */
-                if (goal2BottomSprite.imageIndex != (int16_t)0xFFFF) {
-                    if (goal2BottomSprite.onScreen != 0)
+                if (_goal2BottomSprite.imageIndex != (int16_t)0xFFFF) {
+                    if (_goal2BottomSprite.onScreen != 0)
                         goto bench_camera_target_and_zero_vel;
                 }
 
                 /* Check if substitute is in progress */
-                if (substituteInProgress != 0)
+                if (_substituteInProgress != 0)
                     goto bench_camera_mode;
 
                 boundsMargin = 0;
@@ -153,8 +153,8 @@ void MoveCamera(void)
     }
 
     /* ---- Priority 5: Pre-play camera direction ---- */
-    if (gameStatePl != ST_GAME_IN_PROGRESS) {
-        TeamGeneralInfo *teamPtr = lastTeamPlayedBeforeBreak;
+    if (_gameStatePl != ST_GAME_IN_PROGRESS) {
+        TeamGeneralInfo *teamPtr = _lastTeamPlayedBeforeBreak;
         if (teamPtr != (TeamGeneralInfo *)0) {
             Sprite *spritePtr = teamPtr->controlledPlayer;
             if (spritePtr != (Sprite *)0) {
@@ -166,8 +166,8 @@ void MoveCamera(void)
             }
         }
         /* Fallback: use global cameraDirection */
-        if (cameraDirection >= 0) {
-            int16_t dir = cameraDirection;
+        if (_cameraDirection >= 0) {
+            int16_t dir = _cameraDirection;
             ballDeltaX = nextCameraDirections[dir * 2];
             ballDeltaY = nextCameraDirections[dir * 2 + 1];
         } else {
@@ -187,12 +187,12 @@ apply_accel_limits_setup:
         if (ballDeltaX != 0) {
             if (ballDeltaX > 0) {
                 /* Ball moving right → accelerate X positive */
-                if ((int16_t)cameraXVelocity != maxXVel)
-                    cameraXVelocity += accel;
+                if ((int16_t)_cameraXVelocity != maxXVel)
+                    _cameraXVelocity += accel;
             } else {
                 /* Ball moving left → accelerate X negative */
-                if ((int16_t)cameraXVelocity != -maxXVel)
-                    cameraXVelocity -= accel;
+                if ((int16_t)_cameraXVelocity != -maxXVel)
+                    _cameraXVelocity -= accel;
             }
         }
 
@@ -200,27 +200,27 @@ apply_accel_limits_setup:
         if (ballDeltaY != 0) {
             if (ballDeltaY > 0) {
                 /* Ball moving down → accelerate Y positive */
-                if ((int16_t)cameraYVelocity != maxYVel)
-                    cameraYVelocity += accel;
+                if ((int16_t)_cameraYVelocity != maxYVel)
+                    _cameraYVelocity += accel;
             } else {
                 /* Ball moving up → accelerate Y negative */
-                if ((int16_t)cameraYVelocity != -maxYVel)
-                    cameraYVelocity -= accel;
+                if ((int16_t)_cameraYVelocity != -maxYVel)
+                    _cameraYVelocity -= accel;
             }
         }
 
         /* ---- Bounds margin selection ---- */
         boundsMargin = 63;   /* d1 = $3F, default */
 
-        if (gameStatePl == ST_GAME_IN_PROGRESS)
+        if (_gameStatePl == ST_GAME_IN_PROGRESS)
             goto state_based_camera_target;
 
         boundsMargin = 63;   /* redundant but matches asm */
 
         /* Narrow bounds for set pieces (corners and throw-ins) */
-        if (gameState == ST_CORNER_LEFT || gameState == ST_CORNER_RIGHT)
+        if (_gameState == ST_CORNER_LEFT || _gameState == ST_CORNER_RIGHT)
             goto narrow_bounds_for_set_pieces;
-        if (gameState >= ST_THROW_IN_FORWARD_RIGHT && gameState <= ST_THROW_IN_BACK_LEFT)
+        if (_gameState >= ST_THROW_IN_FORWARD_RIGHT && _gameState <= ST_THROW_IN_BACK_LEFT)
             goto narrow_bounds_for_set_pieces;
 
         goto state_based_camera_target;
@@ -231,52 +231,52 @@ narrow_bounds_for_set_pieces:
 
 state_based_camera_target:
     /* Check for special game states that use fixed camera targets */
-    if (gameState >= ST_STARTING_GAME && gameState <= ST_GAME_ENDED) {
-        if (gameState == ST_STARTING_GAME)
+    if (_gameState >= ST_STARTING_GAME && _gameState <= ST_GAME_ENDED) {
+        if (_gameState == ST_STARTING_GAME)
             goto tunnel_halftime_camera_target;
-        if (gameState == ST_CAMERA_GOING_TO_SHOWERS)
+        if (_gameState == ST_CAMERA_GOING_TO_SHOWERS)
             goto tunnel_halftime_camera_target;
-        if (gameState == ST_FIRST_HALF_ENDED)
+        if (_gameState == ST_FIRST_HALF_ENDED)
             goto target_ball_position;
-        if (gameState == ST_GAME_ENDED) {
-            if (penaltiesState < 0)
+        if (_gameState == ST_GAME_ENDED) {
+            if (_penaltiesState < 0)
                 goto center_camera_fulltime;
             goto target_ball_position;
         }
-        if (gameState == ST_GOING_TO_HALFTIME)
+        if (_gameState == ST_GOING_TO_HALFTIME)
             goto tunnel_halftime_camera_target;
-        if (gameState == ST_PLAYERS_GOING_TO_SHOWER)
+        if (_gameState == ST_PLAYERS_GOING_TO_SHOWER)
             goto tunnel_halftime_camera_target;
-        if (gameState == ST_RESULT_AFTER_THE_GAME)
+        if (_gameState == ST_RESULT_AFTER_THE_GAME)
             goto results_screen_camera_target;
 
         /* Other states in ST_STARTING_GAME..ST_GAME_ENDED range */
 center_camera_fulltime:
         targetX = 0x150;
         targetY = 0x1C1;
-        cameraXVelocity = 0;
-        cameraYVelocity = 0;
+        _cameraXVelocity = 0;
+        _cameraYVelocity = 0;
         goto offset_and_clamp_to_view;
     }
 
 target_ball_position:
     /* Use ball's integer position */
-    targetX = ballSprite.x.s.i;
-    targetY = ballSprite.y.s.i;
+    targetX = _ballSprite.x.s.i;
+    targetY = _ballSprite.y.s.i;
     goto offset_and_clamp_to_view;
 
 results_screen_camera_target:
     targetX = 0x150;
     targetY = 0x81;
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
     goto offset_and_clamp_to_view;
 
 tunnel_halftime_camera_target:
     targetX = 0x24E;
     targetY = 0x1C1;
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
     goto offset_and_clamp_to_view;
 
 bench_camera_mode:
@@ -284,28 +284,28 @@ bench_camera_mode:
     goto bench_camera_target_and_zero_vel;
 
 bench_camera_target_and_zero_vel:
-    targetX = (int16_t)benchXLimit;
+    targetX = (int16_t)_benchXLimit;
     targetY = 0x1C1;
-    cameraXVelocity = 0;
-    cameraYVelocity = 0;
+    _cameraXVelocity = 0;
+    _cameraYVelocity = 0;
     /* fall through to offset_and_clamp_to_view */
 
 offset_and_clamp_to_view:
     /* Center the view: subtract half screen dimensions */
-    targetX -= (g_screen_width / 2);    /* half the view width: 168 (336) / 192 (384 widescreen) */
+    targetX -= (_screen_width / 2);    /* half the view width: 168 (336) / 192 (384 widescreen) */
     targetY -= 0x88;    /* 136 */
 
     /* Apply camera velocity */
-    targetX += (int16_t)cameraXVelocity;
-    targetY += (int16_t)cameraYVelocity;
+    targetX += (int16_t)_cameraXVelocity;
+    targetY += (int16_t)_cameraYVelocity;
 
-    /* Clamp X so the g_screen_width-wide view stays on the pitch. */
+    /* Clamp X so the _screen_width-wide view stays on the pitch. */
     {
         /* pitchWidth(0x2A0=672) - viewWidth = how far the camera may pan and keep the
          * view on the pitch (=0x150 at 336). On wide/ultrawide displays the view nears
          * the pitch width and this range collapses or inverts — then just center the
          * view on the pitch (the whole pitch is visible; the camera can't pan). */
-        int16_t panRange = (int16_t)(0x2A0 - g_screen_width);
+        int16_t panRange = (int16_t)(0x2A0 - _screen_width);
         int16_t xMax = panRange - boundsMargin;
         if (xMax <= boundsMargin) {
             targetX = (int16_t)(panRange / 2);
@@ -318,7 +318,7 @@ offset_and_clamp_to_view:
     }
 
     /* Clamp Y based on game mode */
-    if (trainingGame != 0) {
+    if (_trainingGame != 0) {
         if (targetY <= 0x50)
             targetY = 0x50;
         if (targetY >= 0x220)
@@ -332,8 +332,8 @@ offset_and_clamp_to_view:
 
     /* ---- Compute fixed-point delta from current camera position ---- */
     {
-        int16_t cameraIntX = (int16_t)(cameraX.raw >> 16);
-        int16_t cameraIntY = (int16_t)(cameraY.raw >> 16);
+        int16_t cameraIntX = (int16_t)(_cameraX.raw >> 16);
+        int16_t cameraIntY = (int16_t)(_cameraY.raw >> 16);
         int16_t dx = targetX - cameraIntX;
         int16_t dy = targetY - cameraIntY;
 
@@ -364,8 +364,8 @@ offset_and_clamp_to_view:
             fixedDy = -MAX_CAMERA_MOVEMENT;
 
         /* Add to current fixed-point camera position */
-        int32_t newXFixed = fixedDx + cameraX.raw;
-        int32_t newYFixed = fixedDy + cameraY.raw;
+        int32_t newXFixed = fixedDx + _cameraX.raw;
+        int32_t newYFixed = fixedDy + _cameraY.raw;
 
         /* Write fractional part only (low 16 bits of fixed-point result).
          * On big-endian 68k, cameraX.raw high word = integer, low word = fraction.
@@ -375,8 +375,8 @@ offset_and_clamp_to_view:
          * With FixedPoint union this is a direct field write — on BE it
          * targets the low word of the uint32, on LE it targets the low
          * two bytes of the struct, both of which ARE the frac field. */
-        cameraX.s.frac = (uint16_t)newXFixed;
-        cameraY.s.frac = (uint16_t)newYFixed;
+        _cameraX.s.frac = (uint16_t)newXFixed;
+        _cameraY.s.frac = (uint16_t)newYFixed;
 
         /* Extract integer part (swap d1/d2 in asm) */
         int16_t newIntX = (int16_t)(newXFixed >> 16);
@@ -385,8 +385,8 @@ offset_and_clamp_to_view:
         /* Final clamp of integer position */
         if (newIntX < 0)
             newIntX = 0;
-        if (newIntX >= (int16_t)(0x2A0 - g_screen_width))   /* pitchWidth - viewWidth */
-            newIntX = (int16_t)(0x2A0 - g_screen_width);
+        if (newIntX >= (int16_t)(0x2A0 - _screen_width))   /* pitchWidth - viewWidth */
+            newIntX = (int16_t)(0x2A0 - _screen_width);
 
         if (newIntY < 0x10)
             newIntY = 0x10;
@@ -394,6 +394,6 @@ offset_and_clamp_to_view:
             newIntY = 0x260;
 
         SetCameraCoordinates(newIntX, newIntY);
-        cameraCoordinatesValid = 0;
+        _cameraCoordinatesValid = 0;
     }
 }

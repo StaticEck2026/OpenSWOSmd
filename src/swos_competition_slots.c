@@ -41,11 +41,11 @@
 #include "game_types.h"
 
 /* Standalone backing storage — zero-init BSS, correctly sized + laid out. */
-CompetitionSlotBuffer primaryCompetitionBuf;          /* slot 0 (primary)   */
-CompetitionSlotBuffer competitionContextBuf;          /* slot 1 (secondary) */
-CompetitionSlotBuffer tertiaryCompetitionContextBuf;  /* slot 2 (tertiary)  */
-CompetitionSlotBuffer euroCupsCompetitionContextBuf;  /* slot 3 (euro cups) */
-CompetitionSlotBuffer diyCompetitionContextBuf;       /* slot 4 (diy)       */
+CompetitionSlotBuffer _primaryCompetitionBuf;          /* slot 0 (primary)   */
+CompetitionSlotBuffer _competitionContextBuf;          /* slot 1 (secondary) */
+CompetitionSlotBuffer _tertiaryCompetitionContextBuf;  /* slot 2 (tertiary)  */
+CompetitionSlotBuffer _euroCupsCompetitionContextBuf;  /* slot 3 (euro cups) */
+CompetitionSlotBuffer _diyCompetitionContextBuf;       /* slot 4 (diy)       */
 
 /* The whole SLOT_ALIAS `.equ` family is RETIRED (untangle Part A complete, S1-S6).
  * All 5 career competition slots are now accessed exclusively through their typed

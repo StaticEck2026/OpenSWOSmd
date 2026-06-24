@@ -11,6 +11,6 @@ typedef unsigned int uint32_t;
 
 extern void startShim(void);
 extern void _start(void);
-extern volatile uint16_t panicReasonCode;
+extern volatile uint16_t _panicReasonCode;
 
 #endif

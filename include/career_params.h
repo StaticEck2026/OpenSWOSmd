@@ -55,6 +55,6 @@ typedef struct {
                                           * career retires after this many seasons */
 } CareerParams;
 
-extern CareerParams g_careerParams;
+extern CareerParams _careerParams;
 
 #endif /* CAREER_PARAMS_H */

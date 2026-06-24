@@ -57,9 +57,9 @@
 #define KCBS_STR2(x) #x
 #define KCBS_STR(x)  KCBS_STR2(x)
 
-extern uint8_t  teamSelectionKeyCache[KEY_CACHE_BUF_SIZE];
+extern uint8_t  _teamSelectionKeyCache[KEY_CACHE_BUF_SIZE];
 
-_Static_assert(sizeof(teamSelectionKeyCache) == 8192,
+_Static_assert(sizeof(_teamSelectionKeyCache) == 8192,
                "teamSelectionKeyCache buffer must stay 8192 bytes "
                "(tightened InsertSpaceSorted bound; KEYCACHE_CLUSTER_REWORK.md §8.3)");
 
@@ -71,29 +71,29 @@ __asm__(
 #endif
     ".p2align 1\n"
     /* ---- walk cursors (4 x uint16) ---- */
-    ".globl " _ASM_PFX "teamSelectionKeyCacheIndex\n"
-    _ASM_PFX "teamSelectionKeyCacheIndex:\n"
+    ".globl " _ASM_PFX "_teamSelectionKeyCacheIndex\n"
+    _ASM_PFX "_teamSelectionKeyCacheIndex:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "teamSelectionKeyCacheOffset\n"
-    _ASM_PFX "teamSelectionKeyCacheOffset:\n"
+    ".globl " _ASM_PFX "_teamSelectionKeyCacheOffset\n"
+    _ASM_PFX "_teamSelectionKeyCacheOffset:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "teamSelectionKeyCacheCount\n"
-    _ASM_PFX "teamSelectionKeyCacheCount:\n"
+    ".globl " _ASM_PFX "_teamSelectionKeyCacheCount\n"
+    _ASM_PFX "_teamSelectionKeyCacheCount:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "careerSlotProcessingInProgress\n"
-    _ASM_PFX "careerSlotProcessingInProgress:\n"
+    ".globl " _ASM_PFX "_careerSlotProcessingInProgress\n"
+    _ASM_PFX "_careerSlotProcessingInProgress:\n"
     ".skip 2\n"
     /* ---- dedicated cache buffer (KEY_CACHE_BUF_SIZE B) ---- */
-    ".globl " _ASM_PFX "teamSelectionKeyCache\n"
-    _ASM_PFX "teamSelectionKeyCache:\n"
+    ".globl " _ASM_PFX "_teamSelectionKeyCache\n"
+    _ASM_PFX "_teamSelectionKeyCache:\n"
     ".skip " KCBS_STR(KEY_CACHE_BUF_SIZE) "\n"
     /* ---- end marker: &it = cache+KEY_CACHE_BUF_SIZE = InsertSpaceSorted bound; value = season flag ---- */
-    ".globl " _ASM_PFX "teamSelectionKeyCacheEnd\n"
-    _ASM_PFX "teamSelectionKeyCacheEnd:\n"
+    ".globl " _ASM_PFX "_teamSelectionKeyCacheEnd\n"
+    _ASM_PFX "_teamSelectionKeyCacheEnd:\n"
     ".skip 2\n"
-    /* ---- careerJobOfferPhaseBias: promoted standalone scalar (was cache byte 1) ---- */
-    ".globl " _ASM_PFX "careerJobOfferPhaseBias\n"
-    _ASM_PFX "careerJobOfferPhaseBias:\n"
+    /* ---- _careerJobOfferPhaseBias: promoted standalone scalar (was cache byte 1) ---- */
+    ".globl " _ASM_PFX "_careerJobOfferPhaseBias\n"
+    _ASM_PFX "_careerJobOfferPhaseBias:\n"
     ".skip 1\n"
     ".skip 1\n"   /* pad: keep block even */
     ".text\n"

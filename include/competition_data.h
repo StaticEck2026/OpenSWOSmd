@@ -10,402 +10,402 @@
  * Major International Cups
  * ====================================================================== */
 
-extern CompetitionTournament euroCup;
-extern CompetitionCup cupWinnersCup;
-extern CompetitionCup uefaCup;
+extern CompetitionTournament _euroCup;
+extern CompetitionCup _cupWinnersCup;
+extern CompetitionCup _uefaCup;
 
 /* World Cup */
-extern CompetitionTournament worldCup2;
-extern CompetitionTournament worldCup;
+extern CompetitionTournament _worldCup2;
+extern CompetitionTournament _worldCup;
 
 /* World Cup Qualifying Groups */
-extern CompetitionCup worldCupQualifyingGroup1;
-extern CompetitionCup worldCupQualifyingGroup2;
-extern CompetitionCup worldCupQualifyingGroup3;
-extern CompetitionCup worldCupQualifyingGroup4;
-extern CompetitionCup worldCupQualifyingGroup5;
-extern CompetitionCup worldCupQualifyingGroup6;
-extern CompetitionCup worldCupQualifyingGroup7;
-extern CompetitionCup worldCupQualifyingGroup8;
+extern CompetitionCup _worldCupQualifyingGroup1;
+extern CompetitionCup _worldCupQualifyingGroup2;
+extern CompetitionCup _worldCupQualifyingGroup3;
+extern CompetitionCup _worldCupQualifyingGroup4;
+extern CompetitionCup _worldCupQualifyingGroup5;
+extern CompetitionCup _worldCupQualifyingGroup6;
+extern CompetitionCup _worldCupQualifyingGroup7;
+extern CompetitionCup _worldCupQualifyingGroup8;
 
 /* World Cup Regional Qualifications */
-extern CompetitionTournament northAmericaWorldCupQualification;
-extern CompetitionTournament southAmericaWorldCupQualification;
-extern CompetitionTournament africaWorldCupQualification;
-extern CompetitionTournament asiaWorldCupQualification;
-extern CompetitionCup oceaniaWorldCupQualification;
+extern CompetitionTournament _northAmericaWorldCupQualification;
+extern CompetitionTournament _southAmericaWorldCupQualification;
+extern CompetitionTournament _africaWorldCupQualification;
+extern CompetitionTournament _asiaWorldCupQualification;
+extern CompetitionCup _oceaniaWorldCupQualification;
 
 /* Invitation / Tour / Friendly */
-extern CompetitionCup invitationTournament;
-extern CompetitionCup tour;
-extern CompetitionCup friendly;
+extern CompetitionCup _invitationTournament;
+extern CompetitionCup _tour;
+extern CompetitionCup _friendly;
 
 /* ======================================================================
  * European Championships
  * ====================================================================== */
 
-extern CompetitionTournament europeanChampionships2;
-extern CompetitionTournament europeanChampionships;
+extern CompetitionTournament _europeanChampionships2;
+extern CompetitionTournament _europeanChampionships;
 
 /* EC Qualifying Groups */
-extern CompetitionCup ecQualifyingGroup1;
-extern CompetitionCup ecQualifyingGroup2;
-extern CompetitionCup ecQualifyingGroup3;
-extern CompetitionCup ecQualifyingGroup4;
-extern CompetitionCup ecQualifyingGroup5;
-extern CompetitionCup ecQualifyingGroup6;
-extern CompetitionCup ecQualifyingGroup7;
-extern CompetitionCup ecQualifyingGroup8;
+extern CompetitionCup _ecQualifyingGroup1;
+extern CompetitionCup _ecQualifyingGroup2;
+extern CompetitionCup _ecQualifyingGroup3;
+extern CompetitionCup _ecQualifyingGroup4;
+extern CompetitionCup _ecQualifyingGroup5;
+extern CompetitionCup _ecQualifyingGroup6;
+extern CompetitionCup _ecQualifyingGroup7;
+extern CompetitionCup _ecQualifyingGroup8;
 
 /* ======================================================================
  * Continental Cups
  * ====================================================================== */
 
-extern CompetitionTournament copaAmerica;
-extern CompetitionTournament africanNationsCup;
-extern CompetitionTournament northAmericanCup;
-extern CompetitionTournament asianCup;
-extern CompetitionCup oceaniaCup;
+extern CompetitionTournament _copaAmerica;
+extern CompetitionTournament _africanNationsCup;
+extern CompetitionTournament _northAmericanCup;
+extern CompetitionTournament _asianCup;
+extern CompetitionCup _oceaniaCup;
 
 /* ======================================================================
  * Customs League
  * ====================================================================== */
 
-extern CompetitionLeague customsLeague;
+extern CompetitionLeague _customsLeague;
 
 /* ======================================================================
  * National Leagues (1-division)
  * ====================================================================== */
 
-extern CompetitionLeague albanianLeague;
-extern CompetitionLeague austrianLeague;
-extern CompetitionLeague belarussiaLleague;
-extern CompetitionLeague belgianLeague;
-extern CompetitionLeague bulgarianLeague;
-extern CompetitionLeague croatianLeague;
-extern CompetitionLeague cypriotLeague;
-extern CompetitionLeague czechLeague;
-extern CompetitionLeague danishLeague;
-extern CompetitionLeague estonianLeague;
-extern CompetitionLeague faroeIslesLeague;
-extern CompetitionLeague finnishLeague;
-extern CompetitionLeague greekLeague;
-extern CompetitionLeague hungarianLeague;
-extern CompetitionLeague icelandicLeague;
-extern CompetitionLeague israeliLeague;
-extern CompetitionLeague latvianLeague;
-extern CompetitionLeague lithuanianLeague;
-extern CompetitionLeague luxembourgLeague;
-extern CompetitionLeague malteseLeague;
-extern CompetitionLeague northernIrishLeague;
-extern CompetitionLeague norwegianLeague;
-extern CompetitionLeague polishLeague;
-extern CompetitionLeague portugeseLeague;
-extern CompetitionLeague irishLeague;
-extern CompetitionLeague romanianLeague;
-extern CompetitionLeague russianLeague;
-extern CompetitionLeague sanMarinoLeague;
-extern CompetitionLeague slovakianLeague;
-extern CompetitionLeague slovenianLeague;
-extern CompetitionLeague swedishLeague;
-extern CompetitionLeague swissLeague;
-extern CompetitionLeague turkishLeague;
-extern CompetitionLeague ukrainianLeague;
-extern CompetitionLeague welshLeague;
-extern CompetitionLeague yugoslavianLeague;
+extern CompetitionLeague _albanianLeague;
+extern CompetitionLeague _austrianLeague;
+extern CompetitionLeague _belarussiaLleague;
+extern CompetitionLeague _belgianLeague;
+extern CompetitionLeague _bulgarianLeague;
+extern CompetitionLeague _croatianLeague;
+extern CompetitionLeague _cypriotLeague;
+extern CompetitionLeague _czechLeague;
+extern CompetitionLeague _danishLeague;
+extern CompetitionLeague _estonianLeague;
+extern CompetitionLeague _faroeIslesLeague;
+extern CompetitionLeague _finnishLeague;
+extern CompetitionLeague _greekLeague;
+extern CompetitionLeague _hungarianLeague;
+extern CompetitionLeague _icelandicLeague;
+extern CompetitionLeague _israeliLeague;
+extern CompetitionLeague _latvianLeague;
+extern CompetitionLeague _lithuanianLeague;
+extern CompetitionLeague _luxembourgLeague;
+extern CompetitionLeague _malteseLeague;
+extern CompetitionLeague _northernIrishLeague;
+extern CompetitionLeague _norwegianLeague;
+extern CompetitionLeague _polishLeague;
+extern CompetitionLeague _portugeseLeague;
+extern CompetitionLeague _irishLeague;
+extern CompetitionLeague _romanianLeague;
+extern CompetitionLeague _russianLeague;
+extern CompetitionLeague _sanMarinoLeague;
+extern CompetitionLeague _slovakianLeague;
+extern CompetitionLeague _slovenianLeague;
+extern CompetitionLeague _swedishLeague;
+extern CompetitionLeague _swissLeague;
+extern CompetitionLeague _turkishLeague;
+extern CompetitionLeague _ukrainianLeague;
+extern CompetitionLeague _welshLeague;
+extern CompetitionLeague _yugoslavianLeague;
 
 /* Non-European 1-division leagues */
-extern CompetitionLeague algerianLeague;
-extern CompetitionLeague bolivianLeague;
-extern CompetitionLeague brasilianLeague;
-extern CompetitionLeague chileanLeague;
-extern CompetitionLeague colombianLeague;
-extern CompetitionLeague ecuadorLeague;
-extern CompetitionLeague indianLeague;
-extern CompetitionLeague paraguayanLeague;
-extern CompetitionLeague peruvianLeague;
-extern CompetitionLeague southAfricanLeague;
-extern CompetitionLeague surinamLeague;
-extern CompetitionLeague taiwaneseLeague;
-extern CompetitionLeague americanLeague;
-extern CompetitionLeague venezuelanLeague;
-extern CompetitionLeague ghanaLeague;
+extern CompetitionLeague _algerianLeague;
+extern CompetitionLeague _bolivianLeague;
+extern CompetitionLeague _brasilianLeague;
+extern CompetitionLeague _chileanLeague;
+extern CompetitionLeague _colombianLeague;
+extern CompetitionLeague _ecuadorLeague;
+extern CompetitionLeague _indianLeague;
+extern CompetitionLeague _paraguayanLeague;
+extern CompetitionLeague _peruvianLeague;
+extern CompetitionLeague _southAfricanLeague;
+extern CompetitionLeague _surinamLeague;
+extern CompetitionLeague _taiwaneseLeague;
+extern CompetitionLeague _americanLeague;
+extern CompetitionLeague _venezuelanLeague;
+extern CompetitionLeague _ghanaLeague;
 
 /* ======================================================================
  * Multi-division leagues
  * ====================================================================== */
 
-extern CompetitionLeague frenchLeague;
-extern CompetitionLeague germanLeague;
-extern CompetitionLeague italianLeague;
-extern CompetitionLeague japaneseLeague;
-extern CompetitionLeague argentinianLeague;
-extern CompetitionLeague mexicanLeague;
-extern CompetitionLeague elSalvadorLeague;
-extern CompetitionLeague australianLeague;
-extern CompetitionLeague newZealandLeague;
+extern CompetitionLeague _frenchLeague;
+extern CompetitionLeague _germanLeague;
+extern CompetitionLeague _italianLeague;
+extern CompetitionLeague _japaneseLeague;
+extern CompetitionLeague _argentinianLeague;
+extern CompetitionLeague _mexicanLeague;
+extern CompetitionLeague _elSalvadorLeague;
+extern CompetitionLeague _australianLeague;
+extern CompetitionLeague _newZealandLeague;
 
 /* ======================================================================
  * Complex leagues with playoffs
  * ====================================================================== */
 
-extern Playoffs div1Playoffs;
-extern Playoffs div2Playoffs;
-extern Playoffs div3Playoffs;
+extern Playoffs _div1Playoffs;
+extern Playoffs _div2Playoffs;
+extern Playoffs _div3Playoffs;
 
 /* England's leagues — standalone per-country globals (consolidated from the old
  * EnglishLeaguesBlock 2026-06-18 so England is uniform with every other country).
  * englishLeague = the 4-division league; englishLeagues1/2/3 = the per-division
  * promotion/relegation link blocks. Forward-declared here so their mutual
  * cross-references resolve inside competition_data.c. */
-extern CompetitionLeague englishLeague;
-extern Leagues englishLeagues1;
-extern Leagues englishLeagues2;
-extern Leagues englishLeagues3;
+extern CompetitionLeague _englishLeague;
+extern Leagues _englishLeagues1;
+extern Leagues _englishLeagues2;
+extern Leagues _englishLeagues3;
 
-extern CompetitionLeague dutchLeague;
-extern Leagues dutchLeagues1;
-extern Playoffs dutchPlayoffs;
+extern CompetitionLeague _dutchLeague;
+extern Leagues _dutchLeagues1;
+extern Playoffs _dutchPlayoffs;
 
-extern CompetitionLeague scottishLeague;
-extern Leagues scottishLeague1;
-extern Playoffs scottishPlayoffs;
+extern CompetitionLeague _scottishLeague;
+extern Leagues _scottishLeague1;
+extern Playoffs _scottishPlayoffs;
 
-extern CompetitionLeague spanishLeague;
-extern Leagues spanishLeague1;
-extern Playoffs spanishPlayoffs;
+extern CompetitionLeague _spanishLeague;
+extern Leagues _spanishLeague1;
+extern Playoffs _spanishPlayoffs;
 
-extern CompetitionLeague uruguayanLeague;
-extern Leagues uruguayanLeague1;
-extern Playoffs uruguayanPlayoffs;
+extern CompetitionLeague _uruguayanLeague;
+extern Leagues _uruguayanLeague1;
+extern Playoffs _uruguayanPlayoffs;
 
 /* ======================================================================
  * National Cups
  * ====================================================================== */
 
-extern CompetitionCup albanianCup;
-extern CompetitionCup austrianCup;
-extern CompetitionCup belarusianCup;
-extern CompetitionCup belgianCup;
-extern CompetitionCup bulgarianCup;
-extern CompetitionCup croatianCup;
-extern CompetitionCup cypriotCup;
-extern CompetitionCup czechCup;
-extern CompetitionCup danishCup;
-extern CompetitionCup estonianCup;
-extern CompetitionCup faroeIslesCup;
-extern CompetitionCup finnishCup;
-extern CompetitionCup greekCup;
-extern CompetitionCup hungarianCup;
-extern CompetitionCup icelandicCup;
-extern CompetitionCup irishCup;
-extern CompetitionCup israeliCup;
-extern CompetitionCup latvianCup;
-extern CompetitionCup lithuanianCup;
-extern CompetitionCup luxembourgCup;
-extern CompetitionCup malteseCup;
-extern CompetitionCup northernIrishCup;
-extern CompetitionCup norwegianCup;
-extern CompetitionCup polishCup;
-extern CompetitionCup portugeseCup;
-extern CompetitionCup romanianCup;
-extern CompetitionCup russianCup;
-extern CompetitionCup sanMarinoCup;
-extern CompetitionCup slovakianCup;
-extern CompetitionCup slovenianCup;
-extern CompetitionCup swedishCup;
-extern CompetitionCup swissCup;
-extern CompetitionCup turkishCup;
-extern CompetitionCup ukrainianCup;
-extern CompetitionCup welshCup;
-extern CompetitionCup yugoslavianCup;
-extern CompetitionCup algerianCup;
-extern CompetitionCup southAfricanCup;
-extern CompetitionCup taiwaneseCup;
+extern CompetitionCup _albanianCup;
+extern CompetitionCup _austrianCup;
+extern CompetitionCup _belarusianCup;
+extern CompetitionCup _belgianCup;
+extern CompetitionCup _bulgarianCup;
+extern CompetitionCup _croatianCup;
+extern CompetitionCup _cypriotCup;
+extern CompetitionCup _czechCup;
+extern CompetitionCup _danishCup;
+extern CompetitionCup _estonianCup;
+extern CompetitionCup _faroeIslesCup;
+extern CompetitionCup _finnishCup;
+extern CompetitionCup _greekCup;
+extern CompetitionCup _hungarianCup;
+extern CompetitionCup _icelandicCup;
+extern CompetitionCup _irishCup;
+extern CompetitionCup _israeliCup;
+extern CompetitionCup _latvianCup;
+extern CompetitionCup _lithuanianCup;
+extern CompetitionCup _luxembourgCup;
+extern CompetitionCup _malteseCup;
+extern CompetitionCup _northernIrishCup;
+extern CompetitionCup _norwegianCup;
+extern CompetitionCup _polishCup;
+extern CompetitionCup _portugeseCup;
+extern CompetitionCup _romanianCup;
+extern CompetitionCup _russianCup;
+extern CompetitionCup _sanMarinoCup;
+extern CompetitionCup _slovakianCup;
+extern CompetitionCup _slovenianCup;
+extern CompetitionCup _swedishCup;
+extern CompetitionCup _swissCup;
+extern CompetitionCup _turkishCup;
+extern CompetitionCup _ukrainianCup;
+extern CompetitionCup _welshCup;
+extern CompetitionCup _yugoslavianCup;
+extern CompetitionCup _algerianCup;
+extern CompetitionCup _southAfricanCup;
+extern CompetitionCup _taiwaneseCup;
 
 /* Cups with names */
-extern CompetitionCup englishCup;
-extern CompetitionCup englishLeagueCup;
-extern CompetitionCup englishCup_1;
-extern CompetitionCup englishLeagueCup_1;
-extern CompetitionCup frenchCup;
-extern CompetitionCup germanCup;
-extern CompetitionCup italianCup;
-extern CompetitionCup scottishCup;
-extern CompetitionCup scottishLeagueCup;
-extern CompetitionCup spanishCup;
-extern CompetitionCup dutchCup;
-extern CompetitionCup australianCup;
-extern CompetitionCup japaneseCup;
-extern CompetitionCup japaneseEmperorsCup;
+extern CompetitionCup _englishCup;
+extern CompetitionCup _englishLeagueCup;
+extern CompetitionCup _englishCup_1;
+extern CompetitionCup _englishLeagueCup_1;
+extern CompetitionCup _frenchCup;
+extern CompetitionCup _germanCup;
+extern CompetitionCup _italianCup;
+extern CompetitionCup _scottishCup;
+extern CompetitionCup _scottishLeagueCup;
+extern CompetitionCup _spanishCup;
+extern CompetitionCup _dutchCup;
+extern CompetitionCup _australianCup;
+extern CompetitionCup _japaneseCup;
+extern CompetitionCup _japaneseEmperorsCup;
 
 /* ======================================================================
  * Competition "Copy" variables (BSS, used at runtime for career/season)
  * ====================================================================== */
 
-extern CompetitionTournament euroCupCopy;
-extern CompetitionCup cupWinnersCupCopy;
-extern CompetitionCup uefaCupCopy;
-extern CompetitionCup invitationTournamentCopy;
-extern CompetitionCup tourCopy;
-extern CompetitionCup friendlyCopy;
-extern CompetitionTournament europeanChampionships2Copy;
-extern CompetitionCup ecQualifyingGroup1Copy;
-extern CompetitionCup ecQualifyingGroup2Copy;
-extern CompetitionCup ecQualifyingGroup3Copy;
-extern CompetitionCup ecQualifyingGroup4Copy;
-extern CompetitionCup ecQualifyingGroup5Copy;
-extern CompetitionCup ecQualifyingGroup6Copy;
-extern CompetitionCup ecQualifyingGroup7Copy;
-extern CompetitionCup ecQualifyingGroup8Copy;
-extern CompetitionTournament copaAmericaCopy;
-extern CompetitionTournament africanNationsCupCopy;
-extern CompetitionTournament northAmericanCupCopy;
-extern CompetitionTournament asianCupCopy;
-extern CompetitionCup oceaniaCupCopy;
-extern CompetitionTournament worldCup2Copy;
-extern CompetitionCup worldCupQualifyingGroup1Copy;
-extern CompetitionCup worldCupQualifyingGroup2Copy;
-extern CompetitionCup worldCupQualifyingGroup3Copy;
-extern CompetitionCup worldCupQualifyingGroup4Copy;
-extern CompetitionCup worldCupQualifyingGroup5Copy;
-extern CompetitionCup worldCupQualifyingGroup6Copy;
-extern CompetitionCup worldCupQualifyingGroup7Copy;
-extern CompetitionCup worldCupQualifyingGroup8Copy;
-extern CompetitionTournament northAmericaWorldCupQualificationCopy;
-extern CompetitionTournament southAmericaWorldCupQualificationCopy;
-extern CompetitionTournament africaWorldCupQualificationCopy;
-extern CompetitionTournament asiaWorldCupQualificationCopy;
-extern CompetitionCup oceaniaWorldCupQualificationCopy;
+extern CompetitionTournament _euroCupCopy;
+extern CompetitionCup _cupWinnersCupCopy;
+extern CompetitionCup _uefaCupCopy;
+extern CompetitionCup _invitationTournamentCopy;
+extern CompetitionCup _tourCopy;
+extern CompetitionCup _friendlyCopy;
+extern CompetitionTournament _europeanChampionships2Copy;
+extern CompetitionCup _ecQualifyingGroup1Copy;
+extern CompetitionCup _ecQualifyingGroup2Copy;
+extern CompetitionCup _ecQualifyingGroup3Copy;
+extern CompetitionCup _ecQualifyingGroup4Copy;
+extern CompetitionCup _ecQualifyingGroup5Copy;
+extern CompetitionCup _ecQualifyingGroup6Copy;
+extern CompetitionCup _ecQualifyingGroup7Copy;
+extern CompetitionCup _ecQualifyingGroup8Copy;
+extern CompetitionTournament _copaAmericaCopy;
+extern CompetitionTournament _africanNationsCupCopy;
+extern CompetitionTournament _northAmericanCupCopy;
+extern CompetitionTournament _asianCupCopy;
+extern CompetitionCup _oceaniaCupCopy;
+extern CompetitionTournament _worldCup2Copy;
+extern CompetitionCup _worldCupQualifyingGroup1Copy;
+extern CompetitionCup _worldCupQualifyingGroup2Copy;
+extern CompetitionCup _worldCupQualifyingGroup3Copy;
+extern CompetitionCup _worldCupQualifyingGroup4Copy;
+extern CompetitionCup _worldCupQualifyingGroup5Copy;
+extern CompetitionCup _worldCupQualifyingGroup6Copy;
+extern CompetitionCup _worldCupQualifyingGroup7Copy;
+extern CompetitionCup _worldCupQualifyingGroup8Copy;
+extern CompetitionTournament _northAmericaWorldCupQualificationCopy;
+extern CompetitionTournament _southAmericaWorldCupQualificationCopy;
+extern CompetitionTournament _africaWorldCupQualificationCopy;
+extern CompetitionTournament _asiaWorldCupQualificationCopy;
+extern CompetitionCup _oceaniaWorldCupQualificationCopy;
 
 /* ======================================================================
  * Career Contests
  * ====================================================================== */
 
-extern CompetitionCareer careerContests[35];
+extern CompetitionCareer _careerContests[35];
 
 /* ======================================================================
  * Master Competition Pointer Arrays
  * ====================================================================== */
 
-extern Competition *nationalTeamCompetitionsAndQualifications[39];
-extern Competition *continentalCups[7];
+extern Competition *_nationalTeamCompetitionsAndQualifications[39];
+extern Competition *_continentalCups[7];
 
 /* ======================================================================
  * Qualifying Groups and Region Tables
  * ====================================================================== */
 
-extern QualifyingGroup worldCupQualifyingGroups;
-extern QualifyingGroup ecQualifyingGroups;
-extern QualifyingGroup customsTable;
-extern QualifyingGroup worldTable;
-extern QualifyingGroup europeTable;
-extern QualifyingGroup africaTable;
-extern QualifyingGroup southAmericaTable;
-extern QualifyingGroup northAmericaTable;
-extern QualifyingGroup asiaTable;
-extern QualifyingGroup oceaniaTable;
+extern QualifyingGroup _worldCupQualifyingGroups;
+extern QualifyingGroup _ecQualifyingGroups;
+extern QualifyingGroup _customsTable;
+extern QualifyingGroup _worldTable;
+extern QualifyingGroup _europeTable;
+extern QualifyingGroup _africaTable;
+extern QualifyingGroup _southAmericaTable;
+extern QualifyingGroup _northAmericaTable;
+extern QualifyingGroup _asiaTable;
+extern QualifyingGroup _oceaniaTable;
 
 /* ======================================================================
  * Country Competition Tables
  * ====================================================================== */
 
-extern Competition *albaniaTable[4];
-extern Competition *austriaTable[4];
-extern Competition *belgiumTable[4];
-extern Competition *belarusTable[4];
-extern Competition *bulgariaTable[4];
-extern Competition *croatiaTable[4];
-extern Competition *cyprusTable[4];
-extern Competition *czechRepublicTable[4];
-extern Competition *denmarkTable[4];
-extern Competition *englandTable[5];
-extern Competition *estoniaTable[4];
-extern Competition *faroeIslandsTable[4];
-extern Competition *finlandTable[4];
-extern Competition *franceTable[4];
-extern Competition *germanyTable[4];
-extern Competition *greeceTable[4];
-extern Competition *hungaryTable[4];
-extern Competition *icelandTable[4];
-extern Competition *republicIrelandTable[4];
-extern Competition *israelTable[4];
-extern Competition *italyTable[4];
-extern Competition *latviaTable[4];
-extern Competition *lithuaniaTable[4];
-extern Competition *luxembourgTable[4];
-extern Competition *maltaTable[4];
-extern Competition *hollandTable[4];
-extern Competition *northernIrelandTable[4];
-extern Competition *norwayTable[4];
-extern Competition *polandTable[4];
-extern Competition *portugalTable[4];
-extern Competition *romaniaTable[4];
-extern Competition *russiaTable[4];
-extern Competition *sanMarinoTable[4];
-extern Competition *scotlandTable[5];
-extern Competition *slovakiaTable[4];
-extern Competition *sloveniaTable[4];
-extern Competition *spainTable[4];
-extern Competition *swedenTable[4];
-extern Competition *switzerlandTable[4];
-extern Competition *turkeyTable[4];
-extern Competition *ukraineTable[4];
-extern Competition *walesTable[4];
-extern Competition *yugoslaviaTable[4];
-extern Competition *algeriaTable[4];
-extern Competition *argentinaTable[3];
-extern Competition *australiaTable[4];
-extern Competition *boliviaTable[3];
-extern Competition *brasilTable[3];
-extern Competition *chileTable[3];
-extern Competition *colombiaTable[3];
-extern Competition *ecuadorTable[3];
-extern Competition *elSalvadorTable[3];
-extern Competition *indiaTable[3];
-extern Competition *japanTable[5];
-extern Competition *mexicoTable[3];
-extern Competition *newZealandTable[3];
-extern Competition *paraguayTable[3];
-extern Competition *peruTable[3];
-extern Competition *southAfricaTable[4];
-extern Competition *surinamTable[3];
-extern Competition *taiwanTable[4];
-extern Competition *uruguayTable[3];
-extern Competition *usaTable[3];
-extern Competition *venezuelaTable[3];
-extern Competition *ghanaTable[3];
+extern Competition *_albaniaTable[4];
+extern Competition *_austriaTable[4];
+extern Competition *_belgiumTable[4];
+extern Competition *_belarusTable[4];
+extern Competition *_bulgariaTable[4];
+extern Competition *_croatiaTable[4];
+extern Competition *_cyprusTable[4];
+extern Competition *_czechRepublicTable[4];
+extern Competition *_denmarkTable[4];
+extern Competition *_englandTable[5];
+extern Competition *_estoniaTable[4];
+extern Competition *_faroeIslandsTable[4];
+extern Competition *_finlandTable[4];
+extern Competition *_franceTable[4];
+extern Competition *_germanyTable[4];
+extern Competition *_greeceTable[4];
+extern Competition *_hungaryTable[4];
+extern Competition *_icelandTable[4];
+extern Competition *_republicIrelandTable[4];
+extern Competition *_israelTable[4];
+extern Competition *_italyTable[4];
+extern Competition *_latviaTable[4];
+extern Competition *_lithuaniaTable[4];
+extern Competition *_luxembourgTable[4];
+extern Competition *_maltaTable[4];
+extern Competition *_hollandTable[4];
+extern Competition *_northernIrelandTable[4];
+extern Competition *_norwayTable[4];
+extern Competition *_polandTable[4];
+extern Competition *_portugalTable[4];
+extern Competition *_romaniaTable[4];
+extern Competition *_russiaTable[4];
+extern Competition *_sanMarinoTable[4];
+extern Competition *_scotlandTable[5];
+extern Competition *_slovakiaTable[4];
+extern Competition *_sloveniaTable[4];
+extern Competition *_spainTable[4];
+extern Competition *_swedenTable[4];
+extern Competition *_switzerlandTable[4];
+extern Competition *_turkeyTable[4];
+extern Competition *_ukraineTable[4];
+extern Competition *_walesTable[4];
+extern Competition *_yugoslaviaTable[4];
+extern Competition *_algeriaTable[4];
+extern Competition *_argentinaTable[3];
+extern Competition *_australiaTable[4];
+extern Competition *_boliviaTable[3];
+extern Competition *_brasilTable[3];
+extern Competition *_chileTable[3];
+extern Competition *_colombiaTable[3];
+extern Competition *_ecuadorTable[3];
+extern Competition *_elSalvadorTable[3];
+extern Competition *_indiaTable[3];
+extern Competition *_japanTable[5];
+extern Competition *_mexicoTable[3];
+extern Competition *_newZealandTable[3];
+extern Competition *_paraguayTable[3];
+extern Competition *_peruTable[3];
+extern Competition *_southAfricaTable[4];
+extern Competition *_surinamTable[3];
+extern Competition *_taiwanTable[4];
+extern Competition *_uruguayTable[3];
+extern Competition *_usaTable[3];
+extern Competition *_venezuelaTable[3];
+extern Competition *_ghanaTable[3];
 
 /* ======================================================================
  * Season flags and scheduling data
  * ====================================================================== */
 
-extern int16_t seasonCycleNationalFlagsA[5];
-extern uint16_t seasonCycleNationalFlagsB[5];
-extern uint8_t careerTeamFlagsBySeason0[20];
-extern uint8_t careerTeamFlagsBySeason1[20];
-extern uint32_t nationalSelectorSeasonMaskA;
-extern uint32_t nationalSelectorSeasonMaskB;
+extern int16_t _seasonCycleNationalFlagsA[5];
+extern uint16_t _seasonCycleNationalFlagsB[5];
+extern uint8_t _careerTeamFlagsBySeason0[20];
+extern uint8_t _careerTeamFlagsBySeason1[20];
+extern uint32_t _nationalSelectorSeasonMaskA;
+extern uint32_t _nationalSelectorSeasonMaskB;
 
 /* ======================================================================
  * Countries list and career remap
  * ====================================================================== */
 
-extern CountryNumbers allCountriesList[66];
-extern uint8_t careerCompetitionIdRemapTable[66];
+extern CountryNumbers _allCountriesList[66];
+extern uint8_t _careerCompetitionIdRemapTable[66];
 
 /* ======================================================================
  * Euro Cup Qualifying Seed Lists
  * ====================================================================== */
 
-extern uint8_t euroCupQualSeedList4[4];
-extern uint8_t euroCupQualSeedList6[6];
-extern uint8_t euroCupQualSeedList11[11];
-extern uint8_t euroCupQualSeedList22[23];
-extern uint8_t euroCupQualSeedListReduced4[4];
-extern uint8_t euroCupQualSeedListReduced6[6];
-extern uint8_t euroCupQualSeedListReduced11[11];
-extern uint8_t euroCupQualSeedListReduced22[23];
+extern uint8_t _euroCupQualSeedList4[4];
+extern uint8_t _euroCupQualSeedList6[6];
+extern uint8_t _euroCupQualSeedList11[11];
+extern uint8_t _euroCupQualSeedList22[23];
+extern uint8_t _euroCupQualSeedListReduced4[4];
+extern uint8_t _euroCupQualSeedListReduced6[6];
+extern uint8_t _euroCupQualSeedListReduced11[11];
+extern uint8_t _euroCupQualSeedListReduced22[23];
 /* euroCupQualSeedBucket15/18/22/22Full: untangled into EuroCupQualSeedBucketBlock
  * fields (.bucket15/.bucket18/.bucket22/.bucket22Full) — typedef in game_types.h,
  * definition in competition_data.c. */
@@ -414,83 +414,83 @@ extern uint8_t euroCupQualSeedListReduced22[23];
  * Cup Pick Tables (per-region competition selection for career)
  * ====================================================================== */
 
-extern Competition *cupPickOceaniaInviteFriendly[5];
-extern Competition *cupPickOceaniaOceaniaCupFriendly[5];
-extern Competition *cupPickOceaniaWorldCupFriendly[5];
-extern Competition *cupPickOceaniaWorldCupInvite[5];
-extern Competition *cupPickOceaniaOceaniaCupNonFinalist[5];
-extern Competition *cupPickOceaniaOceaniaCupFinalist[5];
+extern Competition *_cupPickOceaniaInviteFriendly[5];
+extern Competition *_cupPickOceaniaOceaniaCupFriendly[5];
+extern Competition *_cupPickOceaniaWorldCupFriendly[5];
+extern Competition *_cupPickOceaniaWorldCupInvite[5];
+extern Competition *_cupPickOceaniaOceaniaCupNonFinalist[5];
+extern Competition *_cupPickOceaniaOceaniaCupFinalist[5];
 
-extern Competition *cupPickNAmericaInviteFriendly[5];
-extern Competition *cupPickNAmericaNaCupFriendly[5];
-extern Competition *cupPickNAmericaWorldCupFriendly[5];
-extern Competition *cupPickNAmericaWorldCupInvite[5];
-extern Competition *cupPickNAmericaNaCupNonFinalist[5];
-extern Competition *cupPickNAmericaNaCupFinalist[5];
+extern Competition *_cupPickNAmericaInviteFriendly[5];
+extern Competition *_cupPickNAmericaNaCupFriendly[5];
+extern Competition *_cupPickNAmericaWorldCupFriendly[5];
+extern Competition *_cupPickNAmericaWorldCupInvite[5];
+extern Competition *_cupPickNAmericaNaCupNonFinalist[5];
+extern Competition *_cupPickNAmericaNaCupFinalist[5];
 
-extern Competition *cupPickAsiaInviteFriendly[5];
-extern Competition *cupPickAsiaAsianCupFriendly[5];
-extern Competition *cupPickAsiaWorldCupFriendly[5];
-extern Competition *cupPickAsiaWorldCupInvite[5];
-extern Competition *cupPickAsiaAsianCupNonFinalist[5];
-extern Competition *cupPickAsiaAsianCupFinalist[5];
+extern Competition *_cupPickAsiaInviteFriendly[5];
+extern Competition *_cupPickAsiaAsianCupFriendly[5];
+extern Competition *_cupPickAsiaWorldCupFriendly[5];
+extern Competition *_cupPickAsiaWorldCupInvite[5];
+extern Competition *_cupPickAsiaAsianCupNonFinalist[5];
+extern Competition *_cupPickAsiaAsianCupFinalist[5];
 
-extern Competition *cupPickAfricaInviteFriendly[5];
-extern Competition *cupPickAfricaAfricanCupFriendly[5];
-extern Competition *cupPickAfricaWorldCupFriendly[5];
-extern Competition *cupPickAfricaWorldCupInvite[5];
-extern Competition *cupPickAfricaAfricanCupNonFinalist[5];
-extern Competition *cupPickAfricaAfricanCupFinalist[5];
+extern Competition *_cupPickAfricaInviteFriendly[5];
+extern Competition *_cupPickAfricaAfricanCupFriendly[5];
+extern Competition *_cupPickAfricaWorldCupFriendly[5];
+extern Competition *_cupPickAfricaWorldCupInvite[5];
+extern Competition *_cupPickAfricaAfricanCupNonFinalist[5];
+extern Competition *_cupPickAfricaAfricanCupFinalist[5];
 
-extern Competition *cupPickSAmericaInviteFriendly[5];
-extern Competition *cupPickSAmericaCopaAmericaFriendly[5];
-extern Competition *cupPickSAmericaWorldCupFriendly[5];
-extern Competition *cupPickSAmericaWorldCupInvite[5];
-extern Competition *cupPickSAmericaCopaAmericaNonFinalist[5];
-extern Competition *cupPickSAmericaCopaAmericaFinalist[5];
+extern Competition *_cupPickSAmericaInviteFriendly[5];
+extern Competition *_cupPickSAmericaCopaAmericaFriendly[5];
+extern Competition *_cupPickSAmericaWorldCupFriendly[5];
+extern Competition *_cupPickSAmericaWorldCupInvite[5];
+extern Competition *_cupPickSAmericaCopaAmericaNonFinalist[5];
+extern Competition *_cupPickSAmericaCopaAmericaFinalist[5];
 
-extern Competition *ecQualifyingGroupsTable[8];
-extern Competition *cupPickEuropeNoCupFriendly[5];
-extern Competition *cupPickListEuropeInviteTournamentFriendly[5];
-extern Competition *cupPickLisEuropeEuroChampsFriendly[5];
-extern Competition *cupPickListEuropeEuroChampsInviteFriendly[5];
-extern Competition *cupPickListEuropeWorldCupFriendly[5];
-extern Competition *cupPickLisEuropeWorldCupInviteFriendly[5];
-extern Competition *cupPickEuropeNoCupFriendlyAlt[5];
-extern Competition *cupPickListEuropeInviteTournamentFriendlyAlt[5];
-extern Competition *worldCupQualifyingGroupsTable[8];
+extern Competition *_ecQualifyingGroupsTable[8];
+extern Competition *_cupPickEuropeNoCupFriendly[5];
+extern Competition *_cupPickListEuropeInviteTournamentFriendly[5];
+extern Competition *_cupPickLisEuropeEuroChampsFriendly[5];
+extern Competition *_cupPickListEuropeEuroChampsInviteFriendly[5];
+extern Competition *_cupPickListEuropeWorldCupFriendly[5];
+extern Competition *_cupPickLisEuropeWorldCupInviteFriendly[5];
+extern Competition *_cupPickEuropeNoCupFriendlyAlt[5];
+extern Competition *_cupPickListEuropeInviteTournamentFriendlyAlt[5];
+extern Competition *_worldCupQualifyingGroupsTable[8];
 
 /* Tour string table */
-extern char *tourStringTable[6];
+extern char *_tourStringTable[6];
 
 /* Career region weights */
-extern uint8_t careerRegionPickWeightsTable[32];
-extern uint8_t careerRegionPickWeightsTable2[32];
+extern uint8_t _careerRegionPickWeightsTable[32];
+extern uint8_t _careerRegionPickWeightsTable2[32];
 
 /* ======================================================================
  * DIY Cup Choice Variables (zero-init)
  * ====================================================================== */
 
-extern uint16_t diyCupLegsChoice0;
-extern uint16_t diyCupExtraTimeChoice0;
-extern uint16_t diyCupPenaltiesChoice0;
-extern uint16_t diyCupLegsChoice1;
-extern uint16_t diyCupExtraTimeChoice1;
-extern uint16_t diyCupPenaltiesChoice1;
-extern uint16_t diyCupLegsChoice2;
-extern uint16_t diyCupExtraTimeChoice2;
-extern uint16_t diyCupPenaltiesChoice2;
-extern uint16_t diyCupLegsChoice3;
-extern uint16_t diyCupExtraTimeChoice3;
-extern uint16_t diyCupPenaltiesChoice3;
-extern uint16_t diyCupLegsChoice4;
-extern uint16_t diyCupExtraTimeChoice4;
-extern uint16_t diyCupPenaltiesChoice4;
-extern uint16_t diyCupLegsChoice5;
-extern uint16_t diyCupExtraTimeChoice5;
-extern uint16_t diyCupPenaltiesChoice5;
+extern uint16_t _diyCupLegsChoice0;
+extern uint16_t _diyCupExtraTimeChoice0;
+extern uint16_t _diyCupPenaltiesChoice0;
+extern uint16_t _diyCupLegsChoice1;
+extern uint16_t _diyCupExtraTimeChoice1;
+extern uint16_t _diyCupPenaltiesChoice1;
+extern uint16_t _diyCupLegsChoice2;
+extern uint16_t _diyCupExtraTimeChoice2;
+extern uint16_t _diyCupPenaltiesChoice2;
+extern uint16_t _diyCupLegsChoice3;
+extern uint16_t _diyCupExtraTimeChoice3;
+extern uint16_t _diyCupPenaltiesChoice3;
+extern uint16_t _diyCupLegsChoice4;
+extern uint16_t _diyCupExtraTimeChoice4;
+extern uint16_t _diyCupPenaltiesChoice4;
+extern uint16_t _diyCupLegsChoice5;
+extern uint16_t _diyCupExtraTimeChoice5;
+extern uint16_t _diyCupPenaltiesChoice5;
 
-extern uint16_t diyEditParamB;
-extern uint16_t diyEditParamC;
+extern uint16_t _diyEditParamB;
+extern uint16_t _diyEditParamC;
 
 #endif /* COMPETITION_DATA_H */

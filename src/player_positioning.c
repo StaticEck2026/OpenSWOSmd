@@ -13,21 +13,21 @@
  * ================================================================== */
 
 /* ---- External globals ---- */
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
 
-extern int16_t  gameState;
+extern int16_t  _gameState;
 
-extern int16_t  ballQuadrantIndex;
-extern int16_t  playerXQuadrantOffset;
-extern int16_t  playerYQuadrantOffset;
+extern int16_t  _ballQuadrantIndex;
+extern int16_t  _playerXQuadrantOffset;
+extern int16_t  _playerYQuadrantOffset;
 
 /* Tactics lookup table: array of raw 68k pointers to TeamTactics structures */
-extern void *teamTacticsTable[];
+extern void *_teamTacticsTable[];
 
 /* Position lookup tables (in SWOS2.s code section) */
-extern int16_t  playerXQuadrantsCoordinates[];
-extern int16_t  playerYQuadrantCoordinates[];
+extern int16_t  _playerXQuadrantsCoordinates[];
+extern int16_t  _playerYQuadrantCoordinates[];
 
 
 /* ==================================================================
@@ -46,14 +46,14 @@ SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
                                 int16_t ballX, int16_t ballY)
 {
     /* Look up tactics structure */
-    TeamTactics *tactics = (TeamTactics *)(teamTacticsTable[team->tactics]);
+    TeamTactics *tactics = (TeamTactics *)(_teamTacticsTable[team->tactics]);
 
     /* If ball out of play: use redirect tactics */
-    if (gameState == ST_KEEPER_HOLDS_BALL ||
-        gameState == ST_GOAL_OUT_LEFT ||
-        gameState == ST_GOAL_OUT_RIGHT) {
+    if (_gameState == ST_KEEPER_HOLDS_BALL ||
+        _gameState == ST_GOAL_OUT_LEFT ||
+        _gameState == ST_GOAL_OUT_RIGHT) {
         int16_t idx = (int16_t)(int8_t)tactics->ballOutOfPlayTactics;
-        tactics = (TeamTactics *)(teamTacticsTable[idx]);
+        tactics = (TeamTactics *)(_teamTacticsTable[idx]);
     }
 
     /* Advance to positions array */
@@ -73,7 +73,7 @@ SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
 
         int16_t topY = 135;
         int16_t botY = 161;
-        if (team != &topTeamData) {
+        if (team != &_topTeamData) {
             topY = 737;
             botY = 763;
         }
@@ -86,16 +86,16 @@ SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
 
     /* Non-goalkeeper: look up position from tactics table */
     uint16_t tableOffset = (uint16_t)d0 * 35;
-    int16_t d3 = playerXQuadrantOffset;
-    int16_t d4 = playerYQuadrantOffset;
+    int16_t d3 = _playerXQuadrantOffset;
+    int16_t d4 = _playerYQuadrantOffset;
     uint8_t positionByte;
 
-    if (team == &topTeamData) {
-        tableOffset += (uint16_t)ballQuadrantIndex;
+    if (team == &_topTeamData) {
+        tableOffset += (uint16_t)_ballQuadrantIndex;
         positionByte = positions[tableOffset];
     } else {
         /* Right/bottom team: mirror index and position */
-        uint16_t mirrorIdx = 34 - (uint16_t)ballQuadrantIndex;
+        uint16_t mirrorIdx = 34 - (uint16_t)_ballQuadrantIndex;
         tableOffset += mirrorIdx;
         positionByte = (uint8_t)(0xEF - positions[tableOffset]);
     }
@@ -104,12 +104,12 @@ SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
     int16_t xIdx = (positionByte >> 4) & 0xF;
     int16_t yIdx = positionByte & 0xF;
 
-    d3 += playerXQuadrantsCoordinates[xIdx];
-    d4 += playerYQuadrantCoordinates[yIdx];
+    d3 += _playerXQuadrantsCoordinates[xIdx];
+    d4 += _playerYQuadrantCoordinates[yIdx];
 
     /* Team-specific X adjustment */
     d3 -= 4;
-    if (team != &topTeamData)
+    if (team != &_topTeamData)
         d3 += 8; /* net +4 for bottom team */
 
     /* Clamp to pitch bounds */

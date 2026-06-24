@@ -10,8 +10,8 @@
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
 
 /* ASM externs for number formatting */
-extern uint8_t aPound[];       /* "£" (0x9C, 0x00) */
-extern uint8_t nullString_0[]; /* "" (0x00) */
+extern uint8_t _aPound[];       /* "£" (0x9C, 0x00) */
+extern uint8_t _nullString_0[]; /* "" (0x00) */
 
 /* Money symbol. The pound (byte 0x9C) is hard-coded at the start of every money
  * format string: aPound (used by Int2Pounds for balances/wages/transfers) and
@@ -21,20 +21,20 @@ extern uint8_t nullString_0[]; /* "" (0x00) */
  * the stock 0x9C. */
 void Currency_Set(const char *name)
 {
-    extern char a1k[], a0m[], a01m[];
+    extern char _a1k[], _a0m[], _a01m[];
     uint8_t sym = 0x9C;                                       /* pound (default/stock) */
     if (name) {
         if (name[0] == 'd' || name[0] == 'D') sym = 0x24;     /* dollar '$' */
         else if (name[0] == 'e' || name[0] == 'E') sym = 0x9D; /* euro '€' */
     }
-    aPound[0] = sym;
-    a1k[0] = a0m[0] = a01m[0] = (char)sym;
+    _aPound[0] = sym;
+    _a1k[0] = _a0m[0] = _a01m[0] = (char)sym;
 }
 
 /* Back-compat shim for any caller still passing a bool. */
 void Currency_SetDollar(int dollar) { Currency_Set(dollar ? "dollar" : "pound"); }
-extern uint8_t aBank[];        /* "BANK" */
-extern int32_t newBalance;
+extern uint8_t _aBank[];        /* "BANK" */
+extern int32_t _newBalance;
 
 /* ================================================================
  * GetStringLength  (SWOS2.s line 40972)
@@ -214,11 +214,11 @@ void Int2Pounds(uint32_t pounds, uint8_t *dst)
     /* nullsub_11 is a no-op */
     /* Copy the currency sign — aPound[0] is patched to '$' by Currency_SetDollar
      * when currency=dollar (default stays the £, byte 0x9C). */
-    dst = StringCopy(aPound, dst);
+    dst = StringCopy(_aPound, dst);
     /* Format number with commas */
     dst = int2StrWithCommas(pounds, dst);
     /* Copy null string (null terminator) */
-    StringCopy(nullString_0, dst);
+    StringCopy(_nullString_0, dst);
 }
 
 /* ================================================================
@@ -264,10 +264,10 @@ void WriteAccountBalance(int32_t delta, uint8_t *dst)
 __attribute__((used, externally_visible))
 void GetBankBalance(uint8_t *dst)
 {
-    dst = StringCopy(aBank, dst);
+    dst = StringCopy(_aBank, dst);
     *dst++ = ' ';
     *dst++ = ' ';
-    Int2PoundsSigned(newBalance, dst);
+    Int2PoundsSigned(_newBalance, dst);
 }
 
 /* ================================================================
@@ -278,7 +278,7 @@ void GetBankBalance(uint8_t *dst)
 extern void DoubleBufferSwapSequence(void);
 extern void PrepareMenuBackground(void);
 extern void DrawMenu(void);
-extern uint16_t menuFade;
+extern uint16_t _menuFade;
 
 __attribute__((used, externally_visible))
 void PrepareMenuForFadeIn(void)
@@ -286,5 +286,5 @@ void PrepareMenuForFadeIn(void)
     DoubleBufferSwapSequence();
     PrepareMenuBackground();
     DrawMenu();
-    menuFade = 1;
+    _menuFade = 1;
 }

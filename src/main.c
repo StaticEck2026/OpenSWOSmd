@@ -5,7 +5,7 @@
  */
 #include "swos_asm.h"
 
-__attribute__((used, externally_visible)) volatile uint16_t *_panicReasonCode = &panicReasonCode;
+__attribute__((used, externally_visible)) volatile uint16_t *_pPanicReasonCode = &_panicReasonCode;
 
 /* Minimal libc stubs needed when LTO/Ofast optimizes loops into library calls */
 __attribute__((optimize("no-tree-loop-distribute-patterns")))

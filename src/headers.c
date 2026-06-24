@@ -7,25 +7,25 @@
 #include "game_types.h"
 
 /* ---- External asm symbols ---- */
-extern uint16_t currentGameTick;
-extern int16_t kDefaultDestinations[16];
-extern int16_t kPlayerHeaderSpeedIncrease[8];
-extern uint32_t kBallJumpHeaderDeltaZ;
-extern uint16_t kJumpHeaderSpeed;
-extern uint32_t kHeaderLowJumpHeight;
-extern uint32_t kHeaderHighJumpHeight;
-extern uint16_t kStaticHeaderBaseBallSpeed;
-extern uint16_t kStaticHeaderPlayerSpeed;
+extern uint16_t _currentGameTick;
+extern int16_t _kDefaultDestinations[16];
+extern int16_t _kPlayerHeaderSpeedIncrease[8];
+extern uint32_t _kBallJumpHeaderDeltaZ;
+extern uint16_t _kJumpHeaderSpeed;
+extern uint32_t _kHeaderLowJumpHeight;
+extern uint32_t _kHeaderHighJumpHeight;
+extern uint16_t _kStaticHeaderBaseBallSpeed;
+extern uint16_t _kStaticHeaderPlayerSpeed;
 
 /* Animation tables (in sprite_data.c) */
-extern AnimTable jumpHeaderHitAnimTable;
-extern AnimTable jumpHeaderAttemptAnimTable;
-extern AnimTable staticHeaderAttemptAnimTable;
-extern AnimTable staticHeaderAimAnimTable;
-extern AnimTable staticHeaderHitAnimTable;
+extern AnimTable _jumpHeaderHitAnimTable;
+extern AnimTable _jumpHeaderAttemptAnimTable;
+extern AnimTable _staticHeaderAttemptAnimTable;
+extern AnimTable _staticHeaderAimAnimTable;
+extern AnimTable _staticHeaderHitAnimTable;
 
 /* Ball sprite */
-extern Sprite ballSprite;
+extern Sprite _ballSprite;
 
 /* Functions from other modules */
 #include "player_anim.h"
@@ -45,7 +45,7 @@ static void setPlayerJumpHeaderHitAnimationTable(Sprite *player)
 {
     if ((uint16_t)player->frameSwitchCounter > 2)
         return;
-    SetPlayerAnimationTableAndPictureIndex(&jumpHeaderHitAnimTable, player);
+    SetPlayerAnimationTableAndPictureIndex(&_jumpHeaderHitAnimTable, player);
 }
 
 
@@ -58,7 +58,7 @@ static void setPlayerJumpHeaderHitAnimationTable(Sprite *player)
  * ================================================================== */
 static void doFlyingHeader(Sprite *player, Sprite *ball)
 {
-    ball->deltaZ.raw = (int32_t)kHeaderLowJumpHeight;
+    ball->deltaZ.raw = (int32_t)_kHeaderLowJumpHeight;
     uint16_t spd = (uint16_t)ball->speed;
     uint16_t quarter = spd >> 2;
     ball->speed = (int16_t)(spd - quarter);
@@ -75,7 +75,7 @@ static void doFlyingHeader(Sprite *player, Sprite *ball)
  * ================================================================== */
 static void doLobHeader(Sprite *player, Sprite *ball)
 {
-    ball->deltaZ.raw = (int32_t)kHeaderHighJumpHeight;
+    ball->deltaZ.raw = (int32_t)_kHeaderHighJumpHeight;
     uint16_t spd = (uint16_t)ball->speed;
     uint16_t sixteenth = spd >> 4;
     ball->speed = (int16_t)(spd - sixteenth);
@@ -95,7 +95,7 @@ static void doLobHeader(Sprite *player, Sprite *ball)
 void __attribute__((used, externally_visible))
 SetJumpHeaderHitAnimTable(Sprite *player)
 {
-    if (player->animationTable == &jumpHeaderHitAnimTable)
+    if (player->animationTable == &_jumpHeaderHitAnimTable)
         return;
     if (player->heading != 0)
         return;
@@ -104,9 +104,9 @@ SetJumpHeaderHitAnimTable(Sprite *player)
     if ((uint16_t)player->frameSwitchCounter > 2)
         return;
     /* btst #1, currentGameTick+1(pc) — tests bit 1 of low byte */
-    if (!(((uint8_t *)&currentGameTick)[1] & 0x02))
+    if (!(((uint8_t *)&_currentGameTick)[1] & 0x02))
         return;
-    SetPlayerAnimationTableAndPictureIndex(&jumpHeaderHitAnimTable, player);
+    SetPlayerAnimationTableAndPictureIndex(&_jumpHeaderHitAnimTable, player);
     uint16_t spd = (uint16_t)player->speed;
     player->speed = (int16_t)(spd >> 1);
 }
@@ -130,8 +130,8 @@ PlayerHittingJumpHeader(Sprite *player, TeamGeneralInfo *team)
     if (inputDir < 0)
         inputDir = player->direction;
 
-    Sprite *ball = &ballSprite;
-    ball->deltaZ.raw = (int32_t)kBallJumpHeaderDeltaZ;
+    Sprite *ball = &_ballSprite;
+    ball->deltaZ.raw = (int32_t)_kBallJumpHeaderDeltaZ;
 
     /* Ball speed = player speed * 1.25 */
     uint16_t plSpeed = (uint16_t)player->speed;
@@ -201,17 +201,17 @@ apply_dir:
 
     /* Set ball destination from direction lookup table */
     int16_t dirIdx = finalDir * 2; /* index into kDefaultDestinations (pairs of x,y) */
-    int16_t destX = kDefaultDestinations[dirIdx] + ball->x.s.i;
+    int16_t destX = _kDefaultDestinations[dirIdx] + ball->x.s.i;
     ball->destX = destX;
-    int16_t destY = kDefaultDestinations[dirIdx + 1] + ball->y.s.i;
+    int16_t destY = _kDefaultDestinations[dirIdx + 1] + ball->y.s.i;
     ball->destY = destY;
 
     /* Apply heading attribute speed increase. */
     PlayerInfo *pi = GetPlayerPointerFromShirtNumber(player, team);
     int8_t headingSkill = pi->heading;
-    int16_t speedBonus = kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
-    uint16_t ballSpeed = (uint16_t)ball->speed;
-    ball->speed = (int16_t)(ballSpeed + speedBonus);
+    int16_t speedBonus = _kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
+    uint16_t _ballSpeed = (uint16_t)ball->speed;
+    ball->speed = (int16_t)(_ballSpeed + speedBonus);
 
     /* Halve player speed, mark heading done */
     uint16_t pSpeed = (uint16_t)player->speed;
@@ -239,7 +239,7 @@ SetStaticHeaderDirection(Sprite *player, TeamGeneralInfo *team)
         return;
     if ((uint8_t)player->playerDownTimer > 18)
         return;
-    if (player->animationTable != &staticHeaderAttemptAnimTable)
+    if (player->animationTable != &_staticHeaderAttemptAnimTable)
         return;
 
     int16_t delta = inputDir - player->direction;
@@ -260,7 +260,7 @@ SetStaticHeaderDirection(Sprite *player, TeamGeneralInfo *team)
         }
     }
 
-    SetPlayerAnimationTableAndPictureIndex(&staticHeaderAimAnimTable, player);
+    SetPlayerAnimationTableAndPictureIndex(&_staticHeaderAimAnimTable, player);
 }
 
 
@@ -279,7 +279,7 @@ PlayerHittingStaticHeader(Sprite *player, TeamGeneralInfo *team)
     team->passInProgress = 0;
 
     /* Skip direction adjustment if already in hit anim */
-    if (player->animationTable == &staticHeaderHitAnimTable)
+    if (player->animationTable == &_staticHeaderHitAnimTable)
         goto apply_hit;
 
     /* Compare input direction with player direction */
@@ -317,30 +317,30 @@ PlayerHittingStaticHeader(Sprite *player, TeamGeneralInfo *team)
     player->direction = (int16_t)(player->direction & 7);
 
 apply_hit:
-    SetPlayerAnimationTableAndPictureIndex(&staticHeaderHitAnimTable, player);
+    SetPlayerAnimationTableAndPictureIndex(&_staticHeaderHitAnimTable, player);
 
     /* Determine shooting direction: use input if available, else player dir */
     int16_t shootDir = team->currentAllowedDirection;
     if (shootDir < 0)
         shootDir = player->direction;
 
-    Sprite *ball = &ballSprite;
+    Sprite *ball = &_ballSprite;
     team->controlledPlDirection = shootDir;
 
     /* Set ball destination from direction table */
     int16_t dirIdx = shootDir * 2;
-    int16_t destX = kDefaultDestinations[dirIdx] + ball->x.s.i;
+    int16_t destX = _kDefaultDestinations[dirIdx] + ball->x.s.i;
     ball->destX = destX;
-    int16_t destY = kDefaultDestinations[dirIdx + 1] + ball->y.s.i;
+    int16_t destY = _kDefaultDestinations[dirIdx + 1] + ball->y.s.i;
     ball->destY = destY;
 
     /* Set base ball speed for static header */
-    ball->speed = (int16_t)kStaticHeaderBaseBallSpeed;
+    ball->speed = (int16_t)_kStaticHeaderBaseBallSpeed;
 
     /* Apply heading attribute speed increase. */
     PlayerInfo *pi = GetPlayerPointerFromShirtNumber(player, team);
     int8_t headingSkill = pi->heading;
-    int16_t speedBonus = kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
+    int16_t speedBonus = _kPlayerHeaderSpeedIncrease[(int16_t)headingSkill];
     uint16_t ballSpeed = (uint16_t)ball->speed;
     ball->speed = (int16_t)(ballSpeed + speedBonus);
 
@@ -373,14 +373,14 @@ AttemptStaticHeader(Sprite *player, uint16_t dir)
 
     /* Set destination from direction table */
     int16_t dirIdx = (int16_t)(dir * 2);
-    int16_t destX = kDefaultDestinations[dirIdx] + player->x.s.i;
+    int16_t destX = _kDefaultDestinations[dirIdx] + player->x.s.i;
     player->destX = destX;
-    int16_t destY = kDefaultDestinations[dirIdx + 1] + player->y.s.i;
+    int16_t destY = _kDefaultDestinations[dirIdx + 1] + player->y.s.i;
     player->destY = destY;
 
-    player->speed = (int16_t)kStaticHeaderPlayerSpeed;
+    player->speed = (int16_t)_kStaticHeaderPlayerSpeed;
 
-    SetPlayerAnimationTable(&staticHeaderAttemptAnimTable, player);
+    SetPlayerAnimationTable(&_staticHeaderAttemptAnimTable, player);
     player->playerState = PL_STATIC_HEADING;
     player->playerDownTimer = 20;
 }
@@ -400,16 +400,16 @@ PlayerAttemptingJumpHeader(uint16_t dir, Sprite *player)
     player->heading = 0;
     player->direction = (int16_t)dir;
 
-    SetPlayerAnimationTable(&jumpHeaderAttemptAnimTable, player);
+    SetPlayerAnimationTable(&_jumpHeaderAttemptAnimTable, player);
     player->playerDownTimer = 50;
     player->playerState = PL_JUMP_HEADING;
 
     /* Set destination from direction table */
     int16_t dirIdx = (int16_t)(dir * 2);
-    int16_t destX = kDefaultDestinations[dirIdx] + player->x.s.i;
+    int16_t destX = _kDefaultDestinations[dirIdx] + player->x.s.i;
     player->destX = destX;
-    int16_t destY = kDefaultDestinations[dirIdx + 1] + player->y.s.i;
+    int16_t destY = _kDefaultDestinations[dirIdx + 1] + player->y.s.i;
     player->destY = destY;
 
-    player->speed = (int16_t)kJumpHeaderSpeed;
+    player->speed = (int16_t)_kJumpHeaderSpeed;
 }

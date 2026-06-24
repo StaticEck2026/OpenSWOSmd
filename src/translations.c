@@ -132,9 +132,9 @@ static char *tr_dup(const char *tok, int len)
 /* Look up a string symbol's compiled &address by name (startup-only, linear). */
 static void *sym_addr(const char *name)
 {
-    for (int i = 0; i < stringSymbolsCount; i++)
-        if (strcmp(stringSymbols[i].name, name) == 0)
-            return stringSymbols[i].addr;
+    for (int i = 0; i < _stringSymbolsCount; i++)
+        if (strcmp(_stringSymbols[i].name, name) == 0)
+            return _stringSymbols[i].addr;
     return NULL;
 }
 
@@ -188,13 +188,13 @@ void Translations_Load(const char *lang)
     /* Build the address → text map: each compiled string symbol's &address →
      * its localized text. Lets the renderer localize by pointer (tr_ptr). */
     int nCountry = 0;
-    if (stringSymbolsCount > 0) {
-        s_trp = (TrPtrEntry *)malloc((size_t)stringSymbolsCount * sizeof *s_trp);
+    if (_stringSymbolsCount > 0) {
+        s_trp = (TrPtrEntry *)malloc((size_t)_stringSymbolsCount * sizeof *s_trp);
         if (s_trp) {
             int m = 0;
-            for (int si = 0; si < stringSymbolsCount; si++) {
-                const char *txt = tr(stringSymbols[si].name);
-                if (txt) { s_trp[m].addr = stringSymbols[si].addr; s_trp[m].text = txt; m++; }
+            for (int si = 0; si < _stringSymbolsCount; si++) {
+                const char *txt = tr(_stringSymbols[si].name);
+                if (txt) { s_trp[m].addr = _stringSymbols[si].addr; s_trp[m].text = txt; m++; }
             }
             /* Country names: rebuild the packed "<flag>NAME\0NAT\0" string from the
              * clean [name, nationality] pair (preserving the compiled flag byte),
@@ -202,10 +202,10 @@ void Translations_Load(const char *lang)
              * it. Stored packed because the consumers read `str + 1` (skip flag)
              * up to the NUL, then the nationality after it. */
             const char *carr; int cal;
-            if (m < stringSymbolsCount &&
+            if (m < _stringSymbolsCount &&
                 mjson_find(buf, (int)n, "$.countries", &carr, &cal) == MJSON_TOK_OBJECT) {
                 int co = 0, cko, ckl, cvo, cvl, cvt;
-                while (m < stringSymbolsCount &&
+                while (m < _stringSymbolsCount &&
                        (co = mjson_next(carr, cal, co, &cko, &ckl, &cvo, &cvl, &cvt)) != 0) {
                     if (cvt != MJSON_TOK_ARRAY) continue;
                     const char *st = carr + cko; int sn = ckl;
@@ -264,12 +264,12 @@ void Countries_Localize(void)
      * to its localized packed string so every site shows the active language.
      * countryNames[64] is zero-init and filled at runtime from this table, so it
      * inherits the translation. */
-    extern void *countriesTable[];
+    extern void *_countriesTable[];
     int n = 0;
     for (int i = 0; i < 262; i++) {
-        if (!countriesTable[i]) continue;
-        const char *t = tr_ptr(countriesTable[i]);
-        if (t) { countriesTable[i] = (void *)t; n++; }
+        if (!_countriesTable[i]) continue;
+        const char *t = tr_ptr(_countriesTable[i]);
+        if (t) { _countriesTable[i] = (void *)t; n++; }
     }
     fprintf(stderr, "[i18n] localized %d country names\n", n);
     fflush(stderr);

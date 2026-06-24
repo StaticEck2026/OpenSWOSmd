@@ -35,7 +35,7 @@ typedef struct {
 _Static_assert(sizeof(CareerTeamScalars) == 6,
                "CareerTeamScalars must stay 6 bytes (3 x uint16)");
 
-extern CareerTeamScalars careerTeamScalars;
+extern CareerTeamScalars _careerTeamScalars;
 
 __asm__(
 #if defined(__APPLE__)
@@ -44,16 +44,16 @@ __asm__(
     ".section .bss\n"
 #endif
     ".p2align 1\n"
-    ".globl " _ASM_PFX "careerTeamScalars\n"
-    _ASM_PFX "careerTeamScalars:\n"
-    ".globl " _ASM_PFX "careerNumPlayers\n"
-    _ASM_PFX "careerNumPlayers:\n"
+    ".globl " _ASM_PFX "_careerTeamScalars\n"
+    _ASM_PFX "_careerTeamScalars:\n"
+    ".globl " _ASM_PFX "_careerNumPlayers\n"
+    _ASM_PFX "_careerNumPlayers:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "selTeamSelectedPlayerPosition\n"
-    _ASM_PFX "selTeamSelectedPlayerPosition:\n"
+    ".globl " _ASM_PFX "_selTeamSelectedPlayerPosition\n"
+    _ASM_PFX "_selTeamSelectedPlayerPosition:\n"
     ".skip 2\n"
-    ".globl " _ASM_PFX "removedPlayerStatAccum\n"
-    _ASM_PFX "removedPlayerStatAccum:\n"
+    ".globl " _ASM_PFX "_removedPlayerStatAccum\n"
+    _ASM_PFX "_removedPlayerStatAccum:\n"
     ".skip 2\n"
     ".text\n"
 );

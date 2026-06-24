@@ -49,64 +49,64 @@ extern uint32_t GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
 extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 
 /* ---- Data externs (still in asm) ---- */
-extern TeamFileEx careerTeam;
-extern uint8_t    currentMatchPlayers[32];
-extern uint16_t   careerNumPlayers;
-extern uint16_t   trainingGame;
-extern uint16_t   gameType;
-extern uint16_t   currentSeasonShowing;
-extern uint8_t    newRandomSeedCopy;
-extern uint8_t    viewRandomPhase;
-extern uint8_t    seasonPlaying;
-extern uint8_t    kRandomTable[];
-extern void *teamTacticsTable[];
-extern void *positionsTable[];
-extern uint16_t   oldPlayerSkill;
-extern uint8_t    playerPositionsArray[];
+extern TeamFileEx _careerTeam;
+extern uint8_t    _currentMatchPlayers[32];
+extern uint16_t   _careerNumPlayers;
+extern uint16_t   _trainingGame;
+extern uint16_t   _gameType;
+extern uint16_t   _currentSeasonShowing;
+extern uint8_t    _newRandomSeedCopy;
+extern uint8_t    _viewRandomPhase;
+extern uint8_t    _seasonPlaying;
+extern uint8_t    _kRandomTable[];
+extern void *_teamTacticsTable[];
+extern void *_positionsTable[];
+extern uint16_t   _oldPlayerSkill;
+extern uint8_t    _playerPositionsArray[];
 
 /* Data tables in asm for this module */
-extern uint8_t    simGoalsByStrengthDiffTable[];
-extern uint8_t    simHighGoalFallbackValues[];
-extern void *simGoalProbByTacticPtrs[];
-extern void *simExtraGoalProbByTacticPtrs[];
-extern uint8_t    simGoalsByIndexDiffTable[];
-extern uint8_t    simExtraGoalThresholdsA[];
-extern uint8_t    simExtraGoalThresholdsB[];
-extern uint8_t    simGoalScorerPairTable[];
-extern void *goalScorerDistributionByBallOutTactic[];
-extern uint8_t    kUserTeamOffsetBiasLUT[];
-extern uint8_t    kTeamViewOffsetBaseLUT[];
-extern uint8_t    availablePickCountByGoalsInTable[];
-extern uint8_t    preferredTacticsSlotsByRole[];
-extern uint8_t    candidatePlayersByGoalsInTable[];
-extern void *playersPositionsByTactics[];
-extern uint8_t    playerStatusBucketThresholds[];
+extern uint8_t    _simGoalsByStrengthDiffTable[];
+extern uint8_t    _simHighGoalFallbackValues[];
+extern void *_simGoalProbByTacticPtrs[];
+extern void *_simExtraGoalProbByTacticPtrs[];
+extern uint8_t    _simGoalsByIndexDiffTable[];
+extern uint8_t    _simExtraGoalThresholdsA[];
+extern uint8_t    _simExtraGoalThresholdsB[];
+extern uint8_t    _simGoalScorerPairTable[];
+extern void *_goalScorerDistributionByBallOutTactic[];
+extern uint8_t    _kUserTeamOffsetBiasLUT[];
+extern uint8_t    _kTeamViewOffsetBaseLUT[];
+extern uint8_t    _availablePickCountByGoalsInTable[];
+extern uint8_t    _preferredTacticsSlotsByRole[];
+extern uint8_t    _candidatePlayersByGoalsInTable[];
+extern void *_playersPositionsByTactics[];
+extern uint8_t    _playerStatusBucketThresholds[];
 
 /* Extern globals/functions for Chunk 106 */
-extern uint8_t  resultString[];
+extern uint8_t  _resultString[];
 extern void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                      uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
                      uint16_t n4, uint16_t n5, uint16_t n6,
                      const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
-extern uint8_t  a1stLeg01[];
-extern uint8_t  aAWin23OnAgg[];
-extern uint8_t  aAWin23OnAggAET[];
-extern uint8_t  a23OnAggAWinOnA_0[];
-extern uint8_t  a23OnAggAWinOnA[];
-extern uint8_t  a23OnAggAWin01O[];
-extern uint8_t  a23OnAggAWin01O_0[];
-extern uint8_t  a23OnAgg[];
-extern uint8_t  aReplay_0[];
-extern uint8_t  aAET[];
-extern uint8_t  aAET90Mins23[];
-extern uint8_t  aAETReplay[];
-extern uint8_t  aAET90Mins23Rep[];
-extern uint8_t  aAWin01OnPensAE[];
-extern uint8_t  aAWin01OnPensAE_1[];
-extern uint8_t  aAWin01OnPensAE_3[];
-extern uint8_t  aAWin01OnPensAE_5[];
-extern uint8_t  aAWin01OnPens[];
-extern uint8_t  aAWin01OnPensRe[];
+extern uint8_t  _a1stLeg01[];
+extern uint8_t  _aAWin23OnAgg[];
+extern uint8_t  _aAWin23OnAggAET[];
+extern uint8_t  _a23OnAggAWinOnA_0[];
+extern uint8_t  _a23OnAggAWinOnA[];
+extern uint8_t  _a23OnAggAWin01O[];
+extern uint8_t  _a23OnAggAWin01O_0[];
+extern uint8_t  _a23OnAgg[];
+extern uint8_t  _aReplay_0[];
+extern uint8_t  _aAET[];
+extern uint8_t  _aAET90Mins23[];
+extern uint8_t  _aAETReplay[];
+extern uint8_t  _aAET90Mins23Rep[];
+extern uint8_t  _aAWin01OnPensAE[];
+extern uint8_t  _aAWin01OnPensAE_1[];
+extern uint8_t  _aAWin01OnPensAE_3[];
+extern uint8_t  _aAWin01OnPensAE_5[];
+extern uint8_t  _aAWin01OnPens[];
+extern uint8_t  _aAWin01OnPensRe[];
 
 /* buildMatchResultStringControl — static storage for the control flag
  * (originally a dc.w in asm right after the function) */
@@ -116,21 +116,21 @@ static uint16_t buildMatchResultStringControl;
 int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber);
 
 /* Extern globals for Chunk 105 */
-extern uint16_t pl1Tactics;
-extern uint16_t pl2Tactics;
-extern TeamFile *gameTeam1;
-extern TeamFile *gameTeam2;
-extern uint16_t team1AppPercent;
-extern uint16_t team2AppPercent;
-extern uint16_t plgD0Param;
-extern uint16_t isGameFriendly;
-extern uint16_t gameRandValue;
-extern TeamGame topTeamInGame;
-extern TeamGame bottomTeamInGame;
-extern DIYCompetitionEx diyCompetitionStart;
+extern uint16_t _pl1Tactics;
+extern uint16_t _pl2Tactics;
+extern TeamFile *_gameTeam1;
+extern TeamFile *_gameTeam2;
+extern uint16_t _team1AppPercent;
+extern uint16_t _team2AppPercent;
+extern uint16_t _plgD0Param;
+extern uint16_t _isGameFriendly;
+extern uint16_t _gameRandValue;
+extern TeamGame _topTeamInGame;
+extern TeamGame _bottomTeamInGame;
+extern DIYCompetitionEx _diyCompetitionStart;
 extern void SaveRand2State(void);
 extern void RestoreRand2State(void);
-extern void Randomize2(uint16_t seed);
+extern void Randomize2(uint16_t _seed);
 extern uint16_t GetPlayerRandomNum(PlayerFile *playerFile);
 extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
@@ -163,9 +163,9 @@ static uintptr_t currentGoalScorerDistPtr;  /* holds a pointer into goalScorerDi
 static uint16_t  oldPlayerSkillDivisor;
 
 /* Externally-visible state (defined in asm, referenced by other asm modules) */
-extern uint16_t inEditTactics;
-extern uint8_t  team1GoalCounterByPlayer[];
-extern uint8_t  team2GoalCounterByPlayer[];
+extern uint16_t _inEditTactics;
+extern uint8_t  _team1GoalCounterByPlayer[];
+extern uint8_t  _team2GoalCounterByPlayer[];
 static int16_t  careerTeamViewOffsetX;
 
 
@@ -184,21 +184,21 @@ uint32_t CalcTeamViewOffset(TeamFileEx *team) {
     /* d0 = low byte of globalTeamNumber */
     d0 = (uint8_t)team->team.globalTeamNumber;
     /* XOR with currentSeasonShowing low byte */
-    d0 ^= (uint8_t)currentSeasonShowing;
+    d0 ^= (uint8_t)_currentSeasonShowing;
     /* XOR with newRandomSeedCopy */
-    d0 ^= newRandomSeedCopy;
+    d0 ^= _newRandomSeedCopy;
 
     /* Look up in kRandomTable */
-    d0 = kRandomTable[d0];
+    d0 = _kRandomTable[d0];
     d3 = d0;
 
     /* Add viewRandomPhase, mask to 8 bits */
-    d0 = (uint8_t)(d0 + viewRandomPhase);
+    d0 = (uint8_t)(d0 + _viewRandomPhase);
 
     /* Look up base X offset from kTeamViewOffsetBaseLUT */
-    d1 = (int8_t)kTeamViewOffsetBaseLUT[d0];
+    d1 = (int8_t)_kTeamViewOffsetBaseLUT[d0];
     /* Y offset: index+7, wrapped to 8 bits */
-    d2 = (int8_t)kTeamViewOffsetBaseLUT[(uint8_t)(d0 + 7)];
+    d2 = (int8_t)_kTeamViewOffsetBaseLUT[(uint8_t)(d0 + 7)];
 
     /* Double the offsets */
     d1 = d1 + d1;
@@ -208,13 +208,13 @@ uint32_t CalcTeamViewOffset(TeamFileEx *team) {
     if (team->team.teamControls == 1) {
         /* Compute bias index: d3 += (viewRandomPhase << 2) >> 6; d3 &= 0x3F */
         uint16_t biasIdx = d3;
-        uint8_t vrp = viewRandomPhase;
+        uint8_t vrp = _viewRandomPhase;
         biasIdx += (uint16_t)((vrp << 2) >> 6);
         biasIdx &= 0x3F;
 
-        int8_t bias = (int8_t)kUserTeamOffsetBiasLUT[biasIdx];
+        int8_t bias = (int8_t)_kUserTeamOffsetBiasLUT[biasIdx];
         d1 += bias + bias;
-        bias = (int8_t)kUserTeamOffsetBiasLUT[biasIdx];
+        bias = (int8_t)_kUserTeamOffsetBiasLUT[biasIdx];
         d2 += bias + bias;
     }
 
@@ -261,18 +261,18 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
     if (d5 < 0) return;
 
     uint8_t *playerNums = team->team.playerNumbers;
-    if (team == &careerTeam) {
-        playerNums = currentMatchPlayers;
+    if (team == &_careerTeam) {
+        playerNums = _currentMatchPlayers;
     }
 
     /* Get tactic index -> ball-out-of-play tactics -> position list */
     int16_t tacticIdx = (int8_t)team->team.tactics;
-    TeamTactics *tactics = (TeamTactics *)teamTacticsTable[tacticIdx];
+    TeamTactics *tactics = (TeamTactics *)_teamTacticsTable[tacticIdx];
     int16_t ballOutTacticIdx = (int8_t)tactics->ballOutOfPlayTactics;
-    uint8_t *positions = (uint8_t *)positionsTable[ballOutTacticIdx];
+    uint8_t *positions = (uint8_t *)_positionsTable[ballOutTacticIdx];
 
     /* Get goal scorer distribution pointer */
-    currentGoalScorerDistPtr = (uintptr_t)goalScorerDistributionByBallOutTactic[ballOutTacticIdx];
+    currentGoalScorerDistPtr = (uintptr_t)_goalScorerDistributionByBallOutTactic[ballOutTacticIdx];
 
     for (; d5 >= 0; d5--) {
         uint8_t *distTable = (uint8_t *)currentGoalScorerDistPtr;
@@ -337,7 +337,7 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
  * Applies random injury/card/status changes to players after simulation.
  * ================================================================ */
 static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTable) {
-    if (trainingGame) return;
+    if (_trainingGame) return;
     if (team->team.teamControls == 1) return;
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     /* Beta-test mode: never assign post-match injuries / cards so the
@@ -352,7 +352,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 from asm */
 
     int16_t d5;
-    if (gameType == 4) {
+    if (_gameType == 4) {
         d5 = 4;
     } else {
         d5 = 2;
@@ -361,8 +361,8 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
     if (d5 == 0) return;
 
     uint8_t *playerNums = team->team.playerNumbers;
-    if (team == &careerTeam) {
-        playerNums = currentMatchPlayers;
+    if (team == &_careerTeam) {
+        playerNums = _currentMatchPlayers;
     }
 
     int16_t d7;
@@ -408,7 +408,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 
         if (d0 < 0x1D) {
             /* Most common case: minor status */
-            if (!inEditTactics) {
+            if (!_inEditTactics) {
                 if (d1 == 0) {
                     /* No current injury - check ShouldApply */
                     if (ShouldApplyRandomPlayerStatusAfterSim() == 0) {
@@ -426,7 +426,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
             }
         } else if (d0 == 0x1D) {
             /* Moderate status change */
-            if (inEditTactics) {
+            if (_inEditTactics) {
                 cardBits = 2;
             } else {
                 if (d1 == 0) {
@@ -447,7 +447,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
             }
         } else if (d0 == 0x1E) {
             /* Serious status change */
-            if (inEditTactics) {
+            if (_inEditTactics) {
                 cardBits = 2;
             } else {
                 /* loc_122384: ShouldApply -> if yes d1=0x10, else d1=8 */
@@ -459,7 +459,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
             }
         } else {
             /* d0 == 0x1F: most severe */
-            if (inEditTactics) {
+            if (_inEditTactics) {
                 cardBits = 2;
             } else {
                 if (d1 == 0) {
@@ -524,7 +524,7 @@ void InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 */
 
     int16_t d5;
-    if (gameType == 4) {
+    if (_gameType == 4) {
         d5 = 4;
     } else {
         d5 = 2;
@@ -535,10 +535,10 @@ void InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     uint8_t *playerNums = team->team.playerNumbers;
     int16_t d7;
 
-    if (team == &careerTeam) {
-        playerNums = currentMatchPlayers;
+    if (team == &_careerTeam) {
+        playerNums = _currentMatchPlayers;
         if (remapTable == (uint8_t *)0) {
-            d7 = (int16_t)(careerNumPlayers - 1);
+            d7 = (int16_t)(_careerNumPlayers - 1);
             goto loop_start;
         }
     }
@@ -593,7 +593,7 @@ loop_start:
         }
 
         /* Assign new status bucket from probability thresholds */
-        uint8_t *thresholds = playerStatusBucketThresholds;
+        uint8_t *thresholds = _playerStatusBucketThresholds;
         d0 = Rand2();
         d0 &= 0x3F;
         uint16_t newBucket = 0x20;
@@ -638,12 +638,12 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
     }
 
     uint8_t *playerNums = team->team.playerNumbers;
-    if (team == &careerTeam) {
-        playerNums = currentMatchPlayers;
+    if (team == &_careerTeam) {
+        playerNums = _currentMatchPlayers;
     }
 
     /* Get pick count based on goals conceded */
-    uint8_t *pickCounts = availablePickCountByGoalsInTable + (viewResultTeam1GoalsIn << 3);
+    uint8_t *pickCounts = _availablePickCountByGoalsInTable + (viewResultTeam1GoalsIn << 3);
     uint16_t d0 = Rand2();
     uint8_t d4 = pickCounts[d0 & 7];
     if (d4 == 0) {
@@ -654,7 +654,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
     int16_t d4s = (int8_t)d4;
 
     /* Get candidate players based on goals against */
-    uint8_t *candidates = candidatePlayersByGoalsInTable + ((viewResultTeam2GoalsIn - 1) << 5);
+    uint8_t *candidates = _candidatePlayersByGoalsInTable + ((viewResultTeam2GoalsIn - 1) << 5);
     d0 = Rand2();
     candidates += (d0 & 0x18);  /* offset by 0, 8, 16, or 24 */
 
@@ -675,7 +675,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
         if (playerRec->cardsInjuries & 0xE0) continue;
 
         /* Check injury/card status based on inEditTactics */
-        if (!inEditTactics) {
+        if (!_inEditTactics) {
             uint8_t ci = playerRec->cardsInjuries;
             if ((ci & 0x1C) >= 8) continue;
         } else {
@@ -697,13 +697,13 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
         }
 
         /* Pick a preferred position slot for this player's role */
-        uint8_t *roleSlots = preferredTacticsSlotsByRole + ((int16_t)role << 3);
+        uint8_t *roleSlots = _preferredTacticsSlotsByRole + ((int16_t)role << 3);
         d0 = Rand2();
         uint8_t slotIdx = roleSlots[d0 & 7];
 
         /* Map through tactics to get position index */
         uint8_t tacticIdx = team->team.tactics;
-        uint8_t *tacticPositions = (uint8_t *)playersPositionsByTactics[(int8_t)tacticIdx];
+        uint8_t *tacticPositions = (uint8_t *)_playersPositionsByTactics[(int8_t)tacticIdx];
         uint8_t posIdx = tacticPositions[slotIdx];
         uint8_t targetPlayer = playerNums[posIdx];
 
@@ -715,7 +715,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
             /* Re-read tactics mapping */
             tacticIdx = team->team.tactics;
-            tacticPositions = (uint8_t *)playersPositionsByTactics[(int8_t)tacticIdx];
+            tacticPositions = (uint8_t *)_playersPositionsByTactics[(int8_t)tacticIdx];
             posIdx = tacticPositions[slotIdx];
             targetPlayer = playerNums[posIdx];
 
@@ -799,8 +799,8 @@ uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCoun
      * asm memory layout.  In C they are separate variables, so use the
      * symbol directly. */
     uint8_t *goalkeepPlayerNums;
-    if (team == &careerTeam) {
-        goalkeepPlayerNums = currentMatchPlayers;
+    if (team == &_careerTeam) {
+        goalkeepPlayerNums = _currentMatchPlayers;
     } else {
         goalkeepPlayerNums = team->team.playerNumbers;
     }
@@ -817,7 +817,7 @@ uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCoun
 
     /* Final division by oldPlayerSkillDivisor and store */
     result = (uint16_t)((uint32_t)result / oldPlayerSkillDivisor);
-    oldPlayerSkill = result;
+    _oldPlayerSkill = result;
 
     /* Clear flag at offset 0x3B (playerValuesDirty in TeamFile) */
     team->team.playerValuesDirty = TEAM_VALUES_CLEAN;
@@ -836,7 +836,7 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                           uint16_t *outTeam1Goals, uint16_t *outTeam2Goals) {
     /* Store parameters in module state */
     viewResultCtx = ctx;
-    inEditTactics = ctx->substitutesCount;
+    _inEditTactics = ctx->substitutesCount;
     viewResultModeFlag = modeFlag;
     viewResultTeam1GoalsIn = team1GoalsIn;
     viewResultTeam2GoalsIn = team2GoalsIn;
@@ -847,8 +847,8 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     /* Clear goal counters (32 bytes each) — longword stores to avoid
      * GCC generating memset calls (no libc). */
     {
-        uint32_t *p1 = (uint32_t *)team1GoalCounterByPlayer;
-        uint32_t *p2 = (uint32_t *)team2GoalCounterByPlayer;
+        uint32_t *p1 = (uint32_t *)_team1GoalCounterByPlayer;
+        uint32_t *p2 = (uint32_t *)_team2GoalCounterByPlayer;
         p1[0] = 0; p1[1] = 0; p1[2] = 0; p1[3] = 0;
         p1[4] = 0; p1[5] = 0; p1[6] = 0; p1[7] = 0;
         p2[0] = 0; p2[1] = 0; p2[2] = 0; p2[3] = 0;
@@ -892,7 +892,7 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
         team1ViewOffsetX = (int16_t)(packed >> 16);
         team1ViewOffsetY = (int16_t)(packed & 0xFFFF);
     }
-    if (viewResultTeam1Ptr == &careerTeam) {
+    if (viewResultTeam1Ptr == &_careerTeam) {
         careerTeamViewOffsetX = team1ViewOffsetX;
     }
 
@@ -901,7 +901,7 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
         team2ViewOffsetX = (int16_t)(packed >> 16);
         team2ViewOffsetY = (int16_t)(packed & 0xFFFF);
     }
-    if (viewResultTeam2Ptr == &careerTeam) {
+    if (viewResultTeam2Ptr == &_careerTeam) {
         careerTeamViewOffsetX = team2ViewOffsetX;
     }
 
@@ -933,13 +933,13 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     int16_t absDelta = d3;
     if (absDelta < 0) absDelta = -absDelta;
 
-    uint8_t *goalLookup = simGoalsByStrengthDiffTable + ((uint16_t)absDelta << 2);
+    uint8_t *goalLookup = _simGoalsByStrengthDiffTable + ((uint16_t)absDelta << 2);
     uint16_t r = Rand2();
     int16_t d1 = (int8_t)goalLookup[r & 3];
 
     /* Sentinel check: if negative, use high goal fallback */
     if (d1 < 0) {
-        uint8_t *fallback = simHighGoalFallbackValues;
+        uint8_t *fallback = _simHighGoalFallbackValues;
         r = Rand2();
         uint16_t fbIdx = (uint16_t)((r * 6) >> 8);
         d1 = (int8_t)fallback[fbIdx];
@@ -947,7 +947,7 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     /* d1 is now extended to int16_t */
 
     /* Look up additional goals from tactic-based probability */
-    uint8_t *tacticGoalProbs = (uint8_t *)simGoalProbByTacticPtrs[d1];
+    uint8_t *tacticGoalProbs = (uint8_t *)_simGoalProbByTacticPtrs[d1];
     r = Rand2();
     int16_t d2 = 0;
 
@@ -963,7 +963,7 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                     r -= tp[3]; d2++;
 
                     /* Exceeded 4 thresholds: use extra table */
-                    uint8_t *extraProbs = (uint8_t *)simExtraGoalProbByTacticPtrs[d1];
+                    uint8_t *extraProbs = (uint8_t *)_simExtraGoalProbByTacticPtrs[d1];
                     r = Rand2();
                     d2 = 3;
                     if (r >= extraProbs[0]) {
@@ -991,9 +991,9 @@ void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
 
     /* Assign goals to scorers for first phase */
     AssignSimulatedGoalsToScorers(team1, team1PlayerRemapTable,
-                                  team1GoalCounterByPlayer, (uint16_t)d1);
+                                  _team1GoalCounterByPlayer, (uint16_t)d1);
     AssignSimulatedGoalsToScorers(team2, team2PlayerRemapTable,
-                                  team2GoalCounterByPlayer, (uint16_t)d2);
+                                  _team2GoalCounterByPlayer, (uint16_t)d2);
 
     /* Return the simulated goals from first phase */
     *outTeam1Goals = team1SimulatedGoalsOut;
@@ -1051,12 +1051,12 @@ void ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
     int16_t yDiff = d1 - d2;
     if (yDiff < 0) yDiff = -yDiff;
 
-    uint8_t *yGoalLookup = simGoalsByIndexDiffTable + ((uint16_t)yDiff << 2);
+    uint8_t *yGoalLookup = _simGoalsByIndexDiffTable + ((uint16_t)yDiff << 2);
     uint16_t r = Rand2();
     int16_t d3 = (int8_t)yGoalLookup[r & 3];
 
     /* Extra goals from Y-phase thresholds */
-    uint8_t *extraA = simExtraGoalThresholdsA;
+    uint8_t *extraA = _simExtraGoalThresholdsA;
     r = Rand2();
     int16_t d4 = 0;
 
@@ -1066,7 +1066,7 @@ void ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
             r -= extraA[1]; d4++;
 
             /* Use second threshold table */
-            uint8_t *extraB = simExtraGoalThresholdsB;
+            uint8_t *extraB = _simExtraGoalThresholdsB;
             r = Rand2();
             d4 = 1;
             if (r >= extraB[0]) {
@@ -1089,9 +1089,9 @@ void ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
 
     /* Assign second-phase goals to scorers */
     AssignSimulatedGoalsToScorers(viewResultTeam1Ptr, team1PlayerRemapTable,
-                                  team1GoalCounterByPlayer, (uint16_t)d3);
+                                  _team1GoalCounterByPlayer, (uint16_t)d3);
     AssignSimulatedGoalsToScorers(viewResultTeam2Ptr, team2PlayerRemapTable,
-                                  team2GoalCounterByPlayer, (uint16_t)d4);
+                                  _team2GoalCounterByPlayer, (uint16_t)d4);
 
     *outD3 = (uint16_t)d3;
     *outD4 = (uint16_t)d4;
@@ -1106,7 +1106,7 @@ __attribute__((used, externally_visible))
 void PenaltyShootoutScorerPair(int16_t *outD5, uint16_t *outD6) {
     uint16_t d0 = Rand2();
     uint16_t d6 = d0;
-    uint8_t d5byte = simGoalScorerPairTable[d0 & 0x3F];
+    uint8_t d5byte = _simGoalScorerPairTable[d0 & 0x3F];
 
     /* If bit 7 of d6 is set, rotate d5 right by 4 (swap nibbles) */
     if (d6 & 0x80) {
@@ -1125,11 +1125,11 @@ void PenaltyShootoutScorerPair(int16_t *outD5, uint16_t *outD6) {
  * ================================================================ */
 
 /* Additional externs for Chunk 102 */
-extern uint8_t selTeamsPtr;       /* boundary-spill: label is start of teams buffer */
-extern uint16_t numSelectedTeams;
-extern uint16_t careerLoadedFlag;
-extern uint16_t selTeamNumber;
-extern uint16_t stayingInOldClub;
+extern uint8_t _selTeamsPtr;       /* boundary-spill: label is start of teams buffer */
+extern uint16_t _numSelectedTeams;
+extern uint16_t _careerLoadedFlag;
+extern uint16_t _selTeamNumber;
+extern uint16_t _stayingInOldClub;
 
 /* Asm function bridges */
 extern void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
@@ -1141,12 +1141,12 @@ extern int16_t DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
                                      uint16_t defaultEntry);
 
 /* String externs */
-extern uint8_t aDiyCompetitionPrompt[];
-extern uint8_t aPresetCompetitionPrompt[];
-extern uint8_t aSeasonPrompt[];
-extern uint8_t aCareerPrompt[];
-extern uint8_t aContinue[];
-extern uint8_t aAbort[];
+extern uint8_t _aDiyCompetitionPrompt[];
+extern uint8_t _aPresetCompetitionPrompt[];
+extern uint8_t _aSeasonPrompt[];
+extern uint8_t _aCareerPrompt[];
+extern uint8_t _aContinue[];
+extern uint8_t _aAbort[];
 
 /* ================================================================
  * TeamInit  (SWOS2.s line 30304)
@@ -1167,7 +1167,7 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
         PlayerFile *pf = &tfex->players[i];
         pf->cardsInjuries = 0;
 
-        if (tfex != &careerTeam || !stayingInOldClub) {
+        if (tfex != &_careerTeam || !_stayingInOldClub) {
             pf->positionAndFace &= ~PF_LOAN;  /* clear loan bit (bclr #1) */
             pf->form = 0;
         }
@@ -1191,15 +1191,15 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
 __attribute__((used, externally_visible))
 void InitTeams(void)
 {
-    TeamFileEx *teams = selectedTeams;
+    TeamFileEx *teams = _selectedTeams;
 
-    for (int16_t i = (int16_t)(numSelectedTeams - 1); i >= 0; i--) {
+    for (int16_t i = (int16_t)(_numSelectedTeams - 1); i >= 0; i--) {
         teamInit(teams, 15);
         teams++;
     }
 
-    if (!careerLoadedFlag && selTeamNumber != 0xFFFF) {
-        teamInit(&careerTeam, 31);
+    if (!_careerLoadedFlag && _selTeamNumber != 0xFFFF) {
+        teamInit(&_careerTeam, 31);
     }
 }
 
@@ -1214,7 +1214,7 @@ void InitTeams(void)
 __attribute__((used, externally_visible))
 void PlayFriendly(void)
 {
-    TeamFileEx *teams = selectedTeams;
+    TeamFileEx *teams = _selectedTeams;
     InitAndPlayGame(&teams[0], &teams[1]);
 }
 
@@ -1229,24 +1229,24 @@ void PlayFriendly(void)
 __attribute__((used, externally_visible))
 int16_t CheckContinueAbortPrompt(uint8_t *header)
 {
-    if (gameType == 0) {  /* GAME_TYPE_NO_GAME */
+    if (_gameType == 0) {  /* GAME_TYPE_NO_GAME */
         return 0;
     }
 
     uint8_t *changingText;
 
-    if (gameType == 1) {       /* GAME_TYPE_DIY_COMPETITION */
-        changingText = aDiyCompetitionPrompt;
-    } else if (gameType == 2) { /* GAME_TYPE_PRESET_COMPETITION */
-        changingText = aPresetCompetitionPrompt;
-    } else if (gameType == 3) { /* GAME_TYPE_SEASON */
-        changingText = aSeasonPrompt;
+    if (_gameType == 1) {       /* GAME_TYPE_DIY_COMPETITION */
+        changingText = _aDiyCompetitionPrompt;
+    } else if (_gameType == 2) { /* GAME_TYPE_PRESET_COMPETITION */
+        changingText = _aPresetCompetitionPrompt;
+    } else if (_gameType == 3) { /* GAME_TYPE_SEASON */
+        changingText = _aSeasonPrompt;
     } else {
-        changingText = aCareerPrompt;
+        changingText = _aCareerPrompt;
     }
 
     int16_t result = DoContinueAbortMenu(header, changingText,
-                                           aContinue, aAbort, 1);
+                                           _aContinue, _aAbort, 1);
     if (result != 0) {
         return result;  /* user chose continue */
     }
@@ -1282,10 +1282,10 @@ uint16_t ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame)
 
     /* Get team appearance percentage */
     uint16_t d3;
-    if (teamGame == &topTeamInGame)
-        d3 = team1AppPercent;
+    if (teamGame == &_topTeamInGame)
+        d3 = _team1AppPercent;
     else
-        d3 = team2AppPercent;
+        d3 = _team2AppPercent;
 
     /* d2 = factor * appPercent / 100
      * ASM: mulu.w d3,d2 (16x16→32) then divu.w #100,d2 (32÷16).
@@ -1324,7 +1324,7 @@ int16_t GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
     int16_t d4 = factor;
 
     /* Skip team offset adjustments for friendly games and computer-controlled teams */
-    if (isGameFriendly == 0) {
+    if (_isGameFriendly == 0) {
         if (teamFile->teamControls != TEAM_PLAYER_COACH) {
             /* Add caller's d0 value (per-player random from ApplyTeamTactics)
              * Original asm: d0 was saved/restored around CalcTeamViewOffset,
@@ -1332,7 +1332,7 @@ int16_t GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
             d4 += (int16_t)callerD0;
 
             /* Add price rank offset */
-            int16_t pctOff = CalcTeamPriceRankPercentOffset(&diyCompetitionStart.base, teamFile);
+            int16_t pctOff = CalcTeamPriceRankPercentOffset(&_diyCompetitionStart.base, teamFile);
             d4 += pctOff;
         }
     }
@@ -1394,7 +1394,7 @@ void AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
         d4 = 100;
 
     /* Bottom team penalty when not randomize-pitch mode */
-    if (plgD0Param == 0 && teamGame == (TeamGame *)&bottomTeamInGame) {
+    if (_plgD0Param == 0 && teamGame == (TeamGame *)&_bottomTeamInGame) {
         int16_t applyPenalty = 0;
         if (tf->teamControls != TEAM_COMPUTER) {
             /* Own team is human-controlled → apply penalty */
@@ -1454,10 +1454,10 @@ void AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
 
         /* Random addition based on team side */
         uint16_t randBit;
-        if (teamGame == &topTeamInGame) {
-            randBit = gameRandValue & 1;
+        if (teamGame == &_topTeamInGame) {
+            randBit = _gameRandValue & 1;
         } else {
-            randBit = (gameRandValue & 2) >> 1;
+            randBit = (_gameRandValue & 2) >> 1;
         }
         gkSkill += randBit + 1;
 
@@ -1504,14 +1504,14 @@ void ApplyTeamTactics(TeamGame *teamGame)
     TeamFile *ownTeamFile;
     TeamFile *oppTeamFile;
 
-    if (teamGame == &topTeamInGame) {
-        tactics = pl1Tactics;
-        ownTeamFile = gameTeam1;
-        oppTeamFile = gameTeam2;
+    if (teamGame == &_topTeamInGame) {
+        tactics = _pl1Tactics;
+        ownTeamFile = _gameTeam1;
+        oppTeamFile = _gameTeam2;
     } else {
-        tactics = pl2Tactics;
-        ownTeamFile = gameTeam2;
-        oppTeamFile = gameTeam1;
+        tactics = _pl2Tactics;
+        ownTeamFile = _gameTeam2;
+        oppTeamFile = _gameTeam1;
     }
 
     /* Save and temporarily override tactics byte in team file */
@@ -1538,7 +1538,7 @@ void ApplyTeamTactics(TeamGame *teamGame)
         SaveRand2State();
 
         int16_t playerRand = (int16_t)GetPlayerRandomNum((PlayerFile *)playerBase);
-        uint16_t seed = (uint16_t)playerRand ^ gameRandValue;
+        uint16_t seed = (uint16_t)playerRand ^ _gameRandValue;
         Randomize2(seed);
 
         AdjustPlayerSkills(i, ownTeamFile, oppTeamFile, teamGame,
@@ -1594,7 +1594,7 @@ uint8_t *BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
             /* 1st leg only — no 2nd leg yet */
             d0 = leg1 >> 8;         /* team A 1st leg goals */
             d1 = leg1 & 0xFF;       /* team B 1st leg goals */
-            fmt = a1stLeg01;        /* "1ST LEG %0-%1" */
+            fmt = _a1stLeg01;        /* "1ST LEG %0-%1" */
             /* winnerName not used in this format */
             winnerName = a3;
         } else {
@@ -1627,38 +1627,38 @@ uint8_t *BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
                     /* After extra time */
                     if (flags & (1 << 4)) {
                         /* Away goals + AET */
-                        fmt = a23OnAggAWinOnA_0; /* "%2-%3 ON AGG. %a WIN ON AWAY GOALS A.E.T." */
+                        fmt = _a23OnAggAWinOnA_0; /* "%2-%3 ON AGG. %a WIN ON AWAY GOALS A.E.T." */
                     } else if (flags & (1 << 3)) {
                         /* Penalties + AET */
-                        fmt = a23OnAggAWin01O_0; /* "%2-%3 ON AGG. %a WIN %0-%1 ON PENS A.E.T." */
+                        fmt = _a23OnAggAWin01O_0; /* "%2-%3 ON AGG. %a WIN %0-%1 ON PENS A.E.T." */
                     } else {
                         /* AET only (no pens, no away goals) */
-                        fmt = aAWin23OnAggAET;   /* "%a WIN %2-%3 ON AGG. A.E.T." */
+                        fmt = _aAWin23OnAggAET;   /* "%a WIN %2-%3 ON AGG. A.E.T." */
                     }
                 } else {
                     /* Not after extra time */
                     if (flags & (1 << 4)) {
                         /* Away goals */
-                        fmt = a23OnAggAWinOnA;   /* "%2-%3 ON AGG. %a WIN ON AWAY GOALS" */
+                        fmt = _a23OnAggAWinOnA;   /* "%2-%3 ON AGG. %a WIN ON AWAY GOALS" */
                     } else if (flags & (1 << 3)) {
                         /* Penalties */
-                        fmt = a23OnAggAWin01O;   /* "%2-%3 ON AGG. %a WIN %0-%1 ON PENS" */
+                        fmt = _a23OnAggAWin01O;   /* "%2-%3 ON AGG. %a WIN %0-%1 ON PENS" */
                     } else {
                         /* Plain aggregate win */
-                        fmt = aAWin23OnAgg;      /* "%a WIN %2-%3 ON AGG." */
+                        fmt = _aAWin23OnAgg;      /* "%a WIN %2-%3 ON AGG." */
                     }
                 }
             } else {
                 /* No winner yet — just aggregate score */
-                fmt = a23OnAgg;  /* "%2-%3 ON AGG." */
+                fmt = _a23OnAgg;  /* "%2-%3 ON AGG." */
             }
         }
     } else {
         /* --- Single match path (not two-leg) --- */
         if (!(flags & (1 << 7))) {
             /* No detailed scores → empty result */
-            resultString[0] = 0;
-            return resultString;
+            _resultString[0] = 0;
+            return _resultString;
         }
 
         /* Single match with detail */
@@ -1680,45 +1680,45 @@ uint8_t *BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
                 /* Penalties + AET */
                 if (flags & (1 << 6)) {
                     /* Replay */
-                    fmt = aAWin01OnPensAE_3; /* "%a WIN %0-%1 ON PENS A.E.T. (REPLAY)" */
+                    fmt = _aAWin01OnPensAE_3; /* "%a WIN %0-%1 ON PENS A.E.T. (REPLAY)" */
                     if (leg2 != leg1) {
-                        fmt = aAWin01OnPensAE_5; /* "%a WIN %0-%1 ON PENS A.E.T. 90 MINS %2-%3 (REPLAY)" */
+                        fmt = _aAWin01OnPensAE_5; /* "%a WIN %0-%1 ON PENS A.E.T. 90 MINS %2-%3 (REPLAY)" */
                     }
                 } else {
-                    fmt = aAWin01OnPensAE; /* "%a WIN %0-%1 ON PENS A.E.T." */
+                    fmt = _aAWin01OnPensAE; /* "%a WIN %0-%1 ON PENS A.E.T." */
                     if (leg2 != leg1) {
-                        fmt = aAWin01OnPensAE_1; /* "%a WIN %0-%1 ON PENS A.E.T. 90 MINS %2-%3" */
+                        fmt = _aAWin01OnPensAE_1; /* "%a WIN %0-%1 ON PENS A.E.T. 90 MINS %2-%3" */
                     }
                 }
             } else {
                 /* AET without penalties */
                 if (flags & (1 << 6)) {
                     /* Replay */
-                    fmt = aAETReplay; /* "A.E.T. (REPLAY)" */
+                    fmt = _aAETReplay; /* "A.E.T. (REPLAY)" */
                     if (leg2 != leg1) {
-                        fmt = aAET90Mins23Rep; /* "A.E.T. 90 MINS %2-%3 (REPLAY)" */
+                        fmt = _aAET90Mins23Rep; /* "A.E.T. 90 MINS %2-%3 (REPLAY)" */
                     }
                 } else {
-                    fmt = aAET; /* "A.E.T." */
+                    fmt = _aAET; /* "A.E.T." */
                     if (leg2 != leg1) {
-                        fmt = aAET90Mins23; /* "A.E.T. 90 MINS %2-%3" */
+                        fmt = _aAET90Mins23; /* "A.E.T. 90 MINS %2-%3" */
                     }
                 }
             }
         } else if (flags & (1 << 3)) {
             /* Penalties without AET */
             if (flags & (1 << 6)) {
-                fmt = aAWin01OnPensRe; /* "%a WIN %0-%1 ON PENS (REPLAY)" */
+                fmt = _aAWin01OnPensRe; /* "%a WIN %0-%1 ON PENS (REPLAY)" */
             } else {
-                fmt = aAWin01OnPens; /* "%a WIN %0-%1 ON PENS" */
+                fmt = _aAWin01OnPens; /* "%a WIN %0-%1 ON PENS" */
             }
         } else if (flags & (1 << 6)) {
             /* Replay only */
-            fmt = aReplay_0; /* "(REPLAY)" */
+            fmt = _aReplay_0; /* "(REPLAY)" */
         } else {
             /* No special flags at all → empty result */
-            resultString[0] = 0;
-            return resultString;
+            _resultString[0] = 0;
+            return _resultString;
         }
     }
 
@@ -1733,11 +1733,11 @@ uint8_t *BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
     }
 
     /* Call PrintFormatted: fmt, out=resultString, d0-d6, %a=winnerName */
-    PrintFormatted(fmt, resultString, d0, d1, d2, d3,
+    PrintFormatted(fmt, _resultString, d0, d1, d2, d3,
                     0, 0, 0,           /* d4-d6 unused by these formats */
                     winnerName, 0, 0);
 
-    return resultString;
+    return _resultString;
 }
 
 /* CalcTeamPriceRankPercentOffset (SWOS2.s line 25505)
@@ -1800,23 +1800,23 @@ int16_t CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
  * ================================================================ */
 
 /* ASM data externs for Chunk 187 */
-extern uint8_t skillsPerQuadrant[];          /* 7×35 skill table (positions 1-7); GK row is 35 bytes before */
-extern uint32_t priceSkillPonders[];         /* 35 longwords: packed skill ponders per quadrant */
-extern uint8_t quadrantCoordinatesToBallQuadrant[]; /* 240 bytes: coordinate->quadrant map */
-extern uint8_t quadrantDistanceFactor[];     /* 35×35 distance factor matrix */
-extern uint8_t skillValuePonders[];          /* 8 bytes: skill value multipliers */
-extern uint8_t plPricesIncreaseTable[];      /* 50 bytes: price increase lookup */
-extern void *teamTacticsTable[];          /* 19 pointers to tactics data */
-extern uintptr_t plPositions;                 /* tactics-data base pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
-extern uint16_t totalSkillsFactorSum;        /* accumulator for skill factor sum */
-extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadrant */
-extern uint8_t currentMatchPlayers[];
-extern uint8_t playerPositionsArray[];
-extern uint16_t inEditTactics;
+extern uint8_t _skillsPerQuadrant[];          /* 7×35 skill table (positions 1-7); GK row is 35 bytes before */
+extern uint32_t _priceSkillPonders[];         /* 35 longwords: packed skill ponders per quadrant */
+extern uint8_t _quadrantCoordinatesToBallQuadrant[]; /* 240 bytes: coordinate->quadrant map */
+extern uint8_t _quadrantDistanceFactor[];     /* 35×35 distance factor matrix */
+extern uint8_t _skillValuePonders[];          /* 8 bytes: skill value multipliers */
+extern uint8_t _plPricesIncreaseTable[];      /* 50 bytes: price increase lookup */
+extern void *_teamTacticsTable[];          /* 19 pointers to tactics data */
+extern uintptr_t _plPositions;                 /* tactics-data base pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
+extern uint16_t _totalSkillsFactorSum;        /* accumulator for skill factor sum */
+extern uint16_t _numPlayersAtQuadrant;        /* count of players sharing a quadrant */
+extern uint8_t _currentMatchPlayers[];
+extern uint8_t _playerPositionsArray[];
+extern uint16_t _inEditTactics;
 extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 extern uint16_t CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
                                      uint16_t price, const uint8_t *curQuadDistFactor,
-                                     const uint8_t *playerPositions, const uint8_t *coordToQuad);
+                                     const uint8_t *_playerPositions, const uint8_t *coordToQuad);
 
 /* GetPlayerPrice (SWOS2.s line 27392)
  *
@@ -1844,7 +1844,7 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
      * Position 0 (GK) reads from dead code bytes 35 bytes before skillsPerQuadrant.
      * Asm: lea loc_122D6A+1(d0.w),a5 where d0 = position * 35.
      * loc_122D6A+1 is exactly skillsPerQuadrant - 35. */
-    const uint8_t *skillsPerQ = skillsPerQuadrant - 35 + position * 35;
+    const uint8_t *skillsPerQ = _skillsPerQuadrant - 35 + position * 35;
 
     /* Player skills packed: 4 bytes starting at passing (offset 28).
      * Big-endian: passing, velocityHeading, tacklingControl, speedFinishing */
@@ -1857,17 +1857,17 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
 
     /* Get tactics table for this team */
     int16_t tacticsIdx = (int8_t)tf->tactics;
-    uint8_t *tacticsData = (uint8_t *)teamTacticsTable[tacticsIdx] + 9;
-    plPositions = (uintptr_t)tacticsData;
+    uint8_t *tacticsData = (uint8_t *)_teamTacticsTable[tacticsIdx] + 9;
+    _plPositions = (uintptr_t)tacticsData;
 
     /* Player's position data in tactics table (0-based from playerNumber) */
     uint16_t plNum0 = playerNumber - 1;
     uint8_t *playerTactics = tacticsData + plNum0 * 35;
 
     /* Distance factor pointer starts at last row (row 34) */
-    const uint8_t *distFactor = quadrantDistanceFactor + 34 * 35;
+    const uint8_t *distFactor = _quadrantDistanceFactor + 34 * 35;
 
-    totalSkillsFactorSum = 0;
+    _totalSkillsFactorSum = 0;
 
     /* Main loop: iterate over 35 quadrant positions */
     for (int16_t d3 = 34; d3 >= 0; d3--) {
@@ -1875,27 +1875,27 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
 
         /* Map position to ball quadrant */
         uint16_t ballQ = playerTactics[d3];
-        ballQ = quadrantCoordinatesToBallQuadrant[ballQ];
+        ballQ = _quadrantCoordinatesToBallQuadrant[ballQ];
 
         /* Count players at same quadrant (human teams only) */
         if (tf->teamControls != TEAM_COMPUTER) {
-            numPlayersAtQuadrant = 1;
+            _numPlayersAtQuadrant = 1;
             if (d3 >= 5 && d3 < 30 && d3 != 7) {
-                uint8_t *tacticsBase = (uint8_t *)plPositions;
+                uint8_t *tacticsBase = (uint8_t *)_plPositions;
                 uint16_t count = 0;
                 for (int16_t i = 9; i >= 0; i--) {
                     uint16_t q = tacticsBase[d3];
-                    q = quadrantCoordinatesToBallQuadrant[q];
+                    q = _quadrantCoordinatesToBallQuadrant[q];
                     if ((uint8_t)q == (uint8_t)ballQ)
                         count++;
                     tacticsBase += 35;
                 }
-                numPlayersAtQuadrant = count;
+                _numPlayersAtQuadrant = count;
             }
         }
 
         /* Get packed skill ponder for this ball quadrant */
-        uint32_t ponderPacked = priceSkillPonders[ballQ];
+        uint32_t ponderPacked = _priceSkillPonders[ballQ];
 
         /* Inner loop: 7 skills */
         uint32_t skillsCopy = d5;
@@ -1903,7 +1903,7 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
             uint16_t skill = skillsCopy & 0xF;
             uint16_t ponder = ponderPacked & 0xF;
             if (ponder != 0) {
-                ponder = skillValuePonders[ponder];
+                ponder = _skillValuePonders[ponder];
                 quadPrice += skill * ponder;
             }
             skillsCopy >>= 4;
@@ -1923,7 +1923,7 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
 
         /* Divide by number of players at quadrant (human only, >1) */
         if (tf->teamControls != TEAM_COMPUTER) {
-            uint16_t n = numPlayersAtQuadrant - 1;
+            uint16_t n = _numPlayersAtQuadrant - 1;
             if (n != 0)
                 temp2 = temp2 / n;  /* divu.w: 32/16 */
         }
@@ -1934,15 +1934,15 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
         if (tf->teamControls != TEAM_COMPUTER) {
             d7val = CountNearnessFactor(d3, ballQ, d7val,
                                          distFactor, playerTactics,
-                                         quadrantCoordinatesToBallQuadrant);
+                                         _quadrantCoordinatesToBallQuadrant);
         }
 
-        totalSkillsFactorSum += d7val;
+        _totalSkillsFactorSum += d7val;
         distFactor -= 35;
     }
 
     /* Compute final price index */
-    int16_t result = (int16_t)totalSkillsFactorSum;
+    int16_t result = (int16_t)_totalSkillsFactorSum;
     /* ext.l + divu.w #350 → unsigned division of signed-extended 32-bit value */
     int32_t extended = (int32_t)result;
     uint16_t priceIdx = (uint16_t)((uint32_t)extended / 350);
@@ -1969,7 +1969,7 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
     /* Price increase: d0.w = unsigned byte diff (high byte was 0) */
     uint16_t diffIdx = (uint8_t)(priceIdxLow - filePriceByte);
     /* move.b table[diff],d7 + add.b filePrice,d7 → byte operations */
-    uint8_t increase = plPricesIncreaseTable[diffIdx];
+    uint8_t increase = _plPricesIncreaseTable[diffIdx];
     return (int16_t)(uint8_t)(increase + filePriceByte);
 }
 
@@ -1995,8 +1995,8 @@ uint32_t UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx)
 {
     /* Get player slot index based on whether this is the career team */
     int16_t slotIdx;
-    if (team == &careerTeam) {
-        slotIdx = (int8_t)currentMatchPlayers[playerIdx];
+    if (team == &_careerTeam) {
+        slotIdx = (int8_t)_currentMatchPlayers[playerIdx];
     } else {
         slotIdx = (int8_t)team->team.playerNumbers[playerIdx];
     }
@@ -2013,7 +2013,7 @@ uint32_t UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx)
         /* Simple path: return field_1 as position, store in array */
         int16_t pos = (int8_t)pf->cachedMatchValue;
         uint16_t role = (pf->positionAndFace & PF_POSITION_MASK) >> 5;
-        playerPositionsArray[d6] = (uint8_t)pos;
+        _playerPositionsArray[d6] = (uint8_t)pos;
         return ((uint32_t)role << 16) | ((uint16_t)pos & 0xFFFF);
     }
 
@@ -2060,7 +2060,7 @@ uint32_t UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx)
 
         /* Check if player is injured.
          * Asm does exg a0,a1 so IsPlayerInjured gets a0=playerBase (team+slot*38) */
-        if (IsPlayerInjured((PlayerFile *)playerBase, (int16_t)inEditTactics)) {
+        if (IsPlayerInjured((PlayerFile *)playerBase, (int16_t)_inEditTactics)) {
             d7val = 0;  /* injured = price 0 */
         }
     }
@@ -2070,7 +2070,7 @@ storeResult:
     {
         uint16_t posVal = (uint16_t)(int16_t)d7val;
         pf->cachedMatchValue = (int8_t)(uint8_t)posVal;
-        playerPositionsArray[d6] = (uint8_t)posVal;
+        _playerPositionsArray[d6] = (uint8_t)posVal;
 
         /* Get role from positionAndFace */
         uint16_t role = (pf->positionAndFace & PF_POSITION_MASK) >> 5;

@@ -6,98 +6,98 @@
 #include "game_state.h"
 #include "game_types.h"
 #include "endian_helpers.h"
-#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
+#include "display.h"    /* _screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
 
 /* ---- External globals ---- */
-extern uint16_t isGoalAttempt;
-extern uint16_t showStats;
-extern uint16_t overlayActiveFlag;
-extern uint16_t statsTimer;
-extern int16_t  resultTimer;
-extern uint16_t showingUserStats;
+extern uint16_t _isGoalAttempt;
+extern uint16_t _showStats;
+extern uint16_t _overlayActiveFlag;
+extern uint16_t _statsTimer;
+extern int16_t  _resultTimer;
+extern uint16_t _showingUserStats;
 
-extern uint16_t gameSeconds;
-extern uint32_t gameTime;               /* BCD-encoded: byte3=ones, byte2=tens, byte1=hundreds */
-extern uint16_t secondsSwitchAccumulator;
-extern uint16_t copyTimeSprite;
-extern Sprite   currentTimeSprite;
+extern uint16_t _gameSeconds;
+extern uint32_t _gameTime;               /* BCD-encoded: byte3=ones, byte2=tens, byte1=hundreds */
+extern uint16_t _secondsSwitchAccumulator;
+extern uint16_t _copyTimeSprite;
+extern Sprite   _currentTimeSprite;
 
-extern TeamGame topTeamInGame;
-extern TeamGame bottomTeamInGame;
+extern TeamGame _topTeamInGame;
+extern TeamGame _bottomTeamInGame;
 
-extern uint8_t  plOrdinalsTable[];      /* 32 bytes: indices 0-15 at offset 0, duplicated at offset 16 */
-extern uint8_t  plNamesLengthTable[];   /* 32 bytes: 16 entries x 2 bytes */
-extern uint8_t  plNamesLengthTableCopy[];
+extern uint8_t  _plOrdinalsTable[];      /* 32 bytes: indices 0-15 at offset 0, duplicated at offset 16 */
+extern uint8_t  _plNamesLengthTable[];   /* 32 bytes: 16 entries x 2 bytes */
+extern uint8_t  _plNamesLengthTableCopy[];
 
-extern Sprite   goal1TopSprite;
-extern Sprite   goal2BottomSprite;
+extern Sprite   _goal1TopSprite;
+extern Sprite   _goal2BottomSprite;
 
 /* ---- Result display sprite globals ---- */
-extern Sprite   resultOnHalftimeSprite;
-extern Sprite   resultAfterTheGameSprite;
-extern Sprite   gridUpperRowLeftSprite;
-extern Sprite   gridUpperRowRightSprite;
-extern Sprite   gridMiddleRowLeftSprite;
-extern Sprite   gridMiddleRowRightSprite;
-extern Sprite   gridBottomRowLeftSprite;
-extern Sprite   gridBottomRowRightSprite;
-extern Sprite   team1NameSprite;
-extern Sprite   team2NameSprite;
-extern Sprite   team1GoalsDigit2Sprite;
-extern Sprite   team1GoalsDigit1Sprite;
-extern Sprite   team2GoalsDigit2Sprite;
-extern Sprite   team2GoalsDigit1Sprite;
-extern Sprite   team1TotalGoalsDigit2Sprite;
-extern Sprite   team1TotalGoalsDigit1Sprite;
-extern Sprite   team2TotalGoalsDigit2Sprite;
-extern Sprite   team2TotalGoalsDigit1Sprite;
-extern Sprite   dashSprite;
-extern Sprite   team1ScorerSprite[8];
-extern Sprite   team2ScorerSprite[8];
+extern Sprite   _resultOnHalftimeSprite;
+extern Sprite   _resultAfterTheGameSprite;
+extern Sprite   _gridUpperRowLeftSprite;
+extern Sprite   _gridUpperRowRightSprite;
+extern Sprite   _gridMiddleRowLeftSprite;
+extern Sprite   _gridMiddleRowRightSprite;
+extern Sprite   _gridBottomRowLeftSprite;
+extern Sprite   _gridBottomRowRightSprite;
+extern Sprite   _team1NameSprite;
+extern Sprite   _team2NameSprite;
+extern Sprite   _team1GoalsDigit2Sprite;
+extern Sprite   _team1GoalsDigit1Sprite;
+extern Sprite   _team2GoalsDigit2Sprite;
+extern Sprite   _team2GoalsDigit1Sprite;
+extern Sprite   _team1TotalGoalsDigit2Sprite;
+extern Sprite   _team1TotalGoalsDigit1Sprite;
+extern Sprite   _team2TotalGoalsDigit2Sprite;
+extern Sprite   _team2TotalGoalsDigit1Sprite;
+extern Sprite   _dashSprite;
+extern Sprite   _team1ScorerSprite[8];
+extern Sprite   _team2ScorerSprite[8];
 
-extern uint16_t team1ScorerSpritesWidths[];  /* 8 entries */
-extern uint16_t team2ScorerSpritesWidths[];  /* 8 entries */
-extern uint16_t team1TotalGoals;
-extern uint16_t team2TotalGoals;
-extern uint16_t team1GoalsDigit2;
-extern uint16_t team2GoalsDigit2;
-extern uint16_t team1GoalsDigit1;
-extern uint16_t team2GoalsDigit1;
-extern uint16_t team1NameLength;
-extern uint16_t dontShowScorers;
-extern uint16_t secondLeg;
+extern uint16_t _team1ScorerSpritesWidths[];  /* 8 entries */
+extern uint16_t _team2ScorerSpritesWidths[];  /* 8 entries */
+extern uint16_t _team1TotalGoals;
+extern uint16_t _team2TotalGoals;
+extern uint16_t _team1GoalsDigit2;
+extern uint16_t _team2GoalsDigit2;
+extern uint16_t _team1GoalsDigit1;
+extern uint16_t _team2GoalsDigit1;
+extern uint16_t _team1NameLength;
+extern uint16_t _dontShowScorers;
+extern uint16_t _secondLeg;
 
-extern FixedPoint cameraX;
-extern FixedPoint cameraY;
-extern uint16_t lastFrameTicks;
-extern uint16_t gameState;
+extern FixedPoint _cameraX;
+extern FixedPoint _cameraY;
+extern uint16_t _lastFrameTicks;
+extern uint16_t _gameState;
 
-extern ScorerInfo team1Scorers[8];
-extern ScorerInfo team2Scorers[8];
+extern ScorerInfo _team1Scorers[8];
+extern ScorerInfo _team2Scorers[8];
 
 /* ---- UpdateTime globals ---- */
-extern uint16_t timeVar;
-extern uint16_t timeDelta;
-extern int16_t  gsFramesPerGameSecond;   /* GS_54_49 clock reload — dos_gameplay.c */
-extern int16_t  gsEndGameCounter;        /* GS_55_50 endGameCounter reload — dos_gameplay.c */
-extern uint16_t gameStatePl;
-extern uint16_t playingPenalties;
-extern int16_t  extraTimeState;
-extern int16_t  penaltiesState;
-extern uint16_t endGameCounter;
-extern uint16_t playing2ndGame;
-extern uint16_t team1GoalsFirstLeg;
-extern uint16_t team2GoalsFirstLeg;
-extern TeamGame *winningTeamPtr;         /* pointer to winning team */
-extern uint16_t statsTeam1Goals;
-extern uint16_t statsTeam2Goals;
-extern uint16_t statsTeam1GoalsCopy;
-extern uint16_t statsTeam2GoalsCopy;
-extern TeamGeneralInfo *lastTeamPlayed;
-extern Sprite   ballSprite;
-extern uint16_t currentPlayerIndicatorPosition;
-extern TeamGeneralInfo topTeamData;
-extern TeamGeneralInfo bottomTeamData;
+extern uint16_t _timeVar;
+extern uint16_t _timeDelta;
+extern int16_t  _gsFramesPerGameSecond;   /* GS_54_49 clock reload — dos_gameplay.c */
+extern int16_t  _gsEndGameCounter;        /* GS_55_50 endGameCounter reload — dos_gameplay.c */
+extern uint16_t _gameStatePl;
+extern uint16_t _playingPenalties;
+extern int16_t  _extraTimeState;
+extern int16_t  _penaltiesState;
+extern uint16_t _endGameCounter;
+extern uint16_t _playing2ndGame;
+extern uint16_t _team1GoalsFirstLeg;
+extern uint16_t _team2GoalsFirstLeg;
+extern TeamGame *_winningTeamPtr;         /* pointer to winning team */
+extern uint16_t _statsTeam1Goals;
+extern uint16_t _statsTeam2Goals;
+extern uint16_t _statsTeam1GoalsCopy;
+extern uint16_t _statsTeam2GoalsCopy;
+extern TeamGeneralInfo *_lastTeamPlayed;
+extern Sprite   _ballSprite;
+extern uint16_t _currentPlayerIndicatorPosition;
+extern TeamGeneralInfo _topTeamData;
+extern TeamGeneralInfo _bottomTeamData;
 
 /* C-to-asm bridges */
 extern void InitDisplaySprites(void);
@@ -132,9 +132,9 @@ extern void BlitSpritePlanar_Word_StridedDest(uint16_t sprIdx);
 #define ST_RESULT_AFTER_THE_GAME    26
 
 /* gameTime byte accessors (big-endian 68k) */
-#define GAMETIME_ONES     (((uint8_t *)&gameTime)[3])
-#define GAMETIME_TENS     (((uint8_t *)&gameTime)[2])
-#define GAMETIME_HUNDREDS (((uint8_t *)&gameTime)[1])
+#define GAMETIME_ONES     (((uint8_t *)&_gameTime)[3])
+#define GAMETIME_TENS     (((uint8_t *)&_gameTime)[2])
+#define GAMETIME_HUNDREDS (((uint8_t *)&_gameTime)[1])
 
 /* ================================================================
  * ResetGoalAttempt  (SWOS2.s line 18697)
@@ -142,7 +142,7 @@ extern void BlitSpritePlanar_Word_StridedDest(uint16_t sprIdx);
 __attribute__((used, externally_visible))
 void ResetGoalAttempt(void)
 {
-    isGoalAttempt = 0;
+    _isGoalAttempt = 0;
 }
 
 /* ================================================================
@@ -154,10 +154,10 @@ void ResetGoalAttempt(void)
 __attribute__((used, externally_visible))
 void AllowStatistics(void)
 {
-    showStats = 1;
-    overlayActiveFlag = 1;
-    statsTimer = 32000;
-    resultTimer = (int16_t)-resultTimer;    /* neg.w */
+    _showStats = 1;
+    _overlayActiveFlag = 1;
+    _statsTimer = 32000;
+    _resultTimer = (int16_t)-_resultTimer;    /* neg.w */
 }
 
 /* ================================================================
@@ -166,9 +166,9 @@ void AllowStatistics(void)
 __attribute__((used, externally_visible))
 void StatisticsOff(void)
 {
-    statsTimer = 0;
-    showingUserStats = 0;
-    overlayActiveFlag = 0;
+    _statsTimer = 0;
+    _showingUserStats = 0;
+    _overlayActiveFlag = 0;
 }
 
 /* ================================================================
@@ -179,12 +179,12 @@ void StatisticsOff(void)
 __attribute__((used, externally_visible))
 void ResetTime(void)
 {
-    gameSeconds = 0;
-    gameTime = 0;
-    secondsSwitchAccumulator = 0;
-    copyTimeSprite = 1;
-    currentTimeSprite.imageIndex = SPR_8_MINS;
-    currentTimeSprite.visible = 0;
+    _gameSeconds = 0;
+    _gameTime = 0;
+    _secondsSwitchAccumulator = 0;
+    _copyTimeSprite = 1;
+    _currentTimeSprite.imageIndex = SPR_8_MINS;
+    _currentTimeSprite.visible = 0;
 }
 
 /* ================================================================
@@ -213,8 +213,8 @@ void BumpPlayersLastPlayedHalfAtHalfStart(void)
 
     for (i = 0; i < 11; i++)
     {
-        bumpPlayerHalfStart(&topTeamInGame.players[i]);
-        bumpPlayerHalfStart(&bottomTeamInGame.players[i]);
+        bumpPlayerHalfStart(&_topTeamInGame.players[i]);
+        bumpPlayerHalfStart(&_bottomTeamInGame.players[i]);
     }
 }
 
@@ -244,8 +244,8 @@ void BumpPlayersLastPlayedHalfAtHalfEnd(void)
 
     for (i = 0; i < 11; i++)
     {
-        bumpPlayerHalfEnd(&topTeamInGame.players[i]);
-        bumpPlayerHalfEnd(&bottomTeamInGame.players[i]);
+        bumpPlayerHalfEnd(&_topTeamInGame.players[i]);
+        bumpPlayerHalfEnd(&_bottomTeamInGame.players[i]);
     }
 }
 
@@ -263,10 +263,10 @@ void CopyPlayerNameLengths(void)
 
     for (d0 = 0; d0 < 16; d0++)
     {
-        plOrdinalsTable[d0 + 16] = (uint8_t)d0;
-        plOrdinalsTable[d0] = (uint8_t)d0;
-        plNamesLengthTableCopy[d0 * 2]     = plNamesLengthTable[d0 * 2];
-        plNamesLengthTableCopy[d0 * 2 + 1] = plNamesLengthTable[d0 * 2 + 1];
+        _plOrdinalsTable[d0 + 16] = (uint8_t)d0;
+        _plOrdinalsTable[d0] = (uint8_t)d0;
+        _plNamesLengthTableCopy[d0 * 2]     = _plNamesLengthTable[d0 * 2];
+        _plNamesLengthTableCopy[d0 * 2 + 1] = _plNamesLengthTable[d0 * 2 + 1];
     }
 }
 
@@ -278,8 +278,8 @@ void CopyPlayerNameLengths(void)
 __attribute__((used, externally_visible))
 void ClearSaveFlagForGoalSprites(void)
 {
-    goal1TopSprite.saveSprite = 1;
-    goal2BottomSprite.saveSprite = 1;
+    _goal1TopSprite.saveSprite = 1;
+    _goal2BottomSprite.saveSprite = 1;
 }
 
 /* ================================================================
@@ -288,21 +288,21 @@ void ClearSaveFlagForGoalSprites(void)
  * Clears 19000 bytes at goalBasePtr, resets currentHilPtr,
  * clears replayState, sets throwInDeadVar=1.
  * ================================================================ */
-extern uint8_t *goalBasePtr;
-extern uint8_t *currentHilPtr;
-extern uint16_t replayState;
-extern uint16_t throwInDeadVar;
+extern uint8_t *_goalBasePtr;
+extern uint8_t *_currentHilPtr;
+extern uint16_t _replayState;
+extern uint16_t _throwInDeadVar;
 
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void InitCurrentGoalHighlight(void)
 {
-    uint32_t *p = (uint32_t *)goalBasePtr;
+    uint32_t *p = (uint32_t *)_goalBasePtr;
     int16_t i;
     for (i = 4749; i >= 0; i--)
         *p++ = 0;
-    currentHilPtr = goalBasePtr;
-    replayState = 0;
-    throwInDeadVar = 1;
+    _currentHilPtr = _goalBasePtr;
+    _replayState = 0;
+    _throwInDeadVar = 1;
 }
 
 /* ================================================================
@@ -318,37 +318,37 @@ void ResetResultSprites(void)
     ScorerInfo *sc1, *sc2;
     uint16_t *w1, *w2;
 
-    resultOnHalftimeSprite.visible = 0;
-    resultAfterTheGameSprite.visible = 0;
+    _resultOnHalftimeSprite.visible = 0;
+    _resultAfterTheGameSprite.visible = 0;
 
-    team1NameSprite.imageIndex = 0xC1;
-    team2NameSprite.imageIndex = 0xC2;
+    _team1NameSprite.imageIndex = 0xC1;
+    _team2NameSprite.imageIndex = 0xC2;
 
-    gridUpperRowLeftSprite.visible = 0;
-    gridUpperRowRightSprite.visible = 0;
-    gridMiddleRowLeftSprite.visible = 0;
-    gridMiddleRowRightSprite.visible = 0;
-    gridBottomRowLeftSprite.visible = 0;
-    gridBottomRowRightSprite.visible = 0;
-    team1NameSprite.visible = 0;
-    team2NameSprite.visible = 0;
-    team1GoalsDigit2Sprite.visible = 0;
-    team1GoalsDigit1Sprite.visible = 0;
-    team1TotalGoalsDigit2Sprite.visible = 0;
-    team1TotalGoalsDigit1Sprite.visible = 0;
-    team2GoalsDigit2Sprite.visible = 0;
-    team2GoalsDigit1Sprite.visible = 0;
-    team2TotalGoalsDigit2Sprite.visible = 0;
-    team2TotalGoalsDigit1Sprite.visible = 0;
-    team1NameSprite.visible = 0;    /* redundant in original asm */
-    dashSprite.visible = 0;
+    _gridUpperRowLeftSprite.visible = 0;
+    _gridUpperRowRightSprite.visible = 0;
+    _gridMiddleRowLeftSprite.visible = 0;
+    _gridMiddleRowRightSprite.visible = 0;
+    _gridBottomRowLeftSprite.visible = 0;
+    _gridBottomRowRightSprite.visible = 0;
+    _team1NameSprite.visible = 0;
+    _team2NameSprite.visible = 0;
+    _team1GoalsDigit2Sprite.visible = 0;
+    _team1GoalsDigit1Sprite.visible = 0;
+    _team1TotalGoalsDigit2Sprite.visible = 0;
+    _team1TotalGoalsDigit1Sprite.visible = 0;
+    _team2GoalsDigit2Sprite.visible = 0;
+    _team2GoalsDigit1Sprite.visible = 0;
+    _team2TotalGoalsDigit2Sprite.visible = 0;
+    _team2TotalGoalsDigit1Sprite.visible = 0;
+    _team1NameSprite.visible = 0;    /* redundant in original asm */
+    _dashSprite.visible = 0;
 
-    s1 = team1ScorerSprite;
-    s2 = team2ScorerSprite;
-    sc1 = team1Scorers;
-    sc2 = team2Scorers;
-    w1 = team1ScorerSpritesWidths;
-    w2 = team2ScorerSpritesWidths;
+    s1 = _team1ScorerSprite;
+    s2 = _team2ScorerSprite;
+    sc1 = _team1Scorers;
+    sc2 = _team2Scorers;
+    w1 = _team1ScorerSpritesWidths;
+    w2 = _team2ScorerSpritesWidths;
 
     for (i = 7; i >= 0; i--)
     {
@@ -380,27 +380,27 @@ void ShowResult(void)
     Sprite *s;
 
     /* resultTimer == 0 -> nothing to do */
-    if (resultTimer == 0)
+    if (_resultTimer == 0)
         return;
 
     /* resultTimer < 0 -> jump to hide phase */
-    if (resultTimer < 0)
+    if (_resultTimer < 0)
         goto hide_result;
 
     /* --- timer init phase: map magic values to countdown values --- */
-    if (resultTimer == 30000)
+    if (_resultTimer == 30000)
     {
-        resultTimer = 250;
+        _resultTimer = 250;
         goto show_sprites;
     }
-    if (resultTimer == 31000)
+    if (_resultTimer == 31000)
     {
-        resultTimer = 150;
+        _resultTimer = 150;
         goto show_sprites;
     }
-    if (resultTimer == 32000)
+    if (_resultTimer == 32000)
     {
-        resultTimer = 29000;
+        _resultTimer = 29000;
         goto show_sprites;  /* was: goto loc_10B964 which falls through to show_sprites */
     }
 
@@ -409,67 +409,67 @@ void ShowResult(void)
 
 show_sprites:
     /* Show halftime/fulltime banner depending on gameState */
-    if (gameState == ST_RESULT_ON_HALFTIME)
-        resultOnHalftimeSprite.visible = 1;
+    if (_gameState == ST_RESULT_ON_HALFTIME)
+        _resultOnHalftimeSprite.visible = 1;
 
-    if (gameState == ST_RESULT_AFTER_THE_GAME)
-        resultAfterTheGameSprite.visible = 1;
+    if (_gameState == ST_RESULT_AFTER_THE_GAME)
+        _resultAfterTheGameSprite.visible = 1;
 
     /* Show aggregate/total score digits if secondLeg or dontShowScorers */
-    if (dontShowScorers || secondLeg)
+    if (_dontShowScorers || _secondLeg)
     {
-        team1TotalGoalsDigit2Sprite.visible = 1;
-        d0 = (int16_t)team1TotalGoals;
+        _team1TotalGoalsDigit2Sprite.visible = 1;
+        d0 = (int16_t)_team1TotalGoals;
         if ((uint16_t)((uint32_t)(uint16_t)d0 / 10u) != 0)
-            team1TotalGoalsDigit1Sprite.visible = 1;
+            _team1TotalGoalsDigit1Sprite.visible = 1;
 
-        team2TotalGoalsDigit2Sprite.visible = 1;
-        d0 = (int16_t)team2TotalGoals;
+        _team2TotalGoalsDigit2Sprite.visible = 1;
+        d0 = (int16_t)_team2TotalGoals;
         if ((uint16_t)((uint32_t)(uint16_t)d0 / 10u) != 0)
-            team2TotalGoalsDigit1Sprite.visible = 1;
+            _team2TotalGoalsDigit1Sprite.visible = 1;
     }
 
     /* Show grid, team names, goal digits, dash, scorer sprites */
-    gridUpperRowLeftSprite.visible = 1;
-    gridUpperRowRightSprite.visible = 1;
-    gridMiddleRowLeftSprite.visible = 1;
-    gridMiddleRowRightSprite.visible = 1;
-    gridBottomRowLeftSprite.visible = 1;
-    gridBottomRowRightSprite.visible = 1;
-    team1NameSprite.visible = 1;
-    team2NameSprite.visible = 1;
-    team1GoalsDigit2Sprite.visible = 1;
+    _gridUpperRowLeftSprite.visible = 1;
+    _gridUpperRowRightSprite.visible = 1;
+    _gridMiddleRowLeftSprite.visible = 1;
+    _gridMiddleRowRightSprite.visible = 1;
+    _gridBottomRowLeftSprite.visible = 1;
+    _gridBottomRowRightSprite.visible = 1;
+    _team1NameSprite.visible = 1;
+    _team2NameSprite.visible = 1;
+    _team1GoalsDigit2Sprite.visible = 1;
 
-    if (team1GoalsDigit1 != 0)
-        team1GoalsDigit1Sprite.visible = 1;
+    if (_team1GoalsDigit1 != 0)
+        _team1GoalsDigit1Sprite.visible = 1;
 
-    team2GoalsDigit2Sprite.visible = 1;
+    _team2GoalsDigit2Sprite.visible = 1;
 
-    if (team2GoalsDigit1 != 0)
-        team2GoalsDigit1Sprite.visible = 1;
+    if (_team2GoalsDigit1 != 0)
+        _team2GoalsDigit1Sprite.visible = 1;
 
-    team1NameSprite.visible = 1;    /* redundant in original asm */
-    dashSprite.visible = 1;
+    _team1NameSprite.visible = 1;    /* redundant in original asm */
+    _dashSprite.visible = 1;
 
     /* Team 1 scorer sprites -- break on width==0 or dontShowScorers */
-    s = team1ScorerSprite;
+    s = _team1ScorerSprite;
     for (d0 = 7; d0 >= 0; d0--)
     {
-        if (team1ScorerSpritesWidths[7 - d0] == 0)
+        if (_team1ScorerSpritesWidths[7 - d0] == 0)
             break;
-        if (dontShowScorers)
+        if (_dontShowScorers)
             break;
         s->visible = 1;
         s++;
     }
 
     /* Team 2 scorer sprites -- break on width==0 or dontShowScorers */
-    s = team2ScorerSprite;
+    s = _team2ScorerSprite;
     for (d0 = 7; d0 >= 0; d0--)
     {
-        if (team2ScorerSpritesWidths[7 - d0] == 0)
+        if (_team2ScorerSpritesWidths[7 - d0] == 0)
             break;
-        if (dontShowScorers)
+        if (_dontShowScorers)
             break;
         s->visible = 1;
         s++;
@@ -479,48 +479,48 @@ show_sprites:
 
 countdown:
     /* Decrement timer by lastFrameTicks */
-    resultTimer -= (int16_t)lastFrameTicks;
-    if (resultTimer > 0)
+    _resultTimer -= (int16_t)_lastFrameTicks;
+    if (_resultTimer > 0)
         goto position_sprites;
     /* resultTimer <= 0: fall through to check if we should trigger stats */
 
 hide_result:
     /* If halftime or fulltime result, trigger stats timer */
-    if (gameState == ST_RESULT_ON_HALFTIME || gameState == ST_RESULT_AFTER_THE_GAME)
-        statsTimer = 0x7D00;
+    if (_gameState == ST_RESULT_ON_HALFTIME || _gameState == ST_RESULT_AFTER_THE_GAME)
+        _statsTimer = 0x7D00;
 
-    resultTimer = 0;
+    _resultTimer = 0;
 
     /* If sprites aren't visible, nothing to hide */
-    if (team1NameSprite.visible == 0)
+    if (_team1NameSprite.visible == 0)
         return;
 
     /* Hide all result sprites */
-    resultOnHalftimeSprite.visible = 0;
-    resultAfterTheGameSprite.visible = 0;
-    gridUpperRowLeftSprite.visible = 0;
-    gridUpperRowRightSprite.visible = 0;
-    gridMiddleRowLeftSprite.visible = 0;
-    gridMiddleRowRightSprite.visible = 0;
-    gridBottomRowLeftSprite.visible = 0;
-    gridBottomRowRightSprite.visible = 0;
-    team1NameSprite.visible = 0;
-    team2NameSprite.visible = 0;
-    team1GoalsDigit2Sprite.visible = 0;
-    team1GoalsDigit1Sprite.visible = 0;
-    team1TotalGoalsDigit2Sprite.visible = 0;
-    team1TotalGoalsDigit1Sprite.visible = 0;
-    team2GoalsDigit2Sprite.visible = 0;
-    team2GoalsDigit1Sprite.visible = 0;
-    team2TotalGoalsDigit2Sprite.visible = 0;
-    team2TotalGoalsDigit1Sprite.visible = 0;
-    team1NameSprite.visible = 0;    /* redundant in original asm */
-    dashSprite.visible = 0;
+    _resultOnHalftimeSprite.visible = 0;
+    _resultAfterTheGameSprite.visible = 0;
+    _gridUpperRowLeftSprite.visible = 0;
+    _gridUpperRowRightSprite.visible = 0;
+    _gridMiddleRowLeftSprite.visible = 0;
+    _gridMiddleRowRightSprite.visible = 0;
+    _gridBottomRowLeftSprite.visible = 0;
+    _gridBottomRowRightSprite.visible = 0;
+    _team1NameSprite.visible = 0;
+    _team2NameSprite.visible = 0;
+    _team1GoalsDigit2Sprite.visible = 0;
+    _team1GoalsDigit1Sprite.visible = 0;
+    _team1TotalGoalsDigit2Sprite.visible = 0;
+    _team1TotalGoalsDigit1Sprite.visible = 0;
+    _team2GoalsDigit2Sprite.visible = 0;
+    _team2GoalsDigit1Sprite.visible = 0;
+    _team2TotalGoalsDigit2Sprite.visible = 0;
+    _team2TotalGoalsDigit1Sprite.visible = 0;
+    _team1NameSprite.visible = 0;    /* redundant in original asm */
+    _dashSprite.visible = 0;
 
     /* Hide scorer sprites */
     {
-        Sprite *sa = team1ScorerSprite;
-        Sprite *sb = team2ScorerSprite;
+        Sprite *sa = _team1ScorerSprite;
+        Sprite *sb = _team2ScorerSprite;
         for (d0 = 7; d0 >= 0; d0--)
         {
             sa->visible = 0;
@@ -538,7 +538,7 @@ position_sprites:
     d7 = 0;
     for (d1 = 7; d1 >= 0; d1--)
     {
-        d0 = team1ScorerSpritesWidths[7 - d1] + team2ScorerSpritesWidths[7 - d1];
+        d0 = _team1ScorerSpritesWidths[7 - d1] + _team2ScorerSpritesWidths[7 - d1];
         if (d0 == 0)
             break;
         d7 -= 7;
@@ -551,145 +551,145 @@ position_sprites:
      * WIDE_MARGIN to every one shifts the whole score panel / clock into the centered 336
      * region, matching the menus. WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
     /* --- Position team1NameSprite --- */
-    team1NameSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)team1NameLength;
-    team1NameSprite.y.s.i = cameraY.s.i + 246 + d7 + 10000;
-    team1NameSprite.z.s.i = 10000;
+    _team1NameSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)_team1NameLength;
+    _team1NameSprite.y.s.i = _cameraY.s.i + 246 + d7 + 10000;
+    _team1NameSprite.z.s.i = 10000;
 
     /* d0 = base row Y for grid sprites */
-    d0 = team1NameSprite.y.s.i - 1015;
+    d0 = _team1NameSprite.y.s.i - 1015;
 
     /* Grid upper row */
-    gridUpperRowLeftSprite.x.s.i = cameraX.s.i + WIDE_MARGIN;
-    gridUpperRowLeftSprite.y.s.i = d0;
-    gridUpperRowLeftSprite.z.s.i = 9000;
-    gridUpperRowRightSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
-    gridUpperRowRightSprite.y.s.i = d0;
-    gridUpperRowRightSprite.z.s.i = 9000;
+    _gridUpperRowLeftSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN;
+    _gridUpperRowLeftSprite.y.s.i = d0;
+    _gridUpperRowLeftSprite.z.s.i = 9000;
+    _gridUpperRowRightSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _gridUpperRowRightSprite.y.s.i = d0;
+    _gridUpperRowRightSprite.z.s.i = 9000;
 
     d0 += 32;
 
     /* Grid middle row */
-    gridMiddleRowLeftSprite.x.s.i = cameraX.s.i + WIDE_MARGIN;
-    gridMiddleRowLeftSprite.y.s.i = d0;
-    gridMiddleRowLeftSprite.z.s.i = 9000;
-    gridMiddleRowRightSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
-    gridMiddleRowRightSprite.y.s.i = d0;
-    gridMiddleRowRightSprite.z.s.i = 9000;
+    _gridMiddleRowLeftSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN;
+    _gridMiddleRowLeftSprite.y.s.i = d0;
+    _gridMiddleRowLeftSprite.z.s.i = 9000;
+    _gridMiddleRowRightSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _gridMiddleRowRightSprite.y.s.i = d0;
+    _gridMiddleRowRightSprite.z.s.i = 9000;
 
     d0 += 32;
 
     /* Grid bottom row */
-    gridBottomRowLeftSprite.x.s.i = cameraX.s.i + WIDE_MARGIN;
-    gridBottomRowLeftSprite.y.s.i = d0;
-    gridBottomRowLeftSprite.z.s.i = 9000;
-    gridBottomRowRightSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
-    gridBottomRowRightSprite.y.s.i = d0;
-    gridBottomRowRightSprite.z.s.i = 9000;
+    _gridBottomRowLeftSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN;
+    _gridBottomRowLeftSprite.y.s.i = d0;
+    _gridBottomRowLeftSprite.z.s.i = 9000;
+    _gridBottomRowRightSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _gridBottomRowRightSprite.y.s.i = d0;
+    _gridBottomRowRightSprite.z.s.i = 9000;
 
     /* --- Position team2NameSprite --- */
-    team2NameSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 200;
-    team2NameSprite.y.s.i = team1NameSprite.y.s.i;
-    team2NameSprite.z.s.i = 10000;
+    _team2NameSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 200;
+    _team2NameSprite.y.s.i = _team1NameSprite.y.s.i;
+    _team2NameSprite.z.s.i = 10000;
 
     /* --- Team 1 goals digit 2 (units) --- */
-    team1GoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 151;
-    team1GoalsDigit2Sprite.y.s.i = cameraY.s.i + 241 + d7 + 10000;
-    team1GoalsDigit2Sprite.z.s.i = 10000;
-    team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + team1GoalsDigit2;
+    _team1GoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 151;
+    _team1GoalsDigit2Sprite.y.s.i = _cameraY.s.i + 241 + d7 + 10000;
+    _team1GoalsDigit2Sprite.z.s.i = 10000;
+    _team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + _team1GoalsDigit2;
 
     /* --- Team 1 goals digit 1 (tens) --- */
-    if (team1GoalsDigit1Sprite.visible)
+    if (_team1GoalsDigit1Sprite.visible)
     {
-        team1GoalsDigit1Sprite.x.s.i = team1GoalsDigit2Sprite.x.s.i - 12;
-        team1GoalsDigit1Sprite.y.s.i = team1GoalsDigit2Sprite.y.s.i;
-        team1GoalsDigit1Sprite.z.s.i = team1GoalsDigit2Sprite.z.s.i;
-        team1GoalsDigit1Sprite.imageIndex = SPR_BIG_0 + team1GoalsDigit1;
+        _team1GoalsDigit1Sprite.x.s.i = _team1GoalsDigit2Sprite.x.s.i - 12;
+        _team1GoalsDigit1Sprite.y.s.i = _team1GoalsDigit2Sprite.y.s.i;
+        _team1GoalsDigit1Sprite.z.s.i = _team1GoalsDigit2Sprite.z.s.i;
+        _team1GoalsDigit1Sprite.imageIndex = SPR_BIG_0 + _team1GoalsDigit1;
     }
 
     /* --- Team 1 total goals (aggregate) --- */
-    if (team1TotalGoalsDigit2Sprite.visible)
+    if (_team1TotalGoalsDigit2Sprite.visible)
     {
-        d1 = (int16_t)team1TotalGoals;
+        d1 = (int16_t)_team1TotalGoals;
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        team1TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 158;
+        _team1TotalGoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 158;
         if (d1 == 1)
-            team1TotalGoalsDigit2Sprite.x.s.i += 4;
-        team1TotalGoalsDigit2Sprite.y.s.i = cameraY.s.i + 263 + d7 + 10002;
-        team1TotalGoalsDigit2Sprite.z.s.i = 10002;
-        team1TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
+            _team1TotalGoalsDigit2Sprite.x.s.i += 4;
+        _team1TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + 263 + d7 + 10002;
+        _team1TotalGoalsDigit2Sprite.z.s.i = 10002;
+        _team1TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
-        if (team1TotalGoalsDigit1Sprite.visible)
+        if (_team1TotalGoalsDigit1Sprite.visible)
         {
-            team1TotalGoalsDigit1Sprite.x.s.i = team1TotalGoalsDigit2Sprite.x.s.i - 6;
+            _team1TotalGoalsDigit1Sprite.x.s.i = _team1TotalGoalsDigit2Sprite.x.s.i - 6;
             if (d2 == 1)
-                team1TotalGoalsDigit1Sprite.x.s.i += 4;
-            team1TotalGoalsDigit1Sprite.y.s.i = team1TotalGoalsDigit2Sprite.y.s.i - 1;
-            team1TotalGoalsDigit1Sprite.z.s.i = team1TotalGoalsDigit2Sprite.z.s.i - 1;
-            team1TotalGoalsDigit1Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d2;
+                _team1TotalGoalsDigit1Sprite.x.s.i += 4;
+            _team1TotalGoalsDigit1Sprite.y.s.i = _team1TotalGoalsDigit2Sprite.y.s.i - 1;
+            _team1TotalGoalsDigit1Sprite.z.s.i = _team1TotalGoalsDigit2Sprite.z.s.i - 1;
+            _team1TotalGoalsDigit1Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d2;
         }
     }
 
     /* --- Team 2 goals digit 2 (units) --- */
-    team2GoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 173;
-    team2GoalsDigit2Sprite.y.s.i = cameraY.s.i + 241 + d7 + 10000;
-    team2GoalsDigit2Sprite.z.s.i = 10000;
-    team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + team2GoalsDigit2;
+    _team2GoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 173;
+    _team2GoalsDigit2Sprite.y.s.i = _cameraY.s.i + 241 + d7 + 10000;
+    _team2GoalsDigit2Sprite.z.s.i = 10000;
+    _team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + _team2GoalsDigit2;
 
     /* --- Team 2 goals digit 1 (tens) --- */
-    if (team2GoalsDigit1Sprite.visible)
+    if (_team2GoalsDigit1Sprite.visible)
     {
-        team2GoalsDigit1Sprite.x.s.i = team2GoalsDigit2Sprite.x.s.i;
-        team2GoalsDigit2Sprite.x.s.i += 12;    /* original: addi.w #12,SPRITE_X(a0) on digit2 */
-        team2GoalsDigit1Sprite.y.s.i = team2GoalsDigit2Sprite.y.s.i;
-        team2GoalsDigit1Sprite.z.s.i = team2GoalsDigit2Sprite.z.s.i;
-        team2GoalsDigit1Sprite.imageIndex = SPR_SCROLL_ARROW_UP + team2GoalsDigit1;
+        _team2GoalsDigit1Sprite.x.s.i = _team2GoalsDigit2Sprite.x.s.i;
+        _team2GoalsDigit2Sprite.x.s.i += 12;    /* original: addi.w #12,SPRITE_X(a0) on digit2 */
+        _team2GoalsDigit1Sprite.y.s.i = _team2GoalsDigit2Sprite.y.s.i;
+        _team2GoalsDigit1Sprite.z.s.i = _team2GoalsDigit2Sprite.z.s.i;
+        _team2GoalsDigit1Sprite.imageIndex = SPR_SCROLL_ARROW_UP + _team2GoalsDigit1;
     }
 
     /* --- Team 2 total goals (aggregate) --- */
-    if (team2TotalGoalsDigit2Sprite.visible)
+    if (_team2TotalGoalsDigit2Sprite.visible)
     {
-        d1 = (int16_t)team2TotalGoals;
+        d1 = (int16_t)_team2TotalGoals;
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        team2TotalGoalsDigit2Sprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 171;
-        team2TotalGoalsDigit2Sprite.y.s.i = cameraY.s.i + 263 + d7 + 10002;
-        team2TotalGoalsDigit2Sprite.z.s.i = 10002;
-        team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
+        _team2TotalGoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 171;
+        _team2TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + 263 + d7 + 10002;
+        _team2TotalGoalsDigit2Sprite.z.s.i = 10002;
+        _team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
-        if (team2TotalGoalsDigit1Sprite.visible)
+        if (_team2TotalGoalsDigit1Sprite.visible)
         {
             /* asm: copy digit2.X -> digit1.X, then digit2.X += 6 */
-            team2TotalGoalsDigit1Sprite.x.s.i = team2TotalGoalsDigit2Sprite.x.s.i;
-            team2TotalGoalsDigit2Sprite.x.s.i += 6;
+            _team2TotalGoalsDigit1Sprite.x.s.i = _team2TotalGoalsDigit2Sprite.x.s.i;
+            _team2TotalGoalsDigit2Sprite.x.s.i += 6;
             if (d2 == 1)
-                team2TotalGoalsDigit2Sprite.x.s.i -= 4;
-            team2TotalGoalsDigit1Sprite.y.s.i = team2TotalGoalsDigit2Sprite.y.s.i;
-            team2TotalGoalsDigit1Sprite.z.s.i = team2TotalGoalsDigit2Sprite.z.s.i;
-            team2TotalGoalsDigit1Sprite.y.s.i -= 1;
-            team2TotalGoalsDigit1Sprite.z.s.i -= 1;
-            team2TotalGoalsDigit1Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d2;
+                _team2TotalGoalsDigit2Sprite.x.s.i -= 4;
+            _team2TotalGoalsDigit1Sprite.y.s.i = _team2TotalGoalsDigit2Sprite.y.s.i;
+            _team2TotalGoalsDigit1Sprite.z.s.i = _team2TotalGoalsDigit2Sprite.z.s.i;
+            _team2TotalGoalsDigit1Sprite.y.s.i -= 1;
+            _team2TotalGoalsDigit1Sprite.z.s.i -= 1;
+            _team2TotalGoalsDigit1Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d2;
         }
     }
 
     /* --- Dash sprite --- */
-    dashSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 165;
-    dashSprite.y.s.i = cameraY.s.i + 249 + d7 + 10000;
-    dashSprite.z.s.i = 10000;
+    _dashSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 165;
+    _dashSprite.y.s.i = _cameraY.s.i + 249 + d7 + 10000;
+    _dashSprite.z.s.i = 10000;
 
     /* --- Team 1 scorer sprites --- */
     {
-        Sprite *spr = team1ScorerSprite;
-        uint16_t *widths = team1ScorerSpritesWidths;
+        Sprite *spr = _team1ScorerSprite;
+        uint16_t *widths = _team1ScorerSpritesWidths;
         d1 = 263 + d7;
         for (d0 = 7; d0 >= 0; d0--)
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)*(widths);
-            spr->y.s.i = cameraY.s.i + d1 + 10000;
+            spr->x.s.i = _cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)*(widths);
+            spr->y.s.i = _cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
             widths++;
@@ -699,15 +699,15 @@ position_sprites:
 
     /* --- Team 2 scorer sprites --- */
     {
-        Sprite *spr = team2ScorerSprite;
-        uint16_t *widths = team2ScorerSpritesWidths;
+        Sprite *spr = _team2ScorerSprite;
+        uint16_t *widths = _team2ScorerSpritesWidths;
         d1 = 263 + d7;
         for (d0 = 7; d0 >= 0; d0--)
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = cameraX.s.i + WIDE_MARGIN + 200;
-            spr->y.s.i = cameraY.s.i + d1 + 10000;
+            spr->x.s.i = _cameraX.s.i + WIDE_MARGIN + 200;
+            spr->y.s.i = _cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
             widths++;
@@ -716,13 +716,13 @@ position_sprites:
     }
 
     /* --- Position halftime/fulltime result banners --- */
-    d0 = gridUpperRowLeftSprite.y.s.i + 990;
-    resultOnHalftimeSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 168;
-    resultOnHalftimeSprite.y.s.i = d0;
-    resultOnHalftimeSprite.z.s.i = 10000;
-    resultAfterTheGameSprite.x.s.i = resultOnHalftimeSprite.x.s.i;
-    resultAfterTheGameSprite.y.s.i = resultOnHalftimeSprite.y.s.i;
-    resultAfterTheGameSprite.z.s.i = resultOnHalftimeSprite.z.s.i;
+    d0 = _gridUpperRowLeftSprite.y.s.i + 990;
+    _resultOnHalftimeSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _resultOnHalftimeSprite.y.s.i = d0;
+    _resultOnHalftimeSprite.z.s.i = 10000;
+    _resultAfterTheGameSprite.x.s.i = _resultOnHalftimeSprite.x.s.i;
+    _resultAfterTheGameSprite.y.s.i = _resultOnHalftimeSprite.y.s.i;
+    _resultAfterTheGameSprite.z.s.i = _resultOnHalftimeSprite.z.s.i;
 }
 
 
@@ -744,45 +744,45 @@ void UpdateTime(void)
      * The intermediate timer countdown code (sub.w d0,timeVar; bmi/bne) is
      * unreachable due to an unconditional bra.w time_invisible after loading
      * lastFrameTicks. We replicate the reachable path only. */
-    timeVar = 31000;
+    _timeVar = 31000;
 
     /* timeVar is always 31000 here -> convert to 150 */
-    timeVar = 150;
+    _timeVar = 150;
 
     /* Make time sprite visible if not already */
-    if (currentTimeSprite.visible == 0)
+    if (_currentTimeSprite.visible == 0)
     {
-        currentTimeSprite.visible = 1;
+        _currentTimeSprite.visible = 1;
         InitDisplaySprites();
     }
 
     /* --- Time update section (time_invisible) --- */
 
     /* If gameSeconds is negative -> last minute countdown in progress */
-    if ((int16_t)gameSeconds < 0)
+    if ((int16_t)_gameSeconds < 0)
         goto last_minute_in_progress;
 
     /* Only update time during normal gameplay (not penalties) */
-    if (gameStatePl != ST_GAME_IN_PROGRESS)
+    if (_gameStatePl != ST_GAME_IN_PROGRESS)
         goto no_update_to_time;
-    if (playingPenalties)
+    if (_playingPenalties)
         goto no_update_to_time;
 
     /* Accumulate time delta */
-    secondsSwitchAccumulator -= timeDelta;
-    if ((int16_t)secondsSwitchAccumulator >= 0)
+    _secondsSwitchAccumulator -= _timeDelta;
+    if ((int16_t)_secondsSwitchAccumulator >= 0)
         goto no_update_to_time;
 
     /* GS_54_49: frames per in-game second — Amiga 49, DOS 54 (set per style by
      * ApplyGameStyle/dos_gameplay.c). The whole match-clock cadence keys off this. */
-    secondsSwitchAccumulator += (uint16_t)gsFramesPerGameSecond;
-    gameSeconds++;
+    _secondsSwitchAccumulator += (uint16_t)_gsFramesPerGameSecond;
+    _gameSeconds++;
 
-    if (gameSeconds != 60)
+    if (_gameSeconds != 60)
         goto no_update_to_time;
 
     /* Minute boundary: increment BCD gameTime */
-    gameSeconds = 0;
+    _gameSeconds = 0;
     GAMETIME_ONES++;
     if (GAMETIME_ONES >= 10)
     {
@@ -803,19 +803,19 @@ check_game_end:
      * here as a uint32_t. The constants below are in the m68k BE form
      * (e.g. 0x900 = minute 90); HOST_TO_BE32 swaps them on LE so the
      * uint32_t comparison sees the correct byte pattern. */
-    if (gameTime == HOST_TO_BE32(0x00000001))
+    if (_gameTime == HOST_TO_BE32(0x00000001))
         BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 46: mark second-half start */
-    if (gameTime == HOST_TO_BE32(0x00000406))
+    if (_gameTime == HOST_TO_BE32(0x00000406))
         BumpPlayersLastPlayedHalfAtHalfStart();
 
     /* Minute 45: half-time */
-    if (gameTime == HOST_TO_BE32(0x00000405))
+    if (_gameTime == HOST_TO_BE32(0x00000405))
     {
-        if ((int16_t)gameSeconds >= 0)
+        if ((int16_t)_gameSeconds >= 0)
             goto last_cycle;
-        gameSeconds = 0;
+        _gameSeconds = 0;
         PlayEndGameWhistleSample();
         EndFirstHalf();
         BumpPlayersLastPlayedHalfAtHalfEnd();
@@ -823,26 +823,26 @@ check_game_end:
     }
 
     /* Minute 90: full-time */
-    if (gameTime == HOST_TO_BE32(0x00000900))
+    if (_gameTime == HOST_TO_BE32(0x00000900))
     {
-        if ((int16_t)gameSeconds >= 0)
+        if ((int16_t)_gameSeconds >= 0)
             goto last_cycle;
-        gameSeconds = 0;
+        _gameSeconds = 0;
         PlayEndGameWhistleSample();
         BumpPlayersLastPlayedHalfAtHalfEnd();
-        statsTeam1GoalsCopy = statsTeam1Goals;
-        statsTeam2GoalsCopy = statsTeam2Goals;
+        _statsTeam1GoalsCopy = _statsTeam1Goals;
+        _statsTeam2GoalsCopy = _statsTeam2Goals;
 
-        d0u = team1TotalGoals;
-        if (d0u != team2TotalGoals)
+        d0u = _team1TotalGoals;
+        if (d0u != _team2TotalGoals)
             goto not_draw;
 
         /* Tied at 90 minutes */
-        if (secondLeg && playing2ndGame == 1)
+        if (_secondLeg && _playing2ndGame == 1)
         {
             /* Away goals rule: 2*thisLeg + firstLeg */
-            uint16_t team2adj = (uint16_t)(statsTeam2Goals * 2 + team2GoalsFirstLeg);
-            uint16_t team1adj = (uint16_t)(statsTeam1Goals * 2 + team1GoalsFirstLeg);
+            uint16_t team2adj = (uint16_t)(_statsTeam2Goals * 2 + _team2GoalsFirstLeg);
+            uint16_t team1adj = (uint16_t)(_statsTeam1Goals * 2 + _team1GoalsFirstLeg);
             if (team1adj != team2adj)
             {
                 /* Away goals decide */
@@ -855,53 +855,53 @@ check_game_end:
         }
 
         /* Check extra time */
-        if (extraTimeState)
+        if (_extraTimeState)
         {
-            extraTimeState = (int16_t)0xFFFF;
+            _extraTimeState = (int16_t)0xFFFF;
             StartFirstExtraTime();
             goto not_end_of_second_extra;
         }
         /* Check penalties */
-        if (penaltiesState)
+        if (_penaltiesState)
         {
-            penaltiesState = (int16_t)0xFFFF;
+            _penaltiesState = (int16_t)0xFFFF;
             StartPenalties();
             goto not_end_of_second_extra;
         }
         /* Draw with no tiebreaker -> clear winner, end game */
-        winningTeamPtr = (TeamGame *)0;
+        _winningTeamPtr = (TeamGame *)0;
         EndOfGame();
         goto not_end_of_second_extra;
     }
 
     /* Minute 105: end of first extra time */
-    if (gameTime == HOST_TO_BE32(0x00010005))
+    if (_gameTime == HOST_TO_BE32(0x00010005))
     {
-        if ((int16_t)gameSeconds >= 0)
+        if ((int16_t)_gameSeconds >= 0)
             goto last_cycle;
-        gameSeconds = 0;
+        _gameSeconds = 0;
         PlayEndGameWhistleSample();
         EndFirstExtraTime();
         goto not_end_of_second_extra;
     }
 
     /* Minute 120: end of second extra time */
-    if (gameTime == HOST_TO_BE32(0x00010200))
+    if (_gameTime == HOST_TO_BE32(0x00010200))
     {
-        if ((int16_t)gameSeconds >= 0)
+        if ((int16_t)_gameSeconds >= 0)
             goto last_cycle;
-        gameSeconds = 0;
+        _gameSeconds = 0;
         PlayEndGameWhistleSample();
 
-        d0u = team1TotalGoals;
-        if (d0u != team2TotalGoals)
+        d0u = _team1TotalGoals;
+        if (d0u != _team2TotalGoals)
             goto not_draw;
 
         /* Tied after extra time */
-        if (secondLeg && playing2ndGame)
+        if (_secondLeg && _playing2ndGame)
         {
-            uint16_t team2adj = (uint16_t)(statsTeam2Goals * 2 + team2GoalsFirstLeg);
-            uint16_t team1adj = (uint16_t)(statsTeam1Goals * 2 + team1GoalsFirstLeg);
+            uint16_t team2adj = (uint16_t)(_statsTeam2Goals * 2 + _team2GoalsFirstLeg);
+            uint16_t team1adj = (uint16_t)(_statsTeam1Goals * 2 + _team1GoalsFirstLeg);
             if (team1adj != team2adj)
             {
                 if (team1adj > team2adj)
@@ -911,14 +911,14 @@ check_game_end:
             }
         }
         /* Still tied -> check penalties */
-        if (penaltiesState)
+        if (_penaltiesState)
         {
-            penaltiesState = (int16_t)0xFFFF;
+            _penaltiesState = (int16_t)0xFFFF;
             StartPenalties();
             goto not_end_of_second_extra;
         }
         /* No penalties -> draw, end game */
-        winningTeamPtr = (TeamGame *)0;
+        _winningTeamPtr = (TeamGame *)0;
         EndOfGame();
         goto not_end_of_second_extra;
     }
@@ -927,32 +927,32 @@ check_game_end:
 
 not_draw:
     /* d0u has team1TotalGoals, compare with team2TotalGoals */
-    if (d0u > team2TotalGoals)
+    if (d0u > _team2TotalGoals)
         goto team1_wins;
 team2_wins:
-    winningTeamPtr = &bottomTeamInGame;
+    _winningTeamPtr = &_bottomTeamInGame;
     goto end_game;
 team1_wins:
-    winningTeamPtr = &topTeamInGame;
+    _winningTeamPtr = &_topTeamInGame;
 end_game:
     EndOfGame();
     goto not_end_of_second_extra;
 
 last_cycle:
-    gameSeconds = 0xFFFF;       /* negative = last minute in progress */
-    endGameCounter = (uint16_t)gsEndGameCounter;   /* GS_55_50: 50 Amiga / 55 DOS */
+    _gameSeconds = 0xFFFF;       /* negative = last minute in progress */
+    _endGameCounter = (uint16_t)_gsEndGameCounter;   /* GS_55_50: 50 Amiga / 55 DOS */
     goto no_update_to_time;
 
 last_minute_in_progress:
-    endGameCounter -= lastFrameTicks;
-    if ((int16_t)endGameCounter < 0)
+    _endGameCounter -= _lastFrameTicks;
+    if ((int16_t)_endGameCounter < 0)
         goto check_game_end;
 
-    if (gameStatePl != ST_GAME_IN_PROGRESS)
+    if (_gameStatePl != ST_GAME_IN_PROGRESS)
         goto last_cycle;
 
     {
-        int16_t ballY = ballSprite.y.s.i;
+        int16_t ballY = _ballSprite.y.s.i;
 
         /* Ball must be between penalty areas (216 < y < 682) */
         if (ballY <= 216)
@@ -964,20 +964,20 @@ last_minute_in_progress:
         if (ballY <= 449)
         {
             /* Upper half: if bottom team has ball, extend time */
-            if (lastTeamPlayed == &bottomTeamData)
+            if (_lastTeamPlayed == &_bottomTeamData)
                 goto last_cycle;
         }
         else
         {
             /* Lower half: if top team has ball, extend time */
-            if (lastTeamPlayed == &topTeamData)
+            if (_lastTeamPlayed == &_topTeamData)
                 goto last_cycle;
         }
     }
 
 no_update_to_time:
     /* Check if time sprite needs rebuilding */
-    if (!copyTimeSprite)
+    if (!_copyTimeSprite)
         goto set_time_sprite_x;
 
 not_end_of_second_extra:
@@ -1017,7 +1017,7 @@ not_end_of_second_extra:
         CopySprite(digitSprite, sprIdx, xOff, yOff);
 
         /* Set sprite image index */
-        currentTimeSprite.imageIndex = sprIdx;
+        _currentTimeSprite.imageIndex = sprIdx;
 
         /* Blit the assembled time sprite */
         if (sprIdx == SPR_INVITATION_TOURNAMENT)
@@ -1025,19 +1025,19 @@ not_end_of_second_extra:
         else
             BlitSpritePlanar_Word_StridedDest(sprIdx);
 
-        copyTimeSprite = 0;
+        _copyTimeSprite = 0;
     }
 
 set_time_sprite_x:
     {
         /* Position time sprite relative to camera */
-        currentTimeSprite.x.s.i = cameraX.s.i + WIDE_MARGIN + 0x14;
-        currentTimeSprite.y.s.i = cameraY.s.i + 0x2721;
+        _currentTimeSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 0x14;
+        _currentTimeSprite.y.s.i = _cameraY.s.i + 0x2721;
 
         /* If player indicator is at position 4, shift time down by 8 */
-        if (currentPlayerIndicatorPosition == 4)
-            currentTimeSprite.y.s.i += 8;
+        if (_currentPlayerIndicatorPosition == 4)
+            _currentTimeSprite.y.s.i += 8;
 
-        currentTimeSprite.z.s.i = 10000;
+        _currentTimeSprite.z.s.i = 10000;
     }
 }
