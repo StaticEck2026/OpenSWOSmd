@@ -149,6 +149,7 @@ OBJDIR := build/$(BUILD_OS)/$(BUILD_ARCH)
 
 # ---- Sources ----
 SRCDIR  := src
+INCDIR  := include
 SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
 OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
 DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
@@ -374,8 +375,8 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
            -Wno-braces -Wno-address-of-packed-member \
            -Wno-strict-aliasing -Wno-array-bounds -Wno-stringop-overflow \
            $(DATA_FLAGS) \
-           -include $(SRCDIR)/swos_platform.h \
-           -I$(SRCDIR) $(SDL2_CFLAGS)
+           -include $(INCDIR)/swos_platform.h \
+           -I$(SRCDIR) -I$(INCDIR) $(SDL2_CFLAGS)
 # -Wno-braces:                 tactics_data.c auto-extractor wraps scalar
 #                              initialisers in `{ }`; intentional, ~4200 hits.
 # -Wno-address-of-packed-member: packed structs mirror Amiga byte layout

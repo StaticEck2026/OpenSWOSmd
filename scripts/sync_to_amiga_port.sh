@@ -4,7 +4,7 @@
 #
 # Layout mapping:
 #   SDL  src/foo.c → Amiga src/foo.c
-#   SDL  src/foo.h → Amiga include/foo.h
+#   SDL  include/foo.h → Amiga include/foo.h
 #
 # Files skipped (SDL-only by design — no Amiga equivalent needed):
 #   (none — swos_platform.h is now sync'd; the Amiga branch is empty)
@@ -98,7 +98,7 @@ SRC_FILES=(
     menu_color_text_script_cmds.inc
 )
 
-# .h files (copied to dest include/)
+# .h files (SDL include/ -> Amiga include/)
 HDR_FILES=(
     swos_types.h
     diy_competition.h menu_system.h teams.h game_types.h career_params.h
@@ -219,11 +219,11 @@ done
 
 new_hdr=(); diff_hdr=(); same_hdr=(); missing_hdr=()
 for f in "${HDR_FILES[@]}"; do
-    if [[ ! -f "$SDL_ROOT/src/$f" ]]; then
+    if [[ ! -f "$SDL_ROOT/include/$f" ]]; then
         missing_hdr+=("$f")
     elif [[ ! -f "$AMIGA_ROOT/include/$f" ]]; then
         new_hdr+=("$f")
-    elif cmp -s "$SDL_ROOT/src/$f" "$AMIGA_ROOT/include/$f"; then
+    elif cmp -s "$SDL_ROOT/include/$f" "$AMIGA_ROOT/include/$f"; then
         same_hdr+=("$f")
     else
         diff_hdr+=("$f")
@@ -242,7 +242,7 @@ if [[ "$MODE" == "check" ]]; then
         echo "    DIFFER   src/$f  (~$n line(s))"
     done
     for f in "${diff_hdr[@]}"; do
-        n=$(diff "$SDL_ROOT/src/$f" "$AMIGA_ROOT/include/$f" | grep -cE '^[<>]' || true)
+        n=$(diff "$SDL_ROOT/include/$f" "$AMIGA_ROOT/include/$f" | grep -cE '^[<>]' || true)
         echo "    DIFFER   include/$f  (~$n line(s))"
     done
     [[ ${#new_src[@]} -gt 0 ]] && printf '    SDL-ONLY src/%s\n' "${new_src[@]}"
@@ -296,7 +296,7 @@ for f in "${diff_src[@]}" "${new_src[@]}"; do
     copied=$((copied + 1))
 done
 for f in "${diff_hdr[@]}" "${new_hdr[@]}"; do
-    cp "$SDL_ROOT/src/$f" "$AMIGA_ROOT/include/$f"
+    cp "$SDL_ROOT/include/$f" "$AMIGA_ROOT/include/$f"
     copied=$((copied + 1))
 done
 
