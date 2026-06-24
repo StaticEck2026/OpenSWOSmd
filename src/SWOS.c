@@ -58,13 +58,13 @@ extern uint16_t _frontbufferBaseAlt;
 extern uint16_t _frontbufferMaskBuffer;
 
 /* Pre-allocated cache memory (defined in SWOS2.s BSS, filled before hardware takeover) */
-extern uint8_t *_g_earlyAllocCacheMem;
-extern uint32_t _g_earlyAllocCacheSize;
+extern uint8_t *_earlyAllocCacheMem;
+extern uint32_t _earlyAllocCacheSize;
 
 extern uint8_t *AllocMemAny(uint32_t size);
 
-SWOS_CHIP_BSS volatile uint32_t _g_swos_chip_bss_anchor;
-SWOS_FAST_BSS volatile uint32_t _g_swos_fast_bss_anchor;
+SWOS_CHIP_BSS volatile uint32_t _swos_chip_bss_anchor;
+SWOS_FAST_BSS volatile uint32_t _swos_fast_bss_anchor;
 
 /* m68k exception-vector table installer. Dead code on SDL (no real
  * VBR), but kept for the Amiga port. uintptr_t so the cast to
@@ -185,7 +185,7 @@ extern uint8_t _imageCmdWorkBuf[];
 extern uint8_t *_imageStreamCursor;
 extern uint8_t *_menuImageStreamBaseEnd;
 
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 
 extern void AssetSys_InitDiskImageSources(void);
 extern int16_t AssetSvcLoaderOp2(void);

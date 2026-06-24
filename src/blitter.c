@@ -277,7 +277,7 @@ static void blitterSpan4Planes(uint16_t x, uint16_t y, uint16_t width,
  * ================================================================ */
 #ifdef SWOS_SDL_BUILD
 /* SDL build: write to the chunky 8bpp frontbuffer. 1 byte per pixel =
- * palette index. Row stride = g_screen_width. */
+ * palette index. Row stride = _screen_width. */
 static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
                            uint16_t color, uint8_t *buf)
 {
@@ -288,7 +288,7 @@ static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
         uint8_t *row = buf + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
         for (uint16_t dx = 0; dx < w; dx++) {
             uint16_t xx = (uint16_t)(x0 + dx);
-            if (xx >= _g_screen_width) continue;
+            if (xx >= _screen_width) continue;
             row[xx] = pixel;
         }
     }
@@ -298,7 +298,7 @@ static void fillRectChunky(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h,
 __attribute__((used, externally_visible))
 void FillRectangle(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
 {
-    uint8_t *buf = (uint8_t *)_frontbufferBasePtr + _g_menu_draw_x_offset;
+    uint8_t *buf = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
     uint16_t wrapRows;
     int16_t overflow;
 
@@ -382,7 +382,7 @@ static void blitterRectRowMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
             const uint8_t *srcRow = mask + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
             uint8_t       *dstRow = buf  + (uint32_t)yy * FRONTBUFFER_ROW_STRIDE_BYTES;
             uint16_t       copyW  = w;
-            if ((uint32_t)x + copyW > _g_screen_width) copyW = (uint16_t)(_g_screen_width - x);
+            if ((uint32_t)x + copyW > _screen_width) copyW = (uint16_t)(_screen_width - x);
             memcpy(dstRow + x, srcRow + x, copyW);
         }
     }
@@ -741,8 +741,8 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
     SpriteGraphics *srcHdr = table[glyphIndex];
     SpriteGraphics *dstHdr = table[dstSpriteIndex];
     {
-        extern int _g_debug_sprite_load;
-        if (_g_debug_sprite_load) {
+        extern int _debug_sprite_load;
+        if (_debug_sprite_load) {
             SWOS_DBG("[blit] glyph=0x%03X -> dst=0x%03X @(%u,%u) pm=%u srcHdr=%p dstHdr=%p\n",
                     glyphIndex, dstSpriteIndex, xOff, yOff, planeMask,
                     (void*)srcHdr, (void*)dstHdr);
@@ -1016,8 +1016,8 @@ uint16_t Text2Sprite(uint16_t xOff, uint16_t yOff, uint16_t dstSpriteIndex,
      * so the stride is correct on both targets. */
     dstHdr = table[dstSpriteIndex];
     {
-        extern int _g_debug_sprite_load;
-        if (_g_debug_sprite_load) {
+        extern int _debug_sprite_load;
+        if (_debug_sprite_load) {
             SWOS_DBG("[text] dstIdx=0x%03X text='%.16s' width=%u dstPixW=%d dstHdr=%p\n",
                     dstSpriteIndex, (const char *)text, textWidth,
                     dstHdr ? dstHdr->pixWidth : -1, (void*)dstHdr);

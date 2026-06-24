@@ -318,7 +318,7 @@ extern uint32_t S_SavedInt3;
 extern uint32_t S_SavedInt4;
 extern uint32_t S_SavedInt5;
 extern uint32_t size;       /* file size global used by rob_* functions */
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 extern uint8_t _keyexit;   /* DEL key code = 0x46 */
 
 /* ---- External asm functions ---- */
@@ -1502,7 +1502,7 @@ uint8_t KBHook(void)
     keycode = (keycode >> 1) | (keycode << 7);
 
     if (keycode == _keyexit) {
-        _g_quitToDos = 1;
+        _quitToDos = 1;
     }
 
     return raw;

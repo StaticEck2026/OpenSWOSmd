@@ -48,7 +48,7 @@ static inline void fade_wait_one_isr_tick(void)
 extern volatile uint16_t _fadeState;
 extern volatile uint16_t _fadeCommand;
 extern volatile uint16_t _fadeInitFlag;
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 extern uint16_t _loaderModeFlag;
 extern uint16_t _paletteIndex;
 extern uint8_t _copperListBuffer[];
@@ -68,7 +68,7 @@ void FadeOutToBlack(void)
     {
         while (_fadeState == 0)
         {
-            if (_g_quitToDos) return;
+            if (_quitToDos) return;
             FADE_SPIN_BODY();
         }
     }
@@ -81,7 +81,7 @@ void FadeOutToBlack(void)
 
     while (_fadeState != 0)
     {
-        if (_g_quitToDos) return;
+        if (_quitToDos) return;
         FADE_SPIN_BODY();
     }
 }
@@ -100,7 +100,7 @@ void FadeIn(void)
     {
         while (_fadeState != 0)
         {
-            if (_g_quitToDos) return;
+            if (_quitToDos) return;
             FADE_SPIN_BODY();
         }
         FadeOutToBlack();
@@ -114,7 +114,7 @@ void FadeIn(void)
 
     while (_fadeState == 0)
     {
-        if (_g_quitToDos) return;
+        if (_quitToDos) return;
         FADE_SPIN_BODY();
     }
 }

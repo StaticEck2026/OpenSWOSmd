@@ -141,7 +141,7 @@ extern uint8_t *_spriteGraphicsPtr;
 
 /* Platform quit flag: set by Platform_RequestQuit on SDL_QUIT / ESC /
  * X button click. ShowMenu loops check it to break out of nested menus. */
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 /* Map a packed-menu pointer to a human name for the autoskip log. */
@@ -469,11 +469,11 @@ __attribute__((used, externally_visible))
 void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     /* Widescreen: align the masked (transparent) background with the centered
-     * frame/text/items, which draw at x + g_menu_draw_x_offset via the base-shifted
+     * frame/text/items, which draw at x + _menu_draw_x_offset via the base-shifted
      * primitives. Both the mask read and the front write shift by the offset. Without
      * this the masked bg lands un-centered (corrupt menu item in masked-bg states).
      * Same fix as BlitMaskedRectAltToFront. 0 on Amiga / non-widescreen. */
-    RectRowMaskedApplyScreenOffset((uint16_t)(x + _g_menu_draw_x_offset), y, w, h,
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + _menu_draw_x_offset), y, w, h,
                                     _frontbufferMaskBuffer, (uint8_t *)_frontbufferBasePtr);
 }
 
@@ -1315,7 +1315,7 @@ void DrawMenu(void)
     /* Widescreen: center all menu drawing. Set once here; every partial redraw
      * (CallDrawMenuItem, DrawMultipleItems, selector, custom callbacks, ...)
      * inherits it. The in-match game loop resets it to 0 for the world. */
-    _g_menu_draw_x_offset = WIDE_MARGIN;
+    _menu_draw_x_offset = WIDE_MARGIN;
 
     BlitterCopyPanelToScreen2();
     DrawMenuPanelBackground();
@@ -1334,7 +1334,7 @@ void DrawMenu(void)
         CallMenuCallback((void *)onDrawPtr);
     }
 
-    /* Draw all entries (centered via the persistent g_menu_draw_x_offset). */
+    /* Draw all entries (centered via the persistent _menu_draw_x_offset). */
     entry = (MenuEntry *)_menuEntries;
     count = (int16_t)menu->numEntries;
     for (i = 0; i < count; i++) {
@@ -1784,14 +1784,14 @@ void ShowMenu(uint8_t *packedMenu)
     /* If a quit was already requested, skip rendering this menu entirely
      * and propagate exitMenu = 1 to any outer ShowMenu still on the
      * stack. Without this, a click on the SDL window's X (or any path
-     * that sets g_quitToDos) only exits the innermost menu — the outer
+     * that sets _quitToDos) only exits the innermost menu — the outer
      * loop then re-enters its own MenuProc and the user sees every
      * pending menu in the nested chain flash by one at a time before
      * the program actually exits. The same cascade is also visible on
      * the season-transition path where multiple cup result menus
      * stack up. */
-    if (_g_quitToDos) {
-        SWOS_AUTOSKIP_LOG("ShowMenu: SKIPPED packedMenu=%p (%s) — g_quitToDos set",
+    if (_quitToDos) {
+        SWOS_AUTOSKIP_LOG("ShowMenu: SKIPPED packedMenu=%p (%s) — _quitToDos set",
                           packedMenu, swos_autoskip_menu_name(packedMenu));
         _exitMenu = 1;
         return;
@@ -1835,7 +1835,7 @@ void ShowMenu(uint8_t *packedMenu)
     _menuStatus = 1;
     /* Don't clear exitMenu if quit propagation is in flight — leave it
      * set so the outer ShowMenu's `while (exitMenu == 0)` exits too. */
-    if (!_g_quitToDos)
+    if (!_quitToDos)
         _exitMenu = 0;
 
     RestorePreviousMenu(oldSelectedEntry, (uint8_t *)oldPackedMenu);
@@ -1877,11 +1877,11 @@ __attribute__((used, externally_visible))
 void BlitMaskedRectAltToFront(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     extern volatile uintptr_t _frontbufferBaseAltPtr;
-    /* Widescreen: the items were drawn centered (x + g_menu_draw_x_offset via the
+    /* Widescreen: the items were drawn centered (x + _menu_draw_x_offset via the
      * base-shifted primitives), so sync the SAME region between the two buffers.
      * Without this the rect copies the un-offset region and leaves stale/garbage
      * exactly where the centered items are (corrupt menu element). 0 if not widescreen. */
-    RectRowMaskedApplyScreenOffset((uint16_t)(x + _g_menu_draw_x_offset), y, w, h,
+    RectRowMaskedApplyScreenOffset((uint16_t)(x + _menu_draw_x_offset), y, w, h,
                                     (uint8_t *)_frontbufferBaseAltPtr, (uint8_t *)_frontbufferBasePtr);
 }
 

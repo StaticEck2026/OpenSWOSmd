@@ -26,7 +26,7 @@ extern void AudioSetChannelVolume(uint16_t mask, uint16_t vol);
 
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint16_t _paletteIndex;
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 extern volatile uint16_t _currentGameTick;
 extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t _pl1Fire;
@@ -127,7 +127,7 @@ static void loaderIntroStopMusicAndResetAudio(void)
     for (int16_t vol = 0x23; vol >= 0; vol--) {
         AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
         WaitForVSync();
-        if (_g_quitToDos) break;
+        if (_quitToDos) break;
     }
     AudioSetChannelVolume(0xFFFF, 0);
 #else
@@ -216,7 +216,7 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
  * LoaderIntroWaitForFireOrTimeout  (SWOS2.s line 21337)
  *
  * Polls player 1 input each frame. Returns non-zero if fire was
- * pressed or g_quitToDos set; returns 0 if the timeout (d7 frames)
+ * pressed or _quitToDos set; returns 0 if the timeout (d7 frames)
  * expired without interruption.
  *
  * Original asm: d7 = timeout count (dbf-style, so iterates d7+1 times).
@@ -234,7 +234,7 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
 
         if (_pl1Fire != 0)
             return 1;
-        if (_g_quitToDos != 0)
+        if (_quitToDos != 0)
             return 1;
 
         WaitForVSync();
@@ -254,7 +254,7 @@ static int16_t loaderIntroWaitForFireOrTimeout(int16_t timeout)
  * ================================================================ */
 static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t timeout)
 {
-    if (_g_quitToDos != 0) return 1;
+    if (_quitToDos != 0) return 1;
 
     loaderIntroLoadFrameToFrontbufferAlt(filename);
 #ifndef AGA
@@ -267,7 +267,7 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
 #ifndef AGA
     /* Skip the fade-out if the user closed the window — it just adds
      * ~1 s of unresponsive black-screen between the click and exit. */
-    if (_g_quitToDos == 0)
+    if (_quitToDos == 0)
         FadeOutToBlack();
 #endif
     return 0;
@@ -281,7 +281,7 @@ static int16_t loaderIntroShowFrameFadeInOut(const uint8_t *filename, int16_t ti
  * ================================================================ */
 static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t timeout)
 {
-    if (_g_quitToDos != 0) return 1;
+    if (_quitToDos != 0) return 1;
 
     loaderIntroLoadFrameToFrontbufferAlt(filename);
     loaderIntroEnsureMenuMusicPlaying();
@@ -293,7 +293,7 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
         return 1;
 
 #ifndef AGA
-    if (_g_quitToDos == 0)
+    if (_quitToDos == 0)
         FadeOutToBlack();
 #endif
     return 0;
@@ -425,7 +425,7 @@ exit_cleanup:
 load_fail_mid:
     /* Fire pressed → show loader1 splash and continue.
      * Window-X pressed → bypass the splash and exit fast. */
-    if (_g_quitToDos == 0) {
+    if (_quitToDos == 0) {
         FadeOutToBlack();
 #ifndef AGA
         _paletteIndex = 3;
@@ -436,7 +436,7 @@ load_fail_mid:
     goto exit_cleanup;
 
 load_fail_early:
-    if (_g_quitToDos == 0) {
+    if (_quitToDos == 0) {
         FadeOutToBlack();
 #ifndef AGA
         _paletteIndex = 3;

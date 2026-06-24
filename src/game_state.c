@@ -6,7 +6,7 @@
 #include "game_state.h"
 #include "game_types.h"
 #include "endian_helpers.h"
-#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
+#include "display.h"    /* _screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
 
 /* ---- External globals ---- */
 extern uint16_t _isGoalAttempt;

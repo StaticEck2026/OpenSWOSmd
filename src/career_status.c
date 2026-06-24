@@ -1008,8 +1008,8 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx 
     } else {
         d0 = getTeamValueForGateReceipts(team1);
     }
-    d0 = (uint16_t)(d0 / _g_careerParams.gate_value_divisor);
-    d0 = (uint32_t)(uint16_t)d0 * _g_careerParams.gate_league_mult_home;
+    d0 = (uint16_t)(d0 / _careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * _careerParams.gate_league_mult_home;
     uint32_t d7 = d0;
 
     /* team2 value */
@@ -1018,8 +1018,8 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx 
     } else {
         d0 = getTeamValueForGateReceipts(team2);
     }
-    d0 = (uint16_t)(d0 / _g_careerParams.gate_value_divisor);
-    d0 = (uint32_t)(uint16_t)d0 * _g_careerParams.gate_league_mult_away;
+    d0 = (uint16_t)(d0 / _careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * _careerParams.gate_league_mult_away;
     d7 += d0;
 
     d7 >>= 4;   /* lsr.l #4 */
@@ -1053,8 +1053,8 @@ static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *te
     } else {
         d0 = getTeamValueForGateReceipts(team1);
     }
-    d0 = (uint16_t)(d0 / _g_careerParams.gate_value_divisor);
-    d0 = (uint32_t)(uint16_t)d0 * _g_careerParams.gate_cup_mult;
+    d0 = (uint16_t)(d0 / _careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * _careerParams.gate_cup_mult;
     uint32_t d7 = d0;
 
     if (team2 == &_careerTeam) {
@@ -1062,8 +1062,8 @@ static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *te
     } else {
         d0 = getTeamValueForGateReceipts(team2);
     }
-    d0 = (uint16_t)(d0 / _g_careerParams.gate_value_divisor);
-    d0 = (uint32_t)(uint16_t)d0 * _g_careerParams.gate_cup_mult;
+    d0 = (uint16_t)(d0 / _careerParams.gate_value_divisor);
+    d0 = (uint32_t)(uint16_t)d0 * _careerParams.gate_cup_mult;
     d7 += d0;
 
     d7 >>= 4;
@@ -2240,16 +2240,16 @@ void Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
 
     if (someFlag == PLAYER_FORM_TRIALIST) {
         /* Trialist: reduce wage (default 33%) */
-        avgBase = (uint16_t)((uint32_t)avgBase * _g_careerParams.wage_trialist_pct / 100);
+        avgBase = (uint16_t)((uint32_t)avgBase * _careerParams.wage_trialist_pct / 100);
     } else if (someFlag == PLAYER_FORM_RESERVE) {
         /* Youth: reduce wage (default 66%) */
-        avgBase = (uint16_t)((uint32_t)avgBase * _g_careerParams.wage_reserve_pct / 100);
+        avgBase = (uint16_t)((uint32_t)avgBase * _careerParams.wage_reserve_pct / 100);
     }
 
     /* Scale: value * 1000 / 768 * scale / wageScalingDivisor */
     uint32_t wage = (uint32_t)avgBase * 1000;
     wage = wage / 768;
-    wage = wage * _g_careerParams.wage_scale;
+    wage = wage * _careerParams.wage_scale;
     wage = wage / (uint32_t)_wageScalingDivisor;
     wage &= 0xFFFF;  /* keep 16-bit quotient (68k divu behavior) */
 
@@ -2345,13 +2345,13 @@ uint32_t CalculateStartingBalance(uint16_t teamNumber)
     TeamFileEx *teamPtr = GetTeamPointer(teamNumber);
     uint16_t avgPrice = GetAveragePlayerPrice(teamPtr);
     uint16_t baseValue = GetTeamValueBase(avgPrice);
-    uint16_t base3 = (uint16_t)(baseValue * _g_careerParams.start_balance_value_mult);
+    uint16_t base3 = (uint16_t)(baseValue * _careerParams.start_balance_value_mult);
     uint16_t r = Rand2();
-    uint16_t randFactor = (uint16_t)((uint16_t)(r * _g_careerParams.start_balance_pct_range) >> 8);
-    uint16_t pct = (uint16_t)(randFactor + _g_careerParams.start_balance_pct_min);  /* default 80-119 */
+    uint16_t randFactor = (uint16_t)((uint16_t)(r * _careerParams.start_balance_pct_range) >> 8);
+    uint16_t pct = (uint16_t)(randFactor + _careerParams.start_balance_pct_min);  /* default 80-119 */
     uint32_t product = (uint32_t)pct * (uint32_t)base3;
     uint16_t divided = (uint16_t)(product / 100);                /* divu.w quotient */
-    return (uint32_t)divided * _g_careerParams.start_balance_scale;
+    return (uint32_t)divided * _careerParams.start_balance_scale;
 }
 
 /* ================================================================

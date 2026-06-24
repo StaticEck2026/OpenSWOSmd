@@ -170,9 +170,9 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     screenY = pixelY - (int16_t)_cameraY.s.i;
 
     /* bounds check. Widescreen draws fan cells across the full frontbuffer width, not just
-     * the 4:3 336px window; g_screen_width == 336 on 4:3 / Amiga so this is unchanged there. */
+     * the 4:3 336px window; _screen_width == 336 on 4:3 / Amiga so this is unchanged there. */
 #ifdef SWOS_SDL_BUILD
-    if (screenX >= _g_screen_width || screenY >= SCREEN_HEIGHT)
+    if (screenX >= _screen_width || screenY >= SCREEN_HEIGHT)
 #else
     if (screenX >= 336 || screenY >= SCREEN_HEIGHT)
 #endif

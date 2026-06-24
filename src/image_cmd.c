@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-int _g_debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
+int _debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
 __attribute__((constructor))
 static void unbuf_stderr(void) { setbuf(stderr, NULL); }
 #endif
@@ -117,8 +117,8 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     ((SpriteGraphics **)_spriteGraphicsPtr)[spriteIndex] = headerBase;
 #ifdef SWOS_SDL_BUILD
     {
-        extern int _g_debug_sprite_load;
-        if (_g_debug_sprite_load) {
+        extern int _debug_sprite_load;
+        if (_debug_sprite_load) {
             fprintf(stderr, "[sprite] extract idx=0x%03X w=%u h=%u at 0x%08x src=%s\n",
                     spriteIndex, width, height, (unsigned)(uintptr_t)headerBase,
                     src == (uint8_t *)0 ? "CHECKERBOARD" : "buf");
@@ -416,7 +416,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
             const uint8_t *filename = (const uint8_t *)_imageScriptPtrTable[idx];
 #endif
 #ifdef SWOS_SDL_BUILD
-            if (_g_debug_sprite_load)
+            if (_debug_sprite_load)
                 fprintf(stderr, "[sprite] LOAD filename=%s\n",
                         filename ? (const char *)filename : "(null)");
 #endif

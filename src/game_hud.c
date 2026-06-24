@@ -5,7 +5,7 @@
  */
 #include "game_hud.h"
 #include "game_types.h"
-#include "display.h"    /* g_screen_width, WIDE_MARGIN — center the controlled-player name in widescreen */
+#include "display.h"    /* _screen_width, WIDE_MARGIN — center the controlled-player name in widescreen */
 
 /* ---- Sprite indices ---- */
 #define SPR_CORNER_FLAG_FRAME_3         1073

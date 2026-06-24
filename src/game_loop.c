@@ -61,7 +61,7 @@ extern FixedPoint _cameraX;
 extern FixedPoint _cameraY;
 extern volatile int16_t _waitingInterrupt;
 extern uint32_t _irqCookieObfuscated;
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 
 extern uint8_t _pl1Fire;
 extern uint8_t _pl2Fire;
@@ -694,7 +694,7 @@ vblank_return_dispatch:
     /* Widescreen: the in-match world (ads, animated patterns, players/ball) draws at
      * offset 0 — the pitch fills the whole frame. Menu/HUD centering is re-established
      * by DrawMenu when the frontend draws again. */
-    _g_menu_draw_x_offset = 0;
+    _menu_draw_x_offset = 0;
     ManageAdvertisements();
     DoGoalkeeperSprites();
     UpdateControlledPlayerNumbers();
@@ -708,7 +708,7 @@ vblank_return_dispatch:
     BenchCheckControls();
     UpdateAndDrawStatistics();
 
-    if (_g_quitToDos != 0)
+    if (_quitToDos != 0)
         goto cleanup_and_return;
 
     /* Post-frame: save coordinates end marker */

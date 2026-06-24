@@ -540,7 +540,7 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Compute destination address */
         uint32_t *a3 = (uint32_t *)_spriteBlitQueue;
-        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _g_menu_draw_x_offset;
+        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
 
         int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
         int32_t xWordOffL = (int32_t)xWordOff; /* sign-extend */
@@ -612,13 +612,13 @@ static uint32_t savedSrcPlaneB;
  *   - palette index 0 is transparent
  *
  * Destination: 8bpp chunky frontbuffer, row stride =
- * FRONTBUFFER_ROW_STRIDE_BYTES (g_screen_width on SDL). Camera offsets
+ * FRONTBUFFER_ROW_STRIDE_BYTES (_screen_width on SDL). Camera offsets
  * mirror the Amiga path (cameraXMod320 / cameraYMod320, Y-wrap). */
 static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 {
     if (!a0) return;
     const uint8_t *data = (const uint8_t *)(uintptr_t)a0->sprData;
-    uint8_t *dstBase = (uint8_t *)(uintptr_t)_frontbufferBasePtr + _g_menu_draw_x_offset;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)_frontbufferBasePtr + _menu_draw_x_offset;
     if (!data || !dstBase) return;
 
     int16_t sprW  = a0->pixWidth;
@@ -635,7 +635,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
      * below is not enough when dstX is so negative that `dx` wraps into
      * the visible range for huge sprites (replay frame path was passing
      * dstX=-384). */
-    if (dstX >= _g_screen_width || dstY >= SCREEN_HEIGHT) return;
+    if (dstX >= _screen_width || dstY >= SCREEN_HEIGHT) return;
     if (dstX + sprW <= 0 || dstY + sprH <= 0) return;
 
     /* cameraXMod320/cameraYMod320 are Amiga hardware-scroll wrap
@@ -654,7 +654,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 
         for (int16_t px = 0; px < sprW; px++) {
             int16_t dx = dstX + px;
-            if (dx < 0 || dx >= _g_screen_width) continue;
+            if (dx < 0 || dx >= _screen_width) continue;
             uint8_t src = srcRow[px];
             if (src) dstRow[dx] = src;
         }
@@ -674,7 +674,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     if (sprType != 0) {
         /* ---- branch_linked_planes path ---- */
         uint32_t *a3 = (uint32_t *)_spriteBlitQueue;
-        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _g_menu_draw_x_offset;
+        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
         int16_t d3 = a0->nlines;
         int16_t d5 = 0;
 
@@ -812,7 +812,7 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     /* ---- Normal (non-linked) 4-plane path ---- */
     {
         uint32_t *a3 = (uint32_t *)_spriteBlitQueue;
-        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _g_menu_draw_x_offset;
+        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
 
         /* Redundant type check removed - we know sprType == 0 here */
         int16_t d3 = a0->nlines;
@@ -1084,7 +1084,7 @@ void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
     y -= _cameraY.s.i;
 
     /* Cull if completely off-screen */
-    if (x >= _g_screen_width)
+    if (x >= _screen_width)
         return;
     if (y >= SCREEN_HEIGHT)
         return;
@@ -1121,7 +1121,7 @@ void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
     x -= _cameraX.s.i;
     y -= _cameraY.s.i;
 
-    if (x >= _g_screen_width)
+    if (x >= _screen_width)
         return;
     if (y >= SCREEN_HEIGHT)
         return;
@@ -1387,7 +1387,7 @@ static int16_t plane23BandTopY_local;
    We MUST keep them contiguous to avoid undefined behavior from index -1 writes.
 
    SDL widescreen: 26 active buckets only cover 26*16 = 416 px. With a widescreen
-   render (g_screen_width up to PITCH_VIEW_MAX_WIDTH = 672 = 42 columns) a sprite
+   render (_screen_width up to PITCH_VIEW_MAX_WIDTH = 672 = 42 columns) a sprite
    near the right edge indexes past the array, and the `a3[col] = d2` write below
    corrupts whatever the linker placed next in BSS — it was stomping stb's
    stbi__flip_vertically_on_write flag, which silently inverted every in-match
@@ -1457,7 +1457,7 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         d2 -= a1->z.s.i;
 
         /* Cull if off-screen */
-        if (d1 >= _g_screen_width || d2 >= SCREEN_HEIGHT) {
+        if (d1 >= _screen_width || d2 >= SCREEN_HEIGHT) {
             a1->onScreen = 0;
             d7--;
             if (d7 < 0) break;

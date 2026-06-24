@@ -127,13 +127,13 @@ __attribute__((used, externally_visible))
 void ReplayExitMenuAfterFriendly(void)
 {
     /* Widescreen: centre the menu over the (centred) background. The match loop left
-     * g_menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
+     * _menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
      * draws below all read it via FillRectangle / blitStringToFrontBuffer, so without this
      * they'd sit at the screen's left edge while menubg2 (which bakes WIDE_MARGIN into its
      * own frontbuffer position) is centred. Restored before returning. WIDE_MARGIN is 0 on
      * Amiga / non-widescreen, so this is a no-op there. */
-    int saved_x_offset = _g_menu_draw_x_offset;
-    _g_menu_draw_x_offset = WIDE_MARGIN;
+    int saved_x_offset = _menu_draw_x_offset;
+    _menu_draw_x_offset = WIDE_MARGIN;
 
     /* Load menu background image. On Amiga, LoadFileEx writes bitplane
      * data directly into frontbufferMaskBuffer (which is bitplane-format
@@ -223,7 +223,7 @@ void ReplayExitMenuAfterFriendly(void)
             if (_fire != 0)
             {
                 FadeOutToBlack();
-                _g_menu_draw_x_offset = saved_x_offset;
+                _menu_draw_x_offset = saved_x_offset;
                 return;
             }
             /* No fire, just wait */

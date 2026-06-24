@@ -2801,8 +2801,8 @@ void DataJson_LoadCareerParams(void)
     if (!j)
         return;
     double v;
-    #define LDU(path, f) do { if (mjson_get_number(j, len, path, &v)) _g_careerParams.f = (uint16_t)v; } while (0)
-    #define LDS(path, f) do { if (mjson_get_number(j, len, path, &v)) _g_careerParams.f = (int16_t)v;  } while (0)
+    #define LDU(path, f) do { if (mjson_get_number(j, len, path, &v)) _careerParams.f = (uint16_t)v; } while (0)
+    #define LDS(path, f) do { if (mjson_get_number(j, len, path, &v)) _careerParams.f = (int16_t)v;  } while (0)
     LDU("$.start_balance_value_mult",   start_balance_value_mult);
     LDU("$.start_balance_pct_min",      start_balance_pct_min);
     LDU("$.start_balance_pct_range",    start_balance_pct_range);
@@ -2826,8 +2826,8 @@ void DataJson_LoadCareerParams(void)
     LDU("$.num_seasons",                num_seasons);
     #undef LDU
     #undef LDS
-    if (_g_careerParams.num_seasons < 1) _g_careerParams.num_seasons = 1;
-    if (_g_careerParams.num_seasons > CAREER_MAX_SEASONS) _g_careerParams.num_seasons = CAREER_MAX_SEASONS;
+    if (_careerParams.num_seasons < 1) _careerParams.num_seasons = 1;
+    if (_careerParams.num_seasons > CAREER_MAX_SEASONS) _careerParams.num_seasons = CAREER_MAX_SEASONS;
     free(j);
     fprintf(stderr, "[data-json] career params loaded from data_json/career_params.json\n");
 }

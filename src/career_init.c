@@ -119,7 +119,7 @@ void Career_InitSeasonTransferMarketState(void)
 
     /* Compute season transfer quota */
     uint16_t seasonsAdj = (uint16_t)(7 - _careerSeasonsCompleted) * 16;  /* mulu #$10 */
-    uint16_t divisor = _g_careerParams.num_seasons - _currentSeasonShowing;
+    uint16_t divisor = _careerParams.num_seasons - _currentSeasonShowing;
     int16_t numerator = (int16_t)(0x1B0 - _numForeignMarketPlayers2 - seasonsAdj);
     /* ext.l + divu.w: sign-extend to 32-bit then unsigned divide by word */
     uint16_t quota = (uint16_t)((uint32_t)(int32_t)numerator / divisor);
@@ -279,7 +279,7 @@ extern void InitCareerVariables(uint16_t gameTypeParam);
 __attribute__((used, externally_visible))
 void ContinueCareer(void)
 {
-    if (_currentSeasonShowing == _g_careerParams.num_seasons - 1) {
+    if (_currentSeasonShowing == _careerParams.num_seasons - 1) {
         ShowRetirementMessage();
         InitCareerVariables(0);
         SetExitMenuFlag();
@@ -969,7 +969,7 @@ void InitializeNewSeason(void)
                       (unsigned)_selTeamNumber);
     _teamsLoaded = 0;
     _currentSeasonShowing++;
-    if (_currentSeasonShowing == _g_careerParams.num_seasons)
+    if (_currentSeasonShowing == _careerParams.num_seasons)
         _currentSeasonShowing = 0;
 
     _selTeamSelectedPlayerPosition = 0xFFFF;

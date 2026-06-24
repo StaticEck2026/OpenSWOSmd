@@ -420,8 +420,8 @@ void AssetLoaderRegisterRegion(uint32_t size, uint8_t *region)
  * BSS is hunk-allocated with no guaranteed free space after it.
  * ================================================================ */
 /* Pre-allocated cache memory (set in _start before hardware takeover) */
-extern uint8_t *_g_earlyAllocCacheMem;
-extern uint32_t _g_earlyAllocCacheSize;
+extern uint8_t *_earlyAllocCacheMem;
+extern uint32_t _earlyAllocCacheSize;
 
 __attribute__((used, externally_visible))
 void AssetLoaderInitAltPathAndBanks(void)
@@ -433,9 +433,9 @@ void AssetLoaderInitAltPathAndBanks(void)
     AssetLoaderRegisterRegion(0, _surnameBuf);
 
     /* Use cache memory that was pre-allocated in _start (before hardware takeover) */
-    if (_g_earlyAllocCacheMem != (uint8_t *)0 && _g_earlyAllocCacheSize > 0)
+    if (_earlyAllocCacheMem != (uint8_t *)0 && _earlyAllocCacheSize > 0)
     {
-        AssetLoaderRegisterRegion(_g_earlyAllocCacheSize, _g_earlyAllocCacheMem);
+        AssetLoaderRegisterRegion(_earlyAllocCacheSize, _earlyAllocCacheMem);
     }
 }
 

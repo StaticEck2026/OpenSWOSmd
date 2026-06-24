@@ -13,7 +13,7 @@
 #endif
 
 /* FrontEndMainLoop */
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
 extern void MenuProc(void);
@@ -119,7 +119,7 @@ void FrontEndPreLoopSetup(void)
  * FrontEndMainLoop  (SWOS2.s line 42901)
  *
  * Main front-end event loop. Initializes timer and menu system,
- * then repeatedly calls MenuProc until g_quitToDos is set.
+ * then repeatedly calls MenuProc until _quitToDos is set.
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
 void FrontEndMainLoop(void)
@@ -130,5 +130,5 @@ void FrontEndMainLoop(void)
     do
     {
         MenuProc();
-    } while (_g_quitToDos == 0);
+    } while (_quitToDos == 0);
 }

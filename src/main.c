@@ -35,7 +35,7 @@
 #include "swos_settings.h"
 #include "save_format_json.h"   /* DataJson_SelfTest */
 #include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
-#include "display.h"    /* g_screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
+#include "display.h"    /* _screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
 
 #define SWOS_INI_PATH "SWOS.ini"
 
@@ -259,7 +259,7 @@ int main(int argc, char **argv)
     _gDosGraphics = opts.dos_graphics;
     _gDosGameplay = opts.dos_gameplay;
     _gWidescreen  = opts.widescreen;
-    /* g_screen_width (the live render width) + g_menu_draw_x_offset (UI centering)
+    /* _screen_width (the live render width) + _menu_draw_x_offset (UI centering)
      * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
     if (opts.dos_dir[0])
         snprintf(_gDosGraphicsDir, sizeof _gDosGraphicsDir, "%s", opts.dos_dir);
@@ -315,13 +315,13 @@ int main(int argc, char **argv)
         w = (w + 1) & ~1;                          /* round up to even */
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
-        _g_screen_width = w;
+        _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (display %dx%d, %.2f:1)\n",
-                _g_screen_width, SCREEN_HEIGHT, dw, dh, (double)dw / dh);
+                _screen_width, SCREEN_HEIGHT, dw, dh, (double)dw / dh);
     } else {
-        _g_screen_width = SCREEN_WIDTH;
+        _screen_width = SCREEN_WIDTH;
     }
-    _g_menu_draw_x_offset = WIDE_MARGIN;
+    _menu_draw_x_offset = WIDE_MARGIN;
 
     if (Platform_Init(&opts) != 0) {
         fprintf(stderr, "Platform_Init failed\n");

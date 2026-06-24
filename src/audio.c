@@ -596,8 +596,8 @@ void TryPlayMusic(void)
      * this gate, pressing X mid-match causes the menu unwind to call
      * CycleMenuMusic → TryPlayMusic, starting the menu song just
      * before the process exits — audible as a brief musical blip. */
-    extern uint16_t _g_quitToDos;
-    if (_g_quitToDos != 0)
+    extern uint16_t _quitToDos;
+    if (_quitToDos != 0)
         return;
 
     if (_audioActive != 0)

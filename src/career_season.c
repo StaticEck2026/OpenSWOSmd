@@ -616,13 +616,13 @@ void ShowChairmanOpinionAboutTheSeason(void)
 
     int16_t d7 = 0;
     if (position != 0) {
-        if (ratio < _g_careerParams.board_ratio_ok) {
+        if (ratio < _careerParams.board_ratio_ok) {
             d7 = 1;
-            if (ratio < _g_careerParams.board_ratio_good) {
+            if (ratio < _careerParams.board_ratio_good) {
                 d7 = 2;
-                if (ratio <= _g_careerParams.board_ratio_poor) {
+                if (ratio <= _careerParams.board_ratio_poor) {
                     d7 = 3;
-                    if (ratio <= _g_careerParams.board_ratio_terrible)
+                    if (ratio <= _careerParams.board_ratio_terrible)
                         d7 = 4;
                 }
             }
@@ -631,30 +631,30 @@ void ShowChairmanOpinionAboutTheSeason(void)
 
     /* Percentile adjustments (NO guards for d7==0 or d7==4) */
     uint16_t percentile = (uint16_t)((uint16_t)position * 100) / numTeams;
-    if (percentile <= _g_careerParams.board_percentile_low)
+    if (percentile <= _careerParams.board_percentile_low)
         d7--;
-    if (percentile >= _g_careerParams.board_percentile_high)
+    if (percentile >= _careerParams.board_percentile_high)
         d7++;
 
     /* Secondary competition: top-2 finish → -2 */
     if (_secondaryCompetitionPtr != 0) {
         int16_t pos2 = (int16_t)FindTeamInDIY(_selTeamNumber, (DIYCompetition *)&_competitionContextBuf);
         if ((uint16_t)pos2 < 2)
-            d7 -= _g_careerParams.board_secondary_top2_bonus;
+            d7 -= _careerParams.board_secondary_top2_bonus;
     }
 
     /* Tertiary competition: top-2 finish → -2 */
     if (_tertiaryCompetitionPtr != 0) {
         int16_t pos3 = (int16_t)FindTeamInDIY(_selTeamNumber, (DIYCompetition *)&_tertiaryCompetitionContextBuf);
         if ((uint16_t)pos3 < 2)
-            d7 -= _g_careerParams.board_tertiary_top2_bonus;
+            d7 -= _careerParams.board_tertiary_top2_bonus;
     }
 
     /* Quaternary competition (Euro cups): top-2 finish → -3 */
     if (_quaternaryCompetitionPtr != 0) {
         int16_t pos4 = (int16_t)FindTeamInDIY(_selTeamNumber, (DIYCompetition *)&_euroCupsCompetitionContextBuf);
         if ((uint16_t)pos4 < 2)
-            d7 -= _g_careerParams.board_euro_top2_bonus;
+            d7 -= _careerParams.board_euro_top2_bonus;
     }
 
     /* Clamp d7 to >= 0 */

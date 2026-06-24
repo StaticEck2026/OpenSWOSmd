@@ -112,7 +112,7 @@ void Platform_RenderFrame(void);
 void RunInt3HandlerThrottled(void);
 
 /* Force a quit (set by SDL_QUIT or escape). The Amiga code polls
- * `g_quitToDos` -- we set it from here. */
+ * `_quitToDos` -- we set it from here. */
 void Platform_RequestQuit(void);
 
 /* ---- Hardware register stubs --------------------------------------- *

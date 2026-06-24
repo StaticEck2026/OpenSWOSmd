@@ -122,18 +122,18 @@ extern void mainC(void);
 /* SDL: defined here (was in SWOS2.s; SDL doesn't link SWOS2.s).
  * Amiga: defined by Resload.s, included via resload_unit.s. */
 #ifdef SWOS_SDL_BUILD
-uint16_t _g_quitToDos = 0;
+uint16_t _quitToDos = 0;
 #else
-extern uint16_t _g_quitToDos;
+extern uint16_t _quitToDos;
 #endif
 
 void Platform_RequestQuit(void)
 {
 #if defined(SWOS_DEBUG_AUTOSKIP) && defined(SWOS_SDL_BUILD)
-    if (!_g_quitToDos)
-        fprintf(stderr, "[autoskip] Platform_RequestQuit: g_quitToDos was 0, now setting 1\n");
+    if (!_quitToDos)
+        fprintf(stderr, "[autoskip] Platform_RequestQuit: _quitToDos was 0, now setting 1\n");
 #endif
-    _g_quitToDos = 1;
+    _quitToDos = 1;
 }
 
 /* Called from MenuProc each tick on the main thread. When a quit has
@@ -156,12 +156,12 @@ extern uint16_t _chooseTeamsResult;
 
 void Platform_CheckQuitRequest(void)
 {
-    if (!_g_quitToDos) return;
+    if (!_quitToDos) return;
 #if defined(SWOS_DEBUG_AUTOSKIP) && defined(SWOS_SDL_BUILD)
     static int once;
     if (!once) {
         once = 1;
-        fprintf(stderr, "[autoskip] Platform_CheckQuitRequest: FIRST observation that g_quitToDos=1\n");
+        fprintf(stderr, "[autoskip] Platform_CheckQuitRequest: FIRST observation that _quitToDos=1\n");
     }
 #endif
     _exitMenu = 1;
@@ -269,5 +269,5 @@ uint32_t _S_VBR = 0;
  * budget. The cache is read by C code only; decompression targets
  * (frontbufferMaskBuffer etc.) keep their CHIP placement. */
 static uint8_t s_early_cache[EARLY_CACHE_BYTES] __attribute__((aligned(4)));
-uint8_t *_g_earlyAllocCacheMem = s_early_cache;
-uint32_t _g_earlyAllocCacheSize = EARLY_CACHE_BYTES;
+uint8_t *_earlyAllocCacheMem = s_early_cache;
+uint32_t _earlyAllocCacheSize = EARLY_CACHE_BYTES;
