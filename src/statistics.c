@@ -948,14 +948,14 @@ void TopGoalScorersMenu_0(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        extern CompetitionSlotBuffer primaryCompetitionBuf;  /* slot-0 untangle (S6): block-local (file-scope decl is below this fn) */
-        uint16_t compTypeWord = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
+        extern CompetitionSlotBuffer _primaryCompetitionBuf;  /* slot-0 untangle (S6): block-local (file-scope decl is below this fn) */
+        uint16_t compTypeWord = (uint16_t)_primaryCompetitionBuf.tourn.header.competitionType;
         SWOS_AUTOSKIP_LOG("[bug2-scorers] TopGoalScorersMenu_0 ENTER statIdx=-1 "
                           "numSelectedTeams=%u numDiyTeams=%u gameType=%u "
                           "careerLoadedFlag=%u compTypeWord=0x%04X selTeamNumber=0x%04X",
-                          (unsigned)numSelectedTeams, (unsigned)primaryCompetitionBuf.tourn.header.numTeams,
-                          (unsigned)gameType, (unsigned)careerLoadedFlag,
-                          (unsigned)compTypeWord, (unsigned)selTeamNumber);
+                          (unsigned)_numSelectedTeams, (unsigned)_primaryCompetitionBuf.tourn.header.numTeams,
+                          (unsigned)_gameType, (unsigned)_careerLoadedFlag,
+                          (unsigned)compTypeWord, (unsigned)_selTeamNumber);
     }
 #endif
     InitHighestScorersTable();
@@ -963,7 +963,7 @@ void TopGoalScorersMenu_0(void)
     SortHighestScorerTable();
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        uint8_t *base = highestScorersTable;
+        uint8_t *base = _highestScorersTable;
         uint16_t *sortArray = (uint16_t *)base;
         int validCount = 0;
         int totalGoals = 0;

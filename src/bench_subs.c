@@ -427,25 +427,25 @@ activate_bench:
          * the difference between a real double-tap, the keyboard
          * 0x10/0x11 hotkey path, and a phantom direction cycle from
          * an input-pipeline bug. */
-        extern uint16_t bench1Called, bench2Called;
-        extern uint16_t subsPrevPl1Direction, subsPl1TapCount;
-        extern uint16_t subsPrevPl2Direction, subsPl2TapCount;
-        extern uint16_t pl1BenchTimeoutCounter, pl2BenchTimeoutCounter;
-        extern uint16_t gameState, gameStatePl;
+        extern uint16_t _bench1Called, _bench2Called;
+        extern uint16_t _subsPrevPl1Direction, _subsPl1TapCount;
+        extern uint16_t _subsPrevPl2Direction, _subsPl2TapCount;
+        extern uint16_t _pl1BenchTimeoutCounter, _pl2BenchTimeoutCounter;
+        extern uint16_t _gameState, _gameStatePl;
         SWOS_DBG(
                 "[bench] ACTIVATE team=%s gameState=%u gameStatePl=%u "
                 "bench1Called=%u bench2Called=%u "
                 "pl1{prev=0x%04X tapCount=%u timeout=%u} "
                 "pl2{prev=0x%04X tapCount=%u timeout=%u} "
                 "subsDir=0x%04X playerNumber=%u\n",
-                (a6 == &topTeamData) ? "TOP" : "BOTTOM",
-                (unsigned)gameState, (unsigned)gameStatePl,
-                (unsigned)bench1Called, (unsigned)bench2Called,
-                (unsigned)subsPrevPl1Direction, (unsigned)subsPl1TapCount,
-                (unsigned)pl1BenchTimeoutCounter,
-                (unsigned)subsPrevPl2Direction, (unsigned)subsPl2TapCount,
-                (unsigned)pl2BenchTimeoutCounter,
-                (unsigned)subsDirection, (unsigned)a6->playerNumber);
+                (a6 == &_topTeamData) ? "TOP" : "BOTTOM",
+                (unsigned)_gameState, (unsigned)_gameStatePl,
+                (unsigned)_bench1Called, (unsigned)_bench2Called,
+                (unsigned)_subsPrevPl1Direction, (unsigned)_subsPl1TapCount,
+                (unsigned)_pl1BenchTimeoutCounter,
+                (unsigned)_subsPrevPl2Direction, (unsigned)_subsPl2TapCount,
+                (unsigned)_pl2BenchTimeoutCounter,
+                (unsigned)_subsDirection, (unsigned)a6->playerNumber);
 #endif
 
         _bench1Called = 0;

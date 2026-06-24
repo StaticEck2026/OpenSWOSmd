@@ -731,9 +731,9 @@ void ContinueCareerNextSeason(void)
     extern uint16_t _gameType;
     SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason ENTER: youreSacked=%u "
                       "teamNoOfferAccepted=0x%04X gameType=%u",
-                      (unsigned)youreSacked,
-                      (unsigned)teamNoOfferAccepted,
-                      (unsigned)gameType);
+                      (unsigned)_youreSacked,
+                      (unsigned)_teamNoOfferAccepted,
+                      (unsigned)_gameType);
     if (_teamNoOfferAccepted != 0xFFFF) {
         if (_youreSacked == 0) {
             ShowLeavingMessage();
@@ -745,13 +745,13 @@ void ContinueCareerNextSeason(void)
     } else {
         SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason: chairman branch (no offer accepted)");
         ShowChairmanOpinionAboutTheSeason();
-        SWOS_AUTOSKIP_LOG("[bug1] back from ShowChairmanOpinion: youreSacked=%u", (unsigned)youreSacked);
+        SWOS_AUTOSKIP_LOG("[bug1] back from ShowChairmanOpinion: youreSacked=%u", (unsigned)_youreSacked);
         Career_AdvanceToNextSeason_UpdateCompetitions();
-        SWOS_AUTOSKIP_LOG("[bug1] back from AdvanceToNextSeason: youreSacked=%u", (unsigned)youreSacked);
+        SWOS_AUTOSKIP_LOG("[bug1] back from AdvanceToNextSeason: youreSacked=%u", (unsigned)_youreSacked);
         InitializeStartingBalanceForNewSeason();
-        SWOS_AUTOSKIP_LOG("[bug1] back from InitStartingBalance: youreSacked=%u", (unsigned)youreSacked);
+        SWOS_AUTOSKIP_LOG("[bug1] back from InitStartingBalance: youreSacked=%u", (unsigned)_youreSacked);
         InitializeNewSeason();
-        SWOS_AUTOSKIP_LOG("[bug1] back from InitializeNewSeason: youreSacked=%u", (unsigned)youreSacked);
+        SWOS_AUTOSKIP_LOG("[bug1] back from InitializeNewSeason: youreSacked=%u", (unsigned)_youreSacked);
     }
     SWOS_AUTOSKIP_LOG("[bug1] ContinueCareerNextSeason EXIT");
 }
@@ -861,7 +861,7 @@ uint16_t Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t e
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[eurocup] team 0x%04X qualifies euroCupIndex=%u (cupCopy=%p) "
                           "-> activating slot 3",
-                          (unsigned)selTeamNumber, (unsigned)euroCupIndex, (void *)cupCopy);
+                          (unsigned)_selTeamNumber, (unsigned)euroCupIndex, (void *)cupCopy);
 #endif
         /* Save quaternary slot state */
         uint16_t savedA = _euroCupsCompetitionContextBuf.tourn.header.slotStateA;
@@ -964,9 +964,9 @@ void InitializeNewSeason(void)
 {
     SWOS_AUTOSKIP_LOG("[bug1] InitializeNewSeason ENTER: youreSacked=%u "
                       "teamNoOfferAccepted=0x%04X selTeamNumber=0x%04X",
-                      (unsigned)youreSacked,
-                      (unsigned)teamNoOfferAccepted,
-                      (unsigned)selTeamNumber);
+                      (unsigned)_youreSacked,
+                      (unsigned)_teamNoOfferAccepted,
+                      (unsigned)_selTeamNumber);
     _teamsLoaded = 0;
     _currentSeasonShowing++;
     if (_currentSeasonShowing == _g_careerParams.num_seasons)

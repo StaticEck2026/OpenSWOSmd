@@ -130,7 +130,7 @@ extern uint16_t g_quitToDos;
 void Platform_RequestQuit(void)
 {
 #if defined(SWOS_DEBUG_AUTOSKIP) && defined(SWOS_SDL_BUILD)
-    if (!g_quitToDos)
+    if (!_g_quitToDos)
         fprintf(stderr, "[autoskip] Platform_RequestQuit: g_quitToDos was 0, now setting 1\n");
 #endif
     _g_quitToDos = 1;

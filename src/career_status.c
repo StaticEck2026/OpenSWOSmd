@@ -3112,12 +3112,12 @@ void Career_PostMatchUpdate(void)
     SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate ENTER isNationalSelector=%u "
                       "currentCompPtr=%p secondaryCompPtr=%p tertiaryCompPtr=%p "
                       "quaternaryCompPtr=%p youreSacked=%u",
-                      (unsigned)isNationalSelector,
-                      (void *)(uintptr_t)currentCompetitionPtr,
-                      (void *)(uintptr_t)secondaryCompetitionPtr,
-                      (void *)(uintptr_t)tertiaryCompetitionPtr,
-                      (void *)(uintptr_t)quaternaryCompetitionPtr,
-                      (unsigned)youreSacked);
+                      (unsigned)_isNationalSelector,
+                      (void *)(uintptr_t)_currentCompetitionPtr,
+                      (void *)(uintptr_t)_secondaryCompetitionPtr,
+                      (void *)(uintptr_t)_tertiaryCompetitionPtr,
+                      (void *)(uintptr_t)_quaternaryCompetitionPtr,
+                      (unsigned)_youreSacked);
 #endif
 
     /* If national selector, skip competition auto-advance */
@@ -3139,14 +3139,14 @@ void Career_PostMatchUpdate(void)
     /* Auto-advance all competition slots */
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(currentCompetitionPtr=%p)",
-                      (void *)(uintptr_t)currentCompetitionPtr);
+                      (void *)(uintptr_t)_currentCompetitionPtr);
 #endif
     Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)_currentCompetitionPtr);
 
     if (_secondaryCompetitionPtr != 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(secondaryCompetitionPtr=%p)",
-                          (void *)(uintptr_t)secondaryCompetitionPtr);
+                          (void *)(uintptr_t)_secondaryCompetitionPtr);
 #endif
         Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)_secondaryCompetitionPtr);
     }
@@ -3154,7 +3154,7 @@ void Career_PostMatchUpdate(void)
     if (_tertiaryCompetitionPtr != 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(tertiaryCompetitionPtr=%p)",
-                          (void *)(uintptr_t)tertiaryCompetitionPtr);
+                          (void *)(uintptr_t)_tertiaryCompetitionPtr);
 #endif
         Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)_tertiaryCompetitionPtr);
     }
@@ -3162,7 +3162,7 @@ void Career_PostMatchUpdate(void)
     if (_quaternaryCompetitionPtr != 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(quaternaryCompetitionPtr=%p)",
-                          (void *)(uintptr_t)quaternaryCompetitionPtr);
+                          (void *)(uintptr_t)_quaternaryCompetitionPtr);
 #endif
         Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)_quaternaryCompetitionPtr);
     }
@@ -3900,7 +3900,7 @@ void Career_AutoAdvanceLeagueFixtures(void)
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        DIYCompetitionEx *bex = &diyCompetitionStart;
+        DIYCompetitionEx *bex = &_diyCompetitionStart;
         SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague ENTER compId=0x%04X slotIdx=%u "
                           "currentPhase=%u nextPhase=%u viewRandomPhase=%u "
                           "lastMatch=%u leagueMatchProgress=%u sectionsLeft(minSubs)=%u "
@@ -3916,7 +3916,7 @@ void Career_AutoAdvanceLeagueFixtures(void)
                           (int)bex->matchData.league.totalMatchesPerSectionLive,
                           (int)base->totalMatchesInRound,
                           (int)base->subRoundCounter,
-                          (unsigned)seasonFinished);
+                          (unsigned)_seasonFinished);
     }
 #endif
 
@@ -3962,7 +3962,7 @@ show_menu_check:
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        DIYCompetitionEx *bex = &diyCompetitionStart;
+        DIYCompetitionEx *bex = &_diyCompetitionStart;
         SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague EXIT(show_menu) compId=0x%04X "
                           "viewRandomPhase=%u leagueMatchProgress=%u sectionsLeft=%u "
                           "leagueCurrentSlot=%u totalMatchesPerSectionLive=%d subRoundCounter=%d",
@@ -4058,7 +4058,7 @@ void Career_AutoAdvanceCupMatches(void)
                       (unsigned)currentPhase, (unsigned)nextPhase,
                       (unsigned)base->viewRandomPhase, (unsigned)lastMatch,
                       (int)base->currentRoundIndex, (int)base->numRounds,
-                      (int)diyCompetitionStart.matchData.cup.currentMatchIndex,
+                      (int)_diyCompetitionStart.matchData.cup.currentMatchIndex,
                       (int)base->totalMatchesInRound,
                       (int)base->roundComplete,
                       (int)base->competitionFinished,
@@ -4411,26 +4411,26 @@ init_competition:
 #ifdef SWOS_DEBUG_AUTOSKIP
         extern void DIY_BuildTeamSelectionPointerCache(void);
         {
-            int16_t ri_before = diyCompetitionStart.base.roundIterator;
+            int16_t ri_before = _diyCompetitionStart.base.roundIterator;
             int32_t tot_before[64];
             for (int i = 0; i < 64; i++)
-                tot_before[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+                tot_before[i] = _diyCompetitionStart.bracketScratch.teamOffsetTable[i];
             DIY_BuildTeamSelectionPointerCache();
             int m = 0, first = -1;
             long new_first = 0;
             for (int i = 0; i < 64; i++)
-                if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
+                if (_diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
                     if (first < 0) {
                         first = i;
-                        new_first = (long)diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+                        new_first = (long)_diyCompetitionStart.bracketScratch.teamOffsetTable[i];
                     }
                     m++;
                 }
-            int ri_new = diyCompetitionStart.base.roundIterator;
+            int ri_new = _diyCompetitionStart.base.roundIterator;
             int ri_chg = (ri_new != ri_before);
             for (int i = 0; i < 64; i++)
-                diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
-            diyCompetitionStart.base.roundIterator = ri_before;
+                _diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
+            _diyCompetitionStart.base.roundIterator = ri_before;
             if (m || ri_chg)
                 SWOS_AUTOSKIP_LOG("[tot-rebuild-be8ac25] REMOVED but rebuild WOULD CHANGE tot=%d/64 "
                                   "(idx %d %ld->%ld) roundIter(%d->%d) -> STALENESS BACK, revisit",

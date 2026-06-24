@@ -1903,12 +1903,12 @@ void GenerateRandomTransferOffers(void)
 
     SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers ENTER: careerNumPlayers=%u "
                       "numOffers=%u numPlayersOnTransferMarket=%u startIdx=%u",
-                      (unsigned)careerNumPlayers, (unsigned)numOffers,
-                      (unsigned)numPlayersOnTransferMarket, (unsigned)startIdx);
+                      (unsigned)_careerNumPlayers, (unsigned)_numOffers,
+                      (unsigned)_numPlayersOnTransferMarket, (unsigned)startIdx);
     /* Show what player ordinals the user has listed */
     for (uint16_t k = 0; k < _numPlayersOnTransferMarket; k++) {
         SWOS_AUTOSKIP_LOG("[bug2]   playersOnTransferMarket[%u] = %u",
-                          (unsigned)k, (unsigned)playersOnTransferMarket[k]);
+                          (unsigned)k, (unsigned)_playersOnTransferMarket[k]);
     }
 
     int boostedFound = 0;
@@ -1967,7 +1967,7 @@ void GenerateRandomTransferOffers(void)
         count--;
     }
     SWOS_AUTOSKIP_LOG("[bug2] GenerateRandomTransferOffers EXIT: boostedFound=%d offersCreated=%d numOffers=%u",
-                      boostedFound, offersCreated, (unsigned)numOffers);
+                      boostedFound, offersCreated, (unsigned)_numOffers);
 }
 
 /* ---- Chunk 146: UpdateAndExpireTransferOffers ---- */
@@ -5260,7 +5260,7 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — no eligible buyer team "
                           "(numSelectedTeams=%u refSkill=%u home/foreign rnd=%u)",
                           (unsigned)playerOrdinal,
-                          (unsigned)numSelectedTeams,
+                          (unsigned)_numSelectedTeams,
                           (unsigned)refSkill,
                           (unsigned)rnd);
         return;
@@ -5429,7 +5429,7 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
         SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: BAILED — roster overflow "
                           "(newTotal=%d careerNumPlayers=%u)",
                           (unsigned)playerOrdinal,
-                          (int)newTotal, (unsigned)careerNumPlayers);
+                          (int)newTotal, (unsigned)_careerNumPlayers);
         return;
     }
 
@@ -5452,9 +5452,9 @@ void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal)
 
     _numOffers++;
     SWOS_AUTOSKIP_LOG("[bug2]   CreateOffer playerOrd=%u: STORED — team=0x%04X amount=%u numOffers=%u",
-                      (unsigned)offerOrdinals.offerPrimaryPlayerOrdinal,
-                      (unsigned)offerOrdinals.teamOffering, (unsigned)offerOrdinals.offerAmount,
-                      (unsigned)numOffers);
+                      (unsigned)_offerOrdinals.offerPrimaryPlayerOrdinal,
+                      (unsigned)_offerOrdinals.teamOffering, (unsigned)_offerOrdinals.offerAmount,
+                      (unsigned)_numOffers);
 }
 
 /* ================================================================

@@ -145,40 +145,40 @@ extern uint16_t _g_quitToDos;
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 /* Map a packed-menu pointer to a human name for the autoskip log. */
-extern uint8_t diyCupMenu[], diyLeagueTournamentMenu[], chairmanMemosMenu[];
-extern uint8_t careerMenu[], contestMenu[], careerOverMenu[], continueMenu[];
-extern uint8_t continueAbortMenu[], chooseTeamsMenu[], selectFilesMenu[];
-extern uint8_t designDiyCupMenu[], designDiyLeagueMenu[], clubBusinessMenu[];
-extern uint8_t topGoalScorersMenu[], competitionTopGoalScorersMenu[];
-extern uint8_t squadMenu[], competitionStatsMenu[], viewCompetitionsMenu[];
-extern uint8_t managementRecordMenu[];
-extern uint8_t offersMenu[];
-extern uint8_t swosMainMenu[];
-extern uint8_t gotJobOfferMenu[];
+extern uint8_t _diyCupMenu[], _diyLeagueTournamentMenu[], _chairmanMemosMenu[];
+extern uint8_t _careerMenu[], _contestMenu[], _careerOverMenu[], _continueMenu[];
+extern uint8_t _continueAbortMenu[], _chooseTeamsMenu[], _selectFilesMenu[];
+extern uint8_t _designDiyCupMenu[], _designDiyLeagueMenu[], _clubBusinessMenu[];
+extern uint8_t _topGoalScorersMenu[], _competitionTopGoalScorersMenu[];
+extern uint8_t _squadMenu[], _competitionStatsMenu[], _viewCompetitionsMenu[];
+extern uint8_t _managementRecordMenu[];
+extern uint8_t _offersMenu[];
+extern uint8_t _swosMainMenu[];
+extern uint8_t _gotJobOfferMenu[];
 static const char *swos_autoskip_menu_name(const void *p)
 {
-    if (p == diyCupMenu) return "diyCupMenu";
-    if (p == diyLeagueTournamentMenu) return "diyLeagueTournamentMenu";
-    if (p == chairmanMemosMenu) return "chairmanMemosMenu";
-    if (p == careerMenu) return "careerMenu";
-    if (p == contestMenu) return "contestMenu";
-    if (p == careerOverMenu) return "careerOverMenu";
-    if (p == continueMenu) return "continueMenu";
-    if (p == continueAbortMenu) return "continueAbortMenu";
-    if (p == chooseTeamsMenu) return "chooseTeamsMenu";
-    if (p == selectFilesMenu) return "selectFilesMenu";
-    if (p == designDiyCupMenu) return "designDiyCupMenu";
-    if (p == designDiyLeagueMenu) return "designDiyLeagueMenu";
-    if (p == clubBusinessMenu) return "clubBusinessMenu";
-    if (p == topGoalScorersMenu) return "topGoalScorersMenu";
-    if (p == competitionTopGoalScorersMenu) return "competitionTopGoalScorersMenu";
-    if (p == squadMenu) return "squadMenu";
-    if (p == competitionStatsMenu) return "competitionStatsMenu";
-    if (p == viewCompetitionsMenu) return "viewCompetitionsMenu";
-    if (p == managementRecordMenu) return "managementRecordMenu";
-    if (p == offersMenu) return "offersMenu";
-    if (p == swosMainMenu) return "swosMainMenu";
-    if (p == gotJobOfferMenu) return "gotJobOfferMenu";
+    if (p == _diyCupMenu) return "diyCupMenu";
+    if (p == _diyLeagueTournamentMenu) return "diyLeagueTournamentMenu";
+    if (p == _chairmanMemosMenu) return "chairmanMemosMenu";
+    if (p == _careerMenu) return "careerMenu";
+    if (p == _contestMenu) return "contestMenu";
+    if (p == _careerOverMenu) return "careerOverMenu";
+    if (p == _continueMenu) return "continueMenu";
+    if (p == _continueAbortMenu) return "continueAbortMenu";
+    if (p == _chooseTeamsMenu) return "chooseTeamsMenu";
+    if (p == _selectFilesMenu) return "selectFilesMenu";
+    if (p == _designDiyCupMenu) return "designDiyCupMenu";
+    if (p == _designDiyLeagueMenu) return "designDiyLeagueMenu";
+    if (p == _clubBusinessMenu) return "clubBusinessMenu";
+    if (p == _topGoalScorersMenu) return "topGoalScorersMenu";
+    if (p == _competitionTopGoalScorersMenu) return "competitionTopGoalScorersMenu";
+    if (p == _squadMenu) return "squadMenu";
+    if (p == _competitionStatsMenu) return "competitionStatsMenu";
+    if (p == _viewCompetitionsMenu) return "viewCompetitionsMenu";
+    if (p == _managementRecordMenu) return "managementRecordMenu";
+    if (p == _offersMenu) return "offersMenu";
+    if (p == _swosMainMenu) return "swosMainMenu";
+    if (p == _gotJobOfferMenu) return "gotJobOfferMenu";
     return "unknown";
 }
 #else
@@ -1687,12 +1687,12 @@ void MenuProc(void)
     }
 
     _controlMask = d7;
-    SWOS_AUTOSKIP_LOG("MenuProc: -> CallMenuOnSelect (exitMenu before=%u)", (unsigned)exitMenu);
+    SWOS_AUTOSKIP_LOG("MenuProc: -> CallMenuOnSelect (exitMenu before=%u)", (unsigned)_exitMenu);
     /* Original asm MenuProc kept a5 = selectedEntry when calling onSelect.
        Many callbacks (SelectTeamsCommon, SelectLeaguesCommon etc.) read a5
        to get the entry's ordinal and string pointer. */
     CallMenuOnSelect((void *)onSelectPtr, (void *)selectedEntry);
-    SWOS_AUTOSKIP_LOG("MenuProc: <- CallMenuOnSelect (exitMenu after=%u)", (unsigned)exitMenu);
+    SWOS_AUTOSKIP_LOG("MenuProc: <- CallMenuOnSelect (exitMenu after=%u)", (unsigned)_exitMenu);
 
 no_event_or_done:
     if (_fire != 0)
@@ -1810,7 +1810,7 @@ void ShowMenu(uint8_t *packedMenu)
     SWOS_AUTOSKIP_LOG("ShowMenu: ENTER packedMenu=%p (%s)", packedMenu,
                       swos_autoskip_menu_name(packedMenu));
     ActivateMenu(packedMenu);
-    SWOS_AUTOSKIP_LOG("ShowMenu: post-Activate exitMenu=%u", (unsigned)exitMenu);
+    SWOS_AUTOSKIP_LOG("ShowMenu: post-Activate exitMenu=%u", (unsigned)_exitMenu);
 
     if (_exitMenu == 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -1821,16 +1821,16 @@ void ShowMenu(uint8_t *packedMenu)
 #ifdef SWOS_DEBUG_AUTOSKIP
             proc_iters++;
             if (proc_iters <= 3 || proc_iters == 50 || proc_iters == 200 || proc_iters % 1000 == 0) {
-                Menu *m = (Menu *)currentMenu;
-                int ord = swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries);
+                Menu *m = (Menu *)_currentMenu;
+                int ord = swos_autoskip_entry_ordinal((void *)m->selectedEntry, _menuEntries);
                 SWOS_AUTOSKIP_LOG("  proc iter=%u exitMenu=%u sel=%d fire=%u shortFire=%u",
-                                  proc_iters, (unsigned)exitMenu, ord,
-                                  (unsigned)fire, (unsigned)shortFire);
+                                  proc_iters, (unsigned)_exitMenu, ord,
+                                  (unsigned)_fire, (unsigned)_shortFire);
             }
 #endif
         } while (_exitMenu == 0);
     }
-    SWOS_AUTOSKIP_LOG("ShowMenu: loop exited exitMenu=%u", (unsigned)exitMenu);
+    SWOS_AUTOSKIP_LOG("ShowMenu: loop exited exitMenu=%u", (unsigned)_exitMenu);
 
     _menuStatus = 1;
     /* Don't clear exitMenu if quit propagation is in flight — leave it

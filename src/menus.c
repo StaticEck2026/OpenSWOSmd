@@ -3527,8 +3527,8 @@ void StartContest(void)
     uint16_t gt = _gameType;
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("StartContest: ENTER gameType=%u competitionOver=%u cfb[0]=%u (compType)",
-                      (unsigned)gt, (unsigned)primaryCompetitionBuf.tourn.header.competitionOver,
-                      (unsigned)primaryCompetitionBuf.tourn.header.competitionType);
+                      (unsigned)gt, (unsigned)_primaryCompetitionBuf.tourn.header.competitionOver,
+                      (unsigned)_primaryCompetitionBuf.tourn.header.competitionType);
 #endif
 
     if (gt == GAME_TYPE_DIY_COMPETITION) {

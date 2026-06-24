@@ -556,7 +556,7 @@ void DIY_CacheSelectedTeamPointers(void)
                           "teamPtr=%p selTeamsPtr=%p off=%d numTeams=%u",
                           (int)i, (int)idx, (unsigned)entryIdx,
                           (unsigned)teamNum, (void *)teamPtr,
-                          (void *)&selTeamsPtr, (int)off,
+                          (void *)&_selTeamsPtr, (int)off,
                           (unsigned)count);
 #endif
         diy_standings_row(comp, entryIdx)->teamSelOffset = off;
@@ -1650,23 +1650,23 @@ void DIY_BuildTeamSelectionPointerCache(void)
  * production carries no rebuild. */
 void DIY_TotRebuildRegressionCheck(const char *site)
 {
-    int16_t ri = diyCompetitionStart.base.roundIterator;
+    int16_t ri = _diyCompetitionStart.base.roundIterator;
     int32_t tot[64];
     for (int i = 0; i < 64; i++)
-        tot[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+        tot[i] = _diyCompetitionStart.bracketScratch.teamOffsetTable[i];
     DIY_BuildTeamSelectionPointerCache();
     int m = 0, first = -1;
     long nf = 0;
     for (int i = 0; i < 64; i++)
-        if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot[i]) {
-            if (first < 0) { first = i; nf = (long)diyCompetitionStart.bracketScratch.teamOffsetTable[i]; }
+        if (_diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot[i]) {
+            if (first < 0) { first = i; nf = (long)_diyCompetitionStart.bracketScratch.teamOffsetTable[i]; }
             m++;
         }
-    int ri_new = diyCompetitionStart.base.roundIterator;
+    int ri_new = _diyCompetitionStart.base.roundIterator;
     int ri_chg = (ri_new != ri);
     for (int i = 0; i < 64; i++)
-        diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot[i];
-    diyCompetitionStart.base.roundIterator = ri;
+        _diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot[i];
+    _diyCompetitionStart.base.roundIterator = ri;
     if (m || ri_chg)
         SWOS_AUTOSKIP_LOG("[tot-rebuild] %s: REMOVED but rebuild WOULD CHANGE tot=%d/64 "
                           "(idx %d %ld->%ld) roundIter(%d->%d) -> STALENESS BACK, revisit",
@@ -2424,9 +2424,9 @@ void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC)
      * diverge after SaveDIYTournament has run we know the 1450-word copy
      * is the bug. */
     {
-        extern CompetitionSlotBuffer primaryCompetitionBuf;
-        const uint8_t *cfb = (const uint8_t *)&primaryCompetitionBuf;
-        const uint8_t *dfb = (const uint8_t *)&diyFileBufferCopy;
+        extern CompetitionSlotBuffer _primaryCompetitionBuf;
+        const uint8_t *cfb = (const uint8_t *)&_primaryCompetitionBuf;
+        const uint8_t *dfb = (const uint8_t *)&_diyFileBufferCopy;
         SWOS_AUTOSKIP_LOG("EditCompSlot: paramA=%u paramB=%u paramC=%u slotIdx(buf)=%u",
                           (unsigned)paramA, (unsigned)paramB, (unsigned)paramC,
                           (unsigned)bufCopy->roundComplete);
@@ -2944,25 +2944,25 @@ void DIY_RecordCupBracketProgress(void)
      * means the staleness is back and Stage 4 (stable-id) is genuinely needed. */
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        int16_t savedRoundIter = diyCompetitionStart.base.roundIterator;
+        int16_t savedRoundIter = _diyCompetitionStart.base.roundIterator;
         int32_t tot_before[64];
         for (int i = 0; i < 64; i++)
-            tot_before[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+            tot_before[i] = _diyCompetitionStart.bracketScratch.teamOffsetTable[i];
         DIY_BuildTeamSelectionPointerCache();
         int mism = 0, first = -1;
         long new_first = 0;
         for (int i = 0; i < 64; i++)
-            if (diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
+            if (_diyCompetitionStart.bracketScratch.teamOffsetTable[i] != tot_before[i]) {
                 if (first < 0) {
                     first = i;
-                    new_first = (long)diyCompetitionStart.bracketScratch.teamOffsetTable[i];
+                    new_first = (long)_diyCompetitionStart.bracketScratch.teamOffsetTable[i];
                 }
                 mism++;
             }
         /* Discard the rebuild: restore both mutations so debug == production. */
         for (int i = 0; i < 64; i++)
-            diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
-        diyCompetitionStart.base.roundIterator = savedRoundIter;
+            _diyCompetitionStart.bracketScratch.teamOffsetTable[i] = tot_before[i];
+        _diyCompetitionStart.base.roundIterator = savedRoundIter;
         if (mism)
             SWOS_AUTOSKIP_LOG("[tot-rebuild] band-aid REMOVED but rebuild WOULD HAVE CHANGED %d/64 "
                               "(first idx %d: %ld -> %ld) -> STALENESS BACK, Stage 4 needed",
@@ -3178,7 +3178,7 @@ void DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk)
     int16_t type = *(int16_t *)blk;
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        DIYCompetitionEx *bex = &diyCompetitionStart;
+        DIYCompetitionEx *bex = &_diyCompetitionStart;
         SWOS_AUTOSKIP_LOG("[bug20-update] UpdateCompetitionProgressOrAdvanceSlot ENTER "
                           "blk=%p type=%d compId=0x%04X minSubstitutes=%u "
                           "leagueMatchProgress=%u leagueCurrentSlot=%u "
@@ -3830,7 +3830,7 @@ void DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
     {
         const uint8_t *teamList = ((DIYTournamentState *)diy)->teamIndexOrder;
         SWOS_AUTOSKIP_LOG("BuildSeededBracket: ENTER compNum=0x%02x WC?=%d numTeams=%d roundComplete=%d",
-                          (unsigned)compNum, (int)(compNum == worldCup[0]),
+                          (unsigned)compNum, (int)(compNum == _worldCup[0]),
                           (int)compS->numTeams, (int)diyS->roundComplete);
         SWOS_AUTOSKIP_LOG("BuildSeededBracket: teamList(0x5A)[0..15] BEFORE=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
                           teamList[0], teamList[1], teamList[2], teamList[3],
@@ -7838,7 +7838,7 @@ void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
 {
     SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: ENTER arg0=%u arg1=%u arg2=%u seasonUpdate=%u",
                       (unsigned)arg0, (unsigned)arg1, (unsigned)arg2,
-                      (unsigned)seasonUpdateInProgress);
+                      (unsigned)_seasonUpdateInProgress);
     _writeOnlyVar01 = 1;
     _diyCupMenuArg0 = arg0;
     _diyCupMenuArg0Copy = arg0;
@@ -7867,11 +7867,11 @@ void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2)
             debounce_iters++;
             if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 100 == 0) {
                 SWOS_AUTOSKIP_LOG("  debounce iter=%u fire=%u shortFire=%u",
-                                  debounce_iters, (unsigned)fire, (unsigned)shortFire);
+                                  debounce_iters, (unsigned)_fire, (unsigned)_shortFire);
             }
 #endif
         } while (_fire != 0);
-        SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: debounce exited fire=%u", (unsigned)fire);
+        SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: debounce exited fire=%u", (unsigned)_fire);
     }
 
     SWOS_AUTOSKIP_LOG("ShowDIYCupMenuWithParams: -> ShowMenu(diyCupMenu)");
@@ -7928,13 +7928,13 @@ void DIYCupInit(void)
 {
     SWOS_AUTOSKIP_LOG("DIYCupInit: ENTER seasonUpdate=%u arg0=%u arg1=%u arg2=%u "
                       "menuState=%u roundComplete=%u competitionFinished=%u hasGroups=%u",
-                      (unsigned)seasonUpdateInProgress,
-                      (unsigned)diyCupMenuArg0, (unsigned)diyCupMenuArg1,
-                      (unsigned)diyCupMenuArg2,
-                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.menuState,
-                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.roundComplete,
-                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.competitionFinished,
-                      (unsigned)*(uint16_t *)&diyCompetitionStart.base.hasGroups);
+                      (unsigned)_seasonUpdateInProgress,
+                      (unsigned)_diyCupMenuArg0, (unsigned)_diyCupMenuArg1,
+                      (unsigned)_diyCupMenuArg2,
+                      (unsigned)*(uint16_t *)&_diyCompetitionStart.base.menuState,
+                      (unsigned)*(uint16_t *)&_diyCompetitionStart.base.roundComplete,
+                      (unsigned)*(uint16_t *)&_diyCompetitionStart.base.competitionFinished,
+                      (unsigned)*(uint16_t *)&_diyCompetitionStart.base.hasGroups);
 
     _diyCupMatchListScrollIndex = 0;
 
@@ -7973,7 +7973,7 @@ void DIYCupInit(void)
     {
         Menu *m = (Menu *)_currentMenu;
         SWOS_AUTOSKIP_LOG("DIYCupInit: pre-Finish selectedEntry=%d",
-                          swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries));
+                          swos_autoskip_entry_ordinal((void *)m->selectedEntry, _menuEntries));
     }
 
     /* Original asm falls through to DIYCupFinish via bra.w *+4 */
@@ -8521,8 +8521,8 @@ void DIYLeagueTournamentExit(void)
     SWOS_AUTOSKIP_LOG("[bug1] DIYLeagueTournamentExit CALLED: field48=0x%04X field60=0x%04X "
                       "youreSacked=%u gameType=%u diyTournamentViewOnly=%u",
                       (unsigned)(uint16_t)field48, (unsigned)(uint16_t)field60,
-                      (unsigned)youreSacked, (unsigned)gameType,
-                      (unsigned)diyTournamentViewOnly);
+                      (unsigned)_youreSacked, (unsigned)_gameType,
+                      (unsigned)_diyTournamentViewOnly);
 
     if (field48 == 0) {
         /* field48 == 0 path */
@@ -8812,12 +8812,12 @@ void DIYLeagueTournamentInit(void)
 {
     SWOS_AUTOSKIP_LOG("DIYLeagueInit: ENTER seasonUpdate=%u type=%u viewOnly=%u focusOverride=%u "
                       "minSubs=%u hasGroups=%u",
-                      (unsigned)seasonUpdateInProgress,
-                      (unsigned)diyTournamentType,
-                      (unsigned)diyTournamentViewOnly,
-                      (unsigned)diyInitFocusOverride,
-                      (unsigned)diyCompetitionStart.minSubstitutes,
-                      (unsigned)(&diyCompetitionStart.base)->hasGroups);
+                      (unsigned)_seasonUpdateInProgress,
+                      (unsigned)_diyTournamentType,
+                      (unsigned)_diyTournamentViewOnly,
+                      (unsigned)_diyInitFocusOverride,
+                      (unsigned)_diyCompetitionStart.minSubstitutes,
+                      (unsigned)(&_diyCompetitionStart.base)->hasGroups);
 
     _currentDiyLine = 0;
     _diyAllMatchesPlayed = 0;
@@ -8851,7 +8851,7 @@ void DIYLeagueTournamentInit(void)
     {
         Menu *m = (Menu *)_currentMenu;
         SWOS_AUTOSKIP_LOG("DIYLeagueInit: pre-OnRestore selectedEntry=%d",
-                          swos_autoskip_entry_ordinal((void *)m->selectedEntry, menuEntries));
+                          swos_autoskip_entry_ordinal((void *)m->selectedEntry, _menuEntries));
     }
 
     /* bra.w *+4 falls through to DIYLeagueTournamentOnRestore */
@@ -9430,7 +9430,7 @@ void DIYLeagueTournamentViewResult(MenuEntry *entry)
     SWOS_AUTOSKIP_LOG("[bug1] DIYLeagueTournamentViewResult CALLED: ordinal=%u "
                       "youreSacked=%u gameType=%u",
                       (unsigned)entry->ordinal,
-                      (unsigned)youreSacked, (unsigned)gameType);
+                      (unsigned)_youreSacked, (unsigned)_gameType);
     *(uint16_t *)&_diyCompetitionStart.base.slotStateC = entry->ordinal;
     DIYLeagueTournamentMatchCommon(0);
 }
@@ -9635,7 +9635,7 @@ void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t foc
 {
     SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: ENTER type=%u viewOnly=%u focus=%u seasonUpdate=%u",
                       (unsigned)type, (unsigned)viewOnly, (unsigned)focusOverride,
-                      (unsigned)seasonUpdateInProgress);
+                      (unsigned)_seasonUpdateInProgress);
     _writeOnlyVar01 = 1;
     _diyTournamentType = type;
     _diyFixtureViewMode = type;
@@ -9660,11 +9660,11 @@ void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t foc
             debounce_iters++;
             if (debounce_iters <= 3 || debounce_iters == 100 || debounce_iters % 100 == 0) {
                 SWOS_AUTOSKIP_LOG("  debounce iter=%u fire=%u shortFire=%u",
-                                  debounce_iters, (unsigned)fire, (unsigned)shortFire);
+                                  debounce_iters, (unsigned)_fire, (unsigned)_shortFire);
             }
 #endif
         } while (_fire != 0);
-        SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: debounce exited fire=%u", (unsigned)fire);
+        SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: debounce exited fire=%u", (unsigned)_fire);
     }
 
     SWOS_AUTOSKIP_LOG("ShowDiyLeaguesTournamentMenu: -> ShowMenu(diyLeagueTournamentMenu)");
@@ -10867,7 +10867,7 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        DIYCompetitionEx *bex = &diyCompetitionStart;
+        DIYCompetitionEx *bex = &_diyCompetitionStart;
         SWOS_AUTOSKIP_LOG("[bug4-cup] PlayCupMatch ENTER compId=0x%04X "
                           "roundIdx=%d/%d matchIdx=%d/%d roundFormat=%d "
                           "competitionFormat=%d roundComplete=%d "
@@ -11041,7 +11041,7 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        int careerInvolved = (team1 == &careerTeam || team2 == &careerTeam);
+        int careerInvolved = (team1 == &_careerTeam || team2 == &_careerTeam);
         SWOS_AUTOSKIP_LOG("[bug4-cup]   PlayCupMatch played compId=0x%04X "
                           "newMatchIdx=%d roundComplete=%d competitionFinished=%d "
                           "packedGoals=0x%04X flags=0x%02X careerInvolved=%d",
@@ -11231,9 +11231,9 @@ uint16_t DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t sele
                                   "bogus teamSelOffset (team1off=%d team2off=%d maxPositive=%d "
                                   "numSelTeams=%u careerAutoAdv=%u seasonUpd=%u selector=%d)",
                                   (int)teamSelOff1, (int)teamSelOff2,
-                                  (int)maxPositive, (unsigned)numSelectedTeams,
-                                  (unsigned)careerAutoAdvanceInProgress,
-                                  (unsigned)seasonUpdateInProgress,
+                                  (int)maxPositive, (unsigned)_numSelectedTeams,
+                                  (unsigned)_careerAutoAdvanceInProgress,
+                                  (unsigned)_seasonUpdateInProgress,
                                   (int)selector);
             }
 #endif

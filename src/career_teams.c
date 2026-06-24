@@ -1327,7 +1327,7 @@ void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
 
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
-        DIYCompetitionEx *bex = &diyCompetitionStart;
+        DIYCompetitionEx *bex = &_diyCompetitionStart;
         SWOS_AUTOSKIP_LOG("[bug20-load] LoadSlotState src=%p type=%u "
                           "compId=0x%04X minSubstitutes=%u playEachTeam=%u "
                           "leagueMatchProgress=%u leagueCurrentSlot=%u "
@@ -1629,7 +1629,7 @@ void Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
 #ifdef SWOS_DEBUG_AUTOSKIP
             SWOS_AUTOSKIP_LOG("[bug3-league] AdvanceToNext: END-OF-CACHE — setting seasonFinished=1 "
                               "careerFinished=1 keyCacheCount=%u",
-                              (unsigned)teamSelectionKeyCacheCount);
+                              (unsigned)_teamSelectionKeyCacheCount);
 #endif
             _seasonFinished = 1;
             _careerFinished = 1;
@@ -2109,7 +2109,7 @@ void Career_AutoSimulateCupMatchesUntilHumanTeam(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     int iter = 0;
-    DIYCompetitionEx *bex0 = &diyCompetitionStart;
+    DIYCompetitionEx *bex0 = &_diyCompetitionStart;
     SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman ENTER compId=0x%04X "
                       "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
                       "competitionFinished=%d",
@@ -2226,7 +2226,7 @@ void Career_AutoPlayCupMatchAndAdvanceLoop(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     int iter = 0;
-    DIYCompetitionEx *bex0 = &diyCompetitionStart;
+    DIYCompetitionEx *bex0 = &_diyCompetitionStart;
     SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop ENTER compId=0x%04X "
                       "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
                       "competitionFinished=%d careerSlotProcessingInProgress=%d",
@@ -2236,7 +2236,7 @@ void Career_AutoPlayCupMatchAndAdvanceLoop(void)
                       (int)bex0->base.totalMatchesInRound,
                       (int)bex0->base.roundComplete,
                       (int)bex0->base.competitionFinished,
-                      (int)careerSlotProcessingInProgress);
+                      (int)_careerSlotProcessingInProgress);
 #endif
     for (;;) {
         uint16_t field54 = (uint16_t)_diyCompetitionStart.base.roundComplete;
@@ -2254,7 +2254,7 @@ void Career_AutoPlayCupMatchAndAdvanceLoop(void)
             SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop EMERGENCY BAIL iter>%d — "
                               "infinite loop suspected; roundComplete=%d "
                               "careerSlotProcessingInProgress=%d",
-                              iter, (int)field54, (int)careerSlotProcessingInProgress);
+                              iter, (int)field54, (int)_careerSlotProcessingInProgress);
             return;
         }
 #endif
