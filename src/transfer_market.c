@@ -3012,12 +3012,6 @@ void PlayerOffersAfterDrawCommon(void *entryPtr)
     offerAfterDrawCommonShared(a5, 14, 18, 0);
 }
 
-/* j_SetExitMenuFlag_11: just forwards to SetExitMenuFlag */
-__attribute__((used, externally_visible))
-void j_SetExitMenuFlag_11(void)
-{
-    SetExitMenuFlag();
-}
 
 /* PlayerOffersOnSelect13: just forwards to SetExitMenuFlag */
 __attribute__((used, externally_visible))

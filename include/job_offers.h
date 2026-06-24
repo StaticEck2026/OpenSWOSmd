@@ -29,7 +29,6 @@ void JobOffers_ConvertNewOfferToOffer(uint16_t teamNumber, uint32_t initialFunds
 void GotJobOfferInit(void);
 void GotJobOfferFinish(void);
 void AcceptJobOffer(void);
-void j_SetExitMenuFlag_14(void);
 void RejectJobOffer(void);
 void ViewFutureTeam(void);
 void ViewFutureTeamLeague(void);

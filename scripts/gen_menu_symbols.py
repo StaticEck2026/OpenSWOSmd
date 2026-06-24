@@ -30,7 +30,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SYMS = os.path.join(REPO, "bin", "data_json", "menus", "_symbols.json")
 MENU_DATA = os.path.join(REPO, "src", "menu_data.c")
 OUT_C = os.path.join(REPO, "src", "menu_symbols.c")
-OUT_H = os.path.join(REPO, "src", "menu_symbols.h")
+OUT_H = os.path.join(REPO, "include", "menu_symbols.h")
 
 KIND_ENUM = {"functions": "SYM_FUNC", "strings": "SYM_STRING",
              "tables": "SYM_TABLE", "sprite_copies": "SYM_SPRITE_COPY",

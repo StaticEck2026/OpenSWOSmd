@@ -145,7 +145,6 @@ void JobOffersMenu(void);
 void SeasonFinished(void);
 void TransfersMenu(void);
 void ViewWorldMenu(void);
-void jmp_SetExitMenuFlag(void);
 
 /* --- Choose/select team menu functions (Chunk 125) --- */
 void ChooseCompetitionMenu(void);

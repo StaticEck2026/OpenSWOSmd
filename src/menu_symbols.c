@@ -310,6 +310,7 @@ extern void SelectTeamsCommon(void);
 extern void SelectTeamsInit(void);
 extern void SelectTeamsReinit(void);
 extern void SelectTraining(void);
+extern void SetExitMenuFlag(void);
 extern void SetName(void);
 extern void SetSurname(void);
 extern void ShowPlayerMarket(void);
@@ -376,21 +377,6 @@ extern void ViewSquadExitContinue(void);
 extern void ViewSquadInit(void);
 extern void ViewSquadOnSelect21(void);
 extern void ViewWorldMenu(void);
-extern void j_SetExitMenuFlag(void);
-extern void j_SetExitMenuFlag13(void);
-extern void j_SetExitMenuFlag2(void);
-extern void j_SetExitMenuFlag_10(void);
-extern void j_SetExitMenuFlag_11(void);
-extern void j_SetExitMenuFlag_14(void);
-extern void jmpSetExitMenuFlag(void);
-extern void jmp_SetExitMenuFlag(void);
-extern void jmp_SetExitMenuFlag_2(void);
-extern void jmp_SetExitMenuFlag_3(void);
-extern void jmp_SetExitMenuFlag_4(void);
-extern void jmp_SetExitMenuFlag_5(void);
-extern void jmp_SetExitMenuFlag_6(void);
-extern void jmp_SetExitMenuFlag_7(void);
-extern void jmp_SetExitMenuFlag_8(void);
 extern void locret_139AE2(void);
 
 /* ---- data symbols (decls harvested verbatim from menu_data.c) ---- */
@@ -977,6 +963,7 @@ const MenuSymbol menuSymbols[] = {
     { "SelectTeamsInit", (void*)SelectTeamsInit, SYM_FUNC },
     { "SelectTeamsReinit", (void*)SelectTeamsReinit, SYM_FUNC },
     { "SelectTraining", (void*)SelectTraining, SYM_FUNC },
+    { "SetExitMenuFlag", (void*)SetExitMenuFlag, SYM_FUNC },
     { "SetName", (void*)SetName, SYM_FUNC },
     { "SetSurname", (void*)SetSurname, SYM_FUNC },
     { "ShowPlayerMarket", (void*)ShowPlayerMarket, SYM_FUNC },
@@ -1043,22 +1030,6 @@ const MenuSymbol menuSymbols[] = {
     { "ViewSquadInit", (void*)ViewSquadInit, SYM_FUNC },
     { "ViewSquadOnSelect21", (void*)ViewSquadOnSelect21, SYM_FUNC },
     { "ViewWorldMenu", (void*)ViewWorldMenu, SYM_FUNC },
-    { "j_SetExitMenuFlag", (void*)j_SetExitMenuFlag, SYM_FUNC },
-    { "j_SetExitMenuFlag13", (void*)j_SetExitMenuFlag13, SYM_FUNC },
-    { "j_SetExitMenuFlag2", (void*)j_SetExitMenuFlag2, SYM_FUNC },
-    { "j_SetExitMenuFlag_10", (void*)j_SetExitMenuFlag_10, SYM_FUNC },
-    { "j_SetExitMenuFlag_11", (void*)j_SetExitMenuFlag_11, SYM_FUNC },
-    { "j_SetExitMenuFlag_14", (void*)j_SetExitMenuFlag_14, SYM_FUNC },
-    { "jmpSetExitMenuFlag", (void*)jmpSetExitMenuFlag, SYM_FUNC },
-    { "jmp_SetExitMenuFlag", (void*)jmp_SetExitMenuFlag, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_2", (void*)jmp_SetExitMenuFlag_2, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_3", (void*)jmp_SetExitMenuFlag_3, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_4", (void*)jmp_SetExitMenuFlag_4, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_5", (void*)jmp_SetExitMenuFlag_5, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_6", (void*)jmp_SetExitMenuFlag_6, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_7", (void*)jmp_SetExitMenuFlag_7, SYM_FUNC },
-    { "jmp_SetExitMenuFlag_8", (void*)jmp_SetExitMenuFlag_8, SYM_FUNC },
-    { "locret_139AE2", (void*)locret_139AE2, SYM_FUNC },
     { "a343", (void*)a343, SYM_STRING },
     { "a352", (void*)a352, SYM_STRING },
     { "a424", (void*)a424, SYM_STRING },
@@ -1320,6 +1291,7 @@ const MenuSymbol menuSymbols[] = {
     { "flipStrTable", (void*)flipStrTable, SYM_TABLE },
     { "friendlyPitchTypeTable", (void*)friendlyPitchTypeTable, SYM_TABLE },
     { "gameLengthStrTable", (void*)gameLengthStrTable, SYM_TABLE },
+    { "locret_139AE2", (void*)locret_139AE2, SYM_FUNC },
     { "managerNameBuffer", (void*)managerNameBuffer, SYM_BUFFER },
     { "managerSexBuffer", (void*)managerSexBuffer, SYM_BUFFER },
     { "managerSurnameBuffer", (void*)managerSurnameBuffer, SYM_BUFFER },

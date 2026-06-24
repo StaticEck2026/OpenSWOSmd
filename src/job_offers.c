@@ -636,13 +636,6 @@ void AcceptJobOffer(void) {
     SetExitMenuFlag();
 }
 
-/* ================================================================
- * j_SetExitMenuFlag_14  (SWOS2.s line 82844)
- * ================================================================ */
-__attribute__((used, externally_visible))
-void j_SetExitMenuFlag_14(void) {
-    SetExitMenuFlag();
-}
 
 /* ================================================================
  * RejectJobOffer  (SWOS2.s line 82849)

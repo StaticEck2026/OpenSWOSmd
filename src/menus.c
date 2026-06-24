@@ -3320,12 +3320,6 @@ void ViewWorldMenu(void)
     ContestMenuOnReturn();
 }
 
-/* jmp_SetExitMenuFlag — trivial wrapper (SWOS2.s line 60009) */
-__attribute__((used, externally_visible))
-void jmp_SetExitMenuFlag(void)
-{
-    SetExitMenuFlag();
-}
 
 /* ==========================================================================
  * Chunk 124 — Competition Menu Functions

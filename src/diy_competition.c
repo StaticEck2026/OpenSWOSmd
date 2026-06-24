@@ -8490,14 +8490,6 @@ extern void CallDrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 void DIYLeagueTournamentMatchCommon(uint16_t action);
 void DIYLeagueTournament_UpdateMenuEntryVisibilityAndFocus(void);
 
-/* ================================================================
- * jmp_SetExitMenuFlag_7  (SWOS2.s line 42414)
- * ================================================================ */
-__attribute__((used, externally_visible))
-void jmp_SetExitMenuFlag_7(void)
-{
-    SetExitMenuFlag();
-}
 
 /* ================================================================
  * DIYLeagueTournamentStats  (SWOS2.s line 42419)

@@ -305,7 +305,6 @@ void CheckNumTeamsAllowed(void);
 void Bureaucracy(void);
 
 /* --- DIY League/Tournament Menu (Chunk 150) --- */
-void jmp_SetExitMenuFlag_7(void);
 void DIYLeagueTournamentStats(void);
 void DIYLeagueTournamentExit(void);
 void DIYLeagueTournament_UpdateViewOptionsAvailability(void);

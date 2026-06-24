@@ -489,7 +489,7 @@ def _load_country_map() -> dict:
     if _country_cache is None:
         _country_cache = {}
         repo = os.path.dirname(os.path.dirname(_data_dir()))   # .../<repo>/bin/data -> <repo>
-        hdr = os.path.join(repo, "src", "game_types.h")
+        hdr = os.path.join(repo, "include", "game_types.h")
         try:
             for line in open(hdr):
                 m = re.match(r"\s*#define\s+CN_([A-Z_]+)\s+(\d+)\b", line)

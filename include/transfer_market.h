@@ -145,7 +145,6 @@ void OffersInit(void);
 void TransferPlayerAfterDrawCommon(void *entry);
 void ThirdPartyOfferMenuAfterDrawCommon(void *entry);
 void PlayerOffersAfterDrawCommon(void *entry);
-void j_SetExitMenuFlag_11(void);
 void PlayerOffersOnSelect13(void);
 void OffersCommon(void *entry);
 void PlayerOffersOnSelect8(void);
