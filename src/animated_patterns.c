@@ -169,8 +169,13 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     screenX = pixelX - (int16_t)cameraX.s.i;
     screenY = pixelY - (int16_t)cameraY.s.i;
 
-    /* bounds check */
+    /* bounds check. Widescreen draws fan cells across the full frontbuffer width, not just
+     * the 4:3 336px window; g_screen_width == 336 on 4:3 / Amiga so this is unchanged there. */
+#ifdef SWOS_SDL_BUILD
+    if (screenX >= g_screen_width || screenY >= SCREEN_HEIGHT)
+#else
     if (screenX >= 336 || screenY >= SCREEN_HEIGHT)
+#endif
         return;
     if (screenX <= (int16_t)0xFFF0 || screenY <= (int16_t)0xFFF0)
         return;
@@ -265,6 +270,55 @@ _ResetAnimatedPatternsForBothTeams(void)
  * Selects random tiles from the pitch grid and toggles them between
  * static and animated states.
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* drawFanMirror — widescreen-only fan-animation mirror.
+ *
+ * The base loop only toggles a 21-column window positioned at cameraX>>4 — the 4:3 view
+ * width. When the full pitch is visible the right half never animates. For every cell the
+ * loop touches we mirror it into the +21-column cell so the right half animates in lock-step.
+ * do_toggle flips the mirror's OWN tile (fill path); the active path just redraws it. Both
+ * bounds- and parity-checked WITHOUT _PanicHaltLoop: the mirror can fall outside the 2310-slot
+ * table or land on a non-fan tile near the pitch edge, so we skip rather than animate garbage.
+ * Because the mirror is derived from d3 (which the base loop already tracks) and toggled with
+ * the same d4, it stays in sync without its own animatedPatterns[] slot. */
+static void drawFanMirror(int16_t baseIdx, int do_toggle, uint16_t d4)
+{
+    extern uint8_t *s_pitchFullPtrs[];
+    extern uint8_t  pitchChunkyBuffer[];
+    /* Mirror is +21 columns within the SAME 42-column row — compute via row/col, not a flat
+     * +21, so a scrolled camera (16:9) can't spill the mirror into the next row's left edge. */
+    int32_t row    = (int32_t)baseIdx / 42;
+    int32_t colAbs = (int32_t)baseIdx % 42 + 21;
+    int32_t mirrorIdx;
+
+    if (colAbs >= 42)                  /* right mirror column is off the pitch edge */
+        return;
+    mirrorIdx = row * 42 + colAbs;
+    if (mirrorIdx < 0 || mirrorIdx >= 2310)
+        return;
+
+    if (do_toggle) {
+        uint32_t *p = ((uint32_t *)(void *)pitchDatBuffer) + mirrorIdx;
+        int32_t tileIndex =
+            (int32_t)(((uint32_t)(*p - ANIM_TILE_BASE)) >> ANIM_TILE_SIZE_SHIFT);
+        int32_t newIndex;
+
+        if (tileIndex == 0 || tileIndex > MAX_FAN_TILE_INDEX)
+            return;                   /* not an animatable fan tile here */
+        if (tileIndex & 1) {
+            if (d4 == 0) return;      /* static wanted, already static */
+            newIndex = tileIndex + 1; /* odd (static) -> even (animated) */
+        } else {
+            if (d4 != 0) return;      /* animated wanted, already animated */
+            newIndex = tileIndex - 1; /* even (animated) -> odd (static) */
+        }
+        *p = ANIM_TILE_BASE + ((uint32_t)newIndex << ANIM_TILE_SIZE_SHIFT);
+        s_pitchFullPtrs[mirrorIdx] = pitchChunkyBuffer + (size_t)newIndex * 256;
+    }
+    drawPatternFromIndex((uint16_t)mirrorIdx);
+}
+#endif
+
 void __attribute__((used, externally_visible))
 _DrawAnimatedPatterns(void)
 {
@@ -440,6 +494,10 @@ pattern_loop:
             /* active pattern entry: draw once then clear */
             animatedPatterns[7 - d7] = (int16_t)0xFFFF;
             drawPatternFromIndex((uint16_t)d3);
+#ifdef SWOS_SDL_BUILD
+            if (WIDE_MARGIN > 0)
+                drawFanMirror(d3, 0, 0);   /* widescreen: redraw the right-half mirror too */
+#endif
             continue;
         }
 
@@ -551,6 +609,10 @@ pattern_loop:
                 }
 #endif
             }
+#ifdef SWOS_SDL_BUILD
+            if (WIDE_MARGIN > 0)
+                drawFanMirror(d3, 1, d4);   /* widescreen: mirror the toggle into the right half */
+#endif
         }
 
         drawPatternFromIndex((uint16_t)d3);
