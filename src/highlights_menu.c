@@ -53,7 +53,7 @@ extern uint8_t aCannotPlayOldV[];     /* "CANNOT PLAY OLD VERSION..." */
  * when disabled (so cursor lands on "EXIT" instead of greyed item).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _HighlightsMenuCommon(void)
+void HighlightsMenuCommon(void)
 {
     if (hilNumGoals == 0) {
         /* No goals — disable entries 1 and 3 */
@@ -67,7 +67,7 @@ void _HighlightsMenuCommon(void)
         color3 = (color3 & 0xFFF0) + PINK_TO_BROWN_9;
         menuEntries[3].bgColor = color3;
 
-        _SetCurrentEntry(2);
+        SetCurrentEntry(2);
     } else {
         /* Goals exist — enable entries 1 and 3 */
         menuEntries[1].isDisabled = 0;
@@ -89,9 +89,9 @@ void _HighlightsMenuCommon(void)
  * (which calls HighlightsMenuCommon).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _HighlightsMenuInit(void)
+void HighlightsMenuInit(void)
 {
-    _HighlightsMenuCommon();
+    HighlightsMenuCommon();
 }
 
 /* ================================================================
@@ -101,9 +101,9 @@ void _HighlightsMenuInit(void)
  * to update enable/disable state.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _HighlightsMenuOnReturn(void)
+void HighlightsMenuOnReturn(void)
 {
-    _HighlightsMenuCommon();
+    HighlightsMenuCommon();
 }
 
 /* ================================================================
@@ -112,9 +112,9 @@ void _HighlightsMenuOnReturn(void)
  * Exits the highlights menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ExitHighlights(void)
+void ExitHighlights(void)
 {
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
@@ -126,39 +126,39 @@ void _ExitHighlights(void)
  * Then calls HighlightsMenuCommon to update menu state.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _LoadHighlightsMenu(void)
+void LoadHighlightsMenu(void)
 {
-    if (_Asset_PromptInsertSaveDiskDf0(aLoadHighlights) != 0)
+    if (Asset_PromptInsertSaveDiskDf0(aLoadHighlights) != 0)
         return;
 
-    if (_GetFilenameAndExtension(0, aLoadHighlights, aLoadHighlights) != 0)
+    if (GetFilenameAndExtension(0, aLoadHighlights, aLoadHighlights) != 0)
         goto cleanup;
 
     if (extension != 0x2E48494Cu) { /* '.HIL' */
-        _ShowErrorMenu(aNotAHighlights);
+        ShowErrorMenu(aNotAHighlights);
         goto cleanup;
     }
 
-    if (_LoadHilFile(selectedFilename) != 0)
+    if (LoadHilFile(selectedFilename) != 0)
         goto cleanup;
 
     /* HIL file header is big-endian (Amiga m68k); BE_READ_U32 is a no-op
      * on the Amiga build and a byteswap on x86. */
     if (BE_READ_U32(hilFileBuffer) != kHilFileSig) {
-        _ShowErrorMenu(aCannotPlayOldV);
+        ShowErrorMenu(aCannotPlayOldV);
         hilNumGoals = 0;
         goto cleanup;
     }
 
     /* BE→host swap for the 5 u16 header fields now lives inside
-     * _LoadHilFile's legacy load branch so the JSON load path can
+     * LoadHilFile's legacy load branch so the JSON load path can
      * skip it. Both source formats converge on host-native here. */
 
-    _StringCopy(selectedFilename, hilFilename);
+    StringCopy(selectedFilename, hilFilename);
 
 cleanup:
-    _ShowInsertDisk2Dialog(aLoadHighlights);
-    _HighlightsMenuCommon();
+    ShowInsertDisk2Dialog(aLoadHighlights);
+    HighlightsMenuCommon();
 }
 
 /* ================================================================
@@ -169,21 +169,21 @@ cleanup:
  * hilFilename on success.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SaveHighlightsMenu(void)
+void SaveHighlightsMenu(void)
 {
-    if (_Asset_PromptInsertSaveDiskDf0(aSaveHighlights) != 0)
+    if (Asset_PromptInsertSaveDiskDf0(aSaveHighlights) != 0)
         return;
 
-    if (_SelectFileToSaveDialog(0x2E48494Cu /* '.HIL' */, hilFilename, aSaveHighlights) != 0)
+    if (SelectFileToSaveDialog(0x2E48494Cu /* '.HIL' */, hilFilename, aSaveHighlights) != 0)
         goto cleanup;
 
-    if (_DoSaveHighlights(selectedFilename) != 0)
+    if (DoSaveHighlights(selectedFilename) != 0)
         goto cleanup;
 
-    _StringCopy(selectedFilename, hilFilename);
+    StringCopy(selectedFilename, hilFilename);
 
 cleanup:
-    _ShowInsertDisk2Dialog(aSaveHighlights);
+    ShowInsertDisk2Dialog(aSaveHighlights);
 }
 
 /* ================================================================
@@ -202,13 +202,13 @@ extern volatile uint16_t exitMenu;
 extern uintptr_t currentMenuPtr;
 extern uint8_t  currentMenu[];
 
-extern void _CopyTeamsAndHeader(void);
-extern void _StopMusic(void);
-extern void _InitMenuMusic(void);
-extern void _TryPlayMusic(void);
-extern void _PrepareMenuForFadeIn(void);
-extern void _ViewMatchSequence(void);
-extern void _ViewHighlights(void);
+extern void CopyTeamsAndHeader(void);
+extern void StopMusic(void);
+extern void InitMenuMusic(void);
+extern void TryPlayMusic(void);
+extern void PrepareMenuForFadeIn(void);
+extern void ViewMatchSequence(void);
+extern void ViewHighlights(void);
 
 /* These are menu structs defined in assembly as labels */
 extern uint8_t stadiumMenu[];
@@ -230,7 +230,7 @@ static void viewAndRestoreMenu(void (*viewFunc)(void))
 
     menuStatus = 1;
     exitMenu = 0;
-    _RestorePreviousMenu(savedSelectedEntry, (uint8_t *)savedMenuPtr);
+    RestorePreviousMenu(savedSelectedEntry, (uint8_t *)savedMenuPtr);
 }
 
 /* ================================================================
@@ -240,27 +240,27 @@ static void viewAndRestoreMenu(void (*viewFunc)(void))
  * plays highlights, and restores menu music.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowHighlights(void)
+void ShowHighlights(void)
 {
     hilStarted = 1;
     gameMaxSubstitutes = hilMaxSubstitutes;
     teamsLoaded = 0;
     poolplyrLoaded = 0;
-    _CopyTeamsAndHeader();
+    CopyTeamsAndHeader();
 
     if (menuMusic != 0)
-        _StopMusic();
+        StopMusic();
 
-    _ShowMenu(stadiumMenu);
+    ShowMenu(stadiumMenu);
     deadVarAlways0 = 0;
 
-    viewAndRestoreMenu(_ViewHighlights);
+    viewAndRestoreMenu(ViewHighlights);
 
-    _InitMenuMusic();
+    InitMenuMusic();
     if (menuMusic != 0)
-        _TryPlayMusic();
+        TryPlayMusic();
 
-    _PrepareMenuForFadeIn();
+    PrepareMenuForFadeIn();
 }
 
 /* ================================================================
@@ -269,9 +269,9 @@ void _ShowHighlights(void)
  * Saves current menu, plays match sequence, restores menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowMatchSequence(void)
+void ShowMatchSequence(void)
 {
-    viewAndRestoreMenu(_ViewMatchSequence);
+    viewAndRestoreMenu(ViewMatchSequence);
 }
 
 /* ================================================================
@@ -280,9 +280,9 @@ void _ShowMatchSequence(void)
  * Saves current menu, views all highlights, restores menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ViewHighlightsSaveCurrentMenu(void)
+void ViewHighlightsSaveCurrentMenu(void)
 {
-    viewAndRestoreMenu(_ViewHighlights);
+    viewAndRestoreMenu(ViewHighlights);
 }
 
 /* ================================================================
@@ -291,7 +291,7 @@ void _ViewHighlightsSaveCurrentMenu(void)
  * Trivial forwarder to ShowHighlights.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _JmpShowHighlights(void)
+void JmpShowHighlights(void)
 {
-    _ShowHighlights();
+    ShowHighlights();
 }

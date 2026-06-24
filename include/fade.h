@@ -12,11 +12,11 @@ typedef unsigned short uint16_t;
 #define FADE_STEP     0x0020u   /* fadeStep: dc.w $0020 */
 #define FADE_MAX      0x0080u
 
-void _FadeOutToBlack(void);
-void _FadeIn(void);
-void _FadeOutAndIn(void);
-void _ApplyFadeStep(uint16_t fadeLevel);
-void _FadeOutTick(void);
-void _FadeInTick(void);
+void FadeOutToBlack(void);
+void FadeIn(void);
+void FadeOutAndIn(void);
+void ApplyFadeStep(uint16_t fadeLevel);
+void FadeOutTick(void);
+void FadeInTick(void);
 
 #endif

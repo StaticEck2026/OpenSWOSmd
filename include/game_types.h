@@ -467,7 +467,7 @@ struct __attribute__((packed, aligned(2))) TeamFile {
     uint8_t  playerValuesDirty;  /* 59 (was someFlag): dirty flag for the per-player
                                   *     cachedMatchValue cache. TEAM_VALUES_DIRTY when the
                                   *     squad changes (tactics edit / transfer / teamInit);
-                                  *     TEAM_VALUES_CLEAN once _UpdatePlayerPositionAndReturnRole
+                                  *     TEAM_VALUES_CLEAN once UpdatePlayerPositionAndReturnRole
                                   *     recomputes the values. See TEAM_VALUES_* below. */
     uint8_t  playerNumbers[16];  /* 60 */
     /* player data follows at offset 76 */
@@ -526,8 +526,8 @@ typedef char _scorerinfo_size_check[(sizeof(ScorerInfo) == 66) ? 1 : -1];
 typedef struct __attribute__((packed, aligned(2))) PlayerFile {
     int8_t   nationality;          /* 0: nationality code */
     /* 1 (was field_1): RUNTIME scratch — the player's computed match value/rating.
-     * _UpdatePlayerPositionAndReturnRole (match_sim.c) writes the per-player match
-     * value here (_GetPlayerPrice for outfielders / price for GK+subs, forced to 1
+     * UpdatePlayerPositionAndReturnRole (match_sim.c) writes the per-player match
+     * value here (GetPlayerPrice for outfielders / price for GK+subs, forced to 1
      * if sold / 0 if injured) and caches it; career_status.c reads it back as
      * `formDelta = cachedMatchValue - expected` to drive the post-match form change.
      * NOT the HEX guide's "invisible skill", and NOT a formation slot. */
@@ -574,7 +574,7 @@ typedef char _playerfile_size_check[(sizeof(PlayerFile) == 38) ? 1 : -1];
 /* ---- PlayerFile.form (byte 37) values ----
  * Normal range is signed [-100, +100]. The two values below -100 are sentinels
  * for non-first-team players (the form slot is repurposed as a status marker,
- * shown verbatim by _FormatPlayerValueOrStatusText / teams.c): a trialist is
+ * shown verbatim by FormatPlayerValueOrStatusText / teams.c): a trialist is
  * signed at TRIALIST (status "TRIAL", 33% wage), demoted to RESERVE (status
  * "RES", 66% wage) the next week, then has a ~20%/week chance of promotion to a
  * real form value with PF_INFORM set. These are NOT "sold"/"transferred" — that
@@ -624,7 +624,7 @@ extern TeamFileEx selectedTeams[];
 /* The careerTeam and currentTeam buffers are each a TeamFileEx (16 active
  * players) immediately followed by 16 reserve PlayerFile entries = 1292 bytes.
  * Use this for "is this player pointer inside the career/current team buffer?"
- * range checks (e.g. _GetDisplayedPlayerValue) instead of bounding on the next
+ * range checks (e.g. GetDisplayedPlayerValue) instead of bounding on the next
  * BSS symbol — the latter is a fragile adjacency that breaks once those
  * neighbours (playerPositions, careerNumPlayers) are lifted out of the overlay.
  * See docs/CAREERTEAM_STEP4_REWORK.md. */
@@ -812,7 +812,7 @@ typedef char _diyslot_size_check[(sizeof(DIYTournamentSlot) == 0x76) ? 1 : -1];
  *
  * NB the legacy `competitionFileBuffer` tournament backup keeps the old
  * raw-offset layout (it lives in the careerFileBuffer overlay); the
- * _SaveDIYTournament / _RestoreDIYTournament copies field-map between the
+ * SaveDIYTournament / RestoreDIYTournament copies field-map between the
  * two (see diy_competition.c). diyCompetitionStart (the current-stage
  * DIYCompetitionEx) is a separate allocation reached by symbol, not by the
  * old `+0x420` adjacency.
@@ -952,7 +952,7 @@ typedef char _diymatchdata_size_check[(sizeof(DIYCompetitionEx_MatchData) == 0xE
  * DIYCompetitionEx_LeagueSectionState — 136 bytes (0x88)
  * BSS_00_2E13E broken out: per-section progression counters and the
  * phase-start-month table used by the league progression path in
- * _DIY_RecomputeCompetitionDerivedFields and friends.
+ * DIY_RecomputeCompetitionDerivedFields and friends.
  * ================================================================== */
 typedef struct __attribute__((packed, aligned(2))) DIYCompetitionEx_LeagueSectionState {
     uint16_t halfGroupCount;            /* 0x00 (parent 0x1C6) */
@@ -1165,7 +1165,7 @@ typedef char _joboffer_size_check[(sizeof(JobOffer) == 26) ? 1 : -1];
  *   wanted*  = players the offering team wants from you
  *   offered* = players they put up in a swap (>=0) or none (<0)
  * negotiationStep1/2Amount double as the haggling progress sentinels
- * 0xFFFF/0xFFFE (see _OffersCommon status decode).
+ * 0xFFFF/0xFFFE (see OffersCommon status decode).
  * ================================================================== */
 typedef struct __attribute__((packed)) TransferOfferEntry {
     uint16_t teamOffering;            /* 0x00: offering team id (host-native, compared to teamNumber) */
@@ -1186,7 +1186,7 @@ typedef char _transferofferentry_size_check[(sizeof(TransferOfferEntry) == 14) ?
  * GoalieFaceState — 10 bytes. Untangled from the goalieFacesBackingBuf
  * adjacency overlay (SWOS2.s 16482..16493 laid 6 separately-named
  * globals back-to-back; the SDL port .equ-aliased them into one BSS
- * run). _DetermineGoalieFaces writes each team's main GK face at [0]
+ * run). DetermineGoalieFaces writes each team's main GK face at [0]
  * and the reserve face at [1] of a 2-byte face array. On Amiga the [1]
  * write landed on the *next* named global (the misleadingly-named
  * team2GoalieFaces / team2ReserveGoalieSkinType labels, which had no
@@ -1293,11 +1293,11 @@ typedef char _nationalteamrecord_size_check[(sizeof(NationalTeamRecord) == 6) ? 
  * with `entryStride = 10 + N*12`. Entries are sorted by `sortKey` and
  * walked by adding `entryStride` to the current entry pointer.
  *
- * The original asm `_TeamSelectionKeyCache_GetCurrentSelectedElementPtr`
+ * The original asm `TeamSelectionKeyCache_GetCurrentSelectedElementPtr`
  * helper returns `entry + diff*12` where `diff = totalElements -
  * remainingElements`. Writes go to elem[+0x0B..+0x15], so the asm
  * pointer is 10 bytes *before* the actual match slot start. The typed
- * helper `_TeamSelectionKeyCache_GetCurrentMatchSlot()` returns the
+ * helper `TeamSelectionKeyCache_GetCurrentMatchSlot()` returns the
  * properly-aligned `TeamSelectionKeyCacheMatchSlot *`.
  *
  * Layout reverse-engineered from SWOS2.s lines 59549-59656 (entry
@@ -1328,7 +1328,7 @@ typedef struct __attribute__((packed)) TeamSelectionKeyCacheEntry {
     uint8_t  legFlag;           /* +8 — leg/format variant: 0 single-leg,
                                  *      1/2 = first/second leg of a two-leg tie,
                                  *      3 = replay. Written by the cup-bracket
-                                 *      builder _TeamSelectionKeyCache_BuildFromCompetitionBlock
+                                 *      builder TeamSelectionKeyCache_BuildFromCompetitionBlock
                                  *      (career_teams.c: `out[8] = N` after each
                                  *      addNextRoundCupEntry). Read at
                                  *      diy_competition.c:2804+. */
@@ -1401,7 +1401,7 @@ typedef struct TeamTactics {
     uint8_t          pairIds[10];          /* 359: per-outfield-player pair/marking id —
                                             * one byte per the 10 outfield players; equal ids
                                             * = a linked pair, 0xFF/-1 = unlinked. Read+written
-                                            * by edit_tactics.c (_EditTactics_FindFreePairId /
+                                            * by edit_tactics.c (EditTactics_FindFreePairId /
                                             * _ClearPairId / swap-paired-players / row colour).
                                             * SWOS2.s TEAMTACTICS_UNKTABLE EQU 359, init data
                                             * SWOS2.s:47291+ ({0,-1,-1,0,1,...}). Was unkTable */
@@ -1611,7 +1611,7 @@ typedef struct __attribute__((packed)) {
                                  * {Playoffs *, qIdx-pair list} pair. 0 = no link (most
                                  * countries / Premier). Only the English block uses it
                                  * (divisions[1..3] = 46/120/194). Read by
-                                 * career_init.c _DIY_SelectCompetitionSlot4FromCurrentDivision
+                                 * career_init.c DIY_SelectCompetitionSlot4FromCurrentDivision
                                  * and career_season.c processDiyLeagueQualificationEntry
                                  * (now resolved via typed fields because the 32-bit byte
                                  * offset breaks on 64-bit). SWOS2.s DIVISION_UNK1 EQU 5 /
@@ -1652,17 +1652,17 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
     Competition comp;
     int8_t seedingType;         /* was unk1 (byte 9): copied to every stage slot's seedingType
-                                 * (slot $160); _InitDIYLeagueFromRecord / SWOS2.s:52485 */
+                                 * (slot $160); InitDIYLeagueFromRecord / SWOS2.s:52485 */
     int8_t menuState;           /* was unk2 (byte 0xA): copied to runtime DIYComp menuState
-                                 * ($4A); _InitDIYLeagueFromRecord / SWOS2.s:52458 */
+                                 * ($4A); InitDIYLeagueFromRecord / SWOS2.s:52458 */
     int8_t playEachTeam;        /* was unk3 (byte 0xB): copied to every stage slot's playEachTeam
-                                 * (slot $166); _InitDIYLeagueFromRecord / SWOS2.s:52488 */
+                                 * (slot $166); InitDIYLeagueFromRecord / SWOS2.s:52488 */
     int8_t awayGoalsMode;
     int8_t subsAndPointsForWin; /* was subsReserves: hi nibble = min subs, lo = points-for-win */
     int8_t roundStringBase;     /* was firstRoundNo: round-string base / rounds[0] source */
     Round rounds[6];
     int8_t reserved;            /* byte 33: confirmed no reads (tree + SWOS2.s). The
-                                 * _InitDIYLeagueFromRecord round loop (SWOS2.s:52480-52531)
+                                 * InitDIYLeagueFromRecord round loop (SWOS2.s:52480-52531)
                                  * walks the per-round bytes via a1 (rounds region) and reads
                                  * the per-round rule nibbles via a2 = $22(a5) = byte 34
                                  * (roundRuleFlags), so byte 33 is the gap between the two and
@@ -1814,7 +1814,7 @@ _Static_assert(TOURNAMENT_NAME_TABLE_OFFSET == 35 && TOURNAMENT_TEAMLIST_TABLE_O
  * The former opaque `playoffHeader[16]` is a CUP competition record: a
  * CompCupHeader (14 B) + roundRuleFlags[2]. comp.type == 1 (cup); the player's
  * qualified teams contest a knockout, and it is initialised through the cup path
- * (_Career_AutoAdvanceCupCompetitionFromRecord). Because CompetitionCup is ALSO
+ * (Career_AutoAdvanceCupCompetitionFromRecord). Because CompetitionCup is ALSO
  * comp.type == 1 but has a different layout (name@20 / teamSeedList vs Playoffs
  * name@16 / qualifiedTeamIds), Playoffs records set comp.isPlayoff = 1 (untangle
  * Step 4b) — that is how comp_name_table() / comp_team_seed_list() select the

@@ -27,7 +27,7 @@ extern uint16_t userRequestedReplay;
 extern uint16_t overlayFlagBackup;
 extern volatile uint16_t paused;
 extern volatile uint16_t panicReasonCode;
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 extern uint16_t overlayActiveFlag;
 extern volatile uint16_t currentTick;
 extern volatile uint16_t currentGameTick;
@@ -93,67 +93,67 @@ extern uint8_t *nextGoalPtr;
 extern int8_t kAbortLossScorerWeightTable[12];
 
 /* ---- Extern function declarations (already ported or asm) ---- */
-extern void _LoadSfxResources(void);
-extern void _EnsureSfxLoadedAndStart(void);
-extern void _SetPitchTypeAndNumber(void);
-extern void _InitGameSaveTeams(TeamGame *topTeam, TeamGame *bottomTeam);
-extern void _InitGameRestoreTeams(void);
-extern uint16_t _Rand(void);
-extern uint16_t _Rand2(void);
-extern void _ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
-extern void _UpdatePlanePtrsAndBlitParams(void);
-extern void _ReadTimerDelta(void);
-extern void _GetKey(void);
-extern void _ProcessSpriteBlitQueue(void);
-extern void _BlitterCopyPanelToScreen(void);
-extern void _FadeOutToBlack(void);
-extern void _FadeOutAndIn(void);
-extern void _StopAudioAndClearFlags(void);
-extern void _SaveHighlightsPointers(void);
-extern void _RestoreHighlightPointers(void);
-extern void _FadeAndSaveHighlightScene(void);
-extern void _SaveHighlightScene(void);
-extern void _DrawReplayFrame(void);
-extern void _HandleInstantReplayStateSwitch(void);
-extern void _RestoreCameraPosition(void);
-extern void _SaveCoordinatesForHighlights(int16_t marker, uint16_t camX, uint16_t camY);
-extern void _PlayEnqueuedSamples(void);
-extern void _UpdateTime(void);
-extern void _MovePlayers(void);
-extern void _UpdateReferee(void);
-extern void _UpdateCornerFlagSprite(void);
-extern void _SpinBig_S_Sprite(void);
-extern void _ManageAdvertisements(void);
-extern void _UpdateControlledPlayerNumbers(void);
-extern void _MarkPlayer(void);
-extern void _SetCurrentPlayerName(void);
-extern void _UpdateBookedPlayerNumberSprite(void);
-extern void _ShowResult(void);
-extern void _DrawAnimatedPatterns(void);
-extern void _BenchCheckControls(void);
-extern void _DrawBenchAndSubsMenu(void);
-extern void _UpdateAndDrawStatistics(void);
-extern void _AllowStatistics(void);
-extern void _StatisticsOff(void);
-extern void _TurnCrowdChantsOn(void);
-extern void _TurnCrowdChantsOff(void);
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _SetHilFileHeader(void);
-extern void _AudioFadeCrowdDownThenPulseMusic(void);
-extern void _ClearAudioActiveFlag(void);
-extern void _ReplayExitMenuAfterFriendly(void);
-extern void _CopyTeamsAndHeader(void);
-extern void _ScrollToCurrent(void);
+extern void LoadSfxResources(void);
+extern void EnsureSfxLoadedAndStart(void);
+extern void SetPitchTypeAndNumber(void);
+extern void InitGameSaveTeams(TeamGame *topTeam, TeamGame *bottomTeam);
+extern void InitGameRestoreTeams(void);
+extern uint16_t Rand(void);
+extern uint16_t Rand2(void);
+extern void ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
+extern void UpdatePlanePtrsAndBlitParams(void);
+extern void ReadTimerDelta(void);
+extern void GetKey(void);
+extern void ProcessSpriteBlitQueue(void);
+extern void BlitterCopyPanelToScreen(void);
+extern void FadeOutToBlack(void);
+extern void FadeOutAndIn(void);
+extern void StopAudioAndClearFlags(void);
+extern void SaveHighlightsPointers(void);
+extern void RestoreHighlightPointers(void);
+extern void FadeAndSaveHighlightScene(void);
+extern void SaveHighlightScene(void);
+extern void DrawReplayFrame(void);
+extern void HandleInstantReplayStateSwitch(void);
+extern void RestoreCameraPosition(void);
+extern void SaveCoordinatesForHighlights(int16_t marker, uint16_t camX, uint16_t camY);
+extern void PlayEnqueuedSamples(void);
+extern void UpdateTime(void);
+extern void MovePlayers(void);
+extern void UpdateReferee(void);
+extern void UpdateCornerFlagSprite(void);
+extern void SpinBig_S_Sprite(void);
+extern void ManageAdvertisements(void);
+extern void UpdateControlledPlayerNumbers(void);
+extern void MarkPlayer(void);
+extern void SetCurrentPlayerName(void);
+extern void UpdateBookedPlayerNumberSprite(void);
+extern void ShowResult(void);
+extern void DrawAnimatedPatterns(void);
+extern void BenchCheckControls(void);
+extern void DrawBenchAndSubsMenu(void);
+extern void UpdateAndDrawStatistics(void);
+extern void AllowStatistics(void);
+extern void StatisticsOff(void);
+extern void TurnCrowdChantsOn(void);
+extern void TurnCrowdChantsOff(void);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void SetHilFileHeader(void);
+extern void AudioFadeCrowdDownThenPulseMusic(void);
+extern void ClearAudioActiveFlag(void);
+extern void ReplayExitMenuAfterFriendly(void);
+extern void CopyTeamsAndHeader(void);
+extern void ScrollToCurrent(void);
 
 /* Camera (ported to C) */
-extern void _MoveCamera(void);
+extern void MoveCamera(void);
 /* Asm functions NOT ported — called via bsr.w in original */
-extern void _UpdateAndApplyTeamControls(void);
-extern void _UpdateBall(void);
-extern void _InjuryUpdateTickGuard(void);
-extern void _DoGoalkeeperSprites(void);
-extern void _DrawSprites(void);
+extern void UpdateAndApplyTeamControls(void);
+extern void UpdateBall(void);
+extern void InjuryUpdateTickGuard(void);
+extern void DoGoalkeeperSprites(void);
+extern void DrawSprites(void);
 
 /* ---- Helper: VBlank sync with anti-tamper cookie check ----
  * Each loop has its own XOR magic and expected value.
@@ -177,20 +177,20 @@ static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
     /* The game loop draws the full frame, then enters waitVBlankSync.
      * On Amiga this spun on `waitingInterrupt` until the VBlank ISR
      * cleared it after a buffer-swap. On SDL we run that swap inline
-     * (matching `_WaitForVSync` in game_utils.c) and hand control to
+     * (matching `WaitForVSync` in game_utils.c) and hand control to
      * Platform_VBlank, which blits the just-finished frontbuffer to
      * the SDL texture + paces to 50 Hz. Without this, the game-loop
      * branch of `waitVBlankSync` never called Platform_VBlank — the
      * SDL timer thread was the only path that presented frames and it
      * read the frontbuffer mid-draw, tearing sprites every frame. */
     {
-        extern void _SwapBuffersAndCameraViewState(void);
-        extern void _SetCameraCoordinates(int16_t x, int16_t y);
+        extern void SwapBuffersAndCameraViewState(void);
+        extern void SetCameraCoordinates(int16_t x, int16_t y);
         extern int Platform_VBlank(void);
         int16_t cx = cameraX.s.i;
         int16_t cy = cameraY.s.i;
-        _SwapBuffersAndCameraViewState();
-        _SetCameraCoordinates(cx, cy);
+        SwapBuffersAndCameraViewState();
+        SetCameraCoordinates(cx, cy);
         Platform_VBlank();
     }
 #else
@@ -236,10 +236,10 @@ static void pauseSpinWaitOneTick(void)
 }
 
 /* ====================================================================
- * _MainKeysCheck — key dispatch during game
+ * MainKeysCheck — key dispatch during game
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_MainKeysCheck(uint16_t key)
+MainKeysCheck(uint16_t key)
 {
     if (key == 0)
         return;
@@ -285,7 +285,7 @@ _MainKeysCheck(uint16_t key)
             return;
         if (gameState != ST_RESULT_AFTER_THE_GAME)
             return;
-        _SaveHighlightsPointers();
+        SaveHighlightsPointers();
         return;
     }
 
@@ -305,11 +305,11 @@ _MainKeysCheck(uint16_t key)
 
     /* 0x89 — fade and camera switch, toggle crowd chants */
     if (key == 0x89) {
-        _FadeOutAndIn();
+        FadeOutAndIn();
         if (crowdChantsOn != 0)
-            _TurnCrowdChantsOff();
+            TurnCrowdChantsOff();
         else
-            _TurnCrowdChantsOn();
+            TurnCrowdChantsOn();
         return;
     }
 
@@ -352,7 +352,7 @@ _MainKeysCheck(uint16_t key)
         /* bcs: gameState < ST_STARTING_GAME → allow stats */
         if (gameState >= ST_STARTING_GAME && gameState <= ST_GAME_ENDED)
             return;
-        _AllowStatistics();
+        AllowStatistics();
         return;
     }
 
@@ -435,7 +435,7 @@ _MainKeysCheck(uint16_t key)
                  * Actually, d0 is team1TotalGoals (loaded at line 15391).
                  * sub.w team2TotalGoals(pc),d0 → d0 = team1TotalGoals_orig - team2TotalGoals_new
                  * neg.w d0 → d0 = team2TotalGoals_new - team1TotalGoals_orig = goalDiff */
-                _AssignFakeGoalsToScorers(2, (int16_t)(team2TotalGoals - d0_cmp));
+                AssignFakeGoalsToScorers(2, (int16_t)(team2TotalGoals - d0_cmp));
             }
         }
         goto esc_finalize;
@@ -453,7 +453,7 @@ _MainKeysCheck(uint16_t key)
             }
             {
                 int16_t goalDiff = (int16_t)(team1TotalGoals - d0_cmp);
-                _AssignFakeGoalsToScorers(1, goalDiff);
+                AssignFakeGoalsToScorers(1, goalDiff);
             }
         }
 
@@ -501,7 +501,7 @@ key_p_toggle_pause:
 key_s_close_statistics:
     if (key != 0x53)
         return;
-    _StatisticsOff();
+    StatisticsOff();
     return;
 
 stop_highlight_playback:
@@ -512,12 +512,12 @@ stop_highlight_playback:
 }
 
 /* ====================================================================
- * _AssignFakeGoalsToScorers — assigns fake goals when ESC-aborting
+ * AssignFakeGoalsToScorers — assigns fake goals when ESC-aborting
  * teamId: 1 = top team, 2 = bottom team
  * numGoals: number of goals to assign
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
+AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
 {
     TeamGame *teamInGame;
     uint16_t tactics;
@@ -541,7 +541,7 @@ _AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
         uint8_t rval;
         uint16_t playerSlot;
 
-        rval = (uint8_t)_Rand2();
+        rval = (uint8_t)Rand2();
         if (rval >= 248) {
             /* Own goal */
             teamInGame->numOwnGoals += 1;
@@ -565,7 +565,7 @@ _AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
         }
 
         /* Fell through all 11 weights — second random for goalkeeper chances */
-        rval = (uint8_t)_Rand2();
+        rval = (uint8_t)Rand2();
         rval &= 0x7F;
         playerSlot = 1;
         {
@@ -586,10 +586,10 @@ _AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
 }
 
 /* ====================================================================
- * _GameLoop — main per-frame game loop
+ * GameLoop — main per-frame game loop
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_GameLoop(void)
+GameLoop(void)
 {
     int16_t d1, d2;
 
@@ -602,7 +602,7 @@ _GameLoop(void)
     d1 = 168;
     d2 = 313;
     if (trainingGame == 0) {
-        uint16_t r = _Rand();
+        uint16_t r = Rand();
         if (r & 1)
             d2 = 592;
         else
@@ -610,33 +610,33 @@ _GameLoop(void)
         d1 = 168;
     }
 
-    _ReplayUpdateCameraAndSwapBuffers(d1, d2);
-    _UpdatePlanePtrsAndBlitParams();
+    ReplayUpdateCameraAndSwapBuffers(d1, d2);
+    UpdatePlanePtrsAndBlitParams();
     /* nullsub_2 — no-op */
-    _ReadTimerDelta();
+    ReadTimerDelta();
 
     /* Poll keys until clear */
     do {
-        _GetKey();
+        GetKey();
     } while (currentKey != 0);
 
     goto wait_for_vblank_sync;
 
 vblank_return_dispatch:
-    _ReadTimerDelta();
+    ReadTimerDelta();
 
     /* Pause spin loop */
     while (paused != 0) {
         pauseSpinWaitOneTick();
-        _GetKey();
-        _MainKeysCheck(currentKey);
+        GetKey();
+        MainKeysCheck(currentKey);
         /* nullsub_10, nullsub_5, nullsub_4 — no-ops */
-        _PlayEnqueuedSamples();
+        PlayEnqueuedSamples();
     }
 
     /* Handle user stats overlay */
     if (showingUserStats != 0)
-        _KeepStatisticsOnScreen();
+        KeepStatisticsOnScreen();
 
     /* Frame counters */
     frameCount += 1;
@@ -644,15 +644,15 @@ vblank_return_dispatch:
         spaceReplayTimer -= 1;
 
     /* Panel update block */
-    _ProcessSpriteBlitQueue();
+    ProcessSpriteBlitQueue();
     if (subsWriteOnly != 0) {
-        _BlitterCopyPanelToScreen();
+        BlitterCopyPanelToScreen();
         subsWriteOnly -= 1;
     }
 
     /* Read inputs and dispatch */
-    _GetKey();
-    _MainKeysCheck(currentKey);
+    GetKey();
+    MainKeysCheck(currentKey);
     /* nullsub_10, nullsub_9 — no-ops */
 
     /* Check end of match */
@@ -665,65 +665,65 @@ vblank_return_dispatch:
 
     /* Handle active highlights loop */
     if (goIntoHighlightsLoop != 0) {
-        _FadeOutToBlack();
-        _PlayHighlightsLoop();
+        FadeOutToBlack();
+        PlayHighlightsLoop();
         goto wait_for_vblank_sync;
     }
 
     /* Handle replay state change */
     if (replayState != 0) {
-        _FadeOutToBlack();
-        _PlayInstantReplayLoop();
+        FadeOutToBlack();
+        PlayInstantReplayLoop();
         goto wait_for_vblank_sync;
     }
 
     /* Run gameplay update */
-    _MoveCamera();
-    _ScrollToCurrent();
-    _SaveCoordinatesForHighlights((int16_t)0xFFFF, cameraX.s.i, cameraY.s.i);
-    _PlayEnqueuedSamples();
-    _UpdateTime();
+    MoveCamera();
+    ScrollToCurrent();
+    SaveCoordinatesForHighlights((int16_t)0xFFFF, cameraX.s.i, cameraY.s.i);
+    PlayEnqueuedSamples();
+    UpdateTime();
     /* nullsub_8 — no-op */
-    _UpdateAndApplyTeamControls();
-    _UpdateBall();
-    _MovePlayers();
-    _UpdateReferee();
-    _InjuryUpdateTickGuard();
-    _UpdateCornerFlagSprite();
-    _SpinBig_S_Sprite();
+    UpdateAndApplyTeamControls();
+    UpdateBall();
+    MovePlayers();
+    UpdateReferee();
+    InjuryUpdateTickGuard();
+    UpdateCornerFlagSprite();
+    SpinBig_S_Sprite();
     /* Widescreen: the in-match world (ads, animated patterns, players/ball) draws at
      * offset 0 — the pitch fills the whole frame. Menu/HUD centering is re-established
-     * by _DrawMenu when the frontend draws again. */
+     * by DrawMenu when the frontend draws again. */
     g_menu_draw_x_offset = 0;
-    _ManageAdvertisements();
-    _DoGoalkeeperSprites();
-    _UpdateControlledPlayerNumbers();
-    _MarkPlayer();
-    _SetCurrentPlayerName();
-    _UpdateBookedPlayerNumberSprite();
-    _ShowResult();
-    _DrawAnimatedPatterns();
-    _DrawSprites();
-    _DrawBenchAndSubsMenu();
-    _BenchCheckControls();
-    _UpdateAndDrawStatistics();
+    ManageAdvertisements();
+    DoGoalkeeperSprites();
+    UpdateControlledPlayerNumbers();
+    MarkPlayer();
+    SetCurrentPlayerName();
+    UpdateBookedPlayerNumberSprite();
+    ShowResult();
+    DrawAnimatedPatterns();
+    DrawSprites();
+    DrawBenchAndSubsMenu();
+    BenchCheckControls();
+    UpdateAndDrawStatistics();
 
     if (g_quitToDos != 0)
         goto cleanup_and_return;
 
     /* Post-frame: save coordinates end marker */
-    _SaveCoordinatesForHighlights((int16_t)0xFFFE, 0, 0);
+    SaveCoordinatesForHighlights((int16_t)0xFFFE, 0, 0);
 
     if (saveHighlightScene != 0) {
-        _SaveHighlightScene();
+        SaveHighlightScene();
         saveHighlightScene = 0;
     }
     if (fadeAndSaveHighlightScene != 0) {
-        _FadeAndSaveHighlightScene();
+        FadeAndSaveHighlightScene();
         fadeAndSaveHighlightScene = 0;
     }
     if (instantReplayFlag != 0) {
-        _HandleInstantReplayStateSwitch();
+        HandleInstantReplayStateSwitch();
         instantReplayFlag = 0;
         goalCameraMode = 0;
     }
@@ -736,128 +736,128 @@ wait_for_vblank_sync:
     goto vblank_return_dispatch;
 
 end_of_match_flow:
-    _FadeOutToBlack();
+    FadeOutToBlack();
     /* nullsub_3 — no-op */
-    _SetHilFileHeader();
-    _AudioFadeCrowdDownThenPulseMusic();
-    _ClearAudioActiveFlag();
+    SetHilFileHeader();
+    AudioFadeCrowdDownThenPulseMusic();
+    ClearAudioActiveFlag();
 
     if (isGameFriendly != 0 && trainingGame == 0) {
-        _ReplayExitMenuAfterFriendly();
+        ReplayExitMenuAfterFriendly();
         if (replaySelected != 0) {
             team1NumAllowedInjuries = 4;
             team2NumAllowedInjuries = 4;
             playGame = 1;
-            _EnsureSfxLoadedAndStart();
-            _SetPitchTypeAndNumber();
-            _InitGameRestoreTeams();
-            _GameLoop();
+            EnsureSfxLoadedAndStart();
+            SetPitchTypeAndNumber();
+            InitGameRestoreTeams();
+            GameLoop();
             return;
         }
     }
 
 cleanup_and_return:
-    _StopAudioAndClearFlags();
+    StopAudioAndClearFlags();
     return;
 }
 
 /* ====================================================================
- * _StartMatchSequence — sets up and starts a match
+ * StartMatchSequence — sets up and starts a match
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
+StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
 {
-    _LoadSfxResources();
+    LoadSfxResources();
     playGame = 1;
-    _EnsureSfxLoadedAndStart();
-    _SetPitchTypeAndNumber();
-    _InitGameSaveTeams(topTeam, bottomTeam);
+    EnsureSfxLoadedAndStart();
+    SetPitchTypeAndNumber();
+    InitGameSaveTeams(topTeam, bottomTeam);
 #ifdef AGA
     _WriteCopperPitchPalette();
 #endif
-    _InitGameRestoreTeams();
-    _GameLoop();
+    InitGameRestoreTeams();
+    GameLoop();
 }
 
 /* ====================================================================
- * _ViewMatchSequence — entry point from menu system
+ * ViewMatchSequence — entry point from menu system
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_ViewMatchSequence(void)
+ViewMatchSequence(void)
 {
-    _StartMatchSequence(&topTeamInGame, &bottomTeamInGame);
+    StartMatchSequence(&topTeamInGame, &bottomTeamInGame);
 }
 
 /* ====================================================================
- * _ViewHighlights — entry point for highlight viewing
+ * ViewHighlights — entry point for highlight viewing
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_ViewHighlights(void)
+ViewHighlights(void)
 {
-    _ViewHighLightsMain(&topTeamInGame, &bottomTeamInGame);
+    ViewHighLightsMain(&topTeamInGame, &bottomTeamInGame);
 }
 
 /* ====================================================================
- * _KeepStatisticsOnScreen — spin-loop while stats overlay is showing
+ * KeepStatisticsOnScreen — spin-loop while stats overlay is showing
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_KeepStatisticsOnScreen(void)
+KeepStatisticsOnScreen(void)
 {
     do {
         pauseSpinWaitOneTick();
-        _GetKey();
-        _MainKeysCheck(currentKey);
+        GetKey();
+        MainKeysCheck(currentKey);
         /* nullsub_10 — no-op */
-        _PlayEnqueuedSamples();
+        PlayEnqueuedSamples();
         /* nullsub_5, nullsub_4 — no-ops */
-        _UpdateAndDrawStatistics();
+        UpdateAndDrawStatistics();
     } while (showingUserStats != 0);
 }
 
 /* ====================================================================
- * _ViewHighLightsMain — highlights viewer
+ * ViewHighLightsMain — highlights viewer
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
+ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
     playHighlightFlag = 1;
-    _CopyTeamsAndHeader();
-    _InitGameSaveTeams(leftTeam, rightTeam);
-    _ReplayUpdateCameraAndSwapBuffers(168, 313);
-    _UpdatePlanePtrsAndBlitParams();
-    _ReadTimerDelta();
+    CopyTeamsAndHeader();
+    InitGameSaveTeams(leftTeam, rightTeam);
+    ReplayUpdateCameraAndSwapBuffers(168, 313);
+    UpdatePlanePtrsAndBlitParams();
+    ReadTimerDelta();
 
     /* Drain the keyBuffer — original Amiga waits here while the user
      * holds the fire button they just pressed (keyboard ISR pushes
      * auto-repeats so currentKey stays non-zero). On Amiga this also
      * gave the stadium "VS" screen its visible duration. On SDL the
      * actual VS-duration wait happens just upstream in
-     * _InitGameSaveTeams' "wait for fire release" loop (which is
-     * properly pumped via _WaitForVSync there), so by the time we
+     * InitGameSaveTeams' "wait for fire release" loop (which is
+     * properly pumped via WaitForVSync there), so by the time we
      * reach this drain the user has already released and the buffer
      * is empty. Drain anyway to match Amiga semantics. */
     do {
-        _GetKey();
+        GetKey();
     } while (currentKey != 0);
 
-    _SaveHighlightsPointers();
+    SaveHighlightsPointers();
     goto sync_to_vblank;
 
 frame_loop:
-    _ReadTimerDelta();
+    ReadTimerDelta();
     frameCount += 1;
-    _ProcessSpriteBlitQueue();
-    _GetKey();
-    _MainKeysCheck(currentKey);
+    ProcessSpriteBlitQueue();
+    GetKey();
+    MainKeysCheck(currentKey);
     /* nullsub_10, nullsub_9 — no-ops */
 
     if (playHighlightFlag == 0) {
-        _FadeOutToBlack();
+        FadeOutToBlack();
         return;
     }
 
     if (goIntoHighlightsLoop != 0) {
-        _PlayHighlightsLoop();
+        PlayHighlightsLoop();
         playHighlightFlag = 0;
         /* bra.w *+4 → falls through to sync */
     }
@@ -868,31 +868,31 @@ sync_to_vblank:
 }
 
 /* ====================================================================
- * _PlayInstantReplayLoop — instant replay playback
+ * PlayInstantReplayLoop — instant replay playback
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_PlayInstantReplayLoop(void)
+PlayInstantReplayLoop(void)
 {
-    _ReadTimerDelta();
+    ReadTimerDelta();
 
     for (;;) {
         /* Paused poll loop */
         while (paused != 0) {
             pauseSpinWaitOneTick();
-            _GetKey();
+            GetKey();
             if (fadeState == 0)
                 break;
-            _MainKeysCheck(currentKey);
-            _PlayEnqueuedSamples();
+            MainKeysCheck(currentKey);
+            PlayEnqueuedSamples();
             /* nullsub_5, nullsub_4 — no-ops */
         }
 
         /* Input and update block */
-        _ProcessSpriteBlitQueue();
-        _GetKey();
+        ProcessSpriteBlitQueue();
+        GetKey();
 
         if (fadeState != 0) {
-            _MainKeysCheck(currentKey);
+            MainKeysCheck(currentKey);
             /* nullsub_10, nullsub_9 — no-ops */
         }
 
@@ -900,16 +900,16 @@ _PlayInstantReplayLoop(void)
         if (replayState == 0)
             return;
 
-        _PlayEnqueuedSamples();
+        PlayEnqueuedSamples();
 
         /* Fire-to-abort check */
         if (fadeState != 0) {
             if (userRequestedReplay != 0) {
                 /* Multiplayer: check both joysticks */
-                _Player1StatusProc();
+                Player1StatusProc();
                 if (pl1Fire != 0)
                     goto abort_replay;
-                _Player2StatusProc();
+                Player2StatusProc();
                 if (pl2Fire != 0)
                     goto abort_replay;
             } else {
@@ -917,22 +917,22 @@ _PlayInstantReplayLoop(void)
                     uint16_t playerNum = (uint16_t)teamScoredDataPtr->playerNumber;
                     uint16_t coachNum  = (uint16_t)teamScoredDataPtr->playerCoachNumber;
                     if (playerNum == 1) {
-                        _Player1StatusProc();
+                        Player1StatusProc();
                         if (pl1Fire != 0) goto abort_replay;
                     } else if (playerNum == 2) {
-                        _Player2StatusProc();
+                        Player2StatusProc();
                         if (pl2Fire != 0) goto abort_replay;
                     } else if (coachNum == 1) {
-                        _Player1StatusProc();
+                        Player1StatusProc();
                         if (pl1Fire != 0) goto abort_replay;
                     } else if (coachNum == 2) {
-                        _Player2StatusProc();
+                        Player2StatusProc();
                         if (pl2Fire != 0) goto abort_replay;
                     } else {
                         /* Fall through to multiplayer check */
-                        _Player1StatusProc();
+                        Player1StatusProc();
                         if (pl1Fire != 0) goto abort_replay;
-                        _Player2StatusProc();
+                        Player2StatusProc();
                         if (pl2Fire != 0) goto abort_replay;
                     }
                 }
@@ -940,100 +940,100 @@ _PlayInstantReplayLoop(void)
         }
 
         /* Draw replay frame and handle fade */
-        _DrawReplayFrame();
+        DrawReplayFrame();
         if (fadeState == 0 && fadeInitFlag == 0x3E7)
             fadeInitFlag = 0xFFFF;
 
         if (replayState == 0) {
             /* Fade out and cleanup */
-            _FadeOutToBlack();
-            _RestoreCameraPosition();
+            FadeOutToBlack();
+            RestoreCameraPosition();
             return;
         }
 
         /* Handle post-frame flags */
         if (fadeAndSaveHighlightScene != 0) {
-            _FadeAndSaveHighlightScene();
+            FadeAndSaveHighlightScene();
             fadeAndSaveHighlightScene = 0;
         }
         if (instantReplayFlag != 0) {
-            _HandleInstantReplayStateSwitch();
+            HandleInstantReplayStateSwitch();
             instantReplayFlag = 0;
         }
 
         /* VBlank sync and loop back */
         waitVBlankSync(0xCFD1F959u, 0x16BEu);
-        _ReadTimerDelta();
+        ReadTimerDelta();
         continue;
 
     abort_replay:
         fireBlocked = 1;
         replayState = 0;
-        _FadeOutToBlack();
-        _RestoreCameraPosition();
+        FadeOutToBlack();
+        RestoreCameraPosition();
         return;
     }
 }
 
 /* ====================================================================
- * _PlayHighlightsLoop — multi-scene highlight playback
+ * PlayHighlightsLoop — multi-scene highlight playback
  * ==================================================================== */
 void __attribute__((used, externally_visible))
-_PlayHighlightsLoop(void)
+PlayHighlightsLoop(void)
 {
-    _ReadTimerDelta();
+    ReadTimerDelta();
 
     for (;;) {
         /* Paused poll loop */
         while (paused != 0) {
             pauseSpinWaitOneTick();
-            _GetKey();
-            _MainKeysCheck(currentKey);
-            _PlayEnqueuedSamples();
+            GetKey();
+            MainKeysCheck(currentKey);
+            PlayEnqueuedSamples();
         }
 
         /* Input and update block */
-        _ProcessSpriteBlitQueue();
-        _GetKey();
-        _MainKeysCheck(currentKey);
+        ProcessSpriteBlitQueue();
+        GetKey();
+        MainKeysCheck(currentKey);
         /* nullsub_10, nullsub_9 — no-ops */
 
         if (replayState == 0)
             goto advance_to_next_highlight;
 
-        _PlayEnqueuedSamples();
+        PlayEnqueuedSamples();
 
         /* Fire-to-abort check */
         if (fadeState != 0) {
-            _Player1StatusProc();
+            Player1StatusProc();
             if (pl1Fire != 0)
                 goto abort_replay_on_fire;
-            _Player2StatusProc();
+            Player2StatusProc();
             if (pl2Fire != 0)
                 goto abort_replay_on_fire;
         }
 
         /* Draw replay and handle fade */
-        _DrawReplayFrame();
+        DrawReplayFrame();
         if (fadeState == 0 && fadeInitFlag == 0x3E7)
             fadeInitFlag = 0xFFFF;
 
         if (replayState == 0) {
-            _FadeOutToBlack();
-            _RestoreCameraPosition();
+            FadeOutToBlack();
+            RestoreCameraPosition();
             goto advance_to_next_highlight;
         }
 
         /* VBlank sync */
         waitVBlankSync(0xCFD1F917u, 0x16F0u);
-        _ReadTimerDelta();
+        ReadTimerDelta();
         continue;
 
     abort_replay_on_fire:
         fireBlocked = 1;
         replayState = 0;
-        _FadeOutToBlack();
-        _RestoreCameraPosition();
+        FadeOutToBlack();
+        RestoreCameraPosition();
         goto stop_replay_and_return;
     }
 
@@ -1047,22 +1047,22 @@ advance_to_next_highlight:
         /* `hilStartOfGoalsBuffer + offset` is a pointer (8 bytes on 64-bit).
          * Storing into uint32_t truncated the upper 32 bits, then the
          * `(uint8_t *)baseAddr` re-cast produced a half-pointer that
-         * SIGSEGVed in _HandleInstantReplayStateSwitch's `*p & 0x80`.
+         * SIGSEGVed in HandleInstantReplayStateSwitch's `*p & 0x80`.
          * Carry the value as a real pointer instead. */
         uint8_t *baseAddr = hilStartOfGoalsBuffer + offset;
         goalBasePtr = baseAddr;
         currentHilPtr = baseAddr - 4;
         nextGoalPtr = baseAddr + 19000u;
     }
-    _HandleInstantReplayStateSwitch();
+    HandleInstantReplayStateSwitch();
 
     /* VBlank sync and restart loop */
     waitVBlankSync(0xCFD1F917u, 0x16F0u);
-    _ReadTimerDelta();
-    _PlayHighlightsLoop();
+    ReadTimerDelta();
+    PlayHighlightsLoop();
     return;
 
 stop_replay_and_return:
-    _RestoreHighlightPointers();
+    RestoreHighlightPointers();
     return;
 }

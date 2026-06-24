@@ -7,7 +7,7 @@ This is a thin CLI over the layered harness (see docs/HARNESS.md):
   gdb_proxy.py (transport) -> harness_lib.py (generic) -> swos_plugin.py (game).
 
 Driving works on BOTH the SDL build and the Amiga build (FS-UAE), via one
-injection point in the shared _MenuProc — no per-target input code. The game
+injection point in the shared MenuProc — no per-target input code. The game
 must be AT A MENU. Commands:
   where                  selected ordinal + onSelect symbol + numEntries
   enum                   list every entry's onSelect symbol

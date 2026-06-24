@@ -8,26 +8,26 @@
 #include "game_types.h"
 
 /* --- Grid Caching --- */
-void _DIY_CachePrimaryQualifiedTeamsGrid(void);
-void _DIY_CacheSecondaryQualifiedTeamsGrid(void);
-void _DIY_CacheTertiaryQualifiedTeamGrid(void);
+void DIY_CachePrimaryQualifiedTeamsGrid(void);
+void DIY_CacheSecondaryQualifiedTeamsGrid(void);
+void DIY_CacheTertiaryQualifiedTeamGrid(void);
 
 /* --- Title Holder Grid Copy --- */
-void _Career_CopyEuroCupTeamGridAndTitleHolder(void);
-void _Career_CopyCupWinnersCupTeamGridAndTitleHolder(void);
-void _Career_CopyUefaCupTeamGridAndTitleHolder(void);
+void Career_CopyEuroCupTeamGridAndTitleHolder(void);
+void Career_CopyCupWinnersCupTeamGridAndTitleHolder(void);
+void Career_CopyUefaCupTeamGridAndTitleHolder(void);
 
 /* --- European Cup Qualification --- */
-void _Career_ProcessCompetitionForEuropeanCupQualification(void);
+void Career_ProcessCompetitionForEuropeanCupQualification(void);
 
 /* --- Euro Cup Slot Updates (Chunk 181) --- */
-void _Career_UpdateEuroCupCompetitionSlot(void);
-void _Career_UpdateCupWinnersCupCompetitionSlot(void);
-void _Career_UpdateUefaCupCompetitionSlot(void);
+void Career_UpdateEuroCupCompetitionSlot(void);
+void Career_UpdateCupWinnersCupCompetitionSlot(void);
+void Career_UpdateUefaCupCompetitionSlot(void);
 
 /* --- European Cup Team Draw (Chunk 183) --- */
-void _Career_DrawEuropeanCupTeamsAndCopyGrids(void);
+void Career_DrawEuropeanCupTeamsAndCopyGrids(void);
 
 /* --- Championship/World Cup Updates (Chunk 184) --- */
-void _Career_UpdateEuropeanChampionshipCompetitions(void);
-void _Career_UpdateWorldCupCompetitions(void);
+void Career_UpdateEuropeanChampionshipCompetitions(void);
+void Career_UpdateWorldCupCompetitions(void);

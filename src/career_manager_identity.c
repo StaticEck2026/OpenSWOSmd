@@ -9,7 +9,7 @@
  * into a standalone typed `ManagerIdentity` struct. Real labels (not .equ) so
  * every reader (career_init / chairman_memo) + the save FX(...) descriptors keep
  * working unchanged. Overlay run becomes a .skip 30 hole (no cascade). Audited:
- * name/surname are SEPARATE _StringCopy targets (no cross-field adjacency), no
+ * name/surname are SEPARATE StringCopy targets (no cross-field adjacency), no
  * raw careerFileBuffer+offset. See project_career_overlay_extraction_recipe.
  */
 #include "swos_types.h"

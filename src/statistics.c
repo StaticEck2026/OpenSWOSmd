@@ -58,13 +58,13 @@ extern uint8_t  aBookings[];        /* "BOOKINGS" */
 extern uint8_t  aSendingsOff[];     /* "SENDINGS OFF" */
 
 /* ---- External functions ---- */
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _StatisticsOff(void);
-extern uint16_t _DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color,
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void StatisticsOff(void);
+extern uint16_t DrawMenuTextCentered(uint16_t x, uint16_t y, uint16_t color,
                                       uint8_t *text, uint8_t *charsTable);
-extern void _Int2Ascii(uint16_t value, uint8_t *outBuf);
-extern void _DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
+extern void Int2Ascii(uint16_t value, uint8_t *outBuf);
+extern void DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
 
 /* ---- Constants ---- */
 #define SPR_SQUARE_GRID     1093
@@ -77,7 +77,7 @@ extern void _DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
  * d1=x, d2=y, d3=width, d4=height
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
+void DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
     uint16_t cols = (width >> 4) - 1;
     uint16_t rows = (height >> 4) - 1;
@@ -91,7 +91,7 @@ void _DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
         cx = origX;
         for (c = (int16_t)cols; c >= 0; c--)
         {
-            _DarkenRectangle(SPR_SQUARE_GRID, cx, cy);
+            DarkenRectangle(SPR_SQUARE_GRID, cx, cy);
             cx += 16;
         }
         cy += 16;
@@ -108,8 +108,8 @@ void _DrawGrid(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 static void writeStatsNumber(uint16_t number, uint16_t x, uint16_t y,
                              uint16_t color, uint8_t *charTable)
 {
-    _Int2Ascii(number, statsNumber);
-    _DrawMenuTextCentered(x, y, color, statsNumber, charTable);
+    Int2Ascii(number, statsNumber);
+    DrawMenuTextCentered(x, y, color, statsNumber, charTable);
 }
 
 
@@ -123,7 +123,7 @@ static void writeStatsPercent(uint16_t number, uint16_t x, uint16_t y,
 {
     uint8_t *p;
 
-    _Int2Ascii(number, statsNumber);
+    Int2Ascii(number, statsNumber);
 
     /* Find end of string (Int2Ascii leaves pointer at terminator via a1) */
     p = statsNumber;
@@ -132,7 +132,7 @@ static void writeStatsPercent(uint16_t number, uint16_t x, uint16_t y,
     *p++ = '%';
     *p = 0;
 
-    _DrawMenuTextCentered(x, y, color, statsNumber, charTable);
+    DrawMenuTextCentered(x, y, color, statsNumber, charTable);
 }
 
 
@@ -146,7 +146,7 @@ static void writeStatsPercent(uint16_t number, uint16_t x, uint16_t y,
  *   corners won, fouls conceded, bookings, sendings off
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawStatistics(void)
+void DrawStatistics(void)
 {
     TeamGeneralInfo *topInfo;    /* team stats pointer for top/first team */
     TeamGeneralInfo *botInfo;    /* team stats pointer for bottom/second team */
@@ -157,41 +157,41 @@ void _DrawStatistics(void)
     uint16_t y;
     uint16_t d7;
 
-    /* Widescreen: the stats overlay is laid out on 336-frame coords (the _DrawGrid /
-     * _DrawMenuTextCentered / writeStatsNumber x's below — 16/80/168/256/304). Shift the
+    /* Widescreen: the stats overlay is laid out on 336-frame coords (the DrawGrid /
+     * DrawMenuTextCentered / writeStatsNumber x's below — 16/80/168/256/304). Shift the
      * draw base by WIDE_MARGIN so the whole panel centers, same as the menus; restored on
      * exit. WIDE_MARGIN folds to 0 on Amiga / non-widescreen (no shift). */
     const int saved_x_offset = g_menu_draw_x_offset;
     g_menu_draw_x_offset = WIDE_MARGIN;
 
     /* Draw title grid (80, 35, 176, 16) */
-    _DrawGrid(80, 35, 176, 16);
+    DrawGrid(80, 35, 176, 16);
 
     /* Draw 9 data rows starting at y=55, each 304 wide, 16 tall,
-     * spaced 18 apart. (1 title row + 9 data rows = 10 _DrawGrid
+     * spaced 18 apart. (1 title row + 9 data rows = 10 DrawGrid
      * calls total, matching SWOS2.s line 22799-22850. The previous
      * code had a 10th data row that left a visible empty band below
      * SENDINGS OFF.) Rows host: team names, GOALS, POSSESSION, GOAL
      * ATTEMPTS, ON TARGET, CORNERS WON, FOULS CONCEDED, BOOKINGS,
      * SENDINGS OFF. */
     y = 55;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
     y += 18;
-    _DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, 304, 16);
 
     /* Determine team order: topInfo = team whose inGameTeamPtr matches topTeamInGame */
     topInfo = &topTeamData;
@@ -208,7 +208,7 @@ void _DrawStatistics(void)
 
     /* Title: "M A T C H   S T A T S" at y=39 */
     y = 39;
-    _DrawMenuTextCentered(168, y, color, aMATCHSTATS, charTable);
+    DrawMenuTextCentered(168, y, color, aMATCHSTATS, charTable);
 
     /* Team names at y=59 */
     y += 20;
@@ -216,29 +216,29 @@ void _DrawStatistics(void)
         uint16_t topX = 80;
         if (trainingGame)
             topX += 5;
-        _DrawMenuTextCentered(topX, y, color, (uint8_t *)topTeamInGame.teamName, charTable);
+        DrawMenuTextCentered(topX, y, color, (uint8_t *)topTeamInGame.teamName, charTable);
     }
     {
         uint16_t botX = 256;
         if (trainingGame)
             botX -= 5;
-        _DrawMenuTextCentered(botX, y, color, (uint8_t *)bottomTeamInGame.teamName, charTable);
+        DrawMenuTextCentered(botX, y, color, (uint8_t *)bottomTeamInGame.teamName, charTable);
     }
 
     /* GOALS at y=77 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aGoals, charTable);
+    DrawMenuTextCentered(168, y, color, aGoals, charTable);
     writeStatsNumber(statsTeam1Goals, 80, y, color, charTable);
     writeStatsNumber(statsTeam2Goals, 256, y, color, charTable);
 
     /* POSSESSION at y=95 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aPossession, charTable);
+    DrawMenuTextCentered(168, y, color, aPossession, charTable);
     d7 = (uint16_t)a5->ballPossession + (uint16_t)a6->ballPossession;
     if (d7 == 0)
     {
-        _DrawMenuTextCentered(80, y, color, aMinus, charTable);
-        _DrawMenuTextCentered(256, y, color, aMinus, charTable);
+        DrawMenuTextCentered(80, y, color, aMinus, charTable);
+        DrawMenuTextCentered(256, y, color, aMinus, charTable);
     }
     else
     {
@@ -249,37 +249,37 @@ void _DrawStatistics(void)
 
     /* GOAL ATTEMPTS at y=113 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aGoalAttempts, charTable);
+    DrawMenuTextCentered(168, y, color, aGoalAttempts, charTable);
     writeStatsNumber((uint16_t)a5->goalAttempts, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->goalAttempts, 256, y, color, charTable);
 
     /* ON TARGET at y=131 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aOnTarget, charTable);
+    DrawMenuTextCentered(168, y, color, aOnTarget, charTable);
     writeStatsNumber((uint16_t)a5->onTarget, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->onTarget, 256, y, color, charTable);
 
     /* CORNERS WON at y=149 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aCornersWon, charTable);
+    DrawMenuTextCentered(168, y, color, aCornersWon, charTable);
     writeStatsNumber((uint16_t)a5->cornersWon, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->cornersWon, 256, y, color, charTable);
 
     /* FOULS CONCEDED at y=167 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aFoulsConceded, charTable);
+    DrawMenuTextCentered(168, y, color, aFoulsConceded, charTable);
     writeStatsNumber((uint16_t)a5->foulsConceded, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->foulsConceded, 256, y, color, charTable);
 
     /* BOOKINGS at y=185 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aBookings, charTable);
+    DrawMenuTextCentered(168, y, color, aBookings, charTable);
     writeStatsNumber((uint16_t)a5->bookings, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->bookings, 256, y, color, charTable);
 
     /* SENDINGS OFF at y=203 */
     y += 18;
-    _DrawMenuTextCentered(168, y, color, aSendingsOff, charTable);
+    DrawMenuTextCentered(168, y, color, aSendingsOff, charTable);
     writeStatsNumber((uint16_t)a5->sendingsOff, 80, y, color, charTable);
     writeStatsNumber((uint16_t)a6->sendingsOff, 256, y, color, charTable);
 
@@ -296,7 +296,7 @@ void _DrawStatistics(void)
  * - Draws stats when active
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateAndDrawStatistics(void)
+void UpdateAndDrawStatistics(void)
 {
     /* If showStats just set, trigger user stats display */
     if (showStats)
@@ -304,24 +304,24 @@ void _UpdateAndDrawStatistics(void)
         showStats = 0;
         showingUserStats = 1;
         statsTimer = 32000;
-        _DrawStatistics();
+        DrawStatistics();
     }
 
     /* While showing user stats, poll inputs */
     if (showingUserStats)
     {
-        _Player1StatusProc();
-        _Player2StatusProc();
+        Player1StatusProc();
+        Player2StatusProc();
         if (pl1Fire)
         {
             fireBlocked = 1;
-            _StatisticsOff();
+            StatisticsOff();
             return;
         }
         if (pl2Fire)
         {
             fireBlocked = 1;
-            _StatisticsOff();
+            StatisticsOff();
             return;
         }
         return;
@@ -433,7 +433,7 @@ check_show_stats_flag:
 
     if ((int16_t)statsTimer < 0)
     {
-        _StatisticsOff();
+        StatisticsOff();
         return;
     }
 
@@ -447,12 +447,12 @@ check_show_stats_flag:
         statsTimer -= lastFrameTicks;
         if ((int16_t)statsTimer <= 0)
         {
-            _StatisticsOff();
+            StatisticsOff();
             return;
         }
     }
 
-    _DrawStatistics();
+    DrawStatistics();
 }
 
 
@@ -493,15 +493,15 @@ extern uint8_t  competitionTopGoalScorersMenu[];
 extern uint8_t  topGoalScorersMenu[];
 
 /* ---- External functions ---- */
-extern void _ShowMenu(uint8_t *menu);
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern TeamFileEx *_GetTeamPointer(uint16_t teamNumber);
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr);
-extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNumber);
-extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLen);
-extern void _DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
+extern void ShowMenu(uint8_t *menu);
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
+extern TeamFileEx *GetTeamPointer(uint16_t teamNumber);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern int16_t FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr);
+extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNumber);
+extern uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLen);
+extern void DrawMultipleItems(uint16_t maxItems, MenuEntry *firstEntry);
 
 
 /* ================================================================
@@ -600,7 +600,7 @@ static uint8_t *FindReplaceableLowestScorerSlot(uint8_t *base, uint8_t minScore)
                 uint16_t d0 = teamId;
                 uint8_t d1 = *(ptr + 34);  /* playerIdx */
                 int16_t d1w = (int8_t)d1;  /* ext.w d1 */
-                TeamFileEx *teamPtr = _VerifyTeamLoaded(d0);
+                TeamFileEx *teamPtr = VerifyTeamLoaded(d0);
                 if (teamPtr->team.teamControls == 1)   /* isInDIYTeam == 1 */
                     return ptr;
             }
@@ -647,7 +647,7 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
     {
         if (gameType == 3 || gameType == 4)
         {
-            if (_FindTeamIdInDiyTeamsList((uint16_t *)teamPtr) != 0) {
+            if (FindTeamIdInDiyTeamsList((uint16_t *)teamPtr) != 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
                 SWOS_AUTOSKIP_LOG("[bug2-scorers]     AddTeamScorers teamId=0x%04X SKIP (not in DIY list)",
                                   (unsigned)debug_teamId);
@@ -680,14 +680,14 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
         /* For career team, use GetPlayerAtIndex to remap */
         if (teamNumber == selTeamNumber)
         {
-            playerBase = _GetPlayerAtIndex(teamNumber, (uint16_t)numPlayers);
+            playerBase = GetPlayerAtIndex(teamNumber, (uint16_t)numPlayers);
             /* GetPlayerAtIndex stores fileIndex in _cGetPlayerAtIndexFileIdx */
             /* In asm, d1 returns the file index → stored in d7 (playerIdx) */
             extern uint16_t _cGetPlayerAtIndexFileIdx;
             playerIdx = (int16_t)_cGetPlayerAtIndexFileIdx;
         }
 
-        /* playerBase points at the team base (career: the _GetPlayerAtIndex
+        /* playerBase points at the team base (career: the GetPlayerAtIndex
          * result), so the PlayerFile sits at +sizeof(TeamFile). This replaces the
          * old raw 0x6D..0x70 (= 76 + offsetof(PlayerFile, goalStats)). */
         PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
@@ -737,7 +737,7 @@ static void AddTeamScorersToHighestScorersTable(int16_t statIndex,
              * hosts. (Native uint16 store on LE byte-swaps relative to
              * the BE reads, producing a corrupted teamId — e.g. team
              * "VFB STUTTGART" 0x0E27 was read back as 0x000E=14, hitting
-             * _VerifyTeamLoaded panic.) */
+             * VerifyTeamLoaded panic.) */
             BE_WRITE_U16(slot + 32, teamNumber);
 
             if ((uint8_t)score != minScore)
@@ -829,7 +829,7 @@ static uint8_t *GetScorerSurname(uint8_t *entryBase)
     uint8_t *nameStart;
     uint8_t *surname;
 
-    playerPtr = _GetPlayer(teamId, (uint16_t)idxSigned);
+    playerPtr = GetPlayer(teamId, (uint16_t)idxSigned);
     /* Player name at offset 0x4C + PLAYERFILE_PLAYERNAME(3) = 0x4F from GetPlayer result */
     nameStart = playerPtr + 0x4F;
     surname = nameStart;
@@ -933,7 +933,7 @@ static void ShowCompetitionTopScorers(int16_t statIndex, uint8_t *namePtr)
     PopulateHighestScorersTableFromSelectedTeams(statIndex);
     diyStatsName = (uintptr_t)namePtr;
     SortHighestScorerTable();
-    _ShowMenu(competitionTopGoalScorersMenu);
+    ShowMenu(competitionTopGoalScorersMenu);
 }
 
 
@@ -944,13 +944,13 @@ static void ShowCompetitionTopScorers(int16_t statIndex, uint8_t *namePtr)
  * Uses statIndex = -1 (all competitions summed).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TopGoalScorersMenu_0(void)
+void TopGoalScorersMenu_0(void)
 {
 #ifdef SWOS_DEBUG_AUTOSKIP
     {
         extern CompetitionSlotBuffer primaryCompetitionBuf;  /* slot-0 untangle (S6): block-local (file-scope decl is below this fn) */
         uint16_t compTypeWord = (uint16_t)primaryCompetitionBuf.tourn.header.competitionType;
-        SWOS_AUTOSKIP_LOG("[bug2-scorers] _TopGoalScorersMenu_0 ENTER statIdx=-1 "
+        SWOS_AUTOSKIP_LOG("[bug2-scorers] TopGoalScorersMenu_0 ENTER statIdx=-1 "
                           "numSelectedTeams=%u numDiyTeams=%u gameType=%u "
                           "careerLoadedFlag=%u compTypeWord=0x%04X selTeamNumber=0x%04X",
                           (unsigned)numSelectedTeams, (unsigned)primaryCompetitionBuf.tourn.header.numTeams,
@@ -973,11 +973,11 @@ void _TopGoalScorersMenu_0(void)
             uint8_t score   = *(entry + 35);
             if (teamId != 0xFFFF) { validCount++; totalGoals += score; }
         }
-        SWOS_AUTOSKIP_LOG("[bug2-scorers] _TopGoalScorersMenu_0 EXIT "
+        SWOS_AUTOSKIP_LOG("[bug2-scorers] TopGoalScorersMenu_0 EXIT "
                           "filledEntries=%d/15 totalGoals=%d", validCount, totalGoals);
     }
 #endif
-    _ShowMenu(topGoalScorersMenu);
+    ShowMenu(topGoalScorersMenu);
 }
 
 
@@ -988,7 +988,7 @@ void _TopGoalScorersMenu_0(void)
  * from globals, then calls ShowCompetitionTopScorers.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _StatsHighestScorerList(void)
+void StatsHighestScorerList(void)
 {
     uint8_t *namePtr = diyNameOfCompetitionPtr;
     int16_t statIdx = (int16_t)diyUnknownWord_2C;
@@ -1003,7 +1003,7 @@ void _StatsHighestScorerList(void)
  * Populates menu entries with scorer name, (team), and score.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CompetitionTopGoalScorersInit(void)
+void CompetitionTopGoalScorersInit(void)
 {
     MenuEntry *a5 = &menuEntries[0];
     uint8_t *base = highestScorersTable;
@@ -1047,11 +1047,11 @@ void _CompetitionTopGoalScorersInit(void)
             uint8_t *dest;
 
             /* Get team name */
-            teamData = _GetTeamPointer(teamId);
+            teamData = GetTeamPointer(teamId);
             teamName = teamData->team.teamName;
 
             /* Get player name */
-            playerPtr = _GetPlayer(teamId, (uint16_t)playerIdxSigned);
+            playerPtr = GetPlayer(teamId, (uint16_t)playerIdxSigned);
 
             /* Entry 1: player name */
             a5 += 1;
@@ -1059,7 +1059,7 @@ void _CompetitionTopGoalScorersInit(void)
             {
                 uint8_t *src = playerPtr + 0x4F;  /* 0x4C + 3 = playerName */
                 uint8_t *d = dest;
-                d = _StringCopy(src, d);
+                d = StringCopy(src, d);
             }
 
             /* Entry 2: "(teamname)" */
@@ -1067,9 +1067,9 @@ void _CompetitionTopGoalScorersInit(void)
             dest = (uint8_t *)a5->fg;
             {
                 uint8_t *d = dest;
-                d = _StringCopy(aLparen, d);
-                d = _StringCopy(teamName, d);
-                d = _StringCopy(aRparen, d);
+                d = StringCopy(aLparen, d);
+                d = StringCopy(teamName, d);
+                d = StringCopy(aRparen, d);
                 *d = 0;
             }
 
@@ -1093,7 +1093,7 @@ void _CompetitionTopGoalScorersInit(void)
  * Adjusts entry layout based on which competitions are active.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TopGoalScorersInit(void)
+void TopGoalScorersInit(void)
 {
     /* If no tertiary competition, shift entries down */
     if (tertiaryCompetitionPtr == 0)
@@ -1147,7 +1147,7 @@ void _TopGoalScorersInit(void)
  * per-competition goal counts + total.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
+void TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
 {
     uint8_t *base = highestScorersTable;
     uint16_t ordinal = entry->ordinal;
@@ -1201,13 +1201,13 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         uint8_t *dest;
         uint16_t d0val;
 
-        teamData = _GetTeamPointer(teamId);
+        teamData = GetTeamPointer(teamId);
         teamName = teamData->team.teamName;
 
-        playerPtr = _GetPlayer(teamId, (uint16_t)playerIdxSigned);
+        playerPtr = GetPlayer(teamId, (uint16_t)playerIdxSigned);
 
         /* Extract surname using ExtractSurname (name at offset 0x4F, maxLen 0x15=21) */
-        surnameBuf = _ExtractSurname(playerPtr + 0x4F, 0x15);
+        surnameBuf = ExtractSurname(playerPtr + 0x4F, 0x15);
 
         /* Entry 0: player surname */
         a4->fg = (uintptr_t)surnameBuf;
@@ -1219,9 +1219,9 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         dest = (uint8_t *)a4->fg;
         {
             uint8_t *d = dest;
-            d = _StringCopy(aLparen, d);
-            d = _StringCopy(teamName, d);
-            d = _StringCopy(aRparen, d);
+            d = StringCopy(aLparen, d);
+            d = StringCopy(teamName, d);
+            d = StringCopy(aRparen, d);
             *d = 0;
         }
         a4->y = yCoord;
@@ -1275,7 +1275,7 @@ void _TopGoalScorersBeforeDrawCommon(MenuEntry *entry)
         /* Draw all 6 overlay entries starting from entry 21 */
         {
             MenuEntry *drawStart = &menuEntries[0x498 / 56];
-            _DrawMultipleItems(6, drawStart);
+            DrawMultipleItems(6, drawStart);
         }
     }
 }
@@ -1304,7 +1304,7 @@ extern uint8_t  managerSurnameBuffer[];
 extern uint16_t playPromotedAnimation;
 extern uint16_t playRelegatedAnimation;
 
-extern void _DrawMenu(void);
+extern void DrawMenu(void);
 
 
 /* ================================================================
@@ -1318,7 +1318,7 @@ extern void _DrawMenu(void);
  * 106-byte-stride writer).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_GetCurrentSeasonPointer(void)
+uint8_t *GetCurrentSeasonPointer(void)
 {
     uint16_t idx = currentSeasonShowing;
     uint32_t off = (uint32_t)idx * (uint32_t)sizeof(SeasonInformations);
@@ -1332,7 +1332,7 @@ uint8_t *_GetCurrentSeasonPointer(void)
  * Initializes the management record menu header and stats line.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ManagementRecordInit(void)
+void ManagementRecordInit(void)
 {
     uint8_t *dest;
 
@@ -1340,7 +1340,7 @@ void _ManagementRecordInit(void)
 
     /* Format title: "MANAGEMENT RECORD OF <name> <surname>" */
     dest = (uint8_t *)menuEntries[0].fg;
-    _PrintFormatted(tr_fmt(aManagementReco), dest,
+    PrintFormatted(tr_fmt(aManagementReco), dest,
                     0, 0, 0, 0, 0, 0, 0,
                     managerNameBuffer, managerSurnameBuffer, (const uint8_t *)0);
 
@@ -1351,13 +1351,13 @@ void _ManagementRecordInit(void)
 
         if (gamesPlayed == 0)
         {
-            _PrintFormatted(aDash, dest,
+            PrintFormatted(aDash, dest,
                             0, 0, 0, 0, 0, 0, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
         }
         else
         {
-            _PrintFormatted(aPl0W1D2L3F4A5, dest,
+            PrintFormatted(aPl0W1D2L3F4A5, dest,
                             gamesPlayed, numWins, numDrawn, numLost,
                             goalsScored, goalsTaken, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
@@ -1373,12 +1373,12 @@ void _ManagementRecordInit(void)
  * Decrements season number and redraws.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ManagementArrowUpSelect(void)
+void ManagementArrowUpSelect(void)
 {
     if (currentSeasonNumber == 0)
         return;
     currentSeasonNumber -= 1;
-    _DrawMenu();
+    DrawMenu();
 }
 
 
@@ -1389,12 +1389,12 @@ void _ManagementArrowUpSelect(void)
  * Increments season number (up to currentSeasonShowing) and redraws.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ManagementArrowDownSelect(void)
+void ManagementArrowDownSelect(void)
 {
     if (currentSeasonShowing == currentSeasonNumber)
         return;
     currentSeasonNumber += 1;
-    _DrawMenu();
+    DrawMenu();
 }
 
 
@@ -1435,7 +1435,7 @@ void _ManagementArrowDownSelect(void)
  * in the current season info.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_StorePromotionRelegationInSeasonInfo(void)
+void Career_StorePromotionRelegationInSeasonInfo(void)
 {
     uint8_t flag;
 
@@ -1449,7 +1449,7 @@ void _Career_StorePromotionRelegationInSeasonInfo(void)
     else
         return;
 
-    ((SeasonInformations *)_GetCurrentSeasonPointer())->tournamentStatus = flag;
+    ((SeasonInformations *)GetCurrentSeasonPointer())->tournamentStatus = flag;
 }
 
 /* ================================================================
@@ -1499,10 +1499,10 @@ extern uint8_t  oceaniaWorldCupQualificationCopy[];
 extern uint8_t  ecQualifyingGroup1Copy[];
 extern uint8_t  ecQualifyingGroup8Copy[];
 
-extern void _UpdateBoardConfidenceModifiers(void);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
+extern void UpdateBoardConfidenceModifiers(void);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
+extern uint16_t FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
 
 
 /* ================================================================
@@ -1561,7 +1561,7 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
         /* --- Cup path --- */
         if (comp->competitionFinished == 0) {
             /* Cup not finished — check if team is still in it */
-            _FindTeamInDIY(selTeamNumber, comp);
+            FindTeamInDIY(selTeamNumber, comp);
             if (diyFoundTeamIndex == 0)
                 return -104;   /* team not found in cup */
         }
@@ -1590,7 +1590,7 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
     /* --- Tournament/Groups path (type >= 2) --- */
     if (comp->currentRoundIndex == 0) {
         /* Tournament not finished — check if team is still in it */
-        _FindTeamInDIY(selTeamNumber, comp);
+        FindTeamInDIY(selTeamNumber, comp);
         if (diyFoundTeamIndex == 0)
             return -104;   /* team not found */
     }
@@ -1660,7 +1660,7 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
  * - Manager status (sacked/season finished)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_FillCurrentSeasonInfo(void)
+void Career_FillCurrentSeasonInfo(void)
 {
     SeasonInformations *a5;
     uint16_t d0;
@@ -1669,8 +1669,8 @@ void _Career_FillCurrentSeasonInfo(void)
     if (gameType != 4)
         return;
 
-    _UpdateBoardConfidenceModifiers();
-    a5 = (SeasonInformations *)_GetCurrentSeasonPointer();
+    UpdateBoardConfidenceModifiers();
+    a5 = (SeasonInformations *)GetCurrentSeasonPointer();
 
     /* --- Build trophy flags word --- */
     d0 = 0;
@@ -1720,7 +1720,7 @@ void _Career_FillCurrentSeasonInfo(void)
         int16_t i = (int16_t)careerNumPlayers - 1;
 
         while (i >= 0) {
-            uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+            uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
             PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
             uint16_t skill = (uint16_t)pf->goalStats[0] + (uint16_t)pf->goalStats[1]
                            + (uint16_t)pf->goalStats[2] + (uint16_t)pf->goalStats[3];
@@ -1740,14 +1740,14 @@ void _Career_FillCurrentSeasonInfo(void)
         a5->bestScorerNumGoals = bestSkill;
 
         if (bestCount == 1) {
-            _StringCopy(bestPlayer + 0x4F, (uint8_t *)a5->bestScorerName);
+            StringCopy(bestPlayer + 0x4F, (uint8_t *)a5->bestScorerName);
             a5->secondScorerName[0] = 0;
         } else if (bestCount == 2) {
-            _StringCopy(bestPlayer + 0x4F, (uint8_t *)a5->bestScorerName);
-            _StringCopy(best2nd    + 0x4F, (uint8_t *)a5->secondScorerName);
+            StringCopy(bestPlayer + 0x4F, (uint8_t *)a5->bestScorerName);
+            StringCopy(best2nd    + 0x4F, (uint8_t *)a5->secondScorerName);
         } else {
             /* 3+ players tied: "SEVERAL" */
-            _StringCopy(aSeveral, (uint8_t *)a5->bestScorerName);
+            StringCopy(aSeveral, (uint8_t *)a5->bestScorerName);
             a5->secondScorerName[0] = 0;
         }
     }
@@ -1757,7 +1757,7 @@ void _Career_FillCurrentSeasonInfo(void)
 
     /* Primary competition */
     {
-        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&primaryCompetitionBuf);
         uint8_t *compDef = currentCompetitionPtr;
 
@@ -1789,7 +1789,7 @@ void _Career_FillCurrentSeasonInfo(void)
 
     /* Secondary competition */
     if (a5->strPtr1 != 0) {
-        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&competitionContextBuf);
         uint8_t *compDef = secondaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
@@ -1799,7 +1799,7 @@ void _Career_FillCurrentSeasonInfo(void)
 
     /* Tertiary competition */
     if (a5->strPtr2 != 0) {
-        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&tertiaryCompetitionContextBuf);
         uint8_t *compDef = tertiaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
@@ -1809,7 +1809,7 @@ void _Career_FillCurrentSeasonInfo(void)
 
     /* Quaternary competition */
     if (a5->strPtr3 != 0) {
-        d1 = (int16_t)_FindTeamInDIY(selTeamNumber,
+        d1 = (int16_t)FindTeamInDIY(selTeamNumber,
                                       (DIYCompetition *)&euroCupsCompetitionContextBuf);
         uint8_t *compDef = quaternaryCompetitionPtr;
         d1 = EncodeCompetitionPositionForSeasonInfo_impl(
@@ -1962,7 +1962,7 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
 
     /* Copy competition name to entry 7's string buffer */
     dest = (uint8_t *)entry7->fg;
-    _StringCopy(compName, dest);
+    StringCopy(compName, dest);
 
     /* Sign-extend result code byte to word */
     resultCode = (int16_t)resultCodeByte;
@@ -2059,12 +2059,12 @@ static void RenderCompLine_Internal(const uint8_t *compName, int8_t resultCodeBy
 do_print:
     /* Print result to entry 8's string buffer */
     dest = (uint8_t *)entry8->fg;
-    _PrintFormatted(fmt, dest,
+    PrintFormatted(fmt, dest,
                     n0, n1, n2, 0, 0, 0, 0,
                     (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
 
     /* Draw 2 entries (entry 7 and entry 8) */
-    _DrawMultipleItems(2, &menuEntries[7]);
+    DrawMultipleItems(2, &menuEntries[7]);
 
     *pY += 10;
 
@@ -2100,11 +2100,11 @@ do_print:
         colorBits = 10;
     }
 
-    _StringCopy(fmt, dest);
+    StringCopy(fmt, dest);
     entry8->stringFlags = (entry8->stringFlags & 0xFFF0) | colorBits;
 
     /* Draw 2 entries again (with qualification text) */
-    _DrawMultipleItems(2, &menuEntries[7]);
+    DrawMultipleItems(2, &menuEntries[7]);
 
     *pY += 10;
 }
@@ -2118,7 +2118,7 @@ do_print:
  * Called as a menu beforeDraw callback.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FillManagementRecordInfo(void)
+void FillManagementRecordInfo(void)
 {
     SeasonInformations *si;
     uint16_t d5;
@@ -2152,7 +2152,7 @@ void _FillManagementRecordInfo(void)
         else
             fmt = a102Season;    /* "%1/0%2 SEASON" */
 
-        _PrintFormatted(fmt, dest,
+        PrintFormatted(fmt, dest,
                         d0, d1, d2, 0, 0, 0, 0,
                         (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
     }
@@ -2162,7 +2162,7 @@ void _FillManagementRecordInfo(void)
     /* --- Club name line (entry 4) --- */
     entry = &menuEntries[4]; /* $E0/56 = 4 */
     dest = (uint8_t *)entry->fg;
-    _StringCopy((uint8_t *)si->clubName, dest);
+    StringCopy((uint8_t *)si->clubName, dest);
     entry->y = d5;
     d5 += 10;
 
@@ -2183,7 +2183,7 @@ void _FillManagementRecordInfo(void)
             countryStr = cPtr + 1; /* skip first byte */
         }
 
-        _PrintFormatted(aA, dest,
+        PrintFormatted(aA, dest,
                         0, 0, 0, 0, 0, 0, 0,
                         countryStr, (const uint8_t *)0, (const uint8_t *)0);
     }
@@ -2214,7 +2214,7 @@ void _FillManagementRecordInfo(void)
     if (si->bestScorerName[0] == 0)
     {
         /* No scorer name — show dash */
-        _StringCopy(aDash, dest);
+        StringCopy(aDash, dest);
     }
     else
     {
@@ -2225,7 +2225,7 @@ void _FillManagementRecordInfo(void)
         if (totalGames == 0)
         {
             fmt = aDash;
-            _PrintFormatted(fmt, dest,
+            PrintFormatted(fmt, dest,
                             0, 0, 0, 0, 0, 0, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
         }
@@ -2236,7 +2236,7 @@ void _FillManagementRecordInfo(void)
             uint16_t tl = (uint16_t)si->totalLost;
             uint16_t gs = si->totalGoalsScored;
             uint16_t gt = si->totalGoalsTaken;
-            _PrintFormatted(aPl0W1D2L3F4A5, dest,
+            PrintFormatted(aPl0W1D2L3F4A5, dest,
                             totalGames, tw, td, tl, gs, gt, 0,
                             (const uint8_t *)0, (const uint8_t *)0, (const uint8_t *)0);
         }
@@ -2246,7 +2246,7 @@ void _FillManagementRecordInfo(void)
     entry->y = d5;
 
     /* Draw overall stats block (entries 10-11) */
-    _DrawMultipleItems(2, &menuEntries[10]);
+    DrawMultipleItems(2, &menuEntries[10]);
 
     d5 += 13;
 
@@ -2284,7 +2284,7 @@ void _FillManagementRecordInfo(void)
         }
 
         /* Draw manager status entry */
-        _DrawMultipleItems(1, &menuEntries[9]);
+        DrawMultipleItems(1, &menuEntries[9]);
     }
 
     d5 += 13;
@@ -2310,12 +2310,12 @@ void _FillManagementRecordInfo(void)
 
         if (numGoals == 0 || si->bestScorerName[0] == 0)
         {
-            _StringCopy(aDash, dest);
+            StringCopy(aDash, dest);
         }
         else
         {
             const uint8_t *scorerName = (const uint8_t *)si->bestScorerName;
-            _PrintFormatted(aA0, dest,
+            PrintFormatted(aA0, dest,
                             numGoals, 0, 0, 0, 0, 0, 0,
                             scorerName, (const uint8_t *)0, (const uint8_t *)0);
         }
@@ -2324,7 +2324,7 @@ void _FillManagementRecordInfo(void)
     entry->y = d5;
 
     /* Draw top scorer block (entries 12-13) */
-    _DrawMultipleItems(2, &menuEntries[12]);
+    DrawMultipleItems(2, &menuEntries[12]);
 
     d5 += 8;
 
@@ -2341,14 +2341,14 @@ void _FillManagementRecordInfo(void)
 
         numGoals = si->bestScorerNumGoals;
 
-        _PrintFormatted(aA0, dest,
+        PrintFormatted(aA0, dest,
                         numGoals, 0, 0, 0, 0, 0, 0,
                         (const uint8_t *)si->secondScorerName,
                         (const uint8_t *)0, (const uint8_t *)0);
 
         entry->y = d5;
 
-        _DrawMultipleItems(1, &menuEntries[14]);
+        DrawMultipleItems(1, &menuEntries[14]);
 
         d5 += 10;
     }

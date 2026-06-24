@@ -6,8 +6,8 @@
  * plus a giant data section. On SDL we replace those assembly entry points
  * with no-op C stubs and back the data symbols with regular BSS.
  *
- * The interesting bridge is `_startShim`: the original assembly version
- * just stacked-up a fresh stack and called `_start` then `_mainC`. We do
+ * The interesting bridge is `startShim`: the original assembly version
+ * just stacked-up a fresh stack and called `_start` then `mainC`. We do
  * the same minus the stack switch.
  */
 
@@ -59,8 +59,8 @@ void Platform_RewireCustom(void)
 #endif
 
 #ifdef SWOS_SDL_BUILD
-/* The Amiga ISR (`_Int3TimerHandler`) calls into `_FadeOutTick` /
- * `_FadeInTick` which use the sentinel value FADE_SENTINEL (0x3E7) to
+/* The Amiga ISR (`_Int3TimerHandler`) calls into `FadeOutTick` /
+ * `FadeInTick` which use the sentinel value FADE_SENTINEL (0x3E7) to
  * mean "no fade in progress". On Amiga the data section initialised
  * those globals to the sentinel; in our zero-filled BSS stubs they
  * default to 0, which the fade ticks misinterpret as "fade level 0
@@ -113,10 +113,10 @@ void Platform_PreArmIsrGlobals(void)
 /* SWOS.c defines `_start` (the original m68k entry). The hosted libc
  * also defines `_start` as the CRT entry, so we cannot reference the
  * SWOS one by that name from main.c. We declare a renamed extern via
- * the linker option `-Wl,--defsym=_swos_c_start=_start` (set in the
+ * the linker option `-Wl,--defsym=swos_c_start=_start` (set in the
  * Makefile) and call that instead. */
-extern void _swos_c_start(void);
-extern void _mainC(void);
+extern void swos_c_start(void);
+extern void mainC(void);
 
 /* ---- Quit flag ------------------------------------------------------ */
 /* SDL: defined here (was in SWOS2.s; SDL doesn't link SWOS2.s).
@@ -136,16 +136,16 @@ void Platform_RequestQuit(void)
     g_quitToDos = 1;
 }
 
-/* Called from _MenuProc each tick on the main thread. When a quit has
+/* Called from MenuProc each tick on the main thread. When a quit has
  * been requested (by SDL_QUIT / window-X / ESC), nudge the menu state
- * machines out: set `exitMenu` to break the inner _ShowMenu loop AND
+ * machines out: set `exitMenu` to break the inner ShowMenu loop AND
  * set `abortSelectTeams` so the caller's state machine (e.g.
- * `_SelectTeamsFinalMenu`) sees "user backed out" and short-circuits
+ * `SelectTeamsFinalMenu`) sees "user backed out" and short-circuits
  * instead of re-entering another submenu — without this, pressing X
  * while in the team picker flickered between nested menus as each
  * level exited only to be reactivated by its parent on the way out.
  *
- * Originally used setjmp/longjmp from _FrontEndMainLoop for this but
+ * Originally used setjmp/longjmp from FrontEndMainLoop for this but
  * Cygwin's 32-bit setjmp.h pulls in signal context headers that the
  * target doesn't implement, breaking the Windows/Cygwin build.
  * Cooperative unwinding via the game's existing abort flag is
@@ -169,14 +169,14 @@ void Platform_CheckQuitRequest(void)
     chooseTeamsResult = 0;
 }
 
-/* ---- _startShim ----------------------------------------------------- */
+/* ---- startShim ----------------------------------------------------- */
 /* Called from main.c. On Amiga the original asm version was in
  * swos2_unit.s; here we provide it as C now that SWOS2.s is retired.
- * The full Amiga sequence is _swos_c_start() -> _mainC(); SDL skips
- * _swos_c_start() because it pokes raw chip-register addresses that
+ * The full Amiga sequence is swos_c_start() -> mainC(); SDL skips
+ * swos_c_start() because it pokes raw chip-register addresses that
  * segfault on a hosted target. */
 #ifdef SWOS_SDL_BUILD
-void _startShim(void)
+void startShim(void)
 {
     /* Re-point `custom` (defined in display.c with a 0xDFF000 initializer)
      * at our heap-backed stub buffer so any subsequent register pokes
@@ -184,11 +184,11 @@ void _startShim(void)
     extern volatile struct Custom *custom;
     custom = (volatile struct Custom *)&s_custom_storage;
 
-    _mainC();
+    mainC();
 }
 #else
-/* Amiga: switch to our own stack before running _swos_c_start /
- * _mainC. Mirrors the original SWOS2.s _startShim which reserved
+/* Amiga: switch to our own stack before running swos_c_start /
+ * mainC. Mirrors the original SWOS2.s startShim which reserved
  * `stackSpace: ds.b 8192` then `movea.l #stackTop, sp`. Without this,
  * we run on DOS's default task stack (typically 4 KB) and the moment
  * a Level-3 VBlank interrupt nests into the deep `_Int3TimerHandler`
@@ -211,13 +211,13 @@ extern uint32_t S_SavedSP;   /* Resload.s — saves caller's SP for return */
 SWOS_CHIP_BSS uint8_t s_swos_stack[SWOS_STACK_BYTES] __attribute__((aligned(4)));
 
 __attribute__((naked, used))
-void _startShim(void)
+void startShim(void)
 {
     __asm__ volatile (
         "move.l  %%sp,S_SavedSP            \n"
         "lea     s_swos_stack+%c0,%%sp     \n"
-        "jsr     _swos_c_start             \n"
-        "jsr     _mainC                    \n"
+        "jsr     swos_c_start             \n"
+        "jsr     mainC                    \n"
         "jsr     _ExitToDos                \n"
         "movea.l S_SavedSP,%%sp            \n"
         "moveq   #0,%%d0                   \n"
@@ -231,8 +231,8 @@ void _startShim(void)
  * Stubs for the small remaining set of Amiga symbols that have no
  * C definition anywhere in the ported source.
  *
- * The bigger functions (_SafeStart, _LoadDosLibrary, _DetachOSDisplay,
- * _InitHardwareAtFrameStart, _SetupInterrupts, Int*Handler, _AllocMemAny)
+ * The bigger functions (SafeStart, LoadDosLibrary, DetachOSDisplay,
+ * InitHardwareAtFrameStart, SetupInterrupts, Int*Handler, _AllocMemAny)
  * already live in the ported C files (resload.c, interrupts.c, ...) so
  * we must NOT redefine them here.
  * =================================================================== */
@@ -252,7 +252,7 @@ uint32_t S_VBR = 0;
 /* Asset cache pre-allocation. SDL has unlimited RAM; Amiga has 8 MB
  * fast available on the user's machine. Core+menu precache needs
  * ~281 KB raw + ~21 node headers — 256 KB was a too-close fit that
- * caused infinite retry loops in `_AssetPrecacheOneMenu` once the
+ * caused infinite retry loops in `AssetPrecacheOneMenu` once the
  * cache filled (each failed alloc returned status=1 → do-while
  * retried forever). 1 MB matches SDL and gives generous headroom for
  * additional assets loaded by image scripts at runtime. */

@@ -2,7 +2,7 @@
  * sfx_ids.h — SWOS sound-effect IDs.
  *
  * The values are wave-table indices (`waveId`) into `bin/sound/sfx.sng`'s
- * note/wave table. Pass them to `_AudioChannelQueueNextWaveIfEnabled`
+ * note/wave table. Pass them to `AudioChannelQueueNextWaveIfEnabled`
  * (or, on SDL, `AudioSDL_TriggerSfxByWaveId`) to play the matching
  * sample.
  *
@@ -65,11 +65,11 @@
 #define SFX_CROWD_CHANT_3      0x3A    /* Crowd chant variant 3 */
 #define SFX_CROWD_CHANT_4      0x3E    /* Crowd chant variant 4 */
 
-/* ---- Preset IDs (route through _AudioApplyPresetToChannels) ---- */
-#define SFX_PRESET_NOT_TRAINING_1   1       /* [src] _PlaySample1IfNotTraining / _PlaySample1 */
-#define SFX_PRESET_NOT_TRAINING_2   3       /* [src] _PlaySample2IfNotTraining */
-#define SFX_PRESET_NOT_TRAINING_4   4       /* [src] _PlaySample4IfNotTraining */
-#define SFX_PRESET_PENALTY          6       /* [src] _PlayPenaltySample */
-#define SFX_PRESET_NOT_TRAINING_7   7       /* [src] _PlaySample7IfNotTraining */
+/* ---- Preset IDs (route through AudioApplyPresetToChannels) ---- */
+#define SFX_PRESET_NOT_TRAINING_1   1       /* [src] PlaySample1IfNotTraining / PlaySample1 */
+#define SFX_PRESET_NOT_TRAINING_2   3       /* [src] PlaySample2IfNotTraining */
+#define SFX_PRESET_NOT_TRAINING_4   4       /* [src] PlaySample4IfNotTraining */
+#define SFX_PRESET_PENALTY          6       /* [src] PlayPenaltySample */
+#define SFX_PRESET_NOT_TRAINING_7   7       /* [src] PlaySample7IfNotTraining */
 
 #endif /* SWOS_SFX_IDS_H */

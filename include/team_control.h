@@ -10,8 +10,8 @@
 
 /* Chunk 54 — Team Controls + Player Selection */
 
-void _UpdateControlledPlayer(TeamGeneralInfo *team);
-void _UpdatePlayerBeingPassedTo(TeamGeneralInfo *team);
-void _UpdateAndApplyTeamControls(void);
+void UpdateControlledPlayer(TeamGeneralInfo *team);
+void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team);
+void UpdateAndApplyTeamControls(void);
 
 #endif /* TEAM_CONTROL_H */

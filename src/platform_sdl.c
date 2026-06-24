@@ -5,7 +5,7 @@
  * 8bpp-chunky → ARGB8888 palette lookup.
  *
  * Bitplane-to-chunky conversion happens at load time (see
- * `_LoadOverlayToFrontbuffer` in frontend.c and `blitDispatch` in
+ * `LoadOverlayToFrontbuffer` in frontend.c and `blitDispatch` in
  * image_cmd.c) so the per-frame work here is just one palette lookup
  * per pixel into the streaming SDL texture.
  */
@@ -88,11 +88,11 @@ static double        k_frame_secs = 1.0 / 50.0;  /* refreshed per frame from the
  * render driven by Platform_VBlank (main/game thread). The SDL timer
  * callback uses this to skip its own render when the main thread is
  * already presenting complete frames — if the timer renders while the
- * main thread is mid-draw (between _DrawChunkyPitch and _DrawSprites),
+ * main thread is mid-draw (between DrawChunkyPitch and DrawSprites),
  * the partial frontbuffer gets presented and sprites flicker in/out
  * underneath the freshly-redrawn pitch. The timer is only the primary
  * renderer during loader/intro code that spins on currentGameTick
- * without calling _WaitForVSync. */
+ * without calling WaitForVSync. */
 static volatile Uint32 s_last_main_render_ms;
 
 /* Screenshot triggers:
@@ -128,7 +128,7 @@ static int           s_vsync_enabled;
  * timer thread starves, ballooning those waits from tens-of-ms to 10–120 s
  * per cont (driver then over-runs its timeout and false-reports "stuck").
  * Turbo removes every wall-clock wait (Platform_VBlank pacing, the
- * _RunInt3HandlerThrottled throttle, the 20 ms timer interval) so a cont is
+ * RunInt3HandlerThrottled throttle, the 20 ms timer interval) so a cont is
  * bound by CPU work, not by a clock the scheduler stretches. No effect on
  * normal play (default off). SDL-only file; nothing to back-port to Amiga. */
 static int           s_harness_turbo;
@@ -158,13 +158,13 @@ static Uint32      s_last_isr_ms;      /* last ISR fire time, for throttle */
  * Amiga IRQ was hardware-preemptive at 50 Hz; on SDL we approximate that
  * by calling this from BOTH the SDL_Timer worker thread (every 20 ms by
  * default) AND from Platform_VBlank on the main thread (so any
- * _WaitForVSync also drives the ISR). Whichever thread fires first wins
+ * WaitForVSync also drives the ISR). Whichever thread fires first wins
  * for that 20 ms window; the other call returns immediately via the
  * throttle. This guarantees fade ticks, currentGameTick, and audio
  * housekeeping make progress even when one thread is starved (most
  * commonly the SDL_Timer thread on WSL2, where main-thread spin loops
  * can monopolise CPU). */
-void _RunInt3HandlerThrottled(void)
+void RunInt3HandlerThrottled(void)
 {
     /* Turbo collapses the 18 ms throttle to 0 so currentGameTick advances on
      * every call — tick-counting waits (fades, holds, the loader-intro
@@ -196,7 +196,7 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
      * On the SDL host we run it from the SDL_Timer thread at 50 Hz, with
      * Platform_VBlank on the main thread also driving it as a fallback
      * for when the timer thread gets starved (common on WSL2). */
-    _RunInt3HandlerThrottled();
+    RunInt3HandlerThrottled();
 
     /* Pump audio production from the worker thread regardless of
      * renderer mode. With --vsync=on the main thread can occasionally
@@ -210,7 +210,7 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
     AudioSDL_Tick();
 
     /* The loader-intro path waits on `currentGameTick` rather than
-     * `_WaitForVSync`, so the main thread never reaches our render
+     * `WaitForVSync`, so the main thread never reaches our render
      * hook. Drive a render directly from the timer thread only when
      * the main thread hasn't rendered recently — otherwise we race
      * the main thread's pitch/sprite draw and present a torn frame
@@ -243,7 +243,7 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
     /* Turbo: fire as fast as SDL allows (1 ms) so the loader-intro path — a
      * pure spin on currentGameTick that never calls Platform_VBlank, advanced
      * ONLY from this thread — drains in a fraction of a second instead of
-     * ~1–2 min. With the _RunInt3HandlerThrottled throttle also at 0, every
+     * ~1–2 min. With the RunInt3HandlerThrottled throttle also at 0, every
      * fire advances the tick. */
     /* Re-arm at the active style's rate so a DOS-gameplay toggle re-paces the
      * worker tick: 1000/70 ≈ 14 ms (DOS) or 1000/50 = 20 ms (Amiga). */
@@ -557,7 +557,7 @@ static void chunky_to_rgba(uint32_t *dst, int dst_pitch_pixels)
     /* Double-buffer semantics — read the *completed* frame, not the
      * one the game is currently drawing into.
      *
-     * `_SwapBuffersAndCameraViewState()` runs at each VBlank and flips
+     * `SwapBuffersAndCameraViewState()` runs at each VBlank and flips
      * the two pointers: post-swap, `frontbufferBasePtr` is the next
      * draw target (main thread is about to fill it), and
      * `frontbufferBaseAltPtr` is the just-finished frame. Reading
@@ -585,7 +585,7 @@ static void chunky_to_rgba(uint32_t *dst, int dst_pitch_pixels)
      * the wrap region (lines 200–272 of the 273-line frontbuffer).
      *
      * On SDL we now redraw the entire visible pitch to lines 0–199
-     * each frame from the chunky tile bank (pitch.c:_DrawChunkyPitch),
+     * each frame from the chunky tile bank (pitch.c:DrawChunkyPitch),
      * so applying cameraYMod320 here compounds two different scroll
      * schemes and produces "two pitch views stitched vertically"
      * flicker. Always read from line 0 on SDL; cameraYMod320 is
@@ -686,9 +686,9 @@ static void maybe_dump_frame(const uint32_t *argb)
  * The s_render_mtx serializes the renderer + texture access between
  * the game (main) thread and the SDL_AddTimer thread. */
 /* Drain SDL's event queue. Called from both the main thread (via
- * Platform_VBlank from _WaitForVSync) AND the SDL_Timer thread. The
+ * Platform_VBlank from WaitForVSync) AND the SDL_Timer thread. The
  * loader-intro spin loops on currentGameTick and never touches
- * _WaitForVSync, so main-thread-only polling misses the X-button
+ * WaitForVSync, so main-thread-only polling misses the X-button
  * SDL_QUIT during the intro. In practice SDL_PollEvent is safe to
  * call from multiple threads: the queue is internally locked, events
  * are consumed by whichever pump grabs them first, and Platform_RequestQuit
@@ -703,7 +703,7 @@ static void pump_events_any_thread(void)
             /* Hide the window immediately so the main-menu unwind
              * after a mid-match X-press happens off-screen instead
              * of flashing the menu UI for a frame or two. The audio
-             * gate in _TryPlayMusic stops the menu music from
+             * gate in TryPlayMusic stops the menu music from
              * starting; this kills the visual half. */
             if (s_window) SDL_HideWindow(s_window);
             /* Pause + clear audio at the driver. SDL queues ~80-250 ms
@@ -891,7 +891,7 @@ void Platform_RenderFrame(void)
 }
 
 /* ---- Full vblank: render + 50 Hz pacing ---------------------------
- * Called from _WaitForVSync on the game/main thread. Pumps SDL events
+ * Called from WaitForVSync on the game/main thread. Pumps SDL events
  * here (main thread only) before rendering the frame. */
 int Platform_VBlank(void)
 {
@@ -899,7 +899,7 @@ int Platform_VBlank(void)
      * SDL_Timer worker thread is starved (common on WSL2 where main-
      * thread spin loops can monopolise CPU). The throttle inside the
      * wrapper means double-firing from both threads is harmless. */
-    _RunInt3HandlerThrottled();
+    RunInt3HandlerThrottled();
 
     /* Stamp first so the async timer callback sees a recent main-thread
      * render as soon as we enter RenderFrame — prevents the timer from

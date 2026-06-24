@@ -31,13 +31,13 @@ typedef short int16_t;
 #ifdef SWOS_SDL_BUILD
 /* Helper: yield CPU briefly while driving the Amiga Level-3 ISR. The
  * fade-in / fade-out spin loops below wait for fadeState to flip,
- * which is updated by _FadeInTick / _FadeOutTick inside the ISR. On
+ * which is updated by FadeInTick / FadeOutTick inside the ISR. On
  * WSL2 the SDL_Timer thread that normally runs the ISR can be starved
  * by main-thread spinning, so we run the ISR ourselves (throttled to
  * 50 Hz) and SDL_Delay to yield CPU. */
 static inline void fade_wait_one_isr_tick(void)
 {
-    _RunInt3HandlerThrottled();
+    RunInt3HandlerThrottled();
     SDL_Delay(2);
 }
 #define FADE_SPIN_BODY() fade_wait_one_isr_tick()
@@ -62,7 +62,7 @@ extern void *paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes *
  * 4. Spin until fadeState == 0 (wait for fade-out to complete)
  */
 __attribute__((used, externally_visible))
-void _FadeOutToBlack(void)
+void FadeOutToBlack(void)
 {
     if (fadeInitFlag != FADE_SENTINEL)
     {
@@ -94,7 +94,7 @@ void _FadeOutToBlack(void)
  * 4. Spin until fadeState != 0 (wait for fade-in to complete)
  */
 __attribute__((used, externally_visible))
-void _FadeIn(void)
+void FadeIn(void)
 {
     if (fadeCommand != FADE_SENTINEL)
     {
@@ -103,7 +103,7 @@ void _FadeIn(void)
             if (g_quitToDos) return;
             FADE_SPIN_BODY();
         }
-        _FadeOutToBlack();
+        FadeOutToBlack();
     }
 
     if (fadeState != 0)
@@ -121,10 +121,10 @@ void _FadeIn(void)
 
 /* FadeOutAndIn (SWOS2.s line 6801) */
 __attribute__((used, externally_visible))
-void _FadeOutAndIn(void)
+void FadeOutAndIn(void)
 {
-    _FadeOutToBlack();
-    _FadeIn();
+    FadeOutToBlack();
+    FadeIn();
 }
 
 /* ================================================================
@@ -159,7 +159,7 @@ static const uint16_t fadeShiftMaskTable[10] = {
  * Two paths: normal (just shift+mask) or loader (clamp blue >= 2).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ApplyFadeStep(uint16_t fadeLevel)
+void ApplyFadeStep(uint16_t fadeLevel)
 {
     uint16_t idx;
     uint16_t shift;
@@ -262,7 +262,7 @@ void _ApplyFadeStep(uint16_t fadeLevel)
  * applying the fade at each step. When done, sets fadeState = 0.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FadeOutTick(void)
+void FadeOutTick(void)
 {
     uint16_t level;
 
@@ -277,7 +277,7 @@ void _FadeOutTick(void)
         level = FADE_MAX;
     }
 
-    _ApplyFadeStep(level);
+    ApplyFadeStep(level);
 
     fadeCommand -= FADE_STEP;
     if ((int16_t)fadeCommand < 0)
@@ -294,7 +294,7 @@ void _FadeOutTick(void)
  * applying the fade at each step. When done, sets fadeState = 1.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FadeInTick(void)
+void FadeInTick(void)
 {
     uint16_t level;
 
@@ -309,7 +309,7 @@ void _FadeInTick(void)
         level = 0;
     }
 
-    _ApplyFadeStep(level);
+    ApplyFadeStep(level);
 
     fadeInitFlag += FADE_STEP;
     if (fadeInitFlag > FADE_MAX)

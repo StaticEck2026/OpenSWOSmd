@@ -315,7 +315,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
  * DMA, blitter idle wait.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InitDisplayAndCopper(void)
+void InitDisplayAndCopper(void)
 {
     int16_t i;
 
@@ -430,7 +430,7 @@ void _InitDisplayAndCopper(void)
 #endif
 
     /* Update plane pointers and blit parameters in copper list */
-    _UpdatePlanePtrsAndBlitParams();
+    UpdatePlanePtrsAndBlitParams();
 
     /* Install copper list */
     custom->cop1lc = (uintptr_t)copperListBuffer;
@@ -472,7 +472,7 @@ void _InitDisplayAndCopper(void)
  * alignment, builds plane pointer tables for double-buffered display.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdatePlanePtrsAndBlitParams(void)
+void UpdatePlanePtrsAndBlitParams(void)
 {
     uint32_t d0;
     uint16_t d1;
@@ -585,7 +585,7 @@ void _UpdatePlanePtrsAndBlitParams(void)
  * Saves current camera state and restores the other frame's state.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SwapBuffersAndCameraViewState(void)
+void SwapBuffersAndCameraViewState(void)
 {
     if (frontbufferBasePtr == (uintptr_t)frontbufferBase)
     {
@@ -617,9 +617,9 @@ void _SwapBuffersAndCameraViewState(void)
         spriteBlitQueue = (uintptr_t)&kSpriteBlitQueueSentinel_B;
         /* DO NOT write 0xFFFFFFFF at the queue head here. The cursor
          * reset above is intentional — the previous frame's
-         * _DrawSprites calls left valid undraw entries between
+         * DrawSprites calls left valid undraw entries between
          * &kSpriteBlitQueueSentinel_B and the cursor's pre-reset
-         * value, and the next frame's _ProcessSpriteBlitQueue is
+         * value, and the next frame's ProcessSpriteBlitQueue is
          * supposed to walk through them. Clearing the head here
          * defeats that, and sprites smear because no undraw runs. */
 
@@ -696,10 +696,10 @@ void _SwapBuffersAndCameraViewState(void)
  * with wrapping at 352/272.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetCameraCoordinates(int16_t targetX, int16_t targetY)
+void SetCameraCoordinates(int16_t targetX, int16_t targetY)
 {
     /* Keep the g_screen_width-wide view on the pitch for ANY caller — the kickoff/intro
-     * and panel-restore set the camera directly, bypassing _MoveCamera's clamp, so on a
+     * and panel-restore set the camera directly, bypassing MoveCamera's clamp, so on a
      * wide view they'd run off the pitch edge until gameplay takes over. pitchWidth
      * (0x2A0) - viewWidth = the max camera X. Folds to [0, 0x150] on Amiga (g_screen_width
      * = 336), the original range — a no-op for the always-on-pitch classic view. */
@@ -761,14 +761,14 @@ void _SetCameraCoordinates(int16_t targetX, int16_t targetY)
  * (updating copper plane pointers each time).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DoubleBufferSwapSequence(void)
+void DoubleBufferSwapSequence(void)
 {
     paletteIndex = 0;
-    _SetCameraCoordinates(0, 0);
-    _SwapBuffersAndCameraViewState();
-    _UpdatePlanePtrsAndBlitParams();
-    _SwapBuffersAndCameraViewState();
-    _UpdatePlanePtrsAndBlitParams();
+    SetCameraCoordinates(0, 0);
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
+    SwapBuffersAndCameraViewState();
+    UpdatePlanePtrsAndBlitParams();
 }
 
 /* ================================================================
@@ -779,7 +779,7 @@ void _DoubleBufferSwapSequence(void)
 #ifdef SWOS_SDL_BUILD
 #include <string.h>
 __attribute__((used, externally_visible))
-void _BlitterCopyPanelToScreen2(void)
+void BlitterCopyPanelToScreen2(void)
 {
     /* Paint the menu BG into BOTH buffers, not just the drawing target.
      *
@@ -792,15 +792,15 @@ void _BlitterCopyPanelToScreen2(void)
      * old menu's middle visible, and a formation change momentarily
      * loses the tactic grid entirely.
      *
-     * Mechanism: _DrawMenu paints panel BG into the drawing target
-     * (basePtr), draws entries on top, then _WaitForVSync swaps. The
-     * just-drawn buffer becomes displayed. _BlitterCopyOverlayToScreen
+     * Mechanism: DrawMenu paints panel BG into the drawing target
+     * (basePtr), draws entries on top, then WaitForVSync swaps. The
+     * just-drawn buffer becomes displayed. BlitterCopyOverlayToScreen
      * copies the displayed frame back to the new drawing target so both
      * stay in sync — but until that copy runs, the OTHER buffer still
      * holds whatever the previous menu painted. Any draw path or async
      * present that touches the other buffer in this brief window
      * (timer-thread render, DrawSelectedMenuItemFrame, partial
-     * _CallDrawMenuItem on either side of a swap) shows the stale
+     * CallDrawMenuItem on either side of a swap) shows the stale
      * content.
      *
      * The original Amiga code relied on hardware bitplane-pointer
@@ -822,7 +822,7 @@ void _BlitterCopyPanelToScreen2(void)
 }
 #else
 __attribute__((used, externally_visible))
-void _BlitterCopyPanelToScreen2(void)
+void BlitterCopyPanelToScreen2(void)
 {
     /* Enable blitter DMA and wait for idle */
     custom->dmacon = (uint16_t)DMACON_BLT_ON;
@@ -898,7 +898,7 @@ void _BlitterCopyPanelToScreen2(void)
  *  +10: BLTSIZE (kicks blit)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ProcessSpriteBlitQueue(void)
+void ProcessSpriteBlitQueue(void)
 {
     volatile uint32_t *queue;
 
@@ -956,7 +956,7 @@ void _ProcessSpriteBlitQueue(void)
  * ================================================================ */
 #ifdef SWOS_SDL_BUILD
 __attribute__((used, externally_visible))
-void _BlitterCopyPanelToScreen(void)
+void BlitterCopyPanelToScreen(void)
 {
     uint8_t *dst = (uint8_t *)frontbufferBasePtr;
     /* (frontbufferMaskBuffer is a static array, address always non-null.) */
@@ -965,7 +965,7 @@ void _BlitterCopyPanelToScreen(void)
 }
 #else
 __attribute__((used, externally_visible))
-void _BlitterCopyPanelToScreen(void)
+void BlitterCopyPanelToScreen(void)
 {
     /* Wait for blitter idle */
     custom->dmacon = (uint16_t)DMACON_BLT_ON;
@@ -1030,11 +1030,11 @@ void _BlitterCopyPanelToScreen(void)
  * +14 = stride (TILE_STRIDE field, used as width in words).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
+void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
 {
 #ifdef SWOS_SDL_BUILD
     /* Chunky rewrite: zero the sprite's pixel buffer so subsequent
-     * _BlitGlyphToSpriteBitmap calls stamp onto a clean background.
+     * BlitGlyphToSpriteBitmap calls stamp onto a clean background.
      * The Amiga version programs bltdpt + D-only fill; our sprite
      * data is a flat 8bpp byte array of `wquads * 16 * nlines` bytes. */
     SpriteGraphics **table = (SpriteGraphics **)(uintptr_t)spriteGraphicsPtr;
@@ -1085,7 +1085,7 @@ void _HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
  * loopCount iterations, then restores COLOR00 from copper list.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FlashColor0Delay(uint32_t loopCount, uint16_t color)
+void FlashColor0Delay(uint32_t loopCount, uint16_t color)
 {
     volatile uint16_t *copperColor0 = (volatile uint16_t *)(copperListBuffer + COP_PAL_B0_C0_VAL_OFF);
 
@@ -1105,7 +1105,7 @@ void _FlashColor0Delay(uint32_t loopCount, uint16_t color)
  * OCS: 16 colors into both palette blocks (B0 and B1).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _WriteCopperPalette(const uint16_t *palette)
+void WriteCopperPalette(const uint16_t *palette)
 {
 #ifdef AGA
     static const uint16_t bankValOffsets[8] = {
@@ -1182,6 +1182,6 @@ void _WriteCopperPitchPalette(void)
         gamePalette[idx] = pitchPal[i];
     }
 
-    _WriteCopperPalette(gamePalette);
+    WriteCopperPalette(gamePalette);
 }
 #endif

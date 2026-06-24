@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 /* Returns 1 if the buffer's first non-whitespace byte is '{', else 0.
- * Used by file_io.c to dispatch JSON vs legacy after _LoadFileEx
+ * Used by file_io.c to dispatch JSON vs legacy after LoadFileEx
  * reads the file into the destination buffer. */
 int  SaveJson_BufferIsJson(const uint8_t *buf, uint32_t size);
 
@@ -64,7 +64,7 @@ int DataJson_LoadTeamArray(const char *json, int len, struct TeamFileEx *out, in
 #ifdef SWOS_SDL_BUILD
 /* SWOS_DATA_JSON wire-in: load a country's teams from data_json/ into the
    teamFileBuf (2-byte host-native count + TeamFileEx records). Returns the team
-   count (>0), or -1 to fall back to the binary TEAM.NNN. See _LoadTeamFile. */
+   count (>0), or -1 to fall back to the binary TEAM.NNN. See LoadTeamFile. */
 int DataJson_LoadTeamFileForCountry(int countryNum, unsigned char *teamFileBuf, int maxTeams);
 /* Parse one cup/playoff competition record (JSON object slice) into a
    CompetitionCup (`out`, passed as void* — the type is an anonymous typedef).

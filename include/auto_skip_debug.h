@@ -22,12 +22,12 @@
 /* Resolve a MenuEntry pointer back to its ordinal (0..numEntries-1) by
  * subtracting the menuEntries base. Returns -1 if the pointer doesn't
  * land on a valid stride boundary (i.e. it's already a small int from
- * before _ActivateMenu resolved it, or it's NULL). */
+ * before ActivateMenu resolved it, or it's NULL). */
 static inline int swos_autoskip_entry_ordinal(const void *entry_ptr,
                                               const void *menu_entries_base)
 {
     if (entry_ptr == 0) return -1;
-    /* Entry index encoded as small int (pre-resolve) — see _ActivateMenu's
+    /* Entry index encoded as small int (pre-resolve) — see ActivateMenu's
      * `selEntry <= 0xFFFF` check. */
     if ((unsigned long)entry_ptr <= 0xFFFFu) return (int)(unsigned long)entry_ptr;
     long delta = (const char *)entry_ptr - (const char *)menu_entries_base;

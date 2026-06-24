@@ -1,11 +1,11 @@
 /*
  * main.c -- SDL2 entry point for the SWOS C/SDL port.
  *
- * Original Amiga main.c just called _startShim() which jumped to the
+ * Original Amiga main.c just called startShim() which jumped to the
  * Amiga assembly bootstrap. We replace that with an SDL2 host that:
  *   1. Initializes SDL video / audio / events / gamepad
  *   2. Creates the window + renderer + a 336x272 paletted texture
- *   3. Calls into the (ported) Amiga _start / _mainC bootstrap
+ *   3. Calls into the (ported) Amiga _start / mainC bootstrap
  *
  * Graphics: the game still draws into the Amiga 4/8-bitplane framebuffers.
  * Each frame, we convert those bitplanes to chunky 8-bit pixels and upload
@@ -41,7 +41,7 @@
 
 #define WIN_SCALE 3
 
-extern void _startShim(void);
+extern void startShim(void);
 
 /* Anchor CWD to the directory containing the binary. The asset and
  * save paths are all relative ("data/foo.dat", "grafs/...", "save/X.CAR")
@@ -329,10 +329,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Hand off to the (ported) Amiga bootstrap. _startShim runs _start()
-     * (hardware init -- now no-ops via stubs) then _mainC() which is the
+    /* Hand off to the (ported) Amiga bootstrap. startShim runs _start()
+     * (hardware init -- now no-ops via stubs) then mainC() which is the
      * actual game loop. The game pumps SDL via Platform_VBlank() callbacks. */
-    _startShim();
+    startShim();
 
     /* Snapshot runtime-mutable settings (window scale, fullscreen mode)
      * via the Platform_Get* getters and persist back to SWOS.ini. Done

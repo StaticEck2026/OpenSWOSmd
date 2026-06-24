@@ -8,8 +8,8 @@
 
 #include "game_types.h"
 
-void _LoadPitchMap(uint16_t mapIndex);
-void _FixupAndColorPitchFile(void);
-void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable);
+void LoadPitchMap(uint16_t mapIndex);
+void FixupAndColorPitchFile(void);
+void AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable);
 
 #endif

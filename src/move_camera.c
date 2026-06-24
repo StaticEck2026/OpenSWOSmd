@@ -11,7 +11,7 @@
  *   cameraX.raw     = full 32-bit 16.16 fixed-point value
  *   cameraX.s.i     = integer part (high word; same storage on both LE and BE)
  *   cameraX.s.frac  = fractional part (low word)
- * _MoveCamera accumulates via .raw; position consumers use .s.i. */
+ * MoveCamera accumulates via .raw; position consumers use .s.i. */
 extern FixedPoint cameraX;
 extern FixedPoint cameraY;
 extern uint16_t cameraCoordinatesValid;
@@ -39,7 +39,7 @@ extern uint16_t cameraXVelocity;
 extern uint16_t cameraYVelocity;
 
 /* ---- External functions ---- */
-extern void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
+extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
 
 /* ---- Data tables (moved from asm inline data) ---- */
 
@@ -71,7 +71,7 @@ static const int32_t nextCameraDirections[16] = {
  * SetCameraCoordinates handles the integer position update.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MoveCamera(void)
+void MoveCamera(void)
 {
     int16_t boundsMargin;    /* d1 — controls how tight the camera clamp is */
     int16_t targetX;         /* d3 — camera target X */
@@ -371,7 +371,7 @@ offset_and_clamp_to_view:
          * On big-endian 68k, cameraX.raw high word = integer, low word = fraction.
          * We update only the fraction here; SetCameraCoordinates handles integer. */
         /* Keep only the fractional half (low 16 bits) for accumulation.
-         * The integer part gets written by _SetCameraCoordinates below.
+         * The integer part gets written by SetCameraCoordinates below.
          * With FixedPoint union this is a direct field write — on BE it
          * targets the low word of the uint32, on LE it targets the low
          * two bytes of the struct, both of which ARE the frac field. */
@@ -393,7 +393,7 @@ offset_and_clamp_to_view:
         if (newIntY >= 0x260)
             newIntY = 0x260;
 
-        _SetCameraCoordinates(newIntX, newIntY);
+        SetCameraCoordinates(newIntX, newIntY);
         cameraCoordinatesValid = 0;
     }
 }

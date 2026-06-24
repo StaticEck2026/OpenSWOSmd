@@ -24,7 +24,7 @@
  * regions), so this is a routine format-neutral extraction.
  *
  * This was only safe AFTER:
- *   - phase 1 decoupled _Save/_RestoreSelectedTeams from the numSelectedTeams->
+ *   - phase 1 decoupled _Save/RestoreSelectedTeams from the numSelectedTeams->
  *     array adjacency (career_teams.c), and
  *   - the careerTeam step-4 rework removed the careerTeam adjacency below
  *     selTeamsPtr (diy_resolve_team identity branch). See

@@ -11,8 +11,8 @@ typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef short int16_t;
 
-void _InitHardwareAtFrameStart(void);
-void _SetupInterrupts(void);
+void InitHardwareAtFrameStart(void);
+void SetupInterrupts(void);
 void _Int2KeyboardHandler(void);
 void _Int3TimerHandler(void);
 

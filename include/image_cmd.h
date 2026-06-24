@@ -13,6 +13,6 @@ typedef unsigned int uint32_t;
 typedef signed short int16_t;
 typedef signed int int32_t;
 
-void _ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer);
+void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer);
 
 #endif

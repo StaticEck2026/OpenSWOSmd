@@ -75,15 +75,15 @@ extern uint8_t  kTackleInjuryProbability[];
 extern uint8_t  kTackleInjuryProbabilityAlreadyInjured[];
 
 /* ---- External functions ---- */
-extern void     _PlayKickSample(void);
-extern void     _PlayFoulWhistleSample(void);
-extern void     _PlayPenalty(void);
-extern void     _ResetBothTeamSpinTimers(void);
-extern void     _StopAllPlayers(void);
-extern void     _ActivateReferee(void);
-extern uint16_t _Rand(void);
-extern PlayerInfo *_GetPlayerPointerFromShirtNumber(Sprite *player, TeamGeneralInfo *team);
-extern void     _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
+extern void     PlayKickSample(void);
+extern void     PlayFoulWhistleSample(void);
+extern void     PlayPenalty(void);
+extern void     ResetBothTeamSpinTimers(void);
+extern void     StopAllPlayers(void);
+extern void     ActivateReferee(void);
+extern uint16_t Rand(void);
+extern PlayerInfo *GetPlayerPointerFromShirtNumber(Sprite *player, TeamGeneralInfo *team);
+extern void     SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
 
 /* ========================================================================
  * PlayerTackledTheBallWeak
@@ -91,7 +91,7 @@ extern void     _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
  * ball speed = 150% of player speed. Marks as good tackle if opponent far.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
+PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
 {
     Sprite *ball = &ballSprite;
     int16_t inputDir = team->currentAllowedDirection;
@@ -151,8 +151,8 @@ _PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
         }
     }
 
-    _PlayKickSample();
-    _ResetBothTeamSpinTimers();
+    PlayKickSample();
+    ResetBothTeamSpinTimers();
 }
 
 /* ========================================================================
@@ -160,9 +160,9 @@ _PlayerTackledTheBallWeak(Sprite *player, TeamGeneralInfo *team)
  * Sets how long a player lies on the ground based on tackling skill.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team)
+SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team)
 {
-    PlayerInfo *pi = _GetPlayerPointerFromShirtNumber(player, team);
+    PlayerInfo *pi = GetPlayerPointerFromShirtNumber(player, team);
     int16_t *table;
     int16_t tackleSkill;
     int16_t downtime;
@@ -183,7 +183,7 @@ _SetPlayerDowntimeAfterTackle(Sprite *player, TeamGeneralInfo *team)
  * existing injuries. Sets PL_TACKLED state.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_PlayerTackled(Sprite *player, TeamGeneralInfo *team)
+PlayerTackled(Sprite *player, TeamGeneralInfo *team)
 {
     PlayerInfo *pi;
     uint8_t *probTable;
@@ -197,7 +197,7 @@ _PlayerTackled(Sprite *player, TeamGeneralInfo *team)
 
     /* Training game: 25% chance of any injury processing */
     if (trainingGame != 0) {
-        roll = _Rand();
+        roll = Rand();
         if ((roll & 3) != 0)
             goto set_tackled;
     }
@@ -228,7 +228,7 @@ _PlayerTackled(Sprite *player, TeamGeneralInfo *team)
     }
 
     /* Roll for injury */
-    roll = _Rand();
+    roll = Rand();
     if ((uint8_t)roll >= probTable[gameLen])
         goto set_tackled;
 
@@ -239,7 +239,7 @@ _PlayerTackled(Sprite *player, TeamGeneralInfo *team)
         sevTable = kInjuryLevelAlreadyInjured;
     }
 
-    roll = _Rand();
+    roll = Rand();
     roll &= 0x3F;
     severity = 0x20;
 
@@ -274,7 +274,7 @@ apply_injury:
 set_tackled:
     player->playerState = (uint8_t)PL_TACKLED;
     player->playerDownTimer = (int8_t)0x32;
-    _SetPlayerAnimationTable((AnimTable *)&playerTackledAnimTable, player);
+    SetPlayerAnimationTable((AnimTable *)&playerTackledAnimTable, player);
 }
 
 /* ========================================================================
@@ -282,7 +282,7 @@ set_tackled:
  * Returns 0 if card was given, 1 if not eligible.
  * ======================================================================== */
 int16_t __attribute__((used, externally_visible))
-_TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
+TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
 {
     PlayerInfo *pi;
     int16_t cards;
@@ -378,7 +378,7 @@ _TryBookingThePlayer(Sprite *player, TeamGeneralInfo *team)
  * Straight red card. Returns 0 if card given, 1 if not eligible.
  * ======================================================================== */
 int16_t __attribute__((used, externally_visible))
-_TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
+TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
 {
     PlayerInfo *pi;
     int16_t cards;
@@ -454,7 +454,7 @@ _TrySendingOffThePlayer(Sprite *player, TeamGeneralInfo *team)
  * Called when player gets a red card -- marks them as sent off.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_SendPlayerAway(Sprite *player, TeamGeneralInfo *team)
+SendPlayerAway(Sprite *player, TeamGeneralInfo *team)
 {
     TeamGame *teamGame = team->inGameTeamPtr;
     int16_t ordinal = (uint16_t)player->playerOrdinal - 1;
@@ -476,7 +476,7 @@ _SendPlayerAway(Sprite *player, TeamGeneralInfo *team)
  * state, penalty/free kick. A1=tackling player, A6=tackling player's team.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
+PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
 {
     TeamGeneralInfo *oppTeam;
     Sprite *victim;
@@ -522,7 +522,7 @@ _PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
     player->speed = (int16_t)((uint16_t)player->speed | 1);
 
     /* Tackle the victim (injury resolution) */
-    _PlayerTackled(victim, oppTeam);
+    PlayerTackled(victim, oppTeam);
 
     /* If ball is far from victim, no foul */
     if (victim->ballDistance > 800)
@@ -607,7 +607,7 @@ _PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
 
             if (nearest == victim) {
                 /* Same player is nearest: swap card probabilities */
-                roll = _Rand();
+                roll = Rand();
                 if (roll < 32)
                     goto issue_yellow;
                 goto try_red;
@@ -622,26 +622,26 @@ maybe_card:
             goto foul_no_card;
     }
 
-    roll = _Rand();
+    roll = Rand();
     if (roll < 32)
         goto try_red;
 
 issue_yellow:
-    if (_TryBookingThePlayer(player, team) != 0)
+    if (TryBookingThePlayer(player, team) != 0)
         goto foul_no_card;
-    _TestFoulForPenaltyAndFreeKick(victim, team);
-    _ActivateReferee();
+    TestFoulForPenaltyAndFreeKick(victim, team);
+    ActivateReferee();
     return;
 
 try_red:
-    if (_TrySendingOffThePlayer(player, team) != 0)
+    if (TrySendingOffThePlayer(player, team) != 0)
         goto foul_no_card;
-    _TestFoulForPenaltyAndFreeKick(victim, team);
-    _ActivateReferee();
+    TestFoulForPenaltyAndFreeKick(victim, team);
+    ActivateReferee();
     return;
 
 foul_no_card:
-    _TestFoulForPenaltyAndFreeKick(victim, team);
+    TestFoulForPenaltyAndFreeKick(victim, team);
 }
 
 /* ========================================================================
@@ -650,7 +650,7 @@ foul_no_card:
  * speed and destination.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
+GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
 {
     if (team == &topTeamData)
         keeper->direction = (int16_t)4;
@@ -658,7 +658,7 @@ _GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
         keeper->direction = (int16_t)0;
 
     team->goalkeeperDivingLeft = 0;
-    _SetPlayerAnimationTable(&goalieCatchingBallAnimTable, keeper);
+    SetPlayerAnimationTable(&goalieCatchingBallAnimTable, keeper);
     keeper->playerState = (uint8_t)PL_GOALIE_CATCHING_BALL;
     keeper->playerDownTimer = (int8_t)15;
     keeper->speed = kGoalkeeperCatchSpeed;
@@ -677,7 +677,7 @@ _GoalkeeperCaughtTheBall(Sprite *keeper, TeamGeneralInfo *team)
  * Strong tackle: similar to weak but with optional speed boost (125%).
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
+PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
 {
     Sprite *ball = &ballSprite;
     int16_t inputDir = team->currentAllowedDirection;
@@ -743,8 +743,8 @@ _PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
         }
     }
 
-    _PlayKickSample();
-    _ResetBothTeamSpinTimers();
+    PlayKickSample();
+    ResetBothTeamSpinTimers();
 }
 
 /* ========================================================================
@@ -753,14 +753,14 @@ _PlayerTackledTheBallStrong(Sprite *player, TeamGeneralInfo *team)
  * victim position. Sets game state, foul coords, and enters stopped state.
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
+TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
 {
     int16_t vx, vy;
 
     if (gameStatePl == ST_STOPPED)
         return;
 
-    _PlayFoulWhistleSample();
+    PlayFoulWhistleSample();
     /* nullsub_6 omitted */
 
     vx = victim->x.s.i;
@@ -777,7 +777,7 @@ _TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
             playerTurnFlags = 0x83;
             foulXCoordinate = 336;
             foulYCoordinate = 187;
-            _PlayPenalty();
+            PlayPenalty();
             goto apply_break;
         }
 
@@ -796,7 +796,7 @@ _TestFoulForPenaltyAndFreeKick(Sprite *victim, TeamGeneralInfo *team)
             playerTurnFlags = 0x38;
             foulXCoordinate = 336;
             foulYCoordinate = 711;
-            _PlayPenalty();
+            PlayPenalty();
             goto apply_break;
         }
 
@@ -852,14 +852,14 @@ apply_break:
     lastTeamPlayedBeforeBreak = team->opponentsTeam;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     cameraXVelocity = 0;
     cameraYVelocity = 0;
 }
 
 
 /* ========================================================================
- * _PlayerBeginTackling
+ * PlayerBeginTackling
  *   from: PlayerBeginTackling
  *   in:  D0=pressedDir, A1=player, A6=team
  *
@@ -868,13 +868,13 @@ apply_break:
  * code in original: downtime always overwritten with 0xFF).
  * ======================================================================== */
 void __attribute__((used, externally_visible))
-_PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team)
+PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team)
 {
     player->tackleState = 0;
     team->controlledPlDirection = pressedDir;
     player->direction = pressedDir;
 
-    _SetPlayerAnimationTable(&plTacklingAnimTable, player);
+    SetPlayerAnimationTable(&plTacklingAnimTable, player);
     player->playerState = (uint8_t)PL_TACKLING;
     player->playerDownTimer = (int8_t)50;
 

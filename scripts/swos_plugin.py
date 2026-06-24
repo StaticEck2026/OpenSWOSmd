@@ -10,25 +10,25 @@ another game means swapping THIS file, not the framework. See docs/HARNESS.md.
 Driving works on BOTH targets (SDL native + Amiga FS-UAE) because the menu
 system is shared C and the FS-UAE stub is now write-capable (see
 docs/HARNESS.md "FS-UAE write support"). The injection point is a single line in
-the shared _MenuProc, so one mechanism drives both.
+the shared MenuProc, so one mechanism drives both.
 """
 import re
 import subprocess
 import time
 from harness_lib import GdbHarness, _write_png
 
-# Menu input-injection point: the no-op _MenuInputInjectPoint() in _MenuProc(),
-# called right after _MenuCheckControls() (which sets the frame's input globals)
+# Menu input-injection point: the no-op MenuInputInjectPoint() in MenuProc(),
+# called right after MenuCheckControls() (which sets the frame's input globals)
 # and BEFORE the d7/onSelect dispatch and the nav read. Setting the input globals
 # here replicates real input for the whole frame: fire feeds the onSelect d7
 # bitmask; menuControlsDirection feeds the nav.
 #
 # This is a SYMBOL, not a line number, on purpose: a hardcoded `menu_system.c:NNN`
-# silently broke whenever code above _MenuProc moved (e.g. the i18n render hook
-# pushed _MenuCheckControls past the old inject line, so the injected fire was
+# silently broke whenever code above MenuProc moved (e.g. the i18n render hook
+# pushed MenuCheckControls past the old inject line, so the injected fire was
 # overwritten and every career season-transition "stuck"). gdb resolves the
 # symbol wherever it lands.
-INJECT_LINE = "_MenuInputInjectPoint"
+INJECT_LINE = "MenuInputInjectPoint"
 
 # menuControlsDirection encoding: (dir & 6) >> 1 indexes nextEntryDirectionOffsets.
 # Verified against the live table [2,1,3,0] + neighbor links.
@@ -96,7 +96,7 @@ class SwosHarness:
         return self.h.symbol(f"{MENU}->onSelect")
 
     def entry_action(self, i):
-        return self.h.symbol(f"((MenuEntry *)_CalcMenuEntryAddress({i}))->onSelect")
+        return self.h.symbol(f"((MenuEntry *)CalcMenuEntryAddress({i}))->onSelect")
 
     def where(self):
         return {"ordinal": self.ordinal(), "action": self.action(),
@@ -123,7 +123,7 @@ class SwosHarness:
 
         The press is a SINGLE-FRAME PULSE: fire/shortFire are cleared after the
         frame. A *held* fire mis-drives a nested modal entered by the press —
-        e.g. firing CAREER opens careerMenu (a _ShowMenu do/while loop), and a
+        e.g. firing CAREER opens careerMenu (a ShowMenu do/while loop), and a
         still-set fire makes careerMenu immediately re-fire/exit its default
         entry on the next frame (the careerMenu 'bounce/hang' bug)."""
         self.prime()
@@ -156,7 +156,7 @@ class SwosHarness:
         target = next((i for i in range(n) if self.entry_action(i) == symbol), None)
         if target is None:
             return None
-        self.h.cmd(f"call (void)_SetCurrentEntry({target})")
+        self.h.cmd(f"call (void)SetCurrentEntry({target})")
         return target if self.action() == symbol else None
 
     def select(self, symbol, tries=12):
@@ -180,14 +180,14 @@ class SwosHarness:
     # ---- label-driven selection (for dynamic lists) -----------------------
     # Some screens reuse ONE onSelect across many entries whose meaning is the
     # displayed STRING, not the callback — the career team picker (continents,
-    # then countries, then divisions, then teams all share _SelectTeamsCommon /
-    # _SelectLeaguesCommon / _ChooseTeamsFriendlyCommon2). goto(symbol) can't
+    # then countries, then divisions, then teams all share SelectTeamsCommon /
+    # SelectLeaguesCommon / ChooseTeamsFriendlyCommon2). goto(symbol) can't
     # disambiguate those, so navigate by the entry's TEXT instead. A string
     # entry (content == ENTRY_STRING == 2) keeps its text pointer in `fg`.
     def entry_text(self, ord):
         """The visible label of entry `ord`, or None if it's invisible / not a
         string entry."""
-        e = f"((MenuEntry*)_CalcMenuEntryAddress({ord}))"
+        e = f"((MenuEntry*)CalcMenuEntryAddress({ord}))"
         if self.h.int_value(f"{e}->isInvisible"):
             return None
         if self.h.int_value(f"{e}->content") != 2:   # ENTRY_STRING
@@ -222,8 +222,8 @@ class SwosHarness:
 
     def fire_ordinal(self, ordinal, timeout=20):
         """Select `ordinal` by memory write, then a single-frame fire pulse.
-        Use a long timeout on the press that triggers _InitCareer (~30-60s)."""
-        self.h.cmd(f"call (void)_SetCurrentEntry({ordinal})")
+        Use a long timeout on the press that triggers InitCareer (~30-60s)."""
+        self.h.cmd(f"call (void)SetCurrentEntry({ordinal})")
         self.h.set_var("fire", 1)
         self.h.set_var("shortFire", 1)
         for v in ("up", "down", "left", "right"):
@@ -278,7 +278,7 @@ class SwosHarness:
         ncolors = 256 if planes == 8 else 16
         w, h, ps = SCREEN_W, SCREEN_H, AMIGA_PLANE_STRIDE
         row_stride = ps * planes
-        # Displayed base (matches _UpdatePlanePtrsAndBlitParams selection).
+        # Displayed base (matches UpdatePlanePtrsAndBlitParams selection).
         if self.h.int_value("usePlaneOffsetFlag"):
             base = "frontbufferMaskBuffer"
         elif self.h.int_value("useAltBaseFlag"):
@@ -317,10 +317,10 @@ class SwosHarness:
         SDL_AUDIODRIVER=dummy) + the season-loop flags
         (SWOS_TEST_NO_INJURIES_CARDS=1, SWOS_SAVE_FORMAT_JSON_VERIFY=0) — see
         docs/HARNESS.md 'Reliability'. Sets the inject breakpoint, (re)starts
-        the inferior with `run`, and waits for the first _MenuProc stop (the
+        the inferior with `run`, and waits for the first MenuProc stop (the
         main menu). `set confirm off` + `kill` make a re-boot in the SAME daemon
         non-interactive (no 'restart from beginning?' prompt to hang on).
-        Returns the active menu's onInit ('_SWOSMainMenuInit' on success)."""
+        Returns the active menu's onInit ('SWOSMainMenuInit' on success)."""
         self.h.cmd("set confirm off")
         self.h.cmd("kill")                     # no-op if nothing is running
         # TURBO: make the inferior CPU-bound rather than paced to a 50 Hz wall
@@ -342,13 +342,13 @@ class SwosHarness:
 
     def start_fresh_career(self, path=None, init_timeout=120):
         """Start a brand-new career through the NORMAL menu flow (NO
-        _LoadLiverpool). Call boot() first; this must run at the MAIN MENU. It
+        LoadLiverpool). Call boot() first; this must run at the MAIN MENU. It
         drives the real path verified 2026-06-19:
             CAREER -> CHOOSE TEAM AND START CAREER
               -> <continent> -> <country> -> <division> -> <club>   (path, by label)
-              -> _InitCareer(teamId) -> dismiss chairman memo(s) -> contest hub.
+              -> InitCareer(teamId) -> dismiss chairman memo(s) -> contest hub.
         The auto-generated manager name + default nationality are kept (a fresh
-        career needs no text typed). Returns the hub onInit ('_ContestMenuInit')
+        career needs no text typed). Returns the hub onInit ('ContestMenuInit')
         on success, else None (printing the labels it actually saw).
 
         Why label-driven and not goto(onSelect): the picker reuses ONE callback
@@ -359,19 +359,19 @@ class SwosHarness:
         'Starting a fresh career'."""
         path = path or self.FRESH_CAREER_PATH
         self.prime()
-        if self._current_init() != "_SWOSMainMenuInit":
+        if self._current_init() != "SWOSMainMenuInit":
             print(f"start_fresh_career: not at main menu (at {self._current_init()})")
             return None
-        if not self.select("_CareerMenu"):
+        if not self.select("CareerMenu"):
             print("start_fresh_career: CAREER entry not found")
             return None
-        # CHOOSE TEAM AND START CAREER opens the team picker (_SelectTeamsInit).
+        # CHOOSE TEAM AND START CAREER opens the team picker (SelectTeamsInit).
         # Retry until the menu transitions — the fire pulse is occasionally
         # dropped (see select()); a one-shot fire silently no-ops and hangs.
         before = self._current_init()
         opened = False
         for _ in range(12):
-            if self.goto("_ChooseTeamAndStartCareer") is None:
+            if self.goto("ChooseTeamAndStartCareer") is None:
                 print("start_fresh_career: CHOOSE TEAM entry not found")
                 return None
             self.fire()
@@ -383,7 +383,7 @@ class SwosHarness:
             return None
         # Drill the picker by label, RETRYING each hop until the visible list (or
         # the menu init) actually changes — same dropped-pulse robustness. The
-        # LAST hop fires the club, which runs _InitCareer (slow — init_timeout).
+        # LAST hop fires the club, which runs InitCareer (slow — init_timeout).
         for n, label in enumerate(path):
             last = (n == len(path) - 1)
             before_list = [t for _, t in self.scan_text()]
@@ -407,7 +407,7 @@ class SwosHarness:
             if not advanced:
                 print(f"start_fresh_career: '{label}' press did not advance (stuck)")
                 return None
-        # After the club press, _InitCareer runs then stops at the chairman
+        # After the club press, InitCareer runs then stops at the chairman
         # memo's inject bp; ensure stopped, then dismiss the welcome memo(s).
         if not self.h.is_stopped():
             self.h.waitstop(init_timeout)
@@ -426,14 +426,14 @@ class SwosHarness:
     # driver appear to "wedge" — it was NEVER gdb / multithread instability:
     #
     #  1. Season TRANSITION (seasonUpdateInProgress != 0): the cup/league result
-    #     displays are AUTO-ADVANCE menus — _DIYCupInit pre-selects entry-66
-    #     (controlMask 0xFFFF; see _Career_AutoAdvanceCupMatches). Setting
+    #     displays are AUTO-ADVANCE menus — DIYCupInit pre-selects entry-66
+    #     (controlMask 0xFFFF; see Career_AutoAdvanceCupMatches). Setting
     #     s_seasonSkipLatched=1 drains the WHOLE chain at once; the latch persists
     #     until seasonUpdateInProgress drops to 0. DO NOT move the selection
     #     (that clobbers entry-66 and the modal sticks — the original bug). The
     #     ONLY screen in the chain that needs a keypress is the chairman memo
-    #     (_ChairmanMemosInit, a plain modal): shortFire on its Continue button.
-    #     The transition ends at the season increment (_InitializeNewSeason).
+    #     (ChairmanMemosInit, a plain modal): shortFire on its Continue button.
+    #     The transition ends at the season increment (InitializeNewSeason).
     #
     #     The OLD driver free-ran straight to the increment line — which hangs
     #     forever at the chairman memo (a modal waiting for input). That hang,
@@ -443,14 +443,14 @@ class SwosHarness:
     #
     #  2. In-season menus (memo / contest hub / match-day list): shortFire.
     #
-    #  3. The pre-match SQUAD screen (_PlayMatchMenuInit): _PlayMatchSelected
+    #  3. The pre-match SQUAD screen (PlayMatchMenuInit): PlayMatchSelected
     #     gates on the RAW joystick fire pl1Fire (NOT the menu shortFire). Set
     #     pl1Fire=1 to start/sim the fixture (CPU-vs-CPU -> instant result).
     SEASON_INCR_LINE = "career_init.c:974"
-    MEMO_INIT = "_ChairmanMemosInit"
-    SQUAD_INIT = "_PlayMatchMenuInit"
-    HUB_INIT = "_CareerOverInit"         # season-end hub (CONTINUE CAREER)
-    HUB_CONTINUE = "_ContinueCareer"     # the CONTINUE CAREER entry's onSelect
+    MEMO_INIT = "ChairmanMemosInit"
+    SQUAD_INIT = "PlayMatchMenuInit"
+    HUB_INIT = "CareerOverInit"         # season-end hub (CONTINUE CAREER)
+    HUB_CONTINUE = "ContinueCareer"     # the CONTINUE CAREER entry's onSelect
 
     def _current_init(self):
         """onInit symbol of the active menu (identifies the screen). ONE read,
@@ -458,7 +458,7 @@ class SwosHarness:
         return self.h.symbol("((Menu *)currentMenu)->onInit")
 
     def at_contest_menu(self):
-        """True at the season-end hub (onInit == _CareerOverInit)."""
+        """True at the season-end hub (onInit == CareerOverInit)."""
         return self._current_init() == self.HUB_INIT
 
     # ---- interrupt fallback (only for an UNEXPECTED input-waiter) ----------
@@ -516,7 +516,7 @@ class SwosHarness:
     # ---- the in-season fixtures (auto-sim via teamControls=1) --------------
     def drive_inseason(self, max_steps=2000, timeout=25, stuck_limit=40,
                        sim_mode=True):
-        """Drive the current season to the season-end hub (_CareerOverInit).
+        """Drive the current season to the season-end hub (CareerOverInit).
         Returns True if the hub was reached.
 
         SIM MODE (default): set careerTeam.team.teamControls = TEAM_COMPUTER(1)
@@ -529,7 +529,7 @@ class SwosHarness:
 
         STUCK DETECTION keys on (matchesPlayedCount, currentRoundIndex,
         currentSeasonShowing, seasonFinished), NOT the screen — the league
-        match-day keeps onInit=_DIYLeagueTournamentInit + ordinal=3 constant
+        match-day keeps onInit=DIYLeagueTournamentInit + ordinal=3 constant
         across fixtures, so the old (screen, ordinal) key false-stopped while
         matches were in fact playing. matchesPlayedCount (DIYCompetitionEx 0x1BE)
         is a clean named field and a VALID progress signal on a CLEAN run.
@@ -544,7 +544,7 @@ class SwosHarness:
 
         STATUS (2026-06-19): a clean sim-mode drive was PROGRESSING (mp climbing,
         a 4-division season is many fixtures) but was killed at ~30 min before it
-        finished — full ENGLISH-LEAGUE completion to _CareerOverInit is UNVERIFIED
+        finished — full ENGLISH-LEAGUE completion to CareerOverInit is UNVERIFIED
         (not proven to reach the hub, but NOT shown blocked; the earlier 'wanders'
         finding was the reload-in-place confound above). The sim lever and the
         season TRANSITION path (drive_transition) work."""
@@ -647,8 +647,8 @@ class SwosHarness:
         """Stage the basename into a scratch global and call the game's loader.
         Returns 0 on success (game convention: non-zero == failure). NOTE: this
         only loads DATA; to enter the career UI from a cold boot call
-        enter_career() afterwards (the game's _LoadCareerFile path runs
-        _StartContest, which load_career does not)."""
+        enter_career() afterwards (the game's LoadCareerFile path runs
+        StartContest, which load_career does not)."""
         self.ensure_stopped()
         self._stage_filename(filename)
         r = self.h.cmd(
@@ -671,11 +671,11 @@ class SwosHarness:
 
     def enter_career(self):
         """Enter the loaded career's UI from a cold boot. The game's load path
-        runs _StartContest() -> _ShowMenu(contestMenu) (modal). Calling it with
+        runs StartContest() -> ShowMenu(contestMenu) (modal). Calling it with
         the inject breakpoint set makes the inferior call break INSIDE the now-
         active contest menu (the correct nested context the whole career runs
         in). Returns the active menu's onInit symbol afterwards."""
         if INJECT_LINE not in self.h.cmd("info breakpoints"):
             self.h.break_at(INJECT_LINE)
-        self.h.cmd("call (void)_StartContest()", timeout=40)
+        self.h.cmd("call (void)StartContest()", timeout=40)
         return self._current_init()

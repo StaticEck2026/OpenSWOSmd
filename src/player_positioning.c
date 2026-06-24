@@ -31,7 +31,7 @@ extern int16_t  playerYQuadrantCoordinates[];
 
 
 /* ==================================================================
- * _SetPlayerWithNoBallDestination
+ * SetPlayerWithNoBallDestination
  *   from: SetPlayerWithNoBallDestination
  *   in:  A1=player, A6=team, D6=ballX, D7=ballY
  *
@@ -42,7 +42,7 @@ extern int16_t  playerYQuadrantCoordinates[];
  * Goalkeeper uses separate proportional positioning (mulu/divu).
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
+SetPlayerWithNoBallDestination(Sprite *player, TeamGeneralInfo *team,
                                 int16_t ballX, int16_t ballY)
 {
     /* Look up tactics structure */

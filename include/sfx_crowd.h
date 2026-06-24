@@ -14,37 +14,37 @@ typedef short int16_t;
 typedef int int32_t;
 
 /* Crowd management */
-void _CrowdResetMatchState(void);
-void _TurnCrowdChantsOn(void);
-void _TurnCrowdChantsOff(void);
-void _PlayCrowdChants(void);
-void _MuteAllAudioChannelsWithDelay(void);
-void _AudioFadeCrowdDownThenPulseMusic(void);
-void _AudioMuteAllWithFrameRamp(void);
+void CrowdResetMatchState(void);
+void TurnCrowdChantsOn(void);
+void TurnCrowdChantsOff(void);
+void PlayCrowdChants(void);
+void MuteAllAudioChannelsWithDelay(void);
+void AudioFadeCrowdDownThenPulseMusic(void);
+void AudioMuteAllWithFrameRamp(void);
 
 /* SFX triggers */
-void _PlayEnqueuedSamples(void);
-void _PlayPenaltySample(void);
-void _PlaySample7IfNotTraining(void);
-void _PlaySfxSample16(void);
-void _PlayGoodPassSample(void);
-void _PlayKickSample(void);
-void _GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId);
-void _PlayRefereeWhistleSample(void);
-void _PlayFoulWhistleSample(void);
-void _PlayEndGameWhistleSample(void);
-void _PlaySample1IfNotTraining(void);
-void _PlaySample1(void);
-void _PlaySample2IfNotTraining(void);
-void _PlaySample4IfNotTraining(void);
-void _PlaySample3IfNotTraining(void);
-void _PlayMissGoalSample(void);
-void _PlayPenalty(void);
-void _PlayGameStateWhistleSample(void);
-void _PlayGoalReplayBottomSample(void);
-void _PlayGoalKickOffSample(void);
-void _PlayCornerKickSample(void);
-int16_t _HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId);
-void _PlaySample(uint16_t preset);
+void PlayEnqueuedSamples(void);
+void PlayPenaltySample(void);
+void PlaySample7IfNotTraining(void);
+void PlaySfxSample16(void);
+void PlayGoodPassSample(void);
+void PlayKickSample(void);
+void GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId);
+void PlayRefereeWhistleSample(void);
+void PlayFoulWhistleSample(void);
+void PlayEndGameWhistleSample(void);
+void PlaySample1IfNotTraining(void);
+void PlaySample1(void);
+void PlaySample2IfNotTraining(void);
+void PlaySample4IfNotTraining(void);
+void PlaySample3IfNotTraining(void);
+void PlayMissGoalSample(void);
+void PlayPenalty(void);
+void PlayGameStateWhistleSample(void);
+void PlayGoalReplayBottomSample(void);
+void PlayGoalKickOffSample(void);
+void PlayCornerKickSample(void);
+int16_t HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId);
+void PlaySample(uint16_t preset);
 
 #endif

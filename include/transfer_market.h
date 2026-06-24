@@ -10,189 +10,189 @@
 #include "menu_system.h"
 
 /* ---- Transfer pool slot utilities ---- */
-uint16_t _GetRemainingTransferPoolSlots(void);
-uint16_t _GetRemainingOfferSwapSlots(void);
+uint16_t GetRemainingTransferPoolSlots(void);
+uint16_t GetRemainingOfferSwapSlots(void);
 
 /* ---- Transfer offer management ---- */
-void _RemoveTransferOfferAtIndex(uint16_t offerIndex);
-void _PrunePlayerOffersAgainstRosterLimits(void);
+void RemoveTransferOfferAtIndex(uint16_t offerIndex);
+void PrunePlayerOffersAgainstRosterLimits(void);
 
 /* ---- Home market (career contest) player management ---- */
-int16_t _IsPlayerInCareerContest(uint16_t teamNumber, uint16_t playerOrdinal);
-uint16_t _AddPlayerToCareerContest(uint16_t teamNumber, uint16_t playerOrdinal);
-void _RemovePlayerFromCareerContest(uint16_t teamNumber, uint16_t playerOrdinal);
+int16_t IsPlayerInCareerContest(uint16_t teamNumber, uint16_t playerOrdinal);
+uint16_t AddPlayerToCareerContest(uint16_t teamNumber, uint16_t playerOrdinal);
+void RemovePlayerFromCareerContest(uint16_t teamNumber, uint16_t playerOrdinal);
 
 /* ---- Foreign market player management ---- */
-int16_t _FindForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal);
-uint16_t _AddForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal);
-void _RemoveForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal);
+int16_t FindForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal);
+uint16_t AddForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal);
+void RemoveForeignMarketPlayer(uint16_t teamId, uint16_t playerOrdinal);
 
 /* ---- Combined market search ---- */
-uint16_t _FindPlayerInCareerOrForeignMarket(uint16_t teamId, uint16_t playerOrdinal);
+uint16_t FindPlayerInCareerOrForeignMarket(uint16_t teamId, uint16_t playerOrdinal);
 
 /* ---- Transfer offer cleanup ---- */
-void _RemovePlayerFromTransferOffers(uint16_t teamNumber, uint16_t playerOrdinal);
+void RemovePlayerFromTransferOffers(uint16_t teamNumber, uint16_t playerOrdinal);
 
 /* ---- Pool player database ---- */
-void _FillForeignMarketPlayersData(void);
-void _LoadPoolplyrDat(void);
-PoolPlayer *_FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal);
+void FillForeignMarketPlayersData(void);
+void LoadPoolplyrDat(void);
+PoolPlayer *FindPoolplyrDatPlayer(uint16_t teamId, uint16_t playerOrdinal);
 
 /* ---- Market population ---- */
-void _AddCareerTeamPlayer(void);
-void _FillCareerTeamPlayers(void);
-void _AddRandomForeignMarketPlayer(void);
-void _FillForeignMarketPlayers(void);
-void _UpdateHomeMarketPlayers(void);
-void _UpdateForeignMarketPlayers(void);
+void AddCareerTeamPlayer(void);
+void FillCareerTeamPlayers(void);
+void AddRandomForeignMarketPlayer(void);
+void FillForeignMarketPlayers(void);
+void UpdateHomeMarketPlayers(void);
+void UpdateForeignMarketPlayers(void);
 
 /* ---- Transfer offer helpers (Chunk 74) ---- */
-int16_t _FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr);
-int16_t _IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx);
-int16_t _IsTeamEligibleForOfferByRefSkill(TeamFileEx *team, uint16_t refSkill);
-void _RemoveOfferPlayerFromMarketsAndCount(uint16_t teamId, uint16_t playerIndex);
-void _RemoveNegotiatedOfferPlayersFromMarkets(void);
-int16_t _PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill);
-int16_t _PickRandomEligibleSwapPlayerOrdinalFromTeam(TeamFileEx *teamBlock, int16_t excludeSlot);
+int16_t FindTeamIdInDiyTeamsList(uint16_t *teamIdPtr);
+int16_t IsOfferTeamPlayerPairUnique(uint16_t teamId, uint16_t playerIdx);
+int16_t IsTeamEligibleForOfferByRefSkill(TeamFileEx *team, uint16_t refSkill);
+void RemoveOfferPlayerFromMarketsAndCount(uint16_t teamId, uint16_t playerIndex);
+void RemoveNegotiatedOfferPlayersFromMarkets(void);
+int16_t PickRandomEligibleExtraPlayerOrdinal(uint16_t refSkill);
+int16_t PickRandomEligibleSwapPlayerOrdinalFromTeam(TeamFileEx *teamBlock, int16_t excludeSlot);
 
 /* ---- Transfer market list (Chunk 75) ---- */
-int16_t _FindPlayerOnTransferMarket(uint16_t playerId);
-void _AddPlayerToTransferMarket(uint16_t playerId);
-void _RemovePlayerFromTransferMarket(uint16_t playerId);
-int16_t _CheckForTransferOffers(void);
+int16_t FindPlayerOnTransferMarket(uint16_t playerId);
+void AddPlayerToTransferMarket(uint16_t playerId);
+void RemovePlayerFromTransferMarket(uint16_t playerId);
+int16_t CheckForTransferOffers(void);
 
 /* ---- Career finance (Chunk 75) ---- */
-void _Career_CommitNewBalanceAndResetFinanceTotals(void);
+void Career_CommitNewBalanceAndResetFinanceTotals(void);
 
 /* ---- Career pool & foreign market patching (Chunk 75) ---- */
-void _AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile *playerFile);
-void _Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
-void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
-void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
+void AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile *playerFile);
+void Career_PatchTeamWithForeignMarketPlayers(TeamFileEx *teamPtr);
+void Career_ApplyForeignMarketPlayersToSelectedTeams(void);
+void Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
 
 /* ---- DIY fixture & team removal (Chunk 76) ---- */
-void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi);
-void _Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd);
+void DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi);
+void Career_RemovePlayerFromTeamInternal(uint16_t teamNumber, uint16_t playerOrd);
 
 /* ---- Transfer/Offer menu callbacks (Chunk 113) ---- */
-void _TransferPlayerOnSelect10(void);
-void _TransferPlayerOnSelect11(void);
-void _TransferPlayerOnSelect12(void);
-void _AcceptOffer(void);
-void _RejectOffer(void);
-void _AskForMore(void);
-void _ConsiderOffer(void);
-void _ThirdPartyOfferMenuExit(void);
+void TransferPlayerOnSelect10(void);
+void TransferPlayerOnSelect11(void);
+void TransferPlayerOnSelect12(void);
+void AcceptOffer(void);
+void RejectOffer(void);
+void AskForMore(void);
+void ConsiderOffer(void);
+void ThirdPartyOfferMenuExit(void);
 
 /* --- Transfer menu helpers (Chunk 117) --- */
-void _TransferMenuSetBankState(void);
-void _BuyPlayerInit(void);
-void _TransferMarketFinish(void);
-void _ShowDomesticPlayerMarket(void);
-void _ViewDomesticPlayerMarket(void);
-void _ShowForeignPlayerMarket(void);
-void _ViewForeignPlayerMarket(void);
+void TransferMenuSetBankState(void);
+void BuyPlayerInit(void);
+void TransferMarketFinish(void);
+void ShowDomesticPlayerMarket(void);
+void ViewDomesticPlayerMarket(void);
+void ShowForeignPlayerMarket(void);
+void ViewForeignPlayerMarket(void);
 
 /* --- Player offer menu helpers (Chunk 145) --- */
-void _PlayerOffersUpdateOfferAmountText(void);
-void _UpdatePlayerOfferMenuIndicators(void);
-void _PlayerOffersInit(void);
+void PlayerOffersUpdateOfferAmountText(void);
+void UpdatePlayerOfferMenuIndicators(void);
+void PlayerOffersInit(void);
 
 /* --- Offer expiry & random offers (Chunk 146) --- */
-void _GenerateRandomTransferOffers(void);
-void _UpdateAndExpireTransferOffers(void);
-void _ProcessOfferExpiryCountdown(void);
+void GenerateRandomTransferOffers(void);
+void UpdateAndExpireTransferOffers(void);
+void ProcessOfferExpiryCountdown(void);
 
 /* --- Buy Other Players menu (Chunk 147) --- */
-void _BuyOtherPlayersInit(void);
-void _BuyOtherPlayersFinish(void);
+void BuyOtherPlayersInit(void);
+void BuyOtherPlayersFinish(void);
 
 /* --- View Offers menu (Chunk 161) --- */
-void _ViewOffersMenu(void);
+void ViewOffersMenu(void);
 
 /* --- Transfer Market menu helpers (Chunk 162) --- */
-void _CheckNumPlayersOnTransferMarket(void);
-void _CheckIfPlayerSelected(void);
-void _EnableDisableOffers(void);
-void _TransferMarketInit(void);
-void _BuyPlayerMenu(void);
-void _GiveFreeTransfer(void);
-void _TakeOffMarketMenu(void);
-void _TransferMarketCommon(void *entry);
+void CheckNumPlayersOnTransferMarket(void);
+void CheckIfPlayerSelected(void);
+void EnableDisableOffers(void);
+void TransferMarketInit(void);
+void BuyPlayerMenu(void);
+void GiveFreeTransfer(void);
+void TakeOffMarketMenu(void);
+void TransferMarketCommon(void *entry);
 
 /* --- BuildTransferPlayerMenuEntry (Chunk 163) --- */
-void _BuildTransferPlayerMenuEntry(void *item, uint8_t *player,
+void BuildTransferPlayerMenuEntry(void *item, uint8_t *player,
                                     uint16_t y, int16_t idx,
                                     uint16_t style, uint8_t *extra);
-void _TransferMarketAfterDrawCommon(void *entry);
+void TransferMarketAfterDrawCommon(void *entry);
 
 /* --- ShowPlayerOfferMenuForPlayer + market helpers (Chunk 163 cont.) --- */
-void _ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal);
-void _ShowPlayerMarketInit(void);
-void _ShowPlayerMarket(void);
-void _PlayerMarketUpdateFilterMenuEntryState(void);
-void _PlayerMarketUpdateMoreListLabel(void);
-void _PlayerMarketResetListState(void);
-void _BuyOtherPlayersCommon(void *entry);
-void _BuyOtherPlayersAfterDrawCommon(void *entry);
+void ShowPlayerOfferMenuForPlayer(uint16_t teamNumber, uint16_t playerOrdinal);
+void ShowPlayerMarketInit(void);
+void ShowPlayerMarket(void);
+void PlayerMarketUpdateFilterMenuEntryState(void);
+void PlayerMarketUpdateMoreListLabel(void);
+void PlayerMarketResetListState(void);
+void BuyOtherPlayersCommon(void *entry);
+void BuyOtherPlayersAfterDrawCommon(void *entry);
 
 /* --- ShowSquad callers + OffersInit (Chunk 164) --- */
-void _ThirdPartyOfferViewSquad(void);
-void _BuyPlayerViewSquad(void);
-void _OffersInit(void);
+void ThirdPartyOfferViewSquad(void);
+void BuyPlayerViewSquad(void);
+void OffersInit(void);
 
 /* --- AfterDrawCommon + OffersCommon + PlayerOffers callbacks (Chunk 165) --- */
-void _TransferPlayerAfterDrawCommon(void *entry);
-void _ThirdPartyOfferMenuAfterDrawCommon(void *entry);
-void _PlayerOffersAfterDrawCommon(void *entry);
-void _j_SetExitMenuFlag_11(void);
-void _PlayerOffersOnSelect13(void);
-void _OffersCommon(void *entry);
-void _PlayerOffersOnSelect8(void);
-void _PlayerOffersOnSelect10(void);
-void _PlayerOffersOnSelect11(void);
-void _PlayerOffersOnSelect12(void);
-void _PlayerOffersAdjustOfferAmount(void);
+void TransferPlayerAfterDrawCommon(void *entry);
+void ThirdPartyOfferMenuAfterDrawCommon(void *entry);
+void PlayerOffersAfterDrawCommon(void *entry);
+void j_SetExitMenuFlag_11(void);
+void PlayerOffersOnSelect13(void);
+void OffersCommon(void *entry);
+void PlayerOffersOnSelect8(void);
+void PlayerOffersOnSelect10(void);
+void PlayerOffersOnSelect11(void);
+void PlayerOffersOnSelect12(void);
+void PlayerOffersAdjustOfferAmount(void);
 
 /* --- TransferPlayerInit + ThirdPartyOfferMenuInit (Chunk 166) --- */
-void _TransferPlayerInit(void *entry);
-void _ThirdPartyOfferMenuInit(void *entry);
+void TransferPlayerInit(void *entry);
+void ThirdPartyOfferMenuInit(void *entry);
 
 /* --- OffersAfterDrawCommon (Chunk 168) --- */
-void _OffersAfterDrawCommon(void *entryPtr);
+void OffersAfterDrawCommon(void *entryPtr);
 
 /* --- Career Transfer Accept + Trialist System (Chunk 167) --- */
-void _Career_BuildForeignMarketPoolFromSelectedTeam(void);
-void _Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16_t playerOrd);
-void _Career_AcceptOffer_SellPlayer(void);
-void _Career_AcceptOffer_BuyPlayer(void);
-void _Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd);
-void _Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
-void _Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playerOrd);
-void _TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role);
-void _TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
+void Career_BuildForeignMarketPoolFromSelectedTeam(void);
+void Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16_t playerOrd);
+void Career_AcceptOffer_SellPlayer(void);
+void Career_AcceptOffer_BuyPlayer(void);
+void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd);
+void Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex);
+void Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t playerOrd);
+void TrainingMatch_AddTrialPlayerToSelectedTeam(uint16_t role);
+void TrainingMatch_AdjustSelectedTeamRosterForTrialists(uint16_t teamNum, uint16_t baseCount, TeamFileEx *teamPtr);
 
 /* --- PutPlayerOnMarketMenu (Chunk 177) --- */
-void _PutPlayerOnMarketMenu(void);
+void PutPlayerOnMarketMenu(void);
 
 /* --- Chunk 202: BuyOtherDomesticPlayer + BuyOtherForeignPlayer --- */
-void _BuyOtherDomesticPlayer(void);
-void _BuyOtherForeignPlayer(void);
+void BuyOtherDomesticPlayer(void);
+void BuyOtherForeignPlayer(void);
 
 /* --- Chunk 207: PlayerMarketBuildVisiblePlayerList --- */
-void _PlayerMarketBuildVisiblePlayerList(void);
+void PlayerMarketBuildVisiblePlayerList(void);
 
 /* --- Player market menu callbacks --- */
-void _PlayerMarketFilterPositionOnSelect(MenuEntry *entry);
-void _PlayerMarketFilterAgeGroupOnSelect(MenuEntry *entry);
-void _PlayerMarketScrollOnSelect(MenuEntry *entry);
-void _PlayerMarketViewSquadOnSelect(MenuEntry *entry);
-void _PlayerMarketItemOnSelect(MenuEntry *entry);
-void _PlayerMarketItemBeforeDraw(MenuEntry *entry);
+void PlayerMarketFilterPositionOnSelect(MenuEntry *entry);
+void PlayerMarketFilterAgeGroupOnSelect(MenuEntry *entry);
+void PlayerMarketScrollOnSelect(MenuEntry *entry);
+void PlayerMarketViewSquadOnSelect(MenuEntry *entry);
+void PlayerMarketItemOnSelect(MenuEntry *entry);
+void PlayerMarketItemBeforeDraw(MenuEntry *entry);
 
 /* --- Chunk 215: CreateRandomTransferOfferForPlayer + EvaluateTransferOfferNegotiation --- */
-void _CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal);
-int16_t _EvaluateTransferOfferNegotiation(void);
-uint16_t _ApplyOfferDemandMultipliersForSwapAndExtraPlayers(uint16_t demandValue);
+void CreateRandomTransferOfferForPlayer(uint16_t playerOrdinal);
+int16_t EvaluateTransferOfferNegotiation(void);
+uint16_t ApplyOfferDemandMultipliersForSwapAndExtraPlayers(uint16_t demandValue);
 
 #endif

@@ -39,35 +39,35 @@
 #include "job_offers.h"
 
 /* ---- Assembly externs (functions still in asm) ---- */
-extern uint16_t _Rand(void);
-extern uint16_t _Rand2(void);
-extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
-extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
+extern uint16_t Rand(void);
+extern uint16_t Rand2(void);
+extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNum);
+extern uint16_t GetAveragePlayerPrice(TeamFileEx *team);
 #include "career_params.h"
-extern uint16_t _CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
-extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
+extern uint16_t CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
+extern uint16_t GetTeamValueBase(uint16_t avgPrice);
 
 /* Replaces _CGetTeamValueForGateReceipts asm bridge */
 static uint16_t getTeamValueForGateReceipts(TeamFileEx *team) {
     uint16_t teamNum = BE_READ_U16(team);  /* original: move.w (a0),d0 — reads first 2 bytes */
-    _VerifyTeamLoaded(teamNum);
-    uint16_t avgPrice = _GetAveragePlayerPrice(team);
-    return _CalcGateReceiptsBaseFromTeamValue(avgPrice);
+    VerifyTeamLoaded(teamNum);
+    uint16_t avgPrice = GetAveragePlayerPrice(team);
+    return CalcGateReceiptsBaseFromTeamValue(avgPrice);
 }
-/* _FindTeamInDIY and _GetMoreExpensiveTeamsCount declared in diy_competition.h. */
-extern void _ShowChairmanMessage(void);
-extern void _AddCareerTeamPlayer(void);
-extern void _CheckPlayersLeavingComing(void);
-extern uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void);
-extern TeamSelectionKeyCacheMatchSlot *_TeamSelectionKeyCache_GetCurrentMatchSlot(void);
+/* FindTeamInDIY and GetMoreExpensiveTeamsCount declared in diy_competition.h. */
+extern void ShowChairmanMessage(void);
+extern void AddCareerTeamPlayer(void);
+extern void CheckPlayersLeavingComing(void);
+extern uint8_t *TeamSelectionKeyCache_GetCurrentListPtr(void);
+extern TeamSelectionKeyCacheMatchSlot *TeamSelectionKeyCache_GetCurrentMatchSlot(void);
 
 /* C-callable asm bridges for GetPlayer/GetPlayerAtIndex */
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerIndex);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
 
 /* Already-ported C functions */
-extern uint16_t _GetDisplayedPlayerValue(uint8_t *ptr);
+extern uint16_t GetDisplayedPlayerValue(uint8_t *ptr);
 
 /* ---- Data externs ---- */
 extern TeamFileEx careerTeam;
@@ -84,7 +84,7 @@ extern uint8_t    careerUnavailablePlayerLookupTable[];
 extern uint8_t    playerFormModifiers[32];
 extern uint16_t   selTeamNumber;
 extern uint16_t   panicReasonCode;
-extern void       _PanicHaltLoop(void);
+extern void       PanicHaltLoop(void);
 
 /* Financial globals */
 extern int32_t    newBalance;
@@ -272,16 +272,16 @@ static void maybeDecayPlayerStatusBucket(uint16_t bucketBits, PlayerFile *player
 
     if (d1 == 0x20) {
         /* Bucket level 1: 50% chance to decay to 0 */
-        uint16_t r = _Rand2();
+        uint16_t r = Rand2();
         if (r & 1)
             return;  /* no decay */
         d1 = 0;
     } else if (d1 == 0xC0) {
         /* Bucket level 6: 1/8 chance to decay to random level 1-5 */
-        uint16_t r = _Rand2();
+        uint16_t r = Rand2();
         if ((r & 7) != 0)
             return;  /* no decay */
-        r = _Rand2();
+        r = Rand2();
         uint16_t newLevel = (uint16_t)((r * 5) >> 8);
         d1 = (newLevel << 5) + 0x20;
     } else if (d1 == 0xE0) {
@@ -292,7 +292,7 @@ static void maybeDecayPlayerStatusBucket(uint16_t bucketBits, PlayerFile *player
         d1 -= 0x20;
         if (d1 == 0x20) {
             /* Reached level 1 after decrement: 50% chance to clear to 0 */
-            uint16_t r = _Rand2();
+            uint16_t r = Rand2();
             if (r & 1) {
                 /* keep at 1, write it */
             } else {
@@ -411,7 +411,7 @@ static void cyclePlayerStatusFlagsForTeam(TeamFileEx *team, uint16_t mode) {
  * mode parameter is passed to CyclePlayerStatusFlagsForTeam.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uint16_t mode) {
+void InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uint16_t mode) {
     maybeDecayPlayerStatusBucketForTeam(team1);
     maybeDecayPlayerStatusBucketForTeam(team2);
     cyclePlayerStatusFlagsForTeam(team1, mode);
@@ -424,7 +424,7 @@ void _InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uin
  * The Alt variant is an identical copy in the original game.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitInGameTeams_WithMatchParam(TeamFileEx *team1, TeamFileEx *team2) {
+void InitInGameTeams_WithMatchParam(TeamFileEx *team1, TeamFileEx *team2) {
     uint16_t mode = diyCompetitionStart.base.substitutesCount;
     maybeDecayPlayerStatusBucketForTeam(team1);
     maybeDecayPlayerStatusBucketForTeam(team2);
@@ -438,10 +438,10 @@ void _InitInGameTeams_WithMatchParam(TeamFileEx *team1, TeamFileEx *team2) {
  * tournament. Returns 1 otherwise.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void) {
+uint16_t ShouldApplyRandomPlayerStatusAfterSim(void) {
     if (gameType == GAME_TYPE_CAREER) {
         if (isNationalSelector != 0) {
-            uint16_t isMajor = _IsMajorTournamentAllowingRandomStatus();
+            uint16_t isMajor = IsMajorTournamentAllowingRandomStatus();
             if (isMajor == 0) {
                 return 0;
             }
@@ -455,7 +455,7 @@ uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void) {
  * Builds a list (max 4) of career team players who are injured.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _BuildCareerTeamUnavailablePlayerList(void) {
+void BuildCareerTeamUnavailablePlayerList(void) {
     uint16_t *list = (uint16_t *)careerUnavailablePlayerList;
     /* Init 4 entries to -1 (each is 4 bytes = 2 words) */
     list[0] = 0xFFFF;
@@ -463,7 +463,7 @@ void _BuildCareerTeamUnavailablePlayerList(void) {
     list[4] = 0xFFFF;
     list[6] = 0xFFFF;
 
-    if (_ShouldApplyRandomPlayerStatusAfterSim() != 0)
+    if (ShouldApplyRandomPlayerStatusAfterSim() != 0)
         return;
 
     uint16_t slotsLeft = 4;
@@ -498,7 +498,7 @@ void _BuildCareerTeamUnavailablePlayerList(void) {
  * Clears status bucket bits (5-7) for all career team players.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ClearCareerMatchPlayerStatusBucket(void) {
+void ClearCareerMatchPlayerStatusBucket(void) {
     TeamFileEx *teamEx = &careerTeam;
     int16_t count = (int16_t)careerNumPlayers - 1;
 
@@ -522,7 +522,7 @@ void _ClearCareerMatchPlayerStatusBucket(void) {
  * Returns 1 if injured, 0 if not.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
+uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     /* Beta-test mode: nobody is ever unavailable, regardless of what's
      * persisted in cardsInjuries. Catches any injury/card/bucket source
@@ -569,7 +569,7 @@ check_bucket:
  * Counts players with position == 0 (goalkeeper) in the team.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl) {
+uint16_t GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl) {
     int16_t iter = (int16_t)numPl - 1;
     uint8_t *playerList;
     uint16_t dummy;
@@ -599,7 +599,7 @@ uint16_t _GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl) {
  * Counts goalkeepers in selection list (indices 11 to extraCount+10).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraCount) {
+uint16_t GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraCount) {
     int16_t iter = (int16_t)extraCount + 10;
     uint8_t *playerList;
 
@@ -661,7 +661,7 @@ static uint16_t isPlayerDisabled(PlayerFile *pf, int16_t excludeCardsFlag) {
  * Returns (disabled << 16) | (available & 0xFFFF).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _GetNumberOfAvailablePlayers(TeamFileEx *team, int16_t excludeCardsFlag, uint16_t numPl) {
+uint32_t GetNumberOfAvailablePlayers(TeamFileEx *team, int16_t excludeCardsFlag, uint16_t numPl) {
     uint8_t *playerList;
     uint16_t totalCount;
 
@@ -701,7 +701,7 @@ uint32_t _GetNumberOfAvailablePlayers(TeamFileEx *team, int16_t excludeCardsFlag
  * Returns (disabled << 16) | (available & 0xFFFF).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _GetNumberOfAvailableSubstitutes(TeamFileEx *team, int16_t flag) {
+uint32_t GetNumberOfAvailableSubstitutes(TeamFileEx *team, int16_t flag) {
     uint8_t *playerList;
     uint16_t totalCount;
 
@@ -746,7 +746,7 @@ uint32_t _GetNumberOfAvailableSubstitutes(TeamFileEx *team, int16_t flag) {
  * Returns (disabled << 16) | (available & 0xFFFF).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _GetNumberOfAvailableStartingPlayers(TeamFileEx *team, int16_t flag) {
+uint32_t GetNumberOfAvailableStartingPlayers(TeamFileEx *team, int16_t flag) {
     uint8_t *playerList;
     uint16_t totalCount;
 
@@ -798,7 +798,7 @@ static const uint8_t kPlayerAgeToFormDivisorTable[50] = {
 };
 
 __attribute__((used, externally_visible))
-int16_t _GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase) {
+int16_t GetAgeAdjustedPlayerFormFactor(uint8_t *playerBase) {
     PlayerFile *pf = (PlayerFile *)(playerBase + 76);
     int8_t age = pf->price;
     int16_t ageDivisor = (int16_t)(uint8_t)kPlayerAgeToFormDivisorTable[(uint8_t)age];
@@ -866,7 +866,7 @@ static const int16_t nationalSelectorSeasonReviewReputationDeltaTable[5] = {
  * Clamp balance to 100M, set clubBusinessActive via smi, manage overdraftStreak.
  */
 __attribute__((used, externally_visible))
-void _ClampNewBalanceAndUpdateClubStatus(void) {
+void ClampNewBalanceAndUpdateClubStatus(void) {
     if (newBalance > 100000000)
         newBalance = 100000000;
     /* smi: set byte to -1 if negative, 0 if positive */
@@ -879,7 +879,7 @@ void _ClampNewBalanceAndUpdateClubStatus(void) {
 
 /* ClearOverdraftStateIfRecovered */
 __attribute__((used, externally_visible))
-void _ClearOverdraftStateIfRecovered(void) {
+void ClearOverdraftStateIfRecovered(void) {
     if (overdraftWarningState != 0) {
         if (newBalance >= 0)
             overdraftWarningState = 0;
@@ -888,14 +888,14 @@ void _ClearOverdraftStateIfRecovered(void) {
 
 /* SetOverdraftWarningCooldown — random 4-8 */
 static void setOverdraftWarningCooldown(void) {
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     uint16_t val = (uint16_t)((r * 5) >> 8) + 4;
     overdraftWarningCooldown = val;
 }
 
 /* SetPerformanceWarningCooldown — random 4-8 */
 static void setPerformanceWarningCooldown(void) {
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     uint16_t val = (uint16_t)((r * 5) >> 8) + 4;
     performanceWarningCooldown = val;
 }
@@ -909,7 +909,7 @@ static void setPerformanceWarningCooldown(void) {
  * Sets *outCtx to the appropriate competition context pointer.
  */
 __attribute__((used, externally_visible))
-uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
+uint16_t IsMajorInternationalTournament(uint8_t **outCtx) {
     uintptr_t curComp = (uintptr_t)currentCompetitionPtr;
 
     /* Check primary competition against 9 tournament types */
@@ -948,9 +948,9 @@ uint16_t _IsMajorInternationalTournament(uint8_t **outCtx) {
  * Returns nonzero if major tournament allows random status.
  */
 __attribute__((used, externally_visible))
-uint16_t _IsMajorTournamentAllowingRandomStatus(void) {
+uint16_t IsMajorTournamentAllowingRandomStatus(void) {
     uint8_t *ctx;
-    uint16_t isMajor = _IsMajorInternationalTournament(&ctx);
+    uint16_t isMajor = IsMajorInternationalTournament(&ctx);
     if (isMajor == 0)
         return 0;
     /* +0x44 = matchStarted in DIYCompetition base */
@@ -961,9 +961,9 @@ uint16_t _IsMajorTournamentAllowingRandomStatus(void) {
  * Wraps IsMajorInternationalTournament, checks offset 0x46.
  */
 __attribute__((used, externally_visible))
-uint16_t _IsMajorTournamentAllowingSquadChanges(void) {
+uint16_t IsMajorTournamentAllowingSquadChanges(void) {
     uint8_t *ctx;
-    uint16_t isMajor = _IsMajorInternationalTournament(&ctx);
+    uint16_t isMajor = IsMajorInternationalTournament(&ctx);
     if (isMajor == 0)
         return 0;
     /* +0x46 = careerTeamInvolved in DIYCompetition base */
@@ -972,18 +972,18 @@ uint16_t _IsMajorTournamentAllowingSquadChanges(void) {
 
 /* IsTournamentAllowingSquadChangesIfNotCareer */
 __attribute__((used, externally_visible))
-uint16_t _IsTournamentAllowingSquadChangesIfNotCareer(void) {
+uint16_t IsTournamentAllowingSquadChangesIfNotCareer(void) {
     if (isCareer != 0)
         return 0;
-    return _IsMajorTournamentAllowingSquadChanges();
+    return IsMajorTournamentAllowingSquadChanges();
 }
 
 /* ShouldSetupPlayers */
 __attribute__((used, externally_visible))
-uint16_t _ShouldSetupPlayers(void) {
+uint16_t ShouldSetupPlayers(void) {
     if (gameType == GAME_TYPE_CAREER) {
         if (isNationalSelector != 0) {
-            uint16_t allows = _IsMajorTournamentAllowingSquadChanges();
+            uint16_t allows = IsMajorTournamentAllowingSquadChanges();
             if (allows == 0)
                 return 0;
         }
@@ -1028,7 +1028,7 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx 
     if (teamValueDivisor == 0 || d7 > 0xFFFFFFFFu) {
         /* bvs → panic */
         panicReasonCode = 0x9232;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return 0; /* unreachable */
     }
     uint32_t quotient = d7 / (uint32_t)teamValueDivisor;
@@ -1036,7 +1036,7 @@ static uint16_t calcLeagueMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx 
     /* bvs checks if quotient > 0xFFFF (overflow in 16-bit result) */
     if (quotient > 0xFFFF) {
         panicReasonCode = 0x9232;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return 0;
     }
     return (uint16_t)quotient;
@@ -1070,13 +1070,13 @@ static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *te
 
     if (teamValueDivisor == 0 || d7 > 0xFFFFFFFFu) {
         panicReasonCode = 0x9232;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return 0;
     }
     uint32_t quotient = d7 / (uint32_t)teamValueDivisor;
     if (quotient > 0xFFFF) {
         panicReasonCode = 0x9232;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return 0;
     }
     return (uint16_t)quotient;
@@ -1086,7 +1086,7 @@ static uint16_t calcCupMatchGateReceiptsFactor(TeamFileEx *team1, TeamFileEx *te
  * Complex dispatcher that calculates gate receipts based on competition type.
  */
 __attribute__((used, externally_visible))
-void _UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team) {
+void UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team) {
     if (isNationalSelector != 0)
         return;
 
@@ -1110,7 +1110,7 @@ void _UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team) {
     } else {
         /* Report the unexpected compType value */
         panicReasonCode = 0x9200 | (compType & 0xFF);
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -1135,7 +1135,7 @@ league_match:
         /* Non-DIY league */
         if (comp->base.competitionType != 0) {
             panicReasonCode = 0x9235;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
         }
 
@@ -1196,7 +1196,7 @@ cup_match_type1or2:
             /* compType 1 or 2: cup match */
             if (comp->base.competitionType != 1) {
                 panicReasonCode = 0x9236;
-                _PanicHaltLoop();
+                PanicHaltLoop();
                 return;
             }
         }
@@ -1230,7 +1230,7 @@ diy_comp_match:
                 goto increment_count;
             }
             panicReasonCode = 0x9239;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
         } else {
             /* DIY competition with group stages
@@ -1273,8 +1273,8 @@ final_update:
     newBalance += (int32_t)d7;
     seasonGateReceiptsAccum2 += (int32_t)d7;
     seasonGateReceiptsAccum += (int32_t)d7;
-    _ClampNewBalanceAndUpdateClubStatus();
-    _ClearOverdraftStateIfRecovered();
+    ClampNewBalanceAndUpdateClubStatus();
+    ClearOverdraftStateIfRecovered();
 }
 
 /* ================================================================
@@ -1283,7 +1283,7 @@ final_update:
 
 /* MaybeSackManagerAfterSeasonReview */
 __attribute__((used, externally_visible))
-void _MaybeSackManagerAfterSeasonReview(void) {
+void MaybeSackManagerAfterSeasonReview(void) {
     if (stayingInOldClub == 0)
         return;
     if (wonWorldCup != 0)
@@ -1297,7 +1297,7 @@ void _MaybeSackManagerAfterSeasonReview(void) {
     if (seasonReview < 2)
         return;
 
-    uint16_t randVal = _Rand();
+    uint16_t randVal = Rand();
     uint16_t threshold;
     if (seasonReview == 2)
         threshold = 0x20;
@@ -1310,7 +1310,7 @@ void _MaybeSackManagerAfterSeasonReview(void) {
         return;
 
     currentMessage = CHAIRMAN_WE_DIDNT_RENEW_YOUR_CONTRACT;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
     youreSacked = 1;
 }
 
@@ -1329,7 +1329,7 @@ static uint16_t areActiveCompsFinished(void) {
 
 /* UpdateCareerChairmanWarningsAfterMatch */
 __attribute__((used, externally_visible))
-void _UpdateCareerChairmanWarningsAfterMatch(void) {
+void UpdateCareerChairmanWarningsAfterMatch(void) {
     if (isNationalSelector != 0)
         return;
 
@@ -1340,7 +1340,7 @@ void _UpdateCareerChairmanWarningsAfterMatch(void) {
         performanceWarningCooldown--;
 
     /* Get team rank in DIY league */
-    uint16_t d7 = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+    uint16_t d7 = FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
 
     /* Compute performance pressure factor */
     int16_t viewPhase = (int16_t)(int8_t)viewRandomPhase;
@@ -1385,7 +1385,7 @@ performance_warning_active:
             performanceWarningState = 1;
             setPerformanceWarningCooldown();
             currentMessage = CHAIRMAN_IMPROVE_LEAGUE_POSITION;
-            _ShowChairmanMessage();
+            ShowChairmanMessage();
             return;
         }
         if (performanceWarningState == 1) {
@@ -1414,7 +1414,7 @@ performance_warning_active:
             performanceWarningState = 3;
             setPerformanceWarningCooldown();
             currentMessage = CHAIRMAN_THREE_MORE_MATCHES;
-            _ShowChairmanMessage();
+            ShowChairmanMessage();
             return;
         }
         /* State >= 3: countdown to sacking */
@@ -1431,7 +1431,7 @@ performance_warning_active:
             goto done_performance;
         /* Sacked for poor performance */
         currentMessage = CHAIRMAN_YOURE_SACKED_2;
-        _ShowChairmanMessage();
+        ShowChairmanMessage();
         youreSacked = 1;
         return;
     }
@@ -1442,7 +1442,7 @@ random_escalate:
 issue_improve_league_soon:
         setPerformanceWarningCooldown();
         currentMessage = CHAIRMAN_IMPROVE_LEAGUE_POSITION_SOON;
-        _ShowChairmanMessage();
+        ShowChairmanMessage();
         return;
     }
     goto done_performance;
@@ -1455,7 +1455,7 @@ skip_performance_warning:
 
 done_performance:
     /* Overdraft warning section */
-    _ClearOverdraftStateIfRecovered();
+    ClearOverdraftStateIfRecovered();
 
     if (newBalance >= 0) {
         setOverdraftWarningCooldown();
@@ -1476,7 +1476,7 @@ done_performance:
             overdraftWarningState = 1;
             setOverdraftWarningCooldown();
             currentMessage = CHAIRMAN_BANK_BALANCE_OVERDRAFT;
-            _ShowChairmanMessage();
+            ShowChairmanMessage();
             return;
         }
         if (overdraftWarningState == 1) {
@@ -1501,7 +1501,7 @@ done_performance:
             overdraftWarningState = 3;
             setOverdraftWarningCooldown();
             currentMessage = CHAIRMAN_CLEAR_OVERDRAFT_IMMEDIATELY;
-            _ShowChairmanMessage();
+            ShowChairmanMessage();
             return;
         }
         /* State >= 3: countdown to sacking */
@@ -1517,7 +1517,7 @@ done_performance:
         if (competitionSlotUpdatedFlag != 0)
             return;
         currentMessage = CHAIRMAN_YOURE_SACKED;
-        _ShowChairmanMessage();
+        ShowChairmanMessage();
         youreSacked = 1;
         return;
     }
@@ -1526,20 +1526,20 @@ issue_overdraft_last_warning:
     overdraftWarningState = 2;
     setOverdraftWarningCooldown();
     currentMessage = CHAIRMAN_OVERDRAFT_LAST_WARNING;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* UpdateCareerAfterMatch — orchestrator */
 __attribute__((used, externally_visible))
-void _UpdateCareerAfterMatch(void) {
-    _ClampNewBalanceAndUpdateClubStatus();
-    _ClearOverdraftStateIfRecovered();
-    _UpdateCareerChairmanWarningsAfterMatch();
+void UpdateCareerAfterMatch(void) {
+    ClampNewBalanceAndUpdateClubStatus();
+    ClearOverdraftStateIfRecovered();
+    UpdateCareerChairmanWarningsAfterMatch();
     if (removedOfferPlayersFromSelectedTeamCount != 0) {
         removedOfferPlayersFromSelectedTeamCount--;
-        _AddCareerTeamPlayer();
+        AddCareerTeamPlayer();
     }
-    _CheckPlayersLeavingComing();
+    CheckPlayersLeavingComing();
 }
 
 /* ================================================================
@@ -1548,8 +1548,8 @@ void _UpdateCareerAfterMatch(void) {
 
 /* ApplyWeeklyFinancialDeductions */
 __attribute__((used, externally_visible))
-void _ApplyWeeklyFinancialDeductions(void) {
-    uint8_t *listPtr = _TeamSelectionKeyCache_GetCurrentListPtr();
+void ApplyWeeklyFinancialDeductions(void) {
+    uint8_t *listPtr = TeamSelectionKeyCache_GetCurrentListPtr();
     uint8_t currentWeek = listPtr[1];
     uint8_t lastWeek = lastFinancialWeekIndex;
     int16_t diff = (int16_t)(uint16_t)currentWeek - (int16_t)(uint16_t)lastWeek;
@@ -1574,12 +1574,12 @@ void _ApplyWeeklyFinancialDeductions(void) {
     }
 
 save_week_and_clamp:
-    listPtr = _TeamSelectionKeyCache_GetCurrentListPtr();
+    listPtr = TeamSelectionKeyCache_GetCurrentListPtr();
     lastFinancialWeekIndex = listPtr[1];
 
 update_and_clamp:
-    _ClampNewBalanceAndUpdateClubStatus();
-    _ClearOverdraftStateIfRecovered();
+    ClampNewBalanceAndUpdateClubStatus();
+    ClearOverdraftStateIfRecovered();
 }
 
 /* GetExpectedLeagueRankIndex (static helper)
@@ -1645,24 +1645,24 @@ static uint16_t getExpectedLeagueRankIndex(uint8_t *ctx, uint16_t moreExpensiveC
 
 /* InitializeCareerSeasonFinancials */
 __attribute__((used, externally_visible))
-void _InitializeCareerSeasonFinancials(void) {
+void InitializeCareerSeasonFinancials(void) {
     /* Get more expensive teams count and set expected rank */
-    uint16_t moreExpensiveCount = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+    uint16_t moreExpensiveCount = GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
     expectedLeagueRankIndex = moreExpensiveCount;
 
     /* Calculate team value divisor from all active competitions */
     uint16_t d5 = getExpectedLeagueRankIndex((uint8_t *)&primaryCompetitionBuf, moreExpensiveCount);
 
     if (secondaryCompetitionPtr != 0) {
-        uint16_t mec2 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
+        uint16_t mec2 = GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&competitionContextBuf);
         d5 += getExpectedLeagueRankIndex((uint8_t *)&competitionContextBuf, mec2);
     }
     if (tertiaryCompetitionPtr != 0) {
-        uint16_t mec3 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
+        uint16_t mec3 = GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&tertiaryCompetitionContextBuf);
         d5 += getExpectedLeagueRankIndex((uint8_t *)&tertiaryCompetitionContextBuf, mec3);
     }
     if (quaternaryCompetitionPtr != 0) {
-        uint16_t mec4 = _GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&euroCupsCompetitionContextBuf);
+        uint16_t mec4 = GetMoreExpensiveTeamsCount(selTeamNumber, (DIYCompetition *)&euroCupsCompetitionContextBuf);
         d5 += getExpectedLeagueRankIndex((uint8_t *)&euroCupsCompetitionContextBuf, mec4);
     }
 
@@ -1724,7 +1724,7 @@ static int16_t calcBoardConfidenceDeltaPercent(void) {
     }
 
     /* Club manager: compute from league rank delta */
-    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+    uint16_t teamRank = FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
     int16_t d0 = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
     int16_t numTeams = ((DIYCompetitionEx *)&primaryCompetitionBuf)->base.numTeams;
     d0 = (int16_t)(((int32_t)d0 * 100) / (int32_t)numTeams);
@@ -1733,7 +1733,7 @@ static int16_t calcBoardConfidenceDeltaPercent(void) {
 
 /* GetBoardConfidenceScore */
 __attribute__((used, externally_visible))
-int16_t _GetBoardConfidenceScore(void) {
+int16_t GetBoardConfidenceScore(void) {
     int16_t d0 = calcBoardConfidenceDeltaPercent();
     d0 += boardConfidenceHistory0;
     d0 += boardConfidenceHistory1;
@@ -1744,7 +1744,7 @@ int16_t _GetBoardConfidenceScore(void) {
 
 /* UpdateBoardConfidenceScore */
 __attribute__((used, externally_visible))
-int16_t _UpdateBoardConfidenceScore(void) {
+int16_t UpdateBoardConfidenceScore(void) {
     int16_t d0 = boardConfidenceScore;
 
     if (majorTrophyBonusActive != 0)
@@ -1771,7 +1771,7 @@ int16_t _UpdateBoardConfidenceScore(void) {
 
 /* PushBoardConfidenceHistory */
 __attribute__((used, externally_visible))
-int16_t _PushBoardConfidenceHistory(void) {
+int16_t PushBoardConfidenceHistory(void) {
     boardConfidenceHistory3 = boardConfidenceHistory2;
     boardConfidenceHistory2 = boardConfidenceHistory1;
     boardConfidenceHistory1 = boardConfidenceHistory0;
@@ -1782,7 +1782,7 @@ int16_t _PushBoardConfidenceHistory(void) {
 
 /* UpdateBoardConfidenceModifiers */
 __attribute__((used, externally_visible))
-void _UpdateBoardConfidenceModifiers(void) {
+void UpdateBoardConfidenceModifiers(void) {
     qualifyingStage1PendingFlag0 = 0;
     qualifyingStage1PendingFlag1 = 0;
     qualifyingStage2PendingFlag0 = 0;
@@ -1806,7 +1806,7 @@ void _UpdateBoardConfidenceModifiers(void) {
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
-        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+        uint16_t teamRank = FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
         uintptr_t comp = (uintptr_t)currentCompetitionPtr;
         uint16_t qualSlots;
 
@@ -1855,7 +1855,7 @@ check_ec_qualifying:
             curComp > (uintptr_t)ecQualifyingGroup8Copy)
             goto check_winners;
 
-        uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+        uint16_t teamRank = FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
         uint16_t qualSlots;
         if (currentCompetitionPtr == (uint8_t *)ecQualifyingGroup8Copy)
             qualSlots = 1;
@@ -1992,7 +1992,7 @@ static void addReputationFromBonusValueDiv8(int8_t bonusValue) {
 
 /* UpdateCareerReputationBonuses */
 __attribute__((used, externally_visible))
-void _UpdateCareerReputationBonuses(void) {
+void UpdateCareerReputationBonuses(void) {
     /* National selector reputation delta */
     if (isNationalSelector != 0) {
         int16_t delta = nationalSelectorSeasonReviewReputationDeltaTable[seasonReview];
@@ -2078,14 +2078,14 @@ void _UpdateCareerReputationBonuses(void) {
 
 /* InitializeStartingBalanceForNewSeason */
 __attribute__((used, externally_visible))
-void _InitializeStartingBalanceForNewSeason(void) {
+void InitializeStartingBalanceForNewSeason(void) {
     /* Get team value base from avg player price */
     uint16_t avgPrice = getTeamValueForGateReceipts(&careerTeam);
-    uint16_t teamBase = _GetTeamValueBase(avgPrice);
+    uint16_t teamBase = GetTeamValueBase(avgPrice);
     uint16_t d2 = teamBase;
 
     /* Compute adjusted starting balance from expected rank */
-    uint16_t teamRank = _FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
+    uint16_t teamRank = FindTeamInDIY(selTeamNumber, (DIYCompetition *)&primaryCompetitionBuf);
     int16_t rankDelta = (int16_t)expectedLeagueRankIndex - (int16_t)teamRank;
     int16_t pct = (int16_t)(((int32_t)rankDelta * 100) / (int32_t)(int16_t)primaryCompetitionBuf.tourn.header.numTeams);
     pct >>= 1;   /* asr.w #1 */
@@ -2093,7 +2093,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
     uint16_t adjustedBase = (uint16_t)(((uint32_t)(uint16_t)pct * (uint32_t)d2) / 100);
 
     /* Add random factor (90-110%) */
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     uint16_t randPct = (uint16_t)((r * 20) >> 8) + 90;  /* 90 to ~110 */
     uint16_t finalBase = (uint16_t)(((uint32_t)randPct * (uint32_t)adjustedBase) / 100);
     startingBalance = (int32_t)((uint32_t)finalBase * 1000);
@@ -2162,7 +2162,7 @@ void _InitializeStartingBalanceForNewSeason(void) {
         if (currentDivisionIndex == 0) {
             /* Cannot be promoted to division 0 — panic */
             panicReasonCode = 0x1782;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             return;
         }
         uint32_t multiplier;
@@ -2189,7 +2189,7 @@ static void recalcTotalWeeklyWages(void)
     int32_t total = 0;
     int16_t i;
     for (i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-        _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
         uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
         total += weeklyWageByPlayerIndex[fileIdx];
     }
@@ -2208,10 +2208,10 @@ static void recalcTotalWeeklyWages(void)
  * matching the actual calling convention where d0 is always selTeamNumber.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t playerIndex)
+uint16_t GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t playerIndex)
 {
-    uint8_t *player = _GetPlayer(teamNumber, playerIndex);
-    uint16_t displayedValue = _GetDisplayedPlayerValue(player);
+    uint8_t *player = GetPlayer(teamNumber, playerIndex);
+    uint16_t displayedValue = GetDisplayedPlayerValue(player);
     displayedValue &= 0xFF;
     return avgTeamValueBases[displayedValue];
 }
@@ -2229,12 +2229,12 @@ uint16_t _GetAvgTeamValueBaseForCurrentPlayer(uint16_t teamNumber, uint16_t play
  *   5. Recalculate total weekly wages
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
+void Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
 {
-    uint16_t avgBase = _GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, playerIndex);
+    uint16_t avgBase = GetAvgTeamValueBaseForCurrentPlayer(selTeamNumber, playerIndex);
 
     /* Get player pointer to check status flags */
-    uint8_t *player = _GetPlayer(selTeamNumber, playerIndex);
+    uint8_t *player = GetPlayer(selTeamNumber, playerIndex);
     PlayerFile *pf = (PlayerFile *)(player + 76);
     uint8_t someFlag = (uint8_t)pf->form;
 
@@ -2265,7 +2265,7 @@ void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex)
  * the total weekly wages.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages(uint16_t playerIndex)
+void Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages(uint16_t playerIndex)
 {
     weeklyWageByPlayerIndex[playerIndex] = 0;
     recalcTotalWeeklyWages();
@@ -2281,54 +2281,54 @@ void _Career_RemovePlayerWeeklyWageAndRecalcWeeklyWages(uint16_t playerIndex)
 
 /* ShowLeavingMessage — "Thanks for all your help" */
 __attribute__((used, externally_visible))
-void _ShowLeavingMessage(void)
+void ShowLeavingMessage(void)
 {
     currentMessage = isNationalSelector ? 32 : 18;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ShowGreetingMessage — "Welcome, we look forward..." */
 __attribute__((used, externally_visible))
-void _ShowGreetingMessage(void)
+void ShowGreetingMessage(void)
 {
     currentMessage = isNationalSelector ? 33 : 19;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ShowLastSeasonMessage — "Enjoy your last season" */
 __attribute__((used, externally_visible))
-void _ShowLastSeasonMessage(void)
+void ShowLastSeasonMessage(void)
 {
     currentMessage = isNationalSelector ? 34 : 20;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ShowWishYouSuccessMessage — "Wish you success" */
 __attribute__((used, externally_visible))
-void _ShowWishYouSuccessMessage(void)
+void ShowWishYouSuccessMessage(void)
 {
     currentMessage = isNationalSelector ? 35 : 21;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ShowEnjoyLastSeasonMessage — "Enjoy last season before..." */
 __attribute__((used, externally_visible))
-void _ShowEnjoyLastSeasonMessage(void)
+void ShowEnjoyLastSeasonMessage(void)
 {
     currentMessage = isNationalSelector ? 36 : 22;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ShowRetirementMessage — "Enjoy your retirement" */
 __attribute__((used, externally_visible))
-void _ShowRetirementMessage(void)
+void ShowRetirementMessage(void)
 {
     currentMessage = isNationalSelector ? 37 : 23;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ================================================================
- * _CalculateStartingBalance  (SWOS2.s line 86092)
+ * CalculateStartingBalance  (SWOS2.s line 86092)
  *
  * Calculates career starting balance for a given team.
  * Gets team value base * 3, applies random percentage (80-119%),
@@ -2336,17 +2336,17 @@ void _ShowRetirementMessage(void)
  *
  * Asm: CalculateStartingBalance (d0=teamNumber → d1=balance)
  * ================================================================ */
-extern TeamFileEx *_GetTeamPointer(uint16_t teamId);
-extern uint16_t _GetAveragePlayerPrice(TeamFileEx *team);
+extern TeamFileEx *GetTeamPointer(uint16_t teamId);
+extern uint16_t GetAveragePlayerPrice(TeamFileEx *team);
 
 __attribute__((used, externally_visible))
-uint32_t _CalculateStartingBalance(uint16_t teamNumber)
+uint32_t CalculateStartingBalance(uint16_t teamNumber)
 {
-    TeamFileEx *teamPtr = _GetTeamPointer(teamNumber);
-    uint16_t avgPrice = _GetAveragePlayerPrice(teamPtr);
-    uint16_t baseValue = _GetTeamValueBase(avgPrice);
+    TeamFileEx *teamPtr = GetTeamPointer(teamNumber);
+    uint16_t avgPrice = GetAveragePlayerPrice(teamPtr);
+    uint16_t baseValue = GetTeamValueBase(avgPrice);
     uint16_t base3 = (uint16_t)(baseValue * g_careerParams.start_balance_value_mult);
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     uint16_t randFactor = (uint16_t)((uint16_t)(r * g_careerParams.start_balance_pct_range) >> 8);
     uint16_t pct = (uint16_t)(randFactor + g_careerParams.start_balance_pct_min);  /* default 80-119 */
     uint32_t product = (uint32_t)pct * (uint32_t)base3;
@@ -2365,56 +2365,56 @@ uint32_t _CalculateStartingBalance(uint16_t teamNumber)
 #define MSG_PLAYER_JOINED_CLUB_ON_TRIAL   26
 
 extern uint8_t *plNameForMessage;
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-extern void _Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex);
-extern void _RemovePlayerFromTeam(uint16_t playerOrd);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern void Career_UpdatePlayerWeeklyWageCache(uint16_t playerIndex);
+extern void RemovePlayerFromTeam(uint16_t playerOrd);
 
 /* asm bridges for functions not yet ported */
-extern void _Career_ConvertPlayerToTrialistFromName(uint16_t teamNum, uint16_t playerIdx);
-extern void _TrainingMatch_SaveSelectedPlayerId(uint16_t value);
+extern void Career_ConvertPlayerToTrialistFromName(uint16_t teamNum, uint16_t playerIdx);
+extern void TrainingMatch_SaveSelectedPlayerId(uint16_t value);
 
 /* competitionFileBuffer migrated to primaryCompetitionBuf (slot-0 untangle, S6); buffer extern declared above */
 
 
 /* ================================================================
- * _PlayerJoinedClubOnTrial — show chairman message for player joining on trial.
+ * PlayerJoinedClubOnTrial — show chairman message for player joining on trial.
  * Asm: PlayerJoinedClubOnTrial (a1=name ptr)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayerJoinedClubOnTrial(uint8_t *name)
+void PlayerJoinedClubOnTrial(uint8_t *name)
 {
     plNameForMessage = name;
     currentMessage = MSG_PLAYER_JOINED_CLUB_ON_TRIAL;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ================================================================
- * _TrialPlayerLeftClubMessage — show chairman message for trial player leaving.
+ * TrialPlayerLeftClubMessage — show chairman message for trial player leaving.
  * Asm: TrialPlayerLeftClubMessage (a1=name ptr)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _TrialPlayerLeftClubMessage(uint8_t *name)
+void TrialPlayerLeftClubMessage(uint8_t *name)
 {
     plNameForMessage = name;
     currentMessage = MSG_TRIAL_PLAYER_LEFT_CLUB;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ================================================================
- * _ReservePlayerLeftClubMessage — show chairman message for reserve player leaving.
+ * ReservePlayerLeftClubMessage — show chairman message for reserve player leaving.
  * Asm: ReservePlayerLeftClubMessage (a1=name ptr)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ReservePlayerLeftClubMessage(uint8_t *name)
+void ReservePlayerLeftClubMessage(uint8_t *name)
 {
     plNameForMessage = name;
     currentMessage = MSG_RESERVE_PLAYER_LEFT_CLUB;
-    _ShowChairmanMessage();
+    ShowChairmanMessage();
 }
 
 /* ================================================================
- * _Career_UpdateSinglePlayerPostMatchStats — update one player's post-match form.
+ * Career_UpdateSinglePlayerPostMatchStats — update one player's post-match form.
  * Asm: Career_UpdateSinglePlayerPostMatchStats (a6=player raw ptr within careerTeam)
  *
  * The player pointer is within careerTeam; index = (ptr - careerTeam) / 38.
@@ -2422,7 +2422,7 @@ void _ReservePlayerLeftClubMessage(uint8_t *name)
  * in-form players get +2 to form clamped at 100.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
+void Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
 {
     if (isNationalSelector)
         return;
@@ -2440,7 +2440,7 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
         if (form == PLAYER_FORM_TRIALIST) {
             /* Trialist hired → demote to "on trial" ($9A) */
             pf->form = (int8_t)PLAYER_FORM_RESERVE;
-            _Career_UpdatePlayerWeeklyWageCache(playerIdx);
+            Career_UpdatePlayerWeeklyWageCache(playerIdx);
             return;
         }
 
@@ -2448,13 +2448,13 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
             return;  /* Not trial — nothing to do */
 
         /* Form = $9A (on trial) — ~20% chance to promote */
-        if (_Rand() >= 0x33)
+        if (Rand() >= 0x33)
             return;
 
         /* Restore form from saved modifier table and set in-form bit */
         pf->form = (int8_t)playerFormModifiers[playerIdx];
         pf->positionAndFace = positionAndFace | PF_INFORM;  /* bset #0 */
-        _Career_UpdatePlayerWeeklyWageCache(playerIdx);
+        Career_UpdatePlayerWeeklyWageCache(playerIdx);
         return;
     }
 
@@ -2474,9 +2474,9 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
 }
 
 /* ================================================================
- * _Career_ApplyPostMatchPlayerStatModsIfCareerTeam — apply post-match
+ * Career_ApplyPostMatchPlayerStatModsIfCareerTeam — apply post-match
  * stat mods to career team players.
- * Asm: _Career_ApplyPostMatchPlayerStatModsIfCareerTeam (a0=team, a1=mods)
+ * Asm: Career_ApplyPostMatchPlayerStatModsIfCareerTeam (a0=team, a1=mods)
  *
  * Only processes if NOT national selector and team IS careerTeam.
  * Iterates 11 players (d7=10..0), uses currentMatchPlayers[d7] as
@@ -2484,7 +2484,7 @@ void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerSlotPtr)
  * to use remap value as replacement modifier.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t *mods)
+void Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t *mods)
 {
     if (isNationalSelector)
         return;
@@ -2499,7 +2499,7 @@ void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t 
 
         if (!((int8_t)modByte < 0)) {
             /* modByte is non-negative — check 12.5% chance */
-            if (_Rand() >= 0x20)
+            if (Rand() >= 0x20)
                 goto do_update;
             d6 = (int8_t)modByte;
         }
@@ -2509,13 +2509,13 @@ void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t 
             uint16_t d2 = (uint16_t)(uint8_t)d6;
             d2 = (uint16_t)(d2 * 38);  /* mulu.w #$26 */
             uint8_t *playerSlotPtr = teamRaw + d2;
-            _Career_UpdateSinglePlayerPostMatchStats(playerSlotPtr);
+            Career_UpdateSinglePlayerPostMatchStats(playerSlotPtr);
         }
     }
 }
 
 /* ================================================================
- * _AddTrialPlayer — generate a random trial player and add to roster.
+ * AddTrialPlayer — generate a random trial player and add to roster.
  * Asm: AddTrialPlayer (no params, result: a3=new player ptr)
  *
  * Picks a random position from trialPlayerPositionTable, then calls
@@ -2525,16 +2525,16 @@ void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t 
 static const uint8_t trialPlayerPositionTable[] = {3,3,6,6,7,7,0,1,2,4,5,0};
 
 __attribute__((used, externally_visible))
-uint8_t *_AddTrialPlayer(void)
+uint8_t *AddTrialPlayer(void)
 {
-    uint16_t r = _Rand();
+    uint16_t r = Rand();
     uint16_t posIdx = (uint16_t)((uint16_t)(r * 11) >> 8);
     uint16_t position = (uint16_t)trialPlayerPositionTable[posIdx];
-    return _TrainingMatch_AddTrialPlayerAtPosition(position);
+    return TrainingMatch_AddTrialPlayerAtPosition(position);
 }
 
 /* ================================================================
- * _TrainingMatch_AddTrialPlayerAtPosition — add trial player at given position.
+ * TrainingMatch_AddTrialPlayerAtPosition — add trial player at given position.
  * Asm: TrainingMatch_AddTrialPlayerAtPosition (d0=position)
  *
  * Finds unused player slot in team, sets up as trialist, inserts into
@@ -2542,7 +2542,7 @@ uint8_t *_AddTrialPlayer(void)
  * Returns pointer to the new player record.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
+uint8_t *TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
 {
     /* Find an unused player index (not in currentMatchPlayers[0..careerNumPlayers-1]) */
     uint16_t freeSlot = 0;
@@ -2562,9 +2562,9 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     }
 
     /* Get the player record at that slot */
-    uint8_t *player = _GetPlayer(selTeamNumber, freeSlot);
+    uint8_t *player = GetPlayer(selTeamNumber, freeSlot);
     PlayerFile *pf = (PlayerFile *)(player + 76);
-    _TrainingMatch_SaveSelectedPlayerId(freeSlot);
+    TrainingMatch_SaveSelectedPlayerId(freeSlot);
 
     /* Set shirtNumber as a flag (used as a marker here) */
     pf->shirtNumber = 0x10;
@@ -2573,7 +2573,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     pf->positionAndFace = (uint8_t)(position << PF_POSITION_SHIFT);
 
     /* Convert player to trialist */
-    _Career_ConvertPlayerToTrialistFromName(selTeamNumber, freeSlot);
+    Career_ConvertPlayerToTrialistFromName(selTeamNumber, freeSlot);
 
     /* Determine insertion point in currentMatchPlayers */
     uint16_t insertOffset;
@@ -2606,7 +2606,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
 
     /* Assign random negative form modifier */
     {
-        uint16_t r = _Rand();
+        uint16_t r = Rand();
         uint16_t formVal = (uint16_t)((uint16_t)(r * 50) >> 8);  /* 0-49 */
         formVal += 40;   /* 40-89 */
         formVal = (uint16_t)(-(int16_t)formVal);  /* -40 to -89 */
@@ -2614,13 +2614,13 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
     }
 
     careerNumPlayers += 1;
-    _Career_UpdatePlayerWeeklyWageCache(freeSlot);
+    Career_UpdatePlayerWeeklyWageCache(freeSlot);
 
     return player;
 }
 
 /* ================================================================
- * _CheckPlayersLeavingComing — check for random player arrivals/departures.
+ * CheckPlayersLeavingComing — check for random player arrivals/departures.
  * Asm: CheckPlayersLeavingComing (no params)
  *
  * If not national selector and not sacked:
@@ -2629,7 +2629,7 @@ uint8_t *_TrainingMatch_AddTrialPlayerAtPosition(uint16_t position)
  *   reserves ($9A form) with small random chance to leave
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CheckPlayersLeavingComing(void)
+void CheckPlayersLeavingComing(void)
 {
     if (isNationalSelector)
         return;
@@ -2638,10 +2638,10 @@ void _CheckPlayersLeavingComing(void)
 
     /* Try to add a trial player if roster not full */
     if (careerNumPlayers < 30) {
-        if (_Rand() < 25) {
-            uint8_t *newPlayer = _AddTrialPlayer();
+        if (Rand() < 25) {
+            uint8_t *newPlayer = AddTrialPlayer();
             PlayerFile *npf = (PlayerFile *)(newPlayer + 76);
-            _PlayerJoinedClubOnTrial((uint8_t *)npf->playerName);
+            PlayerJoinedClubOnTrial((uint8_t *)npf->playerName);
             return;
         }
     }
@@ -2660,31 +2660,31 @@ void _CheckPlayersLeavingComing(void)
     {
         int16_t d2;
         for (d2 = (int16_t)(careerNumPlayers - 1); d2 >= 0; d2--) {
-            uint8_t *player = _GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
+            uint8_t *player = GetPlayerAtIndex(selTeamNumber, (uint16_t)d2);
             uint16_t fileIndex = (uint16_t)currentMatchPlayers[d2];
             PlayerFile *pf = (PlayerFile *)(player + 76);
             uint8_t form = (uint8_t)pf->form;
 
             if (form == PLAYER_FORM_TRIALIST) {
                 /* Trial player ($9B) — 5/256 chance to leave */
-                if (_Rand() >= 5)
+                if (Rand() >= 5)
                     continue;
-                _TrialPlayerLeftClubMessage((uint8_t *)pf->playerName);
+                TrialPlayerLeftClubMessage((uint8_t *)pf->playerName);
                 goto remove;
             }
 
             if (form == PLAYER_FORM_RESERVE) {
                 /* Reserve/loan player ($9A) — 2/256 chance to leave */
-                if (_Rand() >= 2)
+                if (Rand() >= 2)
                     continue;
-                _ReservePlayerLeftClubMessage((uint8_t *)pf->playerName);
+                ReservePlayerLeftClubMessage((uint8_t *)pf->playerName);
                 goto remove;
             }
 
             continue;
 
         remove:
-            _RemovePlayerFromTeam(fileIndex);
+            RemovePlayerFromTeam(fileIndex);
             return;  /* Only one removal per call */
         }
     }
@@ -2711,7 +2711,7 @@ extern uint8_t aSeasonFromSens[];
 extern uint8_t aAdditionalInve[];
 
 /* Already-ported C functions used by Chunk 101 */
-extern uint16_t _GetTeamValueBase(uint16_t avgPrice);
+extern uint16_t GetTeamValueBase(uint16_t avgPrice);
 
 /* Helper: menu entry from byte offset */
 
@@ -2739,7 +2739,7 @@ static void formatNewBalanceEntry(MenuEntry *e, int32_t balance) {
         bg = (bg & 0xFFF0) | 12;
         e->bgColor = bg;
     }
-    _Int2PoundsSigned(balance, (uint8_t *)e->fg);
+    Int2PoundsSigned(balance, (uint8_t *)e->fg);
 }
 
 /* ================================================================
@@ -2751,22 +2751,22 @@ static void formatNewBalanceEntry(MenuEntry *e, int32_t balance) {
  * 3) stayingInOldClub → extended with sponsorship info
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ClubBusinessInit(void)
+void ClubBusinessInit(void)
 {
     if (contractNegotiationActive) {
         /* ---- Path 1: Full financial summary ---- */
         /* Old balance */
-        _Int2PoundsSigned(old_balance, (uint8_t *)menuEntries[12].fg);
+        Int2PoundsSigned(old_balance, (uint8_t *)menuEntries[12].fg);
         /* Gate receipts */
-        _WriteAccountBalance(gateReceipts, (uint8_t *)menuEntries[14].fg);
+        WriteAccountBalance(gateReceipts, (uint8_t *)menuEntries[14].fg);
         /* General running costs (negated) */
-        _WriteAccountBalance(-generalRunningCosts, (uint8_t *)menuEntries[15].fg);
+        WriteAccountBalance(-generalRunningCosts, (uint8_t *)menuEntries[15].fg);
         /* Player sales */
-        _WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
+        WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
         /* Player purchases (negated) */
-        _WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
+        WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
         /* Player wages bill (negated) */
-        _WriteAccountBalance(-playerWagesBill, (uint8_t *)menuEntries[19].fg);
+        WriteAccountBalance(-playerWagesBill, (uint8_t *)menuEntries[19].fg);
 
         /* Compute total profit/loss */
         int32_t total = computeTotalProfitLoss();
@@ -2775,7 +2775,7 @@ void _ClubBusinessInit(void)
         }
 
         /* Write total */
-        _WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
+        WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
 
         /* New balance with red color if negative */
         formatNewBalanceEntry(&menuEntries[21], newBalance);
@@ -2790,7 +2790,7 @@ void _ClubBusinessInit(void)
 
         MenuEntry *e2A0 = &menuEntries[12];
         e2A0->y += 30;
-        _Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
+        Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
 
         /* Hide entries: E0, 118, 310, 348 */
         menuEntries[4].isInvisible = 1;
@@ -2799,8 +2799,8 @@ void _ClubBusinessInit(void)
         menuEntries[15].isInvisible = 1;
 
         /* Player sales & purchases */
-        _WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
-        _WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
+        WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
+        WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
 
         /* Hide: 1F8, 428 */
         menuEntries[9].isInvisible = 1;
@@ -2817,7 +2817,7 @@ void _ClubBusinessInit(void)
 
         /* Write total */
         menuEntries[20].y -= 15;
-        _WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
+        WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
 
         menuEntries[11].y -= 15;
 
@@ -2850,14 +2850,14 @@ void _ClubBusinessInit(void)
 
     MenuEntry *e2A0 = &menuEntries[12];
     e2A0->y += 5;
-    _Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
+    Int2PoundsSigned(old_balance, (uint8_t *)e2A0->fg);
 
     /* Show entries: A8, 2D8 */
     menuEntries[3].isInvisible = 0;
     menuEntries[13].isInvisible = 0;
 
     /* Competition bonuses */
-    _WriteAccountBalance(competitionBonuses, (uint8_t *)menuEntries[13].fg);
+    WriteAccountBalance(competitionBonuses, (uint8_t *)menuEntries[13].fg);
 
     /* Shift entries E0..E0+7*56 down by 15 */
     {
@@ -2885,13 +2885,13 @@ void _ClubBusinessInit(void)
     /* Starting balance copy */
     menuEntries[14].y += 10;
     menuEntries[15].isInvisible = 1;
-    _WriteAccountBalance(startingBalanceCopy, (uint8_t *)menuEntries[14].fg);
+    WriteAccountBalance(startingBalanceCopy, (uint8_t *)menuEntries[14].fg);
 
     if (sensisoftPlcSponsorshipFactor) {
         /* Show sponsorship entries */
         menuEntries[6].isInvisible = 0;
         menuEntries[16].isInvisible = 0;
-        _WriteAccountBalance(sensisoftPlcSponsorship, (uint8_t *)menuEntries[16].fg);
+        WriteAccountBalance(sensisoftPlcSponsorship, (uint8_t *)menuEntries[16].fg);
 
         if (additionalInvestments) {
             menuEntries[6].fg = (uintptr_t)aAdditionalInve;
@@ -2915,8 +2915,8 @@ void _ClubBusinessInit(void)
     }
 
     /* Player sales & purchases */
-    _WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
-    _WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
+    WriteAccountBalance(playerSales, (uint8_t *)menuEntries[17].fg);
+    WriteAccountBalance(-playerPurchases, (uint8_t *)menuEntries[18].fg);
 
     /* Hide: 1F8, 428 */
     menuEntries[9].isInvisible = 1;
@@ -2931,7 +2931,7 @@ void _ClubBusinessInit(void)
     }
 
     menuEntries[20].y -= 15;
-    _WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
+    WriteAccountBalance(total, (uint8_t *)menuEntries[20].fg);
 
     menuEntries[11].y -= 15;
 
@@ -2947,12 +2947,12 @@ void _ClubBusinessInit(void)
  * resets accumulators, handles sponsorship and competition bonuses.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_InitializeNewSeasonFinances(void)
+void Career_InitializeNewSeasonFinances(void)
 {
     /* Recalculate all player wages */
     for (int16_t i = (int16_t)(careerNumPlayers - 1); i >= 0; i--) {
-        _GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
-        _Career_UpdatePlayerWeeklyWageCache((uint16_t)i);
+        GetPlayerAtIndex(selTeamNumber, (uint16_t)i);
+        Career_UpdatePlayerWeeklyWageCache((uint16_t)i);
     }
 
     /* Transfer newBalance → old_balance and clear accumulators */
@@ -2970,7 +2970,7 @@ void _Career_InitializeNewSeasonFinances(void)
 
         if (d7 == 0) {
             /* 1/8 chance of getting sponsorship */
-            if (_Rand2() >= 0x20) {
+            if (Rand2() >= 0x20) {
                 goto skipSponsorship;
             }
             d7 = 0x10;
@@ -2979,7 +2979,7 @@ void _Career_InitializeNewSeasonFinances(void)
 
         /* Random sponsorship level: 1..32, capped at d7 */
         {
-            uint16_t rnd = _Rand2();
+            uint16_t rnd = Rand2();
             rnd = (rnd & 0x1F) + 1;
             sensisoftPlcSponsorshipFactor = 0;
             if (rnd > d7) {
@@ -2991,14 +2991,14 @@ void _Career_InitializeNewSeasonFinances(void)
 
         /* Calculate sponsorship amount based on team value */
         {
-            _VerifyTeamLoaded(selTeamNumber);
-            uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
-            uint32_t d0 = (uint32_t)_GetTeamValueBase(avgPrice);
+            VerifyTeamLoaded(selTeamNumber);
+            uint16_t avgPrice = GetAveragePlayerPrice(&careerTeam);
+            uint32_t d0 = (uint32_t)GetTeamValueBase(avgPrice);
             d0 = d0 * d7;
 
             if (d0 > 10000) {
                 d0 = 10000;
-                uint16_t rnd = _Rand2() & 0xF;
+                uint16_t rnd = Rand2() & 0xF;
                 rnd = rnd * 100;
                 d0 = 10000 - rnd;
             }
@@ -3064,24 +3064,24 @@ skipSponsorship:
  * board confidence modifiers/score, reputation, job offers, history.
  * ================================================================ */
 extern uint16_t retired;
-extern void _Career_FillCurrentSeasonInfo(void);
-extern void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
+extern void Career_FillCurrentSeasonInfo(void);
+extern void Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr);
 extern uint16_t numJobOffers;
 extern uint16_t numNewJobOffers;
 
 __attribute__((used, externally_visible))
-void _Career_HandleRetirement(void)
+void Career_HandleRetirement(void)
 {
     retired = 1;
-    _UpdateBoardConfidenceModifiers();
-    _UpdateCareerReputationBonuses();
-    _UpdateBoardConfidenceScore();
-    _Career_MaybeGenerateJobOffer();
-    _PushBoardConfidenceHistory();
+    UpdateBoardConfidenceModifiers();
+    UpdateCareerReputationBonuses();
+    UpdateBoardConfidenceScore();
+    Career_MaybeGenerateJobOffer();
+    PushBoardConfidenceHistory();
 }
 
 /* ================================================================
- * _Career_PostMatchUpdate  (SWOS2.s line 35371)
+ * Career_PostMatchUpdate  (SWOS2.s line 35371)
  *
  * Called after each career match. Fills season info, removes expired
  * job offers, generates 1-2 new job offers (up to 100 attempts),
@@ -3089,23 +3089,23 @@ void _Career_HandleRetirement(void)
  * Career_HandleRetirement at the end.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_PostMatchUpdate(void)
+void Career_PostMatchUpdate(void)
 {
     /* Fill current season info (preserves all regs in asm) */
-    _Career_FillCurrentSeasonInfo();
+    Career_FillCurrentSeasonInfo();
 
     /* Remove expired job offers */
-    _JobOffers_RemoveExpiredOffers();
+    JobOffers_RemoveExpiredOffers();
 
     /* Decide how many job offers to target: 1 or 2 */
-    uint16_t target = (_Rand2() & 1) + 1;
+    uint16_t target = (Rand2() & 1) + 1;
 
     /* Try up to 100 times to generate enough job offers */
     for (int16_t i = 99; i >= 0; i--) {
         uint16_t total = numJobOffers + numNewJobOffers;
         if (total >= target)
             break;
-        _Career_MaybeGenerateJobOffer();
+        Career_MaybeGenerateJobOffer();
     }
 
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -3125,7 +3125,7 @@ void _Career_PostMatchUpdate(void)
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate EXIT (isNationalSelector — no auto-advance)");
 #endif
-        _Career_HandleRetirement();
+        Career_HandleRetirement();
         return;
     }
 
@@ -3141,14 +3141,14 @@ void _Career_PostMatchUpdate(void)
     SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(currentCompetitionPtr=%p)",
                       (void *)(uintptr_t)currentCompetitionPtr);
 #endif
-    _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
+    Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)currentCompetitionPtr);
 
     if (secondaryCompetitionPtr != 0) {
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(secondaryCompetitionPtr=%p)",
                           (void *)(uintptr_t)secondaryCompetitionPtr);
 #endif
-        _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)secondaryCompetitionPtr);
+        Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)secondaryCompetitionPtr);
     }
 
     if (tertiaryCompetitionPtr != 0) {
@@ -3156,7 +3156,7 @@ void _Career_PostMatchUpdate(void)
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(tertiaryCompetitionPtr=%p)",
                           (void *)(uintptr_t)tertiaryCompetitionPtr);
 #endif
-        _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)tertiaryCompetitionPtr);
+        Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)tertiaryCompetitionPtr);
     }
 
     if (quaternaryCompetitionPtr != 0) {
@@ -3164,7 +3164,7 @@ void _Career_PostMatchUpdate(void)
         SWOS_AUTOSKIP_LOG("[bug4-cup] PostMatchUpdate -> AutoAdvance(quaternaryCompetitionPtr=%p)",
                           (void *)(uintptr_t)quaternaryCompetitionPtr);
 #endif
-        _Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
+        Career_AutoAdvanceCompetitionAndPersistSlotState((uint8_t *)quaternaryCompetitionPtr);
     }
 
     /* Restore saved values */
@@ -3176,7 +3176,7 @@ void _Career_PostMatchUpdate(void)
 #endif
 
     /* Fall through to Career_HandleRetirement (bra.w *+4) */
-    _Career_HandleRetirement();
+    Career_HandleRetirement();
 }
 
 /* --- Chunk 179: Career Auto-Advance Chain --- */
@@ -3189,7 +3189,7 @@ extern uint16_t careerAutoAdvanceInProgress;
  * loads slot state, dispatches to the appropriate auto-advance function
  * based on competition type, then stores the slot state back. */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
+void Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
 {
     careerAutoAdvanceInProgress = 1;
 
@@ -3205,7 +3205,7 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
         }
     }
 
-    _Career_LoadCompetitionSlotStateFromBuffer(ctx);
+    Career_LoadCompetitionSlotStateFromBuffer(ctx);
 
     /* Dispatch by competition type. The asm reads `1(a0)` which on m68k
      * BE is the LOW byte of the uint16 type word — i.e. the actual type
@@ -3307,21 +3307,21 @@ void _Career_AutoAdvanceCompetitionAndPersistSlotState(uint8_t *compPtr)
                                   (unsigned)bailTeamSelPtr);
             }
 #endif
-            _Career_StoreCompetitionSlotStateToBuffer(ctx);
+            Career_StoreCompetitionSlotStateToBuffer(ctx);
             careerAutoAdvanceInProgress = 0;
             return;
         }
     }
 
     if (compType == 1) {
-        _Career_AutoAdvanceCupMatches();
+        Career_AutoAdvanceCupMatches();
     } else if (compType == 2) {
-        _Career_AutoAdvanceCompetitionSlots();
+        Career_AutoAdvanceCompetitionSlots();
     } else {
-        _Career_AutoAdvanceLeagueFixtures();
+        Career_AutoAdvanceLeagueFixtures();
     }
 
-    _Career_StoreCompetitionSlotStateToBuffer(ctx);
+    Career_StoreCompetitionSlotStateToBuffer(ctx);
     careerAutoAdvanceInProgress = 0;
 }
 
@@ -3335,24 +3335,24 @@ extern uint8_t  englishCup_1[];
 extern uint8_t  englishLeagueCup[];
 extern uint8_t  englishLeagueCup_1[];
 
-extern void _SaveRand2State(void);
-extern void _RestoreRand2State(void);
-extern void _Randomize2(uint16_t seed);
-extern void _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *record);
-extern void _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *record);
-extern void _Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
-extern void _InitDIYCupFromRecord(uint8_t *record);
-extern void _InitDIYLeagueFromRecord(uint8_t *record);
-extern void _InitDIYCompetitionFromTableEntry(uint16_t index, uint8_t *record);
-extern void _InitTeams(void);
-extern void _Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *record, uint16_t index);
+extern void SaveRand2State(void);
+extern void RestoreRand2State(void);
+extern void Randomize2(uint16_t seed);
+extern void Career_InitCompetitionTeamSelectionFromTableHeaderSpec(uint8_t *record);
+extern void Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(uint8_t *record);
+extern void Career_ApplyPendingForeignMarketPlayersToSelectedTeams(void);
+extern void InitDIYCupFromRecord(uint8_t *record);
+extern void InitDIYLeagueFromRecord(uint8_t *record);
+extern void InitDIYCompetitionFromTableEntry(uint16_t index, uint8_t *record);
+extern void InitTeams(void);
+extern void Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *record, uint16_t index);
 
 /* Career_AutoAdvanceCupCompetitionFromRecord (SWOS2.s line 35246)
  * Auto-advances a cup competition: initializes team selection from record,
  * loads competition, runs cup match advancement, then restores RNG state.
  * a0 = competition record pointer. */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
+void Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
 {
     /* Special-case English cup aliases */
     if (record == englishCup)
@@ -3366,7 +3366,7 @@ void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
         teamSelectionKeyCacheEnd = 1;
 
     teamsLoaded = 0;
-    _SaveRand2State();
+    SaveRand2State();
 
     /* Save viewRandomPhase + seasonPlaying (contiguous bytes, saved as word in asm) */
     uint8_t savedViewRandom = viewRandomPhase;
@@ -3374,25 +3374,25 @@ void _Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
 
     /* Seed RNG from record byte and seasonPlaying */
     uint16_t seed = ((uint16_t)record[0] << 8) | (uint16_t)seasonPlaying;
-    _Randomize2(seed);
+    Randomize2(seed);
 
     numSelectedTeams = 0;
-    _Career_InitCompetitionTeamSelectionFromTableHeaderSpec(record);
-    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
-    _InitDIYCupFromRecord(record);
-    _InitTeams();
-    _Career_AutoAdvanceCupMatches();
+    Career_InitCompetitionTeamSelectionFromTableHeaderSpec(record);
+    Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
+    InitDIYCupFromRecord(record);
+    InitTeams();
+    Career_AutoAdvanceCupMatches();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;
-    _RestoreRand2State();
+    RestoreRand2State();
     careerLoadedFlag = 0;
 }
 
 /* Career_AutoAdvanceLeagueCompetitionFromRecord (SWOS2.s line 35291)
  * Same as above but for league competitions. */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
+void Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
 {
     careerLoadedFlag = 1;
 
@@ -3400,24 +3400,24 @@ void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
         teamSelectionKeyCacheEnd = 1;
 
     teamsLoaded = 0;
-    _SaveRand2State();
+    SaveRand2State();
 
     uint8_t savedViewRandom = viewRandomPhase;
     uint8_t savedSeasonPlaying = seasonPlaying;
 
     uint16_t seed = ((uint16_t)record[0] << 8) | (uint16_t)seasonPlaying;
-    _Randomize2(seed);
+    Randomize2(seed);
 
     numSelectedTeams = 0;
-    _Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(record);
-    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
-    _InitDIYLeagueFromRecord(record);
-    _InitTeams();
-    _Career_AutoAdvanceCompetitionSlots();
+    Career_InitCompetitionTeamSelectionFromAltTableHeaderSpec(record);
+    Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
+    InitDIYLeagueFromRecord(record);
+    InitTeams();
+    Career_AutoAdvanceCompetitionSlots();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;
-    _RestoreRand2State();
+    RestoreRand2State();
     careerLoadedFlag = 0;
 }
 
@@ -3427,28 +3427,28 @@ void _Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record)
  * advancement, then restores RNG state.
  * a0 = competition record pointer, d0 = table index. */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index)
+void Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index)
 {
     careerLoadedFlag = 1;
     if (seasonUpdateInProgress == 0 && internationalAutoAdvanceFlag == 0)
         teamSelectionKeyCacheEnd = 1;
     teamsLoaded = 0;
-    _SaveRand2State();
+    SaveRand2State();
     uint8_t savedViewRandom = viewRandomPhase;
     uint8_t savedSeasonPlaying = seasonPlaying;
 
     uint16_t seed = ((uint16_t)record[0] << 8) | (uint16_t)seasonPlaying;
-    _Randomize2(seed);
+    Randomize2(seed);
     numSelectedTeams = 0;
-    _Career_InitCompetitionTeamSelectionFromTableEntrySpec(record, index);
-    _Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
-    _InitDIYCompetitionFromTableEntry(index, record);
-    _InitTeams();
-    _Career_AutoAdvanceLeagueFixtures();
+    Career_InitCompetitionTeamSelectionFromTableEntrySpec(record, index);
+    Career_ApplyPendingForeignMarketPlayersToSelectedTeams();
+    InitDIYCompetitionFromTableEntry(index, record);
+    InitTeams();
+    Career_AutoAdvanceLeagueFixtures();
 
     viewRandomPhase = savedViewRandom;
     seasonPlaying = savedSeasonPlaying;
-    _RestoreRand2State();
+    RestoreRand2State();
     careerLoadedFlag = 0;
 }
 
@@ -3470,7 +3470,7 @@ extern uint16_t avgPlayerPriceHalfClamped;
 extern uint8_t playerFormDeltaRandomTable[]; /* 144 bytes: 18×8 lookup table */
 
 __attribute__((used, externally_visible))
-void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team1, TeamFileEx *team2,
+void UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team1, TeamFileEx *team2,
                                          uint16_t team1Goals, uint16_t team2Goals)
 {
     if (isNationalSelector)
@@ -3503,7 +3503,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
     d7 += 11;
 
     /* Get average player price for career team, halve and clamp to 17 */
-    uint16_t avgPrice = _GetAveragePlayerPrice(&careerTeam);
+    uint16_t avgPrice = GetAveragePlayerPrice(&careerTeam);
     avgPrice >>= 1;
     if (avgPrice > 0x11)
         avgPrice = 0x11;
@@ -3524,13 +3524,13 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
         int8_t d4;  /* form delta to apply */
 
         /* Check if player is injured */
-        if (_IsPlayerInjured(pl - 2, (int16_t)d6)) {
-            /* _IsPlayerInjured takes the TeamFile-relative player base; the
+        if (IsPlayerInjured(pl - 2, (int16_t)d6)) {
+            /* IsPlayerInjured takes the TeamFile-relative player base; the
              * Amiga asm passes the slot-base (careerTeam + slot*38, two
              * PlayerFile records before the players[] start). Preserve
              * that calling convention. */
             /* Injured: 33% chance of -1 form */
-            if (_Rand2() > 0x33)
+            if (Rand2() > 0x33)
                 goto clampForm;
             d4 = -1;
             goto applyGoalBonus;
@@ -3538,7 +3538,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
 
         if (d3 == 0) {
             /* Goalkeeper (index 0) */
-            if (_Rand2() > 0x33)
+            if (Rand2() > 0x33)
                 goto clampForm;
             if (d2 == 0) {
                 d4 = 4;  /* clean sheet: +4 */
@@ -3569,7 +3569,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             if (d4s >= 0) {
                 /* Performing above expectations: positive random adjustment */
                 if (d4s > 0x11) d4s = 0x11;
-                uint16_t r = _Rand();
+                uint16_t r = Rand();
                 d4s <<= 3;
                 uint16_t rIdx = r & 7;
                 d4 = (int8_t)playerFormDeltaRandomTable[d4s + rIdx];
@@ -3577,7 +3577,7 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
                 /* Performing below expectations: negative random adjustment */
                 d4s = -d4s;
                 if (d4s > 0x11) d4s = 0x11;
-                uint16_t r = _Rand();
+                uint16_t r = Rand();
                 d4s <<= 3;
                 uint16_t rIdx = r & 7;
                 d4 = -(int8_t)playerFormDeltaRandomTable[d4s + rIdx];
@@ -3585,13 +3585,13 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             goto applyGoalBonus;
         } else if (d3 < d7) {
             /* Substitute who played (index 11..d7-1) */
-            if (_Rand2() > 0x33)
+            if (Rand2() > 0x33)
                 goto clampForm;
 
             uint8_t posType = (((uint8_t)pl->positionAndFace) & PF_POSITION_MASK) >> 5;
             if (posType == 0) {
                 /* GK sub: random ±1 */
-                uint16_t r = _Rand2();
+                uint16_t r = Rand2();
                 d4 = (int8_t)(r & 1);
                 d4 = -d4;  /* 0→0 or 1→-1 */
             } else {
@@ -3601,9 +3601,9 @@ void _UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team
             goto applyGoalBonus;
         } else {
             /* Unused substitute (index >= d7): random small form change */
-            if (_Rand2() > 0x55)
+            if (Rand2() > 0x55)
                 goto clampForm;
-            uint16_t r = _Rand2();
+            uint16_t r = Rand2();
             d4 = (int8_t)(r & 1);
             d4 = -d4;
             d4 -= 1;  /* 0→-1 or 1→-2 */
@@ -3616,10 +3616,10 @@ applyGoalBonus:
             uint8_t goals = *goalCounterForPlayer;
             if (goals != 0) {
                 d4 += 1;
-                if ((_Rand2() & 1) == 0)
+                if ((Rand2() & 1) == 0)
                     d4 += 1;
                 if (goals != 1) {
-                    if ((_Rand2() & 3) == 0)
+                    if ((Rand2() & 3) == 0)
                         d4 += 1;
                 }
             }
@@ -3627,7 +3627,7 @@ applyGoalBonus:
 
         /* Clamp delta to [-maxDelta..+maxDelta] where maxDelta = random 1 or 2 */
         {
-            uint16_t r = _Rand2();
+            uint16_t r = Rand2();
             int16_t maxDelta = (int16_t)((r & 1) + 1);
             if ((int8_t)d4 > (int8_t)maxDelta)
                 d4 = (int8_t)maxDelta;
@@ -3692,7 +3692,7 @@ extern uint32_t aEuropeanTour;  /* string label — used as address boundary */
 extern uint32_t aOceaniaTour;   /* string label — used as address boundary */
 
 __attribute__((used, externally_visible))
-void _Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
+void Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
                                     uint16_t packedGoals, uint16_t aggregate,
                                     uint16_t penalty, uint16_t flags)
 {
@@ -3810,7 +3810,7 @@ skipStats:
      * teamControls=2 (the Amiga loads those cup slots as teamControls=COMPUTER, so
      * the whole block below is skipped there). On SDL the copy's ctl=2 let every
      * auto-played leg over-decrement the cursor entry past 0 -> stray match-score
-     * writes smashed an entryStride -> _DIY_RecordCupBracketProgress panic 0x6666.
+     * writes smashed an entryStride -> DIY_RecordCupBracketProgress panic 0x6666.
      * Gate on selTeamNumber: the player's number during interactive play, 0xFFFF
      * during auto-advance. This reproduces the Amiga's net keycache effect
      * regardless of the copy's wrong teamControls. (See panic_0x6666 analysis.) */
@@ -3821,7 +3821,7 @@ skipStats:
         /* Asm calls GetCurrentSelectedElementPtr FIRST, THEN decrements
          * remainingElements. Order matters: the slot pointer depends on
          * (totalElements - remainingElements) * 12. */
-        TeamSelectionKeyCacheMatchSlot *slot = _TeamSelectionKeyCache_GetCurrentMatchSlot();
+        TeamSelectionKeyCacheMatchSlot *slot = TeamSelectionKeyCache_GetCurrentMatchSlot();
 
         /* Base cache entry — decrement remainingElements AFTER getting slot */
         TeamSelectionKeyCacheEntry *base_entry =
@@ -3852,13 +3852,13 @@ extern uint16_t teamSelectionKeyCacheIndex;
 extern uint16_t teamSelectionKeyCacheCount;
 
 /* Forward declarations for Chunk 194 dependencies */
-extern uint8_t *_TeamSelectionKeyCache_GetCurrentListPtr(void);
-extern void _DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi);
-extern uint16_t _DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
-extern uint16_t _DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
-extern void _DIY_UpdateCompetitionProgress(void);
-extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
-extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern uint8_t *TeamSelectionKeyCache_GetCurrentListPtr(void);
+extern void DIY_AdvanceFixtureIndex(uint16_t lo, uint16_t hi);
+extern uint16_t DIY_PlayOrSimulateLeagueFixture(int16_t allowSquadChanges, int16_t selector);
+extern uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
+extern void DIY_UpdateCompetitionProgress(void);
+extern void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+extern void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
 
 /* Career_AutoAdvanceLeagueFixtures (SWOS2.s line 31608)
  *
@@ -3868,7 +3868,7 @@ extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg
  * When done, optionally shows the league/tournament menu.
  */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceLeagueFixtures(void)
+void Career_AutoAdvanceLeagueFixtures(void)
 {
     uint8_t currentPhase, nextPhase;
 
@@ -3880,7 +3880,7 @@ void _Career_AutoAdvanceLeagueFixtures(void)
     } else {
         /* Get phase bytes (sortKey) from TeamSelectionKeyCache */
         TeamSelectionKeyCacheEntry *cacheEntry =
-            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+            (TeamSelectionKeyCacheEntry *)TeamSelectionKeyCache_GetCurrentListPtr();
         currentPhase = cacheEntry->sortKey;
         uint16_t nextIdx = teamSelectionKeyCacheIndex + 1;
         if (nextIdx == teamSelectionKeyCacheCount) {
@@ -3922,7 +3922,7 @@ void _Career_AutoAdvanceLeagueFixtures(void)
 
     /* Inline DIY_AdvanceLeagueFixtureIndex: advance fixture and set d6 */
     uint8_t viewRP = base->viewRandomPhase;
-    _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+    DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
     /* d6 tracking not needed — sim path (selector=0) ignores allowSquadChanges */
 
     /* Main simulation loop */
@@ -3931,7 +3931,7 @@ main_loop:
         goto check_next_phase;
 
     /* Sim league fixtures until phase catches up */
-    _DIY_PlayOrSimulateLeagueFixture(0, 0); /* allowSquadChanges=0, selector=0 (sim) */
+    DIY_PlayOrSimulateLeagueFixture(0, 0); /* allowSquadChanges=0, selector=0 (sim) */
 
     if (((DIYCompetitionEx *)base)->leagueCurrentSlot == 0)
         goto main_loop; /* more matches pending in current fixture set */
@@ -3939,7 +3939,7 @@ main_loop:
     if (((DIYCompetitionEx *)base)->minSubstitutes != 0) {
         /* Advance fixture index and continue */
         viewRP = base->viewRandomPhase;
-        _DIY_AdvanceFixtureIndex((uint16_t)(viewRP + 1), (uint16_t)viewRP);
+        DIY_AdvanceFixtureIndex((uint16_t)(viewRP + 1), (uint16_t)viewRP);
         goto main_loop;
     }
 
@@ -3983,7 +3983,7 @@ show_menu_check:
      * select-entry-42 isn't overridden by the menuState fallback in
      * UpdateMenuEntryVisibilityAndFocus, which would otherwise drop the
      * controlMask=0xFFFF auto-skip the season transition relies on. */
-    _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+    ShowDiyLeaguesTournamentMenu(1, 1, 0);
     return;
 
 catch_up_phase:
@@ -3998,7 +3998,7 @@ catch_up_phase:
     if (lastMatch == base->viewRandomPhase) {
         /* Catch-up loop: sim until leagueCurrentSlot != 0 */
         do {
-            _DIY_PlayOrSimulateLeagueFixture(0, 0);
+            DIY_PlayOrSimulateLeagueFixture(0, 0);
         } while (((DIYCompetitionEx *)base)->leagueCurrentSlot == 0);
         goto show_menu_check;
     }
@@ -4006,9 +4006,9 @@ catch_up_phase:
     /* Store current viewRandomPhase as last match index */
     *lastMatchPtr = base->viewRandomPhase;
     if (highlightedLeagueTeamId != 0xFFFF) {
-        _ShowDiyLeaguesTournamentMenu(1, 1, 0);
+        ShowDiyLeaguesTournamentMenu(1, 1, 0);
     } else {
-        _ShowDiyLeaguesTournamentMenu(1, 0, 0);
+        ShowDiyLeaguesTournamentMenu(1, 0, 0);
     }
 }
 
@@ -4019,7 +4019,7 @@ catch_up_phase:
  * functions and checks roundComplete (0x54) and finishedFlag (0x56).
  */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceCupMatches(void)
+void Career_AutoAdvanceCupMatches(void)
 {
     uint8_t currentPhase, nextPhase;
 
@@ -4030,7 +4030,7 @@ void _Career_AutoAdvanceCupMatches(void)
         nextPhase = 0xFF;
     } else {
         TeamSelectionKeyCacheEntry *cacheEntry =
-            (TeamSelectionKeyCacheEntry *)_TeamSelectionKeyCache_GetCurrentListPtr();
+            (TeamSelectionKeyCacheEntry *)TeamSelectionKeyCache_GetCurrentListPtr();
         currentPhase = cacheEntry->sortKey;
         uint16_t nextIdx = teamSelectionKeyCacheIndex + 1;
         if (nextIdx == teamSelectionKeyCacheCount) {
@@ -4067,7 +4067,7 @@ void _Career_AutoAdvanceCupMatches(void)
 
     /* Inline DIY_AdvanceCupFixtureIndex */
     uint8_t viewRP = base->viewRandomPhase;
-    _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+    DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
 
     /* First check: if currentPhase <= viewRandomPhase, skip main loop */
     if (currentPhase <= base->viewRandomPhase)
@@ -4088,7 +4088,7 @@ cup_main_loop:
         return;
     }
 #endif
-    _DIY_PlayCupMatchAndAdvance(0, 0); /* allowSquadChanges=0, mode=0 (sim) */
+    DIY_PlayCupMatchAndAdvance(0, 0); /* allowSquadChanges=0, mode=0 (sim) */
 
     if (base->roundComplete == 0)
         goto cup_main_loop; /* roundComplete == 0, keep going */
@@ -4100,9 +4100,9 @@ cup_main_loop:
         goto check_next_phase_cup;
 
     /* Update competition progress and advance fixture */
-    _DIY_UpdateCompetitionProgress();
+    DIY_UpdateCompetitionProgress();
     viewRP = base->viewRandomPhase;
-    _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+    DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
     goto cup_main_loop;
 
 cup_finished:
@@ -4148,21 +4148,21 @@ cup_show_menu_check:
      * DesignDIYCup_UpdateMenuEntriesVisibilityAndSelection, which would
      * otherwise drop the controlMask=0xFFFF auto-skip the season
      * transition relies on. */
-    _ShowDIYCupMenuWithParams(1, 1, 0);
+    ShowDIYCupMenuWithParams(1, 1, 0);
     return;
 
 cup_catch_up:
     /* If roundComplete, update progress and advance fixture */
     if (base->roundComplete != 0) {
-        _DIY_UpdateCompetitionProgress();
+        DIY_UpdateCompetitionProgress();
         viewRP = base->viewRandomPhase;
-        _DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
+        DIY_AdvanceFixtureIndex(0, (uint16_t)viewRP);
     }
 
     if (lastMatch == base->viewRandomPhase) {
         /* Catch-up loop */
         do {
-            _DIY_PlayCupMatchAndAdvance(0, 0);
+            DIY_PlayCupMatchAndAdvance(0, 0);
         } while (base->roundComplete == 0);
         goto cup_show_menu_check;
     }
@@ -4170,14 +4170,14 @@ cup_catch_up:
     /* Store current viewRandomPhase as last match index */
     *lastMatchPtr = base->viewRandomPhase;
     if (highlightedLeagueTeamId != 0xFFFF) {
-        _ShowDIYCupMenuWithParams(1, 1, 0);
+        ShowDIYCupMenuWithParams(1, 1, 0);
     } else {
-        _ShowDIYCupMenuWithParams(1, 0, 0);
+        ShowDIYCupMenuWithParams(1, 0, 0);
     }
 }
 
-extern void _DIY_SortLeagueTableByStandings(void);
-extern void _DIY_AdvanceToNextCompetitionSlot(void);
+extern void DIY_SortLeagueTableByStandings(void);
+extern void DIY_AdvanceToNextCompetitionSlot(void);
 
 /* Career_AutoAdvanceCompetitionSlots (SWOS2.s line 31635)
  *
@@ -4187,7 +4187,7 @@ extern void _DIY_AdvanceToNextCompetitionSlot(void);
  * Loops via tail-call recursion until all slots are processed.
  */
 __attribute__((used, externally_visible))
-void _Career_AutoAdvanceCompetitionSlots(void)
+void Career_AutoAdvanceCompetitionSlots(void)
 {
 restart:
     ;
@@ -4205,20 +4205,20 @@ restart:
     if (slotRec->isLeagueFormat != 0) {
         /* League path */
         compEx->base.hasGroups = (int16_t)hasGroups;
-        _Career_AutoAdvanceLeagueFixtures();
+        Career_AutoAdvanceLeagueFixtures();
         if (compEx->base.hasGroups < 0)
             return; /* hasGroups went negative → done */
-        _DIY_SortLeagueTableByStandings();
-        _DIY_AdvanceToNextCompetitionSlot();
+        DIY_SortLeagueTableByStandings();
+        DIY_AdvanceToNextCompetitionSlot();
         if (bufCopyBase->currentRoundIndex == 0)
             goto restart; /* more slots remain */
     } else {
         /* Cup path */
         compEx->base.hasGroups = (int16_t)hasGroups;
-        _Career_AutoAdvanceCupMatches();
+        Career_AutoAdvanceCupMatches();
         if (compEx->base.hasGroups < 0)
             return; /* hasGroups went negative → done */
-        _DIY_AdvanceToNextCompetitionSlot();
+        DIY_AdvanceToNextCompetitionSlot();
         if (bufCopyBase->currentRoundIndex == 0)
             goto restart; /* more slots remain */
     }
@@ -4231,17 +4231,17 @@ restart:
 
 extern uint8_t *careerCompetitionSlotPtrTable[];
 extern volatile uint16_t isNationalSelector;
-extern void _Career_ApplyForeignMarketPlayersToSelectedTeams(void);
-extern void _CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
-extern void _InitCompetitionFromRecord(uint16_t index, uint8_t *record);
-extern void _Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
-extern void _Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
-extern void _Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx);
-extern void _DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
-extern void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);
+extern void Career_ApplyForeignMarketPlayersToSelectedTeams(void);
+extern void CopySelectedTeamNumbers(uint16_t count, uint8_t *dest);
+extern void InitCompetitionFromRecord(uint16_t index, uint8_t *record);
+extern void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src);
+extern void Career_StoreCompetitionSlotStateToBuffer(uint8_t *dst);
+extern void Career_InitCompetitionTeamSelection_Dispatch(uint8_t *spec, uint16_t idx);
+extern void DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk);
+extern void TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);
 
 /* ================================================================
- * _Career_SetCurrentCompetitionSlot
+ * Career_SetCurrentCompetitionSlot
  * (SWOS2.s line 31086)
  *
  * Sets up a competition slot for career mode:
@@ -4261,7 +4261,7 @@ extern void _TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk);
  *   hasSelectedTeams — flag indicating teams are pre-selected (d2)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams)
+void Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams)
 {
     /* Store comp pointer in the named per-slot global. On Amiga
      * `currentCompetitionPtr` and its 4 siblings were 5 adjacent
@@ -4282,7 +4282,7 @@ void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t di
         case 4: diyCompetitionPtr        = comp; break;
         default:
             panicReasonCode = 0x4459;  /* unknown slot index */
-            _PanicHaltLoop();
+            PanicHaltLoop();
     }
 
     /* Get the slot state pointer from careerCompetitionSlotPtrTable.
@@ -4292,7 +4292,7 @@ void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t di
 
     /* Load competition slot state from buffer */
     /* asm: exg a0,a1 → a0=slotState for the call, then exg back */
-    _Career_LoadCompetitionSlotStateFromBuffer(slotState);
+    Career_LoadCompetitionSlotStateFromBuffer(slotState);
 
     /* Validate comp type vs slot — panic if mismatch */
     const Competition *compHdr = (const Competition *)comp;
@@ -4323,7 +4323,7 @@ void _Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t di
 
 panic_mismatch:
     panicReasonCode = 0x4459;  /* 'DY' */
-    _PanicHaltLoop();
+    PanicHaltLoop();
 
 validated:
     /* Slot 4 special case: fill diyCompetitionStart.cupTeamIds with career team id */
@@ -4335,11 +4335,11 @@ validated:
         int16_t i = count - 1;
         while (i >= 0) {
             /* cupTeamIds is BE-packed {country, ordinal} (4e5f378 convention);
-             * every reader uses BE_READ_U16 (e.g. _DIY_BuildTeamSelectionPointerCache).
+             * every reader uses BE_READ_U16 (e.g. DIY_BuildTeamSelectionPointerCache).
              * The Amiga `move.w d0,(a0)+` stored a big-endian word; a host-native
              * `cupTeamIds[i] = teamId` on an LE host stores the bytes swapped, so
              * the BE read came back byte-swapped (careerTeam 0x084d -> 0x4d08) and
-             * _VerifyTeamLoaded panicked while building the slot-4 (playoff) cup
+             * VerifyTeamLoaded panicked while building the slot-4 (playoff) cup
              * bracket during season transition. Store BE to match every reader. */
             BE_WRITE_U16(&diyCompetitionStart.cupTeamIds[i], teamId);
             i--;
@@ -4358,19 +4358,19 @@ validated:
         } else {
             teamIdList = diyFileBufferCopy.teamIds;
         }
-        _CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)teamIdList);
+        CopySelectedTeamNumbers(numSelectedTeams, (uint8_t *)teamIdList);
     } else {
         /* Initialize team selection from competition spec
          * asm: jsr Career_InitCompetitionTeamSelection_Dispatch with d1=divisionIndex, a0=comp */
-        _Career_InitCompetitionTeamSelection_Dispatch(comp, divisionIndex);
-        _Career_ApplyForeignMarketPlayersToSelectedTeams();
+        Career_InitCompetitionTeamSelection_Dispatch(comp, divisionIndex);
+        Career_ApplyForeignMarketPlayersToSelectedTeams();
     }
 
 init_competition:
     /* Initialize competition from record — original asm does exg d0,d1 to pass
      * divisionIndex (originally in d1) as the first param to InitCompetitionFromRecord,
      * then exg back to restore d0=slot */
-    _InitCompetitionFromRecord(divisionIndex, comp);
+    InitCompetitionFromRecord(divisionIndex, comp);
 
     /* Store slot index to both diyFileBufferCopy and diyCompetitionStart.
      * +0x2C = compId/slotId word in DIYCompetition base. */
@@ -4382,17 +4382,17 @@ init_competition:
     *(uint16_t *)slotState = (uint16_t)typeWord;
 
     /* Store competition slot state to buffer */
-    _Career_StoreCompetitionSlotStateToBuffer(slotState);
+    Career_StoreCompetitionSlotStateToBuffer(slotState);
 
     /* Build team selection key cache */
-    _TeamSelectionKeyCache_BuildFromCompetitionBlock(slotState);
+    TeamSelectionKeyCache_BuildFromCompetitionBlock(slotState);
 
     /* Slot 4 doesn't do the final load+progress step */
     if (slot == 4)
         return;
 
     /* Reload state and update competition progress */
-    _Career_LoadCompetitionSlotStateFromBuffer(slotState);
+    Career_LoadCompetitionSlotStateFromBuffer(slotState);
     if (compType == 1) {
         /* Stage-3 band-aid removal (be8ac25, TEAMOFFSETTABLE_OVERLAY_UNTANGLE.md
          * §4). The teamOffsetTable rebuild before the season keycache fill is
@@ -4400,7 +4400,7 @@ init_competition:
          * restores bracketScratch.teamOffsetTable (selTeams INDICES that go stale
          * when the careerFileBuffer overlay reorders selTeams), so the fill
          * resolves a slot to a duplicate team → two fixtures in one 1-game
-         * keycache entry → walker desync → _VerifyTeamLoaded garbage-id panic" —
+         * keycache entry → walker desync → VerifyTeamLoaded garbage-id panic" —
          * but Part B retired that overlay, killing the staleness root (same as the
          * 3ac95cf removal). The §4 probe confirmed it a no-op 14/14 across many
          * cup/euro seasons, INCLUDING roundIterator (this site never save/restored
@@ -4409,13 +4409,13 @@ init_competition:
          * NON-WRITING check (run the rebuild, diff teamOffsetTable + roundIterator,
          * restore both so debug == production; log if it ever WOULD change). */
 #ifdef SWOS_DEBUG_AUTOSKIP
-        extern void _DIY_BuildTeamSelectionPointerCache(void);
+        extern void DIY_BuildTeamSelectionPointerCache(void);
         {
             int16_t ri_before = diyCompetitionStart.base.roundIterator;
             int32_t tot_before[64];
             for (int i = 0; i < 64; i++)
                 tot_before[i] = diyCompetitionStart.bracketScratch.teamOffsetTable[i];
-            _DIY_BuildTeamSelectionPointerCache();
+            DIY_BuildTeamSelectionPointerCache();
             int m = 0, first = -1;
             long new_first = 0;
             for (int i = 0; i < 64; i++)
@@ -4441,5 +4441,5 @@ init_competition:
         }
 #endif
     }
-    _DIY_UpdateCompetitionProgressOrAdvanceSlot(slotState);
+    DIY_UpdateCompetitionProgressOrAdvanceSlot(slotState);
 }

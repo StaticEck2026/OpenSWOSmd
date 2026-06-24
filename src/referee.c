@@ -59,18 +59,18 @@ extern int8_t redCardTable[];       /* 30 entries */
 extern int8_t secondYellowTable[];  /* 46 entries */
 
 /* ---- External functions ---- */
-extern uint16_t _Rand(void);
-extern void _InitDisplaySprites(void);
-extern void _PanicHaltLoop(void);
+extern uint16_t Rand(void);
+extern void InitDisplaySprites(void);
+extern void PanicHaltLoop(void);
 
 /* CalculateDeltaXAndY — now ported to C in math68k.c */
-extern uint16_t _CalculateDeltaXAndY(int16_t destX, int16_t destY,
+extern uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
                                       int16_t srcX, int16_t srcY,
                                       int16_t speed,
                                       int32_t *outDeltaX, int32_t *outDeltaY);
 
 /* SendPlayerAway ported to C in tackle_foul.c (still uses uint8_t* params) */
-extern void _SendPlayerAway(uint8_t *playerSprite, uint8_t *teamData);
+extern void SendPlayerAway(uint8_t *playerSprite, uint8_t *teamData);
 
 /* ================================================================
  * InitRefereeAnimationTable  (SWOS2.s line 10612)
@@ -81,7 +81,7 @@ extern void _SendPlayerAway(uint8_t *playerSprite, uint8_t *teamData);
  * in: animTable = pointer to AnimTable (was A1 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitRefereeAnimationTable(uint8_t *animTable)
+void InitRefereeAnimationTable(uint8_t *animTable)
 {
     Sprite *a0 = &refereeSprite;
     uint16_t dir = (uint16_t)a0->direction;
@@ -94,7 +94,7 @@ void _InitRefereeAnimationTable(uint8_t *animTable)
 
     if (frameTablePtr == 0) {
         panicReasonCode = 0x1112;
-        _PanicHaltLoop();
+        PanicHaltLoop();
         return;
     }
 
@@ -110,7 +110,7 @@ void _InitRefereeAnimationTable(uint8_t *animTable)
  * starts incoming animation.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ActivateReferee(void)
+void ActivateReferee(void)
 {
     Sprite *a0 = &refereeSprite;
     int16_t d1 = (int16_t)foulXCoordinate + 28;
@@ -119,7 +119,7 @@ void _ActivateReferee(void)
     a0->destX = d1;
     a0->destY = d2;
 
-    uint16_t rval = _Rand();
+    uint16_t rval = Rand();
     int16_t d0 = (int16_t)(rval >> 3);
 
     if (foulXCoordinate >= 336) {
@@ -145,8 +145,8 @@ void _ActivateReferee(void)
     a0->speed   = (int16_t)kRefereeSpeed;
     a0->visible = 1;
 
-    _InitDisplaySprites();
-    _InitRefereeAnimationTable(refComingAnimTable);
+    InitDisplaySprites();
+    InitRefereeAnimationTable(refComingAnimTable);
     refState = REF_INCOMING;
 }
 
@@ -156,10 +156,10 @@ void _ActivateReferee(void)
  * Sets referee destination to off-screen and starts leaving anim.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetRefereeToLeavingState(void)
+void SetRefereeToLeavingState(void)
 {
     Sprite *a0 = &refereeSprite;
-    uint16_t rval = _Rand();
+    uint16_t rval = Rand();
     int16_t d0 = (int16_t)(rval >> 2) - 32;   /* range -32..31 */
 
     int16_t d2;
@@ -173,7 +173,7 @@ void _SetRefereeToLeavingState(void)
     a0->destX = d0;
     a0->destY = d2;
 
-    _InitRefereeAnimationTable(refComingAnimTable);
+    InitRefereeAnimationTable(refComingAnimTable);
     refState = REF_LEAVING;
 }
 
@@ -184,7 +184,7 @@ void _SetRefereeToLeavingState(void)
  * destination, state machine (incoming→waiting→card→booking→leaving).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateReferee(void)
+void UpdateReferee(void)
 {
     if (refState == 0)
         return;
@@ -245,11 +245,11 @@ state_dispatch:
         /* Transition to REF_BOOKING with appropriate card animation */
         refState = REF_BOOKING;
         if (whichCard == CARD_RED) {
-            _InitRefereeAnimationTable(refRedCardAnimTable);
+            InitRefereeAnimationTable(refRedCardAnimTable);
         } else if (whichCard == CARD_SECOND_YELLOW) {
-            _InitRefereeAnimationTable(refSecondYellowAnimTable);
+            InitRefereeAnimationTable(refSecondYellowAnimTable);
         } else {
-            _InitRefereeAnimationTable(refYellowCardAnimTable);
+            InitRefereeAnimationTable(refYellowCardAnimTable);
         }
         return;
     }
@@ -266,7 +266,7 @@ state_dispatch:
     if (a0->onScreen == 0) {
         refState   = 0;
         a0->visible = 0;
-        _InitDisplaySprites();
+        InitDisplaySprites();
         return;
     }
 
@@ -282,7 +282,7 @@ move_referee:;
     int16_t speed = a0->speed;
 
     int32_t outDeltaX, outDeltaY;
-    uint16_t outDir = _CalculateDeltaXAndY(destX, destY, curX, curY, speed,
+    uint16_t outDir = CalculateDeltaXAndY(destX, destY, curX, curY, speed,
                                             &outDeltaX, &outDeltaY);
 
     a0->deltaX.raw = outDeltaX;
@@ -293,7 +293,7 @@ move_referee:;
     a0->direction = (int16_t)newDir;
 
     if (newDir != savedDir) {
-        _InitRefereeAnimationTable(refComingAnimTable);
+        InitRefereeAnimationTable(refComingAnimTable);
     }
 
     /* ---- Clamp X toward destX ---- */
@@ -340,7 +340,7 @@ move_referee:;
 
     refState      = REF_WAITING_PLAYER;
     a0->direction = 6;
-    _InitRefereeAnimationTable(refWaitingAnimTable);
+    InitRefereeAnimationTable(refWaitingAnimTable);
     return;
 
     /* ---- Off-screen position update (keep moving even when off-screen) ---- */
@@ -401,7 +401,7 @@ off_screen_update:
  *               other positive=show shirt number, -1=sequence end
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateBookedPlayerNumberSprite(void)
+void UpdateBookedPlayerNumberSprite(void)
 {
     Sprite *a0 = &bookedPlayerCardOrNumberSprite;
     a0->imageIndex = (int16_t)0xFFFF;  /* default: hide */
@@ -441,11 +441,11 @@ void _UpdateBookedPlayerNumberSprite(void)
         playerSprite = bookedPlayer;
     } else if (entry < 0) {
         /* -1 sentinel: sequence done, referee leaves */
-        _SetRefereeToLeavingState();
+        SetRefereeToLeavingState();
 
         /* bit 1 of whichCard = red card → send player off */
         if (whichCard & 2) {
-            _SendPlayerAway((uint8_t *)bookedPlayer, (uint8_t *)lastTeamBooked);
+            SendPlayerAway((uint8_t *)bookedPlayer, (uint8_t *)lastTeamBooked);
         }
 
         whichCard    = 0;

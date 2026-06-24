@@ -97,14 +97,14 @@ extern int32_t  kNormalKickDeltaZ;
 extern int16_t  kNormalKickBallSpeed;
 
 /* ---- Extern function declarations ---- */
-extern void _CheckIfBallOutOfPlay(void);
-extern void _PlaySample3IfNotTraining(void);
-extern void _PlaySfxSample16(void);
-extern int16_t _CalculateDeltaXAndY(int16_t destX, int16_t destY,
+extern void CheckIfBallOutOfPlay(void);
+extern void PlaySample3IfNotTraining(void);
+extern void PlaySfxSample16(void);
+extern int16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
                                      int16_t srcX, int16_t srcY,
                                      int16_t speed,
                                      int32_t *outDeltaX, int32_t *outDeltaY);
-extern void _PanicHaltLoop(void);
+extern void PanicHaltLoop(void);
 
 /* ---- Static helpers ---- */
 
@@ -126,10 +126,10 @@ static void reverseDestYDirection(Sprite *spr, int32_t savedY)
 
 
 /* ==================================================================
- * _ResetBothTeamSpinTimers
+ * ResetBothTeamSpinTimers
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_ResetBothTeamSpinTimers(void)
+ResetBothTeamSpinTimers(void)
 {
     topTeamData.spinTimer = (int16_t)0xFFFF;
     bottomTeamData.spinTimer = (int16_t)0xFFFF;
@@ -137,7 +137,7 @@ _ResetBothTeamSpinTimers(void)
 
 
 /* ==================================================================
- * _GetPlayerPointerFromShirtNumber
+ * GetPlayerPointerFromShirtNumber
  *   in: playerSprite (A1), teamData (A6)
  *   out: PlayerInfo pointer for this player
  *
@@ -145,7 +145,7 @@ _ResetBothTeamSpinTimers(void)
  * C version returns the PlayerInfo directly using TeamGame struct access.
  * ================================================================== */
 PlayerInfo * __attribute__((used, externally_visible))
-_GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData)
+GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData)
 {
     uint16_t ord = (uint16_t)playerSprite->playerOrdinal;
     uint16_t idx = ord - 1;
@@ -155,14 +155,14 @@ _GetPlayerPointerFromShirtNumber(Sprite *playerSprite, TeamGeneralInfo *teamData
 
 
 /* ==================================================================
- * _UpdateControllingPlayer
+ * UpdateControllingPlayer
  *   in: playerSprite (A1) - player that controls the ball
  *
  * Set ball coordinates based on controlling player direction.
  * Ball is placed 1 pixel in front of the player.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_UpdateControllingPlayer(Sprite *playerSprite)
+UpdateControllingPlayer(Sprite *playerSprite)
 {
     int16_t dir = playerSprite->direction;
     int16_t idx = dir * 2; /* pairs of (x,y) */
@@ -182,19 +182,19 @@ _UpdateControllingPlayer(Sprite *playerSprite)
     dz >>= 1;
     ball->deltaZ.raw = (int32_t)dz;
 
-    _ResetBothTeamSpinTimers();
+    ResetBothTeamSpinTimers();
 }
 
 
 /* ==================================================================
- * _UpdateBallWithControllingGoalkeeper
+ * UpdateBallWithControllingGoalkeeper
  *   in: playerSprite (A1) - goalkeeper holding the ball
  *
  * Same as UpdateControllingPlayer but deltaZ is forced negative
  * (bring the ball down).
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_UpdateBallWithControllingGoalkeeper(Sprite *playerSprite)
+UpdateBallWithControllingGoalkeeper(Sprite *playerSprite)
 {
     int16_t dir = playerSprite->direction;
     int16_t idx = dir * 2;
@@ -215,18 +215,18 @@ _UpdateBallWithControllingGoalkeeper(Sprite *playerSprite)
         dz = -dz;
     ball->deltaZ.raw = (int32_t)dz;
 
-    _ResetBothTeamSpinTimers();
+    ResetBothTeamSpinTimers();
 }
 
 
 /* ==================================================================
- * _UpdatePlayerWithBall
+ * UpdatePlayerWithBall
  *   in: playerSprite (A1) - player sprite
  *
  * Offset player position relative to ball by direction-based table.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_UpdatePlayerWithBall(Sprite *playerSprite)
+UpdatePlayerWithBall(Sprite *playerSprite)
 {
     int16_t d1 = ballSprite.x.s.i;
     int16_t d2 = ballSprite.y.s.i;
@@ -241,18 +241,18 @@ _UpdatePlayerWithBall(Sprite *playerSprite)
     playerSprite->destX = d1;
     playerSprite->destY = d2;
 
-    _ResetBothTeamSpinTimers();
+    ResetBothTeamSpinTimers();
 }
 
 
 /* ==================================================================
- * _SetThrowInPlayerDestinationCoordinates
+ * SetThrowInPlayerDestinationCoordinates
  *   in: playerSprite (A1)
  *
  * Position throw-in player 3 pixels offset from ball.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_SetThrowInPlayerDestinationCoordinates(Sprite *playerSprite)
+SetThrowInPlayerDestinationCoordinates(Sprite *playerSprite)
 {
     int16_t d1 = ballSprite.x.s.i;
     if ((uint16_t)d1 < 336)
@@ -270,13 +270,13 @@ _SetThrowInPlayerDestinationCoordinates(Sprite *playerSprite)
 
 
 /* ==================================================================
- * _InjuryUpdateTickGuard
+ * InjuryUpdateTickGuard
  *
  * If injuriesForever is set, skip the actual injury update (the asm
  * code after this function is dead). This is just a guard stub.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_InjuryUpdateTickGuard(void)
+InjuryUpdateTickGuard(void)
 {
     /* Original: tst.w (injuriesForever); beq.w *+4; rts
        When injuriesForever == 0, falls through to injury update code.
@@ -289,14 +289,14 @@ _InjuryUpdateTickGuard(void)
 
 
 /* ==================================================================
- * _CalculateNextBallPosition
+ * CalculateNextBallPosition
  *
  * Predicts where the ball will land (Z becomes negative) by
  * integrating position with scaled deltas. Stores result in
  * ballNextX / ballNextY.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_CalculateNextBallPosition(void)
+CalculateNextBallPosition(void)
 {
     Sprite *ball = &ballSprite;
     int32_t d5 = ball->x.raw;
@@ -381,13 +381,13 @@ store:
 
 
 /* ==================================================================
- * _DoGoalkeeperSprites
+ * DoGoalkeeperSprites
  *
  * When a goalkeeper is diving, position the ball relative to the
  * goalkeeper sprite using lookup tables for ball height.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_DoGoalkeeperSprites(void)
+DoGoalkeeperSprites(void)
 {
     TeamGeneralInfo *team;
     int16_t yOff;
@@ -477,7 +477,7 @@ position_ball_diving:
         if ((uint16_t)frameOff >= 28) { /* 28 entries in goalkeeperDiveBallHeights */
             /* frame offset out of range — panic */
             panicReasonCode = 0x237;
-            _PanicHaltLoop();
+            PanicHaltLoop();
         }
 
         /* Look up ball height from dive table */
@@ -488,7 +488,7 @@ position_ball_diving:
 
 
 /* ==================================================================
- * _UpdateBall
+ * UpdateBall
  *
  * Core ball physics: animation, movement, bouncing, goal collisions,
  * shadow update, quadrant calculation for AI tactics.
@@ -498,7 +498,7 @@ position_ball_diving:
  * (positive counterpart of 0xFFFEFFFE used on the Z>5 branch).
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_UpdateBall(void)
+UpdateBall(void)
 {
     Sprite *ball = &ballSprite;
 
@@ -576,7 +576,7 @@ has_picture:
         int16_t speed = ball->speed;
 
         int32_t outDX, outDY;
-        int16_t dir = _CalculateDeltaXAndY(destX, destY, srcX, srcY, speed, &outDX, &outDY);
+        int16_t dir = CalculateDeltaXAndY(destX, destY, srcX, srcY, speed, &outDX, &outDY);
 
         ball->deltaX.raw = (int32_t)outDX;
         ball->deltaY.raw = (int32_t)outDY;
@@ -629,7 +629,7 @@ has_picture:
             if ((uint16_t)ball->speed != 0) {
                 writeOnlyVar04++;
                 Sprite *ctrlPlayer = lastTeamPlayedBeforeBreak->controlledPlayer;
-                _UpdateBallWithControllingGoalkeeper(ctrlPlayer);
+                UpdateBallWithControllingGoalkeeper(ctrlPlayer);
             }
 
             {
@@ -678,7 +678,7 @@ has_picture:
         }
 
         /* Play bounce sound (sample 0x10, not crowd "oooh" 0x2C) */
-        _PlaySfxSample16();
+        PlaySfxSample16();
         goto after_z;
 
     clear_deltaz:
@@ -808,7 +808,7 @@ has_picture:
 
     back_net_bounce:
         reverseDestYDirection(ball, savedY);
-        _ResetBothTeamSpinTimers();
+        ResetBothTeamSpinTimers();
         {
             uint16_t spd = (uint16_t)ball->speed;
             ball->speed = (int16_t)(spd >> 3);
@@ -819,7 +819,7 @@ has_picture:
 
     side_post_bounce:
         reverseDestXDirection(ball, savedX);
-        _ResetBothTeamSpinTimers();
+        ResetBothTeamSpinTimers();
         {
             uint16_t spd = (uint16_t)ball->speed;
             ball->speed = (int16_t)(spd >> 2);
@@ -870,7 +870,7 @@ skip_goal_collision:
                 }
                 /* Deflect Y and add random X */
                 reverseDestYDirection(ball, savedY);
-                _ResetBothTeamSpinTimers();
+                ResetBothTeamSpinTimers();
                 ball->destX = ball->destX + d4;
                 goto goalpost_speed_reduce;
             }
@@ -900,7 +900,7 @@ skip_goal_collision:
                         goto after_goalpost;
                 }
                 reverseDestYDirection(ball, savedY);
-                _ResetBothTeamSpinTimers();
+                ResetBothTeamSpinTimers();
                 ball->destX = ball->destX + d4;
                 goto goalpost_speed_reduce;
             }
@@ -915,7 +915,7 @@ skip_goal_collision:
         }
 
     goalpost_speed_reduce:
-        _PlaySample3IfNotTraining();
+        PlaySample3IfNotTraining();
         {
             uint16_t spd = (uint16_t)ball->speed;
             ball->speed = (int16_t)(spd - (spd >> 2));
@@ -930,7 +930,7 @@ after_goalpost:
         int16_t bx = ball->x.s.i;
         int16_t by = ball->y.s.i;
         if (bx < 81 || bx > 590 || by < 129 || by > 769) {
-            _CheckIfBallOutOfPlay();
+            CheckIfBallOutOfPlay();
         }
     }
 
@@ -947,7 +947,7 @@ after_goalpost:
     }
 
     /* ---- Calculate next ball position (for AI) ---- */
-    _CalculateNextBallPosition();
+    CalculateNextBallPosition();
 
     /* ---- Calculate ball quadrant for tactics ---- */
     {
@@ -1020,7 +1020,7 @@ after_goalpost:
 
 
 /* ==================================================================
- * _UpdateBallVariables
+ * UpdateBallVariables
  *   from: UpdateBallVariables
  *   in:  keeper (A1), ball (A2), team (A6)
  *
@@ -1032,7 +1032,7 @@ after_goalpost:
  * For horizontal movement, predicts at keeper's X position.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_UpdateBallVariables(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
+UpdateBallVariables(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 {
     int32_t d1 = ball->x.raw;
     int32_t d2 = ball->y.raw;
@@ -1295,7 +1295,7 @@ finalize_not_high_and_clear_strike:
 
 
 /* ==================================================================
- * _CalculateBallNextGroundXYPositions
+ * CalculateBallNextGroundXYPositions
  *   from: CalculateBallNextGroundXYPositions
  *   in:  ball (A2)
  *
@@ -1304,7 +1304,7 @@ finalize_not_high_and_clear_strike:
  * Sets ballNextGroundX = -1 if ball is stationary.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_CalculateBallNextGroundXYPositions(Sprite *ball)
+CalculateBallNextGroundXYPositions(Sprite *ball)
 {
     int32_t d1 = ball->x.raw;
     int32_t d2 = ball->y.raw;
@@ -1354,7 +1354,7 @@ _CalculateBallNextGroundXYPositions(Sprite *ball)
 
 
 /* ==================================================================
- * _ApplyBallAfterTouch
+ * ApplyBallAfterTouch
  *   from: ApplyBallAfterTouch
  *   in:  team (A6)
  *
@@ -1365,7 +1365,7 @@ _CalculateBallNextGroundXYPositions(Sprite *ball)
  * Timer increments to 10 then resets to 0xFFFF (disabled).
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_ApplyBallAfterTouch(TeamGeneralInfo *team)
+ApplyBallAfterTouch(TeamGeneralInfo *team)
 {
     Sprite *ball;
     int16_t spinSide;

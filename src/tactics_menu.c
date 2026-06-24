@@ -27,60 +27,60 @@ extern uint16_t chosenTactics;
  * Sets chosenTactics to USER_A and exits menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _User_A_Tactics(void)
+void User_A_Tactics(void)
 {
     chosenTactics = TACTIC_USER_A;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
  * User_B_Tactics  (SWOS2.s line 86799)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _User_B_Tactics(void)
+void User_B_Tactics(void)
 {
     chosenTactics = TACTIC_USER_B;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
  * User_C_Tactics  (SWOS2.s line 86805)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _User_C_Tactics(void)
+void User_C_Tactics(void)
 {
     chosenTactics = TACTIC_USER_C;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
  * User_D_Tactics  (SWOS2.s line 86811)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _User_D_Tactics(void)
+void User_D_Tactics(void)
 {
     chosenTactics = TACTIC_USER_D;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
  * User_E_Tactics  (SWOS2.s line 86817)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _User_E_Tactics(void)
+void User_E_Tactics(void)
 {
     chosenTactics = TACTIC_USER_E;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
  * User_F_Tactics  (SWOS2.s line 86823)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _User_F_Tactics(void)
+void User_F_Tactics(void)
 {
     chosenTactics = TACTIC_USER_F;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* ================================================================
@@ -88,8 +88,8 @@ void _User_F_Tactics(void)
  * Sets chosenTactics to -1 (abort) and exits menu.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ExitChooseTacticsMenu(void)
+void ExitChooseTacticsMenu(void)
 {
     chosenTactics = 0xFFFF;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }

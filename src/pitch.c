@@ -28,8 +28,8 @@ extern TeamGame bottomTeamInGame;
 extern uint16_t fansSidesSwapped;
 
 /* ---- External functions ---- */
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
-extern void _PanicHaltLoop(void) __attribute__((noreturn));
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern void PanicHaltLoop(void) __attribute__((noreturn));
 
 /* ---- Constants ---- */
 #define PITCH_POINTER_COUNT     2310    /* 9240 / 4 */
@@ -70,11 +70,11 @@ static uint16_t pitchFansConvertTable[16] = {
  *   convTable   = color remap table: old_index → new_index
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
+void AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
 {
 #ifdef SWOS_SDL_BUILD
     /* Chunky form: destPattern is a 16×16 8bpp tile (256 bytes) — our
-     * load-time decode in _FixupAndColorPitchFile converts fan tiles
+     * load-time decode in FixupAndColorPitchFile converts fan tiles
      * to the same format as pitch tiles. Color remap is a trivial LUT;
      * skip transparent pixels (palette index 0) to preserve see-through. */
     for (int i = 0; i < 256; i++) {
@@ -133,16 +133,16 @@ void _AdjustFanColor(uint8_t *destPattern, const uint16_t *convTable)
  *                offsets into the bank (tileIndex = offset / 256).
  *
  * We synthesise the per-slot pointer table s_pitchFullPtrs[] that
- * _DrawChunkyPitch consumes — exactly what _FixupAndColorPitchFile's
+ * DrawChunkyPitch consumes — exactly what FixupAndColorPitchFile's
  * Amiga bitplane relocate/decode would produce — then short-circuit
- * that fixup (see _FixupAndColorPitchFile). DOS files are numbered
+ * that fixup (see FixupAndColorPitchFile). DOS files are numbered
  * PITCH1..PITCH6; mapIndex is 0-based (swcPitchMapFiles order), so the
  * DOS number is mapIndex + 1.
  * ================================================================ */
 extern uint8_t pitchChunkyBuffer[];
 /* Direct asset dispatch (writes straight to dest, no frontbuffer staging).
  * ASSET_OP_INIT_SOURCE0 == 2 (see file_io.c / asset_loader.c). */
-extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
+extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
                                           void *name, void *dest,
                                           uint32_t *outFileSize);
 #define DOS_ASSET_OP_INIT_SOURCE0   2
@@ -158,18 +158,18 @@ static void dos_load_pitch(uint16_t mapIndex)
     if (pitchNum > 6) pitchNum = 6;
 
     /* Tile bank — already 256-byte chunky tiles. Load via the DIRECT asset
-     * dispatch, NOT _LoadFileEx: _LoadFileEx stages through the ~91 KB
+     * dispatch, NOT LoadFileEx: LoadFileEx stages through the ~91 KB
      * frontbuffer and panics (0xE000) on anything larger. The SWOS-2020 .blk
      * banks are 190–545 KB, so they MUST bypass that staging. The direct
      * dispatch writes straight into pitchChunkyBuffer (591360 B = 2310 tiles);
      * the 2020 set's largest is pitch6 at 545536 B (2131 tiles), which fits. */
     snprintf(name, sizeof name, "%s/PITCH%d.BLK", gDosGraphicsDir, pitchNum);
-    _CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, name,
+    CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, name,
                                pitchChunkyBuffer, &blkSize);
 
     /* Tile map — stage into pitchDatBuffer, then parse the LE offsets. */
     snprintf(name, sizeof name, "%s/PITCH%d.DAT", gDosGraphicsDir, pitchNum);
-    _LoadFileEx((uint8_t *)name, pitchDatBuffer, &datSize);
+    LoadFileEx((uint8_t *)name, pitchDatBuffer, &datSize);
 
     static uint16_t tileMap[PITCH_POINTER_COUNT];
     int n = DosGfx_ParsePitchMap(pitchDatBuffer, datSize, tileMap,
@@ -187,10 +187,10 @@ static void dos_load_pitch(uint16_t mapIndex)
             s_pitchFullPtrs[i] = (uint8_t *)0;   /* unmapped → surround */
     }
 
-    /* Mirror the Amiga SDL pitch fixup (Step 1b in _FixupAndColorPitchFile):
+    /* Mirror the Amiga SDL pitch fixup (Step 1b in FixupAndColorPitchFile):
      * also store each slot's chunky-tile pointer (truncated to 32 bits) in the
-     * pitchDatBuffer slot itself. The crowd animation (_DrawAnimatedPatterns /
-     * _ResetAnimatedPatternsForBothTeams) reads these slots as tile offsets
+     * pitchDatBuffer slot itself. The crowd animation (DrawAnimatedPatterns /
+     * ResetAnimatedPatternsForBothTeams) reads these slots as tile offsets
      * from pitchChunkyBuffer (`*slot - pitchChunkyBuffer == tileIdx*256`) to
      * toggle fan tiles between their static and animated (waving) variants. The
      * DOS tile bank stores those pairs at adjacent indices just like the Amiga,
@@ -209,7 +209,7 @@ static void dos_load_pitch(uint16_t mapIndex)
  * Panics if file exceeds maximum size.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _LoadPitchMap(uint16_t mapIndex)
+void LoadPitchMap(uint16_t mapIndex)
 {
 #ifdef SWOS_SDL_BUILD
     if (gDosGraphics) {
@@ -221,13 +221,13 @@ void _LoadPitchMap(uint16_t mapIndex)
     uint32_t fileSize = 0;
     int16_t result;
 
-    result = _LoadFileEx(filename, pitchDatBuffer, &fileSize);
+    result = LoadFileEx(filename, pitchDatBuffer, &fileSize);
     (void)result;
 
     if (fileSize > PITCHFILE_MAX_SIZE)
     {
         panicReasonCode = 3;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 }
 
@@ -239,7 +239,7 @@ void _LoadPitchMap(uint16_t mapIndex)
  * 3. Recolors fan sprites for both teams using kit colors.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FixupAndColorPitchFile(void)
+void FixupAndColorPitchFile(void)
 {
     uint32_t *pitchPtrs;
     int16_t i;
@@ -255,10 +255,10 @@ void _FixupAndColorPitchFile(void)
 
 #ifdef SWOS_SDL_BUILD
     if (gDosGraphics) {
-        /* DOS pitch: s_pitchFullPtrs was already built in _LoadPitchMap
+        /* DOS pitch: s_pitchFullPtrs was already built in LoadPitchMap
          * from the BLK tile bank + DAT tile map. There is no bitplane
          * pointer table to relocate or decode, and the Amiga fan-kit
-         * recolor (_AdjustFanColor) doesn't apply to 256-colour DOS tiles
+         * recolor (AdjustFanColor) doesn't apply to 256-colour DOS tiles
          * — it indexes a 16-entry LUT with pixel values that can be 0..255.
          * Just reset the camera and skip the rest. */
         cameraX.s.i = 0;
@@ -302,7 +302,7 @@ void _FixupAndColorPitchFile(void)
      * indexed by **original Amiga tile index** (offset / 128) — NOT by
      * pointer slot. Indexing by tile-type means many pitch entries that
      * reference the same tile share one chunky copy, AND the
-     * `(entry - chunkyBase) / 256` math used by _DrawAnimatedPatterns
+     * `(entry - chunkyBase) / 256` math used by DrawAnimatedPatterns
      * recovers the same tile index the Amiga path computed via
      * `(entry - currentMenu) / 128`. That keeps the fan-tile animation
      * (toggling tile pairs (1,2),(3,4),...,(21,22) between static and
@@ -437,7 +437,7 @@ void _FixupAndColorPitchFile(void)
 
     for (i = FAN_PTR_TABLE_SIZE - 1; i >= 0; i--)
     {
-        _AdjustFanColor(fanGroupB[i], pitchFansConvertTable);
+        AdjustFanColor(fanGroupB[i], pitchFansConvertTable);
     }
 
     /* Step 5: Recolor bottom team fans (21 sprites) */
@@ -454,13 +454,13 @@ void _FixupAndColorPitchFile(void)
 
     for (i = 20; i >= 0; i--)
     {
-        _AdjustFanColor(fanGroupA[i], pitchFansConvertTable);
+        AdjustFanColor(fanGroupA[i], pitchFansConvertTable);
     }
 }
 
 #ifdef SWOS_SDL_BUILD
 /* ================================================================
- * _DrawChunkyPitch (SDL only)
+ * DrawChunkyPitch (SDL only)
  *
  * Whole-visible-pitch redraw from the chunky tile bank. Replaces the
  * Amiga incremental scroll blits (_Scroll{X,Y}UpdateRowsAndBlit, now
@@ -476,7 +476,7 @@ void _FixupAndColorPitchFile(void)
 /* Layout (per AmigaTools.cs): the pitch map is a flat 42-col × 55-row
  * grid of 16×16 tile mappings — every pointer in pitchDatBuffer is a
  * real tile entry, indexed from row 0. The first 42 happen to reference
- * fan-sprite tiles that _AdjustFanColor recolors at load, but that
+ * fan-sprite tiles that AdjustFanColor recolors at load, but that
  * shares tile *data* across mapping entries, not a separate pointer
  * prefix. Rendering must start at index 0 so pitch world Y=0 lines up
  * with overlay sprites that use the same coordinate space. */
@@ -489,7 +489,7 @@ extern uint8_t pitchDatBuffer[];
 extern volatile uintptr_t frontbufferBasePtr;
 
 __attribute__((used, externally_visible))
-void _DrawChunkyPitch(void)
+void DrawChunkyPitch(void)
 {
     uint8_t  *fb        = (uint8_t *)(uintptr_t)frontbufferBasePtr;
     if (!fb) return;

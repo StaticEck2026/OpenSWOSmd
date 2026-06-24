@@ -25,9 +25,9 @@
  * ISR's double-buffer swap can flip/redraw that buffer DURING the multi-VBlank
  * decode, corrupting the compressed stream mid-decode -> RNC bitstream desync ->
  * the output cursor runs ~1 MB past the destination and stomps unrelated globals
- * (e.g. numSelectedTeams -> bogus team count -> _VerifyTeamLoaded panic; found
+ * (e.g. numSelectedTeams -> bogus team count -> VerifyTeamLoaded panic; found
  * 2026-06-16 via watchpoint, Amiga-only — SDL already staged here). Shared by
- * BOTH _LoadFileEx decode paths. 256 KB covers any asset. */
+ * BOTH LoadFileEx decode paths. 256 KB covers any asset. */
 static uint8_t s_rnc_scratch[256 * 1024];
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -40,7 +40,7 @@ extern volatile uintptr_t frontbufferBaseAltPtr;
 extern uint8_t frontbufferBaseAlt[];
 #endif
 extern volatile uint16_t currentGameTick;
-extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
+extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern volatile uint16_t panicReasonCode;
 extern uint16_t hilNumGoals;
 extern uint16_t hilTeam1Goals;
@@ -97,17 +97,17 @@ extern uint16_t selFilesColumnEndY;
 extern MenuEntry menuEntries[];
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
-extern int16_t _CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
-extern int16_t _CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
-extern void _RncDecompressV1(uint8_t *src, uint8_t *dest);
-extern void _RncDecompressV2(uint8_t *src, uint8_t *dest);
-extern int16_t _CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uint32_t size);
-extern void _PanicHaltLoop(void);
+extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param, void *name, void *dest, uint32_t *outFileSize);
+extern int16_t CAssetSys_Dispatch(uint16_t opcode, uint16_t param, void *name, void *dest);
+extern void RncDecompressV1(uint8_t *src, uint8_t *dest);
+extern void RncDecompressV2(uint8_t *src, uint8_t *dest);
+extern int16_t CAssetSys_DispatchWrite(uint16_t opcode, void *filename, void *src, uint32_t size);
+extern void PanicHaltLoop(void);
 
 /* ---- External C functions (already ported) ---- */
-extern int16_t _AssetCacheCopyByName(uint8_t *name, uint8_t *dest, uint32_t *outFileSize);
-extern void _AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size);
-extern void _BlitterCopyOverlayToScreen(void);
+extern int16_t AssetCacheCopyByName(uint8_t *name, uint8_t *dest, uint32_t *outFileSize);
+extern void AssetCacheStoreFromMemory(uint8_t *name, uint8_t *src, uint32_t size);
+extern void BlitterCopyOverlayToScreen(void);
 
 /* ---- Constants matching asm EQU ---- */
 #define ASSET_OP_INIT_SOURCE0       2
@@ -150,7 +150,7 @@ extern void _BlitterCopyOverlayToScreen(void);
  * size for RNC files). The asm stub uses this to return d1.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
+int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
 {
     int16_t result;
     uint32_t fileSize;
@@ -166,7 +166,7 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
     for (;;) {
         /* Direct dispatch if assetCurrentIndex == 4 */
         if (assetCurrentIndex == 4) {
-            result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, dest, &fileSize);
+            result = CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, dest, &fileSize);
             /* The original Amiga asm disk pipeline stripped RNC headers
              * here, but the C asset dispatch returns RAW bytes on BOTH
              * targets: SDL `rob_load` and the Amiga C port's dispatch
@@ -191,13 +191,13 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
                     uint32_t k;
                     for (k = 0; k < fileSize; k++)
                         s_rnc_scratch[k] = dest[k];
-                    if (dest[3] == 0x01) _RncDecompressV1(s_rnc_scratch, dest);
-                    else                  _RncDecompressV2(s_rnc_scratch, dest);
+                    if (dest[3] == 0x01) RncDecompressV1(s_rnc_scratch, dest);
+                    else                  RncDecompressV2(s_rnc_scratch, dest);
                     fileSize = unpacked;
                 }
             }
 #ifdef SWOS_SDL_BUILD
-            /* The Amiga `_BlitterCopyOverlayToScreen` would have copied
+            /* The Amiga `BlitterCopyOverlayToScreen` would have copied
              * the alt → primary buffer for us in the staging path. The
              * early-exit branch skipped that on Amiga because the asset
              * loader wrote directly to the displayed buffer. On SDL,
@@ -221,12 +221,12 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
 
         /* Try cache first */
         if (assetLoaderCacheFlag != 0) {
-            if (_AssetCacheCopyByName(filename, frontbuf, &fileSize) == 0)
+            if (AssetCacheCopyByName(filename, frontbuf, &fileSize) == 0)
                 goto size_check_and_decode;
         }
 
         /* Load from disk into frontbuffer */
-        result = _CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, frontbuf, &fileSize);
+        result = CAssetSys_DispatchGetSize(ASSET_OP_INIT_SOURCE0, 0, filename, frontbuf, &fileSize);
         if (result != 0) {
             /* Load failed — retry if not index 4 */
             if (assetCurrentIndex == 4) {
@@ -237,21 +237,21 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
 
             /* Wait 50 ticks before retry */
             for (i = FPS_50HZ; i >= 0; i--) {
-                _WaitForVSync();
+                WaitForVSync();
             }
             continue; /* retry LoadFile */
         }
 
         /* On success, store to cache if appropriate */
         if (assetLoaderCacheFlag != 0 && assetLoaderAltPathReady != 0) {
-            _AssetCacheStoreFromMemory(filename, frontbuf, fileSize);
+            AssetCacheStoreFromMemory(filename, frontbuf, fileSize);
         }
 
     size_check_and_decode:
         /* Check file size vs frontbuffer capacity */
         if (fileSize > FRONTBUFFER_SIZE_TOTAL_BYTES) {
             panicReasonCode = 0xE000u;
-            _PanicHaltLoop();
+            PanicHaltLoop();
             /* never returns */
         }
 
@@ -288,9 +288,9 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
              * > 64000 sanity check at LoadTeamFile. */
             fileSize = BE_READ_U32(frontbuf + 4);
             if (magic == RNC_MAGIC_V1)
-                _RncDecompressV1(rncSrc, dest);
+                RncDecompressV1(rncSrc, dest);
             else
-                _RncDecompressV2(rncSrc, dest);
+                RncDecompressV2(rncSrc, dest);
         } else {
             /* Raw data: byte-copy from frontbuffer to dest */
             src = frontbuf;
@@ -302,7 +302,7 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
         }
 
         /* Restore screen overlay */
-        _BlitterCopyOverlayToScreen();
+        BlitterCopyOverlayToScreen();
 
         if (outFileSize)
             *outFileSize = fileSize;
@@ -315,16 +315,16 @@ int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize)
  *
  * Writes data to a file via AssetSys_Dispatch opcode 4.
  * The dispatch function uses d1 = size, which is passed via
- * the _CAssetSys_DispatchWrite bridge.
+ * the CAssetSys_DispatchWrite bridge.
  *
  * Asm register convention:
  *   in:  a0 = filename, a1 = src buffer, d1 = size
  *   out: d0 = 0 (success) or non-zero (error), Z flag reflects d0
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size)
+int16_t WriteFile(uint8_t *filename, uint8_t *src, uint32_t size)
 {
-    return _CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE, filename, src, size);
+    return CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE, filename, src, size);
 }
 
 /* ================================================================
@@ -342,7 +342,7 @@ int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size)
  *   other  = DISK ERROR (default)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowFsErrorByCode(uint16_t errCode)
+void ShowFsErrorByCode(uint16_t errCode)
 {
     uint8_t *msg;
 
@@ -359,7 +359,7 @@ void _ShowFsErrorByCode(uint16_t errCode)
     else
         msg = aDiskError;
 
-    _ShowErrorMenu(msg);
+    ShowErrorMenu(msg);
 }
 
 /* ================================================================
@@ -374,25 +374,25 @@ void _ShowFsErrorByCode(uint16_t errCode)
 #include "save_format_json.h"
 
 __attribute__((used, externally_visible))
-int16_t _LoadCareerFile(uint8_t *filename)
+int16_t LoadCareerFile(uint8_t *filename)
 {
-    _SaveOptions();
+    SaveOptions();
 
     /* JSON is the only career format. The legacy raw-memory-dump reader was
      * retired (2026-06-10): after the careerFileBuffer overlay untangle it would
      * load the extracted fields into dead .skip holes -> broken career, and the
-     * writer is already JSON-only (_SaveCareerFile). A non-JSON .CAR/.SEA is now
+     * writer is already JSON-only (SaveCareerFile). A non-JSON .CAR/.SEA is now
      * unsupported (graceful error). The JSON load path runs its own pointer
-     * fixups (_RebuildPointersAfterLoad inside SaveJson_LoadCareer). See docs/
+     * fixups (RebuildPointersAfterLoad inside SaveJson_LoadCareer). See docs/
      * SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadCareer(filename, NULL, 0) != 0) {
-        _ShowErrorMenu(aFileSavedByDif);
-        _RestoreOptions();
-        _InitUserTactics();
+        ShowErrorMenu(aFileSavedByDif);
+        RestoreOptions();
+        InitUserTactics();
         return 1;
     }
-    _CycleMenuMusic();
+    CycleMenuMusic();
     return 0;
 }
 
@@ -404,15 +404,15 @@ int16_t _LoadCareerFile(uint8_t *filename)
  * Returns: 0 = success, 1 = error (after showing error menu)
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _SaveCareerFile(uint8_t *filename)
+int16_t SaveCareerFile(uint8_t *filename)
 {
     /* JSON is the only career write format. The legacy raw-memory-dump
      * writer was retired because it embedded build-specific pointer
      * values and required a careerFileBuffer-shaped on-disk layout.
-     * The read path still accepts legacy .CAR (see _LoadCareerFile).
+     * The read path still accepts legacy .CAR (see LoadCareerFile).
      *
-     * SaveJson_WriteCareer surfaces _WriteFile errors via
-     * _ShowFsErrorByCode internally, so we just propagate its 0/1
+     * SaveJson_WriteCareer surfaces WriteFile errors via
+     * ShowFsErrorByCode internally, so we just propagate its 0/1
      * result here. */
     return SaveJson_WriteCareer(filename);
 }
@@ -426,17 +426,17 @@ int16_t _SaveCareerFile(uint8_t *filename)
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _LoadPresetFile(uint8_t *filename)
+int16_t LoadPresetFile(uint8_t *filename)
 {
-    _SaveOptions();
+    SaveOptions();
 
     /* Route a loaded preset to the preset menu, not the career contestMenu.
      * gameType lives at 0x12cece — BELOW every save region — so NO save type
-     * persists it (a fresh preset/DIY sets it via _InitCareerVariables); the
-     * load path never did, so _StartContest read a stale career/season gameType
-     * and mis-routed -> _CareerGameListCommon SIGSEGV on null
+     * persists it (a fresh preset/DIY sets it via InitCareerVariables); the
+     * load path never did, so StartContest read a stale career/season gameType
+     * and mis-routed -> CareerGameListCommon SIGSEGV on null
      * careerCompetitionSlotPtrTable / currentCompetitionPtr. Only caller
-     * (_LoadOldCompetitionMenu) resets gameType=0 on our failure return, so
+     * (LoadOldCompetitionMenu) resets gameType=0 on our failure return, so
      * setting it up-front is safe. See project_diy_preset_load_gametype. */
     extern uint16_t gameType;
     gameType = 2; /* GAME_TYPE_PRESET_COMPETITION (menus.c:2216) */
@@ -448,17 +448,17 @@ int16_t _LoadPresetFile(uint8_t *filename)
      * like the retired career raw read (f1a5146). JSON-only; a non-JSON .PRE is
      * unsupported (graceful error). SaveJson_LoadPreset restores the typed
      * competition slot and re-derives the tournament/cup identities itself; it
-     * deliberately does NOT run the career _RebuildPointersAfterLoad (a routed
+     * deliberately does NOT run the career RebuildPointersAfterLoad (a routed
      * .PRE goes to the DIY/preset menu, not the career contestMenu). See
      * docs/SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadPreset(filename, NULL, 0) != 0) {
-        _ShowErrorMenu(aFileSavedByDif);
-        _RestoreOptions();
-        _InitUserTactics();
+        ShowErrorMenu(aFileSavedByDif);
+        RestoreOptions();
+        InitUserTactics();
         return 1;
     }
-    _CycleMenuMusic();
+    CycleMenuMusic();
     return 0;
 }
 
@@ -470,14 +470,14 @@ int16_t _LoadPresetFile(uint8_t *filename)
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _SavePresetCompetitionFile(uint8_t *filename)
+int16_t SavePresetCompetitionFile(uint8_t *filename)
 {
-    /* JSON is the only preset write format (mirrors _SaveCareerFile). The
-     * legacy raw _WriteFile of sizeof(CompetitionSlotBuffer) was a raw memory
+    /* JSON is the only preset write format (mirrors SaveCareerFile). The
+     * legacy raw WriteFile of sizeof(CompetitionSlotBuffer) was a raw memory
      * dump of a struct region — the exact "no raw memory dumps" violation the
      * JSON format exists to remove — and its reader is already retired
-     * (_LoadPresetFile is JSON-only). SaveJson_WritePreset surfaces _WriteFile
-     * errors via _ShowFsErrorByCode internally, so we just propagate its 0/1. */
+     * (LoadPresetFile is JSON-only). SaveJson_WritePreset surfaces WriteFile
+     * errors via ShowFsErrorByCode internally, so we just propagate its 0/1. */
     return SaveJson_WritePreset(filename);
 }
 
@@ -490,12 +490,12 @@ int16_t _SavePresetCompetitionFile(uint8_t *filename)
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _LoadDIYFile(uint8_t *filename)
+int16_t LoadDIYFile(uint8_t *filename)
 {
-    _SaveOptions();
+    SaveOptions();
 
     /* Route a loaded DIY competition to the DIY menu, not the career
-     * contestMenu — see the gameType note in _LoadPresetFile. */
+     * contestMenu — see the gameType note in LoadPresetFile. */
     extern uint16_t gameType;
     gameType = 1; /* GAME_TYPE_DIY_COMPETITION (menus.c:2215) */
 
@@ -506,17 +506,17 @@ int16_t _LoadDIYFile(uint8_t *filename)
      * like the retired career raw read (f1a5146). JSON-only; a non-JSON .DIY is
      * unsupported (graceful error). SaveJson_LoadDIY restores the typed
      * competition slot and re-derives the tournament/cup identities itself; it
-     * deliberately does NOT run the career _RebuildPointersAfterLoad (a routed
+     * deliberately does NOT run the career RebuildPointersAfterLoad (a routed
      * .DIY goes to the DIY menu, not the career contestMenu). See
      * docs/SAVE_DATA.md "Format migration / read-support policy". */
     if (SaveJson_FileIsJson(filename) != 1 ||
         SaveJson_LoadDIY(filename, NULL, 0) != 0) {
-        _ShowErrorMenu(aFileSavedByDif);
-        _RestoreOptions();
-        _InitUserTactics();
+        ShowErrorMenu(aFileSavedByDif);
+        RestoreOptions();
+        InitUserTactics();
         return 1;
     }
-    _CycleMenuMusic();
+    CycleMenuMusic();
     return 0;
 }
 
@@ -529,14 +529,14 @@ int16_t _LoadDIYFile(uint8_t *filename)
  * Returns: 0 = success, 1 = error
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _SaveDIYFile(uint8_t *filename)
+int16_t SaveDIYFile(uint8_t *filename)
 {
-    /* JSON is the only DIY write format (mirrors _SaveCareerFile). The legacy
-     * raw _WriteFile of sizeof(CompetitionSlotBuffer) was a raw memory dump of a
+    /* JSON is the only DIY write format (mirrors SaveCareerFile). The legacy
+     * raw WriteFile of sizeof(CompetitionSlotBuffer) was a raw memory dump of a
      * struct region — the exact "no raw memory dumps" violation the JSON format
-     * exists to remove — and its reader is already retired (_LoadDIYFile is
-     * JSON-only). SaveJson_WriteDIY surfaces _WriteFile errors via
-     * _ShowFsErrorByCode internally, so we just propagate its 0/1. */
+     * exists to remove — and its reader is already retired (LoadDIYFile is
+     * JSON-only). SaveJson_WriteDIY surfaces WriteFile errors via
+     * ShowFsErrorByCode internally, so we just propagate its 0/1. */
     return SaveJson_WriteDIY(filename);
 }
 
@@ -555,9 +555,9 @@ int16_t _SaveDIYFile(uint8_t *filename)
  *   out: d0 = result from dispatch
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _FindFilesExtensionPresent(uint8_t *ext)
+int16_t FindFilesExtensionPresent(uint8_t *ext)
 {
-    int16_t r = _CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)&numberOfFiles);
+    int16_t r = CAssetSys_Dispatch(ASSET_OP_RESOLVE_ASSET_LIST, 0, ext, (void *)&numberOfFiles);
     return r;
 }
 
@@ -572,7 +572,7 @@ int16_t _FindFilesExtensionPresent(uint8_t *ext)
  *   out: d0 = 0 (success) or 1 (error), Z flag reflects d0
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-int16_t _ReadTacticsFile(uint8_t *filename)
+int16_t ReadTacticsFile(uint8_t *filename)
 {
     int16_t result;
     int16_t i;
@@ -582,16 +582,16 @@ int16_t _ReadTacticsFile(uint8_t *filename)
         int16_t jr = SaveJson_LoadTactics(filename, editTacticsCurrentTactics,
                                           TACTICS_SIZE);
         if (jr != 0) {
-            _ShowErrorMenu(aFileSavedByDif);
+            ShowErrorMenu(aFileSavedByDif);
             return 1;
         }
         return 0;
     }
 
-    result = _LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
+    result = LoadFileEx(filename, (uint8_t *)frontbufferBasePtr, (uint32_t *)0);
     if (result != 0) {
-        _BlitterCopyOverlayToScreen();
-        _ShowFsErrorByCode((uint16_t)result);
+        BlitterCopyOverlayToScreen();
+        ShowFsErrorByCode((uint16_t)result);
         return 1;
     }
 
@@ -603,7 +603,7 @@ int16_t _ReadTacticsFile(uint8_t *filename)
         }
     }
 
-    _BlitterCopyOverlayToScreen();
+    BlitterCopyOverlayToScreen();
     return 0;
 }
 
@@ -617,7 +617,7 @@ int16_t _ReadTacticsFile(uint8_t *filename)
  *   out: d0 = 0 (success) or 1 (error), Z flag reflects d0
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _WriteTacticsFile(uint8_t *filename, uint8_t *buffer)
+int16_t WriteTacticsFile(uint8_t *filename, uint8_t *buffer)
 {
     int16_t result;
 
@@ -631,11 +631,11 @@ int16_t _WriteTacticsFile(uint8_t *filename, uint8_t *buffer)
     }
 #endif
 
-    result = _WriteFile(filename, buffer, TACTICS_SIZE);
+    result = WriteFile(filename, buffer, TACTICS_SIZE);
     if (result == 0)
         return 0;
 
-    _ShowFsErrorByCode((uint16_t)result);
+    ShowFsErrorByCode((uint16_t)result);
     return 1;
 }
 
@@ -650,7 +650,7 @@ int16_t _WriteTacticsFile(uint8_t *filename, uint8_t *buffer)
  *   out: d0 = 0 (success) or 1 (error)
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _LoadHilFile(uint8_t *filename)
+int16_t LoadHilFile(uint8_t *filename)
 {
     int16_t result;
 
@@ -658,13 +658,13 @@ int16_t _LoadHilFile(uint8_t *filename)
         int16_t jr = SaveJson_LoadHighlights(filename, NULL, 0);
         if (jr != 0) {
             hilNumGoals = 0;
-            _ShowErrorMenu(aFileSavedByDif);
+            ShowErrorMenu(aFileSavedByDif);
             return 1;
         }
         return 0;
     }
 
-    result = _LoadFileEx(filename, hilFileBuffer, (uint32_t *)0);
+    result = LoadFileEx(filename, hilFileBuffer, (uint32_t *)0);
     if (result == 0) {
         /* Legacy on-disk format stores the 5 header u16s in BE (Amiga
          * m68k). The original loader left them BE in memory and
@@ -681,7 +681,7 @@ int16_t _LoadHilFile(uint8_t *filename)
     }
 
     hilNumGoals = 0;
-    _ShowFsErrorByCode((uint16_t)result);
+    ShowFsErrorByCode((uint16_t)result);
     return 1;
 }
 
@@ -695,7 +695,7 @@ int16_t _LoadHilFile(uint8_t *filename)
  *   out: d0 = 0 (success) or 1 (error)
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _DoSaveHighlights(uint8_t *filename)
+int16_t DoSaveHighlights(uint8_t *filename)
 {
     uint32_t size;
     int16_t result;
@@ -721,7 +721,7 @@ int16_t _DoSaveHighlights(uint8_t *filename)
     hilPitchNumber    = HOST_TO_BE16(hilPitchNumber);
     hilMaxSubstitutes = HOST_TO_BE16(hilMaxSubstitutes);
 
-    result = _WriteFile(filename, hilFileBuffer, size);
+    result = WriteFile(filename, hilFileBuffer, size);
 
     hilNumGoals       = BE16_TO_HOST(hilNumGoals);
     hilTeam1Goals     = BE16_TO_HOST(hilTeam1Goals);
@@ -732,7 +732,7 @@ int16_t _DoSaveHighlights(uint8_t *filename)
     if (result == 0)
         return 0;
 
-    _ShowFsErrorByCode((uint16_t)result);
+    ShowFsErrorByCode((uint16_t)result);
     return 1;
 }
 
@@ -742,7 +742,7 @@ int16_t _DoSaveHighlights(uint8_t *filename)
  * No-op callback referenced by diskMenu data (onInit/onReturn).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DiskMenuRet(void)
+void DiskMenuRet(void)
 {
 }
 
@@ -758,13 +758,13 @@ void _DiskMenuRet(void)
  *   out: none (returns when disk is ready)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ShowInsertDisk2Dialog(uint8_t *header)
+void ShowInsertDisk2Dialog(uint8_t *header)
 {
     for (;;) {
-        if (_AssetSvcLoaderOp2() == 0)
+        if (AssetSvcLoaderOp2() == 0)
             return; /* disk ready */
         /* Show prompt — no abort button (null), always retry */
-        _DoContinueAbortMenu(header, aInsertSwosDisk_0, aOk, (uint8_t *)0, 1);
+        DoContinueAbortMenu(header, aInsertSwosDisk_0, aOk, (uint8_t *)0, 1);
     }
 }
 
@@ -781,17 +781,17 @@ void _ShowInsertDisk2Dialog(uint8_t *header)
  *        Z flag reflects d0
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title)
+int16_t Asset_PromptInsertSaveDiskDf0(uint8_t *title)
 {
     int16_t result;
 
     for (;;) {
-        result = _DoContinueAbortMenu(title, aInsertGameSave,
+        result = DoContinueAbortMenu(title, aInsertGameSave,
                                       aOk, (uint8_t *)aAbort, 0);
         if (result != 0)
             return result; /* user aborted */
 
-        result = _CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
+        result = CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
                                      (void *)0, (void *)0);
         if (result == 0)
             return 0; /* disk opened successfully */
@@ -809,46 +809,46 @@ int16_t _Asset_PromptInsertSaveDiskDf0(uint8_t *title)
  *   no params, no return (menu callback)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _FormatSaveDiskMenu(void)
+void FormatSaveDiskMenu(void)
 {
     int16_t result;
 
     for (;;) {
-        result = _DoContinueAbortMenu((uint8_t *)aFormatSaveDisk,
+        result = DoContinueAbortMenu((uint8_t *)aFormatSaveDisk,
                                       aInsertBlankDis,
                                       (uint8_t *)aContinue,
                                       (uint8_t *)aAbort, 1);
         if (result != 0)
             return; /* user aborted */
 
-        result = _CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
+        result = CAssetSys_Dispatch(ASSET_OP_OPEN_ANY_SOURCE, 0,
                                      (void *)0, (void *)0);
         if (result == 0)
             break; /* disk ready */
         if (result == 0x1D)
             continue; /* no disk — retry prompt */
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
         return;
     }
 
     /* Disk ready — format (DO_CRITICAL) */
-    _StopMusic();
-    result = _CAssetSys_Dispatch(ASSET_OP_DO_CRITICAL, 0,
+    StopMusic();
+    result = CAssetSys_Dispatch(ASSET_OP_DO_CRITICAL, 0,
                                  (void *)aSwosu, (void *)0);
     if (menuMusic != 0) {
-        _TryPlayMusic();
+        TryPlayMusic();
     }
     if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
         return;
     }
 
     /* Load swos4.dku save file header (2 bytes) */
-    result = _CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE,
+    result = CAssetSys_DispatchWrite(ASSET_OP_LOAD_FILE,
                                       (void *)aSwos4Dku,
                                       (void *)&saveFileBuffer, 2);
     if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
     }
 }
 
@@ -862,20 +862,20 @@ void _FormatSaveDiskMenu(void)
  *   no params, no return (menu callback)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DeleteFileMenu(void)
+void DeleteFileMenu(void)
 {
     int16_t result;
 
-    if (_Asset_PromptInsertSaveDiskDf0(aDeleteFile) != 0)
+    if (Asset_PromptInsertSaveDiskDf0(aDeleteFile) != 0)
         return;
 
-    if (_GetFilenameAndExtension(0, aDeleteFile, aDeleteFile) != 0)
+    if (GetFilenameAndExtension(0, aDeleteFile, aDeleteFile) != 0)
         return;
 
-    result = _CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE2, 0,
+    result = CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE2, 0,
                                  (void *)0, (void *)0);
     if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
     }
 }
 
@@ -888,10 +888,10 @@ void _DeleteFileMenu(void)
  *   no params, no return (menu callback)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ExitDisk(void)
+void ExitDisk(void)
 {
-    _ShowInsertDisk2Dialog(aFormatSaveDisk);
-    _SetExitMenuFlag();
+    ShowInsertDisk2Dialog(aFormatSaveDisk);
+    SetExitMenuFlag();
 }
 
 /* ================================================================
@@ -909,7 +909,7 @@ void _ExitDisk(void)
  *        selectedFilename global contains the chosen filename
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
+int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
                                 uint8_t *menuTitleStr)
 {
     int16_t result;
@@ -923,11 +923,11 @@ int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
 
     extension = filterExt;
     menuTitle = (uintptr_t)menuTitleStr;
-    _StringCopy(defaultFilename, inputSaveFilename);
+    StringCopy(defaultFilename, inputSaveFilename);
 
-    result = _FindFilesExtensionPresent((uint8_t *)0);
+    result = FindFilesExtensionPresent((uint8_t *)0);
     if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
         return 1;
     }
 
@@ -975,7 +975,7 @@ int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
     }
 
     savingFile = 1;
-    _ShowMenu(selectFilesMenu);
+    ShowMenu(selectFilesMenu);
 
     if (selectedFilename[0] != 0)
         return 0; /* file selected */
@@ -998,7 +998,7 @@ int16_t _SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
  *        selectedFilename global contains the chosen filename
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
+int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
                                  uint8_t *menuTitleStr)
 {
     int16_t result;
@@ -1012,11 +1012,11 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
 
     extension = preferredExt;
     menuTitle = (uintptr_t)menuTitleStr;
-    _StringCopy(defaultFilename, inputSaveFilename);
+    StringCopy(defaultFilename, inputSaveFilename);
 
-    result = _FindFilesExtensionPresent((uint8_t *)0);
+    result = FindFilesExtensionPresent((uint8_t *)0);
     if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
         return 1;
     }
 
@@ -1062,7 +1062,7 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
     }
 
     savingFile = 0;
-    _ShowMenu(selectFilesMenu);
+    ShowMenu(selectFilesMenu);
 
     if (selectedFilename[0] != 0)
         return 0; /* file selected */
@@ -1073,12 +1073,12 @@ int16_t _GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename
 /* ---- Chunk 140: File Selection Helpers ---- */
 
 /* Extern: string copy utility */
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
 
 /* Copy filename to selectedFilename, extract 3-char extension into packed uint32_t,
    and signal menu exit. Extension is packed as: '.', c1, c2, c3 (big-endian). */
-static void _CopyFilenameExtensionAndSetExitMenuFlag(uint8_t *filename) {
-    _StringCopy(filename, selectedFilename);
+static void CopyFilenameExtensionAndSetExitMenuFlag(uint8_t *filename) {
+    StringCopy(filename, selectedFilename);
     /* Scan for '.' in the copied filename */
     uint8_t *p = selectedFilename;
     while (*p++ != '.')
@@ -1089,13 +1089,13 @@ static void _CopyFilenameExtensionAndSetExitMenuFlag(uint8_t *filename) {
     ext = (ext << 8) | *p++;
     ext = (ext << 8) | *p++;
     extension = ext;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* Menu callback: select the save filename and exit the menu. */
 __attribute__((used, externally_visible))
-void _SelectFilenameToSaveAndExit(void) {
-    _CopyFilenameExtensionAndSetExitMenuFlag(inputSaveFilename);
+void SelectFilenameToSaveAndExit(void) {
+    CopyFilenameExtensionAndSetExitMenuFlag(inputSaveFilename);
 }
 
 /* Append the stored extension to filename, copy to selectedFilename, and signal menu exit.
@@ -1107,20 +1107,20 @@ void _SelectFilenameToSaveAndExit(void) {
    raw bytes via `(uint8_t *)&extension` would emit them in reverse on
    an LE host (e.g. "RAC." appended after the user's "TEST"). */
 __attribute__((used, externally_visible))
-void _AddExtension(uint8_t *filename) {
-    uint8_t *p = _StringCopy(filename, selectedFilename);
+void AddExtension(uint8_t *filename) {
+    uint8_t *p = StringCopy(filename, selectedFilename);
     *p++ = (uint8_t)(extension >> 24); /* '.' */
     *p++ = (uint8_t)(extension >> 16);
     *p++ = (uint8_t)(extension >> 8);
     *p++ = (uint8_t)(extension);
     *p = 0;
-    _SetExitMenuFlag();
+    SetExitMenuFlag();
 }
 
 /* Menu onSelect callback: compute file index from entry ordinal (3-column layout)
    and select that file. */
 __attribute__((used, externally_visible))
-void _SelFilesOnSelectCommon(MenuEntry *entry) {
+void SelFilesOnSelectCommon(MenuEntry *entry) {
     uint16_t idx = entry->ordinal;
     idx -= 1;
     if (idx >= 30) {
@@ -1132,13 +1132,13 @@ void _SelFilesOnSelectCommon(MenuEntry *entry) {
         idx += selFilesColumn1NumItems;
     }
     uint8_t *filename = (uint8_t *)foundFilesPtrTable[idx];
-    _CopyFilenameExtensionAndSetExitMenuFlag(filename);
+    CopyFilenameExtensionAndSetExitMenuFlag(filename);
 }
 
 /* Reposition file list menu entries: find max column height, center vertically,
    and assign Y positions for 3 columns × 15 entries each. */
 __attribute__((used, externally_visible))
-void _RepositionSelectFileEntries(void) {
+void RepositionSelectFileEntries(void) {
     /* Find maximum items across all 3 columns */
     uint16_t maxItems = selFilesColumn1NumItems;
     if (selFilesColumn2NumItems > maxItems)
@@ -1181,7 +1181,7 @@ void _RepositionSelectFileEntries(void) {
 /* ---- Chunk 141: SelFilesDrawItemDescription ---- */
 
 __attribute__((used, externally_visible))
-void _SelFilesDrawItemDescription(MenuEntry *entry) {
+void SelFilesDrawItemDescription(MenuEntry *entry) {
     uint16_t idx = entry->ordinal;
     idx -= 1;
     if (idx >= 30) {
@@ -1214,7 +1214,7 @@ void _SelFilesDrawItemDescription(MenuEntry *entry) {
     descEntry->x = entry->x + 0x39;
     descEntry->y = entry->y;
     descEntry->isInvisible = 0;
-    _DrawMenuItem(descEntry);
+    DrawMenuItem(descEntry);
     descEntry->isInvisible = 1;
 }
 
@@ -1223,16 +1223,16 @@ void _SelFilesDrawItemDescription(MenuEntry *entry) {
 extern uint16_t allowExtraCharsFlag;
 
 __attribute__((used, externally_visible))
-void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
+void SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
 {
     if (totalNumberOfFiles == 45) {
-        _ShowErrorMenu((uint8_t *)"CAN ONLY SAVE MAXIMUM 45 FILES ON DISK");
+        ShowErrorMenu((uint8_t *)"CAN ONLY SAVE MAXIMUM 45 FILES ON DISK");
         return;
     }
 
     uint8_t *filename = (uint8_t *)entry->fg;
     allowExtraCharsFlag = 1;
-    uint16_t result = _InputText(9, (uint8_t *)entry);
+    uint16_t result = InputText(9, (uint8_t *)entry);
     allowExtraCharsFlag = 0;
 
     if (result != 0)
@@ -1242,7 +1242,7 @@ void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
     uint8_t *p = filename;
     while (*p != 0) {
         if (*p != 0x20) {
-            _AddExtension(filename);
+            AddExtension(filename);
             return;
         }
         p++;
@@ -1251,19 +1251,19 @@ void _SelectFilesInputSaveFilenameOnSelect(MenuEntry *entry)
     /* All spaces or empty — restore default name from inputSaveFilename */
     MenuEntry *entry48 = &menuEntries[48];
     uint8_t *dst = (uint8_t *)entry48->fg;
-    _StringCopyUntilChar(inputSaveFilename, dst, '.');
-    _CallDrawMenuItem(entry48);
+    StringCopyUntilChar(inputSaveFilename, dst, '.');
+    CallDrawMenuItem(entry48);
 }
 
 /* ================================================================
- * _SelectFilesOnReturn  (SWOS2.s line 57336)
+ * SelectFilesOnReturn  (SWOS2.s line 57336)
  *
  * Called on return/draw for the file selection menu.
  * Sets up title, save entries, calculates 3-column layout,
  * and assigns filenames to visible menu entries.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SelectFilesOnReturn(void)
+void SelectFilesOnReturn(void)
 {
     /* Set menu title in entry 0 */
     menuEntries[0].fg = menuTitle;
@@ -1273,7 +1273,7 @@ void _SelectFilesOnReturn(void)
         menuEntries[48].isInvisible = 0;
         uint8_t *str = (uint8_t *)menuEntries[48].fg;
         *str = 0;
-        _StringCopyUntilChar(inputSaveFilename, str, '.');
+        StringCopyUntilChar(inputSaveFilename, str, '.');
 
         /* Show input box (entry 47) */
         menuEntries[47].isInvisible = 0;
@@ -1304,7 +1304,7 @@ void _SelectFilesOnReturn(void)
         }
     }
 
-    _RepositionSelectFileEntries();
+    RepositionSelectFileEntries();
     /* Assign filenames to menu entries */
     void **filePtr = foundFilesPtrTable;
     MenuEntry *entry = &menuEntries[1]; /* entry at offset 0x38 = index 1 */
@@ -1367,24 +1367,24 @@ void _SelectFilesOnReturn(void)
 }
 
 /* ================================================================
- * _SelectFilesInit  (SWOS2.s line 57279)
+ * SelectFilesInit  (SWOS2.s line 57279)
  *
  * Called on init for the file selection menu.
  * Sets initial cursor position, sorts files by extension/name,
  * then calls SelectFilesOnReturn to set up display.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SelectFilesInit(void)
+void SelectFilesInit(void)
 {
     /* Set initial menu entry based on mode */
     if (savingFile != 0) {
         if (inputSaveFilename[0] != 0)
-            _SetCurrentEntry(49);
+            SetCurrentEntry(49);
         else
-            _SetCurrentEntry(48);
+            SetCurrentEntry(48);
     } else {
         if (numMatchedFiles == 0)
-            _SetCurrentEntry(50);
+            SetCurrentEntry(50);
     }
 
     /* Bubble sort files by extension then name */
@@ -1436,5 +1436,5 @@ void _SelectFilesInit(void)
     }
 
     /* Fall through to OnReturn */
-    _SelectFilesOnReturn();
+    SelectFilesOnReturn();
 }

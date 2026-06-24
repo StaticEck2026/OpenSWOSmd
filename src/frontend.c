@@ -16,13 +16,13 @@
 extern uint16_t g_quitToDos;
 
 /* ---- External asm functions (C-callable bridges in swos2_unit.s) ---- */
-extern void _MenuProc(void);
+extern void MenuProc(void);
 
 extern uint16_t menuMusic;
 extern uint16_t menuFade;
 extern uint8_t frontbufferMaskBuffer[];
 extern volatile uint16_t currentGameTick;
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 #ifdef SWOS_SDL_BUILD
 extern uint8_t rawAssetLoadBuffer[];
 #endif
@@ -40,10 +40,10 @@ extern uint8_t rawAssetLoadBuffer[];
  *   mask buffer expecting chunky palette indices.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _LoadOverlayToFrontbuffer(const uint8_t *path)
+void LoadOverlayToFrontbuffer(const uint8_t *path)
 {
 #ifdef SWOS_SDL_BUILD
-    _LoadFileEx((uint8_t *)path, rawAssetLoadBuffer, (uint32_t *)0);
+    LoadFileEx((uint8_t *)path, rawAssetLoadBuffer, (uint32_t *)0);
 
     /* Decode NUM_PLANES-plane interleaved bitplane data → 8bpp chunky.
      * Full-screen overlay images (MENUBG.RAW = 47872 bytes) are stored
@@ -68,7 +68,7 @@ void _LoadOverlayToFrontbuffer(const uint8_t *path)
         }
     }
 #else
-    _LoadFileEx((uint8_t *)path, frontbufferMaskBuffer, (uint32_t *)0);
+    LoadFileEx((uint8_t *)path, frontbufferMaskBuffer, (uint32_t *)0);
 #endif
 }
 
@@ -80,7 +80,7 @@ void _LoadOverlayToFrontbuffer(const uint8_t *path)
  * the menu fade-in flag.
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _FrontEndPreLoopSetup(void)
+void FrontEndPreLoopSetup(void)
 {
 #ifdef SWOS_SDL_BUILD
     /* SWOS_DATA_JSON: rebuild normal-country competition tables from data_json/
@@ -103,13 +103,13 @@ void _FrontEndPreLoopSetup(void)
         MenuJson_InstallAll();
       } }
 #endif
-    _InitMenuMusic();
-    _PrepareMenuBackground();
-    _InitMainMenuStuff();
+    InitMenuMusic();
+    PrepareMenuBackground();
+    InitMainMenuStuff();
 
     if (menuMusic != 0)
     {
-        _TryPlayMusic();
+        TryPlayMusic();
     }
 
     menuFade = 1;
@@ -122,13 +122,13 @@ void _FrontEndPreLoopSetup(void)
  * then repeatedly calls MenuProc until g_quitToDos is set.
  * ================================================================ */
 __attribute__((used, externally_visible, noinline))
-void _FrontEndMainLoop(void)
+void FrontEndMainLoop(void)
 {
-    _ReadTimerDelta();
-    _FrontEndPreLoopSetup();
+    ReadTimerDelta();
+    FrontEndPreLoopSetup();
 
     do
     {
-        _MenuProc();
+        MenuProc();
     } while (g_quitToDos == 0);
 }

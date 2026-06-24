@@ -5,7 +5,7 @@
  */
 /* match_sim.c — Match simulation / "view result" calculation
  *
- * Ported from SWOS2.s: _CalculateViewResult, CalcTeamViewOffset,
+ * Ported from SWOS2.s: CalculateViewResult, CalcTeamViewOffset,
  * ScaleViewIndexByTeamPriceRank, AssignSimulatedGoalsToScorers,
  * ApplyRandomPlayerStatusAfterSim, InitPlayerRemapTableForTeam,
  * BuildAvailablePlayersRemapAndMask, ComputeOldPlayerSkillForViewResult,
@@ -31,22 +31,22 @@
 #endif
 
 /* ---- Assembly externs (functions still in asm) ---- */
-extern uint16_t _Rand2(void);
-extern uint16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
+extern uint16_t Rand2(void);
+extern uint16_t ShouldApplyRandomPlayerStatusAfterSim(void);
 
 /* C functions (defined in diy_competition.c) */
-extern uint16_t _FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
-extern uint16_t _GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp);
+extern uint16_t FindTeamInDIY(uint16_t teamNo, DIYCompetition *comp);
+extern uint16_t GetMoreExpensiveTeamsCount(uint16_t teamNo, DIYCompetition *comp);
 
 /* C-callable bridges to asm functions (defined in swos2_unit.s) */
-/* Forward declaration: _UpdatePlayerPositionAndReturnRole (Chunk 187) */
-uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
-extern void _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t *remap);
+/* Forward declaration: UpdatePlayerPositionAndReturnRole (Chunk 187) */
+uint32_t UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
+extern void Career_ApplyPostMatchPlayerStatModsIfCareerTeam(TeamFileEx *team, uint8_t *remap);
 
 /* GetNumberOfAvailable* — return packed: d6 in low word, d7 in upper bits */
-extern uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
-extern uint32_t _GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
-extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+extern uint32_t GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
+extern uint32_t GetNumberOfAvailableSubstitutes(uint8_t *team, int16_t flag);
+extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
 
 /* ---- Data externs (still in asm) ---- */
 extern TeamFileEx careerTeam;
@@ -84,7 +84,7 @@ extern uint8_t    playerStatusBucketThresholds[];
 
 /* Extern globals/functions for Chunk 106 */
 extern uint8_t  resultString[];
-extern void _PrintFormatted(const uint8_t *fmt, uint8_t *out,
+extern void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                      uint16_t n0, uint16_t n1, uint16_t n2, uint16_t n3,
                      uint16_t n4, uint16_t n5, uint16_t n6,
                      const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
@@ -112,8 +112,8 @@ extern uint8_t  aAWin01OnPensRe[];
  * (originally a dc.w in asm right after the function) */
 static uint16_t buildMatchResultStringControl;
 
-/* Forward declaration: _GetPlayerPrice (Chunk 187) */
-int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber);
+/* Forward declaration: GetPlayerPrice (Chunk 187) */
+int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber);
 
 /* Extern globals for Chunk 105 */
 extern uint16_t pl1Tactics;
@@ -128,11 +128,11 @@ extern uint16_t gameRandValue;
 extern TeamGame topTeamInGame;
 extern TeamGame bottomTeamInGame;
 extern DIYCompetitionEx diyCompetitionStart;
-extern void _SaveRand2State(void);
-extern void _RestoreRand2State(void);
-extern void _Randomize2(uint16_t seed);
-extern uint16_t _GetPlayerRandomNum(PlayerFile *playerFile);
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern void SaveRand2State(void);
+extern void RestoreRand2State(void);
+extern void Randomize2(uint16_t seed);
+extern uint16_t GetPlayerRandomNum(PlayerFile *playerFile);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
 
 /* ---- Module-local state ---- */
 static DIYCompetition *viewResultCtx;
@@ -176,7 +176,7 @@ static int16_t  careerTeamViewOffsetX;
  * Called from asm bridge and internally.
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _CalcTeamViewOffset(TeamFileEx *team) {
+uint32_t CalcTeamViewOffset(TeamFileEx *team) {
     uint8_t d0;
     int16_t d1, d2;
     uint16_t d3;
@@ -241,7 +241,7 @@ uint32_t _CalcTeamViewOffset(TeamFileEx *team) {
  * out: scaled value (0..31)
  * ================================================================ */
 static uint16_t ScaleViewIndexByTeamPriceRank(uint16_t value, TeamFileEx *team) {
-    int16_t pctOff = _CalcTeamPriceRankPercentOffset(viewResultCtx, &team->team);
+    int16_t pctOff = CalcTeamPriceRankPercentOffset(viewResultCtx, &team->team);
     uint16_t factor = (uint16_t)(pctOff + 100);
     uint32_t result = (uint32_t)value * (uint32_t)factor;
     result /= 100;
@@ -276,7 +276,7 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
 
     for (; d5 >= 0; d5--) {
         uint8_t *distTable = (uint8_t *)currentGoalScorerDistPtr;
-        uint16_t d0 = _Rand2();
+        uint16_t d0 = Rand2();
 
         /* Special case: if d0 >= 0xF8, it's an own goal */
         if (d0 >= 0xF8) {
@@ -297,7 +297,7 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
         }
 
         /* If we exhausted all 11 entries, do a second random for the last 2 buckets */
-        d0 = _Rand2();
+        d0 = Rand2();
         d0 &= 0x7F;
         d6 = 1;
         dp = distTable + 11;  /* point to the 12th entry */
@@ -316,7 +316,7 @@ static void AssignSimulatedGoalsToScorers(TeamFileEx *team, uint8_t *remapTable,
         /* Check remap table; if negative (0x80+), use remapped player */
         if (!((int8_t)remapTable[(uint8_t)d6] < 0)) {
             /* Not remapped - 50% chance to use the remap */
-            uint16_t r = _Rand2();
+            uint16_t r = Rand2();
             if (!(r & 1)) {
                 d6 = remapTable[(uint8_t)d6];
             }
@@ -348,7 +348,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 #endif
 
     /* Get number of available players */
-    uint32_t result = _GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
+    uint32_t result = GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 from asm */
 
     int16_t d5;
@@ -368,7 +368,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
     int16_t d7;
     for (d7 = 10; d7 >= 0; d7--) {
         int16_t d6 = (int8_t)playerNums[d7];
-        uint16_t d0 = _Rand2();
+        uint16_t d0 = Rand2();
 
         /* Check remap: if negative byte in remapTable, use direct; else 50% chance */
         if (!((int8_t)remapTable[d6] < 0)) {
@@ -397,13 +397,13 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 
         if (role == 0) {
             /* Goalkeeper role - check available substitutes */
-            uint32_t subResult = _GetNumberOfAvailableSubstitutes((uint8_t *)team, -1);
+            uint32_t subResult = GetNumberOfAvailableSubstitutes((uint8_t *)team, -1);
             uint16_t subAvail = (uint16_t)(subResult >> 16); /* d6 from asm */
             if (subAvail != 0) goto next_player;
         }
 
         /* Second random for status type determination */
-        d0 = _Rand2();
+        d0 = Rand2();
         d0 &= 0x1F;
 
         if (d0 < 0x1D) {
@@ -411,7 +411,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
             if (!inEditTactics) {
                 if (d1 == 0) {
                     /* No current injury - check ShouldApply */
-                    if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
+                    if (ShouldApplyRandomPlayerStatusAfterSim() == 0) {
                         /* skip this player entirely (loc_1223B2) */
                         d5--;
                         if (d5 == 0) return;
@@ -431,14 +431,14 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
             } else {
                 if (d1 == 0) {
                     /* loc_122376: ShouldApply -> if yes d1=0xC, else d1=8 */
-                    if (_ShouldApplyRandomPlayerStatusAfterSim() != 0) {
+                    if (ShouldApplyRandomPlayerStatusAfterSim() != 0) {
                         d1 = 0x0C;
                     } else {
                         d1 = 8;
                     }
                 } else {
                     /* loc_122384 */
-                    if (_ShouldApplyRandomPlayerStatusAfterSim() != 0) {
+                    if (ShouldApplyRandomPlayerStatusAfterSim() != 0) {
                         d1 = 0x10;
                     } else {
                         d1 = 8;
@@ -451,7 +451,7 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
                 cardBits = 2;
             } else {
                 /* loc_122384: ShouldApply -> if yes d1=0x10, else d1=8 */
-                if (_ShouldApplyRandomPlayerStatusAfterSim() != 0) {
+                if (ShouldApplyRandomPlayerStatusAfterSim() != 0) {
                     d1 = 0x10;
                 } else {
                     d1 = 8;
@@ -464,14 +464,14 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
             } else {
                 if (d1 == 0) {
                     /* loc_122384 */
-                    if (_ShouldApplyRandomPlayerStatusAfterSim() != 0) {
+                    if (ShouldApplyRandomPlayerStatusAfterSim() != 0) {
                         d1 = 0x10;
                     } else {
                         d1 = 8;
                     }
                 } else {
                     /* same path: loc_122384 */
-                    if (_ShouldApplyRandomPlayerStatusAfterSim() != 0) {
+                    if (ShouldApplyRandomPlayerStatusAfterSim() != 0) {
                         d1 = 0x10;
                     } else {
                         d1 = 8;
@@ -504,13 +504,13 @@ static void ApplyRandomPlayerStatusAfterSim(TeamFileEx *team, uint8_t *remapTabl
 /* ================================================================
  * InitPlayerRemapTableForTeam
  * Assigns random status buckets to players based on match factors.
- * The status bucket lives in cardsInjuries bits 5-7; _IsPlayerInjured
+ * The status bucket lives in cardsInjuries bits 5-7; IsPlayerInjured
  * returns "injured" for any bucket above the minor (0x20) tier, so this
  * function is a second source of post-match unavailability that the
  * substitution / VIEW RESULT prompt treats the same as a real injury.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
+void InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     if (team->team.teamControls == 1) return;
 #ifdef SWOS_TEST_NO_INJURIES_CARDS
     /* Beta-test mode: never assign post-match status buckets so the
@@ -520,7 +520,7 @@ void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
     return;
 #endif
 
-    uint32_t result = _GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
+    uint32_t result = GetNumberOfAvailablePlayers((uint8_t *)team, -1, 0);
     uint16_t availCount = (uint16_t)(result >> 16); /* d6 */
 
     int16_t d5;
@@ -547,7 +547,7 @@ void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable) {
 loop_start:
     for (; d7 >= 0; d7--) {
         int16_t d6 = (int8_t)playerNums[d7];
-        uint16_t d0 = _Rand2();
+        uint16_t d0 = Rand2();
 
         /* Check remap table if non-null */
         if (remapTable != (uint8_t *)0) {
@@ -572,7 +572,7 @@ loop_start:
 
         if (role == 0) {
             /* Goalkeeper: check available substitutes */
-            uint32_t subResult = _GetNumberOfAvailableSubstitutes((uint8_t *)team, -1);
+            uint32_t subResult = GetNumberOfAvailableSubstitutes((uint8_t *)team, -1);
             uint16_t subAvail = (uint16_t)(subResult >> 16);
             if (subAvail != 0) continue;
         }
@@ -594,7 +594,7 @@ loop_start:
 
         /* Assign new status bucket from probability thresholds */
         uint8_t *thresholds = playerStatusBucketThresholds;
-        d0 = _Rand2();
+        d0 = Rand2();
         d0 &= 0x3F;
         uint16_t newBucket = 0x20;
 
@@ -644,7 +644,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
     /* Get pick count based on goals conceded */
     uint8_t *pickCounts = availablePickCountByGoalsInTable + (viewResultTeam1GoalsIn << 3);
-    uint16_t d0 = _Rand2();
+    uint16_t d0 = Rand2();
     uint8_t d4 = pickCounts[d0 & 7];
     if (d4 == 0) {
         *outCount = 0;
@@ -655,7 +655,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
     /* Get candidate players based on goals against */
     uint8_t *candidates = candidatePlayersByGoalsInTable + ((viewResultTeam2GoalsIn - 1) << 5);
-    d0 = _Rand2();
+    d0 = Rand2();
     candidates += (d0 & 0x18);  /* offset by 0, 8, 16, or 24 */
 
     uint16_t d6 = 0;
@@ -689,7 +689,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
         if (role == 0) {
             /* Goalkeeper: random chance to skip */
-            d0 = _Rand2();
+            d0 = Rand2();
             if (d0 >= 4) {
                 d4s++;  /* retry: don't count this against the budget (go back to loop start) */
                 continue;
@@ -698,7 +698,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
 
         /* Pick a preferred position slot for this player's role */
         uint8_t *roleSlots = preferredTacticsSlotsByRole + ((int16_t)role << 3);
-        d0 = _Rand2();
+        d0 = Rand2();
         uint8_t slotIdx = roleSlots[d0 & 7];
 
         /* Map through tactics to get position index */
@@ -710,7 +710,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
         /* Check if target player's remap slot is available (0xFF = available) */
         if (!((int8_t)remapTable[targetPlayer] < 0)) {
             /* Slot taken, try once more with different random */
-            d0 = _Rand2();
+            d0 = Rand2();
             slotIdx = roleSlots[d0 & 7];
 
             /* Re-read tactics mapping */
@@ -741,7 +741,7 @@ static void BuildAvailablePlayersRemapAndMask(TeamFileEx *team, uint8_t *remapTa
  * out: skill index (0..31 range)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount) {
+uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount) {
     oldPlayerSkillDivisor = 1;
     uint16_t d5 = 0;
     uint16_t d6 = goalsCount;
@@ -753,7 +753,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
 
         for (; d3 >= 0; d3--) {
             /* Call UpdatePlayerPositionAndReturnRole */
-            uint32_t res = _UpdatePlayerPositionAndReturnRole(team, d7);
+            uint32_t res = UpdatePlayerPositionAndReturnRole(team, d7);
             uint16_t posValue = (uint16_t)(res & 0xFFFF);       /* d0 = position value */
             uint16_t roleValue = (uint16_t)((res >> 16) & 0xFFFF); /* d1 = role */
 
@@ -779,7 +779,7 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
     /* Second pass: iterate all 11 outfield players (indices 0..10) */
     uint16_t d7;
     for (d7 = 0; d7 < 11; d7++) {
-        uint32_t res = _UpdatePlayerPositionAndReturnRole(team, d7);
+        uint32_t res = UpdatePlayerPositionAndReturnRole(team, d7);
         uint16_t posValue = (uint16_t)(res & 0xFFFF);
         uint16_t roleValue = (uint16_t)((res >> 16) & 0xFFFF);
 
@@ -826,10 +826,10 @@ uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCou
 }
 
 /* ================================================================
- * _CalculateViewResult — main entry point
+ * CalculateViewResult — main entry point
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
+void CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                           uint16_t team1GoalsIn, uint16_t team2GoalsIn,
                           uint16_t statColumnIndex,
                           TeamFileEx *team1, TeamFileEx *team2,
@@ -862,12 +862,12 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
                                       &team2AvailableCount, &team2AvailableMask);
 
     /* Init player remap tables */
-    _InitPlayerRemapTableForTeam(team1, team1PlayerRemapTable);
-    _InitPlayerRemapTableForTeam(team2, team2PlayerRemapTable);
+    InitPlayerRemapTableForTeam(team1, team1PlayerRemapTable);
+    InitPlayerRemapTableForTeam(team2, team2PlayerRemapTable);
 
     /* Apply post-match career stat mods */
-    _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(team1, team1PlayerRemapTable);
-    _Career_ApplyPostMatchPlayerStatModsIfCareerTeam(team2, team2PlayerRemapTable);
+    Career_ApplyPostMatchPlayerStatModsIfCareerTeam(team1, team1PlayerRemapTable);
+    Career_ApplyPostMatchPlayerStatModsIfCareerTeam(team2, team2PlayerRemapTable);
 
     /* Apply random player status */
     ApplyRandomPlayerStatusAfterSim(team1, team1PlayerRemapTable);
@@ -875,8 +875,8 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
 
     /* Compute old player skill (view base index) */
     /* Note: for team1, the goals-in parameter is team2's goals (opponent's goals) */
-    team1ViewBaseIndex = (int16_t)_ComputeOldPlayerSkillForViewResult(team1, team2GoalsIn);
-    team2ViewBaseIndex = (int16_t)_ComputeOldPlayerSkillForViewResult(team2, team2GoalsIn);
+    team1ViewBaseIndex = (int16_t)ComputeOldPlayerSkillForViewResult(team1, team2GoalsIn);
+    team2ViewBaseIndex = (int16_t)ComputeOldPlayerSkillForViewResult(team2, team2GoalsIn);
 
     /* Scale by price rank unless both teams are user-controlled */
     if (!(team1->team.teamControls == 1 && team2->team.teamControls == 1)) {
@@ -888,7 +888,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
 
     /* Calculate view offsets */
     {
-        uint32_t packed = _CalcTeamViewOffset(team1);
+        uint32_t packed = CalcTeamViewOffset(team1);
         team1ViewOffsetX = (int16_t)(packed >> 16);
         team1ViewOffsetY = (int16_t)(packed & 0xFFFF);
     }
@@ -897,7 +897,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     }
 
     {
-        uint32_t packed = _CalcTeamViewOffset(team2);
+        uint32_t packed = CalcTeamViewOffset(team2);
         team2ViewOffsetX = (int16_t)(packed >> 16);
         team2ViewOffsetY = (int16_t)(packed & 0xFFFF);
     }
@@ -934,13 +934,13 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
     if (absDelta < 0) absDelta = -absDelta;
 
     uint8_t *goalLookup = simGoalsByStrengthDiffTable + ((uint16_t)absDelta << 2);
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     int16_t d1 = (int8_t)goalLookup[r & 3];
 
     /* Sentinel check: if negative, use high goal fallback */
     if (d1 < 0) {
         uint8_t *fallback = simHighGoalFallbackValues;
-        r = _Rand2();
+        r = Rand2();
         uint16_t fbIdx = (uint16_t)((r * 6) >> 8);
         d1 = (int8_t)fallback[fbIdx];
     }
@@ -948,7 +948,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
 
     /* Look up additional goals from tactic-based probability */
     uint8_t *tacticGoalProbs = (uint8_t *)simGoalProbByTacticPtrs[d1];
-    r = _Rand2();
+    r = Rand2();
     int16_t d2 = 0;
 
     /* Walk up to 4 cumulative thresholds */
@@ -964,7 +964,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
 
                     /* Exceeded 4 thresholds: use extra table */
                     uint8_t *extraProbs = (uint8_t *)simExtraGoalProbByTacticPtrs[d1];
-                    r = _Rand2();
+                    r = Rand2();
                     d2 = 3;
                     if (r >= extraProbs[0]) {
                         r -= extraProbs[0]; d2++;
@@ -1036,7 +1036,7 @@ void _CalculateViewResult(DIYCompetition *ctx, uint16_t modeFlag,
  * Returns d3 (team1 extra goals) and d4 (team2 extra goals).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
+void ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
     int16_t d1 = team1ViewBaseIndex + team1ViewOffsetY;
     if (d1 < 0) d1 = 0;
     if (d1 > 31) d1 = 31;
@@ -1052,12 +1052,12 @@ void _ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
     if (yDiff < 0) yDiff = -yDiff;
 
     uint8_t *yGoalLookup = simGoalsByIndexDiffTable + ((uint16_t)yDiff << 2);
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     int16_t d3 = (int8_t)yGoalLookup[r & 3];
 
     /* Extra goals from Y-phase thresholds */
     uint8_t *extraA = simExtraGoalThresholdsA;
-    r = _Rand2();
+    r = Rand2();
     int16_t d4 = 0;
 
     if (r >= extraA[0]) {
@@ -1067,7 +1067,7 @@ void _ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
 
             /* Use second threshold table */
             uint8_t *extraB = simExtraGoalThresholdsB;
-            r = _Rand2();
+            r = Rand2();
             d4 = 1;
             if (r >= extraB[0]) {
                 r -= extraB[0]; d4++;
@@ -1103,8 +1103,8 @@ void _ExtraTimeSecondPhaseScoring(uint16_t *outD3, uint16_t *outD4) {
  * Returns d5 and d6 via output params.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PenaltyShootoutScorerPair(int16_t *outD5, uint16_t *outD6) {
-    uint16_t d0 = _Rand2();
+void PenaltyShootoutScorerPair(int16_t *outD5, uint16_t *outD6) {
+    uint16_t d0 = Rand2();
     uint16_t d6 = d0;
     uint8_t d5byte = simGoalScorerPairTable[d0 & 0x3F];
 
@@ -1132,11 +1132,11 @@ extern uint16_t selTeamNumber;
 extern uint16_t stayingInOldClub;
 
 /* Asm function bridges */
-extern void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
-extern void _InitCareerVariables(uint16_t gameType);
+extern void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
+extern void InitCareerVariables(uint16_t gameType);
 
 /* C functions from other modules */
-extern int16_t _DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
+extern int16_t DoContinueAbortMenu(uint8_t *header, uint8_t *changing,
                                      uint8_t *contText, uint8_t *abortTextStr,
                                      uint16_t defaultEntry);
 
@@ -1189,7 +1189,7 @@ static void teamInit(TeamFileEx *tfex, uint16_t numPlayersMinus1)
  * Asm: InitTeams() — no params
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitTeams(void)
+void InitTeams(void)
 {
     TeamFileEx *teams = selectedTeams;
 
@@ -1212,22 +1212,22 @@ void _InitTeams(void)
  * Asm: PlayFriendly() — no params
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _PlayFriendly(void)
+void PlayFriendly(void)
 {
     TeamFileEx *teams = selectedTeams;
-    _InitAndPlayGame(&teams[0], &teams[1]);
+    InitAndPlayGame(&teams[0], &teams[1]);
 }
 
 /* ================================================================
- * _CheckContinueAbortPrompt  (SWOS2.s line 30243)
+ * CheckContinueAbortPrompt  (SWOS2.s line 30243)
  *
  * Shows a "continue or abort?" prompt based on game type.
  * Returns 0 (abort/no game) or non-zero (continue).
  *
- * Asm: _CheckContinueAbortPrompt(a0=header) -> d0, ZF
+ * Asm: CheckContinueAbortPrompt(a0=header) -> d0, ZF
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _CheckContinueAbortPrompt(uint8_t *header)
+int16_t CheckContinueAbortPrompt(uint8_t *header)
 {
     if (gameType == 0) {  /* GAME_TYPE_NO_GAME */
         return 0;
@@ -1245,14 +1245,14 @@ int16_t _CheckContinueAbortPrompt(uint8_t *header)
         changingText = aCareerPrompt;
     }
 
-    int16_t result = _DoContinueAbortMenu(header, changingText,
+    int16_t result = DoContinueAbortMenu(header, changingText,
                                            aContinue, aAbort, 1);
     if (result != 0) {
         return result;  /* user chose continue */
     }
 
     /* User chose abort — reset career variables */
-    _InitCareerVariables(0);
+    InitCareerVariables(0);
     return 0;
 }
 
@@ -1270,7 +1270,7 @@ int16_t _CheckContinueAbortPrompt(uint8_t *header)
  * out: scaled skill value
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame)
+uint16_t ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame)
 {
     int16_t d2 = factor;
 
@@ -1298,7 +1298,7 @@ uint16_t _ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame)
     uint16_t remainder = (uint16_t)(product % 100);  /* swap d2 gives remainder */
 
     /* Random rounding: if Rand2() * 100 / 256 < remainder, add 1 */
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     r = (uint16_t)((uint16_t)(r * 100) >> 8);
     if (r < remainder)
         result++;
@@ -1318,7 +1318,7 @@ uint16_t _ScaleSkill(uint16_t skill, int16_t factor, TeamGame *teamGame)
  * out: adjusted factor
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
+int16_t GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
                                         uint16_t callerD0)
 {
     int16_t d4 = factor;
@@ -1332,13 +1332,13 @@ int16_t _GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
             d4 += (int16_t)callerD0;
 
             /* Add price rank offset */
-            int16_t pctOff = _CalcTeamPriceRankPercentOffset(&diyCompetitionStart.base, teamFile);
+            int16_t pctOff = CalcTeamPriceRankPercentOffset(&diyCompetitionStart.base, teamFile);
             d4 += pctOff;
         }
     }
 
     /* Add random variation: [-12, +11] */
-    uint16_t r = _Rand2();
+    uint16_t r = Rand2();
     r = (uint16_t)((uint16_t)(r * 24) >> 8);  /* random 0..23 */
     d4 += (int16_t)r - 12;
 
@@ -1361,7 +1361,7 @@ int16_t _GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
  *      pi         = PlayerInfo for this player in TeamGame (a6 in asm)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
+void AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
                          TeamFile *oppTeamFile, TeamGame *teamGame,
                          uint8_t *playerBase, PlayerInfo *pi,
                          uint16_t callerD0)
@@ -1378,7 +1378,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
         d4 = (int16_t)(int8_t)pf->price;
     } else {
         /* Field player: calculate price via GetPlayerPrice */
-        d4 = _GetPlayerPrice(teamFile, (PlayerFile *)playerBase, playerIdx);
+        d4 = GetPlayerPrice(teamFile, (PlayerFile *)playerBase, playerIdx);
     }
 
     /* Compute percentage: (calculatedPrice * 100) / filePrice */
@@ -1412,7 +1412,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
     }
 
     /* Apply team view offset + rank + random to factor */
-    d4 = _GetPlayerPricePercentageChange(d4, teamFile, callerD0);
+    d4 = GetPlayerPricePercentageChange(d4, teamFile, callerD0);
 
     /* Read packed skills longword from PlayerFile:
      * passing(28), velocityHeading(29), tacklingControl(30), speedFinishing(31).
@@ -1436,7 +1436,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
         skills = (skills << 4) | (skills >> 28);
         uint16_t rawSkill = (uint16_t)(skills & 0xF);
 
-        uint16_t scaled = _ScaleSkill(rawSkill, d4, teamGame);
+        uint16_t scaled = ScaleSkill(rawSkill, d4, teamGame);
         if (scaled > 7)
             scaled = 7;
         piSkills[i] = (int8_t)scaled;
@@ -1497,7 +1497,7 @@ void _AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
  * in:  teamGame = pointer to TeamGame (topTeamInGame or bottomTeamInGame)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ApplyTeamTactics(TeamGame *teamGame)
+void ApplyTeamTactics(TeamGame *teamGame)
 {
     /* Determine tactics and team pointers based on which team */
     uint16_t tactics;
@@ -1530,21 +1530,21 @@ void _ApplyTeamTactics(TeamGame *teamGame)
         int16_t playerFileIdx = (int16_t)(int8_t)pi->playerIndex;
 
         /* Get pointer to player in team file */
-        uint8_t *playerBase = _GetPlayer(teamNumber, (uint16_t)playerFileIdx);
+        uint8_t *playerBase = GetPlayer(teamNumber, (uint16_t)playerFileIdx);
 
         /* Save random state, seed per-player random, adjust skills, restore.
          * The XOR'd seed value (d0 in asm) is passed through to
          * GetPlayerPricePercentageChange as an additional random factor. */
-        _SaveRand2State();
+        SaveRand2State();
 
-        int16_t playerRand = (int16_t)_GetPlayerRandomNum((PlayerFile *)playerBase);
+        int16_t playerRand = (int16_t)GetPlayerRandomNum((PlayerFile *)playerBase);
         uint16_t seed = (uint16_t)playerRand ^ gameRandValue;
-        _Randomize2(seed);
+        Randomize2(seed);
 
-        _AdjustPlayerSkills(i, ownTeamFile, oppTeamFile, teamGame,
+        AdjustPlayerSkills(i, ownTeamFile, oppTeamFile, teamGame,
                             playerBase, pi, seed);
 
-        _RestoreRand2State();
+        RestoreRand2State();
     }
 
     /* Restore original tactics byte */
@@ -1576,7 +1576,7 @@ void _ApplyTeamTactics(TeamGame *teamGame)
  *   bit 7: show 2nd leg / show detailed scores
  */
 __attribute__((used, externally_visible))
-uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
+uint8_t *BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
                                   uint16_t pens, uint8_t *teamA, uint8_t *teamB,
                                   uint16_t flags)
 {
@@ -1733,7 +1733,7 @@ uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
     }
 
     /* Call PrintFormatted: fmt, out=resultString, d0-d6, %a=winnerName */
-    _PrintFormatted(fmt, resultString, d0, d1, d2, d3,
+    PrintFormatted(fmt, resultString, d0, d1, d2, d3,
                     0, 0, 0,           /* d4-d6 unused by these formats */
                     winnerName, 0, 0);
 
@@ -1746,7 +1746,7 @@ uint8_t *_BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
  * a0 = competition context, a1 = team file pointer.
  * Returns half of the clamped [-50, +50] percentage offset. */
 __attribute__((used, externally_visible))
-int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
+int16_t CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
 {
     /* competitionType must be 0 */
     if (comp->competitionType != 0)
@@ -1768,8 +1768,8 @@ int16_t _CalcTeamPriceRankPercentOffset(DIYCompetition *comp, TeamFile *team)
 
     /* Read first two bytes as a packed uint16_t: (countryNumber << 8) | teamOrdinal */
     uint16_t teamNum = ((uint16_t)team->countryNumber << 8) | team->teamOrdinal;
-    uint16_t teamIndex = _FindTeamInDIY(teamNum, comp);
-    uint16_t expensiveCount = _GetMoreExpensiveTeamsCount(teamNum, comp);
+    uint16_t teamIndex = FindTeamInDIY(teamNum, comp);
+    uint16_t expensiveCount = GetMoreExpensiveTeamsCount(teamNum, comp);
 
     int16_t diff = (int16_t)(expensiveCount - teamIndex);
     int32_t scaled = (int32_t)diff * 100;
@@ -1813,12 +1813,12 @@ extern uint16_t numPlayersAtQuadrant;        /* count of players sharing a quadr
 extern uint8_t currentMatchPlayers[];
 extern uint8_t playerPositionsArray[];
 extern uint16_t inEditTactics;
-extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
-extern uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
+extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+extern uint16_t CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQuadrant,
                                      uint16_t price, const uint8_t *curQuadDistFactor,
                                      const uint8_t *playerPositions, const uint8_t *coordToQuad);
 
-/* _GetPlayerPrice (SWOS2.s line 27392)
+/* GetPlayerPrice (SWOS2.s line 27392)
  *
  * Calculates a player's effective price based on skills, tactical position,
  * and distance weighting across 35 pitch quadrants.
@@ -1831,7 +1831,7 @@ extern uint16_t _CountNearnessFactor(uint16_t curBallQuadrant, uint16_t dstBallQ
  * Returns: price value (d7 in asm) as int16_t
  */
 __attribute__((used, externally_visible))
-int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber)
+int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t playerNumber)
 {
     /* Player data is at playerFile[2] (2 * 38 = 76 bytes = sizeof(TeamFile)) */
     PlayerFile *plFile = &playerFile[2];
@@ -1932,7 +1932,7 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
 
         /* Apply nearness factor (human teams only) */
         if (tf->teamControls != TEAM_COMPUTER) {
-            d7val = _CountNearnessFactor(d3, ballQ, d7val,
+            d7val = CountNearnessFactor(d3, ballQ, d7val,
                                          distFactor, playerTactics,
                                          quadrantCoordinatesToBallQuadrant);
         }
@@ -1973,7 +1973,7 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
     return (int16_t)(uint8_t)(increase + filePriceByte);
 }
 
-/* _UpdatePlayerPositionAndReturnRole (SWOS2.s line 26116)
+/* UpdatePlayerPositionAndReturnRole (SWOS2.s line 26116)
  *
  * Determines a player's effective position value and role.
  * For career team: reads slot mapping from currentMatchPlayers[].
@@ -1991,7 +1991,7 @@ int16_t _GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t pla
  *          and position = the effective price/skill value for this player
  */
 __attribute__((used, externally_visible))
-uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx)
+uint32_t UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx)
 {
     /* Get player slot index based on whether this is the career team */
     int16_t slotIdx;
@@ -2039,7 +2039,7 @@ uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx
             goto storeResult;
         } else {
             /* Outfield player in outfield slot: calculate full price */
-            d7val = _GetPlayerPrice(&team->team, (PlayerFile *)playerBase, playerIdx);
+            d7val = GetPlayerPrice(&team->team, (PlayerFile *)playerBase, playerIdx);
         }
     } else {
         /* Substitute (index >= 11) */
@@ -2060,7 +2060,7 @@ uint32_t _UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx
 
         /* Check if player is injured.
          * Asm does exg a0,a1 so IsPlayerInjured gets a0=playerBase (team+slot*38) */
-        if (_IsPlayerInjured((PlayerFile *)playerBase, (int16_t)inEditTactics)) {
+        if (IsPlayerInjured((PlayerFile *)playerBase, (int16_t)inEditTactics)) {
             d7val = 0;  /* injured = price 0 */
         }
     }

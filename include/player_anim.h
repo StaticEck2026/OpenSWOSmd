@@ -8,8 +8,8 @@
 
 #include "game_types.h"
 
-void _MovePlayers(void);
-void _SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
-void _SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *sprite);
+void MovePlayers(void);
+void SetPlayerAnimationTable(AnimTable *animTable, Sprite *sprite);
+void SetPlayerAnimationTableAndPictureIndex(AnimTable *animTable, Sprite *sprite);
 
 #endif

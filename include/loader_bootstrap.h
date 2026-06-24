@@ -11,7 +11,7 @@ typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef short int16_t;
 
-void _InstallAndInitLoaderBootstrap(void);
-void _InstallAndRunLoaderBootstrap_Op3(void);
+void InstallAndInitLoaderBootstrap(void);
+void InstallAndRunLoaderBootstrap_Op3(void);
 
 #endif

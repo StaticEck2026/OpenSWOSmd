@@ -18,7 +18,7 @@ typedef int int32_t;
  * Returns direction 0..255 (or 0xFFFF if no movement).
  * outDeltaX/outDeltaY receive 32-bit fixed-point deltas (16×16 muls result).
  */
-uint16_t _CalculateDeltaXAndY(int16_t destX, int16_t destY,
+uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
                                int16_t srcX, int16_t srcY,
                                int16_t speed,
                                int32_t *outDeltaX, int32_t *outDeltaY);

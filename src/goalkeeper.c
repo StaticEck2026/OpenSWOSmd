@@ -96,13 +96,13 @@ extern int16_t  kGoalkeeperWeakDeflectBallSpeed;
 extern int32_t  kGoalkeeperDeflectDeltaZ;
 
 /* Functions from other modules */
-extern uint16_t _Rand(void);
-extern void     _PlayKickSample(void);
-extern void     _ResetBothTeamSpinTimers(void);
-extern void     _InitTeamsData(void);
-extern void     _StopAllPlayers(void);
-extern void     _UpdatePlayerWithBall(uint8_t *player);
-extern void     _EndOfGame(void);
+extern uint16_t Rand(void);
+extern void     PlayKickSample(void);
+extern void     ResetBothTeamSpinTimers(void);
+extern void     InitTeamsData(void);
+extern void     StopAllPlayers(void);
+extern void     UpdatePlayerWithBall(uint8_t *player);
+extern void     EndOfGame(void);
 
 
 /* ==================================================================
@@ -149,13 +149,13 @@ static int16_t getFramesNeededToCoverDistance(int32_t movementDelta, int16_t dis
 
 
 /* ==================================================================
- * _ShouldGoalkeeperDive
+ * ShouldGoalkeeperDive
  *   from: ShouldGoalkeeperDive
  *   in:  keeper (A1), ball (A2), team (A6)
  *   out: 1 = should dive, 0 = no dive
  * ================================================================== */
 int16_t __attribute__((used, externally_visible))
-_ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
+ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 {
     int16_t dy;
     int16_t dx;
@@ -185,7 +185,7 @@ _ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     /* Penalty distance gate */
     if (playingPenalties || penalty) {
         threshold = kKeeperPenaltySaveDistanceFar;
-        randVal = (int16_t)_Rand();
+        randVal = (int16_t)Rand();
         if (randVal & 0x18) {
             threshold = kKeeperPenaltySaveDistanceNear;
         }
@@ -243,7 +243,7 @@ _ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 
 
 /* ==================================================================
- * _GoalkeeperDeflectedBall
+ * GoalkeeperDeflectedBall
  *   from: GoalkeeperDeflectedBall
  *   in:  ball (A2), team (A6)
  *
@@ -251,7 +251,7 @@ _ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
  * on goalkeeper skill, adds random Z delta.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_GoalkeeperDeflectedBall(Sprite *ball, TeamGeneralInfo *team)
+GoalkeeperDeflectedBall(Sprite *ball, TeamGeneralInfo *team)
 {
     int16_t baseDir;
     int16_t destX, destY;
@@ -305,20 +305,20 @@ _GoalkeeperDeflectedBall(Sprite *ball, TeamGeneralInfo *team)
     deltaZ += randZ;
     ball->deltaZ.raw = deltaZ;
 
-    _ResetBothTeamSpinTimers();
-    _PlayKickSample();
+    ResetBothTeamSpinTimers();
+    PlayKickSample();
 }
 
 
 /* ==================================================================
- * _NextPenalty
+ * NextPenalty
  *   from: NextPenalty
  *
  * Advances penalty shootout state. Checks for end conditions,
  * sets up next round, picks shooter.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_NextPenalty(void)
+NextPenalty(void)
 {
     int16_t totalAttempts;
     int16_t *shooterIdx;
@@ -354,7 +354,7 @@ setup_next:
     teamStarting  = -teamStarting + 3;
 
     hideBall = 0;
-    _InitTeamsData();
+    InitTeamsData();
 
     gameState = ST_PENALTIES;
     breakCameraMode = -1;
@@ -368,7 +368,7 @@ setup_next:
     lastTeamPlayedBeforeBreak = &bottomTeamData;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     cameraXVelocity = 0;
     cameraYVelocity = 0;
     penaltiesTimer = 0;
@@ -406,12 +406,12 @@ end_shootout:
     else
         winningTeamPtr = &bottomTeamInGame;
 
-    _EndOfGame();
+    EndOfGame();
 }
 
 
 /* ==================================================================
- * _GoalkeeperClaimedTheBall
+ * GoalkeeperClaimedTheBall
  *   from: GoalkeeperClaimedTheBall
  *   in:  keeper (A1), ball (A2), team (A6)
  *
@@ -419,7 +419,7 @@ end_shootout:
  * game state, stoppage, and optionally passes control to keeper.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
+GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 {
     lastPlayerBeforeGoalkeeper = lastPlayerPlayed;
     lastTeamScored = lastTeamPlayed;
@@ -451,7 +451,7 @@ _GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     lastTeamPlayedBeforeBreak = team;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
 
     /* If keeper is not currently diving, give control to keeper */
     if (team->goalkeeperDivingRight != 0)
@@ -463,7 +463,7 @@ _GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     team->ballOutOfPlayOrKeeper = 1;
     keeper->direction = (int16_t)cameraDirection;
     team->goaliePlayingOrOut = 1;
-    _UpdatePlayerWithBall((uint8_t *)keeper);
+    UpdatePlayerWithBall((uint8_t *)keeper);
 
     cameraXVelocity = 0;
     cameraYVelocity = 0;
@@ -471,19 +471,19 @@ _GoalkeeperClaimedTheBall(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 
 
 /* ==================================================================
- * _CheckIfGoalkeeperClaimedTheBall
+ * CheckIfGoalkeeperClaimedTheBall
  *   from: CheckIfGoalkeeperClaimedTheBall
  *
  * If gameState == ST_KEEPER_HOLDS_BALL: re-call GoalkeeperClaimedTheBall
  * with the team's goalkeeper sprite. Otherwise enter break idle state.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_CheckIfGoalkeeperClaimedTheBall(void)
+CheckIfGoalkeeperClaimedTheBall(void)
 {
     if (gameState == ST_KEEPER_HOLDS_BALL) {
         TeamGeneralInfo *team = lastTeamPlayedBeforeBreak;
         Sprite *keeper = team->spritesTable[0];  /* first sprite = goalkeeper */
-        _GoalkeeperClaimedTheBall(keeper, &ballSprite, team);
+        GoalkeeperClaimedTheBall(keeper, &ballSprite, team);
         return;
     }
 
@@ -493,14 +493,14 @@ _CheckIfGoalkeeperClaimedTheBall(void)
     gameNotInProgressCounterWriteOnly = 0;
     stoppageTimerTotal = 0;
     stoppageTimerActive = 0;
-    _StopAllPlayers();
+    StopAllPlayers();
     cameraXVelocity = 0;
     cameraYVelocity = 0;
 }
 
 
 /* ==================================================================
- * _GoalkeeperJumping
+ * GoalkeeperJumping
  *   from: GoalkeeperJumping
  *   in:  D0=diveDir, D1=speedVariant, D3=destDir,
  *        A1=keeper, A2=ball, A6=team
@@ -510,7 +510,7 @@ _CheckIfGoalkeeperClaimedTheBall(void)
  * kDefaultDestinations table.
  * ================================================================== */
 void __attribute__((used, externally_visible))
-_GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
+GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
                    Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
 {
     /* Set speed based on ball distance and speed variant */
@@ -537,16 +537,16 @@ _GoalkeeperJumping(int16_t diveDir, int16_t speedVariant, int16_t destDir,
         /* High dive */
         keeper->playerState = (uint8_t)PL_GOALIE_DIVING_HIGH;
         if (team == &bottomTeamData)
-            _SetPlayerAnimationTable(&rightGoalieJumpingHighAnimTable, keeper);
+            SetPlayerAnimationTable(&rightGoalieJumpingHighAnimTable, keeper);
         else
-            _SetPlayerAnimationTable(&leftGoalieJumpingHighAnimTable, keeper);
+            SetPlayerAnimationTable(&leftGoalieJumpingHighAnimTable, keeper);
     } else {
         /* Low dive */
         keeper->playerState = (uint8_t)PL_GOALIE_DIVING_LOW;
         if (team == &bottomTeamData)
-            _SetPlayerAnimationTable(&rightGoalieJumpingLowAnimTable, keeper);
+            SetPlayerAnimationTable(&rightGoalieJumpingLowAnimTable, keeper);
         else
-            _SetPlayerAnimationTable(&leftGoalieJumpingLowAnimTable, keeper);
+            SetPlayerAnimationTable(&leftGoalieJumpingLowAnimTable, keeper);
     }
 
     /* Set downtime and controlled player direction */

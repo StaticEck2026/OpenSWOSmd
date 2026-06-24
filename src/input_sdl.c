@@ -40,18 +40,18 @@ extern uint8_t  ciaa_pra;
  * to the Amiga highlight-capture path only, not the menu fire/skip path. */
 extern uint16_t gameState;
 
-/* ---- Keyboard FIFO consumed by _GetKey() ----
+/* ---- Keyboard FIFO consumed by GetKey() ----
  * The Amiga build's level-2 ISR pushes raw scan codes into keyBuffer
- * and increments keyCount; _GetKey() pops one, runs it through
+ * and increments keyCount; GetKey() pops one, runs it through
  * keycodeLut[] to get ASCII, and exposes that as currentKey for menu
- * input + _InputTextFilterKey. On SDL we have no ISR, so we push
+ * input + InputTextFilterKey. On SDL we have no ISR, so we push
  * directly here from SDL_KEYDOWN. */
 extern volatile uint8_t  keyBuffer[12];
 extern volatile uint16_t keyCount;
 
 /* ---- Amiga raw-scancode table (full set, used by both
  * keyState[] and keyBuffer FIFO). keycodeLut[] in
- * swos_data_bulk_imports.c maps these back to ASCII for _GetKey(). */
+ * swos_data_bulk_imports.c maps these back to ASCII for GetKey(). */
 #define AKEY_BACKTICK 0x00
 #define AKEY_1        0x01
 #define AKEY_0        0x0A
@@ -283,9 +283,9 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int a = sdl_to_amiga(e->key.keysym.sym);
         /* Arrow keys drive joy1Dat directly (s_kbd_up/down/left/right
          * below) so we DON'T also push their Amiga scancodes into
-         * keyBuffer — `_GetKey()` then `keycodeLut` maps the arrow
+         * keyBuffer — `GetKey()` then `keycodeLut` maps the arrow
          * scancodes to 0x10/0x11/0x12/0x13, the same numeric range
-         * that `_MainKeysCheck` interprets as the bench-call hotkey
+         * that `MainKeysCheck` interprets as the bench-call hotkey
          * (0x10 = bench2, 0x11 = bench1) and that menu nav uses for
          * up/right/down/left. On Amiga the player used a joystick
          * in-game so arrow scancodes never fired during play; on
@@ -314,7 +314,7 @@ void InputSDL_HandleEvent(const SDL_Event *e)
              * trigger fire. Alt is purely a modifier on this build. */
         } else if (a >= 0 && !is_movement_arrow) {
             keyState[a] = 1;
-            /* Push into the FIFO consumed by _GetKey() — but only on
+            /* Push into the FIFO consumed by GetKey() — but only on
              * the initial press (SDL re-fires KEYDOWN for OS key-repeat,
              * and the Amiga ISR uses its own keyDelay/repeat logic that
              * we don't currently emulate; ignoring repeats prevents
@@ -327,7 +327,7 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         } else if (a >= 0) {
             /* Arrow keys: still record key-down in keyState (some game
              * code polls keyState[AKEY_UP] etc.) but skip the keyBuffer
-             * FIFO so _GetKey doesn't see them as menu/hotkey input. */
+             * FIFO so GetKey doesn't see them as menu/hotkey input. */
             keyState[a] = 1;
         }
         switch (e->key.keysym.sym) {
@@ -340,7 +340,7 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_RETURN: s_kbd_fire = 1; break;
         case SDLK_SPACE:
             /* In a live match SPACE is SWOS's highlight-capture key
-             * (game_loop.c _MainKeysCheck case 0x20 — sets
+             * (game_loop.c MainKeysCheck case 0x20 — sets
              * fadeAndSaveHighlightScene, which fades the screen).
              * Don't route it to fire/skip on the game pad in-match —
              * that would mash the player's fire button at the same
@@ -492,7 +492,7 @@ static void read_pad_state(int slot,
 /* Encode an up/down/left/right + fire state into Paula's JOY*DAT word.
  *
  * JOY*DAT uses 2-bit Gray-code quadrature per axis. SWOS decodes it as
- * (input.c:_Player1StatusProc / _Player2StatusProc):
+ * (input.c:Player1StatusProc / Player2StatusProc):
  *   right = bit 1
  *   left  = bit 9
  *   down  = bit 0 XOR bit 1
@@ -569,7 +569,7 @@ void InputSDL_PostFrame(void)
 
     /* SWOS reads P1 from JOY1DAT (Amiga Port 1) and P2 from JOY0DAT
      * (Port 0). The port numbering is reversed from the player number —
-     * see input.c _Player1StatusProc/_Player2StatusProc. */
+     * see input.c Player1StatusProc/Player2StatusProc. */
     joy1Dat = encode_joydat(p1_up, p1_down, p1_left, p1_right);
     joy0Dat = encode_joydat(p2_up, p2_down, p2_left, p2_right);
 

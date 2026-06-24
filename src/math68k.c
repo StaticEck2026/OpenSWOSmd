@@ -137,7 +137,7 @@ static const int16_t kAngleCoeficients[1025] = {
  *   6. Multiply by speed to get fixed-point deltas
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _CalculateDeltaXAndY(int16_t destX, int16_t destY,
+uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
                                int16_t srcX, int16_t srcY,
                                int16_t speed,
                                int32_t *outDeltaX, int32_t *outDeltaY)

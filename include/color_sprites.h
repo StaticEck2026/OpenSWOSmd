@@ -8,6 +8,6 @@
 
 #include "game_types.h"
 
-void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2);
+void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2);
 
 #endif

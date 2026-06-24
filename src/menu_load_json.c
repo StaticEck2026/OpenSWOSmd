@@ -2,7 +2,7 @@
  * menu_load_json.c — JSON menu loader (SDL build), docs/MENUS.md §2d
  *
  * Reads bin/data_json/menus/<name>.json and builds the packed "§0"
- * byte-stream that _UnpackMenu (menu_system.c) walks — the SAME stream the
+ * byte-stream that UnpackMenu (menu_system.c) walks — the SAME stream the
  * compiled static `Menu_Foo fooMenu = {…}` initializers lay down. Pointer
  * payloads (callbacks, strings, string-tables, sprite-copy structs, buffers)
  * are stored in the JSON as SYMBOL NAMES and re-resolved here through the
@@ -17,7 +17,7 @@
  * authoritative, so the migration is incremental and reversible.
  *
  * Byte order is HOST-NATIVE here: the SDL build reads back its own freshly
- * built buffer, and _UnpackMenu reads pointers via memcpy of sizeof(uintptr_t).
+ * built buffer, and UnpackMenu reads pointers via memcpy of sizeof(uintptr_t).
  * The Amiga (BE, 4-byte ptr) path is the Python emitter, docs/MENUS.md §3.
  * ====================================================================== */
 
@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ---- packed-stream markers / opcode count (mirror _UnpackMenu) ---- */
+/* ---- packed-stream markers / opcode count (mirror UnpackMenu) ---- */
 #define MK_END        0xFC19u   /* 64537 */
 #define MK_SET_ORIGIN 0xFC1Au   /* 64538 */
 #define MK_TEMPLATE   0xFC1Bu   /* 64539 — start template */
@@ -63,7 +63,7 @@ static void w32(MWriter *w, uint32_t v)
     w->p[3] = (uint8_t)((v >> 24) & 0xFF);
     w->p += 4;
 }
-/* Native pointer-width slot — _UnpackMenu reads these via memcpy(sizeof(uintptr_t)). */
+/* Native pointer-width slot — UnpackMenu reads these via memcpy(sizeof(uintptr_t)). */
 static void wptr(MWriter *w, void *ptr)
 {
     if (w->p + sizeof(uintptr_t) > w->end) { w->overflow = 1; return; }
@@ -73,7 +73,7 @@ static void wptr(MWriter *w, void *ptr)
 
 /* ---- packed-stream reader: walk a compiled static menu to its end marker to
  *      learn its byte length (the in-place install's overflow bound). Mirrors
- *      the parse in _UnpackMenu / the build above, payload-width for payload-
+ *      the parse in UnpackMenu / the build above, payload-width for payload-
  *      width, so it can never disagree about how far a menu extends. ---- */
 static unsigned rd16(const uint8_t *p) { return (unsigned)p[0] | ((unsigned)p[1] << 8); }
 
@@ -148,7 +148,7 @@ static int mj_bool_def(const char *j, int jl, const char *path, int def)
 
 /* Emit a pointer payload from a field that is a symbol NAME (resolved via the
  * registry), a literal INTEGER (a small deferred-string sentinel 1..255 that
- * _UnpackMenu rewrites to 0xFFFFFFFF), or null/absent (a NULL pointer). */
+ * UnpackMenu rewrites to 0xFFFFFFFF), or null/absent (a NULL pointer). */
 static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
                        const char *menuName, int translate);
 
@@ -205,7 +205,7 @@ static void wfield_ptr(MWriter *w, const char *j, int jl, const char *path,
     }
 }
 
-/* ---- opcode-name -> number (MENU_CMD_*; see _UnpackMenu cases 0..22) ---- */
+/* ---- opcode-name -> number (MENU_CMD_*; see UnpackMenu cases 0..22) ---- */
 static int op_num(const char *op)
 {
     if (!strcmp(op, "invisible"))      return 1;
@@ -312,7 +312,7 @@ static void emit_command(MWriter *w, const char *cmd, int cmdl, const char *menu
     case 21: /* sprite_copy: ptr */
         wfield_ptr(w, cmd, cmdl, "$.sprite", menuName, 0);
         break;
-    case 22: /* text_no_ptr: u16 flags (deferred string; _UnpackMenu sets fg=0xFFFFFFFF) */
+    case 22: /* text_no_ptr: u16 flags (deferred string; UnpackMenu sets fg=0xFFFFFFFF) */
         w16(w, (unsigned)mj_long_def(cmd, cmdl, "$.flags", 0));
         break;
     default:
@@ -367,7 +367,7 @@ int MenuJson_BuildPacked(const char *j, int jl, uint8_t *out, int outcap)
     if (mjson_find(j, jl, "$.items", &items, &itemsl) != MJSON_TOK_ARRAY)
         return -1;
 
-    int byteMode = 0;       /* 0 = word coords (default), persists like _UnpackMenu */
+    int byteMode = 0;       /* 0 = word coords (default), persists like UnpackMenu */
     int sawEnd = 0;
     int off = 0, ko, kl, vo, vl, vt;
     while ((off = mjson_next(items, itemsl, off, &ko, &kl, &vo, &vl, &vt)) != 0) {
@@ -550,7 +550,7 @@ int MenuJson_VerifyAll(void)
 
 /* Build every menu from JSON and overwrite the compiled static `fooMenu` storage
  * IN PLACE, so editing the per-menu JSON changes the running game with no
- * call-site churn (every `_ShowMenu(fooMenu)` keeps reading the same symbol).
+ * call-site churn (every `ShowMenu(fooMenu)` keeps reading the same symbol).
  * The overwrite is bounded by the menu's compiled packed length (packed_source_len)
  * so an edit can never spill past the static struct into adjacent globals — a menu
  * that grows beyond its compiled size is left compiled and flagged (growing a menu

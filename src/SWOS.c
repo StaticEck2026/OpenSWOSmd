@@ -36,11 +36,11 @@ typedef short int16_t;
 #define LEVEL_3_INTERRUPT_AUTOVECTOR 0x6Cu
 #define LEVEL_4_INTERRUPT_AUTOVECTOR 0x70u
 
-extern void _SafeStart(void);
-extern void _LoadDosLibrary(void);
-extern void _DetachOSDisplay(void);
-extern void _InitHardwareAtFrameStart(void);
-extern void _SetupInterrupts(void);
+extern void SafeStart(void);
+extern void LoadDosLibrary(void);
+extern void DetachOSDisplay(void);
+extern void InitHardwareAtFrameStart(void);
+extern void SetupInterrupts(void);
 extern void Int2KeyboardHandler(void);
 extern void Int3TimerHandler(void);
 extern void Int4Handler(void);
@@ -77,19 +77,19 @@ static void set_vector(uintptr_t vbr, uintptr_t offset, void (*handler)(void))
 
 /* Renamed from `_start` to avoid colliding with the hosted libc CRT
  * entry point (`_start` is the runtime entry on Linux/glibc). The SDL
- * shim never calls this directly -- it goes straight to _mainC. The
+ * shim never calls this directly -- it goes straight to mainC. The
  * Amiga assembly (swos2_unit.s) still does `jsr _start`, so expose
  * the same body under both names on that build. */
 #if defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-__attribute__((alias("_swos_c_start"), used, externally_visible))
+__attribute__((alias("swos_c_start"), used, externally_visible))
 void _start(void);
 #endif
-__attribute__((used, externally_visible)) void _swos_c_start(void)
+__attribute__((used, externally_visible)) void swos_c_start(void)
 {
-    _SafeStart();
-    _LoadDosLibrary();
-    _DetachOSDisplay();
-    _InitHardwareAtFrameStart();
+    SafeStart();
+    LoadDosLibrary();
+    DetachOSDisplay();
+    InitHardwareAtFrameStart();
 
     /* These two zero-fill loops walk between pairs of SWOS2.s BSS
      * labels that were originally guaranteed adjacent — the first
@@ -99,7 +99,7 @@ __attribute__((used, externally_visible)) void _swos_c_start(void)
      * migrated to discrete C globals neither pair is contiguous, so
      * the loops walk the full 32-bit address space and hang. Both are
      * redundant under the m68k-amiga-elf CRT (it zero-fills BSS at
-     * startup); SDL also doesn't enter `_swos_c_start` so it never
+     * startup); SDL also doesn't enter `swos_c_start` so it never
      * ran them either. Skip until we restore the original adjacency
      * via a shared backing buffer + .equ aliases (the same pattern
      * used by `careerFileBufferBuf`).
@@ -115,7 +115,7 @@ __attribute__((used, externally_visible)) void _swos_c_start(void)
     magicValue = SWOS_MAGIC_VALUE;
     /* Bank scan disabled: assetLoaderBank0Base is in BSS (relocated),
      * so computed bank addresses (base + N*0x80000) point to invalid memory.
-     * Set loaderMemTop = 0 to skip the bank scan in _AssetLoaderInitAltPathAndBanks.
+     * Set loaderMemTop = 0 to skip the bank scan in AssetLoaderInitAltPathAndBanks.
      * The main 195KB cache region is sufficient. */
     loaderMemTop = 0;
     *(volatile uint32_t *)&loaderBankBitmap = 0;
@@ -145,7 +145,7 @@ __attribute__((used, externally_visible)) void _swos_c_start(void)
 #endif
     set_vector(S_VBR, LEVEL_4_INTERRUPT_AUTOVECTOR, Int4Handler);
 
-    _SetupInterrupts();
+    SetupInterrupts();
 
     *(volatile uint8_t *)CIAA_ICR_ADDR = 0x88u;
     custom->intena = 0xC008u;
@@ -187,23 +187,23 @@ extern uint8_t *menuImageStreamBaseEnd;
 
 extern uint16_t g_quitToDos;
 
-extern void _AssetSys_InitDiskImageSources(void);
-extern int16_t _AssetSvcLoaderOp2(void);
-extern int16_t _AssetSvcLoaderOp3(void);
-extern void _ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf);
-extern void _MenuProc(void);
-extern int16_t _LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern void AssetSys_InitDiskImageSources(void);
+extern int16_t AssetSvcLoaderOp2(void);
+extern int16_t AssetSvcLoaderOp3(void);
+extern void ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf);
+extern void MenuProc(void);
+extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
-/* delay_ticks: reset game tick counter, wait N vblanks via _WaitForVSync.
+/* delay_ticks: reset game tick counter, wait N vblanks via WaitForVSync.
  * Original Amiga was a busy spin on currentGameTick; on SDL that starves
  * the timer thread on WSL2 and hangs indefinitely. */
-extern void _WaitForVSync(void);
+extern void WaitForVSync(void);
 
 static void delay_ticks(uint16_t ticks)
 {
     currentGameTick = 0;
     while (currentGameTick < ticks)
-        _WaitForVSync();
+        WaitForVSync();
 }
 
 /* ================================================================
@@ -214,26 +214,26 @@ static void delay_ticks(uint16_t ticks)
  * the front-end main loop.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _mainC(void)
+void mainC(void)
 {
     /* ---- Phase 1: Hardware init ---- */
-    _AssetLoaderResetState();
+    AssetLoaderResetState();
     assetLoaderAltPathReady = 0;
-    _InitDisplayAndCopper();
-    _AssetSys_InitDiskImageSources();
-    _InitSkinAndDefaultPointers();
+    InitDisplayAndCopper();
+    AssetSys_InitDiskImageSources();
+    InitSkinAndDefaultPointers();
 
     /* ---- Phase 2: Build palettes ---- */
     
 #ifdef AGA
     {
         extern uint16_t menuPalette[];
-        _WriteCopperPalette(menuPalette);
+        WriteCopperPalette(menuPalette);
     }
 #else
-    _BuildPaletteFromColors(kTitleLogoColors, titleLogoPalette);
-    _BuildPaletteFromColors(kTitleScreenColors, titleScreenPalette);
-    _BuildPaletteFromColors(kTitleTextColors, titleTextPalette);
+    BuildPaletteFromColors(kTitleLogoColors, titleLogoPalette);
+    BuildPaletteFromColors(kTitleScreenColors, titleScreenPalette);
+    BuildPaletteFromColors(kTitleTextColors, titleTextPalette);
 #endif
 
     /* ---- Phase 3: Boot temps ---- */
@@ -248,49 +248,49 @@ void _mainC(void)
 
     /* ---- Phase 4: Loader intro ---- */
     loaderModeFlag = 1;
-    _ShowLoaderIntroSequence();
-    _AssetLoaderInitAltPathAndBanks();
-    _AssetPrecacheCore();
-    _InstallAndInitLoaderBootstrap();
-    _FadeOutToBlack();
+    ShowLoaderIntroSequence();
+    AssetLoaderInitAltPathAndBanks();
+    AssetPrecacheCore();
+    InstallAndInitLoaderBootstrap();
+    FadeOutToBlack();
     loaderModeFlag = 0;
 
     /* ---- Phase 5: Show title screens ---- */
-    _DoubleBufferSwapSequence();
+    DoubleBufferSwapSequence();
     paletteIndex = 0;
-    _LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "olddisk1.raw");
-    _BlitterCopyPanelToScreen2();
-    _WaitForVSync();
+    LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "olddisk1.raw");
+    BlitterCopyPanelToScreen2();
+    WaitForVSync();
 
-    _LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "disk22.raw");
+    LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "disk22.raw");
     paletteIndex = 0;
-    _FadeIn();
+    FadeIn();
 
     /* ---- Phase 6: Poll loader op3 with 50Hz delays ---- */
     
     do
     {
         delay_ticks(FPS_50HZ);
-    } while (_AssetSvcLoaderOp3() != 0);
+    } while (AssetSvcLoaderOp3() != 0);
 
-    _InstallAndRunLoaderBootstrap_Op3();
-    _FadeOutToBlack();
+    InstallAndRunLoaderBootstrap_Op3();
+    FadeOutToBlack();
 
     /* ---- Phase 7: Poll loader op2 ---- */
     
-    if (_AssetSvcLoaderOp2() != 0)
+    if (AssetSvcLoaderOp2() != 0)
     {
-        _BlitterCopyPanelToScreen2();
-        _WaitForVSync();
+        BlitterCopyPanelToScreen2();
+        WaitForVSync();
         paletteIndex = 0;
-        _FadeIn();
+        FadeIn();
 
         do
         {
             delay_ticks(FPS_50HZ);
-        } while (_AssetSvcLoaderOp2() != 0);
+        } while (AssetSvcLoaderOp2() != 0);
 
-        _FadeOutToBlack();
+        FadeOutToBlack();
     }
 
     /* ---- Phase 8: Build intro menu assets ---- */
@@ -302,23 +302,23 @@ void _mainC(void)
      * AND the Amiga build — the function's name is historical
      * (originally only the SDL path patched these). Without this call
      * on Amiga, the first 0x7000 opcode in introMenuImageScript reads
-     * NULL as the filename pointer; _StringCopy(NULL, assetFilename)
+     * NULL as the filename pointer; StringCopy(NULL, assetFilename)
      * truncates the buffer to byte 0 and the subsequent os_DosOpen on
      * an empty filename fails. */
-    extern void _SwosSDL_InitImageScripts(void);
-    _SwosSDL_InitImageScripts();
-    _ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
+    extern void SwosSDL_InitImageScripts(void);
+    SwosSDL_InitImageScripts();
+    ProcessImageCommandStream(introMenuImageScript, imageCmdWorkBuf);
     /* Map the font-extension glyphs (accented capitals, full ASCII, $) into the
      * char tables now that their sprites have been extracted by the script. */
     { extern void FontExt_ApplyConv(void); FontExt_ApplyConv(); }
     /* Force this write through to memory — LTO must not eliminate it.
-     * menuImageStreamBaseEnd is read later by _ConvertColorsAndTextSprites. */
+     * menuImageStreamBaseEnd is read later by ConvertColorsAndTextSprites. */
     *(uint8_t * volatile *)&menuImageStreamBaseEnd =
         *(uint8_t * volatile *)&imageStreamCursor;
-    _AssetPrecacheMenuPack();
+    AssetPrecacheMenuPack();
     assetLoaderAltPathReady = 1;
     hilNumGoals = 0;
 
     /* ---- Phase 9: Enter front-end loop ---- */
-    _FrontEndMainLoop();
+    FrontEndMainLoop();
 }

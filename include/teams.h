@@ -10,94 +10,94 @@
 #include "game_types.h"
 
 /* ---- Team file loading functions ---- */
-int16_t _LoadTeamFile(uint16_t extNumber);
-void _SetTeamGlobalNumbers(uint16_t numTeams, uint8_t *firstTeam);
+int16_t LoadTeamFile(uint16_t extNumber);
+void SetTeamGlobalNumbers(uint16_t numTeams, uint8_t *firstTeam);
 
 /* ---- Team identification ---- */
-void _CheckIsTeamNational(void);
-uint16_t _IsTeamNational(TeamFileEx *team);
+void CheckIsTeamNational(void);
+uint16_t IsTeamNational(TeamFileEx *team);
 
 /* ---- Team value / price utilities ---- */
-uint16_t _GetTeamValueBase(uint16_t avgPrice);
-uint16_t _CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
-uint16_t _GetAveragePlayerPriceInSelectedTeams(void);
+uint16_t GetTeamValueBase(uint16_t avgPrice);
+uint16_t CalcGateReceiptsBaseFromTeamValue(uint16_t avgPrice);
+uint16_t GetAveragePlayerPriceInSelectedTeams(void);
 
 /* ---- Player display value utilities ---- */
-uint16_t _GetPlayerRandomNum(PlayerFile *playerFile);
-uint16_t _GetDisplayedPlayerValue(uint8_t *ptr);
-void _InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
+uint16_t GetPlayerRandomNum(PlayerFile *playerFile);
+uint16_t GetDisplayedPlayerValue(uint8_t *ptr);
+void InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
 
 /* ---- Value snapping utilities ---- */
-uint16_t _SnapToNearestAvgTeamValueBase(uint16_t value);
-uint16_t _SnapUpToAvgTeamValueBase(uint16_t value);
+uint16_t SnapToNearestAvgTeamValueBase(uint16_t value);
+uint16_t SnapUpToAvgTeamValueBase(uint16_t value);
 
 /* ---- Player rotation ---- */
-void _RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs);
+void RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs);
 
 /* ---- Team buffer management ---- */
-TeamFileEx *_AddTeamToBuffer(TeamFileEx *team);
-TeamFileEx *_FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount);
-void _DeselectTeam(TeamFileEx *teamToRemove);
+TeamFileEx *AddTeamToBuffer(TeamFileEx *team);
+TeamFileEx *FindTeam(TeamFileEx *teamToFind, uint16_t *outRemainingCount);
+void DeselectTeam(TeamFileEx *teamToRemove);
 
 /* ---- Player value/status text formatting (Chunk 151) ---- */
-void _FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
+void FormatPlayerValueOrStatusText(uint8_t *base, uint8_t *dst);
 
 /* ---- Player record lookup (Chunk 91) ---- */
-uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
-uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
-uint16_t _GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerNumber);
+uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+uint16_t GetPlayerSlotIndexByPlayerNumber(uint16_t teamNumber, uint16_t playerNumber);
 
 /* ---- SetBenchPlayersNumbers, Career_RemovePlayerFromSelectedTeamRoster (Chunk 95) ---- */
-void _SetBenchPlayersNumbers(TeamFileEx *team);
-void _Career_RemovePlayerFromSelectedTeamRoster(uint16_t index);
-void _RemovePlayerFromTeam(uint16_t playerOrd);
+void SetBenchPlayersNumbers(TeamFileEx *team);
+void Career_RemovePlayerFromSelectedTeamRoster(uint16_t index);
+void RemovePlayerFromTeam(uint16_t playerOrd);
 
 /* ---- ChooseTeams layout & selection (Chunks 219-221) ---- */
-void _ChooseTeamsFriendly_UpdateMenuEntryYLayout(void);
-void _ViewSelTeamsSetColumns(void);
-void _SetTeamEntriesStringsAndColors(void);
-void _SetChooseChangeTeamsEntries(void);
-void _ChooseTeamsFriendly_DrawChangeTeamsPrompt(MenuEntry *savedA5);
-void _ChooseTeamsFriendlyCommon(MenuEntry *entry);
-void _ChooseTeamsFriendlyCommon2(MenuEntry *entry);
-void _ChooseTeamsFriendlyInit(void);
-void _ChooseTeamsFriendlyInitFinish(void);
-void _SetTeamsCoordinates(void);
-void _SelectTeamsReinit(void);
-void _SelectTeamsInit(void);
-void _SelTeamForTacticsInit(void);
-void _ChooseTeamsInit(void);
+void ChooseTeamsFriendly_UpdateMenuEntryYLayout(void);
+void ViewSelTeamsSetColumns(void);
+void SetTeamEntriesStringsAndColors(void);
+void SetChooseChangeTeamsEntries(void);
+void ChooseTeamsFriendly_DrawChangeTeamsPrompt(MenuEntry *savedA5);
+void ChooseTeamsFriendlyCommon(MenuEntry *entry);
+void ChooseTeamsFriendlyCommon2(MenuEntry *entry);
+void ChooseTeamsFriendlyInit(void);
+void ChooseTeamsFriendlyInitFinish(void);
+void SetTeamsCoordinates(void);
+void SelectTeamsReinit(void);
+void SelectTeamsInit(void);
+void SelTeamForTacticsInit(void);
+void ChooseTeamsInit(void);
 
 /* ---- Team selection menu callbacks (Chunks 107-108) ---- */
-void _DeselectAllTeams(void);
-void _ChangeTeams(void);
-void _AbortChooseTeamsFriendly(void);
-void _ChooseTeamsFriendlyOnSelect76(void);
-void _ViewSelected(void);
-void _ExitChooseTeams2(void);
-void _ChooseTeamsPlayMatchSelected(void);
+void DeselectAllTeams(void);
+void ChangeTeams(void);
+void AbortChooseTeamsFriendly(void);
+void ChooseTeamsFriendlyOnSelect76(void);
+void ViewSelected(void);
+void ExitChooseTeams2(void);
+void ChooseTeamsPlayMatchSelected(void);
 
 /* ---- Team navigation stack & contest checking (Chunk 109) ---- */
-uint8_t *_GetCountryName(uint16_t countryId);
-void _PushContinent(uint16_t countryId);
-uint16_t _PopContinent(void);
-void _SetSelectedTeamsStackTop(void);
-void _PushLastSelectedTeam(void);
-void _GetSelectedTeamsStackTop(void);
-void _MarkSelectedTeamsStackLocation(void);
-void _IsContestContinentalCup(void);
-uint16_t _IsClubTeamsContest(uintptr_t contest);
-void _SetTeamsTypeForSelectedContest(void);
+uint8_t *GetCountryName(uint16_t countryId);
+void PushContinent(uint16_t countryId);
+uint16_t PopContinent(void);
+void SetSelectedTeamsStackTop(void);
+void PushLastSelectedTeam(void);
+void GetSelectedTeamsStackTop(void);
+void MarkSelectedTeamsStackLocation(void);
+void IsContestContinentalCup(void);
+uint16_t IsClubTeamsContest(uintptr_t contest);
+void SetTeamsTypeForSelectedContest(void);
 
 /* ---- SelectTeamsFinalMenu ---- */
-void _SelectTeamsFinalMenu(uint16_t mode);
+void SelectTeamsFinalMenu(uint16_t mode);
 
 /* ---- National team selector utilities (Chunk 91) ---- */
-uint8_t *_GetNationalityRecordPtr(uint16_t teamFileAndOrdinal);
-int16_t _GetNationalTeamNumber(uint16_t nationality);
-int16_t _GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId);
-uint32_t _GetNationalityAndTeamFile(uint16_t teamFileAndOrdinal);
-int16_t _IsTeamCodeOkForNationalSelector(uint16_t code);
-int16_t _IsPlayerOkForNationalSelector(void);
+uint8_t *GetNationalityRecordPtr(uint16_t teamFileAndOrdinal);
+int16_t GetNationalTeamNumber(uint16_t nationality);
+int16_t GetNationalTeamNumberFromTeamFileId(uint16_t teamFileId);
+uint32_t GetNationalityAndTeamFile(uint16_t teamFileAndOrdinal);
+int16_t IsTeamCodeOkForNationalSelector(uint16_t code);
+int16_t IsPlayerOkForNationalSelector(void);
 
 #endif

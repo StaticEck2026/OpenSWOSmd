@@ -60,8 +60,8 @@ extern Sprite   big_S_Sprite;           /* SPRITE_SIZE bytes */
 extern uint8_t  cornerFlagPictureIndices[32];
 
 /* ---- External C/asm functions ---- */
-extern void     _InitDisplaySprites(void);
-extern uint16_t _Rand(void);
+extern void     InitDisplaySprites(void);
+extern uint16_t Rand(void);
 
 /* ================================================================
  * CopyAdvertisementsData  (SWOS2.s line 11822)
@@ -77,7 +77,7 @@ extern uint16_t _Rand(void);
  * sprite's `sprData` pointer, used later by _UpdateAdvertisements
  * to scroll the ad strip. */
 __attribute__((used, externally_visible))
-void _CopyAdvertisementsData(void)
+void CopyAdvertisementsData(void)
 {
     SpriteGraphics **table = (SpriteGraphics **)spriteGraphicsPtr;
     int i;
@@ -96,12 +96,12 @@ void _CopyAdvertisementsData(void)
  * Clears ad state and hides all advert sprites.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitAdvertisements(void)
+void InitAdvertisements(void)
 {
     advertIndex = 0;
     advertSlideTimer = 0;
     currentAnimatedAdLine = 0;
-    _SetAdvertisementsInvisible();
+    SetAdvertisementsInvisible();
 }
 
 /* ================================================================
@@ -111,13 +111,13 @@ void _InitAdvertisements(void)
  * InitDisplaySprites to register them.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetAdvertisementsVisible(void)
+void SetAdvertisementsVisible(void)
 {
     int i;
     for (i = 0; i < 8; i++) {
         advertInGameSprites[i].visible = 1;
     }
-    _InitDisplaySprites();
+    InitDisplaySprites();
 }
 
 /* ================================================================
@@ -127,13 +127,13 @@ void _SetAdvertisementsVisible(void)
  * InitDisplaySprites.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetAdvertisementsInvisible(void)
+void SetAdvertisementsInvisible(void)
 {
     int i;
     for (i = 0; i < 8; i++) {
         advertInGameSprites[i].visible = 0;
     }
-    _InitDisplaySprites();
+    InitDisplaySprites();
 }
 
 /* ================================================================
@@ -144,7 +144,7 @@ void _SetAdvertisementsInvisible(void)
  * pauses, then tears it down.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ManageAdvertisements(void)
+void ManageAdvertisements(void)
 {
     uint16_t d0, d1, d2;
     int16_t d7;
@@ -171,21 +171,21 @@ void _ManageAdvertisements(void)
 
     /* If advertIndex == 0, try to start a new ad cycle */
     if (advertIndex == 0) {
-        d0 = _Rand();
+        d0 = Rand();
         if (d0 > 128)
             goto stop_ad_cycle;
 
         /* If advert sprites not yet visible, make them visible */
         if ((uint16_t)advertInGameSprites[0].visible == 0)
-            _SetAdvertisementsVisible();
+            SetAdvertisementsVisible();
 
         /* Pick which advert strip to show based on foulXCoordinate */
-        d0 = _Rand();
+        d0 = Rand();
         d0 = (d0 & 1) + 1;   /* d0 = 1..2 */
         if (foulXCoordinate >= 326) {
             d0 += 1;           /* d0 = 2..3 */
             if (foulXCoordinate <= 346) {
-                d0 = _Rand();
+                d0 = Rand();
                 d0 = (uint16_t)((uint16_t)(d0 * 3) >> 8) + 1;  /* d0 = 1..3 */
             }
         }
@@ -260,7 +260,7 @@ void _ManageAdvertisements(void)
                 uint32_t lineBytes = (uint32_t)wquads * 8;
 #endif
                 /* a6[d2] is the per-sprite pixel-data base captured at
-                 * load time by _CopyAdvertisementsData. Now stored as a
+                 * load time by CopyAdvertisementsData. Now stored as a
                  * real uint8_t* (advertNPointers retyped to uint8_t*[8]),
                  * so the scroll offset just adds onto it directly. */
                 uint32_t scrollOffset = (uint32_t)currentAnimatedAdLine * lineBytes;
@@ -282,7 +282,7 @@ reset_ads_for_gameplay_state:
 
 teardown_ads_and_reset_counters:
     if ((uint16_t)advertInGameSprites[0].visible != 0)
-        _SetAdvertisementsInvisible();
+        SetAdvertisementsInvisible();
     advertSlideTimer = 0;
     currentAnimatedAdLine = 0;
 }
@@ -294,7 +294,7 @@ teardown_ads_and_reset_counters:
  * animates it using a frame-based lookup table.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateCornerFlagSprite(void)
+void UpdateCornerFlagSprite(void)
 {
     int16_t d0;
     Sprite *spr = &cornerFlagSprite;
@@ -344,7 +344,7 @@ void _UpdateCornerFlagSprite(void)
  * corner during gameplay.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SpinBig_S_Sprite(void)
+void SpinBig_S_Sprite(void)
 {
     Sprite *spr = &big_S_Sprite;
     int16_t d0;

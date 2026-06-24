@@ -20,7 +20,7 @@
  * Software (PLATFORM_RENDERER_SOFTWARE):
  *   SDL_RENDERER_SOFTWARE. The SDL_AddTimer worker thread is allowed to
  *   call Platform_RenderFrame as a fallback during loader-intro spins
- *   that don't go through _WaitForVSync. Cross-thread render is safe
+ *   that don't go through WaitForVSync. Cross-thread render is safe
  *   because software renderers aren't context-bound. PRESENTVSYNC has
  *   no effect on software renderers — frames are not synced to monitor
  *   refresh, so 50 Hz monitor users see a slow drift / beat pattern.
@@ -106,10 +106,10 @@ void Platform_RenderFrame(void);
  * mutex-guarded so concurrent calls from the timer thread and the main
  * thread serialise. Use this from main-thread spin loops on flags the
  * ISR sets (fadeState, currentGameTick, waitingInterrupt) when calling
- * _WaitForVSync isn't appropriate (e.g. you don't want to render a
+ * WaitForVSync isn't appropriate (e.g. you don't want to render a
  * frame). On WSL2 the SDL_Timer thread can be starved indefinitely by
  * a busy main thread, so the spin needs to drive the ISR itself. */
-void _RunInt3HandlerThrottled(void);
+void RunInt3HandlerThrottled(void);
 
 /* Force a quit (set by SDL_QUIT or escape). The Amiga code polls
  * `g_quitToDos` -- we set it from here. */

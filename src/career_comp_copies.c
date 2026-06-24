@@ -7,7 +7,7 @@
  * The 34 per-career *Copy competition records (euroCupCopy ..
  * oceaniaWorldCupQualificationCopy) lifted out of the careerFileBuffer overlay
  * into standalone storage. Each is the runtime working copy of a static
- * competition template (euroCup, cupWinnersCup, ...); career_init.c:_InitCareer
+ * competition template (euroCup, cupWinnersCup, ...); career_init.c:InitCareer
  * builds them by iterating the static `careerContests[]` table
  * (competition_data.c) and memcpy-ing template -> *Copy, and the JSON save
  * RECONSTRUCTS them the same way on load (reconstruct_comp_copy_region_from_-
@@ -17,7 +17,7 @@
  *
  * Why this is format-neutral: `careerContests[].competitionCopy` is initialised
  * with the ADDRESS of each *Copy symbol (`(CompetitionCup *)&euroCupCopy`, ...),
- * so both the _InitCareer fill loop and the save reconstruction write through
+ * so both the InitCareer fill loop and the save reconstruction write through
  * &symbol — relocating the storage here makes those initialisers resolve to the
  * new addresses automatically. Because the records are reconstructed (not
  * byte-loaded), the overlay hole left behind stays zero in both the live image

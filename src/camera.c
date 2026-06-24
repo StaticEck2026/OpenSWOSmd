@@ -15,7 +15,7 @@ extern uint16_t cameraYMod320;
 extern uint16_t cameraCoordinatesValid;
 
 /* ---- External C functions ---- */
-extern void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
+extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
 
 /* ================================================================
  * ScrollToCurrent  (SWOS2.s line 5625)
@@ -24,7 +24,7 @@ extern void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
  * to blit pitch columns/rows matching the current camera position.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ScrollToCurrent(void)
+void ScrollToCurrent(void)
 {
     cameraCoordinatesValid = 1;
 #ifdef SWOS_SDL_BUILD
@@ -32,11 +32,11 @@ void _ScrollToCurrent(void)
      * Instead, redraw the whole visible pitch from the chunky tile
      * bank each call — matches swos-port-c's whole-screen chunky
      * pitch redraw shape. */
-    extern void _DrawChunkyPitch(void);
-    _DrawChunkyPitch();
+    extern void DrawChunkyPitch(void);
+    DrawChunkyPitch();
 #else
-    _ScrollXUpdateColumnsAndBlit();
-    _ScrollYUpdateRowsAndBlit();
+    ScrollXUpdateColumnsAndBlit();
+    ScrollYUpdateRowsAndBlit();
 #endif
 }
 
@@ -52,7 +52,7 @@ void _ScrollToCurrent(void)
  * (wrapping at 272).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MoveView(int16_t newScreenX, int16_t newScreenY)
+void MoveView(int16_t newScreenX, int16_t newScreenY)
 {
     /* ---- Phase 1: move X ---- */
     /* Original asm uses do-while: ScrollToCurrent fires before the exit
@@ -60,7 +60,7 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
      * target position.  This ensures the last tile boundary crossing is
      * blitted — critical for replay camera panning. */
     for (;;) {
-        _ScrollToCurrent();
+        ScrollToCurrent();
         if (cameraX.s.i == newScreenX)
             break;
         if (cameraX.s.i < newScreenX) {
@@ -80,7 +80,7 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
 
     /* ---- Phase 2: move Y ---- */
     for (;;) {
-        _ScrollToCurrent();
+        ScrollToCurrent();
         if (cameraY.s.i == newScreenY)
             break;
         if (cameraY.s.i < newScreenY) {
@@ -110,16 +110,16 @@ void _MoveView(int16_t newScreenX, int16_t newScreenY)
  *   D2 = target Y (saved, then restored for MoveView)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitCameraMoveView(int16_t targetX, int16_t targetY)
+void InitCameraMoveView(int16_t targetX, int16_t targetY)
 {
     /* First pass: set camera to (targetX, 272), scroll */
-    _SetCameraCoordinates(targetX, 272);
-    _ScrollToCurrent();
+    SetCameraCoordinates(targetX, 272);
+    ScrollToCurrent();
 
     /* Second pass: set camera to (cameraX.s.i, 0), scroll */
-    _SetCameraCoordinates(cameraX.s.i, 0);
-    _ScrollToCurrent();
+    SetCameraCoordinates(cameraX.s.i, 0);
+    ScrollToCurrent();
 
     /* Final: iteratively move to (cameraX.s.i, targetY) */
-    _MoveView(cameraX.s.i, targetY);
+    MoveView(cameraX.s.i, targetY);
 }

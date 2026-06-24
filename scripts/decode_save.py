@@ -209,7 +209,7 @@ def _print_table(title, rows, resolve, id_keys, note="", sort=False):
 
     Saved rows are in storage (alphabetical/entry) order; the in-game league
     screen sorts by points > goal-diff > goals-for > name (see
-    _DIY_SortLeagueTableByStandings). sort=True mirrors that so a single-table
+    DIY_SortLeagueTableByStandings). sort=True mirrors that so a single-table
     league lines up row-for-row with the Amiga screen. Group comps keep storage
     order (a global sort across multiple groups would be misleading) — compare
     those by team name."""

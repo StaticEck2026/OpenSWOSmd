@@ -7,8 +7,8 @@
 /* ============================================================
  * SDL build: POSIX/stdio implementation of the same RobNorthenLoader
  * dispatch surface the Amiga code below provides. The rest of the C
- * code calls `_RobNorthenLoader_C` and a few stubs (`_KBHook`,
- * `_FixSnoopBug`, etc.) — those keep their signatures so linking is
+ * code calls `RobNorthenLoader_C` and a few stubs (`KBHook`,
+ * `FixSnoopBug`, etc.) — those keep their signatures so linking is
  * unchanged.
  * ============================================================ */
 #ifdef SWOS_SDL_BUILD
@@ -32,8 +32,8 @@
 #define swos_mkdir(path)  mkdir((path), 0755)
 #endif
 
-extern void _RncDecompressV1(uint8_t *src, uint8_t *dst);
-extern void _RncDecompressV2(uint8_t *src, uint8_t *dst);
+extern void RncDecompressV1(uint8_t *src, uint8_t *dst);
+extern void RncDecompressV2(uint8_t *src, uint8_t *dst);
 
 /* ---- Globals shared with the rest of the C code -------------------- */
 uint32_t size;
@@ -239,7 +239,7 @@ static uint32_t rob_list_directory(uint8_t *name, uint8_t *callerBuf)
     return 0;
 }
 
-uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf)
+uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf)
 {
     switch (cmd) {
     case 0: return rob_load(name, buf);
@@ -254,10 +254,10 @@ uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t
 }
 
 /* ---- Hardware-side helpers (no-ops on SDL) ------------------------ */
-void _CloseDosLibrary(void) {}
-void _FixSnoopBug(void)     {}
-void _FixMemoryRoutine(void) {}
-uint8_t _KBHook(void) { return 0; }
+void CloseDosLibrary(void) {}
+void FixSnoopBug(void)     {}
+void FixMemoryRoutine(void) {}
+uint8_t KBHook(void) { return 0; }
 
 #else  /* !SWOS_SDL_BUILD — Amiga path below */
 
@@ -326,8 +326,8 @@ extern void _S_GetVBR(void);          /* asm: MOVEC VBR,D0; RTE */
 extern void Int2KeyboardHandler(void); /* game keyboard interrupt handler */
 
 /* ---- External C functions ---- */
-extern void _RncDecompressV1(uint8_t *src, uint8_t *dst);
-extern void _RncDecompressV2(uint8_t *src, uint8_t *dst);
+extern void RncDecompressV1(uint8_t *src, uint8_t *dst);
+extern void RncDecompressV2(uint8_t *src, uint8_t *dst);
 
 /* ---- Local data ---- */
 static uint8_t data_path_buf[256];
@@ -842,7 +842,7 @@ static void enable_vblank(void)
  * SafeStart
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SafeStart(void)
+void SafeStart(void)
 {
     /* Open graphics.library (optional) */
     S_GfxBase = (uint32_t)os_OldOpenLibrary("graphics.library", 0);
@@ -886,7 +886,7 @@ void _SafeStart(void)
  * DetachOSDisplay
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DetachOSDisplay(void)
+void DetachOSDisplay(void)
 {
     if (S_FromWB == 0) return;
 
@@ -919,7 +919,7 @@ void _DetachOSDisplay(void)
  * LoadDosLibrary
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _LoadDosLibrary(void)
+void LoadDosLibrary(void)
 {
     if (S_DosBase != 0) return; /* already loaded */
     S_DosBase = (uint32_t)os_OldOpenLibrary("dos.library", 39);
@@ -930,7 +930,7 @@ void _LoadDosLibrary(void)
  * CloseDosLibrary
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CloseDosLibrary(void)
+void CloseDosLibrary(void)
 {
     if (S_DosBase == 0) return;
     os_CloseLibrary((void *)S_DosBase);
@@ -961,7 +961,7 @@ void _FreeMemAny(void *addr, uint32_t sz)
 
 /* ================================================================
  * ExitToDos — restore hardware, close libs, reply WB msg
- * NOTE: SP restore is handled by _startShim in asm.
+ * NOTE: SP restore is handled by startShim in asm.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void _ExitToDos(void)
@@ -1108,10 +1108,10 @@ static uint32_t resload_loadfiledec(uint8_t *name, uint8_t *dest, uint32_t *outE
 
     if (isRnc && tempBuf[3] == 0x02) {
         decompSize = *(uint32_t *)(tempBuf + 4);
-        _RncDecompressV2(tempBuf, dest);
+        RncDecompressV2(tempBuf, dest);
     } else if (isRnc && tempBuf[3] == 0x01) {
         decompSize = *(uint32_t *)(tempBuf + 4);
-        _RncDecompressV1(tempBuf, dest);
+        RncDecompressV1(tempBuf, dest);
     } else {
         /* Raw copy */
         uint32_t i;
@@ -1443,7 +1443,7 @@ static uint32_t rob_list_directory(uint8_t *name, uint8_t *callerBuf)
  * RobNorthenLoader — C dispatcher (called via asm bridge)
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf)
+uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t *buf)
 {
     switch (cmd) {
     case 0: return rob_load(name, buf);
@@ -1455,7 +1455,7 @@ uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t
     case 6:
         /* Op 6 is the "use the address from Op 5" callback. It MUST NOT
          * clear `_rnl_d1_return` because the dispatcher
-         * `_CAssetSys_DispatchGetSize` reads that value back into
+         * `CAssetSys_DispatchGetSize` reads that value back into
          * `*outFileSize` AFTER the Op-5/Op-6 pair returns. Clearing it
          * in Op 6 (as the default case did) makes every cache precache
          * call allocate a 0-byte node, which cascades into a corrupted
@@ -1479,21 +1479,21 @@ uint32_t _RobNorthenLoader_C(uint32_t cmd, uint32_t arg1, uint8_t *name, uint8_t
  * ================================================================ */
 
 __attribute__((used, externally_visible))
-void _FixSnoopBug(void)
+void FixSnoopBug(void)
 {
     /* BPLCON0 is at offset 0x100, not in struct Custom — use absolute address */
     *(volatile uint16_t *)(CUSTOM_BASE + BPLCON0_OFF) = 0x0200u;
 }
 
 __attribute__((used, externally_visible))
-void _FixMemoryRoutine(void)
+void FixMemoryRoutine(void)
 {
     /* no-op */
 }
 
 /* KBHook: read keyboard scan code, check for quit key */
 __attribute__((used, externally_visible))
-uint8_t _KBHook(void)
+uint8_t KBHook(void)
 {
     uint8_t raw = *(volatile uint8_t *)CIAA_SDR_ADDR;
     uint8_t keycode = ~raw;

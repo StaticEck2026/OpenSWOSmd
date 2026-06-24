@@ -7,391 +7,391 @@
 #include <stdlib.h>
 
 /* ---- function callbacks (void(void) for address-taking) ---- */
-extern void _AbortChooseTeamsFriendly(void);
-extern void _AbortEditTactics(void);
-extern void _AbortSaveFile(void);
-extern void _AbortSelected(void);
-extern void _AcceptJobOffer(void);
-extern void _AcceptOffer(void);
-extern void _AskForMore(void);
-extern void _BuyOtherDomesticPlayer(void);
-extern void _BuyOtherForeignPlayer(void);
-extern void _BuyOtherPlayersAfterDrawCommon(void);
-extern void _BuyOtherPlayersCommon(void);
-extern void _BuyOtherPlayersFinish(void);
-extern void _BuyOtherPlayersInit(void);
-extern void _BuyPlayerExit(void);
-extern void _BuyPlayerInit(void);
-extern void _BuyPlayerMenu(void);
-extern void _BuyPlayerViewSquad(void);
-extern void _CareerGameListCommon(void);
-extern void _CareerMenu(void);
-extern void _CareerMenuFinish(void);
-extern void _CareerMenuInit(void);
-extern void _CareerOverFinish(void);
-extern void _CareerOverInit(void);
-extern void _ChairmanMemosContinue(void);
-extern void _ChairmanMemosInit(void);
-extern void _ChairmanMemosOnReturn(void);
-extern void _ChangeAllPlTeamsEqual(void);
-extern void _ChangeAutoReplays(void);
-extern void _ChangeAutoSaveHighlights(void);
-extern void _ChangeGameLength(void);
-extern void _ChangeMenuMusic(void);
-extern void _ChangeNationality(void);
-extern void _ChangePitchType(void);
-extern void _ChangeSex(void);
-extern void _ChangeTeams(void);
-extern void _ChooseTacticsInit(void);
-extern void _ChooseTeamAndStartCareer(void);
-extern void _ChooseTeamsFriendlyCommon(void);
-extern void _ChooseTeamsFriendlyCommon2(void);
-extern void _ChooseTeamsFriendlyInit(void);
-extern void _ChooseTeamsFriendlyInitFinish(void);
-extern void _ChooseTeamsFriendlyOnSelect76(void);
-extern void _ChooseTeamsInit(void);
-extern void _ChooseTeamsMenu(void);
-extern void _ChooseTeamsPlayGame(void);
-extern void _ChooseTeamsPlayMatchSelected(void);
-extern void _ClubBusinessInit(void);
-extern void _ClubBusinessMenu(void);
-extern void _ClubTeams(void);
-extern void _CoachOrPlayerCoach(void);
-extern void _CompetitionInfo(void);
-extern void _CompetitionTopGoalScorersExit(void);
-extern void _CompetitionTopGoalScorersInit(void);
-extern void _ConsiderJobOffer(void);
-extern void _ConsiderOffer(void);
-extern void _ContestMenuInit(void);
-extern void _ContestMenuOnReturn(void);
-extern void _ContestMenuScrollDown(void);
-extern void _ContestMenuScrollUp(void);
-extern void _ContinueAbortInit(void);
-extern void _ContinueCareer(void);
-extern void _ContinueInit(void);
-extern void _ContinueMenuContinueSelected(void);
-extern void _ContinueSelected(void);
-extern void _CopyTactics(void);
-extern void _DIYCompetitionMenu(void);
-extern void _DIYCupFinish(void);
-extern void _DIYCupInit(void);
-extern void _DIYCupOnSelect1(void);
-extern void _DIYCupOnSelect10(void);
-extern void _DIYCupOnSelect16(void);
-extern void _DIYCupOnSelect17(void);
-extern void _DIYCupOnSelect3(void);
-extern void _DIYCupOnSelect4(void);
-extern void _DIYCupOnSelect5(void);
-extern void _DIYCupOnSelect6(void);
-extern void _DIYCupOnSelect7(void);
-extern void _DIYCupOnSelect8(void);
-extern void _DIYCupOnSelect9(void);
-extern void _DIYLeagueChangePitchTypeOrSeason(void);
-extern void _DIYLeagueTournament16BeforeDraw(void);
-extern void _DIYLeagueTournamentExit(void);
-extern void _DIYLeagueTournamentInit(void);
-extern void _DIYLeagueTournamentMatch(void);
-extern void _DIYLeagueTournamentNextMatch(void);
-extern void _DIYLeagueTournamentOnRestore(void);
-extern void _DIYLeagueTournamentOnSelect4(void);
-extern void _DIYLeagueTournamentResult(void);
-extern void _DIYLeagueTournamentScrollDown(void);
-extern void _DIYLeagueTournamentScrollUp(void);
-extern void _DIYLeagueTournamentStats(void);
-extern void _DIYLeagueTournamentViewHighlights(void);
-extern void _DIYLeagueTournamentViewMatch(void);
-extern void _DIYLeagueTournamentViewResult(void);
-extern void _DesignDIYCupInit(void);
-extern void _DesignDIYCupOK(void);
-extern void _DesignDIYCupOnDraw(void);
-extern void _DesignDIYCupOnSelect11(void);
-extern void _DesignDIYCupOnSelect13(void);
-extern void _DesignDIYCupOnSelect15(void);
-extern void _DesignDIYCupOnSelect2(void);
-extern void _DesignDIYCupOnSelect20(void);
-extern void _DesignDIYCupOnSelect21(void);
-extern void _DesignDIYCupOnSelect22(void);
-extern void _DesignDIYCupOnSelect3(void);
-extern void _DesignDIYCupOnSelect4(void);
-extern void _DesignDIYCupOnSelect48(void);
-extern void _DesignDIYCupOnSelect5(void);
-extern void _DesignDIYCupOnSelect7(void);
-extern void _DesignDIYCupOnSelect9(void);
-extern void _DesignDIYCupReinit(void);
-extern void _DesignDIYLeagueChangeEndMonth(void);
-extern void _DesignDIYLeagueChangeMaxSubstitutes(void);
-extern void _DesignDIYLeagueChangeMinSubstitutes(void);
-extern void _DesignDIYLeagueChangeNumPointsForWin(void);
-extern void _DesignDIYLeagueChangeNumberOfTeams(void);
-extern void _DesignDIYLeagueChangePitchType(void);
-extern void _DesignDIYLeagueChangePlayEachTeam(void);
-extern void _DesignDIYLeagueChangeStartMonth(void);
-extern void _DesignDIYLeagueChooseTeams(void);
-extern void _DesignDIYLeagueFinish(void);
-extern void _DesignDIYLeagueInit(void);
-extern void _DesignDIYLeagueOK(void);
-extern void _DesignDIYLeagueSetName(void);
-extern void _DesignDIYTournamentInit(void);
-extern void _DesignDIYTournamentOK(void);
-extern void _DesignDIYTournamentOnDraw(void);
-extern void _DesignDIYTournamentOnSelect11(void);
-extern void _DesignDIYTournamentOnSelect13(void);
-extern void _DesignDIYTournamentOnSelect2(void);
-extern void _DesignDIYTournamentOnSelect20(void);
-extern void _DesignDIYTournamentOnSelect21(void);
-extern void _DesignDIYTournamentOnSelect23(void);
-extern void _DesignDIYTournamentOnSelect24(void);
-extern void _DesignDIYTournamentOnSelect25(void);
-extern void _DesignDIYTournamentOnSelect26(void);
-extern void _DesignDIYTournamentOnSelect28(void);
-extern void _DesignDIYTournamentOnSelect3(void);
-extern void _DesignDIYTournamentOnSelect4(void);
-extern void _DesignDIYTournamentOnSelect5(void);
-extern void _DesignDIYTournamentOnSelect7(void);
-extern void _DesignDIYTournamentOnSelect89(void);
-extern void _DesignDIYTournamentOnSelect9(void);
-extern void _DesignDIYTournamentOnSelect91(void);
-extern void _DesignDIYTournamentReinit(void);
-extern void _DesignDIYTournament_AdjustStageQualifiers(void);
-extern void _DrawPlayerEntries(void);
-extern void _EditCustomTeamMenu(void);
-extern void _EditTacicsMovePlayersOrBall(void);
-extern void _EditTactics28AfterDraw(void);
-extern void _EditTactics2AfterDraw(void);
-extern void _EditTacticsAfterDrawPlayerFace(void);
-extern void _EditTacticsAfterDrawPlayerNames(void);
-extern void _EditTacticsCommon(void);
-extern void _EditTacticsInPlayMatchMenu(void);
-extern void _EditTacticsInit(void);
-extern void _EditTacticsMenu(void);
-extern void _EditTacticsOnRestore(void);
-extern void _EditTacticsOnSelect28(void);
-extern void _EditTacticsPlayerNamesCommon(void);
-extern void _EditTeamsChangePlayerFace(void);
-extern void _EditTeamsChangePlayerName(void);
-extern void _EditTeamsChangeShirtsPrimary(void);
-extern void _EditTeamsChangeShirtsSecondary(void);
-extern void _EditTeamsChangeShortsPrimary(void);
-extern void _EditTeamsChangeShortsSecondary(void);
-extern void _EditTeamsChangeSocksPrimary(void);
-extern void _EditTeamsChangeSocksSecondary(void);
-extern void _EditTeamsFinish(void);
-extern void _EditTeamsInit(void);
-extern void _EditTeamsOK(void);
-extern void _EditTeamsPlayersBeforeDraw(void);
-extern void _EditTeamsSelectCoachName(void);
-extern void _EditTeamsSelectPrimaryShirtType(void);
-extern void _EditTeamsSelectSecondaryShirtType(void);
-extern void _EditTeamsSelectTeamName(void);
-extern void _EditTeamsUndo(void);
-extern void _EditedCustomTeams(void);
-extern void _ExitCareerMenu(void);
-extern void _ExitChooseTacticsMenu(void);
-extern void _ExitChooseTeams(void);
-extern void _ExitChooseTeams2(void);
-extern void _ExitHighlights(void);
-extern void _ExitImportTactics(void);
-extern void _ExitOptions(void);
-extern void _ExitPlayMatch(void);
-extern void _ExitPlayerMarketMenu(void);
-extern void _ExitSelectTeams(void);
-extern void _FillManagementRecordInfo(void);
-extern void _FlipOnOff(void);
-extern void _FriendlyMenu(void);
-extern void _FriendlyMenuInit(void);
-extern void _FriendlyMenuReinit(void);
-extern void _FriendlyOK(void);
-extern void _FriendlyPitchTypeProc(void);
-extern void _GiveFreeTransfer(void);
-extern void _GlobalRetn(void);
-extern void _GotJobOfferFinish(void);
-extern void _GotJobOfferInit(void);
-extern void _HighlightsMenu(void);
-extern void _HighlightsMenuInit(void);
-extern void _HighlightsMenuOnReturn(void);
-extern void _ImportTactics(void);
-extern void _ImportTacticsInit(void);
-extern void _ImportTacticsSelectTactics(void);
-extern void _ImportTeamsMenu(void);
-extern void _JmpShowHighlights(void);
-extern void _JobOffersAfterDrawCommon(void);
-extern void _JobOffersCommon(void);
-extern void _JobOffersExit(void);
-extern void _JobOffersFinish(void);
-extern void _JobOffersInit(void);
-extern void _JobOffersMenu(void);
-extern void _JobOffersMenuRetired(void);
-extern void _JobOffers_DrawOldOfferLine(void);
-extern void _LoadHighlightsMenu(void);
-extern void _LoadLiverpool(void);
-extern void _LoadOldCompetitionMenu(void);
-extern void _LoadTactics(void);
-extern void _ManagementArrowDownSelect(void);
-extern void _ManagementArrowUpSelect(void);
-extern void _ManagementRecordInit(void);
-extern void _ManagementRecordMenu(void);
-extern void _MaxSubstitutes(void);
-extern void _MinSubstitutes(void);
-extern void _NationalTeamAddPlayer(void);
-extern void _NationalTeamAddPlayerAbroadOnSelect(void);
-extern void _NationalTeamAddPlayerExit(void);
-extern void _NationalTeamAddPlayerHomeOnSelect(void);
-extern void _NationalTeamAddPlayerInit(void);
-extern void _NationalTeamRemovePlayers(void);
-extern void _NationalTeams(void);
-extern void _NextMatch(void);
-extern void _OffersAfterDrawCommon(void);
-extern void _OffersCommon(void);
-extern void _OffersInit(void);
-extern void _OldJobOffersCommon(void);
-extern void _OnSwapPlayer(void);
-extern void _OpenDiyFromFile(void);
-extern void _OpenDiyPreset1(void);
-extern void _OpenDiyPreset2(void);
-extern void _OpenDiyPreset3(void);
-extern void _OptionsMenuBeforeDraw(void);
-extern void _OptionsMenuSelected(void);
-extern void _OriginalCustomTeams(void);
-extern void _PitchTypeOrSeasonProc(void);
-extern void _PlayMatch30AfterDraw(void);
-extern void _PlayMatchChangeTactics(void);
-extern void _PlayMatchMenu(void);
-extern void _PlayMatchMenuInit(void);
-extern void _PlayMatchMenuReinit(void);
-extern void _PlayMatchOnSelect30(void);
-extern void _PlayMatchSelected(void);
-extern void _PlayerMarketFilterAgeGroupOnSelect(void);
-extern void _PlayerMarketFilterPositionOnSelect(void);
-extern void _PlayerMarketItemBeforeDraw(void);
-extern void _PlayerMarketItemOnSelect(void);
-extern void _PlayerMarketScrollOnSelect(void);
-extern void _PlayerMarketViewSquadOnSelect(void);
-extern void _PlayerOffersAdjustOfferAmount(void);
-extern void _PlayerOffersAfterDrawCommon(void);
-extern void _PlayerOffersInit(void);
-extern void _PlayerOffersOnSelect10(void);
-extern void _PlayerOffersOnSelect11(void);
-extern void _PlayerOffersOnSelect12(void);
-extern void _PlayerOffersOnSelect13(void);
-extern void _PlayerOffersOnSelect8(void);
-extern void _PresetCompetitionMenu(void);
-extern void _PutPlayerOnMarketMenu(void);
-extern void _RejectJobOffer(void);
-extern void _RejectOffer(void);
-extern void _ReturnFromViewOpponent(void);
-extern void _SWOSMainMenuInit(void);
-extern void _SaveAndExitEditTactics(void);
-extern void _SaveCareer(void);
-extern void _SaveContest(void);
-extern void _SaveDiskFilingMenu(void);
-extern void _SaveHighlightsMenu(void);
-extern void _SeasonMenu(void);
-extern void _SelFilesDrawItemDescription(void);
-extern void _SelFilesOnSelectCommon(void);
-extern void _SelTeamForTacticsCommon(void);
-extern void _SelTeamForTacticsExit(void);
-extern void _SelTeamForTacticsInit(void);
-extern void _SelectCopyTactics(void);
-extern void _SelectFilenameToSaveAndExit(void);
-extern void _SelectFilesInit(void);
-extern void _SelectFilesInputSaveFilenameOnSelect(void);
-extern void _SelectFilesOnReturn(void);
-extern void _SelectGoals(void);
-extern void _SelectLeaguesCommon(void);
-extern void _SelectNationalTeam25AfterDraw(void);
-extern void _SelectNationalTeamAbort(void);
-extern void _SelectNationalTeamAfterDrawCommon(void);
-extern void _SelectNationalTeamCommon(void);
-extern void _SelectNationalTeamExit(void);
-extern void _SelectNationalTeamFinish(void);
-extern void _SelectNationalTeamInit(void);
-extern void _SelectNationalTeamOnSelect25(void);
-extern void _SelectTeamsCommon(void);
-extern void _SelectTeamsInit(void);
-extern void _SelectTeamsReinit(void);
-extern void _SelectTraining(void);
-extern void _SetName(void);
-extern void _SetSurname(void);
-extern void _ShowPlayerMarket(void);
-extern void _ShowPlayerMarketInit(void);
-extern void _ShowStadiumInit(void);
-extern void _Squad45AfterDraw(void);
-extern void _SquadAfterDrawCommon(void);
-extern void _SquadCommon(void);
-extern void _SquadFinish(void);
-extern void _SquadInit(void);
-extern void _SquadMenu(void);
-extern void _SquadOnSelect11(void);
-extern void _SquadOnSelect45(void);
-extern void _StadiumBeforeDrawLeftTeam(void);
-extern void _StadiumBeforeDrawRightTeam(void);
-extern void _StartContest(void);
-extern void _StatsExit(void);
-extern void _StatsHighestScorerList(void);
-extern void _StatsViewSquads(void);
-extern void _TakeOffMarketMenu(void);
-extern void _ThirdPartyOfferMenuAfterDrawCommon(void);
-extern void _ThirdPartyOfferMenuExit(void);
-extern void _ThirdPartyOfferMenuInit(void);
-extern void _ThirdPartyOfferViewSquad(void);
-extern void _TogglePlayerCoach(void);
-extern void _TopGoalScorersBeforeDrawCommon(void);
-extern void _TopGoalScorersExit(void);
-extern void _TopGoalScorersInit(void);
-extern void _TopGoalScorersMenu(void);
-extern void _TransferMarketAfterDrawCommon(void);
-extern void _TransferMarketCommon(void);
-extern void _TransferMarketFinish(void);
-extern void _TransferMarketInit(void);
-extern void _TransferPlayerAfterDrawCommon(void);
-extern void _TransferPlayerInit(void);
-extern void _TransferPlayerOnSelect10(void);
-extern void _TransferPlayerOnSelect11(void);
-extern void _TransferPlayerOnSelect12(void);
-extern void _TransfersMenu(void);
-extern void _UndoTactics(void);
-extern void _UseMatchTeamSelect(void);
-extern void _User_A_Tactics(void);
-extern void _User_B_Tactics(void);
-extern void _User_C_Tactics(void);
-extern void _User_D_Tactics(void);
-extern void _User_E_Tactics(void);
-extern void _User_F_Tactics(void);
-extern void _ViewCompetitionsInit(void);
-extern void _ViewCompetitionsMenu(void);
-extern void _ViewCompetitionsMenuRetired(void);
-extern void _ViewCompetitionsOnReturn(void);
-extern void _ViewDomesticPlayerMarket(void);
-extern void _ViewForeignPlayerMarket(void);
-extern void _ViewFutureTeam(void);
-extern void _ViewFutureTeamLeague(void);
-extern void _ViewOffersMenu(void);
-extern void _ViewOpponentsSelect(void);
-extern void _ViewSelected(void);
-extern void _ViewSelectedTeams(void);
-extern void _ViewSquad21AfterDraw(void);
-extern void _ViewSquadAfterDrawCommon(void);
-extern void _ViewSquadCommon(void);
-extern void _ViewSquadExitContinue(void);
-extern void _ViewSquadInit(void);
-extern void _ViewSquadOnSelect21(void);
-extern void _ViewWorldMenu(void);
-extern void _j_SetExitMenuFlag(void);
-extern void _j_SetExitMenuFlag13(void);
-extern void _j_SetExitMenuFlag2(void);
-extern void _j_SetExitMenuFlag_10(void);
-extern void _j_SetExitMenuFlag_11(void);
-extern void _j_SetExitMenuFlag_14(void);
-extern void _jmpSetExitMenuFlag(void);
-extern void _jmp_SetExitMenuFlag(void);
-extern void _jmp_SetExitMenuFlag_2(void);
-extern void _jmp_SetExitMenuFlag_3(void);
-extern void _jmp_SetExitMenuFlag_4(void);
-extern void _jmp_SetExitMenuFlag_5(void);
-extern void _jmp_SetExitMenuFlag_6(void);
-extern void _jmp_SetExitMenuFlag_7(void);
-extern void _jmp_SetExitMenuFlag_8(void);
-extern void _locret_139AE2(void);
+extern void AbortChooseTeamsFriendly(void);
+extern void AbortEditTactics(void);
+extern void AbortSaveFile(void);
+extern void AbortSelected(void);
+extern void AcceptJobOffer(void);
+extern void AcceptOffer(void);
+extern void AskForMore(void);
+extern void BuyOtherDomesticPlayer(void);
+extern void BuyOtherForeignPlayer(void);
+extern void BuyOtherPlayersAfterDrawCommon(void);
+extern void BuyOtherPlayersCommon(void);
+extern void BuyOtherPlayersFinish(void);
+extern void BuyOtherPlayersInit(void);
+extern void BuyPlayerExit(void);
+extern void BuyPlayerInit(void);
+extern void BuyPlayerMenu(void);
+extern void BuyPlayerViewSquad(void);
+extern void CareerGameListCommon(void);
+extern void CareerMenu(void);
+extern void CareerMenuFinish(void);
+extern void CareerMenuInit(void);
+extern void CareerOverFinish(void);
+extern void CareerOverInit(void);
+extern void ChairmanMemosContinue(void);
+extern void ChairmanMemosInit(void);
+extern void ChairmanMemosOnReturn(void);
+extern void ChangeAllPlTeamsEqual(void);
+extern void ChangeAutoReplays(void);
+extern void ChangeAutoSaveHighlights(void);
+extern void ChangeGameLength(void);
+extern void ChangeMenuMusic(void);
+extern void ChangeNationality(void);
+extern void ChangePitchType(void);
+extern void ChangeSex(void);
+extern void ChangeTeams(void);
+extern void ChooseTacticsInit(void);
+extern void ChooseTeamAndStartCareer(void);
+extern void ChooseTeamsFriendlyCommon(void);
+extern void ChooseTeamsFriendlyCommon2(void);
+extern void ChooseTeamsFriendlyInit(void);
+extern void ChooseTeamsFriendlyInitFinish(void);
+extern void ChooseTeamsFriendlyOnSelect76(void);
+extern void ChooseTeamsInit(void);
+extern void ChooseTeamsMenu(void);
+extern void ChooseTeamsPlayGame(void);
+extern void ChooseTeamsPlayMatchSelected(void);
+extern void ClubBusinessInit(void);
+extern void ClubBusinessMenu(void);
+extern void ClubTeams(void);
+extern void CoachOrPlayerCoach(void);
+extern void CompetitionInfo(void);
+extern void CompetitionTopGoalScorersExit(void);
+extern void CompetitionTopGoalScorersInit(void);
+extern void ConsiderJobOffer(void);
+extern void ConsiderOffer(void);
+extern void ContestMenuInit(void);
+extern void ContestMenuOnReturn(void);
+extern void ContestMenuScrollDown(void);
+extern void ContestMenuScrollUp(void);
+extern void ContinueAbortInit(void);
+extern void ContinueCareer(void);
+extern void ContinueInit(void);
+extern void ContinueMenuContinueSelected(void);
+extern void ContinueSelected(void);
+extern void CopyTactics(void);
+extern void DIYCompetitionMenu(void);
+extern void DIYCupFinish(void);
+extern void DIYCupInit(void);
+extern void DIYCupOnSelect1(void);
+extern void DIYCupOnSelect10(void);
+extern void DIYCupOnSelect16(void);
+extern void DIYCupOnSelect17(void);
+extern void DIYCupOnSelect3(void);
+extern void DIYCupOnSelect4(void);
+extern void DIYCupOnSelect5(void);
+extern void DIYCupOnSelect6(void);
+extern void DIYCupOnSelect7(void);
+extern void DIYCupOnSelect8(void);
+extern void DIYCupOnSelect9(void);
+extern void DIYLeagueChangePitchTypeOrSeason(void);
+extern void DIYLeagueTournament16BeforeDraw(void);
+extern void DIYLeagueTournamentExit(void);
+extern void DIYLeagueTournamentInit(void);
+extern void DIYLeagueTournamentMatch(void);
+extern void DIYLeagueTournamentNextMatch(void);
+extern void DIYLeagueTournamentOnRestore(void);
+extern void DIYLeagueTournamentOnSelect4(void);
+extern void DIYLeagueTournamentResult(void);
+extern void DIYLeagueTournamentScrollDown(void);
+extern void DIYLeagueTournamentScrollUp(void);
+extern void DIYLeagueTournamentStats(void);
+extern void DIYLeagueTournamentViewHighlights(void);
+extern void DIYLeagueTournamentViewMatch(void);
+extern void DIYLeagueTournamentViewResult(void);
+extern void DesignDIYCupInit(void);
+extern void DesignDIYCupOK(void);
+extern void DesignDIYCupOnDraw(void);
+extern void DesignDIYCupOnSelect11(void);
+extern void DesignDIYCupOnSelect13(void);
+extern void DesignDIYCupOnSelect15(void);
+extern void DesignDIYCupOnSelect2(void);
+extern void DesignDIYCupOnSelect20(void);
+extern void DesignDIYCupOnSelect21(void);
+extern void DesignDIYCupOnSelect22(void);
+extern void DesignDIYCupOnSelect3(void);
+extern void DesignDIYCupOnSelect4(void);
+extern void DesignDIYCupOnSelect48(void);
+extern void DesignDIYCupOnSelect5(void);
+extern void DesignDIYCupOnSelect7(void);
+extern void DesignDIYCupOnSelect9(void);
+extern void DesignDIYCupReinit(void);
+extern void DesignDIYLeagueChangeEndMonth(void);
+extern void DesignDIYLeagueChangeMaxSubstitutes(void);
+extern void DesignDIYLeagueChangeMinSubstitutes(void);
+extern void DesignDIYLeagueChangeNumPointsForWin(void);
+extern void DesignDIYLeagueChangeNumberOfTeams(void);
+extern void DesignDIYLeagueChangePitchType(void);
+extern void DesignDIYLeagueChangePlayEachTeam(void);
+extern void DesignDIYLeagueChangeStartMonth(void);
+extern void DesignDIYLeagueChooseTeams(void);
+extern void DesignDIYLeagueFinish(void);
+extern void DesignDIYLeagueInit(void);
+extern void DesignDIYLeagueOK(void);
+extern void DesignDIYLeagueSetName(void);
+extern void DesignDIYTournamentInit(void);
+extern void DesignDIYTournamentOK(void);
+extern void DesignDIYTournamentOnDraw(void);
+extern void DesignDIYTournamentOnSelect11(void);
+extern void DesignDIYTournamentOnSelect13(void);
+extern void DesignDIYTournamentOnSelect2(void);
+extern void DesignDIYTournamentOnSelect20(void);
+extern void DesignDIYTournamentOnSelect21(void);
+extern void DesignDIYTournamentOnSelect23(void);
+extern void DesignDIYTournamentOnSelect24(void);
+extern void DesignDIYTournamentOnSelect25(void);
+extern void DesignDIYTournamentOnSelect26(void);
+extern void DesignDIYTournamentOnSelect28(void);
+extern void DesignDIYTournamentOnSelect3(void);
+extern void DesignDIYTournamentOnSelect4(void);
+extern void DesignDIYTournamentOnSelect5(void);
+extern void DesignDIYTournamentOnSelect7(void);
+extern void DesignDIYTournamentOnSelect89(void);
+extern void DesignDIYTournamentOnSelect9(void);
+extern void DesignDIYTournamentOnSelect91(void);
+extern void DesignDIYTournamentReinit(void);
+extern void DesignDIYTournament_AdjustStageQualifiers(void);
+extern void DrawPlayerEntries(void);
+extern void EditCustomTeamMenu(void);
+extern void EditTacicsMovePlayersOrBall(void);
+extern void EditTactics28AfterDraw(void);
+extern void EditTactics2AfterDraw(void);
+extern void EditTacticsAfterDrawPlayerFace(void);
+extern void EditTacticsAfterDrawPlayerNames(void);
+extern void EditTacticsCommon(void);
+extern void EditTacticsInPlayMatchMenu(void);
+extern void EditTacticsInit(void);
+extern void EditTacticsMenu(void);
+extern void EditTacticsOnRestore(void);
+extern void EditTacticsOnSelect28(void);
+extern void EditTacticsPlayerNamesCommon(void);
+extern void EditTeamsChangePlayerFace(void);
+extern void EditTeamsChangePlayerName(void);
+extern void EditTeamsChangeShirtsPrimary(void);
+extern void EditTeamsChangeShirtsSecondary(void);
+extern void EditTeamsChangeShortsPrimary(void);
+extern void EditTeamsChangeShortsSecondary(void);
+extern void EditTeamsChangeSocksPrimary(void);
+extern void EditTeamsChangeSocksSecondary(void);
+extern void EditTeamsFinish(void);
+extern void EditTeamsInit(void);
+extern void EditTeamsOK(void);
+extern void EditTeamsPlayersBeforeDraw(void);
+extern void EditTeamsSelectCoachName(void);
+extern void EditTeamsSelectPrimaryShirtType(void);
+extern void EditTeamsSelectSecondaryShirtType(void);
+extern void EditTeamsSelectTeamName(void);
+extern void EditTeamsUndo(void);
+extern void EditedCustomTeams(void);
+extern void ExitCareerMenu(void);
+extern void ExitChooseTacticsMenu(void);
+extern void ExitChooseTeams(void);
+extern void ExitChooseTeams2(void);
+extern void ExitHighlights(void);
+extern void ExitImportTactics(void);
+extern void ExitOptions(void);
+extern void ExitPlayMatch(void);
+extern void ExitPlayerMarketMenu(void);
+extern void ExitSelectTeams(void);
+extern void FillManagementRecordInfo(void);
+extern void FlipOnOff(void);
+extern void FriendlyMenu(void);
+extern void FriendlyMenuInit(void);
+extern void FriendlyMenuReinit(void);
+extern void FriendlyOK(void);
+extern void FriendlyPitchTypeProc(void);
+extern void GiveFreeTransfer(void);
+extern void GlobalRetn(void);
+extern void GotJobOfferFinish(void);
+extern void GotJobOfferInit(void);
+extern void HighlightsMenu(void);
+extern void HighlightsMenuInit(void);
+extern void HighlightsMenuOnReturn(void);
+extern void ImportTactics(void);
+extern void ImportTacticsInit(void);
+extern void ImportTacticsSelectTactics(void);
+extern void ImportTeamsMenu(void);
+extern void JmpShowHighlights(void);
+extern void JobOffersAfterDrawCommon(void);
+extern void JobOffersCommon(void);
+extern void JobOffersExit(void);
+extern void JobOffersFinish(void);
+extern void JobOffersInit(void);
+extern void JobOffersMenu(void);
+extern void JobOffersMenuRetired(void);
+extern void JobOffers_DrawOldOfferLine(void);
+extern void LoadHighlightsMenu(void);
+extern void LoadLiverpool(void);
+extern void LoadOldCompetitionMenu(void);
+extern void LoadTactics(void);
+extern void ManagementArrowDownSelect(void);
+extern void ManagementArrowUpSelect(void);
+extern void ManagementRecordInit(void);
+extern void ManagementRecordMenu(void);
+extern void MaxSubstitutes(void);
+extern void MinSubstitutes(void);
+extern void NationalTeamAddPlayer(void);
+extern void NationalTeamAddPlayerAbroadOnSelect(void);
+extern void NationalTeamAddPlayerExit(void);
+extern void NationalTeamAddPlayerHomeOnSelect(void);
+extern void NationalTeamAddPlayerInit(void);
+extern void NationalTeamRemovePlayers(void);
+extern void NationalTeams(void);
+extern void NextMatch(void);
+extern void OffersAfterDrawCommon(void);
+extern void OffersCommon(void);
+extern void OffersInit(void);
+extern void OldJobOffersCommon(void);
+extern void OnSwapPlayer(void);
+extern void OpenDiyFromFile(void);
+extern void OpenDiyPreset1(void);
+extern void OpenDiyPreset2(void);
+extern void OpenDiyPreset3(void);
+extern void OptionsMenuBeforeDraw(void);
+extern void OptionsMenuSelected(void);
+extern void OriginalCustomTeams(void);
+extern void PitchTypeOrSeasonProc(void);
+extern void PlayMatch30AfterDraw(void);
+extern void PlayMatchChangeTactics(void);
+extern void PlayMatchMenu(void);
+extern void PlayMatchMenuInit(void);
+extern void PlayMatchMenuReinit(void);
+extern void PlayMatchOnSelect30(void);
+extern void PlayMatchSelected(void);
+extern void PlayerMarketFilterAgeGroupOnSelect(void);
+extern void PlayerMarketFilterPositionOnSelect(void);
+extern void PlayerMarketItemBeforeDraw(void);
+extern void PlayerMarketItemOnSelect(void);
+extern void PlayerMarketScrollOnSelect(void);
+extern void PlayerMarketViewSquadOnSelect(void);
+extern void PlayerOffersAdjustOfferAmount(void);
+extern void PlayerOffersAfterDrawCommon(void);
+extern void PlayerOffersInit(void);
+extern void PlayerOffersOnSelect10(void);
+extern void PlayerOffersOnSelect11(void);
+extern void PlayerOffersOnSelect12(void);
+extern void PlayerOffersOnSelect13(void);
+extern void PlayerOffersOnSelect8(void);
+extern void PresetCompetitionMenu(void);
+extern void PutPlayerOnMarketMenu(void);
+extern void RejectJobOffer(void);
+extern void RejectOffer(void);
+extern void ReturnFromViewOpponent(void);
+extern void SWOSMainMenuInit(void);
+extern void SaveAndExitEditTactics(void);
+extern void SaveCareer(void);
+extern void SaveContest(void);
+extern void SaveDiskFilingMenu(void);
+extern void SaveHighlightsMenu(void);
+extern void SeasonMenu(void);
+extern void SelFilesDrawItemDescription(void);
+extern void SelFilesOnSelectCommon(void);
+extern void SelTeamForTacticsCommon(void);
+extern void SelTeamForTacticsExit(void);
+extern void SelTeamForTacticsInit(void);
+extern void SelectCopyTactics(void);
+extern void SelectFilenameToSaveAndExit(void);
+extern void SelectFilesInit(void);
+extern void SelectFilesInputSaveFilenameOnSelect(void);
+extern void SelectFilesOnReturn(void);
+extern void SelectGoals(void);
+extern void SelectLeaguesCommon(void);
+extern void SelectNationalTeam25AfterDraw(void);
+extern void SelectNationalTeamAbort(void);
+extern void SelectNationalTeamAfterDrawCommon(void);
+extern void SelectNationalTeamCommon(void);
+extern void SelectNationalTeamExit(void);
+extern void SelectNationalTeamFinish(void);
+extern void SelectNationalTeamInit(void);
+extern void SelectNationalTeamOnSelect25(void);
+extern void SelectTeamsCommon(void);
+extern void SelectTeamsInit(void);
+extern void SelectTeamsReinit(void);
+extern void SelectTraining(void);
+extern void SetName(void);
+extern void SetSurname(void);
+extern void ShowPlayerMarket(void);
+extern void ShowPlayerMarketInit(void);
+extern void ShowStadiumInit(void);
+extern void Squad45AfterDraw(void);
+extern void SquadAfterDrawCommon(void);
+extern void SquadCommon(void);
+extern void SquadFinish(void);
+extern void SquadInit(void);
+extern void SquadMenu(void);
+extern void SquadOnSelect11(void);
+extern void SquadOnSelect45(void);
+extern void StadiumBeforeDrawLeftTeam(void);
+extern void StadiumBeforeDrawRightTeam(void);
+extern void StartContest(void);
+extern void StatsExit(void);
+extern void StatsHighestScorerList(void);
+extern void StatsViewSquads(void);
+extern void TakeOffMarketMenu(void);
+extern void ThirdPartyOfferMenuAfterDrawCommon(void);
+extern void ThirdPartyOfferMenuExit(void);
+extern void ThirdPartyOfferMenuInit(void);
+extern void ThirdPartyOfferViewSquad(void);
+extern void TogglePlayerCoach(void);
+extern void TopGoalScorersBeforeDrawCommon(void);
+extern void TopGoalScorersExit(void);
+extern void TopGoalScorersInit(void);
+extern void TopGoalScorersMenu(void);
+extern void TransferMarketAfterDrawCommon(void);
+extern void TransferMarketCommon(void);
+extern void TransferMarketFinish(void);
+extern void TransferMarketInit(void);
+extern void TransferPlayerAfterDrawCommon(void);
+extern void TransferPlayerInit(void);
+extern void TransferPlayerOnSelect10(void);
+extern void TransferPlayerOnSelect11(void);
+extern void TransferPlayerOnSelect12(void);
+extern void TransfersMenu(void);
+extern void UndoTactics(void);
+extern void UseMatchTeamSelect(void);
+extern void User_A_Tactics(void);
+extern void User_B_Tactics(void);
+extern void User_C_Tactics(void);
+extern void User_D_Tactics(void);
+extern void User_E_Tactics(void);
+extern void User_F_Tactics(void);
+extern void ViewCompetitionsInit(void);
+extern void ViewCompetitionsMenu(void);
+extern void ViewCompetitionsMenuRetired(void);
+extern void ViewCompetitionsOnReturn(void);
+extern void ViewDomesticPlayerMarket(void);
+extern void ViewForeignPlayerMarket(void);
+extern void ViewFutureTeam(void);
+extern void ViewFutureTeamLeague(void);
+extern void ViewOffersMenu(void);
+extern void ViewOpponentsSelect(void);
+extern void ViewSelected(void);
+extern void ViewSelectedTeams(void);
+extern void ViewSquad21AfterDraw(void);
+extern void ViewSquadAfterDrawCommon(void);
+extern void ViewSquadCommon(void);
+extern void ViewSquadExitContinue(void);
+extern void ViewSquadInit(void);
+extern void ViewSquadOnSelect21(void);
+extern void ViewWorldMenu(void);
+extern void j_SetExitMenuFlag(void);
+extern void j_SetExitMenuFlag13(void);
+extern void j_SetExitMenuFlag2(void);
+extern void j_SetExitMenuFlag_10(void);
+extern void j_SetExitMenuFlag_11(void);
+extern void j_SetExitMenuFlag_14(void);
+extern void jmpSetExitMenuFlag(void);
+extern void jmp_SetExitMenuFlag(void);
+extern void jmp_SetExitMenuFlag_2(void);
+extern void jmp_SetExitMenuFlag_3(void);
+extern void jmp_SetExitMenuFlag_4(void);
+extern void jmp_SetExitMenuFlag_5(void);
+extern void jmp_SetExitMenuFlag_6(void);
+extern void jmp_SetExitMenuFlag_7(void);
+extern void jmp_SetExitMenuFlag_8(void);
+extern void locret_139AE2(void);
 
 /* ---- data symbols (decls harvested verbatim from menu_data.c) ---- */
 extern char a343[];
@@ -674,391 +674,391 @@ extern char teamTacticsUSERE[];
 extern char teamTacticsUSERF[];
 
 const MenuSymbol menuSymbols[] = {
-    { "_AbortChooseTeamsFriendly", (void*)_AbortChooseTeamsFriendly, SYM_FUNC },
-    { "_AbortEditTactics", (void*)_AbortEditTactics, SYM_FUNC },
-    { "_AbortSaveFile", (void*)_AbortSaveFile, SYM_FUNC },
-    { "_AbortSelected", (void*)_AbortSelected, SYM_FUNC },
-    { "_AcceptJobOffer", (void*)_AcceptJobOffer, SYM_FUNC },
-    { "_AcceptOffer", (void*)_AcceptOffer, SYM_FUNC },
-    { "_AskForMore", (void*)_AskForMore, SYM_FUNC },
-    { "_BuyOtherDomesticPlayer", (void*)_BuyOtherDomesticPlayer, SYM_FUNC },
-    { "_BuyOtherForeignPlayer", (void*)_BuyOtherForeignPlayer, SYM_FUNC },
-    { "_BuyOtherPlayersAfterDrawCommon", (void*)_BuyOtherPlayersAfterDrawCommon, SYM_FUNC },
-    { "_BuyOtherPlayersCommon", (void*)_BuyOtherPlayersCommon, SYM_FUNC },
-    { "_BuyOtherPlayersFinish", (void*)_BuyOtherPlayersFinish, SYM_FUNC },
-    { "_BuyOtherPlayersInit", (void*)_BuyOtherPlayersInit, SYM_FUNC },
-    { "_BuyPlayerExit", (void*)_BuyPlayerExit, SYM_FUNC },
-    { "_BuyPlayerInit", (void*)_BuyPlayerInit, SYM_FUNC },
-    { "_BuyPlayerMenu", (void*)_BuyPlayerMenu, SYM_FUNC },
-    { "_BuyPlayerViewSquad", (void*)_BuyPlayerViewSquad, SYM_FUNC },
-    { "_CareerGameListCommon", (void*)_CareerGameListCommon, SYM_FUNC },
-    { "_CareerMenu", (void*)_CareerMenu, SYM_FUNC },
-    { "_CareerMenuFinish", (void*)_CareerMenuFinish, SYM_FUNC },
-    { "_CareerMenuInit", (void*)_CareerMenuInit, SYM_FUNC },
-    { "_CareerOverFinish", (void*)_CareerOverFinish, SYM_FUNC },
-    { "_CareerOverInit", (void*)_CareerOverInit, SYM_FUNC },
-    { "_ChairmanMemosContinue", (void*)_ChairmanMemosContinue, SYM_FUNC },
-    { "_ChairmanMemosInit", (void*)_ChairmanMemosInit, SYM_FUNC },
-    { "_ChairmanMemosOnReturn", (void*)_ChairmanMemosOnReturn, SYM_FUNC },
-    { "_ChangeAllPlTeamsEqual", (void*)_ChangeAllPlTeamsEqual, SYM_FUNC },
-    { "_ChangeAutoReplays", (void*)_ChangeAutoReplays, SYM_FUNC },
-    { "_ChangeAutoSaveHighlights", (void*)_ChangeAutoSaveHighlights, SYM_FUNC },
-    { "_ChangeGameLength", (void*)_ChangeGameLength, SYM_FUNC },
-    { "_ChangeMenuMusic", (void*)_ChangeMenuMusic, SYM_FUNC },
-    { "_ChangeNationality", (void*)_ChangeNationality, SYM_FUNC },
-    { "_ChangePitchType", (void*)_ChangePitchType, SYM_FUNC },
-    { "_ChangeSex", (void*)_ChangeSex, SYM_FUNC },
-    { "_ChangeTeams", (void*)_ChangeTeams, SYM_FUNC },
-    { "_ChooseTacticsInit", (void*)_ChooseTacticsInit, SYM_FUNC },
-    { "_ChooseTeamAndStartCareer", (void*)_ChooseTeamAndStartCareer, SYM_FUNC },
-    { "_ChooseTeamsFriendlyCommon", (void*)_ChooseTeamsFriendlyCommon, SYM_FUNC },
-    { "_ChooseTeamsFriendlyCommon2", (void*)_ChooseTeamsFriendlyCommon2, SYM_FUNC },
-    { "_ChooseTeamsFriendlyInit", (void*)_ChooseTeamsFriendlyInit, SYM_FUNC },
-    { "_ChooseTeamsFriendlyInitFinish", (void*)_ChooseTeamsFriendlyInitFinish, SYM_FUNC },
-    { "_ChooseTeamsFriendlyOnSelect76", (void*)_ChooseTeamsFriendlyOnSelect76, SYM_FUNC },
-    { "_ChooseTeamsInit", (void*)_ChooseTeamsInit, SYM_FUNC },
-    { "_ChooseTeamsMenu", (void*)_ChooseTeamsMenu, SYM_FUNC },
-    { "_ChooseTeamsPlayGame", (void*)_ChooseTeamsPlayGame, SYM_FUNC },
-    { "_ChooseTeamsPlayMatchSelected", (void*)_ChooseTeamsPlayMatchSelected, SYM_FUNC },
-    { "_ClubBusinessInit", (void*)_ClubBusinessInit, SYM_FUNC },
-    { "_ClubBusinessMenu", (void*)_ClubBusinessMenu, SYM_FUNC },
-    { "_ClubTeams", (void*)_ClubTeams, SYM_FUNC },
-    { "_CoachOrPlayerCoach", (void*)_CoachOrPlayerCoach, SYM_FUNC },
-    { "_CompetitionInfo", (void*)_CompetitionInfo, SYM_FUNC },
-    { "_CompetitionTopGoalScorersExit", (void*)_CompetitionTopGoalScorersExit, SYM_FUNC },
-    { "_CompetitionTopGoalScorersInit", (void*)_CompetitionTopGoalScorersInit, SYM_FUNC },
-    { "_ConsiderJobOffer", (void*)_ConsiderJobOffer, SYM_FUNC },
-    { "_ConsiderOffer", (void*)_ConsiderOffer, SYM_FUNC },
-    { "_ContestMenuInit", (void*)_ContestMenuInit, SYM_FUNC },
-    { "_ContestMenuOnReturn", (void*)_ContestMenuOnReturn, SYM_FUNC },
-    { "_ContestMenuScrollDown", (void*)_ContestMenuScrollDown, SYM_FUNC },
-    { "_ContestMenuScrollUp", (void*)_ContestMenuScrollUp, SYM_FUNC },
-    { "_ContinueAbortInit", (void*)_ContinueAbortInit, SYM_FUNC },
-    { "_ContinueCareer", (void*)_ContinueCareer, SYM_FUNC },
-    { "_ContinueInit", (void*)_ContinueInit, SYM_FUNC },
-    { "_ContinueMenuContinueSelected", (void*)_ContinueMenuContinueSelected, SYM_FUNC },
-    { "_ContinueSelected", (void*)_ContinueSelected, SYM_FUNC },
-    { "_CopyTactics", (void*)_CopyTactics, SYM_FUNC },
-    { "_DIYCompetitionMenu", (void*)_DIYCompetitionMenu, SYM_FUNC },
-    { "_DIYCupFinish", (void*)_DIYCupFinish, SYM_FUNC },
-    { "_DIYCupInit", (void*)_DIYCupInit, SYM_FUNC },
-    { "_DIYCupOnSelect1", (void*)_DIYCupOnSelect1, SYM_FUNC },
-    { "_DIYCupOnSelect10", (void*)_DIYCupOnSelect10, SYM_FUNC },
-    { "_DIYCupOnSelect16", (void*)_DIYCupOnSelect16, SYM_FUNC },
-    { "_DIYCupOnSelect17", (void*)_DIYCupOnSelect17, SYM_FUNC },
-    { "_DIYCupOnSelect3", (void*)_DIYCupOnSelect3, SYM_FUNC },
-    { "_DIYCupOnSelect4", (void*)_DIYCupOnSelect4, SYM_FUNC },
-    { "_DIYCupOnSelect5", (void*)_DIYCupOnSelect5, SYM_FUNC },
-    { "_DIYCupOnSelect6", (void*)_DIYCupOnSelect6, SYM_FUNC },
-    { "_DIYCupOnSelect7", (void*)_DIYCupOnSelect7, SYM_FUNC },
-    { "_DIYCupOnSelect8", (void*)_DIYCupOnSelect8, SYM_FUNC },
-    { "_DIYCupOnSelect9", (void*)_DIYCupOnSelect9, SYM_FUNC },
-    { "_DIYLeagueChangePitchTypeOrSeason", (void*)_DIYLeagueChangePitchTypeOrSeason, SYM_FUNC },
-    { "_DIYLeagueTournament16BeforeDraw", (void*)_DIYLeagueTournament16BeforeDraw, SYM_FUNC },
-    { "_DIYLeagueTournamentExit", (void*)_DIYLeagueTournamentExit, SYM_FUNC },
-    { "_DIYLeagueTournamentInit", (void*)_DIYLeagueTournamentInit, SYM_FUNC },
-    { "_DIYLeagueTournamentMatch", (void*)_DIYLeagueTournamentMatch, SYM_FUNC },
-    { "_DIYLeagueTournamentNextMatch", (void*)_DIYLeagueTournamentNextMatch, SYM_FUNC },
-    { "_DIYLeagueTournamentOnRestore", (void*)_DIYLeagueTournamentOnRestore, SYM_FUNC },
-    { "_DIYLeagueTournamentOnSelect4", (void*)_DIYLeagueTournamentOnSelect4, SYM_FUNC },
-    { "_DIYLeagueTournamentResult", (void*)_DIYLeagueTournamentResult, SYM_FUNC },
-    { "_DIYLeagueTournamentScrollDown", (void*)_DIYLeagueTournamentScrollDown, SYM_FUNC },
-    { "_DIYLeagueTournamentScrollUp", (void*)_DIYLeagueTournamentScrollUp, SYM_FUNC },
-    { "_DIYLeagueTournamentStats", (void*)_DIYLeagueTournamentStats, SYM_FUNC },
-    { "_DIYLeagueTournamentViewHighlights", (void*)_DIYLeagueTournamentViewHighlights, SYM_FUNC },
-    { "_DIYLeagueTournamentViewMatch", (void*)_DIYLeagueTournamentViewMatch, SYM_FUNC },
-    { "_DIYLeagueTournamentViewResult", (void*)_DIYLeagueTournamentViewResult, SYM_FUNC },
-    { "_DesignDIYCupInit", (void*)_DesignDIYCupInit, SYM_FUNC },
-    { "_DesignDIYCupOK", (void*)_DesignDIYCupOK, SYM_FUNC },
-    { "_DesignDIYCupOnDraw", (void*)_DesignDIYCupOnDraw, SYM_FUNC },
-    { "_DesignDIYCupOnSelect11", (void*)_DesignDIYCupOnSelect11, SYM_FUNC },
-    { "_DesignDIYCupOnSelect13", (void*)_DesignDIYCupOnSelect13, SYM_FUNC },
-    { "_DesignDIYCupOnSelect15", (void*)_DesignDIYCupOnSelect15, SYM_FUNC },
-    { "_DesignDIYCupOnSelect2", (void*)_DesignDIYCupOnSelect2, SYM_FUNC },
-    { "_DesignDIYCupOnSelect20", (void*)_DesignDIYCupOnSelect20, SYM_FUNC },
-    { "_DesignDIYCupOnSelect21", (void*)_DesignDIYCupOnSelect21, SYM_FUNC },
-    { "_DesignDIYCupOnSelect22", (void*)_DesignDIYCupOnSelect22, SYM_FUNC },
-    { "_DesignDIYCupOnSelect3", (void*)_DesignDIYCupOnSelect3, SYM_FUNC },
-    { "_DesignDIYCupOnSelect4", (void*)_DesignDIYCupOnSelect4, SYM_FUNC },
-    { "_DesignDIYCupOnSelect48", (void*)_DesignDIYCupOnSelect48, SYM_FUNC },
-    { "_DesignDIYCupOnSelect5", (void*)_DesignDIYCupOnSelect5, SYM_FUNC },
-    { "_DesignDIYCupOnSelect7", (void*)_DesignDIYCupOnSelect7, SYM_FUNC },
-    { "_DesignDIYCupOnSelect9", (void*)_DesignDIYCupOnSelect9, SYM_FUNC },
-    { "_DesignDIYCupReinit", (void*)_DesignDIYCupReinit, SYM_FUNC },
-    { "_DesignDIYLeagueChangeEndMonth", (void*)_DesignDIYLeagueChangeEndMonth, SYM_FUNC },
-    { "_DesignDIYLeagueChangeMaxSubstitutes", (void*)_DesignDIYLeagueChangeMaxSubstitutes, SYM_FUNC },
-    { "_DesignDIYLeagueChangeMinSubstitutes", (void*)_DesignDIYLeagueChangeMinSubstitutes, SYM_FUNC },
-    { "_DesignDIYLeagueChangeNumPointsForWin", (void*)_DesignDIYLeagueChangeNumPointsForWin, SYM_FUNC },
-    { "_DesignDIYLeagueChangeNumberOfTeams", (void*)_DesignDIYLeagueChangeNumberOfTeams, SYM_FUNC },
-    { "_DesignDIYLeagueChangePitchType", (void*)_DesignDIYLeagueChangePitchType, SYM_FUNC },
-    { "_DesignDIYLeagueChangePlayEachTeam", (void*)_DesignDIYLeagueChangePlayEachTeam, SYM_FUNC },
-    { "_DesignDIYLeagueChangeStartMonth", (void*)_DesignDIYLeagueChangeStartMonth, SYM_FUNC },
-    { "_DesignDIYLeagueChooseTeams", (void*)_DesignDIYLeagueChooseTeams, SYM_FUNC },
-    { "_DesignDIYLeagueFinish", (void*)_DesignDIYLeagueFinish, SYM_FUNC },
-    { "_DesignDIYLeagueInit", (void*)_DesignDIYLeagueInit, SYM_FUNC },
-    { "_DesignDIYLeagueOK", (void*)_DesignDIYLeagueOK, SYM_FUNC },
-    { "_DesignDIYLeagueSetName", (void*)_DesignDIYLeagueSetName, SYM_FUNC },
-    { "_DesignDIYTournamentInit", (void*)_DesignDIYTournamentInit, SYM_FUNC },
-    { "_DesignDIYTournamentOK", (void*)_DesignDIYTournamentOK, SYM_FUNC },
-    { "_DesignDIYTournamentOnDraw", (void*)_DesignDIYTournamentOnDraw, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect11", (void*)_DesignDIYTournamentOnSelect11, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect13", (void*)_DesignDIYTournamentOnSelect13, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect2", (void*)_DesignDIYTournamentOnSelect2, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect20", (void*)_DesignDIYTournamentOnSelect20, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect21", (void*)_DesignDIYTournamentOnSelect21, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect23", (void*)_DesignDIYTournamentOnSelect23, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect24", (void*)_DesignDIYTournamentOnSelect24, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect25", (void*)_DesignDIYTournamentOnSelect25, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect26", (void*)_DesignDIYTournamentOnSelect26, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect28", (void*)_DesignDIYTournamentOnSelect28, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect3", (void*)_DesignDIYTournamentOnSelect3, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect4", (void*)_DesignDIYTournamentOnSelect4, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect5", (void*)_DesignDIYTournamentOnSelect5, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect7", (void*)_DesignDIYTournamentOnSelect7, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect89", (void*)_DesignDIYTournamentOnSelect89, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect9", (void*)_DesignDIYTournamentOnSelect9, SYM_FUNC },
-    { "_DesignDIYTournamentOnSelect91", (void*)_DesignDIYTournamentOnSelect91, SYM_FUNC },
-    { "_DesignDIYTournamentReinit", (void*)_DesignDIYTournamentReinit, SYM_FUNC },
-    { "_DesignDIYTournament_AdjustStageQualifiers", (void*)_DesignDIYTournament_AdjustStageQualifiers, SYM_FUNC },
-    { "_DrawPlayerEntries", (void*)_DrawPlayerEntries, SYM_FUNC },
-    { "_EditCustomTeamMenu", (void*)_EditCustomTeamMenu, SYM_FUNC },
-    { "_EditTacicsMovePlayersOrBall", (void*)_EditTacicsMovePlayersOrBall, SYM_FUNC },
-    { "_EditTactics28AfterDraw", (void*)_EditTactics28AfterDraw, SYM_FUNC },
-    { "_EditTactics2AfterDraw", (void*)_EditTactics2AfterDraw, SYM_FUNC },
-    { "_EditTacticsAfterDrawPlayerFace", (void*)_EditTacticsAfterDrawPlayerFace, SYM_FUNC },
-    { "_EditTacticsAfterDrawPlayerNames", (void*)_EditTacticsAfterDrawPlayerNames, SYM_FUNC },
-    { "_EditTacticsCommon", (void*)_EditTacticsCommon, SYM_FUNC },
-    { "_EditTacticsInPlayMatchMenu", (void*)_EditTacticsInPlayMatchMenu, SYM_FUNC },
-    { "_EditTacticsInit", (void*)_EditTacticsInit, SYM_FUNC },
-    { "_EditTacticsMenu", (void*)_EditTacticsMenu, SYM_FUNC },
-    { "_EditTacticsOnRestore", (void*)_EditTacticsOnRestore, SYM_FUNC },
-    { "_EditTacticsOnSelect28", (void*)_EditTacticsOnSelect28, SYM_FUNC },
-    { "_EditTacticsPlayerNamesCommon", (void*)_EditTacticsPlayerNamesCommon, SYM_FUNC },
-    { "_EditTeamsChangePlayerFace", (void*)_EditTeamsChangePlayerFace, SYM_FUNC },
-    { "_EditTeamsChangePlayerName", (void*)_EditTeamsChangePlayerName, SYM_FUNC },
-    { "_EditTeamsChangeShirtsPrimary", (void*)_EditTeamsChangeShirtsPrimary, SYM_FUNC },
-    { "_EditTeamsChangeShirtsSecondary", (void*)_EditTeamsChangeShirtsSecondary, SYM_FUNC },
-    { "_EditTeamsChangeShortsPrimary", (void*)_EditTeamsChangeShortsPrimary, SYM_FUNC },
-    { "_EditTeamsChangeShortsSecondary", (void*)_EditTeamsChangeShortsSecondary, SYM_FUNC },
-    { "_EditTeamsChangeSocksPrimary", (void*)_EditTeamsChangeSocksPrimary, SYM_FUNC },
-    { "_EditTeamsChangeSocksSecondary", (void*)_EditTeamsChangeSocksSecondary, SYM_FUNC },
-    { "_EditTeamsFinish", (void*)_EditTeamsFinish, SYM_FUNC },
-    { "_EditTeamsInit", (void*)_EditTeamsInit, SYM_FUNC },
-    { "_EditTeamsOK", (void*)_EditTeamsOK, SYM_FUNC },
-    { "_EditTeamsPlayersBeforeDraw", (void*)_EditTeamsPlayersBeforeDraw, SYM_FUNC },
-    { "_EditTeamsSelectCoachName", (void*)_EditTeamsSelectCoachName, SYM_FUNC },
-    { "_EditTeamsSelectPrimaryShirtType", (void*)_EditTeamsSelectPrimaryShirtType, SYM_FUNC },
-    { "_EditTeamsSelectSecondaryShirtType", (void*)_EditTeamsSelectSecondaryShirtType, SYM_FUNC },
-    { "_EditTeamsSelectTeamName", (void*)_EditTeamsSelectTeamName, SYM_FUNC },
-    { "_EditTeamsUndo", (void*)_EditTeamsUndo, SYM_FUNC },
-    { "_EditedCustomTeams", (void*)_EditedCustomTeams, SYM_FUNC },
-    { "_ExitCareerMenu", (void*)_ExitCareerMenu, SYM_FUNC },
-    { "_ExitChooseTacticsMenu", (void*)_ExitChooseTacticsMenu, SYM_FUNC },
-    { "_ExitChooseTeams", (void*)_ExitChooseTeams, SYM_FUNC },
-    { "_ExitChooseTeams2", (void*)_ExitChooseTeams2, SYM_FUNC },
-    { "_ExitHighlights", (void*)_ExitHighlights, SYM_FUNC },
-    { "_ExitImportTactics", (void*)_ExitImportTactics, SYM_FUNC },
-    { "_ExitOptions", (void*)_ExitOptions, SYM_FUNC },
-    { "_ExitPlayMatch", (void*)_ExitPlayMatch, SYM_FUNC },
-    { "_ExitPlayerMarketMenu", (void*)_ExitPlayerMarketMenu, SYM_FUNC },
-    { "_ExitSelectTeams", (void*)_ExitSelectTeams, SYM_FUNC },
-    { "_FillManagementRecordInfo", (void*)_FillManagementRecordInfo, SYM_FUNC },
-    { "_FlipOnOff", (void*)_FlipOnOff, SYM_FUNC },
-    { "_FriendlyMenu", (void*)_FriendlyMenu, SYM_FUNC },
-    { "_FriendlyMenuInit", (void*)_FriendlyMenuInit, SYM_FUNC },
-    { "_FriendlyMenuReinit", (void*)_FriendlyMenuReinit, SYM_FUNC },
-    { "_FriendlyOK", (void*)_FriendlyOK, SYM_FUNC },
-    { "_FriendlyPitchTypeProc", (void*)_FriendlyPitchTypeProc, SYM_FUNC },
-    { "_GiveFreeTransfer", (void*)_GiveFreeTransfer, SYM_FUNC },
-    { "_GlobalRetn", (void*)_GlobalRetn, SYM_FUNC },
-    { "_GotJobOfferFinish", (void*)_GotJobOfferFinish, SYM_FUNC },
-    { "_GotJobOfferInit", (void*)_GotJobOfferInit, SYM_FUNC },
-    { "_HighlightsMenu", (void*)_HighlightsMenu, SYM_FUNC },
-    { "_HighlightsMenuInit", (void*)_HighlightsMenuInit, SYM_FUNC },
-    { "_HighlightsMenuOnReturn", (void*)_HighlightsMenuOnReturn, SYM_FUNC },
-    { "_ImportTactics", (void*)_ImportTactics, SYM_FUNC },
-    { "_ImportTacticsInit", (void*)_ImportTacticsInit, SYM_FUNC },
-    { "_ImportTacticsSelectTactics", (void*)_ImportTacticsSelectTactics, SYM_FUNC },
-    { "_ImportTeamsMenu", (void*)_ImportTeamsMenu, SYM_FUNC },
-    { "_JmpShowHighlights", (void*)_JmpShowHighlights, SYM_FUNC },
-    { "_JobOffersAfterDrawCommon", (void*)_JobOffersAfterDrawCommon, SYM_FUNC },
-    { "_JobOffersCommon", (void*)_JobOffersCommon, SYM_FUNC },
-    { "_JobOffersExit", (void*)_JobOffersExit, SYM_FUNC },
-    { "_JobOffersFinish", (void*)_JobOffersFinish, SYM_FUNC },
-    { "_JobOffersInit", (void*)_JobOffersInit, SYM_FUNC },
-    { "_JobOffersMenu", (void*)_JobOffersMenu, SYM_FUNC },
-    { "_JobOffersMenuRetired", (void*)_JobOffersMenuRetired, SYM_FUNC },
-    { "_JobOffers_DrawOldOfferLine", (void*)_JobOffers_DrawOldOfferLine, SYM_FUNC },
-    { "_LoadHighlightsMenu", (void*)_LoadHighlightsMenu, SYM_FUNC },
-    { "_LoadLiverpool", (void*)_LoadLiverpool, SYM_FUNC },
-    { "_LoadOldCompetitionMenu", (void*)_LoadOldCompetitionMenu, SYM_FUNC },
-    { "_LoadTactics", (void*)_LoadTactics, SYM_FUNC },
-    { "_ManagementArrowDownSelect", (void*)_ManagementArrowDownSelect, SYM_FUNC },
-    { "_ManagementArrowUpSelect", (void*)_ManagementArrowUpSelect, SYM_FUNC },
-    { "_ManagementRecordInit", (void*)_ManagementRecordInit, SYM_FUNC },
-    { "_ManagementRecordMenu", (void*)_ManagementRecordMenu, SYM_FUNC },
-    { "_MaxSubstitutes", (void*)_MaxSubstitutes, SYM_FUNC },
-    { "_MinSubstitutes", (void*)_MinSubstitutes, SYM_FUNC },
-    { "_NationalTeamAddPlayer", (void*)_NationalTeamAddPlayer, SYM_FUNC },
-    { "_NationalTeamAddPlayerAbroadOnSelect", (void*)_NationalTeamAddPlayerAbroadOnSelect, SYM_FUNC },
-    { "_NationalTeamAddPlayerExit", (void*)_NationalTeamAddPlayerExit, SYM_FUNC },
-    { "_NationalTeamAddPlayerHomeOnSelect", (void*)_NationalTeamAddPlayerHomeOnSelect, SYM_FUNC },
-    { "_NationalTeamAddPlayerInit", (void*)_NationalTeamAddPlayerInit, SYM_FUNC },
-    { "_NationalTeamRemovePlayers", (void*)_NationalTeamRemovePlayers, SYM_FUNC },
-    { "_NationalTeams", (void*)_NationalTeams, SYM_FUNC },
-    { "_NextMatch", (void*)_NextMatch, SYM_FUNC },
-    { "_OffersAfterDrawCommon", (void*)_OffersAfterDrawCommon, SYM_FUNC },
-    { "_OffersCommon", (void*)_OffersCommon, SYM_FUNC },
-    { "_OffersInit", (void*)_OffersInit, SYM_FUNC },
-    { "_OldJobOffersCommon", (void*)_OldJobOffersCommon, SYM_FUNC },
-    { "_OnSwapPlayer", (void*)_OnSwapPlayer, SYM_FUNC },
-    { "_OpenDiyFromFile", (void*)_OpenDiyFromFile, SYM_FUNC },
-    { "_OpenDiyPreset1", (void*)_OpenDiyPreset1, SYM_FUNC },
-    { "_OpenDiyPreset2", (void*)_OpenDiyPreset2, SYM_FUNC },
-    { "_OpenDiyPreset3", (void*)_OpenDiyPreset3, SYM_FUNC },
-    { "_OptionsMenuBeforeDraw", (void*)_OptionsMenuBeforeDraw, SYM_FUNC },
-    { "_OptionsMenuSelected", (void*)_OptionsMenuSelected, SYM_FUNC },
-    { "_OriginalCustomTeams", (void*)_OriginalCustomTeams, SYM_FUNC },
-    { "_PitchTypeOrSeasonProc", (void*)_PitchTypeOrSeasonProc, SYM_FUNC },
-    { "_PlayMatch30AfterDraw", (void*)_PlayMatch30AfterDraw, SYM_FUNC },
-    { "_PlayMatchChangeTactics", (void*)_PlayMatchChangeTactics, SYM_FUNC },
-    { "_PlayMatchMenu", (void*)_PlayMatchMenu, SYM_FUNC },
-    { "_PlayMatchMenuInit", (void*)_PlayMatchMenuInit, SYM_FUNC },
-    { "_PlayMatchMenuReinit", (void*)_PlayMatchMenuReinit, SYM_FUNC },
-    { "_PlayMatchOnSelect30", (void*)_PlayMatchOnSelect30, SYM_FUNC },
-    { "_PlayMatchSelected", (void*)_PlayMatchSelected, SYM_FUNC },
-    { "_PlayerMarketFilterAgeGroupOnSelect", (void*)_PlayerMarketFilterAgeGroupOnSelect, SYM_FUNC },
-    { "_PlayerMarketFilterPositionOnSelect", (void*)_PlayerMarketFilterPositionOnSelect, SYM_FUNC },
-    { "_PlayerMarketItemBeforeDraw", (void*)_PlayerMarketItemBeforeDraw, SYM_FUNC },
-    { "_PlayerMarketItemOnSelect", (void*)_PlayerMarketItemOnSelect, SYM_FUNC },
-    { "_PlayerMarketScrollOnSelect", (void*)_PlayerMarketScrollOnSelect, SYM_FUNC },
-    { "_PlayerMarketViewSquadOnSelect", (void*)_PlayerMarketViewSquadOnSelect, SYM_FUNC },
-    { "_PlayerOffersAdjustOfferAmount", (void*)_PlayerOffersAdjustOfferAmount, SYM_FUNC },
-    { "_PlayerOffersAfterDrawCommon", (void*)_PlayerOffersAfterDrawCommon, SYM_FUNC },
-    { "_PlayerOffersInit", (void*)_PlayerOffersInit, SYM_FUNC },
-    { "_PlayerOffersOnSelect10", (void*)_PlayerOffersOnSelect10, SYM_FUNC },
-    { "_PlayerOffersOnSelect11", (void*)_PlayerOffersOnSelect11, SYM_FUNC },
-    { "_PlayerOffersOnSelect12", (void*)_PlayerOffersOnSelect12, SYM_FUNC },
-    { "_PlayerOffersOnSelect13", (void*)_PlayerOffersOnSelect13, SYM_FUNC },
-    { "_PlayerOffersOnSelect8", (void*)_PlayerOffersOnSelect8, SYM_FUNC },
-    { "_PresetCompetitionMenu", (void*)_PresetCompetitionMenu, SYM_FUNC },
-    { "_PutPlayerOnMarketMenu", (void*)_PutPlayerOnMarketMenu, SYM_FUNC },
-    { "_RejectJobOffer", (void*)_RejectJobOffer, SYM_FUNC },
-    { "_RejectOffer", (void*)_RejectOffer, SYM_FUNC },
-    { "_ReturnFromViewOpponent", (void*)_ReturnFromViewOpponent, SYM_FUNC },
-    { "_SWOSMainMenuInit", (void*)_SWOSMainMenuInit, SYM_FUNC },
-    { "_SaveAndExitEditTactics", (void*)_SaveAndExitEditTactics, SYM_FUNC },
-    { "_SaveCareer", (void*)_SaveCareer, SYM_FUNC },
-    { "_SaveContest", (void*)_SaveContest, SYM_FUNC },
-    { "_SaveDiskFilingMenu", (void*)_SaveDiskFilingMenu, SYM_FUNC },
-    { "_SaveHighlightsMenu", (void*)_SaveHighlightsMenu, SYM_FUNC },
-    { "_SeasonMenu", (void*)_SeasonMenu, SYM_FUNC },
-    { "_SelFilesDrawItemDescription", (void*)_SelFilesDrawItemDescription, SYM_FUNC },
-    { "_SelFilesOnSelectCommon", (void*)_SelFilesOnSelectCommon, SYM_FUNC },
-    { "_SelTeamForTacticsCommon", (void*)_SelTeamForTacticsCommon, SYM_FUNC },
-    { "_SelTeamForTacticsExit", (void*)_SelTeamForTacticsExit, SYM_FUNC },
-    { "_SelTeamForTacticsInit", (void*)_SelTeamForTacticsInit, SYM_FUNC },
-    { "_SelectCopyTactics", (void*)_SelectCopyTactics, SYM_FUNC },
-    { "_SelectFilenameToSaveAndExit", (void*)_SelectFilenameToSaveAndExit, SYM_FUNC },
-    { "_SelectFilesInit", (void*)_SelectFilesInit, SYM_FUNC },
-    { "_SelectFilesInputSaveFilenameOnSelect", (void*)_SelectFilesInputSaveFilenameOnSelect, SYM_FUNC },
-    { "_SelectFilesOnReturn", (void*)_SelectFilesOnReturn, SYM_FUNC },
-    { "_SelectGoals", (void*)_SelectGoals, SYM_FUNC },
-    { "_SelectLeaguesCommon", (void*)_SelectLeaguesCommon, SYM_FUNC },
-    { "_SelectNationalTeam25AfterDraw", (void*)_SelectNationalTeam25AfterDraw, SYM_FUNC },
-    { "_SelectNationalTeamAbort", (void*)_SelectNationalTeamAbort, SYM_FUNC },
-    { "_SelectNationalTeamAfterDrawCommon", (void*)_SelectNationalTeamAfterDrawCommon, SYM_FUNC },
-    { "_SelectNationalTeamCommon", (void*)_SelectNationalTeamCommon, SYM_FUNC },
-    { "_SelectNationalTeamExit", (void*)_SelectNationalTeamExit, SYM_FUNC },
-    { "_SelectNationalTeamFinish", (void*)_SelectNationalTeamFinish, SYM_FUNC },
-    { "_SelectNationalTeamInit", (void*)_SelectNationalTeamInit, SYM_FUNC },
-    { "_SelectNationalTeamOnSelect25", (void*)_SelectNationalTeamOnSelect25, SYM_FUNC },
-    { "_SelectTeamsCommon", (void*)_SelectTeamsCommon, SYM_FUNC },
-    { "_SelectTeamsInit", (void*)_SelectTeamsInit, SYM_FUNC },
-    { "_SelectTeamsReinit", (void*)_SelectTeamsReinit, SYM_FUNC },
-    { "_SelectTraining", (void*)_SelectTraining, SYM_FUNC },
-    { "_SetName", (void*)_SetName, SYM_FUNC },
-    { "_SetSurname", (void*)_SetSurname, SYM_FUNC },
-    { "_ShowPlayerMarket", (void*)_ShowPlayerMarket, SYM_FUNC },
-    { "_ShowPlayerMarketInit", (void*)_ShowPlayerMarketInit, SYM_FUNC },
-    { "_ShowStadiumInit", (void*)_ShowStadiumInit, SYM_FUNC },
-    { "_Squad45AfterDraw", (void*)_Squad45AfterDraw, SYM_FUNC },
-    { "_SquadAfterDrawCommon", (void*)_SquadAfterDrawCommon, SYM_FUNC },
-    { "_SquadCommon", (void*)_SquadCommon, SYM_FUNC },
-    { "_SquadFinish", (void*)_SquadFinish, SYM_FUNC },
-    { "_SquadInit", (void*)_SquadInit, SYM_FUNC },
-    { "_SquadMenu", (void*)_SquadMenu, SYM_FUNC },
-    { "_SquadOnSelect11", (void*)_SquadOnSelect11, SYM_FUNC },
-    { "_SquadOnSelect45", (void*)_SquadOnSelect45, SYM_FUNC },
-    { "_StadiumBeforeDrawLeftTeam", (void*)_StadiumBeforeDrawLeftTeam, SYM_FUNC },
-    { "_StadiumBeforeDrawRightTeam", (void*)_StadiumBeforeDrawRightTeam, SYM_FUNC },
-    { "_StartContest", (void*)_StartContest, SYM_FUNC },
-    { "_StatsExit", (void*)_StatsExit, SYM_FUNC },
-    { "_StatsHighestScorerList", (void*)_StatsHighestScorerList, SYM_FUNC },
-    { "_StatsViewSquads", (void*)_StatsViewSquads, SYM_FUNC },
-    { "_TakeOffMarketMenu", (void*)_TakeOffMarketMenu, SYM_FUNC },
-    { "_ThirdPartyOfferMenuAfterDrawCommon", (void*)_ThirdPartyOfferMenuAfterDrawCommon, SYM_FUNC },
-    { "_ThirdPartyOfferMenuExit", (void*)_ThirdPartyOfferMenuExit, SYM_FUNC },
-    { "_ThirdPartyOfferMenuInit", (void*)_ThirdPartyOfferMenuInit, SYM_FUNC },
-    { "_ThirdPartyOfferViewSquad", (void*)_ThirdPartyOfferViewSquad, SYM_FUNC },
-    { "_TogglePlayerCoach", (void*)_TogglePlayerCoach, SYM_FUNC },
-    { "_TopGoalScorersBeforeDrawCommon", (void*)_TopGoalScorersBeforeDrawCommon, SYM_FUNC },
-    { "_TopGoalScorersExit", (void*)_TopGoalScorersExit, SYM_FUNC },
-    { "_TopGoalScorersInit", (void*)_TopGoalScorersInit, SYM_FUNC },
-    { "_TopGoalScorersMenu", (void*)_TopGoalScorersMenu, SYM_FUNC },
-    { "_TransferMarketAfterDrawCommon", (void*)_TransferMarketAfterDrawCommon, SYM_FUNC },
-    { "_TransferMarketCommon", (void*)_TransferMarketCommon, SYM_FUNC },
-    { "_TransferMarketFinish", (void*)_TransferMarketFinish, SYM_FUNC },
-    { "_TransferMarketInit", (void*)_TransferMarketInit, SYM_FUNC },
-    { "_TransferPlayerAfterDrawCommon", (void*)_TransferPlayerAfterDrawCommon, SYM_FUNC },
-    { "_TransferPlayerInit", (void*)_TransferPlayerInit, SYM_FUNC },
-    { "_TransferPlayerOnSelect10", (void*)_TransferPlayerOnSelect10, SYM_FUNC },
-    { "_TransferPlayerOnSelect11", (void*)_TransferPlayerOnSelect11, SYM_FUNC },
-    { "_TransferPlayerOnSelect12", (void*)_TransferPlayerOnSelect12, SYM_FUNC },
-    { "_TransfersMenu", (void*)_TransfersMenu, SYM_FUNC },
-    { "_UndoTactics", (void*)_UndoTactics, SYM_FUNC },
-    { "_UseMatchTeamSelect", (void*)_UseMatchTeamSelect, SYM_FUNC },
-    { "_User_A_Tactics", (void*)_User_A_Tactics, SYM_FUNC },
-    { "_User_B_Tactics", (void*)_User_B_Tactics, SYM_FUNC },
-    { "_User_C_Tactics", (void*)_User_C_Tactics, SYM_FUNC },
-    { "_User_D_Tactics", (void*)_User_D_Tactics, SYM_FUNC },
-    { "_User_E_Tactics", (void*)_User_E_Tactics, SYM_FUNC },
-    { "_User_F_Tactics", (void*)_User_F_Tactics, SYM_FUNC },
-    { "_ViewCompetitionsInit", (void*)_ViewCompetitionsInit, SYM_FUNC },
-    { "_ViewCompetitionsMenu", (void*)_ViewCompetitionsMenu, SYM_FUNC },
-    { "_ViewCompetitionsMenuRetired", (void*)_ViewCompetitionsMenuRetired, SYM_FUNC },
-    { "_ViewCompetitionsOnReturn", (void*)_ViewCompetitionsOnReturn, SYM_FUNC },
-    { "_ViewDomesticPlayerMarket", (void*)_ViewDomesticPlayerMarket, SYM_FUNC },
-    { "_ViewForeignPlayerMarket", (void*)_ViewForeignPlayerMarket, SYM_FUNC },
-    { "_ViewFutureTeam", (void*)_ViewFutureTeam, SYM_FUNC },
-    { "_ViewFutureTeamLeague", (void*)_ViewFutureTeamLeague, SYM_FUNC },
-    { "_ViewOffersMenu", (void*)_ViewOffersMenu, SYM_FUNC },
-    { "_ViewOpponentsSelect", (void*)_ViewOpponentsSelect, SYM_FUNC },
-    { "_ViewSelected", (void*)_ViewSelected, SYM_FUNC },
-    { "_ViewSelectedTeams", (void*)_ViewSelectedTeams, SYM_FUNC },
-    { "_ViewSquad21AfterDraw", (void*)_ViewSquad21AfterDraw, SYM_FUNC },
-    { "_ViewSquadAfterDrawCommon", (void*)_ViewSquadAfterDrawCommon, SYM_FUNC },
-    { "_ViewSquadCommon", (void*)_ViewSquadCommon, SYM_FUNC },
-    { "_ViewSquadExitContinue", (void*)_ViewSquadExitContinue, SYM_FUNC },
-    { "_ViewSquadInit", (void*)_ViewSquadInit, SYM_FUNC },
-    { "_ViewSquadOnSelect21", (void*)_ViewSquadOnSelect21, SYM_FUNC },
-    { "_ViewWorldMenu", (void*)_ViewWorldMenu, SYM_FUNC },
-    { "_j_SetExitMenuFlag", (void*)_j_SetExitMenuFlag, SYM_FUNC },
-    { "_j_SetExitMenuFlag13", (void*)_j_SetExitMenuFlag13, SYM_FUNC },
-    { "_j_SetExitMenuFlag2", (void*)_j_SetExitMenuFlag2, SYM_FUNC },
-    { "_j_SetExitMenuFlag_10", (void*)_j_SetExitMenuFlag_10, SYM_FUNC },
-    { "_j_SetExitMenuFlag_11", (void*)_j_SetExitMenuFlag_11, SYM_FUNC },
-    { "_j_SetExitMenuFlag_14", (void*)_j_SetExitMenuFlag_14, SYM_FUNC },
-    { "_jmpSetExitMenuFlag", (void*)_jmpSetExitMenuFlag, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag", (void*)_jmp_SetExitMenuFlag, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_2", (void*)_jmp_SetExitMenuFlag_2, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_3", (void*)_jmp_SetExitMenuFlag_3, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_4", (void*)_jmp_SetExitMenuFlag_4, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_5", (void*)_jmp_SetExitMenuFlag_5, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_6", (void*)_jmp_SetExitMenuFlag_6, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_7", (void*)_jmp_SetExitMenuFlag_7, SYM_FUNC },
-    { "_jmp_SetExitMenuFlag_8", (void*)_jmp_SetExitMenuFlag_8, SYM_FUNC },
-    { "_locret_139AE2", (void*)_locret_139AE2, SYM_FUNC },
+    { "AbortChooseTeamsFriendly", (void*)AbortChooseTeamsFriendly, SYM_FUNC },
+    { "AbortEditTactics", (void*)AbortEditTactics, SYM_FUNC },
+    { "AbortSaveFile", (void*)AbortSaveFile, SYM_FUNC },
+    { "AbortSelected", (void*)AbortSelected, SYM_FUNC },
+    { "AcceptJobOffer", (void*)AcceptJobOffer, SYM_FUNC },
+    { "AcceptOffer", (void*)AcceptOffer, SYM_FUNC },
+    { "AskForMore", (void*)AskForMore, SYM_FUNC },
+    { "BuyOtherDomesticPlayer", (void*)BuyOtherDomesticPlayer, SYM_FUNC },
+    { "BuyOtherForeignPlayer", (void*)BuyOtherForeignPlayer, SYM_FUNC },
+    { "BuyOtherPlayersAfterDrawCommon", (void*)BuyOtherPlayersAfterDrawCommon, SYM_FUNC },
+    { "BuyOtherPlayersCommon", (void*)BuyOtherPlayersCommon, SYM_FUNC },
+    { "BuyOtherPlayersFinish", (void*)BuyOtherPlayersFinish, SYM_FUNC },
+    { "BuyOtherPlayersInit", (void*)BuyOtherPlayersInit, SYM_FUNC },
+    { "BuyPlayerExit", (void*)BuyPlayerExit, SYM_FUNC },
+    { "BuyPlayerInit", (void*)BuyPlayerInit, SYM_FUNC },
+    { "BuyPlayerMenu", (void*)BuyPlayerMenu, SYM_FUNC },
+    { "BuyPlayerViewSquad", (void*)BuyPlayerViewSquad, SYM_FUNC },
+    { "CareerGameListCommon", (void*)CareerGameListCommon, SYM_FUNC },
+    { "CareerMenu", (void*)CareerMenu, SYM_FUNC },
+    { "CareerMenuFinish", (void*)CareerMenuFinish, SYM_FUNC },
+    { "CareerMenuInit", (void*)CareerMenuInit, SYM_FUNC },
+    { "CareerOverFinish", (void*)CareerOverFinish, SYM_FUNC },
+    { "CareerOverInit", (void*)CareerOverInit, SYM_FUNC },
+    { "ChairmanMemosContinue", (void*)ChairmanMemosContinue, SYM_FUNC },
+    { "ChairmanMemosInit", (void*)ChairmanMemosInit, SYM_FUNC },
+    { "ChairmanMemosOnReturn", (void*)ChairmanMemosOnReturn, SYM_FUNC },
+    { "ChangeAllPlTeamsEqual", (void*)ChangeAllPlTeamsEqual, SYM_FUNC },
+    { "ChangeAutoReplays", (void*)ChangeAutoReplays, SYM_FUNC },
+    { "ChangeAutoSaveHighlights", (void*)ChangeAutoSaveHighlights, SYM_FUNC },
+    { "ChangeGameLength", (void*)ChangeGameLength, SYM_FUNC },
+    { "ChangeMenuMusic", (void*)ChangeMenuMusic, SYM_FUNC },
+    { "ChangeNationality", (void*)ChangeNationality, SYM_FUNC },
+    { "ChangePitchType", (void*)ChangePitchType, SYM_FUNC },
+    { "ChangeSex", (void*)ChangeSex, SYM_FUNC },
+    { "ChangeTeams", (void*)ChangeTeams, SYM_FUNC },
+    { "ChooseTacticsInit", (void*)ChooseTacticsInit, SYM_FUNC },
+    { "ChooseTeamAndStartCareer", (void*)ChooseTeamAndStartCareer, SYM_FUNC },
+    { "ChooseTeamsFriendlyCommon", (void*)ChooseTeamsFriendlyCommon, SYM_FUNC },
+    { "ChooseTeamsFriendlyCommon2", (void*)ChooseTeamsFriendlyCommon2, SYM_FUNC },
+    { "ChooseTeamsFriendlyInit", (void*)ChooseTeamsFriendlyInit, SYM_FUNC },
+    { "ChooseTeamsFriendlyInitFinish", (void*)ChooseTeamsFriendlyInitFinish, SYM_FUNC },
+    { "ChooseTeamsFriendlyOnSelect76", (void*)ChooseTeamsFriendlyOnSelect76, SYM_FUNC },
+    { "ChooseTeamsInit", (void*)ChooseTeamsInit, SYM_FUNC },
+    { "ChooseTeamsMenu", (void*)ChooseTeamsMenu, SYM_FUNC },
+    { "ChooseTeamsPlayGame", (void*)ChooseTeamsPlayGame, SYM_FUNC },
+    { "ChooseTeamsPlayMatchSelected", (void*)ChooseTeamsPlayMatchSelected, SYM_FUNC },
+    { "ClubBusinessInit", (void*)ClubBusinessInit, SYM_FUNC },
+    { "ClubBusinessMenu", (void*)ClubBusinessMenu, SYM_FUNC },
+    { "ClubTeams", (void*)ClubTeams, SYM_FUNC },
+    { "CoachOrPlayerCoach", (void*)CoachOrPlayerCoach, SYM_FUNC },
+    { "CompetitionInfo", (void*)CompetitionInfo, SYM_FUNC },
+    { "CompetitionTopGoalScorersExit", (void*)CompetitionTopGoalScorersExit, SYM_FUNC },
+    { "CompetitionTopGoalScorersInit", (void*)CompetitionTopGoalScorersInit, SYM_FUNC },
+    { "ConsiderJobOffer", (void*)ConsiderJobOffer, SYM_FUNC },
+    { "ConsiderOffer", (void*)ConsiderOffer, SYM_FUNC },
+    { "ContestMenuInit", (void*)ContestMenuInit, SYM_FUNC },
+    { "ContestMenuOnReturn", (void*)ContestMenuOnReturn, SYM_FUNC },
+    { "ContestMenuScrollDown", (void*)ContestMenuScrollDown, SYM_FUNC },
+    { "ContestMenuScrollUp", (void*)ContestMenuScrollUp, SYM_FUNC },
+    { "ContinueAbortInit", (void*)ContinueAbortInit, SYM_FUNC },
+    { "ContinueCareer", (void*)ContinueCareer, SYM_FUNC },
+    { "ContinueInit", (void*)ContinueInit, SYM_FUNC },
+    { "ContinueMenuContinueSelected", (void*)ContinueMenuContinueSelected, SYM_FUNC },
+    { "ContinueSelected", (void*)ContinueSelected, SYM_FUNC },
+    { "CopyTactics", (void*)CopyTactics, SYM_FUNC },
+    { "DIYCompetitionMenu", (void*)DIYCompetitionMenu, SYM_FUNC },
+    { "DIYCupFinish", (void*)DIYCupFinish, SYM_FUNC },
+    { "DIYCupInit", (void*)DIYCupInit, SYM_FUNC },
+    { "DIYCupOnSelect1", (void*)DIYCupOnSelect1, SYM_FUNC },
+    { "DIYCupOnSelect10", (void*)DIYCupOnSelect10, SYM_FUNC },
+    { "DIYCupOnSelect16", (void*)DIYCupOnSelect16, SYM_FUNC },
+    { "DIYCupOnSelect17", (void*)DIYCupOnSelect17, SYM_FUNC },
+    { "DIYCupOnSelect3", (void*)DIYCupOnSelect3, SYM_FUNC },
+    { "DIYCupOnSelect4", (void*)DIYCupOnSelect4, SYM_FUNC },
+    { "DIYCupOnSelect5", (void*)DIYCupOnSelect5, SYM_FUNC },
+    { "DIYCupOnSelect6", (void*)DIYCupOnSelect6, SYM_FUNC },
+    { "DIYCupOnSelect7", (void*)DIYCupOnSelect7, SYM_FUNC },
+    { "DIYCupOnSelect8", (void*)DIYCupOnSelect8, SYM_FUNC },
+    { "DIYCupOnSelect9", (void*)DIYCupOnSelect9, SYM_FUNC },
+    { "DIYLeagueChangePitchTypeOrSeason", (void*)DIYLeagueChangePitchTypeOrSeason, SYM_FUNC },
+    { "DIYLeagueTournament16BeforeDraw", (void*)DIYLeagueTournament16BeforeDraw, SYM_FUNC },
+    { "DIYLeagueTournamentExit", (void*)DIYLeagueTournamentExit, SYM_FUNC },
+    { "DIYLeagueTournamentInit", (void*)DIYLeagueTournamentInit, SYM_FUNC },
+    { "DIYLeagueTournamentMatch", (void*)DIYLeagueTournamentMatch, SYM_FUNC },
+    { "DIYLeagueTournamentNextMatch", (void*)DIYLeagueTournamentNextMatch, SYM_FUNC },
+    { "DIYLeagueTournamentOnRestore", (void*)DIYLeagueTournamentOnRestore, SYM_FUNC },
+    { "DIYLeagueTournamentOnSelect4", (void*)DIYLeagueTournamentOnSelect4, SYM_FUNC },
+    { "DIYLeagueTournamentResult", (void*)DIYLeagueTournamentResult, SYM_FUNC },
+    { "DIYLeagueTournamentScrollDown", (void*)DIYLeagueTournamentScrollDown, SYM_FUNC },
+    { "DIYLeagueTournamentScrollUp", (void*)DIYLeagueTournamentScrollUp, SYM_FUNC },
+    { "DIYLeagueTournamentStats", (void*)DIYLeagueTournamentStats, SYM_FUNC },
+    { "DIYLeagueTournamentViewHighlights", (void*)DIYLeagueTournamentViewHighlights, SYM_FUNC },
+    { "DIYLeagueTournamentViewMatch", (void*)DIYLeagueTournamentViewMatch, SYM_FUNC },
+    { "DIYLeagueTournamentViewResult", (void*)DIYLeagueTournamentViewResult, SYM_FUNC },
+    { "DesignDIYCupInit", (void*)DesignDIYCupInit, SYM_FUNC },
+    { "DesignDIYCupOK", (void*)DesignDIYCupOK, SYM_FUNC },
+    { "DesignDIYCupOnDraw", (void*)DesignDIYCupOnDraw, SYM_FUNC },
+    { "DesignDIYCupOnSelect11", (void*)DesignDIYCupOnSelect11, SYM_FUNC },
+    { "DesignDIYCupOnSelect13", (void*)DesignDIYCupOnSelect13, SYM_FUNC },
+    { "DesignDIYCupOnSelect15", (void*)DesignDIYCupOnSelect15, SYM_FUNC },
+    { "DesignDIYCupOnSelect2", (void*)DesignDIYCupOnSelect2, SYM_FUNC },
+    { "DesignDIYCupOnSelect20", (void*)DesignDIYCupOnSelect20, SYM_FUNC },
+    { "DesignDIYCupOnSelect21", (void*)DesignDIYCupOnSelect21, SYM_FUNC },
+    { "DesignDIYCupOnSelect22", (void*)DesignDIYCupOnSelect22, SYM_FUNC },
+    { "DesignDIYCupOnSelect3", (void*)DesignDIYCupOnSelect3, SYM_FUNC },
+    { "DesignDIYCupOnSelect4", (void*)DesignDIYCupOnSelect4, SYM_FUNC },
+    { "DesignDIYCupOnSelect48", (void*)DesignDIYCupOnSelect48, SYM_FUNC },
+    { "DesignDIYCupOnSelect5", (void*)DesignDIYCupOnSelect5, SYM_FUNC },
+    { "DesignDIYCupOnSelect7", (void*)DesignDIYCupOnSelect7, SYM_FUNC },
+    { "DesignDIYCupOnSelect9", (void*)DesignDIYCupOnSelect9, SYM_FUNC },
+    { "DesignDIYCupReinit", (void*)DesignDIYCupReinit, SYM_FUNC },
+    { "DesignDIYLeagueChangeEndMonth", (void*)DesignDIYLeagueChangeEndMonth, SYM_FUNC },
+    { "DesignDIYLeagueChangeMaxSubstitutes", (void*)DesignDIYLeagueChangeMaxSubstitutes, SYM_FUNC },
+    { "DesignDIYLeagueChangeMinSubstitutes", (void*)DesignDIYLeagueChangeMinSubstitutes, SYM_FUNC },
+    { "DesignDIYLeagueChangeNumPointsForWin", (void*)DesignDIYLeagueChangeNumPointsForWin, SYM_FUNC },
+    { "DesignDIYLeagueChangeNumberOfTeams", (void*)DesignDIYLeagueChangeNumberOfTeams, SYM_FUNC },
+    { "DesignDIYLeagueChangePitchType", (void*)DesignDIYLeagueChangePitchType, SYM_FUNC },
+    { "DesignDIYLeagueChangePlayEachTeam", (void*)DesignDIYLeagueChangePlayEachTeam, SYM_FUNC },
+    { "DesignDIYLeagueChangeStartMonth", (void*)DesignDIYLeagueChangeStartMonth, SYM_FUNC },
+    { "DesignDIYLeagueChooseTeams", (void*)DesignDIYLeagueChooseTeams, SYM_FUNC },
+    { "DesignDIYLeagueFinish", (void*)DesignDIYLeagueFinish, SYM_FUNC },
+    { "DesignDIYLeagueInit", (void*)DesignDIYLeagueInit, SYM_FUNC },
+    { "DesignDIYLeagueOK", (void*)DesignDIYLeagueOK, SYM_FUNC },
+    { "DesignDIYLeagueSetName", (void*)DesignDIYLeagueSetName, SYM_FUNC },
+    { "DesignDIYTournamentInit", (void*)DesignDIYTournamentInit, SYM_FUNC },
+    { "DesignDIYTournamentOK", (void*)DesignDIYTournamentOK, SYM_FUNC },
+    { "DesignDIYTournamentOnDraw", (void*)DesignDIYTournamentOnDraw, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect11", (void*)DesignDIYTournamentOnSelect11, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect13", (void*)DesignDIYTournamentOnSelect13, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect2", (void*)DesignDIYTournamentOnSelect2, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect20", (void*)DesignDIYTournamentOnSelect20, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect21", (void*)DesignDIYTournamentOnSelect21, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect23", (void*)DesignDIYTournamentOnSelect23, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect24", (void*)DesignDIYTournamentOnSelect24, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect25", (void*)DesignDIYTournamentOnSelect25, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect26", (void*)DesignDIYTournamentOnSelect26, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect28", (void*)DesignDIYTournamentOnSelect28, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect3", (void*)DesignDIYTournamentOnSelect3, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect4", (void*)DesignDIYTournamentOnSelect4, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect5", (void*)DesignDIYTournamentOnSelect5, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect7", (void*)DesignDIYTournamentOnSelect7, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect89", (void*)DesignDIYTournamentOnSelect89, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect9", (void*)DesignDIYTournamentOnSelect9, SYM_FUNC },
+    { "DesignDIYTournamentOnSelect91", (void*)DesignDIYTournamentOnSelect91, SYM_FUNC },
+    { "DesignDIYTournamentReinit", (void*)DesignDIYTournamentReinit, SYM_FUNC },
+    { "DesignDIYTournament_AdjustStageQualifiers", (void*)DesignDIYTournament_AdjustStageQualifiers, SYM_FUNC },
+    { "DrawPlayerEntries", (void*)DrawPlayerEntries, SYM_FUNC },
+    { "EditCustomTeamMenu", (void*)EditCustomTeamMenu, SYM_FUNC },
+    { "EditTacicsMovePlayersOrBall", (void*)EditTacicsMovePlayersOrBall, SYM_FUNC },
+    { "EditTactics28AfterDraw", (void*)EditTactics28AfterDraw, SYM_FUNC },
+    { "EditTactics2AfterDraw", (void*)EditTactics2AfterDraw, SYM_FUNC },
+    { "EditTacticsAfterDrawPlayerFace", (void*)EditTacticsAfterDrawPlayerFace, SYM_FUNC },
+    { "EditTacticsAfterDrawPlayerNames", (void*)EditTacticsAfterDrawPlayerNames, SYM_FUNC },
+    { "EditTacticsCommon", (void*)EditTacticsCommon, SYM_FUNC },
+    { "EditTacticsInPlayMatchMenu", (void*)EditTacticsInPlayMatchMenu, SYM_FUNC },
+    { "EditTacticsInit", (void*)EditTacticsInit, SYM_FUNC },
+    { "EditTacticsMenu", (void*)EditTacticsMenu, SYM_FUNC },
+    { "EditTacticsOnRestore", (void*)EditTacticsOnRestore, SYM_FUNC },
+    { "EditTacticsOnSelect28", (void*)EditTacticsOnSelect28, SYM_FUNC },
+    { "EditTacticsPlayerNamesCommon", (void*)EditTacticsPlayerNamesCommon, SYM_FUNC },
+    { "EditTeamsChangePlayerFace", (void*)EditTeamsChangePlayerFace, SYM_FUNC },
+    { "EditTeamsChangePlayerName", (void*)EditTeamsChangePlayerName, SYM_FUNC },
+    { "EditTeamsChangeShirtsPrimary", (void*)EditTeamsChangeShirtsPrimary, SYM_FUNC },
+    { "EditTeamsChangeShirtsSecondary", (void*)EditTeamsChangeShirtsSecondary, SYM_FUNC },
+    { "EditTeamsChangeShortsPrimary", (void*)EditTeamsChangeShortsPrimary, SYM_FUNC },
+    { "EditTeamsChangeShortsSecondary", (void*)EditTeamsChangeShortsSecondary, SYM_FUNC },
+    { "EditTeamsChangeSocksPrimary", (void*)EditTeamsChangeSocksPrimary, SYM_FUNC },
+    { "EditTeamsChangeSocksSecondary", (void*)EditTeamsChangeSocksSecondary, SYM_FUNC },
+    { "EditTeamsFinish", (void*)EditTeamsFinish, SYM_FUNC },
+    { "EditTeamsInit", (void*)EditTeamsInit, SYM_FUNC },
+    { "EditTeamsOK", (void*)EditTeamsOK, SYM_FUNC },
+    { "EditTeamsPlayersBeforeDraw", (void*)EditTeamsPlayersBeforeDraw, SYM_FUNC },
+    { "EditTeamsSelectCoachName", (void*)EditTeamsSelectCoachName, SYM_FUNC },
+    { "EditTeamsSelectPrimaryShirtType", (void*)EditTeamsSelectPrimaryShirtType, SYM_FUNC },
+    { "EditTeamsSelectSecondaryShirtType", (void*)EditTeamsSelectSecondaryShirtType, SYM_FUNC },
+    { "EditTeamsSelectTeamName", (void*)EditTeamsSelectTeamName, SYM_FUNC },
+    { "EditTeamsUndo", (void*)EditTeamsUndo, SYM_FUNC },
+    { "EditedCustomTeams", (void*)EditedCustomTeams, SYM_FUNC },
+    { "ExitCareerMenu", (void*)ExitCareerMenu, SYM_FUNC },
+    { "ExitChooseTacticsMenu", (void*)ExitChooseTacticsMenu, SYM_FUNC },
+    { "ExitChooseTeams", (void*)ExitChooseTeams, SYM_FUNC },
+    { "ExitChooseTeams2", (void*)ExitChooseTeams2, SYM_FUNC },
+    { "ExitHighlights", (void*)ExitHighlights, SYM_FUNC },
+    { "ExitImportTactics", (void*)ExitImportTactics, SYM_FUNC },
+    { "ExitOptions", (void*)ExitOptions, SYM_FUNC },
+    { "ExitPlayMatch", (void*)ExitPlayMatch, SYM_FUNC },
+    { "ExitPlayerMarketMenu", (void*)ExitPlayerMarketMenu, SYM_FUNC },
+    { "ExitSelectTeams", (void*)ExitSelectTeams, SYM_FUNC },
+    { "FillManagementRecordInfo", (void*)FillManagementRecordInfo, SYM_FUNC },
+    { "FlipOnOff", (void*)FlipOnOff, SYM_FUNC },
+    { "FriendlyMenu", (void*)FriendlyMenu, SYM_FUNC },
+    { "FriendlyMenuInit", (void*)FriendlyMenuInit, SYM_FUNC },
+    { "FriendlyMenuReinit", (void*)FriendlyMenuReinit, SYM_FUNC },
+    { "FriendlyOK", (void*)FriendlyOK, SYM_FUNC },
+    { "FriendlyPitchTypeProc", (void*)FriendlyPitchTypeProc, SYM_FUNC },
+    { "GiveFreeTransfer", (void*)GiveFreeTransfer, SYM_FUNC },
+    { "GlobalRetn", (void*)GlobalRetn, SYM_FUNC },
+    { "GotJobOfferFinish", (void*)GotJobOfferFinish, SYM_FUNC },
+    { "GotJobOfferInit", (void*)GotJobOfferInit, SYM_FUNC },
+    { "HighlightsMenu", (void*)HighlightsMenu, SYM_FUNC },
+    { "HighlightsMenuInit", (void*)HighlightsMenuInit, SYM_FUNC },
+    { "HighlightsMenuOnReturn", (void*)HighlightsMenuOnReturn, SYM_FUNC },
+    { "ImportTactics", (void*)ImportTactics, SYM_FUNC },
+    { "ImportTacticsInit", (void*)ImportTacticsInit, SYM_FUNC },
+    { "ImportTacticsSelectTactics", (void*)ImportTacticsSelectTactics, SYM_FUNC },
+    { "ImportTeamsMenu", (void*)ImportTeamsMenu, SYM_FUNC },
+    { "JmpShowHighlights", (void*)JmpShowHighlights, SYM_FUNC },
+    { "JobOffersAfterDrawCommon", (void*)JobOffersAfterDrawCommon, SYM_FUNC },
+    { "JobOffersCommon", (void*)JobOffersCommon, SYM_FUNC },
+    { "JobOffersExit", (void*)JobOffersExit, SYM_FUNC },
+    { "JobOffersFinish", (void*)JobOffersFinish, SYM_FUNC },
+    { "JobOffersInit", (void*)JobOffersInit, SYM_FUNC },
+    { "JobOffersMenu", (void*)JobOffersMenu, SYM_FUNC },
+    { "JobOffersMenuRetired", (void*)JobOffersMenuRetired, SYM_FUNC },
+    { "JobOffers_DrawOldOfferLine", (void*)JobOffers_DrawOldOfferLine, SYM_FUNC },
+    { "LoadHighlightsMenu", (void*)LoadHighlightsMenu, SYM_FUNC },
+    { "LoadLiverpool", (void*)LoadLiverpool, SYM_FUNC },
+    { "LoadOldCompetitionMenu", (void*)LoadOldCompetitionMenu, SYM_FUNC },
+    { "LoadTactics", (void*)LoadTactics, SYM_FUNC },
+    { "ManagementArrowDownSelect", (void*)ManagementArrowDownSelect, SYM_FUNC },
+    { "ManagementArrowUpSelect", (void*)ManagementArrowUpSelect, SYM_FUNC },
+    { "ManagementRecordInit", (void*)ManagementRecordInit, SYM_FUNC },
+    { "ManagementRecordMenu", (void*)ManagementRecordMenu, SYM_FUNC },
+    { "MaxSubstitutes", (void*)MaxSubstitutes, SYM_FUNC },
+    { "MinSubstitutes", (void*)MinSubstitutes, SYM_FUNC },
+    { "NationalTeamAddPlayer", (void*)NationalTeamAddPlayer, SYM_FUNC },
+    { "NationalTeamAddPlayerAbroadOnSelect", (void*)NationalTeamAddPlayerAbroadOnSelect, SYM_FUNC },
+    { "NationalTeamAddPlayerExit", (void*)NationalTeamAddPlayerExit, SYM_FUNC },
+    { "NationalTeamAddPlayerHomeOnSelect", (void*)NationalTeamAddPlayerHomeOnSelect, SYM_FUNC },
+    { "NationalTeamAddPlayerInit", (void*)NationalTeamAddPlayerInit, SYM_FUNC },
+    { "NationalTeamRemovePlayers", (void*)NationalTeamRemovePlayers, SYM_FUNC },
+    { "NationalTeams", (void*)NationalTeams, SYM_FUNC },
+    { "NextMatch", (void*)NextMatch, SYM_FUNC },
+    { "OffersAfterDrawCommon", (void*)OffersAfterDrawCommon, SYM_FUNC },
+    { "OffersCommon", (void*)OffersCommon, SYM_FUNC },
+    { "OffersInit", (void*)OffersInit, SYM_FUNC },
+    { "OldJobOffersCommon", (void*)OldJobOffersCommon, SYM_FUNC },
+    { "OnSwapPlayer", (void*)OnSwapPlayer, SYM_FUNC },
+    { "OpenDiyFromFile", (void*)OpenDiyFromFile, SYM_FUNC },
+    { "OpenDiyPreset1", (void*)OpenDiyPreset1, SYM_FUNC },
+    { "OpenDiyPreset2", (void*)OpenDiyPreset2, SYM_FUNC },
+    { "OpenDiyPreset3", (void*)OpenDiyPreset3, SYM_FUNC },
+    { "OptionsMenuBeforeDraw", (void*)OptionsMenuBeforeDraw, SYM_FUNC },
+    { "OptionsMenuSelected", (void*)OptionsMenuSelected, SYM_FUNC },
+    { "OriginalCustomTeams", (void*)OriginalCustomTeams, SYM_FUNC },
+    { "PitchTypeOrSeasonProc", (void*)PitchTypeOrSeasonProc, SYM_FUNC },
+    { "PlayMatch30AfterDraw", (void*)PlayMatch30AfterDraw, SYM_FUNC },
+    { "PlayMatchChangeTactics", (void*)PlayMatchChangeTactics, SYM_FUNC },
+    { "PlayMatchMenu", (void*)PlayMatchMenu, SYM_FUNC },
+    { "PlayMatchMenuInit", (void*)PlayMatchMenuInit, SYM_FUNC },
+    { "PlayMatchMenuReinit", (void*)PlayMatchMenuReinit, SYM_FUNC },
+    { "PlayMatchOnSelect30", (void*)PlayMatchOnSelect30, SYM_FUNC },
+    { "PlayMatchSelected", (void*)PlayMatchSelected, SYM_FUNC },
+    { "PlayerMarketFilterAgeGroupOnSelect", (void*)PlayerMarketFilterAgeGroupOnSelect, SYM_FUNC },
+    { "PlayerMarketFilterPositionOnSelect", (void*)PlayerMarketFilterPositionOnSelect, SYM_FUNC },
+    { "PlayerMarketItemBeforeDraw", (void*)PlayerMarketItemBeforeDraw, SYM_FUNC },
+    { "PlayerMarketItemOnSelect", (void*)PlayerMarketItemOnSelect, SYM_FUNC },
+    { "PlayerMarketScrollOnSelect", (void*)PlayerMarketScrollOnSelect, SYM_FUNC },
+    { "PlayerMarketViewSquadOnSelect", (void*)PlayerMarketViewSquadOnSelect, SYM_FUNC },
+    { "PlayerOffersAdjustOfferAmount", (void*)PlayerOffersAdjustOfferAmount, SYM_FUNC },
+    { "PlayerOffersAfterDrawCommon", (void*)PlayerOffersAfterDrawCommon, SYM_FUNC },
+    { "PlayerOffersInit", (void*)PlayerOffersInit, SYM_FUNC },
+    { "PlayerOffersOnSelect10", (void*)PlayerOffersOnSelect10, SYM_FUNC },
+    { "PlayerOffersOnSelect11", (void*)PlayerOffersOnSelect11, SYM_FUNC },
+    { "PlayerOffersOnSelect12", (void*)PlayerOffersOnSelect12, SYM_FUNC },
+    { "PlayerOffersOnSelect13", (void*)PlayerOffersOnSelect13, SYM_FUNC },
+    { "PlayerOffersOnSelect8", (void*)PlayerOffersOnSelect8, SYM_FUNC },
+    { "PresetCompetitionMenu", (void*)PresetCompetitionMenu, SYM_FUNC },
+    { "PutPlayerOnMarketMenu", (void*)PutPlayerOnMarketMenu, SYM_FUNC },
+    { "RejectJobOffer", (void*)RejectJobOffer, SYM_FUNC },
+    { "RejectOffer", (void*)RejectOffer, SYM_FUNC },
+    { "ReturnFromViewOpponent", (void*)ReturnFromViewOpponent, SYM_FUNC },
+    { "SWOSMainMenuInit", (void*)SWOSMainMenuInit, SYM_FUNC },
+    { "SaveAndExitEditTactics", (void*)SaveAndExitEditTactics, SYM_FUNC },
+    { "SaveCareer", (void*)SaveCareer, SYM_FUNC },
+    { "SaveContest", (void*)SaveContest, SYM_FUNC },
+    { "SaveDiskFilingMenu", (void*)SaveDiskFilingMenu, SYM_FUNC },
+    { "SaveHighlightsMenu", (void*)SaveHighlightsMenu, SYM_FUNC },
+    { "SeasonMenu", (void*)SeasonMenu, SYM_FUNC },
+    { "SelFilesDrawItemDescription", (void*)SelFilesDrawItemDescription, SYM_FUNC },
+    { "SelFilesOnSelectCommon", (void*)SelFilesOnSelectCommon, SYM_FUNC },
+    { "SelTeamForTacticsCommon", (void*)SelTeamForTacticsCommon, SYM_FUNC },
+    { "SelTeamForTacticsExit", (void*)SelTeamForTacticsExit, SYM_FUNC },
+    { "SelTeamForTacticsInit", (void*)SelTeamForTacticsInit, SYM_FUNC },
+    { "SelectCopyTactics", (void*)SelectCopyTactics, SYM_FUNC },
+    { "SelectFilenameToSaveAndExit", (void*)SelectFilenameToSaveAndExit, SYM_FUNC },
+    { "SelectFilesInit", (void*)SelectFilesInit, SYM_FUNC },
+    { "SelectFilesInputSaveFilenameOnSelect", (void*)SelectFilesInputSaveFilenameOnSelect, SYM_FUNC },
+    { "SelectFilesOnReturn", (void*)SelectFilesOnReturn, SYM_FUNC },
+    { "SelectGoals", (void*)SelectGoals, SYM_FUNC },
+    { "SelectLeaguesCommon", (void*)SelectLeaguesCommon, SYM_FUNC },
+    { "SelectNationalTeam25AfterDraw", (void*)SelectNationalTeam25AfterDraw, SYM_FUNC },
+    { "SelectNationalTeamAbort", (void*)SelectNationalTeamAbort, SYM_FUNC },
+    { "SelectNationalTeamAfterDrawCommon", (void*)SelectNationalTeamAfterDrawCommon, SYM_FUNC },
+    { "SelectNationalTeamCommon", (void*)SelectNationalTeamCommon, SYM_FUNC },
+    { "SelectNationalTeamExit", (void*)SelectNationalTeamExit, SYM_FUNC },
+    { "SelectNationalTeamFinish", (void*)SelectNationalTeamFinish, SYM_FUNC },
+    { "SelectNationalTeamInit", (void*)SelectNationalTeamInit, SYM_FUNC },
+    { "SelectNationalTeamOnSelect25", (void*)SelectNationalTeamOnSelect25, SYM_FUNC },
+    { "SelectTeamsCommon", (void*)SelectTeamsCommon, SYM_FUNC },
+    { "SelectTeamsInit", (void*)SelectTeamsInit, SYM_FUNC },
+    { "SelectTeamsReinit", (void*)SelectTeamsReinit, SYM_FUNC },
+    { "SelectTraining", (void*)SelectTraining, SYM_FUNC },
+    { "SetName", (void*)SetName, SYM_FUNC },
+    { "SetSurname", (void*)SetSurname, SYM_FUNC },
+    { "ShowPlayerMarket", (void*)ShowPlayerMarket, SYM_FUNC },
+    { "ShowPlayerMarketInit", (void*)ShowPlayerMarketInit, SYM_FUNC },
+    { "ShowStadiumInit", (void*)ShowStadiumInit, SYM_FUNC },
+    { "Squad45AfterDraw", (void*)Squad45AfterDraw, SYM_FUNC },
+    { "SquadAfterDrawCommon", (void*)SquadAfterDrawCommon, SYM_FUNC },
+    { "SquadCommon", (void*)SquadCommon, SYM_FUNC },
+    { "SquadFinish", (void*)SquadFinish, SYM_FUNC },
+    { "SquadInit", (void*)SquadInit, SYM_FUNC },
+    { "SquadMenu", (void*)SquadMenu, SYM_FUNC },
+    { "SquadOnSelect11", (void*)SquadOnSelect11, SYM_FUNC },
+    { "SquadOnSelect45", (void*)SquadOnSelect45, SYM_FUNC },
+    { "StadiumBeforeDrawLeftTeam", (void*)StadiumBeforeDrawLeftTeam, SYM_FUNC },
+    { "StadiumBeforeDrawRightTeam", (void*)StadiumBeforeDrawRightTeam, SYM_FUNC },
+    { "StartContest", (void*)StartContest, SYM_FUNC },
+    { "StatsExit", (void*)StatsExit, SYM_FUNC },
+    { "StatsHighestScorerList", (void*)StatsHighestScorerList, SYM_FUNC },
+    { "StatsViewSquads", (void*)StatsViewSquads, SYM_FUNC },
+    { "TakeOffMarketMenu", (void*)TakeOffMarketMenu, SYM_FUNC },
+    { "ThirdPartyOfferMenuAfterDrawCommon", (void*)ThirdPartyOfferMenuAfterDrawCommon, SYM_FUNC },
+    { "ThirdPartyOfferMenuExit", (void*)ThirdPartyOfferMenuExit, SYM_FUNC },
+    { "ThirdPartyOfferMenuInit", (void*)ThirdPartyOfferMenuInit, SYM_FUNC },
+    { "ThirdPartyOfferViewSquad", (void*)ThirdPartyOfferViewSquad, SYM_FUNC },
+    { "TogglePlayerCoach", (void*)TogglePlayerCoach, SYM_FUNC },
+    { "TopGoalScorersBeforeDrawCommon", (void*)TopGoalScorersBeforeDrawCommon, SYM_FUNC },
+    { "TopGoalScorersExit", (void*)TopGoalScorersExit, SYM_FUNC },
+    { "TopGoalScorersInit", (void*)TopGoalScorersInit, SYM_FUNC },
+    { "TopGoalScorersMenu", (void*)TopGoalScorersMenu, SYM_FUNC },
+    { "TransferMarketAfterDrawCommon", (void*)TransferMarketAfterDrawCommon, SYM_FUNC },
+    { "TransferMarketCommon", (void*)TransferMarketCommon, SYM_FUNC },
+    { "TransferMarketFinish", (void*)TransferMarketFinish, SYM_FUNC },
+    { "TransferMarketInit", (void*)TransferMarketInit, SYM_FUNC },
+    { "TransferPlayerAfterDrawCommon", (void*)TransferPlayerAfterDrawCommon, SYM_FUNC },
+    { "TransferPlayerInit", (void*)TransferPlayerInit, SYM_FUNC },
+    { "TransferPlayerOnSelect10", (void*)TransferPlayerOnSelect10, SYM_FUNC },
+    { "TransferPlayerOnSelect11", (void*)TransferPlayerOnSelect11, SYM_FUNC },
+    { "TransferPlayerOnSelect12", (void*)TransferPlayerOnSelect12, SYM_FUNC },
+    { "TransfersMenu", (void*)TransfersMenu, SYM_FUNC },
+    { "UndoTactics", (void*)UndoTactics, SYM_FUNC },
+    { "UseMatchTeamSelect", (void*)UseMatchTeamSelect, SYM_FUNC },
+    { "User_A_Tactics", (void*)User_A_Tactics, SYM_FUNC },
+    { "User_B_Tactics", (void*)User_B_Tactics, SYM_FUNC },
+    { "User_C_Tactics", (void*)User_C_Tactics, SYM_FUNC },
+    { "User_D_Tactics", (void*)User_D_Tactics, SYM_FUNC },
+    { "User_E_Tactics", (void*)User_E_Tactics, SYM_FUNC },
+    { "User_F_Tactics", (void*)User_F_Tactics, SYM_FUNC },
+    { "ViewCompetitionsInit", (void*)ViewCompetitionsInit, SYM_FUNC },
+    { "ViewCompetitionsMenu", (void*)ViewCompetitionsMenu, SYM_FUNC },
+    { "ViewCompetitionsMenuRetired", (void*)ViewCompetitionsMenuRetired, SYM_FUNC },
+    { "ViewCompetitionsOnReturn", (void*)ViewCompetitionsOnReturn, SYM_FUNC },
+    { "ViewDomesticPlayerMarket", (void*)ViewDomesticPlayerMarket, SYM_FUNC },
+    { "ViewForeignPlayerMarket", (void*)ViewForeignPlayerMarket, SYM_FUNC },
+    { "ViewFutureTeam", (void*)ViewFutureTeam, SYM_FUNC },
+    { "ViewFutureTeamLeague", (void*)ViewFutureTeamLeague, SYM_FUNC },
+    { "ViewOffersMenu", (void*)ViewOffersMenu, SYM_FUNC },
+    { "ViewOpponentsSelect", (void*)ViewOpponentsSelect, SYM_FUNC },
+    { "ViewSelected", (void*)ViewSelected, SYM_FUNC },
+    { "ViewSelectedTeams", (void*)ViewSelectedTeams, SYM_FUNC },
+    { "ViewSquad21AfterDraw", (void*)ViewSquad21AfterDraw, SYM_FUNC },
+    { "ViewSquadAfterDrawCommon", (void*)ViewSquadAfterDrawCommon, SYM_FUNC },
+    { "ViewSquadCommon", (void*)ViewSquadCommon, SYM_FUNC },
+    { "ViewSquadExitContinue", (void*)ViewSquadExitContinue, SYM_FUNC },
+    { "ViewSquadInit", (void*)ViewSquadInit, SYM_FUNC },
+    { "ViewSquadOnSelect21", (void*)ViewSquadOnSelect21, SYM_FUNC },
+    { "ViewWorldMenu", (void*)ViewWorldMenu, SYM_FUNC },
+    { "j_SetExitMenuFlag", (void*)j_SetExitMenuFlag, SYM_FUNC },
+    { "j_SetExitMenuFlag13", (void*)j_SetExitMenuFlag13, SYM_FUNC },
+    { "j_SetExitMenuFlag2", (void*)j_SetExitMenuFlag2, SYM_FUNC },
+    { "j_SetExitMenuFlag_10", (void*)j_SetExitMenuFlag_10, SYM_FUNC },
+    { "j_SetExitMenuFlag_11", (void*)j_SetExitMenuFlag_11, SYM_FUNC },
+    { "j_SetExitMenuFlag_14", (void*)j_SetExitMenuFlag_14, SYM_FUNC },
+    { "jmpSetExitMenuFlag", (void*)jmpSetExitMenuFlag, SYM_FUNC },
+    { "jmp_SetExitMenuFlag", (void*)jmp_SetExitMenuFlag, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_2", (void*)jmp_SetExitMenuFlag_2, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_3", (void*)jmp_SetExitMenuFlag_3, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_4", (void*)jmp_SetExitMenuFlag_4, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_5", (void*)jmp_SetExitMenuFlag_5, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_6", (void*)jmp_SetExitMenuFlag_6, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_7", (void*)jmp_SetExitMenuFlag_7, SYM_FUNC },
+    { "jmp_SetExitMenuFlag_8", (void*)jmp_SetExitMenuFlag_8, SYM_FUNC },
+    { "locret_139AE2", (void*)locret_139AE2, SYM_FUNC },
     { "a343", (void*)a343, SYM_STRING },
     { "a352", (void*)a352, SYM_STRING },
     { "a424", (void*)a424, SYM_STRING },

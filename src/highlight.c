@@ -78,16 +78,16 @@ extern uint16_t hilRightTeamGoals;
 extern uint16_t paused;
 
 /* ---- External functions ---- */
-extern uint16_t _Rand(void);
-extern void _FadeOutToBlack(void);
-extern void _FadeIn(void);
-extern void _SetCameraCoordinates(int16_t targetX, int16_t targetY);
-extern void _InitCameraMoveView(int16_t targetX, int16_t targetY);
-extern void _SwapBuffersAndCameraViewState(void);
-extern void _MoveView(int16_t newScreenX, int16_t newScreenY);
-extern void _DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
-extern void _ResetAnimatedPatternsForBothTeams(void);
-extern void _DrawAnimatedPatterns(void);
+extern uint16_t Rand(void);
+extern void FadeOutToBlack(void);
+extern void FadeIn(void);
+extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
+extern void InitCameraMoveView(int16_t targetX, int16_t targetY);
+extern void SwapBuffersAndCameraViewState(void);
+extern void MoveView(int16_t newScreenX, int16_t newScreenY);
+extern void DarkenRectangle(uint16_t sprIdx, uint16_t x, uint16_t y);
+extern void ResetAnimatedPatternsForBothTeams(void);
+extern void DrawAnimatedPatterns(void);
 extern uint16_t panicReasonCode;
 
 /* ---- Local probability tables (matching asm data) ---- */
@@ -150,10 +150,10 @@ static uint8_t *wrapHilPtr(uint8_t *p)
 }
 
 /* ============================================================
- * _SetPitchTypeAndNumber
+ * SetPitchTypeAndNumber
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _SetPitchTypeAndNumber(void)
+void SetPitchTypeAndNumber(void)
 {
     numScenesInHilFile = 0;
 
@@ -177,7 +177,7 @@ void _SetPitchTypeAndNumber(void)
 
     if (needChoose) {
         /* Random selection based on cumulative probabilities */
-        uint16_t r = _Rand();
+        uint16_t r = Rand();
         uint8_t d0 = (uint8_t)((uint32_t)r * 100 / 256);
         pitchType = 0;
         while (d0 >= *probs) {
@@ -191,7 +191,7 @@ void _SetPitchTypeAndNumber(void)
      * that get immediately overwritten in both branches. Omitted. */
     uint16_t pitchNum;
     if (plgD0Param != 0) {
-        pitchNum = _Rand() & 0xF;
+        pitchNum = Rand() & 0xF;
     } else {
         /* Derive from team data */
         uint16_t v = *(uint16_t *)topTeamInGame.teamName;
@@ -214,10 +214,10 @@ void _SetPitchTypeAndNumber(void)
 }
 
 /* ============================================================
- * _CopyTeamsAndHeader
+ * CopyTeamsAndHeader
  * ============================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _CopyTeamsAndHeader(void)
+void CopyTeamsAndHeader(void)
 {
     numScenesInHilFile = hilNumGoals;
     pitchNumberAndType = hilPitchNumber;
@@ -254,10 +254,10 @@ void _CopyTeamsAndHeader(void)
 }
 
 /* ============================================================
- * _SetHilFileHeader
+ * SetHilFileHeader
  * ============================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _SetHilFileHeader(void)
+void SetHilFileHeader(void)
 {
     /* HIL header is big-endian on disk to match Amiga m68k. BE_WRITE_U32
      * is a no-op on Amiga BE host, byteswap on x86 LE — so saves from the
@@ -299,10 +299,10 @@ void _SetHilFileHeader(void)
 }
 
 /* ============================================================
- * _SaveHighlightsPointers
+ * SaveHighlightsPointers
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _SaveHighlightsPointers(void)
+void SaveHighlightsPointers(void)
 {
     if (numScenesInHilFile == 0)
         return;
@@ -317,10 +317,10 @@ void _SaveHighlightsPointers(void)
 }
 
 /* ============================================================
- * _RestoreHighlightPointers
+ * RestoreHighlightPointers
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _RestoreHighlightPointers(void)
+void RestoreHighlightPointers(void)
 {
     normalReplayRunning = 0;
     goalBasePtr = (uint8_t *)savedGoalBasePtr;
@@ -331,24 +331,24 @@ void _RestoreHighlightPointers(void)
 }
 
 /* ============================================================
- * _FadeAndSaveHighlightScene
+ * FadeAndSaveHighlightScene
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _FadeAndSaveHighlightScene(void)
+void FadeAndSaveHighlightScene(void)
 {
-    _FadeOutToBlack();
-    _SaveHighlightScene();
-    _FadeIn();
+    FadeOutToBlack();
+    SaveHighlightScene();
+    FadeIn();
 }
 
 /* ============================================================
- * _SaveHighlightScene
+ * SaveHighlightScene
  * Saves current replay ring buffer segment to the hil goals buffer.
  * Maximum HIL_MAX_SCENES scenes. If buffer is full, shifts scenes
  * 1..9 down to 0..8, freeing the last slot.
  * ============================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _SaveHighlightScene(void)
+void SaveHighlightScene(void)
 {
     /* Asm: move.w #10,d0; beq locret — the beq is dead (10 != 0). Omitted. */
 
@@ -396,19 +396,19 @@ void _SaveHighlightScene(void)
 }
 
 /* ============================================================
- * _ThrowInDeadProc
+ * ThrowInDeadProc
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _ThrowInDeadProc(void)
+void ThrowInDeadProc(void)
 {
     throwInDeadVar = 1;
 }
 
 /* ============================================================
- * _SaveCoordinatesForHighlights
+ * SaveCoordinatesForHighlights
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y)
+void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y)
 {
     uint8_t *a1 = currentHilPtr;
 
@@ -443,8 +443,8 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
      * the original Amiga byte format exactly — on Amiga m68k the BE_WRITE
      * macros are no-ops so this is identical to the prior asm-to-C port,
      * and on x86 LE the byte-swap puts the 0x80 marker byte at offset 0
-     * where _HandleInstantReplayStateSwitch's `*p & 0x80` scan and
-     * _DrawReplayFrame's BE-uint32 bit-31 test both detect it. */
+     * where HandleInstantReplayStateSwitch's `*p & 0x80` scan and
+     * DrawReplayFrame's BE-uint32 bit-31 test both detect it. */
     BE_WRITE_U16(a1,     (uint16_t)x | 0x8000u);
     BE_WRITE_U16(a1 + 2, (uint16_t)y);
     a1 += 4;
@@ -469,7 +469,7 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
 }
 
 /* ============================================================
- * _DrawReplayFrame
+ * DrawReplayFrame
  * Complex replay frame playback state machine.
  * Goto labels map 1:1 to asm labels:
  *   sprite_decode  = loc_10C494
@@ -478,7 +478,7 @@ void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint
  *   after_decode   = loc_10C4E2
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _DrawReplayFrame(void)
+void DrawReplayFrame(void)
 {
     uint8_t *a0 = currentGoalPtr;
     uint32_t d0;
@@ -495,8 +495,8 @@ void _DrawReplayFrame(void)
         uint32_t val = BE_READ_U32(a0);
         val &= ~(1u << 31);  /* bclr #31 */
 
-        _ResetAnimatedPatternsForBothTeams();
-        _ReplayUpdateCameraAndSwapBuffers((int16_t)(val >> 16),
+        ResetAnimatedPatternsForBothTeams();
+        ReplayUpdateCameraAndSwapBuffers((int16_t)(val >> 16),
                                           (int16_t)(val & 0xFFFF));
     }
 
@@ -509,7 +509,7 @@ void _DrawReplayFrame(void)
     /* Frame-start marker processing */
     a0 = wrapPointerFwd(a0);
     d0 &= ~(1u << 31);
-    _MoveView((int16_t)(d0 >> 16), (int16_t)(d0 & 0xFFFF));
+    MoveView((int16_t)(d0 >> 16), (int16_t)(d0 & 0xFFFF));
 
     /* Read team goals */
     hilLeftTeamGoals = BE_READ_U16(a0);
@@ -523,7 +523,7 @@ void _DrawReplayFrame(void)
     a0 += 4;
     a0 = wrapPointerFwd(a0);
 
-    _DrawAnimatedPatterns();
+    DrawAnimatedPatterns();
 
     /* Read next entry after frame marker */
     d0 = BE_READ_U32(a0);
@@ -542,7 +542,7 @@ sprite_decode:
         int32_t sx = (int32_t)(d0 << 12) >> 22;
         int32_t sy = (int32_t)(d0 << 22) >> 22;
         uint32_t sprIdx = d0 >> 20;
-        _DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
+        DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
     }
 
@@ -576,7 +576,7 @@ after_decode:
      * tracks the centred HUD in widescreen instead of sitting at the screen's left edge. */
     if (normalReplayRunning == 0) {
         uint16_t frame = (currentGameTick >> 1) & 0x1F;
-        _DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB + WIDE_MARGIN, 0xE);
+        DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB + WIDE_MARGIN, 0xE);
     }
 
     /* Show score overlay during normal replay (same playfield-relative offset). */
@@ -590,15 +590,15 @@ after_decode:
         uint16_t units = leftGoals % 10;
 
         if (tens != 0) {
-            _DarkenRectangle(SPR_BIG_0 + tens, bx, by);
+            DarkenRectangle(SPR_BIG_0 + tens, bx, by);
             bx += 12;
         }
-        _DarkenRectangle(SPR_BIG_0 + units, bx, by);
+        DarkenRectangle(SPR_BIG_0 + units, bx, by);
         bx += 15;
         by += 8;
 
         /* Dash separator (sprite 0xC3 = 195) */
-        _DarkenRectangle(0xC3, bx, by);
+        DarkenRectangle(0xC3, bx, by);
         by -= 8;
         bx += 8;
 
@@ -608,10 +608,10 @@ after_decode:
         units = rightGoals % 10;
 
         if (tens != 0) {
-            _DarkenRectangle(SPR_BIG_0_ALT + tens, bx, by);
+            DarkenRectangle(SPR_BIG_0_ALT + tens, bx, by);
             bx += 12;
         }
-        _DarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
+        DarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
     }
 
     /* State 3 timing: stretch each replay frame across 2 extra ticks
@@ -642,27 +642,27 @@ after_decode:
 }
 
 /* ============================================================
- * _ReplayUpdateCameraAndSwapBuffers
+ * ReplayUpdateCameraAndSwapBuffers
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
+void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
 {
-    _SetCameraCoordinates(targetX, targetY);
-    _InitCameraMoveView(targetX, targetY);
-    _SwapBuffersAndCameraViewState();
-    _InitCameraMoveView(targetX, targetY);
+    SetCameraCoordinates(targetX, targetY);
+    InitCameraMoveView(targetX, targetY);
+    SwapBuffersAndCameraViewState();
+    InitCameraMoveView(targetX, targetY);
 }
 
 /* ============================================================
- * _HandleInstantReplayStateSwitch
+ * HandleInstantReplayStateSwitch
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _HandleInstantReplayStateSwitch(void)
+void HandleInstantReplayStateSwitch(void)
 {
     if (replayState == 0) {
         /* Search for frame-start marker in ring buffer.
          * Entries are stored big-endian (see frame-marker write in
-         * _SaveCoordinatesForHighlights), so the high byte of the uint32
+         * SaveCoordinatesForHighlights), so the high byte of the uint32
          * — which carries bit 31 — sits at byte offset 0 regardless of
          * host endian. `*p & 0x80` therefore detects the marker on both
          * BE (Amiga) and LE (SDL) hosts. */
@@ -696,14 +696,14 @@ void _HandleInstantReplayStateSwitch(void)
 }
 
 /* ============================================================
- * _RestoreCameraPosition
+ * RestoreCameraPosition
  * ============================================================ */
 __attribute__((used, externally_visible))
-void _RestoreCameraPosition(void)
+void RestoreCameraPosition(void)
 {
     replayState = 0;
     int16_t x = savedCameraX;
     int16_t y = savedCameraY;
-    _ResetAnimatedPatternsForBothTeams();
-    _ReplayUpdateCameraAndSwapBuffers(x, y);
+    ResetAnimatedPatternsForBothTeams();
+    ReplayUpdateCameraAndSwapBuffers(x, y);
 }

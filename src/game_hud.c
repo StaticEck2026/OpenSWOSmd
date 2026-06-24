@@ -49,7 +49,7 @@ extern uint16_t gameStatePl;
  * of currentGameTick).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateControlledPlayerNumbers(void)
+void UpdateControlledPlayerNumbers(void)
 {
     Sprite          *sprPtr;
     TeamGeneralInfo *teamInfo;
@@ -119,7 +119,7 @@ next:
  * bit 4 — only one team's marker is visible at a time.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _MarkPlayer(void)
+void MarkPlayer(void)
 {
     TeamGeneralInfo *teamInfo;
     TeamGame        *teamGame;
@@ -168,7 +168,7 @@ void _MarkPlayer(void)
  * last-player-before-goalkeeper, and normal play tracking.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetCurrentPlayerName(void)
+void SetCurrentPlayerName(void)
 {
     Sprite          *spr = &currentPlayerNameSprite;
     TeamGeneralInfo *a1;    /* TeamGeneralInfo ptr */

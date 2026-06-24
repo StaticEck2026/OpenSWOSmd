@@ -103,8 +103,8 @@ extern uint8_t  seasonInformationsArray[];
 extern DIYTournamentState diyFileBufferCopy;
 
 /* file_io.c writer helper. */
-extern int16_t _WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
-extern void    _ShowFsErrorByCode(uint16_t code);
+extern int16_t WriteFile(uint8_t *filename, uint8_t *src, uint32_t size);
+extern void    ShowFsErrorByCode(uint16_t code);
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
 /* Generic round-trip verify: snapshot a memory region, zero it,
@@ -119,7 +119,7 @@ extern void    _ShowFsErrorByCode(uint16_t code);
  * snapshot back. A PARTIAL restore (snapshot only this region / only the
  * scalar table) was the bug: it left the restored bytes pre-save but the
  * runtime caches reloaded, so a save-then-CONTINUE walked into a desynced mix
- * and panicked (e.g. _FindTeamInDIY 0x6006). The fully-reloaded state is
+ * and panicked (e.g. FindTeamInDIY 0x6006). The fully-reloaded state is
  * exactly what a fresh load of the same file produces — proven playable — so
  * continuing from it is safe. (For a clean verify the reloaded bytes equal the
  * pre-save bytes, so authored state is unchanged either way.) The snapshot is
@@ -195,11 +195,11 @@ static int16_t verify_reload_highlights(uint8_t *f)
 
 /* JSON saves can grow to several hundred KB (>3x the legacy binary
  * size from base64 expansion + key text), which overflows the
- * careerFileBuffer destination if we route through _LoadFileEx.
+ * careerFileBuffer destination if we route through LoadFileEx.
  * Delegate to swos_io.c, which bypasses the asset-loader staging and
  * returns a freshly-allocated buffer:
  *   SDL:   malloc + stdio read.
- *   Amiga: _AllocMemAny + _RobNorthenLoader_C dispatch. */
+ *   Amiga: _AllocMemAny + RobNorthenLoader_C dispatch. */
 static int read_save_file_heap(const uint8_t *filename,
                                uint8_t **out_buf, uint32_t *out_size)
 {
@@ -210,7 +210,7 @@ static int read_save_file_heap(const uint8_t *filename,
  * fields (the four comp-name slots in seasonInformations). On save we
  * emit the string content as a bare JSON value; on load we copy the
  * content into this pool and write the pool address into the slot.
- * Display code (_StringCopy etc.) just walks bytes to NUL, so any
+ * Display code (StringCopy etc.) just walks bytes to NUL, so any
  * valid backing memory works. Pool is reset at the start of each
  * save AND each load so the same string always interns at the same
  * pool offset — byte-stable round-trip. */
@@ -619,11 +619,11 @@ static void load_season_informations(const char *buf, int buflen)
  *   primary/secondary/tertiary/quaternaryCompStringOffset
  *
  * All re-derivable from non-pointer state on load via
- * _RebuildPointersAfterLoad() in career_init.c:
+ * RebuildPointersAfterLoad() in career_init.c:
  *   - slot ptr table: refresh from the 5 named per-slot buffer symbols
  *   - top-level comp pointers: look up by selTeamNumber / isNationalSelector
  *     in competitionsTable / careerCupPickList
- *   - cup pick list: re-populated by _Career_SetCupPickList_ForSelectedRegion
+ *   - cup pick list: re-populated by Career_SetCupPickList_ForSelectedRegion
  *     for national selectors; unused otherwise
  *   - string offsets: zeroed (consumers tolerate NULL as empty string)
  *
@@ -1027,12 +1027,12 @@ static const FieldDesc s_career_scalars[] = {
     /* tmd_team_count — uint16 at &careerFileBuffer + 0, holds the count
      * of populated TeamFileEx records in the TMD pool that follows at
      * tmdFileBuffer (= &careerFileBuffer + 2). Consumed by
-     * _SearchTeamInTmdFile and friends in career_teams.c. */
+     * SearchTeamInTmdFile and friends in career_teams.c. */
     FXC("tmd_team_count",                 careerFileBuffer,            FLD_U16),
 
     /* Per-slot type bytes — first int16 of each careerCompetitionSlotPtrTable
      * entry (= DIYCompetition.competitionType field). Saved explicitly so
-     * _Career_LoadCompetitionSlotStateFromBuffer dispatches to the right
+     * Career_LoadCompetitionSlotStateFromBuffer dispatches to the right
      * branch on load. Previously this was inferred from currentCompetitionPtr
      * (b20b070) which broke when the saved in-memory state disagreed with
      * the pointer; an explicit field is authoritative and survives any
@@ -1208,7 +1208,7 @@ static const FieldDesc s_career_scalars[] = {
     FX("team_selection_key_cache_end",    teamSelectionKeyCacheEnd,    FLD_U16),
     /* Promoted out of the cache blob (was teamSelectionKeyCache byte 1, the
      * Amiga cache/phase-bias overlap). Old saves lack this key -> loads as 0,
-     * re-derived in _InitCareer. See project_keycache_cluster_design. */
+     * re-derived in InitCareer. See project_keycache_cluster_design. */
     FX("career_job_offer_phase_bias",     careerJobOfferPhaseBias,     FLD_U8 ),
     /* Slot-0 (primary) header scalars — SLOT_ALIAS untangle S6. Same addresses as
      * the retired competitionOver/diyPresetNameOfCompetition/.../leagueRelegationCount
@@ -1313,7 +1313,7 @@ static const FieldDesc s_career_scalars[] = {
 
     /* DIY team-id lists per competition type (league/cup/hybrid). Each
      * is an array of BE byte-pairs [country, ordinal] — see
-     * _FindTeamIdInDiyTeamsList in transfer_market.c. Saved as flat
+     * FindTeamIdInDiyTeamsList in transfer_market.c. Saved as flat
      * bytes for round-trip fidelity. */
     /* SLOT_ALIAS untangle S6 (D-A1): the three legacy contiguous BE team-id views,
      * rebased onto primaryCompetitionBuf via the same casts the consumers use
@@ -1329,7 +1329,7 @@ static const FieldDesc s_career_scalars[] = {
 
     /* Per-career-slot competition contexts. Each is a snapshot of
      * diyCompetitionStart / diyFileBufferCopy at the moment
-     * _Career_StoreCompetitionSlotStateToBuffer was last called for
+     * Career_StoreCompetitionSlotStateToBuffer was last called for
      * the slot. Sizes are league/hybrid (2900) or cup (1092).
      *
      * These regions contain `namePtr` and other absolute-pointer fields
@@ -1350,7 +1350,7 @@ static const FieldDesc s_career_scalars[] = {
      * The old granular primary_comp_* runs (a hand-split header for cross-target
      * safety) are superseded by emit_comp_slot, which corrects every cross-
      * target-sensitive field on load AFTER this blob. namePtr rides the blob
-     * (stale absolute pointer) and is re-derived by _RebuildPointersAfterLoad. */
+     * (stale absolute pointer) and is re-derived by RebuildPointersAfterLoad. */
     FAC("primary_competition_context",    primaryCompetitionBuf,       sizeof(CompetitionSlotBuffer), FLD_BYTES),
     /* Context-slot raw blobs — UNTANGLE step A4. The 4 *Context slots are now
      * standalone typed CompetitionSlotBuffer { DIYTournamentState tourn;
@@ -2864,7 +2864,7 @@ static int dj_find_comp_record(const char *path, const char *arrkey, const char 
 /* SWOS_DATA_JSON wire-in: load a country's teams from data_json/ instead of the
    binary TEAM.NNN. Resolves countryNum -> "teams/NAME.json" via the master
    data_json/competitions/countries.json list, reads it, and parses it into
-   `teamFileBuf` in the exact layout _LoadTeamFile expects: a 2-byte HOST-NATIVE
+   `teamFileBuf` in the exact layout LoadTeamFile expects: a 2-byte HOST-NATIVE
    count header followed by `count` TeamFileEx records. Returns the team count
    (>0) on success, or -1 to tell the caller to FALL BACK to the binary file
    (country not in the JSON corpus, file missing, or parse failure). No byteswap
@@ -2981,7 +2981,7 @@ static int dj_comp_base(const char *o, int ol, Competition *c, int isPlayoff)
        name/seed tables via comp_name_table()/comp_team_seed_list() instead, so
        these are "inert" by design — BUT a record copy that differs from the
        compiled global by even one byte trips the season-transition scratch-buffer
-       checksum (_DIY_ValidateLeagueScratchBuffer, panic 0x4444). Keep them
+       checksum (DIY_ValidateLeagueScratchBuffer, panic 0x4444). Keep them
        byte-faithful: parse the stored values rather than zeroing. */
     c->reserved1       = (int8_t)GN(cs, cl, "$.name_table_offset");
     c->isPlayoff       = (int8_t)isPlayoff;   /* byte 6 discriminator (Step 4b) */
@@ -4066,7 +4066,7 @@ int DataJson_SelfTest(void)
  * career_team_reserves, current_team_reserves). The two transient menu-
  * scratch regions (editTeamsBuffer, editTeamsSaveVarsArea) were dropped
  * entirely because no code path reads them outside the menu they belong
- * to. Cross-rebuild loads now rely on _RebuildPointersAfterLoad() for
+ * to. Cross-rebuild loads now rely on RebuildPointersAfterLoad() for
  * any pointer field re-derivation (see SaveJson_LoadCareer). */
 
 /* ---------- *Copy cup-record nameSource pointers ----------
@@ -4141,7 +4141,7 @@ static void restore_comp_copy_text_ptrs_from_template(void)
  * — including the embedded team-id list the season auto-advance reads —
  * sits at a different byte offset per target. A 64-bit save loaded on
  * 32-bit then reads the team-id list 8 bytes early → bogus ids (ordinal 0)
- * → _AppendTeamsToSelectionFromTmdOrTeamFile spins forever. (Observed:
+ * → AppendTeamsToSelectionFromTmdOrTeamFile spins forever. (Observed:
  * 32-bit hang on a 64-bit save; 64-bit same-target was fine.)
  *
  * The records are almost entirely STATIC: career_init.c:687-702 builds
@@ -4189,7 +4189,7 @@ static void emit_comp_copy_dynamic(mjson_print_fn_t fn, void *fnd)
  * (project_eurocup_draw_dup_nondeterministic). The 2696 "almost entirely
  * static" assumption missed that qualification writes the qualified teams INTO
  * these records (euroCupTeamListPtr == euroCupCopy+offset). Locate the list
- * exactly as _Career_PrepareEuropeanCupQualificationState does:
+ * exactly as Career_PrepareEuropeanCupQualificationState does:
  *   off = 7 + base[7] + 2*(sizeof(char*) - 4)   // PAST the text[2] pointers
  *   len = templateSize - off
  * so NO pointer bytes are serialized, and the BE {country,ordinal} byte pairs
@@ -4480,8 +4480,8 @@ static int32_t diy_identity_to_teamseloffset(int32_t v) { return v; }
  * the host's real offset, numbers as endian-neutral decimals.
  *
  * emit_comp_slot / load_comp_slot below do exactly that for the
- * cross-target-sensitive header + team-id region that _FindTeamInDIY /
- * _GetMoreExpensiveTeamsCount read (numTeams, competitionType, the int16
+ * cross-target-sensitive header + team-id region that FindTeamInDIY /
+ * GetMoreExpensiveTeamsCount read (numTeams, competitionType, the int16
  * state run, and the per-type team-id array). The load runs AFTER the raw
  * blob, overwriting the struct-correct positions — same-target it rewrites
  * identical values (VERIFY clean), cross-target it corrects them.
@@ -4490,7 +4490,7 @@ static int32_t diy_identity_to_teamseloffset(int32_t v) { return v; }
  * all 5 slots are covered and VERIFY is clean, the diy_team_id_list_type_*
  * and *_competition_context blobs (and the primary_comp_* runs + this
  * override's league_rows) get retired. namePtr is NOT serialized — it's
- * re-derived for all 5 slots on load by _RebuildPointersAfterLoad Step 1b
+ * re-derived for all 5 slots on load by RebuildPointersAfterLoad Step 1b
  * (repointed at competitionName).
  *
  * Field set mirrors the proven primary_comp_* runs, generalized to take a
@@ -4553,7 +4553,7 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
      * comp_id/slot_id bytes above capture the SAVING host's byte decomposition,
      * which rebuilds the WRONG word cross-endian (LE save slot=1 → compId=1,
      * slotId=0 → BE reads (1<<8)=256 → compType ∉ {0..4} →
-     * _UpdateCareerFinancesAfterMatch panic 0x9200). Emit the logical word
+     * UpdateCareerFinancesAfterMatch panic 0x9200). Emit the logical word
      * endian-neutral; load_comp_slot restores it as a word AFTER the bytes. */
     mjson_printf(fn, fnd, ",%Q:%u", "comp_slot_word",
                  (unsigned)*(const uint16_t *)&b->compId);
@@ -4572,11 +4572,11 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
      * leagueTeamIds[14] / cupTeamIds[64], but those declared sizes are
      * NOT the real bounds: an N-team competition writes N entries from the
      * field base, and the read sites index up to teamIndex = N-1 (e.g.
-     * _DIY_CachePrimaryQualifiedTeamsGrid reads leagueTeamIds[standings-
+     * DIY_CachePrimaryQualifiedTeamsGrid reads leagueTeamIds[standings-
      * sorted index] for any of the N teams). An 18-team league writes 18
      * entries (36 B) past the declared [14] (28 B) — sizeof(field)=14
      * truncated entries 14..17, leaving them to fall back to the endian-
-     * broken raw diy_team_id_list blob → garbage ids → _VerifyTeamLoaded
+     * broken raw diy_team_id_list blob → garbage ids → VerifyTeamLoaded
      * panic cross-target. Reading numTeams entries from the flat slot
      * buffer covers exactly what the game uses. Clamp to 64 (max teams) as
      * a runaway guard. Tournament (type 2) reads a sibling
@@ -4637,12 +4637,12 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
 
     /* LEAGUE teamEntryOffsets — standings-sorted positions (value/18 =
      * team index), host-native uint16, DYNAMIC (rewritten by
-     * _DIY_SortLeagueTableByStandings). Declared [14] but uses numTeams
+     * DIY_SortLeagueTableByStandings). Declared [14] but uses numTeams
      * entries (same overflow as leagueTeamIds): an 18-team league's
      * entries 14..17 fell outside the fixed primary_comp_matchdata_words
      * window and into the endian/position-fragile blob → a bad standings
-     * index → _DIY_CachePrimaryQualifiedTeamsGrid read a garbage team →
-     * _VerifyTeamLoaded panic. Emit numTeams host-native words (decimal,
+     * index → DIY_CachePrimaryQualifiedTeamsGrid read a garbage team →
+     * VerifyTeamLoaded panic. Emit numTeams host-native words (decimal,
      * endian-neutral). League only; cup view doesn't use this field. */
     if (b->competitionType == 0) {
         int16_t nt = b->numTeams;
@@ -4703,7 +4703,7 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
          * two "fields" ARE leagueTeamIds[14]/[15], which are endian-stable BE
          * pairs handled by team_ids. Serializing them as host-native uint16
          * byte-swapped the team-id bytes (leagueTeamIds[14] 0x142a -> 0x2a14)
-         * -> _VerifyTeamLoaded panic in _GetMoreExpensiveTeamsCount (gdb-confirmed
+         * -> VerifyTeamLoaded panic in GetMoreExpensiveTeamsCount (gdb-confirmed
          * on an 18-team league). leagueTeamIds(0x12E) = team_ids (BE pairs);
          * teamEntryOffsets handled above; cupRoundResults/shuffleAndPad are byte
          * arrays. See project_compslot_matchdata_uint16_crosstarget. */
@@ -4805,7 +4805,7 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
          * secondLegCounter, groupSectionFlag, matchCount, totalMatches,
          * curMonthIdx) are RESET/RE-DERIVED at cup setup (diy_competition.c:
          * competitionFormat/counters 1673/1687-1690, roundFormat<-roundLegs 1677,
-         * totalMatches<-numTeams 1755 via _DIY_RecomputeCompetitionDerivedFields,
+         * totalMatches<-numTeams 1755 via DIY_RecomputeCompetitionDerivedFields,
          * which runs on load) so today they round-trip as 0/derived regardless.
          * We KEEP serializing them as a safety margin while the JSON save migration
          * (roadmap step 4) is incomplete: should a field stop being recomputed, or
@@ -5043,7 +5043,7 @@ static void load_comp_slot(const char *parent, int plen,
         if (mjson_get_long(o, olen, "$.league_matches_per_section_live", &v) > 0) s->matchData.league.totalMatchesPerSectionLive = (uint16_t)v;
         /* NOT competition_format/round_format: they alias leagueTeamIds[14]/[15]
          * for N>14-team leagues (BE pairs handled by team_ids) — loading them as
-         * host-native uint16 byte-swapped the team id -> _VerifyTeamLoaded panic.
+         * host-native uint16 byte-swapped the team id -> VerifyTeamLoaded panic.
          * Ignoring any legacy key here lets the blob/team_ids BE-pair bytes stand,
          * which also un-corrupts saves written by the buggy interim build. */
     }
@@ -5326,9 +5326,9 @@ static void load_ctx_league_standings(const char *src, int src_size,
 static int diy_stage_is_league(const DIYCompetitionEx *stage);
 static int diy_stage_is_league_master(const DIYTournamentState *master);
 
-/* _VerifyTeamLoaded is extern'd further down (preset path); the career load
+/* VerifyTeamLoaded is extern'd further down (preset path); the career load
  * path's cup teamOffsetTable rebuild needs it earlier, so declare it here. */
-extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
+extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNum);
 
 /* ---------- TYPE-2 *Context slot current-STAGE (cross-target) ----------
  *
@@ -5356,7 +5356,7 @@ extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
  * tournament's team list (master order), indexed by teamGridPairings — NOT a
  * stage-numTeams list. emit_comp_slot's `team_ids` uses the stage header's
  * numTeams (the current ROUND size, e.g. 2 for a final), so it covers only
- * cupTeamIds[0..stageNumTeams-1]. _FindTeamInDIY's cup_search reads
+ * cupTeamIds[0..stageNumTeams-1]. FindTeamInDIY's cup_search reads
  * cupTeamIds[teamGridPairings[d1]] where teamGridPairings are master indices
  * (e.g. 10/14), so the un-covered entries fell back to the cross-target-broken
  * blob → team not found → chairman panic 0x6006 (live-confirmed on Amiga: AC
@@ -5514,7 +5514,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
     mjson_printf(json_out_emit, &out, "%s", ",\n  ");
     /* careerCompetitionSlotPtrTable / *CompetitionPtr / *CompStringOffset /
      * careerCupPickList are all re-derivable from non-pointer state on
-     * load — _RebuildPointersAfterLoad() handles them. Not saved.
+     * load — RebuildPointersAfterLoad() handles them. Not saved.
      *
      * EXCEPT: when selTeamNumber is the 0xFFFF "no team" sentinel
      * (season mode, all-CPU teams), the rebuild can't recover the
@@ -5591,7 +5591,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
      * endian-neutral: comp_slot_stage (struct-anchored header + per-type
      * fields) + the group standings stats (league) or the three knockout
      * score arrays (cup). On load these are re-laid and the cup teamOffsetTable
-     * is rebuilt careerTeam-aware via _VerifyTeamLoaded (SaveJson_LoadCareer),
+     * is rebuilt careerTeam-aware via VerifyTeamLoaded (SaveJson_LoadCareer),
      * so a managed national team (careerTeam, negative selTeamsPtr offset)
      * resolves correctly cross-target. */
     if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
@@ -5760,10 +5760,10 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
         return 1;
     }
 
-    int16_t result = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    int16_t result = WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
     swos_io_free(out.ptr);
     if (result != 0) {
-        _ShowFsErrorByCode((uint16_t)result);
+        ShowFsErrorByCode((uint16_t)result);
         return 1;
     }
 
@@ -5784,7 +5784,7 @@ int16_t SaveJson_WriteCareer(uint8_t *filename)
 
 /* Probe the first bytes of the named save file. Used by the
  * file_io.c dispatcher to decide which loader to invoke without
- * having to stage the whole file through _LoadFileEx (which the
+ * having to stage the whole file through LoadFileEx (which the
  * JSON-format size would overflow). Returns 1 if the file begins
  * with `{` (after whitespace), 0 otherwise, or -1 on open error.
  *
@@ -5828,7 +5828,7 @@ static void apply_semantic_load(const char *src, int src_size)
     load_season_informations(src, src_size);
     PROF_END(season_info, "career-load");
     /* Top-level pointer fields were removed from the save format —
-     * _RebuildPointersAfterLoad() re-derives them after this returns.
+     * RebuildPointersAfterLoad() re-derives them after this returns.
      * For the rebuild's selTeamNumber==0xFFFF (season-mode) path, parse
      * the saved primary-comp country byte; default to 0xFF if missing
      * (legacy save). Stored to a module-local; career_init.c reads it
@@ -5894,7 +5894,7 @@ static void apply_semantic_load(const char *src, int src_size)
     /* TYPE-2 tournament current-STAGE restore (cross-target) — mirrors the
      * preset load_competition_buf. Re-lay the stage at competitionFileBuffer's
      * stageSnapshot typed/endian-neutral over the raw blob BEFORE
-     * _RebuildPointersAfterLoad copies it into diyCompetitionStart. League:
+     * RebuildPointersAfterLoad copies it into diyCompetitionStart. League:
      * stats + teamSelOffset reconstructed = i; cup: the three knockout score arrays. The
      * cup teamOffsetTable is rebuilt careerTeam-aware below, after the
      * selected_teams load (it needs selTeamsPtr). Absent in pre-fix saves ->
@@ -6019,12 +6019,12 @@ static void apply_semantic_load(const char *src, int src_size)
     /* TYPE-2 tournament KNOCKOUT teamOffsetTable rebuild (cross-target) —
      * mirrors the preset path. teamOffsetTable[k] is a derived selTeamsPtr
      * byte-offset cache that byte-swaps + is layout-dependent cross-target;
-     * rebuild it from cupTeamIds via _VerifyTeamLoaded now that selTeamsPtr
+     * rebuild it from cupTeamIds via VerifyTeamLoaded now that selTeamsPtr
      * (selected_teams), careerTeam and selTeamNumber are all loaded. For a
      * managed national team (careerTeam) findTeamInCache returns &careerTeam,
      * giving the correct NEGATIVE offset — so the R16 bracket names resolve
      * correctly cross-target. League stages skip this (standings rebuilt
-     * earlier). Runs before _RebuildPointersAfterLoad copies the stage. */
+     * earlier). Runs before RebuildPointersAfterLoad copies the stage. */
     if (((const DIYCompetitionEx *)&primaryCompetitionBuf)
             ->base.competitionType == 2) {
         DIYCompetitionEx *stage = (DIYCompetitionEx *)
@@ -6034,7 +6034,7 @@ static void apply_semantic_load(const char *src, int src_size)
             for (uint16_t k = 0; k < n; k++) {
                 uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
                 if (teamNum == 0) continue;
-                TeamFileEx *tp = _VerifyTeamLoaded(teamNum);
+                TeamFileEx *tp = VerifyTeamLoaded(teamNum);
                 stage->bracketScratch.teamOffsetTable[k] =
                     diy_team_to_identity((uint8_t *)tp);  /* identity: -1 careerTeam / index */
             }
@@ -6210,8 +6210,8 @@ int16_t SaveJson_LoadCareer(uint8_t *filename, const uint8_t *src_unused,
      * dispatches to the correct (league/cup/hybrid) branch when it
      * reads slotPtr[0..1]. */
     PROF_START(rebuild_ptrs);
-    extern void _RebuildPointersAfterLoad(void);
-    _RebuildPointersAfterLoad();
+    extern void RebuildPointersAfterLoad(void);
+    RebuildPointersAfterLoad();
     PROF_END(rebuild_ptrs, "career-load");
 
     swos_io_free(src);
@@ -6567,14 +6567,14 @@ static void load_scalar_table_comp(const char *buf, int buflen,
 #endif
 }
 
-extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
+extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNum);
 
 /* A type-2 tournament's CURRENT stage is a group (league) or a knockout
  * (cup). The reliable discriminator is the current slot's isLeagueFormat in
  * the tournament master (nonzero = league/group, 0 = cup/knockout) — but it
  * must be indexed by the ACTIVE STAGE INDEX, which the game keeps in the
  * master header's `roundComplete` (0x54). That is exactly how the game itself
- * selects the stage in _DIY_LoadCurrentCompetitionSlot:
+ * selects the stage in DIY_LoadCurrentCompetitionSlot:
  *     slotIdx = diyFileBufferCopy.header.roundComplete;  // 0x54
  *     s = slots[slotIdx];  if (s->isLeagueFormat) {league} else {cup}
  *
@@ -6629,7 +6629,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
     /* primaryCompStringOffset is intentionally NOT saved — it's a
      * stale absolute pointer into the strings table that the legacy
      * format dumped verbatim. The career load path zeroes it in
-     * _Rebuild_CompStringOffsets and _InitializeNewSeason tolerates
+     * _Rebuild_CompStringOffsets and InitializeNewSeason tolerates
      * the resulting empty string in the season-end summary. Preset/
      * DIY loads land in the same place after load_competition_buf
      * zeroes the comp-tagged fields, so nothing here needs to write it. */
@@ -6692,7 +6692,7 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
          * each tournament team's group results. Its
          * int32 teamSelOffset is a DERIVED team IDENTITY (step-4 phase 3): row i
          * always resolves to selTeamsPtr team i, so the identity is simply i,
-         * built by _DIY_CacheSelectedTeamPointers. We do
+         * built by DIY_CacheSelectedTeamPointers. We do
          * NOT serialize it (it byte-swaps on LE<->BE and is fully derivable
          * from the row index). Instead serialize
          * ONLY the non-derivable stats endian-neutral and RECONSTRUCT
@@ -6761,10 +6761,10 @@ static int16_t write_competition_buf(uint8_t *filename, const char *kind)
         if (out.ptr) swos_io_free(out.ptr);
         return 1;
     }
-    int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    int16_t r = WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
     swos_io_free(out.ptr);
     if (r != 0) {
-        _ShowFsErrorByCode((uint16_t)r);
+        ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
 
@@ -6859,7 +6859,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
     string_pool_reset();
 
     /* primaryCompStringOffset is left at 0 from the memset above —
-     * _InitializeNewSeason tolerates a NULL value here by writing a
+     * InitializeNewSeason tolerates a NULL value here by writing a
      * NULL into the season-end summary's slot, which prints as an
      * empty competition name. The legacy emit was a stale absolute
      * pointer that would have crashed if dereferenced after a
@@ -6902,7 +6902,7 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
 
         /* Rebuild the GROUP-phase standings (see write_competition_buf):
          * RECONSTRUCT each row's derived teamSelOffset = i (the team identity;
-         * row i = selTeamsPtr team i — the cache _DIY_CacheSelectedTeamPointers
+         * row i = selTeamsPtr team i — the cache DIY_CacheSelectedTeamPointers
          * builds) and restore the endian-neutral stats. LEAGUE/group stages
          * only — a KNOCKOUT stage has no league table; its bracket lives in
          * bracketScratch and is rebuilt separately after the diy_teams load
@@ -6990,20 +6990,20 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * load_scalar_table_comp on both targets (it no longer depends on a runtime
      * [&primaryCompetitionBuf, &numSelectedTeams) span — which inverted to empty
      * on the 32-bit Amiga, silently dropping the field → 0 → findTeamInCache
-     * bails → cup _VerifyTeamLoaded panic). We still re-derive from numTeams here
+     * bails → cup VerifyTeamLoaded panic). We still re-derive from numTeams here
      * as the canonical, target-independent value. */
     numSelectedTeams = primaryCompetitionBuf.tourn.header.numTeams;
 
     /* TYPE-2 tournament KNOCKOUT stage: rebuild the cup bracket
      * teamOffsetTable from cupTeamIds. teamOffsetTable[k] is a DERIVED
      * pointer cache (= the selTeamsPtr byte-offset of cupTeamIds[k]'s team,
-     * built by _DIY_BuildTeamSelectionPointerCache); it byte-swaps on
+     * built by DIY_BuildTeamSelectionPointerCache); it byte-swaps on
      * LE<->BE, and the preset-load routes through the league branch (stage
      * header competitionType==0) so it's never rebuilt -> garbage R16 team
      * NAMES (which resolve teamGridPairings -> teamOffsetTable ->
      * &selTeamsPtr -> teamName). cupTeamIds (BE byte-pairs) + teamGridPairings
      * (bytes) ride the raw blob endian-safe, so resolve each team via
-     * _VerifyTeamLoaded (the same lookup the cache builder uses) now that
+     * VerifyTeamLoaded (the same lookup the cache builder uses) now that
      * selTeamsPtr (diy_teams) is loaded. cupTeamIds[0..primaryCompetitionBuf.tourn.header.numTeams-1] are the
      * tournament teams (kept below the standings overlay at index 51).
      * LEAGUE/group stages skip this — their standings were rebuilt above. */
@@ -7016,22 +7016,22 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
             for (uint16_t k = 0; k < n; k++) {
                 uint16_t teamNum = BE_READ_U16(&stage->cupTeamIds[k]);
                 if (teamNum == 0) continue;
-                TeamFileEx *tp = _VerifyTeamLoaded(teamNum);
+                TeamFileEx *tp = VerifyTeamLoaded(teamNum);
                 stage->bracketScratch.teamOffsetTable[k] =
                     diy_team_to_identity((uint8_t *)tp);  /* identity: -1 careerTeam / index */
             }
         }
     }
 
-    /* NB: do NOT call _RebuildPointersAfterLoad() here. It is the CAREER
+    /* NB: do NOT call RebuildPointersAfterLoad() here. It is the CAREER
      * post-load fixup (re-derives currentCompetitionPtr et al. from
      * competitionsTable + selTeamNumber) and is wrong for a standalone
      * DIY/preset — a correctly-routed .DIY/.PRE goes to the DIY menu
-     * (diyLeagueTournamentMenu / _ShowDIYCupMenuWithParams), which reads only
-     * diyCompetitionStart/competitionFileBuffer and is set up by _StartContest's
+     * (diyLeagueTournamentMenu / ShowDIYCupMenuWithParams), which reads only
+     * diyCompetitionStart/competitionFileBuffer and is set up by StartContest's
      * own DIY path. The earlier crash was a SYMPTOM of mis-routing to the career
      * contestMenu because gameType wasn't restored; the real fix is setting
-     * gameType in _LoadDIYFile/_LoadPresetFile. See project_diy_preset_load_gametype. */
+     * gameType in LoadDIYFile/LoadPresetFile. See project_diy_preset_load_gametype. */
     swos_io_free(src);
     return 0;
 }
@@ -7070,7 +7070,7 @@ int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
  *   +2044   gameName[100]
  *   +2144   gameRound[100]
  *   +2244   numGoals          u16 (BE on disk, host-native at our
- *                                  dispatch point — _DoSaveHighlights
+ *                                  dispatch point — DoSaveHighlights
  *                                  hasn't applied its swap yet)
  *   +2246   team1Goals        u16
  *   +2248   team2Goals        u16
@@ -7078,7 +7078,7 @@ int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
  *   +2252   maxSubstitutes    u16
  *   +2254   scenes[numGoals]  each scene = 19000-byte ring of frames
  *
- * Scene format (per _SaveCoordinatesForHighlights / _DrawReplayFrame):
+ * Scene format (per SaveCoordinatesForHighlights / DrawReplayFrame):
  *   - Sequence of u32-aligned entries, BE on disk.
  *   - bit 31 set = frame marker:
  *       [marker u32 = 0x80000000 | (cam_x << 16) | cam_y]
@@ -7097,7 +7097,7 @@ extern uint8_t  hilGameName[];
 extern uint8_t  hilGameRound[];
 
 /* On-disk .HIL header — 2254 bytes total. Matches the byte layout
- * the legacy save/load and _SetHilFileHeader / _SaveCoordinatesForHighlights
+ * the legacy save/load and SetHilFileHeader / SaveCoordinatesForHighlights
  * write at the start of hilFileBuffer. Using offsetof() against this
  * struct replaces every hardcoded byte offset that used to live in
  * this file. Note: signature/max_size/TeamGame kit fields are BE on
@@ -7125,7 +7125,7 @@ typedef char _hilheader_size_check[(sizeof(HilFileHeader) == 2254) ? 1 : -1];
 /* ---------- TeamGame emit/load ----------
  *
  * In hilFileBuffer (memory and on disk), the 11 × int16 fields are
- * BE-encoded by _SetHilFileHeader. We read via BE_READ_U16 to get
+ * BE-encoded by SetHilFileHeader. We read via BE_READ_U16 to get
  * the live host-native values, emit as JSON numbers, and on load
  * write back via HOST_TO_BE16.
  */
@@ -7600,7 +7600,7 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
     }
 
     PROF_START(write_file);
-    int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    int16_t r = WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
     PROF_END(write_file, "highlights-write");
 
 #ifdef SWOS_SAVE_FORMAT_JSON_PROFILE
@@ -7609,7 +7609,7 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
 #endif
     swos_io_free(out.ptr);
     if (r != 0) {
-        _ShowFsErrorByCode((uint16_t)r);
+        ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
 
@@ -7694,7 +7694,7 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     }
 
     /* The 5 u16 header fields are written host-native here. The
-     * legacy load path keeps bytes BE and _LoadHilFile applies a
+     * legacy load path keeps bytes BE and LoadHilFile applies a
      * single BE16_TO_HOST swap on success (moved out of
      * highlights_menu.c so both paths converge on host-native
      * fields ready for the game to read). */
@@ -7807,10 +7807,10 @@ static int16_t write_tactics_buf(uint8_t *filename, const uint8_t *src)
         if (out.ptr) swos_io_free(out.ptr);
         return 1;
     }
-    int16_t r = _WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
+    int16_t r = WriteFile(filename, (uint8_t *)out.ptr, (uint32_t)out.len);
     swos_io_free(out.ptr);
     if (r != 0) {
-        _ShowFsErrorByCode((uint16_t)r);
+        ShowFsErrorByCode((uint16_t)r);
         return 1;
     }
 

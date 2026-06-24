@@ -73,8 +73,8 @@ extern uint32_t copperZeroLong;
 /* Player sprite identification for DrawQueuedSprites */
 extern Sprite goalie1Sprite;
 
-extern void _PanicHaltLoop(void) __attribute__((noreturn));
-extern void _SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y);
+extern void PanicHaltLoop(void) __attribute__((noreturn));
+extern void SaveCoordinatesForHighlights(int16_t spriteIndexOrMarker, uint16_t x, uint16_t y);
 
 
 /* ---- Helper: wait for blitter idle ---- */
@@ -98,7 +98,7 @@ static inline __attribute__((always_inline)) void waitBlit(void)
  * C bridge: (srcSprite, dstSprite, xOffset, yOffset)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
+void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
                  uint16_t xOffset, uint16_t yOffset)
 {
 
@@ -114,12 +114,12 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
      * `custom->blt*` registers which on SDL go to a stub buffer
      * doing nothing observable, so without this path sprite[dstSprite]
      * never actually receives sprite[srcSprite]'s pixel data and the
-     * subsequent _ConvertSpriteColors operates on whatever stale bytes
+     * subsequent ConvertSpriteColors operates on whatever stale bytes
      * are in slot dstSprite. Symptom: stadium-menu little-player
      * sprites all rendered with the SAME shape regardless of team
      * shirt-type, and color conversion produced inconsistent results.
      *
-     * Both src and dst are post-_ProcessImageCommandStream chunky 8bpp;
+     * Both src and dst are post-ProcessImageCommandStream chunky 8bpp;
      * each row is `wquads * 16` bytes wide, `nlines` tall. The Amiga
      * caller passes (xOffset, yOffset) in pixels for compositing; the
      * stadium-menu / edit-tactics callers all use (0, 0). A simple
@@ -285,9 +285,9 @@ void _CopySprite(uint16_t srcSprite, uint16_t dstSprite,
  * Copies entire source sprite into destination sprite at offset (0,0).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _CopyWholeSprite(uint16_t srcSprite, uint16_t dstSprite)
+void CopyWholeSprite(uint16_t srcSprite, uint16_t dstSprite)
 {
-    _CopySprite(srcSprite, dstSprite, 0, 0);
+    CopySprite(srcSprite, dstSprite, 0, 0);
 }
 
 /* ================================================================
@@ -302,13 +302,13 @@ void _CopyWholeSprite(uint16_t srcSprite, uint16_t dstSprite)
  *   - Slow (*colorTable == 0): remaps only non-zero pixels (preserves transparency)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
+void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
 {
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
 #ifdef SWOS_SDL_BUILD
-    /* Sprites are 8bpp chunky after _ProcessImageCommandStream decodes
+    /* Sprites are 8bpp chunky after ProcessImageCommandStream decodes
      * them at load. Color conversion is just a 1-byte LUT walk over
      * `wquads * 16 * nlines` bytes. `colorTable[0] == 0` means "keep
      * transparent pixels (index 0) untouched"; otherwise every pixel
@@ -332,8 +332,8 @@ void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
     uint16_t planeRowBytes = wquads << 1;
     int32_t interplaneSkip = (int32_t)((uint16_t)(wquads * (NUM_PLANES - 1) * 2));
     if (*colorTable == 0) {
-        if (wquads > 0x14) { panicReasonCode = 0x982; _PanicHaltLoop(); }
-        if (interplaneSkip < 0) { panicReasonCode = 0x987; _PanicHaltLoop(); }
+        if (wquads > 0x14) { panicReasonCode = 0x982; PanicHaltLoop(); }
+        if (interplaneSkip < 0) { panicReasonCode = 0x987; PanicHaltLoop(); }
     }
 
     uint16_t *dataBase = (uint16_t *)spr->sprData;
@@ -373,7 +373,7 @@ void _ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
  * Stops early if no swaps occurred in a pass.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SortSprites(void)
+void SortSprites(void)
 {
     int16_t n = (int16_t)numSpritesToRender - 2;
     if (n < 0)
@@ -412,7 +412,7 @@ void _SortSprites(void)
  * allSpritesArray is null-terminated with 0xFFFFFFFF.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitDisplaySprites(void)
+void InitDisplaySprites(void)
 {
     uint16_t count = 0;
     Sprite **dst = sortedSprites;
@@ -432,7 +432,7 @@ void _InitDisplaySprites(void)
         count++;
     }
     numSpritesToRender = count;
-    _SortSprites();
+    SortSprites();
 }
 
 /* ================================================================
@@ -482,7 +482,7 @@ void _InitDisplaySprites(void)
  * in: a0=spriteGraphics, d1=x, d2=y
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
+void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
 #ifdef SWOS_SDL_BUILD
     /* SDL: Amiga's queued/masked player-sprite blit uses a blitter
@@ -490,11 +490,11 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
      * pipeline transparency is palette index 0, so there's no separate
      * mask to combine; a straight chunky draw does the right thing.
      * Route all calls — which for this function are player sprites
-     * (teamNumber 1 or 2) per _DrawQueuedSprites — through
-     * _DrawSpriteClipped → blitChunkySprite. Without this, every
+     * (teamNumber 1 or 2) per DrawQueuedSprites — through
+     * DrawSpriteClipped → blitChunkySprite. Without this, every
      * player on the pitch renders as nothing. */
     if (!a0) return;
-    _DrawSpriteClipped(a0, d1, d2);
+    DrawSpriteClipped(a0, d1, d2);
     return;
 #else
 
@@ -596,7 +596,7 @@ void _QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     return;
 
 fallback:
-    _DrawSpriteClipped(a0, d1, d2);
+    DrawSpriteClipped(a0, d1, d2);
 #endif /* !SWOS_SDL_BUILD */
 }
 
@@ -641,7 +641,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
     /* cameraXMod320/cameraYMod320 are Amiga hardware-scroll wrap
      * offsets — applicable when the display pans its bitplane base
      * pointer. On SDL we redraw the whole frontbuffer each frame
-     * (see pitch.c:_DrawChunkyPitch), so dstX/dstY are already in
+     * (see pitch.c:DrawChunkyPitch), so dstX/dstY are already in
      * final screen coords. Adding the wrap offsets double-translates
      * sprites off-screen and is what was hiding the players/ball. */
 
@@ -663,7 +663,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 #endif
 
 __attribute__((used, externally_visible))
-void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
+void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
 #ifdef SWOS_SDL_BUILD
     blitChunkySprite(a0, d1, d2);
@@ -1031,10 +1031,10 @@ void _DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
  * clipped draw.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
+void DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
     uintptr_t savedQueue = spriteBlitQueue;
-    _DrawSpriteClipped(a0, d1, d2);
+    DrawSpriteClipped(a0, d1, d2);
     spriteBlitQueue = savedQueue;
     *(uint32_t *)savedQueue = BLT_BLITQ_END;
 }
@@ -1045,11 +1045,11 @@ void _DrawSprite_entry2(SpriteGraphics *a0, int16_t d1, int16_t d2)
  * Looks up sprite by index and draws it at (d1, d2).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
+void DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
 {
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
-    _DrawSprite_entry2(spr, x, y);
+    DrawSprite_entry2(spr, x, y);
 }
 
 /* ================================================================
@@ -1059,13 +1059,13 @@ void _DrawSprite16Pixels(uint16_t spriteIndex, int16_t x, int16_t y)
  * offsets before drawing.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
+void DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
 {
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
     x -= spr->centerX;
     y -= spr->centerY;
-    _DrawSprite_entry2(spr, x, y);
+    DrawSprite_entry2(spr, x, y);
 }
 
 /* ================================================================
@@ -1075,7 +1075,7 @@ void _DrawSpriteCentered(uint16_t spriteIndex, int16_t x, int16_t y)
  * checking. Skips draw if sprite is fully outside view.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
+void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 {
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
@@ -1099,7 +1099,7 @@ void _DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
             return;
     }
 
-    _DrawSpriteClipped(spr, x, y);
+    DrawSpriteClipped(spr, x, y);
 }
 
 /* ================================================================
@@ -1109,7 +1109,7 @@ void _DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
  * center (hotspot) offsets first.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
+void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
 {
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
@@ -1136,7 +1136,7 @@ void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
             return;
     }
 
-    _DrawSpriteClipped(spr, x, y);
+    DrawSpriteClipped(spr, x, y);
 }
 
 /* ================================================================
@@ -1149,11 +1149,11 @@ void _DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
  * triggers the branch_linked_planes path.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
+void DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
 {
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
-    _DrawSpriteClipped(spr, x, y);
+    DrawSpriteClipped(spr, x, y);
 }
 
 /* ================================================================
@@ -1170,7 +1170,7 @@ void _DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
  *   +10 = y (int16_t)
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawQueuedSprites(void)
+void DrawQueuedSprites(void)
 {
     uint8_t *a2 = (uint8_t *)renderStackPtr;
 
@@ -1191,22 +1191,22 @@ void _DrawQueuedSprites(void)
         /* Check if highlight recording needed */
         if (a4->teamNumber != 0) {
             int16_t d0 = a0->ordinal;
-            _SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
+            SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
         }
 
         /* Check if a4 is a player sprite (teamNumber 1 or 2).
          * Original asm used address range check (goalie1Sprite..bottomCornerLeftPositions),
          * but sprites moved from asm to C data sections so addresses are no longer contiguous. */
         if (a4->teamNumber == 1 || a4->teamNumber == 2) {
-            _QueueMaskedSpriteBlitClipped(a0, d1, d2);
+            QueueMaskedSpriteBlitClipped(a0, d1, d2);
             continue;
         }
 
         /* Check sprite save flag: if SPRITE_SAVESPRITE ($48) in the sprite struct */
         if (a4->saveSprite != 0) {
-            _DrawSprite_entry2(a0, d1, d2);
+            DrawSprite_entry2(a0, d1, d2);
         } else {
-            _DrawSpriteClipped(a0, d1, d2);
+            DrawSpriteClipped(a0, d1, d2);
         }
     }
 }
@@ -1285,7 +1285,7 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
  * sprite band entry into the copper list sprite buffers.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _RenderSpriteBandsToCopperLists(void)
+void RenderSpriteBandsToCopperLists(void)
 {
 #ifdef SWOS_SDL_BUILD
     /* SDL has no Amiga copper-list / bitplane infrastructure — every
@@ -1293,8 +1293,8 @@ void _RenderSpriteBandsToCopperLists(void)
      * via Amiga blitter regs that don't exist here. On 64-bit the
      * pointer-as-uint32 globals also give us truncated addresses that
      * SIGSEGV when written. Sprites on SDL are drawn through the
-     * chunky 8bpp path in _DrawQueuedSprites (already called by
-     * _DrawSprites above us), so this function is a no-op. */
+     * chunky 8bpp path in DrawQueuedSprites (already called by
+     * DrawSprites above us), so this function is a no-op. */
     return;
 #else
 
@@ -1324,7 +1324,7 @@ void _RenderSpriteBandsToCopperLists(void)
 
         if (*(uint16_t *)a1 != 0) {
             int16_t d0 = a0->ordinal;
-            _SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
+            SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
         }
 
         renderSpriteBandPlanePair(a0, d1, d2, &a4, &a5);
@@ -1351,7 +1351,7 @@ void _RenderSpriteBandsToCopperLists(void)
 
         if (*(uint16_t *)a1 != 0) {
             int16_t d0 = a0->ordinal;
-            _SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
+            SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
         }
 
         renderSpriteBandPlanePair(a0, d1, d2, &a4, &a5);
@@ -1404,7 +1404,7 @@ static int16_t occlBuckets_combined[5 + OCCL_ACTIVE_BUCKETS];
 #define occlMinYBucketsActive_local (occlBuckets_combined + 5)
 
 __attribute__((used, externally_visible))
-void _BuildSpriteBandAndGeneralRenderStacks(void)
+void BuildSpriteBandAndGeneralRenderStacks(void)
 {
     int16_t d7 = (int16_t)numSpritesToRender;
     if (d7 == 0)
@@ -1497,12 +1497,12 @@ void _BuildSpriteBandAndGeneralRenderStacks(void)
          *
          * Narrow sprites (pixWidth ≤ 16) are normally routed to the
          * Amiga hardware sprite bands (plane01/plane23 stacks, drawn
-         * by _RenderSpriteBandsToCopperLists via the copper list). On
+         * by RenderSpriteBandsToCopperLists via the copper list). On
          * SDL the copper-list path is a no-op (writes to `custom->`
          * registers that don't back a framebuffer), so any sprite that
          * lands in a band would silently vanish — that's why player
          * bodies and the ball render nothing. Force every sprite onto
-         * the general render stack so _DrawQueuedSprites handles them
+         * the general render stack so DrawQueuedSprites handles them
          * via blitChunkySprite. */
 #ifdef SWOS_SDL_BUILD
         if (1) {
@@ -1611,10 +1611,10 @@ post_enqueue:
  * draw queued (blitter) sprites -> render bands to copper lists.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _DrawSprites(void)
+void DrawSprites(void)
 {
-    _SortSprites();
-    _BuildSpriteBandAndGeneralRenderStacks();
-    _DrawQueuedSprites();
-    _RenderSpriteBandsToCopperLists();
+    SortSprites();
+    BuildSpriteBandAndGeneralRenderStacks();
+    DrawQueuedSprites();
+    RenderSpriteBandsToCopperLists();
 }

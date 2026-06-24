@@ -4,7 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "string_utils.h"
-#include "menu_system.h"   /* _Int2Ascii */
+#include "menu_system.h"   /* Int2Ascii */
 
 /* Prevent GCC from converting byte loops to memcpy/memset (no libc) */
 #pragma GCC optimize("no-tree-loop-distribute-patterns")
@@ -14,7 +14,7 @@ extern uint8_t aPound[];       /* "£" (0x9C, 0x00) */
 extern uint8_t nullString_0[]; /* "" (0x00) */
 
 /* Money symbol. The pound (byte 0x9C) is hard-coded at the start of every money
- * format string: aPound (used by _Int2Pounds for balances/wages/transfers) and
+ * format string: aPound (used by Int2Pounds for balances/wages/transfers) and
  * the K/M player-value strings a1k/a0m/a01m. SWOS.ini [general] currency= patches that
  * leading byte in all of them: pound -> 0x9C (stock), dollar -> '$' 0x24, euro -> '€' 0x9D.
  * The '$' and '€' glyphs live in the font extension (see docs/FONTS.md); the pound glyph is
@@ -46,7 +46,7 @@ extern int32_t newBalance;
  *   out: d0.w = length, a0 = pointer to null terminator
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint16_t _GetStringLength(const uint8_t *str)
+uint16_t GetStringLength(const uint8_t *str)
 {
     uint16_t len = 0;
     while (str[len] != 0)
@@ -66,7 +66,7 @@ uint16_t _GetStringLength(const uint8_t *str)
  *   out: Z flag (set if equal)
  * ================================================================ */
 __attribute__((used, externally_visible))
-int16_t _StringEquals(const uint8_t *s1, const uint8_t *s2)
+int16_t StringEquals(const uint8_t *s1, const uint8_t *s2)
 {
     uint8_t c;
     for (;;) {
@@ -92,7 +92,7 @@ int16_t _StringEquals(const uint8_t *s1, const uint8_t *s2)
  *        a0 = one byte past the null terminator in src
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst)
+uint8_t *StringCopy(const uint8_t *src, uint8_t *dst)
 {
 #ifdef SWOS_SDL_BUILD
     /* Guard against NULL `src`, which can happen when a zero-stubbed
@@ -124,7 +124,7 @@ uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst)
  * return value in d1 (srcEnd position).
  * ================================================================ */
 __attribute__((used, externally_visible))
-uint8_t *_StringCopyUntilChar(const uint8_t *src, uint8_t *dst, uint8_t stopChar)
+uint8_t *StringCopyUntilChar(const uint8_t *src, uint8_t *dst, uint8_t stopChar)
 {
     for (;;) {
         if (*src == stopChar) {
@@ -155,7 +155,7 @@ static uint8_t *int2StrWithCommas(uint32_t val, uint8_t *dst)
 {
     if (val < 1000) {
         /* Simple case: no commas needed */
-        _Int2Ascii((uint16_t)val, dst);
+        Int2Ascii((uint16_t)val, dst);
         while (*dst) dst++;
         return dst;
     }
@@ -164,7 +164,7 @@ static uint8_t *int2StrWithCommas(uint32_t val, uint8_t *dst)
         /* >= 1M: format as X,XXX,XXX */
         uint32_t d1 = val;
         uint32_t high = (val >> 4) / 62500;  /* millions part */
-        _Int2Ascii((uint16_t)high, dst);
+        Int2Ascii((uint16_t)high, dst);
         while (*dst) dst++;
         *dst++ = ',';
 
@@ -176,7 +176,7 @@ static uint8_t *int2StrWithCommas(uint32_t val, uint8_t *dst)
         /* Pad to 3 digits */
         if (thousands < 100) *dst++ = '0';
         if (thousands < 10) *dst++ = '0';
-        _Int2Ascii(thousands, dst);
+        Int2Ascii(thousands, dst);
         while (*dst) dst++;
         *dst++ = ',';
 
@@ -184,21 +184,21 @@ static uint8_t *int2StrWithCommas(uint32_t val, uint8_t *dst)
         uint16_t units = (uint16_t)(remainder % 1000);
         if (units < 100) *dst++ = '0';
         if (units < 10) *dst++ = '0';
-        _Int2Ascii(units, dst);
+        Int2Ascii(units, dst);
         while (*dst) dst++;
         return dst;
     }
 
     /* 1000-999999: format as X,XXX or XX,XXX or XXX,XXX */
     uint16_t high = (uint16_t)(val / 1000);
-    _Int2Ascii(high, dst);
+    Int2Ascii(high, dst);
     while (*dst) dst++;
     *dst++ = ',';
 
     uint16_t low = (uint16_t)(val % 1000);
     if (low < 100) *dst++ = '0';
     if (low < 10) *dst++ = '0';
-    _Int2Ascii(low, dst);
+    Int2Ascii(low, dst);
     while (*dst) dst++;
     return dst;
 }
@@ -209,16 +209,16 @@ static uint8_t *int2StrWithCommas(uint32_t val, uint8_t *dst)
  * Formats an unsigned value as "£123,456".
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Int2Pounds(uint32_t pounds, uint8_t *dst)
+void Int2Pounds(uint32_t pounds, uint8_t *dst)
 {
     /* nullsub_11 is a no-op */
     /* Copy the currency sign — aPound[0] is patched to '$' by Currency_SetDollar
      * when currency=dollar (default stays the £, byte 0x9C). */
-    dst = _StringCopy(aPound, dst);
+    dst = StringCopy(aPound, dst);
     /* Format number with commas */
     dst = int2StrWithCommas(pounds, dst);
     /* Copy null string (null terminator) */
-    _StringCopy(nullString_0, dst);
+    StringCopy(nullString_0, dst);
 }
 
 /* ================================================================
@@ -227,14 +227,14 @@ void _Int2Pounds(uint32_t pounds, uint8_t *dst)
  * Formats a signed value as "£123" or "- £123".
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _Int2PoundsSigned(int32_t pounds, uint8_t *dst)
+void Int2PoundsSigned(int32_t pounds, uint8_t *dst)
 {
     if (pounds < 0) {
         *dst++ = '-';
         *dst++ = ' ';
         pounds = -pounds;
     }
-    _Int2Pounds((uint32_t)pounds, dst);
+    Int2Pounds((uint32_t)pounds, dst);
 }
 
 /* ================================================================
@@ -243,7 +243,7 @@ void _Int2PoundsSigned(int32_t pounds, uint8_t *dst)
  * Formats a signed value as "+ £123" or "- £123" or just "£0".
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _WriteAccountBalance(int32_t delta, uint8_t *dst)
+void WriteAccountBalance(int32_t delta, uint8_t *dst)
 {
     if (delta > 0) {
         *dst++ = '+';
@@ -253,7 +253,7 @@ void _WriteAccountBalance(int32_t delta, uint8_t *dst)
         *dst++ = ' ';
         delta = -delta;
     }
-    _Int2Pounds((uint32_t)delta, dst);
+    Int2Pounds((uint32_t)delta, dst);
 }
 
 /* ================================================================
@@ -262,12 +262,12 @@ void _WriteAccountBalance(int32_t delta, uint8_t *dst)
  * Formats the current bank balance as "BANK  £123,456".
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _GetBankBalance(uint8_t *dst)
+void GetBankBalance(uint8_t *dst)
 {
-    dst = _StringCopy(aBank, dst);
+    dst = StringCopy(aBank, dst);
     *dst++ = ' ';
     *dst++ = ' ';
-    _Int2PoundsSigned(newBalance, dst);
+    Int2PoundsSigned(newBalance, dst);
 }
 
 /* ================================================================
@@ -275,16 +275,16 @@ void _GetBankBalance(uint8_t *dst)
  *
  * Prepares the menu for a fade-in transition.
  * ================================================================ */
-extern void _DoubleBufferSwapSequence(void);
-extern void _PrepareMenuBackground(void);
-extern void _DrawMenu(void);
+extern void DoubleBufferSwapSequence(void);
+extern void PrepareMenuBackground(void);
+extern void DrawMenu(void);
 extern uint16_t menuFade;
 
 __attribute__((used, externally_visible))
-void _PrepareMenuForFadeIn(void)
+void PrepareMenuForFadeIn(void)
 {
-    _DoubleBufferSwapSequence();
-    _PrepareMenuBackground();
-    _DrawMenu();
+    DoubleBufferSwapSequence();
+    PrepareMenuBackground();
+    DrawMenu();
     menuFade = 1;
 }

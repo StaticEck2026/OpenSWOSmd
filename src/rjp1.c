@@ -462,7 +462,7 @@ void RJP1_PresetEntry(RJP1_Player *p, int presetId, uint8_t out_note_ids[4])
     if (!p->loaded) return;
     if (presetId < 0) return;
     /* Preset table at song_data[2] — 4 bytes per preset, mirroring
-     * what Amiga _AudioApplyPresetToChannels reads. song_data[2] is
+     * what Amiga AudioApplyPresetToChannels reads. song_data[2] is
      * sized as `subsongs_count * 4`; bounds-check against that. */
     if (presetId >= p->subsongs_count) return;
     const uint8_t *src = p->vars.song_data[2] + (uint32_t)presetId * 4;
@@ -528,7 +528,7 @@ void RJP1_StartSequenceByWaveId(RJP1_Player *p, int channel, int waveId)
         return;
     }
 
-    /* Direct path — `_AudioChannelQueueNextWaveIfEnabled` skips the
+    /* Direct path — `AudioChannelQueueNextWaveIfEnabled` skips the
      * note-record indirection and goes straight from waveId to a
      * wave-script pointer. There's no sequence_offsets in this path
      * because no note record was visited; play_song_sequence's

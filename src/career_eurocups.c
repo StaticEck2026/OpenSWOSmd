@@ -51,12 +51,12 @@ extern void *countriesTable[];
 extern uint16_t selTeamNumber;
 
 /* C-to-asm bridges */
-extern TeamFileEx *_VerifyTeamLoaded(uint16_t teamNum);
-extern void _Career_AppendTeamToTmdTeamPool(TeamFileEx *team);
+extern TeamFileEx *VerifyTeamLoaded(uint16_t teamNum);
+extern void Career_AppendTeamToTmdTeamPool(TeamFileEx *team);
 
 /* Already-ported C functions */
-extern void _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void);
-extern void _DIY_SortLeagueTableByStandings(void);
+extern void DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs(void);
+extern void DIY_SortLeagueTableByStandings(void);
 
 /* ================================================================
  * Group A: List manipulation helpers (from loc_12B1F4, loc_12B20A)
@@ -102,7 +102,7 @@ static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t
     writePos[1] = teamGrid[1];
     *writePtrAddr = writePos + 2;
     (*count)++;
-    _Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
+    Career_AppendTeamToTmdTeamPool((TeamFileEx *)teamGrid);
 }
 
 /* tryConsumeCompetitionIdFromList — searches byte list for currentCompetitionId,
@@ -202,7 +202,7 @@ static void qualifyTeamForEuroCup(void)
  * x86 a raw `*(uint16_t *)a5` byte-swaps it, the duplicate-detection
  * never matches, and the function picks a slot that's already in the
  * TMD pool from Euro Cup processing — tripping
- * _Career_AppendTeamToTmdTeamPool's 0x3443 panic. Use BE_READ_U16. */
+ * Career_AppendTeamToTmdTeamPool's 0x3443 panic. Use BE_READ_U16. */
 static void qualifyTeamForCupWinnersCup(void)
 {
     if (!tryConsumeCompetitionIdFromList(cupWinnersCupEligibleCompetitionIds))
@@ -271,7 +271,7 @@ static void qualifyTeamsForUefaCup(void)
  * ================================================================ */
 
 __attribute__((used, externally_visible))
-void _Career_ProcessCompetitionForEuropeanCupQualification(void)
+void Career_ProcessCompetitionForEuropeanCupQualification(void)
 {
     /* countriesTable is uint32_t[] (pointer table); index by competition ID */
     uint16_t idx = (uint8_t)currentCompetitionId;
@@ -298,7 +298,7 @@ static void copyTeamGridWords(uint8_t *src, uint8_t *dst, uint16_t wordCount)
 }
 
 __attribute__((used, externally_visible))
-void _DIY_CachePrimaryQualifiedTeamsGrid(void)
+void DIY_CachePrimaryQualifiedTeamsGrid(void)
 {
     uint8_t *dst = primaryQualifiedTeamGrids;
     uint16_t *cachedIds = cachedPrimaryQualifiedTeamIds;
@@ -318,16 +318,16 @@ void _DIY_CachePrimaryQualifiedTeamsGrid(void)
         /* leagueTeamIds is BE-packed per 4e5f378. */
         uint16_t teamNum = BE_READ_U16((uint8_t *)teamIdsTable + slotIdx);
         *cachedIds++ = teamNum;
-        TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+        TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
         dst += sizeof(TeamFileEx);
     }
 }
 
 __attribute__((used, externally_visible))
-void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
+void DIY_CacheSecondaryQualifiedTeamsGrid(void)
 {
-    _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
+    DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
     /* asm: lea (primaryQualifiedTeamGrids+0x180C),a1 — slot 9 (0x2AC * 9 = 0x180C) */
     uint8_t *dst = primaryQualifiedTeamGrids + 0x180C;
     uint16_t *cachedIds = cachedSecondaryQualifiedTeamIds;
@@ -341,16 +341,16 @@ void _DIY_CacheSecondaryQualifiedTeamsGrid(void)
         /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
         uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
         *cachedIds++ = teamNum;
-        TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+        TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
         copyTeamGridWords((uint8_t *)teamData, dst, 0x155);
         dst += sizeof(TeamFileEx);
     }
 }
 
 __attribute__((used, externally_visible))
-void _DIY_CacheTertiaryQualifiedTeamGrid(void)
+void DIY_CacheTertiaryQualifiedTeamGrid(void)
 {
-    _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
+    DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
     /* See copyTitleHolderGrid below — typed access avoids the +4
      * struct-field shift bug that hit copyTitleHolderGrid on 64-bit. */
     int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
@@ -358,7 +358,7 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
     /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs. */
     uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     cachedTertiaryQualifiedTeamId = teamNum;
-    TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+    TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, tertiaryQualifiedTeamGrid, 0x155);
 }
 
@@ -374,10 +374,10 @@ void _DIY_CacheTertiaryQualifiedTeamGrid(void)
  * (namePtr 4→8), shifting both fields to 0x252 / 0x2D2 — so the original
  * hardcoded byte-offset reads `compRaw + 0x24E` / `+ 0x2CE` walked into
  * the wrong field on 64-bit, producing garbage teamNum values that
- * panic'd inside _VerifyTeamLoaded. Use typed field access instead. */
+ * panic'd inside VerifyTeamLoaded. Use typed field access instead. */
 static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolderGrid)
 {
-    _DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
+    DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
     int8_t gridByte = (int8_t)diyCompetitionStart.teamGridPairings[0];
     int16_t idx = gridByte;
     /* cupTeamIds is BE-packed `{country, ordinal}` byte pairs per the
@@ -386,24 +386,24 @@ static void copyTitleHolderGrid(uint16_t *titleHolderTeamId, uint8_t *titleHolde
      * offset within the array is `gridByte << 1` (each entry is 2 bytes). */
     uint16_t teamNum = BE_READ_U16((uint8_t *)diyCompetitionStart.cupTeamIds + (idx << 1));
     *titleHolderTeamId = teamNum;
-    TeamFileEx *teamData = _VerifyTeamLoaded(teamNum);
+    TeamFileEx *teamData = VerifyTeamLoaded(teamNum);
     copyTeamGridWords((uint8_t *)teamData, titleHolderGrid, 0x155);
 }
 
 __attribute__((used, externally_visible))
-void _Career_CopyEuroCupTeamGridAndTitleHolder(void)
+void Career_CopyEuroCupTeamGridAndTitleHolder(void)
 {
     copyTitleHolderGrid(&euroCupTitleHolderTeamId, euroCupTitleHolderGrid);
 }
 
 __attribute__((used, externally_visible))
-void _Career_CopyCupWinnersCupTeamGridAndTitleHolder(void)
+void Career_CopyCupWinnersCupTeamGridAndTitleHolder(void)
 {
     copyTitleHolderGrid(&cupWinnersCupTitleHolderTeamId, cupWinnersCupTitleHolderGrid);
 }
 
 __attribute__((used, externally_visible))
-void _Career_CopyUefaCupTeamGridAndTitleHolder(void)
+void Career_CopyUefaCupTeamGridAndTitleHolder(void)
 {
     copyTitleHolderGrid(&uefaCupTitleHolderTeamId, uefaCupTitleHolderGrid);
 }
@@ -415,29 +415,29 @@ extern uint8_t cupWinnersCupCopy[];
 extern uint8_t uefaCupCopy[];
 extern uint8_t *quaternaryCompetitionPtr;
 
-extern void _SaveSelectedTeams(void);
-extern void _RestoreSelectedTeams(void);
-extern void _DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
-extern void _ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
+extern void SaveSelectedTeams(void);
+extern void RestoreSelectedTeams(void);
+extern void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+extern void ShowDIYCupMenuWithParams(uint16_t arg0, uint16_t arg1, uint16_t arg2);
 
 extern uint16_t numSelectedTeams;
-extern void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds,
+extern void AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *teamIds,
                                                      uint16_t count);
 
 /* reloadEuroCupTeamSelectionFromRestoredField — loaded-career fix for the
  * CUP-format euro slots (Cup Winners' Cup / UEFA Cup).
  *
- * The interactive cup update shows the cup menu, whose _DIYCupFinish ->
- * _DIY_BuildTeamSelectionPointerCache validates EVERY cup team via
- * _VerifyTeamLoaded, which only searches selTeamsPtr (+ current/career team).
+ * The interactive cup update shows the cup menu, whose DIYCupFinish ->
+ * DIY_BuildTeamSelectionPointerCache validates EVERY cup team via
+ * VerifyTeamLoaded, which only searches selTeamsPtr (+ current/career team).
  * So selTeamsPtr must hold the cup's field.
  *
  * On a FRESH in-session career the cup's teams are already in selTeamsPtr
- * (loaded when the cup was contested that season), so _RestoreSelectedTeams
+ * (loaded when the cup was contested that season), so RestoreSelectedTeams
  * brings them back and the validation passes. On a LOADED career the load only
  * establishes the CURRENT competition's selection (the player's league); the
  * background euro-cup slot's team selection is never re-loaded, so selTeamsPtr
- * holds league teams -> _VerifyTeamLoaded(<a cup team, e.g. 0x0E17>) panics
+ * holds league teams -> VerifyTeamLoaded(<a cup team, e.g. 0x0E17>) panics
  * (SIGILL) during the season-advance CWC/UEFA update (repro: DIV3-2.CAR, club
  * in the Cup Winners' Cup).
  *
@@ -452,7 +452,7 @@ extern void _AppendTeamsToSelectionFromTmdOrTeamFile(uint16_t *out, uint16_t *te
 static void reloadEuroCupTeamSelectionFromRestoredField(void)
 {
     numSelectedTeams = 0;
-    _AppendTeamsToSelectionFromTmdOrTeamFile(
+    AppendTeamsToSelectionFromTmdOrTeamFile(
         (uint16_t *)diyCompetitionStart.cupTeamIds,
         (uint16_t *)diyCompetitionStart.cupTeamIds,
         (uint16_t)diyCompetitionStart.base.numTeams);
@@ -462,80 +462,80 @@ static void reloadEuroCupTeamSelectionFromRestoredField(void)
  * If euroCupCopy is the active quaternary competition, edit it interactively;
  * otherwise auto-advance it as a league competition and copy the grid. */
 __attribute__((used, externally_visible))
-void _Career_UpdateEuroCupCompetitionSlot(void)
+void Career_UpdateEuroCupCompetitionSlot(void)
 {
     uint8_t *a4 = euroCupCopy;
     /* Branch purely on whether this euro cup is the player's quaternary
      * competition — matches SWOS2.s Career_UpdateEuroCupCompetitionSlot @57397
      * (cmpa.l quaternaryCompetitionPtr,a4 / bne). A club->national transition
      * must leave quaternaryCompetitionPtr != euroCupCopy (a national coach never
-     * manages a club euro cup); if a 0x8888 _VerifyTeamLoaded panic ever
+     * manages a club euro cup); if a 0x8888 VerifyTeamLoaded panic ever
      * resurfaces here, the root cause is a STALE quaternaryCompetitionPtr, not
      * this branch — fix THAT, don't re-gate. See
      * project_eurocup_national_backup_clobber. */
     if (a4 == quaternaryCompetitionPtr) {
-        _RestoreSelectedTeams();
-        _Career_CopyEuroCupsCompetitionContextToOrFromActive();
-        _DIY_EditCompetitionSlot(1, 1, 0);
-        _Career_CopyEuroCupTeamGridAndTitleHolder();
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        Career_CopyEuroCupsCompetitionContextToOrFromActive();
+        DIY_EditCompetitionSlot(1, 1, 0);
+        Career_CopyEuroCupTeamGridAndTitleHolder();
+        SaveSelectedTeams();
     } else {
-        _Career_AutoAdvanceLeagueCompetitionFromRecord(a4);
-        _Career_CopyEuroCupTeamGridAndTitleHolder();
+        Career_AutoAdvanceLeagueCompetitionFromRecord(a4);
+        Career_CopyEuroCupTeamGridAndTitleHolder();
     }
 }
 
 /* Career_UpdateCupWinnersCupCompetitionSlot (SWOS2.s line 31792)
  * Same pattern but for Cup Winners' Cup — uses ShowDIYCupMenuWithParams instead of EditSlot. */
 __attribute__((used, externally_visible))
-void _Career_UpdateCupWinnersCupCompetitionSlot(void)
+void Career_UpdateCupWinnersCupCompetitionSlot(void)
 {
     uint8_t *a4 = cupWinnersCupCopy;
     if (a4 == quaternaryCompetitionPtr) {
-        _RestoreSelectedTeams();
-        _Career_CopyEuroCupsCompetitionContextToOrFromActive();
+        RestoreSelectedTeams();
+        Career_CopyEuroCupsCompetitionContextToOrFromActive();
         reloadEuroCupTeamSelectionFromRestoredField();
-        _ShowDIYCupMenuWithParams(1, 1, 0);
-        _Career_CopyCupWinnersCupTeamGridAndTitleHolder();
+        ShowDIYCupMenuWithParams(1, 1, 0);
+        Career_CopyCupWinnersCupTeamGridAndTitleHolder();
         /* reloadEuroCupTeamSelectionFromRestoredField overwrote selTeamsPtr with
          * the cup field (needed by the menu's cache build + the title-grid copy
          * above), but it did NOT touch the shared savedTeamsBackupBuffer — which
-         * still holds the LEAGUE selection that _RestoreSelectedTeams loaded at
-         * entry. Restore it before _SaveSelectedTeams so the backup stays the
+         * still holds the LEAGUE selection that RestoreSelectedTeams loaded at
+         * entry. Restore it before SaveSelectedTeams so the backup stays the
          * league selection: the very next season-advance step
-         * (processPrimaryCompetitionForNextSeason -> _RestoreSelectedTeams ->
-         * _DIY_CachePrimaryQualifiedTeamsGrid) needs the player's league teams,
-         * and would otherwise _VerifyTeamLoaded-panic on a league team (0x0503).
+         * (processPrimaryCompetitionForNextSeason -> RestoreSelectedTeams ->
+         * DIY_CachePrimaryQualifiedTeamsGrid) needs the player's league teams,
+         * and would otherwise VerifyTeamLoaded-panic on a league team (0x0503).
          * No-op on a fresh career (the backup already holds the league teams). */
-        _RestoreSelectedTeams();
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        SaveSelectedTeams();
     } else {
-        _Career_AutoAdvanceCupCompetitionFromRecord(a4);
-        _Career_CopyCupWinnersCupTeamGridAndTitleHolder();
+        Career_AutoAdvanceCupCompetitionFromRecord(a4);
+        Career_CopyCupWinnersCupTeamGridAndTitleHolder();
     }
 }
 
 /* Career_UpdateUefaCupCompetitionSlot (SWOS2.s line 31820)
  * Same pattern for UEFA Cup. */
 __attribute__((used, externally_visible))
-void _Career_UpdateUefaCupCompetitionSlot(void)
+void Career_UpdateUefaCupCompetitionSlot(void)
 {
     uint8_t *a4 = uefaCupCopy;
     if (a4 == quaternaryCompetitionPtr) {
-        _RestoreSelectedTeams();
-        _Career_CopyEuroCupsCompetitionContextToOrFromActive();
+        RestoreSelectedTeams();
+        Career_CopyEuroCupsCompetitionContextToOrFromActive();
         reloadEuroCupTeamSelectionFromRestoredField();
-        _ShowDIYCupMenuWithParams(1, 1, 0);
-        _Career_CopyUefaCupTeamGridAndTitleHolder();
+        ShowDIYCupMenuWithParams(1, 1, 0);
+        Career_CopyUefaCupTeamGridAndTitleHolder();
         /* Restore the league selection into selTeamsPtr before saving — see the
          * Cup Winners' Cup update above for the full rationale (the reload left
          * the cup field in selTeamsPtr; the shared backup still holds the league
          * teams the next advance step needs). */
-        _RestoreSelectedTeams();
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        SaveSelectedTeams();
     } else {
-        _Career_AutoAdvanceCupCompetitionFromRecord(a4);
-        _Career_CopyUefaCupTeamGridAndTitleHolder();
+        Career_AutoAdvanceCupCompetitionFromRecord(a4);
+        Career_CopyUefaCupTeamGridAndTitleHolder();
     }
 }
 
@@ -545,10 +545,10 @@ extern uint16_t teamNoOfferAccepted;
 extern uint16_t careerFileBuffer;
 extern uint16_t panicReasonCode;
 
-extern uint16_t _Rand2(void);
-extern void _Career_RemoveTeamFromTmdTeamPool(uint16_t teamNum);
-extern void _Career_AppendTeamToTmdTeamPool(TeamFileEx *grid);
-extern void _PanicHaltLoop(void);
+extern uint16_t Rand2(void);
+extern void Career_RemoveTeamFromTmdTeamPool(uint16_t teamNum);
+extern void Career_AppendTeamToTmdTeamPool(TeamFileEx *grid);
+extern void PanicHaltLoop(void);
 
 /* Career_DrawRandomTeamFromPoolAndCopyGrid (SWOS2.s line 31528)
  * Given a title holder team ID (d2), a destination grid (a3), a team list (a2),
@@ -574,7 +574,7 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
     uint8_t selectedCountry;
 
     for (;;) {
-        randIdx = _Rand2();
+        randIdx = Rand2();
         randIdx = (uint16_t)((uint32_t)randIdx * count >> 8);
         selectedTeam = BE_READ_U16(&listBytes[randIdx * 2]);
         selectedCountry = (uint8_t)(selectedTeam >> 8);
@@ -598,18 +598,18 @@ static void drawRandomTeamFromPoolAndCopyGrid(uint16_t titleHolder,
     BE_WRITE_U16(&listBytes[randIdx * 2], titleHolder);
 
     uint16_t savedCareerFile = careerFileBuffer;
-    _Career_RemoveTeamFromTmdTeamPool(removedTeam);
-    _Career_AppendTeamToTmdTeamPool((TeamFileEx *)dstGrid);
+    Career_RemoveTeamFromTmdTeamPool(removedTeam);
+    Career_AppendTeamToTmdTeamPool((TeamFileEx *)dstGrid);
     if (savedCareerFile != careerFileBuffer) {
         panicReasonCode = 0x8997;
-        _PanicHaltLoop();
+        PanicHaltLoop();
     }
 }
 
 /* Career_DrawEuropeanCupTeamsAndCopyGrids (SWOS2.s line 31510)
  * Draws random title holder replacement teams for all three European cups. */
 __attribute__((used, externally_visible))
-void _Career_DrawEuropeanCupTeamsAndCopyGrids(void)
+void Career_DrawEuropeanCupTeamsAndCopyGrids(void)
 {
     drawRandomTeamFromPoolAndCopyGrid(
         euroCupTitleHolderTeamId, euroCupTitleHolderGrid,
@@ -656,11 +656,11 @@ extern uint8_t africaWorldCupQualificationCopy[];
 extern uint8_t asiaWorldCupQualificationCopy[];
 extern uint8_t oceaniaWorldCupQualificationCopy[];
 
-extern void _Career_CopyCompetitionFileBufferToOrFromActive(void);
-extern void _ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
-extern void _DIY_BuildQualifiedTeamListFromSortedTable(uint16_t count, uint8_t *out);
-extern void _DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out);
-extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
+extern void Career_CopyCompetitionFileBufferToOrFromActive(void);
+extern void ShowDiyLeaguesTournamentMenu(uint16_t type, uint16_t viewOnly, uint16_t focusOverride);
+extern void DIY_BuildQualifiedTeamListFromSortedTable(uint16_t count, uint8_t *out);
+extern void DIY_BuildQualifiedTeamListFromDiyFileBuffer(uint16_t count, uint8_t *out);
+extern void Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record, uint16_t index);
 
 /* Career_UpdateEuropeanChampionshipCompetitionSlot (SWOS2.s line 31555)
  * in: competition record, count of teams to qualify, output list ptr.
@@ -668,20 +668,20 @@ extern void _Career_AutoAdvanceInternationalCompetitionFixtures(uint8_t *record,
 static void updateECSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
     if (competition == currentCompetitionPtr) {
-        _RestoreSelectedTeams();
-        _Career_CopyCompetitionFileBufferToOrFromActive();
-        _ShowDiyLeaguesTournamentMenu(1, 1, 0);
-        _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
-        _SaveSelectedTeams();
+        RestoreSelectedTeams();
+        Career_CopyCompetitionFileBufferToOrFromActive();
+        ShowDiyLeaguesTournamentMenu(1, 1, 0);
+        DIY_BuildQualifiedTeamListFromSortedTable(count, out);
+        SaveSelectedTeams();
     } else {
-        _Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
-        _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
+        Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
+        DIY_BuildQualifiedTeamListFromSortedTable(count, out);
     }
 }
 
 /* Career_UpdateEuropeanChampionshipCompetitions (SWOS2.s line 31524) */
 __attribute__((used, externally_visible))
-void _Career_UpdateEuropeanChampionshipCompetitions(void)
+void Career_UpdateEuropeanChampionshipCompetitions(void)
 {
     if (!(someTeamFlags & 0x01))
         return;
@@ -721,38 +721,38 @@ static void updateWCSlot(uint8_t *competition, uint16_t count, uint8_t *out)
 {
     int8_t compType = ((Competition *)competition)->type;
     if (competition == currentCompetitionPtr) {
-        _RestoreSelectedTeams();
+        RestoreSelectedTeams();
         if (compType == 2) {
-            _Career_CopyCompetitionFileBufferToOrFromActive();
-            _DIY_EditCompetitionSlot(1, 1, 0);
-            _DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
-            _SaveSelectedTeams();
+            Career_CopyCompetitionFileBufferToOrFromActive();
+            DIY_EditCompetitionSlot(1, 1, 0);
+            DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
+            SaveSelectedTeams();
         } else if (compType == 0) {
-            _Career_CopyCompetitionFileBufferToOrFromActive();
-            _ShowDiyLeaguesTournamentMenu(1, 1, 0);
-            _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
-            _SaveSelectedTeams();
+            Career_CopyCompetitionFileBufferToOrFromActive();
+            ShowDiyLeaguesTournamentMenu(1, 1, 0);
+            DIY_BuildQualifiedTeamListFromSortedTable(count, out);
+            SaveSelectedTeams();
         } else {
             panicReasonCode = 0x1991;
-            _PanicHaltLoop();
+            PanicHaltLoop();
         }
     } else {
         if (compType == 2) {
-            _Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
-            _DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
+            Career_AutoAdvanceLeagueCompetitionFromRecord(competition);
+            DIY_BuildQualifiedTeamListFromDiyFileBuffer(count, out);
         } else if (compType == 0) {
-            _Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
-            _DIY_BuildQualifiedTeamListFromSortedTable(count, out);
+            Career_AutoAdvanceInternationalCompetitionFixtures(competition, 0);
+            DIY_BuildQualifiedTeamListFromSortedTable(count, out);
         } else {
             panicReasonCode = 0x1992;
-            _PanicHaltLoop();
+            PanicHaltLoop();
         }
     }
 }
 
 /* Career_UpdateWorldCupCompetitions (SWOS2.s line 31589) */
 __attribute__((used, externally_visible))
-void _Career_UpdateWorldCupCompetitions(void)
+void Career_UpdateWorldCupCompetitions(void)
 {
     if (someTeamFlags & 0x80)
         worldCupHostTeam = primaryCompetitionBuf.tourn.header.winnerTeam;

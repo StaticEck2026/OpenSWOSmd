@@ -8,19 +8,19 @@
 #include "game_types.h"
 
 /* --- State save/restore --- */
-void _TrainingMatch_SaveSelectedPlayerId(uint16_t value);
-void _TrainingMatch_RemoveSavedPlayerId(uint16_t value);
-void _TrainingMatch_SaveLastMatchState(void);
-void _TrainingMatch_RestoreLastMatchState(void);
-void _TrainingMatch_RestoreSavedTeamSelectionState(void);
-void _TrainingMatch_SaveTeamSelectionState(void);
-int16_t _CheckIfTeamIsChanged(void);
+void TrainingMatch_SaveSelectedPlayerId(uint16_t value);
+void TrainingMatch_RemoveSavedPlayerId(uint16_t value);
+void TrainingMatch_SaveLastMatchState(void);
+void TrainingMatch_RestoreLastMatchState(void);
+void TrainingMatch_RestoreSavedTeamSelectionState(void);
+void TrainingMatch_SaveTeamSelectionState(void);
+int16_t CheckIfTeamIsChanged(void);
 
 /* --- Sub swap candidates and trial players (Chunk 176) --- */
-void _TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
-void _TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position);
-void _TrainingMatch_AddTrialPlayersForNewSeason(void);
+void TrainingMatch_ApplyUseMatchTeamAndSwapSubs(void);
+void TrainingMatch_TryAddTrialPlayerAtPosition(uint16_t position);
+void TrainingMatch_AddTrialPlayersForNewSeason(void);
 
 /* --- Chunk 200: PlayTrainingGame + BuildCurrentTeam --- */
-void _TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
-void _PlayTrainingGame(void);
+void TrainingMatch_BuildCurrentTeamFromCareerTeam(void);
+void PlayTrainingGame(void);

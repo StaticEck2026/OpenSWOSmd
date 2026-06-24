@@ -9,14 +9,14 @@
 #include "game_types.h"
 
 /* Advertisement system */
-void _CopyAdvertisementsData(void);
-void _InitAdvertisements(void);
-void _SetAdvertisementsVisible(void);
-void _SetAdvertisementsInvisible(void);
-void _ManageAdvertisements(void);
+void CopyAdvertisementsData(void);
+void InitAdvertisements(void);
+void SetAdvertisementsVisible(void);
+void SetAdvertisementsInvisible(void);
+void ManageAdvertisements(void);
 
 /* In-game display sprites */
-void _UpdateCornerFlagSprite(void);
-void _SpinBig_S_Sprite(void);
+void UpdateCornerFlagSprite(void);
+void SpinBig_S_Sprite(void);
 
 #endif

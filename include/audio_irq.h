@@ -15,6 +15,6 @@
 #define AUDX_VOL   8   /* uint16_t: volume */
 
 /* ---- Exported function ---- */
-uint8_t _AudioIRQUpdateChannels(void);
+uint8_t AudioIRQUpdateChannels(void);
 
 #endif

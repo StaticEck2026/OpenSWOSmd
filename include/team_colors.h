@@ -15,21 +15,21 @@
 #define SHIRT_HORIZONTAL_STRIPES 3
 
 /* ---- Exported functions ---- */
-uint16_t __attribute__((used, externally_visible)) _ConvertTeamColor(uint16_t color);
-int16_t  __attribute__((used, externally_visible)) _AreBasicColorsConflicting(uint16_t color1, uint16_t color2);
-int16_t  __attribute__((used, externally_visible)) _AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2);
-int16_t  __attribute__((used, externally_visible)) _GetTeamKitsSimilarityFactor(
+uint16_t __attribute__((used, externally_visible)) ConvertTeamColor(uint16_t color);
+int16_t  __attribute__((used, externally_visible)) AreBasicColorsConflicting(uint16_t color1, uint16_t color2);
+int16_t  __attribute__((used, externally_visible)) AreShortsAndStripeColorsConflicting(uint16_t color1, uint16_t color2);
+int16_t  __attribute__((used, externally_visible)) GetTeamKitsSimilarityFactor(
     uint16_t shirtType1, uint8_t stripesColor1, uint8_t basicColor1, uint8_t shortsColor1,
     uint16_t shirtType2, uint8_t stripesColor2, uint8_t basicColor2, uint8_t shortsColor2);
-void     __attribute__((used, externally_visible)) _MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2);
-void     __attribute__((used, externally_visible)) _ConvertTeamKitColors(
+void     __attribute__((used, externally_visible)) MeasureTeamKitsSimilarity(TeamFile *team1, TeamFile *team2);
+void     __attribute__((used, externally_visible)) ConvertTeamKitColors(
     uint16_t shirtType, uint8_t stripesColor, uint8_t basicColor, uint8_t shortsColor, uint8_t socksColor,
     TeamGame *team);
-void     __attribute__((used, externally_visible)) _SetTeamSecondaryColors(
+void     __attribute__((used, externally_visible)) SetTeamSecondaryColors(
     uint16_t shirtType, uint8_t stripesColor, uint8_t basicColor, uint8_t shortsColor, uint8_t socksColor,
     TeamGame *team);
-void     __attribute__((used, externally_visible)) _SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *team2File);
-void     __attribute__((used, externally_visible)) _SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File);
-uint16_t __attribute__((used, externally_visible)) _ConvertPlayerDressColor(uint16_t color);
+void     __attribute__((used, externally_visible)) SetInGameTeamColors(uint16_t secondaryKitFlags, TeamFile *team1File, TeamFile *team2File);
+void     __attribute__((used, externally_visible)) SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File);
+uint16_t __attribute__((used, externally_visible)) ConvertPlayerDressColor(uint16_t color);
 
 #endif

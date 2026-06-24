@@ -22,7 +22,7 @@
  *   = a 32-byte overlay run, of which only 8 bytes are these 4 fields.
  *
  * Those competition pointers are now SEPARATE standalone symbols (re-derived on
- * load by _RebuildPointersAfterLoad, not saved), so the 24 bytes they occupied
+ * load by RebuildPointersAfterLoad, not saved), so the 24 bytes they occupied
  * in the overlay are pure dead space — nothing reads careerFinished+offset to
  * reach them. We therefore pack just the 4 real fields here (8 B) and leave the
  * historical 32-byte run reserved as an overlay hole (no cascade).

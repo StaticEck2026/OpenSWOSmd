@@ -473,7 +473,7 @@ uint16_t secondsSwitchAccumulator[1] = { 0x0000               };
 /* Stores up to 10 pointers into homeMarketPlayers/foreignMarketPlayers
  * entries. Amiga stored these as 32-bit values; on 64-bit the slot must
  * be uintptr_t or the writer's `(uint32_t)a1` cast truncates the upper
- * 32 bits and the reader SIGSEGVs in _PlayerMarketItemBeforeDraw.
+ * 32 bits and the reader SIGSEGVs in PlayerMarketItemBeforeDraw.
  * Same trap shape as [[project_uint32_pointer_storage_trap]]. */
 uintptr_t playerMarketVisibleItems[10] = { 0 };
 uint16_t diyLeagueTournament_viewOptionsAvailable[1] = { 0x0000 };

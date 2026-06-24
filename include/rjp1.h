@@ -153,13 +153,13 @@ void RJP1_StartSequenceByNoteId(RJP1_Player *p, int channel, int noteId);
 void RJP1_StartSequenceByWaveId(RJP1_Player *p, int channel, int waveId);
 
 /* Returns a 4-byte preset record (channel_noteIds[0..3]) from
- * song_data[2] + presetId*4. Used by _AudioApplyPresetToChannels. */
+ * song_data[2] + presetId*4. Used by AudioApplyPresetToChannels. */
 void RJP1_PresetEntry(RJP1_Player *p, int presetId, uint8_t out_note_ids[4]);
 
 /* Set per-channel post-attenuation (0..64). 64 = unity, 0 = mute.
  * Applied in the mixer on top of the wave-script's hw->vol — this is
  * the hook for per-channel volume control from outside the player
- * (e.g. _AudioSetChannelVolume's chant fade-in/fade-out path).
+ * (e.g. AudioSetChannelVolume's chant fade-in/fade-out path).
  * Out-of-range channels and out-of-range volumes are clamped. */
 void RJP1_SetChannelAttenuation(RJP1_Player *p, int channel, int vol_0_64);
 

@@ -330,7 +330,7 @@ int AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
     return 0;
 }
 
-/* Trigger an SFX by note id (the Amiga _AudioChannelNoteOnOff path). */
+/* Trigger an SFX by note id (the Amiga AudioChannelNoteOnOff path). */
 void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
 {
 #if SWOS_AUDIO_DISABLED
@@ -344,7 +344,7 @@ void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
     SDL_UnlockMutex(s_mtx);
 }
 
-/* Trigger an SFX by wave id (the Amiga _AudioChannelQueueNextWaveIfEnabled
+/* Trigger an SFX by wave id (the Amiga AudioChannelQueueNextWaveIfEnabled
  * path). Skips the note-record indirection. */
 void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
 {
@@ -359,7 +359,7 @@ void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
     SDL_UnlockMutex(s_mtx);
 }
 
-/* Trigger an SFX preset (the Amiga _AudioApplyPresetToChannels path).
+/* Trigger an SFX preset (the Amiga AudioApplyPresetToChannels path).
  * Reads the 4-byte preset record (one noteId per channel) and fires
  * each non-zero entry on its corresponding channel via the noteId
  * sequence start. */

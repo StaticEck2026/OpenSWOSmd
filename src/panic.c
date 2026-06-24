@@ -22,11 +22,11 @@ extern volatile uint8_t pl2Fire;
 extern volatile int16_t pl2Direction;
 
 /* ---- External C functions ---- */
-extern void _FadeOutToBlack(void);
-extern void _FadeIn(void);
-extern void _WaitForVSync(void);
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
+extern void FadeOutToBlack(void);
+extern void FadeIn(void);
+extern void WaitForVSync(void);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
 
 
 /* ================================================================
@@ -57,7 +57,7 @@ static uint8_t *panicLookupMessagePtr(uint16_t code)
 }
 
 /* ================================================================
- * _PanicHaltLoop  (SWOS2.s line 5500)
+ * PanicHaltLoop  (SWOS2.s line 5500)
  *
  * Crash handler: displays a 4-digit hex panic code and hangs forever.
  *
@@ -72,7 +72,7 @@ static uint8_t *panicLookupMessagePtr(uint16_t code)
  *   5. Fade in and hang forever
  * ================================================================ */
 __attribute__((used, externally_visible, noreturn))
-void _PanicHaltLoop(void)
+void PanicHaltLoop(void)
 {
 #ifdef SWOS_SDL_BUILD
     /* SDL-only debug aid: log the panic reason and trap so gdb catches it.
@@ -97,16 +97,16 @@ void _PanicHaltLoop(void)
     *dst = 0;
 
     /* Fade screen to black */
-    _FadeOutToBlack();
+    FadeOutToBlack();
 
     /* Wait for both joystick fire buttons pressed with no directional input */
     for (;;) {
-        _Player1StatusProc();
+        Player1StatusProc();
         if (pl1Fire == 0)
             continue;
         if (pl1Direction != 0)
             continue;
-        _Player2StatusProc();
+        Player2StatusProc();
         if (pl2Fire == 0)
             continue;
         if (pl2Direction != 0)
@@ -116,12 +116,12 @@ void _PanicHaltLoop(void)
 
     /* Draw the panic hex code centered on screen */
     /* d1=0x98 (x), d2=0xE1 (y), d3=0x0F (color=15) */
-    _DrawMenuTextCentered(0x98, 0xE1, 0x0F, panicOutBuf, bigCharsTable);
+    DrawMenuTextCentered(0x98, 0xE1, 0x0F, panicOutBuf, bigCharsTable);
 
     /* Wait for vsync and fade in */
-    _WaitForVSync();
+    WaitForVSync();
     paletteIndex = 4;
-    _FadeIn();
+    FadeIn();
 
     /* Infinite loop — system is halted */
     for (;;)

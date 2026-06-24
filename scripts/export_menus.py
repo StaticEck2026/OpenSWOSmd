@@ -13,7 +13,7 @@ Why a flat re-parse instead of brace-walking: the C initializers are the IDA
 brace nesting is irregular (some entries are wrapped, some flattened inline), so
 we IGNORE braces entirely: strip comments, drop all `{`/`}`, split the remaining
 values on commas, then walk the flat token stream with the SAME state machine as
-_UnpackMenu (src/menu_system.c) / the IDA beautifiers (sws_menu*.{py,idc}):
+UnpackMenu (src/menu_system.c) / the IDA beautifiers (sws_menu*.{py,idc}):
 
     header(4) -> { markers | entries }* -> end-menu
 

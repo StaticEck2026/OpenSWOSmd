@@ -53,7 +53,7 @@ extern TeamStatisticsData team2StatsData;
 extern uint16_t pl1Tactics;
 extern uint16_t pl2Tactics;
 
-/* _InitGameSaveTeams globals */
+/* InitGameSaveTeams globals */
 extern TeamGame  topTeamInGame;
 extern TeamGame  bottomTeamInGame;
 extern TeamGame  topTeamSaved;
@@ -83,22 +83,22 @@ extern uint8_t teamBName[];
 extern TeamGame bottomTeamInGame;
 
 /* ---- External function declarations ---- */
-extern void _Player1StatusProc(void);
-extern void _Player2StatusProc(void);
-extern void _FadeOutToBlack(void);
-extern void _LoadPitchMap(uint16_t index);
-extern void _FixupAndColorPitchFile(void);
-extern void _ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2);
-extern uint8_t *_GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
-extern uint8_t *_GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
+extern void Player1StatusProc(void);
+extern void Player2StatusProc(void);
+extern void FadeOutToBlack(void);
+extern void LoadPitchMap(uint16_t index);
+extern void FixupAndColorPitchFile(void);
+extern void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2);
+extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+extern uint8_t *GetPlayerAtIndex(uint16_t teamNumber, uint16_t ordinal);
 extern uint16_t _cGetPlayerAtIndexFileIdx;
-extern uint8_t *_StringCopy(const uint8_t *src, uint8_t *dst);
-extern uint8_t *_ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
-extern uint16_t _IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
-extern int16_t _ShouldApplyRandomPlayerStatusAfterSim(void);
-extern void _Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerFileBase);
-extern uint16_t _GetAveragePlayerPrice(TeamFileEx *teamFileBase);
-extern uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
+extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
+extern uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
+extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+extern int16_t ShouldApplyRandomPlayerStatusAfterSim(void);
+extern void Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerFileBase);
+extern uint16_t GetAveragePlayerPrice(TeamFileEx *teamFileBase);
+extern uint8_t *GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
                                               uint16_t *outSlot, uint16_t *outPlayerIndex);
 
 /* ================================================================
@@ -112,7 +112,7 @@ extern uint8_t *_GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requested
  * struct that gets filled first is bottomTeamData instead.
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitTeamsData(void)
+void InitTeamsData(void)
 {
     /* DOS-vs-Amiga gameplay tuning: write the per-style physics/timer constants
      * (ball friction/gravity, keeper distances, match-clock + stoppage timers) for
@@ -230,7 +230,7 @@ void _InitTeamsData(void)
 }
 
 /* ================================================================
- * _InitGameSaveTeams  (SWOS2.s line 11941)
+ * InitGameSaveTeams  (SWOS2.s line 11941)
  *
  * Saves both team in-game structs (1018 bytes each) to snapshot
  * buffers, stores team pointers, loads pitch, converts colors
@@ -242,7 +242,7 @@ void _InitTeamsData(void)
  * that fall-through; this C function only covers the save portion.
  * ================================================================ */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
-void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
+void InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
 {
     /* Copy both team structs (1018 bytes each) to snapshot buffers */
     uint8_t *src1 = (uint8_t *)&topTeamInGame;
@@ -260,54 +260,54 @@ void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
     bottomTeamPtr = rightTeam;
 
     /* Load pitch map (high byte of pitchNumberAndType is the index) */
-    _LoadPitchMap(pitchNumberAndType >> 8);
-    _FixupAndColorPitchFile();
-    _ConvertColorsAndTextSprites(leftTeam, rightTeam);
+    LoadPitchMap(pitchNumberAndType >> 8);
+    FixupAndColorPitchFile();
+    ConvertColorsAndTextSprites(leftTeam, rightTeam);
 
     /* Wait for both fire buttons released.
      *
-     * On Amiga _Player1StatusProc / _Player2StatusProc read hardware
+     * On Amiga Player1StatusProc / Player2StatusProc read hardware
      * joystick registers (JOY1DAT, CIAA_PRA) directly — the controller
      * updates them in real time so this tight spin sees fire release as
      * soon as the user lets go.
      *
      * On SDL joy1Dat / ciaa_pra are software globals updated by
      * InputSDL_PostFrame inside Platform_VBlank. Without
-     * _WaitForVSync inside the spin, no event pump runs and the fire
+     * WaitForVSync inside the spin, no event pump runs and the fire
      * bits never clear — the program hangs here whenever the user is
      * still holding fire (e.g. they pressed VIEW HIGHLIGHTS and held
      * the key for any noticeable time). Tester reproducer: hold
      * right-Ctrl after clicking VIEW HIGHLIGHTS on Windows.
      *
-     * Fix: drive _WaitForVSync each iteration on SDL so PostFrame runs
+     * Fix: drive WaitForVSync each iteration on SDL so PostFrame runs
      * and the fire state can update. The hold doubles as the
      * stadium-screen visible duration the original Amiga gets for
      * free from the same release-wait. */
 #ifdef SWOS_SDL_BUILD
     {
-        extern void _WaitForVSync(void);
+        extern void WaitForVSync(void);
         for (;;) {
-            _WaitForVSync();
-            _Player1StatusProc();
+            WaitForVSync();
+            Player1StatusProc();
             if (pl1Fire)
                 continue;
-            _Player2StatusProc();
+            Player2StatusProc();
             if (!pl2Fire)
                 break;
         }
     }
 #else
     for (;;) {
-        _Player1StatusProc();
+        Player1StatusProc();
         if (pl1Fire)
             continue;
-        _Player2StatusProc();
+        Player2StatusProc();
         if (!pl2Fire)
             break;
     }
 #endif
 
-    _FadeOutToBlack();
+    FadeOutToBlack();
     paletteIndex = 2;
 }
 
@@ -324,7 +324,7 @@ void _InitGameSaveTeams(TeamGame *leftTeam, TeamGame *rightTeam)
  * Asm: a1 = TeamGame ptr, a2 = TeamFile ptr
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase)
+void UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase)
 {
     if (teamFileBase->team.teamControls == 1)  /* TEAM_COMPUTER */
         return;
@@ -337,9 +337,9 @@ void _UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase)
             continue;
 
         /* Get the player in the team file.
-         * _GetPlayer returns a base pointer; PlayerFile starts sizeof(TeamFile) bytes in. */
+         * GetPlayer returns a base pointer; PlayerFile starts sizeof(TeamFile) bytes in. */
         uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
-        uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
+        uint8_t *playerBase = GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
         PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
         /* Merge injury bitfield: keep low 5 bits, replace high 3 bits */
@@ -359,7 +359,7 @@ void _UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase)
  * Asm: a1 = TeamGame ptr, a2 = TeamFile ptr, d7.w = goalStats offset
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
+void AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
                                         uint16_t statOffset)
 {
     teamFileBase->team.writesZeroHere += (uint8_t)tg->numOwnGoals;
@@ -371,7 +371,7 @@ void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
             continue;
 
         uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
-        uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
+        uint8_t *playerBase = GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
         PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
         pf->goalStats[statOffset] += (uint8_t)goals;
     }
@@ -389,12 +389,12 @@ void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase,
  * sizeof(TeamFile) = offset to first PlayerFile entry).
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
+void SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
 {
     PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
 
     /* Copy full player name */
-    _StringCopy((uint8_t *)pf->playerName, (uint8_t *)pi->fullName);
+    StringCopy((uint8_t *)pf->playerName, (uint8_t *)pi->fullName);
 
     /* Extract face from positionAndFace: bits 3-4 → 0-3 */
     uint16_t face = (uint16_t)(pf->positionAndFace & PF_FACE_MASK) >> 3;
@@ -413,7 +413,7 @@ void _SetPlayerNameAndFace(uint8_t *playerBase, PlayerInfo *pi)
  *      a6 = PlayerInfo ptr within TeamGame
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
+void InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
                         uint8_t *playerBase, PlayerInfo *pi)
 {
     PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
@@ -423,8 +423,8 @@ void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
     pi->halfPlayed = 0;
 
     /* Extract surname for short name display */
-    uint8_t *surname = _ExtractSurname((uint8_t *)pf->playerName, 0x800E);
-    _StringCopy(surname, (uint8_t *)pi->shortName);
+    uint8_t *surname = ExtractSurname((uint8_t *)pf->playerName, 0x800E);
+    StringCopy(surname, (uint8_t *)pi->shortName);
 
     /* Face from positionAndFace: bits 3-4 → 0-3 */
     uint16_t face = (uint16_t)(pf->positionAndFace & PF_FACE_MASK) >> 3;
@@ -440,7 +440,7 @@ void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
     /* Check if player is injured/unavailable (bench slots 11+) */
     if (playerSlot >= 11) {
         int16_t mode = (int16_t)plgD3Param;
-        uint16_t injured = _IsPlayerInjured((PlayerFile *)playerBase, mode);
+        uint16_t injured = IsPlayerInjured((PlayerFile *)playerBase, mode);
         if (injured != 0) {
             /* Player is injured — mark as unavailable */
             pi->position = (int8_t)0xFF;
@@ -491,7 +491,7 @@ void _InitInGamePlayer(uint16_t playerIndex, uint16_t playerSlot,
  * Asm: a1 = TeamGame ptr, a2 = TeamFile ptr
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase)
+void ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase)
 {
     if (trainingGame != 0)
         return;
@@ -507,7 +507,7 @@ void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase)
             continue;
 
         uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
-        uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
+        uint8_t *playerBase = GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
 
         uint8_t cardVal = (uint8_t)pi->numYellowCards;
         PlayerFile *pf = (PlayerFile *)(playerBase + sizeof(TeamFile));
@@ -515,7 +515,7 @@ void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase)
         if (plgD3Param == 0) {
             /* League/friendly mode */
             uint16_t shifted = (uint16_t)(cardVal << 2) & 0x1C;
-            if (_ShouldApplyRandomPlayerStatusAfterSim() == 0) {
+            if (ShouldApplyRandomPlayerStatusAfterSim() == 0) {
                 /* Don't apply — but if exactly 4 (one yellow?), skip entirely */
                 if (shifted == 4)
                     continue;
@@ -547,7 +547,7 @@ void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase)
  * Asm: a1 = TeamGame ptr, a2 = TeamFile ptr
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase)
+void UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase)
 {
     if (trainingGame != 0)
         return;
@@ -562,8 +562,8 @@ void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase)
             continue;
 
         uint16_t teamNum = PACK_BE_U16(teamFileBase->team.countryNumber, teamFileBase->team.teamOrdinal);
-        uint8_t *playerBase = _GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
-        _Career_UpdateSinglePlayerPostMatchStats(playerBase);
+        uint8_t *playerBase = GetPlayer(teamNum, (uint16_t)(int8_t)pi->playerIndex);
+        Career_UpdateSinglePlayerPostMatchStats(playerBase);
     }
 }
 
@@ -583,7 +583,7 @@ void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase)
  * Asm: a2=TeamFile*, a4=TeamGame*, a6=int16_t* avgPricePct
  * ================================================================ */
 __attribute__((used, externally_visible))
-void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
+void InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
                                 int16_t *avgPricePct)
 {
     TeamFile *tf = &teamFileBase->team;
@@ -594,7 +594,7 @@ void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
     /* Compute team price percentage for non-career, equal-teams mode */
     if (gameType != 4 /* GAME_TYPE_CAREER */) {
         if (allPlayerTeamsEqual != 0 && tf->teamControls == 2 /* TEAM_PLAYER_COACH */) {
-            uint16_t avgPrice = _GetAveragePlayerPrice(teamFileBase);
+            uint16_t avgPrice = GetAveragePlayerPrice(teamFileBase);
             uint32_t pct = (uint32_t)avgSelectedTeamsPlayerPrice * 100;
             pct = pct / avgPrice;
             *avgPricePct = (int16_t)(pct + 6);
@@ -617,11 +617,11 @@ void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
             d1 = 0;
         }
 
-        uint8_t *playerBase = _GetPlayerAtIndex(teamNum, d1);
+        uint8_t *playerBase = GetPlayerAtIndex(teamNum, d1);
         d1 = _cGetPlayerAtIndexFileIdx;  /* GetPlayerAtIndex remaps ordinal → file index in d1 */
         PlayerInfo *pi = &tg->players[d2];
 
-        _InitInGamePlayer(d1, d2, playerBase, pi);
+        InitInGamePlayer(d1, d2, playerBase, pi);
 
         /* GetPlayerInfoBreakPosition: maps slot via tactics, returns mapped slot and file index */
         d1 = d2;  /* reset */
@@ -629,7 +629,7 @@ void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
             d1 = 0;
         }
         uint16_t slot, playerIndex;
-        uint8_t *playerBase2 = _GetPlayerInfoBreakPosition((uint8_t *)teamFileBase, d1, &slot, &playerIndex);
+        uint8_t *playerBase2 = GetPlayerInfoBreakPosition((uint8_t *)teamFileBase, d1, &slot, &playerIndex);
 
         /* Check if this player is the selected player (for marking) */
         uint16_t selectedIdx;
@@ -656,7 +656,7 @@ void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
         }
 
         /* SetPlayerNameAndFace uses the player ptr returned by GetPlayerInfoBreakPosition */
-        _SetPlayerNameAndFace(playerBase2, pi);
+        SetPlayerNameAndFace(playerBase2, pi);
 
         /* Clear all skill fields */
         pi->passing = 0;
@@ -679,7 +679,7 @@ void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg,
     } else {
         nameSource = (uint8_t *)tf->teamName;
     }
-    _StringCopy(nameSource, (uint8_t *)tg->teamName);
+    StringCopy(nameSource, (uint8_t *)tg->teamName);
 }
 
 /* ========================================================================
@@ -712,11 +712,11 @@ extern uint16_t isGameFriendly;
 extern uint8_t  aTraining[];
 extern uint8_t  aFriendly_1[];
 
-/* _ShowPlayMatchMenu declared in play_match_menu.h */
-/* _InitializeInGameTeamsAndStartGame declared in game_init.h */
+/* ShowPlayMatchMenu declared in play_match_menu.h */
+/* InitializeInGameTeamsAndStartGame declared in game_init.h */
 
-extern uint16_t _ShouldSetupPlayers(void);
-extern void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable);
+extern uint16_t ShouldSetupPlayers(void);
+extern void InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable);
 
 /* SetupPlayers
  *
@@ -731,7 +731,7 @@ extern void _InitPlayerRemapTableForTeam(TeamFileEx *team, uint8_t *remapTable);
  *   mode              — mode flag (asm d7); 0 = normal, non-zero = skip player assignment
  */
 __attribute__((used, externally_visible))
-void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
+void SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
                    int16_t excludeFlags, int16_t allowSquadChanges, int16_t mode) {
     uint16_t d0 = 0;
 
@@ -740,8 +740,8 @@ void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
     /* Career team remap check */
     if (isCareer == 0) {
         if (team1 == &careerTeam || team2 == &careerTeam) {
-            if (_ShouldSetupPlayers() == 0) {
-                _InitPlayerRemapTableForTeam(&careerTeam, (uint8_t *)0);
+            if (ShouldSetupPlayers() == 0) {
+                InitPlayerRemapTableForTeam(&careerTeam, (uint8_t *)0);
             }
         }
     }
@@ -771,7 +771,7 @@ void _SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
         goto setup_team2;
 
     /* Show play match menu for first player */
-    d0 = _ShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
+    d0 = ShowPlayMatchMenu(3, maxSubs, excludeFlags, 1, allowSquadChanges,
                               team1, team2);
 
     if (exitGameFlag != 0) goto cancelled;
@@ -810,7 +810,7 @@ setup_team2:
     d0 = (topTeamPlayerNo | topTeamCoachNo) ^ 3;
 
     /* Show second player menu with teams swapped (team2 as first, team1 as second) */
-    d0 = _ShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
+    d0 = ShowPlayMatchMenu(d0, maxSubs, excludeFlags, 0, allowSquadChanges,
                               team2, team1);
 
     if (exitGameFlag != 0) goto cancelled;
@@ -854,18 +854,18 @@ cancelled:
  *   team1, team2 — TeamFileEx pointers (asm a1, a2)
  */
 __attribute__((used, externally_visible))
-void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
+void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     /* SetupPlayers: mode=0, maxSubs=maxSubstitutes, excludeFlags=1, allowSquadChanges=1 */
-    _SetupPlayers(team1, team2, (int16_t)maxSubstitutes, 1, 1, 0);
+    SetupPlayers(team1, team2, (int16_t)maxSubstitutes, 1, 1, 0);
 
     if (exitGameFlag != 0)
         goto done;
 
     /* Set game name */
     if (trainingGame != 0) {
-        _StringCopy(aTraining, gameName);
+        StringCopy(aTraining, gameName);
     } else {
-        _StringCopy(aFriendly_1, gameName);
+        StringCopy(aFriendly_1, gameName);
     }
     gameRound = 0;
 
@@ -882,7 +882,7 @@ void _InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     isGameFriendly = 1;
 
     /* d0=1, d1=minSubs, d2=maxSubs, d3=0, d7=-1, a1=team1, a2=team2 */
-    _InitializeInGameTeamsAndStartGame(1, (int16_t)minSubstitutes,
+    InitializeInGameTeamsAndStartGame(1, (int16_t)minSubstitutes,
         (int16_t)maxSubstitutes, 0, -1, &team1->team, &team2->team);
 
 done:
@@ -912,28 +912,28 @@ extern uint16_t deadVarAlways0;
 extern uint16_t gameLength;
 extern uint16_t gameLengthInGame;
 extern volatile uint16_t currentGameTick;
-extern void _WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
+extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 extern uint8_t  stadiumMenu[];
 
 /* C function declarations for called routines */
-extern void _SetTeamSecondaryColors(uint16_t shirtType, uint8_t stripesColor,
+extern void SetTeamSecondaryColors(uint16_t shirtType, uint8_t stripesColor,
     uint8_t basicColor, uint8_t shortsColor, uint8_t socksColor, TeamGame *team);
-extern void _SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File);
-extern uint16_t _ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount);
-extern uint16_t _GetAveragePlayerPriceInSelectedTeams(void);
-extern void _InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg, int16_t *avgPricePct);
-extern uint32_t _GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
-extern void _StopMusic(void);
-extern void _ShowMenu(uint8_t *packedMenu);
-extern void _ShowMatchSequence(void);
-extern void _InitMenuMusic(void);
-extern void _TryPlayMusic(void);
-extern void _PrepareMenuForFadeIn(void);
-extern void _InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uint16_t mode);
-extern void _AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase, uint16_t statOffset);
-extern void _UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase);
-extern void _ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase);
-extern void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase);
+extern void SetInGameTeamsPrimaryColors(TeamFile *team1File, TeamFile *team2File);
+extern uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount);
+extern uint16_t GetAveragePlayerPriceInSelectedTeams(void);
+extern void InitInGameTeamStructure(TeamFileEx *teamFileBase, TeamGame *tg, int16_t *avgPricePct);
+extern uint32_t GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
+extern void StopMusic(void);
+extern void ShowMenu(uint8_t *packedMenu);
+extern void ShowMatchSequence(void);
+extern void InitMenuMusic(void);
+extern void TryPlayMusic(void);
+extern void PrepareMenuForFadeIn(void);
+extern void InitInGameTeams_PlayerControlled(TeamFileEx *team1, TeamFileEx *team2, uint16_t mode);
+extern void AccumulateMatchGoalsIntoTeamFile(TeamGame *tg, TeamFileEx *teamFileBase, uint16_t statOffset);
+extern void UpdatePlayerInjuries(TeamGame *tg, TeamFileEx *teamFileBase);
+extern void ApplyPlayerStatusAfterSim(TeamGame *tg, TeamFileEx *teamFileBase);
+extern void UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFileBase);
 
 /* InitializeInGameTeamsAndStartGame
  *
@@ -950,7 +950,7 @@ extern void _UpdateCareerPlayerStatsAfterMatch(TeamGame *tg, TeamFileEx *teamFil
  *   team2 (a2)          — second team (TeamFile)
  */
 __attribute__((used, externally_visible))
-void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
+void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     int16_t maxSubs, int16_t paramD3, int16_t paramD7,
     TeamFile *team1, TeamFile *team2) {
     uint16_t d0;
@@ -967,8 +967,8 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     gameTeam2 = team2;
 
     /* Compute old player skill for view result (for both teams) */
-    _ComputeOldPlayerSkillForViewResult((TeamFileEx *)team1, (uint16_t)maxSubs);
-    _ComputeOldPlayerSkillForViewResult((TeamFileEx *)team2, (uint16_t)maxSubs);
+    ComputeOldPlayerSkillForViewResult((TeamFileEx *)team1, (uint16_t)maxSubs);
+    ComputeOldPlayerSkillForViewResult((TeamFileEx *)team2, (uint16_t)maxSubs);
 
     teamsLoaded = 0;
     poolplyrLoaded = 0;
@@ -983,46 +983,46 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
         team2Computer = 0x00FF;
 
     /* Set secondary colors for both teams */
-    _SetTeamSecondaryColors((uint16_t)team1->prShirtType, team1->prStripesColor,
+    SetTeamSecondaryColors((uint16_t)team1->prShirtType, team1->prStripesColor,
         team1->prBasicColor, team1->prShortsColor, team1->prSocksColor, &topTeamInGame);
-    _SetTeamSecondaryColors((uint16_t)team2->prShirtType, team2->prStripesColor,
+    SetTeamSecondaryColors((uint16_t)team2->prShirtType, team2->prStripesColor,
         team2->prBasicColor, team2->prShortsColor, team2->prSocksColor, &bottomTeamInGame);
 
     /* Set primary colors */
-    _SetInGameTeamsPrimaryColors(team1, team2);
+    SetInGameTeamsPrimaryColors(team1, team2);
 
     /* If not career and all player teams are equal, compute average price */
     if (gameType != GAME_TYPE_CAREER && allPlayerTeamsEqual != 0) {
-        avgSelectedTeamsPlayerPrice = _GetAveragePlayerPriceInSelectedTeams();
+        avgSelectedTeamsPlayerPrice = GetAveragePlayerPriceInSelectedTeams();
     }
 
     /* Initialize in-game team structures */
-    _InitInGameTeamStructure((TeamFileEx *)team1, &topTeamInGame, &team1AppPercent);
-    _InitInGameTeamStructure((TeamFileEx *)team2, &bottomTeamInGame, &team2AppPercent);
+    InitInGameTeamStructure((TeamFileEx *)team1, &topTeamInGame, &team1AppPercent);
+    InitInGameTeamStructure((TeamFileEx *)team2, &bottomTeamInGame, &team2AppPercent);
 
     /* Calculate allowed injuries for each team */
     if (gameType == GAME_TYPE_CAREER) {
         /* Career mode: allow up to 4 injuries */
-        avail = _GetNumberOfAvailablePlayers((uint8_t *)team1, -1, 0);
+        avail = GetNumberOfAvailablePlayers((uint8_t *)team1, -1, 0);
         disabledCount = (int16_t)(avail >> 16); /* d6 = disabled */
         allowedInjuries = 4 - disabledCount;
         if (allowedInjuries < 0) allowedInjuries = 0;
         team1NumAllowedInjuries = (uint16_t)allowedInjuries;
 
-        avail = _GetNumberOfAvailablePlayers((uint8_t *)team2, -1, 0);
+        avail = GetNumberOfAvailablePlayers((uint8_t *)team2, -1, 0);
         disabledCount = (int16_t)(avail >> 16);
         allowedInjuries = 4 - disabledCount;
         if (allowedInjuries < 0) allowedInjuries = 0;
         team2NumAllowedInjuries = (uint16_t)allowedInjuries;
     } else {
         /* Non-career: allow up to 2 injuries */
-        avail = _GetNumberOfAvailablePlayers((uint8_t *)team1, -1, 0);
+        avail = GetNumberOfAvailablePlayers((uint8_t *)team1, -1, 0);
         disabledCount = (int16_t)(avail >> 16);
         allowedInjuries = 2 - disabledCount;
         if (allowedInjuries < 0) allowedInjuries = 0;
         team1NumAllowedInjuries = (uint16_t)allowedInjuries;
 
-        avail = _GetNumberOfAvailablePlayers((uint8_t *)team2, -1, 0);
+        avail = GetNumberOfAvailablePlayers((uint8_t *)team2, -1, 0);
         disabledCount = (int16_t)(avail >> 16);
         allowedInjuries = 2 - disabledCount;
         if (allowedInjuries < 0) allowedInjuries = 0;
@@ -1037,21 +1037,21 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
 
     /* Stop music if playing */
     if (menuMusic != 0) {
-        _StopMusic();
+        StopMusic();
     }
 
     /* Show stadium menu */
-    _ShowMenu(stadiumMenu);
+    ShowMenu(stadiumMenu);
 
     /* Wait 150 frames (~3 seconds at 50Hz). Original was a busy spin on
      * currentGameTick; on SDL that starves the timer thread on WSL2 and
      * the wait can hang indefinitely (caught by user with SIGINT). Use
-     * _WaitForVSync so the main thread yields each frame and pumps
+     * WaitForVSync so the main thread yields each frame and pumps
      * events / audio. */
     {
         int16_t i;
         for (i = 0x95; i >= 0; i--) {
-            _WaitForVSync();
+            WaitForVSync();
         }
     }
 
@@ -1064,7 +1064,7 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     }
 
     /* Play the match */
-    _ShowMatchSequence();
+    ShowMatchSequence();
 
     if (gameCanceled != 0)
         goto post_match;
@@ -1074,35 +1074,35 @@ void _InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
         team1->andWith0xFE |= 1; /* bset #0,$17(a0) */
         team2->andWith0xFE |= 1;
 
-        _UpdatePlayerInjuries(&topTeamInGame, (TeamFileEx *)team1);
-        _UpdatePlayerInjuries(&bottomTeamInGame, (TeamFileEx *)team2);
+        UpdatePlayerInjuries(&topTeamInGame, (TeamFileEx *)team1);
+        UpdatePlayerInjuries(&bottomTeamInGame, (TeamFileEx *)team2);
         goto post_match;
     }
 
     /* Non-training: full post-match processing */
-    _InitInGameTeams_PlayerControlled((TeamFileEx *)team1, (TeamFileEx *)team2, (uint16_t)plgD3Param);
+    InitInGameTeams_PlayerControlled((TeamFileEx *)team1, (TeamFileEx *)team2, (uint16_t)plgD3Param);
 
     if (paramD7 < 0)
         goto post_match;
 
     /* Process team 1 */
-    _AccumulateMatchGoalsIntoTeamFile(&topTeamInGame, (TeamFileEx *)team1, (uint16_t)paramD7);
-    _UpdatePlayerInjuries(&topTeamInGame, (TeamFileEx *)team1);
-    _ApplyPlayerStatusAfterSim(&topTeamInGame, (TeamFileEx *)team1);
-    _UpdateCareerPlayerStatsAfterMatch(&topTeamInGame, (TeamFileEx *)team1);
+    AccumulateMatchGoalsIntoTeamFile(&topTeamInGame, (TeamFileEx *)team1, (uint16_t)paramD7);
+    UpdatePlayerInjuries(&topTeamInGame, (TeamFileEx *)team1);
+    ApplyPlayerStatusAfterSim(&topTeamInGame, (TeamFileEx *)team1);
+    UpdateCareerPlayerStatsAfterMatch(&topTeamInGame, (TeamFileEx *)team1);
 
     /* Process team 2 */
-    _AccumulateMatchGoalsIntoTeamFile(&bottomTeamInGame, (TeamFileEx *)team2, (uint16_t)paramD7);
-    _UpdatePlayerInjuries(&bottomTeamInGame, (TeamFileEx *)team2);
-    _ApplyPlayerStatusAfterSim(&bottomTeamInGame, (TeamFileEx *)team2);
-    _UpdateCareerPlayerStatsAfterMatch(&bottomTeamInGame, (TeamFileEx *)team2);
+    AccumulateMatchGoalsIntoTeamFile(&bottomTeamInGame, (TeamFileEx *)team2, (uint16_t)paramD7);
+    UpdatePlayerInjuries(&bottomTeamInGame, (TeamFileEx *)team2);
+    ApplyPlayerStatusAfterSim(&bottomTeamInGame, (TeamFileEx *)team2);
+    UpdateCareerPlayerStatsAfterMatch(&bottomTeamInGame, (TeamFileEx *)team2);
 
 post_match:
-    _InitMenuMusic();
+    InitMenuMusic();
     if (menuMusic != 0) {
-        _TryPlayMusic();
+        TryPlayMusic();
     }
 
-    _PrepareMenuForFadeIn();
+    PrepareMenuForFadeIn();
     /* gameCanceled is tested by caller via return/tst.w */
 }
