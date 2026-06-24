@@ -777,9 +777,13 @@ _UpdatePlayerShotChanceTable(Sprite *player, TeamGeneralInfo *team)
         return;
     }
 
-    /* Goalkeeper: index by goalie skill */
+    /* Goalkeeper: index by goalie skill, MASKED to the low 3 bits (0-7) — the original
+     * engine masks here. match_sim.c's gkSkill `> 7 -> 7` clamp only fires for certain
+     * teamControls combos (needClamp), so a friendly's unclamped skill (8-16 from a high
+     * price) would otherwise index past the 8-entry kGoalieSkillTables and store a wild
+     * pointer -> SIGSEGV later in _UpdatePlayers (gs->field_3A). */
     {
         uint16_t skill = (uint16_t)(uint8_t)pi->goalieSkill;
-        team->shotChanceTable = kGoalieSkillTables[skill];
+        team->shotChanceTable = kGoalieSkillTables[skill & 7];
     }
 }
