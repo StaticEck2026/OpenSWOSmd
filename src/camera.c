@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "game_types.h"
 #include "scroll_blit.h"
+#include "display.h"      /* _screen_width — widescreen pan-range clamp in MoveView */
 
 /* ---- External globals ---- */
 extern FixedPoint _cameraX;
@@ -54,6 +55,21 @@ void ScrollToCurrent(void)
 __attribute__((used, externally_visible))
 void MoveView(int16_t newScreenX, int16_t newScreenY)
 {
+    /* Clamp the X target to the pitch pan range. Recorded replay-camera
+     * positions (highlight.c calls MoveView directly with the recorded X)
+     * are in the classic 336-wide coordinate space (pan range 0..0x150). On a
+     * wider SDL view (_screen_width > 336) those over-pan past the pitch's
+     * right edge into the green surround — the "off-centre" HIL pitch. 0x2A0
+     * (pitch world width) - _screen_width is the max camera X, the same clamp
+     * SetCameraCoordinates already applies. No-op on Amiga / 4:3 (_screen_width
+     * == 336, recorded values never exceed the range). */
+    {
+        int16_t panRange = (int16_t)(0x2A0 - _screen_width);
+        if (panRange < 0) panRange = 0;
+        if (newScreenX < 0) newScreenX = 0;
+        else if (newScreenX > panRange) newScreenX = panRange;
+    }
+
     /* ---- Phase 1: move X ---- */
     /* Original asm uses do-while: ScrollToCurrent fires before the exit
      * check, so it always runs at least once and also runs at the final
