@@ -91,7 +91,7 @@ SRC_FILES=(
     fade.c input.c input_text.c loader_bootstrap.c math68k.c panic.c
     random.c string_utils.c team_control.c tactics_menu.c
     game_state.c camera.c move_camera.c scroll_blit.c highlight.c
-    dos_graphics.c dos_gameplay.c
+    dos_graphics.c dos_gameplay.c dos_replay_load.c
     intro_menu_image_script_cmds.inc
     font_ext_script.inc font_ext_conv.inc
     menu_bg_image_script_cmds.inc
