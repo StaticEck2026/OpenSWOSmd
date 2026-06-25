@@ -989,8 +989,20 @@ PlayHighlightsLoop(void)
     ReadTimerDelta();
 
     for (;;) {
+#ifdef SWOS_SDL_BUILD
+        /* Window-close (X) during replay: the SDL event pump (DrawReplayFrame's
+         * vblank) sets _quitToDos, but this loop never polled it, so the process
+         * kept running after the window closed. Exit cleanly via the normal stop
+         * path — the recursion unwinds and the caller propagates the quit. */
+        if (_quitToDos != 0)
+            goto stop_replay_and_return;
+#endif
         /* Paused poll loop */
-        while (_paused != 0) {
+        while (_paused != 0
+#ifdef SWOS_SDL_BUILD
+               && _quitToDos == 0
+#endif
+              ) {
             pauseSpinWaitOneTick();
             GetKey();
             MainKeysCheck(_currentKey);
