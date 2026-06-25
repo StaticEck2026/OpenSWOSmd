@@ -18,6 +18,24 @@ reverse-engineering trees, to drive sprite remapping when loading DOS/2020
   These are the in-match / gameplay sprites — the DOS sprite set inserts 114 extra
   sprites ahead of them. The 0-offset matches are menu / UI sprites.
 
+## Provenance & caveats
+
+The Amiga `SWOS2.h` `SPR_` list was produced by **translating the DOS IDA database
+to the Amiga**: the DOS enum was copied in, then the sprites that were *identified
+in the Amiga* were corrected to their Amiga value (the `−114` gameplay shift). So:
+
+- The **28 `+114` differs are confirmed Amiga corrections** (gameplay, DOS ≥ 227).
+- The **15 matches are mostly menu/UI sprites that genuinely share an index**, but a
+  few may simply be DOS values **carried over unchanged / not yet corrected** rather
+  than independently-verified Amiga indices — treat them as "same unless proven
+  otherwise".
+- The Amiga list is **not exhaustive**: DOS sprites that don't exist in (or weren't
+  found in) the Amiga version are absent — that's most of the 178 DOS-only names.
+
+For the RPL loader this means: apply `dosIdx − 114` for the replay range, but expect
+a few indices with no clean Amiga equivalent and handle them gracefully (skip /
+fallback) rather than indexing past the sprite table.
+
 ### Mapping rule
 
 The split is **clean at DOS index 227**: every matching sprite has a DOS index
