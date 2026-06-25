@@ -507,10 +507,12 @@ static void refresh_palette_from_copper(void)
      * match. The intro, title and menu screens are still Amiga graphics and
      * need their normal Amiga (copper) palette — otherwise they render with the
      * wrong colours (olive backgrounds etc.). playGame is set at kickoff and
-     * cleared when the match ends, so it cleanly scopes the DOS palette to the
-     * in-match pitch/players. (DOS menu backgrounds are a separate follow-up.) */
-    extern volatile uint16_t _playGame;
-    if (_gDosGraphics && _playGame) {
+     * cleared when the match ends; playHighlightFlag does the same for HIL
+     * highlight playback, which renders the in-match pitch/players but never
+     * sets playGame. Either flag means the DOS pitch is on screen, so we must
+     * use the DOS palette. (DOS menu backgrounds are a separate follow-up.) */
+    extern volatile uint16_t _playGame, _playHighlightFlag;
+    if (_gDosGraphics && (_playGame || _playHighlightFlag)) {
         /* The pitch-condition overlay keys off the low byte of
          * pitchNumberAndType (the high byte is which pitch graphic). */
         extern uint16_t _pitchNumberAndType;
