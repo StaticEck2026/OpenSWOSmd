@@ -664,8 +664,20 @@ int16_t LoadHilFile(uint8_t *filename)
         return 0;
     }
 
-    result = LoadFileEx(filename, _hilFileBuffer, (uint32_t *)0);
+    uint32_t hilSize = 0;
+    result = LoadFileEx(filename, _hilFileBuffer, &hilSize);
     if (result == 0) {
+#ifdef SWOS_SDL_BUILD
+        /* DOS / SWOS-2020 .HIL: little-endian, 3626-byte header, different
+         * sprite numbering. Convert it into our Amiga HIL layout in place so
+         * the normal replay path plays it. */
+        extern int DosReplay_IsDosHil(const uint8_t *buf, uint32_t size);
+        extern int DosReplay_ConvertHilInPlace(uint32_t fileSize);
+        if (DosReplay_IsDosHil(_hilFileBuffer, hilSize)) {
+            DosReplay_ConvertHilInPlace(hilSize);
+            return 0;
+        }
+#endif
         /* Legacy on-disk format stores the 5 header u16s in BE (Amiga
          * m68k). The original loader left them BE in memory and
          * highlights_menu.c followed up with an in-place BE_TO_HOST
