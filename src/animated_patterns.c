@@ -165,12 +165,9 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     }
 #endif
 
-    /* compute screen-relative coordinates (+ DOS-replay letterbox margin, 0 otherwise) */
-    extern int _replayVertMargin;
-    extern volatile uint16_t _playHighlightFlag;
-    int vmC = _playHighlightFlag ? _replayVertMargin : 0;
+    /* compute screen-relative coordinates */
     screenX = pixelX - (int16_t)_cameraX.s.i;
-    screenY = pixelY - (int16_t)_cameraY.s.i + vmC;
+    screenY = pixelY - (int16_t)_cameraY.s.i;
 
     /* bounds check. Widescreen draws fan cells across the full frontbuffer width, not just
      * the 4:3 336px window; _screen_width == 336 on 4:3 / Amiga so this is unchanged there. */

@@ -31,14 +31,6 @@ extern uint16_t _hilPitchNumber, _hilMaxSubstitutes;
 extern uint8_t  _hilGameName[];
 extern uint8_t  _hilGameRound[];
 
-/* Vertical letterbox margin for DOS replays. The DOS view is 200px tall, ours
- * is 272 (SCREEN_HEIGHT), so the recorded 200-tall content is centred in our
- * view with this margin top + bottom. 0 for our own (272-tall) HILs. Applied
- * during replay by DrawChunkyPitch, the sprite decode, and the crowd draw. */
-int _replayVertMargin = 0;
-#define DOS_REPLAY_VIEW_H   200
-#define OUR_VIEW_H          272
-
 /* ---- DOS header layout (little-endian) ---- */
 #define DOS_HDR_SIZE        0x0E2A   /* 3626 */
 #define DOS_TEAM1_OFF       8
@@ -170,9 +162,6 @@ int DosReplay_ConvertHilInPlace(uint32_t fileSize)
     _hilTeam2Goals     = t2g;
     _hilPitchNumber    = pitch;
     _hilMaxSubstitutes = maxSubs;
-
-    /* DOS replays were recorded in a 200px-tall view; letterbox into ours. */
-    _replayVertMargin = (OUR_VIEW_H - DOS_REPLAY_VIEW_H) / 2;
     return 0;
 }
 

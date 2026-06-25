@@ -70,6 +70,14 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
         else if (newScreenX > panRange) newScreenX = panRange;
     }
 
+    /* Clamp Y to the live camera's vertical range [0x10, 0x260] (move_camera.c
+     * SetCameraCoordinates). A replay's recorded camera Y can exceed this —
+     * DOS HILs were captured in a 200px-tall view and reach ~0x295 — and
+     * without the clamp the taller (272px) playback view pans past the bottom
+     * of the pitch into the green surround. */
+    if (newScreenY < 0x10) newScreenY = 0x10;
+    else if (newScreenY > 0x260) newScreenY = 0x260;
+
     /* ---- Phase 1: move X ---- */
     /* Original asm uses do-while: ScrollToCurrent fires before the exit
      * check, so it always runs at least once and also runs at the final

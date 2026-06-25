@@ -94,8 +94,7 @@ extern uint16_t _panicReasonCode;
  * (which have the recording camera baked in) onto the current playback camera.
  * Set by ReplayCameraX each frame; applied in the sprite decode below. */
 static int16_t s_replayShiftX = 0;
-extern int _replayVertMargin;            /* DOS-replay vertical letterbox (dos_replay_load.c) */
-extern volatile uint16_t _playHighlightFlag;  /* set only while a .HIL replay is active */
+static int16_t s_replayShiftY = 0;   /* same re-anchor for Y (DOS HIL camera clamp) */
 
 /* ---- Replay camera X (SDL widescreen) ----------------------------------
  * Recorded HIL/replay camera positions are in the classic 336-wide coordinate
@@ -134,6 +133,25 @@ static int16_t ReplayCameraX(int16_t recordedX)
     return out;
 #else
     return recordedX;
+#endif
+}
+
+/* Clamp a replay's recorded camera Y to the live vertical range [0x10, 0x260]
+ * and record the shift so recorded (screen-space) sprites re-anchor onto the
+ * clamped playback camera — the Y counterpart of ReplayCameraX. DOS HILs were
+ * captured in a 200px-tall view and reach ~0x295, past our 272px view's limit;
+ * clamping keeps the view on the pitch (no green) and the shift keeps the
+ * players aligned. No-op for our own 272-tall HILs (camera already in range). */
+static int16_t ReplayCameraY(int16_t recordedY)
+{
+#ifdef SWOS_SDL_BUILD
+    int16_t out = recordedY;
+    if (out < 0x10) out = 0x10;
+    else if (out > 0x260) out = 0x260;
+    s_replayShiftY = (int16_t)(recordedY - out);
+    return out;
+#else
+    return recordedY;
 #endif
 }
 
@@ -556,7 +574,7 @@ void DrawReplayFrame(void)
     /* Frame-start marker processing */
     a0 = wrapPointerFwd(a0);
     d0 &= ~(1u << 31);
-    MoveView(ReplayCameraX((int16_t)(d0 >> 16)), (int16_t)(d0 & 0xFFFF));
+    MoveView(ReplayCameraX((int16_t)(d0 >> 16)), ReplayCameraY((int16_t)(d0 & 0xFFFF)));
 
     /* Read team goals */
     _hilLeftTeamGoals = BE_READ_U16(a0);
@@ -590,8 +608,8 @@ sprite_decode:
         int32_t sy = (int32_t)(d0 << 22) >> 22;
         uint32_t sprIdx = d0 >> 20;
 #ifdef SWOS_SDL_BUILD
-        sx += s_replayShiftX;     /* re-anchor recorded screen coords onto playback camera */
-        sy += (_playHighlightFlag ? _replayVertMargin : 0);  /* letterbox DOS (200-tall) replays */
+        sx += s_replayShiftX;   /* re-anchor recorded screen coords onto playback camera */
+        sy += s_replayShiftY;   /* same re-anchor for Y (DOS HIL camera clamp) */
 #endif
         DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
@@ -699,6 +717,7 @@ __attribute__((used, externally_visible))
 void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
 {
     targetX = ReplayCameraX(targetX);
+    targetY = ReplayCameraY(targetY);
     SetCameraCoordinates(targetX, targetY);
     InitCameraMoveView(targetX, targetY);
     SwapBuffersAndCameraViewState();
