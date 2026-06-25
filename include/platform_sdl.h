@@ -65,6 +65,7 @@ typedef struct {
     PlatformRendererMode   renderer;         /* software / accelerated */
     int                    vsync;            /* 0 = off (default), 1 = on (accel only) */
     int                    widescreen;       /* 1 = wider 16:9 pitch view (default on). PC-only */
+    int                    res_w, res_h;     /* resolution driving the render aspect; 0,0 = use desktop. PC-only */
     int                    audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga panned */
     int                    dos_graphics;     /* 1 = render DOS-version graphics. PC-only */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */

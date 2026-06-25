@@ -74,6 +74,16 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "widescreen")) {
             int b;
             if (parse_bool(value, &b)) opts->widescreen = b;
+        } else if (eqi(name, "resolution")) {
+            /* "WxH" (e.g. 2560x1080) drives the render aspect, for testing other
+             * resolutions without changing the desktop. "auto"/"desktop"/blank
+             * (or unparseable) → 0,0 = use the actual desktop resolution. */
+            int w = 0, h = 0;
+            if (value && sscanf(value, "%d%*[xX]%d", &w, &h) == 2 && w > 0 && h > 0) {
+                opts->res_w = w; opts->res_h = h;
+            } else {
+                opts->res_w = 0; opts->res_h = 0;
+            }
         }
     } else if (eqi(section, "audio")) {
         if (eqi(name, "mode")) {
@@ -145,6 +155,12 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         return;
     }
 
+    char res_buf[24];
+    if (opts->res_w > 0 && opts->res_h > 0)
+        snprintf(res_buf, sizeof res_buf, "%dx%d", opts->res_w, opts->res_h);
+    else
+        snprintf(res_buf, sizeof res_buf, "auto");
+
     fprintf(f,
         "; SWOS — display, audio and gameplay settings.\n"
         "; Auto-generated. Edit by hand or via the command line; runtime changes\n"
@@ -163,6 +179,9 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "; widescreen: true | false — true matches the render to your monitor's aspect\n"
         ";   ratio so it fills the screen (16:9 / 21:9 / ultrawide); false = classic 4:3\n"
         "widescreen=%s\n"
+        "; resolution: WxH (e.g. 2560x1080) to test a specific aspect ratio, or\n"
+        ";   'auto' for your monitor's native resolution. Only used when widescreen=true.\n"
+        "resolution=%s\n"
         "\n"
         "[audio]\n"
         "; mode: mono | stereo\n"
@@ -186,6 +205,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         fullscreen_str(fs_now),
         scale_now,
         opts->widescreen ? "true" : "false",
+        res_buf,
         opts->audio_mono ? "mono" : "stereo",
         opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
         opts->dos_graphics ? "true" : "false",

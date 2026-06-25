@@ -176,6 +176,7 @@ int main(int argc, char **argv)
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
     opts.widescreen = 1;          /* default ON — wider 16:9 pitch view */
+    opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (desktop resolution) */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
@@ -308,15 +309,25 @@ int main(int argc, char **argv)
      * with no mode to set. widescreen=false forces the classic SCREEN_WIDTH. Needs
      * SDL_INIT_VIDEO (above); runs before the window/texture (Platform_Init below). */
     if (_gWidescreen) {
-        SDL_DisplayMode dm;
-        int dw = 16, dh = 9;   /* 16:9 fallback if the query fails */
-        if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
+        int dw, dh;
+        if (opts.res_w > 0 && opts.res_h > 0) {
+            /* SWOS.ini [video] resolution=WxH override — test any aspect without
+             * changing the desktop mode. */
+            dw = opts.res_w; dh = opts.res_h;
+        } else {
+            /* Default: the desktop resolution. Store it back so Settings_Save
+             * writes the actual monitor resolution into the resolution= key. */
+            SDL_DisplayMode dm;
+            dw = 16; dh = 9;   /* 16:9 fallback if the query fails */
+            if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
+            opts.res_w = dw; opts.res_h = dh;
+        }
         int w = (int)((long)SCREEN_HEIGHT * dw / dh);
         w = (w + 1) & ~1;                          /* round up to even */
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
         _screen_width = w;
-        fprintf(stderr, "[video] render %dx%d (display %dx%d, %.2f:1)\n",
+        fprintf(stderr, "[video] render %dx%d (resolution %dx%d, %.2f:1)\n",
                 _screen_width, SCREEN_HEIGHT, dw, dh, (double)dw / dh);
     } else {
         _screen_width = SCREEN_WIDTH;
