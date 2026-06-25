@@ -1060,7 +1060,8 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
                 ext == 0x2E534541u || /* .SEA */
                 ext == 0x2E434152u || /* .CAR */
                 ext == 0x2E544143u || /* .TAC */
-                ext == 0x2E48494Cu)   /* .HIL */
+                ext == 0x2E48494Cu || /* .HIL */
+                ext == 0x2E52504Cu)   /* .RPL (PC whole-match replay) */
             {
                 _totalNumberOfFiles++;
                 _numMatchedFiles++;
@@ -1219,6 +1220,8 @@ void SelFilesDrawItemDescription(MenuEntry *entry) {
         descStr = (const uint8_t *)"CAREER";
     else if (ext == 0x2E544143)  /* '.TAC' */
         descStr = (const uint8_t *)"TACT";
+    else if (ext == 0x2E52504C)  /* '.RPL' — PC whole-match replay */
+        descStr = (const uint8_t *)"REPLAY";
     else
         descStr = (const uint8_t *)"HIGH";
 

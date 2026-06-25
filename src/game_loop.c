@@ -1063,9 +1063,21 @@ advance_to_next_highlight:
          * SIGSEGVed in HandleInstantReplayStateSwitch's `*p & 0x80`.
          * Carry the value as a real pointer instead. */
         uint8_t *baseAddr = _hilStartOfGoalsBuffer + offset;
+        uint8_t *endAddr  = baseAddr + 19000u;
+#ifdef SWOS_SDL_BUILD
+        /* An RPL is a whole match in one ~1 MB scene that can't be addressed by
+         * the 19000-B scene math — dos_replay_load.c loaded it into a dedicated
+         * buffer; stream that as the single scene. */
+        extern uint8_t *_rplBufferPtr;
+        extern uint32_t _rplStreamBytes;
+        if (_rplBufferPtr) {
+            baseAddr = _rplBufferPtr;
+            endAddr  = _rplBufferPtr + _rplStreamBytes;
+        }
+#endif
         _goalBasePtr = baseAddr;
         _currentHilPtr = baseAddr - 4;
-        _nextGoalPtr = baseAddr + 19000u;
+        _nextGoalPtr = endAddr;
     }
     HandleInstantReplayStateSwitch();
 

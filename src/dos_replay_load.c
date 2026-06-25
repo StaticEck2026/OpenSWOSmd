@@ -165,4 +165,78 @@ int DosReplay_ConvertHilInPlace(uint32_t fileSize)
     return 0;
 }
 
+/* ---- RPL: a whole-match replay in the same DOS format, one ~1 MB scene ----
+ * Too big for _hilFileBuffer (192 KB) or the 19000-B scene slots, so load it
+ * into a dedicated buffer, convert the frame stream in place, and hand that
+ * buffer to the replay engine as a single long scene (game_loop.c picks it up
+ * via _rplBufferPtr). The 2020 widescreen RPLs reach ~2.4 MB; size for those. */
+#define RPL_BUFFER_SIZE   (2700u * 1024u)
+static uint8_t s_rplBuffer[RPL_BUFFER_SIZE];
+
+uint8_t  *_rplBufferPtr   = (uint8_t *)0;   /* non-NULL while an RPL is loaded */
+uint32_t  _rplStreamBytes = 0;              /* converted frame-stream length */
+
+extern int16_t CAssetSys_DispatchGetSize(uint16_t opcode, uint16_t param,
+                                          void *name, void *dest,
+                                          uint32_t *outFileSize);
+#define DOS_ASSET_OP_INIT_SOURCE0   2
+extern volatile uint16_t _numScenesInHilFile;
+
+/* Load + convert a DOS/2020 .RPL. Returns 0 on success. Bypasses LoadFileEx
+ * (which panics past the ~91 KB frontbuffer stage) with the direct asset
+ * dispatch — the same path dos_load_pitch uses for the big .BLK banks. */
+int DosReplay_LoadRpl(uint8_t *filename)
+{
+    uint32_t size = 0;
+    CAssetSys_DispatchGetSize(DOS_ASSET_OP_INIT_SOURCE0, 0, filename,
+                               s_rplBuffer, &size);
+    if (size <= DOS_HDR_SIZE || size > RPL_BUFFER_SIZE)
+        return 1;
+    if (!DosReplay_IsDosHil(s_rplBuffer, size))
+        return 1;
+
+    uint8_t *b = s_rplBuffer;
+
+    /* 1. read the DOS header into locals before we overwrite it */
+    uint16_t t1g     = (uint16_t)(b[DOS_T1GOALS_OFF] | (b[DOS_T1GOALS_OFF+1] << 8));
+    uint16_t t2g     = (uint16_t)(b[DOS_T2GOALS_OFF] | (b[DOS_T2GOALS_OFF+1] << 8));
+    uint16_t pitch   = (uint16_t)(b[DOS_PITCH_OFF]   | (b[DOS_PITCH_OFF+1]   << 8));
+    uint16_t maxSubs = (uint16_t)(b[DOS_MAXSUBS_OFF] | (b[DOS_MAXSUBS_OFF+1] << 8));
+    static uint8_t team1[DOS_TEAM_SIZE], team2[DOS_TEAM_SIZE];
+    memcpy(team1, b + DOS_TEAM1_OFF, DOS_TEAM_SIZE);
+    memcpy(team2, b + DOS_TEAM2_OFF, DOS_TEAM_SIZE);
+    uint8_t gameName[40];
+    memcpy(gameName, b + DOS_LEAGUE_NAME_OFF, 40);
+
+    /* 2. convert the frame stream in place: DOS @DOS_HDR_SIZE -> our @0. Forward
+     *    1:1, write cursor stays behind the read cursor. */
+    _rplStreamBytes = convert_frames(b + DOS_HDR_SIZE, size - DOS_HDR_SIZE, b);
+
+    /* 3. teams + scalars into the _hilFileBuffer header (CopyTeamsAndHeader reads
+     *    the teams there; the scalars are the overlaid symbols). */
+    BE_WRITE_U32(_hilFileBuffer,     K_HIL_SIG);
+    BE_WRITE_U32(_hilFileBuffer + 4, K_HIL_MAXSZ);
+    convert_team(team1, _hilFileBuffer + OUR_TEAM1_OFF);
+    convert_team(team2, _hilFileBuffer + OUR_TEAM2_OFF);
+    memcpy(_hilGameName,  gameName, 40);
+    memset(_hilGameRound, 0, 40);
+    _hilNumGoals       = 1;            /* one whole-match scene */
+    _hilTeam1Goals     = t1g;
+    _hilTeam2Goals     = t2g;
+    _hilPitchNumber    = pitch;
+    _hilMaxSubstitutes = maxSubs;
+
+    /* 4. hand the buffer to the replay engine */
+    _rplBufferPtr     = b;
+    _numScenesInHilFile = 1;
+    return 0;
+}
+
+/* Clear the RPL state so a subsequent .HIL load uses the normal scene buffer. */
+void DosReplay_ClearRpl(void)
+{
+    _rplBufferPtr = (uint8_t *)0;
+    _rplStreamBytes = 0;
+}
+
 #endif /* SWOS_SDL_BUILD */

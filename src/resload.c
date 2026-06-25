@@ -42,7 +42,9 @@ uint8_t _keyexit = 0x46;
 
 /* ---- Path resolver ------------------------------------------------- */
 static const char *known_save_exts[] = {
-    ".DIY", ".PRE", ".SEA", ".CAR", ".TAC", ".HIL", ".EDT", NULL
+    ".DIY", ".PRE", ".SEA", ".CAR", ".TAC", ".HIL", ".EDT",
+    ".RPL", /* PC whole-match replay (not native to the Amiga) */
+    NULL
 };
 
 static int has_save_ext(const char *name)
@@ -349,6 +351,7 @@ static const uint32_t ext_table[] = {
     0x2E544143u, /* ".TAC" */
     0x2E48494Cu, /* ".HIL" */
     0x2E454454u, /* ".EDT" */
+    0x2E52504Cu, /* ".RPL" (PC whole-match replay) */
     0            /* terminator */
 };
 
