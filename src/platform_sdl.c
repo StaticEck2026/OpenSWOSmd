@@ -518,10 +518,17 @@ static void refresh_palette_from_copper(void)
         extern uint16_t _pitchNumberAndType;
         uint8_t rgb[768];
         DosGfx_BuildPalette((int)(_pitchNumberAndType & 0xFF), rgb);
+        /* Apply the current fade level so fades work on the DOS palette like the
+         * copper path does (g_fadeLevel: 0x80 bright .. 0 black; rgb*level/0x80).
+         * DosGfx_BuildPalette rebuilds full-bright RGB each frame, so without
+         * this scaling fade in/out had no visible effect on DOS pitches. */
+        extern int g_fadeLevel;
+        int fl = g_fadeLevel;
+        if (fl < 0) fl = 0; else if (fl > 0x80) fl = 0x80;
         for (int i = 0; i < 256; ++i) {
-            s_palette[i].r = rgb[i * 3 + 0];
-            s_palette[i].g = rgb[i * 3 + 1];
-            s_palette[i].b = rgb[i * 3 + 2];
+            s_palette[i].r = (uint8_t)((rgb[i * 3 + 0] * fl) >> 7);
+            s_palette[i].g = (uint8_t)((rgb[i * 3 + 1] * fl) >> 7);
+            s_palette[i].b = (uint8_t)((rgb[i * 3 + 2] * fl) >> 7);
             s_palette[i].a = 255;
         }
         return;
