@@ -254,6 +254,21 @@ void ShowHighlights(void)
     ShowMenu(_stadiumMenu);
     _deadVarAlways0 = 0;
 
+#ifdef SWOS_SDL_BUILD
+    /* Show the stadium "VS" line-up for a brief beat, then auto-advance. The
+     * Amiga held it on screen while the selection fire was held, proceeding the
+     * moment it was released (SWOS2.s wait_for_both_joy_fire_release → FadeOut) —
+     * never a separate press. On SDL the menu-click fire is already released, so
+     * a short fixed view matches that brief-view intent without flashing past.
+     * WaitForVSync pumps input/audio and holds the frame, as the real-match
+     * stadium hold does. */
+    {
+        extern void WaitForVSync(void);
+        for (int16_t i = 75; i > 0; i--)   /* ~1.5s at 50Hz */
+            WaitForVSync();
+    }
+#endif
+
     viewAndRestoreMenu(ViewHighlights);
 
     InitMenuMusic();

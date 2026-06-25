@@ -820,9 +820,14 @@ KeepStatisticsOnScreen(void)
 void __attribute__((used, externally_visible))
 ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
-    _playHighlightFlag = 1;
     CopyTeamsAndHeader();
     InitGameSaveTeams(leftTeam, rightTeam);
+    /* Set the highlight flag AFTER InitGameSaveTeams' fade-out. The flag is what
+     * flips refresh_palette_from_copper to the DOS pitch palette; setting it
+     * earlier made the (Amiga-graphics) stadium "VS" line-up fade out through DOS
+     * colours. The DOS palette is only correct once the pitch is on screen, which
+     * begins with the swap below. */
+    _playHighlightFlag = 1;
     ReplayUpdateCameraAndSwapBuffers(168, 313);
     UpdatePlanePtrsAndBlitParams();
     ReadTimerDelta();
