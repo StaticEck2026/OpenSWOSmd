@@ -673,6 +673,8 @@ int16_t LoadHilFile(uint8_t *filename)
          * the normal replay path plays it. */
         extern int DosReplay_IsDosHil(const uint8_t *buf, uint32_t size);
         extern int DosReplay_ConvertHilInPlace(uint32_t fileSize);
+        extern int _replayVertMargin;
+        _replayVertMargin = 0;   /* our own 272-tall HILs need no letterbox */
         if (DosReplay_IsDosHil(_hilFileBuffer, hilSize)) {
             DosReplay_ConvertHilInPlace(hilSize);
             return 0;

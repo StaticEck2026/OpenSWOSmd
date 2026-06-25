@@ -12,6 +12,7 @@
 #ifdef SWOS_SDL_BUILD
 #include "dos_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
 #include <stdio.h>          /* snprintf for the DOS pitch filenames */
+#include <string.h>         /* memset for the DOS-replay letterbox bars */
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -495,7 +496,20 @@ void DrawChunkyPitch(void)
     if (!fb) return;
 
     const int fbW = FRONTBUFFER_ROW_STRIDE_BYTES;   /* SDL = SCREEN_WIDTH = 320 */
-    const int fbH = SCREEN_HEIGHT;                  /* 200 */
+    const int fbH = SCREEN_HEIGHT;                  /* 272 */
+
+    /* DOS replays were recorded in a 200px-tall view; letterbox them centred in
+     * ours. vm is 0 for live play and our own 272-tall HILs. Clear the bars and
+     * draw the pitch shifted down by vm, clipped to [vm, fbH-vm]. */
+    extern int _replayVertMargin;
+    extern volatile uint16_t _playHighlightFlag;
+    int vm = _playHighlightFlag ? _replayVertMargin : 0;
+    if (vm > 0) {
+        for (int y = 0; y < vm; y++)
+            memset(fb + (size_t)y * fbW, 0, (size_t)fbW);
+        for (int y = fbH - vm; y < fbH; y++)
+            memset(fb + (size_t)y * fbW, 0, (size_t)fbW);
+    }
 
     int startTileX = (int)_cameraX.s.i / PITCH_TILE_SIZE;
     int startTileY = (int)_cameraY.s.i / PITCH_TILE_SIZE;
@@ -509,7 +523,7 @@ void DrawChunkyPitch(void)
 
     for (int ty = 0; ty < tilesDown; ty++) {
         int gridY = startTileY + ty;
-        int screenY = ty * PITCH_TILE_SIZE - offsetY;
+        int screenY = ty * PITCH_TILE_SIZE - offsetY + vm;
         for (int tx = 0; tx < tilesAcross; tx++) {
             int gridX = startTileX + tx;
             int screenX = tx * PITCH_TILE_SIZE - offsetX;
@@ -525,7 +539,7 @@ void DrawChunkyPitch(void)
 
             for (int row = 0; row < PITCH_TILE_SIZE; row++) {
                 int py = screenY + row;
-                if (py < 0 || py >= fbH) continue;
+                if (py < vm || py >= fbH - vm) continue;
                 uint8_t *dstRow = fb + py * fbW;
                 if (tile) {
                     const uint8_t *srcRow = tile + row * PITCH_TILE_SIZE;

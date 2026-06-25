@@ -94,6 +94,8 @@ extern uint16_t _panicReasonCode;
  * (which have the recording camera baked in) onto the current playback camera.
  * Set by ReplayCameraX each frame; applied in the sprite decode below. */
 static int16_t s_replayShiftX = 0;
+extern int _replayVertMargin;            /* DOS-replay vertical letterbox (dos_replay_load.c) */
+extern volatile uint16_t _playHighlightFlag;  /* set only while a .HIL replay is active */
 
 /* ---- Replay camera X (SDL widescreen) ----------------------------------
  * Recorded HIL/replay camera positions are in the classic 336-wide coordinate
@@ -588,7 +590,8 @@ sprite_decode:
         int32_t sy = (int32_t)(d0 << 22) >> 22;
         uint32_t sprIdx = d0 >> 20;
 #ifdef SWOS_SDL_BUILD
-        sx += s_replayShiftX;   /* re-anchor recorded screen coords onto playback camera */
+        sx += s_replayShiftX;     /* re-anchor recorded screen coords onto playback camera */
+        sy += (_playHighlightFlag ? _replayVertMargin : 0);  /* letterbox DOS (200-tall) replays */
 #endif
         DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
