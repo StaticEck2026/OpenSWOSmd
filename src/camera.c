@@ -55,28 +55,27 @@ void ScrollToCurrent(void)
 __attribute__((used, externally_visible))
 void MoveView(int16_t newScreenX, int16_t newScreenY)
 {
-    /* Clamp the X target to the pitch pan range. Recorded replay-camera
-     * positions (highlight.c calls MoveView directly with the recorded X)
-     * are in the classic 336-wide coordinate space (pan range 0..0x150). On a
-     * wider SDL view (_screen_width > 336) those over-pan past the pitch's
-     * right edge into the green surround — the "off-centre" HIL pitch. 0x2A0
-     * (pitch world width) - _screen_width is the max camera X, the same clamp
-     * SetCameraCoordinates already applies. No-op on Amiga / 4:3 (_screen_width
-     * == 336, recorded values never exceed the range). */
-    {
+    /* These clamps map a DOS-336 recorded replay camera into our wider view and
+     * must run ONLY for loaded HIL/RPL playback (_playHighlightFlag). highlight.c
+     * calls MoveView directly with the recorded X; the live in-game camera — and
+     * the in-game instant replay, recorded in our own space — does its own
+     * clamping (SetCameraCoordinates), so applying these here clamped the up-pan
+     * to the subs bench, which legitimately leaves the playing-field Y range. */
+    extern uint16_t _playHighlightFlag;
+    if (_playHighlightFlag != 0) {
+        /* X: 0x2A0 (pitch world width) - _screen_width is the max camera X — the
+         * same clamp SetCameraCoordinates applies. No-op at 4:3 / on Amiga. */
         int16_t panRange = (int16_t)(0x2A0 - _screen_width);
         if (panRange < 0) panRange = 0;
         if (newScreenX < 0) newScreenX = 0;
         else if (newScreenX > panRange) newScreenX = panRange;
-    }
 
-    /* Clamp Y to the live camera's vertical range [0x10, 0x260] (move_camera.c
-     * SetCameraCoordinates). A replay's recorded camera Y can exceed this —
-     * DOS HILs were captured in a 200px-tall view and reach ~0x295 — and
-     * without the clamp the taller (272px) playback view pans past the bottom
-     * of the pitch into the green surround. */
-    if (newScreenY < 0x10) newScreenY = 0x10;
-    else if (newScreenY > 0x260) newScreenY = 0x260;
+        /* Y: the live camera's vertical range [0x10, 0x260]. A DOS HIL captured
+         * in a 200px-tall view reaches ~0x295, which on our taller (272px)
+         * playback view would pan past the bottom into the green surround. */
+        if (newScreenY < 0x10) newScreenY = 0x10;
+        else if (newScreenY > 0x260) newScreenY = 0x260;
+    }
 
     /* ---- Phase 1: move X ---- */
     /* Original asm uses do-while: ScrollToCurrent fires before the exit
