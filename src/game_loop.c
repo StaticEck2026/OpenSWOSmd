@@ -1020,7 +1020,15 @@ PlayHighlightsLoop(void)
 
         if (_replayState == 0) {
             FadeOutToBlack();
-            RestoreCameraPosition();
+            /* Restore the pre-replay camera only once the whole reel is done.
+             * Between scenes, RestoreCameraPosition snaps the camera to the
+             * pre-replay default (≈ pitch centre) and swaps it onscreen for a
+             * frame before the next scene's first marker re-aims it — that's
+             * the "jump to centre" glitch. The next scene's DrawReplayFrame
+             * re-inits the camera + patterns, so skipping it between scenes is
+             * safe; only the final scene needs the real restore. */
+            if ((uint16_t)(_hilSceneNumber + 1) >= _numScenesInHilFile)
+                RestoreCameraPosition();
             goto advance_to_next_highlight;
         }
 
