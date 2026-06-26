@@ -166,6 +166,12 @@ skip_if_penalties:
     if (_playingPenalties != 0)
         return;
 
+#ifdef SWOS_SDL_BUILD
+    /* Arcade golden goal: the first (non-penalty) goal ends the match. No-op
+     * unless _gArcadeMode + golden-goal is armed (checked inside). */
+    { extern void Arcade_GoalScored(void); Arcade_GoalScored(); }
+#endif
+
     /* null check scorer sprite */
     if (scorerSprite == (Sprite *)0) {
         _panicReasonCode = 9;
