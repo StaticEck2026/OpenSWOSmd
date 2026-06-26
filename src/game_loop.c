@@ -820,9 +820,14 @@ KeepStatisticsOnScreen(void)
 void __attribute__((used, externally_visible))
 ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
-    _playHighlightFlag = 1;
     CopyTeamsAndHeader();
     InitGameSaveTeams(leftTeam, rightTeam);
+    /* Set the highlight flag AFTER InitGameSaveTeams' fade-out. The flag is what
+     * flips refresh_palette_from_copper to the DOS pitch palette; setting it
+     * earlier made the (Amiga-graphics) stadium "VS" line-up fade out through DOS
+     * colours. The DOS palette is only correct once the pitch is on screen, which
+     * begins with the swap below. */
+    _playHighlightFlag = 1;
     ReplayUpdateCameraAndSwapBuffers(168, 313);
     UpdatePlanePtrsAndBlitParams();
     ReadTimerDelta();
@@ -1020,7 +1025,15 @@ PlayHighlightsLoop(void)
 
         if (_replayState == 0) {
             FadeOutToBlack();
-            RestoreCameraPosition();
+            /* Restore the pre-replay camera only once the whole reel is done.
+             * Between scenes, RestoreCameraPosition snaps the camera to the
+             * pre-replay default (≈ pitch centre) and swaps it onscreen for a
+             * frame before the next scene's first marker re-aims it — that's
+             * the "jump to centre" glitch. The next scene's DrawReplayFrame
+             * re-inits the camera + patterns, so skipping it between scenes is
+             * safe; only the final scene needs the real restore. */
+            if ((uint16_t)(_hilSceneNumber + 1) >= _numScenesInHilFile)
+                RestoreCameraPosition();
             goto advance_to_next_highlight;
         }
 

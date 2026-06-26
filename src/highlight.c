@@ -90,6 +90,71 @@ extern void ResetAnimatedPatternsForBothTeams(void);
 extern void DrawAnimatedPatterns(void);
 extern uint16_t _panicReasonCode;
 
+/* Per-frame X shift that re-anchors recorded screen-space sprite coordinates
+ * (which have the recording camera baked in) onto the current playback camera.
+ * Set by ReplayCameraX each frame; applied in the sprite decode below. */
+static int16_t s_replayShiftX = 0;
+static int16_t s_replayShiftY = 0;   /* same re-anchor for Y (DOS HIL camera clamp) */
+
+/* ---- Replay camera X (SDL widescreen) ----------------------------------
+ * Recorded HIL/replay camera positions are in the classic 336-wide coordinate
+ * space (scrolled to keep the ball centred in a 336px view). The pitch is 0x2A0
+ * (672) wide, so a view of width W has only (672 - W) px of camera travel.
+ *   - Near-full-pitch view (ultrawide, tiny pan range): following the recorded
+ *     path only SLIDES the static scenery (net, stands) by the pan-range width
+ *     — there's nothing off-screen to follow to. Lock to the pan-range centre:
+ *     dead-stable, pitch-centred.
+ *   - Narrower widescreen: the camera still needs to track play, so re-centre
+ *     the recorded 336-space path for the view (the per-mode adjustment SWOS
+ *     2020 applies: subtract WIDE_MARGIN = (_screen_width - SCREEN_WIDTH)/2) and
+ *     clamp to the pan range.
+ * No-op on Amiga / 4:3 (pan range == the classic range, WIDE_MARGIN == 0). */
+static int16_t ReplayCameraX(int16_t recordedX)
+{
+#ifdef SWOS_SDL_BUILD
+    int16_t panRange = (int16_t)(0x2A0 - _screen_width);
+    if (panRange < 0) panRange = 0;
+    int16_t out;
+    if (panRange <= 64) {
+        out = (int16_t)(panRange / 2);                 /* whole pitch fits -> lock */
+    } else {
+        out = (int16_t)(recordedX - (int16_t)WIDE_MARGIN);
+        if (out < 0) out = 0;
+        else if (out > panRange) out = panRange;        /* re-centre + follow */
+    }
+    /* Recorded sprites are in screen space relative to the recording camera;
+     * shift them by (recorded - playback) so they re-anchor onto our playback
+     * camera. A stationary world object has a constant world position, so its
+     * shift cancels the recording camera -> it no longer slides. The recorded
+     * coords already sit in the centred 336 region of a wide view (WIDE_MARGIN),
+     * so subtract it to avoid double-counting the margin (otherwise everything
+     * lands WIDE_MARGIN px too far right). */
+    s_replayShiftX = (int16_t)(recordedX - out - WIDE_MARGIN);
+    return out;
+#else
+    return recordedX;
+#endif
+}
+
+/* Clamp a replay's recorded camera Y to the live vertical range [0x10, 0x260]
+ * and record the shift so recorded (screen-space) sprites re-anchor onto the
+ * clamped playback camera — the Y counterpart of ReplayCameraX. DOS HILs were
+ * captured in a 200px-tall view and reach ~0x295, past our 272px view's limit;
+ * clamping keeps the view on the pitch (no green) and the shift keeps the
+ * players aligned. No-op for our own 272-tall HILs (camera already in range). */
+static int16_t ReplayCameraY(int16_t recordedY)
+{
+#ifdef SWOS_SDL_BUILD
+    int16_t out = recordedY;
+    if (out < 0x10) out = 0x10;
+    else if (out > 0x260) out = 0x260;
+    s_replayShiftY = (int16_t)(recordedY - out);
+    return out;
+#else
+    return recordedY;
+#endif
+}
+
 /* ---- Local probability tables (matching asm data) ---- */
 
 /* pitchTypeSeasonalProbabilities: 12 seasons * 7 types = 84 bytes
@@ -509,7 +574,7 @@ void DrawReplayFrame(void)
     /* Frame-start marker processing */
     a0 = wrapPointerFwd(a0);
     d0 &= ~(1u << 31);
-    MoveView((int16_t)(d0 >> 16), (int16_t)(d0 & 0xFFFF));
+    MoveView(ReplayCameraX((int16_t)(d0 >> 16)), ReplayCameraY((int16_t)(d0 & 0xFFFF)));
 
     /* Read team goals */
     _hilLeftTeamGoals = BE_READ_U16(a0);
@@ -542,6 +607,10 @@ sprite_decode:
         int32_t sx = (int32_t)(d0 << 12) >> 22;
         int32_t sy = (int32_t)(d0 << 22) >> 22;
         uint32_t sprIdx = d0 >> 20;
+#ifdef SWOS_SDL_BUILD
+        sx += s_replayShiftX;   /* re-anchor recorded screen coords onto playback camera */
+        sy += s_replayShiftY;   /* same re-anchor for Y (DOS HIL camera clamp) */
+#endif
         DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
     }
@@ -647,6 +716,8 @@ after_decode:
 __attribute__((used, externally_visible))
 void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
 {
+    targetX = ReplayCameraX(targetX);
+    targetY = ReplayCameraY(targetY);
     SetCameraCoordinates(targetX, targetY);
     InitCameraMoveView(targetX, targetY);
     SwapBuffersAndCameraViewState();

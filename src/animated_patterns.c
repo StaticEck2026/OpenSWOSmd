@@ -169,6 +169,20 @@ static void drawPatternFromIndex(uint16_t patternIndex)
     screenX = pixelX - (int16_t)_cameraX.s.i;
     screenY = pixelY - (int16_t)_cameraY.s.i;
 
+#ifdef SWOS_SDL_BUILD
+    /* The fan is drawn via DrawSprite16Pixels, whose blit is offset by
+     * _menu_draw_x_offset (= WIDE_MARGIN during a widescreen replay, to centre
+     * the menu/HUD). The static crowd is drawn by DrawChunkyPitch, which writes
+     * the framebuffer directly with NO such offset — so the animated fan landed
+     * _menu_draw_x_offset px right of its own static cell (tester-measured
+     * 157 = WIDE_MARGIN). Cancel it on the coordinate so the fan overlays its
+     * cell. In live play _menu_draw_x_offset == 0, so this is a no-op there. */
+    {
+        extern int _menu_draw_x_offset;
+        screenX = (int16_t)(screenX - _menu_draw_x_offset);
+    }
+#endif
+
     /* bounds check. Widescreen draws fan cells across the full frontbuffer width, not just
      * the 4:3 336px window; _screen_width == 336 on 4:3 / Amiga so this is unchanged there. */
 #ifdef SWOS_SDL_BUILD
@@ -296,6 +310,18 @@ static void drawFanMirror(int16_t baseIdx, int do_toggle, uint16_t d4)
     mirrorIdx = row * 42 + colAbs;
     if (mirrorIdx < 0 || mirrorIdx >= 2310)
         return;
+
+    /* The mirror cell must itself be an animatable fan tile. The active redraw
+     * path (do_toggle == 0) skips the toggle block's tile check below, so
+     * without this it blits whatever tile sits at the mirror cell — including a
+     * non-fan grass tile near the crowd edge — over the pitch (the intermittent
+     * grass patch). */
+    {
+        uint32_t *mp = ((uint32_t *)(void *)_pitchDatBuffer) + mirrorIdx;
+        int32_t mti = (int32_t)(((uint32_t)(*mp - ANIM_TILE_BASE)) >> ANIM_TILE_SIZE_SHIFT);
+        if (mti == 0 || mti > MAX_FAN_TILE_INDEX)
+            return;
+    }
 
     if (do_toggle) {
         uint32_t *p = ((uint32_t *)(void *)_pitchDatBuffer) + mirrorIdx;

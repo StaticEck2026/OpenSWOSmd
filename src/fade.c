@@ -158,6 +158,12 @@ static const uint16_t fadeShiftMaskTable[10] = {
  *
  * Two paths: normal (just shift+mask) or loader (clamp blue >= 2).
  * ================================================================ */
+/* Current fade level (FADE_MAX=0x80 bright .. 0 black). Tracked so palettes that
+ * aren't the copper list — namely the DOS-graphics palette, rebuilt fresh each
+ * frame in platform_sdl.c — can apply the same fade the copper palette gets
+ * below. Without it, fades had no visible effect on DOS pitches. */
+int g_fadeLevel = 0x80;
+
 __attribute__((used, externally_visible))
 void ApplyFadeStep(uint16_t fadeLevel)
 {
@@ -171,6 +177,7 @@ void ApplyFadeStep(uint16_t fadeLevel)
 #endif
     int16_t i;
 
+    g_fadeLevel = (int)fadeLevel;   /* let non-copper (DOS) palettes fade in step */
     idx = (fadeLevel >> 5) * 2; /* index into shift/mask pairs */
 
     if (_loaderModeFlag == 0)
