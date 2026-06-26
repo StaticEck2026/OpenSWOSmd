@@ -155,6 +155,18 @@ retry:
         goto retry;
 }
 
+#ifdef SWOS_SDL_BUILD
+/* Arcade mode skips the loader intro, so the HERO title song is never staged.
+ * Load hero.sng / hero.ins and start playback (subsong 0, faded in) on demand —
+ * used by the arcade attract loop. Reuses the two intro helpers so the staging
+ * buffers and subsong choice stay in one place. SDL-only (arcade is). */
+void Arcade_PlayHeroMusic(void)
+{
+    loaderIntroLoadHeroAudioBank();
+    loaderIntroEnsureMenuMusicPlaying();
+}
+#endif
+
 /* ================================================================
  * LoaderIntroLoadFrameToFrontbufferAlt  (SWOS2.s line 21365)
  *

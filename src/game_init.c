@@ -737,6 +737,36 @@ void SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
 
     _careerTeamCoachOnly = 0;
 
+#ifdef SWOS_SDL_BUILD
+    {
+        extern int _gArcadeMode;
+        if (_gArcadeMode) {
+            /* Arcade: no pre-match squad/tactics menu — and the front-end menu
+             * stack isn't initialised on this path anyway. Assign joystick control
+             * directly and use each team's default formation/tactics: the same
+             * outputs the normal SetupPlayers tail produces, with the
+             * ShowPlayMatchMenu returns hard-wired (top team = joystick 1,
+             * bottom = joystick 2 in 2P or the computer in 1P). */
+            _isCareer = 0;
+            _exitGameFlag = 0;
+            _team1SelectedPlayerIndex = 0xFFFF;
+            _team2SelectedPlayerIndex = 0xFFFF;
+            _twoPlayers = (team1->team.teamControls != TEAM_COMPUTER &&
+                           team2->team.teamControls != TEAM_COMPUTER) ? 1 : 0;
+            _pl1Coach = 0;
+            _pl2Coach = 0;
+            _topTeamPlayerNo    = (team1->team.teamControls != TEAM_COMPUTER) ? 1 : 0;
+            _topTeamCoachNo     = 0;
+            _bottomTeamPlayerNo = (team2->team.teamControls != TEAM_COMPUTER) ? 2 : 0;
+            _bottomTeamCoachNo  = 0;
+            _pl1Tactics = (int16_t)(int8_t)team1->team.tactics;
+            _pl2Tactics = (int16_t)(int8_t)team2->team.tactics;
+            (void)maxSubs; (void)excludeFlags; (void)allowSquadChanges; (void)mode; (void)d0;
+            return;
+        }
+    }
+#endif
+
     /* Career team remap check */
     if (_isCareer == 0) {
         if (team1 == &_careerTeam || team2 == &_careerTeam) {
@@ -865,6 +895,13 @@ void InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2) {
     if (_trainingGame != 0) {
         StringCopy(_aTraining, _gameName);
     } else {
+#ifdef SWOS_SDL_BUILD
+        extern int _gArcadeMode;
+        extern uint8_t _aArcadeMatchName[];   /* "GOLDEN GOAL" (arcade.c) */
+        if (_gArcadeMode)
+            StringCopy(_aArcadeMatchName, _gameName);
+        else
+#endif
         StringCopy(_aFriendly_1, _gameName);
     }
     _gameRound = 0;
