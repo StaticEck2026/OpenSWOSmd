@@ -185,20 +185,20 @@ User-confirmed concrete requirements as we build it:
 
 - **`[arcade] enabled=false` (default)** in `SWOS.ini`. When `true`, SWOS boots
   **straight to attract mode and never shows the main menu**.
-- **Attract mode** = a random **arcade pitch** (see below) as the background, the
-  **SWOS logo** overlaid, plus highlight/replay (`.HIL`/`.RPL`) files that
-  **randomly fade in/out and play**. Reels live in
-  `bin/grafs_arcade/attract_mode/` (drop curated files there; empty = no reels,
-  handle gracefully). Reuses the existing HIL/RPL playback path (now
-  widescreen-correct).
-- **Flashing "INSERT COIN"** text for **player 1 and player 2** (both shown).
+- **Attract mode = the HIL/RPL reels PLAY** (camera follows normally, exactly like
+  the replay viewer) showing gameplay footage, with the **SWOS logo overlaid** and
+  **flashing INSERT COIN at the bottom** — like a real arcade cabinet's attract
+  loop. Reels live in `bin/grafs_arcade/attract_mode/` (random pick, fade in/out
+  between them; empty dir = no reels, handle gracefully). Reuses the existing
+  (now widescreen-correct) HIL/RPL playback path. **The pitch art is NOT the
+  attract background — the reels are.**
+- **Flashing "INSERT COIN"** for **player 1 and player 2** (both, bottom corners).
 - **Coin insert (MAME convention): key `5` = credit P1, key `6` = credit P2.**
   Any credit interrupts attract → match.
-- **Arcade pitches:** `bin/grafs_arcade/SWCPICH1.png … SWCPICH7.png`, chosen
-  **at random** per match/attract. **SDL-only: load the PNGs DIRECTLY into our
-  internal 8bpp format** — *not* the DOS `PITCH*.BLK`/`.DAT` pipeline (supersedes
-  §4). If the PNGs need to be 256-colour paletted for a clean direct load, convert
-  them (user will, or we do).
+- **Arcade pitches** (`bin/grafs_arcade/SWCPICH1.png … SWCPICH7.png`) are the
+  **match playing field**, chosen at random **when a game starts** (not in
+  attract). Full 672×880 RGB → quantised to a per-pitch 256-colour palette, loaded
+  into the 8bpp pitch pipeline. (SDL-only direct load, not DOS `PITCH*.BLK`/`.DAT`.)
 - **Service menu:** **F2** opens it (pauses attract/game). Start with a **basic**
   menu showing the **current mode** + the obvious arcade settings. Font =
   `bin/grafs_arcade/SVCFONT.bmp` (§3.2). Visual ref: NBA Hangtime
@@ -208,11 +208,13 @@ User-confirmed concrete requirements as we build it:
   these (time, golden-goal, etc.) **adjustable in the service menu**.
 
 ### Build phasing (this implementation)
-1. `[arcade] enabled` setting + `gArcadeMode` global + **boot gate** (arcade →
-   skip the front-end menu, run the arcade loop). ← start here
-2. Arcade pitch PNG loader (direct → 8bpp) + random pick + draw as background.
-3. Attract loop: flashing INSERT-COIN P1/P2 + coin keys 5/6 + logo overlay +
-   random HIL/RPL fade-in/out playback from `attract_mode/`.
-4. Service menu (F2): SVCFONT loader + basic settings list (mode + arcade rules).
-5. Arcade match: 45 s golden-goal, draw→penalties, launched on credit.
-6. Operator config persistence + bookkeeping; winner-stays-on; cabinet I/O.
+1. ✅ DONE (`f2f3ccc`): `[arcade] enabled` + `gArcadeMode` + boot gate (skip
+   intro/menu) + attract skeleton (flashing INSERT COIN bottom corners, coin keys
+   5/6, F2 stub).
+2. **Attract reels**: scan `attract_mode/`, random HIL/RPL playback free-running
+   (camera-follow as normal, fade in/out between reels) with the SWOS logo + the
+   INSERT-COIN overlay; any coin interrupts → match. ← here
+3. Service menu (F2): SVCFONT loader + basic settings list (mode + arcade rules).
+4. Arcade match: random `SWCPICH*` pitch (→8bpp) + 45 s golden-goal,
+   draw→penalties, launched on credit. Winner stays on.
+5. Operator config persistence + bookkeeping; cabinet I/O (coin/service GPIO).

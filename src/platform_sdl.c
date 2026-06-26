@@ -880,6 +880,13 @@ static void render_frame_impl(int pump_full)
     int    pitch;
     if (SDL_LockTexture(s_texture, NULL, &pixels, &pitch) == 0) {
         chunky_to_rgba((uint32_t *)pixels, pitch / 4);
+        /* Arcade attract: composite the menu-palette logo/INSERT-COIN overlay over
+         * the reel frame (which uses its own DOS palette). */
+        { extern int _gArcadeMode;
+          extern void Arcade_CompositeOverlay(uint32_t *, int, int, int);
+          if (_gArcadeMode)
+              Arcade_CompositeOverlay((uint32_t *)pixels, pitch / 4,
+                                      _screen_width, PLATFORM_SCREEN_H); }
         if (s_dump_frames && (pitch == _screen_width * 4))
             maybe_dump_frame((uint32_t *)pixels);
         /* Only write the F12 screenshot from the main-thread render (pump_full). The

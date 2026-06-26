@@ -11,6 +11,8 @@
 #ifndef SWOS_ARCADE_H
 #define SWOS_ARCADE_H
 
+#include <stdint.h>
+
 extern int _gArcadeMode;   /* 1 = arcade/coin-op mode (boot to attract). SDL-only */
 
 /* Runs in place of FrontEndMainLoop when _gArcadeMode is set (called from mainC
@@ -21,5 +23,17 @@ void ArcadeMainLoop(void);
  * receives the number of events. MAME convention: key 5 = insert coin P1,
  * key 6 = insert coin P2, F2 = service button. Implemented in platform_sdl.c. */
 void Platform_ArcadeInput(int *coin1, int *coin2, int *service);
+
+/* Draw the attract overlay (full-screen SWOS logo, index-0 transparent, + the
+ * flashing INSERT COIN / credit state) onto the current frontbuffer. Called once
+ * per frame from the replay draw loop while in arcade mode so it layers over the
+ * playing reel, and from the idle screen. No-op effect unless _gArcadeMode. */
+void Arcade_DrawAttractOverlay(void);
+
+/* Composite the attract overlay (built by Arcade_DrawAttractOverlay) onto the
+ * final ARGB8888 frame using the MENU palette (index 0 transparent). Called by
+ * the SDL present path after the frontbuffer->RGBA conversion so the logo + text
+ * keep their menu colours over a reel that is using a different palette. */
+void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h);
 
 #endif /* SWOS_ARCADE_H */

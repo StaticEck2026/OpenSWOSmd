@@ -63,7 +63,10 @@ static void resolve_path(const uint8_t *amiga_name, char *out, size_t out_sz)
     const char *colon = strchr(src, ':');
     if (colon) src = colon + 1;
 
-    if (has_save_ext(src)) {
+    /* A bare save-extension name (FOO.HIL) maps into the save/ dir. A name that
+     * already carries a directory (e.g. the arcade attract reels under
+     * grafs_arcade/attract_mode/) is taken relative to bin/ exactly as written. */
+    if (has_save_ext(src) && !strchr(src, '/')) {
         snprintf(out, out_sz, "save/%s", src);
     } else {
         snprintf(out, out_sz, "%s", src);
