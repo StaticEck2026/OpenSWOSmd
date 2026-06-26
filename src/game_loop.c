@@ -946,6 +946,10 @@ PlayInstantReplayLoop(void)
 
         /* Draw replay frame and handle fade */
         DrawReplayFrame();
+#ifdef SWOS_SDL_BUILD
+        { extern int _gArcadeMode; extern int Arcade_DrawAttractOverlay(void);
+          if (_gArcadeMode && Arcade_DrawAttractOverlay()) goto abort_replay; }
+#endif
         if (_fadeState == 0 && _fadeInitFlag == 0x3E7)
             _fadeInitFlag = 0xFFFF;
 
@@ -1032,6 +1036,10 @@ PlayHighlightsLoop(void)
 
         /* Draw replay and handle fade */
         DrawReplayFrame();
+#ifdef SWOS_SDL_BUILD
+        { extern int _gArcadeMode; extern int Arcade_DrawAttractOverlay(void);
+          if (_gArcadeMode && Arcade_DrawAttractOverlay()) goto abort_replay_on_fire; }
+#endif
         if (_fadeState == 0 && _fadeInitFlag == 0x3E7)
             _fadeInitFlag = 0xFFFF;
 

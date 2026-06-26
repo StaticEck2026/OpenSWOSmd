@@ -248,14 +248,23 @@ void mainC(void)
 
     /* ---- Phase 4: Loader intro ---- */
     _loaderModeFlag = 1;
+#ifdef SWOS_SDL_BUILD
+    /* Arcade: no intro/credits — boot straight to attract (asset loading below
+     * still runs; only the visible intro animation is skipped). */
+    { extern int _gArcadeMode; if (!_gArcadeMode) ShowLoaderIntroSequence(); }
+#else
     ShowLoaderIntroSequence();
+#endif
     AssetLoaderInitAltPathAndBanks();
     AssetPrecacheCore();
     InstallAndInitLoaderBootstrap();
     FadeOutToBlack();
     _loaderModeFlag = 0;
 
-    /* ---- Phase 5: Show title screens ---- */
+    /* ---- Phase 5: Show title screens (skipped in arcade mode) ---- */
+#ifdef SWOS_SDL_BUILD
+    { extern int _gArcadeMode; if (_gArcadeMode) goto skip_title_screens; }
+#endif
     DoubleBufferSwapSequence();
     _paletteIndex = 0;
     LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "olddisk1.raw");
@@ -265,6 +274,9 @@ void mainC(void)
     LoadOverlayToFrontbuffer((const uint8_t *)GRAFS "disk22.raw");
     _paletteIndex = 0;
     FadeIn();
+#ifdef SWOS_SDL_BUILD
+skip_title_screens: ;
+#endif
 
     /* ---- Phase 6: Poll loader op3 with 50Hz delays ---- */
     
@@ -319,6 +331,16 @@ void mainC(void)
     _assetLoaderAltPathReady = 1;
     _hilNumGoals = 0;
 
-    /* ---- Phase 9: Enter front-end loop ---- */
+    /* ---- Phase 9: Enter front-end loop (or arcade attract loop) ---- */
+#ifdef SWOS_SDL_BUILD
+    {
+        extern int _gArcadeMode;
+        extern void ArcadeMainLoop(void);
+        if (_gArcadeMode) {
+            ArcadeMainLoop();   /* coin-op: boot to attract, never the main menu */
+            return;
+        }
+    }
+#endif
     FrontEndMainLoop();
 }

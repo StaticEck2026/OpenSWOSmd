@@ -18,9 +18,10 @@
  *
  * SDL-only: the DOS replays are a PC-extras feature.
  */
-#include "game_types.h"
+#include "game_types.h"     /* provides uintN_t on both SDL and Amiga (no <stdint.h>:
+                             * the m68k toolchain can't resolve it and swos_platform.h
+                             * deliberately keeps it out to avoid typedef conflicts) */
 #include "endian_helpers.h"
-#include <stdint.h>
 #include <string.h>
 
 #ifdef SWOS_SDL_BUILD

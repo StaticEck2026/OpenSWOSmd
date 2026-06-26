@@ -673,8 +673,13 @@ after_decode:
         DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB + WIDE_MARGIN, 0xE);
     }
 
-    /* Show score overlay during normal replay (same playfield-relative offset). */
-    if (_normalReplayRunning != 0) {
+    /* Show score overlay during normal replay (same playfield-relative offset).
+     * Suppressed in arcade attract so the demo reels don't show a scoreline. */
+    int showScore = (_normalReplayRunning != 0);
+#ifdef SWOS_SDL_BUILD
+    { extern int _gArcadeMode; if (_gArcadeMode) showScore = 0; }
+#endif
+    if (showScore) {
         uint16_t bx = 17 + WIDE_MARGIN;   /* d1 = 0xD + 4 */
         uint16_t by = 17;                 /* d2 = 0xD + 4 */
 
