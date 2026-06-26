@@ -85,10 +85,19 @@ static void convert_team(const uint8_t *dosTeam, uint8_t *ourTeam)
  * `src`, writes BE into `dst`. Returns bytes written. The DOS scene region sits
  * above our scene region in the same buffer, so a forward in-place copy keeps
  * the write cursor behind the read cursor (1:1 dwords). */
+/* Set by convert_frames: 1 if the recording's sprites span wider than the 336px
+ * DOS/Amiga view (a SWOS-2020 widescreen capture), 0 otherwise. The SDL
+ * widescreen camera helper (highlight.c ReplayCameraX) reads this to decide
+ * whether to centre a 336 recording or use the wide recorded camera verbatim.
+ * The recorded camera markers are the same regardless; only the playback
+ * mapping differs, so the core replay/render path is untouched. */
+int _replayRecordingIsWide = 0;
+
 static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst)
 {
     uint32_t si = 0, di = 0;
     int afterMarker = 0;  /* next two dwords after a marker are goals + anim */
+    int isWide = 0;       /* recorded sprite span exceeds the 336 DOS/Amiga view */
     while (si + 4 <= srcLen) {
         uint32_t d = (uint32_t)src[si] | ((uint32_t)src[si+1] << 8) |
                      ((uint32_t)src[si+2] << 16) | ((uint32_t)src[si+3] << 24);
@@ -111,6 +120,7 @@ static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst
             uint32_t idx = d >> 20;
             int32_t  x   = (int32_t)(d << 12) >> 22;
             int32_t  y   = (int32_t)(d << 22) >> 22;
+            if (x < -40 || x > 360) isWide = 1;   /* sprite beyond the 336-wide DOS view */
             if (idx >= DOS_TO_AMIGA_SPR) idx -= DOS_TO_AMIGA_SPR;
             out = ((idx & 0x7FF) << 20) |
                   (((uint32_t)x & 0x3FF) << 10) | ((uint32_t)y & 0x3FF);
@@ -119,6 +129,7 @@ static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst
         BE_WRITE_U32(dst + di, out);
         di += 4;
     }
+    _replayRecordingIsWide = isWide;
     return di;
 }
 
