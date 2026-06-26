@@ -47,6 +47,8 @@ extern uint32_t _kHilFileSig;
 
 #define ARC_WHITE         2          /* menu-palette white (0x0FFF) for the UI text */
 #define ARC_CHARS         ((uint8_t *)_bigCharsTable)
+#define ARC_Y_BOTTOM      256        /* INSERT COIN / CREDIT NN / player-count row */
+#define ARC_Y_PROMPT      244        /* PUSH START BUTTON — just above the bottom row */
 #define ARC_ASSET_INIT    2          /* CAssetSys ASSET_OP_INIT_SOURCE0 */
 #define ARC_REEL_DIR      "grafs_arcade/attract_mode"
 #define ARC_MAX_REELS     64
@@ -54,7 +56,8 @@ extern uint32_t _kHilFileSig;
 static char     s_reels[ARC_MAX_REELS][64];
 static int      s_reelCount;
 static uint32_t s_rngState = 0x1234abcdu;
-static int      s_credits1, s_credits2;   /* inserted credits (shared attract/match) */
+static int      s_credits;     /* total credits in the cabinet */
+static int      s_startGame;   /* pending game: 0 none, 1 one-player, 2 two-player */
 static uint32_t s_overlayFrame;           /* blink phase for the attract overlay */
 
 #define ARC_LOGO_MAXW  1024
@@ -139,14 +142,22 @@ static void arc_clear(void)
            (size_t)_screen_width * (size_t)SCREEN_HEIGHT);
 }
 
-/* Coin/service input — accumulate credits (shared by attract + idle). */
-static void arc_drain_coins(void)
+/* Cabinet input: coins add credits; start buttons request a game (1P needs 1
+ * credit, 2P needs 2). Shared by the attract reels and the idle screen. */
+static void arc_drain_input(void)
 {
-    int c1 = 0, c2 = 0, sv = 0;
-    Platform_ArcadeInput(&c1, &c2, &sv);
-    if (c1) { s_credits1 += c1; fprintf(stderr, "[arcade] coin P1 (credits=%d)\n", s_credits1); }
-    if (c2) { s_credits2 += c2; fprintf(stderr, "[arcade] coin P2 (credits=%d)\n", s_credits2); }
-    if (sv)  fprintf(stderr, "[arcade] F2 service button — service menu TODO\n");
+    int c1 = 0, c2 = 0, sv = 0, st1 = 0, st2 = 0;
+    Platform_ArcadeInput(&c1, &c2, &sv, &st1, &st2);
+    if (c1 + c2 > 0) {
+        s_credits += (c1 + c2);
+        fprintf(stderr, "[arcade] credit -> %d\n", s_credits);
+    }
+    if (sv) fprintf(stderr, "[arcade] F2 service button — service menu TODO\n");
+    if (st1 && s_credits >= 1)      { s_credits -= 1; s_startGame = 1; }
+    else if (st2 && s_credits >= 2) { s_credits -= 2; s_startGame = 2; }
+    if (s_startGame)
+        fprintf(stderr, "[arcade] START %d-player game (credits left %d)\n",
+                s_startGame, s_credits);
 }
 
 /* Decode the LOADER1 intro logo once into s_logoBuf (8bpp chunky, frontbuffer
@@ -169,9 +180,9 @@ static void arc_load_logo(void)
  * platform layer composites this buffer with the menu palette — see
  * Arcade_CompositeOverlay. Drawn over the playing reel (hook in PlayHighlightsLoop)
  * and on the idle screen. */
-void Arcade_DrawAttractOverlay(void)
+int Arcade_DrawAttractOverlay(void)
 {
-    arc_drain_coins();
+    arc_drain_input();
     s_overlayFrame++;
     int flash = (int)((s_overlayFrame >> 4) & 1);
 
@@ -185,13 +196,27 @@ void Arcade_DrawAttractOverlay(void)
     uintptr_t saved = _frontbufferBasePtr;
     _frontbufferBasePtr = (uintptr_t)s_overlayBuf;
 
-    if (s_credits1 == 0) { if (flash) DrawMenuText(8, 248, ARC_WHITE, (uint8_t *)"INSERT COIN", ARC_CHARS); }
-    else                            DrawMenuText(8, 248, ARC_WHITE, (uint8_t *)"PLAYER 1 READY", ARC_CHARS);
-    if (s_credits2 == 0) { if (flash) DrawMenuTextRightAligned(328, 248, ARC_WHITE, (uint8_t *)"INSERT COIN", ARC_CHARS); }
-    else                            DrawMenuTextRightAligned(328, 248, ARC_WHITE, (uint8_t *)"PLAYER 2 READY", ARC_CHARS);
+    if (s_credits <= 0) {
+        /* no credits — flashing INSERT COIN in both bottom corners */
+        if (flash) {
+            DrawMenuText(8, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)"INSERT COIN", ARC_CHARS);
+            DrawMenuTextRightAligned(328, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)"INSERT COIN", ARC_CHARS);
+        }
+    } else {
+        /* credits available — CREDIT count (bottom-right) + flashing PUSH START
+         * prompt with the player-count line aligned to the CREDIT row */
+        char buf[20];
+        snprintf(buf, sizeof buf, "CREDIT %02d", s_credits);
+        DrawMenuTextRightAligned(328, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)buf, ARC_CHARS);
+        if (flash)
+            DrawMenuTextCentered(168, ARC_Y_PROMPT, ARC_WHITE, (uint8_t *)"PUSH START BUTTON", ARC_CHARS);
+        DrawMenuTextCentered(168, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)(
+            (s_credits >= 2) ? "ONE OR TWO PLAYERS" : "ONE PLAYER ONLY"), ARC_CHARS);
+    }
 
     _frontbufferBasePtr = saved;
     s_overlayActive = 1;
+    return s_startGame != 0;   /* non-zero -> caller leaves the attract reel */
 }
 
 /* Composite the attract overlay onto the final ARGB8888 frame using the MENU
@@ -240,10 +265,19 @@ static void arc_idle_insert_coin(int frames)
 {
     for (int f = 0; f < frames && _quitToDos == 0; f++) {
         arc_clear();
-        Arcade_DrawAttractOverlay();
+        if (Arcade_DrawAttractOverlay()) break;   /* a game was started */
         WaitForVSync();
         ReadTimerDelta();
     }
+}
+
+/* Begin the requested arcade game. 3b (flag select) and 3c (arcade-rules match)
+ * land here; for now it just logs and clears the request, returning to attract. */
+static void arc_start_game(void)
+{
+    fprintf(stderr, "[arcade] >>> START %d-PLAYER GAME (flag select + match TODO)\n",
+            s_startGame);
+    s_startGame = 0;
 }
 
 void ArcadeMainLoop(void)
@@ -259,6 +293,11 @@ void ArcadeMainLoop(void)
     ReadTimerDelta();
 
     while (_quitToDos == 0) {
+        if (s_startGame) {               /* start pressed during a reel/idle */
+            arc_start_game();
+            continue;
+        }
+
         if (s_reelCount == 0) {
             arc_idle_insert_coin(250);   /* ~5 s, then re-scan */
             arc_scan_reels();

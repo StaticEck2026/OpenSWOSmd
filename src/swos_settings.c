@@ -99,6 +99,16 @@ static int handler(void *user, const char *section,
     } else if (eqi(section, "arcade")) {
         int b;
         if (eqi(name, "enabled") && parse_bool(value, &b)) opts->arcade = b;
+        else if (eqi(name, "key_p1_credit") && value && value[0])
+            snprintf(opts->arcade_key_p1_credit, sizeof opts->arcade_key_p1_credit, "%s", value);
+        else if (eqi(name, "key_p1_start") && value && value[0])
+            snprintf(opts->arcade_key_p1_start, sizeof opts->arcade_key_p1_start, "%s", value);
+        else if (eqi(name, "key_p2_credit") && value && value[0])
+            snprintf(opts->arcade_key_p2_credit, sizeof opts->arcade_key_p2_credit, "%s", value);
+        else if (eqi(name, "key_p2_start") && value && value[0])
+            snprintf(opts->arcade_key_p2_start, sizeof opts->arcade_key_p2_start, "%s", value);
+        else if (eqi(name, "key_service") && value && value[0])
+            snprintf(opts->arcade_key_service, sizeof opts->arcade_key_service, "%s", value);
     } else if (eqi(section, "general")) {
         if (eqi(name, "language") && value && value[0])
             snprintf(opts->language, sizeof opts->language, "%s", value);
@@ -200,8 +210,14 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "\n"
         "[arcade]           ; coin-op mode (PC-only). See docs/ARCADE.md\n"
         "; enabled: true | false — boot straight to attract mode, no main menu\n"
-        "; (MAME keys: 5 = coin P1, 6 = coin P2, F2 = service menu)\n"
         "enabled=%s\n"
+        "; cabinet key bindings (SDL key names, e.g. 5, 6, 1, 2, F2; case-insensitive).\n"
+        "; Default layout matches MAME: 5/6 = insert coin P1/P2, 1/2 = start P1/P2.\n"
+        "key_p1_credit=%s\n"
+        "key_p1_start=%s\n"
+        "key_p2_credit=%s\n"
+        "key_p2_start=%s\n"
+        "key_service=%s\n"
         "\n"
         "[general]\n"
         "; language: en | de | fr | es | it | nl\n"
@@ -219,6 +235,11 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         opts->dos_graphics ? "true" : "false",
         opts->dos_gameplay ? "true" : "false",
         opts->arcade ? "true" : "false",
+        opts->arcade_key_p1_credit[0] ? opts->arcade_key_p1_credit : "5",
+        opts->arcade_key_p1_start[0]  ? opts->arcade_key_p1_start  : "1",
+        opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6",
+        opts->arcade_key_p2_start[0]  ? opts->arcade_key_p2_start  : "2",
+        opts->arcade_key_service[0]   ? opts->arcade_key_service   : "F2",
         opts->language[0] ? opts->language : "en",
         opts->currency[0] ? opts->currency : "pound");
 

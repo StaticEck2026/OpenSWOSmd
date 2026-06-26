@@ -21,14 +21,18 @@ void ArcadeMainLoop(void);
 
 /* Drain edge-triggered cabinet input collected since the last call. Each out
  * receives the number of events. MAME convention: key 5 = insert coin P1,
- * key 6 = insert coin P2, F2 = service button. Implemented in platform_sdl.c. */
-void Platform_ArcadeInput(int *coin1, int *coin2, int *service);
+ * key 6 = insert coin P2, F2 = service, 1 = P1 start, 2 = P2 start. Any out may
+ * be NULL. Implemented in platform_sdl.c. */
+void Platform_ArcadeInput(int *coin1, int *coin2, int *service,
+                          int *start1, int *start2);
 
 /* Draw the attract overlay (full-screen SWOS logo, index-0 transparent, + the
  * flashing INSERT COIN / credit state) onto the current frontbuffer. Called once
  * per frame from the replay draw loop while in arcade mode so it layers over the
- * playing reel, and from the idle screen. No-op effect unless _gArcadeMode. */
-void Arcade_DrawAttractOverlay(void);
+ * playing reel, and from the idle screen. Returns non-zero when a game has been
+ * started (a start button pressed with enough credits) so the caller can leave
+ * the attract reel. */
+int Arcade_DrawAttractOverlay(void);
 
 /* Composite the attract overlay (built by Arcade_DrawAttractOverlay) onto the
  * final ARGB8888 frame using the MENU palette (index 0 transparent). Called by

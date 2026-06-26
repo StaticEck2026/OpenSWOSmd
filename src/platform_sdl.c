@@ -116,12 +116,33 @@ static int          s_screenshot_auto_count; /* number written by interval mode 
 static volatile int s_arcade_coin1;
 static volatile int s_arcade_coin2;
 static volatile int s_arcade_service;
+static volatile int s_arcade_start1;   /* P1 start button */
+static volatile int s_arcade_start2;   /* P2 start button */
 
-void Platform_ArcadeInput(int *coin1, int *coin2, int *service)
+/* Resolved cabinet key bindings — set from opts at Platform_Init via
+ * SDL_GetKeyFromName; defaults are the MAME layout (5/6 coin, 1/2 start, F2 svc). */
+static SDL_Keycode s_arcade_key_p1_credit = SDLK_5;
+static SDL_Keycode s_arcade_key_p2_credit = SDLK_6;
+static SDL_Keycode s_arcade_key_p1_start  = SDLK_1;
+static SDL_Keycode s_arcade_key_p2_start  = SDLK_2;
+static SDL_Keycode s_arcade_key_service   = SDLK_F2;
+
+static void arcade_resolve_key(SDL_Keycode *dst, const char *name)
+{
+    if (name && name[0]) {
+        SDL_Keycode k = SDL_GetKeyFromName(name);
+        if (k != SDLK_UNKNOWN) *dst = k;
+    }
+}
+
+void Platform_ArcadeInput(int *coin1, int *coin2, int *service,
+                          int *start1, int *start2)
 {
     if (coin1)   { *coin1   = s_arcade_coin1;   s_arcade_coin1   = 0; }
     if (coin2)   { *coin2   = s_arcade_coin2;   s_arcade_coin2   = 0; }
     if (service) { *service = s_arcade_service; s_arcade_service = 0; }
+    if (start1)  { *start1  = s_arcade_start1;  s_arcade_start1  = 0; }
+    if (start2)  { *start2  = s_arcade_start2;  s_arcade_start2  = 0; }
 }
 
 /* Headless smoke-test: dump every Nth converted frame to /tmp as a PPM. */
@@ -284,6 +305,14 @@ int Platform_Init(const PlatformInitOptions *opts)
     if (win_scale < 1) win_scale = 1;
     if (win_scale > 4) win_scale = 4;
     s_win_scale_current = win_scale;
+
+    if (opts) {
+        arcade_resolve_key(&s_arcade_key_p1_credit, opts->arcade_key_p1_credit);
+        arcade_resolve_key(&s_arcade_key_p2_credit, opts->arcade_key_p2_credit);
+        arcade_resolve_key(&s_arcade_key_p1_start,  opts->arcade_key_p1_start);
+        arcade_resolve_key(&s_arcade_key_p2_start,  opts->arcade_key_p2_start);
+        arcade_resolve_key(&s_arcade_key_service,   opts->arcade_key_service);
+    }
     s_fullscreen_mode   = fs_mode;
     /* Repoint `custom` at our stub storage *before* the tick timer
      * starts -- the first VBlank ISR firing reads custom->intreqr. */
@@ -807,14 +836,17 @@ static void pump_events_any_thread(void)
                 continue;
             }
             /* Arcade cabinet inputs (MAME convention): 5 = coin P1, 6 = coin P2,
-             * F2 = service. Only when arcade mode is on; swallowed so they don't
-             * also reach the game/menu layer. */
+             * F2 = service, 1 = P1 start, 2 = P2 start. Only when arcade mode is
+             * on; swallowed so they don't also reach the game/menu layer. */
             {
                 extern int _gArcadeMode;
                 if (ev.key.repeat == 0 && _gArcadeMode) {
-                    if (ev.key.keysym.sym == SDLK_5)  { s_arcade_coin1++;   continue; }
-                    if (ev.key.keysym.sym == SDLK_6)  { s_arcade_coin2++;   continue; }
-                    if (ev.key.keysym.sym == SDLK_F2) { s_arcade_service++; continue; }
+                    SDL_Keycode k = ev.key.keysym.sym;
+                    if (k == s_arcade_key_p1_credit) { s_arcade_coin1++;   continue; }
+                    if (k == s_arcade_key_p2_credit) { s_arcade_coin2++;   continue; }
+                    if (k == s_arcade_key_service)   { s_arcade_service++; continue; }
+                    if (k == s_arcade_key_p1_start)  { s_arcade_start1++;  continue; }
+                    if (k == s_arcade_key_p2_start)  { s_arcade_start2++;  continue; }
                 }
             }
             /* fallthrough */

@@ -70,6 +70,11 @@ typedef struct {
     int                    dos_graphics;     /* 1 = render DOS-version graphics. PC-only */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
     int                    arcade;           /* 1 = arcade/coin-op mode — boot to attract. PC-only. See docs/ARCADE.md */
+    char                   arcade_key_p1_credit[16]; /* cabinet key bindings (SDL key names; */
+    char                   arcade_key_p1_start[16];  /*   default MAME layout 5/6/1/2/F2). */
+    char                   arcade_key_p2_credit[16]; /*   Empty -> compiled default. PC-only */
+    char                   arcade_key_p2_start[16];
+    char                   arcade_key_service[16];
     char                   dos_dir[256];     /* DOS asset dir (default "grafs_dos"). PC-only */
     char                   language[16];     /* UI language code, e.g. "en" — selects data_json/translations/<lang>.json */
     char                   currency[8];      /* "pound" (default) or "dollar" — money symbol */
