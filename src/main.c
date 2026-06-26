@@ -185,6 +185,8 @@ int main(int argc, char **argv)
     opts.arcade_game_seconds = 45;
     opts.arcade_golden_goal = 1;
     opts.arcade_penalties = 1;
+    opts.arcade_goal_replay = 1;
+    opts.arcade_attract_audio = 0;   /* music (HERO) */
     snprintf(opts.arcade_key_p1_credit, sizeof opts.arcade_key_p1_credit, "%s", "5");
     snprintf(opts.arcade_key_p1_start,  sizeof opts.arcade_key_p1_start,  "%s", "1");
     snprintf(opts.arcade_key_p2_credit, sizeof opts.arcade_key_p2_credit, "%s", "6");

@@ -683,6 +683,11 @@ vblank_return_dispatch:
     SaveCoordinatesForHighlights((int16_t)0xFFFF, _cameraX.s.i, _cameraY.s.i);
     PlayEnqueuedSamples();
     UpdateTime();
+#ifdef SWOS_SDL_BUILD
+    /* Arcade in-match rules (deterministic frame count): golden goal / time limit /
+     * penalties. No-op unless _gArcadeMode (checked inside). */
+    { extern void Arcade_MatchTick(void); Arcade_MatchTick(); }
+#endif
     /* nullsub_8 — no-op */
     UpdateAndApplyTeamControls();
     UpdateBall();
@@ -742,7 +747,13 @@ end_of_match_flow:
     AudioFadeCrowdDownThenPulseMusic();
     ClearAudioActiveFlag();
 
-    if (_isGameFriendly != 0 && _trainingGame == 0) {
+    int arcadeNoReplayMenu = 0;
+#ifdef SWOS_SDL_BUILD
+    /* Arcade returns straight to attract after the match — skip the friendly
+     * "watch replay / exit" menu (it would block on cabinet input). */
+    { extern int _gArcadeMode; arcadeNoReplayMenu = _gArcadeMode; }
+#endif
+    if (_isGameFriendly != 0 && _trainingGame == 0 && !arcadeNoReplayMenu) {
         ReplayExitMenuAfterFriendly();
         if (_replaySelected != 0) {
             _team1NumAllowedInjuries = 4;

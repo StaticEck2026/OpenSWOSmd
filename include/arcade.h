@@ -51,4 +51,9 @@ int         Arcade_ModeCount(void);
 const char *Arcade_ModeName(int idx);             /* clamped to a valid name */
 int         Arcade_ModeFromName(const char *name); /* case-insensitive; -1 if unknown */
 
+/* In-match arcade rules, driven by the deterministic game-frame step (NOT a
+ * wall clock — keeps the sim deterministic for lockstep multiplayer). */
+void Arcade_MatchTick(void);   /* once per game-loop frame: counts frames, ends the match */
+void Arcade_GoalScored(void);  /* call after a goal is registered: golden-goal ends the match */
+
 #endif /* SWOS_ARCADE_H */

@@ -330,6 +330,11 @@ int AudioSDL_LoadSfxBank(const uint8_t *song_data, int song_size,
     return 0;
 }
 
+/* Arcade attract suppresses SFX triggers so the HERO attract song isn't corrupted
+ * by reel crowd/SFX events firing on the shared RJP1 player (they'd retrigger one
+ * of HERO's own samples). Defined in arcade.c (SDL-only); 0 in the normal game. */
+extern int _gArcadeSfxSuppressed;
+
 /* Trigger an SFX by note id (the Amiga AudioChannelNoteOnOff path). */
 void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
 {
@@ -337,6 +342,7 @@ void AudioSDL_TriggerSfxByNoteId(int channel, int note_id)
     (void)channel; (void)note_id;
     return;
 #endif
+    if (_gArcadeSfxSuppressed) return;
     SWOS_SFX_LOG_TRIGGER_NOTE(channel, note_id);
     SDL_LockMutex(s_mtx);
     if (s_player_active)
@@ -352,6 +358,7 @@ void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id)
     (void)channel; (void)wave_id;
     return;
 #endif
+    if (_gArcadeSfxSuppressed) return;
     SWOS_SFX_LOG_TRIGGER_WAVE(channel, wave_id);
     SDL_LockMutex(s_mtx);
     if (s_player_active)
@@ -369,6 +376,7 @@ void AudioSDL_TriggerSfxPreset(int preset_id)
     (void)preset_id;
     return;
 #endif
+    if (_gArcadeSfxSuppressed) return;
     SDL_LockMutex(s_mtx);
     if (s_player_active) {
         uint8_t note_ids[4];

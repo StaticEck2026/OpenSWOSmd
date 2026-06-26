@@ -111,6 +111,11 @@ static int handler(void *user, const char *section,
         }
         else if (eqi(name, "golden_goal") && parse_bool(value, &b)) opts->arcade_golden_goal = b;
         else if (eqi(name, "penalties_on_draw") && parse_bool(value, &b)) opts->arcade_penalties = b;
+        else if (eqi(name, "goal_replay") && parse_bool(value, &b)) opts->arcade_goal_replay = b;
+        else if (eqi(name, "attract_audio") && value && value[0]) {
+            if (eqi(value, "sfx")) opts->arcade_attract_audio = 1;
+            else if (eqi(value, "music")) opts->arcade_attract_audio = 0;
+        }
         else if (eqi(name, "key_p1_credit") && value && value[0])
             snprintf(opts->arcade_key_p1_credit, sizeof opts->arcade_key_p1_credit, "%s", value);
         else if (eqi(name, "key_p1_start") && value && value[0])
@@ -226,10 +231,13 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL\n"
         "mode=%s\n"
         "; game rules (settable in the F2 service menu). game_seconds 10..600;\n"
-        ";   golden_goal/penalties_on_draw: true | false\n"
+        ";   golden_goal/penalties_on_draw/goal_replay: true | false\n"
         "game_seconds=%d\n"
         "golden_goal=%s\n"
         "penalties_on_draw=%s\n"
+        "goal_replay=%s\n"
+        "; attract_audio: music (HERO over the reels) | sfx (reel crowd, no music)\n"
+        "attract_audio=%s\n"
         "; cabinet key bindings (SDL key names, e.g. 5, 6, 1, 2, F2; case-insensitive).\n"
         "; Default layout matches MAME: 5/6 = insert coin P1/P2, 1/2 = start P1/P2.\n"
         "key_p1_credit=%s\n"
@@ -258,6 +266,8 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45,
         opts->arcade_golden_goal ? "true" : "false",
         opts->arcade_penalties ? "true" : "false",
+        opts->arcade_goal_replay ? "true" : "false",
+        opts->arcade_attract_audio ? "sfx" : "music",
         opts->arcade_key_p1_credit[0] ? opts->arcade_key_p1_credit : "5",
         opts->arcade_key_p1_start[0]  ? opts->arcade_key_p1_start  : "1",
         opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6",

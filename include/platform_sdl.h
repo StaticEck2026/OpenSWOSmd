@@ -74,6 +74,8 @@ typedef struct {
     int                    arcade_game_seconds; /* arcade match length in seconds (default 45) */
     int                    arcade_golden_goal;  /* 1 = first goal wins the match (default 1) */
     int                    arcade_penalties;    /* 1 = penalty shootout when drawn (default 1) */
+    int                    arcade_goal_replay;  /* 1 = replay goals (drives _autoReplays; default 1) */
+    int                    arcade_attract_audio;/* attract audio: 0 = music (HERO), 1 = sfx (reel crowd) */
     char                   arcade_key_p1_credit[16]; /* cabinet key bindings (SDL key names; */
     char                   arcade_key_p1_start[16];  /*   default MAME layout 5/6/1/2/F2). */
     char                   arcade_key_p2_credit[16]; /*   Empty -> compiled default. PC-only */

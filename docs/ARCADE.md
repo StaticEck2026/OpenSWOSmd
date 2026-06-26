@@ -213,9 +213,14 @@ User-confirmed concrete requirements as we build it:
   a complete national-team roster across six files: `team.080` Europe, `team.081`
   Africa, `team.082` S.America, `team.083` N&C.America, `team.084` Asia,
   `team.085` Oceania. Full cell→team table below.
-- **Attract music = `HERO.SNG`** (the title theme). On entering **country (flag)
-  select**, switch to **`MENU.SNG`** (the menu music) via `InitMenuMusic` /
-  `TryPlayMusic` / `_menuMusic`.
+- **Attract audio** is selectable (service-menu **ATTRACT AUDIO**, `[arcade]
+  attract_audio=music|sfx`): **MUSIC** plays `HERO.SNG` (the title theme) over the
+  reels; **SFX** lets the reels' own recorded crowd/SFX play with no music. On
+  entering **country (flag) select** it switches to **`MENU.SNG`** (the menu music).
+  Note: music and SFX share one RJP1 player, so in MUSIC mode the reels' SFX
+  triggers are suppressed (`_gArcadeSfxSuppressed`) — otherwise a reel sound event
+  retriggers one of HERO's own samples (its vocal track). The actual match always
+  plays real crowd SFX.
 - **Attract RPL/HIL reels also render on the random arcade pitches** — the same
   `SWCPICH*` → 8bpp tile-bank pipeline used for the match, a random pitch per reel
   (the recorded pitch is replaced).
@@ -228,7 +233,12 @@ unknown/blank falls back to the default). Index 0 is the default.
 
 | Mode | Rules |
 |--|--|
-| **GOLDEN GOAL** (default) | Short timed match (`game_seconds`, default 45 s). The first goal wins and ends the match immediately; if it's still level at full time the match goes to a penalty shootout (`penalties_on_draw`). |
+| **GOLDEN GOAL** (default) | Short timed match (`game_seconds`, default 45 s). The first goal wins and ends the match (after a brief celebration); if it's still level at the time limit the match goes to a penalty shootout (`penalties_on_draw`). |
+
+Per-match rule toggles (F2 service menu, saved to `SWOS.ini`): `game_seconds`,
+`golden_goal`, `penalties_on_draw`, and `goal_replay` (replay each goal — drives the
+engine's auto-replay). The match length is counted in **game frames** (deterministic,
+not wall-clock), so it stays lockstep-safe for future multiplayer.
 
 More modes will be added later. Adding one is: add its display name to
 `s_arcadeModeNames[]` in `src/arcade.c` (the `Arcade_Mode*` helpers expose

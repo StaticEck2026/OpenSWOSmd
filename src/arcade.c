@@ -26,6 +26,14 @@
 
 int _gArcadeMode = 0;
 
+/* When set, the SDL SFX trigger path is suppressed (AudioSDL_TriggerSfx*). The
+ * attract reels are match replays whose recorded crowd/SFX events would otherwise
+ * fire on the SAME single RJP1 player that's playing the HERO attract song,
+ * corrupting it (post-match, once the SFX bank is loaded — at boot it isn't, which
+ * is why it only broke after a match). On during attract (HERO only), off for the
+ * actual match (real crowd SFX wanted). SDL-only. */
+int _gArcadeSfxSuppressed = 0;
+
 /* Match-title shown on the pre-match stadium/line-up screen in arcade mode, in
  * place of "FRIENDLY" (set into _gameName by InitAndPlayGame). */
 uint8_t _aArcadeMatchName[] = "GOLDEN GOAL";
@@ -86,6 +94,10 @@ extern void     Arcade_PlayHeroMusic(void);   /* loader_intro.c (SDL-only) */
 extern void     InitMenuMusic(void);          /* audio.c — load MENU.SNG/.INS */
 extern void     TryPlayMusic(void);           /* audio.c — start menu song */
 extern void     StopMusic(void);              /* audio.c — fade out + stop */
+extern void     LoadSfxResources(void);       /* audio.c — load the in-game SFX bank */
+extern void     EnsureSfxLoadedAndStart(void);/* audio.c — activate SFX playback */
+
+extern PlatformInitOptions *g_arcadeOpts;     /* live arcade options (defined below) */
 
 /* Menu sprite graphics (little-player figures the stadium/line-up screen draws).
  * The front-end normally extracts these from menus.raw via the menu-BG image
@@ -561,7 +573,19 @@ static int arc_pitch_select(void);   /* defined after the SVCFONT helpers */
 
 /* Attract uses HERO (title) music; entering country/pitch select switches to the
  * MENU music. */
-static void arc_music_attract(void) { Arcade_PlayHeroMusic(); }
+static void arc_music_attract(void)
+{
+    /* ATTRACT AUDIO setting: MUSIC = HERO over the reels (reel SFX suppressed);
+     * SFX = the reels' recorded crowd/SFX plays, no music. */
+    if (g_arcadeOpts && g_arcadeOpts->arcade_attract_audio == 1) {
+        _gArcadeSfxSuppressed = 0;        /* let reel crowd/SFX through */
+        LoadSfxResources();               /* hand the SFX bank to the shared player */
+        EnsureSfxLoadedAndStart();        /* so the reel's triggers are audible */
+    } else {
+        _gArcadeSfxSuppressed = 1;        /* HERO only; ignore reel SFX triggers */
+        Arcade_PlayHeroMusic();
+    }
+}
 static void arc_music_menu(void)
 {
     extern void AudioSetChannelVolume(uint16_t, uint16_t);
@@ -643,9 +667,87 @@ static int arc_load_team(int flag, int slot, uint8_t controls)
     return 0;
 }
 
+/* ====================================================================
+ * Arcade match rules (Parts 2-3) — DETERMINISTIC, driven by the game-frame
+ * step (one tick per game-loop iteration), never a wall clock, so the sim
+ * stays deterministic for future lockstep multiplayer.
+ *
+ * - Length: end after game_seconds * ARC_FRAMES_PER_SEC frames of play.
+ * - Golden goal: the first goal ends the match (the scorer is ahead).
+ * - Penalties: a level score at the time limit goes to a shootout.
+ * The match's own clock is run slow (_gameLength = 3 in arc_start_game) so the
+ * engine's half-time/full-time never fire within the arcade limit — no edits to
+ * the shared match-clock code needed.
+ * ==================================================================== */
+#define ARC_FRAMES_PER_SEC 50   /* nominal sim frames per arcade second (Amiga PAL cadence) */
+
+extern PlatformInitOptions *g_arcadeOpts;   /* live options (defined below) */
+
+static int  s_arcGoldenGoal;    /* end on first goal */
+static int  s_arcPenalties;     /* draw -> penalty shootout */
+static int  s_arcMatchActive;   /* gates the per-frame logic for the current match */
+static int  s_arcTimerStarted;  /* the frame count begins at kickoff (first live frame) */
+static long s_arcFramesPlayed;  /* deterministic count of frames since kickoff */
+static long s_arcLimitFrames;   /* end the match at this many frames */
+
+/* Latch the rule settings for the match about to start (called from arc_start_game). */
+static void arc_begin_match_rules(void)
+{
+    extern uint16_t _autoReplays;   /* game_timers.c goal-replay gate */
+    int secs = (g_arcadeOpts && g_arcadeOpts->arcade_game_seconds > 0)
+               ? g_arcadeOpts->arcade_game_seconds : 45;
+    s_arcGoldenGoal  = g_arcadeOpts ? g_arcadeOpts->arcade_golden_goal : 1;
+    s_arcPenalties   = g_arcadeOpts ? g_arcadeOpts->arcade_penalties  : 1;
+    s_arcLimitFrames = (long)secs * ARC_FRAMES_PER_SEC;
+    s_arcFramesPlayed = 0;
+    s_arcTimerStarted = 0;
+    s_arcMatchActive  = 1;
+    /* GOAL REPLAY setting -> the engine's goal auto-replay. */
+    _autoReplays = (g_arcadeOpts && g_arcadeOpts->arcade_goal_replay) ? 1 : 0;
+    _gArcadeSfxSuppressed = 0;   /* the match wants real crowd / in-game SFX */
+}
+
+void Arcade_MatchTick(void)
+{
+    extern uint16_t _gameStatePl;
+    extern uint16_t _playingPenalties;
+    extern uint16_t _team1TotalGoals, _team2TotalGoals, _playGame;
+    extern void StartPenalties(void);
+
+    if (!_gArcadeMode || !s_arcMatchActive) return;
+    if (_playingPenalties) return;                  /* the shootout runs + ends itself */
+
+    if (!s_arcTimerStarted) {
+        if (_gameStatePl != ST_GAME_IN_PROGRESS) return;  /* wait for kickoff */
+        s_arcTimerStarted = 1;
+        s_arcFramesPlayed = 0;
+    }
+    if (++s_arcFramesPlayed < s_arcLimitFrames) return;
+
+    /* Time up. With golden goal a goal would already have ended the match, so a
+     * timeout here is a draw (0-0 in golden-goal mode): penalties if enabled and
+     * level, otherwise just end (the result shows the score). */
+    s_arcMatchActive = 0;
+    if (_team1TotalGoals == _team2TotalGoals && s_arcPenalties)
+        StartPenalties();
+    else
+        _playGame = 0;
+}
+
+void Arcade_GoalScored(void)
+{
+    if (!_gArcadeMode || !s_arcMatchActive) return;
+    if (s_arcGoldenGoal) {
+        /* First goal wins. Don't end instantly — let the goal celebration play for
+         * ~2s, then the frame-limit timeout ends the match. The scorer is ahead
+         * (not level), so the timeout path picks a winner rather than penalties. */
+        long endIn = s_arcFramesPlayed + 2 * ARC_FRAMES_PER_SEC;
+        if (endIn < s_arcLimitFrames) s_arcLimitFrames = endIn;
+    }
+}
+
 /* Begin the requested arcade game: country (flag) select -> pitch select -> the
- * match (mirrors PlayFriendly). Pitch wiring (Part 4) + arcade rules
- * (length / golden-goal / penalties, Parts 2-3) land on top of this. */
+ * match (mirrors PlayFriendly). Pitch wiring (Part 4) lands on top of this. */
 static void arc_start_game(void)
 {
     extern uint16_t _gameType;
@@ -654,6 +756,7 @@ static void arc_start_game(void)
     extern uint16_t _pitchTypeOrSeason;   /* 0 = fixed pitch type, not seasonal */
     extern uint16_t _maxSubstitutes;
     extern uint16_t _minSubstitutes;
+    extern uint16_t _gameLength;          /* clock-speed index (0..3); 3 = slowest */
     int numPlayers = (s_startGame >= 2) ? 2 : 1;
     int p1 = 0, p2 = 0;
 
@@ -688,6 +791,8 @@ static void arc_start_game(void)
     _friendlyPitchType = 4;                 /* a normal pitch (interim; Part 4 = themed pitch) */
     _maxSubstitutes = 0;                    /* arcade: no subs */
     _minSubstitutes = 0;
+    _gameLength = 3;                        /* slowest match clock: engine half/full-time
+                                             * never fire within the arcade frame limit */
     _numSelectedTeams = 0;
     int ok = (arc_load_team(p1, 0, ARC_CTRL_HUMAN) == 0);
     uint8_t p2ctrl = (numPlayers >= 2) ? ARC_CTRL_HUMAN : ARC_CTRL_COMPUTER;
@@ -704,6 +809,7 @@ static void arc_start_game(void)
         ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
         InitTeams();
         StopMusic();                        /* silence menu music before kickoff */
+        arc_begin_match_rules();            /* arm golden-goal / time-limit / penalties */
         InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
     } else {
         fprintf(stderr, "[arcade] team load failed; returning to attract\n");
@@ -822,12 +928,14 @@ static void arc_service_menu(void)
     uint32_t GREEN = s_svcLoaded ? s_svcPal[6] : 0xFF00FF00u;
     const int times[] = { 30, 45, 60, 90, 120 };
     const int NT = (int)(sizeof times / sizeof times[0]);
-    const int NUM = 4;
+    const int NUM = 6;
 
     int sel = 0, u=0, d=0, l=0, r=0, f=1;   /* f=1: ignore a fire still held on entry */
     uint32_t frame = 0;
     int cx = _screen_width / 2;
     s_flagScreenActive = 1;
+    s_arcadeFade = 256;                     /* full-bright; the menu doesn't fade in
+                                             * (else a leftover fade=0 renders it black) */
 
     while (_quitToDos == 0) {
         Player1StatusProc();
@@ -845,7 +953,9 @@ static void arc_service_menu(void)
                 for (int i = 0; i < NT; i++) if (times[i] == g_arcadeOpts->arcade_game_seconds) idx = i;
                 g_arcadeOpts->arcade_game_seconds = times[(idx + adj + NT) % NT];
             } else if (sel == 2) g_arcadeOpts->arcade_golden_goal = !g_arcadeOpts->arcade_golden_goal;
-            else                 g_arcadeOpts->arcade_penalties   = !g_arcadeOpts->arcade_penalties;
+            else if (sel == 3)   g_arcadeOpts->arcade_penalties   = !g_arcadeOpts->arcade_penalties;
+            else if (sel == 4)   g_arcadeOpts->arcade_goal_replay = !g_arcadeOpts->arcade_goal_replay;
+            else                 g_arcadeOpts->arcade_attract_audio = !g_arcadeOpts->arcade_attract_audio;
         }
         u=_pl1Up; d=_pl1Down; l=_pl1Left; r=_pl1Right;
         int exitNow = (_pl1ShortFire && !f) || sv;
@@ -858,7 +968,7 @@ static void arc_service_menu(void)
         for (size_t i = 0; i < total; i++) s_flagScreenRGBA[i] = BLACK;
 
         /* title (green) + subtitle (yellow), enclosed in a yellow box */
-        const char *title = "ARCADE SERVICE";
+        const char *title = "SERVICE MENU";
         const char *sub   = "OPENSWOS ARCADE - VER L1.0 6/26/26";
         int tw = arc_svc_textw(title, TROGF15_glyphs, TROGF15_COUNT);
         int sw = arc_svc_textw(sub,   TROGF7_glyphs,  TROGF7_COUNT);
@@ -876,18 +986,25 @@ static void arc_service_menu(void)
         int ly = 92;
         for (int i = 0; i < NUM; i++) {
             const char *label = (i == 0) ? "MODE" : (i == 1) ? "GAME TIME"
-                              : (i == 2) ? "GOLDEN GOAL" : "PENALTIES ON DRAW";
+                              : (i == 2) ? "GOLDEN GOAL" : (i == 3) ? "PENALTIES ON DRAW"
+                              : (i == 4) ? "GOAL REPLAY" : "ATTRACT AUDIO";
             if      (i == 0) snprintf(val, sizeof val, "%s", Arcade_ModeName(g_arcadeOpts->arcade_mode));
             else if (i == 1) snprintf(val, sizeof val, "%d SEC", g_arcadeOpts->arcade_game_seconds);
             else if (i == 2) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_golden_goal ? "ON" : "OFF");
-            else             snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_penalties   ? "ON" : "OFF");
+            else if (i == 3) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_penalties   ? "ON" : "OFF");
+            else if (i == 4) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_goal_replay ? "ON" : "OFF");
+            else             snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_attract_audio ? "SFX" : "MUSIC");
             uint32_t tc = YEL;
+            /* Keep the rows within the title box (boxW, computed above) — never
+             * wider. Label left-aligned at the box's left; value left-aligned in a
+             * reserved right column (~90px, wide enough for "GOLDEN GOAL"). */
+            int bl = cx - boxW / 2, br = cx + boxW / 2;
             if (i == sel) {
-                arc_fill_rect(cx - 140, ly - 2, 280, 16, WHITE);
+                arc_fill_rect(bl, ly - 2, boxW, 16, WHITE);
                 tc = selCol;
             }
-            arc_svc_text(cx - 130, ly, tc, label, TROGF7_glyphs, TROGF7_COUNT);
-            arc_svc_text(cx + 70,  ly, tc, val,   TROGF7_glyphs, TROGF7_COUNT);
+            arc_svc_text(bl + 12, ly, tc, label, TROGF7_glyphs, TROGF7_COUNT);
+            arc_svc_text(br - 90, ly, tc, val,   TROGF7_glyphs, TROGF7_COUNT);
             ly += 18;
         }
         arc_svc_centered(cx, 224, WHITE, "JOYSTICK: CHANGE    FIRE / F2: EXIT + SAVE",
@@ -1057,6 +1174,7 @@ void ArcadeMainLoop(void)
         if (s_serviceReq) {              /* F2 pressed during a reel/idle */
             s_serviceReq = 0;
             arc_service_menu();
+            arc_music_attract();         /* re-apply ATTRACT AUDIO (may have changed) */
             continue;
         }
         if (s_startGame) {               /* start pressed during a reel/idle */

@@ -1135,9 +1135,21 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     UpdateCareerPlayerStatsAfterMatch(&_bottomTeamInGame, (TeamFileEx *)team2);
 
 post_match:
-    InitMenuMusic();
-    if (_menuMusic != 0) {
-        TryPlayMusic();
+    {
+        int doMenuMusic = 1;
+#ifdef SWOS_SDL_BUILD
+        /* Arcade restarts its own (HERO) attract music and returns to the attract
+         * loop, so skip loading + playing menu music here — a redundant reconfigure
+         * of the shared RJP1 player right before HERO takes it over. */
+        extern int _gArcadeMode;
+        if (_gArcadeMode) doMenuMusic = 0;
+#endif
+        if (doMenuMusic) {
+            InitMenuMusic();
+            if (_menuMusic != 0) {
+                TryPlayMusic();
+            }
+        }
     }
 
     PrepareMenuForFadeIn();
