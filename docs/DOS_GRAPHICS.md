@@ -125,13 +125,16 @@ the DOS data into the exact buffer our renderer already consumes:
    the Amiga load+convert path overwrote them earlier in the same function. The
    blitter resolves `spriteGraphicsPtr[idx]` live each frame, and player
    `Sprite`s look up their graphic by index, so re-pointing redirects rendering.
-   - **Scope / deferred:** `score.dat` (amiga 113..226 — score/result digits,
+   - **Per-team kit-colour recolour: DONE** (commit `2569105`). DOS player/keeper
+     `.dat` sprites are 4-bitplane = 16-colour (not 256), with the kit at the SAME
+     indices the Amiga uses (10 stripes, 11 shirt, 14 shorts, 15 socks + skin), so
+     the stock Amiga `team1/2PlayersColorTable` conversions recolour them.
+     `dos_prepare_sprites()` now drops the DOS sprites into the table BEFORE those
+     conversions (they had been overlaid *after* → default kit), with a
+     pristine-decode reset each match so successive remaps don't stack.
+   - **Scope / still deferred:** `score.dat` (amiga 113..226 — score/result digits,
      team-name + player-name sprites at 0x8D.., partly runtime-generated) and the
-     charset/fonts stay Amiga, so text/HUD keep working. **Per-team kit-colour
-     tinting of DOS players is NOT done** — the Amiga 16-entry colour-conversion
-     LUTs (`_ConvertSpriteColors`) can't recolour 256-colour DOS sprites, so both
-     teams currently render the DOS *default* kit baked into the `.dat`. A DOS
-     kit-recolour pass is the next follow-up.
+     charset/fonts stay Amiga, so text/HUD keep working.
    - Verified: all four `.dat` record-walks consume their files exactly; a
      standalone decode of `team1.dat` (`/tmp/dos_sprite_render.c`) renders
      coherent player figures (kits, shadows, animation frames, working index-0
@@ -146,7 +149,9 @@ the DOS data into the exact buffer our renderer already consumes:
   short-circuit + `animated_patterns.c` DOS gates. Row offset settled (42×55 from 0).
 - Done: hook **3 (sprites, players/keepers/bench)** — `color_sprites.c::
   _DosOverlaySprites` overlays DOS team1/team3/goal1×2/bench at amiga 227..1219.
-- Next follow-ups: **(a) DOS kit-colour recolour** so the two teams differ (DOS
-  players currently show the default kit); **(b) score.dat** (digits/HUD numbers)
-  and **(c) DOS charset/fonts** via `SPRITE.DAT` if Amiga fonts look wrong under
-  the DOS palette.
+- Done: **DOS per-team kit-colour recolour** (`2569105`) — `dos_prepare_sprites()`
+  loads the DOS sprites into the table *before* the Amiga kit conversions, so both
+  teams recolour correctly (pristine-decode reset per match).
+- Next follow-ups (minor/deferred): **(a) score.dat** (digits/HUD numbers) and
+  **(b) DOS charset/fonts** via `SPRITE.DAT` if Amiga fonts look wrong under the
+  DOS palette.
