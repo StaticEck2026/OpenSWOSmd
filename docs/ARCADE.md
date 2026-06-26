@@ -206,6 +206,64 @@ User-confirmed concrete requirements as we build it:
 - **First arcade game mode** = a **FRIENDLY**-style match with arcade rules:
   **45 s** play, **first goal wins**, **draw → direct penalty shootout**. All of
   these (time, golden-goal, etc.) **adjustable in the service menu**.
+- **Match teams = national teams picked by flag** (`bin/grafs_arcade/FLAGS.bmp`,
+  48 flags, 6×8, row-major). Each flag maps directly to a SWOS national-team
+  record `{team-file, ordinal}`, loaded via the normal `LoadTeamFile` +
+  find-by-ordinal path into `_selectedTeams[0/1]` (no team-select UI). SWOS ships
+  a complete national-team roster across six files: `team.080` Europe, `team.081`
+  Africa, `team.082` S.America, `team.083` N&C.America, `team.084` Asia,
+  `team.085` Oceania. Full cell→team table below.
+- **Attract music = `HERO.SNG`** (the title theme). On entering **country (flag)
+  select**, switch to **`MENU.SNG`** (the menu music) via `InitMenuMusic` /
+  `TryPlayMusic` / `_menuMusic`.
+- **Attract RPL/HIL reels also render on the random arcade pitches** — the same
+  `SWCPICH*` → 8bpp tile-bank pipeline used for the match, a random pitch per reel
+  (the recorded pitch is replaced).
+
+### Game modes
+
+The arcade match runs in a selectable **game mode**, chosen on the F2 service menu's
+**MODE** row and persisted as `[arcade] mode=<name>` in `SWOS.ini` (case-insensitive;
+unknown/blank falls back to the default). Index 0 is the default.
+
+| Mode | Rules |
+|--|--|
+| **GOLDEN GOAL** (default) | Short timed match (`game_seconds`, default 45 s). The first goal wins and ends the match immediately; if it's still level at full time the match goes to a penalty shootout (`penalties_on_draw`). |
+
+More modes will be added later. Adding one is: add its display name to
+`s_arcadeModeNames[]` in `src/arcade.c` (the `Arcade_Mode*` helpers expose
+name↔index for the service menu + `SWOS.ini`), then wire its rules into the match
+setup. The mode shows on the pre-match line-up title in place of "FRIENDLY"
+(`_aArcadeMatchName`).
+
+### National-team flag mapping (FLAGS.bmp cell → SWOS national team)
+
+48 cells, row-major (6 across). `file.ord` = national-team file byte + team
+ordinal (hex). Five cells have **no SWOS national team** and load a **generic
+placeholder** squad; `COD` is mapped to SWOS's "CONGO" (≈ DR Congo).
+
+| # | code | team | # | code | team | # | code | team |
+|--:|--|--|--:|--|--|--:|--|--|
+| 0 | MEX | 83.08 Mexico         | 16 | CIV | 81.0D Ivory Coast    | 32 | SEN | 81.17 Senegal        |
+| 1 | CAN | 83.01 Canada         | 17 | TUN | 81.1E Tunisia        | 33 | AUT | 80.02 Austria        |
+| 2 | BRA | 82.02 Brazil         | 18 | CZE | 80.09 Czech Republic | 34 | COL | 82.04 Colombia       |
+| 3 | USA | 83.0E United States  | 19 | BIH | — generic (Bosnia)   | 35 | CRO | 80.07 Croatia        |
+| 4 | GER | 80.11 Germany        | 20 | HAI | — generic (Haiti)    | 36 | EGY | 81.08 Egypt          |
+| 5 | NED | 80.13 Holland        | 21 | TUR | 80.2D Turkey         | 37 | KSA | 84.16 Saudi Arabia   |
+| 6 | KOR | 84.18 South Korea    | 22 | CUW | — generic (Curaçao)  | 38 | NOR | 80.20 Norway         |
+| 7 | SUI | 80.2C Switzerland    | 23 | SWE | 80.2B Sweden         | 39 | ALG | 81.00 Algeria        |
+| 8 | MAR | 81.13 Morocco        | 24 | BEL | 80.05 Belgium        | 40 | UZB | — generic (Uzbekistan)|
+| 9 | AUS | 85.00 Australia      | 25 | ESP | 80.2A Spain          | 41 | PAN | 83.0A Panama         |
+| 10 | ECU | 82.05 Ecuador       | 26 | FRA | 80.0F France         | 42 | NZL | 85.02 New Zealand    |
+| 11 | JPN | 84.09 Japan         | 27 | ARG | 82.00 Argentina      | 43 | CPV | — generic (Cape Verde)|
+| 12 | RSA | 81.19 South Africa  | 28 | POR | 80.22 Portugal       | 44 | IRQ | 84.08 Iraq           |
+| 13 | QAT | 84.15 Qatar         | 29 | ENG | 80.0B England        | 45 | JOR | 84.0A Jordan         |
+| 14 | SCO | 80.27 Scotland      | 30 | IRN | 84.07 Iran           | 46 | COD | 81.07 Congo (≈DR Congo)|
+| 15 | PAR | 82.06 Paraguay      | 31 | URU | 82.08 Uruguay        | 47 | GHA | 81.0B Ghana          |
+
+**Generic placeholder (no SWOS national team):** BIH Bosnia (19), HAI Haiti (20),
+CUW Curaçao (22), UZB Uzbekistan (40), CPV Cape Verde (43). These load a neutral
+default squad so the cell is still playable.
 
 ### Build phasing (this implementation)
 1. ✅ DONE (`f2f3ccc`): `[arcade] enabled` + `gArcadeMode` + boot gate (skip

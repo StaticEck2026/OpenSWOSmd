@@ -31,6 +31,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* Arcade game-mode name<->index (defined in arcade.c) for [arcade] mode. */
+extern const char *Arcade_ModeName(int idx);
+extern int         Arcade_ModeFromName(const char *name);
+
 static int eqi(const char *a, const char *b)
 {
     while (*a && *b) {
@@ -99,6 +103,9 @@ static int handler(void *user, const char *section,
     } else if (eqi(section, "arcade")) {
         int b;
         if (eqi(name, "enabled") && parse_bool(value, &b)) opts->arcade = b;
+        else if (eqi(name, "mode") && value && value[0]) {
+            int m = Arcade_ModeFromName(value); if (m >= 0) opts->arcade_mode = m;
+        }
         else if (eqi(name, "game_seconds")) {
             int v = atoi(value); if (v >= 10 && v <= 600) opts->arcade_game_seconds = v;
         }
@@ -216,6 +223,8 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "[arcade]           ; coin-op mode (PC-only). See docs/ARCADE.md\n"
         "; enabled: true | false — boot straight to attract mode, no main menu\n"
         "enabled=%s\n"
+        "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL\n"
+        "mode=%s\n"
         "; game rules (settable in the F2 service menu). game_seconds 10..600;\n"
         ";   golden_goal/penalties_on_draw: true | false\n"
         "game_seconds=%d\n"
@@ -245,6 +254,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         opts->dos_graphics ? "true" : "false",
         opts->dos_gameplay ? "true" : "false",
         opts->arcade ? "true" : "false",
+        Arcade_ModeName(opts->arcade_mode),
         opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45,
         opts->arcade_golden_goal ? "true" : "false",
         opts->arcade_penalties ? "true" : "false",

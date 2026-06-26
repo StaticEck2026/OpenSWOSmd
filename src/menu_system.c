@@ -1851,6 +1851,15 @@ void RestorePreviousMenu(MenuEntry *oldSelectedEntry, uint8_t *oldPackedMenu)
     MenuVoidFn afterDrawPtr;
 
     _currentMenuPtr = (uintptr_t)oldPackedMenu;
+
+    /* Arcade mode calls ShowMenu (e.g. the stadium menu) without ever entering
+     * the front-end menu stack, so there is no previously-active menu to restore
+     * to — _currentMenuPtr was 0 on entry. There's nothing to unpack; just return.
+     * Normal play always has an active menu here, so oldPackedMenu is never NULL
+     * on that path. */
+    if (oldPackedMenu == 0)
+        return;
+
     UnpackMenu(oldPackedMenu, _currentMenu);
 
     menu = (Menu *)_currentMenu;

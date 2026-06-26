@@ -22,8 +22,33 @@
 #include "platform_sdl.h"   /* PlatformInitOptions — service-menu settings */
 #include "swos_settings.h"  /* Settings_Save — service menu writes SWOS.ini */
 #include "arcade_svcfont.h" /* SVCFONT glyph LUT (TROGF15 large / TROGF7 small) */
+#include "game_types.h"     /* TeamFileEx — arcade match teams */
 
 int _gArcadeMode = 0;
+
+/* Match-title shown on the pre-match stadium/line-up screen in arcade mode, in
+ * place of "FRIENDLY" (set into _gameName by InitAndPlayGame). */
+uint8_t _aArcadeMatchName[] = "GOLDEN GOAL";
+
+/* Arcade game modes — shown in the F2 service menu, persisted as [arcade] mode in
+ * SWOS.ini, documented in docs/ARCADE.md. Index 0 is the default. To add a mode:
+ * add its name here and wire its rules into the match setup. */
+static const char *const s_arcadeModeNames[] = {
+    "GOLDEN GOAL",
+};
+int Arcade_ModeCount(void) { return (int)(sizeof s_arcadeModeNames / sizeof s_arcadeModeNames[0]); }
+const char *Arcade_ModeName(int idx)
+{
+    if (idx < 0 || idx >= Arcade_ModeCount()) idx = 0;
+    return s_arcadeModeNames[idx];
+}
+int Arcade_ModeFromName(const char *name)
+{
+    if (!name) return -1;
+    for (int i = 0; i < Arcade_ModeCount(); i++)
+        if (strcasecmp(name, s_arcadeModeNames[i]) == 0) return i;
+    return -1;
+}
 
 extern void WaitForVSync(void);
 extern void ReadTimerDelta(void);
@@ -47,6 +72,28 @@ extern int  DosReplay_ConvertHilInPlace(uint32_t fileSize);
 extern int  DosReplay_LoadRpl(uint8_t *filename);
 extern void DosReplay_ClearRpl(void);
 extern uint32_t _kHilFileSig;
+
+/* match launch (mirrors PlayFriendly: match_sim.c) + national-team loading */
+extern TeamFileEx _selectedTeams[];
+extern uint16_t   _numSelectedTeams;
+extern uint8_t    _teamFileBuffer[];
+extern int16_t    LoadTeamFile(uint16_t extNumber);
+extern void       InitTeams(void);
+extern void       InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
+
+/* music: HERO (title) in attract, MENU on entering country (flag) select */
+extern void     Arcade_PlayHeroMusic(void);   /* loader_intro.c (SDL-only) */
+extern void     InitMenuMusic(void);          /* audio.c — load MENU.SNG/.INS */
+extern void     TryPlayMusic(void);           /* audio.c — start menu song */
+extern void     StopMusic(void);              /* audio.c — fade out + stop */
+
+/* Menu sprite graphics (little-player figures the stadium/line-up screen draws).
+ * The front-end normally extracts these from menus.raw via the menu-BG image
+ * script (PrepareMenuBackground); arcade skips the front-end, so we run the
+ * extraction ourselves before a match. */
+extern uint16_t _menuBGImageCmdStream[];
+extern uint8_t *_menuImageStreamBaseEnd;
+extern void     ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workBuf);
 
 #define ARC_WHITE         2          /* menu-palette white (0x0FFF) for the UI text */
 #define ARC_CHARS         ((uint8_t *)_bigCharsTable)
@@ -292,6 +339,7 @@ static uint32_t s_flagPal[256];
 static int      s_flagSheetW, s_flagSheetH, s_flagsLoaded;
 static uint32_t s_flagScreenRGBA[ARC_LOGO_MAXW * SCREEN_HEIGHT];
 static int      s_flagScreenActive;
+static int      s_arcadeFade = 256;   /* full-screen brightness 0..256 (256 = full) */
 static uint8_t  s_menubgBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* MENUBG.RAW, menu-palette idx */
 static int      s_menubgLoaded;
 
@@ -345,11 +393,39 @@ int Arcade_RenderFullScreen(uint32_t *dst, int dst_pitch_pixels, int w, int h)
     if (!s_flagScreenActive || !dst) return 0;
     if (h > SCREEN_HEIGHT)  h = SCREEN_HEIGHT;
     if (w > _screen_width)  w = _screen_width;
-    for (int y = 0; y < h; y++)
-        memcpy(dst + (size_t)y * (size_t)dst_pitch_pixels,
-               s_flagScreenRGBA + (size_t)y * (size_t)_screen_width,
-               (size_t)w * sizeof(uint32_t));
+    int fade = s_arcadeFade;
+    for (int y = 0; y < h; y++) {
+        const uint32_t *src = s_flagScreenRGBA + (size_t)y * (size_t)_screen_width;
+        uint32_t       *out = dst + (size_t)y * (size_t)dst_pitch_pixels;
+        if (fade >= 256) {
+            memcpy(out, src, (size_t)w * sizeof(uint32_t));
+        } else {
+            for (int x = 0; x < w; x++) {
+                uint32_t c = src[x];
+                uint32_t r = (((c >> 16) & 0xFFu) * (uint32_t)fade) >> 8;
+                uint32_t g = (((c >> 8)  & 0xFFu) * (uint32_t)fade) >> 8;
+                uint32_t b = (( c        & 0xFFu) * (uint32_t)fade) >> 8;
+                out[x] = 0xFF000000u | (r << 16) | (g << 8) | b;
+            }
+        }
+    }
     return 1;
+}
+
+/* Ramp the arcade full-screen brightness from its current value to `target`
+ * (0..256) over `frames`, re-presenting each frame so the flag/pitch screens
+ * fade smoothly. The caller must keep s_flagScreenActive set and the last frame
+ * drawn into s_flagScreenRGBA (held static for a fade-out). */
+static void arc_fade_ramp(int target, int frames)
+{
+    if (frames < 1) frames = 1;
+    int start = s_arcadeFade;
+    for (int f = 1; f <= frames && _quitToDos == 0; f++) {
+        s_arcadeFade = start + (target - start) * f / frames;
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+    s_arcadeFade = target;
 }
 
 static void arc_flag_blit(int f, int px, int py)
@@ -426,6 +502,7 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
     int gy0 = 44;
 
     s_flagScreenActive = 1;
+    s_arcadeFade = 0;                       /* fade in from black */
     while (_quitToDos == 0 && (!conf1 || !conf2)) {
         frame++;
         Player1StatusProc();
@@ -466,26 +543,174 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
         /* header */
         arc_flag_header(numPlayers >= 2 ? "SELECT YOUR TEAMS" : "SELECT YOUR TEAM");
 
+        if (s_arcadeFade < 256) { s_arcadeFade += 24; if (s_arcadeFade > 256) s_arcadeFade = 256; }
         WaitForVSync();
         ReadTimerDelta();
     }
+    arc_fade_ramp(0, 10);                   /* fade out to black for the pitch screen */
     s_flagScreenActive = 0;
     *outP1 = sel1; if (outP2) *outP2 = sel2;
 }
 
 static int arc_pitch_select(void);   /* defined after the SVCFONT helpers */
 
-/* Begin the requested arcade game: flag select -> pitch select -> (3c) match.
- * The match is still a stub — logs the chosen teams + pitch and returns. */
+/* ====================================================================
+ * Phase 3c — the match (mirror PlayFriendly): country/flag select picks two
+ * national teams, loaded into _selectedTeams; InitAndPlayGame runs the match.
+ * ==================================================================== */
+
+/* Attract uses HERO (title) music; entering country/pitch select switches to the
+ * MENU music. */
+static void arc_music_attract(void) { Arcade_PlayHeroMusic(); }
+static void arc_music_menu(void)
+{
+    extern void AudioSetChannelVolume(uint16_t, uint16_t);
+    extern void AudioSDL_StopSong(void);
+    extern uint16_t _audioActive, _audioBankLoaded;
+    /* Quick-stop HERO (skip StopMusic's ~1.4 s fade — the screen is black during
+     * the swap), then load + start MENU (TryPlayMusic ramps it in). */
+    AudioSetChannelVolume(0xFFFF, 0);
+    AudioSDL_StopSong();
+    _audioActive = 0;
+    _audioBankLoaded = 0;
+    InitMenuMusic();    /* load MENU.SNG / MENU.INS */
+    TryPlayMusic();     /* start it (faded in) */
+}
+
+/* flag cell -> {national-team file byte, team ordinal, ISO label}. file ==
+ * ARC_NO_TEAM => SWOS has no national team for that flag; load the generic
+ * placeholder squad. National-team files: 0x50 Europe / 0x51 Africa /
+ * 0x52 S.America / 0x53 N&C.America / 0x54 Asia / 0x55 Oceania. Full table +
+ * rationale (incl. the 5 generic cells) in docs/ARCADE.md. */
+#define ARC_NO_TEAM       0xFF
+#define ARC_GENERIC_FILE  0x50   /* placeholder squad template = team.080 ... */
+#define ARC_GENERIC_ORD   0x0B   /* ...ordinal 0x0B (ENGLAND), relabelled per cell */
+#define ARC_CTRL_HUMAN    0
+#define ARC_CTRL_COMPUTER 1      /* TEAM_COMPUTER */
+
+static const struct { uint8_t file, ord; char code[4]; } s_flagTeam[FLAG_COUNT] = {
+    {0x53,0x08,"MEX"}, {0x53,0x01,"CAN"}, {0x52,0x02,"BRA"}, {0x53,0x0E,"USA"}, {0x50,0x11,"GER"}, {0x50,0x13,"NED"},
+    {0x54,0x18,"KOR"}, {0x50,0x2C,"SUI"}, {0x51,0x13,"MAR"}, {0x55,0x00,"AUS"}, {0x52,0x05,"ECU"}, {0x54,0x09,"JPN"},
+    {0x51,0x19,"RSA"}, {0x54,0x15,"QAT"}, {0x50,0x27,"SCO"}, {0x52,0x06,"PAR"}, {0x51,0x0D,"CIV"}, {0x51,0x1E,"TUN"},
+    {0x50,0x09,"CZE"}, {ARC_NO_TEAM,0,"BIH"}, {ARC_NO_TEAM,0,"HAI"}, {0x50,0x2D,"TUR"}, {ARC_NO_TEAM,0,"CUW"}, {0x50,0x2B,"SWE"},
+    {0x50,0x05,"BEL"}, {0x50,0x2A,"ESP"}, {0x50,0x0F,"FRA"}, {0x52,0x00,"ARG"}, {0x50,0x22,"POR"}, {0x50,0x0B,"ENG"},
+    {0x54,0x07,"IRN"}, {0x52,0x08,"URU"}, {0x51,0x17,"SEN"}, {0x50,0x02,"AUT"}, {0x52,0x04,"COL"}, {0x50,0x07,"CRO"},
+    {0x51,0x08,"EGY"}, {0x54,0x16,"KSA"}, {0x50,0x20,"NOR"}, {0x51,0x00,"ALG"}, {ARC_NO_TEAM,0,"UZB"}, {0x53,0x0A,"PAN"},
+    {0x55,0x02,"NZL"}, {ARC_NO_TEAM,0,"CPV"}, {0x54,0x08,"IRQ"}, {0x54,0x0A,"JOR"}, {0x51,0x07,"COD"}, {0x51,0x0B,"GHA"},
+};
+
+/* Load the national team for flag cell `flag` into _selectedTeams[slot] and set
+ * who controls it. Returns 0 on success. LoadTeamFile caches by file number, so
+ * loading P1 then P2 each does its own load + find + copy atomically. */
+static int arc_load_team(int flag, int slot, uint8_t controls)
+{
+    if (flag < 0 || flag >= FLAG_COUNT) return -1;
+    uint8_t file = s_flagTeam[flag].file, ord = s_flagTeam[flag].ord;
+    const char *label = s_flagTeam[flag].code;
+    int generic = (file == ARC_NO_TEAM);
+    if (generic) { file = ARC_GENERIC_FILE; ord = ARC_GENERIC_ORD; }
+
+    if (LoadTeamFile(file) != 0) {
+        fprintf(stderr, "[arcade] LoadTeamFile(0x%02X) failed for %s\n", file, label);
+        return -1;
+    }
+    /* _teamFileBuffer: [u16 host-native count][count * TeamFileEx(684B)] */
+    uint16_t count = *(uint16_t *)_teamFileBuffer;
+    TeamFileEx *rec = (TeamFileEx *)(_teamFileBuffer + 2), *found = (TeamFileEx *)0;
+    for (uint16_t i = 0; i < count; i++) {
+        if (rec[i].team.countryNumber == file && rec[i].team.teamOrdinal == ord) {
+            found = &rec[i];
+            break;
+        }
+    }
+    if (!found) {
+        fprintf(stderr, "[arcade] team 0x%02X.%02X (%s) not found in file\n", file, ord, label);
+        return -1;
+    }
+
+    memcpy(&_selectedTeams[slot], found, sizeof(TeamFileEx));
+    _selectedTeams[slot].team.teamControls = controls;
+    if (generic) {
+        /* Placeholder squad: a real (valid) team relabelled to the cell's code so
+         * the flag still reads correctly. TODO: replace with a proper generic team
+         * when the arcade team/animation system lands. */
+        int8_t *nm = _selectedTeams[slot].team.teamName;
+        memset(nm, 0, sizeof(_selectedTeams[slot].team.teamName));
+        snprintf((char *)nm, sizeof(_selectedTeams[slot].team.teamName), "%s", label);
+    }
+    fprintf(stderr, "[arcade] P%d team: %s (file 0x%02X ord 0x%02X, ctrl %u)\n",
+            slot + 1, label, file, ord, controls);
+    return 0;
+}
+
+/* Begin the requested arcade game: country (flag) select -> pitch select -> the
+ * match (mirrors PlayFriendly). Pitch wiring (Part 4) + arcade rules
+ * (length / golden-goal / penalties, Parts 2-3) land on top of this. */
 static void arc_start_game(void)
 {
+    extern uint16_t _gameType;
+    /* Globals the friendly menu normally initialises before InitAndPlayGame. */
+    extern uint16_t _friendlyPitchType;   /* pitch CONDITION 0..6 (Part 4 replaces the field) */
+    extern uint16_t _pitchTypeOrSeason;   /* 0 = fixed pitch type, not seasonal */
+    extern uint16_t _maxSubstitutes;
+    extern uint16_t _minSubstitutes;
     int numPlayers = (s_startGame >= 2) ? 2 : 1;
     int p1 = 0, p2 = 0;
+
+    /* Cut to black before swapping music + entering country select, so leaving the
+     * attract reel isn't an abrupt jump / frozen frame. s_arcadeFade=0 makes
+     * Arcade_RenderFullScreen output opaque black regardless of buffer contents;
+     * the selectors fade back in from there. Also kill the attract logo overlay
+     * (s_overlayActive is set by Arcade_DrawAttractOverlay and never otherwise
+     * cleared, so the logo + stale pitch-menu scratch in s_overlayBuf would draw
+     * over the selectors/match). The attract loop re-enables it when we return. */
+    s_overlayActive = 0;
+    s_arcadeFade = 0;
+    s_flagScreenActive = 1;
+    WaitForVSync();                         /* show the black frame */
+    arc_music_menu();                       /* HERO -> MENU (behind the black screen) */
     arc_flag_select(numPlayers, &p1, &p2);
+    if (numPlayers < 2) {                    /* 1P: opponent isn't user-picked -> random CPU */
+        do { p2 = (int)(arc_rand() % FLAG_COUNT); } while (p2 == p1);
+    }
     int pitch = arc_pitch_select();
-    fprintf(stderr, "[arcade] teams P1=%d P2=%d, pitch=%d (SWCPICH%d) -> START MATCH (3c TODO)\n",
-            p1, p2, pitch, pitch + 1);
+    (void)pitch;                            /* Part 4: feed the chosen pitch into the match */
+
+    /* Selectors done (each faded out to black on exit); make sure no arcade frame
+     * composites over the match. */
+    s_overlayActive = 0;
+    s_flagScreenActive = 0;
+
+    /* Build the two teams (mirrors GoGetTeamsForPlay + InitTeams + PlayFriendly,
+     * minus the team-select UI). */
+    _gameType = 0;                          /* non-career friendly path */
+    _pitchTypeOrSeason = 0;                 /* fixed pitch condition, not seasonal */
+    _friendlyPitchType = 4;                 /* a normal pitch (interim; Part 4 = themed pitch) */
+    _maxSubstitutes = 0;                    /* arcade: no subs */
+    _minSubstitutes = 0;
+    _numSelectedTeams = 0;
+    int ok = (arc_load_team(p1, 0, ARC_CTRL_HUMAN) == 0);
+    uint8_t p2ctrl = (numPlayers >= 2) ? ARC_CTRL_HUMAN : ARC_CTRL_COMPUTER;
+    ok = ok && (arc_load_team(p2, 1, p2ctrl) == 0);
+
+    if (ok) {
+        _numSelectedTeams = 2;
+        /* Arcade skipped the front-end, so the menu sprite graphics (the little
+         * player figures the stadium/line-up screen draws, sprites 210-213, etc.)
+         * were never extracted from menus.raw. Run the menu-BG image script's
+         * sprite extraction now — NOT PrepareMenuBackground, whose second step
+         * loads the menu BG into the frontbuffer — so the line-up shows real
+         * player sprites instead of garbage. */
+        ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
+        InitTeams();
+        StopMusic();                        /* silence menu music before kickoff */
+        InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
+    } else {
+        fprintf(stderr, "[arcade] team load failed; returning to attract\n");
+    }
+
     s_startGame = 0;
+    arc_music_attract();                    /* resume HERO for the attract loop */
 }
 
 /* ====================================================================
@@ -597,7 +822,7 @@ static void arc_service_menu(void)
     uint32_t GREEN = s_svcLoaded ? s_svcPal[6] : 0xFF00FF00u;
     const int times[] = { 30, 45, 60, 90, 120 };
     const int NT = (int)(sizeof times / sizeof times[0]);
-    const int NUM = 3;
+    const int NUM = 4;
 
     int sel = 0, u=0, d=0, l=0, r=0, f=1;   /* f=1: ignore a fire still held on entry */
     uint32_t frame = 0;
@@ -613,10 +838,13 @@ static void arc_service_menu(void)
         int adj = ((_pl1Right && !r) ? 1 : 0) - ((_pl1Left && !l) ? 1 : 0);
         if (adj) {
             if (sel == 0) {
+                int mc = Arcade_ModeCount();
+                g_arcadeOpts->arcade_mode = (g_arcadeOpts->arcade_mode + adj + mc) % mc;
+            } else if (sel == 1) {
                 int idx = 1;
                 for (int i = 0; i < NT; i++) if (times[i] == g_arcadeOpts->arcade_game_seconds) idx = i;
                 g_arcadeOpts->arcade_game_seconds = times[(idx + adj + NT) % NT];
-            } else if (sel == 1) g_arcadeOpts->arcade_golden_goal = !g_arcadeOpts->arcade_golden_goal;
+            } else if (sel == 2) g_arcadeOpts->arcade_golden_goal = !g_arcadeOpts->arcade_golden_goal;
             else                 g_arcadeOpts->arcade_penalties   = !g_arcadeOpts->arcade_penalties;
         }
         u=_pl1Up; d=_pl1Down; l=_pl1Left; r=_pl1Right;
@@ -647,9 +875,11 @@ static void arc_service_menu(void)
         char val[24];
         int ly = 92;
         for (int i = 0; i < NUM; i++) {
-            const char *label = (i == 0) ? "GAME TIME" : (i == 1) ? "GOLDEN GOAL" : "PENALTIES ON DRAW";
-            if      (i == 0) snprintf(val, sizeof val, "%d SEC", g_arcadeOpts->arcade_game_seconds);
-            else if (i == 1) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_golden_goal ? "ON" : "OFF");
+            const char *label = (i == 0) ? "MODE" : (i == 1) ? "GAME TIME"
+                              : (i == 2) ? "GOLDEN GOAL" : "PENALTIES ON DRAW";
+            if      (i == 0) snprintf(val, sizeof val, "%s", Arcade_ModeName(g_arcadeOpts->arcade_mode));
+            else if (i == 1) snprintf(val, sizeof val, "%d SEC", g_arcadeOpts->arcade_game_seconds);
+            else if (i == 2) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_golden_goal ? "ON" : "OFF");
             else             snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_penalties   ? "ON" : "OFF");
             uint32_t tc = YEL;
             if (i == sel) {
@@ -745,6 +975,7 @@ static int arc_pitch_select(void)
     int labelCx = bx336 + bw / 2;
 
     s_flagScreenActive = 1;
+    s_arcadeFade = 0;                       /* fade in from black */
     while (_quitToDos == 0) {
         frame++;
         Player1StatusProc();
@@ -794,9 +1025,11 @@ static int arc_pitch_select(void)
         arc_pitch_preview(pvx, pvy, pvw, pvh);
         arc_flag_rect(pvx - 1, pvy - 1, pvw + 2, pvh + 2, 0xFFFFFFFFu);
 
+        if (s_arcadeFade < 256) { s_arcadeFade += 24; if (s_arcadeFade > 256) s_arcadeFade = 256; }
         WaitForVSync();
         ReadTimerDelta();
     }
+    arc_fade_ramp(0, 10);                   /* fade out to black before kickoff */
     s_flagScreenActive = 0;
 
     if (sel >= PITCH_OPTIONS - 1) sel = (int)(arc_rand() % 7);   /* RANDOM -> 0..6 */
@@ -817,6 +1050,8 @@ void ArcadeMainLoop(void)
     arc_load_svcfont();
     arc_scan_reels();
     ReadTimerDelta();
+
+    arc_music_attract();   /* HERO (title) song plays over the attract loop */
 
     while (_quitToDos == 0) {
         if (s_serviceReq) {              /* F2 pressed during a reel/idle */

@@ -44,4 +44,11 @@ void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h);
  * in which case the platform skips the normal 8bpp present path. */
 int Arcade_RenderFullScreen(uint32_t *dst, int dst_pitch_pixels, int w, int h);
 
+/* Arcade game modes — the F2 service-menu MODE setting, persisted as
+ * [arcade] mode in SWOS.ini. Index 0 is the default. Currently only
+ * "GOLDEN GOAL"; more will be added. */
+int         Arcade_ModeCount(void);
+const char *Arcade_ModeName(int idx);             /* clamped to a valid name */
+int         Arcade_ModeFromName(const char *name); /* case-insensitive; -1 if unknown */
+
 #endif /* SWOS_ARCADE_H */

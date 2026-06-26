@@ -181,6 +181,7 @@ int main(int argc, char **argv)
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.arcade = 0;              /* default off — normal front-end menu */
+    opts.arcade_mode = 0;         /* GOLDEN GOAL */
     opts.arcade_game_seconds = 45;
     opts.arcade_golden_goal = 1;
     opts.arcade_penalties = 1;

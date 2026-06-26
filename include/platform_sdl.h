@@ -70,6 +70,7 @@ typedef struct {
     int                    dos_graphics;     /* 1 = render DOS-version graphics. PC-only */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
     int                    arcade;           /* 1 = arcade/coin-op mode — boot to attract. PC-only. See docs/ARCADE.md */
+    int                    arcade_mode;         /* arcade game mode index (0 = GOLDEN GOAL) */
     int                    arcade_game_seconds; /* arcade match length in seconds (default 45) */
     int                    arcade_golden_goal;  /* 1 = first goal wins the match (default 1) */
     int                    arcade_penalties;    /* 1 = penalty shootout when drawn (default 1) */
