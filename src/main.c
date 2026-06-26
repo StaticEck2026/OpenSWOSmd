@@ -181,6 +181,9 @@ int main(int argc, char **argv)
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.arcade = 0;              /* default off — normal front-end menu */
+    opts.arcade_game_seconds = 45;
+    opts.arcade_golden_goal = 1;
+    opts.arcade_penalties = 1;
     snprintf(opts.arcade_key_p1_credit, sizeof opts.arcade_key_p1_credit, "%s", "5");
     snprintf(opts.arcade_key_p1_start,  sizeof opts.arcade_key_p1_start,  "%s", "1");
     snprintf(opts.arcade_key_p2_credit, sizeof opts.arcade_key_p2_credit, "%s", "6");
@@ -193,6 +196,11 @@ int main(int argc, char **argv)
     /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
      * at clean shutdown will create one. */
     Settings_Load(&opts, SWOS_INI_PATH);
+
+    /* Expose the live options + ini path to the arcade service menu so its
+     * settings (game rules) can be written straight back to SWOS.ini. */
+    { extern PlatformInitOptions *g_arcadeOpts; extern const char *g_arcadeIniPath;
+      g_arcadeOpts = &opts; g_arcadeIniPath = SWOS_INI_PATH; }
 
     /* 3) CLI overrides INI (highest precedence — explicit user intent). */
     for (int i = 1; i < argc; ++i) {

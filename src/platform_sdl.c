@@ -145,6 +145,42 @@ void Platform_ArcadeInput(int *coin1, int *coin2, int *service,
     if (start2)  { *start2  = s_arcade_start2;  s_arcade_start2  = 0; }
 }
 
+/* Load an indexed (8bpp paletted) BMP — the arcade FLAGS sheet / SWCPICH pitches.
+ * Copies up to out_cap index bytes into out8 (row-packed at width *outW) and the
+ * 256-entry palette as ARGB8888 into outPal. Returns 0 on success. SDL-only. */
+int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
+                            uint32_t *outPal, int *outW, int *outH)
+{
+    SDL_Surface *s = SDL_LoadBMP(path);
+    if (!s) { fprintf(stderr, "[arcade] SDL_LoadBMP(%s): %s\n", path, SDL_GetError()); return 1; }
+
+    int rc = 1;
+    if (s->format->BytesPerPixel == 1 && s->format->palette &&
+        s->w * s->h <= out_cap) {
+        for (int y = 0; y < s->h; y++)
+            memcpy(out8 + (size_t)y * s->w,
+                   (const uint8_t *)s->pixels + (size_t)y * s->pitch, s->w);
+        int n = s->format->palette->ncolors;
+        for (int i = 0; i < 256; i++) {
+            if (i < n) {
+                SDL_Color c = s->format->palette->colors[i];
+                outPal[i] = ((uint32_t)0xFFu << 24) | ((uint32_t)c.r << 16) |
+                            ((uint32_t)c.g << 8) | (uint32_t)c.b;
+            } else {
+                outPal[i] = 0xFF000000u;
+            }
+        }
+        if (outW) *outW = s->w;
+        if (outH) *outH = s->h;
+        rc = 0;
+    } else {
+        fprintf(stderr, "[arcade] %s not an indexed BMP that fits (bpp=%d %dx%d)\n",
+                path, s->format->BytesPerPixel, s->w, s->h);
+    }
+    SDL_FreeSurface(s);
+    return rc;
+}
+
 /* Headless smoke-test: dump every Nth converted frame to /tmp as a PPM. */
 static int           s_dump_frames;
 static int           s_frame_count;
@@ -911,14 +947,23 @@ static void render_frame_impl(int pump_full)
     void *pixels;
     int    pitch;
     if (SDL_LockTexture(s_texture, NULL, &pixels, &pitch) == 0) {
-        chunky_to_rgba((uint32_t *)pixels, pitch / 4);
-        /* Arcade attract: composite the menu-palette logo/INSERT-COIN overlay over
-         * the reel frame (which uses its own DOS palette). */
+        /* Arcade flag-select / service screens render a full RGBA frame; when one
+         * is active it replaces the normal 8bpp path. Otherwise convert the
+         * framebuffer and (in attract) composite the logo/INSERT-COIN overlay. */
+        int arcade_full = 0;
         { extern int _gArcadeMode;
-          extern void Arcade_CompositeOverlay(uint32_t *, int, int, int);
+          extern int Arcade_RenderFullScreen(uint32_t *, int, int, int);
           if (_gArcadeMode)
-              Arcade_CompositeOverlay((uint32_t *)pixels, pitch / 4,
-                                      _screen_width, PLATFORM_SCREEN_H); }
+              arcade_full = Arcade_RenderFullScreen((uint32_t *)pixels, pitch / 4,
+                                                    _screen_width, PLATFORM_SCREEN_H); }
+        if (!arcade_full) {
+            chunky_to_rgba((uint32_t *)pixels, pitch / 4);
+            { extern int _gArcadeMode;
+              extern void Arcade_CompositeOverlay(uint32_t *, int, int, int);
+              if (_gArcadeMode)
+                  Arcade_CompositeOverlay((uint32_t *)pixels, pitch / 4,
+                                          _screen_width, PLATFORM_SCREEN_H); }
+        }
         if (s_dump_frames && (pitch == _screen_width * 4))
             maybe_dump_frame((uint32_t *)pixels);
         /* Only write the F12 screenshot from the main-thread render (pump_full). The

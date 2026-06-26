@@ -40,4 +40,8 @@ int Arcade_DrawAttractOverlay(void);
  * keep their menu colours over a reel that is using a different palette. */
 void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h);
 
+/* Full-screen arcade RGBA frame (flag select). Returns non-zero if it filled dst,
+ * in which case the platform skips the normal 8bpp present path. */
+int Arcade_RenderFullScreen(uint32_t *dst, int dst_pitch_pixels, int w, int h);
+
 #endif /* SWOS_ARCADE_H */
