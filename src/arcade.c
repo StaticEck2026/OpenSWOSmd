@@ -292,9 +292,42 @@ static uint32_t s_flagPal[256];
 static int      s_flagSheetW, s_flagSheetH, s_flagsLoaded;
 static uint32_t s_flagScreenRGBA[ARC_LOGO_MAXW * SCREEN_HEIGHT];
 static int      s_flagScreenActive;
+static uint8_t  s_menubgBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* MENUBG.RAW, menu-palette idx */
+static int      s_menubgLoaded;
 
 extern int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
                                    uint32_t *outPal, int *outW, int *outH);
+
+/* Decode MENUBG.RAW (the SWOS menu background) into s_menubgBuf the same way as
+ * the logo, for use behind the flag/pitch selectors. */
+static void arc_load_menubg(void)
+{
+    extern void    LoadOverlayToFrontbuffer(const uint8_t *path);
+    extern uint8_t _frontbufferMaskBuffer[];
+    size_t n = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
+    if (n > sizeof s_menubgBuf) n = sizeof s_menubgBuf;
+    LoadOverlayToFrontbuffer((const uint8_t *)"grafs/menubg.raw");
+    memcpy(s_menubgBuf, _frontbufferMaskBuffer, n);
+    s_menubgLoaded = 1;
+}
+
+/* Paint the menu background (menu-palette indices -> ARGB) into the full-screen
+ * RGBA. The decode is centred in the 336 region; margins are near-black. */
+static void arc_fill_menubg(void)
+{
+    extern uint16_t _menuPalette[];
+    uint32_t pal[16];
+    for (int i = 0; i < 16; i++) {
+        uint16_t v = _menuPalette[i];
+        uint32_t r = (v >> 8) & 0xF, g = (v >> 4) & 0xF, b = v & 0xF;
+        r = (r << 4) | r; g = (g << 4) | g; b = (b << 4) | b;
+        pal[i] = 0xFF000000u | (r << 16) | (g << 8) | b;
+    }
+    size_t n = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
+    if (n > sizeof s_menubgBuf) n = sizeof s_menubgBuf;
+    for (size_t i = 0; i < n; i++)
+        s_flagScreenRGBA[i] = s_menubgLoaded ? pal[s_menubgBuf[i] & 15] : 0xFF000000u;
+}
 
 static void arc_load_flags(void)
 {
@@ -415,9 +448,8 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
         }
         u2=_pl2Up; d2=_pl2Down; l2=_pl2Left; r2=_pl2Right;
 
-        /* background */
-        size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
-        for (size_t i = 0; i < total; i++) s_flagScreenRGBA[i] = 0xFF0A280Au;
+        /* menu background */
+        arc_fill_menubg();
         /* flags */
         for (int f = 0; f < FLAG_COUNT; f++)
             arc_flag_blit(f, gx0 + (f % FLAG_COLS) * FLAG_CELL_W + 2,
@@ -441,17 +473,18 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
     *outP1 = sel1; if (outP2) *outP2 = sel2;
 }
 
-/* Begin the requested arcade game: flag select, then (3c) the arcade-rules match.
- * The match is still a stub — for now it logs the chosen flags and returns. */
+static int arc_pitch_select(void);   /* defined after the SVCFONT helpers */
+
+/* Begin the requested arcade game: flag select -> pitch select -> (3c) match.
+ * The match is still a stub — logs the chosen teams + pitch and returns. */
 static void arc_start_game(void)
 {
     int numPlayers = (s_startGame >= 2) ? 2 : 1;
     int p1 = 0, p2 = 0;
     arc_flag_select(numPlayers, &p1, &p2);
-    if (numPlayers >= 2)
-        fprintf(stderr, "[arcade] flags chosen: P1=%d P2=%d -> START MATCH (3c TODO)\n", p1, p2);
-    else
-        fprintf(stderr, "[arcade] flag chosen: P1=%d -> START MATCH (3c TODO)\n", p1);
+    int pitch = arc_pitch_select();
+    fprintf(stderr, "[arcade] teams P1=%d P2=%d, pitch=%d (SWCPICH%d) -> START MATCH (3c TODO)\n",
+            p1, p2, pitch, pitch + 1);
     s_startGame = 0;
 }
 
@@ -641,6 +674,135 @@ static void arc_service_menu(void)
     }
 }
 
+/* ====================================================================
+ * Phase 3c (part 1) — pitch select (themed arcade pitches + RANDOM)
+ * ==================================================================== */
+#define PITCH_OPTIONS 8   /* BEACH..STADIUM (SWCPICH1..7) + RANDOM (SWCPICHR) */
+static const char *const s_pitchNames[PITCH_OPTIONS] = {
+    "BEACH", "PARK", "YARD", "SKATE PARK", "PRISON", "CITY", "STADIUM", "RANDOM"
+};
+static uint8_t  s_pitchSheet[672 * 880];
+static uint32_t s_pitchPal[256];
+static int      s_pitchW, s_pitchH;
+
+static int arc_load_pitch(int idx)   /* 0..6 = SWCPICH1..7, 7 = SWCPICHR */
+{
+    char path[64];
+    if (idx >= PITCH_OPTIONS - 1) snprintf(path, sizeof path, "grafs_arcade/SWCPICHR.bmp");
+    else                          snprintf(path, sizeof path, "grafs_arcade/SWCPICH%d.bmp", idx + 1);
+    return Platform_LoadIndexedBMP(path, s_pitchSheet, (int)sizeof s_pitchSheet,
+                                   s_pitchPal, &s_pitchW, &s_pitchH);
+}
+
+/* Nearest-neighbour scale the loaded pitch into the preview rect (RGBA). */
+static void arc_pitch_preview(int px, int py, int pw, int ph)
+{
+    if (s_pitchW <= 0 || s_pitchH <= 0) return;
+    for (int y = 0; y < ph; y++) {
+        int dy = py + y;
+        if (dy < 0 || dy >= SCREEN_HEIGHT) continue;
+        const uint8_t *src = s_pitchSheet + (size_t)(y * s_pitchH / ph) * s_pitchW;
+        uint32_t      *out = s_flagScreenRGBA + (size_t)dy * _screen_width;
+        for (int x = 0; x < pw; x++) {
+            int dx = px + x;
+            if (dx >= 0 && dx < _screen_width) out[dx] = s_pitchPal[src[x * s_pitchW / pw]];
+        }
+    }
+}
+
+/* Themed-pitch selector: a column of buttons (green; RANDOM in red) with the
+ * selected pitch previewed on the right. Joystick up/down, fire confirms.
+ * Returns 0..6 (SWCPICH1..7); RANDOM resolves to a random 0..6. */
+static int arc_pitch_select(void)
+{
+    extern uint8_t _pl1Up, _pl1Down, _pl1ShortFire;
+    extern void Player1StatusProc(void);
+    extern void DrawMenuItemBackground(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    extern void DrawMenuItemOuterFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    extern void DrawMenuItemInnerFrame(uint16_t color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+    extern uint16_t _kColorTableShine[];
+    extern int      _menu_draw_x_offset;
+    extern uint16_t _cameraXMod320;
+    extern uint16_t _menuPalette[];
+
+    /* menu palette -> ARGB (the buttons/text composite through this) */
+    uint32_t mpal[16];
+    for (int i = 0; i < 16; i++) {
+        uint16_t v = _menuPalette[i];
+        uint32_t r = (v >> 8) & 0xF, g = (v >> 4) & 0xF, b = v & 0xF;
+        r = (r << 4) | r; g = (g << 4) | g; b = (b << 4) | b;
+        mpal[i] = 0xFF000000u | (r << 16) | (g << 8) | b;
+    }
+
+    int sel = 0, u = 0, d = 0, f = 1, loaded = -1;
+    uint32_t frame = 0;
+    /* Lay out within the central 336-wide 4:3 region. Buttons/text draw via the
+     * original menu routines into s_overlayBuf (menu-palette indices) with
+     * _menu_draw_x_offset = WIDE_MARGIN, then composite through the menu palette. */
+    int bw = 152, bh = 24, gap = 2, by0 = 50, bx336 = 8;
+    int pvw = 156, pvh = pvw * 880 / 672, pvx336 = 168, pvy = 38;
+    int pvx = WIDE_MARGIN + pvx336;
+    int labelCx = bx336 + bw / 2;
+
+    s_flagScreenActive = 1;
+    while (_quitToDos == 0) {
+        frame++;
+        Player1StatusProc();
+        if (_pl1Up && !u)   sel = (sel - 1 + PITCH_OPTIONS) % PITCH_OPTIONS;
+        if (_pl1Down && !d) sel = (sel + 1) % PITCH_OPTIONS;
+        u = _pl1Up; d = _pl1Down;
+        int pick = (_pl1ShortFire && !f); f = _pl1ShortFire;
+        if (loaded != sel) { arc_load_pitch(sel); loaded = sel; }
+        if (pick) break;
+
+        arc_fill_menubg();
+
+        /* buttons + flashing selector + labels via the original menu drawing code */
+        size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+        size_t n = total > sizeof s_overlayBuf ? sizeof s_overlayBuf : total;
+        memset(s_overlayBuf, 0, n);
+        uintptr_t savedFb  = _frontbufferBasePtr;
+        int       savedOff = _menu_draw_x_offset;
+        uint16_t  savedCam = _cameraXMod320;
+        _frontbufferBasePtr = (uintptr_t)s_overlayBuf;
+        _menu_draw_x_offset = WIDE_MARGIN;
+        _cameraXMod320 = 0;
+
+        for (int i = 0; i < PITCH_OPTIONS; i++) {
+            int yy = by0 + i * (bh + gap);
+            uint16_t col = (i == PITCH_OPTIONS - 1) ? 10 : 14;  /* RED_10 / YELLOW_GREEN_BLACK_14 */
+            DrawMenuItemBackground(col, (uint16_t)bx336, (uint16_t)yy, (uint16_t)bw, (uint16_t)bh);
+            DrawMenuItemOuterFrame(col, (uint16_t)bx336, (uint16_t)yy, (uint16_t)bw, (uint16_t)bh);
+            DrawMenuTextCentered((uint16_t)labelCx, (uint16_t)(yy + 7), 2,
+                                 (uint8_t *)s_pitchNames[i], ARC_CHARS);
+        }
+        { int yy = by0 + sel * (bh + gap);
+          uint16_t shine = _kColorTableShine[(frame & 14) >> 1];   /* menu selector flash */
+          DrawMenuItemInnerFrame(shine, (uint16_t)bx336, (uint16_t)yy, (uint16_t)bw, (uint16_t)bh);
+          DrawMenuItemInnerFrame(shine, (uint16_t)(bx336+1), (uint16_t)(yy+1),
+                                 (uint16_t)(bw-2), (uint16_t)(bh-2)); }
+        DrawMenuTextCentered((uint16_t)labelCx, 20, 2, (uint8_t *)"SELECT PITCH", ARC_CHARS);
+
+        _frontbufferBasePtr = savedFb;
+        _menu_draw_x_offset = savedOff;
+        _cameraXMod320 = savedCam;
+
+        for (size_t i = 0; i < n; i++)
+            if (s_overlayBuf[i]) s_flagScreenRGBA[i] = mpal[s_overlayBuf[i] & 15];
+
+        /* the pitch preview (its own palette, drawn directly in RGBA) */
+        arc_pitch_preview(pvx, pvy, pvw, pvh);
+        arc_flag_rect(pvx - 1, pvy - 1, pvw + 2, pvh + 2, 0xFFFFFFFFu);
+
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+    s_flagScreenActive = 0;
+
+    if (sel >= PITCH_OPTIONS - 1) sel = (int)(arc_rand() % 7);   /* RANDOM -> 0..6 */
+    return sel;
+}
+
 void ArcadeMainLoop(void)
 {
     fprintf(stderr, "[arcade] boot-to-arcade: entering attract loop\n");
@@ -651,6 +813,7 @@ void ArcadeMainLoop(void)
 
     arc_load_logo();
     arc_load_flags();
+    arc_load_menubg();
     arc_load_svcfont();
     arc_scan_reels();
     ReadTimerDelta();
