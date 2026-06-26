@@ -134,6 +134,24 @@ void LoadHighlightsMenu(void)
     if (GetFilenameAndExtension(0, _aLoadHighlights, _aLoadHighlights) != 0)
         goto cleanup;
 
+#ifdef SWOS_SDL_BUILD
+    /* PC: also accept .RPL — a whole-match replay in the same DOS HIL format.
+     * The Highlights menu plays both; clear any prior RPL state first so a .HIL
+     * uses the normal scene buffer. */
+    {
+        extern void DosReplay_ClearRpl(void);
+        extern int  DosReplay_LoadRpl(uint8_t *filename);
+        DosReplay_ClearRpl();
+        if (_extension == 0x2E52504Cu) {   /* '.RPL' */
+            if (DosReplay_LoadRpl(_selectedFilename) != 0) {
+                ShowErrorMenu(_aNotAHighlights);
+                goto cleanup;
+            }
+            StringCopy(_selectedFilename, _hilFilename);
+            goto cleanup;   /* loaded; skip the .HIL sig check below */
+        }
+    }
+#endif
     if (_extension != 0x2E48494Cu) { /* '.HIL' */
         ShowErrorMenu(_aNotAHighlights);
         goto cleanup;

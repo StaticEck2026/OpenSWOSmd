@@ -989,8 +989,20 @@ PlayHighlightsLoop(void)
     ReadTimerDelta();
 
     for (;;) {
+#ifdef SWOS_SDL_BUILD
+        /* Window-close (X) during replay: the SDL event pump (DrawReplayFrame's
+         * vblank) sets _quitToDos, but this loop never polled it, so the process
+         * kept running after the window closed. Exit cleanly via the normal stop
+         * path — the recursion unwinds and the caller propagates the quit. */
+        if (_quitToDos != 0)
+            goto stop_replay_and_return;
+#endif
         /* Paused poll loop */
-        while (_paused != 0) {
+        while (_paused != 0
+#ifdef SWOS_SDL_BUILD
+               && _quitToDos == 0
+#endif
+              ) {
             pauseSpinWaitOneTick();
             GetKey();
             MainKeysCheck(_currentKey);
@@ -1063,9 +1075,21 @@ advance_to_next_highlight:
          * SIGSEGVed in HandleInstantReplayStateSwitch's `*p & 0x80`.
          * Carry the value as a real pointer instead. */
         uint8_t *baseAddr = _hilStartOfGoalsBuffer + offset;
+        uint8_t *endAddr  = baseAddr + 19000u;
+#ifdef SWOS_SDL_BUILD
+        /* An RPL is a whole match in one ~1 MB scene that can't be addressed by
+         * the 19000-B scene math — dos_replay_load.c loaded it into a dedicated
+         * buffer; stream that as the single scene. */
+        extern uint8_t *_rplBufferPtr;
+        extern uint32_t _rplStreamBytes;
+        if (_rplBufferPtr) {
+            baseAddr = _rplBufferPtr;
+            endAddr  = _rplBufferPtr + _rplStreamBytes;
+        }
+#endif
         _goalBasePtr = baseAddr;
         _currentHilPtr = baseAddr - 4;
-        _nextGoalPtr = baseAddr + 19000u;
+        _nextGoalPtr = endAddr;
     }
     HandleInstantReplayStateSwitch();
 

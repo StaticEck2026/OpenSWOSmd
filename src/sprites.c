@@ -618,8 +618,17 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 {
     if (!a0) return;
     const uint8_t *data = (const uint8_t *)(uintptr_t)a0->sprData;
-    uint8_t *dstBase = (uint8_t *)(uintptr_t)_frontbufferBasePtr + _menu_draw_x_offset;
+    uint8_t *dstBase = (uint8_t *)(uintptr_t)_frontbufferBasePtr;
     if (!data || !dstBase) return;
+
+    /* Fold the menu/replay horizontal offset into the screen X so the cull and
+     * per-pixel clip below operate on the actual frontbuffer column
+     * [0, _screen_width). Previously the offset lived only in dstBase, which made
+     * the left _menu_draw_x_offset pixels a dead zone: a re-anchored far-left
+     * replay player at dstX=-107 has real column 50 (on-screen) but was killed by
+     * `dstX + sprW <= 0`, and `dx >= _screen_width` let the right edge overflow
+     * into the next row. Showed up as the left-edge cut-off in widescreen replays. */
+    dstX = (int16_t)(dstX + _menu_draw_x_offset);
 
     int16_t sprW  = a0->pixWidth;
     int16_t sprH  = a0->nlines;

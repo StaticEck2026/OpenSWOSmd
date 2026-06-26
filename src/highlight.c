@@ -112,15 +112,34 @@ static int16_t s_replayShiftY = 0;   /* same re-anchor for Y (DOS HIL camera cla
 static int16_t ReplayCameraX(int16_t recordedX)
 {
 #ifdef SWOS_SDL_BUILD
+    extern uint16_t _playHighlightFlag;
+    if (_playHighlightFlag == 0) {
+        /* In-game instant replay: the recorded camera + sprites are already in
+         * our own (wide) screen space, not the DOS 336-space, so the WIDE_MARGIN
+         * re-anchor below would shift them (the goal overlay landed ~WIDE_MARGIN
+         * too far left). Play the recorded path verbatim. */
+        s_replayShiftX = 0;
+        return recordedX;
+    }
+    /* The DosReplay loader flags a SWOS-2020 widescreen recording (sprites span
+     * wider than the 336 DOS/Amiga view). For those the recorded camera already
+     * sits in a wide view, so it's used verbatim; only narrow 336 recordings get
+     * the WIDE_MARGIN centring. The loader owns the format knowledge — this
+     * helper just applies the bit. */
+    extern int _replayRecordingIsWide;
     int16_t panRange = (int16_t)(0x2A0 - _screen_width);
     if (panRange < 0) panRange = 0;
     int16_t out;
-    if (panRange <= 64) {
-        out = (int16_t)(panRange / 2);                 /* whole pitch fits -> lock */
+    if (_replayRecordingIsWide) {
+        out = recordedX;                               /* wide recording: camera verbatim */
+        if (out < 0) out = 0;
+        else if (out > panRange) out = panRange;
+    } else if (panRange <= 64) {
+        out = (int16_t)(panRange / 2);                 /* narrow + whole pitch fits -> lock */
     } else {
         out = (int16_t)(recordedX - (int16_t)WIDE_MARGIN);
         if (out < 0) out = 0;
-        else if (out > panRange) out = panRange;        /* re-centre + follow */
+        else if (out > panRange) out = panRange;        /* 336 content: re-centre + follow */
     }
     /* Recorded sprites are in screen space relative to the recording camera;
      * shift them by (recorded - playback) so they re-anchor onto our playback
@@ -145,6 +164,12 @@ static int16_t ReplayCameraX(int16_t recordedX)
 static int16_t ReplayCameraY(int16_t recordedY)
 {
 #ifdef SWOS_SDL_BUILD
+    extern uint16_t _playHighlightFlag;
+    if (_playHighlightFlag == 0) {
+        /* In-game instant replay: recorded in our own space, no re-anchor. */
+        s_replayShiftY = 0;
+        return recordedY;
+    }
     int16_t out = recordedY;
     if (out < 0x10) out = 0x10;
     else if (out > 0x260) out = 0x260;
