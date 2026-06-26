@@ -96,6 +96,9 @@ static int handler(void *user, const char *section,
         else if (eqi(name, "gameplay") && parse_bool(value, &b)) opts->dos_gameplay = b;
         else if (eqi(name, "directory") && value && value[0])
             snprintf(opts->dos_dir, sizeof opts->dos_dir, "%s", value);
+    } else if (eqi(section, "arcade")) {
+        int b;
+        if (eqi(name, "enabled") && parse_bool(value, &b)) opts->arcade = b;
     } else if (eqi(section, "general")) {
         if (eqi(name, "language") && value && value[0])
             snprintf(opts->language, sizeof opts->language, "%s", value);
@@ -195,6 +198,11 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         "; gameplay: true | false — DOS 70 FPS physics/timer tuning\n"
         "gameplay=%s\n"
         "\n"
+        "[arcade]           ; coin-op mode (PC-only). See docs/ARCADE.md\n"
+        "; enabled: true | false — boot straight to attract mode, no main menu\n"
+        "; (MAME keys: 5 = coin P1, 6 = coin P2, F2 = service menu)\n"
+        "enabled=%s\n"
+        "\n"
         "[general]\n"
         "; language: en | de | fr | es | it | nl\n"
         "language=%s\n"
@@ -210,6 +218,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
         opts->dos_graphics ? "true" : "false",
         opts->dos_gameplay ? "true" : "false",
+        opts->arcade ? "true" : "false",
         opts->language[0] ? opts->language : "en",
         opts->currency[0] ? opts->currency : "pound");
 

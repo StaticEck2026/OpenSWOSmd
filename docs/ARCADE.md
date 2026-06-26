@@ -176,3 +176,43 @@ From the spec — for context, not needed for the SDL build:
 - Whether the selection "flash" is a fixed colour cycle or palette-rotate.
 - `.HIL` attract reels: which curated set ships, and the rotation order.
 - Two-player join/seat-swap flow specifics on the cabinet.
+
+---
+
+## Current implementation decisions (live build, supersedes spec where noted)
+
+User-confirmed concrete requirements as we build it:
+
+- **`[arcade] enabled=false` (default)** in `SWOS.ini`. When `true`, SWOS boots
+  **straight to attract mode and never shows the main menu**.
+- **Attract mode** = a random **arcade pitch** (see below) as the background, the
+  **SWOS logo** overlaid, plus highlight/replay (`.HIL`/`.RPL`) files that
+  **randomly fade in/out and play**. Reels live in
+  `bin/grafs_arcade/attract_mode/` (drop curated files there; empty = no reels,
+  handle gracefully). Reuses the existing HIL/RPL playback path (now
+  widescreen-correct).
+- **Flashing "INSERT COIN"** text for **player 1 and player 2** (both shown).
+- **Coin insert (MAME convention): key `5` = credit P1, key `6` = credit P2.**
+  Any credit interrupts attract → match.
+- **Arcade pitches:** `bin/grafs_arcade/SWCPICH1.png … SWCPICH7.png`, chosen
+  **at random** per match/attract. **SDL-only: load the PNGs DIRECTLY into our
+  internal 8bpp format** — *not* the DOS `PITCH*.BLK`/`.DAT` pipeline (supersedes
+  §4). If the PNGs need to be 256-colour paletted for a clean direct load, convert
+  them (user will, or we do).
+- **Service menu:** **F2** opens it (pauses attract/game). Start with a **basic**
+  menu showing the **current mode** + the obvious arcade settings. Font =
+  `bin/grafs_arcade/SVCFONT.bmp` (§3.2). Visual ref: NBA Hangtime
+  (`D:\Projects\Arcade\nba-hangtime\MAME\snap\nbahangt`).
+- **First arcade game mode** = a **FRIENDLY**-style match with arcade rules:
+  **45 s** play, **first goal wins**, **draw → direct penalty shootout**. All of
+  these (time, golden-goal, etc.) **adjustable in the service menu**.
+
+### Build phasing (this implementation)
+1. `[arcade] enabled` setting + `gArcadeMode` global + **boot gate** (arcade →
+   skip the front-end menu, run the arcade loop). ← start here
+2. Arcade pitch PNG loader (direct → 8bpp) + random pick + draw as background.
+3. Attract loop: flashing INSERT-COIN P1/P2 + coin keys 5/6 + logo overlay +
+   random HIL/RPL fade-in/out playback from `attract_mode/`.
+4. Service menu (F2): SVCFONT loader + basic settings list (mode + arcade rules).
+5. Arcade match: 45 s golden-goal, draw→penalties, launched on credit.
+6. Operator config persistence + bookkeeping; winner-stays-on; cabinet I/O.

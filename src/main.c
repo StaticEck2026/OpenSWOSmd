@@ -180,6 +180,7 @@ int main(int argc, char **argv)
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
+    opts.arcade = 0;              /* default off — normal front-end menu */
     snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", "grafs_dos");
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
@@ -258,6 +259,7 @@ int main(int argc, char **argv)
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;
+    { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
     _gWidescreen  = opts.widescreen;
     /* _screen_width (the live render width) + _menu_draw_x_offset (UI centering)

@@ -111,6 +111,19 @@ static int          s_screenshot_index;
 static int          s_screenshot_interval;   /* 0 = disabled, N>0 = every N frames */
 static int          s_screenshot_auto_count; /* number written by interval mode */
 
+/* Arcade coin/service input (MAME keys 5/6/F2). Edge-counted in the event pump,
+ * drained by Platform_ArcadeInput. Only consumed when _gArcadeMode is set. */
+static volatile int s_arcade_coin1;
+static volatile int s_arcade_coin2;
+static volatile int s_arcade_service;
+
+void Platform_ArcadeInput(int *coin1, int *coin2, int *service)
+{
+    if (coin1)   { *coin1   = s_arcade_coin1;   s_arcade_coin1   = 0; }
+    if (coin2)   { *coin2   = s_arcade_coin2;   s_arcade_coin2   = 0; }
+    if (service) { *service = s_arcade_service; s_arcade_service = 0; }
+}
+
 /* Headless smoke-test: dump every Nth converted frame to /tmp as a PPM. */
 static int           s_dump_frames;
 static int           s_frame_count;
@@ -792,6 +805,17 @@ static void pump_events_any_thread(void)
                  ev.key.keysym.sym == SDLK_KP_MINUS)) {
                 Platform_SetWindowScale(s_win_scale_current - 1);
                 continue;
+            }
+            /* Arcade cabinet inputs (MAME convention): 5 = coin P1, 6 = coin P2,
+             * F2 = service. Only when arcade mode is on; swallowed so they don't
+             * also reach the game/menu layer. */
+            {
+                extern int _gArcadeMode;
+                if (ev.key.repeat == 0 && _gArcadeMode) {
+                    if (ev.key.keysym.sym == SDLK_5)  { s_arcade_coin1++;   continue; }
+                    if (ev.key.keysym.sym == SDLK_6)  { s_arcade_coin2++;   continue; }
+                    if (ev.key.keysym.sym == SDLK_F2) { s_arcade_service++; continue; }
+                }
             }
             /* fallthrough */
         case SDL_KEYUP:
