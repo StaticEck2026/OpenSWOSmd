@@ -20,6 +20,11 @@
  * Boolean values accept on/off, true/false, yes/no, 1/0 — case-insensitive.
  * Unknown keys / sections are silently ignored so the file format can grow
  * without breaking older binaries.
+ *
+ * The writer (Settings_Save) is NON-DESTRUCTIVE: it rewrites the file
+ * line-by-line, changing only the values of known keys that actually changed
+ * and appending keys the file is missing. Comments, blank lines, commented-out
+ * keys (";resolution=...") and unknown keys are preserved verbatim and in place.
  */
 
 #include "swos_settings.h"
@@ -75,9 +80,6 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "scale")) {
             int n = atoi(value);
             if (n >= 1 && n <= 4) opts->win_scale = n;
-        } else if (eqi(name, "widescreen")) {
-            int b;
-            if (parse_bool(value, &b)) opts->widescreen = b;
         } else if (eqi(name, "resolution")) {
             /* "WxH" (e.g. 2560x1080) drives the render aspect, for testing other
              * resolutions without changing the desktop. "auto"/"desktop"/blank
@@ -113,8 +115,13 @@ static int handler(void *user, const char *section,
         else if (eqi(name, "penalties_on_draw") && parse_bool(value, &b)) opts->arcade_penalties = b;
         else if (eqi(name, "goal_replay") && parse_bool(value, &b)) opts->arcade_goal_replay = b;
         else if (eqi(name, "attract_audio") && value && value[0]) {
-            if (eqi(value, "sfx")) opts->arcade_attract_audio = 1;
+            if (eqi(value, "music+sfx") || eqi(value, "both")) opts->arcade_attract_audio = 2;
+            else if (eqi(value, "sfx")) opts->arcade_attract_audio = 1;
             else if (eqi(value, "music")) opts->arcade_attract_audio = 0;
+        }
+        else if (eqi(name, "gameplay") && value && value[0]) {
+            if (eqi(value, "dos")) opts->arcade_gameplay = 1;
+            else if (eqi(value, "amiga")) opts->arcade_gameplay = 0;
         }
         else if (eqi(name, "key_p1_credit") && value && value[0])
             snprintf(opts->arcade_key_p1_credit, sizeof opts->arcade_key_p1_credit, "%s", value);
@@ -166,115 +173,254 @@ static const char *fullscreen_str(PlatformFullscreenMode m)
     }
 }
 
-void Settings_Save(const PlatformInitOptions *opts, const char *path)
-{
-    if (!opts || !path) return;
+/* ===========================================================================
+ * Non-destructive writer
+ *
+ * settings_build() is the single source of truth for the file: section, key,
+ * comment and the current value (from `opts`). Settings_Save() uses it both to
+ * create a fresh file and to update an existing one in place.
+ * ========================================================================= */
 
-    /* Read current scale + fullscreen from the platform layer so any
-     * runtime adjustments (Alt+Enter, +/-) round-trip into the file.
-     * Renderer / vsync / audio_mode aren't user-toggleable at runtime
-     * yet, so we trust whatever's in opts. */
+typedef struct { const char *section, *key, *comment, *value; } IniEntry;
+
+#define SETTINGS_MAX 32
+
+/* Inline comment appended to a section-header line in a freshly-created file. */
+static const char *section_intro(const char *sec)
+{
+    if (eqi(sec, "dos"))    return "              ; PC-only extras (Amiga is the definitive version)";
+    if (eqi(sec, "arcade")) return "           ; coin-op mode (PC-only). See docs/ARCADE.md";
+    return "";
+}
+
+/* Fill `items` with the canonical list and return the count. `vbuf` provides
+ * scratch storage for the three non-constant values (resolution, scale,
+ * game_seconds) and must outlive any use of `items`. */
+static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char vbuf[3][24])
+{
     int scale_now = Platform_GetWindowScale();
     PlatformFullscreenMode fs_now = Platform_GetFullscreenMode();
     if (scale_now < 1 || scale_now > 4) scale_now = opts->win_scale;
 
+    if (opts->res_w > 0 && opts->res_h > 0)
+        snprintf(vbuf[0], 24, "%dx%d", opts->res_w, opts->res_h);
+    else
+        snprintf(vbuf[0], 24, "auto");
+    snprintf(vbuf[1], 24, "%d", scale_now);
+    snprintf(vbuf[2], 24, "%d", opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45);
+
+    int n = 0;
+    items[n++] = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
+    items[n++] = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
+    items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
+    items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
+    items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render aspect, or 'auto' for the desktop. Any value works — it need not match the monitor", vbuf[0] };
+    items[n++] = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
+    items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
+    items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
+    items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };
+    items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
+    items[n++] = (IniEntry){ "arcade", "mode",       "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL", Arcade_ModeName(opts->arcade_mode) };
+    items[n++] = (IniEntry){ "arcade", "game_seconds", "; game rules (F2 service menu). game_seconds 10..600;  golden_goal/penalties_on_draw/goal_replay: true | false", vbuf[2] };
+    items[n++] = (IniEntry){ "arcade", "golden_goal", NULL, opts->arcade_golden_goal ? "true" : "false" };
+    items[n++] = (IniEntry){ "arcade", "penalties_on_draw", NULL, opts->arcade_penalties ? "true" : "false" };
+    items[n++] = (IniEntry){ "arcade", "goal_replay", NULL, opts->arcade_goal_replay ? "true" : "false" };
+    items[n++] = (IniEntry){ "arcade", "attract_audio",
+        "; attract_audio: music (HERO only) | sfx (reel crowd only) | music+sfx (both, default)",
+        opts->arcade_attract_audio == 2 ? "music+sfx" : opts->arcade_attract_audio == 1 ? "sfx" : "music" };
+    items[n++] = (IniEntry){ "arcade", "gameplay",   "; gameplay: amiga (50fps feel) | dos (70fps). Picks attract_mode/<mode> reels too", opts->arcade_gameplay ? "dos" : "amiga" };
+    items[n++] = (IniEntry){ "arcade", "key_p1_credit", "; cabinet key bindings (SDL key names; MAME layout 5/6 = coin P1/P2, 1/2 = start, F2 = service)", opts->arcade_key_p1_credit[0] ? opts->arcade_key_p1_credit : "5" };
+    items[n++] = (IniEntry){ "arcade", "key_p1_start", NULL, opts->arcade_key_p1_start[0]  ? opts->arcade_key_p1_start  : "1" };
+    items[n++] = (IniEntry){ "arcade", "key_p2_credit", NULL, opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6" };
+    items[n++] = (IniEntry){ "arcade", "key_p2_start", NULL, opts->arcade_key_p2_start[0]  ? opts->arcade_key_p2_start  : "2" };
+    items[n++] = (IniEntry){ "arcade", "key_service", NULL, opts->arcade_key_service[0]   ? opts->arcade_key_service   : "F2" };
+    items[n++] = (IniEntry){ "general","language",   "; language: en | de | fr | es | it | nl", opts->language[0] ? opts->language : "en" };
+    items[n++] = (IniEntry){ "general","currency",   "; currency: pound | dollar | euro", opts->currency[0] ? opts->currency : "pound" };
+    return n;
+}
+
+/* Create a full default file. Only used when SWOS.ini doesn't exist yet. */
+static void settings_write_full(const PlatformInitOptions *opts, const char *path)
+{
+    IniEntry items[SETTINGS_MAX];
+    char vbuf[3][24];
+    int n = settings_build(opts, items, vbuf);
+
     FILE *f = fopen(path, "w");
     if (!f) {
-        fprintf(stderr, "[settings] cannot open %s for write: %s\n",
-                path, strerror(errno));
+        fprintf(stderr, "[settings] cannot create %s: %s\n", path, strerror(errno));
         return;
     }
-
-    char res_buf[24];
-    if (opts->res_w > 0 && opts->res_h > 0)
-        snprintf(res_buf, sizeof res_buf, "%dx%d", opts->res_w, opts->res_h);
-    else
-        snprintf(res_buf, sizeof res_buf, "auto");
-
     fprintf(f,
         "; SWOS — display, audio and gameplay settings.\n"
-        "; Auto-generated. Edit by hand or via the command line; runtime changes\n"
-        "; (+/- keys, Alt+Enter) are written back here on clean shutdown. Booleans\n"
-        "; accept true/false, on/off, yes/no, 1/0 (case-insensitive).\n"
-        "\n"
-        "[video]\n"
-        "; renderer: software | accel  (hardware-accelerated)\n"
-        "renderer=%s\n"
-        "; vsync: on | off  (accel renderer only)\n"
-        "vsync=%s\n"
-        "; fullscreen: off | desktop | exclusive\n"
-        "fullscreen=%s\n"
-        "; scale: window scale 1-4 (windowed only)\n"
-        "scale=%d\n"
-        "; widescreen: true | false — true matches the render to your monitor's aspect\n"
-        ";   ratio so it fills the screen (16:9 / 21:9 / ultrawide); false = classic 4:3\n"
-        "widescreen=%s\n"
-        "; resolution: WxH (e.g. 2560x1080) to test a specific aspect ratio, or\n"
-        ";   'auto' for your monitor's native resolution. Only used when widescreen=true.\n"
-        "resolution=%s\n"
-        "\n"
-        "[audio]\n"
-        "; mode: mono | stereo\n"
-        "mode=%s\n"
-        "\n"
-        "[dos]              ; PC-only extras (Amiga is the definitive version)\n"
-        "; directory: folder under bin/ to load the DOS assets from\n"
-        "directory=%s\n"
-        "; graphics: true | false — render the DOS-version graphics\n"
-        "graphics=%s\n"
-        "; gameplay: true | false — DOS 70 FPS physics/timer tuning\n"
-        "gameplay=%s\n"
-        "\n"
-        "[arcade]           ; coin-op mode (PC-only). See docs/ARCADE.md\n"
-        "; enabled: true | false — boot straight to attract mode, no main menu\n"
-        "enabled=%s\n"
-        "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL\n"
-        "mode=%s\n"
-        "; game rules (settable in the F2 service menu). game_seconds 10..600;\n"
-        ";   golden_goal/penalties_on_draw/goal_replay: true | false\n"
-        "game_seconds=%d\n"
-        "golden_goal=%s\n"
-        "penalties_on_draw=%s\n"
-        "goal_replay=%s\n"
-        "; attract_audio: music (HERO over the reels) | sfx (reel crowd, no music)\n"
-        "attract_audio=%s\n"
-        "; cabinet key bindings (SDL key names, e.g. 5, 6, 1, 2, F2; case-insensitive).\n"
-        "; Default layout matches MAME: 5/6 = insert coin P1/P2, 1/2 = start P1/P2.\n"
-        "key_p1_credit=%s\n"
-        "key_p1_start=%s\n"
-        "key_p2_credit=%s\n"
-        "key_p2_start=%s\n"
-        "key_service=%s\n"
-        "\n"
-        "[general]\n"
-        "; language: en | de | fr | es | it | nl\n"
-        "language=%s\n"
-        "; currency: pound | dollar | euro\n"
-        "currency=%s\n",
-        renderer_str(opts->renderer),
-        opts->vsync ? "on" : "off",
-        fullscreen_str(fs_now),
-        scale_now,
-        opts->widescreen ? "true" : "false",
-        res_buf,
-        opts->audio_mono ? "mono" : "stereo",
-        opts->dos_dir[0] ? opts->dos_dir : "grafs_dos",
-        opts->dos_graphics ? "true" : "false",
-        opts->dos_gameplay ? "true" : "false",
-        opts->arcade ? "true" : "false",
-        Arcade_ModeName(opts->arcade_mode),
-        opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45,
-        opts->arcade_golden_goal ? "true" : "false",
-        opts->arcade_penalties ? "true" : "false",
-        opts->arcade_goal_replay ? "true" : "false",
-        opts->arcade_attract_audio ? "sfx" : "music",
-        opts->arcade_key_p1_credit[0] ? opts->arcade_key_p1_credit : "5",
-        opts->arcade_key_p1_start[0]  ? opts->arcade_key_p1_start  : "1",
-        opts->arcade_key_p2_credit[0] ? opts->arcade_key_p2_credit : "6",
-        opts->arcade_key_p2_start[0]  ? opts->arcade_key_p2_start  : "2",
-        opts->arcade_key_service[0]   ? opts->arcade_key_service   : "F2",
-        opts->language[0] ? opts->language : "en",
-        opts->currency[0] ? opts->currency : "pound");
-
+        "; Hand-edit freely: SWOS only updates values you change and adds missing\n"
+        "; keys; your comments, blank lines and commented-out keys are preserved.\n"
+        "; Booleans accept true/false, on/off, yes/no, 1/0 (case-insensitive).\n");
+    const char *cur = NULL;
+    for (int i = 0; i < n; i++) {
+        if (!cur || !eqi(cur, items[i].section)) {
+            cur = items[i].section;
+            fprintf(f, "\n[%s]%s\n", cur, section_intro(cur));
+        }
+        if (items[i].comment) fprintf(f, "%s\n", items[i].comment);
+        fprintf(f, "%s=%s\n", items[i].key, items[i].value);
+    }
     fclose(f);
+}
+
+/* Trim a value string (after '=') into `out`: skip leading blanks, stop at
+ * end-of-line, drop trailing blanks. */
+static void copy_value(const char *v, char *out, size_t outsz)
+{
+    while (*v == ' ' || *v == '\t') v++;
+    size_t len = 0;
+    while (v[len] && v[len] != '\n' && v[len] != '\r' && len + 1 < outsz) len++;
+    while (len > 0 && (v[len-1] == ' ' || v[len-1] == '\t')) len--;
+    memcpy(out, v, len);
+    out[len] = '\0';
+}
+
+/*
+ * Non-destructive save. If `path` is absent, write a full default file.
+ * Otherwise rewrite it line-by-line: update ONLY the values of known keys whose
+ * value changed, append keys the file is missing, and preserve everything else
+ * (comments, blank lines, commented-out keys, unknown keys, ordering) verbatim.
+ * If nothing changed and nothing is missing, the file is left untouched.
+ */
+void Settings_Save(const PlatformInitOptions *opts, const char *path)
+{
+    if (!opts || !path) return;
+
+    IniEntry items[SETTINGS_MAX];
+    char vbuf[3][24];
+    int n = settings_build(opts, items, vbuf);
+
+    /* Slurp the existing file. */
+    static char lines[400][256];
+    int n_lines = 0;
+    FILE *f = fopen(path, "r");
+    if (!f) { settings_write_full(opts, path); return; }   /* absent -> create it */
+    while (n_lines < 400 && fgets(lines[n_lines], (int)sizeof lines[0], f))
+        n_lines++;
+    fclose(f);
+
+    /* Pass 1: detect whether anything actually needs writing, and which keys
+     * the file already has. This keeps an unchanged file (the common case)
+     * byte-for-byte identical — not even the mtime moves. */
+    unsigned char seen[SETTINGS_MAX];
+    memset(seen, 0, sizeof seen);
+    int dirty = 0;
+    {
+        char cur_sec[32] = "";
+        for (int i = 0; i < n_lines; i++) {
+            const char *t = lines[i];
+            while (*t == ' ' || *t == '\t') t++;
+            if (*t == '[') {
+                const char *e = strchr(t, ']');
+                if (e) {
+                    int len = (int)(e - (t + 1));
+                    if (len < 0) len = 0; else if (len > 31) len = 31;
+                    memcpy(cur_sec, t + 1, (size_t)len); cur_sec[len] = '\0';
+                }
+                continue;
+            }
+            const char *eq;
+            if (*t == ';' || *t == '#' || *t == '\0' || *t == '\n' || *t == '\r'
+                || (eq = strchr(t, '=')) == NULL)
+                continue;
+            int klen = (int)(eq - t);
+            while (klen > 0 && (t[klen-1] == ' ' || t[klen-1] == '\t')) klen--;
+            char key[48];
+            if (klen > 47) klen = 47;
+            memcpy(key, t, (size_t)klen); key[klen] = '\0';
+            for (int k = 0; k < n; k++) {
+                if (eqi(cur_sec, items[k].section) && eqi(key, items[k].key)) {
+                    seen[k] = 1;
+                    char fileval[64];
+                    copy_value(eq + 1, fileval, sizeof fileval);
+                    if (strcmp(fileval, items[k].value) != 0) dirty = 1;
+                    break;
+                }
+            }
+        }
+        for (int k = 0; k < n; k++) if (!seen[k]) { dirty = 1; break; }
+    }
+    if (!dirty) return;   /* nothing to change — leave the file exactly as it is */
+
+    /* Pass 2: rewrite, updating changed values and preserving everything else. */
+    memset(seen, 0, sizeof seen);
+    FILE *out = fopen(path, "w");
+    if (!out) {
+        fprintf(stderr, "[settings] cannot write %s: %s\n", path, strerror(errno));
+        return;
+    }
+    char cur_sec[32] = "";
+    for (int i = 0; i < n_lines; i++) {
+        char *ln = lines[i];
+        const char *t = ln;
+        while (*t == ' ' || *t == '\t') t++;
+
+        if (*t == '[') {                                   /* section header */
+            const char *e = strchr(t, ']');
+            if (e) {
+                int len = (int)(e - (t + 1));
+                if (len < 0) len = 0; else if (len > 31) len = 31;
+                memcpy(cur_sec, t + 1, (size_t)len); cur_sec[len] = '\0';
+            }
+            fputs(ln, out);
+            continue;
+        }
+        const char *eq;
+        if (*t == ';' || *t == '#' || *t == '\0' || *t == '\n' || *t == '\r'
+            || (eq = strchr(t, '=')) == NULL) {
+            fputs(ln, out);                                /* comment / blank / no '=' */
+            continue;
+        }
+        int klen = (int)(eq - t);
+        while (klen > 0 && (t[klen-1] == ' ' || t[klen-1] == '\t')) klen--;
+        char key[48];
+        if (klen > 47) klen = 47;
+        memcpy(key, t, (size_t)klen); key[klen] = '\0';
+
+        int idx = -1;
+        for (int k = 0; k < n; k++)
+            if (eqi(cur_sec, items[k].section) && eqi(key, items[k].key)) { idx = k; break; }
+        if (idx < 0) { fputs(ln, out); continue; }         /* unknown key -> verbatim */
+
+        seen[idx] = 1;
+        char fileval[64];
+        copy_value(eq + 1, fileval, sizeof fileval);
+        if (strcmp(fileval, items[idx].value) == 0) {
+            fputs(ln, out);                                /* unchanged -> verbatim */
+        } else {
+            size_t prefix = (size_t)(eq - ln) + 1;         /* keep "key=" verbatim */
+            fwrite(ln, 1, prefix, out);
+            fprintf(out, "%s\n", items[idx].value);        /* ...replace the value */
+        }
+    }
+
+    /* Append keys the file didn't have. */
+    int missing = 0;
+    for (int k = 0; k < n; k++) if (!seen[k]) missing++;
+    if (missing) {
+        fputs("\n; --- keys added by a newer SWOS build (defaults; edit as you like) ---\n", out);
+        const char *cur = NULL;
+        for (int k = 0; k < n; k++) {
+            if (seen[k]) continue;
+            if (!cur || !eqi(cur, items[k].section)) {
+                cur = items[k].section;
+                fprintf(out, "[%s]\n", cur);
+            }
+            if (items[k].comment) fprintf(out, "%s\n", items[k].comment);
+            fprintf(out, "%s=%s\n", items[k].key, items[k].value);
+        }
+    }
+    fclose(out);
+}
+
+/* Back-compat alias for the startup/shutdown path: now identical to the
+ * non-destructive Settings_Save. */
+void Settings_AppendMissing(const PlatformInitOptions *opts, const char *path)
+{
+    Settings_Save(opts, path);
 }

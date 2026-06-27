@@ -25,9 +25,17 @@
  * unreadable file is a no-op. */
 void Settings_Load(PlatformInitOptions *opts, const char *path);
 
-/* Write current settings to `path`. Reads runtime-mutable values
- * (window scale, fullscreen mode) via the Platform_Get* getters so
- * any +/- and Alt+Enter changes survive across launches. */
+/* Write ALL current settings to `path`, replacing it. Reads runtime-mutable
+ * values (window scale, fullscreen mode) via the Platform_Get* getters. This is
+ * a deliberate full rewrite — used when the arcade F2 service menu saves the
+ * rule values the operator just changed. NOT used on normal startup (it would
+ * clobber a hand-edited file); use Settings_AppendMissing for that. */
 void Settings_Save(const PlatformInitOptions *opts, const char *path);
+
+/* Non-destructive: if `path` is absent, write it in full (Settings_Save);
+ * otherwise APPEND only the keys it's missing, preserving the user's values,
+ * comments and ordering — and if it already has every key, leave it untouched.
+ * This is the startup/shutdown path so hand-edited SWOS.ini files survive. */
+void Settings_AppendMissing(const PlatformInitOptions *opts, const char *path);
 
 #endif /* SWOS_SETTINGS_H */

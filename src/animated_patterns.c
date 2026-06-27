@@ -513,6 +513,15 @@ game_in_progress:
 pattern_loop:
     _patternStatic = d0;
 
+#ifdef SWOS_SDL_BUILD
+    /* Arcade themed pitches have no fan/crowd tiles. Everything above (the
+     * _showFansCounter tick, goal-celebration timer, camera-state selection) still
+     * runs — only the fan-pattern toggle/draw is skipped. That toggle rewrites
+     * _s_pitchFullPtrs[d3] (line below), which would corrupt the diced BMP tiles,
+     * so it must NOT run for the arcade pitch. */
+    { extern int _gArcadePitchActive; if (_gArcadePitchActive) return; }
+#endif
+
     for (d7 = 7; d7 >= 0; d7--) {
         int16_t d3 = _animatedPatterns[7 - d7];
 

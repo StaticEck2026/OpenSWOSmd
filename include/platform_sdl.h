@@ -64,8 +64,7 @@ typedef struct {
     PlatformFullscreenMode fullscreen;       /* none / desktop / exclusive */
     PlatformRendererMode   renderer;         /* software / accelerated */
     int                    vsync;            /* 0 = off (default), 1 = on (accel only) */
-    int                    widescreen;       /* 1 = wider 16:9 pitch view (default on). PC-only */
-    int                    res_w, res_h;     /* resolution driving the render aspect; 0,0 = use desktop. PC-only */
+    int                    res_w, res_h;     /* resolution driving the render aspect; 0,0 = auto (desktop). PC-only */
     int                    audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga panned */
     int                    dos_graphics;     /* 1 = render DOS-version graphics. PC-only */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
@@ -75,7 +74,8 @@ typedef struct {
     int                    arcade_golden_goal;  /* 1 = first goal wins the match (default 1) */
     int                    arcade_penalties;    /* 1 = penalty shootout when drawn (default 1) */
     int                    arcade_goal_replay;  /* 1 = replay goals (drives _autoReplays; default 1) */
-    int                    arcade_attract_audio;/* attract audio: 0 = music (HERO), 1 = sfx (reel crowd) */
+    int                    arcade_attract_audio;/* attract audio: 0 = music (HERO), 1 = sfx (reel crowd), 2 = music+sfx (default) */
+    int                    arcade_gameplay;     /* arcade gameplay feel: 0 = amiga (50fps), 1 = dos (70fps) */
     char                   arcade_key_p1_credit[16]; /* cabinet key bindings (SDL key names; */
     char                   arcade_key_p1_start[16];  /*   default MAME layout 5/6/1/2/F2). */
     char                   arcade_key_p2_credit[16]; /*   Empty -> compiled default. PC-only */

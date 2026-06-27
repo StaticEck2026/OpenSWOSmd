@@ -128,6 +128,12 @@ void RJP1_StopAll(RJP1_Player *p);
 /* Tick at 50 Hz for music, advances pattern playback. */
 void RJP1_HandleTick(RJP1_Player *p);
 
+/* Non-zero once the song has fully ended: every sequence has stopped
+ * (active_channels_mask == 0) AND no hardware channel is still playing a
+ * sample. Used by the host to loop a one-shot song (e.g. HERO, which has no
+ * internal loop-back and otherwise falls silent when it finishes). */
+int RJP1_IsFinished(const RJP1_Player *p);
+
 /* Mix `len` bytes (== `len/2` stereo frames) of signed-8-bit-stereo
  * samples into `buf`. Caller is expected to have memset(buf, 0, ...)
  * first; this function does the per-channel mix-and-clip. */

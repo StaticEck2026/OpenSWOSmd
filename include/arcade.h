@@ -56,4 +56,9 @@ int         Arcade_ModeFromName(const char *name); /* case-insensitive; -1 if un
 void Arcade_MatchTick(void);   /* once per game-loop frame: counts frames, ends the match */
 void Arcade_GoalScored(void);  /* call after a goal is registered: golden-goal ends the match */
 
+/* Themed pitch (DOS pitch pipeline). _gArcadePitchActive gates both hooks. */
+extern int      _gArcadePitchActive;          /* 1 = arcade themed pitch active (match only) */
+void            Arcade_DicePitchTiles(void);  /* dice the chosen SWCPICH BMP into the tile bank */
+const uint32_t *Arcade_PitchPaletteArgb(void);/* active pitch's 256 ARGB palette (slots 16..255) */
+
 #endif /* SWOS_ARCADE_H */

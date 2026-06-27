@@ -86,14 +86,16 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
 
     AudioSetChannelVolume(0xFFFF, 0);
     _audioActive = 1;
-    /* Ramp the master volume from 0 to 0x23 over a few vblanks so the
-     * song fades in instead of starting at full volume mid-note. Mirror
-     * of TryPlayMusic's ramp on the menu song. */
-    for (uint16_t vol = 0; vol <= 0x22; vol += 2) {
+    /* Ramp the master volume from 0 to 0x40 (full) over a few vblanks so the
+     * song fades in instead of starting mid-note. SDL plays music at full
+     * volume: at 0x40 there is no digital attenuation, so the 8-bit output keeps
+     * full level + full precision (matching the reference rjp1player). The Amiga
+     * build keeps 0x23 — there the AUDxVOL attenuation is lossless analog. */
+    for (uint16_t vol = 0; vol <= 0x3E; vol += 2) {
         AudioSetChannelVolume(0xFFFF, vol);
         WaitForVSync();
     }
-    AudioSetChannelVolume(0xFFFF, 0x23);
+    AudioSetChannelVolume(0xFFFF, 0x40);
 #else
     if (_audioBankLoaded == 0)
     {
@@ -124,7 +126,7 @@ static void loaderIntroEnsureMenuMusicPlaying(void)
 static void loaderIntroStopMusicAndResetAudio(void)
 {
 #ifdef SWOS_SDL_BUILD
-    for (int16_t vol = 0x23; vol >= 0; vol--) {
+    for (int16_t vol = 0x40; vol >= 0; vol--) {   /* fade from full (SDL playback level) */
         AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
         WaitForVSync();
         if (_quitToDos) break;

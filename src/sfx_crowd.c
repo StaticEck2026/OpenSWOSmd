@@ -202,6 +202,12 @@ void AudioFadeCrowdDownThenPulseMusic(void)
 {
     int16_t vol;
 
+#ifdef SWOS_SDL_BUILD
+    /* Arcade attract music (HERO): the reels are match replays. A replay goal
+     * would otherwise pulse/dip the shared music player via the all-channels
+     * (master) volume — cutting HERO. Skip it while SFX are suppressed. */
+    { extern int _gArcadeSfxSuppressed; if (_gArcadeSfxSuppressed) return; }
+#endif
     /* Phase 1: Fade crowd channel down */
     vol = (int16_t)_crowdChantVolume;
     if (vol != 0)
@@ -239,6 +245,11 @@ void AudioMuteAllWithFrameRamp(void)
 {
     int16_t vol;
 
+#ifdef SWOS_SDL_BUILD
+    /* Don't mute the shared player during arcade attract music (HERO) — a replay
+     * half-time/end event must not silence the title song. */
+    { extern int _gArcadeSfxSuppressed; if (_gArcadeSfxSuppressed) return; }
+#endif
     for (vol = 0x40; vol >= 0; vol -= 2)
     {
         AudioSetChannelVolume(0xFFFF, (uint16_t)vol);

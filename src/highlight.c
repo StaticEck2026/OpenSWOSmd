@@ -96,6 +96,42 @@ extern uint16_t _panicReasonCode;
 static int16_t s_replayShiftX = 0;
 static int16_t s_replayShiftY = 0;   /* same re-anchor for Y (DOS HIL camera clamp) */
 
+/* --- Ball-tracked replay camera ------------------------------------------
+ * A wide (e.g. SWOS-2020) recording's camera barely scrolls — the wide view
+ * already showed the ball — so at a narrower playback width the recorded camera
+ * can't follow the ball. With REPLAY_BALL_TRACK_CAMERA on, ReplayCameraX instead
+ * centres the BALL's own recorded world position, so ANY recording follows
+ * tightly at ANY resolution. Set to 0 to play the recorded camera verbatim
+ * (just re-centred). The ball's world X is reconstructed in the sprite decode
+ * from the recorded camera + the ball sprite's recorded screen X. */
+#define REPLAY_BALL_TRACK_CAMERA 1
+/* The in-game ball graphic is height-dependent (it changes sprite as the ball
+ * rises/falls), but it's always drawn above a CONSTANT ground SHADOW
+ * (SPR_BALL_SHADOW = 1069) at the ball's ground X — present every frame. So we
+ * track the shadow's recorded X for the camera. */
+#define REPLAY_BALL_SHADOW_SPR 1069
+/* The replay camera mirrors the LIVE game camera (MoveCamera): a velocity that
+ * accelerates toward the ball's movement so the camera LEADS the ball, then the
+ * camera eases a quarter of the remaining gap each frame (>>2), capped at
+ * MAX_CAMERA_MOVEMENT. Same constants/maths as move_camera.c, driven by the
+ * ball position we reconstruct from the recorded shadow sprite. */
+#define REPLAY_CAM_VEL_ACCEL     2           /* camera lead accel per frame */
+#define REPLAY_CAM_VEL_MAX       40          /* camera lead velocity cap (px) */
+#define REPLAY_CAM_BOUNDS_MARGIN 63          /* open-play target clamp margin (MoveCamera d1=$3F) */
+#define REPLAY_CAM_MAX_MOVE      0x00050000L /* 5.0 px/frame, 16.16 (== MAX_CAMERA_MOVEMENT) */
+static int16_t s_replayRecCamX    = 0;  /* recorded camera X of the current frame */
+static int     s_replayBallWorldX = 0;  /* ball world X = recorded cam + recorded sprite X */
+static int     s_replayBallValid  = 0;  /* 1 once a ball sprite has been seen this replay */
+static int32_t s_replayCamXraw    = 0;  /* eased camera X, 16.16 fixed point (mirrors _cameraX.raw) */
+static int     s_replayCamVelX    = 0;  /* camera lead velocity (mirrors _cameraXVelocity) */
+static int     s_replayBallPrevX  = 0;  /* previous ball world X, for velocity reconstruction */
+static int     s_replayCamXSet    = 0;  /* 0 -> snap + seed on first frame; 1 -> live follow */
+
+/* Reset ball-tracking at the start of a replay so a previous replay's ball
+ * position / velocity doesn't aim the first frame. Called from ViewHighLightsMain. */
+__attribute__((used, externally_visible))
+void Replay_ResetBallCamera(void) { s_replayBallValid = 0; s_replayCamXSet = 0; s_replayCamVelX = 0; }
+
 /* ---- Replay camera X (SDL widescreen) ----------------------------------
  * Recorded HIL/replay camera positions are in the classic 336-wide coordinate
  * space (scrolled to keep the ball centred in a 336px view). The pitch is 0x2A0
@@ -113,6 +149,7 @@ static int16_t ReplayCameraX(int16_t recordedX)
 {
 #ifdef SWOS_SDL_BUILD
     extern uint16_t _playHighlightFlag;
+    s_replayRecCamX = recordedX;   /* the sprite decode reads this to reconstruct the ball's world X */
     if (_playHighlightFlag == 0) {
         /* In-game instant replay: the recorded camera + sprites are already in
          * our own (wide) screen space, not the DOS 336-space, so the WIDE_MARGIN
@@ -130,8 +167,58 @@ static int16_t ReplayCameraX(int16_t recordedX)
     int16_t panRange = (int16_t)(0x2A0 - _screen_width);
     if (panRange < 0) panRange = 0;
     int16_t out;
+#if REPLAY_BALL_TRACK_CAMERA
+    if (s_replayBallValid) {
+        /* Mirror MoveCamera's normal-play follow, driven by the ball position we
+         * reconstruct from the recorded shadow. The camera LEADS the ball via a
+         * velocity that accelerates toward the ball's movement, then eases 1/4 of
+         * the remaining gap per frame, capped at MAX_CAMERA_MOVEMENT — identical
+         * feel to the live game (and a ball teleport simply glides via that cap). */
+        int ballX = s_replayBallWorldX;
+        if (!s_replayCamXSet) {
+            /* First frame: snap to the ball, seed the velocity reconstruction. */
+            int target = ballX - _screen_width / 2;
+            if (target < 0) target = 0; else if (target > panRange) target = panRange;
+            s_replayCamXraw   = (int32_t)target << 16;
+            s_replayBallPrevX = ballX;
+            s_replayCamVelX   = 0;
+            s_replayCamXSet   = 1;
+            out = (int16_t)target;
+        } else {
+            int ballDeltaX = ballX - s_replayBallPrevX;
+            s_replayBallPrevX = ballX;
+            /* Accelerate the lead velocity toward the ball's direction (clamped). */
+            if (ballDeltaX > 0)      { if (s_replayCamVelX !=  REPLAY_CAM_VEL_MAX) s_replayCamVelX += REPLAY_CAM_VEL_ACCEL; }
+            else if (ballDeltaX < 0) { if (s_replayCamVelX != -REPLAY_CAM_VEL_MAX) s_replayCamVelX -= REPLAY_CAM_VEL_ACCEL; }
+            /* Target = ball centred + lead, clamped to the open-play bounds. */
+            int target = ballX - _screen_width / 2 + s_replayCamVelX;
+            int xMax = panRange - REPLAY_CAM_BOUNDS_MARGIN;
+            if (xMax <= REPLAY_CAM_BOUNDS_MARGIN) target = panRange / 2;
+            else if (target < REPLAY_CAM_BOUNDS_MARGIN) target = REPLAY_CAM_BOUNDS_MARGIN;
+            else if (target > xMax) target = xMax;
+            /* Ease 1/4 of the gap, capped at MAX_CAMERA_MOVEMENT (same maths as
+             * MoveCamera: scaledDx = dx>>2; fixedDx = 0x4000 * scaledDx). */
+            int camInt = (int)(s_replayCamXraw >> 16);
+            int32_t step = (int32_t)0x4000 * (int32_t)((target - camInt) >> 2);
+            if (step >  REPLAY_CAM_MAX_MOVE) step =  REPLAY_CAM_MAX_MOVE;
+            if (step < -REPLAY_CAM_MAX_MOVE) step = -REPLAY_CAM_MAX_MOVE;
+            s_replayCamXraw += step;
+            camInt = (int)(s_replayCamXraw >> 16);
+            if (camInt < 0)             { camInt = 0;        s_replayCamXraw = 0; }
+            else if (camInt > panRange) { camInt = panRange; s_replayCamXraw = (int32_t)panRange << 16; }
+            out = (int16_t)camInt;
+        }
+        s_replayShiftX = (int16_t)(recordedX - out - WIDE_MARGIN);
+        return out;
+    }
+#endif
     if (_replayRecordingIsWide) {
-        out = recordedX;                               /* wide recording: camera verbatim */
+        /* The recorded camera sits in the SWOS-2020 widescreen space (WIDESCREEN_WIDTH).
+         * Re-centre it for the ACTUAL playback width so the action stays centred at any
+         * resolution — verbatim only centred when _screen_width == WIDESCREEN_WIDTH, so at
+         * 4:3 (362) it landed (480-362)/2 px too far left. Same shape as the narrow path,
+         * just with rec width 480 instead of 336. */
+        out = (int16_t)(recordedX + (WIDESCREEN_WIDTH - _screen_width) / 2);
         if (out < 0) out = 0;
         else if (out > panRange) out = panRange;
     } else if (panRange <= 64) {
@@ -633,6 +720,20 @@ sprite_decode:
         int32_t sy = (int32_t)(d0 << 22) >> 22;
         uint32_t sprIdx = d0 >> 20;
 #ifdef SWOS_SDL_BUILD
+#if REPLAY_BALL_TRACK_CAMERA
+        if (sprIdx == REPLAY_BALL_SHADOW_SPR) {
+            /* sx is still the recorded (un-re-anchored) screen X here, so
+             * recorded-camera + sx is the ball's world X — used to aim the
+             * NEXT frame's camera (ReplayCameraX). Ignore off-pitch outliers
+             * (out-of-play / between-scene frames) so they don't yank the camera;
+             * the pitch is [0, 0x2A0], allow a little margin. */
+            int bx = (int)s_replayRecCamX + (int)sx;
+            if (bx >= -48 && bx <= 0x2A0 + 48) {
+                s_replayBallWorldX = bx;
+                s_replayBallValid  = 1;
+            }
+        }
+#endif
         sx += s_replayShiftX;   /* re-anchor recorded screen coords onto playback camera */
         sy += s_replayShiftY;   /* same re-anchor for Y (DOS HIL camera clamp) */
 #endif
@@ -680,19 +781,25 @@ after_decode:
     { extern int _gArcadeMode; if (_gArcadeMode) showScore = 0; }
 #endif
     if (showScore) {
-        uint16_t bx = 17 + WIDE_MARGIN;   /* d1 = 0xD + 4 */
         uint16_t by = 17;                 /* d2 = 0xD + 4 */
 
-        /* Left team goals (using SPR_BIG_0 digit sprites) */
-        uint16_t leftGoals = _hilLeftTeamGoals;
-        uint16_t tens = leftGoals / 10;
-        uint16_t units = leftGoals % 10;
+        uint16_t leftGoals  = _hilLeftTeamGoals;
+        uint16_t rightGoals = _hilRightTeamGoals;
+        uint16_t lTens = leftGoals / 10,  lUnits = leftGoals % 10;
+        uint16_t rTens = rightGoals / 10, rUnits = rightGoals % 10;
 
-        if (tens != 0) {
-            DarkenRectangle(SPR_BIG_0 + tens, bx, by);
-            bx += 12;
-        }
-        DarkenRectangle(SPR_BIG_0 + units, bx, by);
+        /* Centre the "L-R" big-digit line horizontally. The original fixed X
+         * (17 + WIDE_MARGIN) is anchored to the 336 region, so it sits
+         * left-of-centre at any other width. Widths: digit advances 12/15, dash 8. */
+        int total_w = 15 + 8 + 15;        /* left units + dash + right units */
+        if (lTens) total_w += 12;
+        if (rTens) total_w += 12;
+        uint16_t bx = (_screen_width > total_w)
+                          ? (uint16_t)((_screen_width - total_w) / 2) : 0;
+
+        /* Left team goals (SPR_BIG_0 digit sprites) */
+        if (lTens) { DarkenRectangle(SPR_BIG_0 + lTens, bx, by); bx += 12; }
+        DarkenRectangle(SPR_BIG_0 + lUnits, bx, by);
         bx += 15;
         by += 8;
 
@@ -701,16 +808,9 @@ after_decode:
         by -= 8;
         bx += 8;
 
-        /* Right team goals (using SPR_BIG_0_ALT digit sprites) */
-        uint16_t rightGoals = _hilRightTeamGoals;
-        tens = rightGoals / 10;
-        units = rightGoals % 10;
-
-        if (tens != 0) {
-            DarkenRectangle(SPR_BIG_0_ALT + tens, bx, by);
-            bx += 12;
-        }
-        DarkenRectangle(SPR_BIG_0_ALT + units, bx, by);
+        /* Right team goals (SPR_BIG_0_ALT digit sprites) */
+        if (rTens) { DarkenRectangle(SPR_BIG_0_ALT + rTens, bx, by); bx += 12; }
+        DarkenRectangle(SPR_BIG_0_ALT + rUnits, bx, by);
     }
 
     /* State 3 timing: stretch each replay frame across 2 extra ticks

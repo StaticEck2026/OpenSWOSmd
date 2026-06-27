@@ -175,8 +175,7 @@ int main(int argc, char **argv)
     opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
-    opts.widescreen = 1;          /* default ON — wider 16:9 pitch view */
-    opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (desktop resolution) */
+    opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (fill the desktop aspect) */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
@@ -186,7 +185,8 @@ int main(int argc, char **argv)
     opts.arcade_golden_goal = 1;
     opts.arcade_penalties = 1;
     opts.arcade_goal_replay = 1;
-    opts.arcade_attract_audio = 0;   /* music (HERO) */
+    opts.arcade_attract_audio = 2;   /* music+sfx (HERO + reel crowd/SFX mixed) */
+    opts.arcade_gameplay = 0;        /* amiga gameplay feel */
     snprintf(opts.arcade_key_p1_credit, sizeof opts.arcade_key_p1_credit, "%s", "5");
     snprintf(opts.arcade_key_p1_start,  sizeof opts.arcade_key_p1_start,  "%s", "1");
     snprintf(opts.arcade_key_p2_credit, sizeof opts.arcade_key_p2_credit, "%s", "6");
@@ -277,7 +277,6 @@ int main(int argc, char **argv)
     _gDosGraphics = opts.dos_graphics;
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
-    _gWidescreen  = opts.widescreen;
     /* _screen_width (the live render width) + _menu_draw_x_offset (UI centering)
      * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
     if (opts.dos_dir[0])
@@ -321,24 +320,24 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Match the render aspect to the display: width = SCREEN_HEIGHT * (desktop w/h),
-     * clamped to [SCREEN_WIDTH .. the full pitch width]. The render then fills any
-     * monitor — 4:3, 16:9, 21:9, ultrawide — with no letterbox bars, and it "just works"
-     * with no mode to set. widescreen=false forces the classic SCREEN_WIDTH. Needs
+    /* Match the render aspect to `resolution` (or the desktop when resolution=auto):
+     * width = SCREEN_HEIGHT * (w/h), clamped to [SCREEN_WIDTH .. the full pitch width].
+     * The render fills any aspect — 4:3, 16:9, 21:9, ultrawide — with no letterbox bars,
+     * and any arbitrary resolution works (it need not match the monitor). Needs
      * SDL_INIT_VIDEO (above); runs before the window/texture (Platform_Init below). */
-    if (_gWidescreen) {
+    {
         int dw, dh;
         if (opts.res_w > 0 && opts.res_h > 0) {
-            /* SWOS.ini [video] resolution=WxH override — test any aspect without
-             * changing the desktop mode. */
+            /* SWOS.ini [video] resolution=WxH — any aspect, monitor-independent. */
             dw = opts.res_w; dh = opts.res_h;
         } else {
-            /* Default: the desktop resolution. Store it back so Settings_Save
-             * writes the actual monitor resolution into the resolution= key. */
+            /* 'auto': derive the render aspect from the desktop, but DON'T store it
+             * back into opts — leaving res_w/res_h at 0 keeps the file's
+             * "resolution=auto" intact when Settings_Save runs (otherwise 'auto'
+             * would be rewritten as the resolved WxH). */
             SDL_DisplayMode dm;
             dw = 16; dh = 9;   /* 16:9 fallback if the query fails */
             if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
-            opts.res_w = dw; opts.res_h = dh;
         }
         int w = (int)((long)SCREEN_HEIGHT * dw / dh);
         w = (w + 1) & ~1;                          /* round up to even */
@@ -347,8 +346,6 @@ int main(int argc, char **argv)
         _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (resolution %dx%d, %.2f:1)\n",
                 _screen_width, SCREEN_HEIGHT, dw, dh, (double)dw / dh);
-    } else {
-        _screen_width = SCREEN_WIDTH;
     }
     _menu_draw_x_offset = WIDE_MARGIN;
 
@@ -363,11 +360,12 @@ int main(int argc, char **argv)
      * actual game loop. The game pumps SDL via Platform_VBlank() callbacks. */
     startShim();
 
-    /* Snapshot runtime-mutable settings (window scale, fullscreen mode)
-     * via the Platform_Get* getters and persist back to SWOS.ini. Done
-     * BEFORE Platform_Shutdown destroys the window, since the getters
-     * read SDL window flags. */
-    Settings_Save(&opts, SWOS_INI_PATH);
+    /* Persist settings WITHOUT clobbering a hand-edited SWOS.ini: create the
+     * file if it doesn't exist, otherwise only add keys it's missing (e.g. new
+     * settings from a newer build). Existing values/comments are left as the
+     * user wrote them. Done BEFORE Platform_Shutdown destroys the window, since
+     * the getters used for any newly-added scale/fullscreen keys read SDL flags. */
+    Settings_AppendMissing(&opts, SWOS_INI_PATH);
 
     Platform_Shutdown();
     SDL_Quit();

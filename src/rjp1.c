@@ -448,6 +448,16 @@ void RJP1_HandleTick(RJP1_Player *p)
     }
 }
 
+int RJP1_IsFinished(const RJP1_Player *p)
+{
+    if (!p->loaded) return 0;
+    if (p->vars.active_channels_mask != 0) return 0;   /* a sequence is still running */
+    for (int i = 0; i < RJP1_NUM_CHANNELS; ++i)         /* or a sample is still ringing out */
+        if (p->channels[i].hw_channel.active && p->channels[i].hw_channel.len > 2)
+            return 0;
+    return 1;
+}
+
 void RJP1_SetChannelAttenuation(RJP1_Player *p, int channel, int vol_0_64)
 {
     if (channel < 0 || channel >= RJP1_NUM_CHANNELS) return;

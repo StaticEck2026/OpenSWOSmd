@@ -34,6 +34,12 @@ int _gArcadeMode = 0;
  * actual match (real crowd SFX wanted). SDL-only. */
 int _gArcadeSfxSuppressed = 0;
 
+/* When set, the arcade themed pitch (a diced SWCPICH BMP) is active for the match:
+ * LoadPitchMap dices the BMP into the tile bank instead of loading PITCH*.BLK, and
+ * refresh_palette_from_copper builds the pitch palette (16..255) from the BMP. On
+ * only during the arcade MATCH (attract reels use the normal DOS pitch). SDL-only. */
+int _gArcadePitchActive = 0;
+
 /* Match-title shown on the pre-match stadium/line-up screen in arcade mode, in
  * place of "FRIENDLY" (set into _gameName by InitAndPlayGame). */
 uint8_t _aArcadeMatchName[] = "GOLDEN GOAL";
@@ -117,6 +123,7 @@ extern void     ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workB
 
 static char     s_reels[ARC_MAX_REELS][64];
 static int      s_reelCount;
+static char     s_reelDir[160] = ARC_REEL_DIR;  /* resolved per gameplay mode (see below) */
 static uint32_t s_rngState = 0x1234abcdu;
 static int      s_credits;     /* total credits in the cabinet */
 static int      s_startGame;   /* pending game: 0 none, 1 one-player, 2 two-player */
@@ -143,13 +150,28 @@ static int arc_ends_with(const char *s, const char *suf)
     return ls >= lf && strcasecmp(s + ls - lf, suf) == 0;
 }
 
-/* Scan attract_mode/ for .HIL/.RPL reels. Returns the count. */
+/* Pick the reel subdir for the current gameplay mode: attract_mode/dos (DOS
+ * gameplay) or attract_mode/amiga (Amiga). Reels are recorded at the gameplay FPS
+ * (DOS 70 / Amiga 50), so they must match _gDosGameplay. Falls back to
+ * attract_mode/ itself if the mode subdir doesn't exist. */
+static void arc_resolve_reel_dir(void)
+{
+    extern int _gDosGameplay;
+    char cand[160];
+    snprintf(cand, sizeof cand, "%s/%s", ARC_REEL_DIR, _gDosGameplay ? "dos" : "amiga");
+    DIR *d = opendir(cand);
+    if (d) { closedir(d); snprintf(s_reelDir, sizeof s_reelDir, "%s", cand); }
+    else   { snprintf(s_reelDir, sizeof s_reelDir, "%s", ARC_REEL_DIR); }
+}
+
+/* Scan the resolved reel dir for .HIL/.RPL reels. Returns the count. */
 static int arc_scan_reels(void)
 {
+    arc_resolve_reel_dir();
     s_reelCount = 0;
-    DIR *d = opendir(ARC_REEL_DIR);
+    DIR *d = opendir(s_reelDir);
     if (!d) {
-        fprintf(stderr, "[arcade] no attract reels: cannot open %s\n", ARC_REEL_DIR);
+        fprintf(stderr, "[arcade] no attract reels: cannot open %s\n", s_reelDir);
         return 0;
     }
     struct dirent *e;
@@ -158,8 +180,8 @@ static int arc_scan_reels(void)
         if (arc_ends_with(e->d_name, ".HIL") || arc_ends_with(e->d_name, ".RPL")) {
             /* The .HIL converter reads the (larger) DOS source into _hilFileBuffer
              * (192254 B), so skip reels too big for it; RPLs use the 2.76 MB buffer. */
-            char p[160];
-            snprintf(p, sizeof p, "%s/%s", ARC_REEL_DIR, e->d_name);
+            char p[224];
+            snprintf(p, sizeof p, "%s/%s", s_reelDir, e->d_name);
             struct stat st;
             uint32_t limit = arc_ends_with(e->d_name, ".RPL") ? (2700u * 1024u) : 192254u;
             if (stat(p, &st) == 0 && (uint32_t)st.st_size > limit) {
@@ -172,7 +194,7 @@ static int arc_scan_reels(void)
         }
     }
     closedir(d);
-    fprintf(stderr, "[arcade] %d attract reel(s) in %s\n", s_reelCount, ARC_REEL_DIR);
+    fprintf(stderr, "[arcade] %d attract reel(s) in %s\n", s_reelCount, s_reelDir);
     return s_reelCount;
 }
 
@@ -181,8 +203,8 @@ static int arc_scan_reels(void)
  * frontbuffer-stage cap, so it handles the multi-MB RPLs. Returns 0 on success. */
 static int arc_load_reel(const char *name)
 {
-    char path[128];
-    snprintf(path, sizeof path, "%s/%s", ARC_REEL_DIR, name);
+    char path[224];
+    snprintf(path, sizeof path, "%s/%s", s_reelDir, name);
     DosReplay_ClearRpl();
 
     if (arc_ends_with(name, ".RPL"))
@@ -214,6 +236,7 @@ static void arc_drain_input(void)
     if (c1 + c2 > 0) {
         s_credits += (c1 + c2);
         fprintf(stderr, "[arcade] credit -> %d\n", s_credits);
+        { extern void AudioSDL_PlayOverlaySample(void); AudioSDL_PlayOverlaySample(); }
     }
     if (sv) s_serviceReq = 1;
     if (st1 && s_credits >= 1)      { s_credits -= 1; s_startGame = 1; }
@@ -234,6 +257,35 @@ static void arc_load_logo(void)
     if (n > sizeof s_logoBuf) n = sizeof s_logoBuf;
     LoadOverlayToFrontbuffer((const uint8_t *)"grafs/loader1.raw");
     memcpy(s_logoBuf, _frontbufferMaskBuffer, n);
+
+    /* LOADER1's art is centred in a 352px-wide source, but LoadOverlayToFrontbuffer
+     * decodes only the left SCREEN_WIDTH (336) of it, landing the logo ~8px right of
+     * centre. (We can't change that shared decode — MENUBG and the menus rely on the
+     * left-aligned 336.) Re-centre the logo here on its own non-zero bounding box so
+     * it's centred at any render width. */
+    {
+        int minx = _screen_width, maxx = -1;
+        for (int y = 0; y < SCREEN_HEIGHT; y++)
+            for (int x = 0; x < _screen_width; x++)
+                if (s_logoBuf[(size_t)y * _screen_width + x]) {
+                    if (x < minx) minx = x;
+                    if (x > maxx) maxx = x;
+                }
+        if (maxx >= minx) {
+            int shift = _screen_width / 2 - (minx + maxx) / 2;
+            for (int y = 0; shift != 0 && y < SCREEN_HEIGHT; y++) {
+                uint8_t *row = s_logoBuf + (size_t)y * _screen_width;
+                if (shift > 0) {
+                    memmove(row + shift, row, (size_t)(_screen_width - shift));
+                    memset(row, 0, (size_t)shift);
+                } else {
+                    int s = -shift;
+                    memmove(row, row + s, (size_t)(_screen_width - s));
+                    memset(row + _screen_width - s, 0, (size_t)s);
+                }
+            }
+        }
+    }
     s_logoLoaded = 1;
 }
 
@@ -565,32 +617,58 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
 }
 
 static int arc_pitch_select(void);   /* defined after the SVCFONT helpers */
+static int arc_load_pitch(int idx);  /* defined in the pitch-select section */
 
 /* ====================================================================
  * Phase 3c — the match (mirror PlayFriendly): country/flag select picks two
  * national teams, loaded into _selectedTeams; InitAndPlayGame runs the match.
  * ==================================================================== */
 
+/* ATTRACT AUDIO setting values (SWOS.ini [arcade] attract_audio). */
+#define ARC_ATTRACT_AUDIO_MUSIC      0   /* HERO only, reel SFX suppressed */
+#define ARC_ATTRACT_AUDIO_SFX        1   /* reel crowd/SFX only, no music */
+#define ARC_ATTRACT_AUDIO_MUSIC_SFX  2   /* HERO + reel crowd/SFX mixed (default) */
+
 /* Attract uses HERO (title) music; entering country/pitch select switches to the
  * MENU music. */
 static void arc_music_attract(void)
 {
-    /* ATTRACT AUDIO setting: MUSIC = HERO over the reels (reel SFX suppressed);
-     * SFX = the reels' recorded crowd/SFX plays, no music. */
-    if (g_arcadeOpts && g_arcadeOpts->arcade_attract_audio == 1) {
+    extern void AudioSDL_SetSongLoop(int loop);
+    extern void AudioSDL_SetSfxSecondPlayer(int on);
+    /* MUSIC = HERO only; SFX = reel crowd/SFX only; MUSIC+SFX = both, with HERO on
+     * the music player and the reel SFX on a dedicated second RJP1 player so they
+     * mix (no Amiga 4-channel limit on the SDL host). */
+    int mode = g_arcadeOpts ? g_arcadeOpts->arcade_attract_audio : ARC_ATTRACT_AUDIO_MUSIC_SFX;
+    if (mode == ARC_ATTRACT_AUDIO_SFX) {
+        AudioSDL_SetSfxSecondPlayer(0);   /* SFX on the shared player */
         _gArcadeSfxSuppressed = 0;        /* let reel crowd/SFX through */
-        LoadSfxResources();               /* hand the SFX bank to the shared player */
-        EnsureSfxLoadedAndStart();        /* so the reel's triggers are audible */
-    } else {
+        LoadSfxResources();
+        EnsureSfxLoadedAndStart();
+    } else if (mode == ARC_ATTRACT_AUDIO_MUSIC_SFX) {
+        AudioSDL_SetSfxSecondPlayer(1);   /* SFX -> 2nd player, mixed with HERO */
+        _gArcadeSfxSuppressed = 0;
+        Arcade_PlayHeroMusic();           /* HERO -> music player (clears the queue) */
+        AudioSDL_SetSongLoop(1);          /* HERO has no loop-back; loop it */
+        LoadSfxResources();
+        EnsureSfxLoadedAndStart();        /* SFX bank -> 2nd player (leaves HERO's queue) */
+    } else { /* ARC_ATTRACT_AUDIO_MUSIC */
+        AudioSDL_SetSfxSecondPlayer(0);
         _gArcadeSfxSuppressed = 1;        /* HERO only; ignore reel SFX triggers */
         Arcade_PlayHeroMusic();
+        AudioSDL_SetSongLoop(1);
     }
 }
 static void arc_music_menu(void)
 {
     extern void AudioSetChannelVolume(uint16_t, uint16_t);
     extern void AudioSDL_StopSong(void);
+    extern void AudioSDL_StopSfx(void);
+    extern void AudioSDL_SetSfxSecondPlayer(int on);
     extern uint16_t _audioActive, _audioBankLoaded;
+    /* Stop any attract SFX running on the 2nd player + revert to the shared player
+     * (in-game/menu SFX use the shared player). */
+    AudioSDL_StopSfx();
+    AudioSDL_SetSfxSecondPlayer(0);
     /* Quick-stop HERO (skip StopMusic's ~1.4 s fade — the screen is black during
      * the swap), then load + start MENU (TryPlayMusic ramps it in). */
     AudioSetChannelVolume(0xFFFF, 0);
@@ -776,8 +854,7 @@ static void arc_start_game(void)
     if (numPlayers < 2) {                    /* 1P: opponent isn't user-picked -> random CPU */
         do { p2 = (int)(arc_rand() % FLAG_COUNT); } while (p2 == p1);
     }
-    int pitch = arc_pitch_select();
-    (void)pitch;                            /* Part 4: feed the chosen pitch into the match */
+    int pitch = arc_pitch_select();         /* 0..6 -> SWCPICH1..7 (RANDOM already resolved) */
 
     /* Selectors done (each faded out to black on exit); make sure no arcade frame
      * composites over the match. */
@@ -810,7 +887,10 @@ static void arc_start_game(void)
         InitTeams();
         StopMusic();                        /* silence menu music before kickoff */
         arc_begin_match_rules();            /* arm golden-goal / time-limit / penalties */
+        arc_load_pitch(pitch);              /* chosen pitch -> s_pitchSheet / s_pitchPal */
+        _gArcadePitchActive = 1;            /* themed pitch (DOS pipeline) for this match */
         InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
+        _gArcadePitchActive = 0;
     } else {
         fprintf(stderr, "[arcade] team load failed; returning to attract\n");
     }
@@ -928,7 +1008,7 @@ static void arc_service_menu(void)
     uint32_t GREEN = s_svcLoaded ? s_svcPal[6] : 0xFF00FF00u;
     const int times[] = { 30, 45, 60, 90, 120 };
     const int NT = (int)(sizeof times / sizeof times[0]);
-    const int NUM = 6;
+    const int NUM = 7;
 
     int sel = 0, u=0, d=0, l=0, r=0, f=1;   /* f=1: ignore a fire still held on entry */
     uint32_t frame = 0;
@@ -955,7 +1035,8 @@ static void arc_service_menu(void)
             } else if (sel == 2) g_arcadeOpts->arcade_golden_goal = !g_arcadeOpts->arcade_golden_goal;
             else if (sel == 3)   g_arcadeOpts->arcade_penalties   = !g_arcadeOpts->arcade_penalties;
             else if (sel == 4)   g_arcadeOpts->arcade_goal_replay = !g_arcadeOpts->arcade_goal_replay;
-            else                 g_arcadeOpts->arcade_attract_audio = !g_arcadeOpts->arcade_attract_audio;
+            else if (sel == 5)   g_arcadeOpts->arcade_attract_audio = !g_arcadeOpts->arcade_attract_audio;
+            else                 g_arcadeOpts->arcade_gameplay = !g_arcadeOpts->arcade_gameplay;
         }
         u=_pl1Up; d=_pl1Down; l=_pl1Left; r=_pl1Right;
         int exitNow = (_pl1ShortFire && !f) || sv;
@@ -987,13 +1068,14 @@ static void arc_service_menu(void)
         for (int i = 0; i < NUM; i++) {
             const char *label = (i == 0) ? "MODE" : (i == 1) ? "GAME TIME"
                               : (i == 2) ? "GOLDEN GOAL" : (i == 3) ? "PENALTIES ON DRAW"
-                              : (i == 4) ? "GOAL REPLAY" : "ATTRACT AUDIO";
+                              : (i == 4) ? "GOAL REPLAY" : (i == 5) ? "ATTRACT AUDIO" : "GAMEPLAY";
             if      (i == 0) snprintf(val, sizeof val, "%s", Arcade_ModeName(g_arcadeOpts->arcade_mode));
             else if (i == 1) snprintf(val, sizeof val, "%d SEC", g_arcadeOpts->arcade_game_seconds);
             else if (i == 2) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_golden_goal ? "ON" : "OFF");
             else if (i == 3) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_penalties   ? "ON" : "OFF");
             else if (i == 4) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_goal_replay ? "ON" : "OFF");
-            else             snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_attract_audio ? "SFX" : "MUSIC");
+            else if (i == 5) snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_attract_audio ? "SFX" : "MUSIC");
+            else             snprintf(val, sizeof val, "%s", g_arcadeOpts->arcade_gameplay ? "DOS" : "AMIGA");
             uint32_t tc = YEL;
             /* Keep the rows within the title box (boxW, computed above) — never
              * wider. Label left-aligned at the box's left; value left-aligned in a
@@ -1040,6 +1122,44 @@ static int arc_load_pitch(int idx)   /* 0..6 = SWCPICH1..7, 7 = SWCPICHR */
     return Platform_LoadIndexedBMP(path, s_pitchSheet, (int)sizeof s_pitchSheet,
                                    s_pitchPal, &s_pitchW, &s_pitchH);
 }
+
+/* Dice the loaded arcade pitch (s_pitchSheet, 672x880 chunky 8bpp) into the DOS
+ * chunky tile bank: 42x55 = 2310 row-major 16x16 tiles, identity-mapped — exactly
+ * what dos_load_pitch produces from PITCH*.BLK, so DrawChunkyPitch + the DOS pitch
+ * pipeline render it. Called from LoadPitchMap when _gArcadePitchActive. */
+void Arcade_DicePitchTiles(void)
+{
+    extern uint8_t  _pitchChunkyBuffer[];
+    extern uint8_t *_s_pitchFullPtrs[];
+    extern uint8_t  _pitchDatBuffer[];
+    enum { COLS = 42, ROWS = 55, TILE = 16, SRCW = COLS * TILE /*672*/ };
+
+    if (s_pitchW < SRCW || s_pitchH < ROWS * TILE) {
+        fprintf(stderr, "[arcade] pitch BMP %dx%d, expected %dx%d — skipping dice\n",
+                s_pitchW, s_pitchH, SRCW, ROWS * TILE);
+        return;
+    }
+    for (int gridY = 0; gridY < ROWS; gridY++) {
+        for (int gridX = 0; gridX < COLS; gridX++) {
+            int slot = gridY * COLS + gridX;
+            uint8_t *tile = _pitchChunkyBuffer + (size_t)slot * (TILE * TILE);
+            for (int row = 0; row < TILE; row++)
+                memcpy(tile + row * TILE,
+                       s_pitchSheet + (size_t)(gridY * TILE + row) * SRCW + gridX * TILE,
+                       TILE);
+            _s_pitchFullPtrs[slot] = tile;
+        }
+    }
+    /* Mirror each slot's tile pointer into pitchDatBuffer (the animated-pattern /
+     * surround code reads these), same as dos_load_pitch. */
+    uint32_t *slots = (uint32_t *)_pitchDatBuffer;
+    for (int i = 0; i < COLS * ROWS; i++)
+        slots[i] = (uint32_t)(uintptr_t)_s_pitchFullPtrs[i];
+}
+
+/* The active arcade pitch's 256-entry palette (0xAARRGGBB), used by the palette
+ * hook to fill pitch slots 16..255. Slots 0..15 hold the DOS sprite palette. */
+const uint32_t *Arcade_PitchPaletteArgb(void) { return s_pitchPal; }
 
 /* Nearest-neighbour scale the loaded pitch into the preview rect (RGBA). */
 static void arc_pitch_preview(int px, int py, int pw, int ph)
@@ -1157,6 +1277,20 @@ void ArcadeMainLoop(void)
 {
     fprintf(stderr, "[arcade] boot-to-arcade: entering attract loop\n");
 
+    /* The whole arcade renders in DOS graphics (256-colour) so the themed pitches
+     * work. The DOS palette only applies during a match/reel (refresh_palette_from_copper
+     * gates it on _playGame/_playHighlightFlag), so the menus/selectors/line-up keep
+     * their normal palettes. Gameplay feel (dos_gameplay) is a separate setting. */
+    { extern int _gDosGraphics, _gDosGameplay;
+      _gDosGraphics = 1;
+      if (g_arcadeOpts) _gDosGameplay = g_arcadeOpts->arcade_gameplay; }
+
+    /* No animated advertising hoardings in the arcade — the themed pitches carry
+     * their own static perimeter art, and the sliding ad sprites would draw over it.
+     * _blockAdvertisements makes UpdateAdvertisements keep them invisible; nothing
+     * else writes it, so set it once for the whole session. */
+    { extern uint16_t _blockAdvertisements; _blockAdvertisements = 1; }
+
     /* The boot loader leaves the copper palette faded to black; restore the menu
      * palette so anything we draw is visible. */
     { extern uint16_t _menuPalette[]; WriteCopperPalette(_menuPalette); }
@@ -1166,6 +1300,8 @@ void ArcadeMainLoop(void)
     arc_load_menubg();
     arc_load_svcfont();
     arc_scan_reels();
+    /* Coin-insert jingle (mixed over the attract audio). */
+    { extern int AudioSDL_LoadOverlaySample(const char *); AudioSDL_LoadOverlaySample("sound/1UP.WAV"); }
     ReadTimerDelta();
 
     arc_music_attract();   /* HERO (title) song plays over the attract loop */
@@ -1174,6 +1310,9 @@ void ArcadeMainLoop(void)
         if (s_serviceReq) {              /* F2 pressed during a reel/idle */
             s_serviceReq = 0;
             arc_service_menu();
+            /* GAMEPLAY may have changed: re-apply it and re-pick the reel subdir. */
+            { extern int _gDosGameplay; if (g_arcadeOpts) _gDosGameplay = g_arcadeOpts->arcade_gameplay; }
+            arc_scan_reels();
             arc_music_attract();         /* re-apply ATTRACT AUDIO (may have changed) */
             continue;
         }
