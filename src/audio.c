@@ -619,11 +619,11 @@ void TryPlayMusic(void)
     AudioSetChannelVolume(0xFFFF, 0);
     _audioActive = 1;
 
-    for (vol = 0; vol <= 0x22; vol += 2) {
+    for (vol = 0; vol <= 0x3E; vol += 2) {   /* SDL: ramp to full (0x40) — see loader_intro.c */
         AudioSetChannelVolume(0xFFFF, vol);
         WaitForVSync();
     }
-    AudioSetChannelVolume(0xFFFF, 0x23);
+    AudioSetChannelVolume(0xFFFF, 0x40);
     return;
 #else
     if (_audioBankLoaded == 0)
@@ -758,7 +758,11 @@ void StopMusic(void)
     if (_audioActive == 0)
         return;
 
+#ifdef SWOS_SDL_BUILD
+    for (vol = 0x40; vol >= 0; vol--)   /* SDL plays music at full; fade from there */
+#else
     for (vol = 0x23; vol >= 0; vol--)
+#endif
     {
         int16_t i;
 

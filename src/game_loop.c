@@ -707,7 +707,7 @@ vblank_return_dispatch:
     SetCurrentPlayerName();
     UpdateBookedPlayerNumberSprite();
     ShowResult();
-    DrawAnimatedPatterns();
+    DrawAnimatedPatterns();   /* also ticks _showFansCounter / goal-celebration state */
     DrawSprites();
     DrawBenchAndSubsMenu();
     BenchCheckControls();
@@ -839,9 +839,34 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
      * colours. The DOS palette is only correct once the pitch is on screen, which
      * begins with the swap below. */
     _playHighlightFlag = 1;
+#ifdef SWOS_SDL_BUILD
+    { extern void Replay_ResetBallCamera(void); Replay_ResetBallCamera(); }
+#endif
     ReplayUpdateCameraAndSwapBuffers(168, 313);
     UpdatePlanePtrsAndBlitParams();
     ReadTimerDelta();
+#ifdef SWOS_SDL_BUILD
+    /* Load + start the SFX bank so the replay isn't silent. Unlike the live-match
+     * path (StartMatchSequence), the non-arcade highlights/replay viewer never
+     * loaded it, so RPL/HIL playback had no crowd ambience or recorded SFX. The
+     * arcade reels manage their own audio (HERO music vs crowd-SFX) in
+     * arc_music_attract, so leave _gArcadeMode alone. */
+    { extern int _gArcadeMode;
+      extern void LoadSfxResources(void);
+      extern void EnsureSfxLoadedAndStart(void);
+      extern void TurnCrowdChantsOn(void);
+      if (!_gArcadeMode) { LoadSfxResources(); EnsureSfxLoadedAndStart(); }
+      /* The RPL/HIL stream carries no 0x89 crowd-chant marker, so PlayCrowdChants
+       * (ticked every frame by PlayEnqueuedSamples) stays disabled and the replay
+       * is silent. A live match also resets the crowd state via CrowdResetMatchState
+       * (match setup), which a fresh-loaded replay never runs — leaving
+       * _currentCrowdSample at the BSS default 0, so PlayCrowdChants' "keep current
+       * sample" path fires wave 0 (= channel-off) and the chant is silent until it
+       * randomly re-picks. Reset it to 0xFFFF so the first chant picks a real sample,
+       * then enable. Gated downstream by _gArcadeSfxSuppressed. */
+      { extern uint16_t _currentCrowdSample; _currentCrowdSample = 0xFFFF; }
+      TurnCrowdChantsOn(); }
+#endif
 
     /* Drain the keyBuffer — original Amiga waits here while the user
      * holds the fire button they just pressed (keyboard ISR pushes
