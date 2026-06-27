@@ -1,6 +1,6 @@
 {
-  "name": "continueAbortMenu",
-  "onInit": "_ContinueAbortInit",
+  "name": "_continueAbortMenu",
+  "onInit": "ContinueAbortInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 2,
@@ -79,7 +79,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ContinueSelected"
+          "func": "ContinueSelected"
         }
       ]
     },
@@ -111,7 +111,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_AbortSelected"
+          "func": "AbortSelected"
         }
       ]
     }

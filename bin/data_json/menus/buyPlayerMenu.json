@@ -1,7 +1,7 @@
 {
-  "name": "buyPlayerMenu",
-  "onInit": "_BuyPlayerInit",
-  "onReturn": "_BuyPlayerInit",
+  "name": "_buyPlayerMenu",
+  "onInit": "BuyPlayerInit",
+  "onReturn": "BuyPlayerInit",
   "onDraw": null,
   "defaultEntry": 2,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aBuyPlayer"
+          "str": "_aBuyPlayer"
         }
       ]
     },
@@ -69,11 +69,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewDomesticPl"
+          "str": "_aViewDomesticPl"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewDomesticPlayerMarket"
+          "func": "ViewDomesticPlayerMarket"
         }
       ]
     },
@@ -101,11 +101,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewForeignPla"
+          "str": "_aViewForeignPla"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewForeignPlayerMarket"
+          "func": "ViewForeignPlayerMarket"
         }
       ]
     },
@@ -133,11 +133,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aBuyOtherDomest"
+          "str": "_aBuyOtherDomest"
         },
         {
           "op": "onselect_fire",
-          "func": "_BuyOtherDomesticPlayer"
+          "func": "BuyOtherDomesticPlayer"
         }
       ]
     },
@@ -165,11 +165,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aBuyOtherForeig"
+          "str": "_aBuyOtherForeig"
         },
         {
           "op": "onselect_fire",
-          "func": "_BuyOtherForeignPlayer"
+          "func": "BuyOtherForeignPlayer"
         }
       ]
     },
@@ -197,11 +197,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewSquad"
+          "str": "_aViewSquad"
         },
         {
           "op": "onselect_fire",
-          "func": "_BuyPlayerViewSquad"
+          "func": "BuyPlayerViewSquad"
         }
       ]
     },
@@ -229,11 +229,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_BuyPlayerExit"
+          "func": "BuyPlayerExit"
         }
       ]
     }

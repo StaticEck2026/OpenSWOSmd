@@ -1,6 +1,6 @@
 {
-  "name": "viewSquadMenu",
-  "onInit": "_ViewSquadInit",
+  "name": "_viewSquadMenu",
+  "onInit": "ViewSquadInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 2,
@@ -75,11 +75,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewSquadExitContinue"
+          "func": "ViewSquadExitContinue"
         }
       ]
     },
@@ -110,11 +110,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aContinue"
+          "str": "_aContinue"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewSquadExitContinue"
+          "func": "ViewSquadExitContinue"
         }
       ]
     },
@@ -143,11 +143,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_ViewSquadAfterDrawCommon"
+          "func": "ViewSquadAfterDrawCommon"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewSquadCommon"
+          "func": "ViewSquadCommon"
         }
       ]
     },
@@ -502,11 +502,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewSquadOnSelect21"
+          "func": "ViewSquadOnSelect21"
         },
         {
           "op": "after_draw",
-          "func": "_ViewSquad21AfterDraw"
+          "func": "ViewSquad21AfterDraw"
         }
       ]
     },

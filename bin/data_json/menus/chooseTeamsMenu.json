@@ -1,7 +1,7 @@
 {
-  "name": "chooseTeamsMenu",
-  "onInit": "_ChooseTeamsInit",
-  "onReturn": "_ChooseTeamsInit",
+  "name": "_chooseTeamsMenu",
+  "onInit": "ChooseTeamsInit",
+  "onReturn": "ChooseTeamsInit",
   "onDraw": null,
   "defaultEntry": 0,
   "items": [
@@ -33,11 +33,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aClubTeams"
+          "str": "_aClubTeams"
         },
         {
           "op": "onselect_fire",
-          "func": "_ClubTeams"
+          "func": "ClubTeams"
         }
       ]
     },
@@ -65,11 +65,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aNationalTeams"
+          "str": "_aNationalTeams"
         },
         {
           "op": "onselect_fire",
-          "func": "_NationalTeams"
+          "func": "NationalTeams"
         }
       ]
     },
@@ -97,11 +97,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOriginalCustom"
+          "str": "_aOriginalCustom"
         },
         {
           "op": "onselect_fire",
-          "func": "_OriginalCustomTeams"
+          "func": "OriginalCustomTeams"
         }
       ]
     },
@@ -129,11 +129,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aEditedCustomTe_0"
+          "str": "_aEditedCustomTe_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditedCustomTeams"
+          "func": "EditedCustomTeams"
         }
       ]
     },
@@ -161,11 +161,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitChooseTeams"
+          "func": "ExitChooseTeams"
         }
       ]
     },

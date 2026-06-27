@@ -1,7 +1,7 @@
 {
-  "name": "playMatchMenu",
-  "onInit": "_PlayMatchMenuInit",
-  "onReturn": "_PlayMatchMenuReinit",
+  "name": "_playMatchMenu",
+  "onInit": "PlayMatchMenuInit",
+  "onReturn": "PlayMatchMenuReinit",
   "onDraw": null,
   "defaultEntry": 9,
   "items": [
@@ -82,7 +82,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aCoach_4"
+          "str": "_aCoach_4"
         }
       ]
     },
@@ -126,11 +126,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aUseMatchTeam"
+          "str": "_aUseMatchTeam"
         },
         {
           "op": "onselect_fire",
-          "func": "_UseMatchTeamSelect"
+          "func": "UseMatchTeamSelect"
         }
       ]
     },
@@ -172,7 +172,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_TogglePlayerCoach"
+          "func": "TogglePlayerCoach"
         }
       ]
     },
@@ -200,11 +200,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewOppo"
+          "str": "_aViewOppo"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewOpponentsSelect"
+          "func": "ViewOpponentsSelect"
         }
       ]
     },
@@ -237,11 +237,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitPlayMatch"
+          "func": "ExitPlayMatch"
         }
       ]
     },
@@ -283,7 +283,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayMatchSelected"
+          "func": "PlayMatchSelected"
         }
       ]
     },
@@ -311,11 +311,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aEditTactics"
+          "str": "_aEditTactics"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTacticsInPlayMatchMenu"
+          "func": "EditTacticsInPlayMatchMenu"
         }
       ]
     },
@@ -330,7 +330,7 @@
       "commands": [
         {
           "op": "onselect_fire",
-          "func": "_ReturnFromViewOpponent"
+          "func": "ReturnFromViewOpponent"
         }
       ]
     },
@@ -370,11 +370,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_DrawPlayerEntries"
+          "func": "DrawPlayerEntries"
         },
         {
           "op": "onselect_fire",
-          "func": "_OnSwapPlayer"
+          "func": "OnSwapPlayer"
         }
       ]
     },
@@ -746,11 +746,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayMatchOnSelect30"
+          "func": "PlayMatchOnSelect30"
         },
         {
           "op": "after_draw",
-          "func": "_PlayMatch30AfterDraw"
+          "func": "PlayMatch30AfterDraw"
         }
       ]
     },
@@ -903,7 +903,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayMatchChangeTactics"
+          "func": "PlayMatchChangeTactics"
         }
       ]
     },
@@ -926,7 +926,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a442"
+          "str": "_a442"
         }
       ]
     },
@@ -949,7 +949,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a541"
+          "str": "_a541"
         }
       ]
     },
@@ -972,7 +972,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a451"
+          "str": "_a451"
         }
       ]
     },
@@ -995,7 +995,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a532"
+          "str": "_a532"
         }
       ]
     },
@@ -1018,7 +1018,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a352"
+          "str": "_a352"
         }
       ]
     },
@@ -1041,7 +1041,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a433"
+          "str": "_a433"
         }
       ]
     },
@@ -1064,7 +1064,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a424"
+          "str": "_a424"
         }
       ]
     },
@@ -1087,7 +1087,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a343"
+          "str": "_a343"
         }
       ]
     },
@@ -1110,7 +1110,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSweep"
+          "str": "_aSweep"
         }
       ]
     },
@@ -1133,7 +1133,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a523"
+          "str": "_a523"
         }
       ]
     },
@@ -1156,7 +1156,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAttack"
+          "str": "_aAttack"
         }
       ]
     },
@@ -1179,7 +1179,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDefend"
+          "str": "_aDefend"
         }
       ]
     },
@@ -1202,7 +1202,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERA"
+          "str": "_teamTacticsUSERA"
         }
       ]
     },
@@ -1225,7 +1225,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERB"
+          "str": "_teamTacticsUSERB"
         }
       ]
     },
@@ -1248,7 +1248,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERC"
+          "str": "_teamTacticsUSERC"
         }
       ]
     },
@@ -1271,7 +1271,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERD"
+          "str": "_teamTacticsUSERD"
         }
       ]
     },
@@ -1294,7 +1294,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERE"
+          "str": "_teamTacticsUSERE"
         }
       ]
     },
@@ -1317,7 +1317,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERF"
+          "str": "_teamTacticsUSERF"
         }
       ]
     },

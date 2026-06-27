@@ -1,7 +1,7 @@
 {
-  "name": "selectFilesMenu",
-  "onInit": "_SelectFilesInit",
-  "onReturn": "_SelectFilesOnReturn",
+  "name": "_selectFilesMenu",
+  "onInit": "SelectFilesInit",
+  "onReturn": "SelectFilesOnReturn",
   "onDraw": null,
   "defaultEntry": 16,
   "items": [
@@ -59,11 +59,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SelFilesOnSelectCommon"
+          "func": "SelFilesOnSelectCommon"
         },
         {
           "op": "before_draw",
-          "func": "_SelFilesDrawItemDescription"
+          "func": "SelFilesDrawItemDescription"
         }
       ]
     },
@@ -1064,7 +1064,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aFilename"
+          "str": "_aFilename"
         }
       ]
     },
@@ -1098,7 +1098,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectFilesInputSaveFilenameOnSelect"
+          "func": "SelectFilesInputSaveFilenameOnSelect"
         }
       ]
     },
@@ -1129,11 +1129,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSave"
+          "str": "_aSave"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectFilenameToSaveAndExit"
+          "func": "SelectFilenameToSaveAndExit"
         }
       ]
     },
@@ -1161,11 +1161,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAbort"
+          "str": "_aAbort"
         },
         {
           "op": "onselect_fire",
-          "func": "_AbortSaveFile"
+          "func": "AbortSaveFile"
         }
       ]
     }

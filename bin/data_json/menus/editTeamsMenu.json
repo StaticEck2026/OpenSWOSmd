@@ -1,7 +1,7 @@
 {
-  "name": "editTeamsMenu",
-  "onInit": "_EditTeamsInit",
-  "onReturn": "_EditTeamsFinish",
+  "name": "_editTeamsMenu",
+  "onInit": "EditTeamsInit",
+  "onReturn": "EditTeamsFinish",
   "onDraw": null,
   "defaultEntry": 0,
   "items": [
@@ -37,7 +37,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectTeamName"
+          "func": "EditTeamsSelectTeamName"
         }
       ]
     },
@@ -85,7 +85,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aCoach_3"
+          "str": "_aCoach_3"
         }
       ]
     },
@@ -117,7 +117,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectCoachName"
+          "func": "EditTeamsSelectCoachName"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFirstKit"
+          "str": "_aFirstKit"
         }
       ]
     },
@@ -158,7 +158,7 @@
         },
         {
           "op": "sprite_copy",
-          "sprite": "editTeamsPrimaryShirts"
+          "sprite": "_editTeamsPrimaryShirts"
         },
         {
           "op": "nav",
@@ -170,7 +170,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_EditTeamsChangeShirtsPrimary"
+          "func": "EditTeamsChangeShirtsPrimary"
         }
       ]
     },
@@ -190,7 +190,7 @@
         },
         {
           "op": "sprite_copy",
-          "sprite": "editTeamsShorts"
+          "sprite": "_editTeamsShorts"
         },
         {
           "op": "nav",
@@ -202,7 +202,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_EditTeamsChangeShortsPrimary"
+          "func": "EditTeamsChangeShortsPrimary"
         }
       ]
     },
@@ -222,7 +222,7 @@
         },
         {
           "op": "sprite_copy",
-          "sprite": "editTeamsSocks"
+          "sprite": "_editTeamsSocks"
         },
         {
           "op": "nav",
@@ -234,7 +234,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_EditTeamsChangeSocksPrimary"
+          "func": "EditTeamsChangeSocksPrimary"
         }
       ]
     },
@@ -255,7 +255,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSecondKit"
+          "str": "_aSecondKit"
         }
       ]
     },
@@ -275,7 +275,7 @@
         },
         {
           "op": "sprite_copy",
-          "sprite": "editTeamsSecondaryShirt"
+          "sprite": "_editTeamsSecondaryShirt"
         },
         {
           "op": "nav",
@@ -287,7 +287,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_EditTeamsChangeShirtsSecondary"
+          "func": "EditTeamsChangeShirtsSecondary"
         }
       ]
     },
@@ -307,7 +307,7 @@
         },
         {
           "op": "sprite_copy",
-          "sprite": "editTeamsSecondaryShorts"
+          "sprite": "_editTeamsSecondaryShorts"
         },
         {
           "op": "nav",
@@ -319,7 +319,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_EditTeamsChangeShortsSecondary"
+          "func": "EditTeamsChangeShortsSecondary"
         }
       ]
     },
@@ -339,7 +339,7 @@
         },
         {
           "op": "sprite_copy",
-          "sprite": "editTeamsSecondarySocks"
+          "sprite": "_editTeamsSecondarySocks"
         },
         {
           "op": "nav",
@@ -351,7 +351,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_EditTeamsChangeSocksSecondary"
+          "func": "EditTeamsChangeSocksSecondary"
         }
       ]
     },
@@ -387,7 +387,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectPrimaryShirtType"
+          "func": "EditTeamsSelectPrimaryShirtType"
         }
       ]
     },
@@ -418,7 +418,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectPrimaryShirtType"
+          "func": "EditTeamsSelectPrimaryShirtType"
         }
       ]
     },
@@ -449,7 +449,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectPrimaryShirtType"
+          "func": "EditTeamsSelectPrimaryShirtType"
         }
       ]
     },
@@ -480,7 +480,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectPrimaryShirtType"
+          "func": "EditTeamsSelectPrimaryShirtType"
         }
       ]
     },
@@ -516,7 +516,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectSecondaryShirtType"
+          "func": "EditTeamsSelectSecondaryShirtType"
         }
       ]
     },
@@ -547,7 +547,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectSecondaryShirtType"
+          "func": "EditTeamsSelectSecondaryShirtType"
         }
       ]
     },
@@ -578,7 +578,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectSecondaryShirtType"
+          "func": "EditTeamsSelectSecondaryShirtType"
         }
       ]
     },
@@ -609,7 +609,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsSelectSecondaryShirtType"
+          "func": "EditTeamsSelectSecondaryShirtType"
         }
       ]
     },
@@ -642,11 +642,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aImport"
+          "str": "_aImport"
         },
         {
           "op": "onselect_fire",
-          "func": "_ImportTeamsMenu"
+          "func": "ImportTeamsMenu"
         }
       ]
     },
@@ -678,11 +678,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOk"
+          "str": "_aOk"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsOK"
+          "func": "EditTeamsOK"
         }
       ]
     },
@@ -714,11 +714,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aUndo"
+          "str": "_aUndo"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsUndo"
+          "func": "EditTeamsUndo"
         }
       ]
     },
@@ -737,7 +737,7 @@
       "commands": [
         {
           "op": "before_draw",
-          "func": "_EditTeamsPlayersBeforeDraw"
+          "func": "EditTeamsPlayersBeforeDraw"
         }
       ]
     },
@@ -773,7 +773,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -804,7 +804,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -835,7 +835,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -866,7 +866,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -897,7 +897,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -928,7 +928,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -959,7 +959,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -990,7 +990,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1021,7 +1021,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1052,7 +1052,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1083,7 +1083,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1114,7 +1114,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1145,7 +1145,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1176,7 +1176,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1207,7 +1207,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1238,7 +1238,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerFace"
+          "func": "EditTeamsChangePlayerFace"
         }
       ]
     },
@@ -1278,7 +1278,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1310,7 +1310,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1342,7 +1342,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1374,7 +1374,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1406,7 +1406,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1438,7 +1438,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1470,7 +1470,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1502,7 +1502,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1534,7 +1534,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1566,7 +1566,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1598,7 +1598,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1630,7 +1630,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1662,7 +1662,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1694,7 +1694,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1726,7 +1726,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },
@@ -1758,7 +1758,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTeamsChangePlayerName"
+          "func": "EditTeamsChangePlayerName"
         }
       ]
     },

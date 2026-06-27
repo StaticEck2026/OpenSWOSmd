@@ -1,7 +1,7 @@
 {
-  "name": "designDiyLeagueMenu",
-  "onInit": "_DesignDIYLeagueInit",
-  "onReturn": "_DesignDIYLeagueFinish",
+  "name": "_designDiyLeagueMenu",
+  "onInit": "DesignDIYLeagueInit",
+  "onReturn": "DesignDIYLeagueFinish",
   "onDraw": null,
   "defaultEntry": 13,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDesignDiyLeagu"
+          "str": "_aDesignDiyLeagu"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "diyCompetitionStart.base.competitionName"
+          "str": "_diyCompetitionStart.base.competitionName"
         }
       ]
     },
@@ -91,11 +91,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "diyCompetitionStart.base.competitionName"
+          "str": "_diyCompetitionStart.base.competitionName"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueSetName"
+          "func": "DesignDIYLeagueSetName"
         }
       ]
     },
@@ -116,7 +116,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aNumberOfTeams"
+          "str": "_aNumberOfTeams"
         }
       ]
     },
@@ -137,7 +137,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlayEachTeam"
+          "str": "_aPlayEachTeam"
         }
       ]
     },
@@ -158,7 +158,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPointsForAWin"
+          "str": "_aPointsForAWin"
         }
       ]
     },
@@ -179,7 +179,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSubstitutes"
+          "str": "_aSubstitutes"
         }
       ]
     },
@@ -200,7 +200,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFrom"
+          "str": "_aFrom"
         }
       ]
     },
@@ -228,11 +228,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyPitchTypeOrSeasonStrTable"
+          "table": "_diyPitchTypeOrSeasonStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYLeagueChangePitchTypeOrSeason"
+          "func": "DIYLeagueChangePitchTypeOrSeason"
         }
       ]
     },
@@ -260,11 +260,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyLeaguePitchTypeStrTable"
+          "table": "_diyLeaguePitchTypeStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangePitchType"
+          "func": "DesignDIYLeagueChangePitchType"
         }
       ]
     },
@@ -292,11 +292,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyLeagueMonthsStrTable"
+          "table": "_diyLeagueMonthsStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangeStartMonth"
+          "func": "DesignDIYLeagueChangeStartMonth"
         }
       ]
     },
@@ -317,7 +317,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "asc_131FF2"
+          "str": "_asc_131FF2"
         }
       ]
     },
@@ -345,11 +345,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyLeagueEndingMonthStrTable"
+          "table": "_diyLeagueEndingMonthStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangeEndMonth"
+          "func": "DesignDIYLeagueChangeEndMonth"
         }
       ]
     },
@@ -381,7 +381,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangeNumberOfTeams"
+          "func": "DesignDIYLeagueChangeNumberOfTeams"
         }
       ]
     },
@@ -412,7 +412,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangePlayEachTeam"
+          "func": "DesignDIYLeagueChangePlayEachTeam"
         }
       ]
     },
@@ -444,7 +444,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangeNumPointsForWin"
+          "func": "DesignDIYLeagueChangeNumPointsForWin"
         }
       ]
     },
@@ -475,7 +475,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangeMinSubstitutes"
+          "func": "DesignDIYLeagueChangeMinSubstitutes"
         }
       ]
     },
@@ -506,7 +506,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChangeMaxSubstitutes"
+          "func": "DesignDIYLeagueChangeMaxSubstitutes"
         }
       ]
     },
@@ -585,11 +585,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aChooseTeams"
+          "str": "_aChooseTeams"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueChooseTeams"
+          "func": "DesignDIYLeagueChooseTeams"
         }
       ]
     },
@@ -617,11 +617,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOk"
+          "str": "_aOk"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYLeagueOK"
+          "func": "DesignDIYLeagueOK"
         }
       ]
     },
@@ -649,11 +649,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag_6"
+          "func": "SetExitMenuFlag"
         }
       ]
     },

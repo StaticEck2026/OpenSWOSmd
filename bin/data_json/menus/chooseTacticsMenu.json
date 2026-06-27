@@ -1,6 +1,6 @@
 {
-  "name": "chooseTacticsMenu",
-  "onInit": "_ChooseTacticsInit",
+  "name": "_chooseTacticsMenu",
+  "onInit": "ChooseTacticsInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 1,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aEditTactics"
+          "str": "_aEditTactics"
         }
       ]
     },
@@ -58,7 +58,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_User_A_Tactics"
+          "func": "User_A_Tactics"
         }
       ]
     },
@@ -90,7 +90,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_User_B_Tactics"
+          "func": "User_B_Tactics"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_User_C_Tactics"
+          "func": "User_C_Tactics"
         }
       ]
     },
@@ -154,7 +154,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_User_D_Tactics"
+          "func": "User_D_Tactics"
         }
       ]
     },
@@ -186,7 +186,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_User_E_Tactics"
+          "func": "User_E_Tactics"
         }
       ]
     },
@@ -218,7 +218,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_User_F_Tactics"
+          "func": "User_F_Tactics"
         }
       ]
     },
@@ -246,11 +246,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitChooseTacticsMenu"
+          "func": "ExitChooseTacticsMenu"
         }
       ]
     }

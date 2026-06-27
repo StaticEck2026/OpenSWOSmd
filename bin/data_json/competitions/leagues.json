@@ -3,7 +3,7 @@
   "count": 66,
   "leagues": [
     {
-      "id": "customsLeague",
+      "id": "_customsLeague",
       "comp": {
         "comp_number": 36,
         "type": 0,
@@ -48,16 +48,16 @@
       ],
       "reserved1": 0,
       "name": [
-        "aDivision1",
-        "aDivision1",
-        "aDivision2",
-        "aDivision2",
-        "aDivision3",
-        "aDivision3"
+        "_aDivision1",
+        "_aDivision1",
+        "_aDivision2",
+        "_aDivision2",
+        "_aDivision3",
+        "_aDivision3"
       ]
     },
     {
-      "id": "albanianLeague",
+      "id": "_albanianLeague",
       "comp": {
         "comp_number": 37,
         "type": 0,
@@ -88,7 +88,7 @@
       "name": []
     },
     {
-      "id": "austrianLeague",
+      "id": "_austrianLeague",
       "comp": {
         "comp_number": 38,
         "type": 0,
@@ -119,7 +119,7 @@
       "name": []
     },
     {
-      "id": "belarussiaLleague",
+      "id": "_belarussiaLleague",
       "comp": {
         "comp_number": 39,
         "type": 0,
@@ -150,7 +150,7 @@
       "name": []
     },
     {
-      "id": "belgianLeague",
+      "id": "_belgianLeague",
       "comp": {
         "comp_number": 40,
         "type": 0,
@@ -181,7 +181,7 @@
       "name": []
     },
     {
-      "id": "bulgarianLeague",
+      "id": "_bulgarianLeague",
       "comp": {
         "comp_number": 41,
         "type": 0,
@@ -212,7 +212,7 @@
       "name": []
     },
     {
-      "id": "croatianLeague",
+      "id": "_croatianLeague",
       "comp": {
         "comp_number": 42,
         "type": 0,
@@ -243,7 +243,7 @@
       "name": []
     },
     {
-      "id": "cypriotLeague",
+      "id": "_cypriotLeague",
       "comp": {
         "comp_number": 43,
         "type": 0,
@@ -274,7 +274,7 @@
       "name": []
     },
     {
-      "id": "czechLeague",
+      "id": "_czechLeague",
       "comp": {
         "comp_number": 44,
         "type": 0,
@@ -305,7 +305,7 @@
       "name": []
     },
     {
-      "id": "danishLeague",
+      "id": "_danishLeague",
       "comp": {
         "comp_number": 45,
         "type": 0,
@@ -336,7 +336,7 @@
       "name": []
     },
     {
-      "id": "estonianLeague",
+      "id": "_estonianLeague",
       "comp": {
         "comp_number": 50,
         "type": 0,
@@ -367,7 +367,7 @@
       "name": []
     },
     {
-      "id": "faroeIslesLeague",
+      "id": "_faroeIslesLeague",
       "comp": {
         "comp_number": 51,
         "type": 0,
@@ -398,7 +398,7 @@
       "name": []
     },
     {
-      "id": "finnishLeague",
+      "id": "_finnishLeague",
       "comp": {
         "comp_number": 52,
         "type": 0,
@@ -429,7 +429,7 @@
       "name": []
     },
     {
-      "id": "greekLeague",
+      "id": "_greekLeague",
       "comp": {
         "comp_number": 55,
         "type": 0,
@@ -460,7 +460,7 @@
       "name": []
     },
     {
-      "id": "hungarianLeague",
+      "id": "_hungarianLeague",
       "comp": {
         "comp_number": 58,
         "type": 0,
@@ -491,7 +491,7 @@
       "name": []
     },
     {
-      "id": "icelandicLeague",
+      "id": "_icelandicLeague",
       "comp": {
         "comp_number": 59,
         "type": 0,
@@ -522,7 +522,7 @@
       "name": []
     },
     {
-      "id": "israeliLeague",
+      "id": "_israeliLeague",
       "comp": {
         "comp_number": 60,
         "type": 0,
@@ -553,7 +553,7 @@
       "name": []
     },
     {
-      "id": "latvianLeague",
+      "id": "_latvianLeague",
       "comp": {
         "comp_number": 62,
         "type": 0,
@@ -584,7 +584,7 @@
       "name": []
     },
     {
-      "id": "lithuanianLeague",
+      "id": "_lithuanianLeague",
       "comp": {
         "comp_number": 63,
         "type": 0,
@@ -615,7 +615,7 @@
       "name": []
     },
     {
-      "id": "luxembourgLeague",
+      "id": "_luxembourgLeague",
       "comp": {
         "comp_number": 64,
         "type": 0,
@@ -646,7 +646,7 @@
       "name": []
     },
     {
-      "id": "malteseLeague",
+      "id": "_malteseLeague",
       "comp": {
         "comp_number": 65,
         "type": 0,
@@ -677,7 +677,7 @@
       "name": []
     },
     {
-      "id": "northernIrishLeague",
+      "id": "_northernIrishLeague",
       "comp": {
         "comp_number": 66,
         "type": 0,
@@ -708,7 +708,7 @@
       "name": []
     },
     {
-      "id": "norwegianLeague",
+      "id": "_norwegianLeague",
       "comp": {
         "comp_number": 67,
         "type": 0,
@@ -739,7 +739,7 @@
       "name": []
     },
     {
-      "id": "polishLeague",
+      "id": "_polishLeague",
       "comp": {
         "comp_number": 68,
         "type": 0,
@@ -770,7 +770,7 @@
       "name": []
     },
     {
-      "id": "portugeseLeague",
+      "id": "_portugeseLeague",
       "comp": {
         "comp_number": 69,
         "type": 0,
@@ -801,7 +801,7 @@
       "name": []
     },
     {
-      "id": "irishLeague",
+      "id": "_irishLeague",
       "comp": {
         "comp_number": 70,
         "type": 0,
@@ -832,7 +832,7 @@
       "name": []
     },
     {
-      "id": "romanianLeague",
+      "id": "_romanianLeague",
       "comp": {
         "comp_number": 71,
         "type": 0,
@@ -863,7 +863,7 @@
       "name": []
     },
     {
-      "id": "russianLeague",
+      "id": "_russianLeague",
       "comp": {
         "comp_number": 72,
         "type": 0,
@@ -894,7 +894,7 @@
       "name": []
     },
     {
-      "id": "sanMarinoLeague",
+      "id": "_sanMarinoLeague",
       "comp": {
         "comp_number": 73,
         "type": 0,
@@ -925,7 +925,7 @@
       "name": []
     },
     {
-      "id": "slovakianLeague",
+      "id": "_slovakianLeague",
       "comp": {
         "comp_number": 76,
         "type": 0,
@@ -956,7 +956,7 @@
       "name": []
     },
     {
-      "id": "slovenianLeague",
+      "id": "_slovenianLeague",
       "comp": {
         "comp_number": 77,
         "type": 0,
@@ -987,7 +987,7 @@
       "name": []
     },
     {
-      "id": "swedishLeague",
+      "id": "_swedishLeague",
       "comp": {
         "comp_number": 80,
         "type": 0,
@@ -1018,7 +1018,7 @@
       "name": []
     },
     {
-      "id": "swissLeague",
+      "id": "_swissLeague",
       "comp": {
         "comp_number": 81,
         "type": 0,
@@ -1049,7 +1049,7 @@
       "name": []
     },
     {
-      "id": "turkishLeague",
+      "id": "_turkishLeague",
       "comp": {
         "comp_number": 82,
         "type": 0,
@@ -1080,7 +1080,7 @@
       "name": []
     },
     {
-      "id": "ukrainianLeague",
+      "id": "_ukrainianLeague",
       "comp": {
         "comp_number": 83,
         "type": 0,
@@ -1111,7 +1111,7 @@
       "name": []
     },
     {
-      "id": "welshLeague",
+      "id": "_welshLeague",
       "comp": {
         "comp_number": 84,
         "type": 0,
@@ -1142,7 +1142,7 @@
       "name": []
     },
     {
-      "id": "yugoslavianLeague",
+      "id": "_yugoslavianLeague",
       "comp": {
         "comp_number": 85,
         "type": 0,
@@ -1173,7 +1173,7 @@
       "name": []
     },
     {
-      "id": "algerianLeague",
+      "id": "_algerianLeague",
       "comp": {
         "comp_number": 86,
         "type": 0,
@@ -1204,7 +1204,7 @@
       "name": []
     },
     {
-      "id": "bolivianLeague",
+      "id": "_bolivianLeague",
       "comp": {
         "comp_number": 89,
         "type": 0,
@@ -1235,7 +1235,7 @@
       "name": []
     },
     {
-      "id": "brasilianLeague",
+      "id": "_brasilianLeague",
       "comp": {
         "comp_number": 90,
         "type": 0,
@@ -1266,7 +1266,7 @@
       "name": []
     },
     {
-      "id": "chileanLeague",
+      "id": "_chileanLeague",
       "comp": {
         "comp_number": 91,
         "type": 0,
@@ -1297,7 +1297,7 @@
       "name": []
     },
     {
-      "id": "colombianLeague",
+      "id": "_colombianLeague",
       "comp": {
         "comp_number": 92,
         "type": 0,
@@ -1328,7 +1328,7 @@
       "name": []
     },
     {
-      "id": "ecuadorLeague",
+      "id": "_ecuadorLeague",
       "comp": {
         "comp_number": 93,
         "type": 0,
@@ -1359,7 +1359,7 @@
       "name": []
     },
     {
-      "id": "indianLeague",
+      "id": "_indianLeague",
       "comp": {
         "comp_number": 95,
         "type": 0,
@@ -1390,7 +1390,7 @@
       "name": []
     },
     {
-      "id": "paraguayanLeague",
+      "id": "_paraguayanLeague",
       "comp": {
         "comp_number": 99,
         "type": 0,
@@ -1421,7 +1421,7 @@
       "name": []
     },
     {
-      "id": "peruvianLeague",
+      "id": "_peruvianLeague",
       "comp": {
         "comp_number": 100,
         "type": 0,
@@ -1452,7 +1452,7 @@
       "name": []
     },
     {
-      "id": "southAfricanLeague",
+      "id": "_southAfricanLeague",
       "comp": {
         "comp_number": 101,
         "type": 0,
@@ -1483,7 +1483,7 @@
       "name": []
     },
     {
-      "id": "surinamLeague",
+      "id": "_surinamLeague",
       "comp": {
         "comp_number": 102,
         "type": 0,
@@ -1514,7 +1514,7 @@
       "name": []
     },
     {
-      "id": "taiwaneseLeague",
+      "id": "_taiwaneseLeague",
       "comp": {
         "comp_number": 103,
         "type": 0,
@@ -1545,7 +1545,7 @@
       "name": []
     },
     {
-      "id": "americanLeague",
+      "id": "_americanLeague",
       "comp": {
         "comp_number": 106,
         "type": 0,
@@ -1576,7 +1576,7 @@
       "name": []
     },
     {
-      "id": "venezuelanLeague",
+      "id": "_venezuelanLeague",
       "comp": {
         "comp_number": 107,
         "type": 0,
@@ -1607,7 +1607,7 @@
       "name": []
     },
     {
-      "id": "ghanaLeague",
+      "id": "_ghanaLeague",
       "comp": {
         "comp_number": 108,
         "type": 0,
@@ -1638,7 +1638,7 @@
       "name": []
     },
     {
-      "id": "frenchLeague",
+      "id": "_frenchLeague",
       "comp": {
         "comp_number": 53,
         "type": 0,
@@ -1675,14 +1675,14 @@
       ],
       "reserved1": 0,
       "name": [
-        "aPremiereDivisi",
-        "aPremiere",
-        "aDeuxiemeDivisi",
-        "aDeuxieme"
+        "_aPremiereDivisi",
+        "_aPremiere",
+        "_aDeuxiemeDivisi",
+        "_aDeuxieme"
       ]
     },
     {
-      "id": "germanLeague",
+      "id": "_germanLeague",
       "comp": {
         "comp_number": 54,
         "type": 0,
@@ -1719,14 +1719,14 @@
       ],
       "reserved1": 0,
       "name": [
-        "a1Liga",
-        "a1Liga",
-        "a2Liga",
-        "a2Liga"
+        "_a1Liga",
+        "_a1Liga",
+        "_a2Liga",
+        "_a2Liga"
       ]
     },
     {
-      "id": "italianLeague",
+      "id": "_italianLeague",
       "comp": {
         "comp_number": 61,
         "type": 0,
@@ -1763,14 +1763,14 @@
       ],
       "reserved1": 0,
       "name": [
-        "aSerieA",
-        "aSerieA",
-        "aSerieB",
-        "aSerieB"
+        "_aSerieA",
+        "_aSerieA",
+        "_aSerieB",
+        "_aSerieB"
       ]
     },
     {
-      "id": "japaneseLeague",
+      "id": "_japaneseLeague",
       "comp": {
         "comp_number": 96,
         "type": 0,
@@ -1807,14 +1807,14 @@
       ],
       "reserved1": 0,
       "name": [
-        "aJLeague",
-        "aJLeague_0",
-        "aLeague_2",
-        "aLeague_3"
+        "_aJLeague",
+        "_aJLeague_0",
+        "_aLeague_2",
+        "_aLeague_3"
       ]
     },
     {
-      "id": "argentinianLeague",
+      "id": "_argentinianLeague",
       "comp": {
         "comp_number": 87,
         "type": 0,
@@ -1853,7 +1853,7 @@
       "name": []
     },
     {
-      "id": "mexicanLeague",
+      "id": "_mexicanLeague",
       "comp": {
         "comp_number": 97,
         "type": 0,
@@ -1892,7 +1892,7 @@
       "name": []
     },
     {
-      "id": "elSalvadorLeague",
+      "id": "_elSalvadorLeague",
       "comp": {
         "comp_number": 94,
         "type": 0,
@@ -1947,7 +1947,7 @@
       "name": []
     },
     {
-      "id": "australianLeague",
+      "id": "_australianLeague",
       "comp": {
         "comp_number": 88,
         "type": 0,
@@ -2000,18 +2000,18 @@
       ],
       "reserved1": 0,
       "name": [
-        "a1stDivision",
-        "a1stDivision",
-        "aSouthDivision",
-        "aSouthDivision_0",
-        "aNswDivision",
-        "aNsw",
-        "aQueenslandDivi",
-        "aQueensland"
+        "_a1stDivision",
+        "_a1stDivision",
+        "_aSouthDivision",
+        "_aSouthDivision_0",
+        "_aNswDivision",
+        "_aNsw",
+        "_aQueenslandDivi",
+        "_aQueensland"
       ]
     },
     {
-      "id": "newZealandLeague",
+      "id": "_newZealandLeague",
       "comp": {
         "comp_number": 98,
         "type": 0,
@@ -2056,16 +2056,16 @@
       ],
       "reserved1": 0,
       "name": [
-        "aNorthernRegion",
-        "aNorthern",
-        "aCentralRegion",
-        "aCentral",
-        "aSouthernRegion",
-        "aSouthern"
+        "_aNorthernRegion",
+        "_aNorthern",
+        "_aCentralRegion",
+        "_aCentral",
+        "_aSouthernRegion",
+        "_aSouthern"
       ]
     },
     {
-      "id": "englishLeague",
+      "id": "_englishLeague",
       "comp": {
         "comp_number": 46,
         "type": 0,
@@ -2118,18 +2118,18 @@
       ],
       "reserved1": 0,
       "name": [
-        "aPremierLeague",
-        "aPremier",
-        "aDivisionOne",
-        "aDivisionOne",
-        "aDivisionTwo",
-        "aDivisionTwo",
-        "aDivisionThree",
-        "aDivisionThree"
+        "_aPremierLeague",
+        "_aPremier",
+        "_aDivisionOne",
+        "_aDivisionOne",
+        "_aDivisionTwo",
+        "_aDivisionTwo",
+        "_aDivisionThree",
+        "_aDivisionThree"
       ],
       "playoff_links": [
-        "div1Playoffs",
-        "englishLeagues1"
+        "_div1Playoffs",
+        "_englishLeagues1"
       ],
       "promotion_link_data": [
         0,
@@ -2159,7 +2159,7 @@
       ]
     },
     {
-      "id": "dutchLeague",
+      "id": "_dutchLeague",
       "comp": {
         "comp_number": 56,
         "type": 0,
@@ -2199,8 +2199,8 @@
         null
       ],
       "playoff_links": [
-        "dutchPlayoffs",
-        "dutchLeagues1"
+        "_dutchPlayoffs",
+        "_dutchLeagues1"
       ],
       "promotion_link_data": [
         0,
@@ -2230,7 +2230,7 @@
       ]
     },
     {
-      "id": "scottishLeague",
+      "id": "_scottishLeague",
       "comp": {
         "comp_number": 74,
         "type": 0,
@@ -2286,8 +2286,8 @@
         null
       ],
       "playoff_links": [
-        "scottishPlayoffs",
-        "scottishLeague1"
+        "_scottishPlayoffs",
+        "_scottishLeague1"
       ],
       "promotion_link_data": [
         0,
@@ -2301,7 +2301,7 @@
       ]
     },
     {
-      "id": "spanishLeague",
+      "id": "_spanishLeague",
       "comp": {
         "comp_number": 78,
         "type": 0,
@@ -2338,14 +2338,14 @@
       ],
       "reserved1": 0,
       "name": [
-        "aPrimeraDivisio",
-        "aPrimera",
-        "aSegundaDivisio",
-        "aSegunda"
+        "_aPrimeraDivisio",
+        "_aPrimera",
+        "_aSegundaDivisio",
+        "_aSegunda"
       ],
       "playoff_links": [
-        "spanishPlayoffs",
-        "spanishLeague1"
+        "_spanishPlayoffs",
+        "_spanishLeague1"
       ],
       "promotion_link_data": [
         0,
@@ -2375,7 +2375,7 @@
       ]
     },
     {
-      "id": "uruguayanLeague",
+      "id": "_uruguayanLeague",
       "comp": {
         "comp_number": 104,
         "type": 0,
@@ -2415,8 +2415,8 @@
         null
       ],
       "playoff_links": [
-        "uruguayanPlayoffs",
-        "uruguayanLeague1"
+        "_uruguayanPlayoffs",
+        "_uruguayanLeague1"
       ],
       "promotion_link_data": [
         0,

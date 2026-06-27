@@ -1,7 +1,7 @@
 {
-  "name": "highlightsMenu",
-  "onInit": "_HighlightsMenuInit",
-  "onReturn": "_HighlightsMenuOnReturn",
+  "name": "_highlightsMenu",
+  "onInit": "HighlightsMenuInit",
+  "onReturn": "HighlightsMenuOnReturn",
   "onDraw": null,
   "defaultEntry": 1,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aHighlights"
+          "str": "_aHighlights"
         }
       ]
     },
@@ -54,11 +54,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewHighlights"
+          "str": "_aViewHighlights"
         },
         {
           "op": "onselect_fire",
-          "func": "_JmpShowHighlights"
+          "func": "JmpShowHighlights"
         }
       ]
     },
@@ -86,11 +86,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aLoadHighlights"
+          "str": "_aLoadHighlights"
         },
         {
           "op": "onselect_fire",
-          "func": "_LoadHighlightsMenu"
+          "func": "LoadHighlightsMenu"
         }
       ]
     },
@@ -118,11 +118,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSaveHighlights"
+          "str": "_aSaveHighlights"
         },
         {
           "op": "onselect_fire",
-          "func": "_SaveHighlightsMenu"
+          "func": "SaveHighlightsMenu"
         }
       ]
     },
@@ -150,11 +150,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitHighlights"
+          "func": "ExitHighlights"
         }
       ]
     }

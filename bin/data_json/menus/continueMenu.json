@@ -1,6 +1,6 @@
 {
-  "name": "continueMenu",
-  "onInit": "_ContinueInit",
+  "name": "_continueMenu",
+  "onInit": "ContinueInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 1,
@@ -47,11 +47,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aContinue"
+          "str": "_aContinue"
         },
         {
           "op": "onselect_fire",
-          "func": "_ContinueMenuContinueSelected"
+          "func": "ContinueMenuContinueSelected"
         }
       ]
     }

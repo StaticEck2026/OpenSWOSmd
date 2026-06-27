@@ -1,7 +1,7 @@
 {
-  "name": "squadMenu",
-  "onInit": "_SquadInit",
-  "onReturn": "_SquadFinish",
+  "name": "_squadMenu",
+  "onInit": "SquadInit",
+  "onReturn": "SquadFinish",
   "onDraw": null,
   "defaultEntry": 9,
   "items": [
@@ -101,7 +101,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aCoach_4"
+          "str": "_aCoach_4"
         }
       ]
     },
@@ -150,11 +150,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTraining"
+          "str": "_aTraining"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectTraining"
+          "func": "SelectTraining"
         }
       ]
     },
@@ -213,11 +213,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aGoals"
+          "str": "_aGoals"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectGoals"
+          "func": "SelectGoals"
         }
       ]
     },
@@ -245,11 +245,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -273,11 +273,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -292,7 +292,7 @@
       "commands": [
         {
           "op": "onselect_fire",
-          "func": "_SquadOnSelect11"
+          "func": "SquadOnSelect11"
         }
       ]
     },
@@ -323,7 +323,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aGoals"
+          "str": "_aGoals"
         }
       ]
     },
@@ -339,7 +339,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aNat"
+          "str": "_aNat"
         }
       ]
     },
@@ -355,7 +355,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aForm"
+          "str": "_aForm"
         }
       ]
     },
@@ -386,7 +386,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aCups"
+          "str": "_aCups"
         }
       ]
     },
@@ -402,7 +402,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aLge"
+          "str": "_aLge"
         }
       ]
     },
@@ -418,7 +418,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aCup_3"
+          "str": "_aCup_3"
         }
       ]
     },
@@ -473,7 +473,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTot"
+          "str": "_aTot"
         }
       ]
     },
@@ -505,7 +505,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aOwnGoals"
+          "str": "_aOwnGoals"
         }
       ]
     },
@@ -537,7 +537,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aExPlayerGoals"
+          "str": "_aExPlayerGoals"
         }
       ]
     },
@@ -581,11 +581,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_SquadAfterDrawCommon"
+          "func": "SquadAfterDrawCommon"
         },
         {
           "op": "onselect_fire",
-          "func": "_SquadCommon"
+          "func": "SquadCommon"
         }
       ]
     },
@@ -932,11 +932,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SquadOnSelect45"
+          "func": "SquadOnSelect45"
         },
         {
           "op": "after_draw",
-          "func": "_Squad45AfterDraw"
+          "func": "Squad45AfterDraw"
         }
       ]
     },
@@ -1115,7 +1115,7 @@
       "commands": [
         {
           "op": "fg_func",
-          "func": "_locret_139AE2"
+          "func": "locret_139AE2"
         }
       ]
     },

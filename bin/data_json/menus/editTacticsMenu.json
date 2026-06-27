@@ -1,7 +1,7 @@
 {
-  "name": "editTacticsMenu",
-  "onInit": "_EditTacticsInit",
-  "onReturn": "_EditTacticsOnRestore",
+  "name": "_editTacticsMenu",
+  "onInit": "EditTacticsInit",
+  "onReturn": "EditTacticsOnRestore",
   "onDraw": null,
   "defaultEntry": 8,
   "items": [
@@ -61,11 +61,11 @@
         {
           "op": "input_func",
           "mask": "0xFFFF",
-          "func": "_EditTacicsMovePlayersOrBall"
+          "func": "EditTacicsMovePlayersOrBall"
         },
         {
           "op": "after_draw",
-          "func": "_EditTactics2AfterDraw"
+          "func": "EditTactics2AfterDraw"
         }
       ]
     },
@@ -81,11 +81,11 @@
         {
           "op": "input_func",
           "mask": "0xFFFF",
-          "func": "_CopyTactics"
+          "func": "CopyTactics"
         },
         {
           "op": "after_draw",
-          "func": "_EditTactics2AfterDraw"
+          "func": "EditTactics2AfterDraw"
         }
       ]
     },
@@ -113,11 +113,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aCopy"
+          "str": "_aCopy"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectCopyTactics"
+          "func": "SelectCopyTactics"
         }
       ]
     },
@@ -145,11 +145,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aUndo"
+          "str": "_aUndo"
         },
         {
           "op": "onselect_fire",
-          "func": "_UndoTactics"
+          "func": "UndoTactics"
         }
       ]
     },
@@ -177,11 +177,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "flipStrTable"
+          "table": "_flipStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_FlipOnOff"
+          "func": "FlipOnOff"
         }
       ]
     },
@@ -209,11 +209,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aImport"
+          "str": "_aImport"
         },
         {
           "op": "onselect_fire",
-          "func": "_ImportTactics"
+          "func": "ImportTactics"
         }
       ]
     },
@@ -241,11 +241,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSaveExit"
+          "str": "_aSaveExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_SaveAndExitEditTactics"
+          "func": "SaveAndExitEditTactics"
         }
       ]
     },
@@ -273,11 +273,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAbort"
+          "str": "_aAbort"
         },
         {
           "op": "onselect_fire",
-          "func": "_AbortEditTactics"
+          "func": "AbortEditTactics"
         }
       ]
     },
@@ -322,11 +322,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_EditTacticsAfterDrawPlayerNames"
+          "func": "EditTacticsAfterDrawPlayerNames"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTacticsPlayerNamesCommon"
+          "func": "EditTacticsPlayerNamesCommon"
         }
       ]
     },
@@ -670,11 +670,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTacticsOnSelect28"
+          "func": "EditTacticsOnSelect28"
         },
         {
           "op": "after_draw",
-          "func": "_EditTactics28AfterDraw"
+          "func": "EditTactics28AfterDraw"
         }
       ]
     },
@@ -701,11 +701,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_EditTacticsAfterDrawPlayerFace"
+          "func": "EditTacticsAfterDrawPlayerFace"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTacticsCommon"
+          "func": "EditTacticsCommon"
         }
       ]
     },

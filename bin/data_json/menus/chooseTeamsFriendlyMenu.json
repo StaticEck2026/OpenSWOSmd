@@ -1,7 +1,7 @@
 {
-  "name": "chooseTeamsFriendlyMenu",
-  "onInit": "_ChooseTeamsFriendlyInitFinish",
-  "onReturn": "_ChooseTeamsFriendlyInitFinish",
+  "name": "_chooseTeamsFriendlyMenu",
+  "onInit": "ChooseTeamsFriendlyInitFinish",
+  "onReturn": "ChooseTeamsFriendlyInitFinish",
   "onDraw": null,
   "defaultEntry": 23,
   "items": [
@@ -89,7 +89,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aComputer"
+          "str": "_aComputer"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aPlayerCoach"
+          "str": "_aPlayerCoach"
         }
       ]
     },
@@ -121,7 +121,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aCoach"
+          "str": "_aCoach"
         }
       ]
     },
@@ -155,7 +155,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamsFriendlyCommon2"
+          "func": "ChooseTeamsFriendlyCommon2"
         }
       ]
     },
@@ -1225,11 +1225,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewSelectedTe"
+          "str": "_aViewSelectedTe"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewSelected"
+          "func": "ViewSelected"
         }
       ]
     },
@@ -1257,11 +1257,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitChooseTeams2"
+          "func": "ExitChooseTeams2"
         }
       ]
     },
@@ -1302,7 +1302,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamsPlayMatchSelected"
+          "func": "ChooseTeamsPlayMatchSelected"
         }
       ]
     },

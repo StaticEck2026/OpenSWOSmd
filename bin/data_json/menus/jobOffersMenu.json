@@ -1,7 +1,7 @@
 {
-  "name": "jobOffersMenu",
-  "onInit": "_JobOffersInit",
-  "onReturn": "_JobOffersFinish",
+  "name": "_jobOffersMenu",
+  "onInit": "JobOffersInit",
+  "onReturn": "JobOffersFinish",
   "onDraw": null,
   "defaultEntry": 12,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aJobOffers"
+          "str": "_aJobOffers"
         }
       ]
     },
@@ -55,11 +55,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_JobOffersCommon"
+          "func": "JobOffersCommon"
         },
         {
           "op": "after_draw",
-          "func": "_JobOffersAfterDrawCommon"
+          "func": "JobOffersAfterDrawCommon"
         }
       ]
     },
@@ -181,7 +181,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aJobOffersBeing"
+          "str": "_aJobOffersBeing"
         }
       ]
     },
@@ -210,11 +210,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_JobOffers_DrawOldOfferLine"
+          "func": "JobOffers_DrawOldOfferLine"
         },
         {
           "op": "onselect_fire",
-          "func": "_OldJobOffersCommon"
+          "func": "OldJobOffersCommon"
         }
       ]
     },
@@ -348,11 +348,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_JobOffersExit"
+          "func": "JobOffersExit"
         }
       ]
     },

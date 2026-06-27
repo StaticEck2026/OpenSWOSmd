@@ -5,741 +5,741 @@
     {
       "number": 0,
       "name": "ALBANIA",
-      "table": "albaniaTable",
+      "table": "_albaniaTable",
       "leagues": [
-        "albanianLeague"
+        "_albanianLeague"
       ],
       "cups": [
-        "albanianCup"
+        "_albanianCup"
       ]
     },
     {
       "number": 1,
       "name": "AUSTRIA",
-      "table": "austriaTable",
+      "table": "_austriaTable",
       "leagues": [
-        "austrianLeague"
+        "_austrianLeague"
       ],
       "cups": [
-        "austrianCup"
+        "_austrianCup"
       ]
     },
     {
       "number": 2,
       "name": "BELGIUM",
-      "table": "belgiumTable",
+      "table": "_belgiumTable",
       "leagues": [
-        "belgianLeague"
+        "_belgianLeague"
       ],
       "cups": [
-        "belgianCup"
+        "_belgianCup"
       ]
     },
     {
       "number": 3,
       "name": "BULGARIA",
-      "table": "bulgariaTable",
+      "table": "_bulgariaTable",
       "leagues": [
-        "bulgarianLeague"
+        "_bulgarianLeague"
       ],
       "cups": [
-        "bulgarianCup"
+        "_bulgarianCup"
       ]
     },
     {
       "number": 4,
       "name": "CROATIA",
-      "table": "croatiaTable",
+      "table": "_croatiaTable",
       "leagues": [
-        "croatianLeague"
+        "_croatianLeague"
       ],
       "cups": [
-        "croatianCup"
+        "_croatianCup"
       ]
     },
     {
       "number": 5,
       "name": "CYPRUS",
-      "table": "cyprusTable",
+      "table": "_cyprusTable",
       "leagues": [
-        "cypriotLeague"
+        "_cypriotLeague"
       ],
       "cups": [
-        "cypriotCup"
+        "_cypriotCup"
       ]
     },
     {
       "number": 6,
       "name": "CZECH_REPUBLIC",
-      "table": "czechRepublicTable",
+      "table": "_czechRepublicTable",
       "leagues": [
-        "czechLeague"
+        "_czechLeague"
       ],
       "cups": [
-        "czechCup"
+        "_czechCup"
       ]
     },
     {
       "number": 7,
       "name": "DENMARK",
-      "table": "denmarkTable",
+      "table": "_denmarkTable",
       "leagues": [
-        "danishLeague"
+        "_danishLeague"
       ],
       "cups": [
-        "danishCup"
+        "_danishCup"
       ]
     },
     {
       "number": 8,
       "name": "ENGLAND",
-      "table": "englandTable",
+      "table": "_englandTable",
       "leagues": [
-        "englishLeague"
+        "_englishLeague"
       ],
       "cups": [
-        "englishCup",
-        "englishLeagueCup"
+        "_englishCup",
+        "_englishLeagueCup"
       ]
     },
     {
       "number": 10,
       "name": "ESTONIA",
-      "table": "estoniaTable",
+      "table": "_estoniaTable",
       "leagues": [
-        "estonianLeague"
+        "_estonianLeague"
       ],
       "cups": [
-        "estonianCup"
+        "_estonianCup"
       ]
     },
     {
       "number": 11,
       "name": "FAROE_ISLANDS",
-      "table": "faroeIslandsTable",
+      "table": "_faroeIslandsTable",
       "leagues": [
-        "faroeIslesLeague"
+        "_faroeIslesLeague"
       ],
       "cups": [
-        "faroeIslesCup"
+        "_faroeIslesCup"
       ]
     },
     {
       "number": 12,
       "name": "FINLAND",
-      "table": "finlandTable",
+      "table": "_finlandTable",
       "leagues": [
-        "finnishLeague"
+        "_finnishLeague"
       ],
       "cups": [
-        "finnishCup"
+        "_finnishCup"
       ]
     },
     {
       "number": 13,
       "name": "FRANCE",
-      "table": "franceTable",
+      "table": "_franceTable",
       "leagues": [
-        "frenchLeague"
+        "_frenchLeague"
       ],
       "cups": [
-        "frenchCup"
+        "_frenchCup"
       ]
     },
     {
       "number": 14,
       "name": "GERMANY",
-      "table": "germanyTable",
+      "table": "_germanyTable",
       "leagues": [
-        "germanLeague"
+        "_germanLeague"
       ],
       "cups": [
-        "germanCup"
+        "_germanCup"
       ]
     },
     {
       "number": 15,
       "name": "GREECE",
-      "table": "greeceTable",
+      "table": "_greeceTable",
       "leagues": [
-        "greekLeague"
+        "_greekLeague"
       ],
       "cups": [
-        "greekCup"
+        "_greekCup"
       ]
     },
     {
       "number": 16,
       "name": "HUNGARY",
-      "table": "hungaryTable",
+      "table": "_hungaryTable",
       "leagues": [
-        "hungarianLeague"
+        "_hungarianLeague"
       ],
       "cups": [
-        "hungarianCup"
+        "_hungarianCup"
       ]
     },
     {
       "number": 17,
       "name": "ICELAND",
-      "table": "icelandTable",
+      "table": "_icelandTable",
       "leagues": [
-        "icelandicLeague"
+        "_icelandicLeague"
       ],
       "cups": [
-        "icelandicCup"
+        "_icelandicCup"
       ]
     },
     {
       "number": 18,
       "name": "REPUBLIC_IRELAND",
-      "table": "republicIrelandTable",
+      "table": "_republicIrelandTable",
       "leagues": [
-        "irishLeague"
+        "_irishLeague"
       ],
       "cups": [
-        "irishCup"
+        "_irishCup"
       ]
     },
     {
       "number": 19,
       "name": "ISRAEL",
-      "table": "israelTable",
+      "table": "_israelTable",
       "leagues": [
-        "israeliLeague"
+        "_israeliLeague"
       ],
       "cups": [
-        "israeliCup"
+        "_israeliCup"
       ]
     },
     {
       "number": 20,
       "name": "ITALY",
-      "table": "italyTable",
+      "table": "_italyTable",
       "leagues": [
-        "italianLeague"
+        "_italianLeague"
       ],
       "cups": [
-        "italianCup"
+        "_italianCup"
       ]
     },
     {
       "number": 21,
       "name": "LATVIA",
-      "table": "latviaTable",
+      "table": "_latviaTable",
       "leagues": [
-        "latvianLeague"
+        "_latvianLeague"
       ],
       "cups": [
-        "latvianCup"
+        "_latvianCup"
       ]
     },
     {
       "number": 22,
       "name": "LITHUANIA",
-      "table": "lithuaniaTable",
+      "table": "_lithuaniaTable",
       "leagues": [
-        "lithuanianLeague"
+        "_lithuanianLeague"
       ],
       "cups": [
-        "lithuanianCup"
+        "_lithuanianCup"
       ]
     },
     {
       "number": 23,
       "name": "LUXEMBOURG",
-      "table": "luxembourgTable",
+      "table": "_luxembourgTable",
       "leagues": [
-        "luxembourgLeague"
+        "_luxembourgLeague"
       ],
       "cups": [
-        "luxembourgCup"
+        "_luxembourgCup"
       ]
     },
     {
       "number": 24,
       "name": "MALTA",
-      "table": "maltaTable",
+      "table": "_maltaTable",
       "leagues": [
-        "malteseLeague"
+        "_malteseLeague"
       ],
       "cups": [
-        "malteseCup"
+        "_malteseCup"
       ]
     },
     {
       "number": 25,
       "name": "HOLLAND",
-      "table": "hollandTable",
+      "table": "_hollandTable",
       "leagues": [
-        "dutchLeague"
+        "_dutchLeague"
       ],
       "cups": [
-        "dutchCup"
+        "_dutchCup"
       ]
     },
     {
       "number": 26,
       "name": "NORTHERN_IRELAND",
-      "table": "northernIrelandTable",
+      "table": "_northernIrelandTable",
       "leagues": [
-        "northernIrishLeague"
+        "_northernIrishLeague"
       ],
       "cups": [
-        "northernIrishCup"
+        "_northernIrishCup"
       ]
     },
     {
       "number": 27,
       "name": "NORWAY",
-      "table": "norwayTable",
+      "table": "_norwayTable",
       "leagues": [
-        "norwegianLeague"
+        "_norwegianLeague"
       ],
       "cups": [
-        "norwegianCup"
+        "_norwegianCup"
       ]
     },
     {
       "number": 28,
       "name": "POLAND",
-      "table": "polandTable",
+      "table": "_polandTable",
       "leagues": [
-        "polishLeague"
+        "_polishLeague"
       ],
       "cups": [
-        "polishCup"
+        "_polishCup"
       ]
     },
     {
       "number": 29,
       "name": "PORTUGAL",
-      "table": "portugalTable",
+      "table": "_portugalTable",
       "leagues": [
-        "portugeseLeague"
+        "_portugeseLeague"
       ],
       "cups": [
-        "portugeseCup"
+        "_portugeseCup"
       ]
     },
     {
       "number": 30,
       "name": "ROMANIA",
-      "table": "romaniaTable",
+      "table": "_romaniaTable",
       "leagues": [
-        "romanianLeague"
+        "_romanianLeague"
       ],
       "cups": [
-        "romanianCup"
+        "_romanianCup"
       ]
     },
     {
       "number": 31,
       "name": "RUSSIA",
-      "table": "russiaTable",
+      "table": "_russiaTable",
       "leagues": [
-        "russianLeague"
+        "_russianLeague"
       ],
       "cups": [
-        "russianCup"
+        "_russianCup"
       ]
     },
     {
       "number": 32,
       "name": "SAN_MARINO",
-      "table": "sanMarinoTable",
+      "table": "_sanMarinoTable",
       "leagues": [
-        "sanMarinoLeague"
+        "_sanMarinoLeague"
       ],
       "cups": [
-        "sanMarinoCup"
+        "_sanMarinoCup"
       ]
     },
     {
       "number": 33,
       "name": "SCOTLAND",
-      "table": "scotlandTable",
+      "table": "_scotlandTable",
       "leagues": [
-        "scottishLeague"
+        "_scottishLeague"
       ],
       "cups": [
-        "scottishCup",
-        "scottishLeagueCup"
+        "_scottishCup",
+        "_scottishLeagueCup"
       ]
     },
     {
       "number": 34,
       "name": "SLOVENIA",
-      "table": "sloveniaTable",
+      "table": "_sloveniaTable",
       "leagues": [
-        "slovenianLeague"
+        "_slovenianLeague"
       ],
       "cups": [
-        "slovenianCup"
+        "_slovenianCup"
       ]
     },
     {
       "number": 35,
       "name": "SPAIN",
-      "table": "spainTable",
+      "table": "_spainTable",
       "leagues": [
-        "spanishLeague"
+        "_spanishLeague"
       ],
       "cups": [
-        "spanishCup"
+        "_spanishCup"
       ]
     },
     {
       "number": 36,
       "name": "SWEDEN",
-      "table": "swedenTable",
+      "table": "_swedenTable",
       "leagues": [
-        "swedishLeague"
+        "_swedishLeague"
       ],
       "cups": [
-        "swedishCup"
+        "_swedishCup"
       ]
     },
     {
       "number": 37,
       "name": "SWITZERLAND",
-      "table": "switzerlandTable",
+      "table": "_switzerlandTable",
       "leagues": [
-        "swissLeague"
+        "_swissLeague"
       ],
       "cups": [
-        "swissCup"
+        "_swissCup"
       ]
     },
     {
       "number": 38,
       "name": "TURKEY",
-      "table": "turkeyTable",
+      "table": "_turkeyTable",
       "leagues": [
-        "turkishLeague"
+        "_turkishLeague"
       ],
       "cups": [
-        "turkishCup"
+        "_turkishCup"
       ]
     },
     {
       "number": 39,
       "name": "UKRAINE",
-      "table": "ukraineTable",
+      "table": "_ukraineTable",
       "leagues": [
-        "ukrainianLeague"
+        "_ukrainianLeague"
       ],
       "cups": [
-        "ukrainianCup"
+        "_ukrainianCup"
       ]
     },
     {
       "number": 40,
       "name": "WALES",
-      "table": "walesTable",
+      "table": "_walesTable",
       "leagues": [
-        "welshLeague"
+        "_welshLeague"
       ],
       "cups": [
-        "welshCup"
+        "_welshCup"
       ]
     },
     {
       "number": 41,
       "name": "YUGOSLAVIA",
-      "table": "yugoslaviaTable",
+      "table": "_yugoslaviaTable",
       "leagues": [
-        "yugoslavianLeague"
+        "_yugoslavianLeague"
       ],
       "cups": [
-        "yugoslavianCup"
+        "_yugoslavianCup"
       ]
     },
     {
       "number": 42,
       "name": "ALGERIA",
-      "table": "algeriaTable",
+      "table": "_algeriaTable",
       "leagues": [
-        "algerianLeague"
+        "_algerianLeague"
       ],
       "cups": [
-        "algerianCup"
+        "_algerianCup"
       ]
     },
     {
       "number": 43,
       "name": "ARGENTINA",
-      "table": "argentinaTable",
+      "table": "_argentinaTable",
       "leagues": [
-        "argentinianLeague"
+        "_argentinianLeague"
       ],
       "cups": []
     },
     {
       "number": 44,
       "name": "AUSTRALIA",
-      "table": "australiaTable",
+      "table": "_australiaTable",
       "leagues": [
-        "australianLeague"
+        "_australianLeague"
       ],
       "cups": [
-        "australianCup"
+        "_australianCup"
       ]
     },
     {
       "number": 45,
       "name": "BOLIVIA",
-      "table": "boliviaTable",
+      "table": "_boliviaTable",
       "leagues": [
-        "bolivianLeague"
+        "_bolivianLeague"
       ],
       "cups": []
     },
     {
       "number": 46,
       "name": "BRAZIL",
-      "table": "brasilTable",
+      "table": "_brasilTable",
       "leagues": [
-        "brasilianLeague"
+        "_brasilianLeague"
       ],
       "cups": []
     },
     {
       "number": 48,
       "name": "CHILE",
-      "table": "chileTable",
+      "table": "_chileTable",
       "leagues": [
-        "chileanLeague"
+        "_chileanLeague"
       ],
       "cups": []
     },
     {
       "number": 49,
       "name": "COLOMBIA",
-      "table": "colombiaTable",
+      "table": "_colombiaTable",
       "leagues": [
-        "colombianLeague"
+        "_colombianLeague"
       ],
       "cups": []
     },
     {
       "number": 50,
       "name": "ECUADOR",
-      "table": "ecuadorTable",
+      "table": "_ecuadorTable",
       "leagues": [
-        "ecuadorLeague"
+        "_ecuadorLeague"
       ],
       "cups": []
     },
     {
       "number": 51,
       "name": "EL_SALVADOR",
-      "table": "elSalvadorTable",
+      "table": "_elSalvadorTable",
       "leagues": [
-        "elSalvadorLeague"
+        "_elSalvadorLeague"
       ],
       "cups": []
     },
     {
       "number": 55,
       "name": "JAPAN",
-      "table": "japanTable",
+      "table": "_japanTable",
       "leagues": [
-        "japaneseLeague"
+        "_japaneseLeague"
       ],
       "cups": [
-        "japaneseCup",
-        "japaneseEmperorsCup"
+        "_japaneseCup",
+        "_japaneseEmperorsCup"
       ]
     },
     {
       "number": 60,
       "name": "MEXICO",
-      "table": "mexicoTable",
+      "table": "_mexicoTable",
       "leagues": [
-        "mexicanLeague"
+        "_mexicanLeague"
       ],
       "cups": []
     },
     {
       "number": 62,
       "name": "NEW_ZEALAND",
-      "table": "newZealandTable",
+      "table": "_newZealandTable",
       "leagues": [
-        "newZealandLeague"
+        "_newZealandLeague"
       ],
       "cups": []
     },
     {
       "number": 64,
       "name": "PARAGUAY",
-      "table": "paraguayTable",
+      "table": "_paraguayTable",
       "leagues": [
-        "paraguayanLeague"
+        "_paraguayanLeague"
       ],
       "cups": []
     },
     {
       "number": 65,
       "name": "PERU",
-      "table": "peruTable",
+      "table": "_peruTable",
       "leagues": [
-        "peruvianLeague"
+        "_peruvianLeague"
       ],
       "cups": []
     },
     {
       "number": 66,
       "name": "SURINAM",
-      "table": "surinamTable",
+      "table": "_surinamTable",
       "leagues": [
-        "surinamLeague"
+        "_surinamLeague"
       ],
       "cups": []
     },
     {
       "number": 67,
       "name": "TAIWAN",
-      "table": "taiwanTable",
+      "table": "_taiwanTable",
       "leagues": [
-        "taiwaneseLeague"
+        "_taiwaneseLeague"
       ],
       "cups": [
-        "taiwaneseCup"
+        "_taiwaneseCup"
       ]
     },
     {
       "number": 69,
       "name": "SOUTH_AFRICA",
-      "table": "southAfricaTable",
+      "table": "_southAfricaTable",
       "leagues": [
-        "southAfricanLeague"
+        "_southAfricanLeague"
       ],
       "cups": [
-        "southAfricanCup"
+        "_southAfricanCup"
       ]
     },
     {
       "number": 71,
       "name": "URUGUAY",
-      "table": "uruguayTable",
+      "table": "_uruguayTable",
       "leagues": [
-        "uruguayanLeague"
+        "_uruguayanLeague"
       ],
       "cups": []
     },
     {
       "number": 72,
       "name": "CUSTOM",
-      "table": "customsTable"
+      "table": "_customsTable"
     },
     {
       "number": 73,
       "name": "USA",
-      "table": "usaTable",
+      "table": "_usaTable",
       "leagues": [
-        "americanLeague"
+        "_americanLeague"
       ],
       "cups": []
     },
     {
       "number": 75,
       "name": "INDIA",
-      "table": "indiaTable",
+      "table": "_indiaTable",
       "leagues": [
-        "indianLeague"
+        "_indianLeague"
       ],
       "cups": []
     },
     {
       "number": 76,
       "name": "BELARUS",
-      "table": "belarusTable",
+      "table": "_belarusTable",
       "leagues": [
-        "belarussiaLleague"
+        "_belarussiaLleague"
       ],
       "cups": [
-        "belarusianCup"
+        "_belarusianCup"
       ]
     },
     {
       "number": 77,
       "name": "VENEZUELA",
-      "table": "venezuelaTable",
+      "table": "_venezuelaTable",
       "leagues": [
-        "venezuelanLeague"
+        "_venezuelanLeague"
       ],
       "cups": []
     },
     {
       "number": 78,
       "name": "SLOVAKIA",
-      "table": "slovakiaTable",
+      "table": "_slovakiaTable",
       "leagues": [
-        "slovakianLeague"
+        "_slovakianLeague"
       ],
       "cups": [
-        "slovakianCup"
+        "_slovakianCup"
       ]
     },
     {
       "number": 79,
       "name": "GHANA",
-      "table": "ghanaTable",
+      "table": "_ghanaTable",
       "leagues": [
-        "ghanaLeague"
+        "_ghanaLeague"
       ],
       "cups": []
     },
     {
       "number": 80,
       "name": "EUROPE",
-      "table": "europeTable"
+      "table": "_europeTable"
     },
     {
       "number": 81,
       "name": "AFRICA",
-      "table": "africaTable"
+      "table": "_africaTable"
     },
     {
       "number": 82,
       "name": "SOUTH_AMERICA",
-      "table": "southAmericaTable"
+      "table": "_southAmericaTable"
     },
     {
       "number": 83,
       "name": "NORTH_AMERICA",
-      "table": "northAmericaTable"
+      "table": "_northAmericaTable"
     },
     {
       "number": 84,
       "name": "ASIA",
-      "table": "asiaTable"
+      "table": "_asiaTable"
     },
     {
       "number": 85,
       "name": "OCEANIA",
-      "table": "oceaniaTable"
+      "table": "_oceaniaTable"
     },
     {
       "number": 100,
       "name": "COUNTRY_100",
-      "table": "customsTable"
+      "table": "_customsTable"
     },
     {
       "number": 252,
       "name": "COUNTRY_252",
-      "table": "worldCupQualifyingGroups"
+      "table": "_worldCupQualifyingGroups"
     },
     {
       "number": 253,
       "name": "COUNTRY_253",
-      "table": "ecQualifyingGroups"
+      "table": "_ecQualifyingGroups"
     },
     {
       "number": 254,
       "name": "COUNTRY_254",
-      "table": "worldTable"
+      "table": "_worldTable"
     }
   ]
 }

@@ -1,8 +1,8 @@
 {
-  "name": "designDiyTournamentMenu",
-  "onInit": "_DesignDIYTournamentInit",
-  "onReturn": "_DesignDIYTournamentReinit",
-  "onDraw": "_DesignDIYTournamentOnDraw",
+  "name": "_designDiyTournamentMenu",
+  "onInit": "DesignDIYTournamentInit",
+  "onReturn": "DesignDIYTournamentReinit",
+  "onDraw": "DesignDIYTournamentOnDraw",
   "defaultEntry": 19,
   "items": [
     {
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDesignDiyTourn"
+          "str": "_aDesignDiyTourn"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "diyFileBufferCopy.header.competitionName"
+          "str": "_diyFileBufferCopy.header.competitionName"
         }
       ]
     },
@@ -82,11 +82,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "diyFileBufferCopy.header.competitionName"
+          "str": "_diyFileBufferCopy.header.competitionName"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect2"
+          "func": "DesignDIYTournamentOnSelect2"
         }
       ]
     },
@@ -118,11 +118,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyPitchSeasonStrTab"
+          "table": "_diyPitchSeasonStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect3"
+          "func": "DesignDIYTournamentOnSelect3"
         }
       ]
     },
@@ -150,11 +150,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyPitchTypeStringTable"
+          "table": "_diyPitchTypeStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect4"
+          "func": "DesignDIYTournamentOnSelect4"
         }
       ]
     },
@@ -182,11 +182,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStartMonthStrTab"
+          "table": "_diyStartMonthStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect5"
+          "func": "DesignDIYTournamentOnSelect5"
         }
       ]
     },
@@ -207,7 +207,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "asc_135D96"
+          "str": "_asc_135D96"
         }
       ]
     },
@@ -235,11 +235,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyEndMonthStrTab"
+          "table": "_diyEndMonthStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect7"
+          "func": "DesignDIYTournamentOnSelect7"
         }
       ]
     },
@@ -260,7 +260,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAwayGoals"
+          "str": "_aAwayGoals"
         }
       ]
     },
@@ -288,11 +288,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyAwayGoalsStrTab"
+          "table": "_diyAwayGoalsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect9"
+          "func": "DesignDIYTournamentOnSelect9"
         }
       ]
     },
@@ -313,7 +313,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSubstitutes"
+          "str": "_aSubstitutes"
         }
       ]
     },
@@ -344,7 +344,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect11"
+          "func": "DesignDIYTournamentOnSelect11"
         }
       ]
     },
@@ -365,7 +365,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFrom"
+          "str": "_aFrom"
         }
       ]
     },
@@ -396,7 +396,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect13"
+          "func": "DesignDIYTournamentOnSelect13"
         }
       ]
     },
@@ -417,7 +417,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aTeams"
+          "str": "_aTeams"
         }
       ]
     },
@@ -433,7 +433,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDescription"
+          "str": "_aDescription"
         }
       ]
     },
@@ -449,7 +449,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSeeded"
+          "str": "_aSeeded"
         }
       ]
     },
@@ -518,7 +518,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+          "func": "DesignDIYTournament_AdjustStageQualifiers"
         }
       ]
     },
@@ -549,7 +549,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect20"
+          "func": "DesignDIYTournamentOnSelect20"
         }
       ]
     },
@@ -577,11 +577,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStar"
+          "str": "_aStar"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect21"
+          "func": "DesignDIYTournamentOnSelect21"
         }
       ]
     },
@@ -637,11 +637,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage1LegsStrTab"
+          "table": "_diyStage1LegsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect23"
+          "func": "DesignDIYTournamentOnSelect23"
         }
       ]
     },
@@ -669,11 +669,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage1ExtraTimeStrTab"
+          "table": "_diyStage1ExtraTimeStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect24"
+          "func": "DesignDIYTournamentOnSelect24"
         }
       ]
     },
@@ -701,11 +701,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage1PenaltiesStrTab"
+          "table": "_diyStage1PenaltiesStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect25"
+          "func": "DesignDIYTournamentOnSelect25"
         }
       ]
     },
@@ -733,11 +733,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage1PtsForWinStrTab"
+          "table": "_diyStage1PtsForWinStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect26"
+          "func": "DesignDIYTournamentOnSelect26"
         }
       ]
     },
@@ -786,11 +786,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage1PlayCountStrTab"
+          "table": "_diyStage1PlayCountStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect28"
+          "func": "DesignDIYTournamentOnSelect28"
         }
       ]
     },
@@ -859,7 +859,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+          "func": "DesignDIYTournament_AdjustStageQualifiers"
         }
       ]
     },
@@ -890,7 +890,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect20"
+          "func": "DesignDIYTournamentOnSelect20"
         }
       ]
     },
@@ -918,11 +918,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStar"
+          "str": "_aStar"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect21"
+          "func": "DesignDIYTournamentOnSelect21"
         }
       ]
     },
@@ -979,11 +979,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage2LegsStrTab"
+          "table": "_diyStage2LegsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect23"
+          "func": "DesignDIYTournamentOnSelect23"
         }
       ]
     },
@@ -1011,11 +1011,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage2ExtraTimeStrTab"
+          "table": "_diyStage2ExtraTimeStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect24"
+          "func": "DesignDIYTournamentOnSelect24"
         }
       ]
     },
@@ -1043,11 +1043,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage2PenaltiesStrTab"
+          "table": "_diyStage2PenaltiesStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect25"
+          "func": "DesignDIYTournamentOnSelect25"
         }
       ]
     },
@@ -1075,11 +1075,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage2PtsForWinStrTab"
+          "table": "_diyStage2PtsForWinStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect26"
+          "func": "DesignDIYTournamentOnSelect26"
         }
       ]
     },
@@ -1128,11 +1128,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage2PlayCountStrTab"
+          "table": "_diyStage2PlayCountStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect28"
+          "func": "DesignDIYTournamentOnSelect28"
         }
       ]
     },
@@ -1201,7 +1201,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+          "func": "DesignDIYTournament_AdjustStageQualifiers"
         }
       ]
     },
@@ -1232,7 +1232,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect20"
+          "func": "DesignDIYTournamentOnSelect20"
         }
       ]
     },
@@ -1260,11 +1260,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStar"
+          "str": "_aStar"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect21"
+          "func": "DesignDIYTournamentOnSelect21"
         }
       ]
     },
@@ -1320,11 +1320,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage3LegsStrTab"
+          "table": "_diyStage3LegsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect23"
+          "func": "DesignDIYTournamentOnSelect23"
         }
       ]
     },
@@ -1352,11 +1352,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage3ExtraTimeStrTab"
+          "table": "_diyStage3ExtraTimeStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect24"
+          "func": "DesignDIYTournamentOnSelect24"
         }
       ]
     },
@@ -1384,11 +1384,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage3PenaltiesStrTab"
+          "table": "_diyStage3PenaltiesStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect25"
+          "func": "DesignDIYTournamentOnSelect25"
         }
       ]
     },
@@ -1416,11 +1416,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage3PtsForWinStrTab"
+          "table": "_diyStage3PtsForWinStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect26"
+          "func": "DesignDIYTournamentOnSelect26"
         }
       ]
     },
@@ -1469,11 +1469,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage3PlayCountStrTab"
+          "table": "_diyStage3PlayCountStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect28"
+          "func": "DesignDIYTournamentOnSelect28"
         }
       ]
     },
@@ -1542,7 +1542,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+          "func": "DesignDIYTournament_AdjustStageQualifiers"
         }
       ]
     },
@@ -1573,7 +1573,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect20"
+          "func": "DesignDIYTournamentOnSelect20"
         }
       ]
     },
@@ -1601,11 +1601,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStar"
+          "str": "_aStar"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect21"
+          "func": "DesignDIYTournamentOnSelect21"
         }
       ]
     },
@@ -1661,11 +1661,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage4LegsStrTab"
+          "table": "_diyStage4LegsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect23"
+          "func": "DesignDIYTournamentOnSelect23"
         }
       ]
     },
@@ -1693,11 +1693,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage4ExtraTimeStrTab"
+          "table": "_diyStage4ExtraTimeStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect24"
+          "func": "DesignDIYTournamentOnSelect24"
         }
       ]
     },
@@ -1725,11 +1725,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage4PenaltiesStrTab"
+          "table": "_diyStage4PenaltiesStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect25"
+          "func": "DesignDIYTournamentOnSelect25"
         }
       ]
     },
@@ -1757,11 +1757,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage4PtsForWinStrTab"
+          "table": "_diyStage4PtsForWinStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect26"
+          "func": "DesignDIYTournamentOnSelect26"
         }
       ]
     },
@@ -1810,11 +1810,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage4PlayCountStrTab"
+          "table": "_diyStage4PlayCountStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect28"
+          "func": "DesignDIYTournamentOnSelect28"
         }
       ]
     },
@@ -1883,7 +1883,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+          "func": "DesignDIYTournament_AdjustStageQualifiers"
         }
       ]
     },
@@ -1914,7 +1914,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect20"
+          "func": "DesignDIYTournamentOnSelect20"
         }
       ]
     },
@@ -1942,11 +1942,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStar"
+          "str": "_aStar"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect21"
+          "func": "DesignDIYTournamentOnSelect21"
         }
       ]
     },
@@ -2002,11 +2002,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage5LegsStrTab"
+          "table": "_diyStage5LegsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect23"
+          "func": "DesignDIYTournamentOnSelect23"
         }
       ]
     },
@@ -2034,11 +2034,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage5ExtraTimeStrTab"
+          "table": "_diyStage5ExtraTimeStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect24"
+          "func": "DesignDIYTournamentOnSelect24"
         }
       ]
     },
@@ -2066,11 +2066,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage5PenaltiesStrTab"
+          "table": "_diyStage5PenaltiesStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect25"
+          "func": "DesignDIYTournamentOnSelect25"
         }
       ]
     },
@@ -2098,11 +2098,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage5PtsForWinStrTab"
+          "table": "_diyStage5PtsForWinStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect26"
+          "func": "DesignDIYTournamentOnSelect26"
         }
       ]
     },
@@ -2151,11 +2151,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage5PlayCountStrTab"
+          "table": "_diyStage5PlayCountStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect28"
+          "func": "DesignDIYTournamentOnSelect28"
         }
       ]
     },
@@ -2224,7 +2224,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_DesignDIYTournament_AdjustStageQualifiers"
+          "func": "DesignDIYTournament_AdjustStageQualifiers"
         }
       ]
     },
@@ -2255,7 +2255,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect20"
+          "func": "DesignDIYTournamentOnSelect20"
         }
       ]
     },
@@ -2283,11 +2283,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStar"
+          "str": "_aStar"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect21"
+          "func": "DesignDIYTournamentOnSelect21"
         }
       ]
     },
@@ -2343,11 +2343,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage6LegsStrTab"
+          "table": "_diyStage6LegsStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect23"
+          "func": "DesignDIYTournamentOnSelect23"
         }
       ]
     },
@@ -2375,11 +2375,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage6ExtraTimeStrTab"
+          "table": "_diyStage6ExtraTimeStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect24"
+          "func": "DesignDIYTournamentOnSelect24"
         }
       ]
     },
@@ -2407,11 +2407,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage6PenaltiesStrTab"
+          "table": "_diyStage6PenaltiesStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect25"
+          "func": "DesignDIYTournamentOnSelect25"
         }
       ]
     },
@@ -2439,11 +2439,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage6PtsForWinStrTab"
+          "table": "_diyStage6PtsForWinStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect26"
+          "func": "DesignDIYTournamentOnSelect26"
         }
       ]
     },
@@ -2492,11 +2492,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyStage6PlayCountStrTab"
+          "table": "_diyStage6PlayCountStrTab"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect28"
+          "func": "DesignDIYTournamentOnSelect28"
         }
       ]
     },
@@ -2529,11 +2529,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aChooseTeams"
+          "str": "_aChooseTeams"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect89"
+          "func": "DesignDIYTournamentOnSelect89"
         }
       ]
     },
@@ -2561,11 +2561,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOk"
+          "str": "_aOk"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOK"
+          "func": "DesignDIYTournamentOK"
         }
       ]
     },
@@ -2593,11 +2593,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYTournamentOnSelect91"
+          "func": "DesignDIYTournamentOnSelect91"
         }
       ]
     },

@@ -1,7 +1,7 @@
 {
-  "name": "friendlyGameMenu",
-  "onInit": "_FriendlyMenuInit",
-  "onReturn": "_FriendlyMenuReinit",
+  "name": "_friendlyGameMenu",
+  "onInit": "FriendlyMenuInit",
+  "onReturn": "FriendlyMenuReinit",
   "onDraw": null,
   "defaultEntry": 8,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFriendly_1"
+          "str": "_aFriendly_1"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSubstitutes"
+          "str": "_aSubstitutes"
         }
       ]
     },
@@ -73,7 +73,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFrom"
+          "str": "_aFrom"
         }
       ]
     },
@@ -101,11 +101,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "pitchTypeOrSeasonTable"
+          "table": "_pitchTypeOrSeasonTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_PitchTypeOrSeasonProc"
+          "func": "PitchTypeOrSeasonProc"
         }
       ]
     },
@@ -133,11 +133,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "friendlyPitchTypeTable"
+          "table": "_friendlyPitchTypeTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_FriendlyPitchTypeProc"
+          "func": "FriendlyPitchTypeProc"
         }
       ]
     },
@@ -168,7 +168,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_MinSubstitutes"
+          "func": "MinSubstitutes"
         }
       ]
     },
@@ -199,7 +199,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_MaxSubstitutes"
+          "func": "MaxSubstitutes"
         }
       ]
     },
@@ -232,11 +232,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aChooseTeams"
+          "str": "_aChooseTeams"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamsMenu"
+          "func": "ChooseTeamsMenu"
         }
       ]
     },
@@ -264,11 +264,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOk"
+          "str": "_aOk"
         },
         {
           "op": "onselect_fire",
-          "func": "_FriendlyOK"
+          "func": "FriendlyOK"
         }
       ]
     },
@@ -296,11 +296,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmpSetExitMenuFlag"
+          "func": "SetExitMenuFlag"
         }
       ]
     },

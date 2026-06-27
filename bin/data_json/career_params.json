@@ -29,6 +29,6 @@
   "board_tertiary_top2_bonus": 2,
   "board_euro_top2_bonus": 3,
 
-  "_career_length": "how many seasons before the manager retires; 20 (classic) or up to 35",
+  "_career_length": "how many seasons before the manager retires; 20 (classic) or _up to 35",
   "num_seasons": 20
 }

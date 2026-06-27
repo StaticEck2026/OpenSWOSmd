@@ -1,6 +1,6 @@
 {
-  "name": "managementRecordMenu",
-  "onInit": "_ManagementRecordInit",
+  "name": "_managementRecordMenu",
+  "onInit": "ManagementRecordInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 3,
@@ -25,7 +25,7 @@
         },
         {
           "op": "before_draw",
-          "func": "_FillManagementRecordInfo"
+          "func": "FillManagementRecordInfo"
         }
       ]
     },
@@ -60,7 +60,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ManagementArrowUpSelect"
+          "func": "ManagementArrowUpSelect"
         }
       ]
     },
@@ -91,7 +91,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ManagementArrowDownSelect"
+          "func": "ManagementArrowDownSelect"
         }
       ]
     },
@@ -119,11 +119,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag_3"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -218,7 +218,7 @@
         {
           "op": "text",
           "flags": "0xA",
-          "str": "aSacked"
+          "str": "_aSacked"
         }
       ]
     },
@@ -238,7 +238,7 @@
         {
           "op": "text",
           "flags": "0x7",
-          "str": "aAllMatches"
+          "str": "_aAllMatches"
         }
       ]
     },
@@ -323,7 +323,7 @@
         {
           "op": "text",
           "flags": "0x1D",
-          "str": "aCareerTotal"
+          "str": "_aCareerTotal"
         }
       ]
     },

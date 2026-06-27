@@ -1,6 +1,6 @@
 {
-  "name": "topGoalScorersMenu",
-  "onInit": "_TopGoalScorersInit",
+  "name": "_topGoalScorersMenu",
+  "onInit": "TopGoalScorersInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 5,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTopGoalScorers"
+          "str": "_aTopGoalScorers"
         }
       ]
     },
@@ -42,7 +42,7 @@
         {
           "op": "multiline",
           "flags": "0x0",
-          "str": "aLge_0"
+          "str": "_aLge_0"
         }
       ]
     },
@@ -62,7 +62,7 @@
         {
           "op": "multiline",
           "flags": "0x0",
-          "str": "aCup1"
+          "str": "_aCup1"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "op": "multiline",
           "flags": "0x0",
-          "str": "aCup2"
+          "str": "_aCup2"
         }
       ]
     },
@@ -94,7 +94,7 @@
         {
           "op": "multiline",
           "flags": "0x0",
-          "str": "aTot_0"
+          "str": "_aTot_0"
         }
       ]
     },
@@ -119,11 +119,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_TopGoalScorersExit"
+          "func": "TopGoalScorersExit"
         }
       ]
     },
@@ -147,7 +147,7 @@
       "commands": [
         {
           "op": "before_draw",
-          "func": "_TopGoalScorersBeforeDrawCommon"
+          "func": "TopGoalScorersBeforeDrawCommon"
         }
       ]
     },

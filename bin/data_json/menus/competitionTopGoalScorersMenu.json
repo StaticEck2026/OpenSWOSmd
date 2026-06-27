@@ -1,6 +1,6 @@
 {
-  "name": "competitionTopGoalScorersMenu",
-  "onInit": "_CompetitionTopGoalScorersInit",
+  "name": "_competitionTopGoalScorersMenu",
+  "onInit": "CompetitionTopGoalScorersInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 2,
@@ -47,7 +47,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aLeadingCompeti"
+          "str": "_aLeadingCompeti"
         }
       ]
     },
@@ -68,11 +68,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_CompetitionTopGoalScorersExit"
+          "func": "CompetitionTopGoalScorersExit"
         }
       ]
     },

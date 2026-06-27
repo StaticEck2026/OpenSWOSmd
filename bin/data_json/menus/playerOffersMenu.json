@@ -1,7 +1,7 @@
 {
-  "name": "playerOffersMenu",
-  "onInit": "_PlayerOffersInit",
-  "onReturn": "_PlayerOffersInit",
+  "name": "_playerOffersMenu",
+  "onInit": "PlayerOffersInit",
+  "onReturn": "PlayerOffersInit",
   "onDraw": null,
   "defaultEntry": 9,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aMakeOffer"
+          "str": "_aMakeOffer"
         }
       ]
     },
@@ -61,7 +61,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aDearSirMadam"
+          "str": "_aDearSirMadam"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -127,7 +127,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -143,7 +143,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -171,11 +171,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerOffersOnSelect8"
+          "func": "PlayerOffersOnSelect8"
         }
       ]
     },
@@ -207,7 +207,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_PlayerOffersAdjustOfferAmount"
+          "func": "PlayerOffersAdjustOfferAmount"
         }
       ]
     },
@@ -235,11 +235,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerOffersOnSelect10"
+          "func": "PlayerOffersOnSelect10"
         }
       ]
     },
@@ -267,11 +267,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerOffersOnSelect11"
+          "func": "PlayerOffersOnSelect11"
         }
       ]
     },
@@ -299,11 +299,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aConfirmOffer"
+          "str": "_aConfirmOffer"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerOffersOnSelect12"
+          "func": "PlayerOffersOnSelect12"
         }
       ]
     },
@@ -331,11 +331,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerOffersOnSelect13"
+          "func": "PlayerOffersOnSelect13"
         }
       ]
     },
@@ -359,7 +359,7 @@
         },
         {
           "op": "after_draw",
-          "func": "_PlayerOffersAfterDrawCommon"
+          "func": "PlayerOffersAfterDrawCommon"
         }
       ]
     },

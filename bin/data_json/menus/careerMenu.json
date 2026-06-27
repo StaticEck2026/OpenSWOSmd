@@ -1,7 +1,7 @@
 {
-  "name": "careerMenu",
-  "onInit": "_CareerMenuInit",
-  "onReturn": "_CareerMenuFinish",
+  "name": "_careerMenu",
+  "onInit": "CareerMenuInit",
+  "onReturn": "CareerMenuFinish",
   "onDraw": null,
   "defaultEntry": 3,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aCareer_1"
+          "str": "_aCareer_1"
         }
       ]
     },
@@ -57,11 +57,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aLoadLiverpool"
+          "str": "_aLoadLiverpool"
         },
         {
           "op": "onselect_fire",
-          "func": "_LoadLiverpool"
+          "func": "LoadLiverpool"
         }
       ]
     },
@@ -82,7 +82,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aName"
+          "str": "_aName"
         }
       ]
     },
@@ -110,11 +110,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "managerSexBuffer"
+          "str": "_managerSexBuffer"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeSex"
+          "func": "ChangeSex"
         }
       ]
     },
@@ -142,11 +142,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "managerNameBuffer"
+          "str": "_managerNameBuffer"
         },
         {
           "op": "onselect_fire",
-          "func": "_SetName"
+          "func": "SetName"
         }
       ]
     },
@@ -174,11 +174,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "managerSurnameBuffer"
+          "str": "_managerSurnameBuffer"
         },
         {
           "op": "onselect_fire",
-          "func": "_SetSurname"
+          "func": "SetSurname"
         }
       ]
     },
@@ -199,7 +199,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aNationality"
+          "str": "_aNationality"
         }
       ]
     },
@@ -231,7 +231,7 @@
         {
           "op": "input_func",
           "mask": "0x3C1",
-          "func": "_ChangeNationality"
+          "func": "ChangeNationality"
         }
       ]
     },
@@ -252,7 +252,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStartCareerAs"
+          "str": "_aStartCareerAs"
         }
       ]
     },
@@ -280,11 +280,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "offsetCoachOrPlayer"
+          "table": "_offsetCoachOrPlayer"
         },
         {
           "op": "onselect_fire",
-          "func": "_CoachOrPlayerCoach"
+          "func": "CoachOrPlayerCoach"
         }
       ]
     },
@@ -312,11 +312,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aChooseTeam"
+          "str": "_aChooseTeam"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamAndStartCareer"
+          "func": "ChooseTeamAndStartCareer"
         }
       ]
     },
@@ -344,11 +344,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag2"
+          "func": "SetExitMenuFlag"
         }
       ]
     }

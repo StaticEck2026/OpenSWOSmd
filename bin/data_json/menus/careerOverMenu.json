@@ -1,7 +1,7 @@
 {
-  "name": "careerOverMenu",
-  "onInit": "_CareerOverInit",
-  "onReturn": "_CareerOverFinish",
+  "name": "_careerOverMenu",
+  "onInit": "CareerOverInit",
+  "onReturn": "CareerOverFinish",
   "onDraw": null,
   "defaultEntry": 4,
   "items": [
@@ -84,7 +84,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aYourCareerIsOv"
+          "str": "_aYourCareerIsOv"
         }
       ]
     },
@@ -112,11 +112,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewCompetitio"
+          "str": "_aViewCompetitio"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewCompetitionsMenuRetired"
+          "func": "ViewCompetitionsMenuRetired"
         }
       ]
     },
@@ -144,11 +144,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aJobOffers"
+          "str": "_aJobOffers"
         },
         {
           "op": "onselect_fire",
-          "func": "_JobOffersMenuRetired"
+          "func": "JobOffersMenuRetired"
         }
       ]
     },
@@ -176,11 +176,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aContinueCareer"
+          "str": "_aContinueCareer"
         },
         {
           "op": "onselect_fire",
-          "func": "_ContinueCareer"
+          "func": "ContinueCareer"
         }
       ]
     },
@@ -208,11 +208,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSaveCareer"
+          "str": "_aSaveCareer"
         },
         {
           "op": "onselect_fire",
-          "func": "_SaveCareer"
+          "func": "SaveCareer"
         }
       ]
     },
@@ -240,11 +240,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitCareerMenu"
+          "func": "ExitCareerMenu"
         }
       ]
     }

@@ -3,10 +3,10 @@
   "count": 7,
   "groups": [
     {
-      "id": "englishLeagues1",
+      "id": "_englishLeagues1",
       "leagues": [
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -19,7 +19,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -32,7 +32,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -45,7 +45,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -58,8 +58,8 @@
           ]
         }
       ],
-      "playoffs": "div2Playoffs",
-      "next_group": "englishLeagues2",
+      "playoffs": "_div2Playoffs",
+      "next_group": "_englishLeagues2",
       "qualifier_index_pairs": [
         0,
         4,
@@ -88,10 +88,10 @@
       ]
     },
     {
-      "id": "englishLeagues2",
+      "id": "_englishLeagues2",
       "leagues": [
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -104,7 +104,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -117,7 +117,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -130,7 +130,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -143,8 +143,8 @@
           ]
         }
       ],
-      "playoffs": "div3Playoffs",
-      "next_group": "englishLeagues3",
+      "playoffs": "_div3Playoffs",
+      "next_group": "_englishLeagues3",
       "qualifier_index_pairs": [
         0,
         8,
@@ -173,10 +173,10 @@
       ]
     },
     {
-      "id": "englishLeagues3",
+      "id": "_englishLeagues3",
       "leagues": [
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -189,7 +189,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -202,7 +202,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -215,7 +215,7 @@
           ]
         },
         {
-          "league": "englishLeague",
+          "league": "_englishLeague",
           "link_params": [
             0,
             0,
@@ -230,16 +230,16 @@
       ]
     },
     {
-      "id": "dutchLeagues1",
+      "id": "_dutchLeagues1",
       "leagues": [
         {
-          "league": "dutchLeague",
+          "league": "_dutchLeague",
           "link_params": [
             0
           ]
         },
         {
-          "league": "dutchLeague",
+          "league": "_dutchLeague",
           "link_params": [
             0,
             0,
@@ -252,7 +252,7 @@
           ]
         },
         {
-          "league": "dutchLeague",
+          "league": "_dutchLeague",
           "link_params": [
             0,
             0,
@@ -265,7 +265,7 @@
           ]
         },
         {
-          "league": "dutchLeague",
+          "league": "_dutchLeague",
           "link_params": [
             0,
             0,
@@ -280,16 +280,16 @@
       ]
     },
     {
-      "id": "scottishLeague1",
+      "id": "_scottishLeague1",
       "leagues": [
         {
-          "league": "scottishLeague",
+          "league": "_scottishLeague",
           "link_params": [
             0
           ]
         },
         {
-          "league": "scottishLeague",
+          "league": "_scottishLeague",
           "link_params": [
             0,
             0,
@@ -304,16 +304,16 @@
       ]
     },
     {
-      "id": "spanishLeague1",
+      "id": "_spanishLeague1",
       "leagues": [
         {
-          "league": "spanishLeague",
+          "league": "_spanishLeague",
           "link_params": [
             0
           ]
         },
         {
-          "league": "spanishLeague",
+          "league": "_spanishLeague",
           "link_params": [
             0,
             0,
@@ -326,7 +326,7 @@
           ]
         },
         {
-          "league": "spanishLeague",
+          "league": "_spanishLeague",
           "link_params": [
             0,
             0,
@@ -339,7 +339,7 @@
           ]
         },
         {
-          "league": "spanishLeague",
+          "league": "_spanishLeague",
           "link_params": [
             0,
             0,
@@ -354,16 +354,16 @@
       ]
     },
     {
-      "id": "uruguayanLeague1",
+      "id": "_uruguayanLeague1",
       "leagues": [
         {
-          "league": "uruguayanLeague",
+          "league": "_uruguayanLeague",
           "link_params": [
             0
           ]
         },
         {
-          "league": "uruguayanLeague",
+          "league": "_uruguayanLeague",
           "link_params": [
             0,
             0,

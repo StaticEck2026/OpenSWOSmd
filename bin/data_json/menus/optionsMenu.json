@@ -1,6 +1,6 @@
 {
-  "name": "optionsMenu",
-  "onInit": "_OptionsMenuBeforeDraw",
+  "name": "_optionsMenu",
+  "onInit": "OptionsMenuBeforeDraw",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 13,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOptions"
+          "str": "_aOptions"
         }
       ]
     },
@@ -52,7 +52,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFriendlyDiyGam"
+          "str": "_aFriendlyDiyGam"
         }
       ]
     },
@@ -80,11 +80,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "gameLengthStrTable"
+          "table": "_gameLengthStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeGameLength"
+          "func": "ChangeGameLength"
         }
       ]
     },
@@ -105,7 +105,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFixPitchType"
+          "str": "_aFixPitchType"
         }
       ]
     },
@@ -133,11 +133,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "pitchTypeStrTable"
+          "table": "_pitchTypeStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangePitchType"
+          "func": "ChangePitchType"
         }
       ]
     },
@@ -158,7 +158,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAutoReplays"
+          "str": "_aAutoReplays"
         }
       ]
     },
@@ -186,11 +186,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "autoReplaysStrTable"
+          "table": "_autoReplaysStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeAutoReplays"
+          "func": "ChangeAutoReplays"
         }
       ]
     },
@@ -211,7 +211,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAllPlayerTeams"
+          "str": "_aAllPlayerTeams"
         }
       ]
     },
@@ -239,11 +239,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "allPlTeamsEqualStrTable"
+          "table": "_allPlTeamsEqualStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeAllPlTeamsEqual"
+          "func": "ChangeAllPlTeamsEqual"
         }
       ]
     },
@@ -264,7 +264,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAutoSaveHighli"
+          "str": "_aAutoSaveHighli"
         }
       ]
     },
@@ -292,11 +292,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "autoSaveHlStrTable"
+          "table": "_autoSaveHlStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeAutoSaveHighlights"
+          "func": "ChangeAutoSaveHighlights"
         }
       ]
     },
@@ -317,7 +317,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aMenuMusic"
+          "str": "_aMenuMusic"
         }
       ]
     },
@@ -345,11 +345,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "menuMusicStrTable"
+          "table": "_menuMusicStrTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeMenuMusic"
+          "func": "ChangeMenuMusic"
         }
       ]
     },
@@ -382,12 +382,12 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "input_func",
           "mask": "0x30",
-          "func": "_ExitOptions"
+          "func": "ExitOptions"
         }
       ]
     },
@@ -406,7 +406,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSwosVersion152"
+          "str": "_aSwosVersion152"
         }
       ]
     }

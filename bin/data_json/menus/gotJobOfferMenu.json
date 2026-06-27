@@ -1,7 +1,7 @@
 {
-  "name": "gotJobOfferMenu",
-  "onInit": "_GotJobOfferInit",
-  "onReturn": "_GotJobOfferFinish",
+  "name": "_gotJobOfferMenu",
+  "onInit": "GotJobOfferInit",
+  "onReturn": "GotJobOfferFinish",
   "onDraw": null,
   "defaultEntry": 10,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aJobOffer"
+          "str": "_aJobOffer"
         }
       ]
     },
@@ -167,11 +167,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aReject"
+          "str": "_aReject"
         },
         {
           "op": "onselect_fire",
-          "func": "_RejectJobOffer"
+          "func": "RejectJobOffer"
         }
       ]
     },
@@ -199,11 +199,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewLeague"
+          "str": "_aViewLeague"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewFutureTeamLeague"
+          "func": "ViewFutureTeamLeague"
         }
       ]
     },
@@ -231,11 +231,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aConsider"
+          "str": "_aConsider"
         },
         {
           "op": "onselect_fire",
-          "func": "_ConsiderJobOffer"
+          "func": "ConsiderJobOffer"
         }
       ]
     },
@@ -263,11 +263,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag_14"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -295,11 +295,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewTeam"
+          "str": "_aViewTeam"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewFutureTeam"
+          "func": "ViewFutureTeam"
         }
       ]
     },
@@ -327,11 +327,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAccept"
+          "str": "_aAccept"
         },
         {
           "op": "onselect_fire",
-          "func": "_AcceptJobOffer"
+          "func": "AcceptJobOffer"
         }
       ]
     }

@@ -1,6 +1,6 @@
 {
-  "name": "chooseTeamsFriendlyMenu2",
-  "onInit": "_ChooseTeamsFriendlyInit",
+  "name": "_chooseTeamsFriendlyMenu2",
+  "onInit": "ChooseTeamsFriendlyInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 30,
@@ -113,7 +113,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aComputer"
+          "str": "_aComputer"
         }
       ]
     },
@@ -129,7 +129,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aPlayerCoach"
+          "str": "_aPlayerCoach"
         }
       ]
     },
@@ -145,7 +145,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aCoach"
+          "str": "_aCoach"
         }
       ]
     },
@@ -179,7 +179,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamsFriendlyCommon"
+          "func": "ChooseTeamsFriendlyCommon"
         }
       ]
     },
@@ -1637,7 +1637,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ChangeTeams"
+          "func": "ChangeTeams"
         }
       ]
     },
@@ -1665,11 +1665,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAbort"
+          "str": "_aAbort"
         },
         {
           "op": "onselect_fire",
-          "func": "_AbortChooseTeamsFriendly"
+          "func": "AbortChooseTeamsFriendly"
         }
       ]
     },
@@ -1710,7 +1710,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamsFriendlyOnSelect76"
+          "func": "ChooseTeamsFriendlyOnSelect76"
         }
       ]
     },

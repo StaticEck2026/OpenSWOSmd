@@ -1,7 +1,7 @@
 {
-  "name": "showPlayerMarketMenu",
-  "onInit": "_ShowPlayerMarketInit",
-  "onReturn": "_ShowPlayerMarket",
+  "name": "_showPlayerMarketMenu",
+  "onInit": "ShowPlayerMarketInit",
+  "onReturn": "ShowPlayerMarket",
   "onDraw": null,
   "defaultEntry": 7,
   "items": [
@@ -57,7 +57,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aCriteria"
+          "str": "_aCriteria"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aType"
+          "str": "_aType"
         }
       ]
     },
@@ -106,11 +106,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "positionFilterStringTable"
+          "table": "_positionFilterStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerMarketFilterPositionOnSelect"
+          "func": "PlayerMarketFilterPositionOnSelect"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSkills"
+          "str": "_aSkills"
         }
       ]
     },
@@ -164,11 +164,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "skillFilterStringTable"
+          "table": "_skillFilterStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerMarketFilterAgeGroupOnSelect"
+          "func": "PlayerMarketFilterAgeGroupOnSelect"
         }
       ]
     },
@@ -196,11 +196,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aList"
+          "str": "_aList"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerMarketScrollOnSelect"
+          "func": "PlayerMarketScrollOnSelect"
         }
       ]
     },
@@ -228,11 +228,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewSquad"
+          "str": "_aViewSquad"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerMarketViewSquadOnSelect"
+          "func": "PlayerMarketViewSquadOnSelect"
         }
       ]
     },
@@ -260,11 +260,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitPlayerMarketMenu"
+          "func": "ExitPlayerMarketMenu"
         }
       ]
     },
@@ -293,11 +293,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_PlayerMarketItemBeforeDraw"
+          "func": "PlayerMarketItemBeforeDraw"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayerMarketItemOnSelect"
+          "func": "PlayerMarketItemOnSelect"
         }
       ]
     },

@@ -1,7 +1,7 @@
 {
-  "name": "playerTransferMenu",
-  "onInit": "_TransferPlayerInit",
-  "onReturn": "_TransferPlayerInit",
+  "name": "_playerTransferMenu",
+  "onInit": "TransferPlayerInit",
+  "onReturn": "TransferPlayerInit",
   "onDraw": null,
   "defaultEntry": 11,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aResponseToOffe"
+          "str": "_aResponseToOffe"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -163,7 +163,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -206,11 +206,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aMakeImprovedOf"
+          "str": "_aMakeImprovedOf"
         },
         {
           "op": "onselect_fire",
-          "func": "_TransferPlayerOnSelect10"
+          "func": "TransferPlayerOnSelect10"
         }
       ]
     },
@@ -238,11 +238,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_TransferPlayerOnSelect11"
+          "func": "TransferPlayerOnSelect11"
         }
       ]
     },
@@ -266,11 +266,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aContinue"
+          "str": "_aContinue"
         },
         {
           "op": "onselect_fire",
-          "func": "_TransferPlayerOnSelect12"
+          "func": "TransferPlayerOnSelect12"
         }
       ]
     },
@@ -294,7 +294,7 @@
         },
         {
           "op": "after_draw",
-          "func": "_TransferPlayerAfterDrawCommon"
+          "func": "TransferPlayerAfterDrawCommon"
         }
       ]
     },

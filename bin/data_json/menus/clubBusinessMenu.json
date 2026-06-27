@@ -1,6 +1,6 @@
 {
-  "name": "clubBusinessMenu",
-  "onInit": "_ClubBusinessInit",
+  "name": "_clubBusinessMenu",
+  "onInit": "ClubBusinessInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 1,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aBankStatement"
+          "str": "_aBankStatement"
         }
       ]
     },
@@ -47,11 +47,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aContinue"
+          "str": "_aContinue"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag13"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -76,7 +76,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aOldBalance"
+          "str": "_aOldBalance"
         }
       ]
     },
@@ -99,7 +99,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aCompetitionBon"
+          "str": "_aCompetitionBon"
         }
       ]
     },
@@ -115,7 +115,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aGateReceipts"
+          "str": "_aGateReceipts"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aGeneralRunning"
+          "str": "_aGeneralRunning"
         }
       ]
     },
@@ -150,7 +150,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aAdditionalInve_0"
+          "str": "_aAdditionalInve_0"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aPlayerSales"
+          "str": "_aPlayerSales"
         }
       ]
     },
@@ -182,7 +182,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aPlayerPurchase"
+          "str": "_aPlayerPurchase"
         }
       ]
     },
@@ -198,7 +198,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aPlayerWagesBil"
+          "str": "_aPlayerWagesBil"
         }
       ]
     },
@@ -214,7 +214,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aTotalProfit"
+          "str": "_aTotalProfit"
         }
       ]
     },
@@ -230,7 +230,7 @@
         {
           "op": "text",
           "flags": "0x4000",
-          "str": "aNewBalance"
+          "str": "_aNewBalance"
         }
       ]
     },

@@ -1,7 +1,7 @@
 {
-  "name": "diyCupMenu",
-  "onInit": "_DIYCupInit",
-  "onReturn": "_DIYCupFinish",
+  "name": "_diyCupMenu",
+  "onInit": "DIYCupInit",
+  "onReturn": "DIYCupFinish",
   "onDraw": null,
   "defaultEntry": 1,
   "items": [
@@ -62,7 +62,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect1"
+          "func": "DIYCupOnSelect1"
         }
       ]
     },
@@ -93,7 +93,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlayMatch"
+          "str": "_aPlayMatch"
         }
       ]
     },
@@ -121,11 +121,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aMatch"
+          "str": "_aMatch"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect3"
+          "func": "DIYCupOnSelect3"
         }
       ]
     },
@@ -156,11 +156,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewHighlights_0"
+          "str": "_aViewHighlights_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect4"
+          "func": "DIYCupOnSelect4"
         }
       ]
     },
@@ -188,11 +188,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aResult"
+          "str": "_aResult"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect5"
+          "func": "DIYCupOnSelect5"
         }
       ]
     },
@@ -220,11 +220,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewMatch"
+          "str": "_aViewMatch"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect6"
+          "func": "DIYCupOnSelect6"
         }
       ]
     },
@@ -255,11 +255,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewHighlights_0"
+          "str": "_aViewHighlights_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect7"
+          "func": "DIYCupOnSelect7"
         }
       ]
     },
@@ -287,11 +287,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewResult"
+          "str": "_aViewResult"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect8"
+          "func": "DIYCupOnSelect8"
         }
       ]
     },
@@ -319,11 +319,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStats"
+          "str": "_aStats"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect9"
+          "func": "DIYCupOnSelect9"
         }
       ]
     },
@@ -351,11 +351,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect10"
+          "func": "DIYCupOnSelect10"
         }
       ]
     },
@@ -491,7 +491,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect16"
+          "func": "DIYCupOnSelect16"
         }
       ]
     },
@@ -522,7 +522,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCupOnSelect17"
+          "func": "DIYCupOnSelect17"
         }
       ]
     },
@@ -1306,7 +1306,7 @@
         {
           "op": "input_func",
           "mask": "0xFFFF",
-          "func": "_jmp_SetExitMenuFlag_5"
+          "func": "SetExitMenuFlag"
         }
       ]
     }

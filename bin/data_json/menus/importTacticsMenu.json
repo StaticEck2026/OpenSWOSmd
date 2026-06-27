@@ -1,6 +1,6 @@
 {
-  "name": "importTacticsMenu",
-  "onInit": "_ImportTacticsInit",
+  "name": "_importTacticsMenu",
+  "onInit": "ImportTacticsInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 2,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aImportTactics"
+          "str": "_aImportTactics"
         }
       ]
     },
@@ -55,7 +55,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ImportTacticsSelectTactics"
+          "func": "ImportTacticsSelectTactics"
         }
       ]
     },
@@ -78,7 +78,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a442"
+          "str": "_a442"
         }
       ]
     },
@@ -101,7 +101,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a541"
+          "str": "_a541"
         }
       ]
     },
@@ -124,7 +124,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a451"
+          "str": "_a451"
         }
       ]
     },
@@ -147,7 +147,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a532"
+          "str": "_a532"
         }
       ]
     },
@@ -170,7 +170,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a352"
+          "str": "_a352"
         }
       ]
     },
@@ -193,7 +193,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a433"
+          "str": "_a433"
         }
       ]
     },
@@ -216,7 +216,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a424"
+          "str": "_a424"
         }
       ]
     },
@@ -239,7 +239,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a343"
+          "str": "_a343"
         }
       ]
     },
@@ -262,7 +262,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSweep"
+          "str": "_aSweep"
         }
       ]
     },
@@ -285,7 +285,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "a523"
+          "str": "_a523"
         }
       ]
     },
@@ -308,7 +308,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAttack"
+          "str": "_aAttack"
         }
       ]
     },
@@ -331,7 +331,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDefend"
+          "str": "_aDefend"
         }
       ]
     },
@@ -354,7 +354,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERA"
+          "str": "_teamTacticsUSERA"
         }
       ]
     },
@@ -377,7 +377,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERB"
+          "str": "_teamTacticsUSERB"
         }
       ]
     },
@@ -400,7 +400,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERC"
+          "str": "_teamTacticsUSERC"
         }
       ]
     },
@@ -423,7 +423,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERD"
+          "str": "_teamTacticsUSERD"
         }
       ]
     },
@@ -446,7 +446,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERE"
+          "str": "_teamTacticsUSERE"
         }
       ]
     },
@@ -469,7 +469,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "teamTacticsUSERF"
+          "str": "_teamTacticsUSERF"
         }
       ]
     },
@@ -500,11 +500,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aLoad"
+          "str": "_aLoad"
         },
         {
           "op": "onselect_fire",
-          "func": "_LoadTactics"
+          "func": "LoadTactics"
         }
       ]
     },
@@ -537,11 +537,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitImportTactics"
+          "func": "ExitImportTactics"
         }
       ]
     }

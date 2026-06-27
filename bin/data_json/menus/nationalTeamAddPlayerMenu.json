@@ -1,6 +1,6 @@
 {
-  "name": "nationalTeamAddPlayerMenu",
-  "onInit": "_NationalTeamAddPlayerInit",
+  "name": "_nationalTeamAddPlayerMenu",
+  "onInit": "NationalTeamAddPlayerInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 1,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAddPlayer"
+          "str": "_aAddPlayer"
         }
       ]
     },
@@ -54,11 +54,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAddInternation"
+          "str": "_aAddInternation"
         },
         {
           "op": "onselect_fire",
-          "func": "_NationalTeamAddPlayerHomeOnSelect"
+          "func": "NationalTeamAddPlayerHomeOnSelect"
         }
       ]
     },
@@ -86,11 +86,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAddInternation_0"
+          "str": "_aAddInternation_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_NationalTeamAddPlayerAbroadOnSelect"
+          "func": "NationalTeamAddPlayerAbroadOnSelect"
         }
       ]
     },
@@ -118,11 +118,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_NationalTeamAddPlayerExit"
+          "func": "NationalTeamAddPlayerExit"
         }
       ]
     }

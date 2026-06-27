@@ -1,8 +1,8 @@
 {
-  "name": "designDiyCupMenu",
-  "onInit": "_DesignDIYCupInit",
-  "onReturn": "_DesignDIYCupReinit",
-  "onDraw": "_DesignDIYCupOnDraw",
+  "name": "_designDiyCupMenu",
+  "onInit": "DesignDIYCupInit",
+  "onReturn": "DesignDIYCupReinit",
+  "onDraw": "DesignDIYCupOnDraw",
   "defaultEntry": 11,
   "items": [
     {
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDesignDiyCup"
+          "str": "_aDesignDiyCup"
         }
       ]
     },
@@ -54,7 +54,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "diyCompetitionStart.base.competitionName"
+          "str": "_diyCompetitionStart.base.competitionName"
         }
       ]
     },
@@ -87,11 +87,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "diyCompetitionStart.base.competitionName"
+          "str": "_diyCompetitionStart.base.competitionName"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect2"
+          "func": "DesignDIYCupOnSelect2"
         }
       ]
     },
@@ -123,11 +123,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPitchTypeOrSeasonStringTable"
+          "table": "_diyCupPitchTypeOrSeasonStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect3"
+          "func": "DesignDIYCupOnSelect3"
         }
       ]
     },
@@ -155,11 +155,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPitchTypeStringTable"
+          "table": "_diyCupPitchTypeStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect4"
+          "func": "DesignDIYCupOnSelect4"
         }
       ]
     },
@@ -187,11 +187,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupStartMonthStringTable"
+          "table": "_diyCupStartMonthStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect5"
+          "func": "DesignDIYCupOnSelect5"
         }
       ]
     },
@@ -212,7 +212,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aHyphen"
+          "str": "_aHyphen"
         }
       ]
     },
@@ -240,11 +240,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupEndMonthStringTable"
+          "table": "_diyCupEndMonthStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect7"
+          "func": "DesignDIYCupOnSelect7"
         }
       ]
     },
@@ -265,7 +265,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAwayGoals"
+          "str": "_aAwayGoals"
         }
       ]
     },
@@ -293,11 +293,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupAwayGoalsStringTable"
+          "table": "_diyCupAwayGoalsStringTable"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect9"
+          "func": "DesignDIYCupOnSelect9"
         }
       ]
     },
@@ -318,7 +318,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aRounds"
+          "str": "_aRounds"
         }
       ]
     },
@@ -350,7 +350,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect11"
+          "func": "DesignDIYCupOnSelect11"
         }
       ]
     },
@@ -371,7 +371,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSubstitutes"
+          "str": "_aSubstitutes"
         }
       ]
     },
@@ -402,7 +402,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect13"
+          "func": "DesignDIYCupOnSelect13"
         }
       ]
     },
@@ -423,7 +423,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aFrom"
+          "str": "_aFrom"
         }
       ]
     },
@@ -458,7 +458,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect15"
+          "func": "DesignDIYCupOnSelect15"
         }
       ]
     },
@@ -478,7 +478,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTeams"
+          "str": "_aTeams"
         }
       ]
     },
@@ -494,7 +494,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aDescription"
+          "str": "_aDescription"
         }
       ]
     },
@@ -564,11 +564,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupLegsStringTable0"
+          "table": "_diyCupLegsStringTable0"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect20"
+          "func": "DesignDIYCupOnSelect20"
         }
       ]
     },
@@ -596,11 +596,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupExtraTimeStringTable0"
+          "table": "_diyCupExtraTimeStringTable0"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect21"
+          "func": "DesignDIYCupOnSelect21"
         }
       ]
     },
@@ -628,11 +628,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPenaltiesStringTable0"
+          "table": "_diyCupPenaltiesStringTable0"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect22"
+          "func": "DesignDIYCupOnSelect22"
         }
       ]
     },
@@ -702,11 +702,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupLegsStringTable1"
+          "table": "_diyCupLegsStringTable1"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect20"
+          "func": "DesignDIYCupOnSelect20"
         }
       ]
     },
@@ -734,11 +734,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupExtraTimeStringTable1"
+          "table": "_diyCupExtraTimeStringTable1"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect21"
+          "func": "DesignDIYCupOnSelect21"
         }
       ]
     },
@@ -766,11 +766,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPenaltiesStringTable1"
+          "table": "_diyCupPenaltiesStringTable1"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect22"
+          "func": "DesignDIYCupOnSelect22"
         }
       ]
     },
@@ -840,11 +840,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupLegsStringTable2"
+          "table": "_diyCupLegsStringTable2"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect20"
+          "func": "DesignDIYCupOnSelect20"
         }
       ]
     },
@@ -872,11 +872,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupExtraTimeStringTable2"
+          "table": "_diyCupExtraTimeStringTable2"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect21"
+          "func": "DesignDIYCupOnSelect21"
         }
       ]
     },
@@ -904,11 +904,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPenaltiesStringTable2"
+          "table": "_diyCupPenaltiesStringTable2"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect22"
+          "func": "DesignDIYCupOnSelect22"
         }
       ]
     },
@@ -978,11 +978,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupLegsStringTable3"
+          "table": "_diyCupLegsStringTable3"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect20"
+          "func": "DesignDIYCupOnSelect20"
         }
       ]
     },
@@ -1010,11 +1010,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupExtraTimeStringTable3"
+          "table": "_diyCupExtraTimeStringTable3"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect21"
+          "func": "DesignDIYCupOnSelect21"
         }
       ]
     },
@@ -1042,11 +1042,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPenaltiesStringTable3"
+          "table": "_diyCupPenaltiesStringTable3"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect22"
+          "func": "DesignDIYCupOnSelect22"
         }
       ]
     },
@@ -1116,11 +1116,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupLegsStringTable4"
+          "table": "_diyCupLegsStringTable4"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect20"
+          "func": "DesignDIYCupOnSelect20"
         }
       ]
     },
@@ -1148,11 +1148,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupExtraTimeStringTable4"
+          "table": "_diyCupExtraTimeStringTable4"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect21"
+          "func": "DesignDIYCupOnSelect21"
         }
       ]
     },
@@ -1180,11 +1180,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPenaltiesStringTable4"
+          "table": "_diyCupPenaltiesStringTable4"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect22"
+          "func": "DesignDIYCupOnSelect22"
         }
       ]
     },
@@ -1254,11 +1254,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupLegsStringTable5"
+          "table": "_diyCupLegsStringTable5"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect20"
+          "func": "DesignDIYCupOnSelect20"
         }
       ]
     },
@@ -1286,11 +1286,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupExtraTimeStringTable5"
+          "table": "_diyCupExtraTimeStringTable5"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect21"
+          "func": "DesignDIYCupOnSelect21"
         }
       ]
     },
@@ -1318,11 +1318,11 @@
         {
           "op": "string_table",
           "flags": "0x0",
-          "table": "diyCupPenaltiesStringTable5"
+          "table": "_diyCupPenaltiesStringTable5"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect22"
+          "func": "DesignDIYCupOnSelect22"
         }
       ]
     },
@@ -1355,11 +1355,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aChooseTeams"
+          "str": "_aChooseTeams"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOnSelect48"
+          "func": "DesignDIYCupOnSelect48"
         }
       ]
     },
@@ -1387,11 +1387,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOk"
+          "str": "_aOk"
         },
         {
           "op": "onselect_fire",
-          "func": "_DesignDIYCupOK"
+          "func": "DesignDIYCupOK"
         }
       ]
     },
@@ -1419,11 +1419,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag_4"
+          "func": "SetExitMenuFlag"
         }
       ]
     },

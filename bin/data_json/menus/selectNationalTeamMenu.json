@@ -1,7 +1,7 @@
 {
-  "name": "selectNationalTeamMenu",
-  "onInit": "_SelectNationalTeamInit",
-  "onReturn": "_SelectNationalTeamFinish",
+  "name": "_selectNationalTeamMenu",
+  "onInit": "SelectNationalTeamInit",
+  "onReturn": "SelectNationalTeamFinish",
   "onDraw": null,
   "defaultEntry": 4,
   "items": [
@@ -61,7 +61,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aToReplace"
+          "str": "_aToReplace"
         }
       ]
     },
@@ -89,11 +89,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAddPlayer"
+          "str": "_aAddPlayer"
         },
         {
           "op": "onselect_fire",
-          "func": "_NationalTeamAddPlayer"
+          "func": "NationalTeamAddPlayer"
         }
       ]
     },
@@ -121,11 +121,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectNationalTeamExit"
+          "func": "SelectNationalTeamExit"
         }
       ]
     },
@@ -158,11 +158,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAbort"
+          "str": "_aAbort"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectNationalTeamAbort"
+          "func": "SelectNationalTeamAbort"
         }
       ]
     },
@@ -190,11 +190,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aRemovePlayers"
+          "str": "_aRemovePlayers"
         },
         {
           "op": "onselect_fire",
-          "func": "_NationalTeamRemovePlayers"
+          "func": "NationalTeamRemovePlayers"
         }
       ]
     },
@@ -223,11 +223,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_SelectNationalTeamAfterDrawCommon"
+          "func": "SelectNationalTeamAfterDrawCommon"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectNationalTeamCommon"
+          "func": "SelectNationalTeamCommon"
         }
       ]
     },
@@ -592,11 +592,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectNationalTeamOnSelect25"
+          "func": "SelectNationalTeamOnSelect25"
         },
         {
           "op": "after_draw",
-          "func": "_SelectNationalTeam25AfterDraw"
+          "func": "SelectNationalTeam25AfterDraw"
         }
       ]
     },

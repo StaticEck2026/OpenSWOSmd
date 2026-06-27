@@ -3,7 +3,7 @@
   "count": 76,
   "competitions": [
     {
-      "id": "cupWinnersCup",
+      "id": "_cupWinnersCup",
       "type": "cup",
       "comp": {
         "comp_number": 1,
@@ -55,8 +55,8 @@
         }
       ],
       "name": [
-        "aEuropeanCupWin",
-        "aEuroCwCup"
+        "_aEuropeanCupWin",
+        "_aEuroCwCup"
       ],
       "team_seed_list": [
         {
@@ -222,7 +222,7 @@
       ]
     },
     {
-      "id": "uefaCup",
+      "id": "_uefaCup",
       "type": "cup",
       "comp": {
         "comp_number": 2,
@@ -274,8 +274,8 @@
         }
       ],
       "name": [
-        "aEufaCup",
-        "aEufaCup_0"
+        "_aEufaCup",
+        "_aEufaCup_0"
       ],
       "team_seed_list": [
         {
@@ -441,7 +441,7 @@
       ]
     },
     {
-      "id": "worldCupQualifyingGroup1",
+      "id": "_worldCupQualifyingGroup1",
       "type": "cup",
       "comp": {
         "comp_number": 5,
@@ -494,13 +494,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_2",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_2",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup2",
+      "id": "_worldCupQualifyingGroup2",
       "type": "cup",
       "comp": {
         "comp_number": 6,
@@ -553,13 +553,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_3",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_3",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup3",
+      "id": "_worldCupQualifyingGroup3",
       "type": "cup",
       "comp": {
         "comp_number": 7,
@@ -612,13 +612,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_4",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_4",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup4",
+      "id": "_worldCupQualifyingGroup4",
       "type": "cup",
       "comp": {
         "comp_number": 8,
@@ -671,13 +671,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_5",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_5",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup5",
+      "id": "_worldCupQualifyingGroup5",
       "type": "cup",
       "comp": {
         "comp_number": 9,
@@ -730,13 +730,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_6",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_6",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup6",
+      "id": "_worldCupQualifyingGroup6",
       "type": "cup",
       "comp": {
         "comp_number": 10,
@@ -789,13 +789,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_7",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_7",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup7",
+      "id": "_worldCupQualifyingGroup7",
       "type": "cup",
       "comp": {
         "comp_number": 11,
@@ -848,13 +848,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_8",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_8",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCupQualifyingGroup8",
+      "id": "_worldCupQualifyingGroup8",
       "type": "cup",
       "comp": {
         "comp_number": 12,
@@ -907,13 +907,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_9",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_9",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "oceaniaWorldCupQualification",
+      "id": "_oceaniaWorldCupQualification",
       "type": "cup",
       "comp": {
         "comp_number": 17,
@@ -966,13 +966,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_1",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "invitationTournament",
+      "id": "_invitationTournament",
       "type": "cup",
       "comp": {
         "comp_number": 18,
@@ -999,13 +999,13 @@
         }
       ],
       "name": [
-        "aInvitationTour",
-        "aInvTournament"
+        "_aInvitationTour",
+        "_aInvTournament"
       ],
       "team_seed_list": []
     },
     {
-      "id": "tour",
+      "id": "_tour",
       "type": "cup",
       "comp": {
         "comp_number": 19,
@@ -1033,12 +1033,12 @@
       ],
       "name": [
         null,
-        "aTour"
+        "_aTour"
       ],
       "team_seed_list": []
     },
     {
-      "id": "friendly",
+      "id": "_friendly",
       "type": "cup",
       "comp": {
         "comp_number": 20,
@@ -1065,13 +1065,13 @@
         }
       ],
       "name": [
-        "aFriendly",
-        "aFriendly_0"
+        "_aFriendly",
+        "_aFriendly_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup1",
+      "id": "_ecQualifyingGroup1",
       "type": "cup",
       "comp": {
         "comp_number": 23,
@@ -1124,13 +1124,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr",
-        "aECQualifier_0"
+        "_aECQualifyingGr",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup2",
+      "id": "_ecQualifyingGroup2",
       "type": "cup",
       "comp": {
         "comp_number": 24,
@@ -1183,13 +1183,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_0",
-        "aECQualifier_0"
+        "_aECQualifyingGr_0",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup3",
+      "id": "_ecQualifyingGroup3",
       "type": "cup",
       "comp": {
         "comp_number": 25,
@@ -1242,13 +1242,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_1",
-        "aECQualifier_0"
+        "_aECQualifyingGr_1",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup4",
+      "id": "_ecQualifyingGroup4",
       "type": "cup",
       "comp": {
         "comp_number": 26,
@@ -1301,13 +1301,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_2",
-        "aECQualifier_0"
+        "_aECQualifyingGr_2",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup5",
+      "id": "_ecQualifyingGroup5",
       "type": "cup",
       "comp": {
         "comp_number": 27,
@@ -1360,13 +1360,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_3",
-        "aECQualifier_0"
+        "_aECQualifyingGr_3",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup6",
+      "id": "_ecQualifyingGroup6",
       "type": "cup",
       "comp": {
         "comp_number": 28,
@@ -1419,13 +1419,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_4",
-        "aECQualifier_0"
+        "_aECQualifyingGr_4",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup7",
+      "id": "_ecQualifyingGroup7",
       "type": "cup",
       "comp": {
         "comp_number": 29,
@@ -1478,13 +1478,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_5",
-        "aECQualifier_0"
+        "_aECQualifyingGr_5",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "ecQualifyingGroup8",
+      "id": "_ecQualifyingGroup8",
       "type": "cup",
       "comp": {
         "comp_number": 30,
@@ -1537,13 +1537,13 @@
         }
       ],
       "name": [
-        "aECQualifyingGr_6",
-        "aECQualifier_0"
+        "_aECQualifyingGr_6",
+        "_aECQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "oceaniaCup",
+      "id": "_oceaniaCup",
       "type": "cup",
       "comp": {
         "comp_number": 35,
@@ -1570,13 +1570,13 @@
         }
       ],
       "name": [
-        "aOceaniaCup",
-        "aOceaniaCup_0"
+        "_aOceaniaCup",
+        "_aOceaniaCup_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "albanianCup",
+      "id": "_albanianCup",
       "type": "cup",
       "comp": {
         "comp_number": 109,
@@ -1621,7 +1621,7 @@
       "team_seed_list": []
     },
     {
-      "id": "austrianCup",
+      "id": "_austrianCup",
       "type": "cup",
       "comp": {
         "comp_number": 110,
@@ -1666,7 +1666,7 @@
       "team_seed_list": []
     },
     {
-      "id": "belarusianCup",
+      "id": "_belarusianCup",
       "type": "cup",
       "comp": {
         "comp_number": 111,
@@ -1711,7 +1711,7 @@
       "team_seed_list": []
     },
     {
-      "id": "belgianCup",
+      "id": "_belgianCup",
       "type": "cup",
       "comp": {
         "comp_number": 112,
@@ -1756,7 +1756,7 @@
       "team_seed_list": []
     },
     {
-      "id": "bulgarianCup",
+      "id": "_bulgarianCup",
       "type": "cup",
       "comp": {
         "comp_number": 113,
@@ -1801,7 +1801,7 @@
       "team_seed_list": []
     },
     {
-      "id": "croatianCup",
+      "id": "_croatianCup",
       "type": "cup",
       "comp": {
         "comp_number": 114,
@@ -1846,7 +1846,7 @@
       "team_seed_list": []
     },
     {
-      "id": "cypriotCup",
+      "id": "_cypriotCup",
       "type": "cup",
       "comp": {
         "comp_number": 115,
@@ -1891,7 +1891,7 @@
       "team_seed_list": []
     },
     {
-      "id": "czechCup",
+      "id": "_czechCup",
       "type": "cup",
       "comp": {
         "comp_number": 116,
@@ -1936,7 +1936,7 @@
       "team_seed_list": []
     },
     {
-      "id": "danishCup",
+      "id": "_danishCup",
       "type": "cup",
       "comp": {
         "comp_number": 117,
@@ -1981,7 +1981,7 @@
       "team_seed_list": []
     },
     {
-      "id": "estonianCup",
+      "id": "_estonianCup",
       "type": "cup",
       "comp": {
         "comp_number": 122,
@@ -2026,7 +2026,7 @@
       "team_seed_list": []
     },
     {
-      "id": "faroeIslesCup",
+      "id": "_faroeIslesCup",
       "type": "cup",
       "comp": {
         "comp_number": 123,
@@ -2071,7 +2071,7 @@
       "team_seed_list": []
     },
     {
-      "id": "finnishCup",
+      "id": "_finnishCup",
       "type": "cup",
       "comp": {
         "comp_number": 124,
@@ -2116,7 +2116,7 @@
       "team_seed_list": []
     },
     {
-      "id": "greekCup",
+      "id": "_greekCup",
       "type": "cup",
       "comp": {
         "comp_number": 127,
@@ -2161,7 +2161,7 @@
       "team_seed_list": []
     },
     {
-      "id": "hungarianCup",
+      "id": "_hungarianCup",
       "type": "cup",
       "comp": {
         "comp_number": -128,
@@ -2206,7 +2206,7 @@
       "team_seed_list": []
     },
     {
-      "id": "icelandicCup",
+      "id": "_icelandicCup",
       "type": "cup",
       "comp": {
         "comp_number": -127,
@@ -2251,7 +2251,7 @@
       "team_seed_list": []
     },
     {
-      "id": "irishCup",
+      "id": "_irishCup",
       "type": "cup",
       "comp": {
         "comp_number": -126,
@@ -2296,7 +2296,7 @@
       "team_seed_list": []
     },
     {
-      "id": "israeliCup",
+      "id": "_israeliCup",
       "type": "cup",
       "comp": {
         "comp_number": -125,
@@ -2341,7 +2341,7 @@
       "team_seed_list": []
     },
     {
-      "id": "latvianCup",
+      "id": "_latvianCup",
       "type": "cup",
       "comp": {
         "comp_number": -123,
@@ -2386,7 +2386,7 @@
       "team_seed_list": []
     },
     {
-      "id": "lithuanianCup",
+      "id": "_lithuanianCup",
       "type": "cup",
       "comp": {
         "comp_number": -122,
@@ -2431,7 +2431,7 @@
       "team_seed_list": []
     },
     {
-      "id": "luxembourgCup",
+      "id": "_luxembourgCup",
       "type": "cup",
       "comp": {
         "comp_number": -121,
@@ -2476,7 +2476,7 @@
       "team_seed_list": []
     },
     {
-      "id": "malteseCup",
+      "id": "_malteseCup",
       "type": "cup",
       "comp": {
         "comp_number": -120,
@@ -2521,7 +2521,7 @@
       "team_seed_list": []
     },
     {
-      "id": "northernIrishCup",
+      "id": "_northernIrishCup",
       "type": "cup",
       "comp": {
         "comp_number": -118,
@@ -2566,7 +2566,7 @@
       "team_seed_list": []
     },
     {
-      "id": "norwegianCup",
+      "id": "_norwegianCup",
       "type": "cup",
       "comp": {
         "comp_number": -117,
@@ -2611,7 +2611,7 @@
       "team_seed_list": []
     },
     {
-      "id": "polishCup",
+      "id": "_polishCup",
       "type": "cup",
       "comp": {
         "comp_number": -116,
@@ -2656,7 +2656,7 @@
       "team_seed_list": []
     },
     {
-      "id": "portugeseCup",
+      "id": "_portugeseCup",
       "type": "cup",
       "comp": {
         "comp_number": -115,
@@ -2701,7 +2701,7 @@
       "team_seed_list": []
     },
     {
-      "id": "romanianCup",
+      "id": "_romanianCup",
       "type": "cup",
       "comp": {
         "comp_number": -114,
@@ -2746,7 +2746,7 @@
       "team_seed_list": []
     },
     {
-      "id": "russianCup",
+      "id": "_russianCup",
       "type": "cup",
       "comp": {
         "comp_number": -113,
@@ -2791,7 +2791,7 @@
       "team_seed_list": []
     },
     {
-      "id": "sanMarinoCup",
+      "id": "_sanMarinoCup",
       "type": "cup",
       "comp": {
         "comp_number": -112,
@@ -2836,7 +2836,7 @@
       "team_seed_list": []
     },
     {
-      "id": "slovakianCup",
+      "id": "_slovakianCup",
       "type": "cup",
       "comp": {
         "comp_number": -109,
@@ -2881,7 +2881,7 @@
       "team_seed_list": []
     },
     {
-      "id": "slovenianCup",
+      "id": "_slovenianCup",
       "type": "cup",
       "comp": {
         "comp_number": -108,
@@ -2926,7 +2926,7 @@
       "team_seed_list": []
     },
     {
-      "id": "swedishCup",
+      "id": "_swedishCup",
       "type": "cup",
       "comp": {
         "comp_number": -106,
@@ -2971,7 +2971,7 @@
       "team_seed_list": []
     },
     {
-      "id": "swissCup",
+      "id": "_swissCup",
       "type": "cup",
       "comp": {
         "comp_number": -105,
@@ -3016,7 +3016,7 @@
       "team_seed_list": []
     },
     {
-      "id": "turkishCup",
+      "id": "_turkishCup",
       "type": "cup",
       "comp": {
         "comp_number": -104,
@@ -3061,7 +3061,7 @@
       "team_seed_list": []
     },
     {
-      "id": "ukrainianCup",
+      "id": "_ukrainianCup",
       "type": "cup",
       "comp": {
         "comp_number": -103,
@@ -3106,7 +3106,7 @@
       "team_seed_list": []
     },
     {
-      "id": "welshCup",
+      "id": "_welshCup",
       "type": "cup",
       "comp": {
         "comp_number": -102,
@@ -3151,7 +3151,7 @@
       "team_seed_list": []
     },
     {
-      "id": "yugoslavianCup",
+      "id": "_yugoslavianCup",
       "type": "cup",
       "comp": {
         "comp_number": -101,
@@ -3196,7 +3196,7 @@
       "team_seed_list": []
     },
     {
-      "id": "algerianCup",
+      "id": "_algerianCup",
       "type": "cup",
       "comp": {
         "comp_number": -100,
@@ -3241,7 +3241,7 @@
       "team_seed_list": []
     },
     {
-      "id": "southAfricanCup",
+      "id": "_southAfricanCup",
       "type": "cup",
       "comp": {
         "comp_number": -96,
@@ -3286,7 +3286,7 @@
       "team_seed_list": []
     },
     {
-      "id": "taiwaneseCup",
+      "id": "_taiwaneseCup",
       "type": "cup",
       "comp": {
         "comp_number": -95,
@@ -3331,7 +3331,7 @@
       "team_seed_list": []
     },
     {
-      "id": "englishCup",
+      "id": "_englishCup",
       "type": "cup",
       "comp": {
         "comp_number": 118,
@@ -3383,13 +3383,13 @@
         }
       ],
       "name": [
-        "aCup_4",
-        "aCup_5"
+        "_aCup_4",
+        "_aCup_5"
       ],
       "team_seed_list": []
     },
     {
-      "id": "englishLeagueCup",
+      "id": "_englishLeagueCup",
       "type": "cup",
       "comp": {
         "comp_number": 119,
@@ -3441,13 +3441,13 @@
         }
       ],
       "name": [
-        "aLeagueCup",
-        "aLeagueCup_0"
+        "_aLeagueCup",
+        "_aLeagueCup_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "englishCup_1",
+      "id": "_englishCup_1",
       "type": "cup",
       "comp": {
         "comp_number": 120,
@@ -3499,13 +3499,13 @@
         }
       ],
       "name": [
-        "aCup_4",
-        "aCup_5"
+        "_aCup_4",
+        "_aCup_5"
       ],
       "team_seed_list": []
     },
     {
-      "id": "englishLeagueCup_1",
+      "id": "_englishLeagueCup_1",
       "type": "cup",
       "comp": {
         "comp_number": 121,
@@ -3557,13 +3557,13 @@
         }
       ],
       "name": [
-        "aLeagueCup",
-        "aLeagueCup_0"
+        "_aLeagueCup",
+        "_aLeagueCup_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "frenchCup",
+      "id": "_frenchCup",
       "type": "cup",
       "comp": {
         "comp_number": 125,
@@ -3615,13 +3615,13 @@
         }
       ],
       "name": [
-        "aCoupeDeFrance",
-        "aCoupe"
+        "_aCoupeDeFrance",
+        "_aCoupe"
       ],
       "team_seed_list": []
     },
     {
-      "id": "germanCup",
+      "id": "_germanCup",
       "type": "cup",
       "comp": {
         "comp_number": 126,
@@ -3673,13 +3673,13 @@
         }
       ],
       "name": [
-        "aDFBPokal",
-        "aPokal"
+        "_aDFBPokal",
+        "_aPokal"
       ],
       "team_seed_list": []
     },
     {
-      "id": "italianCup",
+      "id": "_italianCup",
       "type": "cup",
       "comp": {
         "comp_number": -124,
@@ -3731,13 +3731,13 @@
         }
       ],
       "name": [
-        "aCoppaItalia",
-        "aCoppa"
+        "_aCoppaItalia",
+        "_aCoppa"
       ],
       "team_seed_list": []
     },
     {
-      "id": "scottishCup",
+      "id": "_scottishCup",
       "type": "cup",
       "comp": {
         "comp_number": -111,
@@ -3789,13 +3789,13 @@
         }
       ],
       "name": [
-        "aCup_6",
-        "aCup_7"
+        "_aCup_6",
+        "_aCup_7"
       ],
       "team_seed_list": []
     },
     {
-      "id": "scottishLeagueCup",
+      "id": "_scottishLeagueCup",
       "type": "cup",
       "comp": {
         "comp_number": -110,
@@ -3847,13 +3847,13 @@
         }
       ],
       "name": [
-        "aLeagueCup_1",
-        "aLeagueCup_2"
+        "_aLeagueCup_1",
+        "_aLeagueCup_2"
       ],
       "team_seed_list": []
     },
     {
-      "id": "spanishCup",
+      "id": "_spanishCup",
       "type": "cup",
       "comp": {
         "comp_number": -107,
@@ -3905,13 +3905,13 @@
         }
       ],
       "name": [
-        "aCopa",
-        "aCopa_0"
+        "_aCopa",
+        "_aCopa_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "dutchCup",
+      "id": "_dutchCup",
       "type": "cup",
       "comp": {
         "comp_number": -119,
@@ -3966,7 +3966,7 @@
       "team_seed_list": []
     },
     {
-      "id": "australianCup",
+      "id": "_australianCup",
       "type": "cup",
       "comp": {
         "comp_number": -99,
@@ -4021,7 +4021,7 @@
       "team_seed_list": []
     },
     {
-      "id": "japaneseCup",
+      "id": "_japaneseCup",
       "type": "cup",
       "comp": {
         "comp_number": -98,
@@ -4063,13 +4063,13 @@
         }
       ],
       "name": [
-        "aCup_8",
-        "aCup_9"
+        "_aCup_8",
+        "_aCup_9"
       ],
       "team_seed_list": []
     },
     {
-      "id": "japaneseEmperorsCup",
+      "id": "_japaneseEmperorsCup",
       "type": "cup",
       "comp": {
         "comp_number": -97,
@@ -4111,8 +4111,8 @@
         }
       ],
       "name": [
-        "aEmperorSCup",
-        "aEmpCup"
+        "_aEmperorSCup",
+        "_aEmpCup"
       ],
       "team_seed_list": []
     }

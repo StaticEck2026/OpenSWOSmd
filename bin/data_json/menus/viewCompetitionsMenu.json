@@ -1,7 +1,7 @@
 {
-  "name": "viewCompetitionsMenu",
-  "onInit": "_ViewCompetitionsInit",
-  "onReturn": "_ViewCompetitionsOnReturn",
+  "name": "_viewCompetitionsMenu",
+  "onInit": "ViewCompetitionsInit",
+  "onReturn": "ViewCompetitionsOnReturn",
   "onDraw": null,
   "defaultEntry": 1,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewCompetitio"
+          "str": "_aViewCompetitio"
         }
       ]
     },
@@ -58,7 +58,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_OpenDiyFromFile"
+          "func": "OpenDiyFromFile"
         }
       ]
     },
@@ -90,7 +90,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_OpenDiyPreset1"
+          "func": "OpenDiyPreset1"
         }
       ]
     },
@@ -122,7 +122,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_OpenDiyPreset2"
+          "func": "OpenDiyPreset2"
         }
       ]
     },
@@ -154,7 +154,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_OpenDiyPreset3"
+          "func": "OpenDiyPreset3"
         }
       ]
     },
@@ -182,11 +182,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTopGoalScorers"
+          "str": "_aTopGoalScorers"
         },
         {
           "op": "onselect_fire",
-          "func": "_TopGoalScorersMenu"
+          "func": "TopGoalScorersMenu"
         }
       ]
     },
@@ -214,11 +214,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aManagementReco_0"
+          "str": "_aManagementReco_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_ManagementRecordMenu"
+          "func": "ManagementRecordMenu"
         }
       ]
     },
@@ -246,11 +246,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag_2"
+          "func": "SetExitMenuFlag"
         }
       ]
     }

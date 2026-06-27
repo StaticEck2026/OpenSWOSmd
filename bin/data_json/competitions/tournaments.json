@@ -3,7 +3,7 @@
   "count": 13,
   "competitions": [
     {
-      "id": "euroCup",
+      "id": "_euroCup",
       "type": "tournament",
       "comp": {
         "comp_number": 0,
@@ -79,8 +79,8 @@
         }
       ],
       "name": [
-        "aEuropeanChampi_1",
-        "aEuropeanCup"
+        "_aEuropeanChampi_1",
+        "_aEuropeanCup"
       ],
       "team_seed_list": [
         {
@@ -166,7 +166,7 @@
       ]
     },
     {
-      "id": "worldCup2",
+      "id": "_worldCup2",
       "type": "tournament",
       "comp": {
         "comp_number": 3,
@@ -252,13 +252,13 @@
         }
       ],
       "name": [
-        "aWorldCup",
-        "aWorldCup_0"
+        "_aWorldCup",
+        "_aWorldCup_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "worldCup",
+      "id": "_worldCup",
       "type": "tournament",
       "comp": {
         "comp_number": 4,
@@ -344,8 +344,8 @@
         }
       ],
       "name": [
-        "aWorldCup",
-        "aWorldCup_0"
+        "_aWorldCup",
+        "_aWorldCup_0"
       ],
       "team_seed_list": [
         {
@@ -471,7 +471,7 @@
       ]
     },
     {
-      "id": "northAmericaWorldCupQualification",
+      "id": "_northAmericaWorldCupQualification",
       "type": "tournament",
       "comp": {
         "comp_number": 13,
@@ -557,13 +557,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_1",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "southAmericaWorldCupQualification",
+      "id": "_southAmericaWorldCupQualification",
       "type": "tournament",
       "comp": {
         "comp_number": 14,
@@ -649,13 +649,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_1",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "africaWorldCupQualification",
+      "id": "_africaWorldCupQualification",
       "type": "tournament",
       "comp": {
         "comp_number": 15,
@@ -741,13 +741,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_1",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "asiaWorldCupQualification",
+      "id": "_asiaWorldCupQualification",
       "type": "tournament",
       "comp": {
         "comp_number": 16,
@@ -833,13 +833,13 @@
         }
       ],
       "name": [
-        "aWorldCupQualif_1",
-        "aWCQualifier_0"
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
       ],
       "team_seed_list": []
     },
     {
-      "id": "europeanChampionships2",
+      "id": "_europeanChampionships2",
       "type": "tournament",
       "comp": {
         "comp_number": 21,
@@ -915,13 +915,13 @@
         }
       ],
       "name": [
-        "aEuropeanChampi_0",
-        "aECFinals"
+        "_aEuropeanChampi_0",
+        "_aECFinals"
       ],
       "team_seed_list": []
     },
     {
-      "id": "europeanChampionships",
+      "id": "_europeanChampionships",
       "type": "tournament",
       "comp": {
         "comp_number": 22,
@@ -997,8 +997,8 @@
         }
       ],
       "name": [
-        "aEuropeanChampi_0",
-        "aECFinals"
+        "_aEuropeanChampi_0",
+        "_aECFinals"
       ],
       "team_seed_list": [
         {
@@ -1084,7 +1084,7 @@
       ]
     },
     {
-      "id": "copaAmerica",
+      "id": "_copaAmerica",
       "type": "tournament",
       "comp": {
         "comp_number": 31,
@@ -1160,8 +1160,8 @@
         }
       ],
       "name": [
-        "aCopaAmerica",
-        "aCopaAmerica_0"
+        "_aCopaAmerica",
+        "_aCopaAmerica_0"
       ],
       "team_seed_list": [
         {
@@ -1227,7 +1227,7 @@
       ]
     },
     {
-      "id": "africanNationsCup",
+      "id": "_africanNationsCup",
       "type": "tournament",
       "comp": {
         "comp_number": 32,
@@ -1313,13 +1313,13 @@
         }
       ],
       "name": [
-        "aAfricanNations",
-        "aAfricanCup"
+        "_aAfricanNations",
+        "_aAfricanCup"
       ],
       "team_seed_list": []
     },
     {
-      "id": "northAmericanCup",
+      "id": "_northAmericanCup",
       "type": "tournament",
       "comp": {
         "comp_number": 33,
@@ -1395,13 +1395,13 @@
         }
       ],
       "name": [
-        "aNorthAmericanC",
-        "aNAmericanCup"
+        "_aNorthAmericanC",
+        "_aNAmericanCup"
       ],
       "team_seed_list": []
     },
     {
-      "id": "asianCup",
+      "id": "_asianCup",
       "type": "tournament",
       "comp": {
         "comp_number": 34,
@@ -1487,8 +1487,8 @@
         }
       ],
       "name": [
-        "aAsianCup",
-        "aAsianCup_0"
+        "_aAsianCup",
+        "_aAsianCup_0"
       ],
       "team_seed_list": []
     }

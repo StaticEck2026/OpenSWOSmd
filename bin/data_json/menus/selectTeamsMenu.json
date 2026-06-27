@@ -1,7 +1,7 @@
 {
-  "name": "selectTeamsMenu",
-  "onInit": "_SelectTeamsInit",
-  "onReturn": "_SelectTeamsReinit",
+  "name": "_selectTeamsMenu",
+  "onInit": "SelectTeamsInit",
+  "onReturn": "SelectTeamsReinit",
   "onDraw": null,
   "defaultEntry": 43,
   "items": [
@@ -57,7 +57,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectLeaguesCommon"
+          "func": "SelectLeaguesCommon"
         }
       ]
     },
@@ -456,7 +456,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SelectTeamsCommon"
+          "func": "SelectTeamsCommon"
         }
       ]
     },
@@ -1920,11 +1920,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewSelectedTe"
+          "str": "_aViewSelectedTe"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewSelectedTeams"
+          "func": "ViewSelectedTeams"
         }
       ]
     },
@@ -1952,11 +1952,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ExitSelectTeams"
+          "func": "ExitSelectTeams"
         }
       ]
     },
@@ -1997,7 +1997,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ChooseTeamsPlayGame"
+          "func": "ChooseTeamsPlayGame"
         }
       ]
     },

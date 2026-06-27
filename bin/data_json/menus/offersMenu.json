@@ -1,7 +1,7 @@
 {
-  "name": "offersMenu",
-  "onInit": "_OffersInit",
-  "onReturn": "_OffersInit",
+  "name": "_offersMenu",
+  "onInit": "OffersInit",
+  "onReturn": "OffersInit",
   "onDraw": null,
   "defaultEntry": 2,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aOffers"
+          "str": "_aOffers"
         }
       ]
     },
@@ -54,11 +54,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag_11"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -87,11 +87,11 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_OffersCommon"
+          "func": "OffersCommon"
         },
         {
           "op": "after_draw",
-          "func": "_OffersAfterDrawCommon"
+          "func": "OffersAfterDrawCommon"
         }
       ]
     },

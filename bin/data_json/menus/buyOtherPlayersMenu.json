@@ -1,7 +1,7 @@
 {
-  "name": "buyOtherPlayersMenu",
-  "onInit": "_BuyOtherPlayersInit",
-  "onReturn": "_BuyOtherPlayersFinish",
+  "name": "_buyOtherPlayersMenu",
+  "onInit": "BuyOtherPlayersInit",
+  "onReturn": "BuyOtherPlayersFinish",
   "onDraw": null,
   "defaultEntry": 2,
   "items": [
@@ -75,11 +75,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_j_SetExitMenuFlag_10"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -108,11 +108,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_BuyOtherPlayersAfterDrawCommon"
+          "func": "BuyOtherPlayersAfterDrawCommon"
         },
         {
           "op": "onselect_fire",
-          "func": "_BuyOtherPlayersCommon"
+          "func": "BuyOtherPlayersCommon"
         }
       ]
     },

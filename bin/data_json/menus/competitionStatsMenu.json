@@ -1,5 +1,5 @@
 {
-  "name": "competitionStatsMenu",
+  "name": "_competitionStatsMenu",
   "onInit": null,
   "onReturn": null,
   "onDraw": null,
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aStatistics"
+          "str": "_aStatistics"
         }
       ]
     },
@@ -54,11 +54,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aHighestScorerL"
+          "str": "_aHighestScorerL"
         },
         {
           "op": "onselect_fire",
-          "func": "_StatsHighestScorerList"
+          "func": "StatsHighestScorerList"
         }
       ]
     },
@@ -86,11 +86,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aCompetitionInf"
+          "str": "_aCompetitionInf"
         },
         {
           "op": "onselect_fire",
-          "func": "_CompetitionInfo"
+          "func": "CompetitionInfo"
         }
       ]
     },
@@ -118,11 +118,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewSquads"
+          "str": "_aViewSquads"
         },
         {
           "op": "onselect_fire",
-          "func": "_StatsViewSquads"
+          "func": "StatsViewSquads"
         }
       ]
     },
@@ -150,11 +150,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_StatsExit"
+          "func": "StatsExit"
         }
       ]
     }

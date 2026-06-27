@@ -1,7 +1,7 @@
 {
-  "name": "swosMainMenu",
-  "onInit": "_SWOSMainMenuInit",
-  "onReturn": "_GlobalRetn",
+  "name": "_swosMainMenu",
+  "onInit": "SWOSMainMenuInit",
+  "onReturn": "GlobalRetn",
   "onDraw": null,
   "defaultEntry": 6,
   "items": [
@@ -53,11 +53,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aEditTactics"
+          "str": "_aEditTactics"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditTacticsMenu"
+          "func": "EditTacticsMenu"
         }
       ]
     },
@@ -85,11 +85,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aEditCustomTeam"
+          "str": "_aEditCustomTeam"
         },
         {
           "op": "onselect_fire",
-          "func": "_EditCustomTeamMenu"
+          "func": "EditCustomTeamMenu"
         }
       ]
     },
@@ -117,11 +117,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aHighlights_0"
+          "str": "_aHighlights_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_HighlightsMenu"
+          "func": "HighlightsMenu"
         }
       ]
     },
@@ -149,11 +149,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aOptions"
+          "str": "_aOptions"
         },
         {
           "op": "onselect_fire",
-          "func": "_OptionsMenuSelected"
+          "func": "OptionsMenuSelected"
         }
       ]
     },
@@ -181,11 +181,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aSaveDiskFiling"
+          "str": "_aSaveDiskFiling"
         },
         {
           "op": "onselect_fire",
-          "func": "_SaveDiskFilingMenu"
+          "func": "SaveDiskFilingMenu"
         }
       ]
     },
@@ -213,11 +213,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aFriendly_1"
+          "str": "_aFriendly_1"
         },
         {
           "op": "onselect_fire",
-          "func": "_FriendlyMenu"
+          "func": "FriendlyMenu"
         }
       ]
     },
@@ -245,11 +245,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aDiyCompetition_0"
+          "str": "_aDiyCompetition_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_DIYCompetitionMenu"
+          "func": "DIYCompetitionMenu"
         }
       ]
     },
@@ -277,11 +277,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aPresetCompetit_0"
+          "str": "_aPresetCompetit_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_PresetCompetitionMenu"
+          "func": "PresetCompetitionMenu"
         }
       ]
     },
@@ -309,11 +309,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aSeason_1"
+          "str": "_aSeason_1"
         },
         {
           "op": "onselect_fire",
-          "func": "_SeasonMenu"
+          "func": "SeasonMenu"
         }
       ]
     },
@@ -341,11 +341,11 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aCareer_1"
+          "str": "_aCareer_1"
         },
         {
           "op": "onselect_fire",
-          "func": "_CareerMenu"
+          "func": "CareerMenu"
         }
       ]
     },
@@ -381,7 +381,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_StartContest"
+          "func": "StartContest"
         }
       ]
     },
@@ -409,11 +409,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "saveFileTitle"
+          "str": "_saveFileTitle"
         },
         {
           "op": "onselect_fire",
-          "func": "_SaveContest"
+          "func": "SaveContest"
         }
       ]
     },
@@ -441,11 +441,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aLoadOldCompeti"
+          "str": "_aLoadOldCompeti"
         },
         {
           "op": "onselect_fire",
-          "func": "_LoadOldCompetitionMenu"
+          "func": "LoadOldCompetitionMenu"
         }
       ]
     },

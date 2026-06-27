@@ -1,7 +1,7 @@
 {
-  "name": "transferMarketMenu",
-  "onInit": "_TransferMarketInit",
-  "onReturn": "_TransferMarketFinish",
+  "name": "_transferMarketMenu",
+  "onInit": "TransferMarketInit",
+  "onReturn": "TransferMarketFinish",
   "onDraw": null,
   "defaultEntry": 2,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTransferMarket"
+          "str": "_aTransferMarket"
         }
       ]
     },
@@ -69,11 +69,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aBuyPlayer"
+          "str": "_aBuyPlayer"
         },
         {
           "op": "onselect_fire",
-          "func": "_BuyPlayerMenu"
+          "func": "BuyPlayerMenu"
         }
       ]
     },
@@ -101,11 +101,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewOffers"
+          "str": "_aViewOffers"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewOffersMenu"
+          "func": "ViewOffersMenu"
         }
       ]
     },
@@ -133,11 +133,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPutPlayerOnTra_0"
+          "str": "_aPutPlayerOnTra_0"
         },
         {
           "op": "onselect_fire",
-          "func": "_PutPlayerOnMarketMenu"
+          "func": "PutPlayerOnMarketMenu"
         }
       ]
     },
@@ -165,11 +165,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aGiveFreeTransf"
+          "str": "_aGiveFreeTransf"
         },
         {
           "op": "onselect_fire",
-          "func": "_GiveFreeTransfer"
+          "func": "GiveFreeTransfer"
         }
       ]
     },
@@ -197,11 +197,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag_8"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -229,11 +229,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTakeOffMarket"
+          "str": "_aTakeOffMarket"
         },
         {
           "op": "onselect_fire",
-          "func": "_TakeOffMarketMenu"
+          "func": "TakeOffMarketMenu"
         }
       ]
     },
@@ -249,7 +249,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlayersCurrent"
+          "str": "_aPlayersCurrent"
         }
       ]
     },
@@ -278,11 +278,11 @@
         },
         {
           "op": "after_draw",
-          "func": "_TransferMarketAfterDrawCommon"
+          "func": "TransferMarketAfterDrawCommon"
         },
         {
           "op": "onselect_fire",
-          "func": "_TransferMarketCommon"
+          "func": "TransferMarketCommon"
         }
       ]
     },

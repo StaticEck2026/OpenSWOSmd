@@ -1,7 +1,7 @@
 {
-  "name": "chairmanMemosMenu",
-  "onInit": "_ChairmanMemosInit",
-  "onReturn": "_ChairmanMemosOnReturn",
+  "name": "_chairmanMemosMenu",
+  "onInit": "ChairmanMemosInit",
+  "onReturn": "ChairmanMemosOnReturn",
   "onDraw": null,
   "defaultEntry": 6,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aMemoFromTheClu"
+          "str": "_aMemoFromTheClu"
         }
       ]
     },
@@ -91,7 +91,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aBestRegards"
+          "str": "_aBestRegards"
         }
       ]
     },
@@ -107,7 +107,7 @@
         {
           "op": "text",
           "flags": "0x8000",
-          "str": "aYourChairman"
+          "str": "_aYourChairman"
         }
       ]
     },
@@ -135,11 +135,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aContinue"
+          "str": "_aContinue"
         },
         {
           "op": "onselect_fire",
-          "func": "_ChairmanMemosContinue"
+          "func": "ChairmanMemosContinue"
         }
       ]
     }

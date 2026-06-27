@@ -1,7 +1,7 @@
 {
-  "name": "thirdPartyOfferMenu",
-  "onInit": "_ThirdPartyOfferMenuInit",
-  "onReturn": "_ThirdPartyOfferMenuInit",
+  "name": "_thirdPartyOfferMenu",
+  "onInit": "ThirdPartyOfferMenuInit",
+  "onReturn": "ThirdPartyOfferMenuInit",
   "onDraw": null,
   "defaultEntry": 13,
   "items": [
@@ -26,7 +26,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aThirdPartyOffe"
+          "str": "_aThirdPartyOffe"
         }
       ]
     },
@@ -113,7 +113,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -129,7 +129,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -145,7 +145,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlus"
+          "str": "_aPlus"
         }
       ]
     },
@@ -188,11 +188,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewSquad"
+          "str": "_aViewSquad"
         },
         {
           "op": "onselect_fire",
-          "func": "_ThirdPartyOfferViewSquad"
+          "func": "ThirdPartyOfferViewSquad"
         }
       ]
     },
@@ -220,11 +220,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAcceptOffer"
+          "str": "_aAcceptOffer"
         },
         {
           "op": "onselect_fire",
-          "func": "_AcceptOffer"
+          "func": "AcceptOffer"
         }
       ]
     },
@@ -262,11 +262,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aAskForMore"
+          "str": "_aAskForMore"
         },
         {
           "op": "onselect_fire",
-          "func": "_AskForMore"
+          "func": "AskForMore"
         }
       ]
     },
@@ -294,11 +294,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aRejectOffer"
+          "str": "_aRejectOffer"
         },
         {
           "op": "onselect_fire",
-          "func": "_RejectOffer"
+          "func": "RejectOffer"
         }
       ]
     },
@@ -326,11 +326,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aConsider"
+          "str": "_aConsider"
         },
         {
           "op": "onselect_fire",
-          "func": "_ConsiderOffer"
+          "func": "ConsiderOffer"
         }
       ]
     },
@@ -354,11 +354,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_ThirdPartyOfferMenuExit"
+          "func": "ThirdPartyOfferMenuExit"
         }
       ]
     },
@@ -382,7 +382,7 @@
         },
         {
           "op": "after_draw",
-          "func": "_ThirdPartyOfferMenuAfterDrawCommon"
+          "func": "ThirdPartyOfferMenuAfterDrawCommon"
         }
       ]
     },

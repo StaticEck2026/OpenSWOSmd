@@ -1,7 +1,7 @@
 {
-  "name": "contestMenu",
-  "onInit": "_ContestMenuInit",
-  "onReturn": "_ContestMenuOnReturn",
+  "name": "_contestMenu",
+  "onInit": "ContestMenuInit",
+  "onReturn": "ContestMenuOnReturn",
   "onDraw": null,
   "defaultEntry": 7,
   "items": [
@@ -90,7 +90,7 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSeason_1"
+          "str": "_aSeason_1"
         }
       ]
     },
@@ -127,11 +127,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aTransfers"
+          "str": "_aTransfers"
         },
         {
           "op": "onselect_fire",
-          "func": "_TransfersMenu"
+          "func": "TransfersMenu"
         }
       ]
     },
@@ -169,11 +169,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aJobOffers"
+          "str": "_aJobOffers"
         },
         {
           "op": "onselect_fire",
-          "func": "_JobOffersMenu"
+          "func": "JobOffersMenu"
         }
       ]
     },
@@ -211,11 +211,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aClubBusiness"
+          "str": "_aClubBusiness"
         },
         {
           "op": "onselect_fire",
-          "func": "_ClubBusinessMenu"
+          "func": "ClubBusinessMenu"
         }
       ]
     },
@@ -253,11 +253,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aPlayMatch"
+          "str": "_aPlayMatch"
         },
         {
           "op": "onselect_fire",
-          "func": "_PlayMatchMenu"
+          "func": "PlayMatchMenu"
         }
       ]
     },
@@ -290,11 +290,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aSquad"
+          "str": "_aSquad"
         },
         {
           "op": "onselect_fire",
-          "func": "_SquadMenu"
+          "func": "SquadMenu"
         }
       ]
     },
@@ -322,11 +322,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -359,11 +359,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aNextMatch"
+          "str": "_aNextMatch"
         },
         {
           "op": "onselect_fire",
-          "func": "_NextMatch"
+          "func": "NextMatch"
         }
       ]
     },
@@ -391,11 +391,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewCompetitio"
+          "str": "_aViewCompetitio"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewCompetitionsMenu"
+          "func": "ViewCompetitionsMenu"
         }
       ]
     },
@@ -428,11 +428,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewWorld"
+          "str": "_aViewWorld"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewWorldMenu"
+          "func": "ViewWorldMenu"
         }
       ]
     },
@@ -463,11 +463,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aNextMatch"
+          "str": "_aNextMatch"
         },
         {
           "op": "onselect_fire",
-          "func": "_NextMatch"
+          "func": "NextMatch"
         }
       ]
     },
@@ -498,11 +498,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aViewCompetitio"
+          "str": "_aViewCompetitio"
         },
         {
           "op": "onselect_fire",
-          "func": "_ViewCompetitionsMenu"
+          "func": "ViewCompetitionsMenu"
         }
       ]
     },
@@ -533,11 +533,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_jmp_SetExitMenuFlag"
+          "func": "SetExitMenuFlag"
         }
       ]
     },
@@ -568,7 +568,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ContestMenuScrollUp"
+          "func": "ContestMenuScrollUp"
         }
       ]
     },
@@ -599,7 +599,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_ContestMenuScrollDown"
+          "func": "ContestMenuScrollDown"
         }
       ]
     },
@@ -647,7 +647,7 @@
       "commands": [
         {
           "op": "before_draw",
-          "func": "_CareerGameListCommon"
+          "func": "CareerGameListCommon"
         }
       ]
     },

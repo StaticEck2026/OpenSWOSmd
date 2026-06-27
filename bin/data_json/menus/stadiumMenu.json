@@ -1,6 +1,6 @@
 {
-  "name": "stadiumMenu",
-  "onInit": "_ShowStadiumInit",
+  "name": "_stadiumMenu",
+  "onInit": "ShowStadiumInit",
   "onReturn": null,
   "onDraw": null,
   "defaultEntry": 59,
@@ -78,7 +78,7 @@
         {
           "op": "text",
           "flags": "0x10",
-          "str": "aV"
+          "str": "_aV"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "commands": [
         {
           "op": "before_draw",
-          "func": "_StadiumBeforeDrawLeftTeam"
+          "func": "StadiumBeforeDrawLeftTeam"
         }
       ]
     },
@@ -137,7 +137,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -152,7 +152,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -167,7 +167,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -182,7 +182,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -197,7 +197,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -212,7 +212,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -227,7 +227,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -242,7 +242,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -257,7 +257,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -272,7 +272,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -287,7 +287,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -575,7 +575,7 @@
       "commands": [
         {
           "op": "before_draw",
-          "func": "_StadiumBeforeDrawRightTeam"
+          "func": "StadiumBeforeDrawRightTeam"
         }
       ]
     },
@@ -590,7 +590,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -605,7 +605,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -620,7 +620,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -635,7 +635,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -650,7 +650,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -665,7 +665,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -680,7 +680,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -695,7 +695,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -710,7 +710,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -725,7 +725,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },
@@ -740,7 +740,7 @@
       "commands": [
         {
           "op": "sprite_copy",
-          "sprite": "stadiumMenuLittlePlayerSpriteCopy"
+          "sprite": "_stadiumMenuLittlePlayerSpriteCopy"
         }
       ]
     },

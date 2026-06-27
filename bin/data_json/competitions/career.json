@@ -3,140 +3,140 @@
   "count": 35,
   "contests": [
     {
-      "competition": "euroCup",
-      "competition_copy": "euroCupCopy"
+      "competition": "_euroCup",
+      "competition_copy": "_euroCupCopy"
     },
     {
-      "competition": "cupWinnersCup",
-      "competition_copy": "cupWinnersCupCopy"
+      "competition": "_cupWinnersCup",
+      "competition_copy": "_cupWinnersCupCopy"
     },
     {
-      "competition": "uefaCup",
-      "competition_copy": "uefaCupCopy"
+      "competition": "_uefaCup",
+      "competition_copy": "_uefaCupCopy"
     },
     {
-      "competition": "invitationTournament",
-      "competition_copy": "invitationTournamentCopy"
+      "competition": "_invitationTournament",
+      "competition_copy": "_invitationTournamentCopy"
     },
     {
-      "competition": "tour",
-      "competition_copy": "tourCopy"
+      "competition": "_tour",
+      "competition_copy": "_tourCopy"
     },
     {
-      "competition": "friendly",
-      "competition_copy": "friendlyCopy"
+      "competition": "_friendly",
+      "competition_copy": "_friendlyCopy"
     },
     {
-      "competition": "europeanChampionships2",
-      "competition_copy": "europeanChampionships2Copy"
+      "competition": "_europeanChampionships2",
+      "competition_copy": "_europeanChampionships2Copy"
     },
     {
-      "competition": "ecQualifyingGroup1",
-      "competition_copy": "ecQualifyingGroup1Copy"
+      "competition": "_ecQualifyingGroup1",
+      "competition_copy": "_ecQualifyingGroup1Copy"
     },
     {
-      "competition": "ecQualifyingGroup2",
-      "competition_copy": "ecQualifyingGroup2Copy"
+      "competition": "_ecQualifyingGroup2",
+      "competition_copy": "_ecQualifyingGroup2Copy"
     },
     {
-      "competition": "ecQualifyingGroup3",
-      "competition_copy": "ecQualifyingGroup3Copy"
+      "competition": "_ecQualifyingGroup3",
+      "competition_copy": "_ecQualifyingGroup3Copy"
     },
     {
-      "competition": "ecQualifyingGroup4",
-      "competition_copy": "ecQualifyingGroup4Copy"
+      "competition": "_ecQualifyingGroup4",
+      "competition_copy": "_ecQualifyingGroup4Copy"
     },
     {
-      "competition": "ecQualifyingGroup5",
-      "competition_copy": "ecQualifyingGroup5Copy"
+      "competition": "_ecQualifyingGroup5",
+      "competition_copy": "_ecQualifyingGroup5Copy"
     },
     {
-      "competition": "ecQualifyingGroup6",
-      "competition_copy": "ecQualifyingGroup6Copy"
+      "competition": "_ecQualifyingGroup6",
+      "competition_copy": "_ecQualifyingGroup6Copy"
     },
     {
-      "competition": "ecQualifyingGroup7",
-      "competition_copy": "ecQualifyingGroup7Copy"
+      "competition": "_ecQualifyingGroup7",
+      "competition_copy": "_ecQualifyingGroup7Copy"
     },
     {
-      "competition": "ecQualifyingGroup8",
-      "competition_copy": "ecQualifyingGroup8Copy"
+      "competition": "_ecQualifyingGroup8",
+      "competition_copy": "_ecQualifyingGroup8Copy"
     },
     {
-      "competition": "copaAmerica",
-      "competition_copy": "copaAmericaCopy"
+      "competition": "_copaAmerica",
+      "competition_copy": "_copaAmericaCopy"
     },
     {
-      "competition": "africanNationsCup",
-      "competition_copy": "africanNationsCupCopy"
+      "competition": "_africanNationsCup",
+      "competition_copy": "_africanNationsCupCopy"
     },
     {
-      "competition": "northAmericanCup",
-      "competition_copy": "northAmericanCupCopy"
+      "competition": "_northAmericanCup",
+      "competition_copy": "_northAmericanCupCopy"
     },
     {
-      "competition": "asianCup",
-      "competition_copy": "asianCupCopy"
+      "competition": "_asianCup",
+      "competition_copy": "_asianCupCopy"
     },
     {
-      "competition": "oceaniaCup",
-      "competition_copy": "oceaniaCupCopy"
+      "competition": "_oceaniaCup",
+      "competition_copy": "_oceaniaCupCopy"
     },
     {
-      "competition": "worldCup2",
-      "competition_copy": "worldCup2Copy"
+      "competition": "_worldCup2",
+      "competition_copy": "_worldCup2Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup1",
-      "competition_copy": "worldCupQualifyingGroup1Copy"
+      "competition": "_worldCupQualifyingGroup1",
+      "competition_copy": "_worldCupQualifyingGroup1Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup2",
-      "competition_copy": "worldCupQualifyingGroup2Copy"
+      "competition": "_worldCupQualifyingGroup2",
+      "competition_copy": "_worldCupQualifyingGroup2Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup3",
-      "competition_copy": "worldCupQualifyingGroup3Copy"
+      "competition": "_worldCupQualifyingGroup3",
+      "competition_copy": "_worldCupQualifyingGroup3Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup4",
-      "competition_copy": "worldCupQualifyingGroup4Copy"
+      "competition": "_worldCupQualifyingGroup4",
+      "competition_copy": "_worldCupQualifyingGroup4Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup5",
-      "competition_copy": "worldCupQualifyingGroup5Copy"
+      "competition": "_worldCupQualifyingGroup5",
+      "competition_copy": "_worldCupQualifyingGroup5Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup6",
-      "competition_copy": "worldCupQualifyingGroup6Copy"
+      "competition": "_worldCupQualifyingGroup6",
+      "competition_copy": "_worldCupQualifyingGroup6Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup7",
-      "competition_copy": "worldCupQualifyingGroup7Copy"
+      "competition": "_worldCupQualifyingGroup7",
+      "competition_copy": "_worldCupQualifyingGroup7Copy"
     },
     {
-      "competition": "worldCupQualifyingGroup8",
-      "competition_copy": "worldCupQualifyingGroup8Copy"
+      "competition": "_worldCupQualifyingGroup8",
+      "competition_copy": "_worldCupQualifyingGroup8Copy"
     },
     {
-      "competition": "northAmericaWorldCupQualification",
-      "competition_copy": "northAmericaWorldCupQualificationCopy"
+      "competition": "_northAmericaWorldCupQualification",
+      "competition_copy": "_northAmericaWorldCupQualificationCopy"
     },
     {
-      "competition": "southAmericaWorldCupQualification",
-      "competition_copy": "southAmericaWorldCupQualificationCopy"
+      "competition": "_southAmericaWorldCupQualification",
+      "competition_copy": "_southAmericaWorldCupQualificationCopy"
     },
     {
-      "competition": "africaWorldCupQualification",
-      "competition_copy": "africaWorldCupQualificationCopy"
+      "competition": "_africaWorldCupQualification",
+      "competition_copy": "_africaWorldCupQualificationCopy"
     },
     {
-      "competition": "asiaWorldCupQualification",
-      "competition_copy": "asiaWorldCupQualificationCopy"
+      "competition": "_asiaWorldCupQualification",
+      "competition_copy": "_asiaWorldCupQualificationCopy"
     },
     {
-      "competition": "oceaniaWorldCupQualification",
-      "competition_copy": "oceaniaWorldCupQualificationCopy"
+      "competition": "_oceaniaWorldCupQualification",
+      "competition_copy": "_oceaniaWorldCupQualificationCopy"
     },
     {
       "competition": null,

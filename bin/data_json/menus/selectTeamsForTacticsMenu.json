@@ -1,7 +1,7 @@
 {
-  "name": "selectTeamsForTacticsMenu",
-  "onInit": "_SelTeamForTacticsInit",
-  "onReturn": "_SelTeamForTacticsInit",
+  "name": "_selectTeamsForTacticsMenu",
+  "onInit": "SelTeamForTacticsInit",
+  "onReturn": "SelTeamForTacticsInit",
   "onDraw": null,
   "defaultEntry": 23,
   "items": [
@@ -60,7 +60,7 @@
         },
         {
           "op": "onselect_fire",
-          "func": "_SelTeamForTacticsCommon"
+          "func": "SelTeamForTacticsCommon"
         }
       ]
     },
@@ -1504,11 +1504,11 @@
         {
           "op": "text",
           "flags": "0x0",
-          "str": "aExit"
+          "str": "_aExit"
         },
         {
           "op": "onselect_fire",
-          "func": "_SelTeamForTacticsExit"
+          "func": "SelTeamForTacticsExit"
         }
       ]
     }
