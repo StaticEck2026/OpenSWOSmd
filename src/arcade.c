@@ -115,8 +115,9 @@ extern void     ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workB
 
 #define ARC_WHITE         2          /* menu-palette white (0x0FFF) for the UI text */
 #define ARC_CHARS         ((uint8_t *)_bigCharsTable)
-#define ARC_Y_BOTTOM      256        /* INSERT COIN / CREDIT NN / player-count row */
-#define ARC_Y_PROMPT      240        /* PUSH START BUTTON — just above the bottom row */
+#define ARC_Y_BOTTOM      256        /* INSERT COIN / CREDIT NN — machine status, screen bottom */
+#define ARC_Y_PROMPT      224        /* PUSH START BUTTON */
+#define ARC_Y_PLAYERS     240        /* ONE PLAYER ONLY / ONE OR TWO PLAYERS — under PUSH START */
 #define ARC_ASSET_INIT    2          /* CAssetSys ASSET_OP_INIT_SOURCE0 */
 #define ARC_REEL_DIR      "grafs_arcade/attract_mode"
 #define ARC_MAX_REELS     64
@@ -131,7 +132,11 @@ static int      s_serviceReq;  /* service key pressed -> open the F2 service men
 static uint32_t s_overlayFrame;           /* blink phase for the attract overlay */
 
 #define ARC_LOGO_MAXW  1024
-static uint8_t  s_logoBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];    /* LOADER1 logo, 16-col chunky */
+#define ARC_LOGO_SCALE 1     /* DOS LOADER1 LOGO.bmp is already full-size (320x200) */
+#define ARC_LOGO_TRANSPARENT 0   /* DOS LOADER1 uses index 0 as the transparent background */
+static uint8_t  s_logoBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];    /* LOGO.bmp pixels (indexed) */
+static uint32_t s_logoPal[256];                             /* LOGO.bmp 256-colour palette (ARGB) */
+static int      s_logoW, s_logoH;                           /* LOGO.bmp dimensions */
 static int      s_logoLoaded;
 static uint8_t  s_overlayBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT]; /* composited UI, menu-palette idx */
 static int      s_overlayActive;
@@ -246,47 +251,21 @@ static void arc_drain_input(void)
                 s_startGame, s_credits);
 }
 
-/* Decode the LOADER1 intro logo once into s_logoBuf (8bpp chunky, frontbuffer
- * layout). LoadOverlayToFrontbuffer writes the decode into _frontbufferMaskBuffer
- * (a staging buffer, not the visible one), so this doesn't disturb the screen. */
+/* Load the arcade LOGO.bmp once: indexed pixels into s_logoBuf + its own 256-colour
+ * palette into s_logoPal. Composited (scaled up, centred) over the attract reels by
+ * Arcade_CompositeOverlay — index 0 is transparent. */
 static void arc_load_logo(void)
 {
-    extern void    LoadOverlayToFrontbuffer(const uint8_t *path);
-    extern uint8_t _frontbufferMaskBuffer[];
-    size_t n = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
-    if (n > sizeof s_logoBuf) n = sizeof s_logoBuf;
-    LoadOverlayToFrontbuffer((const uint8_t *)"grafs/loader1.raw");
-    memcpy(s_logoBuf, _frontbufferMaskBuffer, n);
-
-    /* LOADER1's art is centred in a 352px-wide source, but LoadOverlayToFrontbuffer
-     * decodes only the left SCREEN_WIDTH (336) of it, landing the logo ~8px right of
-     * centre. (We can't change that shared decode — MENUBG and the menus rely on the
-     * left-aligned 336.) Re-centre the logo here on its own non-zero bounding box so
-     * it's centred at any render width. */
-    {
-        int minx = _screen_width, maxx = -1;
-        for (int y = 0; y < SCREEN_HEIGHT; y++)
-            for (int x = 0; x < _screen_width; x++)
-                if (s_logoBuf[(size_t)y * _screen_width + x]) {
-                    if (x < minx) minx = x;
-                    if (x > maxx) maxx = x;
-                }
-        if (maxx >= minx) {
-            int shift = _screen_width / 2 - (minx + maxx) / 2;
-            for (int y = 0; shift != 0 && y < SCREEN_HEIGHT; y++) {
-                uint8_t *row = s_logoBuf + (size_t)y * _screen_width;
-                if (shift > 0) {
-                    memmove(row + shift, row, (size_t)(_screen_width - shift));
-                    memset(row, 0, (size_t)shift);
-                } else {
-                    int s = -shift;
-                    memmove(row, row + s, (size_t)(_screen_width - s));
-                    memset(row + _screen_width - s, 0, (size_t)s);
-                }
-            }
-        }
+    extern int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
+                                       uint32_t *outPal, int *outW, int *outH);
+    if (s_logoLoaded) return;
+    if (Platform_LoadIndexedBMP("grafs_arcade/LOGO.bmp", s_logoBuf, (int)sizeof s_logoBuf,
+                                s_logoPal, &s_logoW, &s_logoH) == 0) {
+        s_logoLoaded = 1;
+        fprintf(stderr, "[arcade] LOGO.bmp %dx%d loaded\n", s_logoW, s_logoH);
+    } else {
+        fprintf(stderr, "[arcade] LOGO.bmp failed to load\n");
     }
-    s_logoLoaded = 1;
 }
 
 /* The attract overlay: full-screen SWOS logo (index-0 transparent) + flashing
@@ -325,7 +304,7 @@ int Arcade_DrawAttractOverlay(void)
         DrawMenuTextRightAligned(328, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)buf, ARC_CHARS);
         if (flash)
             DrawMenuTextCentered(168, ARC_Y_PROMPT, ARC_WHITE, (uint8_t *)"PUSH START BUTTON", ARC_CHARS);
-        DrawMenuTextCentered(168, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)(
+        DrawMenuTextCentered(168, ARC_Y_PLAYERS, ARC_WHITE, (uint8_t *)(
             (s_credits >= 2) ? "ONE OR TWO PLAYERS" : "ONE PLAYER ONLY"), ARC_CHARS);
     }
 
@@ -343,30 +322,40 @@ void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h)
     if (!s_overlayActive || !dst)
         return;
 
-    /* LOADER1 is authored for the title-screen palette (the intro shows it with
-     * _paletteTable[3]); the reel underneath uses its own palette, so map the
-     * logo's indices through _titleScreenPalette here. The INSERT-COIN text is a
-     * flat white drawn separately into s_overlayBuf. */
-    extern uint16_t _titleScreenPalette[];
-    uint32_t pal[16];
-    for (int i = 0; i < 16; i++) {
-        uint16_t v = _titleScreenPalette[i];          /* 0x0RGB Amiga 12-bit */
-        uint32_t r = (v >> 8) & 0xF, g = (v >> 4) & 0xF, b = v & 0xF;
-        r = (r << 4) | r; g = (g << 4) | g; b = (b << 4) | b;
-        pal[i] = ((uint32_t)0xFFu << 24) | (r << 16) | (g << 8) | b;
-    }
+    /* The reel underneath uses its own (DOS) palette; the LOGO.bmp logo carries its
+     * own 256-colour palette (s_logoPal) and the INSERT-COIN text is flat white drawn
+     * separately into s_overlayBuf. */
     const uint32_t white = 0xFFFFFFFFu;
     const uint32_t black = 0xFF000000u;
     const uint8_t  shadowBit = (uint8_t)(1u << (NUM_PLANES - 1)); /* glyph shadow plane */
 
     if (h > SCREEN_HEIGHT)  h = SCREEN_HEIGHT;
     if (w > _screen_width)  w = _screen_width;
+
+    /* LOGO.bmp, scaled up (nearest-neighbour) and centred horizontally in the area
+     * above the prompt row, composited with its own palette (index 0 transparent). */
+    const int lscale = ARC_LOGO_SCALE;
+    const int lw = s_logoW * lscale, lh = s_logoH * lscale;
+    const int lx0 = (_screen_width - lw) / 2;
+    const int ly0 = (ARC_Y_PROMPT - lh) / 2;      /* high — centred in the space above the prompts */
+
     for (int y = 0; y < h; y++) {
-        const uint8_t *lg  = s_logoBuf    + (size_t)y * (size_t)_screen_width;
         const uint8_t *tx  = s_overlayBuf + (size_t)y * (size_t)_screen_width;
         uint32_t      *out = dst + (size_t)y * (size_t)dst_pitch_pixels;
+
+        int ly = y - ly0;
+        const uint8_t *lgrow = (s_logoLoaded && ly >= 0 && ly < lh)
+            ? s_logoBuf + (size_t)(ly / lscale) * (size_t)s_logoW : NULL;
+
         for (int x = 0; x < w; x++) {
-            if (lg[x]) out[x] = pal[lg[x] & 15];          /* logo (title-screen palette) */
+            if (lgrow) {
+                int lx = x - lx0;
+                if (lx >= 0 && lx < lw) {
+                    uint8_t idx = lgrow[lx / lscale];
+                    if (idx != ARC_LOGO_TRANSPARENT)
+                        out[x] = s_logoPal[idx];          /* logo (own palette) */
+                }
+            }
             uint8_t t = tx[x];
             if (t)                                        /* text: body->white ink, */
                 out[x] = (t & (uint8_t)~shadowBit) ? white : black; /* shadow plane->black */
