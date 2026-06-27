@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>          /* SIGHUP — see main() (Cygwin-under-gdb startup) */
 
 #ifdef _WIN32
 #include <windows.h>
@@ -155,6 +156,16 @@ static const char *match_kv(const char *arg, const char *key)
 
 int main(int argc, char **argv)
 {
+#ifdef SIGHUP
+    /* Cygwin under the VS Code gdb launcher wires stdio as pipes (not a Cygwin
+     * pty), so at startup the runtime sees the controlling terminal "hang up"
+     * and delivers SIGHUP — whose default action kills us before the window
+     * even opens (gdb reports "terminated with signal SIGHUP", exit code 0).
+     * This is a GUI app and doesn't need the terminal, so ignore it. No effect
+     * on a normal run, which never receives SIGHUP. */
+    signal(SIGHUP, SIG_IGN);
+#endif
+
     /* Anchor CWD to the binary's directory FIRST so SWOS.ini / SWOS.log
      * and the data/ grafs/ sound/ trees all resolve relative to the
      * exe regardless of where the user launched from. Done before

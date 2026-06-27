@@ -8,27 +8,32 @@
             "name": "Launch Debug (gbd)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bin/soccer-win.exe",
+            "program": "${workspaceFolder}/bin/SWOS.exe",
             "cwd": "${workspaceFolder}/bin",
             "preLaunchTask": "Build (Debug)",
             "MIMode": "gdb",
             "miDebuggerPath": "C:/cygwin64/bin/gdb.exe",
             "stopAtEntry": false,
-            "externalConsole": false,
+            "externalConsole": true,
             "windows": {
-                "program": "${workspaceFolder}/bin/soccer-win.exe",
-                "args": [ "--overlay", "--seed", "0" ],
+                "program": "${workspaceFolder}/bin/SWOS.exe",
+                "args": [],
                 "cwd": "${workspaceFolder}/bin"
             },
             "linux": {
-                "program": "${workspaceFolder}/bin/soccer-win",
-                "args": [ "--overlay", "--log" ],
+                "program": "${workspaceFolder}/bin/SWOS.x86_64",
+                "args": [],
                 "cwd": "${workspaceFolder}/bin"
             },
             "sourceFileMap": {
                 "/home/headk": "C:/cygwin64/home/headk"
             },
             "setupCommands": [
+                {
+                    "description": "Cygwin under the VS Code gdb launcher delivers a startup SIGHUP (pipes, not a Cygwin pty), which kills the game. Don't pass it to the inferior.",
+                    "text": "handle SIGHUP nostop noprint nopass",
+                    "ignoreFailures": true
+                },
                 {
                     "description": "Enable pretty-printing for gdb",
                     "text": "-enable-pretty-printing",
