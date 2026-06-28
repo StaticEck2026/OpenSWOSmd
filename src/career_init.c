@@ -894,6 +894,62 @@ uint16_t Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t e
 }
 
 /* ================================================================
+ * Career_SelectCopaLibertadoresSlotIfTeamParticipates
+ *
+ * CONMEBOL analog of Career_SelectEuroCupSlotIfTeamParticipates: if the player's
+ * club is in this season's Copa Libertadores field (the 20 teams earned by the
+ * 10 CONMEBOL leagues — already populated into Copa's *Copy seed list by the
+ * qualifier in Career_AdvanceToNextSeason_UpdateCompetitions, which runs before
+ * this), claim the quaternary slot (slot 3) for Copa so the player plays it
+ * interactively (Career_UpdateCopaLibertadoresCompetitionSlot's
+ * `== _quaternaryCompetitionPtr` branch).
+ *
+ * Tried only as the cascade fallback AFTER the three euro cups, so it can fire
+ * only for a club in NONE of them — i.e. a South-American club. Copa reuses the
+ * slot-3 context buffer (shared with the euro cups, mutually exclusive), so the
+ * same slot-state bookkeeping applies. Reuses the static Career_TeamInEuroCup
+ * field test (it is generic over a type-2 tournament *Copy). The Copa *Copy is
+ * reached through Career_CopaWorkingCopy (src/career_copa.c).
+ *
+ * NOTE: unlike the euro selector this does NOT set _euroCupSlotIndex — that index
+ * drives the LOAD-time slot-3 re-derivation (RebuildPointersAfterLoad), which is
+ * still euro-only; Copa interactive play is currently in-session only. A saved
+ * CONMEBOL career re-loads with slot 3 inactive (Copa falls back to auto-advance)
+ * until that load path learns about Copa. The in-session play path here does not
+ * read _euroCupSlotIndex (it branches on _quaternaryCompetitionPtr).
+ *
+ * out: 0 if participating, 1 if not (or Copa not installed).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+uint16_t Career_SelectCopaLibertadoresSlotIfTeamParticipates(void)
+{
+    extern Competition *Career_CopaWorkingCopy(void);
+    uint8_t *copaCopy = (uint8_t *)Career_CopaWorkingCopy();
+    if (!copaCopy)
+        return 1;  /* Copa not installed (e.g. SWOS_DATA_JSON disabled) */
+    if (!Career_TeamInEuroCup(copaCopy))
+        return 1;  /* player's club is not in the Copa field this season */
+
+    /* Save quaternary slot state */
+    uint16_t savedA = _euroCupsCompetitionContextBuf.tourn.header.slotStateA;
+    uint16_t savedB = _euroCupsCompetitionContextBuf.tourn.header.slotStateB;
+    uint16_t savedC = _euroCupsCompetitionContextBuf.tourn.header.slotStateC;
+
+    /* Claim slot 3 for Copa */
+    Career_SetCurrentCompetitionSlot(copaCopy, 3, 0, 0);
+
+    ((SeasonInformations *)GetCurrentSeasonPointer())->strPtr3 =
+        ((DIYCompetition *)_careerCompetitionSlotPtrTable[3])->namePtr;
+
+    /* Restore quaternary slot state */
+    _euroCupsCompetitionContextBuf.tourn.header.slotStateC = savedC;
+    _euroCupsCompetitionContextBuf.tourn.header.slotStateB = savedB;
+    _euroCupsCompetitionContextBuf.tourn.header.slotStateA = savedA;
+
+    return 0;  /* participating */
+}
+
+/* ================================================================
  * DIY_SelectCompetitionSlot4FromCurrentDivision  (SWOS2.s line 30972)
  *
  * If the primary competition is a league (type 0), check if it has
@@ -1217,10 +1273,16 @@ void InitializeNewSeason(void)
         }
     }
 
-    /* Try euro cups for slot 3 (quaternary) */
+    /* Try euro cups for slot 3 (quaternary); if the club is in none of them, try
+     * Copa Libertadores (a South-American club). The quaternary slot holds the
+     * player's ONE continental cup — euro and Copa are mutually exclusive, so this
+     * cascade naturally routes a CONMEBOL club to Copa and everyone else to a euro
+     * cup (or leaves slot 3 inactive). */
     if (Career_SelectEuroCupSlotIfTeamParticipates(_euroCupCopy, 0) != 0) {
         if (Career_SelectEuroCupSlotIfTeamParticipates(_cupWinnersCupCopy, 1) != 0) {
-            Career_SelectEuroCupSlotIfTeamParticipates(_uefaCupCopy, 2);
+            if (Career_SelectEuroCupSlotIfTeamParticipates(_uefaCupCopy, 2) != 0) {
+                Career_SelectCopaLibertadoresSlotIfTeamParticipates();
+            }
         }
     }
 

@@ -65,6 +65,18 @@ extern uint8_t  _currentCompetitionIndex;
  * euroCup). Defined in career_status.c. */
 extern void Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
 
+/* Interactive play-path machinery (a player managing a CONMEBOL club). Copa
+ * shares the slot-3 (quaternary) slot with the euro cups — mutually exclusive,
+ * since a club is either European or South-American — so it reuses the same
+ * slot-3 context-load (Career_CopyEuroCupsCompetitionContextToOrFromActive
+ * just loads the generic slot-3 buffer). Routing into the slot is done by
+ * Career_SelectCopaLibertadoresSlotIfTeamParticipates (career_init.c). */
+extern uint8_t *_quaternaryCompetitionPtr;
+extern void RestoreSelectedTeams(void);
+extern void SaveSelectedTeams(void);
+extern void Career_CopyEuroCupsCompetitionContextToOrFromActive(void);
+extern void DIY_EditCompetitionSlot(uint16_t paramA, uint16_t paramB, uint16_t paramC);
+
 /* ================================================================
  * Helpers (mirror career_eurocups.c)
  * ================================================================ */
@@ -74,8 +86,12 @@ extern void Career_AutoAdvanceLeagueCompetitionFromRecord(uint8_t *record);
  * (DataJson_InstallCompetitionGraph), so its {template, copy} pair lives there.
  * Comp_ById returns the TEMPLATE record; we want the per-career working *Copy
  * (the one the season machinery edits and the save reconstructs). Returns NULL
- * if Copa isn't installed (data not present). */
-static Competition *copaWorkingCopy(void)
+ * if Copa isn't installed (data not present).
+ *
+ * Exported (career_init.c's Copa slot-selection reaches Copa's *Copy through
+ * this, mirroring how the euro cascade names _euroCupCopy directly). */
+__attribute__((used, externally_visible))
+Competition *Career_CopaWorkingCopy(void)
 {
     Competition *tmpl = Comp_ById(COMPID_copaLibertadores);
     if (!tmpl)
@@ -147,7 +163,7 @@ void Career_PrepareCopaLibertadoresQualificationState(void)
 
     s_copaQualifiedTeamCount = 0;
 
-    Competition *copy = copaWorkingCopy();
+    Competition *copy = Career_CopaWorkingCopy();
     if (copy) {
         s_copaTeamListPtr      = (uint8_t *)comp_team_seed_list(copy);
         s_copaTeamListWritePtr = s_copaTeamListPtr;
@@ -202,15 +218,33 @@ uint16_t Career_CopaLibertadoresExpectedTeamCount(void)
  * field from the record's own seed list and runs the group->knockout, so the
  * teams need not be pre-staged in selTeamsPtr.
  *
- * The player-managing-a-CONMEBOL-club INTERACTIVE path (the euro
- * `a4 == _quaternaryCompetitionPtr` branch) is deferred — for now Copa always
- * auto-advances. No title-holder grid copy: Copa has no holder berth (the field
- * is fully re-earned each season). Inert when Copa is not installed. */
+ * When the player's own CONMEBOL club is in Copa this season it is the active
+ * quaternary competition (routed by
+ * Career_SelectCopaLibertadoresSlotIfTeamParticipates in career_init.c, exactly
+ * as the euro cascade routes _euroCupCopy): take the INTERACTIVE branch and show
+ * the cup menu so the player plays/sims it — the analog of
+ * Career_UpdateEuroCupCompetitionSlot's `a4 == _quaternaryCompetitionPtr` path.
+ * Copa reuses the slot-3 context buffer (shared with the euro cups, mutually
+ * exclusive), so the same context-load applies. No title-holder grid copy: Copa
+ * has no holder berth (the field is fully re-earned each season). Inert when Copa
+ * is not installed. */
 __attribute__((used, externally_visible))
 void Career_UpdateCopaLibertadoresCompetitionSlot(void)
 {
-    Competition *copy = copaWorkingCopy();
+    Competition *copy = Career_CopaWorkingCopy();
     if (!copy)
         return;
-    Career_AutoAdvanceLeagueCompetitionFromRecord((uint8_t *)copy);
+
+    uint8_t *a4 = (uint8_t *)copy;
+    if (a4 == _quaternaryCompetitionPtr) {
+        /* INTERACTIVE: the player's club is in Copa — let them play it. */
+        RestoreSelectedTeams();
+        Career_CopyEuroCupsCompetitionContextToOrFromActive();
+        DIY_EditCompetitionSlot(1, 1, 0);
+        SaveSelectedTeams();
+    } else {
+        /* AUTO-ADVANCE (background-simulate): a non-CONMEBOL career, or a
+         * CONMEBOL career whose club did not qualify this season. */
+        Career_AutoAdvanceLeagueCompetitionFromRecord(a4);
+    }
 }
