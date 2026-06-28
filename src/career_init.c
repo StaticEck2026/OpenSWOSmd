@@ -158,7 +158,7 @@ void Career_RandomizeInvitationTournamentCup(void)
          * only dereference real pointers for the id check (the original compared the
          * raw pointer, which was sentinel-safe). The replacement stores the actual
          * tour competition object, so it keeps referencing &_tourCopy. */
-        if (p != 0 && p != (void *)(intptr_t)-1 && p != (void *)(intptr_t)-2 &&
+        if (p != 0 && p != (void *)(uintptr_t)-1 && p != (void *)(uintptr_t)-2 &&
             comp_id(p) == COMPID_invitationTournament) {
             if (Rand() & 1)
                 pickList[i] = (void *)_tourCopy;
