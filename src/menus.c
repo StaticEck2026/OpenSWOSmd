@@ -6242,7 +6242,7 @@ static void ShowSquadMenuForTeam(uint8_t *teamPtr, uint16_t rowMode)
     _inEditTactics = rowMode;
 
     /* Read skill diff param from diyCompetitionStart offset 0x2C (word) */
-    uint16_t d0 = *(uint16_t *)&_diyCompetitionStart.base.compId;
+    uint16_t d0 = *(uint16_t *)&_diyCompetitionStart.base.compSlot;
     if (d0 == 4)
         d0 = 0;
     _teamSkillDiffAfterChange = d0;

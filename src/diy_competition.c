@@ -438,7 +438,7 @@ void DIY_InitCompetitionDefaults(void)
     uint8_t *a2raw = (uint8_t *)a2;
 
     a2->competitionType = 0;             /* competition type = 0 (league) */
-    *(uint16_t *)&a2->compId = 0;       /* 0x2C: compId + slotId as word */
+    *(uint16_t *)&a2->compSlot = 0;       /* 0x2C: compId + slotId as word */
     a2->isActive = 0;                   /* 0x02 */
     a2->matchStarted = 0;              /* 0x44 */
     a2->careerTeamInvolved = 0;              /* 0x46 */
@@ -684,7 +684,7 @@ void InitDIYTournament(void)
     DIYCompetition *a2 = &_diyFileBufferCopy.header;
 
     a2->competitionType = 2;             /* competition type = 2 (tournament) */
-    *(uint16_t *)&a2->compId = 2;       /* 0x2C: compId + slotId as word */
+    *(uint16_t *)&a2->compSlot = 2;       /* 0x2C: compId + slotId as word */
     a2->isActive = 0;                   /* 0x02 */
     a2->matchStarted = 0;              /* 0x44 */
     a2->careerTeamInvolved = 0;              /* 0x46 */
@@ -1246,7 +1246,7 @@ void InitDIYCup(void)
     uint8_t *a2raw = (uint8_t *)a2;
 
     a2->competitionType = DIY_CUP;       /* competition type = cup */
-    *(uint16_t *)&a2->compId = 1;       /* 0x2C: compId + slotId as word */
+    *(uint16_t *)&a2->compSlot = 1;       /* 0x2C: compId + slotId as word */
     a2->menuState = 0;                     /* 0x4A */
     a2->subRoundCounter = 1;             /* 0x5C */
     a2->isActive = 0;                   /* 0x02 */
@@ -1929,7 +1929,7 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
                           "team1Off=0x%lx team2Off=0x%lx "
                           "selOff1=%ld selOff2=%ld selOk1=%d selOk2=%d "
                           "t1Id=0x%04X t1Ctrl=%u t2Id=0x%04X t2Ctrl=%u",
-                          (unsigned)*(uint16_t *)&a0s->compId,
+                          (unsigned)*(uint16_t *)&a0s->compSlot,
                           (int)a0s->subRoundCounter,
                           (int)a0s->totalMatchesInRound,
                           (unsigned)roundIdx,
@@ -2006,7 +2006,7 @@ void DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2)
         SWOS_AUTOSKIP_LOG("[bug3-league]   PhaseBoundary compId=0x%04X new_leagueMatchProgress=%u "
                           "new_viewRandomPhase=%u(phaseStartMonths[%u]) "
                           "sectionsLeft(minSubs)=%u totalMatchesPerSectionLive=%d",
-                          (unsigned)*(uint16_t *)&a0s->compId,
+                          (unsigned)*(uint16_t *)&a0s->compSlot,
                           (unsigned)comp->leagueMatchProgress,
                           (unsigned)a0s->viewRandomPhase, (unsigned)phaseIdx,
                           (unsigned)comp->minSubstitutes,
@@ -2023,7 +2023,7 @@ void DIY_AdvanceLeagueProgressAfterMatch(uint8_t *team1, uint8_t *team2)
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug3-league]   SectionEnd compId=0x%04X "
                       "sectionsLeft(minSubs)=%u (decremented from prev+1)",
-                      (unsigned)*(uint16_t *)&a0s->compId, (unsigned)comp->minSubstitutes);
+                      (unsigned)*(uint16_t *)&a0s->compSlot, (unsigned)comp->minSubstitutes);
 #endif
     if (comp->minSubstitutes == 0)
         return;
@@ -2705,7 +2705,7 @@ void DIY_UpdateCompetitionProgress(void)
     SWOS_AUTOSKIP_LOG("[bug4-cup] UpdateCompetitionProgress ENTER compId=0x%04X "
                       "currentRoundIdx=%d/%d competitionFormat=%d roundFormat=%d "
                       "secondLegCounter=%d competitionFinished=%d",
-                      (unsigned)*(uint16_t *)&a0s->compId,
+                      (unsigned)*(uint16_t *)&a0s->compSlot,
                       (int)a0s->currentRoundIndex, (int)a0s->numRounds,
                       (int)comp->matchData.cup.competitionFormat,
                       (int)comp->matchData.cup.roundFormat,
@@ -2718,7 +2718,7 @@ void DIY_UpdateCompetitionProgress(void)
 #ifdef SWOS_DEBUG_AUTOSKIP
         SWOS_AUTOSKIP_LOG("[bug4-cup] UpdateCompetitionProgress EXIT early "
                           "(competitionFinished=1) compId=0x%04X",
-                          (unsigned)*(uint16_t *)&a0s->compId);
+                          (unsigned)*(uint16_t *)&a0s->compSlot);
 #endif
         return;
     }
@@ -2992,20 +2992,20 @@ outer_loop:
         /* Use diyFileBufferCopy round index */
         roundIdx = _diyFileBufferCopy.header.roundComplete;
     }
-    /* Read low byte of (compId, slotId) word at +0x2C — same fix pattern
+    /* Read low byte of (compSlot, slotId) word at +0x2C — same fix pattern
      * as DIY_RecordLeagueFixtureResultAndAdvanceProgress: a2s->slotId
      * on SDL LE is always 0 because the slot index got written into the
-     * compId byte instead. *(uint16_t *) gives the same value on both
+     * compSlot byte instead. *(uint16_t *) gives the same value on both
      * hosts. Without this, cup-bracket progress for CL/UEFA/CWC reads
      * the wrong cache entry on SDL. */
-    uint8_t compId = (uint8_t)*(uint16_t *)&a2s->compId;
+    uint8_t compSlot = (uint8_t)*(uint16_t *)&a2s->compSlot;
 
     /* Search teamSelectionKeyCache for matching entry */
     uint8_t *cacheEntry = _teamSelectionKeyCache;
     int16_t cacheCount = _teamSelectionKeyCacheCount - 1;
 
     while (cacheCount >= 0) {
-        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compId == compId) {
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compSlot == compSlot) {
             if (((TeamSelectionKeyCacheEntry *)cacheEntry)->roundIdx == (uint8_t)roundIdx)
                 goto found_entry;
         }
@@ -3129,7 +3129,7 @@ try_next:
     cacheEntry += ((TeamSelectionKeyCacheEntry *)cacheEntry)->entryStride;
     cacheCount--;
     if (cacheCount >= 0) {
-        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compId == compId) {
+        if (((TeamSelectionKeyCacheEntry *)cacheEntry)->compSlot == compSlot) {
             if (((TeamSelectionKeyCacheEntry *)cacheEntry)->roundIdx == (uint8_t)roundIdx)
                 goto found_entry;
         }
@@ -3185,7 +3185,7 @@ void DIY_UpdateCompetitionProgressOrAdvanceSlot(uint8_t *blk)
                           "leagueMatchProgress=%u leagueCurrentSlot=%u "
                           "totalMatchesPerSectionLive=%d hasGroups=%d",
                           (void *)blk, (int)type,
-                          (unsigned)*(uint16_t *)&bex->base.compId,
+                          (unsigned)*(uint16_t *)&bex->base.compSlot,
                           (unsigned)bex->minSubstitutes,
                           (unsigned)bex->leagueMatchProgress,
                           (unsigned)bex->leagueCurrentSlot,
@@ -3248,7 +3248,7 @@ void DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
                             "subRoundCounter=%d numTeams=%d "
                             "leagueTotalMatches=%u\n",
                             s_recCalls,
-                            (unsigned)*(uint16_t *)&a6s->compId,
+                            (unsigned)*(uint16_t *)&a6s->compSlot,
                             (unsigned)a6Ex->minSubstitutes,
                             (unsigned)a6s->playEachTeam,
                             (int)a6s->matchPairsPerRound,
@@ -3274,23 +3274,23 @@ void DIY_RecordLeagueFixtureResultAndAdvanceProgress(void)
     uint8_t *cache = _teamSelectionKeyCache;
     int16_t cacheCount = _teamSelectionKeyCacheCount - 1;
     int16_t curRound = _diyFileBufferCopy.header.roundComplete;
-    /* Asm: move.w $2C(a6),d0 / cmp.b (a4),d0 — read the (compId, slotId)
+    /* Asm: move.w $2C(a6),d0 / cmp.b (a4),d0 — read the (compSlot, slotId)
      * word at +0x2C, then compare its low byte to the cache header's
      * teamSlot byte. On Amiga BE the word's low byte is the slotId
      * field at +0x2D (which the cache builder also reads as
-     * *(uint16_t *)&compId via the same low-byte-of-word path). On SDL
+     * *(uint16_t *)&compSlot via the same low-byte-of-word path). On SDL
      * LE the word's low byte is the compId field at +0x2C — different
      * memory location, but the same VALUE because *(uint16_t *) on LE
      * gives the same number that was written. The previous version
      * read `a6s->slotId` directly which on SDL LE is always zero (slot
-     * value got written into compId byte instead), so cache lookups
+     * value got written into compSlot byte instead), so cache lookups
      * for any slot > 0 silently matched slot 0's cache entries —
      * causing Juventus's CL fixtures to overwrite Serie A's. */
-    uint8_t compId = (uint8_t)*(uint16_t *)&a6s->compId;
+    uint8_t compSlot = (uint8_t)*(uint16_t *)&a6s->compSlot;
 
     while (cacheCount >= 0) {
         TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)cache;
-        if (e->compId == compId) {
+        if (e->compSlot == compSlot) {
             if (a6s->hasGroups == 0 || e->roundIdx == (uint8_t)curRound)
                 goto found;
         }
@@ -3333,7 +3333,7 @@ process_next:
                             "t1=0x%04X ctrl1=%u t2=0x%04X ctrl2=%u "
                             "resultPtrOff=0x%lx\n",
                             s_fxCalls,
-                            (unsigned)*(uint16_t *)&a6s->compId,
+                            (unsigned)*(uint16_t *)&a6s->compSlot,
                             (int)a6s->subRoundCounter,
                             (unsigned)a6Ex->leagueSectionState.sectionMatchesProgress,
                             (int)a6s->totalMatchesInRound,
@@ -3367,7 +3367,7 @@ process_next:
 #ifdef SWOS_DEBUG_AUTOSKIP
             SWOS_AUTOSKIP_LOG("[bug20-fixture]   SKIP both-human compId=0x%04X "
                               "t1=0x%04X t2=0x%04X",
-                              (unsigned)*(uint16_t *)&a6s->compId,
+                              (unsigned)*(uint16_t *)&a6s->compSlot,
                               (unsigned)BE_READ_U16(sel1),
                               (unsigned)BE_READ_U16(sel2));
 #endif
@@ -3400,7 +3400,7 @@ process_next:
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug20-fixture]   WROTE compId=0x%04X resultOff=0x%lx "
                       "t1=0x%04X t2=0x%04X marker=%u",
-                      (unsigned)*(uint16_t *)&a6s->compId,
+                      (unsigned)*(uint16_t *)&a6s->compSlot,
                       (unsigned long)(resultPtr - cache),
                       (unsigned)BE_READ_U16(sel1),
                       (unsigned)BE_READ_U16(sel2),
@@ -3432,7 +3432,7 @@ check_continue:
             if (cacheCount < 0)
                 return;  /* Asm panics here; in our path the wider career
                           * flow continues, so exit silently. */
-            if (((TeamSelectionKeyCacheEntry *)cache)->compId != compId)
+            if (((TeamSelectionKeyCacheEntry *)cache)->compSlot != compSlot)
                 continue;
             if (a6s->hasGroups != 0 && ((TeamSelectionKeyCacheEntry *)cache)->roundIdx != (uint8_t)curRound)
                 continue;
@@ -3645,7 +3645,7 @@ static void buildCompSpecificTeamList(uint8_t *diy)
     SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: ENTER field54=%u compType=%d numTeams=%d "
                       "compId=%u slotId=%u namePtr=0x%lx",
                       (unsigned)field54, (int)diyS->competitionType,
-                      (int)diyS->numTeams, (unsigned)diyS->compId,
+                      (int)diyS->numTeams, (unsigned)diyS->compSlot,
                       (unsigned)diyS->slotId, (unsigned long)diyS->namePtr);
     SWOS_AUTOSKIP_LOG("buildCompSpecificTeamList: src[0..15]=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
                       src[0], src[1], src[2], src[3], src[4], src[5], src[6], src[7],
@@ -4298,7 +4298,7 @@ void DIY_LoadCurrentCompetitionSlot(void)
                       (unsigned)s->numTeams, (unsigned)s->groups,
                       (unsigned)s->teamsPerGroup,
                       (int)a2s->competitionType, (int)a2s->numTeams,
-                      (unsigned)a2s->compId);
+                      (unsigned)a2s->compSlot);
 #endif
 
     uint8_t *a4 = (uint8_t *)&_diyCompetitionStart;
@@ -4325,7 +4325,7 @@ void DIY_LoadCurrentCompetitionSlot(void)
 
         a5s->menuState = a2s->roundComplete;  /* 0x4A = 0x54 */
         a5s->roundIterator = a2s->totalMatchesInRound;  /* 0x4C = 0x52 */
-        *(uint16_t *)&a5s->compId = *(uint16_t *)&a2s->compId;  /* 0x2C */
+        *(uint16_t *)&a5s->compSlot = *(uint16_t *)&a2s->compSlot;  /* 0x2C */
 
         /* Num teams */
         a5s->numTeams = (int16_t)s->numTeams;
@@ -4413,7 +4413,7 @@ void DIY_LoadCurrentCompetitionSlot(void)
         StringCopy((char *)(a2 + 4), (char *)(a4 + 4));
 
         a4s->numRounds = 1;  /* 0x5A */
-        *(uint16_t *)&a4s->compId = *(uint16_t *)&a2s->compId;  /* 0x2C */
+        *(uint16_t *)&a4s->compSlot = *(uint16_t *)&a2s->compSlot;  /* 0x2C */
 
         /* Cup-specific fields from slot — write into cup roundLegs[0] (parent +0x66),
          * roundExtraTime[0] (+0x72), roundPenalties[0] (+0x7E). */
@@ -8308,9 +8308,9 @@ void SetupDIYCompetitionStatsMenu(void) {
     DIYCompetition   *a0s = &a0->base;
     uint16_t isCup = ((uint16_t)a0s->competitionType == DIY_CUP);
 
-    /* a0+44 = 0x2C = compId/slotId word (DIYCompetition fields compId/slotId
+    /* a0+44 = 0x2C = compSlot/slotId word (DIYCompetition fields compSlot/slotId
      * read as a uint16; we want the same packed value). */
-    _diyUnknownWord_2C = *(uint16_t *)&a0s->compId;
+    _diyUnknownWord_2C = *(uint16_t *)&a0s->compSlot;
     _diyNumberOfTeams  = (uint16_t)a0s->numTeams;
     if ((uint16_t)a0s->hasGroups)
         _diyNumberOfTeams = (uint16_t)a0s->numTeamsInStage;
@@ -10172,7 +10172,7 @@ void ProcessDIYLeagueMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx *
 
     uint16_t goalsIn1 = compEx->matchData.league.leagueMinSubstitutes;
     uint16_t goalsIn2 = compEx->matchData.league.leagueMaxSubstitutes;
-    uint16_t statCol  = *(uint16_t *)&diy->compId;  /* word read of compId+slotId at 0x2C */
+    uint16_t statCol  = *(uint16_t *)&diy->compSlot;  /* word read of compId+slotId at 0x2C */
 
     uint16_t d1, d2;
     getCachedOrCalcViewResult(team1, team2, comp, modeFlag, goalsIn1, goalsIn2, statCol, &d1, &d2);
@@ -10227,7 +10227,7 @@ void ProcessDIYKnockoutMatchResultAndCareerUpdates(TeamFileEx *team1, TeamFileEx
         uint8_t *comp = (uint8_t *)compEx;
         getCachedOrCalcViewResult(team1, team2, comp, 0,
             compEx->minSubstitutes, compEx->pointsForAWin,
-            *(uint16_t *)&diy->compId, &d1, &d2);  /* word read of compId+slotId at 0x2C */
+            *(uint16_t *)&diy->compSlot, &d1, &d2);  /* word read of compId+slotId at 0x2C */
     }
     if (d1 == d2)
         goto drawResult;
@@ -10240,7 +10240,7 @@ returnLeg:
         uint8_t *comp = (uint8_t *)compEx;
         getCachedOrCalcViewResult(team1, team2, comp, 0,
             compEx->minSubstitutes, compEx->pointsForAWin,
-            *(uint16_t *)&diy->compId, &d1, &d2);  /* word read of compId+slotId at 0x2C */
+            *(uint16_t *)&diy->compSlot, &d1, &d2);  /* word read of compId+slotId at 0x2C */
     }
     d3 = d1 + d5;  /* aggregate team1 */
     d4 = d2 + d6;  /* aggregate team2 */
@@ -10313,7 +10313,7 @@ singleLeg:
         uint8_t *comp = (uint8_t *)compEx;
         getCachedOrCalcViewResult(team1, team2, comp, mode,
             compEx->minSubstitutes, compEx->pointsForAWin,
-            *(uint16_t *)&diy->compId, &d1, &d2);  /* word read of compId+slotId at 0x2C */
+            *(uint16_t *)&diy->compSlot, &d1, &d2);  /* word read of compId+slotId at 0x2C */
     }
     if (d1 != d2)
         goto finalizeResult;
@@ -10573,14 +10573,14 @@ uint16_t PlayDIYLeagueMatchAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     _playing2ndGame = 0;
     _isGameFriendly = 0;
 
-    /* d7 = word at offset 0x2C (compId|slotId) */
-    /* Read (compId, slotId) word at +0x2C. Don't use PACK_BE_U16 here:
-     * the word was written via *(uint16_t *)&compId = slot, so on
-     * SDL LE the compId byte holds `slot` and slotId holds 0 (Amiga BE
+    /* d7 = word at offset 0x2C (compSlot|slotId) */
+    /* Read (compSlot, slotId) word at +0x2C. Don't use PACK_BE_U16 here:
+     * the word was written via *(uint16_t *)&compSlot = slot, so on
+     * SDL LE the compSlot byte holds `slot` and slotId holds 0 (Amiga BE
      * is the reverse). Reading via *(uint16_t *) preserves the value
-     * across hosts; PACK_BE_U16(compId, slotId) gives `slot << 8` on
+     * across hosts; PACK_BE_U16(compSlot, slotId) gives `slot << 8` on
      * SDL instead of `slot`. */
-    int16_t d7val = (int16_t)*(uint16_t *)&diy->compId;
+    int16_t d7val = (int16_t)*(uint16_t *)&diy->compSlot;
 
     /* d0 = (playEachTeam == 1) ? 0xFF : 0 */
     int16_t d0val = (diy->playEachTeam == 1) ? 0xFF : 0;
@@ -10710,13 +10710,13 @@ uint16_t PlayDIYCupFixtureAndCacheResult(TeamFileEx *team1, TeamFileEx *team2,
     _cachedViewResultTeam2Goals = (int16_t)d2;
 
     /* Common values for InitializeInGameTeamsAndStartGame */
-    /* Read (compId, slotId) word at +0x2C. Don't use PACK_BE_U16 here:
-     * the word was written via *(uint16_t *)&compId = slot, so on
-     * SDL LE the compId byte holds `slot` and slotId holds 0 (Amiga BE
+    /* Read (compSlot, slotId) word at +0x2C. Don't use PACK_BE_U16 here:
+     * the word was written via *(uint16_t *)&compSlot = slot, so on
+     * SDL LE the compSlot byte holds `slot` and slotId holds 0 (Amiga BE
      * is the reverse). Reading via *(uint16_t *) preserves the value
-     * across hosts; PACK_BE_U16(compId, slotId) gives `slot << 8` on
+     * across hosts; PACK_BE_U16(compSlot, slotId) gives `slot << 8` on
      * SDL instead of `slot`. */
-    int16_t d7val = (int16_t)*(uint16_t *)&diy->compId;
+    int16_t d7val = (int16_t)*(uint16_t *)&diy->compSlot;
 
     /* Determine play path based on roundLegs[cupRoundIdx], replayField, competitionFormat */
     int16_t a5_66 = (int16_t)compEx->matchData.cup.roundLegs[cupRoundIdx];
@@ -10873,7 +10873,7 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
                           "roundIdx=%d/%d matchIdx=%d/%d roundFormat=%d "
                           "competitionFormat=%d roundComplete=%d "
                           "competitionFinished=%d careerTeamInvolved=%d mode=%d",
-                          (unsigned)*(uint16_t *)&baseS->compId,
+                          (unsigned)*(uint16_t *)&baseS->compSlot,
                           (int)baseS->currentRoundIndex, (int)baseS->numRounds,
                           (int)bex->matchData.cup.currentMatchIndex,
                           (int)baseS->totalMatchesInRound,
@@ -11046,7 +11046,7 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
         SWOS_AUTOSKIP_LOG("[bug4-cup]   PlayCupMatch played compId=0x%04X "
                           "newMatchIdx=%d roundComplete=%d competitionFinished=%d "
                           "packedGoals=0x%04X flags=0x%02X careerInvolved=%d",
-                          (unsigned)*(uint16_t *)&baseS->compId,
+                          (unsigned)*(uint16_t *)&baseS->compSlot,
                           (int)newMatchIdx, (int)baseS->roundComplete,
                           (int)baseS->competitionFinished,
                           (unsigned)packedGoals, (unsigned)(resultFlags & 0xFF),
@@ -11090,7 +11090,7 @@ final_or_groups:
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug4-cup]   PlayCupMatch SETS competitionFinished=1 "
                       "compId=0x%04X currentRoundIdx=%d/numRounds=%d hasGroups=%d",
-                      (unsigned)*(uint16_t *)&baseS->compId,
+                      (unsigned)*(uint16_t *)&baseS->compSlot,
                       (int)baseS->currentRoundIndex, (int)baseS->numRounds,
                       (int)baseS->hasGroups);
 #endif

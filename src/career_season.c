@@ -80,12 +80,12 @@ extern uint8_t _uefaCupEligibleCompetitionIds[];
  * ================================================================ */
 __attribute__((used, externally_visible))
 void Career_FillRandomTeamListExcludingSelected(uint16_t excludeCount,
-                                                  uint8_t *table, uint8_t *compIds)
+                                                  uint8_t *table, uint8_t *compIndexs)
 {
     /* move.b (selTeamNumber).l,d0 — reads MSB on big-endian 68k */
     uint8_t selTeam = (uint8_t)(_selTeamNumber >> 8);
     int16_t d7 = (int16_t)excludeCount;
-    uint8_t *out = compIds;
+    uint8_t *out = compIndexs;
 
     /* Iterate as the typed struct so the per-entry stride matches the
      * pointer width on both targets. The original code advanced `table`
@@ -723,7 +723,7 @@ extern uint8_t *_tertiaryCompetitionPtr;
 extern void *_competitionsTable[];
 extern uint16_t _cachedTertiaryQualifiedTeamId;
 extern uint16_t _panicReasonCode;
-extern uint8_t _currentCompetitionId;
+extern uint8_t _currentCompetitionIndex;
 
 /* Forward declaration for static function defined in Chunk 186 below */
 static void processPrimaryCompetitionForNextSeason(uint8_t *competition);
@@ -777,14 +777,14 @@ void Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition)
  * Main dispatcher: processes primary, secondary, tertiary competitions.
  * d0 = competition ID. */
 __attribute__((used, externally_visible))
-void Career_ProcessCompetitionForNextSeason(uint16_t compId)
+void Career_ProcessCompetitionForNextSeason(uint16_t compIndex)
 {
-    _currentCompetitionId = (uint8_t)compId;
+    _currentCompetitionIndex = (uint8_t)compIndex;
     _cachedTertiaryQualifiedTeamId = 0xFFFF;
 
     /* Walk competitionsTable[idx]'s sub-table as void** so each slot is
      * native pointer-width. Was uint32_t* — read half-pointers on 64-bit. */
-    void **tableEntry = (void **)_competitionsTable[compId & 0xFF];
+    void **tableEntry = (void **)_competitionsTable[compIndex & 0xFF];
 
     /* Entry layout: [0]=primary ptr, [1]=skip, [2]=secondary ptr, [3]=tertiary ptr */
     uint8_t *primary = (uint8_t *)tableEntry[0];
@@ -1664,8 +1664,8 @@ void Career_AdvanceToNextSeason_UpdateCompetitions(void)
     _careerFileBuffer = 0;
 
     if (!_isNationalSelector) {
-        uint16_t compId = (uint8_t)(_selTeamNumber >> 8);
-        Career_ProcessCompetitionForNextSeason(compId);
+        uint16_t compIndex = (uint8_t)(_selTeamNumber >> 8);
+        Career_ProcessCompetitionForNextSeason(compIndex);
         Career_ProcessCompetitionForEuropeanCupQualification();
     }
 

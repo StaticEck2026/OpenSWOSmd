@@ -33,7 +33,7 @@ void BeginContractNegotiationSequence(DIYCompetitionEx *comp, TeamFileEx *team);
 /* --- Chunk 182: Competition Season Processing --- */
 void Career_ProcessSecondaryCompetitionForNextSeason(uint8_t *competition);
 void Career_ProcessTertiaryCompetitionForNextSeason(uint8_t *competition);
-void Career_ProcessCompetitionForNextSeason(uint16_t compId);
+void Career_ProcessCompetitionForNextSeason(uint16_t compIndex);
 
 /* --- Chunk 185: Cup Pick List System --- */
 void Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);
