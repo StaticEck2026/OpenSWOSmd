@@ -326,10 +326,18 @@ def daemon_main(args):
         d = GdbDaemon(mode, gdb_bin, target_path, host, args.port)
     elif mode == "sdl":
         gdb_bin = GDB_BIN_SDL
-        target_path = args.bin
+        # Resolve --bin to an ABSOLUTE path. gdb is launched with cwd set to the
+        # binary's directory (below) so the SDL inferior finds its data/grafs/
+        # sound subdirs; if target_path stayed relative (e.g. "bin/SWOS.x86_64"),
+        # gdb would look it up as <cwd>/bin/SWOS.x86_64 and NOT find it — it would
+        # then start with NO executable, `run` silently no-ops ("Use the file or
+        # exec-file command"), the inferior never launches, and every boot hangs
+        # (this was the recurring "harness wedges" symptom). abspath fixes it
+        # regardless of the caller's cwd or whether --bin was relative.
+        target_path = os.path.abspath(args.bin)
         # Run gdb from the binary's directory so the SDL inferior finds
         # its data/grafs/sound subdirs by relative path.
-        cwd = os.path.dirname(os.path.abspath(target_path))
+        cwd = os.path.dirname(target_path)
         print(f"[daemon] mode=sdl gdb={gdb_bin}", file=sys.stderr)
         print(f"[daemon] bin={target_path}", file=sys.stderr)
         print(f"[daemon] cwd={cwd}", file=sys.stderr)
