@@ -1953,7 +1953,9 @@ check_tertiary_winner:
     if (_selTeamNumber != _euroCupsCompetitionContextBuf.tourn.header.winnerTeam)
         return;
 
-    if (_euroCupSlotIndex == 0) {
+    if (_euroCupSlotIndex == 0 || _euroCupSlotIndex == 3) {
+        /* European Cup (0) or Copa Libertadores (3): the premier continental club
+         * cup -> major trophy bonus. */
         _majorTrophyBonusActive = 1;
     } else if (_euroCupSlotIndex == 2) {
         _cupBonus2Active = 1;
@@ -3008,6 +3010,7 @@ skipSponsorship:
             d0 = (uint32_t)((uint16_t)bonus) * 41668;
             d0 <<= 1;
         } else {
+            /* European Cup (0) or Copa Libertadores (3): euroCup-tier bonus. */
             d0 = (uint32_t)((uint16_t)(bonus << 1)) * 50011;
         }
 
