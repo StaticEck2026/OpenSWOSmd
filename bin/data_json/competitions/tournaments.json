@@ -1,6 +1,6 @@
 {
   "type": "competition_tournaments",
-  "count": 13,
+  "count": 14,
   "competitions": [
     {
       "id": "_euroCup",
@@ -1491,6 +1491,199 @@
         "_aAsianCup_0"
       ],
       "team_seed_list": []
+    },
+    {
+      "id": "_copaLibertadores",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 128,
+        "type": 2,
+        "team_number": -1,
+        "begin_month": 64,
+        "end_month": 32,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 1
+      },
+      "seeding_type": 1,
+      "menu_state": 1,
+      "play_each_team": 2,
+      "away_goals_mode": 0,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "rounds": [
+        {
+          "team_count": 20,
+          "group_count": 5,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "_aCopaLibertadores",
+        "_aCopaLibertadores_0"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_ECUADOR",
+          "ordinal": 0,
+          "team": "BARCELONA"
+        },
+        {
+          "country": "CN_ECUADOR",
+          "ordinal": 6,
+          "team": "ESPOLI"
+        },
+        {
+          "country": "CN_PARAGUAY",
+          "ordinal": 2,
+          "team": "CERRO PORTENO"
+        },
+        {
+          "country": "CN_PARAGUAY",
+          "ordinal": 7,
+          "team": "OLIMPIA"
+        },
+        {
+          "country": "CN_URUGUAY",
+          "ordinal": 17,
+          "team": "PENAROL"
+        },
+        {
+          "country": "CN_URUGUAY",
+          "ordinal": 8,
+          "team": "DEFENSOR SPORT"
+        },
+        {
+          "country": "CN_PERU",
+          "ordinal": 12,
+          "team": "SPORTING CRISTAL"
+        },
+        {
+          "country": "CN_PERU",
+          "ordinal": 15,
+          "team": "UNIVERSITARIO"
+        },
+        {
+          "country": "CN_COLOMBIA",
+          "ordinal": 0,
+          "team": "AMERICA CALI"
+        },
+        {
+          "country": "CN_COLOMBIA",
+          "ordinal": 4,
+          "team": "ATLETICO JUNIOR"
+        },
+        {
+          "country": "CN_BOLIVIA",
+          "ordinal": 11,
+          "team": "SAN JOSE ORURO"
+        },
+        {
+          "country": "CN_BOLIVIA",
+          "ordinal": 4,
+          "team": "GUABIRA"
+        },
+        {
+          "country": "CN_BRAZIL",
+          "ordinal": 5,
+          "team": "CORINTHIANS"
+        },
+        {
+          "country": "CN_BRAZIL",
+          "ordinal": 3,
+          "team": "BOTAFOGO"
+        },
+        {
+          "country": "CN_CHILE",
+          "ordinal": 15,
+          "team": "UNIV. DE CHILE"
+        },
+        {
+          "country": "CN_CHILE",
+          "ordinal": 14,
+          "team": "UNIV. CATOLICA"
+        },
+        {
+          "country": "CN_ARGENTINA",
+          "ordinal": 33,
+          "team": "RIVER PLATE"
+        },
+        {
+          "country": "CN_ARGENTINA",
+          "ordinal": 36,
+          "team": "SAN LORENZO"
+        },
+        {
+          "country": "CN_VENEZUELA",
+          "ordinal": 13,
+          "team": "MINERVEN"
+        },
+        {
+          "country": "CN_VENEZUELA",
+          "ordinal": 2,
+          "team": "CARACAS"
+        }
+      ]
     }
   ]
 }

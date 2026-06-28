@@ -84,6 +84,13 @@ enum CompId {
      * 120/121). */
     COMPID_englishCup                        = 118,
     COMPID_englishLeagueCup                  = 119,
+    /* Dynamic / data-only competitions start at 128 — the original SWOS comp ids
+     * fill 0..127 exactly, so a brand-new competition (added as pure data in
+     * tournaments.json with no compiled record) must use a byte >= 128. The
+     * field is int8_t but every identity read casts (uint8_t), so 128 is read
+     * back as 128 (see comp_id() below and docs/COMPETITION_DYNAMIC_REFACTOR.md
+     * §8d). Widen Competition.compId to uint8_t before the Amiga bake. */
+    COMPID_copaLibertadores                  = 128,
 };
 
 /* Read a competition's id (compId = byte 0 of the record). Endian-neutral

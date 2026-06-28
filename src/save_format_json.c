@@ -2972,7 +2972,7 @@ static int dj_comp_base(const char *o, int ol, Competition *c, int isPlayoff)
     const char *cs; int cl; double v;
     if (mjson_find(o, ol, "$.comp", &cs, &cl) != MJSON_TOK_OBJECT) return -1;
 #define GN(s, sl, p) (mjson_get_number((s), (sl), (p), &v) ? (int)v : 0)
-    c->compId      = (int8_t)GN(cs, cl, "$.comp_id");
+    c->compId      = (uint8_t)GN(cs, cl, "$.comp_id");
     c->type            = (int8_t)GN(cs, cl, "$.type");
     c->teamNumber      = (int8_t)GN(cs, cl, "$.team_number");
     c->beginMonth      = (int8_t)GN(cs, cl, "$.begin_month");

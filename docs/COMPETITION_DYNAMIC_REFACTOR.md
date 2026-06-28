@@ -257,6 +257,168 @@ E: {43,33} RIVER PLATE, {43,36} SAN LORENZO, {77,13} MINERVEN, {77,2} CARACAS
    the by-id treatment + a routing table. Model: `career_eurocups.c`.
 4. **Strings/screens** — `_aCopaLibertadores` title, group labels, captions.
 
+## 8d. INC1 DONE + INC2 (load) DONE; INC3 grounded design (2026-06-28)
+
+**INC1 (record) — DONE, runtime-verified, UNCOMMITTED.** `_copaLibertadores` added to
+`tournaments.json` (count 13→14). Runtime-loaded with no rebuild (data is read at
+startup): SWOS.log `dynamic tournament '_copaLibertadores' compId=128 -> heap record +
+careerContests` / `1 dynamic competition(s)`. gdb-verified `Comp_ById(128)` = heap record
+(type2, teamNumber-1, playEachTeam2, awayGoals0, rounds `{20,5,4}{16,0,16}{8,0,8}{4,0,4}{2,0,2}{1,1,1}`,
+flags `00 84 84 84 84 00`, 20 seeds), `_careerContests[34]`=record + sentinel re-planted
+[35]. All 20 `{cc,ord}` seeds verified vs `bin/data_json/teams/*.json` (20/20).
+- ⚠️ **comp_id 60 was NOT free** (handoff error — it's a league). **ALL 0-127 are taken**;
+  new comps use **128-255**. `Competition.compId` is **`int8_t` (signed)** — 128 stores as
+  byte 0x80 but works because every identity read casts `(uint8_t)` (dj_comp_base store,
+  dynamic-detect, Comp_Register index, comp_id()). **Before Step-8 Amiga bake: widen compId
+  int8_t→uint8_t** or emit_competitions.py warns on `{128,...}` (layout/size/save unchanged).
+- **MATCH RULES = REAL-COPA (user-chosen 2026-06-28):** away_goals **OFF (0)**, **no ET**,
+  **2-leg KO incl. final**, penalties on. (NOT euroCup's away-on/ET-on/single-leg-final.)
+
+**INC2 (load) — DONE.** Verified above. Play-through validation folds into Inc3 (Copa plays
+via the career path, per user choice). Standalone activation path if ever needed:
+`_selectedContest = Comp_ById(128)` → menus.c:3440 dispatch.
+
+**INC3 (CONMEBOL career qualifier) — fully RE'd, NOT yet implemented. The MODEL is
+`Career_ProcessCompetitionForEuropeanCupQualification` (career_eurocups.c), NOT
+`processDiyLeagueQualificationEntry`** (that's English promotion-PLAYOFF handling — a
+handoff conflation). Season transition = `Career_AdvanceToNextSeason_UpdateCompetitions`
+(career_season.c:1642):
+1. `Career_PrepareEuropeanCupQualificationState()` (career_season.c:173) — per cup: set
+   `_xCupTeamListPtr/WritePtr` INTO the cup `*Copy`'s embedded seed list (`base[7]` offset +
+   `2*(sizeof(char*)-4)` 64-bit delta), reset count, build the eligible-id list via
+   `Career_FillRandomTeamListExcludingSelected(excl, seedLists, eligibleIds)`. **KEY: the
+   qualified-team storage IS the comp's `*Copy` seed list — Copa's lives in
+   `_careerContests[34].competitionCopy`'s teamSeedList (heap, save-reconstructed). Minimal
+   new BSS: just transient `_copaTeamListPtr/WritePtr` + `_copaQualifiedTeamCount`.**
+2. `Career_UpdateEuroCup*CompetitionSlot()` (×3) — rebuild each cup `*Copy` team list for
+   next season (interactive if player's quaternary comp, else auto-advance + copy grid).
+3. In the per-competition loop (player comp @1668 + `_careerCompetitionIdRemapTable` walk
+   @1673): `Career_ProcessCompetitionForNextSeason(idx)` (advances comp, caches top-9
+   finishers into `_primaryQualifiedTeamGrids` via DIY_CachePrimaryQualifiedTeamsGrid, sets
+   `_currentCompetitionIndex`) THEN `Career_ProcessCompetitionForEuropeanCupQualification()`
+   (if `_countriesTable[idx][0]==0` i.e. European, append finishers to cup lists + TMD pool).
+4. `if (_careerFileBuffer == 0x50)` → `Career_DrawEuropeanCupTeamsAndCopyGrids()` + validate
+   `euroCup==16 && CWC==32 && UEFA==32` (else panic 0x8998).
+
+**Routing CONFIRMED:** the 10 CONMEBOL country numbers {43,45,46,48,49,50,64,65,71,77} are ALL
+in `_careerCompetitionIdRemapTable` (competition_data.c:1834) → simulated every season →
+each yields champion(slot0)+runner-up(slot1) in `_primaryQualifiedTeamGrids`. Copa eligible
+list = those 10. Copa field = top-2 × 10 = exactly 20 (DETERMINISTIC — no random fill needed,
+unlike euro).
+
+**The Copa siblings to write (mirror euro):**
+- `Career_PrepareCopaLibertadoresQualificationState()` — ptr into Copa `*Copy` seed list
+  (look up `_careerContests` entry whose `.competition==Comp_ById(128)`, use
+  `.competitionCopy`), reset `_copaQualifiedTeamCount`, eligible-id list = the 10 countries.
+- `Career_ProcessCompetitionForCopaLibertadoresQualification()` — if `_currentCompetitionIndex`
+  is CONMEBOL (consume from eligible list), append `_primaryQualifiedTeamGrids` slot0+slot1 to
+  the Copa list via `appendTeamToList` (BE byte pairs + TMD pool).
+- `Career_UpdateCopaLibertadoresCompetitionSlot()` — rebuild Copa `*Copy` for next season
+  (auto-advance; interactive only if player manages a CONMEBOL club — DEFER, auto-only first).
+- Hook all three into `Career_AdvanceToNextSeason_UpdateCompetitions` as siblings of the euro
+  calls (Prepare after euro-prepare; Update after euro-updates; Qualify after each euro-qualify).
+
+**⚠️ THE GNARLY BIT — RESOLVED (2026-06-28): the `0x50` gate is a TMD-APPEND COUNT, not a
+region code.** `_careerFileBuffer` (career-overlay HEAD, `uint16_t`) is the TMD-pool team
+count: `Career_AppendTeamToTmdTeamPool` (career_teams.c:444 `count=_careerFileBuffer` /
+:451 `_careerFileBuffer++`) increments it per appended team. It's reset to 0 at
+career_season.c:1664, then the qualification loop appends the euro cups' teams; at the end
+`if (_careerFileBuffer == 0x50)` means **80 teams appended = 16 euroCup + 32 CWC + 32 UEFA**.
+The block draws title holders, validates `euroCup==16 && CWC==32 && UEFA==32 && ==0x50`, and
+`return`s; **falling through (count != 0x50) hits `panic 0x8999`** at career_season.c:1701.
+So every career ALWAYS ends with exactly 80 euro appends (the euro cups qualify in every
+career regardless of player region — they're all in the remap table). **⇒ Copa's qualifier
+appends 20 MORE teams to the TMD pool (via the same Career_AppendTeamToTmdTeamPool), pushing
+`_careerFileBuffer` to 100 (0x64) → the `==0x50` gate FAILS → panic 0x8999 on EVERY career.**
+The 3b fix: generalise the magic `0x50` to `0x50 + Career_CopaLibertadoresQualifiedTeamCount()`
+(80→100 when Copa is present) and add `&& copaCount==20` to the validation. Copa needs NO
+title-holder draw (no holder berth). This is a season-transition + BOTH-PORTS change → verify
+with a full-season harness run; the magic constant lives in the shared C so it back-ports.
+
+**⚠️ Save/scope notes:** transient state (`_copaTeamListPtr/count`) is recomputed each
+transition (likely no save change — the team data lives in the Copa `*Copy` which already
+saves). If any persistent Copa state is added (e.g. a title holder), it's a SAVE-FORMAT
+change → heads-up the user. Slices: **3a — DONE (2026-06-28, x86_64 build green, gdb-unit-tested).** New
+`src/career_copa.c` (Makefile auto-globs `src/*.c`, no edit needed): the 10-CONMEBOL routing
+(`s_copaEligibleMaster` country nums + consume-once working copy), transient
+ptr/count state, `Career_PrepareCopaLibertadoresQualificationState`,
+`Career_ProcessCompetitionForCopaLibertadoresQualification`,
+`Career_CopaLibertadoresQualifiedTeamCount`. gdb test (simulate InitCareer memcpy
+template→copy, _careerFileBuffer=0 so the TMD append is safe): qualify ARG(43)→count2,
+Copa *Copy seed[0]=43/33 seed[1]=43/36; BRA(46)→count4 seed[2]=46/5 seed[3]=46/3;
+non-CONMEBOL(7) rejected; re-ARG consumed→no dup. `COMPID_copaLibertadores=128` added to
+comp_identity.h. NOT yet hooked into the season transition.
+**3b-part-1 — DONE (2026-06-28, HARNESS-VERIFIED on a real MILAN career, UNCOMMITTED).**
+Hooked `Career_PrepareCopaLibertadoresQualificationState` (after career_season.c:1649) +
+`Career_ProcessCompetitionForCopaLibertadoresQualification` (after :1669 player comp + :1681
+remap loop) into `Career_AdvanceToNextSeason_UpdateCompetitions`. **Field-building only —
+the TMD-pool append is DEFERRED** (commented in appendTeamToCopaList), so `_careerFileBuffer`
+stays 80, the `0x50` count gate is untouched (no panic 0x8999), and no buffer/save change.
+Harness (VERIFY=0 build, gdb-proxy daemon, MILAN.CAR loads at the CareerOverInit hub):
+season 3→4 transition ran the hooks → **count AFTER = 20, panic = 0**, Copa *Copy seed list
+rebuilt from the preset 1996 field to the EARNED field = champion+runner-up of all 10
+CONMEBOL leagues (2 per nation: 43/24,43/38 45/4,45/0 46/1,46/9 48/14,48/7 49/10,49/4
+50/5,50/4 64/6,64/2 65/1,65/6 71/8,71/16 77/12,77/17 — countries {43,45,46,48,49,50,64,65,71,77}).
+The season-4 `DIYCupInit` drive_inseason stall is the pre-existing documented harness
+limitation, NOT this change. Harness recipe in scripts/copa_harness.py (scratch).
+**3b-part-2 — DONE (2026-06-28, HARNESS-VERIFIED, UNCOMMITTED). Copa is now CONTESTED.**
+- `Career_UpdateCopaLibertadoresCompetitionSlot` (career_copa.c) auto-advances Copa each
+  season via `Career_AutoAdvanceLeagueCompetitionFromRecord(copaCopy)` (mirrors euroCup's
+  non-interactive branch; that fn loads its own field from the record seed list + InitTeams,
+  so no pre-staging needed; no title-holder grid — no holder berth). Hooked after the euro
+  UpdateSlots (career_season.c, after `Career_UpdateUefaCupCompetitionSlot()`). Player-in-
+  CONMEBOL INTERACTIVE path still deferred.
+- TMD-pool append RE-ENABLED in appendTeamToCopaList.
+- `_tmdFileBuffer` ENLARGED 80→**128** (career_team_buffers.c `.skip 54720`→`87552`; logical
+  max is 100 = 80 euro + 20 copa, +margin). Save is COUNT-DRIVEN (`tmd_team_count`) so
+  backward-compatible: old ≤80 saves load fine; new saves carry up to 100 `tmd_teams`.
+  ⚠️ SAVE heads-up given to user. The auto-advance does NOT grow the TMD count (only the
+  qualifier append does), so the pool peaks at 100.
+- `0x50` gate GENERALISED (career_season.c:1699 + the validation): `0x50 +
+  Career_CopaLibertadoresQualifiedTeamCount()`, and the validation adds
+  `Career_CopaLibertadoresQualifiedTeamCount() == Career_CopaLibertadoresExpectedTeamCount()`
+  (expected = 20 if Copa installed else 0 — so a build WITHOUT Copa data stays correct, gate
+  reverts to the original 0x50).
+- HARNESS (MILAN.CAR, VERIFY=0): season 3→4 with all of the above — **panic=0, TMD count=100,
+  Copa count=20, earned 20-team CONMEBOL field**, season reached 4 (then the pre-existing
+  DIYCupInit stall). Isolated `Career_UpdateCopaLibertadoresCompetitionSlot()` gdb call:
+  **panic=0** (the 5-group type-2 club auto-advance — a previously-untested engine path — runs).
+- Files (UNCOMMITTED): bin/data_json/competitions/tournaments.json, include/comp_identity.h,
+  src/career_copa.c (NEW), src/career_season.c, src/career_team_buffers.c.
+
+**INC4 (strings) — DONE (2026-06-28, gdb-verified).** Added `_aCopaLibertadores` +
+`_aCopaLibertadores_0` = "COPA LIBERTADORES" to strings_data.c; regenerated string_symbols.c
+(gen_string_symbols.py, 1074 symbols) + en.json (export_translations.py) + the 5 non-en files
+(gen_translations.py — clean +2 lines each, "COPA LIBERTADORES" as a proper-noun English
+fallback). gdb: `Comp_ById(128)->name[0]` now resolves to "COPA LIBERTADORES" via tr() (was
+the literal symbol). Group labels (A-E) + round captions are SHARED tables (round_string_base),
+so no Copa-specific strings needed — NOTE round_string_base=4 (euroCup) labels the bracket
+euroCup-style; if the interactive path shows a wrong "ROUND OF n" caption, switch to 5
+(asianCup's 16-team set). en.json is gitignored (regen from committed strings_data.c).
+
+**compId WIDENING — DONE (2026-06-28).** game_types.h Competition.compId int8_t→uint8_t
+(+ loader store cast save_format_json.c:2975). Audited all direct `.compId` reads — safe
+(cast uint8_t or compare same-type fields, values ≤127). Build clean, dynamic install intact
+(compId=128), full season harness PASS. Unblocks the Amiga bake (no `{128}` int8_t overflow).
+
+**BACK-PORT (sync) — DONE (2026-06-28).** `career_copa.c` added to sync_to_amiga_port.sh
+SRC_FILES; `--apply` copied 12 files (8 changed src + career_copa.c new + 3 changed include)
+to /mnt/c/Projects/AI/SWOS/SWOS_C. CORRECTION: the Amiga Makefile DOES auto-glob `*.c`
+(Makefile:27 `$(wildcard *.c) $(wildcard $(subdirs)*.c)`) — so NO Amiga Makefile edit needed;
+the handoff's "not auto-globbed" was wrong. Safe by design: on Amiga, Copa isn't installed
+(no runtime JSON parse, not baked) → `Comp_ById(128)`=NULL → career_copa.c functions no-op +
+the gate reverts to 0x50 → Amiga behaves identically until Step 8. ⚠️ NO m68k toolchain on
+this box → USER builds m68k + tests + commits (do NOT auto-commit the Amiga port).
+
+**REMAINING for the full Copa feature:** (a) the INTERACTIVE play path (human manages a
+CONMEBOL club → plays Copa in real-time — the euro `a4 == _quaternaryCompetitionPtr` branch;
+needs a CONMEBOL-club career to test, which the MILAN harness doesn't cover); (b) USER: m68k
+build + test + commit the Amiga back-port; (c) Step 8 Amiga bake (emit_competitions.py bakes
+Copa into competition_data.c) — GATED on (d); (d) USER re-baselines data_json + re-zips
+data_json.zip. Validate via the MILAN (European) career: the 10 CONMEBOL leagues
+auto-advance, so Copa should populate to 20 even though the player isn't South American —
+BUT only if the readiness gate is generalized so the Copa draw runs for a non-SA career.
+
 **Then add Copa to data PERMANENTLY → user re-baselines data_json.** Amiga: Copa
 gets BAKED into competition_data.c via `scripts/emit_competitions.py` (Step 8 — the
 Amiga doesn't runtime-parse JSON; it bakes). The shared by-id C makes both ports

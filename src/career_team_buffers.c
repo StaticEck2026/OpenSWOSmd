@@ -5,7 +5,8 @@
 /* career_team_buffers.c — UNTANGLE step 3 / step-4 phase 4 (overlay retirement).
  *
  * The player's club team (careerTeam), the in-memory working team (currentTeam),
- * and the TMD team pool (tmdFileBuffer, TeamFileEx[80], added 2026-06-10)
+ * and the TMD team pool (tmdFileBuffer, TeamFileEx[128] — was [80], enlarged
+ * 2026-06-28 for the Copa Libertadores qualifier; see the .skip note below) are
  * lifted out of the careerFileBuffer overlay into standalone storage. After
  * tmdFileBuffer the overlay is down to just its carrier + the careerFileBuffer
  * head + numSelectedTeams. careerTeam/currentTeam are each a TeamFileEx (16 active
@@ -52,14 +53,23 @@ __asm__(
     ".globl " _ASM_PFX "_currentTeam\n"
     _ASM_PFX "_currentTeam:\n"
     ".skip 1292\n"
-    /* _tmdFileBuffer — the TMD team pool: TeamFileEx[80] (80*684 = 54720 B),
+    /* _tmdFileBuffer — the TMD team pool: TeamFileEx[128] (128*684 = 87552 B),
      * lifted out of the _careerFileBuffer overlay (UNTANGLE step 3, 2026-06-10).
      * Addressed as (TeamFileEx *)&_tmdFileBuffer + i; saved as the typed
      * `tmd_teams` JSON array (same emit_team_file_ex_body path as _selectedTeams),
      * so this is save-format-neutral. Raw-byte label so the typed-but-undersized
-     * externs (extern uint8_t _tmdFileBuffer / _tmdFileBuffer[]) resolve. */
+     * externs (extern uint8_t _tmdFileBuffer / _tmdFileBuffer[]) resolve.
+     *
+     * ENLARGED 80 -> 128 (2026-06-28, Copa Libertadores Inc3b-part-2): a career
+     * with the Copa qualifier active stages 20 CONMEBOL teams in addition to the
+     * 80 European-cup teams (16+32+32) that every season transition appends, so
+     * the pool peaks at 100 (+ margin for the play-path auto-advance). The save
+     * is COUNT-DRIVEN (emits/loads exactly `tmd_team_count` = _careerFileBuffer
+     * entries — save_format_json.c), so this is backward-compatible: old <=80
+     * saves load unchanged; new saves carry up to 100 entries. Back-port the
+     * same .skip change to the Amiga tree. */
     ".globl " _ASM_PFX "_tmdFileBuffer\n"
     _ASM_PFX "_tmdFileBuffer:\n"
-    ".skip 54720\n"
+    ".skip 87552\n"
     ".text\n"
 );
