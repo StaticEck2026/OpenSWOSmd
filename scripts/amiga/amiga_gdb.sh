@@ -209,6 +209,14 @@ attach_once() {
     fi
     log "health check..."
     if is_healthy; then
+        # Harness fast-boot: skip the (slow) loader intro. The target is paused at
+        # the SWOS2 entry (before ShowLoaderIntroSequence runs); install a breakpoint
+        # that force-returns from the intro, so the next `continue` lands at the menu.
+        # (A gdb-set _skipLoaderIntro global can't be used on the Amiga: it is only
+        # read there, and the m68k LTO/--gc-sections drops the read-only global.)
+        python3 "$GDB_PROXY" cmd "set confirm off" >/dev/null 2>&1 || true
+        python3 "$GDB_PROXY" cmd "break ShowLoaderIntroSequence" >/dev/null 2>&1 || true
+        python3 "$GDB_PROXY" cmd $'commands\nsilent\nreturn\ncontinue\nend' >/dev/null 2>&1 || true
         return 0
     fi
     log "  attach DEGRADED (target not cleanly stopped)"

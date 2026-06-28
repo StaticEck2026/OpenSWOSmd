@@ -92,6 +92,12 @@ mirrors how the VSCode bartman extension attaches:
    entry `0x219b10`),
 5. if DEGRADED, does a full restart and retries (up to `ATTACH_RETRIES=4`),
    and fails FAST if FS-UAE crashes on boot.
+6. **skips the loader intro** for a fast boot-to-menu (~4s vs the full intro):
+   after a healthy attach it installs a gdb breakpoint at `ShowLoaderIntroSequence`
+   with `commands { silent; return; continue }`, so the next `continue`
+   force-returns past the intro. (A gdb-set `_skipLoaderIntro` global can't be used
+   on the Amiga — it is only read there, so the m68k LTO/--gc-sections drops it;
+   the SDL build seeds that same global from `SWOS_HARNESS_TURBO` instead.)
 
 **Why the 90s timeout matters (the old flakiness, root-caused against
 `barto_gdbserver.cpp`):** the stub opens the LISTEN port at *startup* but only
