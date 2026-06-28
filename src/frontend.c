@@ -102,6 +102,13 @@ void FrontEndPreLoopSetup(void)
         extern int MenuJson_InstallAll(void);
         MenuJson_InstallAll();
       } }
+#else
+    /* Amiga: no runtime JSON parse, so install the BAKED Copa Libertadores
+       (competition_data_copa_baked.c) here — the analog of the SDL dynamic
+       DataJson_InstallCompetitionGraph above — so the CONMEBOL career qualifier
+       (career_copa.c) finds Copa by compId. See docs/COMPETITION_DYNAMIC_REFACTOR.md §8. */
+    extern void CopaBaked_Install(void);
+    CopaBaked_Install();
 #endif
     InitMenuMusic();
     PrepareMenuBackground();
