@@ -172,6 +172,96 @@ gates), `career_eurocups.c` (euro qualification model), `diy_competition.c`
 3. Decide the **identity scheme** (§5.2) and present a concrete, ordered conversion
    plan (which gate / table first, build+test cadence) before editing.
 
+## 8b. STATUS 2026-06-27 — ENGINE COMPLETE (Steps 1-7 done); Copa is next
+
+**The whole competition engine refactor (Steps 1-7) is DONE, committed, pushed,
+synced, and Amiga-verified (builds + runs).** Summary of what shipped this session
+(see the memory note `project_competition_dynamic_refactor` for commit-level detail):
+
+- **By-id identity** — every by-ADDRESS competition gate → `comp_id(c)==COMPID_x`
+  (`include/comp_identity.h`: enum + accessor + `comp_is_wc_qualifier`/
+  `_ec_qualifier`/`_continental_cup`/`_tour_or_friendly`). Cat-1 slot-occupancy +
+  Cat-5 DIY buffers left as object identity (correct).
+- **Runtime-fill tables** — `_careerContests[35]→[CAREER_CONTESTS_CAP=48]` +
+  `Comp_AppendCareerContest()`; `comp_by_id` registry (`Comp_Register`/`Comp_ById`).
+- **Dynamic comps** — `DataJson_InstallCompetitionGraph` heap-allocates a record +
+  `*Copy` for any tournaments.json id whose compId matches no compiled global,
+  appends to `_careerContests`, registers it. (Detect by compId, not id-string.)
+- **Save-safe** (Step 7) — career load/save round-trips with a dynamic comp present;
+  the load-time reconstruct rebuilds the dynamic heap `*Copy`. VERIFY=0 green.
+- **id-prefix fix** — loader sg[]/sp[]/R[]/QT[] ids prefixed `_` to match the data
+  (was no-op'ing into compiled fallback); install now drives all standalone+region
+  comps from JSON, regionMiss=0 (byte-identical).
+- **Naming convergence** — three things were all called "comp id"; now distinct:
+  `compIndex`/`_currentCompetitionIndex` (the `_competitionsTable` country index),
+  `compSlot` (DIYCompetition 0x2C slot/cache-key word, pairs w/ slotId), `compId`/
+  `comp_id()`/`COMPID_*`/JSON `comp_id` (the byte-0 identity). Save key
+  `comp_id`→`comp_slot`; existing saves migrated via
+  `scripts/migrate_save_keys.py comp_id=comp_slot` (40 files / 216 keys, SDL+Amiga).
+- All MILAN-verified no-op (rep=49, panic=0); builds x86_64+arm64+armhf.
+- ⚠️ `data_json` changed (the comp_id key rename) — re-zip the `data_json.zip` backup.
+- ⚠️ Known deferred: the 0x2C `compSlot` is overloaded — read as `compType` in
+  `UpdateCareerFinancesAfterMatch` (`career_status.c`, commented). A future bigger
+  rename session may reconcile it with `competitionType@0x00`.
+
+## 8c. COPA LIBERTADORES — grounded plan (NEXT; user chose "replicate euroCup")
+
+User direction: **make Copa like the European Champions Cup** (`euroCup`) — i.e.
+the SIMPLE thing, no custom rules. This resolves §c's open questions: seeded
+bracket, draw from the qualified teams, NO same-nation-before-QF constraint, NO
+holder berth, top-3+best-4th for the 16th. Prereqs CONFIRMED: the 10 CONMEBOL club
+leagues exist as compiled comps; all CONMEBOL `TEAM.<cc>` files exist (20 clubs
+present). **No new tournament-engine wiring needed** — `euroCup` already does
+group→2-leg-knockout, and `_asianCup` (comp_id 34) already does a 5-group bracket.
+
+**THE TEMPLATE: `_asianCup`'s shape + `_euroCup`'s 2-leg flags.**
+```
+asianCup rounds = [{30,5,6},{16,0,16},{8,0,8},{4,0,4},{2,0,2},{1,1,1}]  (single-leg)
+COPA     rounds = [{20,5,4},{16,0,16},{8,0,8},{4,0,4},{2,0,2},{1,1,1}]  (2-leg KO)
+                   group     R16        QF       SF       final   winner
+```
+`rounds[6]` fits exactly (no terminal {0,0,0} needed; winner at [5]). Copa flags:
+group `{0,0,0}`, then 2-leg knockout from euroCup `{2,1,1}` for R16/QF/SF (final:
+euroCup uses single-leg `{0,1,1}`, but Copa spec wants 2-leg — minor, pick one).
+play_each_team=2 (double RR). away_goals: euroCup=3(on); Copa-spec=0(off) — user
+said replicate euroCup, so 3 is defensible (flag if it matters).
+
+**NOTE on round_rule_flags array size:** euroCup emits 4 flag entries, asianCup
+emits 6 — confirm the struct/emitter handles Copa's needed count when authoring.
+
+**20-team seed list (group order A-E, {country, ordinal}) — from handoff, confirmed:**
+```
+A: {50,0} BARCELONA, {50,6} ESPOLI, {64,2} CERRO PORTENO, {64,7} OLIMPIA
+B: {71,17} PENAROL, {71,8} DEFENSOR SPORT, {65,12} SPORTING CRISTAL, {65,15} UNIVERSITARIO
+C: {49,0} AMERICA CALI, {49,4} ATLETICO JUNIOR, {45,11} SAN JOSE ORURO, {45,4} GUABIRA
+D: {46,5} CORINTHIANS, {46,3} BOTAFOGO, {48,15} UNIV. DE CHILE, {48,14} UNIV. CATOLICA
+E: {43,33} RIVER PLATE, {43,36} SAN LORENZO, {77,13} MINERVEN, {77,2} CARACAS
+```
+(country = high byte of team id; verify each {cc,ord} against `bin/data/TEAM.<cc>`.)
+
+**Increments:**
+1. **Copa record as DATA** — add to `bin/data_json/competitions/tournaments.json`:
+   clone `_asianCup` shape with `{20,5,4}` round 0, `_euroCup` 2-leg flags, the 20
+   seeds above, a FREE `comp_id` (e.g. 60 — confirm unused; compNumbers max ~127),
+   `play_each_team=2`, and a name entry. Add the `_aCopaLibertadores` name symbol
+   (JSON `name` array → already data-driven via `dj_intern_names`). The dynamic
+   loader (Step 6) heap-loads it automatically — NO compiled record needed.
+2. **Verify** via harness: boot → `Comp_ById(copaId)` non-NULL, in `_careerContests`,
+   `*Copy` reconstructs; then make it active and play a group→knockout run.
+3. **CONMEBOL qualifier (Gap-B)** — the real new logic. Generalise
+   `career_eurocups.c`: at season end, champion+runner-up of each of the 10 leagues
+   (`_argentinianLeague`.._venezuelanLeague) → next-season Copa's 20-team field,
+   drawn into groups A-E (nation-pairing, see docs/COPA_LIBERTADORES.md §3/§6).
+   Career qualification today is hardcoded by address — `career_season.c`
+   `processDiyLeagueQualificationEntry` (~1446, only `_englishLeague`); it now uses
+   the by-id treatment + a routing table. Model: `career_eurocups.c`.
+4. **Strings/screens** — `_aCopaLibertadores` title, group labels, captions.
+
+**Then add Copa to data PERMANENTLY → user re-baselines data_json.** Amiga: Copa
+gets BAKED into competition_data.c via `scripts/emit_competitions.py` (Step 8 — the
+Amiga doesn't runtime-parse JSON; it bakes). The shared by-id C makes both ports
+work; verify the m68k build + a season after.
+
 ## 9. House rules (carry over)
 
 Build all 3 Linux arches (`make X86_64=1` / `ARM64=1` / `ARM=1`, `make clean`
