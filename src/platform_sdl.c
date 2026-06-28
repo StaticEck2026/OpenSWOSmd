@@ -462,6 +462,8 @@ int Platform_Init(const PlatformInitOptions *opts)
     s_dump_frames = (getenv("SWOS_DUMP_FRAMES") != NULL);
 
     s_harness_turbo = (getenv("SWOS_HARNESS_TURBO") != NULL);
+    /* Harness fast-boot: skip the (slow) loader intro under the harness too. */
+    { extern volatile uint8_t _skipLoaderIntro; if (s_harness_turbo) _skipLoaderIntro = 1; }
     if (s_harness_turbo)
         fprintf(stderr,
             "[harness] TURBO: 50 Hz pacing + ISR throttle + 20 ms timer "
