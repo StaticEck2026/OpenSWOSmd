@@ -41,6 +41,8 @@ typedef short           int16_t;
 typedef unsigned int    uint32_t;
 typedef int             int32_t;
 typedef unsigned int    uintptr_t;     /* pointer is 32-bit on Amiga */
+typedef int             intptr_t;      /* signed pointer-width (e.g. save_format_json.c
+                                          sentinel arithmetic `pv > -0x1000`) */
 /* size_t: GCC's built-in str/mem functions expect `long unsigned
  * int`, so use unsigned long here even though it is the same width
  * as unsigned int on m68k. Matching the canonical type avoids

@@ -282,7 +282,24 @@ extern CompetitionCup _oceaniaWorldCupQualificationCopy;
  * Career Contests
  * ====================================================================== */
 
-extern CompetitionCareer _careerContests[35];
+/* 34 compiled entries + sentinel + spare slots for runtime-appended
+ * (dynamically-loaded) competitions — roadmap step 5/6. */
+#define CAREER_CONTESTS_CAP 48
+extern CompetitionCareer _careerContests[CAREER_CONTESTS_CAP];
+
+/* Append a competition's {template, working-copy, sizeof(template)} triple to
+ * _careerContests at runtime (used by the dynamic-competition loader). Writes the
+ * entry over the current 0xFFFFFFFF sentinel and re-plants the sentinel one slot
+ * later, so the sentinel-terminated InitCareer fill + save-reconstruct walks pick
+ * it up. Returns 0 on success, -1 if the table is full. */
+int Comp_AppendCareerContest(Competition *competitionTemplate,
+                             Competition *competitionCopy, uint16_t templateSize);
+
+/* Runtime compNumber -> Competition* registry (roadmap step 6/7). Dynamically-
+ * loaded competitions register their heap record; Comp_ById resolves a saved
+ * compNumber back to a live record (returns NULL if unregistered). */
+void Comp_Register(Competition *c);
+Competition *Comp_ById(uint8_t compNumber);
 
 /* ======================================================================
  * Master Competition Pointer Arrays
