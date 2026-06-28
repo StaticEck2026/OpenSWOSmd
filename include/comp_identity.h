@@ -32,7 +32,10 @@
 #ifndef COMP_IDENTITY_H
 #define COMP_IDENTITY_H
 
-#include <stdint.h>
+/* swos_types.h (NOT <stdint.h>): the Amiga m68k toolchain has no working
+ * <stdint.h>, so the project defines uint8_t/etc. there and pulls in the libc
+ * <stdint.h> only on the SDL build. */
+#include "swos_types.h"
 
 /* compNumber values, from the record heads in competition_data.c. */
 enum CompId {
