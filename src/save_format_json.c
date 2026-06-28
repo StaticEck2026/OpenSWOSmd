@@ -3474,7 +3474,7 @@ void DataJson_InstallCompetitionGraph(void)
        become JSON-driven here, overwritten IN PLACE (compNumber-matched) exactly
        like the 5 complex countries' leagues — preserving the address identity the
        by-name/by-address game plumbing depends on. id == global symbol name. */
-    int nTour = 0, nPlay = 0;
+    int nTour = 0, nPlay = 0, nDyn = 0;
     {
         extern CompetitionTournament _euroCup, _worldCup, _worldCup2,
             _northAmericaWorldCupQualification, _southAmericaWorldCupQualification,
@@ -3531,6 +3531,61 @@ void DataJson_InstallCompetitionGraph(void)
                 }
             }
             free(recfb);
+        }
+
+        /* Dynamic competitions (roadmap step 6): a tournament record in
+           tournaments.json whose id is NOT in sg[] has no compiled global. Heap-
+           allocate its record + a working *Copy, load it from JSON, append the
+           {template, copy, sizeof} triple to _careerContests (so InitCareer builds
+           the copy and the save reconstructs it), and register it by compNumber.
+           This is what makes a brand-new competition addable as pure data. */
+        extern int  Comp_AppendCareerContest(Competition *, Competition *, uint16_t);
+        extern void Comp_Register(Competition *);
+        {
+            int dlen = 0;
+            char *dfb = dj_slurp("data_json/competitions/tournaments.json", &dlen);
+            if (dfb) {
+                const char *darr; int dal;
+                if (mjson_find(dfb, dlen, "$.competitions", &darr, &dal) == MJSON_TOK_ARRAY) {
+                    int dpos = 0, dvoff, dvlen, dvt;
+                    while ((dpos = fast_array_next(darr, dal, dpos, &dvoff, &dvlen, &dvt)) != 0) {
+                        if (dvt != MJSON_TOK_OBJECT) continue;
+                        char idb[40];
+                        if (mjson_get_string(darr + dvoff, dvlen, "$.id", idb, (int)sizeof idb) <= 0)
+                            idb[0] = '\0';
+                        if (poolIdx >= DJ_MAX_RECS) break;
+                        CompetitionTournament *t = (CompetitionTournament *)calloc(1, sizeof *t);
+                        CompetitionTournament *cc = (CompetitionTournament *)calloc(1, sizeof *cc);
+                        if (!t || !cc) { free(t); free(cc); continue; }
+                        char *dpool = s_djNamePool[poolIdx];
+                        if (DataJson_LoadCompetitionTournament(darr + dvoff, dvlen, t, dpool, DJ_NAMEPOOL) != 0) {
+                            free(t); free(cc); continue;   /* malformed record */
+                        }
+                        /* Dynamic iff no compiled tournament global shares this record's
+                           compNumber. Detect by compNumber, not by id STRING — robust to
+                           the id naming convention used in the JSON (the sg[] string ids
+                           and the JSON ids don't share a prefix convention). */
+                        int rcn = (uint8_t)t->header.comp.compNumber, known = 0;
+                        for (unsigned gi = 0; gi < sizeof sg / sizeof sg[0]; gi++)
+                            if (sg[gi].kind == GK_TOUR
+                                && ((CompetitionTournament *)sg[gi].g)->header.comp.compNumber == rcn) {
+                                known = 1; break;
+                            }
+                        if (known) { free(t); free(cc); continue; }   /* compiled — skip, reuse pool slice */
+                        if (Comp_AppendCareerContest((Competition *)t, (Competition *)cc,
+                                                     (uint16_t)sizeof *t) != 0) {
+                            free(t); free(cc); continue;   /* contest table full */
+                        }
+                        poolIdx++;                          /* commit the name-pool slice */
+                        Comp_Register((Competition *)t);
+                        nDyn++;
+                        fprintf(stderr, "[data-json] dynamic tournament '%s' compNumber=%d "
+                                "-> heap record + careerContests\n",
+                                idb, rcn);
+                    }
+                }
+                free(dfb);
+            }
         }
     }
 
@@ -3741,8 +3796,8 @@ void DataJson_InstallCompetitionGraph(void)
     fprintf(stderr, "[data-json] competition graph installed: %d simple countries swapped, "
            "%d complex countries loaded in place (cups=%d leagues=%d); "
            "standalone globals in place: %d tournaments, %d playoffs, %d special records, "
-           "%d region tables (%d kept-compiled)\n",
-           swapped, inPlace, nCups, nLeagues, nTour, nPlay, nSpec, nRegion, regionMiss);
+           "%d region tables (%d kept-compiled); %d dynamic competition(s)\n",
+           swapped, inPlace, nCups, nLeagues, nTour, nPlay, nSpec, nRegion, regionMiss, nDyn);
     fflush(stderr);
 }
 

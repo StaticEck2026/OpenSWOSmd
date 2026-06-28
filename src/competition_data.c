@@ -1553,8 +1553,15 @@ extern CompetitionCup _oceaniaWorldCupQualificationCopy;  /* aliased into career
  * ====================================================================== */
 
 /* 34 real entries + a 0xFFFFFFFF sentinel as the loop terminator
- * (matches `dc.l -1` after the last entry in SWOS2.s:118137). */
-CompetitionCareer _careerContests[35] = {
+ * (matches `dc.l -1` after the last entry in SWOS2.s:118137).
+ *
+ * Roadmap step 5 (runtime-fill): over-sized to CAREER_CONTESTS_CAP so a
+ * dynamically-loaded competition (step 6) can append its {template, copy, size}
+ * triple via Comp_AppendCareerContest — the spare [35..CAP-1] slots are zero-
+ * filled and never reached until an append moves the sentinel. The compiled 34
+ * entries are unchanged, so every sentinel-terminated walk (InitCareer fill,
+ * save reconstruction) behaves identically until something appends. */
+CompetitionCareer _careerContests[CAREER_CONTESTS_CAP] = {
     { (Competition *)&_euroCup, (Competition *)&_euroCupCopy, sizeof(_euroCup) },
     { (Competition *)&_cupWinnersCup, (Competition *)&_cupWinnersCupCopy, sizeof(_cupWinnersCup) },
     { (Competition *)&_uefaCup, (Competition *)&_uefaCupCopy, sizeof(_uefaCup) },
@@ -1589,8 +1596,48 @@ CompetitionCareer _careerContests[35] = {
     { (Competition *)&_africaWorldCupQualification, (Competition *)&_africaWorldCupQualificationCopy, sizeof(_africaWorldCupQualification) },
     { (Competition *)&_asiaWorldCupQualification, (Competition *)&_asiaWorldCupQualificationCopy, sizeof(_asiaWorldCupQualification) },
     { (Competition *)&_oceaniaWorldCupQualification, (Competition *)&_oceaniaWorldCupQualificationCopy, sizeof(_oceaniaWorldCupQualification) },
-    { (Competition *)0xFFFFFFFFu, (Competition *)0, 0 },  /* sentinel */
+    { (Competition *)0xFFFFFFFFu, (Competition *)0, 0 },  /* sentinel (index 34) */
+    /* [35 .. CAREER_CONTESTS_CAP-1]: spare, zero-filled, for runtime appends. */
 };
+
+/* Runtime count of real entries preceding the sentinel (34 compiled). */
+static int s_careerContestsCount = 34;
+
+int Comp_AppendCareerContest(Competition *competitionTemplate,
+                             Competition *competitionCopy, uint16_t templateSize)
+{
+    /* Need room for the new entry AND a trailing sentinel. */
+    if (s_careerContestsCount + 1 >= CAREER_CONTESTS_CAP)
+        return -1;
+    int i = s_careerContestsCount;
+    _careerContests[i].competition     = competitionTemplate;
+    _careerContests[i].competitionCopy = competitionCopy;
+    _careerContests[i].templateSize    = templateSize;
+    _careerContests[i + 1].competition     = (Competition *)0xFFFFFFFFu;  /* move sentinel */
+    _careerContests[i + 1].competitionCopy = (Competition *)0;
+    _careerContests[i + 1].templateSize    = 0;
+    s_careerContestsCount = i + 1;
+    return 0;
+}
+
+/* Runtime competition registry by compNumber (roadmap step 6). A dynamically-
+ * loaded competition (no compiled global) registers its heap record here so
+ * save/load pointer re-derivation (step 7) can resolve a saved compNumber back
+ * to a live record. Compiled competitions don't need this — their slot pointers
+ * re-derive via competitionsTable — but registering them too is harmless and
+ * keeps the map uniform. Indexed 0..255 (compNumber is a single byte). */
+static Competition *s_compById[256];
+
+void Comp_Register(Competition *c)
+{
+    if (c)
+        s_compById[(uint8_t)c->compNumber] = c;
+}
+
+Competition *Comp_ById(uint8_t compNumber)
+{
+    return s_compById[compNumber];
+}
 
 /* ======================================================================
  * Master Competition Pointer Arrays

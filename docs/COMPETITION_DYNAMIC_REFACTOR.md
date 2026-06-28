@@ -340,6 +340,43 @@ fixed, else every client cmd errors and all reads return None.
 
 Next: Step 5 (runtime-fill tables).
 
+## A.6 Steps 5-6 — dynamic competition engine (DONE, runtime-validated 2026-06-27)
+
+A brand-new competition is now addable as **pure data** (a tournaments.json record
+with a compNumber no compiled global uses):
+
+- **`_careerContests` appendable** (step 5): `[35] → [CAREER_CONTESTS_CAP=48]` +
+  `Comp_AppendCareerContest(template, copy, size)` (writes over the sentinel,
+  re-plants it). Sentinel-terminated walks pick up appends. Inert for the 34
+  compiled entries.
+- **`comp_by_id` registry** (step 6): `Comp_Register(c)` / `Comp_ById(n)` —
+  `s_compById[256]` indexed by compNumber. Dynamic comps register their heap record
+  (compiled comps re-derive slot ptrs via competitionsTable, so they don't need it).
+- **Dynamic loader** (step 6, in `DataJson_InstallCompetitionGraph` after the `sg[]`
+  loop): iterate tournaments.json; for any record whose compNumber matches no
+  compiled tournament global, `calloc` a `CompetitionTournament` + a `*Copy`,
+  `DataJson_LoadCompetitionTournament` it, `Comp_AppendCareerContest`, `Comp_Register`.
+  **Detection is by compNumber, NOT id string** (see finding below).
+
+Validated via gdb: a temporary `_testDynamicCup` (compNumber 60) injected into
+tournaments.json → install log "1 dynamic competition(s)", `Comp_ById(60)` returns
+the heap record (compNumber 60, type 2), `_careerContests[34]` == that record with
+the sentinel moved to [35], `Comp_ById(99)`==NULL. Test record then reverted.
+
+### ⚠ Pre-existing finding (NOT caused by this work) — sg[]/sp[]/R[] id mismatch
+
+The data_json competition ids are **`_`-prefixed** (C-symbol style: `_euroCup`,
+`_cupWinnersCup`), but the loader's hardcoded `sg[]` (tournaments+playoffs), `sp[]`
+(special cups/leagues), and `R[]` (region) id lists use **non-prefixed** ids
+(`euroCup`). So those three patch-loops `dj_find_comp_record` find **0 records** —
+the install summary shows `0 tournaments, 0 playoffs, 0 special records, 0 region
+tables`. Harmless today (the compiled records are identical, so the compiled
+fallback is correct), but it means the JSON is NOT currently overriding the
+standalone tournaments / special cups / region tables (only the country
+league/cup tables, which match JSON-internally via `reg[]`). The dynamic loader
+sidesteps this by detecting via compNumber. **Decide during the data re-baseline:**
+either prefix the `sg[]/sp[]/R[]` ids with `_`, or drop the `_` in the JSON.
+
 ## A.4 Scope read
 
 Copa Libertadores is a **continental CLUB** cup → models on `_euroCup` (standalone
