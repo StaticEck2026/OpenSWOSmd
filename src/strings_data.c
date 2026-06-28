@@ -242,6 +242,10 @@ const char _aCa[] = "CA";
 const char _aCopa[] = "COPA";
 const char _aCopaAmerica[] = "COPA AMERICA";
 const char _aCopaAmerica_0[] = "COPA AMERICA";
+/* Copa Libertadores (Inc4) — the data-only continental club cup (compId 128).
+ * Two variants to mirror the other tournament name pairs (name[0]/name[1]). */
+const char _aCopaLibertadores[] = "COPA LIBERTADORES";
+const char _aCopaLibertadores_0[] = "COPA LIBERTADORES";
 const char _aCopa_0[] = "COPA";
 const char _aCoppa[] = "COPPA";
 const char _aCoppaItalia[] = "COPPA ITALIA";

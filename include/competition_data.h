@@ -295,11 +295,11 @@ extern CompetitionCareer _careerContests[CAREER_CONTESTS_CAP];
 int Comp_AppendCareerContest(Competition *competitionTemplate,
                              Competition *competitionCopy, uint16_t templateSize);
 
-/* Runtime compNumber -> Competition* registry (roadmap step 6/7). Dynamically-
+/* Runtime compId -> Competition* registry (roadmap step 6/7). Dynamically-
  * loaded competitions register their heap record; Comp_ById resolves a saved
- * compNumber back to a live record (returns NULL if unregistered). */
+ * compId back to a live record (returns NULL if unregistered). */
 void Comp_Register(Competition *c);
-Competition *Comp_ById(uint8_t compNumber);
+Competition *Comp_ById(uint8_t compId);
 
 /* ======================================================================
  * Master Competition Pointer Arrays

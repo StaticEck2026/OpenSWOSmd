@@ -302,7 +302,7 @@ uint8_t *GetCompetitionAbbrevStr(uint8_t *competition)
     if (competition == 0)
         return (uint8_t *)"FR";
 
-    /* By-id dispatch (was by-*Copy-address). compNumber is shared by template
+    /* By-id dispatch (was by-*Copy-address). compId is shared by template
      * and *Copy, so this matches both and no longer depends on the *Copy layout. */
     uint8_t id = comp_id(competition);
     if (id == COMPID_friendly)
@@ -1634,6 +1634,21 @@ static void processPrimaryCompetitionForNextSeason(uint8_t *competition)
     }
 }
 
+/* Copa Libertadores career qualifier (Inc3 — src/career_copa.c). These run as
+ * siblings of the European-cup qualification calls below: Prepare resets the
+ * CONMEBOL eligible list + points the write cursor at the Copa *Copy seed list;
+ * Process appends the champion + runner-up of each CONMEBOL league (read from
+ * _primaryQualifiedTeamGrids, just cached by Career_ProcessCompetitionForNextSeason)
+ * into next season's Copa field. See docs/COMPETITION_DYNAMIC_REFACTOR.md §8d.
+ * (3b-part-1: field-building only — the TMD-pool staging, the play-path
+ * Career_UpdateCopaLibertadoresCompetitionSlot, and the count-gate
+ * generalisation are deferred to the play path.) */
+extern void Career_PrepareCopaLibertadoresQualificationState(void);
+extern void Career_ProcessCompetitionForCopaLibertadoresQualification(void);
+extern uint16_t Career_CopaLibertadoresQualifiedTeamCount(void);
+extern uint16_t Career_CopaLibertadoresExpectedTeamCount(void);
+extern void Career_UpdateCopaLibertadoresCompetitionSlot(void);
+
 /* ---- Career_AdvanceToNextSeason_UpdateCompetitions ----
  * (SWOS2.s line 31686)
  * Main season transition function. Updates all competition slots,
@@ -1647,6 +1662,7 @@ void Career_AdvanceToNextSeason_UpdateCompetitions(void)
     _playRelegatedAnimation = 0;
 
     Career_PrepareEuropeanCupQualificationState();
+    Career_PrepareCopaLibertadoresQualificationState();   /* Inc3: build next season's CONMEBOL field */
     SaveSelectedTeams();
 
     _seasonUpdateInProgress = 1;
@@ -1660,6 +1676,7 @@ void Career_AdvanceToNextSeason_UpdateCompetitions(void)
     Career_UpdateEuroCupCompetitionSlot();
     Career_UpdateCupWinnersCupCompetitionSlot();
     Career_UpdateUefaCupCompetitionSlot();
+    Career_UpdateCopaLibertadoresCompetitionSlot();   /* Inc3b-part-2: auto-advance Copa */
 
     _careerFileBuffer = 0;
 
@@ -1667,6 +1684,7 @@ void Career_AdvanceToNextSeason_UpdateCompetitions(void)
         uint16_t compIndex = (uint8_t)(_selTeamNumber >> 8);
         Career_ProcessCompetitionForNextSeason(compIndex);
         Career_ProcessCompetitionForEuropeanCupQualification();
+        Career_ProcessCompetitionForCopaLibertadoresQualification();   /* Inc3 */
     }
 
     /* Loop through all competition IDs in the remap table */
@@ -1679,9 +1697,16 @@ void Career_AdvanceToNextSeason_UpdateCompetitions(void)
             continue;
         Career_ProcessCompetitionForNextSeason((uint16_t)compByte);
         Career_ProcessCompetitionForEuropeanCupQualification();
+        Career_ProcessCompetitionForCopaLibertadoresQualification();   /* Inc3 */
     }
 
-    if (_careerFileBuffer == 0x50) {
+    /* The 0x50 (80) here is the TMD-pool append COUNT, not a region code: every
+     * season transition appends 16 euroCup + 32 cupWinnersCup + 32 uefaCup teams.
+     * The Copa Libertadores qualifier (Inc3) appends its CONMEBOL field on top,
+     * so the expected total is 0x50 + the Copa count (0 on a build without the
+     * Copa data). Without this the gate would miss (e.g. 100 != 0x50) and fall
+     * through to panic 0x8999. */
+    if (_careerFileBuffer == 0x50 + Career_CopaLibertadoresQualifiedTeamCount()) {
         Career_DrawEuropeanCupTeamsAndCopyGrids();
         _seasonUpdateInProgress = 0;
         RestoreSelectedTeams();
@@ -1689,7 +1714,8 @@ void Career_AdvanceToNextSeason_UpdateCompetitions(void)
         if (_euroCupQualifiedTeamCount == 16 &&
             _cupWinnersCupQualifiedTeamCount == 32 &&
             _uefaCupQualifiedTeamCount == 32 &&
-            _careerFileBuffer == 0x50) {
+            Career_CopaLibertadoresQualifiedTeamCount() == Career_CopaLibertadoresExpectedTeamCount() &&
+            _careerFileBuffer == 0x50 + Career_CopaLibertadoresQualifiedTeamCount()) {
             Career_StorePromotionRelegationInSeasonInfo();
             return;
         }

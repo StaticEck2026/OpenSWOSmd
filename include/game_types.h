@@ -1557,7 +1557,14 @@ typedef struct __attribute__((packed)) {
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    int8_t compNumber;
+    /* compId — byte-0 competition identity (the COMPID_* values; see
+     * comp_identity.h). UNSIGNED: the original SWOS ids fill 0..127, so a
+     * data-only competition (e.g. Copa Libertadores, compId 128) needs the full
+     * 0..255 range. The canonical accessor comp_id() already reads this byte as
+     * uint8_t; this makes the field itself unsigned so direct reads agree and the
+     * Amiga bake (emit_competitions.py) emits `{ 128, ... }` without an int8_t
+     * overflow warning. Byte layout/size unchanged (still 1 byte). */
+    uint8_t compId;
     int8_t type;
     int8_t teamNumber;       /* TEAM.XXX team-file selector: country/region number for
                               * nationals; 0xFF (255) = .TMD / special team file */

@@ -8988,7 +8988,7 @@ void InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     a6s->substitutesCount = 1;  /* 0x3C */
     checkEuropeanCupsAndClear3C(table, a6);
 
-    a6s->field_2E   = (uint8_t)compHdr->compNumber;  /* 0x2E */
+    a6s->field_2E   = (uint8_t)compHdr->compId;  /* 0x2E */
     a6s->startMonth = compHdr->beginMonth;           /* 0x38 */
     a6s->endMonth   = compHdr->endMonth;             /* 0x39 */
 
@@ -9076,7 +9076,7 @@ void InitDIYCupFromRecord(uint8_t *cupRec)
     a6s->substitutesCount = 1;  /* 0x3C */
     checkEuropeanCupsAndClear3C(cupRec, a6);
 
-    a6s->field_2E        = (uint8_t)compHdr->compNumber;  /* 0x2E */
+    a6s->field_2E        = (uint8_t)compHdr->compId;  /* 0x2E */
     a6s->subRoundCounter = (int8_t)cup->roundStringBase;  /* 0x5C */
     a6s->startMonth      = compHdr->beginMonth;           /* 0x38 */
     a6s->endMonth        = compHdr->endMonth;             /* 0x39 */
@@ -9156,7 +9156,7 @@ void InitDIYLeagueFromRecord(uint8_t *leagueRec)
     a6s->substitutesCount = 1;  /* 0x3C */
     checkEuropeanCupsAndClear3C(a5, a6);
 
-    a6s->field_2E = (uint8_t)compHdr->compNumber;  /* 0x2E */
+    a6s->field_2E = (uint8_t)compHdr->compId;  /* 0x2E */
     a6s->matchPairsPerRound = 0;        /* 0x50 */
 
     if (compHdr->seedReorderFlag != 0) {

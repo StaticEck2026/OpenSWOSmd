@@ -1778,7 +1778,7 @@ void Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
     }
 
     /* Step 2: Special replacements for europeanChampionships and worldCup.
-     * compNumber 22/4 appear only on these templates (the "2" copies are 21/3),
+     * compId 22/4 appear only on these templates (the "2" copies are 21/3),
      * so by-id is exactly equivalent to the old template-address compare. */
     uint8_t cid = comp ? comp_id(comp) : 0xFFu;
     if (cid == COMPID_europeanChampionships)
