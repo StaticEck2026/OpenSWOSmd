@@ -2,32 +2,32 @@
  * Amiga SWOS RE Project
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  */
-/* comp_identity.h — competition identity by compNumber.
+/* comp_identity.h — competition identity by compId.
  *
  * Part of the competition dynamic / pointer-free refactor (see
  * docs/COMPETITION_DYNAMIC_REFACTOR.md). It replaces by-ADDRESS competition
  * identity gates — `comp == &_xCopy`, `comp >= &_aCopy && comp <= &_bCopy` —
  * with by-ID integer compares: `comp_id(c) == COMPID_x`.
  *
- * Why compNumber is the right runtime id:
+ * Why compId is the right runtime id:
  *   - It is byte 0 of every Competition record (the struct head shared by
  *     CompetitionTournament / CompetitionCup / Playoffs / CompetitionLeague),
  *     so reading it needs no competition-type header here (avoids the
  *     include-conflict hazard noted in project_career_season_includes).
  *   - A runtime working *Copy is memcpy'd from its static template
  *     (career_init.c:InitCareer / reconstruct_comp_copy_region_from_templates),
- *     so the *Copy carries the SAME compNumber as the template. One id compare
+ *     so the *Copy carries the SAME compId as the template. One id compare
  *     therefore matches both template and copy — and removes the dependency on
  *     the compiled global's address and on the *Copy region's .skip layout.
  *   - It is already the loader's verify key (save_format_json.c sg[]/sp[]).
  *
- * The compNumber map below is extracted from the record literals in
- * competition_data.c (the `{ compNumber, type, ... }` struct head). The
+ * The compId map below is extracted from the record literals in
+ * competition_data.c (the `{ compId, type, ... }` struct head). The
  * internationals are deliberately dense (0..36), which makes the qualifier
  * RANGE checks contiguous — see comp_is_wc_qualifier / comp_is_ec_qualifier.
  *
  * The JSON string id (tournaments.json/cups.json/leagues.json "id") remains the
- * external/persistent identity; compNumber is the internal/runtime identity.
+ * external/persistent identity; compId is the internal/runtime identity.
  */
 #ifndef COMP_IDENTITY_H
 #define COMP_IDENTITY_H
@@ -37,7 +37,7 @@
  * <stdint.h> only on the SDL build. */
 #include "swos_types.h"
 
-/* compNumber values, from the record heads in competition_data.c. */
+/* compId values, from the record heads in competition_data.c. */
 enum CompId {
     COMPID_euroCup                           = 0,
     COMPID_cupWinnersCup                     = 1,
@@ -86,7 +86,7 @@ enum CompId {
     COMPID_englishLeagueCup                  = 119,
 };
 
-/* Read a competition's id (compNumber = byte 0 of the record). Endian-neutral
+/* Read a competition's id (compId = byte 0 of the record). Endian-neutral
  * (single byte). `comp` must be non-NULL — callers that may pass NULL guard it
  * first (NULL was always a distinct, non-competition case in the asm). */
 static inline uint8_t comp_id(const void *comp)
@@ -97,7 +97,7 @@ static inline uint8_t comp_id(const void *comp)
 /* World Cup qualifier set: the 8 group records (5..12) plus the 5 regional
  * qualifications (13..17). Replaces the *Copy address-range gate
  * `comp >= _worldCupQualifyingGroup1Copy && comp <= _oceaniaWorldCupQualificationCopy`
- * (the copies are laid out so that span = exactly compNumber 5..17). */
+ * (the copies are laid out so that span = exactly compId 5..17). */
 static inline int comp_is_wc_qualifier(uint8_t id)
 {
     return id >= COMPID_worldCupQualifyingGroup1 &&

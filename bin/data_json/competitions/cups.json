@@ -6,7 +6,7 @@
       "id": "_cupWinnersCup",
       "type": "cup",
       "comp": {
-        "comp_number": 1,
+        "comp_id": 1,
         "type": 1,
         "team_number": -1,
         "begin_month": 64,
@@ -225,7 +225,7 @@
       "id": "_uefaCup",
       "type": "cup",
       "comp": {
-        "comp_number": 2,
+        "comp_id": 2,
         "type": 1,
         "team_number": -1,
         "begin_month": 64,
@@ -444,7 +444,7 @@
       "id": "_worldCupQualifyingGroup1",
       "type": "cup",
       "comp": {
-        "comp_number": 5,
+        "comp_id": 5,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -503,7 +503,7 @@
       "id": "_worldCupQualifyingGroup2",
       "type": "cup",
       "comp": {
-        "comp_number": 6,
+        "comp_id": 6,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -562,7 +562,7 @@
       "id": "_worldCupQualifyingGroup3",
       "type": "cup",
       "comp": {
-        "comp_number": 7,
+        "comp_id": 7,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -621,7 +621,7 @@
       "id": "_worldCupQualifyingGroup4",
       "type": "cup",
       "comp": {
-        "comp_number": 8,
+        "comp_id": 8,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -680,7 +680,7 @@
       "id": "_worldCupQualifyingGroup5",
       "type": "cup",
       "comp": {
-        "comp_number": 9,
+        "comp_id": 9,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -739,7 +739,7 @@
       "id": "_worldCupQualifyingGroup6",
       "type": "cup",
       "comp": {
-        "comp_number": 10,
+        "comp_id": 10,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -798,7 +798,7 @@
       "id": "_worldCupQualifyingGroup7",
       "type": "cup",
       "comp": {
-        "comp_number": 11,
+        "comp_id": 11,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -857,7 +857,7 @@
       "id": "_worldCupQualifyingGroup8",
       "type": "cup",
       "comp": {
-        "comp_number": 12,
+        "comp_id": 12,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -916,7 +916,7 @@
       "id": "_oceaniaWorldCupQualification",
       "type": "cup",
       "comp": {
-        "comp_number": 17,
+        "comp_id": 17,
         "type": 0,
         "team_number": 85,
         "begin_month": 72,
@@ -975,7 +975,7 @@
       "id": "_invitationTournament",
       "type": "cup",
       "comp": {
-        "comp_number": 18,
+        "comp_id": 18,
         "type": 0,
         "team_number": -1,
         "begin_month": -104,
@@ -1008,7 +1008,7 @@
       "id": "_tour",
       "type": "cup",
       "comp": {
-        "comp_number": 19,
+        "comp_id": 19,
         "type": 0,
         "team_number": -1,
         "begin_month": -104,
@@ -1041,7 +1041,7 @@
       "id": "_friendly",
       "type": "cup",
       "comp": {
-        "comp_number": 20,
+        "comp_id": 20,
         "type": 0,
         "team_number": -1,
         "begin_month": 56,
@@ -1074,7 +1074,7 @@
       "id": "_ecQualifyingGroup1",
       "type": "cup",
       "comp": {
-        "comp_number": 23,
+        "comp_id": 23,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1133,7 +1133,7 @@
       "id": "_ecQualifyingGroup2",
       "type": "cup",
       "comp": {
-        "comp_number": 24,
+        "comp_id": 24,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1192,7 +1192,7 @@
       "id": "_ecQualifyingGroup3",
       "type": "cup",
       "comp": {
-        "comp_number": 25,
+        "comp_id": 25,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1251,7 +1251,7 @@
       "id": "_ecQualifyingGroup4",
       "type": "cup",
       "comp": {
-        "comp_number": 26,
+        "comp_id": 26,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1310,7 +1310,7 @@
       "id": "_ecQualifyingGroup5",
       "type": "cup",
       "comp": {
-        "comp_number": 27,
+        "comp_id": 27,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1369,7 +1369,7 @@
       "id": "_ecQualifyingGroup6",
       "type": "cup",
       "comp": {
-        "comp_number": 28,
+        "comp_id": 28,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1428,7 +1428,7 @@
       "id": "_ecQualifyingGroup7",
       "type": "cup",
       "comp": {
-        "comp_number": 29,
+        "comp_id": 29,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1487,7 +1487,7 @@
       "id": "_ecQualifyingGroup8",
       "type": "cup",
       "comp": {
-        "comp_number": 30,
+        "comp_id": 30,
         "type": 0,
         "team_number": 80,
         "begin_month": 72,
@@ -1546,7 +1546,7 @@
       "id": "_oceaniaCup",
       "type": "cup",
       "comp": {
-        "comp_number": 35,
+        "comp_id": 35,
         "type": 0,
         "team_number": 85,
         "begin_month": -120,
@@ -1579,7 +1579,7 @@
       "id": "_albanianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 109,
+        "comp_id": 109,
         "type": 1,
         "team_number": 0,
         "begin_month": 88,
@@ -1624,7 +1624,7 @@
       "id": "_austrianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 110,
+        "comp_id": 110,
         "type": 1,
         "team_number": 1,
         "begin_month": -128,
@@ -1669,7 +1669,7 @@
       "id": "_belarusianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 111,
+        "comp_id": 111,
         "type": 1,
         "team_number": 76,
         "begin_month": 72,
@@ -1714,7 +1714,7 @@
       "id": "_belgianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 112,
+        "comp_id": 112,
         "type": 1,
         "team_number": 2,
         "begin_month": 80,
@@ -1759,7 +1759,7 @@
       "id": "_bulgarianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 113,
+        "comp_id": 113,
         "type": 1,
         "team_number": 3,
         "begin_month": 80,
@@ -1804,7 +1804,7 @@
       "id": "_croatianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 114,
+        "comp_id": 114,
         "type": 1,
         "team_number": 4,
         "begin_month": 80,
@@ -1849,7 +1849,7 @@
       "id": "_cypriotCup",
       "type": "cup",
       "comp": {
-        "comp_number": 115,
+        "comp_id": 115,
         "type": 1,
         "team_number": 5,
         "begin_month": 104,
@@ -1894,7 +1894,7 @@
       "id": "_czechCup",
       "type": "cup",
       "comp": {
-        "comp_number": 116,
+        "comp_id": 116,
         "type": 1,
         "team_number": 6,
         "begin_month": 72,
@@ -1939,7 +1939,7 @@
       "id": "_danishCup",
       "type": "cup",
       "comp": {
-        "comp_number": 117,
+        "comp_id": 117,
         "type": 1,
         "team_number": 7,
         "begin_month": 112,
@@ -1984,7 +1984,7 @@
       "id": "_estonianCup",
       "type": "cup",
       "comp": {
-        "comp_number": 122,
+        "comp_id": 122,
         "type": 1,
         "team_number": 10,
         "begin_month": -128,
@@ -2029,7 +2029,7 @@
       "id": "_faroeIslesCup",
       "type": "cup",
       "comp": {
-        "comp_number": 123,
+        "comp_id": 123,
         "type": 1,
         "team_number": 11,
         "begin_month": 56,
@@ -2074,7 +2074,7 @@
       "id": "_finnishCup",
       "type": "cup",
       "comp": {
-        "comp_number": 124,
+        "comp_id": 124,
         "type": 1,
         "team_number": 12,
         "begin_month": 32,
@@ -2119,7 +2119,7 @@
       "id": "_greekCup",
       "type": "cup",
       "comp": {
-        "comp_number": 127,
+        "comp_id": 127,
         "type": 1,
         "team_number": 15,
         "begin_month": 64,
@@ -2164,7 +2164,7 @@
       "id": "_hungarianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -128,
+        "comp_id": -128,
         "type": 1,
         "team_number": 16,
         "begin_month": 104,
@@ -2209,7 +2209,7 @@
       "id": "_icelandicCup",
       "type": "cup",
       "comp": {
-        "comp_number": -127,
+        "comp_id": -127,
         "type": 1,
         "team_number": 17,
         "begin_month": 56,
@@ -2254,7 +2254,7 @@
       "id": "_irishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -126,
+        "comp_id": -126,
         "type": 1,
         "team_number": 18,
         "begin_month": 112,
@@ -2299,7 +2299,7 @@
       "id": "_israeliCup",
       "type": "cup",
       "comp": {
-        "comp_number": -125,
+        "comp_id": -125,
         "type": 1,
         "team_number": 19,
         "begin_month": 120,
@@ -2344,7 +2344,7 @@
       "id": "_latvianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -123,
+        "comp_id": -123,
         "type": 1,
         "team_number": 21,
         "begin_month": 56,
@@ -2389,7 +2389,7 @@
       "id": "_lithuanianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -122,
+        "comp_id": -122,
         "type": 1,
         "team_number": 22,
         "begin_month": -128,
@@ -2434,7 +2434,7 @@
       "id": "_luxembourgCup",
       "type": "cup",
       "comp": {
-        "comp_number": -121,
+        "comp_id": -121,
         "type": 1,
         "team_number": 23,
         "begin_month": 120,
@@ -2479,7 +2479,7 @@
       "id": "_malteseCup",
       "type": "cup",
       "comp": {
-        "comp_number": -120,
+        "comp_id": -120,
         "type": 1,
         "team_number": 24,
         "begin_month": -128,
@@ -2524,7 +2524,7 @@
       "id": "_northernIrishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -118,
+        "comp_id": -118,
         "type": 1,
         "team_number": 26,
         "begin_month": 104,
@@ -2569,7 +2569,7 @@
       "id": "_norwegianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -117,
+        "comp_id": -117,
         "type": 1,
         "team_number": 27,
         "begin_month": 64,
@@ -2614,7 +2614,7 @@
       "id": "_polishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -116,
+        "comp_id": -116,
         "type": 1,
         "team_number": 28,
         "begin_month": 80,
@@ -2659,7 +2659,7 @@
       "id": "_portugeseCup",
       "type": "cup",
       "comp": {
-        "comp_number": -115,
+        "comp_id": -115,
         "type": 1,
         "team_number": 29,
         "begin_month": 96,
@@ -2704,7 +2704,7 @@
       "id": "_romanianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -114,
+        "comp_id": -114,
         "type": 1,
         "team_number": 30,
         "begin_month": 112,
@@ -2749,7 +2749,7 @@
       "id": "_russianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -113,
+        "comp_id": -113,
         "type": 1,
         "team_number": 31,
         "begin_month": 16,
@@ -2794,7 +2794,7 @@
       "id": "_sanMarinoCup",
       "type": "cup",
       "comp": {
-        "comp_number": -112,
+        "comp_id": -112,
         "type": 1,
         "team_number": 32,
         "begin_month": 120,
@@ -2839,7 +2839,7 @@
       "id": "_slovakianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -109,
+        "comp_id": -109,
         "type": 1,
         "team_number": 78,
         "begin_month": -128,
@@ -2884,7 +2884,7 @@
       "id": "_slovenianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -108,
+        "comp_id": -108,
         "type": 1,
         "team_number": 34,
         "begin_month": 120,
@@ -2929,7 +2929,7 @@
       "id": "_swedishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -106,
+        "comp_id": -106,
         "type": 1,
         "team_number": 36,
         "begin_month": 32,
@@ -2974,7 +2974,7 @@
       "id": "_swissCup",
       "type": "cup",
       "comp": {
-        "comp_number": -105,
+        "comp_id": -105,
         "type": 1,
         "team_number": 37,
         "begin_month": 120,
@@ -3019,7 +3019,7 @@
       "id": "_turkishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -104,
+        "comp_id": -104,
         "type": 1,
         "team_number": 38,
         "begin_month": 88,
@@ -3064,7 +3064,7 @@
       "id": "_ukrainianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -103,
+        "comp_id": -103,
         "type": 1,
         "team_number": 39,
         "begin_month": 120,
@@ -3109,7 +3109,7 @@
       "id": "_welshCup",
       "type": "cup",
       "comp": {
-        "comp_number": -102,
+        "comp_id": -102,
         "type": 1,
         "team_number": 40,
         "begin_month": 88,
@@ -3154,7 +3154,7 @@
       "id": "_yugoslavianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -101,
+        "comp_id": -101,
         "type": 1,
         "team_number": 41,
         "begin_month": 80,
@@ -3199,7 +3199,7 @@
       "id": "_algerianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -100,
+        "comp_id": -100,
         "type": 1,
         "team_number": 42,
         "begin_month": 96,
@@ -3244,7 +3244,7 @@
       "id": "_southAfricanCup",
       "type": "cup",
       "comp": {
-        "comp_number": -96,
+        "comp_id": -96,
         "type": 1,
         "team_number": 69,
         "begin_month": 56,
@@ -3289,7 +3289,7 @@
       "id": "_taiwaneseCup",
       "type": "cup",
       "comp": {
-        "comp_number": -95,
+        "comp_id": -95,
         "type": 1,
         "team_number": 67,
         "begin_month": 96,
@@ -3334,7 +3334,7 @@
       "id": "_englishCup",
       "type": "cup",
       "comp": {
-        "comp_number": 118,
+        "comp_id": 118,
         "type": 1,
         "team_number": 8,
         "begin_month": 96,
@@ -3392,7 +3392,7 @@
       "id": "_englishLeagueCup",
       "type": "cup",
       "comp": {
-        "comp_number": 119,
+        "comp_id": 119,
         "type": 1,
         "team_number": 8,
         "begin_month": 64,
@@ -3450,7 +3450,7 @@
       "id": "_englishCup_1",
       "type": "cup",
       "comp": {
-        "comp_number": 120,
+        "comp_id": 120,
         "type": 1,
         "team_number": 8,
         "begin_month": 96,
@@ -3508,7 +3508,7 @@
       "id": "_englishLeagueCup_1",
       "type": "cup",
       "comp": {
-        "comp_number": 121,
+        "comp_id": 121,
         "type": 1,
         "team_number": 8,
         "begin_month": 64,
@@ -3566,7 +3566,7 @@
       "id": "_frenchCup",
       "type": "cup",
       "comp": {
-        "comp_number": 125,
+        "comp_id": 125,
         "type": 1,
         "team_number": 13,
         "begin_month": 104,
@@ -3624,7 +3624,7 @@
       "id": "_germanCup",
       "type": "cup",
       "comp": {
-        "comp_number": 126,
+        "comp_id": 126,
         "type": 1,
         "team_number": 14,
         "begin_month": 64,
@@ -3682,7 +3682,7 @@
       "id": "_italianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -124,
+        "comp_id": -124,
         "type": 1,
         "team_number": 20,
         "begin_month": 56,
@@ -3740,7 +3740,7 @@
       "id": "_scottishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -111,
+        "comp_id": -111,
         "type": 1,
         "team_number": 33,
         "begin_month": 96,
@@ -3798,7 +3798,7 @@
       "id": "_scottishLeagueCup",
       "type": "cup",
       "comp": {
-        "comp_number": -110,
+        "comp_id": -110,
         "type": 1,
         "team_number": 33,
         "begin_month": 56,
@@ -3856,7 +3856,7 @@
       "id": "_spanishCup",
       "type": "cup",
       "comp": {
-        "comp_number": -107,
+        "comp_id": -107,
         "type": 1,
         "team_number": 35,
         "begin_month": 88,
@@ -3914,7 +3914,7 @@
       "id": "_dutchCup",
       "type": "cup",
       "comp": {
-        "comp_number": -119,
+        "comp_id": -119,
         "type": 1,
         "team_number": 25,
         "begin_month": 88,
@@ -3969,7 +3969,7 @@
       "id": "_australianCup",
       "type": "cup",
       "comp": {
-        "comp_number": -99,
+        "comp_id": -99,
         "type": 1,
         "team_number": 44,
         "begin_month": 40,
@@ -4024,7 +4024,7 @@
       "id": "_japaneseCup",
       "type": "cup",
       "comp": {
-        "comp_number": -98,
+        "comp_id": -98,
         "type": 1,
         "team_number": 55,
         "begin_month": 48,
@@ -4072,7 +4072,7 @@
       "id": "_japaneseEmperorsCup",
       "type": "cup",
       "comp": {
-        "comp_number": -97,
+        "comp_id": -97,
         "type": 1,
         "team_number": 55,
         "begin_month": 88,

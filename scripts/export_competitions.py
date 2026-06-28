@@ -131,7 +131,7 @@ def find_defs(text: str, typename: str):
 
 
 # ----------------------------------------------------------------- comp parsing
-COMP_FIELDS = ["comp_number", "type", "team_number", "begin_month", "end_month",
+COMP_FIELDS = ["comp_id", "type", "team_number", "begin_month", "end_month",
                "name_table_offset", "reserved", "team_list_offset", "seed_reorder_flag"]
 
 

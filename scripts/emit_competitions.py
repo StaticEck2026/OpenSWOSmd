@@ -40,7 +40,7 @@ def _rrf_bytes(rrf):
 
 def _comp9(c):
     return "{ %d, %d, %d, %d, %d, %d, %d, %d, %d }" % (
-        c["comp_number"], c["type"], c["team_number"], c["begin_month"], c["end_month"],
+        c["comp_id"], c["type"], c["team_number"], c["begin_month"], c["end_month"],
         c["name_table_offset"], c["reserved"], c["team_list_offset"], c["seed_reorder_flag"])
 
 

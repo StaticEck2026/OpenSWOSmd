@@ -1620,23 +1620,23 @@ int Comp_AppendCareerContest(Competition *competitionTemplate,
     return 0;
 }
 
-/* Runtime competition registry by compNumber (roadmap step 6). A dynamically-
+/* Runtime competition registry by compId (roadmap step 6). A dynamically-
  * loaded competition (no compiled global) registers its heap record here so
- * save/load pointer re-derivation (step 7) can resolve a saved compNumber back
+ * save/load pointer re-derivation (step 7) can resolve a saved compId back
  * to a live record. Compiled competitions don't need this — their slot pointers
  * re-derive via competitionsTable — but registering them too is harmless and
- * keeps the map uniform. Indexed 0..255 (compNumber is a single byte). */
+ * keeps the map uniform. Indexed 0..255 (compId is a single byte). */
 static Competition *s_compById[256];
 
 void Comp_Register(Competition *c)
 {
     if (c)
-        s_compById[(uint8_t)c->compNumber] = c;
+        s_compById[(uint8_t)c->compId] = c;
 }
 
-Competition *Comp_ById(uint8_t compNumber)
+Competition *Comp_ById(uint8_t compId)
 {
-    return s_compById[compNumber];
+    return s_compById[compId];
 }
 
 /* ======================================================================

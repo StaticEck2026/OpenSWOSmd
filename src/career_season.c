@@ -302,7 +302,7 @@ uint8_t *GetCompetitionAbbrevStr(uint8_t *competition)
     if (competition == 0)
         return (uint8_t *)"FR";
 
-    /* By-id dispatch (was by-*Copy-address). compNumber is shared by template
+    /* By-id dispatch (was by-*Copy-address). compId is shared by template
      * and *Copy, so this matches both and no longer depends on the *Copy layout. */
     uint8_t id = comp_id(competition);
     if (id == COMPID_friendly)

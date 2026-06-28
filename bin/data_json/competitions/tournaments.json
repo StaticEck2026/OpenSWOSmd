@@ -6,7 +6,7 @@
       "id": "_euroCup",
       "type": "tournament",
       "comp": {
-        "comp_number": 0,
+        "comp_id": 0,
         "type": 2,
         "team_number": -1,
         "begin_month": 64,
@@ -169,7 +169,7 @@
       "id": "_worldCup2",
       "type": "tournament",
       "comp": {
-        "comp_number": 3,
+        "comp_id": 3,
         "type": 2,
         "team_number": -1,
         "begin_month": -120,
@@ -261,7 +261,7 @@
       "id": "_worldCup",
       "type": "tournament",
       "comp": {
-        "comp_number": 4,
+        "comp_id": 4,
         "type": 2,
         "team_number": -1,
         "begin_month": -120,
@@ -474,7 +474,7 @@
       "id": "_northAmericaWorldCupQualification",
       "type": "tournament",
       "comp": {
-        "comp_number": 13,
+        "comp_id": 13,
         "type": 2,
         "team_number": 83,
         "begin_month": 72,
@@ -566,7 +566,7 @@
       "id": "_southAmericaWorldCupQualification",
       "type": "tournament",
       "comp": {
-        "comp_number": 14,
+        "comp_id": 14,
         "type": 2,
         "team_number": 82,
         "begin_month": 72,
@@ -658,7 +658,7 @@
       "id": "_africaWorldCupQualification",
       "type": "tournament",
       "comp": {
-        "comp_number": 15,
+        "comp_id": 15,
         "type": 2,
         "team_number": 81,
         "begin_month": 72,
@@ -750,7 +750,7 @@
       "id": "_asiaWorldCupQualification",
       "type": "tournament",
       "comp": {
-        "comp_number": 16,
+        "comp_id": 16,
         "type": 2,
         "team_number": 84,
         "begin_month": 72,
@@ -842,7 +842,7 @@
       "id": "_europeanChampionships2",
       "type": "tournament",
       "comp": {
-        "comp_number": 21,
+        "comp_id": 21,
         "type": 2,
         "team_number": 80,
         "begin_month": -120,
@@ -924,7 +924,7 @@
       "id": "_europeanChampionships",
       "type": "tournament",
       "comp": {
-        "comp_number": 22,
+        "comp_id": 22,
         "type": 2,
         "team_number": 80,
         "begin_month": -120,
@@ -1087,7 +1087,7 @@
       "id": "_copaAmerica",
       "type": "tournament",
       "comp": {
-        "comp_number": 31,
+        "comp_id": 31,
         "type": 2,
         "team_number": 82,
         "begin_month": -120,
@@ -1230,7 +1230,7 @@
       "id": "_africanNationsCup",
       "type": "tournament",
       "comp": {
-        "comp_number": 32,
+        "comp_id": 32,
         "type": 2,
         "team_number": 81,
         "begin_month": -120,
@@ -1322,7 +1322,7 @@
       "id": "_northAmericanCup",
       "type": "tournament",
       "comp": {
-        "comp_number": 33,
+        "comp_id": 33,
         "type": 2,
         "team_number": 83,
         "begin_month": -120,
@@ -1404,7 +1404,7 @@
       "id": "_asianCup",
       "type": "tournament",
       "comp": {
-        "comp_number": 34,
+        "comp_id": 34,
         "type": 2,
         "team_number": 84,
         "begin_month": -120,

@@ -5,7 +5,7 @@
     {
       "id": "_div1Playoffs",
       "comp": {
-        "comp_number": 47,
+        "comp_id": 47,
         "type": 1,
         "team_number": 8,
         "begin_month": -128,
@@ -41,7 +41,7 @@
     {
       "id": "_div2Playoffs",
       "comp": {
-        "comp_number": 48,
+        "comp_id": 48,
         "type": 1,
         "team_number": 8,
         "begin_month": -128,
@@ -77,7 +77,7 @@
     {
       "id": "_div3Playoffs",
       "comp": {
-        "comp_number": 49,
+        "comp_id": 49,
         "type": 1,
         "team_number": 8,
         "begin_month": -128,
@@ -113,7 +113,7 @@
     {
       "id": "_dutchPlayoffs",
       "comp": {
-        "comp_number": 57,
+        "comp_id": 57,
         "type": 1,
         "team_number": 25,
         "begin_month": -128,
@@ -149,7 +149,7 @@
     {
       "id": "_scottishPlayoffs",
       "comp": {
-        "comp_number": 75,
+        "comp_id": 75,
         "type": 1,
         "team_number": 33,
         "begin_month": -128,
@@ -185,7 +185,7 @@
     {
       "id": "_spanishPlayoffs",
       "comp": {
-        "comp_number": 79,
+        "comp_id": 79,
         "type": 1,
         "team_number": 35,
         "begin_month": -120,
@@ -221,7 +221,7 @@
     {
       "id": "_uruguayanPlayoffs",
       "comp": {
-        "comp_number": 105,
+        "comp_id": 105,
         "type": 1,
         "team_number": 71,
         "begin_month": 88,

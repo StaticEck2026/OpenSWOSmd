@@ -5,7 +5,7 @@
     {
       "id": "_customsLeague",
       "comp": {
-        "comp_number": 36,
+        "comp_id": 36,
         "type": 0,
         "team_number": 72,
         "begin_month": 64,
@@ -59,7 +59,7 @@
     {
       "id": "_albanianLeague",
       "comp": {
-        "comp_number": 37,
+        "comp_id": 37,
         "type": 0,
         "team_number": 0,
         "begin_month": 64,
@@ -90,7 +90,7 @@
     {
       "id": "_austrianLeague",
       "comp": {
-        "comp_number": 38,
+        "comp_id": 38,
         "type": 0,
         "team_number": 1,
         "begin_month": 56,
@@ -121,7 +121,7 @@
     {
       "id": "_belarussiaLleague",
       "comp": {
-        "comp_number": 39,
+        "comp_id": 39,
         "type": 0,
         "team_number": 76,
         "begin_month": 56,
@@ -152,7 +152,7 @@
     {
       "id": "_belgianLeague",
       "comp": {
-        "comp_number": 40,
+        "comp_id": 40,
         "type": 0,
         "team_number": 2,
         "begin_month": 56,
@@ -183,7 +183,7 @@
     {
       "id": "_bulgarianLeague",
       "comp": {
-        "comp_number": 41,
+        "comp_id": 41,
         "type": 0,
         "team_number": 3,
         "begin_month": 56,
@@ -214,7 +214,7 @@
     {
       "id": "_croatianLeague",
       "comp": {
-        "comp_number": 42,
+        "comp_id": 42,
         "type": 0,
         "team_number": 4,
         "begin_month": 56,
@@ -245,7 +245,7 @@
     {
       "id": "_cypriotLeague",
       "comp": {
-        "comp_number": 43,
+        "comp_id": 43,
         "type": 0,
         "team_number": 5,
         "begin_month": 64,
@@ -276,7 +276,7 @@
     {
       "id": "_czechLeague",
       "comp": {
-        "comp_number": 44,
+        "comp_id": 44,
         "type": 0,
         "team_number": 6,
         "begin_month": 56,
@@ -307,7 +307,7 @@
     {
       "id": "_danishLeague",
       "comp": {
-        "comp_number": 45,
+        "comp_id": 45,
         "type": 0,
         "team_number": 7,
         "begin_month": 56,
@@ -338,7 +338,7 @@
     {
       "id": "_estonianLeague",
       "comp": {
-        "comp_number": 50,
+        "comp_id": 50,
         "type": 0,
         "team_number": 10,
         "begin_month": 56,
@@ -369,7 +369,7 @@
     {
       "id": "_faroeIslesLeague",
       "comp": {
-        "comp_number": 51,
+        "comp_id": 51,
         "type": 0,
         "team_number": 11,
         "begin_month": 24,
@@ -400,7 +400,7 @@
     {
       "id": "_finnishLeague",
       "comp": {
-        "comp_number": 52,
+        "comp_id": 52,
         "type": 0,
         "team_number": 12,
         "begin_month": 24,
@@ -431,7 +431,7 @@
     {
       "id": "_greekLeague",
       "comp": {
-        "comp_number": 55,
+        "comp_id": 55,
         "type": 0,
         "team_number": 15,
         "begin_month": 56,
@@ -462,7 +462,7 @@
     {
       "id": "_hungarianLeague",
       "comp": {
-        "comp_number": 58,
+        "comp_id": 58,
         "type": 0,
         "team_number": 16,
         "begin_month": 56,
@@ -493,7 +493,7 @@
     {
       "id": "_icelandicLeague",
       "comp": {
-        "comp_number": 59,
+        "comp_id": 59,
         "type": 0,
         "team_number": 17,
         "begin_month": 32,
@@ -524,7 +524,7 @@
     {
       "id": "_israeliLeague",
       "comp": {
-        "comp_number": 60,
+        "comp_id": 60,
         "type": 0,
         "team_number": 19,
         "begin_month": 64,
@@ -555,7 +555,7 @@
     {
       "id": "_latvianLeague",
       "comp": {
-        "comp_number": 62,
+        "comp_id": 62,
         "type": 0,
         "team_number": 21,
         "begin_month": 32,
@@ -586,7 +586,7 @@
     {
       "id": "_lithuanianLeague",
       "comp": {
-        "comp_number": 63,
+        "comp_id": 63,
         "type": 0,
         "team_number": 22,
         "begin_month": 56,
@@ -617,7 +617,7 @@
     {
       "id": "_luxembourgLeague",
       "comp": {
-        "comp_number": 64,
+        "comp_id": 64,
         "type": 0,
         "team_number": 23,
         "begin_month": 56,
@@ -648,7 +648,7 @@
     {
       "id": "_malteseLeague",
       "comp": {
-        "comp_number": 65,
+        "comp_id": 65,
         "type": 0,
         "team_number": 24,
         "begin_month": 64,
@@ -679,7 +679,7 @@
     {
       "id": "_northernIrishLeague",
       "comp": {
-        "comp_number": 66,
+        "comp_id": 66,
         "type": 0,
         "team_number": 26,
         "begin_month": 64,
@@ -710,7 +710,7 @@
     {
       "id": "_norwegianLeague",
       "comp": {
-        "comp_number": 67,
+        "comp_id": 67,
         "type": 0,
         "team_number": 27,
         "begin_month": 24,
@@ -741,7 +741,7 @@
     {
       "id": "_polishLeague",
       "comp": {
-        "comp_number": 68,
+        "comp_id": 68,
         "type": 0,
         "team_number": 28,
         "begin_month": 56,
@@ -772,7 +772,7 @@
     {
       "id": "_portugeseLeague",
       "comp": {
-        "comp_number": 69,
+        "comp_id": 69,
         "type": 0,
         "team_number": 29,
         "begin_month": 56,
@@ -803,7 +803,7 @@
     {
       "id": "_irishLeague",
       "comp": {
-        "comp_number": 70,
+        "comp_id": 70,
         "type": 0,
         "team_number": 18,
         "begin_month": 56,
@@ -834,7 +834,7 @@
     {
       "id": "_romanianLeague",
       "comp": {
-        "comp_number": 71,
+        "comp_id": 71,
         "type": 0,
         "team_number": 30,
         "begin_month": 56,
@@ -865,7 +865,7 @@
     {
       "id": "_russianLeague",
       "comp": {
-        "comp_number": 72,
+        "comp_id": 72,
         "type": 0,
         "team_number": 31,
         "begin_month": 16,
@@ -896,7 +896,7 @@
     {
       "id": "_sanMarinoLeague",
       "comp": {
-        "comp_number": 73,
+        "comp_id": 73,
         "type": 0,
         "team_number": 32,
         "begin_month": 72,
@@ -927,7 +927,7 @@
     {
       "id": "_slovakianLeague",
       "comp": {
-        "comp_number": 76,
+        "comp_id": 76,
         "type": 0,
         "team_number": 78,
         "begin_month": 56,
@@ -958,7 +958,7 @@
     {
       "id": "_slovenianLeague",
       "comp": {
-        "comp_number": 77,
+        "comp_id": 77,
         "type": 0,
         "team_number": 34,
         "begin_month": 56,
@@ -989,7 +989,7 @@
     {
       "id": "_swedishLeague",
       "comp": {
-        "comp_number": 80,
+        "comp_id": 80,
         "type": 0,
         "team_number": 36,
         "begin_month": 24,
@@ -1020,7 +1020,7 @@
     {
       "id": "_swissLeague",
       "comp": {
-        "comp_number": 81,
+        "comp_id": 81,
         "type": 0,
         "team_number": 37,
         "begin_month": 48,
@@ -1051,7 +1051,7 @@
     {
       "id": "_turkishLeague",
       "comp": {
-        "comp_number": 82,
+        "comp_id": 82,
         "type": 0,
         "team_number": 38,
         "begin_month": 56,
@@ -1082,7 +1082,7 @@
     {
       "id": "_ukrainianLeague",
       "comp": {
-        "comp_number": 83,
+        "comp_id": 83,
         "type": 0,
         "team_number": 39,
         "begin_month": 56,
@@ -1113,7 +1113,7 @@
     {
       "id": "_welshLeague",
       "comp": {
-        "comp_number": 84,
+        "comp_id": 84,
         "type": 0,
         "team_number": 40,
         "begin_month": 56,
@@ -1144,7 +1144,7 @@
     {
       "id": "_yugoslavianLeague",
       "comp": {
-        "comp_number": 85,
+        "comp_id": 85,
         "type": 0,
         "team_number": 41,
         "begin_month": 64,
@@ -1175,7 +1175,7 @@
     {
       "id": "_algerianLeague",
       "comp": {
-        "comp_number": 86,
+        "comp_id": 86,
         "type": 0,
         "team_number": 42,
         "begin_month": 64,
@@ -1206,7 +1206,7 @@
     {
       "id": "_bolivianLeague",
       "comp": {
-        "comp_number": 89,
+        "comp_id": 89,
         "type": 0,
         "team_number": 45,
         "begin_month": 32,
@@ -1237,7 +1237,7 @@
     {
       "id": "_brasilianLeague",
       "comp": {
-        "comp_number": 90,
+        "comp_id": 90,
         "type": 0,
         "team_number": 46,
         "begin_month": 0,
@@ -1268,7 +1268,7 @@
     {
       "id": "_chileanLeague",
       "comp": {
-        "comp_number": 91,
+        "comp_id": 91,
         "type": 0,
         "team_number": 48,
         "begin_month": 24,
@@ -1299,7 +1299,7 @@
     {
       "id": "_colombianLeague",
       "comp": {
-        "comp_number": 92,
+        "comp_id": 92,
         "type": 0,
         "team_number": 49,
         "begin_month": 24,
@@ -1330,7 +1330,7 @@
     {
       "id": "_ecuadorLeague",
       "comp": {
-        "comp_number": 93,
+        "comp_id": 93,
         "type": 0,
         "team_number": 50,
         "begin_month": 24,
@@ -1361,7 +1361,7 @@
     {
       "id": "_indianLeague",
       "comp": {
-        "comp_number": 95,
+        "comp_id": 95,
         "type": 0,
         "team_number": 75,
         "begin_month": 0,
@@ -1392,7 +1392,7 @@
     {
       "id": "_paraguayanLeague",
       "comp": {
-        "comp_number": 99,
+        "comp_id": 99,
         "type": 0,
         "team_number": 64,
         "begin_month": 64,
@@ -1423,7 +1423,7 @@
     {
       "id": "_peruvianLeague",
       "comp": {
-        "comp_number": 100,
+        "comp_id": 100,
         "type": 0,
         "team_number": 65,
         "begin_month": 24,
@@ -1454,7 +1454,7 @@
     {
       "id": "_southAfricanLeague",
       "comp": {
-        "comp_number": 101,
+        "comp_id": 101,
         "type": 0,
         "team_number": 69,
         "begin_month": 0,
@@ -1485,7 +1485,7 @@
     {
       "id": "_surinamLeague",
       "comp": {
-        "comp_number": 102,
+        "comp_id": 102,
         "type": 0,
         "team_number": 66,
         "begin_month": 24,
@@ -1516,7 +1516,7 @@
     {
       "id": "_taiwaneseLeague",
       "comp": {
-        "comp_number": 103,
+        "comp_id": 103,
         "type": 0,
         "team_number": 67,
         "begin_month": 64,
@@ -1547,7 +1547,7 @@
     {
       "id": "_americanLeague",
       "comp": {
-        "comp_number": 106,
+        "comp_id": 106,
         "type": 0,
         "team_number": 73,
         "begin_month": 24,
@@ -1578,7 +1578,7 @@
     {
       "id": "_venezuelanLeague",
       "comp": {
-        "comp_number": 107,
+        "comp_id": 107,
         "type": 0,
         "team_number": 77,
         "begin_month": 24,
@@ -1609,7 +1609,7 @@
     {
       "id": "_ghanaLeague",
       "comp": {
-        "comp_number": 108,
+        "comp_id": 108,
         "type": 0,
         "team_number": 79,
         "begin_month": 56,
@@ -1640,7 +1640,7 @@
     {
       "id": "_frenchLeague",
       "comp": {
-        "comp_number": 53,
+        "comp_id": 53,
         "type": 0,
         "team_number": 13,
         "begin_month": 56,
@@ -1684,7 +1684,7 @@
     {
       "id": "_germanLeague",
       "comp": {
-        "comp_number": 54,
+        "comp_id": 54,
         "type": 0,
         "team_number": 14,
         "begin_month": 56,
@@ -1728,7 +1728,7 @@
     {
       "id": "_italianLeague",
       "comp": {
-        "comp_number": 61,
+        "comp_id": 61,
         "type": 0,
         "team_number": 20,
         "begin_month": 64,
@@ -1772,7 +1772,7 @@
     {
       "id": "_japaneseLeague",
       "comp": {
-        "comp_number": 96,
+        "comp_id": 96,
         "type": 0,
         "team_number": 55,
         "begin_month": 16,
@@ -1816,7 +1816,7 @@
     {
       "id": "_argentinianLeague",
       "comp": {
-        "comp_number": 87,
+        "comp_id": 87,
         "type": 0,
         "team_number": 43,
         "begin_month": 64,
@@ -1855,7 +1855,7 @@
     {
       "id": "_mexicanLeague",
       "comp": {
-        "comp_number": 97,
+        "comp_id": 97,
         "type": 0,
         "team_number": 60,
         "begin_month": 56,
@@ -1894,7 +1894,7 @@
     {
       "id": "_elSalvadorLeague",
       "comp": {
-        "comp_number": 94,
+        "comp_id": 94,
         "type": 0,
         "team_number": 51,
         "begin_month": 56,
@@ -1949,7 +1949,7 @@
     {
       "id": "_australianLeague",
       "comp": {
-        "comp_number": 88,
+        "comp_id": 88,
         "type": 0,
         "team_number": 44,
         "begin_month": 16,
@@ -2013,7 +2013,7 @@
     {
       "id": "_newZealandLeague",
       "comp": {
-        "comp_number": 98,
+        "comp_id": 98,
         "type": 0,
         "team_number": 62,
         "begin_month": 16,
@@ -2067,7 +2067,7 @@
     {
       "id": "_englishLeague",
       "comp": {
-        "comp_number": 46,
+        "comp_id": 46,
         "type": 0,
         "team_number": 8,
         "begin_month": 56,
@@ -2161,7 +2161,7 @@
     {
       "id": "_dutchLeague",
       "comp": {
-        "comp_number": 56,
+        "comp_id": 56,
         "type": 0,
         "team_number": 25,
         "begin_month": 56,
@@ -2232,7 +2232,7 @@
     {
       "id": "_scottishLeague",
       "comp": {
-        "comp_number": 74,
+        "comp_id": 74,
         "type": 0,
         "team_number": 33,
         "begin_month": 56,
@@ -2303,7 +2303,7 @@
     {
       "id": "_spanishLeague",
       "comp": {
-        "comp_number": 78,
+        "comp_id": 78,
         "type": 0,
         "team_number": 35,
         "begin_month": 64,
@@ -2377,7 +2377,7 @@
     {
       "id": "_uruguayanLeague",
       "comp": {
-        "comp_number": 104,
+        "comp_id": 104,
         "type": 0,
         "team_number": 71,
         "begin_month": 24,

@@ -1557,7 +1557,7 @@ typedef struct __attribute__((packed)) {
  * ================================================================== */
 
 typedef struct __attribute__((packed)) {
-    int8_t compNumber;
+    int8_t compId;
     int8_t type;
     int8_t teamNumber;       /* TEAM.XXX team-file selector: country/region number for
                               * nationals; 0xFF (255) = .TMD / special team file */
