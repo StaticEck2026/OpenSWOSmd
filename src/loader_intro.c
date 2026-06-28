@@ -37,6 +37,22 @@ extern uint16_t _audioBankLoaded;
 extern volatile uint16_t _audioActive;
 extern uint16_t _fireResetFlag;
 extern volatile uint16_t _keyCount;
+
+/* Harness fast-boot: when non-zero, ShowLoaderIntroSequence returns immediately,
+ * skipping the (slow) loader intro. Seeded from SWOS_HARNESS_TURBO in
+ * Platform_Init on SDL (the harness always sets that env); gdb-set by
+ * amiga_gdb.sh after attach on the Amiga (the target is paused at the entry,
+ * before this runs).
+ *
+ * SDL: kept because platform_sdl.c WRITES it (Platform_Init) — a written global
+ * survives. AMIGA: it is only READ (the gdb set is invisible to the compiler),
+ * and the m68k LTO/--gc-sections drops a read-only global (used/externally_visible
+ * don't save it; `retain` is unsupported on this binutils). So the Amiga harness
+ * does NOT use this flag — amiga_gdb.sh skips the intro with a gdb breakpoint +
+ * `return` at ShowLoaderIntroSequence instead. This check then just no-ops there
+ * (folded away), which is fine. */
+__attribute__((used, externally_visible))
+volatile uint8_t _skipLoaderIntro = 0;
 extern volatile uint16_t _currentKey;
 extern uint8_t _audioInstrumentBank[];
 extern uint8_t _aSoundHeroSng[];
@@ -337,6 +353,9 @@ static int16_t loaderIntroShowFrameWithMusic(const uint8_t *filename, int16_t ti
 __attribute__((used, externally_visible))
 void ShowLoaderIntroSequence(void)
 {
+    if (_skipLoaderIntro)            /* harness fast-boot: skip the intro */
+        return;
+
     if ((uintptr_t)&_memBoundaryMarker > 0x100000u) { }
 
     SetCameraCoordinates(0, 0);
