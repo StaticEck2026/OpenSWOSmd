@@ -13,6 +13,7 @@
 #include "career_init.h"
 #include "career_status.h"
 #include "career_teams.h"
+#include "comp_identity.h"
 #include "diy_competition.h"
 #include "endian_helpers.h"
 #include "game_types.h"
@@ -300,31 +301,33 @@ uint8_t *GetCompetitionAbbrevStr(uint8_t *competition)
 {
     if (competition == 0)
         return (uint8_t *)"FR";
-    if (competition == _friendlyCopy)
+
+    /* By-id dispatch (was by-*Copy-address). compNumber is shared by template
+     * and *Copy, so this matches both and no longer depends on the *Copy layout. */
+    uint8_t id = comp_id(competition);
+    if (id == COMPID_friendly)
         return (uint8_t *)"FR";
-    if (competition == _worldCup2Copy)
+    if (id == COMPID_worldCup2)
         return (uint8_t *)"WC";
-    if (competition >= _worldCupQualifyingGroup1Copy &&
-        competition <= _oceaniaWorldCupQualificationCopy)
+    if (comp_is_wc_qualifier(id))
         return (uint8_t *)"WCQ";
-    if (competition == _europeanChampionships2Copy)
+    if (id == COMPID_europeanChampionships2)
         return (uint8_t *)"EC";
-    if (competition >= _ecQualifyingGroup1Copy &&
-        competition <= _ecQualifyingGroup8Copy)
+    if (comp_is_ec_qualifier(id))
         return (uint8_t *)"ECQ";
-    if (competition == _northAmericanCupCopy)
+    if (id == COMPID_northAmericanCup)
         return (uint8_t *)"NAC";
-    if (competition == _copaAmericaCopy)
+    if (id == COMPID_copaAmerica)
         return (uint8_t *)"CA";
-    if (competition == _africanNationsCupCopy)
+    if (id == COMPID_africanNationsCup)
         return (uint8_t *)"ANC";
-    if (competition == _asianCupCopy)
+    if (id == COMPID_asianCup)
         return (uint8_t *)"AC";
-    if (competition == _oceaniaCupCopy)
+    if (id == COMPID_oceaniaCup)
         return (uint8_t *)"OC";
-    if (competition == _invitationTournamentCopy)
+    if (id == COMPID_invitationTournament)
         return (uint8_t *)"TNM";
-    if (competition == _tourCopy)
+    if (id == COMPID_tour)
         return (uint8_t *)"TR";
 
     _panicReasonCode = 0x2184;
@@ -436,35 +439,39 @@ extern uint16_t _wonContinentalCup;
 extern uint16_t _findTeamInDIY_SuppressSideEffectsFlag;
 
 /* ---- SeasonReview_AdjustWeightsForCompetition (SWOS2.s line 35686) ----
- * Classifies a competition by comparing its pointer against known addresses,
- * then multiplies the category by a weight factor and accumulates the weight.
+ * Classifies a competition by id, then multiplies the category by a weight
+ * factor and accumulates the weight.
  * Only called from SeasonFinished_ComputeSeasonReview (static). */
 static void adjustWeightsForCompetition(uint8_t *compPtr, uint16_t *weightAccum,
                                          uint16_t *weightedCategory)
 {
+    /* compPtr may be NULL (e.g. an empty primary slot); the original only
+     * compared the pointer, so NULL/unknown fell through to the domestic
+     * default. 0xFF matches no COMPID, preserving that. */
+    uint8_t id = compPtr ? comp_id(compPtr) : 0xFFu;
+
     /* World Cup: weight 8 */
-    if (compPtr == _worldCup2Copy) {
+    if (id == COMPID_worldCup2) {
         *weightedCategory *= 8;
         *weightAccum += 8;
         return;
     }
     /* Friendly / Invitation Tournament / Tour: weight 1, d7 NOT multiplied */
-    if (compPtr == _friendlyCopy || compPtr == _invitationTournamentCopy ||
-        compPtr == _tourCopy) {
+    if (id == COMPID_friendly || id == COMPID_invitationTournament ||
+        id == COMPID_tour) {
         *weightAccum += 1;
         return;
     }
     /* Continental cups: weight 6 */
-    if (compPtr == _europeanChampionships2Copy || compPtr == _northAmericanCupCopy ||
-        compPtr == _copaAmericaCopy || compPtr == _africanNationsCupCopy ||
-        compPtr == _asianCupCopy || compPtr == _oceaniaCupCopy) {
+    if (id == COMPID_europeanChampionships2 || id == COMPID_northAmericanCup ||
+        id == COMPID_copaAmerica || id == COMPID_africanNationsCup ||
+        id == COMPID_asianCup || id == COMPID_oceaniaCup) {
         *weightedCategory *= 6;
         *weightAccum += 6;
         return;
     }
     /* World Cup qualifiers (range check): weight 4 */
-    if ((uintptr_t)compPtr >= (uintptr_t)_worldCupQualifyingGroup1Copy &&
-        (uintptr_t)compPtr <= (uintptr_t)_oceaniaWorldCupQualificationCopy) {
+    if (comp_is_wc_qualifier(id)) {
         *weightedCategory *= 4;
         *weightAccum += 4;
         return;
@@ -1067,7 +1074,7 @@ static void setupWorldCupQualifyingGroups(uint16_t **teamListPtr)
                 _careerCupPickList[0] = (void *)group;
                 teamId = _selTeamNumber;
             } else {
-                if (group == _worldCupQualifyingGroup8Copy && colOffset >= d5)
+                if (comp_id(group) == COMPID_worldCupQualifyingGroup8 && colOffset >= d5)
                     continue;
                 do {
                     teamId = *(*teamListPtr)++;
@@ -1221,7 +1228,7 @@ static void setCupPickList_Europe(uint16_t **teamListPtr)
             }
 
             if (readFromList) {
-                if (group == _ecQualifyingGroup8Copy && (uint16_t)colOffset >= 8)
+                if (comp_id(group) == COMPID_ecQualifyingGroup8 && (uint16_t)colOffset >= 8)
                     continue;
                 do {
                     teamId = *(*teamListPtr)++;
@@ -1465,7 +1472,7 @@ static void processDiyLeagueQualificationEntry(uint16_t index, uint8_t *competit
     /* Typed dispatch (see header comment for derivation). The walk via
      * `divisions[i].qualifierLinkOffset` is replaced with direct struct-member
      * access. */
-    if (competition != (uint8_t *)&_englishLeague) {
+    if (comp_id(competition) != COMPID_englishLeague) {  /* non-NULL: deref'd above */
         /* Non-English country reached the walk despite divisions[i].qualifierLinkOffset
          * being expected zero — unexpected. Bail safely rather than
          * re-introduce the broken byte walk. */

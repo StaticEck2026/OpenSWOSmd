@@ -5,6 +5,7 @@
  */
 #include "statistics.h"
 #include "translations.h"
+#include "comp_identity.h"
 #include "game_types.h"
 #include "menu_system.h"
 #include "play_match_menu.h"
@@ -1539,14 +1540,11 @@ static int16_t EncodeCompetitionPositionForSeasonInfo_impl(
         if (comp->matchStarted == 0)
             return -106;   /* league not started/invalid */
 
-        /* Check if compDef is a World Cup qualifying group */
-        if ((uintptr_t)compDef >= (uintptr_t)_worldCupQualifyingGroup1Copy &&
-            (uintptr_t)compDef <= (uintptr_t)_oceaniaWorldCupQualificationCopy)
+        /* Negate position if compDef is a World Cup or EC qualifying group */
+        uint8_t defId = compDef ? comp_id(compDef) : 0xFFu;
+        if (comp_is_wc_qualifier(defId))
             goto negate;
-
-        /* Check if compDef is a European Championship qualifying group */
-        if ((uintptr_t)compDef >= (uintptr_t)_ecQualifyingGroup1Copy &&
-            (uintptr_t)compDef <= (uintptr_t)_ecQualifyingGroup8Copy)
+        if (comp_is_ec_qualifier(defId))
             goto negate;
 
         /* Check finished flag at extended +0x60 (minSubstitutes) */
@@ -1766,11 +1764,9 @@ void Career_FillCurrentSeasonInfo(void)
                 d1, (uint8_t *)&_primaryCompetitionBuf, compDef);
             a5->comp1Result = (int8_t)d1;
 
-            /* Check qualifying stage status */
-            if (((uintptr_t)compDef >= (uintptr_t)_worldCupQualifyingGroup1Copy &&
-                 (uintptr_t)compDef <= (uintptr_t)_oceaniaWorldCupQualificationCopy) ||
-                ((uintptr_t)compDef >= (uintptr_t)_ecQualifyingGroup1Copy &&
-                 (uintptr_t)compDef <= (uintptr_t)_ecQualifyingGroup8Copy))
+            /* Check qualifying stage status (WC or EC qualifier) */
+            uint8_t defId = compDef ? comp_id(compDef) : 0xFFu;
+            if (comp_is_wc_qualifier(defId) || comp_is_ec_qualifier(defId))
             {
                 a5->tournamentStatus = 1;
                 if (_qualifyingStage1PendingFlag0 == 0 &&

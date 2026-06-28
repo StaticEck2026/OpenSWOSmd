@@ -9,6 +9,7 @@
  */
 
 #include "diy_competition.h"
+#include "comp_identity.h"
 #include "translations.h"
 #include "auto_skip_debug.h"
 #include "endian_helpers.h"
@@ -1840,7 +1841,7 @@ static void getCurrentFixtureTeamPtrs(uint8_t **team1Out, uint8_t **team2Out)
     /* Select fixture schedule: EC fixture data or general table */
     uint8_t *schedule;
     uint8_t compId = a0s->field_2E;
-    if (compId == _europeanChampionships[0] || compId == _europeanChampionships2[0]) {
+    if (compId == COMPID_europeanChampionships || compId == COMPID_europeanChampionships2) {
         schedule = _euroChampFixtureData;
     } else {
         uint16_t groups = (uint16_t)a0s->totalMatchesInRound;
@@ -3830,7 +3831,7 @@ void DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
     {
         const uint8_t *teamList = ((DIYTournamentState *)diy)->teamIndexOrder;
         SWOS_AUTOSKIP_LOG("BuildSeededBracket: ENTER compNum=0x%02x WC?=%d numTeams=%d roundComplete=%d",
-                          (unsigned)compNum, (int)(compNum == _worldCup[0]),
+                          (unsigned)compNum, (int)(compNum == COMPID_worldCup),
                           (int)compS->numTeams, (int)diyS->roundComplete);
         SWOS_AUTOSKIP_LOG("BuildSeededBracket: teamList(0x5A)[0..15] BEFORE=%02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x  %02x %02x %02x %02x",
                           teamList[0], teamList[1], teamList[2], teamList[3],
@@ -3839,7 +3840,7 @@ void DIY_BuildSeededBracketAndUpdateScores(uint8_t *diy, uint8_t *slot,
                           teamList[12], teamList[13], teamList[14], teamList[15]);
     }
 #endif
-    if (compNum == _worldCup[0]) {
+    if (compNum == COMPID_worldCup) {
         DIY_AdjustWorldCupBracketScores(diy, slot, comp);
         goto copy_back;
     }
@@ -3996,7 +3997,7 @@ void DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
 check_worldcup:
     {
         uint8_t compNum = diyS->field_2E;
-        if (compNum == _worldCup[0]) {
+        if (compNum == COMPID_worldCup) {
             DIY_AdjustWorldCupBracketScores(diy, slot, comp);
         }
     }
@@ -4032,14 +4033,14 @@ void DIY_BuildTeamGridAndIndexMaps(uint8_t *diy, uint8_t *slot,
     uint8_t compNum = diyS->field_2E;
 
     /* Check for world cup — use comp-specific list directly */
-    if (compNum == _worldCup[0]) {
+    if (compNum == COMPID_worldCup) {
         buildCompSpecificTeamList(diy);
         goto copy_and_index;
     }
 
     /* Check for European championships — use comp-specific shuffle */
-    if (compNum == _europeanChampionships[0] ||
-        compNum == _europeanChampionships2[0]) {
+    if (compNum == COMPID_europeanChampionships ||
+        compNum == COMPID_europeanChampionships2) {
         buildCompSpecificTeamShuffle(diy);
         goto copy_and_index;
     }
@@ -4176,14 +4177,14 @@ void DIY_ShuffleTeamsAndBuildCompTeamList(uint8_t *diy, uint8_t *slot,
     uint8_t compNum = diyS->field_2E;
 
     /* Check for world cup — use comp-specific list */
-    if (compNum == _worldCup[0]) {
+    if (compNum == COMPID_worldCup) {
         buildCompSpecificTeamList(diy);
         goto copy_to_comp;
     }
 
     /* Check for European championships — use comp-specific shuffle */
-    if (compNum == _europeanChampionships[0] ||
-        compNum == _europeanChampionships2[0]) {
+    if (compNum == COMPID_europeanChampionships ||
+        compNum == COMPID_europeanChampionships2) {
         buildCompSpecificTeamShuffle(diy);
         goto copy_to_comp;
     }

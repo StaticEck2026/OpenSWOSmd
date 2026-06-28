@@ -5,6 +5,7 @@
  */
 #include "menus.h"
 #include "translations.h"
+#include "comp_identity.h"
 #include "endian_helpers.h"
 #include "auto_skip_debug.h"
 #ifdef SWOS_DEBUG_AUTOSKIP
@@ -4456,8 +4457,8 @@ void ViewCompetitionsOnReturn(void)
     _menuEntries[4].fg = (uintptr_t)_euroCupsCompetitionContextBuf.tourn.header.competitionName;
 
     /* If primary competition is tour/friendly, hide entry 1 and shift Y coords up */
-    if (_currentCompetitionPtr == (uint8_t *)_tourCopy
-        || _currentCompetitionPtr == (uint8_t *)_friendlyCopy)
+    if (comp_is_tour_or_friendly(_currentCompetitionPtr
+            ? comp_id((void *)_currentCompetitionPtr) : 0xFFu))
     {
         _menuEntries[1].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3, 3←2, 2←1 */
@@ -4469,8 +4470,7 @@ void ViewCompetitionsOnReturn(void)
 
     /* If secondary competition is null/tour/friendly, hide entry 2 and shift */
     if (_secondaryCompetitionPtr == 0
-        || _secondaryCompetitionPtr == (uint8_t *)_friendlyCopy
-        || _secondaryCompetitionPtr == (uint8_t *)_tourCopy)
+        || comp_is_tour_or_friendly(comp_id((void *)_secondaryCompetitionPtr)))
     {
         _menuEntries[2].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3, 3←2 */
@@ -4481,8 +4481,7 @@ void ViewCompetitionsOnReturn(void)
 
     /* If tertiary competition is null/tour/friendly, hide entry 3 and shift */
     if (_tertiaryCompetitionPtr == 0
-        || _tertiaryCompetitionPtr == (uint8_t *)_friendlyCopy
-        || _tertiaryCompetitionPtr == (uint8_t *)_tourCopy)
+        || comp_is_tour_or_friendly(comp_id((void *)_tertiaryCompetitionPtr)))
     {
         _menuEntries[3].isInvisible = 1;
         /* Shift Y coordinates: 5←4, 4←3 */
@@ -4521,8 +4520,8 @@ void ViewCompetitionsOnReturn(void)
 __attribute__((used, externally_visible))
 void ViewCompetitionsInit(void)
 {
-    if (_currentCompetitionPtr == (uint8_t *)_tourCopy
-        || _currentCompetitionPtr == (uint8_t *)_friendlyCopy)
+    if (comp_is_tour_or_friendly(_currentCompetitionPtr
+            ? comp_id((void *)_currentCompetitionPtr) : 0xFFu))
     {
         SetCurrentEntry(5);
 

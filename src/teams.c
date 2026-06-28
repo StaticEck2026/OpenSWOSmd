@@ -5,6 +5,7 @@
  */
 #include "teams.h"
 #include "career_teams.h"
+#include "comp_identity.h"
 #include "swos_platform.h"   /* HLOG — force-included by the SDL Makefile, not the
                                Amiga one, so include it explicitly */
 #include "endian_helpers.h"  /* BE_READ_U16 / PACK_BE_U16 */
@@ -2288,7 +2289,8 @@ void ChooseTeamsFriendlyInit(void)
 
     /* Handle choosingPreset / copaAmerica */
     if (_choosingPreset != 0) {
-        if (_selectedContest == (uintptr_t)_copaAmerica) {
+        if (_selectedContest != 0 &&
+            comp_id((void *)_selectedContest) == COMPID_copaAmerica) {
             _menuEntries[74].isInvisible = 1;
         }
     }
