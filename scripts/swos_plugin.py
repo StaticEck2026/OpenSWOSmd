@@ -12,6 +12,7 @@ system is shared C and the FS-UAE stub is now write-capable (see
 docs/HARNESS.md "FS-UAE write support"). The injection point is a single line in
 the shared MenuProc, so one mechanism drives both.
 """
+import os
 import re
 import subprocess
 import time
@@ -74,8 +75,44 @@ class SwosHarness:
         return self._is_sdl
 
     # ---- being at the injection point -------------------------------------
+    # ---- Amiga one-shot-port auto-recovery -------------------------------
+    def amiga_up(self, fresh=False):
+        """Bring up / recover the Amiga FS-UAE+gdb session via amiga_gdb.sh
+        (no-op on SDL). `up` is idempotent: it REUSES a live healthy session
+        instantly and does a full FS-UAE+daemon RESTART only if the one-shot
+        debugger port was burned / the session died. fresh=True forces a clean
+        restart. Returns True if the session came up ('OK')."""
+        if self.is_sdl():
+            return True
+        sh = os.path.join(os.path.dirname(self.h.proxy), "amiga_gdb.sh")
+        args = ["bash", sh, "up"] + (["--fresh"] if fresh else [])
+        r = subprocess.run(args, capture_output=True, text=True, timeout=300)
+        return "OK" in (r.stdout + r.stderr)
+
+    def _amiga_session_dead(self):
+        """True iff the Amiga daemon/target is DEFINITIVELY dead — safe to re-up:
+        no socket, no ping, or gdb reports the remote target gone. A RUNNING
+        target (HEALTH 'running (busy)') and a STOPPED one are both LIVE -> False,
+        so a drive is never re-booted out from under itself on a false positive."""
+        if not os.path.exists("/tmp/swos_gdb.sock"):
+            return True
+        if "pong" not in (self.h._simple("ping") or ""):
+            return True
+        h = self.h.health() or ""
+        return any(s in h for s in ("not being run", "Remote connection closed",
+                                    "Connection refused"))
+
     def prime(self, timeout=120):
         """Ensure a breakpoint at the inject line and stop the target on it."""
+        # Amiga: auto-recover a DEAD session (FS-UAE crash / one-shot port burned)
+        # before driving, instead of hard-failing the run. Conservative — only
+        # fires when the daemon is unreachable or gdb says the remote is gone,
+        # never for a merely-running target. amiga_gdb.sh up reuses a healthy
+        # session instantly, so this is ~free when the session is live.
+        if not self.is_sdl() and self._amiga_session_dead():
+            print("[harness] Amiga session dead/burned — recovering via "
+                  "amiga_gdb.sh up", flush=True)
+            self.amiga_up()
         if "menu_system.c:1567" not in self.h.cmd("info breakpoints"):
             self.h.break_at(INJECT_LINE)
         self.h.cmd("continue", timeout=3)
@@ -480,7 +517,7 @@ class SwosHarness:
         return self.h.is_stopped()
 
     # ---- the season transition (skip-latch; NO free-run into a modal) ------
-    def drive_transition(self, max_stops=80, timeout=14):
+    def drive_transition(self, max_stops=80, timeout=None):
         """Drive ONE season transition to the next season's increment. Assumes
         CONTINUE CAREER was just fired at the hub (or _seasonUpdateInProgress is
         already set). Returns the new _currentSeasonShowing, or None if it stuck
@@ -493,6 +530,12 @@ class SwosHarness:
         the proven-reliable core (season 3->4 verified, health OK throughout,
         threads untouched)."""
         h = self.h
+        # Mode-aware per-continue timeout: a cycle-exact 68020 `continue` through
+        # the season-transition screens runs far longer than a native SDL frame,
+        # so the old SDL-tuned 14s falsely declared "stuck" while the Amiga was
+        # still progressing (2026-06-28). Pick by target; callers can override.
+        if timeout is None:
+            timeout = 14 if self.is_sdl() else 90
         start = h.int_value("_currentSeasonShowing")
         h.set_var("s_seasonSkipLatched", 1)
         h.delete_breakpoints()
@@ -514,7 +557,7 @@ class SwosHarness:
         return None
 
     # ---- the in-season fixtures (auto-sim via teamControls=1) --------------
-    def drive_inseason(self, max_steps=2000, timeout=25, stuck_limit=40,
+    def drive_inseason(self, max_steps=2000, timeout=None, stuck_limit=40,
                        sim_mode=True):
         """Drive the current season to the season-end hub (CareerOverInit).
         Returns True if the hub was reached.
@@ -549,6 +592,10 @@ class SwosHarness:
         finding was the reload-in-place confound above). The sim lever and the
         season TRANSITION path (drive_transition) work."""
         h = self.h
+        # Mode-aware per-continue timeout (see drive_transition): FS-UAE matches
+        # auto-sim far slower than native SDL, so use a longer wait on Amiga.
+        if timeout is None:
+            timeout = 25 if self.is_sdl() else 90
         h.delete_breakpoints()
         h.break_at(INJECT_LINE)
 
