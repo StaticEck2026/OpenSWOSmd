@@ -35,7 +35,7 @@ extern uint8_t _euroCupEligibleCompetitionIds[];
 extern uint8_t _cupWinnersCupEligibleCompetitionIds[];
 extern uint8_t _uefaCupEligibleCompetitionIds[];
 
-extern uint8_t _currentCompetitionId;
+extern uint8_t _currentCompetitionIndex;
 extern uint16_t _euroCupQualifiedTeamCount;
 extern uint16_t _cupWinnersCupQualifiedTeamCount;
 extern uint16_t _uefaCupQualifiedTeamCount;
@@ -110,7 +110,7 @@ static void appendTeamToList(uint8_t *teamGrid, uint8_t **writePtrAddr, uint16_t
  * Asm: TryConsumeCompetitionIdFromList */
 static int16_t tryConsumeCompetitionIdFromList(uint8_t *list)
 {
-    uint8_t id = _currentCompetitionId;
+    uint8_t id = _currentCompetitionIndex;
     while (*list != 0xFF) {
         if (*list == id) {
             *list = 0xFE;
@@ -274,7 +274,7 @@ __attribute__((used, externally_visible))
 void Career_ProcessCompetitionForEuropeanCupQualification(void)
 {
     /* countriesTable is uint32_t[] (pointer table); index by competition ID */
-    uint16_t idx = (uint8_t)_currentCompetitionId;
+    uint16_t idx = (uint8_t)_currentCompetitionIndex;
     uint8_t *countryPtr = (uint8_t *)_countriesTable[idx];
     if (*countryPtr != 0)
         return; /* not European (first byte != 0) → skip */

@@ -248,7 +248,7 @@ uint8_t _left  = 0;
 uint8_t _right  = 0;
 uint8_t _shirtType1  = 0;
 uint8_t _shirtType2  = 0;
-uint8_t _currentCompetitionId  = 0;
+uint8_t _currentCompetitionIndex  = 0;
 /* diyLeaguePitchTypeStrTable: real packed-struct definition in
  * swos_amiga_ptr_imports.c. The auto-extractor mis-classified it as a
  * scalar with the SWOS2.s file offset (188198) as its value. */
