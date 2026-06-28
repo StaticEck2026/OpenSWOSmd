@@ -4568,7 +4568,7 @@ static void emit_comp_slot(mjson_print_fn_t fn, void *fnd,
         "%Q:%u,%Q:%u,%Q:%u",
         "type",      (int)b->competitionType,
         "is_active", (unsigned)b->isActive,
-        "comp_id",   (unsigned)b->compSlot,
+        "comp_slot", (unsigned)b->compSlot,
         "slot_id",   (unsigned)b->slotId,
         "field_2e",  (unsigned)b->field_2E,
         "view_phase",(unsigned)b->viewRandomPhase,
@@ -4976,7 +4976,7 @@ static void load_comp_slot(const char *parent, int plen,
 
     LD16("type", b->competitionType);
     LDU16("is_active", b->isActive);
-    LD8("comp_id", b->compSlot);
+    LD8("comp_slot", b->compSlot);
     LD8("slot_id", b->slotId);
     LD8("field_2e", b->field_2E);
     /* compSlot/slotId is a host-native word (see emit_comp_slot). The bytes
