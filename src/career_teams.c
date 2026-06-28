@@ -1333,7 +1333,7 @@ void Career_LoadCompetitionSlotStateFromBuffer(uint8_t *src)
                           "leagueMatchProgress=%u leagueCurrentSlot=%u "
                           "totalMatchesPerSectionLive=%d",
                           (void *)src, (unsigned)type,
-                          (unsigned)*(uint16_t *)&bex->base.compId,
+                          (unsigned)*(uint16_t *)&bex->base.compSlot,
                           (unsigned)bex->minSubstitutes,
                           (unsigned)bex->base.playEachTeam,
                           (unsigned)bex->leagueMatchProgress,
@@ -1758,8 +1758,8 @@ void Career_ProcessCurrentCompetitionSlotAfterMatch(void)
         /* Type 0: league */
         Career_AutoPlayOrSimulateLeagueFixtureLoop();
         Career_StoreCompetitionSlotStateToBuffer(slotPtr);
-        /* slotPtr+0x2C = compId/slotId word (DIYCompetition.compId field) */
-        if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
+        /* slotPtr+0x2C = compSlot/slotId word (DIYCompetition.compSlot field) */
+        if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compSlot != 0)
             return;
         /* slotPtr+0x60 = first byte of competition's extended (DIYCompetitionEx)
          * region = minSubstitutes */
@@ -1880,7 +1880,7 @@ void Career_OpenCompetitionSlotMenuAndApplyChanges(uint16_t d2)
     }
 
     /* Rebuild caches if competition is done (type==0, no round/phase left) */
-    if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compId != 0)
+    if (*(uint16_t *)&((DIYCompetition *)slotPtr)->compSlot != 0)
         return;
     if (*(uint16_t *)slotPtr != 0)
         return;
@@ -2113,7 +2113,7 @@ void Career_AutoSimulateCupMatchesUntilHumanTeam(void)
     SWOS_AUTOSKIP_LOG("[bug4-cup] AutoSimUntilHuman ENTER compId=0x%04X "
                       "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
                       "competitionFinished=%d",
-                      (unsigned)*(uint16_t *)&bex0->base.compId,
+                      (unsigned)*(uint16_t *)&bex0->base.compSlot,
                       (int)bex0->base.currentRoundIndex, (int)bex0->base.numRounds,
                       (int)bex0->matchData.cup.currentMatchIndex,
                       (int)bex0->base.totalMatchesInRound,
@@ -2230,7 +2230,7 @@ void Career_AutoPlayCupMatchAndAdvanceLoop(void)
     SWOS_AUTOSKIP_LOG("[bug4-cup] AutoPlayCupLoop ENTER compId=0x%04X "
                       "roundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
                       "competitionFinished=%d careerSlotProcessingInProgress=%d",
-                      (unsigned)*(uint16_t *)&bex0->base.compId,
+                      (unsigned)*(uint16_t *)&bex0->base.compSlot,
                       (int)bex0->base.currentRoundIndex, (int)bex0->base.numRounds,
                       (int)bex0->matchData.cup.currentMatchIndex,
                       (int)bex0->base.totalMatchesInRound,
@@ -2771,7 +2771,7 @@ static uint8_t *addNextRoundCupEntry(uint8_t **srcPtr, uint16_t idx, uint16_t to
     uint16_t cupRoundIdx = GetNextCupRoundStringIndex(idx, total, ((DIYCompetition *)base)->subRoundCounter);
     e->cupRoundStringIdx = (uint8_t)cupRoundIdx;
     e->roundIdx          = (uint8_t)idx;
-    e->compId            = (uint8_t)teamId;
+    e->compSlot            = (uint8_t)teamId;
     e->entryStride       = slotLen;
     e->phaseFlag         = 0;
     e->totalElements     = 0;
@@ -2810,7 +2810,7 @@ static uint8_t *addCupEntry(uint8_t **srcPtr, uint16_t teamSlot, uint16_t roundI
                                                     opt);
     e->cupRoundStringIdx = (uint8_t)cupRoundIdx;
     e->roundIdx          = (uint8_t)roundIdx;
-    e->compId            = (uint8_t)teamSlot;
+    e->compSlot            = (uint8_t)teamSlot;
     e->entryStride       = slotLen;
     e->phaseFlag         = 0;
     e->totalElements     = 0;
@@ -2853,7 +2853,7 @@ void TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         /* +0x1CE = leagueSectionState.phaseStartMonths (per-round month bytes) */
         uint8_t *src = baseEx->leagueSectionState.phaseStartMonths;
         uint16_t count = baseEx->leagueTotalMatches;
-        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;  /* slot/team index */
+        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compSlot;  /* slot/team index */
         int16_t i = (int16_t)count - 1;
 
         while (i >= 0) {
@@ -2862,7 +2862,7 @@ void TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
             TeamSelectionKeyCacheEntry *e = (TeamSelectionKeyCacheEntry *)out;
             _teamSelectionKeyCacheCount++;
             e->sortKey = *src++;
-            e->compId = (uint8_t)teamSlot;
+            e->compSlot = (uint8_t)teamSlot;
             e->entryStride = slotLen;
             e->phaseFlag = 0;
             e->totalElements = 0;
@@ -2877,7 +2877,7 @@ void TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         /* Cup type (single competition) */
         DIYCompetitionEx *baseEx = (DIYCompetitionEx *)blk;
         uint8_t *base = blk;         /* a6: constant base for AddNextRoundCupEntry */
-        uint16_t teamId = *(uint16_t *)&baseEx->base.compId;  /* slot/team index */
+        uint16_t teamId = *(uint16_t *)&baseEx->base.compSlot;  /* slot/team index */
         /* +0x338 = bracketScratch.progTable */
         uint8_t *src = baseEx->bracketScratch.progTable;
         uint16_t numRounds = comp->numRounds;
@@ -2939,7 +2939,7 @@ void TeamSelectionKeyCache_BuildFromCompetitionBlock(uint8_t *blk)
         /* +0x15A = first slot's _pad_00 word (used as opt for GetCupRoundStringIndex) */
         DIYTournamentSlot *firstSlot = (DIYTournamentSlot *)(base + 0x15A);
         uint16_t opt = *(uint16_t *)firstSlot->_pad_00;
-        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compId;
+        uint16_t teamSlot = *(uint16_t *)&baseEx->base.compSlot;
         uint8_t *out = _teamSelectionKeyCache;
         TeamSelectionKeyCacheEntry *e;
         uint16_t numSlots = comp->totalMatchesInRound;

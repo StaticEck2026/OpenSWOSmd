@@ -651,7 +651,7 @@ typedef struct DIYCompetition {
     union { uint16_t isActive; uint16_t competitionOver; }; /* 0x02: in-use flag (cup) / "over" flag (slot alias) */
     int8_t   competitionName[36];      /* 0x04: competition name string buffer */
     uint8_t *namePtr;                  /* 0x28: ptr to competition name string */
-    uint8_t  compId;                   /* 0x2C: competition ID byte */
+    uint8_t  compSlot;                   /* 0x2C: competition slot cache-key byte (pairs with slotId) */
     uint8_t  slotId;                   /* 0x2D: competition slot index for cache matching */
     uint8_t  field_2E;                 /* 0x2E: team configuration byte */
     uint8_t  viewRandomPhase;          /* 0x2F: current month/phase for scheduling */
@@ -1318,7 +1318,7 @@ typedef struct __attribute__((packed)) TeamSelectionKeyCacheMatchSlot {
 typedef char _tskc_slot_size_check[(sizeof(TeamSelectionKeyCacheMatchSlot) == 12) ? 1 : -1];
 
 typedef struct __attribute__((packed)) TeamSelectionKeyCacheEntry {
-    uint8_t  compId;            /* +0 — competition id (matched in lookup) */
+    uint8_t  compSlot;            /* +0 — competition slot cache key (matched in lookup) */
     uint8_t  sortKey;           /* +1 — InsertSpaceSorted insertion key */
     uint16_t entryStride;       /* +2 — host-native; = 10 + numTeams*12 */
     uint8_t  phaseFlag;         /* +4 — 0 == unprocessed */

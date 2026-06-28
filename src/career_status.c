@@ -1083,13 +1083,13 @@ void UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team) {
     if (_isNationalSelector != 0)
         return;
 
-    /* Read the (compId, slotId) word at +0x2C. *(uint16_t *) gives the
-     * value that was written via *(uint16_t *)&compId = slot regardless
-     * of host endian. PACK_BE_U16(compId, slotId) is wrong on SDL LE
-     * because the byte layout is reversed (slot ends up in compId byte,
+    /* Read the (compSlot, slotId) word at +0x2C. *(uint16_t *) gives the
+     * value that was written via *(uint16_t *)&compSlot = slot regardless
+     * of host endian. PACK_BE_U16(compSlot, slotId) is wrong on SDL LE
+     * because the byte layout is reversed (slot ends up in compSlot byte,
      * not slotId byte) — that produced compType = slot << 8 and made
      * every match dispatch to the panic branch. */
-    int16_t compType = (int16_t)*(uint16_t *)&comp->base.compId;
+    int16_t compType = (int16_t)*(uint16_t *)&comp->base.compSlot;
     uint32_t d7;
 
     if (compType == 0) {
@@ -3888,7 +3888,7 @@ void Career_AutoAdvanceLeagueFixtures(void)
                           "leagueCurrentSlot=%u totalMatchesPerSectionLive=%d "
                           "totalMatchesInRound=%d subRoundCounter=%d "
                           "seasonFinished=%u",
-                          (unsigned)*(uint16_t *)&base->compId, (unsigned)slotIdx,
+                          (unsigned)*(uint16_t *)&base->compSlot, (unsigned)slotIdx,
                           (unsigned)currentPhase, (unsigned)nextPhase,
                           (unsigned)base->viewRandomPhase,
                           (unsigned)lastMatch, (unsigned)bex->leagueMatchProgress,
@@ -3947,7 +3947,7 @@ show_menu_check:
         SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague EXIT(show_menu) compId=0x%04X "
                           "viewRandomPhase=%u leagueMatchProgress=%u sectionsLeft=%u "
                           "leagueCurrentSlot=%u totalMatchesPerSectionLive=%d subRoundCounter=%d",
-                          (unsigned)*(uint16_t *)&base->compId,
+                          (unsigned)*(uint16_t *)&base->compSlot,
                           (unsigned)base->viewRandomPhase,
                           (unsigned)bex->leagueMatchProgress,
                           (unsigned)bex->minSubstitutes,
@@ -3971,7 +3971,7 @@ catch_up_phase:
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug3-league] AutoAdvanceLeague catch_up_phase compId=0x%04X "
                       "lastMatch=%u viewRandomPhase=%u (eq=%d)",
-                      (unsigned)*(uint16_t *)&base->compId,
+                      (unsigned)*(uint16_t *)&base->compSlot,
                       (unsigned)lastMatch, (unsigned)base->viewRandomPhase,
                       (int)(lastMatch == base->viewRandomPhase));
 #endif
@@ -4035,7 +4035,7 @@ void Career_AutoAdvanceCupMatches(void)
                       "currentPhase=%u nextPhase=%u viewRandomPhase=%u lastMatch=%u "
                       "currentRoundIdx=%d/%d matchIdx=%d/%d roundComplete=%d "
                       "competitionFinished=%d hasGroups=%d",
-                      (unsigned)*(uint16_t *)&base->compId,
+                      (unsigned)*(uint16_t *)&base->compSlot,
                       (unsigned)currentPhase, (unsigned)nextPhase,
                       (unsigned)base->viewRandomPhase, (unsigned)lastMatch,
                       (int)base->currentRoundIndex, (int)base->numRounds,
@@ -4062,7 +4062,7 @@ cup_main_loop:
                           "iter>%d compId=0x%04X viewRandomPhase=%u currentPhase=%u "
                           "roundComplete=%d competitionFinished=%d",
                           debug_cup_iters,
-                          (unsigned)*(uint16_t *)&base->compId,
+                          (unsigned)*(uint16_t *)&base->compSlot,
                           (unsigned)base->viewRandomPhase, (unsigned)currentPhase,
                           (int)base->roundComplete,
                           (int)base->competitionFinished);
@@ -4090,7 +4090,7 @@ cup_finished:
 #ifdef SWOS_DEBUG_AUTOSKIP
     SWOS_AUTOSKIP_LOG("[bug4-cup] AutoAdvanceCupMatches cup_finished compId=0x%04X "
                       "iters=%d hasGroups=%d viewRandomPhase=%u",
-                      (unsigned)*(uint16_t *)&base->compId,
+                      (unsigned)*(uint16_t *)&base->compSlot,
                       debug_cup_iters, (int)base->hasGroups,
                       (unsigned)base->viewRandomPhase);
 #endif
@@ -4114,7 +4114,7 @@ cup_show_menu_check:
     SWOS_AUTOSKIP_LOG("[bug4-cup] AutoAdvanceCupMatches EXIT (show_menu) compId=0x%04X "
                       "iters=%d currentRoundIdx=%d viewRandomPhase=%u "
                       "roundComplete=%d competitionFinished=%d",
-                      (unsigned)*(uint16_t *)&base->compId,
+                      (unsigned)*(uint16_t *)&base->compSlot,
                       debug_cup_iters, (int)base->currentRoundIndex,
                       (unsigned)base->viewRandomPhase,
                       (int)base->roundComplete,
@@ -4267,9 +4267,9 @@ void Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t div
     }
 
     /* Get the slot state pointer from careerCompetitionSlotPtrTable.
-     * +0x2C = compId/slotId word in DIYCompetition base. */
+     * +0x2C = compSlot/slotId word in DIYCompetition base. */
     uint8_t *slotState = _careerCompetitionSlotPtrTable[slot];
-    *(uint16_t *)&((DIYCompetition *)slotState)->compId = slot;
+    *(uint16_t *)&((DIYCompetition *)slotState)->compSlot = slot;
 
     /* Load competition slot state from buffer */
     /* asm: exg a0,a1 → a0=slotState for the call, then exg back */
@@ -4354,9 +4354,9 @@ init_competition:
     InitCompetitionFromRecord(divisionIndex, comp);
 
     /* Store slot index to both diyFileBufferCopy and diyCompetitionStart.
-     * +0x2C = compId/slotId word in DIYCompetition base. */
-    *(uint16_t *)&_diyFileBufferCopy.header.compId = slot;
-    *(uint16_t *)&_diyCompetitionStart.base.compId = slot;  /* writes compId+slotId as word */
+     * +0x2C = compSlot/slotId word in DIYCompetition base. */
+    *(uint16_t *)&_diyFileBufferCopy.header.compSlot = slot;
+    *(uint16_t *)&_diyCompetitionStart.base.compSlot = slot;  /* writes compId+slotId as word */
 
     /* Write comp type to slot state header (sign-extended from int8). */
     int16_t typeWord = (int16_t)compType;
