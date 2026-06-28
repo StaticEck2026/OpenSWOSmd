@@ -363,19 +363,23 @@ tournaments.json → install log "1 dynamic competition(s)", `Comp_ById(60)` ret
 the heap record (compNumber 60, type 2), `_careerContests[34]` == that record with
 the sentinel moved to [35], `Comp_ById(99)`==NULL. Test record then reverted.
 
-### ⚠ Pre-existing finding (NOT caused by this work) — sg[]/sp[]/R[] id mismatch
+### sg[]/sp[]/R[]/QT[] id-prefix mismatch — RESOLVED (2026-06-27)
 
-The data_json competition ids are **`_`-prefixed** (C-symbol style: `_euroCup`,
-`_cupWinnersCup`), but the loader's hardcoded `sg[]` (tournaments+playoffs), `sp[]`
-(special cups/leagues), and `R[]` (region) id lists use **non-prefixed** ids
-(`euroCup`). So those three patch-loops `dj_find_comp_record` find **0 records** —
-the install summary shows `0 tournaments, 0 playoffs, 0 special records, 0 region
-tables`. Harmless today (the compiled records are identical, so the compiled
-fallback is correct), but it means the JSON is NOT currently overriding the
-standalone tournaments / special cups / region tables (only the country
-league/cup tables, which match JSON-internally via `reg[]`). The dynamic loader
-sidesteps this by detecting via compNumber. **Decide during the data re-baseline:**
-either prefix the `sg[]/sp[]/R[]` ids with `_`, or drop the `_` in the JSON.
+The data_json competition ids are **`_`-prefixed** (C-symbol style: `_euroCup`),
+but the loader's FOUR hardcoded id lists — `sg[]` (tournaments+playoffs), `sp[]`
+(special cups/leagues), `R[]` (region comp refs), `QT[]` (region table ids) —
+used **non-prefixed** ids, so those patch-loops found **0 records** (install log
+`0 tournaments / 0 playoffs / 0 special / 0 region`). Harmless (compiled fallback
+identical) but meant the JSON wasn't actually driving the standalone/region comps.
+
+Per the chosen convention ("everything that references a variable is `_`-prefixed,
+as in the code"), the fix is to **prefix the loader ids** (88 strings across the
+four lists). Result: `13 tournaments, 7 playoffs, 26 special records, 10 region
+tables (0 kept-compiled)` now load. **Proven a faithful no-op:** the region
+loop's `memcmp` guard accepted all 10 tables byte-identically (`regionMiss=0`, no
+`JSON != compiled`), compNumber spot-checks all matched, and a MILAN season is
+behaviourally identical (`rep=49, panic=0`, same 3→4 transition). Builds green on
+all 3 Linux arches.
 
 ## A.4 Scope read
 
