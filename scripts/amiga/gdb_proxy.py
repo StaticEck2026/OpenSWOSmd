@@ -59,6 +59,23 @@ DEFAULT_BIN   = "/mnt/c/cygwin64/home/headk/SWOS_C_SDL/bin/SWOS"
 DEFAULT_PORT  = 2345
 SOCK_PATH     = "/tmp/swos_gdb.sock"
 
+# A "the target is stopped now" signature in gdb's output: a breakpoint /
+# watchpoint / signal stop, or the bare "(gdb)" prompt (a completed command =>
+# the inferior is stopped). The reader thread uses this to keep the running-state
+# flag accurate even for stops nobody is actively waiting on (an external SIGINT,
+# or a breakpoint hit after a `continue` timed out). See GdbDaemon.running.
+_STOP_SIG = re.compile(r"Breakpoint \d+,|Temporary breakpoint \d+,|"
+                       r"received signal|Watchpoint \d+|hit Hardware watchpoint|"
+                       r"\(gdb\)")
+
+# Pure read-probe commands that BLOCK (no prompt) while the all-stop target is
+# running — issuing one then leaves it queued in gdb's stdin to race the eventual
+# stop output: the classic single-socket wedge (GDB.md). The busy-guard refuses
+# exactly these while running; control/resume/`set`/breakpoint commands pass
+# through (so kill/run/continue/delete during a re-boot are never blocked).
+_PROBE_RE = re.compile(r"^\s*(print|p|inspect|info|x|bt|backtrace|where|"
+                       r"display|frame|f|list|l)\b")
+
 
 def detect_windows_host():
     """On WSL2 the Windows host is whatever /etc/resolv.conf has as nameserver."""
@@ -91,6 +108,12 @@ class GdbDaemon:
         self.mode = mode
         self.attach_ok = True
         self.attach_detail = "sdl" if mode == "sdl" else "pending"
+        # running == the inferior has been resumed (all-stop running). Set True
+        # when a command resumes the target / returns no prompt; cleared the
+        # instant a stop surfaces (see _reader_loop / cmd / wait_stop). The
+        # busy-guard reads it to refuse read-probes that would otherwise wedge
+        # the single gdb socket while the target runs.
+        self.running = False
         # Wait for initial gdb prompt.
         self._wait_for_prompt(timeout=5.0)
         # Drop the banner; subsequent `cmd` calls return clean responses.
@@ -163,6 +186,13 @@ class GdbDaemon:
                 return
             with self.buf_lock:
                 self.buf.extend(chunk)
+            # Keep the running flag accurate independent of who later drains the
+            # buffer: any stop signature (breakpoint/signal/prompt) means the
+            # inferior is stopped now. This un-sticks `running` after an external
+            # SIGINT or a breakpoint hit nobody is actively wait_stop-ing on.
+            if self.running and _STOP_SIG.search(
+                    chunk.decode("utf-8", errors="replace")):
+                self.running = False
 
     def _drain(self):
         with self.buf_lock:
@@ -191,13 +221,29 @@ class GdbDaemon:
 
     def cmd(self, command, timeout=10.0):
         # Capture any async output (e.g., halt notifications) that arrived
-        # since the last command, so we don't lose it.
+        # since the last command, so we don't lose it. (The reader thread has
+        # already cleared `running` if that output contained a stop.)
         pre = self._drain().decode("utf-8", errors="replace")
+        # Busy-guard: while the inferior is running, a read-probe blocks with no
+        # prompt and leaves itself queued in gdb to race the eventual stop — the
+        # classic single-socket wedge. Refuse fast (handing back any async
+        # output) so the caller can wait_stop/interrupt first. Control / resume /
+        # set / breakpoint commands pass through (e.g. `kill` during a re-boot,
+        # or `continue` itself).
+        if self.running and _PROBE_RE.match(command):
+            return pre + ("[BUSY: target running — read-probes refused; "
+                          "wait_stop or interrupt first]")
         self._send_raw(command.rstrip("\n") + "\n")
         got = self._wait_for_prompt(timeout)
         post = self._drain().decode("utf-8", errors="replace")
         if not got:
+            # No prompt within the timeout: the command resumed the target, or
+            # gdb is busy on a still-running target. Mark running so subsequent
+            # read-probes are refused instead of wedging the socket.
+            self.running = True
             return f"[TIMEOUT after {timeout}s — partial output below]\n{pre}{post}"
+        # A prompt came back => the inferior is stopped.
+        self.running = False
         return pre + post
 
     def poll(self, timeout=0.5):
@@ -240,6 +286,7 @@ class GdbDaemon:
                     # follow-up `cmd` doesn't race a half-written prompt.
                     time.sleep(0.25)
                     captured += self._drain().decode("utf-8", errors="replace")
+                    self.running = False     # the inferior has stopped
                     return captured
                 continue
             time.sleep(0.1)
@@ -344,11 +391,16 @@ def daemon_main(args):
                 elif req == "PING":
                     out = "pong"
                 elif req == "HEALTH":
-                    # _target_health is mode-generic (plain `info program` +
-                    # `print/x $pc`), so it returns a real stopped/running
-                    # verdict for the sdl native target too, not just amiga.
-                    ok, detail = d._target_health()
-                    out = ("OK " if ok else "DEGRADED ") + detail
+                    # Busy-aware: probing a RUNNING all-stop target with `info
+                    # program` HANGS (the old "DEGRADED info program hung" + the
+                    # 6s stall), so report the running state from the tracked flag
+                    # instead of wedging gdb. When stopped, _target_health is
+                    # mode-generic (`info program` + `print/x $pc`) for sdl+amiga.
+                    if d.running:
+                        out = "DEGRADED target running (busy — gdb not probed)"
+                    else:
+                        ok, detail = d._target_health()
+                        out = ("OK " if ok else "DEGRADED ") + detail
                 else:
                     out = f"[unknown request] {req!r}"
 

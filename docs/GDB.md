@@ -137,6 +137,45 @@ python3 .../gdb_proxy.py watch --interval 1 --no-frame # faster, PC only
 The manual steps below are the underlying mechanism (kept for reference /
 debugging the orchestrator itself).
 
+## Reliability hardening (2026-06-28)
+
+Three changes removed the failure modes that made driving — especially the Amiga
+— flaky. None change the command interface; existing `cmd`/`waitstop`/`health`
+calls behave the same except where noted.
+
+1. **Mode-aware drive timeouts** (`swos_plugin.py` `drive_transition` /
+   `drive_inseason`). A single cycle-exact 68020 `continue` through the
+   season-transition screens runs far longer than a native SDL frame, so the old
+   SDL-tuned 14s per-continue timeout falsely declared the drive "stuck" while
+   the Amiga was still progressing. The per-continue timeout is now chosen by
+   target — 14s/25s on SDL, **90s on Amiga** (pass `timeout=` to override).
+
+2. **Daemon busy-guard** (`gdb_proxy.py`). The daemon tracks a running-state flag
+   (set when a command resumes the target / returns no prompt; cleared the
+   instant any stop signature — breakpoint / signal / `(gdb)` prompt — surfaces
+   in gdb's output, including an external SIGINT, via the reader thread). Two
+   effects:
+   - `HEALTH` while the target runs returns `DEGRADED target running (busy)`
+     **instantly** instead of blocking ~6s on `info program` (which hangs on a
+     running all-stop target — the old "DEGRADED info program hung"). So the
+     "DEGRADED while running is NORMAL" caveat below is now reported cleanly
+     rather than as a hang, and `is_stopped()` no longer stalls.
+   - **Read-probes** (`print`/`p`/`info`/`x`/`bt`/`where`/`list`/…) issued while
+     the target runs are refused with `[BUSY: …]` instead of queueing inside gdb
+     to race the eventual stop output (the single-socket wedge). Control / resume
+     / `set` / breakpoint commands pass through (so `kill`/`continue` during a
+     re-boot are never blocked). Use `waitstop` (or interrupt) to regain control,
+     then probe.
+
+3. **One-shot-port auto-recovery** (`swos_plugin.py` `amiga_up()` + `prime()`).
+   On Amiga, `prime()` auto-recovers a DEFINITIVELY-dead session — no socket, no
+   ping, or gdb reports the remote target gone ("not being run" / "Remote
+   connection closed" / "Connection refused") — by calling the idempotent
+   `amiga_gdb.sh up` (reuse-if-healthy, else a full FS-UAE restart for the burned
+   one-shot port), instead of hard-failing the run. It is conservative: a
+   merely-running target is LIVE and is never re-booted out from under a drive.
+   `s.amiga_up(fresh=True)` forces a clean restart on demand.
+
 ## Run + attach: manual session (reference)
 
 The order matters: **FS-UAE must be running and listening on its
