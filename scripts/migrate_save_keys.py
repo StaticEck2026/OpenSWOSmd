@@ -43,6 +43,7 @@ SAVE_EXTS = ("CAR", "SEA", "PRE", "DIY")
 RENAMES = {
     "field_1":   "cached_match_value",     # PlayerFile (player-only key)
     "some_flag": "player_values_dirty",    # TeamFile (player one already -> form via RAW below)
+    "comp_id":   "comp_slot",              # DIYCompetition slot-word key (field compId -> compSlot)
 }
 
 # Context-ANCHORED renames, for keys SHARED by more than one struct where a blind

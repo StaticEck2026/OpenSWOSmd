@@ -1083,12 +1083,17 @@ void UpdateCareerFinancesAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team) {
     if (_isNationalSelector != 0)
         return;
 
-    /* Read the (compSlot, slotId) word at +0x2C. *(uint16_t *) gives the
-     * value that was written via *(uint16_t *)&compSlot = slot regardless
-     * of host endian. PACK_BE_U16(compSlot, slotId) is wrong on SDL LE
-     * because the byte layout is reversed (slot ends up in compSlot byte,
-     * not slotId byte) — that produced compType = slot << 8 and made
-     * every match dispatch to the panic branch. */
+    /* The 0x2C word is OVERLOADED: it's named compSlot for its team-selection
+     * cache-key role, but in THIS match-finance path it carries the competition
+     * TYPE discriminator (0=league, 1/2/4=cup, 3=DIY) — hence reading compSlot
+     * into a var called compType. (A future rename pass may give 0x2C a name
+     * that captures both roles, or reconcile it with competitionType@0x00.)
+     *
+     * Read the whole (compSlot, slotId) word: *(uint16_t *) round-trips the
+     * value written via *(uint16_t *)&compSlot = slot on both endians.
+     * PACK_BE_U16(compSlot, slotId) is wrong on SDL LE because the byte layout
+     * is reversed (slot lands in the compSlot byte, not slotId) — that produced
+     * compType = slot << 8 and dispatched every match to the panic branch. */
     int16_t compType = (int16_t)*(uint16_t *)&comp->base.compSlot;
     uint32_t d7;
 
