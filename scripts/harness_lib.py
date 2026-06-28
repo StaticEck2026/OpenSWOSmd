@@ -27,7 +27,7 @@ import sys
 import time
 import zlib
 
-DEFAULT_PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py"
+DEFAULT_PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/scripts/amiga/gdb_proxy.py"
 
 # A single `continue` to the next breakpoint should be sub-second with TURBO
 # (and at most ~1 s without it). When the WSL2/gdb session degrades, the

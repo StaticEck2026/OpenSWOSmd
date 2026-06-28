@@ -9,6 +9,7 @@
  */
 
 #include "game_types.h"
+#include "comp_identity.h"
 #include <string.h>   /* memcpy in Rebuild_CupRecordNameSourcePointers */
 #include "endian_helpers.h"
 #include "menu_system.h"
@@ -152,7 +153,13 @@ void Career_RandomizeInvitationTournamentCup(void)
     int16_t i;
 
     for (i = 4; i >= 0; i--) {
-        if (pickList[i] == (void *)_invitationTournamentCopy) {
+        void *p = pickList[i];
+        /* Entries are competition-copy pointers or the table sentinels 0 / -1 / -2;
+         * only dereference real pointers for the id check (the original compared the
+         * raw pointer, which was sentinel-safe). The replacement stores the actual
+         * tour competition object, so it keeps referencing &_tourCopy. */
+        if (p != 0 && p != (void *)(intptr_t)-1 && p != (void *)(intptr_t)-2 &&
+            comp_id(p) == COMPID_invitationTournament) {
             if (Rand() & 1)
                 pickList[i] = (void *)_tourCopy;
         }
@@ -923,7 +930,7 @@ void DIY_SelectCompetitionSlot4FromCurrentDivision(void)
     CompetitionLeague *league = (CompetitionLeague *)comp;
     if (league->divisions[(uint16_t)_currentDivisionIndex].qualifierLinkOffset == 0)
         return;
-    if (comp != (uint8_t *)&_englishLeague)
+    if (comp_id(comp) != COMPID_englishLeague)   /* comp non-NULL: deref'd at type check above */
         return;  /* only the English leagues carry these per-division links */
 
     uint8_t *diyComp;
@@ -1770,10 +1777,13 @@ void Career_ViewOrEditCompetitionSlot(uint8_t *comp, uint16_t sel)
         }
     }
 
-    /* Step 2: Special replacements for europeanChampionships and worldCup */
-    if (comp == _europeanChampionships)
+    /* Step 2: Special replacements for europeanChampionships and worldCup.
+     * compNumber 22/4 appear only on these templates (the "2" copies are 21/3),
+     * so by-id is exactly equivalent to the old template-address compare. */
+    uint8_t cid = comp ? comp_id(comp) : 0xFFu;
+    if (cid == COMPID_europeanChampionships)
         comp = _europeanChampionships2Copy;
-    if (comp == _worldCup)
+    if (cid == COMPID_worldCup)
         comp = _worldCup2Copy;
 
     /* Step 3: Find which slot owns this competition */

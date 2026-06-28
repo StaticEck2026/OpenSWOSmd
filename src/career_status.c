@@ -29,6 +29,7 @@
  */
 
 #include "career_status.h"
+#include "comp_identity.h"
 #include "diy_competition.h"
 #include "endian_helpers.h"
 #include "career_teams.h"
@@ -910,32 +911,24 @@ static void setPerformanceWarningCooldown(void) {
  */
 __attribute__((used, externally_visible))
 uint16_t IsMajorInternationalTournament(uint8_t **outCtx) {
-    uintptr_t curComp = (uintptr_t)_currentCompetitionPtr;
+    /* Slot pointers may be NULL (empty slot); 0xFF matches no COMPID, so a NULL
+     * slot falls through exactly as the original pointer-compare did. */
+    uint8_t curId = _currentCompetitionPtr ? comp_id((void *)_currentCompetitionPtr) : 0xFFu;
 
-    /* Check primary competition against 9 tournament types */
-    if (curComp == (uintptr_t)_worldCup2Copy ||
-        curComp == (uintptr_t)_europeanChampionships2Copy ||
-        curComp == (uintptr_t)_copaAmericaCopy ||
-        curComp == (uintptr_t)_africanNationsCupCopy ||
-        curComp == (uintptr_t)_northAmericanCupCopy ||
-        curComp == (uintptr_t)_asianCupCopy ||
-        curComp == (uintptr_t)_oceaniaCupCopy ||
-        curComp == (uintptr_t)_invitationTournamentCopy ||
-        curComp == (uintptr_t)_tourCopy) {
+    /* Check primary competition: World Cup + 6 continental cups + invitation + tour */
+    if (curId == COMPID_worldCup2 ||
+        comp_is_continental_cup(curId) ||
+        curId == COMPID_invitationTournament ||
+        curId == COMPID_tour) {
         *outCtx = (uint8_t *)&_primaryCompetitionBuf;
         return 1;
     }
 
-    /* Check secondary competition against 8 tournament types (no worldCup) */
-    uintptr_t secComp = (uintptr_t)_secondaryCompetitionPtr;
-    if (secComp == (uintptr_t)_europeanChampionships2Copy ||
-        secComp == (uintptr_t)_copaAmericaCopy ||
-        secComp == (uintptr_t)_africanNationsCupCopy ||
-        secComp == (uintptr_t)_northAmericanCupCopy ||
-        secComp == (uintptr_t)_asianCupCopy ||
-        secComp == (uintptr_t)_oceaniaCupCopy ||
-        secComp == (uintptr_t)_invitationTournamentCopy ||
-        secComp == (uintptr_t)_tourCopy) {
+    /* Check secondary competition: same set minus World Cup */
+    uint8_t secId = _secondaryCompetitionPtr ? comp_id((void *)_secondaryCompetitionPtr) : 0xFFu;
+    if (comp_is_continental_cup(secId) ||
+        secId == COMPID_invitationTournament ||
+        secId == COMPID_tour) {
         *outCtx = (uint8_t *)&_competitionContextBuf;
         return 1;
     }
@@ -1800,27 +1793,25 @@ void UpdateBoardConfidenceModifiers(void) {
         if (team == _worldCupQualifyingTeam || team == _worldCupHostTeam)
             goto set_qual1_flag0;
 
-        uintptr_t curComp = (uintptr_t)_currentCompetitionPtr;
-        if (curComp < (uintptr_t)_worldCupQualifyingGroup1Copy ||
-            curComp > (uintptr_t)_oceaniaWorldCupQualificationCopy)
+        uint8_t curId = _currentCompetitionPtr ? comp_id((void *)_currentCompetitionPtr) : 0xFFu;
+        if (!comp_is_wc_qualifier(curId))
             goto check_ec_qualifying;
 
         /* In WC qualifying: find team rank and determine qualifying slots */
         uint16_t teamRank = FindTeamInDIY(_selTeamNumber, (DIYCompetition *)&_primaryCompetitionBuf);
-        uintptr_t comp = (uintptr_t)_currentCompetitionPtr;
         uint16_t qualSlots;
 
-        if (comp == (uintptr_t)_northAmericaWorldCupQualificationCopy)
+        if (curId == COMPID_northAmericaWorldCupQualification)
             qualSlots = 3;
-        else if (comp == (uintptr_t)_southAmericaWorldCupQualificationCopy)
+        else if (curId == COMPID_southAmericaWorldCupQualification)
             qualSlots = 4;
-        else if (comp == (uintptr_t)_africaWorldCupQualificationCopy)
+        else if (curId == COMPID_africaWorldCupQualification)
             qualSlots = 5;
-        else if (comp == (uintptr_t)_asiaWorldCupQualificationCopy)
+        else if (curId == COMPID_asiaWorldCupQualification)
             qualSlots = 2;
-        else if (comp == (uintptr_t)_oceaniaWorldCupQualificationCopy)
+        else if (curId == COMPID_oceaniaWorldCupQualification)
             qualSlots = 1;
-        else if (comp == (uintptr_t)_worldCupQualifyingGroup8Copy)
+        else if (curId == COMPID_worldCupQualifyingGroup8)
             qualSlots = 1;
         else
             qualSlots = 2;
@@ -1850,14 +1841,13 @@ check_ec_qualifying:
         if (team == _euroChampionshipQualTeam)
             goto set_qual1_flag1;
 
-        uintptr_t curComp = (uintptr_t)_currentCompetitionPtr;
-        if (curComp < (uintptr_t)_ecQualifyingGroup1Copy ||
-            curComp > (uintptr_t)_ecQualifyingGroup8Copy)
+        uint8_t curId = _currentCompetitionPtr ? comp_id((void *)_currentCompetitionPtr) : 0xFFu;
+        if (!comp_is_ec_qualifier(curId))
             goto check_winners;
 
         uint16_t teamRank = FindTeamInDIY(_selTeamNumber, (DIYCompetition *)&_primaryCompetitionBuf);
         uint16_t qualSlots;
-        if (_currentCompetitionPtr == (uint8_t *)_ecQualifyingGroup8Copy)
+        if (curId == COMPID_ecQualifyingGroup8)
             qualSlots = 1;
         else
             qualSlots = 2;
@@ -1890,33 +1880,27 @@ check_winners:
     /* Check if we won the primary competition */
     if (_selTeamNumber != _primaryCompetitionBuf.tourn.header.winnerTeam)
         goto check_secondary_winner;
-    if (_currentCompetitionPtr == (uint8_t *)_friendlyCopy)
-        goto check_secondary_winner;
-    if (_currentCompetitionPtr == (uint8_t *)_tourCopy)
-        goto check_secondary_winner;
-    /* Skip if EC qualifying */
-    if (_currentCompetitionPtr >= (uint8_t *)_ecQualifyingGroup1Copy &&
-        _currentCompetitionPtr <= (uint8_t *)_ecQualifyingGroup8Copy)
-        goto check_secondary_winner;
-    /* Skip if WC qualifying */
-    if (_currentCompetitionPtr >= (uint8_t *)_worldCupQualifyingGroup1Copy &&
-        _currentCompetitionPtr <= (uint8_t *)_oceaniaWorldCupQualificationCopy)
-        goto check_secondary_winner;
+    {
+        uint8_t curId = _currentCompetitionPtr ? comp_id((void *)_currentCompetitionPtr) : 0xFFu;
+        if (curId == COMPID_friendly)
+            goto check_secondary_winner;
+        if (curId == COMPID_tour)
+            goto check_secondary_winner;
+        if (comp_is_ec_qualifier(curId))      /* Skip if EC qualifying */
+            goto check_secondary_winner;
+        if (comp_is_wc_qualifier(curId))      /* Skip if WC qualifying */
+            goto check_secondary_winner;
 
-    /* Determine which trophy was won */
-    if (_currentCompetitionPtr == (uint8_t *)_invitationTournamentCopy) {
-        _wonInvitationTournament = 1;
-    } else if (_currentCompetitionPtr == (uint8_t *)_worldCup2Copy) {
-        _wonWorldCup = 1;
-    } else if (_currentCompetitionPtr == (uint8_t *)_europeanChampionships2Copy ||
-               _currentCompetitionPtr == (uint8_t *)_copaAmericaCopy ||
-               _currentCompetitionPtr == (uint8_t *)_africanNationsCupCopy ||
-               _currentCompetitionPtr == (uint8_t *)_northAmericanCupCopy ||
-               _currentCompetitionPtr == (uint8_t *)_asianCupCopy ||
-               _currentCompetitionPtr == (uint8_t *)_oceaniaCupCopy) {
-        _wonContinentalCup = 1;
-    } else {
-        _playWinCupAnimation = 1;
+        /* Determine which trophy was won */
+        if (curId == COMPID_invitationTournament) {
+            _wonInvitationTournament = 1;
+        } else if (curId == COMPID_worldCup2) {
+            _wonWorldCup = 1;
+        } else if (comp_is_continental_cup(curId)) {
+            _wonContinentalCup = 1;
+        } else {
+            _playWinCupAnimation = 1;
+        }
     }
 
 check_secondary_winner:
@@ -1926,22 +1910,23 @@ check_secondary_winner:
         goto check_tertiary_winner;
     if (_selTeamNumber != _competitionContextBuf.tourn.header.winnerTeam)
         goto check_tertiary_winner;
-    if (_secondaryCompetitionPtr == (uint8_t *)_friendlyCopy)
-        goto check_tertiary_winner;
-    if (_currentCompetitionPtr == (uint8_t *)_tourCopy)
-        goto check_tertiary_winner;
+    {
+        /* _secondaryCompetitionPtr is non-NULL here (guarded above). */
+        uint8_t secId = comp_id((void *)_secondaryCompetitionPtr);
+        if (secId == COMPID_friendly)
+            goto check_tertiary_winner;
+        /* NOTE: original tests the PRIMARY ptr against tour here, not the
+         * secondary — preserved verbatim (faithful to SWOS2.s). */
+        if (_currentCompetitionPtr && comp_id((void *)_currentCompetitionPtr) == COMPID_tour)
+            goto check_tertiary_winner;
 
-    if (_secondaryCompetitionPtr == (uint8_t *)_invitationTournamentCopy) {
-        _wonInvitationTournament = 1;
-    } else if (_secondaryCompetitionPtr == (uint8_t *)_europeanChampionships2Copy ||
-               _secondaryCompetitionPtr == (uint8_t *)_copaAmericaCopy ||
-               _secondaryCompetitionPtr == (uint8_t *)_africanNationsCupCopy ||
-               _secondaryCompetitionPtr == (uint8_t *)_northAmericanCupCopy ||
-               _secondaryCompetitionPtr == (uint8_t *)_asianCupCopy ||
-               _secondaryCompetitionPtr == (uint8_t *)_oceaniaCupCopy) {
-        _wonContinentalCup = 1;
-    } else {
-        _minorTrophyBonusActive = 1;
+        if (secId == COMPID_invitationTournament) {
+            _wonInvitationTournament = 1;
+        } else if (comp_is_continental_cup(secId)) {
+            _wonContinentalCup = 1;
+        } else {
+            _minorTrophyBonusActive = 1;
+        }
     }
 
 check_tertiary_winner:
@@ -1949,7 +1934,7 @@ check_tertiary_winner:
 
     if (_tertiaryCompetitionPtr != 0 &&
         _selTeamNumber == _tertiaryCompetitionContextBuf.tourn.header.winnerTeam &&
-        _tertiaryCompetitionPtr != (uint8_t *)_friendlyCopy) {
+        comp_id((void *)_tertiaryCompetitionPtr) != COMPID_friendly) {  /* non-NULL: guarded by && above */
         _leagueTitleBonusActive = 1;
     }
 
@@ -2041,15 +2026,10 @@ void UpdateCareerReputationBonuses(void) {
         addReputationFromBonusValueDiv4((int8_t)_primaryCompetitionBuf.tourn.header.trophyBonusValue);
 
     if (_wonContinentalCup != 0) {
-        /* Check if it's a major continental or minor */
-        uintptr_t comp = (uintptr_t)_currentCompetitionPtr;
+        /* Major continental (primary slot) vs minor (secondary context) */
+        uint8_t curId = _currentCompetitionPtr ? comp_id((void *)_currentCompetitionPtr) : 0xFFu;
         int8_t bonusVal;
-        if (comp == (uintptr_t)_europeanChampionships2Copy ||
-            comp == (uintptr_t)_copaAmericaCopy ||
-            comp == (uintptr_t)_africanNationsCupCopy ||
-            comp == (uintptr_t)_northAmericanCupCopy ||
-            comp == (uintptr_t)_asianCupCopy ||
-            comp == (uintptr_t)_oceaniaCupCopy) {
+        if (comp_is_continental_cup(curId)) {
             bonusVal = (int8_t)_primaryCompetitionBuf.tourn.header.trophyBonusValue;
         } else {
             bonusVal = (int8_t)_competitionContextBuf.tourn.header.trophyBonusValue;
@@ -3354,10 +3334,11 @@ extern void Career_InitCompetitionTeamSelectionFromTableEntrySpec(uint8_t *recor
 __attribute__((used, externally_visible))
 void Career_AutoAdvanceCupCompetitionFromRecord(uint8_t *record)
 {
-    /* Special-case English cup aliases */
-    if (record == _englishCup)
+    /* Special-case English cup aliases (118/119 → 120/121). */
+    uint8_t rid = record ? comp_id(record) : 0xFFu;
+    if (rid == COMPID_englishCup)
         record = _englishCup_1;
-    else if (record == _englishLeagueCup)
+    else if (rid == COMPID_englishLeagueCup)
         record = _englishLeagueCup_1;
 
     _careerLoadedFlag = 1;
