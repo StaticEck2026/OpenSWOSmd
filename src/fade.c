@@ -9,6 +9,9 @@
 #ifdef SWOS_SDL_BUILD
 #include "platform_sdl.h"
 #include <SDL.h>
+#ifdef SWOS_WASM_BUILD
+#include <emscripten.h>
+#endif
 #endif
 
 /* COPPER_WRITE_W: write a 16-bit value into the copper list buffer.
@@ -38,7 +41,11 @@ typedef short int16_t;
 static inline void fade_wait_one_isr_tick(void)
 {
     RunInt3HandlerThrottled();
+#ifdef SWOS_WASM_BUILD
+    emscripten_sleep(2);   /* yield to the browser (ASYNCIFY); SDL_Delay would freeze the tab */
+#else
     SDL_Delay(2);
+#endif
 }
 #define FADE_SPIN_BODY() fade_wait_one_isr_tick()
 #else

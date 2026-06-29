@@ -50,7 +50,7 @@
  */
 #include "swos_types.h"
 #include "swos_platform.h"
-#include "game_types.h"   /* TeamFileEx + the selTeam*/editTeams* offset macros */
+#include "game_types.h"   /* TeamFileEx + the selTeam / editTeams offset macros */
 
 /* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
  * converted for the WASM/Emscripten target, which rejects asm-defined data

@@ -27,6 +27,15 @@
 /* The SDL build is hosted on x86/x64 with little-endian ordering. */
 #define SWOS_SDL_BUILD 1
 
+/* WebAssembly/Emscripten target (a flavour of the SDL build). WASM-specific
+ * bits read `#ifdef SWOS_WASM_BUILD` rather than raw `__EMSCRIPTEN__`:
+ * single-threaded (no SDL timer / audio-pump thread) and the in-match loop
+ * yields to the browser via emscripten_sleep in Platform_VBlank (ASYNCIFY).
+ * See docs/WASM.md. */
+#ifdef __EMSCRIPTEN__
+#define SWOS_WASM_BUILD 1
+#endif
+
 /* On Win32 PE-COFF the C compiler prepends '_' to every C global symbol
  * at the assembler level (so a C `foo` becomes `_foo` in the .o file).
  * ELF (Linux/macOS) does not. Many files alias buffers via inline asm
