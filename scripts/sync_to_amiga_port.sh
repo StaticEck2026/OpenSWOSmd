@@ -108,6 +108,7 @@ HDR_FILES=(
     competition_data.h comp_identity.h sprite_data.h
     dos_graphics.h dos_mode.h dos_gameplay.h
     translations.h string_symbols.h
+    play_match_menu.h
 )
 
 # ---- Arg parsing ----
