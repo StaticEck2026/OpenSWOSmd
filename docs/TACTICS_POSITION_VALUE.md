@@ -387,38 +387,63 @@ through an identical algorithm give identical outputs — therefore a different
 mark for the same swap can *only* come from different **inputs**, i.e. the team's
 data.
 
-### 9.2 The cause: the team data differs between releases
+Everything verified byte-for-byte: the per-player and team checks, the full
+`GetPlayerPrice` (the 35-quadrant loop, the **16-bit** intermediate arithmetic
+and 16-bit running total with the `cwde`/`ext.l` sign-extend before `÷350`, the
+`−8`, the `0..49` clamp, the `plPricesIncreaseTable` softening), **and all six
+weight tables** (`skillsPerQuadrant`, `priceSkillPonders`, `quadrantDistanceFactor`,
+`quadrantCoordinatesToBallQuadrant`, `skillValuePonders`, `plPricesIncreaseTable`).
+The engine is platform-independent.
 
-The DOS and Amiga *releases* shipped slightly different hidden ratings for the
-same squad. For reference, this port's (Amiga) Brazil defenders are:
+### 9.2 So the difference must be a per-team INPUT, not the engine
+
+With an identical engine, identical inputs are *forced* to produce identical
+output — so a different mark means a different **input**. And crucially,
+**swapping two players doesn't change the formation's shape**: the per-quadrant
+crowding counts (`_numPlayersAtQuadrant`) are identical before and after, because
+you've only relabelled which player sits in which slot. So each swapped player's
+value is simply *his own skills evaluated against his **new slot's** 35-quadrant
+coverage pattern*, then shaped by the price-softening step.
+
+The inputs that can change the result are therefore: the player's **skills**, the
+player's **price**, the player's **position byte**, and the **tactic coverage**
+(the per-slot quadrant pattern in the team's chosen formation). For reference,
+this port's (Amiga) Brazil defenders:
 
 | Player | Pass | Vel | Head | Tackle | Ctrl | Speed | Finish | Price |
 |--------|:----:|:---:|:----:|:------:|:----:|:-----:|:------:|:-----:|
 | Aldair (4) | 4 | 3 | 15 | 15 | 6 | 15 | 3 | **37** |
 | Ronaldão (3) | 2 | 4 | 15 | 15 | 5 | 15 | 4 | **36** |
 
-Run those through the (identical) formula and Ronaldão's value at Aldair's slot
-comes out *equal* to his own slot → **no mark**, which is what the Amiga shows
-and what this port reproduces. The DOS release's ratings (or stored price) for
-those two players differ just enough that the same evaluation comes out one
-index *higher* → **tick**.
+### 9.3 Why Aldair shows a mark but Ronaldão might not
 
-### 9.3 Why such a tiny data difference flips the result
+The result isn't symmetric, because of the **price-softening** at the end of
+`GetPlayerPrice`:
 
-The per-player value is heavily **quantized**: the 35-quadrant factor sum is
-`÷ 350` and clamped to a `0..49` index, and a gain over the player's stored price
-is further flattened by `plPricesIncreaseTable` (max +10). Aldair's and
-Ronaldão's slots are the two **near-symmetric** central-defender positions, so a
-player's value at them is almost always within one `0..50` index of each other —
-which **ties to "no change"** (the Amiga result). It only takes a 1-point rating
-difference, or a `÷350` boundary landing differently, to push the two slots onto
-*adjacent* indices and surface a tick. The marks are this sensitive at the
-boundary precisely *because* the value is so coarsely bucketed.
+- computed index **below** the player's stored price → the raw computed value is
+  returned (changes show *linearly*);
+- **at or above** the stored price → the gain is compressed through
+  `plPricesIncreaseTable` (saturates at +10).
 
-### 9.4 Implication for this port
+So a player whose value drops *below* his price shows the drop fully
+(**Aldair → ✗**), while a player whose value sits *around/above* his price has any
+rise flattened — often to "no change" (**Ronaldão → no mark on Amiga**). On top of
+that the index is coarsely quantised (`÷350`, `0..49`). That's why the mark is
+hair-trigger at the boundary: a one-unit difference in the player's **price**
+(it moves the compression threshold) or in the slot's coverage is enough to make
+the same rise read as a tick on one build and vanish on the other.
 
-This is **data, not logic** — and **not a bug**. We use the Amiga data set and
-the (identical) algorithm, so we correctly reproduce the **Amiga** behaviour
-(Ronaldão: no mark). The DOS difference is entirely down to the DOS release's
-different player ratings; to confirm the exact delta you'd compare the two
-releases' Brazil team files player-by-player.
+### 9.4 Conclusion — and a correction
+
+An earlier pass of this section guessed the **skill ratings** differ. That was
+**wrong** — the ratings match (and the engine is identical), so the differing
+input is one of the **other** per-team fields. The prime suspects are the **price**
+(it sets the softening threshold that produces exactly this "Aldair drops but
+Ronaldão doesn't" asymmetry, and it's separate from the visible skill bars) and
+the **tactic/formation coverage**. To pin it down, compare *those specific fields*
+— the £M **price** and the team's stored **tactic** — between the DOS and Amiga
+team files, not just the skill ratings.
+
+Either way it is **input data, not engine logic**, and **not a bug** in this
+port: we use the Amiga data set and the (verified-identical) engine, so we
+reproduce the Amiga result.
