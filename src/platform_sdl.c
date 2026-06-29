@@ -19,6 +19,9 @@
 
 #include <SDL.h>
 #include <stdio.h>
+#ifdef SWOS_WASM_BUILD
+#include <emscripten.h>      /* emscripten_sleep — the ASYNCIFY yield point */
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -340,6 +343,20 @@ int Platform_Init(const PlatformInitOptions *opts)
 
     if (win_scale < 1) win_scale = 1;
     if (win_scale > 4) win_scale = 4;
+#ifdef SWOS_WASM_BUILD
+    /* Web: always native Amiga resolution — 336x272 logical, windowed, scale 1
+     * (there is no SWOS.ini in the browser to carry a chosen resolution, and a
+     * desktop-fullscreen window would stretch the canvas to the page). The
+     * canvas CSS in wasm/shell.html upscales it crisply (image-rendering:
+     * pixelated) to fit the viewport. */
+    win_scale = 1;
+    fs_mode   = PLATFORM_FULLSCREEN_NONE;
+    /* Pacing is emscripten_sleep in Platform_VBlank, not SDL vsync. Leaving SDL
+     * vsync on makes its eglSwapInterval call emscripten_set_main_loop_timing,
+     * which warns ("a main loop does not exist") since we use ASYNCIFY, not a
+     * registered main loop. */
+    vsync = 0;
+#endif
     s_win_scale_current = win_scale;
 
     if (opts) {
@@ -487,8 +504,13 @@ int Platform_Init(const PlatformInitOptions *opts)
         "(env SWOS_SCREENSHOT_INTERVAL=N for auto-capture every N frames)\n");
 
     /* 20 ms = 50 Hz, the PAL VBlank rate the game expects. */
+#ifndef SWOS_WASM_BUILD
+    /* Single-threaded on WASM: Platform_VBlank already pumps the ISR + render +
+     * audio every frame, so this fallback timer is redundant (and pthreads on
+     * wasm need SharedArrayBuffer/COOP+COEP — avoided entirely). */
     SDL_InitSubSystem(SDL_INIT_TIMER);
     s_tick_timer = SDL_AddTimer((Uint32)(1000 / DosGameplay_TargetFps()), tick_timer_cb, NULL);
+#endif
 
     return 0;
 }
@@ -950,7 +972,16 @@ static void render_frame_impl(int pump_full)
         pump_events_any_thread();
     else
         pump_quit_only();
+#ifdef SWOS_WASM_BUILD
+    /* The ONLY audio pump on WASM (no timer/worker thread), once per jittery
+     * emscripten_sleep frame. AudioSDL_Tick mixes one 20 ms tick and early-
+     * returns at target, and its silence-pad path is compiled out here — so call
+     * it repeatedly to fill the queue to QUEUE_TARGET_MS with REAL audio. The
+     * 16 cap (>QUEUE_TARGET_MS/20) bounds the work; extra calls just no-op. */
+    for (int i = 0; i < 16; ++i) AudioSDL_Tick();
+#else
     AudioSDL_Tick();
+#endif
 
     if (!s_renderer || !s_texture) return;
 
@@ -1038,6 +1069,18 @@ int Platform_VBlank(void)
      * firing a concurrent render while we're holding the mutex. */
     s_last_main_render_ms = SDL_GetTicks();
     Platform_RenderFrame();
+
+#ifdef SWOS_WASM_BUILD
+    /* The browser owns the event loop, so a C program must hand control back
+     * every frame or the tab freezes. ASYNCIFY rewinds the C stack here and
+     * resumes after ~20 ms — turning "render this frame, return to the browser"
+     * out of the same blocking loop the native build runs. This ONE yield paces
+     * every blocking loop in the game (match loop, menus, fades, replays — they
+     * all funnel through Platform_VBlank), so no per-loop rewrite is needed.
+     * (No 50 Hz SDL_Delay+spin below — emscripten_sleep IS the pace.) */
+    emscripten_sleep((unsigned)(1000 / DosGameplay_TargetFps()));
+    return _quitToDos ? 1 : 0;
+#endif
 
     /* 50 Hz pacing — wait until the next frame boundary on the
      * high-resolution counter. Hybrid sleep + spin: SDL_Delay() for the

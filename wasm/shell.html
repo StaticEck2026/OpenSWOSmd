@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Sensible World of Soccer</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center; }
+    /* Native SWOS render is 336x272 (the canvas internal size). Display it crisp
+       — nearest-neighbour, no smoothing — at native aspect, scaled to fit the
+       viewport height. This is what "native Amiga resolution" means on the web:
+       the game renders 336x272 and the browser only does an integer-ish pixel
+       upscale, never a blurry stretch. */
+    #canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      height: 100vh;
+      width: auto;
+      max-width: 100vw;
+      object-fit: contain;
+      background: #000;
+      display: block;
+      outline: none;
+    }
+    #status {
+      position: fixed; top: 8px; left: 0; right: 0; text-align: center;
+      color: #6c6; font: 12px/1.4 monospace; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">loading…</div>
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  <script type="text/javascript">
+    var statusEl = document.getElementById('status');
+    var Module = {
+      canvas: document.getElementById('canvas'),
+      setStatus: function (text) {
+        if (!statusEl) return;
+        statusEl.textContent = text;
+        statusEl.style.display = text ? 'block' : 'none';   // hide once running
+      },
+      print:    function (t) { console.log(t); },
+      printErr: function (t) { console.error(t); },
+    };
+    Module.setStatus('downloading…');
+    window.onerror = function () { Module.setStatus('error — see console (F12)'); };
+    // Audio is blocked until a user gesture; nudge the canvas into focus on
+    // first interaction so keyboard input + audio start promptly.
+    window.addEventListener('click', function () {
+      document.getElementById('canvas').focus();
+    }, { once: false });
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

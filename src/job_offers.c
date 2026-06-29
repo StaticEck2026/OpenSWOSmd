@@ -71,7 +71,7 @@ extern int16_t  IsTeamCodeOkForNationalSelector(uint16_t code);
 extern int16_t  IsPlayerOkForNationalSelector(void);
 extern uint16_t FindTeamInDIY(uint16_t teamId, DIYCompetition *compBuffer);
 extern uint32_t CalculateStartingBalance(uint16_t teamId);
-extern void     LoadTeamFile(uint16_t code);
+extern int16_t  LoadTeamFile(uint16_t code);
 
 /* Job offer menu data (in SWOS2.s) */
 extern uint16_t _jobOffersFromRetired;

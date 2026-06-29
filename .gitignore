@@ -2,6 +2,15 @@
 *.d
 *.exe
 build/
+
+# Emscripten/WASM build outputs (regenerate: make WASM=1). The .data preload
+# bundle is ~21 MB; all four are pure build artifacts from wasm/shell.html +
+# wasm/pre.js + the data dirs.
+bin/SWOS.html
+bin/SWOS.js
+bin/SWOS.wasm
+bin/SWOS.data
+
 sensible-soccer-nes-c/
 scripts/__pycache__/
 

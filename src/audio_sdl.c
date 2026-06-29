@@ -87,8 +87,17 @@ static int16_t           s_out_buf[48000 * 2 / 50 + 128];
 /* Target queue fill we try to maintain ahead of the playback cursor.
  * 80 ms gives the driver enough cushion to ride out ~4 game frames of
  * main-thread stalls without audibly underrunning, without adding
- * noticeable latency between music events and what you hear. */
+ * noticeable latency between music events and what you hear.
+ *
+ * WASM runs single-threaded and pumps audio once per emscripten_sleep frame,
+ * which jitters more (browser scheduling / GC) than a native timer thread — a
+ * deeper queue rides that out. Paired with the real-audio fill loop (below /
+ * Platform_RenderFrame) instead of the native silence-pad. */
+#ifdef SWOS_WASM_BUILD
+#define QUEUE_TARGET_MS  120
+#else
 #define QUEUE_TARGET_MS  80
+#endif
 
 /* Dedicated audio-pump thread. Keeping the SDL queue full is the audio engine's
  * one hard real-time job, but our only pumps were the game loop (Platform_VBlank)
@@ -139,9 +148,14 @@ int AudioSDL_Init(int mono)
     s_master_volume = 0;
     SDL_PauseAudioDevice(s_audio_dev, 0);
 
-    /* Start the dedicated pump so the queue stays full regardless of render load. */
+    /* Start the dedicated pump so the queue stays full regardless of render load.
+     * Single-threaded on WASM — AudioSDL_Tick is already called from
+     * Platform_RenderFrame every frame, so the pump thread is redundant (and
+     * pthreads on wasm need SharedArrayBuffer/COOP+COEP). */
     s_pump_run    = 1;
+#ifndef SWOS_WASM_BUILD
     s_pump_thread = SDL_CreateThread(audio_pump_thread, "swos-audio-pump", NULL);
+#endif
     return 0;
 }
 
@@ -305,13 +319,19 @@ void AudioSDL_Tick(void)
      * new size. SDL_QueueAudio is internally locked; nesting s_mtx is safe. */
     SDL_QueueAudio(s_audio_dev, s_out_buf, out_bytes);
 
+#ifndef SWOS_WASM_BUILD
     /* If a long main-thread stall left us under target, top up with silence
-     * rather than mixing multiple ticks (which would desync the fade tempo). */
+     * rather than mixing multiple ticks (which would desync the fade tempo).
+     * WASM does NOT do this — it would stutter, since the once-per-frame pump
+     * regularly leaves us under target. Instead AudioSDL_Tick is called in a
+     * loop (Platform_RenderFrame) so the queue fills with REAL ticks; the device
+     * drains at real time so the song tempo stays correct. */
     queued_bytes = SDL_GetQueuedAudioSize(s_audio_dev);
     if (queued_bytes + out_bytes < target_bytes) {
         SDL_memset(s_out_buf, 0, (size_t)out_bytes);
         SDL_QueueAudio(s_audio_dev, s_out_buf, out_bytes);
     }
+#endif
 
     SDL_UnlockMutex(s_mtx);
 }

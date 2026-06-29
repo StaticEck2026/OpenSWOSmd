@@ -17,7 +17,16 @@
 # macOS: auto-detected via `uname -s == Darwin`. Native clang; expects
 # SDL2 from Homebrew (`brew install sdl2`). Like ARM64, modern macOS
 # is 64-bit, so the same Phase 5 / 6 constraints apply.
-ifdef ARM64
+ifdef WASM
+# WebAssembly via Emscripten (`make WASM=1`). `source <emsdk>/emsdk_env.sh`
+# first so emcc is on PATH. SDL2 comes from emcc's bundled port (-sUSE_SDL=2),
+# NOT pkg-config. Single-threaded + ASYNCIFY — see docs/WASM.md.
+CC := emcc
+PKGCONF := true
+# Verify-on reloads the career into live globals on every save (corrupts live
+# state) — pointless in the browser; default off (command line still overrides).
+SWOS_SAVE_FORMAT_JSON_VERIFY ?= 0
+else ifdef ARM64
 ARM64_HOST_MACHINE := $(shell uname -m)
 ifneq (,$(filter aarch64 arm64,$(ARM64_HOST_MACHINE)))
 CC := gcc
@@ -89,7 +98,13 @@ norm_arch = $(patsubst aarch64,arm64,$(patsubst amd64,x86_64,$(patsubst i686,x86
 # ---- Output ----
 # Each branch sets TARGET_NAME (the bin/ binary name) AND the BUILD_OS /
 # BUILD_ARCH that select the build/<os>/<arch> object dir.
-ifeq ($(OS),Windows_NT)
+ifdef WASM
+# emcc emits SWOS.html + SWOS.js + SWOS.wasm + SWOS.data (the preloaded data
+# package). Objects live under build/emscripten/wasm (wasm32 = ILP32).
+TARGET_NAME := SWOS.html
+BUILD_OS    := emscripten
+BUILD_ARCH  := wasm
+else ifeq ($(OS),Windows_NT)
 TARGET_NAME := SWOS.exe
 BUILD_OS    := windows
 BUILD_ARCH  := $(call norm_arch,$(UNAME_M))
@@ -213,7 +228,12 @@ endif
 # ---- Helpers ----
 PKGCONF ?= pkg-config
 
-ifdef SDL2_MACOS_FW
+ifdef WASM
+# Emscripten ships SDL2 as a port — downloaded + cached on first use. Same flag
+# for compile and link; no pkg-config.
+SDL2_CFLAGS := -sUSE_SDL=2
+SDL2_LIBS   := -sUSE_SDL=2
+else ifdef SDL2_MACOS_FW
 # macOS framework: header search via -F + Headers/, link via -framework SDL2.
 # The -rpath entries let the binary find SDL2.framework at runtime when
 # either bundled inside the .app (Contents/Frameworks/) or installed
@@ -242,7 +262,11 @@ endif
 # Testers wanting an actual 32-bit Windows binary should use MSYS2
 # MINGW32 (gcc already 32-bit; -m32 is a no-op) or Cygwin's 32-bit
 # toolchain.
-ifdef ARM64
+ifdef WASM
+# wasm32 is ILP32 — no -m flags; emcc targets wasm by default. (Struct
+# size_check[] asserts pass on ILP32, same as armhf.)
+ARCHFLAGS :=
+else ifdef ARM64
 # aarch64 is 64-bit (LP64) — no -m32 / -m64 needed. The static
 # size_check[] asserts that hard-code Amiga 32-bit struct sizes
 # will fail until Phase 5 / 6 lands.
@@ -408,6 +432,30 @@ ifeq ($(UNAME_S),Darwin)
 LDFLAGS += -Wl,-ld_classic
 endif
 
+# Emscripten link flags. ASYNCIFY lets the blocking game loop yield to the
+# browser at the one Platform_VBlank choke-point (emscripten_sleep — docs/WASM.md
+# §0/§2a). Growable heap; preload the read-only game data into MEMFS; IDBFS for
+# persistent saves at /save (mounted in wasm/pre.js). Single-threaded — the
+# 20 ms SDL timer + 5 ms audio-pump thread are compiled out (#ifdef SWOS_WASM_BUILD).
+ifdef WASM
+# EMULATE_FUNCTION_POINTER_CASTS: SWOS's menu system stores void(void) callbacks
+# (e.g. FriendlyMenu) in void(MenuEntry*) fields and invokes them through void*
+# casts — fine on every native ABI, but wasm hard-traps an indirect call whose
+# table signature differs ("indirect call signature mismatch"). This generates
+# adapter thunks so the mismatched calls work, like native. wasm-only flag.
+LDFLAGS += -sASYNCIFY -sASYNCIFY_STACK_SIZE=65536 \
+           -sEMULATE_FUNCTION_POINTER_CASTS=1 \
+           -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=134217728 \
+           -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,FS -lidbfs.js \
+           --pre-js wasm/pre.js --shell-file wasm/shell.html \
+           --preload-file bin/data@/data \
+           --preload-file bin/grafs@/grafs \
+           --preload-file bin/sound@/sound \
+           --preload-file bin/data_json@/data_json
+# Re-link when the pre-js or shell HTML changes (both embedded at link time).
+WASM_LINK_DEPS := wasm/pre.js wasm/shell.html
+endif
+
 LDLIBS  := $(SDL2_LIBS) -lm
 
 # ---- Targets ----
@@ -417,8 +465,9 @@ all: $(TARGET)
 debug:
 	$(MAKE) DEBUG=1 all
 
-# Ensure bin/ exists, then link
-$(TARGET): $(OBJECTS) | $(BINDIR)
+# Ensure bin/ exists, then link. $(WASM_LINK_DEPS) re-links on a pre-js change
+# (empty for non-WASM targets).
+$(TARGET): $(OBJECTS) $(WASM_LINK_DEPS) | $(BINDIR)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) $(LDLIBS)
 
 # Create output directory if needed

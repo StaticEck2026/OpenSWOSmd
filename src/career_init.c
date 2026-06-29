@@ -609,7 +609,7 @@ extern void ShowLeavingMessage(void);
 extern void TrainingMatch_AddTrialPlayersForNewSeason(void);
 extern void Career_InitInternationalSquadAndLookupTablesForNewSeason(TeamFileEx *teamPtr);
 extern void Career_SetCupPickList_ForSelectedRegion(uint16_t *teamList);
-extern void Career_UpdateLastNationalityCall(void);
+extern uint16_t Career_UpdateLastNationalityCall(void);
 extern void InitializeNewSeason_BuildTeamBudgetRankTable(void);
 extern void Career_SetCurrentCompetitionSlot(uint8_t *comp, uint16_t slot, uint16_t divisionIndex, uint16_t hasSelectedTeams);
 extern void ShowChairmanOpinionAboutTheSeason(void);

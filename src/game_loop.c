@@ -102,8 +102,8 @@ extern uint16_t Rand(void);
 extern uint16_t Rand2(void);
 extern void ReplayUpdateCameraAndSwapBuffers(int16_t x, int16_t y);
 extern void UpdatePlanePtrsAndBlitParams(void);
-extern void ReadTimerDelta(void);
-extern void GetKey(void);
+extern uint16_t ReadTimerDelta(void);   /* real return type — wasm traps on a void-signature indirect call */
+extern uint16_t GetKey(void);
 extern void ProcessSpriteBlitQueue(void);
 extern void BlitterCopyPanelToScreen(void);
 extern void FadeOutToBlack(void);

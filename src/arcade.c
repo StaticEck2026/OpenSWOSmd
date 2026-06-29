@@ -65,7 +65,7 @@ int Arcade_ModeFromName(const char *name)
 }
 
 extern void WaitForVSync(void);
-extern void ReadTimerDelta(void);
+extern uint16_t ReadTimerDelta(void);
 extern volatile uint16_t _quitToDos;
 extern volatile uintptr_t _frontbufferBasePtr;
 extern uint8_t _bigCharsTable[];

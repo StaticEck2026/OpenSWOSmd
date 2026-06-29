@@ -45,6 +45,28 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            // Builds the WASM target + serves it with emrun (both in WSL — see the
+            // "Build (wasm)" / "Serve (wasm)" tasks), then opens it in Edge. WSL2
+            // forwards localhost so the Windows browser reaches the WSL emrun server.
+            //
+            // The dedicated userDataDir makes the JS debugger spawn a FRESH browser
+            // instance it can attach to (fixes "Unable to attach to browser" when
+            // Edge is already running). Swap "msedge" -> "chrome" for Chrome.
+            // For wasm SOURCE-level (DWARF) stepping install the
+            // "C/C++ DevTools Support (DWARF)" extension; plain launch works without it.
+            //
+            // FALLBACK: if the browser still won't attach, the server is already
+            // up — just open http://localhost:8080/SWOS.html in any browser; the
+            // game runs there. The CDP attach only adds JS/wasm breakpoints.
+            "name": "Launch Debug (wasm)",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:8080/SWOS.html",
+            "webRoot": "${workspaceFolder}/bin",
+            "userDataDir": "${workspaceFolder}/.vscode/.wasm-browser-profile",
+            "preLaunchTask": "Serve (wasm)"
         }
     ]
 }

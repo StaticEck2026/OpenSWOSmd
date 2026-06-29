@@ -1618,7 +1618,7 @@ SWOS_CHIP_BSS char _imageCmdWorkBuf[0x200000];
  * which the DOS sprite build never touches, so the glyphs survive in DOS-graphics
  * mode as well as Amiga. */
 #if UINTPTR_MAX == 0xFFFFFFFFu
-SWOS_CHIP_BSS char spriteGraphics[1310 * 4];          /* 1310 ptrs × 4 B = 5240 */
+SWOS_CHIP_BSS char _spriteGraphics[1310 * 4];          /* 1310 ptrs × 4 B = 5240 (32-bit) */
 #else
 SWOS_CHIP_BSS char _spriteGraphics[1310 * 8];          /* 1310 ptrs × 8 B = 10480 */
 #endif

@@ -169,8 +169,12 @@ int main(int argc, char **argv)
     /* Anchor CWD to the binary's directory FIRST so SWOS.ini / SWOS.log
      * and the data/ grafs/ sound/ trees all resolve relative to the
      * exe regardless of where the user launched from. Done before
-     * Settings_Load so SWOS.ini lookup hits the right file. */
+     * Settings_Load so SWOS.ini lookup hits the right file.
+     * WASM: there is no binary dir — the data is --preload-file'd into MEMFS at
+     * /data, /grafs, … and cwd is already "/", so skip the chdir. */
+#ifndef SWOS_WASM_BUILD
     chdir_to_binary(argv ? argv[0] : NULL);
+#endif
 
 #ifdef SWOS_SDL_BUILD
     /* Data-file JSON loader self-test (docs/DATA_INTERNAL_JSON.md). Runs before
