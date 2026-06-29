@@ -364,86 +364,103 @@ A tester noticed that on the **squad screen**, swapping two central defenders
 Both agree Aldair got *worse*; they disagree on whether Ronaldão got *better* or
 *stayed the same*. The reason is **not** a difference in the indicator code.
 
-### 9.1 The indicator system is byte-for-byte identical on both platforms
+### 9.1 The engine is byte-for-byte identical on both platforms
 
-Verified against the DOS disassembly (`swos-port/swos/swos.asm`):
+Verified against both the DOS disassembly (`swos-port/swos/swos.asm`) and the
+Amiga disassembly (`SWOS-RE/Amiga/SWOS/SWOS2.s`):
 
-- **Per-player (small) check** — `SquadAfterDrawCommon` does exactly what our
-  `play_match_menu.c` / `edit_tactics.c` does:
-  `current > snapshot` → `0xD0` (**208** `SPR_CHECK_SMALL`, tick),
-  `==` → no sprite, `<` → `0xD1` (**209** `SPR_CROSS_SMALL`, cross).
-- **Team (big) check** — DOS `UpdateBigCheckMark` is identical to ours:
-  gated on `teamSkillDiffAfterChange`, then `oldPlayerSkill > newPlayerSkill`
-  → `SPR_CHECK_BIG`, `<` → `SPR_CROSS_BIG`.
-- **The value formula** — DOS `GetPlayerPrice` is line-for-line the same: the
-  35-quadrant loop, `÷ players-at-quadrant`, `× distance`, then the final
-  `… ÷ 350 − 8`, clamp `0..49`, and `plPricesIncreaseTable` softening.
-- **The weight tables are byte-identical** — `skillsPerQuadrant` (all 7×35),
+- **Per-player (small) check** — DOS `SquadAfterDrawCommon` does exactly what our
+  `play_match_menu.c` / `edit_tactics.c` does: `current > snapshot` → `0xD0`
+  (**208** `SPR_CHECK_SMALL`, tick), `==` → no sprite, `<` → `0xD1`
+  (**209** `SPR_CROSS_SMALL`, cross).
+- **Team (big) check** — DOS `UpdateBigCheckMark` is identical: gated on
+  `teamSkillDiffAfterChange`, then `oldPlayerSkill > newPlayerSkill` →
+  `SPR_CHECK_BIG`, `<` → `SPR_CROSS_BIG`.
+- **`GetPlayerPrice`** — line-for-line the same, including the **16-bit**
+  intermediate arithmetic, the 16-bit running total with the `cwde`/`ext.l`
+  sign-extend before `÷350`, the `−8`, the `0..49` clamp, and the
+  `plPricesIncreaseTable` softening.
+- **All six weight tables byte-identical** — `skillsPerQuadrant` (7×35),
   `priceSkillPonders`, `quadrantDistanceFactor`, `quadrantCoordinatesToBallQuadrant`,
-  `skillValuePonders` all match `src/tactics_data.c` exactly.
+  `skillValuePonders`, `plPricesIncreaseTable`.
 
-So the **algorithm and its constants are platform-independent.** Identical inputs
-through an identical algorithm give identical outputs — therefore a different
-mark for the same swap can *only* come from different **inputs**, i.e. the team's
-data.
+The engine is platform-independent, so a different mark for the same swap can
+*only* come from different **input data**.
 
-Everything verified byte-for-byte: the per-player and team checks, the full
-`GetPlayerPrice` (the 35-quadrant loop, the **16-bit** intermediate arithmetic
-and 16-bit running total with the `cwde`/`ext.l` sign-extend before `÷350`, the
-`−8`, the `0..49` clamp, the `plPricesIncreaseTable` softening), **and all six
-weight tables** (`skillsPerQuadrant`, `priceSkillPonders`, `quadrantDistanceFactor`,
-`quadrantCoordinatesToBallQuadrant`, `skillValuePonders`, `plPricesIncreaseTable`).
-The engine is platform-independent.
+### 9.2 The team files are identical — so it's the FORMATION coverage
 
-### 9.2 So the difference must be a per-team INPUT, not the engine
+The Brazil team file (`TEAM.082`) decompresses to byte-identical data on both
+versions (the Amiga's `TEAM.*` are RNC-compressed and the DOS plain, but the
+decoded bytes match), so the player **skills, price, and position bytes are
+identical**. That leaves exactly one input that feeds the value *and changes when
+you swap two players*: the **formation/tactic coverage** — the per-slot
+35-quadrant pattern in the team's chosen formation. (A swap doesn't change the
+formation's *shape*, so the crowding counts are unchanged; each swapped player's
+value is just his skills evaluated against his **new slot's** coverage.)
 
-With an identical engine, identical inputs are *forced* to produce identical
-output — so a different mark means a different **input**. And crucially,
-**swapping two players doesn't change the formation's shape**: the per-quadrant
-crowding counts (`_numPlayersAtQuadrant`) are identical before and after, because
-you've only relabelled which player sits in which slot. So each swapped player's
-value is simply *his own skills evaluated against his **new slot's** 35-quadrant
-coverage pattern*, then shaped by the price-softening step.
+The two platforms even store it differently:
 
-The inputs that can change the result are therefore: the player's **skills**, the
-player's **price**, the player's **position byte**, and the **tactic coverage**
-(the per-slot quadrant pattern in the team's chosen formation). For reference,
-this port's (Amiga) Brazil defenders:
+- **DOS** embeds each formation in the executable — `tact_4_4_2 db 34h,34h,32h,…`
+  (`g_tacticsTable` → `tact_4_4_2`).
+- **Amiga** has it as `teamTactics442` (real `dc.b` data) in `SWOS2.s` — *not* the
+  11-byte `tacticsPosition442` BSS stub that sits nearby and is easy to mistake
+  for it.
 
-| Player | Pass | Vel | Head | Tackle | Ctrl | Speed | Finish | Price |
-|--------|:----:|:---:|:----:|:------:|:----:|:-----:|:------:|:-----:|
-| Aldair (4) | 4 | 3 | 15 | 15 | 6 | 15 | 3 | **37** |
-| Ronaldão (3) | 2 | 4 | 15 | 15 | 5 | 15 | 4 | **36** |
+### 9.3 The actual difference (4-4-2), proven asm-to-asm
 
-### 9.3 Why Aldair shows a mark but Ronaldão might not
+Diffing the real Amiga `teamTactics442` against the real DOS `tact_4_4_2`:
 
-The result isn't symmetric, because of the **price-softening** at the end of
-`GetPlayerPrice`:
+| Section | Differing bytes |
+|---|---|
+| header (`name[]`, bytes 0–8) | **2** — bytes 4,5: DOS `$20,$42` vs Amiga `$00,$41` (skipped by `GetPlayerPrice`, which does `+9`) |
+| coverage (`positions[]`, bytes 9+, the part actually used) | **198** |
 
-- computed index **below** the player's stored price → the raw computed value is
-  returned (changes show *linearly*);
-- **at or above** the stored price → the gain is compressed through
-  `plPricesIncreaseTable` (saturates at +10).
+Player 1's 35 coverage bytes are identical, player 2 differs by one byte, and
+players 3–10 diverge substantially — the formations were re-tuned between the
+Amiga and the DOS 96/97 release. Sample bytes in the central-defender region
+(packed `x,y` pitch coordinates):
 
-So a player whose value drops *below* his price shows the drop fully
-(**Aldair → ✗**), while a player whose value sits *around/above* his price has any
-rise flattened — often to "no change" (**Ronaldão → no mark on Amiga**). On top of
-that the index is coarsely quantised (`÷350`, `0..49`). That's why the mark is
-hair-trigger at the boundary: a one-unit difference in the player's **price**
-(it moves the compression threshold) or in the slot's coverage is enough to make
-the same rise read as a tick on one build and vanish on the other.
+```
+player 2 coord 20:  DOS 0x33   Amiga 0x73
+player 3 coord 3:   DOS 0x90   Amiga 0x70
+player 3 coord 4:   DOS 0x90   Amiga 0x70
+player 3 coord 9:   DOS 0xA1   Amiga 0x5F
+player 3 coord 10:  DOS 0x82   Amiga 0x7E
+```
 
-### 9.4 Conclusion — and a correction
+So the two central-defender slots send the defender to **different quadrants** in
+the DOS vs the Amiga formation.
 
-An earlier pass of this section guessed the **skill ratings** differ. That was
-**wrong** — the ratings match (and the engine is identical), so the differing
-input is one of the **other** per-team fields. The prime suspects are the **price**
-(it sets the softening threshold that produces exactly this "Aldair drops but
-Ronaldão doesn't" asymmetry, and it's separate from the visible skill bars) and
-the **tactic/formation coverage**. To pin it down, compare *those specific fields*
-— the £M **price** and the team's stored **tactic** — between the DOS and Amiga
-team files, not just the skill ratings.
+### 9.4 Why that flips the mark — and why it's asymmetric
 
-Either way it is **input data, not engine logic**, and **not a bug** in this
-port: we use the Amiga data set and the (verified-identical) engine, so we
-reproduce the Amiga result.
+Swapping Aldair ↔ Ronaldão lands each on a slot whose coverage *differs between
+the two versions* → `GetPlayerPrice` yields a different value → the tick appears
+on DOS but not Amiga.
+
+Why asymmetric (Aldair ✗ on both, Ronaldão only ticks on DOS)? The end of
+`GetPlayerPrice` is non-linear around the player's stored price:
+
+- computed index **below** the stored price → returned raw, so a drop shows fully
+  (**Aldair → ✗**);
+- **at/above** the stored price → the gain is compressed via
+  `plPricesIncreaseTable` (saturates at +10), and the index is coarsely quantised
+  (`÷350`, `0..49`).
+
+Ronaldão (price 36, right at the threshold) has his rise flattened to "no change"
+under the Amiga coverage but it survives one bucket under the DOS coverage. The
+mark is hair-trigger *because* the value is so coarsely bucketed — and the
+coverage difference is what tips it.
+
+### 9.5 Conclusion
+
+The differing data is the **default formation/tactic coverage tables**
+(`teamTactics442` and the rest), re-tuned between the Amiga and DOS 96/97
+releases — **not** the engine and **not** the team files. It is **not a bug** in
+this port: we use the Amiga formation data + the verified-identical engine, so we
+reproduce the Amiga result (Ronaldão: no mark).
+
+> Investigation note: earlier drafts of this section wrongly guessed the *player
+> ratings*, then the *price*, differed. The engine and team files are identical;
+> the difference is the formation coverage, confirmed by an asm-to-asm diff of the
+> Amiga `teamTactics442` against the DOS `tact_4_4_2` (2 header + 198 coverage
+> bytes differ).
