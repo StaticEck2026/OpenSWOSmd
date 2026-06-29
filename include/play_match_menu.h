@@ -31,10 +31,18 @@
 #define TEAM_COACH         3
 
 /* Sprite indices for check marks */
-#define SPR_CHECK_BIG        206
-#define SPR_NOT_CHECK_BIG    207
-#define SPR_CHECK_SMALL      208
-#define SPR_NOT_CHECK_SMALL  209
+/* "Did this change help?" indicators drawn in the tactics editor and the squad
+ * screen. The editor recomputes each player's position-value (and the team
+ * average) on every move and compares it to the snapshot taken when you entered:
+ *   CHECK = green tick   → value ROSE  (better fit / stronger team)
+ *   CROSS = red cross    → value FELL
+ *   (equal → indicator hidden).  BIG = whole-team, SMALL = per-player.
+ * Sprite-index ↔ graphic verified against MENUS.bmp + SWOS2.s UpdateBigCheckMark
+ * (206 = big green tick, 207 = big red cross, 208/209 the small pair). */
+#define SPR_CHECK_BIG        206   /* big green tick   */
+#define SPR_CROSS_BIG        207   /* big red cross    */
+#define SPR_CHECK_SMALL      208   /* small green tick */
+#define SPR_CROSS_SMALL      209   /* small red cross  */
 
 /* Game types */
 #define GAME_TYPE_CAREER     4
@@ -81,7 +89,7 @@ void TogglePlayerCoach(void);
 
 /* --- Chunk 212: ShowPlayMatchMenu --- */
 #define GAME_TYPE_SEASON     3
-int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes,
+int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t _maxSubstitutes,
                             int16_t excludeFlags, int16_t isFirstPlayer,
                             int16_t squadChanges, TeamFileEx *team1, TeamFileEx *team2);
 
