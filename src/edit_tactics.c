@@ -176,9 +176,9 @@ extern void DrawEditTacticsPitchAndPlayers(void);
 /* EditTactics_ApplyPlayerRowHighlighting declared in edit_tactics.h */
 extern void RotatePlayersLeft(TeamFileEx *team, uint16_t maxSubs);
 
-/* ---- Sprite constants ---- */
-#define SPR_CHECK_BIG       206
-#define SPR_NOT_CHECK_BIG   207
+/* ---- Sprite constants ----
+ * SPR_CHECK_BIG/SPR_CROSS_BIG/SPR_CHECK_SMALL/SPR_CROSS_SMALL come from
+ * play_match_menu.h (included above). */
 
 /* ================================================================
  * ChooseTacticsInit  (SWOS2.s line 86669)
@@ -357,13 +357,15 @@ void EditTactics_UpdateExtraPlayerMenuVisibility(void)
 }
 
 /* ================================================================
- * SetBigCheckSprite  (SWOS2.s line 88355)
+ * SetBigCheckSprite
  *
- * Shows/hides the big check/not-check sprite on menuEntries[0]
- * based on comparison of oldPlayerSkill vs newPlayerSkill.
- *   - If equal: hide entry, clear sprite bit
- *   - If new > old: show NOT_CHECK_BIG (skill decreased)
- *   - If new < old: show CHECK_BIG (skill increased)
+ * Big "did this change help the team?" mark on menuEntries[0], shown while
+ * editing the formation. Compares the team's freshly-recomputed skill
+ * (_oldPlayerSkill — refreshed by ComputeOldPlayerSkillForViewResult) against
+ * the baseline captured on entry (_newPlayerSkill):
+ *   - equal                        → hidden
+ *   - recomputed > baseline (team STRONGER) → SPR_CHECK_BIG (green tick, 206)
+ *   - recomputed < baseline (team WEAKER)   → SPR_CROSS_BIG (red cross, 207)
  * ================================================================ */
 __attribute__((used, externally_visible))
 void SetBigCheckSprite(void)
@@ -377,13 +379,10 @@ void SetBigCheckSprite(void)
     if (_oldPlayerSkill == _newPlayerSkill)
         return;
 
-    /* Determine which sprite to show */
     if (_oldPlayerSkill > _newPlayerSkill) {
-        /* Skill decreased - show red X */
-        entry->fgWord = SPR_CHECK_BIG;
+        entry->fgWord = SPR_CHECK_BIG;   /* stronger → green tick */
     } else {
-        /* Skill increased - show green check */
-        entry->fgWord = SPR_NOT_CHECK_BIG;
+        entry->fgWord = SPR_CROSS_BIG;   /* weaker → red cross */
     }
 
     /* Set bit 13 of stringFlags and make visible */
@@ -3298,9 +3297,9 @@ void EditTactics_ApplyPlayerRowHighlighting(int16_t playerOrdinal, MenuEntry *cu
         uint8_t curPos = posArray[playerIndex];
         uint8_t oldPos = oldPosArray[playerIndex];
         if (curPos > oldPos) {
-            entry39->fgWord = SPR_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
+            entry39->fgWord = SPR_CHECK_SMALL;   /* value rose → green tick */
         } else if (curPos < oldPos) {
-            entry39->fgWord = SPR_NOT_CHECK_SMALL;  /* ENTRY_NUMBER: write high word */
+            entry39->fgWord = SPR_CROSS_SMALL;   /* value fell → red cross */
         }
     }
 }

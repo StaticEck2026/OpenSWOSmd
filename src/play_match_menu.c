@@ -188,7 +188,7 @@ void UpdateCheckMarkSprite(void) {
     if (_viewingOpponentTeam) return;
     e->stringFlags &= ~(1u << 13);
     if (_oldPlayerSkill == _newPlayerSkill) return;
-    e->fgWord = (_oldPlayerSkill > _newPlayerSkill) ? SPR_CHECK_BIG : SPR_NOT_CHECK_BIG;
+    e->fgWord = (_oldPlayerSkill > _newPlayerSkill) ? SPR_CHECK_BIG : SPR_CROSS_BIG;
     e->stringFlags |= (1u << 13);
     e->isInvisible = 0;
 }
@@ -1172,8 +1172,8 @@ void DrawPlayerEntries(MenuEntry *a5) {
     if (!_viewingOpponentTeam && d4 < 11) {
         uint8_t cur = _playerPositionsArray[d1];
         uint8_t old = _oldPlayerPositionsArray[d1];
-        if (cur < old) bgE->fgWord = SPR_NOT_CHECK_SMALL;
-        else if (cur > old) bgE->fgWord = SPR_CHECK_SMALL;
+        if (cur < old) bgE->fgWord = SPR_CROSS_SMALL;       /* value fell → red cross */
+        else if (cur > old) bgE->fgWord = SPR_CHECK_SMALL;  /* value rose → green tick */
     }
 
     /* Checkmark entry sync */

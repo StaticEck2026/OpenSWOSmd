@@ -916,8 +916,7 @@ void Squad45AfterDraw(void)
  * Squad operations (Chunk 112, SWOS2.s lines 57494-57562)
  * ================================================================ */
 
-#define SPR_CHECK_BIG       206
-#define SPR_NOT_CHECK_BIG   207
+/* SPR_CHECK_BIG / SPR_CROSS_BIG come from play_match_menu.h (included above). */
 
 extern uint16_t _oldPlayerSkill;
 extern uint16_t _newPlayerSkill;
@@ -931,8 +930,8 @@ extern uint16_t _teamSkillDiffAfterChange;
  * Updates the big check mark sprite on menu entry 1 (offset 0x38)
  * based on skill difference after formation change.
  * - If teamSkillDiffAfterChange >= 0: hide the check mark
- * - If old > new skill: show green check (SPR_CHECK_BIG)
- * - If old < new skill: show red X (SPR_NOT_CHECK_BIG)
+ * - If old > new skill (team STRONGER): show green tick (SPR_CHECK_BIG)
+ * - If old < new skill (team WEAKER):   show red cross (SPR_CROSS_BIG)
  * - If equal: return (no change)
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -950,11 +949,11 @@ void UpdateBigCheckMark(void)
     entry->stringFlags = flags;
 
     if (_oldPlayerSkill > _newPlayerSkill) {
-        /* Skill decreased: show check mark */
+        /* Team got stronger: show green tick */
         entry->fgWord = SPR_CHECK_BIG;
     } else if (_oldPlayerSkill < _newPlayerSkill) {
-        /* Skill increased: show not-check mark */
-        entry->fgWord = SPR_NOT_CHECK_BIG;
+        /* Team got weaker: show red cross */
+        entry->fgWord = SPR_CROSS_BIG;
     } else {
         /* Equal: no mark shown */
         return;
