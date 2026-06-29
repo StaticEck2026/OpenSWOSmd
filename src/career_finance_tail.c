@@ -76,48 +76,15 @@ _Static_assert(offsetof(CareerFinanceTail, additionalInvestments)         == 180
 _Static_assert(offsetof(CareerFinanceTail, teamValueDivisor)              == 186, "ft layout");
 _Static_assert(offsetof(CareerFinanceTail, expectedLeagueRankIndex)       == 188, "ft layout");
 
-extern CareerFinanceTail _careerFinanceTail;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_careerFinanceTail\n"
-    _ASM_PFX "_careerFinanceTail:\n"
-    ".globl " _ASM_PFX "_financeTotalsNeedResetFlag\n"
-    _ASM_PFX "_financeTotalsNeedResetFlag:\n"
-    ".skip 2\n"
-    ".skip 4\n"   /* BSS_01_164A14 unnamed hole */
-    ".globl " _ASM_PFX "_weeklyRunningCosts\n"
-    _ASM_PFX "_weeklyRunningCosts:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_weeklyPlayerWages\n"
-    _ASM_PFX "_weeklyPlayerWages:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_totalTeamValue\n"
-    _ASM_PFX "_totalTeamValue:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_weeklyWageByPlayerIndex\n"
-    _ASM_PFX "_weeklyWageByPlayerIndex:\n"
-    ".skip 128\n"
-    ".globl " _ASM_PFX "_playerFormModifiers\n"
-    _ASM_PFX "_playerFormModifiers:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "_sensisoftPlcSponsorshipFactor\n"
-    _ASM_PFX "_sensisoftPlcSponsorshipFactor:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_additionalInvestments\n"
-    _ASM_PFX "_additionalInvestments:\n"
-    ".skip 2\n"
-    ".skip 4\n"   /* BSS_01_164AC8 unnamed hole */
-    ".globl " _ASM_PFX "_teamValueDivisor\n"
-    _ASM_PFX "_teamValueDivisor:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_expectedLeagueRankIndex\n"
-    _ASM_PFX "_expectedLeagueRankIndex:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _financeTotalsNeedResetFlag;
+int32_t  _weeklyRunningCosts, _weeklyPlayerWages, _totalTeamValue;
+int32_t  _weeklyWageByPlayerIndex[32];   /* 128 B; FLD_U32_ARRAY in save */
+uint8_t  _playerFormModifiers[32];
+uint16_t _sensisoftPlcSponsorshipFactor, _additionalInvestments, _teamValueDivisor,
+         _expectedLeagueRankIndex;

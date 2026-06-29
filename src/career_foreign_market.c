@@ -31,22 +31,13 @@
 #include "swos_platform.h"
 #include "game_types.h"     /* MarketPlayer */
 
-extern MarketPlayer _careerForeignMarketPlayers[432];
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM target, which rejects asm-defined data symbols —
+ * docs/WASM.md §4b). &symbol-addressed everywhere, so byte-neutral; the typed
+ * MarketPlayer[] array gives the same 2-byte alignment the old .p2align 1 did. */
+MarketPlayer _careerForeignMarketPlayers[432];
 
 _Static_assert(sizeof(MarketPlayer) == 42, "MarketPlayer must stay 42 bytes");
 _Static_assert(sizeof(_careerForeignMarketPlayers) == 18144,
                "careerForeignMarketPlayers must stay 432*42 = 18144 bytes "
                "(named 352 + unnamed 80-entry tail, one pool)");
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerForeignMarketPlayers\n"
-    _ASM_PFX "_careerForeignMarketPlayers:\n"
-    ".skip 18144\n"     /* 432 * 42 */
-    ".text\n"
-);

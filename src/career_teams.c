@@ -31,10 +31,9 @@ extern uint16_t _careerAutoAdvanceInProgress;
 extern TeamFileEx _careerTeam;
 extern uint16_t _selTeamNumber;
 extern uint16_t _numSelectedTeams;
-extern uint8_t _selTeamsPtr;
-extern uint8_t _teamSelectionKeyCache[];
+extern uint8_t _teamSelectionKeyCache[8192];   /* sized: end-bound = base + sizeof */
 extern uint16_t _teamSelectionKeyCacheCount;
-extern uint8_t _teamSelectionKeyCacheEnd[];
+extern uint16_t _teamSelectionKeyCacheEnd;     /* season flag (value); bound derived below */
 extern uint16_t _panicReasonCode;
 extern uint16_t _careerFileBuffer;     /* count of teams in TMD pool */
 extern uint8_t _tmdFileBuffer;         /* start of TMD team pool data (array of TeamFileEx records) */
@@ -132,7 +131,6 @@ TeamFileEx *VerifyTeamLoaded(uint16_t teamNum)
         /* Always dump context on panic — we're crashing anyway and the
          * cache contents tell us whether the caller trusted a stale
          * teamNum or whether numSelectedTeams is wrong. */
-        extern uint8_t _selTeamsPtr;
         extern uint16_t _numSelectedTeams;
         extern uint16_t _selTeamNumber;
         SWOS_DBG(
@@ -317,8 +315,10 @@ uint8_t *TeamSelectionKeyCache_InsertSpaceSorted(uint16_t key, uint16_t insertio
         count--;
     }
 
-    /* Walked all entries without finding insert point — check bounds */
-    if ((uintptr_t)ptr > (uintptr_t)_teamSelectionKeyCacheEnd)
+    /* Walked all entries without finding insert point — check bounds.
+     * End-of-cache bound == cache base + buffer size (was &_teamSelectionKeyCacheEnd
+     * when End sat adjacent past the cache; now derived since they're decoupled). */
+    if ((uintptr_t)ptr > (uintptr_t)_teamSelectionKeyCache + sizeof(_teamSelectionKeyCache))
         goto panic;
     return ptr;
 
@@ -334,7 +334,7 @@ found_insert_point:
 
         /* Check if shifted data would overflow */
         uint8_t *newEnd = endPtr + insertionBytes;
-        if ((uintptr_t)newEnd > (uintptr_t)_teamSelectionKeyCacheEnd)
+        if ((uintptr_t)newEnd > (uintptr_t)_teamSelectionKeyCache + sizeof(_teamSelectionKeyCache))
             goto panic;
 
         /* Shift data upward by insertionBytes (from end to start, word-at-a-time) */
@@ -1618,7 +1618,7 @@ void Career_AdvanceToNextTeamSelectionKeyCacheEntry(void)
     }
 
     _careerSlotProcessingInProgress = 0;
-    *(uint16_t *)_teamSelectionKeyCacheEnd = 0;
+    _teamSelectionKeyCacheEnd = 0;   /* clear season flag (was *(u16*)&End via its address) */
 
     uint8_t *ptr = _teamSelectionKeyCache + _teamSelectionKeyCacheOffset;
     uint16_t d0 = _teamSelectionKeyCacheIndex;

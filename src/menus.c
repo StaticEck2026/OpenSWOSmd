@@ -5210,7 +5210,6 @@ void FriendlyPitchTypeProc(MenuEntry *entry)
 #define ENTRY_FRAME_AND_BACK_COLOR 2
 
 extern uint16_t _gameType;
-extern uint8_t _selTeamsPtr;
 extern void SaveSelectedTeams(void);
 extern void RestoreSelectedTeams(void);
 extern void ShowFriendlyMenu(void);

@@ -49,29 +49,13 @@ _Static_assert(offsetof(CareerUnavailablePlayers, list)        ==  0, "up layout
 _Static_assert(offsetof(CareerUnavailablePlayers, lookupTable) == 16, "up layout");
 _Static_assert(offsetof(CareerUnavailablePlayers, names)       == 96, "up layout");
 
-extern CareerUnavailablePlayers _careerUnavailablePlayers;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerUnavailablePlayers\n"
-    _ASM_PFX "_careerUnavailablePlayers:\n"
-    ".globl " _ASM_PFX "_careerUnavailablePlayerList\n"
-    _ASM_PFX "_careerUnavailablePlayerList:\n"
-    ".skip 16\n"
-    ".globl " _ASM_PFX "_careerUnavailablePlayerLookupTable\n"
-    _ASM_PFX "_careerUnavailablePlayerLookupTable:\n"
-    ".skip 80\n"
-    ".globl " _ASM_PFX "_careerUnavailablePlayerNames\n"
-    _ASM_PFX "_careerUnavailablePlayerNames:\n"
-    ".skip 340\n"
-    /* adjacent neighbour, separate symbol (not part of the struct) */
-    ".globl " _ASM_PFX "_currentMatchPlayers\n"
-    _ASM_PFX "_currentMatchPlayers:\n"
-    ".skip 32\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _careerUnavailablePlayerList[8];          /* 16 B; accessed via (uint16_t *) */
+uint16_t _careerUnavailablePlayerLookupTable[40];  /* 80 B; accessed via (uint16_t *) */
+uint8_t  _careerUnavailablePlayerNames[340];       /* 20 x 17 club-name strings */
+uint8_t  _currentMatchPlayers[32];                 /* separate neighbour, byte-indexed */

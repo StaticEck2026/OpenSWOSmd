@@ -45,8 +45,6 @@ extern DIYCompetitionEx _diyCompetitionStart;
  * == sizeof(DIYCompetitionEx)) to move the full image without a (false)
  * fortify overread/overflow. */
 extern uint8_t _diyCompetitionStartBuf[];
-extern uint8_t _selTeamsPtr;
-extern uint8_t _selTeamNameBase;
 extern uint16_t _selTeamNumber;
 extern uint16_t _careerNumPlayers;
 extern uint8_t _currentMatchPlayers[];
@@ -8712,7 +8710,6 @@ void DIYLeagueTournamentScrollDown(void)
  * Gets current fixture team pointers and fills 5 menu entries:
  * "V" separator, left team name, right team name, 2 invisible entries.
  * ================================================================ */
-extern uint8_t _selTeamNameBase;
 
 __attribute__((used, externally_visible))
 void DIYLeagueTournament_SetupCurrentFixtureTeamNames(void)

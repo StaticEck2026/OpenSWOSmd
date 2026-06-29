@@ -26,38 +26,21 @@
  *    space; we reserve seasonSquadTeamNumbers as 48 here and leave the overlay's
  *    full 68-byte run as a hole (no cascade).
  *
- * Single standalone arrays (no sub-field aliasing), but emitted via an __asm__
- * real-label block rather than plain C definitions because these symbols carry
- * conflicting element-type externs across TUs (uint8_t[] vs uint16_t[]); raw-byte
- * BSS storage sidesteps that and matches the rest of the overlay-extraction work.
+ * Single standalone arrays (no sub-field aliasing). Pure C (was an __asm__ .skip
+ * block; converted for the WASM target, which rejects asm-defined data symbols —
+ * docs/WASM.md §4b). Each is defined with its true element type here, which gives
+ * correct natural alignment (uint16 -> 2-byte) for free; the conflicting
+ * element-type externs in OTHER TUs (uint8_t[] vs uint16_t[]) stay link-compatible
+ * (C does no cross-TU type check on globals).
  */
 #include "swos_types.h"
 #include "swos_platform.h"
 
-extern uint8_t  _teamBudgetRankTable[128];
-extern uint8_t  _careerLastMatchIndexByCompetitionSlot[162];
-extern uint16_t _seasonSquadTeamNumbers[24];
+uint8_t  _teamBudgetRankTable[128];
+uint8_t  _careerLastMatchIndexByCompetitionSlot[162];
+uint16_t _seasonSquadTeamNumbers[24];
 
 _Static_assert(sizeof(_teamBudgetRankTable) == 128, "teamBudgetRankTable 128 B");
 _Static_assert(sizeof(_careerLastMatchIndexByCompetitionSlot) == 162,
                "careerLastMatchIndexByCompetitionSlot 162 B");
 _Static_assert(sizeof(_seasonSquadTeamNumbers) == 48, "seasonSquadTeamNumbers 48 B");
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_teamBudgetRankTable\n"
-    _ASM_PFX "_teamBudgetRankTable:\n"
-    ".skip 128\n"
-    ".globl " _ASM_PFX "_careerLastMatchIndexByCompetitionSlot\n"
-    _ASM_PFX "_careerLastMatchIndexByCompetitionSlot:\n"
-    ".skip 162\n"
-    ".globl " _ASM_PFX "_seasonSquadTeamNumbers\n"
-    _ASM_PFX "_seasonSquadTeamNumbers:\n"
-    ".skip 48\n"
-    ".text\n"
-);

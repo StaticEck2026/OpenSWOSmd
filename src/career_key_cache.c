@@ -52,49 +52,29 @@
  * honest bound now that foreign-market no longer shares the slack — see the
  * file header. ~7x the measured ~1188 B HWM. */
 #define KEY_CACHE_BUF_SIZE 8192
-/* Stringize so the BSS `.skip` below reserves EXACTLY KEY_CACHE_BUF_SIZE and
- * can't drift from the declared array size. */
-#define KCBS_STR2(x) #x
-#define KCBS_STR(x)  KCBS_STR2(x)
-
-extern uint8_t  _teamSelectionKeyCache[KEY_CACHE_BUF_SIZE];
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b).
+ *
+ * The cache and the season-flag `_teamSelectionKeyCacheEnd` are now INDEPENDENT
+ * globals. In SWOS2.s `End` sat immediately past the cache, so its single
+ * storage slot did double duty: its VALUE is a season flag, and its ADDRESS was
+ * the InsertSpaceSorted overflow bound (== cache + KEY_CACHE_BUF_SIZE). The save
+ * already models the two roles as SEPARATE fields (a 1870-B cache blob +
+ * a uint16 `team_selection_key_cache_end`), so decoupling the storage is
+ * format-neutral; End's address-bound role is re-expressed at the two
+ * career_teams.c call sites as `_teamSelectionKeyCache + sizeof(...)`, so the
+ * Amiga memory-reuse adjacency is no longer required. The four cursors and
+ * `_careerJobOfferPhaseBias` were already independent scalars. */
+uint16_t _teamSelectionKeyCacheIndex;
+uint16_t _teamSelectionKeyCacheOffset;
+uint16_t _teamSelectionKeyCacheCount;
+uint16_t _careerSlotProcessingInProgress;
+uint8_t  _teamSelectionKeyCache[KEY_CACHE_BUF_SIZE];
+uint16_t _teamSelectionKeyCacheEnd;     /* season-flag VALUE; the old &End == cache+SIZE
+                                           overflow bound is now derived in career_teams.c */
+uint8_t  _careerJobOfferPhaseBias;      /* promoted standalone scalar (was cache byte 1) */
 
 _Static_assert(sizeof(_teamSelectionKeyCache) == 8192,
                "teamSelectionKeyCache buffer must stay 8192 bytes "
                "(tightened InsertSpaceSorted bound; KEYCACHE_CLUSTER_REWORK.md §8.3)");
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    /* ---- walk cursors (4 x uint16) ---- */
-    ".globl " _ASM_PFX "_teamSelectionKeyCacheIndex\n"
-    _ASM_PFX "_teamSelectionKeyCacheIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_teamSelectionKeyCacheOffset\n"
-    _ASM_PFX "_teamSelectionKeyCacheOffset:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_teamSelectionKeyCacheCount\n"
-    _ASM_PFX "_teamSelectionKeyCacheCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_careerSlotProcessingInProgress\n"
-    _ASM_PFX "_careerSlotProcessingInProgress:\n"
-    ".skip 2\n"
-    /* ---- dedicated cache buffer (KEY_CACHE_BUF_SIZE B) ---- */
-    ".globl " _ASM_PFX "_teamSelectionKeyCache\n"
-    _ASM_PFX "_teamSelectionKeyCache:\n"
-    ".skip " KCBS_STR(KEY_CACHE_BUF_SIZE) "\n"
-    /* ---- end marker: &it = cache+KEY_CACHE_BUF_SIZE = InsertSpaceSorted bound; value = season flag ---- */
-    ".globl " _ASM_PFX "_teamSelectionKeyCacheEnd\n"
-    _ASM_PFX "_teamSelectionKeyCacheEnd:\n"
-    ".skip 2\n"
-    /* ---- _careerJobOfferPhaseBias: promoted standalone scalar (was cache byte 1) ---- */
-    ".globl " _ASM_PFX "_careerJobOfferPhaseBias\n"
-    _ASM_PFX "_careerJobOfferPhaseBias:\n"
-    ".skip 1\n"
-    ".skip 1\n"   /* pad: keep block even */
-    ".text\n"
-);

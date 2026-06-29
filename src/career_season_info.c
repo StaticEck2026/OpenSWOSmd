@@ -32,36 +32,22 @@
  * (job_offers / statistics) and ((SeasonInformations *)…)[currentSeasonNumber]
  * (currentSeasonNumber < CAREER_MAX_SEASONS = 35, bounded by currentSeasonShowing) —
  * nothing walks past the array into
- * lastFinancialWeekIndex. Emitted via __asm__ real label (overlay style) so the
- * conflicting element-type externs across TUs (uint8_t[] vs SeasonInformations*)
- * resolve to raw-byte storage, exactly as when it lived in the overlay.
+ * lastFinancialWeekIndex. Pure C (was an __asm__ .skip block; converted for the
+ * WASM target, which rejects asm-defined data symbols — docs/WASM.md §4b).
+ * Defining it with the real SeasonInformations[] element type makes the
+ * 32-bit (106 B/row) vs 64-bit (122 B/row) reservation automatic — no
+ * conditional .skip — and gives correct natural alignment. The conflicting
+ * element-type externs in OTHER TUs (uint8_t[] vs SeasonInformations*) stay
+ * link-compatible (C does no cross-TU type check on globals).
  */
 #include "swos_types.h"
 #include "swos_platform.h"
 #include "game_types.h"   /* SeasonInformations — for the size lock below */
 
 /* CAREER_MAX_SEASONS (35) seasons of history; num_seasons (career_params) selects 20 or 35
- * at runtime. The array is sized to the max; the reservation below must match. */
+ * at runtime. The array is sized to the max. */
 _Static_assert(sizeof(SeasonInformations) * 35 ==
                (UINTPTR_MAX != 0xFFFFFFFFu ? 4270u : 3710u),
-               "seasonInformationsArray reservation must equal 35 * sizeof(SeasonInformations) (CAREER_MAX_SEASONS)");
+               "seasonInformationsArray must equal 35 * sizeof(SeasonInformations) (CAREER_MAX_SEASONS)");
 
-extern SeasonInformations _seasonInformationsArray[35];
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_seasonInformationsArray\n"
-    _ASM_PFX "_seasonInformationsArray:\n"
-    ".skip 3710\n"   /* 35 * 106 (CAREER_MAX_SEASONS rows, 32-bit struct _size) */
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    /* SeasonInformations grows 106 -> 122 bytes per row on 64-bit (4 pointer
-     * fields); reserve 35 * 16 = 560 extra bytes for the full struct size. */
-    ".skip 560\n"
-#endif
-    ".text\n"
-);
+SeasonInformations _seasonInformationsArray[35];

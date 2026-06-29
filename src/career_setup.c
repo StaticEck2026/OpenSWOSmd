@@ -37,46 +37,12 @@ _Static_assert(offsetof(CareerSetup, worldCupHostTeam)      ==  0, "cs layout");
 _Static_assert(offsetof(CareerSetup, selTeamNumber)         ==  6, "cs layout");
 _Static_assert(offsetof(CareerSetup, playRelegatedAnimation) == 18, "cs layout");
 
-extern CareerSetup _careerSetup;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerSetup\n"
-    _ASM_PFX "_careerSetup:\n"
-    ".globl " _ASM_PFX "_worldCupHostTeam\n"
-    _ASM_PFX "_worldCupHostTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_worldCupQualifyingTeam\n"
-    _ASM_PFX "_worldCupQualifyingTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_euroChampionshipQualTeam\n"
-    _ASM_PFX "_euroChampionshipQualTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_selTeamNumber\n"
-    _ASM_PFX "_selTeamNumber:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_coachOrPlayer\n"
-    _ASM_PFX "_coachOrPlayer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_careerTeamLeague\n"
-    _ASM_PFX "_careerTeamLeague:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_currentDivisionIndex\n"
-    _ASM_PFX "_currentDivisionIndex:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_leagueFirstRoundNumber\n"
-    _ASM_PFX "_leagueFirstRoundNumber:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_playPromotedAnimation\n"
-    _ASM_PFX "_playPromotedAnimation:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_playRelegatedAnimation\n"
-    _ASM_PFX "_playRelegatedAnimation:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _worldCupHostTeam, _worldCupQualifyingTeam, _euroChampionshipQualTeam,
+         _selTeamNumber, _coachOrPlayer, _careerTeamLeague, _currentDivisionIndex,
+         _leagueFirstRoundNumber, _playPromotedAnimation, _playRelegatedAnimation;

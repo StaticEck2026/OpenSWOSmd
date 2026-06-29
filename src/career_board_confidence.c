@@ -46,70 +46,15 @@ _Static_assert(offsetof(BoardConfidenceState, previousBoardConfidence) == 10, "b
 _Static_assert(offsetof(BoardConfidenceState, boardConfidenceMod0)      == 12, "bc layout");
 _Static_assert(offsetof(BoardConfidenceState, boardConfidenceMod9)      == 34, "bc layout");
 
-extern BoardConfidenceState _boardConfidenceState;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_boardConfidenceState\n"
-    _ASM_PFX "_boardConfidenceState:\n"
-    ".globl " _ASM_PFX "_boardConfidenceHistory0\n"
-    _ASM_PFX "_boardConfidenceHistory0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceHistory1\n"
-    _ASM_PFX "_boardConfidenceHistory1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceHistory2\n"
-    _ASM_PFX "_boardConfidenceHistory2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceHistory3\n"
-    _ASM_PFX "_boardConfidenceHistory3:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceScore\n"
-    _ASM_PFX "_boardConfidenceScore:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_previousBoardConfidence\n"
-    _ASM_PFX "_previousBoardConfidence:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod0\n"
-    _ASM_PFX "_boardConfidenceMod0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod1\n"
-    _ASM_PFX "_boardConfidenceMod1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod2\n"
-    _ASM_PFX "_boardConfidenceMod2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod3\n"
-    _ASM_PFX "_boardConfidenceMod3:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceValue0\n"
-    _ASM_PFX "_boardConfidenceValue0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceValue1\n"
-    _ASM_PFX "_boardConfidenceValue1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod4\n"
-    _ASM_PFX "_boardConfidenceMod4:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod5\n"
-    _ASM_PFX "_boardConfidenceMod5:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod6\n"
-    _ASM_PFX "_boardConfidenceMod6:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod7\n"
-    _ASM_PFX "_boardConfidenceMod7:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod8\n"
-    _ASM_PFX "_boardConfidenceMod8:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_boardConfidenceMod9\n"
-    _ASM_PFX "_boardConfidenceMod9:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _boardConfidenceHistory0, _boardConfidenceHistory1, _boardConfidenceHistory2,
+         _boardConfidenceHistory3, _boardConfidenceScore, _previousBoardConfidence,
+         _boardConfidenceMod0, _boardConfidenceMod1, _boardConfidenceMod2,
+         _boardConfidenceMod3, _boardConfidenceValue0, _boardConfidenceValue1,
+         _boardConfidenceMod4, _boardConfidenceMod5, _boardConfidenceMod6,
+         _boardConfidenceMod7, _boardConfidenceMod8, _boardConfidenceMod9;

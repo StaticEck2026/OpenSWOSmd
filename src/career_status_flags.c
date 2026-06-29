@@ -35,52 +35,13 @@ _Static_assert(sizeof(CareerStatusFlags) == 24,
 _Static_assert(offsetof(CareerStatusFlags, currentSeasonShowing) ==  0, "flags layout");
 _Static_assert(offsetof(CareerStatusFlags, clubBusinessActive)   == 22, "flags layout");
 
-extern CareerStatusFlags _careerStatusFlags;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerStatusFlags\n"
-    _ASM_PFX "_careerStatusFlags:\n"
-    ".globl " _ASM_PFX "_currentSeasonShowing\n"
-    _ASM_PFX "_currentSeasonShowing:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_stayingInOldClub\n"
-    _ASM_PFX "_stayingInOldClub:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_overdraftStreak\n"
-    _ASM_PFX "_overdraftStreak:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_overdraftWarningState\n"
-    _ASM_PFX "_overdraftWarningState:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_performanceWarningState\n"
-    _ASM_PFX "_performanceWarningState:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_overdraftWarningCooldown\n"
-    _ASM_PFX "_overdraftWarningCooldown:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_performanceWarningCooldown\n"
-    _ASM_PFX "_performanceWarningCooldown:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_youreSacked\n"
-    _ASM_PFX "_youreSacked:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_retired\n"
-    _ASM_PFX "_retired:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_competitionSlotUpdatedFlag\n"
-    _ASM_PFX "_competitionSlotUpdatedFlag:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_careerTeamLostMatch\n"
-    _ASM_PFX "_careerTeamLostMatch:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_clubBusinessActive\n"
-    _ASM_PFX "_clubBusinessActive:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _currentSeasonShowing, _stayingInOldClub, _overdraftStreak,
+         _overdraftWarningState, _performanceWarningState, _overdraftWarningCooldown,
+         _performanceWarningCooldown, _youreSacked, _retired,
+         _competitionSlotUpdatedFlag, _careerTeamLostMatch, _clubBusinessActive;

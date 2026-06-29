@@ -619,7 +619,24 @@ typedef char _teamfileex_size_check[(sizeof(TeamFileEx) == 684) ? 1 : -1];
  * over the historical `(TeamFileEx *)&selTeamsPtr` cast (STRUCT_CONSOLIDATE /
  * SELECTED_TEAMS_UNTANGLE phase 3). The raw `(uint8_t*)&selTeamsPtr + offset`
  * identity-resolve sites stay as-is (teamSelOffset is a byte-offset identity). */
-extern TeamFileEx _selectedTeams[];
+extern TeamFileEx _selectedTeams[100];
+
+/* The historical sub-labels of the selected-teams overlay, now pure-C offset
+ * macros into the one backing symbol (was asm .skip labels in selected_teams.c;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — docs/WASM.md §4b). `_selectedTeams` is a 68400-byte load-bearing
+ * union: records [0..1] are the real selected teams; [2..] physically overlaps
+ * the edit-teams workspace, exactly as the Amiga overlay reserved it.
+ *   - `_selTeamsPtr` keeps its dual role: the bare macro is the buffer's first
+ *     byte (value), `&_selTeamsPtr` is the buffer base (address).
+ *   - the selTeam* field macros are record[0] TeamFile fields.
+ * Offsets are locked by _Static_asserts in selected_teams.c. */
+#define _selTeamsPtr            (*(uint8_t *)_selectedTeams)           /* +0    base / first byte */
+#define _selTeamNameBase        (*((uint8_t *)_selectedTeams + 5))     /* +5    record[0].teamName */
+#define _selTeamImportField     (*((uint8_t *)_selectedTeams + 25))    /* +25   record[0].league   */
+#define _selTeamPlayerIndices   ((uint8_t *)_selectedTeams + 60)       /* +60   record[0].playerNumbers */
+#define _editTeamsBuffer        ((uint8_t *)_selectedTeams + 1368)     /* +1368  edit-teams workspace */
+#define _editTeamsSaveVarsArea  ((uint8_t *)_selectedTeams + 45146)    /* +45146 edit-teams save scratch */
 
 /* The careerTeam and currentTeam buffers are each a TeamFileEx (16 active
  * players) immediately followed by 16 reserve PlayerFile entries = 1292 bytes.

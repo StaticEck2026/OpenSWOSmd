@@ -79,88 +79,19 @@ _Static_assert(offsetof(CareerSettings, gameLength)       == 2232, "set layout")
 _Static_assert(offsetof(CareerSettings, pitchType)        == 2242, "set layout");
 _Static_assert(offsetof(CareerSettings, randomSeed)       == 2248, "set layout");
 
-extern CareerSettings _careerSettings;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerSettings\n"
-    _ASM_PFX "_careerSettings:\n"
-    ".globl " _ASM_PFX "_viewRandomPhase\n"
-    _ASM_PFX "_viewRandomPhase:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_seasonPlaying\n"
-    _ASM_PFX "_seasonPlaying:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_inFriendlyMenu\n"
-    _ASM_PFX "_inFriendlyMenu:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_isNationalTeam\n"
-    _ASM_PFX "_isNationalTeam:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_gameType\n"
-    _ASM_PFX "_gameType:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_contestStarted\n"
-    _ASM_PFX "_contestStarted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_careerLoadedFlag\n"
-    _ASM_PFX "_careerLoadedFlag:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_teamTacticsUSERA\n"
-    _ASM_PFX "_teamTacticsUSERA:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "_teamTacticsUSERB\n"
-    _ASM_PFX "_teamTacticsUSERB:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "_teamTacticsUSERC\n"
-    _ASM_PFX "_teamTacticsUSERC:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "_teamTacticsUSERD\n"
-    _ASM_PFX "_teamTacticsUSERD:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "_teamTacticsUSERE\n"
-    _ASM_PFX "_teamTacticsUSERE:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "_teamTacticsUSERF\n"
-    _ASM_PFX "_teamTacticsUSERF:\n"
-    ".skip 370\n"
-    ".globl " _ASM_PFX "_gameLength\n"
-    _ASM_PFX "_gameLength:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_autoReplays\n"
-    _ASM_PFX "_autoReplays:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_menuMusic\n"
-    _ASM_PFX "_menuMusic:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_autoSaveHighlights\n"
-    _ASM_PFX "_autoSaveHighlights:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_allPlayerTeamsEqual\n"
-    _ASM_PFX "_allPlayerTeamsEqual:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_pitchType\n"
-    _ASM_PFX "_pitchType:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_seed2\n"
-    _ASM_PFX "_seed2:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_randXorIndex2\n"
-    _ASM_PFX "_randXorIndex2:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_randXorKey2\n"
-    _ASM_PFX "_randXorKey2:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_newRandomSeedCopy\n"
-    _ASM_PFX "_newRandomSeedCopy:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_randomSeed\n"
-    _ASM_PFX "_randomSeed:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM target — docs/WASM.md §4b). The six 370-byte tactics
+ * slots stay raw byte blobs (fixed-size &symbol blobs in the save; aligned(2)
+ * preserves the old .p2align 1 for the TeamTactics-cast access). Base dropped. */
+uint8_t  _viewRandomPhase, _seasonPlaying;
+uint16_t _inFriendlyMenu, _isNationalTeam, _gameType, _contestStarted, _careerLoadedFlag;
+uint8_t  _teamTacticsUSERA[370] __attribute__((aligned(2)));
+uint8_t  _teamTacticsUSERB[370] __attribute__((aligned(2)));
+uint8_t  _teamTacticsUSERC[370] __attribute__((aligned(2)));
+uint8_t  _teamTacticsUSERD[370] __attribute__((aligned(2)));
+uint8_t  _teamTacticsUSERE[370] __attribute__((aligned(2)));
+uint8_t  _teamTacticsUSERF[370] __attribute__((aligned(2)));
+uint16_t _gameLength, _autoReplays, _menuMusic, _autoSaveHighlights,
+         _allPlayerTeamsEqual, _pitchType;
+uint8_t  _seed2, _randXorIndex2, _randXorKey2, _newRandomSeedCopy;
+uint16_t _randomSeed;

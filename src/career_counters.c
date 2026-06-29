@@ -64,81 +64,19 @@ _Static_assert(sizeof(CareerTransferCounters) == 16,
 _Static_assert(offsetof(CareerTransferCounters, careerSeasonsCompleted) ==  0, "tc layout");
 _Static_assert(offsetof(CareerTransferCounters, offerSwapSlotsUsed)     == 14, "tc layout");
 
-extern CareerSeasonCounters   _careerSeasonCounters;
-extern CareerTransferCounters _careerTransferCounters;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    /* ---- run 1 ---- */
-    ".globl " _ASM_PFX "_careerSeasonCounters\n"
-    _ASM_PFX "_careerSeasonCounters:\n"
-    ".globl " _ASM_PFX "_winCupBonusCount\n"
-    _ASM_PFX "_winCupBonusCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_minorTrophyBonusCount\n"
-    _ASM_PFX "_minorTrophyBonusCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_majorTrophyBonusCount\n"
-    _ASM_PFX "_majorTrophyBonusCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_careerReputationPoints\n"
-    _ASM_PFX "_careerReputationPoints:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_removedOfferPlayersFromSelectedTeamCount\n"
-    _ASM_PFX "_removedOfferPlayersFromSelectedTeamCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_removedOfferPlayersFromOtherTeamsCount\n"
-    _ASM_PFX "_removedOfferPlayersFromOtherTeamsCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_homeMarketUpdateBacklog\n"
-    _ASM_PFX "_homeMarketUpdateBacklog:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_foreignMarketUpdateBacklog\n"
-    _ASM_PFX "_foreignMarketUpdateBacklog:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_offerExpiryIterationsRemaining\n"
-    _ASM_PFX "_offerExpiryIterationsRemaining:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numForeignMarketPlayers\n"
-    _ASM_PFX "_numForeignMarketPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numHomeMarketPlayers\n"
-    _ASM_PFX "_numHomeMarketPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numOffers\n"
-    _ASM_PFX "_numOffers:\n"
-    ".skip 2\n"
-    /* ---- run 2 ---- */
-    ".globl " _ASM_PFX "_careerTransferCounters\n"
-    _ASM_PFX "_careerTransferCounters:\n"
-    ".globl " _ASM_PFX "_careerSeasonsCompleted\n"
-    _ASM_PFX "_careerSeasonsCompleted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numForeignMarketPlayers2\n"
-    _ASM_PFX "_numForeignMarketPlayers2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_pendingForeignPlayerCount\n"
-    _ASM_PFX "_pendingForeignPlayerCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_seasonTransferQuota\n"
-    _ASM_PFX "_seasonTransferQuota:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_transferPoolSlotLimit\n"
-    _ASM_PFX "_transferPoolSlotLimit:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_offerSwapSlotLimit\n"
-    _ASM_PFX "_offerSwapSlotLimit:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_transferPoolSlotsUsed\n"
-    _ASM_PFX "_transferPoolSlotsUsed:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_offerSwapSlotsUsed\n"
-    _ASM_PFX "_offerSwapSlotsUsed:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+/* run 1 */
+uint16_t _winCupBonusCount, _minorTrophyBonusCount, _majorTrophyBonusCount,
+         _careerReputationPoints, _removedOfferPlayersFromSelectedTeamCount,
+         _removedOfferPlayersFromOtherTeamsCount, _homeMarketUpdateBacklog,
+         _foreignMarketUpdateBacklog, _offerExpiryIterationsRemaining,
+         _numForeignMarketPlayers, _numHomeMarketPlayers, _numOffers;
+/* run 2 */
+uint16_t _careerSeasonsCompleted, _numForeignMarketPlayers2, _pendingForeignPlayerCount,
+         _seasonTransferQuota, _transferPoolSlotLimit, _offerSwapSlotLimit,
+         _transferPoolSlotsUsed, _offerSwapSlotsUsed;

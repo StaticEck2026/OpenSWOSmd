@@ -90,7 +90,6 @@ extern int    atoi(const char *s);
  * clear both bytes, and tmd_team_count reads it FLD_U16. */
 extern uint16_t _careerFileBuffer;
 extern uint16_t _numSelectedTeams;
-extern uint8_t  _selTeamsPtr;
 /* step-4 phase 3: standings/bracket team-selection fields hold a team IDENTITY
  * (-1 == careerTeam, >= 0 == selTeamsPtr index), not a byte offset. The load
  * reconstruction below must store the identity, via this helper (diy_competition.c). */
@@ -2102,8 +2101,6 @@ extern uint8_t _teamTacticsUSERC[];                  /* +96960, 370 B */
 extern uint8_t _teamTacticsUSERD[];                  /* +97330, 370 B */
 extern uint8_t _teamTacticsUSERE[];                  /* +97700, 370 B */
 extern uint8_t _teamTacticsUSERF[];                  /* +98070, 370 B */
-extern uint8_t _editTeamsBuffer[];                   /* +99846, ~43.7 KB */
-extern uint8_t _editTeamsSaveVarsArea[];             /* +143624, ~23.2 KB */
 
 /* *Copy slot region — one big contiguous block at +71452, 1832 B.
  * Individual records resolvable via careerContests; we emit the

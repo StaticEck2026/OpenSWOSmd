@@ -52,71 +52,21 @@ _Static_assert(sizeof(_foreignMarketPlayers)==60 && sizeof(_homeMarketPlayers)==
             && sizeof(_jobOffers)==130 && sizeof(_playersOnTransferMarket)==10,
                "transfer-market array sizes must match the overlay reservation");
 
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    /* ---- run 1 ---- */
-    ".globl " _ASM_PFX "_foreignMarketPlayers\n"
-    _ASM_PFX "_foreignMarketPlayers:\n"
-    ".skip 60\n"
-    ".globl " _ASM_PFX "_homeMarketPlayers\n"
-    _ASM_PFX "_homeMarketPlayers:\n"
-    ".skip 100\n"
-    ".globl " _ASM_PFX "_transferOfferTable\n"
-    _ASM_PFX "_transferOfferTable:\n"
-    ".skip 70\n"
-    /* ---- run 2 ---- */
-    ".globl " _ASM_PFX "_numNewJobOffers\n"
-    _ASM_PFX "_numNewJobOffers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_newJobOffers\n"
-    _ASM_PFX "_newJobOffers:\n"
-    ".skip 130\n"
-    ".globl " _ASM_PFX "_numJobOffers\n"
-    _ASM_PFX "_numJobOffers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_jobOffers\n"
-    _ASM_PFX "_jobOffers:\n"
-    ".skip 130\n"
-    ".globl " _ASM_PFX "_timeToNegotiate\n"
-    _ASM_PFX "_timeToNegotiate:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numPlayersOnTransferMarket\n"
-    _ASM_PFX "_numPlayersOnTransferMarket:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_playersOnTransferMarket\n"
-    _ASM_PFX "_playersOnTransferMarket:\n"
-    ".skip 10\n"
-    ".globl " _ASM_PFX "_lastOfferPrimaryPlayerOrdinal\n"
-    _ASM_PFX "_lastOfferPrimaryPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_lastOfferExtraPlayersWanted\n"
-    _ASM_PFX "_lastOfferExtraPlayersWanted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_lastOfferSwapPlayerOrdinal\n"
-    _ASM_PFX "_lastOfferSwapPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_lastOfferExtraPlayerOrdinal\n"
-    _ASM_PFX "_lastOfferExtraPlayerOrdinal:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_offerNegotiationAttemptCount\n"
-    _ASM_PFX "_offerNegotiationAttemptCount:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_transferMarketRandOffset0\n"
-    _ASM_PFX "_transferMarketRandOffset0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_transferMarketRandOffset1\n"
-    _ASM_PFX "_transferMarketRandOffset1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_transferMarketRandOffset2\n"
-    _ASM_PFX "_transferMarketRandOffset2:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_transferMarketPhase\n"
-    _ASM_PFX "_transferMarketPhase:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM target — docs/WASM.md §4b). The arrays match their
+ * in-file externs above (kept) with aligned() preserving the old .p2align 2;
+ * newJobOffers/jobOffers are JobOffer[5] raw blobs (fixed-size &symbol save). */
+uint8_t  _foreignMarketPlayers[60]    __attribute__((aligned(4)));
+uint8_t  _homeMarketPlayers[100]      __attribute__((aligned(4)));
+uint8_t  _transferOfferTable[70]      __attribute__((aligned(4)));
+uint16_t _numNewJobOffers;
+uint8_t  _newJobOffers[130]           __attribute__((aligned(4)));   /* JobOffer[5] */
+uint16_t _numJobOffers;
+uint8_t  _jobOffers[130]              __attribute__((aligned(4)));   /* JobOffer[5] */
+uint16_t _timeToNegotiate;
+uint16_t _numPlayersOnTransferMarket;
+uint8_t  _playersOnTransferMarket[10] __attribute__((aligned(2)));
+uint16_t _lastOfferPrimaryPlayerOrdinal, _lastOfferExtraPlayersWanted,
+         _lastOfferSwapPlayerOrdinal, _lastOfferExtraPlayerOrdinal,
+         _offerNegotiationAttemptCount, _transferMarketRandOffset0,
+         _transferMarketRandOffset1, _transferMarketRandOffset2, _transferMarketPhase;
