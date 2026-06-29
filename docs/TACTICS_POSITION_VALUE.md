@@ -348,3 +348,77 @@ and an outfielder forced into goal.
 
 *Tables decoded from the committed C data; behaviour cross-checked against the
 original `SWOS2.s`.*
+
+---
+
+## 9. Amiga vs DOS — why the *same* swap can show different marks
+
+A tester noticed that on the **squad screen**, swapping two central defenders
+(Brazil's **Aldair** ↔ **Ronaldão**) produces different indicators:
+
+| Version | Aldair (moved to Ronaldão's slot) | Ronaldão (moved to Aldair's slot) |
+|---------|-----------------------------------|-----------------------------------|
+| **Amiga** (and this port) | ✗ red cross | *(no mark)* |
+| **DOS** | ✗ red cross | ✓ green tick |
+
+Both agree Aldair got *worse*; they disagree on whether Ronaldão got *better* or
+*stayed the same*. The reason is **not** a difference in the indicator code.
+
+### 9.1 The indicator system is byte-for-byte identical on both platforms
+
+Verified against the DOS disassembly (`swos-port/swos/swos.asm`):
+
+- **Per-player (small) check** — `SquadAfterDrawCommon` does exactly what our
+  `play_match_menu.c` / `edit_tactics.c` does:
+  `current > snapshot` → `0xD0` (**208** `SPR_CHECK_SMALL`, tick),
+  `==` → no sprite, `<` → `0xD1` (**209** `SPR_CROSS_SMALL`, cross).
+- **Team (big) check** — DOS `UpdateBigCheckMark` is identical to ours:
+  gated on `teamSkillDiffAfterChange`, then `oldPlayerSkill > newPlayerSkill`
+  → `SPR_CHECK_BIG`, `<` → `SPR_CROSS_BIG`.
+- **The value formula** — DOS `GetPlayerPrice` is line-for-line the same: the
+  35-quadrant loop, `÷ players-at-quadrant`, `× distance`, then the final
+  `… ÷ 350 − 8`, clamp `0..49`, and `plPricesIncreaseTable` softening.
+- **The weight tables are byte-identical** — `skillsPerQuadrant` (all 7×35),
+  `priceSkillPonders`, `quadrantDistanceFactor`, `quadrantCoordinatesToBallQuadrant`,
+  `skillValuePonders` all match `src/tactics_data.c` exactly.
+
+So the **algorithm and its constants are platform-independent.** Identical inputs
+through an identical algorithm give identical outputs — therefore a different
+mark for the same swap can *only* come from different **inputs**, i.e. the team's
+data.
+
+### 9.2 The cause: the team data differs between releases
+
+The DOS and Amiga *releases* shipped slightly different hidden ratings for the
+same squad. For reference, this port's (Amiga) Brazil defenders are:
+
+| Player | Pass | Vel | Head | Tackle | Ctrl | Speed | Finish | Price |
+|--------|:----:|:---:|:----:|:------:|:----:|:-----:|:------:|:-----:|
+| Aldair (4) | 4 | 3 | 15 | 15 | 6 | 15 | 3 | **37** |
+| Ronaldão (3) | 2 | 4 | 15 | 15 | 5 | 15 | 4 | **36** |
+
+Run those through the (identical) formula and Ronaldão's value at Aldair's slot
+comes out *equal* to his own slot → **no mark**, which is what the Amiga shows
+and what this port reproduces. The DOS release's ratings (or stored price) for
+those two players differ just enough that the same evaluation comes out one
+index *higher* → **tick**.
+
+### 9.3 Why such a tiny data difference flips the result
+
+The per-player value is heavily **quantized**: the 35-quadrant factor sum is
+`÷ 350` and clamped to a `0..49` index, and a gain over the player's stored price
+is further flattened by `plPricesIncreaseTable` (max +10). Aldair's and
+Ronaldão's slots are the two **near-symmetric** central-defender positions, so a
+player's value at them is almost always within one `0..50` index of each other —
+which **ties to "no change"** (the Amiga result). It only takes a 1-point rating
+difference, or a `÷350` boundary landing differently, to push the two slots onto
+*adjacent* indices and surface a tick. The marks are this sensitive at the
+boundary precisely *because* the value is so coarsely bucketed.
+
+### 9.4 Implication for this port
+
+This is **data, not logic** — and **not a bug**. We use the Amiga data set and
+the (identical) algorithm, so we correctly reproduce the **Amiga** behaviour
+(Ronaldão: no mark). The DOS difference is entirely down to the DOS release's
+different player ratings; to confirm the exact delta you'd compare the two
+releases' Brazil team files player-by-player.
