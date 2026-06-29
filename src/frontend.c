@@ -102,6 +102,15 @@ void FrontEndPreLoopSetup(void)
         extern int MenuJson_InstallAll(void);
         MenuJson_InstallAll();
       } }
+    /* SWOS_TACTICS_JSON: load the 12 built-in formations from
+       bin/data_json/tactics/*.json and overwrite the compiled TeamTactics
+       structs IN PLACE (src/tactics_load_json.c), so editing a formation's JSON
+       changes the running game. Default-ON; SWOS_TACTICS_JSON=0 disables. */
+    { const char *vt = getenv("SWOS_TACTICS_JSON");
+      if (!(vt && vt[0] == '0' && vt[1] == '\0')) {
+        extern int TacticsJson_InstallAll(void);
+        TacticsJson_InstallAll();
+      } }
 #else
     /* Amiga: no runtime JSON parse, so install the BAKED Copa Libertadores
        (competition_data_copa_baked.c) here — the analog of the SDL dynamic

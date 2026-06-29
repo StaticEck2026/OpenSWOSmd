@@ -181,6 +181,7 @@ DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
 # regen is faithful, run the bare emitter (no --out): python3 scripts/emit_competitions.py
 COMP_JSON := $(wildcard bin/data_json/competitions/*.json)
 MENU_JSON := $(wildcard bin/data_json/menus/*.json)
+TACTICS_JSON := $(wildcard bin/data_json/tactics/*.json)
 
 # python3 for the JSON->C regen. If it's not on PATH (e.g. a minimal Cygwin), the committed
 # .c is compiled as-is and a JSON edit needs python3 to take effect (the touch suppresses a
@@ -201,11 +202,19 @@ else
 	@echo "  REGEN $@"; $(PYTHON) scripts/emit_menus.py --out $@ >/dev/null
 endif
 
+$(SRCDIR)/tactics_data.c: $(TACTICS_JSON) scripts/emit_tactics.py scripts/export_tactics.py
+ifeq ($(strip $(PYTHON)),)
+	@echo "  WARN  python3 not found; compiling the committed $@ (JSON edits won't apply)"; touch $@
+else
+	@echo "  REGEN $@"; $(PYTHON) scripts/emit_tactics.py --out $@ >/dev/null
+endif
+
 .PHONY: regen-data
 regen-data:
 	@test -n "$(strip $(PYTHON))" || { echo "regen-data needs python3 on PATH"; exit 1; }
 	$(PYTHON) scripts/emit_competitions.py --out $(SRCDIR)/competition_data.c
 	$(PYTHON) scripts/emit_menus.py --out $(SRCDIR)/menu_data.c
+	$(PYTHON) scripts/emit_tactics.py --out $(SRCDIR)/tactics_data.c
 
 # ---- Windows resource (icon) ----
 # On MinGW and Cygwin we compile SWOS.rc → SWOS.res.o via windres and
