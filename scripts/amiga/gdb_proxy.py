@@ -278,6 +278,20 @@ class GdbDaemon:
         end = time.time() + timeout
         captured = ""
         while time.time() < end:
+            # The stop may have ALREADY happened and been consumed before we were
+            # called: when a breakpoint fires inside a `cmd "run"/"continue"`
+            # timeout window, that cmd's _wait_for_prompt sees the "(gdb)" prompt
+            # trailing "Breakpoint N," and _drain() swallows the whole chunk,
+            # flipping `running` to False. No NEW stop signature will then ever
+            # arrive in the stream, so a stream-only wait hangs forever even though
+            # the inferior is halted. Treat an already-stopped target as a stop and
+            # return — `running` is kept accurate by the reader thread (_STOP_SIG)
+            # and by cmd()'s prompt handling. (Root-caused 2026-06-28: this race is
+            # boot-speed-dependent — a FAST boot hits the bp inside the window and
+            # wedged waitstop; a slow boot dodged it, which masqueraded as "WSL
+            # degradation".)
+            if not self.running:
+                return captured + self._drain().decode("utf-8", errors="replace")
             chunk = self._drain().decode("utf-8", errors="replace")
             if chunk:
                 captured += chunk
