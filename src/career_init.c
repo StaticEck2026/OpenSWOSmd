@@ -911,12 +911,14 @@ uint16_t Career_SelectEuroCupSlotIfTeamParticipates(uint8_t *cupCopy, uint16_t e
  * field test (it is generic over a type-2 tournament *Copy). The Copa *Copy is
  * reached through Career_CopaWorkingCopy (src/career_copa.c).
  *
- * NOTE: unlike the euro selector this does NOT set _euroCupSlotIndex — that index
- * drives the LOAD-time slot-3 re-derivation (RebuildPointersAfterLoad), which is
- * still euro-only; Copa interactive play is currently in-session only. A saved
- * CONMEBOL career re-loads with slot 3 inactive (Copa falls back to auto-advance)
- * until that load path learns about Copa. The in-session play path here does not
- * read _euroCupSlotIndex (it branches on _quaternaryCompetitionPtr).
+ * Copa claims slot 3 with _euroCupSlotIndex = 3 (the euro cups use 0/1/2). That
+ * SAVED index drives BOTH (a) the load-time slot-3 re-derivation
+ * (RebuildPointersAfterLoad below), so a saved CONMEBOL career re-loads with Copa
+ * still interactive rather than auto-advancing, and (b) the continental-cup win
+ * rewards in career_status.c, where index 3 is treated as euroCup-tier (major
+ * trophy + euroCup financial bonus) — Copa Libertadores is South America's premier
+ * club cup. The in-session play path branches on _quaternaryCompetitionPtr, not the
+ * index.
  *
  * out: 0 if participating, 1 if not (or Copa not installed).
  * ================================================================ */
@@ -945,6 +947,11 @@ uint16_t Career_SelectCopaLibertadoresSlotIfTeamParticipates(void)
     _euroCupsCompetitionContextBuf.tourn.header.slotStateC = savedC;
     _euroCupsCompetitionContextBuf.tourn.header.slotStateB = savedB;
     _euroCupsCompetitionContextBuf.tourn.header.slotStateA = savedA;
+
+    /* Copa sentinel for the slot-3 index: euro cups are 0/1/2, Copa is 3. Saved,
+     * and consumed by the load gate (RebuildPointersAfterLoad) + the
+     * continental-cup rewards (career_status.c). */
+    _euroCupSlotIndex = 3;
 
     return 0;  /* participating */
 }
@@ -1647,6 +1654,15 @@ static void Rebuild_CompetitionSlotPointers(void)
         if (_euroCupSlotIndex == 0)      euroCup3 = _euroCupCopy;        /* type 2 */
         else if (_euroCupSlotIndex == 1) euroCup3 = _cupWinnersCupCopy;  /* type 1 */
         else if (_euroCupSlotIndex == 2) euroCup3 = _uefaCupCopy;        /* type 1 */
+        else if (_euroCupSlotIndex == 3) {                              /* type 2 (Copa) */
+            /* Copa Libertadores shares the quaternary slot (a CONMEBOL club is in
+             * none of the euro cups). Re-derive its *Copy so a saved South-American
+             * career re-loads with Copa still interactive. The same type-match +
+             * Career_TeamInLoadedEuroSlot validation below applies (Copa is type 2,
+             * like the European Cup). */
+            extern Competition *Career_CopaWorkingCopy(void);
+            euroCup3 = (uint8_t *)Career_CopaWorkingCopy();
+        }
 
         DIYCompetition *q3 = (DIYCompetition *)_careerCompetitionSlotPtrTable[3];
         /* Participation gate: euroCupSlotIndex is only written on qualification
