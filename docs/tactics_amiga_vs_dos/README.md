@@ -1,0 +1,24 @@
+# Amiga vs DOS tactic (formation) data
+
+The SWOS engine + team files are identical across DOS and Amiga; the only
+gameplay-affecting data that differs between the two releases is the **default
+formation coverage** (`TeamTactics`). This folder is the proof + the raw data.
+
+"amiga" here = this port's `tactics_data.c`, which is **byte-identical to the
+real Amiga** `SWOS2.s` `teamTactics*` (verified, all 12 formations). "dos" =
+`swos.asm` `tact_*` (SWOS 96/97).
+
+## Files
+- **tactics_diff_summary.csv** — one row per formation: how many name/coverage
+  bytes differ, and whether it's identical.
+- **tactics_diff_detail.csv** — one row per *differing byte*, fully decoded:
+  `formation, section, player_slot, ball_zone, zone_quadrant, amiga_hex/x/y, dos_hex/x/y`.
+  (`x` = high nibble, `y` = low nibble of the packed coordinate.)
+- **tactics_amiga.json / tactics_dos.json** — the full formation data for each
+  side (10 players × 5 ball-zones × 7 quadrants), for side-by-side import.
+
+## Result
+Only **3 of 12** formations were re-tuned for DOS: **4-4-2** (2 name + 68
+coverage bytes), **4-3-3** (1 + 10), **Sweep** (0 + 64). The other 9 are
+byte-identical. In 4-4-2 the two central-defender slots are swapped at several
+ball positions — that's the Aldair/Ronaldão tick/cross difference.

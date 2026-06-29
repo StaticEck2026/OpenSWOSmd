@@ -1,0 +1,13 @@
+formation,name_bytes_differ,coverage_bytes_differ,identical?
+4-4-2,2,68,no
+5-4-1,0,0,YES
+4-5-1,0,0,YES
+5-3-2,0,0,YES
+3-5-2,0,0,YES
+4-3-3,1,10,no
+4-2-4,0,0,YES
+3-4-3,0,0,YES
+Sweep,0,64,no
+5-2-3,0,0,YES
+Attack,0,0,YES
+Defend,0,0,YES
