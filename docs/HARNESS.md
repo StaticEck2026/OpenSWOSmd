@@ -275,6 +275,42 @@ still fire. `rc` is reliable on the Amiga now (no "verify by data" caveat).
 > match per-save across the full 16-season career (5 re-confirmed by `rc=0` after
 > the hardening; all 17 by the field check).
 
+## Amiga: attach → main menu (the fast procedure)
+
+Getting the Amiga harness to the main menu is **fast** once you know the
+procedure — measured ~34 s cold-boot+attach, then **~3–5 s entry→menu** (verified
+3 fresh cycles, 2026-06-28). The CAR load is the only slow part (1–3 min, the
+mjson parse — unavoidable).
+
+```python
+# 1. amiga_gdb.sh up   (bash) — cold-boots FS-UAE + attaches at the SWOS2 entry.
+#    It ALSO installs the loader-intro skip:
+#      break ShowLoaderIntroSequence ;  commands: silent / return / continue
+#    (force-returns from the slow intro so the next continue lands at the menu).
+# 2. From the harness — DO NOT boot() (SDL-only: kill+run doesn't apply to the
+#    FS-UAE remote; it returns None). DO NOT h.cmd("delete") — that deletes the
+#    intro-skip breakpoint and the intro then plays in FULL (the slow path).
+from swos_plugin import SwosHarness
+s = SwosHarness(); h = s.h
+h.break_at("MenuInputInjectPoint")     # ADD it; keep the intro-skip bp
+h.cmd("continue", timeout=2)           # kick off; the intro auto-skips
+h.waitstop(60)                         # -> SWOSMainMenuInit in ~3-5 s
+```
+
+**Why the cold boot is ~34 s and that's NOT polling/our-fault.** The attach is
+**event-driven, exactly like the VSCode bartman extension**: `attach_once`
+(amiga_gdb.sh) spawns FS-UAE then has the daemon's gdb `target remote` connect
+**immediately** — gdb auto-retries the TCP connect and grabs the stub the instant
+FS-UAE opens port 2345 at the `:SWOS2` trigger, then blocks on the handshake (no
+log-scraping, no settle — that old approach is retired). The ~34 s is the emulated
+A1200 **cold boot** (Kickstart + dh0 + launching SWOS2); the extension's
+`target remote` blocks the same ~30 s. The only non-signal bit left is
+`start_daemon`'s `sleep 1` socket-poll (≤1 s to *notice* the attach after it
+happens) — tighten that if you want, but it's ~1 s, not the 34 s. To cut the boot
+itself you'd need an FS-UAE savestate snapshotted at the entry (skips Kickstart).
+If a *run* feels like it's "waiting", check it's not the agent polling the
+background `up` task instead of waiting for its completion signal.
+
 ## Amiga `DBG=1` build (precise breakpoints)
 
 The release Amiga build is `-Ofast`, whose reordering makes line breakpoints
