@@ -406,30 +406,39 @@ The two platforms even store it differently:
   11-byte `tacticsPosition442` BSS stub that sits nearby and is easy to mistake
   for it.
 
-### 9.3 The actual difference (4-4-2), proven asm-to-asm
+### 9.3 The actual difference, proven asm-to-asm
 
-Diffing the real Amiga `teamTactics442` against the real DOS `tact_4_4_2`:
+This port reproduces the real Amiga formations **byte-for-byte** (verified against
+`SWOS-RE/.../SWOS2.s` `teamTactics*` for all 12 formations — 0 differences).
+Comparing those against the DOS `tact_*` tables, only **3 of the 12 formations
+were re-tuned** for the DOS release; the other 9 are byte-identical:
 
-| Section | Differing bytes |
-|---|---|
-| header (`name[]`, bytes 0–8) | **2** — bytes 4,5: DOS `$20,$42` vs Amiga `$00,$41` (skipped by `GetPlayerPrice`, which does `+9`) |
-| coverage (`positions[]`, bytes 9+, the part actually used) | **198** |
+| Formation | header diff | coverage diff |
+|---|---:|---:|
+| 4-4-2 | 2 | **68** |
+| 4-3-3 | 1 | 10 |
+| Sweep | 0 | 64 |
+| *(other 9)* | 0 | 0 |
 
-Player 1's 35 coverage bytes are identical, player 2 differs by one byte, and
-players 3–10 diverge substantially — the formations were re-tuned between the
-Amiga and the DOS 96/97 release. Sample bytes in the central-defender region
-(packed `x,y` pitch coordinates):
+In the 4-4-2 the differences sit in the **outfield slots**, and the two
+central-defender slots have their coverage **swapped** at several ball positions
+(values are packed `x,y` pitch coordinates):
 
 ```
-player 2 coord 20:  DOS 0x33   Amiga 0x73
-player 3 coord 3:   DOS 0x90   Amiga 0x70
-player 3 coord 4:   DOS 0x90   Amiga 0x70
-player 3 coord 9:   DOS 0xA1   Amiga 0x5F
-player 3 coord 10:  DOS 0x82   Amiga 0x7E
+slot 1 (CD), ball-pos 4:   Amiga 0x90   DOS 0x70
+slot 2 (CD), ball-pos 4:   Amiga 0x70   DOS 0x90   ← swapped vs slot 1
+slot 1 (CD), ball-pos 20:  Amiga 0x73   DOS 0x33
+slot 2 (CD), ball-pos 20:  Amiga 0x44   DOS 0x64
 ```
 
 So the two central-defender slots send the defender to **different quadrants** in
-the DOS vs the Amiga formation.
+the DOS vs the Amiga 4-4-2 — which is exactly the Aldair ↔ Ronaldão swap. (The
+header bytes 4,5 — `$00,$41` Amiga vs `$20,$42` DOS — are in the `name[]` field,
+skipped by `GetPlayerPrice`'s `+9`, so they don't affect the value.)
+
+The full data and a per-coordinate spreadsheet are in
+`docs/tactics_amiga_vs_dos/` (`tactics_amiga.json`, `tactics_dos.json`,
+`tactics_amiga_vs_dos.csv`).
 
 ### 9.4 Why that flips the mark — and why it's asymmetric
 
@@ -454,13 +463,18 @@ coverage difference is what tips it.
 ### 9.5 Conclusion
 
 The differing data is the **default formation/tactic coverage tables**
-(`teamTactics442` and the rest), re-tuned between the Amiga and DOS 96/97
-releases — **not** the engine and **not** the team files. It is **not a bug** in
-this port: we use the Amiga formation data + the verified-identical engine, so we
-reproduce the Amiga result (Ronaldão: no mark).
+(`teamTactics442`, `teamTactics433`, `teamTacticsSweep`) — re-tuned for the DOS
+release — **not** the engine and **not** the team files. It is **not a bug** in
+this port: our formation data is **byte-identical to the real Amiga** (verified,
+all 12 formations) and the engine is verified-identical, so we reproduce the
+**Amiga** result (Ronaldão: no mark). DOS shows a tick because its 4-4-2 sends
+those two defenders to different quadrants.
 
-> Investigation note: earlier drafts of this section wrongly guessed the *player
-> ratings*, then the *price*, differed. The engine and team files are identical;
-> the difference is the formation coverage, confirmed by an asm-to-asm diff of the
-> Amiga `teamTactics442` against the DOS `tact_4_4_2` (2 header + 198 coverage
-> bytes differ).
+> Investigation note (and a few traps for next time): this took several wrong
+> turns — first guessing the *ratings* differed, then the *price*, then
+> mis-reading the Amiga formation as the 11-byte `tacticsPosition442` BSS stub
+> (the real data is `teamTactics442`), then a regex that dropped the **signed**
+> `dc.b` minus signs (a negative like `-112` is byte `0x90`), which briefly made
+> the port look DOS-derived. Settled result: engine + team files identical; this
+> port == the real Amiga byte-for-byte; DOS re-tuned 3 formations (4-4-2 =
+> 2 header + 68 coverage bytes, 4-3-3 = 10, Sweep = 64).
