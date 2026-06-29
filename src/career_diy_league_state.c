@@ -37,23 +37,11 @@
 #include "swos_types.h"
 #include "swos_platform.h"
 
-extern uint8_t _diyLeagueSeasonStateTable[2000];
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals; the old 1-byte overlay
+ * pad between them is not relied on (both are &symbol-addressed in the save). */
+uint8_t _lastFinancialWeekIndex;
+uint8_t _diyLeagueSeasonStateTable[2000];
 _Static_assert(sizeof(_diyLeagueSeasonStateTable) == 2000,
                "diyLeagueSeasonStateTable must stay 2000 bytes");
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_lastFinancialWeekIndex\n"
-    _ASM_PFX "_lastFinancialWeekIndex:\n"
-    ".skip 1\n"
-    ".skip 1\n"   /* pad_165CE1 unnamed pad */
-    ".globl " _ASM_PFX "_diyLeagueSeasonStateTable\n"
-    _ASM_PFX "_diyLeagueSeasonStateTable:\n"
-    ".skip 2000\n"
-    ".text\n"
-);

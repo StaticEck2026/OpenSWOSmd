@@ -40,36 +40,26 @@
 _Static_assert(CAREER_TEAM_BUF_SIZE == 1292,
                "careerTeam/currentTeam buffers must stay 1292 bytes (TeamFileEx + 16 reserves)");
 
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_careerTeam\n"
-    _ASM_PFX "_careerTeam:\n"
-    ".skip 1292\n"
-    ".globl " _ASM_PFX "_currentTeam\n"
-    _ASM_PFX "_currentTeam:\n"
-    ".skip 1292\n"
-    /* _tmdFileBuffer — the TMD team pool: TeamFileEx[128] (128*684 = 87552 B),
-     * lifted out of the _careerFileBuffer overlay (UNTANGLE step 3, 2026-06-10).
-     * Addressed as (TeamFileEx *)&_tmdFileBuffer + i; saved as the typed
-     * `tmd_teams` JSON array (same emit_team_file_ex_body path as _selectedTeams),
-     * so this is save-format-neutral. Raw-byte label so the typed-but-undersized
-     * externs (extern uint8_t _tmdFileBuffer / _tmdFileBuffer[]) resolve.
-     *
-     * ENLARGED 80 -> 128 (2026-06-28, Copa Libertadores Inc3b-part-2): a career
-     * with the Copa qualifier active stages 20 CONMEBOL teams in addition to the
-     * 80 European-cup teams (16+32+32) that every season transition appends, so
-     * the pool peaks at 100 (+ margin for the play-path auto-advance). The save
-     * is COUNT-DRIVEN (emits/loads exactly `tmd_team_count` = _careerFileBuffer
-     * entries — save_format_json.c), so this is backward-compatible: old <=80
-     * saves load unchanged; new saves carry up to 100 entries. Back-port the
-     * same .skip change to the Amiga tree. */
-    ".globl " _ASM_PFX "_tmdFileBuffer\n"
-    _ASM_PFX "_tmdFileBuffer:\n"
-    ".skip 87552\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM target, which rejects asm-defined data symbols —
+ * docs/WASM.md §4b). Raw-byte arrays so the typed-but-undersized externs
+ * ((TeamFileEx *)&_careerTeam etc.) resolve, with aligned(4) to match the old
+ * .p2align 2 for the struct casts consumers do.
+ *
+ * _tmdFileBuffer — the TMD team pool: TeamFileEx[128] (128*684 = 87552 B),
+ * lifted out of the _careerFileBuffer overlay (UNTANGLE step 3, 2026-06-10).
+ * Addressed as (TeamFileEx *)&_tmdFileBuffer + i; saved as the typed `tmd_teams`
+ * JSON array (same emit_team_file_ex_body path as _selectedTeams), so this is
+ * save-format-neutral.
+ *
+ * ENLARGED 80 -> 128 (2026-06-28, Copa Libertadores Inc3b-part-2): a career with
+ * the Copa qualifier active stages 20 CONMEBOL teams in addition to the 80
+ * European-cup teams (16+32+32) that every season transition appends, so the pool
+ * peaks at 100 (+ margin for the play-path auto-advance). The save is COUNT-DRIVEN
+ * (emits/loads exactly `tmd_team_count` = _careerFileBuffer entries —
+ * save_format_json.c), so this is backward-compatible: old <=80 saves load
+ * unchanged; new saves carry up to 100 entries. Back-port the same size to the
+ * Amiga tree. */
+uint8_t _careerTeam[CAREER_TEAM_BUF_SIZE]  __attribute__((aligned(4)));
+uint8_t _currentTeam[CAREER_TEAM_BUF_SIZE] __attribute__((aligned(4)));
+uint8_t _tmdFileBuffer[87552]              __attribute__((aligned(4)));  /* 128 * 684 */

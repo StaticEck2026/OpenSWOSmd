@@ -475,7 +475,6 @@ extern uint8_t  _highestScorersTable[];   /* 92 bytes BSS */
 extern uintptr_t _diyStatsName;            /* pointer stored as uint32_t */
 extern uint16_t _numSelectedTeams;
 extern uint16_t _selTeamNumber;
-extern uint8_t  _selTeamsPtr;             /* start of selected teams, stride=684 */
 extern uint16_t _gameType;
 extern uint16_t _careerLoadedFlag;
 extern TeamFileEx _careerTeam;

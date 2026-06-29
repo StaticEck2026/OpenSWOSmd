@@ -49,7 +49,6 @@ extern int16_t  _nationalSelectorReputationPoints;
 extern uint16_t _isNationalSelector;
 extern uint16_t _selTeamNumber;
 extern uint16_t _numSelectedTeams;
-extern uint8_t  _selTeamsPtr;
 extern uint16_t _currentDivisionIndex;
 extern CompetitionSlotBuffer _primaryCompetitionBuf;           /* slot-0 untangle (S6): typed buffer */
 /* numDiyTeams migrated to primaryCompetitionBuf.tourn.header.numTeams (slot-0 untangle, S6) */

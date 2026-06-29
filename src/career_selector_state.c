@@ -69,60 +69,18 @@ _Static_assert(offsetof(CareerSelectorState, lastNationalityCall)              =
 _Static_assert(offsetof(CareerSelectorState, nationalTeamFileCode)             == 24, "ss layout");
 _Static_assert(offsetof(CareerSelectorState, seasonReview)                     == 26, "ss layout");
 
-extern CareerSelectorState _careerSelectorState;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_careerSelectorState\n"
-    _ASM_PFX "_careerSelectorState:\n"
-    ".globl " _ASM_PFX "_contractNegotiationActive\n"
-    _ASM_PFX "_contractNegotiationActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_wageScalingDivisor\n"
-    _ASM_PFX "_wageScalingDivisor:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_teamNoOfferAccepted\n"
-    _ASM_PFX "_teamNoOfferAccepted:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_teamFundsAccepted\n"
-    _ASM_PFX "_teamFundsAccepted:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_isNationalSelector\n"
-    _ASM_PFX "_isNationalSelector:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_someTeamFlags\n"
-    _ASM_PFX "_someTeamFlags:\n"
-    ".skip 1\n"
-    ".skip 1\n"   /* BSS_01_164B28 unnamed hole */
-    ".globl " _ASM_PFX "_lastNationalityCall\n"
-    _ASM_PFX "_lastNationalityCall:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_nationalTeamNationality\n"
-    _ASM_PFX "_nationalTeamNationality:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_nationalTeamFileId\n"
-    _ASM_PFX "_nationalTeamFileId:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_sameNationalCallFlag\n"
-    _ASM_PFX "_sameNationalCallFlag:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_sackedReputationScore\n"
-    _ASM_PFX "_sackedReputationScore:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_nationalSelectorReputationPoints\n"
-    _ASM_PFX "_nationalSelectorReputationPoints:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_nationalTeamFileCode\n"
-    _ASM_PFX "_nationalTeamFileCode:\n"
-    ".skip 1\n"
-    ".skip 1\n"   /* BSS_01_164B34 unnamed hole */
-    ".globl " _ASM_PFX "_seasonReview\n"
-    _ASM_PFX "_seasonReview:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _contractNegotiationActive, _wageScalingDivisor, _teamNoOfferAccepted;
+int32_t  _teamFundsAccepted;
+uint16_t _isNationalSelector;
+uint8_t  _someTeamFlags;
+uint16_t _lastNationalityCall;
+uint8_t  _nationalTeamNationality, _nationalTeamFileId;
+uint16_t _sameNationalCallFlag, _sackedReputationScore, _nationalSelectorReputationPoints;
+uint8_t  _nationalTeamFileCode;
+uint16_t _seasonReview;

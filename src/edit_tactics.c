@@ -583,7 +583,6 @@ void ExitImportTactics(void)
  * ================================================================ */
 
 extern uint16_t _numSelectedTeams;
-extern uint8_t _selTeamsPtr;        /* start of selected teams array, stride = 0x2AC = 684 bytes */
 
 #define SELECTED_TEAM_STRIDE   684
 
@@ -2868,10 +2867,7 @@ void EditTeamsCallback(TeamFileEx *team)
 extern uint16_t _numSelectedTeams;
 extern uint8_t  _lastLoadedExtNumber;
 extern uint8_t  _teamFileBuffer[];
-extern uint8_t  _editTeamsBuffer[];
 extern uint8_t  _lastSelectedTeam[];
-extern uint8_t  _editTeamsSaveVarsArea[];
-extern uint8_t  _selTeamImportField;
 extern uint8_t  _aEditCustomTeam[];
 extern uint8_t  _aSelectTeamToEd[];
 extern uint8_t  _aCustomTeamsChanged[];

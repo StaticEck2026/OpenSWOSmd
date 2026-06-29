@@ -50,7 +50,6 @@ extern uint8_t  _aDataPoolplyrDa[];
 extern PoolPlayer   _poolPlayerStrideRef[];
 extern uint16_t _isNationalSelector;
 extern uint16_t _numSelectedTeams;
-extern uint8_t  _selTeamsPtr;
 extern uint16_t _homeMarketUpdateBacklog;
 extern uint16_t _foreignMarketUpdateBacklog;
 extern uint16_t _homeMarketRandomPickRetries;
@@ -3835,7 +3834,6 @@ drawAndReturn:
 
 /* ---- Additional externs for Chunk 167 ---- */
 extern uint8_t  _tempTeamBuffer[];          /* 0x2AC-byte team buffer */
-extern uint8_t  _selTeamPlayerIndices[];    /* 16-byte player index mapping */
 extern uint8_t *_transferReplacementPriorityTable[]; /* 8 pointers to priority lists */
 extern volatile uint16_t _currentMessage;
 extern uint16_t _trainingGame;

@@ -35,25 +35,10 @@ typedef struct {
 _Static_assert(sizeof(CareerTeamScalars) == 6,
                "CareerTeamScalars must stay 6 bytes (3 x uint16)");
 
-extern CareerTeamScalars _careerTeamScalars;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerTeamScalars\n"
-    _ASM_PFX "_careerTeamScalars:\n"
-    ".globl " _ASM_PFX "_careerNumPlayers\n"
-    _ASM_PFX "_careerNumPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_selTeamSelectedPlayerPosition\n"
-    _ASM_PFX "_selTeamSelectedPlayerPosition:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_removedPlayerStatAccum\n"
-    _ASM_PFX "_removedPlayerStatAccum:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _careerNumPlayers, _selTeamSelectedPlayerPosition, _removedPlayerStatAccum;

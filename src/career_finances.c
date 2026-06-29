@@ -80,55 +80,16 @@ _Static_assert(offsetof(CareerFinances, sensisoftPlcSponsorship) == 40, "fin lay
 
 /* Typed base symbol (offset 0, coincident with newBalance). Available for
  * new/migrated code; flat aliases below remain valid until consumers move. */
-extern CareerFinances _careerFinances;
-
 /* Standalone backing storage — zero-init BSS, real labels at each field
  * offset (see header comment for why real labels, not .equ). Mirrors the
  * section/alignment handling of careerFileBufferBuf in
  * swos_globals_career_overlay.c. */
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_careerFinances\n"
-    _ASM_PFX "_careerFinances:\n"
-    ".globl " _ASM_PFX "_newBalance\n"
-    _ASM_PFX "_newBalance:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_old_balance\n"
-    _ASM_PFX "_old_balance:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_playerPurchases\n"
-    _ASM_PFX "_playerPurchases:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_playerSales\n"
-    _ASM_PFX "_playerSales:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_generalRunningCosts\n"
-    _ASM_PFX "_generalRunningCosts:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_playerWagesBill\n"
-    _ASM_PFX "_playerWagesBill:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_gateReceipts\n"
-    _ASM_PFX "_gateReceipts:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_startingBalance\n"
-    _ASM_PFX "_startingBalance:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_startingBalanceCopy\n"
-    _ASM_PFX "_startingBalanceCopy:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_competitionBonuses\n"
-    _ASM_PFX "_competitionBonuses:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_sensisoftPlcSponsorship\n"
-    _ASM_PFX "_sensisoftPlcSponsorship:\n"
-    ".skip 4\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+int32_t _newBalance, _old_balance, _playerPurchases, _playerSales,
+        _generalRunningCosts, _playerWagesBill, _gateReceipts, _startingBalance,
+        _startingBalanceCopy, _competitionBonuses, _sensisoftPlcSponsorship;

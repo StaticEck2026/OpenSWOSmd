@@ -1125,7 +1125,6 @@ void PenaltyShootoutScorerPair(int16_t *outD5, uint16_t *outD6) {
  * ================================================================ */
 
 /* Additional externs for Chunk 102 */
-extern uint8_t _selTeamsPtr;       /* boundary-spill: label is start of teams buffer */
 extern uint16_t _numSelectedTeams;
 extern uint16_t _careerLoadedFlag;
 extern uint16_t _selTeamNumber;

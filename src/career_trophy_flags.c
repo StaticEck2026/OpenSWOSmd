@@ -41,61 +41,14 @@ _Static_assert(sizeof(CareerTrophyFlags) == 30,
 _Static_assert(offsetof(CareerTrophyFlags, playWinCupAnimation)      ==  0, "tf layout");
 _Static_assert(offsetof(CareerTrophyFlags, careerMatchSimulatedFlag) == 28, "tf layout");
 
-extern CareerTrophyFlags _careerTrophyFlags;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerTrophyFlags\n"
-    _ASM_PFX "_careerTrophyFlags:\n"
-    ".globl " _ASM_PFX "_playWinCupAnimation\n"
-    _ASM_PFX "_playWinCupAnimation:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_minorTrophyBonusActive\n"
-    _ASM_PFX "_minorTrophyBonusActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_leagueTitleBonusActive\n"
-    _ASM_PFX "_leagueTitleBonusActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_majorTrophyBonusActive\n"
-    _ASM_PFX "_majorTrophyBonusActive:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_cupBonus1Active\n"
-    _ASM_PFX "_cupBonus1Active:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_cupBonus2Active\n"
-    _ASM_PFX "_cupBonus2Active:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_wonWorldCup\n"
-    _ASM_PFX "_wonWorldCup:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_wonContinentalCup\n"
-    _ASM_PFX "_wonContinentalCup:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_wonInvitationTournament\n"
-    _ASM_PFX "_wonInvitationTournament:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_qualifyingStage1PendingFlag0\n"
-    _ASM_PFX "_qualifyingStage1PendingFlag0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_qualifyingStage1PendingFlag1\n"
-    _ASM_PFX "_qualifyingStage1PendingFlag1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_qualifyingStage2PendingFlag0\n"
-    _ASM_PFX "_qualifyingStage2PendingFlag0:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_qualifyingStage2PendingFlag1\n"
-    _ASM_PFX "_qualifyingStage2PendingFlag1:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_isCareer\n"
-    _ASM_PFX "_isCareer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_careerMatchSimulatedFlag\n"
-    _ASM_PFX "_careerMatchSimulatedFlag:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _playWinCupAnimation, _minorTrophyBonusActive, _leagueTitleBonusActive,
+         _majorTrophyBonusActive, _cupBonus1Active, _cupBonus2Active, _wonWorldCup,
+         _wonContinentalCup, _wonInvitationTournament, _qualifyingStage1PendingFlag0,
+         _qualifyingStage1PendingFlag1, _qualifyingStage2PendingFlag0,
+         _qualifyingStage2PendingFlag1, _isCareer, _careerMatchSimulatedFlag;

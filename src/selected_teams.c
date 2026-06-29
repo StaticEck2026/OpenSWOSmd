@@ -49,41 +49,35 @@
  *   +68400  (end)
  */
 #include "swos_types.h"
-#include "swos_platform.h"  /* _ASM_PFX */
+#include "swos_platform.h"
+#include "game_types.h"   /* TeamFileEx + the selTeam*/editTeams* offset macros */
 
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    /* base — typed alias + the legacy "pointer" name (same address) */
-    ".globl " _ASM_PFX "_selectedTeams\n"
-    _ASM_PFX "_selectedTeams:\n"
-    ".globl " _ASM_PFX "_selTeamsPtr\n"
-    _ASM_PFX "_selTeamsPtr:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_selTeamIsComputerFlag\n"
-    _ASM_PFX "_selTeamIsComputerFlag:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_selTeamNameBase\n"
-    _ASM_PFX "_selTeamNameBase:\n"
-    ".skip 20\n"
-    ".globl " _ASM_PFX "_selTeamImportField\n"
-    _ASM_PFX "_selTeamImportField:\n"
-    ".skip 5\n"
-    ".globl " _ASM_PFX "_selTeamSocksColor\n"
-    _ASM_PFX "_selTeamSocksColor:\n"
-    ".skip 30\n"
-    ".globl " _ASM_PFX "_selTeamPlayerIndices\n"
-    _ASM_PFX "_selTeamPlayerIndices:\n"
-    ".skip 1308\n"
-    ".globl " _ASM_PFX "_editTeamsBuffer\n"
-    _ASM_PFX "_editTeamsBuffer:\n"
-    ".skip 43778\n"
-    ".globl " _ASM_PFX "_editTeamsSaveVarsArea\n"
-    _ASM_PFX "_editTeamsSaveVarsArea:\n"
-    ".skip 23254\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b).
+ *
+ * The whole 68400-byte run is ONE contiguous TeamFileEx[100] (100 * 684), a
+ * load-bearing union: records [0..1] are the real selected teams; the 32-team
+ * roster overruns from record [2] onward into what the Amiga overlay labelled
+ * editTeamsBuffer (record[2], +1368) and editTeamsSaveVarsArea (+45146), and
+ * career_teams.c stores selTeamsPtr-relative offsets that reach into that space.
+ * Modelling it as the full array keeps every relative offset intact with no
+ * out-of-bounds. The historical sub-labels (selTeamsPtr / selTeamNameBase /
+ * selTeamImportField / selTeamPlayerIndices / editTeamsBuffer /
+ * editTeamsSaveVarsArea) are now pure-C offset macros in game_types.h; the
+ * asserts below lock their offsets to this layout. All of these are
+ * &symbol-addressed and not byte-saved (the JSON save serialises a typed
+ * selected_teams array by count + drops the scratch regions), so this is
+ * format-neutral. */
+TeamFileEx _selectedTeams[100];
+
+_Static_assert(sizeof(_selectedTeams) == 68400,
+               "selectedTeams union must stay 68400 bytes (100 * 684, overlay-exact)");
+_Static_assert(sizeof(TeamFileEx) == 684, "TeamFileEx stride must be 684");
+/* Lock the historical sub-label offsets the game_types.h macros encode: */
+_Static_assert(offsetof(TeamFileEx, team) == 0,                         "selTeamsPtr @ +0");
+_Static_assert(offsetof(TeamFile, teamName)      ==  5,                 "selTeamNameBase @ +5");
+_Static_assert(offsetof(TeamFile, league)        == 25,                 "selTeamImportField @ +25");
+_Static_assert(offsetof(TeamFile, playerNumbers) == 60,                 "selTeamPlayerIndices @ +60");
+_Static_assert(2 * sizeof(TeamFileEx)            == 1368,               "editTeamsBuffer @ +1368");
+_Static_assert(1368 + 43778                      == 45146,             "editTeamsSaveVarsArea @ +45146");

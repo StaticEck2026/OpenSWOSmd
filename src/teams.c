@@ -50,7 +50,6 @@ extern uint8_t _diyLeagueSeasonStateTable[];
 extern volatile uint16_t _panicReasonCode;
 extern uint16_t _isNationalTeam;
 extern uint16_t _numSelectedTeams;
-extern uint8_t _selTeamsPtr;
 
 /* Data labels (mutable strings and tables in SWOS2.s) */
 extern uint8_t _aDataTeamNnn[];      /* "data/team.nnn" */
@@ -2178,7 +2177,6 @@ void ChooseTeamsFriendlyCommon2(MenuEntry *entry)
 
 /* ---- Chunk 222: ChooseTeamsFriendlyInit ---- */
 
-extern uint8_t _selTeamsPtr;
 extern uint16_t _numSelectedTeams;
 extern uint16_t _viewSelectedTeams;
 extern uintptr_t _chooseTeamsHeader1stPart;

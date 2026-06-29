@@ -98,6 +98,42 @@ If a season run "wedges": it's almost always #4 (dead daemon), #5 (contention),
 #8 (dropped fire, no retry), or #9 (degraded/slow daemon) — not gdb instability
 or a game bug. Check `health`, the daemon process, and a `SWOS_HARNESS_LOG` trail.
 
+### ⚠️ "Boot hangs / harness wedges" is a DAEMON BUG — diagnose it, don't blame WSL
+
+Every "boot is slow / harness hangs" we've chased has turned out to be a bug in
+the **daemon** (`scripts/amiga/gdb_proxy.py`), NOT WSL/gdb "degradation", NOT the
+game, NOT the binary. Two have been root-caused and fixed; the symptom is always
+the same and the diagnosis takes ~30 s:
+
+**FIRST, get the real state (do NOT guess "WSL").** While `boot()`/`waitstop`
+appears hung, ask the daemon what's actually true:
+- `gdb_proxy.py health` → if it says `OK stopped PC=…`, the inferior IS halted
+  fine and only the *stop reporting* is broken (a daemon bug).
+- `gdb_proxy.py cmd "info breakpoints"` → if the **hit count climbs**, the
+  breakpoint is firing; the inferior is reaching the menu. So boot isn't slow —
+  `waitstop` just isn't noticing the stop.
+- If you need a backtrace: `kill -INT <gdb-pid>` then `cmd "thread apply all bt"`
+  (the main thread sitting at `MenuInputInjectPoint` = it reached the menu).
+
+**The two daemon bugs (both fixed):**
+1. **Relative `--bin` vs gdb cwd** → `run` no-ops (`Use the "file"/"exec-file"
+   command`), inferior never launches, every boot hangs. Fix: `abspath(args.bin)`.
+2. **`wait_stop` consume-the-stop RACE (fixed 2026-06-28).** `boot()` does
+   `cmd("run", timeout=4)` then `waitstop`. If the breakpoint fires *inside* the
+   4 s window, `cmd("run")`'s prompt-drain **swallows** the `Breakpoint N,` chunk
+   and flips `running=False`; the later `waitstop` then waits for a *new* stop
+   that never comes → hang. It is **boot-SPEED-dependent and INVERTED**: a FAST
+   boot (TURBO healthy, bp < 4 s) wedges; a SLOW boot dodges it. *That is exactly
+   why slowing things down (or "WSL degradation") appears to "fix" it, and why a
+   timing tweak fixes it but it recurs.* Fix: `wait_stop()` returns when the
+   target is already stopped (`if not self.running: return …`). Effect: `boot()`
+   150 s+/hang → ~3 s.
+
+Red herrings, ruled out: the `endbr64;ret` 4-byte `MenuInputInjectPoint`, and
+line- vs symbol-breakpoints (the harness already breaks on the **symbol**, which
+resolves + fires correctly — a `.map` file would not have helped). Don't chase
+those; get `health`/`info breakpoints` first.
+
 ### Seeing where the game is — `SWOS_HARNESS_LOG=1` (the [harness] log)
 
 Set `SWOS_HARNESS_LOG=1` in the inferior's env and the game writes `[harness] ...`

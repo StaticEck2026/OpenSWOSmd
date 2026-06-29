@@ -31,31 +31,14 @@ _Static_assert(offsetof(ManagerIdentity, managerNameBuffer)    ==  6, "mgr layou
 _Static_assert(offsetof(ManagerIdentity, managerSurnameBuffer) == 15, "mgr layout");
 _Static_assert(offsetof(ManagerIdentity, plNationality)        == 28, "mgr layout");
 
-extern ManagerIdentity _managerIdentity;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_managerIdentity\n"
-    _ASM_PFX "_managerIdentity:\n"
-    ".globl " _ASM_PFX "_mrOrMs\n"
-    _ASM_PFX "_mrOrMs:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_managerSexBuffer\n"
-    _ASM_PFX "_managerSexBuffer:\n"
-    ".skip 4\n"
-    ".globl " _ASM_PFX "_managerNameBuffer\n"
-    _ASM_PFX "_managerNameBuffer:\n"
-    ".skip 9\n"
-    ".globl " _ASM_PFX "_managerSurnameBuffer\n"
-    _ASM_PFX "_managerSurnameBuffer:\n"
-    ".skip 13\n"
-    ".globl " _ASM_PFX "_plNationality\n"
-    _ASM_PFX "_plNationality:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _mrOrMs;
+uint8_t  _managerSexBuffer[4];      /* "MR" / "MS" */
+uint8_t  _managerNameBuffer[9];
+uint8_t  _managerSurnameBuffer[13];
+uint16_t _plNationality;

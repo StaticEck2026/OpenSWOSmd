@@ -49,39 +49,13 @@ _Static_assert(offsetof(CareerSeasonRecord, goalsTaken)   == 10, "rec layout");
 /* Typed base symbol (offset 0, coincident with gamesPlayed). Available for
  * new/migrated code; the flat field labels below remain valid until consumers
  * move to careerSeasonRecord.<field>. */
-extern CareerSeasonRecord _careerSeasonRecord;
-
 /* Standalone backing storage — zero-init BSS, real labels at each field offset
  * (see header comment for why real labels, not .equ). Mirrors the section
  * handling of careerFileBufferBuf / careerFinances. */
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerSeasonRecord\n"
-    _ASM_PFX "_careerSeasonRecord:\n"
-    ".globl " _ASM_PFX "_gamesPlayed\n"
-    _ASM_PFX "_gamesPlayed:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numWins\n"
-    _ASM_PFX "_numWins:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numDrawn\n"
-    _ASM_PFX "_numDrawn:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_numLost\n"
-    _ASM_PFX "_numLost:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_goalsScored\n"
-    _ASM_PFX "_goalsScored:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_goalsTaken\n"
-    _ASM_PFX "_goalsTaken:\n"
-    ".skip 2\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint16_t _gamesPlayed, _numWins, _numDrawn, _numLost, _goalsScored, _goalsTaken;

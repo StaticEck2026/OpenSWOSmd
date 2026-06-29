@@ -70,59 +70,20 @@ _Static_assert(offsetof(CareerMatchState, lastMatchSavedPlayerPos)    == 106, "m
 _Static_assert(offsetof(CareerMatchState, lastMatchPlayers)           == 110, "ms layout");
 _Static_assert(offsetof(CareerMatchState, lastMatchSavedTeamControls) == 175, "ms layout");
 
-extern CareerMatchState _careerMatchState;
-
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 1\n"
-    ".globl " _ASM_PFX "_careerMatchState\n"
-    _ASM_PFX "_careerMatchState:\n"
-    ".globl " _ASM_PFX "_playerPositions\n"
-    _ASM_PFX "_playerPositions:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "_numPlayers\n"
-    _ASM_PFX "_numPlayers:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_currentTeamNumber\n"
-    _ASM_PFX "_currentTeamNumber:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_currentTeamSelectedPlayerPosition\n"
-    _ASM_PFX "_currentTeamSelectedPlayerPosition:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_trainingMatchSavedPlayerPos\n"
-    _ASM_PFX "_trainingMatchSavedPlayerPos:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_trainingMatchSavedPlayers\n"
-    _ASM_PFX "_trainingMatchSavedPlayers:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "_trainingMatchSavedShirtNums\n"
-    _ASM_PFX "_trainingMatchSavedShirtNums:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "_trainingMatchSavedTactics\n"
-    _ASM_PFX "_trainingMatchSavedTactics:\n"
-    ".skip 1\n"
-    ".skip 1\n"   /* pad_166A27 unnamed pad */
-    ".globl " _ASM_PFX "_lastMatchSavedPlayerPos\n"
-    _ASM_PFX "_lastMatchSavedPlayerPos:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_lastMatchSavedCoachOrPlayer\n"
-    _ASM_PFX "_lastMatchSavedCoachOrPlayer:\n"
-    ".skip 2\n"
-    ".globl " _ASM_PFX "_lastMatchPlayers\n"
-    _ASM_PFX "_lastMatchPlayers:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "_lastMatchSavedShirtNums\n"
-    _ASM_PFX "_lastMatchSavedShirtNums:\n"
-    ".skip 32\n"
-    ".globl " _ASM_PFX "_currentTactics\n"
-    _ASM_PFX "_currentTactics:\n"
-    ".skip 1\n"
-    ".globl " _ASM_PFX "_lastMatchSavedTeamControls\n"
-    _ASM_PFX "_lastMatchSavedTeamControls:\n"
-    ".skip 1\n"
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Independent globals matching the old
+ * member labels' names/types/sizes; the typed base + overlay pads were unused
+ * scaffolding and are dropped. Each member is &symbol-addressed in the save,
+ * so the format is unchanged. */
+uint8_t  _playerPositions[32];
+uint16_t _numPlayers, _currentTeamNumber, _currentTeamSelectedPlayerPosition,
+         _trainingMatchSavedPlayerPos;
+uint8_t  _trainingMatchSavedPlayers[32];
+uint8_t  _trainingMatchSavedShirtNums[32];
+uint8_t  _trainingMatchSavedTactics;
+uint16_t _lastMatchSavedPlayerPos, _lastMatchSavedCoachOrPlayer;
+uint8_t  _lastMatchPlayers[32];
+uint8_t  _lastMatchSavedShirtNums[32];
+uint8_t  _currentTactics;
+uint8_t  _lastMatchSavedTeamControls;

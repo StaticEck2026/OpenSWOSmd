@@ -38,218 +38,47 @@
 #include "swos_types.h"
 #include "swos_platform.h"
 
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_careerCompCopies\n"
-    _ASM_PFX "_careerCompCopies:\n"
-    ".globl " _ASM_PFX "_euroCupCopy\n"
-    _ASM_PFX "_euroCupCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_cupWinnersCupCopy\n"
-    _ASM_PFX "_cupWinnersCupCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_uefaCupCopy\n"
-    _ASM_PFX "_uefaCupCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_invitationTournamentCopy\n"
-    _ASM_PFX "_invitationTournamentCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_tourCopy\n"
-    _ASM_PFX "_tourCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_friendlyCopy\n"
-    _ASM_PFX "_friendlyCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_europeanChampionships2Copy\n"
-    _ASM_PFX "_europeanChampionships2Copy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup1Copy\n"
-    _ASM_PFX "_ecQualifyingGroup1Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup2Copy\n"
-    _ASM_PFX "_ecQualifyingGroup2Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup3Copy\n"
-    _ASM_PFX "_ecQualifyingGroup3Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup4Copy\n"
-    _ASM_PFX "_ecQualifyingGroup4Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup5Copy\n"
-    _ASM_PFX "_ecQualifyingGroup5Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup6Copy\n"
-    _ASM_PFX "_ecQualifyingGroup6Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup7Copy\n"
-    _ASM_PFX "_ecQualifyingGroup7Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_ecQualifyingGroup8Copy\n"
-    _ASM_PFX "_ecQualifyingGroup8Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_copaAmericaCopy\n"
-    _ASM_PFX "_copaAmericaCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_africanNationsCupCopy\n"
-    _ASM_PFX "_africanNationsCupCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_northAmericanCupCopy\n"
-    _ASM_PFX "_northAmericanCupCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_asianCupCopy\n"
-    _ASM_PFX "_asianCupCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_oceaniaCupCopy\n"
-    _ASM_PFX "_oceaniaCupCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCup2Copy\n"
-    _ASM_PFX "_worldCup2Copy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup1Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup1Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup2Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup2Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup3Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup3Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup4Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup4Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup5Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup5Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup6Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup6Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup7Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup7Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_worldCupQualifyingGroup8Copy\n"
-    _ASM_PFX "_worldCupQualifyingGroup8Copy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_northAmericaWorldCupQualificationCopy\n"
-    _ASM_PFX "_northAmericaWorldCupQualificationCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_southAmericaWorldCupQualificationCopy\n"
-    _ASM_PFX "_southAmericaWorldCupQualificationCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_africaWorldCupQualificationCopy\n"
-    _ASM_PFX "_africaWorldCupQualificationCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_asiaWorldCupQualificationCopy\n"
-    _ASM_PFX "_asiaWorldCupQualificationCopy:\n"
-    ".skip 112\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".globl " _ASM_PFX "_oceaniaWorldCupQualificationCopy\n"
-    _ASM_PFX "_oceaniaWorldCupQualificationCopy:\n"
-    ".skip 92\n"
-#if UINTPTR_MAX != 0xFFFFFFFFu
-    ".skip 8\n"   /* text[2] 64-bit growth */
-#endif
-    ".text\n"
-);
+/* Standalone zero-init BSS storage — pure C (was an __asm__ .skip block;
+ * converted for the WASM/Emscripten target, which rejects asm-defined data
+ * symbols — see docs/WASM.md §4b). Simple split: the typed base was unused and
+ * there is no cross-copy arithmetic; each *Copy is its own buffer, addressed via
+ * &symbol by careerContests[].competitionCopy and reconstructed on load, so the
+ * relocation is save-neutral. CC64 reproduces the old conditional `.skip 8`
+ * (the text[2] pointer pair grows 32->64-bit); aligned(4) preserves .p2align 2.
+ * Kept raw-byte (no competition-type include) to avoid the include conflict. */
+#define CC64 (UINTPTR_MAX != 0xFFFFFFFFu ? 8 : 0)
+
+uint8_t _euroCupCopy                          [112 + CC64] __attribute__((aligned(4)));
+uint8_t _cupWinnersCupCopy                    [92 + CC64] __attribute__((aligned(4)));
+uint8_t _uefaCupCopy                          [92 + CC64] __attribute__((aligned(4)));
+uint8_t _invitationTournamentCopy             [92 + CC64] __attribute__((aligned(4)));
+uint8_t _tourCopy                             [92 + CC64] __attribute__((aligned(4)));
+uint8_t _friendlyCopy                         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _europeanChampionships2Copy           [112 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup1Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup2Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup3Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup4Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup5Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup6Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup7Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _ecQualifyingGroup8Copy               [92 + CC64] __attribute__((aligned(4)));
+uint8_t _copaAmericaCopy                      [112 + CC64] __attribute__((aligned(4)));
+uint8_t _africanNationsCupCopy                [112 + CC64] __attribute__((aligned(4)));
+uint8_t _northAmericanCupCopy                 [112 + CC64] __attribute__((aligned(4)));
+uint8_t _asianCupCopy                         [112 + CC64] __attribute__((aligned(4)));
+uint8_t _oceaniaCupCopy                       [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCup2Copy                        [112 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup1Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup2Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup3Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup4Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup5Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup6Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup7Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _worldCupQualifyingGroup8Copy         [92 + CC64] __attribute__((aligned(4)));
+uint8_t _northAmericaWorldCupQualificationCopy[112 + CC64] __attribute__((aligned(4)));
+uint8_t _southAmericaWorldCupQualificationCopy[112 + CC64] __attribute__((aligned(4)));
+uint8_t _africaWorldCupQualificationCopy      [112 + CC64] __attribute__((aligned(4)));
+uint8_t _asiaWorldCupQualificationCopy        [112 + CC64] __attribute__((aligned(4)));
+uint8_t _oceaniaWorldCupQualificationCopy     [92 + CC64] __attribute__((aligned(4)));

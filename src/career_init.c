@@ -71,7 +71,6 @@ extern uint16_t _stayingInOldClub;
 extern uint16_t _careerTeamLeague;
 extern uint16_t _selTeamNumber;
 extern TeamFileEx _careerTeam;
-extern uint8_t  _selTeamsPtr;     /* start of selected teams buffer (boundary spill) */
 extern uint8_t  _currentMatchPlayers[];
 extern uint16_t _teamsLoaded;
 extern int32_t  _newBalance;

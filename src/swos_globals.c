@@ -346,12 +346,18 @@ uint16_t _menuColorAndTextScript[5166] = {
  * those section-stack pseudo-ops (it errors "unknown pseudo-op"). The zero-init
  * globals further down (offerOrdinals, goalieFaces) emit their own .bss/.comm
  * directive and resync regardless. */
-__asm__(
+/* Converted for the WASM/Emscripten target (rejects asm-defined .skip storage —
+ * docs/WASM.md §4b). `_menuEntries` must sit at `_currentMenu + MENU_HEADER_SIZE`
+ * (UnpackMenu writes the Menu header into currentMenu, then entries at +HDR) and
+ * has >1000 uses, so this is a storage-level conversion, not a call-site repoint.
+ * On non-Apple: a pure-C array carrier + a .equ offset alias for menuEntries
+ * (`.skip` storage is rejected by wasm; `.equ a, carrier+off` compiles on
+ * wasm/ELF/COFF). On Apple: keep real BSS labels (Mach-O drops `.equ a, sym+off`);
+ * that branch ends in `.data` to keep GCC's lazy section tracking in sync with the
+ * initialized global that follows (see the NOTE above). */
 #if defined(__APPLE__)
+__asm__(
     ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
     ".p2align 2\n"
     ".globl " _ASM_PFX "_currentMenu\n"
     _ASM_PFX "_currentMenu:\n"
@@ -361,6 +367,11 @@ __asm__(
     ".skip " _MENU_HDR_STR((8 * 1024 + 80 * 1024) - MENU_HEADER_SIZE) "\n"
     ".data\n"
 );
+#else
+uint8_t _currentMenu[8 * 1024 + 80 * 1024] __attribute__((used, aligned(4)));
+__asm__(".globl " _ASM_PFX "_menuEntries\n"
+        ".equ   " _ASM_PFX "_menuEntries, " _ASM_PFX "_currentMenu + " _MENU_HDR_STR(MENU_HEADER_SIZE) "\n");
+#endif
 
 /* ---- Stadium-menu little-player sprite-copy block --------------------
  * The stadium menu (pre-match lineup screen) draws one mini-player
@@ -609,17 +620,18 @@ __attribute__((used, aligned(2))) EditTeamsSpriteCopy _editTeamsSecondarySocks  
  *   +2252  hilMaxSubstitutes
  *   +2254  hilStartOfGoalsBuffer
  *   +21254 inGameHilBuffer        (= 2254 + 0x4A38) */
-__asm__(
+/* Converted for the WASM/Emscripten target (rejects asm-defined .skip storage —
+ * docs/WASM.md §4b). The HIL buffer is blob-written as one unit
+ * (WriteFile(_hilFileBuffer, size)) and its named sub-fields are read/written by
+ * symbol, so the run MUST stay contiguous — a storage-level conversion, not a
+ * call-site repoint. On non-Apple: a pure-C array carrier + .equ offset aliases
+ * (`.skip` storage is rejected by wasm; `.equ a, carrier+off` compiles on
+ * wasm/ELF/COFF). On Apple: keep real BSS labels (Mach-O drops `.equ a, sym+off`).
+ * The unused `_hilBackingBuf` base alias is dropped. Total 192254 bytes. */
 #if defined(__APPLE__)
+__asm__(
     ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
-#else
-    ".section .bss\n"
-#endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "_hilBackingBuf\n"
-    _ASM_PFX "_hilBackingBuf:\n"
     ".globl " _ASM_PFX "_hilFileBuffer\n"
     _ASM_PFX "_hilFileBuffer:\n"
     ".skip 2044\n"
@@ -652,6 +664,29 @@ __asm__(
     ".skip 171000\n"              /* 192254 - 21254 */
     ".text\n"
 );
+#else
+uint8_t _hilFileBuffer[192254] __attribute__((used, aligned(4)));
+__asm__(
+    ".globl " _ASM_PFX "_hilGameName\n"
+    ".equ   " _ASM_PFX "_hilGameName, "          _ASM_PFX "_hilFileBuffer + 2044\n"
+    ".globl " _ASM_PFX "_hilGameRound\n"
+    ".equ   " _ASM_PFX "_hilGameRound, "         _ASM_PFX "_hilFileBuffer + 2144\n"
+    ".globl " _ASM_PFX "_hilNumGoals\n"
+    ".equ   " _ASM_PFX "_hilNumGoals, "          _ASM_PFX "_hilFileBuffer + 2244\n"
+    ".globl " _ASM_PFX "_hilTeam1Goals\n"
+    ".equ   " _ASM_PFX "_hilTeam1Goals, "        _ASM_PFX "_hilFileBuffer + 2246\n"
+    ".globl " _ASM_PFX "_hilTeam2Goals\n"
+    ".equ   " _ASM_PFX "_hilTeam2Goals, "        _ASM_PFX "_hilFileBuffer + 2248\n"
+    ".globl " _ASM_PFX "_hilPitchNumber\n"
+    ".equ   " _ASM_PFX "_hilPitchNumber, "       _ASM_PFX "_hilFileBuffer + 2250\n"
+    ".globl " _ASM_PFX "_hilMaxSubstitutes\n"
+    ".equ   " _ASM_PFX "_hilMaxSubstitutes, "    _ASM_PFX "_hilFileBuffer + 2252\n"
+    ".globl " _ASM_PFX "_hilStartOfGoalsBuffer\n"
+    ".equ   " _ASM_PFX "_hilStartOfGoalsBuffer, " _ASM_PFX "_hilFileBuffer + 2254\n"
+    ".globl " _ASM_PFX "_inGameHilBuffer\n"
+    ".equ   " _ASM_PFX "_inGameHilBuffer, "      _ASM_PFX "_hilFileBuffer + 21254\n"
+);
+#endif
 #undef HIL_BACKING_BUF_SIZE
 
 /* ---- Audio buffers: sized to hold the real Amiga sound files.
@@ -968,17 +1003,20 @@ void *_kGoalieSkillTables[8] = {
  * team ids, and tripped Career_AppendTeamToTmdTeamPool's 0x3443
  * panic. Pack the whole region into one buffer matching the Amiga
  * BSS run and expose each slot via inline-asm .equ alias. */
-__asm__(
+/* Converted for the WASM/Emscripten target (rejects asm-defined .skip storage —
+ * docs/WASM.md §4b). The grids MUST stay one contiguous run (qualifyTeamsForUefaCup
+ * walks a5 forward and uses `a5 == euroCupTitleHolderGrid` as a boundary), and
+ * primaryQualifiedTeamGrids has many uses, so this is a storage-level conversion,
+ * not a call-site repoint. On non-Apple: a pure-C array carrier + .equ offset
+ * aliases (`.skip` storage is rejected by wasm; `.equ a, carrier+off` compiles on
+ * wasm/ELF/COFF). On Apple: keep real BSS labels (Mach-O drops `.equ a, sym+off`).
+ * The unused `_qualifiedTeamGridsBlock` base alias is dropped. Layout:
+ *   primaryQualifiedTeamGrids +0 (8208), tertiary +8208, euroCup +8892,
+ *   cupWinnersCup +9576, uefa +10260; total 10944. */
 #if defined(__APPLE__)
+__asm__(
     ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
-#else
-    ".section .bss\n"
-#endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "_qualifiedTeamGridsBlock\n"
-    _ASM_PFX "_qualifiedTeamGridsBlock:\n"
     ".globl " _ASM_PFX "_primaryQualifiedTeamGrids\n"
     _ASM_PFX "_primaryQualifiedTeamGrids:\n"
     ".skip 8208\n"
@@ -996,6 +1034,19 @@ __asm__(
     ".skip 684\n"
     ".text\n"
 );
+#else
+uint8_t _primaryQualifiedTeamGrids[10944] __attribute__((used, aligned(4)));
+__asm__(
+    ".globl " _ASM_PFX "_tertiaryQualifiedTeamGrid\n"
+    ".equ   " _ASM_PFX "_tertiaryQualifiedTeamGrid, "    _ASM_PFX "_primaryQualifiedTeamGrids + 8208\n"
+    ".globl " _ASM_PFX "_euroCupTitleHolderGrid\n"
+    ".equ   " _ASM_PFX "_euroCupTitleHolderGrid, "       _ASM_PFX "_primaryQualifiedTeamGrids + 8892\n"
+    ".globl " _ASM_PFX "_cupWinnersCupTitleHolderGrid\n"
+    ".equ   " _ASM_PFX "_cupWinnersCupTitleHolderGrid, " _ASM_PFX "_primaryQualifiedTeamGrids + 9576\n"
+    ".globl " _ASM_PFX "_uefaCupTitleHolderGrid\n"
+    ".equ   " _ASM_PFX "_uefaCupTitleHolderGrid, "       _ASM_PFX "_primaryQualifiedTeamGrids + 10260\n"
+);
+#endif
 
 
 /* gameRound: on Amiga the 1-byte gameRound label is followed by an
@@ -1006,22 +1057,11 @@ __asm__(
  * (which sits adjacent on SDL). highlight.c also iterates 40 bytes
  * between gameRound and hilGameRound. Provide a 100-byte buffer to
  * match the Amiga round-string capacity. */
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_gameRoundBuf\n"
-    _ASM_PFX "_gameRoundBuf:\n"
-    ".globl " _ASM_PFX "_gameRound\n"
-    _ASM_PFX "_gameRound:\n"
-    ".skip 100\n"
-    ".text\n"
-);
+/* Pure-C backing (was an __asm__ .skip block; converted for the WASM target —
+ * docs/WASM.md §4b). gameRoundBuf was an unused base alias and is dropped;
+ * gameRound is a 100-byte round-name string buffer (StringCopy target + the
+ * highlight.c 40-byte copy). aligned(2) covers any sub-word access. */
+uint8_t _gameRound[100] __attribute__((aligned(2)));
 
 
 /* diyFileBufferCopy + diyCompetitionStart share one BSS run on Amiga:
@@ -1080,18 +1120,11 @@ __asm__(
  * --------------------------------------------------------------------- */
 DIYTournamentState _diyFileBufferCopy;
 
-__asm__(
-#if defined(__APPLE__)
-    ".section __DATA,__bss\n"
-#else
-    ".section .bss\n"
-#endif
-    ".p2align 2\n"
-    ".globl " _ASM_PFX "_diyCompetitionStartBuf\n"
-    _ASM_PFX "_diyCompetitionStartBuf:\n"
-    ".skip 7136\n"
-    ".text\n"
-);
+/* Pure-C backing (was an __asm__ .skip block; converted for the WASM/Emscripten
+ * target, which rejects asm-defined data symbols — docs/WASM.md §4b). aligned(4)
+ * matches the old .p2align 2. The _diyCompetitionStart alias below is a no-offset
+ * rename — wasm/ELF/COFF/Mach-O all resolve `.equ a, carrier` over a C array. */
+uint8_t _diyCompetitionStartBuf[7136] __attribute__((used, aligned(4)));
 
 __asm__(".globl " _ASM_PFX "_diyCompetitionStart\n"
         ".equ   " _ASM_PFX "_diyCompetitionStart, " _ASM_PFX "_diyCompetitionStartBuf\n");
@@ -1159,17 +1192,16 @@ __asm__(".globl " _ASM_PFX "_diyCompetitionStart\n"
  * each slot for the '.' that starts the file extension. The Amiga
  * sized this run as numberOfFiles(2) + 2 pad + foundFilenamesBuffer($77E)
  * = 0x782 bytes total. */
-__asm__(
+/* Converted for the WASM/Emscripten target (rejects asm-defined .skip storage —
+ * docs/WASM.md §4b). foundFilenamesBuffer must sit at numberOfFiles+4
+ * (AssetSys_ResolveAssetList packs 32-byte entries from &numberOfFiles, names
+ * landing at foundFilenamesBuffer), so the run stays contiguous. On non-Apple:
+ * pure-C array carrier + .equ aliases; on Apple: real BSS labels (Mach-O drops
+ * `.equ a, sym+off`). The unused base alias keeps the carrier name. Total 1922. */
 #if defined(__APPLE__)
+__asm__(
     ".section __DATA,__bss\n"
-#elif defined(__m68k__) || defined(__amigaos__) || defined(__amigaos4__)
-    ".section .bss\n"
-#else
-    ".section .bss\n"
-#endif
     ".p2align 2\n"
-    ".globl " _ASM_PFX "_numberOfFilesBuf\n"
-    _ASM_PFX "_numberOfFilesBuf:\n"
     ".globl " _ASM_PFX "_numberOfFiles\n"
     _ASM_PFX "_numberOfFiles:\n"
     ".skip 4\n"
@@ -1178,6 +1210,15 @@ __asm__(
     ".skip 1918\n"
     ".text\n"
 );
+#else
+uint8_t _numberOfFilesBuf[1922] __attribute__((used, aligned(4)));
+__asm__(
+    ".globl " _ASM_PFX "_numberOfFiles\n"
+    ".equ   " _ASM_PFX "_numberOfFiles, "        _ASM_PFX "_numberOfFilesBuf\n"
+    ".globl " _ASM_PFX "_foundFilenamesBuffer\n"
+    ".equ   " _ASM_PFX "_foundFilenamesBuffer, " _ASM_PFX "_numberOfFilesBuf + 4\n"
+);
+#endif
 
 
 /* careerTeam: aliased in swos_globals_career_overlay.c to

@@ -48,7 +48,6 @@ extern uint16_t _newPlayerSkill;
 
 extern TeamFileEx _currentTeam;
 extern TeamFileEx _careerTeam;
-extern uint8_t _selTeamsPtr;
 extern uint8_t _playerPositions[];
 extern uint8_t _currentMatchPlayers[];
 extern uint8_t _playerPositionsArray[];
