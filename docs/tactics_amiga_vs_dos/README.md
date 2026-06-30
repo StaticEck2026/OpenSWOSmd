@@ -1,5 +1,13 @@
 # Amiga vs DOS tactic (formation) data
 
+> **Note (2026-06-29) — historical snapshot.** This data reflects the *original*
+> Amiga formations. Tester-supplied `.TAC` fixes were later applied (commit
+> `23f0c59`) to **4-4-2, Sweep, 4-3-3, 3-4-3** (buggy ball positions — CDs /
+> attackers flipping sides). The shipped formations now live in
+> `bin/data_json/tactics/*.json` and diverge from the "amiga" column here for
+> those four. This snapshot is kept as the record of the original Amiga-vs-DOS
+> delta, not of the current data.
+
 The SWOS engine + team files are identical across DOS and Amiga; the only
 gameplay-affecting data that differs between the two releases is the **default
 formation coverage** (`TeamTactics`). This folder is the proof + the raw data.

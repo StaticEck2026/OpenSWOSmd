@@ -353,6 +353,17 @@ original `SWOS2.s`.*
 
 ## 9. Amiga vs DOS — why the *same* swap can show different marks
 
+> **Update (2026-06-29) — the "byte-identical to the Amiga" claims below are now
+> historical.** Since this analysis, tester-supplied `.TAC` fixes were applied
+> (commit `23f0c59`) to **4 Amiga formations — 4-4-2, Sweep, 4-3-3, 3-4-3** —
+> which had buggy ball-position coverage (central defenders / attackers flipping
+> sides instead of holding position). So this port's `442`/`Sweep`/`433`/`343`
+> now **intentionally diverge** from the pristine Amiga data. The byte counts in
+> §9.3 and the `docs/tactics_amiga_vs_dos/` snapshot describe the data **before**
+> that fix; they remain accurate as a record of the original Amiga-vs-DOS delta,
+> not of the current shipped formations. The formations now live in
+> `bin/data_json/tactics/*.json` (see `docs/` data-pipeline notes).
+
 A tester noticed that on the **squad screen**, swapping two central defenders
 (Brazil's **Aldair** ↔ **Ronaldão**) produces different indicators:
 
@@ -408,8 +419,10 @@ The two platforms even store it differently:
 
 ### 9.3 The actual difference, proven asm-to-asm
 
-This port reproduces the real Amiga formations **byte-for-byte** (verified against
-`SWOS-RE/.../SWOS2.s` `teamTactics*` for all 12 formations — 0 differences).
+At the time of this analysis the port reproduced the real Amiga formations
+**byte-for-byte** (verified against `SWOS-RE/.../SWOS2.s` `teamTactics*` for all 12
+formations — 0 differences). *(Since superseded for 4 formations — see the update
+note at the top of §9.)*
 Comparing those against the DOS `tact_*` tables, only **3 of the 12 formations
 were re-tuned** for the DOS release; the other 9 are byte-identical:
 
