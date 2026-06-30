@@ -61,7 +61,7 @@ extern uint8_t    _seasonPlaying;
 extern uint8_t    _kRandomTable[];
 extern void *_teamTacticsTable[];
 extern void *_positionsTable[];
-extern uint16_t   _oldPlayerSkill;
+extern uint16_t   _teamSkillCurrent;
 extern uint8_t    _playerPositionsArray[];
 
 /* Data tables in asm for this module */
@@ -817,7 +817,7 @@ uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCoun
 
     /* Final division by oldPlayerSkillDivisor and store */
     result = (uint16_t)((uint32_t)result / oldPlayerSkillDivisor);
-    _oldPlayerSkill = result;
+    _teamSkillCurrent = result;
 
     /* Clear flag at offset 0x3B (playerValuesDirty in TeamFile) */
     team->team.playerValuesDirty = TEAM_VALUES_CLEAN;

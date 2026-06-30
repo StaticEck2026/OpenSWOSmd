@@ -300,8 +300,13 @@ uint16_t _internationalAutoAdvanceFlag;
 uint16_t _seasonUpdateInProgress;
 uint16_t _writeOnlyVar01;
 uint16_t _highlightedLeagueTeamId;
-uint16_t _oldPlayerSkill;
-uint16_t _newPlayerSkill;
+/* Squad/tactics LARGE tick-cross: _teamSkillCurrent is the live team total written
+ * by ComputeOldPlayerSkillForViewResult; _teamSkillSnapshot is the baseline captured
+ * before a move (only ever `_teamSkillSnapshot = _teamSkillCurrent`). current > snapshot
+ * -> team improved -> green tick. (Renamed from the back-to-front _oldPlayerSkill /
+ * _newPlayerSkill, 2026-06-30.) */
+uint16_t _teamSkillCurrent;
+uint16_t _teamSkillSnapshot;
 uint16_t _team1SelectedPlayerIndex;
 uint16_t _team2SelectedPlayerIndex;
 /* careerFileBuffer: backing storage moved to swos_globals.c. On

@@ -43,8 +43,8 @@ extern uint16_t _coachOrPlayer;
 extern uint16_t _currentTeamNumber;
 extern uint16_t _selTeamNumber;
 extern uint16_t _panicReasonCode;
-extern uint16_t _oldPlayerSkill;
-extern uint16_t _newPlayerSkill;
+extern uint16_t _teamSkillCurrent;
+extern uint16_t _teamSkillSnapshot;
 
 extern TeamFileEx _currentTeam;
 extern TeamFileEx _careerTeam;
@@ -187,8 +187,8 @@ void UpdateCheckMarkSprite(void) {
     e->isInvisible = 1;
     if (_viewingOpponentTeam) return;
     e->stringFlags &= ~(1u << 13);
-    if (_oldPlayerSkill == _newPlayerSkill) return;
-    e->fgWord = (_oldPlayerSkill > _newPlayerSkill) ? SPR_CHECK_BIG : SPR_CROSS_BIG;
+    if (_teamSkillCurrent == _teamSkillSnapshot) return;
+    e->fgWord = (_teamSkillCurrent > _teamSkillSnapshot) ? SPR_CHECK_BIG : SPR_CROSS_BIG;
     e->stringFlags |= (1u << 13);
     e->isInvisible = 0;
 }
@@ -196,7 +196,7 @@ void UpdateCheckMarkSprite(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void UpdateLittleCheckmark(void) {
-    _newPlayerSkill = _oldPlayerSkill;
+    _teamSkillSnapshot = _teamSkillCurrent;
     int16_t i; for (i = 0; i < 32; i++) _oldPlayerPositionsArray[i] = _playerPositionsArray[i];
     UpdateCheckMarkSprite();
 }
@@ -204,7 +204,7 @@ void UpdateLittleCheckmark(void) {
 /* ================================================================ */
 __attribute__((used, externally_visible))
 void SavePositionsAndUpdateLittleCheckmark(void) {
-    _newPlayerSkill = _oldPlayerSkill;
+    _teamSkillSnapshot = _teamSkillCurrent;
     int16_t i; for (i = 0; i < 32; i++) _oldPlayerPositionsArray[i] = _playerPositionsArray[i];
     TeamFileEx *team = _playMatchTeam1Ptr;
     team->team.playerValuesDirty = TEAM_VALUES_DIRTY;

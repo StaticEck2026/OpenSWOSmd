@@ -918,8 +918,8 @@ void Squad45AfterDraw(void)
 
 /* SPR_CHECK_BIG / SPR_CROSS_BIG come from play_match_menu.h (included above). */
 
-extern uint16_t _oldPlayerSkill;
-extern uint16_t _newPlayerSkill;
+extern uint16_t _teamSkillCurrent;
+extern uint16_t _teamSkillSnapshot;
 extern uint8_t _playerPositionsArray[];
 extern uint8_t _oldPlayerPositionsArray[];
 extern uint16_t _teamSkillDiffAfterChange;
@@ -930,8 +930,8 @@ extern uint16_t _teamSkillDiffAfterChange;
  * Updates the big check mark sprite on menu entry 1 (offset 0x38)
  * based on skill difference after formation change.
  * - If teamSkillDiffAfterChange >= 0: hide the check mark
- * - If old > new skill (team STRONGER): show green tick (SPR_CHECK_BIG)
- * - If old < new skill (team WEAKER):   show red cross (SPR_CROSS_BIG)
+ * - If current > snapshot (team STRONGER): show green tick (SPR_CHECK_BIG)
+ * - If current < snapshot (team WEAKER):   show red cross (SPR_CROSS_BIG)
  * - If equal: return (no change)
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -948,10 +948,10 @@ void UpdateBigCheckMark(void)
     flags &= ~(1 << 13); /* bclr #13 */
     entry->stringFlags = flags;
 
-    if (_oldPlayerSkill > _newPlayerSkill) {
+    if (_teamSkillCurrent > _teamSkillSnapshot) {
         /* Team got stronger: show green tick */
         entry->fgWord = SPR_CHECK_BIG;
-    } else if (_oldPlayerSkill < _newPlayerSkill) {
+    } else if (_teamSkillCurrent < _teamSkillSnapshot) {
         /* Team got weaker: show red cross */
         entry->fgWord = SPR_CROSS_BIG;
     } else {
@@ -981,7 +981,7 @@ void SquadRedrawPlayerListAndCheckMark(void)
 /* ================================================================
  * SquadMenuSavePlayerPositions  (SWOS2.s line 57506)
  *
- * Copies newPlayerSkill → oldPlayerSkill,
+ * Snapshots the team total (_teamSkillSnapshot = _teamSkillCurrent),
  * copies 32 bytes from playerPositionsArray → oldPlayerPositionsArray,
  * then calls UpdateBigCheckMark.
  * ================================================================ */
@@ -991,7 +991,7 @@ void SquadMenuSavePlayerPositions(void)
     volatile uint8_t *dst = (volatile uint8_t *)_oldPlayerPositionsArray;
     volatile uint8_t *src = (volatile uint8_t *)_playerPositionsArray;
     int16_t i;
-    _newPlayerSkill = _oldPlayerSkill;
+    _teamSkillSnapshot = _teamSkillCurrent;
     for (i = 0; i < 32; i++)
         dst[i] = src[i];
     UpdateBigCheckMark();
@@ -1012,7 +1012,7 @@ void SquadCommitPositionsAndUpdateSkill(void)
     volatile uint8_t *dst = (volatile uint8_t *)_oldPlayerPositionsArray;
     volatile uint8_t *src = (volatile uint8_t *)_playerPositionsArray;
     int16_t i;
-    _newPlayerSkill = _oldPlayerSkill;
+    _teamSkillSnapshot = _teamSkillCurrent;
     for (i = 0; i < 32; i++)
         dst[i] = src[i];
 
