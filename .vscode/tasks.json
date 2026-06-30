@@ -2,6 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
+            // Native Windows build (Cygwin) -> bin/SWOS.exe. Default build (Ctrl+Shift+B).
             "label": "Build",
             "type": "process",
             "command": "C:/cygwin64/bin/bash.exe",
@@ -36,6 +37,75 @@
             "problemMatcher": []
         },
         {
+            // Linux x86_64 ELF -> bin/SWOS.x86_64. The Linux ELF targets build (and,
+            // for x86_64, run) in WSL — Cygwin's gcc makes Windows binaries, not Linux
+            // ELF. Per-arch object dirs (build/linux/<arch>) mean NO `make clean` is
+            // needed when switching arches. Adjust the project path below if yours differs.
+            "label": "Build (x86_64)",
+            "detail": "Linux x86_64 ELF (bin/SWOS.x86_64) — built + run in WSL.",
+            "type": "process",
+            "command": "wsl.exe",
+            "args": [
+                "bash", "-lc",
+                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make X86_64=1 -j$(nproc)"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            // Linux aarch64 ELF -> bin/SWOS.aarch64. Cross-compiled in WSL
+            // (aarch64-linux-gnu-gcc + libsdl2-dev:arm64). Runs on real ARM64 hardware,
+            // not on the x86 host.
+            "label": "Build (aarch64)",
+            "detail": "Linux aarch64 ELF (bin/SWOS.aarch64) — cross-compiled in WSL.",
+            "type": "process",
+            "command": "wsl.exe",
+            "args": [
+                "bash", "-lc",
+                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make ARM64=1 -j$(nproc)"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            // Linux armhf ELF -> bin/SWOS.armhf. Cross-compiled in WSL
+            // (arm-linux-gnueabihf-gcc + libsdl2-dev:armhf). Runs on a Pi etc.
+            "label": "Build (armhf)",
+            "detail": "Linux armhf ELF (bin/SWOS.armhf) — cross-compiled in WSL.",
+            "type": "process",
+            "command": "wsl.exe",
+            "args": [
+                "bash", "-lc",
+                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make ARM=1 -j$(nproc)"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            // All three Linux ELF arches in one go. Per-arch objdirs => no clean between them.
+            "label": "Build (Linux all)",
+            "detail": "x86_64 + aarch64 + armhf (separate build/linux/<arch> objdirs).",
+            "type": "process",
+            "command": "wsl.exe",
+            "args": [
+                "bash", "-lc",
+                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make X86_64=1 -j$(nproc) && make ARM64=1 -j$(nproc) && make ARM=1 -j$(nproc)"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            // macOS universal binary -> bin/SWOS.macos (x86_64 + arm64 via lipo).
+            // MAC ONLY — needs a Darwin host + SDL2.framework; will fail on Windows.
+            "label": "Build (macOS universal)",
+            "detail": "Mac only — bin/SWOS.macos fat binary. Needs SDL2.framework.",
+            "type": "shell",
+            "command": "make",
+            "args": ["macos-universal"],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
             // WASM is built with emcc (a Linux toolchain), so it runs in WSL, not
             // Cygwin. Adjust the emsdk / project paths below if yours differ.
             "label": "Build (wasm)",
@@ -45,6 +115,7 @@
                 "bash", "-lc",
                 "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make WASM=1 -j$(nproc)"
             ],
+            "group": "build",
             "problemMatcher": []
         },
         {
