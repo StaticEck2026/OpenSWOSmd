@@ -116,6 +116,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) MODE="dry-run"; shift ;;
         --check|--status) MODE="check"; shift ;;
+        --audit)   MODE="audit";   shift ;;
         --apply)   MODE="apply";   shift ;;
         --force)   FORCE=1;        shift ;;
         --dest)    AMIGA_ROOT="$2"; shift 2 ;;
@@ -189,7 +190,7 @@ fi
 # Clobber protection: if Amiga port has uncommitted src/ or include/
 # changes, refuse unless --force. Only matters for modes that WRITE — the
 # read-only --dry-run / --check never overwrite, so they skip this.
-if [[ "$MODE" != "dry-run" && "$MODE" != "check" \
+if [[ "$MODE" != "dry-run" && "$MODE" != "check" && "$MODE" != "audit" \
       && "$FORCE" -eq 0 && -d "$AMIGA_ROOT/.git" ]]; then
     dirty=$(cd "$AMIGA_ROOT" && git status --porcelain src/ include/ 2>/dev/null | head -1)
     if [[ -n "$dirty" ]]; then
@@ -231,6 +232,43 @@ for f in "${HDR_FILES[@]}"; do
     fi
 done
 
+# ---- Audit: shared files that DIFFER but are NOT in the sync lists ----
+# Catches the silent-gap failure mode: a header used by tracked .c files but
+# absent from HDR_FILES never syncs, and --check can't see it (it only inspects
+# the tracked lists). Scans every src/*.c and include/*.h that exists in BOTH
+# trees; reports the ones that differ AND aren't tracked. NOTE: some of these are
+# intentional `#ifdef SWOS_SDL_BUILD`-only divergences — review before adding
+# them to SRC_FILES/HDR_FILES.
+audit_untracked() {
+    local tracked=" ${SRC_FILES[*]} ${HDR_FILES[*]} "
+    local found=0 b
+    echo "Audit: untracked shared files that DIFFER between the trees:"
+    for f in "$SDL_ROOT"/src/*.c; do
+        b=$(basename "$f")
+        [[ -f "$AMIGA_ROOT/src/$b" ]] || continue
+        [[ "$tracked" == *" $b "* ]] && continue
+        cmp -s "$f" "$AMIGA_ROOT/src/$b" || { echo "    UNTRACKED+DIFFERS  src/$b"; found=$((found+1)); }
+    done
+    for f in "$SDL_ROOT"/include/*.h; do
+        b=$(basename "$f")
+        [[ -f "$AMIGA_ROOT/include/$b" ]] || continue
+        [[ "$tracked" == *" $b "* ]] && continue
+        cmp -s "$f" "$AMIGA_ROOT/include/$b" || { echo "    UNTRACKED+DIFFERS  include/$b"; found=$((found+1)); }
+    done
+    if [[ "$found" -eq 0 ]]; then
+        echo "    (none — every differing shared file is tracked)"
+    else
+        echo "  -> $found untracked file(s) drift silently. Add genuinely-shared ones to"
+        echo "     SRC_FILES / HDR_FILES; leave intentional SWOS_SDL_BUILD-only files out."
+    fi
+    return 0
+}
+
+if [[ "$MODE" == "audit" ]]; then
+    audit_untracked
+    exit 0
+fi
+
 # ---- Check mode: content-diff status report; exit 0 iff fully in sync ----
 if [[ "$MODE" == "check" ]]; then
     echo "Sync status (SDL -> Amiga, by content):"
@@ -253,9 +291,12 @@ if [[ "$MODE" == "check" ]]; then
         [[ ${#missing_src[@]} -gt 0 ]] && printf '    src/%s\n' "${missing_src[@]}"
         [[ ${#missing_hdr[@]} -gt 0 ]] && printf '    include/%s\n' "${missing_hdr[@]}"
     fi
+    echo ""
+    audit_untracked
+    echo ""
     out_of_sync=$(( ${#diff_src[@]} + ${#diff_hdr[@]} + ${#new_src[@]} + ${#new_hdr[@]} ))
     if [[ "$out_of_sync" -eq 0 ]]; then
-        echo "Verdict: IN SYNC - all ${#same_src[@]} src + ${#same_hdr[@]} include file(s) identical."
+        echo "Verdict: IN SYNC - all ${#same_src[@]} src + ${#same_hdr[@]} include file(s) identical (tracked list; see audit above for untracked drift)."
         exit 0
     fi
     echo "Verdict: OUT OF SYNC - ${#diff_src[@]} src + ${#diff_hdr[@]} include differ, $(( ${#new_src[@]} + ${#new_hdr[@]} )) SDL-only. Run --apply to sync (or 'git diff' on the Amiga side for detail)."
