@@ -7,6 +7,18 @@
 // side hook is the docs/WASM.md §2d follow-up); the mount + initial load below
 // are enough to round-trip once that hook lands.
 Module['preRun'] = Module['preRun'] || [];
+
+// SWOS.ini lives in the browser's localStorage (a small editable text file).
+// Copy it into MEMFS at /SWOS.ini BEFORE main() runs so Settings_Load picks up
+// the user's settings. The web settings panel (shell.html) edits the localStorage
+// copy and reloads. Synchronous — no run-dependency needed.
+Module['preRun'].push(function () {
+  try {
+    var ini = localStorage.getItem('SWOS.ini');
+    if (ini !== null && ini !== '') FS.writeFile('/SWOS.ini', ini);
+  } catch (e) { /* no localStorage (e.g. node) — the game falls back to defaults */ }
+});
+
 Module['preRun'].push(function () {
   try { FS.mkdir('/save'); } catch (e) { /* already exists on a warm re-run */ }
   // IDBFS needs a working IndexedDB (every browser has it). node ships a

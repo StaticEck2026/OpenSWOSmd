@@ -211,8 +211,17 @@ int main(int argc, char **argv)
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
-    /* 2) SWOS.ini overrides defaults. Missing file is fine — Settings_Save
-     * at clean shutdown will create one. */
+#ifdef SWOS_WASM_BUILD
+    /* Web defaults (SWOS.ini still overrides these): native render scale — the
+     * canvas CSS upscales to the viewport, so a high SDL win_scale just wastes
+     * GPU — and vsync off (we pace via emscripten_sleep, not SDL vsync). */
+    opts.win_scale = 1;
+    opts.vsync     = 0;
+#endif
+
+    /* 2) SWOS.ini overrides defaults. On the web it's copied from localStorage
+     * into /SWOS.ini by wasm/pre.js before we get here (edit it via the in-page
+     * settings panel). Missing file is fine — defaults are used. */
     Settings_Load(&opts, SWOS_INI_PATH);
 
     /* Expose the live options + ini path to the arcade service menu so its

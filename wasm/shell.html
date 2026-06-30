@@ -27,11 +27,60 @@
       position: fixed; top: 8px; left: 0; right: 0; text-align: center;
       color: #6c6; font: 12px/1.4 monospace; pointer-events: none;
     }
+    /* --- Settings (SWOS.ini) panel --- */
+    #gear {
+      position: fixed; top: 6px; right: 8px; z-index: 10;
+      width: 28px; height: 28px; line-height: 28px; text-align: center;
+      font-size: 18px; color: #ccc; background: rgba(0,0,0,0.45);
+      border: 1px solid #444; border-radius: 4px; cursor: pointer;
+      user-select: none; opacity: 0.45; transition: opacity .15s;
+    }
+    #gear:hover { opacity: 1; }
+    #settings {
+      position: fixed; inset: 0; z-index: 20; display: none;
+      background: rgba(0,0,0,0.82); color: #ddd; font: 13px/1.5 monospace;
+      align-items: center; justify-content: center;
+    }
+    #settings.open { display: flex; }
+    #settings .panel {
+      width: min(560px, 92vw); max-height: 88vh; display: flex; flex-direction: column;
+      background: #14181c; border: 1px solid #3a4048; border-radius: 8px; padding: 16px;
+    }
+    #settings h2 { margin: 0 0 4px; font-size: 15px; color: #6c6; }
+    #settings p  { margin: 0 0 10px; color: #99a; font-size: 12px; }
+    #settings textarea {
+      flex: 1; min-height: 280px; resize: vertical;
+      background: #0b0e11; color: #cde; border: 1px solid #3a4048; border-radius: 4px;
+      font: 13px/1.45 monospace; padding: 8px; white-space: pre; tab-size: 2;
+    }
+    #settings .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    #settings button {
+      font: 13px monospace; padding: 7px 14px; border-radius: 4px; cursor: pointer;
+      border: 1px solid #3a4048; background: #20262c; color: #ddd;
+    }
+    #settings button.primary { background: #2a6; border-color: #2a6; color: #042; font-weight: bold; }
   </style>
 </head>
 <body>
   <div id="status">loading…</div>
   <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+  <div id="gear" title="Settings (SWOS.ini)">&#9881;</div>
+  <div id="settings">
+    <div class="panel">
+      <h2>Settings &mdash; SWOS.ini</h2>
+      <p>Edit and Save &amp; Reload. Stored in your browser (localStorage), not a file.
+         <code>resolution=WxH</code> or <code>auto</code>; <code>scale</code> 1&ndash;4;
+         <code>[audio] mode</code> mono|stereo; <code>[general] language</code> en/fr/de/it/es/nl.
+         Fullscreen: press F11.</p>
+      <textarea id="ini" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="iniCancel">Cancel</button>
+        <button id="iniSave" class="primary">Save &amp; Reload</button>
+      </div>
+    </div>
+  </div>
+
   <script type="text/javascript">
     var statusEl = document.getElementById('status');
     var Module = {
@@ -51,6 +100,53 @@
     window.addEventListener('click', function () {
       document.getElementById('canvas').focus();
     }, { once: false });
+
+    // --- Settings panel: edits the localStorage SWOS.ini the game reads at boot
+    //     (wasm/pre.js copies it into MEMFS). Keeps the same text format as the
+    //     desktop builds. ---
+    (function () {
+      var DEFAULT_INI =
+        '[video]\n' +
+        '; resolution: WxH (e.g. 1024x768) drives the render aspect, or auto\n' +
+        'resolution=auto\n' +
+        '; scale: 1-4 internal render scale (the canvas fits the page either way)\n' +
+        'scale=1\n\n' +
+        '[audio]\n' +
+        '; mode: mono | stereo\n' +
+        'mode=mono\n\n' +
+        '[general]\n' +
+        '; language: en fr de it es nl\n' +
+        'language=en\n';
+      var gear  = document.getElementById('gear');
+      var panel = document.getElementById('settings');
+      var ta    = document.getElementById('ini');
+      function open() {
+        var cur = '';
+        try { cur = localStorage.getItem('SWOS.ini') || ''; } catch (e) {}
+        ta.value = (cur && cur.trim()) ? cur : DEFAULT_INI;
+        panel.classList.add('open');
+        ta.focus();
+      }
+      function close() {
+        panel.classList.remove('open');
+        document.getElementById('canvas').focus();
+      }
+      gear.addEventListener('click', open);
+      document.getElementById('iniCancel').addEventListener('click', close);
+      document.getElementById('iniSave').addEventListener('click', function () {
+        try { localStorage.setItem('SWOS.ini', ta.value); }
+        catch (e) { alert('Could not save settings: ' + e); return; }
+        location.reload();
+      });
+      // Keep keystrokes typed in the panel out of the game (SDL listens on the
+      // document); Esc closes.
+      ['keydown', 'keyup', 'keypress'].forEach(function (ev) {
+        panel.addEventListener(ev, function (e) {
+          e.stopPropagation();
+          if (ev === 'keydown' && e.key === 'Escape') close();
+        });
+      });
+    })();
   </script>
   {{{ SCRIPT }}}
 </body>

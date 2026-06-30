@@ -344,18 +344,12 @@ int Platform_Init(const PlatformInitOptions *opts)
     if (win_scale < 1) win_scale = 1;
     if (win_scale > 4) win_scale = 4;
 #ifdef SWOS_WASM_BUILD
-    /* Web: always native Amiga resolution — 336x272 logical, windowed, scale 1
-     * (there is no SWOS.ini in the browser to carry a chosen resolution, and a
-     * desktop-fullscreen window would stretch the canvas to the page). The
-     * canvas CSS in wasm/shell.html upscales it crisply (image-rendering:
-     * pixelated) to fit the viewport. */
-    win_scale = 1;
-    fs_mode   = PLATFORM_FULLSCREEN_NONE;
-    /* Pacing is emscripten_sleep in Platform_VBlank, not SDL vsync. Leaving SDL
-     * vsync on makes its eglSwapInterval call emscripten_set_main_loop_timing,
-     * which warns ("a main loop does not exist") since we use ASYNCIFY, not a
-     * registered main loop. */
-    vsync = 0;
+    /* Web: fullscreen is browser-managed (F11) — SDL desktop-fullscreen at boot
+     * is user-gesture-gated and would stretch the canvas — so force windowed
+     * mode regardless of SWOS.ini. win_scale + vsync come from SWOS.ini (main.c
+     * defaults: native scale, vsync off — the canvas CSS upscales to the
+     * viewport, and we pace via emscripten_sleep). */
+    fs_mode = PLATFORM_FULLSCREEN_NONE;
 #endif
     s_win_scale_current = win_scale;
 
