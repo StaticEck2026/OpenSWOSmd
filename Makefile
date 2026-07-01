@@ -555,9 +555,9 @@ macos-universal:
 # Builds (or reuses) the universal binary, then assembles a complete
 # bin/SWOS.app drag-installable bundle that includes:
 #   - the universal SWOS binary at Contents/MacOS/SWOS
-#   - the game data dirs (data/ grafs/ grafs_aga/ sound/ save/)
-#     beside the binary, where the SWOS chdir-to-own-dir startup
-#     finds them
+#   - the game data dirs (data/ grafs/ grafs_aga/ grafs_dos/ grafs_2020/
+#     grafs_arcade/ sound/ save/ data_json/) beside the binary, where the
+#     SWOS chdir-to-own-dir startup finds them
 #   - SDL2.framework bundled in Contents/Frameworks/ so end users
 #     don't need to install SDL2 themselves (the binary's -rpath
 #     already points at @executable_path/../Frameworks)
@@ -612,7 +612,7 @@ macos-app: macos-universal
 	  else \
 	    echo "    WARNING: SDL2.framework not found — user will need to install it system-wide" >&2; \
 	  fi; \
-	  for d in data grafs grafs_aga sound save; do \
+	  for d in data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound save data_json; do \
 	    if [ -d "$(BINDIR)/$$d" ]; then \
 	      echo "    copying $$d/"; \
 	      cp -R "$(BINDIR)/$$d" $$APP/Contents/MacOS/; \
