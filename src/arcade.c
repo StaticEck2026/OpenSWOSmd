@@ -68,6 +68,7 @@ extern void WaitForVSync(void);
 extern uint16_t ReadTimerDelta(void);
 extern volatile uint16_t _quitToDos;
 extern volatile uintptr_t _frontbufferBasePtr;
+extern volatile uintptr_t _frontbufferBaseAltPtr;
 extern uint8_t _bigCharsTable[];
 
 /* replay engine + reel loaders (highlight.c / dos_replay_load.c / game_loop.c) */
@@ -142,6 +143,9 @@ static int      s_logoW, s_logoH;                           /* LOGO.bmp dimensio
 static int      s_logoLoaded;
 static uint8_t  s_overlayBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT]; /* INSERT COIN / prompts, menu-palette idx */
 static int      s_overlayActive;
+static int      s_arcInMatch;   /* 1 while InitAndPlayGame runs — suppresses the attract overlay
+                                 * during an in-match GOAL replay (PlayInstantReplayLoop shares the
+                                 * Arcade_DrawAttractOverlay hook with the attract reel loop) */
 
 /* Attract FOREGROUND cross-fade: the reel ALWAYS plays in the background; the
  * foreground cycles logo -> (fade) -> high-score table -> (fade) -> logo, composited
@@ -356,6 +360,13 @@ static void arc_fg_advance(void)
  * each reel frame (hook in PlayHighlightsLoop) and on the idle screen. */
 int Arcade_DrawAttractOverlay(void)
 {
+    /* The in-match goal replay (PlayInstantReplayLoop) shares this hook with the
+     * attract reel loop. During a real match don't draw the attract overlay or take
+     * attract input — leave s_overlayActive alone (0) so Arcade_CompositeOverlay is a
+     * no-op, and return 0 so the replay isn't aborted. */
+    if (s_arcInMatch)
+        return 0;
+
     arc_drain_input();
     s_overlayFrame++;
     arc_fg_advance();
@@ -1050,11 +1061,22 @@ static void arc_start_game(void)
          * player sprites instead of garbage. */
         ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
         InitTeams();
+        /* Clear both display buffers to black before StopMusic. StopMusic fades the
+         * menu music over ~2.5s while presenting frames, but the RGBA path is now off
+         * (pitch select faded to black + cleared s_flagScreenActive), so those frames
+         * would show the STALE 8bpp frontbuffer — the attract reel's last pitch frame —
+         * mapped through the menu palette (grey garble) instead of the pitch palette.
+         * Blanking both buffers keeps the transition black until the stadium draws. */
+        { size_t fbn = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
+          if (_frontbufferBasePtr)    memset((void *)_frontbufferBasePtr, 0, fbn);
+          if (_frontbufferBaseAltPtr) memset((void *)_frontbufferBaseAltPtr, 0, fbn); }
         StopMusic();                        /* silence menu music before kickoff */
         arc_begin_match_rules();            /* arm golden-goal / time-limit / penalties */
         arc_load_pitch(pitch);              /* chosen pitch -> s_pitchSheet / s_pitchPal */
         _gArcadePitchActive = 1;            /* themed pitch (DOS pipeline) for this match */
+        s_arcInMatch = 1;                   /* suppress the attract overlay during goal replays */
         InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
+        s_arcInMatch = 0;
         _gArcadePitchActive = 0;
 
         if (_quitToDos) { aborted = 1; break; }

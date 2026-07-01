@@ -16,6 +16,13 @@
 /* ---- Sprite indices ---- */
 #define SPR_BIG_DASH            195
 #define SPR_BIG_0               173
+/* The animated replay "R" indicator (32 frames). It lives inside the Amiga
+ * bench.dat index range (1065..1219), but the DOS bench.dat has different content
+ * there and the DOS score/HUD sprites are deliberately omitted — so letting the DOS
+ * bench overwrite these slots draws garbage (kit-coloured) frames during a replay.
+ * Keep the Amiga replay-R sprites in DOS-graphics mode. */
+#define SPR_REPLAY_FRAME_00     1095
+#define SPR_REPLAY_FRAME_LAST   1126
 #define SPR_RESULT_BIG_0        183
 #define SPR_TEAM1_NAME          193
 #define SPR_TEAM2_NAME          194
@@ -151,7 +158,10 @@ static void dos_build_sprite_dat(const char *name, int dosStart, int count)
         s->bltsize  = (uint16_t)(((int)nlines << 6) + wquads + wquads);
         s->ordinal  = (int16_t)amigaIdx;
 
-        if (amigaIdx >= 0 && amigaIdx < DOS_SPRITE_TABLE_SLOTS)
+        /* Don't let the DOS bench sprites clobber the replay-"R" indicator slots —
+         * keep the correct Amiga frames there (the DOS asset has garbage here). */
+        if (amigaIdx >= 0 && amigaIdx < DOS_SPRITE_TABLE_SLOTS
+            && !(amigaIdx >= SPR_REPLAY_FRAME_00 && amigaIdx <= SPR_REPLAY_FRAME_LAST))
             s_dosSprite[amigaIdx] = s;
     }
 
