@@ -85,8 +85,8 @@ extern uint16_t _editTacticsNumPlayers;
 extern uint16_t _editTacticsSelectedPairSlotIndex;
 extern MenuEntry *_editTacticsSelectedPlayerMenuEntryPtr;
 extern uint16_t _editTacticsSelectedPlayerNameIndex;
-extern uint16_t _oldPlayerSkill;
-extern uint16_t _newPlayerSkill;
+extern uint16_t _teamSkillCurrent;
+extern uint16_t _teamSkillSnapshot;
 
 /* ---- Globals for Chunk 84 ---- */
 extern uint16_t _tacticsChangedFlag;
@@ -361,8 +361,8 @@ void EditTactics_UpdateExtraPlayerMenuVisibility(void)
  *
  * Big "did this change help the team?" mark on menuEntries[0], shown while
  * editing the formation. Compares the team's freshly-recomputed skill
- * (_oldPlayerSkill — refreshed by ComputeOldPlayerSkillForViewResult) against
- * the baseline captured on entry (_newPlayerSkill):
+ * (_teamSkillCurrent — refreshed by ComputeOldPlayerSkillForViewResult) against
+ * the baseline captured on entry (_teamSkillSnapshot):
  *   - equal                        → hidden
  *   - recomputed > baseline (team STRONGER) → SPR_CHECK_BIG (green tick, 206)
  *   - recomputed < baseline (team WEAKER)   → SPR_CROSS_BIG (red cross, 207)
@@ -376,10 +376,10 @@ void SetBigCheckSprite(void)
     entry->isInvisible = 1;
     entry->stringFlags &= ~(1u << 13);
 
-    if (_oldPlayerSkill == _newPlayerSkill)
+    if (_teamSkillCurrent == _teamSkillSnapshot)
         return;
 
-    if (_oldPlayerSkill > _newPlayerSkill) {
+    if (_teamSkillCurrent > _teamSkillSnapshot) {
         entry->fgWord = SPR_CHECK_BIG;   /* stronger → green tick */
     } else {
         entry->fgWord = SPR_CROSS_BIG;   /* weaker → red cross */
@@ -482,7 +482,8 @@ void DrawPlayerNamesAndFaces(void)
  * EditTacticsMenuSavePlayerPositions  (SWOS2.s line 88253)
  *
  * Copies playerPositionsArray (32 bytes) into oldPlayerPositionsArray,
- * sets newPlayerSkill = oldPlayerSkill, then calls SetBigCheckSprite.
+ * snapshots the team total (_teamSkillSnapshot = _teamSkillCurrent), then calls
+ * SetBigCheckSprite.
  * Note: original asm does full d0-d7/a0-a6 save/restore internally.
  * ================================================================ */
 extern uint8_t _playerPositionsArray;   /* 32-byte array */
@@ -491,7 +492,7 @@ extern uint8_t _oldPlayerPositionsArray; /* 32-byte array */
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void EditTacticsMenuSavePlayerPositions(void)
 {
-    _newPlayerSkill = _oldPlayerSkill;
+    _teamSkillSnapshot = _teamSkillCurrent;
     uint8_t *src = &_playerPositionsArray;
     uint8_t *dst = &_oldPlayerPositionsArray;
     for (int16_t i = 31; i >= 0; i--) {
@@ -504,7 +505,7 @@ void EditTacticsMenuSavePlayerPositions(void)
  * EditTactics_CommitPlayerPositionsAndRecalcSkill  (SWOS2.s line 88268)
  *
  * Copies playerPositionsArray (32 bytes) to oldPlayerPositionsArray,
- * sets newPlayerSkill = oldPlayerSkill, sets team flag,
+ * snapshots the team total (_teamSkillSnapshot = _teamSkillCurrent), sets team flag,
  * temporarily changes team's tactics byte to 0x12, calls
  * ComputeOldPlayerSkillForViewResult with d0=5, restores the
  * original tactics byte, then falls through to SetBigCheckSprite.
@@ -514,7 +515,7 @@ extern uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t go
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void EditTactics_CommitPlayerPositionsAndRecalcSkill(void)
 {
-    _newPlayerSkill = _oldPlayerSkill;
+    _teamSkillSnapshot = _teamSkillCurrent;
     uint8_t *src = &_playerPositionsArray;
     uint8_t *dst = &_oldPlayerPositionsArray;
     for (int16_t i = 31; i >= 0; i--) {

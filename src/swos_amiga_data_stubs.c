@@ -1174,7 +1174,7 @@ SWOS_CHIP_BSS char _imageCmdWorkBuf[0x200000];
 /* nearestTeammatePtr: typed definition in swos_data_typed_stubs.c */
 /* newBalance: typed definition in swos_data_typed_stubs.c */
 /* newJobOffers: typed definition in swos_data_typed_stubs.c */
-/* newPlayerSkill: typed definition in swos_data_typed_stubs.c */
+/* _teamSkillSnapshot (was newPlayerSkill): typed definition in swos_data_typed_stubs.c */
 /* newRandomSeedCopy: typed definition in swos_data_typed_stubs.c */
 /* nextChantTimer: real data in swos_amiga_data_imports.c */
 /* nextEntryDirectionOffsets — defined for real in swos_globals.c.
@@ -1254,7 +1254,7 @@ SWOS_CHIP_BSS char _imageCmdWorkBuf[0x200000];
 /* oldCameraYSaved0: real data in swos_amiga_data_imports.c */
 /* oldCameraYSaved1: real data in swos_amiga_data_imports.c */
 /* oldJobOfferOrdinal: real data in swos_amiga_data_imports.c */
-/* oldPlayerSkill: typed definition in swos_data_typed_stubs.c */
+/* _teamSkillCurrent (was oldPlayerSkill): typed definition in swos_data_typed_stubs.c */
 /* old_balance: typed definition in swos_data_typed_stubs.c */
 /* opponentBenchY: real data in swos_amiga_data_imports.c */
 /* otherTeamScored: real data in swos_amiga_data_imports.c */

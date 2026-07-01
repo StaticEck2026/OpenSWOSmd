@@ -14,8 +14,21 @@
  *       new value  >  snapshot  ->  GREEN TICK   (player improved his slot)
  *       new value  <  snapshot  ->  RED CROSS    (player got worse)
  *       new value  == snapshot  ->  no mark
- *   The big team-level tick/cross is the same comparison on the team average.
- *   So the whole thing reduces to: call GetPlayerPrice() before and after, diff.
+ *   That's the SMALL (per-player) mark: SwosSmallMark() over _playerPositionsArray
+ *   vs _oldPlayerPositionsArray.
+ *
+ *   The LARGE (whole-team) mark is the SAME before/after comparison, but on the
+ *   team's overall skill total -- NOT a plain average of GetPlayerPrice(). The team
+ *   total is ComputeOldPlayerSkillForViewResult(): it
+ *   runs every player through UpdatePlayerPositionAndReturnRole, folds the subs in
+ *   as a weighted average, sums the 11 outfield values, divides by 15, halves for a
+ *   non-GK in goal, and divides by an empty-slot penalty divisor. Snapshot it,
+ *   move a player, recompute, diff -> SwosBigMark().
+ *
+ *   (History: these two globals were once named `_oldPlayerSkill` / `_newPlayerSkill`,
+ *   which were back-to-front for this feature -- the live/after total lived in the
+ *   "old"-named one. Both the game and this tool now use `_teamSkillCurrent` /
+ *   `_teamSkillSnapshot`; see the NAMING NOTE on those.)
  *
  * THE PIECES YOU ASKED FOR
  *   - coordToQuadrant      -> NOT code: it's the lookup table
@@ -33,6 +46,11 @@
  *                             GetPlayerPrice for outfielders; it does NOT change
  *                             the player's position TYPE, it selects which value
  *                             path to use and caches the result).
+ *   - ComputeOldPlayerSkillForViewResult -> function below: the whole-team
+ *                             value that drives the LARGE tick/cross.
+ *   - SwosSmallMark / SwosBigMark / SwosSnapshotBaseline / SwosMarkSprite ->
+ *                             the small (per-player) + large (team) tick/cross
+ *                             decisions and the snapshot helper.
  *
  * All tables + function bodies are byte-for-byte from the port's source
  * (src/tactics_data.c, src/swos_data_bulk_imports.c, src/match_sim.c,
@@ -50,7 +68,8 @@
 #define PF_LOAN            0x02   /* bit 1: on loan -> value forced to 1 */
 #define PLAYERFILE_SIZE    38
 #define TEAM_COMPUTER      1      /* teamControls value for a CPU team */
-#define TEAM_VALUES_CLEAN  0      /* playerValuesDirty: cache valid */
+#define TEAM_VALUES_CLEAN  0      /* playerValuesDirty: cache valid (use cachedMatchValue) */
+#define TEAM_VALUES_DIRTY  1      /* playerValuesDirty: squad changed -> recompute */
 
 /* ======================================================================
  * DATA TABLES  (verbatim from the game)
@@ -132,8 +151,40 @@ uint16_t     _numPlayersAtQuadrant;   /* scratch: crowding count                
 /* Used only by UpdatePlayerPositionAndReturnRole: */
 TeamFileEx   _careerTeam;             /* the human's career team (slot remap)   */
 uint8_t      _currentMatchPlayers[16];/* career squad-slot -> file-index map    */
-uint8_t      _playerPositionsArray[16];/* output: per-slot value snapshot        */
+uint8_t      _playerPositionsArray[16];/* output: per-slot value (the live values)*/
 uint16_t     _inEditTactics;          /* mode flag passed to IsPlayerInjured     */
+
+/* ---- LARGE (team-level) indicator state ----
+ * The big tick/cross compares the whole-team skill total NOW against a snapshot
+ * taken BEFORE the move: total rose -> green tick, total fell -> red cross.
+ *
+ * NAMING NOTE — these were once two generic skill registers the game reused for this
+ * feature under back-to-front names: ComputeOldPlayerSkillForViewResult() writes the
+ * LIVE (current/after) total, but it landed in a global called `_oldPlayerSkill`, while
+ * the BEFORE snapshot lived in `_newPlayerSkill` (only ever `_new = _old`, never
+ * recomputed). They have since been renamed in BOTH the game source and this tool to
+ * what they actually hold:
+ *     _teamSkillCurrent   (was _oldPlayerSkill)  -- live recompute = AFTER
+ *     _teamSkillSnapshot  (was _newPlayerSkill)  -- the BEFORE baseline
+ * The per-player array pair was always named correctly and is kept verbatim:
+ *     _playerPositionsArray    = current per-player values
+ *     _oldPlayerPositionsArray = the before snapshot. */
+uint16_t _teamSkillCurrent;           /* live team total (just recomputed = AFTER)   */
+uint16_t _teamSkillSnapshot;          /* the team total captured BEFORE the move     */
+uint8_t  _oldPlayerPositionsArray[16];/* snapshot of _playerPositionsArray (per-player)*/
+/* Enable-gate for the big mark. >= 0 hides it; < 0 (0xFFFF, the default the squad
+ * screen installs for a human team) shows it. The game derives it per game-type/team
+ * in ShowSquadMenuForTeam (SWOS2.s); kept here as a settable flag. */
+uint16_t _teamSkillDiffAfterChange = 0xFFFF;
+/* Internal accumulator of ComputeOldPlayerSkillForViewResult (empty-non-GK-slot count). */
+static uint16_t oldPlayerSkillDivisor;
+
+/* Tick/cross sprite indices (include/play_match_menu.h). BIG = whole-team mark,
+ * SMALL = per-player mark; CHECK = green tick (value rose), CROSS = red cross (fell). */
+#define SPR_CHECK_BIG     206
+#define SPR_CROSS_BIG     207
+#define SPR_CHECK_SMALL   208
+#define SPR_CROSS_SMALL   209
 
 /* Stub -- replace with your real injury check if you need the injured path.
  * (Returns 0 = not injured, so outfield values aren't forced to 0.) */
@@ -331,14 +382,142 @@ storeResult:
 }
 
 /* ======================================================================
- * TICK / CROSS helper -- the squad-screen comparison.
+ * ComputeOldPlayerSkillForViewResult  (src/match_sim.c, SWOS2.s line 47020)
+ *                    -- the LARGE / whole-team value.
+ *   team       : the team (provides the slot->file map + tactics)
+ *   goalsCount : number of substitute slots to fold in (the game passes
+ *                _maxSubstitutesEntries, typically 5; 0 skips the subs pass)
+ *   returns    : the team's overall skill value, ALSO stored in _teamSkillCurrent.
+ *
+ * Walks every player through UpdatePlayerPositionAndReturnRole (which refills
+ * _playerPositionsArray as a side effect, so the SMALL marks work straight after):
+ *   - subs pass (file slots 11..11+goalsCount-1): value*4 for an outfielder, *1 for
+ *     a GK, accumulated with a running weight d2, then averaged: (d2/2 + sum)/d2;
+ *   - main pass (file slots 0..10): add each raw value; an empty non-GK slot bumps
+ *     the divisor (team weakened);
+ *   - result = sum / 15; halve it when a non-GK is filling the goalkeeper slot;
+ *     then divide by the empty-slot divisor.
+ *
+ * NOTE on the cache: UpdatePlayerPositionAndReturnRole returns the CACHED value when
+ * team.playerValuesDirty == TEAM_VALUES_CLEAN, and this function sets CLEAN at the
+ * end. So to force a real recompute after a change, set
+ * team->team.playerValuesDirty = TEAM_VALUES_DIRTY before calling again (the game's
+ * commit paths do exactly this).
+ * (Writes _teamSkillCurrent, the live/after team total -- see the NAMING NOTE.)
+ * ====================================================================== */
+uint16_t ComputeOldPlayerSkillForViewResult(TeamFileEx *team, uint16_t goalsCount)
+{
+    oldPlayerSkillDivisor = 1;
+    uint16_t d5 = 0;
+    uint16_t d6 = goalsCount;
+
+    if (d6 != 0) {
+        int16_t  d3 = (int16_t)d6 - 1;
+        uint16_t d2 = 0;
+        uint16_t d7 = 11;                       /* substitutes start at file slot 11 */
+        for (; d3 >= 0; d3--) {
+            uint32_t res       = UpdatePlayerPositionAndReturnRole(team, d7);
+            uint16_t posValue  = (uint16_t)(res & 0xFFFF);
+            uint16_t roleValue = (uint16_t)((res >> 16) & 0xFFFF);
+            uint16_t scaled = posValue << 2;    /* lsl.w #2 -> weight x4 */
+            d2 += 4;
+            if (roleValue == 0) {               /* goalkeeper: undo the x4 weighting */
+                scaled = posValue;
+                d2 -= 3;
+            }
+            d5 += scaled;
+            d7++;
+        }
+        uint16_t half = d2 >> 1;
+        uint32_t sum  = (uint32_t)(half + d5);
+        d5 = (uint16_t)(sum / d2);              /* subs folded into one rounded average */
+    }
+
+    for (uint16_t d7 = 0; d7 < 11; d7++) {      /* the 11 outfield slots */
+        uint32_t res       = UpdatePlayerPositionAndReturnRole(team, d7);
+        uint16_t posValue  = (uint16_t)(res & 0xFFFF);
+        uint16_t roleValue = (uint16_t)((res >> 16) & 0xFFFF);
+        if (posValue == 0 && roleValue != 0)    /* empty non-GK slot weakens the team */
+            oldPlayerSkillDivisor++;
+        d5 += posValue;
+    }
+
+    uint16_t result = (uint16_t)((uint32_t)d5 / 15);
+
+    /* Goalkeeper-slot penalty: if file slot 0 holds a non-GK, halve the result. */
+    uint8_t *gkPlayerNums = (team == &_careerTeam)
+                          ? _currentMatchPlayers : team->team.playerNumbers;
+    int16_t     gkIdx  = (int8_t)gkPlayerNums[0];
+    PlayerFile *gkRec  = &team->players[(uint16_t)gkIdx];
+    uint16_t    gkRole = (gkRec->positionAndFace & PF_POSITION_MASK) >> 5;
+    if (gkRole != 0) result >>= 1;
+
+    result = (uint16_t)((uint32_t)result / oldPlayerSkillDivisor);
+    _teamSkillCurrent = result;
+    team->team.playerValuesDirty = TEAM_VALUES_CLEAN;
+    return result;
+}
+
+/* ======================================================================
+ * TICK / CROSS  -- the squad / tactics-screen comparison (small + LARGE).
+ *
+ * Two indicators, both answering "did this move help?":
+ *   SMALL (per-player) : each outfield player's value now vs its before-snapshot.
+ *   LARGE (whole-team) : the team total (ComputeOldPlayerSkillForViewResult) now vs its snapshot.
+ * In both: value ROSE -> green tick, value FELL -> red cross, equal -> no mark.
+ *
+ * Typical use:
+ *   ComputeOldPlayerSkillForViewResult(team, 5);                       // current values
+ *   SwosSnapshotBaseline();                          // freeze them as the "before"
+ *   ... move a player / edit the formation ...
+ *   team->team.playerValuesDirty = TEAM_VALUES_DIRTY;// force a real recompute
+ *   ComputeOldPlayerSkillForViewResult(team, 5);                       // refills _playerPositionsArray
+ *   SwosBigMark();                                   // whole-team tick/cross
+ *   SwosSmallMark(fileIdx);                          // per-player tick/cross
  * ====================================================================== */
 typedef enum { SWOS_NO_MARK = 0, SWOS_GREEN_TICK = 1, SWOS_RED_CROSS = 2 } SwosMark;
+
 SwosMark SwosMarkForChange(int valueBefore, int valueAfter)
 {
     if (valueAfter > valueBefore) return SWOS_GREEN_TICK;
     if (valueAfter < valueBefore) return SWOS_RED_CROSS;
     return SWOS_NO_MARK;
+}
+
+/* Freeze the current team total + per-player values as the "before" baseline
+ * (mirrors SquadMenuSavePlayerPositions / EditTacticsMenuSavePlayerPositions:
+ * `_newPlayerSkill = _oldPlayerSkill` + copy the positions array). */
+void SwosSnapshotBaseline(void)
+{
+    _teamSkillSnapshot = _teamSkillCurrent;
+    for (int i = 0; i < 16; i++)
+        _oldPlayerPositionsArray[i] = _playerPositionsArray[i];
+}
+
+/* SMALL mark: one outfield player's value (file index; the game marks only the 11
+ * outfield slots) now vs its before-snapshot. */
+SwosMark SwosSmallMark(int fileIdx)
+{
+    if (fileIdx < 0 || fileIdx >= 16) return SWOS_NO_MARK;
+    return SwosMarkForChange(_oldPlayerPositionsArray[fileIdx], _playerPositionsArray[fileIdx]);
+}
+
+/* LARGE mark: the whole-team total now (_teamSkillCurrent) vs the snapshot
+ * (_teamSkillSnapshot). Honours the enable-gate: _teamSkillDiffAfterChange >= 0
+ * hides the mark (mirrors UpdateBigCheckMark; the squad screen sets it to 0xFFFF =
+ * "show" for a human team, see ShowSquadMenuForTeam). */
+SwosMark SwosBigMark(void)
+{
+    if ((int16_t)_teamSkillDiffAfterChange >= 0) return SWOS_NO_MARK;
+    return SwosMarkForChange(_teamSkillSnapshot, _teamSkillCurrent);
+}
+
+/* Map a mark to its MENUS.bmp sprite index, big or small (0 = nothing drawn). */
+int SwosMarkSprite(SwosMark m, int big)
+{
+    if (m == SWOS_GREEN_TICK) return big ? SPR_CHECK_BIG : SPR_CHECK_SMALL;
+    if (m == SWOS_RED_CROSS)  return big ? SPR_CROSS_BIG : SPR_CROSS_SMALL;
+    return 0;
 }
 
 #ifdef SWOS_PV_DEMO
@@ -401,10 +580,26 @@ static int value_in_slot(TeamFileEx *tfe, int fileIdx, int slotNumber)
     return GetPlayerPrice(&tfe->team, base, (uint16_t)slotNumber);
 }
 
+/* Fill a full demo squad: identity slot->file map, a GK in slot 0, ten outfielders
+ * in a 4-4-2 shape (files 1..10), five subs (files 11..15). Skills are illustrative
+ * 0..7 nibbles. Used by the LARGE (whole-team) tick/cross demo below. */
+static void fill_demo_team(TeamFileEx *t)
+{
+    for (int i = 0; i < 16; i++) t->team.playerNumbers[i] = (uint8_t)i;   /* slot i -> file i */
+    set_skills(&t->players[0], 3,3,3,3,4,3,2, /*GK type 0*/0, /*price*/20);
+    static const int posType[10] = { 1,3,3,2,  6,6,6,6,  7,7 };           /* RB CD CD LB  MF*4  ST ST */
+    for (int i = 1; i <= 10; i++)
+        set_skills(&t->players[i], 4,4,4,4,4,4,4, posType[i - 1], /*price*/30);
+    for (int i = 11; i < 16; i++)
+        set_skills(&t->players[i], 3,3,3,3,3,3,3, /*MF*/6, /*price*/25);
+}
+
 int main(void)
 {
+    const char *mk[] = { "no mark", "GREEN TICK", "RED CROSS" };
     _teamTacticsTable[0] = (TeamTactics *)demo_442;   /* tactic index 0 = 4-4-2 */
 
+    /* ---- SMALL (per-player) mark: one CD in formation slot 1 vs slot 2 ---- */
     static TeamFileEx tfe;          /* zeroed */
     tfe.team.tactics      = 0;      /* use 4-4-2 */
     tfe.team.teamControls = 0;      /* human (not TEAM_COMPUTER) -> full calc */
@@ -415,10 +610,31 @@ int main(void)
 
     int v1 = value_in_slot(&tfe, 3, 1);   /* same player, formation slot 1 */
     int v2 = value_in_slot(&tfe, 3, 2);   /* same player, formation slot 2 */
-    const char *mk[] = { "no mark", "GREEN TICK", "RED CROSS" };
     printf("CD value in slot 1 = %d\n", v1);
     printf("CD value in slot 2 = %d\n", v2);
     printf("moving him from slot 1 to slot 2 -> %s\n", mk[SwosMarkForChange(v1, v2)]);
+
+    /* ---- LARGE (whole-team) mark: boost a midfielder, recompute the team total ---- */
+    static TeamFileEx team;         /* zeroed */
+    team.team.tactics      = 0;     /* 4-4-2 */
+    team.team.teamControls = 0;     /* human */
+    fill_demo_team(&team);
+    _teamSkillDiffAfterChange = 0xFFFF;   /* enable the big mark (human-team default) */
+
+    team.team.playerValuesDirty = TEAM_VALUES_DIRTY;
+    int tBefore = ComputeOldPlayerSkillForViewResult(&team, 5);   /* current team total (fills the value array) */
+    SwosSnapshotBaseline();                     /* freeze it as the "before" */
+
+    set_skills(&team.players[6], 7,7,7,7,7,7,7, /*MF*/6, 30);   /* improve a midfielder */
+    team.team.playerValuesDirty = TEAM_VALUES_DIRTY;            /* force a real recompute */
+    int tAfter = ComputeOldPlayerSkillForViewResult(&team, 5);
+
+    SwosMark big   = SwosBigMark();
+    SwosMark small = SwosSmallMark(6);
+    printf("\nteam skill before  = %d\n", tBefore);
+    printf("team skill after   = %d\n", tAfter);
+    printf("BIG team mark      -> %s (sprite %d)\n", mk[big],   SwosMarkSprite(big, 1));
+    printf("SMALL mark file 6  -> %s (sprite %d)\n", mk[small], SwosMarkSprite(small, 0));
     return 0;
 }
 #endif
