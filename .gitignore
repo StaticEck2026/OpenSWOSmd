@@ -14,6 +14,9 @@ bin/SWOS.data
 sensible-soccer-nes-c/
 scripts/__pycache__/
 
+# Arcade high-score table (runtime save next to SWOS.ini; seeded with defaults)
+bin/ARCADE.HI
+
 # generated JSON export of bin/data (regenerate: scripts/decode_data.py --dump-json)
 # Use /* (not /) so git still descends into translations/ for the exceptions below.
 bin/data_json/*

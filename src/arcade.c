@@ -129,6 +129,8 @@ static uint32_t s_rngState = 0x1234abcdu;
 static int      s_credits;     /* total credits in the cabinet */
 static int      s_startGame;   /* pending game: 0 none, 1 one-player, 2 two-player */
 static int      s_serviceReq;  /* service key pressed -> open the F2 service menu */
+static int      s_arcModalRunOver; /* GAME OVER / name-entry / result modal: coins accumulate but
+                                    * start/service do NOT fire (so the flow can't be interrupted) */
 static uint32_t s_overlayFrame;           /* blink phase for the attract overlay */
 
 #define ARC_LOGO_MAXW  1024
@@ -138,8 +140,29 @@ static uint8_t  s_logoBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];    /* LOGO.bmp pixels 
 static uint32_t s_logoPal[256];                             /* LOGO.bmp 256-colour palette (ARGB) */
 static int      s_logoW, s_logoH;                           /* LOGO.bmp dimensions */
 static int      s_logoLoaded;
-static uint8_t  s_overlayBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT]; /* composited UI, menu-palette idx */
+static uint8_t  s_overlayBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT]; /* INSERT COIN / prompts, menu-palette idx */
 static int      s_overlayActive;
+
+/* Attract FOREGROUND cross-fade: the reel ALWAYS plays in the background; the
+ * foreground cycles logo -> (fade) -> high-score table -> (fade) -> logo, composited
+ * over the live reel. The two INSERT COIN prompts at the bottom never fade. */
+static uint8_t  s_tableBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* rendered table text, menu-font idx */
+static int      s_fgLogoAlpha  = 255;   /* 0..255 logo opacity   */
+static int      s_fgTableAlpha = 0;     /* 0..255 table opacity  */
+static uint32_t s_fgTimer;              /* frames elapsed in the current fg phase */
+static int      s_fgPhase;              /* 0=logo hold 1=logo-out 2=table-in 3=table hold 4=table-out 5=logo-in */
+static int      s_fgTableMode;          /* game mode whose table the table phase shows */
+static void     arc_render_table_to_buf(int mode);   /* defined in the high-score section */
+static void     arc_draw_table_flags(int mode, uint32_t *dst, int pitch, int alpha);
+static void     arc_build_menu_argb(uint32_t pal[16]);
+
+/* High-score table colours — indices into _menuPalette (already loaded): 14=green,
+ * 6=orange, 10=red, 2=white. The menu-font glyph blit stores the colour index in the
+ * pixel, so both composite paths map it back through the menu palette. */
+#define HS_COL_TITLE   14    /* GOLDEN GOAL + HIGH SCORES -> green  */
+#define HS_COL_HEADER  6     /* RANK / NAME / WINS / TIME -> orange */
+#define HS_COL_TOP     10    /* the #1 row               -> red    */
+#define HS_COL_ROW     2     /* the other rows           -> white  */
 
 /* Tiny LCG — Date/rand are off-limits in workflows but this is the game; still
  * keep it self-contained + seed-stirred so the rotation isn't fixed. */
@@ -243,6 +266,7 @@ static void arc_drain_input(void)
         fprintf(stderr, "[arcade] credit -> %d\n", s_credits);
         { extern void AudioSDL_PlayOverlaySample(void); AudioSDL_PlayOverlaySample(); }
     }
+    if (s_arcModalRunOver) return;   /* run-over / name-entry: accept coins only */
     if (sv) s_serviceReq = 1;
     if (st1 && s_credits >= 1)      { s_credits -= 1; s_startGame = 1; }
     else if (st2 && s_credits >= 2) { s_credits -= 2; s_startGame = 2; }
@@ -268,16 +292,73 @@ static void arc_load_logo(void)
     }
 }
 
-/* The attract overlay: full-screen SWOS logo (index-0 transparent) + flashing
- * INSERT COIN / credit state, rendered into a private 16-colour buffer using
- * MENU-palette indices. The reel underneath uses its own (DOS) palette, so the
- * platform layer composites this buffer with the menu palette — see
- * Arcade_CompositeOverlay. Drawn over the playing reel (hook in PlayHighlightsLoop)
- * and on the idle screen. */
+/* Foreground cross-fade phase durations (frames). The reel runs ~50/70 fps under it. */
+#define FG_LOGO_HOLD   (6 * 50)
+#define FG_TABLE_HOLD  (6 * 50)
+#define FG_FADE        (40)        /* fade time each direction (~0.8 s) */
+
+/* Alpha-blend `over` onto `base` (both 0xAARRGGBB) by a (0..255). */
+static uint32_t arc_blend(uint32_t base, uint32_t over, int a)
+{
+    if (a >= 255) return over;
+    if (a <= 0)   return base;
+    int br = (base >> 16) & 0xFF, bg = (base >> 8) & 0xFF, bb = base & 0xFF;
+    int orr = (over >> 16) & 0xFF, og = (over >> 8) & 0xFF, ob = over & 0xFF;
+    int r = (orr * a + br * (255 - a)) / 255;
+    int g = (og  * a + bg * (255 - a)) / 255;
+    int b = (ob  * a + bb * (255 - a)) / 255;
+    return 0xFF000000u | ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+}
+
+/* Advance the logo<->table foreground cross-fade by one frame (called once per
+ * attract frame from Arcade_DrawAttractOverlay). Sequence: hold logo -> fade logo
+ * out -> fade table in -> hold table -> fade table out -> fade logo in -> repeat.
+ * Each table phase shows the next game mode's table. */
+static void arc_fg_advance(void)
+{
+    s_fgTimer++;
+    switch (s_fgPhase) {
+    case 0:                                   /* logo hold */
+        s_fgLogoAlpha = 255; s_fgTableAlpha = 0;
+        if (s_fgTimer >= FG_LOGO_HOLD) { s_fgPhase = 1; s_fgTimer = 0; }
+        break;
+    case 1:                                   /* logo fade out */
+        s_fgLogoAlpha = 255 - (int)(255 * s_fgTimer / FG_FADE);
+        if (s_fgTimer >= FG_FADE) { s_fgLogoAlpha = 0;
+            arc_render_table_to_buf(s_fgTableMode);   /* build the table about to fade in */
+            s_fgPhase = 2; s_fgTimer = 0; }
+        break;
+    case 2:                                   /* table fade in */
+        s_fgTableAlpha = (int)(255 * s_fgTimer / FG_FADE);
+        if (s_fgTimer >= FG_FADE) { s_fgTableAlpha = 255; s_fgPhase = 3; s_fgTimer = 0; }
+        break;
+    case 3:                                   /* table hold */
+        s_fgTableAlpha = 255; s_fgLogoAlpha = 0;
+        if (s_fgTimer >= FG_TABLE_HOLD) { s_fgPhase = 4; s_fgTimer = 0; }
+        break;
+    case 4:                                   /* table fade out */
+        s_fgTableAlpha = 255 - (int)(255 * s_fgTimer / FG_FADE);
+        if (s_fgTimer >= FG_FADE) { s_fgTableAlpha = 0;
+            { int mc = Arcade_ModeCount(); s_fgTableMode = (s_fgTableMode + 1) % (mc > 0 ? mc : 1); }
+            s_fgPhase = 5; s_fgTimer = 0; }
+        break;
+    default:                                  /* 5: logo fade in */
+        s_fgLogoAlpha = (int)(255 * s_fgTimer / FG_FADE);
+        if (s_fgTimer >= FG_FADE) { s_fgLogoAlpha = 255; s_fgPhase = 0; s_fgTimer = 0; }
+        break;
+    }
+}
+
+/* The attract overlay foreground: a SWOS logo <-> high-score table cross-fade plus
+ * the flashing INSERT COIN / credit prompts, all composited OVER the continuously
+ * playing reel by Arcade_CompositeOverlay (the reel is never interrupted). The
+ * logo/table use their own palettes; the prompts are menu-font white+shadow. Drawn
+ * each reel frame (hook in PlayHighlightsLoop) and on the idle screen. */
 int Arcade_DrawAttractOverlay(void)
 {
     arc_drain_input();
     s_overlayFrame++;
+    arc_fg_advance();
     int flash = (int)((s_overlayFrame >> 4) & 1);
 
     size_t n = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
@@ -313,54 +394,67 @@ int Arcade_DrawAttractOverlay(void)
     return (s_startGame != 0) || s_serviceReq;   /* non-zero -> leave the attract reel */
 }
 
-/* Composite the attract overlay onto the final ARGB8888 frame using the MENU
- * palette (16-col), index 0 transparent. Called by the platform present path
- * after chunky_to_rgba, so the logo + text show their menu colours over a reel
- * that is using a different (DOS) palette. */
+/* Composite the attract foreground onto the final ARGB8888 frame, over the live reel
+ * (called by the platform present path after chunky_to_rgba). Three layers:
+ *   1. the SWOS logo, blended at s_fgLogoAlpha (its own palette, index 0 transparent)
+ *   2. the high-score table text, blended at s_fgTableAlpha (menu-font white+shadow)
+ *   3. the INSERT COIN / credit prompts, always opaque (they never fade)
+ * The logo and table cross-fade through the reel (arc_fg_advance drives the alphas);
+ * the reel itself is untouched, so it keeps playing in the background. */
 void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h)
 {
     if (!s_overlayActive || !dst)
         return;
 
-    /* The reel underneath uses its own (DOS) palette; the LOGO.bmp logo carries its
-     * own 256-colour palette (s_logoPal) and the INSERT-COIN text is flat white drawn
-     * separately into s_overlayBuf. */
     const uint32_t white = 0xFFFFFFFFu;
     const uint32_t black = 0xFF000000u;
     const uint8_t  shadowBit = (uint8_t)(1u << (NUM_PLANES - 1)); /* glyph shadow plane */
+    const int la = s_fgLogoAlpha, ta = s_fgTableAlpha;
+    uint32_t mpal[16]; arc_build_menu_argb(mpal);   /* table text -> menu palette colours */
 
     if (h > SCREEN_HEIGHT)  h = SCREEN_HEIGHT;
     if (w > _screen_width)  w = _screen_width;
 
-    /* LOGO.bmp, scaled up (nearest-neighbour) and centred horizontally in the area
-     * above the prompt row, composited with its own palette (index 0 transparent). */
+    /* LOGO.bmp, centred horizontally in the area above the prompt row. */
     const int lscale = ARC_LOGO_SCALE;
     const int lw = s_logoW * lscale, lh = s_logoH * lscale;
     const int lx0 = (_screen_width - lw) / 2;
-    const int ly0 = (ARC_Y_PROMPT - lh) / 2;      /* high — centred in the space above the prompts */
+    const int ly0 = (ARC_Y_PROMPT - lh) / 2;
 
     for (int y = 0; y < h; y++) {
-        const uint8_t *tx  = s_overlayBuf + (size_t)y * (size_t)_screen_width;
+        const uint8_t *tx  = s_overlayBuf + (size_t)y * (size_t)_screen_width;  /* prompts */
+        const uint8_t *tb  = s_tableBuf   + (size_t)y * (size_t)_screen_width;  /* table   */
         uint32_t      *out = dst + (size_t)y * (size_t)dst_pitch_pixels;
 
         int ly = y - ly0;
-        const uint8_t *lgrow = (s_logoLoaded && ly >= 0 && ly < lh)
+        const uint8_t *lgrow = (s_logoLoaded && la > 0 && ly >= 0 && ly < lh)
             ? s_logoBuf + (size_t)(ly / lscale) * (size_t)s_logoW : NULL;
 
         for (int x = 0; x < w; x++) {
-            if (lgrow) {
+            uint32_t px = out[x];                         /* the reel pixel underneath */
+
+            if (lgrow) {                                  /* 1. logo (faded) */
                 int lx = x - lx0;
                 if (lx >= 0 && lx < lw) {
                     uint8_t idx = lgrow[lx / lscale];
                     if (idx != ARC_LOGO_TRANSPARENT)
-                        out[x] = s_logoPal[idx];          /* logo (own palette) */
+                        px = arc_blend(px, s_logoPal[idx], la);
                 }
             }
-            uint8_t t = tx[x];
-            if (t)                                        /* text: body->white ink, */
-                out[x] = (t & (uint8_t)~shadowBit) ? white : black; /* shadow plane->black */
+            if (ta > 0) {                                 /* 2. table text (faded, coloured) */
+                uint8_t t = tb[x];
+                if (t) px = arc_blend(px, (t & (uint8_t)~shadowBit) ? mpal[t & 0x0F] : black, ta);
+            }
+            uint8_t t2 = tx[x];                           /* 3. prompts (opaque, white) */
+            if (t2) px = (t2 & (uint8_t)~shadowBit) ? white : black;
+
+            out[x] = px;
         }
     }
+
+    /* Country flags next to each table row, faded in/out with the table text. */
+    if (ta > 0)
+        arc_draw_table_flags(s_fgTableMode, dst, dst_pitch_pixels, ta);
 }
 
 /* No reels available: hold the attract overlay on a black screen for a bit, then
@@ -608,6 +702,10 @@ static void arc_flag_select(int numPlayers, int *outP1, int *outP2)
 static int arc_pitch_select(void);   /* defined after the SVCFONT helpers */
 static int arc_load_pitch(int idx);  /* defined in the pitch-select section */
 
+/* High-score session screens (defined in the high-score section, before ArcadeMainLoop). */
+static void arc_run_over(int mode, uint32_t wins, uint32_t totalSecs, int flag);
+static int  arc_continue_screen(uint32_t wins);
+
 /* ====================================================================
  * Phase 3c — the match (mirror PlayFriendly): country/flag select picks two
  * national teams, loaded into _selectedTeams; InitAndPlayGame runs the match.
@@ -756,6 +854,10 @@ static int  s_arcMatchActive;   /* gates the per-frame logic for the current mat
 static int  s_arcTimerStarted;  /* the frame count begins at kickoff (first live frame) */
 static long s_arcFramesPlayed;  /* deterministic count of frames since kickoff */
 static long s_arcLimitFrames;   /* end the match at this many frames */
+static int  s_arcGoalPendingEnd;      /* golden goal scored: end once the celebration + replay resolve */
+static int  s_arcGoalCelebrationSeen; /* the goal-camera celebration has been observed running */
+static int  s_arcDebugEndRun;         /* DEBUG instant-win key pressed: end the run -> name entry */
+static int  s_arcDebugForceNameEntry; /* DEBUG: show name entry even if the run wouldn't qualify */
 
 /* Latch the rule settings for the match about to start (called from arc_start_game). */
 static void arc_begin_match_rules(void)
@@ -769,6 +871,9 @@ static void arc_begin_match_rules(void)
     s_arcFramesPlayed = 0;
     s_arcTimerStarted = 0;
     s_arcMatchActive  = 1;
+    s_arcGoalPendingEnd = 0;
+    s_arcGoalCelebrationSeen = 0;
+    s_arcDebugEndRun = 0;
     /* GOAL REPLAY setting -> the engine's goal auto-replay. */
     _autoReplays = (g_arcadeOpts && g_arcadeOpts->arcade_goal_replay) ? 1 : 0;
     _gArcadeSfxSuppressed = 0;   /* the match wants real crowd / in-game SFX */
@@ -779,10 +884,41 @@ void Arcade_MatchTick(void)
     extern uint16_t _gameStatePl;
     extern uint16_t _playingPenalties;
     extern uint16_t _team1TotalGoals, _team2TotalGoals, _playGame;
+    extern volatile uint16_t _goalCameraMode;
+    extern uint16_t _replayState;
     extern void StartPenalties(void);
+
+    extern int Platform_ArcadeDebugWin(void);
 
     if (!_gArcadeMode || !s_arcMatchActive) return;
     if (_playingPenalties) return;                  /* the shootout runs + ends itself */
+
+    /* DEBUG instant-win key (F10): make P1/champion the winner, end the match, and
+     * flag the run to stop -> GAME OVER -> name entry. For testing the high-score flow. */
+    if (Platform_ArcadeDebugWin()) {
+        if (_team1TotalGoals <= _team2TotalGoals)
+            _team1TotalGoals = (uint16_t)(_team2TotalGoals + 1);
+        s_arcDebugEndRun = 1;
+        s_arcMatchActive = 0;
+        _playGame = 0;
+        return;
+    }
+
+    /* Golden goal scored: do NOT cut the match on a fixed timer. The old 2-second
+     * shrink raced the goal celebration + AUTO REPLAYS and ended the match before
+     * the replay could play ("a goal immediately exits"). Instead let the whole
+     * goal sequence resolve — the engine runs the celebration (_goalCameraMode != 0)
+     * and, if AUTO REPLAYS is on, the instant replay (_replayState != 0, with
+     * _goalCameraMode forced to 0 on the replay frame) — then end once everything has
+     * settled. The scorer is ahead, so the result picks a winner, not penalties. */
+    if (s_arcGoalPendingEnd) {
+        if (_goalCameraMode != 0) s_arcGoalCelebrationSeen = 1;   /* celebration began */
+        if (s_arcGoalCelebrationSeen && _goalCameraMode == 0 && _replayState == 0) {
+            s_arcMatchActive = 0;
+            _playGame = 0;
+        }
+        return;   /* the frame timer is paused while a golden goal resolves */
+    }
 
     if (!s_arcTimerStarted) {
         if (_gameStatePl != ST_GAME_IN_PROGRESS) return;  /* wait for kickoff */
@@ -791,9 +927,8 @@ void Arcade_MatchTick(void)
     }
     if (++s_arcFramesPlayed < s_arcLimitFrames) return;
 
-    /* Time up. With golden goal a goal would already have ended the match, so a
-     * timeout here is a draw (0-0 in golden-goal mode): penalties if enabled and
-     * level, otherwise just end (the result shows the score). */
+    /* Time up with no golden goal: a level score goes to penalties (if enabled),
+     * otherwise the match just ends on the current score. */
     s_arcMatchActive = 0;
     if (_team1TotalGoals == _team2TotalGoals && s_arcPenalties)
         StartPenalties();
@@ -805,16 +940,32 @@ void Arcade_GoalScored(void)
 {
     if (!_gArcadeMode || !s_arcMatchActive) return;
     if (s_arcGoldenGoal) {
-        /* First goal wins. Don't end instantly — let the goal celebration play for
-         * ~2s, then the frame-limit timeout ends the match. The scorer is ahead
-         * (not level), so the timeout path picks a winner rather than penalties. */
-        long endIn = s_arcFramesPlayed + 2 * ARC_FRAMES_PER_SEC;
-        if (endIn < s_arcLimitFrames) s_arcLimitFrames = endIn;
+        /* First goal wins. Flag the match to end once the goal celebration AND the
+         * auto-replay (if AUTO REPLAYS is on) have finished — see Arcade_MatchTick.
+         * Don't end on a fixed delay here: that raced the replay and exited first. */
+        s_arcGoalPendingEnd = 1;
     }
 }
 
-/* Begin the requested arcade game: country (flag) select -> pitch select -> the
- * match (mirrors PlayFriendly). Pitch wiring (Part 4) lands on top of this. */
+/* Who won the match that just finished? 1 = top (P1/champion), 2 = bottom (the
+ * opponent), 0 = draw. Reads the final goal counters (penalty goals break a draw
+ * decided by a shootout). The arcade champion always occupies the top/team-1 slot. */
+static int arc_match_winner(void)
+{
+    extern uint16_t _team1TotalGoals, _team2TotalGoals;
+    extern uint16_t _team1PenaltyGoals, _team2PenaltyGoals;
+    if (_team1TotalGoals != _team2TotalGoals)
+        return _team1TotalGoals > _team2TotalGoals ? 1 : 2;
+    if (_team1PenaltyGoals != _team2PenaltyGoals)
+        return _team1PenaltyGoals > _team2PenaltyGoals ? 1 : 2;
+    return 0;
+}
+
+/* Begin the requested arcade game: country (flag) select -> pitch select -> a
+ * winner-stays-on run of matches (mirrors PlayFriendly per match). The champion
+ * (top/team-1 slot, human) keeps playing fresh opponents; SCORE = consecutive wins,
+ * TIME = total in-game time over the run. The run ends on the champion's first
+ * non-win (loss or lost shootout) -> GAME OVER -> high-score name entry. */
 static void arc_start_game(void)
 {
     extern uint16_t _gameType;
@@ -826,6 +977,8 @@ static void arc_start_game(void)
     extern uint16_t _gameLength;          /* clock-speed index (0..3); 3 = slowest */
     int numPlayers = (s_startGame >= 2) ? 2 : 1;
     int p1 = 0, p2 = 0;
+    s_startGame = 0;   /* consume the trigger now: during the run the modal screens
+                        * test s_startGame, so it must read 0 until a NEW request. */
 
     /* Cut to black before swapping music + entering country select, so leaving the
      * attract reel isn't an abrupt jump / frozen frame. s_arcadeFade=0 makes
@@ -850,21 +1003,44 @@ static void arc_start_game(void)
     s_overlayActive = 0;
     s_flagScreenActive = 0;
 
-    /* Build the two teams (mirrors GoGetTeamsForPlay + InitTeams + PlayFriendly,
-     * minus the team-select UI). */
+    /* Match-engine globals the friendly menu normally sets up — fixed for the whole
+     * run (mirrors GoGetTeamsForPlay + PlayFriendly, minus the team-select UI). */
     _gameType = 0;                          /* non-career friendly path */
     _pitchTypeOrSeason = 0;                 /* fixed pitch condition, not seasonal */
-    _friendlyPitchType = 4;                 /* a normal pitch (interim; Part 4 = themed pitch) */
+    _friendlyPitchType = 4;                 /* a normal pitch (themed pitch overrides at dice time) */
     _maxSubstitutes = 0;                    /* arcade: no subs */
     _minSubstitutes = 0;
     _gameLength = 3;                        /* slowest match clock: engine half/full-time
                                              * never fire within the arcade frame limit */
-    _numSelectedTeams = 0;
-    int ok = (arc_load_team(p1, 0, ARC_CTRL_HUMAN) == 0);
-    uint8_t p2ctrl = (numPlayers >= 2) ? ARC_CTRL_HUMAN : ARC_CTRL_COMPUTER;
-    ok = ok && (arc_load_team(p2, 1, p2ctrl) == 0);
 
-    if (ok) {
+    /* The run. champFlag holds the seat (top/team-1 slot, human, joystick 1); the
+     * opponent slot is replaced each match. wins = streak, totalSecs = total play time.
+     *   1P: champion vs a CPU opponent, winner-stays-on — beat the CPU and keep going
+     *       on joystick 1; the run ends on the champion's first non-win.
+     *   2P: a single head-to-head match (champion = joy1, opponent = joy2); the winner
+     *       posts a score (wins = 1). (Mid-streak P2-challenges-P1 cabinet flow is a
+     *       larger feature — TODO; this keeps each player on their own stick.) */
+    int      champFlag = p1, oppFlag = p2;
+    int      runFlag = champFlag;           /* country recorded on the high-score table */
+    uint32_t wins = 0, totalSecs = 0;
+    int      aborted = 0;
+
+    /* The whole run (and the run-over screens) is modal: coins still accumulate for
+     * the NEXT game, but start/service can't interrupt a run in progress — a free
+     * mid-streak continuation must not consume a credit, and name entry must finish. */
+    s_arcModalRunOver = 1;
+
+    for (;;) {
+        uint8_t oppCtrl = (numPlayers >= 2) ? ARC_CTRL_HUMAN : ARC_CTRL_COMPUTER;
+        _numSelectedTeams = 0;
+        int ok = (arc_load_team(champFlag, 0, ARC_CTRL_HUMAN) == 0);
+        ok = ok && (arc_load_team(oppFlag, 1, oppCtrl) == 0);
+        if (!ok) {
+            fprintf(stderr, "[arcade] team load failed; ending run\n");
+            aborted = 1;
+            break;
+        }
+
         _numSelectedTeams = 2;
         /* Arcade skipped the front-end, so the menu sprite graphics (the little
          * player figures the stadium/line-up screen draws, sprites 210-213, etc.)
@@ -880,11 +1056,43 @@ static void arc_start_game(void)
         _gArcadePitchActive = 1;            /* themed pitch (DOS pipeline) for this match */
         InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
         _gArcadePitchActive = 0;
-    } else {
-        fprintf(stderr, "[arcade] team load failed; returning to attract\n");
+
+        if (_quitToDos) { aborted = 1; break; }
+
+        totalSecs += (uint32_t)(s_arcFramesPlayed / ARC_FRAMES_PER_SEC);
+
+        int winner = arc_match_winner();
+        if (s_arcDebugEndRun) {              /* DEBUG (F10): end the run with a RANDOM score so the
+                                             * name-entry screen can be tested with varied values */
+            s_arcDebugEndRun = 0;
+            wins      = 1 + (arc_rand() % 20);          /* 1..20 wins */
+            totalSecs = 30 + (arc_rand() % (15 * 60));  /* ~0:30 .. 15:00 */
+            s_arcDebugForceNameEntry = 1;    /* always show name entry (force last place if needed) */
+            break;
+        }
+        if (numPlayers >= 2) {               /* 2P: one head-to-head match, then done */
+            wins = (winner != 0) ? 1u : 0u;
+            runFlag = (winner == 2) ? oppFlag : champFlag;   /* record the winner's country */
+            break;
+        }
+        if (winner == 1) {                   /* 1P champion wins -> stays on, free continue */
+            wins++;
+            do { oppFlag = (int)(arc_rand() % FLAG_COUNT); } while (oppFlag == champFlag);
+            pitch = (int)(arc_rand() % 7);   /* a fresh themed pitch each round */
+            arc_continue_screen(wins);       /* "WINNER / STREAK N", skippable */
+            continue;
+        }
+        break;                               /* 1P champion lost or drew -> run over */
     }
 
-    s_startGame = 0;
+    /* No arcade frame should composite over the run-over screens. */
+    s_overlayActive = 0;
+    s_flagScreenActive = 0;
+
+    if (!aborted)
+        arc_run_over(g_arcadeOpts ? g_arcadeOpts->arcade_mode : 0, wins, totalSecs, runFlag);
+
+    s_arcModalRunOver = 0;                   /* attract input is live again */
     arc_music_attract();                    /* resume HERO for the attract loop */
 }
 
@@ -1262,6 +1470,546 @@ static int arc_pitch_select(void)
     return sel;
 }
 
+/* ====================================================================
+ * Phase 5 — arcade high-score tables, name entry, and the attract display
+ *
+ * SCORE = consecutive wins of a winner-stays-on run; TIME = total in-game time
+ * over the run. One table per game mode, persisted to ARCADE.HI (next to SWOS.ini).
+ * Every screen uses the in-game MENU font (NOT the service font) drawn through the
+ * menu palette over the menu background — the same compositing the flag / pitch
+ * selectors use. SDL-only.
+ * ==================================================================== */
+extern int      _menu_draw_x_offset;
+extern uint16_t _cameraXMod320;
+extern uint16_t _menuPalette[];
+
+#define ARC_HS_ENTRIES   10        /* rows per table */
+#define ARC_HS_NAME_MAX  3         /* initials */
+#define ARC_HS_MAX_MODES 8         /* upper bound on Arcade_ModeCount() */
+
+typedef struct {
+    char     name[ARC_HS_NAME_MAX + 1];   /* initials, uppercase; ' ' allowed */
+    uint32_t score;                        /* wins (the streak length) */
+    uint32_t timeSecs;                     /* total in-game time over the run */
+    uint8_t  flag;                         /* FLAGS.bmp cell (country played) 0..47; 0xFF = none */
+} ArcHiEntry;
+
+static ArcHiEntry s_hiTable[ARC_HS_MAX_MODES][ARC_HS_ENTRIES];
+static int        s_hiLoaded;
+
+/* ARCADE.HI lives next to SWOS.ini (g_arcadeIniPath's directory) when known, else
+ * in the working directory. */
+static const char *arc_hs_path(void)
+{
+    static char path[256];
+    if (g_arcadeIniPath && g_arcadeIniPath[0]) {
+        const char *slash = strrchr(g_arcadeIniPath, '/');
+        const char *bs    = strrchr(g_arcadeIniPath, '\\');
+        if (bs && (!slash || bs > slash)) slash = bs;
+        if (slash) {
+            size_t n = (size_t)(slash - g_arcadeIniPath) + 1;
+            if (n > sizeof path - 16) n = sizeof path - 16;
+            memcpy(path, g_arcadeIniPath, n);
+            snprintf(path + n, sizeof path - n, "ARCADE.HI");
+            return path;
+        }
+    }
+    snprintf(path, sizeof path, "ARCADE.HI");
+    return path;
+}
+
+/* Seed every table with descending placeholder rows so a fresh cabinet still has
+ * something to show in attract. */
+static void arc_hs_seed_defaults(void)
+{
+    static const struct { const char *nm; uint32_t sc, t; uint8_t fl; } seed[ARC_HS_ENTRIES] = {
+        {"SWS",10,540,29}, {"BEN",8,420,4},  {"AMI",6,330,26}, {"DOS",5,260,2}, {"ARC",4,210,27},
+        {"ACE",3,170,25},  {"PRO",3,150,28}, {"FAB",2,110,5},  {"NEW",1,60,23}, {"AAA",1,45,0},
+    };
+    for (int m = 0; m < ARC_HS_MAX_MODES; m++)
+        for (int i = 0; i < ARC_HS_ENTRIES; i++) {
+            snprintf(s_hiTable[m][i].name, sizeof s_hiTable[m][i].name, "%s", seed[i].nm);
+            s_hiTable[m][i].score    = seed[i].sc;
+            s_hiTable[m][i].timeSecs = seed[i].t;
+            s_hiTable[m][i].flag     = seed[i].fl;
+        }
+}
+
+static void arc_hs_load(void)
+{
+    if (s_hiLoaded) return;
+    s_hiLoaded = 1;
+    arc_hs_seed_defaults();
+
+    FILE *f = fopen(arc_hs_path(), "r");
+    if (!f) {
+        fprintf(stderr, "[arcade] no high-score file (%s) — using defaults\n", arc_hs_path());
+        return;
+    }
+    char line[160];
+    int mode = -1, row = 0;
+    while (fgets(line, sizeof line, f)) {
+        char *s = line;
+        while (*s == ' ' || *s == '\t') s++;
+        if (*s == '#' || *s == '\r' || *s == '\n' || *s == 0) continue;
+        if (*s == '[') {                       /* [MODE NAME] section header */
+            char *end = strchr(s, ']');
+            if (!end) continue;
+            *end = 0;
+            mode = Arcade_ModeFromName(s + 1);
+            row  = 0;
+            continue;
+        }
+        if (mode < 0 || mode >= ARC_HS_MAX_MODES || row >= ARC_HS_ENTRIES) continue;
+        char nm[32]; unsigned sc = 0, t = 0, fl = 0xFF;
+        int got = sscanf(s, "%31s %u %u %u", nm, &sc, &t, &fl);   /* flag field is optional */
+        if (got >= 1) {
+            if (got < 4) fl = 0xFF;
+            for (char *p = nm; *p; p++) if (*p == '_') *p = ' ';
+            nm[ARC_HS_NAME_MAX] = 0;                          /* keep the first ARC_HS_NAME_MAX chars */
+            memcpy(s_hiTable[mode][row].name, nm, ARC_HS_NAME_MAX + 1);
+            s_hiTable[mode][row].score    = sc;
+            s_hiTable[mode][row].timeSecs = t;
+            s_hiTable[mode][row].flag     = (uint8_t)fl;
+            row++;
+        }
+    }
+    fclose(f);
+    fprintf(stderr, "[arcade] high scores loaded from %s\n", arc_hs_path());
+}
+
+static void arc_hs_save(void)
+{
+    FILE *f = fopen(arc_hs_path(), "w");
+    if (!f) {
+        fprintf(stderr, "[arcade] cannot write high-score file %s\n", arc_hs_path());
+        return;
+    }
+    fprintf(f, "# OpenSWOS Arcade high scores\n");
+    fprintf(f, "# <name> <wins> <time-seconds> <flag>   ('_' = space in name; flag = FLAGS cell, 255 = none)\n");
+    int modes = Arcade_ModeCount();
+    for (int m = 0; m < modes && m < ARC_HS_MAX_MODES; m++) {
+        fprintf(f, "[%s]\n", Arcade_ModeName(m));
+        for (int i = 0; i < ARC_HS_ENTRIES; i++) {
+            char nm[ARC_HS_NAME_MAX + 1];
+            memcpy(nm, s_hiTable[m][i].name, sizeof nm);   /* both fixed at 4 bytes */
+            nm[ARC_HS_NAME_MAX] = 0;
+            if (!nm[0]) { nm[0] = 'A'; nm[1] = 'A'; nm[2] = 'A'; nm[3] = 0; }
+            for (char *p = nm; *p; p++) if (*p == ' ') *p = '_';
+            fprintf(f, "%s %u %u %u\n", nm, s_hiTable[m][i].score, s_hiTable[m][i].timeSecs,
+                    (unsigned)s_hiTable[m][i].flag);
+        }
+    }
+    fclose(f);
+    fprintf(stderr, "[arcade] high scores saved to %s\n", arc_hs_path());
+}
+
+/* Rank a (score,timeSecs) would take in mode's table: 0 = best .. ARC_HS_ENTRIES-1;
+ * -1 if it doesn't make the table. Higher score wins; a faster run breaks a tie.
+ * A 0-win run never qualifies. */
+static int arc_hs_rank(int mode, uint32_t score, uint32_t timeSecs)
+{
+    if (mode < 0 || mode >= ARC_HS_MAX_MODES || score == 0) return -1;
+    for (int i = 0; i < ARC_HS_ENTRIES; i++) {
+        const ArcHiEntry *e = &s_hiTable[mode][i];
+        if (score > e->score) return i;
+        if (score == e->score && timeSecs < e->timeSecs) return i;
+    }
+    return -1;
+}
+
+static void arc_hs_insert(int mode, int row, const char *name, uint32_t score,
+                          uint32_t timeSecs, uint8_t flag)
+{
+    if (mode < 0 || mode >= ARC_HS_MAX_MODES || row < 0 || row >= ARC_HS_ENTRIES) return;
+    for (int i = ARC_HS_ENTRIES - 1; i > row; i--)
+        s_hiTable[mode][i] = s_hiTable[mode][i - 1];
+    ArcHiEntry *e = &s_hiTable[mode][row];
+    snprintf(e->name, sizeof e->name, "%s", name);
+    e->score    = score;
+    e->timeSecs = timeSecs;
+    e->flag     = flag;
+}
+
+/* ---- shared rendering helpers (menu palette over the menu background) ---- */
+static void arc_build_menu_argb(uint32_t pal[16])
+{
+    for (int i = 0; i < 16; i++) {
+        uint16_t v = _menuPalette[i];
+        uint32_t r = (v >> 8) & 0xF, g = (v >> 4) & 0xF, b = v & 0xF;
+        r = (r << 4) | r; g = (g << 4) | g; b = (b << 4) | b;
+        pal[i] = 0xFF000000u | (r << 16) | (g << 8) | b;
+    }
+}
+
+static void arc_composite_menu_overlay(const uint32_t pal[16])
+{
+    size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+    size_t n = total > sizeof s_overlayBuf ? sizeof s_overlayBuf : total;
+    for (size_t i = 0; i < n; i++)
+        if (s_overlayBuf[i]) s_flagScreenRGBA[i] = pal[s_overlayBuf[i] & 15];
+}
+
+
+/* INSERT COIN / CREDIT-PUSH-START prompt into the current menu-draw target (the
+ * caller has redirected _frontbufferBasePtr to s_overlayBuf, offset = WIDE_MARGIN). */
+static void arc_draw_bottom_prompt(uint32_t frame)
+{
+    int flash = (int)((frame >> 4) & 1);
+    if (s_credits <= 0) {
+        if (flash)
+            DrawMenuTextCentered(168, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)"INSERT COIN", ARC_CHARS);
+    } else {
+        char buf[24];
+        snprintf(buf, sizeof buf, "CREDIT %02d", s_credits);
+        DrawMenuTextCentered(168, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)buf, ARC_CHARS);
+        if (flash)
+            DrawMenuTextCentered(168, ARC_Y_PROMPT, ARC_WHITE, (uint8_t *)"PUSH START BUTTON", ARC_CHARS);
+    }
+}
+
+/* ---- high-score table geometry (336-space X, screen-space Y) ---- */
+#define HS_TITLE_Y   14
+#define HS_SUB_Y     30
+#define HS_HEAD_Y    48
+#define HS_ROW0_Y    62
+#define HS_ROW_DY    15
+#define HS_X_RANK    36
+#define HS_X_FLAG    74      /* country flag (24px sprite) — 336-space left edge */
+#define HS_X_NAME    104
+#define HS_X_SCORE   190
+#define HS_X_TIME_R  302     /* right edge for the right-aligned TIME column */
+#define HS_HILITE_X  30
+#define HS_HILITE_W  282     /* 30..312 */
+
+static void arc_draw_table_text(int mode)
+{
+    DrawMenuTextCentered(168, HS_TITLE_Y, HS_COL_TITLE, (uint8_t *)Arcade_ModeName(mode), ARC_CHARS);
+    DrawMenuTextCentered(168, HS_SUB_Y,   HS_COL_TITLE, (uint8_t *)"HIGH SCORES", ARC_CHARS);
+    DrawMenuText(HS_X_RANK,  HS_HEAD_Y, HS_COL_HEADER, (uint8_t *)"RANK", ARC_CHARS);
+    DrawMenuText(HS_X_NAME,  HS_HEAD_Y, HS_COL_HEADER, (uint8_t *)"NAME", ARC_CHARS);
+    DrawMenuText(HS_X_SCORE, HS_HEAD_Y, HS_COL_HEADER, (uint8_t *)"WINS", ARC_CHARS);
+    DrawMenuTextRightAligned(HS_X_TIME_R, HS_HEAD_Y, HS_COL_HEADER, (uint8_t *)"TIME", ARC_CHARS);
+    for (int i = 0; i < ARC_HS_ENTRIES; i++) {
+        const ArcHiEntry *e = &s_hiTable[mode][i];
+        int y = HS_ROW0_Y + i * HS_ROW_DY;
+        uint16_t col = (i == 0) ? HS_COL_TOP : HS_COL_ROW;   /* #1 row red, the rest white */
+        char b[24];
+        snprintf(b, sizeof b, "%2d", i + 1);
+        DrawMenuText(HS_X_RANK, y, col, (uint8_t *)b, ARC_CHARS);
+        DrawMenuText(HS_X_NAME, y, col, (uint8_t *)(e->name[0] ? e->name : "---"), ARC_CHARS);
+        snprintf(b, sizeof b, "%u", e->score);
+        DrawMenuText(HS_X_SCORE, y, col, (uint8_t *)b, ARC_CHARS);
+        snprintf(b, sizeof b, "%u:%02u", e->timeSecs / 60, e->timeSecs % 60);
+        DrawMenuTextRightAligned(HS_X_TIME_R, y, col, (uint8_t *)b, ARC_CHARS);
+    }
+}
+
+/* Blit flag `f` (24x16 from the FLAGS sheet) into an RGBA target at screen (px,py),
+ * scaled to 50% (12x8, nearest-neighbour), blended onto whatever is there by `alpha`. */
+static void arc_blit_flag_blend(int f, int px, int py, uint32_t *dst, int pitch, int alpha)
+{
+    if (!s_flagsLoaded || f < 0 || f >= FLAG_COUNT || alpha <= 0) return;
+    int sx = (f % FLAG_COLS) * FLAG_W, sy = (f / FLAG_COLS) * FLAG_H;
+    int dw = FLAG_W / 2, dh = FLAG_H / 2;            /* 12 x 8 */
+    for (int y = 0; y < dh; y++) {
+        int dy = py + y;
+        if (dy < 0 || dy >= SCREEN_HEIGHT) continue;
+        const uint8_t *src = s_flagSheet + (size_t)(sy + y * 2) * s_flagSheetW + sx;
+        uint32_t      *out = dst + (size_t)dy * pitch;
+        for (int x = 0; x < dw; x++) {
+            int dx = px + x;
+            if (dx < 0 || dx >= _screen_width) continue;
+            uint32_t c = s_flagPal[src[x * 2]];
+            out[dx] = (alpha >= 255) ? c : arc_blend(out[dx], c, alpha);
+        }
+    }
+}
+
+/* Draw each high-score entry's country flag next to its row, into an RGBA target,
+ * faded by `alpha`. Shared by the run-over result table and the attract overlay. */
+static void arc_draw_table_flags(int mode, uint32_t *dst, int pitch, int alpha)
+{
+    if (mode < 0 || mode >= ARC_HS_MAX_MODES || alpha <= 0) return;
+    for (int i = 0; i < ARC_HS_ENTRIES; i++) {
+        uint8_t f = s_hiTable[mode][i].flag;
+        if (f >= FLAG_COUNT) continue;                  /* entry has no flag */
+        int py = HS_ROW0_Y + i * HS_ROW_DY + 1;         /* centre the 8px flag on the text row */
+        arc_blit_flag_blend(f, WIDE_MARGIN + HS_X_FLAG, py, dst, pitch, alpha);
+    }
+}
+
+/* Render mode's table text (menu font, white+shadow) into s_tableBuf, for the attract
+ * foreground cross-fade (Arcade_CompositeOverlay blends it over the live reel). */
+static void arc_render_table_to_buf(int mode)
+{
+    size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+    size_t n = total > sizeof s_tableBuf ? sizeof s_tableBuf : total;
+    memset(s_tableBuf, 0, n);
+    uintptr_t sFb = _frontbufferBasePtr; int sOff = _menu_draw_x_offset; uint16_t sCam = _cameraXMod320;
+    _frontbufferBasePtr = (uintptr_t)s_tableBuf; _menu_draw_x_offset = WIDE_MARGIN; _cameraXMod320 = 0;
+    arc_draw_table_text(mode);
+    _frontbufferBasePtr = sFb; _menu_draw_x_offset = sOff; _cameraXMod320 = sCam;
+}
+
+/* Present mode's high-score table over the menu background, fading in then holding
+ * for holdFrames. highlightRow >= 0 draws a flashing bar on that row (the entry
+ * just added). Returns 1 if interrupted by a start/service request. */
+static int arc_present_table(int mode, int holdFrames, int highlightRow)
+{
+    uint32_t mpal[16]; arc_build_menu_argb(mpal);
+    s_flagScreenActive = 1;
+    s_arcadeFade = 0;
+    uint32_t frame = 0;
+    int held = 0;
+    while (_quitToDos == 0) {
+        frame++;
+        arc_drain_input();
+        if (s_startGame || s_serviceReq) { s_flagScreenActive = 0; return 1; }
+
+        arc_fill_menubg();
+
+        size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+        size_t n = total > sizeof s_overlayBuf ? sizeof s_overlayBuf : total;
+        memset(s_overlayBuf, 0, n);
+        uintptr_t sFb = _frontbufferBasePtr; int sOff = _menu_draw_x_offset; uint16_t sCam = _cameraXMod320;
+        _frontbufferBasePtr = (uintptr_t)s_overlayBuf; _menu_draw_x_offset = WIDE_MARGIN; _cameraXMod320 = 0;
+        arc_draw_table_text(mode);
+        arc_draw_bottom_prompt(frame);
+        _frontbufferBasePtr = sFb; _menu_draw_x_offset = sOff; _cameraXMod320 = sCam;
+        arc_composite_menu_overlay(mpal);
+        arc_draw_table_flags(mode, s_flagScreenRGBA, _screen_width, 255);  /* flags (frame dims via s_arcadeFade) */
+
+        if (highlightRow >= 0 && highlightRow < ARC_HS_ENTRIES) {
+            int ry = HS_ROW0_Y + highlightRow * HS_ROW_DY - 3;
+            int rx = WIDE_MARGIN + HS_HILITE_X;
+            uint32_t c = ((frame >> 3) & 1) ? 0xFFFFFF00u : 0xFF806000u;   /* flashing yellow */
+            /* 2px-thick box (matches the name-entry selector) */
+            arc_flag_rect(rx,     ry,     HS_HILITE_W,     HS_ROW_DY + 2, c);
+            arc_flag_rect(rx + 1, ry + 1, HS_HILITE_W - 2, HS_ROW_DY,     c);
+        }
+
+        if (s_arcadeFade < 256) { s_arcadeFade += 16; if (s_arcadeFade > 256) s_arcadeFade = 256; }
+        else if (++held >= holdFrames) break;
+
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+    arc_fade_ramp(0, 10);
+    s_flagScreenActive = 0;
+    return (s_startGame || s_serviceReq);
+}
+
+/* A simple up-to-3-line centred message over the menu background (GAME OVER /
+ * WINNER, etc.). Fades in, holds; if `skippable`, a fire press ends it early.
+ * Returns 1 if interrupted by a start/service request (ignored while modal). */
+static int arc_message_screen(const char *l1, const char *l2, const char *l3,
+                              int holdFrames, int skippable)
+{
+    extern uint8_t _pl1ShortFire, _pl2ShortFire;
+    extern void Player1StatusProc(void);
+    extern void Player2StatusProc(void);
+    uint32_t mpal[16]; arc_build_menu_argb(mpal);
+    s_flagScreenActive = 1;
+    s_arcadeFade = 0;
+    uint32_t frame = 0;
+    int held = 0, f = 1;
+    while (_quitToDos == 0) {
+        frame++;
+        Player1StatusProc(); Player2StatusProc();
+        int fire = _pl1ShortFire || _pl2ShortFire;
+        arc_drain_input();
+        if (s_startGame || s_serviceReq) { s_flagScreenActive = 0; return 1; }
+
+        arc_fill_menubg();
+        size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+        size_t n = total > sizeof s_overlayBuf ? sizeof s_overlayBuf : total;
+        memset(s_overlayBuf, 0, n);
+        uintptr_t sFb = _frontbufferBasePtr; int sOff = _menu_draw_x_offset; uint16_t sCam = _cameraXMod320;
+        _frontbufferBasePtr = (uintptr_t)s_overlayBuf; _menu_draw_x_offset = WIDE_MARGIN; _cameraXMod320 = 0;
+        if (l1) DrawMenuTextCentered(168,  92, ARC_WHITE, (uint8_t *)l1, ARC_CHARS);
+        if (l2) DrawMenuTextCentered(168, 120, ARC_WHITE, (uint8_t *)l2, ARC_CHARS);
+        if (l3) DrawMenuTextCentered(168, 144, ARC_WHITE, (uint8_t *)l3, ARC_CHARS);
+        arc_draw_bottom_prompt(frame);
+        _frontbufferBasePtr = sFb; _menu_draw_x_offset = sOff; _cameraXMod320 = sCam;
+        arc_composite_menu_overlay(mpal);
+
+        if (s_arcadeFade < 256) { s_arcadeFade += 16; if (s_arcadeFade > 256) s_arcadeFade = 256; }
+        else {
+            held++;
+            if (skippable && fire && !f && held > 8) break;
+            if (held >= holdFrames) break;
+        }
+        f = fire;
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+    arc_fade_ramp(0, 10);
+    s_flagScreenActive = 0;
+    return (s_startGame || s_serviceReq);
+}
+
+static int arc_continue_screen(uint32_t wins)
+{
+    char l2[32];
+    snprintf(l2, sizeof l2, "WIN STREAK: %u", wins);
+    return arc_message_screen("WINNER!", l2, "GET READY...", 110, 1);
+}
+
+/* ---- name (initials) entry: 4x10 character grid + DEL / END action row ---- */
+#define NAME_COLS     10
+#define NAME_CHARROWS 4
+#define NAME_ROWS     (NAME_CHARROWS + 1)
+/* Only glyphs the menu font actually has (A-Z, 0-9, '.', '-', space — '!' and '_'
+ * map to glyph 0 in _bigCharsTable, so they're left out). The trailing blanks are
+ * selectable space cells. */
+static const char s_nameGrid[NAME_CHARROWS * NAME_COLS + 1] =
+    "ABCDEFGHIJ"
+    "KLMNOPQRST"
+    "UVWXYZ0123"
+    "456789.-  ";
+#define NAME_CELL_W  28
+#define NAME_GW      (NAME_COLS * NAME_CELL_W)   /* 280 */
+#define NAME_GX336   ((336 - NAME_GW) / 2)       /* 28 (336-space left edge) */
+#define NAME_GY      108
+#define NAME_CELL_H  20
+
+/* Either player's stick navigates (the champion may be P1 or P2); fire picks the
+ * highlighted cell. Writes up to ARC_HS_NAME_MAX chars into out (NUL-terminated). */
+static void arc_name_entry(int rank, char *out)
+{
+    extern uint8_t _pl1Up,_pl1Down,_pl1Left,_pl1Right,_pl1ShortFire;
+    extern uint8_t _pl2Up,_pl2Down,_pl2Left,_pl2Right,_pl2ShortFire;
+    extern void Player1StatusProc(void);
+    extern void Player2StatusProc(void);
+
+    uint32_t mpal[16]; arc_build_menu_argb(mpal);
+    char entered[ARC_HS_NAME_MAX + 1] = {0};
+    int  nch = 0, col = 0, row = 0;
+    int  u = 0, d = 0, l = 0, r = 0, f = 1;
+    uint32_t frame = 0;
+    int done = 0;
+
+    out[0] = 0;
+    s_flagScreenActive = 1;
+    s_arcadeFade = 0;
+    while (_quitToDos == 0 && !done) {
+        frame++;
+        Player1StatusProc(); Player2StatusProc();
+        int up = _pl1Up || _pl2Up,   dn = _pl1Down || _pl2Down;
+        int lf = _pl1Left || _pl2Left, rt = _pl1Right || _pl2Right;
+        int fire = _pl1ShortFire || _pl2ShortFire;
+
+        if (up && !u) row = (row - 1 + NAME_ROWS) % NAME_ROWS;
+        if (dn && !d) row = (row + 1) % NAME_ROWS;
+        if (lf && !l) col = (col - 1 + NAME_COLS) % NAME_COLS;
+        if (rt && !r) col = (col + 1) % NAME_COLS;
+        int pick = (fire && !f);
+        u = up; d = dn; l = lf; r = rt; f = fire;
+
+        if (pick) {
+            if (row < NAME_CHARROWS) {
+                char c = s_nameGrid[row * NAME_COLS + col];
+                if (nch < ARC_HS_NAME_MAX) { entered[nch++] = c; entered[nch] = 0; }
+                if (nch >= ARC_HS_NAME_MAX) done = 1;
+            } else if (col < NAME_COLS / 2) {        /* DEL */
+                if (nch > 0) entered[--nch] = 0;
+            } else {                                 /* END */
+                done = 1;
+            }
+        }
+
+        arc_drain_input();   /* accumulate coins; modal flag blocks start/service */
+
+        /* ---- draw ---- */
+        arc_fill_menubg();
+        size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+        size_t n = total > sizeof s_overlayBuf ? sizeof s_overlayBuf : total;
+        memset(s_overlayBuf, 0, n);
+        uintptr_t sFb = _frontbufferBasePtr; int sOff = _menu_draw_x_offset; uint16_t sCam = _cameraXMod320;
+        _frontbufferBasePtr = (uintptr_t)s_overlayBuf; _menu_draw_x_offset = WIDE_MARGIN; _cameraXMod320 = 0;
+
+        DrawMenuTextCentered(168, 22, ARC_WHITE, (uint8_t *)"NEW HIGH SCORE!", ARC_CHARS);
+        { char hh[40]; snprintf(hh, sizeof hh, "RANK %d - ENTER INITIALS", rank + 1);
+          DrawMenuTextCentered(168, 42, ARC_WHITE, (uint8_t *)hh, ARC_CHARS); }
+        { char shown[ARC_HS_NAME_MAX * 2 + 1]; int k = 0;
+          for (int i = 0; i < ARC_HS_NAME_MAX; i++) {
+              char c = (i < nch) ? entered[i] : '.';   /* '.' marks an empty slot */
+              shown[k++] = (c == ' ') ? '.' : c;       /* a chosen space also shows as '.' */
+              shown[k++] = ' ';
+          }
+          shown[k] = 0;
+          DrawMenuTextCentered(168, 70, ARC_WHITE, (uint8_t *)shown, ARC_CHARS); }
+
+        for (int rr = 0; rr < NAME_CHARROWS; rr++)
+            for (int cc = 0; cc < NAME_COLS; cc++) {
+                char cs[2] = { s_nameGrid[rr * NAME_COLS + cc], 0 };
+                int cx = NAME_GX336 + cc * NAME_CELL_W + NAME_CELL_W / 2;
+                int cy = NAME_GY + rr * NAME_CELL_H;
+                DrawMenuTextCentered((uint16_t)cx, (uint16_t)cy, ARC_WHITE, (uint8_t *)cs, ARC_CHARS);
+            }
+        { int ay = NAME_GY + NAME_CHARROWS * NAME_CELL_H;
+          DrawMenuTextCentered(NAME_GX336 + NAME_GW / 4,     ay, ARC_WHITE, (uint8_t *)"DEL", ARC_CHARS);
+          DrawMenuTextCentered(NAME_GX336 + 3 * NAME_GW / 4, ay, ARC_WHITE, (uint8_t *)"END", ARC_CHARS); }
+
+        arc_draw_bottom_prompt(frame);
+        _frontbufferBasePtr = sFb; _menu_draw_x_offset = sOff; _cameraXMod320 = sCam;
+        arc_composite_menu_overlay(mpal);
+
+        /* flashing selector box over the highlighted cell (RGBA, screen-space) */
+        uint32_t selc = ((frame >> 3) & 1) ? 0xFFFFFF00u : 0xFFFF8000u;
+        int rx, ry, rw;
+        if (row < NAME_CHARROWS) {
+            rx = WIDE_MARGIN + NAME_GX336 + col * NAME_CELL_W;
+            ry = NAME_GY + row * NAME_CELL_H - 6;
+            rw = NAME_CELL_W;
+        } else {
+            int leftHalf = (col < NAME_COLS / 2);
+            rx = WIDE_MARGIN + NAME_GX336 + (leftHalf ? 0 : NAME_GW / 2);
+            ry = NAME_GY + NAME_CHARROWS * NAME_CELL_H - 6;
+            rw = NAME_GW / 2;
+        }
+        arc_flag_rect(rx, ry, rw, NAME_CELL_H, selc);
+        arc_flag_rect(rx + 1, ry + 1, rw - 2, NAME_CELL_H - 2, selc);
+
+        if (s_arcadeFade < 256) { s_arcadeFade += 24; if (s_arcadeFade > 256) s_arcadeFade = 256; }
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+    arc_fade_ramp(0, 10);
+    s_flagScreenActive = 0;
+    snprintf(out, ARC_HS_NAME_MAX + 1, "%s", entered);
+}
+
+/* End of a winner-stays-on run: GAME OVER beat, then (if it qualifies) name entry
+ * and a flash of the updated table. Modal — coins accumulate but the flow can't be
+ * interrupted into a new game until it returns to the attract loop. */
+static void arc_run_over(int mode, uint32_t wins, uint32_t totalSecs, int flag)
+{
+    char l2[32], l3[32];
+    arc_hs_load();   /* s_arcModalRunOver is held by the caller for the whole run */
+
+    snprintf(l2, sizeof l2, "WINS: %u", wins);
+    snprintf(l3, sizeof l3, "TIME: %u:%02u", totalSecs / 60, totalSecs % 60);
+    arc_message_screen("GAME OVER", l2, l3, 150, 1);
+
+    int rank = arc_hs_rank(mode, wins, totalSecs);
+    if (rank < 0 && s_arcDebugForceNameEntry)    /* DEBUG: force the name-entry screen */
+        rank = ARC_HS_ENTRIES - 1;               /* (last place) even if it wouldn't qualify */
+    s_arcDebugForceNameEntry = 0;
+    if (rank >= 0) {
+        char name[ARC_HS_NAME_MAX + 1] = "";
+        arc_name_entry(rank, name);
+        if (!name[0]) snprintf(name, sizeof name, "AAA");
+        arc_hs_insert(mode, rank, name, wins, totalSecs,
+                      (flag >= 0 && flag < FLAG_COUNT) ? (uint8_t)flag : 0xFF);
+        arc_hs_save();
+        arc_present_table(mode, 4 * 50, rank);   /* show the table, new row flashing */
+    } else {
+        arc_present_table(mode, 3 * 50, -1);     /* no high score — still show the table */
+    }
+}
+
 void ArcadeMainLoop(void)
 {
     fprintf(stderr, "[arcade] boot-to-arcade: entering attract loop\n");
@@ -1288,6 +2036,7 @@ void ArcadeMainLoop(void)
     arc_load_flags();
     arc_load_menubg();
     arc_load_svcfont();
+    arc_hs_load();          /* high-score tables (ARCADE.HI; seeds defaults if absent) */
     arc_scan_reels();
     /* Coin-insert jingle (mixed over the attract audio). */
     { extern int AudioSDL_LoadOverlaySample(const char *); AudioSDL_LoadOverlaySample("sound/1UP.WAV"); }
@@ -1311,14 +2060,19 @@ void ArcadeMainLoop(void)
         }
 
         if (s_reelCount == 0) {
-            arc_idle_insert_coin(250);   /* ~5 s, then re-scan */
+            /* No reels: run the attract foreground (logo<->table cross-fade + INSERT
+             * COIN) over a black screen, then re-scan for newly-dropped reels. */
+            arc_idle_insert_coin(300);
             arc_scan_reels();
             continue;
         }
 
-        /* play a random reel through the normal replay path (camera follows as
-         * usual). ViewHighlights does CopyTeamsAndHeader + InitGameSaveTeams +
-         * PlayHighlightsLoop and returns when the reel finishes. */
+        /* Play a random reel right through (the foreground logo<->high-score cross-fade
+         * runs over it via the Arcade_DrawAttractOverlay hook — the reel is NEVER cut
+         * for the foreground). When it finishes, loop straight into the next reel so a
+         * reel is always playing in the background. ViewHighlights does
+         * CopyTeamsAndHeader + InitGameSaveTeams + PlayHighlightsLoop and returns when
+         * the reel ends (or a coin/start/service aborts it). */
         int idx = (int)(arc_rand() % (uint32_t)s_reelCount);
         s_rngState ^= (uint32_t)_quitToDos << 13;   /* stir */
         fprintf(stderr, "[arcade] attract reel: %s\n", s_reels[idx]);
@@ -1335,10 +2089,8 @@ void ArcadeMainLoop(void)
         _poolplyrLoaded    = 0;
         ViewHighlights();
 
-        /* between reels: restore the menu palette (the reel set its own) and a
-         * brief INSERT COIN beat. */
+        /* Reel finished — restore the menu palette and loop to the next reel. */
         { extern uint16_t _menuPalette[]; WriteCopperPalette(_menuPalette); }
-        arc_idle_insert_coin(60);
     }
 }
 

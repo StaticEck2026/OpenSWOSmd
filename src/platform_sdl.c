@@ -148,6 +148,20 @@ void Platform_ArcadeInput(int *coin1, int *coin2, int *service,
     if (start2)  { *start2  = s_arcade_start2;  s_arcade_start2  = 0; }
 }
 
+/* DEBUG: instant-win key (F10) for the arcade match — returns 1 once per press
+ * (edge-triggered). Polled from Arcade_MatchTick; the keyboard state is refreshed by
+ * the event pump in Platform_VBlank. Lets a tester jump a match straight to the
+ * high-score name-entry flow. SDL-only. */
+int Platform_ArcadeDebugWin(void)
+{
+    static int prev = 0;
+    const Uint8 *ks = SDL_GetKeyboardState(NULL);
+    int now  = ks ? ks[SDL_SCANCODE_F10] : 0;
+    int edge = now && !prev;
+    prev = now;
+    return edge;
+}
+
 /* Load an indexed (8bpp paletted) BMP — the arcade FLAGS sheet / SWCPICH pitches.
  * Copies up to out_cap index bytes into out8 (row-packed at width *outW) and the
  * 256-entry palette as ARGB8888 into outPal. Returns 0 on success. SDL-only. */

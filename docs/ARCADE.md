@@ -237,8 +237,18 @@ unknown/blank falls back to the default). Index 0 is the default.
 
 Per-match rule toggles (F2 service menu, saved to `SWOS.ini`): `game_seconds`,
 `golden_goal`, `penalties_on_draw`, and `goal_replay` (replay each goal — drives the
-engine's auto-replay). The match length is counted in **game frames** (deterministic,
-not wall-clock), so it stays lockstep-safe for future multiplayer.
+engine's auto-replay, the same thing the normal OPTIONS menu calls **AUTO REPLAYS** /
+`_autoReplays`). The match length is counted in **game frames** (deterministic, not
+wall-clock), so it stays lockstep-safe for future multiplayer.
+
+**Goal replay (golden goal):** a golden goal no longer ends the match on a fixed
+2-second timer. That old timer raced the goal celebration + auto-replay and ended the
+match before the replay could play ("a goal immediately exits"). Instead
+`Arcade_GoalScored` flags the match to end, and `Arcade_MatchTick` waits for the whole
+goal sequence to resolve — the engine runs the celebration (`_goalCameraMode != 0`)
+and, when AUTO REPLAYS is on, the instant replay (`_replayState != 0`) — then ends with
+the scorer ahead. With `goal_replay` off, the celebration just plays through and the
+match ends; with it on, the replay plays first.
 
 More modes will be added later. Adding one is: add its display name to
 `s_arcadeModeNames[]` in `src/arcade.c` (the `Arcade_Mode*` helpers expose
@@ -275,14 +285,51 @@ placeholder** squad; `COD` is mapped to SWOS's "CONGO" (≈ DR Congo).
 CUW Curaçao (22), UZB Uzbekistan (40), CPV Cape Verde (43). These load a neutral
 default squad so the cell is still playable.
 
+### High scores, name entry, and the attract display
+
+A coin-op high-score system, **one table per game mode**, all in `src/arcade.c`
+(it reuses the menu-font / menu-palette compositing the flag & pitch selectors use —
+**not** the service font; SVCFONT stays service-menu-only).
+
+- **A play session is a winner-stays-on run.** SCORE = **consecutive wins**, TIME =
+  **total in-game time over the run**.
+  - **1P**: champion (top/team-1 slot, joystick 1) vs a CPU opponent. Beat the CPU and
+    you keep playing fresh random opponents on a fresh random pitch — a free
+    continuation (no extra credit). The run ends on the champion's first non-win
+    (loss, or losing the penalty shootout). `arc_start_game` loops the match.
+  - **2P**: a single head-to-head match (champion = joy1, opponent = joy2); the winner
+    posts a score (`wins = 1`). The full "P2 inserts a coin to challenge the 1P
+    champion mid-streak and take the seat" cabinet flow is a larger TODO — kept out so
+    each player stays on their own stick.
+- **Table columns**: RANK · NAME · WINS · TIME. Ranked by wins desc, then by a faster
+  total time on a tie. Ten rows per mode.
+- **Name entry** (`arc_name_entry`): a 4×10 grid of `A-Z 0-9 . -` + space, plus a
+  DEL/END action row, drawn in the in-game menu font with a flashing selector. Either
+  player's stick navigates (the champion may be P1 or P2); fire picks a cell; END or
+  the 3rd initial finishes. Shown only when the run's score makes that mode's table.
+- **Run end** (`arc_run_over`): GAME OVER beat (wins/time) → if it qualifies, name
+  entry → insert + save → flash the updated table; otherwise just show the table. The
+  whole run + run-over is **modal** (`s_arcModalRunOver`): coins still accumulate for
+  the next game, but start/service can't interrupt a run in progress.
+- **Attract display** (`arc_show_highscores`): between attract reels (and in the
+  no-reels idle), the SWOS logo fades in/holds/**fades out**, then each game mode's
+  high-score table is shown in turn (with flashing INSERT COIN / CREDIT–PUSH START). A
+  coin/start/service request returns to the attract loop to act on it.
+- **Persistence**: `ARCADE.HI` (a small human-readable text file next to `SWOS.ini`),
+  keyed by mode **name** so reordering modes doesn't scramble tables. Seeded with
+  placeholder rows when absent, so a fresh cabinet still has something to show.
+
 ### Build phasing (this implementation)
 1. ✅ DONE (`f2f3ccc`): `[arcade] enabled` + `gArcadeMode` + boot gate (skip
    intro/menu) + attract skeleton (flashing INSERT COIN bottom corners, coin keys
    5/6, F2 stub).
-2. **Attract reels**: scan `attract_mode/`, random HIL/RPL playback free-running
-   (camera-follow as normal, fade in/out between reels) with the SWOS logo + the
-   INSERT-COIN overlay; any coin interrupts → match. ← here
-3. Service menu (F2): SVCFONT loader + basic settings list (mode + arcade rules).
-4. Arcade match: random `SWCPICH*` pitch (→8bpp) + 45 s golden-goal,
-   draw→penalties, launched on credit. Winner stays on.
-5. Operator config persistence + bookkeeping; cabinet I/O (coin/service GPIO).
+2. ✅ DONE: **Attract reels** — scan `attract_mode/`, random HIL/RPL playback
+   free-running (camera-follow as normal, fade in/out between reels) with the SWOS logo
+   + the INSERT-COIN overlay; any coin interrupts → match.
+3. ✅ DONE: Service menu (F2): SVCFONT loader + basic settings list (mode + arcade rules).
+4. ✅ DONE: Arcade match — random `SWCPICH*` pitch (→8bpp) + golden-goal, draw→penalties,
+   launched on credit; winner-stays-on run (1P).
+5. ✅ DONE: High-score tables + name entry + attract high-score display; goal-replay fix
+   (golden goal waits for the celebration + AUTO REPLAYS to finish).
+6. Operator config persistence + bookkeeping; cabinet I/O (coin/service GPIO);
+   2P-challenge-mid-streak seat-swap flow.
