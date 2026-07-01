@@ -380,7 +380,11 @@ int Platform_Init(const PlatformInitOptions *opts)
     Platform_RewireCustom();
     Platform_PreArmIsrGlobals();
 
-    Uint32 wflags = SDL_WINDOW_SHOWN;
+    /* SDL_WINDOW_RESIZABLE: lets the user resize/maximise the window (the content
+     * is letterboxed by SDL_RenderSetLogicalSize below). It's also required on macOS
+     * for the green title-bar zoom/fullscreen button to be enabled — without it the
+     * button is greyed out and users can't go fullscreen from the window controls. */
+    Uint32 wflags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (fs_mode == PLATFORM_FULLSCREEN_DESKTOP) {
         /* Borderless window sized to the desktop, no display-mode
          * change. SDL_RenderSetLogicalSize letterboxes 336x272 inside
