@@ -1085,12 +1085,35 @@ int Platform_VBlank(void)
 #ifdef SWOS_WASM_BUILD
     /* The browser owns the event loop, so a C program must hand control back
      * every frame or the tab freezes. ASYNCIFY rewinds the C stack here and
-     * resumes after ~20 ms — turning "render this frame, return to the browser"
-     * out of the same blocking loop the native build runs. This ONE yield paces
-     * every blocking loop in the game (match loop, menus, fades, replays — they
-     * all funnel through Platform_VBlank), so no per-loop rewrite is needed.
-     * (No 50 Hz SDL_Delay+spin below — emscripten_sleep IS the pace.) */
-    emscripten_sleep((unsigned)(1000 / DosGameplay_TargetFps()));
+     * resumes later — turning "render this frame, return to the browser" out of
+     * the same blocking loop the native build runs. This ONE yield paces every
+     * blocking loop in the game (match loop, menus, fades, replays), so no
+     * per-loop rewrite is needed.
+     *
+     * Pace to a FIXED frame period that ABSORBS the frame's own work time. A plain
+     * emscripten_sleep(period) sleeps the whole period AFTER rendering, so every
+     * frame actually took work + period and the real rate fell well below target
+     * (~35 fps). And because WASM has no timer thread, the game clock
+     * (_currentGameTick) advances exactly once per Platform_VBlank — so a low frame
+     * rate makes the whole game run in slow-motion. Sleep only (deadline - now), with
+     * an accumulating deadline that self-corrects for setTimeout jitter; if a slow
+     * frame overruns, resync instead of building up a backlog (no spiral of death). */
+    {
+        double period = 1000.0 / DosGameplay_TargetFps();
+        static double s_frame_deadline;
+        double now = emscripten_get_now();
+        if (s_frame_deadline <= 0.0) s_frame_deadline = now;   /* first frame */
+        s_frame_deadline += period;
+        double sleep_ms = s_frame_deadline - now;
+        if (sleep_ms < 1.0) {                 /* work overran the frame budget */
+            sleep_ms = 1.0;                   /* still yield so the browser paints + polls input */
+            s_frame_deadline = now + period;  /* drop the backlog */
+        } else if (sleep_ms > period) {       /* first frame / clock jumped back */
+            sleep_ms = period;
+            s_frame_deadline = now + period;
+        }
+        emscripten_sleep((unsigned)(sleep_ms + 0.5));
+    }
     return _quitToDos ? 1 : 0;
 #endif
 
