@@ -380,11 +380,17 @@ int Platform_Init(const PlatformInitOptions *opts)
     Platform_RewireCustom();
     Platform_PreArmIsrGlobals();
 
-    /* SDL_WINDOW_RESIZABLE: lets the user resize/maximise the window (the content
-     * is letterboxed by SDL_RenderSetLogicalSize below). It's also required on macOS
-     * for the green title-bar zoom/fullscreen button to be enabled — without it the
-     * button is greyed out and users can't go fullscreen from the window controls. */
-    Uint32 wflags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+    /* SDL_WINDOW_RESIZABLE: lets the user resize/maximise the desktop window (content
+     * is letterboxed by SDL_RenderSetLogicalSize below), and on macOS it's what enables
+     * the green title-bar zoom/fullscreen button (greyed out without it).
+     * NOT on WASM: emscripten's SDL2 sizes the <canvas> element to the SDL window when
+     * it's resizable, which overrides the shell.html responsive CSS (height:100vh /
+     * object-fit:contain) and pins the canvas to a small fixed size letterboxed in the
+     * page. On the web the page CSS owns the canvas display size, so leave it off. */
+    Uint32 wflags = SDL_WINDOW_SHOWN;
+#ifndef SWOS_WASM_BUILD
+    wflags |= SDL_WINDOW_RESIZABLE;
+#endif
     if (fs_mode == PLATFORM_FULLSCREEN_DESKTOP) {
         /* Borderless window sized to the desktop, no display-mode
          * change. SDL_RenderSetLogicalSize letterboxes 336x272 inside
