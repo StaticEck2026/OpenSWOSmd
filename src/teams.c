@@ -132,6 +132,7 @@ extern uint8_t  _europeanChampionships[];
 extern uint8_t  _worldCup[];
 extern uint8_t  _africanNationsCup[];
 extern uint8_t  _copaAmerica[];
+extern Competition *Comp_ById(uint8_t compId);  /* comp record by compId (competition_data.h) */
 extern uint8_t  _northAmericanCup[];
 extern uint8_t  _asianCup[];
 extern uint8_t  _oceaniaCup[];
@@ -3005,6 +3006,13 @@ loc_E086:
 
     /* Career mode continental cup filtering (loc_13E0A6) */
     if (_gameType == GAME_TYPE_CAREER) {
+        /* Copa Libertadores is a CLUB competition that career mode auto-routes
+         * into the quaternary slot (career_copa.c); it is never picked through
+         * this menu, so hide it from the career competition list. It is spliced
+         * into _southAmericaTable only to surface in the preset/exhibition list
+         * (where _gameType != GAME_TYPE_CAREER, so this block is skipped). */
+        if (compEntry == (uint8_t *)Comp_ById(COMPID_copaLibertadores))
+            goto loc_E086;
         if (compEntry == _africanNationsCup) {
             if ((uint8_t)(_selTeamNumber >> 8) != CN_AFRICA)
                 goto loc_E086;

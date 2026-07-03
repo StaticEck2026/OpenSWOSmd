@@ -119,6 +119,12 @@ void FrontEndPreLoopSetup(void)
     extern void CopaBaked_Install(void);
     CopaBaked_Install();
 #endif
+    /* Copa Libertadores is registered by compId above (dynamic on SDL, baked on
+       Amiga); splice its record into the South America region's preset-competition
+       list so it appears in "CHOOSE PRESET COMPETITION - SOUTH AMERICA". Inert if
+       Copa isn't installed. Shared code path (career_copa.c) — same on both ports. */
+    extern void Career_InstallCopaLibertadoresPresetEntry(void);
+    Career_InstallCopaLibertadoresPresetEntry();
     InitMenuMusic();
     PrepareMenuBackground();
     InitMainMenuStuff();
