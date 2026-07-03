@@ -16,8 +16,27 @@ the SWOS automation built on top of it.
 ## ⭐ READ THIS FIRST — driving a career through seasons (the proven recipe)
 
 This is the route that works (validated 2026-06-19: a career driven season 3 → 19
-+ retirement, no wedges). Follow it exactly; the "DON'Ts" below each cost *hours*
-in a debugging session — they are the only reason this got hard.
++ retirement, no wedges; cold-start + fresh-career reliability re-verified
+2026-07-03). Follow it exactly; the "DON'Ts" below each cost *hours* in a
+debugging session — they are the only reason this got hard.
+
+**Cold start is now automatic (fixed 2026-07-03).** From a stone-cold daemon
+(ELF loaded, never `run`), ANY entry point — `where` / `prime` / `nav` / `select`
+/ `load_career` / `start_fresh_career` — auto-boots to the main menu. You do NOT
+need a manual `break MenuInputInjectPoint` + `run` first. Three bugs had made this
+fail every session; all three are fixed in `scripts/harness_lib.py` +
+`scripts/swos_plugin.py`:
+  1. `is_stopped()` did `"stopped" in health()`, but the not-booted verdict is
+     `"DEGRADED target not cleanly stopped"` — which CONTAINS "stopped" → false
+     positive → `ensure_stopped()` thought a never-run daemon was already stopped
+     and skipped the boot. Now keys on the `OK` verdict.
+  2. `prime()` issued `continue`, which silently no-ops on a never-run target
+     (`info inferiors` shows `<null>`). Now it detects "not booted" and `boot()`s.
+  3. `set_var()` did `set variable X = v`, which FAILS ("Invalid cast") for the
+     codebase's `uint16_t X[1]` stub-globals (`_fire`, `_shortFire`,
+     `_menuControlsDirection`) — so every menu _fire was silently dropped and the
+     drivers hung. Now retries `X[0] = v`. (This — not a "non-deterministic
+     single-frame drop" — was the real dropped-fire cause.)
 
 ### The recipe (copy/paste)
 
@@ -77,15 +96,19 @@ CONTINUE CAREER → `drive_transition` (skip-latch auto-advances the result chai
    — runtime competition state is left stale. Cold-boot fresh each test.
 7. **DON'T poll the output file every few seconds.** Long drives are minutes;
    use `python3 -u` + `flush=True` and wait for the background-task notification.
-8. **DON'T fire a menu entry once and assume it dispatched.** The harness fire()
-   is a single-frame pulse and is **non-deterministically DROPPED** — the
-   injected fire/shortFire isn't present at the dispatch frame, so the entry
-   silently no-ops and the caller hangs. `select()` / `start_fresh_career()` now
-   **retry the fire until the menu transitions** (onInit or the visible list
-   changes); any custom drive must do the same (the season-loop drivers already
-   re-assert shortFire every iteration — that's why they're robust). Diagnose
-   with `SWOS_HARNESS_LOG=1` (see below): a `dispatch-try` line with the entry's
-   controlMask vs the injected d7, plus per-menu `ActivateMenu` lines.
+8. **DON'T fire a menu entry once and assume it dispatched.** `select()` /
+   `start_fresh_career()` **retry the fire until the menu transitions** (onInit or
+   the visible list changes); any custom drive must do the same (the season-loop
+   drivers already re-assert shortFire every iteration — that's why they're
+   robust). **Root cause (fixed 2026-07-03):** the fire wasn't "non-deterministically
+   dropped" — it was NEVER set. `_fire`/`_shortFire` are `uint16_t[1]` stub-arrays,
+   so `set variable _fire = 1` failed "Invalid cast" and `set_var` silently no-op'd
+   every retry (nav still worked because direction ALSO flows through the scalar
+   `_up`/`_down` globals). `set_var` now falls back to `X[0] = v`. Diagnose fire
+   issues by reading `selectedEntry->controlMask` (the control bit the entry gates
+   on — e.g. CAREER = `0x20` = shortFire) and confirming your `_fire[0]`/
+   `_shortFire[0]` writes actually READ BACK non-zero, plus `SWOS_HARNESS_LOG=1`'s
+   `dispatch-try` line (controlMask vs injected d7).
 9. **DON'T run one daemon for an entire long session.** The gdb/WSL2 daemon
    **degrades over a session** — after ~20-30 launches/drives the per-frame
    `continue` balloons from ~tens of ms to 10s-120s (VBlank/timer-thread

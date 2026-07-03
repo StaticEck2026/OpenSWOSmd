@@ -61,7 +61,17 @@ class GdbHarness:
         return self._simple("health").strip()
 
     def is_stopped(self):
-        return "stopped" in self.health()
+        """True iff the target is cleanly STOPPED (booted + at a bp/signal, so
+        memory is readable). The proxy verdict is 'OK stopped PC=...' ONLY when
+        cleanly stopped; a not-booted OR running target reports
+        'DEGRADED target not cleanly stopped'. A naive `"stopped" in health`
+        false-positives on that DEGRADED string (it contains the substring
+        'stopped'), which made ensure_stopped() believe a fresh, never-run daemon
+        was already stopped and skip the cold-start boot — the recurring harness
+        hang. Key on the OK verdict instead. Empty/ambiguous health -> False, so
+        the caller (safely) primes/boots."""
+        h = self.health()
+        return h.startswith("OK") and "stopped" in h
 
     def waitstop(self, seconds=20):
         return self._simple("waitstop", str(seconds))
@@ -90,7 +100,18 @@ class GdbHarness:
 
     # ---- writes ------------------------------------------------------------
     def set_var(self, name, value):
-        self.cmd(f"set variable {name} = {value}")
+        """Set a global. Robust to this codebase's stub-global pattern where a
+        logical scalar is DEFINED as a 1-element array (e.g.
+        `uint16_t _fire[1]` / `_shortFire[1]` / `_menuControlsDirection[1]` in
+        swos_amiga_data_imports.c) but extern'd as a plain scalar in the C. gdb
+        types those from the DEFINITION (array), so `set var X = v` fails
+        'Invalid cast' and the write silently no-ops — which dropped every menu
+        _fire and hung the drivers. Retry `X[0] = v` (same memory). Genuine
+        scalars (e.g. the `unsigned char` _up/_down/_left/_right) take the first
+        form unchanged."""
+        r = self.cmd(f"set variable {name} = {value}")
+        if "Invalid cast" in r or "not an lvalue" in r:
+            self.cmd(f"set variable {name}[0] = {value}")
 
     def write_check(self, name, value):
         """set var, read back; return (ok, readback). Detects read-only stubs."""

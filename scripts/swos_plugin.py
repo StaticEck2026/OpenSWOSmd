@@ -102,8 +102,19 @@ class SwosHarness:
         return any(s in h for s in ("not being run", "Remote connection closed",
                                     "Connection refused"))
 
+    def _inferior_running(self):
+        """True iff a live target process exists (has been `run`). A FRESH SDL
+        daemon has LOADED the ELF but not started it, so `continue` silently
+        no-ops — the recurring cold-start failure. Empirically grounded:
+        not-booted `info inferiors` shows '<null>' (no process); booted shows
+        'process NNNN'. See docs/HARNESS.md."""
+        return "process " in self.h.cmd("info inferiors")
+
     def prime(self, timeout=120):
-        """Ensure a breakpoint at the inject line and stop the target on it."""
+        """Ensure the target is STOPPED at the inject anchor (MenuInputInjectPoint),
+        cold-BOOTING it first if it has never been `run`. Safe to call on a fresh
+        daemon: every entry point (where/nav/_fire/load/…) routes here, so all of
+        them are cold-start-safe — no separate boot() call required."""
         # Amiga: auto-recover a DEAD session (FS-UAE crash / one-shot port burned)
         # before driving, instead of hard-failing the run. Conservative — only
         # fires when the daemon is unreachable or gdb says the remote is gone,
@@ -113,7 +124,16 @@ class SwosHarness:
             print("[harness] Amiga session dead/burned — recovering via "
                   "amiga_gdb.sh up", flush=True)
             self.amiga_up()
-        if "menu_system.c:1567" not in self.h.cmd("info breakpoints"):
+        # SDL cold-start: a fresh daemon loaded the ELF but never ran it, so
+        # `continue` would no-op forever. boot() `run`s it and leaves it stopped
+        # at the inject anchor on the main menu — exactly prime()'s post-state.
+        if self.is_sdl() and not self._inferior_running():
+            self.boot(timeout=max(timeout, 180))
+            return
+        # Dedup by the ACTUAL anchor symbol (INJECT_LINE == MenuInputInjectPoint),
+        # which is what `info breakpoints` prints — not the old fragile line
+        # number, which never matched and re-added a breakpoint every call.
+        if INJECT_LINE not in self.h.cmd("info breakpoints"):
             self.h.break_at(INJECT_LINE)
         self.h.cmd("continue", timeout=3)
         self.h.waitstop(timeout)
