@@ -16,6 +16,14 @@ void Translations_Load(const char *lang);
  * exit, so it is safe to store in long-lived menu/competition data. */
 const char *tr(const char *symbol);
 
+/* Resolve a string-symbol NAME (e.g. "_aSerieA") to the ADDRESS of the compiled
+ * string it names, or NULL if unknown. Backed by the compiled _stringSymbols
+ * table (always present), so unlike tr() it works even when no translation file
+ * loaded. Use as the tr()==NULL fallback for data-driven names so they resolve
+ * to the compiled string (which tr_ptr can still localize at draw time) rather
+ * than the raw symbol key. */
+const void *Translations_SymbolAddr(const char *name);
+
 /* Localize a string the caller only has as a POINTER: if `strAddr` is the
  * address of a compiled UI string symbol, return its translated text; else NULL
  * (caller keeps the original pointer). Used by the renderer for string_table

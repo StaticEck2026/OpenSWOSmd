@@ -138,6 +138,15 @@ static void *sym_addr(const char *name)
     return NULL;
 }
 
+/* Public: resolve a string-symbol NAME to the ADDRESS of the compiled string it
+ * names. Backed by _stringSymbols (compiled data, always present — independent
+ * of whether a translation file loaded), so it works even when tr() returns
+ * NULL. Used as the tr()==NULL fallback for data-driven names. */
+const void *Translations_SymbolAddr(const char *name)
+{
+    return name ? sym_addr(name) : NULL;
+}
+
 void Translations_Load(const char *lang)
 {
     s_tr = NULL; s_trCount = 0;
