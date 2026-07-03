@@ -1310,6 +1310,23 @@ void InitializeNewSeason(void)
     _seasonFinished = 0;
     _careerFinished = 0;
 
+    /* Re-derive careerJobOfferPhaseBias from the freshly-built key cache.
+     *
+     * In SWOS2.s this byte OVERLAPS teamSelectionKeyCache[1] (adjacent-globals
+     * BSS: `teamSelectionKeyCache: ds.b $1` immediately followed by
+     * `careerJobOfferPhaseBias: ds.b $1`), so the cache builder writing entry-0's
+     * sortKey there implicitly set the bias to the EARLIEST fixture's week. The
+     * finance/job-offer code relies on that: it is the season-start week base for
+     * lastFinancialWeekIndex and the `lastKey - bias` season span in
+     * wageScalingDivisor. The SDL port promoted the byte to a standalone global
+     * (career_key_cache.c) but never re-derived it, leaving it 0 — so
+     * lastFinancialWeekIndex started at 0 and the FIRST weekly deduction
+     * front-loaded the entire pre-season gap (both PLAYER WAGES BILL and GENERAL
+     * RUNNING COSTS ~inflated on the first match, self-cancelling by season end
+     * because wageScalingDivisor = lastKey grows to match). Restore the overlap
+     * value explicitly so bias == entry-0 sortKey on every season init. */
+    _careerJobOfferPhaseBias = ((TeamSelectionKeyCacheEntry *)_teamSelectionKeyCache)->sortKey;
+
     _viewRandomPhase = _careerJobOfferPhaseBias;
 
     /* Walk teamSelectionKeyCache to compute wageScalingDivisor */
