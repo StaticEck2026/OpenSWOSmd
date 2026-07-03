@@ -245,7 +245,11 @@ const char _aCopaAmerica_0[] = "COPA AMERICA";
 /* Copa Libertadores (Inc4) — the data-only continental club cup (compId 128).
  * Two variants to mirror the other tournament name pairs (name[0]/name[1]). */
 const char _aCopaLibertadores[] = "COPA LIBERTADORES";
-const char _aCopaLibertadores_0[] = "COPA LIBERTADORES";
+/* name[1] — the SHORT/abbreviated form used ONLY by the career-hub fixture-list
+ * row (CareerGameListCommon reads nameTbl[1]); name[0] above stays full for the
+ * preset-competition menu + team-selection screens. "COPA LIBERTADORES" (17 chars)
+ * overflowed the fixture name column — abbreviate to fit, like "PREM DIV". */
+const char _aCopaLibertadores_0[] = "COPA LIB";
 const char _aCopa_0[] = "COPA";
 const char _aCoppa[] = "COPPA";
 const char _aCoppaItalia[] = "COPPA ITALIA";

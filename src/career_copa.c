@@ -103,6 +103,46 @@ Competition *Career_CopaWorkingCopy(void)
     return NULL;
 }
 
+/* Career_InstallCopaLibertadoresPresetEntry — make Copa Libertadores selectable
+ * in the "CHOOSE PRESET COMPETITION - SOUTH AMERICA" menu.
+ *
+ * That menu (SelectTeamsForPresetCompetition -> SelectTeamsFinalMenu, teams.c)
+ * builds its competition list by walking _southAmericaTable.compCup[] — a
+ * compiled token stream that ships with only _southAmericaWorldCupQualification
+ * and _copaAmerica (competition_data.c). Copa Libertadores is a dynamic (heap)
+ * competition on SDL, so there is no compiled symbol to list in that static
+ * initializer; instead we splice its TEMPLATE record (the same standalone/preset
+ * field _copaAmerica is listed by — NOT the per-career *Copy) into the compCup[]
+ * token stream at runtime, just before the -1 terminator.
+ *
+ * Idempotent (re-running finds Copa already present and returns) and inert when
+ * Copa is not installed (Comp_ById(128) == NULL, e.g. SWOS_DATA_JSON disabled or
+ * a build without the Copa data) or the fixed-size list has no free slot. Called
+ * once from FrontEndPreLoopSetup on BOTH ports — after the SDL dynamic loader
+ * (DataJson_InstallCompetitionGraph) or the Amiga bake (CopaBaked_Install) has
+ * registered the record — so the single shared code path keeps the trees in sync. */
+__attribute__((used, externally_visible))
+void Career_InstallCopaLibertadoresPresetEntry(void)
+{
+    Competition *copa = Comp_ById(COMPID_copaLibertadores);
+    if (!copa)
+        return;
+
+    Competition **cc = _southAmericaTable.compCup;
+    const int cap = (int)(sizeof _southAmericaTable.compCup / sizeof cc[0]);  /* 9 */
+    int i = 0;
+    /* Walk to the -1 terminator; bail out if Copa is already spliced in. */
+    while (i < cap && cc[i] != (Competition *)-1) {
+        if (cc[i] == copa)
+            return;                 /* already installed */
+        i++;
+    }
+    if (i >= cap - 1)               /* need room for Copa + the moved terminator */
+        return;
+    cc[i]     = copa;               /* overwrite the -1 slot with Copa Libertadores */
+    cc[i + 1] = (Competition *)-1;  /* re-plant the -1 terminator after it */
+}
+
 /* appendTeamToCopaList — mirror of appendTeamToList (career_eurocups.c). The
  * grid's first two bytes are the team's {country, ordinal}; preserve that byte
  * order in the list (it is both the TeamId struct layout and the BE byte-pair
