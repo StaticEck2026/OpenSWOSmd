@@ -32,13 +32,19 @@
  * Tier 2 §8.3 finish; the deferred per-record writer fix is still a follow-up.
  *
  * careerJobOfferPhaseBias was byte 1 of the cache buffer in SWOS2.s
- * (`teamSelectionKeyCache: ds.b $1` then `careerJobOfferPhaseBias: ds.b $1`) —
- * Amiga memory-reuse across disjoint career phases (job-offers vs cache build),
- * the cache builder overwriting it as entry-0's sortKey. Nothing reads it as
- * cache data or reads the cache byte as the bias, so it is promoted here to an
- * independent scalar (removes a latent clobber footgun). It now has its own
- * save descriptor; old JSON saves that carried it as cache-blob byte 1 load it
- * as 0 and it is re-derived in InitCareer.
+ * (`teamSelectionKeyCache: ds.b $1` then `careerJobOfferPhaseBias: ds.b $1`).
+ * This is NOT idle memory-reuse: the finance/job-offer code DEPENDS on the
+ * overlap value. The cache builder writes entry-0's sortKey to
+ * teamSelectionKeyCache[1] == careerJobOfferPhaseBias, so the bias equals the
+ * earliest fixture's week — which is the season-start base for
+ * lastFinancialWeekIndex (first weekly deduction diff) and the `lastKey - bias`
+ * season span in wageScalingDivisor. Promoting it to an independent scalar here
+ * decoupled it from the cache, so InitCareer MUST re-derive it explicitly
+ * (`_careerJobOfferPhaseBias = ((TeamSelectionKeyCacheEntry*)cache)->sortKey`,
+ * career_init.c) — otherwise it stays 0 and the first-match finances are
+ * inflated (long-standing bug fixed 2026-07-03). It has its own save descriptor;
+ * old JSON saves that carried it as cache-blob byte 1 load it as 0 and it is
+ * re-derived on the next season init.
  *
  * Real labels (not .equ) so every reader and the save FX/FA descriptors
  * (addressed by &symbol) keep working unchanged.
