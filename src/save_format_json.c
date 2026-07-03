@@ -3006,11 +3006,23 @@ static void dj_intern_names(const char *o, int ol, const char *path,
             int n = mjson_get_string(arr + voff, vlen, "$", sym, (int)sizeof sym);
             if (n > 0) {
                 const char *txt = tr(sym);
-                if (txt)
-                    out[i] = (char *)txt;                         /* permanent translation pool */
-                else if (used + n + 1 <= strpoolsz) {
-                    memcpy(strpool + used, sym, (size_t)n + 1);   /* fallback: the symbol name */
-                    out[i] = strpool + used; used += n + 1;
+                if (txt) {
+                    out[i] = (char *)txt;                         /* localized (translation pool) */
+                } else {
+                    /* No translation loaded/found: fall back to the COMPILED string
+                     * the symbol NAMES (draw-time tr_ptr can still localize that
+                     * address), NOT the raw symbol key. Otherwise every data-driven
+                     * competition name renders as its key ("_ASERIEA", "_A1LIGA", …)
+                     * on any build where the translation table isn't populated
+                     * (observed on the macOS app). Matches translations.h's
+                     * "fall back to the compiled string symbol" contract. */
+                    const void *addr = Translations_SymbolAddr(sym);
+                    if (addr) {
+                        out[i] = (char *)addr;                    /* compiled string symbol */
+                    } else if (used + n + 1 <= strpoolsz) {
+                        memcpy(strpool + used, sym, (size_t)n + 1); /* last resort: literal name */
+                        out[i] = strpool + used; used += n + 1;
+                    }
                 }
             }
         }
