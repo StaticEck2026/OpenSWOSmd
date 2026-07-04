@@ -146,17 +146,115 @@ void swos_io_free(void *p)
 
 #ifdef SWOS_SDL_BUILD
 
+/* ---- Save directory -------------------------------------------------------
+ * Every save file (careers .CAR/.SEA/.PRE/.DIY, tactics .TAC, highlights .HIL,
+ * edited teams .EDT, options .CFG) lives under one base directory. On most
+ * platforms that's "save" relative to the game dir (CWD, anchored to the binary
+ * at startup) — unchanged.
+ *
+ * macOS exception: the game is usually launched from a .app bundle, and macOS
+ * makes a *downloaded* bundle READ-ONLY — Gatekeeper "App Translocation" runs a
+ * quarantined app from a randomized read-only mount, and /Applications needs
+ * admin. Writing saves inside the bundle then fails: "saving doesn't work". So
+ * on macOS, if the in-bundle "save" dir isn't writable, redirect saves to the
+ * per-user Application Support dir (always writable) and seed it once with the
+ * bundled defaults (FORMA.TAC, TEST.CAR, …) so they're still there. Both the
+ * reader (resolve_save_path here) and the writer (resolve_path in resload.c)
+ * consult swos_save_dir(), so load and save always agree. */
+static char s_save_dir[1024] = "save";
+
+const char *swos_save_dir(void)
+{
+    return s_save_dir;
+}
+
+#ifdef __APPLE__
+#include <SDL.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <errno.h>
+
+static int save_dir_writable(const char *dir)
+{
+    char probe[1100];
+    snprintf(probe, sizeof probe, "%s/.swos_write_test", dir);
+    FILE *f = fopen(probe, "wb");     /* also fails if `dir` doesn't exist */
+    if (!f) return 0;
+    fclose(f);
+    remove(probe);
+    return 1;
+}
+
+static void save_copy_file(const char *src, const char *dst)
+{
+    FILE *in = fopen(src, "rb");
+    if (!in) return;
+    FILE *out = fopen(dst, "wb");
+    if (!out) { fclose(in); return; }
+    char buf[8192];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof buf, in)) > 0)
+        fwrite(buf, 1, n, out);
+    fclose(out);
+    fclose(in);
+}
+
+/* Copy every regular file from the bundled `src` dir into the writable `dst`,
+ * skipping any that already exist (never clobber the player's saves). */
+static void save_seed_defaults(const char *src, const char *dst)
+{
+    DIR *d = opendir(src);
+    if (!d) return;
+    struct dirent *e;
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') continue;            /* . .. and dotfiles */
+        char sp[1200], dp[1200];
+        snprintf(sp, sizeof sp, "%s/%s", src, e->d_name);
+        snprintf(dp, sizeof dp, "%s/%s", dst, e->d_name);
+        FILE *exists = fopen(dp, "rb");
+        if (exists) { fclose(exists); continue; }     /* keep existing */
+        save_copy_file(sp, dp);
+    }
+    closedir(d);
+}
+#endif  /* __APPLE__ */
+
+void swos_save_dir_init(void)
+{
+#ifdef __APPLE__
+    /* Keep the in-bundle "save" dir while it's writable (a plain CLI run, or an
+     * un-quarantined bundle) so the existing workflow is untouched. Only
+     * redirect when it isn't — the downloaded/translocated .app that fails now. */
+    if (save_dir_writable("save"))
+        return;
+
+    char *pref = SDL_GetPrefPath("baker76", "SWOS");   /* ~/Library/Application Support/baker76/SWOS/ */
+    if (!pref)
+        return;                                        /* give up; keep "save" */
+
+    char cand[1024];
+    snprintf(cand, sizeof cand, "%ssave", pref);       /* pref ends in '/' */
+    SDL_free(pref);
+
+    if (mkdir(cand, 0777) != 0 && errno != EEXIST)
+        return;                                        /* can't create; keep "save" */
+
+    save_seed_defaults("save", cand);                  /* copy bundled defaults once */
+    snprintf(s_save_dir, sizeof s_save_dir, "%s", cand);
+#endif
+}
+
 static void resolve_save_path(const uint8_t *name, char *out, uint32_t out_sz)
 {
     const char *src = (const char *)name;
     const char *colon = strchr(src, ':');
     if (colon) src = colon + 1;
-    snprintf(out, out_sz, "save/%s", src);
+    snprintf(out, out_sz, "%s/%s", swos_save_dir(), src);
 }
 
 int swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_size)
 {
-    char path[512];
+    char path[1280];   /* s_save_dir (up to 1023) + "/" + filename */
     resolve_save_path(name, path, sizeof(path));
 
     FILE *f = fopen(path, "rb");
@@ -181,7 +279,7 @@ int swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_siz
 
 int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
 {
-    char path[512];
+    char path[1280];
     resolve_save_path(name, path, sizeof(path));
 
     FILE *f = fopen(path, "wb");
