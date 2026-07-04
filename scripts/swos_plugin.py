@@ -254,13 +254,33 @@ class SwosHarness:
 
     def scan_text(self):
         """[(ordinal, label)] for every VISIBLE string entry of the current
-        menu — the reliable way to 'see' a dynamic list without a screenshot."""
+        menu — the reliable way to 'see' a dynamic list without a screenshot.
+
+        Batched: one gdb `while`-loop over all entries in a SINGLE round-trip,
+        not ~3 per entry. A 91-entry team-select screen went from >80 s (which
+        blew driver timeouts) to <1 s. Selects visible entries whose `fg` is a
+        readable pointer (the displayed string); the content==2 gate used by
+        entry_text() wrongly dropped the preset-chooser continent rows."""
         n = self.num_entries() or 0
+        if not n:
+            return []
+        script = (
+            "set $i = 0\n"
+            f"while $i <= {n}\n"
+            "  set $e = (MenuEntry*)CalcMenuEntryAddress($i)\n"
+            "  if ($e->isInvisible == 0 && (unsigned long)$e->fg > 0x10000)\n"
+            '    printf "SCAN|%d|%s|\\n", $i, (char*)$e->fg\n'
+            "  end\n"
+            "  set $i = $i + 1\n"
+            "end\n"
+        )
+        path = "/tmp/harness_scan.gdb"
+        with open(path, "w") as f:
+            f.write(script)
+        r = self.h.cmd(f"source {path}", timeout=30)
         out = []
-        for i in range(n + 1):
-            t = self.entry_text(i)
-            if t is not None:
-                out.append((i, t))
+        for m in re.finditer(r"SCAN\|(\d+)\|(.*?)\|", r):
+            out.append((int(m.group(1)), m.group(2)))
         return out
 
     def find_text(self, label):
