@@ -34,6 +34,7 @@
 
 #include "platform_sdl.h"
 #include "swos_settings.h"
+#include "swos_io.h"            /* swos_save_dir_init() — macOS-writable save dir */
 #include "save_format_json.h"   /* DataJson_SelfTest */
 #include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
 #include "display.h"    /* _screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
@@ -343,6 +344,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return 1;
     }
+
+    /* Resolve the save directory before any save/load. No-op except on macOS,
+     * where it redirects saves out of a read-only .app bundle (App Translocation
+     * / /Applications) into a writable per-user dir so saving works. */
+    swos_save_dir_init();
 
     /* Match the render aspect to `resolution` (or the desktop when resolution=auto):
      * width = SCREEN_HEIGHT * (w/h), clamped to [SCREEN_WIDTH .. the full pitch width].

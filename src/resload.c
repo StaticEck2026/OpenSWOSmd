@@ -16,6 +16,7 @@
 #include "resload.h"
 #include "display.h"
 #include "rnc_magic.h"
+#include "swos_io.h"      /* swos_save_dir() — shared save-dir base */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,7 +68,7 @@ static void resolve_path(const uint8_t *amiga_name, char *out, size_t out_sz)
      * already carries a directory (e.g. the arcade attract reels under
      * grafs_arcade/attract_mode/) is taken relative to bin/ exactly as written. */
     if (has_save_ext(src) && !strchr(src, '/')) {
-        snprintf(out, out_sz, "save/%s", src);
+        snprintf(out, out_sz, "%s/%s", swos_save_dir(), src);
     } else {
         snprintf(out, out_sz, "%s", src);
     }
@@ -218,7 +219,7 @@ static uint32_t rob_get_file_size(uint8_t *name)
 static uint32_t rob_list_directory(uint8_t *name, uint8_t *callerBuf)
 {
     (void)name;
-    uint32_t count = fs_listdir("save", s_listdir_buf, sizeof(s_listdir_buf));
+    uint32_t count = fs_listdir(swos_save_dir(), s_listdir_buf, sizeof(s_listdir_buf));
     if (count == 0) {
         _rnl_d1_return = 0;
         size = 0;

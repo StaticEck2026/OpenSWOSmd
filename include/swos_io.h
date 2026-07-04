@@ -40,6 +40,18 @@ int  swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_si
  * exists. Returns 0 on success, non-zero on failure. */
 int  swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t _size);
 
+/* Base directory for all save files (careers, tactics, highlights, …). Usually
+ * "save"; on macOS may be redirected to a writable per-user dir — see
+ * swos_save_dir_init(). Both the save reader and writer consult this so they
+ * always agree. Returns a stable, NUL-terminated string (no trailing slash). */
+const char *swos_save_dir(void);
+
+/* Resolve the save directory once, at startup (after SDL_Init, before any save
+ * or load). No-op except on macOS, where it redirects saves out of a read-only
+ * .app bundle into ~/Library/Application Support and seeds the bundled
+ * defaults. Safe to call on every platform. */
+void swos_save_dir_init(void);
+
 /* ---- Heap (size-tagged allocations) ----
  *
  * swos_io_alloc / swos_io_realloc / swos_io_free are a portable
