@@ -148,19 +148,20 @@ void swos_io_free(void *p)
 
 /* ---- Save directory -------------------------------------------------------
  * Every save file (careers .CAR/.SEA/.PRE/.DIY, tactics .TAC, highlights .HIL,
- * edited teams .EDT, options .CFG) lives under one base directory. On most
- * platforms that's "save" relative to the game dir (CWD, anchored to the binary
- * at startup) — unchanged.
- *
- * macOS exception: the game is usually launched from a .app bundle, and macOS
- * makes a *downloaded* bundle READ-ONLY — Gatekeeper "App Translocation" runs a
- * quarantined app from a randomized read-only mount, and /Applications needs
- * admin. Writing saves inside the bundle then fails: "saving doesn't work". So
- * on macOS, if the in-bundle "save" dir isn't writable, redirect saves to the
- * per-user Application Support dir (always writable) and seed it once with the
- * bundled defaults (FORMA.TAC, TEST.CAR, …) so they're still there. Both the
+ * edited teams .EDT, options .CFG) lives under one base directory, resolved once
+ * at startup by swos_save_dir_init() and returned by swos_save_dir(). Both the
  * reader (resolve_save_path here) and the writer (resolve_path in resload.c)
- * consult swos_save_dir(), so load and save always agree. */
+ * consult it, so load and save always agree.
+ *
+ * Saves go to the platform's per-user data location — never inside the app
+ * bundle / install dir (read-only under Gatekeeper, /Applications, Program
+ * Files, etc.). See docs/SAVE.md.
+ *   Windows: %USERPROFILE%\Documents\SWOS\save
+ *   macOS:   ~/Library/Application Support/SWOS/save
+ *   Linux:   ~/.swos/save
+ *   WASM:    "save" (→ the IndexedDB-backed /save mount from wasm/pre.js)
+ * If the location can't be determined or created, we fall back to the relative
+ * "save" default so a dev/CLI run still works from the game dir. */
 static char s_save_dir[1024] = "save";
 
 const char *swos_save_dir(void)
@@ -168,80 +169,74 @@ const char *swos_save_dir(void)
     return s_save_dir;
 }
 
-#ifdef __APPLE__
-#include <SDL.h>
-#include <sys/stat.h>
-#include <dirent.h>
+#ifndef SWOS_WASM_BUILD
 #include <errno.h>
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#include <direct.h>
+#define SWOS_MKDIR(p) _mkdir(p)
+#else
+#include <sys/stat.h>
+#define SWOS_MKDIR(p) mkdir((p), 0777)
+#endif
 
-static int save_dir_writable(const char *dir)
+/* mkdir -p: create every missing component of `path`. Returns 0 if the leaf
+ * exists afterwards, -1 otherwise. Intermediate mkdirs on components that
+ * already exist (or a drive root like "C:") fail harmlessly and are ignored. */
+static int swos_make_dirs(const char *path)
 {
-    char probe[1100];
-    snprintf(probe, sizeof probe, "%s/.swos_write_test", dir);
-    FILE *f = fopen(probe, "wb");     /* also fails if `dir` doesn't exist */
-    if (!f) return 0;
-    fclose(f);
-    remove(probe);
-    return 1;
-}
-
-static void save_copy_file(const char *src, const char *dst)
-{
-    FILE *in = fopen(src, "rb");
-    if (!in) return;
-    FILE *out = fopen(dst, "wb");
-    if (!out) { fclose(in); return; }
-    char buf[8192];
-    size_t n;
-    while ((n = fread(buf, 1, sizeof buf, in)) > 0)
-        fwrite(buf, 1, n, out);
-    fclose(out);
-    fclose(in);
-}
-
-/* Copy every regular file from the bundled `src` dir into the writable `dst`,
- * skipping any that already exist (never clobber the player's saves). */
-static void save_seed_defaults(const char *src, const char *dst)
-{
-    DIR *d = opendir(src);
-    if (!d) return;
-    struct dirent *e;
-    while ((e = readdir(d)) != NULL) {
-        if (e->d_name[0] == '.') continue;            /* . .. and dotfiles */
-        char sp[1200], dp[1200];
-        snprintf(sp, sizeof sp, "%s/%s", src, e->d_name);
-        snprintf(dp, sizeof dp, "%s/%s", dst, e->d_name);
-        FILE *exists = fopen(dp, "rb");
-        if (exists) { fclose(exists); continue; }     /* keep existing */
-        save_copy_file(sp, dp);
+    char tmp[1024];
+    snprintf(tmp, sizeof tmp, "%s", path);
+    size_t len = strlen(tmp);
+    if (len && (tmp[len - 1] == '/' || tmp[len - 1] == '\\'))
+        tmp[len - 1] = '\0';
+    for (char *p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            SWOS_MKDIR(tmp);
+            *p = '/';
+        }
     }
-    closedir(d);
+    if (SWOS_MKDIR(tmp) == 0)
+        return 0;
+    return (errno == EEXIST) ? 0 : -1;
 }
-#endif  /* __APPLE__ */
+#endif  /* !SWOS_WASM_BUILD */
 
 void swos_save_dir_init(void)
 {
-#ifdef __APPLE__
-    /* Keep the in-bundle "save" dir while it's writable (a plain CLI run, or an
-     * un-quarantined bundle) so the existing workflow is untouched. Only
-     * redirect when it isn't — the downloaded/translocated .app that fails now. */
-    if (save_dir_writable("save"))
+#ifdef SWOS_WASM_BUILD
+    /* Browser build: saves persist in the IndexedDB-backed /save mount set up in
+     * wasm/pre.js. The game writes "save/…" relative to cwd "/" (chdir is skipped
+     * on WASM), i.e. into /save — so the "save" default is already correct. */
+    return;
+#else
+    char base[1024];
+
+# if defined(_WIN32) || defined(__CYGWIN__)
+    /* Windows: %USERPROFILE%\Documents\SWOS\save. Forward slashes are accepted by
+     * both the native CRT and Cygwin's path layer. */
+    const char *profile = getenv("USERPROFILE");
+    if (!profile || !*profile)
+        return;                                  /* fall back to "save" */
+    snprintf(base, sizeof base, "%s/Documents/SWOS/save", profile);
+    for (char *p = base; *p; p++)
+        if (*p == '\\') *p = '/';
+# elif defined(__APPLE__)
+    const char *home = getenv("HOME");
+    if (!home || !*home)
         return;
+    snprintf(base, sizeof base, "%s/Library/Application Support/SWOS/save", home);
+# else  /* Linux and other Unix */
+    const char *home = getenv("HOME");
+    if (!home || !*home)
+        return;
+    snprintf(base, sizeof base, "%s/.swos/save", home);
+# endif
 
-    char *pref = SDL_GetPrefPath("baker76", "SWOS");   /* ~/Library/Application Support/baker76/SWOS/ */
-    if (!pref)
-        return;                                        /* give up; keep "save" */
-
-    char cand[1024];
-    snprintf(cand, sizeof cand, "%ssave", pref);       /* pref ends in '/' */
-    SDL_free(pref);
-
-    if (mkdir(cand, 0777) != 0 && errno != EEXIST)
-        return;                                        /* can't create; keep "save" */
-
-    save_seed_defaults("save", cand);                  /* copy bundled defaults once */
-    snprintf(s_save_dir, sizeof s_save_dir, "%s", cand);
-#endif
+    if (swos_make_dirs(base) != 0)
+        return;                                  /* couldn't create; keep "save" */
+    snprintf(s_save_dir, sizeof s_save_dir, "%s", base);
+#endif  /* !SWOS_WASM_BUILD */
 }
 
 static void resolve_save_path(const uint8_t *name, char *out, uint32_t out_sz)

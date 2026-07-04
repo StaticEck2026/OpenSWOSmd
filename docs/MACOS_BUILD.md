@@ -160,7 +160,7 @@ SWOS.app/
     │   ├── grafs/
     │   ├── grafs_aga/
     │   ├── sound/
-    │   └── save/                    # whatever you have in bin/save/ at build time
+    │   └── data_json/               # (no save/ — saves go to a per-user dir; see docs/SAVE.md)
     ├── Frameworks/
     │   └── SDL2.framework           # bundled (so user doesn't need to install)
     └── Resources/
