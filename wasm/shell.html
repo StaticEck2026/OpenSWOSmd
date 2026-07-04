@@ -36,6 +36,20 @@
       user-select: none; opacity: 0.45; transition: opacity .15s;
     }
     #gear:hover { opacity: 1; }
+    /* --- Fullscreen toggle (mobile: F11 isn't available, so tap this) --- */
+    #fs {
+      position: fixed; top: 40px; right: 8px; z-index: 10;
+      width: 28px; height: 28px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; background: rgba(0,0,0,0.45);
+      border: 1px solid #444; border-radius: 4px; cursor: pointer;
+      user-select: none; opacity: 0.45; transition: opacity .15s;
+    }
+    #fs:hover { opacity: 1; }
+    #fs svg { width: 17px; height: 17px; display: block; }
+    /* Fullscreen mode: the canvas already fits via height:100vh, so nothing else
+       to do — but drop the letterbox background to pure black. */
+    :fullscreen { background: #000; }
     #settings {
       position: fixed; inset: 0; z-index: 20; display: none;
       background: rgba(0,0,0,0.82); color: #ddd; font: 13px/1.5 monospace;
@@ -66,13 +80,19 @@
   <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
   <div id="gear" title="Settings (SWOS.ini)">&#9881;</div>
+  <div id="fs" title="Toggle fullscreen">
+    <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+    </svg>
+  </div>
   <div id="settings">
     <div class="panel">
       <h2>Settings &mdash; SWOS.ini</h2>
       <p>Edit and Save &amp; Reload. Stored in your browser (localStorage), not a file.
          <code>resolution=WxH</code> or <code>auto</code>; <code>scale</code> 1&ndash;4;
          <code>[audio] mode</code> mono|stereo; <code>[general] language</code> en/fr/de/it/es/nl.
-         Fullscreen: press F11.</p>
+         Fullscreen: tap the &#9974; button below the gear (or F11 on desktop).</p>
       <textarea id="ini" spellcheck="false"></textarea>
       <div class="row">
         <button id="iniCancel">Cancel</button>
@@ -144,6 +164,59 @@
         panel.addEventListener(ev, function (e) {
           e.stopPropagation();
           if (ev === 'keydown' && e.key === 'Escape') close();
+        });
+      });
+    })();
+
+    // --- Fullscreen toggle. Mobile browsers have no F11 and only allow
+    //     requestFullscreen() from a user gesture (a tap) — never from an
+    //     orientationchange handler — so a tappable button is the only reliable
+    //     way in. Entering fullscreen also hides the browser chrome (address
+    //     bar / status bar), which is the real win on a handheld: the canvas
+    //     (height:100vh) then fills the whole screen. ---
+    (function () {
+      var fsBtn  = document.getElementById('fs');
+      var fsIcon = document.getElementById('fsIcon');
+      var docEl  = document.documentElement;
+      var reqFn  = docEl.requestFullscreen || docEl.webkitRequestFullscreen ||
+                   docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+      // No Fullscreen API at all (e.g. iOS Safari only fullscreens <video>):
+      // hide the button rather than offer a dead control.
+      if (!reqFn) { fsBtn.style.display = 'none'; return; }
+
+      var EXPAND   = '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>';
+      var COMPRESS = '<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>';
+
+      function fsElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement ||
+               document.msFullscreenElement;
+      }
+      function lockLandscape() {
+        // Best-effort; unsupported / rejected on many browsers — ignore failures.
+        try {
+          if (screen.orientation && screen.orientation.lock)
+            screen.orientation.lock('landscape')['catch'](function () {});
+        } catch (e) {}
+      }
+      function enter() {
+        var p = reqFn.call(docEl);
+        if (p && p.then) p.then(lockLandscape)['catch'](function () {}); else lockLandscape();
+      }
+      function exit() {
+        var ex = document.exitFullscreen || document.webkitExitFullscreen ||
+                 document.msExitFullscreen;
+        if (ex) ex.call(document);
+      }
+      fsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (fsElement()) exit(); else enter();
+        document.getElementById('canvas').focus();
+      });
+      ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (ev) {
+        document.addEventListener(ev, function () {
+          var on = !!fsElement();
+          fsIcon.innerHTML = on ? COMPRESS : EXPAND;
+          fsBtn.title = on ? 'Exit fullscreen' : 'Toggle fullscreen';
         });
       });
     })();
