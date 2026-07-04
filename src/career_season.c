@@ -1260,7 +1260,15 @@ static void setupFriendlyCupTeams(void)
 
     uint8_t *comp = _friendlyCopy;
     int16_t teamCount = (int8_t)((CompCupHeader *)comp)->roundStringBase;
-    uint16_t *teamList = (uint16_t *)comp_team_seed_list((Competition *)comp);
+    /* Seed list at comp + 7 + teamListOffset(comp[7]) (+ the 64-bit text[2]-growth
+     * delta), exactly as the asm computes it (`move.b 7(a1),d0; lea 7(a1,d0.w),a1`,
+     * SWOS2.s:59176-59180) and as setupTourCupTeams below already does. Do NOT use
+     * comp_team_seed_list(): it type-gates (case 1/2 only) and returns NULL for the
+     * type-0 friendly/invitation CUPs, so the BE_WRITE_U16 below wrote to NULL —
+     * a SIGSEGV on the national-selector season's InitializeNewSeason ->
+     * Career_SetCupPickList_ForSelectedRegion (the "national coach then crash" bug). */
+    uint16_t *teamList = (uint16_t *)(comp + 7 + (comp[7] & 0xFF)
+                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
     uint16_t *listBase = teamList;
 
     /* BE writes so the slot bytes match the static-init dc.b layout
@@ -1287,7 +1295,12 @@ static void setupInvitationTournamentTeams(void)
 
     uint8_t *comp = _invitationTournamentCopy;
     int16_t teamCount = (int8_t)((CompCupHeader *)comp)->roundStringBase;
-    uint16_t *teamList = (uint16_t *)comp_team_seed_list((Competition *)comp);
+    /* Seed list at comp + 7 + teamListOffset(comp[7]) (+ 64-bit text[2]-growth
+     * delta) — the asm's `move.b 7(a1),d0; lea 7(a1,d0.w),a1` (SWOS2.s:59208-59210),
+     * same as setupFriendlyCupTeams / setupTourCupTeams. NOT comp_team_seed_list():
+     * it returns NULL for this type-0 invitation CUP (see setupFriendlyCupTeams). */
+    uint16_t *teamList = (uint16_t *)(comp + 7 + (comp[7] & 0xFF)
+                        + 2u * (sizeof(char *) - sizeof(uint32_t)));
     uint16_t *listBase = teamList;
 
     /* BE writes — see setupFriendlyCupTeams comment. */
