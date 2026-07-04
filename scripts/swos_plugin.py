@@ -306,8 +306,14 @@ class SwosHarness:
 
     def screencap(self, out_png):
         if self.is_sdl():
+            # The SDL render width is ADAPTIVE (widescreen): the frontbuffer
+            # stride == the live _screen_width, not the 336 native. Reading it at
+            # a fixed 336 skews every row diagonally. Query the real geometry
+            # (fall back to the native constants if the symbols aren't present).
+            w = self.h.int_value("_screen_width") or SCREEN_W
+            hgt = self.h.int_value("_screen_height") or SCREEN_H
             return self.h.screencap(out_png, "_frontbufferBaseAltPtr",
-                                    SCREEN_W, SCREEN_H, SCREEN_STRIDE,
+                                    w, hgt, w,
                                     palette_expr="&s_palette[0]", pal_fmt="rgba")
         return self._screencap_amiga(out_png)
 
