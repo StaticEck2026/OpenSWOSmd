@@ -1195,15 +1195,20 @@ void InitializeNewSeason(void)
         _nationalTeamFileId = (uint8_t)(natResult & 0xFF);       /* d1 */
 
         /* Look up season cycle flags. The A/B tables are 5 entries — one per
-         * 4-year cycle across the fixed 20-season national scheduling period
-         * (like the 20-entry region-flag table wrapped `% 20` above). Wrap the
-         * season the same way; without it a career past season 20 (num_seasons
-         * runs up to 35) indexes seasonCycleNationalFlags[5..8] out of bounds and
-         * feeds garbage World-Cup / Euro-Championship qualifier ids into the
-         * group fill. */
-        uint16_t cycleIdx = ((_currentSeasonShowing % 20) >> 2) << 1;
-        _worldCupQualifyingTeam = _seasonCycleNationalFlagsA[cycleIdx >> 1];
-        _euroChampionshipQualTeam = _seasonCycleNationalFlagsB[cycleIdx >> 1];
+         * 4-year cycle across the fixed 20-season national scheduling period.
+         * The original asm indexed seasonCycleNationalFlags[(season>>2)*2] with
+         * NO wrap because careers were capped at 20 seasons (cycle 0..4, in
+         * bounds). num_seasons now runs to 35, so cycle = season>>2 can reach 8
+         * and must wrap into the 5 entries — otherwise it reads
+         * seasonCycleNationalFlags[5..8] out of bounds and feeds garbage
+         * World-Cup / Euro-Championship qualifier ids into the group fill.
+         * cycle is <= 8 (CAREER_MAX_SEASONS caps season at 34), so a single
+         * conditional subtract does the wrap — no `% 5` divide (slow on 68k). */
+        uint16_t cycle = _currentSeasonShowing >> 2;   /* 4-year cycle number, 0..8 */
+        if (cycle >= 5)
+            cycle -= 5;                                 /* wrap into the 5-cycle period */
+        _worldCupQualifyingTeam = _seasonCycleNationalFlagsA[cycle];
+        _euroChampionshipQualTeam = _seasonCycleNationalFlagsB[cycle];
 
         /* Set cup pick list for selected region (param unused, function writes to global) */
         Career_SetCupPickList_ForSelectedRegion(0);
