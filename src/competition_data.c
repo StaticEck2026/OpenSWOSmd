@@ -13,6 +13,7 @@
 #include "swos_types.h"
 #include "swos_platform.h"  /* _ASM_PFX */
 #include "competition_data.h"
+#include "comp_identity.h"  /* comp_is_type0_cup — type-0 cup name-table routing */
 
 /* ======================================================================
  * Polymorphic competition accessors (untangle Step 4b — declared in game_types.h).
@@ -26,7 +27,16 @@ char **comp_name_table(Competition *c)
 {
     char **nm;
     switch (c->type) {
-    case 0:  nm = ((CompetitionLeague *)c)->name; break;                 /* league */
+    case 0:
+        /* Real leagues use CompetitionLeague.name (offset 38). BUT invitation/
+         * tour/friendly are authored type==0 while physically CompetitionCup
+         * (name[] at offset 20, teamSeedList at 36) — reading them as a league
+         * lands name[] on teamSeedList[1], which is a valid team-id-as-pointer
+         * once the national-coach season fills the draw list -> StringCopy
+         * SIGSEGV. Route those three to the cup name field. */
+        nm = comp_is_type0_cup(c->compId) ? ((CompetitionCup *)c)->name
+                                          : ((CompetitionLeague *)c)->name;
+        break;
     case 1:  nm = c->isPlayoff ? ((Playoffs *)c)->name
                                : ((CompetitionCup *)c)->name; break;      /* playoff / cup */
     case 2:  nm = ((CompetitionTournament *)c)->name; break;             /* tournament */

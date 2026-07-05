@@ -127,6 +127,19 @@ static inline int comp_is_tour_or_friendly(uint8_t id)
     return id == COMPID_tour || id == COMPID_friendly;
 }
 
+/* The three national-team exhibition competitions — invitation tournament (18),
+ * tour (19), friendly (20). They are authored with competitionType==0 (so
+ * InitCompetitionFromRecord routes them to the LEAGUE init) but are physically
+ * CompetitionCup records: name[] at the cup offset (20) with the embedded
+ * teamSeedList right after, NOT the league layout (name[] at 38). Any
+ * type==0-means-league assumption (comp_name_table) must special-case them or it
+ * reads name[] out of teamSeedList — harmless while empty, a team-id-as-pointer
+ * SIGSEGV once the national-coach season fills the draw list. */
+static inline int comp_is_type0_cup(uint8_t id)
+{
+    return id >= COMPID_invitationTournament && id <= COMPID_friendly;
+}
+
 /* The six continental national-team cups — European Championship (the "2"
  * variant), Copa America, African Nations, North American, Asian, Oceania.
  * This is the "_wonContinentalCup" / major-continental set checked repeatedly
