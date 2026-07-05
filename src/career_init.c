@@ -1194,8 +1194,14 @@ void InitializeNewSeason(void)
         _nationalTeamNationality = (uint8_t)(natResult >> 16);  /* d0 */
         _nationalTeamFileId = (uint8_t)(natResult & 0xFF);       /* d1 */
 
-        /* Look up season cycle flags */
-        uint16_t cycleIdx = (_currentSeasonShowing >> 2) << 1;
+        /* Look up season cycle flags. The A/B tables are 5 entries — one per
+         * 4-year cycle across the fixed 20-season national scheduling period
+         * (like the 20-entry region-flag table wrapped `% 20` above). Wrap the
+         * season the same way; without it a career past season 20 (num_seasons
+         * runs up to 35) indexes seasonCycleNationalFlags[5..8] out of bounds and
+         * feeds garbage World-Cup / Euro-Championship qualifier ids into the
+         * group fill. */
+        uint16_t cycleIdx = ((_currentSeasonShowing % 20) >> 2) << 1;
         _worldCupQualifyingTeam = _seasonCycleNationalFlagsA[cycleIdx >> 1];
         _euroChampionshipQualTeam = _seasonCycleNationalFlagsB[cycleIdx >> 1];
 
