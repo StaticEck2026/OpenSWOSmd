@@ -8047,6 +8047,7 @@ void DIYCupOnSelect17(void)
 
 extern uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode);
 extern uint8_t _aPlayTournament[]; /* "PLAY TOURNAMENT" */
+extern uint16_t _diyTournamentType;  /* 1 = career (squad changes allowed), 0 = standalone DIY */
 
 /* DIYLeagueChangePitchTypeOrSeason — toggle pitchTypeOrSeason, redraw (SWOS2.s line 41373) */
 __attribute__((used, externally_visible))
@@ -8061,7 +8062,19 @@ void DIYLeagueChangePitchTypeOrSeason(void)
  * Called from DIYCupOnSelect3-8 with mode parameter. */
 static void DIYCupOnSelectCommonC(uint16_t mode)
 {
-    uint16_t result = DIY_PlayCupMatchAndAdvance(0, mode);
+    /* allowSquadChanges (asm d6) is INHERITED from the menu dispatch here — the
+     * asm DIYCupOnSelect3-8 set only d7 (mode) and fall into DIYCupOnSelectCommon,
+     * which `jsr DIY_PlayCupMatchAndAdvance` without touching d6 (SWOS2.s
+     * DIYCupOnSelect3 @73325 / DIYCupOnSelectCommon). That inherited value is the
+     * DIY tournament type: 1 = career (squad changes allowed -> "PLAY MATCH"),
+     * 0 = standalone DIY. The league sibling DIYLeagueTournamentMatchCommon passes
+     * _diyTournamentType the same way. Passing a hardcoded 0 made every career cup
+     * match's squad screen show "VIEW RESULT" instead of "PLAY MATCH"
+     * (SetGameStartButtonText early-returns when !_squadChangesAllowed). Note the
+     * asm cup MATCH path (DIY_PlayCupMatchAndAdvance mode 2) does NOT force d6=1
+     * the way the league MATCH path does — it uses this inherited value — so pass
+     * _diyTournamentType, not a forced 1. */
+    uint16_t result = DIY_PlayCupMatchAndAdvance(_diyTournamentType, mode);
     if (result != 0)
         return;
 
