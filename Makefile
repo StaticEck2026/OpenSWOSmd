@@ -579,7 +579,7 @@ define INFO_PLIST_CONTENT
 <dict>
     <key>CFBundleName</key>               <string>SWOS</string>
     <key>CFBundleDisplayName</key>        <string>SWOS</string>
-    <key>CFBundleIdentifier</key>         <string>com.baker76.swos</string>
+    <key>CFBundleIdentifier</key>         <string>com.Baker76.SWOS</string>
     <key>CFBundleVersion</key>            <string>1.0</string>
     <key>CFBundleShortVersionString</key> <string>1.0</string>
     <key>CFBundlePackageType</key>        <string>APPL</string>
