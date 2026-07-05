@@ -709,10 +709,19 @@ class SwosHarness:
     @staticmethod
     def _save_basename(filename):
         """The game's resolve_save_path() (swos_io.c) strips a 'drive:' prefix
-        then UNCONDITIONALLY prepends 'save/'. So a caller passing 'save/X.CAR'
-        gets the doubled 'save/save/X.CAR' -> fopen fails -> the load silently
-        no-ops (a failure long masked by warm in-memory career state). Pass the
-        bare basename; strip a leading 'save/' if a caller still includes it."""
+        then prepends swos_save_dir() + '/'. So a caller passing 'save/X.CAR'
+        (or the save dir + 'X.CAR') gets a doubled path -> fopen fails -> the load
+        silently no-ops (rc 1; long masked by warm in-memory career state). Pass
+        the bare basename; strip a leading 'save/' if a caller still includes it.
+
+        ⚠️ SAVE DIR MOVED (2026-07-04): swos_save_dir() is now the per-user OS dir
+        (~/.swos/save on Linux/WSL, Documents/SWOS/save on Windows, Application
+        Support/SWOS on macOS) — NOT bin/save. So load_career('MILAN.CAR') resolves
+        to ~/.swos/save/MILAN.CAR and returns rc 1 (silent) if the file isn't there.
+        Copy test careers into the per-user dir first:
+            cp bin/save/*.CAR ~/.swos/save/
+        Verify the game's resolved dir with `cmd 'print (char*)swos_save_dir()'`.
+        See docs/SAVE.md."""
         f = filename.replace("\\", "/")
         if f.lower().startswith("save/"):
             f = f[5:]
@@ -738,10 +747,11 @@ class SwosHarness:
 
     def load_career(self, filename):
         """Stage the basename into a scratch global and call the game's loader.
-        Returns 0 on success (game convention: non-zero == failure). NOTE: this
-        only loads DATA; to enter the career UI from a cold boot call
-        enter_career() afterwards (the game's LoadCareerFile path runs
-        StartContest, which load_career does not)."""
+        Returns 0 on success (game convention: non-zero == failure; rc 1 usually
+        means the file wasn't found in the per-user save dir — see _save_basename,
+        `cp bin/save/*.CAR ~/.swos/save/`). NOTE: this only loads DATA; to enter
+        the career UI from a cold boot call enter_career() afterwards (the game's
+        LoadCareerFile path runs StartContest, which load_career does not)."""
         self.ensure_stopped()
         self._stage_filename(filename)
         r = self.h.cmd(

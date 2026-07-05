@@ -51,11 +51,14 @@ find src \( -name '*.c' -o -name '*.h' \) -newer bin/SWOS.x86_64 | head   # MUST
 # 2. Launch the daemon via Bash run_in_background:true (NOT nohup& — see DON'Ts), headless:
 #    cd bin; SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SWOS_TEST_NO_INJURIES_CARDS=1 \
 #      SWOS_SAVE_FORMAT_JSON_VERIFY=0 python3 .../gdb_proxy.py daemon --mode sdl --bin .../bin/SWOS.x86_64
+# 2.5 Put the test careers where the game looks for them — the PER-USER save dir
+#     (~/.swos/save on Linux/WSL), NOT bin/save (changed 2026-07-04, see DON'T #10):
+#        cp bin/save/*.CAR ~/.swos/save/
 # 3. Drive seasons from a LOADED career (NOT a fresh one):
 from swos_plugin import SwosHarness
 s = SwosHarness()
 s.boot()                                  # cold boot → main menu (~10 s with TURBO, auto-set by boot())
-s.load_career("MILAN.CAR")                # rc 0; a career sitting at/near a season end
+s.load_career("MILAN.CAR")                # rc 0 (rc 1 = not in ~/.swos/save — see step 2.5)
 s.enter_career()                          # → _CareerOverInit (the season-end hub)
 s.run_seasons(20)                         # advances season-by-season → retirement (season 19)
 ```
@@ -116,10 +119,22 @@ CONTINUE CAREER → `drive_transition` (skip-latch auto-advances the result chai
    looks hung. Restart the terminal/WSL (not just the daemon) for a long
    session, and never let one task's cleanup `pkill -f gdb_proxy.py` run while
    another task's daemon is live (it kills the wrong daemon).
+10. **DON'T assume `load_career()` reads from `bin/save`.** Since 2026-07-04 the
+    game resolves saves to the **per-user OS dir** (`swos_save_dir()`:
+    `~/.swos/save` on Linux/WSL, `Documents/SWOS/save` on Windows, `Application
+    Support/SWOS` on macOS) — see docs/SAVE.md. `load_career('X.CAR')` looks there,
+    NOT in `bin/save`, and returns **rc 1 *silently*** if the file is absent (no
+    exception; you then read stale/warm in-memory state and chase a phantom bug).
+    Fix: `cp bin/save/*.CAR ~/.swos/save/` before the run. Confirm the game's dir
+    with `cmd 'print (char*)swos_save_dir()'`. (Also: many career state globals
+    — `_diyTournamentType`, `_squadChangesAllowed`, `_fire`, … — are `uint16_t[1]`
+    stub arrays, so **read them as `sym[0]`**; `print (int)sym` gives the *address*,
+    not the value. This is the read-side of DON'T #8's write gotcha.)
 
 If a season run "wedges": it's almost always #4 (dead daemon), #5 (contention),
 #8 (dropped fire, no retry), or #9 (degraded/slow daemon) — not gdb instability
 or a game bug. Check `health`, the daemon process, and a `SWOS_HARNESS_LOG` trail.
+If `load_career` returns rc 1 or reads look stale, it's #10 (wrong save dir).
 
 ### ⚠️ "Boot hangs / harness wedges" is a DAEMON BUG — diagnose it, don't blame WSL
 
