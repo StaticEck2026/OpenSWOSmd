@@ -2365,6 +2365,20 @@ __attribute__((used, externally_visible))
 void ShowFriendlyMenu(void)
 {
     _inFriendlyMenu = 1;
+    /* Invalidate the team-file cache so the friendly's country team list reloads
+     * PRISTINE. LoadTeamFile() mutates every record's .league byte in place via
+     * setLeagueNumbers() (adding the promotion/relegation delta from
+     * _diyLeagueSeasonStateTable) whenever gameType==CAREER. A friendly played
+     * after a career would otherwise cache-hit that career-mutated buffer
+     * (teamsLoaded=1, lastLoadedExtNumber==<country>) and, filtering
+     * .league==_leagueNumber, show the career's current division instead of the
+     * default one — e.g. German promotion/relegation swapping BAYERN/1860 MUNICH
+     * out for FSV ZWICKAU/GÜTERSLOH etc. Friendly runs with gameType==NO_GAME
+     * (Friendly() clears it before calling us), so the forced reload skips
+     * setLeagueNumbers and restores the pristine leagues. The career is
+     * unaffected — its next InitializeNewSeason resets the cache too. NOTE:
+     * SWOS2.s has this same latent leak; this is a deliberate fix (back-ported). */
+    _teamsLoaded = 0;
     _pitchTypeOrSeason = 0;
     _friendlyPitchType = RANDOM_PITCH;
     _friendlySeason = SEASON_SEP;
