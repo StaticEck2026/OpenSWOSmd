@@ -148,10 +148,10 @@ void Platform_ArcadeInput(int *coin1, int *coin2, int *service,
     if (start2)  { *start2  = s_arcade_start2;  s_arcade_start2  = 0; }
 }
 
-/* DEBUG: instant-win key (F10) for the arcade match — returns 1 once per press
- * (edge-triggered). Polled from Arcade_MatchTick; the keyboard state is refreshed by
- * the event pump in Platform_VBlank. Lets a tester jump a match straight to the
- * high-score name-entry flow. SDL-only. */
+/* DEBUG: F10 key for the arcade — returns 1 once per press (edge-triggered). Polled
+ * from Arcade_MatchTick (in-match: jump to the name-entry flow) and from
+ * Arcade_DrawAttractOverlay (attract: step the screen cycler). The keyboard state is
+ * refreshed by the event pump in Platform_VBlank. SDL-only. */
 int Platform_ArcadeDebugWin(void)
 {
     static int prev = 0;

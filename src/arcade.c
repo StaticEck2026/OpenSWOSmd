@@ -132,6 +132,7 @@ static int      s_startGame;   /* pending game: 0 none, 1 one-player, 2 two-play
 static int      s_serviceReq;  /* service key pressed -> open the F2 service menu */
 static int      s_arcModalRunOver; /* GAME OVER / name-entry / result modal: coins accumulate but
                                     * start/service do NOT fire (so the flow can't be interrupted) */
+static int      s_arcDebugCycleReq;       /* DEBUG (F10 in attract): show the next arcade screen */
 static uint32_t s_overlayFrame;           /* blink phase for the attract overlay */
 
 #define ARC_LOGO_MAXW  1024
@@ -368,6 +369,8 @@ int Arcade_DrawAttractOverlay(void)
         return 0;
 
     arc_drain_input();
+    if (Platform_ArcadeDebugWin())       /* DEBUG F10: request the screen cycler */
+        s_arcDebugCycleReq = 1;
     s_overlayFrame++;
     arc_fg_advance();
     int flash = (int)((s_overlayFrame >> 4) & 1);
@@ -402,7 +405,8 @@ int Arcade_DrawAttractOverlay(void)
 
     _frontbufferBasePtr = saved;
     s_overlayActive = 1;
-    return (s_startGame != 0) || s_serviceReq;   /* non-zero -> leave the attract reel */
+    /* non-zero -> leave the attract reel (game start, service, or a debug-cycle request) */
+    return (s_startGame != 0) || s_serviceReq || s_arcDebugCycleReq;
 }
 
 /* Composite the attract foreground onto the final ARGB8888 frame, over the live reel
@@ -716,6 +720,7 @@ static int arc_load_pitch(int idx);  /* defined in the pitch-select section */
 /* High-score session screens (defined in the high-score section, before ArcadeMainLoop). */
 static void arc_run_over(int mode, uint32_t wins, uint32_t totalSecs, int flag);
 static int  arc_continue_screen(uint32_t wins);
+static int  arc_continue_countdown(void);   /* CONTINUE? 9..0 coin gate (loss -> game over) */
 
 /* ====================================================================
  * Phase 3c — the match (mirror PlayFriendly): country/flag select picks two
@@ -1104,7 +1109,17 @@ static void arc_start_game(void)
             arc_continue_screen(wins);       /* "WINNER / STREAK N", skippable */
             continue;
         }
-        break;                               /* 1P champion lost or drew -> run over */
+
+        /* 1P champion lost or drew. Real-arcade continue: offer the CONTINUE? 9..0
+         * countdown. Feed a coin before it expires and the run resumes with the win
+         * streak intact — a rematch against the same opponent on the same pitch (the
+         * closest we get to "resume the stage you died on"); the credit is spent on
+         * the continue. Let it hit zero with no coin and it's a genuine game over. */
+        if (arc_continue_countdown()) {
+            if (s_credits > 0) s_credits--;  /* pay for the continue */
+            continue;                        /* rematch same oppFlag/pitch, wins preserved */
+        }
+        break;                               /* no coin -> run over */
     }
 
     /* No arcade frame should composite over the run-over screens. */
@@ -1878,6 +1893,144 @@ static int arc_continue_screen(uint32_t wins)
     return arc_message_screen("WINNER!", l2, "GET READY...", 110, 1);
 }
 
+/* ---- big scaled menu-font glyph (for the CONTINUE countdown digit) ---- */
+
+/* Look up a menu-font glyph sprite by character, exactly as DrawMenuText does:
+ * conversionTable[c-' '] + spriteIndexOffset indexes _spriteGraphicsPtr. Returns
+ * NULL if the glyph/table isn't available. */
+static SpriteGraphics *arc_menu_glyph(char c)
+{
+    extern uint8_t *_spriteGraphicsPtr;
+    CharsTableHeader *hdr = (CharsTableHeader *)_bigCharsTable;
+    const uint16_t *conv = (const uint16_t *)(hdr + 1);
+    uint16_t idx = (uint16_t)(conv[(uint8_t)(c - ' ')] + (uint16_t)hdr->spriteIndexOffset);
+    if (!_spriteGraphicsPtr) return NULL;
+    return ((SpriteGraphics **)_spriteGraphicsPtr)[idx];
+}
+
+/* Nearest-neighbour blit of one menu-font glyph, scaled by `scale`, straight into
+ * the RGBA present buffer with top-left at (dx,dy) screen pixels. This is just the
+ * text font scaled up: the glyph data carries both the body (palette bit 1) and the
+ * drop shadow (bit NUM_PLANES-1), so we reproduce exactly what DrawMenuText would
+ * draw with colour ARC_WHITE — body -> pal[2] (white), shadow -> pal[8] — only
+ * bigger. `pal` is the 16-entry menu ARGB palette (arc_build_menu_argb). */
+static void arc_big_glyph(char c, int dx, int dy, int scale, const uint32_t pal[16])
+{
+    if (scale < 1) scale = 1;
+    SpriteGraphics *spr = arc_menu_glyph(c);
+    if (!spr) return;
+    const uint8_t *data = (const uint8_t *)(uintptr_t)spr->sprData;
+    if (!data) return;
+    int gw = spr->pixWidth, gh = spr->nlines, pitch = spr->wquads * 16;
+
+    for (int py = 0; py < gh; py++) {
+        const uint8_t *srcRow = data + (size_t)py * pitch;
+        for (int px = 0; px < gw; px++) {
+            uint8_t src    = srcRow[px];
+            uint8_t body   = (uint8_t)((src >> 1) & 1u);
+            uint8_t shadow = (uint8_t)((src >> (NUM_PLANES - 1)) & 1u);
+            if (!body && !shadow) continue;                  /* transparent */
+            /* same output index DrawMenuText builds for colour=ARC_WHITE(2):
+             * body -> bit 1 (2), shadow -> top plane bit (8) */
+            uint8_t outIdx = (uint8_t)((body ? 2 : 0) | (shadow ? (1u << (NUM_PLANES - 1)) : 0));
+            uint32_t argb = pal[outIdx & 0x0F];
+            int bx = dx + px * scale, by = dy + py * scale;
+            for (int sy = 0; sy < scale; sy++) {
+                int yy = by + sy;
+                if (yy < 0 || yy >= SCREEN_HEIGHT) continue;
+                uint32_t *out = s_flagScreenRGBA + (size_t)yy * _screen_width;
+                for (int sx = 0; sx < scale; sx++) {
+                    int xx = bx + sx;
+                    if (xx >= 0 && xx < _screen_width) out[xx] = argb;
+                }
+            }
+        }
+    }
+}
+
+/* Draw one countdown digit centred in the full screen at `scale` — a plain scaled
+ * copy of the menu-font glyph (its built-in drop shadow comes along for free). */
+static void arc_big_digit_centered(char c, int scale, const uint32_t pal[16])
+{
+    SpriteGraphics *spr = arc_menu_glyph(c);
+    if (!spr) return;
+    int gw = spr->pixWidth * scale, gh = spr->nlines * scale;
+    int dx = (_screen_width - gw) / 2;
+    int dy = (SCREEN_HEIGHT - gh) / 2;
+    arc_big_glyph(c, dx, dy, scale, pal);
+}
+
+/* Classic coin-op CONTINUE? screen. A large menu-font digit fills the centre of
+ * the 4:3 safe area (scaled to whatever the display resolution is), counting one
+ * second per digit from 9 down to 0, with "CONTINUE?" pinned top and a flashing
+ * "INSERT COIN" bottom. Coins accumulate as normal (the run's modal flag is still
+ * set, so start/service are ignored here). Returns:
+ *    1  a coin was inserted before 0 -> the caller resumes the run (rematch, streak
+ *                                       preserved) and spends one credit.
+ *    0  the count reached 0 with no coin -> a genuine game over; the caller runs the
+ *                                       GAME OVER / high-score sequence. */
+static int arc_continue_countdown(void)
+{
+    uint32_t mpal[16]; arc_build_menu_argb(mpal);
+    int      base  = s_credits;                     /* detect a NEW coin vs. this baseline */
+    int      digit = 9;
+    uint32_t frame = 0, secTick = 0;
+
+    /* Size the digit to fill ~60% of the 4:3 height, derived from the glyph so it
+     * tracks the font. Falls back to a sane scale if the glyph is unavailable. */
+    int scale = 10;
+    { SpriteGraphics *spr = arc_menu_glyph('0');
+      if (spr && spr->nlines > 0) {
+          scale = (SCREEN_HEIGHT * 3 / 5) / spr->nlines;
+          if (scale < 1) scale = 1;
+      } }
+
+    s_flagScreenActive = 1;
+    s_arcadeFade = 0;
+
+    while (_quitToDos == 0) {
+        frame++;
+        arc_drain_input();                          /* modal: coins only */
+        if (s_credits > base) {                     /* a coin dropped -> continue */
+            arc_fade_ramp(0, 10);
+            s_flagScreenActive = 0;
+            return 1;
+        }
+
+        /* background + top/bottom prompts (menu palette over MENUBG) */
+        arc_fill_menubg();
+        size_t total = (size_t)_screen_width * SCREEN_HEIGHT;
+        size_t n = total > sizeof s_overlayBuf ? sizeof s_overlayBuf : total;
+        memset(s_overlayBuf, 0, n);
+        uintptr_t sFb = _frontbufferBasePtr; int sOff = _menu_draw_x_offset; uint16_t sCam = _cameraXMod320;
+        _frontbufferBasePtr = (uintptr_t)s_overlayBuf; _menu_draw_x_offset = WIDE_MARGIN; _cameraXMod320 = 0;
+        DrawMenuTextCentered(168, 30, ARC_WHITE, (uint8_t *)"CONTINUE?", ARC_CHARS);
+        if ((frame >> 4) & 1)
+            DrawMenuTextCentered(168, ARC_Y_BOTTOM, ARC_WHITE, (uint8_t *)"INSERT COIN", ARC_CHARS);
+        _frontbufferBasePtr = sFb; _menu_draw_x_offset = sOff; _cameraXMod320 = sCam;
+        arc_composite_menu_overlay(mpal);
+
+        /* big centred countdown digit — the menu font scaled up (shadow and all),
+         * over everything, using the same menu palette as the CONTINUE?/INSERT COIN
+         * text so it reads as one screen */
+        arc_big_digit_centered((char)('0' + digit), scale, mpal);
+
+        if (s_arcadeFade < 256) {
+            s_arcadeFade += 16; if (s_arcadeFade > 256) s_arcadeFade = 256;
+        } else if (++secTick >= ARC_FRAMES_PER_SEC) {   /* one second per digit */
+            secTick = 0;
+            if (digit == 0) break;                      /* 0 held its second -> time out */
+            digit--;
+        }
+        WaitForVSync();
+        ReadTimerDelta();
+    }
+
+    arc_fade_ramp(0, 10);
+    s_flagScreenActive = 0;
+    return 0;
+}
+
 /* ---- name (initials) entry: 4x10 character grid + DEL / END action row ---- */
 #define NAME_COLS     10
 #define NAME_CHARROWS 4
@@ -2032,6 +2185,60 @@ static void arc_run_over(int mode, uint32_t wins, uint32_t totalSecs, int flag)
     }
 }
 
+/* DEBUG (F10 from attract): show the next arcade result/interstitial screen so they
+ * can be eyeballed without playing a match. Each F10 press advances one step and
+ * wraps; the screens are shown with sample data using assets already loaded at boot.
+ * The run-over modal flag is forced on for the duration so a stray coin during the
+ * demo can't kick off a game, and any full-screen frame is cleared afterwards. */
+static void arc_debug_next_screen(void)
+{
+    static const char *const names[] = {
+        "CONTINUE? countdown", "WINNER / streak", "GAME OVER", "NAME ENTRY",
+        "HIGH SCORE table", "FLAG SELECT (1P)", "PITCH SELECT",
+    };
+    enum { ARC_DBG_SCREENS = 7 };
+    static int idx = 0;
+    int mode = g_arcadeOpts ? g_arcadeOpts->arcade_mode : 0;
+
+    fprintf(stderr, "[arcade] DEBUG screen %d/%d: %s\n", idx, ARC_DBG_SCREENS, names[idx]);
+
+    int savedModal = s_arcModalRunOver;
+    s_arcModalRunOver = 1;                 /* accept coins, ignore start/service */
+
+    switch (idx) {
+    case 0:                               /* CONTINUE? 9..0 coin gate */
+        arc_continue_countdown();
+        break;
+    case 1:                               /* WINNER! / WIN STREAK */
+        arc_continue_screen(5);
+        break;
+    case 2:                               /* GAME OVER message */
+        arc_message_screen("GAME OVER", "WINS: 7", "TIME: 3:45", 150, 1);
+        break;
+    case 3: {                             /* initials entry */
+        char nm[ARC_HS_NAME_MAX + 1] = "";
+        arc_name_entry(0, nm);
+        break;
+    }
+    case 4:                               /* high-score table (row 0 highlighted) */
+        arc_present_table(mode, 5 * 50, 0);
+        break;
+    case 5: {                             /* country/flag select (1 player) */
+        int p1 = 0, p2 = 0;
+        arc_flag_select(1, &p1, &p2);
+        break;
+    }
+    case 6:                               /* themed-pitch select */
+        arc_pitch_select();
+        break;
+    }
+    idx = (idx + 1) % ARC_DBG_SCREENS;
+
+    s_arcModalRunOver = savedModal;
+    s_flagScreenActive = 0;               /* drop any full-screen RGBA frame */
+    s_overlayActive = 0;
+}
+
 void ArcadeMainLoop(void)
 {
     fprintf(stderr, "[arcade] boot-to-arcade: entering attract loop\n");
@@ -2067,6 +2274,12 @@ void ArcadeMainLoop(void)
     arc_music_attract();   /* HERO (title) song plays over the attract loop */
 
     while (_quitToDos == 0) {
+        if (s_arcDebugCycleReq) {        /* F10 pressed during a reel/idle: demo a screen */
+            s_arcDebugCycleReq = 0;
+            arc_debug_next_screen();
+            { extern uint16_t _menuPalette[]; WriteCopperPalette(_menuPalette); }
+            continue;
+        }
         if (s_serviceReq) {              /* F2 pressed during a reel/idle */
             s_serviceReq = 0;
             arc_service_menu();

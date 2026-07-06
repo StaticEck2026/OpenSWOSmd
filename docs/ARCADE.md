@@ -319,6 +319,69 @@ A coin-op high-score system, **one table per game mode**, all in `src/arcade.c`
   keyed by mode **name** so reordering modes doesn't scramble tables. Seeded with
   placeholder rows when absent, so a fresh cabinet still has something to show.
 
+### CONTINUE? countdown (coin-op continue gate)
+
+`arc_continue_countdown()` — the classic coin-op "**CONTINUE?**" screen, shown the
+moment a run ends (the 1P champion loses/draws, or a 2P match finishes), **before**
+the GAME OVER / high-score sequence.
+
+- **Look** (matches the reference art): `CONTINUE?` pinned near the top, a flashing
+  `INSERT COIN` at the bottom, and a **large countdown digit filling the centre** of
+  the 4:3 safe area. The digit is just the *menu font*, nearest-neighbour **scaled**
+  so it fills ~60% of the screen height at **any** resolution — no per-size font
+  asset. The scale is derived from the glyph's own height, so it tracks the font. It's
+  drawn exactly as `DrawMenuText` would (body → white, the font's own drop **shadow**
+  → shadow colour, both via the menu palette), only bigger — so it reads as the same
+  font as the surrounding text. Rendering reuses the selectors' MENUBG + menu-palette
+  compositing; the digit is blitted straight into the RGBA present buffer over the top
+  (`arc_big_glyph` / `arc_big_digit_centered`).
+- **Timing**: counts **9 → 0, one second per digit** (`ARC_FRAMES_PER_SEC` frames
+  each), after a short fade-in. `0` is held for its second, then the screen times out.
+- **Input**: the run's modal flag (`s_arcModalRunOver`) is still set, so only **coins**
+  register here (start/service are ignored). A coin is detected as an increase over the
+  credit count on entry.
+- **Outcomes** (both return control to the attract loop; the credit count decides what
+  attract shows next):
+  - **Coin inserted** → returns `1`; the caller **skips** GAME OVER / high-score entry
+    and drops back to attract, which now shows **CREDIT / PUSH START**. (This banks a
+    credit for a fresh game; true mid-run *resume* — keep the win streak — is a later
+    enhancement. Skipping the initials screen on a continue is deliberate: in coin-op
+    convention you only enter initials at a genuine game over.)
+  - **Timed out at 0** → returns `0`; the caller runs the normal `arc_run_over` GAME
+    OVER + high-score sequence, then returns to attract "from the start".
+- **Debug**: the F10 force-name-entry path (`s_arcDebugForceNameEntry`) **skips** the
+  countdown so it still lands straight on the name-entry / high-score test flow.
+- SDL-only, `#ifdef SWOS_SDL_BUILD` like the rest of `arcade.c`; no shared files
+  touched, so nothing to sync to the Amiga port.
+
+### Debug: F10 screen cycler
+
+`F10` is the arcade debug key (`Platform_ArcadeDebugWin`, edge-triggered), with two
+contexts:
+
+- **During a match** — ends the run with a random score and jumps straight to the
+  GAME OVER / name-entry flow (unchanged; forces name entry even if it wouldn't
+  qualify).
+- **From the attract loop** — steps a **screen cycler** (`arc_debug_next_screen`) so
+  every result/interstitial screen can be eyeballed **without playing a match**. Each
+  F10 press aborts the reel (like a coin does) and shows the **next** screen with
+  sample data, wrapping around. The current step is logged to `SWOS.log`
+  (`[arcade] DEBUG screen N/7: …`). Dismiss a screen the normal way (fire / timeout /
+  END) to return to attract, then press F10 again for the next. The sequence is:
+
+  | # | Screen | Function |
+  |---|--------|----------|
+  | 0 | CONTINUE? countdown | `arc_continue_countdown` |
+  | 1 | WINNER! / WIN STREAK | `arc_continue_screen(5)` |
+  | 2 | GAME OVER | `arc_message_screen(…)` |
+  | 3 | NAME ENTRY | `arc_name_entry(0,…)` |
+  | 4 | HIGH SCORE table | `arc_present_table(mode, …, 0)` |
+  | 5 | FLAG SELECT (1P) | `arc_flag_select(1,…)` |
+  | 6 | PITCH SELECT | `arc_pitch_select()` |
+
+  The cycler forces the run-over modal flag on for the duration, so a stray coin
+  during the demo can't start a real game. SDL-only, no shared files touched.
+
 ### Build phasing (this implementation)
 1. ✅ DONE (`f2f3ccc`): `[arcade] enabled` + `gArcadeMode` + boot gate (skip
    intro/menu) + attract skeleton (flashing INSERT COIN bottom corners, coin keys
@@ -331,5 +394,7 @@ A coin-op high-score system, **one table per game mode**, all in `src/arcade.c`
    launched on credit; winner-stays-on run (1P).
 5. ✅ DONE: High-score tables + name entry + attract high-score display; goal-replay fix
    (golden goal waits for the celebration + AUTO REPLAYS to finish).
-6. Operator config persistence + bookkeeping; cabinet I/O (coin/service GPIO);
-   2P-challenge-mid-streak seat-swap flow.
+6. ✅ DONE: **CONTINUE? countdown** — 9→0 coin gate on a lost run; coin → attract
+   (CREDIT/PUSH START), timeout → GAME OVER / high scores. (`arc_continue_countdown`.)
+7. Operator config persistence + bookkeeping; cabinet I/O (coin/service GPIO);
+   2P-challenge-mid-streak seat-swap flow; true mid-run *resume* on continue.

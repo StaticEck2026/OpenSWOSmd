@@ -26,9 +26,9 @@ void ArcadeMainLoop(void);
 void Platform_ArcadeInput(int *coin1, int *coin2, int *service,
                           int *start1, int *start2);
 
-/* DEBUG: returns 1 once per press (edge) of the instant-win key (F10) during an
- * arcade match — jumps the match to the high-score name-entry flow. Implemented in
- * platform_sdl.c. */
+/* DEBUG: returns 1 once per press (edge) of the debug key (F10). During a match it
+ * jumps to the high-score name-entry flow; from the attract loop it advances the
+ * arcade screen cycler (arc_debug_next_screen). Implemented in platform_sdl.c. */
 int Platform_ArcadeDebugWin(void);
 
 /* Draw the attract overlay (full-screen SWOS logo, index-0 transparent, + the
