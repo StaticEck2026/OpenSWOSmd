@@ -8558,9 +8558,17 @@ void DIYLeagueTournamentExit(void)
 
 set_ff_and_exit:
     if (field48 != 0) {
-        *(int16_t *)&a0[0x48] = (int16_t)0xFFFF;
+        /* Mark the in-progress stage "don't advance": DIY_EditCompetitionSlot
+         * skips DIY_AdvanceToNextCompetitionSlot when hasGroups < 0 (diy_competition.c:2589).
+         * hasGroups is at 0x48 on 32-bit but shifts to 0x4C on 64-bit (DIYCompetition
+         * pointer-width growth past namePtr@0x28), so the raw `a0[0x48] = 0xFFFF` wrote
+         * matchStarted on the SDL build and left hasGroups=1 — the group stage then
+         * advanced to the knockout on EXIT (World Cup "jumps to SECOND ROUND after 1
+         * match"). Use the typed field; identical bytes on Amiga, correct on 64-bit.
+         * Same fix class as field60 above. See project_raw_offset_64bit_shift_trap.md. */
+        compEx->base.hasGroups = (int16_t)0xFFFF;
     }
-    SWOS_AUTOSKIP_LOG("[bug1] DIYLeagueTournamentExit: path C — set 0x48=0xFFFF, SetExitMenuFlag");
+    SWOS_AUTOSKIP_LOG("[bug1] DIYLeagueTournamentExit: path C — set hasGroups=0xFFFF, SetExitMenuFlag");
     SetExitMenuFlag();
 }
 
