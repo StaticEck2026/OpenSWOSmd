@@ -19,6 +19,8 @@ void ClearCareerMatchPlayerStatusBucket(void);
 /* --- Status checks --- */
 uint16_t ShouldApplyRandomPlayerStatusAfterSim(void);
 uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+/* DISPLAY-only: real status even under SWOS_TEST_NO_INJURIES_CARDS (see career_status.c). */
+uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode);
 
 /* --- Player count utilities --- */
 uint16_t GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl);
