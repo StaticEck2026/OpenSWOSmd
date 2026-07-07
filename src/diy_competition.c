@@ -2374,16 +2374,6 @@ uint32_t Career_IsTeamIdNotInListOrReturnSentinel2(uint16_t teamId, uint16_t *en
  *            DIY_ResetAndLoadCurrentCompetitionSlot
  * ================================================================ */
 
-/* Helper macros for reading/writing fields at byte offsets in raw buffers.
- * Used for extended fields (offset >= 0x60) beyond the typed DIYCompetition base.
- * Base-struct fields (0x00-0x5F) use proper struct access via DIYCompetition. */
-#define RD16(base, off) (*(int16_t *)((uint8_t *)(base) + (off)))
-#define RD16U(base, off) (*(uint16_t *)((uint8_t *)(base) + (off)))
-#define WR16(base, off, val) (*(int16_t *)((uint8_t *)(base) + (off)) = (int16_t)(val))
-#define RD32U(base, off) (*(uint32_t *)((uint8_t *)(base) + (off)))
-#define RD8U(base, off) (*(uint8_t *)((uint8_t *)(base) + (off)))
-#define WR8U(base, off, val) (*(uint8_t *)((uint8_t *)(base) + (off)) = (uint8_t)(val))
-
 /* Slot structure offsets (0x76 = 118 bytes per slot):
  * +0x15E: slot active flag
  * +0x160: first leg flag
@@ -2498,9 +2488,17 @@ restart_loop:
         /* a4=comp, a5=comp */
         comp->hasGroups = 1;  /* DIY_COMPETITION_FIELD_3A+$E(a4) = 1 */
 
-        /* Check if current round is last */
+        /* Check if current round is last. Asm: cmp.w TOTALMATCHESINROUND(a2),d0
+         * (a2 = diyFileBufferCopy) — i.e. the header's totalMatchesInRound @0x52,
+         * exactly like the league branch below. The original port mistranslated
+         * this as a raw read at 0x72 (a per-round array field, wrong on BOTH
+         * targets: totalMatchesInRound is 0x52 on 32-bit / 0x56 on 64-bit), so at
+         * the LAST slot `roundComplete+1 == totalMatchesInRound` never matched,
+         * hasGroups stayed 1 instead of 2, DIYCupOnSelect10 then set it 0xFFFF and
+         * DIY_AdvanceToNextCompetitionSlot (the sole isActive=2 site) was skipped —
+         * so a finished grouped tournament showed CONTINUE instead of REPLAY. */
         uint16_t curRound = (uint16_t)bufCopy->roundComplete;
-        if ((uint16_t)(curRound + 1) == RD16U(bufCopyRaw, 0x72)) {
+        if ((uint16_t)(curRound + 1) == (uint16_t)bufCopy->totalMatchesInRound) {
             comp->hasGroups = 2;
         }
 
