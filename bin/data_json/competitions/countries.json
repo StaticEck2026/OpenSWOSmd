@@ -1,6 +1,6 @@
 {
   "type": "countries",
-  "count": 66,
+  "count": 72,
   "countries": [
     {
       "number": 46,
@@ -397,6 +397,42 @@
       "name": "NEW_ZEALAND",
       "define": "CN_NEW_ZEALAND",
       "team_file": "teams/NEW_ZEALAND.json"
+    },
+    {
+      "number": 80,
+      "name": "EUROPE",
+      "define": "CN_EUROPE",
+      "team_file": "teams/EUROPE.json"
+    },
+    {
+      "number": 81,
+      "name": "AFRICA",
+      "define": "CN_AFRICA",
+      "team_file": "teams/AFRICA.json"
+    },
+    {
+      "number": 82,
+      "name": "SOUTH_AMERICA",
+      "define": "CN_SOUTH_AMERICA",
+      "team_file": "teams/SOUTH_AMERICA.json"
+    },
+    {
+      "number": 83,
+      "name": "NORTH_AMERICA",
+      "define": "CN_NORTH_AMERICA",
+      "team_file": "teams/NORTH_AMERICA.json"
+    },
+    {
+      "number": 84,
+      "name": "ASIA",
+      "define": "CN_ASIA",
+      "team_file": "teams/ASIA.json"
+    },
+    {
+      "number": 85,
+      "name": "OCEANIA",
+      "define": "CN_OCEANIA",
+      "team_file": "teams/OCEANIA.json"
     }
   ]
 }

@@ -463,6 +463,16 @@ def main():
     for n, b in find_defs(text, "CountryNumbers"):
         country_lists[n] = [country_entry(num(x)) for x in split_top(b)]
     master = country_lists.get("_allCountriesList", [])
+    # National-team pseudo-countries: the continent codes CN_EUROPE=80 ..
+    # CN_OCEANIA=85 are used as seed-list country numbers by the national
+    # tournaments (World Cup, European Championships, Copa America) — a seed
+    # `{CN_EUROPE, 36}` means "national team #36 from Europe", loaded from
+    # teams/EUROPE.json / TEAM.080. They are NOT in _allCountriesList (which is
+    # club leagues only), so without them the runtime JSON seed parser
+    # (dj_cn_number, save_format_json.c) can't resolve "CN_EUROPE" and clamps the
+    # country to 0 (Albania) — the national comps then preselect Albanian club
+    # teams. Append them so the seed lists round-trip through JSON.
+    master += [country_entry(n) for n in range(80, 86)]  # CN_EUROPE .. CN_OCEANIA
     with open(os.path.join(OUT_DIR, "countries.json"), "w") as f:
         json.dump({"type": "countries", "count": len(master), "countries": master},
                   f, indent=2, ensure_ascii=False)
