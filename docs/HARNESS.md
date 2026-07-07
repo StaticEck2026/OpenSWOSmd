@@ -112,13 +112,17 @@ CONTINUE CAREER → `drive_transition` (skip-latch auto-advances the result chai
    on — e.g. CAREER = `0x20` = shortFire) and confirming your `_fire[0]`/
    `_shortFire[0]` writes actually READ BACK non-zero, plus `SWOS_HARNESS_LOG=1`'s
    `dispatch-try` line (controlMask vs injected d7).
-9. **DON'T run one daemon for an entire long session.** The gdb/WSL2 daemon
-   **degrades over a session** — after ~20-30 launches/drives the per-frame
-   `continue` balloons from ~tens of ms to 10s-120s (VBlank/timer-thread
-   starvation under gdb), so nav that should take seconds takes many minutes and
-   looks hung. Restart the terminal/WSL (not just the daemon) for a long
-   session, and never let one task's cleanup `pkill -f gdb_proxy.py` run while
-   another task's daemon is live (it kills the wrong daemon).
+9. **DON'T blame "WSL/gdb degradation" for a slow or wedged daemon — it's almost
+   always misuse or a daemon bug (diagnose, ⚠️ section below).** `boot()` sets
+   TURBO, which already removes the per-frame wall-clock waits WSL could stretch,
+   so a `SLOW CONT` / `DEGRADED` / `target running` mid-session is **not** "WSL
+   timer starvation". Every time we've blamed WSL, the real cause was: two clients
+   hitting the daemon at once, rapid kill/relaunch (stale sockets / half-dead gdb),
+   `delete_breakpoints()`+`cont()` into a state that never stops, or the operation
+   not being in the state you assumed. Diagnose (30 s) before ever reaching for
+   `wsl --shutdown`. And never let one task's cleanup `pkill -f gdb_proxy.py` run
+   while another task's daemon is live — it kills the wrong daemon; use `pkill -x`
+   or a PID.
 10. **DON'T assume `load_career()` reads from `bin/save`.** Since 2026-07-04 the
     game resolves saves to the **per-user OS dir** (`swos_save_dir()`:
     `~/.swos/save` on Linux/WSL, `Documents/SWOS/save` on Windows, `Application
@@ -171,6 +175,41 @@ Red herrings, ruled out: the `endbr64;ret` 4-byte `MenuInputInjectPoint`, and
 line- vs symbol-breakpoints (the harness already breaks on the **symbol**, which
 resolves + fires correctly — a `.map` file would not have helped). Don't chase
 those; get `health`/`info breakpoints` first.
+
+### ⚠️ "SLOW CONT / DEGRADED / target running / None reads" mid-drive is ALSO not WSL
+
+Same rule as boot hangs, for the OTHER recurring symptom — a `[harness] SLOW CONT`
+warning, `health → DEGRADED`, `int_value` reads returning `None`, or `target
+running (busy)` **in the middle of a drive**. Every time this got blamed on "WSL2
+timer starvation" the real cause was one of the following. TURBO (auto-set by
+`boot()`) already removed the per-frame pacing WSL could stretch, so **with TURBO
+on it is not WSL** — check these IN ORDER first:
+
+1. **Two clients at once.** A second script or one-shot probe (even `health` /
+   `cmd`) hit the daemon while a background drive still owned it → interleaved gdb
+   traffic wedges it (`DEGRADED info program hung`). Wait for the background script
+   to EXIT before probing. (See "Daemon discipline".)
+2. **Rapid kill/relaunch.** Restarting the daemon on every hiccup leaves stale
+   sockets / half-dead gdb — that IS the flake. Launch once; recover in place.
+3. **`delete_breakpoints()` then `cont()` into a state that never stops.** With no
+   breakpoint the inferior runs the menu/idle loop forever; the cont burns its
+   whole timeout (→ SLOW CONT) and `_interrupt()` (SIGINT) is a racy stop → `None`
+   reads / `target running`. To sample DURING a match, keep a breakpoint at a
+   per-frame function (e.g. `MoveCamera`) and read at that clean stop — do NOT
+   delete-breakpoints + cont + interrupt.
+4. **The operation isn't in the state you assumed.** If the "match" never actually
+   started (fumbled menu nav — e.g. `ordof("PLAY")` matching "PLAYER-COACH", or the
+   real PLAY entry never fired), your "in-match cont" is really spinning in a menu.
+   Confirm the state (`_gameStatePl == ST_GAME_IN_PROGRESS`, or the expected `init`)
+   BEFORE concluding the harness is slow.
+
+Diagnose first (same 30 s as boot): `gdb_proxy.py health`, `cmd "info breakpoints"`
+(hit count climbing?), and confirm no other client is live. `wsl --shutdown` is a
+LAST resort after 1–4 are ruled out — reaching for it first is how we keep
+mis-blaming WSL and losing an hour. (2026-07-07: hit all four of these in one
+session — repeatedly relaunched the daemon, ran a concurrent `health` probe, and
+`delete_breakpoints()`+cont into a match that never started because the menu nav
+matched "PLAYER-COACH" for "PLAY" — then blamed "WSL". None of it was WSL.)
 
 ### Seeing where the game is — `SWOS_HARNESS_LOG=1` (the [harness] log)
 
@@ -484,10 +523,13 @@ alone. No effect on normal play (default off); SDL-only (`platform_sdl.c`
 `s_harness_turbo`), nothing to back-port to the Amiga build.
 
 A tripwire backs this up: `GdbHarness.cont()` warns on stderr (`[harness] SLOW
-CONT …`) when a continue exceeds `CONT_SLOW_WARN_S` (4 s), so a degrading session
-is visible immediately — not after a 40-step stuck-out. If you see it, confirm
-TURBO is set on the inferior; if it persists, `wsl --shutdown` resets a long-up VM
-(a fresh WSL *tab* is not enough).
+CONT …`) when a continue exceeds `CONT_SLOW_WARN_S` (4 s). Read it as "something is
+wrong with MY usage", not "WSL is degrading": with TURBO on (which `boot()` sets)
+the pacing WSL could stretch is already gone, so a persistent SLOW CONT is almost
+always one of the causes in the ⚠️ "SLOW CONT … is ALSO not WSL" section above
+(two clients, rapid relaunch, cont-with-no-breakpoint, wrong assumed state) —
+diagnose those first. `wsl --shutdown` is a genuine last resort, not the first
+move.
 
 ### Daemon discipline
 
