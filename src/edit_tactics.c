@@ -3353,8 +3353,12 @@ void EditTacticsAfterDrawPlayerNames(MenuEntry *cur)
     teamBase = _chooseTacticsTeamPtr;
     teamBase->team.tactics = savedTactics;
 
-    /* Check if player is injured */
-    if (IsPlayerInjured((PlayerFile *)playerPtr, (int16_t)_inEditTactics)) {
+    /* Check if player is injured/suspended. Use the DISPLAY query so the red
+     * name shows even under SWOS_TEST_NO_INJURIES_CARDS (which forces plain
+     * IsPlayerInjured to "available" for gameplay) — otherwise the name would
+     * not match the drawn "3"/injury indicator (entry39, which reads the raw
+     * cardsInjuries directly). */
+    if (IsPlayerInjuredForDisplay((PlayerFile *)playerPtr, (int16_t)_inEditTactics)) {
         setBgColor(entry41, RED_10);
     }
 

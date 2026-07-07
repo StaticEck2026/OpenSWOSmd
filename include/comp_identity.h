@@ -127,17 +127,24 @@ static inline int comp_is_tour_or_friendly(uint8_t id)
     return id == COMPID_tour || id == COMPID_friendly;
 }
 
-/* The three national-team exhibition competitions — invitation tournament (18),
- * tour (19), friendly (20). They are authored with competitionType==0 (so
- * InitCompetitionFromRecord routes them to the LEAGUE init) but are physically
- * CompetitionCup records: name[] at the cup offset (20) with the embedded
- * teamSeedList right after, NOT the league layout (name[] at 38). Any
- * type==0-means-league assumption (comp_name_table) must special-case them or it
- * reads name[] out of teamSeedList — harmless while empty, a team-id-as-pointer
- * SIGSEGV once the national-coach season fills the draw list. */
+/* Type-0 (competitionType==0) is OVERLOADED: it means "league FORMAT" (round-robin
+ * table), used by BOTH real CompetitionLeague records (the country leagues, compId
+ * >= COMPID_customsLeague == 36) AND several physically-CompetitionCup records that
+ * play a group table — the WC qualifiers (5..17), the three exhibition comps
+ * invitation/tour/friendly (18..20), the EC qualifiers (23..30), and the Oceania Cup
+ * (35). Those cups store name[] at the CUP offset (20) with the embedded teamSeedList
+ * right after, NOT the league layout (name[] at 38). So a type==0-means-league
+ * assumption (comp_name_table) must route EVERY type-0 comp below the first league to
+ * the cup name field, else name[] reads out of teamSeedList — best case it's NULL and
+ * the caller substitutes a default division name (the Oceania Cup showed "PREMIER
+ * DIVISION" via _divisionStringTable[0]); worst case it's a team-id-as-pointer once a
+ * national-coach season has filled the draw list -> StringCopy SIGSEGV. The compId
+ * order is fixed SWOS data: all type-0 cups sort below COMPID_customsLeague.
+ * (Was `>= COMPID_invitationTournament && <= COMPID_friendly`, i.e. only 18..20 —
+ * which missed the Oceania Cup and the WC/EC qualifiers.) */
 static inline int comp_is_type0_cup(uint8_t id)
 {
-    return id >= COMPID_invitationTournament && id <= COMPID_friendly;
+    return id < COMPID_customsLeague;
 }
 
 /* The six continental national-team cups — European Championship (the "2"

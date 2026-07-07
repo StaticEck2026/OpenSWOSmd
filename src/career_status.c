@@ -522,16 +522,10 @@ void ClearCareerMatchPlayerStatusBucket(void) {
  *   mode  1: check cards only
  * Returns 1 if injured, 0 if not.
  * ================================================================ */
-__attribute__((used, externally_visible))
-uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
-#ifdef SWOS_TEST_NO_INJURIES_CARDS
-    /* Beta-test mode: nobody is ever unavailable, regardless of what's
-     * persisted in cardsInjuries. Catches any injury/card/bucket source
-     * the per-write-site gates may have missed (loaded saves with
-     * pre-existing injury bits, edit-tactics writes, etc.). */
-    (void)playerFile; (void)mode;
-    return 0;
-#endif
+/* Core injury/suspension status from the persisted cardsInjuries data —
+ * the actual asm logic. IsPlayerInjured()/IsPlayerInjuredForDisplay() below
+ * are thin wrappers (only difference: the beta no-injuries override). */
+static uint16_t player_injury_status(PlayerFile *playerFile, int16_t mode) {
     PlayerFile *pf = &playerFile[2];
     uint8_t ci = pf->cardsInjuries;
 
@@ -563,6 +557,33 @@ check_bucket:
             return 0;  /* no bucket or minor (0x20) → not injured */
         return 1;      /* serious bucket → injured */
     }
+}
+
+__attribute__((used, externally_visible))
+uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    /* Beta-test mode: nobody is ever unavailable for SELECTION/GAMEPLAY,
+     * regardless of what's persisted in cardsInjuries. Catches any injury/
+     * card/bucket source the per-write-site gates may have missed (loaded
+     * saves with pre-existing injury bits, edit-tactics writes, etc.).
+     * NOTE: this is a GAMEPLAY-availability override only — it must NOT
+     * suppress the squad-screen DISPLAY (the red suspended/injured name), or
+     * the name stops matching the drawn "3"/injury indicator. DISPLAY callers
+     * use IsPlayerInjuredForDisplay() which keeps the honest status. */
+    (void)playerFile; (void)mode;
+    return 0;
+#else
+    return player_injury_status(playerFile, mode);
+#endif
+}
+
+/* DISPLAY-only status query: reports the REAL persisted injury/suspension even
+ * under SWOS_TEST_NO_INJURIES_CARDS, so the edit-tactics squad screen colours a
+ * suspended/injured player's name red to match its drawn indicator. On non-beta
+ * builds this is identical to IsPlayerInjured (both just call the core). */
+__attribute__((used, externally_visible))
+uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode) {
+    return player_injury_status(playerFile, mode);
 }
 
 /* ================================================================

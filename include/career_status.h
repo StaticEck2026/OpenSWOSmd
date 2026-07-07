@@ -19,6 +19,8 @@ void ClearCareerMatchPlayerStatusBucket(void);
 /* --- Status checks --- */
 uint16_t ShouldApplyRandomPlayerStatusAfterSim(void);
 uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+/* DISPLAY-only: real status even under SWOS_TEST_NO_INJURIES_CARDS (see career_status.c). */
+uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode);
 
 /* --- Player count utilities --- */
 uint16_t GetNumberOfSubstitutes(TeamFileEx *team, uint16_t numPl);
@@ -112,4 +114,4 @@ void UpdateCareerPlayersFormAfterMatch(DIYCompetitionEx *comp, TeamFileEx *team1
 /* --- Career stats update after match (Chunk 189) --- */
 void Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
                                     uint16_t packedGoals, uint16_t aggregate,
-                                    uint16_t penalty, uint16_t flags);
+                                    uint16_t _penalty, uint16_t flags);
