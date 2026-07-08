@@ -8108,7 +8108,19 @@ check_32E:
     if (a0s->hasGroups != 0) {  /* 0x48 */
         /* state 5 */
         a0s->menuState = 5;
-        if (a0s->hasGroups == 2)
+        /* asm DIYCupOnSelectCommon loc_13501A: `cmpi.w #2,hasGroups; bne.s
+         * loc_135034` — only the LAST grouped stage (hasGroups==2) falls into
+         * state_check (which can force menuState=6 "competition complete" when
+         * competitionFinished is set); an intermediate finished stage
+         * (hasGroups==1) SKIPS state_check and keeps menuState=5 ("NEXT ROUND"),
+         * so DIY_EditCompetitionSlot advances to the next slot. The original C
+         * port inverted this test (`== 2`), which sent a finished non-last stage
+         * into state_check → menuState=6 → EXIT-only → DIYCupOnSelect10 set
+         * hasGroups=0xFFFF → no slot-advance. That stranded the World Cup 3rd-place
+         * play-off (slot 4: numTeams=2 → numRounds=1 → competitionFinished=1 on its
+         * single match, but NOT the last slot) before the FINAL (slot 5) could
+         * load. R16/QF/SF are unaffected (numRounds>1 → competitionFinished=0). */
+        if (a0s->hasGroups != 2)
             goto final_draw;
         goto state_check;
     }
