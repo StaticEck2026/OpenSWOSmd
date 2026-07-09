@@ -163,10 +163,30 @@ void swos_io_free(void *p)
  * If the location can't be determined or created, we fall back to the relative
  * "save" default so a dev/CLI run still works from the game dir. */
 static char s_save_dir[1024] = "save";
+/* The user's game folder — the PARENT of the save dir. SWOS.ini lives here (a
+ * sibling of save/), so config and saves share one per-user location. Default "."
+ * (= the exe's cwd) so a dev/CLI run and the WASM build keep the old relative
+ * "./SWOS.ini". swos_save_dir_init() overwrites it with the real per-user dir. */
+static char s_user_dir[1024] = ".";
 
 const char *swos_save_dir(void)
 {
     return s_save_dir;
+}
+
+const char *swos_user_dir(void)
+{
+    return s_user_dir;
+}
+
+/* Full path to SWOS.ini in the user's game folder. Returns a static buffer
+ * (rebuilt each call from s_user_dir, which is set once at startup) — safe to
+ * cache the pointer (it never moves). */
+const char *swos_ini_path(void)
+{
+    static char s_ini[1088];
+    snprintf(s_ini, sizeof s_ini, "%s/SWOS.ini", s_user_dir);
+    return s_ini;
 }
 
 #ifndef SWOS_WASM_BUILD
@@ -207,35 +227,47 @@ void swos_save_dir_init(void)
 #ifdef SWOS_WASM_BUILD
     /* Browser build: saves persist in the IndexedDB-backed /save mount set up in
      * wasm/pre.js. The game writes "save/…" relative to cwd "/" (chdir is skipped
-     * on WASM), i.e. into /save — so the "save" default is already correct. */
+     * on WASM), i.e. into /save — so the "save" default is already correct, and
+     * s_user_dir stays "." so SWOS.ini resolves to /SWOS.ini (where wasm/pre.js
+     * copies it from localStorage). */
     return;
 #else
-    char base[1024];
+    /* user = the per-user game folder (holds SWOS.ini); save = user + "/save".
+     * Resolving the user dir first (not just the save dir) lets SWOS.ini live
+     * beside the save folder in one per-user location. Kept well under the 1024
+     * static/tmp buffers so the "/save" + "/SWOS.ini" compositions never risk
+     * truncation (a home path this long can't happen in practice). */
+    char user[512];
 
 # if defined(_WIN32) || defined(__CYGWIN__)
-    /* Windows: %USERPROFILE%\Documents\SWOS\save. Forward slashes are accepted by
+    /* Windows: %USERPROFILE%\Documents\SWOS. Forward slashes are accepted by
      * both the native CRT and Cygwin's path layer. */
     const char *profile = getenv("USERPROFILE");
     if (!profile || !*profile)
-        return;                                  /* fall back to "save" */
-    snprintf(base, sizeof base, "%s/Documents/SWOS/save", profile);
-    for (char *p = base; *p; p++)
+        return;                                  /* fall back to "save" / "." */
+    snprintf(user, sizeof user, "%s/Documents/SWOS", profile);
+    for (char *p = user; *p; p++)
         if (*p == '\\') *p = '/';
 # elif defined(__APPLE__)
     const char *home = getenv("HOME");
     if (!home || !*home)
         return;
-    snprintf(base, sizeof base, "%s/Library/Application Support/SWOS/save", home);
+    snprintf(user, sizeof user, "%s/Library/Application Support/SWOS", home);
 # else  /* Linux and other Unix */
     const char *home = getenv("HOME");
     if (!home || !*home)
         return;
-    snprintf(base, sizeof base, "%s/.swos/save", home);
+    snprintf(user, sizeof user, "%s/.swos", home);
 # endif
 
-    if (swos_make_dirs(base) != 0)
-        return;                                  /* couldn't create; keep "save" */
-    snprintf(s_save_dir, sizeof s_save_dir, "%s", base);
+    char save[1024];
+    snprintf(save, sizeof save, "%s/save", user);
+    /* mkdir -p the save dir also creates its parent (the user dir), so both the
+     * SWOS.ini location and the save location exist afterward. */
+    if (swos_make_dirs(save) != 0)
+        return;                                  /* couldn't create; keep defaults */
+    snprintf(s_user_dir, sizeof s_user_dir, "%s", user);
+    snprintf(s_save_dir, sizeof s_save_dir, "%s", save);
 #endif  /* !SWOS_WASM_BUILD */
 }
 

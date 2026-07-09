@@ -46,10 +46,19 @@ int  swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t _size);
  * always agree. Returns a stable, NUL-terminated string (no trailing slash). */
 const char *swos_save_dir(void);
 
-/* Resolve the save directory once, at startup (after SDL_Init, before any save
- * or load). No-op except on macOS, where it redirects saves out of a read-only
- * .app bundle into ~/Library/Application Support and seeds the bundled
- * defaults. Safe to call on every platform. */
+/* The user's game folder — the PARENT of swos_save_dir() (so SWOS.ini can sit
+ * beside the save/ folder in one per-user location). "." until
+ * swos_save_dir_init() resolves it. Stable, NUL-terminated, no trailing slash. */
+const char *swos_user_dir(void);
+
+/* Full path to SWOS.ini in the user's game folder (swos_user_dir() + "/SWOS.ini").
+ * Static buffer; the returned pointer is stable for the program's lifetime. */
+const char *swos_ini_path(void);
+
+/* Resolve the user game dir + save directory once, at startup — call BEFORE
+ * Settings_Load (so SWOS.ini resolves to the per-user location) and before any
+ * save/load. Creates the per-user dir + its save/ subfolder. Safe on every
+ * platform; on WASM it is a no-op (relative "save" / "." are already correct). */
 void swos_save_dir_init(void);
 
 /* ---- Heap (size-tagged allocations) ----
