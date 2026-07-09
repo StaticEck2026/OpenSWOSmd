@@ -39,8 +39,6 @@
 #include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
 #include "display.h"    /* _screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
 
-#define SWOS_INI_PATH "SWOS.ini"
-
 #define WIN_SCALE 3
 
 extern void startShim(void);
@@ -167,15 +165,21 @@ int main(int argc, char **argv)
     signal(SIGHUP, SIG_IGN);
 #endif
 
-    /* Anchor CWD to the binary's directory FIRST so SWOS.ini / SWOS.log
-     * and the data/ grafs/ sound/ trees all resolve relative to the
-     * exe regardless of where the user launched from. Done before
-     * Settings_Load so SWOS.ini lookup hits the right file.
+    /* Anchor CWD to the binary's directory FIRST so SWOS.log and the data/
+     * grafs/ sound/ trees resolve relative to the exe regardless of where the
+     * user launched from. (SWOS.ini no longer lives here — see below.)
      * WASM: there is no binary dir — the data is --preload-file'd into MEMFS at
      * /data, /grafs, … and cwd is already "/", so skip the chdir. */
 #ifndef SWOS_WASM_BUILD
     chdir_to_binary(argv ? argv[0] : NULL);
 #endif
+
+    /* Resolve the per-user game folder + save dir NOW, before Settings_Load, so
+     * SWOS.ini reads/writes from the same per-user location as the save/ folder
+     * (~/.swos, Documents/SWOS, ~/Library/Application Support/SWOS). Creates the
+     * folder if missing; if it can't be resolved, falls back to the exe dir.
+     * (Was called later, after SDL_Init — moved up so the ini lookup uses it.) */
+    swos_save_dir_init();
 
 #ifdef SWOS_SDL_BUILD
     /* Data-file JSON loader self-test (docs/DATA_INTERNAL_JSON.md). Runs before
@@ -220,15 +224,17 @@ int main(int argc, char **argv)
     opts.vsync     = 0;
 #endif
 
-    /* 2) SWOS.ini overrides defaults. On the web it's copied from localStorage
-     * into /SWOS.ini by wasm/pre.js before we get here (edit it via the in-page
-     * settings panel). Missing file is fine — defaults are used. */
-    Settings_Load(&opts, SWOS_INI_PATH);
+    /* 2) SWOS.ini (in the per-user game folder — swos_ini_path()) overrides
+     * defaults. On the web it's copied from localStorage into /SWOS.ini by
+     * wasm/pre.js before we get here (edit it via the in-page settings panel).
+     * Missing file is fine — defaults are used, and step 4 writes a fresh one. */
+    const char *ini_path = swos_ini_path();
+    Settings_Load(&opts, ini_path);
 
     /* Expose the live options + ini path to the arcade service menu so its
      * settings (game rules) can be written straight back to SWOS.ini. */
     { extern PlatformInitOptions *g_arcadeOpts; extern const char *g_arcadeIniPath;
-      g_arcadeOpts = &opts; g_arcadeIniPath = SWOS_INI_PATH; }
+      g_arcadeOpts = &opts; g_arcadeIniPath = ini_path; }
 
     /* 3) CLI overrides INI (highest precedence — explicit user intent). */
     for (int i = 1; i < argc; ++i) {
@@ -345,10 +351,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    /* Resolve the save directory before any save/load. No-op except on macOS,
-     * where it redirects saves out of a read-only .app bundle (App Translocation
-     * / /Applications) into a writable per-user dir so saving works. */
-    swos_save_dir_init();
+    /* (swos_save_dir_init() now runs earlier, before Settings_Load — see above.) */
 
     /* Match the render aspect to `resolution` (or the desktop when resolution=auto):
      * width = SCREEN_HEIGHT * (w/h), clamped to [SCREEN_WIDTH .. the full pitch width].
@@ -395,7 +398,7 @@ int main(int argc, char **argv)
      * settings from a newer build). Existing values/comments are left as the
      * user wrote them. Done BEFORE Platform_Shutdown destroys the window, since
      * the getters used for any newly-added scale/fullscreen keys read SDL flags. */
-    Settings_AppendMissing(&opts, SWOS_INI_PATH);
+    Settings_AppendMissing(&opts, ini_path);
 
     Platform_Shutdown();
     SDL_Quit();
