@@ -6020,6 +6020,19 @@ void DesignDIYTournamentOnDraw(void)
                     { uint32_t div = (uint32_t)d0ext; remainder = (uint16_t)(div % d2); }
                     uint16_t d1 = remainder; /* swap d0 gives remainder in low word */
 
+                    /* asm `divu.w d2,d0` OVERWRITES d0 with the quotient (per-group
+                     * qualifiers) and hands the remainder to %1 — those become the
+                     * %0/%1 filled by PrintFormatted at print_qual. The C port left
+                     * d0/d2 as the raw divisionFactor (TOTAL qualifiers) / group count,
+                     * so a grouped stage's qualifier line printed the total, e.g. the
+                     * Copa's "5 GROUPS OF 4" round showed "(TOP 16 IN EACH GROUP AND
+                     * BEST RUNNER-UP QUALIFY)" instead of "(TOP 3 …)" (16 = round-2 team
+                     * count). Also broke the World Cup / European Championships info.
+                     * Restore the asm's register values so %0 = per-group qualifiers,
+                     * %1 = extra ("runners-up") count. */
+                    d0 = quotient;
+                    d2 = remainder;
+
                     if (quotient == 1) {
                         if (d1 == 1) {
                             StringCopy(_aWinnersOfEachG_0, dst);
