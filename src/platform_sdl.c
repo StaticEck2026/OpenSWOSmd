@@ -503,6 +503,19 @@ int Platform_Init(const PlatformInitOptions *opts)
             if (wy - bt < ub.y)                    wy = ub.y + bt;   /* title bar on-screen */
             SDL_SetWindowPosition(s_window, wx, wy);
         }
+
+        /* Diagnostic: the actual window geometry + the monitor it fits, so a
+         * tester's SWOS.log tells us whether the fit worked (and DPI is sane). */
+        {
+            int wx = 0, wy = 0, ww = 0, wh = 0;
+            SDL_GetWindowPosition(s_window, &wx, &wy);
+            SDL_GetWindowSize(s_window, &ww, &wh);
+            SDL_Rect ub2 = { 0, 0, 0, 0 };
+            SDL_GetDisplayUsableBounds(disp, &ub2);
+            fprintf(stderr,
+                    "[video] window %dx%d @%d,%d scale=%d display=%d usable=%dx%d\n",
+                    ww, wh, wx, wy, s_win_scale_current, disp, ub2.w, ub2.h);
+        }
     }
 #endif
 

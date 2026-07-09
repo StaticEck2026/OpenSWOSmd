@@ -348,6 +348,21 @@ int main(int argc, char **argv)
         fprintf(stderr, "[dos] DOS graphics mode ON (bin/%s)\n", _gDosGraphicsDir);
 
     SDL_SetMainReady();
+
+    /* Become per-monitor DPI-aware on Windows BEFORE SDL_Init (Windows reads the
+     * process DPI awareness at init). Without this SDL2 runs DPI-UNAWARE, so on a
+     * scaled display (a 16" laptop at 150% is the Windows default) Windows
+     * virtualizes coordinates: SDL_CreateWindow sizes are LOGICAL pixels that
+     * Windows then scales UP — a 3x window (1452x816 logical) becomes ~2178x1224
+     * physical and overflows a 1920x1080 panel, hiding the title bar. It also
+     * broke our fit clamp: SDL_GetDisplayUsableBounds reports PHYSICAL pixels
+     * while the window is sized in LOGICAL pixels, so the two never agree. Making
+     * the process DPI-aware puts everything in physical pixels, so win_scale and
+     * the usable-bounds clamp are consistent and the window fits its monitor.
+     * Set via the raw hint name so it compiles on any SDL2 (the macro is 2.24+)
+     * and is ignored on Linux/WASM/older SDL. */
+    SDL_SetHint("SDL_WINDOWS_DPI_AWARENESS", "permonitorv2");
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS |
                   SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
