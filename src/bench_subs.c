@@ -28,7 +28,7 @@
 #include "match_sim.h"
 #include "player_anim.h"
 #include "player_sprites.h"
-#include "display.h"    /* _screen_width / PITCH_VIEW_MAX_WIDTH — widescreen bench-camera fix (no-op on Amiga) */
+#include "display.h"    /* _screen_width — widescreen bench-camera fix (no-op on Amiga) */
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 #endif
@@ -1480,7 +1480,7 @@ DrawBenchAndSubsMenu(void)
         /* Mirror MoveCamera's leaving-subs target (targetX=211, boundsMargin=37)
          * and its X clamp so we know where the camera comes to rest. */
         int16_t restX        = (int16_t)(211 - _screen_width / 2);
-        int16_t panRange     = (int16_t)(PITCH_VIEW_MAX_WIDTH - _screen_width);
+        int16_t panRange     = (int16_t)(0x2A0 - _screen_width);   /* pitch width 0x2A0=672, as MoveCamera */
         int16_t boundsMargin = 37;
         int16_t xMax         = (int16_t)(panRange - boundsMargin);
         if (xMax <= boundsMargin)      restX = (int16_t)(panRange / 2);
