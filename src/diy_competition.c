@@ -9074,11 +9074,22 @@ void InitDIYCompetitionFromTableEntry(uint16_t idx, uint8_t *table)
     uint8_t *a1 = a6 + 4;
     a1 = prependCountryNameIfClub(table, a1);
 
-    /* Division/competition name */
+    /* Division/competition name.
+     *
+     * The embedded name[] table holds TWO pointers per division — {full name,
+     * abbreviation} — so division d7's full name is nameTbl[d7*2] (stride 2),
+     * exactly as SelectTeamsFinalMenu (teams.c) and the game-list header
+     * (menus.c) index it. The Amiga stride was d7*8 bytes = 2×4-byte slots.
+     * Reading nameTbl[d7] instead walked the pairs consecutively, so a
+     * multi-division league with custom division names showed the wrong
+     * headers during the end-of-season scroll — Australia "1ST DIVISION / 1ST
+     * DIVISION / SOUTH DIVISION / SOUTH DIVISION" (NSW + Queensland lost) and
+     * New Zealand "NORTHERN REGION / NORTHERN / CENTRAL REGION". The
+     * _divisionStringTable fallback is one name per division, so it stays d7. */
     uint8_t *nameSource;
     {
         char **nameTbl = comp_name_table(compHdr);
-        nameSource = nameTbl ? (uint8_t *)nameTbl[d7]
+        nameSource = nameTbl ? (uint8_t *)nameTbl[d7 * 2]
                              : (uint8_t *)_divisionStringTable[d7];
     }
     a6s->namePtr = nameSource;  /* 0x28 */
