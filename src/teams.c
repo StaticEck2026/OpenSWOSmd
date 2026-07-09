@@ -3006,13 +3006,20 @@ loc_E086:
 
     /* Career mode continental cup filtering (loc_13E0A6) */
     if (_gameType == GAME_TYPE_CAREER) {
-        /* Copa Libertadores is a CLUB competition that career mode auto-routes
-         * into the quaternary slot (career_copa.c); it is never picked through
-         * this menu, so hide it from the career competition list. It is spliced
-         * into _southAmericaTable only to surface in the preset/exhibition list
-         * (where _gameType != GAME_TYPE_CAREER, so this block is skipped). */
-        if (compEntry == (uint8_t *)Comp_ById(COMPID_copaLibertadores))
-            goto loc_E086;
+        /* NOTE: Copa Libertadores is deliberately NOT filtered here. It is a
+         * CLUB cup — the CONMEBOL analog of the European club cups
+         * (euroCup/cupWinnersCup/uefaCup), which are likewise absent from this
+         * filter and so always render in the EUROPE region view. Copa is routed
+         * into the quaternary slot for a CONMEBOL career exactly as the euro
+         * cups are (career_copa.c, "slot-3 mirrors euro"), and
+         * Career_ViewOrEditCompetitionSlot handles it identically (found_slot →
+         * cup view when it's your quaternary comp, auto-advance otherwise —
+         * same as a euro cup browsed by a non-European career). An earlier
+         * `goto loc_E086` hid it from the career VIEW WORLD/South America list,
+         * leaving the green competition box empty where the euro cups fill it
+         * for Europe. Removing the skip restores the symmetric behaviour.
+         * (The national-team continental cups below stay region-gated — those
+         * are national comps, not club cups.) */
         if (compEntry == _africanNationsCup) {
             if ((uint8_t)(_selTeamNumber >> 8) != CN_AFRICA)
                 goto loc_E086;
