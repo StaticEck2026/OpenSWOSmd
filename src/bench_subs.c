@@ -28,7 +28,7 @@
 #include "match_sim.h"
 #include "player_anim.h"
 #include "player_sprites.h"
-#include "display.h"    /* _screen_width / PITCH_VIEW_MAX_WIDTH — widescreen bench-camera fix (no-op on Amiga) */
+#include "display.h"    /* _screen_width — widescreen bench-camera fix (no-op on Amiga) */
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 #endif
@@ -1453,24 +1453,46 @@ DrawBenchAndSubsMenu(void)
     if (_leavingSubsMenu == 0)
         return;
 
-    /* Clear the leaving-subs camera lock once the view has panned back from the
-     * bench. The original test (keep locked while cameraX < _benchXLimit+8) waits
-     * for the camera to pan right until the bench is off the left edge. On an
-     * ULTRAWIDE render the view is nearly as wide as the whole pitch, so
-     * MoveCamera centres the camera (SetCameraCoordinates clamps to panRange/2)
-     * and cameraX can NEVER reach _benchXLimit+8 — so this never fired,
-     * _leavingSubsMenu stayed set, and MoveCamera kept the camera pinned to the
-     * bench-return target (targetY=449), killing the vertical ball-follow:
-     * "camera stuck mid-pitch after calling the bench" (tester at 3440x1440 ->
-     * _screen_width 650 -> camera centres at cameraX 11, 11 < 35 forever). So
-     * only keep waiting while the camera can ACTUALLY reach the threshold
-     * (panRange/2 >= it); once it's centred as far as it will go, clear. On 4:3 /
-     * normal widescreen / Amiga the camera does reach it (panRange/2 = 168 >= 35),
-     * so the original bench-slide-off pan is preserved unchanged. */
+    /* Release the leaving-subs camera lock once the view has slid the bench off
+     * to the left AND the camera has reached its bench-return rest position.
+     *
+     * The original test held the lock while cameraX < _benchXLimit+8 (=35) —
+     * i.e. until the camera panned far enough right that the bench cleared the
+     * left edge. That works on 4:3/Amiga: MoveCamera's leaving-subs target
+     * (priority 3, targetX=211) rests at cameraX ~43 there and sails past 35.
+     *
+     * But on a WIDESCREEN view the rest X clamps down to the camera's left bound
+     * (~37, or panRange/2 once the view nears the pitch width), and MoveCamera's
+     * 3px move-deadzone (dx>>2 == 0 for |dx|<=3) parks the camera up to 3px
+     * SHORT of it — at cameraX ~34 on 16:9, ~11 on ultrawide. Both sit below 35,
+     * so the lock never released and MoveCamera kept the camera pinned to the
+     * bench-return target (targetY=449), killing vertical ball-follow: "camera
+     * frozen mid-pitch after calling the bench" (16:9 and wider — the earlier
+     * ultrawide-only guard missed 16:9).
+     *
+     * Fix: also release once the camera has SETTLED at its rest X (can slide no
+     * closer), computed the same way MoveCamera does. On 4:3 the rest X (43) is
+     * above 35 so the cameraX>=threshold branch still fires first — unchanged on
+     * Amiga. No-op on Amiga (rest X 43 > threshold). */
     {
-        int16_t threshold = (int16_t)(_benchXLimit + 8);
-        int16_t panRange  = (int16_t)(PITCH_VIEW_MAX_WIDTH - _screen_width);
-        if (threshold > _cameraX.s.i && panRange / 2 >= threshold)
+        int16_t threshold = (int16_t)(_benchXLimit + 8);       /* 35 */
+
+        /* Mirror MoveCamera's leaving-subs target (targetX=211, boundsMargin=37)
+         * and its X clamp so we know where the camera comes to rest. */
+        int16_t restX        = (int16_t)(211 - _screen_width / 2);
+        int16_t panRange     = (int16_t)(0x2A0 - _screen_width);   /* pitch width 0x2A0=672, as MoveCamera */
+        int16_t boundsMargin = 37;
+        int16_t xMax         = (int16_t)(panRange - boundsMargin);
+        if (xMax <= boundsMargin)      restX = (int16_t)(panRange / 2);
+        else if (restX < boundsMargin) restX = boundsMargin;
+        else if (restX >= xMax)        restX = xMax;
+
+        int16_t camX = _cameraX.s.i;
+        /* Keep holding only while the bench hasn't cleared the edge (camX <
+         * threshold) AND the camera can still slide further right toward its
+         * rest X (camX more than the 3px deadzone below restX). Once either is
+         * satisfied the transition is done — release so ball-follow resumes. */
+        if (camX < threshold && camX < (int16_t)(restX - 3))
             goto draw_bench;
     }
 
