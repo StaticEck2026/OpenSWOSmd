@@ -445,6 +445,67 @@ int Platform_Init(const PlatformInitOptions *opts)
         return -1;
     }
 
+#ifndef SWOS_WASM_BUILD
+    /* Post-creation window fit (windowed only). The pre-creation scale clamp
+     * uses SDL_GetDisplayUsableBounds, which can under-shrink (DPI virtualization
+     * on Windows, work-area quirks) and CANNOT account for the title bar — that's
+     * added by the OS OUTSIDE the client rect. CENTERED_DISPLAY then centers the
+     * CLIENT rect, so a tall window pushes its title bar above the screen top:
+     * "the window opens inside the screen but I can't see the close/maximize
+     * buttons" (16" laptop, 1920x1080). Redo the fit with the REAL decorated
+     * geometry: shrink the integer scale until the framed window fits the usable
+     * area, then move it so the whole frame — title bar included — is on-screen. */
+    if (fs_mode == PLATFORM_FULLSCREEN_NONE) {
+        int disp = SDL_GetWindowDisplayIndex(s_window);
+        if (disp < 0) disp = screen;
+        SDL_Rect ub, db;
+        int have_ub = (SDL_GetDisplayUsableBounds(disp, &ub) == 0 && ub.w > 0 && ub.h > 0);
+        int have_db = (SDL_GetDisplayBounds(disp, &db) == 0 && db.w > 0 && db.h > 0);
+        if (!have_ub && have_db) { ub = db; have_ub = 1; }   /* usable query failed */
+        if (have_ub && have_db) {
+            /* Never trust usable bounds bigger than the physical display — some
+             * multi-monitor drivers return the whole virtual desktop for a single
+             * display index, which is why the tester's 4x (1936x1088) window was
+             * NOT shrunk below his 1920x1080 panel. Cap to the display's real
+             * size/origin so the fit reflects the monitor the window is on. */
+            if (ub.w > db.w) ub.w = db.w;
+            if (ub.h > db.h) ub.h = db.h;
+            if (ub.x < db.x) ub.x = db.x;
+            if (ub.y < db.y) ub.y = db.y;
+        }
+        if (have_ub) {
+            /* Border thicknesses; bt = title-bar height. 0 if unsupported. */
+            int bt = 0, bl = 0, bb = 0, br = 0;
+            SDL_GetWindowBordersSize(s_window, &bt, &bl, &bb, &br);
+
+            /* Shrink until the DECORATED window fits the usable area. */
+            while (win_scale > 1 &&
+                   ((int)_screen_width * win_scale + bl + br > ub.w ||
+                    PLATFORM_SCREEN_H * win_scale + bt + bb > ub.h)) {
+                win_scale--;
+            }
+            SDL_SetWindowSize(s_window,
+                              _screen_width * win_scale,
+                              PLATFORM_SCREEN_H * win_scale);
+            s_win_scale_current = win_scale;
+
+            /* Reposition so the full frame (client + borders) sits inside the
+             * usable bounds; guarantee the title bar is never above the top. */
+            int wx, wy, ww, wh;
+            SDL_GetWindowPosition(s_window, &wx, &wy);
+            SDL_GetWindowSize(s_window, &ww, &wh);
+            int outerW = ww + bl + br, outerH = wh + bt + bb;
+            if (wx - bl < ub.x)                    wx = ub.x + bl;
+            if (wy - bt < ub.y)                    wy = ub.y + bt;
+            if (wx - bl + outerW > ub.x + ub.w)    wx = ub.x + ub.w - outerW + bl;
+            if (wy - bt + outerH > ub.y + ub.h)    wy = ub.y + ub.h - outerH + bt;
+            if (wx - bl < ub.x)                    wx = ub.x + bl;   /* re-pin if too wide */
+            if (wy - bt < ub.y)                    wy = ub.y + bt;   /* title bar on-screen */
+            SDL_SetWindowPosition(s_window, wx, wy);
+        }
+    }
+#endif
+
     /* Renderer choice. Hardware (accelerated) is the default — vsync
      * gives a 50 Hz monitor user free perfect pacing. Software is
      * available as an opt-in for hosts where the hardware backend
