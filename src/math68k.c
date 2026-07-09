@@ -5,6 +5,11 @@
  */
 #include "math68k.h"
 
+/* Movement speed_factor (dos_gameplay.c): DOS/PC 70fps scales the CalculateDeltaXAndY
+ * deltas by 41/64; Amiga 50fps = 1/1 (no-op). See docs/DOS_GAMEPLAY.md §8.3. */
+extern int16_t _gMoveDeltaScaleNum;
+extern int16_t _gMoveDeltaScaleDen;
+
 /* ================================================================
  * kSineCosineTable — 256 entries of int16_t
  * Indexed by direction (0..511 wrapped to 0..255 via word addressing).
@@ -229,6 +234,19 @@ uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
     /* Multiply by speed (muls.w: 16×16 → 32) */
     *outDeltaX = (int32_t)cosVal * (int32_t)speed;
     *outDeltaY = (int32_t)sinVal * (int32_t)speed;
+
+    /* speed_factor: scale the movement deltas by the active game style so a higher
+     * frame rate doesn't play faster — reproduces swos-2020's CalculateDeltaXAndY_125
+     * hook, injected at this routine's tail (symbols.txt:2083 -> render.cpp:4682).
+     * DOS/PC 70fps = 41/64; Amiga 50fps = 1/1 (no-op, so the Amiga build and normal
+     * 50fps play are byte-for-byte unchanged). Integer `* num / den` matches
+     * swos-2020's truncation. Callers reading only `dir` (AI goal-angle, tactics
+     * arrows) are unaffected; every mover using the deltas is scaled, as in
+     * swos-2020. See docs/DOS_GAMEPLAY.md §8.3. */
+    if (_gMoveDeltaScaleNum != _gMoveDeltaScaleDen) {
+        *outDeltaX = *outDeltaX * _gMoveDeltaScaleNum / _gMoveDeltaScaleDen;
+        *outDeltaY = *outDeltaY * _gMoveDeltaScaleNum / _gMoveDeltaScaleDen;
+    }
 
     return (uint16_t)dir;
 }

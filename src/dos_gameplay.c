@@ -34,6 +34,18 @@ int16_t  _gsResultAutoAdvance   = 600;  /* GS_660_600 ai.c            half/fullt
 int16_t  _gsKickoffStoppage     = 750;  /* GS_825_750 game_timers.c   kickoff stoppage */
 int16_t  _gsStoppageEventReload = 50;   /* GS_GK_55_50 game_timers.c  stoppageEvent reload */
 
+/* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
+ * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
+ * render.cpp:4682): the deltaX/deltaY computed by CalculateDeltaXAndY are scaled by
+ * num/den so a higher frame rate doesn't play faster. DOS/PC 70fps = 41/64; Amiga
+ * 50fps = 1/1 (no-op). Read at the tail of CalculateDeltaXAndY (math68k.c). Kept as
+ * an integer ratio (not a float) to match swos-2020's `* 41 / 64` truncation
+ * exactly. Ball trajectory is NOT scaled here — it rides the §3 physics constants;
+ * callers that read only the direction (AI goal-angle, tactics arrows) are
+ * unaffected. Default 1/1 so the Amiga build (dos=0) never scales. ---------------- */
+int16_t  _gMoveDeltaScaleNum = 1;       /* DOS 41 / Amiga 1  (future Amiga-60: 50) */
+int16_t  _gMoveDeltaScaleDen = 1;       /* DOS 64 / Amiga 1  (future Amiga-60: 60) */
+
 /* GS_54_49: the doc keeps the authentic ORIGINAL DOS value 54 as the default, and
  * exposes swos-2020's deliberate retune of 69 as a tweak. Flip this to test. */
 #define GS_FRAMES_PER_GAME_SECOND_DOS  54    /* original DOS = 54; swos-2020 = 69 */
@@ -78,4 +90,10 @@ void ApplyGameStyle(void)
     _gsResultAutoAdvance   = dos ? 660 : 600;
     _gsKickoffStoppage     = dos ? 825 : 750;
     _gsStoppageEventReload = dos ? 55  : 50;
+
+    /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
+     * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't
+     * cover 1.4x the ground per second at the higher frame rate; Amiga 50fps = 1/1. */
+    _gMoveDeltaScaleNum = dos ? 41 : 1;
+    _gMoveDeltaScaleDen = dos ? 64 : 1;
 }
