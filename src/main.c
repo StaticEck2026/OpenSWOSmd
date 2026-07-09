@@ -165,9 +165,10 @@ int main(int argc, char **argv)
     signal(SIGHUP, SIG_IGN);
 #endif
 
-    /* Anchor CWD to the binary's directory FIRST so SWOS.log and the data/
-     * grafs/ sound/ trees resolve relative to the exe regardless of where the
-     * user launched from. (SWOS.ini no longer lives here — see below.)
+    /* Anchor CWD to the binary's directory FIRST so the data/ grafs/ sound/
+     * trees resolve relative to the exe regardless of where the user launched
+     * from. (SWOS.ini and SWOS.log no longer live here — they go to the per-user
+     * game folder; see swos_save_dir_init() + the freopen below.)
      * WASM: there is no binary dir — the data is --preload-file'd into MEMFS at
      * /data, /grafs, … and cwd is already "/", so skip the chdir. */
 #ifndef SWOS_WASM_BUILD
@@ -313,15 +314,16 @@ int main(int argc, char **argv)
     if (opts.dos_dir[0])
         snprintf(_gDosGraphicsDir, sizeof _gDosGraphicsDir, "%s", opts.dos_dir);
 
-    /* Redirect stderr to SWOS.log alongside the binary. Saves the
-     * tester from having to remember `2> SWOS.log` on every launch
-     * and works the same whether the program is started from gdb,
-     * Explorer, or a terminal. Disable by setting SWOS_NO_LOG=1 in
-     * the environment if you want stderr to go back to the
-     * console. unbuffered so log lines flush immediately and we
-     * don't lose context when the program crashes. */
+    /* Redirect stderr to SWOS.log in the per-user game folder (beside SWOS.ini
+     * and save/ — swos_user_dir(), resolved above). Saves the tester from having
+     * to remember `2> SWOS.log`, and keeps the log out of a possibly read-only
+     * install dir. Works the same from gdb, Explorer, or a terminal. Disable by
+     * setting SWOS_NO_LOG=1 to send stderr back to the console. Unbuffered so
+     * lines flush immediately and we don't lose context on a crash. */
     if (getenv("SWOS_NO_LOG") == NULL) {
-        FILE *log = freopen("SWOS.log", "w", stderr);
+        char log_path[1088];
+        snprintf(log_path, sizeof log_path, "%s/SWOS.log", swos_user_dir());
+        FILE *log = freopen(log_path, "w", stderr);
         if (log) {
             setvbuf(log, NULL, _IONBF, 0);
         }
