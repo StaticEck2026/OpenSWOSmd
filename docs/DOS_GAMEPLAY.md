@@ -132,10 +132,20 @@ proportionally more real frames per game-minute.
   between DOS and Amiga base arrays by difficulty — the clearest DOS-vs-Amiga
   table in the tree.
 
-## 6. Explicitly NOT FPS-scaled (gaps / gotchas)
+## 6. NOT FPS-scaled in the *shipping* asm — but see §8 (the missing piece)
 
-swos-2020 did **not** compensate these for frame rate — they run one step per
-frame, so they are effectively faster in wall-clock terms at 70 FPS *by design*:
+> ⚠️ **CORRECTION (2026-07-08).** This section was written from
+> `setGameStyleVariables()` only, and concluded player/animation/camera speed is
+> "faster at 70 FPS by design." That is true of the **raw shipping DOS/Amiga
+> binaries**, but it MISSED the **`speed_factor`** (a per-frame `deltaX/deltaY`
+> scale = `50/fps`) that the test-team preset system applies to hold
+> distance-per-second constant across frame rates. Our port implements neither,
+> which is why DOS-70 players cover ~1.4× the ground per second. Read **§8**
+> before acting on this section.
+
+The following are unscaled in the raw shipping asm (they run one step per frame,
+so they are effectively faster in wall-clock terms at 70 FPS in the *original*
+binaries — but the preset system in §8 scales them):
 
 - **Player movement speed & acceleration** — `playerSpeedsGameInProgress`,
   `kPlayerSpeed=14`, `playerGroundConstant` (debug-tunable only). Not touched by
@@ -170,6 +180,132 @@ frame, so they are effectively faster in wall-clock terms at 70 FPS *by design*:
 6. **Attract/replay note**: `.HIL`/`.RPL` reels are frame-rate-specific — a 70 FPS
    reel plays back wrong at 50 FPS and vice-versa (see `docs/ARCADE.md`). Tag/keep
    them by mode.
+
+## 8. `speed_factor` and high-FPS gameplay authenticity (2026-07-08 — the missing piece)
+
+Prompted by a tester report ("DOS-70 players move too fast; game speed should be
+×0.714") + the EINTR. FRANKFURT test-team preset table. This section supersedes
+§6's "faster by design" conclusion for the **preset system**.
+
+### 8.1 The `speed_factor` (what §1–7 missed)
+
+Beyond the `setGameStyleVariables` constants, the preset system carries a
+**`speed_factor = 50 / fps`** that is applied **per frame to the player movement
+deltas** (`deltaX`, `deltaY`) — NOT to the speed *table*. It holds
+**distance-per-second constant** across frame rates:
+
+| fps | speed_factor | effect |
+|---|---|---|
+| 50 (Amiga) | 1.000 | baseline |
+| 60 | 0.833 (=50/60) | each frame's `deltaX/deltaY` × 0.833 |
+| 70 (DOS) | 0.714 (=50/70) | each frame's `deltaX/deltaY` × 0.714 |
+
+Test-team physics-preset table (Amiga family; the `g`/`maxFrames`/`maxDistance`/
+`maxHeight` columns are the *ball kick trajectory* tuned per preset, with `_ratio`
+columns = vs the 50 fps baseline):
+
+| preset | 1 = 50fps_amiga | 3 = 60fps_amiga | 5 = 60fps_amiga(2) | 7 = 60fps_amiga(3) |
+|---|---|---|---|---|
+| fps | 50 | 60 | 60 | 60 |
+| speed_factor | 1.000 | 0.833 | 0.833 | 1.000 |
+| g (gravity) | 4608 | 3840 | 4608 | 4608 |
+| maxFrames | 22 | 18 | 16 | 16 |
+| maxDistance | 184 | 172 | 153 | 184 |
+| maxDistance_ratio | 1.000 | 0.935 | 0.833 | 1.000 |
+| maxHeight | 22 | 25 | 22 | 22 |
+| maxHeight_ratio | 1.000 | 1.136 | 1.000 | 1.000 |
+
+Presets 3/5/7 are **experiments** trading speed_factor vs gravity vs ball-trajectory
+to find the best 60 fps feel; the test team hadn't converged.
+
+### 8.2 CRITICAL authenticity distinction — `speed_factor` is NORMALIZATION, not real DOS
+
+Verified from the retail DOS disassembly (`swos-2020/swos/swos.asm`):
+- Player speed table (`playerSpeedsGameInProgress dw 928,974,…,1250` @247873) is
+  **byte-identical to the Amiga** — and to our `_kPlayerSpeedsGameInProgress`.
+- `MovePlayer` (@103063) does `x += deltaX` / `y += deltaY` with **no scaling**.
+- DOS tick = 70 Hz (PIT 17045).
+
+⟹ The **real DOS binary used speed_factor = 1.000** — players genuinely moved
+**1.4× faster** than the Amiga (same per-frame deltas, 70 vs 50 frames/sec). That
+is authentic DOS; it is *the* reason DOS SWOS feels more frantic than the Amiga.
+So `speed_factor = 0.714` is a **modern normalization** ("make DOS play at Amiga
+wall-clock pace"), NOT a reproduction of the real DOS.
+
+**Decision axis for our port:**
+- *Authentic real DOS* → speed_factor 1.000 (current behaviour; players fast).
+- *Consistent/normalized speed* (test-team goal) → speed_factor 0.714.
+Recommend: keep authentic-fast as the DOS default; expose 0.714 as an optional
+"consistent speed" preset if wanted. (Mirrors the `GS_54_49 54-vs-69` decision.)
+
+### 8.3 WHERE swos-2020 implements it — the LIVE `CalculateDeltaXAndY_125` hook
+
+> ⚠️ **CORRECTION (2026-07-08, 2nd pass).** A first read concluded "dead
+> scaffolding / never solved" after finding `g_SpeedFactor` / `AdjustBallSpeed_2`
+> / `AdjustDestFactor_2` commented out. **Those are a decoy** (an abandoned
+> earlier attempt). The REAL, LIVE speed_factor is an asm-injection hook — found
+> only after searching `render.cpp` + `symbols.txt`, not the movement files.
+
+- `swos/symbols.txt` is the hook table: a line `<AsmFunc>, <offset>[, <hookName>]`
+  injects a call to `<AsmFunc>_<offset>()` at that instruction offset; a leading
+  `#` disables the line.
+- Line 2083 — `CalculateDeltaXAndY, 125` (**ACTIVE**) → injects
+  `SWOS::CalculateDeltaXAndY_125()` at offset 125 of `CalculateDeltaXAndY` (right
+  after the deltas are computed). Line 2082 `#CalculateDeltaXAndY, 153` and 2084
+  `#UpdateBall, 155` are `#`-disabled.
+- `SWOS::CalculateDeltaXAndY_125()` (`src/video/render.cpp:4682`, live / not
+  `#if(0)`) scales the movement deltas `D1`/`D2` by game style:
+
+  | style | fps | delta scale |
+  |---|---|---|
+  | 0 DOS/PC | 70 | **× 41/64 ≈ 0.641** |
+  | 1 Amiga | 50 | ×1 |
+  | 3/4 Amiga | 60 | **× 50/60 = 0.833** (when `g_BallMoved==0`) |
+
+So the speed_factor scales **player** movement (every consumer of
+`CalculateDeltaXAndY`'s deltas). The **ball is NOT delta-scaled** — its hooks
+(`#UpdateBall, 155`; the `CalculateNextBallPosition_*` / `AdjustDeltaZ_2` bodies in
+`controls.cpp` are all `#if(0)`) are disabled; the ball rides the §3 physics
+constants (gravity 3291, etc.) instead.
+
+⚠️ The DOS factor is **41/64 ≈ 0.641**, *below* the naive `50/70 = 0.714` — port
+swos-2020's **exact 41/64**, not the frame-ratio guess.
+
+**Authenticity note:** swos-2020 *injects* this scale; the raw retail DOS
+`MovePlayer` (§8.2) has none (players 1.4× faster). So 41/64 is swos-2020's
+deliberate normalization, not baked into the original DOS binary — but it IS what
+the reference does, and it is exactly the "missing movement scale" the test team
+reported.
+
+### 8.3-port — what OUR port must add (small + clean)
+
+Our `CalculateDeltaXAndY` is one C function (`src/math68k.c`). swos-2020's hook
+injects at its END (offset 125), so the faithful port is: at the end of
+`CalculateDeltaXAndY`, multiply `outDeltaX`/`outDeltaY` by the active game-style
+factor (41/64 DOS-70 / 50/60 Amiga-60 / 1 otherwise). That reproduces the hook
+exactly — every mover using those deltas is scaled, just like swos-2020. Ball
+stays on the §3 constants (already applied by `ApplyGameStyle()`).
+
+### 8.4 Amiga 60 Hz — `speed_factor` is NOT good enough; decouple instead
+
+For an **authentic** Amiga 60 Hz mode, `speed_factor 0.833` is insufficient:
+scaling `deltaX/deltaY` by 0.833 keeps the *average* distance/second but each
+frame's delta is **fixed-point-truncated**, so discrete positions drift from the
+true 50 Hz path — it can never be bit-exact (this is exactly the tester's "needs
+decoupling"). The correct approach is **temporal decoupling**:
+
+1. Run the game **logic at a fixed 50 Hz timestep** (accumulate real time; step
+   the sim once per 20 ms) — byte-identical to the Amiga.
+2. **Render at 60 Hz**, drawing each sprite / the ball / the camera at an
+   **interpolated** position `prev + (curr - prev) × alpha`, where `alpha` is the
+   fraction of the way to the next logic step. (Store prev+curr per entity.)
+
+Result: exact 50 Hz gameplay + smooth 60 Hz visuals. This is **our own approach**
+(the reference didn't do it) and is the only way to keep Amiga gameplay authentic
+at a higher refresh. Cost: an interpolated render layer (all match-render position
+reads consult prev/curr + alpha). Bigger than the DOS speed_factor, but the only
+faithful path. NOTE: `.HIL`/`.RPL` replays and the arcade attract reels are
+frame-rate-tagged (§7.6) — a decoupled loop must record/replay at the logic rate.
 
 ## Authoritative swos-2020 files
 - `src/options.cpp` — `setGameStyleVariables()` (1563-1843, THE table),
