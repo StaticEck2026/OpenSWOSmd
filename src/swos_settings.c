@@ -90,6 +90,11 @@ static int handler(void *user, const char *section,
             } else {
                 opts->res_w = 0; opts->res_h = 0;
             }
+        } else if (eqi(name, "screen")) {
+            /* Which monitor to open on (0 = primary). Out-of-range is clamped to
+             * a valid display at init, so a stale index just falls back to 0. */
+            int n = atoi(value);
+            if (n >= 0) opts->screen = n;
         }
     } else if (eqi(section, "audio")) {
         if (eqi(name, "mode")) {
@@ -196,7 +201,7 @@ static const char *section_intro(const char *sec)
 /* Fill `items` with the canonical list and return the count. `vbuf` provides
  * scratch storage for the three non-constant values (resolution, scale,
  * game_seconds) and must outlive any use of `items`. */
-static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char vbuf[3][24])
+static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char vbuf[4][24])
 {
     int scale_now = Platform_GetWindowScale();
     PlatformFullscreenMode fs_now = Platform_GetFullscreenMode();
@@ -208,6 +213,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         snprintf(vbuf[0], 24, "auto");
     snprintf(vbuf[1], 24, "%d", scale_now);
     snprintf(vbuf[2], 24, "%d", opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45);
+    snprintf(vbuf[3], 24, "%d", opts->screen > 0 ? opts->screen : 0);
 
     int n = 0;
     items[n++] = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
@@ -215,6 +221,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
     items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render aspect, or 'auto' for the desktop. Any value works — it need not match the monitor", vbuf[0] };
+    items[n++] = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
     items[n++] = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
     items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
     items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
@@ -243,7 +250,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
 static void settings_write_full(const PlatformInitOptions *opts, const char *path)
 {
     IniEntry items[SETTINGS_MAX];
-    char vbuf[3][24];
+    char vbuf[4][24];
     int n = settings_build(opts, items, vbuf);
 
     FILE *f = fopen(path, "w");
@@ -292,7 +299,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
     if (!opts || !path) return;
 
     IniEntry items[SETTINGS_MAX];
-    char vbuf[3][24];
+    char vbuf[4][24];
     int n = settings_build(opts, items, vbuf);
 
     /* Slurp the existing file. */

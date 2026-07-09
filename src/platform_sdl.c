@@ -357,6 +357,33 @@ int Platform_Init(const PlatformInitOptions *opts)
 
     if (win_scale < 1) win_scale = 1;
     if (win_scale > 4) win_scale = 4;
+
+    /* Which monitor to open on ([video] screen=N, 0 = primary). */
+    int screen = opts ? opts->screen : 0;
+    if (screen < 0) screen = 0;
+#ifndef SWOS_WASM_BUILD
+    /* Clamp the display index to a real one, then shrink win_scale so the
+     * windowed size fits that monitor's USABLE bounds (desktop minus the
+     * taskbar/dock). Without this the fixed default (WIN_SCALE=3 →
+     * _screen_width*3 × 272*3) overflows a laptop/small screen — the "window is
+     * bigger than my monitor" report. Windowed only; fullscreen covers the
+     * display regardless. The user can still scale up with +/- to what fits. */
+    {
+        int nd = SDL_GetNumVideoDisplays();
+        if (nd < 1) nd = 1;
+        if (screen >= nd) screen = 0;
+        if (fs_mode == PLATFORM_FULLSCREEN_NONE) {
+            SDL_Rect ub;
+            if (SDL_GetDisplayUsableBounds(screen, &ub) == 0 && ub.w > 0 && ub.h > 0) {
+                while (win_scale > 1 &&
+                       ((int)_screen_width * win_scale > ub.w ||
+                        PLATFORM_SCREEN_H * win_scale > ub.h)) {
+                    win_scale--;
+                }
+            }
+        }
+    }
+#endif
 #ifdef SWOS_WASM_BUILD
     /* Web: fullscreen is browser-managed (F11) — SDL desktop-fullscreen at boot
      * is user-gesture-gated and would stretch the canvas — so force windowed
@@ -405,9 +432,12 @@ int Platform_Init(const PlatformInitOptions *opts)
         wflags |= SDL_WINDOW_FULLSCREEN;
     }
 
+    /* Open (and, for fullscreen, cover) the requested monitor. CENTERED_DISPLAY
+     * places the window on display `screen`; on WASM SDL only has display 0. */
     s_window = SDL_CreateWindow(
         SWOS_WINDOW_TITLE,
-        SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
+        SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
         _screen_width * win_scale, PLATFORM_SCREEN_H * win_scale,
         wflags);
     if (!s_window) {

@@ -197,6 +197,7 @@ int main(int argc, char **argv)
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
     opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (fill the desktop aspect) */
+    opts.screen = 0;                 /* target display index (0 = primary) */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
@@ -361,26 +362,35 @@ int main(int argc, char **argv)
      * and any arbitrary resolution works (it need not match the monitor). Needs
      * SDL_INIT_VIDEO (above); runs before the window/texture (Platform_Init below). */
     {
+        /* Clamp the requested display index ([video] screen=N) to a valid one —
+         * 0 = primary. The SAME index is used here for the render aspect AND by
+         * Platform_Init to place + size the window, so the aspect always matches
+         * the monitor the window opens on (fixes "sized from monitor 0, dropped
+         * on a different screen, overflows it" on multi-monitor rigs). */
+        int nd = SDL_GetNumVideoDisplays();
+        if (nd < 1) nd = 1;
+        if (opts.screen < 0 || opts.screen >= nd) opts.screen = 0;
+
         int dw, dh;
         if (opts.res_w > 0 && opts.res_h > 0) {
             /* SWOS.ini [video] resolution=WxH — any aspect, monitor-independent. */
             dw = opts.res_w; dh = opts.res_h;
         } else {
-            /* 'auto': derive the render aspect from the desktop, but DON'T store it
-             * back into opts — leaving res_w/res_h at 0 keeps the file's
-             * "resolution=auto" intact when Settings_Save runs (otherwise 'auto'
-             * would be rewritten as the resolved WxH). */
+            /* 'auto': derive the render aspect from the chosen display's desktop
+             * mode, but DON'T store it back into opts — leaving res_w/res_h at 0
+             * keeps the file's "resolution=auto" intact when Settings_Save runs
+             * (otherwise 'auto' would be rewritten as the resolved WxH). */
             SDL_DisplayMode dm;
             dw = 16; dh = 9;   /* 16:9 fallback if the query fails */
-            if (SDL_GetDesktopDisplayMode(0, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
+            if (SDL_GetDesktopDisplayMode(opts.screen, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
         }
         int w = (int)((long)SCREEN_HEIGHT * dw / dh);
         w = (w + 1) & ~1;                          /* round up to even */
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
         _screen_width = w;
-        fprintf(stderr, "[video] render %dx%d (resolution %dx%d, %.2f:1)\n",
-                _screen_width, SCREEN_HEIGHT, dw, dh, (double)dw / dh);
+        fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
+                _screen_width, SCREEN_HEIGHT, opts.screen, nd, dw, dh, (double)dw / dh);
     }
     _menu_draw_x_offset = WIDE_MARGIN;
 
