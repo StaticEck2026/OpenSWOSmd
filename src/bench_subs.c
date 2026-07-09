@@ -28,6 +28,7 @@
 #include "match_sim.h"
 #include "player_anim.h"
 #include "player_sprites.h"
+#include "display.h"    /* _screen_width / PITCH_VIEW_MAX_WIDTH — widescreen bench-camera fix (no-op on Amiga) */
 
 #ifdef SWOS_DEBUG_AUTOSKIP
 #endif
@@ -1452,10 +1453,26 @@ DrawBenchAndSubsMenu(void)
     if (_leavingSubsMenu == 0)
         return;
 
-    d0 = _benchXLimit;
-    d0 += 8;
-    if (d0 > _cameraX.s.i)
-        goto draw_bench;
+    /* Clear the leaving-subs camera lock once the view has panned back from the
+     * bench. The original test (keep locked while cameraX < _benchXLimit+8) waits
+     * for the camera to pan right until the bench is off the left edge. On an
+     * ULTRAWIDE render the view is nearly as wide as the whole pitch, so
+     * MoveCamera centres the camera (SetCameraCoordinates clamps to panRange/2)
+     * and cameraX can NEVER reach _benchXLimit+8 — so this never fired,
+     * _leavingSubsMenu stayed set, and MoveCamera kept the camera pinned to the
+     * bench-return target (targetY=449), killing the vertical ball-follow:
+     * "camera stuck mid-pitch after calling the bench" (tester at 3440x1440 ->
+     * _screen_width 650 -> camera centres at cameraX 11, 11 < 35 forever). So
+     * only keep waiting while the camera can ACTUALLY reach the threshold
+     * (panRange/2 >= it); once it's centred as far as it will go, clear. On 4:3 /
+     * normal widescreen / Amiga the camera does reach it (panRange/2 = 168 >= 35),
+     * so the original bench-slide-off pan is preserved unchanged. */
+    {
+        int16_t threshold = (int16_t)(_benchXLimit + 8);
+        int16_t panRange  = (int16_t)(PITCH_VIEW_MAX_WIDTH - _screen_width);
+        if (threshold > _cameraX.s.i && panRange / 2 >= threshold)
+            goto draw_bench;
+    }
 
     _leavingSubsMenu = 0;
     return;
