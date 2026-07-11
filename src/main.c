@@ -196,6 +196,7 @@ int main(int argc, char **argv)
     opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
+    opts.render_driver[0] = '\0'; /* "" = auto (SDL default backend) */
     opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (fill the desktop aspect) */
     opts.screen = 0;                 /* target display index (0 = primary) */
     opts.audio_mono = 1;

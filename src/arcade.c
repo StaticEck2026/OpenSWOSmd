@@ -123,9 +123,8 @@ extern void     ProcessImageCommandStream(const uint16_t *cmdBuf, uint8_t *workB
 #define ARC_REEL_DIR      "grafs_arcade/attract_mode"
 #define ARC_MAX_REELS     64
 
-static char     s_reels[ARC_MAX_REELS][64];
+static char     s_reels[ARC_MAX_REELS][288];  /* path relative to attract_mode/ (may include a subdir) */
 static int      s_reelCount;
-static char     s_reelDir[160] = ARC_REEL_DIR;  /* resolved per gameplay mode (see below) */
 static uint32_t s_rngState = 0x1234abcdu;
 static int      s_credits;     /* total credits in the cabinet */
 static int      s_startGame;   /* pending game: 0 none, 1 one-player, 2 two-player */
@@ -183,62 +182,73 @@ static int arc_ends_with(const char *s, const char *suf)
     return ls >= lf && strcasecmp(s + ls - lf, suf) == 0;
 }
 
-/* Pick the reel subdir for the current gameplay mode: attract_mode/dos (DOS
- * gameplay) or attract_mode/amiga (Amiga). Reels are recorded at the gameplay FPS
- * (DOS 70 / Amiga 50), so they must match _gDosGameplay. Falls back to
- * attract_mode/ itself if the mode subdir doesn't exist. */
-static void arc_resolve_reel_dir(void)
+/* Scan one directory under attract_mode/ for .HIL/.RPL reels, appending each to
+ * s_reels as a path RELATIVE TO attract_mode/. `sub` is "" for the flat folder
+ * itself, or a subdir name ("dos"/"amiga") for the legacy per-mode split. */
+static void arc_scan_one_dir(const char *sub)
 {
-    extern int _gDosGameplay;
-    char cand[160];
-    snprintf(cand, sizeof cand, "%s/%s", ARC_REEL_DIR, _gDosGameplay ? "dos" : "amiga");
-    DIR *d = opendir(cand);
-    if (d) { closedir(d); snprintf(s_reelDir, sizeof s_reelDir, "%s", cand); }
-    else   { snprintf(s_reelDir, sizeof s_reelDir, "%s", ARC_REEL_DIR); }
-}
-
-/* Scan the resolved reel dir for .HIL/.RPL reels. Returns the count. */
-static int arc_scan_reels(void)
-{
-    arc_resolve_reel_dir();
-    s_reelCount = 0;
-    DIR *d = opendir(s_reelDir);
-    if (!d) {
-        fprintf(stderr, "[arcade] no attract reels: cannot open %s\n", s_reelDir);
-        return 0;
-    }
+    char dir[224];
+    if (sub[0]) snprintf(dir, sizeof dir, "%s/%s", ARC_REEL_DIR, sub);
+    else        snprintf(dir, sizeof dir, "%s", ARC_REEL_DIR);
+    DIR *d = opendir(dir);
+    if (!d) return;
     struct dirent *e;
     while ((e = readdir(d)) != NULL && s_reelCount < ARC_MAX_REELS) {
         if (e->d_name[0] == '.') continue;
-        if (arc_ends_with(e->d_name, ".HIL") || arc_ends_with(e->d_name, ".RPL")) {
-            /* The .HIL converter reads the (larger) DOS source into _hilFileBuffer
-             * (192254 B), so skip reels too big for it; RPLs use the 2.76 MB buffer. */
-            char p[224];
-            snprintf(p, sizeof p, "%s/%s", s_reelDir, e->d_name);
-            struct stat st;
-            uint32_t limit = arc_ends_with(e->d_name, ".RPL") ? (2700u * 1024u) : 192254u;
-            if (stat(p, &st) == 0 && (uint32_t)st.st_size > limit) {
-                fprintf(stderr, "[arcade] skip oversized reel %s (%ld B)\n",
-                        e->d_name, (long)st.st_size);
-                continue;
-            }
-            snprintf(s_reels[s_reelCount], sizeof s_reels[0], "%s", e->d_name);
-            s_reelCount++;
+        if (!(arc_ends_with(e->d_name, ".HIL") || arc_ends_with(e->d_name, ".RPL")))
+            continue;
+        /* The .HIL converter reads the (larger) DOS source into _hilFileBuffer
+         * (192254 B), so skip reels too big for it; RPLs use the 2.76 MB buffer. */
+        char p[512];
+        snprintf(p, sizeof p, "%s/%s", dir, e->d_name);
+        struct stat st;
+        uint32_t limit = arc_ends_with(e->d_name, ".RPL") ? (2700u * 1024u) : 192254u;
+        if (stat(p, &st) == 0 && (uint32_t)st.st_size > limit) {
+            fprintf(stderr, "[arcade] skip oversized reel %s (%ld B)\n",
+                    e->d_name, (long)st.st_size);
+            continue;
         }
+        if (sub[0]) snprintf(s_reels[s_reelCount], sizeof s_reels[0], "%s/%s", sub, e->d_name);
+        else        snprintf(s_reels[s_reelCount], sizeof s_reels[0], "%s", e->d_name);
+        s_reelCount++;
     }
     closedir(d);
-    fprintf(stderr, "[arcade] %d attract reel(s) in %s\n", s_reelCount, s_reelDir);
+}
+
+/* Collect ALL attract reels from a SINGLE folder — attract_mode/ — regardless of
+ * gameplay mode. Each reel self-describes its playback rate (the gameStyle byte
+ * at file offset 5; see dos_replay_load.c replay_fps_from_gamestyle +
+ * Platform_ActivePacingFps), so the old per-mode dos/ amiga/ split is no longer
+ * needed to keep speed correct: a 70 Hz PC reel and a 50 Hz Amiga reel can sit
+ * side by side and each plays at its own rate. The legacy dos/ and amiga/
+ * subdirs are still scanned so existing setups keep working without moving files.
+ * Returns the count. */
+static int arc_scan_reels(void)
+{
+    s_reelCount = 0;
+    arc_scan_one_dir("");        /* flat attract_mode/ reels — the recommended layout */
+    arc_scan_one_dir("dos");     /* legacy per-mode split (back-compat) */
+    arc_scan_one_dir("amiga");
+    fprintf(stderr, "[arcade] %d attract reel(s) in %s (flat + legacy dos/amiga)\n",
+            s_reelCount, ARC_REEL_DIR);
     return s_reelCount;
 }
 
-/* Load reel `name` (relative to attract_mode/) into the replay engine. The
- * direct asset dispatch resolves paths relative to bin/ and has no ~91 KB
- * frontbuffer-stage cap, so it handles the multi-MB RPLs. Returns 0 on success. */
+/* Load reel `name` (path relative to attract_mode/, possibly including a legacy
+ * dos/ or amiga/ subdir) into the replay engine. The direct asset dispatch
+ * resolves paths relative to bin/ and has no ~91 KB frontbuffer-stage cap, so it
+ * handles the multi-MB RPLs. Returns 0 on success. */
 static int arc_load_reel(const char *name)
 {
     char path[224];
-    snprintf(path, sizeof path, "%s/%s", s_reelDir, name);
+    snprintf(path, sizeof path, "%s/%s", ARC_REEL_DIR, name);
     DosReplay_ClearRpl();
+
+    /* Reset to the native-Amiga rate; the DOS/2020 converter bumps it to 70. This
+     * clears a stale 70 if the previous reel was a DOS replay and this one is a
+     * native Amiga .HIL (which never runs the converter). Playback is then paced
+     * at the reel's own framerate regardless of the arcade gameplay-mode setting. */
+    { extern int _replayPlaybackFps; _replayPlaybackFps = 50; }
 
     if (arc_ends_with(name, ".RPL"))
         return DosReplay_LoadRpl((uint8_t *)path);

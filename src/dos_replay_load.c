@@ -26,6 +26,8 @@
 
 #ifdef SWOS_SDL_BUILD
 
+#include <stdio.h>          /* fprintf(stderr, …) → SWOS.log: log each reel's gameStyle→fps */
+
 extern uint8_t  _hilFileBuffer[];
 extern uint16_t _hilNumGoals, _hilTeam1Goals, _hilTeam2Goals;
 extern uint16_t _hilPitchNumber, _hilMaxSubstitutes;
@@ -94,6 +96,39 @@ static void convert_team(const uint8_t *dosTeam, uint8_t *ourTeam)
  * mapping differs, so the core replay/render path is untouched. */
 int _replayRecordingIsWide = 0;
 
+/* Native playback framerate (Hz) of the currently-loaded replay. The host paces
+ * LOADED-replay playback (Platform_ActivePacingFps in platform_sdl.c) at THIS
+ * rate rather than the live-match gameplay setting, so a replay plays at its
+ * AUTHORED speed whether the game is in Amiga-50 or DOS-70 gameplay mode.
+ *
+ * DOS / SWOS-2020 recordings store the authored rate PER FILE as a "gameStyle"
+ * byte at file offset 5 (see replay_fps_from_gamestyle); the DOS loaders read it
+ * and set this. Native Amiga recordings have no such byte and run at 50 Hz — the
+ * default, which the load entry points (file_io LoadHilFile / arcade
+ * arc_load_reel) also reset before dispatch so a native Amiga .HIL after a DOS
+ * reel doesn't inherit a stale per-file rate. */
+int _replayPlaybackFps = 50;
+
+extern int DosGameplay_TargetFps(void);   /* current gameplay-mode rate (70 DOS / 50 Amiga) */
+
+/* Map a SWOS-2020 replay gameStyle byte (file offset 5) to its playback Hz,
+ * mirroring swos-2020 frameDelayForReplay() (video/render.cpp): 0 = PC DOS 70,
+ * 1 = Amiga 50, 2 = Moon Soccer 50, >=3 = Amiga-60 -> 60. The 0xF4 (244)
+ * sentinel means "no per-file rate — use the current game style", which for us
+ * is the live gameplay setting. These reels are recorded per-style, NOT all at
+ * 70: the arcade attract_mode/{dos,amiga} folders mix gameStyle 0 and 1, so the
+ * rate MUST come from the file, not the folder or the format. */
+static int replay_fps_from_gamestyle(uint8_t gs)
+{
+    switch (gs) {
+    case 0:    return 70;   /* PC DOS */
+    case 1:    return 50;   /* Amiga */
+    case 2:    return 50;   /* Moon Soccer */
+    case 0xF4: return DosGameplay_TargetFps();   /* 244 = use current game style */
+    default:   return (gs >= 3) ? 60 : 50;       /* Amiga 60 FPS (beta styles) */
+    }
+}
+
 static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst)
 {
     uint32_t si = 0, di = 0;
@@ -131,6 +166,9 @@ static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst
         di += 4;
     }
     _replayRecordingIsWide = isWide;
+    /* _replayPlaybackFps is set by the caller from the file's gameStyle byte
+     * (offset 5) — see DosReplay_ConvertHilInPlace / DosReplay_LoadRpl — because
+     * this converter no longer has the header (src already points past it). */
     return di;
 }
 
@@ -139,6 +177,11 @@ static uint32_t convert_frames(const uint8_t *src, uint32_t srcLen, uint8_t *dst
 int DosReplay_ConvertHilInPlace(uint32_t fileSize)
 {
     uint8_t *b = _hilFileBuffer;
+
+    /* Authored playback rate from the gameStyle byte at file offset 5. */
+    _replayPlaybackFps = replay_fps_from_gamestyle(b[5]);
+    fprintf(stderr, "[replay] DOS .HIL gameStyle=%u -> %d fps\n",
+            (unsigned)b[5], _replayPlaybackFps);
 
     /* 1. read DOS header fields (before we overwrite anything) */
     uint16_t numScenes = (uint16_t)(b[DOS_NUMSCENES_OFF] | (b[DOS_NUMSCENES_OFF+1] << 8));
@@ -208,6 +251,11 @@ int DosReplay_LoadRpl(uint8_t *filename)
         return 1;
 
     uint8_t *b = s_rplBuffer;
+
+    /* Authored playback rate from the gameStyle byte at file offset 5. */
+    _replayPlaybackFps = replay_fps_from_gamestyle(b[5]);
+    fprintf(stderr, "[replay] DOS .RPL gameStyle=%u -> %d fps\n",
+            (unsigned)b[5], _replayPlaybackFps);
 
     /* 1. read the DOS header into locals before we overwrite it */
     uint16_t t1g     = (uint16_t)(b[DOS_T1GOALS_OFF] | (b[DOS_T1GOALS_OFF+1] << 8));

@@ -79,7 +79,21 @@ extern uint16_t _quitToDos;
 /* ---- SDL state ----------------------------------------------------- */
 static SDL_Window   *s_window;
 static SDL_Renderer *s_renderer;
-static SDL_Texture  *s_texture;          /* RGBA8888 streaming, 336x272 */
+/* A small RING of streaming textures. We upload into a DIFFERENT one each frame so
+ * we never lock/refill the texture the GPU is still sampling from a recent frame.
+ * That per-frame resource contention is what stalls SDL's D3D11 texture-upload
+ * path (~45 ms/frame) when the frames are too cheap to hide it (arcade replays);
+ * separating the CPU's upload target from the GPU's read target keeps the pipeline
+ * flowing. Ring depth 4 stays a frame clear of D3D11's default 3-frame latency
+ * queue. Harmless on OpenGL (which never stalled). */
+#define PLATFORM_TEX_RING 4
+static SDL_Texture  *s_textures[PLATFORM_TEX_RING];  /* RGBA8888 streaming, _screen_width x 272 */
+static int           s_tex_idx;
+/* Cached-RAM staging buffer: ALL per-pixel work (8bpp→RGBA, overlay blend) happens
+ * here, then one SDL_UpdateTexture uploads it. Writing/reading SDL_LockTexture's
+ * mapped memory directly is ~100× slower on D3D11 (write-combined/uncached), which
+ * made the render 43 ms/frame; normal RAM makes it ~sub-ms. Sized _screen_width×272. */
+static uint32_t     *s_frame_rgba;
 static SDL_Color     s_palette[256];
 static SDL_mutex    *s_render_mtx;       /* serializes Platform_RenderFrame calls */
 
@@ -240,6 +254,24 @@ static SDL_TimerID s_tick_timer;
 static SDL_mutex  *s_isr_mtx;          /* serialises _Int3TimerHandler */
 static Uint32      s_last_isr_ms;      /* last ISR fire time, for throttle */
 
+/* Active host pacing rate (Hz). Normally the gameplay-mode target
+ * (DosGameplay_TargetFps: 70 DOS / 50 Amiga). BUT while a LOADED replay is
+ * playing (_playHighlightFlag), pace at the replay's OWN recorded framerate
+ * (_replayPlaybackFps) so a DOS RPL always plays at 70 Hz and a native Amiga
+ * .HIL at 50 Hz, independent of the current gameplay setting. The in-match
+ * instant replay (PlayInstantReplayLoop) does NOT set _playHighlightFlag, so it
+ * correctly stays on the gameplay rate — it was recorded at that rate. Every
+ * per-frame pacing site below reads this so the main frame clock, the worker
+ * tick, and the ISR throttle all agree during replay playback. */
+static int Platform_ActivePacingFps(void)
+{
+    extern volatile uint16_t _playHighlightFlag;
+    extern int _replayPlaybackFps;
+    if (_playHighlightFlag != 0 && _replayPlaybackFps > 0)
+        return _replayPlaybackFps;
+    return DosGameplay_TargetFps();
+}
+
 /* Run the Amiga Level-3 VBlank ISR body, throttled to ~50 Hz max and
  * guarded by a mutex so callers from different threads serialise. The
  * Amiga IRQ was hardware-preemptive at 50 Hz; on SDL we approximate that
@@ -258,8 +290,9 @@ void RunInt3HandlerThrottled(void)
      * timeout) drain at CPU speed and stop depending on the starved timer
      * thread. The loop that calls this exits as soon as the tick advances, so
      * it runs once or twice, not unbounded. */
-    /* Throttle just under one frame interval: 18 ms @ 50 Hz, ~12 ms @ 70 Hz (DOS). */
-    const Uint32 thr = s_harness_turbo ? 0u : (Uint32)(1000 / DosGameplay_TargetFps() - 2);
+    /* Throttle just under one frame interval: 18 ms @ 50 Hz, ~12 ms @ 70 Hz (DOS
+     * or a 70 Hz replay). */
+    const Uint32 thr = s_harness_turbo ? 0u : (Uint32)(1000 / Platform_ActivePacingFps() - 2);
     Uint32 now = SDL_GetTicks();
     /* Cheap pre-check before the lock — most calls will be too soon. */
     if (now - s_last_isr_ms < thr) return;
@@ -332,10 +365,11 @@ static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
      * ONLY from this thread — drains in a fraction of a second instead of
      * ~1–2 min. With the RunInt3HandlerThrottled throttle also at 0, every
      * fire advances the tick. */
-    /* Re-arm at the active style's rate so a DOS-gameplay toggle re-paces the
-     * worker tick: 1000/70 ≈ 14 ms (DOS) or 1000/50 = 20 ms (Amiga). */
+    /* Re-arm at the active rate so a DOS-gameplay toggle — or a loaded replay's
+     * own framerate — re-paces the worker tick: 1000/70 ≈ 14 ms (DOS / 70 Hz
+     * replay) or 1000/50 = 20 ms (Amiga). */
     (void)interval;
-    return s_harness_turbo ? (Uint32)1 : (Uint32)(1000 / DosGameplay_TargetFps());
+    return s_harness_turbo ? (Uint32)1 : (Uint32)(1000 / Platform_ActivePacingFps());
 }
 
 extern void Platform_RewireCustom(void);
@@ -537,6 +571,19 @@ int Platform_Init(const PlatformInitOptions *opts)
         s_vsync_enabled  = vsync;
     }
 
+    /* Optional accel-backend override ([video] render_driver). SDL_CreateRenderer
+     * with index -1 picks the first driver matching SDL_HINT_RENDER_DRIVER; unset
+     * = SDL's platform default (D3D11 on Windows). On Windows the D3D11 backend
+     * serialises presents on CPU-idle frames, so cheap-per-frame content like the
+     * arcade attract replays crawls even though live play is fine — "opengl" sides
+     * around it. The env var SDL_RENDER_DRIVER overrides this too. */
+    if (opts && opts->render_driver[0] &&
+        SDL_strcasecmp(opts->render_driver, "auto") != 0) {
+        SDL_SetHint(SDL_HINT_RENDER_DRIVER, opts->render_driver);
+        fprintf(stderr, "[render] requested driver '%s' via [video] render_driver\n",
+                opts->render_driver);
+    }
+
     s_renderer = SDL_CreateRenderer(s_window, -1, rflags);
     if (!s_renderer) {
         /* Fall back to software if the requested mode failed. */
@@ -568,13 +615,21 @@ int Platform_Init(const PlatformInitOptions *opts)
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_EventState(SDL_MOUSEMOTION, SDL_DISABLE);
 
-    s_texture = SDL_CreateTexture(
-        s_renderer,
-        SDL_PIXELFORMAT_ARGB8888,
-        SDL_TEXTUREACCESS_STREAMING,
-        _screen_width, PLATFORM_SCREEN_H);
-    if (!s_texture) {
-        fprintf(stderr, "SDL_CreateTexture: %s\n", SDL_GetError());
+    s_tex_idx = 0;
+    for (int ti = 0; ti < PLATFORM_TEX_RING; ti++) {
+        s_textures[ti] = SDL_CreateTexture(
+            s_renderer,
+            SDL_PIXELFORMAT_ARGB8888,
+            SDL_TEXTUREACCESS_STREAMING,
+            _screen_width, PLATFORM_SCREEN_H);
+        if (!s_textures[ti]) {
+            fprintf(stderr, "SDL_CreateTexture[%d]: %s\n", ti, SDL_GetError());
+            return -1;
+        }
+    }
+    s_frame_rgba = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
+    if (!s_frame_rgba) {
+        fprintf(stderr, "frame buffer alloc failed (%d x %d)\n", _screen_width, PLATFORM_SCREEN_H);
         return -1;
     }
 
@@ -631,7 +686,7 @@ int Platform_Init(const PlatformInitOptions *opts)
      * audio every frame, so this fallback timer is redundant (and pthreads on
      * wasm need SharedArrayBuffer/COOP+COEP — avoided entirely). */
     SDL_InitSubSystem(SDL_INIT_TIMER);
-    s_tick_timer = SDL_AddTimer((Uint32)(1000 / DosGameplay_TargetFps()), tick_timer_cb, NULL);
+    s_tick_timer = SDL_AddTimer((Uint32)(1000 / Platform_ActivePacingFps()), tick_timer_cb, NULL);
 #endif
 
     return 0;
@@ -645,7 +700,9 @@ void Platform_Shutdown(void)
     InputSDL_Shutdown();
     AudioSDL_Shutdown();
 
-    if (s_texture)  { SDL_DestroyTexture(s_texture);   s_texture = NULL; }
+    for (int ti = 0; ti < PLATFORM_TEX_RING; ti++)
+        if (s_textures[ti]) { SDL_DestroyTexture(s_textures[ti]); s_textures[ti] = NULL; }
+    if (s_frame_rgba) { SDL_free(s_frame_rgba); s_frame_rgba = NULL; }
     if (s_renderer) { SDL_DestroyRenderer(s_renderer); s_renderer = NULL; }
     if (s_window)   { SDL_DestroyWindow(s_window);     s_window = NULL; }
 }
@@ -1105,66 +1162,69 @@ static void render_frame_impl(int pump_full)
     AudioSDL_Tick();
 #endif
 
-    if (!s_renderer || !s_texture) return;
+    if (!s_renderer || !s_textures[0]) return;
 
     SDL_LockMutex(s_render_mtx);
 
-    /* Render the current Amiga framebuffer. */
+    /* Upload into the next texture in the ring (not the one the GPU is still
+     * sampling from a recent frame) — see the s_textures[] comment. */
+    SDL_Texture *tex = s_textures[s_tex_idx];
+    s_tex_idx = (s_tex_idx + 1) % PLATFORM_TEX_RING;
+
+    /* Render the current Amiga framebuffer INTO CACHED RAM (s_frame_rgba), never
+     * into the texture's mapped memory — that's the D3D11 write-combined trap. The
+     * buffer is tightly packed so the row pitch in pixels is exactly _screen_width. */
     refresh_palette_from_copper();
 
-    void *pixels;
-    int    pitch;
-    if (SDL_LockTexture(s_texture, NULL, &pixels, &pitch) == 0) {
-        /* Arcade flag-select / service screens render a full RGBA frame; when one
-         * is active it replaces the normal 8bpp path. Otherwise convert the
-         * framebuffer and (in attract) composite the logo/INSERT-COIN overlay. */
-        int arcade_full = 0;
+    uint32_t *fb   = s_frame_rgba;
+    const int fbpx = _screen_width;              /* row pitch, in pixels */
+
+    /* Arcade flag-select / service screens render a full RGBA frame; when one is
+     * active it replaces the normal 8bpp path. Otherwise convert the framebuffer
+     * and (in attract) composite the logo/INSERT-COIN overlay. */
+    int arcade_full = 0;
+    { extern int _gArcadeMode;
+      extern int Arcade_RenderFullScreen(uint32_t *, int, int, int);
+      if (_gArcadeMode)
+          arcade_full = Arcade_RenderFullScreen(fb, fbpx, _screen_width, PLATFORM_SCREEN_H); }
+    if (!arcade_full) {
+        chunky_to_rgba(fb, fbpx);
         { extern int _gArcadeMode;
-          extern int Arcade_RenderFullScreen(uint32_t *, int, int, int);
+          extern void Arcade_CompositeOverlay(uint32_t *, int, int, int);
           if (_gArcadeMode)
-              arcade_full = Arcade_RenderFullScreen((uint32_t *)pixels, pitch / 4,
-                                                    _screen_width, PLATFORM_SCREEN_H); }
-        if (!arcade_full) {
-            chunky_to_rgba((uint32_t *)pixels, pitch / 4);
-            { extern int _gArcadeMode;
-              extern void Arcade_CompositeOverlay(uint32_t *, int, int, int);
-              if (_gArcadeMode)
-                  Arcade_CompositeOverlay((uint32_t *)pixels, pitch / 4,
-                                          _screen_width, PLATFORM_SCREEN_H); }
-        }
-        if (s_dump_frames && (pitch == _screen_width * 4))
-            maybe_dump_frame((uint32_t *)pixels);
-        /* Only write the F12 screenshot from the main-thread render (pump_full). The
-         * SDL_AddTimer worker renders as a software-renderer fallback when the main thread
-         * stalls — e.g. across the previous screenshot's blocking PNG write — and at that
-         * moment it can grab the alternate double-buffer, whose own cameraYMod320 scroll/redraw
-         * state differs, which is what produced the every-other-shot vertical flip. Deferring
-         * to the main thread makes every capture read the same just-completed buffer the
-         * display does. The request flag persists until the main thread services it. */
-        if (pump_full && s_screenshot_request && (pitch == _screen_width * 4)) {
-            write_screenshot((uint32_t *)pixels);
-            s_screenshot_request = 0;
-        }
-        if (s_screenshot_interval > 0 && (pitch == _screen_width * 4)) {
-            static int frame_mod;
-            if (++frame_mod >= s_screenshot_interval) {
-                frame_mod = 0;
-                if (s_screenshot_auto_count < 200) {
-                    write_screenshot((uint32_t *)pixels);
-                    s_screenshot_auto_count++;
-                } else if (s_screenshot_auto_count == 200) {
-                    fprintf(stderr,
-                        "[screenshot] interval mode hit 200-shot cap; disabling\n");
-                    s_screenshot_interval = 0;
-                    s_screenshot_auto_count++;
-                }
-            }
-        }
-        SDL_UnlockTexture(s_texture);
+              Arcade_CompositeOverlay(fb, fbpx, _screen_width, PLATFORM_SCREEN_H); }
     }
 
+    /* Screenshots read the packed RAM buffer directly (always the right stride now,
+     * so the old pitch-mismatch skip is gone). Only write the F12 shot from the
+     * main-thread render (pump_full); the timer-thread fallback would race the draw. */
+    if (s_dump_frames)
+        maybe_dump_frame(fb);
+    if (pump_full && s_screenshot_request) {
+        write_screenshot(fb);
+        s_screenshot_request = 0;
+    }
+    if (s_screenshot_interval > 0) {
+        static int frame_mod;
+        if (++frame_mod >= s_screenshot_interval) {
+            frame_mod = 0;
+            if (s_screenshot_auto_count < 200) {
+                write_screenshot(fb);
+                s_screenshot_auto_count++;
+            } else if (s_screenshot_auto_count == 200) {
+                fprintf(stderr,
+                    "[screenshot] interval mode hit 200-shot cap; disabling\n");
+                s_screenshot_interval = 0;
+                s_screenshot_auto_count++;
+            }
+        }
+    }
+
+    /* Hand the finished frame to the GPU in ONE bulk upload from cached RAM. */
+    SDL_UpdateTexture(tex, NULL, fb, _screen_width * 4);
+
     SDL_RenderClear(s_renderer);
-    SDL_RenderCopy(s_renderer, s_texture, NULL, NULL);
+    SDL_RenderCopy(s_renderer, tex, NULL, NULL);
     SDL_RenderPresent(s_renderer);
 
     SDL_UnlockMutex(s_render_mtx);
@@ -1209,7 +1269,7 @@ int Platform_VBlank(void)
      * an accumulating deadline that self-corrects for setTimeout jitter; if a slow
      * frame overruns, resync instead of building up a backlog (no spiral of death). */
     {
-        double period = 1000.0 / DosGameplay_TargetFps();
+        double period = 1000.0 / Platform_ActivePacingFps();
         static double s_frame_deadline;
         double now = emscripten_get_now();
         if (s_frame_deadline <= 0.0) s_frame_deadline = now;   /* first frame */
@@ -1249,8 +1309,9 @@ int Platform_VBlank(void)
     if (s_harness_turbo)
         return _quitToDos ? 1 : 0;
 
-    /* Read the frame rate live so an in-game DOS-gameplay toggle re-paces. */
-    k_frame_secs = 1.0 / (double)DosGameplay_TargetFps();
+    /* Read the frame rate live so an in-game DOS-gameplay toggle — or a loaded
+     * replay's own recorded framerate — re-paces each frame. */
+    k_frame_secs = 1.0 / (double)Platform_ActivePacingFps();
     s_next_frame_perf += (Uint64)((double)s_perf_freq * k_frame_secs);
     Uint64 now = SDL_GetPerformanceCounter();
 

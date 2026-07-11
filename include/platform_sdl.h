@@ -64,6 +64,9 @@ typedef struct {
     PlatformFullscreenMode fullscreen;       /* none / desktop / exclusive */
     PlatformRendererMode   renderer;         /* software / accelerated */
     int                    vsync;            /* 0 = off (default), 1 = on (accel only) */
+    char                   render_driver[16];/* accel backend override: "" / "auto" = SDL default (D3D11 on Windows);
+                                              * "opengl" / "direct3d11" / "direct3d" / "metal" force one. Windows D3D11
+                                              * serialises presents on CPU-idle frames (replays crawl); "opengl" avoids it. */
     int                    res_w, res_h;     /* resolution driving the render aspect; 0,0 = auto (desktop). PC-only */
     int                    screen;           /* target display index (0 = primary). The window opens on / fullscreens on this monitor and its size is auto-fitted to that screen's usable bounds. Clamped to a valid display. PC-only */
     int                    audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga panned */

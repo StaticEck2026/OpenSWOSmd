@@ -73,6 +73,8 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "vsync")) {
             int b;
             if (parse_bool(value, &b)) opts->vsync = b;
+        } else if (eqi(name, "render_driver")) {
+            snprintf(opts->render_driver, sizeof opts->render_driver, "%s", value);
         } else if (eqi(name, "fullscreen")) {
             if      (eqi(value, "off"))       opts->fullscreen = PLATFORM_FULLSCREEN_NONE;
             else if (eqi(value, "desktop"))   opts->fullscreen = PLATFORM_FULLSCREEN_DESKTOP;
@@ -218,6 +220,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     int n = 0;
     items[n++] = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
     items[n++] = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
+    items[n++] = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
     items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render aspect, or 'auto' for the desktop. Any value works — it need not match the monitor", vbuf[0] };
@@ -287,12 +290,29 @@ static void copy_value(const char *v, char *out, size_t outsz)
     out[len] = '\0';
 }
 
+/* Write every still-missing key that belongs to section `sec` (comment + value),
+ * marking each seen. Called when Pass 2 leaves a section block, so a missing key
+ * is inserted into the FIRST existing occurrence of its section rather than in a
+ * brand-new duplicate section at the end of the file. */
+static void flush_section_missing(FILE *out, const char *sec,
+                                  const IniEntry *items, int n, unsigned char *seen)
+{
+    for (int k = 0; k < n; k++) {
+        if (seen[k] || !eqi(items[k].section, sec)) continue;
+        if (items[k].comment) fprintf(out, "%s\n", items[k].comment);
+        fprintf(out, "%s=%s\n", items[k].key, items[k].value);
+        seen[k] = 1;
+    }
+}
+
 /*
  * Non-destructive save. If `path` is absent, write a full default file.
  * Otherwise rewrite it line-by-line: update ONLY the values of known keys whose
- * value changed, append keys the file is missing, and preserve everything else
- * (comments, blank lines, commented-out keys, unknown keys, ordering) verbatim.
- * If nothing changed and nothing is missing, the file is left untouched.
+ * value changed, drop duplicate occurrences of a known key, add each missing key
+ * to the end of the FIRST block of its section (a new section only if the file
+ * has none), and preserve everything else (comments, blank lines, commented-out
+ * keys, unknown keys, ordering) verbatim. If nothing changed, nothing is missing
+ * and nothing is duplicated, the file is left untouched.
  */
 void Settings_Save(const PlatformInitOptions *opts, const char *path)
 {
@@ -342,6 +362,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
             memcpy(key, t, (size_t)klen); key[klen] = '\0';
             for (int k = 0; k < n; k++) {
                 if (eqi(cur_sec, items[k].section) && eqi(key, items[k].key)) {
+                    if (seen[k]) { dirty = 1; break; }  /* duplicate known key -> clean it */
                     seen[k] = 1;
                     char fileval[64];
                     copy_value(eq + 1, fileval, sizeof fileval);
@@ -368,6 +389,10 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         while (*t == ' ' || *t == '\t') t++;
 
         if (*t == '[') {                                   /* section header */
+            /* Leaving cur_sec: drop any of its still-missing keys in HERE, at the
+             * end of this (the first) block of the section — not in a duplicate
+             * section appended to the file's tail. */
+            if (cur_sec[0]) flush_section_missing(out, cur_sec, items, n, seen);
             const char *e = strchr(t, ']');
             if (e) {
                 int len = (int)(e - (t + 1));
@@ -394,6 +419,8 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
             if (eqi(cur_sec, items[k].section) && eqi(key, items[k].key)) { idx = k; break; }
         if (idx < 0) { fputs(ln, out); continue; }         /* unknown key -> verbatim */
 
+        if (seen[idx]) continue;    /* duplicate of a known key already written -> drop it */
+
         seen[idx] = 1;
         char fileval[64];
         copy_value(eq + 1, fileval, sizeof fileval);
@@ -405,8 +432,12 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
             fprintf(out, "%s\n", items[idx].value);        /* ...replace the value */
         }
     }
+    /* EOF: flush the final section's still-missing keys into its block. */
+    if (cur_sec[0]) flush_section_missing(out, cur_sec, items, n, seen);
 
-    /* Append keys the file didn't have. */
+    /* Append keys whose section never appeared in the file at all (a genuinely
+     * new section), with a fresh header. Keys for sections already present were
+     * injected in-place above, so this never duplicates an existing section. */
     int missing = 0;
     for (int k = 0; k < n; k++) if (!seen[k]) missing++;
     if (missing) {
