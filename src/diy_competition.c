@@ -8081,10 +8081,16 @@ static void DIYCupOnSelectCommonC(uint16_t mode)
      * 0 = standalone DIY. The league sibling DIYLeagueTournamentMatchCommon passes
      * _diyTournamentType the same way. Passing a hardcoded 0 made every career cup
      * match's squad screen show "VIEW RESULT" instead of "PLAY MATCH"
-     * (SetGameStartButtonText early-returns when !_squadChangesAllowed). Note the
-     * asm cup MATCH path (DIY_PlayCupMatchAndAdvance mode 2) does NOT force d6=1
-     * the way the league MATCH path does — it uses this inherited value — so pass
-     * _diyTournamentType, not a forced 1. */
+     * (SetGameStartButtonText early-returns when !_squadChangesAllowed).
+     *
+     * We pass _diyTournamentType as the base value here for modes 0/1/3 (RESULT /
+     * VIEW MATCH / VIEW HIGHLIGHTS), which matches the league siblings. BUT the
+     * interactive MATCH button (mode 2) must always allow squad changes — the asm
+     * relied on an inherited d6=1 there rather than an explicit move, so
+     * _diyTournamentType (0 for a standalone/preset) is the wrong value for it.
+     * DIY_PlayCupMatchAndAdvance overrides mode 2 to a forced 1 internally,
+     * mirroring the league MATCH path's `move.w #1,d6`. See the mode==2 branch
+     * there for the full rationale (preset World Cup KO "VIEW RESULT" bug). */
     uint16_t result = DIY_PlayCupMatchAndAdvance(_diyTournamentType, mode);
     if (result != 0)
         return;
@@ -10993,8 +10999,24 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
         if (PlayDIYCupFixtureAndCacheResult(team1, team2, allowSquadChanges, 1) != 0)
             return 1;
     } else {
-        /* mode==2 or other */
-        if (PlayDIYCupFixtureAndCacheResult(team1, team2, allowSquadChanges, 0) != 0)
+        /* mode==2: the interactive "MATCH" button (DIYCupOnSelect3). Force
+         * allowSquadChanges=1, exactly mirroring the league sibling
+         * DIY_PlayOrSimulateLeagueFixture selector==2 (which does move.w #1,d6).
+         *
+         * The asm cup path (loc_12A630 fall-through) relies on an INHERITED d6
+         * here — unlike the league MATCH path it has NO explicit `move.w #1,d6` —
+         * and that register happened to be 1 in context. The C port can't inherit
+         * a register, so DIYCupOnSelectCommonC passes _diyTournamentType instead.
+         * That is 1 for a career (career KO MATCH was correct) but 0 for a
+         * standalone/preset competition, so a preset World Cup KO match wrongly
+         * showed the green "VIEW RESULT" button instead of a playable
+         * "PLAY/VIEW MATCH". Group-stage matches were unaffected because their
+         * league selector==2 already forces 1. (Bug reported 2026-07-10: preset
+         * WC group stage OK, KO stage "VIEW RESULT".)
+         *
+         * mode 0/1/3 (RESULT / VIEW MATCH / VIEW HIGHLIGHTS) keep the passed
+         * value, matching their league siblings which also inherit d6. */
+        if (PlayDIYCupFixtureAndCacheResult(team1, team2, 1, 0) != 0)
             return 1;
     }
 
