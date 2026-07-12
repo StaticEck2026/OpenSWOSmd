@@ -787,6 +787,10 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
     WriteCopperPitchPalette();
 #endif
     InitGameRestoreTeams();
+    /* Wipe the bitplane frontbuffers before the first pitch draw so leftover
+     * menu/intro high-plane (4-7) data can't bleed onto the white pitch lines.
+     * No-op on SDL / OCS (see ClearFrontbuffers). */
+    ClearFrontbuffers();
     GameLoop();
 }
 

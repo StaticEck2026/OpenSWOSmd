@@ -159,7 +159,7 @@ static void copper_write_word(uint8_t *addr, uint16_t val)
 }
 
 /* ================================================================
- * Copper list template — const data, copied to copperListBuffer at init.
+ * Copper list template — const data, copied to _copperListBuffer at init.
  * OCS: 160 words (320 bytes), AGA: 658 words (1316 bytes).
  * ================================================================ */
 static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
@@ -309,6 +309,25 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
 };
 
 /* ================================================================
+ * ClearFrontbuffers
+ *
+ * Zero both bitplane frontbuffers before a match starts. They carry
+ * leftover menu / intro bitplanes; on AGA the 16-colour pitch tiles never
+ * write the high planes (4-7), so that stale high-plane data bleeds onto
+ * the white pitch lines as rainbow/cyan garbage. The incremental
+ * ScrollX/Y redraw only the scrolled delta, so the bulk of the buffer must
+ * start clean. No-op on SDL (chunky pitch is fully redrawn each frame).
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void ClearFrontbuffers(void)
+{
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    memset(_frontbufferBase, 0, FRONTBUFFER_ALLOC_TOTAL_BYTES);
+    memset(_frontbufferBaseAlt, 0, FRONTBUFFER_ALLOC_TOTAL_BYTES);
+#endif
+}
+
+/* ================================================================
  * InitDisplayAndCopper  (SWOS2.s line 5416)
  *
  * Sets up display: frontbuffer pointers, copper list, bitplanes,
@@ -337,7 +356,7 @@ void InitDisplayAndCopper(void)
         }
     }
 
-    /* Clear copperZeroLong */
+    /* Clear _copperZeroLong */
     _copperZeroLong = 0;
 
     /* Disable interrupts during vblank sync */
@@ -356,7 +375,7 @@ void InitDisplayAndCopper(void)
     /* Re-enable interrupts */
     _custom->intena = 0xC000u;
 
-    /* Write copperZeroLong pointer into first 8 sprite pointer entries */
+    /* Write _copperZeroLong pointer into first 8 sprite pointer entries */
     {
         uint8_t *entry = _copperListBuffer + COP_SPR_B0_OFF;
         uint32_t ptr = (uintptr_t)&_copperZeroLong;
@@ -380,7 +399,7 @@ void InitDisplayAndCopper(void)
         int16_t bank;
         for (bank = 0; bank < NUM_PAL_BANKS; bank++)
         {
-            uint8_t *p = copperListBuffer + bankOffsets[bank];
+            uint8_t *p = _copperListBuffer + bankOffsets[bank];
             for (i = COLORS_PER_BANK - 1; i >= 0; i--)
             {
                 copper_write_word(p, 0);
@@ -423,10 +442,10 @@ void InitDisplayAndCopper(void)
     *(volatile uint32_t *)_bitPlane2Base = _copperZeroLong;
     *(volatile uint32_t *)_bitPlane3Base = _copperZeroLong;
 #ifdef AGA
-    *(volatile uint32_t *)bitPlane4Base = copperZeroLong;
-    *(volatile uint32_t *)bitPlane5Base = copperZeroLong;
-    *(volatile uint32_t *)bitPlane6Base = copperZeroLong;
-    *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
+    *(volatile uint32_t *)bitPlane4Base = _copperZeroLong;
+    *(volatile uint32_t *)bitPlane5Base = _copperZeroLong;
+    *(volatile uint32_t *)bitPlane6Base = _copperZeroLong;
+    *(volatile uint32_t *)bitPlane7Base = _copperZeroLong;
 #endif
 
     /* Update plane pointers and blit parameters in copper list */
@@ -484,10 +503,10 @@ void UpdatePlanePtrsAndBlitParams(void)
     copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 16, _bitPlane2BasePtr);
     copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 24, _bitPlane3BasePtr);
 #ifdef AGA
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 32, bitPlane4BasePtr);
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 40, bitPlane5BasePtr);
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 48, bitPlane6BasePtr);
-    copper_write_ptr(copperListBuffer + COP_SPR_B0_OFF + 56, bitPlane7BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 32, bitPlane4BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 40, bitPlane5BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 48, bitPlane6BasePtr);
+    copper_write_ptr(_copperListBuffer + COP_SPR_B0_OFF + 56, bitPlane7BasePtr);
 #endif
 
     /* Handle horizontal scroll alignment */
@@ -606,10 +625,10 @@ void SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)_bitPlane2BaseAlt = _copperZeroLong;
         *(volatile uint32_t *)_bitPlane3BaseAlt = _copperZeroLong;
 #ifdef AGA
-        *(volatile uint32_t *)bitPlane4BaseAlt = copperZeroLong;
-        *(volatile uint32_t *)bitPlane5BaseAlt = copperZeroLong;
-        *(volatile uint32_t *)bitPlane6BaseAlt = copperZeroLong;
-        *(volatile uint32_t *)bitPlane7BaseAlt = copperZeroLong;
+        *(volatile uint32_t *)bitPlane4BaseAlt = _copperZeroLong;
+        *(volatile uint32_t *)bitPlane5BaseAlt = _copperZeroLong;
+        *(volatile uint32_t *)bitPlane6BaseAlt = _copperZeroLong;
+        *(volatile uint32_t *)bitPlane7BaseAlt = _copperZeroLong;
 #endif
 
         _frontbufferBasePtr = (uintptr_t)_frontbufferBaseAlt;
@@ -658,10 +677,10 @@ void SwapBuffersAndCameraViewState(void)
         *(volatile uint32_t *)_bitPlane2Base = _copperZeroLong;
         *(volatile uint32_t *)_bitPlane3Base = _copperZeroLong;
 #ifdef AGA
-        *(volatile uint32_t *)bitPlane4Base = copperZeroLong;
-        *(volatile uint32_t *)bitPlane5Base = copperZeroLong;
-        *(volatile uint32_t *)bitPlane6Base = copperZeroLong;
-        *(volatile uint32_t *)bitPlane7Base = copperZeroLong;
+        *(volatile uint32_t *)bitPlane4Base = _copperZeroLong;
+        *(volatile uint32_t *)bitPlane5Base = _copperZeroLong;
+        *(volatile uint32_t *)bitPlane6Base = _copperZeroLong;
+        *(volatile uint32_t *)bitPlane7Base = _copperZeroLong;
 #endif
 
         _frontbufferBasePtr = (uintptr_t)_frontbufferBase;
@@ -1100,10 +1119,13 @@ void FlashColor0Delay(uint32_t loopCount, uint16_t color)
 /* ================================================================
  * WriteCopperPalette
  *
- * Writes a full palette into the copperListBuffer color value slots.
+ * Writes a full palette into the _copperListBuffer color value slots.
  * AGA: 256 colors across 8 banks of 32 colors each.
  * OCS: 16 colors into both palette blocks (B0 and B1).
  * ================================================================ */
+/* Set while a match is being played (StartMatchSequence). Gates the AGA
+ * sprite-palette mirror below so it only fires in-match. */
+extern volatile uint16_t _playGame;
 __attribute__((used, externally_visible))
 void WriteCopperPalette(const uint16_t *palette)
 {
@@ -1117,13 +1139,31 @@ void WriteCopperPalette(const uint16_t *palette)
     int16_t bank;
     for (bank = 0; bank < 8; bank++)
     {
-        uint8_t *dst = copperListBuffer + bankValOffsets[bank];
+        uint8_t *dst = _copperListBuffer + bankValOffsets[bank];
         const uint16_t *src = palette + (bank * 32);
         int16_t i;
         for (i = 31; i >= 0; i--)
         {
             copper_write_word(dst, *src++);
             dst += 4; /* stride: reg+val pairs = 4 bytes */
+        }
+    }
+    /* Mirror colours 0-15 into 16-31, but ONLY in-match (_playGame). In-match
+     * players are drawn as AGA attached hardware sprites, which read colours
+     * 16-31 — so they must see the same 16-colour kit palette as the playfield's
+     * colours 0-15 (where ConvertTeamColor puts the kit colours). This is the AGA
+     * analogue of the OCS two-block write (which stamps the 16-colour palette into
+     * both blocks). The intro, menus and loading screens are 8bpp images that
+     * legitimately use colours 16-31 as distinct palette entries and have no
+     * hardware-sprite players, so mirroring there corrupts them. */
+    if (_playGame != 0)
+    {
+        uint8_t *dst = _copperListBuffer + bankValOffsets[0] + 16 * 4; /* colour 16 */
+        int16_t j;
+        for (j = 0; j < 16; j++)
+        {
+            copper_write_word(dst, palette[j]);
+            dst += 4;
         }
     }
 #else
@@ -1149,10 +1189,10 @@ void WriteCopperPalette(const uint16_t *palette)
  * paletteIndices, then pushes the full 256-color gamePalette into
  * the copper buffer via WriteCopperPalette.
  * ================================================================ */
-extern uint16_t gamePalette[];
-extern uint16_t pitchNumberAndType;
-extern const uint16_t *pitchPalettePtrs[];
-extern uint8_t paletteIndices[];
+extern uint16_t _gamePalette[];
+extern uint16_t _pitchNumberAndType;
+extern const uint16_t *_pitchPalettePtrs[];
+extern uint8_t _paletteIndices[];
 
 __attribute__((used, externally_visible))
 void WriteCopperPitchPalette(void)
@@ -1166,22 +1206,22 @@ void WriteCopperPitchPalette(void)
      * show normal grass even when the saved HIL specified a different
      * pitch type. Fresh boot worked only because pitch number happened
      * to be 0 then. */
-    uint16_t pitchIdx = pitchNumberAndType & 0xFF;
+    uint16_t pitchIdx = _pitchNumberAndType & 0xFF;
     const uint16_t *pitchPal;
     int16_t i;
 
     if (pitchIdx > 6)
         pitchIdx = 4; /* default to "normal" if out of range */
 
-    pitchPal = pitchPalettePtrs[pitchIdx];
+    pitchPal = _pitchPalettePtrs[pitchIdx];
 
     /* Apply 9 entries into gamePalette */
     for (i = 0; i < 9; i++)
     {
-        uint16_t idx = paletteIndices[i];
-        gamePalette[idx] = pitchPal[i];
+        uint16_t idx = _paletteIndices[i];
+        _gamePalette[idx] = pitchPal[i];
     }
 
-    WriteCopperPalette(gamePalette);
+    WriteCopperPalette(_gamePalette);
 }
 #endif

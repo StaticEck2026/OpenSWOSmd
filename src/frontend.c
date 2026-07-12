@@ -43,24 +43,28 @@ __attribute__((used, externally_visible))
 void LoadOverlayToFrontbuffer(const uint8_t *path)
 {
 #ifdef SWOS_SDL_BUILD
-    LoadFileEx((uint8_t *)path, _rawAssetLoadBuffer, (uint32_t *)0);
+    uint32_t ovlSize = 0;
+    LoadFileEx((uint8_t *)path, _rawAssetLoadBuffer, &ovlSize);
 
-    /* Decode NUM_PLANES-plane interleaved bitplane data → 8bpp chunky.
-     * Full-screen overlay images (MENUBG.RAW = 47872 bytes) are stored
-     * at the *frontbuffer* stride: PLANE_STRIDE bytes per plane row,
-     * NUM_PLANES planes per scanline = ROW_STRIDE_BYTES total. We
-     * decode SCREEN_WIDTH pixels (the visible portion of PLANE_STRIDE*8
-     * = 352 source bits). Sprite-source images use a smaller stride and
-     * go through `blitDispatch`, not this path. */
+    /* Decode interleaved bitplane data → 8bpp chunky. Full-screen overlay
+     * images are stored at the *frontbuffer* stride: PLANE_STRIDE bytes per
+     * plane row, N planes per scanline. Detect N per-bank from the
+     * decompressed size (MENUBG.RAW = 47872 for 4bpp OCS, 95744 for 8bpp
+     * AGA) rather than assuming NUM_PLANES, so mixed-depth grafs_aga banks
+     * decode correctly. We decode SCREEN_WIDTH pixels (the visible portion
+     * of PLANE_STRIDE*8 = 352 source bits). Sprite-source images use a
+     * smaller stride and go through `blitDispatch`, not this path. */
+    uint16_t ovlPlanes    = DetectBankPlanes(ovlSize, PLANE_STRIDE, SCREEN_HEIGHT);
+    uint32_t ovlRowStride = (uint32_t)PLANE_STRIDE * ovlPlanes;
     memset(_frontbufferMaskBuffer, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        const uint8_t *rowSrc = _rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        const uint8_t *rowSrc = _rawAssetLoadBuffer + (size_t)y * ovlRowStride;
         uint8_t       *rowDst = _frontbufferMaskBuffer + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + WIDE_MARGIN;
         for (int px = 0; px < SCREEN_WIDTH; px++) {
             int bit = 7 - (px & 7);
             int byte = px >> 3;
             uint8_t idx = 0;
-            for (int p = 0; p < NUM_PLANES; p++) {
+            for (int p = 0; p < ovlPlanes; p++) {
                 uint8_t planeByte = rowSrc[p * PLANE_STRIDE + byte];
                 idx |= (uint8_t)(((planeByte >> bit) & 1u) << p);
             }

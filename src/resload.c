@@ -75,7 +75,9 @@ static void resolve_path(const uint8_t *amiga_name, char *out, size_t out_sz)
 }
 
 /* ---- Low-level file ops ------------------------------------------- */
-static FILE *open_case_insensitive(const char *path, const char *mode)
+/* Case-insensitive open of a single literal path (host filesystems may be
+ * case-sensitive; the Amiga names are upper/mixed case). */
+static FILE *try_open_ci(const char *path, const char *mode)
 {
     FILE *f = fopen(path, mode);
     if (f) return f;
@@ -100,6 +102,34 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
     }
     closedir(d);
     return NULL;
+}
+
+static FILE *open_case_insensitive(const char *path, const char *mode)
+{
+#ifdef AGA
+    /* AGA asset redirect + fallback. Graphics banks split across two folders:
+     *   grafs_aga/ — AGA-specific mixed-depth assets (4bpp sprite sheets,
+     *                8bpp backgrounds/pitches) produced by DOS2AGA.
+     *   grafs/     — shared 4bpp assets (the extended SWOS_Font charset) and
+     *                OCS screens not yet reconverted (disk2/socpic/tactics/winscrn).
+     * A grafs load (from either a "grafs/" literal or a GRAFS-macro'd
+     * "grafs_aga/" path) prefers grafs_aga/, then falls back to grafs/ by
+     * basename. So a *partial* grafs_aga set + the shared grafs assets both
+     * resolve, and dropping an AGA version into grafs_aga later just takes over.
+     * grafs_arcade/ etc. don't match the "grafs/" prefix (next char is '_'). */
+    const char *base = NULL;
+    if (strncmp(path, "grafs_aga/", 10) == 0)  base = path + 10;
+    else if (strncmp(path, "grafs/", 6) == 0)  base = path + 6;
+    if (base) {
+        char alt[1024];
+        FILE *f;
+        snprintf(alt, sizeof(alt), "grafs_aga/%s", base);
+        if ((f = try_open_ci(alt, mode)) != NULL) return f;
+        snprintf(alt, sizeof(alt), "grafs/%s", base);
+        return try_open_ci(alt, mode);
+    }
+#endif
+    return try_open_ci(path, mode);
 }
 
 static uint32_t fs_get_size(const char *path)
@@ -345,6 +375,13 @@ static const uint8_t progdir_prefix[] = "PROGDIR:";
  * (_save_filename before _save_filepath), which was a latent bug.  */
 static uint8_t save_path_buf[5 + 14] = { 's','a','v','e','/' };
 static const uint8_t savedir[] = "save";
+#ifdef AGA
+/* AGA: "grafs/FILE" loads get redirected to "grafs_aga/FILE" (mixed-depth
+ * AGA assets — 8bpp backgrounds/pitches, 4bpp sprite sheets, extended charset).
+ * Symmetric with the SDL resload redirect (open_case_insensitive). 10-byte
+ * "grafs_aga/" prefix + up to 20 for the filename. */
+static uint8_t grafs_aga_buf[10 + 20] = { 'g','r','a','f','s','_','a','g','a','/' };
+#endif
 static uint8_t listdir_buf[2048 + 4];
 
 static const uint32_t ext_table[] = {
@@ -1320,6 +1357,23 @@ static uint8_t *fix_filename(uint8_t *name)
     /* Skip "DF0:" prefix if present */
     if (a0[3] == ':')
         a0 += 4;
+
+#ifdef AGA
+    /* Redirect "grafs/FILE" -> "grafs_aga/FILE" so the mixed-depth AGA assets
+     * (8bpp menubg/backgrounds/pitches, 8bpp soccer_s, extended charset) are
+     * loaded instead of the OCS 4bpp grafs/ versions. The && short-circuits
+     * safely at the NUL of any shorter name. grafs_aga/ holds every asset the
+     * game loads (charset included), so no fallback to grafs/ is needed here. */
+    if (a0[0]=='g' && a0[1]=='r' && a0[2]=='a' && a0[3]=='f' &&
+        a0[4]=='s' && a0[5]=='/') {
+        uint8_t *src = a0 + 6;             /* after "grafs/"     */
+        uint8_t *dst = grafs_aga_buf + 10; /* after "grafs_aga/" */
+        uint8_t *cap = grafs_aga_buf + sizeof(grafs_aga_buf) - 1;
+        while (dst < cap && (*dst = *src) != 0) { dst++; src++; }
+        *dst = 0;
+        return grafs_aga_buf;
+    }
+#endif
 
     /* Find end of string */
     uint8_t *end = a0;
