@@ -62,6 +62,14 @@ extern uint8_t _rawAssetLoadBuffer[];
 extern void PanicHaltLoop(void) __attribute__((noreturn));
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 
+/* Current sprite-bank bitplane depth. Auto-detected from each 0x7000/0x8000
+ * file-load's decompressed size (SDL build only). A single image script can
+ * load both 4bpp sheets (cjc*, team kits) and the 8bpp soccer_s.raw, so the
+ * depth must track per-bank rather than the compile-time NUM_PLANES. Stays
+ * NUM_PLANES on the Amiga build (only the SDL load branch updates it), so the
+ * Amiga bitplane path is byte-identical. */
+static uint16_t s_bankSrcPlanes = NUM_PLANES;
+
 
 /* ================================================================
  * blitDispatch  (SWOS2.s line 6481)
@@ -92,7 +100,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     uint16_t wquads;             /* width in 16-pixel tiles */
 #ifndef SWOS_SDL_BUILD
     int32_t rowSkip;             /* bytes to skip between source rows */
-    uint16_t i, j;
+    uint16_t i, j, p;
     uint16_t *wp;
 #endif
 
@@ -137,10 +145,14 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     if (planesFlag != 0)
         headerBase->type      = 0xFF;  /* sne sets 0xFF when condition true */
 
-    /* Adjust source pointer for x/y offset (if src != NULL) */
+    /* Adjust source pointer for x/y offset (if src != NULL).
+     * Source row stride is the bank's own depth (s_bankSrcPlanes * 40),
+     * NOT the compile-time IMAGE_ROW_STRIDE_BYTES — a 4bpp bank on an
+     * 8-plane build has a 160-byte row, not 320. On the Amiga build
+     * s_bankSrcPlanes == NUM_PLANES so this equals IMAGE_ROW_STRIDE_BYTES. */
     if (src != (uint8_t *)0) {
         uint32_t byteOff = (uint32_t)((xOffset >> 3) & 0xFFFE);
-        uint32_t lineOff = (uint32_t)yOffset * IMAGE_ROW_STRIDE_BYTES;
+        uint32_t lineOff = (uint32_t)yOffset * (uint32_t)(BITPLANE_ROW_BYTES * s_bankSrcPlanes);
         src += byteOff + lineOff;
     }
 
@@ -188,18 +200,21 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
                     out[r * pitch + c] = ((c >> 1) & 1u) ? 0u : 5u;
             }
         } else {
-            /* Source is 4-bitplane interleaved: NUM_PLANES slabs of 40
-             * bytes each per scanline. For each output pixel, gather bit
-             * (7 - (px & 7)) of byte (px >> 3) from each plane, stack
-             * them into a 0..15 palette index. */
+            /* Source is bitplane-interleaved: s_bankSrcPlanes slabs of 40
+             * bytes each per scanline (4 for sprite sheets, 8 for soccer_s).
+             * For each output pixel, gather bit (7 - (px & 7)) of byte
+             * (px >> 3) from each plane, stack them into a palette index
+             * (0..15 for 4bpp, 0..255 for 8bpp). */
+            uint16_t srcPlanes = s_bankSrcPlanes;
+            uint32_t srcRowStride = (uint32_t)BITPLANE_ROW_BYTES * srcPlanes;
             for (uint16_t r = 0; r < outRows; r++) {
-                const uint8_t *rowSrc = src + (size_t)r * IMAGE_ROW_STRIDE_BYTES;
+                const uint8_t *rowSrc = src + (size_t)r * srcRowStride;
                 uint8_t *rowDst = out + (size_t)r * pitch;
                 for (uint16_t px = 0; px < pitch; px++) {
                     uint8_t bit = (uint8_t)(7 - (px & 7));
                     uint8_t byte = (uint8_t)(px >> 3);
                     uint8_t idx = 0;
-                    for (uint16_t p = 0; p < NUM_PLANES; p++) {
+                    for (uint16_t p = 0; p < srcPlanes; p++) {
                         uint8_t planeByte = rowSrc[p * BITPLANE_ROW_BYTES + byte];
                         idx |= (uint8_t)(((planeByte >> bit) & 1u) << p);
                     }
@@ -233,17 +248,33 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
         }
         pixelPtr = (uint8_t *)wp;
     } else {
-        /* Copy from source buffer, row by row across all bitplanes */
+        /* Copy from source buffer, per pixel row: s_bankSrcPlanes real
+         * bitplane rows from the (interleaved) source, then zero-pad the
+         * remaining (NUM_PLANES - srcPlanes) plane rows. A 4bpp player bank
+         * thus lands in planes 0-3 with planes 4-7 = 0, so the sprite is a
+         * 16-colour object: RenderSpriteBands grabs planes 0-3 as an
+         * attached hardware-sprite pair, and the bob cookie-cut clears the
+         * playfield's upper planes (data 0 there). srcPlanes == NUM_PLANES
+         * (8bpp banks / OCS) leaves the pad loop empty → byte-identical to
+         * the old height*NUM_PLANES straight copy. See docs/AMIGA_SPRITES.md. */
         rowSkip = (int32_t)(BITPLANE_ROW_BYTES - (int32_t)wquads * 2);
         {
             uint16_t *srcW = (uint16_t *)src;
-            uint16_t totalRows = (uint16_t)(height * NUM_PLANES);
+            uint16_t srcPlanes = s_bankSrcPlanes;
+            uint16_t r;
             wp = (uint16_t *)pixelPtr;
-            for (i = 0; i < totalRows; i++) {
-                for (j = 0; j < wquads; j++) {
-                    *wp++ = *srcW++;
+            for (r = 0; r < height; r++) {
+                for (p = 0; p < srcPlanes; p++) {
+                    for (j = 0; j < wquads; j++) {
+                        *wp++ = *srcW++;
+                    }
+                    srcW = (uint16_t *)((uint8_t *)srcW + rowSkip);
                 }
-                srcW = (uint16_t *)((uint8_t *)srcW + rowSkip);
+                for (; p < NUM_PLANES; p++) {
+                    for (j = 0; j < wquads; j++) {
+                        *wp++ = 0;
+                    }
+                }
             }
             pixelPtr = (uint8_t *)wp;
         }
@@ -391,6 +422,9 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 #endif
 
     _imageStreamCursor = workBuffer;
+    /* Default depth until the script's first 0x7000/0x8000 load sets it
+     * (every real script loads its bank before drawing from it). */
+    s_bankSrcPlanes = NUM_PLANES;
 
     for (;;) {
         opcode = *(const uint16_t *)a0;
@@ -426,11 +460,26 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
              * `frontbufferMaskBuffer` isn't clobbered between sprite
              * extractions. */
 #ifdef SWOS_SDL_BUILD
-            while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0) != 0)
-                ;
+            {
+                uint32_t bankSize = 0;
+                while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, &bankSize) != 0)
+                    ;
+                /* Auto-detect this bank's bitplane depth from its decompressed
+                 * size (320x256 planar sheet: 40 bytes/plane row * 256 rows).
+                 * 4bpp for cjc / team kits, 8bpp for soccer_s. */
+                s_bankSrcPlanes = DetectBankPlanes(bankSize, BITPLANE_ROW_BYTES, SPRITE_SHEET_ROWS);
+            }
 #else
-            while (LoadFileEx((uint8_t *)filename, _frontbufferMaskBuffer, (uint32_t *)0) != 0)
-                ;
+            {
+                uint32_t bankSize = 0;
+                while (LoadFileEx((uint8_t *)filename, _frontbufferMaskBuffer, &bankSize) != 0)
+                    ;
+                /* Same per-bank depth detect as the SDL branch: 320x256 planar
+                 * sheet (40 B/plane row * 256 rows). blitDispatch uses this to
+                 * store 4bpp players in planes 0-3 (16-colour hardware sprites)
+                 * and 8bpp banks (soccer_s) at full depth. */
+                s_bankSrcPlanes = DetectBankPlanes(bankSize, BITPLANE_ROW_BYTES, SPRITE_SHEET_ROWS);
+            }
 #endif
 
             a0 = savedA0;
@@ -457,11 +506,26 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 #endif
 
 #ifdef SWOS_SDL_BUILD
-            while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0) != 0)
-                ;
+            {
+                uint32_t bankSize = 0;
+                while (LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, &bankSize) != 0)
+                    ;
+                /* Auto-detect this bank's bitplane depth from its decompressed
+                 * size (320x256 planar sheet: 40 bytes/plane row * 256 rows).
+                 * 4bpp for cjc / team kits, 8bpp for soccer_s. */
+                s_bankSrcPlanes = DetectBankPlanes(bankSize, BITPLANE_ROW_BYTES, SPRITE_SHEET_ROWS);
+            }
 #else
-            while (LoadFileEx((uint8_t *)filename, _frontbufferMaskBuffer, (uint32_t *)0) != 0)
-                ;
+            {
+                uint32_t bankSize = 0;
+                while (LoadFileEx((uint8_t *)filename, _frontbufferMaskBuffer, &bankSize) != 0)
+                    ;
+                /* Same per-bank depth detect as the SDL branch: 320x256 planar
+                 * sheet (40 B/plane row * 256 rows). blitDispatch uses this to
+                 * store 4bpp players in planes 0-3 (16-colour hardware sprites)
+                 * and 8bpp banks (soccer_s) at full depth. */
+                s_bankSrcPlanes = DetectBankPlanes(bankSize, BITPLANE_ROW_BYTES, SPRITE_SHEET_ROWS);
+            }
 #endif
 
             a0 = savedA0;

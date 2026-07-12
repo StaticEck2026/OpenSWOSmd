@@ -801,13 +801,13 @@ apply_palette_and_pitch:
 #ifdef AGA
         {
             /* AGA: apply 9 pitch entries via paletteIndices, write full 256-color palette to copper */
-            extern uint8_t paletteIndices[];
-            const uint16_t *palPtr = pitchPalettePtrs[pitchIdx];
+            extern uint8_t _paletteIndices[];
+            const uint16_t *palPtr = _pitchPalettePtrs[pitchIdx];
             int16_t pi;
             for (pi = 0; pi < 9; pi++)
             {
-                uint16_t idx = paletteIndices[pi];
-                ((uint16_t *)gamePalette)[idx] = palPtr[pi];
+                uint16_t idx = _paletteIndices[pi];
+                ((uint16_t *)_gamePalette)[idx] = palPtr[pi];
             }
         }
 #else

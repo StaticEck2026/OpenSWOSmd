@@ -227,8 +227,8 @@ void mainC(void)
     
 #ifdef AGA
     {
-        extern uint16_t menuPalette[];
-        WriteCopperPalette(menuPalette);
+        extern uint16_t _menuPalette[];
+        WriteCopperPalette(_menuPalette);
     }
 #else
     BuildPaletteFromColors(_kTitleLogoColors, _titleLogoPalette);

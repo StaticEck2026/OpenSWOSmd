@@ -5,18 +5,19 @@
 #include "game_types.h"
 
 /* Full 16-color palettes (all zeros / near-zeros — runtime-filled) */
-extern uint16_t blackPalette[16];
-extern uint16_t panicPalette[16];
+extern uint16_t _blackPalette[16];
+extern uint16_t _panicPalette[16];
 
 /* OCS pitch condition palettes: 3 entries each.
  * (AGA mode uses 9 entries each — see SWOS2.s IFNE AGA blocks.)
  * These are partial palettes applied to gamePalette via pitchPalettePtrs[]. */
-extern uint16_t normalPalette[3];
-extern uint16_t dryPalette[3];
-extern uint16_t wetPalette[3];
-extern uint16_t softPalette[3];
-extern uint16_t hardPalette[3];
-extern uint16_t frozenPalette[3];
-extern uint16_t muddyPalette[3];
+/* Unsized: 9 entries under AGA (grass + line/detail), 3 under OCS (grass). */
+extern uint16_t _normalPalette[];
+extern uint16_t _dryPalette[];
+extern uint16_t _wetPalette[];
+extern uint16_t _softPalette[];
+extern uint16_t _hardPalette[];
+extern uint16_t _frozenPalette[];
+extern uint16_t _muddyPalette[];
 
 #endif /* PALETTE_DATA_H */

@@ -386,7 +386,7 @@ void SetPitchTypeAndNumber(void)
 
 #ifdef DETERMINISTIC_MODE
     /* Force fixed pitch to ensure ASM and C versions match */
-    pitchNumberAndType = 0x0004;  /* pitch 0, type 4 (normal) */
+    _pitchNumberAndType = 0x0004;  /* pitch 0, type 4 (normal) */
 #endif
 }
 
