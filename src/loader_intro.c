@@ -205,21 +205,27 @@ void Arcade_PlayHeroMusic(void)
 static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
 {
 #ifdef SWOS_SDL_BUILD
-    LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, (uint32_t *)0);
+    uint32_t frameSize = 0;
+    LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, &frameSize);
 
     uint8_t *dstAlt  = (uint8_t *)_frontbufferBaseAltPtr;
     uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr;
     if (!dstAlt) return;
 
+    /* Same full-screen layout as LoadOverlayToFrontbuffer: detect the
+     * frame's bitplane depth from its decompressed size (4bpp OCS / 8bpp
+     * AGA) so loader frames decode at their own depth, not NUM_PLANES. */
+    uint16_t framePlanes    = DetectBankPlanes(frameSize, PLANE_STRIDE, SCREEN_HEIGHT);
+    uint32_t frameRowStride = (uint32_t)PLANE_STRIDE * framePlanes;
     memset(dstAlt, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        const uint8_t *rowSrc = _rawAssetLoadBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        const uint8_t *rowSrc = _rawAssetLoadBuffer + (size_t)y * frameRowStride;
         uint8_t       *rowDst = dstAlt + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES + WIDE_MARGIN;
         for (int px = 0; px < SCREEN_WIDTH; px++) {
             int bit  = 7 - (px & 7);
             int byte = px >> 3;
             uint8_t idx = 0;
-            for (int p = 0; p < NUM_PLANES; p++) {
+            for (int p = 0; p < framePlanes; p++) {
                 uint8_t planeByte = rowSrc[p * PLANE_STRIDE + byte];
                 idx |= (uint8_t)(((planeByte >> bit) & 1u) << p);
             }

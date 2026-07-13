@@ -11,12 +11,13 @@ extern uint16_t _panicPalette[16];
 /* OCS pitch condition palettes: 3 entries each.
  * (AGA mode uses 9 entries each — see SWOS2.s IFNE AGA blocks.)
  * These are partial palettes applied to gamePalette via pitchPalettePtrs[]. */
-extern uint16_t _normalPalette[3];
-extern uint16_t _dryPalette[3];
-extern uint16_t _wetPalette[3];
-extern uint16_t _softPalette[3];
-extern uint16_t _hardPalette[3];
-extern uint16_t _frozenPalette[3];
-extern uint16_t _muddyPalette[3];
+/* Unsized: 9 entries under AGA (grass + line/detail), 3 under OCS (grass). */
+extern uint16_t _normalPalette[];
+extern uint16_t _dryPalette[];
+extern uint16_t _wetPalette[];
+extern uint16_t _softPalette[];
+extern uint16_t _hardPalette[];
+extern uint16_t _frozenPalette[];
+extern uint16_t _muddyPalette[];
 
 #endif /* PALETTE_DATA_H */

@@ -15,10 +15,12 @@ typedef int int32_t;
 /* ==================================================================
  * AGA mode switch
  *
- * Uncomment to enable AGA (8 bitplanes, 256 colors).
- * When commented out, the build uses OCS (4 bitplanes, 16 colors).
+ * Default: AGA (8 bitplanes, 256 colors) with mixed per-bank source
+ * depth — 4bpp sprite/menu/charset banks + 8bpp backgrounds/pitches,
+ * auto-detected per bank at load (DetectBankPlanes). Comment out for
+ * OCS (4 bitplanes, 16 colors) loading from grafs/.
  * ================================================================== */
-//#define AGA
+#define AGA
 
 /* ---- Graphics folder path ---- */
 #ifdef AGA
@@ -189,6 +191,37 @@ extern volatile struct Custom *_custom;
 #define SCREEN_WIDTH                336
 #define SCREEN_HEIGHT               272
 
+/* ---- Source-image sprite-sheet height ----
+ * The Amiga sprite-source banks (charset, cjc*, team kits, soccer_s) are a
+ * fixed 320x256 planar sheet: BITPLANE_ROW_BYTES (40) per plane row, this
+ * many rows. Full-screen overlays instead use PLANE_STRIDE x SCREEN_HEIGHT. */
+#define SPRITE_SHEET_ROWS           256
+
+/* ==================================================================
+ * Per-bank bitplane depth auto-detect (mixed-depth AGA support)
+ *
+ * A loaded bank is a full planar image; its RNC-decompressed byte size
+ * (the value LoadFileEx reports via outFileSize) divided by one plane's
+ * byte size (planeRowBytes * rows) yields the plane count. This lets a
+ * 4bpp sprite sheet and an 8bpp background flow through the same decode
+ * loop with no per-file header — the depth is inferred from the size,
+ * mirroring SwosGfx's -bitplanes=auto. Falls back to the compile-time
+ * NUM_PLANES on any size that isn't an exact 1..8-plane multiple.
+ *
+ * Used on BOTH targets: SDL decodes bitplanes -> chunky; the Amiga build
+ * uses it so blitDispatch stores each sprite at its real depth (4bpp
+ * players get zero-padded to 8 planes so the low nibble is a 16-colour
+ * hardware sprite — see docs/AMIGA_SPRITES.md).
+ * ================================================================== */
+static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowBytes, uint32_t rows)
+{
+    uint32_t planeBytes = planeRowBytes * rows;
+    uint32_t planes = planeBytes ? byteSize / planeBytes : 0u;
+    if (planes < 1u || planes > 8u || planes * planeBytes != byteSize)
+        return (uint16_t)NUM_PLANES;
+    return (uint16_t)planes;
+}
+
 /* ---- Copper list layout ----
  *
  * OCS: 320 bytes (16 colors x 2 palette blocks)
@@ -325,10 +358,11 @@ extern int _menu_draw_x_offset;
 /* ---- Copper list byte-offset helper ---- */
 /* NOTE: Do NOT use COPPER_W for writes — GCC decomposes volatile uint16_t
  * stores into byte-level move.b pairs. Use copper_write_word() instead. */
-#define COPPER_W(offset) (*(volatile uint16_t *)((uint8_t *)copperListBuffer + (offset)))
+#define COPPER_W(offset) (*(volatile uint16_t *)((uint8_t *)_copperListBuffer + (offset)))
 
 /* ---- Function declarations ---- */
 void InitDisplayAndCopper(void);
+void ClearFrontbuffers(void);
 void UpdatePlanePtrsAndBlitParams(void);
 void SwapBuffersAndCameraViewState(void);
 void SetCameraCoordinates(int16_t targetX, int16_t targetY);

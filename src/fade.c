@@ -60,6 +60,7 @@ extern uint16_t _loaderModeFlag;
 extern uint16_t _paletteIndex;
 extern uint8_t _copperListBuffer[];
 extern void *_paletteTable[];   /* array of 7 pointers to uint16_t[16] palettes */
+extern volatile uint16_t _playGame; /* nonzero while a match plays — gates the AGA sprite mirror */
 
 /* FadeOutToBlack (SWOS2.s line 6781)
  *
@@ -161,7 +162,7 @@ static const uint16_t fadeShiftMaskTable[10] = {
  * ApplyFadeStep  (SWOS2.s line 6110)
  *
  * Applies a fade level (d2) to the palette currently selected by
- * paletteIndex, writing results to copperListBuffer palette slots.
+ * paletteIndex, writing results to _copperListBuffer palette slots.
  *
  * Two paths: normal (just shift+mask) or loader (clamp blue >= 2).
  * ================================================================ */
@@ -214,12 +215,12 @@ void ApplyFadeStep(uint16_t fadeLevel)
         int16_t bank;
         for (bank = 0; bank < 8; bank++)
         {
-            volatile uint16_t *dst = (volatile uint16_t *)(copperListBuffer + bankValOffsets[bank]);
+            volatile uint16_t *dst = (volatile uint16_t *)(_copperListBuffer + bankValOffsets[bank]);
             for (i = 31; i >= 0; i--)
             {
                 uint16_t color = *palette++;
                 color = (color >> shift) & mask;
-                if (loaderModeFlag != 0)
+                if (_loaderModeFlag != 0)
                 {
                     uint16_t blue = color & 0x000F;
                     if (blue < 2)
@@ -227,6 +228,34 @@ void ApplyFadeStep(uint16_t fadeLevel)
                 }
                 COPPER_WRITE_W(dst, color);
                 dst += 2; /* stride 4 bytes */
+            }
+        }
+
+        /* Mirror faded colours 0-15 into 16-31 (bank 0), but ONLY in-match
+         * (_playGame). AGA in-match players are drawn as attached hardware
+         * sprites, which read colours 16-31, so they must track the 16-colour kit
+         * palette (colours 0-15) exactly as WriteCopperPalette does. Without this
+         * the fade rewrites 16-31 as the distinct 8bpp background colours, and the
+         * sprite players/ball show the wrong colours for the rest of the match
+         * (the mirror set at match start by WriteCopperPitchPalette gets wiped by
+         * the first fade). Skipped off-pitch: the intro/menus/loaders are 8bpp
+         * images that use 16-31 as real palette entries and would be corrupted. */
+        if (_playGame != 0)
+        {
+            const uint16_t *pal0 = (const uint16_t *)_paletteTable[_paletteIndex];
+            volatile uint16_t *mdst =
+                (volatile uint16_t *)(_copperListBuffer + bankValOffsets[0] + 16 * 4);
+            for (i = 0; i < 16; i++)
+            {
+                uint16_t color = (pal0[i] >> shift) & mask;
+                if (_loaderModeFlag != 0)
+                {
+                    uint16_t blue = color & 0x000F;
+                    if (blue < 2)
+                        color = (color & 0x0FF0) | 2;
+                }
+                COPPER_WRITE_W(mdst, color);
+                mdst += 2; /* stride 4 bytes */
             }
         }
     }

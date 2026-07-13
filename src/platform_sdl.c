@@ -828,8 +828,28 @@ static void refresh_palette_from_copper(void)
         return;
     }
 #ifdef AGA
-    /* TODO: walk 8 banks of 32 colours each, combining the high/low MOVEs. */
-    /* Until then, leave whatever was last loaded. */
+    /* AGA: 256 colours across 8 banks of 32. WriteCopperPalette wrote each
+     * bank's 32 value words starting at COP_PAL_Bx_C0_VAL_OFF with a 4-byte
+     * stride (copper reg+val pairs), exactly like the OCS block below but for
+     * 8 banks. Each value is a 12-bit 0x0RGB word; expand each nibble to 8-bit
+     * (*17 maps 0xF→255). Fades are already baked into these copper values. */
+    static const uint32_t aga_bank_val_off[8] = {
+        COP_PAL_B0_C0_VAL_OFF, COP_PAL_B1_C0_VAL_OFF,
+        COP_PAL_B2_C0_VAL_OFF, COP_PAL_B3_C0_VAL_OFF,
+        COP_PAL_B4_C0_VAL_OFF, COP_PAL_B5_C0_VAL_OFF,
+        COP_PAL_B6_C0_VAL_OFF, COP_PAL_B7_C0_VAL_OFF
+    };
+    for (int bank = 0; bank < 8; ++bank) {
+        const uint8_t *base = _copperListBuffer + aga_bank_val_off[bank];
+        for (int j = 0; j < 32; ++j) {
+            uint16_t v = *(const uint16_t *)(base + j * 4);
+            int idx = bank * 32 + j;
+            s_palette[idx].r = (uint8_t)(((v >> 8) & 0x0F) * 17);
+            s_palette[idx].g = (uint8_t)(((v >> 4) & 0x0F) * 17);
+            s_palette[idx].b = (uint8_t)(((v >> 0) & 0x0F) * 17);
+            s_palette[idx].a = 255;
+        }
+    }
 #else
     /* OCS: two palette blocks of 16 colours immediately at known offsets.
      * Each MOVE pair is 4 bytes [reg_word][value_word], we want value_word. */
