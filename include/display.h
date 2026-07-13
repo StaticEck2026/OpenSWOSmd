@@ -29,16 +29,23 @@ typedef int int32_t;
 #define GRAFS "grafs/"
 #endif
 
-/* ---- Hardware register addresses (for code that can't use struct Custom) ---- */
+/* ---- Hardware register addresses (for code that can't use struct Custom)
+ * On the SDL host, swos_platform.h pre-defines CUSTOM_BASE to resolve
+ * through the `custom` stub pointer so register pokes land in valid
+ * memory instead of crashing on 0x00DFF000. */
+#ifndef CUSTOM_BASE
 #define CUSTOM_BASE         0x00DFF000u
-#define DMACONR_ADDR        0x00DFF002u
-#define VPOSR_ADDR          0x00DFF004u
-#define COP1LC_ADDR         0x00DFF080u
-#define COPJMP1_ADDR        0x00DFF088u
-#define DMACON_ADDR         0x00DFF096u
-#define INTENA_ADDR         0x00DFF09Au
-#define INTREQ_ADDR         0x00DFF09Cu
-#define COLOR00_ADDR        0x00DFF180u
+#endif
+#ifndef DMACONR_ADDR
+#define DMACONR_ADDR        (CUSTOM_BASE + 0x002u)
+#define VPOSR_ADDR          (CUSTOM_BASE + 0x004u)
+#define COP1LC_ADDR         (CUSTOM_BASE + 0x080u)
+#define COPJMP1_ADDR        (CUSTOM_BASE + 0x088u)
+#define DMACON_ADDR         (CUSTOM_BASE + 0x096u)
+#define INTENA_ADDR         (CUSTOM_BASE + 0x09Au)
+#define INTREQ_ADDR         (CUSTOM_BASE + 0x09Cu)
+#define COLOR00_ADDR        (CUSTOM_BASE + 0x180u)
+#endif
 
 /* ==================================================================
  * Amiga Custom Chip Register Map (struct for register-relative access)
@@ -274,13 +281,34 @@ static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowByte
 #define COP_WAIT_WAIT              0x118
 #endif
 
-/* ---- Frontbuffer layout ---- */
-/* Amiga has no widescreen: _screen_width folds to the fixed visible width at compile
- * time, so the synced per-site culls / camera math are identical to before. (The SDL
- * build makes these runtime; this is the back-ported Amiga branch.) */
+/* ---- Frontbuffer layout ----
+ * Amiga: bitplane-interleaved, NUM_PLANES planes of PLANE_STRIDE bytes per
+ * scanline, 176 bytes/row for OCS.
+ * SDL: 8bpp chunky, 1 byte per pixel = palette index (0..15 for OCS-style
+ * palette). Row stride = SCREEN_WIDTH. Sprites store the same format
+ * (byte = palette index, 0 = transparent). */
+#ifdef SWOS_SDL_BUILD
+/* Widescreen: the frontbuffer STRIDE (= visible width) is RUNTIME — _screen_width is
+ * 336 (normal, == SCREEN_WIDTH) or WIDESCREEN_WIDTH (widescreen), set once at startup
+ * from gWidescreen. The buffers are ALLOCATED at the max stride so their array size
+ * stays a link-time constant (FRONTBUFFER_ALLOC_TOTAL_BYTES); only the row-stride
+ * arithmetic is runtime. SCREEN_WIDTH stays the 336 logical/centered width (menus). */
+extern int _screen_width;
+/* _screen_width (the live render width) is derived at startup from the monitor's
+ * aspect ratio (main.c), so the picture fills any display with no bars. The buffer is
+ * ALLOCATED at the MAX useful width = the full pitch world width (the view never
+ * usefully exceeds the pitch; the camera clamp keys off the same 0x2A0). */
+#define WIDESCREEN_WIDTH                480   /* 16:9 reference (1.76); the width is now adaptive */
+#define PITCH_VIEW_MAX_WIDTH            672   /* = 0x2A0, pitch world width = max render width */
+#define FRONTBUFFER_MAX_STRIDE_BYTES    PITCH_VIEW_MAX_WIDTH
+#define FRONTBUFFER_ROW_STRIDE_BYTES    _screen_width
+#else
+/* Amiga has no widescreen: _screen_width folds to the fixed visible width at
+ * compile time, so the synced per-site culls/camera math are identical to before. */
 #define _screen_width                  SCREEN_WIDTH
-#define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
+#define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
+#endif
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)
 #define FRONTBUFFER_SIZE_VISIBLE_BYTES  (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_VISIBLE_LINES)
@@ -289,8 +317,11 @@ static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowByte
 #define FRONTBUFFER_ALLOC_TOTAL_BYTES   (FRONTBUFFER_MAX_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
 #define FB_COPY_WORDS_MINUS1            ((FRONTBUFFER_SIZE_TOTAL_BYTES >> 1) - 1)
 #define FB_BLT_MOD_AFTER_1_WORD         (FRONTBUFFER_ROW_STRIDE_BYTES - 2)
-/* Widescreen menu centering (SDL only). On Amiga WIDE_MARGIN folds to 0 and
- * _menu_draw_x_offset stays 0, so the synced menu/primitive code is a no-op. */
+
+/* Widescreen menu centering: 336-wide menu content is drawn centered in the wider
+ * frame by shifting the frontbuffer write base by WIDE_MARGIN. _menu_draw_x_offset is
+ * set to WIDE_MARGIN only around the menu entry-draw loop (so the full-width panel
+ * background and the in-match pitch stay at offset 0). 0 / WIDE_MARGIN=0 on Amiga. */
 #define WIDE_MARGIN                     ((_screen_width - SCREEN_WIDTH) / 2)
 extern int _menu_draw_x_offset;
 
