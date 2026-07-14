@@ -178,11 +178,11 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x0100, 0x0210,                     /* BPLCON0: 8 bitplanes (BPU3=1) + COLOR */
     0x0102, 0x0000,                     /* BPLCON1 */
     0x0104, 0x0024,                     /* BPLCON2 */
-    0x01FE, 0x0000,                     /* NO-OP (FMODE placeholder) */
+    0x01FC, 0x0001,                     /* FMODE = BPL32 (32-bit bitplane fetch, 8bpl lores) */
     0x01FE, 0x0000,                     /* NO-OP */
     0x0108, 0x0000,                     /* BPL1MOD */
     0x010A, 0x0000,                     /* BPL2MOD */
-    0x0092, 0x0028,                     /* DDFSTRT */
+    0x0092, 0x0020,                     /* DDFSTRT (FMODE=1: 12 longs = full 384px plane row) */
     0x0094, 0x00D0,                     /* DDFSTOP */
     0x008E, 0x2471,                     /* DIWSTRT */
     0x0090, 0x34C1,                     /* DIWSTOP */
@@ -322,8 +322,30 @@ __attribute__((used, externally_visible))
 void ClearFrontbuffers(void)
 {
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-    memset(_frontbufferBase, 0, FRONTBUFFER_ALLOC_TOTAL_BYTES);
-    memset(_frontbufferBaseAlt, 0, FRONTBUFFER_ALLOC_TOTAL_BYTES);
+    memset(_frontbufferBase, 0, FRONTBUFFER_DISPLAY_ALLOC_BYTES);
+    memset(_frontbufferBaseAlt, 0, FRONTBUFFER_DISPLAY_ALLOC_BYTES);
+#endif
+}
+
+/* ================================================================
+ * MirrorFrontbuffer (AGA block-B elimination)
+ *
+ * Copies the visible frontbuffer region [0, SCREEN_HEIGHT) into the mirror
+ * half [SCREEN_HEIGHT, 2*SCREEN_HEIGHT) of the 2x-tall buffer, so the copper's
+ * single block A can display all SCREEN_HEIGHT lines contiguously from any
+ * cameraYMod320 (no mid-screen 8-pointer reload). Call once after a full
+ * buffer fill; the incremental scroll blits keep the mirror maintained after
+ * that (ScrollY double-writes; ScrollX mirror TODO). No-op on SDL/OCS.
+ * ================================================================ */
+__attribute__((used, externally_visible))
+void MirrorFrontbuffer(void)
+{
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    uint32_t *src = (uint32_t *)(void *)(uintptr_t)_frontbufferBasePtr;
+    uint32_t *dst = (uint32_t *)(void *)(uintptr_t)(_frontbufferBasePtr + FB_MIRROR_OFFSET_BYTES);
+    int32_t n = (SCREEN_HEIGHT * ROW_STRIDE_BYTES) / 4;
+    while (n-- > 0)
+        *dst++ = *src++;
 #endif
 }
 
@@ -510,6 +532,69 @@ void UpdatePlanePtrsAndBlitParams(void)
 #endif
 
     /* Handle horizontal scroll alignment */
+#ifdef AGA
+    /* FMODE=1 (32-bit / 2x fetch) scroll. The coarse cameraX byte offset (below)
+     * is 4-byte / 32px aligned so the bitplane-fetch pointer is 32-bit aligned
+     * (a hard FMODE=1 requirement); the residual is a BPLCON1 fine scroll.
+     *
+     * The 8-bit AGA lores scroll code maps to BPLCON1 as H2..H5 = pixel bits
+     * 8,4,2,1 in bits 0-3(PF1)/4-7(PF2) and H6 (+16px) in bit10(PF1)/14(PF2). The
+     * playfield delay D shows the pixel D to the LEFT of the fetch pointer, i.e.
+     * displayed = pointer - D. With a 32px-aligned pointer at `coarse`, the clean
+     * range is delay 16..31 = displayed offset 1..16 (RIGHT of the pointer, all
+     * fetched). That covers only HALF of each 32px block:
+     *   frac 0     : aligned, delay 0.
+     *   frac 1..16 : pointer=coarse, delay = 32-frac (16..31), H6. All fetched.
+     *   frac 17..31: pointer=coarse+32px (advanced one block in the plane-ptr block
+     *                below), delay = 64-frac (33..47), H7. Showing the position from
+     *                the NEXT fetched 32px block means the H7 delay reveals FETCHED
+     *                data, not the pre-fetch pipeline garbage a plain positive delay
+     *                would (that was the old "left strip"). This gives true per-pixel
+     *                smoothness across the full 0..31px with NO snap and NO strip
+     *                (verified strip-free + smooth at frac 24 and 31 on FS-UAE via the
+     *                test-rig BPLCON1/pointer overrides). See docs/AGA.md §11. */
+    /* FMODE=1 smooth horizontal scroll (the AGA analogue of the OCS path below,
+     * scaled from a 16px word to a 32px long). Faithful to how OCS switches the
+     * fetch window between aligned and unaligned frames:
+     *   ALIGNED (frac 0): 11-long (352px) fetch, DDFSTRT 0x30, modulo ROW-44,
+     *       BPLCON1 0, plane pointer = coarse. No fine delay, nothing to reveal.
+     *   UNALIGNED (frac 1..31): 12-long (384px = the FULL plane row) fetch, DDFSTRT
+     *       one long earlier (0x20), modulo ROW-48. The extra LEFT long sits under
+     *       the BPLCON1 fine-scroll delay so it reveals FETCHED pitch, not the
+     *       pre-fetch gap that used to show as the empty far-left column. delay =
+     *       32-frac (1..31) via PF1H2..H5 (bits 0-3) + PF1H6 (+16, bit 10) and the
+     *       PF2 mirror; NO H7.
+     * The DDFSTRT change at the frac 31->0 boundary cancels the coarse pointer step,
+     * and the plane-pointer pull-back (one long, ONLY when PF1H6 is set = frac 1..16;
+     * see the pointer block) keeps every transition per-pixel smooth. This gives
+     * smooth scroll across all 32px boundaries AND no empty column. Root-caused +
+     * validated frac 0..31 static/incremental on FS-UAE 2026-07-14 (the earlier
+     * H7 + pointer-advance scheme showed the right position but revealed the
+     * pre-fetch gap = the column, and disagreeing pointer/delay = the jitter).
+     * See RandyAGA.txt "Smooth Hardware Scrolling" + "LONG burst mode", docs/AGA.md. */
+    d1 = _cameraXMod320 & 0x1Fu;               /* fine fraction 0..31px */
+    copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
+    copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, PITCH_DEST_MOD_FMODE);
+    copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0020u);
+    copper_write_word(_copperListBuffer + COP_DDFSTOP_VAL_OFF, 0x00D0u);
+    {
+        /* One uniform fine-scroll delay for the WHOLE 0..31px range: delay = 32-frac
+         * (frac 0 -> 32 -> PF1H7, frac 1..16 -> 31..16 -> PF1H6, frac 17..31 ->
+         * 15..1 -> low bits). Encoded across PF1H2..H5 (bits 0-3) + PF1H6 (+16, bit
+         * 10) + PF1H7 (+32, bit 11) and the PF2 mirror (bits 4-7,14,15). The matching
+         * plane-pointer pull-back (one long when delay>=16; see the pointer block)
+         * keeps the fetched extra-left long under the delay AND cancels the coarse
+         * pointer step at every 32px boundary. Result: per-pixel smooth scroll across
+         * frac 0..31 with NO empty column. */
+        uint16_t delay = (uint16_t)(32u - d1);          /* frac 0..31 -> 32..1 */
+        uint16_t lo = delay & 0x0Fu;
+        uint16_t h6 = (delay >> 4) & 1u;                /* PF1H6/PF2H6 = +16px */
+        uint16_t h7 = (delay >> 5) & 1u;                /* PF1H7/PF2H7 = +32px (frac 0) */
+        copper_write_word(_copperListBuffer + COP_BPLCON1_VAL_OFF,
+                          (uint16_t)(lo | (lo << 4) | (h6 << 10) | (h6 << 14)
+                                        | (h7 << 11) | (h7 << 15)));
+    }
+#else
     d1 = _cameraXMod320 & 0x0Fu;
     if (d1 == 0)
     {
@@ -528,6 +613,7 @@ void UpdatePlanePtrsAndBlitParams(void)
         copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, 0x0028u);
         copper_write_word(_copperListBuffer + COP_BPLCON1_VAL_OFF, (uint16_t)(shift | (shift << 4)));
     }
+#endif
 
     /* Build plane pointer tables at copper BPL pointer blocks A and B */
     {
@@ -553,10 +639,19 @@ void UpdatePlanePtrsAndBlitParams(void)
             baseOffset += _frontbufferBasePtr;
         }
 
-        /* Add X byte offset */
+        /* Add X byte offset (coarse scroll). 4-byte / 32px aligned under
+         * FMODE=1 so the 32-bit fetch pointer is 32-bit aligned; 2-byte
+         * otherwise. The residual sub-align px is the BPLCON1 fine scroll above. */
         d1 = _cameraXMod320;
         d1 >>= 3;
-        d1 &= 0xFFFEu; /* word-align */
+        d1 &= SCROLL_X_COARSE_ALIGN_MASK;
+        /* Skip the per-plane verge margin: the pitch DATA lives at byte
+         * SCROLL_LEFT_MARGIN_BYTES.. of each plane row; the -4 pull-back below then
+         * reads the margin (byte 0..) at coarse=0 = the pitch's extreme-left edge. */
+        d1 += SCROLL_LEFT_MARGIN_BYTES;
+        /* No H7 +32px advance: the fine scroll is the continuous 0..31 delay above,
+         * and the plane pointer is pulled one long earlier below (baseOffset -= 4)
+         * so the 12-long fetch's extra LEFT long sits under that delay. */
         baseOffset += d1;
 
         /* Compute alt offset for second table */
@@ -568,6 +663,38 @@ void UpdatePlanePtrsAndBlitParams(void)
         {
             altOffset = (uint32_t)d1 + _frontbufferBasePtr;
         }
+
+#ifdef AGA
+        /* FMODE=1 12-long fetch (see the scroll block above): pull the plane pointer
+         * back one long (4 bytes / 32px) so the fetched extra-LEFT long lands under
+         * the BPLCON1 fine-scroll delay -- but ONLY when the delay >= 16 (PF1H6 or
+         * PF1H7 set = frac 0..16). For frac 17..31 (delay 1..15) the pointer stays at
+         * coarse. This delay-conditional pull-back is what cancels the coarse pointer
+         * step at each 32px boundary, making frac 31->0, 0->1 and 16->17 all per-pixel
+         * smooth while keeping every fraction column-free (verified on FS-UAE). */
+        if ((32u - (uint32_t)(_cameraXMod320 & 0x1Fu)) >= 16u)
+        {
+            /* The pull-back fetches the plane byte at coarse-4 (32px LEFT of the
+             * visible edge). Mid-pitch that is the previous pitch block; at the
+             * pitch's extreme-left edge (coarse=0) it is the per-plane VERGE MARGIN
+             * (bytes 0.., filled by fillVergeMargin with the repeated leftmost
+             * column). So the -4 smoothing now works at every camX including the
+             * first coarse block -- no edge-guard, no "jump back to the start". */
+            baseOffset -= 4u;
+            altOffset  -= 4u;
+        }
+#endif
+
+#ifdef PITCH_SCROLL_TEST
+        /* gdb-pokeable coarse-pointer byte nudge — used to empirically find the
+         * correct pointer offset for the FMODE=1 positive-shift regime (the
+         * "left strip" bug). 0 = camera-computed pointer. */
+        {
+            extern int32_t g_pstPtrByteOff;
+            baseOffset += (uint32_t)g_pstPtrByteOff;
+            altOffset += (uint32_t)g_pstPtrByteOff;
+        }
+#endif
 
         /* Write 4 plane pointer pairs */
         for (i = NUM_PLANES_MINUS1; i >= 0; i--)
@@ -581,9 +708,18 @@ void UpdatePlanePtrsAndBlitParams(void)
         }
     }
 
-    /* Compute and write blit line count */
+    /* Compute and write blit line count (raster of the block-B pointer reload) */
     {
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Block-B elimination: keep the reload raster constant at the bottom of
+         * the display (SCREEN_HEIGHT + DIWSTRT) regardless of cameraYMod320, so
+         * the mid-screen 8-pointer reload NEVER fires within the visible region.
+         * Block A alone displays all SCREEN_HEIGHT lines, reading the 2x-tall
+         * mirrored frontbuffer contiguously. */
+        uint16_t lineCount = SCREEN_HEIGHT + 0x24u;
+#else
         uint16_t lineCount = SCREEN_HEIGHT - _cameraYMod320 + 0x24u;
+#endif
         if (lineCount > 0xFFu)
         {
             copper_write_word(_copperListBuffer + COP_WAIT_VHPOS, 0xFFE1u);
@@ -595,6 +731,22 @@ void UpdatePlanePtrsAndBlitParams(void)
         lineCount &= 0xFFu;
         copper_write_word(_copperListBuffer + COP_WAIT_WAIT, (uint16_t)((lineCount << 8) | 1u));
     }
+
+#ifdef PITCH_SCROLL_TEST
+    /* Copper-register overrides for the pitch-scroll test rig (gdb-pokeable).
+     * Applied here so they survive the VBlank-ISR's own UpdatePlanePtrs call.
+     * A value < 0 means "leave the camera-computed value". */
+    {
+        extern int32_t g_pstB1Force, g_pstDsForce, g_pstDeForce, g_pstMoForce;
+        if (g_pstB1Force >= 0) copper_write_word(_copperListBuffer + COP_BPLCON1_VAL_OFF, (uint16_t)g_pstB1Force);
+        if (g_pstDsForce >= 0) copper_write_word(_copperListBuffer + COP_DDFSTRT_VAL_OFF, (uint16_t)g_pstDsForce);
+        if (g_pstDeForce >= 0) copper_write_word(_copperListBuffer + COP_DDFSTOP_VAL_OFF, (uint16_t)g_pstDeForce);
+        if (g_pstMoForce >= 0) {
+            copper_write_word(_copperListBuffer + COP_BPL1MOD_VAL_OFF, (uint16_t)g_pstMoForce);
+            copper_write_word(_copperListBuffer + COP_BPL2MOD_VAL_OFF, (uint16_t)g_pstMoForce);
+        }
+    }
+#endif
 }
 
 /* ================================================================
@@ -712,7 +864,7 @@ void SwapBuffersAndCameraViewState(void)
  *
  * Iteratively moves cameraX.s.i/cameraXMod320 toward targetX and
  * cameraY.s.i/cameraYMod320 toward targetY, one pixel per iteration,
- * with wrapping at 352/272.
+ * with wrapping at SCROLL_X_WRAP/272.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void SetCameraCoordinates(int16_t targetX, int16_t targetY)
@@ -736,7 +888,7 @@ void SetCameraCoordinates(int16_t targetX, int16_t targetY)
         {
             _cameraX.s.i += 1;
             _cameraXMod320 += 1;
-            if (_cameraXMod320 == 352)
+            if (_cameraXMod320 == SCROLL_X_WRAP)
                 _cameraXMod320 = 0;
         }
         else
@@ -744,7 +896,7 @@ void SetCameraCoordinates(int16_t targetX, int16_t targetY)
             _cameraX.s.i -= 1;
             _cameraXMod320 -= 1;
             if ((int16_t)_cameraXMod320 < 0)
-                _cameraXMod320 = 351;
+                _cameraXMod320 = SCROLL_X_WRAP - 1;
         }
     }
 

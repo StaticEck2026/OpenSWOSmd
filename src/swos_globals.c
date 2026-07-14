@@ -97,8 +97,8 @@ volatile uint32_t bitPlane7BasePtr;
  * point at these for the main display area. */
 /* Sized at the MAX (widescreen) stride so the array is big enough whatever the
  * runtime _screen_width is; the live frame uses _screen_width as its row stride. */
-SWOS_CHIP_BSS uint8_t _frontbufferBase[FRONTBUFFER_ALLOC_TOTAL_BYTES];
-SWOS_CHIP_BSS uint8_t _frontbufferBaseAlt[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+SWOS_CHIP_BSS uint8_t _frontbufferBase[FRONTBUFFER_DISPLAY_ALLOC_BYTES];
+SWOS_CHIP_BSS uint8_t _frontbufferBaseAlt[FRONTBUFFER_DISPLAY_ALLOC_BYTES];
 SWOS_CHIP_BSS uint8_t _frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 #ifdef SWOS_SDL_BUILD
 /* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
@@ -1007,7 +1007,15 @@ int16_t _kGoalieSkill0Table[30] = { 0x0007, 0x01A8, -50,    0x0340, 0x00A0, 0x00
  * DMA buffers), corrupting the pitch AND the sound. Sized to the compile-time
  * frontbuffer allocation, which equals PITCHFILE_MAX_SIZE on Amiga and is an
  * upper bound on SDL (PITCHFILE_MAX_SIZE is runtime there). */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* AGA: dedicated 82K buffer (== PITCHFILE_MAX_SIZE), smaller than the
+ * frontbuffer, to reclaim chip RAM for the 2x block-B display buffers. The
+ * load-size check (pitch.c) rejects any map > PITCHFILE_MAX_SIZE, so a map that
+ * would overflow is refused (no overrun); real AGA maps are <=78K. */
+SWOS_CHIP_BSS uint8_t _pitchDatBuffer[PITCHFILE_MAX_SIZE];
+#else
 SWOS_CHIP_BSS uint8_t _pitchDatBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
+#endif
 uint8_t _pitchChunkyBuffer[PITCH_POINTER_COUNT * PITCH_CHUNKY_TILE_BYTES];
 
 void *_kGoalieSkillTables[8] = {

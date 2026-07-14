@@ -342,5 +342,12 @@ skip_title_screens: ;
         }
     }
 #endif
+#ifdef PITCH_SCROLL_TEST
+    {
+        extern void PitchScrollTest(void);
+        PitchScrollTest();   /* dedicated AGA pitch-scroll test rig, never returns */
+        return;
+    }
+#endif
     FrontEndMainLoop();
 }
