@@ -71,6 +71,8 @@ DUMP_ASM ?= 1
 ifeq ($(DUMP_ASM),1)
 CCFLAGS   += -save-temps=obj -fverbose-asm
 endif
+# Escape hatch for one-off defines, e.g. make EXTRA_CFLAGS=-DPITCH_SCROLL_TEST
+CCFLAGS   += $(EXTRA_CFLAGS)
 CPPFLAGS  = $(CCFLAGS) -fno-rtti -fcoroutines -fno-use-cxa-atexit
 ASFLAGS   = -mcpu=68020 -g --register-prefix-optional -I$(SDKDIR)
 LDFLAGS   = -Wl,--emit-relocs,--no-check-sections,-e,main,-Map=$(OUT).map,-T,$(LDSCRIPT)
