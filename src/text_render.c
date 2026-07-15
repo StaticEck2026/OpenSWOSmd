@@ -46,15 +46,14 @@ static inline __attribute__((always_inline)) void waitBlit(void)
  *   - row stride = wquads * 16 bytes
  *   - palette index 0 = transparent
  *
- * Body/shadow remap: glyph fonts encode the body in palette index bit 1
- * (= colour 2) and the shadow in bit (NUM_PLANES-1) (= colour 8 for OCS).
- * The Amiga renderer used the `color` parameter to override the body
- * colour while preserving the shadow. We do the same:
- *   bodyBit   = (src >> 1) & 1
- *   shadowBit = (src >> (NUM_PLANES-1)) & 1
- *   For each output palette bit p:
- *     if p == NUM_PLANES-1: bit = (color>>p)&1 ? 1 : shadowBit
- *     else                : bit = (color>>p)&1 ? bodyBit : 0
+ * Body/shadow remap: the 4bpp SWOS_Font glyph encodes the body in palette index
+ * bit 1 (= colour 2) and the drop shadow in bit GLYPH_SHADOW_PLANE=3 (= colour 8),
+ * FIXED regardless of the display bit depth. The `color` parameter overrides the
+ * body colour; the shadow keeps the fixed menu shadow colour 8:
+ *   bodyBit   = (src >> 1) & 1        -> out = color
+ *   shadowBit = (src >> 3) & 1        -> out = 8   (shadow-only pixels)
+ * (Using NUM_PLANES-1 here silently dropped the shadow on the 8-plane build --
+ * NUM_PLANES-1 is 7 there, and the 4bpp glyph never sets bit 7.)
  *
  * Pixels with both bodyBit and shadowBit clear are transparent. */
 static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
@@ -84,19 +83,16 @@ static void blitGlyphBitplanes(uint16_t sprIdx, int16_t dstX, int16_t dstY,
             if (dx < 0 || dx >= _screen_width) continue;
 
             uint8_t src = srcRow[px];
-            uint8_t bodyBit   = (uint8_t)((src >> 1) & 1u);
-            uint8_t shadowBit = (uint8_t)((src >> (NUM_PLANES - 1)) & 1u);
+            uint8_t bodyBit   = (uint8_t)((src >> 1) & 1u);                  /* glyph body  = colour 2 */
+            uint8_t shadowBit = (uint8_t)((src >> GLYPH_SHADOW_PLANE) & 1u); /* glyph shadow = colour 8 */
             if (bodyBit == 0 && shadowBit == 0) continue;
 
-            uint8_t out = 0;
-            for (uint16_t p = 0; p < NUM_PLANES - 1; p++) {
-                if ((color >> p) & 1u) out |= (uint8_t)(bodyBit << p);
-            }
-            if ((color >> (NUM_PLANES - 1)) & 1u)
-                out |= (uint8_t)(1u << (NUM_PLANES - 1));
-            else
-                out |= (uint8_t)(shadowBit << (NUM_PLANES - 1));
-
+            /* Body pixels take the requested colour; shadow-only pixels take the
+             * fixed menu shadow colour (8). Uses the charset's FIXED shadow plane
+             * (bit 3), not NUM_PLANES-1, so the drop shadow survives on the 8-plane
+             * (AGA/SDL) build. Identical to the old per-plane remap on 4-plane OCS. */
+            uint8_t out = bodyBit ? (uint8_t)color
+                                  : (uint8_t)(1u << GLYPH_SHADOW_PLANE);
             if (out) dstRow[dx] = out;
         }
     }

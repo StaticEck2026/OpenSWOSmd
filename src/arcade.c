@@ -433,7 +433,7 @@ void Arcade_CompositeOverlay(uint32_t *dst, int dst_pitch_pixels, int w, int h)
 
     const uint32_t white = 0xFFFFFFFFu;
     const uint32_t black = 0xFF000000u;
-    const uint8_t  shadowBit = (uint8_t)(1u << (NUM_PLANES - 1)); /* glyph shadow plane */
+    const uint8_t  shadowBit = (uint8_t)(1u << GLYPH_SHADOW_PLANE); /* glyph shadow plane */
     const int la = s_fgLogoAlpha, ta = s_fgTableAlpha;
     uint32_t mpal[16]; arc_build_menu_argb(mpal);   /* table text -> menu palette colours */
 
@@ -512,41 +512,54 @@ static int      s_flagSheetW, s_flagSheetH, s_flagsLoaded;
 static uint32_t s_flagScreenRGBA[ARC_LOGO_MAXW * SCREEN_HEIGHT];
 static int      s_flagScreenActive;
 static int      s_arcadeFade = 256;   /* full-screen brightness 0..256 (256 = full) */
-static uint8_t  s_menubgBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* MENUBG.RAW, menu-palette idx */
+static uint8_t  s_menubgBuf[ARC_LOGO_MAXW * SCREEN_HEIGHT];  /* BALLNOTE.bmp, indexed pixels */
+static uint32_t s_menubgPal[256];                           /* BALLNOTE.bmp 256-colour palette (ARGB) */
+static int      s_menubgW, s_menubgH;                       /* BALLNOTE.bmp dimensions */
 static int      s_menubgLoaded;
 
 extern int Platform_LoadIndexedBMP(const char *path, uint8_t *out8, int out_cap,
                                    uint32_t *outPal, int *outW, int *outH);
 
-/* Decode MENUBG.RAW (the SWOS menu background) into s_menubgBuf the same way as
- * the logo, for use behind the flag/pitch selectors. */
+/* Load the arcade screen background BALLNOTE.bmp (256-colour indexed) into
+ * s_menubgBuf + its own palette, behind the flag/pitch selectors, high-score
+ * table, message/continue and name-entry screens. (Was grafs/menubg.raw, the
+ * plain SWOS menu background — the arcade uses its own artwork.) */
 static void arc_load_menubg(void)
 {
-    extern void    LoadOverlayToFrontbuffer(const uint8_t *path);
-    extern uint8_t _frontbufferMaskBuffer[];
-    size_t n = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
-    if (n > sizeof s_menubgBuf) n = sizeof s_menubgBuf;
-    LoadOverlayToFrontbuffer((const uint8_t *)"grafs/menubg.raw");
-    memcpy(s_menubgBuf, _frontbufferMaskBuffer, n);
-    s_menubgLoaded = 1;
+    if (Platform_LoadIndexedBMP("grafs_arcade/BALLNOTE.bmp", s_menubgBuf, (int)sizeof s_menubgBuf,
+                                s_menubgPal, &s_menubgW, &s_menubgH) == 0) {
+        s_menubgLoaded = 1;
+        fprintf(stderr, "[arcade] BALLNOTE.bmp %dx%d loaded\n", s_menubgW, s_menubgH);
+    } else {
+        fprintf(stderr, "[arcade] BALLNOTE.bmp failed to load\n");
+    }
 }
 
-/* Paint the menu background (menu-palette indices -> ARGB) into the full-screen
- * RGBA. The decode is centred in the 336 region; margins are near-black. */
+/* Paint BALLNOTE.bmp (its own 256-colour palette -> ARGB) into the full-screen
+ * RGBA. Scale UNIFORMLY to fill the height (keep aspect ratio, no distortion);
+ * the wider-than-screen result is centred and cropped at the sides. */
 static void arc_fill_menubg(void)
 {
-    extern uint16_t _menuPalette[];
-    uint32_t pal[16];
-    for (int i = 0; i < 16; i++) {
-        uint16_t v = _menuPalette[i];
-        uint32_t r = (v >> 8) & 0xF, g = (v >> 4) & 0xF, b = v & 0xF;
-        r = (r << 4) | r; g = (g << 4) | g; b = (b << 4) | b;
-        pal[i] = 0xFF000000u | (r << 16) | (g << 8) | b;
+    size_t total = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
+    if (!s_menubgLoaded || s_menubgW <= 0 || s_menubgH <= 0) {
+        for (size_t i = 0; i < total; i++) s_flagScreenRGBA[i] = 0xFF000000u;
+        return;
     }
-    size_t n = (size_t)_screen_width * (size_t)SCREEN_HEIGHT;
-    if (n > sizeof s_menubgBuf) n = sizeof s_menubgBuf;
-    for (size_t i = 0; i < n; i++)
-        s_flagScreenRGBA[i] = s_menubgLoaded ? pal[s_menubgBuf[i] & 15] : 0xFF000000u;
+    /* Uniform scale = SCREEN_HEIGHT / s_menubgH (fill height). The image's scaled
+     * width (s_menubgW * scale) is centred in _screen_width via `left`; the same
+     * scale on X keeps the aspect ratio. */
+    int scaledW = s_menubgW * SCREEN_HEIGHT / s_menubgH;
+    int left    = (_screen_width - scaledW) / 2;
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        int sy = y * s_menubgH / SCREEN_HEIGHT;
+        if (sy >= s_menubgH) sy = s_menubgH - 1;
+        const uint8_t *brow = s_menubgBuf + (size_t)sy * (size_t)s_menubgW;
+        uint32_t *out = s_flagScreenRGBA + (size_t)y * (size_t)_screen_width;
+        for (int x = 0; x < _screen_width; x++) {
+            int sx = (x - left) * s_menubgH / SCREEN_HEIGHT;
+            out[x] = (sx >= 0 && sx < s_menubgW) ? s_menubgPal[brow[sx]] : 0xFF000000u;
+        }
+    }
 }
 
 static void arc_load_flags(void)
@@ -642,7 +655,7 @@ static void arc_flag_header(const char *header)
     DrawMenuTextCentered(168, 16, ARC_WHITE, (uint8_t *)header, ARC_CHARS);
     _frontbufferBasePtr = saved;
 
-    uint8_t shadowBit = (uint8_t)(1u << (NUM_PLANES - 1));
+    uint8_t shadowBit = (uint8_t)(1u << GLYPH_SHADOW_PLANE);
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         const uint8_t *tx  = s_overlayBuf + (size_t)y * _screen_width;
         uint32_t      *out = s_flagScreenRGBA + (size_t)y * _screen_width;
@@ -1921,7 +1934,7 @@ static SpriteGraphics *arc_menu_glyph(char c)
 /* Nearest-neighbour blit of one menu-font glyph, scaled by `scale`, straight into
  * the RGBA present buffer with top-left at (dx,dy) screen pixels. This is just the
  * text font scaled up: the glyph data carries both the body (palette bit 1) and the
- * drop shadow (bit NUM_PLANES-1), so we reproduce exactly what DrawMenuText would
+ * drop shadow (bit GLYPH_SHADOW_PLANE), so we reproduce exactly what DrawMenuText would
  * draw with colour ARC_WHITE — body -> pal[2] (white), shadow -> pal[8] — only
  * bigger. `pal` is the 16-entry menu ARGB palette (arc_build_menu_argb). */
 static void arc_big_glyph(char c, int dx, int dy, int scale, const uint32_t pal[16])
@@ -1938,11 +1951,11 @@ static void arc_big_glyph(char c, int dx, int dy, int scale, const uint32_t pal[
         for (int px = 0; px < gw; px++) {
             uint8_t src    = srcRow[px];
             uint8_t body   = (uint8_t)((src >> 1) & 1u);
-            uint8_t shadow = (uint8_t)((src >> (NUM_PLANES - 1)) & 1u);
+            uint8_t shadow = (uint8_t)((src >> GLYPH_SHADOW_PLANE) & 1u);
             if (!body && !shadow) continue;                  /* transparent */
             /* same output index DrawMenuText builds for colour=ARC_WHITE(2):
              * body -> bit 1 (2), shadow -> top plane bit (8) */
-            uint8_t outIdx = (uint8_t)((body ? 2 : 0) | (shadow ? (1u << (NUM_PLANES - 1)) : 0));
+            uint8_t outIdx = (uint8_t)((body ? 2 : 0) | (shadow ? (1u << GLYPH_SHADOW_PLANE) : 0));
             uint32_t argb = pal[outIdx & 0x0F];
             int bx = dx + px * scale, by = dy + py * scale;
             for (int sy = 0; sy < scale; sy++) {
