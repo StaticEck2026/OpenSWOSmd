@@ -49,12 +49,23 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
  * pointer (NULL if not yet decoded). */
 uint8_t *_s_pitchFullPtrs[PITCH_POINTER_COUNT];
 
-/* pitchFansConvertTable: color remap table for fan sprites.
- * Indices 10,11 get replaced with team kit colors. */
+/* pitchFansConvertTable: colour remap for the fan/crowd tiles. Indices 10,11 get
+ * replaced with the away team's kit colours at load; everything else is identity.
+ *
+ * AGA (8 planes) and SDL (8bpp chunky) fan tiles use 8-BIT colour indices, so
+ * AdjustFanColor does convTable[0..255] — the table MUST be 256 entries. The old
+ * 16-entry OCS table (4-bit indices) read out of bounds for any crowd pixel >=16
+ * and garbled the whole crowd (only tiles using indices 0..15 came out right).
+ * OCS keeps the 16-entry 4-bit table. The 256-entry table is filled to identity
+ * at load in FixupAndColorPitchFile (before slots 10/11 are set to kit colours). */
+#if defined(AGA) || defined(SWOS_SDL_BUILD)
+static uint16_t pitchFansConvertTable[256];
+#else
 static uint16_t pitchFansConvertTable[16] = {
     0, 1, 2, 3, 4, 5, 6, 7,
     8, 9, 0xFFFF, 0xFFFF, 12, 13, 14, 15
 };
+#endif
 
 /* ================================================================
  * AdjustFanColor  (SWOS2.s line 7737)
@@ -427,6 +438,17 @@ void FixupAndColorPitchFile(void)
         fanGroupB = tmp;
         _fansSidesSwapped = 1;
     }
+
+#if defined(AGA) || defined(SWOS_SDL_BUILD)
+    /* Fill the 256-entry remap to identity so AdjustFanColor (which indexes it
+     * with an 8-bit crowd colour) preserves every colour except the kit slots
+     * 10/11 set below. Without this the crowd is garbled (see table decl). */
+    {
+        int16_t c;
+        for (c = 0; c < 256; c++)
+            pitchFansConvertTable[c] = (uint16_t)c;
+    }
+#endif
 
     /* Step 4: Recolor top team fans (21 sprites) */
     teamData = &_topTeamInGame;
