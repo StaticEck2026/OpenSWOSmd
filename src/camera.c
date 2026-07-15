@@ -49,7 +49,7 @@ void ScrollToCurrent(void)
  * does the same for cameraY.s.i toward newScreenY.
  *
  * 68k semantics: each increment/decrement adjusts both cameraX.s.i and
- * cameraXMod320 (wrapping at 352), and cameraY.s.i/cameraYMod320
+ * cameraXMod320 (wrapping at SCROLL_X_WRAP), and cameraY.s.i/cameraYMod320
  * (wrapping at 272).
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -90,14 +90,14 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
             /* Move right */
             _cameraX.s.i += 1;
             _cameraXMod320 += 1;
-            if (_cameraXMod320 == 352)
+            if (_cameraXMod320 == SCROLL_X_WRAP)
                 _cameraXMod320 = 0;
         } else {
             /* Move left */
             _cameraX.s.i -= 1;
             _cameraXMod320 -= 1;
             if ((int16_t)_cameraXMod320 < 0)
-                _cameraXMod320 = 351;
+                _cameraXMod320 = SCROLL_X_WRAP - 1;
         }
     }
 
