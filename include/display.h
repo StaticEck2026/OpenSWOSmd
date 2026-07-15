@@ -168,8 +168,45 @@ extern volatile struct Custom *_custom;
 
 #define NUM_PLANES_MINUS1           (NUM_PLANES - 1)
 #define NUM_PLANES_MINUS2           (NUM_PLANES - 2)
+/* Frontbuffer circular scroll-buffer plane-row width (bytes = px/8).
+ * AGA (FMODE=1) needs 48 B (384 px) not 44 B (352 px): FMODE=1's 32-bit fetch
+ * forces a 32px-aligned bitplane pointer, so the fine scroll uses a 32px quantum
+ * whose left-prime (for frac 17..31, the BPLCON1 H7 render) reads a full 32px
+ * block before the visible edge. A 352px circular buffer (336 visible + 16 slack)
+ * is too narrow — ScrollX's incoming right-edge write wraps into that prime region
+ * and corrupts it during scroll (the "empty column" bug). 384px gives the prime a
+ * whole extra 32px FMODE block of its own. OCS (FMODE=0 / 16px pointers / 16px
+ * quantum) fits the 16px slack, so it stays 44. See docs/AGA.md §11. */
+/* AGA (FMODE=1) = 48 B (384px); OCS = 44 B (352px). FMODE=1's 32-bit fetch forces
+ * a 32px-aligned bitplane pointer, so the 0..31px fine scroll must come entirely
+ * from BPLCON1 — and that needs a full 32px of FETCHED margin the 336px display
+ * doesn't include. A 352px buffer/window has only 16px of slack; 384px gives the
+ * 32px margin (336 visible + 32 fine-scroll + 16 blit slack). The fetch (DDFSTRT/
+ * DDFSTOP in display.c) and ScrollX's leading-edge blit (scroll_blit.c) both widen
+ * to keep that margin current during the incremental scroll — the piece the earlier
+ * 384px attempt missed. See docs/AGA.md §11. */
+/* AGA verge margin: 4 bytes (32px) of LEFT margin per plane row, holding the
+ * repeated leftmost pitch column so the FMODE=1 fine-scroll -4 pull-back has valid
+ * data to read at the pitch's extreme-left edge (the first coarse block). Without
+ * it the first block can't use the -4 smoothing -> the ~1-tile-in "jump back to
+ * the start". PLANE_STRIDE = FMODE_FETCH_BYTES(48 data) + margin(4) = 52. The data
+ * lives at byte SCROLL_LEFT_MARGIN_BYTES..PLANE_STRIDE; the margin at byte 0.. */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+#define SCROLL_LEFT_MARGIN_BYTES    4
+#define PLANE_STRIDE                52
+#else
+#define SCROLL_LEFT_MARGIN_BYTES    0
 #define PLANE_STRIDE                44
-#define PLANE_STRIDE_MINUS2         (PLANE_STRIDE - 2)      /* 42 */
+#endif
+/* cameraXMod320 (px) wraps at the plane-row pixel width = PLANE_STRIDE*8
+ * (384 AGA / 352 OCS). Was a hardcoded 352 in camera.c / display.c. */
+#define SCROLL_X_WRAP               (PLANE_STRIDE * 8)
+/* AGA FMODE=1 fine-scroll (frac 17..31 / BPLCON1 H7) reads a 32px "prime" block
+ * just LEFT of the visible window. ScrollX pre-blits this margin so it stays
+ * current during scroll (see scroll_blit.c). Fits the 384px buffer's 48px slack
+ * (336 visible + 32 prime = 368 < 384). Must be a whole tile multiple (16). */
+#define SCROLL_LEFT_PRIME_PX        32
+#define PLANE_STRIDE_MINUS2         (PLANE_STRIDE - 2)      /* 46 AGA / 42 OCS */
 #define PLANE_STRIDE_MINUS4         (PLANE_STRIDE - 4)      /* 40 */
 #define PLANE_STRIDE_DIV2           (PLANE_STRIDE >> 1)     /* 22 */
 #define ROW_STRIDE_BYTES            (PLANE_STRIDE * NUM_PLANES)
@@ -247,6 +284,7 @@ static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowByte
 #define COP_BPL1MOD_VAL_OFF         0x5A
 #define COP_BPL2MOD_VAL_OFF         0x5E
 #define COP_DDFSTRT_VAL_OFF         0x62
+#define COP_DDFSTOP_VAL_OFF         0x66
 
 /* Copper byte offsets — differ between OCS and AGA */
 #ifdef AGA
@@ -311,10 +349,27 @@ extern int _screen_width;
 #endif
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)
+/* AGA block-B elimination: ONLY the two display frontbuffers (base/alt) are 2x
+ * tall. Rows [SCREEN_HEIGHT, 2*SCREEN_HEIGHT) MIRROR rows [0, SCREEN_HEIGHT), so
+ * the copper's single block A displays all SCREEN_HEIGHT lines starting at any
+ * cameraYMod320 CONTIGUOUSLY — no mid-screen 8-pointer reload, hence no block-B
+ * fetch race under FMODE=1. The mask, pitch buffer, and every FRONTBUFFER_*
+ * size macro stay 1x (so their memsets/copies and PITCHFILE_MAX_SIZE are
+ * unchanged). The scroll blits double-write each row into the mirror at offset
+ * FB_MIRROR_OFFSET_BYTES. See docs/AGA.md section 12. */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+#define FRONTBUFFER_DISPLAY_LINES       (2 * SCREEN_HEIGHT + 1)
+#define FB_MIRROR_OFFSET_BYTES          (SCREEN_HEIGHT * ROW_STRIDE_BYTES)
+#else
+#define FRONTBUFFER_DISPLAY_LINES       (SCREEN_HEIGHT + 1)
+#endif
 #define FRONTBUFFER_SIZE_VISIBLE_BYTES  (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_VISIBLE_LINES)
 #define FRONTBUFFER_SIZE_TOTAL_BYTES    (FRONTBUFFER_ROW_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
 /* Compile-time max allocation (max stride) for the frontbuffer array declarations. */
 #define FRONTBUFFER_ALLOC_TOTAL_BYTES   (FRONTBUFFER_MAX_STRIDE_BYTES * FRONTBUFFER_TOTAL_LINES)
+/* Allocation for the two DISPLAY frontbuffers (base/alt) only — 2x tall on AGA
+ * for the block-B mirror, 1x elsewhere. */
+#define FRONTBUFFER_DISPLAY_ALLOC_BYTES (FRONTBUFFER_MAX_STRIDE_BYTES * FRONTBUFFER_DISPLAY_LINES)
 #define FB_COPY_WORDS_MINUS1            ((FRONTBUFFER_SIZE_TOTAL_BYTES >> 1) - 1)
 #define FB_BLT_MOD_AFTER_1_WORD         (FRONTBUFFER_ROW_STRIDE_BYTES - 2)
 
@@ -334,9 +389,45 @@ extern int _menu_draw_x_offset;
 #define MAX_FAN_TILE_INDEX          22
 #define MAX_FAN_TILE_OFFSET         (MAX_FAN_TILE_INDEX * TILE_SIZE)
 #define TILE_MASK                   15
-#define PITCH_PTR_ROW_BYTES         (PLANE_STRIDE_MINUS2 * 4)
-#define PITCH_DEST_MOD_UNALIGNED    (ROW_STRIDE_BYTES - PLANE_STRIDE)
-#define PITCH_DEST_MOD_ALIGNED      (ROW_STRIDE_BYTES - (PLANE_STRIDE - 2))
+/* Pitch-MAP source row stride: 42 tile-columns x 4-byte pointer = 168.
+ * This is a property of the pitch map (42x55 tiles), NOT the frontbuffer plane
+ * row — it must stay 168 even when PLANE_STRIDE widens to 48 for AGA. (It
+ * coincidentally equalled PLANE_STRIDE_MINUS2*4 while PLANE_STRIDE was 44.) */
+#define PITCH_MAP_COLS              42
+#define PITCH_PTR_ROW_BYTES         (PITCH_MAP_COLS * 4)
+/* ScrollY dest row-advance modulo = ROW_STRIDE - (bytes written per scroll row).
+ * The Y row copy writes a FIXED 22 words (unaligned) / 21 words (aligned) = 44/42
+ * bytes — that's the 336px visible pitch in 16px tile-columns (+1 partial), a
+ * property of the display width, NOT PLANE_STRIDE. It only coincidentally equalled
+ * ROW_STRIDE-PLANE_STRIDE while PLANE_STRIDE was 44; with the AGA widen to 48 that
+ * left each row 4 bytes short → Y-scroll skew. Keep the literal 44/42. */
+#define SCROLL_ROW_BYTES_UNALIGNED  44
+#define SCROLL_ROW_BYTES_ALIGNED    42
+#define PITCH_DEST_MOD_UNALIGNED    (ROW_STRIDE_BYTES - SCROLL_ROW_BYTES_UNALIGNED)
+#define PITCH_DEST_MOD_ALIGNED      (ROW_STRIDE_BYTES - SCROLL_ROW_BYTES_ALIGNED)
+/* FMODE=1 (32-bit / BPL32) bitplane fetch for the 8bpl-lores AGA pitch.
+ * The pitch is read as 12 fetches x 32px = 384px = 48 bytes per plane per
+ * scanline = the FULL plane row (DDFSTRT=0x20, DDFSTOP=0xD0), so the modulo to
+ * reach the next scanline's plane is ROW_STRIDE - 48 = 336. This MATCHES the
+ * ScrollY fill, which already writes 48 B/plane. (A previous revision fetched
+ * only 11 longs / 44 B / modulo 340; that under-fetched, leaving the leftmost
+ * (delay-32)px of each scrolled frame BEFORE the fetch pointer -> they showed
+ * background colour 0 = the persistent "empty far-left column". 2026-07-14: root-
+ * caused via live copper/geometry read + RandyAGA.txt LONG-burst rule, fixed by
+ * fetching the 12th long AND pointing the fetch one long earlier so that extra
+ * long lands under the H6/H7 fine-scroll delay — see display.c UpdatePlanePtrs.)
+ * The coarse cameraX byte offset and the tile-blit dest must both be 4-byte
+ * (32px) aligned so the 32-bit fetch pointer is 32-bit aligned; the residual
+ * 0..31px is applied via BPLCON1's AGA extended playfield-scroll bits (H6/H7).
+ * AGA (8bpl) only; OCS keeps 16px. Copper is Amiga-only, so on SDL these are
+ * inert. */
+#define FMODE_FETCH_BYTES           48
+#define PITCH_DEST_MOD_FMODE        (ROW_STRIDE_BYTES - FMODE_FETCH_BYTES)
+#ifdef AGA
+#define SCROLL_X_COARSE_ALIGN_MASK  0xFFFCu   /* 4-byte / 32px for FMODE=1 */
+#else
+#define SCROLL_X_COARSE_ALIGN_MASK  0xFFFEu   /* 2-byte / 16px (OCS) */
+#endif
 #define BLTDMOD_PLANE_STEP          PLANE_STRIDE_MINUS2
 #define BLTSIZE_TILE_COL            (((TILE_HEIGHT * NUM_PLANES) << 6) | 1)
 #define BLTSIZE_COL_16LINES_ALLPLANES  BLTSIZE_TILE_COL
@@ -353,7 +444,15 @@ extern int _menu_draw_x_offset;
 #define SPRITE_BLTSIZE_W2           ((SPRITE_BLIT_HEIGHT_LINES << 6) | 2)
 
 /* ---- File info ---- */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* Dedicated pitch-buffer size, smaller than the frontbuffer, to reclaim chip
+ * RAM for the 2x block-B display buffers (see FRONTBUFFER_DISPLAY_ALLOC_BYTES).
+ * AGA pitch maps are <=78KB (docs/AGA.md); 82KB gives ~4KB headroom. Both the
+ * load-size check (pitch.c) and _pitchDatBuffer allocation use this. */
+#define PITCHFILE_MAX_SIZE          (82u * 1024u)
+#else
 #define PITCHFILE_MAX_SIZE          FRONTBUFFER_SIZE_TOTAL_BYTES
+#endif
 
 /* ---- Copper list byte-offset helper ---- */
 /* NOTE: Do NOT use COPPER_W for writes — GCC decomposes volatile uint16_t
