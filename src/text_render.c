@@ -197,7 +197,16 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     _custom->bltamod = srcStrideBytes - blitWidthBytes;
     _custom->bltbmod = srcInterleavedBytes - blitWidthBytes;
 
-    uint16_t dstMod = PLANE_STRIDE - blitWidthBytes + PITCH_DEST_MOD_UNALIGNED;
+    /* Per-plane dest modulo: this cookie-cut runs one plane at a time
+     * (dst += PLANE_STRIDE after each), so consecutive scanlines of the SAME
+     * plane are a full interleaved row (ROW_STRIDE_BYTES) apart. After writing
+     * blitWidthBytes the blitter must skip ROW_STRIDE_BYTES - blitWidthBytes.
+     * The old form (PLANE_STRIDE - blitWidthBytes + PITCH_DEST_MOD_UNALIGNED)
+     * only equalled this while PLANE_STRIDE == SCROLL_ROW_BYTES_UNALIGNED (both
+     * 44); the AGA FMODE widen to PLANE_STRIDE 52 left it 8 bytes too high, so
+     * every glyph sheared down-right into horizontal streaks across the menu.
+     * See docs/AGA.md §11 (coincidental-equality trap). */
+    uint16_t dstMod = ROW_STRIDE_BYTES - blitWidthBytes;
     _custom->bltcmod = dstMod;
     _custom->bltdmod = dstMod;
 
