@@ -846,12 +846,17 @@ after_decode:
 __attribute__((used, externally_visible))
 void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
 {
+    /* AGA: populate the 2x-tall frontbuffer's mirror half after each full fill,
+     * so the copper's block A displays with no block-B reload. No-op elsewhere. */
+    extern void MirrorFrontbuffer(void);
     targetX = ReplayCameraX(targetX);
     targetY = ReplayCameraY(targetY);
     SetCameraCoordinates(targetX, targetY);
     InitCameraMoveView(targetX, targetY);
+    MirrorFrontbuffer();
     SwapBuffersAndCameraViewState();
     InitCameraMoveView(targetX, targetY);
+    MirrorFrontbuffer();
 }
 
 /* ============================================================
