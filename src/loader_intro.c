@@ -262,11 +262,8 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
         framePlanes = NUM_PLANES;
     /* No memset here: these frames are full-screen (SCREEN_HEIGHT rows) 8bpp, so
      * the re-stride below overwrites the entire visible area (bytes 0..44 of every
-     * plane row). A per-frame memset cleared the alt buffer to black first, which
-     * flashed black for a beat before the re-stride refilled it -> the intro
-     * "flicker". Overwriting in place (like the original verbatim LoadFileEx) has
-     * no black intermediate. Off-screen padding (bytes 44..52) stays stale but is
-     * never displayed. */
+     * plane row). Off-screen padding (bytes 44..52) stays stale but is never
+     * displayed. */
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         const uint8_t *src = _rawAssetLoadBuffer +
                              (size_t)y * LOADER_SRC_PLANE_STRIDE * framePlanes;
@@ -275,6 +272,18 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
             memcpy(dst + (size_t)p * PLANE_STRIDE,
                    src + (size_t)p * LOADER_SRC_PLANE_STRIDE,
                    LOADER_SRC_PLANE_STRIDE);
+    }
+    /* Mirror the decoded frame ALT -> BASE. This is the real intro-flicker fix:
+     * the original `LoadFileEx(..., alt)` mirrored to base IMPLICITLY (LoadFileEx
+     * copies alt->base when the dest is the alt buffer), but our staged re-stride
+     * writes ALT only. The display double-buffer swaps every vblank, so with the
+     * frame in ALT alone it strobed between the frame (alt) and the stale/other
+     * buffer (base). Copying alt->base puts the frame in BOTH buffers so every swap
+     * shows it. (Same reason the SDL branch above mirrors.) */
+    {
+        uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr;
+        if (dstBase && dstBase != dstAlt)
+            memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #endif
 }
