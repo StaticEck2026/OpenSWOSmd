@@ -10,9 +10,9 @@
 #include "display.h"
 #include "input.h"
 #include "audio.h"
+#include <string.h>            /* memcpy/memset — both builds (Amiga loader re-stride) */
+extern uint8_t _rawAssetLoadBuffer[];   /* overlay/frame staging — both builds */
 #ifdef SWOS_SDL_BUILD
-#include <string.h>
-extern uint8_t _rawAssetLoadBuffer[];
 extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                                const uint8_t *ins_data,  int ins_size,
                                int subsong);
@@ -244,7 +244,32 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
         memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #else
-    LoadFileEx((uint8_t *)filename, (uint8_t *)_frontbufferBaseAltPtr, (uint32_t *)0);
+    /* Amiga: RE-STRIDE the 44-byte-plane-row frame into the ALT frontbuffer's
+     * PLANE_STRIDE(52) slots. The frame FILES are authored at the pre-FMODE
+     * 44-byte plane row; the AGA widen made the frontbuffer PLANE_STRIDE 52, so
+     * the old verbatim `LoadFileEx(..., _frontbufferBaseAltPtr, 0)` misaligned
+     * every plane row -> garbled loader/intro screens. Identical fix to
+     * LoadOverlayToFrontbuffer; plane count from the decompressed size so 4bpp/
+     * 8bpp frames both load. On OCS (PLANE_STRIDE==44) it's a straight copy.
+     * docs/AGA.md §11. */
+    enum { LOADER_SRC_PLANE_STRIDE = 44 };
+    uint8_t *dstAlt = (uint8_t *)_frontbufferBaseAltPtr;
+    if (!dstAlt) return;
+    uint32_t frameSize = 0;
+    LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, &frameSize);
+    uint32_t framePlanes = frameSize / ((uint32_t)LOADER_SRC_PLANE_STRIDE * SCREEN_HEIGHT);
+    if (framePlanes == 0 || framePlanes > (uint32_t)NUM_PLANES)
+        framePlanes = NUM_PLANES;
+    memset(dstAlt, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        const uint8_t *src = _rawAssetLoadBuffer +
+                             (size_t)y * LOADER_SRC_PLANE_STRIDE * framePlanes;
+        uint8_t *dst = dstAlt + (size_t)y * ROW_STRIDE_BYTES;
+        for (uint32_t p = 0; p < framePlanes; p++)
+            memcpy(dst + (size_t)p * PLANE_STRIDE,
+                   src + (size_t)p * LOADER_SRC_PLANE_STRIDE,
+                   LOADER_SRC_PLANE_STRIDE);
+    }
 #endif
 }
 
