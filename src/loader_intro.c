@@ -260,7 +260,13 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
     uint32_t framePlanes = frameSize / ((uint32_t)LOADER_SRC_PLANE_STRIDE * SCREEN_HEIGHT);
     if (framePlanes == 0 || framePlanes > (uint32_t)NUM_PLANES)
         framePlanes = NUM_PLANES;
-    memset(dstAlt, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    /* No memset here: these frames are full-screen (SCREEN_HEIGHT rows) 8bpp, so
+     * the re-stride below overwrites the entire visible area (bytes 0..44 of every
+     * plane row). A per-frame memset cleared the alt buffer to black first, which
+     * flashed black for a beat before the re-stride refilled it -> the intro
+     * "flicker". Overwriting in place (like the original verbatim LoadFileEx) has
+     * no black intermediate. Off-screen padding (bytes 44..52) stays stale but is
+     * never displayed. */
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         const uint8_t *src = _rawAssetLoadBuffer +
                              (size_t)y * LOADER_SRC_PLANE_STRIDE * framePlanes;
