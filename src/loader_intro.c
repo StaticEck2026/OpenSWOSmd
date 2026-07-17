@@ -253,6 +253,16 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
      * 8bpp frames both load. On OCS (PLANE_STRIDE==44) it's a straight copy.
      * docs/AGA.md §11. */
     enum { LOADER_SRC_PLANE_STRIDE = 44 };
+    /* AGA FMODE=1 displays static byte-0 content 16px (2 bytes) left of the
+     * OCS/FMODE=0 position, so a full-screen loader frame drawn at byte 0 lands
+     * 16px left of centre -- the SAME offset the menu foreground gets fixed with
+     * in DrawMenu (menu_system.c AGA_MENU_FG_SHIFT_BYTES). Shift the frame right by
+     * LOADER_X_SHIFT_BYTES to re-centre it. 0 on OCS. */
+#ifdef AGA
+    enum { LOADER_X_SHIFT_BYTES = 2 };
+#else
+    enum { LOADER_X_SHIFT_BYTES = 0 };
+#endif
     uint8_t *dstAlt = (uint8_t *)_frontbufferBaseAltPtr;
     if (!dstAlt) return;
     uint32_t frameSize = 0;
@@ -260,18 +270,21 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
     uint32_t framePlanes = frameSize / ((uint32_t)LOADER_SRC_PLANE_STRIDE * SCREEN_HEIGHT);
     if (framePlanes == 0 || framePlanes > (uint32_t)NUM_PLANES)
         framePlanes = NUM_PLANES;
-    /* No memset here: these frames are full-screen (SCREEN_HEIGHT rows) 8bpp, so
-     * the re-stride below overwrites the entire visible area (bytes 0..44 of every
-     * plane row). Off-screen padding (bytes 44..52) stays stale but is never
-     * displayed. */
+    /* No full-screen memset (that caused the black-flash); the re-stride overwrites
+     * the whole visible area. Per plane row: clear the LOADER_X_SHIFT_BYTES left
+     * margin (kept black), then place the 44-byte frame row shifted right by it.
+     * Off-screen padding past the frame stays stale but is never displayed. */
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
         const uint8_t *src = _rawAssetLoadBuffer +
                              (size_t)y * LOADER_SRC_PLANE_STRIDE * framePlanes;
         uint8_t *dst = dstAlt + (size_t)y * ROW_STRIDE_BYTES;
-        for (uint32_t p = 0; p < framePlanes; p++)
-            memcpy(dst + (size_t)p * PLANE_STRIDE,
+        for (uint32_t p = 0; p < framePlanes; p++) {
+            uint8_t *pd = dst + (size_t)p * PLANE_STRIDE;
+            if (LOADER_X_SHIFT_BYTES) memset(pd, 0, LOADER_X_SHIFT_BYTES);
+            memcpy(pd + LOADER_X_SHIFT_BYTES,
                    src + (size_t)p * LOADER_SRC_PLANE_STRIDE,
                    LOADER_SRC_PLANE_STRIDE);
+        }
     }
     /* Mirror the decoded frame ALT -> BASE. This is the real intro-flicker fix:
      * the original `LoadFileEx(..., alt)` mirrored to base IMPLICITLY (LoadFileEx
