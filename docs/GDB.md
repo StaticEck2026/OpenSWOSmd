@@ -481,6 +481,18 @@ pkill -f "fs-uae --amiga"                                     # closes FS-UAE
   the *Windows* FS-UAE binary (it binds to Windows loopback, which
   WSL2 can't see). Use the bundled Linux FS-UAE binary instead, as
   documented above.
+- **FS-UAE window is blank / shows `[WARN:COPY MODE]` in the title bar, no
+  emulation visible** — but `monitor screenshot` / `fb_capture.py` still return a
+  correct frame, so FS-UAE and the game are fine; only the *window* is dead. Cause:
+  WSLg's **weston** compositor has wedged into CPU-copy mode — typically after
+  repeated FS-UAE boot→kill→boot **relaunch churn** in one session exhausts/wedges
+  the vGPU surface sharing (launching once and leaving it up avoids it). Fix, from
+  a **Windows PowerShell** (no full `wsl --shutdown` needed):
+  ```
+  wsl.exe --system sh -c "pkill -9 weston"
+  ```
+  weston lives in the WSLg **system** distro; killing it makes WSLg respawn it, and
+  the next FS-UAE launch renders normally. (Confirmed working 2026-07-17.)
 - **`up` fails every attempt: "trigger never appeared in /tmp/fs-uae.log"**
   (4 retries → FAIL), and gdb "suddenly takes forever / never worked
   before." The FS-UAE build's GDBSERVER log strings changed.

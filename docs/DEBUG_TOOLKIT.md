@@ -64,9 +64,36 @@ fetch cycles? where, exactly? which blit?*
 dma_profile.py 10
 
 # parse an existing capture
-dma_profile.py parse  out.prof     # contention summary
-dma_profile.py blits  out.prof     # one line per blit: raster span, size, dest, overrun
+dma_profile.py parse   out.prof            # contention summary + fetch-vs-sprite-slot steal
+dma_profile.py blits   out.prof            # one line per blit: raster span, size, dest, overrun
+dma_profile.py map     out.prof [prefix]   # -> PNG raster maps (full frame + annotated left edge)
+dma_profile.py compare a.prof b.prof [png] # side-by-side left-edge panels (before/after a fix)
 ```
+
+> **Reliable-capture protocol (hard-won 2026-07-19).** `monitor profile` replies
+> INSTANTLY with a benign `Protocol error with Rcmd: 01` ack, then resumes the target and
+> profiles **asynchronously** — the file appears seconds later (each cycle-exact frame costs
+> ~15–25 s wall-clock). `do_profile` therefore **polls for the file**; do NOT test
+> `os.path.exists` right after the ack (the long-standing "always FAILED" bug). The target
+> must be **stopped with NO breakpoints** when you issue the command — a breakpoint hit
+> mid-profile halts the frame and it never completes. **Active hardware-sprite ("band")
+> frames stall the recorder entirely** (the frame never finishes under cycle-exact); profile
+> the equivalent **bob-path** frame instead — it renders the same pitch at the same DDFSTRT,
+> and sprite DMA slots are hpos-fixed, so the fetch-vs-slot overlap is fully visible there.
+
+`parse` also reports the **hardware-sprite DMA steal** — where the bitplane fetch starts vs
+the 8 fixed sprite slots (an early DDFSTRT disables the sprites whose slots fall after it):
+
+```
+    fetch: bitplane DMA hpos on display lines = 0x24..0xdb (starts @0x24)
+    sprite DMA slots: spr0=0x19/0x1b  spr1=0x1d/0x1f  spr2=0x21/0x23  spr3=0x25/0x27  ...
+    >>> STEAL: fetch start 0x24 lands on slots of spr[3, 4, 5, 6, 7] -> those sprites are DISABLED by AGA
+        of the SWOS sprites (spr0..3): spr[3] LOST
+```
+
+`map`/`compare` render the DMA grid to a PNG (bitplane=green, sprite=yellow, blitter=red,
+copper=blue, conflict=magenta) so the steal is *visible*: the red bitplane-fetch-start line
+against the yellow sprite-slot ticks. See docs/AGA.md "Hardware sprite DMA steal (DDFSTRT)".
 
 Contention summary flags **blitter DMA landing on display lines** (a blit running while
 the bitplanes are being fetched — the thing that corrupts the picture):
@@ -92,6 +119,32 @@ localises the offending blit:
 Record format (`sizeofDmaRec=58`, `DMARECORD_*` channels, `DmaEvents` bits) and the
 `GetBlits` reconstruction are ported from the `vscode-amiga-debug` plugin
 (`src/backend/profile.ts`, `src/client/dma.ts`).
+
+### `cpu_flamegraph.py` — CPU flame graph from the same `.prof`
+
+The `.prof` that `dma_profile.py` captures **also** embeds the fs-uae CPU profiler stream
+(`newcpu.cpp get_cpu_profiler_output`): per executed instruction a record
+`[pc …] (0xffffffff-cycles) 17×register`. This tool walks that stream, resolves PCs to
+function names via `SWOS2.elf` (objdump), and answers *what burns the frame's CPU cycles*.
+
+```sh
+cpu_flamegraph.py top  out.prof [N]        # text: top-N functions by cycles
+cpu_flamegraph.py fold out.prof [f.folded] # Brendan-Gregg folded stacks
+cpu_flamegraph.py svg  out.prof [out.svg]  # fold + render via FlameGraph/flamegraph.py
+```
+
+```
+dma_bobfix.prof: 284200 CPU cycles profiled, top functions:
+   199456   70.2%  WaitForVSync          <- idle spin => the frame has big CPU headroom
+    49335   17.4%  scrollXBlitColumn     <- the real per-frame work
+     8730    3.1%  QueueMaskedSpriteBlitClipped
+```
+
+The SVG is produced through the owner's FlameGraph port (`$FLAMEGRAPH_PY`, default
+`C:\Projects\Python\FlameGraph\flamegraph.py`). Captures made with the empty unwind file
+(how `dma_profile.py` runs) are **depth-1** (leaf only) → a flat self-time profile; feeding
+fs-uae a real DWARF-derived unwind file makes the *same walk* emit full call stacks →
+hierarchical flame graph. Env: `SWOS_ELF`, `M68K_OBJDUMP`, `FLAMEGRAPH_PY`.
 
 ### `copper_disasm.py` — copper-list disassembler
 
