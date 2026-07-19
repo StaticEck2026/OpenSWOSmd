@@ -10,9 +10,9 @@
 #include "display.h"
 #include "input.h"
 #include "audio.h"
+#include <string.h>            /* memcpy/memset — both builds (Amiga loader re-stride) */
+extern uint8_t _rawAssetLoadBuffer[];   /* overlay/frame staging — both builds */
 #ifdef SWOS_SDL_BUILD
-#include <string.h>
-extern uint8_t _rawAssetLoadBuffer[];
 extern int  AudioSDL_StartSong(const uint8_t *song_data, int song_size,
                                const uint8_t *ins_data,  int ins_size,
                                int subsong);
@@ -244,7 +244,60 @@ static void loaderIntroLoadFrameToFrontbufferAlt(const uint8_t *filename)
         memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
     }
 #else
-    LoadFileEx((uint8_t *)filename, (uint8_t *)_frontbufferBaseAltPtr, (uint32_t *)0);
+    /* Amiga: RE-STRIDE the 44-byte-plane-row frame into the ALT frontbuffer's
+     * PLANE_STRIDE(52) slots. The frame FILES are authored at the pre-FMODE
+     * 44-byte plane row; the AGA widen made the frontbuffer PLANE_STRIDE 52, so
+     * the old verbatim `LoadFileEx(..., _frontbufferBaseAltPtr, 0)` misaligned
+     * every plane row -> garbled loader/intro screens. Identical fix to
+     * LoadOverlayToFrontbuffer; plane count from the decompressed size so 4bpp/
+     * 8bpp frames both load. On OCS (PLANE_STRIDE==44) it's a straight copy.
+     * docs/AGA.md §11. */
+    enum { LOADER_SRC_PLANE_STRIDE = 44 };
+    /* AGA FMODE=1 displays static byte-0 content 16px (2 bytes) left of the
+     * OCS/FMODE=0 position, so a full-screen loader frame drawn at byte 0 lands
+     * 16px left of centre -- the SAME offset the menu foreground gets fixed with
+     * in DrawMenu (menu_system.c AGA_MENU_FG_SHIFT_BYTES). Shift the frame right by
+     * LOADER_X_SHIFT_BYTES to re-centre it. 0 on OCS. */
+#ifdef AGA
+    enum { LOADER_X_SHIFT_BYTES = 2 };
+#else
+    enum { LOADER_X_SHIFT_BYTES = 0 };
+#endif
+    uint8_t *dstAlt = (uint8_t *)_frontbufferBaseAltPtr;
+    if (!dstAlt) return;
+    uint32_t frameSize = 0;
+    LoadFileEx((uint8_t *)filename, _rawAssetLoadBuffer, &frameSize);
+    uint32_t framePlanes = frameSize / ((uint32_t)LOADER_SRC_PLANE_STRIDE * SCREEN_HEIGHT);
+    if (framePlanes == 0 || framePlanes > (uint32_t)NUM_PLANES)
+        framePlanes = NUM_PLANES;
+    /* No full-screen memset (that caused the black-flash); the re-stride overwrites
+     * the whole visible area. Per plane row: clear the LOADER_X_SHIFT_BYTES left
+     * margin (kept black), then place the 44-byte frame row shifted right by it.
+     * Off-screen padding past the frame stays stale but is never displayed. */
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        const uint8_t *src = _rawAssetLoadBuffer +
+                             (size_t)y * LOADER_SRC_PLANE_STRIDE * framePlanes;
+        uint8_t *dst = dstAlt + (size_t)y * ROW_STRIDE_BYTES;
+        for (uint32_t p = 0; p < framePlanes; p++) {
+            uint8_t *pd = dst + (size_t)p * PLANE_STRIDE;
+            if (LOADER_X_SHIFT_BYTES) memset(pd, 0, LOADER_X_SHIFT_BYTES);
+            memcpy(pd + LOADER_X_SHIFT_BYTES,
+                   src + (size_t)p * LOADER_SRC_PLANE_STRIDE,
+                   LOADER_SRC_PLANE_STRIDE);
+        }
+    }
+    /* Mirror the decoded frame ALT -> BASE. This is the real intro-flicker fix:
+     * the original `LoadFileEx(..., alt)` mirrored to base IMPLICITLY (LoadFileEx
+     * copies alt->base when the dest is the alt buffer), but our staged re-stride
+     * writes ALT only. The display double-buffer swaps every vblank, so with the
+     * frame in ALT alone it strobed between the frame (alt) and the stale/other
+     * buffer (base). Copying alt->base puts the frame in BOTH buffers so every swap
+     * shows it. (Same reason the SDL branch above mirrors.) */
+    {
+        uint8_t *dstBase = (uint8_t *)_frontbufferBasePtr;
+        if (dstBase && dstBase != dstAlt)
+            memcpy(dstBase, dstAlt, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    }
 #endif
 }
 

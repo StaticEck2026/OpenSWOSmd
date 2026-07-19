@@ -1315,7 +1315,21 @@ void DrawMenu(void)
     /* Widescreen: center all menu drawing. Set once here; every partial redraw
      * (CallDrawMenuItem, DrawMultipleItems, selector, custom callbacks, ...)
      * inherits it. The in-match game loop resets it to 0 for the world. */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* AGA FMODE widen (PLANE_STRIDE 44->52) left the whole menu FOREGROUND 16px
+     * (= AGA_MENU_FG_SHIFT_BYTES*8) left of the stock/OCS item position -- verified
+     * pixel-for-pixel against a real OCS capture (the entry boxes AND the logo
+     * sprite are uniformly offset). _menu_draw_x_offset is a BYTE offset added to
+     * the frontbuffer base by FillRectangle (entry boxes), the glyph blit (text),
+     * AND the sprite blit (the logo is MENU_CMD_SPRITE_FG sprite 224) -- but NOT by
+     * BlitterCopyPanelToScreen2, so the background stays full-screen. Nudging it 2
+     * bytes right realigns the foreground with OCS without touching the backdrop
+     * (no left black strip). */
+    enum { AGA_MENU_FG_SHIFT_BYTES = 2 };
+    _menu_draw_x_offset = WIDE_MARGIN + AGA_MENU_FG_SHIFT_BYTES;
+#else
     _menu_draw_x_offset = WIDE_MARGIN;
+#endif
 
     BlitterCopyPanelToScreen2();
     DrawMenuPanelBackground();

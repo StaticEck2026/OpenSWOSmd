@@ -179,7 +179,7 @@ static const uint16_t copperListTemplate[COPPERLIST_SIZE_BYTES / 2] = {
     0x0102, 0x0000,                     /* BPLCON1 */
     0x0104, 0x0024,                     /* BPLCON2 */
     0x01FC, 0x0001,                     /* FMODE = BPL32 (32-bit bitplane fetch, 8bpl lores) */
-    0x01FE, 0x0000,                     /* NO-OP */
+    0x010C, 0x0000,                     /* BPLCON4: ESPRM=OSPRM=0 -> HW sprites index palette 0-15 (kit colours) instead of the reset-default base-16 (colours 16-31) */
     0x0108, 0x0000,                     /* BPL1MOD */
     0x010A, 0x0000,                     /* BPL2MOD */
     0x0092, 0x0020,                     /* DDFSTRT (FMODE=1: 12 longs = full 384px plane row) */

@@ -116,17 +116,15 @@ int _menu_draw_x_offset = 0;
 volatile uintptr_t _frontbufferBasePtr;
 volatile uintptr_t _frontbufferBaseAltPtr;
 
-#ifdef SWOS_SDL_BUILD
-/* SDL-only scratch buffer used by `ProcessImageCommandStream` and
- * `LoadOverlayToFrontbuffer` to receive raw RNC-decompressed bitplane
- * file loads. The Amiga build wrote bitplane data directly into
- * `frontbufferMaskBuffer`, but we now keep that buffer in chunky 8bpp
- * format (matching the frontbuffer), so we need a separate area for the
- * raw bitplane data the loader produces. 128 KB covers the largest
- * single-asset load (HERO.INS at ~286 KB is split, the largest single
- * grafs file is well under 128 KB). */
+/* Scratch buffer for raw RNC-decompressed bitplane file loads.
+ * SDL: `ProcessImageCommandStream` and `LoadOverlayToFrontbuffer` stage here
+ *   because the mask buffer is kept in chunky 8bpp; the loader needs a separate
+ *   planar area.
+ * Amiga: `LoadOverlayToFrontbuffer` stages here to RE-STRIDE the overlay's
+ *   44-byte plane rows into the PLANE_STRIDE mask buffer — after the AGA FMODE
+ *   widen (PLANE_STRIDE 52) a verbatim load misaligned every row. (Regular fast
+ *   RAM, no DMA; 128 KB covers the largest single grafs file.) */
 uint8_t _rawAssetLoadBuffer[128 * 1024];
-#endif
 
 /* Copper list (OCS 320 bytes / AGA 1316 bytes). Must be in chip RAM
  * because the copper hardware fetches from it via DMA. */

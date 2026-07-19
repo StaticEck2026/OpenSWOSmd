@@ -8,9 +8,7 @@
 #include "audio.h"
 #include "menus.h"
 #include "display.h"
-#ifdef SWOS_SDL_BUILD
-#include <string.h>
-#endif
+#include <string.h>   /* memcpy/memset — used by both the SDL decode and the Amiga overlay re-stride */
 
 /* FrontEndMainLoop */
 extern uint16_t _quitToDos;
@@ -23,9 +21,7 @@ extern uint16_t _menuFade;
 extern uint8_t _frontbufferMaskBuffer[];
 extern volatile uint16_t _currentGameTick;
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
-#ifdef SWOS_SDL_BUILD
-extern uint8_t _rawAssetLoadBuffer[];
-#endif
+extern uint8_t _rawAssetLoadBuffer[];   /* staging buffer for both builds' overlay load */
 
 /* ================================================================
  * LoadOverlayToFrontbuffer  (SWOS2.s line 42675)
@@ -72,7 +68,33 @@ void LoadOverlayToFrontbuffer(const uint8_t *path)
         }
     }
 #else
-    LoadFileEx((uint8_t *)path, _frontbufferMaskBuffer, (uint32_t *)0);
+    /* Amiga: load the raw interleaved-bitplane overlay, then RE-STRIDE it into
+     * the mask buffer. The overlay FILES are authored at a 44-byte plane row
+     * (352px — the pre-FMODE frontbuffer width); the AGA FMODE widen made the
+     * runtime mask/frontbuffer PLANE_STRIDE 52, so the old verbatim
+     * `LoadFileEx(..., _frontbufferMaskBuffer, 0)` misaligned every plane row:
+     * BlitterCopyPanelToScreen2 reads the mask at PLANE_STRIDE, so a 44-byte
+     * source row bled 8 bytes into the next plane every row -> horizontal
+     * streaks across the whole menu backdrop. Copy each interleaved plane row
+     * into its PLANE_STRIDE slot instead. On OCS (PLANE_STRIDE == 44) the
+     * strides match and this is a straight copy. Plane count comes from the
+     * decompressed size so 4bpp and 8bpp grafs banks both load. docs/AGA.md §11. */
+    enum { OVERLAY_SRC_PLANE_STRIDE = 44 };
+    uint32_t ovlSize = 0;
+    LoadFileEx((uint8_t *)path, _rawAssetLoadBuffer, &ovlSize);
+    uint32_t filePlanes = ovlSize / ((uint32_t)OVERLAY_SRC_PLANE_STRIDE * SCREEN_HEIGHT);
+    if (filePlanes == 0 || filePlanes > (uint32_t)NUM_PLANES)
+        filePlanes = NUM_PLANES;
+    memset(_frontbufferMaskBuffer, 0, FRONTBUFFER_SIZE_TOTAL_BYTES);
+    for (int y = 0; y < SCREEN_HEIGHT; y++) {
+        const uint8_t *src = _rawAssetLoadBuffer +
+                             (size_t)y * OVERLAY_SRC_PLANE_STRIDE * filePlanes;
+        uint8_t *dst = _frontbufferMaskBuffer + (size_t)y * ROW_STRIDE_BYTES;
+        for (uint32_t p = 0; p < filePlanes; p++)
+            memcpy(dst + (size_t)p * PLANE_STRIDE,
+                   src + (size_t)p * OVERLAY_SRC_PLANE_STRIDE,
+                   OVERLAY_SRC_PLANE_STRIDE);
+    }
 #endif
 }
 

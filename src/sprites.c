@@ -517,7 +517,19 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     d1 += (int16_t)_cameraXMod320;
     d2 += (int16_t)_cameraYMod320;
 
-    /* Wrap Y if beyond screen height */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* AGA no-wrap: the two display frontbuffers are 2x tall — rows
+     * [SCREEN_HEIGHT,2*SCREEN_HEIGHT) MIRROR [0,SCREEN_HEIGHT) and the copper
+     * shows a window sliding by cameraYMod320. Draw the bob ONCE at its true
+     * absolute buffer row (screen_y + cameraYMod, NO wrap) so it lands exactly
+     * where the display reads it — whether that is the first half, the mirror
+     * half, or straddling the seam. d2 now spans [0, 2*SCREEN_HEIGHT); the
+     * frontbuffer is contiguous and (2*SCREEN_HEIGHT+1) rows tall, and
+     * screen_y(<=SPRITE_MAX_Y_DRAW) + cameraYMod(<=SCREEN_HEIGHT) + 15 lines
+     * stays inside it. The 1x-tall bg-save mask buffer is indexed per-case in
+     * the undraw section below (mirror rows fold back by FB_MIRROR_OFFSET). */
+#else
+    /* OCS 1x buffer: wrap Y into the single visible band. */
     if (d2 >= SCREEN_HEIGHT)
         d2 -= SCREEN_HEIGHT;
 
@@ -528,6 +540,7 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         d2 -= (int16_t)_cameraYMod320;
         goto fallback;
     }
+#endif
 
     {
         /* Check horizontal overlap: (x & 15) + pixWidth */
@@ -556,40 +569,89 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         /* Destination */
         BLT_L(_custom->bltcpt, destAddr);
         BLT_L(_custom->bltdpt, destAddr);
-        /* Queue entry: [maskAddr(4), destAddr(4), mod(2), bltsize(2)] */
-        *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
-        uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
-        *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
+        /* Destination address (a1-relative) reused for the draw and undraw. */
+        uint32_t destOff = destAddr - (uint32_t)a1;   /* d2*ROW_STRIDE + xWordOff */
 
         /* Source pointers: data=BLTBPT, mask=BLTAPT */
         BLT_L(_custom->bltbpt, (uint32_t)a0->sprData);
         BLT_L(_custom->bltapt, (uint32_t)a0->maskPtr);
         /* First word mask always all-ones */
         BLT_W(_custom->bltafwm, 0xFFFF);
+        uint16_t entryMod, entryBltsize;
         if (overlap <= 16) {
             /* ---- Single-word path ---- */
             BLT_W(_custom->bltamod, 0);
             BLT_W(_custom->bltbmod, 0);
             BLT_W(_custom->bltcmod, PLANE_STRIDE_MINUS2);
             BLT_W(_custom->bltdmod, PLANE_STRIDE_MINUS2);
-            *(uint16_t *)((uint8_t *)a3 + 8) = PLANE_STRIDE_MINUS2;
+            entryMod     = PLANE_STRIDE_MINUS2;
             BLT_W(_custom->bltalwm, 0xFFFF);
-            BLT_W(_custom->bltsize, SPRITE_BLTSIZE_W1);
-            *(uint16_t *)((uint8_t *)a3 + 10) = SPRITE_BLTSIZE_W1;
+            entryBltsize = SPRITE_BLTSIZE_W1;
         } else {
             /* ---- Two-word path ---- */
             BLT_W(_custom->bltamod, 0xFFFE); /* -2 */
             BLT_W(_custom->bltbmod, 0xFFFE);
             BLT_W(_custom->bltcmod, PLANE_STRIDE_MINUS4);
             BLT_W(_custom->bltdmod, PLANE_STRIDE_MINUS4);
-            *(uint16_t *)((uint8_t *)a3 + 8) = PLANE_STRIDE_MINUS4;
+            entryMod     = PLANE_STRIDE_MINUS4;
             BLT_W(_custom->bltalwm, 0);
-            BLT_W(_custom->bltsize, SPRITE_BLTSIZE_W2);
-            *(uint16_t *)((uint8_t *)a3 + 10) = SPRITE_BLTSIZE_W2;
+            entryBltsize = SPRITE_BLTSIZE_W2;
         }
+        /* Kick the sprite draw. The 2x-tall frontbuffer is contiguous across the
+         * mirror seam, so even a bob straddling SCREEN_HEIGHT draws in this one
+         * blit; only the 1x-tall bg-save undraw (below) ever needs splitting. */
+        BLT_W(_custom->bltsize, entryBltsize);
 
-        /* Advance queue pointer, write sentinel */
+        /* ---- Queue the undraw (bg-restore) entry/entries ---- */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (d2 + SPRITE_HEIGHT_LINES <= SCREEN_HEIGHT) {
+            /* Entirely in the first half. */
+            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        } else if (d2 >= SCREEN_HEIGHT) {
+            /* Entirely in the mirror half — fold the bg-save read back to the
+             * matching first-half row (the 1x mask buffer has no mirror half). */
+            *(uint32_t *)((uint8_t *)a3 + 0)  = (destOff - (uint32_t)FB_MIRROR_OFFSET_BYTES) + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        } else {
+            /* Straddles the seam — two undraw entries, each reading first-half bg:
+             * top rows [d2, SCREEN_HEIGHT) and bottom rows [SCREEN_HEIGHT, d2+15)
+             * (which live at the mirror top, bg-save row 0 = xWordOff). */
+            uint16_t wc       = (uint16_t)(entryBltsize & 0x3Fu);   /* word count */
+            uint16_t topCount = (uint16_t)(SCREEN_HEIGHT - d2);
+            uint16_t botCount = (uint16_t)((d2 + SPRITE_HEIGHT_LINES) - SCREEN_HEIGHT);
+            uint16_t topSize  = (uint16_t)(((topCount * NUM_PLANES) << 6) | wc);
+            uint16_t botSize  = (uint16_t)(((botCount * NUM_PLANES) << 6) | wc);
+            /* top */
+            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = topSize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+            /* bottom (mirror top; contiguous continuation of destAddr) */
+            uint32_t botDest = destAddr + (uint32_t)topCount * (uint32_t)ROW_STRIDE_BYTES;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = (uint32_t)xWordOffL + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = botDest;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = botSize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        }
+#else
+        /* OCS 1x buffer: d2 was wrapped into [0,SCREEN_HEIGHT); one entry. */
+        *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+        *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+        *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+        *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
         a3 = (uint32_t *)((uint8_t *)a3 + 12);
+#endif
+
+        /* Write sentinel at the (new) queue head */
         *(uint32_t *)a3 = BLT_BLITQ_END;
         _spriteBlitQueue = (uintptr_t)a3;
     }
@@ -700,11 +762,16 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
                 d3 -= d0;
         }
 
-        /* Apply camera offsets with Y wrap */
+        /* Apply camera offsets. */
         d1 += _cameraXMod320;
         d2 += _cameraYMod320;
+#if !(defined(AGA) && !defined(SWOS_SDL_BUILD))
+        /* OCS 1x buffer wraps Y; AGA draws no-wrap into the 2x-tall buffer (the
+         * seam split below routes any overshoot into the mirror half, and a bob
+         * wholly in the mirror half folds its bg-save offset back). */
         if (d2 >= SCREEN_HEIGHT)
             d2 -= SCREEN_HEIGHT;
+#endif
 
         /* Compute edge masks and word count */
         uint16_t d6 = 0;
@@ -736,14 +803,25 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             BLT_W(_custom->bltadat, 0xFFFF);
         }
         BLT_W(_custom->bltcon0, bltcon0);
-        /* Check for Y-wrap split */
+        /* Check for seam split */
         uint16_t d4 = 0;
         {
             int16_t overshoot = d2 + d3 - SCREEN_HEIGHT;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* No-wrap: only a bob straddling the seam (d2 < SCREEN_HEIGHT) splits
+             * its tail into the mirror top. A bob wholly in the mirror half
+             * (d2 >= SCREEN_HEIGHT) is one contiguous blit; its bg-save offset is
+             * folded back at the main entry below. */
+            if (d2 < SCREEN_HEIGHT && overshoot > 0) {
+                d4 = (uint16_t)overshoot;
+                d3 -= overshoot;
+            }
+#else
             if (overshoot > 0) {
                 d4 = (uint16_t)overshoot;
                 d3 -= overshoot;
             }
+#endif
         }
 
         /* Compute destination pointer */
@@ -757,7 +835,15 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         BLT_L(_custom->bltdpt, destAddr);
         /* Queue entry: mask+fb addresses */
         *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Fold a mirror-half dest back to its first-half bg-save row (1x mask). */
+        uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
+        if (d2 >= SCREEN_HEIGHT)
+            maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
+        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+#else
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
         *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
 
         /* BLTSIZE = (nlines * NUM_PLANES) << 6 | wordCount */
@@ -791,7 +877,16 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Handle Y-wrap tail portion */
         if (d4 != 0) {
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* AGA 2x-tall buffer: the tail is the CONTIGUOUS continuation past
+             * SCREEN_HEIGHT, so it belongs at the top of the MIRROR half
+             * (+FB_MIRROR_OFFSET), NOT wrapped back to buffer row 0. Wrapping to
+             * row 0 (the 1x-buffer assumption) is what left the "missing strip"
+             * band where a bob straddles the display's mirror seam. */
+            uint32_t destAddr2 = (uint32_t)a1 + (uint32_t)FB_MIRROR_OFFSET_BYTES + d6save;
+#else
             uint32_t destAddr2 = (uint32_t)a1 + d6save;
+#endif
             blitWidthBytes = d7; /* restore d7 (still in words) */
             /* Recompute: d7 was already halved? No, d7 is word count.
                In asm: lsr.w #1,d7 then uses d7 as half-word count for bltsize.
@@ -804,7 +899,15 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             BLT_L(_custom->bltcpt, destAddr2);
             BLT_L(_custom->bltdpt, destAddr2);
             BLT_W(_custom->bltsize, tailBltsize);
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* The mirror half's clean pitch == the first half's, and the bg-save
+             * mask buffer is only 1x tall — so restore the tail from the FIRST-half
+             * mask position (destAddr2 minus the mirror offset), not destAddr2's own
+             * (out-of-range) offset. */
+            uint32_t tailMask = (destAddr2 - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#else
             uint32_t tailMask = destAddr2 - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
             *(uint32_t *)((uint8_t *)a3 + 0) = tailMask;
             /* Copy modulo from previous entry */
             *(uint16_t *)((uint8_t *)a3 + 8) = *(uint16_t *)((uint8_t *)a3 - 4);
@@ -840,11 +943,14 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
                 d3 -= d0;
         }
 
-        /* Apply camera offsets with Y wrap */
+        /* Apply camera offsets. */
         d1 += _cameraXMod320;
         d2 += _cameraYMod320;
+#if !(defined(AGA) && !defined(SWOS_SDL_BUILD))
+        /* OCS 1x buffer wraps Y; AGA draws no-wrap into the 2x-tall buffer. */
         if (d2 >= SCREEN_HEIGHT)
             d2 -= SCREEN_HEIGHT;
+#endif
 
         /* Compute edge masks and word count */
         uint16_t d6 = 0;
@@ -876,14 +982,24 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
             BLT_W(_custom->bltadat, 0xFFFF);
         }
         BLT_W(_custom->bltcon0, bltcon0);
-        /* Check for Y-wrap split */
+        /* Check for seam split */
         uint16_t d4 = 0;
         {
             int16_t overshoot = d2 + d3 - SCREEN_HEIGHT;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* No-wrap: split only a bob straddling the seam (d2 < SCREEN_HEIGHT).
+             * A bob wholly in the mirror half is one contiguous blit (bg-save
+             * offset folded back at the entry below). */
+            if (d2 < SCREEN_HEIGHT && overshoot > 0) {
+                d4 = (uint16_t)overshoot;
+                d3 -= overshoot;
+            }
+#else
             if (overshoot > 0) {
                 d4 = (uint16_t)overshoot;
                 d3 -= overshoot;
             }
+#endif
         }
 
         /* Save queued line count */
@@ -902,7 +1018,15 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Queue entry */
         *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Fold a mirror-half dest back to its first-half bg-save row (1x mask). */
+        uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
+        if (d2 >= SCREEN_HEIGHT)
+            maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
+        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+#else
         uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
         *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
 
         /* BLTSIZE for 4-plane blit: (nlines * 4) << 6 | wordCount */
@@ -983,15 +1107,27 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
             waitBlit();
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* Contiguous continuation past SCREEN_HEIGHT → mirror top (row 0 of
+             * the mirror half), NOT buffer row 0; bg-save reads the first-half
+             * row (destAddr2 minus the mirror offset). Only reached when the bob
+             * straddles the seam (d2 < SCREEN_HEIGHT), per the guarded d4 above. */
+            uint32_t tailDest = (uint32_t)a1 + (uint32_t)FB_MIRROR_OFFSET_BYTES + d6save;
+#else
             /* Dest wraps to top of buffer at column offset */
             uint32_t tailDest = (uint32_t)a1 + d6save;
+#endif
             BLT_L(_custom->bltcpt, tailDest);
             BLT_L(_custom->bltdpt, tailDest);
             BLT_L(_custom->bltapt, tailSrcB);
             BLT_L(_custom->bltbpt, tailSrcA);
             /* Queue entry for tail */
             *(uint32_t *)((uint8_t *)a3 + 4) = tailDest;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            uint32_t tailMask = (tailDest - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#else
             uint32_t tailMask = tailDest - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
             *(uint32_t *)((uint8_t *)a3 + 0) = tailMask;
 
             /* Per-plane blit size */

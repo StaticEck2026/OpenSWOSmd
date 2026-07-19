@@ -127,11 +127,19 @@ __attribute__((used, externally_visible)) void swos_c_start(void)
     volatile uint16_t *alt = &_frontbufferBaseAlt;
     volatile uint16_t *mask = &_frontbufferMaskBuffer;
 
+    /* Prime the display buffers. Original SWOS2.s wrote 0xF0F0 here (a visible
+     * 4px-on/4px-off bitplane pattern) — harmless on OCS because the 44-byte
+     * content covers the whole 352px line before the buffer is ever shown. On
+     * the AGA FMODE-widened buffer (PLANE_STRIDE 52 / 416px line) the content no
+     * longer spans the extra columns, so the 0xF0F0 prime showed through as
+     * yellow vertical stripes (full screen before the first frame draws, and a
+     * band wherever a frame doesn't cover). Clear to 0 instead — the m68k prime
+     * value was arbitrary; black is invisible against the border. */
     for (uint32_t bytes = FRONTBUFFER_SIZE_TOTAL_BYTES; bytes != 0u; bytes -= 2u)
     {
-        *front++ = 0xF0F0u;
-        *alt++ = 0xF0F0u;
-        *mask++ = 0xF0F0u;
+        *front++ = 0x0000u;
+        *alt++ = 0x0000u;
+        *mask++ = 0x0000u;
     }
 
     _custom->dmacon = 0x8340u;
@@ -253,7 +261,9 @@ void mainC(void)
      * still runs; only the visible intro animation is skipped). */
     { extern int _gArcadeMode; if (!_gArcadeMode) ShowLoaderIntroSequence(); }
 #else
-    ShowLoaderIntroSequence();
+#ifndef PITCH_SCROLL_TEST
+    ShowLoaderIntroSequence();   /* skipped in the scroll-test rig: boot straight to the pitch */
+#endif
 #endif
     AssetLoaderInitAltPathAndBanks();
     AssetPrecacheCore();
