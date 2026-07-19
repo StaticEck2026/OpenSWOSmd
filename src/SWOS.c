@@ -261,7 +261,9 @@ void mainC(void)
      * still runs; only the visible intro animation is skipped). */
     { extern int _gArcadeMode; if (!_gArcadeMode) ShowLoaderIntroSequence(); }
 #else
-    ShowLoaderIntroSequence();
+#ifndef PITCH_SCROLL_TEST
+    ShowLoaderIntroSequence();   /* skipped in the scroll-test rig: boot straight to the pitch */
+#endif
 #endif
     AssetLoaderInitAltPathAndBanks();
     AssetPrecacheCore();

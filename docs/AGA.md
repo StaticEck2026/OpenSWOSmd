@@ -149,7 +149,7 @@ palette all correct. Both AGA and OCS builds exit-0.
 **Amiga** (FS-UAE + gdb, Kickstart 3.1 A1200 = AGA):
 ```
 scripts/amiga/amiga_gdb.sh up          # launch FS-UAE + attach gdb (from uae/dh0/data)
-python3 scripts/amiga/gdb_proxy.py cmd "info registers"
+python3 scripts/amiga/amigascope/gdb_proxy.py cmd "info registers"
 python3 scripts/swos_harness.py where  # drive menus (works on SDL and Amiga)
 ```
 See [HARNESS.md](HARNESS.md) for the FS-UAE write-support details.
@@ -278,7 +278,7 @@ localised the exact overrunning blits. This is the signature to remember: **buff
 clean + live-capture dirty = a real-time DMA/timing bug** — reach for the DMA profiler,
 not more screenshots.
 
-**Proven cycle-exact** with the new `scripts/amiga/dma_profile.py` (drives the fs-uae
+**Proven cycle-exact** with the new `scripts/amiga/amigascope/dma_profile.py` (drives the fs-uae
 `monitor profile` DMA recorder and parses the `dma_rec[227×313]` per-cycle grid):
 
 - 7 of every ~8 frames have **zero blitter DMA** → clean pure-hardware scroll (coarse
@@ -331,6 +331,49 @@ cannot capture real-time artifacts.)
   via the copper block-A plane-0 pointer (fast, halt-only; shows buffer content, not the
   real-time beam).
 - **`shot.sh CAMX CAMY OUT`** — settle + composited screenshot at a camera position.
+
+### 11c. Hardware sprite DMA steal (DDFSTRT) — the FMODE=3 case (2026-07-19)
+
+**Symptom.** With hardware sprites on, the right-hand players/ball lose colour (col-5
+corruption) and jitter on rightward scroll. **Root cause, proven cycle-exact** with
+`dma_profile.py` (see DEBUG_TOOLKIT.md): the 8-plane pitch's early **DDFSTRT** makes the
+bitplane fetch begin inside the hardware **sprite DMA slots**, and AGA disables any sprite
+whose slot falls at/after the fetch start.
+
+Measured on the SWOS AGA pitch (bob-path profile — sprite slots are hpos-fixed, so the
+overlap is visible even without active sprites):
+
+```
+fetch_start(hpos) = DDFSTRT + 4          # first bitplane DMA cell on a display line
+sprite spr_n owns slots  0x19+4n  and  0x1b+4n
+  spr0=0x19/0x1b  spr1=0x1d/0x1f  spr2=0x21/0x23  spr3=0x25/0x27
+  spr4=0x29/0x2b  spr5=0x2d/0x2f  spr6=0x31/0x33  spr7=0x35/0x37
+```
+
+SWOS uses **spr0–3** (planes01=spr0/1, planes23=spr2/3 attached 16-colour pairs). So:
+
+| DDFSTRT | fetch start | sprites disabled | SWOS effect |
+|---|---|---|---|
+| **$20** (current AGA FMODE=1) | 0x24 | spr3,4,5,6,7 | **spr3 lost** → spr2/3 pair mis-colours = col-5 corruption |
+| **$30** | 0x34 | spr7 only | spr0–3 all safe |
+| **$28** (OCS unaligned) | 0x2c | spr4–7 | spr0–3 safe (OCS runs 4 planes, so $28 already clears them) |
+
+**Why we can't just move DDFSTRT later at FMODE=1.** The 8-plane FMODE=1 fetch is dense
+(~96 bitplane cells/line, spanning 0x24..0xdb). Starting it later than $20 pushes its right
+edge past `DDFSTOP=$D0` and **truncates the right columns** — you'd have to move DDFSTOP too,
+which shifts/narrows the display. And the per-pixel BPLCON1 fine-scroll (which OCS has —
+`display.c:598-614` — and we must not regress) needs the extra-left long that forces the
+early $20. So at FMODE=1 the sprite steal and per-pixel scroll are in direct conflict.
+
+**The fix is FMODE=3 (64-bit fetch).** It fetches the same 8 planes in ¼ the DMA cells, so
+the fetch window is ¼ as wide and can **start past the sprite slots** (like OCS's $28/$30)
+while still feeding 8 planes, keeping the per-pixel scroll, and keeping full width. i.e.
+"OCS scroll geometry, 8 planes." A1200 page-mode chip RAM supports FMODE=3 (the 4×-bandwidth
+double-CAS mode). After it's implemented, re-profile and confirm `fetch start > 0x27`.
+
+**Measure/verify:** `dma_profile.py parse <bob.prof>` prints the steal; `dma_profile.py
+compare <ddf20.prof> <ddf30.prof> out.png` renders the before/after (green fetch line vs
+yellow sprite slots). Force DDFSTRT in the test rig with `g_pstDsForce`.
 
 ### The problem: 8 bitplanes in LORES cannot be fed at FMODE=0
 
@@ -473,7 +516,7 @@ column to the *wrong* physical byte while the display kept over-reading the ring
 plane-shifted garbage. **Fix: delete the clamp; restore the faithful
 `dest = ((cameraXMod320 + d5) >> 3) & WORD_ALIGN_EVEN_MASK` (un-clamped).** `ScrollY`'s
 row write was already un-clamped (faithful), so it was untouched. Verified on FS-UAE
-via `scripts/amiga/fb_capture.py`: clean at coarse 24 (full redraw) and clean through
+via `scripts/amiga/amigascope/fb_capture.py`: clean at coarse 24 (full redraw) and clean through
 a full incremental scroll sweep, both directions, both double-buffers.
 
 **The "empty/corrupt left column" is off-screen headroom, not a bug.** During
