@@ -432,7 +432,14 @@ void PitchScrollTest(void)
             ScrollYUpdateRowsAndBlit();
         }
 
-        UpdatePlanePtrsAndBlitParams();
+        /* UpdatePlanePtrsAndBlitParams() is deliberately NOT called here (before the
+         * bob draw). Calling it mid-render pointed the copper's block-A plane pointers
+         * at the buffer being drawn; a VBLANK landing in the window before DrawSprites
+         * finished then switched the live display to the half-drawn buffer, producing
+         * the intermittent progressive top-to-bottom sprite "flicker" during vertical
+         * scroll (the ex-§5d tear). It is called AFTER DrawSprites below, so the copper
+         * only ever adopts a fully-drawn buffer. The real game_loop.c never calls it
+         * between scroll and draw either — per frame the VBlank ISR does it at the swap. */
 
         /* full-load test: render the player/ball complement (bands + bobs) after the
          * pitch, mirroring game_loop.c. Exercises the full per-frame render budget. */
@@ -450,6 +457,9 @@ void PitchScrollTest(void)
             DrawSprites();
             SaveCoordinatesForHighlights((int16_t)0xFFFE, 0, 0);
         }
+        /* Point the copper at the just-drawn buffer ONLY now that it is fully
+         * written (see the note above the draw block). */
+        UpdatePlanePtrsAndBlitParams();
         s_pstFrame++;
 
         /* --- debug overlay (screen coords; the glyph blitter adds the wrap) --- */
