@@ -1695,7 +1695,18 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
                 goto enqueue_general;
             }
 
-            /* Try plane23 band first (top-most) */
+#if !defined(AGA)
+            /* Try plane23 band first (top-most).
+             *
+             * AGA-ONLY EXCLUSION: plane23 is drawn by spr2+3 (RenderSpriteBandsToCopperLists
+             * blits it into bitPlane2/3 = SPR2/SPR3PT). Under AGA 8-plane lores the pitch
+             * bitplane fetch (DDFSTRT=$20, fetch@0x24) steals spr3's DMA slot (0x25/0x27) —
+             * proven cycle-exact (dma_profile.py) and unavoidable at 8 planes (see docs/AGA.md
+             * sec 11c). An attached spr2+3 sprite with spr3 dead loses planes 2/3 and renders
+             * white/black. Only spr0+1 (plane01) survives the steal, so on AGA we DON'T use the
+             * plane23 band: sprites that would land here fall through to plane01 (steal-safe) or
+             * the general/bob stack, which renders correctly. OCS (4-plane) has no steal — it
+             * keeps both bands. */
             if (d3 < plane23BandTopY_local) {
                 a1->field_56 = 2;
                 plane23BandTopY_local = d2;
@@ -1705,8 +1716,9 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
                 *(int16_t *)a5 = d2;             a5 += 2;
                 goto post_enqueue;
             }
+#endif
 
-            /* Try plane01 band */
+            /* Try plane01 band (the steal-safe spr0+1 pair) */
             if (d3 < plane01BandTopY_local) {
                 a1->field_56 = 1;
                 plane01BandTopY_local = d2;
