@@ -48,11 +48,11 @@ around `ShowLoaderIntroSequence` in SWOS.c) so it boots straight to the pitch.
 **Boot + drive (see GDB.md for detail):**
 ```sh
 scripts/amiga/amiga_gdb.sh up            # or: down / status / restart
-P="python3 scripts/amiga/amigascope/gdb_proxy.py cmd"
-$P "break PitchScrollTest"; timeout 30 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "continue"
+P="python3 scripts/amiga/gdb_proxy.py cmd"
+$P "break PitchScrollTest"; timeout 30 python3 scripts/amiga/gdb_proxy.py cmd "continue"
 $P "set var g_pstAutoScrollX = 2"        # continuous scroll, bounces at edges
 $P "set var g_pstFullRedraw = 0"         # 0 = REAL incremental ScrollX (what the game uses)
-$P "delete"; timeout 6 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "continue"   # free-run
+$P "delete"; timeout 6 python3 scripts/amiga/gdb_proxy.py cmd "continue"   # free-run
 ```
 Leave it free-running for the display to stay live. A read-probe returning `[BUSY: target
 running]` = free-running = good. To interrupt: `pkill -INT -f '[m]68k-amiga-elf-gdb'` then
@@ -140,14 +140,40 @@ effect. All were guesses before reading the docs.
 Confirm the write-vs-read divergence, then make the leftward write track the frac-dependent
 pull-back (or otherwise reconcile the leftward `d5` lead with the read position).
 
-### 5b. Full-load test — add hardware sprites + bobs to the rig (next task)
-The rig scrolls an empty pitch; it does not prove the game's real frame budget. Add
-`DrawSprites` (hardware-sprite bands via `RenderSpriteBandsToCopperLists` + bobs via
-`DrawQueuedSprites`) to `PitchScrollTest`, feed it a full complement (≈22 players + ball +
-keepers) to hit the game's limits, and profile with `dma_profile.py`. Goals: (1) prove 8-plane
-scroll + attached sprites + bobs all fit one frame (perf), (2) the in-match validation of the
-P3 sprite work (`AMIGA_SPRITES.md`) that never ran live, (3) exercise the scroll fix under real
-load. Success = `dma_profile` shows no blitter cell at vpos ≥ 36 and frames hold rate.
+### 5b. Full-load test — hardware sprites + bobs in the rig (DONE — rig has them)
+The rig now renders ≈22 players + ball (`pitch_scroll_test.c` `pstSetupSprites`), both the
+HW-sprite band path (`g_pstForceBobs=0`) and the bob path (`g_pstForceBobs=1`). Keyboard-driven
+(§ rig controls). Perf profiling via `dma_profile.py` on the BOB path works; the BAND path
+stalls the cycle-exact recorder (fs-uae-side, deferred — bob path serves all measurements).
+
+### 5c. Sprite colour loss (last-column HW sprites white/black) — RESOLVED (committed 219d788)
+The rightmost HW-sprite column rendered white/black because the **plane23 band uses spr3, whose
+DMA slot (0x25/0x27) is stolen** by the FMODE=1 8-plane bitplane fetch at DDFSTRT=$20
+(`fetch_start=DDFSTRT+4=0x24`, ≤ spr3's slot). Two prior fixes are also in: `41aff36` BPLCON4
+ESPRM/OSPRM=0 (sprites index kit palette 0-15, not 16-31), `9eb2df2` no-wrap contiguous bob draw.
+
+**The steal itself is fundamentally unfixable at DDFSTRT** (proven — do NOT re-try): three
+constraints have empty intersection — smooth per-pixel scroll needs DDFSTRT on the 16-CCK grid
+{$20,$30}; clearing spr3 needs DDFSTRT ≥ $24; not overrunning refresh/disk DMA needs DDFSTOP ≤ $D8
+i.e. DDFSTRT ≤ $28. `[$24,$28] ∩ {$20,$30} = ∅`. Empirically $24/$28/$28+rephase all stutter
+(off-grid), $20 is smooth but steals spr3, $28→DDFSTOP=$D8 guru-crashes. FMODE=3 was also refuted.
+So instead of fixing the steal, the fix **routes players off the stolen band**: on AGA,
+`BuildSpriteBandAndGeneralRenderStacks` (sprites.c ~1698) skips the plane23 (spr2+3) assignment
+(`#if !defined(AGA)`); those sprites fall through to plane01 (spr0+1, safe) or the general/bob
+stack. display.c stays at $20 → **smooth scroll preserved AND colours correct.**
+
+### 5d. Vertical-scroll bob flicker (OPEN — primary remaining task)
+Scrolling UP, ≈14 sprites flicker (worse toward the RIGHT of the grid = more bobs, because 5c's
+routing pushes the ex-band players onto the bob stack); scrolling DOWN, 5-6 flicker. Horizontal
+is clean (which is all we'd been testing — always run the full up/down/left/right round trip).
+**Ruled out:** bob budget (8-bob test = just as much flicker), blit timing (`g_pstVBlankBlit`
+A/B = same), per-buffer camera state (already saved/restored incl. `_oldCameraY*`). It is a
+**mirror-seam double-buffer geometry bug** — bobs crossing SCREEN_HEIGHT into the 2×-tall mirror
+region (the same class of bug as the vertical-vanish fixed 2026-07-18, but a residual flicker).
+**Instrumentation trap (cost time last session):** players are WIDE sprites → they render through
+`DrawSpriteClipped` (the linked / non-linked clipped paths), **NOT** `drawMaskedPlayerSprite`
+(that masked path only handles pixWidth ≤ 16). Instrument `DrawSpriteClipped`'s vertical / mirror
+(FB_MIRROR_OFFSET) straddle handling, not the masked function.
 
 ---
 
@@ -167,7 +193,19 @@ load. Success = `dma_profile` shows no blitter cell at vpos ≥ 36 and frames ho
 - **One-shot debugger port** (GDB.md): each gdb connect/disconnect burns FS-UAE's port. Boot
   once; don't throwaway-connect.
 - **Don't blame WSL** (`feedback_dont_blame_wsl`): blank window / slowness is relanch churn /
-  two clients / wrong state — diagnose, don't reach for `wsl --shutdown`.
+  two clients / wrong state — diagnose, don't reach for `wsl --shutdown`. Real root causes hit
+  this session: `pkill` instead of `amiga_gdb.sh down` (leaves the stub un-handshaked); a
+  lingering `ShowLoaderIntroSequence` breakpoint trapping boot; `pgrep -f 'opt/bin/…gdb'`
+  false-positive matching your OWN shell command line (phantom "stale clients" — match
+  `'m68k-amiga-elf-gdb -q'` or check /proc instead). weston genuinely down is the exception —
+  owner restarts it from Windows: `wsl.exe --system sh -c "pkill -9 weston"`.
+- **Boot is SLOW (~40s), not hung.** `ConvertSpriteColors` (from `pstSetupSprites`) converts
+  many sprites and takes ~40s under the harness. Wait it out before declaring a hang — a
+  premature 14s wait looked like a "BSS hang" last session and was a red herring. (Corollary:
+  adding a fresh BSS global did NOT hang boot — data can move freely, good news for the untangle.)
+- **Instrument the RIGHT draw function.** Players are WIDE → `DrawSpriteClipped`, not
+  `drawMaskedPlayerSprite` (pixWidth ≤ 16 only). Logging the masked function for a player bug
+  yields garbage/impossible values (stale seq, negative d2). See §5d.
 
 ---
 
