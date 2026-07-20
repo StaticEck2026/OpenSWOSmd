@@ -432,14 +432,16 @@ void PitchScrollTest(void)
             ScrollYUpdateRowsAndBlit();
         }
 
-        /* UpdatePlanePtrsAndBlitParams() is deliberately NOT called here (before the
-         * bob draw). Calling it mid-render pointed the copper's block-A plane pointers
-         * at the buffer being drawn; a VBLANK landing in the window before DrawSprites
-         * finished then switched the live display to the half-drawn buffer, producing
-         * the intermittent progressive top-to-bottom sprite "flicker" during vertical
-         * scroll (the ex-§5d tear). It is called AFTER DrawSprites below, so the copper
-         * only ever adopts a fully-drawn buffer. The real game_loop.c never calls it
-         * between scroll and draw either — per frame the VBlank ISR does it at the swap. */
+        /* No explicit UpdatePlanePtrsAndBlitParams() in this loop — the VBlank ISR
+         * (interrupts.c) already calls it at the buffer swap, exactly like the real
+         * game_loop.c (which never calls it between scroll and draw). Calling it inside
+         * the loop was wrong BOTH ways: BEFORE DrawSprites it pointed the copper's
+         * block-A plane pointers at the still-being-drawn buffer, so a VBLANK in that
+         * window showed the half-drawn buffer (the §5d progressive top-to-bottom
+         * "flicker"); AFTER DrawSprites it could run past the VBLANK on heavy bob frames
+         * → a 1-frame scroll-update lag (extra stutter on the DMA-bound all-bob path).
+         * The ISR points the copper at a COMPLETE buffer, at the swap, always on time —
+         * so it avoids both. */
 
         /* full-load test: render the player/ball complement (bands + bobs) after the
          * pitch, mirroring game_loop.c. Exercises the full per-frame render budget. */
@@ -457,9 +459,6 @@ void PitchScrollTest(void)
             DrawSprites();
             SaveCoordinatesForHighlights((int16_t)0xFFFE, 0, 0);
         }
-        /* Point the copper at the just-drawn buffer ONLY now that it is fully
-         * written (see the note above the draw block). */
-        UpdatePlanePtrsAndBlitParams();
         s_pstFrame++;
 
         /* --- debug overlay (screen coords; the glyph blitter adds the wrap) --- */
