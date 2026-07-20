@@ -432,7 +432,16 @@ void PitchScrollTest(void)
             ScrollYUpdateRowsAndBlit();
         }
 
-        UpdatePlanePtrsAndBlitParams();
+        /* No explicit UpdatePlanePtrsAndBlitParams() in this loop — the VBlank ISR
+         * (interrupts.c) already calls it at the buffer swap, exactly like the real
+         * game_loop.c (which never calls it between scroll and draw). Calling it inside
+         * the loop was wrong BOTH ways: BEFORE DrawSprites it pointed the copper's
+         * block-A plane pointers at the still-being-drawn buffer, so a VBLANK in that
+         * window showed the half-drawn buffer (the §5d progressive top-to-bottom
+         * "flicker"); AFTER DrawSprites it could run past the VBLANK on heavy bob frames
+         * → a 1-frame scroll-update lag (extra stutter on the DMA-bound all-bob path).
+         * The ISR points the copper at a COMPLETE buffer, at the swap, always on time —
+         * so it avoids both. */
 
         /* full-load test: render the player/ball complement (bands + bobs) after the
          * pitch, mirroring game_loop.c. Exercises the full per-frame render budget. */

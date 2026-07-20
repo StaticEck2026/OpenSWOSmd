@@ -162,18 +162,53 @@ So instead of fixing the steal, the fix **routes players off the stolen band**: 
 (`#if !defined(AGA)`); those sprites fall through to plane01 (spr0+1, safe) or the general/bob
 stack. display.c stays at $20 → **smooth scroll preserved AND colours correct.**
 
-### 5d. Vertical-scroll bob flicker (OPEN — primary remaining task)
-Scrolling UP, ≈14 sprites flicker (worse toward the RIGHT of the grid = more bobs, because 5c's
-routing pushes the ex-band players onto the bob stack); scrolling DOWN, 5-6 flicker. Horizontal
-is clean (which is all we'd been testing — always run the full up/down/left/right round trip).
-**Ruled out:** bob budget (8-bob test = just as much flicker), blit timing (`g_pstVBlankBlit`
-A/B = same), per-buffer camera state (already saved/restored incl. `_oldCameraY*`). It is a
-**mirror-seam double-buffer geometry bug** — bobs crossing SCREEN_HEIGHT into the 2×-tall mirror
-region (the same class of bug as the vertical-vanish fixed 2026-07-18, but a residual flicker).
-**Instrumentation trap (cost time last session):** players are WIDE sprites → they render through
-`DrawSpriteClipped` (the linked / non-linked clipped paths), **NOT** `drawMaskedPlayerSprite`
-(that masked path only handles pixWidth ≤ 16). Instrument `DrawSpriteClipped`'s vertical / mirror
-(FB_MIRROR_OFFSET) straddle handling, not the masked function.
+### 5d. Vertical-scroll bob flicker — RESOLVED (2026-07-19), it was a RIG artifact
+**NOT a DrawSpriteClipped mirror-geometry bug** (the 2026-07-18 handoff's hypothesis was wrong —
+do not re-chase it). It was a display-timing **tear** caused by the test rig itself, and the fix is
+one line moved in `pitch_scroll_test.c`.
+
+**What it actually was.** A torn frame is a *progressive top-to-bottom cutoff* (top row complete,
+each lower row losing more of its right side) = the beam displaying a buffer while `DrawSprites` is
+still drawing bobs into it (bobs draw top-to-bottom in sort order; the beam outruns the blitter down
+the screen). The rig called `UpdatePlanePtrsAndBlitParams()` *mid-render, before* `DrawSprites` —
+which points the copper's block-A plane pointers at the buffer being drawn. When a VBLANK landed in
+the window between that call and `DrawSprites` finishing (~a few % of frames = the intermittent
+flicker), the copper switched the live display to the half-drawn buffer → the tear. The real
+`game_loop.c` never calls `UpdatePlanePtrs` between scroll and draw (per frame the **VBlank ISR**
+does it, at the swap — the correct time), so **the shipped game is not affected.**
+
+**Fix (final).** REMOVE the rig's explicit `UpdatePlanePtrsAndBlitParams()` from the loop entirely
+and rely on the **VBlank ISR** (interrupts.c) to call it at the buffer swap — exactly what the real
+`game_loop.c` does (it never calls it between scroll and draw). The ISR points the copper at a
+COMPLETE buffer, at the swap, always on time. (An intermediate fix, commit 9c681ac, instead *moved*
+the call to after `DrawSprites` — that also killed the tear, but on heavy all-bob frames the render
+can run past the VBLANK, landing the copper scroll-update a frame late = extra stutter on the
+DMA-bound bob path; dropping the call avoids that. Superseded.) Confirmed: a debug counter of "copper
+block-A == drawn-buffer at render-end" went 122/121 → **0/251**; the post-jump repro that reliably
+tore went torn-at-c01/c02 → **0/14** on both the after-DrawSprites and the ISR-only builds; owner
+validated live — full-pitch scroll, HW-sprites toggled on/off mid-scroll, no flicker either way,
+all-bob and mixed both render perfectly.
+
+**Separate, PRE-EXISTING issue confirmed alongside (NOT §5d, do not conflate):** horizontal scroll
+on the all-bob path stutters (pitch + sprites) at the top of the pitch, and **HW sprites remove it**.
+That is the documented blitter/DMA budget limit — on tile-cross frames the scroll column blit + 22
+bob blits push the blitter onto 200-240 visible display lines, contending with the 8-plane fetch
+(see [[project_aga_fullload_test]] perf finding). Most visible at the top (high-contrast stand/crowd/
+ads; a 1px slip on plain grass is invisible). This is exactly why players go on HW sprites — the P3
+architectural work, not a quick patch. The rig's 6-per-row grid is a pathological worst case.
+
+**Method notes that cost time (heed them):**
+- The tear is intermittent (~few %/frame). A single `monitor screenshot` usually catches a *clean*
+  frame — it looks like flicker only when watched live/continuously. Measure with a **run of
+  consecutive frames** + an objective detector, not one shot.
+- **The per-frame breakpoint used to step frames PERTURBS the race and suppresses the tear** — so
+  bp-stepped capture under-reports it. Use the counters (accumulate under continuous free-run) or
+  continuous `monitor screenshot`.
+- `fb_capture.py` had a stale `PLANE_STRIDE=48`; the AGA build is 52 (4-byte scroll margin). Fixed
+  to derive the stride live from the copper (plane1−plane0), so it self-adapts to any build.
+- The bob-body detector (`scratchpad/bodycount.py` during the session): a torn frame drops the
+  lower-row blue-shirt / yellow-shorts pixel counts (mirror-region rows), which is the reliable
+  objective signal.
 
 ---
 
@@ -205,7 +240,18 @@ region (the same class of bug as the vertical-vanish fixed 2026-07-18, but a res
   adding a fresh BSS global did NOT hang boot — data can move freely, good news for the untangle.)
 - **Instrument the RIGHT draw function.** Players are WIDE → `DrawSpriteClipped`, not
   `drawMaskedPlayerSprite` (pixWidth ≤ 16 only). Logging the masked function for a player bug
-  yields garbage/impossible values (stale seq, negative d2). See §5d.
+  yields garbage/impossible values (stale seq, negative d2).
+- **A "flicker/tear" may be a DISPLAY-TIMING bug, not a draw/geometry bug — and the rig can
+  MANUFACTURE it.** §5d looked like a sprite-drawing bug for two sessions; it was the rig calling
+  `UpdatePlanePtrsAndBlitParams` mid-render (before `DrawSprites`), switching the copper to the
+  half-drawn buffer. Tells: buffers are always CLEAN when halted; static/pinned camera is clean;
+  only the LIVE beam during motion tears; the artifact is a progressive top-to-bottom cutoff
+  (beam-outruns-blitter), not a fixed missing region. When halting/pinning makes a "flicker"
+  vanish, suspect the DISPLAY path (copper/beam/swap timing), not the pixels in the buffer.
+- **Breakpoints perturb timing bugs.** A per-frame breakpoint changed the render↔beam phase enough
+  to SUPPRESS the §5d tear (0 tears while bp-stepping, tears under free-run). For any race, measure
+  with in-code counters accumulated under continuous free-run, or continuous `monitor screenshot` —
+  not bp-stepped capture.
 
 ---
 
