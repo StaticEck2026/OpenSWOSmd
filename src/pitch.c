@@ -397,8 +397,6 @@ void FixupAndColorPitchFile(void)
      * philosophy as DetectBankPlanes for sprite/overlay banks. */
     {
         extern uint8_t _pitchChunkyBuffer[];
-        uint8_t *bufStart    = _pitchDatBuffer;
-        uint8_t *bufEnd      = _pitchDatBuffer + 64 * 1024;
         uint8_t *tileDataBase = _pitchDatBuffer + PITCH_POINTER_COUNT * 4;
         /* Track which tile-type indices have been decoded already. */
         static uint8_t tileDecoded[PITCH_POINTER_COUNT];
@@ -429,6 +427,16 @@ void FixupAndColorPitchFile(void)
         if (srcPlanes > PITCH_NUM_PLANES) srcPlanes = (uint16_t)PITCH_NUM_PLANES;
         uint32_t srcRowBytes = (uint32_t)srcPlanes * 2u;          /* one scanline  */
         uint32_t srcTileSize = srcRowBytes * TILE_HEIGHT;         /* 128 or 256    */
+        /* End of the tile stream = end of what LoadPitchMap actually read. This
+         * was a hard-coded `_pitchDatBuffer + 64*1024`, which every 4bpp OCS map
+         * fits inside (largest 45592) but 5 of the 6 8bpp AGA maps do NOT
+         * (63256..78104). Tiles past the 64K mark failed the guard below and got
+         * zero-filled, and palette index 0 is grass — so they drew as flat
+         * grass-coloured rectangles scattered over the pitch. The buffer itself
+         * was never the limit (PITCHFILE_MAX_SIZE / FRONTBUFFER_ALLOC_TOTAL_BYTES,
+         * ~82-128K) and the load-size check passed; only this bound was stale. */
+        uint8_t *tileDataEnd = tileRegion ? tileDataBase + tileRegion
+                                          : _pitchDatBuffer + 64 * 1024;
 
         for (i = 0; i < PITCH_POINTER_COUNT; i++) {
             uint32_t slotLow    = pitchPtrs[i];
@@ -436,7 +444,7 @@ void FixupAndColorPitchFile(void)
             uint8_t *bitplane   = tileDataBase + fileOffset;
             /* Guard against bogus pointers (shouldn't happen, but the
              * file could be malformed or the stub still indexed). */
-            if (bitplane < tileDataBase || bitplane + srcTileSize > bufEnd) {
+            if (bitplane < tileDataBase || bitplane + srcTileSize > tileDataEnd) {
                 /* Fall back to per-entry indexing for invalid pointers
                  * so we at least don't share garbage between tiles. */
                 uint32_t safeIdx = (uint32_t)i;
