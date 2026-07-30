@@ -102,6 +102,11 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     int32_t rowSkip;             /* bytes to skip between source rows */
     uint16_t i, j, p;
     uint16_t *wp;
+    /* Real bitplane depth this sprite is STORED at (4 for a 16-colour sprite, 8 for the
+     * soccer_s/replay bank). Was hard NUM_PLANES(8) — zero-padding every 16-colour sprite
+     * to 8 planes doubled the sprite pool and overflowed _imageCmdWorkBuf into
+     * _spriteGraphics. Every sprite-DATA reader derives the same value via spriteNumPlanes. */
+    uint16_t sp = spriteNumPlanes((int16_t)spriteIndex);
 #endif
 
     /* Panic if mask selector is zero */
@@ -235,11 +240,11 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
 #else
     /* ---- Copy or fill pixel data (Amiga bitplane path) ---- */
     if (src == (uint8_t *)0) {
-        /* Fill with checkerboard pattern 0x5555 */
+        /* Fill with checkerboard pattern 0x5555 — `sp` plane rows (was NUM_PLANES). */
         rowSkip = (int32_t)(BITPLANE_ROW_BYTES - (int32_t)wquads * 2);
         wp = (uint16_t *)pixelPtr;
         {
-            uint16_t totalRows = (uint16_t)(height * NUM_PLANES);
+            uint16_t totalRows = (uint16_t)(height * sp);
             for (i = 0; i < totalRows; i++) {
                 for (j = 0; j < wquads; j++) {
                     *wp++ = 0x5555;
@@ -248,15 +253,11 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
         }
         pixelPtr = (uint8_t *)wp;
     } else {
-        /* Copy from source buffer, per pixel row: s_bankSrcPlanes real
-         * bitplane rows from the (interleaved) source, then zero-pad the
-         * remaining (NUM_PLANES - srcPlanes) plane rows. A 4bpp player bank
-         * thus lands in planes 0-3 with planes 4-7 = 0, so the sprite is a
-         * 16-colour object: RenderSpriteBands grabs planes 0-3 as an
-         * attached hardware-sprite pair, and the bob cookie-cut clears the
-         * playfield's upper planes (data 0 there). srcPlanes == NUM_PLANES
-         * (8bpp banks / OCS) leaves the pad loop empty → byte-identical to
-         * the old height*NUM_PLANES straight copy. See docs/AMIGA_SPRITES.md. */
+        /* Store the sprite at its REAL depth `sp` (4 for a 16-colour sprite; 8 for the
+         * soccer_s/replay bank). Copy the source bank's own `srcPlanes` interleaved rows;
+         * zero-pad if the bank is shallower than `sp`, or skip source rows deeper than `sp`.
+         * Normally srcPlanes == sp. This DROPS the old blanket zero-pad-to-8 that doubled
+         * the pool — every sprite-DATA reader derives the same `sp` via spriteNumPlanes. */
         rowSkip = (int32_t)(BITPLANE_ROW_BYTES - (int32_t)wquads * 2);
         {
             uint16_t *srcW = (uint16_t *)src;
@@ -264,17 +265,21 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
             uint16_t r;
             wp = (uint16_t *)pixelPtr;
             for (r = 0; r < height; r++) {
-                for (p = 0; p < srcPlanes; p++) {
-                    for (j = 0; j < wquads; j++) {
-                        *wp++ = *srcW++;
+                for (p = 0; p < sp; p++) {
+                    if (p < srcPlanes) {
+                        for (j = 0; j < wquads; j++) {
+                            *wp++ = *srcW++;
+                        }
+                        srcW = (uint16_t *)((uint8_t *)srcW + rowSkip);
+                    } else {
+                        for (j = 0; j < wquads; j++) {
+                            *wp++ = 0;
+                        }
                     }
-                    srcW = (uint16_t *)((uint8_t *)srcW + rowSkip);
                 }
-                for (; p < NUM_PLANES; p++) {
-                    for (j = 0; j < wquads; j++) {
-                        *wp++ = 0;
-                    }
-                }
+                /* Skip source plane rows beyond `sp` (source deeper than stored). */
+                for (; p < srcPlanes; p++)
+                    srcW = (uint16_t *)((uint8_t *)srcW + (int32_t)wquads * 2 + rowSkip);
             }
             pixelPtr = (uint8_t *)wp;
         }
@@ -305,7 +310,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
         uint16_t edgeMask = (uint16_t)(0xFFFF << edgeBits);
         uint16_t totalRows = (uint16_t)headerBase->nlines;
         if (planesFlag != 0)
-            totalRows *= NUM_PLANES;
+            totalRows *= sp;
 
         wp = (uint16_t *)pixelPtr;
         for (i = 0; i < totalRows; i++) {
@@ -330,7 +335,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
             if (planesFlag == 0)
                 planeRepeat = 1;
             else
-                planeRepeat = NUM_PLANES;
+                planeRepeat = sp;
 
             rowBase = (uint16_t *)pixelData;
 
@@ -340,7 +345,7 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
                     uint16_t accum = *plane0;
                     uint16_t offset = planeWordStride;
                     uint16_t k;
-                    for (k = 0; k < NUM_PLANES_MINUS1; k++) {
+                    for (k = 0; k + 1 < sp; k++) {
                         accum |= *(uint16_t *)((uint8_t *)plane0 + offset);
                         offset += planeWordStride;
                     }
@@ -349,8 +354,8 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
                 }
             }
 
-            /* Advance pixelData by wquads * NUM_PLANES * 2 bytes per scanline */
-            pixelData += (uint32_t)wquads * (1 << NUM_PLANES_SHIFT_PLUS1);
+            /* Advance pixelData by wquads * sp * 2 bytes per scanline (all planes). */
+            pixelData += (uint32_t)wquads * (uint32_t)sp * 2u;
         }
         pixelPtr = (uint8_t *)wp;
     }

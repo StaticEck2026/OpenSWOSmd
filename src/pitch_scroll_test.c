@@ -80,9 +80,20 @@ extern TeamGame *_topTeamPtr, *_bottomTeamPtr;
 /* gdb-pokeable camera target (plain globals so a watchpoint / set works) */
 int16_t g_pstCamX = 0;
 int16_t g_pstCamY = 0;
-int16_t g_pstSpeed = 2;
+int16_t g_pstSpeed = 1;   /* MANUAL step per frame: arrows move 1px/frame, hold = continuous */
 /* gdb-pokeable continuous auto-scroll (px/frame, 0 = off); bounces at edges */
 int16_t g_pstAutoScrollX = 0;
+/* 1 = MANUAL cursor-key control ONLY (the default). The arrow keys (joystick port 1
+ * under FS-UAE) move the camera g_pstSpeed px/frame; hold a key to scroll continuously.
+ * The auto-scroll circuit is DISABLED, so reversing direction happens IN PLACE with no
+ * jump/full-redraw reset — which is exactly the moment the vertical-seam transient shows
+ * (the old auto-scroll hid it by snapping back to the pitch edge on every direction flip).
+ * 0 = the legacy auto-scroll modes (circular / single-axis). SPACE toggles; gdb-pokeable. */
+int32_t g_pstManual = 1;
+/* TEMP §desync test: 1 = anchor sprites to WORLD positions (spread across the pitch)
+ * instead of screen-fixed, so they must stay glued to the pitch as the camera scrolls
+ * — exposes the sprite-vs-pitch horizontal desync that screen-fixed sprites hide. */
+int16_t g_pstWorldAnchor = 0;
 
 /* gdb-pokeable copper-register overrides (see UpdatePlanePtrsAndBlitParams,
  * gated PITCH_SCROLL_TEST). -1 = use the camera-computed value. Lets me sweep
@@ -108,9 +119,17 @@ int32_t g_pstFullRedraw = 0;
 /* 1 = do the scroll blit during VBlank (avoids the FMODE-fetch beam glitch);
  * 0 = old behaviour (blit mid-frame). gdb-pokeable A/B toggle. */
 int32_t g_pstVBlankBlit = 1;
+/* 1 = ScrollY also fills the FMODE -4 pull-back long (scroll_blit.c) for every row
+ * it touches; 0 = pre-fix behaviour (only the left-edge verge margin was written, so
+ * rows exposed by a vertical scroll kept a stale pull-back long = the "vertical line
+ * down the pitch"). Default ON; poke 0 to A/B the seam back. */
+int32_t g_pstPullbackFill = 1;
 
 /* --- full-load test controls (AGA_TEST.md §5b), gdb-pokeable --- */
-int32_t g_pstDrawSprites = 1;   /* 1 = render players+ball via DrawSprites each frame */
+/* Default 0 = PURE GRASS (the seam test). Sprites off also skips pstSetupSprites(),
+ * whose match-bypass ConvertColorsAndTextSprites path currently faults on rig startup
+ * (wild PC=0). Press 'B' (or poke =1) to enable; the toggle lazily runs setup then. */
+int32_t g_pstDrawSprites = 1;   /* 1 = render players+ball via DrawSprites each frame (default ON for the 4-plane sprite test) */
 int32_t g_pstNumSprites  = 22;  /* player count (ball added on top); clamped */
 int32_t g_pstMoveSprites = 0;   /* 1 = add in-place world-X jitter (player moving on the pitch); the pitch scroll already moves them across the screen. Toggle with 'M'. */
 /* 1 = force every player onto the bob (general) render stack instead of the
@@ -189,6 +208,7 @@ static Sprite   s_pstSprites[PST_MAX_SPRITES];
 static uint16_t s_pstFrame;
 static int16_t  s_pstScrollPhase;   /* circular scroll: 0=right 1=down 2=left 3=up */
 static int16_t  s_pstRedrawFrames;  /* >0 = force a full-screen redraw (both buffers) after a camera JUMP */
+static uint8_t  s_pstSpritesReady;  /* 1 once pstSetupSprites() has run (lazy, on first sprite-enable) */
 
 static void pstSetupSprites(void)
 {
@@ -264,8 +284,16 @@ static void pstMoveSprites(void)
          * screen while the pitch scrolls under them (owner prefers this for the
          * test — keeps the whole complement in view). Base Y +90 keeps the grid on
          * the green, below the ads banner. With jitter off they don't slide. */
-        s->x.s.i = (int16_t)(camX + 40 + col * 48 + osc);
-        s->y.s.i = (int16_t)(camY + 90 + row * 44);
+        if (g_pstWorldAnchor) {
+            /* WORLD-anchored: fixed pitch positions (spread across the 0x2A0 pitch),
+             * so a correct render keeps each sprite glued to its grass spot as the
+             * camera scrolls. Any horizontal drift/jitter vs the pitch = the desync. */
+            s->x.s.i = (int16_t)(60 + col * 100 + osc);
+            s->y.s.i = (int16_t)(80 + row * 90);
+        } else {
+            s->x.s.i = (int16_t)(camX + 40 + col * 48 + osc);
+            s->y.s.i = (int16_t)(camY + 90 + row * 44);
+        }
         s->z.s.i = 0;
     }
     /* the ball (soccer_s, index 1068, 8bpp bob), also screen-fixed */
@@ -282,6 +310,39 @@ static void pstMoveSprites(void)
     }
     _numSpritesToRender = (uint16_t)(n + 1);
 }
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+extern void SwapBuffersAndCameraViewState(void);
+
+/* Full vertical beam position (0..~312 PAL): VPOSR bit0 = V8, VHPOSR high byte = V7..V0. */
+static inline uint16_t pstBeamVpos(void)
+{
+    uint32_t v = *(volatile uint32_t *)0x00DFF004u;   /* VPOSR:VHPOSR (long read) */
+    return (uint16_t)((((v >> 16) & 1u) << 8) | ((v >> 8) & 0xFFu));
+}
+
+/* Frame throttle + buffer swap for the rig.
+ *
+ * The rig bypasses match entry, and in that context the Level-3 VBlank ISR over-fires
+ * (~4x per real frame), so WaitForVSync's `_waitingInterrupt` spin is cleared almost
+ * immediately and the loop runs unthrottled -> the scroll (and everything else) runs ~4x,
+ * which reads as "the rig is slow/choppy". The DISPLAY beam, however, is a normal 50Hz frame.
+ * So gate the loop on the beam instead, then do the buffer swap inline -- exactly what the
+ * ISR's swap block does -- WITHOUT setting `_waitingInterrupt`, so the ISR's own swap (gated
+ * on that flag) stays disabled and we don't double-swap. One scroll + one swap per real
+ * frame, like the game. */
+static void pstWaitVBlankAndSwap(void)
+{
+    while (pstBeamVpos() <  0x120u) { }   /* wait until the beam is in the bottom band (>=288) */
+    while (pstBeamVpos() >= 0x120u) { }   /* wait for it to wrap to the top -> one full frame */
+    UpdatePlanePtrsAndBlitParams();
+    {
+        int16_t cx = _cameraX.s.i, cy = _cameraY.s.i;
+        SwapBuffersAndCameraViewState();
+        SetCameraCoordinates(cx, cy);
+    }
+}
+#endif
 
 __attribute__((used, externally_visible))
 void PitchScrollTest(void)
@@ -315,8 +376,11 @@ void PitchScrollTest(void)
     /* paint BOTH double-buffers with the pitch at the start position */
     ReplayUpdateCameraAndSwapBuffers(g_pstCamX, g_pstCamY);
 
-    /* full-load test: load player/ball sprite headers + build the render list once */
-    pstSetupSprites();
+    /* full-load test: load player/ball sprite headers + build the render list once.
+     * Guarded on g_pstDrawSprites (default 0): pstSetupSprites() faults in the rig's
+     * match-bypass context, so pure-grass startup skips it entirely and never crashes.
+     * Enabling sprites at runtime ('B') runs it lazily then. */
+    if (g_pstDrawSprites) { pstSetupSprites(); s_pstSpritesReady = 1; }
 
     for (;;)
     {
@@ -326,28 +390,43 @@ void PitchScrollTest(void)
         if (_pl1Right) g_pstCamX += g_pstSpeed;
         if (_pl1Up)    g_pstCamY -= g_pstSpeed;
         if (_pl1Down)  g_pstCamY += g_pstSpeed;
+        /* Any arrow press drops out of auto-scroll into manual, so the camera
+         * follows the keys instead of the auto circuit (owner request). */
+        if (_pl1Left || _pl1Right || _pl1Up || _pl1Down) g_pstManual = 1;
         /* gdb-pokeable auto-scroll (px/frame): lets me FREE-RUN a continuous
          * incremental scroll and screenshot live mid-motion (the horizontal
          * "empty column" is a dynamic transient that step-and-halt misses).
          * Bounces at the edges so it stays incremental (no big jump). */
-        /* keyboard: W/A/S/D jump to an edge and scroll one axis; SPACE = circular.
-         * Codes are ASCII (GetKey runs the rawkey->ASCII LUT). */
+        /* keyboard (ASCII via GetKey's rawkey->ASCII LUT):
+         *   SPACE toggles MANUAL <-> auto-scroll; B/H/O/M/P are feature toggles.
+         *   W/A/S/D jump-scroll ONLY in auto mode (in manual they'd reset the camera
+         *   mid-observation, so they're ignored). Move with the ARROW keys instead. */
         {
             uint16_t k = GetKey();
-            /* W/A/S/D JUMP the camera to an edge, so the whole screen must be
-             * re-filled — the incremental scroll only redraws edge columns and
-             * would leave the interior as garbage. Force a 2-frame full redraw
-             * (one per double-buffer) after each jump, then resume incremental. */
-            if      (k == 0x57) { g_pstScrollMode = 1; g_pstCamY = maxY; s_pstRedrawFrames = 2; }  /* W: bottom -> up    */
-            else if (k == 0x41) { g_pstScrollMode = 2; g_pstCamX = maxX; s_pstRedrawFrames = 2; }  /* A: right  -> left  */
-            else if (k == 0x53) { g_pstScrollMode = 3; g_pstCamY = 0;    s_pstRedrawFrames = 2; }  /* S: top    -> down  */
-            else if (k == 0x44) { g_pstScrollMode = 4; g_pstCamX = 0;    s_pstRedrawFrames = 2; }  /* D: left   -> right */
-            else if (k == 0x20) { g_pstScrollMode = 0;                   }  /* SPACE: circular (no jump) */
-            else if (k == 0x42) { g_pstDrawSprites = !g_pstDrawSprites;  }  /* B: sprites on/off  */
-            else if (k == 0x48) { g_pstForceBobs   = !g_pstForceBobs;    }  /* H: bob <-> HW path */
-            else if (k == 0x4F) { g_pstShowOverlay = !g_pstShowOverlay;  }  /* O: overlay on/off  */
-            else if (k == 0x4D) { g_pstMoveSprites = !g_pstMoveSprites;  }  /* M: player jitter   */
+            if (!g_pstManual) {
+                /* auto mode: W/A/S/D JUMP to an edge + pick a single-axis scroll (needs a
+                 * 2-frame full redraw so the interior isn't left as pre-jump garbage). */
+                if      (k == 0x57) { g_pstScrollMode = 1; g_pstCamY = maxY; s_pstRedrawFrames = 2; }  /* W: bottom -> up    */
+                else if (k == 0x41) { g_pstScrollMode = 2; g_pstCamX = maxX; s_pstRedrawFrames = 2; }  /* A: right  -> left  */
+                else if (k == 0x53) { g_pstScrollMode = 3; g_pstCamY = 0;    s_pstRedrawFrames = 2; }  /* S: top    -> down  */
+                else if (k == 0x44) { g_pstScrollMode = 4; g_pstCamX = 0;    s_pstRedrawFrames = 2; }  /* D: left   -> right */
+            }
+            if      (k == 0x20) { g_pstManual     = !g_pstManual;    }  /* SPACE: manual <-> auto */
+            else if (k == 0x42) { g_pstDrawSprites = !g_pstDrawSprites; /* B: sprites on/off */
+                                  if (g_pstDrawSprites && !s_pstSpritesReady) { pstSetupSprites(); s_pstSpritesReady = 1; } }
+            else if (k == 0x48) { g_pstForceBobs   = !g_pstForceBobs;   }  /* H: bob <-> HW path */
+            else if (k == 0x4F) { g_pstShowOverlay = !g_pstShowOverlay; }  /* O: overlay on/off  */
+            else if (k == 0x4D) { g_pstMoveSprites = !g_pstMoveSprites; }  /* M: player jitter   */
+            else if (k == 0x50) { g_pstPullbackFill = !g_pstPullbackFill; } /* P: -4 pull-back fill on/off
+                                  * Live A/B for the "vertical line down the pitch": OFF restores the
+                                  * pre-fix behaviour where ScrollY leaves the FMODE -4 pull-back long
+                                  * unwritten. The stale column only re-appears on rows ScrollY newly
+                                  * exposes, so scroll VERTICALLY after toggling to see it. */
         }
+        /* Camera motion. MANUAL (default): position comes only from the arrow-key deltas
+         * above — no auto-scroll, so reversing direction happens IN PLACE with no reset
+         * (the seam-hiding jump is gone). Auto mode runs the legacy circuit/single-axis. */
+        if (!g_pstManual)
         {
             int16_t spd = (int16_t)(g_pstAutoScrollX ? g_pstAutoScrollX : 2);
             if (spd < 0) spd = (int16_t)-spd;
@@ -385,7 +464,13 @@ void PitchScrollTest(void)
          * VBlank here (the ISR also does the buffer swap) means the column blit
          * below runs while the bitplanes are idle. gdb-toggle g_pstVBlankBlit=0
          * to A/B against the old mid-frame-blit behaviour. */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Beam-gated throttle + inline swap (see pstWaitVBlankAndSwap): the rig's Level-3
+         * ISR over-fires, so WaitForVSync alone doesn't hold the loop to one frame. */
+        if (g_pstVBlankBlit) pstWaitVBlankAndSwap();
+#else
         if (g_pstVBlankBlit) WaitForVSync();
+#endif
 
         /* Undraw last frame's bobs BEFORE scrolling — game_loop.c runs
          * ProcessSpriteBlitQueue (647) ahead of ScrollToCurrent (682). Undrawing
@@ -491,6 +576,8 @@ void PitchScrollTest(void)
             p = line;
             p = putStr(p, "Y ");   p = putDec(p, _cameraY.s.i);
             p = putStr(p, " YM "); p = putDec(p, (int16_t)_cameraYMod320);
+            /* PB = the -4 pull-back fill (P key). 1 = fixed, 0 = pre-fix (seam returns). */
+            p = putStr(p, " PB "); p = putDec(p, (int16_t)g_pstPullbackFill);
             *p = 0;
             DrawMenuText(4, 28, 2, line, _bigCharsTable);
         }

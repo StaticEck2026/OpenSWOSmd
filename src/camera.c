@@ -24,6 +24,13 @@ extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
  * Sets cameraCoordinatesValid = 1, then calls ScrollX and ScrollY
  * to blit pitch columns/rows matching the current camera position.
  * ================================================================ */
+/* Set while MoveView/InitCameraMoveView is panning the camera to a target (match-setup
+ * pitch pan, replay seek). During such a pan ScrollToCurrent is driven pixel-by-pixel and
+ * expects plain incremental ScrollX+ScrollY — the left-edge full-refill below must NOT fire
+ * (it rewrites _oldCameraX/_oldCameraY, derailing the pan and blacking the match on entry).
+ * The seam fix is only needed for LIVE gameplay scrolling (game_loop's ScrollToCurrent). */
+static uint8_t s_inCameraPan = 0;
+
 __attribute__((used, externally_visible))
 void ScrollToCurrent(void)
 {
@@ -36,6 +43,11 @@ void ScrollToCurrent(void)
     extern void DrawChunkyPitch(void);
     DrawChunkyPitch();
 #else
+    /* The FMODE left-verge "column strip" fix used to force a full-screen ScrollY refill here
+     * (expensive: ~284k cycles/frame at the left edge, and it clobbered _oldCameraX/_oldCameraY).
+     * It now lives in ScrollXUpdateColumnsAndBlit as a cheap margin-only ScrollYVergeRefresh()
+     * — see scroll_blit.c. So ScrollToCurrent is just the plain incremental scroll again, and it
+     * works in the rig too (the old fix was _playGame-gated and never ran there). */
     ScrollXUpdateColumnsAndBlit();
     ScrollYUpdateRowsAndBlit();
 #endif
@@ -55,6 +67,8 @@ void ScrollToCurrent(void)
 __attribute__((used, externally_visible))
 void MoveView(int16_t newScreenX, int16_t newScreenY)
 {
+    uint8_t savedPan = s_inCameraPan;
+    s_inCameraPan = 1;   /* disable the live-gameplay seam refill during this pan */
     /* These clamps map a DOS-336 recorded replay camera into our wider view and
      * must run ONLY for loaded HIL/RPL playback (_playHighlightFlag). highlight.c
      * calls MoveView directly with the recorded X; the live in-game camera — and
@@ -120,6 +134,7 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
                 _cameraYMod320 = 271;
         }
     }
+    s_inCameraPan = savedPan;
 }
 
 /* ================================================================
@@ -135,6 +150,9 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
 __attribute__((used, externally_visible))
 void InitCameraMoveView(int16_t targetX, int16_t targetY)
 {
+    uint8_t savedPan = s_inCameraPan;
+    s_inCameraPan = 1;   /* these setup ScrollToCurrent calls are a pan, not live scroll */
+
     /* First pass: set camera to (targetX, 272), scroll */
     SetCameraCoordinates(targetX, 272);
     ScrollToCurrent();
@@ -145,4 +163,6 @@ void InitCameraMoveView(int16_t targetX, int16_t targetY)
 
     /* Final: iteratively move to (cameraX.s.i, targetY) */
     MoveView(_cameraX.s.i, targetY);
+
+    s_inCameraPan = savedPan;
 }

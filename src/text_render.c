@@ -10,6 +10,15 @@
 #include <stddef.h>
 #endif
 
+/* SWOS_Font glyph: body in plane 1 (colour 2), drop shadow in plane 3 (colour 8).
+ * Fixed at 3 on BOTH depths — the glyph is always a 4bpp/16-colour font, so the
+ * shadow lives in plane 3 whether the playfield is 4 (OCS) or 8 (AGA) planes. The
+ * AGA glyph blit must target dest plane 3 for the shadow, NOT the last dest plane
+ * (which is plane 3 on OCS but plane 7 = a wrong colour on AGA). */
+#ifndef GLYPH_SHADOW_PLANE
+#define GLYPH_SHADOW_PLANE 3
+#endif
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *_spriteGraphicsPtr;
 extern volatile uintptr_t _frontbufferBasePtr;
@@ -192,7 +201,7 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     uint16_t blitWidthBytes = blitWords << 1;
     uint16_t srcWquads = (uint16_t)spr->wquads;
     uint16_t srcStrideBytes = srcWquads << 1;
-    uint16_t srcInterleavedBytes = srcStrideBytes << NUM_PLANES_SHIFT;
+    uint16_t srcInterleavedBytes = srcStrideBytes << SPRITE_NUM_PLANES_SHIFT;
 
     _custom->bltamod = srcStrideBytes - blitWidthBytes;
     _custom->bltbmod = srcInterleavedBytes - blitWidthBytes;
@@ -214,31 +223,54 @@ static void blitStringToFrontBuffer(uint16_t sprIdx, int16_t x, int16_t y, uint1
     uint32_t maskPtr   = (uint32_t)spr->maskPtr;
     uint32_t dataBase  = (uint32_t)spr->sprData;
     uint32_t plane1Ptr = dataBase + srcStrideBytes;          /* skip plane 0 */
-    uint32_t planeLastPtr = plane1Ptr + (uint32_t)srcStrideBytes * (NUM_PLANES - 2);  /* last plane */
+    uint32_t planeLastPtr = plane1Ptr + (uint32_t)srcStrideBytes * (SPRITE_NUM_PLANES - 2);  /* glyph plane 3 = shadow */
 
 restart_blit_span:
     ;
     uint16_t pMask = planeMask;
     uint8_t *dst = destPtr;
 
-    /* Passes 0 through NUM_PLANES-2 */
-    for (int16_t pass = NUM_PLANES - 2; pass >= 0; pass--) {
+    /* One pass per DEST/playfield plane (NUM_PLANES). Plane GLYPH_SHADOW_PLANE(3) is
+     * the SHADOW plane (colour 8) with the asymmetric logic; every other plane is a
+     * BODY plane. Previously this was structured as "planes 0..N-2 body, final plane =
+     * shadow", which put the shadow on the last dest plane — plane 3 on OCS (correct)
+     * but plane 7 (a wrong colour) on the 8-plane AGA playfield. Keying the shadow to
+     * plane 3 explicitly fixes the AGA drop-shadow colour while staying identical on OCS. */
+    for (int16_t p = 0; p < NUM_PLANES; p++) {
         uint16_t bit = pMask & 1;
         pMask >>= 1;
 
-        if (bit) {
-            /* Color bit set → cookie cut glyph through mask */
-            _custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
-            _custom->bltapt = maskPtr;
-            _custom->bltbpt = plane1Ptr;
-            _custom->bltcpt = (uint32_t)dst;
-            _custom->bltdpt = (uint32_t)dst;
+        if (p == GLYPH_SHADOW_PLANE) {
+            /* Shadow plane. If the requested colour also uses plane 3 → OR the mask
+             * (body sets it too); else cookie-cut the glyph's shadow plane so
+             * shadow-only pixels set plane 3 (= colour 8). */
+            if (bit) {
+                _custom->bltcon0 = shiftVal | BLTCON0_OR_MASK;
+                _custom->bltapt = maskPtr;
+                _custom->bltcpt = (uint32_t)dst;
+                _custom->bltdpt = (uint32_t)dst;
+            } else {
+                _custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
+                _custom->bltapt = maskPtr;
+                _custom->bltbpt = planeLastPtr;   /* glyph shadow plane (plane 3) */
+                _custom->bltcpt = (uint32_t)dst;
+                _custom->bltdpt = (uint32_t)dst;
+            }
         } else {
-            /* Color bit clear → clear through mask */
-            _custom->bltcon0 = shiftVal | BLTCON0_CLEAR_MASK;
-            _custom->bltapt = maskPtr;
-            _custom->bltcpt = (uint32_t)dst;
-            _custom->bltdpt = (uint32_t)dst;
+            /* Body plane: cookie-cut the glyph body where the colour bit is set,
+             * else clear the footprint (transparent in that plane). */
+            if (bit) {
+                _custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
+                _custom->bltapt = maskPtr;
+                _custom->bltbpt = plane1Ptr;      /* glyph body plane (plane 1) */
+                _custom->bltcpt = (uint32_t)dst;
+                _custom->bltdpt = (uint32_t)dst;
+            } else {
+                _custom->bltcon0 = shiftVal | BLTCON0_CLEAR_MASK;
+                _custom->bltapt = maskPtr;
+                _custom->bltcpt = (uint32_t)dst;
+                _custom->bltdpt = (uint32_t)dst;
+            }
         }
 
         /* Kick blit and wait */
@@ -246,29 +278,6 @@ restart_blit_span:
         waitBlit();
 
         dst += PLANE_STRIDE;
-    }
-
-    /* Final pass: last plane — asymmetric logic */
-    {
-        uint16_t bitLast = pMask & 1;
-
-        if (bitLast) {
-            /* Color bit set → OR mask into dest (set all masked pixels) */
-            _custom->bltcon0 = shiftVal | BLTCON0_OR_MASK;
-            _custom->bltapt = maskPtr;
-            _custom->bltcpt = (uint32_t)dst;
-            _custom->bltdpt = (uint32_t)dst;
-        } else {
-            /* Color bit clear → cookie cut last plane glyph data */
-            _custom->bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
-            _custom->bltapt = maskPtr;
-            _custom->bltbpt = planeLastPtr;
-            _custom->bltcpt = (uint32_t)dst;
-            _custom->bltdpt = (uint32_t)dst;
-        }
-
-        /* Kick final blit */
-        _custom->bltsize = bltsize;
     }
 
     /* Handle vertical wrap */

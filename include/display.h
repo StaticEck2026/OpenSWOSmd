@@ -168,6 +168,63 @@ extern volatile struct Custom *_custom;
 
 #define NUM_PLANES_MINUS1           (NUM_PLANES - 1)
 #define NUM_PLANES_MINUS2           (NUM_PLANES - 2)
+
+/* ---- Sprite vs playfield bitplane depth (AGA) ----
+ * The PLAYFIELD (pitch, menu backgrounds) is NUM_PLANES deep — 8 on AGA (256 colours),
+ * 4 on OCS. SPRITES are 16-colour = 4 planes on BOTH targets. Sprite pixel/mask data is
+ * therefore STORED at 4 planes and composited onto the playfield per-plane (the low 4
+ * planes carry the sprite; the sprite's footprint in the upper playfield planes is CLEARED
+ * so a 16-colour sprite reads back as colour 0-15). PITCH_NUM_PLANES aliases NUM_PLANES for
+ * the playfield sites. The one exception is the SOCCER_S / replay-"R" bank (sprite indices
+ * 0x447..0x486), which genuinely uses palette 0x70..0x7F -> 8 planes on AGA; spriteNumPlanes()
+ * returns that per-sprite from the ordinal. On OCS everything is 4 planes. */
+#define PITCH_NUM_PLANES              NUM_PLANES
+
+/* ===== Sprite storage-depth toggle (SWOS_SPRITE_PLANES) =====
+ *   4 = store sprites at their real 4-plane depth (16 colours). Fits the in-match sprite
+ *       pool in memory, but a 4-plane bob can't single-blit onto the 8-plane pitch (the
+ *       plane interleave mismatches), so it composites in several blits.
+ *   8 = pad every sprite to the 8-plane playfield depth (the pre-4-plane original). One blit
+ *       per bob, but the in-match pool overflows the buffer (needs the space fix).
+ * Everything routes through SPRITE_NUM_PLANES / spriteNumPlanes(), so flipping this one value
+ * switches the whole build between the two modes. Override at build time with
+ * -DSWOS_SPRITE_PLANES=8 (no source edit needed). */
+#ifndef SWOS_SPRITE_PLANES
+#define SWOS_SPRITE_PLANES            4
+#endif
+#if (SWOS_SPRITE_PLANES != 4) && (SWOS_SPRITE_PLANES != 8)
+#error "SWOS_SPRITE_PLANES must be 4 or 8"
+#endif
+
+#define SPRITE_NUM_PLANES             SWOS_SPRITE_PLANES
+#if SWOS_SPRITE_PLANES == 8
+#define SPRITE_NUM_PLANES_SHIFT       3    /* log2(8) */
+#else
+#define SPRITE_NUM_PLANES_SHIFT       2    /* log2(4) */
+#endif
+#define SPRITE_NUM_PLANES_SHIFT_PLUS1 (SPRITE_NUM_PLANES_SHIFT + 1)
+#define SPRITE_NUM_PLANES_MINUS1      (SPRITE_NUM_PLANES - 1)
+#define SPRITE_NUM_PLANES_MINUS2      (SPRITE_NUM_PLANES - 2)
+
+#define SOCCER_S_SPRITE_FIRST         0x447
+#define SOCCER_S_SPRITE_LAST          0x486
+
+/* Real stored bitplane depth of a sprite by its ordinal (sprite index). In 4-plane mode:
+ * 8 for the AGA soccer_s/replay-R bank (genuinely 8-plane), else 4. In 8-plane mode every
+ * sprite is padded to 8 so the special case is a no-op. OCS: always 4. Used by every
+ * sprite-DATA reader so a 4-plane sprite is walked at 4-plane stride, not the playfield's 8. */
+static inline uint16_t spriteNumPlanes(int16_t ordinal)
+{
+#if defined(AGA) && !defined(SWOS_SDL_BUILD) && (SWOS_SPRITE_PLANES != 8)
+    if ((uint16_t)ordinal >= SOCCER_S_SPRITE_FIRST &&
+        (uint16_t)ordinal <= SOCCER_S_SPRITE_LAST)
+        return PITCH_NUM_PLANES;   /* SOCCER_S bank is genuinely 8-plane */
+#else
+    (void)ordinal;
+#endif
+    return SPRITE_NUM_PLANES;      /* 4 (default) or 8 (SWOS_SPRITE_PLANES=8) */
+}
+
 /* Frontbuffer circular scroll-buffer plane-row width (bytes = px/8).
  * AGA (FMODE=1) needs 48 B (384 px) not 44 B (352 px): FMODE=1's 32-bit fetch
  * forces a 32px-aligned bitplane pointer, so the fine scroll uses a 32px quantum

@@ -2283,9 +2283,8 @@ void CommonMenuExit(void)
 /* RANDOM/SEASONAL constants for ShowFriendlyMenu */
 #define RANDOM_PITCH     0xFFFF
 #define SEASON_SEP       7
-
-extern uint8_t _seed;              /* adjacent to randXorIndex — word write seeds both */
-extern uint8_t _randXorIndex;      /* adjacent byte after seed */
+extern uint8_t _seed;              /* primary PRNG seed/counter */
+extern uint8_t _randXorIndex;      /* primary XOR key index */
 extern uint16_t _diySelected;
 extern uint8_t _diyCompetitionMenu[];
 extern uint8_t _highlightsMenu[];
@@ -3406,7 +3405,13 @@ __attribute__((used, externally_visible))
 void DIYCompetitionMenu(void)
 {
 #ifndef DETERMINISTIC_MODE
-    *(volatile uint16_t *)(volatile void *)&_seed = _currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    /* move.w (currentTick),(seed) — the m68k word write puts currentTick's HIGH
+     * byte in seed and its LOW byte in randXorIndex. Done as two explicit byte
+     * writes: a native uint16 store lands the bytes the other way round on a
+     * little-endian host, and this also drops the seed/randXorIndex adjacency
+     * assumption. Same form as FriendlyMenu. */
+    _seed         = (uint8_t)(_currentTick >> 8);
+    _randXorIndex = (uint8_t)(_currentTick & 0xFF);
 #endif
     if (CheckContinueAbortPrompt(_aDiyCompetition_0) != 0)
         goto exit;
@@ -3436,7 +3441,13 @@ __attribute__((used, externally_visible))
 void PresetCompetitionMenu(void)
 {
 #ifndef DETERMINISTIC_MODE
-    *(volatile uint16_t *)(volatile void *)&_seed = _currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    /* move.w (currentTick),(seed) — the m68k word write puts currentTick's HIGH
+     * byte in seed and its LOW byte in randXorIndex. Done as two explicit byte
+     * writes: a native uint16 store lands the bytes the other way round on a
+     * little-endian host, and this also drops the seed/randXorIndex adjacency
+     * assumption. Same form as FriendlyMenu. */
+    _seed         = (uint8_t)(_currentTick >> 8);
+    _randXorIndex = (uint8_t)(_currentTick & 0xFF);
 #endif
     if (CheckContinueAbortPrompt(_aPresetCompetit_0) != 0) {
         CommonMenuExit();
@@ -3489,7 +3500,13 @@ __attribute__((used, externally_visible))
 void SeasonMenu(void)
 {
 #ifndef DETERMINISTIC_MODE
-    *(volatile uint16_t *)(volatile void *)&_seed = _currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    /* move.w (currentTick),(seed) — the m68k word write puts currentTick's HIGH
+     * byte in seed and its LOW byte in randXorIndex. Done as two explicit byte
+     * writes: a native uint16 store lands the bytes the other way round on a
+     * little-endian host, and this also drops the seed/randXorIndex adjacency
+     * assumption. Same form as FriendlyMenu. */
+    _seed         = (uint8_t)(_currentTick >> 8);
+    _randXorIndex = (uint8_t)(_currentTick & 0xFF);
 #endif
     if (CheckContinueAbortPrompt(_aSeason_1) != 0) {
         CommonMenuExit();
@@ -3516,7 +3533,13 @@ __attribute__((used, externally_visible))
 void CareerMenu(void)
 {
 #ifndef DETERMINISTIC_MODE
-    *(volatile uint16_t *)(volatile void *)&_seed = _currentTick;  /* word write seeds both seed and adjacent randXorIndex */
+    /* move.w (currentTick),(seed) — the m68k word write puts currentTick's HIGH
+     * byte in seed and its LOW byte in randXorIndex. Done as two explicit byte
+     * writes: a native uint16 store lands the bytes the other way round on a
+     * little-endian host, and this also drops the seed/randXorIndex adjacency
+     * assumption. Same form as FriendlyMenu. */
+    _seed         = (uint8_t)(_currentTick >> 8);
+    _randXorIndex = (uint8_t)(_currentTick & 0xFF);
 #endif
     if (CheckContinueAbortPrompt(_aCareer_1) != 0) {
         CommonMenuExit();

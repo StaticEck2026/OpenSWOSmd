@@ -255,6 +255,10 @@ static void scrollXBlitColumn(uint8_t *a1, uint32_t destXByteOff)
 }
 #endif /* !SWOS_SDL_BUILD */
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+void ScrollYVergeRefresh(void);   /* verge-only margin refresh; defined after ScrollYUpdateRowsAndBlit */
+#endif
+
 /* ================================================================
  * ScrollXUpdateColumnsAndBlit  (SWOS2.s lines 5504-5678)
  *
@@ -288,6 +292,20 @@ void ScrollXUpdateColumnsAndBlit(void)
 #endif
         return;
     }
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* Left-touchline verge refresh (see ScrollYVergeRefresh). ScrollY only refreshes the FMODE
+     * verge margin (tile 0 -> byte 0) for the rows it copies, and is skipped on a horizontal-only
+     * frame, so rows first exposed at camXMod>=32 keep a stale byte-0 that the display's -4
+     * pull-back reads as the left "column strip". Refresh the whole-screen margin EVERY frame
+     * while at the touchline -- this is what actually kills the strip (a once-per-transition
+     * variant regressed it: the verge needs continuous refresh, e.g. across the double-buffers /
+     * as the DATA columns roll). It is a full-screen CPU write, so at ~1 iteration/frame it's
+     * ~1/10th of a full ScrollY refill; if the loop is ever unthrottled it multiplies (see the
+     * 2026-07 rig-throttle notes) -- fix the loop rate, not this. */
+    if (_cameraXMod320 < 32u)
+        ScrollYVergeRefresh();
+#endif
 
     if (d0 >= _oldCameraX) {
         /* Moved right */
@@ -411,12 +429,14 @@ void ScrollYUpdateRowsAndBlit(void)
     uint16_t fmodeExtraTiles = 0;  /* AGA: extra left tile pulled in to 32px-align the fill */
     int32_t d3;       /* src scanline offset within tile (ext.l) */
     uint32_t d7;      /* dest stride per row */
-    uint32_t xByteOff = 0;  /* frontbuffer X byte offset (hoisted: reused for the verge margin) */
+    uint32_t xByteOff = 0;  /* frontbuffer X byte offset of the fill start */
     int16_t rowCount;
     uint8_t *a1;      /* pitch pointer table cursor */
     uint8_t *a3;      /* dest plane 0 */
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
     uint8_t *a1_verge; /* pitch pointer table cursor for tile column 0 (verge margin) */
+    uint8_t *a1_pb;    /* pitch pointer cursor for the -4 pull-back long's first tile */
+    uint16_t pbDup;    /* 1 = pull-back is off-pitch -> repeat tile 0 (the old verge case) */
 #endif
 #ifndef AGA
     uint8_t *a4;      /* dest plane 1 */
@@ -483,6 +503,22 @@ void ScrollYUpdateRowsAndBlit(void)
         a3 += yByteOff;
     }
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* Source for the FMODE -4 pull-back long (see the per-row write in the CPU loop
+     * below): the two 16px pitch tiles immediately LEFT of the 32px-aligned fill
+     * start. `a1 - a1_verge` is the fill's start tile column x4 (always a multiple
+     * of 8 = 2 tiles, because the fill start is 32px-aligned), so < 8 means the
+     * pull-back reads off the left edge of the pitch -> repeat tile column 0, which
+     * is exactly what the old verge-margin write did. */
+    if ((uint32_t)(a1 - a1_verge) >= 8u) {
+        a1_pb = a1 - 8;
+        pbDup = 0;
+    } else {
+        a1_pb = a1_verge;
+        pbDup = 1;
+    }
+#endif
+
     /* ---- Determine word count and dest stride per row ---- */
     if (((uint16_t)_cameraX.s.i & 0xF) != 0) {
         d6 = 0x15;  /* 21 words (unaligned) */
@@ -536,31 +572,45 @@ void ScrollYUpdateRowsAndBlit(void)
         uint8_t *a1_saved = a1;
 
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
-        /* Verge margin: write tile column 0 (pitch-x 0, REPEATED into both margin
-         * words) into this row's per-plane margin (byte 0.. = a3 - xByteOff), and
-         * its mirror. The display's FMODE -4 pull-back reads this at the pitch's
-         * extreme-left edge (coarse=0). Done per-row inside the CPU loop so it fills
-         * only the newly-exposed rows and never blits/overruns vblank.
+        /* FMODE -4 pull-back long (32px / 2 tiles, at byte xByteOff-4 = a3-4).
          *
-         * ONLY at coarse=0 (cameraXMod320 < 32 = the pitch's left touchline block):
-         * elsewhere byte 0.. of each plane is the region the PREVIOUS plane's 48-byte
-         * fetch OVER-READS (the FMODE rolling mechanism), so it must hold the rolling
-         * over-write content, not tile 0. At coarse=0 that over-read stops exactly at
-         * the margin boundary, so writing tile 0 here is both safe and what the -4
-         * pull-back needs. */
-        if (_cameraXMod320 < 32u)
+         * UpdatePlanePtrsAndBlitParams points the bitplane fetch one long EARLIER
+         * than the 32px coarse so the extra left long sits under the BPLCON1
+         * fine-scroll delay. This fill, though, starts AT the coarse — so those 4
+         * bytes are written by nobody: plane p-1's 48-byte fill spills into plane p
+         * only up to byte xByteOff-4, and plane p's own fill starts at xByteOff.
+         * On a vertical scroll the newly-exposed rows therefore kept whatever was in
+         * the circular buffer 272 rows earlier, which the pull-back then displays as
+         * a stale column in the leftmost ~32px — the "vertical line down the pitch"
+         * (most visibly the perimeter-hoarding tile left behind by a previous visit
+         * to the left touchline, since that content is constant in y).
+         *
+         * Fill it per-row here (CPU, like the rest of this loop — never a blit, so it
+         * cannot overrun vblank), from the two pitch tiles left of the fill start.
+         * At the pitch's extreme-left edge there is no pitch further left, so pbDup
+         * repeats tile column 0 — byte-for-byte the old verge-margin write this
+         * replaces (there xByteOff == 4, so a3-4 IS the verge margin at byte 0).
+         * Mirror-written too, like the main fill (2x-tall frontbuffer). */
+#ifdef PITCH_SCROLL_TEST
+        /* rig A/B: 0 = pre-fix behaviour (write only the left-edge verge margin). */
+        extern int32_t g_pstPullbackFill;
+        if (g_pstPullbackFill || pbDup)
+#endif
         {
-            uint8_t *vsrc = *(uint8_t **)a1_verge + d3;
-            uint8_t *m = a3 - xByteOff;   /* this row's byte 0 = the verge margin */
+            uint8_t *psrc0 = *(uint8_t **)a1_pb + d3;
+            uint8_t *psrc1 = pbDup ? psrc0 : (*(uint8_t **)(a1_pb + 4) + d3);
+            uint8_t *m = a3 - 4;   /* this row's pull-back long */
             int16_t vp;
             for (vp = 0; vp < NUM_PLANES; vp++)
             {
-                uint16_t vv = *(uint16_t *)vsrc;
-                *(uint16_t *)(m + vp * PLANE_STRIDE)                              = vv;
-                *(uint16_t *)(m + vp * PLANE_STRIDE + 2)                          = vv;
-                *(uint16_t *)(m + vp * PLANE_STRIDE + FB_MIRROR_OFFSET_BYTES)     = vv;
-                *(uint16_t *)(m + vp * PLANE_STRIDE + 2 + FB_MIRROR_OFFSET_BYTES) = vv;
-                vsrc += 2;
+                uint16_t v0 = *(uint16_t *)psrc0;
+                uint16_t v1 = *(uint16_t *)psrc1;
+                *(uint16_t *)(m + vp * PLANE_STRIDE)                              = v0;
+                *(uint16_t *)(m + vp * PLANE_STRIDE + 2)                          = v1;
+                *(uint16_t *)(m + vp * PLANE_STRIDE + FB_MIRROR_OFFSET_BYTES)     = v0;
+                *(uint16_t *)(m + vp * PLANE_STRIDE + 2 + FB_MIRROR_OFFSET_BYTES) = v1;
+                psrc0 += 2;
+                psrc1 += 2;
             }
         }
 #endif
@@ -613,6 +663,7 @@ void ScrollYUpdateRowsAndBlit(void)
             a1 += PITCH_PTR_ROW_BYTES;
 #if defined(AGA) && !defined(SWOS_SDL_BUILD)
             a1_verge += PITCH_PTR_ROW_BYTES;   /* keep the verge (tile 0) in step */
+            a1_pb    += PITCH_PTR_ROW_BYTES;   /* and the pull-back source tiles */
 #endif
             d3 = 0;
         }
@@ -715,3 +766,63 @@ void ScrollYUpdateRowsAndBlit(void)
     }
 #endif /* !SWOS_SDL_BUILD */
 }
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* ================================================================
+ * ScrollYVergeRefresh
+ *
+ * Rewrites ONLY the FMODE left-verge margin -- pitch tile column 0 -> byte 0 of every visible
+ * row (+ its 2x-tall mirror) -- for the WHOLE screen, WITHOUT the full-row data copy or mask
+ * blit that ScrollYUpdateRowsAndBlit does. ScrollY refreshes the verge per-row but only for the
+ * deltaY rows it copies, and early-returns on a horizontal-only frame (deltaY==0). So a
+ * left-scroll into the touchline (camXMod<32) leaves rows first exposed at camXMod>=32 with a
+ * stale byte-0 that the display's FMODE -4 pull-back reads as the left "column strip". This
+ * refresh costs ~1/10th of the full-screen ScrollY refill the earlier camera.c fix used, and
+ * (unlike that fix) never touches _oldCameraX/_oldCameraY. Setup mirrors ScrollY at d5==0.
+ * ================================================================ */
+void ScrollYVergeRefresh(void)
+{
+    /* pitch tile-0 pointer for the top visible tile row (the verge = pitch-x 0) */
+    uint8_t *a1_verge = _pitchDatBuffer +
+        (uint32_t)((uint16_t)_cameraY.s.i >> TILE_SHIFT_X) * PITCH_PTR_ROW_BYTES;
+
+    /* frontbuffer dest: same coarse-32 align + margin skip ScrollY uses, so (a3 - xByteOff)
+     * lands on byte 0 (the verge) of each plane row. */
+    uint32_t xByteOff = (uint16_t)_cameraXMod320 >> 3;
+    xByteOff &= WORD_ALIGN_EVEN_MASK;
+    xByteOff &= (uint32_t)(uint16_t)SCROLL_X_COARSE_ALIGN_MASK;
+    xByteOff += SCROLL_LEFT_MARGIN_BYTES;
+    uint8_t *a3 = (uint8_t *)_frontbufferBasePtr + xByteOff
+                + (uint32_t)_cameraYMod320 * ROW_STRIDE_BYTES;
+
+    /* source scanline offset within the tile (8 bytes/scanline on AGA) */
+    int32_t d3 = (int32_t)(uint16_t)((uint16_t)_cameraY.s.i & TILE_MASK) << NUM_PLANES_SHIFT_PLUS1;
+
+    uint16_t d4 = _cameraYMod320;
+    int16_t rowCount = SCREEN_HEIGHT - 1;
+    do {
+        uint8_t *vsrc = *(uint8_t **)a1_verge + d3;
+        uint8_t *m = a3 - xByteOff;   /* byte 0 of this row = the verge margin */
+        int16_t vp;
+        for (vp = 0; vp < NUM_PLANES; vp++) {
+            uint16_t vv = *(uint16_t *)vsrc;
+            *(uint16_t *)(m + vp * PLANE_STRIDE)                              = vv;
+            *(uint16_t *)(m + vp * PLANE_STRIDE + 2)                          = vv;
+            *(uint16_t *)(m + vp * PLANE_STRIDE + FB_MIRROR_OFFSET_BYTES)     = vv;
+            *(uint16_t *)(m + vp * PLANE_STRIDE + 2 + FB_MIRROR_OFFSET_BYTES) = vv;
+            vsrc += 2;
+        }
+        /* advance source scanline; cross a tile -> next pitch-pointer row */
+        d3 += SRC_SCANLINE_BYTES;
+        if (d3 == TILE_SIZE) {
+            a1_verge += PITCH_PTR_ROW_BYTES;
+            d3 = 0;
+        }
+        a3 += ROW_STRIDE_BYTES;
+        if (++d4 == SCREEN_HEIGHT) {
+            a3 -= FRONTBUFFER_SIZE_VISIBLE_BYTES;
+            d4 = 0;
+        }
+    } while (--rowCount >= 0);
+}
+#endif /* AGA && !SWOS_SDL_BUILD */

@@ -41,6 +41,7 @@
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t *_spriteGraphicsPtr;
 extern volatile uint16_t _panicReasonCode;
+extern volatile uint16_t _playGame;   /* nonzero only while a match plays (AGA verge margin) */
 
 extern Sprite **_allSpritesArray;      /* Null-terminated ((Sprite *)-1) pointer array */
 extern Sprite *_sortedSprites[];        /* 78 entries max */
@@ -148,6 +149,9 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     uint16_t dstStrideBytes = (uint16_t)dstHdr->wquads << 1;
     /* Destination sprite data pointer */
     uint8_t *dstData = (uint8_t *)dstHdr->sprData;
+    /* Src and dst are same-depth sprites (`sp` planes: 4 for 16-colour / 8 soccer_s).
+     * Was hard NUM_PLANES(8) interleave; a 4-plane sprite now steps sp plane-rows/scanline. */
+    uint16_t sp = spriteNumPlanes(dstHdr->ordinal);
 
     /* Wait for blitter idle */
     waitBlit();
@@ -188,7 +192,7 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     uint32_t wordByteOff = (uint32_t)((xOffset >> 3) & 0xFFFE);
 
     /* Compute y offset in interleaved plane data */
-    uint16_t dstInterleavedStride = dstStrideBytes << NUM_PLANES_SHIFT;
+    uint16_t dstInterleavedStride = (uint16_t)(dstStrideBytes * sp);
     uint32_t yByteOff = (uint32_t)yOffset * dstInterleavedStride;
     uint32_t dstAddr = (uintptr_t)dstData + yByteOff + wordByteOff;
 
@@ -201,7 +205,7 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
     if (srcType != 0) {
         /* ---- Linked / interleaved path ---- */
         uint16_t nlines = (uint16_t)srcHdr->nlines;
-        uint16_t bltsize = ((nlines << NUM_PLANES_SHIFT) << 6) | blitWords;
+        uint16_t bltsize = ((uint16_t)(nlines * sp) << 6) | blitWords;
 
         /* Source A/B modulo */
         uint16_t srcStride = (uint16_t)srcHdr->wquads << 1;
@@ -220,15 +224,15 @@ void CopySprite(uint16_t srcSprite, uint16_t dstSprite,
         uint16_t nlines = (uint16_t)srcHdr->nlines;
         uint16_t bltsize = (nlines << 6) | blitWords;
 
-        /* B modulo: src interleaved stride (4 planes) - blit width */
+        /* B modulo: src interleaved scanline (sp plane-rows) - blit width */
         uint16_t srcWquads = (uint16_t)srcHdr->wquads;
-        uint16_t srcBmod = (srcWquads << NUM_PLANES_SHIFT_PLUS1) - blitWidthBytes;
+        uint16_t srcBmod = (uint16_t)(srcWquads * 2 * sp) - blitWidthBytes;
         BLT_W(_custom->bltbmod, srcBmod);
-        /* A modulo: per-plane stride - blit width */
+        /* A modulo: per-plane stride - blit width (single-plane mask) */
         uint16_t srcAmod = (srcWquads << 1) - blitWidthBytes;
         BLT_W(_custom->bltamod, srcAmod);
-        /* C/D modulo: dst interleaved stride - blit width */
-        uint16_t dstCDmod = (dstStrideBytes << NUM_PLANES_SHIFT) - blitWidthBytes;
+        /* C/D modulo: dst interleaved scanline (sp plane-rows) - blit width */
+        uint16_t dstCDmod = (uint16_t)(dstStrideBytes * sp) - blitWidthBytes;
         BLT_W(_custom->bltcmod, dstCDmod);
         BLT_W(_custom->bltdmod, dstCDmod);
         /* Source data and mask pointers */
@@ -326,41 +330,44 @@ void ConvertSpriteColors(uint16_t spriteIndex, uint16_t *colorTable)
         px[i] = (uint8_t)colorTable[c];
     }
 #else
-    /* Amiga build — retains the 4-bitplane in-place re-palette. */
+    /* Amiga build — in-place re-palette of the sprite's own `sp` planes (4 for a
+     * 16-colour sprite; 8 for soccer_s). Was hard NUM_PLANES(8), which gathered planes
+     * 4-7 from the NEXT sprite for a 4-plane sprite. Arrays sized to the max (8). */
+    uint16_t sp = spriteNumPlanes((int16_t)spriteIndex);
     uint16_t wquads = (uint16_t)spr->wquads;
     uint16_t nlines = (uint16_t)spr->nlines;
     uint16_t planeRowBytes = wquads << 1;
-    int32_t interplaneSkip = (int32_t)((uint16_t)(wquads * (NUM_PLANES - 1) * 2));
+    int32_t interplaneSkip = (int32_t)((uint16_t)(wquads * (sp - 1) * 2));
     if (*colorTable == 0) {
         if (wquads > 0x14) { _panicReasonCode = 0x982; PanicHaltLoop(); }
         if (interplaneSkip < 0) { _panicReasonCode = 0x987; PanicHaltLoop(); }
     }
 
     uint16_t *dataBase = (uint16_t *)spr->sprData;
-    uint16_t *planes[NUM_PLANES];
+    uint16_t *planes[PITCH_NUM_PLANES];
     int16_t pl;
-    for (pl = 0; pl < NUM_PLANES; pl++)
+    for (pl = 0; pl < (int16_t)sp; pl++)
         planes[pl] = (uint16_t *)((uint8_t *)dataBase + pl * planeRowBytes);
 
     uint16_t skipTransparent = (*colorTable == 0);
     for (uint16_t line = 0; line < nlines; line++) {
         for (uint16_t quad = 0; quad < wquads; quad++) {
-            uint16_t w[NUM_PLANES];
-            for (pl = 0; pl < NUM_PLANES; pl++) w[pl] = *planes[pl];
+            uint16_t w[PITCH_NUM_PLANES];
+            for (pl = 0; pl < (int16_t)sp; pl++) w[pl] = *planes[pl];
             for (uint16_t pixel = 0; pixel < 16; pixel++) {
                 uint16_t colorIdx = 0;
-                for (pl = NUM_PLANES - 1; pl >= 0; pl--) {
+                for (pl = (int16_t)sp - 1; pl >= 0; pl--) {
                     colorIdx = (colorIdx << 1) | ((w[pl] >> 15) & 1);
                     w[pl] <<= 1;
                 }
                 if (skipTransparent && colorIdx == 0) continue;
                 uint16_t newColor = colorTable[colorIdx];
-                for (pl = 0; pl < NUM_PLANES; pl++)
+                for (pl = 0; pl < (int16_t)sp; pl++)
                     if (newColor & (1 << pl)) w[pl] |= 1;
             }
-            for (pl = 0; pl < NUM_PLANES; pl++) *planes[pl]++ = w[pl];
+            for (pl = 0; pl < (int16_t)sp; pl++) *planes[pl]++ = w[pl];
         }
-        for (pl = 0; pl < NUM_PLANES; pl++)
+        for (pl = 0; pl < (int16_t)sp; pl++)
             planes[pl] = (uint16_t *)((uint8_t *)planes[pl] + interplaneSkip);
     }
 #endif
@@ -481,6 +488,10 @@ void InitDisplaySprites(void)
  *
  * in: a0=spriteGraphics, d1=x, d2=y
  * ================================================================ */
+/* ---- QueueMaskedSpriteBlitClipped: single-blit when sprite depth == pitch depth (OCS 4==4, or AGA sprites
+ * toggled to 8==8) — one interleaved blit; else (AGA 4-plane sprite on 8-plane pitch)
+ * per-plane composite + upper-plane clear. SWOS_SPRITE_PLANES flips this. ---- */
+#if (SPRITE_NUM_PLANES == PITCH_NUM_PLANES)
 __attribute__((used, externally_visible))
 void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
@@ -556,6 +567,9 @@ void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
         uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
 
         int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (_playGame) xWordOff += SCROLL_LEFT_MARGIN_BYTES;   /* §desync: pitch verge margin, in-match only */
+#endif
         int32_t xWordOffL = (int32_t)xWordOff; /* sign-extend */
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
         uint32_t destAddr = (uint32_t)a1 + yOff + (uint32_t)xWordOffL;
@@ -661,6 +675,198 @@ fallback:
     DrawSpriteClipped(a0, d1, d2);
 #endif /* !SWOS_SDL_BUILD */
 }
+#else
+__attribute__((used, externally_visible))
+void QueueMaskedSpriteBlitClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
+{
+#ifdef SWOS_SDL_BUILD
+    /* SDL: Amiga's queued/masked player-sprite blit uses a blitter
+     * queue with linked-plane cookie-cut masking. On our 8bpp chunky
+     * pipeline transparency is palette index 0, so there's no separate
+     * mask to combine; a straight chunky draw does the right thing.
+     * Route all calls — which for this function are player sprites
+     * (teamNumber 1 or 2) per DrawQueuedSprites — through
+     * DrawSpriteClipped → blitChunkySprite. Without this, every
+     * player on the pitch renders as nothing. */
+    if (!a0) return;
+    DrawSpriteClipped(a0, d1, d2);
+    return;
+#else
+    /* 4-plane sprite storage: the optimised single-interleaved-blit fast path below assumed
+     * 8-plane storage (one blit of nlines*NUM_PLANES rows). With sprites at real 4-plane
+     * depth, route player bobs through the per-plane-correct DrawSpriteClipped (which also
+     * clears the upper playfield planes and queues the undraw) — same as the SDL branch.
+     * TODO: reinstate an optimised 4-plane fast path here if the in-match frame budget needs it. */
+    if (a0) DrawSpriteClipped(a0, d1, d2);
+    return;
+
+    /* ---- former 8-plane fast path (unreached; kept for a future 4-plane rewrite) ---- */
+    /* Validate sprite: nlines must be 15, pixWidth <= 16, type != 0 */
+    if ((uint16_t)a0->nlines != 15)
+        goto fallback;
+    if ((uint16_t)a0->pixWidth > 16)
+        goto fallback;
+    if (a0->type == 0)
+        goto fallback;
+
+    /* Y must be non-negative and within drawable range */
+    if (d2 < 0)
+        goto fallback;
+    if (d2 > SPRITE_MAX_Y_DRAW)
+        goto fallback;
+
+    /* Apply camera offsets */
+    d1 += (int16_t)_cameraXMod320;
+    d2 += (int16_t)_cameraYMod320;
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    /* AGA no-wrap: the two display frontbuffers are 2x tall — rows
+     * [SCREEN_HEIGHT,2*SCREEN_HEIGHT) MIRROR [0,SCREEN_HEIGHT) and the copper
+     * shows a window sliding by cameraYMod320. Draw the bob ONCE at its true
+     * absolute buffer row (screen_y + cameraYMod, NO wrap) so it lands exactly
+     * where the display reads it — whether that is the first half, the mirror
+     * half, or straddling the seam. d2 now spans [0, 2*SCREEN_HEIGHT); the
+     * frontbuffer is contiguous and (2*SCREEN_HEIGHT+1) rows tall, and
+     * screen_y(<=SPRITE_MAX_Y_DRAW) + cameraYMod(<=SCREEN_HEIGHT) + 15 lines
+     * stays inside it. The 1x-tall bg-save mask buffer is indexed per-case in
+     * the undraw section below (mirror rows fold back by FB_MIRROR_OFFSET). */
+#else
+    /* OCS 1x buffer: wrap Y into the single visible band. */
+    if (d2 >= SCREEN_HEIGHT)
+        d2 -= SCREEN_HEIGHT;
+
+    /* Re-validate Y after wrap */
+    if (d2 > SPRITE_MAX_Y_DRAW) {
+        /* Undo camera offsets and fall through to DrawSpriteClipped */
+        d1 -= (int16_t)_cameraXMod320;
+        d2 -= (int16_t)_cameraYMod320;
+        goto fallback;
+    }
+#endif
+
+    {
+        /* Check horizontal overlap: (x & 15) + pixWidth */
+        uint16_t xFrac = (uint16_t)d1 & TILE_MASK;
+        uint16_t pixW = (uint16_t)a0->pixWidth;
+        uint16_t overlap = xFrac + pixW;
+
+        /* Compute blitter shift value: (x & 15) << 12 */
+        uint16_t shiftVal = xFrac << 12;
+
+        /* Compute destination address */
+        uint32_t *a3 = (uint32_t *)_spriteBlitQueue;
+        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
+
+        int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (_playGame) xWordOff += SCROLL_LEFT_MARGIN_BYTES;   /* §desync: pitch verge margin, in-match only */
+#endif
+        int32_t xWordOffL = (int32_t)xWordOff; /* sign-extend */
+        uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
+        uint32_t destAddr = (uint32_t)a1 + yOff + (uint32_t)xWordOffL;
+
+        /* Wait for blitter and program registers */
+        waitBlit();
+
+        /* BLTCON1 = shift, BLTCON0 = shift + cookie-cut minterm */
+        BLT_W(_custom->bltcon1, shiftVal);
+        BLT_W(_custom->bltcon0, shiftVal + BLTCON0_BASE_LINKED);
+        /* Destination */
+        BLT_L(_custom->bltcpt, destAddr);
+        BLT_L(_custom->bltdpt, destAddr);
+        /* Destination address (a1-relative) reused for the draw and undraw. */
+        uint32_t destOff = destAddr - (uint32_t)a1;   /* d2*ROW_STRIDE + xWordOff */
+
+        /* Source pointers: data=BLTBPT, mask=BLTAPT */
+        BLT_L(_custom->bltbpt, (uint32_t)a0->sprData);
+        BLT_L(_custom->bltapt, (uint32_t)a0->maskPtr);
+        /* First word mask always all-ones */
+        BLT_W(_custom->bltafwm, 0xFFFF);
+        uint16_t entryMod, entryBltsize;
+        if (overlap <= 16) {
+            /* ---- Single-word path ---- */
+            BLT_W(_custom->bltamod, 0);
+            BLT_W(_custom->bltbmod, 0);
+            BLT_W(_custom->bltcmod, PLANE_STRIDE_MINUS2);
+            BLT_W(_custom->bltdmod, PLANE_STRIDE_MINUS2);
+            entryMod     = PLANE_STRIDE_MINUS2;
+            BLT_W(_custom->bltalwm, 0xFFFF);
+            entryBltsize = SPRITE_BLTSIZE_W1;
+        } else {
+            /* ---- Two-word path ---- */
+            BLT_W(_custom->bltamod, 0xFFFE); /* -2 */
+            BLT_W(_custom->bltbmod, 0xFFFE);
+            BLT_W(_custom->bltcmod, PLANE_STRIDE_MINUS4);
+            BLT_W(_custom->bltdmod, PLANE_STRIDE_MINUS4);
+            entryMod     = PLANE_STRIDE_MINUS4;
+            BLT_W(_custom->bltalwm, 0);
+            entryBltsize = SPRITE_BLTSIZE_W2;
+        }
+        /* Kick the sprite draw. The 2x-tall frontbuffer is contiguous across the
+         * mirror seam, so even a bob straddling SCREEN_HEIGHT draws in this one
+         * blit; only the 1x-tall bg-save undraw (below) ever needs splitting. */
+        BLT_W(_custom->bltsize, entryBltsize);
+
+        /* ---- Queue the undraw (bg-restore) entry/entries ---- */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (d2 + SPRITE_HEIGHT_LINES <= SCREEN_HEIGHT) {
+            /* Entirely in the first half. */
+            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        } else if (d2 >= SCREEN_HEIGHT) {
+            /* Entirely in the mirror half — fold the bg-save read back to the
+             * matching first-half row (the 1x mask buffer has no mirror half). */
+            *(uint32_t *)((uint8_t *)a3 + 0)  = (destOff - (uint32_t)FB_MIRROR_OFFSET_BYTES) + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        } else {
+            /* Straddles the seam — two undraw entries, each reading first-half bg:
+             * top rows [d2, SCREEN_HEIGHT) and bottom rows [SCREEN_HEIGHT, d2+15)
+             * (which live at the mirror top, bg-save row 0 = xWordOff). */
+            uint16_t wc       = (uint16_t)(entryBltsize & 0x3Fu);   /* word count */
+            uint16_t topCount = (uint16_t)(SCREEN_HEIGHT - d2);
+            uint16_t botCount = (uint16_t)((d2 + SPRITE_HEIGHT_LINES) - SCREEN_HEIGHT);
+            uint16_t topSize  = (uint16_t)(((topCount * NUM_PLANES) << 6) | wc);
+            uint16_t botSize  = (uint16_t)(((botCount * NUM_PLANES) << 6) | wc);
+            /* top */
+            *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = topSize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+            /* bottom (mirror top; contiguous continuation of destAddr) */
+            uint32_t botDest = destAddr + (uint32_t)topCount * (uint32_t)ROW_STRIDE_BYTES;
+            *(uint32_t *)((uint8_t *)a3 + 0)  = (uint32_t)xWordOffL + (uint32_t)_frontbufferMaskBuffer;
+            *(uint32_t *)((uint8_t *)a3 + 4)  = botDest;
+            *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+            *(uint16_t *)((uint8_t *)a3 + 10) = botSize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        }
+#else
+        /* OCS 1x buffer: d2 was wrapped into [0,SCREEN_HEIGHT); one entry. */
+        *(uint32_t *)((uint8_t *)a3 + 0)  = destOff + (uint32_t)_frontbufferMaskBuffer;
+        *(uint32_t *)((uint8_t *)a3 + 4)  = destAddr;
+        *(uint16_t *)((uint8_t *)a3 + 8)  = entryMod;
+        *(uint16_t *)((uint8_t *)a3 + 10) = entryBltsize;
+        a3 = (uint32_t *)((uint8_t *)a3 + 12);
+#endif
+
+        /* Write sentinel at the (new) queue head */
+        *(uint32_t *)a3 = BLT_BLITQ_END;
+        _spriteBlitQueue = (uintptr_t)a3;
+    }
+    return;
+
+fallback:
+    DrawSpriteClipped(a0, d1, d2);
+#endif /* !SWOS_SDL_BUILD */
+}
+#endif
 
 /* Local statics matching SWOS2.s local data (queuedLineCount, savedSrcPlaneB, savedSrcPlaneA) */
 static uint16_t queuedLineCount;
@@ -733,6 +939,10 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 }
 #endif
 
+/* ---- DrawSpriteClipped: single-blit when sprite depth == pitch depth (OCS 4==4, or AGA sprites
+ * toggled to 8==8) — one interleaved blit; else (AGA 4-plane sprite on 8-plane pitch)
+ * per-plane composite + upper-plane clear. SWOS_SPRITE_PLANES flips this. ---- */
+#if (SPRITE_NUM_PLANES == PITCH_NUM_PLANES)
 __attribute__((used, externally_visible))
 void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 {
@@ -826,6 +1036,9 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Compute destination pointer */
         int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (_playGame) xWordOff += SCROLL_LEFT_MARGIN_BYTES;   /* §desync: pitch verge margin, in-match only */
+#endif
         int32_t xWordOffL = (int32_t)xWordOff;  /* sign-extended */
         uint32_t d6save = (uint32_t)xWordOffL;
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
@@ -1007,6 +1220,9 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
 
         /* Compute destination pointer */
         int16_t xByteOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (_playGame) xByteOff += SCROLL_LEFT_MARGIN_BYTES;   /* §desync: pitch verge margin, in-match only */
+#endif
         int32_t xByteOffL = (int32_t)xByteOff;
         uint32_t d6save = (uint32_t)xByteOffL;
         uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
@@ -1167,6 +1383,516 @@ void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
     }
 #endif /* !SWOS_SDL_BUILD */
 }
+#else
+__attribute__((used, externally_visible))
+void DrawSpriteClipped(SpriteGraphics *a0, int16_t d1, int16_t d2)
+{
+#ifdef SWOS_SDL_BUILD
+    blitChunkySprite(a0, d1, d2);
+    return;
+#else
+    uint16_t sprType = a0->type;
+
+    if (sprType != 0) {
+        /* ---- branch_linked_planes path ---- */
+        uint32_t *a3 = (uint32_t *)_spriteBlitQueue;
+        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
+        int16_t d3 = a0->nlines;
+        int16_t d5 = 0;
+
+        /* Clip top */
+        if (d2 < 0) {
+            d5 = -d2;
+            d3 += d2;
+            d2 = 0;
+        }
+        /* Clip bottom */
+        {
+            int16_t d0 = d2 + d3 - SCREEN_HEIGHT;
+            if (d0 > 0)
+                d3 -= d0;
+        }
+
+        /* Apply camera offsets. */
+        d1 += _cameraXMod320;
+        d2 += _cameraYMod320;
+#if !(defined(AGA) && !defined(SWOS_SDL_BUILD))
+        /* OCS 1x buffer wraps Y; AGA draws no-wrap into the 2x-tall buffer (the
+         * seam split below routes any overshoot into the mirror half, and a bob
+         * wholly in the mirror half folds its bg-save offset back). */
+        if (d2 >= SCREEN_HEIGHT)
+            d2 -= SCREEN_HEIGHT;
+#endif
+
+        /* Compute edge masks and word count */
+        uint16_t d6 = 0;
+        uint16_t bitPos = (uint16_t)d1 & TILE_MASK;
+        uint16_t sprPixMod = (uint16_t)a0->pixWidth & TILE_MASK;
+        if (sprPixMod == 0)
+            sprPixMod = 16;
+        uint16_t totalBits = bitPos + sprPixMod;
+        uint16_t d7 = (uint16_t)a0->wquads + 1;  /* WQUADS for linked planes */
+        if (totalBits <= 16) {
+            d6 = 0xFFFF;
+            d7--;
+        }
+
+        /* Wait for blitter idle and program registers */
+        waitBlit();
+        BLT_W(_custom->bltalwm, d6);
+        BLT_W(_custom->bltafwm, 0xFFFF);
+        /* Shift amount */
+        uint16_t shiftVal = ((uint16_t)d1 & TILE_MASK) << 12;
+        BLT_W(_custom->bltcon1, shiftVal);
+        /* BLTCON0 mode */
+        uint32_t maskPtr = (uint32_t)a0->maskPtr;
+        uint16_t bltcon0;
+        if (maskPtr != 0) {
+            bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
+        } else {
+            bltcon0 = shiftVal | BLTCON0_BASE_SINGLE;
+            BLT_W(_custom->bltadat, 0xFFFF);
+        }
+        BLT_W(_custom->bltcon0, bltcon0);
+        /* Check for seam split */
+        uint16_t d4 = 0;
+        {
+            int16_t overshoot = d2 + d3 - SCREEN_HEIGHT;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* No-wrap: only a bob straddling the seam (d2 < SCREEN_HEIGHT) splits
+             * its tail into the mirror top. A bob wholly in the mirror half
+             * (d2 >= SCREEN_HEIGHT) is one contiguous blit; its bg-save offset is
+             * folded back at the main entry below. */
+            if (d2 < SCREEN_HEIGHT && overshoot > 0) {
+                d4 = (uint16_t)overshoot;
+                d3 -= overshoot;
+            }
+#else
+            if (overshoot > 0) {
+                d4 = (uint16_t)overshoot;
+                d3 -= overshoot;
+            }
+#endif
+        }
+
+        /* Compute destination pointer */
+        int16_t xWordOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (_playGame) xWordOff += SCROLL_LEFT_MARGIN_BYTES;   /* §desync: pitch verge margin, in-match only */
+#endif
+        int32_t xWordOffL = (int32_t)xWordOff;  /* sign-extended */
+        uint32_t d6save = (uint32_t)xWordOffL;
+        uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
+        uint32_t destAddr = (uint32_t)a1 + yOff + xWordOffL;
+
+        BLT_L(_custom->bltcpt, destAddr);
+        BLT_L(_custom->bltdpt, destAddr);
+        /* Queue entry: mask+fb addresses */
+        *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Fold a mirror-half dest back to its first-half bg-save row (1x mask). */
+        uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
+        if (d2 >= SCREEN_HEIGHT)
+            maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
+        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+#else
+        uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
+        *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
+
+        /* Queue-undraw values stay 8-plane interleaved: ProcessSpriteBlitQueue replays one
+         * contiguous restore over all NUM_PLANES playfield planes from the bg-save. */
+        uint16_t bltsize = ((uint16_t)d3 << NUM_PLANES_SHIFT << 6) | d7;   /* queue: 8-plane */
+        uint16_t blitWidthBytes = d7 << 1;
+        uint16_t tileStride = (uint16_t)a0->wquads;
+        uint16_t srcStrideBytes = (uint16_t)(tileStride << 1);
+        uint16_t destMod = PLANE_STRIDE - blitWidthBytes;                 /* queue undraw modulo */
+        *(uint16_t *)((uint8_t *)a3 + 8) = destMod;
+        *(uint16_t *)((uint8_t *)a3 + 10) = bltsize;
+
+        /* DRAW per-plane. Sprite + its interleaved mask are `sp` planes (4 for a 16-colour
+         * bob / 8 soccer_s); the playfield is NUM_PLANES(8). Planes 0..sp-1 cookie-cut the
+         * sprite; sp..NUM_PLANES-1 clear its footprint (16-colour bob -> colours 0-15). Per
+         * plane: SOURCE steps one whole sprite scanline (sp plane-rows), DEST one whole
+         * playfield scanline (ROW_STRIDE). The old single 8-plane interleaved blit read a
+         * 4-plane sprite across 8 dest planes -> upper planes picked up the next sprite. */
+        uint16_t sp = spriteNumPlanes(a0->ordinal);
+        uint32_t srcSkip = (d5 != 0)
+            ? (uint32_t)(uint16_t)(d5 * sp) * (uint32_t)srcStrideBytes : 0u;
+        uint32_t srcData = (uint32_t)a0->sprData + srcSkip;
+        uint32_t srcMask2 = (uint32_t)a0->maskPtr + srcSkip;
+        uint16_t drawSrcMod  = (uint16_t)((uint16_t)(sp * srcStrideBytes) - blitWidthBytes);
+        uint16_t drawDestMod = (uint16_t)(ROW_STRIDE_BYTES - blitWidthBytes);
+        uint16_t drawBltsize = ((uint16_t)d3 << 6) | d7;                  /* nlines rows, 1 plane */
+        uint16_t clearCon0 = (a0->maskPtr != 0)
+            ? (uint16_t)(BLTCON0_CLEAR_MASK | shiftVal)      /* ~mask & dest */
+            : (uint16_t)(BLTCON0_USED_LF_00 | shiftVal);     /* no mask: zero-fill footprint */
+        {
+            int16_t p;
+            for (p = 0; p < NUM_PLANES; p++) {
+                uint32_t pdst = destAddr + (uint32_t)p * PLANE_STRIDE;
+                waitBlit();
+                if (p < (int16_t)sp) {
+                    BLT_W(_custom->bltcon0, bltcon0);
+                    BLT_W(_custom->bltamod, drawSrcMod);
+                    BLT_W(_custom->bltbmod, drawSrcMod);
+                    BLT_W(_custom->bltcmod, drawDestMod);
+                    BLT_W(_custom->bltdmod, drawDestMod);
+                    BLT_L(_custom->bltapt, srcMask2 + (uint32_t)p * srcStrideBytes);
+                    BLT_L(_custom->bltbpt, srcData  + (uint32_t)p * srcStrideBytes);
+                    BLT_L(_custom->bltcpt, pdst);
+                    BLT_L(_custom->bltdpt, pdst);
+                } else {
+                    BLT_W(_custom->bltcon0, clearCon0);
+                    BLT_W(_custom->bltamod, drawSrcMod);
+                    BLT_W(_custom->bltcmod, drawDestMod);
+                    BLT_W(_custom->bltdmod, drawDestMod);
+                    BLT_L(_custom->bltapt, srcMask2);        /* plane-0 silhouette */
+                    BLT_L(_custom->bltcpt, pdst);
+                    BLT_L(_custom->bltdpt, pdst);
+                }
+                BLT_W(_custom->bltsize, drawBltsize);
+            }
+        }
+        a3 = (uint32_t *)((uint8_t *)a3 + 12);
+
+        /* Handle Y-wrap tail portion (the d4 rows that wrap past the seam). */
+        if (d4 != 0) {
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* AGA 2x-tall buffer: the tail is the CONTIGUOUS continuation past
+             * SCREEN_HEIGHT, so it belongs at the top of the MIRROR half
+             * (+FB_MIRROR_OFFSET), NOT wrapped back to buffer row 0. */
+            uint32_t destAddr2 = (uint32_t)a1 + (uint32_t)FB_MIRROR_OFFSET_BYTES + d6save;
+#else
+            uint32_t destAddr2 = (uint32_t)a1 + d6save;
+#endif
+            uint16_t tailBltsize = ((uint16_t)d4 << NUM_PLANES_SHIFT << 6) | d7;  /* queue: 8-plane */
+
+            *(uint32_t *)((uint8_t *)a3 + 4) = destAddr2;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            uint32_t tailMask = (destAddr2 - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#else
+            uint32_t tailMask = destAddr2 - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
+            *(uint32_t *)((uint8_t *)a3 + 0) = tailMask;
+            *(uint16_t *)((uint8_t *)a3 + 8) = *(uint16_t *)((uint8_t *)a3 - 4);  /* 8-plane destMod */
+            *(uint16_t *)((uint8_t *)a3 + 10) = tailBltsize;
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+
+            /* DRAW the wrapped d4 rows per-plane, sourced from sprite row d3 onward. */
+            uint32_t tailSrc  = srcData  + (uint32_t)d3 * (uint32_t)sp * (uint32_t)srcStrideBytes;
+            uint32_t tailMaskS = srcMask2 + (uint32_t)d3 * (uint32_t)sp * (uint32_t)srcStrideBytes;
+            uint16_t tailDrawBltsize = ((uint16_t)d4 << 6) | d7;             /* d4 rows, 1 plane */
+            {
+                int16_t p;
+                for (p = 0; p < NUM_PLANES; p++) {
+                    uint32_t pdst = destAddr2 + (uint32_t)p * PLANE_STRIDE;
+                    waitBlit();
+                    if (p < (int16_t)sp) {
+                        BLT_W(_custom->bltcon0, bltcon0);
+                        BLT_W(_custom->bltamod, drawSrcMod);
+                        BLT_W(_custom->bltbmod, drawSrcMod);
+                        BLT_W(_custom->bltcmod, drawDestMod);
+                        BLT_W(_custom->bltdmod, drawDestMod);
+                        BLT_L(_custom->bltapt, tailMaskS + (uint32_t)p * srcStrideBytes);
+                        BLT_L(_custom->bltbpt, tailSrc  + (uint32_t)p * srcStrideBytes);
+                        BLT_L(_custom->bltcpt, pdst);
+                        BLT_L(_custom->bltdpt, pdst);
+                    } else {
+                        BLT_W(_custom->bltcon0, clearCon0);
+                        BLT_W(_custom->bltamod, drawSrcMod);
+                        BLT_W(_custom->bltcmod, drawDestMod);
+                        BLT_W(_custom->bltdmod, drawDestMod);
+                        BLT_L(_custom->bltapt, tailMaskS);
+                        BLT_L(_custom->bltcpt, pdst);
+                        BLT_L(_custom->bltdpt, pdst);
+                    }
+                    BLT_W(_custom->bltsize, tailDrawBltsize);
+                }
+            }
+        }
+
+        /* Seal queue */
+        *(uint32_t *)a3 = BLT_BLITQ_END;
+        _spriteBlitQueue = (uintptr_t)a3;
+        return;
+    }
+
+    /* ---- Normal (non-linked) 4-plane path ---- */
+    {
+        uint32_t *a3 = (uint32_t *)_spriteBlitQueue;
+        uint8_t *a1 = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
+
+        /* Redundant type check removed - we know sprType == 0 here */
+        int16_t d3 = a0->nlines;
+        int16_t d5 = 0;
+
+        /* Clip top */
+        if (d2 < 0) {
+            d5 = -d2;
+            d3 += d2;
+            d2 = 0;
+        }
+        /* Clip bottom */
+        {
+            int16_t d0 = d2 + d3 - SCREEN_HEIGHT;
+            if (d0 > 0)
+                d3 -= d0;
+        }
+
+        /* Apply camera offsets. */
+        d1 += _cameraXMod320;
+        d2 += _cameraYMod320;
+#if !(defined(AGA) && !defined(SWOS_SDL_BUILD))
+        /* OCS 1x buffer wraps Y; AGA draws no-wrap into the 2x-tall buffer. */
+        if (d2 >= SCREEN_HEIGHT)
+            d2 -= SCREEN_HEIGHT;
+#endif
+
+        /* Compute edge masks and word count */
+        uint16_t d6 = 0;
+        uint16_t bitPos = (uint16_t)d1 & TILE_MASK;
+        uint16_t sprPixMod = (uint16_t)a0->pixWidth & TILE_MASK;
+        if (sprPixMod == 0)
+            sprPixMod = 16;
+        uint16_t totalBits = bitPos + sprPixMod;
+        uint16_t d7 = (uint16_t)a0->wquads + 1;  /* TILE_STRIDE for normal path */
+        if (totalBits <= 16) {
+            d6 = 0xFFFF;
+            d7--;
+        }
+
+        /* Wait for blitter idle */
+        waitBlit();
+        BLT_W(_custom->bltalwm, d6);
+        BLT_W(_custom->bltafwm, 0xFFFF);
+        /* Shift amount */
+        uint16_t shiftVal = ((uint16_t)d1 & TILE_MASK) << 12;
+        BLT_W(_custom->bltcon1, shiftVal);
+        /* BLTCON0 mode */
+        uint32_t maskPtr = (uint32_t)a0->maskPtr;
+        uint16_t bltcon0;
+        if (maskPtr != 0) {
+            bltcon0 = shiftVal | BLTCON0_BASE_LINKED;
+        } else {
+            bltcon0 = shiftVal | BLTCON0_BASE_SINGLE;
+            BLT_W(_custom->bltadat, 0xFFFF);
+        }
+        BLT_W(_custom->bltcon0, bltcon0);
+        /* Check for seam split */
+        uint16_t d4 = 0;
+        {
+            int16_t overshoot = d2 + d3 - SCREEN_HEIGHT;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* No-wrap: split only a bob straddling the seam (d2 < SCREEN_HEIGHT).
+             * A bob wholly in the mirror half is one contiguous blit (bg-save
+             * offset folded back at the entry below). */
+            if (d2 < SCREEN_HEIGHT && overshoot > 0) {
+                d4 = (uint16_t)overshoot;
+                d3 -= overshoot;
+            }
+#else
+            if (overshoot > 0) {
+                d4 = (uint16_t)overshoot;
+                d3 -= overshoot;
+            }
+#endif
+        }
+
+        /* Save queued line count */
+        queuedLineCount = (uint16_t)d3;
+
+        /* Compute destination pointer */
+        int16_t xByteOff = (d1 >> TILE_SHIFT_X) << 1; /* asr.w + asl.w (signed) */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        if (_playGame) xByteOff += SCROLL_LEFT_MARGIN_BYTES;   /* §desync: pitch verge margin, in-match only */
+#endif
+        int32_t xByteOffL = (int32_t)xByteOff;
+        uint32_t d6save = (uint32_t)xByteOffL;
+        uint32_t yOff = (uint16_t)d2 * (uint32_t)ROW_STRIDE_BYTES;
+        uint32_t destAddr = (uint32_t)a1 + yOff + xByteOffL;
+
+        BLT_L(_custom->bltcpt, destAddr);
+        BLT_L(_custom->bltdpt, destAddr);
+        uint8_t *a2 = (uint8_t *)destAddr;  /* tracks dest for multi-plane passes */
+
+        /* Queue entry */
+        *(uint32_t *)((uint8_t *)a3 + 4) = destAddr;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+        /* Fold a mirror-half dest back to its first-half bg-save row (1x mask). */
+        uint32_t maskFirstHalfOff = destAddr - (uint32_t)a1;
+        if (d2 >= SCREEN_HEIGHT)
+            maskFirstHalfOff -= (uint32_t)FB_MIRROR_OFFSET_BYTES;
+        uint32_t maskBufAddr = maskFirstHalfOff + (uint32_t)_frontbufferMaskBuffer;
+#else
+        uint32_t maskBufAddr = destAddr - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
+        *(uint32_t *)((uint8_t *)a3 + 0) = maskBufAddr;
+
+        /* BLTSIZE for 4-plane blit: (nlines * 4) << 6 | wordCount */
+        uint16_t bltsize4 = ((uint16_t)d3 << NUM_PLANES_SHIFT << 6) | d7;
+        *(uint16_t *)((uint8_t *)a3 + 10) = bltsize4;
+
+        /* Per-plane bltsize: nlines << 6 | wordCount */
+        uint16_t bltsize1 = ((uint16_t)d3 << 6) | d7;
+        uint16_t blitWidthBytes = d7 << 1;
+
+        /* Sprite real depth (4 for a 16-colour bob / 8 soccer_s). type==0 has a SINGLE-plane
+         * mask (planesFlag==0), so the A/mask modulo stays 1-plane; only the B (sprite)
+         * strides scale with `sp`. */
+        uint16_t sp = spriteNumPlanes(a0->ordinal);
+
+        /* Modulos */
+        uint16_t tileStride = (uint16_t)a0->wquads;
+        uint16_t srcModA = tileStride << 1;
+        uint16_t d1mod = srcModA;  /* save for source B modulo */
+        uint16_t srcModAB = srcModA - blitWidthBytes;
+        BLT_W(_custom->bltamod, srcModAB);
+        /* Source B modulo: sprite scanline (sp plane-rows) - blit width. Was <<NUM_PLANES_SHIFT
+         * (×8) — a 4-plane sprite steps sp plane-rows/scanline, not 8. */
+        uint16_t srcModB = (uint16_t)(d1mod * sp) - blitWidthBytes;
+        BLT_W(_custom->bltbmod, srcModB);
+        /* Dest C/D modulo: PLANE_STRIDE - blit width (per row, per plane) */
+        uint16_t destMod = PLANE_STRIDE - blitWidthBytes;
+        *(uint16_t *)((uint8_t *)a3 + 8) = destMod;
+        /* Actual C/D mod includes inter-plane gap: ROW_STRIDE - PLANE_STRIDE + destMod */
+        uint16_t destCDMod = destMod + (ROW_STRIDE_BYTES - PLANE_STRIDE);
+        BLT_W(_custom->bltcmod, destCDMod);
+        BLT_W(_custom->bltdmod, destCDMod);
+        /* Source top skip: d5 clipped scanlines. DATA = sp plane-rows/scanline; MASK = 1. */
+        uint32_t srcSkip5  = (uint32_t)((uint16_t)(d5 * sp)) * (uint32_t)(tileStride << 1);
+        uint32_t maskSkip5 = (uint32_t)d5 * (uint32_t)(tileStride << 1);
+
+        /* Source plane data */
+        uint32_t srcDataAddr = (uint32_t)a0->sprData + srcSkip5;
+        BLT_L(_custom->bltbpt, srcDataAddr);
+        uint8_t *a5ptr = (uint8_t *)srcDataAddr;
+
+        /* Source mask (single plane) */
+        uint32_t srcMaskAddr = (uint32_t)a0->maskPtr + maskSkip5;
+        BLT_L(_custom->bltapt, (uint32_t)srcMaskAddr);
+        uint8_t *a4ptr = (uint8_t *)srcMaskAddr;
+
+        a3 = (uint32_t *)((uint8_t *)a3 + 12);
+
+        /* Kick first plane blit */
+        BLT_W(_custom->bltsize, bltsize1);
+        /* Save source pointers for tail portion */
+        savedSrcPlaneB = (uint32_t)a4ptr;
+        savedSrcPlaneA = (uint32_t)a5ptr;
+
+        /* Remaining planes: 1..sp-1 cookie-cut the sprite; sp..NUM_PLANES-1 clear the
+         * footprint in the upper playfield planes (16-colour bob -> colours 0-15). The
+         * single-plane mask a4ptr is reused (not advanced); the sprite a5ptr advances. */
+        uint16_t clearCon0 = (a0->maskPtr != 0)
+            ? (uint16_t)(BLTCON0_CLEAR_MASK | shiftVal)      /* ~mask & dest */
+            : (uint16_t)(BLTCON0_USED_LF_00 | shiftVal);     /* no mask: zero-fill footprint */
+        uint32_t srcPlaneStep = (uint32_t)(tileStride << 1);
+        a2 += PLANE_STRIDE;
+        a5ptr += srcPlaneStep;
+
+        {
+            int16_t planeIdx;
+            for (planeIdx = 1; planeIdx < (int16_t)sp; planeIdx++)
+            {
+                waitBlit();
+                BLT_L(_custom->bltcpt, (uint32_t)a2);
+                BLT_L(_custom->bltdpt, (uint32_t)a2);
+                BLT_L(_custom->bltapt, (uint32_t)a4ptr);
+                BLT_L(_custom->bltbpt, (uint32_t)a5ptr);
+                BLT_W(_custom->bltsize, bltsize1);
+                a2 += PLANE_STRIDE;
+                a5ptr += srcPlaneStep;
+            }
+            if (sp < NUM_PLANES) {
+                waitBlit();
+                BLT_W(_custom->bltcon0, clearCon0);
+                for (; planeIdx < NUM_PLANES; planeIdx++) {
+                    BLT_L(_custom->bltcpt, (uint32_t)a2);
+                    BLT_L(_custom->bltdpt, (uint32_t)a2);
+                    BLT_L(_custom->bltapt, (uint32_t)a4ptr);   /* single-plane silhouette */
+                    BLT_W(_custom->bltsize, bltsize1);
+                    waitBlit();
+                    a2 += PLANE_STRIDE;
+                }
+            }
+        }
+
+        /* Handle Y-wrap tail portion (d4 wrapped rows). */
+        if (d4 != 0) {
+            /* Source skip for the wrapped rows: MASK is 1-plane, DATA is sp-plane. */
+            uint32_t tailSrcSkipB = (uint32_t)queuedLineCount * (uint32_t)(tileStride << 1);
+            uint32_t tailSrcB = savedSrcPlaneB + tailSrcSkipB;                  /* mask */
+            uint32_t tailSrcSkipA = tailSrcSkipB * (uint32_t)sp;
+            uint32_t tailSrcA = savedSrcPlaneA + tailSrcSkipA;                  /* sprite */
+
+            waitBlit();
+            /* The main-draw clear pass may have left bltcon0 = CLEAR_MASK; restore linked. */
+            BLT_W(_custom->bltcon0, bltcon0);
+
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            /* Contiguous continuation past SCREEN_HEIGHT → mirror top. */
+            uint32_t tailDest = (uint32_t)a1 + (uint32_t)FB_MIRROR_OFFSET_BYTES + d6save;
+#else
+            uint32_t tailDest = (uint32_t)a1 + d6save;
+#endif
+            BLT_L(_custom->bltcpt, tailDest);
+            BLT_L(_custom->bltdpt, tailDest);
+            BLT_L(_custom->bltapt, tailSrcB);
+            BLT_L(_custom->bltbpt, tailSrcA);
+            *(uint32_t *)((uint8_t *)a3 + 4) = tailDest;
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+            uint32_t tailMask = (tailDest - (uint32_t)FB_MIRROR_OFFSET_BYTES) - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#else
+            uint32_t tailMask = tailDest - (uint32_t)a1 + (uint32_t)_frontbufferMaskBuffer;
+#endif
+            *(uint32_t *)((uint8_t *)a3 + 0) = tailMask;
+
+            uint16_t tailBltsize1 = ((uint16_t)d4 << 6) | (blitWidthBytes >> 1);
+            BLT_W(_custom->bltsize, tailBltsize1);                              /* plane 0 */
+            uint16_t tailBltsizeN = ((uint16_t)d4 << NUM_PLANES_SHIFT << 6) | (blitWidthBytes >> 1);
+            *(uint16_t *)((uint8_t *)a3 + 10) = tailBltsizeN;                   /* queue 8-plane */
+
+            /* planes 1..sp-1 cookie-cut; sp..NUM_PLANES-1 clear. Mask (A) reused. */
+            tailDest += PLANE_STRIDE;
+            tailSrcA += srcPlaneStep;
+            {
+                int16_t planeIdx;
+                for (planeIdx = 1; planeIdx < (int16_t)sp; planeIdx++) {
+                    waitBlit();
+                    BLT_L(_custom->bltcpt, tailDest);
+                    BLT_L(_custom->bltdpt, tailDest);
+                    BLT_L(_custom->bltapt, tailSrcB);
+                    BLT_L(_custom->bltbpt, tailSrcA);
+                    BLT_W(_custom->bltsize, tailBltsize1);
+                    tailDest += PLANE_STRIDE;
+                    tailSrcA += srcPlaneStep;
+                }
+                if (sp < NUM_PLANES) {
+                    waitBlit();
+                    BLT_W(_custom->bltcon0, clearCon0);
+                    for (; planeIdx < NUM_PLANES; planeIdx++) {
+                        BLT_L(_custom->bltcpt, tailDest);
+                        BLT_L(_custom->bltdpt, tailDest);
+                        BLT_L(_custom->bltapt, tailSrcB);
+                        BLT_W(_custom->bltsize, tailBltsize1);
+                        waitBlit();
+                        tailDest += PLANE_STRIDE;
+                    }
+                }
+            }
+
+            *(uint16_t *)((uint8_t *)a3 + 8) = *(uint16_t *)((uint8_t *)a3 - 4);
+            a3 = (uint32_t *)((uint8_t *)a3 + 12);
+        }
+
+        /* Seal queue */
+        *(uint32_t *)a3 = BLT_BLITQ_END;
+        _spriteBlitQueue = (uintptr_t)a3;
+    }
+#endif /* !SWOS_SDL_BUILD */
+}
+#endif
 
 /* ================================================================
  * DrawSprite_entry2  (SWOS2.s line 6313)
@@ -1367,6 +2093,14 @@ void DrawQueuedSprites(void)
  *     a4/a5 = copper list plane pair pointers (advanced on exit)
  *     a6 = CUSTOM base
  * ================================================================ */
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+/* HW-sprite X re-centre (AGA only): the FMODE=1 display shows the bitplanes (pitch, bobs,
+ * menus) re-centred +16px vs OCS; hardware sprites use raw screen coords via the fixed 0x70
+ * reference and never got that +16px, so they landed a tile left of the bobs (the on-pitch
+ * "twitch" + ball/shadow separation). Add the same +16px. */
+enum { AGA_HW_SPRITE_X_SHIFT = 16 };
+#endif
+
 static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t y,
                                        uint16_t **pA4, uint16_t **pA5)
 {
@@ -1376,6 +2110,9 @@ static void renderSpriteBandPlanePair(SpriteGraphics *sprGfx, int16_t x, int16_t
 
     int16_t d3 = y + sprGfx->nlines;
 
+#if defined(AGA) && !defined(SWOS_SDL_BUILD)
+    x += AGA_HW_SPRITE_X_SHIFT;   /* re-centre HW sprites onto the +16px-shifted bobs/pitch */
+#endif
     /* Add display offsets */
     x += 0x70;    /* horizontal display start */
     y += 0x24;    /* vertical display start */
@@ -1450,7 +2187,11 @@ void RenderSpriteBandsToCopperLists(void)
     BLT_W(_custom->bltafwm, 0xFFFF);
     BLT_W(_custom->bltcon1, 0);
     BLT_W(_custom->bltcon0, BLTCON0_USEA_USED_LF_F0);
-    BLT_W(_custom->bltamod, (NUM_PLANES - 2) * 2);
+    /* HW-sprite band reads only planes 0-3 (attached pair). Source scanline stride is
+     * now the sprite's real 4-plane row (8 B), so after each 2-word (4 B) plane-pair
+     * read, skip (SPRITE_NUM_PLANES-2)*2 = 4 to the next line. Was (NUM_PLANES-2)*2 = 12,
+     * which only worked because sprites were padded to 8 planes (16 B rows). */
+    BLT_W(_custom->bltamod, (SPRITE_NUM_PLANES - 2) * 2);
     BLT_W(_custom->bltdmod, 0);
     /* ---- Process plane 0/1 render stack ---- */
     uint16_t *a4 = (uint16_t *)_bitPlane0BasePtr;
