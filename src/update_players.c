@@ -181,11 +181,26 @@ extern int16_t     *_topBallOutOfPlayPositions[];
 #define CARD_YELLOW             1
 #define CARD_RED                2
 
-/* Sprite image index constants for goalkeeper catch frames */
-#define SPR_GOALIE1_CAUGHT_BALL_RIGHT  0x3C4
-#define SPR_GOALIE1_CAUGHT_BALL_LEFT   0x3C6
-#define SPR_GOALIE2_CAUGHT_BALL_RIGHT  0x3D0
-#define SPR_GOALIE2_CAUGHT_BALL_LEFT   0x3D2
+/* Sprite image index constants for goalkeeper catch frames.
+ * Values from SWOS2.s:2020-2023 (862/864/992/994) and data/SWOS2.h:176-179.
+ * The caught-ball poses sit at offsets {5, 7, 19, 21} from each goalie's
+ * dive-sequence base — goalie 1 at 0x359, goalie 2 at 0x3CD
+ * (ball_physics.c:420,428):
+ *     goalie 1: 0x35E, 0x360, 0x36C, 0x36E
+ *     goalie 2: 0x3D2, 0x3D4, 0x3E0, 0x3E2
+ * The four named below are g1+5, g1+7, g2+19, g2+21; the compare chain in
+ * goalie_diving supplies the other four (0x3D2/0x3D4/0x36C/0x36E) as literals,
+ * so all 8 are covered and none is a duplicate.
+ *
+ * Was 0x3C4/0x3C6/0x3D0/0x3D2 (fixed 2026-07-29): that made 0x3D2 a duplicate
+ * of a literal already in the chain and put 0x3C4/0x3C6 outside every dive
+ * sequence, so a keeper in the caught-ball pose decayed at
+ * kGoalKeeperRecoveryStepBase (112) instead of ...StepAlt (192) and slid ~70%
+ * further after the catch. */
+#define SPR_GOALIE1_CAUGHT_BALL_RIGHT  0x35E
+#define SPR_GOALIE1_CAUGHT_BALL_LEFT   0x360
+#define SPR_GOALIE2_CAUGHT_BALL_RIGHT  0x3E0
+#define SPR_GOALIE2_CAUGHT_BALL_LEFT   0x3E2
 
 /* ---- Local data (from inline labels after asm UpdatePlayers) ---- */
 static Sprite *prevLastPlayer;
