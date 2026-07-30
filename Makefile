@@ -446,6 +446,12 @@ endif
 # §0/§2a). Growable heap; preload the read-only game data into MEMFS; IDBFS for
 # persistent saves at /save (mounted in wasm/pre.js). Single-threaded — the
 # 20 ms SDL timer + 5 ms audio-pump thread are compiled out (#ifdef SWOS_WASM_BUILD).
+#
+# BOTH graphics tiers are preloaded: resload.c resolves a grafs load as
+# grafs_aga/ first then grafs/ (display.h defines AGA on this build too), so
+# without grafs_aga in MEMFS the browser silently ran the 4bpp OCS set while
+# native ran 8bpp. grafs_aga is currently a complete superset, so grafs/ is only
+# the safety net — droppable later if the ~268K matters for download size.
 ifdef WASM
 # EMULATE_FUNCTION_POINTER_CASTS: SWOS's menu system stores void(void) callbacks
 # (e.g. FriendlyMenu) in void(MenuEntry*) fields and invokes them through void*
@@ -459,6 +465,7 @@ LDFLAGS += -sASYNCIFY -sASYNCIFY_STACK_SIZE=65536 \
            --pre-js wasm/pre.js --shell-file wasm/shell.html \
            --preload-file bin/data@/data \
            --preload-file bin/grafs@/grafs \
+           --preload-file bin/grafs_aga@/grafs_aga \
            --preload-file bin/sound@/sound \
            --preload-file bin/data_json@/data_json
 # Re-link when the pre-js or shell HTML changes (both embedded at link time).
