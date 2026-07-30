@@ -1241,10 +1241,15 @@ void HWSprite_LoadFromSpriteGraphics(uint16_t spriteIndex)
     /* Dest = sprite data pointer (first long of sprite entry) */
     destPtr = *(uint32_t *)sprEntry;
     BLT_L(_custom->bltdpt, destPtr);
-    /* BLTSIZE = (height << 8) | stride */
+    /* BLTSIZE row field = height * (real plane count): the sprite's data buffer is
+     * `height * sp` plane-rows. Was hard NUM_PLANES(8); a 16-colour sprite is stored
+     * at 4 planes now, so clearing 8 would over-clear into the next sprite. */
     height = *(uint16_t *)(sprEntry + 12);
     stride = *(uint16_t *)(sprEntry + 14); /* TILE_STRIDE offset */
-    blitSize = (uint16_t)((height << (NUM_PLANES_SHIFT + 6)) | stride);
+    {
+        uint16_t sp = spriteNumPlanes((int16_t)spriteIndex);
+        blitSize = (uint16_t)(((uint16_t)(height * sp) << 6) | stride);
+    }
     BLT_W(_custom->bltsize, blitSize);
 #endif
 }
