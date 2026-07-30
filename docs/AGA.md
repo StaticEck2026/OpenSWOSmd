@@ -154,6 +154,30 @@ python3 scripts/swos_harness.py where  # drive menus (works on SDL and Amiga)
 ```
 See [HARNESS.md](HARNESS.md) for the FS-UAE write-support details.
 
+### 9a. ⚠️ GOTCHA — every `#ifdef AGA` file MUST include `display.h`
+
+`AGA` is `#define`d in exactly one place: **`include/display.h`** (the "single source of
+`#define AGA`"). It is NOT a compiler `-D` flag, so it is only defined in a translation
+unit that actually `#include`s `display.h` (directly or transitively, and *before* the
+`#ifdef AGA` block). **If a `.c` uses `#ifdef AGA` / `#if defined(AGA)` but doesn't pull
+in `display.h`, `AGA` is undefined there and the whole AGA block is silently compiled
+out — no error, no warning.** The OCS/`#else` path runs on the AGA build, so a feature
+"works everywhere except in that one file" for no obvious reason.
+
+Real bug found 2026-07-20: **`match_setup.c`** used `#ifdef AGA` (the 256-colour pitch-
+palette-to-copper block) but had no `#include "display.h"`, so on the AGA build it was
+running the OCS 16-colour path. This class of bug has bitten us more than once.
+
+**Audit command** — run after adding any `#ifdef AGA`, or when an AGA feature is
+mysteriously inert in one area:
+```sh
+for f in $(grep -rlE '#if.*defined\(AGA\)|#ifdef AGA' src/*.c); do
+  grep -q '#include "display.h"' "$f" || echo "MISSING display.h: $f"
+done
+```
+(Also verify the include ordering: `display.h` must precede any header that itself keys
+off `#ifdef AGA`.)
+
 ## 10. Sync
 
 Shared C is authored in `SWOS_C_SDL` and synced to the Amiga tree

@@ -5,6 +5,9 @@
  */
 #include "match_setup.h"
 #include "game_types.h"
+#include "display.h"        /* single source of `#define AGA` — without it the #ifdef AGA
+                             * pitch-palette block below is silently compiled out (ran the
+                             * OCS 16-colour path on AGA). See docs/AGA.md §9a. */
 #include "deterministic.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
