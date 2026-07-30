@@ -213,6 +213,57 @@ static void dos_load_pitch(uint16_t mapIndex)
 }
 #endif /* SWOS_SDL_BUILD */
 
+#ifdef SWOS_SDL_BUILD
+/* Unpacked byte size of the pitch file LoadPitchMap last read, so the chunky
+ * decode in FixupAndColorPitchFile can size the tile region. 0 = unknown. */
+static uint32_t s_pitchFileSize;
+
+/* ----------------------------------------------------------------
+ * pitchTilePlanes — source bitplane depth of the loaded pitch file.
+ *
+ * A pitch file is a PITCH_POINTER_COUNT-entry table of byte offsets into a
+ * tile-data region, followed by that region. Tiles are a fixed 16 scanlines ×
+ * planes × 2 bytes, so the stride is 128 at 4bpp (OCS, grafs/) or 256 at 8bpp
+ * (AGA, grafs_aga/). Nothing in the file states which, so derive it:
+ *
+ *   - every offset is a multiple of the stride, so a 4bpp file almost always
+ *     has offsets at 128 mod 256 (measured: 1644 of 2310 in grafs/SWCPICH1)
+ *     whereas an 8bpp file has none by construction
+ *   - the last tile ends exactly at the end of the region, so
+ *     maxOffset + stride == tileRegionBytes pins it down outright
+ *
+ * Both signals must agree for 8bpp; the alignment test alone decides when the
+ * region size is unknown. Falls back to PITCH_NUM_PLANES if neither is
+ * conclusive. `offsetOf` recovers the file offset from an already-relocated
+ * slot the same way the decode loop does.
+ * ---------------------------------------------------------------- */
+static uint16_t pitchTilePlanes(const uint32_t *pitchPtrs, uint32_t baseLow,
+                                uint32_t tileRegionBytes)
+{
+    uint32_t maxOffset = 0;
+    int      anyHalfStride = 0;
+    int      sawAny = 0;
+    int32_t  k;
+
+    for (k = 0; k < (int32_t)PITCH_POINTER_COUNT; k++) {
+        uint32_t off = pitchPtrs[k] - baseLow;
+        if (tileRegionBytes && off >= tileRegionBytes)
+            continue;                       /* bogus/unused slot */
+        sawAny = 1;
+        if (off > maxOffset) maxOffset = off;
+        if ((off & 255u) == 128u) anyHalfStride = 1;
+    }
+    if (!sawAny)
+        return (uint16_t)PITCH_NUM_PLANES;
+
+    if (tileRegionBytes) {
+        if (!anyHalfStride && maxOffset + 256u == tileRegionBytes) return 8;
+        if (maxOffset + 128u == tileRegionBytes)                   return 4;
+    }
+    return anyHalfStride ? 4 : (uint16_t)PITCH_NUM_PLANES;
+}
+#endif /* SWOS_SDL_BUILD */
+
 /* ================================================================
  * LoadPitchMap  (SWOS2.s line 5557)
  *
@@ -239,6 +290,9 @@ void LoadPitchMap(uint16_t mapIndex)
 
     result = LoadFileEx(filename, _pitchDatBuffer, &fileSize);
     (void)result;
+#ifdef SWOS_SDL_BUILD
+    s_pitchFileSize = fileSize;   /* -> pitchTilePlanes (source bitplane depth) */
+#endif
 
     if (fileSize > PITCHFILE_MAX_SIZE)
     {
@@ -324,20 +378,23 @@ void FixupAndColorPitchFile(void)
      * (toggling tile pairs (1,2),(3,4),...,(21,22) between static and
      * animated variants) functional.
      *
-     * Bitplane tile layout: 16 scanlines × (NUM_PLANES planes × 2 bytes) =
-     * TILE_SIZE bytes. Each scanline is `plane0_word, plane1_word, ...`
-     * packing 16 horizontal pixels as bit N of each plane word.
+     * Bitplane tile layout: 16 scanlines × (planes × 2 bytes) = tileSize bytes.
+     * Each scanline is `plane0_word, plane1_word, ...` packing 16 horizontal
+     * pixels as bit N of each plane word.
      *
-     * DEPTH IS NUM_PLANES-DRIVEN, not hard-coded 4/128. display.h defines AGA
-     * on this build too, so GRAFS is grafs_aga/ and the pitch we load is the
-     * 8bpp one (TILE_SIZE 256, 16-byte scanlines). This block used to assume
-     * the OCS 4bpp layout (128-byte tiles, 8-byte scanlines): it read only
-     * planes 0-3 of each scanline, so every pixel lost its high nibble, and it
-     * strided tiles at half their real size so the tile index was wrong too —
-     * the pitch drew with recognisable geometry but wrong colours (white lines
-     * came out blue, the crowd scrambled). The Amiga path was always
-     * NUM_PLANES-driven (TILE_SIZE / SRC_SCANLINE_BYTES in scroll_blit.c);
-     * this now matches it. */
+     * DEPTH IS DETECTED PER FILE (pitchTilePlanes), not hard-coded and not
+     * fixed at compile time. This block used to assume the OCS 4bpp layout
+     * (128-byte tiles, 8-byte scanlines) while display.h defines AGA on this
+     * build, so GRAFS is grafs_aga/ and the pitch actually loaded is 8bpp: it
+     * read only planes 0-3 of each scanline, losing every pixel's high nibble,
+     * and strided tiles at half their real size so the tile index was wrong
+     * too — the pitch drew with recognisable geometry but wrong colours (white
+     * lines came out blue, the crowd scrambled).
+     *
+     * Detecting rather than using PITCH_NUM_PLANES directly keeps the ORIGINAL
+     * 4bpp OCS pitches loadable: drop a grafs/ SWCPICH*.MAP in (or run a build
+     * that resolves to grafs/) and it still decodes, on the same binary. Same
+     * philosophy as DetectBankPlanes for sprite/overlay banks. */
     {
         extern uint8_t _pitchChunkyBuffer[];
         uint8_t *bufStart    = _pitchDatBuffer;
@@ -361,13 +418,25 @@ void FixupAndColorPitchFile(void)
          * to give the same offset Step 1 read out of the file. Add it
          * back to the *real* tileDataBase to get the real pointer. */
         uint32_t baseLow = (uint32_t)(uintptr_t)tileDataBase;
+        /* Source depth of THIS file: 4 (OCS grafs/) or 8 (AGA grafs_aga/). */
+        uint32_t tileRegion  = s_pitchFileSize > PITCH_POINTER_COUNT * 4u
+                             ? s_pitchFileSize - PITCH_POINTER_COUNT * 4u : 0u;
+        uint16_t srcPlanes   = pitchTilePlanes(pitchPtrs, baseLow, tileRegion);
+        /* Never gather more planes than the pw[] below holds. Only bites on a
+         * hypothetical 4-plane (non-AGA) build fed an 8bpp pitch — that build
+         * resolves grafs/ only, so it can't normally happen; degrade to the low
+         * nibble rather than overrun. */
+        if (srcPlanes > PITCH_NUM_PLANES) srcPlanes = (uint16_t)PITCH_NUM_PLANES;
+        uint32_t srcRowBytes = (uint32_t)srcPlanes * 2u;          /* one scanline  */
+        uint32_t srcTileSize = srcRowBytes * TILE_HEIGHT;         /* 128 or 256    */
+
         for (i = 0; i < PITCH_POINTER_COUNT; i++) {
             uint32_t slotLow    = pitchPtrs[i];
             uint32_t fileOffset = slotLow - baseLow;
             uint8_t *bitplane   = tileDataBase + fileOffset;
             /* Guard against bogus pointers (shouldn't happen, but the
              * file could be malformed or the stub still indexed). */
-            if (bitplane < tileDataBase || bitplane + TILE_SIZE > bufEnd) {
+            if (bitplane < tileDataBase || bitplane + srcTileSize > bufEnd) {
                 /* Fall back to per-entry indexing for invalid pointers
                  * so we at least don't share garbage between tiles. */
                 uint32_t safeIdx = (uint32_t)i;
@@ -378,7 +447,7 @@ void FixupAndColorPitchFile(void)
                 continue;
             }
 
-            uint32_t tileIdx = (uint32_t)((bitplane - tileDataBase) / TILE_SIZE);
+            uint32_t tileIdx = (uint32_t)((bitplane - tileDataBase) / srcTileSize);
             if (tileIdx >= PITCH_POINTER_COUNT) {
                 /* offset out of bounds → safe fallback */
                 uint8_t *chunky = _pitchChunkyBuffer + (size_t)i * 256;
@@ -391,17 +460,20 @@ void FixupAndColorPitchFile(void)
             uint8_t *chunky = _pitchChunkyBuffer + (size_t)tileIdx * 256;
 
             if (!tileDecoded[tileIdx]) {
-                for (int row = 0; row < 16; row++) {
-                    const uint8_t *rowSrc = bitplane + row * SRC_SCANLINE_BYTES;
-                    /* Read NUM_PLANES plane words (big-endian from file) */
-                    uint16_t pw[NUM_PLANES];
-                    for (int pl = 0; pl < NUM_PLANES; pl++)
+                for (int row = 0; row < TILE_HEIGHT; row++) {
+                    const uint8_t *rowSrc = bitplane + (uint32_t)row * srcRowBytes;
+                    /* Read srcPlanes plane words (big-endian from file). Sized
+                     * PITCH_NUM_PLANES (the deepest we ever see) and filled to
+                     * srcPlanes, so a 4bpp OCS pitch yields indices 0-15 and an
+                     * 8bpp AGA one the full 0-255. */
+                    uint16_t pw[PITCH_NUM_PLANES];
+                    for (int pl = 0; pl < srcPlanes; pl++)
                         pw[pl] = (uint16_t)(((uint16_t)rowSrc[pl * 2] << 8) | rowSrc[pl * 2 + 1]);
                     uint8_t *dst = chunky + row * 16;
                     for (int px = 0; px < 16; px++) {
                         int bit = 15 - px;
                         uint8_t idx = 0;
-                        for (int pl = 0; pl < NUM_PLANES; pl++)
+                        for (int pl = 0; pl < srcPlanes; pl++)
                             idx |= (uint8_t)(((pw[pl] >> bit) & 1u) << pl);
                         dst[px] = idx;
                     }
