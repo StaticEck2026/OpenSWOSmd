@@ -313,20 +313,31 @@ void FixupAndColorPitchFile(void)
     (void)i;
 
 #ifdef SWOS_SDL_BUILD
-    /* Step 1b (SDL only): decode each 128-byte 4-bitplane tile to a
-     * 256-byte 8bpp chunky tile. Chunky tiles live in pitchChunkyBuffer,
-     * indexed by **original Amiga tile index** (offset / 128) — NOT by
+    /* Step 1b (SDL only): decode each TILE_SIZE-byte NUM_PLANES-bitplane tile
+     * to a 256-byte 8bpp chunky tile. Chunky tiles live in pitchChunkyBuffer,
+     * indexed by **original Amiga tile index** (offset / TILE_SIZE) — NOT by
      * pointer slot. Indexing by tile-type means many pitch entries that
      * reference the same tile share one chunky copy, AND the
      * `(entry - chunkyBase) / 256` math used by DrawAnimatedPatterns
      * recovers the same tile index the Amiga path computed via
-     * `(entry - currentMenu) / 128`. That keeps the fan-tile animation
+     * `(entry - currentMenu) / TILE_SIZE`. That keeps the fan-tile animation
      * (toggling tile pairs (1,2),(3,4),...,(21,22) between static and
      * animated variants) functional.
      *
-     * Bitplane tile layout: 16 scanlines × (4 planes × 2 bytes) = 128 bytes.
-     * Each scanline is `plane0_word, plane1_word, plane2_word, plane3_word`
-     * packing 16 horizontal pixels as bit N of each plane word. */
+     * Bitplane tile layout: 16 scanlines × (NUM_PLANES planes × 2 bytes) =
+     * TILE_SIZE bytes. Each scanline is `plane0_word, plane1_word, ...`
+     * packing 16 horizontal pixels as bit N of each plane word.
+     *
+     * DEPTH IS NUM_PLANES-DRIVEN, not hard-coded 4/128. display.h defines AGA
+     * on this build too, so GRAFS is grafs_aga/ and the pitch we load is the
+     * 8bpp one (TILE_SIZE 256, 16-byte scanlines). This block used to assume
+     * the OCS 4bpp layout (128-byte tiles, 8-byte scanlines): it read only
+     * planes 0-3 of each scanline, so every pixel lost its high nibble, and it
+     * strided tiles at half their real size so the tile index was wrong too —
+     * the pitch drew with recognisable geometry but wrong colours (white lines
+     * came out blue, the crowd scrambled). The Amiga path was always
+     * NUM_PLANES-driven (TILE_SIZE / SRC_SCANLINE_BYTES in scroll_blit.c);
+     * this now matches it. */
     {
         extern uint8_t _pitchChunkyBuffer[];
         uint8_t *bufStart    = _pitchDatBuffer;
@@ -356,7 +367,7 @@ void FixupAndColorPitchFile(void)
             uint8_t *bitplane   = tileDataBase + fileOffset;
             /* Guard against bogus pointers (shouldn't happen, but the
              * file could be malformed or the stub still indexed). */
-            if (bitplane < tileDataBase || bitplane + 128 > bufEnd) {
+            if (bitplane < tileDataBase || bitplane + TILE_SIZE > bufEnd) {
                 /* Fall back to per-entry indexing for invalid pointers
                  * so we at least don't share garbage between tiles. */
                 uint32_t safeIdx = (uint32_t)i;
@@ -367,7 +378,7 @@ void FixupAndColorPitchFile(void)
                 continue;
             }
 
-            uint32_t tileIdx = (uint32_t)((bitplane - tileDataBase) / 128);
+            uint32_t tileIdx = (uint32_t)((bitplane - tileDataBase) / TILE_SIZE);
             if (tileIdx >= PITCH_POINTER_COUNT) {
                 /* offset out of bounds → safe fallback */
                 uint8_t *chunky = _pitchChunkyBuffer + (size_t)i * 256;
@@ -381,19 +392,17 @@ void FixupAndColorPitchFile(void)
 
             if (!tileDecoded[tileIdx]) {
                 for (int row = 0; row < 16; row++) {
-                    const uint8_t *rowSrc = bitplane + row * 8;
-                    /* Read 4 plane words (big-endian from file) */
-                    uint16_t p0 = ((uint16_t)rowSrc[0] << 8) | rowSrc[1];
-                    uint16_t p1 = ((uint16_t)rowSrc[2] << 8) | rowSrc[3];
-                    uint16_t p2 = ((uint16_t)rowSrc[4] << 8) | rowSrc[5];
-                    uint16_t p3 = ((uint16_t)rowSrc[6] << 8) | rowSrc[7];
+                    const uint8_t *rowSrc = bitplane + row * SRC_SCANLINE_BYTES;
+                    /* Read NUM_PLANES plane words (big-endian from file) */
+                    uint16_t pw[NUM_PLANES];
+                    for (int pl = 0; pl < NUM_PLANES; pl++)
+                        pw[pl] = (uint16_t)(((uint16_t)rowSrc[pl * 2] << 8) | rowSrc[pl * 2 + 1]);
                     uint8_t *dst = chunky + row * 16;
                     for (int px = 0; px < 16; px++) {
                         int bit = 15 - px;
-                        uint8_t idx = (uint8_t)(((p0 >> bit) & 1)      |
-                                                (((p1 >> bit) & 1) << 1) |
-                                                (((p2 >> bit) & 1) << 2) |
-                                                (((p3 >> bit) & 1) << 3));
+                        uint8_t idx = 0;
+                        for (int pl = 0; pl < NUM_PLANES; pl++)
+                            idx |= (uint8_t)(((pw[pl] >> bit) & 1u) << pl);
                         dst[px] = idx;
                     }
                 }

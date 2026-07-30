@@ -48,11 +48,12 @@ extern uint8_t  _frontbufferMaskBuffer[];
 extern uint8_t  _currentMenu[];
 #ifdef SWOS_SDL_BUILD
 extern uint8_t  _pitchChunkyBuffer[];
-/* On SDL the pitch tile pointers live in pitchChunkyBuffer with 256-byte
- * stride per tile (vs Amiga's 128-byte bitplane stride). Pitch.c arranges
- * chunky tiles to be indexed by the *original* Amiga tile index
- * (offset / 128), so the same `(entry - base) / stride` math still
- * recovers the tile-pair index used by the static/animated swap. */
+/* On SDL the pitch tile pointers live in pitchChunkyBuffer with a fixed
+ * 256-byte chunky stride per tile, whatever the source bitplane depth
+ * (Amiga TILE_SIZE = 128 at 4bpp / 256 at 8bpp). Pitch.c arranges chunky
+ * tiles to be indexed by the *original* Amiga tile index (offset /
+ * TILE_SIZE), so the same `(entry - base) / stride` math still recovers
+ * the tile-pair index used by the static/animated swap. */
 #define ANIM_TILE_BASE        ((uintptr_t)_pitchChunkyBuffer)
 #define ANIM_TILE_SIZE        256u
 #define ANIM_TILE_SIZE_SHIFT  8
