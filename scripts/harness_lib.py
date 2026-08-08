@@ -20,6 +20,7 @@ the FS-UAE stub needed a patch to add M/P/G packets (see
 docs/HARNESS.md "FS-UAE write support"). write_check() verifies a write stuck —
 use it to fail loudly on a read-only target instead of silently no-op'ing.
 """
+import os
 import re
 import struct
 import subprocess
@@ -27,7 +28,21 @@ import sys
 import time
 import zlib
 
-DEFAULT_PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/scripts/amiga/gdb_proxy.py"
+# gdb_proxy.py + amiga_gdb.sh live in the AmigaScope repo (split out of
+# SWOS_C/scripts/amiga on 2026-07-19 — github.com/benbaker76/AmigaScope). Set
+# AMIGASCOPE_DIR if your checkout is elsewhere; the old in-tree paths are kept
+# as fallbacks so a stale checkout still resolves. swos_plugin.py derives
+# amiga_gdb.sh from dirname(proxy), so pointing this at the repo fixes both.
+PROXY_CANDIDATES = [
+    os.path.join(os.environ["AMIGASCOPE_DIR"], "gdb_proxy.py")
+    if os.environ.get("AMIGASCOPE_DIR") else None,
+    "/mnt/c/Projects/AI/AmigaScope/gdb_proxy.py",                  # standalone repo
+    "/mnt/c/Projects/AI/SWOS/SWOS_C/scripts/amiga/amigascope/gdb_proxy.py",  # submodule
+    "/mnt/c/Projects/AI/SWOS/SWOS_C/scripts/amiga/gdb_proxy.py",   # pre-split
+]
+DEFAULT_PROXY = next(
+    (p for p in PROXY_CANDIDATES if p and os.path.exists(p)),
+    PROXY_CANDIDATES[1])
 
 # A single `continue` to the next breakpoint should be sub-second with TURBO
 # (and at most ~1 s without it). When the WSL2/gdb session degrades, the
@@ -40,6 +55,15 @@ CONT_SLOW_WARN_S = 4.0
 
 class GdbHarness:
     def __init__(self, proxy=DEFAULT_PROXY, timeout=8):
+        if not os.path.exists(proxy):
+            # Fail LOUDLY here: without this every cmd() silently returns
+            # python3's "can't open file" on stderr, which parses as "no
+            # symbol / not stopped" and looks like a wedged target.
+            raise FileNotFoundError(
+                "gdb_proxy.py not found at %r. It lives in the AmigaScope repo "
+                "(github.com/benbaker76/AmigaScope) since the 2026-07-19 split "
+                "out of SWOS_C/scripts/amiga. Set AMIGASCOPE_DIR to your "
+                "checkout, or pass proxy=<path>." % proxy)
         self.proxy = proxy
         self.timeout = timeout
         self._slow_conts = 0   # consecutive slow conts (degradation tripwire)

@@ -13,6 +13,28 @@ the SWOS automation built on top of it.
 
 ---
 
+## Where the tools live (moved 2026-07-19)
+
+`gdb_proxy.py` and `amiga_gdb.sh` were split out of `SWOS_C/scripts/amiga/` into
+their own repo — **AmigaScope** (github.com/benbaker76/AmigaScope), checked out
+locally at `/mnt/c/Projects/AI/AmigaScope`. Only the *transport* moved; the SWOS
+layers (`scripts/harness_lib.py`, `scripts/swos_plugin.py`,
+`scripts/swos_harness.py`) stayed here.
+
+`harness_lib.PROXY_CANDIDATES` resolves the proxy in this order:
+`$AMIGASCOPE_DIR/gdb_proxy.py` → `/mnt/c/Projects/AI/AmigaScope/gdb_proxy.py` →
+the pre-split in-tree path. Set `AMIGASCOPE_DIR` if your checkout is elsewhere.
+`swos_plugin.amiga_up()` derives `amiga_gdb.sh` from `dirname(proxy)`, so
+pointing the proxy at the repo fixes the Amiga side too.
+
+**Symptom of a wrong path:** `GdbHarness()` now raises `FileNotFoundError` at
+construction. Before that guard existed, every `cmd()` returned python3's "can't
+open file" on stderr, which parses as "no symbol / not stopped" — so a moved
+repo looked exactly like a wedged target and cost a session. Docs elsewhere that
+still say `scripts/amiga/gdb_proxy.py` predate the split.
+
+---
+
 ## ⭐ READ THIS FIRST — driving a career through seasons (the proven recipe)
 
 This is the route that works (validated 2026-06-19: a career driven season 3 → 19
@@ -48,9 +70,12 @@ find src \( -name '*.c' -o -name '*.h' \) -newer bin/SWOS.x86_64 | head   # MUST
 ```
 
 ```python
-# 2. Launch the daemon via Bash run_in_background:true (NOT nohup& — see DON'Ts), headless:
+# 2. Launch the daemon via Bash run_in_background:true (NOT nohup& — see DON'Ts), headless.
+#    gdb_proxy.py lives in the AmigaScope repo (see "Where the tools live" below);
+#    --bin MUST be absolute (a relative path makes `run` silently no-op):
 #    cd bin; SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SWOS_TEST_NO_INJURIES_CARDS=1 \
-#      SWOS_SAVE_FORMAT_JSON_VERIFY=0 python3 .../gdb_proxy.py daemon --mode sdl --bin .../bin/SWOS.x86_64
+#      SWOS_SAVE_FORMAT_JSON_VERIFY=0 python3 /mnt/c/Projects/AI/AmigaScope/gdb_proxy.py \
+#      daemon --mode sdl --bin /abs/path/to/SWOS_C_SDL/bin/SWOS.x86_64
 # 2.5 Put the test careers where the game looks for them — the PER-USER save dir
 #     (~/.swos/save on Linux/WSL), NOT bin/save (changed 2026-07-04, see DON'T #10):
 #        cp bin/save/*.CAR ~/.swos/save/
@@ -775,6 +800,25 @@ cold-boot fresh each time.
   player's fixtures auto-sim (the game's `selector==0` path) instead of opening
   the real-time in-game match loop (`_ShowMatchSequence`, throttled in
   `clock_nanosleep`). `drive_inseason(sim_mode=True)` sets it each step.
+- ⚠️ **The squad screen needs the ENTRY, not just `pl1Fire`.** `PlayMatchSelected`
+  is an entry `onSelect`: it only runs once that entry is *dispatched*, so the
+  PLAY/COACH MATCH entry must be SELECTED (`SetCurrentEntry`) and the menu fire
+  bit set; `pl1Fire` is the *inner* gate it then reads. Setting `pl1Fire` alone
+  does nothing — the screen just sits there (60+ no-op frames).
+- ⚠️ **A PLAYER-CONTROLLED fixture cannot be driven to completion headless.**
+  Start one for real and the inferior pins a core in the in-game loop and never
+  returns to `MenuProc`, so every `cont` burns its full timeout (observed: 30 min
+  of CPU, no breakpoint). That is what the sim lever exists to avoid. The catch
+  for *keycache* work: the sim lever sets `teamControls = 1`, which is the very
+  condition `Career_UpdateStatsAfterMatch`'s store block tests
+  (`team1->teamControls != 1 || team2->teamControls != 1`), so a simmed fixture
+  cannot exercise the player-fixture path. To test that path, drive to the hub
+  and CALL the writer directly on the current fixture, taking the two
+  `TeamFileEx *` from `_selectedTeams[]`:
+  `call (void)Career_UpdateStatsAfterMatch(&_selectedTeams[i], &_selectedTeams[j], 0, 0x0201, 0, 0, 1)`
+  then diff `remainingElements` / `matchFlags` / `packedGoals` on the slot at
+  `_teamSelectionKeyCache + _teamSelectionKeyCacheOffset + 10`. Do NOT reach for
+  `VerifyTeamLoaded` to get those pointers — an inferior call into it hangs.
 
 ## Reusing for another project
 

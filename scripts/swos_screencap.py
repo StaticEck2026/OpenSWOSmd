@@ -23,13 +23,17 @@ Usage:
   scripts/swos_screencap.py OUT.png [--proxy PATH] [--pal-fmt rgba]
 """
 import argparse
+import os
 import struct
 import subprocess
 import sys
 import zlib
 
 W, H, STRIDE = 336, 272, 336
-DEFAULT_PROXY = "/mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py"
+# Single source of truth for the gdb_proxy.py location (AmigaScope repo since
+# the 2026-07-19 split) — see harness_lib.PROXY_CANDIDATES / AMIGASCOPE_DIR.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from harness_lib import DEFAULT_PROXY  # noqa: E402
 FB_BIN = "/tmp/swos_fb.bin"
 PAL_BIN = "/tmp/swos_pal.bin"
 
