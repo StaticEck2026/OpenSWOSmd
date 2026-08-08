@@ -335,11 +335,40 @@ ifdef SWOS_DEBUG
 DEBUG_FLAGS := -DSWOS_DEBUG_AUTOSKIP=1 -DSWOS_DEBUG_SFX=1
 endif
 
+# ⚠️ TOGGLING ANY -D FLAG BELOW REQUIRES A `clean` FIRST. make compares
+# TIMESTAMPS, not CFLAGS: if the .o files are already newer than the sources,
+# `make X86_64=1` after `make X86_64=1 SWOS_TEST_NO_INJURIES_CARDS=1` RELINKS
+# THE OLD OBJECTS and silently hands you a binary that still has the flag baked
+# in. Always `make <TARGET-VARS> clean && make <TARGET-VARS> <FLAGS>` when the
+# flag set changes. (`clean` is per-target — it removes build/<os>/<arch> for
+# the selected target only, so it won't disturb your other builds.)
+#
 # Beta-testing convenience: build with `make SWOS_TEST_NO_INJURIES_CARDS=1`
 # to suppress in-match yellow/red cards and post-match random injuries.
 # Lets the tester hit VIEW RESULT uninterruptedly through a season — no
 # substitution menus, no booking prompts. Intentionally compile-time only
 # so production builds never accidentally ship with it on.
+#
+# KNOWN DISPLAY SIDE-EFFECTS under this flag (do NOT re-investigate as port
+# bugs — they vanish in a production build). IsPlayerInjured() returns 0 for
+# everyone, so any player carrying a PRE-EXISTING injury/suspension in a loaded
+# save is "healthy" to every gameplay query while the row indicator — which
+# reads pf->cardsInjuries directly — still shows the "3":
+#   * the squad screens' red name needs the honest status; all three call sites
+#     now use IsPlayerInjuredForDisplay() (edit_tactics.c, play_match_menu.c
+#     DrawPlayerEntries, menus.c SquadAfterDrawCommon), so this one is handled.
+#   * the tick/cross marks still read low: UpdatePlayerPositionAndReturnRole
+#     zeroes an injured player's position value via IsPlayerInjured, so under
+#     the flag he keeps full value and substituting him off scores as a
+#     DOWNGRADE (big red cross instead of a green tick). Left as-is — that
+#     value also feeds the match sim, where the flag's "he can play" is the
+#     intended behaviour.
+#   * squad LEGALITY (isPlayerDisabled -> GetNumberOfAvailablePlayers/
+#     Substitutes) read cardsInjuries directly, so ShowOrHidePlayMatchButton
+#     still hid the PLAY MATCH / VIEW RESULT button and forced a substitution —
+#     the exact friction the flag exists to remove. isPlayerDisabled now honours
+#     the override too, so this one is handled. (Stock builds are unaffected:
+#     an injured starter still hides the button, per SWOS2.s loc_14872A.)
 ifdef SWOS_TEST_NO_INJURIES_CARDS
 DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
 endif

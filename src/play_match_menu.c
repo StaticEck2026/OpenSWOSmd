@@ -118,6 +118,8 @@ extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
 extern uint16_t IsTeamNational(TeamFileEx *team);
 extern void InitPlayerValueDisplayStruct(uint8_t *playerEntry, uint8_t *dst);
 extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
+/* Honest injury/suspension status for DISPLAY decisions — no beta override. */
+extern uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode);
 extern uint16_t GetNumberOfSubstitutes(uint8_t *team, uint16_t numPl);
 extern uint16_t GetNumberOfSubstitutesInSelectionList(uint8_t *team, uint16_t extraCount);
 extern uint32_t GetNumberOfAvailablePlayers(uint8_t *team, int16_t excludeCardsFlag, uint16_t numPl);
@@ -1149,9 +1151,16 @@ void DrawPlayerEntries(MenuEntry *a5) {
     int16_t d4 = (int16_t)slot;
     int16_t d1 = (int16_t)fIdx;
 
-    /* Injured check */
+    /* Injured check — DISPLAY decision, so it must use the honest status.
+     * IsPlayerInjured carries the SWOS_TEST_NO_INJURIES_CARDS beta override
+     * (returns 0 for everyone), which is a GAMEPLAY-availability override; using
+     * it here made an injured/suspended player's row keep its normal colour
+     * while SetSquadMenuEntryStatusSprite — which reads pf->cardsInjuries
+     * directly and is unaffected by the flag — still drew the "3" indicator.
+     * Same split already applied to the edit-tactics squad screen
+     * (edit_tactics.c EditTacticsAfterDrawPlayerNames). */
     if (!_viewingOpponentTeam) {
-        if (IsPlayerInjured((PlayerFile *)player, _playMatchExcludeFlags)) {
+        if (IsPlayerInjuredForDisplay((PlayerFile *)player, _playMatchExcludeFlags)) {
             bgE->bgColor = (bgE->bgColor & 0xFFF0) | RED_10;
             numE->bgColor = (numE->bgColor & 0xFFF0) | RED_10;
         }

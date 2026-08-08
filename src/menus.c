@@ -1548,8 +1548,11 @@ void SquadAfterDrawCommon(void *entryPtr)
     uint8_t *player = GetPlayerInfoBreakPosition(teamBase, d7, &d6_breakPos, &d4_fileIdx);
     PlayerFile *pf = (PlayerFile *)(player + sizeof(TeamFile));
 
-    /* Check if injured */
-    uint16_t injured = IsPlayerInjured((PlayerFile *)player, (int16_t)_squadRowMode);
+    /* Check if injured — DISPLAY decision (row goes red), so use the honest
+     * status rather than IsPlayerInjured, whose SWOS_TEST_NO_INJURIES_CARDS
+     * beta override is a GAMEPLAY-availability override only. See the same
+     * split in play_match_menu.c DrawPlayerEntries / edit_tactics.c. */
+    uint16_t injured = IsPlayerInjuredForDisplay((PlayerFile *)player, (int16_t)_squadRowMode);
     if (injured != 0) {
         setColorPair46_48(10);
     }
