@@ -33,8 +33,12 @@ make                      # bin/SWOS (linux x86) / bin/SWOS.exe (cygwin)
 make X86_64=1 -j$(nproc)  # bin/SWOS.x86_64
 make WASM=1               # bin/SWOS.html   (needs emsdk on PATH)
 
-# Amiga m68k — toolchain ships inside the amiga-debug VSCode extension
-EXT=~/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
+# Amiga m68k — toolchain ships inside the amiga-debug VSCode extension.
+# NOTE the path is the WINDOWS-side .vscode (VSCode is installed on the host),
+# NOT ~/.vscode in the WSL home — there is no extension dir there. Getting this
+# wrong fails as `Error 127` (compiler not found), and an up-to-date tree hides
+# it behind "Nothing to be done for 'all'" until something actually recompiles.
+EXT=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
 PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
 ```
 

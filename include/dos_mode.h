@@ -7,8 +7,9 @@
  * the DOS asset path; default 0 = the normal Amiga graphics/gameplay.
  *
  * gDosGraphics: load + render the DOS graphics from bin/grafs_dos.
- * gDosGameplay: DOS gameplay tweaks (framerate / minor changes). Reserved — not
- *               wired up yet; kept so the option exists.
+ * gDosGameplay: use the DOS gameplay tuning instead of the Amiga one — 70 Hz
+ *               game tick (DosGameplay_TargetFps) plus the DOS goalkeeper /
+ *               ball-physics constants written by ApplyGameStyle (dos_gameplay.c).
  */
 #ifndef SWOS_DOS_MODE_H
 #define SWOS_DOS_MODE_H

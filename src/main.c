@@ -132,8 +132,11 @@ static void print_usage(const char *argv0)
         "  --dos-graphics=<on|off>   Render the DOS-version graphics (bin/grafs_dos)\n"
         "                            instead of the Amiga graphics. Default: off.\n"
         "                            PC-only extra; the Amiga look is the default.\n"
-        "  --dos-gameplay=<on|off>   DOS gameplay tweaks (framerate etc.). Default:\n"
-        "                            off. Reserved — not wired up yet.\n"
+        "  --dos-gameplay=<on|off>   Use the DOS version's gameplay tuning: a 70 Hz\n"
+        "                            game tick (movement scaled 41/64 so it doesn't\n"
+        "                            play faster), plus the DOS goalkeeper reach and\n"
+        "                            ball-physics constants. Default: off (Amiga\n"
+        "                            tuning). PC-only extra.\n"
         "  --dos-dir=<folder>        Folder (under bin/) to load DOS assets from.\n"
         "                            Default: grafs_dos.\n"
         "  -h, --help                Show this help and exit.\n",
