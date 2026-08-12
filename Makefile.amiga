@@ -71,7 +71,13 @@ $(foreach f,$(SDL_ONLY_SRCS),$(if $(wildcard src/$(f)),,$(error SDL_ONLY_SRCS li
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
 
-program ?= uae/dh0/data/SWOS2
+# The Amiga binary links into bin/ — the SAME directory the SDL binaries and all
+# the game data live in. The amiga-debug extension mounts dirname(program) as
+# DH1: and its startup-sequence does `cd dh1:` before running the program, so the
+# game's relative loads (data/ grafs/ grafs_aga/ sound/ save/) resolve inside
+# bin/ exactly as they do for the SDL build. That is why bin/ no longer has a
+# duplicate under uae/ — see CLAUDE.md "Data".
+program ?= bin/SWOS2
 OUT = $(program)
 LDSCRIPT = SWOS2.ld
 CC = m68k-amiga-elf-gcc

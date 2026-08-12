@@ -1,5 +1,5 @@
 {
-    "amiga.program": "uae/dh0/data/SWOS2",
+    "amiga.program": "bin/SWOS2",
     "m68k.includePaths": [
         "c:\\Users\\headk\\.vscode\\extensions\\bartmanabyss.amiga-debug-1.8.2\\bin\\win32\\opt\\m68k-amiga-elf\\sys-include"
     ],

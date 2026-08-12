@@ -1,3 +1,4 @@
-SYS:data/SWOS2
+cd dh1:
+:SWOS2
 ; Quits the emulator at the end of the program
 UAEquit
