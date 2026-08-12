@@ -148,7 +148,7 @@ palette all correct. Both AGA and OCS builds exit-0.
 
 **Amiga** (FS-UAE + gdb, Kickstart 3.1 A1200 = AGA):
 ```
-scripts/amiga/amiga_gdb.sh up          # launch FS-UAE + attach gdb (from uae/dh0/data)
+scripts/amiga/amiga_gdb.sh up          # launch FS-UAE + attach gdb (DH1: = bin/)
 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "info registers"
 python3 scripts/swos_harness.py where  # drive menus (works on SDL and Amiga)
 ```
@@ -178,7 +178,12 @@ done
 (Also verify the include ordering: `display.h` must precede any header that itself keys
 off `#ifdef AGA`.)
 
-## 10. Sync
+## 10. Sync (historical)
+
+> **Superseded (2026-08-12).** The SDL and Amiga trees were merged into one
+> repo; there is no sync step and no "canonical edit site" any more — edit
+> the file once and both targets pick it up. The section below is kept for
+> the historical record of what was/wasn't propagated at the time.
 
 Shared C is authored in `SWOS_C_SDL` and synced to the Amiga tree
 (`C:\Projects\AI\SWOS\SWOS_C`, `sync_to_amiga_port.sh`). The P1/P2 changes are **not

@@ -40,7 +40,7 @@ BART=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/li
 export PATH="$BART/opt/bin:$BART:$PATH"   # opt/bin = gcc/as; $BART = elf2hunk (BOTH needed)
 rm -f obj/*.d                          # stale .d carry Windows C:/ paths -> break make
 rm -f obj/<changed>.o obj/<changed>.s  # force-rebuild the files you edited (LTO)
-make EXTRA_CFLAGS=-DPITCH_SCROLL_TEST   # -> uae/dh0/data/SWOS2 (+ .elf for gdb symbols)
+make -f Makefile.amiga EXTRA_CFLAGS=-DPITCH_SCROLL_TEST   # -> bin/SWOS2 (+ .elf for gdb symbols)
 ```
 The scroll-test build also **compile-time-skips the loader intro** (`#ifndef PITCH_SCROLL_TEST`
 around `ShowLoaderIntroSequence` in SWOS.c) so it boots straight to the pitch.
@@ -255,7 +255,12 @@ architectural work, not a quick patch. The rig's 6-per-row grid is a pathologica
 
 ---
 
-## 7. Sync
+## 7. Sync (historical)
+
+> **Superseded (2026-08-12).** The SDL and Amiga trees were merged into one
+> repo; there is no sync step and no "canonical edit site" any more — edit
+> the file once and both targets pick it up. The section below is kept for
+> the historical record of what was/wasn't propagated at the time.
 
 Scroll/display/sprite `.c` are shared between the SDL tree
 (`/mnt/c/cygwin64/home/headk/SWOS_C_SDL`, canonical edit site) and the Amiga tree

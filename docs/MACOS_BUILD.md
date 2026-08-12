@@ -65,8 +65,8 @@ will fail because Homebrew's SDL2 isn't a universal binary.
 Clone the repo somewhere convenient:
 
 ```bash
-git clone <repo-url> SWOS_C_SDL
-cd SWOS_C_SDL
+git clone <repo-url> OpenSWOS
+cd OpenSWOS
 ```
 
 ### Native single-arch (for the Mac you're on)

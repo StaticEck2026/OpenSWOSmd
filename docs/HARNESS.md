@@ -75,7 +75,7 @@ find src \( -name '*.c' -o -name '*.h' \) -newer bin/SWOS.x86_64 | head   # MUST
 #    --bin MUST be absolute (a relative path makes `run` silently no-op):
 #    cd bin; SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy SWOS_TEST_NO_INJURIES_CARDS=1 \
 #      SWOS_SAVE_FORMAT_JSON_VERIFY=0 python3 /mnt/c/Projects/AI/AmigaScope/gdb_proxy.py \
-#      daemon --mode sdl --bin /abs/path/to/SWOS_C_SDL/bin/SWOS.x86_64
+#      daemon --mode sdl --bin /abs/path/to/OpenSWOS/bin/SWOS.x86_64
 # 2.5 Put the test careers where the game looks for them — the PER-USER save dir
 #     (~/.swos/save on Linux/WSL), NOT bin/save (changed 2026-07-04, see DON'T #10):
 #        cp bin/save/*.CAR ~/.swos/save/
@@ -432,7 +432,7 @@ Notes: keep `-fomit-frame-pointer` even in DBG (`-fno-omit-frame-pointer` ICEs
 GCC 15.1.0 in `dwarf2out_frame_debug_adjust_cfa`); `-g` still emits CFI so gdb
 unwinds. `-O0` emits a real `strncmp` that `-Ofast` inlined — provided in the
 `#if defined(__m68k__)` shim in `src/swos_io.c`. Release binary backed up as
-`uae/dh0/data/SWOS2.release.bak`.
+`uae/artifacts/SWOS2.release.bak`.
 
 ## Usage
 

@@ -39,7 +39,7 @@ TCDIR=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/l
 export PATH="$TCDIR/opt/bin:$TCDIR:$PATH"   # opt/bin = gcc/as, $TCDIR = elf2hunk
 
 rm -f obj/*.d   # see note below — required when the last build was on Windows
-make            # produces uae/dh0/data/SWOS2 (hunk) + SWOS2.elf (gdb)
+make -f Makefile.amiga   # produces bin/SWOS2 (hunk) + bin/SWOS2.elf (gdb)
 ```
 
 `SWOS2.elf` is what gdb loads for symbols. The hunk-format `SWOS2`
@@ -195,7 +195,7 @@ cd /mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linu
     --amiga_model=a1200 \
     --automatic_input_grab=0 \
     --hard_drive_0=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/dh0 \
-    --hard_drive_1=/mnt/c/Projects/AI/SWOS/SWOS_C/uae/dh0/data \
+    --hard_drive_1=/mnt/c/Projects/AI/SWOS/SWOS_C/bin \
     --remote_debugger=20 \
     --remote_debugger_port=2345 \
     --remote_debugger_trigger=:SWOS2 \
@@ -237,7 +237,7 @@ python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py ping     # expect: pong
 ```
 
 The daemon:
-1. Spawns `m68k-amiga-elf-gdb -q --nx uae/dh0/data/SWOS2.elf`.
+1. Spawns `m68k-amiga-elf-gdb -q --nx bin/SWOS2.elf`.
 2. Issues `target remote 127.0.0.1:2345`. The target is paused at
    `_swos_c_start` / `main` (`0x00219b10`).
 3. Listens on `/tmp/swos_gdb.sock`. Subsequent `gdb_proxy.py cmd …`
@@ -521,20 +521,21 @@ pkill -f "fs-uae --amiga"                                     # closes FS-UAE
   prefix (`sed -i 's#C:/#/mnt/c/#g' obj/*.d`) — they're regenerable artifacts,
   and the build stays incremental. Toolchain lives at
   `.../bartmanabyss.amiga-debug-*/bin/linux/{opt/bin,}` (gcc/as + elf2hunk);
-  put both on PATH. `make` outputs straight to `uae/dh0/data/SWOS2{,.elf}`.
+  put both on PATH. `make -f Makefile.amiga` outputs straight to `bin/SWOS2{,.elf}`.
 
 ---
 
 ## SDL Linux workflow
 
-The SDL port lives in `/mnt/c/cygwin64/home/headk/SWOS_C_SDL/`. It
+The SDL target builds from this same tree (it used to live in a separate
+`SWOS_C_SDL` repo, merged 2026-08-12). It
 builds an x86 Linux ELF (`bin/SWOS`, 32-bit by default — the `-m32`
 flag keeps pointer/long widths matching the Amiga struct layouts).
 
 ### Build
 
 ```bash
-cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL
+cd /mnt/c/Projects/AI/SWOS/SWOS_C     # repo root
 make clean      # only when crossing between Cygwin and WSL builds
 make -j4        # produces bin/SWOS (Linux ELF, debug info included)
 ```

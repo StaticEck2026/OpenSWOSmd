@@ -1,23 +1,32 @@
-# SWOS — Pure C / SDL2 Port
+# OpenSWOS — Pure C port, Amiga + SDL2 from one source tree
 
-A portable, pure C port of *Sensible World of Soccer* (Amiga, 1994), running
-on top of SDL2 instead of Amiga hardware. The original 68k assembly has been
-translated to C; the OCS/AGA chipset, Paula audio, and joystick I/O are
-emulated by thin SDL2 shims.
+A pure C port of *Sensible World of Soccer* (Amiga, 1994). The original 68k
+assembly has been translated to C, and **one source tree builds two targets**:
 
-This is one of two SWOS ports in flight by the same author:
+| Target | Build | Output |
+|---|---|---|
+| **SDL2** — Windows, Linux, WSL2, macOS, WebAssembly, ARM | `make` | `bin/SWOS*` |
+| **Amiga m68k** — A1200/AGA, FS-UAE/WinUAE or real hardware | `make -f Makefile.amiga` | `bin/SWOS2` |
 
-- **`SWOS_C_SDL`** *(this repo)* — runs everywhere SDL2 runs (Windows, Linux,
-  WSL2, macOS, etc).
-- **`SWOS_C`** — same C codebase targeting real Amiga hardware. Fixes made
-  here get back-ported there. Eventually `SWOS2.s` (the original 68k asm)
-  will be retired and the Amiga build will run entirely from C.
+On SDL the OCS/AGA chipset, Paula audio, and joystick I/O are emulated by thin
+SDL2 shims; on Amiga the same C drives the real hardware. `src/` and `include/`
+are shared — platform divergence is expressed with `#ifdef SWOS_SDL_BUILD`, and
+a short list of SDL-only files is excluded from the m68k build by name
+(`SDL_ONLY_SRCS` in `Makefile.amiga`).
+
+> These were two separate repos (`SWOS_C_SDL` and `SWOS_C`) kept in step by a
+> one-way copy script until they were merged on 2026-08-12. Older notes in
+> `docs/` that talk about "back-porting" or `sync_to_amiga_port.sh` describe
+> that historical workflow — there is no sync step any more.
 
 ## Goals
 
-1. **Stabilise the SDL port first.** Get the full game working — match loop,
-   career mode, save/load, transfer market, edit teams, all UI flows.
-2. **Back-port to the Amiga C port** so both builds run from one C codebase.
+1. **Keep both targets building.** A change to shared code has to compile for
+   m68k as well as SDL. The Amiga build is the stricter of the two (32-bit
+   pointers, big-endian, `-nostdlib`), so it catches bitness and endian slips
+   the SDL build would let through.
+2. **Retire `SWOS2.s`.** It is now reference material (`data/SWOS2.s`) — the
+   Amiga build already runs entirely from C.
 3. **Untangle the Amiga BSS overlays.** The current code mirrors the Amiga's
    memory layout faithfully (adjacent-globals, `careerFileBuffer` overlays,
    `selTeamsPtr` aliased onto its own data). Once both ports run on C, those
@@ -47,7 +56,8 @@ Known issues (open):
 - Ball sprite: sometimes invisible at edge of camera.
 - Brief flicker (1–2 frames) on some menu transitions (e.g., post-match
   RESULT, lineup-swap).
-- Amiga-side: hasn't been re-synced with recent SDL changes yet.
+- Amiga-side: builds and links from the shared tree, but the AGA render path
+  (mixed-depth sprites, FMODE scroll) is still work-in-progress — see docs/AGA.md.
 
 This is a personal project under active development; expect rough edges.
 
@@ -86,6 +96,8 @@ target architecture. Pass an arch flag for cross builds.
 | macOS (native, single-arch)            | `make`                 | `bin/SWOS.macos`      |
 | macOS universal binary (x86_64 + arm64)| `make macos-universal` | `bin/SWOS.macos`      |
 | macOS `.app` bundle (data + SDL2 inside)| `make macos-app`       | `bin/SWOS.app`        |
+| WebAssembly (browser)                  | `make WASM=1`          | `bin/SWOS.html`       |
+| **Amiga m68k (A1200/AGA)**             | `make -f Makefile.amiga` | `bin/SWOS2`         |
 
 Common flags:
 - `make clean` first if you've switched between archs in the same checkout.
@@ -228,6 +240,46 @@ Full details — SDL2 framework setup, deployment-target overrides,
 .app bundle layout, troubleshooting — are in
 [`docs/MACOS_BUILD.md`](docs/MACOS_BUILD.md).
 
+### Amiga (m68k)
+
+The Amiga target uses a different Makefile and a different toolchain, but the
+same `src/` and `include/`:
+
+```
+make -f Makefile.amiga -j$(nproc)
+```
+
+The m68k cross-toolchain (`m68k-amiga-elf-gcc`, `vasmm68k_mot`, `elf2hunk`)
+ships inside the **Amiga C/C++ Compile, Debug & Profile** VS Code extension by
+Bartman^Abyss rather than being installed system-wide, so put it on `PATH`
+first. Linux/WSL and macOS builds of the toolchain are both bundled:
+
+```
+EXT=~/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
+PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
+```
+
+From VS Code, use the **Build (Amiga)** task, then one of the *FS-UAE* /
+*WinUAE* launch configurations.
+
+Output is `bin/SWOS2` (an Amiga hunk executable) plus `bin/SWOS2.elf` and
+`bin/SWOS2.map`. It links into `bin/` deliberately: the debugger mounts the
+binary's directory as **DH1:** and `cd`s into it, so the game finds `data/`,
+`grafs/`, `grafs_aga/`, `sound/` and `save/` there — the very same files the
+SDL build reads. There is no separate Amiga copy of the game data.
+
+Useful knobs:
+- `make -f Makefile.amiga DBG=1` — `-O0` for reliable gdb line breakpoints
+  (same struct/ABI layout, so save-format tests stay valid).
+- `make -f Makefile.amiga EXTRA_CFLAGS=-DPITCH_SCROLL_TEST` — boots the
+  standalone AGA pitch-scroll rig instead of the menu (see `docs/AGA_TEST.md`).
+- Always check `bin/SWOS2.map` after a build that moves globals around —
+  CHIP RAM placement is load-bearing and silently correct-looking on SDL.
+
+**Adding a source file:** shared code just goes in `src/` and both targets
+compile it. A file that needs SDL2 or hosted libc must also be listed in
+`SDL_ONLY_SRCS` in `Makefile.amiga`, or the m68k build will try to compile it.
+
 ## Running
 
 Launch the binary from anywhere — the program automatically `chdir()`s to
@@ -361,10 +413,17 @@ it.
 ## Project layout
 
 ```
-src/                         — port source
+Makefile                     — SDL targets  (make)
+Makefile.amiga               — Amiga m68k target (make -f Makefile.amiga),
+                               incl. SDL_ONLY_SRCS: the files the m68k
+                               build must skip
+SWOS2.ld                     — Amiga linker script (CHIP vs FAST placement)
+src/                         — port source, SHARED by both targets
     SWOS.c                   — (start of the Amiga C entry tree)
-    main.c                   — SDL2 entry point
-    platform_sdl.c           — window, render, vblank pacing
+    main.c                   — entry point; #ifdef SWOS_SDL_BUILD splits the
+                               SDL2 host from the Amiga -nostdlib/startShim one
+    platform_sdl.c           — window, render, vblank pacing        [SDL only]
+    platform_amiga_stubs.c   — startShim + Amiga-side platform glue
     audio_sdl.c              — SDL2 audio backend
     rjp1.c                   — RJP1 (Richard Joseph Player) module decoder
     input_sdl.c              — keyboard + gamepad → joy0Dat / joy1Dat / CIAA
@@ -380,10 +439,19 @@ src/                         — port source
     swos_globals*.c          — shared backing buffers + `.equ` aliases for
                                adjacent-globals BSS runs that the original
                                Amiga code reads as one struct
-bin/                         — runtime location for assets + binary
+bin/                         — runtime dir for BOTH targets; FS-UAE mounts
+                               this as DH1: so the Amiga sees the same files
     data/, grafs/, sound/    — original Amiga data (NOT in this repo)
-    save/                    — career save files (.CAR)
-    SWOS / SWOS.exe          — the built binary
+    grafs_aga/               — 8-bitplane AGA graphics
+    save/                    — career save files (.CAR/.SEA/.PRE/.DIY/.HIL)
+    SWOS / SWOS.exe          — the built SDL binary
+    SWOS2                    — the built Amiga binary (+ .elf, .map)
+data/                        — IDA/Ghidra reference only, NOT compiled
+                               (Data.c, SWOS2.s, SWOS2_IDA.h)
+asm/, support/               — the small amount of m68k asm still linked in
+uae/                         — FS-UAE bootable-volume scaffolding (dh0/c, dh0/s)
+                               and legacy disk images under uae/artifacts/
+scripts/amiga/               — gdb/profiling harness (AmigaScope submodule)
 .claude/CLAUDE.md            — engineering conventions for contributors
 ```
 
@@ -412,8 +480,8 @@ the long version):
 - **Sensible Software** — original SWOS (1994).
 - **Ben Baker** ([github.com/benbaker76](https://github.com/benbaker76)) —
   reverse-engineered the SWOS Amiga 68k assembly that this C port is built
-  from, and author of the Amiga C port (`SWOS_C`) and the SDL C port
-  (`SWOS_C_SDL`).
+  from, and author of the port (originally as two trees, `SWOS_C` for Amiga
+  and `SWOS_C_SDL` for SDL, merged here into one).
 - **Zlatko Karakaš** ([github.com/zlatkok](https://github.com/zlatkok/)) —
   reverse-engineered the original DOS version.
 - **Richard Joseph** — RJP1 audio engine.
