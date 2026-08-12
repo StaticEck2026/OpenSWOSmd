@@ -20,19 +20,53 @@ GENERAL_DATA_C     ?= 1   # countriesTable, kTeamColorsTable, etc.
 
 DATA_FLAGS = -DCOMPETITION_DATA_C=$(COMPETITION_DATA_C) -DTACTICS_DATA_C=$(TACTICS_DATA_C) -DFIXTURE_DATA_C=$(FIXTURE_DATA_C) -DSIMULATION_DATA_C=$(SIMULATION_DATA_C) -DPLAYER_DATA_C=$(PLAYER_DATA_C) -DRENDER_DATA_C=$(RENDER_DATA_C) -DPALETTE_DATA_C=$(PALETTE_DATA_C) -DSTRINGS_DATA_C=$(STRINGS_DATA_C) -DGENERAL_DATA_C=$(GENERAL_DATA_C)
 
-subdirs := $(filter-out data/,$(wildcard */))
-VPATH = $(subdirs)
-cpp_sources := $(wildcard *.cpp) $(wildcard $(addsuffix *.cpp,$(subdirs)))
+# ---- Sources ----
+# Scan ONLY the directories that actually hold buildable code. This used to be
+# `$(filter-out data/,$(wildcard */))`, which swept every top-level directory —
+# fine when the tree was Amiga-only, but since the SDL merge the root also holds
+# bin/ docs/ tools/ wasm/ scripts/ build/, and a stray .c in any of them (e.g.
+# tools/swos_position_value.c) would silently join the m68k link.
+SRC_DIRS := src
+VPATH     = $(SRC_DIRS) support asm
+
+# SDL-only translation units. They live in the shared src/ (see CLAUDE.md
+# "one C source tree, two targets") but pull in SDL2 / hosted-libc headers the
+# m68k -nostdlib toolchain has no answer for, so they are excluded by NAME here
+# rather than wrapped in #ifdef SWOS_SDL_BUILD — the Amiga build shouldn't pay
+# to preprocess ~14k lines it always discards.
+#
+# Adding a new SDL-only file? Add it here too, or the Amiga build breaks.
+# Anything genuinely shared must compile for BOTH targets — that's the point of
+# the merge; don't "fix" a shared file by adding it to this list.
+SDL_ONLY_SRCS := \
+    arcade.c              \
+    audio_sdl.c           \
+    ini.c                 \
+    input_sdl.c           \
+    menu_load_json.c      \
+    menu_symbols.c        \
+    platform_sdl.c        \
+    rjp1.c                \
+    sfx_debug.c           \
+    stb_image_write_impl.c \
+    swos_settings.c       \
+    tactics_load_json.c
+
+cpp_sources := $(wildcard $(addsuffix /*.cpp,$(SRC_DIRS)))
 cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
-c_sources := $(filter-out support/gcc8_c_support.c main.c,$(wildcard *.c) $(wildcard $(addsuffix *.c,$(subdirs))))
+c_sources := $(filter-out $(addprefix src/,$(SDL_ONLY_SRCS)),$(wildcard $(addsuffix /*.c,$(SRC_DIRS))))
 c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
 s_sources := support/gcc8_a_support.s
 s_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(s_sources))))
 swos_asm_sources := asm/resload_unit.s
 swos_asm_objects := $(addprefix obj/,$(patsubst %.s,%.o,$(notdir $(swos_asm_sources))))
-vasm_sources := $(wildcard *.asm) $(wildcard $(addsuffix *.asm, $(subdirs)))
+vasm_sources := $(wildcard $(addsuffix /*.asm,$(SRC_DIRS)))
 vasm_objects := $(addprefix obj/, $(patsubst %.asm,%.o,$(notdir $(vasm_sources))))
 objects := $(cpp_objects) $(c_objects) $(s_objects) $(swos_asm_objects) $(vasm_objects)
+
+# Fail loudly if an SDL-only name no longer exists — otherwise the entry rots
+# silently and stops excluding anything the day the file is renamed.
+$(foreach f,$(SDL_ONLY_SRCS),$(if $(wildcard src/$(f)),,$(error SDL_ONLY_SRCS lists src/$(f), which does not exist — update Makefile.amiga)))
 
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html
