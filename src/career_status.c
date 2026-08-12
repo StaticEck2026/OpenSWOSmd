@@ -234,6 +234,7 @@ extern DIYCompetitionEx _diyCompetitionStart;
 /* DIY competition struct cast for diyFileBufferCopy / diyCompetitionStart access */
 
 #define GAME_TYPE_CAREER 4
+#define GAME_TYPE_SEASON 3
 
 /* cardsInjuries bit masks */
 #define CI_CARD_BITS         0x03   /* bits 0-1: card severity */
@@ -648,8 +649,28 @@ uint16_t GetNumberOfSubstitutesInSelectionList(TeamFileEx *team, uint16_t extraC
  * Common helper for availability checking.
  * Checks if a player is disabled based on injury/card/bucket bits.
  * Returns 1 if disabled, 0 if available.
+ *
+ * Shared core of GetNumberOfAvailablePlayers / GetNumberOfAvailableSubstitutes
+ * / GetNumberOfAvailableStartingPlayers — i.e. SQUAD-LEGALITY, which is what
+ * ShowOrHidePlayMatchButton gates the PLAY MATCH / VIEW RESULT button on
+ * (SWOS2.s loc_14872A: GetNumberOfAvailablePlayers(d1=11); tst.w d6; bne →
+ * loc_14876E hides the button). An injured starter therefore blocks the match
+ * until he is substituted — correct, original SWOS behaviour.
+ *
+ * That makes this a GAMEPLAY-availability query, so it must honour the same
+ * SWOS_TEST_NO_INJURIES_CARDS override as IsPlayerInjured(). Without it the
+ * beta flag only half-applied: IsPlayerInjured said "nobody is unavailable"
+ * while these counters still read cardsInjuries directly, so a tester with a
+ * pre-existing injury in a loaded save got NO start button at all and was
+ * forced to substitute — exactly what the flag exists to prevent.
+ * The squad screen still shows the red name / "3" indicator, since those are
+ * DISPLAY queries and route through IsPlayerInjuredForDisplay().
  * ================================================================ */
 static uint16_t isPlayerDisabled(PlayerFile *pf, int16_t excludeCardsFlag) {
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    (void)pf; (void)excludeCardsFlag;
+    return 0;
+#else
     uint8_t ci = pf->cardsInjuries;
 
     /* Check status bucket bits (5-7) */
@@ -676,6 +697,7 @@ static uint16_t isPlayerDisabled(PlayerFile *pf, int16_t excludeCardsFlag) {
         return 1;  /* has card → disabled */
 
     return 0;
+#endif
 }
 
 /* ================================================================
@@ -3701,6 +3723,45 @@ extern uint16_t _careerSlotProcessingInProgress;
 extern uint32_t _aEuropeanTour;  /* string label — used as address boundary */
 extern uint32_t _aOceaniaTour;   /* string label — used as address boundary */
 
+extern uint16_t _seasonNumberOfSquads;
+extern uint16_t _seasonSquadTeamNumbers[];
+
+/* Does this fixture belong to a team the PLAYER controls — i.e. should it
+ * consume one of the round's keycache match slots?
+ *
+ * Career (gameType 4): the one career team, selTeamNumber.
+ *
+ * Season (gameType 3): selTeamNumber is NEVER assigned. SeasonMenu calls
+ * InitCareerVariables(GAME_TYPE_SEASON), which sets it to 0xFFFF, and the only
+ * writers (Career_InitializeSelectedTeamAndStartingBalance, via InitCareer /
+ * Career_ContinueToNextSeasonInitTeamAndFunds) are career-only paths — so it
+ * stays 0xFFFF for the whole season. The human-controlled teams live in the
+ * seasonSquadTeamNumbers list instead, which InitNewSeason fills from the
+ * non-computer selected teams using the same PACK_BE_U16 {country, ordinal}
+ * key we compare against here.
+ *
+ * Getting this wrong is not cosmetic: a bare selTeamNumber test is false for
+ * EVERY season match, so the caller's store block never runs — matchFlags /
+ * packedGoals are never written (the season fixture list keeps rendering
+ * "VALENCIA V SEVILLA" for matches already played) and remainingElements never
+ * decrements (Career_PlayMatchMenuLoop then takes its no-advance path, so the
+ * list cursor desyncs from the real league fixture index).
+ */
+static int KeyCacheFixtureIsPlayerControlled(uint16_t t1num, uint16_t t2num)
+{
+    if (t1num == _selTeamNumber || t2num == _selTeamNumber)
+        return 1;
+
+    if (_gameType == GAME_TYPE_SEASON) {
+        for (uint16_t i = 0; i < _seasonNumberOfSquads; i++) {
+            uint16_t id = _seasonSquadTeamNumbers[i];
+            if (id == t1num || id == t2num)
+                return 1;
+        }
+    }
+    return 0;
+}
+
 __attribute__((used, externally_visible))
 void Career_UpdateStatsAfterMatch(TeamFileEx *team1, TeamFileEx *team2, uint16_t compType,
                                     uint16_t packedGoals, uint16_t aggregate,
@@ -3821,13 +3882,19 @@ skipStats: ;
      * the whole block below is skipped there). On SDL the copy's ctl=2 let every
      * auto-played leg over-decrement the cursor entry past 0 -> stray match-score
      * writes smashed an entryStride -> DIY_RecordCupBracketProgress panic 0x6666.
-     * Gate on selTeamNumber: the player's number during interactive play, 0xFFFF
-     * during auto-advance. This reproduces the Amiga's net keycache effect
-     * regardless of the copy's wrong teamControls. (See panic_0x6666 analysis.) */
+     * Gate on the player's team: its number during interactive play, and no
+     * match during auto-advance (selTeamNumber is 0xFFFF there). This
+     * reproduces the Amiga's net keycache effect regardless of the copy's wrong
+     * teamControls. (See panic_0x6666 analysis.)
+     *
+     * The player-team test is MODE-AWARE — season mode never assigns
+     * selTeamNumber, so a bare comparison against it silently disabled this
+     * whole block for every season match. See
+     * KeyCacheFixtureIsPlayerControlled. */
     uint16_t t1num = PACK_BE_U16(team1->team.countryNumber, team1->team.teamOrdinal);
     uint16_t t2num = PACK_BE_U16(team2->team.countryNumber, team2->team.teamOrdinal);
     if ((team1->team.teamControls != 1 || team2->team.teamControls != 1) &&
-        (t1num == _selTeamNumber || t2num == _selTeamNumber)) {
+        KeyCacheFixtureIsPlayerControlled(t1num, t2num)) {
         /* Asm calls GetCurrentSelectedElementPtr FIRST, THEN decrements
          * remainingElements. Order matters: the slot pointer depends on
          * (totalElements - remainingElements) * 12. */
