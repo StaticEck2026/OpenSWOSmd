@@ -14,6 +14,13 @@ are shared — platform divergence is expressed with `#ifdef SWOS_SDL_BUILD`, an
 a short list of SDL-only files is excluded from the m68k build by name
 (`SDL_ONLY_SRCS` in `Makefile.amiga`).
 
+The C didn't come from nowhere: it's the downstream product of
+**[SWOS-RE](https://github.com/benbaker76/SWOS-RE)**, a separate reverse-engineering
+project that documents the original Amiga 68k binary — IDA Pro + Ghidra databases,
+function/variable/struct naming, sprite and menu formats, and the annotated
+`SWOS2.s` disassembly this port was first translated from. If you want to know
+*why* a piece of this code looks the way it does, that's where the answer lives.
+
 > These were two separate repos (`SWOS_C_SDL` and `SWOS_C`) kept in step by a
 > one-way copy script until they were merged on 2026-08-12. Older notes in
 > `docs/` that talk about "back-porting" or `sync_to_amiga_port.sh` describe
@@ -608,9 +615,10 @@ the long version):
 
 - **Sensible Software** — original SWOS (1994).
 - **Ben Baker** ([github.com/benbaker76](https://github.com/benbaker76)) —
-  reverse-engineered the SWOS Amiga 68k assembly that this C port is built
-  from, and author of the port (originally as two trees, `SWOS_C` for Amiga
-  and `SWOS_C_SDL` for SDL, merged here into one).
+  reverse-engineered the SWOS Amiga 68k assembly in
+  **[SWOS-RE](https://github.com/benbaker76/SWOS-RE)**, which this C port grew
+  out of, and author of the port (originally two trees, `SWOS_C` for Amiga and
+  `SWOS_C_SDL` for SDL, merged here into one).
 - **Zlatko Karakaš** ([github.com/zlatkok](https://github.com/zlatkok/)) —
   reverse-engineered the original DOS version.
 - **Richard Joseph** — RJP1 audio engine.

@@ -134,9 +134,24 @@ Nothing is duplicated under `uae/` any more.
 
 ## Sources
 
-- `data/` (in this repo) - IDA/Ghidra reference artifacts: `Data.c`, `SWOS2.s`,
-  `SWOS2_IDA.h`, `SWOS2.h`. **Reference only — not compiled** (`Makefile.amiga`
-  filters `data/` out of the source scan).
+- **SWOS-RE — `C:\Projects\Amiga\SWOS-RE` (github.com/benbaker76/SWOS-RE).**
+  The upstream reverse-engineering project this port grew out of: the
+  documented understanding of the original Amiga 68k binary. **This is the
+  authority on original intent** — when the C looks wrong, arbitrary, or you
+  need to know what a magic constant/struct field/BSS label actually meant,
+  check here BEFORE guessing or "fixing" it. Contains:
+  - `README.md` (~77KB) — the narrative: version info, DOS-vs-Amiga history,
+    formats, and how the RE was done (IDA Pro for symbols → Ghidra for m68k
+    decompilation via a patched exporter plugin → Python cleanup passes).
+  - `Docs/` — `Structs.txt`, `Variables.md`, `Prototypes.txt`, `Menus.txt`,
+    `Sprites.txt`, plus the reloc dumps.
+  - `IDAPro/`, `Ghidra/` — the actual databases.
+  Its DOS-side naming derives from Zlatko Karakaš's DOS IDA database, which is
+  why our symbol names often match the DOS port's.
+- `data/` (in this repo) - IDA/Ghidra reference artifacts exported from
+  SWOS-RE: `Data.c`, `SWOS2.s`, `SWOS2_IDA.h`, `SWOS2.h`. **Reference only —
+  not compiled** (`Makefile.amiga` filters `data/` out of the source scan).
+  These are a *snapshot*; SWOS-RE is the live source.
 - C:\Projects\AI\SWOS\swos-port-c - Partial C++ port with the Amiga game loop working under SDL. Used as the verified game-loop reference.
 - C:\Projects\GitHub\SwosGfx - SWOS graphics conversion app (C#). **`SwosGfx\AmigaTools.cs` is the authoritative reference for parsing Amiga SPRITE, PITCH (tile-map mapping + bitplane tile stream), and PALETTE data.** Consult it whenever implementing or debugging an Amiga asset decoder.
 - C:\msys64\home\headk\rjp1player - RJP1 module player for the original Amiga music modules / SFX extraction.
