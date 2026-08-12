@@ -49,6 +49,10 @@ Working:
 - Crowd chants, in-match SFX (whistle, kicks, throw-ins).
 - Substitutions (triple-tap or Q/W hotkey), tactics editing.
 - 1-player keyboard, 1-player gamepad, 2-player gamepad.
+- Arcade (coin-op) mode with attract loop and operator service menu — see
+  [Arcade mode](#arcade-mode).
+- Runs in the browser via WebAssembly (`make WASM=1`), saves persisted to
+  IndexedDB.
 
 Known issues (open):
 
@@ -79,7 +83,22 @@ bin/
 └── sound/      (HERO.SNG, MENU.SNG, SFX.SNG/IN1/IN2, …)
 ```
 
-`save/` is created on first save.
+**Where saves go differs by target**, because the two have different
+constraints:
+
+- **SDL** writes saves to the per-user folder described under
+  [Settings file](#settings-file-swosini) — e.g.
+  `%USERPROFILE%\Documents\SWOS\save\` — so an installed copy in a
+  read-only directory still works.
+- **Amiga** writes to `bin/save/`, since FS-UAE mounts `bin/` as DH1: and the
+  game's paths are relative to it.
+
+Both are created automatically. The JSON save format is designed to move
+between the two — it serialises *named fields* and semantic identities rather
+than raw memory and pointers, so a save survives 32↔64-bit and LE↔BE. Copying
+a `.CAR`/`.SEA`/`.PRE`/`.DIY`/`.HIL` across has been verified for league
+careers; cup and tournament careers aren't fully cross-target tested yet.
+See `docs/SAVE_FORMAT_JSON.md`.
 
 ## Building
 
@@ -289,25 +308,85 @@ correctly. `stderr` is auto-redirected to `SWOS.log` next to the binary
 
 ### Settings file (`SWOS.ini`)
 
-Display + audio settings persist between runs in `SWOS.ini`, written
-next to the binary. The file is created on first clean shutdown if it
-doesn't exist; missing keys fall back to the hard-coded defaults.
+#### Where it lives
+
+`SWOS.ini` is **not** kept next to the binary — it goes in a per-user
+game folder, alongside your `save/` directory and `SWOS.log`. Install
+directories are frequently read-only (Program Files, `/Applications`,
+a Gatekeeper-quarantined bundle), so config and saves live where the
+user can always write:
+
+| Platform | Folder |
+|----------|--------|
+| Windows (incl. Cygwin) | `%USERPROFILE%\Documents\SWOS\` |
+| macOS                  | `~/Library/Application Support/SWOS/` |
+| Linux / other Unix     | `~/.swos/` |
+| WebAssembly            | `/SWOS.ini` in the IndexedDB-backed mount (mirrored to `localStorage`) |
+
+So on Windows the full path is
+`C:\Users\<you>\Documents\SWOS\SWOS.ini`, with saves in
+`…\Documents\SWOS\save\`. The folder is created at startup. If it
+can't be determined or created (no `%USERPROFILE%` / `$HOME`), the game
+falls back to the current directory, which is how a dev run from `bin/`
+ends up with a local `./SWOS.ini`.
+
+#### How it's applied
 
 Resolution order at launch is: **defaults → SWOS.ini → command-line
-flags** — so a flag always wins over the file, but a value you only
-set in the file (or via runtime keys like `+`/`-` and Alt+Enter) is
-remembered.
+flags** — a flag always wins over the file, but a value you only set in
+the file (or via runtime keys like `+`/`-`, Alt+Enter, or the arcade F2
+service menu) is remembered.
+
+The file is created complete, with comments, if it doesn't exist. On
+exit, any keys a newer build added are **appended** — your hand-edited
+values and comments are never rewritten or reordered.
+
+#### Full key reference
 
 ```ini
 [video]
-renderer=accel        ; software | accel
-vsync=off             ; on | off
+renderer=accel        ; software | accel (hardware-accelerated)
+vsync=off             ; on | off — accel renderer only
+render_driver=auto    ; auto | opengl | direct3d11 | direct3d | software-backend
+                      ; auto = SDL default (D3D11 on Windows). Use opengl if
+                      ; replays/attract run in slow motion on Windows.
 fullscreen=off        ; off | desktop | exclusive
-scale=3               ; 1..4 (windowed only)
+scale=3               ; 1..4 window scale (windowed only)
+resolution=auto       ; WxH (e.g. 2560x1080) drives the render aspect, or
+                      ; auto for the desktop. Need not match the monitor.
+screen=0              ; monitor index to open on, 0 = primary. Auto-clamped.
 
 [audio]
 mode=mono             ; mono | stereo
+
+[general]
+language=en           ; en | de | fr | es | it | nl
+currency=pound        ; pound | dollar | euro
+
+[dos]                 ; PC-only extras (Amiga is the definitive version)
+directory=grafs_dos   ; folder under bin/ to load the DOS assets from
+graphics=false        ; true | false — render the DOS-version graphics
+gameplay=false        ; true | false — DOS 70 FPS physics/timer tuning
+
+[arcade]              ; coin-op mode (PC-only). See docs/ARCADE.md
+enabled=false         ; true | false — boot straight to attract mode, no menu
+mode=GOLDEN GOAL      ; arcade game mode (F2 service menu)
+game_seconds=45       ; 10..600
+golden_goal=true      ; true | false
+penalties_on_draw=true
+goal_replay=true      ; replay each goal (the engine's AUTO REPLAYS)
+attract_audio=music+sfx  ; music (HERO only) | sfx (reel crowd only) | music+sfx
+gameplay=amiga        ; amiga (50fps feel) | dos (70fps); also picks the
+                      ; attract_mode/<mode> reels
+key_p1_credit=5       ; cabinet key bindings, SDL key names. MAME layout:
+key_p1_start=1        ; 5/6 = coin P1/P2, 1/2 = start, F2 = service
+key_p2_credit=6
+key_p2_start=2
+key_service=F2
 ```
+
+Everything in `[arcade]` except `enabled` is also editable in-game from
+the F2 service menu, which writes changes straight back to `SWOS.ini`.
 
 ### Command-line options
 
@@ -345,8 +424,20 @@ mode=mono             ; mono | stereo
                           single-speaker laptops. 'stereo' restores
                           the original Amiga panning if you'd rather
                           hear it that way (e.g. on headphones).
+--dos-graphics=<on|off>   Render the DOS-version graphics (from bin/grafs_dos)
+                          instead of the Amiga graphics. Default: off.
+                          PC-only extra; the Amiga look is the default.
+--dos-gameplay=<on|off>   DOS gameplay tuning — 70 FPS physics/timer rates
+                          instead of the Amiga's 50. Default: off.
+--dos-dir=<folder>        Folder under bin/ to load the DOS assets from.
+                          Default: grafs_dos.
 -h, --help                Show usage and exit.
 ```
+
+There is deliberately **no `--arcade` flag** — arcade mode is enabled only via
+`[arcade] enabled=true` in `SWOS.ini`, so a cabinet can't be knocked out of
+coin-op by a stray command line. Every other `[arcade]` key is adjustable
+in-game from the F2 service menu.
 
 #### Choosing a render mode
 
@@ -409,6 +500,44 @@ built-in DB (Xbox, PS4/5, Switch Pro, most Logitechs are covered), download
 and drop it next to the binary — it'll be picked up at startup.
 `SWOS.log` lists every detected joystick and whether SDL has a mapping for
 it.
+
+## Arcade mode
+
+A coin-op presentation layer over the same match engine: no front-end, no
+career, no save/load UI. The cabinet boots into an **attract loop**, takes
+credits, plays short **first-goal-wins** matches, and has an operator
+**service menu** in the style of a Midway/NBA Hangtime cabinet. It's a
+PC-only extra — the Amiga game is the definitive product, and with arcade
+mode off nothing here is reachable.
+
+Turn it on in `SWOS.ini` (there is no command-line flag, so a stray argument
+can't knock a cabinet out of coin-op):
+
+```ini
+[arcade]
+enabled=true
+```
+
+**Default rules:** 45-second matches, first goal wins (golden goal), a draw
+goes straight to sudden-death penalties, winner stays on. A challenger
+inserts a credit to take the seat. Match length is counted in *game frames*,
+not wall-clock, so it stays deterministic.
+
+**Cabinet keys** (MAME layout, all rebindable via `key_*` in `[arcade]`):
+
+| Key   | Function             |
+|-------|----------------------|
+| `5` / `6` | Insert coin — player 1 / player 2 |
+| `1` / `2` | Start — player 1 / player 2 |
+| `F2`  | Service (operator) menu |
+
+The F2 service menu edits the game rules live — mode, `game_seconds`,
+golden goal, penalties-on-draw, goal replay — and writes them back to
+`SWOS.ini`, so an operator never has to hand-edit the file.
+
+`docs/ARCADE.md` is the full spec: attract-reel structure, the service-menu
+visual style and font, arcade-exclusive pitch art, high-score/name entry,
+the CONTINUE? countdown, and the real-cabinet hardware target.
 
 ## Project layout
 
