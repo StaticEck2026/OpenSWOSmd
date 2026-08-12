@@ -1,0 +1,438 @@
+{
+  "type": "countries",
+  "count": 72,
+  "countries": [
+    {
+      "number": 46,
+      "name": "BRAZIL",
+      "define": "CN_BRAZIL",
+      "team_file": "teams/BRAZIL.json"
+    },
+    {
+      "number": 0,
+      "name": "ALBANIA",
+      "define": "CN_ALBANIA",
+      "team_file": "teams/ALBANIA.json"
+    },
+    {
+      "number": 1,
+      "name": "AUSTRIA",
+      "define": "CN_AUSTRIA",
+      "team_file": "teams/AUSTRIA.json"
+    },
+    {
+      "number": 2,
+      "name": "BELGIUM",
+      "define": "CN_BELGIUM",
+      "team_file": "teams/BELGIUM.json"
+    },
+    {
+      "number": 76,
+      "name": "BELARUS",
+      "define": "CN_BELARUS",
+      "team_file": "teams/BELARUS.json"
+    },
+    {
+      "number": 3,
+      "name": "BULGARIA",
+      "define": "CN_BULGARIA",
+      "team_file": "teams/BULGARIA.json"
+    },
+    {
+      "number": 4,
+      "name": "CROATIA",
+      "define": "CN_CROATIA",
+      "team_file": "teams/CROATIA.json"
+    },
+    {
+      "number": 5,
+      "name": "CYPRUS",
+      "define": "CN_CYPRUS",
+      "team_file": "teams/CYPRUS.json"
+    },
+    {
+      "number": 6,
+      "name": "CZECH_REPUBLIC",
+      "define": "CN_CZECH_REPUBLIC",
+      "team_file": "teams/CZECH_REPUBLIC.json"
+    },
+    {
+      "number": 7,
+      "name": "DENMARK",
+      "define": "CN_DENMARK",
+      "team_file": "teams/DENMARK.json"
+    },
+    {
+      "number": 8,
+      "name": "ENGLAND",
+      "define": "CN_ENGLAND",
+      "team_file": "teams/ENGLAND.json"
+    },
+    {
+      "number": 10,
+      "name": "ESTONIA",
+      "define": "CN_ESTONIA",
+      "team_file": "teams/ESTONIA.json"
+    },
+    {
+      "number": 11,
+      "name": "FAROE_ISLANDS",
+      "define": "CN_FAROE_ISLANDS",
+      "team_file": "teams/FAROE_ISLANDS.json"
+    },
+    {
+      "number": 12,
+      "name": "FINLAND",
+      "define": "CN_FINLAND",
+      "team_file": "teams/FINLAND.json"
+    },
+    {
+      "number": 13,
+      "name": "FRANCE",
+      "define": "CN_FRANCE",
+      "team_file": "teams/FRANCE.json"
+    },
+    {
+      "number": 14,
+      "name": "GERMANY",
+      "define": "CN_GERMANY",
+      "team_file": "teams/GERMANY.json"
+    },
+    {
+      "number": 15,
+      "name": "GREECE",
+      "define": "CN_GREECE",
+      "team_file": "teams/GREECE.json"
+    },
+    {
+      "number": 16,
+      "name": "HUNGARY",
+      "define": "CN_HUNGARY",
+      "team_file": "teams/HUNGARY.json"
+    },
+    {
+      "number": 17,
+      "name": "ICELAND",
+      "define": "CN_ICELAND",
+      "team_file": "teams/ICELAND.json"
+    },
+    {
+      "number": 18,
+      "name": "REPUBLIC_IRELAND",
+      "define": "CN_REPUBLIC_IRELAND",
+      "team_file": "teams/REPUBLIC_IRELAND.json"
+    },
+    {
+      "number": 19,
+      "name": "ISRAEL",
+      "define": "CN_ISRAEL",
+      "team_file": "teams/ISRAEL.json"
+    },
+    {
+      "number": 20,
+      "name": "ITALY",
+      "define": "CN_ITALY",
+      "team_file": "teams/ITALY.json"
+    },
+    {
+      "number": 21,
+      "name": "LATVIA",
+      "define": "CN_LATVIA",
+      "team_file": "teams/LATVIA.json"
+    },
+    {
+      "number": 22,
+      "name": "LITHUANIA",
+      "define": "CN_LITHUANIA",
+      "team_file": "teams/LITHUANIA.json"
+    },
+    {
+      "number": 23,
+      "name": "LUXEMBOURG",
+      "define": "CN_LUXEMBOURG",
+      "team_file": "teams/LUXEMBOURG.json"
+    },
+    {
+      "number": 24,
+      "name": "MALTA",
+      "define": "CN_MALTA",
+      "team_file": "teams/MALTA.json"
+    },
+    {
+      "number": 25,
+      "name": "HOLLAND",
+      "define": "CN_HOLLAND",
+      "team_file": "teams/HOLLAND.json"
+    },
+    {
+      "number": 26,
+      "name": "NORTHERN_IRELAND",
+      "define": "CN_NORTHERN_IRELAND",
+      "team_file": "teams/NORTHERN_IRELAND.json"
+    },
+    {
+      "number": 27,
+      "name": "NORWAY",
+      "define": "CN_NORWAY",
+      "team_file": "teams/NORWAY.json"
+    },
+    {
+      "number": 28,
+      "name": "POLAND",
+      "define": "CN_POLAND",
+      "team_file": "teams/POLAND.json"
+    },
+    {
+      "number": 29,
+      "name": "PORTUGAL",
+      "define": "CN_PORTUGAL",
+      "team_file": "teams/PORTUGAL.json"
+    },
+    {
+      "number": 30,
+      "name": "ROMANIA",
+      "define": "CN_ROMANIA",
+      "team_file": "teams/ROMANIA.json"
+    },
+    {
+      "number": 31,
+      "name": "RUSSIA",
+      "define": "CN_RUSSIA",
+      "team_file": "teams/RUSSIA.json"
+    },
+    {
+      "number": 32,
+      "name": "SAN_MARINO",
+      "define": "CN_SAN_MARINO",
+      "team_file": "teams/SAN_MARINO.json"
+    },
+    {
+      "number": 33,
+      "name": "SCOTLAND",
+      "define": "CN_SCOTLAND",
+      "team_file": "teams/SCOTLAND.json"
+    },
+    {
+      "number": 78,
+      "name": "SLOVAKIA",
+      "define": "CN_SLOVAKIA",
+      "team_file": "teams/SLOVAKIA.json"
+    },
+    {
+      "number": 34,
+      "name": "SLOVENIA",
+      "define": "CN_SLOVENIA",
+      "team_file": "teams/SLOVENIA.json"
+    },
+    {
+      "number": 35,
+      "name": "SPAIN",
+      "define": "CN_SPAIN",
+      "team_file": "teams/SPAIN.json"
+    },
+    {
+      "number": 36,
+      "name": "SWEDEN",
+      "define": "CN_SWEDEN",
+      "team_file": "teams/SWEDEN.json"
+    },
+    {
+      "number": 37,
+      "name": "SWITZERLAND",
+      "define": "CN_SWITZERLAND",
+      "team_file": "teams/SWITZERLAND.json"
+    },
+    {
+      "number": 38,
+      "name": "TURKEY",
+      "define": "CN_TURKEY",
+      "team_file": "teams/TURKEY.json"
+    },
+    {
+      "number": 39,
+      "name": "UKRAINE",
+      "define": "CN_UKRAINE",
+      "team_file": "teams/UKRAINE.json"
+    },
+    {
+      "number": 40,
+      "name": "WALES",
+      "define": "CN_WALES",
+      "team_file": "teams/WALES.json"
+    },
+    {
+      "number": 41,
+      "name": "YUGOSLAVIA",
+      "define": "CN_YUGOSLAVIA",
+      "team_file": "teams/YUGOSLAVIA.json"
+    },
+    {
+      "number": 42,
+      "name": "ALGERIA",
+      "define": "CN_ALGERIA",
+      "team_file": "teams/ALGERIA.json"
+    },
+    {
+      "number": 69,
+      "name": "SOUTH_AFRICA",
+      "define": "CN_SOUTH_AFRICA",
+      "team_file": "teams/SOUTH_AFRICA.json"
+    },
+    {
+      "number": 79,
+      "name": "GHANA",
+      "define": "CN_GHANA",
+      "team_file": "teams/GHANA.json"
+    },
+    {
+      "number": 43,
+      "name": "ARGENTINA",
+      "define": "CN_ARGENTINA",
+      "team_file": "teams/ARGENTINA.json"
+    },
+    {
+      "number": 45,
+      "name": "BOLIVIA",
+      "define": "CN_BOLIVIA",
+      "team_file": "teams/BOLIVIA.json"
+    },
+    {
+      "number": 46,
+      "name": "BRAZIL",
+      "define": "CN_BRAZIL",
+      "team_file": "teams/BRAZIL.json"
+    },
+    {
+      "number": 48,
+      "name": "CHILE",
+      "define": "CN_CHILE",
+      "team_file": "teams/CHILE.json"
+    },
+    {
+      "number": 49,
+      "name": "COLOMBIA",
+      "define": "CN_COLOMBIA",
+      "team_file": "teams/COLOMBIA.json"
+    },
+    {
+      "number": 50,
+      "name": "ECUADOR",
+      "define": "CN_ECUADOR",
+      "team_file": "teams/ECUADOR.json"
+    },
+    {
+      "number": 64,
+      "name": "PARAGUAY",
+      "define": "CN_PARAGUAY",
+      "team_file": "teams/PARAGUAY.json"
+    },
+    {
+      "number": 65,
+      "name": "PERU",
+      "define": "CN_PERU",
+      "team_file": "teams/PERU.json"
+    },
+    {
+      "number": 66,
+      "name": "SURINAM",
+      "define": "CN_SURINAM",
+      "team_file": "teams/SURINAM.json"
+    },
+    {
+      "number": 71,
+      "name": "URUGUAY",
+      "define": "CN_URUGUAY",
+      "team_file": "teams/URUGUAY.json"
+    },
+    {
+      "number": 77,
+      "name": "VENEZUELA",
+      "define": "CN_VENEZUELA",
+      "team_file": "teams/VENEZUELA.json"
+    },
+    {
+      "number": 51,
+      "name": "EL_SALVADOR",
+      "define": "CN_EL_SALVADOR",
+      "team_file": "teams/EL_SALVADOR.json"
+    },
+    {
+      "number": 60,
+      "name": "MEXICO",
+      "define": "CN_MEXICO",
+      "team_file": "teams/MEXICO.json"
+    },
+    {
+      "number": 73,
+      "name": "USA",
+      "define": "CN_USA",
+      "team_file": "teams/USA.json"
+    },
+    {
+      "number": 55,
+      "name": "JAPAN",
+      "define": "CN_JAPAN",
+      "team_file": "teams/JAPAN.json"
+    },
+    {
+      "number": 67,
+      "name": "TAIWAN",
+      "define": "CN_TAIWAN",
+      "team_file": "teams/TAIWAN.json"
+    },
+    {
+      "number": 75,
+      "name": "INDIA",
+      "define": "CN_INDIA",
+      "team_file": "teams/INDIA.json"
+    },
+    {
+      "number": 44,
+      "name": "AUSTRALIA",
+      "define": "CN_AUSTRALIA",
+      "team_file": "teams/AUSTRALIA.json"
+    },
+    {
+      "number": 62,
+      "name": "NEW_ZEALAND",
+      "define": "CN_NEW_ZEALAND",
+      "team_file": "teams/NEW_ZEALAND.json"
+    },
+    {
+      "number": 80,
+      "name": "EUROPE",
+      "define": "CN_EUROPE",
+      "team_file": "teams/EUROPE.json"
+    },
+    {
+      "number": 81,
+      "name": "AFRICA",
+      "define": "CN_AFRICA",
+      "team_file": "teams/AFRICA.json"
+    },
+    {
+      "number": 82,
+      "name": "SOUTH_AMERICA",
+      "define": "CN_SOUTH_AMERICA",
+      "team_file": "teams/SOUTH_AMERICA.json"
+    },
+    {
+      "number": 83,
+      "name": "NORTH_AMERICA",
+      "define": "CN_NORTH_AMERICA",
+      "team_file": "teams/NORTH_AMERICA.json"
+    },
+    {
+      "number": 84,
+      "name": "ASIA",
+      "define": "CN_ASIA",
+      "team_file": "teams/ASIA.json"
+    },
+    {
+      "number": 85,
+      "name": "OCEANIA",
+      "define": "CN_OCEANIA",
+      "team_file": "teams/OCEANIA.json"
+    }
+  ]
+}

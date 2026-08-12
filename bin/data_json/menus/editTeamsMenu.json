@@ -1,0 +1,1859 @@
+{
+  "name": "_editTeamsMenu",
+  "onInit": "EditTeamsInit",
+  "onReturn": "EditTeamsFinish",
+  "onDraw": null,
+  "defaultEntry": 0,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": -63,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 5,
+          "up": -1,
+          "down": 39
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectTeamName"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 274,
+        "y": 0,
+        "w": 30,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -74,
+        "w": 55,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "_aCoach_3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -66,
+        "w": -114,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 20,
+          "up": 54,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectCoachName"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 211,
+      "y": 21
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 0,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aFirstKit"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 7,
+        "w": 46,
+        "h": 33
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_copy",
+          "sprite": "_editTeamsPrimaryShirts"
+        },
+        {
+          "op": "nav",
+          "left": 41,
+          "right": 13,
+          "up": 0,
+          "down": 6
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "EditTeamsChangeShirtsPrimary"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 40,
+        "w": 46,
+        "h": 19
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_copy",
+          "sprite": "_editTeamsShorts"
+        },
+        {
+          "op": "nav",
+          "left": 43,
+          "right": 14,
+          "up": 5,
+          "down": 7
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "EditTeamsChangeShortsPrimary"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 59,
+        "w": 46,
+        "h": 19
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_copy",
+          "sprite": "_editTeamsSocks"
+        },
+        {
+          "op": "nav",
+          "left": 45,
+          "right": 15,
+          "up": 6,
+          "down": 9
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "EditTeamsChangeSocksPrimary"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 211,
+      "y": 101
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 0,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aSecondKit"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 7,
+        "w": 46,
+        "h": 33
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_copy",
+          "sprite": "_editTeamsSecondaryShirt"
+        },
+        {
+          "op": "nav",
+          "left": 49,
+          "right": 17,
+          "up": 7,
+          "down": 10
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "EditTeamsChangeShirtsSecondary"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 40,
+        "w": 46,
+        "h": 19
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_copy",
+          "sprite": "_editTeamsSecondaryShorts"
+        },
+        {
+          "op": "nav",
+          "left": 51,
+          "right": 18,
+          "up": 9,
+          "down": 11
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "EditTeamsChangeShortsSecondary"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 59,
+        "w": 46,
+        "h": 19
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_copy",
+          "sprite": "_editTeamsSecondarySocks"
+        },
+        {
+          "op": "nav",
+          "left": 53,
+          "right": 19,
+          "up": 10,
+          "down": 22
+        },
+        {
+          "op": "input_func",
+          "mask": "0x3C1",
+          "func": "EditTeamsChangeSocksSecondary"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 272,
+      "y": 24
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": -1,
+          "up": 0,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 199
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectPrimaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": -1,
+          "up": 12,
+          "down": 14
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 200
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectPrimaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": -1,
+          "up": 13,
+          "down": 15
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 201
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectPrimaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": -1,
+          "up": 14,
+          "down": 16
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 202
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectPrimaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 272,
+      "y": 104
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": -1,
+          "up": 15,
+          "down": 17
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 199
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectSecondaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": -1,
+          "up": 16,
+          "down": 18
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 200
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectSecondaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 38,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": -1,
+          "up": 17,
+          "down": 19
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 201
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectSecondaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": -1,
+          "up": 18,
+          "down": 21
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "sprite_fg",
+          "index": 202
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsSelectSecondaryShirtType"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -92,
+        "y": -71,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 22,
+          "up": 54,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aImport"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ImportTeamsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 264,
+        "y": 185,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 22,
+          "right": -1,
+          "up": 19,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aOk"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsOK"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -42,
+        "y": -71,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 20,
+          "right": 21,
+          "up": 11,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aUndo"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsUndo"
+        }
+      ]
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "before_draw",
+          "func": "EditTeamsPlayersBeforeDraw"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 22
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 39,
+          "up": 0,
+          "down": 24
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 10,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 40,
+          "up": 23,
+          "down": 25
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 20,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 41,
+          "up": 24,
+          "down": 26
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 30,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 42,
+          "up": 25,
+          "down": 27
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 40,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 43,
+          "up": 26,
+          "down": 28
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 50,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 44,
+          "up": 27,
+          "down": 29
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 60,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 45,
+          "up": 28,
+          "down": 30
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 70,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 46,
+          "up": 29,
+          "down": 31
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 80,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 47,
+          "up": 30,
+          "down": 32
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 90,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 48,
+          "up": 31,
+          "down": 33
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 100,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 49,
+          "up": 32,
+          "down": 34
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 110,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 50,
+          "up": 33,
+          "down": 35
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 120,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 51,
+          "up": 34,
+          "down": 36
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -126,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 52,
+          "up": 35,
+          "down": 37
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -116,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 53,
+          "up": 36,
+          "down": 38
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -106,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 54,
+          "up": 37,
+          "down": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerFace"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 22
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 0,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 23,
+          "right": 5,
+          "up": 0,
+          "down": 40
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 10,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 24,
+          "right": 5,
+          "up": 39,
+          "down": 41
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 20,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 25,
+          "right": 5,
+          "up": 40,
+          "down": 42
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 30,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 26,
+          "right": 5,
+          "up": 41,
+          "down": 43
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 40,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 27,
+          "right": 6,
+          "up": 42,
+          "down": 44
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 50,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 28,
+          "right": 6,
+          "up": 43,
+          "down": 45
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 60,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 29,
+          "right": 7,
+          "up": 44,
+          "down": 46
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 70,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 30,
+          "right": 7,
+          "up": 45,
+          "down": 47
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 80,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 31,
+          "right": 9,
+          "up": 46,
+          "down": 48
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 90,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 32,
+          "right": 9,
+          "up": 47,
+          "down": 49
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 100,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 33,
+          "right": 9,
+          "up": 48,
+          "down": 50
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 110,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 34,
+          "right": 9,
+          "up": 49,
+          "down": 51
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": 120,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 35,
+          "right": 10,
+          "up": 50,
+          "down": 52
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": -126,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 36,
+          "right": 10,
+          "up": 51,
+          "down": 53
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": -116,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 37,
+          "right": 11,
+          "up": 52,
+          "down": 54
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 22,
+        "y": -106,
+        "w": -105,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 38,
+          "right": 11,
+          "up": 53,
+          "down": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTeamsChangePlayerName"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 11,
+        "y": 0,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -92,
+        "y": 0,
+        "w": 9,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -82,
+        "y": 0,
+        "w": 14,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -68,
+        "y": 0,
+        "w": 7,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 181
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -62,
+        "y": 0,
+        "w": 7,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 182
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -91,
+        "y": 0,
+        "w": 9,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 189
+        }
+      ]
+    }
+  ]
+}

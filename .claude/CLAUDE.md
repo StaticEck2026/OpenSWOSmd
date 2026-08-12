@@ -1,494 +1,304 @@
-# CLAUDE.md — SWOS (Amiga 68000) Assembly → C Port Plan
+# OpenSWOS — one C source tree, two targets (Amiga m68k + portable SDL)
 
-## Project Summary
+## What this project is
 
-This is a port of the Amiga Motorola 68000 game **Sensible World of Soccer (SWOS)** from assembly (`SWOS2.s`) to C (with support code in `Resload.s`).
+A pure C port of the Amiga **Sensible World of Soccer**, derived from the
+original `SWOS2.s`. **One** source tree builds **both** targets:
 
-`SWOS2.s` is a **reverse engineered** assembly reconstruction (IDA Pro 9.0). Treat it as mostly correct but not infallible—especially around data offsets, hard-coded addresses, and pointer arithmetic after data relocation.
+| Target | Build | Output | Notes |
+|---|---|---|---|
+| SDL (Linux/Windows/macOS/WASM/ARM) | `make` | `bin/SWOS*` | the day-to-day dev target |
+| Amiga m68k (A1200/AGA) | `make -f Makefile.amiga` | `bin/SWOS2` | runs under FS-UAE/WinUAE or real hardware |
 
-Build environment:
-- VSCode extension: **Amiga C/C++ Compile, Debug & Profile** by Bartman^Abyss
-  https://marketplace.visualstudio.com/items?itemName=BartmanAbyss.amiga-debug
+`src/` and `include/` are **shared**. Platform divergence is expressed with
+`#ifdef SWOS_SDL_BUILD` (defined by `include/swos_platform.h`, which the SDL
+build force-includes via `-include`; the m68k toolchain never defines it).
+A small set of SDL-only sources is excluded from the Amiga build by name —
+see `SDL_ONLY_SRCS` in `Makefile.amiga`.
 
-### How to Build
+> **History:** until 2026-08-12 these were two separate repos (`SWOS_C_SDL`
+> and `SWOS_C`) kept in step by a one-way copy script. They are now merged.
+> **There is no sync step any more — edit the file once.** If you find a doc
+> or comment referring to "the Amiga port" as a separate tree, it predates
+> the merge; fix it when you touch it.
 
-The project **must** be built through the VSCode extension — not from a raw terminal/cygwin shell.
+## Building
 
-**Build from VSCode:** Use the default build task (`Ctrl+Shift+B` or Terminal → Run Build Task).
-This runs the "compile" task defined in `.vscode/tasks.json`.
+Both targets build from a plain bash shell (WSL included) — the old
+"must build from VSCode" restriction is gone.
 
-**What the build task does:**
-- Extension path: `C:\Users\headk\.vscode\extensions\bartmanabyss.amiga-debug-1.7.9\bin\win32\`
-- Runs: `gnumake.exe -j4 program=uae/dh0/data/SWOS2`
-- Sets PATH to include `<ext-bin>\opt\bin` (for `m68k-amiga-elf-gcc`) and `<ext-bin>` (for `vasmm68k_mot`, `elf2hunk`)
-- `${command:amiga.bin-path}` in tasks.json resolves to the extension's platform-specific bin directory at runtime
+```bash
+# SDL, native
+make                      # bin/SWOS (linux x86) / bin/SWOS.exe (cygwin)
+make X86_64=1 -j$(nproc)  # bin/SWOS.x86_64
+make WASM=1               # bin/SWOS.html   (needs emsdk on PATH)
 
-**Why not from terminal:** The Makefile checks `ifdef OS` (set on Windows) and uses `SHELL = cmd.exe` with Windows-specific commands. The m68k cross-compiler toolchain is bundled inside the extension and is NOT on the system PATH. Running `make` from cygwin/bash will silently fail.
-
-**Build outputs:**
-- Binary: `uae/dh0/data/SWOS2` (Amiga hunk executable)
-- ELF: `uae/dh0/data/SWOS2.elf`
-- Map: `uae/dh0/data/SWOS2.map`
-- Object files: `obj/*.o`
-
-**Clean:** Run the "clean" task from VSCode (Terminal → Run Task → clean)
-
-**CLI build (from Claude Code):** Use `build.cmd` which sets up PATH and invokes gnumake:
-```
-C:/Windows/System32/cmd.exe //c C:\\Projects\\AI\\SWOS\\SWOS_C\\build.cmd -j4 program=uae/dh0/data/SWOS2
-```
-The `//c` flag is needed when invoking cmd.exe from cygwin/msys bash (single `/c` is interpreted as a path).
-
-Current status:
-- The project **compiles and runs from `main`** in `main.c`.
-- Only the **`start`** assembly routine has been ported to C:
-  - Ported routine name: `_start`
-  - Location: `SWOS.c`
-- Most code is still in `SWOS2.s`.
-- `Resload.s` is also part of the runtime: it provides the loader/utility routines used by this HDD-run version (it replaces the original WHDLoad-style interfaces, so it must be ported to C as well).
-
-Goal:
-- Port **all** remaining subroutines from `SWOS2.s` (and `Resload.s`) to C in small, safe chunks.
-- Keep the project **compiling at all times**.
-- Keep a running **progress log** here so a new session can resume without re-discovery.
-- Follow the **Project Phases** below — each phase has a hard stop-gate before proceeding.
-
-### Floppy Disk Routines — SKIP
-
-The floppy disk routines (`FloppyAsset_DispatchOp`, `FloppyDev_TransferImpl`, `Floppy_ParseDrivePrefix`, `Floppy_StreamInit`, `Floppy_LoadByName`, `Floppy_SelectId`, `Floppy_DumpStatus`, `Floppy_SendTextRecord`, `Floppy_AllocTmpEntry`, `Floppy_ClearTmpEntry`, `Floppy_ReadFromTmpEntry`, etc.) do **not** need to be ported.
-
-The game is already patched to use HDD routines via `Resload.s` — the floppy code paths are dead code. Leave them in `SWOS2.s` as-is and ignore them during porting.
-
----
-
-## Project Phases — MANDATORY STOP-GATES
-
-This project follows a strict phased approach. **Do NOT skip phases or combine them.**
-
-### Phase 1: Subroutine Porting (CURRENT)
-Port all remaining subroutines from `SWOS2.s` and `Resload.s` to C.
-
-**Completion criteria:** Zero unported subroutines remain (only data declarations, forwarding stubs, and dead floppy code left in assembly).
-
-**When Phase 1 is complete, you MUST:**
-1. Output exactly: `*** READY FOR TESTING PHASE! ***`
-2. **STOP all porting work immediately.** Do not proceed to Phase 2 or Phase 3.
-3. Wait for the user to confirm the game runs correctly before moving on.
-
-### Phase 2: Runtime Testing and Bug Fixing
-The user will test the game in the emulator. Any bugs found will be reported back for fixing.
-
-**Completion criteria:** The user confirms the game is running correctly and gives explicit approval to proceed.
-
-**Do NOT start Phase 3 until the user explicitly says the game is working and gives the go-ahead.**
-
-### Phase 3: Assembly Code Removal
-Once testing passes, remove all remaining assembly **code** (stubs, dead floppy routines) from `SWOS2.s` and `Resload.s`, leaving **only data declarations** in assembly.
-
-**Completion criteria:** Assembly files contain only data (initialized variables, tables, BSS). All code is in C. Build still works.
-
-**After Phase 3, stop and test again before proceeding to Phase 4.**
-
-### Phase 4: Data Migration (Assembly → C)
-Gradually replace assembly data declarations with initialized C data. **This phase requires extreme care:**
-
-- Data in the original assembly is **position-sensitive** — many variables must remain sequential/contiguous in memory because game code relies on adjacent layout (see "Boundary Spill" section above).
-- Migrate data in **small, tested batches** — not all at once.
-- After each batch:
-  1. Build and verify the map file confirms correct placement.
-  2. **User tests the game** to confirm nothing broke.
-  3. Only then proceed to the next batch.
-- Use the linker script (`SWOS2.ld`) to control section placement and ensure Chip RAM data stays in Chip RAM.
-- When data has known adjacency dependencies (contiguous globals), migrate the entire contiguous group together as a struct or adjacent declarations — never split them across separate migration batches.
-- Document each migration batch in PROGRESS.md with: which symbols moved, which memory section, any adjacency constraints preserved.
-
-**This phase will require a coordinated plan before starting — enumerate all data groups, identify adjacency dependencies, plan the migration order, and get user approval before executing.**
-
----
-
-## Required C Types
-
-Use **only** these integer types:
-
-- `int8_t`
-- `int16_t`
-- `int32_t`
-- `uint8_t`
-- `uint16_t`
-- `uint32_t`
-
-Avoid `long`, `short`, `char` (except for raw byte buffers and char* strings), `size_t`, `bool` unless there’s a strong reason and it does not obscure the 68k semantics.
-
-## Struct Access — Use Typed Structs, Not Byte Offsets
-
-All game struct definitions live in **`include/game_types.h`**: `Sprite`, `TeamGeneralInfo`, `TeamGame`, `TeamStatisticsData`, `PlayerInfo`, `GoalieSkill`, `SpriteGraphics`, `GoalInfo`, `ScorerInfo`, `FixedPoint`.
-
-**When porting new code, always use proper struct access:**
-
-- Declare variables with the correct struct type: `Sprite *player`, `TeamGeneralInfo *team`, `TeamGame *teamGame`
-- Access fields via `->` or `.`: `player->x.s.i`, `team->controlledPlayer`, `teamGame->prShirtCol`
-- For FixedPoint (16.16) fields: `.raw` (full int32_t), `.s.i` (int16_t integer part), `.s.frac` (uint16_t fractional part)
-- Include `"game_types.h"` in both `.c` and `.h` files (it provides typedefs too, replacing manual `typedef unsigned char uint8_t` blocks)
-- Declare externs with proper types: `extern Sprite ballSprite;`, `extern TeamGeneralInfo topTeamData;`, `extern TeamGame topTeamInGame;`
-- For pointer-valued globals defined in asm, use typed pointers (`extern Sprite *lastPlayerPlayed;`), NOT `extern uint32_t` — the latter causes LTO type-mismatch warnings
-
-**Do NOT use byte-offset macros** like `RD16(ptr, SPRITE_X)`, `WR16(ptr, offset, val)`, `*(int16_t *)(ptr + 30)`, `TG_W(team, TEAMGAME_PRSHIRTTYPE)`, etc. These were fully removed from the codebase.
-
-### Capitalized offsets in SWOS2.s indicate struct fields
-
-When `SWOS2.s` uses capitalized EQU offsets like `TEAMFILE_TACTICS`, `TEAMFILEEX_TEAM`, `PLAYERFILE_SOMEFLAG`, etc., these correspond to **struct definitions in `data/SWOS2_IDA.h`**. Always look up the struct in `SWOS2_IDA.h` and use the matching C struct from `game_types.h` instead of raw byte offsets.
-
-Additionally, **function prototypes in the asm comments** (e.g., `; prototype: void __usercall Foo(PlayerFile *player@<a0>)`) indicate the types of parameters — use those struct types in the C port.
-
-**Example:** If asm does `move.b $66(a0),d0` and the prototype says `a0` is a player pointer from `GetPlayerAtIndex`, use:
-```c
-PlayerFile *pf = (PlayerFile *)(playerBase + 76);
-uint8_t val = pf->positionAndFace;
-```
-NOT:
-```c
-uint8_t val = playerBase[0x66];
+# Amiga m68k — toolchain ships inside the amiga-debug VSCode extension
+EXT=~/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
+PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
 ```
 
----
+⚠️ **Toggling any `-D` flag requires a `clean` first** on both targets — make
+compares timestamps, not CFLAGS, so a flag change silently relinks stale objects.
+
+## Long-term roadmap
+
+1. ~~**Stabilize the SDL port.**~~ / ~~**Back-port to the Amiga C port.**~~
+   Superseded: the trees are merged, so a fix lands on both targets at once.
+   `SWOS2.s` is retained as a **reference only** (`data/SWOS2.s`) — the Amiga
+   build runs entirely from C.
+2. **Keep both targets building.** Any change to shared code must compile for
+   m68k as well as SDL. The Amiga build is the stricter of the two (32-bit
+   pointers, big-endian, `-nostdlib`), so it catches bitness/endian slips early.
+3. **Untangle the data overlays.** The current code mirrors the Amiga's BSS
+   layout faithfully — adjacent-globals reuse, careerFileBuffer-style
+   overlays, `selTeamsPtr` aliased onto its own data, etc. (see
+   "Adjacent-globals BSS pattern" below). Once both ports run on C, those
+   overlays become **proper structs** with named fields. No more `.equ`
+   aliases, no more "this label is the next label's label", no more
+   adjacent-reads-into-the-following-global. Memory is structured.
+4. **Replace the save format.** The current `.CAR` format is a raw memory
+   dump of the careerFileBuffer overlay region — fragile against any layout
+   change, and contains absolute pointers (see "Pointer-to-disk problem"
+   below). Eventually replace with a structured format (likely JSON or a
+   tagged binary) that serializes named fields, not memory addresses. This
+   change happens *together* on both ports.
+
+What this means for current decisions:
+
+- **"Compatible with Amiga" means our own m68k target, not original SWOS2.s.**
+  Save-file format changes we make are fine — the original Amiga binary is not
+  a compatibility target. SWOS2.s is a *reference*, not a *spec*.
+- **Adjacent-globals workarounds and `.equ` aliases are a transitional
+  scaffold.** They exist so both targets can run today against the same C
+  code. When step 3 happens, we delete every alias and replace every
+  "label-into-next-label" read with a struct field access. Don't write *new*
+  code that depends on adjacency — fix the call site to use a proper struct
+  field instead.
+- **Don't preserve format details that exist only because m68k did them.**
+  Big-endian byte order in the on-disk save, raw pointer fields, the precise
+  98476-byte career-header size — these are all artifacts of the Amiga
+  memory dump, not deliberate format design. They're fair game to change in
+  step 4. Until then we use the BE_*/PACK_BE helpers to keep the SDL build
+  reading the Amiga byte order.
+- **Don't introduce an SDL-only divergence without checking the m68k build.**
+  There is no back-port lag any more — a shared file that only compiles on SDL
+  breaks the Amiga target in the same commit. Build both before you call it done.
+
+## Pointer-to-disk problem
+
+The careerFileBuffer overlay (see `swos_globals_career_overlay.c`) contains
+several BSS labels typed as pointers — `currentCompetitionPtr`,
+`secondaryCompetitionPtr`, `careerCompetitionSlotPtrTable[5]`,
+`*CompStringOffset`, `diyCompetitionTablePtr`, plus runtime-only pointers
+inside `tmdFileBuffer` (`inGameTeamPtr`, `spritesTable`, etc.). Because
+`_SaveCareerFile` is a raw memory dump of the overlay region, those pointer
+*values* end up in the .CAR file. After a rebuild (or load on a different
+machine), the linker places the destination buffers at different addresses
+and the saved pointers become stale.
+
+**Original SWOS2.s ignored this problem** — the Amiga binary loaded at a
+fixed address with a stable BSS layout, so saved pointer values stayed
+valid across runs of the same binary. `LoadCareerFile` does no pointer
+fixups at all (`LoadCompetitionFile` is just a magic-bytes verifier). This
+is one of the bugs we *don't* inherit: our Amiga C port no longer places
+data at fixed addresses either, so the same fixup is needed on both ports.
+
+**The JSON save format is live** (`src/save_format_json.c`, ~3270 lines).
+Build with `make SWOS_SAVE_FORMAT_JSON=1` to write new saves in JSON via
+mjson — pointer fields are emitted as semantic identities (competition id,
+string-pool key, etc.) rather than raw address bytes, so saves round-trip
+across rebuilds and across 32/64-bit. Load auto-detects format from the
+file header so legacy `.CAR` dumps still open. `SWOS_SAVE_FORMAT_JSON_VERIFY=1`
+adds a load-time diff that compares the JSON-derived byte image against the
+opaque-data fallback — a zero-mismatch result means every meaningful byte
+is covered by typed fields/blobs and opaque_data can be removed. Step 4
+of the long-term roadmap is now mostly "delete the legacy dump path once
+all save types are proven."
+
+## Data
+
+`bin/` is the **single** data directory, shared by both targets. The SDL binary
+runs with `bin/` as its CWD; FS-UAE mounts `bin/` as **DH1:** and `cd`s into it,
+so the same relative paths (`data/`, `grafs/`, `sound/`, `save/`) resolve on both.
+Nothing is duplicated under `uae/` any more.
+
+- bin/data - Amiga game data
+- bin/grafs - Amiga graphics in 4 bitplane format
+- bin/grafs_aga - Amiga graphics in 8 bitplane format (AGA pre-processor switches between AGA and non-AGA)
+- bin/grafs_dos, bin/grafs_2020, bin/grafs_arcade - alternate asset tiers (SDL only)
+- bin/sound - Amiga music modules and sound effects in RJP1 format
+- bin/save - save games, shared by both targets
+- bin/data_json - editable JSON that bakes into competition/menu/tactics C (SDL only)
+- If a file starts with `RNC` then it's RNC compressed; `src/rnc.c` decompresses it on both targets.
+
+## Sources
+
+- `data/` (in this repo) - IDA/Ghidra reference artifacts: `Data.c`, `SWOS2.s`,
+  `SWOS2_IDA.h`, `SWOS2.h`. **Reference only — not compiled** (`Makefile.amiga`
+  filters `data/` out of the source scan).
+- C:\Projects\AI\SWOS\swos-port-c - Partial C++ port with the Amiga game loop working under SDL. Used as the verified game-loop reference.
+- C:\Projects\GitHub\SwosGfx - SWOS graphics conversion app (C#). **`SwosGfx\AmigaTools.cs` is the authoritative reference for parsing Amiga SPRITE, PITCH (tile-map mapping + bitplane tile stream), and PALETTE data.** Consult it whenever implementing or debugging an Amiga asset decoder.
+- C:\msys64\home\headk\rjp1player - RJP1 module player for the original Amiga music modules / SFX extraction.
+- github.com/benbaker76/AmigaScope - the gdb/profiling harness, a submodule at `scripts/amiga/amigascope`.
+
+## Files
+
+- `data/Data.c` - C data structures exported from IDA Amiga SWOS
+- `data/SWOS2.s` - Original Amiga SWOS 68k asm
+- C:\Projects\GitHub\SwosGfx\SwosGfx\AmigaTools.cs - Routines to parse and manage Amiga SWOS sprites, pitch and palettes
+- C:\Projects\GitHub\SwosGfx\SwosGfx\bin\Debug\net8.0\Amiga_Images_16 - Extracted graphics from Amiga SWOS in 8bpp BMP format
+
+## Architecture conventions
 
-## Reference Materials
-
-The `data/` folder contains helpful artifacts:
-
-- `data/Data.c` — initialized data from IDA
-- `data/Data.h` — header for IDA initialized data
-- `data/SWOS2.c` — Ghidra decompiled C (reference only; not authoritative)
-- `data/SWOS2.h` — Ghidra header (structs/types reference)
-- `data/SWOS2_IDA.h` — IDA header (structs/types reference)
-- `data/SWOS2.s` — the original assembly file for reference
-
-Use these to:
-- identify structs and field layouts
-- cross-check calling conventions
-- match globals/labels
-- validate control-flow and bit-level logic
-
----
-
-## Memory Layout, CHIP RAM, and Link Validation
-
-### CHIP RAM must remain CHIP RAM
-Data stored in **Chip RAM** must stay there. In particular, variables declared in the **`BSSInChip`** section in `SWOS2.s` must continue to be allocated in Chip RAM after porting.
-
-Practical rules:
-- If a variable currently lives in `BSSInChip`, do **not** accidentally move it to a default `.bss`/FAST RAM region when translating to C.
-- When translating such globals to C, place them in a dedicated linker section that maps to Chip RAM, matching the original intent (see `SWOS2.ld` for memory layout).
-
-### Linker script is authoritative
-The file **`SWOS2.ld`** contains memory layout and section placement rules (including Chip RAM placement). Use it as the primary reference when adding new C modules/sections or when migrating globals out of assembly.
-
-### Validate placement with the map file
-After each build, inspect:
-
-- `uae\dh0\data\SWOS2.map`
-
-Use the map to confirm:
-- code and data are landing in the expected memory regions (Chip vs Fast)
-- `BSSInChip`-equivalent data is still in Chip RAM
-- no large unintended shifts in segment sizes/addresses (which can expose hard-coded offset bugs)
-
-
----
-
-## Overlapping Data, Code-as-Data, and Boundary Spill Issues
-
-The original game (and therefore `SWOS2.s`) may intentionally **overlap memory regions** or reuse an earlier **code block as a data buffer** after it is no longer executed. This is common in highly memory-constrained Amiga/68k code and can also be an artifact of reverse-engineering.
-
-### Pattern A: “Code label is actually data”
-Example (from `ResetResultSprites` in `SWOS2.s`):
-
-```asm
-                lea     (ShowLoaderIntroSequence).l,a3 ; ScorerInfo team1Scorers[8]
-                lea     ((loc_10FE24+2)).l,a4          ; ScorerInfo team2Scorers[8]
-```
-
-In your comments you identified that:
-- `ShowLoaderIntroSequence` should really be `team1Scorers`
-- `loc_10FE24+2` should really be `team2Scorers`
-
-**Porting rule:** do not preserve these “fake” code-label aliases long-term. Move the backing storage into **real variables**:
-- define `team1Scorers` and `team2Scorers` as explicit globals (in the correct memory section)
-- update call sites / `lea` references to point at the real symbols
-- if the original build relied on this region being in CHIP RAM, ensure the replacement storage also lands in CHIP RAM
-
-### Pattern B: Boundary spill (reads/writes past the declared end)
-Sometimes assembly references data **beyond the end of a label’s intended C declaration**, relying on the fact that the next label is placed immediately after it in memory. This can show up as:
-- indexed reads/writes that exceed the “official” array length
-- memcpy/clear loops that run longer than the declared object size
-- struct field access that assumes extra trailing fields/padding from an adjacent object
-
-In these cases, a naive C translation that “tightens” sizes will break behavior.
-
-**Mitigation options (choose the least invasive that preserves layout):**
-1) **Create a wrapper layout struct** that matches the real contiguous memory region, e.g.
-   - `struct Combined { TypeA a; TypeB b; /* ... */ };`
-   - and expose pointers/aliases for `a` and `b` as needed
-2) **Increase the C declaration size** to cover the actual accessed range (and document why).
-   - Example: enlarge an array to include “spill” bytes, or add explicit trailing padding:
-     - `uint8_t pad[N];`
-3) **Keep the object in assembly until verified**, while porting the logic that uses it.
-4) **Add explicit symbols for the “spill” region** if it’s semantically distinct, rather than relying on adjacency.
-
-### How to detect these issues
-- Look for `lea`/`movea` of **code labels** into address registers followed by data-like indexing.
-- Look for `clr`/`move` loops where the loop count does not match the declared C size.
-- Search for symbol+offset patterns that “walk” across neighboring objects.
-- Use `uae\dh0\data\SWOS2.map` to confirm whether two objects were originally contiguous and in which memory region.
-
-### Documentation requirement
-When you identify a code-as-data or boundary-spill dependency:
-- fix the declarations/layout so the behavior remains correct after porting
-- add a short note either in:
-  - the local module header (`*.h`) next to the declarations, **and**
-  - the “Bug Log” / “Pitfalls” area of this document if it was subtle or caused breakage
-
----
-
-## High-Level Porting Strategy
-
-### Keep it compiling: “chunked port”
-Port small groups of subroutines at a time (5–30 functions depending on complexity), and verify:
-1) the project **compiles**
-2) it **links**
-3) the **link/map output** confirms correct memory placement (see map validation section)
-
-### Split the C port into modules
-Do not grow one giant C file. Break translated code into thematic files, e.g.:
-
-- `SWOS.c` / `SWOS.h` (core entrypoints + glue)
-- `menus.c` / `menus.h`
-- `sprites.c` / `sprites.h`
-- `render.c` / `render.h`
-- `audio.c` / `audio.h`
-- `input.c` / `input.h`
-- `teams.c` / `teams.h`
-- `filesystem.c` / `filesystem.h`
-- `math68k.c` / `math68k.h` (mul/div, fixed-point helpers, bit ops)
-- `mem_amiga.c` / `mem_amiga.h` (Chip/Fast allocations, DMA/copper helpers if needed)
-- `debug.c` / `debug.h` (optional instrumentation)
-
-Prefer “one header per module” with clear exported symbols.
-
----
-
-## Naming + Collision Rules
-
-This project will temporarily have both:
-- C implementations of routines
-- assembly stubs (or remaining assembly routines)
-- IDA/assembly globals
-
-To avoid symbol collisions and to make it obvious what is “ported”, use these conventions:
-
-### Functions
-- C-ported functions: prefix with underscore: `_<name>`
-  - example: `_start` (already done)
-  - example: `_ShowMenu`, `_DrawSprite`, `_AudioIRQUpdate`
-- Assembly stubs/exported wrappers should keep original names **without underscore** when needed.
-
-This makes it possible to:
-- keep original symbol names in assembly for call sites
-- redirect calls to the C implementation by changing the call site or by providing a small asm stub that calls `_name`
-
-### Globals / Variables
-- C-side globals that correspond to original variables: prefix with underscore by default: `_<name>`
-- Keep original global names in `data/Data.c` / `data/Data.h` as-is, unless there is an explicit reason to rename.
-- If both exist, the underscore form should be “the new one”, and the non-underscore is “legacy/original”.
-
----
-
-## “Always Compiles” Plan (critical)
-
-When you translate a subroutine to C, you may remove it from `SWOS2.s` to reclaim space. That can break:
-- calls from other assembly code
-- references to symbols (functions, labels, data)
-- linkage order expectations
-
-To prevent the build from breaking, use a two-layer approach:
-
-### Layer 1: Assembly stubs (preferred)
-After removing a function body from `SWOS2.s`, replace it with a tiny stub that preserves the symbol and forwards to C.
-
-Example (conceptual 68k):
-- Original symbol: `Foo`
-- New C function: `_Foo`
-
-Stub keeps the original entrypoint alive:
-- `Foo: jmp _Foo` (or `jsr _Foo; rts` depending on ABI and return expectations)
-
-This ensures:
-- any remaining assembly callers still link
-- the C implementation is used immediately
-
-### Layer 2: Temporary C stubs (fallback)
-If you cannot yet port the full behavior but need the symbol:
-- implement `_Foo` as a stub that returns safely
-- add TODO and expected semantics (inputs/outputs/register behavior)
-- keep the project compiling while you port dependencies in a later chunk
-
-### Layer 3: Minimal “export map”
-Maintain a small mapping list (in this file) describing:
-- original function name
-- C function name
-- stub status
-- dependencies remaining in asm
-
-This prevents “lost work” between sessions.
-
----
-
-## Calling Convention & Register Semantics
-
-The original code uses 68k register calling heavily.
-
-When translating to C:
-- Model register-passed parameters explicitly in the C signature where possible.
-- If the build system uses compiler extensions for register parameters, consider using them only if stable; otherwise:
-  - pass explicit arguments in C and create a tiny asm wrapper to shuffle registers → stack args.
-
-Return values:
-- Single return: normal C return.
-- Multi-register return (e.g., `@<d1:d2>`) should use a struct return in C:
-  - `typedef struct { int16_t x; int16_t y; } Position;`
-  - Return `Position` by value.
-
-Preserve side effects:
-- Some routines return results via pointers or global variables.
-- Some routines clobber registers intentionally. Do not rely on C register allocation matching; explicitly encode outputs.
-
----
-
-## Porting Workflow (repeatable)
-
-For each chunk:
-
-1) **Select a chunk** of functions that are tightly related (same subsystem).
-2) Build a dependency list:
-   - called functions
-   - global variables used
-   - hardware registers accessed
-3) Create/extend a module (e.g., `audio.c`).
-4) Translate function-by-function:
-   - keep logic identical first (no refactors)
-   - preserve signedness and bit widths
-   - keep “magic numbers” intact initially
-5) Add any required structs/enums to the appropriate header.
-6) Add assembly forwarding stubs for the translated functions.
-7) Build.
-8) Review the generated map file and section placement for regressions.
-9) Update **Progress Log** in this file.
-
-**Never** translate a large amount of code without a compile check.
-
----
-
-## Verification Checklist (per chunk)
-
-- [ ] `make clean && make` succeeds
-- [ ] Binary outputs to expected path under `uae/dh0` (per project config)
-- [ ] `uae\dh0\data\SWOS2.map` confirms code/data are placed in the correct memory sections
-- [ ] No new unresolved symbols
-- [ ] Stubs are in place for any removed assembly routines
-- [ ] Updated module headers compile cleanly (no implicit declarations)
-
----
-
-## Progress Log
-
-> **Full progress log moved to `.claude/PROGRESS.md`** to prevent prompt size overflow.
-> Read it with: `Read .claude/PROGRESS.md`
-
-**Current status:** PHASE 1 COMPLETE — 1611 functions ported across 231 chunks.
-
-**Last completed chunk:** Chunk 231 — SelectTeamsFinalMenu (teams.c).
-
-**Phase 1 done.** All game logic ported. Only stubs, data, dead floppy code, interrupt handlers, WHDLoad traps, and low-level HW code remain in assembly. Awaiting user testing (Phase 2).
-
----
-
-## Porting Notes / Rules of Thumb
-
-### Performance: Avoid 32-bit Multiplies on 68020
-
-GCC sometimes promotes 16-bit × 16-bit multiplies to slow 32-bit `muls.l`/`mulu.l` instructions. The original assembly uses fast `muls.w`/`mulu.w` (16×16→32). For performance-critical multiplications, use the inline assembly helpers from `gcc8_c_support.h`:
-
-```c
-#include "gcc8_c_support.h"
-uint32_t result = muluw(a, b);  // unsigned 16×16→32
-int32_t  result = mulsw(a, b);  // signed 16×16→32
-```
-
-This is especially important in hot loops (sprite rendering, physics, per-frame updates).
-
-### Build Flags
-
-Current optimized flags: `-Ofast -flto` (with `-fno-tree-loop-distribution` to prevent loop→memcpy transforms). Do NOT use `-fwhole-program` — it causes crashes. Minimal `memcpy`/`memset`/`memmove` stubs are provided in `main.c` for when LTO still converts loops to library calls.
-
-## Reverse-Engineering Pitfalls and Hard-Coded Offset Bugs
-
-Because `SWOS2.s` is reconstructed from IDA, subtle mistakes can exist—especially when data has moved from the original binary. These issues may look plausible but be wrong in a way that breaks logic after relocation.
-
-Example pattern:
-- An instruction uses a symbol+offset where the real intent was a fixed constant:
-  - `ori.l   #(goalBase+$2292),d0` **should be** `ori.l   #$10000,d0`
-
-Common sources of failure:
-- hard-coded absolute addresses that were not fully normalized during RE
-- symbol-relative offsets that should have been literal constants
-- struct field offsets that are off by a word/long due to incorrect type/packing assumptions
-- pointer arithmetic that assumes an old layout
-
-### If you find one of these bugs
-1) Fix it (prefer the minimal change that restores the intended semantics).
-2) Record it here so it isn’t rediscovered later.
-
-#### Bug Log Template (append entries)
-- Date:
-- Location in `SWOS2.s` (label + line/address):
-- Symptom:
-- Root cause:
-- Before:
-- After:
-- Why it was wrong (reasoning/evidence):
-- Notes / Follow-ups:
-
-#### Bug #1 — IDA address-as-constant in UpdateBall keeper-holds-ball deltaZ
-- Date: 2026-02-19
-- Location: `SWOS2.s`, UpdateBall body, original line ~9517 (`move.l #(frontbufferBaseAlt+$1CAA),d3`)
-- Symptom: deltaZ for keeper-holds-ball (Z<5) path would use garbage address value instead of physics constant
-- Root cause: IDA interpreted raw binary value 0x00010002 as symbol+offset (frontbufferBaseAlt+0x1CAA = 0x64058, not a valid deltaZ)
-- Before: `move.l #(frontbufferBaseAlt+$1CAA),d3`
-- After: `d3 = 0x00010002` (literal constant in C port)
-- Why: 0x00010002 is the positive counterpart of 0xFFFEFFFE used for the Z>5 branch. The two branches handle ball rising vs falling: Z<5 needs positive delta (push ball up), Z>5 needs negative (bring ball down). Exact negation: 0x00010002 = 65538, ~65538+1 = 0xFFFEFFFE. Map file confirmed frontbufferBaseAlt=0x623ae, so 0x623ae+0x1CAA=0x64058 which is nonsensical as a physics value.
-
-#### Bug #2 — GCC `-Ofast` miscompiles nested interleave loop in DIY_BuildTeamGridAndIndexMaps
-- Date: 2026-03-30
-- Location: `src/diy_competition.c`, `_DIY_BuildTeamGridAndIndexMaps`, interleave loop (~line 3356-3399)
-- Symptom: European Champions Cup in career mode showed "AUXERRE" for all 16 teams instead of the correct 16 different team names
-- Root cause: GCC `-Ofast` miscompiled a nested loop with computed array indexing (`dst[d1] = *src++`) where the index `d1` is advanced by a variable stride (`d1 += numGroupSlots`) and wrapped (`while (d1 >= numTeams) d1 -= numTeams`). The loop also has dead-code branches (`d5 = -1`, making `d4 == d5` always false) that the optimizer tried to eliminate. The result: 16 iterations collapsed to 1, writing only 1 of 16 team indices.
-- Fix: `__attribute__((optimize("O1")))` on `_DIY_BuildTeamGridAndIndexMaps` prevents the miscompilation
-- Why it was hard to find: The team IDs in the saved competition context were correct. The team data in `selTeamsPtr` was correct. The Load/Store cycle preserved data correctly. The corruption appeared to be in the saved context offsets (showed BSS-fill pattern), but was actually caused by the interleave writing only 1 of 16 team indices to the shuffle scratch buffer — making 15 of 16 fixture table entries point to the same team.
-- Lesson: **When a complex loop with computed indexing produces wrong results, suspect `-Ofast` miscompilation.** Test by adding `__attribute__((optimize("O1")))` to the function. Nested loops with variable strides, wrap-around arithmetic, and dead-code branches are particularly vulnerable. Dump intermediate buffers to disk (`_DebugDumpToFile`) to compare expected vs actual values.
-
-- Preserve behavior first, refactor later.
-- Treat `uint16_t` vs `int16_t` seriously (branch conditions depend on signedness).
-- Prefer explicit casts when mixing widths.
-- Avoid C UB (shifts, signed overflow). Mirror 68k behavior explicitly.
-- Where assembly uses `swap`, `ext`, `asr/lsl`, model it with explicit masking and casts.
-
----
-
-## Session Handoff Notes (how to resume quickly)
-
-When starting a new session:
-1) Read `.claude/PROGRESS.md` for the full progress log.
-2) Check the **Progress Log** summary above for current chunk status.
-3) Continue from where the last session left off.
-
-**IMPORTANT: Keep CLAUDE.md compact.** Detailed chunk logs go in PROGRESS.md only. The summary above should be ~10 lines max. This prevents "Prompt too long" errors.
+### Graphics pipeline is 8bpp chunky end-to-end
+
+- **Frontbuffer**: 8bpp chunky. One byte per pixel = palette index. RGBA conversion happens only at the SDL texture upload boundary (platform_sdl.c).
+- **Sprites**: 8bpp chunky **after load**. The Amiga bitplane decode happens once in `_ProcessImageCommandStream` (src/image_cmd.c) — every render-time consumer (blitter, `_ConvertSpriteColors`, glyph blit, `_Text2Sprite`, etc.) reads chunky bytes, not planes.
+- **Why**: eliminates per-pixel bitplane-gather at blit time, reduces `_ConvertSpriteColors` to a 1-byte LUT, and unifies the render path with the DOS-data variant so either asset set works with the same pipeline. Conversion is the responsibility of the loader, not every downstream function.
+- When adding new rendering code, assume 8bpp chunky sprite data. If you need the bitplane layout, you are doing something wrong — fix the load site instead.
+
+### Endian-swap macros are explicit for back-portability
+
+SWOS data files (team files, RNC headers, save games, audio modules) were authored on Amiga m68k (big-endian). Fixes for the x86 LE host MUST go through `src/endian_helpers.h` rather than inline byte arithmetic or `__builtin_bswap*` calls, so the SDL changes can be cherry-picked cleanly back to the Amiga tree (where every macro is a no-op).
+
+Use:
+- `BE16_TO_HOST(x)` / `HOST_TO_BE16(x)` — 16-bit byteswap (no-op on BE host)
+- `BE32_TO_HOST(x)` / `HOST_TO_BE32(x)` — 32-bit byteswap
+- `BE_READ_U16(p)` / `BE_READ_U32(p)` — unaligned big-endian read from a byte pointer (use for file-format headers like RNC)
+- `BE_WRITE_U16` / `BE_WRITE_U32` — unaligned BE write
+- `PACK_BE_U16(hi, lo)` — combine two separate single-byte struct fields into the uint16 an m68k `move.w` would produce. Use this wherever the original asm/C did `*(uint16_t *)&struct.byteField` and the next byte is a *separate* logical field (e.g. `PACK_BE_U16(team.countryNumber, team.teamOrdinal)` for team id).
+
+Do **not** write `*(uint16_t *)&foo.byteField`, `((uint16_t)hi << 8) | lo`, or hand-rolled byte arithmetic for endian-sensitive reads — use the macros so the intent is greppable and the Amiga build stays compatible.
+
+### Save/load is typed JSON of NAMED fields — no addresses, no ranges, no raw dumps
+
+The save/load format (`src/save_format_json.c`) serializes **named fields** to
+JSON. This is the same cleanup as untangling the Amiga's overlapped /
+adjacency-packed data (roadmap step 3): the on-disk format must be **decoupled
+from the runtime memory layout** so a save survives rebuilds, 32↔64-bit, and
+LE↔BE. The Amiga's memory-saving tricks (overlaid globals, "this label is the
+next label's label", region dumps) are what made SWOS hard to reverse-engineer
+— they must NOT leak into the save format.
+
+Save/load must **never**:
+
+- **Decide what to save/restore by a runtime ADDRESS RANGE.** Testing a field's
+  runtime address against a `[&symA, &symB)` pointer span — e.g.
+  `field_in_range(f, &competitionFileBuffer, &numSelectedTeams)` — is
+  forbidden. Symbol addresses are build/target-specific: a range that is valid
+  on the 64-bit SDL build is **empty or inverted** on the 32-bit Amiga when the
+  two symbols' relative order flips. (Real bug, 2026-06-09: on the Amiga
+  `&competitionFileBuffer` (0x565a94) sorts *above* `&numSelectedTeams`
+  (0x33cb00), so the `.DIY` comp-scalars range was empty, `numSelectedTeams`
+  never restored → 0 → cup `_VerifyTeamLoaded` panic.) Select fields to
+  serialize by **explicit name/key**, never by address span — and never do
+  "fuzzy"/approximate pointer comparisons either.
+- **Emit raw binary memory dumps** of a struct/overlay region (a `FLD_BYTES` of
+  a whole buffer). Promote each region to typed, named fields.
+- **Emit or compare pointers / pseudo-pointer (address-derived) values.** Save a
+  semantic identity (competition id, team index, string-pool key) and
+  re-derive the pointer on load.
+
+If you find yourself comparing `&globalA` to `&globalB`, gating on whether an
+address falls in a span, or copying a region by address span — stop. That is
+the exact fragility this format exists to remove.
+
+**KEEP binary READ support for `.TAC`, `.HIL`, `.EDT`, and `.CFG`.** The JSON
+migration applies to the big overlay-dump saves (`.CAR`/`.SEA`/`.PRE`/`.DIY`) —
+there the legacy raw-dump *reader* is dead post-untangle and is being retired.
+But the small fixed-layout binary records (`.TAC` tactics, `.HIL` highlights,
+`.EDT` edited teams / `CUSTOMS.EDT`, `.CFG` options) are still authored/consumed
+as binary (`.EDT` is a SWOS-community interop format too); their
+`_Read*`/`_Load*`/`_LoadFileEx` paths are NOT legacy and must be maintained.
+Don't fold them into a "retire legacy reads" cleanup. See `docs/SAVE_DATA.md`
+"Format migration / read-support policy".
+
+### NULL-deref crashes are a symptom, not a bug
+
+When ported asm code SIGSEGVs on a pointer field (`team->inGameTeamPtr`, `team->spritesTable`, a SpriteGraphics slot, etc.), **do not add a `if (!ptr) return;` guard and move on**. The guard masks a real problem:
+
+- On Amiga the BSS was one flat `ds.b` block. Every symbol landed somewhere mapped and adjacent globals were contiguous, so reads past the "end" of a variable silently picked up the next declared global (often intentional — see the `stadiumMenuLittlePlayer`/`littlePlayerSpriteGeneric`/`littlePlayersColorTable` triple that `MENU_CMD_SPRITE_COPY` reads as one 36-byte struct).
+- On our SDL host each global is its own `.o` symbol at a linker-determined address. Reads beyond a variable's declared size hit an unrelated global — or unmapped memory — and nothing is adjacent unless we make it so.
+
+When you see a NULL-deref crash, root-cause it:
+
+1. **Look at the Amiga source.** If the crashing code is reading `*(type *)&sym + offset`, grep `SWOS2.s` (or the Amiga-port `Data.c`) for the label — whatever `dc.b`/`dc.w`/`dc.l` follows it is the "next global" the code expects adjacent. Merge the run into one shared backing buffer with `.equ` symbol aliases (see `stadiumMenuLittlePlayerBackingBuf` / `currentMenu` in `src/swos_globals.c` for the pattern).
+2. **Look for undersized stubs.** If the crashing pointer should have been written during init, trace back — is it a `char foo[4096]` auto-stub in `swos_amiga_data_stubs.c` masking a typed definition the code expects? Replace the stub with the real typed data from `Data.c` / `SWOS2.s` (see `src/swos_data_bulk_imports.c` for the bulk-imported set).
+3. **Look for int8_t-vs-int16_t traps.** A `int8_t[2N]` definition that the game reads as `int16_t[N]` decodes to different values on LE vs BE — crashes and weird behaviour both come from this. Re-encode the table with the correct type.
+4. **Only after ruling the above out**, consider whether the pointer is genuinely optional in the intended design (rare — most of these fields were guaranteed non-NULL by the original Amiga layout).
+
+Adding a NULL guard "because it crashes" hides whichever of 1/2/3 is actually wrong and lets unrelated data stay broken for longer.
+
+### Panics are signals — never patch them out
+
+The same rule applies to every original-asm panic, not just NULL-deref SIGSEGVs. The Amiga code panics (`_PanicHaltLoop`, `panicReasonCode = 0x...`) when an invariant has been violated — a team that was supposed to be in the cache isn't, a slot count that should be 16 is 6073, a magic value got stomped, a `findInList` walked off the end. These panics are the original game telling us the *previous* setup step left state in a shape it shouldn't be. **Trust them.**
+
+Do not:
+- Replace `_PanicHaltLoop()` with a `return` / fallback / "load it now" path to make the menu draw work.
+- Add a `if (X != expected) X = sane_default;` clamp before a panic-checking site.
+- Wrap a `_VerifyTeamLoaded` / `_FindTeamInDIY` / `_GetCurrentSeasonPointer` call in a fallback that loads or fabricates the data the original would have expected to already be there.
+- Bump a sentinel/epsilon to silence a `magicValue != 0x12345678` check.
+
+Do:
+- **Trace upward.** What was meant to populate the missing data? Add prints there to verify it ran and wrote the expected values.
+- **Compare to the asm.** Find the analogous call site in `SWOS2.s` and check it matches the C ordering, parameters, and side effects (especially registers d0-d7/a0-a6 the asm relied on as scratch state).
+- **Suspect adjacency / endian / sizing first.** 90% of the panics we hit on bring-up are one of: undersized backing buffer (`teamSelectionKeyCache` was 1 byte), `int8_t[2N]` stored where the game reads `int16_t[N]`, `*(uint16_t *)p` reading a `{country, ordinal}` byte pair without `BE_READ_U16`, or a `.equ`-aliased global the SDL build forgot to alias.
+- **Leave the panic in.** Once the *real* setup bug is fixed, the panic stops firing on its own. If you can't find the cause yet, leave the crash and tell the user — a hard panic on an unknown invariant is far more useful than silent corruption.
+
+Patching out a panic to "make the screen render" is the worst kind of bring-up debt: the symptom disappears but the corrupted state propagates into save files, wage calculations, scorer tables, etc., where it surfaces hours later as something completely unrelated.
+
+### Amiga target: CHIP RAM placement is load-bearing
+
+Data the original kept in **Chip RAM** must stay there — anything the custom
+chips DMA from (copper lists, bitplanes, the frontbuffer, audio samples) is
+unreachable from Fast RAM and fails silently or corrupts the display.
+
+- Globals that lived in `BSSInChip` in `SWOS2.s` must land in Chip RAM in C.
+  Use the `SWOS_CHIP_BSS` section attribute (`include/swos_sections.h`), not a
+  plain `.bss` definition.
+- **`SWOS2.ld` is authoritative** for section placement and the memory map.
+  Read it before adding a new module or migrating a global out of asm.
+- **Validate every Amiga build against the map file** (`bin/SWOS2.map`):
+  - code/data land in the expected region (Chip vs Fast)
+  - `BSSInChip`-equivalent data is still in Chip RAM
+  - no large unintended shifts in segment sizes — those expose hard-coded
+    offset bugs elsewhere
+
+On SDL these attributes compile to no-ops, so a Chip-RAM mistake is **invisible
+on the SDL target** and only shows up on Amiga. Check the map, don't assume.
+
+### Amiga target: code-as-data and boundary spill
+
+`SWOS2.s` sometimes reuses a **code block as a data buffer** once it's no longer
+executed (e.g. `ShowLoaderIntroSequence` is really `team1Scorers[8]`), and
+sometimes indexes **past the declared end** of a label, relying on the next
+label being contiguous.
+
+Porting rule: do **not** preserve the fake code-label aliases. Move the storage
+into real, correctly-typed globals in the correct section, and update the call
+sites. For genuine adjacency, merge the run into one backing buffer with `.equ`
+aliases — see the `stadiumMenuLittlePlayer` triple in `src/swos_globals.c`, and
+"NULL-deref crashes are a symptom" above. Use `bin/SWOS2.map` to confirm whether
+two objects really were contiguous.
+
+### Required C types
+
+Use only the fixed-width integer types: `int8_t`/`int16_t`/`int32_t` and their
+`uint` counterparts. Avoid `long`, `short`, `char` (except raw byte buffers and
+`char *` strings), `size_t` and `bool` unless there's a strong reason — the
+widths differ between the 32-bit m68k target and the 64-bit SDL hosts, and
+obscuring the 68k semantics is how endian/size bugs get in.
+
+### Struct access — typed structs, not byte offsets
+
+Game struct definitions live in **`include/game_types.h`**. Access fields via
+`->`/`.`, declare externs with real types (`extern Sprite *lastPlayerPlayed;`,
+not `extern uint32_t`). For `FixedPoint` (16.16): `.raw`, `.s.i`, `.s.frac`.
+
+Do **not** reintroduce byte-offset macros (`RD16(ptr, SPRITE_X)`,
+`*(int16_t *)(ptr + 30)`, …) — they were fully removed. When `SWOS2.s` uses a
+capitalised EQU offset like `TEAMFILE_TACTICS`, look the struct up in
+`data/SWOS2_IDA.h` and use the matching `game_types.h` struct. Prototypes in the
+asm comments (`; prototype: void __usercall Foo(PlayerFile *player@<a0>)`) tell
+you the parameter types.

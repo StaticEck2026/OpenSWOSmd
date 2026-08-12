@@ -1,0 +1,199 @@
+{
+  "type": "qualifying_groups",
+  "count": 10,
+  "groups": [
+    {
+      "id": "_worldCupQualifyingGroups",
+      "comp_cup": [
+        "_worldCupQualifyingGroup1",
+        "_worldCupQualifyingGroup2",
+        "_worldCupQualifyingGroup3",
+        "_worldCupQualifyingGroup4",
+        "_worldCupQualifyingGroup5",
+        "_worldCupQualifyingGroup6",
+        "_worldCupQualifyingGroup7",
+        "_worldCupQualifyingGroup8",
+        -1
+      ],
+      "countries": [
+        255
+      ]
+    },
+    {
+      "id": "_ecQualifyingGroups",
+      "comp_cup": [
+        "_ecQualifyingGroup1",
+        "_ecQualifyingGroup2",
+        "_ecQualifyingGroup3",
+        "_ecQualifyingGroup4",
+        "_ecQualifyingGroup5",
+        "_ecQualifyingGroup6",
+        "_ecQualifyingGroup7",
+        "_ecQualifyingGroup8",
+        -1
+      ],
+      "countries": [
+        255
+      ]
+    },
+    {
+      "id": "_customsTable",
+      "comp_cup": [
+        "_customsLeague",
+        -2,
+        -1
+      ],
+      "countries": []
+    },
+    {
+      "id": "_worldTable",
+      "comp_cup": [
+        "_worldCup",
+        -1
+      ],
+      "countries": [
+        80,
+        83,
+        82,
+        81,
+        84,
+        85,
+        255
+      ]
+    },
+    {
+      "id": "_europeTable",
+      "comp_cup": [
+        252,
+        "_europeanChampionships",
+        "_euroCup",
+        "_cupWinnersCup",
+        "_uefaCup",
+        -1
+      ],
+      "countries": [
+        0,
+        1,
+        76,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        25,
+        16,
+        17,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        26,
+        27,
+        28,
+        29,
+        18,
+        30,
+        31,
+        32,
+        33,
+        78,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        255
+      ]
+    },
+    {
+      "id": "_africaTable",
+      "comp_cup": [
+        "_africaWorldCupQualification",
+        "_africanNationsCup",
+        -1
+      ],
+      "countries": [
+        42,
+        79,
+        69,
+        255
+      ]
+    },
+    {
+      "id": "_southAmericaTable",
+      "comp_cup": [
+        "_southAmericaWorldCupQualification",
+        "_copaAmerica",
+        -1
+      ],
+      "countries": [
+        43,
+        45,
+        46,
+        48,
+        49,
+        50,
+        64,
+        65,
+        66,
+        71,
+        77,
+        255
+      ]
+    },
+    {
+      "id": "_northAmericaTable",
+      "comp_cup": [
+        "_northAmericaWorldCupQualification",
+        "_northAmericanCup",
+        -1
+      ],
+      "countries": [
+        51,
+        60,
+        73,
+        255
+      ]
+    },
+    {
+      "id": "_asiaTable",
+      "comp_cup": [
+        "_asiaWorldCupQualification",
+        "_asianCup",
+        -1
+      ],
+      "countries": [
+        75,
+        55,
+        67,
+        255
+      ]
+    },
+    {
+      "id": "_oceaniaTable",
+      "comp_cup": [
+        "_oceaniaWorldCupQualification",
+        "_oceaniaCup",
+        -1
+      ],
+      "countries": [
+        44,
+        62,
+        255
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1173 @@
+{
+  "name": "_selectFilesMenu",
+  "onInit": "SelectFilesInit",
+  "onReturn": "SelectFilesOnReturn",
+  "onDraw": null,
+  "defaultEntry": 16,
+  "items": [
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 2,
+        "y": 0,
+        "w": 300,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": -1
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SelFilesOnSelectCommon"
+        },
+        {
+          "op": "before_draw",
+          "func": "SelFilesDrawItemDescription"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 21,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 16,
+          "up": -1,
+          "down": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 30,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 17,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 39,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 18,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 48,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 19,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 57,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 20,
+          "up": 4,
+          "down": 6
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 66,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 21,
+          "up": 5,
+          "down": 7
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 75,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 22,
+          "up": 6,
+          "down": 8
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 84,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 23,
+          "up": 7,
+          "down": 9
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 93,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 24,
+          "up": 8,
+          "down": 10
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 102,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 25,
+          "up": 9,
+          "down": 11
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 111,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 26,
+          "up": 10,
+          "down": 12
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 120,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 27,
+          "up": 11,
+          "down": 13
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -127,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 28,
+          "up": 12,
+          "down": 14
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -118,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 29,
+          "up": 13,
+          "down": 15
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -109,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 30,
+          "up": 14,
+          "down": 48
+        },
+        {
+          "op": "up_skip",
+          "skip": 15,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 21,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 1,
+          "right": 31,
+          "up": -1,
+          "down": 17
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 30,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 2,
+          "right": 32,
+          "up": 16,
+          "down": 18
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 39,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 33,
+          "up": 17,
+          "down": 19
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 48,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 34,
+          "up": 18,
+          "down": 20
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 57,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 35,
+          "up": 19,
+          "down": 21
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 66,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 36,
+          "up": 20,
+          "down": 22
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 75,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": 37,
+          "up": 21,
+          "down": 23
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 84,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": 38,
+          "up": 22,
+          "down": 24
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 93,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": 39,
+          "up": 23,
+          "down": 25
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 102,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 40,
+          "up": 24,
+          "down": 26
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 111,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": 41,
+          "up": 25,
+          "down": 27
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": 120,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 12,
+          "right": 42,
+          "up": 26,
+          "down": 28
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": -127,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 13,
+          "right": 43,
+          "up": 27,
+          "down": 29
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": -118,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 14,
+          "right": 44,
+          "up": 28,
+          "down": 30
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 104,
+        "y": -109,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 15,
+          "right": 45,
+          "up": 29,
+          "down": 48
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 21,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 16,
+          "right": -1,
+          "up": -1,
+          "down": 32
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 30,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 17,
+          "right": -1,
+          "up": 31,
+          "down": 33
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 39,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 18,
+          "right": -1,
+          "up": 32,
+          "down": 34
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 48,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 19,
+          "right": -1,
+          "up": 33,
+          "down": 35
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 57,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 20,
+          "right": -1,
+          "up": 34,
+          "down": 36
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 66,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 21,
+          "right": -1,
+          "up": 35,
+          "down": 37
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 75,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 22,
+          "right": -1,
+          "up": 36,
+          "down": 38
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 84,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 23,
+          "right": -1,
+          "up": 37,
+          "down": 39
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 93,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 24,
+          "right": -1,
+          "up": 38,
+          "down": 40
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 102,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 25,
+          "right": -1,
+          "up": 39,
+          "down": 41
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 111,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 26,
+          "right": -1,
+          "up": 40,
+          "down": 42
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": 120,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 27,
+          "right": -1,
+          "up": 41,
+          "down": 43
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": -127,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 28,
+          "right": -1,
+          "up": 42,
+          "down": 44
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": -118,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 29,
+          "right": -1,
+          "up": 43,
+          "down": 45
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -48,
+        "y": -109,
+        "w": 56,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 30,
+          "right": -1,
+          "up": 44,
+          "down": 48
+        },
+        {
+          "op": "down_skip",
+          "skip": 45,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 39,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 111,
+        "y": -104,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "str": "_aFilename"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 112,
+        "y": -104,
+        "w": 80,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 30,
+          "down": 49
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SelectFilesInputSaveFilenameOnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -91,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "nav",
+          "left": 15,
+          "right": 45,
+          "up": 48,
+          "down": 50
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aSave"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SelectFilenameToSaveAndExit"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -71,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 15,
+          "right": 45,
+          "up": 49,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aAbort"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "AbortSaveFile"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,245 @@
+{
+  "type": "seed_buckets",
+  "_comment": "euro_cup_qual_seed_buckets = UEFA Cup berths per country, by coefficient tier; order matters; re-expanded to repeated country numbers + 0xFF sentinel on load. See docs/DATA_CUSTOMIZE.md.",
+  "euro_cup_qual_seed_buckets": [
+    {
+      "tier": "bucket15",
+      "size": 15,
+      "allocation": [
+        {
+          "country": "GERMANY",
+          "number": 14,
+          "berths": 4
+        },
+        {
+          "country": "ITALY",
+          "number": 20,
+          "berths": 4
+        },
+        {
+          "country": "SPAIN",
+          "number": 35,
+          "berths": 4
+        },
+        {
+          "country": "ENGLAND",
+          "number": 8,
+          "berths": 3
+        }
+      ]
+    },
+    {
+      "tier": "bucket18",
+      "size": 18,
+      "allocation": [
+        {
+          "country": "BELGIUM",
+          "number": 2,
+          "berths": 3
+        },
+        {
+          "country": "FRANCE",
+          "number": 13,
+          "berths": 3
+        },
+        {
+          "country": "PORTUGAL",
+          "number": 29,
+          "berths": 3
+        },
+        {
+          "country": "ROMANIA",
+          "number": 30,
+          "berths": 3
+        },
+        {
+          "country": "RUSSIA",
+          "number": 31,
+          "berths": 3
+        },
+        {
+          "country": "YUGOSLAVIA",
+          "number": 41,
+          "berths": 3
+        }
+      ]
+    },
+    {
+      "tier": "bucket22",
+      "size": 22,
+      "allocation": [
+        {
+          "country": "AUSTRIA",
+          "number": 1,
+          "berths": 2
+        },
+        {
+          "country": "BULGARIA",
+          "number": 3,
+          "berths": 2
+        },
+        {
+          "country": "CZECH_REPUBLIC",
+          "number": 6,
+          "berths": 2
+        },
+        {
+          "country": "DENMARK",
+          "number": 7,
+          "berths": 2
+        },
+        {
+          "country": "GREECE",
+          "number": 15,
+          "berths": 2
+        },
+        {
+          "country": "HOLLAND",
+          "number": 25,
+          "berths": 2
+        },
+        {
+          "country": "POLAND",
+          "number": 28,
+          "berths": 2
+        },
+        {
+          "country": "SCOTLAND",
+          "number": 33,
+          "berths": 2
+        },
+        {
+          "country": "SWEDEN",
+          "number": 36,
+          "berths": 2
+        },
+        {
+          "country": "SWITZERLAND",
+          "number": 37,
+          "berths": 2
+        },
+        {
+          "country": "TURKEY",
+          "number": 38,
+          "berths": 2
+        }
+      ]
+    },
+    {
+      "tier": "bucket22Full",
+      "size": 23,
+      "allocation": [
+        {
+          "country": "HUNGARY",
+          "number": 16,
+          "berths": 1
+        },
+        {
+          "country": "FINLAND",
+          "number": 12,
+          "berths": 1
+        },
+        {
+          "country": "ALBANIA",
+          "number": 0,
+          "berths": 1
+        },
+        {
+          "country": "ICELAND",
+          "number": 17,
+          "berths": 1
+        },
+        {
+          "country": "CYPRUS",
+          "number": 5,
+          "berths": 1
+        },
+        {
+          "country": "NORWAY",
+          "number": 27,
+          "berths": 1
+        },
+        {
+          "country": "NORTHERN_IRELAND",
+          "number": 26,
+          "berths": 1
+        },
+        {
+          "country": "MALTA",
+          "number": 24,
+          "berths": 1
+        },
+        {
+          "country": "REPUBLIC_IRELAND",
+          "number": 18,
+          "berths": 1
+        },
+        {
+          "country": "LUXEMBOURG",
+          "number": 23,
+          "berths": 1
+        },
+        {
+          "country": "CROATIA",
+          "number": 4,
+          "berths": 1
+        },
+        {
+          "country": "ESTONIA",
+          "number": 10,
+          "berths": 1
+        },
+        {
+          "country": "FAROE_ISLANDS",
+          "number": 11,
+          "berths": 1
+        },
+        {
+          "country": "ISRAEL",
+          "number": 19,
+          "berths": 1
+        },
+        {
+          "country": "LATVIA",
+          "number": 21,
+          "berths": 1
+        },
+        {
+          "country": "LITHUANIA",
+          "number": 22,
+          "berths": 1
+        },
+        {
+          "country": "SAN_MARINO",
+          "number": 32,
+          "berths": 1
+        },
+        {
+          "country": "SLOVENIA",
+          "number": 34,
+          "berths": 1
+        },
+        {
+          "country": "UKRAINE",
+          "number": 39,
+          "berths": 1
+        },
+        {
+          "country": "WALES",
+          "number": 40,
+          "berths": 1
+        },
+        {
+          "country": "BELARUS",
+          "number": 76,
+          "berths": 1
+        },
+        {
+          "country": "SLOVAKIA",
+          "number": 78,
+          "berths": 1
+        }
+      ]
+    }
+  ]
+}

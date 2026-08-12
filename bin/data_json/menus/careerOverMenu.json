@@ -1,0 +1,252 @@
+{
+  "name": "_careerOverMenu",
+  "onInit": "CareerOverInit",
+  "onReturn": "CareerOverFinish",
+  "onDraw": null,
+  "defaultEntry": 4,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 90,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 7,
+          "background_color": 9
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 91,
+        "y": 0,
+        "w": 122,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -42,
+        "y": 0,
+        "w": 90,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 7,
+          "background_color": 9
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 82,
+        "y": 25,
+        "w": -116,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aYourCareerIsOv"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 50,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aViewCompetitio"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ViewCompetitionsMenuRetired"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 70,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": 6
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aJobOffers"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "JobOffersMenuRetired"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 82,
+        "y": 118,
+        "w": -116,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": 7
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aContinueCareer"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ContinueCareer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -91,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 6,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aSaveCareer"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SaveCareer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -71,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 7,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ExitCareerMenu"
+        }
+      ]
+    }
+  ]
+}

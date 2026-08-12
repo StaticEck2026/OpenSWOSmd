@@ -11,6 +11,7 @@
 #include "chairman_memo.h"
 #include "menu_system.h"
 #include "input_text.h"
+#include "translations.h"   /* tr_ptr — localize the by-pointer memo body text */
 
 /* ---- ASM externs (globals) ---- */
 extern MenuEntry _menuEntries[];
@@ -20,6 +21,7 @@ extern volatile uint16_t _currentMessage;
 extern uint8_t *_plNameForMessage;
 extern volatile uint16_t _currentGameTick;
 extern uint16_t _clubBusinessActive;
+extern void WaitForVSync(void);
 
 /* ---- ASM externs (data labels) ---- */
 extern uint8_t _chairmanMemosMenu[];
@@ -58,9 +60,9 @@ void ChairmanMemosInit(void)
 
     if (_isNationalSelector) {
         /* Change menu title to "MEMO FROM THE PRESIDENT" */
-        _menuEntries[0].fg = (uint32_t)_aMemoFromThePre;
+        _menuEntries[0].fg = (uintptr_t)_aMemoFromThePre;
         /* Change sign-off to "THE PRESIDENT" (entry 5 = offset $118/56) */
-        _menuEntries[5].fg = (uint32_t)_aThePresident;
+        _menuEntries[5].fg = (uintptr_t)_aThePresident;
     }
 
     /* Fall through to OnReturn */
@@ -71,19 +73,19 @@ void ChairmanMemosInit(void)
  * ChairmanMemosOnReturn  (SWOS2.s line 85626)
  *
  * Menu onReturn callback. Formats the "DEAR %a %b" greeting line
- * and the two message body lines from _clubMessagesTable, draws the
+ * and the two message body lines from clubMessagesTable, draws the
  * menu, waits 100 VBlanks, then shows the "Continue" button.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void ChairmanMemosOnReturn(void)
 {
     /* Format "DEAR %a %b" into entry 1's text buffer */
-    PrintFormatted(_aDearAB_0, (uint8_t *)_menuEntries[1].fg,
+    PrintFormatted(tr_fmt(_aDearAB_0), (uint8_t *)_menuEntries[1].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     _managerSexBuffer, _managerSurnameBuffer, (void *)0);
 
-    /* Look up message pair from _clubMessagesTable (1-based, 2 pointers per message).
-     * Guard against _currentMessage being 0 or out of range (38 messages max).
+    /* Look up message pair from clubMessagesTable (1-based, 2 pointers per message).
+     * Guard against currentMessage being 0 or out of range (38 messages max).
      * Can happen if the chairman memo menu is triggered with stale state. */
     if (_currentMessage == 0 || _currentMessage > 38)
         return;
@@ -91,31 +93,23 @@ void ChairmanMemosOnReturn(void)
     int16_t msgIdx = (int16_t)(_currentMessage - 1) * 2;
 
     /* Format message line 1 into entry 2's text buffer */
-    PrintFormatted((const uint8_t *)_clubMessagesTable[msgIdx],
+    PrintFormatted(tr_fmt(_clubMessagesTable[msgIdx]),
                     (uint8_t *)_menuEntries[2].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     _managerNameBuffer, (const uint8_t *)_plNameForMessage, (void *)0);
 
     /* Format message line 2 into entry 3's text buffer */
-    PrintFormatted((const uint8_t *)_clubMessagesTable[msgIdx + 1],
+    PrintFormatted(tr_fmt(_clubMessagesTable[msgIdx + 1]),
                     (uint8_t *)_menuEntries[3].fg,
                     0, 0, 0, 0, 0, 0, 0,
                     _managerNameBuffer, (const uint8_t *)_plNameForMessage, (void *)0);
 
-    /* Draw the menu */
-    DrawMenu();
-
-    /* Wait 100 VBlanks */
-    for (int16_t i = 99; i >= 0; i--) {
-        uint16_t tick = _currentGameTick;
-        while (_currentGameTick == tick)
-            ;
-    }
-
-    /* Show the "Continue" button (entry 6, clear isInvisible) */
+    /* SDL build skips the original Amiga 100-VBlank (~2s) dwell before
+     * the Continue button appears. With a series of chairman messages
+     * during a season-end review, the cumulative wait was painful and
+     * users have no way to short-circuit it on the original hardware
+     * either — so we just show Continue immediately. */
     _menuEntries[6].isInvisible = 0;
-
-    /* Redraw */
     DrawMenu();
 }
 

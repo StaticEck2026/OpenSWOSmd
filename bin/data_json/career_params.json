@@ -1,0 +1,34 @@
+{
+  "_comment": "Career-mode balance knobs. Loaded at startup over the compiled defaults (these ARE the defaults) — edit a value and relaunch, no rebuild. A removed field falls back to the built-in default. See docs/DATA_PIPELINE.md.",
+
+  "_finances_starting_balance": "balance = teamValueBase*value_mult, then *(pct_min..pct_min+pct_range-1)% , then *scale",
+  "start_balance_value_mult": 3,
+  "start_balance_pct_min": 80,
+  "start_balance_pct_range": 40,
+  "start_balance_scale": 1000,
+
+  "_finances_gate_receipts": "per-match income factor from both teams' values; bigger mults = bigger gates",
+  "gate_value_divisor": 4000,
+  "gate_league_mult_home": 10000,
+  "gate_league_mult_away": 2000,
+  "gate_cup_mult": 6000,
+
+  "_finances_wages": "trialist/reserve players cost that % of a full wage; wage_scale is the overall wage multiplier",
+  "wage_trialist_pct": 33,
+  "wage_reserve_pct": 66,
+  "wage_scale": 96,
+
+  "_board_expectations": "chairman verdict from league finish; ratio thresholds (higher = easier to please), percentile reward/punish, cup top-2 bonuses",
+  "board_ratio_ok": 30,
+  "board_ratio_good": 10,
+  "board_ratio_poor": -10,
+  "board_ratio_terrible": -30,
+  "board_percentile_low": 25,
+  "board_percentile_high": 75,
+  "board_secondary_top2_bonus": 2,
+  "board_tertiary_top2_bonus": 2,
+  "board_euro_top2_bonus": 3,
+
+  "_career_length": "how many seasons before the manager retires; 20 (classic) or _up to 35",
+  "num_seasons": 20
+}

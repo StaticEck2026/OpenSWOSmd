@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Sensible World of Soccer</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    body { display: flex; align-items: center; justify-content: center; }
+    /* Native SWOS render is 336x272 (the canvas internal size). Display it crisp
+       — nearest-neighbour, no smoothing — at native aspect, scaled to fit the
+       viewport height. This is what "native Amiga resolution" means on the web:
+       the game renders 336x272 and the browser only does an integer-ish pixel
+       upscale, never a blurry stretch. */
+    #canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      height: 100vh;
+      width: auto;
+      max-width: 100vw;
+      object-fit: contain;
+      background: #000;
+      display: block;
+      outline: none;
+    }
+    #status {
+      position: fixed; top: 8px; left: 0; right: 0; text-align: center;
+      color: #6c6; font: 12px/1.4 monospace; pointer-events: none;
+    }
+    /* --- Settings (SWOS.ini) panel --- */
+    #gear {
+      position: fixed; top: 6px; right: 8px; z-index: 10;
+      width: 28px; height: 28px; line-height: 28px; text-align: center;
+      font-size: 18px; color: #ccc; background: rgba(0,0,0,0.45);
+      border: 1px solid #444; border-radius: 4px; cursor: pointer;
+      user-select: none; opacity: 0.45; transition: opacity .15s;
+    }
+    #gear:hover { opacity: 1; }
+    /* --- Fullscreen toggle (mobile: F11 isn't available, so tap this) --- */
+    #fs {
+      position: fixed; top: 40px; right: 8px; z-index: 10;
+      width: 28px; height: 28px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; background: rgba(0,0,0,0.45);
+      border: 1px solid #444; border-radius: 4px; cursor: pointer;
+      user-select: none; opacity: 0.45; transition: opacity .15s;
+    }
+    #fs:hover { opacity: 1; }
+    #fs svg { width: 17px; height: 17px; display: block; }
+    /* Fullscreen mode: the canvas already fits via height:100vh, so nothing else
+       to do — but drop the letterbox background to pure black. */
+    :fullscreen { background: #000; }
+    #settings {
+      position: fixed; inset: 0; z-index: 20; display: none;
+      background: rgba(0,0,0,0.82); color: #ddd; font: 13px/1.5 monospace;
+      align-items: center; justify-content: center;
+    }
+    #settings.open { display: flex; }
+    #settings .panel {
+      width: min(560px, 92vw); max-height: 88vh; display: flex; flex-direction: column;
+      background: #14181c; border: 1px solid #3a4048; border-radius: 8px; padding: 16px;
+    }
+    #settings h2 { margin: 0 0 4px; font-size: 15px; color: #6c6; }
+    #settings p  { margin: 0 0 10px; color: #99a; font-size: 12px; }
+    #settings textarea {
+      flex: 1; min-height: 280px; resize: vertical;
+      background: #0b0e11; color: #cde; border: 1px solid #3a4048; border-radius: 4px;
+      font: 13px/1.45 monospace; padding: 8px; white-space: pre; tab-size: 2;
+    }
+    #settings .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+    #settings button {
+      font: 13px monospace; padding: 7px 14px; border-radius: 4px; cursor: pointer;
+      border: 1px solid #3a4048; background: #20262c; color: #ddd;
+    }
+    #settings button.primary { background: #2a6; border-color: #2a6; color: #042; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="status">loading…</div>
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+
+  <div id="gear" title="Settings (SWOS.ini)">&#9881;</div>
+  <div id="fs" title="Toggle fullscreen">
+    <svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
+    </svg>
+  </div>
+  <div id="settings">
+    <div class="panel">
+      <h2>Settings &mdash; SWOS.ini</h2>
+      <p>Edit and Save &amp; Reload. Stored in your browser (localStorage), not a file.
+         <code>resolution=WxH</code> or <code>auto</code>; <code>scale</code> 1&ndash;4;
+         <code>[audio] mode</code> mono|stereo; <code>[general] language</code> en/fr/de/it/es/nl.
+         Fullscreen: tap the &#9974; button below the gear (or F11 on desktop).</p>
+      <textarea id="ini" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="iniCancel">Cancel</button>
+        <button id="iniSave" class="primary">Save &amp; Reload</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var statusEl = document.getElementById('status');
+    var Module = {
+      canvas: document.getElementById('canvas'),
+      setStatus: function (text) {
+        if (!statusEl) return;
+        statusEl.textContent = text;
+        statusEl.style.display = text ? 'block' : 'none';   // hide once running
+      },
+      print:    function (t) { console.log(t); },
+      printErr: function (t) { console.error(t); },
+    };
+    Module.setStatus('downloading…');
+    window.onerror = function () { Module.setStatus('error — see console (F12)'); };
+    // Audio is blocked until a user gesture; nudge the canvas into focus on
+    // first interaction so keyboard input + audio start promptly.
+    window.addEventListener('click', function () {
+      document.getElementById('canvas').focus();
+    }, { once: false });
+
+    // --- Settings panel: edits the localStorage SWOS.ini the game reads at boot
+    //     (wasm/pre.js copies it into MEMFS). Keeps the same text format as the
+    //     desktop builds. ---
+    (function () {
+      var DEFAULT_INI =
+        '[video]\n' +
+        '; resolution: WxH (e.g. 1024x768) drives the render aspect, or auto\n' +
+        'resolution=auto\n' +
+        '; scale: 1-4 internal render scale (the canvas fits the page either way)\n' +
+        'scale=1\n\n' +
+        '[audio]\n' +
+        '; mode: mono | stereo\n' +
+        'mode=mono\n\n' +
+        '[general]\n' +
+        '; language: en fr de it es nl\n' +
+        'language=en\n';
+      var gear  = document.getElementById('gear');
+      var panel = document.getElementById('settings');
+      var ta    = document.getElementById('ini');
+      function open() {
+        var cur = '';
+        try { cur = localStorage.getItem('SWOS.ini') || ''; } catch (e) {}
+        ta.value = (cur && cur.trim()) ? cur : DEFAULT_INI;
+        panel.classList.add('open');
+        ta.focus();
+      }
+      function close() {
+        panel.classList.remove('open');
+        document.getElementById('canvas').focus();
+      }
+      gear.addEventListener('click', open);
+      document.getElementById('iniCancel').addEventListener('click', close);
+      document.getElementById('iniSave').addEventListener('click', function () {
+        try { localStorage.setItem('SWOS.ini', ta.value); }
+        catch (e) { alert('Could not save settings: ' + e); return; }
+        location.reload();
+      });
+      // Keep keystrokes typed in the panel out of the game (SDL listens on the
+      // document); Esc closes.
+      ['keydown', 'keyup', 'keypress'].forEach(function (ev) {
+        panel.addEventListener(ev, function (e) {
+          e.stopPropagation();
+          if (ev === 'keydown' && e.key === 'Escape') close();
+        });
+      });
+    })();
+
+    // --- Fullscreen toggle. Mobile browsers have no F11 and only allow
+    //     requestFullscreen() from a user gesture (a tap) — never from an
+    //     orientationchange handler — so a tappable button is the only reliable
+    //     way in. Entering fullscreen also hides the browser chrome (address
+    //     bar / status bar), which is the real win on a handheld: the canvas
+    //     (height:100vh) then fills the whole screen. ---
+    (function () {
+      var fsBtn  = document.getElementById('fs');
+      var fsIcon = document.getElementById('fsIcon');
+      var docEl  = document.documentElement;
+      var reqFn  = docEl.requestFullscreen || docEl.webkitRequestFullscreen ||
+                   docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+      // No Fullscreen API at all (e.g. iOS Safari only fullscreens <video>):
+      // hide the button rather than offer a dead control.
+      if (!reqFn) { fsBtn.style.display = 'none'; return; }
+
+      var EXPAND   = '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>';
+      var COMPRESS = '<path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3"/>';
+
+      function fsElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement ||
+               document.msFullscreenElement;
+      }
+      function lockLandscape() {
+        // Best-effort; unsupported / rejected on many browsers — ignore failures.
+        try {
+          if (screen.orientation && screen.orientation.lock)
+            screen.orientation.lock('landscape')['catch'](function () {});
+        } catch (e) {}
+      }
+      function enter() {
+        var p = reqFn.call(docEl);
+        if (p && p.then) p.then(lockLandscape)['catch'](function () {}); else lockLandscape();
+      }
+      function exit() {
+        var ex = document.exitFullscreen || document.webkitExitFullscreen ||
+                 document.msExitFullscreen;
+        if (ex) ex.call(document);
+      }
+      fsBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (fsElement()) exit(); else enter();
+        document.getElementById('canvas').focus();
+      });
+      ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (ev) {
+        document.addEventListener(ev, function () {
+          var on = !!fsElement();
+          fsIcon.innerHTML = on ? COMPRESS : EXPAND;
+          fsBtn.title = on ? 'Exit fullscreen' : 'Toggle fullscreen';
+        });
+      });
+    })();
+  </script>
+  {{{ SCRIPT }}}
+</body>
+</html>

@@ -1,0 +1,630 @@
+{
+  "name": "_thirdPartyOfferMenu",
+  "onInit": "ThirdPartyOfferMenuInit",
+  "onReturn": "ThirdPartyOfferMenuInit",
+  "onDraw": null,
+  "defaultEntry": 13,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aThirdPartyOffe"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 32,
+        "w": 304,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 42,
+        "w": 304,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 42,
+        "w": 304,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 89,
+        "w": 304,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 65,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aPlus"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 110,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aPlus"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": -126,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aPlus"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 112,
+        "y": 100,
+        "w": 80,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -103,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 12,
+          "up": -1,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aViewSquad"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ThirdPartyOfferViewSquad"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -87,
+        "w": 101,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 11,
+          "up": 9,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aAcceptOffer"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "AcceptOffer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -87,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 12,
+          "up": 9,
+          "down": 13
+        },
+        {
+          "op": "right_skip",
+          "skip": 11,
+          "dir": 0
+        },
+        {
+          "op": "left_skip",
+          "skip": 11,
+          "dir": 0
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aAskForMore"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "AskForMore"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -87,
+        "w": 101,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": -1,
+          "up": 9,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aRejectOffer"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "RejectOffer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -71,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 12,
+          "up": 11,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aConsider"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ConsiderOffer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 122,
+        "y": -71,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ThirdPartyOfferMenuExit"
+        }
+      ]
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "after_draw",
+          "func": "ThirdPartyOfferMenuAfterDrawCommon"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 55,
+        "w": 304,
+        "h": 8
+      },
+      "commands": []
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 75,
+        "w": 304,
+        "h": 8
+      },
+      "commands": []
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 120,
+        "w": 304,
+        "h": 8
+      },
+      "commands": []
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 140,
+        "w": 304,
+        "h": 8
+      },
+      "commands": []
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 2,
+        "y": 0,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 13,
+        "y": 0,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 24,
+        "y": 0,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -47,
+        "y": 0,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -45,
+        "y": 0,
+        "w": 14,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -21,
+        "y": 0,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xF"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -24,
+        "y": 0,
+        "w": 7,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 181
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -17,
+        "y": 0,
+        "w": 7,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 182
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -45,
+        "y": 0,
+        "w": 9,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 189
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -13,
+        "y": 0,
+        "w": 30,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 272,
+        "y": 0,
+        "w": 32,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1513 @@
+{
+  "name": "_playMatchMenu",
+  "onInit": "PlayMatchMenuInit",
+  "onReturn": "PlayMatchMenuReinit",
+  "onDraw": null,
+  "defaultEntry": 9,
+  "items": [
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": -20
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 3,
+        "y": 6,
+        "w": 16,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 82,
+        "y": 0,
+        "w": -116,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 14,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -44,
+        "w": 55,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "_aCoach_4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 44,
+        "y": -44,
+        "w": -114,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -99,
+        "w": 105,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 29,
+          "down": 6
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 8
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aUseMatchTeam"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "UseMatchTeamSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -73,
+        "w": 42,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 50,
+          "up": 5,
+          "down": 9
+        },
+        {
+          "op": "up_skip",
+          "skip": 6,
+          "dir": 2
+        },
+        {
+          "op": "right_skip",
+          "skip": 9,
+          "dir": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "multiline",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "TogglePlayerCoach"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -84,
+        "y": -34,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": 10,
+          "up": 54,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aViewOppo"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ViewOpponentsSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": -34,
+        "w": 52,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": 7,
+          "up": 6,
+          "down": -1
+        },
+        {
+          "op": "right_skip",
+          "skip": 9,
+          "dir": 0
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ExitPlayMatch"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -38,
+        "w": 106,
+        "h": 23
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 6,
+          "down": -1
+        },
+        {
+          "op": "up_skip",
+          "skip": 9,
+          "dir": 2
+        },
+        {
+          "op": "right_skip",
+          "skip": 9,
+          "dir": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "PlayMatchSelected"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -21,
+        "y": -34,
+        "w": 68,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": -1,
+          "up": 55,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aEditTactics"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTacticsInPlayMatchMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "commands": [
+        {
+          "op": "onselect_fire",
+          "func": "ReturnFromViewOpponent"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -84,
+        "w": -84,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        }
+      ]
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "after_draw",
+          "func": "DrawPlayerEntries"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "OnSwapPlayer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 24,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": -1,
+          "down": 14
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 33,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 13,
+          "down": 15
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 42,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 14,
+          "down": 16
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 51,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 15,
+          "down": 17
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 60,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 16,
+          "down": 18
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 69,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 17,
+          "down": 19
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 78,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 18,
+          "down": 20
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 87,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 19,
+          "down": 21
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 96,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 20,
+          "down": 22
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 105,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 21,
+          "down": 23
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 114,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 22,
+          "down": 24
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 125,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 23,
+          "down": 25
+        },
+        {
+          "op": "up_skip",
+          "skip": 29,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -122,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 24,
+          "down": 26
+        },
+        {
+          "op": "up_skip",
+          "skip": 29,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -113,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 25,
+          "down": 27
+        },
+        {
+          "op": "up_skip",
+          "skip": 29,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -104,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 26,
+          "down": 28
+        },
+        {
+          "op": "up_skip",
+          "skip": 29,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -95,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 41,
+          "up": 27,
+          "down": 29
+        },
+        {
+          "op": "up_skip",
+          "skip": 29,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": -84,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 30,
+          "right": 44,
+          "up": 28,
+          "down": 5
+        },
+        {
+          "op": "up_skip",
+          "skip": 29,
+          "dir": 2
+        },
+        {
+          "op": "invisible"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -84,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 29,
+          "up": 28,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "PlayMatchOnSelect30"
+        },
+        {
+          "op": "after_draw",
+          "func": "PlayMatch30AfterDraw"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 13,
+        "y": 0,
+        "w": 10,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 23,
+        "y": 0,
+        "w": 82,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 106,
+        "y": 0,
+        "w": 14,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -127,
+        "y": 0,
+        "w": 0,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0xF"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -117,
+        "y": 0,
+        "w": 32,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "sprite_fg",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 172,
+      "y": 131
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "PlayMatchChangeTactics"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 27,
+          "right": 39,
+          "up": -1,
+          "down": 41
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a442"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 44,
+        "y": 0,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 38,
+          "right": 40,
+          "up": -1,
+          "down": 42
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a541"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 0,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 39,
+          "right": -1,
+          "up": -1,
+          "down": 43
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a451"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 10,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 27,
+          "right": 42,
+          "up": 38,
+          "down": 44
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a532"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 44,
+        "y": 10,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 41,
+          "right": 43,
+          "up": 39,
+          "down": 45
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a352"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 10,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 42,
+          "right": -1,
+          "up": 40,
+          "down": 46
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a433"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 20,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 28,
+          "right": 45,
+          "up": 41,
+          "down": 47
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a424"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 44,
+        "y": 20,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 44,
+          "right": 46,
+          "up": 42,
+          "down": 48
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a343"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 20,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 45,
+          "right": -1,
+          "up": 43,
+          "down": 49
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aSweep"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 30,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 29,
+          "right": 48,
+          "up": 44,
+          "down": 50
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_a523"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 44,
+        "y": 30,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 47,
+          "right": 49,
+          "up": 45,
+          "down": 50
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aAttack"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 30,
+        "w": 43,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 48,
+          "right": -1,
+          "up": 46,
+          "down": 51
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aDefend"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 40,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 51,
+          "up": 47,
+          "down": 52
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_teamTacticsUSERA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 66,
+        "y": 40,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 50,
+          "right": -1,
+          "up": 49,
+          "down": 53
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_teamTacticsUSERB"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 50,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 53,
+          "up": 50,
+          "down": 54
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_teamTacticsUSERC"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 66,
+        "y": 50,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 52,
+          "right": -1,
+          "up": 51,
+          "down": 55
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_teamTacticsUSERD"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 60,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 6,
+          "right": 55,
+          "up": 52,
+          "down": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_teamTacticsUSERE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 66,
+        "y": 60,
+        "w": 65,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 54,
+          "right": -1,
+          "up": 53,
+          "down": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_teamTacticsUSERF"
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "set_origin",
+      "x": 172,
+      "y": 4
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": -124,
+        "h": 125
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 225
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 66,
+        "y": 12,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 3,
+        "y": 25,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 63,
+        "y": 35,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 69,
+        "y": 35,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -127,
+        "y": 25,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 3,
+        "y": 55,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 63,
+        "y": 65,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 69,
+        "y": 65,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -127,
+        "y": 55,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 63,
+        "y": 85,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 69,
+        "y": 85,
+        "w": 0,
+        "h": 6
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    }
+  ]
+}

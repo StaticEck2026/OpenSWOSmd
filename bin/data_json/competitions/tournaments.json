@@ -1,0 +1,1689 @@
+{
+  "type": "competition_tournaments",
+  "count": 14,
+  "competitions": [
+    {
+      "id": "_euroCup",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 0,
+        "type": 2,
+        "team_number": -1,
+        "begin_month": 64,
+        "end_month": 32,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 1
+      },
+      "seeding_type": 1,
+      "menu_state": 1,
+      "play_each_team": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "rounds": [
+        {
+          "team_count": 16,
+          "group_count": 4,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 0,
+          "team_group_count": 0
+        },
+        {
+          "team_count": 0,
+          "group_count": 0,
+          "team_group_count": 0
+        }
+      ],
+      "header_reserved": 0,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aEuropeanChampi_1",
+        "_aEuropeanCup"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_FRANCE",
+          "ordinal": 1,
+          "team": "AUXERRE"
+        },
+        {
+          "country": "CN_HOLLAND",
+          "ordinal": 0,
+          "team": "AJAX"
+        },
+        {
+          "country": "CN_SWITZERLAND",
+          "ordinal": 5,
+          "team": "GRASSHOPPERS"
+        },
+        {
+          "country": "CN_SCOTLAND",
+          "ordinal": 33,
+          "team": "RANGERS"
+        },
+        {
+          "country": "CN_SPAIN",
+          "ordinal": 6,
+          "team": "ATLETICO MADRID"
+        },
+        {
+          "country": "CN_ROMANIA",
+          "ordinal": 18,
+          "team": "STEAUA BUCHAREST"
+        },
+        {
+          "country": "CN_GERMANY",
+          "ordinal": 4,
+          "team": "BOR. DORTMUND"
+        },
+        {
+          "country": "CN_POLAND",
+          "ordinal": 23,
+          "team": "WIDZEW LODZ"
+        },
+        {
+          "country": "CN_AUSTRIA",
+          "ordinal": 5,
+          "team": "RAPID VIENNA"
+        },
+        {
+          "country": "CN_TURKEY",
+          "ordinal": 9,
+          "team": "FENERBAHCE"
+        },
+        {
+          "country": "CN_ITALY",
+          "ordinal": 22,
+          "team": "JUVENTUS"
+        },
+        {
+          "country": "CN_ENGLAND",
+          "ordinal": 20,
+          "team": "MANCHESTER UTD"
+        },
+        {
+          "country": "CN_SWEDEN",
+          "ordinal": 8,
+          "team": "IFK GOTHENBURG"
+        },
+        {
+          "country": "CN_NORWAY",
+          "ordinal": 11,
+          "team": "ROSENBORG"
+        },
+        {
+          "country": "CN_ITALY",
+          "ordinal": 0,
+          "team": "AC MILAN"
+        },
+        {
+          "country": "CN_PORTUGAL",
+          "ordinal": 12,
+          "team": "FC PORTO"
+        }
+      ]
+    },
+    {
+      "id": "_worldCup2",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 3,
+        "type": 2,
+        "team_number": -1,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "rounds": [
+        {
+          "team_count": 32,
+          "group_count": 8,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": -1,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aWorldCup",
+        "_aWorldCup_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_worldCup",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 4,
+        "type": 2,
+        "team_number": -1,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 1
+      },
+      "seeding_type": 0,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 6,
+      "rounds": [
+        {
+          "team_count": 24,
+          "group_count": 6,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": -1,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aWorldCup",
+        "_aWorldCup_0"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 36,
+          "team": "ROMANIA"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 4,
+          "team": "COLOMBIA"
+        },
+        {
+          "country": "CN_NORTH_AMERICA",
+          "ordinal": 13,
+          "team": "TRINIDAD-TOBAGO"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 44,
+          "team": "SWITZERLAND"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 2,
+          "team": "BRAZIL"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 37,
+          "team": "RUSSIA"
+        },
+        {
+          "country": "CN_AFRICA",
+          "ordinal": 6,
+          "team": "CAMEROON"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 43,
+          "team": "SWEDEN"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 17,
+          "team": "GERMANY"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 1,
+          "team": "BOLIVIA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 42,
+          "team": "SPAIN"
+        },
+        {
+          "country": "CN_ASIA",
+          "ordinal": 24,
+          "team": "SOUTH KOREA"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 0,
+          "team": "ARGENTINA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 18,
+          "team": "GREECE"
+        },
+        {
+          "country": "CN_AFRICA",
+          "ordinal": 22,
+          "team": "NIGERIA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 6,
+          "team": "BULGARIA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 23,
+          "team": "ITALY"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 35,
+          "team": "REPUBLIC IRELAND"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 32,
+          "team": "NORWAY"
+        },
+        {
+          "country": "CN_NORTH_AMERICA",
+          "ordinal": 8,
+          "team": "MEXICO"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 5,
+          "team": "BELGIUM"
+        },
+        {
+          "country": "CN_AFRICA",
+          "ordinal": 19,
+          "team": "MOROCCO"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 19,
+          "team": "HOLLAND"
+        },
+        {
+          "country": "CN_ASIA",
+          "ordinal": 22,
+          "team": "SAUDI ARABIA"
+        }
+      ]
+    },
+    {
+      "id": "_northAmericaWorldCupQualification",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 13,
+        "type": 2,
+        "team_number": 83,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 2,
+      "rounds": [
+        {
+          "team_count": 12,
+          "group_count": 0,
+          "team_group_count": 12
+        },
+        {
+          "team_count": 6,
+          "group_count": 1,
+          "team_group_count": 6
+        },
+        {
+          "team_count": 3,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_southAmericaWorldCupQualification",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 14,
+        "type": 2,
+        "team_number": 82,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 1,
+      "rounds": [
+        {
+          "team_count": 8,
+          "group_count": 1,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_africaWorldCupQualification",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 15,
+        "type": 2,
+        "team_number": 81,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 3,
+      "rounds": [
+        {
+          "team_count": 32,
+          "group_count": 0,
+          "team_group_count": 32
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 1,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 5,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_asiaWorldCupQualification",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 16,
+        "type": 2,
+        "team_number": 84,
+        "begin_month": 72,
+        "end_month": 16,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 3,
+      "rounds": [
+        {
+          "team_count": 24,
+          "group_count": 0,
+          "team_group_count": 24
+        },
+        {
+          "team_count": 12,
+          "group_count": 0,
+          "team_group_count": 12
+        },
+        {
+          "team_count": 6,
+          "group_count": 1,
+          "team_group_count": 6
+        },
+        {
+          "team_count": 2,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aWorldCupQualif_1",
+        "_aWCQualifier_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_europeanChampionships2",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 21,
+        "type": 2,
+        "team_number": 80,
+        "begin_month": -120,
+        "end_month": -120,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "rounds": [
+        {
+          "team_count": 16,
+          "group_count": 4,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 0
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aEuropeanChampi_0",
+        "_aECFinals"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_europeanChampionships",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 22,
+        "type": 2,
+        "team_number": 80,
+        "begin_month": -120,
+        "end_month": -120,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 1
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "rounds": [
+        {
+          "team_count": 16,
+          "group_count": 4,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 0
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aEuropeanChampi_0",
+        "_aECFinals"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 11,
+          "team": "ENGLAND"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 44,
+          "team": "SWITZERLAND"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 19,
+          "team": "HOLLAND"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 39,
+          "team": "SCOTLAND"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 42,
+          "team": "SPAIN"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 6,
+          "team": "BULGARIA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 36,
+          "team": "ROMANIA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 15,
+          "team": "FRANCE"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 17,
+          "team": "GERMANY"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 9,
+          "team": "CZECH REPUBLIC"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 23,
+          "team": "ITALY"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 37,
+          "team": "RUSSIA"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 10,
+          "team": "DENMARK"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 34,
+          "team": "PORTUGAL"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 45,
+          "team": "TURKEY"
+        },
+        {
+          "country": "CN_EUROPE",
+          "ordinal": 7,
+          "team": "CROATIA"
+        }
+      ]
+    },
+    {
+      "id": "_copaAmerica",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 31,
+        "type": 2,
+        "team_number": 82,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "rounds": [
+        {
+          "team_count": 12,
+          "group_count": 3,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aCopaAmerica",
+        "_aCopaAmerica_0"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_NORTH_AMERICA",
+          "ordinal": 8,
+          "team": "MEXICO"
+        },
+        {
+          "country": "CN_NORTH_AMERICA",
+          "ordinal": 13,
+          "team": "TRINIDAD-TOBAGO"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 8,
+          "team": "URUGUAY"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 9,
+          "team": "VENEZUELA"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 0,
+          "team": "ARGENTINA"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 1,
+          "team": "BOLIVIA"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 2,
+          "team": "BRAZIL"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 3,
+          "team": "CHILE"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 4,
+          "team": "COLOMBIA"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 5,
+          "team": "ECUADOR"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 6,
+          "team": "PARAGUAY"
+        },
+        {
+          "country": "CN_SOUTH_AMERICA",
+          "ordinal": 7,
+          "team": "PERU"
+        }
+      ]
+    },
+    {
+      "id": "_africanNationsCup",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 32,
+        "type": 2,
+        "team_number": 81,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 5,
+      "rounds": [
+        {
+          "team_count": 32,
+          "group_count": 8,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "_aAfricanNations",
+        "_aAfricanCup"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_northAmericanCup",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 33,
+        "type": 2,
+        "team_number": 83,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 4,
+      "rounds": [
+        {
+          "team_count": 12,
+          "group_count": 3,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        }
+      ],
+      "name": [
+        "_aNorthAmericanC",
+        "_aNAmericanCup"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_asianCup",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 34,
+        "type": 2,
+        "team_number": 84,
+        "begin_month": -120,
+        "end_month": -112,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 0,
+        "seed_reorder_flag": 0
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 1,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 5,
+      "rounds": [
+        {
+          "team_count": 30,
+          "group_count": 5,
+          "team_group_count": 6
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 1,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "_aAsianCup",
+        "_aAsianCup_0"
+      ],
+      "team_seed_list": []
+    },
+    {
+      "id": "_copaLibertadores",
+      "type": "tournament",
+      "comp": {
+        "comp_id": 128,
+        "type": 2,
+        "team_number": -1,
+        "begin_month": 16,
+        "end_month": 40,
+        "name_table_offset": 35,
+        "reserved": 0,
+        "team_list_offset": 41,
+        "seed_reorder_flag": 1
+      },
+      "seeding_type": 1,
+      "menu_state": 0,
+      "play_each_team": 2,
+      "away_goals_mode": 3,
+      "substitutes": 3,
+      "points_for_win": 5,
+      "round_string_base": 5,
+      "rounds": [
+        {
+          "team_count": 20,
+          "group_count": 5,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 16,
+          "group_count": 0,
+          "team_group_count": 16
+        },
+        {
+          "team_count": 8,
+          "group_count": 0,
+          "team_group_count": 8
+        },
+        {
+          "team_count": 4,
+          "group_count": 0,
+          "team_group_count": 4
+        },
+        {
+          "team_count": 2,
+          "group_count": 0,
+          "team_group_count": 2
+        },
+        {
+          "team_count": 1,
+          "group_count": 1,
+          "team_group_count": 1
+        }
+      ],
+      "header_reserved": 1,
+      "round_rule_flags": [
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 2,
+          "extra_time": 0,
+          "penalties": 1
+        },
+        {
+          "legs": 0,
+          "extra_time": 0,
+          "penalties": 0
+        }
+      ],
+      "name": [
+        "_aCopaLibertadores",
+        "_aCopaLibertadores_0"
+      ],
+      "team_seed_list": [
+        {
+          "country": "CN_ECUADOR",
+          "ordinal": 0,
+          "team": "BARCELONA"
+        },
+        {
+          "country": "CN_ECUADOR",
+          "ordinal": 6,
+          "team": "ESPOLI"
+        },
+        {
+          "country": "CN_PARAGUAY",
+          "ordinal": 2,
+          "team": "CERRO PORTENO"
+        },
+        {
+          "country": "CN_PARAGUAY",
+          "ordinal": 7,
+          "team": "OLIMPIA"
+        },
+        {
+          "country": "CN_URUGUAY",
+          "ordinal": 17,
+          "team": "PENAROL"
+        },
+        {
+          "country": "CN_URUGUAY",
+          "ordinal": 8,
+          "team": "DEFENSOR SPORT"
+        },
+        {
+          "country": "CN_PERU",
+          "ordinal": 12,
+          "team": "SPORTING CRISTAL"
+        },
+        {
+          "country": "CN_PERU",
+          "ordinal": 15,
+          "team": "UNIVERSITARIO"
+        },
+        {
+          "country": "CN_COLOMBIA",
+          "ordinal": 0,
+          "team": "AMERICA CALI"
+        },
+        {
+          "country": "CN_COLOMBIA",
+          "ordinal": 4,
+          "team": "ATLETICO JUNIOR"
+        },
+        {
+          "country": "CN_BOLIVIA",
+          "ordinal": 11,
+          "team": "SAN JOSE ORURO"
+        },
+        {
+          "country": "CN_BOLIVIA",
+          "ordinal": 4,
+          "team": "GUABIRA"
+        },
+        {
+          "country": "CN_BRAZIL",
+          "ordinal": 5,
+          "team": "CORINTHIANS"
+        },
+        {
+          "country": "CN_BRAZIL",
+          "ordinal": 3,
+          "team": "BOTAFOGO"
+        },
+        {
+          "country": "CN_CHILE",
+          "ordinal": 15,
+          "team": "UNIV. DE CHILE"
+        },
+        {
+          "country": "CN_CHILE",
+          "ordinal": 14,
+          "team": "UNIV. CATOLICA"
+        },
+        {
+          "country": "CN_ARGENTINA",
+          "ordinal": 33,
+          "team": "RIVER PLATE"
+        },
+        {
+          "country": "CN_ARGENTINA",
+          "ordinal": 36,
+          "team": "SAN LORENZO"
+        },
+        {
+          "country": "CN_VENEZUELA",
+          "ordinal": 13,
+          "team": "MINERVEN"
+        },
+        {
+          "country": "CN_VENEZUELA",
+          "ordinal": 2,
+          "team": "CARACAS"
+        }
+      ]
+    }
+  ]
+}

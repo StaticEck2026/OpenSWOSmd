@@ -1,0 +1,1330 @@
+{
+  "name": "_chooseTeamsFriendlyMenu",
+  "onInit": "ChooseTeamsFriendlyInitFinish",
+  "onReturn": "ChooseTeamsFriendlyInitFinish",
+  "onDraw": null,
+  "defaultEntry": 23,
+  "items": [
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 2,
+        "y": 0,
+        "w": 300,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 20,
+        "y": 35,
+        "w": 19,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 120,
+        "y": 35,
+        "w": 19,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -36,
+        "y": 35,
+        "w": 19,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 45,
+        "y": 35,
+        "w": 0,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "_aComputer"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -111,
+        "y": 35,
+        "w": 0,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "_aPlayerCoach"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -11,
+        "y": 35,
+        "w": 0,
+        "h": 11
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": "_aCoach"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 16
+    },
+    {
+      "kind": "start_template"
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "template": true,
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": null
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ChooseTeamsFriendlyCommon2"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 21,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 23,
+          "up": -1,
+          "down": 8
+        },
+        {
+          "op": "left_skip",
+          "skip": 38,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 31,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 24,
+          "up": 7,
+          "down": 9
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 41,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 25,
+          "up": 8,
+          "down": 10
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 51,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 26,
+          "up": 9,
+          "down": 11
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 61,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 27,
+          "up": 10,
+          "down": 12
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 71,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 28,
+          "up": 11,
+          "down": 13
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 81,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 29,
+          "up": 12,
+          "down": 14
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 91,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 30,
+          "up": 13,
+          "down": 15
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 101,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 31,
+          "up": 14,
+          "down": 16
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 111,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 32,
+          "up": 15,
+          "down": 17
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": 121,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 33,
+          "up": 16,
+          "down": 18
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": -125,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 34,
+          "up": 17,
+          "down": 19
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": -115,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 35,
+          "up": 18,
+          "down": 20
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": -105,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 36,
+          "up": 19,
+          "down": 21
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": -95,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 37,
+          "up": 20,
+          "down": 22
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 1,
+        "y": -85,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 38,
+          "up": 21,
+          "down": 55
+        },
+        {
+          "op": "up_skip",
+          "skip": 22,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 21,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": 39,
+          "up": -1,
+          "down": 24
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 31,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 8,
+          "right": 40,
+          "up": 23,
+          "down": 25
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 41,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 9,
+          "right": 41,
+          "up": 24,
+          "down": 26
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 51,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 10,
+          "right": 42,
+          "up": 25,
+          "down": 27
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 61,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": 43,
+          "up": 26,
+          "down": 28
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 71,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 12,
+          "right": 44,
+          "up": 27,
+          "down": 29
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 81,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 13,
+          "right": 45,
+          "up": 28,
+          "down": 30
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 91,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 14,
+          "right": 46,
+          "up": 29,
+          "down": 31
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 101,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 15,
+          "right": 47,
+          "up": 30,
+          "down": 32
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 111,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 16,
+          "right": 48,
+          "up": 31,
+          "down": 33
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": 121,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 17,
+          "right": 49,
+          "up": 32,
+          "down": 34
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -125,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 18,
+          "right": 50,
+          "up": 33,
+          "down": 35
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -115,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 19,
+          "right": 51,
+          "up": 34,
+          "down": 36
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -105,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 20,
+          "right": 52,
+          "up": 35,
+          "down": 37
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -95,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 21,
+          "right": 53,
+          "up": 36,
+          "down": 38
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -85,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 22,
+          "right": 54,
+          "up": 37,
+          "down": 56
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 21,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 23,
+          "right": -1,
+          "up": -1,
+          "down": 40
+        },
+        {
+          "op": "left_skip",
+          "skip": 38,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 31,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 24,
+          "right": -1,
+          "up": 39,
+          "down": 41
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 41,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 25,
+          "right": -1,
+          "up": 40,
+          "down": 42
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 51,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 26,
+          "right": -1,
+          "up": 41,
+          "down": 43
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 61,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 27,
+          "right": -1,
+          "up": 42,
+          "down": 44
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 71,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 28,
+          "right": -1,
+          "up": 43,
+          "down": 45
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 81,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 29,
+          "right": -1,
+          "up": 44,
+          "down": 46
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 91,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 30,
+          "right": -1,
+          "up": 45,
+          "down": 47
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 101,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 31,
+          "right": -1,
+          "up": 46,
+          "down": 48
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 111,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 32,
+          "right": -1,
+          "up": 47,
+          "down": 49
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": 121,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 33,
+          "right": -1,
+          "up": 48,
+          "down": 50
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -125,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 34,
+          "right": -1,
+          "up": 49,
+          "down": 51
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -115,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 35,
+          "right": -1,
+          "up": 50,
+          "down": 52
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -105,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 36,
+          "right": -1,
+          "up": 51,
+          "down": 53
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -95,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 37,
+          "right": -1,
+          "up": 52,
+          "down": 54
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -53,
+        "y": -85,
+        "w": 100,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 38,
+          "right": -1,
+          "up": 53,
+          "down": 57
+        },
+        {
+          "op": "down_skip",
+          "skip": 54,
+          "dir": 2
+        }
+      ]
+    },
+    {
+      "kind": "reset_template"
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -71,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 56,
+          "up": 22,
+          "down": -1
+        },
+        {
+          "op": "up_skip",
+          "skip": 55,
+          "dir": 2
+        },
+        {
+          "op": "right_skip",
+          "skip": 55,
+          "dir": 1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aViewSelectedTe"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ViewSelected"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -71,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 55,
+          "right": 57,
+          "up": 38,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ExitChooseTeams2"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -72,
+        "y": -71,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 56,
+          "right": -1,
+          "up": 54,
+          "down": -1
+        },
+        {
+          "op": "down_skip",
+          "skip": 57,
+          "dir": 2
+        },
+        {
+          "op": "right_skip",
+          "skip": 57,
+          "dir": 0
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ChooseTeamsPlayMatchSelected"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -72,
+        "y": -68,
+        "w": 120,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    }
+  ]
+}

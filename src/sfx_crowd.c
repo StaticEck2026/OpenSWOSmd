@@ -5,6 +5,7 @@
  */
 #include "sfx_crowd.h"
 #include "audio.h"
+#include "sfx_ids.h"
 
 #define ST_PENALTY 14
 
@@ -19,6 +20,7 @@ extern uint16_t _gameState;
 extern uint16_t _patternsGoalCounter;
 extern uint16_t _showFansCounter;
 extern volatile uint16_t _currentGameTick;
+extern void WaitForVSync(void);   /* game_utils.c — pumps audio + events on SDL */
 
 /* ---- Embedded data labels in SWOS2.s code section ---- */
 extern uint16_t _pendingSampleId3_4;
@@ -89,9 +91,9 @@ void TurnCrowdChantsOff(void)
  *
  * State machine for crowd chant audio:
  *   - If training game or chants off: return
- *   - If _fadeInChantTimer active: fade in
- *   - If _nextChantTimer active: cooldown tick
- *   - If _fadeOutChantTimer active: fade out
+ *   - If fadeInChantTimer active: fade in
+ *   - If nextChantTimer active: cooldown tick
+ *   - If fadeOutChantTimer active: fade out
  *   - Otherwise: random chance to start new chant event
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -180,25 +182,18 @@ __attribute__((used, externally_visible))
 void MuteAllAudioChannelsWithDelay(void)
 {
     uint16_t vol;
-    uint16_t tick;
 
     for (vol = 0; vol <= 0x40; vol += 4)
     {
         AudioSetChannelVolume(0xFFFF, vol);
-
-        /* Wait 1 tick (dbf d1 with d1=0 loops once) */
-        tick = _currentGameTick;
-        while (_currentGameTick == tick)
-        {
-            /* spin */
-        }
+        WaitForVSync();
     }
 }
 
 /* ================================================================
  * AudioFadeCrowdDownThenPulseMusic  (SWOS2.s line 9228)
  *
- * Phase 1: Fade crowd channel (ch2) down from _crowdChantVolume to 0.
+ * Phase 1: Fade crowd channel (ch2) down from crowdChantVolume to 0.
  * Phase 2: Fade music channels (ch0,1,3) down from 0x40 to 0.
  * Final: Set all channels to 0.
  * ================================================================ */
@@ -206,8 +201,13 @@ __attribute__((used, externally_visible))
 void AudioFadeCrowdDownThenPulseMusic(void)
 {
     int16_t vol;
-    uint16_t tick;
 
+#ifdef SWOS_SDL_BUILD
+    /* Arcade attract music (HERO): the reels are match replays. A replay goal
+     * would otherwise pulse/dip the shared music player via the all-channels
+     * (master) volume — cutting HERO. Skip it while SFX are suppressed. */
+    { extern int _gArcadeSfxSuppressed; if (_gArcadeSfxSuppressed) return; }
+#endif
     /* Phase 1: Fade crowd channel down */
     vol = (int16_t)_crowdChantVolume;
     if (vol != 0)
@@ -215,13 +215,7 @@ void AudioFadeCrowdDownThenPulseMusic(void)
         while (vol >= 0)
         {
             AudioSetChannelVolume(2, (uint16_t)vol);
-
-            tick = _currentGameTick;
-            while (_currentGameTick == tick)
-            {
-                /* spin */
-            }
-
+            WaitForVSync();
             vol -= 2;
         }
         AudioSetChannelVolume(2, 0);
@@ -233,12 +227,7 @@ void AudioFadeCrowdDownThenPulseMusic(void)
         AudioSetChannelVolume(0, (uint16_t)vol);
         AudioSetChannelVolume(1, (uint16_t)vol);
         AudioSetChannelVolume(3, (uint16_t)vol);
-
-        tick = _currentGameTick;
-        while (_currentGameTick == tick)
-        {
-            /* spin */
-        }
+        WaitForVSync();
     }
 
     /* Final: all channels to 0 */
@@ -255,17 +244,16 @@ __attribute__((used, externally_visible))
 void AudioMuteAllWithFrameRamp(void)
 {
     int16_t vol;
-    uint16_t tick;
 
+#ifdef SWOS_SDL_BUILD
+    /* Don't mute the shared player during arcade attract music (HERO) — a replay
+     * half-time/end event must not silence the title song. */
+    { extern int _gArcadeSfxSuppressed; if (_gArcadeSfxSuppressed) return; }
+#endif
     for (vol = 0x40; vol >= 0; vol -= 2)
     {
         AudioSetChannelVolume(0xFFFF, (uint16_t)vol);
-
-        tick = _currentGameTick;
-        while (_currentGameTick == tick)
-        {
-            /* spin */
-        }
+        WaitForVSync();
     }
 
     AudioSetChannelVolume(0xFFFF, 0);
@@ -327,7 +315,7 @@ void PlayPenaltySample(void)
 {
     if (_trainingGame != 0)
         return;
-    PlaySample(6);
+    PlaySample(SFX_PRESET_PENALTY);
 }
 
 /* ================================================================
@@ -340,45 +328,53 @@ void PlaySample7IfNotTraining(void)
 {
     if (_trainingGame != 0)
         return;
-    PlaySample(7);
+    PlaySample(SFX_PRESET_NOT_TRAINING_7);
 }
 
 /* ================================================================
  * PlaySfxSample16  (SWOS2.s line 9406, sub_107260)
  *
- * GateKickSampleAndCrowd with sfxId=$10, channel=3.
+ * Plays SFX_BALL_BOUNCE_1 (default ball bounce) on channel 3,
+ * gated through GateKickSampleAndCrowd.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlaySfxSample16(void)
 {
-    GateKickSampleAndCrowd(3, 0x10);
+    GateKickSampleAndCrowd(3, SFX_BALL_BOUNCE_1);
 }
 
 /* ================================================================
  * PlayGoodPassSample  (SWOS2.s line 9414)
  *
- * GateKickSampleAndCrowd with sfxId=$27, channel=3.
+ * Plays SFX_BALL_PASSED_OR_TACKLED (pass or sliding-tackle ball
+ * thump) on channel 3, gated through GateKickSampleAndCrowd. The
+ * "good pass" name is the original asm symbol; in practice the
+ * sample also plays for tackles, hence the renamed wave id.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayGoodPassSample(void)
 {
-    GateKickSampleAndCrowd(3, 0x27);
+    GateKickSampleAndCrowd(3, SFX_BALL_PASSED_OR_TACKLED);
 }
 
 /* ================================================================
  * PlayKickSample  (SWOS2.s line 9422)
  *
- * Alternates between sfxId $25 and $28 based on _currentGameTick bit 1.
- * Then calls GateKickSampleAndCrowd(3, sfxId).
+ * Alternates between SFX_BALL_KEEPER_SAFE_2 (0x25, keeper saves)
+ * and SFX_BALL_SHOT_HEADER_LOW (0x28, low shot / flying header)
+ * based on currentGameTick bit 1, then routes through
+ * GateKickSampleAndCrowd on channel 3. Despite the asm-derived
+ * "kick" name, the per-tick alternation makes this fire on a mix
+ * of shot/save events depending on game state.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayKickSample(void)
 {
-    uint16_t sfxId = 0x25;
+    uint16_t sfxId = SFX_BALL_KEEPER_SAFE_2;
 
-    /* btst #1,(_currentGameTick+1) tests bit 1 of the low byte */
+    /* btst #1,(currentGameTick+1) tests bit 1 of the low byte */
     if (((uint8_t)_currentGameTick) & 0x02)
-        sfxId = 0x28;
+        sfxId = SFX_BALL_SHOT_HEADER_LOW;
 
     GateKickSampleAndCrowd(3, sfxId);
 }
@@ -386,17 +382,29 @@ void PlayKickSample(void)
 /* ================================================================
  * GateKickSampleAndCrowd  (SWOS2.s line 9432)
  *
- * Gates the kick sample through _audioDbgFlagA bit 7 check
- * and _lastKickSampleTick comparison. If gate passes, calls
- * HandleKickSampleAndCrowd.
+ * Gates a ball/kick/shot sample through the audioDbgFlagA bit 7
+ * check and the lastKickSampleTick comparison: when the gate is
+ * armed, only allow the next sample if the previous one was a
+ * crowd reaction (CROWD_KEEPERSAVES "aaah" or CROWD_NEARMISS
+ * "oooh"). This pacing rule prevents back-to-back ball thumps
+ * from drowning out the crowd response. If the gate passes,
+ * HandleKickSampleAndCrowd does the actual trigger.
+ *
+ * Asm name kept for back-port traceability — these IDs aren't
+ * strictly "kicks" any more (we now know the wave-ids include
+ * passes, tackles, headers, saves) but the function symbol still
+ * matches SWOS2.s line 12017.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 {
-    /* If _audioDbgFlagA bit 7 is set, apply gating */
+    /* If audioDbgFlagA bit 7 is set, apply gating: only allow kicks when
+     * the last triggered SFX was CROWD_KEEPERSAVES (0x0F "aaah") or
+     * CROWD_NEARMISS (0x12 "oooh") — both are crowd reactions that
+     * should "unlock" the next kick sample. */
     if (_audioDbgFlagA & 0x80)
     {
-        if (_lastKickSampleTick != 0x000F && _lastKickSampleTick != 0x0012)
+        if (_lastKickSampleTick != SFX_CROWD_KEEPERSAVES && _lastKickSampleTick != SFX_CROWD_NEARMISS)
             return;
     }
 
@@ -405,11 +413,16 @@ void GateKickSampleAndCrowd(uint16_t channel, uint16_t sfxId)
 
 /* ================================================================
  * PlayRefereeWhistleSample  (SWOS2.s line 9444)
+ *
+ * Plays SFX_WHISTLE_KICKOFF (0x31, kickoff whistle — minute 0/45
+ * or after a goal) on channel 3 via HandleKickSampleAndCrowd.
+ * "Referee whistle" is the original asm symbol; the actual sample
+ * is specifically the kickoff whistle.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayRefereeWhistleSample(void)
 {
-    HandleKickSampleAndCrowd(3, 0x31);
+    HandleKickSampleAndCrowd(3, SFX_WHISTLE_KICKOFF);
 }
 
 /* ================================================================
@@ -418,7 +431,7 @@ void PlayRefereeWhistleSample(void)
 __attribute__((used, externally_visible))
 void PlayFoulWhistleSample(void)
 {
-    HandleKickSampleAndCrowd(3, 4);
+    HandleKickSampleAndCrowd(3, SFX_WHISTLE_FOUL_1);
 }
 
 /* ================================================================
@@ -427,7 +440,7 @@ void PlayFoulWhistleSample(void)
 __attribute__((used, externally_visible))
 void PlayEndGameWhistleSample(void)
 {
-    HandleKickSampleAndCrowd(3, 0x16);
+    HandleKickSampleAndCrowd(3, SFX_WHISTLE_ENDGAME);
 }
 
 /* ================================================================
@@ -438,7 +451,7 @@ void PlaySample1IfNotTraining(void)
 {
     if (_trainingGame != 0)
         return;
-    PlaySample(1);
+    PlaySample(SFX_PRESET_NOT_TRAINING_1);
 }
 
 /* ================================================================
@@ -447,13 +460,13 @@ void PlaySample1IfNotTraining(void)
 __attribute__((used, externally_visible))
 void PlaySample1(void)
 {
-    PlaySample(1);
+    PlaySample(SFX_PRESET_NOT_TRAINING_1);
 }
 
 /* ================================================================
  * PlaySample2IfNotTraining  (SWOS2.s line 9477)
  *
- * If not training: set _pendingSampleId3_4=$3E8, play preset 3.
+ * If not training: set pendingSampleId3_4=$3E8, play preset 3.
  * (Original: falls through to PlaySample3 label)
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -462,13 +475,13 @@ void PlaySample2IfNotTraining(void)
     if (_trainingGame != 0)
         return;
     _pendingSampleId3_4 = 0x3E8;
-    PlaySample(3);
+    PlaySample(SFX_PRESET_NOT_TRAINING_2);
 }
 
 /* ================================================================
  * PlaySample4IfNotTraining  (SWOS2.s line 9488)
  *
- * If not training: set _pendingSampleId3_4=$190, play preset 4.
+ * If not training: set pendingSampleId3_4=$190, play preset 4.
  * (Original: falls through to PlaySample4 label)
  * ================================================================ */
 __attribute__((used, externally_visible))
@@ -477,13 +490,14 @@ void PlaySample4IfNotTraining(void)
     if (_trainingGame != 0)
         return;
     _pendingSampleId3_4 = 0x190;
-    PlaySample(4);
+    PlaySample(SFX_PRESET_NOT_TRAINING_4);
 }
 
 /* ================================================================
  * PlaySample3IfNotTraining  (SWOS2.s line 9502)
  *
- * If not training: set _sfxQueueCount=$A, GateKick($2C, 3).
+ * If not training: set sfxQueueCount=$A, then GateKick on channel 3
+ * with SFX_BALL_BOUNCE_3 (ball bounce variant 3).
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlaySample3IfNotTraining(void)
@@ -491,13 +505,16 @@ void PlaySample3IfNotTraining(void)
     if (_trainingGame != 0)
         return;
     _sfxQueueCount = 0x0A;
-    GateKickSampleAndCrowd(3, 0x2C);
+    GateKickSampleAndCrowd(3, SFX_BALL_BOUNCE_3);
 }
 
 /* ================================================================
  * PlayMissGoalSample  (SWOS2.s line 9514)
  *
- * If not training: set _sfxQueueCount=$A, HandleKick($26, 3).
+ * If not training: set sfxQueueCount=$A, then HandleKick on channel
+ * 3 with SFX_BALL_HEADER_STANDING (standing header). The "miss
+ * goal" name is the original asm symbol; the actual wave is the
+ * standing-header ball thump.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayMissGoalSample(void)
@@ -505,13 +522,13 @@ void PlayMissGoalSample(void)
     if (_trainingGame != 0)
         return;
     _sfxQueueCount = 0x0A;
-    HandleKickSampleAndCrowd(3, 0x26);
+    HandleKickSampleAndCrowd(3, SFX_BALL_HEADER_STANDING);
 }
 
 /* ================================================================
  * PlayPenalty  (SWOS2.s line 9526)
  *
- * If not training: play penalty sample, set _sfxQueueWriteIdx=$8C.
+ * If not training: play penalty sample, set sfxQueueWriteIdx=$8C.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayPenalty(void)
@@ -526,9 +543,9 @@ void PlayPenalty(void)
  * PlayGameStateWhistleSample  (SWOS2.s line 9537)
  *
  * If not training:
- *   - If _gameState != ST_PENALTY: play penalty sample
- *   - If _gameState == ST_PENALTY && _sfxQueueWriteIdx == 0: play penalty sample
- *   - Set _sfxQueueWriteIdx = $96
+ *   - If gameState != ST_PENALTY: play penalty sample
+ *   - If gameState == ST_PENALTY && sfxQueueWriteIdx == 0: play penalty sample
+ *   - Set sfxQueueWriteIdx = $96
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayGameStateWhistleSample(void)
@@ -564,15 +581,18 @@ void PlayGoalReplayBottomSample(void)
 /* ================================================================
  * PlayGoalKickOffSample  (SWOS2.s line 9563)
  *
- * If not training: HandleKick($12, 3). If played (return 0),
- * set _crowdEventFlags = $39.
+ * If not training: HandleKick on channel 3 with SFX_CROWD_NEARMISS
+ * ("oooh, just wide"). If the gate plays it (return 0), arm the
+ * crowd-event window with crowdEventFlags = $39. The asm name
+ * "GoalKickOff" is misleading — the wave id is the near-miss
+ * crowd reaction, not a kickoff.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayGoalKickOffSample(void)
 {
     if (_trainingGame != 0)
         return;
-    if (HandleKickSampleAndCrowd(3, 0x12) != 0)
+    if (HandleKickSampleAndCrowd(3, SFX_CROWD_NEARMISS) != 0)
         return;
     _crowdEventFlags = 0x39;
 }
@@ -580,15 +600,18 @@ void PlayGoalKickOffSample(void)
 /* ================================================================
  * PlayCornerKickSample  (SWOS2.s line 9579)
  *
- * If not training: HandleKick($F, 3). If played (return 0),
- * set _crowdEventFlags = $32.
+ * If not training: HandleKick on channel 3 with
+ * SFX_CROWD_KEEPERSAVES ("aaah" keeper saves a shot). If the gate
+ * plays it (return 0), arm the crowd-event window with
+ * crowdEventFlags = $32. The asm name "CornerKick" is misleading —
+ * the wave id is the keeper-saves crowd reaction.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void PlayCornerKickSample(void)
 {
     if (_trainingGame != 0)
         return;
-    if (HandleKickSampleAndCrowd(3, 0x0F) != 0)
+    if (HandleKickSampleAndCrowd(3, SFX_CROWD_KEEPERSAVES) != 0)
         return;
     _crowdEventFlags = 0x32;
 }
@@ -597,14 +620,16 @@ void PlayCornerKickSample(void)
  * HandleKickSampleAndCrowd  (SWOS2.s line 9606)
  *
  * If sfxId == $16, always play.
- * Otherwise, if _crowdEventFlags != 0, block (return non-zero).
- * Stores sfxId to _lastKickSampleTick, calls CrowdTickJump,
+ * Otherwise, if crowdEventFlags != 0, block (return non-zero).
+ * Stores sfxId to lastKickSampleTick, calls CrowdTickJump,
  * returns 0 (played).
  * ================================================================ */
 __attribute__((used, externally_visible))
 int16_t HandleKickSampleAndCrowd(uint16_t mode, uint16_t sfxId)
 {
-    if (sfxId != 0x16)
+    /* SFX_WHISTLE_ENDGAME bypasses the crowd-event gate so the final whistle
+     * always plays regardless of any in-flight crowd reaction. */
+    if (sfxId != SFX_WHISTLE_ENDGAME)
     {
         if (_crowdEventFlags != 0)
             return 1;  /* blocked */

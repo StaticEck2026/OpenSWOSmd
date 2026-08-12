@@ -1,0 +1,1451 @@
+{
+  "name": "_designDiyCupMenu",
+  "onInit": "DesignDIYCupInit",
+  "onReturn": "DesignDIYCupReinit",
+  "onDraw": "DesignDIYCupOnDraw",
+  "defaultEntry": 11,
+  "items": [
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aDesignDiyCup"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 304,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "invisible"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_diyCompetitionStart.base.competitionName"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 15
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 5,
+        "w": 304,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 13
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_diyCompetitionStart.base.competitionName"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect2"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 25,
+        "w": 75,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 4,
+          "up": 2,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPitchTypeOrSeasonStringTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 76,
+        "y": 25,
+        "w": 56,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 5,
+          "up": 2,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPitchTypeStringTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 76,
+        "y": 25,
+        "w": 22,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 7,
+          "up": 4,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupStartMonthStringTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect5"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 99,
+        "y": 25,
+        "w": 10,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aHyphen"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 110,
+        "y": 25,
+        "w": 22,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 9,
+          "up": 4,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupEndMonthStringTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect7"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -123,
+        "y": 25,
+        "w": 70,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aAwayGoals"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -52,
+        "y": 25,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 7,
+          "right": -1,
+          "up": 2,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupAwayGoalsStringTable"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect9"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 45,
+        "w": 64,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aRounds"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 65,
+        "y": 45,
+        "w": 44,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 13,
+          "up": 5,
+          "down": 20
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect11"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 45,
+        "w": 70,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aSubstitutes"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -72,
+        "y": 45,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 11,
+          "right": 15,
+          "up": 9,
+          "down": 21
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect13"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 45,
+        "w": 38,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aFrom"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": true
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 264,
+        "y": 45,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 13,
+          "right": -1,
+          "up": 9,
+          "down": 22
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect15"
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 58,
+        "y": 66,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aTeams"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -127,
+        "y": 66,
+        "w": 120,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aDescription"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 78,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 78,
+        "w": 18,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 78,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 21,
+          "up": 11,
+          "down": 25
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupLegsStringTable0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 78,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 20,
+          "right": 22,
+          "up": 13,
+          "down": 26
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupExtraTimeStringTable0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 78,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 21,
+          "right": -1,
+          "up": 15,
+          "down": 27
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPenaltiesStringTable0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect22"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 88,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 88,
+        "w": 18,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 88,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 26,
+          "up": 20,
+          "down": 30
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupLegsStringTable1"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 88,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 25,
+          "right": 27,
+          "up": 21,
+          "down": 31
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupExtraTimeStringTable1"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 88,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 26,
+          "right": -1,
+          "up": 22,
+          "down": 32
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPenaltiesStringTable1"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect22"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 98,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 98,
+        "w": 18,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 98,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 31,
+          "up": 25,
+          "down": 35
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupLegsStringTable2"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 98,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 30,
+          "right": 32,
+          "up": 26,
+          "down": 36
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupExtraTimeStringTable2"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 98,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 31,
+          "right": -1,
+          "up": 27,
+          "down": 37
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPenaltiesStringTable2"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect22"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 108,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 108,
+        "w": 18,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 108,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 36,
+          "up": 30,
+          "down": 40
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupLegsStringTable3"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 108,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 35,
+          "right": 37,
+          "up": 31,
+          "down": 41
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupExtraTimeStringTable3"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 108,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 36,
+          "right": -1,
+          "up": 32,
+          "down": 42
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPenaltiesStringTable3"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect22"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 118,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": 118,
+        "w": 18,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": 118,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 41,
+          "up": 35,
+          "down": 45
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupLegsStringTable4"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": 118,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 40,
+          "right": 42,
+          "up": 36,
+          "down": 46
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupExtraTimeStringTable4"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": 118,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 41,
+          "right": -1,
+          "up": 37,
+          "down": 47
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPenaltiesStringTable4"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect22"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -128,
+        "w": 80,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": -128,
+        "w": 18,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 9
+        },
+        {
+          "op": "number",
+          "flags": "0x0",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 113,
+        "y": -128,
+        "w": 38,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 46,
+          "up": 40,
+          "down": 49
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupLegsStringTable5"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect20"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -104,
+        "y": -128,
+        "w": 72,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 45,
+          "right": 47,
+          "up": 41,
+          "down": 49
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupExtraTimeStringTable5"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect21"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -31,
+        "y": -128,
+        "w": 79,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 46,
+          "right": -1,
+          "up": 42,
+          "down": 49
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "string_table",
+          "flags": "0x0",
+          "table": "_diyCupPenaltiesStringTable5"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect22"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -71,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 50,
+          "up": 45,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aChooseTeams"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOnSelect48"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -91,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 45,
+          "down": 50
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aOk"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DesignDIYCupOK"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 121,
+        "y": -71,
+        "w": 62,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 48,
+          "right": -1,
+          "up": 49,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -72,
+        "y": -68,
+        "w": 120,
+        "h": 9
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 0
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    }
+  ]
+}

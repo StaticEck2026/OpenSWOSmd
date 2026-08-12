@@ -1,0 +1,59 @@
+{
+  "name": "_continueMenu",
+  "onInit": "ContinueInit",
+  "onReturn": null,
+  "onDraw": null,
+  "defaultEntry": 1,
+  "items": [
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 2,
+        "y": 40,
+        "w": 300,
+        "h": 40
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": null
+        }
+      ]
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 102,
+        "y": -71,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aContinue"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "ContinueMenuContinueSelected"
+        }
+      ]
+    }
+  ]
+}

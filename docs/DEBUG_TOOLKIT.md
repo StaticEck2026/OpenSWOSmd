@@ -12,8 +12,12 @@ This document covers the **inspection** layer. Two sibling docs cover the rest:
 - **`HARNESS.md`** — the higher-level *control* layer (drive the game: load careers,
   open menus, step seasons).
 
-All tools live in **`scripts/amiga/`** and talk to the target via `gdb_proxy.py`, so a
-healthy attached session (`amiga_gdb.sh up --fresh`) is the only prerequisite.
+All tools live in the **AmigaScope** repo (github.com/benbaker76/AmigaScope, checked out
+at `/mnt/c/Projects/AI/AmigaScope`; set `AMIGASCOPE_DIR` if yours is elsewhere) and talk
+to the target via `gdb_proxy.py`, so a healthy attached session (`amiga_gdb.sh up
+--fresh`) is the only prerequisite. They were split out of `SWOS_C/scripts/amiga/` on
+2026-07-19 — paths written as `scripts/amiga/<tool>` below and in the sibling docs
+predate that move; read them as `$AMIGASCOPE_DIR/<tool>`.
 
 > These tools are game-agnostic. Nothing here is SWOS-specific except the default
 > symbol names (`_copperListBuffer`, the pitch display window) — pass explicit

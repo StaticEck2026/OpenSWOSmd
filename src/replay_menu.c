@@ -10,6 +10,8 @@
 #include "display.h"
 #include "fade.h"
 
+extern void WaitForVSync(void);   /* game_utils.c — pumps SDL events on SDL */
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern volatile int16_t _waitingInterrupt;
 extern volatile uint16_t _currentGameTick;
@@ -29,6 +31,7 @@ extern uint8_t _aExit[];             /* "EXIT" */
 
 /* ---- External functions ---- */
 extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern void LoadOverlayToFrontbuffer(const uint8_t *path);
 
 /* ================================================================
  * DrawMenuBack150x20  (SWOS2.s line 18456)
@@ -48,7 +51,7 @@ void DrawMenuBack150x20(uint16_t color, uint16_t x, uint16_t y)
  * DrawReplayContinueShiningFrame  (SWOS2.s line 18513)
  *
  * Draws an animated shining frame around a 150x20 box.
- * Uses _currentGameTick to cycle through _kColorTableShine colors.
+ * Uses currentGameTick to cycle through kColorTableShine colors.
  *   D0 = x position, D1 = y position
  *
  * Frame consists of 4 FillRectangle calls:
@@ -102,10 +105,14 @@ void DrawReplayOrExitMenu(void)
         /* "EXIT" text centered (x center=176, y=142, color index=2) */
         DrawMenuTextCentered(176, 142, 2, _aExit, _bigCharsTable);
 
-        /* Wait for VBlank */
-        _waitingInterrupt = 1;
-        while (_waitingInterrupt != 0)
-            ;
+        /* Wait for VBlank. Use WaitForVSync (which routes to
+         * Platform_VBlank on SDL) instead of the raw waitingInterrupt
+         * spin — Platform_VBlank pumps SDL events, so keyboard
+         * up/down gets processed; without it the user couldn't move
+         * the cursor on Windows because the only event-pump path was
+         * the SDL_Timer thread's >60ms-since-render fallback, which
+         * never fires from a tight menu loop. */
+        WaitForVSync();
     }
 }
 
@@ -114,21 +121,29 @@ void DrawReplayOrExitMenu(void)
  *
  * Shows the post-friendly-match "REPLAY / EXIT" menu.
  * Loads background image, sets up display, then runs an event loop
- * handling up/down navigation and _fire to select.
+ * handling up/down navigation and fire to select.
  * ================================================================ */
 __attribute__((used, externally_visible))
 void ReplayExitMenuAfterFriendly(void)
 {
     /* Widescreen: centre the menu over the (centred) background. The match loop left
      * _menu_draw_x_offset = 0 (game_loop.c); the REPLAY/EXIT box, text and shining-frame
-     * draws below all read it, so without this they'd sit at the screen's left edge while the
-     * background is centred. Restored before returning. WIDE_MARGIN is 0 on Amiga, so this is
-     * a no-op here. */
+     * draws below all read it via FillRectangle / blitStringToFrontBuffer, so without this
+     * they'd sit at the screen's left edge while menubg2 (which bakes WIDE_MARGIN into its
+     * own frontbuffer position) is centred. Restored before returning. WIDE_MARGIN is 0 on
+     * Amiga / non-widescreen, so this is a no-op there. */
     int saved_x_offset = _menu_draw_x_offset;
     _menu_draw_x_offset = WIDE_MARGIN;
 
-    /* Load menu background image */
-    LoadFileEx(_aGrafsMenubg2Ra, _frontbufferMaskBuffer, (uint32_t *)0);
+    /* Load menu background image. On Amiga, LoadFileEx writes bitplane
+     * data directly into frontbufferMaskBuffer (which is bitplane-format
+     * there). On SDL, frontbufferMaskBuffer is chunky 8bpp, so we have to
+     * route through LoadOverlayToFrontbuffer, which decompresses to a
+     * staging buffer and decodes bitplane → chunky into the mask buffer.
+     * The previous direct LoadFileEx call left the top of the buffer
+     * holding raw bitplane bytes (visible as noise) and the bottom
+     * holding stale memory (visible as the previous-frame stadium). */
+    LoadOverlayToFrontbuffer(_aGrafsMenubg2Ra);
 
     ProcessSpriteBlitQueue();
     BlitterCopyPanelToScreen();
@@ -166,10 +181,14 @@ void ReplayExitMenuAfterFriendly(void)
                 needsRedraw = 0;
             }
 
-            /* Wait for VBlank */
-            _waitingInterrupt = 1;
-            while (_waitingInterrupt != 0)
-                ;
+            /* Wait for VBlank. Use WaitForVSync (which routes to
+             * Platform_VBlank on SDL) instead of the raw
+             * waitingInterrupt spin so SDL events get pumped on the
+             * main thread — without this the user can't move the
+             * cursor on Windows. Same fix pattern as the other
+             * site in this file and the season-transition debounce
+             * loops in commit f6a0a47. */
+            WaitForVSync();
 
             /* Draw shining frame on selected item */
             if (_replaySelected != 0)
@@ -200,14 +219,14 @@ void ReplayExitMenuAfterFriendly(void)
                 continue;
             }
 
-            /* Other direction (up/left/right) — check _fire */
+            /* Other direction (up/left/right) — check fire */
             if (_fire != 0)
             {
                 FadeOutToBlack();
                 _menu_draw_x_offset = saved_x_offset;
                 return;
             }
-            /* No _fire, just wait */
+            /* No fire, just wait */
         }
     }
 }

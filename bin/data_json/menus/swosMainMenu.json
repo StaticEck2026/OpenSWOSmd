@@ -1,0 +1,458 @@
+{
+  "name": "_swosMainMenu",
+  "onInit": "SWOSMainMenuInit",
+  "onReturn": "GlobalRetn",
+  "onDraw": null,
+  "defaultEntry": 6,
+  "items": [
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 88,
+        "y": -24,
+        "w": 128,
+        "h": 76
+      },
+      "commands": [
+        {
+          "op": "sprite_fg",
+          "index": 224
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 1
+    },
+    {
+      "kind": "coords_mode",
+      "wide": false
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 64,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 6,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aEditTactics"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditTacticsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 84,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 7,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 8
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aEditCustomTeam"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "EditCustomTeamMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 104,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aHighlights_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "HighlightsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": 124,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 9,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 8
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aOptions"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "OptionsMenuSelected"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 0,
+        "y": -112,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 10,
+          "up": 4,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aSaveDiskFiling"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SaveDiskFilingMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 64,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 1,
+          "right": -1,
+          "up": -1,
+          "down": 7
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aFriendly_1"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "FriendlyMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 84,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 2,
+          "right": -1,
+          "up": 6,
+          "down": 8
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aDiyCompetition_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "DIYCompetitionMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 104,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 3,
+          "right": -1,
+          "up": 7,
+          "down": 9
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 5
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aPresetCompetit_0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "PresetCompetitionMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": 124,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 4,
+          "right": -1,
+          "up": 8,
+          "down": 10
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aSeason_1"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SeasonMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": -102,
+        "y": -112,
+        "w": -106,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": 5,
+          "right": -1,
+          "up": 9,
+          "down": 11
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x10",
+          "str": "_aCareer_1"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "CareerMenu"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 27,
+        "y": -88,
+        "w": -6,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 10,
+          "down": 12
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "StartContest"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 27,
+        "y": -67,
+        "w": -6,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 11,
+          "down": 13
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_saveFileTitle"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SaveContest"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "coords": {
+        "x": 27,
+        "y": -50,
+        "w": -6,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 12,
+          "down": -1
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aLoadOldCompeti"
+        },
+        {
+          "op": "onselect_fire",
+          "func": "LoadOldCompetitionMenu"
+        }
+      ]
+    },
+    {
+      "kind": "set_origin",
+      "x": 0,
+      "y": 0
+    }
+  ]
+}

@@ -10,7 +10,7 @@ typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;
 typedef signed short int16_t;
-typedef int int32_t;
+typedef signed int int32_t;
 
 /* --- Initialization / cleanup --- */
 void SafeStart(void);
@@ -18,7 +18,7 @@ void DetachOSDisplay(void);
 void LoadDosLibrary(void);
 void CloseDosLibrary(void);
 void ExitToDos(void);
-uint8_t *AllocMemAny(uint32_t size);
+uint8_t *AllocMemAny(uint32_t _size);
 
 /* --- Hardware helpers --- */
 void FixSnoopBug(void);
