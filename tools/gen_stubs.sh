@@ -10,7 +10,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ASM="/mnt/c/Projects/AI/SWOS/OpenSWOS/SWOS2.s"
+# The FULL annotated disassembly exported from SWOS-RE, not the smaller sparse
+# ./SWOS2.s at the repo root (an older, AGA-switchable export). Stub sizes come
+# from `ds.b N` here, so a sparse/stale source silently produces undersized
+# buffers -- exactly the failure mode described in the header comment below.
+# Repo-relative so moving the checkout doesn't break it.
+ASM="$ROOT/data/SWOS2.s"
 OUT="$ROOT/src/swos_amiga_data_stubs.c"
 
 cd "$ROOT"

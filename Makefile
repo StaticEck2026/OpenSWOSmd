@@ -499,6 +499,15 @@ LDFLAGS += -sASYNCIFY -sASYNCIFY_STACK_SIZE=65536 \
            --preload-file bin/data_json@/data_json
 # Re-link when the pre-js or shell HTML changes (both embedded at link time).
 WASM_LINK_DEPS := wasm/pre.js wasm/shell.html
+# The --preload-file dirs are baked into SWOS.data AT LINK TIME, but nothing above
+# makes them a prerequisite — so editing/adding a data file and re-running
+# `make WASM=1` relinked nothing and silently shipped the OLD SWOS.data. (Hit for
+# real when bin/data_json/teams landed: SWOS.data stayed 2.8MB until the target was
+# deleted by hand, then jumped to 21MB.) List the preloaded files so a data change
+# forces the relink.
+WASM_PRELOAD_FILES := $(wildcard bin/data/* bin/grafs/* bin/grafs_aga/* bin/sound/* \
+                                 bin/data_json/*.json bin/data_json/*/*.json)
+WASM_LINK_DEPS += $(WASM_PRELOAD_FILES)
 endif
 
 LDLIBS  := $(SDL2_LIBS) -lm
