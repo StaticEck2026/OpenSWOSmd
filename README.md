@@ -276,12 +276,26 @@ make -f Makefile.amiga -j$(nproc)
 ```
 
 The m68k cross-toolchain (`m68k-amiga-elf-gcc`, `vasmm68k_mot`, `elf2hunk`)
-ships inside the **Amiga C/C++ Compile, Debug & Profile** VS Code extension by
-Bartman^Abyss rather than being installed system-wide, so put it on `PATH`
-first. Linux/WSL and macOS builds of the toolchain are both bundled:
+ships inside the **Amiga C/C++ Compile, Debug & Profile** VS Code extension
+rather than being installed system-wide, so put it on `PATH` first.
+
+> ⚠️ **Use the [`benbaker76/vscode-amiga-debug`](https://github.com/benbaker76/vscode-amiga-debug)
+> fork, not the marketplace build** of Bartman^Abyss's extension. The fork's
+> FS-UAE carries the gdb **write**-packet support (`M`/`P`/`G`) that lets the
+> AmigaScope harness *drive* the Amiga — inject input, set variables, call
+> functions — rather than only read it, plus a log-spam fix. Both install to the
+> same `bartmanabyss.amiga-debug-<ver>` directory and report the same publisher
+> and upstream repo in `package.json`, so **you cannot tell them apart after the
+> fact**. Symptom of being on the stock build: gdb reads memory fine, but writes
+> and input injection silently do nothing.
+
+Linux/WSL and macOS builds of the toolchain are both bundled. When building from
+WSL, note the extension lives in the **Windows-side** `.vscode` — there is no
+extension directory in the WSL home, and `~/.vscode` fails as `Error 127`
+(which an already-up-to-date tree hides behind `Nothing to be done for 'all'`):
 
 ```
-EXT=~/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
+EXT=/mnt/c/Users/<your-user>/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
 PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
 ```
 

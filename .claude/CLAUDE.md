@@ -34,6 +34,13 @@ make X86_64=1 -j$(nproc)  # bin/SWOS.x86_64
 make WASM=1               # bin/SWOS.html   (needs emsdk on PATH)
 
 # Amiga m68k — toolchain ships inside the amiga-debug VSCode extension.
+# ⚠️ It MUST be the owner's fork, github.com/benbaker76/vscode-amiga-debug —
+# NOT the marketplace build. Its FS-UAE has the gdb WRITE packets (M/P/G) that
+# let the AmigaScope harness drive the target (inject input, set vars, call
+# functions) instead of only reading it, plus a log-spam fix. Both installs share
+# the SAME dir name and the SAME publisher/repo in package.json, so they are
+# indistinguishable after the fact — if gdb reads fine but writes silently no-op,
+# that's the stock build. See scripts/amiga/amigascope/README.md.
 # NOTE the path is the WINDOWS-side .vscode (VSCode is installed on the host),
 # NOT ~/.vscode in the WSL home — there is no extension dir there. Getting this
 # wrong fails as `Error 127` (compiler not found), and an up-to-date tree hides

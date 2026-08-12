@@ -292,11 +292,20 @@ combo, e.g. `combo fire left`.
 ## Prerequisite: a write-capable gdb stub
 
 Input injection, inferior calls, and filename staging all require gdb to **write**
-target memory/registers. Native SDL gdb is fine. **The FS-UAE / bartman stub was
-read-only** (it ACKs reads + breakpoints but silently drops `M`/`X`/`G`/`P`
-writes — so `set var` never stuck and every injection no-op'd). It was patched to
+target memory/registers. Native SDL gdb is fine. **The stock FS-UAE / bartman stub
+is read-only** (it ACKs reads + breakpoints but silently drops `M`/`X`/`G`/`P`
+writes — so `set var` never sticks and every injection no-ops). It was patched to
 add write support — see below. Run `swos_harness.py check` to confirm writes
 reach the target (it fails loudly on a read-only stub).
+
+> **You do not have to redo this patch by hand.** It is packaged in the
+> [`benbaker76/vscode-amiga-debug`](https://github.com/benbaker76/vscode-amiga-debug)
+> fork of the extension, which is the build this project (and AmigaScope) assumes
+> — install that instead of the marketplace one. The two are **indistinguishable
+> once installed**: same `bartmanabyss.amiga-debug-<ver>` directory, same
+> publisher and upstream repo URL in `package.json`. The only reliable tell is
+> behavioural — reads work, writes silently do nothing. The section below is kept
+> for the record, and for rebuilding the stub if you need to change it.
 
 ### FS-UAE write support (the patch)
 
