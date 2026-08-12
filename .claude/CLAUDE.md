@@ -153,16 +153,34 @@ Nothing is duplicated under `uae/` any more.
   not compiled** (`Makefile.amiga` scans only `src/`). These are a *snapshot*;
   SWOS-RE is the live source.
 
-  ⚠️ **There are TWO `SWOS2.s` in this repo and they are NOT the same file.**
-  Use `data/SWOS2.s`.
+  `data/SWOS2.s` (~5.4 MB, matching SWOS-RE's `Amiga/SWOS/SWOS2.s`) is **the**
+  disassembly to read — every doc and audit cites it. It is not assembled.
 
-  | Path | Size | Vintage | What it is |
-  |---|---|---|---|
-  | `data/SWOS2.s` | ~5.4 MB | Apr 2026 | **The one to read.** Full annotated export, matches SWOS-RE's `Amiga/SWOS/SWOS2.s`. Every doc and audit references this one. |
-  | `./SWOS2.s` (root) | ~1.2 MB | Mar 2026 | Older, smaller *sparse* export carrying an `AGA = 0` build switch. Kept for history; **do not cite it for symbol sizes or offsets** — being sparse, an absent `ds.b` there does not mean the symbol is absent. |
+  > A second, smaller (~1.2 MB) *sparse* `SWOS2.s` used to sit at the repo root,
+  > paired with `asm/swos2_unit.s` which `include`d it. That pair was the original
+  > bootstrap scaffolding — assemble the whole 68k program as one vasm unit and
+  > progressively move routines out into C. Both were **deleted 2026-08-12**: the
+  > port runs entirely from C, neither was in the build (`swos_asm_sources` is
+  > only `asm/resload_unit.s`), and `startShim` comes from
+  > `src/platform_amiga_stubs.c`. Deleting them left the Amiga binary
+  > byte-for-byte identical (same sections, same 5721 symbols). Recover from git
+  > history if ever needed.
 
-  Neither is assembled — the only asm in the build is `asm/resload_unit.s`
-  (vasm) and `support/gcc8_a_support.s`.
+### Writing new m68k assembly
+
+There IS still a live asm path — don't resurrect the old monolith to use it:
+
+- `asm/resload_unit.s` (vasm) `include`s `../Resload.s`. **`Resload.s` at the
+  repo root is a real build input** — don't mistake it for the deleted
+  `SWOS2.s` and remove it.
+- `support/gcc8_a_support.s` (gas) is the toolchain support unit.
+
+To move a routine back to assembly (e.g. an interrupt handler where C codegen
+isn't tight enough): add a **new** `asm/<name>.s`, append it to
+`swos_asm_sources` in `Makefile.amiga`, `xdef` the entry point, and delete or
+`#ifdef` out the C version. Copy the original body from `data/SWOS2.s`. Do not
+re-introduce a single all-encompassing asm unit — the per-routine split is what
+lets the two targets share `src/`.
 - C:\Projects\AI\SWOS\swos-port-c - Partial C++ port with the Amiga game loop working under SDL. Used as the verified game-loop reference.
 - C:\Projects\GitHub\SwosGfx - SWOS graphics conversion app (C#). **`SwosGfx\AmigaTools.cs` is the authoritative reference for parsing Amiga SPRITE, PITCH (tile-map mapping + bitplane tile stream), and PALETTE data.** Consult it whenever implementing or debugging an Amiga asset decoder.
 - C:\msys64\home\headk\rjp1player - RJP1 module player for the original Amiga music modules / SFX extraction.
