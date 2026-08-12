@@ -47,7 +47,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make X86_64=1 -j$(nproc)"
+                "cd /mnt/c/Projects/AI/SWOS/OpenSWOS && make X86_64=1 -j$(nproc)"
             ],
             "group": "build",
             "problemMatcher": []
@@ -62,7 +62,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make ARM64=1 -j$(nproc)"
+                "cd /mnt/c/Projects/AI/SWOS/OpenSWOS && make ARM64=1 -j$(nproc)"
             ],
             "group": "build",
             "problemMatcher": []
@@ -76,7 +76,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make ARM=1 -j$(nproc)"
+                "cd /mnt/c/Projects/AI/SWOS/OpenSWOS && make ARM=1 -j$(nproc)"
             ],
             "group": "build",
             "problemMatcher": []
@@ -89,7 +89,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make X86_64=1 -j$(nproc) && make ARM64=1 -j$(nproc) && make ARM=1 -j$(nproc)"
+                "cd /mnt/c/Projects/AI/SWOS/OpenSWOS && make X86_64=1 -j$(nproc) && make ARM64=1 -j$(nproc) && make ARM=1 -j$(nproc)"
             ],
             "group": "build",
             "problemMatcher": []
@@ -113,7 +113,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL && make WASM=1 -j$(nproc)"
+                "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/Projects/AI/SWOS/OpenSWOS && make WASM=1 -j$(nproc)"
             ],
             "group": "build",
             "problemMatcher": []
@@ -127,7 +127,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/cygwin64/home/headk/SWOS_C_SDL/bin && exec emrun --no_browser --port 8080 SWOS.html"
+                "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/Projects/AI/SWOS/OpenSWOS/bin && exec emrun --no_browser --port 8080 SWOS.html"
             ],
             "isBackground": true,
             "dependsOn": "Build (wasm)",

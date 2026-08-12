@@ -37,8 +37,8 @@ PROXY_CANDIDATES = [
     os.path.join(os.environ["AMIGASCOPE_DIR"], "gdb_proxy.py")
     if os.environ.get("AMIGASCOPE_DIR") else None,
     "/mnt/c/Projects/AI/AmigaScope/gdb_proxy.py",                  # standalone repo
-    "/mnt/c/Projects/AI/SWOS/SWOS_C/scripts/amiga/amigascope/gdb_proxy.py",  # submodule
-    "/mnt/c/Projects/AI/SWOS/SWOS_C/scripts/amiga/gdb_proxy.py",   # pre-split
+    "/mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/amigascope/gdb_proxy.py",  # submodule
+    "/mnt/c/Projects/AI/SWOS/OpenSWOS/scripts/amiga/gdb_proxy.py",   # pre-split
 ]
 DEFAULT_PROXY = next(
     (p for p in PROXY_CANDIDATES if p and os.path.exists(p)),

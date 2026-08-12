@@ -34,7 +34,7 @@ From WSL inside the project root. The m68k toolchain (`m68k-amiga-elf-gcc`,
 on PATH** by default — add it:
 
 ```bash
-cd /mnt/c/Projects/AI/SWOS/SWOS_C
+cd /mnt/c/Projects/AI/SWOS/OpenSWOS
 TCDIR=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
 export PATH="$TCDIR/opt/bin:$TCDIR:$PATH"   # opt/bin = gcc/as, $TCDIR = elf2hunk
 
@@ -73,7 +73,7 @@ provides `$DISPLAY` automatically — no Xserver setup needed.
 ## Run + attach: the reliable one-command path (use this)
 
 ```bash
-bash /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh up
+bash /mnt/c/Projects/AI/SWOS/OpenSWOS/amiga_gdb.sh up
 ```
 
 `amiga_gdb.sh up` does the whole dance deterministically and prints `OK`
@@ -111,10 +111,10 @@ DEGRADED. 90s outwaits any boot. No FS-UAE change needed. (The old
 Then drive gdb as usual and check the live verdict any time:
 
 ```bash
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py cmd "info registers"
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py health    # OK / DEGRADED
-bash    /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh status     # HEALTHY / DEGRADED / DOWN
-bash    /mnt/c/Projects/AI/SWOS/SWOS_C/amiga_gdb.sh down       # tear everything down
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py cmd "info registers"
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py health    # OK / DEGRADED
+bash    /mnt/c/Projects/AI/SWOS/OpenSWOS/amiga_gdb.sh status     # HEALTHY / DEGRADED / DOWN
+bash    /mnt/c/Projects/AI/SWOS/OpenSWOS/amiga_gdb.sh down       # tear everything down
 ```
 
 The daemon also prints its attach verdict to `/tmp/swos_gdb_daemon.log`
@@ -133,7 +133,7 @@ for a follow-up `cmd`/`poll`. Pipe it into any notifier:
 
 ```bash
 # one line per stop, with function + file:line (Ctrl-C / kill to stop):
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py watch
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py watch
 #   STOP OK stopped PC=0x259ebc | setCupPickList_Europe career_season.c:1148
 
 python3 .../gdb_proxy.py watch --once                  # exit after first stop
@@ -195,7 +195,7 @@ cd /mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linu
     --amiga_model=a1200 \
     --automatic_input_grab=0 \
     --hard_drive_0=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/dh0 \
-    --hard_drive_1=/mnt/c/Projects/AI/SWOS/SWOS_C/bin \
+    --hard_drive_1=/mnt/c/Projects/AI/SWOS/OpenSWOS/bin \
     --remote_debugger=20 \
     --remote_debugger_port=2345 \
     --remote_debugger_trigger=:SWOS2 \
@@ -228,12 +228,12 @@ pgrep -af fs-uae | head -1   # expect: the running fs-uae process
 ### 2. Start the proxy daemon
 
 ```bash
-setsid nohup python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py daemon \
+setsid nohup python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py daemon \
        --mode amiga --host 127.0.0.1 \
   > /tmp/swos_gdb_daemon.log 2>&1 < /dev/null &
 disown
 sleep 3
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py ping     # expect: pong
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py ping     # expect: pong
 ```
 
 The daemon:
@@ -280,7 +280,7 @@ Every gdb client connect→disconnect burns it. So:
 ### Send a command, get the response
 
 ```bash
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py cmd "<gdb command>"
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py cmd "<gdb command>"
 ```
 
 `<gdb command>` is any normal CLI gdb input. The response is the
@@ -457,7 +457,7 @@ accepting new connections until FS-UAE is restarted.
 Clean teardown:
 
 ```bash
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py stop      # quits gdb, frees socket
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py stop      # quits gdb, frees socket
 pkill -f "fs-uae --amiga"                                     # closes FS-UAE
 ```
 
@@ -468,7 +468,7 @@ pkill -f "fs-uae --amiga"                                     # closes FS-UAE
 - **gdb prints `warning: SECTION.foo: No such file or directory`** —
   harmless, the ELF's `.debug_*` sections reference Windows-style
   source paths (`C:/Projects/...`) which Linux gdb can't open. Use
-  `set substitute-path C:/Projects/AI/SWOS/SWOS_C/ /mnt/c/Projects/AI/SWOS/SWOS_C/`
+  `set substitute-path C:/Projects/AI/SWOS/OpenSWOS/ /mnt/c/Projects/AI/SWOS/OpenSWOS/`
   to give it the WSL path if you need `list`/source view to work.
 - **`call (void*)memcpy(...)` hangs** — gdb's "call inferior
   function" requires the target to be at a clean stop point. If
@@ -535,7 +535,7 @@ flag keeps pointer/long widths matching the Amiga struct layouts).
 ### Build
 
 ```bash
-cd /mnt/c/Projects/AI/SWOS/SWOS_C     # repo root
+cd /mnt/c/Projects/AI/SWOS/OpenSWOS     # repo root
 make clean      # only when crossing between Cygwin and WSL builds
 make -j4        # produces bin/SWOS (Linux ELF, debug info included)
 ```
@@ -551,15 +551,15 @@ The SDL workflow is simpler than Amiga: gdb directly launches the
 binary, no separate emulator step.
 
 ```bash
-setsid nohup python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py daemon \
+setsid nohup python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py daemon \
        --mode sdl \
   > /tmp/swos_gdb_daemon.log 2>&1 < /dev/null &
 disown
 sleep 2
-python3 /mnt/c/Projects/AI/SWOS/SWOS_C/gdb_proxy.py ping         # expect: pong
+python3 /mnt/c/Projects/AI/SWOS/OpenSWOS/gdb_proxy.py ping         # expect: pong
 ```
 
-By default the SDL daemon uses `/mnt/c/cygwin64/home/headk/SWOS_C_SDL/bin/SWOS`
+By default the SDL daemon uses `/mnt/c/Projects/AI/SWOS/OpenSWOS/bin/SWOS`
 and runs gdb with that directory as cwd (so the inferior finds its
 `data/`, `grafs/`, `sound/` subdirs). Override with `--bin
 /path/to/SWOS` if needed.
@@ -611,7 +611,7 @@ needed.
 ## File layout
 
 ```
-/mnt/c/Projects/AI/SWOS/SWOS_C/                     # Amiga port
+/mnt/c/Projects/AI/SWOS/OpenSWOS/                     # Amiga port
 ├── gdb_proxy.py                                     # the proxy script (used by both modes)
 ├── uae/dh0/data/
 │   ├── SWOS2                # hunk binary FS-UAE runs
@@ -619,7 +619,7 @@ needed.
 │   └── SWOS2.map            # linker map (adjacent-symbol lookups)
 └── GDB.md                   # this file
 
-/mnt/c/cygwin64/home/headk/SWOS_C_SDL/               # SDL port
+/mnt/c/Projects/AI/SWOS/OpenSWOS/               # SDL port
 ├── bin/SWOS                 # x86 Linux ELF the SDL daemon launches
 ├── data/ grafs/ sound/      # runtime assets (loaded relative to bin/)
 └── Makefile

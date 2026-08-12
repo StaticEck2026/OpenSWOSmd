@@ -63,9 +63,9 @@
             "name": "Launch Debug (x86_64 / WSL)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/mnt/c/cygwin64/home/headk/SWOS_C_SDL/bin/SWOS.x86_64",
+            "program": "/mnt/c/Projects/AI/SWOS/OpenSWOS/bin/SWOS.x86_64",
             "args": [],
-            "cwd": "/mnt/c/cygwin64/home/headk/SWOS_C_SDL/bin",
+            "cwd": "/mnt/c/Projects/AI/SWOS/OpenSWOS/bin",
             "stopAtEntry": false,
             "MIMode": "gdb",
             "preLaunchTask": "Build (x86_64)",
@@ -76,7 +76,7 @@
                 "pipeCwd": ""
             },
             "sourceFileMap": {
-                "/mnt/c/cygwin64/home/headk/SWOS_C_SDL": "${workspaceFolder}"
+                "/mnt/c/Projects/AI/SWOS/OpenSWOS": "${workspaceFolder}"
             },
             "setupCommands": [
                 {

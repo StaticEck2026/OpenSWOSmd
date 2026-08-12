@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ASM="/mnt/c/Projects/AI/SWOS/SWOS_C/SWOS2.s"
+ASM="/mnt/c/Projects/AI/SWOS/OpenSWOS/SWOS2.s"
 OUT="$ROOT/src/swos_amiga_data_stubs.c"
 
 cd "$ROOT"

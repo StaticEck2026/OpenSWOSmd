@@ -10,8 +10,8 @@ with meaningful names, justified by how the original Amiga asm and the current
 C port actually read each byte.
 
 **Sources cross-checked:**
-- `/mnt/c/Projects/AI/SWOS/SWOS_C/data/SWOS2.s` — original 68k asm + EQU blocks (lines 1718–2134 define the struct field offsets; data tables at 117994–121230).
-- `/mnt/c/Projects/AI/SWOS/SWOS_C/data/Data.c` — IDA C export.
+- `/mnt/c/Projects/AI/SWOS/OpenSWOS/data/SWOS2.s` — original 68k asm + EQU blocks (lines 1718–2134 define the struct field offsets; data tables at 117994–121230).
+- `/mnt/c/Projects/AI/SWOS/OpenSWOS/data/Data.c` — IDA C export.
 - SDL port: `src/diy_competition.c`, `src/teams.c`, `src/career_*.c`, `src/competition_data.c`, `src/save_format_json.c`.
 
 **Convention for this report**

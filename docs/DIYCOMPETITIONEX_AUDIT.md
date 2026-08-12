@@ -5,7 +5,7 @@ This is the source-of-truth investigation for refactoring the ~400 raw
 typed `struct->field` accesses. Before any code changes happen, every
 distinct offset needs to be mapped to the actual semantic field it
 addresses, cross-referenced against the original Amiga BSS layout in
-`/mnt/c/Projects/AI/SWOS/SWOS_C/data/SWOS2.s` (referred to below as
+`/mnt/c/Projects/AI/SWOS/OpenSWOS/data/SWOS2.s` (referred to below as
 `SWOS2.s`).
 
 ## TL;DR — the key discovery

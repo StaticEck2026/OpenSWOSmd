@@ -17,7 +17,7 @@
       "Bash(export AMIGA_BIN=\"/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.7.9/bin/win32\")",
       "Bash(cmd.exe /c \"cd /d C:\\\\Projects\\\\AI\\\\SWOS\\\\SWOS_C && C:\\\\Users\\\\headk\\\\.vscode\\\\extensions\\\\bartmanabyss.amiga-debug-1.7.9\\\\bin\\\\win32\\\\gnumake.exe program=uae/dh0/data/SWOS2 2>&1\")",
       "Bash(cmd.exe //c \"cd /d C:\\\\Projects\\\\AI\\\\SWOS\\\\SWOS_C && C:\\\\Users\\\\headk\\\\.vscode\\\\extensions\\\\bartmanabyss.amiga-debug-1.7.9\\\\bin\\\\win32\\\\gnumake.exe program=uae/dh0/data/SWOS2\")",
-      "Bash(\"/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.7.9/bin/win32/gnumake.exe\" -C /c/Projects/AI/SWOS/SWOS_C program=uae/dh0/data/SWOS2)",
+      "Bash(\"/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.7.9/bin/win32/gnumake.exe\" -C /c/Projects/AI/SWOS/OpenSWOS program=uae/dh0/data/SWOS2)",
       "Bash(export PATH=\"$AMIGA_BIN/opt/bin:$AMIGA_BIN:$PATH\")",
       "Bash(export OS=Windows_NT:*)",
       "Bash(AMIGA_BIN=\"C:/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.7.9/bin/win32\")",
@@ -51,7 +51,7 @@
       "Bash(for label:*)",
       "Bash(do echo:*)",
       "Read(//tmp/**)",
-      "Bash(rm -f /mnt/c/Projects/AI/SWOS/SWOS_C/obj/*.d /mnt/c/Projects/AI/SWOS/SWOS_C/obj/*.o)",
+      "Bash(rm -f /mnt/c/Projects/AI/SWOS/OpenSWOS/obj/*.d /mnt/c/Projects/AI/SWOS/OpenSWOS/obj/*.o)",
       "Bash(/tmp/build_swos.sh -j4 program=uae/dh0/data/SWOS2)"
     ]
   }

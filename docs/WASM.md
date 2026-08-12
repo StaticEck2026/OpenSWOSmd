@@ -336,7 +336,7 @@ swos_globals.c:22         career_board_confidence.c:19
 
 **Verify recipe (per file):**
 1. `make X86_64=1 SWOS_SAVE_FORMAT_JSON_VERIFY=0` (green).
-2. Amiga: `source` the m68k toolchain (linux bin), `make -C /mnt/c/Projects/AI/SWOS/SWOS_C` (green).
+2. Amiga: `source` the m68k toolchain (linux bin), `make -C /mnt/c/Projects/AI/SWOS/OpenSWOS` (green).
 3. Periodically: a real `emcc` compile of the converted TU (see below) — should stop
    erroring on `.skip` once the file is pure C.
 4. After a batch: the MILAN harness season (no-regression) once the daemon's running.

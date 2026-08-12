@@ -403,7 +403,7 @@ euroCup-style; if the interactive path shows a wrong "ROUND OF n" caption, switc
 
 **BACK-PORT (sync) — DONE (2026-06-28).** `career_copa.c` added to sync_to_amiga_port.sh
 SRC_FILES; `--apply` copied 12 files (8 changed src + career_copa.c new + 3 changed include)
-to /mnt/c/Projects/AI/SWOS/SWOS_C. CORRECTION: the Amiga Makefile DOES auto-glob `*.c`
+to /mnt/c/Projects/AI/SWOS/OpenSWOS. CORRECTION: the Amiga Makefile DOES auto-glob `*.c`
 (Makefile:27 `$(wildcard *.c) $(wildcard $(subdirs)*.c)`) — so NO Amiga Makefile edit needed;
 the handoff's "not auto-globbed" was wrong. Safe by design: on Amiga, Copa isn't installed
 (no runtime JSON parse, not baked) → `Comp_ById(128)`=NULL → career_copa.c functions no-op +

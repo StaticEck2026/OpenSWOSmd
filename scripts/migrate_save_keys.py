@@ -30,7 +30,7 @@ import sys, os, glob
 _HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DIRS = [
     os.path.normpath(os.path.join(_HERE, "..", "bin", "save")),
-    "/mnt/c/Projects/AI/SWOS/SWOS_C/uae/dh0/data/save",
+    "/mnt/c/Projects/AI/SWOS/OpenSWOS/uae/dh0/data/save",
 ]
 # JSON save types only (NOT .TAC/.HIL/.EDT/.CFG — those are binary records).
 SAVE_EXTS = ("CAR", "SEA", "PRE", "DIY")

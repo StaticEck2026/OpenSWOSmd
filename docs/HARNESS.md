@@ -424,8 +424,8 @@ stay valid.
 ```sh
 export AMIGA_BIN=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-*/bin/linux
 export PATH=$AMIGA_BIN/opt/bin:$AMIGA_BIN:$PATH
-rm -f /mnt/c/Projects/AI/SWOS/SWOS_C/obj/* /mnt/c/Projects/AI/SWOS/SWOS_C/out/*   # first WSL build only: stale Windows-path .d files break GNU make
-make -C /mnt/c/Projects/AI/SWOS/SWOS_C DBG=1 DUMP_ASM=0 -j$(nproc)
+rm -f /mnt/c/Projects/AI/SWOS/OpenSWOS/obj/* /mnt/c/Projects/AI/SWOS/OpenSWOS/out/*   # first WSL build only: stale Windows-path .d files break GNU make
+make -C /mnt/c/Projects/AI/SWOS/OpenSWOS DBG=1 DUMP_ASM=0 -j$(nproc)
 ```
 
 Notes: keep `-fomit-frame-pointer` even in DBG (`-fno-omit-frame-pointer` ICEs

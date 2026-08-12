@@ -22,7 +22,7 @@ copper/blitter scroll path — all of this is `#if !defined(SWOS_SDL_BUILD)` / `
 | **AGA hardware docs** `/mnt/c/Projects/Amiga/doc/aga/` | Authoritative chipset behaviour — **read these instead of guessing.** `RandyAGA.txt` ("Smooth Hardware Scrolling", "LONG burst mode" — the fine-scroll model), `AGA Registers.pdf`, `AGA.guide`, `A1200FuncSpec.txt`. |
 | **Memory** (`~/.claude/.../memory/`) | `project_aga_fmode_impl`, `project_aga_fmode_leftscroll_jitter`, `project_aga_mixed_depth_rendering`, `project_aga_sprite_ddfstrt_dma_steal`, `feedback_dont_blame_wsl`. Point-in-time findings; verify against code. |
 
-Source of record for engine behaviour: the Amiga port `/mnt/c/Projects/AI/SWOS/SWOS_C` (data
+Source of record for engine behaviour: the Amiga port `/mnt/c/Projects/AI/SWOS/OpenSWOS` (data
 `Data.c`, `SWOS2.s`) and SwosGfx `AmigaTools.cs` for asset formats.
 
 ---
@@ -34,7 +34,7 @@ when built `-DPITCH_SCROLL_TEST`. It shows ONLY a scrolling pitch (no players ye
 
 **Build (Amiga scroll-test binary):**
 ```sh
-cd /mnt/c/Projects/AI/SWOS/SWOS_C
+cd /mnt/c/Projects/AI/SWOS/OpenSWOS
 unset OS                              # else the Makefile picks the Windows 'where' branch
 BART=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
 export PATH="$BART/opt/bin:$BART:$PATH"   # opt/bin = gcc/as; $BART = elf2hunk (BOTH needed)
@@ -263,7 +263,7 @@ architectural work, not a quick patch. The rig's 6-per-row grid is a pathologica
 > the historical record of what was/wasn't propagated at the time.
 
 Scroll/display/sprite `.c` are shared between the SDL tree
-(`/mnt/c/cygwin64/home/headk/SWOS_C_SDL`, canonical edit site) and the Amiga tree
-(`/mnt/c/Projects/AI/SWOS/SWOS_C`, what FS-UAE builds). `display.h` genuinely diverges — hand-port
+(`/mnt/c/Projects/AI/SWOS/OpenSWOS`, canonical edit site) and the Amiga tree
+(`/mnt/c/Projects/AI/SWOS/OpenSWOS`, what FS-UAE builds). `display.h` genuinely diverges — hand-port
 its 3 AGA changes. Copy this file (`docs/AGA_TEST.md`) to both trees. **Never git-commit the
 Amiga tree** (owner commits it); SDL tree commits straight to main, source only.
