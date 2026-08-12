@@ -48,6 +48,15 @@ bin/data_json/menus/*
 bin/data_json/tactics/*
 !bin/data_json/tactics/*.json
 
+# Track the decoded team JSON too (bin/data_json/teams/, ~19MB). It's the
+# decode_data.py --dump-json export of every team file. Regenerable, but kept in
+# the repo so a clone has the full corpus without needing the original data +
+# python. NOTE: the WASM build preloads all of bin/data_json, so this rides along
+# into SWOS.data — see wasm notes in the Makefile if download size matters.
+!bin/data_json/teams
+bin/data_json/teams/*
+!bin/data_json/teams/*.json
+
 # Career-mode balance knobs (runtime-loaded; testers edit + relaunch, no rebuild).
 !bin/data_json/career_params.json
 
@@ -70,3 +79,13 @@ bin/SWOS2.map
 uae/fs-uae/
 
 __pycache__/
+
+# Built binaries + runtime log live in bin/ but are artifacts, not sources.
+# (The Linux ELFs used to be tracked, inconsistently with SWOS.exe/SWOS2 which
+# never were; all of them are ignored now.) Rebuild with the Makefile.
+bin/SWOS
+bin/SWOS.x86_64
+bin/SWOS.aarch64
+bin/SWOS.armhf
+bin/SWOS.macos
+bin/SWOS.log
