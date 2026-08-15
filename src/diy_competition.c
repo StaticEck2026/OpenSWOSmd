@@ -11140,36 +11140,50 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
 
     /* Round complete — determine next action.
      *
-     * BUGFIX (Copa Libertadores preset): a grouped tournament whose knockout is a
-     * MULTI-ROUND two-legged bracket (group stage → R16 → QF → SF → FINAL, every
-     * knockout tie two-legged) wrongly finalized after the FIRST knockout round.
-     * The original `if (hasGroups) goto final_or_groups` skipped the "more rounds
-     * remain?" check, so final_or_groups set competitionFinished=1 after R16
-     * (currentRoundIndex 0 of numRounds 4) → menuState 6 → no NEXT ROUND button.
-     * The groups-stage check inside final_or_groups keys on the STAGE count, not
-     * the bracket round, so it can't tell a mid-bracket knockout round from the
-     * last one. The World Cup / non-grouped cups took the check below and worked
-     * because their knockout is single-match; the Copa is the first grouped
-     * tournament with a two-legged knockout of >1 round.
+     * ASM-FAITHFUL (SWOS2.s loc_12A7A2):
+     *      tst.w  $48(a3)      ; hasGroups
+     *      bne.s  loc_12A7E0   ; grouped tournament -> ALWAYS finalise the stage
+     *      move.w $58(a3),d0   ; currentRoundIndex
+     *      addq.w #1,d0
+     *      cmp.w  $5A(a3),d0   ; numRounds
+     *      beq.s  loc_12A7E0
      *
-     * Fix: apply the same "more rounds remain?" check to a hasGroups tournament's
-     * two-legged knockout rounds (roundFormat==2) — advance to the next round
-     * unless it is the last one. Only the group stage (roundFormat!=2) and the
-     * final knockout round fall through to final_or_groups, so the group→knockout
-     * transition, single-match finals (e.g. the European Cup final), and
-     * non-grouped cups are all unchanged. */
+     * For a GROUPED tournament (Copa Libertadores, World Cup) every knockout
+     * stage is its OWN competition slot in diyFileBufferCopy — SECOND ROUND, QF,
+     * SF, FINAL are slots 1..4. `competitionFinished` there does NOT mean "the
+     * trophy is decided", it means "this SLOT's stage is over"; the slot
+     * machinery is what carries the bracket forward:
+     *   - preset/interactive: DIYCupOnSelectCommonC leaves menuState=5 for a
+     *     finished non-last stage (hasGroups==1) -> NEXT ROUND ->
+     *     DIY_EditCompetitionSlot -> DIY_AdvanceToNextCompetitionSlot
+     *   - career: Career_UpdateHybridCompetitionProgressAndMaybeAdvanceSlot
+     *     calls DIY_AdvanceToNextCompetitionSlot on competitionFinished != 0
+     * The "trophy is decided" test is the one INSIDE the finalise block below
+     * (diyFileBufferCopy.roundComplete + 1 == totalMatchesInRound, i.e. last
+     * slot), which is why the stage-level finalise is safe.
+     *
+     * A slot's `numRounds` is log2(numTeams) (DIY_InitCupBracketState), so the
+     * 16-team SECOND ROUND slot reports numRounds=4 even though it only plays
+     * ONE round. f0ade69 dropped the hasGroups short-circuit and let that count
+     * gate the finalise, so a grouped stage never set competitionFinished and
+     * the bracket advanced INSIDE slot 1 instead of moving to slot 2:
+     *   - career: the slot never advanced, so DIY_RecordCupBracketProgress
+     *     (keyed on diyFileBufferCopy.roundComplete, still 1) rewrote the
+     *     SECOND ROUND keycache entry with the QUARTER-FINAL pairings — the
+     *     tester's "R2 rows show the QF opponent, results vanish, COMPETITION
+     *     INFO lists the QF ties under a SECOND ROUND header", and the
+     *     competition then stopped progressing.
+     *   - the preset symptom f0ade69 was chasing ("no NEXT ROUND after R16")
+     *     was really the inverted hasGroups test in DIYCupOnSelectCommonC,
+     *     root-caused and fixed 3 days later in fb99ad9. */
+    if (baseS->hasGroups != 0)  /* 0x48 */
+        goto final_or_groups;   /* grouped tournament -> finalise this stage */
+
+    /* Non-grouped cup: more bracket rounds remain? */
     {
         uint16_t curExit = (uint16_t)baseS->currentRoundIndex;  /* 0x58 */
         if (curExit + 1 != (uint16_t)baseS->numRounds) {  /* 0x5A */
-            /* More knockout rounds remain — advance (recount, check unselected,
-             * shuffle), regardless of hasGroups. This is a CUP handler; a grouped
-             * tournament's group stage is a round-robin played through the league
-             * path (DIY_PlayOrSimulateLeagueFixture), never here, so every call to
-             * this function is a knockout bracket round. The Copa's bracket even
-             * mixes leg counts (roundLegs {2,1,1,1} — R16 two-legged, QF/SF/FINAL
-             * single, because only the first stage seeded roundLegs[0]), so the
-             * check must NOT gate on roundFormat==2. Only the FINAL round
-             * (curExit+1 == numRounds) falls through to finalise. */
+            /* More rounds: recount, check unselected, shuffle */
             DIY_RecountMissingTeamsInTeamGrid();
             DIY_CountUnselectedTeams();
             if (a3Ex->bracketScratch.groupSectionFlag == 0)
@@ -11178,10 +11192,8 @@ uint16_t DIY_PlayCupMatchAndAdvance(int16_t allowSquadChanges, int16_t mode) {
         }
     }
 
-    /* Final round or group-stage completion handler. Reached by fall-through:
-     * the group stage (roundFormat!=2) and the LAST knockout round; earlier
-     * rounds return above. (Was the `final_or_groups` goto target before the
-     * hasGroups knockout-advance fix above made the goto redundant.) */
+final_or_groups:
+    /* Final round or group-stage completion handler */
     DIY_RecountMissingTeamsInTeamGrid();
     if (DIY_CountUnselectedTeams() != 0)
         return 0;
