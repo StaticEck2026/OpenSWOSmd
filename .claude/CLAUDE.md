@@ -52,6 +52,38 @@ PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
 ⚠️ **Toggling any `-D` flag requires a `clean` first** on both targets — make
 compares timestamps, not CFLAGS, so a flag change silently relinks stale objects.
 
+### Release builds — `scripts/build_dist.sh`
+
+Builds every target this machine can produce and packages the binaries into
+`bin/SWOS.zip` (WASM excluded from the zip — it's a web deployment, and the
+`.data` preload alone is ~21 MB):
+
+```bash
+scripts/build_dist.sh              # all targets + bin/SWOS.zip
+scripts/build_dist.sh --only windows --no-clean
+scripts/build_dist.sh --help
+```
+
+Two traps it exists to handle — **don't hand-roll a release without them**:
+
+- **`SWOS_SAVE_FORMAT_JSON_VERIFY` defaults to ON for every target except
+  WASM.** The `?= 0` line sits *inside* the Makefile's `ifdef WASM` branch, so a
+  plain `make` builds in the save round-trip verifier, which makes every SAVE
+  zero the saved fields, reload the file and deliberately not restore. The
+  script passes `=0` (use `--verify` to opt back in).
+- **The Amiga makefile keeps objects in its own `obj/` tree**, so `rm -rf build`
+  leaves it stale and the build reports "Nothing to be done for 'all'". The
+  script also runs `make -f Makefile.amiga clean`.
+
+`bin/SWOS.exe` is a **Cygwin** binary (imports `cygwin1.dll`; testers need that
+plus `SDL2.dll`). The Makefile selects the Windows target from the *host shell*
+(`$(OS)` / `uname -s`), never from a flag, so from WSL the script reaches Cygwin
+through Windows interop (`/mnt/c/cygwin64/bin/bash.exe -lc`). Machine paths are
+overridable: `EMSDK_DIR`, `AMIGA_TOOLCHAIN`, `CYGWIN_BASH`.
+
+macOS is not buildable here — `make macos-universal` / `make macos-app` hard-fail
+unless `uname -s` is Darwin.
+
 ## Long-term roadmap
 
 1. ~~**Stabilize the SDL port.**~~ / ~~**Back-port to the Amiga C port.**~~
