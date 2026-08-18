@@ -24,7 +24,19 @@
 #     make macos-universal      # bin/SWOS.macos (x86_64 + arm64)
 #     make macos-app            # bin/SWOS.app
 #
-# TWO THINGS THIS SCRIPT EXISTS TO GET RIGHT
+# TESTER BUILD BY DEFAULT
+#
+# SWOS_TEST_NO_INJURIES_CARDS=1 is ON unless you pass --release. It suppresses
+# in-match yellow/red cards and post-match random injuries so a tester can hit
+# VIEW RESULT through a whole season without substitution menus or booking
+# prompts — without it, testing takes far longer. Pass --release for a public
+# build (stock injuries + cards). Keep it consistent across ALL platforms in a
+# given drop: a macOS build with the flag next to a Windows build without it
+# produces bug reports for differences that aren't bugs (e.g. subbing an
+# injured player scores as a DOWNGRADE under the flag — see the Makefile's
+# "KNOWN DISPLAY SIDE-EFFECTS" note).
+#
+# THREE THINGS THIS SCRIPT EXISTS TO GET RIGHT
 #
 # 1. SWOS_SAVE_FORMAT_JSON_VERIFY defaults to ON for every target except WASM.
 #    The `?= 0` line in the Makefile sits INSIDE the `ifdef WASM` branch, so a
@@ -33,7 +45,12 @@
 #    snapshot — a bring-up diagnostic, not release behaviour. We pass
 #    SWOS_SAVE_FORMAT_JSON_VERIFY=0 unless you ask for --verify.
 #
-# 2. Toggling any -D flag needs a clean first: make compares timestamps, not
+# 2. Makefile.amiga has no SWOS_* knobs, so the m68k target would silently miss
+#    SWOS_TEST_NO_INJURIES_CARDS. We pass it through its EXTRA_CFLAGS escape
+#    hatch, and its objects live in obj/ (not build/) so `rm -rf build` alone
+#    leaves it stale and reports "Nothing to be done for 'all'".
+#
+# 3. Toggling any -D flag needs a clean first: make compares timestamps, not
 #    CFLAGS, so a flag change silently relinks stale objects. We wipe the object
 #    dirs by default (--no-clean to skip when you know the flags are unchanged).
 #
@@ -63,6 +80,7 @@ JOBS="$(nproc 2>/dev/null || echo 4)"
 DO_CLEAN=1
 DO_ZIP=1
 VERIFY=0
+NOINJ=1          # tester builds: suppress injuries/cards. --release turns it off.
 ZIP_PATH="bin/SWOS.zip"
 ONLY=""
 SKIP=""
@@ -77,6 +95,8 @@ Options:
       --only  LIST    comma-separated targets to build (default: all)
       --skip  LIST    comma-separated targets to skip
       --verify        build WITH SWOS_SAVE_FORMAT_JSON_VERIFY=1 (debug only)
+      --release       PUBLIC build: stock injuries + cards (default is a tester
+                      build with SWOS_TEST_NO_INJURIES_CARDS=1)
       --no-clean      don't wipe object dirs first (only safe if flags unchanged)
       --no-zip        build but don't package
       --zip PATH      zip output path (default: $ZIP_PATH)
@@ -92,6 +112,7 @@ while [ $# -gt 0 ]; do
         --only)      ONLY="$2"; shift 2 ;;
         --skip)      SKIP="$2"; shift 2 ;;
         --verify)    VERIFY=1; shift ;;
+        --release)   NOINJ=0; shift ;;
         --no-clean)  DO_CLEAN=0; shift ;;
         --no-zip)    DO_ZIP=0; shift ;;
         --zip)       ZIP_PATH="$2"; shift 2 ;;
@@ -100,7 +121,14 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-VERIFY_FLAG="SWOS_SAVE_FORMAT_JSON_VERIFY=$VERIFY"
+MAKE_FLAGS="SWOS_SAVE_FORMAT_JSON_VERIFY=$VERIFY"
+AMIGA_EXTRA=""
+if [ "$NOINJ" = 1 ]; then
+    MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_NO_INJURIES_CARDS=1"
+    # Makefile.amiga has no SWOS_* knobs of its own; EXTRA_CFLAGS is its
+    # documented escape hatch, so the m68k binary matches the SDL ones.
+    AMIGA_EXTRA="-DSWOS_TEST_NO_INJURIES_CARDS=1"
+fi
 
 wanted() {   # wanted <target> -> 0 if it should be built
     local t="$1"
@@ -141,15 +169,15 @@ fi
 
 # ---- SDL targets ------------------------------------------------------------
 wanted linux-x86    && run linux-x86    "linux x86 (32-bit) -> bin/SWOS" \
-                           make $VERIFY_FLAG -j"$JOBS"
+                           make $MAKE_FLAGS -j"$JOBS"
 wanted linux-x86_64 && run linux-x86_64 "linux x86_64       -> bin/SWOS.x86_64" \
-                           make X86_64=1 $VERIFY_FLAG -j"$JOBS"
+                           make X86_64=1 $MAKE_FLAGS -j"$JOBS"
 
 if wanted linux-arm64; then
     if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1 || \
        [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
         run linux-arm64 "linux arm64        -> bin/SWOS.aarch64" \
-            make ARM64=1 $VERIFY_FLAG -j"$JOBS"
+            make ARM64=1 $MAKE_FLAGS -j"$JOBS"
     else
         record linux-arm64 "SKIP (no aarch64-linux-gnu-gcc)"
     fi
@@ -159,7 +187,7 @@ if wanted linux-armhf; then
     if command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1 || \
        [ "$(uname -m)" = "armv7l" ]; then
         run linux-armhf "linux armhf        -> bin/SWOS.armhf" \
-            make ARM=1 $VERIFY_FLAG -j"$JOBS"
+            make ARM=1 $MAKE_FLAGS -j"$JOBS"
     else
         record linux-armhf "SKIP (no arm-linux-gnueabihf-gcc)"
     fi
@@ -172,7 +200,7 @@ if wanted wasm; then
         # emsdk_env.sh is not -u clean, hence the subshell + set +u.
         if ( set +u
              [ -f "$EMSDK_DIR/emsdk_env.sh" ] && . "$EMSDK_DIR/emsdk_env.sh" >/dev/null 2>&1
-             cd "$ROOT" && make WASM=1 $VERIFY_FLAG -j"$JOBS" ); then
+             cd "$ROOT" && make WASM=1 $MAKE_FLAGS -j"$JOBS" ); then
             record wasm "OK"; echo "-- OK: wasm"
         else
             record wasm "FAIL"; echo "-- FAIL: wasm"
@@ -191,7 +219,7 @@ if wanted amiga; then
         # the benbaker76 fork (see .claude/CLAUDE.md). A wrong path fails as
         # 'Error 127' and an up-to-date tree hides it as "Nothing to be done".
         if PATH="$AMIGA_TOOLCHAIN/opt/bin:$AMIGA_TOOLCHAIN:$PATH" \
-               make -f Makefile.amiga -j"$JOBS"; then
+               make -f Makefile.amiga EXTRA_CFLAGS="$AMIGA_EXTRA" -j"$JOBS"; then
             record amiga "OK"; echo "-- OK: amiga"
         else
             record amiga "FAIL"; echo "-- FAIL: amiga"
@@ -207,7 +235,7 @@ if wanted windows; then
         CYGWIN*|MINGW*|MSYS*)
             # Already inside a Windows shell — plain make picks SWOS.exe.
             run windows "windows -> bin/SWOS.exe (native)" \
-                make $VERIFY_FLAG -j"$JOBS"
+                make $MAKE_FLAGS -j"$JOBS"
             ;;
         *)
             if [ -x "$CYGWIN_BASH" ]; then
@@ -219,7 +247,7 @@ if wanted windows; then
                 if [ -z "$WINPATH" ]; then
                     record windows "SKIP (can't map $ROOT to a Windows path)"
                 elif "$CYGWIN_BASH" -lc \
-                        "cd \"\$(cygpath -u '$WINPATH')\" && make $VERIFY_FLAG -j$JOBS"; then
+                        "cd \"\$(cygpath -u '$WINPATH')\" && make $MAKE_FLAGS -j$JOBS"; then
                     record windows "OK"; echo "-- OK: windows"
                 else
                     record windows "FAIL"; echo "-- FAIL: windows"
@@ -257,7 +285,9 @@ fi
 # ---- summary ----------------------------------------------------------------
 banner "SUMMARY"
 printf '  save-format verify : %s\n' \
-    "$( [ "$VERIFY" = 1 ] && echo 'ON  (debug — every save round-trips)' || echo 'off (release)' )"
+    "$( [ "$VERIFY" = 1 ] && echo 'ON  (debug — every save round-trips)' || echo 'off' )"
+printf '  injuries + cards   : %s\n' \
+    "$( [ "$NOINJ" = 1 ] && echo 'OFF (tester build — SWOS_TEST_NO_INJURIES_CARDS=1)' || echo 'on  (release build)' )"
 echo ""
 RC=0
 for t in $ALL_TARGETS; do

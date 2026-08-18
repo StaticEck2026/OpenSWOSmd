@@ -59,12 +59,21 @@ Builds every target this machine can produce and packages the binaries into
 `.data` preload alone is ~21 MB):
 
 ```bash
-scripts/build_dist.sh              # all targets + bin/SWOS.zip
+scripts/build_dist.sh              # TESTER drop: all targets + bin/SWOS.zip
+scripts/build_dist.sh --release    # PUBLIC build: stock injuries + cards
 scripts/build_dist.sh --only windows --no-clean
 scripts/build_dist.sh --help
 ```
 
-Two traps it exists to handle — **don't hand-roll a release without them**:
+**Tester builds set `SWOS_TEST_NO_INJURIES_CARDS=1` by default** — that is the
+owner's standing preference (without it a tester can't hit VIEW RESULT through a
+season: substitution menus and booking prompts every match). `--release` turns it
+off for a public build. Keep the flag **identical across every platform in one
+drop**: a macOS build with it next to a Windows build without it generates bug
+reports for non-bugs (under the flag, subbing an injured player scores as a
+DOWNGRADE — see the Makefile's "KNOWN DISPLAY SIDE-EFFECTS" block).
+
+Three traps it exists to handle — **don't hand-roll a release without them**:
 
 - **`SWOS_SAVE_FORMAT_JSON_VERIFY` defaults to ON for every target except
   WASM.** The `?= 0` line sits *inside* the Makefile's `ifdef WASM` branch, so a
@@ -74,6 +83,11 @@ Two traps it exists to handle — **don't hand-roll a release without them**:
 - **The Amiga makefile keeps objects in its own `obj/` tree**, so `rm -rf build`
   leaves it stale and the build reports "Nothing to be done for 'all'". The
   script also runs `make -f Makefile.amiga clean`.
+- **`Makefile.amiga` has no `SWOS_*` knobs**, so the m68k target would silently
+  miss `SWOS_TEST_NO_INJURIES_CARDS`; the script passes it through that
+  makefile's `EXTRA_CFLAGS` escape hatch. Confirm it landed by checking
+  `obj/career_status.s` — under the flag `IsPlayerInjured` is just
+  `clr.w %d0; rts`.
 
 `bin/SWOS.exe` is a **Cygwin** binary (imports `cygwin1.dll`; testers need that
 plus `SDL2.dll`). The Makefile selects the Windows target from the *host shell*
