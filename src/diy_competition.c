@@ -3967,27 +3967,55 @@ void DIY_CopyTeamGridFromCompToDIY(uint8_t *diy, uint8_t *slot,
     DIYCompetition *compS = (DIYCompetition *)comp;
     DIYTournamentSlot *s = (DIYTournamentSlot *)(slot + offsetof(DIYTournamentState, slots));
 
-    uint16_t legs = s->divisionFactor;
-    uint16_t field58 = (uint16_t)diyS->currentRoundIndex;
+    uint16_t legs = s->divisionFactor;                      /* slot+0x164 */
+    uint16_t field58 = (uint16_t)diyS->currentRoundIndex;   /* diy+0x58   */
 
-    if (!(legs == 1 && field58 == 0)) {
-        DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
+    /* ASM (SWOS2.s DIY_CopyTeamGridFromCompToDIY):
+     *      cmpi.w #1,$164(a3)     ; legs
+     *      bne.s  loc_1295EC      ; legs != 1 -> run the block
+     *      tst.w  $58(a2)         ; currentRoundIndex
+     *      bne.s  loc_129632      ; legs==1 AND curIdx != 0 -> skip to the COPY
+     * The skip target is the copy, so it bypasses the World Cup adjust too.
+     *
+     * The port had `if (!(legs == 1 && field58 == 0))` — the currentRoundIndex
+     * test INVERTED — and left the World Cup adjust outside the guard so it ran
+     * even on the skip path. currentRoundIndex is 0 at every normal slot
+     * advance, so the inverted test skipped the home/away + pair-swap block
+     * exactly when the asm runs it. */
+    if (legs == 1 && field58 != 0)
+        goto copy_grid;
 
-        /* Check if pair swap needed */
-        if (s->doubleCount != 0) {
-            goto do_pair_swap;
-        }
-        if (legs == 1) goto check_worldcup;
-        /* slot+0x1D2 = next-slot doubleCount (0x76 stride + +0x02 within slot) */
-        if (s[1].doubleCount == 0) goto check_worldcup;
+    DIY_ApplyHomeAwaySwapFlagsToTeamGridPairs();
 
-    do_pair_swap:
-        {
-            uint8_t *grid = ((DIYCompetitionEx *)comp)->teamGridPairings;
-            uint8_t tmp = grid[0];
-            grid[0] = grid[1];
-            grid[1] = tmp;
-        }
+    /* asm: tst.w $15C(a3) / cmpi.w #1,$164(a3) / tst.w $1D2(a3)
+     * ($1D2 = the NEXT slot's doubleCount: 0x15A + 0x76 + 0x02) */
+    if (s->doubleCount != 0)   goto do_pair_swap;
+    if (legs == 1)             goto check_worldcup;
+    if (s[1].doubleCount == 0) goto check_worldcup;
+
+do_pair_swap:
+    {
+        /* asm:
+         *      lea    $2CE(a4),a0
+         *      move.w (a0),d0
+         *      move.w 2(a0),(a0)
+         *      move.w d0,2(a0)
+         * WORD moves at +0 and +2 over a grid of one BYTE per team: this swaps
+         * FIXTURE 0 with FIXTURE 1 (two teams each). It does NOT reorder the
+         * teams inside a fixture. The port swapped grid[0] with grid[1], i.e.
+         * flipped home/away within fixture 0 and left the fixture ORDER alone.
+         *
+         * That order decides which pair the next slot consumes, and the World
+         * Cup's 3rd-place play-off is the only shipping stage with doubleCount
+         * set. Measured on a preset drive: before this fix the bronze match and
+         * the final were the SAME fixture (bronze [7,0] / final [0,7]); after,
+         * they are distinct (bronze [14,13] / final [3,13]).
+         *
+         * Explicit byte moves: a pure 2-byte relocation, endian-neutral. */
+        uint8_t *grid = ((DIYCompetitionEx *)comp)->teamGridPairings;
+        uint8_t t0 = grid[0], t1 = grid[1];
+        grid[0] = grid[2]; grid[1] = grid[3];
+        grid[2] = t0;      grid[3] = t1;
     }
 
 check_worldcup:
@@ -3997,6 +4025,8 @@ check_worldcup:
             DIY_AdjustWorldCupBracketScores(diy, slot, comp);
         }
     }
+
+copy_grid:
 
     /* Copy team grid from comp to diy. Raw `comp + 0x2CE` is the 32-bit
      * byte offset to teamGridPairings[64]; on 64-bit DIYCompetition grew
