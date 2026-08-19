@@ -772,15 +772,19 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
 
     /* Body/shadow remap — mirrors `blitGlyphBitplanes` in text_render.c.
      * Glyph fonts encode the text body in palette bit 1 (colour 2) and the
-     * drop-shadow in bit NUM_PLANES-1 (colour 8 for OCS). planeMask selects
-     * the body colour; the shadow must land on bit NUM_PLANES-1 regardless
-     * so the shadow pixel reads a different palette entry (typically black)
-     * than the body. Previously this function wrote `planeMask` to every
-     * non-zero source pixel, so body and shadow both mapped to the same
-     * colour — visible as text without a drop-shadow (or "the shadow is
-     * the same white as the text" on team-name sprites). */
+     * drop-shadow in the charset's FIXED plane, GLYPH_SHADOW_PLANE (bit 3 /
+     * colour 8). planeMask selects the body colour; the shadow always lands on
+     * the shadow plane so it reads a different palette entry (typically black).
+     *
+     * This used to key the shadow off NUM_PLANES-1, which is only the same bit
+     * on a 4-plane OCS build. Once `#define AGA` made NUM_PLANES 8 for SDL,
+     * NUM_PLANES-1 became bit 7 while the charset still stores its shadow at
+     * bit 3 — so shadowBit was ALWAYS 0 and no shadow pixel was ever written.
+     * Sprite-baked text (in-match player names via Text2Sprite, team names)
+     * rendered flat white. 0e425b4 fixed exactly this in the frontbuffer text
+     * path (text_render.c) but did not touch this one, which is why menu and
+     * HUD text kept their shadows while the player name lost its. */
     uint16_t color = (uint16_t)(planeMask & 0xFF);
-    uint8_t shadowMask = (uint8_t)(1u << (NUM_PLANES - 1));
 
     for (int16_t y = 0; y < srcH; y++) {
         int16_t dy = (int16_t)(yOff + y);
@@ -792,19 +796,15 @@ void BlitGlyphToSpriteBitmap(uint16_t glyphIndex, uint16_t xOff, uint16_t yOff,
             if (dx < 0 || dx >= dstW) continue;
 
             uint8_t s = srcRow[x];
-            uint8_t bodyBit   = (uint8_t)((s >> 1) & 1u);
-            uint8_t shadowBit = (uint8_t)((s >> (NUM_PLANES - 1)) & 1u);
+            uint8_t bodyBit   = (uint8_t)((s >> 1) & 1u);                  /* body   = colour 2 */
+            uint8_t shadowBit = (uint8_t)((s >> GLYPH_SHADOW_PLANE) & 1u); /* shadow = colour 8 */
             if (bodyBit == 0 && shadowBit == 0)
                 continue;
 
-            uint8_t out = 0;
-            for (uint16_t p = 0; p < NUM_PLANES - 1; p++) {
-                if ((color >> p) & 1u) out |= (uint8_t)(bodyBit << p);
-            }
-            if (color & shadowMask)
-                out |= shadowMask;
-            else
-                out |= (uint8_t)(shadowBit ? shadowMask : 0);
+            /* Body pixels take the requested colour; shadow-only pixels take
+             * the fixed shadow colour. Identical to blitGlyphBitplanes(). */
+            uint8_t out = bodyBit ? (uint8_t)color
+                                  : (uint8_t)(1u << GLYPH_SHADOW_PLANE);
 
             if (out) dstRow[dx] = out;
         }

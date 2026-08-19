@@ -103,8 +103,8 @@ SetJumpHeaderHitAnimTable(Sprite *player)
         return;
     if ((uint16_t)player->frameSwitchCounter > 2)
         return;
-    /* btst #1, currentGameTick+1(pc) — tests bit 1 of low byte */
-    if (!(((uint8_t *)&_currentGameTick)[1] & 0x02))
+    /* btst #1,currentGameTick+1(pc) — bit 1 of the LOW byte on BE m68k. */
+    if (!(_currentGameTick & 0x02))
         return;
     SetPlayerAnimationTableAndPictureIndex(&_jumpHeaderHitAnimTable, player);
     uint16_t spd = (uint16_t)player->speed;

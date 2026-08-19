@@ -73,8 +73,13 @@ void UpdateControlledPlayerNumbers(void)
                 ordinal -= 1;
 
                 /* If controlled player == marked player, apply blink */
+                /* ASM: `btst #N,(currentGameTick+1)` — on big-endian m68k byte +1 of a
+                 * 16-bit word is the LOW byte, so this tests bit N of the tick value.
+                 * Reading ((uint8_t *)&tick)[1] gives the HIGH byte on a little-endian host
+                 * (bit N+8), which slowed every blink by 256x. Mask the value instead —
+                 * identical on both targets. */
                 if (ordinal == teamGame->markedPlayer) {
-                    uint8_t tickBit4 = ((uint8_t *)&_currentGameTick)[1] & 0x10;
+                    uint16_t tickBit4 = _currentGameTick & 0x10;
                     if (d7 != 0) {
                         /* Team 1: hide when bit4 is clear */
                         if (!tickBit4)
@@ -128,7 +133,7 @@ void MarkPlayer(void)
 
     /* Select team based on tick bit 4 */
     teamInfo = &_topTeamData;
-    if (((uint8_t *)&_currentGameTick)[1] & 0x10)
+    if (_currentGameTick & 0x10)
         teamInfo = &_bottomTeamData;
 
     teamGame = teamInfo->inGameTeamPtr;
@@ -191,7 +196,7 @@ void SetCurrentPlayerName(void)
         a2 = (Sprite *)_currentScorer;
         a1 = _lastTeamScored;
         /* Blink: hide when bit 3 of tick LSB is clear */
-        if (!(((uint8_t *)&_currentGameTick)[1] & 0x08))
+        if (!(_currentGameTick & 0x08))
             goto hide_and_clear;
         goto position_name;
     }
@@ -200,7 +205,7 @@ void SetCurrentPlayerName(void)
     if (_whichCard != 0) {
         a2 = _bookedPlayer;
         a1 = _lastTeamBooked;
-        if (!(((uint8_t *)&_currentGameTick)[1] & 0x08))
+        if (!(_currentGameTick & 0x08))
             goto hide_and_clear;
         goto position_name;
     }
