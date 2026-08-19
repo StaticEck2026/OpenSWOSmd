@@ -3585,10 +3585,34 @@ extern uint8_t _diyLeagueTeamShuffleMap[];   /* 16 bytes: signed index map */
 extern uint8_t _diyGroupPatternLookup[];     /* 76 bytes: bitmask→division ordering */
 extern uint8_t _diyTeamShuffleScratch[];     /* 64 bytes: scratch buffer */
 
-/* sub_129960 in asm — its machine code bytes {0x02,0x01,0x00,0x00} are used
- * as a 4-byte shuffle order table for 4-team comp-specific lists (3-group case).
- * We define the actual data here. */
-static const uint8_t diyCompSpecificShuffle4[4] = {0x02, 0x01, 0x00, 0x00};
+/* 4-team shuffle order for the World Cup SEMI-FINAL slot (the field54==3 case of
+ * buildCompSpecificTeamList). Sibling tables: diyTournamentShuffleOrder8
+ * {6,1,5,4,2,3,7,0} for 8 teams and diyLeagueTeamShuffleMap for 16 — both are
+ * permutations that use every index exactly once, because the source array holds
+ * one qualifier per tie and the table merely re-seeds them.
+ *
+ * SWOS2.s reads this table from `lea (sub_129960).l,a2` — a CODE label used as
+ * data, sitting immediately after diyTournamentShuffleOrder8 (0x129958+8 =
+ * 0x129960). Disassembled, those bytes render as `andi.b #0,d1` = 02 01 00 00,
+ * and the port transcribed {2,1,0,0} literally. SWOS-RE's reloc dump likewise
+ * marks 0x129960 as [C] code, unlike the neighbouring [D] data tables, so the
+ * RE has not resolved it as data either.
+ *
+ * {2,1,0,0} cannot work: index 0 appears twice and index 3 never, so entries 2
+ * and 3 of the semi-final are always the SAME team and one quarter-final winner
+ * is dropped. Measured on all-CPU World Cup preset drives, every run produced a
+ * self-tie — SF grids [11,12,16,16], [14,3,13,13], [0,14,7,7]: last two entries
+ * always identical, the signature of a table ending {0,0}. That is the tester's
+ * "I won the semi final but still have to play the 3rd place match": a self-tie's
+ * winner and loser are one team, so it lands in both the bronze match and the
+ * final.
+ *
+ * 3 is the only value that completes the permutation, and it verifies: with
+ * {2,1,0,3} a drive gives QF [7,4,12,14,0,3,8,5] -> SF [3,12,4,5], four distinct
+ * teams, exactly one from each quarter-final tie, and bronze [3,4] / final [12,5]
+ * disjoint. Both call sites of buildCompSpecificTeamList are gated on
+ * COMPID_worldCup, so this touches nothing else. */
+static const uint8_t diyCompSpecificShuffle4[4] = {0x02, 0x01, 0x00, 0x03};
 
 /* ================================================================
  * DIY_BuildCompSpecificTeamShuffle — reorder teams for comp-specific
