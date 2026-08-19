@@ -95,8 +95,33 @@ plus `SDL2.dll`). The Makefile selects the Windows target from the *host shell*
 through Windows interop (`/mnt/c/cygwin64/bin/bash.exe -lc`). Machine paths are
 overridable: `EMSDK_DIR`, `AMIGA_TOOLCHAIN`, `CYGWIN_BASH`.
 
-macOS is not buildable here — `make macos-universal` / `make macos-app` hard-fail
-unless `uname -s` is Darwin.
+### macOS — `scripts/build_macos.sh`
+
+macOS cannot be built here (`make macos-universal` / `make macos-app` hard-fail
+unless `uname -s` is Darwin, and there is no cross-compile path), so this script
+drives the Mac mini over ssh and brings the bundle back:
+
+```bash
+scripts/build_macos.sh             # tester build -> bin/SWOS-macOS-app.zip
+scripts/build_macos.sh --release   # public build
+scripts/build_macos.sh --no-pull   # build the Mac's tree as-is
+```
+
+Defaults match `build_dist.sh` so a drop is uniform. Overrides: `MAC_HOST`
+(default `bbaker@192.168.1.37`), `MAC_PATH` (`~/Programming/OpenSWOS`),
+`MAC_ZIP`.
+
+- It `git pull --ff-only`s and **prints the commit it built**, because a stale
+  remote checkout is invisible otherwise — a tester once reported a fixed bug as
+  still present on macOS purely because that Mac was two commits behind.
+- The bundle is packed with `ditto -c -k --sequesterRsrc --keepParent`, never
+  `zip -r`: `SDL2.framework` is built out of symlinks, and plain zip follows
+  them, producing a bloated archive whose framework won't load. The summary
+  prints the preserved-symlink count — 0 means the bundle is broken.
+- **`ssh` does not preserve argv boundaries** — it joins its arguments into one
+  string that the remote shell re-splits, so multi-word arguments must be
+  pre-quoted (`printf %q`). Getting this wrong silently shifted a make variable
+  onto `-j`.
 
 ## Long-term roadmap
 
