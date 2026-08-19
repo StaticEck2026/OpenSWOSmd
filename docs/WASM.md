@@ -142,6 +142,25 @@ start" overlay).
 - Build `SWOS_SAVE_FORMAT_JSON_VERIFY=0` for WASM (the verify path reloads-on-save;
   unnecessary overhead in the browser).
 
+**Importing saves from the local disk (2026-08-19).** `wasm/shell.html` has an
+import button (the ⬆ icon under the gear / fullscreen toggles). It reads picked
+files, writes them into `/save` with `FS.writeFile`, then calls
+`FS.syncfs(false, …)` so they persist in IndexedDB — after which they show up in
+the game's own LOAD dialog. Two constraints it has to respect:
+
+- **Names must be UPPERCASE.** The in-game selector matches the extension with a
+  4-byte compare against `'.CAR'`/`'.TAC'`/… (`file_io.c`), and `fs_listdir`
+  (`resload.c`) returns directory names verbatim — so `milan.car` would be
+  listed by the FS but silently rejected by the selector. The importer
+  uppercases and sanitises to 8.3.
+- **The selector caps at 45 files** (`SelectFilesInputSaveFilenameOnSelect`).
+
+⚠️ Still missing: the **write-side** hook. `FS.syncfs(false, …)` is only called by
+the importer, so a career SAVED in the browser still lives in the in-memory
+mirror and is lost on reload. `wasm/pre.js` has always said this ("To PERSIST a
+save you must FS.syncfs(false, …) after writing it — wire that into the save
+path"); it needs an `EM_ASM` (or a ccall'd hook) after a successful write.
+
 ### 2e. Rendering — SDL2 as-is
 The 8bpp-chunky → RGBA → `SDL_Texture` → `SDL_RenderCopy/Present` path is standard
 SDL2 and runs on Emscripten's SDL2 (WebGL-backed). The `<canvas>` is the window.

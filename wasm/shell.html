@@ -47,6 +47,26 @@
     }
     #fs:hover { opacity: 1; }
     #fs svg { width: 17px; height: 17px; display: block; }
+    /* --- Import saves (.CAR/.TAC/...) from the local disk into /save --- */
+    #imp {
+      position: fixed; top: 74px; right: 8px; z-index: 10;
+      width: 28px; height: 28px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center;
+      color: #ccc; background: rgba(0,0,0,0.45);
+      border: 1px solid #444; border-radius: 4px; cursor: pointer;
+      user-select: none; opacity: 0.45; transition: opacity .15s;
+    }
+    #imp:hover { opacity: 1; }
+    #imp svg { width: 17px; height: 17px; display: block; }
+    #impFile { display: none; }
+    #impMsg {
+      position: fixed; top: 74px; right: 44px; z-index: 10;
+      max-width: 60vw; padding: 4px 8px; border-radius: 4px;
+      background: rgba(0,0,0,0.75); border: 1px solid #444;
+      color: #6c6; font: 12px/1.4 monospace; white-space: pre-line;
+      display: none;
+    }
+    #impMsg.err { color: #d66; }
     /* Fullscreen mode: the canvas already fits via height:100vh, so nothing else
        to do — but drop the letterbox background to pure black. */
     :fullscreen { background: #000; }
@@ -86,6 +106,16 @@
       <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>
     </svg>
   </div>
+  <div id="imp" title="Import save files (.CAR .SEA .PRE .DIY .TAC .HIL .EDT)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 16V4M12 4L8 8M12 4l4 4M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+    </svg>
+  </div>
+  <input id="impFile" type="file" multiple
+         accept=".CAR,.SEA,.PRE,.DIY,.TAC,.HIL,.EDT,.CFG,.car,.sea,.pre,.diy,.tac,.hil,.edt,.cfg">
+  <div id="impMsg"></div>
+
   <div id="settings">
     <div class="panel">
       <h2>Settings &mdash; SWOS.ini</h2>
@@ -218,6 +248,100 @@
           fsIcon.innerHTML = on ? COMPRESS : EXPAND;
           fsBtn.title = on ? 'Exit fullscreen' : 'Toggle fullscreen';
         });
+      });
+    })();
+
+    // --- Import saves from the local disk -------------------------------
+    // Writes the picked files into /save (the IDBFS mount from pre.js) and then
+    // FS.syncfs(false) so they survive a reload, which is also the write-side
+    // flush pre.js asks for. The game lists /save with plain readdir and matches
+    // the extension with an UPPERCASE 4-byte compare (file_io.c: '.CAR' ==
+    // 0x2E434152), so a lower-case name would be silently invisible in the LOAD
+    // dialog — hence the uppercase + sanitise below. Its selector also caps out
+    // at 45 files.
+    (function () {
+      var btn  = document.getElementById('imp');
+      var pick = document.getElementById('impFile');
+      var msgEl = document.getElementById('impMsg');
+      var KNOWN = ['CAR', 'SEA', 'PRE', 'DIY', 'TAC', 'HIL', 'EDT', 'CFG'];
+      var msgTimer;
+
+      function msg(text, isErr) {
+        msgEl.textContent = text;
+        msgEl.className = isErr ? 'err' : '';
+        msgEl.style.display = 'block';
+        clearTimeout(msgTimer);
+        msgTimer = setTimeout(function () { msgEl.style.display = 'none'; }, 6000);
+      }
+
+      // SWOS filenames are upper case 8.3; keep it to characters DOS allowed so
+      // the in-game selector can render and re-open them.
+      function sanitise(name) {
+        name = name.replace(/^.*[\\/]/, '').toUpperCase();
+        var dot  = name.lastIndexOf('.');
+        var base = (dot < 0 ? name : name.slice(0, dot)).replace(/[^A-Z0-9_-]/g, '');
+        var ext  = (dot < 0 ? ''   : name.slice(dot + 1)).replace(/[^A-Z0-9]/g, '');
+        if (!base) base = 'SAVE';
+        return base.slice(0, 8) + (ext ? '.' + ext.slice(0, 3) : '');
+      }
+
+      function ready() {
+        return typeof Module !== 'undefined' && Module.FS && Module.FS.writeFile;
+      }
+
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!ready()) { msg('Still loading — try again in a moment.', true); return; }
+        pick.value = '';       // so re-picking the same file still fires change
+        pick.click();
+      });
+
+      pick.addEventListener('change', function () {
+        var files = Array.prototype.slice.call(pick.files || []);
+        if (!files.length) return;
+        if (!ready()) { msg('Still loading — try again in a moment.', true); return; }
+
+        var FS = Module.FS;
+        try { FS.mkdir('/save'); } catch (e) { /* already there */ }
+
+        var done = 0, written = [], failed = [], odd = [];
+        files.forEach(function (f) {
+          var r = new FileReader();
+          r.onload = function () {
+            var name = sanitise(f.name);
+            try {
+              FS.writeFile('/save/' + name, new Uint8Array(r.result));
+              written.push(name);
+              var ext = name.split('.').pop();
+              if (KNOWN.indexOf(ext) < 0) odd.push(name);
+            } catch (err) {
+              failed.push(f.name + ' (' + err + ')');
+            }
+            if (++done === files.length) finish();
+          };
+          r.onerror = function () {
+            failed.push(f.name + ' (unreadable)');
+            if (++done === files.length) finish();
+          };
+          r.readAsArrayBuffer(f);
+        });
+
+        function finish() {
+          // Persist to IndexedDB. Without this the files live only in the
+          // in-memory mirror and vanish on reload.
+          FS.syncfs(false, function (err) {
+            var lines = [];
+            if (written.length) lines.push('Imported: ' + written.join(', '));
+            if (odd.length)
+              lines.push('Note: ' + odd.join(', ') +
+                         ' — not a save extension SWOS lists.');
+            if (failed.length) lines.push('Failed: ' + failed.join(', '));
+            if (err) lines.push('Not persisted across reload: ' + err);
+            msg(lines.join('\n') || 'Nothing imported.',
+                !!(failed.length || err));
+            document.getElementById('canvas').focus();
+          });
+        }
       });
     })();
   </script>
