@@ -14,6 +14,9 @@
 #   bin/SWOS-full.zip  binaries + game data + the Cygwin runtime for SWOS.exe:
 #                      unzip and play. Excludes save/ (per-user dir, and 24 MB of
 #                      test careers here).
+#   bin/SWOS-Amiga.zip the m68k binary + ONLY the trees it actually opens
+#                      (data grafs grafs_aga sound) + an empty save/. Copy onto a
+#                      volume FS-UAE/WinUAE mounts.
 #
 # Targets:
 #
@@ -99,6 +102,17 @@ FULL_DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound dat
 # mentioned anywhere, including SDL backends it only ever dlopens, and lands you
 # at ~14 MB of X11/pulse/codec libraries that are never loaded.)
 FULL_DLLS="cygwin1.dll cygSDL2-2-0-0.dll"
+
+# SWOS-Amiga.zip — the runnable Amiga drop: the m68k binary plus only the trees
+# the m68k binary actually opens. Verified against the built binary itself
+# (`strings bin/SWOS2 | grep -oE '^(data|grafs|...)/'`): it references data/,
+# grafs/, grafs_aga/, sound/ and save/ — and NOTHING from grafs_dos, grafs_2020,
+# grafs_arcade or data_json, which are SDL-only asset tiers. Shipping those would
+# add ~50 MB the Amiga can never load. An EMPTY save/ is created because the
+# binary writes there and will not create the directory itself.
+# Copy the contents onto a volume FS-UAE/WinUAE mounts (the harness mounts bin/
+# as DH1: and cd's in, so the same relative paths resolve).
+AMIGA_DATA_DIRS="data grafs grafs_aga sound"
 CYGWIN_BIN="${CYGWIN_BIN:-/mnt/c/cygwin64/bin}"
 
 JOBS="$(nproc 2>/dev/null || echo 4)"
@@ -108,6 +122,7 @@ VERIFY=0
 NOINJ=1          # tester builds: suppress injuries/cards. --release turns it off.
 ZIP_PATH="bin/SWOS.zip"
 FULL_ZIP_PATH="bin/SWOS-full.zip"
+AMIGA_ZIP_PATH="bin/SWOS-Amiga.zip"
 DO_FULL=1
 ONLY=""
 SKIP=""
@@ -128,6 +143,7 @@ Options:
       --no-zip        build but don't package (neither zip)
       --no-full       skip SWOS-full.zip (binaries-only SWOS.zip still written)
       --full-zip PATH full-dist output path (default: bin/SWOS-full.zip)
+      --amiga-zip PATH Amiga-dist output path (default: bin/SWOS-Amiga.zip)
       --zip PATH      zip output path (default: $ZIP_PATH)
   -h, --help          this text
 
@@ -146,6 +162,7 @@ while [ $# -gt 0 ]; do
         --no-zip)    DO_ZIP=0; DO_FULL=0; shift ;;
         --no-full)   DO_FULL=0; shift ;;
         --full-zip)  FULL_ZIP_PATH="$2"; shift 2 ;;
+        --amiga-zip) AMIGA_ZIP_PATH="$2"; shift 2 ;;
         --zip)       ZIP_PATH="$2"; shift 2 ;;
         -h|--help)   usage; exit 0 ;;
         *) echo "build_dist: unknown option '$1' (try --help)" >&2; exit 2 ;;
@@ -345,6 +362,27 @@ if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; the
     fi
 fi
 
+# ---- package: Amiga dist (m68k binary + the trees it actually reads) ---------
+if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; then
+    banner "package -> $AMIGA_ZIP_PATH  (Amiga: SWOS2 + Amiga data)"
+    AMIGA_DIRS=""
+    for d in $AMIGA_DATA_DIRS; do
+        [ -d "bin/$d" ] && AMIGA_DIRS="$AMIGA_DIRS $d"
+    done
+    rm -f "$AMIGA_ZIP_PATH"
+    ( cd bin && zip -j -q "$ROOT/$AMIGA_ZIP_PATH" SWOS2 ) &&
+    ( cd bin && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" $AMIGA_DIRS -x '*/.DS_Store' ) && {
+        # Empty save/ — the binary writes there but won't mkdir it. Staged from a
+        # temp dir so bin/save's 24 MB of test careers cannot leak in.
+        AMIGA_TMP="$(mktemp -d)"
+        mkdir -p "$AMIGA_TMP/save"
+        ( cd "$AMIGA_TMP" && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" save )
+        rm -rf "$AMIGA_TMP"
+        echo "-- data:    $AMIGA_DIRS + empty save/"
+        echo "-- OK: $AMIGA_ZIP_PATH"
+    }
+fi
+
 # ---- summary ----------------------------------------------------------------
 banner "SUMMARY"
 printf '  save-format verify : %s\n' \
@@ -364,4 +402,5 @@ echo "  macos          not buildable here — run 'make macos-app' on a Mac"
 echo ""
 [ "$DO_ZIP" = 1 ] && [ -f "$ZIP_PATH" ] && ls -l "$ZIP_PATH"
 [ -f "$FULL_ZIP_PATH" ] && ls -l "$FULL_ZIP_PATH"
+[ -f "$AMIGA_ZIP_PATH" ] && ls -l "$AMIGA_ZIP_PATH"
 exit $RC

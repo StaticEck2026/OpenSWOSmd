@@ -62,6 +62,7 @@ alone is ~21 MB):
 |---|---|---|
 | `bin/SWOS.zip` | 10 MB | the 6 binaries only — for someone who already has a `bin/` |
 | `bin/SWOS-full.zip` | 27 MB | binaries + game data + the Cygwin runtime for `SWOS.exe`: unzip and play |
+| `bin/SWOS-Amiga.zip` | 2 MB | `SWOS2` + only the trees the m68k binary opens + an empty `save/` |
 
 The full dist keeps everything at the zip root because the SDL binary chdir's to
 its own directory. Its data list mirrors what `make macos-app` bundles (the
@@ -72,6 +73,15 @@ of test careers. The Windows runtime is exactly `cygwin1.dll` +
 `strings`, which picks up every DLL name mentioned anywhere — including backends
 SDL only ever `dlopen`s — and lands you at ~14 MB of X11/pulse/codec libraries
 that never load. `--no-full` skips the big one.
+
+The **Amiga** drop carries `data grafs grafs_aga sound` and nothing else. That
+list was derived from the built binary, not guessed —
+`strings bin/SWOS2 | grep -oE '^(data|grafs|...)/'` shows it opens exactly those
+four plus `save/`, and never touches `grafs_dos`, `grafs_2020`, `grafs_arcade` or
+`data_json` (SDL-only asset tiers, ~50 MB the Amiga can't load). `save/` ships
+EMPTY: the binary writes there but won't create the directory. Copy the contents
+onto a volume FS-UAE/WinUAE mounts — the harness mounts `bin/` as **DH1:** and
+`cd`s in, so the same relative paths resolve.
 
 ```bash
 scripts/build_dist.sh              # TESTER drop: all targets + bin/SWOS.zip
