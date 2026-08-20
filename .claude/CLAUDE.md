@@ -117,10 +117,17 @@ unless `uname -s` is Darwin, and there is no cross-compile path), so this script
 drives the Mac mini over ssh and brings the bundle back:
 
 ```bash
-scripts/build_macos.sh             # tester build -> bin/SWOS-macOS-app.zip
+scripts/build_macos.sh             # tester build -> both archives below
 scripts/build_macos.sh --release   # public build
 scripts/build_macos.sh --no-pull   # build the Mac's tree as-is
 ```
+
+Two archives come back, mirroring `build_dist.sh`'s split:
+
+| archive | ~size | contents |
+|---|---|---|
+| `bin/SWOS-macOS-app.zip` | 19 MB | the drag-installable `.app`, `SDL2.framework` bundled |
+| `bin/SWOS-macOS.zip` | 1.4 MB | the universal binary alone — **needs SDL2 installed system-wide**, since the framework only ships inside the `.app` |
 
 Defaults match `build_dist.sh` so a drop is uniform. Overrides: `MAC_HOST`
 (default `bbaker@192.168.1.37`), `MAC_PATH` (`~/Programming/OpenSWOS`),

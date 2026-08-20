@@ -3,9 +3,14 @@
 # build_macos.sh — build the macOS .app on a remote Mac over ssh and bring the
 #                  zip back into this checkout's bin/.
 #
-#   scripts/build_macos.sh                # tester build -> bin/SWOS-macOS-app.zip
+#   scripts/build_macos.sh                # tester build -> both archives below
 #   scripts/build_macos.sh --release      # public build (stock injuries + cards)
 #   scripts/build_macos.sh --no-pull      # build the Mac's tree as-is
+#
+# Two archives come back, mirroring build_dist.sh's split:
+#   bin/SWOS-macOS-app.zip   the drag-installable .app, SDL2.framework bundled
+#   bin/SWOS-macOS.zip       the universal binary alone — needs SDL2 installed
+#                            system-wide, since the framework ships in the .app
 #
 # macOS is the one target scripts/build_dist.sh cannot produce: `make macos-app`
 # hard-fails unless `uname -s` is Darwin and there is no cross-compile path. So
@@ -37,6 +42,7 @@ cd "$ROOT" || exit 1
 MAC_HOST="${MAC_HOST:-bbaker@192.168.1.37}"
 MAC_PATH="${MAC_PATH:-~/Programming/OpenSWOS}"
 MAC_ZIP="${MAC_ZIP:-SWOS-macOS-app.zip}"
+MAC_ZIP_BIN="${MAC_ZIP_BIN:-SWOS-macOS.zip}"
 
 JOBS=""
 NOINJ=1
@@ -56,7 +62,8 @@ Options:
 Environment:
   MAC_HOST   ssh target      (default: $MAC_HOST)
   MAC_PATH   remote checkout (default: $MAC_PATH)
-  MAC_ZIP    archive name    (default: $MAC_ZIP)
+  MAC_ZIP    .app archive    (default: $MAC_ZIP)
+  MAC_ZIP_BIN binary archive  (default: $MAC_ZIP_BIN)
 EOF
 }
 
@@ -95,10 +102,10 @@ banner "build on $MAC_HOST:$MAC_PATH"
 # argument for re-input to the remote bash. The tilde in MAC_PATH survives as a
 # literal (%q escapes it, the remote parser strips the backslash) and is expanded
 # by the `eval cd` below.
-REMOTE_ARGV="$(printf ' %q' "$MAC_PATH" "$MAKE_FLAGS" "$JOBS" "$MAC_ZIP" "$DO_PULL")"
+REMOTE_ARGV="$(printf ' %q' "$MAC_PATH" "$MAKE_FLAGS" "$JOBS" "$MAC_ZIP" "$DO_PULL" "$MAC_ZIP_BIN")"
 ssh "$MAC_HOST" "bash -s --$REMOTE_ARGV" 2>&1 <<'REMOTE' | tee "$LOG"
 set -uo pipefail
-REPO="$1"; FLAGS="$2"; JOBS="$3"; ZIP="$4"; DO_PULL="$5"
+REPO="$1"; FLAGS="$2"; JOBS="$3"; ZIP="$4"; DO_PULL="$5"; ZIPBIN="$6"
 
 eval cd "$REPO" || { echo "!! no checkout at $REPO"; exit 1; }
 [ -n "$JOBS" ] || JOBS="$(sysctl -n hw.ncpu 2>/dev/null || echo 4)"
@@ -127,15 +134,26 @@ rm -f "bin/$ZIP"
 # zipinfo shows a leading 'l' in the mode column for a stored symlink. A plain
 # `zip -r` would have followed them and this count would be 0.
 echo "== SYMLINKS_IN_ZIP=$(zipinfo "bin/$ZIP" 2>/dev/null | grep -c '^l' || true)"
+# Binaries-only archive, the macOS counterpart of SWOS.zip: just the universal
+# binary, for someone who already has a bin/ tree. NOTE this one needs SDL2
+# installed system-wide — the bundled SDL2.framework only ships inside the .app.
+echo "== packing bin/$ZIPBIN (universal binary only)"
+rm -f "bin/$ZIPBIN"
+[ -f bin/SWOS.macos ] || { echo "!! bin/SWOS.macos missing"; exit 1; }
+( cd bin && ditto -c -k --sequesterRsrc SWOS.macos "$ZIPBIN" ) \
+    || { echo "!! ditto (binary) failed"; exit 1; }
+
 echo "== BUILT_COMMIT=$(git rev-parse --short HEAD)"
 echo "== ZIP_BYTES=$(stat -f%z "bin/$ZIP")"
+echo "== ZIPBIN_BYTES=$(stat -f%z "bin/$ZIPBIN")"
 echo "== REMOTE_OK"
 REMOTE
 
 grep -q "== REMOTE_OK" "$LOG" || { echo ""; echo "-- FAIL: remote build did not complete"; exit 1; }
 
-banner "fetch -> bin/$MAC_ZIP"
-scp -q "$MAC_HOST:$MAC_PATH/bin/$MAC_ZIP" "bin/$MAC_ZIP" || { echo "-- FAIL: scp"; exit 1; }
+banner "fetch -> bin/$MAC_ZIP, bin/$MAC_ZIP_BIN"
+scp -q "$MAC_HOST:$MAC_PATH/bin/$MAC_ZIP"     "bin/$MAC_ZIP"     || { echo "-- FAIL: scp (.app)"; exit 1; }
+scp -q "$MAC_HOST:$MAC_PATH/bin/$MAC_ZIP_BIN" "bin/$MAC_ZIP_BIN" || { echo "-- FAIL: scp (binary)"; exit 1; }
 
 banner "SUMMARY"
 printf '  built from commit  : %s\n' "$(sed -n 's/.*BUILT_COMMIT=//p' "$LOG" | head -1)"
@@ -148,4 +166,4 @@ printf '  slices             : %s\n' "$(grep -m1 '^== lipo:' "$LOG" | sed 's/^==
 printf '  symlinks preserved : %s (0 would mean SDL2.framework is broken)\n' \
     "$(sed -n 's/.*SYMLINKS_IN_ZIP=//p' "$LOG" | head -1)"
 echo ""
-ls -l "bin/$MAC_ZIP"
+ls -l "bin/$MAC_ZIP" "bin/$MAC_ZIP_BIN"
