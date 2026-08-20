@@ -7,6 +7,13 @@
 #   scripts/build_dist.sh --only windows  # just the .exe
 #   scripts/build_dist.sh --skip wasm     # everything but the browser build
 #   scripts/build_dist.sh --no-zip        # build only, don't package
+#   scripts/build_dist.sh --no-full       # skip the big SWOS-full.zip
+#
+# Two archives are written:
+#   bin/SWOS.zip       binaries only (~10 MB) — for someone who already has bin/
+#   bin/SWOS-full.zip  binaries + game data + the Cygwin runtime for SWOS.exe:
+#                      unzip and play. Excludes save/ (per-user dir, and 24 MB of
+#                      test careers here).
 #
 # Targets:
 #
@@ -76,12 +83,32 @@ ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows"
 # from a zip, and .data alone is ~21 MB.
 ZIP_MEMBERS="SWOS SWOS.x86_64 SWOS.aarch64 SWOS.armhf SWOS.exe SWOS2"
 
+# SWOS-full.zip — a RUNNABLE drop: the same binaries plus the game data, so a
+# tester can unzip and play instead of supplying their own bin/. Everything sits
+# at the zip root because the SDL binary chdir's to its own directory.
+#
+# The data list mirrors what `make macos-app` bundles (Makefile, macos-app rule)
+# — that is this project's tested definition of "what the game needs at runtime".
+# save/ is deliberately EXCLUDED: it is 24 MB of test careers here, and saves go
+# to a per-user directory anyway (swos_io.c), so shipping it would both bloat the
+# zip and drop stale saves on testers.
+FULL_DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound data_json"
+# Cygwin runtime for SWOS.exe. `cygcheck bin/SWOS.exe` reports exactly these two
+# as its non-system dependencies; everything else it prints is a Windows system
+# DLL. (Don't derive this list with `strings` — that picks up every DLL name
+# mentioned anywhere, including SDL backends it only ever dlopens, and lands you
+# at ~14 MB of X11/pulse/codec libraries that are never loaded.)
+FULL_DLLS="cygwin1.dll cygSDL2-2-0-0.dll"
+CYGWIN_BIN="${CYGWIN_BIN:-/mnt/c/cygwin64/bin}"
+
 JOBS="$(nproc 2>/dev/null || echo 4)"
 DO_CLEAN=1
 DO_ZIP=1
 VERIFY=0
 NOINJ=1          # tester builds: suppress injuries/cards. --release turns it off.
 ZIP_PATH="bin/SWOS.zip"
+FULL_ZIP_PATH="bin/SWOS-full.zip"
+DO_FULL=1
 ONLY=""
 SKIP=""
 
@@ -98,7 +125,9 @@ Options:
       --release       PUBLIC build: stock injuries + cards (default is a tester
                       build with SWOS_TEST_NO_INJURIES_CARDS=1)
       --no-clean      don't wipe object dirs first (only safe if flags unchanged)
-      --no-zip        build but don't package
+      --no-zip        build but don't package (neither zip)
+      --no-full       skip SWOS-full.zip (binaries-only SWOS.zip still written)
+      --full-zip PATH full-dist output path (default: bin/SWOS-full.zip)
       --zip PATH      zip output path (default: $ZIP_PATH)
   -h, --help          this text
 
@@ -114,7 +143,9 @@ while [ $# -gt 0 ]; do
         --verify)    VERIFY=1; shift ;;
         --release)   NOINJ=0; shift ;;
         --no-clean)  DO_CLEAN=0; shift ;;
-        --no-zip)    DO_ZIP=0; shift ;;
+        --no-zip)    DO_ZIP=0; DO_FULL=0; shift ;;
+        --no-full)   DO_FULL=0; shift ;;
+        --full-zip)  FULL_ZIP_PATH="$2"; shift 2 ;;
         --zip)       ZIP_PATH="$2"; shift 2 ;;
         -h|--help)   usage; exit 0 ;;
         *) echo "build_dist: unknown option '$1' (try --help)" >&2; exit 2 ;;
@@ -282,6 +313,38 @@ if [ "$DO_ZIP" = 1 ]; then
     fi
 fi
 
+# ---- package: full dist (binaries + data + Windows runtime) ------------------
+if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; then
+    banner "package -> $FULL_ZIP_PATH  (full game: binaries + data)"
+    FULL_DIRS=""
+    for d in $FULL_DATA_DIRS; do
+        [ -d "bin/$d" ] && FULL_DIRS="$FULL_DIRS $d"
+    done
+    if [ -z "$FULL_DIRS" ]; then
+        echo "-- SKIP: no data directories under bin/"
+    else
+        rm -f "$FULL_ZIP_PATH"
+        # Binaries junked to the root, then the data trees with their paths kept.
+        ( cd bin && zip -j -q "$ROOT/$FULL_ZIP_PATH" $ZIPPED ) &&
+        ( cd bin && zip -r -q "$ROOT/$FULL_ZIP_PATH" $FULL_DIRS -x '*/.DS_Store' ) &&
+            echo "-- data:     $FULL_DIRS"
+
+        # Windows runtime beside SWOS.exe. Skipped cleanly off-Cygwin hosts.
+        DLL_ADDED=""; DLL_MISS=""
+        for d in $FULL_DLLS; do
+            if [ -f "$CYGWIN_BIN/$d" ]; then DLL_ADDED="$DLL_ADDED $CYGWIN_BIN/$d"
+            else DLL_MISS="$DLL_MISS $d"; fi
+        done
+        if [ -n "$DLL_ADDED" ]; then
+            zip -j -q "$FULL_ZIP_PATH" $DLL_ADDED && \
+                echo "-- windows runtime:$(echo $DLL_ADDED | tr ' ' '\n' | sed 's|.*/||' | tr '\n' ' ')"
+        fi
+        [ -n "$DLL_MISS" ] && \
+            echo "-- NOTE: Cygwin DLLs not found in $CYGWIN_BIN (SWOS.exe will not run standalone):$DLL_MISS"
+        echo "-- OK: $FULL_ZIP_PATH"
+    fi
+fi
+
 # ---- summary ----------------------------------------------------------------
 banner "SUMMARY"
 printf '  save-format verify : %s\n' \
@@ -300,4 +363,5 @@ echo ""
 echo "  macos          not buildable here — run 'make macos-app' on a Mac"
 echo ""
 [ "$DO_ZIP" = 1 ] && [ -f "$ZIP_PATH" ] && ls -l "$ZIP_PATH"
+[ -f "$FULL_ZIP_PATH" ] && ls -l "$FULL_ZIP_PATH"
 exit $RC

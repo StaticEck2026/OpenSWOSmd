@@ -54,9 +54,24 @@ compares timestamps, not CFLAGS, so a flag change silently relinks stale objects
 
 ### Release builds — `scripts/build_dist.sh`
 
-Builds every target this machine can produce and packages the binaries into
-`bin/SWOS.zip` (WASM excluded from the zip — it's a web deployment, and the
-`.data` preload alone is ~21 MB):
+Builds every target this machine can produce and writes **two** archives (WASM is
+built but excluded from both — it's a web deployment, and its `.data` preload
+alone is ~21 MB):
+
+| archive | ~size | contents |
+|---|---|---|
+| `bin/SWOS.zip` | 10 MB | the 6 binaries only — for someone who already has a `bin/` |
+| `bin/SWOS-full.zip` | 27 MB | binaries + game data + the Cygwin runtime for `SWOS.exe`: unzip and play |
+
+The full dist keeps everything at the zip root because the SDL binary chdir's to
+its own directory. Its data list mirrors what `make macos-app` bundles (the
+project's tested "what the game needs at runtime" set). `save/` is deliberately
+excluded — saves go to a per-user dir (`swos_io.c`), and `bin/save` here is 24 MB
+of test careers. The Windows runtime is exactly `cygwin1.dll` +
+`cygSDL2-2-0-0.dll`; that list comes from `cygcheck bin/SWOS.exe`, **not** from
+`strings`, which picks up every DLL name mentioned anywhere — including backends
+SDL only ever `dlopen`s — and lands you at ~14 MB of X11/pulse/codec libraries
+that never load. `--no-full` skips the big one.
 
 ```bash
 scripts/build_dist.sh              # TESTER drop: all targets + bin/SWOS.zip
