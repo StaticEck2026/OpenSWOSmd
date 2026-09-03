@@ -2342,30 +2342,39 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         int16_t d2 = a1->y.s.i - a0->centerY - _cameraY.s.i;
         d2 -= a1->z.s.i;
 
-        /* Cull if off-screen. This is a GAMEPLAY decision as well as a render
-         * one — UpdateControlledPlayer will not auto-select a player whose
-         * onScreen is clear (GAMEPLAY.md §5, §25.2) — so it keys off the
-         * SIMULATION view, which defaults to the render width but which the
-         * replay rig sets to the geometry a recording was made in. */
-        if (d1 >= _sim_view_width || d2 >= _sim_view_height) {
-            a1->onScreen = 0;
-            d7--;
-            if (d7 < 0) break;
-            continue;
-        }
+        /* Two culls, deliberately: one decides GAMEPLAY, the other DRAWING.
+         *
+         * `onScreen` is a simulation input — UpdateControlledPlayer will not
+         * auto-select a player whose onScreen is clear (GAMEPLAY.md §5, §25.2)
+         * — so it must NOT depend on the display. Keying it off the live
+         * render width meant a widescreen player faced a different CPU: a
+         * 650-wide view admits men the Amiga culls, one of them is nearer the
+         * ball, and the selection changes. GAMEPLAY.md §25.4.
+         *
+         * The window is 336 wide and _sim_view_height tall, and the width is a
+         * CONSTANT rather than the view: measured against the DOS recordings,
+         * whose visible screen is 320 wide, a sprite is recorded onScreen out
+         * to camera-relative x 335 and off from 336 (42032 samples across
+         * zkz-12065730, per-image centerX/pixWidth taken from the DOS banks —
+         * clean separation, no overlap). Both releases cull to a 336-wide
+         * buffer; only the height follows the display (200 DOS, 272 Amiga),
+         * which is also what the same measurement gives: on out to y 199.
+         *
+         * Whether to ENQUEUE the sprite is a rendering question and keys off
+         * the render width, so a wide display still draws everything it can
+         * fit — the renderer draws wider than the simulation sees, which is
+         * exactly what §25.5 prescribes. The render view is never narrower
+         * than the simulation view (main.c clamps _screen_width to at least
+         * SCREEN_WIDTH), so this only ever draws MORE, never less. */
         {
             int16_t negW = -a0->pixWidth;
-            if (d1 <= negW) {
-                a1->onScreen = 0;
-                d7--;
-                if (d7 < 0) break;
-                continue;
-            }
-        }
-        {
             int16_t negH = -a0->nlines;
-            if (d2 <= negH) {
-                a1->onScreen = 0;
+            int onScreen = !(d1 >= SCREEN_WIDTH || d2 >= _sim_view_height ||
+                             d1 <= negW || d2 <= negH);
+            int inRenderView = !(d1 >= _screen_width || d2 >= SCREEN_HEIGHT ||
+                                 d1 <= negW || d2 <= negH);
+            a1->onScreen = (int16_t)onScreen;
+            if (!inRenderView) {
                 d7--;
                 if (d7 < 0) break;
                 continue;
@@ -2490,8 +2499,12 @@ post_enqueue:
                 a3[rightBucket >> 1] = d2;
         }
 
-        /* Mark sprite as on-screen */
-        a1->onScreen = 1;
+        /* onScreen was already decided by the SIMULATION cull above, and this
+         * used to overwrite it with 1 for anything that reached the enqueue.
+         * That was harmless while the two culls were the same test, and wrong
+         * the moment they are not: a sprite outside the simulation's window
+         * but inside the render view gets drawn (correct) and must still read
+         * as off-screen to the game (which this line was undoing). */
 #if defined(DETERMINISTIC_MODE) && DETERMINISTIC_SPRITE_LIMIT > 0
         spritesEnqueued++;
 #endif

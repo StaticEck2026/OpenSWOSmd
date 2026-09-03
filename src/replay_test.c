@@ -859,6 +859,9 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
      * auto-selection may pick, and every camera constant is derived from it
      * (display.h) — so replaying a 320x200 recording at 336x272 diverges by
      * construction, not by defect. The renderer still draws at _screen_width. */
+    /* Note the cull is NOT this width — it is a fixed 336 in both releases
+     * (sprites.c). Only the camera constants and the cull HEIGHT follow the
+     * recording's view. */
     if (s_setup.viewWidth > 0 && s_setup.viewHeight > 0) {
         _sim_view_width  = (int16_t)s_setup.viewWidth;
         _sim_view_height = (int16_t)s_setup.viewHeight;

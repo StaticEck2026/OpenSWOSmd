@@ -10,7 +10,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-int _debug_sprite_load = 0;  /* flip to 1 in gdb to trace extracts */
+#include <stdlib.h>   /* getenv — SWOS_DEBUG_SPRITE_LOAD */
+int _debug_sprite_load = 0;  /* flip to 1 in gdb, or set SWOS_DEBUG_SPRITE_LOAD=1 */
 __attribute__((constructor))
 static void unbuf_stderr(void) { setbuf(stderr, NULL); }
 #endif
@@ -132,8 +133,8 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
     {
         extern int _debug_sprite_load;
         if (_debug_sprite_load) {
-            fprintf(stderr, "[sprite] extract idx=0x%03X w=%u h=%u at 0x%08x src=%s\n",
-                    spriteIndex, width, height, (unsigned)(uintptr_t)headerBase,
+            fprintf(stderr, "[sprite] extract idx=0x%03X (%u) w=%u h=%u cx=%d cy=%d src=%s\n",
+                    spriteIndex, spriteIndex, width, height, (int)dstX, (int)dstY,
                     src == (uint8_t *)0 ? "CHECKERBOARD" : "buf");
         }
     }
@@ -410,6 +411,13 @@ update_cursor:
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
 {
+#ifdef SWOS_SDL_BUILD
+    /* SWOS_DEBUG_SPRITE_LOAD=1 traces every extract with its hotspot, which is
+     * what the onScreen cull reads — useful for comparing our bank's metrics
+     * against another release's (docs/TESTS.md). */
+    { static int probed; if (!probed) { probed = 1;
+        if (getenv("SWOS_DEBUG_SPRITE_LOAD")) _debug_sprite_load = 1; } }
+#endif
     const uint8_t *a0 = (const uint8_t *)cmdBuffer;
     uint16_t opcode, opcodeType;
     uint16_t spriteIndex, xOff, yOff, w, h, maskSel;

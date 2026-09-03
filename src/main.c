@@ -479,13 +479,15 @@ int main(int argc, char **argv)
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, SCREEN_HEIGHT, opts.screen, nd, dw, dh, (double)dw / dh);
     }
-    /* Keep the SIMULATION view (display.h) equal to the render width, which is
-     * exactly what the gameplay culls and camera math used before it existed —
-     * so this is a no-op for a player. Only the replay rig overrides it.
-     * (GAMEPLAY.md §25.4: pinning it to SCREEN_WIDTH x SCREEN_HEIGHT instead
-     * would stop a widescreen render from changing CPU player selection. That
-     * is a deliberate gameplay change, not this line.) */
-    _sim_view_width  = (int16_t)_screen_width;
+    /* The SIMULATION view (display.h) is the port's own fixed geometry, NOT the
+     * render width. SWOS reads the view size from inside the simulation — the
+     * onScreen cull decides which players auto-selection may pick — so tying
+     * it to the render width made a widescreen display change CPU behaviour:
+     * a 650-wide view admits men the Amiga culls, and the nearest-to-the-ball
+     * choice changes. Pinning it here means every display plays the same game
+     * and the renderer simply draws wider (GAMEPLAY.md §25.4/§25.5).
+     * The replay rig overrides it to the geometry a recording was made in. */
+    _sim_view_width  = SCREEN_WIDTH;
     _sim_view_height = SCREEN_HEIGHT;
 
     _menu_draw_x_offset = WIDE_MARGIN;
