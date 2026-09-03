@@ -93,6 +93,8 @@ extern uint16_t _timeVar;
 extern uint16_t _timeDelta;
 extern int16_t  _gsFramesPerGameSecond;   /* GS_54_49 clock reload — dos_gameplay.c */
 extern int16_t  _gsEndGameCounter;        /* GS_55_50 endGameCounter reload — dos_gameplay.c */
+extern int16_t  _gsResultHalftimeLength;  /* GS_275_250 result banner — dos_gameplay.c */
+extern int16_t  _gsResultBreakLength;     /* GS_165_150 result banner — dos_gameplay.c */
 extern uint16_t _gameStatePl;
 extern uint16_t _playingPenalties;
 extern int16_t  _extraTimeState;
@@ -404,12 +406,12 @@ void ShowResult(void)
     /* --- timer init phase: map magic values to countdown values --- */
     if (_resultTimer == 30000)
     {
-        _resultTimer = 250;
+        _resultTimer = _gsResultHalftimeLength;   /* Amiga 250 / DOS 275 */
         goto show_sprites;
     }
     if (_resultTimer == 31000)
     {
-        _resultTimer = 150;
+        _resultTimer = _gsResultBreakLength;      /* Amiga 150 / DOS 165 */
         goto show_sprites;
     }
     if (_resultTimer == 32000)

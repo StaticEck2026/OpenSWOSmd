@@ -10,10 +10,14 @@ replays `.RGD` recordings against its DOS port. That corpus is our starting
 point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
-Status: **data imported; format decoded and verified; decoder written. Replay
-rig not yet implemented.**
+Status: **live.** The corpus decodes, converts and replays; all 12 decodable
+recordings run, reaching frame 99-786 before the first divergence at level
+`info` (section 5). Four real defects found and fixed on the way in.
 
 ```bash
+scripts/replay_test.sh                                  # convert + replay + report
+scripts/replay_test.sh --all                            # every comparison level
+
 scripts/rgd_convert.py --info    tests/dos/*.RGD.gz     # header + frame geometry
 scripts/rgd_convert.py --verify  tests/dos/*.RGD.gz     # decode invariants
 scripts/rgd_convert.py --dump-frames 0:4 tests/dos/zkz-12065730.RGD.gz
@@ -178,111 +182,270 @@ Sprite sprites[33]
 
 ---
 
-## 3. What the reference rig asserts
+## 3. Running it
 
-Per frame, after injecting the recorded input and running one tick
-(`RecordedDataTest::verifyFrame`):
+```bash
+scripts/replay_test.sh                    # the shortest recording, level "info"
+scripts/replay_test.sh --all              # every level, in order
+scripts/replay_test.sh --level sprites tests/dos/zkz-11021807.RGD.gz
+scripts/replay_test.sh --level info --frames 0:400 tests/dos/zkz-12080203.RGD.gz
 
-- `topTeamInGame` / `bottomTeamInGame` (`TeamGame`) — full compare
-- `team1StatsData` / `team2StatsData` — full compare
-- `topTeamData` / `bottomTeamData` (`TeamGeneralInfo`), plus player sprite order
-- all 33 sprites
-- `cameraX/Y` and both camera velocities
-- game time in minutes, both goal counts
-- `gameState`, `gameStatePl`
-- bench state (v1.3+), `fireBlocked` / `statsTimer` / `resultTimer` (v1.4+)
+bin/SWOS --replay-selftest                # CalculateDeltaXAndY vectors, no data needed
+```
 
-Every one of those globals exists in our tree (`_topTeamInGame`,
-`_bottomTeamData`, `_cameraX`, `_gameStatePl`, `_currentGameTick`, …). Setup is
-also within reach: the rig pushes the header's two `TeamFile`s into
-`selectedTeams` and calls `InitAndPlayGame()`, which we have in
-`src/game_init.c`.
+The script converts the recording (`scripts/rgd_convert.py --emit`) and hands
+the `.swr` to `bin/SWOS --replay-test=`. Exit code **0** = every frame matched,
+**2** = divergence, **1** = setup failure. Useful flags, all also available
+directly on the binary:
 
----
+| flag | what |
+|---|---|
+| `--replay-level=<scalars\|teams\|info\|sprites>` | how much of each frame to compare |
+| `--replay-max-errors=N` | keep going and list up to N mismatching fields |
+| `--replay-skip=a,b,…` | mute fields whose name contains any of these substrings |
 
-## 4. Why we cannot replay the bytes directly
+The four levels are cumulative, cheapest first:
 
-The recording is a packed dump of the **DOS port's** structs. Ours have diverged
-— deliberately, per the untangle roadmap. Measured:
+| level | fields/frame | what it adds |
+|---|---:|---|
+| `scalars` | 19 | game clock, goals, `gameState`/`gameStatePl`, camera, the v1.4 timers |
+| `teams` | 793 | both `TeamGame`s (16 `PlayerInfo` each) and both `TeamStatisticsData` |
+| `info` | 915 | both `TeamGeneralInfo`s — the per-team control/AI block |
+| `sprites` | 2499 | all 33 sprites |
 
-| struct | ours 64-bit | ours 32-bit | swos-port |
-|---|---:|---:|---:|
-| `TeamTactics` | 370 | 370 | **370** ✓ |
-| `PlayerFile` | 38 | 38 | **38** ✓ |
-| `TeamFileEx` | 684 | 684 | **684** ✓ (their `TeamFile`) |
-| `SpriteGraphics` | 32 | 24 | **24** |
-| `TeamGeneralInfo` | 180 | 144 | **145** |
-| `Sprite` | 118 | 110 | (frame-derived) |
-| `TeamFile` | 76 | 76 | — (ours is the 76-byte header only) |
-
-Three distinct problems:
-
-1. **Pointer growth.** `Sprite`, `SpriteGraphics` and `TeamGeneralInfo` hold
-   pointers. swos-port sidesteps this with `SwosDataPointer<T>`, a 32-bit
-   VM-relative offset; ours are real pointers, 8 bytes on x86_64.
-2. **`TeamFile` means different things.** Theirs is header + 16 players (684);
-   ours is the 76-byte header, and `TeamFileEx` is the full 684-byte record.
-   **Map their `TeamFile` to our `TeamFileEx`.**
-3. **No contiguous image.** swos-port keeps one flat memory image and can
-   `memcmp` a struct against a recorded region. Our globals are separate objects
-   at linker-chosen addresses (the whole point of the untangle), so region
-   compares are impossible *and* forbidden — the same rule the save format
-   follows (see CLAUDE.md, "no address ranges").
-
-Note `TeamGeneralInfo` is 144 for us on 32-bit against their 145 — an actual
-layout difference to chase, not just pointer width.
-
-**Consequence: the rig must compare NAMED FIELDS, never memory regions.**
+Start low. A cheap level runs the same simulation but reports the *symptom*
+rather than the cause; a high level reports the cause but has more known
+non-comparable fields to work around. Divergences found at `scalars` are almost
+always visible much earlier at `info`.
 
 ---
 
-## 5. Design
+## 4. What it compares, and how
+
+Per frame: `ReplayTest_FrameStart` (top of `GameLoop`'s body) writes the
+recorded stick state into `_joy1Dat` / `_joy0Dat` / `_ciaa_pra` — the same
+registers `input_sdl.c` writes, so `Player1StatusProc` decodes a recorded stick
+exactly as it decodes a real one — and `ReplayTest_FrameEnd` (just before
+`wait_for_vblank_sync`) compares every bound field and stops at the first
+mismatch.
+
+Comparison is by **name**, never by address or offset. `scripts/rgd_schema.py`
+pins the DOS layout in one place and emits `(name, type, level, cmp)` rows;
+`src/replay_test.c` builds a registry of the same names from our own
+`offsetof`s and binds the two at load. A schema name with no matching global is
+a hard load error, so the rig can never silently skip a field.
+
+`cmp` classes:
+
+| class | meaning |
+|---|---|
+| `eq` | exact, at the recorded field's width (so their `word` vs our `int16_t` is not a difference) |
+| `bool` | truth test only — see "byte-set word flags" below |
+| `view` | depends on the view geometry; compared only when ours matches the recording's |
+| `spr` | a sprite-bank index; compared after subtracting the recording's `sprite_index_offset` |
+| `in` | recorded input, injected rather than compared |
+| `meta` | bookkeeping (`frameNo`) |
+
+### Determinism
+
+A replay is only meaningful if two runs agree, and three inputs had to be taken
+away from the SDL host before they did:
+
+- **`Rand` / `Rand2`** return the recording's `fixedRandomValue` while
+  `_replayFixedRandom >= 0` (random.c). The recordings pin the RNG to one
+  value; without this nothing reproduces.
+- **`_currentGameTick` and `_currentTick`.** On Amiga these are the VBlank
+  interrupt, i.e. exactly one step per game-loop iteration. On SDL two threads
+  bump them from a wall clock. Gameplay reads both — `_currentTick & 2` gates
+  the ball-control speed bonus (`ball_possession.c`), `_currentGameTick & mask`
+  gates most of the AI's phase decisions — so the rig owns them and steps them
+  itself (`ReplayTest_OwnsGameTick`, gated in `interrupts.c`).
+- **`_lastGameTick`.** This was the subtle one. `ReadTimerDelta` turns
+  `_currentGameTick - _lastGameTick` into `_lastFrameTicks`, which every
+  stoppage/referee/result timer is stepped by. Coming out of the menus it held
+  whatever the wall clock had reached, so frame 0's delta was a random number
+  and two runs of the same recording diverged at different frames. Reset with
+  the other two at kick-off.
+
+`--replay-test` also forces `SWOS_HARNESS_TURBO` (no 50 Hz wait — the clock is
+driven per iteration, not by the wall), `--dos-gameplay=on`, and the port's
+native 336x272 render rather than the tester's monitor aspect.
+
+---
+
+## 5. Results
+
+Every recording that decodes also replays. First divergence at level `info`:
+
+| recording | ver | frames | first divergence |
+|---|---|---:|---:|
+| `zkz-10190651` | 1.1 | 21279 | 786 |
+| `zkz-11021807` | 1.3 | 4064 | 775 |
+| `playa-10144556` | 1.1 | 21061 | 754 |
+| `zkz-11054632` | 1.1 | 7314 | 700 |
+| `zkz-10140228` / `zkz-10173518` | 1.1 | 39066 / 25586 | 660 |
+| `zkz-12065730` | 1.5 | 1519 | 600 |
+| `zkz-11215003` | 1.1 | 27819 | 117 |
+| `playa-10090613` / `playa-10095214` / `zkz-12080203` | 1.1 / 1.1 / 1.4 | — | 99 |
+| `zkz-10174427` | 1.1 | 26624 | 0 |
+
+`zkz-12065730` across the levels: **972** frames at `scalars`, **809** at
+`teams`, **600** at `info`, **128** at `sprites`. Hundreds of frames in which
+900+ named fields agree exactly is a real regression net — a change that
+perturbs the simulation will move these numbers immediately.
+
+### What the rig has already found
+
+Four real defects, all fixed in the commit that added it:
+
+1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
+   `zkz-12065730` reaches game-minute 1 at frame 702 and minute 2 at frame 842
+   — 140 frames per game-minute. The accumulator subtracts
+   `gameLenSecondsTable[0] = 30` per frame and reloads by `N`, so 60 seconds
+   take `2N` frames: **N = 70**. 54 would give 108 frames/minute, swos-2020's
+   69 would give 138. `docs/DOS_GAMEPLAY.md` had taken 54 from a swos-2020
+   comment; swos-port's `kPcTicksPerGameSeconds = 70` agrees with the
+   measurement.
+2. **The 41/64 speed_factor used C division instead of shifts.** `41/64` is
+   `x - x/4 - x/16 - x/32 - x/64` with *arithmetic* shifts, which floor;
+   C division truncates toward zero, so the two disagree by one on negative
+   deltas and the trajectory forks within a few frames. swos-port hit exactly
+   this ("shifts have to be used explicitly, divisions end up with slightly
+   different result"). Ours produced `delta_x = -93531` where the recording had
+   `-93530`; with the shift chain, `bin/SWOS --replay-selftest` matches
+   **10/10** of swos-port's `CalculateDeltaXAndY` reference vectors (it matched
+   4/10 before). At `sprites` level this moved the first divergence from frame
+   12 to frame 128.
+3. **Two DOS result-banner timer constants were missing.** `ShowResult` maps
+   its `30000` / `31000` markers to a display length; DOS uses 275 / 165 where
+   the Amiga uses 250 / 150 — the same ×1.1 family as every other `GS_*`.
+   Now `_gsResultHalftimeLength` / `_gsResultBreakLength` in `dos_gameplay.c`.
+4. **A wall-clock value leaked into the match** through `_lastGameTick`, making
+   even *our own* runs non-deterministic (see above). That one is a real
+   gameplay bug outside the rig: the first frame of every match steps its
+   timers by an arbitrary amount.
+
+### Known non-comparable state
+
+Not bugs; consequences of comparing two different builds.
+
+- **View geometry.** SWOS's camera *is* the view's top-left in world space and
+  every camera constant is derived from the view size: kick-off camera
+  `((pitchWidth - viewWidth)/2, pitchBottom - viewHeight)`, `MoveCamera`
+  centring on `target - viewWidth/2`, pan range `pitchWidth - viewWidth`. DOS
+  renders 320x200, we render 336x272, so a DOS recording's kick-off camera is
+  `(176, 664)` where ours is `(168, 592)` — not one offset, since X is centred
+  (half the difference) and Y is bottom-anchored (all of it). Sprite
+  coordinates are WORLD coordinates and are unaffected. The camera fields and
+  `Sprite.onScreen` carry `cmp = view` and are skipped, with a line saying how
+  many.
+  **This also caps the `sprites` level**: `updateSpriteAnimation` only advances
+  a sprite whose `onScreen` is set, so at a different view size animation state
+  itself diverges (frame 128 of `zkz-12065730` is `sprite[14]`'s animation
+  never starting). Sprite-exact replay needs a recording made at our geometry
+  — see section 7.
+- **Sprite-bank indices.** DOS sprite indices are ours + 114
+  (`DOS_TO_AMIGA_OFFSET`, `include/dos_graphics.h`) — confirmed independently
+  here as exactly the delta on all 33 sprites' `imageIndex`. Handled by
+  `cmp = spr` plus `sprite_index_offset` in the `.swr` setup.
+- **Byte-set word flags.** `SWOS2.s` writes several 16-bit fields with a byte
+  `sne` — `ballOutOfPlayOrKeeper` and `goaliePlayingOrOut` (lines 29236-29243),
+  `Sprite.isMoving` (29122). "Set" is `0x00FF` little-endian and `0xFF00`
+  big-endian; ours says `-1`, which is the same flag without the byte trick,
+  and every read is a truth test (`tst.w`, `cmp.b`). Marked `cmp = bool`.
+- **swos-port's own sprite init.** Its `Sprite::init()` sets several fields to
+  values its source explicitly calls "for SWOS++/tests compatibility", one of
+  which (`frameSwitchCounter = -1`) its comment says SWOS itself starts at 0 —
+  which is what we do. `scripts/replay_test.sh` mutes `starting_direction`,
+  `frame_switch_counter`, `field_3e`, `player_direction` and `save_sprite` at
+  the `sprites` level; `--strict` compares them.
+- **v1.0/1.1 headers** stop before `season` / `min` / `maxSubstitutes`. The
+  converter falls back to the DOS data segment's own defaults for the
+  substitute counts (2 and 5); leaving them 0 benches players 11..15 before the
+  first frame. `season` has no safe default, so the rig keeps this build's
+  value and says so.
+
+### Open leads
+
+- **Frame 99, three recordings**: `gameState` 0 vs our 21 (`ST_STARTING_GAME`)
+  and `ball_x` 336 vs 1672 — our kick-off sequence is still running when DOS
+  has already started play. Another pre-match timer, probably in the `GS_*`
+  family.
+- **`zkz-10174427` frame 0**: `top_game.players[5]` has `passing` / `tackling`
+  / `ballControl` 5 where we compute 4 — a rounding difference in the skill
+  nibbles `InitInGameTeamStructure` derives.
+- **`zkz-12065730` frame 809** (`teams`): `ball_possession` diverges by one and
+  then walks away — the possession accumulator's cadence.
+- The single **v1.2** recording still resolves to no (header, frame) pair.
+
+---
+
+## 6. Design notes
 
 Two pieces, deliberately split so the fragile part is offline and in Python.
 
-### 5a. `scripts/rgd_convert.py` — decode to a neutral format
+### 6a. `scripts/rgd_convert.py` + `scripts/rgd_schema.py`
 
-Parses `.RGD.gz` using the version table above and emits a self-describing
-per-frame record with **named fields**, independent of any struct layout or word
-size. Rationale:
+`rgd_schema.py` is the DOS layout, pinned in one readable place; `--emit`
+walks a `.RGD` through it and writes a `.swr` of named fields. The C rig never
+parses a DOS byte, so 32/64-bit and pointer growth stop mattering, and the same
+container can carry Amiga dumps later.
 
-- the DOS layout is pinned in one readable place instead of smeared through C
-  structs that must not change;
-- the C rig never parses DOS bytes, so 32/64-bit and pointer growth stop
-  mattering;
-- the **same** output format can carry the Amiga dumps later, so the rig has one
-  input format and the platform differences live in the converters.
+`.swr` layout (little-endian):
 
-Emit a compact binary keyed by field name (JSON per frame would be far too large
-at 31 k frames), or JSON for a `--frames 0..N` slice when debugging.
+```
+0   char magic[8]  "SWOSREC\0"
+8   u32  fileVersion (1)
+12  u32  setupOff,  setupLen     JSON — the match setup
+20  u32  schemaOff, schemaLen    TSV — name <TAB> type <TAB> level <TAB> cmp
+28  u32  blobOff,   blobLen      the fixed-layout binary records
+36  u32  framesOff, frameCount, frameSize
+48  u32  reserved[4]
+64  ... sections, in that order
+```
 
-### 5b. The C rig
+Frames are the schema's fields packed back to back in schema order, which is
+why the schema carries the types: the reader needs a name and a width, never an
+offset. The blob section holds the two 684-byte team records and the six
+370-byte user tactics — fixed-layout binary records of exactly the kind
+`.EDT`/`.TAC` support is kept for, and setup state rather than per-frame state.
+The rig copies each whole and then restores the one endian-sensitive field
+(`TeamFile.globalTeamNumber`) from the named scalar beside it.
 
-A `--selftest` mode in the SDL binary rather than a separate harness: it needs
-the real globals, and the gdb harness already proves we can drive and inspect a
-live match. Per frame: set input → run one tick → compare each named field
-against its global → report the first divergence with frame number and field.
+### 6b. `src/replay_test.c`
 
-The first divergence is the whole value here: gameplay is chaotic, so one wrong
-bit diverges everything within a few frames. The report should name the frame
-and field and stop.
+A mode of the SDL binary rather than a separate harness: it needs the real
+globals. It also has to skip the front end, which means doing by hand the few
+things the front end would have done — `ProcessImageCommandStream` for the menu
+sprite bank (the stadium line-up SIGSEGVs without it), `InitTeams`, and the
+control assignment the two `ShowPlayMatchMenu` prompts would have produced
+(`ReplayTest_SetupPlayers`, called from `SetupPlayers` and mirroring the
+arcade-mode branch beside it).
 
-### 5c. DOS mode
-
-The corpus is DOS gameplay, so the rig must set DOS tuning before
-`InitAndPlayGame()` — `_gDosGameplay = 1` (`--dos-gameplay=on`), which selects
-the 70 Hz tick and the DOS movement/goalkeeper/ball constants
-(`src/dos_gameplay.c`). Also set from the header: `pitchType`, `gameLength`,
-`autoReplays`, `allPlayerTeamsEqual`, `season`, `min/maxSubstitutes`, the six
-user tactics, and `fixedRandomValue` — the recordings pin the RNG, without which
-nothing is reproducible.
-
-Getting any of these wrong looks exactly like a gameplay bug, so assert them
-rather than assuming.
+Not yet injected: the recorded **bench** and **ESC** control bits and the v1.4
+`userKey`. The rig warns once when a recording uses one, so a divergence after
+that point is attributed to the missing input rather than to a port bug.
 
 ---
 
-## 6. Harvesting Amiga data
+## 7. Order of work
+
+1. ~~Decide how the 66 MB is stored.~~ Still untracked; `tests/replay/` (the
+   converted `.swr` files) is ignored too — regenerate rather than track.
+2. ~~`scripts/rgd_convert.py`~~ — done; 12 of 13 files decode and verify.
+3. Resolve v1.2 (1 file, no (header, frame) pair found).
+4. ~~The C rig~~ — done; see section 5 for where each level reaches.
+5. Chase the open leads in section 5, cheapest level first.
+6. Inject bench / ESC / `userKey` so recordings that use them stay comparable.
+7. **The Amiga dumper.** Now the priority rather than a nice-to-have: the view
+   geometry cap means a DOS recording can never validate sprite-level state
+   against this port, and a divergence in DOS data always has to be triaged
+   against "is this a DOS-vs-Amiga difference?" first. An Amiga corpus removes
+   both problems — every divergence there is a porting bug.
+
+---
+
+## 8. Harvesting Amiga data
 
 Target: `C:\Projects\Amiga\SWOS-RE\Amiga\WHDLoad\Static` — a buildable
 disassembly (`SWOS/SWOS2.s`, 5.6 MB) plus a WHDLoad slave
@@ -321,35 +484,25 @@ Steps:
    Find it in `SWOS2.s`; cross-check against the same routine in our
    `data/SWOS2.s`, which shares its provenance.
 2. **Write the dumper in the slave**, next to the existing fix routines: save
-   registers, walk the same globals section 3 lists, append one frame record,
+   registers, walk the globals the schema names, append one frame record,
    restore, run the displaced instructions, return.
-3. **Emit the neutral format directly** — same schema as
-   `scripts/rgd_convert.py` output. Do not reinvent `.RGD`: the Amiga structs
-   are not the DOS ones, and hand-decoding a second binary layout is exactly the
-   work the converter exists to avoid.
-4. **Write it out** with WHDLoad's `resload_SaveFile`. 31 k frames × ~7 KB is
-   ~200 MB uncompressed, so dump a bounded window (a few thousand frames) or
-   only the fields the rig asserts.
+3. **Emit the `.swr` container directly** — same schema names as
+   `scripts/rgd_schema.py`, with `view_width`/`view_height` set to the Amiga's
+   336x272 and `sprite_index_offset` 0, so the rig compares the camera and
+   `onScreen` too and the `spr` class becomes a no-op. Do not reinvent `.RGD`:
+   the Amiga structs are not the DOS ones, and hand-decoding a second binary
+   layout is exactly the work the converter exists to avoid.
+4. **Write it out** with WHDLoad's `resload_SaveFile`. 31 k frames × ~4.4 KB is
+   ~140 MB, so dump a bounded window (a few thousand frames) or only the fields
+   one level needs — the schema's `level` column is there for this.
 5. **Verify nothing moved**: diff the built image against an unpatched build —
    byte-identical except the patched instructions. Same discipline as checking
    `bin/SWOS2.map` for the C port.
 
 ### Why the Amiga corpus matters
 
-The DOS corpus validates DOS gameplay tuning. The Amiga recordings validate the
-path the port actually derives from (`data/SWOS2.s`), where any divergence is a
-genuine porting bug rather than a DOS-vs-Amiga behavioural difference.
-
----
-
-## 7. Order of work
-
-1. Decide how the 66 MB is stored (LFS / untracked + fetch script).
-2. ~~`scripts/rgd_convert.py`~~ — done; 12 of 13 files decode and verify.
-3. Resolve v1.2 (1 file, no (header, frame) pair found).
-4. The C rig, first asserting only the cheap scalars (game time, goals,
-   `gameState`, camera), then teams, then all 33 sprites.
-5. The Amiga dumper.
-
-Start the rig against `zkz-12065730` — v1.5, fully decoded, and the shortest at
-1519 frames.
+The DOS corpus validates DOS gameplay tuning, and it has already paid for
+itself (section 5). But its view geometry differs, its sprite bank differs, and
+every divergence has to be triaged against "DOS-vs-Amiga difference?" first.
+The Amiga recordings validate the path the port actually derives from
+(`data/SWOS2.s`), where any divergence is a genuine porting bug.

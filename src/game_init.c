@@ -739,6 +739,19 @@ void SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
 
 #ifdef SWOS_SDL_BUILD
     {
+        /* Recorded-game replay: the two ShowPlayMatchMenu prompts are
+         * replaced by the control assignment the recording's header carries
+         * (docs/TESTS.md 5b), mirroring the reference rig's menu callback. */
+        extern int  ReplayTest_Armed(void);
+        extern void ReplayTest_SetupPlayers(TeamFileEx *t1, TeamFileEx *t2);
+        if (ReplayTest_Armed()) {
+            _careerTeamCoachOnly = 0;
+            ReplayTest_SetupPlayers(team1, team2);
+            (void)maxSubs; (void)excludeFlags; (void)allowSquadChanges; (void)mode; (void)d0;
+            return;
+        }
+    }
+    {
         extern int _gArcadeMode;
         if (_gArcadeMode) {
             /* Arcade: no pre-match squad/tactics menu — and the front-end menu

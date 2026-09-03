@@ -1,0 +1,1101 @@
+/*
+ * replay_test.c — recorded-game replay regression rig (SDL build only).
+ *
+ * docs/TESTS.md is the design; this is section 5b.
+ *
+ * A `.swr` file (scripts/rgd_convert.py --emit) carries a match setup, a
+ * per-frame field SCHEMA (name/type/level), and the frames themselves as
+ * those fields packed in schema order. The rig:
+ *
+ *   1. binds every schema name to one of OUR globals — a name-keyed table
+ *      built from include/game_types.h offsets, never a DOS byte offset and
+ *      never an address range (CLAUDE.md, "no address ranges");
+ *   2. installs the recorded setup and starts the match with no menus;
+ *   3. per frame: inject the recorded joystick state, run one game-loop
+ *      iteration, compare each bound field, and stop at the first
+ *      divergence naming the frame and the field.
+ *
+ * Determinism is the whole point, so the rig also takes over the two inputs
+ * the SDL host would otherwise supply from a wall clock:
+ *
+ *   - Rand/Rand2 return the recording's fixedRandomValue (_replayFixedRandom);
+ *   - _currentGameTick advances exactly once per game-loop iteration instead
+ *     of being bumped by the SDL timer thread (see ReplayTest_OwnsGameTick).
+ *
+ * Exit codes: 0 every frame matched, 2 divergence, 1 setup failure.
+ */
+
+#ifdef SWOS_SDL_BUILD
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "replay_test.h"
+#include "game_types.h"
+#include "display.h"    /* _screen_width, SCREEN_HEIGHT — the view geometry */
+#include "game_init.h"
+#include "math68k.h"
+#include "mjson.h"
+
+/* ===================================================================
+ * Recorded-field types
+ * =================================================================== */
+
+typedef enum {
+    RT_U8, RT_S8, RT_U16, RT_S16, RT_U32, RT_S32, RT_NTYPES
+} RtType;
+
+static const uint8_t k_rtSize[RT_NTYPES] = { 1, 1, 2, 2, 4, 4 };
+static const char * const k_rtName[RT_NTYPES] = { "u8", "s8", "u16", "s16", "u32", "s32" };
+
+enum { RC_EQ, RC_BOOL, RC_VIEW, RC_SPR, RC_IN, RC_META };
+
+/* One of our globals, addressable by the schema's name. */
+typedef struct {
+    char    *name;
+    uint8_t  type;
+    void    *addr;
+} RtEntry;
+
+/* One field of the recorded frame. */
+typedef struct {
+    char    *name;
+    uint8_t  type;     /* as recorded */
+    uint8_t  level;
+    uint8_t  cmp;
+    uint32_t off;      /* byte offset inside a packed frame record */
+    int32_t  bind;     /* index into s_reg, or -1 when unbound */
+} RtField;
+
+/* ===================================================================
+ * Loaded file
+ * =================================================================== */
+
+static int       s_armed;
+static int       s_running;
+static int       s_finished;
+
+static uint8_t  *s_file;
+static uint32_t  s_fileLen;
+static const char *s_setupJson;
+static int       s_setupLen;
+static const uint8_t *s_blob;
+static const uint8_t *s_frames;
+static uint32_t  s_frameCount;
+static uint32_t  s_frameSize;
+
+static RtField  *s_field;
+static uint32_t  s_fieldCount;
+static uint32_t  s_compareCount;
+static uint32_t  s_viewSkipped;    /* "view" fields muted by a geometry mismatch */
+static int       s_viewMatches;
+
+static RtEntry  *s_reg;
+static uint32_t  s_regCount, s_regCap;
+
+static int       s_maxLevel = 3;
+static int       s_maxErrors = 1;
+static const char *s_skipPrefixes;  /* --replay-skip=a,b,c */
+static int       s_errors;
+static uint32_t  s_frame;          /* index of the record being replayed */
+static const uint8_t *s_rec;       /* the record itself, NULL between frames */
+static int       s_firstFrame = 1;
+static int       s_warnedBench, s_warnedEsc, s_warnedUserKey;
+
+int _replayFixedRandom = -1;
+
+/* The recording's setup, as named values. */
+static struct {
+    int major, minor;
+    int firstFrame, lastFrame;
+    int fixedRandomValue;
+    int pitchTypeOrSeason, pitchType, gameLength, autoReplays, allPlayerTeamsEqual;
+    int season, minSubstitutes, maxSubstitutes;
+    int trainingGameCareerSize, inputControls;
+    int viewWidth, viewHeight;
+    int spriteIndexOffset;
+    int extraTime, penaltyShootout;
+    int topTeamMarkedPlayer, bottomTeamMarkedPlayer;
+    int topTeamCoachNo, topTeamPlayerNo, bottomTeamCoachNo, bottomTeamPlayerNo;
+    struct { int blobOff, blobLen, globalTeamNumber, teamControls; char name[20]; } team[2];
+    struct { int blobOff, blobLen; } tactics[6];
+} s_setup;
+
+/* ===================================================================
+ * Globals the rig drives
+ * =================================================================== */
+
+extern TeamFileEx        _selectedTeams[100];
+extern uint16_t          _numSelectedTeams;
+extern TeamGame          _topTeamInGame, _bottomTeamInGame;
+extern TeamGeneralInfo   _topTeamData, _bottomTeamData;
+extern uint16_t          _team1StatsData[7], _team2StatsData[7];
+extern FixedPoint        _cameraX, _cameraY;
+extern uint16_t          _cameraXVelocity, _cameraYVelocity;
+extern uint8_t           _gameTime[4];
+extern uint16_t          _statsTeam1Goals, _statsTeam2Goals;
+extern uint16_t          _gameState, _gameStatePl;
+extern uint16_t          _fireBlocked, _statsTimer, _resultTimer;
+extern volatile uint16_t _currentGameTick;
+extern volatile uint16_t _currentTick;
+extern uint16_t          _lastGameTick;
+extern uint16_t          _showingUserStats, _paused;
+extern uint16_t          _gameType, _trainingGame, _isCareer, _exitGameFlag, _twoPlayers;
+extern uint16_t          _pitchTypeOrSeason, _friendlyPitchType, _friendlySeason;
+extern uint16_t          _pitchType, _gameLength, _autoReplays, _autoSaveHighlights;
+extern uint16_t          _allPlayerTeamsEqual, _minSubstitutes, _maxSubstitutes;
+extern int16_t           _extraTimeState, _penaltiesState;
+extern uint16_t          _pl1Coach, _pl2Coach;
+extern uint16_t          _topTeamPlayerNo, _topTeamCoachNo;
+extern uint16_t          _bottomTeamPlayerNo, _bottomTeamCoachNo;
+extern uint16_t          _team1SelectedPlayerIndex, _team2SelectedPlayerIndex;
+extern int16_t           _pl1Tactics, _pl2Tactics;
+extern uint8_t           _teamTacticsUSERA[370], _teamTacticsUSERB[370];
+extern uint8_t           _teamTacticsUSERC[370], _teamTacticsUSERD[370];
+extern uint8_t           _teamTacticsUSERE[370], _teamTacticsUSERF[370];
+extern uint16_t          _joy0Dat, _joy1Dat;
+extern uint8_t           _ciaa_pra;
+extern int               _gDosGameplay;
+extern int16_t           _gMoveDeltaScaleNum, _gMoveDeltaScaleDen;
+
+/* Front-end work the rig skips but the match still depends on. */
+extern uint16_t  _menuBGImageCmdStream[];
+extern uint8_t  *_menuImageStreamBaseEnd;
+extern void      ProcessImageCommandStream(uint16_t *script, uint8_t *base);
+extern void      InitTeams(void);
+
+/* The 33 sprites the recording carries, in ITS order. Indices 0..29 happen
+ * to coincide with our own allSpritesArray (sprite_data.c), which is a
+ * useful confirmation, but the list is written out by name so a change to
+ * that table can't silently re-map the comparison. */
+extern Sprite _ballShadowSprite, _ballSprite, _goal1TopSprite, _goal2BottomSprite;
+extern Sprite _goalie1Sprite, _goalie2Sprite;
+extern Sprite _team1Player2Sprite,  _team1Player3Sprite,  _team1Player4Sprite;
+extern Sprite _team1Player5Sprite,  _team1Player6Sprite,  _team1Player7Sprite;
+extern Sprite _team1Player8Sprite,  _team1Player9Sprite,  _team1Player10Sprite;
+extern Sprite _team1Player11Sprite;
+extern Sprite _team2Player2Sprite,  _team2Player3Sprite,  _team2Player4Sprite;
+extern Sprite _team2Player5Sprite,  _team2Player6Sprite,  _team2Player7Sprite;
+extern Sprite _team2Player8Sprite,  _team2Player9Sprite,  _team2Player10Sprite;
+extern Sprite _team2Player11Sprite;
+extern Sprite _team1CurPlayerNumSprite, _team2CurPlayerNumSprite;
+extern Sprite _playerMarkSprite, _bookedPlayerCardOrNumberSprite;
+extern Sprite _refereeSprite, _cornerFlagSprite, _currentPlayerNameSprite;
+
+static Sprite * const k_recordedSprites[33] = {
+    &_ballShadowSprite, &_ballSprite, &_goal1TopSprite, &_goal2BottomSprite,
+    &_goalie1Sprite,
+    &_team1Player2Sprite,  &_team1Player3Sprite,  &_team1Player4Sprite,
+    &_team1Player5Sprite,  &_team1Player6Sprite,  &_team1Player7Sprite,
+    &_team1Player8Sprite,  &_team1Player9Sprite,  &_team1Player10Sprite,
+    &_team1Player11Sprite,
+    &_goalie2Sprite,
+    &_team2Player2Sprite,  &_team2Player3Sprite,  &_team2Player4Sprite,
+    &_team2Player5Sprite,  &_team2Player6Sprite,  &_team2Player7Sprite,
+    &_team2Player8Sprite,  &_team2Player9Sprite,  &_team2Player10Sprite,
+    &_team2Player11Sprite,
+    &_team1CurPlayerNumSprite, &_team2CurPlayerNumSprite,
+    &_playerMarkSprite, &_bookedPlayerCardOrNumberSprite,
+    &_refereeSprite, &_cornerFlagSprite, &_currentPlayerNameSprite,
+};
+
+/* ===================================================================
+ * Registry — schema name -> one of our globals
+ * =================================================================== */
+
+typedef struct { const char *name; uint8_t type; uint16_t off; } MemberDesc;
+
+#define M(field, type)  { #field, type, (uint16_t)offsetof(Sprite, field) }
+static const MemberDesc k_spriteMembers[] = {
+    M(teamNumber, RT_S16), M(playerOrdinal, RT_S16), M(frameOffset, RT_S16),
+    M(startingDirection, RT_S16), M(playerState, RT_U8), M(playerDownTimer, RT_S8),
+    M(field_E, RT_S16), M(field_10, RT_S16), M(frameIndex, RT_S16),
+    M(frameDelay, RT_S16), M(cycleFramesTimer, RT_S16), M(frameSwitchCounter, RT_S16),
+    M(direction, RT_S16), M(speed, RT_S16), M(destX, RT_S16), M(destY, RT_S16),
+    M(visible, RT_S16), M(imageIndex, RT_S16), M(saveSprite, RT_S16),
+    M(ballDistance, RT_S32), M(field_4E, RT_S16), M(field_50, RT_S16),
+    M(fullDirection, RT_S16), M(onScreen, RT_S16), M(field_56, RT_S16),
+    M(field_58, RT_S16), M(field_5A, RT_S16), M(playerDirection, RT_S16),
+    M(isMoving, RT_S16), M(tackleState, RT_S16), M(heading, RT_S16),
+    M(destReachedState, RT_S16), M(cards, RT_S16), M(injuryLevel, RT_S16),
+    M(tacklingTimer, RT_S16), M(sentAway, RT_S16),
+};
+/* The schema's snake_case name for each of the above, same order. */
+static const char * const k_spriteMemberNames[] = {
+    "team_number", "player_ordinal", "frame_offset",
+    "starting_direction", "player_state", "player_down_timer",
+    "field_e", "field_10", "frame_index",
+    "frame_delay", "cycle_frames_timer", "frame_switch_counter",
+    "direction", "speed", "dest_x", "dest_y",
+    "visible", "image_index", "save_sprite",
+    "ball_distance", "field_4e", "field_50",
+    "full_direction", "on_screen", "field_56",
+    "field_58", "field_5a", "player_direction",
+    "is_moving", "tackle_state", "heading",
+    "dest_reached_state", "cards", "injury_level",
+    "tackling_timer", "sent_away",
+};
+#undef M
+
+#define I(field, type)  { #field, type, (uint16_t)offsetof(TeamGeneralInfo, field) }
+static const MemberDesc k_infoMembers[] = {
+    I(playerNumber, RT_S16), I(playerCoachNumber, RT_S16), I(isPlCoach, RT_S16),
+    I(teamNumber, RT_S16), I(tactics, RT_S16), I(updatePlayerIndex, RT_S16),
+    I(playerHasBall, RT_S16), I(allowedDirections, RT_S16),
+    I(currentAllowedDirection, RT_S16), I(direction, RT_S16),
+    I(quickFire, RT_S8), I(normalFire, RT_S8), I(firePressed, RT_S8),
+    I(fireThisFrame, RT_S8), I(headerOrTackle, RT_S16), I(fireCounter, RT_S16),
+    I(controlledPlDirection, RT_S16), I(shooting, RT_S16), I(field_3C, RT_S8),
+    I(plVeryCloseToBall, RT_S8), I(plCloseToBall, RT_S8), I(plNotFarFromBall, RT_S8),
+    I(ballLessEqual4, RT_S8), I(ball4To8, RT_S8), I(ball8To12, RT_S8),
+    I(ball12To17, RT_S8), I(ballAbove17, RT_S8), I(prevPlVeryCloseToBall, RT_S8),
+    I(field_46, RT_S16), I(goalkeeperSavedCommentTimer, RT_S16), I(field_4E, RT_S16),
+    I(goalkeeperDivingRight, RT_S16), I(goalkeeperDivingLeft, RT_S16),
+    I(ballOutOfPlayOrKeeper, RT_S16), I(goaliePlayingOrOut, RT_S16),
+    I(passingBall, RT_S16), I(passingToPlayer, RT_S16), I(playerSwitchTimer, RT_S16),
+    I(ballInPlay, RT_S16), I(ballOutOfPlay, RT_S16), I(ballX, RT_S16), I(ballY, RT_S16),
+    I(passKickTimer, RT_S16), I(ballControlTurnTimer, RT_S16),
+    I(ballCanBeControlled, RT_S16), I(ballControllingPlayerDirection, RT_S16),
+    I(field_72, RT_S16), I(field_74, RT_S16), I(spinTimer, RT_S16),
+    I(leftSpin, RT_S16), I(rightSpin, RT_S16), I(longPass, RT_S16),
+    I(longSpinPass, RT_S16), I(passInProgress, RT_S16), I(AI_timer, RT_S16),
+    I(field_84, RT_S16), I(AI_afterTouchStrength, RT_S16),
+    I(AI_ballSpinDirection, RT_S16), I(wonTheBallTimer, RT_S16),
+    I(goalkeeperPlaying, RT_S16), I(resetControls, RT_S16),
+};
+static const char * const k_infoMemberNames[] = {
+    "player_number", "player_coach_number", "is_pl_coach",
+    "team_number", "tactics", "update_player_index",
+    "player_has_ball", "allowed_directions",
+    "current_allowed_direction", "direction",
+    "quick_fire", "normal_fire", "fire_pressed",
+    "fire_this_frame", "header_or_tackle", "fire_counter",
+    "controlled_pl_direction", "shooting", "field_3c",
+    "pl_very_close_to_ball", "pl_close_to_ball", "pl_not_far_from_ball",
+    "ball_less_equal4", "ball4_to8", "ball8_to12",
+    "ball12_to17", "ball_above17", "prev_pl_very_close_to_ball",
+    "field_46", "goalkeeper_saved_comment_timer", "field_4e",
+    "goalkeeper_diving_right", "goalkeeper_diving_left",
+    "ball_out_of_play_or_keeper", "goalie_playing_or_out",
+    "passing_ball", "passing_to_player", "player_switch_timer",
+    "ball_in_play", "ball_out_of_play", "ball_x", "ball_y",
+    "pass_kick_timer", "ball_control_turn_timer",
+    "ball_can_be_controlled", "ball_controlling_player_direction",
+    "field_72", "field_74", "spin_timer",
+    "left_spin", "right_spin", "long_pass",
+    "long_spin_pass", "pass_in_progress", "ai_timer",
+    "field_84", "ai_after_touch_strength",
+    "ai_ball_spin_direction", "won_the_ball_timer",
+    "goalkeeper_playing", "reset_controls",
+};
+#undef I
+
+#define P(field, type)  { #field, type, (uint16_t)offsetof(PlayerInfo, field) }
+static const MemberDesc k_playerMembers[] = {
+    P(skip, RT_S8), P(playerIndex, RT_S8), P(goalsScored, RT_S8),
+    P(shirtNumber, RT_S8), P(position, RT_S8), P(face, RT_S8),
+    P(isInjured, RT_S8), P(field_7, RT_S8), P(field_8, RT_S8),
+    P(previousCards, RT_S8), P(numYellowCards, RT_S8), P(field_B, RT_S8),
+    P(passing, RT_S8), P(shooting, RT_S8), P(heading, RT_S8),
+    P(tackling, RT_S8), P(ballControl, RT_S8), P(speed, RT_S8),
+    P(finishing, RT_S8), P(goalieSkill, RT_S8), P(injuriesBitfield, RT_S8),
+    P(halfPlayed, RT_S8), P(face2, RT_S8),
+};
+static const char * const k_playerMemberNames[] = {
+    "skip", "player_index", "goals_scored",
+    "shirt_number", "position", "face",
+    "is_injured", "field_7", "field_8",
+    "previous_cards", "num_yellow_cards", "field_b",
+    "passing", "shooting", "heading",
+    "tackling", "ball_control", "speed",
+    "finishing", "goalie_skill", "injuries_bitfield",
+    "half_played", "face2",
+};
+#undef P
+
+#define G(field, type)  { #field, type, (uint16_t)offsetof(TeamGame, field) }
+static const MemberDesc k_teamGameMembers[] = {
+    G(prShirtType, RT_S16), G(prShirtCol, RT_S16), G(prStripesCol, RT_S16),
+    G(prShortsCol, RT_S16), G(prSocksCol, RT_S16), G(secShirtType, RT_S16),
+    G(secShirtCol, RT_S16), G(secStripesCol, RT_S16), G(secShortsCol, RT_S16),
+    G(secSocksCol, RT_S16), G(markedPlayer, RT_S16), G(numOwnGoals, RT_S8),
+};
+static const char * const k_teamGameMemberNames[] = {
+    "pr_shirt_type", "pr_shirt_col", "pr_stripes_col",
+    "pr_shorts_col", "pr_socks_col", "sec_shirt_type",
+    "sec_shirt_col", "sec_stripes_col", "sec_shorts_col",
+    "sec_socks_col", "marked_player", "num_own_goals",
+};
+#undef G
+
+static const char * const k_statsMemberNames[7] = {
+    "ball_possession", "corners_won", "fouls_conceded",
+    "bookings", "sendings_off", "goal_attempts", "on_target",
+};
+
+static void regAdd(const char *name, uint8_t type, void *addr)
+{
+    if (s_regCount == s_regCap) {
+        s_regCap = s_regCap ? s_regCap * 2 : 512;
+        s_reg = (RtEntry *)realloc(s_reg, s_regCap * sizeof(*s_reg));
+        if (!s_reg) { fprintf(stderr, "[replay] out of memory\n"); exit(1); }
+    }
+    s_reg[s_regCount].name = strdup(name);
+    s_reg[s_regCount].type = type;
+    s_reg[s_regCount].addr = addr;
+    s_regCount++;
+}
+
+static void regAddf(uint8_t type, void *addr, const char *fmt, ...)
+    __attribute__((format(printf, 3, 4)));
+
+#include <stdarg.h>
+static void regAddf(uint8_t type, void *addr, const char *fmt, ...)
+{
+    char buf[128];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof buf, fmt, ap);
+    va_end(ap);
+    regAdd(buf, type, addr);
+}
+
+static void regMembers(const char *prefix, void *base,
+                       const MemberDesc *m, const char * const *names, int n)
+{
+    int i;
+    for (i = 0; i < n; i++)
+        regAddf(m[i].type, (uint8_t *)base + m[i].off, "%s.%s", prefix, names[i]);
+}
+
+static void regTeamGame(const char *prefix, TeamGame *g)
+{
+    int p, i;
+    regMembers(prefix, g, k_teamGameMembers, k_teamGameMemberNames,
+               (int)(sizeof k_teamGameMembers / sizeof *k_teamGameMembers));
+    for (p = 0; p < 16; p++) {
+        PlayerInfo *pi = &g->players[p];
+        for (i = 0; i < (int)(sizeof k_playerMembers / sizeof *k_playerMembers); i++)
+            regAddf(k_playerMembers[i].type, (uint8_t *)pi + k_playerMembers[i].off,
+                    "%s.players[%d].%s", prefix, p, k_playerMemberNames[i]);
+    }
+}
+
+static void buildRegistry(void)
+{
+    int i, s;
+
+    regAdd("camera_x",      RT_S32, &_cameraX.raw);
+    regAdd("camera_y",      RT_S32, &_cameraY.raw);
+    regAdd("camera_x_vel",  RT_S16, &_cameraXVelocity);
+    regAdd("camera_y_vel",  RT_S16, &_cameraYVelocity);
+    for (i = 0; i < 4; i++)
+        regAddf(RT_U8, &_gameTime[i], "game_time[%d]", i);
+    regAdd("team1_goals",   RT_S16, &_statsTeam1Goals);
+    regAdd("team2_goals",   RT_S16, &_statsTeam2Goals);
+    regAdd("game_state",    RT_S16, &_gameState);
+    regAdd("game_state_pl", RT_S16, &_gameStatePl);
+    regAdd("fire_blocked",  RT_S16, &_fireBlocked);
+    regAdd("stats_timer",   RT_S16, &_statsTimer);
+    regAdd("result_timer",  RT_S16, &_resultTimer);
+
+    regTeamGame("top_game",    &_topTeamInGame);
+    regTeamGame("bottom_game", &_bottomTeamInGame);
+
+    for (i = 0; i < 7; i++) {
+        regAddf(RT_S16, &_team1StatsData[i], "top_stats.%s",    k_statsMemberNames[i]);
+        regAddf(RT_S16, &_team2StatsData[i], "bottom_stats.%s", k_statsMemberNames[i]);
+    }
+
+    regMembers("top_info", &_topTeamData, k_infoMembers, k_infoMemberNames,
+               (int)(sizeof k_infoMembers / sizeof *k_infoMembers));
+    regMembers("bottom_info", &_bottomTeamData, k_infoMembers, k_infoMemberNames,
+               (int)(sizeof k_infoMembers / sizeof *k_infoMembers));
+
+    for (s = 0; s < 33; s++) {
+        Sprite *sp = k_recordedSprites[s];
+        char pre[24];
+        snprintf(pre, sizeof pre, "sprite[%d]", s);
+        regMembers(pre, sp, k_spriteMembers, k_spriteMemberNames,
+                   (int)(sizeof k_spriteMembers / sizeof *k_spriteMembers));
+        /* field_3E is a 6-byte run our struct keeps as one array. */
+        for (i = 0; i < 6; i++)
+            regAddf(RT_U8, &sp->field_3E[i], "%s.field_3e[%d]", pre, i);
+        /* FixedPoint members: compare the raw 16.16 word, as recorded. */
+        regAddf(RT_S32, &sp->x.raw,      "%s.x", pre);
+        regAddf(RT_S32, &sp->y.raw,      "%s.y", pre);
+        regAddf(RT_S32, &sp->z.raw,      "%s.z", pre);
+        regAddf(RT_S32, &sp->deltaX.raw, "%s.delta_x", pre);
+        regAddf(RT_S32, &sp->deltaY.raw, "%s.delta_y", pre);
+        regAddf(RT_S32, &sp->deltaZ.raw, "%s.delta_z", pre);
+    }
+}
+
+static int regFind(const char *name)
+{
+    uint32_t i;
+    for (i = 0; i < s_regCount; i++)
+        if (strcmp(s_reg[i].name, name) == 0)
+            return (int)i;
+    return -1;
+}
+
+/* ===================================================================
+ * Value access
+ * =================================================================== */
+
+static int64_t readTyped(const void *p, uint8_t type)
+{
+    switch (type) {
+    case RT_U8:  { uint8_t  v; memcpy(&v, p, 1); return (int64_t)v; }
+    case RT_S8:  { int8_t   v; memcpy(&v, p, 1); return (int64_t)v; }
+    case RT_U16: { uint16_t v; memcpy(&v, p, 2); return (int64_t)v; }
+    case RT_S16: { int16_t  v; memcpy(&v, p, 2); return (int64_t)v; }
+    case RT_U32: { uint32_t v; memcpy(&v, p, 4); return (int64_t)v; }
+    default:     { int32_t  v; memcpy(&v, p, 4); return (int64_t)v; }
+    }
+}
+
+/* Two values are the same when their two's-complement bits agree at the
+ * RECORDED field's width. The recorded width is the field's real width in
+ * the game's own data; our global may be stored wider (a byte-sized state
+ * kept in a uint16_t, say) and may disagree on signedness (their `word`
+ * against our int16_t), and neither of those is a divergence. */
+static int sameValue(int64_t rec, int64_t ours, uint8_t recType)
+{
+    uint64_t mask = (k_rtSize[recType] == 1) ? 0xFFull :
+                    (k_rtSize[recType] == 2) ? 0xFFFFull : 0xFFFFFFFFull;
+    return ((uint64_t)rec & mask) == ((uint64_t)ours & mask);
+}
+
+static int typeFromName(const char *s)
+{
+    int i;
+    for (i = 0; i < RT_NTYPES; i++)
+        if (strcmp(s, k_rtName[i]) == 0) return i;
+    return -1;
+}
+
+static int64_t recField(const char *name)
+{
+    uint32_t i;
+    for (i = 0; i < s_fieldCount; i++)
+        if (strcmp(s_field[i].name, name) == 0)
+            return readTyped(s_rec + s_field[i].off, s_field[i].type);
+    return 0;
+}
+
+/* ===================================================================
+ * Loading
+ * =================================================================== */
+
+static int jnum(const char *path, int dflt)
+{
+    double v;
+    if (mjson_get_number(s_setupJson, s_setupLen, path, &v)) return (int)v;
+    return dflt;
+}
+
+static void jstr(const char *path, char *dst, int n)
+{
+    if (mjson_get_string(s_setupJson, s_setupLen, path, dst, n) <= 0)
+        dst[0] = 0;
+}
+
+static int parseSchema(const char *text, int len, const char *levelName)
+{
+    const char *p = text, *end = text + len;
+    uint32_t cap = 256, off = 0;
+    static const char * const k_levels[] = { "scalars", "teams", "info", "sprites" };
+    int i;
+
+    if (levelName) {
+        s_maxLevel = -1;
+        for (i = 0; i < 4; i++)
+            if (strcmp(levelName, k_levels[i]) == 0) s_maxLevel = i;
+        if (s_maxLevel < 0) {
+            fprintf(stderr, "[replay] unknown level '%s' (scalars|teams|info|sprites)\n", levelName);
+            return -1;
+        }
+    }
+
+    s_field = (RtField *)malloc(cap * sizeof(*s_field));
+    if (!s_field) return -1;
+
+    while (p < end) {
+        const char *nl = (const char *)memchr(p, '\n', (size_t)(end - p));
+        char line[192], *tok[4];
+        int n = 0, tlen;
+        if (!nl) nl = end;
+        tlen = (int)(nl - p);
+        if (tlen > 0 && tlen < (int)sizeof line) {
+            memcpy(line, p, (size_t)tlen);
+            line[tlen] = 0;
+            {
+                char *q = line;
+                tok[n++] = q;
+                while (*q && n < 4) {
+                    if (*q == '\t') { *q = 0; tok[n++] = q + 1; }
+                    q++;
+                }
+            }
+            if (n == 4) {
+                int ty = typeFromName(tok[1]);
+                if (ty < 0) {
+                    fprintf(stderr, "[replay] schema: unknown type '%s' for %s\n", tok[1], tok[0]);
+                    return -1;
+                }
+                if (s_fieldCount == cap) {
+                    cap *= 2;
+                    s_field = (RtField *)realloc(s_field, cap * sizeof(*s_field));
+                    if (!s_field) return -1;
+                }
+                s_field[s_fieldCount].name  = strdup(tok[0]);
+                s_field[s_fieldCount].type  = (uint8_t)ty;
+                s_field[s_fieldCount].level = (uint8_t)atoi(tok[2]);
+                s_field[s_fieldCount].cmp   =
+                    strcmp(tok[3], "in")   == 0 ? RC_IN   :
+                    strcmp(tok[3], "meta") == 0 ? RC_META :
+                    strcmp(tok[3], "bool") == 0 ? RC_BOOL :
+                    strcmp(tok[3], "view") == 0 ? RC_VIEW :
+                    strcmp(tok[3], "spr")  == 0 ? RC_SPR  : RC_EQ;
+                s_field[s_fieldCount].off   = off;
+                s_field[s_fieldCount].bind  = -1;
+                off += k_rtSize[ty];
+                s_fieldCount++;
+            }
+        }
+        p = nl + 1;
+    }
+    if (off != s_frameSize) {
+        fprintf(stderr, "[replay] schema sums to %u bytes, file says %u\n", off, s_frameSize);
+        return -1;
+    }
+    return 0;
+}
+
+/* Does `name` contain any of the comma-separated --replay-skip patterns?
+ * Substring, not prefix, so one pattern can mute a member across all 33
+ * sprites (".starting_direction") as easily as one whole struct ("top_info."). */
+static int isSkipped(const char *name)
+{
+    const char *p = s_skipPrefixes;
+    char pat[128];
+    if (!p) return 0;
+    while (*p) {
+        const char *comma = strchr(p, ',');
+        size_t n = comma ? (size_t)(comma - p) : strlen(p);
+        if (n && n < sizeof pat) {
+            memcpy(pat, p, n);
+            pat[n] = 0;
+            if (strstr(name, pat)) return 1;
+        }
+        p = comma ? comma + 1 : p + n;
+    }
+    return 0;
+}
+
+static int bindSchema(void)
+{
+    uint32_t i;
+    int unbound = 0;
+    uint32_t skipped = 0;
+
+    for (i = 0; i < s_fieldCount; i++) {
+        RtField *f = &s_field[i];
+        if (f->cmp == RC_IN || f->cmp == RC_META) continue;
+        if (f->level > s_maxLevel) continue;
+        if (f->cmp == RC_VIEW && !s_viewMatches) { s_viewSkipped++; continue; }
+        if (isSkipped(f->name)) { skipped++; continue; }
+        f->bind = regFind(f->name);
+        if (f->bind < 0) {
+            if (unbound < 12)
+                fprintf(stderr, "[replay] schema field has no global: %s\n", f->name);
+            unbound++;
+            continue;
+        }
+        s_compareCount++;
+    }
+    if (skipped)
+        fprintf(stderr, "[replay] --replay-skip muted %u field(s)\n", skipped);
+    if (unbound) {
+        fprintf(stderr, "[replay] %d schema field(s) unbound — the rig would silently\n"
+                        "         skip them; fix the registry in src/replay_test.c\n", unbound);
+        return -1;
+    }
+    return 0;
+}
+
+int ReplayTest_Load(const char *path, const char *level, int maxErrors,
+                    const char *skipPrefixes)
+{
+    FILE *fp;
+    long size;
+    uint32_t hdr[10];
+    char buf[64];
+    int i;
+
+    s_skipPrefixes = (skipPrefixes && skipPrefixes[0]) ? skipPrefixes : NULL;
+
+    fp = fopen(path, "rb");
+    if (!fp) { fprintf(stderr, "[replay] cannot open %s\n", path); return 1; }
+    fseek(fp, 0, SEEK_END); size = ftell(fp); fseek(fp, 0, SEEK_SET);
+    if (size < 64) { fprintf(stderr, "[replay] %s is too small\n", path); fclose(fp); return 1; }
+    s_file = (uint8_t *)malloc((size_t)size);
+    if (!s_file || fread(s_file, 1, (size_t)size, fp) != (size_t)size) {
+        fprintf(stderr, "[replay] short read on %s\n", path); fclose(fp); return 1;
+    }
+    fclose(fp);
+    s_fileLen = (uint32_t)size;
+
+    if (memcmp(s_file, "SWOSREC\0", 8) != 0) {
+        fprintf(stderr, "[replay] %s is not a .swr (bad magic)\n", path);
+        return 1;
+    }
+    memcpy(hdr, s_file + 8, sizeof hdr);
+    if (hdr[0] != 1) {
+        fprintf(stderr, "[replay] .swr format version %u, expected 1\n", hdr[0]);
+        return 1;
+    }
+    s_setupJson  = (const char *)(s_file + hdr[1]);
+    s_setupLen   = (int)hdr[2];
+    s_blob       = s_file + hdr[5];
+    s_frames     = s_file + hdr[7];
+    s_frameCount = hdr[8];
+    s_frameSize  = hdr[9];
+    if (hdr[7] + (uint64_t)s_frameCount * s_frameSize > s_fileLen) {
+        fprintf(stderr, "[replay] %s is truncated\n", path);
+        return 1;
+    }
+
+    s_setup.major = jnum("$.version[0]", 1);
+    s_setup.minor = jnum("$.version[1]", 0);
+    s_setup.firstFrame = jnum("$.first_frame", 0);
+    s_setup.lastFrame  = jnum("$.last_frame", 0);
+    s_setup.fixedRandomValue     = jnum("$.fixed_random_value", 0);
+    s_setup.pitchTypeOrSeason    = jnum("$.pitch_type_or_season", 0);
+    s_setup.pitchType            = jnum("$.pitch_type", 0);
+    s_setup.gameLength           = jnum("$.game_length", 0);
+    s_setup.autoReplays          = jnum("$.auto_replays", 0);
+    s_setup.allPlayerTeamsEqual  = jnum("$.all_player_teams_equal", 0);
+    /* -1 = the recording's header predates these fields (v1.0/1.1). */
+    s_setup.season               = jnum("$.season", -1);
+    s_setup.minSubstitutes       = jnum("$.min_substitutes", -1);
+    s_setup.maxSubstitutes       = jnum("$.max_substitutes", -1);
+    s_setup.trainingGameCareerSize = jnum("$.training_game_career_size", 0);
+    s_setup.inputControls        = jnum("$.input_controls", 0);
+    s_setup.spriteIndexOffset    = jnum("$.sprite_index_offset", 0);
+    s_setup.viewWidth            = jnum("$.view_width", 0);
+    s_setup.viewHeight           = jnum("$.view_height", 0);
+    s_setup.extraTime            = jnum("$.extra_time", 0);
+    s_setup.penaltyShootout      = jnum("$.penalty_shootout", 0);
+    s_setup.topTeamMarkedPlayer    = jnum("$.top_team_marked_player", -1);
+    s_setup.bottomTeamMarkedPlayer = jnum("$.bottom_team_marked_player", -1);
+    s_setup.topTeamCoachNo       = jnum("$.top_team_coach_no", 0);
+    s_setup.topTeamPlayerNo      = jnum("$.top_team_player_no", 0);
+    s_setup.bottomTeamCoachNo    = jnum("$.bottom_team_coach_no", 0);
+    s_setup.bottomTeamPlayerNo   = jnum("$.bottom_team_player_no", 0);
+    for (i = 0; i < 2; i++) {
+        snprintf(buf, sizeof buf, "$.teams[%d].blob_off", i);
+        s_setup.team[i].blobOff = jnum(buf, -1);
+        snprintf(buf, sizeof buf, "$.teams[%d].blob_len", i);
+        s_setup.team[i].blobLen = jnum(buf, 0);
+        snprintf(buf, sizeof buf, "$.teams[%d].global_team_number", i);
+        s_setup.team[i].globalTeamNumber = jnum(buf, 0);
+        snprintf(buf, sizeof buf, "$.teams[%d].team_controls", i);
+        s_setup.team[i].teamControls = jnum(buf, 0);
+        snprintf(buf, sizeof buf, "$.teams[%d].name", i);
+        jstr(buf, s_setup.team[i].name, (int)sizeof s_setup.team[i].name);
+        if (s_setup.team[i].blobOff < 0 || s_setup.team[i].blobLen != (int)sizeof(TeamFileEx)) {
+            fprintf(stderr, "[replay] team %d record is %d bytes, expected %d\n",
+                    i, s_setup.team[i].blobLen, (int)sizeof(TeamFileEx));
+            return 1;
+        }
+    }
+    for (i = 0; i < 6; i++) {
+        snprintf(buf, sizeof buf, "$.tactics[%d].blob_off", i);
+        s_setup.tactics[i].blobOff = jnum(buf, -1);
+        snprintf(buf, sizeof buf, "$.tactics[%d].blob_len", i);
+        s_setup.tactics[i].blobLen = jnum(buf, 0);
+        if (s_setup.tactics[i].blobOff < 0 || s_setup.tactics[i].blobLen != 370) {
+            fprintf(stderr, "[replay] tactics %d record is %d bytes, expected 370\n",
+                    i, s_setup.tactics[i].blobLen);
+            return 1;
+        }
+    }
+
+    /* SWOS's camera IS the view's top-left in world space and every camera
+     * constant is derived from the view size, so a recording made at a
+     * different resolution has a legitimately different camera. Compare
+     * those fields only when the geometry matches; everything else (sprite
+     * positions are WORLD coordinates) is comparable regardless. */
+    s_viewMatches = (s_setup.viewWidth == (int)_screen_width &&
+                     s_setup.viewHeight == SCREEN_HEIGHT);
+
+    if (parseSchema((const char *)(s_file + hdr[3]), (int)hdr[4], level) != 0)
+        return 1;
+
+    buildRegistry();
+    if (bindSchema() != 0)
+        return 1;
+
+    s_maxErrors = maxErrors > 0 ? maxErrors : 1;
+    s_armed = 1;
+
+    fprintf(stderr, "[replay] %s: v%d.%d  %s v %s\n", path, s_setup.major, s_setup.minor,
+            s_setup.team[0].name, s_setup.team[1].name);
+    fprintf(stderr, "[replay] %u frames (%d..%d), %u fields/frame, %u compared\n",
+            s_frameCount, s_setup.firstFrame, s_setup.lastFrame,
+            s_fieldCount, s_compareCount);
+    if (s_viewSkipped)
+        fprintf(stderr, "[replay] view %dx%d recorded vs %dx%d here — %u camera/on-screen "
+                        "field(s) not compared\n",
+                s_setup.viewWidth, s_setup.viewHeight, (int)_screen_width, SCREEN_HEIGHT,
+                s_viewSkipped);
+    return 0;
+}
+
+int ReplayTest_Armed(void)   { return s_armed; }
+int ReplayTest_Running(void) { return s_running; }
+int ReplayTest_OwnsGameTick(void) { return s_running; }
+
+/* ===================================================================
+ * CalculateDeltaXAndY reference vectors
+ *
+ * swos-port's RecordedDataTest carries ten vectors for the DOS routine
+ * (kCalculateDeltaXAndYTestData). It is the movement primitive every sprite
+ * delta comes from, so checking it directly separates "our trig is wrong"
+ * from "our trig got different inputs" when a replay diverges on a position.
+ * The vectors are the DOS routine's output, i.e. WITH the 41/64 speed_factor
+ * (the ratio is visible in them: 92160 -> 59040 exactly), so the run forces
+ * that scale on regardless of the current game style.
+ * =================================================================== */
+
+static const struct {
+    int16_t speed, x, y, destX, destY;
+    int32_t angle;                 /* -1 = no movement (0xFFFF) */
+    int32_t deltaX, deltaY;
+} k_deltaVectors[] = {
+    { 1168, 396, 373, 757, 447, 0x46,  0x17048,      0x349d      },
+    { 1168, 757, 447, 396, 373, 0xc6, (int32_t)0xfffe8ccd, (int32_t)0xffffc878 },
+    {    0, 396, 373, 757, 447, 0x46,  0,            0           },
+    {    0, 757, 447, 396, 373, 0xc6,  0,            0           },
+    { 1168, 396, 373, 396, 373,   -1,  0,            0           },
+    { 1168, 396, 373, 396, 373,   -1,  0,            0           },
+    {  500, 200, 300, 200, 100, 0x00,  0, (int32_t)0xffff5fd8    },
+    {  500, 200, 100, 200, 300, 0x80,  0,  0x00009ee9            },
+    { 1024,   0,   0,   1,   1, 0x60,  0x0000e6a0,   0x0000e6a0  },
+    { 1024,   1,   1,   0,   0, 0xe0, (int32_t)0xffff16d0, (int32_t)0xffff16d0 },
+};
+
+int ReplayTest_MathSelfTest(void)
+{
+    int i, bad = 0;
+    int16_t savedNum = _gMoveDeltaScaleNum, savedDen = _gMoveDeltaScaleDen;
+
+    _gMoveDeltaScaleNum = 41;      /* the vectors are the DOS (scaled) routine */
+    _gMoveDeltaScaleDen = 64;
+    for (i = 0; i < (int)(sizeof k_deltaVectors / sizeof *k_deltaVectors); i++) {
+        int32_t dx = 0, dy = 0;
+        uint16_t dir = CalculateDeltaXAndY(k_deltaVectors[i].destX, k_deltaVectors[i].destY,
+                                           k_deltaVectors[i].x, k_deltaVectors[i].y,
+                                           k_deltaVectors[i].speed, &dx, &dy);
+        int32_t wantDir = k_deltaVectors[i].angle < 0 ? 0xFFFF : k_deltaVectors[i].angle;
+        if ((int32_t)dir != wantDir || dx != k_deltaVectors[i].deltaX ||
+            dy != k_deltaVectors[i].deltaY) {
+            fprintf(stderr, "[replay] CalculateDeltaXAndY vector %d: "
+                    "dir %ld (want %ld)  dx %ld (want %ld)  dy %ld (want %ld)\n",
+                    i, (long)dir, (long)wantDir, (long)dx, (long)k_deltaVectors[i].deltaX,
+                    (long)dy, (long)k_deltaVectors[i].deltaY);
+            bad++;
+        }
+    }
+    _gMoveDeltaScaleNum = savedNum;
+    _gMoveDeltaScaleDen = savedDen;
+    fprintf(stderr, "[replay] CalculateDeltaXAndY: %d/%d reference vectors match\n",
+            (int)(sizeof k_deltaVectors / sizeof *k_deltaVectors) - bad,
+            (int)(sizeof k_deltaVectors / sizeof *k_deltaVectors));
+    return bad ? 2 : 0;
+}
+
+/* ===================================================================
+ * Setup + run
+ * =================================================================== */
+
+static void installTeam(int i, TeamFileEx *dst)
+{
+    memcpy(dst, s_blob + s_setup.team[i].blobOff, sizeof(TeamFileEx));
+    /* The 684-byte record is a fixed-layout binary team record (the .EDT
+     * shape), so it copies whole — but its ONE 16-bit field carries a byte
+     * order, so restore it from the named scalar rather than trusting the
+     * blob on a big-endian host. */
+    dst->team.globalTeamNumber = (int16_t)s_setup.team[i].globalTeamNumber;
+}
+
+static void applySetup(void)
+{
+    uint8_t *tac[6] = { _teamTacticsUSERA, _teamTacticsUSERB, _teamTacticsUSERC,
+                        _teamTacticsUSERD, _teamTacticsUSERE, _teamTacticsUSERF };
+    int i;
+
+    /* The corpus is DOS gameplay; without the DOS constants every physics
+     * field diverges on frame 1 and the report says nothing useful. */
+    if (!_gDosGameplay) {
+        fprintf(stderr, "[replay] forcing --dos-gameplay=on (the corpus is DOS)\n");
+        _gDosGameplay = 1;
+    }
+
+    _replayFixedRandom = s_setup.fixedRandomValue;
+
+
+    _pitchTypeOrSeason   = (uint16_t)s_setup.pitchTypeOrSeason;
+    _friendlyPitchType   = (uint16_t)s_setup.pitchType;
+    _pitchType           = (uint16_t)s_setup.pitchType;
+    _gameLength          = (uint16_t)s_setup.gameLength;
+    _autoReplays         = (uint16_t)s_setup.autoReplays;
+    _allPlayerTeamsEqual = (uint16_t)s_setup.allPlayerTeamsEqual;
+    /* A v1.0/1.1 header stops before season/substitutes. Forcing 0 there
+     * benches players 11..15 (players[].skip) before the first frame, so
+     * leave the options' own values and say which run is not fully pinned. */
+    if (s_setup.season >= 0)         _friendlySeason = (uint16_t)s_setup.season;
+    if (s_setup.minSubstitutes >= 0) _minSubstitutes = (uint16_t)s_setup.minSubstitutes;
+    if (s_setup.maxSubstitutes >= 0) _maxSubstitutes = (uint16_t)s_setup.maxSubstitutes;
+    if (s_setup.season < 0)
+        fprintf(stderr, "[replay] v%d.%d header carries no season/substitute counts — "
+                        "using this build's options (season=%u, subs %u-%u)\n",
+                s_setup.major, s_setup.minor, _friendlySeason,
+                _minSubstitutes, _maxSubstitutes);
+    _autoSaveHighlights  = 0;      /* a highlights save would fork the state */
+    _gameType            = 0;      /* friendly path */
+    _trainingGame        = 0;
+    _isCareer            = 0;
+
+    for (i = 0; i < 6; i++)
+        memcpy(tac[i], s_blob + s_setup.tactics[i].blobOff, 370);
+
+    installTeam(0, &_selectedTeams[0]);
+    installTeam(1, &_selectedTeams[1]);
+    _numSelectedTeams = 2;
+
+    /* The front end was skipped, so the menu sprite graphics the stadium
+     * line-up draws (the little player figures, sprites 210-213) were never
+     * extracted from menus.raw — DrawMenuItem SIGSEGVs on the missing
+     * header. Run just the sprite extraction, not PrepareMenuBackground
+     * (whose second step overwrites the frontbuffer). Same fix arcade mode
+     * needs for the same reason. */
+    ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
+    InitTeams();
+}
+
+void ReplayTest_SetupPlayers(TeamFileEx *team1, TeamFileEx *team2)
+{
+    /* What the two ShowPlayMatchMenu prompts would have produced, taken
+     * from the recording instead: which joystick drove which team, and
+     * whether either side was a coach. Mirrors the tail of SetupPlayers. */
+    _isCareer = 0;
+    _exitGameFlag = 0;
+    _team1SelectedPlayerIndex = 0xFFFF;
+    _team2SelectedPlayerIndex = 0xFFFF;
+    _twoPlayers = (team1->team.teamControls != 1 /* TEAM_COMPUTER */ &&
+                   team2->team.teamControls != 1) ? 1 : 0;
+    _pl1Coach = 0;
+    _pl2Coach = 0;
+    if (team1->team.teamControls == 3 /* TEAM_COACH */) *(uint8_t *)&_pl1Coach = 0xFF;
+    if (team2->team.teamControls == 3)                  *(uint8_t *)&_pl2Coach = 0xFF;
+    _topTeamPlayerNo    = (uint16_t)s_setup.topTeamPlayerNo;
+    _topTeamCoachNo     = (uint16_t)s_setup.topTeamCoachNo;
+    _bottomTeamPlayerNo = (uint16_t)s_setup.bottomTeamPlayerNo;
+    _bottomTeamCoachNo  = (uint16_t)s_setup.bottomTeamCoachNo;
+    _pl1Tactics = (int16_t)(int8_t)team1->team.tactics;
+    _pl2Tactics = (int16_t)(int8_t)team2->team.tactics;
+}
+
+static void finish(int code)
+{
+    if (s_finished) return;
+    s_finished = 1;
+    s_running = 0;
+    /* A run that kept going past a divergence (--replay-max-errors) still
+     * failed, whatever reason it finally stopped for. */
+    if (s_errors && code == 0) code = 2;
+    if (code == 0)
+        fprintf(stderr, "[replay] PASS — %u/%u frames matched (%u fields each)\n",
+                s_frame, s_frameCount, s_compareCount);
+    else
+        fprintf(stderr, "[replay] FAIL — diverged after %u of %u frames\n",
+                s_frame, s_frameCount);
+    fflush(stderr);
+    fflush(stdout);
+    exit(code);
+}
+
+void ReplayTest_Run(void)
+{
+    if (!s_armed) return;
+    applySetup();
+    s_running = 1;
+    s_frame = 0;
+    s_rec = NULL;
+    fprintf(stderr, "[replay] kick-off\n");
+    InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
+    /* The match ended before the recording did — every remaining frame is a
+     * divergence in itself, so say so rather than reporting a pass. */
+    if (s_frame < s_frameCount) {
+        fprintf(stderr, "[replay] match ended at frame %u, recording has %u\n",
+                s_frame, s_frameCount);
+        finish(2);
+    }
+    finish(0);
+}
+
+/* ===================================================================
+ * Per-frame hooks
+ * =================================================================== */
+
+/* Recorded control bits (swos-port's ControlFlags). */
+#define RC_UP     1
+#define RC_DOWN   2
+#define RC_LEFT   4
+#define RC_RIGHT  8
+#define RC_FIRE   32
+#define RC_BENCH  64
+#define RC_ESC    128
+
+/* JOY0DAT/JOY1DAT encoding, identical to input_sdl.c's encode_joydat —
+ * the rig writes the same registers the SDL input path does, so
+ * Player1StatusProc/Player2StatusProc decode the recorded stick exactly as
+ * they decode a real one. */
+static uint16_t encodeJoy(int ctl)
+{
+    int up = (ctl & RC_UP) != 0, down = (ctl & RC_DOWN) != 0;
+    int left = (ctl & RC_LEFT) != 0, right = (ctl & RC_RIGHT) != 0;
+    uint16_t v = 0;
+    if (right)          v |= (1u << 1);
+    if (right ^ down)   v |= (1u << 0);
+    if (left)           v |= (1u << 9);
+    if (left  ^ up)     v |= (1u << 8);
+    return v;
+}
+
+static void injectInput(void)
+{
+    int p1 = (int)recField("p1_controls");
+    int p2 = (int)recField("p2_controls");
+    int key = (int)recField("user_key");
+
+    _joy1Dat = encodeJoy(p1);          /* Amiga port 1 = player 1 */
+    _joy0Dat = encodeJoy(p2);          /* port 0 = player 2 */
+    _ciaa_pra = 0xFF;
+    if (p1 & RC_FIRE) _ciaa_pra &= (uint8_t)~(1u << 7);
+    if (p2 & RC_FIRE) _ciaa_pra &= (uint8_t)~(1u << 6);
+
+    /* Not injected yet — say so once each, so a divergence downstream is
+     * attributed to the missing input and not mistaken for a port bug. */
+    if ((p1 | p2) & RC_BENCH && !s_warnedBench) {
+        s_warnedBench = 1;
+        fprintf(stderr, "[replay] frame %u presses BENCH — not injected yet\n", s_frame);
+    }
+    if ((p1 | p2) & RC_ESC && !s_warnedEsc) {
+        s_warnedEsc = 1;
+        fprintf(stderr, "[replay] frame %u presses ESC — not injected yet\n", s_frame);
+    }
+    if (key && !s_warnedUserKey) {
+        s_warnedUserKey = 1;
+        fprintf(stderr, "[replay] frame %u presses '%c' — not injected yet\n",
+                s_frame, key);
+    }
+}
+
+void ReplayTest_FrameStart(void)
+{
+    if (!s_running) return;
+    if (s_frame >= s_frameCount) {
+        fprintf(stderr, "[replay] recording exhausted at frame %u — match still running\n",
+                s_frame);
+        finish(0);
+        return;
+    }
+    if (s_rec) {
+        /* The previous iteration took a branch that skipped the compare (a
+         * highlights or instant-replay detour). Say so — silently re-using
+         * the record would desync input from state. */
+        fprintf(stderr, "[replay] frame %u never reached the compare point "
+                        "(replay/highlights branch?)\n", s_frame);
+        finish(2);
+        return;
+    }
+    s_rec = s_frames + (size_t)s_frame * s_frameSize;
+
+    if (s_firstFrame) {
+        s_firstFrame = 0;
+        _extraTimeState = (int16_t)s_setup.extraTime;
+        _penaltiesState = (int16_t)s_setup.penaltyShootout;
+        _topTeamInGame.markedPlayer    = (int16_t)s_setup.topTeamMarkedPlayer;
+        _bottomTeamInGame.markedPlayer = (int16_t)s_setup.bottomTeamMarkedPlayer;
+        /* The Amiga VBlank ISR advances both tick counters once per frame in
+         * lockstep with this loop; the rig owns them (see the header) and
+         * starts them from the kick-off frame. _lastGameTick has to be reset
+         * with them: ReadTimerDelta turns the difference into _lastFrameTicks,
+         * which every stoppage/referee/clock timer is stepped by, and the
+         * value it held coming out of the menus is whatever the wall clock had
+         * reached — the one input that made two runs of the same recording
+         * diverge at different frames. */
+        _currentGameTick = 0;
+        _currentTick = 0;
+        _lastGameTick = 0;
+    }
+
+    injectInput();
+}
+
+static void reportMismatch(const RtField *f, int64_t rec, int64_t ours)
+{
+    if (s_errors == 0)
+        fprintf(stderr, "[replay] DIVERGENCE at frame %u (recording frame %d)\n",
+                s_frame, s_setup.firstFrame + (int)s_frame);
+    fprintf(stderr, "[replay]   %-44s recorded=%lld  actual=%lld\n",
+            f->name, (long long)rec, (long long)ours);
+    s_errors++;
+}
+
+void ReplayTest_FrameEnd(void)
+{
+    uint32_t i;
+
+    if (!s_running || !s_rec) return;
+
+    for (i = 0; i < s_fieldCount; i++) {
+        const RtField *f = &s_field[i];
+        int64_t rec, ours;
+        if (f->bind < 0) continue;
+        rec  = readTyped(s_rec + f->off, f->type);
+        ours = readTyped(s_reg[f->bind].addr, s_reg[f->bind].type);
+        if (f->cmp == RC_SPR && rec >= 0)
+            rec -= s_setup.spriteIndexOffset;   /* recording's bank -> ours */
+        if (f->cmp == RC_BOOL) {
+            if (!rec == !ours) continue;
+        } else if (sameValue(rec, ours, f->type)) {
+            continue;
+        }
+        reportMismatch(f, rec, ours);
+        if (s_errors >= s_maxErrors) {
+            s_rec = NULL;
+            finish(2);
+            return;
+        }
+    }
+
+    s_rec = NULL;
+    s_frame++;
+    /* One tick per game-loop iteration — the Amiga guarantee the SDL timer
+     * thread cannot make. Mirrors the ISR's own gates. */
+    _currentTick++;
+    if (_showingUserStats == 0 && _paused == 0)
+        _currentGameTick++;
+
+    if ((s_frame % 500) == 0)
+        fprintf(stderr, "[replay] ... %u/%u frames matched\n", s_frame, s_frameCount);
+}
+
+#endif /* SWOS_SDL_BUILD */

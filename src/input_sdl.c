@@ -553,6 +553,11 @@ void InputSDL_ClearKeyState(void)
 
 void InputSDL_PostFrame(void)
 {
+    /* The replay rig writes joy0Dat/joy1Dat/ciaa_pra itself, once per game
+     * loop iteration. Recomputing them from the real keyboard/pads here
+     * would overwrite the recorded stick with whatever is physically held. */
+    { extern int ReplayTest_Running(void); if (ReplayTest_Running()) return; }
+
     /* Player 1: keyboard + pad 0 (combined). */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;
     int p1_fire = s_kbd_fire;

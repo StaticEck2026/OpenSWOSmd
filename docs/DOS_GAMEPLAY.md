@@ -74,7 +74,7 @@ Columns: **DOS 70 / Amiga 50** (60-FPS shown where relevant).
 ### Timers / match-clock thresholds (all int16 `word` compares)
 | Constant | DOS 70 | Amiga 50 | 60 FPS | Gates (asm site) |
 |---|---|---|---|---|
-| `GS_54_49` | **54**¹ | **49** | 59 | **Frames per in-game second** — clock accumulator reload (`swos.asm:97826`). The central clock-rate constant (see §4). |
+| `GS_54_49` | **70**¹ | **49** | 59 | **Frames per in-game second** — clock accumulator reload (`swos.asm:97826`). The central clock-rate constant (see §4). |
 | `GS_55_50` | 55 | 50 | 60 | `endGameCounter` reload, last-minute switch (`swos.asm:98021`). |
 | `GS_27_22` | 27 | 22 | 27 | Ball defensive-Z threshold for goalie catch (`swos.asm:114226`). |
 | `GS_110_100` / `GS_PT_110_100` | 110 | 100 | 120 | Penalty timer → `NextPenalty` (`swos.asm:101431`). |
@@ -83,15 +83,22 @@ Columns: **DOS 70 / Amiga 50** (60-FPS shown where relevant).
 | `GS_660_600` | 660 | 600 | 720 | Auto-advance final/halftime result (`swos.asm:118450`). |
 | `GS_825_750` | 825 | 750 | 900 | Kickoff stoppage → `PrepareForInitialKick` (`swos.asm:101465`). |
 | `GS_GK_55_50` | 55 | 50 | 60 | `stoppageEventTimer` reload, ball still (`swos.asm:101710`). |
+| `GS_275_250` | 275 | 250 | — | Half/full-time result-banner display length — `ShowResult`'s `30000` marker (`game_state.c`). Found by the replay rig; swos-2020 hard-codes 275 (`game.cpp:13024`). |
+| `GS_165_150` | 165 | 150 | — | Stoppage result-banner display length — `ShowResult`'s `31000` marker. Found by the replay rig: a DOS recording sets `resultTimer` to 165 at a stoppage where we set 150. |
 | `GS_PT_55_50` | 50² | 50 | 60 | Penalty keeper-still-down compare (`swos.asm:113363`). |
 | `GS_SF_128__128` / `GS_SF_8000h__8000h` | 128 / 0x8000 | -128 / -0x8000 | — | Sign-fix constants (negative for styles 1-3). |
 
-¹ **Decision: default to the authentic original DOS value `54`, but make it a
-tweakable** so it can be flipped to `69` at runtime. swos-2020 ships
-`GS_54_49 = 69; // original = 54` (`options.cpp:1581`) — a deliberate retune of the
-DOS clock cadence; we keep `54` as the default for authenticity and expose `69` as
-an option. When implemented, the code comment must record both values (original
-DOS = 54, swos-2020 = 69). The Amiga value is the clean **49**.
+¹ **MEASURED, 2026-09-03: the DOS value is 70, not 54.** This row previously read
+54, taken from swos-2020's `GS_54_49 = 69; // original = 54` (`options.cpp:1581`).
+The recorded-game replay rig settles it against a real DOS recording
+(docs/TESTS.md §5): `zkz-12065730` reaches game-minute 1 at frame 702 and minute 2
+at frame 842 — **140 frames per game-minute**. The accumulator subtracts
+`gameLenSecondsTable[0] = 30` per frame and reloads by `N`, so seconds advance at
+`30/N` per frame and 60 of them take `2N` frames: **N = 70**. 54 would give 108
+frames/minute, 69 would give 138. swos-port's independent decompile agrees
+(`gameTime.cpp: kPcTicksPerGameSeconds = 70`) and its replay of this same corpus
+passes. `dos_gameplay.c` now uses 70. The Amiga value is the clean **49** and is
+unchanged.
 ² `GS_PT_55_50` DOS value happens to equal the Amiga value (50).
 
 ### NOT differentiated (important)
@@ -108,8 +115,8 @@ Frame-driven accumulator, **same algorithm** both modes, differing only by
 
 - Per in-progress frame: `secondsSwitchAccumulator -= timeDelta`; on underflow →
   `secondsSwitchAccumulator += GS_54_49; gameSeconds++` (`swos.asm:97793-97830`).
-  So `GS_54_49` ≈ frames-per-game-second: 49 @ 50 FPS, **54 @ 70 FPS** (our
-  default = authentic original DOS; tweakable to swos-2020's `69`, see §3 note ¹).
+  So `GS_54_49` ≈ frames-per-game-second: 49 @ 50 FPS, **70 @ 70 FPS** —
+  measured against a DOS recording, see §3 note ¹.
 - `timeDelta` comes from `gameLenSecondsTable dw 30,18,12,9` indexed by the chosen
   match length (`swos.asm:96458`) — **FPS-independent**; the FPS dependence is
   entirely in the `GS_54_49` reload.
@@ -237,6 +244,32 @@ wall-clock pace"), NOT a reproduction of the real DOS.
 - *Consistent/normalized speed* (test-team goal) → speed_factor 0.714.
 Recommend: keep authentic-fast as the DOS default; expose 0.714 as an optional
 "consistent speed" preset if wanted. (Mirrors the `GS_54_49 54-vs-69` decision.)
+
+> ⚠️ **CORRECTION (2026-09-03) — the real DOS binary DOES scale, by 41/64, and
+> it does it inside `CalculateDeltaXAndY`, not in `MovePlayer`.** The reasoning
+> above is sound about `MovePlayer` (`x += deltaX`, unscaled) and about the
+> speed table, but the scale is applied one level earlier, where the deltas are
+> produced. Three independent lines of evidence, all from the replay work
+> (docs/TESTS.md):
+>
+> 1. swos-port's decompile of the routine applies
+>    `x - (x>>2) - (x>>4) - (x>>5) - (x>>6)` (= ×41/64) whenever Amiga mode is
+>    off, with the comment *"using this method gets exactly the same result as
+>    SWOS"*.
+> 2. Its `CalculateDeltaXAndY` reference vectors carry the scaled values — e.g.
+>    92160 → 59040, exactly ×41/64. `bin/SWOS --replay-selftest` runs them.
+> 3. Replaying a DOS recording with the scale ON reaches frame 972 before
+>    diverging; with it OFF, frame 339.
+>
+> So `_gMoveDeltaScaleNum/Den = 41/64` in DOS mode is not a normalization
+> deviation — it is what the DOS binary did, and it is required to reproduce
+> DOS recordings. §8.1's "our port implements neither" is likewise superseded.
+>
+> **It must be done as the shift chain, not `* 41 / 64`.** Arithmetic shifts
+> floor; C division truncates toward zero, so the two disagree by one on
+> negative deltas and the trajectory forks within a few frames. `math68k.c`
+> special-cases 41/64 for this reason; the vector test went 4/10 → 10/10 on the
+> change.
 
 ### 8.3 WHERE swos-2020 implements it — the LIVE `CalculateDeltaXAndY_125` hook
 

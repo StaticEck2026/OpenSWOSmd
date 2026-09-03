@@ -344,6 +344,14 @@ skip_title_screens: ;
     /* ---- Phase 9: Enter front-end loop (or arcade attract loop) ---- */
 #ifdef SWOS_SDL_BUILD
     {
+        extern int  ReplayTest_Armed(void);
+        extern void ReplayTest_Run(void);
+        if (ReplayTest_Armed()) {
+            ReplayTest_Run();   /* replays a recording, then exits the process */
+            return;
+        }
+    }
+    {
         extern int _gArcadeMode;
         extern void ArcadeMainLoop(void);
         if (_gArcadeMode) {

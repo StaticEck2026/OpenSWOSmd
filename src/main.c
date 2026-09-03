@@ -36,6 +36,7 @@
 #include "save_format_json.h"   /* DataJson_SelfTest */
 #include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
 #include "display.h"    /* _screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
+#include "replay_test.h"        /* --replay-test: recorded-game regression rig */
 
 #define WIN_SCALE 3
 
@@ -139,6 +140,23 @@ static void print_usage(const char *argv0)
         "                            tuning). PC-only extra.\n"
         "  --dos-dir=<folder>        Folder (under bin/) to load DOS assets from.\n"
         "                            Default: grafs_dos.\n"
+        "  --replay-test=<file.swr>  Replay a recorded match and assert every frame\n"
+        "                            against the recording (docs/TESTS.md). Skips the\n"
+        "                            front end, runs unpaced, and exits 0 on a full\n"
+        "                            match, 2 on the first divergence. Build a .swr\n"
+        "                            with scripts/rgd_convert.py --emit.\n"
+        "  --replay-level=<scalars|teams|info|sprites>\n"
+        "                            How much of each frame to compare. Default: the\n"
+        "                            level the .swr was emitted at.\n"
+        "  --replay-selftest         Check CalculateDeltaXAndY against swos-port's\n"
+        "                            reference vectors and exit. No recording needed.\n"
+        "  --replay-skip=<a,b,...>   Mute every field whose name contains one of these\n"
+        "                            substrings, e.g. '.starting_direction' (all 33\n"
+        "                            sprites) or 'top_info.'.\n"
+        "  --replay-max-errors=<N>   Keep going past a divergence and report up to N\n"
+        "                            mismatching fields. Default: 1 (stop at the\n"
+        "                            first — gameplay is chaotic, so everything after\n"
+        "                            it is noise).\n"
         "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
 }
@@ -217,6 +235,8 @@ int main(int argc, char **argv)
     snprintf(opts.arcade_key_p2_start,  sizeof opts.arcade_key_p2_start,  "%s", "2");
     snprintf(opts.arcade_key_service,   sizeof opts.arcade_key_service,   "%s", "F2");
     snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", "grafs_dos");
+    const char *replay_file = NULL, *replay_level = NULL, *replay_skip = NULL;
+    int replay_max_errors = 1;
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
@@ -298,6 +318,20 @@ int main(int argc, char **argv)
             }
         } else if ((v = match_kv(a, "dos-dir")) != NULL) {
             snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", v);
+        } else if ((v = match_kv(a, "replay-test")) != NULL) {
+            replay_file = v;
+        } else if ((v = match_kv(a, "replay-level")) != NULL) {
+            replay_level = v;
+        } else if (strcmp(a, "--replay-selftest") == 0) {
+            return ReplayTest_MathSelfTest();
+        } else if ((v = match_kv(a, "replay-skip")) != NULL) {
+            replay_skip = v;
+        } else if ((v = match_kv(a, "replay-max-errors")) != NULL) {
+            replay_max_errors = atoi(v);
+            if (replay_max_errors < 1) {
+                fprintf(stderr, "Invalid --replay-max-errors value '%s' (expected >= 1)\n", v);
+                return 1;
+            }
         } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -306,6 +340,26 @@ int main(int argc, char **argv)
             print_usage(argv[0]);
             return 1;
         }
+    }
+
+    /* A replay test is a batch run: unpace the frame loop (the game clock is
+     * driven per-iteration by the rig, not by the wall clock), skip the loader
+     * intro, and keep the log on the terminal where the test output belongs.
+     * Both are read inside Platform_Init, so they must be set before it. */
+    if (replay_file) {
+#ifdef _WIN32
+        _putenv("SWOS_HARNESS_TURBO=1");
+        _putenv("SWOS_NO_LOG=1");
+#else
+        setenv("SWOS_HARNESS_TURBO", "1", 1);
+        setenv("SWOS_NO_LOG", "1", 1);
+#endif
+        opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */
+        /* Replay at the port's OWN native view, not the tester's monitor:
+         * SWOS's camera constants are all derived from the view size, so a
+         * widescreen render puts the camera somewhere else entirely. */
+        opts.res_w = SCREEN_WIDTH;
+        opts.res_h = SCREEN_HEIGHT;
     }
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
@@ -410,6 +464,15 @@ int main(int argc, char **argv)
                 _screen_width, SCREEN_HEIGHT, opts.screen, nd, dw, dh, (double)dw / dh);
     }
     _menu_draw_x_offset = WIDE_MARGIN;
+
+    /* Arm the replay rig before the bootstrap: SWOS.c enters it in place of
+     * the front-end loop once the game data is loaded. Parsing here means a
+     * bad path or a stale .swr fails immediately, not after the intro. */
+    if (replay_file &&
+        ReplayTest_Load(replay_file, replay_level, replay_max_errors, replay_skip) != 0) {
+        SDL_Quit();
+        return 1;
+    }
 
     if (Platform_Init(&opts) != 0) {
         fprintf(stderr, "Platform_Init failed\n");

@@ -7,6 +7,18 @@
 #include "deterministic.h"
 #include "game_types.h"
 
+#ifdef SWOS_SDL_BUILD
+/* Recorded-game replay pins BOTH generators to the recording's
+ * fixedRandomValue (docs/TESTS.md 5c) — without it nothing is reproducible.
+ * -1 (the default) leaves the real PRNGs alone. Defined in replay_test.c. */
+extern int _replayFixedRandom;
+#define REPLAY_FIXED_RAND() do { \
+    if (_replayFixedRandom >= 0) return (uint16_t)_replayFixedRandom; \
+} while (0)
+#else
+#define REPLAY_FIXED_RAND() do { } while (0)
+#endif
+
 /* ---- External globals (all live in SWOS2.s) ---- */
 extern uint8_t _kRandomTable[];        /* 257-byte lookup table */
 extern uint8_t _seed;                  /* primary PRNG seed/counter (in code section) */
@@ -28,7 +40,10 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 __attribute__((used, externally_visible))
 uint16_t Rand(void)
 {
-    uint16_t d0 = _seed & 0xFFu;
+    uint16_t d0;
+
+    REPLAY_FIXED_RAND();
+    d0 = _seed & 0xFFu;
 
     if (d0 == 0)
     {
@@ -50,7 +65,10 @@ uint16_t Rand(void)
 __attribute__((used, externally_visible))
 uint16_t Rand2(void)
 {
-    uint16_t d0 = _seed2 & 0xFFu;
+    uint16_t d0;
+
+    REPLAY_FIXED_RAND();
+    d0 = _seed2 & 0xFFu;
 
     if (d0 == 0)
     {

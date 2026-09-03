@@ -96,3 +96,6 @@ bin/SWOS.log
 #   cp /mnt/c/Projects/GitHub/swos-port/tests/data/* tests/dos/
 tests/dos/
 tests/amiga/
+# Converted recordings (scripts/rgd_convert.py --emit). Derived from tests/dos,
+# regenerate rather than track — a full-level .swr of one recording is ~7 MB.
+tests/replay/

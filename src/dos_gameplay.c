@@ -33,6 +33,13 @@ int16_t  _gsBallOutOfGameTimer  = 500;  /* GS_550_500 game_timers.c   ball-out-o
 int16_t  _gsResultAutoAdvance   = 600;  /* GS_660_600 ai.c            half/fulltime result dismiss */
 int16_t  _gsKickoffStoppage     = 750;  /* GS_825_750 game_timers.c   kickoff stoppage */
 int16_t  _gsStoppageEventReload = 50;   /* GS_GK_55_50 game_timers.c  stoppageEvent reload */
+/* The two result-banner display lengths ShowResult (game_state.c) maps its magic
+ * 30000/31000 markers to. Found by the recorded-game replay rig: a DOS recording
+ * sets resultTimer to 165 at a stoppage where we set 150 (docs/TESTS.md). They fit
+ * the same x1.1 DOS:Amiga family as every GS_* above, and swos-2020's DOS source
+ * hard-codes 275 (game.cpp:13024). */
+int16_t  _gsResultHalftimeLength = 250; /* GS_275_250 game_state.c    30000 -> banner length */
+int16_t  _gsResultBreakLength    = 150; /* GS_165_150 game_state.c    31000 -> banner length */
 
 /* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
  * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
@@ -46,9 +53,15 @@ int16_t  _gsStoppageEventReload = 50;   /* GS_GK_55_50 game_timers.c  stoppageEv
 int16_t  _gMoveDeltaScaleNum = 1;       /* DOS 41 / Amiga 1  (future Amiga-60: 50) */
 int16_t  _gMoveDeltaScaleDen = 1;       /* DOS 64 / Amiga 1  (future Amiga-60: 60) */
 
-/* GS_54_49: the doc keeps the authentic ORIGINAL DOS value 54 as the default, and
- * exposes swos-2020's deliberate retune of 69 as a tweak. Flip this to test. */
-#define GS_FRAMES_PER_GAME_SECOND_DOS  54    /* original DOS = 54; swos-2020 = 69 */
+/* GS_54_49 — MEASURED, not chosen. docs/DOS_GAMEPLAY.md originally took 54 from
+ * swos-2020's `GS_54_49 = 69; // original = 54`, but a DOS recording settles it:
+ * zkz-12065730 reaches game-minute 1 at frame 702 and minute 2 at frame 842, i.e.
+ * 140 frames per game-minute. The accumulator subtracts gameLenSecondsTable[0] = 30
+ * per frame and reloads by this constant, so seconds advance at 30/N per frame and
+ * 60 seconds take 2*N frames: N = 70. (54 would give 108 frames/minute, 69 would
+ * give 138.) swos-port agrees — gameTime.cpp kPcTicksPerGameSeconds = 70 — and its
+ * replay of this same corpus passes. The Amiga 49 is unchanged and untouched. */
+#define GS_FRAMES_PER_GAME_SECOND_DOS  70    /* was 54 (swos-2020 comment); see above */
 #define GS_FRAMES_PER_GAME_SECOND_AMIGA 49
 
 int DosGameplay_TargetFps(void)
@@ -90,6 +103,8 @@ void ApplyGameStyle(void)
     _gsResultAutoAdvance   = dos ? 660 : 600;
     _gsKickoffStoppage     = dos ? 825 : 750;
     _gsStoppageEventReload = dos ? 55  : 50;
+    _gsResultHalftimeLength = dos ? 275 : 250;
+    _gsResultBreakLength    = dos ? 165 : 150;
 
     /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
      * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't

@@ -239,11 +239,23 @@ uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
      * frame rate doesn't play faster — reproduces swos-2020's CalculateDeltaXAndY_125
      * hook, injected at this routine's tail (symbols.txt:2083 -> render.cpp:4682).
      * DOS/PC 70fps = 41/64; Amiga 50fps = 1/1 (no-op, so the Amiga build and normal
-     * 50fps play are byte-for-byte unchanged). Integer `* num / den` matches
-     * swos-2020's truncation. Callers reading only `dir` (AI goal-angle, tactics
-     * arrows) are unaffected; every mover using the deltas is scaled, as in
-     * swos-2020. See docs/DOS_GAMEPLAY.md §8.3. */
-    if (_gMoveDeltaScaleNum != _gMoveDeltaScaleDen) {
+     * 50fps play are byte-for-byte unchanged). Callers reading only `dir` (AI
+     * goal-angle, tactics arrows) are unaffected. See docs/DOS_GAMEPLAY.md §8.3.
+     *
+     * 41/64 is done as a chain of ARITHMETIC SHIFTS, not `* 41 / 64`:
+     *   x - x/4 - x/16 - x/32 - x/64  ==  x * (64-16-4-2-1)/64  ==  x * 41/64
+     * Each shift floors, while C division truncates toward zero, so the two
+     * disagree by one on negative deltas — and that one unit compounds into a
+     * different trajectory within a few frames. swos-port hit the same thing
+     * (updateSprite.cpp: "shifts have to be used explicitly, divisions end up
+     * with slightly different result"), and the replay rig caught ours:
+     * delta_x -93531 where the recording had -93530. `--replay-selftest` runs
+     * the reference vectors for this routine. */
+    if (_gMoveDeltaScaleNum == 41 && _gMoveDeltaScaleDen == 64) {
+        int32_t dx = *outDeltaX, dy = *outDeltaY;
+        *outDeltaX = dx - (dx >> 2) - (dx >> 4) - (dx >> 5) - (dx >> 6);
+        *outDeltaY = dy - (dy >> 2) - (dy >> 4) - (dy >> 5) - (dy >> 6);
+    } else if (_gMoveDeltaScaleNum != _gMoveDeltaScaleDen) {
         *outDeltaX = *outDeltaX * _gMoveDeltaScaleNum / _gMoveDeltaScaleDen;
         *outDeltaY = *outDeltaY * _gMoveDeltaScaleNum / _gMoveDeltaScaleDen;
     }

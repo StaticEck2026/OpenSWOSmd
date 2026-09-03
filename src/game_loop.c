@@ -623,6 +623,12 @@ GameLoop(void)
     goto wait_for_vblank_sync;
 
 vblank_return_dispatch:
+#ifdef SWOS_SDL_BUILD
+    /* Recorded-game replay: take this frame's record and inject its stick
+     * state before anything reads input (docs/TESTS.md 5b). No-op unless the
+     * rig is running. */
+    { extern void ReplayTest_FrameStart(void); ReplayTest_FrameStart(); }
+#endif
     ReadTimerDelta();
 
     /* Pause spin loop */
@@ -732,6 +738,14 @@ vblank_return_dispatch:
         _instantReplayFlag = 0;
         _goalCameraMode = 0;
     }
+
+#ifdef SWOS_SDL_BUILD
+    /* ... and compare the state this frame produced against the record. The
+     * branches above that jump straight to wait_for_vblank_sync deliberately
+     * skip this — the rig reports such a frame rather than silently reusing
+     * its record. */
+    { extern void ReplayTest_FrameEnd(void); ReplayTest_FrameEnd(); }
+#endif
 
 wait_for_vblank_sync:
     waitVBlankSync(0xCFD1F9BDu, 0x165Au);

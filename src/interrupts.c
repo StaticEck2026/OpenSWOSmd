@@ -232,11 +232,27 @@ void _Int3TimerHandler(void)
     /* debugMode LINE-A trap skipped (dead code in non-debug builds) */
 
     /* isr_update_ticks_and_input */
+#ifdef SWOS_SDL_BUILD
+    /* On Amiga this IS the VBlank interrupt, so BOTH counters advance exactly
+     * once per game-loop iteration. On SDL they are driven from a wall clock by
+     * two threads — fine for play, but gameplay reads them (currentTick gates
+     * the ball-control speed bonus in ball_possession.c, currentGameTick gates
+     * most of the AI's phase decisions), so a replay would not reproduce. The
+     * rig takes both over and advances them itself, once per frame. */
+    { extern int ReplayTest_OwnsGameTick(void);
+      if (!ReplayTest_OwnsGameTick()) _currentTick++; }
+#else
     _currentTick++;
+#endif
 
     if (_showingUserStats == 0 && _paused == 0)
     {
+#ifdef SWOS_SDL_BUILD
+        { extern int ReplayTest_OwnsGameTick(void);
+          if (!ReplayTest_OwnsGameTick()) _currentGameTick++; }
+#else
         _currentGameTick++;
+#endif
 
         /* Key repeat logic: keyDelay is negative when counting down */
         if (_keyDelay < 0)

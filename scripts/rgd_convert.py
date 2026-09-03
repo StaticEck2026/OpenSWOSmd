@@ -24,8 +24,13 @@ Usage:
     scripts/rgd_convert.py --info tests/dos/*.RGD.gz
     scripts/rgd_convert.py --verify tests/dos/zkz-12065730.RGD.gz
     scripts/rgd_convert.py --dump-frames 0:5 tests/dos/zkz-12065730.RGD.gz
+    scripts/rgd_convert.py --emit tests/replay/kickoff.swr --level scalars \
+                           --frames 0:400 tests/dos/zkz-12065730.RGD.gz
 """
-import argparse, gzip, struct, sys, os
+import argparse, gzip, struct, sys, os, json
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rgd_schema
 
 # ---- struct sizes (theirs; see docs/TESTS.md section 4) --------------------
 TEAM_FILE        = 684    # header 76 + 16 players x 38  == our TeamFileEx
@@ -197,13 +202,183 @@ def cmd_dump(paths, rng):
                   f"{f['team1Goals']}-{f['team2Goals']} st={f['gameState']}/{f['gameStatePl']}")
 
 
+
+# =========================================================================
+# --emit: the neutral, name-keyed format the C rig reads (docs/TESTS.md 5a)
+# =========================================================================
+#
+# Layout (all little-endian):
+#
+#   0   char magic[8]   "SWOSREC\0"
+#   8   u32  fileVersion (1)
+#   12  u32  setupOff,  setupLen     JSON, UTF-8 — the match setup
+#   20  u32  schemaOff, schemaLen    TSV, one line per per-frame field:
+#                                    name <TAB> type <TAB> level <TAB> cmp
+#   28  u32  blobOff,   blobLen      the fixed-layout binary records
+#   36  u32  framesOff, frameCount, frameSize
+#   48  u32  reserved[4]
+#   64  ... sections, in the order above
+#
+# Frames are the schema's fields packed back-to-back in schema order, which
+# is why the schema carries the types: the reader never needs to know a DOS
+# offset, only a name and a width.
+#
+# The blob section holds the two 684-byte team records and the six 370-byte
+# user tactics. Those are fixed-layout binary records of exactly the kind
+# CLAUDE.md keeps binary support for (.EDT / .TAC), and they are setup
+# state, not per-frame state — the rig copies each in whole and then
+# restores the one endian-sensitive field (TeamFile.globalTeamNumber) from
+# the named scalar beside it.
+
+MAGIC = b"SWOSREC\0"
+SWR_HEADER_SIZE = 64
+
+PACK = {"u8": "<B", "s8": "<b", "u16": "<H", "s16": "<h", "u32": "<I", "s32": "<i"}
+READ = {"u8": "<B", "s8": "<b", "u16": "<H", "s16": "<h", "u32": "<I", "s32": "<i"}
+
+
+def _team_setup(d, off):
+    """The named, endian-sensitive parts of a 684-byte team record."""
+    return dict(name=cstr(d, off + 5, 17),
+                country_number=d[off + 0], team_ordinal=d[off + 1],
+                global_team_number=struct.unpack_from("<h", d, off + 2)[0],
+                team_controls=d[off + 4], tactics=d[off + 24])
+
+
+def cmd_emit(paths, out_path, level, rng, quiet=False):
+    if len(paths) != 1:
+        print("--emit takes exactly one recording", file=sys.stderr)
+        return 1
+    d = load(paths[0])
+    h = read_header(d)
+    ver = (h["major"], h["minor"])
+    total = frame_count(d, h)
+
+    first, last = 0, total - 1
+    if rng:
+        a, _, b = rng.partition(":")
+        first = int(a) if a else 0
+        last = int(b) if b else total - 1
+    first = max(0, first)
+    last = min(total - 1, last)
+    if last < first:
+        print(f"empty frame range {first}:{last}", file=sys.stderr)
+        return 1
+
+    schema = rgd_schema.build_schema(h["major"], h["minor"], level)
+    frame_size_out = sum(rgd_schema.TYPE_SIZE[f["type"]] for f in schema)
+
+    base = 8 + 2 * TEAM_FILE
+    tactics_off = base + 8
+    setup = dict(
+        source=os.path.basename(paths[0]),
+        version=[h["major"], h["minor"]],
+        level=level,
+        first_frame=first, last_frame=last,
+        fixed_random_value=h["fixedRandomValue"],
+        pitch_type_or_season=h["pitchTypeOrSeason"],
+        pitch_type=h["pitchType"],
+        game_length=h["gameLength"],
+        auto_replays=h["autoReplays"],
+        all_player_teams_equal=h["allPlayerTeamsEqual"],
+        # v1.0/1.1 headers stop before these three. Fall back to the DOS data
+        # segment's own defaults for the substitute counts (swos-port vm.c:
+        # minSubstitutes 2, maxSubstitutes 5) — leaving them at 0 benches
+        # players 11..15 before the first frame and diverges immediately.
+        # `season` has no equally safe default, so -1 means "not recorded" and
+        # the rig keeps this build's value and says so.
+        season=h.get("season", -1),
+        min_substitutes=h.get("minSubstitutes", 2),
+        max_substitutes=h.get("maxSubstitutes", 5),
+        training_game_career_size=h.get("trainingGameCareerSize", 0),
+        sprite_index_offset=rgd_schema.DOS_SPRITE_INDEX_OFFSET,
+        view_width=rgd_schema.DOS_VIEW_WIDTH,
+        view_height=rgd_schema.DOS_VIEW_HEIGHT,
+        input_controls=h["inputControls"],
+        initial_frame=h["initialFrame"],
+        extra_time=h["extraTime"],
+        penalty_shootout=h["penaltyShootout"],
+        top_team_marked_player=struct.unpack_from("<b", d, base + 6)[0],
+        bottom_team_marked_player=struct.unpack_from("<b", d, base + 7)[0],
+        top_team_coach_no=h["topTeamCoachNo"], top_team_player_no=h["topTeamPlayerNo"],
+        bottom_team_coach_no=h["bottomTeamCoachNo"], bottom_team_player_no=h["bottomTeamPlayerNo"],
+    )
+
+    blob = bytearray()
+    teams = []
+    for i, toff in enumerate((8, 8 + TEAM_FILE)):
+        t = _team_setup(d, toff)
+        t["blob_off"], t["blob_len"] = len(blob), TEAM_FILE
+        blob += d[toff:toff + TEAM_FILE]
+        teams.append(t)
+    setup["teams"] = teams
+    tac = []
+    for i in range(6):
+        o = tactics_off + i * TEAM_TACTICS
+        tac.append(dict(name=cstr(d, o, 9), blob_off=len(blob), blob_len=TEAM_TACTICS))
+        blob += d[o:o + TEAM_TACTICS]
+    setup["tactics"] = tac
+
+    setup_js = json.dumps(setup, indent=1).encode()
+    schema_js = "".join("%s\t%s\t%d\t%s\n" % (f["name"], f["type"], f["level"], f["cmp"])
+                        for f in schema).encode()
+
+    frames = bytearray()
+    for i in range(first, last + 1):
+        fb = h["headerSize"] + i * h["frameSize"]
+        for f in schema:
+            v = struct.unpack_from(READ[f["type"]], d, fb + f["off"])[0]
+            frames += struct.pack(PACK[f["type"]], v)
+
+    setup_off = SWR_HEADER_SIZE
+    schema_off = setup_off + len(setup_js)
+    blob_off = schema_off + len(schema_js)
+    frames_off = blob_off + len(blob)
+
+    hdr = bytearray(SWR_HEADER_SIZE)
+    hdr[0:8] = MAGIC
+    struct.pack_into("<10I", hdr, 8, 1, setup_off, len(setup_js), schema_off,
+                     len(schema_js), blob_off, len(blob), frames_off,
+                     last - first + 1, frame_size_out)
+
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(out_path, "wb") as fp:
+        fp.write(hdr); fp.write(setup_js); fp.write(schema_js)
+        fp.write(blob); fp.write(frames)
+
+    if not quiet:
+        n = last - first + 1
+        cmp_n = sum(1 for f in schema if f["cmp"] in ("eq", "bool"))
+        view_n = sum(1 for f in schema if f["cmp"] == "view")
+        print(f"{out_path}: v{h['major']}.{h['minor']} {h['topTeamName']} v {h['bottomTeamName']}")
+        print(f"  level {level}: {len(schema)} fields/frame ({cmp_n} compared, "
+              f"{view_n} view-dependent), {frame_size_out} bytes/frame")
+        print(f"  frames {first}..{last} of {total}  ->  "
+              f"{(frames_off + len(frames)) / 1048576.0:.1f} MB")
+        used = 0
+        for i in range(first, last + 1):
+            fr = read_frame(d, h, i)
+            used |= fr["player1Controls"] | fr["player2Controls"]
+        extra = [n for bit, n in CONTROL_BITS if used & bit and n in ("bench", "esc")]
+        if extra:
+            print(f"  NOTE: range uses {', '.join(extra)} — not injected yet, "
+                  f"the rig will diverge there")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description="Decode swos-port .RGD recordings")
     ap.add_argument("files", nargs="+")
     ap.add_argument("--info", action="store_true", help="header + frame geometry")
     ap.add_argument("--verify", action="store_true", help="check decode invariants")
     ap.add_argument("--dump-frames", metavar="A[:B]", help="print decoded frames A..B")
+    ap.add_argument("--emit", metavar="OUT.swr", help="write the neutral format the C rig reads")
+    ap.add_argument("--level", default="scalars", choices=rgd_schema.LEVELS,
+                    help="how much per-frame state to emit (default: scalars)")
+    ap.add_argument("--frames", metavar="A[:B]", help="limit --emit to frames A..B")
+    ap.add_argument("-q", "--quiet", action="store_true")
     a = ap.parse_args()
+    if a.emit:        return cmd_emit(a.files, a.emit, a.level, a.frames, a.quiet)
     if a.dump_frames: cmd_dump(a.files, a.dump_frames); return 0
     if a.verify:      return cmd_verify(a.files)
     cmd_info(a.files); return 0
