@@ -1051,11 +1051,15 @@ Sprite _team2Player11Sprite = { 2, 11, 0, (AnimTable *)-1, -1, 0xFF, 0, 0, 0, 0,
  * The `.equ` aliases must live in the same TU as the array definition
  * or GAS won't emit a global symbol for them (same gotcha as
  * careerFileBufferBuf — see swos_globals_career_overlay.c). */
-#ifdef SWOS_SDL_BUILD
-Sprite* _teamSpritesTable[102] = {   /* 101 + 1 slot for the widescreen-only cornerFlagSprite2 below */
-#else
-Sprite* _teamSpritesTable[101] = {
-#endif
+/* UNSIZED ON PURPOSE. The final element is the (Sprite *)-1 sentinel that
+ * InitDisplaySprites walks to; with an explicit size, adding a sprite silently
+ * DROPS the trailing initializers — GCC only WARNS ("excess elements in array
+ * initializer") — and losing the sentinel makes InitDisplaySprites run off the
+ * end of the array and SIGSEGV at match start. That is exactly what happened
+ * when the three widescreen grid tiles were added to a [102] declaration.
+ * Letting the initializer size the array makes that failure impossible; the
+ * assert below still enforces the minimum the overlapping views need. */
+Sprite* _teamSpritesTable[] = {
     /* [0..10]  — team1SpritesTable */
     &_goalie1Sprite, &_team1Player2Sprite, &_team1Player3Sprite,
     &_team1Player4Sprite, &_team1Player5Sprite, &_team1Player6Sprite,
@@ -1117,6 +1121,11 @@ Sprite* _teamSpritesTable[101] = {
  * pointer-decay assignment unchanged; only their extern decls become
  * `Sprite **` (matching these definitions — an array-form extern over a
  * pointer object would misread, so all are updated). */
+_Static_assert(sizeof(_teamSpritesTable) / sizeof(*_teamSpritesTable) >= 101,
+               "teamSpritesTable needs >= 101 slots: team1/team2/allSprites "
+               "overlay it at 0/11/22 and the bench/subs code deliberately "
+               "cross-reads past team1's and team2's own 11 entries");
+
 Sprite **_team1SpritesTable = &_teamSpritesTable[0];
 Sprite **_team2SpritesTable = &_teamSpritesTable[11];
 Sprite **_allSpritesArray   = &_teamSpritesTable[22];
