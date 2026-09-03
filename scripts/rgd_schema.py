@@ -33,6 +33,8 @@ Field tuple:  (name, type, dos_offset[, cmp])
                  non-zero value is an implementation detail
           "view" depends on the VIEW GEOMETRY the recording was made at, so
                  it is only comparable when ours matches (see below)
+          "na"   the slot has no counterpart in this port at all, whatever the
+                 geometry — never compared
           "spr"  a sprite-bank index, compared after subtracting the
                  recording's `sprite_index_offset` (the DOS bank has 114
                  entries our Amiga bank does not — DOS_TO_AMIGA_OFFSET in
@@ -94,17 +96,17 @@ OFF_SPRITES         = 3774
 SPRITE_STRIDE       = 110
 NUM_SPRITES         = 33
 # Slot 31 of the recording is a corner flag, and WHICH corner flag is chosen by
-# the camera: swos-port keeps four and picks one with
+# the camera: swos-port keeps FOUR of them and picks one with
 #   if (cameraX >= 176) idx += cameraY >= 349 ? 3 : 1; else if (cameraY >= 349) idx += 2;
 # (RecordedDataTest.cpp). Our port has the original's single _cornerFlagSprite,
-# so the slot only lines up when the camera happens to select the same corner —
-# i.e. it is view-dependent in the same way the camera itself is, and every one
-# of its fields carries cmp="view".
+# so there is no slot here that corresponds to it — not even when the geometry
+# matches, because the recording is describing one of four objects we do not
+# have. Every field carries cmp="na".
 CORNER_FLAG_SPRITE  = 31
 # Slot 32 is the "current player name" HUD sprite, parked off-pitch when hidden
 # at a position derived from the view. swos-port's rig does not field-compare it
-# either — it `continue`s past the slot and instead checks semantically that the
-# right player's name is displayed (RecordedDataTest.cpp, kCurrentPlayerNameSprite).
+# either — it `continue`s past the slot outright and instead checks semantically
+# that the right player's name is displayed (kCurrentPlayerNameSprite). cmp="na".
 PLAYER_NAME_SPRITE  = 32
 PLAYERINFO_STRIDE   = 61
 NUM_PLAYERS         = 16
@@ -381,7 +383,7 @@ def build_schema(major, minor, level):
                 n, t, o = fld[0], fld[1], fld[2]
                 c = fld[3] if len(fld) > 3 else "eq"
                 if s in (CORNER_FLAG_SPRITE, PLAYER_NAME_SPRITE):
-                    c = "view"
+                    c = "na"
                 out.append(_f("sprite[%d].%s" % (s, n), t, base + o, 3, c))
 
     return out

@@ -2342,8 +2342,12 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         int16_t d2 = a1->y.s.i - a0->centerY - _cameraY.s.i;
         d2 -= a1->z.s.i;
 
-        /* Cull if off-screen */
-        if (d1 >= _screen_width || d2 >= SCREEN_HEIGHT) {
+        /* Cull if off-screen. This is a GAMEPLAY decision as well as a render
+         * one — UpdateControlledPlayer will not auto-select a player whose
+         * onScreen is clear (GAMEPLAY.md §5, §25.2) — so it keys off the
+         * SIMULATION view, which defaults to the render width but which the
+         * replay rig sets to the geometry a recording was made in. */
+        if (d1 >= _sim_view_width || d2 >= _sim_view_height) {
             a1->onScreen = 0;
             d7--;
             if (d7 < 0) break;

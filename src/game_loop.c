@@ -599,15 +599,20 @@ GameLoop(void)
     _fadeAndSaveHighlightScene = 0;
     _spaceReplayTimer = 0;
 
+    /* Training starts at a fixed (168, 313) in both releases. A match starts
+     * centred horizontally on one of the two goal ends, and both of those are
+     * functions of the SIMULATION view (display.h): 168/592 at the port's own
+     * 336x272, and 176/664 — swos-port's kCenterX / kBottomStartLocationY — at
+     * the DOS release's 320x200. */
     d1 = 168;
     d2 = 313;
     if (_trainingGame == 0) {
         uint16_t r = Rand();
         if (r & 1)
-            d2 = 592;
+            d2 = SIM_CAMERA_MAX_Y;   /* bottom end: 592 at 272 lines */
         else
-            d2 = 16;
-        d1 = 168;
+            d2 = 16;                 /* top end: the same in both */
+        d1 = SIM_CAMERA_CENTRE_X;    /* 168 at 336 wide */
     }
 
     ReplayUpdateCameraAndSwapBuffers(d1, d2);

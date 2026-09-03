@@ -203,6 +203,7 @@ directly on the binary:
 | `--replay-level=<scalars\|teams\|info\|sprites>` | how much of each frame to compare |
 | `--replay-max-errors=N` | keep going and list up to N mismatching fields |
 | `--replay-skip=a,b,…` | mute fields whose name contains any of these substrings |
+| `--replay-window` | open a window; off by default, a replay is a batch run |
 
 The four levels are cumulative, cheapest first:
 
@@ -244,6 +245,7 @@ a hard load error, so the rig can never silently skip a field.
 | `view` | depends on the view geometry; compared only when ours matches the recording's |
 | `spr` | a sprite-bank index; compared after subtracting the recording's `sprite_index_offset` |
 | `ptr:<kind>` | a pointer, compared as a semantic **identity** — see below |
+| `na` | the slot has no counterpart in this port at all — never compared |
 | `in` | recorded input, injected rather than compared |
 | `meta` | bookkeeping (`frameNo`) |
 
@@ -287,8 +289,39 @@ away from the SDL host before they did:
   the other two at kick-off.
 
 `--replay-test` also forces `SWOS_HARNESS_TURBO` (no 50 Hz wait — the clock is
-driven per iteration, not by the wall), `--dos-gameplay=on`, and the port's
-native 336x272 render rather than the tester's monitor aspect.
+driven per iteration, not by the wall), `--dos-gameplay=on`, the port's native
+336x272 render rather than the tester's monitor aspect, and
+`SDL_VIDEODRIVER=dummy` so nothing opens a window (a full matrix is 48 runs).
+Every buffer and blit is still real — the game renders into the frontbuffer,
+which is what the `onScreen` cull reads back — there is just nowhere to put it.
+`--replay-window` opts back in to watching one.
+
+### The simulation view
+
+SWOS reads the view size from *inside* the simulation, so the rig sets it to
+the geometry the recording was made in (`_sim_view_width` / `_sim_view_height`,
+`include/display.h`) while the renderer keeps drawing at `_screen_width`. Every
+camera constant in the engine turns out to be a function of it, which is what
+makes this a faithful generalisation rather than a test hook:
+
+| | formula | at 336x272 (ours) | at 320x200 (DOS) |
+|---|---|---:|---:|
+| kick-off centre X | `(672 - viewW) / 2` | 168 | 176 |
+| bottom start Y | `664 - (viewH - 200)` | 592 | 664 |
+| camera centre Y | `viewH / 2` | 136 | 100 |
+| pan range | `672 - viewW` | 336 | 352 |
+| target Y clamp | `664 - (viewH - 200)` | 592 | 664 |
+| position Y clamp | `880 - viewH` | 608 | 680 |
+
+The left column is what this port had hard-coded (`168`, `592`, `0x88`,
+`0x250`, `0x260`); the right column is swos-port's own named constants
+(`kCenterX`, `kBottomStartLocationY`, `kPitchMaxX`, `kCameraMaxY`). Same
+formulas, both releases.
+
+The default is unchanged behaviour — `main.c` follows `_screen_width` into it,
+exactly what the culls and camera used before. Pinning it to 336x272 instead is
+the widescreen fix noted below, and is deliberately *not* what the default
+does.
 
 ---
 
@@ -304,17 +337,29 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **775-1859** frames at
-`scalars`, **566-775** at `info`, and the levels ladder down predictably —
-`zkz-12065730` gets **972** frames at `scalars`, **809** at `teams`, **566** at
-`info`, **128** at `sprites`. Hundreds of frames in which 930+ named fields
-agree exactly is a real regression net: a change that perturbs the simulation
-moves these numbers immediately.
+The shape of the results, as of the run in that file: **117-1663** frames at
+`scalars`, **117-1335** at `info`, **116-147** at `sprites`.
 
-The `info` column is now dominated by one cause: **eight of the twelve
-recordings** stop on `top_info.controlled_player`, which is the `onScreen`
-ceiling described below and not a port defect. Read the numbers as a
-regression baseline, not as a correctness target.
+Three things to read into them:
+
+- **The `sprites` column is now one cause.** Every recording but two stops on
+  `sprite[N].on_screen`, between frames 116 and 147. That is the artwork floor
+  described below, not simulation drift — with the animation fields muted, all
+  22 player sprites' positions, deltas and directions match as far as the
+  `info` level goes.
+- **`scalars` and `info` are not comparable with runs before the simulation
+  view existed.** The camera fields used to be skipped as non-comparable and
+  are now checked, so several numbers went *down* while the test got
+  *stronger*: `zkz-11021807` reads 222 rather than 775 because it now stops on
+  `camera_x`, which nothing was looking at before.
+- **The camera is testable for the first time**, and it is where most of the
+  remaining `scalars` stops are: `camera_x` at 222, `camera_y` at 714,
+  `camera_x_vel` / `camera_y_vel` at 117 and 925. Those are new leads, not
+  regressions.
+
+Hundreds of frames in which 930+ named fields agree exactly is a real
+regression net: a change that perturbs the simulation moves these numbers
+immediately.
 
 ### What the rig has already found
 
@@ -367,10 +412,7 @@ Five real defects so far, all fixed:
    number as it does in the reference rig, and moving only `_lastGameTick`,
    keeps every gain and loses neither.
 
-### The `onScreen` ceiling — what a DOS corpus can and cannot validate
-
-This is the single most important conclusion from running the corpus, and it
-is proven from the recordings' own data rather than argued.
+### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
 `onScreen` is clear**:
@@ -383,14 +425,13 @@ if (_gameStatePl == ST_GAME_IN_PROGRESS) {
 ```
 
 `onScreen` is set by the sprite cull in `sprites.c`, against the camera, the
-view size and the per-image `centerX`/`pixWidth`/`nlines` metrics. All three
-differ between DOS and this port. So the view geometry does not merely change
-the camera — **it feeds back into the simulation**, and GAMEPLAY.md §5, §25.2
-and §25.5 all say so.
+view size and the per-image `centerX`/`pixWidth`/`nlines` metrics. So the view
+geometry does not merely change the camera — **it feeds back into the
+simulation**, and GAMEPLAY.md §5, §25.2 and §25.5 all say so.
 
-With pointer identities compared, **eight of the twelve recordings now end
-their `info` level on `top_info.controlled_player`**, between frames 566 and
-660 — one cause, not eight. Worked example, `playa-10090613` frame 660:
+That was worth 200+ frames per recording, and simulating at the recording's own
+geometry (above) recovers it. The worked example that found it,
+`playa-10090613` frame 660, when the rig still simulated at 336x272:
 
 | | |
 |---|---|
@@ -399,32 +440,34 @@ their `info` level on `top_info.controlled_player`**, between frames 566 and
 | DOS camera / view | (156.5, 389.8), 320x200 → y spans **390..590** |
 | ours | 72 higher, 272 tall → y spans ~318..590 |
 | recorded `sprite[21].on_screen` | **0** — above the top of the DOS view |
-| recorded `sprite[23].on_screen` | 1 |
 
-Our taller view puts `sprite[21]` on screen, it is nearer the ball, so we
-select it; DOS cannot see it and selects `sprite[23]`. From there the AI reads
-`controlledPlayer->direction` as its facing and the two ports issue different
-turns. Nothing was wrong with the port.
+Our taller view put `sprite[21]` on screen, it was nearer the ball, so we
+selected it; DOS could not see it. Simulating at 320x200 removes that entirely.
 
-**So the ceiling is: the first frame at which a player's `onScreen` differs.**
-Everything downstream of it — player selection, the AI's facing, the animation
-walker, the ball-proximity flags — is view-caused, not a port defect. A
-divergence at or after that point against DOS data is *expected* and cannot be
-fixed by changing our code. Divergences *before* it are real and worth
-chasing: `zkz-10174427`'s frame-0 skill nibbles are the clear example.
+**What is left is the artwork.** With the geometry matched, `onScreen` still
+differs when a sprite sits within a pixel or two of the view edge, because the
+cull also reads the per-image metrics and the two releases' sprites are not
+pixel-identical. Measured on `zkz-12065730` frame 126/127, sprite[14],
+image 341: the recording flips `on_screen` between screen x 340.4 and 338.9, so
+its `centerX` is 19 or 20; ours culls at both, so ours is ≤ 18. Everything else
+— position, camera, `imageIndex` — matched to that frame.
 
-That is what makes the Amiga corpus (section 7) a requirement rather than a
-nice-to-have.
+That is the floor for a DOS corpus, and GAMEPLAY.md §5 predicted it: *"a port
+with its own artwork cannot match it exactly"*. It is not unreachable —
+`bin/grafs_dos` is shipped and `--dos-graphics=on` already loads the DOS sprite
+data — but `src/dos_graphics.c` decodes pixels into our existing slots and does
+not carry the DOS per-image `centerX`/`pixWidth`/`nlines` across, so today the
+cull still uses the Amiga bank's metrics. Teaching the DOS loader to bring its
+own metrics is the next lever if the residual proves to matter.
 
-> **Related finding, and it is a real one.** The cull tests
-> `d1 >= _screen_width`, i.e. the *live* render width. On the Amiga that is
-> always 336, and at 4:3 so is ours — but in widescreen it can be 650, so
-> **playing this port ultrawide changes which players are eligible for
-> auto-selection and therefore changes CPU behaviour.** GAMEPLAY.md §25.5
-> anticipates exactly this and recommends the fix: cull `onScreen` against a
-> fixed 336x272 window and let the renderer draw wider. That means separating
-> "enqueue for drawing" from "onScreen", so it is a deliberate change rather
-> than a one-line edit — filed here, not made.
+> **A real finding, filed rather than fixed.** The cull tests
+> `d1 >= _sim_view_width`, and `main.c` sets that from the *live* render width.
+> On the Amiga it is always 336, and at 4:3 so is ours — but in widescreen it
+> can be 650, so **playing this port ultrawide changes which players are
+> eligible for auto-selection and therefore changes CPU behaviour.** With the
+> simulation view now separate from the render width, the fix is one line —
+> pin it to `SCREEN_WIDTH` x `SCREEN_HEIGHT` — but it is a deliberate gameplay
+> change, so it is recorded in GAMEPLAY.md §25.4 and not made here.
 
 ### Known non-comparable state
 
@@ -454,14 +497,15 @@ Not bugs; consequences of comparing two different builds.
   `Sprite.isMoving` (29122). "Set" is `0x00FF` little-endian and `0xFF00`
   big-endian; ours says `-1`, which is the same flag without the byte trick,
   and every read is a truth test (`tst.w`, `cmp.b`). Marked `cmp = bool`.
-- **The corner flag is chosen by the camera.** Slot 31 of the recording is a
-  corner flag, and *which* of the four swos-port keeps is picked from the
-  camera position (`if (cameraX >= 176) idx += cameraY >= 349 ? 3 : 1; ...`).
-  Our port has the original's single `_cornerFlagSprite`, so the slot only
-  lines up when the camera happens to select the same corner — view-dependent
-  in exactly the way the camera is. All 48 of its fields carry `cmp = view`.
-  (Found from the results: two recordings' `sprites` level stopped on
-  `sprite[31].y` and nothing else.)
+- **Two sprite slots have no counterpart here at all** (`cmp = na`, never
+  compared, whatever the geometry). Slot 31 is a corner flag and swos-port
+  keeps *four*, picking one by camera position; our port has the original's
+  single `_cornerFlagSprite`, so the recording is describing one of four
+  objects we do not have. Slot 32 is the player-name HUD sprite, which
+  swos-port's own rig `continue`s past rather than field-comparing. Both were
+  first classified `view`, which was right in effect and wrong in reason — and
+  the moment the simulation view matched, `view` stopped skipping them and they
+  reappeared as false divergences.
 - **swos-port's own sprite init.** Its `Sprite::init()` sets several fields to
   values its source explicitly calls "for SWOS++/tests compatibility", one of
   which (`frameSwitchCounter = -1`) its comment says SWOS itself starts at 0 —
@@ -476,32 +520,32 @@ Not bugs; consequences of comparing two different builds.
 
 ### Open leads
 
-Split by the `onScreen` ceiling above, because that decides whether a lead is
-worth chasing at all. See [TESTS_RESULTS.md](TESTS_RESULTS.md) for which file
-stops where.
+Ranked, with the artwork floor (above) as the dividing line. See
+[TESTS_RESULTS.md](TESTS_RESULTS.md) for which file stops where.
 
-**Above the ceiling — real, and chaseable against `data/SWOS2.s`:**
+**Genuine, and newly visible now that the geometry matches:**
 
+- **The camera.** `camera_x` (`zkz-11021807`, frame 222), `camera_y`
+  (`zkz-10174427`, 714), `camera_x_vel` / `camera_y_vel` (`zkz-12065730` 925,
+  `zkz-11215003` 117). Nothing was comparing these before, so this whole class
+  is unexamined. §20's velocity ladder and the two Y clamps are the places to
+  read against `data/SWOS2.s`. `zkz-11215003` at 117 is the earliest and so the
+  cheapest to chase.
 - **`zkz-10174427` frame 0**: `top_game.players[5]` has `passing` /
-  `tackling` / `ballControl` 5 where we compute 4. Pure setup, no camera
-  involved, so this is a genuine difference in the skill nibbles
-  `InitInGameTeamStructure` derives — most likely the `allPlayerTeamsEqual`
-  price-percentage scaling (`GetAveragePlayerPrice`, the `pct + 6`).
-- **`zkz-11215003` at 117 on `game_state_pl`**, the only recording that stops
-  there and the only early stop that is not frame 0. Worth checking whether it
-  is upstream of any `onScreen` effect.
+  `tackling` / `ballControl` 5 where we compute 4. Pure setup, no camera, no
+  cull — a real difference in the skill nibbles `InitInGameTeamStructure`
+  derives, most likely the `allPlayerTeamsEqual` price-percentage scaling
+  (`GetAveragePlayerPrice`, the `pct + 6`).
+- **`top_info.pass_to_player_ptr`** ends the `info` level in several
+  recordings (`zkz-12065730` 818, `playa-10090613` 795).
+  `UpdatePlayerBeingPassedTo` is `onScreen`-gated like `UpdateControlledPlayer`,
+  so some of this is the artwork floor — but it is now the *second* selection
+  to diverge rather than the first, and worth a read against the asm.
 
-**At or below the ceiling — expected, do not "fix":**
+**The artwork floor — expected until the DOS loader carries its own metrics:**
 
-- `top_info.controlled_player` at frames 566-660 — **eight of twelve
-  recordings**, and with it `current_allowed_direction`, which is only the
-  first scalar consequence. The worked example above.
-- `sprite[N].frame_index` at 117-144: `updateSpriteAnimation` only advances a
-  sprite whose `onScreen` is set.
-- `top_info.player_has_ball` / `pl_not_far_from_ball`: ball-proximity state for
-  a player selection that has already diverged.
-- `top_stats.ball_possession` drifting by one and walking away: possession is
-  accumulated for whichever player holds the ball.
+- `sprite[N].on_screen` at 116-147, which is every recording's `sprites` stop.
+- Anything downstream of a selection that has already diverged.
 
 **Neither:**
 

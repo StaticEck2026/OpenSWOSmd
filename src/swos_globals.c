@@ -104,6 +104,14 @@ SWOS_CHIP_BSS uint8_t _frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 /* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
  * set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
 int _screen_width = SCREEN_WIDTH;
+#ifdef SWOS_SDL_BUILD
+/* The SIMULATION view (display.h). Defaults to the port's own geometry; main.c
+ * follows _screen_width into it so behaviour is unchanged, and the replay rig
+ * overrides it to the geometry a recording was made in. On Amiga these are
+ * compile-time constants (display.h), so there is nothing to define. */
+int16_t _sim_view_width  = SCREEN_WIDTH;
+int16_t _sim_view_height = SCREEN_HEIGHT;
+#endif
 #endif
 /* Per-draw X shift for centering 336-wide menu content in a widescreen frame. Set to
  * WIDE_MARGIN only around the menu entry-draw loop; 0 everywhere else (and on Amiga). */

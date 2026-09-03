@@ -33,7 +33,7 @@
 
 #include "replay_test.h"
 #include "game_types.h"
-#include "display.h"    /* _screen_width, SCREEN_HEIGHT — the view geometry */
+#include "display.h"    /* _sim_view_width/_height — the simulation view */
 #include "game_init.h"
 #include "math68k.h"
 #include "mjson.h"
@@ -49,7 +49,7 @@ typedef enum {
 static const uint8_t k_rtSize[RT_NTYPES] = { 1, 1, 2, 2, 4, 4, sizeof(void *) };
 static const char * const k_rtName[RT_NTYPES] = { "u8", "s8", "u16", "s16", "u32", "s32", "ptr" };
 
-enum { RC_EQ, RC_BOOL, RC_VIEW, RC_SPR, RC_PTR, RC_IN, RC_META };
+enum { RC_EQ, RC_BOOL, RC_VIEW, RC_SPR, RC_PTR, RC_NA, RC_IN, RC_META };
 
 /* ptr:<kind> — how to turn a recorded identity into a pointer. */
 enum { PK_TEAM, PK_TEAMGAME, PK_STATS, PK_SPRITES_TABLE, PK_SPRITE,
@@ -681,7 +681,8 @@ static int parseSchema(const char *text, int len, const char *levelName)
                         strcmp(tok[3], "meta") == 0 ? RC_META :
                         strcmp(tok[3], "bool") == 0 ? RC_BOOL :
                         strcmp(tok[3], "view") == 0 ? RC_VIEW :
-                        strcmp(tok[3], "spr")  == 0 ? RC_SPR  : RC_EQ;
+                        strcmp(tok[3], "spr")  == 0 ? RC_SPR  :
+                        strcmp(tok[3], "na")   == 0 ? RC_NA   : RC_EQ;
                 }
                 s_field[s_fieldCount].off   = off;
                 s_field[s_fieldCount].bind  = -1;
@@ -727,7 +728,7 @@ static int bindSchema(void)
 
     for (i = 0; i < s_fieldCount; i++) {
         RtField *f = &s_field[i];
-        if (f->cmp == RC_IN || f->cmp == RC_META) continue;
+        if (f->cmp == RC_IN || f->cmp == RC_META || f->cmp == RC_NA) continue;
         if (f->level > s_maxLevel) continue;
         if (f->cmp == RC_VIEW && !s_viewMatches) { s_viewSkipped++; continue; }
         if (isSkipped(f->name)) { skipped++; continue; }
@@ -853,8 +854,17 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
      * different resolution has a legitimately different camera. Compare
      * those fields only when the geometry matches; everything else (sprite
      * positions are WORLD coordinates) is comparable regardless. */
-    s_viewMatches = (s_setup.viewWidth == (int)_screen_width &&
-                     s_setup.viewHeight == SCREEN_HEIGHT);
+    /* Simulate at the geometry the recording was made in. SWOS reads the view
+     * size from inside the simulation — the onScreen cull gates which players
+     * auto-selection may pick, and every camera constant is derived from it
+     * (display.h) — so replaying a 320x200 recording at 336x272 diverges by
+     * construction, not by defect. The renderer still draws at _screen_width. */
+    if (s_setup.viewWidth > 0 && s_setup.viewHeight > 0) {
+        _sim_view_width  = (int16_t)s_setup.viewWidth;
+        _sim_view_height = (int16_t)s_setup.viewHeight;
+    }
+    s_viewMatches = (s_setup.viewWidth == (int)_sim_view_width &&
+                     s_setup.viewHeight == (int)_sim_view_height);
 
     if (parseSchema((const char *)(s_file + hdr[3]), (int)hdr[4], level) != 0)
         return 1;
@@ -872,10 +882,10 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
             s_frameCount, s_setup.firstFrame, s_setup.lastFrame,
             s_fieldCount, s_compareCount);
     if (s_viewSkipped)
-        fprintf(stderr, "[replay] view %dx%d recorded vs %dx%d here — %u camera/on-screen "
+        fprintf(stderr, "[replay] view %dx%d recorded vs %dx%d simulated — %u camera/on-screen "
                         "field(s) not compared\n",
-                s_setup.viewWidth, s_setup.viewHeight, (int)_screen_width, SCREEN_HEIGHT,
-                s_viewSkipped);
+                s_setup.viewWidth, s_setup.viewHeight,
+                (int)_sim_view_width, (int)_sim_view_height, s_viewSkipped);
     return 0;
 }
 

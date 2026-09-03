@@ -79,14 +79,17 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
     if (_playHighlightFlag != 0) {
         /* X: 0x2A0 (pitch world width) - _screen_width is the max camera X — the
          * same clamp SetCameraCoordinates applies. No-op at 4:3 / on Amiga. */
-        int16_t panRange = (int16_t)(0x2A0 - _screen_width);
+        int16_t panRange = SIM_CAMERA_PAN_RANGE;
         if (panRange < 0) panRange = 0;
         if (newScreenX < 0) newScreenX = 0;
         else if (newScreenX > panRange) newScreenX = panRange;
 
         /* Y: the live camera's vertical range [0x10, 0x260]. A DOS HIL captured
          * in a 200px-tall view reaches ~0x295, which on our taller (272px)
-         * playback view would pan past the bottom into the green surround. */
+         * playback view would pan past the bottom into the green surround.
+         * This one stays keyed to the PLAYBACK view (0x260), not the
+         * simulation view: it exists precisely to re-fit a foreign recording
+         * to the window we are drawing in. */
         if (newScreenY < 0x10) newScreenY = 0x10;
         else if (newScreenY > 0x260) newScreenY = 0x260;
     }

@@ -404,6 +404,53 @@ extern int _screen_width;
 #define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
 #endif
+
+/* ---- The SIMULATION view --------------------------------------------------
+ * SWOS's gameplay reads the view size, not just the renderer: the `onScreen`
+ * cull decides which players auto-selection may pick (GAMEPLAY.md §5, §25.2),
+ * and every camera constant is derived from the view —
+ *
+ *      kick-off centre X   (672 - viewW) / 2      168 at 336, 176 at 320
+ *      bottom start Y      664 - (viewH - 200)    592 at 272, 664 at 200
+ *      camera centre Y     viewH / 2              136 at 272, 100 at 200
+ *      pan range           672 - viewW            336 at 336, 352 at 320
+ *      target Y clamp      664 - (viewH - 200)    592 at 272, 664 at 200
+ *      position Y clamp    880 - viewH            608 at 272, 680 at 200
+ *                                                 (= swos-port's kCameraMaxY)
+ *
+ * — which is why the port's hard-coded 168/592/0x88/0x250 are all f(336, 272),
+ * and why the same formulas reproduce the DOS release's own constants at
+ * (320, 200). Keeping that size separate from the RENDER width lets the
+ * recorded-game replay rig (docs/TESTS.md) simulate at the geometry a
+ * recording was made in while still drawing at whatever the display wants.
+ *
+ * Default: exactly today's behaviour — the live render width and the fixed
+ * 272 line count — so nothing changes for a player unless something sets it.
+ * (GAMEPLAY.md §25.4 notes that pinning this to 336x272 regardless of the
+ * render width is the fix for widescreen changing CPU player selection; that
+ * is a deliberate gameplay change and is NOT what the default does.) */
+#ifdef SWOS_SDL_BUILD
+extern int16_t _sim_view_width;
+extern int16_t _sim_view_height;
+#else
+/* Amiga has no widescreen and no replay rig, so the simulation view IS the
+ * hardware view — fold to compile-time constants and the m68k codegen for
+ * every site below is byte-for-byte what it was before this existed. */
+#define _sim_view_width                 SCREEN_WIDTH
+#define _sim_view_height                SCREEN_HEIGHT
+#endif
+
+/* The camera constants above, as functions of the simulation view. */
+#define SIM_CAMERA_CENTRE_X   ((int16_t)((0x2A0 - _sim_view_width) / 2))
+#define SIM_CAMERA_PAN_RANGE  ((int16_t)(0x2A0 - _sim_view_width))
+#define SIM_CAMERA_CENTRE_Y   ((int16_t)(_sim_view_height / 2))
+/* The camera DESTINATION clamp (where MoveCamera may aim). */
+#define SIM_CAMERA_MAX_Y      ((int16_t)(664 - (_sim_view_height - 200)))
+#define SIM_CAMERA_MAX_Y_TRN  ((int16_t)(616 - (_sim_view_height - 200)))
+/* The camera POSITION clamp — keeps the view inside the 880-tall pitch. 0x260
+ * at 272 lines; swos-port's kCameraMaxY = 680 at 200. */
+#define SIM_CAMERA_POS_MAX_Y  ((int16_t)(880 - _sim_view_height))
+
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)
 /* AGA block-B elimination: ONLY the two display frontbuffers (base/alt) are 2x

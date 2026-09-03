@@ -292,8 +292,11 @@ bench_camera_target_and_zero_vel:
 
 offset_and_clamp_to_view:
     /* Center the view: subtract half screen dimensions */
-    targetX -= (_screen_width / 2);    /* half the view width: 168 (336) / 192 (384 widescreen) */
-    targetY -= 0x88;    /* 136 */
+    /* Centre the view on the target. Both halves come from the SIMULATION view
+     * (display.h), not the render width: 168/136 at the port's own 336x272,
+     * 160/100 at the DOS release's 320x200. */
+    targetX -= (_sim_view_width / 2);
+    targetY -= SIM_CAMERA_CENTRE_Y;
 
     /* Apply camera velocity */
     targetX += (int16_t)_cameraXVelocity;
@@ -305,7 +308,7 @@ offset_and_clamp_to_view:
          * view on the pitch (=0x150 at 336). On wide/ultrawide displays the view nears
          * the pitch width and this range collapses or inverts — then just center the
          * view on the pitch (the whole pitch is visible; the camera can't pan). */
-        int16_t panRange = (int16_t)(0x2A0 - _screen_width);
+        int16_t panRange = SIM_CAMERA_PAN_RANGE;
         int16_t xMax = panRange - boundsMargin;
         if (xMax <= boundsMargin) {
             targetX = (int16_t)(panRange / 2);
@@ -321,13 +324,13 @@ offset_and_clamp_to_view:
     if (_trainingGame != 0) {
         if (targetY <= 0x50)
             targetY = 0x50;
-        if (targetY >= 0x220)
-            targetY = 0x220;
+        if (targetY >= SIM_CAMERA_MAX_Y_TRN)   /* 0x220 = 544 at 272 lines */
+            targetY = SIM_CAMERA_MAX_Y_TRN;
     } else {
         if (targetY <= 0x10)
             targetY = 0x10;
-        if (targetY >= 0x250)
-            targetY = 0x250;
+        if (targetY >= SIM_CAMERA_MAX_Y)       /* 0x250 = 592 at 272 lines */
+            targetY = SIM_CAMERA_MAX_Y;
     }
 
     /* ---- Compute fixed-point delta from current camera position ---- */
@@ -385,13 +388,13 @@ offset_and_clamp_to_view:
         /* Final clamp of integer position */
         if (newIntX < 0)
             newIntX = 0;
-        if (newIntX >= (int16_t)(0x2A0 - _screen_width))   /* pitchWidth - viewWidth */
-            newIntX = (int16_t)(0x2A0 - _screen_width);
+        if (newIntX >= SIM_CAMERA_PAN_RANGE)   /* pitchWidth - viewWidth */
+            newIntX = SIM_CAMERA_PAN_RANGE;
 
         if (newIntY < 0x10)
             newIntY = 0x10;
-        if (newIntY >= 0x260)
-            newIntY = 0x260;
+        if (newIntY >= SIM_CAMERA_POS_MAX_Y)   /* 0x260 = 880 - 272 lines */
+            newIntY = SIM_CAMERA_POS_MAX_Y;
 
         SetCameraCoordinates(newIntX, newIntY);
         _cameraCoordinatesValid = 0;

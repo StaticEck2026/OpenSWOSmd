@@ -148,6 +148,9 @@ static void print_usage(const char *argv0)
         "  --replay-level=<scalars|teams|info|sprites>\n"
         "                            How much of each frame to compare. Default: the\n"
         "                            level the .swr was emitted at.\n"
+        "  --replay-window           Open a window during --replay-test. Off by\n"
+        "                            default: a replay is a batch run and a full\n"
+        "                            matrix would open one window per cell.\n"
         "  --replay-selftest         Check CalculateDeltaXAndY against swos-port's\n"
         "                            reference vectors and exit. No recording needed.\n"
         "  --replay-skip=<a,b,...>   Mute every field whose name contains one of these\n"
@@ -237,6 +240,7 @@ int main(int argc, char **argv)
     snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", "grafs_dos");
     const char *replay_file = NULL, *replay_level = NULL, *replay_skip = NULL;
     int replay_max_errors = 1;
+    int replay_window = 0;
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
@@ -322,6 +326,8 @@ int main(int argc, char **argv)
             replay_file = v;
         } else if ((v = match_kv(a, "replay-level")) != NULL) {
             replay_level = v;
+        } else if (strcmp(a, "--replay-window") == 0) {
+            replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
             return ReplayTest_MathSelfTest();
         } else if ((v = match_kv(a, "replay-skip")) != NULL) {
@@ -350,9 +356,19 @@ int main(int argc, char **argv)
 #ifdef _WIN32
         _putenv("SWOS_HARNESS_TURBO=1");
         _putenv("SWOS_NO_LOG=1");
+        if (!replay_window && !getenv("SDL_VIDEODRIVER"))
+            _putenv("SDL_VIDEODRIVER=dummy");
 #else
         setenv("SWOS_HARNESS_TURBO", "1", 1);
         setenv("SWOS_NO_LOG", "1", 1);
+        /* Headless by default: a replay is a batch run, and a full matrix opens
+         * one window per cell. The dummy video driver keeps every buffer and
+         * blit real — the game still renders into the frontbuffer, which is
+         * what the simulation reads back — it just never opens a window.
+         * --replay-window opts back in to watching it. Respect an
+         * SDL_VIDEODRIVER the caller set explicitly. */
+        if (!replay_window && !getenv("SDL_VIDEODRIVER"))
+            setenv("SDL_VIDEODRIVER", "dummy", 1);
 #endif
         opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */
         /* Replay at the port's OWN native view, not the tester's monitor:
@@ -463,6 +479,15 @@ int main(int argc, char **argv)
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, SCREEN_HEIGHT, opts.screen, nd, dw, dh, (double)dw / dh);
     }
+    /* Keep the SIMULATION view (display.h) equal to the render width, which is
+     * exactly what the gameplay culls and camera math used before it existed —
+     * so this is a no-op for a player. Only the replay rig overrides it.
+     * (GAMEPLAY.md §25.4: pinning it to SCREEN_WIDTH x SCREEN_HEIGHT instead
+     * would stop a widescreen render from changing CPU player selection. That
+     * is a deliberate gameplay change, not this line.) */
+    _sim_view_width  = (int16_t)_screen_width;
+    _sim_view_height = SCREEN_HEIGHT;
+
     _menu_draw_x_offset = WIDE_MARGIN;
 
     /* Arm the replay rig before the bootstrap: SWOS.c enters it in place of
