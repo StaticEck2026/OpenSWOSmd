@@ -361,6 +361,76 @@ Hundreds of frames in which 930+ named fields agree exactly is a real
 regression net: a change that perturbs the simulation moves these numbers
 immediately.
 
+### Can we claim "100% accurate"?
+
+Not against this corpus — and the reason is worth understanding, because it is
+not a shortcoming of the port.
+
+**The recordings are SWOS++, not the retail DOS game.** swos-port's own source
+says so where it initialises a sprite:
+
+```c
+// this is for SWOS++/tests compatibility
+playerDirection = playerOrdinal ? 0 : -1;
+...
+// SWOS initial value for frameSwitchCoutner is 0, but we will initialize
+// with -1 to be compatible with SWOS++ and tests
+frameSwitchCounter = -1;
+```
+
+It deliberately deviates from SWOS's own initial values to agree with the
+recordings, and its rig compensates elsewhere for the recorder running "*after*
+reset and SWOS++'s *before*". The files are `zkz-*` — Zlatko Karakaš, SWOS++'s
+author. So **matching those fields 100% would mean reproducing SWOS++'s
+departures from SWOS**, which is the opposite of what this port is for.
+
+That reframes the target. There are four classes of field where exact agreement
+is either impossible or undesirable:
+
+| class | why | closable? |
+|---|---|---|
+| Recorder conventions (`frame_switch_counter`, `player_direction`, `starting_direction`, `save_sprite`, `field_3e`) | SWOS++ initial values that the reference's own source calls deviations from SWOS | **No — and we should not want to** |
+| Two sprite slots (corner flag, player-name HUD) | swos-port keeps four corner flags and picks by camera; its rig skips the HUD slot outright | No — no counterpart exists here |
+| Byte-set word flags (`ballOutOfPlayOrKeeper`, `goaliePlayingOrOut`, `isMoving`) | `SWOS2.s` writes a byte into a word, so "set" is `0x00FF` little-endian and `0xFF00` big-endian. Exactness is *target-dependent*; a truth test is the correct comparison, not a compromise | No — the truth test **is** the right test |
+| Per-image cull metrics (`centerX`/`pixWidth`/`nlines`, via `onScreen`) | the two releases' artwork is not pixel-identical, and the cull is gameplay-visible | **Probably — see below** |
+
+So the honest strong claim available today is *bounded*, and still worth making:
+
+> Every field two differently-derived builds can meaningfully be compared on
+> agrees exactly, for the first N frames of each recorded match — with a
+> four-item exclusion list, every item justified from the reference
+> implementation's own source.
+
+**The fourth class is the one to chase**, because it is the only one that is
+both closable and currently costing frames — it is what ends the `sprites`
+level in every recording at 116-147. The pieces are already in the tree:
+`bin/grafs_dos/TEAM1.DAT` and friends carry `pixWidth`/`nlines`/`wquads`/
+`centerX`/`centerY` per image, `color_sprites.c::dos_build_sprite_dat` already
+parses them into `SpriteGraphics` records (DOS 341..643 → Amiga 227..529, and
+three more ranges), and `dos_prepare_sprites()` installs those records into
+`_spriteGraphicsPtr` when `--dos-graphics=on`. Yet running the rig with
+`--dos-graphics=on` does not move the first `on_screen` divergence at all,
+which it should. Something in that path is not reaching the cull —
+**unresolved, and the next concrete step.**
+
+Two supporting measurements for whoever picks it up. The recorder's cull window
+is consistent with 320x200 plus per-image metrics: across `zkz-12065730`'s
+frames 60-900, a player sprite is recorded `on_screen` for camera-relative x up
+to 339.9 and y up to 211.9, and off-screen from x -29.8, which fits a 320-wide
+test with `centerX` up to ~20 and `pixWidth` up to ~30. And DOS's own `centerX`
+for image 341 is 4 — so an earlier inference here that DOS used 19-20 was wrong,
+and the single frame-127 case it rested on is still unexplained.
+
+### With an Amiga corpus, 100% becomes a real target
+
+All four classes above exist only because the recording came from a different
+release. Record from the Amiga original at 336x272 with the Amiga sprite bank
+(section 8) and: the recorder conventions are the original's own, the corner
+flag and HUD slots are the ones we have, the byte-set flags land in the byte
+order we use, and the cull metrics are the artwork we ship. Nothing is left to
+exclude, and "every recorded field, every frame" is a claim that can actually
+be made — and would mean what it says.
+
 ### What the rig has already found
 
 Five real defects so far, all fixed:
