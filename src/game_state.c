@@ -21,6 +21,19 @@ extern uint32_t _gameTime;               /* BCD-encoded: byte3=ones, byte2=tens,
 extern uint16_t _secondsSwitchAccumulator;
 extern uint16_t _copyTimeSprite;
 extern Sprite   _currentTimeSprite;
+#ifdef SWOS_SDL_BUILD
+/* Widescreen 3rd score-panel tile per row — see sprite_data.c. */
+extern Sprite   _gridUpperRowExtraSprite;
+extern Sprite   _gridMiddleRowExtraSprite;
+extern Sprite   _gridBottomRowExtraSprite;
+#define HUD_EXTRA_TILE_VISIBLE(v) do {                     \
+        _gridUpperRowExtraSprite.visible  = (v);           \
+        _gridMiddleRowExtraSprite.visible = (v);           \
+        _gridBottomRowExtraSprite.visible = (v);           \
+    } while (0)
+#else
+#define HUD_EXTRA_TILE_VISIBLE(v) ((void)0)
+#endif
 
 extern TeamGame _topTeamInGame;
 extern TeamGame _bottomTeamInGame;
@@ -330,6 +343,7 @@ void ResetResultSprites(void)
     _gridMiddleRowRightSprite.visible = 0;
     _gridBottomRowLeftSprite.visible = 0;
     _gridBottomRowRightSprite.visible = 0;
+    HUD_EXTRA_TILE_VISIBLE(0);
     _team1NameSprite.visible = 0;
     _team2NameSprite.visible = 0;
     _team1GoalsDigit2Sprite.visible = 0;
@@ -436,6 +450,8 @@ show_sprites:
     _gridMiddleRowRightSprite.visible = 1;
     _gridBottomRowLeftSprite.visible = 1;
     _gridBottomRowRightSprite.visible = 1;
+    /* 3rd tile only once the HUD box exceeds the 2x168 the base tiles cover. */
+    HUD_EXTRA_TILE_VISIBLE(HUD_WIDTH > 2 * 168 ? 1 : 0);
     _team1NameSprite.visible = 1;
     _team2NameSprite.visible = 1;
     _team1GoalsDigit2Sprite.visible = 1;
@@ -504,6 +520,7 @@ hide_result:
     _gridMiddleRowRightSprite.visible = 0;
     _gridBottomRowLeftSprite.visible = 0;
     _gridBottomRowRightSprite.visible = 0;
+    HUD_EXTRA_TILE_VISIBLE(0);
     _team1NameSprite.visible = 0;
     _team2NameSprite.visible = 0;
     _team1GoalsDigit2Sprite.visible = 0;
@@ -559,32 +576,47 @@ position_sprites:
     d0 = _team1NameSprite.y.s.i - 1015;
 
     /* Grid upper row */
-    _gridUpperRowLeftSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN;
+    _gridUpperRowLeftSprite.x.s.i = _cameraX.s.i + HUD_MARGIN;
     _gridUpperRowLeftSprite.y.s.i = d0;
     _gridUpperRowLeftSprite.z.s.i = 9000;
-    _gridUpperRowRightSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _gridUpperRowRightSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 168;
     _gridUpperRowRightSprite.y.s.i = d0;
     _gridUpperRowRightSprite.z.s.i = 9000;
+#ifdef SWOS_SDL_BUILD
+    _gridUpperRowExtraSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + HUD_WIDTH - 168;
+    _gridUpperRowExtraSprite.y.s.i = d0;
+    _gridUpperRowExtraSprite.z.s.i = 9000;
+#endif
 
     d0 += 32;
 
     /* Grid middle row */
-    _gridMiddleRowLeftSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN;
+    _gridMiddleRowLeftSprite.x.s.i = _cameraX.s.i + HUD_MARGIN;
     _gridMiddleRowLeftSprite.y.s.i = d0;
     _gridMiddleRowLeftSprite.z.s.i = 9000;
-    _gridMiddleRowRightSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _gridMiddleRowRightSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 168;
     _gridMiddleRowRightSprite.y.s.i = d0;
     _gridMiddleRowRightSprite.z.s.i = 9000;
+#ifdef SWOS_SDL_BUILD
+    _gridMiddleRowExtraSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + HUD_WIDTH - 168;
+    _gridMiddleRowExtraSprite.y.s.i = d0;
+    _gridMiddleRowExtraSprite.z.s.i = 9000;
+#endif
 
     d0 += 32;
 
     /* Grid bottom row */
-    _gridBottomRowLeftSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN;
+    _gridBottomRowLeftSprite.x.s.i = _cameraX.s.i + HUD_MARGIN;
     _gridBottomRowLeftSprite.y.s.i = d0;
     _gridBottomRowLeftSprite.z.s.i = 9000;
-    _gridBottomRowRightSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _gridBottomRowRightSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 168;
     _gridBottomRowRightSprite.y.s.i = d0;
     _gridBottomRowRightSprite.z.s.i = 9000;
+#ifdef SWOS_SDL_BUILD
+    _gridBottomRowExtraSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + HUD_WIDTH - 168;
+    _gridBottomRowExtraSprite.y.s.i = d0;
+    _gridBottomRowExtraSprite.z.s.i = 9000;
+#endif
 
     /* --- Position team2NameSprite --- */
     _team2NameSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 200;
@@ -1031,7 +1063,7 @@ not_end_of_second_extra:
 set_time_sprite_x:
     {
         /* Position time sprite relative to camera */
-        _currentTimeSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 0x14;
+        _currentTimeSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 0x14;
         _currentTimeSprite.y.s.i = _cameraY.s.i + 0x2721;
 
         /* If player indicator is at position 4, shift time down by 8 */

@@ -269,10 +269,11 @@ position_name:
 
     d2 = (int16_t)(int8_t)(uint8_t)d2;     /* sign-extend from byte */
     spr->imageIndex = d1;
-    /* Widescreen: shift the controlled-player name into the centered 336 region (the
-     * per-corner offsets below — +10/+20 left, +326-width right — key off this base).
-     * WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
-    spr->x.s.i      = (int16_t)_cameraX.s.i + WIDE_MARGIN;
+    /* Widescreen: anchor the controlled-player name to the HUD box — the display
+     * width, capped at 16:9 (see HUD_WIDTH in display.h). The per-corner offsets
+     * below are insets from that box's edges: +10/+20 from the left,
+     * HUD_WIDTH-10 from the right. HUD_MARGIN folds to 0 on Amiga. */
+    spr->x.s.i      = (int16_t)_cameraX.s.i + HUD_MARGIN;
     spr->y.s.i      = (int16_t)_cameraY.s.i + 8000;
     spr->z.s.i      = 8000;
 
@@ -284,13 +285,13 @@ position_name:
         return;
     case 2:
         /* Bottom-right */
-        spr->x.s.i += 326;
+        spr->x.s.i += HUD_WIDTH - 10;
         spr->x.s.i -= d2;
         spr->y.s.i += 251;
         return;
     case 3:
         /* Top-right */
-        spr->x.s.i += 326;
+        spr->x.s.i += HUD_WIDTH - 10;
         spr->x.s.i -= d2;
         spr->y.s.i += 14;
         return;

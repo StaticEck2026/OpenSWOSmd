@@ -786,6 +786,25 @@ Sprite _gridBottomRowRightSprite
     = { 0, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
           { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, 138,
           0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
+#ifdef SWOS_SDL_BUILD
+/* Widescreen: the score panel is a 168-wide dither tile (sprite 138) repeated
+ * across the row. Two tiles cover the old 336 box; a 16:9 HUD box is 480 wide,
+ * so a THIRD tile per row is needed to reach the right edge (3 x 168 = 504,
+ * clipped to HUD_WIDTH). SDL-only — Amiga is always 336 and never shows these,
+ * so the m68k sprite set is unchanged. Same pattern as _cornerFlagSprite2. */
+Sprite _gridUpperRowExtraSprite
+    = { 0, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
+          { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, 138,
+          0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
+Sprite _gridMiddleRowExtraSprite
+    = { 0, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
+          { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, 138,
+          0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
+Sprite _gridBottomRowExtraSprite
+    = { 0, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
+          { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, 138,
+          0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0 };
+#endif
 Sprite _team1NameSprite
     = { 0, 0, 0, (AnimTable *)-1, -1, 255, 0, 0, 0, 0, -1, 5, 1, 0, { 0 }, { 0 },
           { 0 }, 0, 0, { 0 }, { 0 }, { 0 }, 0, 0, { 0, 0, 0, 0, 0, 1 }, 1, -1,
@@ -1078,6 +1097,8 @@ Sprite* _teamSpritesTable[101] = {
     &_refereeSprite, &_cornerFlagSprite,
 #ifdef SWOS_SDL_BUILD
     &_cornerFlagSprite2,
+    &_gridUpperRowExtraSprite, &_gridMiddleRowExtraSprite,
+    &_gridBottomRowExtraSprite,
 #endif
     &_big_S_Sprite, &_currentPlayerNameSprite, _advertInGameSprites,
     &_advertInGameSprites[0x1], &_advertInGameSprites[0x2],

@@ -437,6 +437,32 @@ extern int _screen_width;
 #define WIDE_MARGIN                     ((_screen_width - SCREEN_WIDTH) / 2)
 extern int _menu_draw_x_offset;
 
+/* In-match HUD box: the score panel at the bottom and the controlled-player
+ * name + clock at the top-left span the DISPLAY rather than the 336-wide
+ * (4:3) region, but are capped at the 16:9 width so on an ultrawide they do
+ * not sit at the far edges. Aligning them to 4:3 kept them near the middle,
+ * where the score panel obstructs the view when attacking the goal with fast
+ * long balls.
+ *
+ *   <= 16:9   HUD_WIDTH == _screen_width, HUD_MARGIN == 0  -> fills the screen
+ *   ultrawide HUD_WIDTH == WIDESCREEN_WIDTH (480, the 16:9 reference)
+ *             centred, HUD_MARGIN == the leftover / 2
+ *   Amiga     _screen_width folds to 336 -> HUD_MARGIN == 0, unchanged.
+ *
+ * Only LEFT/RIGHT-anchored HUD elements need this. Anything centred in the old
+ * box already resolves to screen centre (WIDE_MARGIN + 168 == _screen_width/2),
+ * so the team names, score digits and dash are left alone. */
+#ifdef SWOS_SDL_BUILD
+#define HUD_WIDTH                       (_screen_width < WIDESCREEN_WIDTH \
+                                         ? _screen_width : WIDESCREEN_WIDTH)
+#define HUD_MARGIN                      ((_screen_width - HUD_WIDTH) / 2)
+#else
+/* Amiga has no widescreen (WIDESCREEN_WIDTH is SDL-only), so fold both to
+ * compile-time constants — byte-identical geometry to before. */
+#define HUD_WIDTH                       SCREEN_WIDTH
+#define HUD_MARGIN                      0
+#endif
+
 /* ---- Tile / scroll-blit constants ---- */
 #define TILE_STRIDE                 14
 #define TILE_SHIFT_X                4
