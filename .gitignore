@@ -89,3 +89,10 @@ bin/SWOS.aarch64
 bin/SWOS.armhf
 bin/SWOS.macos
 bin/SWOS.log
+
+# Recorded-game test corpus (docs/TESTS.md). 66 MB of binary imported from
+# swos-port/tests/data. UNTRACKED until the replay rig has proven it decodes and
+# replays; then decide between Git LFS and a fetch script. Restore with:
+#   cp /mnt/c/Projects/GitHub/swos-port/tests/data/* tests/dos/
+tests/dos/
+tests/amiga/

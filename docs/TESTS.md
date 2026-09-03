@@ -10,7 +10,32 @@ replays `.RGD` recordings against its DOS port. That corpus is our starting
 point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
-Status: **data imported and format decoded. Rig not yet implemented.**
+Status: **data imported; format decoded and verified; decoder written. Replay
+rig not yet implemented.**
+
+```bash
+scripts/rgd_convert.py --info    tests/dos/*.RGD.gz     # header + frame geometry
+scripts/rgd_convert.py --verify  tests/dos/*.RGD.gz     # decode invariants
+scripts/rgd_convert.py --dump-frames 0:4 tests/dos/zkz-12065730.RGD.gz
+```
+
+**12 of 13 recordings decode with zero trailing bytes and pass verification.**
+The decode is corroborated semantically, not just arithmetically: full matches
+end at exactly 90 min, one ends at 120 min drawn 3-3 (extra time), scorelines are
+plausible, the game clock is monotonic and `gameTime[0]` is always 0. Frame 0 of
+`zkz-12065730` shows player 1 pressing fire at kick-off with the camera then
+panning smoothly — velocity ramping 0, 2, 4, 6 — and `cameraX` 11534336 is
+exactly 176.0 in 16.16. Field offsets are therefore right, not merely the
+stride.
+
+| | frames | ends |
+|---|---:|---|
+| `zkz-12065730` (v1.5) | 1519 | 3 min, 1-0 |
+| `zkz-11021807` (v1.3) | 4064 | 6 min, 0-0 |
+| `zkz-11054632` (v1.1) | 7314 | 8 min, 0-0 |
+| `playa-10090613` (v1.1) | 22497 | 90 min, 3-0 |
+| `zkz-10140228` (v1.1) | 39066 | 120 min, 3-3 |
+| `zkz-12080203` (v1.4) | 31635 | 90 min, 10-10 |
 
 ---
 
@@ -25,8 +50,13 @@ tests/amiga/    (planned — needs a dumper, see section 6)
 `tests/dos` is a verbatim copy of `swos-port/tests/data`. All 13 archives pass
 `gzip -t`.
 
-⚠️ 66 MB of binary in git. Upstream tracks it directly; we may prefer Git LFS or
-keeping it untracked with a fetch script. **Decide before committing the data.**
+The corpus is **untracked** (`.gitignore`) until the rig has proven it decodes
+and replays; only then do we decide between Git LFS and a fetch script. 66 MB of
+binary is hard to remove from git history once it is in. Restore it with:
+
+```bash
+mkdir -p tests/dos && cp /mnt/c/Projects/GitHub/swos-port/tests/data/* tests/dos/
+```
 
 ---
 
@@ -43,13 +73,25 @@ confirmed by checking that `(filesize - header) % frame == 0` *and* that the
 | version | header | frame | struct |
 |---|---:|---:|---|
 | 1.0 / 1.1 | 3610 | 7404 | `Header` + `FrameV1p0` |
-| 1.2 | 3617? | ? | **unresolved — see below** |
-| 1.3 | 3617 | 7475 | `HeaderV1p2` + `FrameV1p3` (adds `BenchDataV1`) |
+| 1.2 | ? | ? | **unresolved — see below** |
+| 1.3 | 3617 | 7475 | `HeaderV1p2` + `FrameV1p3` (`+ BenchDataV1`, 71) |
 | 1.4 | 3617 | 7481 | `+ userKey, fireBlocked, statsTimer, resultTimer` (+6) |
 | 1.5 | 3617 | 7485 | `+ pl1/pl2TapTimeoutCounter` (+4) |
 
-The +6 and +4 deltas match the field additions in `RecordedDataTest.h` exactly,
-which is a good independent check on the model.
+`BenchDataV1` is 71, not 72 — `shirtNumberTable` is `2 * kNumPlayersInTeam` with
+`kNumPlayersInTeam == 16`. That makes the whole model self-consistent: the base
+frame is 7404 for *every* version, and 7404 + 71 + 6 + 4 = 7485 reproduces the
+measured v1.5 size exactly.
+
+The component sizes are likewise forced rather than assumed. Their `TeamGame` is
+1704 (`10 words + markedPlayer + teamName[17] + 3 bytes + 16 * PlayerGame(61) +
+unknownTail[686]`) and `TeamStatsData` is 14, which leaves
+`33 * Sprite == 7404 - 3436 - 338 == 3630`, i.e. **`Sprite` == 110 — exactly our
+32-bit `Sprite`**. `scripts/rgd_convert.py::build_frame_layout()` asserts the
+sum, so a wrong constant fails loudly rather than silently mis-parsing.
+
+Note our `TeamGame` (1018) is their first 1018 bytes — everything before
+`unknownTail[686]`.
 
 ### The corpus
 
@@ -69,9 +111,11 @@ which is a good independent check on the model.
 | `zkz-12065730` | 1.5 | 1519 | ALIANZA ATLETICO v UNIVERSITARIO |
 | `zkz-12080203` | 1.4 | 31635 | FORT. DUSSELDORF v MSV DUISBURG |
 
-**Open:** the single v1.2 file resolves with neither (3610, 7404) nor
-(3617, ·). Either 1.2 shifts the header without shifting the frame or vice
-versa. One file — park it; start with 1.3–1.5, which are fully decoded.
+**Open:** the single v1.2 file resolves with no (header, frame) pair at all —
+brute-forced over headers 3560–3700 against frame sizes 6000–9000 requiring ten
+consecutive `frameNo`s, with no hit. It is also the largest file (112 MB). It
+may be a format variant or simply a damaged capture. One file out of thirteen;
+parked.
 
 ### Header fields
 
@@ -94,6 +138,29 @@ strings read correctly ("ALIANZA ATLETICO", "UNIVERSITARIO").
 ```
 
 ### Frame fields
+
+Offsets within a frame, as decoded and verified by `scripts/rgd_convert.py`:
+
+```
+   +0  4     frameNo
+   +4  2+2   player1Controls, player2Controls
+   +8  145   topTeam (TeamGeneralInfo)      +153  11   topTeamPlayers
+ +164  145   bottomTeam                     +309  11   bottomTeamPlayers
+ +320  1704  topTeamGame                   +2024  1704 bottomTeamGame
++3728  14    topTeamStats                  +3742  14   bottomTeamStats
++3756  4+4   cameraX, cameraY  (16.16 fixed point)
++3764  1+1   cameraXVelocity, cameraYVelocity
++3766  4     gameTime[4]   (minutes = d[3] + 10*d[2] + 100*d[1]; d[0] is always 0)
++3770  1+1   team1Goals, team2Goals
++3772  1+1   gameState, gameStatePl
++3774  3630  sprites[33]   (110 each)
+ =7404       end of FrameV1p0
++7404  71    BenchDataV1                    (v1.3+)
++7475  1+1+2+2  userKey, fireBlocked, statsTimer, resultTimer   (v1.4+)
++7481  2+2   pl1TapTimeoutCounter, pl2TapTimeoutCounter         (v1.5+)
+```
+
+Original C++ declaration order, for reference:
 
 ```
 dword frameNo
@@ -278,9 +345,8 @@ genuine porting bug rather than a DOS-vs-Amiga behavioural difference.
 ## 7. Order of work
 
 1. Decide how the 66 MB is stored (LFS / untracked + fetch script).
-2. `scripts/rgd_convert.py` for v1.3–1.5 (the three fully-decoded files),
-   round-tripped against the measured header/frame sizes.
-3. Resolve v1.2, then v1.0/1.1 field offsets — that unlocks the other 9 files.
+2. ~~`scripts/rgd_convert.py`~~ — done; 12 of 13 files decode and verify.
+3. Resolve v1.2 (1 file, no (header, frame) pair found).
 4. The C rig, first asserting only the cheap scalars (game time, goals,
    `gameState`, camera), then teams, then all 33 sprites.
 5. The Amiga dumper.
