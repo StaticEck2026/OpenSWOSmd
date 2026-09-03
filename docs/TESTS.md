@@ -243,8 +243,27 @@ a hard load error, so the rig can never silently skip a field.
 | `bool` | truth test only — see "byte-set word flags" below |
 | `view` | depends on the view geometry; compared only when ours matches the recording's |
 | `spr` | a sprite-bank index; compared after subtracting the recording's `sprite_index_offset` |
+| `ptr:<kind>` | a pointer, compared as a semantic **identity** — see below |
 | `in` | recorded input, injected rather than compared |
 | `meta` | bookkeeping (`frameNo`) |
+
+### Pointers are compared, as identities
+
+The recording does not store addresses. swos-port's recorder writes each
+pointer field as a small semantic value, and its own rig decodes it the same
+way (`verifySpritePointer`, `verifyShotChanceTable`): `-1` for null, `0`/`1`
+for "which team", and an index into the recording's own 33-sprite order for a
+player. So the rig resolves the identity to the pointer *our* build should
+hold, and reports a mismatch by name:
+
+```
+top_info.controlled_player   recorded=sprite[23]   actual=sprite[21]
+```
+
+This is the tier the first version of the rig deferred, and it turned out to be
+the most valuable one. Every scalar can agree while the two ports are driving
+**different men** — which is exactly what was happening (see below), and no
+amount of scalar comparison would have said so.
 
 ### Determinism
 
@@ -286,12 +305,16 @@ scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
 The shape of the results, as of the run in that file: **775-1859** frames at
-`scalars`, **600-786** at `info`, and the levels ladder down predictably —
-`zkz-12065730` gets **972** frames at `scalars`, **809** at `teams`, **600** at
-`info`, **128** at `sprites`. Two recordings stop early for reasons of their
-own (see the leads below). Hundreds of frames in which 900+ named fields agree
-exactly is a real regression net: a change that perturbs the simulation moves
-these numbers immediately.
+`scalars`, **566-775** at `info`, and the levels ladder down predictably —
+`zkz-12065730` gets **972** frames at `scalars`, **809** at `teams`, **566** at
+`info`, **128** at `sprites`. Hundreds of frames in which 930+ named fields
+agree exactly is a real regression net: a change that perturbs the simulation
+moves these numbers immediately.
+
+The `info` column is now dominated by one cause: **eight of the twelve
+recordings** stop on `top_info.controlled_player`, which is the `onScreen`
+ceiling described below and not a port defect. Read the numbers as a
+regression baseline, not as a correctness target.
 
 ### What the rig has already found
 
@@ -344,6 +367,65 @@ Five real defects so far, all fixed:
    number as it does in the reference rig, and moving only `_lastGameTick`,
    keeps every gain and loses neither.
 
+### The `onScreen` ceiling — what a DOS corpus can and cannot validate
+
+This is the single most important conclusion from running the corpus, and it
+is proven from the recordings' own data rather than argued.
+
+`UpdateControlledPlayer` — auto player-selection — **skips players whose
+`onScreen` is clear**:
+
+```c
+if (_gameStatePl == ST_GAME_IN_PROGRESS) {
+    if (!pl->onScreen)
+        continue;
+}
+```
+
+`onScreen` is set by the sprite cull in `sprites.c`, against the camera, the
+view size and the per-image `centerX`/`pixWidth`/`nlines` metrics. All three
+differ between DOS and this port. So the view geometry does not merely change
+the camera — **it feeds back into the simulation**, and GAMEPLAY.md §5, §25.2
+and §25.5 all say so.
+
+With pointer identities compared, **eight of the twelve recordings now end
+their `info` level on `top_info.controlled_player`**, between frames 566 and
+660 — one cause, not eight. Worked example, `playa-10090613` frame 660:
+
+| | |
+|---|---|
+| recorded `top_info.controlled_player` | `sprite[23]` (team2Player9), world y 449.1 |
+| ours | `sprite[21]` (team2Player7), world y 373.7 |
+| DOS camera / view | (156.5, 389.8), 320x200 → y spans **390..590** |
+| ours | 72 higher, 272 tall → y spans ~318..590 |
+| recorded `sprite[21].on_screen` | **0** — above the top of the DOS view |
+| recorded `sprite[23].on_screen` | 1 |
+
+Our taller view puts `sprite[21]` on screen, it is nearer the ball, so we
+select it; DOS cannot see it and selects `sprite[23]`. From there the AI reads
+`controlledPlayer->direction` as its facing and the two ports issue different
+turns. Nothing was wrong with the port.
+
+**So the ceiling is: the first frame at which a player's `onScreen` differs.**
+Everything downstream of it — player selection, the AI's facing, the animation
+walker, the ball-proximity flags — is view-caused, not a port defect. A
+divergence at or after that point against DOS data is *expected* and cannot be
+fixed by changing our code. Divergences *before* it are real and worth
+chasing: `zkz-10174427`'s frame-0 skill nibbles are the clear example.
+
+That is what makes the Amiga corpus (section 7) a requirement rather than a
+nice-to-have.
+
+> **Related finding, and it is a real one.** The cull tests
+> `d1 >= _screen_width`, i.e. the *live* render width. On the Amiga that is
+> always 336, and at 4:3 so is ours — but in widescreen it can be 650, so
+> **playing this port ultrawide changes which players are eligible for
+> auto-selection and therefore changes CPU behaviour.** GAMEPLAY.md §25.5
+> anticipates exactly this and recommends the fix: cull `onScreen` against a
+> fixed 336x272 window and let the renderer draw wider. That means separating
+> "enqueue for drawing" from "onScreen", so it is a deliberate change rather
+> than a one-line edit — filed here, not made.
+
 ### Known non-comparable state
 
 Not bugs; consequences of comparing two different builds.
@@ -394,39 +476,35 @@ Not bugs; consequences of comparing two different builds.
 
 ### Open leads
 
-Ranked by how many recordings they hold up. See
-[TESTS_RESULTS.md](TESTS_RESULTS.md) for which file stops where.
+Split by the `onScreen` ceiling above, because that decides whether a lead is
+worth chasing at all. See [TESTS_RESULTS.md](TESTS_RESULTS.md) for which file
+stops where.
 
-- **`game_state` / `game_state_pl` transitions**, the largest group by far —
-  every recording's `scalars` and `teams` level ends on one. They are all the
-  §21.4a stopped-state dispatcher firing a frame or two out: the timer that
-  ends a break (`stoppageEventTimer`, `stoppageTimerActive`, the AI's
-  `aiResumePlayTimer`) is stepped by `_lastFrameTicks`, so a one-frame
-  difference anywhere upstream shows up here. Defect (5) above was one of
-  these; there is at least one more.
-- **`sprite[N].frame_index` at ~70-145**, the ceiling on the `sprites` level in
-  almost every recording. `updateSpriteAnimation` only advances a sprite whose
-  `onScreen` is set, and `onScreen` is view-dependent — so this is the view
-  geometry cap, not a simulation bug, and it will not move until there is an
-  Amiga corpus (section 7).
-- **`top_stats.ball_possession`** ends the `teams` level in four recordings,
-  always by drifting one unit and then walking away — the possession
-  accumulator's cadence.
-- **`top_info.current_allowed_direction` at frame 660 — in four independent
-  recordings, to the frame.** This is the sharpest signal the corpus has
-  produced: `current_allowed_direction` is the stick the AI hands to
-  `UpdatePlayers`, and four different matches disagree on it at exactly the
-  same frame. The other four `info`-level stops are
-  `top_info.player_has_ball` / `pl_not_far_from_ball` at 600-786, which are
-  ball-proximity state feeding the same decision, so this is plausibly one
-  cause. Start here.
-- **`zkz-11215003` stops at 117 at every level**, on `game_state_pl` — the only
-  recording that does. Something about that match's break sequence, not a
-  general timing error.
-- **`zkz-10174427` frame 0**: `top_game.players[5]` has `passing` / `tackling`
-  / `ballControl` 5 where we compute 4 — a rounding difference in the skill
-  nibbles `InitInGameTeamStructure` derives, most likely in the
-  `allPlayerTeamsEqual` price-percentage scaling.
+**Above the ceiling — real, and chaseable against `data/SWOS2.s`:**
+
+- **`zkz-10174427` frame 0**: `top_game.players[5]` has `passing` /
+  `tackling` / `ballControl` 5 where we compute 4. Pure setup, no camera
+  involved, so this is a genuine difference in the skill nibbles
+  `InitInGameTeamStructure` derives — most likely the `allPlayerTeamsEqual`
+  price-percentage scaling (`GetAveragePlayerPrice`, the `pct + 6`).
+- **`zkz-11215003` at 117 on `game_state_pl`**, the only recording that stops
+  there and the only early stop that is not frame 0. Worth checking whether it
+  is upstream of any `onScreen` effect.
+
+**At or below the ceiling — expected, do not "fix":**
+
+- `top_info.controlled_player` at frames 566-660 — **eight of twelve
+  recordings**, and with it `current_allowed_direction`, which is only the
+  first scalar consequence. The worked example above.
+- `sprite[N].frame_index` at 117-144: `updateSpriteAnimation` only advances a
+  sprite whose `onScreen` is set.
+- `top_info.player_has_ball` / `pl_not_far_from_ball`: ball-proximity state for
+  a player selection that has already diverged.
+- `top_stats.ball_possession` drifting by one and walking away: possession is
+  accumulated for whichever player holds the ball.
+
+**Neither:**
+
 - The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---

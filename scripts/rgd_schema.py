@@ -38,6 +38,19 @@ Field tuple:  (name, type, dos_offset[, cmp])
                  entries our Amiga bank does not — DOS_TO_AMIGA_OFFSET in
                  include/dos_graphics.h, and exactly the delta this rig
                  measures on every one of the 33 sprites)
+          "ptr:<kind>"  a POINTER field. The recording does not store an
+                 address: the recorder writes a semantic identity, which
+                 swos-port's own rig decodes the same way
+                 (RecordedDataTest::verifySpritePointer /
+                 verifyShotChanceTable). Kinds:
+                   team          0 = topTeamData,   1 = bottomTeamData
+                   teamgame      0 = topTeamInGame, 1 = bottomTeamInGame
+                   stats         0 = team1StatsData,1 = team2StatsData
+                   sprites_table 0 = team1SpritesTable, 1 = team2SpritesTable
+                   sprite        -1 = null, else an index into the recording's
+                                 own 33-sprite order (only 4..25, the players)
+                   shotchance    -1 = null, 0 = the outfield table,
+                                 else kGoalieSkillTables[value - 1]
           "in"   recorded input, injected rather than compared
           "meta" bookkeeping, neither injected nor compared
 
@@ -88,6 +101,11 @@ NUM_SPRITES         = 33
 # i.e. it is view-dependent in the same way the camera itself is, and every one
 # of its fields carries cmp="view".
 CORNER_FLAG_SPRITE  = 31
+# Slot 32 is the "current player name" HUD sprite, parked off-pitch when hidden
+# at a position derived from the view. swos-port's rig does not field-compare it
+# either — it `continue`s past the slot and instead checks semantically that the
+# right player's name is displayed (RecordedDataTest.cpp, kCurrentPlayerNameSprite).
+PLAYER_NAME_SPRITE  = 32
 PLAYERINFO_STRIDE   = 61
 NUM_PLAYERS         = 16
 
@@ -95,7 +113,9 @@ TYPE_SIZE = {"u8": 1, "s8": 1, "u16": 2, "s16": 2, "u32": 4, "s32": 4}
 
 
 # ---- Sprite (110 bytes; ours is 110 on 32-bit, 118 on 64-bit) -----------
-# Pointers omitted: animationTable@6, frameIndicesTable@18.
+# Pointers omitted: animationTable@6, frameIndicesTable@18. Unlike the
+# TeamGeneralInfo pointers these are recorded as raw VM offsets into
+# swos-port's image, with no small identity to decode.
 SPRITE_FIELDS = [
     ("team_number",           "s16",   0),
     ("player_ordinal",        "s16",   2),
@@ -151,10 +171,23 @@ SPRITE_FIELDS = [
 ]
 
 # ---- TeamGeneralInfo (theirs 145 = our 144 + a trailing secondaryFire) ---
-# Pointers omitted: opponentsTeam@0 inGameTeamPtr@10 teamStatsPtr@14
-# spritesTable@20 shotChanceTable@24 controlledPlayer@32 passToPlayerPtr@36
-# lastHeadingTacklingPlayer@72 passingKickingPlayer@104.
+# The nine pointer fields ARE included, as identities rather than addresses —
+# see "ptr:<kind>" in the module docstring. They are the only place the rig can
+# see "we are controlling a different player", which no amount of scalar
+# comparison reveals: every scalar can agree while the two ports drive
+# different men.
 TEAMINFO_FIELDS = [
+    # --- pointers, compared as identities (see the module docstring) ---------
+    ("opponents_team",                    "s32",   0, "ptr:team"),
+    ("in_game_team_ptr",                  "s32",  10, "ptr:teamgame"),
+    ("team_stats_ptr",                    "s32",  14, "ptr:stats"),
+    ("sprites_table",                     "s32",  20, "ptr:sprites_table"),
+    ("shot_chance_table",                 "s32",  24, "ptr:shotchance"),
+    ("controlled_player",                 "s32",  32, "ptr:sprite"),
+    ("pass_to_player_ptr",                "s32",  36, "ptr:sprite"),
+    ("last_heading_tackling_player",      "s32",  72, "ptr:sprite"),
+    ("passing_kicking_player",            "s32", 104, "ptr:sprite"),
+    # --- scalars -------------------------------------------------------------
     ("player_number",                     "s16",   4),
     ("player_coach_number",               "s16",   6),
     ("is_pl_coach",                       "s16",   8),
@@ -347,7 +380,7 @@ def build_schema(major, minor, level):
             for fld in SPRITE_FIELDS:
                 n, t, o = fld[0], fld[1], fld[2]
                 c = fld[3] if len(fld) > 3 else "eq"
-                if s == CORNER_FLAG_SPRITE:
+                if s in (CORNER_FLAG_SPRITE, PLAYER_NAME_SPRITE):
                     c = "view"
                 out.append(_f("sprite[%d].%s" % (s, n), t, base + o, 3, c))
 

@@ -43,13 +43,19 @@
  * =================================================================== */
 
 typedef enum {
-    RT_U8, RT_S8, RT_U16, RT_S16, RT_U32, RT_S32, RT_NTYPES
+    RT_U8, RT_S8, RT_U16, RT_S16, RT_U32, RT_S32, RT_PTR, RT_NTYPES
 } RtType;
 
-static const uint8_t k_rtSize[RT_NTYPES] = { 1, 1, 2, 2, 4, 4 };
-static const char * const k_rtName[RT_NTYPES] = { "u8", "s8", "u16", "s16", "u32", "s32" };
+static const uint8_t k_rtSize[RT_NTYPES] = { 1, 1, 2, 2, 4, 4, sizeof(void *) };
+static const char * const k_rtName[RT_NTYPES] = { "u8", "s8", "u16", "s16", "u32", "s32", "ptr" };
 
-enum { RC_EQ, RC_BOOL, RC_VIEW, RC_SPR, RC_IN, RC_META };
+enum { RC_EQ, RC_BOOL, RC_VIEW, RC_SPR, RC_PTR, RC_IN, RC_META };
+
+/* ptr:<kind> — how to turn a recorded identity into a pointer. */
+enum { PK_TEAM, PK_TEAMGAME, PK_STATS, PK_SPRITES_TABLE, PK_SPRITE,
+       PK_SHOTCHANCE, PK_NKINDS };
+static const char * const k_ptrKind[PK_NKINDS] = {
+    "team", "teamgame", "stats", "sprites_table", "sprite", "shotchance" };
 
 /* One of our globals, addressable by the schema's name. */
 typedef struct {
@@ -64,6 +70,7 @@ typedef struct {
     uint8_t  type;     /* as recorded */
     uint8_t  level;
     uint8_t  cmp;
+    uint8_t  ptrKind;  /* RC_PTR only */
     uint32_t off;      /* byte offset inside a packed frame record */
     int32_t  bind;     /* index into s_reg, or -1 when unbound */
 } RtField;
@@ -159,6 +166,12 @@ extern uint8_t           _ciaa_pra;
 extern int               _gDosGameplay;
 extern int16_t           _gMoveDeltaScaleNum, _gMoveDeltaScaleDen;
 
+/* The tables the recording's pointer identities resolve to. */
+extern GoalieSkill *_kGoalieSkillTables[8];
+extern uint32_t     _teamPlOfs24Table;   /* the outfield shot-chance table */
+extern Sprite     **_team1SpritesTable;
+extern Sprite     **_team2SpritesTable;
+
 /* Front-end work the rig skips but the match still depends on. */
 extern uint16_t  _menuBGImageCmdStream[];
 extern uint8_t  *_menuImageStreamBaseEnd;
@@ -240,6 +253,12 @@ static const char * const k_spriteMemberNames[] = {
 
 #define I(field, type)  { #field, type, (uint16_t)offsetof(TeamGeneralInfo, field) }
 static const MemberDesc k_infoMembers[] = {
+    /* Pointers, bound by the address of the POINTER FIELD; the comparison
+     * turns the recording's identity into the pointer it should hold. */
+    I(opponentsTeam, RT_PTR), I(inGameTeamPtr, RT_PTR), I(teamStatsPtr, RT_PTR),
+    I(spritesTable, RT_PTR), I(shotChanceTable, RT_PTR), I(controlledPlayer, RT_PTR),
+    I(passToPlayerPtr, RT_PTR), I(lastHeadingTacklingPlayer, RT_PTR),
+    I(passingKickingPlayer, RT_PTR),
     I(playerNumber, RT_S16), I(playerCoachNumber, RT_S16), I(isPlCoach, RT_S16),
     I(teamNumber, RT_S16), I(tactics, RT_S16), I(updatePlayerIndex, RT_S16),
     I(playerHasBall, RT_S16), I(allowedDirections, RT_S16),
@@ -265,6 +284,10 @@ static const MemberDesc k_infoMembers[] = {
     I(goalkeeperPlaying, RT_S16), I(resetControls, RT_S16),
 };
 static const char * const k_infoMemberNames[] = {
+    "opponents_team", "in_game_team_ptr", "team_stats_ptr",
+    "sprites_table", "shot_chance_table", "controlled_player",
+    "pass_to_player_ptr", "last_heading_tackling_player",
+    "passing_kicking_player",
     "player_number", "player_coach_number", "is_pl_coach",
     "team_number", "tactics", "update_player_index",
     "player_has_ball", "allowed_directions",
@@ -453,8 +476,94 @@ static int64_t readTyped(const void *p, uint8_t type)
     case RT_U16: { uint16_t v; memcpy(&v, p, 2); return (int64_t)v; }
     case RT_S16: { int16_t  v; memcpy(&v, p, 2); return (int64_t)v; }
     case RT_U32: { uint32_t v; memcpy(&v, p, 4); return (int64_t)v; }
+    case RT_PTR: { void    *v; memcpy(&v, p, sizeof v); return (int64_t)(intptr_t)v; }
     default:     { int32_t  v; memcpy(&v, p, 4); return (int64_t)v; }
     }
+}
+
+/* Turn a recorded pointer IDENTITY into the pointer our build should hold.
+ * The recording never stores an address: swos-port's recorder writes a small
+ * semantic value and its own rig decodes it the same way (verifySpritePointer,
+ * verifyShotChanceTable). Returns 1 when `rec` is a value this kind can
+ * represent, 0 when it is out of range — which is itself worth reporting. */
+static int resolvePointer(int kind, int64_t rec, const void **out)
+{
+    switch (kind) {
+    case PK_TEAM:
+        if (rec != 0 && rec != 1) return 0;
+        *out = rec ? (const void *)&_bottomTeamData : (const void *)&_topTeamData;
+        return 1;
+    case PK_TEAMGAME:
+        if (rec != 0 && rec != 1) return 0;
+        *out = rec ? (const void *)&_bottomTeamInGame : (const void *)&_topTeamInGame;
+        return 1;
+    case PK_STATS:
+        if (rec != 0 && rec != 1) return 0;
+        *out = rec ? (const void *)_team2StatsData : (const void *)_team1StatsData;
+        return 1;
+    case PK_SPRITES_TABLE:
+        if (rec != 0 && rec != 1) return 0;
+        *out = rec ? (const void *)_team2SpritesTable : (const void *)_team1SpritesTable;
+        return 1;
+    case PK_SPRITE:
+        if (rec == -1) { *out = NULL; return 1; }
+        if (rec < 0 || rec >= 33) return 0;
+        *out = (const void *)k_recordedSprites[rec];
+        return 1;
+    case PK_SHOTCHANCE:
+        if (rec == -1) { *out = NULL; return 1; }
+        /* 0 is the outfield table; anything else is kGoalieSkillTables[n-1]. */
+        if (rec == 0) { *out = (const void *)&_teamPlOfs24Table; return 1; }
+        if (rec < 1 || rec > 8) return 0;
+        *out = (const void *)_kGoalieSkillTables[rec - 1];
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+/* Name a pointer the way the recording would have, so a mismatch reads
+ * "sprite[7]" against "sprite[12]" rather than two hex addresses. */
+static void describePointer(int kind, const void *p, char *buf, size_t n)
+{
+    int i;
+    if (!p) { snprintf(buf, n, "null"); return; }
+    switch (kind) {
+    case PK_TEAM:
+        snprintf(buf, n, "%s", p == (const void *)&_topTeamData ? "top" :
+                               p == (const void *)&_bottomTeamData ? "bottom" : "?");
+        return;
+    case PK_TEAMGAME:
+        snprintf(buf, n, "%s", p == (const void *)&_topTeamInGame ? "top" :
+                               p == (const void *)&_bottomTeamInGame ? "bottom" : "?");
+        return;
+    case PK_STATS:
+        snprintf(buf, n, "%s", p == (const void *)_team1StatsData ? "team1" :
+                               p == (const void *)_team2StatsData ? "team2" : "?");
+        return;
+    case PK_SPRITES_TABLE:
+        snprintf(buf, n, "%s", p == (const void *)_team1SpritesTable ? "team1" :
+                               p == (const void *)_team2SpritesTable ? "team2" : "?");
+        return;
+    case PK_SPRITE:
+        for (i = 0; i < 33; i++)
+            if (p == (const void *)k_recordedSprites[i]) {
+                snprintf(buf, n, "sprite[%d]", i);
+                return;
+            }
+        break;
+    case PK_SHOTCHANCE:
+        if (p == (const void *)&_teamPlOfs24Table) { snprintf(buf, n, "outfield"); return; }
+        for (i = 0; i < 8; i++)
+            if (p == (const void *)_kGoalieSkillTables[i]) {
+                snprintf(buf, n, "goalie[%d]", i);
+                return;
+            }
+        break;
+    default:
+        break;
+    }
+    snprintf(buf, n, "unknown(%p)", p);
 }
 
 /* Two values are the same when their two's-complement bits agree at the
@@ -554,12 +663,26 @@ static int parseSchema(const char *text, int len, const char *levelName)
                 s_field[s_fieldCount].name  = strdup(tok[0]);
                 s_field[s_fieldCount].type  = (uint8_t)ty;
                 s_field[s_fieldCount].level = (uint8_t)atoi(tok[2]);
-                s_field[s_fieldCount].cmp   =
-                    strcmp(tok[3], "in")   == 0 ? RC_IN   :
-                    strcmp(tok[3], "meta") == 0 ? RC_META :
-                    strcmp(tok[3], "bool") == 0 ? RC_BOOL :
-                    strcmp(tok[3], "view") == 0 ? RC_VIEW :
-                    strcmp(tok[3], "spr")  == 0 ? RC_SPR  : RC_EQ;
+                s_field[s_fieldCount].ptrKind = 0;
+                if (strncmp(tok[3], "ptr:", 4) == 0) {
+                    int k;
+                    s_field[s_fieldCount].cmp = RC_PTR;
+                    for (k = 0; k < PK_NKINDS; k++)
+                        if (strcmp(tok[3] + 4, k_ptrKind[k]) == 0) break;
+                    if (k == PK_NKINDS) {
+                        fprintf(stderr, "[replay] schema: unknown pointer kind '%s' for %s\n",
+                                tok[3] + 4, tok[0]);
+                        return -1;
+                    }
+                    s_field[s_fieldCount].ptrKind = (uint8_t)k;
+                } else {
+                    s_field[s_fieldCount].cmp =
+                        strcmp(tok[3], "in")   == 0 ? RC_IN   :
+                        strcmp(tok[3], "meta") == 0 ? RC_META :
+                        strcmp(tok[3], "bool") == 0 ? RC_BOOL :
+                        strcmp(tok[3], "view") == 0 ? RC_VIEW :
+                        strcmp(tok[3], "spr")  == 0 ? RC_SPR  : RC_EQ;
+                }
                 s_field[s_fieldCount].off   = off;
                 s_field[s_fieldCount].bind  = -1;
                 off += k_rtSize[ty];
@@ -1066,13 +1189,32 @@ void ReplayTest_FrameStart(void)
     injectInput();
 }
 
-static void reportMismatch(const RtField *f, int64_t rec, int64_t ours)
+static void reportHeader(void)
 {
     if (s_errors == 0)
         fprintf(stderr, "[replay] DIVERGENCE at frame %u (recording frame %d)\n",
                 s_frame, s_setup.firstFrame + (int)s_frame);
+}
+
+static void reportMismatch(const RtField *f, int64_t rec, int64_t ours)
+{
+    reportHeader();
     fprintf(stderr, "[replay]   %-44s recorded=%lld  actual=%lld\n",
             f->name, (long long)rec, (long long)ours);
+    s_errors++;
+}
+
+static void reportPointerMismatch(const RtField *f, int64_t rec,
+                                  const void *want, const void *got)
+{
+    char a[48], b[48];
+    reportHeader();
+    if (want)
+        describePointer(f->ptrKind, want, a, sizeof a);
+    else
+        snprintf(a, sizeof a, "%lld (out of range)", (long long)rec);
+    describePointer(f->ptrKind, got, b, sizeof b);
+    fprintf(stderr, "[replay]   %-44s recorded=%-14s actual=%s\n", f->name, a, b);
     s_errors++;
 }
 
@@ -1088,6 +1230,16 @@ void ReplayTest_FrameEnd(void)
         if (f->bind < 0) continue;
         rec  = readTyped(s_rec + f->off, f->type);
         ours = readTyped(s_reg[f->bind].addr, s_reg[f->bind].type);
+        if (f->cmp == RC_PTR) {
+            const void *want = NULL;
+            const void *got  = (const void *)(intptr_t)ours;
+            int ok = resolvePointer(f->ptrKind, rec, &want);
+            if (ok && want == got)
+                continue;
+            reportPointerMismatch(f, rec, ok ? want : NULL, got);
+            if (s_errors >= s_maxErrors) { s_rec = NULL; finish(2); return; }
+            continue;
+        }
         if (f->cmp == RC_SPR && rec >= 0)
             rec -= s_setup.spriteIndexOffset;   /* recording's bank -> ours */
         if (f->cmp == RC_BOOL) {
