@@ -107,6 +107,76 @@ extern uint8_t  _aAWin01OnPensAE_3[];
 extern uint8_t  _aAWin01OnPensAE_5[];
 extern uint8_t  _aAWin01OnPens[];
 extern uint8_t  _aAWin01OnPensRe[];
+/* Compact ("second string") counterparts — see resultFormatCompact() below. */
+extern uint8_t  _a1stLeg01_0[];
+extern uint8_t  _aAWinOnAwayGoal[];
+extern uint8_t  _aAWinOnAwayGoal_0[];
+extern uint8_t  _aAWin01OnPensAE_7[];
+extern uint8_t  _aAWin23OnAggAET_0[];
+extern uint8_t  _aAWin01OnPens_0[];
+extern uint8_t  _aAWin01OnPens_1[];
+extern uint8_t  _aAWin01OnPens_2[];
+extern uint8_t  _aAWin23OnAgg_0[];
+extern uint8_t  _a23OnAgg_0[];
+extern uint8_t  _aAWin01OnPensAE_0[];
+extern uint8_t  _aAWin01OnPensAE_2[];
+extern uint8_t  _aAWin01OnPensAE_4[];
+extern uint8_t  _aAWin01OnPensAE_6[];
+extern uint8_t  _aAETReplay_0[];
+extern uint8_t  _aAET90Mins23Rep_0[];
+extern uint8_t  _aAET_0[];
+extern uint8_t  _aAET90Mins23_0[];
+extern uint8_t  _aReplay_1[];
+extern uint8_t  _a23OnAggAWinOnA_0[];
+extern uint8_t  _aAWin23OnAggAET[];
+extern uint8_t  _a1stLeg01[];
+
+/* ---------------------------------------------------------------------------
+ * resultFormatCompact — the `control != 0` format.
+ *
+ * In SWOS2.s every result format is stored as a PADDED display string
+ * immediately followed by a COMPACT one, and `control != 0` selects the second
+ * by walking past the first NUL:
+ *
+ *     aAWin01OnPensAE:   dc.b '    %a WIN %0-%1 ON PENS A.E.T.     ',0
+ *     aAWin01OnPensAE_0: dc.b '%a WIN %0-%1 ON PENS A.E.T.',0
+ *
+ * That is the adjacent-globals pattern: it only works because the assembler
+ * laid the two strings out back to back. In C they are separate objects at
+ * linker-chosen addresses, so the original `while (*fmt) fmt++; fmt++;` walked
+ * off the end of one string into unrelated data. The career fixture list is the
+ * only caller that passes control=1, which is why a drawn cup tie lost its
+ * second line ("CROATIA WIN 4-3 ON PENS A.E.T.") while every other result
+ * screen — all control=0 — looked right.
+ *
+ * Mapping extracted from the label order in SWOS2.s (each entry is literally
+ * "the next label in the data block"). Returns fmt unchanged if it is not one
+ * of the known formats, so an unmapped caller keeps the padded string rather
+ * than reading out of bounds.
+ * ------------------------------------------------------------------------- */
+static uint8_t *resultFormatCompact(uint8_t *fmt)
+{
+    if (fmt == _a1stLeg01)          return _a1stLeg01_0;
+    if (fmt == _a23OnAggAWinOnA_0)  return _aAWinOnAwayGoal_0;
+    if (fmt == _a23OnAggAWin01O_0)  return _aAWin01OnPensAE_7;
+    if (fmt == _aAWin23OnAggAET)    return _aAWin23OnAggAET_0;
+    if (fmt == _a23OnAggAWinOnA)    return _aAWinOnAwayGoal;
+    if (fmt == _a23OnAggAWin01O)    return _aAWin01OnPens_2;
+    if (fmt == _aAWin23OnAgg)       return _aAWin23OnAgg_0;
+    if (fmt == _a23OnAgg)           return _a23OnAgg_0;
+    if (fmt == _aAWin01OnPensAE_3)  return _aAWin01OnPensAE_4;
+    if (fmt == _aAWin01OnPensAE_5)  return _aAWin01OnPensAE_6;
+    if (fmt == _aAWin01OnPensAE)    return _aAWin01OnPensAE_0;
+    if (fmt == _aAWin01OnPensAE_1)  return _aAWin01OnPensAE_2;
+    if (fmt == _aAETReplay)         return _aAETReplay_0;
+    if (fmt == _aAET90Mins23Rep)    return _aAET90Mins23Rep_0;
+    if (fmt == _aAET)               return _aAET_0;
+    if (fmt == _aAET90Mins23)       return _aAET90Mins23_0;
+    if (fmt == _aAWin01OnPensRe)    return _aAWin01OnPens_1;
+    if (fmt == _aAWin01OnPens)      return _aAWin01OnPens_0;
+    if (fmt == _aReplay_0)          return _aReplay_1;
+    return fmt;
+}
 
 /* buildMatchResultStringControl — static storage for the control flag
  * (originally a dc.w in asm right after the function) */
@@ -1721,15 +1791,12 @@ uint8_t *BuildMatchResultString(uint16_t control, uint16_t leg2, uint16_t leg1,
         }
     }
 
-    /* If control is non-zero, skip to the 2nd embedded format string
-     * (advance past the first null terminator) */
-    if (buildMatchResultStringControl != 0) {
-        while (*fmt != 0)
-            fmt++;
-        /* fmt now points at the null; the asm tst.b (a0)+ / bne loop
-         * leaves a0 pointing one past the null, which is the 2nd string */
-        fmt++;
-    }
+    /* control != 0 selects the COMPACT ("second string") form. The asm reached
+     * it by walking past the NUL, which only works because the two strings are
+     * adjacent in the data block; in C they are separate objects, so resolve
+     * the sibling by name instead. See resultFormatCompact(). */
+    if (buildMatchResultStringControl != 0)
+        fmt = resultFormatCompact(fmt);
 
     /* Call PrintFormatted: fmt, out=resultString, d0-d6, %a=winnerName */
     PrintFormatted(fmt, _resultString, d0, d1, d2, d3,
