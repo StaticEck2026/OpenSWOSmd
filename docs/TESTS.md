@@ -275,28 +275,27 @@ native 336x272 render rather than the tester's monitor aspect.
 
 ## 5. Results
 
-Every recording that decodes also replays. First divergence at level `info`:
+Every recording that decodes also replays. The measured numbers live in
+**[TESTS_RESULTS.md](TESTS_RESULTS.md)** — every recording at every level, plus
+the field each one first disagrees on — because they change with the engine and
+this document does not. Regenerate them with:
 
-| recording | ver | frames | first divergence |
-|---|---|---:|---:|
-| `zkz-10190651` | 1.1 | 21279 | 786 |
-| `zkz-11021807` | 1.3 | 4064 | 775 |
-| `playa-10144556` | 1.1 | 21061 | 754 |
-| `zkz-11054632` | 1.1 | 7314 | 700 |
-| `zkz-10140228` / `zkz-10173518` | 1.1 | 39066 / 25586 | 660 |
-| `zkz-12065730` | 1.5 | 1519 | 600 |
-| `zkz-11215003` | 1.1 | 27819 | 117 |
-| `playa-10090613` / `playa-10095214` / `zkz-12080203` | 1.1 / 1.1 / 1.4 | — | 99 |
-| `zkz-10174427` | 1.1 | 26624 | 0 |
+```bash
+scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
+scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
+```
 
-`zkz-12065730` across the levels: **972** frames at `scalars`, **809** at
-`teams`, **600** at `info`, **128** at `sprites`. Hundreds of frames in which
-900+ named fields agree exactly is a real regression net — a change that
-perturbs the simulation will move these numbers immediately.
+The shape of the results, as of the run in that file: **775-1859** frames at
+`scalars`, **600-786** at `info`, and the levels ladder down predictably —
+`zkz-12065730` gets **972** frames at `scalars`, **809** at `teams`, **600** at
+`info`, **128** at `sprites`. Two recordings stop early for reasons of their
+own (see the leads below). Hundreds of frames in which 900+ named fields agree
+exactly is a real regression net: a change that perturbs the simulation moves
+these numbers immediately.
 
 ### What the rig has already found
 
-Four real defects, all fixed in the commit that added it:
+Five real defects so far, all fixed:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
    `zkz-12065730` reaches game-minute 1 at frame 702 and minute 2 at frame 842
@@ -324,6 +323,26 @@ Four real defects, all fixed in the commit that added it:
    even *our own* runs non-deterministic (see above). That one is a real
    gameplay bug outside the rig: the first frame of every match steps its
    timers by an arbitrary amount.
+5. **Frame 0's timer delta was 0 where it should be 1.** Having fixed (4) by
+   zeroing both `_currentGameTick` and `_lastGameTick` at kick-off, frame 0's
+   `ReadTimerDelta` returned 0 — so `_lastFrameTicks` was 0 for one frame and
+   every timer-driven transition in the whole match landed one frame late.
+   `GameLoop` reads the delta once *before* the loop and then jumps to the
+   vblank wait, so on Amiga one VBlank (one tick) falls between that read and
+   the first pass through the body: frame 0's delta is 1 like every other
+   frame's. The fix is to start `_lastGameTick` one *behind* the tick, which is
+   what that pre-loop read latched. Three recordings had been stalling the
+   kick-off at frame 99 (`game_state` still `ST_STARTING_GAME` where the
+   recording had moved on) and now run to **912** and **1253**; a fourth went
+   from 99 to **1300**.
+
+   Two effects hide in this one line, and they are worth separating. Starting
+   the *tick* at 1 gets the same delta, but it also shifts the phase of every
+   `currentGameTick & mask` decision in the AI — and that costs two recordings
+   several hundred frames (`zkz-10190651` 1796 → 1028, `zkz-10173518`'s
+   `sprites` level 117 → 15). Keeping the tick at 0, so it equals the frame
+   number as it does in the reference rig, and moving only `_lastGameTick`,
+   keeps every gain and loses neither.
 
 ### Known non-comparable state
 
@@ -353,6 +372,14 @@ Not bugs; consequences of comparing two different builds.
   `Sprite.isMoving` (29122). "Set" is `0x00FF` little-endian and `0xFF00`
   big-endian; ours says `-1`, which is the same flag without the byte trick,
   and every read is a truth test (`tst.w`, `cmp.b`). Marked `cmp = bool`.
+- **The corner flag is chosen by the camera.** Slot 31 of the recording is a
+  corner flag, and *which* of the four swos-port keeps is picked from the
+  camera position (`if (cameraX >= 176) idx += cameraY >= 349 ? 3 : 1; ...`).
+  Our port has the original's single `_cornerFlagSprite`, so the slot only
+  lines up when the camera happens to select the same corner — view-dependent
+  in exactly the way the camera is. All 48 of its fields carry `cmp = view`.
+  (Found from the results: two recordings' `sprites` level stopped on
+  `sprite[31].y` and nothing else.)
 - **swos-port's own sprite init.** Its `Sprite::init()` sets several fields to
   values its source explicitly calls "for SWOS++/tests compatibility", one of
   which (`frameSwitchCounter = -1`) its comment says SWOS itself starts at 0 —
@@ -367,15 +394,39 @@ Not bugs; consequences of comparing two different builds.
 
 ### Open leads
 
-- **Frame 99, three recordings**: `gameState` 0 vs our 21 (`ST_STARTING_GAME`)
-  and `ball_x` 336 vs 1672 — our kick-off sequence is still running when DOS
-  has already started play. Another pre-match timer, probably in the `GS_*`
-  family.
+Ranked by how many recordings they hold up. See
+[TESTS_RESULTS.md](TESTS_RESULTS.md) for which file stops where.
+
+- **`game_state` / `game_state_pl` transitions**, the largest group by far —
+  every recording's `scalars` and `teams` level ends on one. They are all the
+  §21.4a stopped-state dispatcher firing a frame or two out: the timer that
+  ends a break (`stoppageEventTimer`, `stoppageTimerActive`, the AI's
+  `aiResumePlayTimer`) is stepped by `_lastFrameTicks`, so a one-frame
+  difference anywhere upstream shows up here. Defect (5) above was one of
+  these; there is at least one more.
+- **`sprite[N].frame_index` at ~70-145**, the ceiling on the `sprites` level in
+  almost every recording. `updateSpriteAnimation` only advances a sprite whose
+  `onScreen` is set, and `onScreen` is view-dependent — so this is the view
+  geometry cap, not a simulation bug, and it will not move until there is an
+  Amiga corpus (section 7).
+- **`top_stats.ball_possession`** ends the `teams` level in four recordings,
+  always by drifting one unit and then walking away — the possession
+  accumulator's cadence.
+- **`top_info.current_allowed_direction` at frame 660 — in four independent
+  recordings, to the frame.** This is the sharpest signal the corpus has
+  produced: `current_allowed_direction` is the stick the AI hands to
+  `UpdatePlayers`, and four different matches disagree on it at exactly the
+  same frame. The other four `info`-level stops are
+  `top_info.player_has_ball` / `pl_not_far_from_ball` at 600-786, which are
+  ball-proximity state feeding the same decision, so this is plausibly one
+  cause. Start here.
+- **`zkz-11215003` stops at 117 at every level**, on `game_state_pl` — the only
+  recording that does. Something about that match's break sequence, not a
+  general timing error.
 - **`zkz-10174427` frame 0**: `top_game.players[5]` has `passing` / `tackling`
   / `ballControl` 5 where we compute 4 — a rounding difference in the skill
-  nibbles `InitInGameTeamStructure` derives.
-- **`zkz-12065730` frame 809** (`teams`): `ball_possession` diverges by one and
-  then walks away — the possession accumulator's cadence.
+  nibbles `InitInGameTeamStructure` derives, most likely in the
+  `allPlayerTeamsEqual` price-percentage scaling.
 - The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---

@@ -80,6 +80,14 @@ OFF_CAMERA          = 3756
 OFF_SPRITES         = 3774
 SPRITE_STRIDE       = 110
 NUM_SPRITES         = 33
+# Slot 31 of the recording is a corner flag, and WHICH corner flag is chosen by
+# the camera: swos-port keeps four and picks one with
+#   if (cameraX >= 176) idx += cameraY >= 349 ? 3 : 1; else if (cameraY >= 349) idx += 2;
+# (RecordedDataTest.cpp). Our port has the original's single _cornerFlagSprite,
+# so the slot only lines up when the camera happens to select the same corner —
+# i.e. it is view-dependent in the same way the camera itself is, and every one
+# of its fields carries cmp="view".
+CORNER_FLAG_SPRITE  = 31
 PLAYERINFO_STRIDE   = 61
 NUM_PLAYERS         = 16
 
@@ -339,6 +347,8 @@ def build_schema(major, minor, level):
             for fld in SPRITE_FIELDS:
                 n, t, o = fld[0], fld[1], fld[2]
                 c = fld[3] if len(fld) > 3 else "eq"
+                if s == CORNER_FLAG_SPRITE:
+                    c = "view"
                 out.append(_f("sprite[%d].%s" % (s, n), t, base + o, 3, c))
 
     return out

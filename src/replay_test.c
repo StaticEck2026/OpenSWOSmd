@@ -1040,10 +1040,27 @@ void ReplayTest_FrameStart(void)
          * which every stoppage/referee/clock timer is stepped by, and the
          * value it held coming out of the menus is whatever the wall clock had
          * reached — the one input that made two runs of the same recording
-         * diverge at different frames. */
+         * diverge at different frames.
+         *
+         * _lastGameTick starts one BEHIND the tick, not equal to it. GameLoop
+         * reads the timer delta once before the loop and then jumps to the
+         * vblank wait, so on Amiga a VBlank — one tick — falls between that
+         * read and the first pass through the body: frame 0's _lastFrameTicks
+         * is 1, like every other frame's. Leaving them equal gives frame 0 a
+         * delta of 0, and every timer-driven transition in the match then
+         * lands one frame late — three recordings stalled the kick-off at
+         * frame 99 with game_state still ST_STARTING_GAME, where the fixed rig
+         * runs to 912 and 1253.
+         *
+         * The TICK ITSELF still starts at 0, so currentGameTick == the frame
+         * number and the dozens of `tick & mask` AI decisions keep the phase
+         * the reference rig runs at. Starting it at 1 instead gets the same
+         * delta but shifts that phase, which costs two recordings a few
+         * hundred frames (zkz-10190651 1796 -> 1028) — the two effects look
+         * alike and are not. */
         _currentGameTick = 0;
         _currentTick = 0;
-        _lastGameTick = 0;
+        _lastGameTick = 0xFFFF;
     }
 
     injectInput();

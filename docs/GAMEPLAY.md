@@ -15,9 +15,11 @@ Everything here is derived from the reversed Amiga original
 (`SWOS2.s` → this C port). Where the DOS release differs, the DOS value is given
 alongside; the Amiga value is the reference.
 
-> **Document version 1.7** — 2026-07-29. Five rounds of independent
-> re-verification against the port sources, the last two including blind
-> implementation tests. This is the released baseline.
+> **Document version 1.8** — 2026-09-03. Five rounds of independent
+> re-verification against the port sources (the last two including blind
+> implementation tests), then a sixth check of a different kind: replaying
+> recorded DOS matches against the port frame by frame (docs/TESTS.md). That
+> pass corrected three DOS values here.
 > See [Revision history](#revision-history) before editing.
 
 ---
@@ -5753,7 +5755,7 @@ UpdateTime():
 
     secondsSwitchAccumulator -= timeDelta
     if (secondsSwitchAccumulator >= 0) -> just rebuild the sprite
-    secondsSwitchAccumulator += gsFramesPerGameSecond      /* 49 (DOS 54) */
+    secondsSwitchAccumulator += gsFramesPerGameSecond      /* 49 (DOS 70) */
     gameSeconds++
     if (gameSeconds != 60) -> just rebuild the sprite
     gameSeconds = 0
@@ -6614,7 +6616,7 @@ match.
 | `kPitchBallSpeedInfluence[0..2]` | -2, 2, 3 | -3, 4, 1    |
 | `kKeeperSaveDistance`       | 24            | 16          |
 | `kGoalkeeperDiveDeltas[i]`  | `0x30000 + i*0x8000` | that − `0x8000` |
-| frames per in-game second   | 49            | 54          |
+| frames per in-game second   | 49            | 70          |
 | `endGameCounter` reload     | 50            | 55          |
 | keeper catch z-threshold    | 22            | 27          |
 | penalty auto-advance        | 100           | 110         |
@@ -6623,12 +6625,32 @@ match.
 | result dismissal (half/full)| 600           | 660         |
 | kick-off stoppage           | 750           | 825         |
 | stoppage-event reload       | 50            | 55          |
+| result banner, half/full    | 250           | 275         |
+| result banner, stoppage     | 150           | 165         |
 | movement delta scale        | 1/1           | 41/64       |
 
 The last row is the key one: at 70 Hz every `deltaX`/`deltaY` out of
-`CalculateDeltaXAndY` is multiplied by `41/64` (integer, truncating) so players
-cover the same ground per *second*. Ball trajectories are not scaled there —
-they are retuned through the physics constants above.
+`CalculateDeltaXAndY` is multiplied by `41/64` so players cover the same ground
+per *second*. Ball trajectories are not scaled there — they are retuned through
+the physics constants above.
+
+**Do that multiply as a chain of arithmetic shifts, not as `* 41 / 64`:**
+
+```c
+d = d - (d >> 2) - (d >> 4) - (d >> 5) - (d >> 6);   /* == d * 41/64 */
+```
+
+Shifts round toward −∞ (§25.2); C division rounds toward zero, so the two
+disagree by one on every negative delta, and one unit of X error compounds into
+a different trajectory within a few frames. Verified against swos-port's
+`CalculateDeltaXAndY` vectors: the shift form matches 10/10, the division form
+4/10 (`bin/SWOS --replay-selftest`, docs/TESTS.md §5).
+
+The two result-banner rows and the 70 in the clock row were both **measured**
+from DOS recordings by the replay rig, not read off a table; the clock value in
+particular was 54 in every earlier revision of this document and in
+docs/DOS_GAMEPLAY.md. 140 frames per game-minute with a per-frame decrement of
+30 forces `2N = 140`.
 
 ### 24.11 `kRandomTable`
 
@@ -6713,7 +6735,10 @@ layer against the original:
   the game was balanced around.
 * **Rounding differently in `CalculateDeltaXAndY`.** `>> 8` on a signed 16-bit
   sine, `>> 2` on the camera error, `>> 1` on speeds — all are arithmetic shifts
-  of signed values, which round toward −∞, not toward zero.
+  of signed values, which round toward −∞, not toward zero. The DOS `41/64`
+  delta scale (§24.10) is the same trap wearing a different hat: written as
+  `* 41 / 64` it rounds toward zero and every negative delta comes out one
+  short.
 * **Taking the square root of `ballDistance`.** Every threshold in the engine is
   a squared constant.
 * **Treating the three ball-proximity flags as cumulative.** They are mutually
@@ -6814,12 +6839,39 @@ a HIL/RPL recording; see the second block below for why:
 
 * `currentGameTick` must increment exactly once per simulation frame and be the
   only source of the dozens of `tick & mask` decisions.
+* **`currentTick` too.** It is a second counter, and it is *also* read by
+  gameplay — `currentTick & 2` decides whether the ball-control skill bonus is
+  added to a controlled ball's speed (§12.4). On the Amiga both counters are the
+  same VBlank interrupt, so this is easy to miss; on a host that drives them
+  from a timer thread they drift apart and that decision becomes a coin toss.
+* **`lastGameTick` must be reset when the match starts.** `lastFrameTicks` is
+  `currentGameTick - lastGameTick`, and §21's `resultTimer`,
+  `stoppageEventTimer`, `endGameCounter`, `refTimer` and `inGameCounter` are all
+  stepped by it. Left over from the menus, it makes frame 0 step every one of
+  them by an arbitrary amount. **Frame 0's delta is 1, like every other
+  frame's**: `GameLoop` reads the delta once before the loop and then waits for
+  vblank, so one tick falls between that read and the first pass through the
+  body. Reset `lastGameTick` to one *behind* `currentGameTick`, not equal to
+  it — equal gives frame 0 a delta of 0 and every timer-driven transition in
+  the match lands a frame late.
+* **Reset the tick's value and the tick's phase separately.** They look like
+  one knob and are two: `lastFrameTicks` is a *difference*, while the dozens of
+  `currentGameTick & mask` AI decisions read the *absolute* value. Starting the
+  tick at 1 fixes the delta and silently rotates every one of those masks by
+  one frame. Keep `currentGameTick` equal to the frame number and move
+  `lastGameTick` instead.
 * `Rand()` and `Rand2()` must stay on separate state, and `Rand2`'s
   save/restore stack must be preserved.
 * `frameCount` drives the team alternation, so it must also advance exactly once
   per frame.
 * No gameplay decision may read the wall clock, the frame time, or a
   floating-point value.
+
+These are testable rather than aspirational: `scripts/replay_test.sh`
+(docs/TESTS.md) replays a recorded match frame by frame and compares 900+ named
+globals per frame. The first three bullets above are there because the rig found
+each of them violated in this port — two runs of the same recording diverged at
+different frames until all three were fixed.
 
 **What replay determinism does and does not require.** Be clear about which kind
 of determinism is at stake, because SWOS's replay format makes the distinction
@@ -6853,6 +6905,7 @@ matter:
 
 | Version | Date       | Sections touched | Change |
 |---------|------------|------------------|--------|
+| 1.8     | 2026-09-03 | §21.1, §24.10, §25.2, §25.5 | First round checked by **measurement** rather than by reading: the recorded-game replay rig (docs/TESTS.md) replays a DOS match frame by frame against the port and compares 900+ named globals per frame, so a wrong constant shows up as a divergence at a specific frame. **`CORRECTION:`** §24.10/§21.1 — **frames per in-game second is 70 on DOS, not 54.** Every earlier revision said 54, taken from a swos-2020 comment. The recording reaches game-minute 1 at frame 702 and minute 2 at frame 842 = 140 frames per game-minute; the accumulator decrements by `gameLenSecondsTable[0] = 30` per frame and reloads by `N`, so 60 seconds take `2N` frames and `N = 70`. 54 would give 108 frames/minute, swos-2020's alternative 69 would give 138. swos-port's independent decompile says 70 as well. §24.10 — the `41/64` delta scale must be the **shift chain** `d - (d>>2) - (d>>4) - (d>>5) - (d>>6)`, not `* 41 / 64`; §25.2 already warned that these shifts round toward −∞ while C division rounds toward zero, but the table's own note said "integer, truncating" and so specified the wrong one. Every negative delta came out one unit short and the trajectory forked within a few frames; against swos-port's reference vectors the shift form scores 10/10 and the division form 4/10. **`ADDED:`** §24.10 — the two DOS result-banner lengths (275 half/full, 165 stoppage, against the Amiga's 250/150), which gate the §21.4a stopped-state dwell and the §16 AI's `resultTimer != 0` test. §25.5 — **`currentTick` is a second gameplay-read tick counter** (`currentTick & 2` gates the ball-control speed bonus), and **`lastGameTick` must be reset when a match starts, to one behind `currentGameTick` rather than equal to it**: `lastFrameTicks` steps `resultTimer`, `stoppageEventTimer`, `endGameCounter`, `refTimer` and `inGameCounter`, so left over from the menus it steps all five by an arbitrary amount, and set equal it makes frame 0's delta 0 and lands every timer-driven transition in the match a frame late. §25.5 also now separates the tick's *value* from its *phase* — `lastFrameTicks` is a difference, the `tick & mask` AI decisions read the absolute value, and fixing the first by starting the tick at 1 silently rotates all of the second. Both were live defects in this port, found because two runs of the same recording diverged at different frames. §25.5 now names the rig as the way to check the section rather than trust it. |
 | 1.7     | 2026-07-29 | §1.3, §1.3a, §2.3, §2.4, §4, §5, §8, §8.10, §8.10a, §11.2, §11.3, §13.2, §14.4, §15.1–§15.5, §15.7 (new), §16.2, §16.4, §16.5, §16.6, §19, §20.2, §21.1, §21.2, §21.3, §21.4, §22, §24.6, §24.7, §25.4, §25.5, Known gaps | Fifth and final round before release. Three agents: a release-gate audit of every v1.6 addition, a precision pass over the goalkeeper (§15), and a **second blind implementation** — a fresh agent, given only this document, which wrote and compiled 3488 lines of C covering §13–§22 and reported every point the text failed it. Between them they found one clock-stopping omission, one empty branch, one no-op arm and eleven elided expressions. **`CORRECTION:`** §21.1/§21.2 — **nothing in the document ever cleared `gameSeconds` back from `-1`.** Each of the four boundary minutes is entered *twice*: the first pass arms the injury-time wait, and only the second pass writes `gameSeconds = 0` and blows the whistle. A port following the old text reached 45:00, whistled, kicked off the second half correctly and then **never advanced the clock again**, because `UpdateTime`'s first test sent every later frame back into "last minute in progress". This was the worst defect in the document. §15.1/§24.7 — `shotChanceTable` is **never** repointed for a penalty; `penaltyGoalieSkillTable` is read at exactly one site (the diving-contact parry), so its `index[]` and `field_30`/`field_3A` are dead and every other penalty decision still uses the keeper's own skill table. §15.2 — "the keeper's `destY` is *always* clamped" was false (four paths skip it), the opening sentence contradicted the body (the *cascade* is gated on `live`, the routine is not), and branch D's far arm has a **second** burst-out test the document showed once. §15.5 — the scattered-parry Y scatter is `((tick & 0x1F) << 4) - 256`, i.e. `-256..+240` in steps of 16, **not** a symmetric ±256, and the second speed subtraction reuses the pre-subtraction value (final speed `×5/8`, not `×9/16`); the four-way parry decision collapses to two, because `d1 - field_2` is always negative. §16.6 — both AI spin arms **do** assign `currentAllowedDirection`; as written they computed a value and discarded it, and since §16.1 has already centred the stick, §12.5 then took the lofted-straight arm — every CPU curled shot became a lofted straight one. §16.6's single "distance to goal" rule for `AI_afterTouchStrength` is wrong: there are six per-call-site rules, on two different partitions of `d6`. §16.5's mid-range gated tree belongs to **§16.4** (it is the "no fire" fallback), not to "nobody near the ball" — it had been filed under the wrong branch since v1.4. §14.4's cards — the sending-off path does **not** increment `player.cards`, and does set `bookedPlayer`/`lastTeamBooked`/`refTimer`, all three of which §19 requires. §19 — the card decoder's `entry == 1` / `entry == 2` arms are **unreachable** given the three tables (which contain only `0`, `9` and `-1`), so `SPR_YELLOW_CARD`/`SPR_RED_CARD` are dead and the visible card comes from the referee's *own* animation; also "a 5-state machine" listing six states. §20.2's `(0,0)` note still ended with an out-of-bounds claim v1.6 had already corrected. **`ADDED:`** §15.2's **midrange positioning body** — an empty branch until now, and the most common save situation in the game; the keeper's wrong-half threshold (`y > 449`, strict on one side only); §15.3's penalty side-guess as two explicit tick masks (and why variant 1's slower dive speed is the "guessed wrong" speed); §15.5's diving-contact overlap windows in full, with `pixWidth` named as asset data; the `kKeeperEaseBallTable` easing expression; §13.2's two-step static-header turn, and that the *stick* rather than the facing decides where the header goes; §11.2's raw initialisers (`d1`/`d2`/`d3`/`d6` are read before the document assigned them) and §11.3's key fact that **the integrators have no ground and no `z` termination** — adding one silently turns dipping shots from "on target" into "off target", which is exactly what it did to the blind implementer; §16.4's "not deep" test (the 6-yard-box Y bounds) and the four leaves of its fallback tree; §16.5's long-ball spin bias in full (three X bands × a 3-bit tick bucket); §16.2's keeper's-ball facing set (`{1,3}` left of centre, `{5,7}` right) and the `aiTurnDirection` oscillator's real mechanics (it reverses only when `playerTurnFlags` blocks the step, and issues no direction on the frame it reverses); §21.3's five match-option globals with `extraTimeState`/`penaltiesState` as a **tri-state**, not a boolean; §22's goal-attempt tracker as code, including that the arm and the clear use *opposite* team assignments and differ by `>` vs `>=` at the centre line; `PlayerInfo.position`'s 0..7 role encoding, without which §8.10a's three-tier selector cannot be written; §8.10's phase `-1` hand-off to the idle-target path, without which the incoming substitute walks *away* from the pitch; `numYellowCards` as a five-value **state** rather than a count; §1.3a rows for `gameSeconds`, `endGameCounter`, `secondsSwitchAccumulator`, `refState`, `refTimer`, `aiCounter`, `aiResumePlayTimer`, `aiTurnDirection`, `field_84` and `isGoalAttempt`; §15.7 — a **worked example** that walks one keeper frame end to end and names, at every step, which unfixed variable decides the next branch. **`CLARIFIED:`** §16.6 — the CPU's stick is consumed **one team update late** and that is correct, because `ApplyBallAfterTouch` sits in `UpdatePlayers`' preamble while the AI writes the stick inside the per-player dispatch; §22 — `strikeDestX` is deliberately stale, so do not refresh it; §15.3 — the one-on-one duel resolves the attacker's shirt number inside the **keeper's** squad (an original-SWOS bug that is nonetheless behaviour, and must be reproduced); §4/§25.5 — the RNG rules are *simulation*-determinism requirements, not replay-playback requirements; §25.4 now records the one place the C ports themselves are wrong. |
 | 1.6     | 2026-07-29 | §1.3, §1.3a (new), §4, §8.3, §8.10a, §11.3, §12.6, §14.3, §15.2, §16.2, §18.1, §20.1, §20.2, §21.1, §21.3, §24.2a (new), §24.6, §25.5, Known gaps | Round 4 completed (it had been cut short by a session limit). Three agents: an audit of the round-3 additions, an independent source-first pass over the least-reviewed sections, and a **blind implementation** — an agent allowed to read only this document, which wrote and compiled a 2052-line simulation from it and logged every point the text failed it. **`CORRECTION:`** the v1.5 RNG seeding block invented a third line, `randXorKey = kRandomTable[randXorIndex]`, that no code path performs — `randXorKey` starts at 0 and is written only inside `Rand()`'s own rekey arm, so following it XORed every value before the first wrap with the wrong key; seeding also happens on game-**mode** entry, not per match, and the state does start zeroed. §21.3's minute-90 resolution was written as an if/else-if chain when the away-goals block **falls through** to extra time and penalties if the adjusted totals are also level — as documented, a level second leg could never reach extra time. Minute 120 is not "the same as minute 90" (no extra-time arm, no score snapshot, no half-played mark). §11.3's sample-at-ball paths zero `strikeDest*` rather than setting it to the ball position, and the two `deltaX` arms have an already-past-the-keeper early exit. §20.1's subs-menu margin defaults to 37, not 0; §20.2's `cameraDirection < 0` yields `(0,0)` rather than an out-of-bounds table read; every non-tracking camera branch also zeroes both velocity accumulators. §14.3's severity upgrade is an **unsigned** byte compare (0x20..0xE0 read as -128..-32 signed, which inverts the rule). §24.6's "all indexed 0..7" heading was false for eight of its tables. `forceLeftTeam` has **eight** read sites, not six, and the eighth is disguised as `== ST_GOAL_OUT_LEFT`. **`ADDED:`** §24.2a — `kKickSpinFactor` and `kPassingSpinFactor`, which appeared exactly once in the whole document (at their use site) and in no table section, making aftertouch, chips, long passes and all of §16.6 unimplementable; this was the worst blocker found. §1.3a — a set/stepped/cleared lifecycle table for every load-bearing shared global, which is the class of defect that cost the blind implementer the most time (a missing *writer* presents as your own bug, not as missing text). The `inGameCounter` increment (read by §8.8's freeze gate, previously zeroed twice and stepped nowhere — omit it and no off-ball player repositions again after the first corner). `StopAllPlayers()`'s full eight-field clear, including `ballInPlay`/`ballOutOfPlay`, which is what actually terminates the §18.3 hand-over. A definition for "toggle timers"; the corner-table selection (by foul spot, not by state); the `aiThrowInDirections` rotate semantics; and the squared-distance note on the keeper's rush-out test. **`CLARIFIED:`** §25.5 — the `onScreen` cull also decides which sprites a newly *made* recording contains, even though playback is unaffected. Both previously UNVERIFIED items are resolved: `gameMaxSubstitutes > 5` is unreachable from every menu and all 89 shipped presets, and `substitutedPlX/Y` has no reader at all. |
 | 1.5     | 2026-07-29 | §3.2, §4, §5, §18.1, §18.3, §25.5 | **`CORRECTION:`** v1.4 claimed that a port with substitute artwork "cannot reproduce a SWOS replay frame-for-frame" and that this port breaks cross-machine replay determinism. **Both were wrong.** A HIL/RPL recording is a packed `(spriteIndex, x, y)` **position** stream, not an input stream, so playback never re-simulates and replay fidelity does not depend on `onScreen`, on sprite metrics or on the view width. §25.5 now documents the actual technique instead: re-derive the replay camera by tracking the **ball shadow** (image 1069 — constant every frame at the ball's ground X, unlike the ball itself whose image changes with height), reconstruct `ballWorldX = recordedCameraX + recordedShadowScreenX`, and drive the §20 camera model from it — which plays any recording correctly at any width, and is what this port does. The `onScreen` caveat is scoped to input-level re-simulation (lockstep/rollback), which the original never performs. `CORRECTION:` §18.1's throw-in state selection had been reduced to the hand-wave "the matching `ST_THROW_IN_*` for (side, zone, which team throws)" during the v1.2 rewrite; all twelve cases are restored. **`ADDED:`** the RNG seeding (`seed = currentTick >> 8`, `randXorIndex = currentTick & 0xFF`) — v1.4 defined the generators but never their initial state, which is observable on the first call; the `stoppageEventTimer` decrement site, previously armed in nine places and decremented in none; why the `destReachedState` handshake cannot deadlock even though `1 → 2` happens only in the idle branch (`StopAllPlayers` clears both teams' `controlledPlayer` at the start of every break — a port that keeps one alive across a restart *will* deadlock); and a note that the 14 sine-table deviations' signs are not derivable, so the literal table must be transcribed for bit-exactness. Round 4's three agents were cut short by a session limit before filing reports; these items were salvaged from a blind implementation attempt (an agent that could read only this document and tried to build the simulation from it). Its remaining flagged gaps are listed under "Known gaps" below. |
