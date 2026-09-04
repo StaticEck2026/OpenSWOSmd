@@ -2162,19 +2162,32 @@ rule that fits all three presses — runs
 so nothing else in either recording disagrees with this port. That is the
 corpus at **98.0%** instead of 87.1%.
 
-The mechanism is half-known, and the half that is missing is the half that
-matters. `MainKeysCheck` reads the input at GameLoop line 666 and
-`UpdateAndApplyTeamControls` writes `secondaryFire` — the thing the recording
-carries — at line 703, so the two sample the SAME input at two points in the
-frame. A press before 666 is seen by both and gives lag 0; a press between 666
-and 703 is seen only by the later one and gives lag 1. Both land the recorded
-rise on the same frame, and `p1_controls` (sampled at the frame's end) rises
-there too, so nothing in the record says which side of 666 the press fell on.
-A press after 703 would separate the two signals by a frame, and the schema
-note records that no press in the corpus does.
+**The mechanism is now fully known, and it is why this cannot be recovered.**
+One physical key reaches the game down TWO independent paths:
 
-The rule is NOT shipped, and should not be until somebody closes that last
-gap. Three presses and a one-bit predicate is not evidence, and this is
+- the **polled bitmask**. `Player1StatusProc` reads one input word and splits
+  it — `test ax, 32` is fire, `test ax, 64` is `pl1SecondaryFire`
+  (swos.asm:13033-13037). That is the same bit 6 the recording carries as
+  `p1_controls & RC_BENCH`, and `UpdateAndApplyTeamControls` copies it into
+  `TeamGeneralInfo.secondaryFire` (swos.asm:100610), which is the other half
+  of what the recording carries.
+- the **buffered scancode**. `bench1Called` is set nowhere else in either
+  listing than `MainKeysCheck`, off the key itself (swos.asm:7984,
+  SWOS2.s:21900) — and `MainKeysCheck` runs at GameLoop line 666 where
+  `UpdateAndApplyTeamControls` runs at 703.
+
+So the recording records the *bitmask* latch and the game opens the bench off
+the *scancode* latch, and a scancode can arrive a frame after the bitmask sees
+the key held. Nothing in the record times the queue. `p1_controls` is sampled
+at the frame's end and rises with the level, and a press after 703 would
+separate the two recorded signals by a frame — the schema note records that no
+press in the corpus does, which pins the press inside the frame but not inside
+the frame's 666.
+
+The rule is NOT shipped, and on this evidence it should not be: there is no
+mechanism left to find, only a coin-flip to guess. Closing this needs a
+recording that carries `bench1Called` itself — which the Amiga dumper
+(section 8) would, since it is our own build being dumped. Three presses and a one-bit predicate is not evidence, and this is
 a rule in the HARNESS: a test rig carrying an unexplained fudge to make itself
 pass is worth less than one that stops honestly. Every gate input was traced
 identical at both frames (see above), so if there is a mechanism it is not in
