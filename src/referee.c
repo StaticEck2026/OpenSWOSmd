@@ -11,6 +11,7 @@
  */
 
 #include "referee.h"
+#include "dos_mode.h"      /* _gDosGameplay: the DOS second-yellow table runs off its end */
 #include "display.h"      /* SIM_REFEREE_ENTRY_BELOW: f(view) */
 #include "game_types.h"
 
@@ -422,14 +423,59 @@ void UpdateBookedPlayerNumberSprite(void)
     _refTimer += _lastFrameTicks;
     uint16_t tableIdx = _refTimer >> 3;
 
-    /* Select card display table */
-    int8_t *table;
+    /* Select card display table.
+     *
+     * The second-yellow table is where the two releases part company, and it
+     * is a bug in the DOS build rather than a choice. The Amiga's is 46 bytes
+     * and terminates properly:
+     *
+     *      secondYellowTable:                          ; SWOS2.s:16637
+     *              dc.b 0,9,0,9,0,9,0,9,0,9,0,9,0,0,0,0
+     *              dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+     *              dc.b 0,0,0,0,0,0,0,0,0,0,0,0,-1,0    ; -1 at index 44
+     *
+     * The DOS one is 27 bytes and has NO terminator at all — 23 on one line
+     * and 4 on the next (swos.asm:245189) — so `secondYellowTable[27]` reads
+     * straight into `unusedPalTable01`, which the assembler places next.
+     * The yellow and red tables are 30 bytes with their -1 at index 29 in
+     * BOTH builds; only this one is short.
+     *
+     * That overrun is visible behaviour, and zkz-10174427 shows it frame for
+     * frame. `refTimer >> 3` indexes the table, the booking commits at f21711:
+     *
+     *      indices 0..11   refTimer   0..95    0/9 -> the number blinks 8 on, 8 off
+     *      indices 12..26  refTimer  96..215   zeros -> hidden
+     *      index 27        refTimer 216..223   96 -> SHOWN   <- past the end
+     *      index 28        refTimer 224..231    3 -> SHOWN
+     *      index 29        refTimer 232        153, and as a SIGNED byte that
+     *                                          is -103 -> the negative
+     *                                          sentinel: the referee leaves
+     *                                          and the player is sent off
+     *
+     * and the recording's `sprite[29].image_index` turns on at f21927 and off
+     * at f21943, which is refTimer 216 and 232 exactly. The Amiga instead
+     * stays hidden until its real -1 at index 44, refTimer 352 — so a DOS
+     * second yellow ends 120 frames sooner than an Amiga one.
+     *
+     * Reproduced by giving the DOS path its own array: the 27 real bytes
+     * followed by the palette bytes that actually sit behind them. */
+    static const int8_t k_dosSecondYellowTable[46] = {
+        0, 9, 0, 9, 0, 9, 0, 9, 0, 9, 0, 9,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* ends here: 27 bytes */
+        /* unusedPalTable01 (swos.asm:245192), read as signed bytes */
+        (int8_t)96,  (int8_t)3,   (int8_t)153, (int8_t)9,   (int8_t)255,
+        (int8_t)15,  0,           0,           (int8_t)33,  (int8_t)7,
+        (int8_t)64,  (int8_t)10,  (int8_t)113, (int8_t)15,  (int8_t)80,
+        (int8_t)2,   (int8_t)48,  0,           (int8_t)112
+    };
+
+    const int8_t *table;
     if (_whichCard == CARD_YELLOW) {
         table = _yellowCardTable;
     } else if (_whichCard == CARD_RED) {
         table = _redCardTable;
     } else {
-        table = _secondYellowTable;
+        table = _gDosGameplay ? k_dosSecondYellowTable : _secondYellowTable;
     }
 
     int8_t entry = table[tableIdx];
