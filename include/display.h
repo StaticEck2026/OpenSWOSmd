@@ -455,6 +455,13 @@ extern int16_t _sim_view_height;
  * 303..323 at 272 lines, and 339..359 at 200 — which is exactly what the DOS
  * release's own MoveCamera compares against, so this is one more f(view)
  * constant rather than a platform difference. */
+/* Where ActivateReferee parks the referee when he enters from BELOW the view:
+ * `addi.w #287,d2` on the Amiga (SWOS2.s:15172) against `add word ptr D2, 215`
+ * on the DOS build (swos.asm:102740). 287 - 215 = 72 = the view-height
+ * difference, so it is the bottom edge plus 15, not a literal. (The sibling
+ * `- 20` for entering from ABOVE is the top edge and is 20 in both.) */
+#define SIM_REFEREE_ENTRY_BELOW ((int16_t)(_sim_view_height + 15))
+
 #define SIM_CAMERA_BENCH_Y_LO ((int16_t)(0x1C1 - 10 - SIM_CAMERA_CENTRE_Y))
 #define SIM_CAMERA_BENCH_Y_HI ((int16_t)(0x1C1 + 10 - SIM_CAMERA_CENTRE_Y))
 

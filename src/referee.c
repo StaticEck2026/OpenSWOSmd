@@ -11,6 +11,7 @@
  */
 
 #include "referee.h"
+#include "display.h"      /* SIM_REFEREE_ENTRY_BELOW: f(view) */
 #include "game_types.h"
 
 /* ---- Referee state machine ---- */
@@ -128,8 +129,10 @@ void ActivateReferee(void)
 
     /* Position above or below camera based on foul Y */
     if (_foulYCoordinate <= 449) {
-        /* Foul in upper half: referee enters from bottom */
-        d2 = (int16_t)_cameraY.s.i + 287;
+        /* Foul in upper half: referee enters from bottom — one view height
+         * below the camera plus 15. Was a hard-coded 287, which is the Amiga's
+         * 272-high view; the DOS build writes 215 for its 200-high one. */
+        d2 = (int16_t)_cameraY.s.i + SIM_REFEREE_ENTRY_BELOW;
     } else {
         /* Foul in lower half: referee enters from top */
         d2 = (int16_t)_cameraY.s.i - 20;

@@ -82,6 +82,33 @@ int16_t  _gsPlayerDownTimer      = 50;  /* GS_55_50   tackle_foul.c/headers.c */
  * throw-in taker the reference left facing where he was (docs/TESTS.md). */
 int16_t  _gsThrowInHideResult    = 50;  /* GS_55_50   update_players.c  throw-in UI */
 
+/* ---- stoppageEventTimer reloads (match_setup.c) ----
+ * How long each end-of-period pause runs before the state machine advances.
+ * Both listings write these as literals and they are NOT one family: of the
+ * twelve sites, seven scale x1.1 and five do not, so they are paired here
+ * routine by routine rather than scaled wholesale.
+ *
+ *   routine                      SWOS2.s   swos.asm   scaled
+ *   UpdateCameraBreakMode           50        55       yes -> _gsStoppageEventReload
+ *   UpdateCameraBreakMode           75        75       no
+ *   StartingMatch                  100       100       no
+ *   SetCameraMovingToShowerState   100       110       yes
+ *   EndFirstHalf                   100       100       no
+ *   FirstHalfJustEnded             250       275       yes
+ *   EndOfGame                      150       150       no
+ *   PlayersLeavingPitch            250       275       yes
+ *   GoToHalftime                   700       770       yes
+ *   GameOver                      1500      1650       yes
+ *   StartFirstExtraTime            100       110       yes
+ *   EndFirstExtraTime              100       110       yes
+ *
+ * Found by the replay rig: zkz-10140228 left ST_GOING_TO_HALFTIME 25 frames
+ * early because FirstHalfJustEnded armed 250 where the DOS build arms 275. */
+int16_t  _gsStoppageShowerPan    = 100;  /* GS_110_100  camera to showers, extra time */
+int16_t  _gsStoppageHalfEnded    = 250;  /* GS_275_250  first half / players leaving */
+int16_t  _gsStoppageHalftime     = 700;  /* GS_770_700  GoToHalftime */
+int16_t  _gsStoppageGameOver     = 1500; /* GS_1650_1500 GameOver */
+
 /* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
  * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
  * render.cpp:4682): the deltaX/deltaY computed by CalculateDeltaXAndY are scaled by
@@ -158,6 +185,10 @@ void ApplyGameStyle(void)
     _gsCameraLeavingSubs    = dos ? 55  : 50;
     _gsPlayerDownTimer      = dos ? 55  : 50;
     _gsThrowInHideResult    = dos ? 55  : 50;
+    _gsStoppageShowerPan    = dos ? 110 : 100;
+    _gsStoppageHalfEnded    = dos ? 275 : 250;
+    _gsStoppageHalftime     = dos ? 770 : 700;
+    _gsStoppageGameOver     = dos ? 1650: 1500;
 
     /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
      * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't

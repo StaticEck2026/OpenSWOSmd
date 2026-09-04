@@ -377,9 +377,9 @@ corpus (see "Can we claim 100% accurate?"), but it moves for exactly one reason,
 which is a defect being fixed.
 
 The shape of the results, as of the run in that file: **1252-14519** frames at
-`scalars`, **1251-14519** at `info` and at `sprites` — **34.8%** of every
-recorded frame in the corpus at `scalars` and **34.6%** at `sprites`, which are
-now within a fifth of a point of each other — and **401 of 416**
+`scalars`, **1251-21927** at `info` and at `sprites` — **40.9%** of every
+recorded frame in the corpus at `scalars` and **40.8%** at `sprites`, which are
+now within a tenth of a point of each other — and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). Every recording is in those
 ranges now: `zkz-10174427`'s frame-0 stop was the coverage byte that
@@ -674,7 +674,7 @@ and would mean what it says.
 
 ### What the rig has already found
 
-Thirty-four real defects so far, all fixed — plus the two in "The `onScreen`
+Thirty-six real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -844,6 +844,15 @@ ceiling" below, which that measurement turned up on its own:
     says "/= 32", in *both* listings — one wrong annotation inherited from the
     shared DOS IDA database. We had `>>= 5`. `playa-10095214` 4419 → 10129. See
     "The comment is not the code" below.
+35. **The referee's entry position was a literal, not `f(view)`.** He enters
+    from below at `cameraY + 287` on the Amiga and `+ 215` on DOS — a
+    difference of exactly one view height. Now `SIM_REFEREE_ENTRY_BELOW`.
+    `zkz-10140228` 7053 → 11833.
+36. **Seven of the twelve `stoppageEventTimer` reloads scale ×1.1 and five do
+    not** — including two 100s that stay where three others become 110. We had
+    the Amiga values throughout, so DOS mode left every end-of-period pause
+    early. `zkz-10140228` 11833 → 14282, `zkz-10174427` 14519 → 21927. See
+    "Twelve reloads, seven of which scale" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1846,6 +1855,64 @@ onto as a rule in its own right:
 This is the same discipline as "a disassembly shows what is stored, not what is
 executed", one level further out: a disassembly also shows what somebody
 *thought* it did.
+
+### Twelve reloads, seven of which scale
+
+`zkz-10140228` stopped at 7053 on `sprite[30]` — the referee — with his Y 72
+pixels out and his `delta_x` exactly half ours. 72 is the view-height
+difference, 272 − 200, which points at a constant that should be `f(view)` and
+is not. A watchpoint put the write in `ActivateReferee`:
+
+```
+    Amiga  SWOS2.s:15172    addi.w  #287,d2
+    DOS    swos.asm:102740  add     word ptr D2, 215
+```
+
+287 − 215 = 72. The referee entering from *below* is parked one view height plus
+15 under the camera, and the literal was the Amiga's 272-high view — the same
+shape as the bench-slide window, and now `SIM_REFEREE_ENTRY_BELOW`. Its sibling
+`- 20`, for entering from *above*, is 20 in both listings: that one is measured
+from the top edge and genuinely is not view-dependent. **7053 → 11833.**
+
+The new stop was `game_state` 23 recorded against our 25 — we leave
+`ST_GOING_TO_HALFTIME` early — and `zkz-10174427` had been sitting on the same
+transition at 14519. `stoppageEventTimer` gates it, and grepping the literal in
+both listings gives the whole family at once:
+
+| routine | `SWOS2.s` | `swos.asm` | scaled |
+|---|---:|---:|:--:|
+| `UpdateCameraBreakMode` | 50 | 55 | ✓ |
+| `UpdateCameraBreakMode` | 75 | 75 | |
+| `StartingMatch` | 100 | 100 | |
+| `SetCameraMovingToShowerState` | 100 | 110 | ✓ |
+| `EndFirstHalf` | 100 | 100 | |
+| `FirstHalfJustEnded` | 250 | 275 | ✓ |
+| `EndOfGame` | 150 | 150 | |
+| `PlayersLeavingPitch` | 250 | 275 | ✓ |
+| `GoToHalftime` | 700 | 770 | ✓ |
+| `GameOver` | 1500 | 1650 | ✓ |
+| `StartFirstExtraTime` | 100 | 110 | ✓ |
+| `EndFirstExtraTime` | 100 | 110 | ✓ |
+
+**Seven scale and five do not**, and two of the unscaled ones are 100 — the same
+literal as three that do. There is no rule to apply here, only a table; scaling
+"the 100s" would have been wrong three times out of five. This is the discipline
+the player-down timer established, and the first time the corpus has offered a
+whole family at once to apply it to.
+
+Four constants cover the seven: `_gsStoppageShowerPan` (100/110),
+`_gsStoppageHalfEnded` (250/275), `_gsStoppageHalftime` (700/770) and
+`_gsStoppageGameOver` (1500/1650).
+
+`zkz-10140228` went **7053 → 14282**, `zkz-10174427` **14519 → 21927** — 82.4%
+of itself — and `playa-10090613`, which stops elsewhere, 10426 → 11222. Corpus
+coverage went **34.6% → 40.8%** at `sprites`.
+
+> Grepping the *literal* across both listings — `move.w #…,(stoppageEventTimer)`
+> against `mov stoppageEventTimer,` — took one command and produced a table that
+> would have taken a dozen watchpoints to assemble one stop at a time. When a
+> constant turns out to be release-specific, ask immediately how many siblings
+> it has.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 

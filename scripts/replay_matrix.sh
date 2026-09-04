@@ -178,6 +178,8 @@ they were found.
 | 32 | `a2` is a parameter holding the **ball**, not an uninitialised local; declaring it NULL and guarding the read made the free-kick spin gate never fire | missing parameter |
 | 33 | `tst.l` on the two-byte `longPass` spans `longSpinPass` too — three of four sites tested one field, so a spin-pass threw the pass landing point across the pitch | wider access than the field |
 | 34 | A shift count taken from a **comment** ("/= 32") instead of the four instructions beneath it (/16) — wrong in both listings, one bad annotation from the shared IDA database | comment believed over code |
+| 35 | The referee's entry position was the Amiga's literal `cameraY + 287` rather than `f(view)` — the DOS writes 215, one view height less | view-dependent constant |
+| 36 | Seven of the twelve `stoppageEventTimer` reloads scale x1.1 and five do not, including two 100s that stay where three become 110 — DOS mode left every end-of-period pause early | timing constant |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -186,7 +188,7 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Sixteen of the thirty-three are a **DOS-vs-Amiga difference** — mostly timing
+Eighteen of the thirty-five are a **DOS-vs-Amiga difference** — mostly timing
 constants, one a whole data set (30), and three (28, 29, 31) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what

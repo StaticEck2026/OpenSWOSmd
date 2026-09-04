@@ -34,6 +34,10 @@ extern TeamGeneralInfo *_lastTeamPlayedBeforeBreak;
 extern uint16_t _stoppageTimerTotal;
 extern uint16_t _stoppageTimerActive;
 extern uint16_t _stoppageEventTimer;
+extern int16_t _gsStoppageShowerPan;   /* stoppageEventTimer reloads — dos_gameplay.c */
+extern int16_t _gsStoppageHalfEnded;
+extern int16_t _gsStoppageHalftime;
+extern int16_t _gsStoppageGameOver;
 extern uint16_t _halfNumber;
 extern uint16_t _teamStarting;
 extern uint16_t _teamPlayingUp;
@@ -448,7 +452,7 @@ void SetCameraMovingToShowerState(void)
     SetBallPosition(1672, 449);
     _hideBall = 0;
     InitTeamsData();
-    _stoppageEventTimer = 100;
+    _stoppageEventTimer = (uint16_t)_gsStoppageShowerPan;   /* Amiga 100 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_CAMERA_GOING_TO_SHOWERS;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = 101;
@@ -490,7 +494,7 @@ __attribute__((used, externally_visible))
 void FirstHalfJustEnded(void)
 {
     _hideBall = 0;
-    _stoppageEventTimer = 250;
+    _stoppageEventTimer = (uint16_t)_gsStoppageHalfEnded;   /* Amiga 250 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_GOING_TO_HALFTIME;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = ST_STOPPED;
@@ -524,7 +528,7 @@ __attribute__((used, externally_visible))
 void PlayersLeavingPitch(void)
 {
     _hideBall = 0;
-    _stoppageEventTimer = 250;
+    _stoppageEventTimer = (uint16_t)_gsStoppageHalfEnded;   /* Amiga 250 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_PLAYERS_GOING_TO_SHOWER;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = 0x65;
@@ -546,7 +550,7 @@ void GoToHalftime(void)
     SetBallPosition(1672, 449);
     _resultTimer = 30000;
     _timeVar = 32000;
-    _stoppageEventTimer = 700;
+    _stoppageEventTimer = (uint16_t)_gsStoppageHalftime;   /* Amiga 700 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_RESULT_ON_HALFTIME;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = ST_STOPPED;
@@ -578,7 +582,7 @@ void GameOver(void)
     SetBallPosition(1672, 449);
     _resultTimer = 30000;
     _timeVar = 32000;
-    _stoppageEventTimer = 1500;
+    _stoppageEventTimer = (uint16_t)_gsStoppageGameOver;   /* Amiga 1500 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_RESULT_AFTER_THE_GAME;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = ST_STOPPED;
@@ -605,7 +609,7 @@ void StartFirstExtraTime(void)
 
     _hideBall = 0;
     InitTeamsData();
-    _stoppageEventTimer = 100;
+    _stoppageEventTimer = (uint16_t)_gsStoppageShowerPan;   /* Amiga 100 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_FIRST_EXTRA_STARTING;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = ST_STOPPED;
@@ -637,7 +641,7 @@ void EndFirstExtraTime(void)
 
     _hideBall = 0;
     InitTeamsData();
-    _stoppageEventTimer = 100;
+    _stoppageEventTimer = (uint16_t)_gsStoppageShowerPan;   /* Amiga 100 / DOS x1.1 — dos_gameplay.c */
     _gameState = ST_FIRST_EXTRA_ENDED;
     _breakCameraMode = 0xFFFF;
     _gameStatePl = ST_STOPPED;
