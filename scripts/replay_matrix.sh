@@ -80,10 +80,21 @@ the non-comparable classes mean.
 - **Build:** \`$COMMIT\`, $(date +%Y-%m-%d)
 - **Selftest:** $(cd bin && ./SWOS --replay-selftest 2>&1 | grep -oE '[0-9]+/[0-9]+ reference vectors match' || echo '(not run)')
 - **Corpus:** $(ls tests/dos/*.RGD.gz | wc -l) recordings in \`tests/dos\`$([ "$SKIP_V12" = 1 ] && echo ', the unresolved v1.2 file skipped')
+- **Corpus coverage:** $(awk -F'\t' '
+      { tot[$1]=$3; got[$4]+=$5; }
+      END {
+          for (n in tot) all += tot[n];
+          split("scalars teams info sprites", L, " ");
+          out = "";
+          for (i = 1; i <= 4; i++)
+              out = out sprintf("%s%s %.1f%%", (i>1 ? ", " : ""), L[i], 100*got[L[i]]/all);
+          printf "%s of %d recorded frames", out, all;
+      }' "$ROWS")
 
-A cell is the frame the replay reached before the first mismatching field; the
-match's own length is in the "frames" column. Higher is better, and the number
-only means something relative to another run of the same corpus.
+A cell is the frame the replay reached before the first mismatching field, and
+the percentage beside it is that frame as a share of the recording's own length
+(the "frames" column). 100% means the replay ran the whole recording without a
+single bound field ever disagreeing.
 
 "values" is the setup-state check that runs before frame 0: the recording's own
 per-player match values (\`PlayerFile.cachedMatchValue\`, 16 per team) against
@@ -101,7 +112,12 @@ cut -f1 "$ROWS" | awk '!seen[$0]++' | while read -r n; do
     line="| \`$n\` | $ver | $tot | ${val:--}"
     for lvl in scalars teams info sprites; do
         v=$(awk -F'\t' -v n="$n" -v l="$lvl" '$1==n && $4==l{print $5; exit}' "$ROWS")
-        line="$line | ${v:--}"
+        if [ -n "$v" ] && [ "$v" != '?' ] && [ -n "$tot" ] && [ "$tot" != '?' ]; then
+            pct=$(awk -v a="$v" -v b="$tot" 'BEGIN{printf "%.1f", 100*a/b}')
+            line="$line | $v (${pct}%)"
+        else
+            line="$line | ${v:--}"
+        fi
     done
     echo "$line |"
 done

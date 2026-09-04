@@ -13,7 +13,7 @@ point; an Amiga corpus follows once we can harvest it (see
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
 every bound field, every frame — and `zkz-11054632` now does it at every
-level, all 7314 frames of it.** The rest reach 1251-4496 at level `info`
+level, all 7314 frames of it.** The rest reach 1251-7201 at level `info`
 (section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
 coverage rather than a porting defect. Thirty-one real defects found and fixed
 on the way in, and
@@ -362,9 +362,17 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **889-7314** frames at
-`scalars`, **1251-7314** at `info`, **939-7314** at `sprites`, and **401 of
-416**
+Each cell carries the frame reached **and that frame as a share of the
+recording's own length**, and the header carries the corpus-wide figure — the
+sum of the frames matched over the sum of the frames recorded, per level. That
+last number is the honest headline: 100% of it is not reachable against a DOS
+corpus (see "Can we claim 100% accurate?"), but it moves for exactly one reason,
+which is a defect being fixed.
+
+The shape of the results, as of the run in that file: **889-7411** frames at
+`scalars`, **1251-7314** at `info`, **939-7314** at `sprites` — **16.8%** of
+every recorded frame in the corpus at `scalars` and **13.2%** at `sprites` —
+and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -1371,6 +1379,14 @@ it samples (`tick & 0xE == 0`, and 1169 mod 16 is 1). Now `_gsThrowInHideResult`
 `zkz-11054632` went **1169 → 7314**: the whole recording, at every level, 2104
 fields a frame. It is the first recording to complete at `sprites`.
 
+There are **two** of these gates, not one — `SWOS2.s:30162` for a controlled
+player at a break and `:30563` for a throw-in, against `swos.asm:114574` and
+`:115401`. Only the second had a recording stopping on it, so the first went
+unfixed for a day until a grep of the constant across both listings turned it
+up; it was worth as much as its twin — `zkz-10140228` **2273 → 7411** and
+`zkz-10173518` 1663 → 2049. Grep the constant across both listings *before*
+calling a site unique: it is a two-second habit and it found half of this one.
+
 > Three globals separate the constant from the symptom, and none of the three is
 > a field the rig compares. What made it findable was that the *symptom* was
 > compared: `cycle_frames_timer` jumping to 90 says "this animation was just
@@ -1633,22 +1649,32 @@ Ranked by how early they stop a recording. See
    are the fields that say which side is AI.
 5. **The earliest stops now.** `sprite[7].x` at 939 (`zkz-10173518`, the known
    4-4-2 coverage byte) is the only one below 1251, and it is not a code bug.
-   Above it: `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, the last
-   `BenchDataV1` thread), then a cluster of **player-selection** fields —
-   `top_info.controlled_player` at 1696 and 2570,
-   `top_info.current_allowed_direction` at 2272 and 4496. Four of the twelve
-   now stop on who the game is driving rather than on a simulation value, which
-   is the `onScreen` ceiling below coming into view.
-6. **Sprite state**, at 939-3356 (setting aside `zkz-10174427`, whose frame-0
+   Above it: `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, item 6), then
+   a cluster of **player-selection** fields — `top_info.controlled_player` at
+   1696 and 2570, `top_info.current_allowed_direction` at 4496. Three of the
+   twelve now stop on who the game is driving rather than on a simulation
+   value, which is the `onScreen` ceiling below coming into view.
+6. **`zkz-12065730` at 1251 — a frame of team-alternation phase.** Diagnosed,
+   not fixed. `_fireBlocked` makes `UpdateAndApplyTeamControls` return without
+   updating *either* team, so the frame it clears on decides which team the
+   next frame updates. Ours clears on replay frame 1250 and the reference on
+   1251, which puts the bottom team's input one frame early and swaps both
+   teams' `update_player_index` (top 4/bottom 3 recorded against our 3/4).
+   Everything around it matches — `p2_controls` drops its fire bit at 1250 in
+   the recording, `pl1Fire`/`pl2Fire` are bytes in both builds, and the asm's
+   clear-and-return is what we do. So the question is narrow: **what makes the
+   reference register that fire release one frame later than we do.** Start
+   there, not at the bench fields it surfaces as.
+7. **Sprite state**, at 939-3356 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.
-7. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
+8. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
    paid three times over: the `substituteInProgress` sign bug, the bench-camera
    constant, and `IsThisPlayerOkToSelect`. `zkz-11021807` went 926 → 2262 on
    the back of it. `bench.pl2_prev_direction` at 1251 of `zkz-12065730` is the
    next thread from the same spool.
-8. The single **v1.2** recording still resolves to no (header, frame) pair.
+9. The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---
 

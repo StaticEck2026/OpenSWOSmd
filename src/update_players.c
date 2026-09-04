@@ -1333,7 +1333,9 @@ not_in_penalty:
 
         /* stoppage_timer_gate_for_controlled */
         if (team->playerNumber == 0) {
-            if (_stoppageTimerActive <= 50)
+            /* Amiga 50 (SWOS2.s:30162) / DOS 55 (swos.asm:114574) — the
+             * controlled-player twin of the throw-in gate below. */
+            if (_stoppageTimerActive <= (uint16_t)_gsThrowInHideResult)
                 goto check_any_fire_inputs;
             goto flip_time_and_result_timers;
         }
