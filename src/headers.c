@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "headers.h"
+#include "dos_mode.h"      /* _gDosGameplay: the aim-anim tail is Amiga-only */
 
 extern int16_t  _gsPlayerDownTimer;   /* Amiga 50 / DOS 55 — dos_gameplay.c */
 #include "game_types.h"
@@ -262,7 +263,28 @@ SetStaticHeaderDirection(Sprite *player, TeamGeneralInfo *team)
         }
     }
 
-    SetPlayerAnimationTableAndPictureIndex(&_staticHeaderAimAnimTable, player);
+    /* The Amiga funnels all three outcomes — already facing the input, a
+     * half-turn away, or one step turned — into the same tail:
+     *
+     *     _11288E_apply_dir_wrap_mod8:
+     *             andi.w  #7,SPRITE_DIRECTION(a1)
+     *     apply_static_header_aim_anim:            ; SWOS2.s:25882
+     *             lea     (staticHeaderAimAnimTable).l,a0
+     *             jsr     SetPlayerAnimationTableAndPictureIndex
+     *
+     * The DOS build has no such tail at all: the two `beq`s become `jz @@out`
+     * and the turn falls through to the same bare `retn` (swos.asm:112213,
+     * 112216, 112231). So a DOS static header stays on the ATTEMPT animation
+     * for its whole 20 frames, where the Amiga switches to the AIM one on the
+     * first frame the down-timer drops to 18.
+     *
+     * That is a missing tail rather than a changed constant, which is a strange
+     * thing for a recompilation to do — but the corpus measures it and agrees
+     * with the listing: playa-10144556's header keeps frame_delay 10 (the
+     * attempt list's own `-10`) and image 612 from frame 1304 to 1312, where
+     * the aim table would have put 5 there. Amiga behaviour is unchanged. */
+    if (!_gDosGameplay)
+        SetPlayerAnimationTableAndPictureIndex(&_staticHeaderAimAnimTable, player);
 }
 
 

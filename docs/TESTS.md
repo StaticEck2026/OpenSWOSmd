@@ -13,9 +13,9 @@ point; an Amiga corpus follows once we can harvest it (see
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
 every bound field, every frame — and `zkz-11054632` now does it at every
-level, all 7314 frames of it.** The rest reach 1169-4186 at level `info`
+level, all 7314 frames of it.** The rest reach 1251-4496 at level `info`
 (section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
-coverage rather than a porting defect. Twenty-nine real defects found and fixed
+coverage rather than a porting defect. Thirty-one real defects found and fixed
 on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -363,7 +363,7 @@ scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
 The shape of the results, as of the run in that file: **889-7314** frames at
-`scalars`, **1169-7314** at `info`, **939-7314** at `sprites`, and **401 of
+`scalars`, **1251-7314** at `info`, **939-7314** at `sprites`, and **401 of
 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
@@ -626,7 +626,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Twenty-seven real defects so far, all fixed — plus the two in "The `onScreen`
+Twenty-nine real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -756,6 +756,19 @@ ceiling" below, which that measurement turned up on its own:
     start rotating the thrower. Five frames early there turned an AI throw-in
     taker the reference left standing. `zkz-11054632` **1169 -> 7314, the whole
     recording, at every level**. See "One constant, three globals away" below.
+28. **A 32-bit move of "the x" carries x's fraction on m68k and *y's* fraction
+    on x86.** `DoGoalkeeperSprites` parks the ball on the diving keeper with one
+    long move at the x field's integer word — which is the start of the field on
+    the Amiga and its second word on the DOS build, so the same instruction
+    copies a different pair of fields. Gated on `_gDosGameplay`; the Amiga side
+    is the one that reads as intended. See "Two ways a 32-bit move can mean
+    different fields" below.
+29. **`SetStaticHeaderDirection`'s tail is missing from the DOS build.** The
+    Amiga funnels all three outcomes into
+    `SetPlayerAnimationTableAndPictureIndex(&staticHeaderAimAnimTable)`; the DOS
+    build's two `beq`s become `jz @@out` and the turn falls through to the same
+    bare `retn`, so a DOS static header never leaves the *attempt* animation.
+    Also gated. See "The tail that the recompilation dropped" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1364,6 +1377,82 @@ fields a frame. It is the first recording to complete at `sprites`.
 > restarted", which is a much stronger clue than the direction byte beside it.
 > Watchpoints, then, not reasoning — each one names its writer in a second.
 
+### Two ways a 32-bit move can mean different fields
+
+`playa-10144556` stopped at 1042 with only the **ball's** x and y differing, and
+both by less than a pixel: recorded (358.85, 145.22) against our (358.30,
+145.87). The integers agree; the *fractions* are swapped-looking. Frame 1042 is
+`ST_KEEPER_HOLDS_BALL` — the keeper has just claimed it — and a watchpoint on
+`_ballSprite.x.raw` names `DoGoalkeeperSprites`, which parks the ball on the
+diving keeper's sprite.
+
+Splitting the two values into integer and fraction says the rest:
+
+| | integer | fraction | fraction is… |
+|---|---:|---:|---|
+| recorded x | 358 | 55850 | the **ball's own**, from frame 1041 |
+| recorded y | 145 | 14344 | the **keeper's** |
+| our x | 358 | 20182 | the **keeper's** |
+| our y | 145 | 57161 | the **ball's own** |
+
+Each build copies one fraction from the keeper and keeps the other. And both are
+doing the same instruction:
+
+```
+    Amiga  SWOS2.s:  move.l  SPRITE_X(a5),(ballSprite+SPRITE_X).l
+    DOS    swos.asm:110889:  mov  eax, [esi+(Sprite.x+2)]
+                             mov  ballSprite.x+2, eax
+```
+
+One 32-bit move of "the x, at its integer word". On the m68k the integer word is
+the **start** of the 16.16 field, so the long carries x's integer and x's
+fraction. On x86 it is the **second** word, so the same long carries x's integer
+and then runs straight on into **y's fraction**. Same source, same instruction,
+two different pairs of fields — the conversion could not have preserved this
+without knowing it mattered.
+
+So the Amiga is the one that reads as intended and the DOS is the artefact;
+`placeBallOnDivingKeeper` keeps the plain `.raw` copy for Amiga and spells the
+straddle out under `_gDosGameplay`. **1042 → 1308.**
+
+### The tail that the recompilation dropped
+
+The next stop, at 1308, was `sprite[22].frame_delay` 10 recorded against our 5 —
+a static header whose animation we restarted and the reference did not. A
+watchpoint on the sprite's `frameDelay` named
+`SetPlayerAnimationTableAndPictureIndex(&_staticHeaderAimAnimTable, …)`, called
+from `SetStaticHeaderDirection`, which is the last thing that routine does:
+
+```
+    _11288E_apply_dir_wrap_mod8:
+            andi.w  #7,SPRITE_DIRECTION(a1)
+    apply_static_header_aim_anim:               ; SWOS2.s:25882
+            lea     (staticHeaderAimAnimTable).l,a0
+            jsr     SetPlayerAnimationTableAndPictureIndex
+```
+
+All three outcomes reach it — already facing the input (`beq`), a half-turn away
+(`beq`), or one step turned (fall-through). **The DOS build has no such tail.**
+Both `beq`s become `jz @@out` and the turn falls through to the same bare `retn`
+(swos.asm:112213, 112216, 112231); the caller is identical on both sides
+(swos.asm:115894). So a DOS static header stays on the *attempt* animation for
+its whole 20 frames, and the recording says exactly that: `frame_delay` 10 — the
+attempt list's own `-10` command — held from 1304 to 1312, where the aim table's
+5 would have replaced it.
+
+A missing tail is a strange thing for a recompilation to produce, and it is a
+bigger difference than any constant this document has recorded. It is taken on
+the same terms as the rest: one unambiguous site in each listing, the caller
+checked on both sides, and a measurement only one of them reproduces. Gated on
+`_gDosGameplay`; the Amiga path is untouched. **1308 → 1696.**
+
+> Both of these are the same lesson from opposite ends. A static recompilation
+> preserves *instructions*, not *meaning* — and where the meaning of an
+> instruction depends on the machine (which half of a 16.16 field its address
+> names) or where an instruction simply went missing, the two binaries diverge
+> without anybody deciding anything. Neither is a tuning choice, so neither
+> changes what this port does on the Amiga.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1542,12 +1631,14 @@ Ranked by how early they stop a recording. See
    header's `top_team_player_no` / `bottom_team_player_no` do not read the way
    their names suggest — `top_info.player_number` / `bottom_info.player_number`
    are the fields that say which side is AI.
-5. **The new earliest stops**, none of them a repeat: `sprite[7].x` at 939
-   (`zkz-10173518`, the known 4-4-2 coverage byte), `sprite[1].x` at 1042
-   (`playa-10144556`), `sprite[1].x` at 1112 (`zkz-10140228` — the ball, one
-   frame after the keeper now dives, so start with what the dive does to it),
-   `bench.pl2_prev_direction` at 1251 (`zkz-12065730`), and
-   `top_info.controlled_player` at 2570 / 4186.
+5. **The earliest stops now.** `sprite[7].x` at 939 (`zkz-10173518`, the known
+   4-4-2 coverage byte) is the only one below 1251, and it is not a code bug.
+   Above it: `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, the last
+   `BenchDataV1` thread), then a cluster of **player-selection** fields —
+   `top_info.controlled_player` at 1696 and 2570,
+   `top_info.current_allowed_direction` at 2272 and 4496. Four of the twelve
+   now stop on who the game is driving rather than on a simulation value, which
+   is the `onScreen` ceiling below coming into view.
 6. **Sprite state**, at 939-3356 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on

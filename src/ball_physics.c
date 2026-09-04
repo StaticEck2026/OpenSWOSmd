@@ -3,6 +3,7 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
+#include "dos_mode.h"       /* _gDosGameplay: the diving-keeper ball straddle */
 #include "ball_physics.h"
 
 /* Sprite image constants */
@@ -386,6 +387,43 @@ store:
  * When a goalkeeper is diving, position the ball relative to the
  * goalkeeper sprite using lookup tables for ball height.
  * ================================================================== */
+
+/* ==================================================================
+ * placeBallOnDivingKeeper — the ball rides the diving keeper's sprite.
+ *
+ * The two releases do NOT agree here, and the reason is the endianness of
+ * the 16.16 layout rather than anything anyone decided:
+ *
+ *   Amiga  SWOS2.s:  move.l SPRITE_X(a5),(ballSprite+SPRITE_X).l
+ *   DOS    swos.asm:110889/110934:  mov eax,[esi+(Sprite.x+2)]
+ *                                   mov ballSprite.x+2, eax
+ *
+ * Both are one 32-bit move of "the x at its integer word". On the m68k the
+ * integer word is the START of the field, so the long carries x's integer AND
+ * x's fraction. On x86 it is the SECOND word, so the same long carries x's
+ * integer and then runs straight on into **y's fraction**. Same instruction,
+ * two different pairs of fields.
+ *
+ * So this is a conversion artefact, not a design difference, and the Amiga
+ * side is the one that reads as intended — which is why the Amiga path here is
+ * the plain `.raw` copy and the DOS path spells the straddle out. Measured:
+ * playa-10144556 frame 1042, where the keeper claims it and the recording's
+ * ball keeps its own x fraction and takes the keeper's y fraction.
+ * ================================================================== */
+static void placeBallOnDivingKeeper(Sprite *gkSprite, int16_t yOff)
+{
+    if (_gDosGameplay) {
+        _ballSprite.x.s.i    = gkSprite->x.s.i;
+        _ballSprite.y.s.frac = gkSprite->y.s.frac;
+    } else {
+        _ballSprite.x.raw = gkSprite->x.raw;
+    }
+    _ballSprite.y.s.i = (int16_t)(gkSprite->y.s.i + yOff);
+    _ballSprite.z.s.i = (int16_t)0;
+    _ballSprite.deltaZ.raw = (int32_t)0;
+    _ballSprite.speed = (int16_t)0;
+}
+
 void __attribute__((used, externally_visible))
 DoGoalkeeperSprites(void)
 {
@@ -447,13 +485,7 @@ diving_left_common:
         baseImgIdx = 0x3CD;
     }
     {
-        /* Ball position from keeper sprite */
-        _ballSprite.x.raw = gkSprite->x.raw;
-        int16_t bally = gkSprite->y.s.i + yOff;
-        _ballSprite.y.s.i = bally;
-        _ballSprite.z.s.i = (int16_t)0;
-        _ballSprite.deltaZ.raw = (int32_t)0;
-        _ballSprite.speed = (int16_t)0;
+        placeBallOnDivingKeeper(gkSprite, yOff);
 
         /* Look up ball height from claiming table using frameSwitchCounter */
         int16_t fsc = gkSprite->frameSwitchCounter;
@@ -464,13 +496,7 @@ diving_left_common:
 
 position_ball_diving:
     {
-        /* Ball position from keeper sprite */
-        _ballSprite.x.raw = gkSprite->x.raw;
-        int16_t bally = gkSprite->y.s.i + yOff;
-        _ballSprite.y.s.i = bally;
-        _ballSprite.z.s.i = (int16_t)0;
-        _ballSprite.deltaZ.raw = (int32_t)0;
-        _ballSprite.speed = (int16_t)0;
+        placeBallOnDivingKeeper(gkSprite, yOff);
 
         /* Compute frame offset from base */
         int16_t frameOff = gkSprite->imageIndex - baseImgIdx;
