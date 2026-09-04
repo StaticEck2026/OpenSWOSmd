@@ -177,6 +177,7 @@ they were found.
 | 31 | The AI's random-rotate **position gate does not exist in the DOS build** — four comparisons the Amiga opens with are simply absent | recompilation artefact |
 | 32 | `a2` is a parameter holding the **ball**, not an uninitialised local; declaring it NULL and guarding the read made the free-kick spin gate never fire | missing parameter |
 | 33 | `tst.l` on the two-byte `longPass` spans `longSpinPass` too — three of four sites tested one field, so a spin-pass threw the pass landing point across the pitch | wider access than the field |
+| 34 | A shift count taken from a **comment** ("/= 32") instead of the four instructions beneath it (/16) — wrong in both listings, one bad annotation from the shared IDA database | comment believed over code |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -203,14 +204,17 @@ knowing by name:
 - **A register that is really a parameter** (32) — nothing assigns it inside the
   routine because the caller already did; a `movem.l a1-a3,-(sp)` around the
   `bsr` is the tell.
+- **Believing the annotation** (34) — the comments in `data/SWOS2.s` come from
+  the DOS IDA database; they are evidence of intent and none about the
+  instructions beside them. `swos.asm` is a second witness for one grep.
 - **Reading the listing too literally** (10, 18, 20, 22) — an equate applied to
   a foreign pointer, a table read off its own front, a copy to the wrong symbol,
   and an arm the mask above it had already made unreachable.
 
-Two recordings stop on state that is **swos-port's own C++ control layer**
+Three recordings stop on state that is **swos-port's own C++ control layer**
 rather than the game's — it replaces `Player1StatusProc`, the team alternation
 and the fire-block, with private counters and a switch counter that does not
-advance on a skipped frame. Those two cannot go further, and no change to this
+advance on a skipped frame. Those three cannot go further, and no change to this
 port will move them; see docs/TESTS.md, "The control layer is swos-port's".
 
 Four retractions are documented too. Three were data that never executes: a

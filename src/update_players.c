@@ -1866,8 +1866,16 @@ not_in_penalty:
         if (player->y.s.i < 129 || player->y.s.i > 769) {
             /* Out of pitch by Y */
             if (player->x.s.i >= 275 && player->x.s.i <= 396) {
-                /* Near goal — heavy slowdown */
-                player->speed >>= 5;
+                /* Near goal — heavy slowdown. FOUR shifts, so /16: the Amiga
+                 * has `lsr SPRITE_SPEED(a1)` x4 (SWOS2.s:30738-30741) and the
+                 * DOS `shr [esi+Sprite.speed], 1` x4 (swos.asm:115736-115743).
+                 * BOTH carry the same comment on the `ori` beneath them —
+                 * "sprite speed /= 32" — and it is wrong in both, because it
+                 * is one annotation from the shared IDA database. This port had
+                 * implemented the comment rather than the instructions.
+                 * Measured: playa-10095214 frame 4419 goes 736 -> 46|1 = 47,
+                 * the recorded value; >> 5 gives the 23 we had. */
+                player->speed >>= 4;
                 player->speed |= 1;
                 goto finalize;
             }

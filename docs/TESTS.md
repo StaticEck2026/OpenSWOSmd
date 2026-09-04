@@ -378,8 +378,8 @@ which is a defect being fixed.
 
 The shape of the results, as of the run in that file: **1252-14519** frames at
 `scalars`, **1251-14519** at `info` and at `sprites` — **34.8%** of every
-recorded frame in the corpus at `scalars` and **32.0%** at `sprites` — and
-**401 of 416**
+recorded frame in the corpus at `scalars` and **34.6%** at `sprites`, which are
+now within a fifth of a point of each other — and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). Every recording is in those
 ranges now: `zkz-10174427`'s frame-0 stop was the coverage byte that
@@ -674,7 +674,7 @@ and would mean what it says.
 
 ### What the rig has already found
 
-Thirty-three real defects so far, all fixed — plus the two in "The `onScreen`
+Thirty-four real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -839,6 +839,11 @@ ceiling" below, which that measurement turned up on its own:
     spin-pass picked the wrong lead angle and threw the pass landing point
     across the pitch. `zkz-12080203` 2449 → 10551. See "A long test on a word
     field" below.
+34. **A shift count taken from a comment instead of the instructions.** The
+    tackle's near-goalmouth slowdown is four shifts (/16) under a comment that
+    says "/= 32", in *both* listings — one wrong annotation inherited from the
+    shared DOS IDA database. We had `>>= 5`. `playa-10095214` 4419 → 10129. See
+    "The comment is not the code" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1661,8 +1666,9 @@ bound. **13248 → 14519.**
 
 ### The control layer is swos-port's, not the game's
 
-The two earliest remaining stops — `zkz-12065730` at 1251 and `playa-10144556`
-at 1696 — are one finding, and it is not a defect here. Both are input-derived,
+**Three** of the twelve stops — `zkz-12065730` at 1251, `playa-10144556` at
+1696 and `zkz-10190651` at 2570 — are one finding, and it is not a defect
+here. Both are input-derived,
 both survived a full audit of the asm (the tracking block, the classifier, the
 consume thresholds and all four `headerOrTackle` sites are faithful), and the
 answer was never in `data/SWOS2.s` at all. It is in swos-port's own source:
@@ -1773,6 +1779,49 @@ Corpus-wide, `sprites` coverage went **27.4% → 32.0%**.
 > as one wider unit" that the endian helpers exist for. Testing both fields by
 > name is the portable form — it says what it means, it greps, and it is
 > endian-independent, where `*(int32_t *)&team->longPass` would be none of those.
+
+### The comment is not the code — and the comments came from the DOS database
+
+`playa-10095214` stopped at 4419 on `sprite[13].speed`: 47 recorded against our
+23. The player is mid-tackle (`PL_TACKLING`), his speed decaying 1024 → 928 →
+832 by `kPlayerGroundConstant`, and then in one step to 47 where ours goes to
+23. A watchpoint put the write at the "out of pitch by Y, near the goalmouth"
+branch, which is a shift and an `or`:
+
+```
+                lsr     SPRITE_SPEED(a1) ; player tackling out of pitch horizontally, but near goal
+                lsr     SPRITE_SPEED(a1)
+                lsr     SPRITE_SPEED(a1)
+                lsr     SPRITE_SPEED(a1)
+                ori.w   #1,SPRITE_SPEED(a1) ; sprite speed /= 32
+```
+
+**Four** `lsr`s — /16 — under a comment that says /32. This port had `>>= 5`:
+it implemented the comment. 736 >> 4 is 46, `| 1` is **47**, exactly what the
+recording holds; 736 >> 5 is 23, exactly what we had. **4419 → 10129.**
+
+The comment is wrong on the DOS side too, and identically:
+
+```
+    shr     [esi+Sprite.speed], 1        ; swos.asm:115736-115743, four of them
+    ...
+    or      [esi+Sprite.speed], 1        ; sprite speed /= 32
+```
+
+So this is not an Amiga-vs-DOS difference at all — it is **one annotation from
+the shared IDA database**, wrong in both listings because both inherit it from
+Zlatko Karakaš's DOS database (see CLAUDE.md, "Sources"). That is worth holding
+onto as a rule in its own right:
+
+> The comments in `data/SWOS2.s` are DOS-derived. They are a good guide to
+> *intent* and no evidence at all about the instructions beside them — they can
+> be wrong for both releases, as here, or right for DOS and wrong for the Amiga.
+> When a comment and an instruction sequence disagree, the instructions win; and
+> `swos-port/swos/swos.asm` is a second witness that costs one grep.
+
+This is the same discipline as "a disassembly shows what is stored, not what is
+executed", one level further out: a disassembly also shows what somebody
+*thought* it did.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
@@ -1955,11 +2004,10 @@ Ranked by how early they stop a recording. See
    header's `top_team_player_no` / `bottom_team_player_no` do not read the way
    their names suggest — `top_info.player_number` / `bottom_info.player_number`
    are the fields that say which side is AI.
-5. **The earliest stops now.** The two lowest — `zkz-12065730` at 1251 and
-   `playa-10144556` at 1696 — are the control-layer pair in item 6 and will not
-   move. The earliest that can: `zkz-10190651` at 2570
-   (`top_info.controlled_player`), then `playa-10095214` at 4419 and
-   `zkz-10173518` at 5051. Several are **player-selection** fields — who the game is driving
+5. **The earliest stops now.** The three lowest — `zkz-12065730` at 1251,
+   `playa-10144556` at 1696 and `zkz-10190651` at 2570 — are the control-layer
+   group in item 6 and will not move. The earliest that can: `playa-10095214`
+   at 4419, then `zkz-10173518` at 5051 and `zkz-10140228` at 7053. Several are **player-selection** fields — who the game is driving
    rather than a simulation value — which is the `onScreen` ceiling below
    coming into view, and the reason section 7 puts the Amiga dumper first.
 6. ~~**The fire-counter family**~~ — **closed, and not as a defect.**
@@ -1970,8 +2018,9 @@ Ranked by how early they stop a recording. See
    game's, and does not clear them when the fire-block lifts. All three differ
    from `UpdateAndApplyTeamControls`, and none of them can be reproduced without
    reimplementing swos-port instead of SWOS. See "The control layer is
-   swos-port's, not the game's". **These two recordings cannot go further**, and
-   no change to this port will move them.
+   swos-port's, not the game's". `zkz-10190651` at 2570 is a third instance with
+   the same signature. **These three recordings cannot go further**, and no
+   change to this port will move them.
 7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.

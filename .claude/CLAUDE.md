@@ -267,6 +267,14 @@ Nothing is duplicated under `uae/` any more.
   - `IDAPro/`, `Ghidra/` — the actual databases.
   Its DOS-side naming derives from Zlatko Karakaš's DOS IDA database, which is
   why our symbol names often match the DOS port's.
+
+  ⚠️ **The COMMENTS in `data/SWOS2.s` come from that DOS database too, so they
+  are evidence of intent and none at all about the instructions beside them.**
+  They can be stale, DOS-specific, or simply wrong for both releases — a
+  four-shift sequence annotated "sprite speed /= 32" cost real accuracy until
+  the instructions were counted (docs/TESTS.md, "The comment is not the code").
+  When a comment and the code disagree, the code wins, and
+  `swos-port/swos/swos.asm` is a second witness that costs one grep.
 - `data/` (in this repo) - IDA/Ghidra reference artifacts exported from
   SWOS-RE: `Data.c`, `SWOS2.s`, `SWOS2_IDA.h`, `SWOS2.h`. **Reference only —
   not compiled** (`Makefile.amiga` scans only `src/`). These are a *snapshot*;
