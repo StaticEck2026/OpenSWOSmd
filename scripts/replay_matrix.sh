@@ -211,11 +211,11 @@ knowing by name:
   a foreign pointer, a table read off its own front, a copy to the wrong symbol,
   and an arm the mask above it had already made unreachable.
 
-Three recordings stop on state that is **swos-port's own C++ control layer**
+Four recordings stop on state that is **swos-port's own C++ control layer**
 rather than the game's — it replaces `Player1StatusProc`, the team alternation
 and the fire-block, with private counters and a switch counter that does not
-advance on a skipped frame. Those three cannot go further, and no change to this
-port will move them; see docs/TESTS.md, "The control layer is swos-port's".
+advance on a skipped frame, and a sampling schedule the game never sees. Those
+four cannot go further, and no change to this port will move them; see docs/TESTS.md, "The control layer is swos-port's".
 
 Four retractions are documented too. Three were data that never executes: a
 "rewritten" DOS forward line, a hybrid tactics table, and a DOS-specific 4-4-2.

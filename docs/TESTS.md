@@ -1666,9 +1666,9 @@ bound. **13248 → 14519.**
 
 ### The control layer is swos-port's, not the game's
 
-**Three** of the twelve stops — `zkz-12065730` at 1251, `playa-10144556` at
-1696 and `zkz-10190651` at 2570 — are one finding, and it is not a defect
-here. Both are input-derived,
+**Four** of the twelve stops — `zkz-12065730` at 1251, `playa-10144556` at
+1696, `zkz-10190651` at 2570 and `zkz-10173518` at 5051 — are one finding, and
+it is not a defect here. Both are input-derived,
 both survived a full audit of the asm (the tracking block, the classifier, the
 consume thresholds and all four `headerOrTackle` sites are faithful), and the
 answer was never in `data/SWOS2.s` at all. It is in swos-port's own source:
@@ -1717,8 +1717,32 @@ the stops:
   `clr.w (pl1FireCounter) / clr.w (pl2FireCounter)` right after clearing
   `fireBlocked` (SWOS2.s:25586-25588). swos-port's `updateFireBlocked()` has no
   equivalent, so its counters carry history across a block where ours are
-  zeroed. That is `playa-10144556` at 1696, where a four-sample press classifies
-  as `quickFire` here and as nothing at all there.
+  zeroed.
+
+**Three of the stops share one signature**, to the frame: a human team, the
+button held across four samples, released, our counter negating to +4 and
+classifying as `quickFire` while the recording shows `quick_fire` 0 *and*
+`normal_fire` 0. Ours plays a pass, the reference does not. `playa-10144556` at
+1696, `zkz-10190651` at 2570, `zkz-10173518` at 5051.
+
+**Which difference produces it is not pinned down, and the obvious answer is
+wrong.** swos-port's classifier is logically identical to the asm's — `< -4` →
+`normalFire` and clear, `> 4` → `normalFire` else `quickFire`, clear — so a
+counter of +4 would give it `quickFire` too. Both flags reading zero means its
+counter was **already 0** at the release, which its own arithmetic cannot
+produce from a press that started at -1 four samples earlier. Its
+`m_pl1LastFired` / `m_pl1FireCounter` were therefore already out of phase before
+that press — which is what a different *sampling schedule* does: the Amiga's
+`pl1LastFired` is updated by every one of `Player1StatusProc`'s thirteen call
+sites, while swos-port's is touched only on that team's own update, so a press
+or release falling between two of its samples is invisible to it and visible to
+the game.
+
+That places these stops in this class without claiming to have traced which
+sample went missing: the state that decides them lives in C++ statics the game
+never sees. And `quick_fire` is genuinely observable, for the avoidance of
+doubt — non-zero on 36-108 frames of every recording — so this is a real
+behavioural difference, not a recorder that never captures the flag.
 
 So this is a **fourth class of non-comparable state**, and a consequential one:
 `quick_fire`, `normal_fire` and anything downstream of *which* team updates on a
@@ -2018,9 +2042,9 @@ Ranked by how early they stop a recording. See
    game's, and does not clear them when the fire-block lifts. All three differ
    from `UpdateAndApplyTeamControls`, and none of them can be reproduced without
    reimplementing swos-port instead of SWOS. See "The control layer is
-   swos-port's, not the game's". `zkz-10190651` at 2570 is a third instance with
-   the same signature. **These three recordings cannot go further**, and no
-   change to this port will move them.
+   swos-port's, not the game's". `zkz-10190651` at 2570 and `zkz-10173518` at
+   5051 are further instances of the same signature. **These four recordings
+   cannot go further**, and no change to this port will move them.
 7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.
