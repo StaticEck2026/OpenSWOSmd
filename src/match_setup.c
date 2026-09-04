@@ -9,6 +9,7 @@
 #include "display.h"        /* single source of `#define AGA` — without it the #ifdef AGA
                              * pitch-palette block below is silently compiled out (ran the
                              * OCS 16-colour path on AGA). See docs/AGA.md §9a. */
+#include "dos_mode.h"      /* _gDosGameplay: GameOver drops the training-camera test */
 #include "deterministic.h"
 
 /* ---- External globals (in SWOS2.s code/BSS sections) ---- */
@@ -571,9 +572,25 @@ void GameOver(void)
 {
     FadeOutToBlack();
 
-    int16_t viewX = 168;
+    /* 168 at the port's own 336-wide view, 176 at the DOS release's 320 —
+     * `move.w #168,d1` (SWOS2.s:28049) against `mov word ptr D1, 176`
+     * (swos.asm:103859). Y is a literal in both. */
+    int16_t viewX = SIM_CAMERA_CENTRE_X;
+    /* The camera Y is 80 for a training game and 16 for a match:
+     *
+     *      move.w  #80,d2
+     *      tst.w   (trainingGame).l
+     *      bne.s   set_for_training_or_regular_game
+     *      move.w  #16,d2
+     *
+     * (SWOS2.s:28050). The DOS build has no such test — `mov word ptr D2, 80`
+     * and straight on (swos.asm:103860) — so on DOS the final whistle parks
+     * the camera 64 lines lower whether or not it was a training game. That is
+     * a dropped branch, not a recompiler artifact, and the recording settles
+     * which way round it goes: playa-10095214 jumps to 80.75 at f21888 on a
+     * plain league match, where this test would have said 16. */
     int16_t viewY = 80;
-    if (_trainingGame == 0) {
+    if (!_gDosGameplay && _trainingGame == 0) {
         viewY = 16;
     }
     ReplayUpdateCameraAndSwapBuffers(viewX, viewY);

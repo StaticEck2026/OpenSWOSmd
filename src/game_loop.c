@@ -865,7 +865,9 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 #ifdef SWOS_SDL_BUILD
     { extern void Replay_ResetBallCamera(void); Replay_ResetBallCamera(); }
 #endif
-    ReplayUpdateCameraAndSwapBuffers(168, 313);
+    /* Both are f(view), not literals — see display.h. 168/313 at the port's
+     * own 336x272, 176/349 at the DOS release's 320x200. */
+    ReplayUpdateCameraAndSwapBuffers(SIM_CAMERA_CENTRE_X, SIM_CAMERA_BENCH_Y);
     UpdatePlanePtrsAndBlitParams();
     ReadTimerDelta();
 #ifdef SWOS_SDL_BUILD

@@ -462,8 +462,13 @@ extern int16_t _sim_view_height;
  * `- 20` for entering from ABOVE is the top edge and is 20 in both.) */
 #define SIM_REFEREE_ENTRY_BELOW ((int16_t)(_sim_view_height + 15))
 
-#define SIM_CAMERA_BENCH_Y_LO ((int16_t)(0x1C1 - 10 - SIM_CAMERA_CENTRE_Y))
-#define SIM_CAMERA_BENCH_Y_HI ((int16_t)(0x1C1 + 10 - SIM_CAMERA_CENTRE_Y))
+/* The camera Y that puts the bench (449) in the middle of the view: 313 at
+ * 272 lines, 349 at 200 — which is what `ViewHighLightsMain` parks the camera
+ * at before the first highlight (`move.w #313,d2`, SWOS2.s:20826, against
+ * `mov word ptr D2, 349`, swos.asm:9090). */
+#define SIM_CAMERA_BENCH_Y    ((int16_t)(0x1C1 - SIM_CAMERA_CENTRE_Y))
+#define SIM_CAMERA_BENCH_Y_LO ((int16_t)(SIM_CAMERA_BENCH_Y - 10))
+#define SIM_CAMERA_BENCH_Y_HI ((int16_t)(SIM_CAMERA_BENCH_Y + 10))
 
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)
