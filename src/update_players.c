@@ -1157,8 +1157,18 @@ not_in_penalty:
                 /* Comment timing logic */
                 {
                     int16_t d1 = (_currentGameTick & 0xF0) >> 4;
-                    /* Using goalie skill table fields as timing thresholds */
-                    d1 -= gs->field_0;
+                    /* asm: `sub.w SPRITE_DIRECTION(a0),d1` then
+                     * `sub.w SPRITE_SPEED(a0),d1` — and a0 is the GoalieSkill
+                     * entry, not a Sprite. The disassembly is applying Sprite
+                     * equates to a foreign pointer, so those are offsets 42 and
+                     * 44 (`SPRITE_DIRECTION EQU 42`, `SPRITE_SPEED EQU 44` in
+                     * data/SWOS2.s) = field_2A / field_2C. Reading field_0 /
+                     * field_2 instead made the keeper claim the ball on frames
+                     * he should have played on — playa-10090613 dropped into
+                     * ST_KEEPER_HOLDS_BALL at 912 where the recording plays on
+                     * (docs/TESTS.md). The sibling gate below reads `48(a0)` =
+                     * field_30 and was already right. */
+                    d1 -= gs->field_2A;
                     if (d1 < 0) {
                         /* comment_timing_gate_fail_dir: check X proximity */
                         int16_t xd = player->x.s.i - ball->x.s.i;
@@ -1178,7 +1188,7 @@ not_in_penalty:
                         PlayMissGoalSample();
                         goto finalize;
                     }
-                    d1 -= gs->field_2;
+                    d1 -= gs->field_2C;
                     if (team->goalkeeperSavedCommentTimer >= 0) {
                         if (d1 < 0)
                             goto continue_post_save_flow;
@@ -1826,7 +1836,11 @@ not_in_penalty:
         /* tackle_early_release_window */
         if (player->tacklingTimer >= 0 && team->playerNumber != 0 && !team->firePressed) {
             player->tacklingTimer = -player->tacklingTimer;
-            if (player->tacklingTimer > -2)
+            /* asm: `cmpi.w #$FFFE,...; blt <skip>` — the branch away is taken
+             * only when the timer is STRICTLY LESS than -2, so -2 itself falls
+             * through and becomes -1. `> -2` left -2 alone; the replay rig read
+             * it as sprite[9].tackling_timer -1 against our -2. */
+            if (player->tacklingTimer >= -2)
                 player->tacklingTimer = -1;
         }
 

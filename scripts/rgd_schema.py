@@ -220,7 +220,12 @@ TEAMINFO_FIELDS = [
     ("ball12_to17",                       "s8",   67),
     ("ball_above17",                      "s8",   68),
     ("prev_pl_very_close_to_ball",        "s8",   69),
-    ("field_46",                          "s16",  70),
+    # A 16-bit flag the asm sets with a BYTE write (`move.b #1,$46(a6)`), so its
+    # numeric value is endian-dependent by design: the byte lands in the high
+    # half on the Amiga (0x0100, which is what this port stores) and the low
+    # half on the DOS build (0x0001, which is what the recordings hold). Every
+    # reader is a truth test and the clear is `&= 0xFF`, so compare it as one.
+    ("field_46",                          "s16",  70, "bool"),
     ("goalkeeper_saved_comment_timer",    "s16",  76),
     ("field_4e",                          "s16",  78),
     ("goalkeeper_diving_right",           "s16",  80),
