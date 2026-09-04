@@ -184,6 +184,7 @@ they were found.
 | 38 | The `end_game_transmission` chain's last `bne` falls through into the stoppage countdown; ported as a `void` helper plus `return`, a held fire button froze every end-of-period timer | fall-through became a return |
 | 39 | `GameOver` and `ViewHighLightsMain` parked the camera at the Amiga's literals — three more `f(view)` constants (168/176 centre-x twice, 313/349 bench-y) | view-dependent constant |
 | 40 | `GameOver`'s training-camera test does not exist in the DOS build, which takes the training Y either way | recompilation artefact |
+| 41 | The Amiga ISR will not advance `currentGameTick` while the stats overlay is up and the DOS `TimerProc` will — one lost count re-phases every `tick & mask` decision for the rest of the match | DOS-vs-Amiga |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -192,7 +193,7 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Twenty of the thirty-nine are a **DOS-vs-Amiga difference** — mostly timing
+Twenty-one of the forty are a **DOS-vs-Amiga difference** — mostly timing
 constants, one a whole data set (30), and four (28, 29, 31, 40) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what

@@ -2032,6 +2032,119 @@ no reason to delete a `tst/bne` pair — and `playa-10095214` is a plain league
 match landing on 80, which is where the Amiga's test would have said 16. Gated
 on `_gDosGameplay`. **21888 → 22400 of 22401.**
 
+### One tick, eight thousand frames later
+
+`zkz-12080203` stopped at 11492 on `sprite[1].dest_x`, -796 recorded against
+our -812. sprite[1] is the ball, and it had just glanced a goalpost:
+
+```
+            move.w  (currentGameTick).l,d4          ; SWOS2.s:14830
+            andi.w  #$1F,d4
+            lsl.w   #4,d4
+            subi.w  #$100,d4
+            ...
+            add.w   d4,SPRITE_DESTX(a0)
+```
+
+so the deflection is `((tick & 0x1F) << 4) - 0x100`, a value on a 16-unit grid.
+-812 and -796 are adjacent points on that grid: **the two runs read a
+`currentGameTick` one apart.** The expression is identical in the DOS listing
+(swos.asm:110378), so the difference was the tick itself.
+
+It was not a phase offset. A phase offset would be wrong from frame 0, and the
+rig starts the tick at 0 deliberately. Printing the tick against the frame
+number found it in phase at f3038 and one behind from f3042 — it had *lost* a
+count in between, and the rig's own gate says where:
+
+```
+    if (_showingUserStats == 0 && _paused == 0)
+        _currentGameTick++;
+```
+
+f3039 is the one frame of this recording where the stats overlay is up
+(`stats_timer` 32000, and 0 again by f3040). The gate mirrors the Amiga ISR
+faithfully. The DOS `TimerProc` does not have it:
+
+```
+    mov     ax, paused                          ; swos.asm:12171
+    or      ax, ax
+    jnz     short @@bump_intro_timers
+    inc     currentGameTick
+```
+
+Only `paused`. The `paused` half survived the conversion, which is what makes
+the missing `showingUserStats` half a hand edit rather than something the
+recompiler did. So a DOS stats overlay costs the game clock nothing, and an
+Amiga one costs it a tick per frame it is up.
+
+The consequence is out of all proportion to the cause. `currentGameTick` is not
+really a clock — it is the game's cheap source of pseudo-randomness, and dozens
+of AI and physics decisions are `tick & mask` against it. One lost count
+re-phases every one of them for the rest of the match. Here it stayed invisible
+for 8000 frames and then surfaced as a ball bouncing 16 units wrong off a post.
+
+Two wrong answers were ruled out on the way, and both are worth keeping:
+
+- **The phase is not globally off by one.** Forcing the tick to start at 1
+  costs `zkz-11021807` 4064 → 2863 and `zkz-11054632` 7314 → 671. An earlier
+  attempt at that same experiment had reported the same verdict for the wrong
+  reason: `_lastGameTick` is set to `0xFFFF` so that frame 0's timer delta
+  comes out as 1, and moving the tick without moving it too makes frame 0's
+  delta 2, which breaks the kick-off on its own. The experiment only means
+  something with both moved together — and it still says 0.
+- **The DOS goalkeeper reach entry's `dec ax` is not a phase correction.**
+  That was the obvious suspicion once a tick discrepancy turned up, since a
+  `-1` on a tick-indexed lookup would fit one exactly. It decrements the table
+  VALUE, not the index — `mov ax, [esi+ebx+10] / dec ax / jns` (swos.asm:106642)
+  — so defect 26 stands as measured.
+
+> The lesson is about *invisible* state. Every field the rig compares agreed
+> for 8000 frames while the two runs were already out of step, because the
+> thing that was wrong is not in the recording and is not in any struct — it is
+> a counter that only ever appears masked. When a divergence is a small
+> quantised step in a value that comes off a `tick & mask` grid, suspect the
+> tick and not the expression, and go looking for where the count was lost
+> rather than for where the phase was set.
+
+### The bench call the rig cannot place
+
+Two recordings stop where a player calls the substitutes bench, and the rig
+cannot tell which frame to make the call on.
+
+The recorded signal is `TeamGeneralInfo.secondaryFire` (offset 144, which the
+DOS `UpdateAndApplyTeamControls` copies out of the joystick port,
+swos.asm:100612) with `p1_controls` bit 6 rising on the same frame. The game's
+own trigger is `bench1Called`, which `MainKeysCheck` sets from a key event. The
+rig turns the recorded rising edge into `bench1Called` at frame start — and
+that is right in one of the corpus's three presses and one frame early in the
+other two:
+
+| recording | level rises | reference acts |
+|---|---:|---:|
+| `zkz-11215003` | 117 | 117 |
+| `zkz-11215003` | 11479 | 11480 |
+| `playa-10090613` | 11222 | 11223 |
+
+Both readings are confirmed by 11000 frames of agreement on the other side of
+them: injecting on the edge runs `zkz-11215003` from 117 to 11479, and
+injecting one frame later runs `playa-10090613` from 11223 to 22496.
+
+There is nothing to choose between them from the recording. The whole gate was
+traced on both sides — `waitForPlayerToGoInTimer`, `cameraLeavingSubsTimer`,
+`substituteInProgress`, `refState`, `injuriesForever`, `statsTimer`,
+`gameStatePl`, `whichCard`, `playingPenalties`, `gameState` — and every input
+is identical at both frames, so the game is not deferring the call; it simply
+had not seen the key yet. The loop order is the same in both listings
+(`GetKey`/`MainKeysCheck` at SWOS2.s:20671-20673 ahead of `BenchCheckControls`
+at 20723; swos.asm:7629-7630 ahead of 7686), so a press lands in the same frame
+it is polled — *if* it lands before the poll. Whether it did is sub-frame
+timing, and the recording samples once a frame.
+
+Same class as the terminal-frame `fire_this_frame` above: an input edge inside
+a frame, invisible to a rig that injects a frame's input atomically before the
+frame runs. It costs `playa-10090613` at 11222 and `zkz-11215003` at 11479, and
+those are the only two.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -2174,6 +2287,11 @@ Not bugs; consequences of comparing two different builds.
   frame runs and cannot reproduce it. Costs the last frame of that recording
   and nothing else, since it can only happen on a press the reference then acts
   on by leaving the match.
+- **The bench call's frame.** Two of the corpus's three bench presses are
+  acted on one frame after the recorded button rises and one is acted on the
+  same frame, with every gate input identical at both — sub-frame key timing
+  the recording samples too coarsely to carry. See "The bench call the rig
+  cannot place". Costs `playa-10090613` at 11222 and `zkz-11215003` at 11479.
 - **v1.0/1.1 headers** stop before `season` / `min` / `maxSubstitutes`. The
   converter falls back to the DOS data segment's own defaults for the
   substitute counts (2 and 5); leaving them 0 benches players 11..15 before the
