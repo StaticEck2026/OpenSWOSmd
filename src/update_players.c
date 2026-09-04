@@ -2116,7 +2116,10 @@ not_in_penalty:
         if (team->playerNumber == 0)
             goto post_pass_assist;
 
-        if (!team->longPass && !team->leftSpin && !team->rightSpin)
+        /* `tst.l TEAMGENERALINFO_LONGPASS(a6)` (SWOS2.s:31006) spans longPass
+         * and longSpinPass — see the note in ball_possession.c. */
+        if (!team->longPass && !team->longSpinPass &&
+            !team->leftSpin && !team->rightSpin)
             goto post_pass_assist;
         if (_ballSprite.speed < 512)
             goto post_pass_assist;
@@ -2137,7 +2140,11 @@ not_in_penalty:
 
             /* pass_assist_compute_lead_offset */
             {
-                int8_t leadAngle = (int8_t)(team->longPass ? -32 : -64);
+                /* Also a `tst.l` over the pair (SWOS2.s:31040). This one picks
+                 * the lead angle, so getting it wrong sends the receiver to a
+                 * different entry of the direction-offset table entirely. */
+                int8_t leadAngle = (int8_t)((team->longPass || team->longSpinPass)
+                                            ? -32 : -64);
                 if ((int8_t)angleDiff >= 0)
                     leadAngle = -leadAngle;
 

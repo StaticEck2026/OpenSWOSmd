@@ -176,6 +176,7 @@ they were found.
 | 30 | `--dos-gameplay` swapped the physics and the timers but not the DOS release's re-tuned **formations**, so every destination came off the wrong grid | DOS-vs-Amiga |
 | 31 | The AI's random-rotate **position gate does not exist in the DOS build** — four comparisons the Amiga opens with are simply absent | recompilation artefact |
 | 32 | `a2` is a parameter holding the **ball**, not an uninitialised local; declaring it NULL and guarding the read made the free-kick spin gate never fire | missing parameter |
+| 33 | `tst.l` on the two-byte `longPass` spans `longSpinPass` too — three of four sites tested one field, so a spin-pass threw the pass landing point across the pitch | wider access than the field |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -184,11 +185,11 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Sixteen of the thirty-two are a **DOS-vs-Amiga difference** — mostly timing
+Sixteen of the thirty-three are a **DOS-vs-Amiga difference** — mostly timing
 constants, one a whole data set (30), and three (28, 29, 31) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
-this port does on the Amiga. The other sixteen are porting defects that would be
+this port does on the Amiga. The other seventeen are porting defects that would be
 just as wrong on either machine, and they cluster into a handful of shapes worth
 knowing by name:
 
@@ -197,6 +198,8 @@ knowing by name:
 - **Off-by-one bounds** (19, 24, 25) — `bcs`/`bhi`/`blt` are not `<=`.
 - **A flag that is really a value** (12, 15) — a routine whose contract is a
   condition code can still leave a number in the register at the `rts`.
+- **An access wider than the field** (33) — `tst.l` on a `dc.w` reaches the
+  next one; the endian-helper rule, arriving as a read.
 - **A register that is really a parameter** (32) — nothing assigns it inside the
   routine because the caller already did; a `movem.l a1-a3,-(sp)` around the
   `bsr` is the tell.

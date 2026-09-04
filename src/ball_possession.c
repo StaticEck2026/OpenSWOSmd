@@ -691,8 +691,12 @@ UpdatePlayerSpeed(Sprite *player, TeamGeneralInfo *team)
     if (team->passingToPlayer == 0)
         goto no_pass_target;
 
-    /* Check if it's a long pass or spin */
+    /* Check if it's a long pass or spin.
+     * `tst.l TEAMGENERALINFO_LONGPASS(a6)` (SWOS2.s:23703) is a LONG test on a
+     * WORD field, so it covers `longSpinPass` at 126 as well — the pair is
+     * non-zero if either is. Same idiom at :27564, :31006 and :31040. */
     if (team->longPass == 0 &&
+        team->longSpinPass == 0 &&
         team->leftSpin == 0 &&
         team->rightSpin == 0)
         goto no_pass_target;

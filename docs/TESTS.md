@@ -377,8 +377,8 @@ corpus (see "Can we claim 100% accurate?"), but it moves for exactly one reason,
 which is a defect being fixed.
 
 The shape of the results, as of the run in that file: **1252-14519** frames at
-`scalars`, **1251-14519** at `info` and at `sprites` — **29.9%** of every
-recorded frame in the corpus at `scalars` and **27.4%** at `sprites` — and
+`scalars`, **1251-14519** at `info` and at `sprites` — **34.8%** of every
+recorded frame in the corpus at `scalars` and **32.0%** at `sprites` — and
 **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). Every recording is in those
@@ -674,7 +674,7 @@ and would mean what it says.
 
 ### What the rig has already found
 
-Thirty-two real defects so far, all fixed — plus the two in "The `onScreen`
+Thirty-three real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -833,6 +833,12 @@ ceiling" below, which that measurement turned up on its own:
     the caller passes `ballSprite` (SWOS2.s:30123). This port declared it NULL
     and guarded the read, so the gate never fired. `zkz-10174427` 13248 → 14519.
     See "The register that arrived holding something" below.
+33. **`tst.l` on a two-byte field spans the next one.**
+    `tst.l TEAMGENERALINFO_LONGPASS(a6)` covers `longPass` *and* `longSpinPass`,
+    at four sites; this port tested `longPass` alone at three of them, so a
+    spin-pass picked the wrong lead angle and threw the pass landing point
+    across the pitch. `zkz-12080203` 2449 → 10551. See "A long test on a word
+    field" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1722,6 +1728,52 @@ checks out, stop reading `data/SWOS2.s` and read
 `swos-port/src/controls/gameControls.cpp`. The asm says what the game does per
 call; only swos-port's own source says when it is called and with what.
 
+### A long test on a word field
+
+`zkz-12080203` stopped at 2449 on `bottom_info.ball_x` — 803 recorded against
+our -64, with `sprite[7].dest_x` carrying the same two values. Neither is a ball
+coordinate: the pitch is 672 wide. `TeamGeneralInfo.ballX`/`ballY` are reused as
+the **pass landing point**, the receiver walks to it, and both builds had agreed
+on it for 2448 frames.
+
+The landing point comes from a lead offset:
+
+```
+pass_assist_compute_lead_offset:                ; SWOS2.s:31038
+                move.b  #192,d1                 ; -64
+                tst.l   TEAMGENERALINFO_LONGPASS(a6)
+                beq.s   pass_assist_apply_lead_sign
+                move.b  #224,d1                 ; -32
+pass_assist_apply_lead_sign:
+                tst.b   d0
+                blt.s   pass_assist_build_friction_index
+                neg.b   d1
+```
+
+`TEAMGENERALINFO_LONGPASS` is at 124 and its size is 2 — but the test is
+**`tst.l`**. It spans `longSpinPass` at 126 as well, and the pair is non-zero if
+*either* word is. This port tested `team->longPass` alone, so a spin-pass took
+the -64 arm where the reference takes -32, which indexes a different entry of
+the direction-offset table entirely and throws the landing point across the
+pitch.
+
+The asm does that at **four** sites — `SWOS2.s:23703`, `:27564`, `:31006` and
+`:31040` — and this port had it right at exactly one of them
+(`ball_physics.c:1599`, `longPass != 0 || longSpinPass != 0`, which is the
+idiom the other three now use). One correct instance of a pattern in the tree is
+not evidence the rest are; grep the *equate*, not the field name.
+
+`zkz-12080203` went **2449 → 11495 / 11495 / 11494 / 10551**, and
+`playa-10090613` — which had been stopping on a sprite position — **7103 →
+10426 at every level**, its `sprites` and `scalars` depths now identical.
+Corpus-wide, `sprites` coverage went **27.4% → 32.0%**.
+
+> This is the `PACK_BE_U16` rule from CLAUDE.md arriving as a *read* rather than
+> a write: `tst.l` on a two-byte field is the same "two adjacent fields accessed
+> as one wider unit" that the endian helpers exist for. Testing both fields by
+> name is the portable form — it says what it means, it greps, and it is
+> endian-independent, where `*(int32_t *)&team->longPass` would be none of those.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1903,10 +1955,11 @@ Ranked by how early they stop a recording. See
    header's `top_team_player_no` / `bottom_team_player_no` do not read the way
    their names suggest — `top_info.player_number` / `bottom_info.player_number`
    are the fields that say which side is AI.
-5. **The earliest stops now**, with nothing below 1251 left:
-   `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, item 6),
-   `playa-10144556` at 1696 on `top_info.controlled_player`, `zkz-12080203` at
-   2449, `zkz-10190651` at 2570. Several are **player-selection** fields — who the game is driving
+5. **The earliest stops now.** The two lowest — `zkz-12065730` at 1251 and
+   `playa-10144556` at 1696 — are the control-layer pair in item 6 and will not
+   move. The earliest that can: `zkz-10190651` at 2570
+   (`top_info.controlled_player`), then `playa-10095214` at 4419 and
+   `zkz-10173518` at 5051. Several are **player-selection** fields — who the game is driving
    rather than a simulation value — which is the `onScreen` ceiling below
    coming into view, and the reason section 7 puts the Amiga dumper first.
 6. ~~**The fire-counter family**~~ — **closed, and not as a defect.**
