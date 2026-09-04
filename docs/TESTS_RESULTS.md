@@ -88,3 +88,65 @@ cheap level reports a symptom the next level down would have caught earlier.
 | `zkz-12080203` | teams | 2466 | `camera_y_vel` |
 | `zkz-12080203` | info | 2449 | `bottom_info.ball_x` |
 | `zkz-12080203` | sprites | 2449 | `bottom_info.ball_x` |
+
+## What the rig has found
+
+Every defect below was found by a recording disagreeing with this build on a
+named field, and every one is fixed. The narrative for each — the evidence, the
+disassembly, the reasoning — is in docs/TESTS.md; this is the index. Ordered as
+they were found.
+
+| # | Defect | Class |
+|---:|---|---|
+| 1 | `GS_54_49` was 54; the DOS match-clock reload is **70** | timing constant |
+| 2 | The 41/64 `speed_factor` used C division where the asm uses arithmetic shifts — they disagree by one on negative deltas | integer semantics |
+| 3 | Two DOS result-banner lengths were missing (275/165 against the Amiga's 250/150) | timing constant |
+| 4 | A wall-clock value leaked into the match through `_lastGameTick`, making our own runs non-deterministic | real gameplay bug |
+| 5 | Frame 0's timer delta was 0 where it is 1, landing every timer-driven transition a frame late | ordering |
+| 6 | The bench-slide camera window was hard-coded to the Amiga's view instead of `f(view)` | view-dependent constant |
+| 7 | A goalkeeper substitution could never move the selection cursor — the guard was inverted | inverted condition |
+| 8 | The bench menu's held-direction repeat delay is 2 on Amiga, 4 on DOS | timing constant |
+| 9 | DOS mode latched the **Amiga** pitch ball-speed influence for the whole match — `ApplyGameStyle` ran after the latch | ordering |
+| 10 | Every outfield player stood 30 px too high whenever the ball was in the top Y band — the quadrant bound was read off the front of the wrong table | adjacent-globals |
+| 11 | Placing the ball zeroed all 32 bits of its Z where the asm clears only the integer half | wrong width |
+| 12 | `substituteInProgress` was read as a boolean where the asm branches on its **sign** | flag vs value |
+| 13 | The bench's team-pick alternation is a different *variable* on DOS, not a different constant | DOS-vs-Amiga |
+| 14 | The camera's return from the bench is 50 frames on Amiga, 55 on DOS | timing constant |
+| 15 | `IsThisPlayerOkToSelect` returns an **offset**, not an error, and its callers test the sign | flag vs value |
+| 16 | The player-down timer after a tackle or jump-header is 50 on Amiga, 55 on DOS — at two sites, not the whole family | timing constant |
+| 17 | Five "nearest player" scans walked the sprite table **backwards** — `dbf` counts down while `(a1)+` walks up | loop direction |
+| 18 | The goalkeeper's catch gate read `GoalieSkill` offsets 0 and 2 where the asm reads 42 and 44 | equates on a foreign pointer |
+| 19 | `tacklingTimer == -2` was kept where the asm folds it to -1 | off-by-one bound |
+| 20 | `InitUserTactics` wrote its 5-3-2 forward-row copy to the bare symbols, so no variant build received it | wrong target |
+| 21 | The AI's "don't shoot sideways" gate was inverted on both halves — it hammered the ball across its own six-yard box | inverted condition |
+| 22 | A `cmpi.w #$FFFF` arm that `andi.w #7` had already made **dead** was ported as `diff == 7` | dead code ported live |
+| 23 | `random_rotate_when_no_target`'s two y tests were inverted, swapping the two groups | inverted condition |
+| 24 | The AI fire-angle tolerance included its own negative bound | off-by-one bound |
+| 25 | The mid-right after-touch spin band included x == 478 (`bcs` is unsigned *lower*) | off-by-one bound |
+| 26 | The goalkeeper's reach entry is indexed differently on the two releases — `(tick>>2)&15` against `tick&15` minus one | DOS-vs-Amiga |
+| 27 | The throw-in "hide the result banner" gate is 50 on Amiga, 55 on DOS — and hiding it is what lets the AI start rotating the thrower | timing constant |
+
+Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
+off the live render width, so a widescreen display changed CPU player selection;
+and `BuildSpriteBandAndGeneralRenderStacks` ended every iteration with an
+unconditional `onScreen = 1` that undid the cull.
+
+### What the shape of that list says
+
+Twelve of the twenty-seven are a **DOS-vs-Amiga timing constant or variable**,
+which is what a rig replaying DOS recordings against an Amiga port is built to
+find. The other fifteen are porting defects that would be just as wrong on the
+Amiga, and they cluster into a handful of shapes worth knowing by name:
+
+- **Inverted conditions** (7, 21, 23) — an `ble`/`bge` whose branch target is
+  the *reject* label reads naturally as the accept condition.
+- **Off-by-one bounds** (19, 24, 25) — `bcs`/`bhi`/`blt` are not `<=`.
+- **A flag that is really a value** (12, 15) — a routine whose contract is a
+  condition code can still leave a number in the register at the `rts`.
+- **Reading the listing too literally** (10, 18, 20, 22) — an equate applied to
+  a foreign pointer, a table read off its own front, a copy to the wrong symbol,
+  and an arm the mask above it had already made unreachable.
+
+The three retractions are documented too: what looked like a rewritten DOS
+forward line, a hybrid tactics table, and a DOS-specific 4-4-2 were all
+misreadings of data that never executes.
