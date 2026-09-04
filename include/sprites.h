@@ -28,4 +28,9 @@ void RenderSpriteBandsToCopperLists(void);
 void BuildSpriteBandAndGeneralRenderStacks(void);
 void DrawSprites(void);
 
+/* Was this sprite inside the RENDER view on the last cull? Animation gates on
+ * this rather than on Sprite.onScreen, which is the simulation view — see
+ * BuildSpriteBandAndGeneralRenderStacks in sprites.c. */
+int Sprite_AnimVisible(const Sprite *s);
+
 #endif

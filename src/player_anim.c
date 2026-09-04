@@ -5,6 +5,7 @@
  */
 #include "player_anim.h"
 #include "game_types.h"
+#include "sprites.h"     /* Sprite_AnimVisible — animation follows the RENDER view */
 
 /* Player states */
 /* PL_NORMAL defined in game_types.h */
@@ -36,7 +37,13 @@ extern void PanicHaltLoop(void);
  * ================================================================ */
 static void setNextPlayerFrame(Sprite *s)
 {
-    if (s->onScreen == 0)
+    /* Not `onScreen`: that is the SIMULATION view and is deliberately pinned to
+     * the port's own 336-wide geometry so the window size cannot change CPU
+     * player selection. Animation has to follow what is DRAWN, or a sprite in
+     * the widescreen margin moves (movePlayer below still moves it) without its
+     * frame advancing — it slides. See Sprite_AnimVisible in sprites.c; under
+     * the replay rig the two are identical. */
+    if (s->onScreen == 0 && !Sprite_AnimVisible(s))
         return;
 
     s->cycleFramesTimer -= 1;
@@ -163,7 +170,7 @@ static void setNextPlayerFrame(Sprite *s)
  * ================================================================ */
 static void movePlayer(Sprite *s)
 {
-    if (s->onScreen == 0) {
+    if (s->onScreen == 0 && !Sprite_AnimVisible(s)) {
         /* Off-screen: only move when game in progress, no anim switch */
         if (_gameStatePl == ST_GAME_IN_PROGRESS) {
             clampAxis(s->x, s->deltaX, s->destX);

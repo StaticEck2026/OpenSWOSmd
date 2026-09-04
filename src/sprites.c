@@ -2290,9 +2290,41 @@ static int16_t occlBuckets_combined[5 + OCCL_ACTIVE_BUCKETS];
 #define occlMinYBucketsActive_local (occlBuckets_combined + 5)
 
 __attribute__((used, externally_visible))
+/* ------------------------------------------------------------------
+ * Animation visibility — separate from `onScreen`, on purpose.
+ *
+ * `onScreen` is a SIMULATION input: UpdateControlledPlayer will not
+ * auto-select a player whose onScreen is clear, so it is pinned to the
+ * simulation view and must not follow the window size (GAMEPLAY.md 25.2).
+ * Animation is a PRESENTATION concern and has to follow what is actually
+ * DRAWN: `setNextPlayerFrame` skips a sprite whose flag is clear while
+ * `movePlayer` still moves it, so a sprite that is drawn but not flagged
+ * moves without animating — it slides.
+ *
+ * The port widens the view HORIZONTALLY only (_screen_width >= SCREEN_WIDTH;
+ * the line count is fixed), so this test takes the render WIDTH and the
+ * simulation HEIGHT. In a replay the rig pins the render width to
+ * SCREEN_WIDTH and sets the simulation height from the recording, which makes
+ * this identical to `onScreen` — so the corpus is unaffected — while at a
+ * 16:9 render (484 wide) the extra margin animates instead of sliding.
+ * ------------------------------------------------------------------ */
+#define SPRITE_ANIMVIS_MAX 128
+static const Sprite *s_animVisible[SPRITE_ANIMVIS_MAX];
+static int16_t       s_animVisibleCount;
+
+int Sprite_AnimVisible(const Sprite *s)
+{
+    int16_t i;
+    for (i = 0; i < s_animVisibleCount; i++)
+        if (s_animVisible[i] == s)
+            return 1;
+    return 0;
+}
+
 void BuildSpriteBandAndGeneralRenderStacks(void)
 {
     int16_t d7 = (int16_t)_numSpritesToRender;
+    s_animVisibleCount = 0;
     if (d7 == 0)
         return;
 
@@ -2374,6 +2406,17 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
             int inRenderView = !(d1 >= _screen_width || d2 >= SCREEN_HEIGHT ||
                                  d1 <= negW || d2 <= negH);
             a1->onScreen = (int16_t)onScreen;
+            /* Only ever ADD to what `onScreen` already allows, and only when
+             * the render really is wider than the simulation view. When
+             * `_screen_width == SCREEN_WIDTH` this list stays empty and the
+             * animation gate is bit-for-bit what it was — which is the case
+             * the replay rig runs in, so the corpus cannot be perturbed. */
+            if (!onScreen && _screen_width > SCREEN_WIDTH) {
+                int animVis = !(d1 >= _screen_width || d2 >= _sim_view_height ||
+                                d1 <= negW || d2 <= negH);
+                if (animVis && s_animVisibleCount < SPRITE_ANIMVIS_MAX)
+                    s_animVisible[s_animVisibleCount++] = a1;
+            }
             if (!inRenderView) {
                 d7--;
                 if (d7 < 0) break;
