@@ -235,13 +235,9 @@ knowing by name:
 
 ### Where the corpus stands
 
-Five of the twelve recordings replay COMPLETE at every level, and two more
-stop only on their terminal frame. Of the five stops that remain, **none is
-known to be a defect in this port** — every one is something the recording
-cannot carry:
-
-**No stop in the corpus is a known defect in this port any more.** Every one
-of the four that remain is something the recording cannot carry:
+Eight of the twelve recordings read 100.0% and a ninth 99.6%. **No stop in the
+corpus is a known defect in this port.** Every one of the four that remain is
+something the recording cannot carry:
 
 | stop | frames lost | what |
 |---|---:|---|
@@ -256,10 +252,21 @@ runs `zkz-11215003` to 27487 of 27819 and `playa-10090613` to its terminal
 frame, which is the corpus at **98.0%**. Nothing else in either recording
 disagrees with this port.
 
-That rule is deliberately NOT shipped. Three presses and a one-bit predicate
-is not evidence, and a rig carrying an unexplained fudge to make itself pass
-is worth less than one that stops honestly. Finding the mechanism behind it is
-the top open lead — see docs/TESTS.md, "The bench call the rig cannot place".
+That rule is deliberately NOT shipped, and the mechanism says it never should
+be. One key reaches the game down two independent latches — the recording
+carries the POLLED BITMASK (`p1_controls` bit 6 -> `pl1SecondaryFire` ->
+`TeamGeneralInfo.secondaryFire`, written at GameLoop line 703) while the bench
+opens off the BUFFERED SCANCODE (`bench1Called`, set only in `MainKeysCheck`
+at line 666). A scancode can arrive a frame after the bitmask sees the key
+held, and nothing in the record times that queue. So there is no mechanism
+left to find, only a coin-flip to guess, and the current same-frame injection
+is a guess too — just a different one. Neither placement is right for all
+three presses in the corpus.
+
+**What closes it is a recording that carries `bench1Called` itself**, which the
+Amiga dumper (docs/TESTS.md section 8) would, being our own build. That is now
+the strongest argument for building it: it is worth 11% of this corpus on its
+own, quite apart from the `onScreen` ceiling below.
 
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
