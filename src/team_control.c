@@ -3,6 +3,9 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 #include "team_control.h"
 
 /* ==================================================================
@@ -468,7 +471,17 @@ void UpdateAndApplyTeamControls(void) {
 
         if (team->headerOrTackle) {
             team->headerOrTackle = 0;
-            /* No fire counter to clear for AI team */
+            /* Yes, player 1's counter — even though this team is the
+             * computer's. In the asm a playerNumber of 0 does not get a tail
+             * of its own: `beq.w post_input_common_p1` drops it into the
+             * PLAYER 1 tail, so the `clr.w (pl1FireCounter)` after
+             * UpdatePlayers is shared (SWOS2.s:25650, swos.asm:100708).
+             * The effect is real and load-bearing: a tackle by the AI side
+             * resets the human's fire hold, so a button held across an
+             * opponent's challenge never reaches the -5 that arms normalFire.
+             * playa-10095214 diverged at f10129 on exactly that — we shot,
+             * the reference kept dribbling. */
+            _pl1FireCounter = 0;
         }
         return;
     }

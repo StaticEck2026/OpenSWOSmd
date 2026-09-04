@@ -106,6 +106,11 @@ static int       s_maxErrors = 1;
 static const char *s_skipPrefixes;  /* --replay-skip=a,b,c */
 static int       s_errors;
 static uint32_t  s_frame;          /* index of the record being replayed */
+/* The recording frame currently being replayed, or -1 outside a replay.
+ * Exported so a throwaway trace anywhere in the game code can print the frame
+ * number the divergence report uses — the one thing an ad-hoc printf can
+ * never work out for itself. Nothing in the build reads it. */
+int32_t g_rtFrameNo = -1;
 static const uint8_t *s_rec;       /* the record itself, NULL between frames */
 static int       s_firstFrame = 1;
 static int       s_warnedEsc, s_warnedUserKey;
@@ -1346,6 +1351,7 @@ void ReplayTest_FrameStart(void)
         return;
     }
     s_rec = s_frames + (size_t)s_frame * s_frameSize;
+    g_rtFrameNo = (int32_t)s_setup.firstFrame + (int32_t)s_frame;  /* see above */
 
     if (s_firstFrame) {
         s_firstFrame = 0;
