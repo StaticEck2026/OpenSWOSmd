@@ -13,7 +13,7 @@ point; an Amiga corpus follows once we can harvest it (see
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, reaching frame 711-1335 before the first divergence at level
 `info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
-formation coverage rather than a porting defect. Eight real defects found and
+formation coverage rather than a porting defect. Ten real defects found and
 fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -349,7 +349,7 @@ scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
 The shape of the results, as of the run in that file: **714-1663** frames at
-`scalars`, **711-1335** at `info`, **459-1090** at `sprites`, and **401 of 416**
+`scalars`, **711-1335** at `info`, **689-1090** at `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -613,7 +613,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Six real defects so far, all fixed — plus the two in "The `onScreen` ceiling"
+Eight real defects so far, all fixed — plus the two in "The `onScreen` ceiling"
 below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -663,6 +663,10 @@ below, which that measurement turned up on its own:
    number as it does in the reference rig, and moving only `_lastGameTick`,
    keeps every gain and loses neither.
 6. **The bench-slide window was hard-coded to the Amiga's view.** See below.
+7. **A goalkeeper substitution could not move the selection cursor** — the
+   guard around it was inverted. See "Two bugs in one substitution" below.
+8. **The bench menu's held-direction repeat delay is 2 on Amiga and 4 on DOS**,
+   and DOS mode was using 2. Same section.
 
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
@@ -713,6 +717,54 @@ Everything else in swos-port's `src/game/camera.cpp` was already right:
 `kTrainingPitchMaxY` 616, `kCameraMaxY` 680 all fall out of the existing
 `SIM_CAMERA_*` formulas at 320x200, and the three side limits (37 / 51 / 63)
 are view-independent in both releases.
+
+### Two bugs in one substitution
+
+`zkz-11021807` stopped at frame 459 on `sprite[4].frame_delay` — the top team's
+**goalkeeper**. Reading the rest of that frame's report was the whole
+diagnosis: our keeper was walking to `(39, 449)`, and `(39, 449)` is where the
+recording sends `sprite[5]`, the *outfield* player at lineup position 1. We were
+substituting the wrong man.
+
+The v1.3+ frame carries `BenchDataV1`, 30 named fields of substitutes-menu state
+that the schema does not decode yet — but Python can. It said exactly what the
+reference did: enter "select player to substitute" with the cursor on lineup
+position 0, hold DOWN for four frames, step **once** to position 1, fire. Two of
+our own bugs sat behind that one sentence.
+
+**One: the goalkeeper guard was inverted.** In `UpdateSubstitutePlayerIndices`,
+when the player coming on is index 11 — the reserve keeper, who can only replace
+the keeper — the selection cursor is frozen. The asm freezes it only when *more
+than five* substitutes are allowed:
+
+```
+cmpi.w  #5,(gameMaxSubstitutes)   ; SWOS2.s:19307
+bhi     exit                      ; leave when maxSubstitutes > 5
+```
+
+We had `<= 5`. Five is the normal maximum, so the cursor was frozen for **every**
+goalkeeper substitution in the shipping game: whoever it happened to start on was
+the only player you could take off. That is a real gameplay bug, not a replay
+artefact, and nothing short of a frame-exact reference was going to point at it.
+
+**Two: the repeat delay is a DOS constant we did not have.** With the cursor
+free, a held direction repeats after `subsMovementDelayTimer` reaches a
+threshold — `2` in `data/SWOS2.s:18639`, `4` in the DOS asm
+(`swos-port/swos/swos.asm:92055`), routines otherwise identical. At 2 the four
+held frames step the cursor *twice* and we substituted a different wrong player.
+Now `_gsSubsMovementDelay` in `dos_gameplay.c`, beside the other GS_* pairs —
+though note it is not one of the ×1.1 frame-rate conversions: 2 → 4 is a feel
+change (×1.1 would be 3).
+
+Both were needed; forcing either back reproduces a divergence at 459.
+`zkz-11021807` went **459 → 1111 at every level**, and it is the first recording
+in the corpus where all four levels stop on the same frame and the same field.
+
+> Also found on the way: `src/bench_subs.c` carries **two copies** of this
+> routine family — a `static` lowercase set that runs and an
+> `externally_visible` uppercase set declared in `bench_subs.h` and called by
+> nobody. The first fix went into the copy that isn't used. Both are corrected
+> and flagged; merging them is a separate cleanup.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
@@ -881,12 +933,19 @@ Ranked by how early they stop a recording. See
    `onScreen`-gated, so some of this may still be view-related — but the window
    now matches the recording's, so it is worth reading
    `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
-5. **Sprite state**, at 459-1090 (setting aside `zkz-10174427`, whose frame-0
+5. **Sprite state**, at 689-1090 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start
-   there — `sprites` is now the earliest stop (or tied with it) on all twelve
-   recordings, so it is where the corpus still has something to say.
-6. The single **v1.2** recording still resolves to no (header, frame) pair.
+   there — `sprites` is the earliest stop (or tied with it) on all twelve
+   recordings, so it is where the corpus still has something to say. The
+   earliest of them is now `zkz-11215003` at 704 on `sprite[1].speed` — the
+   ball.
+6. **Decode `BenchDataV1` in the schema.** The v1.3+ frame carries 30 named
+   fields of substitutes-menu state (tap counts, block flags, timers, cursor
+   indices, the shirt-number table) and the rig decodes none of them. Reading
+   them by hand in Python is what found both substitution bugs above; wiring
+   them in would have found them in one run, and three recordings carry them.
+7. The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---
 

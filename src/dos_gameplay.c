@@ -40,6 +40,17 @@ int16_t  _gsStoppageEventReload = 50;   /* GS_GK_55_50 game_timers.c  stoppageEv
  * hard-codes 275 (game.cpp:13024). */
 int16_t  _gsResultHalftimeLength = 250; /* GS_275_250 game_state.c    30000 -> banner length */
 int16_t  _gsResultBreakLength    = 150; /* GS_165_150 game_state.c    31000 -> banner length */
+/* The bench menu's held-direction auto-repeat delay: how many frames a held
+ * up/down waits before the cursor steps again. NOT one of the x1.1 timing
+ * conversions above — the DOS release doubled it (2 -> 4), which is slower than
+ * the frame rate alone would justify (2 * 70/50 would be 3), so it is a feel
+ * change, not a port artefact. Both are in the disassemblies:
+ * `cmpi.w #2,(subsMovementDelayTimer)` (data/SWOS2.s:18639) vs
+ * `cmp subsMovementDelayTimer, 4` (swos-port/swos/swos.asm:92055), routines
+ * otherwise identical. Found by the replay rig: a DOS recording holds DOWN in
+ * the substitutes menu for four frames and steps the cursor ONCE; at 2 we
+ * stepped it twice and substituted the wrong player (docs/TESTS.md). */
+int16_t  _gsSubsMovementDelay    = 2;   /* GS_4_2     bench_subs.c    menu repeat delay */
 
 /* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
  * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
@@ -105,6 +116,7 @@ void ApplyGameStyle(void)
     _gsStoppageEventReload = dos ? 55  : 50;
     _gsResultHalftimeLength = dos ? 275 : 250;
     _gsResultBreakLength    = dos ? 165 : 150;
+    _gsSubsMovementDelay    = dos ? 4   : 2;
 
     /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
      * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't

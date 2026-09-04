@@ -35,6 +35,7 @@
 
 /* ---- external asm globals ---- */
 extern uint16_t _inSubstitutesMenu;
+extern int16_t  _gsSubsMovementDelay;  /* Amiga 2 / DOS 4 — dos_gameplay.c */
 extern uintptr_t _benchTeam;          /* Competition*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
 extern uintptr_t _benchTeamGame;      /* TeamGame*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern uint16_t _subsTeamsSwapped;
@@ -550,7 +551,8 @@ menu_active_phase:
             if (_subsPrevDirection != 0 && _subsPrevDirection != 4)
                 return;
             _subsMovementDelayTimer++;
-            if (_subsMovementDelayTimer != 2)
+            /* Amiga 2, DOS 4 — the held-direction repeat delay (dos_gameplay.c). */
+            if ((int16_t)_subsMovementDelayTimer != _gsSubsMovementDelay)
                 return;
         }
 
@@ -1166,10 +1168,21 @@ static void updateSubstitutePlayerIndices(void)
     if (d7 == 2) { subsBenchOff(); return; }
     if (d7 == 6) { subsBenchOff(); return; }
 
-    /* for state != 4 and goalie sub (index 11): skip if maxSubs <= 5 */
+    /* Outside state 4, a reserve GOALKEEPER coming on (index 11) can only
+     * replace the keeper, so the selection cursor is frozen — but ONLY when
+     * more than five substitutes are allowed. asm (SWOS2.s:19307):
+     *     cmpi.w #5,(gameMaxSubstitutes) ; bhi exit
+     * i.e. leave when maxSubstitutes > 5. This was inverted (`<= 5`), and five
+     * is the normal maximum, so it froze the cursor for EVERY goalkeeper
+     * substitution: whoever it started on was the only player you could take
+     * off. Found by the replay rig (docs/TESTS.md).
+     * NOTE: this file carries two copies of this routine — the `static`
+     * lowercase set below is what runs, the externally_visible uppercase set
+     * is a parallel copy declared in bench_subs.h and called by nobody. Fix
+     * both until they are merged. */
     if (_subsState != 4) {
         if (_plToEnterGameIndex == 11) {
-            if (_gameMaxSubstitutes <= 5)
+            if (_gameMaxSubstitutes > 5)
                 return;
         }
     }
@@ -2601,9 +2614,18 @@ void UpdateSubstitutePlayerIndices(void)
         return;
     }
 
-    /* Guard: not state 4, entering player 11 with <=5 max subs */
+    /* Guard: outside state 4, a reserve GOALKEEPER coming on (index 11) can
+     * only replace the keeper, so the selection cursor is frozen — but ONLY
+     * when more than five substitutes are allowed. asm (SWOS2.s:19307):
+     *     cmpi.w #5,(gameMaxSubstitutes) ; bhi exit
+     * i.e. leave when maxSubstitutes > 5. This was inverted here (`<= 5`), and
+     * since five is the normal maximum that froze the cursor for EVERY
+     * goalkeeper substitution: whoever it started on was the only player you
+     * could take off. Found by the replay rig — a DOS recording steps the
+     * cursor to lineup position 1 while we stayed on the keeper and
+     * substituted him instead (docs/TESTS.md). */
     if (_subsState != 4) {
-        if (_plToEnterGameIndex == 11 && _gameMaxSubstitutes <= 5)
+        if (_plToEnterGameIndex == 11 && _gameMaxSubstitutes > 5)
             return;
     }
 
