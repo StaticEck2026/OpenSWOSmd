@@ -2172,7 +2172,7 @@ frame.
 and where that step is *added* is the whole difference (SWOS2.s:14829-14869,
 swos.asm:110374-110438 identical):
 
-| entry | Y | | |
+| entry | Y velocity | arm | what it does |
 |---|---|---|---|
 | crossbar height | weak | `loc_109878` | negate deltaZ, restore Z, push the ball one pixel down the pitch |
 | post height, outside the mouth | weak | `loc_109810` falls through | reverse the Y destination, **`destY += d4`** |
