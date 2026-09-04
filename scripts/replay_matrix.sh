@@ -270,6 +270,39 @@ itself — which the Amiga dumper (docs/TESTS.md section 8) would, being our own
 build. It was worth 11% of this corpus, which is the strongest argument for
 building it, quite apart from the `onScreen` ceiling below.
 
+### The open lead
+
+Placing the bench call uncovered a frontier that was hidden behind it.
+`zkz-11215003` now reaches **27487 of 27819** and stops one frame into
+`PlayersLeavingPitch`: `game_state` agrees (both 24), but the reference's
+players start walking off and ours do not. `sprite[8].dest_x` is 1406 against
+our 439, `frame_delay` 16 against 5.
+
+The 16 is diagnostic. `UpdatePlayerSpeed`'s tail computes
+`frameDelay = (1280 - speed) >> 7 + 6`, so 16 means the reference's player
+speed is 0 — which is `adjust_speed_for_stoppage` scaling by
+`stoppageTimerTotal * 4` on the frame `PlayersLeavingPitch` has just zeroed
+that timer. Our 5 is below that formula's floor of 6, so our player never
+reached the tail at all and took an animation-table delay instead.
+
+`StopAllPlayers` IS what writes it, and the trail leads somewhere more
+interesting than an animation. A watchpoint puts our write in
+`stopPlayers()` — `dest = current position`, 439 — on the frame
+`PlayersLeavingPitch` runs. The reference leaves the same player's `dest_x` at
+1406 through that frame, and both listings' `StopPlayers` set `dest` for any
+player in PL_NORMAL, PL_HAPPY or PL_SAD that is not `sentAway`. The recording
+says this player is PL_HAPPY (15) going into the frame and `sent_away` 0.
+
+So the reference did not visit him at all — **he is not in that team's
+`spritesTable`**, and ours is. This recording makes two substitutions, and
+`spritesTable` is recorded as a pointer IDENTITY (which table, 0 or 1), never
+its contents, so a substitution that swaps the wrong player is invisible to
+every level until something like this reads the table back. His stale
+destination of 1406/1370 is off-pitch — where a substituted player walks.
+
+That makes it a lead about the substitution itself, and it sits directly
+downstream of the estimated bench frame above.
+
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
 is why the Amiga dumper is a requirement rather than a nice-to-have.
