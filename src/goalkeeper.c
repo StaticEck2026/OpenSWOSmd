@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "goalkeeper.h"
+#include "dos_mode.h"       /* _gDosGameplay: the dive-index expression differs */
 #include "game_types.h"
 #include "player_anim.h"
 
@@ -226,8 +227,29 @@ ShouldGoalkeeperDive(Sprite *keeper, Sprite *ball, TeamGeneralInfo *team)
     if (dx < 0) dx = -dx;
 
     shotTable = team->shotChanceTable;
-    /* tick & 0x3C → 0,4,8,...,60; >> 2 → 0,1,2,...,15 word index into skill index table */
-    skillIndex = shotTable->index[((uint16_t)_currentGameTick & 0x3C) >> 2];
+    /* How the keeper's reach entry is picked is one of the few places where the
+     * two releases' listings genuinely disagree, so it is switched rather than
+     * chosen:
+     *
+     *   Amiga  SWOS2.s:26266  andi.w #$3C,d0 / lsr.w #1,d0   -> (tick >> 2) & 15
+     *   DOS    swos.asm:106639  and D0,0Fh / shl D0,1        ->  tick & 15
+     *   DOS    swos.asm:106644  dec ax / jns / mov ax,0      -> entry - 1, floored at 0
+     *
+     * The Amiga's index advances every fourth tick and the DOS's every tick;
+     * the DOS then steps one entry DOWN its (already lower) reach table. Both
+     * encodings are unambiguous, and the corpus measures the difference:
+     * zkz-10140228 frame 1108 has the keeper diving in the recording and
+     * standing here, and the DOS expression is what makes him dive.
+     * The Amiga path is untouched — see docs/DOS_GAMEPLAY.md. */
+    if (_gDosGameplay) {
+        skillIndex = shotTable->index[(uint16_t)_currentGameTick & 0xF];
+        skillIndex--;
+        if (skillIndex < 0)
+            skillIndex = 0;
+    } else {
+        /* tick & 0x3C -> 0,4,8,...,60; >> 2 -> 0..15 word index */
+        skillIndex = shotTable->index[((uint16_t)_currentGameTick & 0x3C) >> 2];
+    }
 
     diveDelta = _kGoalkeeperDiveDeltas[skillIndex];
     _goalkeeperDiveAttemptCount++;

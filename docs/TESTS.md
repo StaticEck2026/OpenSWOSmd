@@ -12,9 +12,9 @@ point; an Amiga corpus follows once we can harvest it (see
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
-every bound field, every frame.** The rest reach 1108-3916 at level `info`
+every bound field, every frame.** The rest reach 1169-4186 at level `info`
 (section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
-coverage rather than a porting defect. Twenty-seven real defects found and fixed
+coverage rather than a porting defect. Twenty-eight real defects found and fixed
 on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -356,7 +356,7 @@ scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
 The shape of the results, as of the run in that file: **889-5276** frames at
-`scalars` (`zkz-11021807` complete), **1108-3916** at `info`, **939-2694** at
+`scalars` (`zkz-11021807` complete), **1169-4186** at `info`, **939-3356** at
 `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
@@ -619,7 +619,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Twenty-five real defects so far, all fixed — plus the two in "The `onScreen`
+Twenty-six real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -735,6 +735,11 @@ ceiling" below, which that measurement turned up on its own:
     `neg.b d1; cmp.b d1,d2; bgt` fires only on `d2 > -tolerance`.
 25. **The mid-right after-touch spin band included x == 478.** `bcs` is an
     unsigned *lower* test, so 478 belongs to the midfield band.
+26. **The goalkeeper's reach entry is picked differently on the two releases.**
+    The Amiga indexes the skill table with `(tick >> 2) & 15`; the DOS uses
+    `tick & 15` and then steps one entry *down* the table with a floor at 0. One
+    unambiguous site in each listing plus a measurement, so it is switched on
+    `_gDosGameplay` rather than chosen. See "The keeper's reach entry" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1223,6 +1228,72 @@ And one off-by-one on each of two bounds:
 > condition. When a gate's branch target is the failure path, the C `if` has to
 > carry the same sense as the branch, not the opposite of it.
 
+### The keeper's reach entry — where the two listings really do disagree
+
+`zkz-10140228` stopped at 1108 on `top_info.controlled_pl_direction`, 2 recorded
+against our 6. The rest of that frame says what it actually is:
+`sprite[15].player_state` 6 (`PL_GOALIE_DIVING_HIGH`) against our 0,
+`player_down_timer` 75 against 0, `speed` 2048 against 256. **The reference's
+goalkeeper dived and ours stood still**, and `controlledPlDirection` is only the
+dive direction `GoalkeeperJumping` writes on the way past.
+
+Two things narrow it to one line before any instrumentation:
+
+- `speed` 2048 is `kGoalkeeperFarJumpSpeed`, which `GoalkeeperJumping` only
+  reaches with `speedVariant == 0`. The `goalie_react_goal_scored` path passes
+  2, which would have given `(tick & 0xFF) + 1024`. So the dive came from
+  `goalie_save_attempt_entry`, i.e. `ShouldGoalkeeperDive` returned 1.
+- `goalkeeper_saved_comment_timer` never moves off 0, so the finisher-vs-keeper
+  roll above it did not run either — `ballDistance` 466 takes the
+  `> 128` exit straight to the save attempt.
+
+Printing the gate values on the frame:
+
+```
+[gk 1108 top] dive: dy=16 ballY=158 gkY=142 defX=349 gkX=330
+[gk 1108 top]   saveDist=16 dy=16
+[gk 1108 top]   framesY=8 absBallDy=16
+[gk 1108 top]   framesX=64 dx=19
+[gk 1108 top]   framesDive=7 skillIdx=1 diveDelta=196608 -> NO
+```
+
+The last gate is `framesDive >= framesY`, and 7 < 8 by one frame. Every input to
+it is a compared field that matched at 1107 — ball position and deltas, keeper
+position and deltas — except the reach entry, which comes from the tick:
+
+```
+    Amiga  SWOS2.s:26266    andi.w  #$3C,d0        ; (tick >> 2) & 15
+                            lsr.w   #1,d0
+    DOS    swos.asm:106639  and  word ptr D0, 0Fh  ;  tick & 15
+                            shl  word ptr D0, 1
+    DOS    swos.asm:106644  dec  ax                ; entry - 1, floored at 0
+                            jns  short @@calc_frames
+                            mov  ax, 0
+```
+
+The Amiga's index advances every fourth tick; the DOS's every tick. The DOS then
+steps one entry **down** its reach table — which is already the lower of the two
+(`0x28000…0x60000` against `0x30000…0x68000`, and both binaries ship their own,
+so `ApplyGameStyle` was already swapping the data). At tick 1108 the Amiga
+expression gives entry 5 → skill 1 → 3.0 px/frame → 7 frames; the DOS one gives
+entry 4 → skill 1 → minus one → 0 → 2.5 px/frame → **8** frames, and 8 >= 8
+dives.
+
+This is the third retraction's rule applied in the other direction. "The DOS is
+a recompile, so a difference is a misreading" is the null hypothesis, not a
+prohibition — and it is discharged the way the rule says: one unambiguous site
+in each listing (an `andi.w`/`lsr.w` pair against an `and`/`shl` pair, plus a
+`dec` with no Amiga counterpart) and a measurement that only one of them
+reproduces. So it is **switched on `_gDosGameplay`**, like the DOS bench
+team-pick counter before it; the Amiga path is byte-for-byte what it was.
+
+`zkz-10140228` went **1108 → 1286 / 1286 / 1281 / 1112**, and `playa-10095214`
+— whose `controlled_pl_direction` stop at 1976 was the same keeper, on the same
+gate — **1976 → 4186** at `info` and 1976 → 3356 at `sprites`. Nothing regressed.
+
+> A gate that misses by exactly one frame is worth more attention than one that
+> misses by a mile: it means every input is right except a single quantised one.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1384,33 +1455,33 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and possession** — still the largest cluster, and its
-   clearest sample is now closed: `zkz-10190651` at 1113 was the AI firing a
-   shot the reference did not take, and the gate that should have stopped it was
-   inverted (see "Three inverted gates in one AI routine"). That took the
-   recording to 2570, `playa-10095214` to 5276 and `zkz-10174427` to 889.
-   What remains: `controlled_pl_direction` (1108 of `zkz-10140228`, 1976 of
-   `playa-10095214`), `current_allowed_direction` (1169 of `zkz-11054632`), and
-   `top_info.controlled_player` at `zkz-10190651`'s new stop. All four are on
-   the **human**-controlled side of their recording — check the setup before
-   assuming otherwise, as the AI fix above did not move any of them — so they
-   point at `team_control.c` and the kick-direction writers in
-   `ball_possession.c` / `headers.c` / `tackle_foul.c`, not at the AI. The
-   method that closed 1113 transfers: print the gates on the diverging frame
-   rather than reasoning about them.
-5. **Sprite state**, at 939-2694 (setting aside `zkz-10174427`, whose frame-0
+4. ~~**Player selection and possession**~~ — **the cluster is dissolved, and
+   neither half of it was about possession.** `zkz-10190651` at 1113 was the AI
+   taking a shot the reference did not, on an inverted gate ("Three inverted
+   gates in one AI routine"); both `controlled_pl_direction` stops —
+   `zkz-10140228` at 1108 and `playa-10095214` at 1976 — were the **goalkeeper**
+   failing to dive, on a reach index that differs between the two releases ("The
+   keeper's reach entry"). `controlledPlDirection` is written by whoever kicks,
+   dives or heads, so it names the *symptom's owner*, never the cause: read the
+   rest of the frame before believing the field name.
+   What remains from the old cluster is one field —
+   `bottom_info.current_allowed_direction` at 1169 of `zkz-11054632`, on the
+   human side, so `team_control.c` rather than `ai.c`.
+5. **The new earliest stops**, and none of them is a repeat: `sprite[7].x` at
+   939 (`zkz-10173518`, the known 4-4-2 coverage byte), `sprite[1].x` at 1112
+   (`zkz-10140228` — the ball, one frame after the keeper now dives, so start
+   with what the dive does to it), `sprite[1].x` at 1042 (`playa-10144556`) and
+   `top_info.controlled_player` at 2570 / 4186.
+6. **Sprite state**, at 939-3356 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
-   `frame_delay`. These are downstream of (4) in every case so far, so start
-   there — `sprites` is the earliest stop (or tied with it) on all twelve
-   recordings, so it is where the corpus still has something to say. The
-   earliest is now `playa-10090613` at 795 on `bottom_info.pass_to_player_ptr`,
-   which is really (4).
-6. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
+   `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
+   every recording, so it is where the corpus has most left to say.
+7. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
    paid three times over: the `substituteInProgress` sign bug, the bench-camera
    constant, and `IsThisPlayerOkToSelect`. `zkz-11021807` went 926 → 2262 on
    the back of it. `bench.pl2_prev_direction` at 1251 of `zkz-12065730` is the
    next thread from the same spool.
-7. The single **v1.2** recording still resolves to no (header, frame) pair.
+8. The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---
 
