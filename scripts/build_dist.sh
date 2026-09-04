@@ -15,8 +15,9 @@
 #                      unzip and play. Excludes save/ (per-user dir, and 24 MB of
 #                      test careers here).
 #   bin/SWOS-Amiga.zip the m68k binary + ONLY the trees it actually opens
-#                      (data grafs grafs_aga sound) + an empty save/. Copy onto a
-#                      volume FS-UAE/WinUAE mounts.
+#                      (data grafs grafs_aga sound) + the AmigaDOS boot files
+#                      (c s) + an empty save/. Unpack onto the volume
+#                      FS-UAE/WinUAE boots from and s/startup-sequence runs it.
 #
 # Targets:
 #
@@ -112,7 +113,14 @@ FULL_DLLS="cygwin1.dll cygSDL2-2-0-0.dll"
 # binary writes there and will not create the directory itself.
 # Copy the contents onto a volume FS-UAE/WinUAE mounts (the harness mounts bin/
 # as DH1: and cd's in, so the same relative paths resolve).
+#
+# c/ and s/ are the AmigaDOS BOOT infrastructure and are NOT discoverable by the
+# strings rule above — the binary never opens them, AmigaDOS does. s/startup-
+# sequence is the whole point: mount the drop as the boot volume and it runs
+# SWOS2 and then quits the emulator via c/UAEquit. Without them the drop is a
+# pile of files someone has to launch by hand.
 AMIGA_DATA_DIRS="data grafs grafs_aga sound"
+AMIGA_BOOT_DIRS="c s"
 CYGWIN_BIN="${CYGWIN_BIN:-/mnt/c/cygwin64/bin}"
 
 JOBS="$(nproc 2>/dev/null || echo 4)"
@@ -366,9 +374,14 @@ fi
 if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; then
     banner "package -> $AMIGA_ZIP_PATH  (Amiga: SWOS2 + Amiga data)"
     AMIGA_DIRS=""
-    for d in $AMIGA_DATA_DIRS; do
+    for d in $AMIGA_DATA_DIRS $AMIGA_BOOT_DIRS; do
         [ -d "bin/$d" ] && AMIGA_DIRS="$AMIGA_DIRS $d"
     done
+    for d in $AMIGA_BOOT_DIRS; do
+        [ -d "bin/$d" ] || echo "!! bin/$d missing — the drop will not self-boot" >&2
+    done
+    [ -f "bin/s/startup-sequence" ] ||
+        echo "!! bin/s/startup-sequence missing — the drop will not self-boot" >&2
     rm -f "$AMIGA_ZIP_PATH"
     ( cd bin && zip -j -q "$ROOT/$AMIGA_ZIP_PATH" SWOS2 ) &&
     ( cd bin && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" $AMIGA_DIRS -x '*/.DS_Store' ) && {

@@ -74,14 +74,19 @@ of test careers. The Windows runtime is exactly `cygwin1.dll` +
 SDL only ever `dlopen`s — and lands you at ~14 MB of X11/pulse/codec libraries
 that never load. `--no-full` skips the big one.
 
-The **Amiga** drop carries `data grafs grafs_aga sound` and nothing else. That
-list was derived from the built binary, not guessed —
+The **Amiga** drop carries `data grafs grafs_aga sound` plus `c s`. The data list
+was derived from the built binary, not guessed —
 `strings bin/SWOS2 | grep -oE '^(data|grafs|...)/'` shows it opens exactly those
 four plus `save/`, and never touches `grafs_dos`, `grafs_2020`, `grafs_arcade` or
 `data_json` (SDL-only asset tiers, ~50 MB the Amiga can't load). `save/` ships
-EMPTY: the binary writes there but won't create the directory. Copy the contents
-onto a volume FS-UAE/WinUAE mounts — the harness mounts `bin/` as **DH1:** and
-`cd`s in, so the same relative paths resolve.
+EMPTY: the binary writes there but won't create the directory.
+
+`bin/c` and `bin/s` are the **AmigaDOS boot files** and that strings rule cannot
+find them — the binary never opens them, AmigaDOS does. `s/startup-sequence`
+runs `SWOS2` and then `c/UAEquit` to close the emulator, so unpacking the drop
+onto the volume FS-UAE/WinUAE boots from is all a tester has to do. (The harness
+is different: it mounts `bin/` as **DH1:** and `cd`s in, so the same relative
+paths resolve without booting from it.)
 
 ```bash
 scripts/build_dist.sh              # TESTER drop: all targets + bin/SWOS.zip
