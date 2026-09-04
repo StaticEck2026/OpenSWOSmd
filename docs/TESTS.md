@@ -10,6 +10,12 @@ replays `.RGD` recordings against its DOS port. That corpus is our starting
 point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
+The corpus is the **original DOS game**: swos-port is a static recompilation, so
+the recordings capture SWOS's own code executing. An earlier version of this
+document called them "SWOS++, not retail DOS" and treated a five-field
+exclusion list as permanent — that was wrong, and "Can we claim 100% accurate?"
+now has the correction.
+
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **two of them replay end to end at every level** —
 `zkz-11054632`'s 7314 frames and `zkz-11021807`'s 4064, every bound field on
@@ -405,49 +411,77 @@ immediately.
 
 ### Can we claim "100% accurate"?
 
-Not against this corpus — and the reason is worth understanding, because it is
-not a shortcoming of the port.
+Closer than this document used to say, and the correction is worth writing down
+because the wrong version was load-bearing for months.
 
-**The recordings are SWOS++, not the retail DOS game.** swos-port's own source
-says so where it initialises a sprite:
+**It said: "the recordings are SWOS++, not the retail DOS game." That is wrong.**
+swos-port is a *static recompilation* — `swos/swos.asm` is the DOS binary's own
+code with a register file standing in for D0-D7/A0-A6, and the C++ around it is
+a platform layer. The simulation the recordings capture is the original DOS
+program executing, instruction for instruction. **The recordings are the
+original game.**
+
+What misled the earlier reading is two comments, and they are both in one place:
 
 ```c
-// this is for SWOS++/tests compatibility
-playerDirection = playerOrdinal ? 0 : -1;
-...
-// SWOS initial value for frameSwitchCoutner is 0, but we will initialize
-// with -1 to be compatible with SWOS++ and tests
-frameSwitchCounter = -1;
+    // src/sprites/Sprite.h — swos-port's own C++ Sprite class
+    void init() {
+        int offset = offsetof(Sprite, frameOffset);
+        memset(reinterpret_cast<char *>(this) + offset, 0, sizeof(*this) - offset);
+        // this is for SWOS++/tests compatibility
+        playerDirection = playerOrdinal ? 0 : -1;
+        ...
+        // SWOS initial value for frameSwitchCoutner is 0, but we will initialize
+        // with -1 to be compatible with SWOS++ and tests
+        frameSwitchCounter = -1;
 ```
 
-It deliberately deviates from SWOS's own initial values to agree with the
-recordings, and its rig compensates elsewhere for the recorder running "*after*
-reset and SWOS++'s *before*". The files are `zkz-*` — Zlatko Karakaš, SWOS++'s
-author. So **matching those fields 100% would mean reproducing SWOS++'s
-departures from SWOS**, which is the opposite of what this port is for.
+That is a **constructor**, not the game. swos-port builds its sprites in C++
+instead of using SWOS's static sprite table, and the `memset` from
+`offsetof(frameOffset)` throws that table's initial values away before the
+recompiled code ever runs. Everything the constructor touches therefore carries
+swos-port's values at frame 0 — two of them labelled SWOS++, the rest simply
+zero because they were memset.
 
-That reframes the target. There are four classes of field where exact agreement
-is either impossible or undesirable:
+The five fields the `sprites` level mutes are exactly that constructor's
+footprint, and checking each against `data/SWOS2.s` settles who is right:
+
+| field | recorded | ours | SWOS says |
+|---|---:|---:|---|
+| `starting_direction` | 0 | -1 | **-1** — `ballSprite`/`team1Player2Sprite` static data |
+| `frame_switch_counter` | -1 | 0 | **0** — and swos-port's own comment says so |
+| `field_3e[4]` / `[5]` | 1 / 0 | 0 / 1 | **[5] = 1** — every sprite's static data |
+| `player_direction` | 0 | -1 | **-1** — static data, outfield players included |
+| `save_sprite` (goals) | 0 | 1 | **1** — `SWOS2.s:16857` writes it |
+
+**On all five this port holds the SWOS value and the harness does not.** They
+are muted because the reference cannot produce them, not because we cannot; and
+they are frame-0 construction, so they say nothing about any frame after it.
+
+That leaves a much shorter honest list:
 
 | class | why | closable? |
 |---|---|---|
-| Recorder conventions (`frame_switch_counter`, `player_direction`, `starting_direction`, `save_sprite`, `field_3e`) | SWOS++ initial values that the reference's own source calls deviations from SWOS | **No — and we should not want to** |
+| Sprite construction (the five above) | swos-port builds sprites in C++ and memsets the game's static table away before frame 0 | No — but they are *its* deviation, not ours, and cannot recur once the game code runs |
 | Two sprite slots (corner flag, player-name HUD) | swos-port keeps four corner flags and picks by camera; its rig skips the HUD slot outright | No — no counterpart exists here |
-| Byte-set word flags (`ballOutOfPlayOrKeeper`, `goaliePlayingOrOut`, `isMoving`) | `SWOS2.s` writes a byte into a word, so "set" is `0x00FF` little-endian and `0xFF00` big-endian. Exactness is *target-dependent*; a truth test is the correct comparison, not a compromise | No — the truth test **is** the right test |
-| ~~Per-image cull metrics~~ | **Retracted.** The banks are a 1:1 conversion and the metrics are identical; the residual was two bugs of ours (the cull keyed off the render width, and `onScreen` was overwritten after the enqueue). Both fixed | **Closed** |
+| Byte-set word flags (`ballOutOfPlayOrKeeper`, `goaliePlayingOrOut`, `isMoving`) | `SWOS2.s` writes a byte into a word, so "set" is `0x00FF` little-endian and `0xFF00` big-endian. Exactness is *target-dependent*; a truth test is the correct comparison | No — the truth test **is** the right test |
+| ~~Per-image cull metrics~~ | **Retracted.** The banks are a 1:1 conversion and the metrics identical; the residual was two bugs of ours | **Closed** |
+| ~~"The corpus is SWOS++"~~ | **Retracted.** A static recompilation runs the original code; see above | **Closed** |
 
-So the honest strong claim available today is *bounded*, and still worth making:
+So the claim available is stronger than the old bounded one:
 
-> Every field two differently-derived builds can meaningfully be compared on
-> agrees exactly, for the first N frames of each recorded match — with a
-> four-item exclusion list, every item justified from the reference
-> implementation's own source.
+> The recordings are the original DOS game running under a static
+> recompilation. Every field that both builds compute — which is every field
+> except five that the reference *constructs* before frame 0, two slots that do
+> not exist here, and three flags whose exact value is endian-dependent by
+> design — agrees exactly, for as far as each recording currently reaches.
 
-**The fourth class is closed** — it was never about the artwork. See "The
-`onScreen` ceiling" above for the measurement that settled it and the two
-defects of ours it exposed. Three classes remain, and none of them is a
-statement about this port's accuracy: two are slots that do not exist here, and
-one is a flag whose exact value is endian-dependent by design.
+100% of *frames* is still the open question, and the honest remaining obstacle
+is the view geometry, not the corpus's provenance: DOS renders 320x200 and this
+port 336x272, `onScreen` gates player selection, and the rig narrows that by
+setting `_sim_view_width`/`_sim_view_height` to the recording's geometry rather
+than by pretending it does not matter. An Amiga corpus removes the last of it —
+see section 8 — but it is no longer true that the corpus itself is the ceiling.
 
 ### The player-price audit — and the 416 checks hiding in the header
 
@@ -626,13 +660,16 @@ settled by a byte that had been sitting in the recording's header all along.
 
 ### With an Amiga corpus, 100% becomes a real target
 
-All four classes above exist only because the recording came from a different
-release. Record from the Amiga original at 336x272 with the Amiga sprite bank
-(section 8) and: the recorder conventions are the original's own, the corner
-flag and HUD slots are the ones we have, the byte-set flags land in the byte
-order we use, and the cull metrics are the artwork we ship. Nothing is left to
-exclude, and "every recorded field, every frame" is a claim that can actually
-be made — and would mean what it says.
+The classes above exist because the recording came through a different
+*harness*, not from a different game — swos-port's C++ scaffolding around the
+recompiled DOS code, and the 320x200 view that scaffolding renders at. Record
+from the Amiga original at 336x272 with the Amiga sprite bank (section 8) and
+all of it goes: sprites are constructed from the game's own static table, the
+corner flag and HUD slots are the ones we have, the byte-set flags land in the
+byte order we use, the cull metrics are the artwork we ship, and `onScreen`
+stops depending on a view size we do not render. Nothing is left to exclude,
+and "every recorded field, every frame" is a claim that can actually be made —
+and would mean what it says.
 
 ### What the rig has already found
 
@@ -1738,12 +1775,15 @@ Not bugs; consequences of comparing two different builds.
   first classified `view`, which was right in effect and wrong in reason — and
   the moment the simulation view matched, `view` stopped skipping them and they
   reappeared as false divergences.
-- **swos-port's own sprite init.** Its `Sprite::init()` sets several fields to
-  values its source explicitly calls "for SWOS++/tests compatibility", one of
-  which (`frameSwitchCounter = -1`) its comment says SWOS itself starts at 0 —
-  which is what we do. `scripts/replay_test.sh` mutes `starting_direction`,
-  `frame_switch_counter`, `field_3e`, `player_direction` and `save_sprite` at
-  the `sprites` level; `--strict` compares them.
+- **swos-port's own sprite construction.** Its `Sprite::init()` memsets from
+  `offsetof(frameOffset)` and then applies its own initial values, so the game's
+  static sprite table never reaches frame 0 there. Five fields differ as a
+  result, and on **every one of them this port holds the value `data/SWOS2.s`
+  gives** — see the table in "Can we claim 100% accurate?".
+  `scripts/replay_test.sh` mutes `starting_direction`, `frame_switch_counter`,
+  `field_3e`, `player_direction` and `save_sprite` at the `sprites` level;
+  `--strict` compares them. Muting them is a statement about the harness, not
+  about this port, and nothing after frame 0 depends on it.
 - **v1.0/1.1 headers** stop before `season` / `min` / `maxSubstitutes`. The
   converter falls back to the DOS data segment's own defaults for the
   substitute counts (2 and 5); leaving them 0 benches players 11..15 before the

@@ -16,12 +16,15 @@ FRAMES=
 ALL=0
 EXTRA=()
 
-# Sprite fields the DOS corpus cannot agree on at kick-off: swos-port's
-# Sprite::init() sets them to values its own source calls "for SWOS++/tests
-# compatibility" (and frame_switch_counter's comment says SWOS itself starts at
-# 0, which is what we do). save_sprite is 1 in our goal sprites' static data and
-# 0 after their init. Muted by default at the sprites level so the run reaches
-# real gameplay state; pass --strict to compare them anyway.
+# Five sprite fields the corpus cannot agree on at kick-off. swos-port builds
+# its sprites in C++ rather than from SWOS's static sprite table: Sprite::init()
+# memsets from offsetof(frameOffset) and then applies its own initial values, so
+# the table's values never reach frame 0 there. On ALL FIVE this port holds the
+# value data/SWOS2.s gives (save_sprite included — SWOS2.s:16857 writes the 1 we
+# have); the recording holds the constructor's. Muted by default at the sprites
+# level so the run reaches real gameplay state; --strict compares them anyway.
+# See docs/TESTS.md, "Can we claim 100% accurate?" — this is a statement about
+# the harness, not about the port, and nothing past frame 0 depends on it.
 INIT_FIELDS='.starting_direction,.frame_switch_counter,.field_3e,.player_direction,.save_sprite'
 STRICT=0
 

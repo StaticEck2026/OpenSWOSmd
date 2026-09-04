@@ -160,6 +160,12 @@ knowing by name:
   a foreign pointer, a table read off its own front, a copy to the wrong symbol,
   and an arm the mask above it had already made unreachable.
 
-The three retractions are documented too: what looked like a rewritten DOS
-forward line, a hybrid tactics table, and a DOS-specific 4-4-2 were all
-misreadings of data that never executes.
+Four retractions are documented too. Three were data that never executes: a
+"rewritten" DOS forward line, a hybrid tactics table, and a DOS-specific 4-4-2.
+The fourth was about the corpus itself — this document long said the recordings
+were SWOS++ rather than the retail DOS game, and treated five sprite fields as
+permanently unmatchable because of it. swos-port is a **static recompilation**:
+the recordings are the original game's own code executing. The five fields are
+its C++ `Sprite::init()` memsetting SWOS's static sprite table away before
+frame 0, and on every one of them this port holds the value `data/SWOS2.s`
+gives.
