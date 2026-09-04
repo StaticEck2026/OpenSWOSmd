@@ -2184,16 +2184,22 @@ separate the two recorded signals by a frame — the schema note records that no
 press in the corpus does, which pins the press inside the frame but not inside
 the frame's 666.
 
-The rule is NOT shipped, and on this evidence it should not be: there is no
-mechanism left to find, only a coin-flip to guess. Closing this needs a
-recording that carries `bench1Called` itself — which the Amiga dumper
-(section 8) would, since it is our own build being dumped. Three presses and a one-bit predicate is not evidence, and this is
-a rule in the HARNESS: a test rig carrying an unexplained fudge to make itself
-pass is worth less than one that stops honestly. Every gate input was traced
-identical at both frames (see above), so if there is a mechanism it is not in
-`BenchCheckControls`. **This is the top open lead in the whole rig** — it is
-worth 11% of the corpus, and it is the only place left where the DOS corpus
-still has something to say about this port.
+**The rule IS shipped, as an estimate and labelled as one.** The argument
+against it was that it is a guess, fitted to three presses. What settles it
+the other way is that the same-frame placement it replaced is a guess too —
+the assumption that the press landed before line 666 — and a worse one, right
+on one press of three where this is right on three. There is no neutral option
+here: the rig must place this input on some frame.
+
+So it is placed, every deferral prints ESTIMATED in the log, and
+`src/replay_test.c` carries the whole of this argument at the call site.
+**A bench-frame match is evidence of nothing** — treat any result that turns
+on a substitution as unverified. Every gate input in `BenchCheckControls` was
+traced identical at both frames, so if a mechanism exists it is not in there.
+What would make this a recovered fact is a recording that carries
+`bench1Called` itself — which the Amiga dumper (section 8) would, since it is
+our own build being dumped. It was worth 11% of this corpus, which is the
+strongest argument for building it.
 
 ### The goalpost has three arms and the port had two
 
