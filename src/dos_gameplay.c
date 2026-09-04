@@ -59,6 +59,16 @@ int16_t  _gsSubsMovementDelay    = 2;   /* GS_4_2     bench_subs.c    menu repea
  * behaviour change. Found by the replay rig: our bench check resumed exactly 5
  * frames early after a substitution (docs/TESTS.md). */
 int16_t  _gsCameraLeavingSubs    = 50;  /* GS_55_50   bench_subs.c    camera back from bench */
+/* How long a player stays down after starting a tackle or a jumping header.
+ * `move.b #50,SPRITE_PLAYERDOWNTIMER(a1)` in PlayerBeginTackling (SWOS2.s
+ * 27016) and PlayerAttemptingJumpHeader (27140); the DOS build writes 55 at
+ * both (swos.asm 106276, 108938). Checked site by site rather than scaled:
+ * PlayerTackled's own 50 (SWOS2.s:24312 `#$32`) stays 50 in the DOS build too
+ * (swos.asm:107958), and the keeper's 75/15 and the 20/25s are unchanged
+ * everywhere — so this is two specific writes, not the whole family. Found by
+ * the replay rig: two recordings stopped on sprite[N].player_down_timer with a
+ * recorded 55 counting down against our 50 (docs/TESTS.md). */
+int16_t  _gsPlayerDownTimer      = 50;  /* GS_55_50   tackle_foul.c/headers.c */
 
 /* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
  * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
@@ -126,6 +136,7 @@ void ApplyGameStyle(void)
     _gsResultBreakLength    = dos ? 165 : 150;
     _gsSubsMovementDelay    = dos ? 4   : 2;
     _gsCameraLeavingSubs    = dos ? 55  : 50;
+    _gsPlayerDownTimer      = dos ? 55  : 50;
 
     /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
      * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't

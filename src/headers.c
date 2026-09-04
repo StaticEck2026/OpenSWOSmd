@@ -4,6 +4,8 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "headers.h"
+
+extern int16_t  _gsPlayerDownTimer;   /* Amiga 50 / DOS 55 — dos_gameplay.c */
 #include "game_types.h"
 
 /* ---- External asm symbols ---- */
@@ -401,7 +403,7 @@ PlayerAttemptingJumpHeader(uint16_t dir, Sprite *player)
     player->direction = (int16_t)dir;
 
     SetPlayerAnimationTable(&_jumpHeaderAttemptAnimTable, player);
-    player->playerDownTimer = 50;
+    player->playerDownTimer = (int8_t)_gsPlayerDownTimer;   /* Amiga 50 / DOS 55 */
     player->playerState = PL_JUMP_HEADING;
 
     /* Set destination from direction table */

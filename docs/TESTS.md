@@ -13,7 +13,7 @@ point; an Amiga corpus follows once we can harvest it (see
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, reaching frame 795-2449 before the first divergence at level
 `info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
-formation coverage rather than a porting defect. Seventeen real defects found
+formation coverage rather than a porting defect. Eighteen real defects found
 and fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -613,7 +613,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Fifteen real defects so far, all fixed — plus the two in "The `onScreen`
+Sixteen real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -692,6 +692,12 @@ ceiling" below, which that measurement turned up on its own:
 15. **`IsThisPlayerOkToSelect` returns an OFFSET, not an error, for an inactive
     player** — and its callers test the sign. See "A routine that answers with
     the wrong number" below.
+16. **The player-down timer after a tackle or a jumping header is 50 on Amiga,
+    55 on DOS.** Two write sites (`PlayerBeginTackling`,
+    `PlayerAttemptingJumpHeader`), checked one at a time rather than scaled:
+    `PlayerTackled`'s own 50 stays 50 in the DOS build, and the keeper's 75/15
+    and the 20/25s are unchanged everywhere. Two recordings stopped on
+    `sprite[N].player_down_timer` counting down from 55 against our 50.
 
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
@@ -1107,12 +1113,16 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and the pass target**, at 795-1335:
-   `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
-   `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
-   `onScreen`-gated, so some of this may still be view-related — but the window
-   now matches the recording's, so it is worth reading
-   `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
+4. **Player selection and possession**, and it is now the whole remaining
+   cluster: `pass_to_player_ptr` (795), `controlled_pl_direction` (1108, 1976),
+   `current_allowed_direction` (1169), `ball_possession` (1113). They arrive
+   together — `zkz-10190651` frame 1113 has the reference crediting possession
+   to the top team and us to the bottom, `bottom_info.controlled_player`
+   `sprite[25]` against our null, `player_has_ball` 1 against 0, and
+   `last_heading_tackling_player` `sprite[21]` against `sprite[25]`. So it is
+   one question — who is judged to have the ball after a contested touch — and
+   not five. `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` and the
+   `_lastTeamPlayed` writers are where to read against `data/SWOS2.s`.
 5. **Sprite state**, at 795-2449 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start

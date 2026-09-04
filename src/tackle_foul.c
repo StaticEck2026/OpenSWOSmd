@@ -5,6 +5,8 @@
  */
 #include "tackle_foul.h"
 
+extern int16_t  _gsPlayerDownTimer;   /* Amiga 50 / DOS 55 — dos_gameplay.c */
+
 /* Card types (not in game_types.h) */
 #define CARD_YELLOW                 1
 #define CARD_RED                    2
@@ -876,7 +878,7 @@ PlayerBeginTackling(int16_t pressedDir, Sprite *player, TeamGeneralInfo *team)
 
     SetPlayerAnimationTable(&_plTacklingAnimTable, player);
     player->playerState = (uint8_t)PL_TACKLING;
-    player->playerDownTimer = (int8_t)50;
+    player->playerDownTimer = (int8_t)_gsPlayerDownTimer;   /* Amiga 50 / DOS 55 */
 
     /* Look up player info to check fasterTackle */
     {
