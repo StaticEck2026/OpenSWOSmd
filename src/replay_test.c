@@ -32,6 +32,7 @@
 #include <string.h>
 
 #include "replay_test.h"
+#include "dos_mode.h"      /* _gDosGameplay: the DOS timer ISR has no stats gate */
 #include "game_types.h"
 #include "display.h"    /* _sim_view_width/_height — the simulation view */
 #include "game_init.h"
@@ -1463,7 +1464,8 @@ void ReplayTest_FrameEnd(void)
     /* One tick per game-loop iteration — the Amiga guarantee the SDL timer
      * thread cannot make. Mirrors the ISR's own gates. */
     _currentTick++;
-    if (_showingUserStats == 0 && _paused == 0)
+    /* Same gate as the ISR it stands in for — see interrupts.c. */
+    if (_paused == 0 && (_gDosGameplay || _showingUserStats == 0))
         _currentGameTick++;
 
     if ((s_frame % 500) == 0)

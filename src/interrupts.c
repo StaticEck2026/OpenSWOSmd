@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "interrupts.h"
+#include "dos_mode.h"      /* _gDosGameplay: the DOS timer ISR has no stats gate */
 #include "game_types.h"
 #include "display.h"
 #include "deterministic.h"
@@ -245,7 +246,26 @@ void _Int3TimerHandler(void)
     _currentTick++;
 #endif
 
-    if (_showingUserStats == 0 && _paused == 0)
+    /* The stats overlay freezes the game clock on the Amiga and does NOT on DOS.
+     * The Amiga ISR tests both flags:
+     *
+     *      tst.w   (showingUserStats).l        ; SWOS2.s:5615
+     *      bne.s   isr_paused_path
+     *      tst.w   (paused).l
+     *      bne.s   isr_paused_path
+     *      addq.w  #1,(currentGameTick).l
+     *
+     * where the DOS `TimerProc` tests only `paused` (swos.asm:12172) and counts
+     * straight on. So a DOS stats overlay costs the clock nothing, and an Amiga
+     * one costs it a tick per frame it is up.
+     *
+     * `currentGameTick` is not a clock in any gentle sense — dozens of AI and
+     * physics decisions are `tick & mask`, so losing one tick shifts the phase of
+     * all of them for the rest of the match. zkz-12080203 showed a single frame
+     * of stats at f3039, and 8000 frames later the ball glanced a goalpost:
+     * `((tick & 0x1F) << 4) - 0x100` gave us -208 against the reference's -192,
+     * one step of the tick apart. */
+    if (_paused == 0 && (_gDosGameplay || _showingUserStats == 0))
     {
 #ifdef SWOS_SDL_BUILD
         { extern int ReplayTest_OwnsGameTick(void);
