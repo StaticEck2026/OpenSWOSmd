@@ -300,8 +300,20 @@ its contents, so a substitution that swaps the wrong player is invisible to
 every level until something like this reads the table back. His stale
 destination of 1406/1370 is off-pitch — where a substituted player walks.
 
-That makes it a lead about the substitution itself, and it sits directly
-downstream of the estimated bench frame above.
+But he cannot simply be absent from the table either: his `player_state` goes
+0 -> 15 between f27400 and f27486, and only `UpdatePlayers` walking that table
+sets it. So the reference writes his destination TWICE in the frame — once
+from `stopPlayers` and again afterwards — and we only write once (a
+watchpoint over the whole frame catches exactly one).
+
+The second write's shape is the clue. 1406 - 439 = 967 and 1370 - 403 = 967:
+**the same offset on both axes**, so the reference sets `dest = position +
+K * direction` with K large — "keep walking that way" rather than a place. By
+f27489 it is 635/392, a real position again. Whatever assigns that walk-off
+destination during ST_PLAYERS_GOING_TO_SHOWER, this port does not have it, and
+`frame_delay` agrees: the reference's 16 is `UpdatePlayerSpeed`'s tail with
+speed 0, and our 5 is below that formula's floor of 6, so our player never
+reached the tail at all.
 
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
