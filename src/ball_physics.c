@@ -860,8 +860,10 @@ skip_goal_collision:
         int16_t bx = ball->x.s.i - 1;
         int16_t by = ball->y.s.i;
         int16_t bz = ball->z.s.i;
+        int16_t d4;
+        int32_t deltaY;
 
-        /* Check if ball is near goal line (Y 129..132 or 766..769) */
+        /* Near a goal line: Y 129..132 or 766..769 (SWOS2.s:14807). */
         if (by > 128 && by <= 132)
             goto goalline_check;
         if (by >= 766 && by < 770)
@@ -871,76 +873,74 @@ skip_goal_collision:
     goalline_check:
         if (bz > 19) goto after_goalpost;
         if (bx <= 295 || bx > 372) goto after_goalpost;
-        if (bz <= 15) {
-            /* Ball at post level */
-            if (bx >= 302 && bx <= 366)
-                goto after_goalpost; /* inside goal mouth, no post */
-            /* Side post hit */
-            goto goalpost_hit;
+
+        /* Three arms, and the port used to have only two of them. `d4` is the
+         * same expression in each — a 16-unit step off the game tick — but
+         * WHERE it is added is what separates them (SWOS2.s:14829-14869, and
+         * swos.asm:110374-110438 the same):
+         *
+         *   above post level (z > 15), weak Y  -> loc_109878, the crossbar:
+         *       bounce Z, restore it, and shift the ball a pixel down the
+         *       pitch. Nothing is added to a destination.
+         *   at post level (z <= 15) and outside the goal mouth, weak Y
+         *                                    -> loc_109810's fall-through:
+         *       reverse the Y destination and add d4 to DESTY.
+         *   either, strong Y                 -> loc_10984C:
+         *       reverse the Y destination and add d4 to DESTX.
+         *
+         * The middle arm was missing: a weak Y at post level fell into the
+         * crossbar, so a ball resting against a post drifted a pixel down the
+         * pitch every frame instead of rattling along it. zkz-12080203 f11493
+         * is one frame of that — recorded destY -390 and y unmoved against
+         * our destY 478 and y one pixel further on. */
+        if (bz > 15)
+            goto above_post_level;
+        if (bx >= 302 && bx <= 366)
+            goto after_goalpost;   /* inside the goal mouth: no post to hit */
+
+        /* loc_109810 — the side of a post */
+        d4 = (int16_t)(_currentGameTick & 0x1F);
+        d4 = (int16_t)((d4 << 4) - 0x100);
+        deltaY = ball->deltaY.raw;
+        if (deltaY < (int32_t)0xFFFFB000 || deltaY > 0x5000)
+            goto strong_y_deflection;
+        reverseDestYDirection(ball, savedY);
+        ResetBothTeamSpinTimers();
+        ball->destY = (int16_t)(ball->destY + d4);
+        goto goalpost_speed_reduce;
+
+    above_post_level:
+        /* loc_1097E6 — level with the crossbar */
+        d4 = (int16_t)(_currentGameTick & 0x1F);
+        d4 = (int16_t)((d4 << 4) - 0x100);
+        deltaY = ball->deltaY.raw;
+        if (deltaY < (int32_t)0xFFFFB000 || deltaY > 0x5000)
+            goto strong_y_deflection;
+        goto crossbar_bounce;
+
+    strong_y_deflection:
+        /* loc_10984C — shared by both, and it only fires when the ball is
+         * travelling INTO the goal line it is nearest. */
+        if (by <= 449) {
+            if (deltaY >= 0)
+                goto after_goalpost;
+        } else {
+            if (deltaY < 0)
+                goto after_goalpost;
         }
+        reverseDestYDirection(ball, savedY);
+        ResetBothTeamSpinTimers();
+        ball->destX = (int16_t)(ball->destX + d4);
+        goto goalpost_speed_reduce;
 
-        /* Ball above post level but below crossbar — random deflection */
-        {
-            int16_t d4 = (int16_t)(_currentGameTick & 0x1F);
-            d4 = (int16_t)((d4 << 4) - 0x100);
-
-            int32_t deltaY = ball->deltaY.raw;
-            if (deltaY < (int32_t)0xFFFFB000 || deltaY > 0x5000) {
-                /* Strong Y velocity: check direction */
-                if (by <= 449) {
-                    if (deltaY >= 0)
-                        goto after_goalpost;
-                } else {
-                    if (deltaY < 0)
-                        goto after_goalpost;
-                }
-                /* Deflect Y and add random X */
-                reverseDestYDirection(ball, savedY);
-                ResetBothTeamSpinTimers();
-                ball->destX = ball->destX + d4;
-                goto goalpost_speed_reduce;
-            }
-
-            /* Weak Y velocity at crossbar height -> crossbar bounce.
-             * ASM: neg.l SPRITE_DELTAZ, restore Z from savedZ, bump savedY +1.
-             * This bounces the ball off the crossbar. */
-            ball->deltaZ.raw = -ball->deltaZ.raw;
-            ball->z.raw = savedZ;
-            savedY += 0x10000;
-            goto goalpost_speed_reduce;
-        }
-
-    goalpost_hit:
-        {
-            int16_t d4 = (int16_t)(_currentGameTick & 0x1F);
-            d4 = (int16_t)((d4 << 4) - 0x100);
-
-            int32_t deltaY = ball->deltaY.raw;
-            if (deltaY < (int32_t)0xFFFFB000 || deltaY > 0x5000) {
-                /* Strong velocity */
-                if (by <= 449) {
-                    if (ball->deltaY.raw >= 0)
-                        goto after_goalpost;
-                } else {
-                    if (ball->deltaY.raw < 0)
-                        goto after_goalpost;
-                }
-                reverseDestYDirection(ball, savedY);
-                ResetBothTeamSpinTimers();
-                ball->destX = ball->destX + d4;
-                goto goalpost_speed_reduce;
-            }
-
-            /* Crossbar bounce */
-            {
-                int32_t curDZ = ball->deltaZ.raw;
-                ball->deltaZ.raw = -curDZ;
-            }
-            ball->z.raw = savedZ;
-            savedY += 0x10000; /* bump Y by 1 integer unit */
-        }
+    crossbar_bounce:
+        /* loc_109878 */
+        ball->deltaZ.raw = -ball->deltaZ.raw;
+        ball->z.raw = savedZ;
+        savedY += 0x10000;
 
     goalpost_speed_reduce:
+        /* loc_109886 */
         PlaySample3IfNotTraining();
         {
             uint16_t spd = (uint16_t)ball->speed;
