@@ -1724,13 +1724,14 @@ Two things worth keeping out of the wreckage:
   ```
 
   So a fire-block period shifts the DOS phase and leaves the Amiga's alone,
-  and the two are on opposite teams afterwards. That is the standing lead for
-  `zkz-12065730` at 1251, where `update_player_index` comes back top 4 /
-  bottom 3 against our 3 / 4. It qualifies on the usual terms — one site in
-  each listing, and the conversion did not force it, since the DOS build still
-  has `frameCount` and chose not to use it here — but it has **not** been
-  A/B'd against a recording yet, which is what this document requires before a
-  `_gDosGameplay` gate goes in.
+  and the two are on opposite teams afterwards. **Now measured and fixed**
+  (defect 42): player 2 holds fire through a stoppage in `zkz-12065730` to
+  f1249 and releases at f1250, and the reference resumes writing the bottom
+  team's `direction` at f1252 where `frameCount` says f1251 — which the
+  bench's double-tap detector then latches a full alternation late, recorded
+  `subsPrevPl2Direction` -1 at f1251 and 7 at f1253 against our 7 at f1251.
+  That recording now replays **complete**, and with it the last of the four
+  stops this section claimed could never move.
 
 ### A long test on a word field
 
@@ -2145,6 +2146,59 @@ a frame, invisible to a rig that injects a frame's input atomically before the
 frame runs. It costs `playa-10090613` at 11222 and `zkz-11215003` at 11479, and
 those are the only two.
 
+### The goalpost has three arms and the port had two
+
+`zkz-12080203` stopped at 11493 with the ball a pixel further down the pitch
+than the reference and its `destY` unreversed. The ball had wedged against the
+side of a post at 11492 — the recording holds its x and y perfectly still while
+`destY` alternates 478, -390, 654, -534 and the speed drops by a quarter every
+frame.
+
+`UpdateBall`'s goalpost block is entered two ways and leaves three:
+
+```
+    loc_1097E6:                 ; z > 15 — level with the crossbar
+    loc_109810:                 ; z <= 15 and outside the goal mouth — a post
+            move.w  (currentGameTick).l,d4      ; both compute the same step
+            andi.w  #$1F,d4
+            lsl.w   #4,d4
+            subi.w  #$100,d4
+            cmpi.l  #$FFFFB000,SPRITE_DELTAY(a0)
+            blt     loc_10984C                  ; strong Y
+            cmpi.l  #$5000,SPRITE_DELTAY(a0)
+            bgt     loc_10984C
+```
+
+and where that step is *added* is the whole difference (SWOS2.s:14829-14869,
+swos.asm:110374-110438 identical):
+
+| entry | Y | | |
+|---|---|---|---|
+| crossbar height | weak | `loc_109878` | negate deltaZ, restore Z, push the ball one pixel down the pitch |
+| post height, outside the mouth | weak | `loc_109810` falls through | reverse the Y destination, **`destY += d4`** |
+| either | strong | `loc_10984C` | reverse the Y destination, **`destX += d4`** |
+
+The port had the first and the third, and routed the second into the first. So
+a ball resting against the side of a post with little Y velocity bounced off a
+crossbar that is not there — a pixel down the pitch every frame instead of
+rattling along the goal line.
+
+The arithmetic confirms itself once the middle arm exists. f11493 is the weak
+arm: `reverseDestYDirection` on a ball at y 132 with `destY` 478 gives -214,
+and the tick step at that frame is -176, so `destY` lands on the recorded
+**-390**. f11494 is the strong arm: `destY` reverses to the recorded **654**
+and is left there while `destX` takes the step instead, -796 + -160 = the
+recorded **-956**.
+
+**11493 → 31634 of 31635 frames.** One missing arm was 20141 frames of a
+recording, and it also carried `zkz-10140228` from 29984 to 32545.
+
+> Worth noticing how it hid. Both entries compute `d4` identically and both
+> test the same threshold, so the two blocks read as duplicates — and a
+> duplicate is exactly the kind of thing a port collapses into one. They are
+> not duplicates: they differ only in what happens when the test FAILS, which
+> is the arm with no code of its own in the listing, just a fall-through.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -2353,8 +2407,8 @@ Ranked by how early they stop a recording. See
    challenge never arms `normalFire`. `playa-10095214` went 10129 → 21613 on
    it; the other three stops with that signature — `playa-10144556` at 1696,
    `zkz-10190651` at 2570, `zkz-10173518` at 5051 — are re-opened by it.
-   `zkz-12065730` at 1251 is a different question and is still open: see the
-   team-alternation note in the retraction.
+   `zkz-12065730` at 1251 was the fourth and a different question — the DOS
+   team-alternation counter, defect 42 — and it is closed too. All four moved.
 7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.

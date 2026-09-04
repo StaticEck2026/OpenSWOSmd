@@ -185,6 +185,8 @@ they were found.
 | 39 | `GameOver` and `ViewHighLightsMain` parked the camera at the Amiga's literals — three more `f(view)` constants (168/176 centre-x twice, 313/349 bench-y) | view-dependent constant |
 | 40 | `GameOver`'s training-camera test does not exist in the DOS build, which takes the training Y either way | recompilation artefact |
 | 41 | The Amiga ISR will not advance `currentGameTick` while the stats overlay is up and the DOS `TimerProc` will — one lost count re-phases every `tick & mask` decision for the rest of the match | DOS-vs-Amiga |
+| 42 | The DOS build alternates which team `UpdateAndApplyTeamControls` handles on a dedicated counter that stands still through a fire-block, where the Amiga reads `frameCount`, which never stops | DOS-vs-Amiga |
+| 43 | The goalpost deflection has THREE arms and the port had two: a weak-Y hit on the side of a post adds the tick step to `destY`, and was falling into the crossbar bounce instead | shared tail split in two |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -193,11 +195,11 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Twenty-one of the forty are a **DOS-vs-Amiga difference** — mostly timing
+Twenty-two of the forty-three are a **DOS-vs-Amiga difference** — mostly timing
 constants, one a whole data set (30), and four (28, 29, 31, 40) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
-this port does on the Amiga. The other nineteen are porting defects that would be
+this port does on the Amiga. The other twenty-one are porting defects that would be
 just as wrong on either machine, and they cluster into a handful of shapes worth
 knowing by name:
 
@@ -217,10 +219,13 @@ knowing by name:
 - **Reading the listing too literally** (10, 18, 20, 22) — an equate applied to
   a foreign pointer, a table read off its own front, a copy to the wrong symbol,
   and an arm the mask above it had already made unreachable.
-- **A shared tail split in two** (37) — the port gave a branch its own arm
+- **A shared tail split in two** (37, 43) — the port gave a branch its own arm
   where the listing had already answered by jumping into somebody else's. The
   mirror image of 22 and 29: not code that never runs, but code reached from
-  somewhere the port did not look.
+  somewhere the port did not look. 43 is the same shape seen from the other
+  side: two blocks that read as duplicates because they compute the same value
+  and test the same threshold, and differ only in the arm the listing writes
+  as a bare fall-through.
 - **A fall-through that became a return** (38) — a chain of `cmpi/bne` has a
   default arm whether or not anyone wrote one, and it is wherever the last
   `bne` points. Factored into a `void` helper it silently becomes "return",
