@@ -245,28 +245,30 @@ something the recording cannot carry:
 | `zkz-10173518` 25490, `zkz-10174427` 21927 | 4793 | `currentGameTick` drifting in real time across a fade |
 | four recordings' last frame | 4 | an input edge inside the frame |
 
-The bench pair is the whole remaining gap, and that is measured rather than
-estimated: a throwaway build that defers the call by one frame whenever
-`gameStatePl != 0` — the one rule that fits all three presses in the corpus —
-runs `zkz-11215003` to 27487 of 27819 and `playa-10090613` to its terminal
-frame, which is the corpus at **98.0%**. Nothing else in either recording
-disagrees with this port.
+### ! The bench frame is ESTIMATED, not recovered
 
-That rule is deliberately NOT shipped, and the mechanism says it never should
-be. One key reaches the game down two independent latches — the recording
-carries the POLLED BITMASK (`p1_controls` bit 6 -> `pl1SecondaryFire` ->
+The one place the rig guesses, and it is worth reading before trusting any
+result that turns on a substitution.
+
+The recording under-determines the bench call by exactly one frame. One key
+reaches the game down two independent latches: the recording carries the
+POLLED BITMASK (`p1_controls` bit 6 -> `pl1SecondaryFire` ->
 `TeamGeneralInfo.secondaryFire`, written at GameLoop line 703) while the bench
 opens off the BUFFERED SCANCODE (`bench1Called`, set only in `MainKeysCheck`
 at line 666). A scancode can arrive a frame after the bitmask sees the key
-held, and nothing in the record times that queue. So there is no mechanism
-left to find, only a coin-flip to guess, and the current same-frame injection
-is a guess too — just a different one. Neither placement is right for all
-three presses in the corpus.
+held, and nothing in the record times that queue.
 
-**What closes it is a recording that carries `bench1Called` itself**, which the
-Amiga dumper (docs/TESTS.md section 8) would, being our own build. That is now
-the strongest argument for building it: it is worth 11% of this corpus on its
-own, quite apart from the `onScreen` ceiling below.
+The corpus has three presses and neither placement is right for all of them —
+`zkz-11215003` f117 same-frame, `zkz-11215003` f11479 and `playa-10090613`
+f11222 one frame later. The rig defers unless `gameStatePl` is 0, which is
+right on all three and is **fitted to those three, not derived**. Every
+deferral says ESTIMATED in the log, and `src/replay_test.c` carries the whole
+argument. A bench-frame match is evidence of nothing.
+
+What would make it a recovered fact is a recording that carries `bench1Called`
+itself — which the Amiga dumper (docs/TESTS.md section 8) would, being our own
+build. It was worth 11% of this corpus, which is the strongest argument for
+building it, quite apart from the `onScreen` ceiling below.
 
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
