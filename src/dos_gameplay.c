@@ -51,6 +51,14 @@ int16_t  _gsResultBreakLength    = 150; /* GS_165_150 game_state.c    31000 -> b
  * the substitutes menu for four frames and steps the cursor ONCE; at 2 we
  * stepped it twice and substituted the wrong player (docs/TESTS.md). */
 int16_t  _gsSubsMovementDelay    = 2;   /* GS_4_2     bench_subs.c    menu repeat delay */
+/* How long the camera takes to come back from the bench after the substitutes
+ * menu closes. `move.w #50,(cameraLeavingSubsTimer)` (data/SWOS2.s:18791) vs
+ * `mov g_cameraLeavingSubsTimer, 55` (swos-port/swos/swos.asm:92305) — one write
+ * site in each, and 50 -> 55 is the same x1.1 family as every GS_* above, so
+ * this is the conversion's systematic 50 Hz -> 70 Hz timer scaling rather than a
+ * behaviour change. Found by the replay rig: our bench check resumed exactly 5
+ * frames early after a substitution (docs/TESTS.md). */
+int16_t  _gsCameraLeavingSubs    = 50;  /* GS_55_50   bench_subs.c    camera back from bench */
 
 /* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
  * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
@@ -117,6 +125,7 @@ void ApplyGameStyle(void)
     _gsResultHalftimeLength = dos ? 275 : 250;
     _gsResultBreakLength    = dos ? 165 : 150;
     _gsSubsMovementDelay    = dos ? 4   : 2;
+    _gsCameraLeavingSubs    = dos ? 55  : 50;
 
     /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
      * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't

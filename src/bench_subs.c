@@ -36,6 +36,7 @@
 /* ---- external asm globals ---- */
 extern uint16_t _inSubstitutesMenu;
 extern int16_t  _gsSubsMovementDelay;  /* Amiga 2 / DOS 4 — dos_gameplay.c */
+extern int16_t  _gsCameraLeavingSubs;  /* Amiga 50 / DOS 55 — dos_gameplay.c */
 extern int      _gDosGameplay;
 /* DOS's benchPickTeamCounter — see the team alternation in BenchCheckControls.
  * The Amiga has no such variable; it tests frameCount instead. */
@@ -628,7 +629,7 @@ static void leaveSubsMenu(void)
 {
     InitCurrentGoalHighlight();
     _benchOff = 1;
-    _cameraLeavingSubsTimer = 50;
+    _cameraLeavingSubsTimer = (uint16_t)_gsCameraLeavingSubs;  /* Amiga 50 / DOS 55 */
     _leavingSubsMenu = 1;
     CheckIfGoalkeeperClaimedTheBall();
     _bench1Called = 0;
@@ -787,6 +788,22 @@ static void trainingSwapBenchTeams(void)
  * isThisPlayerOkToSelect (SWOS2.s line 12549)
  * Returns: negative = not OK, >= 0 = OK
  * ================================================================ */
+/* The negative-position path returns the byte OFFSET, not an error.
+ *
+ *   tst.b  PLAYERINFOHEADER_POSITION(a0)
+ *   bmi.s  locret_10D230        ; SWOS2.s:18963 — straight to the rts,
+ *                               ; leaving d0 = (benchPlayerIndex+10)*61
+ *
+ * and the callers test the SIGN of that word (`if (... >= 0) return;`), so a
+ * player with position < 0 comes out NON-NEGATIVE and is treated as SELECTABLE.
+ * That reads like an original-game slip, but it is the behaviour on both
+ * releases — the DOS recompile inherits it verbatim
+ * (`js short @@out` then `mov ax, word ptr D0; or ax,ax; retn`,
+ * swos-port/swos/swos.asm:92573). Returning the negative position instead made
+ * the bench arrow skip the slot: the replay rig caught the cursor landing on
+ * bench slot 2 where the reference has 1, and a substitution offered for the
+ * wrong player (docs/TESTS.md). The offset is always small and positive here
+ * (at most 15*61), so the sign is never in doubt. */
 static int16_t isThisPlayerOkToSelect(void)
 {
     uint16_t d0, d1;
@@ -813,7 +830,7 @@ static int16_t isThisPlayerOkToSelect(void)
         if (pi->skip != 0)
             return -1;
         if ((int8_t)pi->position < 0)
-            return (int16_t)(int8_t)pi->position; /* returns negative */
+            return (int16_t)(idx * (uint16_t)sizeof(PlayerInfo));  /* d0 = offset */
         if ((uint8_t)pi->numYellowCards >= 2)
             return -1;
 
@@ -2480,7 +2497,7 @@ void LeaveSubsMenu(void)
 {
     InitCurrentGoalHighlight();
     _benchOff = 1;
-    _cameraLeavingSubsTimer = 50;
+    _cameraLeavingSubsTimer = (uint16_t)_gsCameraLeavingSubs;  /* Amiga 50 / DOS 55 */
     _leavingSubsMenu = 1;
     CheckIfGoalkeeperClaimedTheBall();
     _bench1Called = 0;
@@ -2550,9 +2567,11 @@ int16_t IsThisPlayerOkToSelect(void)
     if (pi->skip != 0)
         return -1;
 
-    /* Inactive player? (negative position) */
+    /* Inactive player: the asm falls straight to the rts with d0 still holding
+     * the OFFSET, and callers test its sign — so this is NON-NEGATIVE, i.e.
+     * selectable. See the note on isThisPlayerOkToSelect above. */
     if (pi->position < 0)
-        return -1;
+        return (int16_t)(uint16_t)offset;
 
     /* Red card or worse? */
     if ((uint8_t)pi->numYellowCards >= 2)

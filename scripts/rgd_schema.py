@@ -393,7 +393,9 @@ def build_schema(major, minor, level):
             # instead, so this is only meaningful with DOS gameplay on. See
             # BenchCheckControls in src/bench_subs.c.
             ("alternate_teams_timer", "s32", 29, "eq"),
-            ("arrow_player_index",   "s8",  33, "na"),
+            # swos-port's m_arrowPlayerIndex is our _benchPlayerIndex: which
+            # bench slot the menu arrow is on.
+            ("arrow_player_index",   "s8",  33, "eq"),
             ("selected_menu_player", "s8",  34, "na"),
             ("player_to_enter",      "s8",  35, "eq"),
             ("player_to_sub_pos",    "s8",  36, "eq"),

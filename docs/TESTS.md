@@ -11,10 +11,10 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, reaching frame 795-2158 before the first divergence at level
+recordings run, reaching frame 795-2449 before the first divergence at level
 `info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
-formation coverage rather than a porting defect. Fifteen real defects found and
-fixed on the way in, and
+formation coverage rather than a porting defect. Seventeen real defects found
+and fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
 player-price audit").
@@ -348,8 +348,8 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **714-2466** frames at
-`scalars`, **795-2158** at `info`, **795-2158** at `sprites`, and **401 of 416**
+The shape of the results, as of the run in that file: **714-3390** frames at
+`scalars`, **795-2449** at `info`, **795-2449** at `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -613,7 +613,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Thirteen real defects so far, all fixed — plus the two in "The `onScreen`
+Fifteen real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -685,6 +685,13 @@ ceiling" below, which that measurement turned up on its own:
     different constant — `benchPickTeamCounter`, which advances only when the
     bench check runs, against the Amiga's global `frameCount`. Both are in
     `BenchCheckControls`.
+14. **The camera's return from the bench is 50 frames on Amiga, 55 on DOS** —
+    one write site each (`SWOS2.s:18791`, `swos.asm:92305`), and the same ×1.1
+    family as every other `GS_*`. DOS mode was using 50, so its bench check
+    resumed exactly five frames early after every substitution.
+15. **`IsThisPlayerOkToSelect` returns an OFFSET, not an error, for an inactive
+    player** — and its callers test the sign. See "A routine that answers with
+    the wrong number" below.
 
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
@@ -900,6 +907,45 @@ This is the "adjacent-globals" pattern CLAUDE.md warns about, seen from the
 other side: not a read that runs off the end of a variable, but a read that runs
 off the *front* of one.
 
+### A routine that answers with the wrong number
+
+`IsThisPlayerOkToSelect` decides whether the bench arrow may land on a slot. Its
+documented contract is the **sign flag** — "set = not OK, clear = OK" — and the
+callers honour that literally: `if (isThisPlayerOkToSelect() >= 0) return;`.
+
+The three rejection paths do `move.w #$FFFF,d0`. The *fourth* does not:
+
+```
+loc_10D204:
+    move.w  (benchPlayerIndex).l,d0
+    addi.w  #$A,d0
+    mulu.w  #PLAYERINFO_SIZE+PLAYERINFO_SKIP,d0   ; d0 = the byte offset
+    ...
+    tst.b   PLAYERINFOHEADER_POSITION(a0)
+    bmi.s   locret_10D230                         ; straight to the rts —
+    ...                                           ; d0 is STILL the offset
+locret_10D230:
+    rts
+```
+
+So a player with a negative `position` — the marker `SubstitutePlayer` writes on
+the slot of the man who just came off — returns `(benchPlayerIndex + 10) * 61`,
+a small positive number, and the caller reads that as **selectable**. It looks
+like an original-game slip; it is nonetheless the behaviour, and the DOS
+recompile inherits it verbatim (`js short @@out`, then
+`mov ax, word ptr D0; or ax,ax; retn`).
+
+Our port returned the negative position, so the arrow skipped that slot. The rig
+caught it precisely: `bench.arrow_player_index` recorded 1, ours 2, on the exact
+frame the player pressed DOWN — and the fire that followed then offered a
+substitution for the wrong man. `zkz-11021807` went **1178 → 2262** (of 4064
+frames), and with the bench-camera constant beside it, **1111 → 3390** at
+`scalars`.
+
+Worth keeping as a pattern: a routine whose contract is a *flag* can return a
+*value* on some paths, and translating it as "return the thing that was wrong"
+is a plausible, wrong guess. Read what the register actually holds at the `rts`.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1067,7 +1113,7 @@ Ranked by how early they stop a recording. See
    `onScreen`-gated, so some of this may still be view-related — but the window
    now matches the recording's, so it is worth reading
    `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
-5. **Sprite state**, at 795-2158 (setting aside `zkz-10174427`, whose frame-0
+5. **Sprite state**, at 795-2449 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start
    there — `sprites` is the earliest stop (or tied with it) on all twelve
@@ -1075,13 +1121,10 @@ Ranked by how early they stop a recording. See
    earliest is now `playa-10090613` at 795 on `bottom_info.pass_to_player_ptr`,
    which is really (4).
 6. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
-   immediately paid: the `substituteInProgress` sign bug above, and a precise
-   new lead. `bench.alternate_teams_timer` drifts by exactly **one** at frame
-   926 of `zkz-11021807` (and 2158 of `zkz-12080203`): somewhere between the
-   bench closing and there, we run the team-pick check on one frame the
-   reference does not. The guard chain matches the DOS asm line for line, so
-   the difference is in when one of those guards is *satisfied*.
-   `bench.pl2_prev_direction` at 1251 of `zkz-12065730` is the same family.
+   paid three times over: the `substituteInProgress` sign bug, the bench-camera
+   constant, and `IsThisPlayerOkToSelect`. `zkz-11021807` went 926 → 2262 on
+   the back of it. `bench.pl2_prev_direction` at 1251 of `zkz-12065730` is the
+   next thread from the same spool.
 7. The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---

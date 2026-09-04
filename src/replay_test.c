@@ -477,6 +477,8 @@ static void buildRegistry(void)
         regAdd("bench.player_to_sub_pos",    RT_S16, &_plToBeSubstitutedPos);
         regAdd("bench.player_to_sub_ord",    RT_S16, &_plToBeSubstitutedOrd);
         regAdd("bench.selected_formation",   RT_S16, &_selectedFormationEntry);
+        { extern uint16_t _benchPlayerIndex;
+          regAdd("bench.arrow_player_index", RT_S16, &_benchPlayerIndex); }
     }
 
     regTeamGame("top_game",    &_topTeamInGame);
