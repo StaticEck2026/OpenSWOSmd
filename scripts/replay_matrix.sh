@@ -180,6 +180,10 @@ they were found.
 | 34 | A shift count taken from a **comment** ("/= 32") instead of the four instructions beneath it (/16) — wrong in both listings, one bad annotation from the shared IDA database | comment believed over code |
 | 35 | The referee's entry position was the Amiga's literal `cameraY + 287` rather than `f(view)` — the DOS writes 215, one view height less | view-dependent constant |
 | 36 | Seven of the twelve `stoppageEventTimer` reloads scale x1.1 and five do not, including two 100s that stay where three become 110 — DOS mode left every end-of-period pause early | timing constant |
+| 37 | `UpdateAndApplyTeamControls` gives a computer team no tail of its own — the asm drops it into **player one's**, so an AI tackle clears the human's `pl1FireCounter` and a fire hold that crosses a challenge never arms `normalFire` | shared tail split in two |
+| 38 | The `end_game_transmission` chain's last `bne` falls through into the stoppage countdown; ported as a `void` helper plus `return`, a held fire button froze every end-of-period timer | fall-through became a return |
+| 39 | `GameOver` and `ViewHighLightsMain` parked the camera at the Amiga's literals — three more `f(view)` constants (168/176 centre-x twice, 313/349 bench-y) | view-dependent constant |
+| 40 | `GameOver`'s training-camera test does not exist in the DOS build, which takes the training Y either way | recompilation artefact |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -188,11 +192,11 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Eighteen of the thirty-five are a **DOS-vs-Amiga difference** — mostly timing
-constants, one a whole data set (30), and three (28, 29, 31) artefacts of the
+Twenty of the thirty-nine are a **DOS-vs-Amiga difference** — mostly timing
+constants, one a whole data set (30), and four (28, 29, 31, 40) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
-this port does on the Amiga. The other seventeen are porting defects that would be
+this port does on the Amiga. The other nineteen are porting defects that would be
 just as wrong on either machine, and they cluster into a handful of shapes worth
 knowing by name:
 
@@ -212,14 +216,16 @@ knowing by name:
 - **Reading the listing too literally** (10, 18, 20, 22) — an equate applied to
   a foreign pointer, a table read off its own front, a copy to the wrong symbol,
   and an arm the mask above it had already made unreachable.
+- **A shared tail split in two** (37) — the port gave a branch its own arm
+  where the listing had already answered by jumping into somebody else's. The
+  mirror image of 22 and 29: not code that never runs, but code reached from
+  somewhere the port did not look.
+- **A fall-through that became a return** (38) — a chain of `cmpi/bne` has a
+  default arm whether or not anyone wrote one, and it is wherever the last
+  `bne` points. Factored into a `void` helper it silently becomes "return",
+  and the C reads exactly like what it was meant to be.
 
-Four recordings stop on state that is **swos-port's own C++ control layer**
-rather than the game's — it replaces `Player1StatusProc`, the team alternation
-and the fire-block, with private counters and a switch counter that does not
-advance on a skipped frame, and a sampling schedule the game never sees. Those
-four cannot go further, and no change to this port will move them; see docs/TESTS.md, "The control layer is swos-port's".
-
-Four retractions are documented too. Three were data that never executes: a
+Five retractions are documented too. Three were data that never executes: a
 "rewritten" DOS forward line, a hybrid tactics table, and a DOS-specific 4-4-2.
 The fourth was about the corpus itself — this document long said the recordings
 were SWOS++ rather than the retail DOS game, and treated five sprite fields as
@@ -228,5 +234,16 @@ the recordings are the original game's own code executing. The five fields are
 its C++ `Sprite::init()` memsetting SWOS's static sprite table away before
 frame 0, and on every one of them this port holds the value `data/SWOS2.s`
 gives.
+
+The fifth is this document's own worst call, and it is the same mistake once
+more. Four recordings that stopped on fire flags and team alternation were
+filed as "swos-port's C++ control layer, and no change to this port will move
+them". The recordings are made by SWOS++ instrumenting the DOS binary; they
+were never swos-port's C++ at all. Defect 37 is what three of the four
+actually were, and it moved `playa-10144556` from 1696 to complete,
+`zkz-10190651` from 2570 to complete and `zkz-10173518` from 5051 to 25586 —
+a third of the whole corpus, sitting behind a paragraph that said not to look.
+**A class of "cannot be fixed" is a claim, and it needs the same evidence as a
+fix.**
 EOF
 
