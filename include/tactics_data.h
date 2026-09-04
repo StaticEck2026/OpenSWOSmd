@@ -64,6 +64,13 @@ extern TeamTactics _savedCurrentTactics;
 /* Pointer table for all 19 tactics (18 formations + editor working copy) */
 extern TeamTactics *_teamTacticsTable[19];
 
+/* Point the four re-tuned formation slots (4-4-2, 4-3-3, 3-4-3, Sweep) at the
+ * DOS release's coverage or the Amiga's. Called from ApplyGameStyle so
+ * --dos-gameplay switches the formations along with the physics; re-applies
+ * InitUserTactics' 5-3-2 forward-row copy, so call order does not matter.
+ * A -DSWOS_DOS_TACTICS build stays pinned to the DOS set. */
+void TacticsData_SelectRelease(int dos);
+
 /* ======================================================================
  * Skill and quadrant tables
  * ====================================================================== */

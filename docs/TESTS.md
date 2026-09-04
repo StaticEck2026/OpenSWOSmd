@@ -11,12 +11,12 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
-every bound field, every frame — and `zkz-11054632` now does it at every
-level, all 7314 frames of it.** The rest reach 1251-7201 at level `info`
-(section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
-coverage rather than a porting defect. Thirty-one real defects found and fixed
-on the way in, and
+recordings run, and **two of them replay end to end at every level** —
+`zkz-11054632`'s 7314 frames and `zkz-11021807`'s 4064, every bound field on
+every frame. The rest reach 1251-11267 at level `info` (section 5).
+`zkz-10174427`'s frame-0 stop is gone too: it was one byte of formation
+coverage, and DOS-gameplay mode now uses the DOS formations. Thirty-two real
+defects found and fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
 player-price audit").
@@ -369,14 +369,15 @@ last number is the honest headline: 100% of it is not reachable against a DOS
 corpus (see "Can we claim 100% accurate?"), but it moves for exactly one reason,
 which is a defect being fixed.
 
-The shape of the results, as of the run in that file: **889-7411** frames at
-`scalars`, **1251-7314** at `info`, **939-7314** at `sprites` — **16.8%** of
-every recorded frame in the corpus at `scalars` and **13.2%** at `sprites` —
-and **401 of 416**
+The shape of the results, as of the run in that file: **1252-11479** frames at
+`scalars`, **1251-11267** at `info` and at `sprites` — **24.7%** of every
+recorded frame in the corpus at `scalars` and **22.1%** at `sprites` — and
+**401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
-runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
-of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
-understood and is not a porting defect (same section).
+runs before frame 0; see "The player-price audit"). Every recording is in those
+ranges now: `zkz-10174427`'s frame-0 stop was the coverage byte that
+`--dos-gameplay` was not switching, and it runs to 1345 with the DOS
+formations in.
 
 Four things to read into them:
 
@@ -634,7 +635,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Twenty-nine real defects so far, all fixed — plus the two in "The `onScreen`
+Thirty real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -777,6 +778,12 @@ ceiling" below, which that measurement turned up on its own:
     build's two `beq`s become `jz @@out` and the turn falls through to the same
     bare `retn`, so a DOS static header never leaves the *attempt* animation.
     Also gated. See "The tail that the recompilation dropped" below.
+30. **`--dos-gameplay` was not switching the formations.** The DOS release
+    re-tuned 4-4-2, 4-3-3 and Sweep, `ApplyGameStyle` swapped the physics and
+    the timers but not those tables, and the gap had been diagnosed and written
+    down for weeks behind a compile-time flag. `TacticsData_SelectRelease` makes
+    it runtime. Three recordings roughly quadruple their `sprites` depth. See
+    "The formations are part of what `--dos-gameplay` means" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1469,6 +1476,68 @@ checked on both sides, and a measurement only one of them reproduces. Gated on
 > without anybody deciding anything. Neither is a tuning choice, so neither
 > changes what this port does on the Amiga.
 
+### The formations are part of what `--dos-gameplay` means
+
+Three of the corpus's `sprites` stops were the same shape: a player's `dest_x`
+or `dest_y` off by one grid step and everything downstream of it following —
+`sprite[20].dest_x` 145 recorded against our 179, `sprite[10].dest_y` 394
+against 434. Destinations come from the tactics grid, and this document already
+knew the answer: the DOS release re-tuned three formations (21 coverage bytes
+across 4-4-2, 4-3-3 and Sweep; its 3-4-3 is the pristine Amiga one), and
+`ApplyGameStyle` was swapping the physics and the timers for `--dos-gameplay`
+but **not** the formations. It was written down as an open gap and left there,
+because the machinery to fix it — the baked DOS tables — existed only behind a
+compile-time flag.
+
+Testing the hypothesis costs one build:
+
+```
+make clean && make SWOS_DOS_TACTICS=1
+    playa-10090613   2694 -> 7103      (sprites)
+    zkz-11215003     1592 -> 11267
+    zkz-10173518      939 -> 5051
+```
+
+So the tables come out from behind the flag. `TacticsData_SelectRelease(dos)`
+points slots 0/5/7/8 of `_teamTacticsTable` at one release's set or the other,
+and `ApplyGameStyle` calls it beside the ball friction and the `GS_*` timers.
+Two details make it safe to call from there:
+
+- It **re-applies `InitUserTactics`' 5-3-2 forward-row copy** to whichever set
+  is now in the table. That copy is what makes slots 8 and 9 of the 4-4-2 and
+  the Sweep dead data on both releases (see "The rows that were never
+  executed"), and `InitUserTactics` runs in the front end, long before
+  `ApplyGameStyle`. Redoing it here means call order does not matter.
+- It does **not** touch the six USER slots. Those are the player's own tactics,
+  loaded from a `.TAC` or — in the rig — from the recording's own blob.
+
+The four DOS tables are now always compiled: ~1.5 KB, and the Amiga link shows
+exactly that (`.data` 0x1dca4 → 0x1e26e, `.text` +260 bytes for the function,
+`.bss` unchanged). `-DSWOS_DOS_TACTICS` still exists and still pins a build to
+the DOS set; the Amiga default is byte-for-byte what it was, because
+`TacticsData_SelectRelease(0)` writes back the pointers the static initialiser
+already held and redoes a copy that was already done.
+
+The full corpus said more than the three probes did. `zkz-11021807` completes at
+**every** level now rather than only at `scalars`; `zkz-10174427`, which had
+stopped at frame 0 since the rig was built, runs to **1345** — its frame-0
+divergence was the Eranio coverage byte, which is to say this exact gap seen at
+setup time instead of in play; and `playa-10095214` goes 5276 → 10130 at
+`scalars`. Corpus-wide, `sprites` coverage went **13.2% → 22.1%**.
+
+One loose end: `checkPlayerValues` still reports 31/32 for the two recordings
+whose values depend on those bytes. It runs between `installTeam` and
+`InitTeams`, which is *before* `ApplyGameStyle` — so the audit still grades the
+Amiga tables while the match that follows plays the DOS ones. The 384/384 that
+`-DSWOS_DOS_TACTICS` scores is the right number for DOS mode; making the
+setup-time check agree means moving the selection earlier, which is a question
+about where `--dos-gameplay` should take effect rather than about the data.
+
+> The gap had been diagnosed, measured and written down for weeks; what it was
+> missing was somebody running `make SWOS_DOS_TACTICS=1` against the corpus and
+> reading the three numbers. A hypothesis that costs one build is not worth
+> reasoning about.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1647,13 +1716,13 @@ Ranked by how early they stop a recording. See
    header's `top_team_player_no` / `bottom_team_player_no` do not read the way
    their names suggest — `top_info.player_number` / `bottom_info.player_number`
    are the fields that say which side is AI.
-5. **The earliest stops now.** `sprite[7].x` at 939 (`zkz-10173518`, the known
-   4-4-2 coverage byte) is the only one below 1251, and it is not a code bug.
-   Above it: `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, item 6), then
-   a cluster of **player-selection** fields — `top_info.controlled_player` at
-   1696 and 2570, `top_info.current_allowed_direction` at 4496. Three of the
-   twelve now stop on who the game is driving rather than on a simulation
-   value, which is the `onScreen` ceiling below coming into view.
+5. **The earliest stops now**, with the formation gap closed and nothing below
+   1251 left: `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, item 6),
+   `zkz-10174427` at 1259, `playa-10144556` at 1696 on
+   `top_info.controlled_player`, `zkz-12080203` at 2449, `zkz-10190651` at
+   2570. Several are **player-selection** fields — who the game is driving
+   rather than a simulation value — which is the `onScreen` ceiling below
+   coming into view, and the reason section 7 puts the Amiga dumper first.
 6. **`zkz-12065730` at 1251 — a frame of team-alternation phase.** Diagnosed,
    not fixed. `_fireBlocked` makes `UpdateAndApplyTeamControls` return without
    updating *either* team, so the frame it clears on decides which team the

@@ -427,7 +427,11 @@ TeamTactics _teamTacticsSweepOriginal = {
  * tactics menu shows. DOS grades 4-4-2 "B" where the Amiga says "A" (and
  * writes no space), and 4-3-3 "B" where the Amiga says "C".
  * ====================================================================== */
-#ifdef SWOS_DOS_TACTICS
+/* Always compiled, not `#ifdef SWOS_DOS_TACTICS`: DOS-gameplay mode selects
+ * these at runtime (`TacticsData_SelectRelease`, called from ApplyGameStyle),
+ * because the corpus showed the formations are part of what --dos-gameplay
+ * means. ~1.5 KB of data on both targets. The compile-time flag still exists
+ * and still pins the build to this set; see the block above. */
 TeamTactics _teamTactics442Dos = {
     { 0x34, 0x34, 0x32, 0x00, 0x20, 0x42, 0x00, 0x00, 0x00 },
     {
@@ -496,7 +500,7 @@ TeamTactics _teamTacticsSweepDos = {
     { 0x00, 0xFF, 0xFF, 0x00, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0xFF },
     0x08
 };
-#endif
+
 
 #if defined(SWOS_ORIGINAL_TACTICS) && defined(SWOS_DOS_TACTICS)
 #error "SWOS_ORIGINAL_TACTICS and SWOS_DOS_TACTICS select different data — pick one"
@@ -528,6 +532,59 @@ TeamTactics *_teamTacticsTable[19] = {
     &_teamTacticsUSERD, &_teamTacticsUSERE, &_teamTacticsUSERF,
     &_editTacticsCurrentTactics
 };
+
+/* ======================================================================
+ * TacticsData_SelectRelease — point the four re-tuned slots at one release
+ *
+ * 4-4-2, 4-3-3, 3-4-3 and Sweep are the formations the DOS build re-tuned
+ * (21 coverage bytes across three of them; the DOS 3-4-3 is the pristine
+ * Amiga one). ApplyGameStyle calls this so --dos-gameplay switches the
+ * formations along with the physics and the timers, which is what the replay
+ * corpus says it means: with the DOS set, playa-10090613 goes 2694 -> 7103 at
+ * `sprites`, zkz-11215003 1592 -> 11267 and zkz-10173518 939 -> 5051.
+ *
+ * It redoes InitUserTactics' 5-3-2 forward-row copy afterwards, so it does not
+ * matter whether it runs before or after that: whichever set is in the table
+ * has had positions[8..9] overwritten, exactly as the startup copy does on
+ * both releases (see docs/TESTS.md, "The rows that were never executed").
+ * The USER slots are NOT re-derived — those are the player's own tactics.
+ *
+ * A build pinned with -DSWOS_DOS_TACTICS keeps its set either way.
+ * ====================================================================== */
+void TacticsData_SelectRelease(int dos)
+{
+    static TeamTactics * const amigaSet[4] = {
+        &TACTICS_442, &TACTICS_433, &TACTICS_343, &TACTICS_SWEEP
+    };
+    static TeamTactics * const dosSet[4] = {
+        &_teamTactics442Dos, &_teamTactics433Dos,
+        &_teamTactics343Dos, &_teamTacticsSweepDos
+    };
+    static const int8_t slot[4] = { 0, 5, 7, 8 };   /* 442, 433, 343, Sweep */
+    TeamTactics * const *set;
+    int16_t i;
+
+#ifdef SWOS_DOS_TACTICS
+    (void)dos;
+    set = dosSet;
+#else
+    set = dos ? dosSet : amigaSet;
+#endif
+
+    for (i = 0; i < 4; i++)
+        _teamTacticsTable[(int)slot[i]] = set[i];
+
+    /* Re-apply the startup copy to whichever set is now in the table. */
+    {
+        uint8_t *src      = (uint8_t *)&_teamTactics532.positions[8];
+        uint8_t *dst442   = (uint8_t *)&((TeamTactics *)_teamTacticsTable[0])->positions[8];
+        uint8_t *dstSweep = (uint8_t *)&((TeamTactics *)_teamTacticsTable[8])->positions[8];
+        for (i = 0; i < 70; i++) {
+            dst442[i] = src[i];
+            dstSweep[i] = src[i];
+        }
+    }
+}
 
 /* ======================================================================
  * Skill and quadrant tables

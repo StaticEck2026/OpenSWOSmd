@@ -4,7 +4,8 @@
  * gDosGameplay; with it 0 the Amiga values (== the globals' defaults) are written.
  */
 #include "dos_gameplay.h"
-#include "dos_mode.h"     /* gDosGameplay */
+#include "dos_mode.h"
+#include "tactics_data.h"     /* gDosGameplay */
 #include "swos_types.h"
 
 /* ---- Keeper (already named globals in swos_amiga_data_imports.c) ---------- */
@@ -113,6 +114,14 @@ void ApplyGameStyle(void)
 {
     const int dos = _gDosGameplay;
     int i;
+
+    /* --- Formations ---
+     * The DOS release re-tuned 4-4-2, 4-3-3 and Sweep (21 coverage bytes; its
+     * 3-4-3 is the pristine Amiga one), and the replay corpus says those rows
+     * are part of what --dos-gameplay means: three recordings roughly quadruple
+     * their `sprites` depth with the DOS set in. docs/TESTS.md has the
+     * measurement and docs/TACTICS_POSITION_VALUE.md the byte-level diff. */
+    TacticsData_SelectRelease(dos);
 
     /* --- Goalkeeper --- */
     _kKeeperSaveDistance[0] = dos ? 16 : 24;

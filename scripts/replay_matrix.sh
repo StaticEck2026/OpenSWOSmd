@@ -173,6 +173,7 @@ they were found.
 | 27 | The throw-in "hide the result banner" gate is 50 on Amiga, 55 on DOS — and hiding it is what lets the AI start rotating the thrower | timing constant |
 | 28 | A 32-bit move of "the x" carries x's fraction on m68k and **y's** fraction on x86 — the diving keeper parks the ball with one | recompilation artefact |
 | 29 | `SetStaticHeaderDirection`'s whole tail is missing from the DOS build, so a DOS static header never leaves the *attempt* animation | recompilation artefact |
+| 30 | `--dos-gameplay` swapped the physics and the timers but not the DOS release's re-tuned **formations**, so every destination came off the wrong grid | DOS-vs-Amiga |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -181,9 +182,9 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Fourteen of the twenty-nine are a **DOS-vs-Amiga difference** — mostly timing
-constants, and two of them (28, 29) artefacts of the static recompilation
-itself rather than anything anyone chose. That is what a rig replaying DOS
+Fifteen of the thirty are a **DOS-vs-Amiga difference** — mostly timing
+constants, one of them a whole data set (30), and two (28, 29) artefacts of the
+static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
 this port does on the Amiga. The other fifteen are porting defects that would be
 just as wrong on either machine, and they cluster into a handful of shapes worth
