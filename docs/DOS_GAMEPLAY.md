@@ -108,6 +108,20 @@ unchanged.
   1536→2218. Only styles ≥3 (60 FPS) apply a ×1.2 boost. Do **not** rescale
   kick/pass power between 50 and 70.
 
+### Differentiated but NOT switched by `ApplyGameStyle` — the formations
+The DOS release re-tuned three of the twelve built-in formations, and
+`GetPlayerPrice` walks the tactics table for every player, so this is a
+gameplay difference that reaches player values and in-game skill nibbles as
+well as where men stand. `ApplyGameStyle` swaps the physics and timer constants
+and leaves the formations alone.
+
+Available as a **build flag** since 2026-09-03: `make clean && make
+SWOS_DOS_TACTICS=1` bakes the DOS coverage
+(`bin/data_json/tactics/<id>_dos.json`, extracted from the DOS disassembly).
+It is not yet wired to `--dos-gameplay=on` — that is a deliberate hold, because
+the recorded-game corpus disagrees with the DOS data's two forward slots
+(docs/TACTICS_POSITION_VALUE.md §9.6). Sizes and the caveat are there.
+
 ## 4. Match clock
 
 Frame-driven accumulator, **same algorithm** both modes, differing only by

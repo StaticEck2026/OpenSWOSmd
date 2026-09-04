@@ -385,6 +385,18 @@ ifdef SWOS_ORIGINAL_TACTICS
 DEBUG_FLAGS += -DSWOS_ORIGINAL_TACTICS=1
 endif
 
+# The DOS release's formation coverage instead of the Amiga's. Nine of the
+# twelve are byte-identical; 4-4-2 (68 bytes), Sweep (64) and 4-3-3 (10) are
+# not, and 60/61 of the first two are the two forward slots, rewritten. Since
+# GetPlayerPrice walks the tactics table for every player, this changes player
+# values and in-game skill nibbles as well as where men stand.
+# `make clean` first (same reason as above), and it is mutually exclusive with
+# SWOS_ORIGINAL_TACTICS. See src/tactics_data.c and docs/TACTICS_POSITION_VALUE.md
+# section 9 — including why the replay corpus disagrees with the forward slots.
+ifdef SWOS_DOS_TACTICS
+DEBUG_FLAGS += -DSWOS_DOS_TACTICS=1
+endif
+
 # Debug: force a World Cup for a national-team career, bypassing the natural
 # 4-year competition cycle, so the national-coach WC path can be reproduced on
 # demand (e.g. the season-transition 0x8888 backup-clobber in

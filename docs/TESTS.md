@@ -516,8 +516,10 @@ slip.
 (`project_dos_tactics_gap`), not a porting defect: `ApplyGameStyle`
 (`src/dos_gameplay.c`) swaps the physics and timer constants for
 `--dos-gameplay=on` and leaves the formations alone, and `GetPlayerPrice` reads
-them. The `SWOS_ORIGINAL_TACTICS` build switch is most of the machinery a fix
-needs.
+them. `make clean && make SWOS_DOS_TACTICS=1` now bakes the DOS coverage
+(docs/TACTICS_POSITION_VALUE.md §9.6) — and running the corpus against it is
+what produced the table below, so read that before wiring it to the runtime
+flag.
 
 > **Retracted:** an earlier revision of this section concluded "the corpus uses
 > the DOS 4-4-2", on the strength of swos-port's baked `tact_4_4_2` being
@@ -540,12 +542,13 @@ recordings — 24 team instances, 240 outfield starters, 5 formations:
 | the DOS snapshot | 225 / 240 |
 | **DOS rows 0–7 + Amiga rows 8–9** | **240 / 240** |
 
-The first two rows are the build itself: `make clean && make
-SWOS_ORIGINAL_TACTICS=1`, then the rig, prints `31/32`, `29/32`, `30/32`,
-`29/32` on the four affected recordings and `32/32` on the rest — the same
-eleven players, with the same values, that the shipped build gets right. (Under
-the pristine data Ayala below is correct and Baresi and four others are not; the
-two sets of failures are disjoint.)
+The first three rows are the build itself, not a model: `make clean && make
+SWOS_ORIGINAL_TACTICS=1` and `SWOS_DOS_TACTICS=1` (§9.6 of
+docs/TACTICS_POSITION_VALUE.md) select the other two, and the rig then scores
+**382 / 373 / 369** of 384 respectively over the twelve decodable recordings —
+the same players, with the same values, that the table above predicts. Under
+the DOS data Eranio and Ayala below both come out right and fifteen forwards do
+not; the three sets of failures are disjoint, which is the whole point.
 
 The last row is the corpus's own data, and it is a hybrid: the recordings agree
 with **DOS** on every discriminating byte in the first eight slots, and with the

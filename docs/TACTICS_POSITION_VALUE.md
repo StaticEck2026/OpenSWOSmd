@@ -497,6 +497,29 @@ The full data and a per-coordinate spreadsheet are in
 `docs/tactics_amiga_vs_dos/` (`tactics_amiga.json`, `tactics_dos.json`,
 `tactics_amiga_vs_dos.csv`).
 
+**All twelve, measured** (2026-09-03, from the DOS disassembly directly —
+`swos-port/swos/swos.asm` `tact_*`, whose `g_tacticsTable` order is ours;
+370 bytes each, cross-checked against the snapshot above). Nine formations are
+byte-identical:
+
+| formation | name bytes | coverage bytes | where |
+|---|---:|---:|---|
+| 4-4-2 | 2 | **68** | slots 1,2,3,4,6,7 (1-2 each) + **slot 8: 31, slot 9: 29** |
+| Sweep | 0 | **64** | slots 1,2,4 (1 each) + **slot 8: 32, slot 9: 29** |
+| 4-3-3 | 1 | **10** | slots 1,2,5,6,7,8 (1-2 each) |
+| *the other nine* | 0 | 0 | — |
+
+**142 of 4200 coverage bytes, and 121 of those 142 are four slots**: the two
+forwards of 4-4-2 and of Sweep, which are not adjusted but **rewritten** (see
+the per-slot note above). The eleven-byte tail (`pair_ids` +
+`ballOutOfPlayTactics`) is identical in all twelve.
+
+The two name-byte differences are cosmetic. The 9-byte `name[]` is a label, a
+NUL, then a second short string the tactics menu shows as a grade: DOS grades
+4-4-2 `" B"` where the Amiga says `"\0A"` (no space — an original-data slip),
+and 4-3-3 `" B"` where the Amiga says `" C"`. `GetPlayerPrice` skips all nine
+bytes (`+9`), so they change nothing but the display.
+
 ### 9.4 Why that flips the mark — and why it's asymmetric
 
 Swapping Aldair ↔ Ronaldão lands each on a slot whose coverage *differs between
@@ -535,3 +558,28 @@ those two defenders to different quadrants.
 > the port look DOS-derived. Settled result: engine + team files identical; this
 > port == the real Amiga byte-for-byte; DOS re-tuned 3 formations (4-4-2 =
 > 2 header + 68 coverage bytes, 4-3-3 = 10, Sweep = 64).
+
+### 9.6 Building the DOS formations — `SWOS_DOS_TACTICS`
+
+```bash
+make clean && make SWOS_DOS_TACTICS=1        # the DOS coverage
+make clean && make SWOS_ORIGINAL_TACTICS=1   # the pristine Amiga coverage
+make clean && make                           # what ships (Amiga + the fixes)
+```
+
+Baked from `bin/data_json/tactics/<id>_dos.json` by `scripts/emit_tactics.py`,
+which round-trip checks them like everything else, and selected in
+`_teamTacticsTable` — a rebuild, not a file swap, and the two flags are mutually
+exclusive (`#error`). Only four variants exist because only four formations need
+one: 4-4-2, 4-3-3 and Sweep because DOS changed them, and 3-4-3 because *this
+port* did (the DOS 3-4-3 is the pristine Amiga one).
+
+It is **not** wired to `--dos-gameplay=on` yet, deliberately. The recorded-game
+corpus grades formation data directly (docs/TESTS.md, "The recording grades our
+formation data"), and it **disagrees with the DOS forward slots**: turning this
+flag on scores **369/384** on the corpus's own recorded player values where the
+shipped data scores **382/384** — it fixes the two players the shipped data gets
+wrong and breaks fifteen forwards that the shipped data gets right. So the data
+here is faithfully what the DOS binary holds, and it is demonstrably not what
+produced those recordings. Decide what DOS mode should follow before making it
+automatic.

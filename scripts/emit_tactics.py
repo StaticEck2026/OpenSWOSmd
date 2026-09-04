@@ -8,8 +8,10 @@ runtime via src/tactics_load_json.c). Mirrors emit_competitions.py / emit_menus.
 
 Four formations also have a `<id>_original.json` holding the PRISTINE Amiga
 data, baked alongside as `_teamTactics<id>Original` and selected by
--DSWOS_ORIGINAL_TACTICS. See the header comment in src/tactics_data.c for what
-they are and why the shipped ones differ.
+-DSWOS_ORIGINAL_TACTICS, and a `<id>_dos.json` holding the DOS release's,
+baked as `_teamTactics<id>Dos` and selected by -DSWOS_DOS_TACTICS. See the
+header comments in src/tactics_data.c for what they are and why the shipped
+ones differ from both.
 
 The self-check re-parses the spliced C and confirms every formation reproduces the
 JSON byte-for-byte (the 370-byte TeamTactics image).
@@ -80,11 +82,12 @@ def splice(text, sym, init):
 # `_teamTactics<id>Original`, so -DSWOS_ORIGINAL_TACTICS is a rebuild, not a
 # file swap.
 ORIG_SUFFIX = "_original"
+DOS_SUFFIX = "_dos"
 
 
-def original_ids():
+def variant_ids(suffix):
     return [tid for tid in ex.IDS
-            if os.path.exists(os.path.join(ex.OUT_DIR, tid + ORIG_SUFFIX + ".json"))]
+            if os.path.exists(os.path.join(ex.OUT_DIR, tid + suffix + ".json"))]
 
 
 def main():
@@ -94,30 +97,35 @@ def main():
     for tid in ex.IDS:
         text = splice(text, "_teamTactics" + tid, build_init(data[tid]))
 
-    orig_ids = original_ids()
-    orig = {tid: json.load(open(os.path.join(ex.OUT_DIR, tid + ORIG_SUFFIX + ".json")))
-            for tid in orig_ids}
-    for tid in orig_ids:
-        text = splice(text, "_teamTactics" + tid + "Original", build_init(orig[tid]))
+    variants = []          # (suffix, C symbol suffix, {id: json})
+    for suffix, sym in ((ORIG_SUFFIX, "Original"), (DOS_SUFFIX, "Dos")):
+        ids = variant_ids(suffix)
+        data_v = {tid: json.load(open(os.path.join(ex.OUT_DIR, tid + suffix + ".json")))
+                  for tid in ids}
+        for tid in ids:
+            text = splice(text, "_teamTactics" + tid + sym, build_init(data_v[tid]))
+        variants.append((suffix, sym, data_v))
 
     # round-trip self-check: the spliced C must reproduce each JSON image exactly.
     bad = 0
     for tid in ex.IDS:
         if c_bytes(text, "_teamTactics" + tid) != json_bytes(data[tid]):
             print("  MISMATCH %s" % tid); bad += 1
-    for tid in orig_ids:
-        if c_bytes(text, "_teamTactics" + tid + "Original") != json_bytes(orig[tid]):
-            print("  MISMATCH %s%s" % (tid, ORIG_SUFFIX)); bad += 1
+    for suffix, sym, data_v in variants:
+        for tid in data_v:
+            if c_bytes(text, "_teamTactics" + tid + sym) != json_bytes(data_v[tid]):
+                print("  MISMATCH %s%s" % (tid, suffix)); bad += 1
     if bad:
         raise SystemExit("emit_tactics: %d formation(s) failed round-trip" % bad)
 
+    nvar = ", ".join("%d %s" % (len(d), s.lstrip("_")) for s, _, d in variants)
     if out:
         open(out, "w", encoding="latin1").write(text)
-        print("wrote %s (%d formations + %d pristine variants, round-trip OK)"
-              % (out, len(ex.IDS), len(orig_ids)))
+        print("wrote %s (%d formations + %s variants, round-trip OK)"
+              % (out, len(ex.IDS), nvar))
     else:
-        print("round-trip OK: %d formations + %d pristine variants reproduce the JSON"
-              % (len(ex.IDS), len(orig_ids)))
+        print("round-trip OK: %d formations + %s variants reproduce the JSON"
+              % (len(ex.IDS), nvar))
 
 
 if __name__ == "__main__":
