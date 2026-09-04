@@ -875,7 +875,33 @@ void SetCameraCoordinates(int16_t targetX, int16_t targetY)
      * (0x2A0) - viewWidth = the max camera X. Folds to [0, 0x150] on Amiga (_screen_width
      * = 336), the original range — a no-op for the always-on-pitch classic view. */
     {
-        int16_t panRange = (int16_t)(0x2A0 - _screen_width);
+        /* The pan range is a CONSTANT, not the render width. This is the
+         * final camera write for every caller, so clamping it by
+         * `_screen_width` put the display back into the simulation: `onScreen`
+         * is measured from `_cameraX` (sprites.c) and `UpdateControlledPlayer`
+         * will not auto-select a player whose flag is clear.
+         *
+         * Since 22f370a pinned the simulation view to 336 while the render
+         * stayed at the display width, the two clamps disagreed: `MoveCamera`
+         * aims at `0x2A0 - _sim_view_width` = 336, and this line then cut it
+         * to `0x2A0 - 484` = 188 on a 16:9 display. The camera simply stopped
+         * 148px short and could not follow the ball into the right third of
+         * the pitch — the ball ran out of the window, the players beside it
+         * fell outside the 336-wide cull anchored on the stuck camera, and the
+         * AI kept selecting men who could not reach it. That is a tester's
+         * "the ball gets left and they run up to it one at a time".
+         *
+         * 336 rather than `SIM_CAMERA_PAN_RANGE`: both releases pan against
+         * the Amiga's 336-wide buffer, the same constant the `onScreen` cull
+         * uses, and the constant is what makes this fold to EXACTLY the old
+         * expression wherever `_screen_width` is 336 — every 4:3 display, the
+         * Amiga (the original [0, 0x150]), and the replay rig, which pins the
+         * render to SCREEN_WIDTH. The rig sets `_sim_view_*` from the
+         * recording, so `SIM_CAMERA_PAN_RANGE` there is 352 and would change
+         * the corpus; there is no evidence for that value, so it is not used.
+         * The renderer is unaffected: `DrawChunkyPitch` bounds-checks the tile
+         * grid and paints the surround past the pitch edge. */
+        int16_t panRange = (int16_t)(0x2A0 - SCREEN_WIDTH);
         if (panRange < 0) panRange = 0;
         if (targetX < 0) targetX = 0;
         else if (targetX > panRange) targetX = panRange;
