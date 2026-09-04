@@ -465,7 +465,7 @@ That leaves a much shorter honest list:
 | Sprite construction (the five above) | swos-port builds sprites in C++ and memsets the game's static table away before frame 0 | No — but they are *its* deviation, not ours, and cannot recur once the game code runs |
 | Two sprite slots (corner flag, player-name HUD) | swos-port keeps four corner flags and picks by camera; its rig skips the HUD slot outright | No — no counterpart exists here |
 | Byte-set word flags (`ballOutOfPlayOrKeeper`, `goaliePlayingOrOut`, `isMoving`) | `SWOS2.s` writes a byte into a word, so "set" is `0x00FF` little-endian and `0xFF00` big-endian. Exactness is *target-dependent*; a truth test is the correct comparison | No — the truth test **is** the right test |
-| Control-layer state (`quick_fire`, `normal_fire`, which team updates when) | swos-port replaces `Player1StatusProc`, the team alternation and the fire-block with its own C++ — private counters, a switch counter that does not advance on a skipped frame, no counter clear. See "The control layer is swos-port's" | No — it is *its* reimplementation, not SWOS |
+| ~~Control-layer state (`quick_fire`, `normal_fire`)~~ | **Retracted.** The recordings are the DOS binary, not swos-port's C++. The signature was ours: an AI tackle clears the human's `pl1FireCounter` through a tail the port had split in two | **Closed** |
 | ~~Per-image cull metrics~~ | **Retracted.** The banks are a 1:1 conversion and the metrics identical; the residual was two bugs of ours | **Closed** |
 | ~~"The corpus is SWOS++"~~ | **Retracted.** A static recompilation runs the original code; see above | **Closed** |
 
@@ -1673,99 +1673,64 @@ bound. **13248 → 14519.**
 > is quieter and worse than a crash — the CLAUDE.md rule about NULL guards,
 > arriving from a direction it does not name.
 
-### The control layer is swos-port's, not the game's
+### RETRACTED: "the control layer is swos-port's, not the game's"
 
-**Four** of the twelve stops — `zkz-12065730` at 1251, `playa-10144556` at
-1696, `zkz-10190651` at 2570 and `zkz-10173518` at 5051 — are one finding, and
-it is not a defect here. Both are input-derived,
-both survived a full audit of the asm (the tracking block, the classifier, the
-consume thresholds and all four `headerOrTackle` sites are faithful), and the
-answer was never in `data/SWOS2.s` at all. It is in swos-port's own source:
+This section used to file **four** stops — `zkz-12065730` at 1251,
+`playa-10144556` at 1696, `zkz-10190651` at 2570 and `zkz-10173518` at 5051 —
+as a fourth class of non-comparable state, on the grounds that swos-port
+replaces the input path with C++ (`src/controls/gameControls.cpp`: private
+`m_pl1FireCounter`, `m_teamSwitchCounter`, an `updateFireBlocked()` that
+clears no counters) and that the recordings were therefore describing that
+C++ rather than the game.
 
-```cpp
-    // src/controls/gameControls.cpp — swos-port's C++, replacing the routines
-    static int m_pl1FireCounter;
-    static int m_pl2FireCounter;
-    static int m_teamSwitchCounter;
+**The premise is wrong. The recordings are made by SWOS++ driving the
+original DOS binary in a VM — SWOS++ instruments the game, it does not
+reimplement it.** swos-port is a *listing* in this project, a second witness
+to what the original does; it is not the thing that produced the corpus. Every
+value in a `.RGD` is the real DOS game's.
 
-    TeamGeneralInfo *selectTeamForUpdate() {
-        return ++m_teamSwitchCounter & 1 ? &swos.topTeamData : &swos.bottomTeamData;
-    }
+So there is no fourth class, and "when a divergence is input-derived and the
+disassembly checks out, read swos-port's C++" was exactly the wrong rule: it
+sent the next look away from the code that was actually wrong. The correct
+rule is the boring one this document already had — *the disassembly checking
+out means you have not read enough of it yet.*
 
-    bool updateFireBlocked() {
-        if (swos.fireBlocked) {
-            if (!isAnyPlayerFiring())
-                swos.fireBlocked = 0;
-            return true;
-        }
-        return false;
-    }
+That is not hindsight. The audit this section rested on said "all four
+`headerOrTackle` sites are faithful", and they were; what it never asked was
+who else jumps into the tail those sites feed. The answer was the AI team, and
+it is the finding above — an AI tackle clears the human's `pl1FireCounter`,
+which is precisely how both fire flags come to read 0 on a hold our classifier
+arms. Three of the four stops carry that exact signature, to the frame.
 
-    void SWOS::Player1StatusProc() {
-        auto events = getPlayerEvents(kPlayer1);
-        updatePlayerFire(kPlayer1, events);      // sets pl1Fire, and nothing else
-    }
-```
+Two things worth keeping out of the wreckage:
 
-Three differences from `UpdateAndApplyTeamControls`, and each explains one of
-the stops:
+- **`quick_fire` is genuinely observable** — non-zero on 36 to 108 frames of
+  every recording — so these stops were always real behavioural differences
+  rather than a recorder that never captures the flag. That part stands, and
+  it is what made them worth chasing.
+- **The team-alternation difference is real, and it is in the original
+  binaries, not in swos-port.** The Amiga picks the team to update with
+  `btst #0,frameCount+1` (SWOS2.s:25593) — a global that advances every frame,
+  including the frames the fire-block skips. The DOS build keeps a dedicated
+  counter and advances it **inside** the `fireBlocked == 0` branch:
 
-- **Team alternation.** The Amiga picks the team with `btst #0,frameCount+1`
-  (SWOS2.s:25595) — a global that advances every frame, *including* the frames
-  the fire-block skips. swos-port advances its own `m_teamSwitchCounter` only
-  when the update actually runs. So after a skipped frame the two builds are
-  on opposite teams. That is `zkz-12065730` at 1251, where `update_player_index`
-  comes back top 4 / bottom 3 against our 3 / 4.
-- **The fire counters are private.** swos-port keeps `m_pl1FireCounter` as a
-  C++ static and never touches the game's `pl1FireCounter` global. Its
-  `Player1StatusProc` sets `pl1Fire` and returns; the counter is bumped from
-  `updateTeamControls` alone, where the Amiga's lives inside
-  `Player1StatusProc` and is therefore bumped by every one of that routine's
-  thirteen call sites.
-- **The fire-block does not clear them.** The Amiga's does —
-  `clr.w (pl1FireCounter) / clr.w (pl2FireCounter)` right after clearing
-  `fireBlocked` (SWOS2.s:25586-25588). swos-port's `updateFireBlocked()` has no
-  equivalent, so its counters carry history across a block where ours are
-  zeroed.
+  ```
+      @@no_stats_exit:                            ; swos.asm:100580
+      add     teamSwitchCounter, 1
+      mov     A6, offset topTeamData
+      test    byte ptr teamSwitchCounter, 1
+      jnz     short @@update_controlled_player
+      mov     A6, offset bottomTeamData
+  ```
 
-**Three of the stops share one signature**, to the frame: a human team, the
-button held across four samples, released, our counter negating to +4 and
-classifying as `quickFire` while the recording shows `quick_fire` 0 *and*
-`normal_fire` 0. Ours plays a pass, the reference does not. `playa-10144556` at
-1696, `zkz-10190651` at 2570, `zkz-10173518` at 5051.
-
-**Which difference produces it is not pinned down, and the obvious answer is
-wrong.** swos-port's classifier is logically identical to the asm's — `< -4` →
-`normalFire` and clear, `> 4` → `normalFire` else `quickFire`, clear — so a
-counter of +4 would give it `quickFire` too. Both flags reading zero means its
-counter was **already 0** at the release, which its own arithmetic cannot
-produce from a press that started at -1 four samples earlier. Its
-`m_pl1LastFired` / `m_pl1FireCounter` were therefore already out of phase before
-that press — which is what a different *sampling schedule* does: the Amiga's
-`pl1LastFired` is updated by every one of `Player1StatusProc`'s thirteen call
-sites, while swos-port's is touched only on that team's own update, so a press
-or release falling between two of its samples is invisible to it and visible to
-the game.
-
-That places these stops in this class without claiming to have traced which
-sample went missing: the state that decides them lives in C++ statics the game
-never sees. And `quick_fire` is genuinely observable, for the avoidance of
-doubt — non-zero on 36-108 frames of every recording — so this is a real
-behavioural difference, not a recorder that never captures the flag.
-
-So this is a **fourth class of non-comparable state**, and a consequential one:
-`quick_fire`, `normal_fire` and anything downstream of *which* team updates on a
-given frame cannot be reproduced without reimplementing swos-port's control
-layer instead of SWOS's. Muting the fields would not help either — they feed the
-simulation, so once they disagree the match itself forks.
-
-It also sharpens the retraction above. The recompiled `swos.asm` **is** the
-original game and the recordings **are** its behaviour — but swos-port replaces
-a handful of routines with C++, and the input path is where it does most of it.
-The rule that follows: when a divergence is input-derived and the disassembly
-checks out, stop reading `data/SWOS2.s` and read
-`swos-port/src/controls/gameControls.cpp`. The asm says what the game does per
-call; only swos-port's own source says when it is called and with what.
+  So a fire-block period shifts the DOS phase and leaves the Amiga's alone,
+  and the two are on opposite teams afterwards. That is the standing lead for
+  `zkz-12065730` at 1251, where `update_player_index` comes back top 4 /
+  bottom 3 against our 3 / 4. It qualifies on the usual terms — one site in
+  each listing, and the conversion did not force it, since the DOS build still
+  has `frameCount` and chose not to use it here — but it has **not** been
+  A/B'd against a recording yet, which is what this document requires before a
+  `_gDosGameplay` gate goes in.
 
 ### A long test on a word field
 
@@ -1914,6 +1879,159 @@ coverage went **34.6% → 40.8%** at `sprites`.
 > constant turns out to be release-specific, ask immediately how many siblings
 > it has.
 
+### The tail the AI team shares with player one
+
+`playa-10095214` stopped at 10129 with the human's controlled player taking a
+shot the reference never took: `normal_fire` -1 against a recorded 0, and with
+it `shooting`, `pass_kick_timer` 25, a cleared `controlled_player` and a
+`passing_kicking_player` — the whole signature of `execute_shot_and_update_context`.
+
+`normalFire` is armed by a counter, and the counter is easy to follow.
+`Player1StatusProc` writes `pl1FireCounter = -1` on the frame the button goes
+down and decrements it on every later poll while it stays down; the classifier
+in `UpdateAndApplyTeamControls` arms `normalFire` once the value drops below
+-4 and zeroes the counter, and because the decrement is guarded on the counter
+being non-zero, a zeroed counter stays zero for the rest of the hold. One team
+is polled per frame, so "poll" means every other frame, and the team's own
+`fireCounter` — which the recording carries — counts them.
+
+The recording says the mechanism is right and our arithmetic is right:
+
+```
+   f9931  fireCounter 1                     press
+   f9939  fireCounter 5   normal_fire -1    armed, exactly where the classifier says
+   f10005 fireCounter 1                     press
+   f10013 fireCounter 5   normal_fire  0    ... and never armed, all the way to 15
+   f10121 fireCounter 1                     press
+   f10129 fireCounter 5   normal_fire  0    ... nor here
+```
+
+Three holds by the same player; the first arms and the other two do not. So
+something cleared `pl1FireCounter` during the second and third. Only three
+things clear it, and two were ruled out on the recording's own evidence: the
+`fireBlocked` release needs both buttons up, and the team's own header/tackle
+sites all clear `ballCanBeControlled` as well, which stayed 1 throughout.
+
+That leaves the fourth clear — the one in the tail:
+
+```
+    post_input_common_p1:                       ; SWOS2.s:25634
+            ...
+    apply_input_and_update_players_p1:
+            bsr.w   UpdatePlayers
+            tst.w   TEAMGENERALINFO_HEADERORTACKLE(a6)
+            beq.w   _1126D6_exit_rts
+            clr.w   TEAMGENERALINFO_HEADERORTACKLE(a6)
+            clr.w   (pl1FireCounter).l
+            rts
+```
+
+and the thing to notice is who reaches it. A team with `playerNumber == 0` —
+the computer — reads no joystick, and the port had given it a small tail of its
+own: run `UpdatePlayers`, clear `headerOrTackle`, return, with a comment saying
+there was no fire counter to clear for an AI team. The asm gives it no tail of
+its own at all. `move.w 4(a6),d0 / beq.w post_input_common_p1` drops it into
+**player one's**, and the `clr.w (pl1FireCounter)` is shared. The DOS build
+does the same (swos.asm:100703).
+
+So an AI tackle resets the human's fire hold. Read as an accident of a shared
+tail it looks like a bug in the original; read as behaviour it is exactly what
+should happen — a button held down through an opponent's challenge does not
+come out the other side still charging a shot. Either way it is what the game
+does, and the port has to do it.
+
+**10129 → 21613.** One line.
+
+> The general shape: *a branch that looked like it needed its own arm.* The
+> port asked "what does the AI path do here?" and answered from what the AI
+> path plausibly needs, when the listing had already answered by jumping into
+> somebody else's code. Two of this document's earlier findings are the same
+> mistake with the polarity flipped — rows that were never executed, a tail
+> that the recompilation dropped. A shared tail is the third face of it: not
+> code that was never reached, but code reached from somewhere the port did
+> not look.
+
+### The default arm of a state chain is not an exit
+
+21613 was `game_state` 24 against our 30 — the reference leaving `ST_GAME_ENDED`
+for `ST_PLAYERS_GOING_TO_SHOWER` while we stayed put. `EndOfGame` arms 150
+ticks and the recording's own timings say that is right: state 30 at f21464 to
+24 at f21613 is 149 frames for a timer of 150, matching halftime's 29 at f11021
+to 23 at f11120, 99 frames for 100.
+
+A trace on the timer showed it sitting at 150, not counting, for 25 frames.
+`UpdateGameTimersAndCameraBreakMode` asks whether a fire button is down during
+states 21..30 and runs the `end_game_transmission` chain if it is; the port
+called that chain and returned. The chain is four `cmpi/bne` arms, and the last
+one is
+
+```
+    game_not_starting:                              ; SWOS2.s:25267
+            cmpi.w  #ST_CAMERA_GOING_TO_SHOWERS,(gameState).l
+            bne.s   game_interrupted
+```
+
+— `game_interrupted` being the stoppage countdown itself. Only states 25, 26,
+21 and 22 leave the routine there. Every other state in the window **falls
+through into the countdown**, and state 30 is one of them. The final whistle
+usually catches a player mid-press, so the timer stalled for as long as the
+button was held: down from f21460 to f21487, `PlayersLeavingPitch` 25 frames
+late.
+
+`handleEndGameTransmission` now returns whether it handled the state, and the
+caller returns only when it did. **21613 → 21888.**
+
+> This is the C-versus-asm hazard that has no analogue in the asm at all. A
+> chain of `cmpi/bne` has a default arm whether or not anybody wrote one, and
+> it is *whatever the last `bne` targets*. Translated into a chain of `if`s
+> returning `void`, the default arm silently becomes "return" — and a `return`
+> that should have been a fall-through is invisible in review, because the C
+> reads exactly like what it was meant to be. Worth checking every helper this
+> port factored out of a state chain: the question is not "are the arms right"
+> but "where does the last `bne` go".
+
+### Three more camera literals, and one dropped branch
+
+21888 was `camera_x` 176 recorded against our 168, at the jump into
+`ST_RESULT_AFTER_THE_GAME`. 168 is `GameOver`'s literal, and 176 is what
+`SIM_CAMERA_CENTRE_X` — `(0x2A0 - view_width) / 2`, already used by `GameLoop` —
+evaluates to at 320 wide. Grepping the literal across both listings found the
+whole set:
+
+| site | `SWOS2.s` | `swos.asm` | is |
+|---|---|---|---|
+| `GameOver` x | 168 | 176 | `SIM_CAMERA_CENTRE_X` |
+| `ViewHighLightsMain` x | 168 | 176 | `SIM_CAMERA_CENTRE_X` |
+| `ViewHighLightsMain` y | 313 | 349 | `449 - view_height/2` |
+| `GameLoop` x, match arm | 168 | 176 | already correct |
+| `GameLoop` x/y, TRAINING arm | 168 / 313 | 168 / 313 | **neither** |
+
+313 and 349 are the camera Y that centres the bench (449), so it gets a name —
+`SIM_CAMERA_BENCH_Y` — and `MoveCamera`'s "has the camera arrived at the bench"
+window becomes ±10 around it instead of repeating the expression.
+
+The training arm is the interesting row. It is 168/313 in the DOS build too, so
+in a training game the camera really does start 8 pixels off centre and 36 lines
+high there. Same literal, same routine, one arm f(view) and the other not —
+which is the reason this table was built by grepping the value across both
+listings rather than by reasoning about which constants "look like" geometry.
+
+Then `camera_y`, 80.75 recorded against our 16.75. The Amiga picks 80 for a
+training game and 16 for a match:
+
+```
+            move.w  #80,d2                          ; SWOS2.s:28050
+            tst.w   (trainingGame).l
+            bne.s   set_for_training_or_regular_game
+            move.w  #16,d2
+```
+
+The DOS build has `mov word ptr D2, 80` and goes straight on (swos.asm:103860).
+This is the same class as the dropped animation tail above — a recompiler has
+no reason to delete a `tst/bne` pair — and `playa-10095214` is a plain league
+match landing on 80, which is where the Amiga's test would have said 16. Gated
+on `_gDosGameplay`. **21888 → 22400 of 22401.**
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -2046,6 +2164,16 @@ Not bugs; consequences of comparing two different builds.
   `field_3e`, `player_direction` and `save_sprite` at the `sprites` level;
   `--strict` compares them. Muting them is a statement about the harness, not
   about this port, and nothing after frame 0 depends on it.
+- **An input edge inside one frame.** Both listings poll `Player1StatusProc`
+  twice per frame when the game is stopped — once from `UpdateCameraBreakMode`'s
+  fire check, once from the team dispatch — so the second call always clears
+  the short-fire edge and `fireThisFrame` is 0. `playa-10095214`'s terminal
+  frame has the reference seeing the edge on the SECOND call, which is only
+  possible if the button went down between the two: real asynchronous input
+  landing inside a frame. The rig injects a frame's input atomically before the
+  frame runs and cannot reproduce it. Costs the last frame of that recording
+  and nothing else, since it can only happen on a press the reference then acts
+  on by leaving the match.
 - **v1.0/1.1 headers** stop before `season` / `min` / `maxSubstitutes`. The
   converter falls back to the DOS data segment's own defaults for the
   substitute counts (2 and 5); leaving them 0 benches players 11..15 before the
@@ -2095,23 +2223,20 @@ Ranked by how early they stop a recording. See
    header's `top_team_player_no` / `bottom_team_player_no` do not read the way
    their names suggest — `top_info.player_number` / `bottom_info.player_number`
    are the fields that say which side is AI.
-5. **The earliest stops now.** The three lowest — `zkz-12065730` at 1251,
-   `playa-10144556` at 1696 and `zkz-10190651` at 2570 — are the control-layer
-   group in item 6 and will not move. The earliest that can: `playa-10095214`
-   at 4419, then `zkz-10173518` at 5051 and `zkz-10140228` at 7053. Several are **player-selection** fields — who the game is driving
-   rather than a simulation value — which is the `onScreen` ceiling below
-   coming into view, and the reason section 7 puts the Amiga dumper first.
-6. ~~**The fire-counter family**~~ — **closed, and not as a defect.**
-   `zkz-12065730` at 1251 and `playa-10144556` at 1696 are both swos-port's C++
-   **control layer**, which replaces `Player1StatusProc`, the team alternation
-   and the fire-block: it picks the team with a private counter that does not
-   advance on a skipped frame, keeps its own fire counters instead of the
-   game's, and does not clear them when the fire-block lifts. All three differ
-   from `UpdateAndApplyTeamControls`, and none of them can be reproduced without
-   reimplementing swos-port instead of SWOS. See "The control layer is
-   swos-port's, not the game's". `zkz-10190651` at 2570 and `zkz-10173518` at
-   5051 are further instances of the same signature. **These four recordings
-   cannot go further**, and no change to this port will move them.
+5. **The earliest stops.** Superseded — the three lowest were filed here as
+   "the control-layer group and will not move", which is retracted; see item 6.
+   [TESTS_RESULTS.md](TESTS_RESULTS.md) carries the live numbers.
+6. ~~**The fire-counter family**~~ — **closed, and it WAS a defect.** This
+   entry previously said the opposite, on the retracted premise that the
+   recordings came from swos-port's C++ control layer. They come from the DOS
+   binary. The cause is one line: `UpdateAndApplyTeamControls` gives a
+   computer-controlled team no tail of its own, so an AI tackle clears
+   **player one's** `pl1FireCounter`, and a fire hold that crosses an opponent's
+   challenge never arms `normalFire`. `playa-10095214` went 10129 → 21613 on
+   it; the other three stops with that signature — `playa-10144556` at 1696,
+   `zkz-10190651` at 2570, `zkz-10173518` at 5051 — are re-opened by it.
+   `zkz-12065730` at 1251 is a different question and is still open: see the
+   team-alternation note in the retraction.
 7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.
