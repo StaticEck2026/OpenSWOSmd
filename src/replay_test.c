@@ -116,6 +116,7 @@ static const uint8_t *s_rec;       /* the record itself, NULL between frames */
 static int       s_firstFrame = 1;
 static int       s_warnedEsc, s_warnedUserKey;
 static int       s_benchHeld[2];   /* previous frame's recorded bench button */
+static int       s_benchPending[2]; /* a deferred bench call, due next frame */
 static int       s_prevUserKey;    /* previous frame's recorded userKey */
 
 int _replayFixedRandom = -1;
@@ -1292,12 +1293,60 @@ static void injectInput(void)
      * bench1Called is the top team's, bench2Called the bottom's — the guard
      * `MainKeysCheck` applies (that team must have a human) is the reason the
      * recorded per-team button is used rather than the per-player control bit. */
+    /* ESTIMATED, NOT RECOVERED — read this before trusting a bench frame.
+     *
+     * One key reaches the game down two independent latches. The recording
+     * carries the POLLED BITMASK: `Player1StatusProc` splits one input word
+     * (`test ax, 64` -> `pl1SecondaryFire`, swos.asm:13033), which is
+     * `p1_controls` bit 6, and `UpdateAndApplyTeamControls` copies it into
+     * `TeamGeneralInfo.secondaryFire` at GameLoop line 703. But the bench
+     * opens off the BUFFERED SCANCODE: `bench1Called` is set nowhere in
+     * either listing except `MainKeysCheck` (swos.asm:7984, SWOS2.s:21900),
+     * which runs at line 666. A scancode can arrive a frame after the bitmask
+     * sees the key held, and nothing in the record times that queue.
+     *
+     * So the recording under-determines this input by one frame, and the rig
+     * has to pick. The corpus has three presses and neither placement is
+     * right for all of them:
+     *
+     *      zkz-11215003   f117     acted on the SAME frame
+     *      zkz-11215003   f11479   acted one frame LATER
+     *      playa-10090613 f11222   acted one frame LATER
+     *
+     * f117 is not a misreading — under a lag-1 build that frame diverges on
+     * `game_state_pl` and on every player's destination, with the reference
+     * walking them to the bench line.
+     *
+     * The predicate below is fitted to those three, not derived: defer unless
+     * `gameStatePl` is 0. It is right on all three and takes the corpus from
+     * 87.1% to 98.0% (`zkz-11215003` to 27487 of 27819, `playa-10090613` to
+     * its terminal frame), which is what says the bench frame is the ONLY
+     * thing those two recordings still disagree with us about.
+     *
+     * Treat a bench-frame match as evidence of nothing. What would make this
+     * a recovered fact rather than an estimate is a recording that carries
+     * `bench1Called` itself — which the Amiga dumper (docs/TESTS.md section 8)
+     * would, being our own build. Until then every deferral says so in the
+     * log. */
     for (i = 0; i < 2; i++) {
-        if (bench[i] && !s_benchHeld[i]) {
+        if (s_benchPending[i]) {
             if (i == 0) _bench1Called = 1;
             else        _bench2Called = 1;
-            fprintf(stderr, "[replay] frame %u: %s team calls the bench\n",
+            fprintf(stderr, "[replay] frame %u: %s team calls the bench "
+                            "(deferred one frame — ESTIMATED, see replay_test.c)\n",
                     s_frame, i == 0 ? "top" : "bottom");
+            s_benchPending[i] = 0;
+        }
+        if (bench[i] && !s_benchHeld[i]) {
+            if (_gameStatePl != 0) {
+                /* defer to the next frame */
+                s_benchPending[i] = 1;
+            } else {
+                if (i == 0) _bench1Called = 1;
+                else        _bench2Called = 1;
+                fprintf(stderr, "[replay] frame %u: %s team calls the bench\n",
+                        s_frame, i == 0 ? "top" : "bottom");
+            }
         }
         s_benchHeld[i] = bench[i] != 0;
     }
