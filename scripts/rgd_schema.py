@@ -332,6 +332,15 @@ def build_schema(major, minor, level):
     out.append(_f("frame_no",       "u32", 0, 0, "meta"))
     out.append(_f("p1_controls",    "s16", 4, 0, "in"))
     out.append(_f("p2_controls",    "s16", 6, 0, "in"))
+    # The bench button, per TEAM. swos-port's TeamGeneralInfo is our 144 plus a
+    # trailing `secondaryFire` byte (see TEAMINFO_FIELDS below) that it sets
+    # from its own kGameEventBench, so the recording says which team's bench a
+    # press belongs to instead of leaving the rig to infer it from who drives
+    # whom. Injected, never compared — we have no such field. Its RISING edge
+    # is on the same frame as the matching pN_controls bench bit in every press
+    # in the corpus (the FALL lags a frame, which is why the rig uses the edge).
+    out.append(_f("top_bench_button",    "u8", OFF_TOP_INFO + 144, 0, "in"))
+    out.append(_f("bottom_bench_button", "u8", OFF_BOTTOM_INFO + 144, 0, "in"))
     out.append(_f("camera_x",       "s32", OFF_CAMERA + 0,  0, "view"))
     out.append(_f("camera_y",       "s32", OFF_CAMERA + 4,  0, "view"))
     out.append(_f("camera_x_vel",   "s8",  OFF_CAMERA + 8,  0, "view"))

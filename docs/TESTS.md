@@ -11,8 +11,10 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, reaching frame 117-1335 before the first divergence at level
-`info` (section 5). Eight real defects found and fixed on the way in, and
+recordings run, reaching frame 711-1335 before the first divergence at level
+`info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
+formation coverage rather than a porting defect. Eight real defects found and
+fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
 player-price audit").
@@ -346,13 +348,12 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **117-1663** frames at
-`scalars`, **117-1335** at `info`, **117-1090** at `sprites`, and **401 of 416**
+The shape of the results, as of the run in that file: **714-1663** frames at
+`scalars`, **711-1335** at `info`, **459-1090** at `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
-runs before frame 0; see "The player-price audit"). One recording sets that 117
-floor and it is not a simulation difference: `zkz-11215003`'s player presses
-**BENCH** on frame 117 and the rig does not inject it yet. The rest run
-714-1663 / 459-1090.
+runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
+of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
+understood and is not a porting defect (same section).
 
 Four things to read into them:
 
@@ -856,17 +857,12 @@ Ranked by how early they stop a recording. See
    1140, and **no recording's first divergence is a camera field at a frame the
    `sprites` level hadn't already diverged by.** Every remaining `camera_x_vel`
    / `camera_y` stop is downstream of a sprite difference that the cheaper
-   levels are simply not looking at — chase the sprite, not the camera. The one
-   exception is `zkz-11215003` frame 117, which is (2).
-2. **Inject the recorded BENCH bit.** `zkz-11215003` presses it on frame 117 and
-   holds it for 17 frames; the camera stops tracking in the recording and keeps
-   going in ours, and 27702 frames of match go unchecked behind it. It is the
-   corpus's earliest stop and the only one that is a missing rig feature rather
-   than a simulation difference. `MainKeysCheck` turns a hotkey into
-   `bench2Called` (bottom team) / `bench1Called` (top), guarded on that team
-   having a human — the DOS asm agrees byte-for-byte with our port here — so the
-   open question is edge-vs-level: the recording holds the flag, and inside the
-   menu `bench1Called` is what *leaves* it.
+   levels are simply not looking at — chase the sprite, not the camera.
+2. ~~**Inject the recorded BENCH bit**~~ — **done.** The rig injects the
+   recorded per-team bench button on its rising edge (section 6b);
+   `zkz-11215003` goes 117 -> 836/836/711/704, so a 27819-frame recording is
+   back in play and the whole substitutes-menu sequence — bench camera pan,
+   menu, return — replays field-for-field.
 3. ~~**`zkz-10174427` frame 0** skill nibbles~~ — **closed.** One byte of
    4-4-2 coverage (row 4, ball position 0: Amiga `0x33`, DOS `0x23`), worth the
    exactly-one bucket the `÷350` needs; 401 of the corpus's own 416 recorded
@@ -876,16 +872,16 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and the pass target**, at 795-1335:
+4. **Player selection and the pass target**, at 711-1335:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
    `onScreen`-gated, so some of this may still be view-related — but the window
    now matches the recording's, so it is worth reading
    `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
-5. **Sprite state**, at 459-1090 (setting aside the two stops whose cause is
-   known, frame 0 and frame 117): `dest_y`, `x`, `z`, `player_down_timer`,
+5. **Sprite state**, at 459-1090 (setting aside `zkz-10174427`, whose frame-0
+   stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start
-   there — and note that `sprites` now stops FIRST on eleven of the twelve
+   there — `sprites` is now the earliest stop (or tied with it) on all twelve
    recordings, so it is where the corpus still has something to say.
 6. The single **v1.2** recording still resolves to no (header, frame) pair.
 
@@ -933,9 +929,22 @@ control assignment the two `ShowPlayMatchMenu` prompts would have produced
 (`ReplayTest_SetupPlayers`, called from `SetupPlayers` and mirroring the
 arcade-mode branch beside it).
 
-Not yet injected: the recorded **bench** and **ESC** control bits and the v1.4
-`userKey`. The rig warns once when a recording uses one, so a divergence after
-that point is attributed to the missing input rather than to a port bug.
+The **bench button** is injected per TEAM, on its rising edge. swos-port's
+`TeamGeneralInfo` is our 144 bytes plus a trailing `secondaryFire` it sets from
+its own bench event, so the recording says which team's bench a press belongs
+to and the rig does not have to infer it from who drives whom — the schema
+exposes that byte as `top_bench_button` / `bottom_bench_button`, injected and
+never compared (we have no such field). The edge matters:
+`MainKeysCheck` sets `bench1Called` / `bench2Called` from a key EVENT, and
+inside the menu the same flag is what *leaves* it, so re-asserting a held
+button would open and close the bench on consecutive frames.
+
+Still not injected: the recorded **ESC** bit and the v1.4 `userKey`. Neither
+blocks anything today — every ESC in the corpus is on the recording's last
+frame (it is how the match ends) and both `userKey` presses ('S', the stats
+screen) are well past where their recordings currently stop. The rig warns once
+when a recording uses one, so a divergence after that point is attributed to the
+missing input rather than to a port bug.
 
 `checkPlayerValues` is the one comparison that is not per-frame. It runs
 between `installTeam` and `InitTeams`, while the recorded team records are

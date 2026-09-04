@@ -108,7 +108,8 @@ static int       s_errors;
 static uint32_t  s_frame;          /* index of the record being replayed */
 static const uint8_t *s_rec;       /* the record itself, NULL between frames */
 static int       s_firstFrame = 1;
-static int       s_warnedBench, s_warnedEsc, s_warnedUserKey;
+static int       s_warnedEsc, s_warnedUserKey;
+static int       s_benchHeld[2];   /* previous frame's recorded bench button */
 
 int _replayFixedRandom = -1;
 
@@ -182,6 +183,9 @@ extern void      InitTeams(void);
  * (PlayerFile.cachedMatchValue), and what recomputes it. See checkPlayerValues. */
 extern uint32_t  UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
 extern uint8_t   _playerPositionsArray[32];
+
+/* What MainKeysCheck's bench hotkey sets — see injectInput. */
+extern uint16_t  _bench1Called, _bench2Called;
 
 /* The 33 sprites the recording carries, in ITS order. Indices 0..29 happen
  * to coincide with our own allSpritesArray (sprite_data.c), which is a
@@ -1174,7 +1178,7 @@ void ReplayTest_Run(void)
 #define RC_LEFT   4
 #define RC_RIGHT  8
 #define RC_FIRE   32
-#define RC_BENCH  64
+#define RC_BENCH  64   /* per PLAYER; the rig injects the per-TEAM button instead */
 #define RC_ESC    128
 
 /* JOY0DAT/JOY1DAT encoding, identical to input_sdl.c's encode_joydat —
@@ -1198,6 +1202,10 @@ static void injectInput(void)
     int p1 = (int)recField("p1_controls");
     int p2 = (int)recField("p2_controls");
     int key = (int)recField("user_key");
+    /* Per TEAM, not per player: see the schema note on top_bench_button. */
+    int bench[2] = { (int)recField("top_bench_button"),
+                     (int)recField("bottom_bench_button") };
+    int i;
 
     _joy1Dat = encodeJoy(p1);          /* Amiga port 1 = player 1 */
     _joy0Dat = encodeJoy(p2);          /* port 0 = player 2 */
@@ -1205,12 +1213,31 @@ static void injectInput(void)
     if (p1 & RC_FIRE) _ciaa_pra &= (uint8_t)~(1u << 7);
     if (p2 & RC_FIRE) _ciaa_pra &= (uint8_t)~(1u << 6);
 
+    /* The bench call, on the RISING edge of the recorded button.
+     *
+     * `MainKeysCheck` sets these from a key EVENT, not from the key being
+     * held: on the reference the hotkey fires once and the menu stays up
+     * (`zkz-11215003` holds it for 17 frames and its camera pans to the bench
+     * and stops). Re-asserting a held button would be wrong twice over —
+     * inside the menu the SAME flag is what LEAVES it
+     * (`BenchMenuHandleControls`), so a level would open and close the bench
+     * on consecutive frames.
+     *
+     * bench1Called is the top team's, bench2Called the bottom's — the guard
+     * `MainKeysCheck` applies (that team must have a human) is the reason the
+     * recorded per-team button is used rather than the per-player control bit. */
+    for (i = 0; i < 2; i++) {
+        if (bench[i] && !s_benchHeld[i]) {
+            if (i == 0) _bench1Called = 1;
+            else        _bench2Called = 1;
+            fprintf(stderr, "[replay] frame %u: %s team calls the bench\n",
+                    s_frame, i == 0 ? "top" : "bottom");
+        }
+        s_benchHeld[i] = bench[i] != 0;
+    }
+
     /* Not injected yet — say so once each, so a divergence downstream is
      * attributed to the missing input and not mistaken for a port bug. */
-    if ((p1 | p2) & RC_BENCH && !s_warnedBench) {
-        s_warnedBench = 1;
-        fprintf(stderr, "[replay] frame %u presses BENCH — not injected yet\n", s_frame);
-    }
     if ((p1 | p2) & RC_ESC && !s_warnedEsc) {
         s_warnedEsc = 1;
         fprintf(stderr, "[replay] frame %u presses ESC — not injected yet\n", s_frame);
