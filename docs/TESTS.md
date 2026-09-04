@@ -11,9 +11,9 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, reaching frame 711-1335 before the first divergence at level
+recordings run, reaching frame 795-1655 before the first divergence at level
 `info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
-formation coverage rather than a porting defect. Ten real defects found and
+formation coverage rather than a porting defect. Eleven real defects found and
 fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -348,8 +348,8 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **714-1663** frames at
-`scalars`, **711-1335** at `info`, **689-1090** at `sprites`, and **401 of 416**
+The shape of the results, as of the run in that file: **714-1694** frames at
+`scalars`, **795-1655** at `info`, **689-1592** at `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -613,7 +613,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Eight real defects so far, all fixed — plus the two in "The `onScreen` ceiling"
+Nine real defects so far, all fixed — plus the two in "The `onScreen` ceiling"
 below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -667,6 +667,9 @@ below, which that measurement turned up on its own:
    guard around it was inverted. See "Two bugs in one substitution" below.
 8. **The bench menu's held-direction repeat delay is 2 on Amiga and 4 on DOS**,
    and DOS mode was using 2. Same section.
+9. **DOS mode latched the AMIGA pitch ball-speed influence for the whole
+   match** — an ordering bug in our own `ApplyGameStyle`. See "The constant
+   that was right and the value that wasn't" below.
 
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
@@ -765,6 +768,43 @@ in the corpus where all four levels stop on the same frame and the same field.
 > `externally_visible` uppercase set declared in `bench_subs.h` and called by
 > nobody. The first fix went into the copy that isn't used. Both are corrected
 > and flagged; merging them is a separate cleanup.
+
+### The constant that was right and the value that wasn't
+
+`zkz-11215003` stopped at frame 704 on `sprite[1].speed` — the ball, recorded
+2191, ours 2193 — and the gap stayed at exactly 2 as it decelerated. Frame 704
+is the **kick-off**: `game_state` flips 0 → 100 and the ball is played for the
+first time.
+
+A `gdb` watchpoint on `_ballSprite.speed`, armed at frame 703, gave the whole
+answer in two stops. `PlayerKickingBall` sets 2208 in both. Then `UpdateBall`
+takes the first friction step and we land on 2193 where the reference lands on
+2191 — friction 15 against 17:
+
+```c
+int16_t friction = _kBallGroundConstant;                /* DOS 13, Amiga 16 */
+if (nobody has the ball) friction += _pitchBallSpeedFactor;
+```
+
+`_kPitchBallSpeedInfluence` held the DOS values ({-3, 4, 1, …}, so
+`ApplyGameStyle` had run) but `_pitchBallSpeedFactor` was **2** — a number that
+appears nowhere in the DOS table and is exactly the AMIGA table's entry for the
+pitch this match rolled ({-2, **2**, 3, …}).
+
+It is an ordering bug, and ours alone. `InitGameRestoreTeams` *latches* three
+pitch physics factors out of those tables at match setup; the only
+`ApplyGameStyle` call site was `InitTeamsData`, which `StartingMatch` reaches
+from **inside** `GameLoop` — after the latch. So DOS gameplay ran every match
+with the Amiga's ball-speed influence: two units per frame less ground friction
+on every loose ball, for ninety minutes. `ApplyGameStyle` is a pure write of
+constants, so the fix is to call it once more at the top of
+`InitGameRestoreTeams`.
+
+`zkz-11215003` went **704 → 1592** at `sprites` (and 836 → 1694 at `scalars`),
+which makes it the deepest recording in the corpus. Nothing else moved, and
+that is the tell: the pitch is chosen randomly per match, and the Amiga and DOS
+influence tables differ only in their first three entries — the other
+recordings rolled a pitch where the two agree.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
@@ -927,19 +967,18 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and the pass target**, at 711-1335:
+4. **Player selection and the pass target**, at 795-1655:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
    `onScreen`-gated, so some of this may still be view-related — but the window
    now matches the recording's, so it is worth reading
    `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
-5. **Sprite state**, at 689-1090 (setting aside `zkz-10174427`, whose frame-0
+5. **Sprite state**, at 689-1592 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start
    there — `sprites` is the earliest stop (or tied with it) on all twelve
    recordings, so it is where the corpus still has something to say. The
-   earliest of them is now `zkz-11215003` at 704 on `sprite[1].speed` — the
-   ball.
+   earliest of them is now `zkz-12065730` at 689 on `sprite[11].dest_y`.
 6. **Decode `BenchDataV1` in the schema.** The v1.3+ frame carries 30 named
    fields of substitutes-menu state (tap counts, block flags, timers, cursor
    indices, the shirt-number table) and the rig decodes none of them. Reading

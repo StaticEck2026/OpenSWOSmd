@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "match_setup.h"
+#include "dos_gameplay.h"   /* ApplyGameStyle — the pitch factors below latch its tables */
 #include "game_types.h"
 #include "display.h"        /* single source of `#define AGA` — without it the #ifdef AGA
                              * pitch-palette block below is silently compiled out (ran the
@@ -737,6 +738,19 @@ void StartPenalties(void)
 __attribute__((used, externally_visible, optimize("no-tree-loop-distribute-patterns")))
 void InitGameRestoreTeams(void)
 {
+    /* DOS-vs-Amiga tuning has to be in the tables BEFORE this routine reads
+     * them. It LATCHES three pitch physics factors out of
+     * _kPitchBallSpeedInfluence / _kBallSpeedBounceFactorTable /
+     * _kBallBounceFactorTable below, and the only other ApplyGameStyle call
+     * site is InitTeamsData, which StartingMatch reaches from INSIDE GameLoop
+     * — after this. So DOS mode was latching the AMIGA ball-speed influence
+     * and using it for the whole match: with the pitch the replay corpus rolls,
+     * 2 instead of 4, i.e. two units per frame less ground friction on every
+     * loose ball. ApplyGameStyle is a pure write of constants, so calling it
+     * twice is free. (Found by the rig: the kick-off ball decelerated 2208 ->
+     * 2193 where the recording has 2191 — docs/TESTS.md.) */
+    ApplyGameStyle();
+
     InitAdvertisements();
     CopyPlayerNameLengths();
 
