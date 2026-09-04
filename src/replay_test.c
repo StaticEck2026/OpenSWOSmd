@@ -179,6 +179,7 @@ extern uint16_t  _menuBGImageCmdStream[];
 extern uint8_t  *_menuImageStreamBaseEnd;
 extern void      ProcessImageCommandStream(uint16_t *script, uint8_t *base);
 extern void      InitTeams(void);
+extern void      InitUserTactics(void);
 
 /* The per-player match value the recording carries in its own team records
  * (PlayerFile.cachedMatchValue), and what recomputes it. See checkPlayerValues. */
@@ -1134,6 +1135,16 @@ static void applySetup(void)
     _gameType            = 0;      /* friendly path */
     _trainingGame        = 0;
     _isCareer            = 0;
+
+    /* Front-end work the rig skips but the tables depend on: InitUserTactics
+     * copies the last two player rows of the 5-3-2 over the 4-4-2's and the
+     * Sweep's (SWOS2.s:43757 / swos.asm:22569) and seeds USER_A..F from the
+     * 4-4-2. The real game does it in InitMainMenuStuff; without it the
+     * formations the match plays with are whatever was baked, which for the
+     * SWOS_DOS_TACTICS variant is 60 bytes of dead dseg data. The recording's
+     * own user tactics are copied over the USER slots afterwards, which is the
+     * same order the game loads a .TAC in. */
+    InitUserTactics();
 
     for (i = 0; i < 6; i++)
         memcpy(tac[i], s_blob + s_setup.tactics[i].blobOff, 370);

@@ -301,11 +301,20 @@ void InitUserTactics(void)
 {
     int16_t i;
 
-    /* Copy positions[8..9] (70 bytes) from 532 formation to both 442 and Sweep */
+    /* Copy positions[8..9] (70 bytes) from 532 formation to both 442 and Sweep.
+     *
+     * Through _teamTacticsTable, NOT the bare _teamTactics442 / Sweep symbols:
+     * SWOS_ORIGINAL_TACTICS and SWOS_DOS_TACTICS point the table at variant
+     * copies, and writing to the unsuffixed symbols left those variants holding
+     * whatever their JSON baked — which for the DOS 4-4-2 and Sweep is 60 bytes
+     * of DEAD dseg data that the real DOS build overwrites here too. The asm
+     * writes to the tables the game plays with; so does this. */
     {
+        TeamTactics *t442   = (TeamTactics *)_teamTacticsTable[0];
+        TeamTactics *tSweep = (TeamTactics *)_teamTacticsTable[8];
         uint8_t *src = (uint8_t *)&_teamTactics532.positions[8];
-        uint8_t *dst442 = (uint8_t *)&_teamTactics442.positions[8];
-        uint8_t *dstSweep = (uint8_t *)&_teamTacticsSweep.positions[8];
+        uint8_t *dst442 = (uint8_t *)&t442->positions[8];
+        uint8_t *dstSweep = (uint8_t *)&tSweep->positions[8];
         for (i = 0; i < 70; i++) {
             dst442[i] = src[i];
             dstSweep[i] = src[i];
@@ -325,7 +334,7 @@ void InitUserTactics(void)
 
         for (slot = 0; slot < 6; slot++) {
             uint8_t *dst = (uint8_t *)userSlots[slot];
-            uint8_t *src = (uint8_t *)&_teamTactics442;
+            uint8_t *src = (uint8_t *)_teamTacticsTable[0];   /* the 4-4-2 in play */
             for (i = 0; i < (int16_t)sizeof(TeamTactics); i++) {
                 dst[i] = src[i];
             }

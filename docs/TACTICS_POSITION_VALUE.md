@@ -500,19 +500,32 @@ The full data and a per-coordinate spreadsheet are in
 **All twelve, measured** (2026-09-03, from the DOS disassembly directly —
 `swos-port/swos/swos.asm` `tact_*`, whose `g_tacticsTable` order is ours;
 370 bytes each, cross-checked against the snapshot above). Nine formations are
-byte-identical:
+byte-identical, and **the live difference is 21 bytes**:
 
-| formation | name bytes | coverage bytes | where |
-|---|---:|---:|---|
-| 4-4-2 | 2 | **68** | slots 1,2,3,4,6,7 (1-2 each) + **slot 8: 31, slot 9: 29** |
-| Sweep | 0 | **64** | slots 1,2,4 (1 each) + **slot 8: 32, slot 9: 29** |
-| 4-3-3 | 1 | **10** | slots 1,2,5,6,7,8 (1-2 each) |
-| *the other nine* | 0 | 0 | — |
+| formation | name bytes | live coverage bytes | where | dead |
+|---|---:|---:|---|---:|
+| 4-3-3 | 1 | **10** | slots 1,2,5,6,7,8 | — |
+| 4-4-2 | 2 | **8** | slots 1,2,3,4,6,7 | 60 |
+| Sweep | 0 | **3** | slots 1,2,4 | 61 |
+| *the other nine* | 0 | 0 | — | — |
 
-**142 of 4200 coverage bytes, and 121 of those 142 are four slots**: the two
-forwards of 4-4-2 and of Sweep, which are not adjusted but **rewritten** (see
-the per-slot note above). The eleven-byte tail (`pair_ids` +
-`ballOutOfPlayTactics`) is identical in all twelve.
+> **Retracted (2026-09-03).** An earlier revision of this table read 68 / 64 /
+> 10 and concluded that "the DOS release rewrote the 4-4-2's and Sweep's forward
+> line — 121 of the 142 bytes". **That was wrong.** Those 121 bytes are in slots
+> 8 and 9, and **neither release ever executes them**: `InitUserTactics` copies
+> the 5-3-2's last two player rows (70 bytes at `+$118`) over the 4-4-2's *and*
+> the Sweep's at startup, on both platforms —
+> `data/SWOS2.s:43757` and `swos-port/swos/swos.asm:22569`, the same routine,
+> the same 70 bytes. The Amiga's baked rows already equal the 5-3-2's so the
+> copy is a no-op there and the difference never showed; the DOS binary's are
+> different, and dead. The corpus said so all along (fifteen recorded forwards
+> matching the Amiga and none matching the DOS dseg) and it was read as evidence
+> that no table we hold is the one the recordings ran. It is: with the copy
+> applied and the DOS coverage selected, **all 384 recorded player values
+> reproduce**. See docs/TESTS.md, "The rows that were never executed".
+
+The eleven-byte tail (`pair_ids` + `ballOutOfPlayTactics`) is identical in all
+twelve.
 
 The two name-byte differences are cosmetic. The 9-byte `name[]` is a label, a
 NUL, then a second short string the tactics menu shows as a grade: DOS grades
@@ -574,12 +587,18 @@ exclusive (`#error`). Only four variants exist because only four formations need
 one: 4-4-2, 4-3-3 and Sweep because DOS changed them, and 3-4-3 because *this
 port* did (the DOS 3-4-3 is the pristine Amiga one).
 
-It is **not** wired to `--dos-gameplay=on` yet, deliberately. The recorded-game
-corpus grades formation data directly (docs/TESTS.md, "The recording grades our
-formation data"), and it **disagrees with the DOS forward slots**: turning this
-flag on scores **369/384** on the corpus's own recorded player values where the
-shipped data scores **382/384** — it fixes the two players the shipped data gets
-wrong and breaks fifteen forwards that the shipped data gets right. So the data
-here is faithfully what the DOS binary holds, and it is demonstrably not what
-produced those recordings. Decide what DOS mode should follow before making it
-automatic.
+The `_dos.json` files carry what the DOS **binary** holds, dead rows included;
+`InitUserTactics` overwrites slots 8 and 9 at startup exactly as the real game
+does, so the baked data stays a faithful image and the runtime behaviour is
+correct. (That routine writes through `_teamTacticsTable`, not the bare
+`_teamTactics442` / `_teamTacticsSweep` symbols — otherwise the variant builds
+never receive the copy, which is what made this flag look wrong for a while.)
+
+**With it on, the corpus's own recorded player values score 384/384** — every
+outfielder in every decodable recording, including the two the shipped Amiga
+data gets wrong (Eranio, Ayala). That is as direct a confirmation as the corpus
+can give that these are the formations the recordings were made with.
+
+It is still **not** wired to `--dos-gameplay=on`: that is a gameplay decision
+(it changes squad-screen marks and player values in menus, not just in the
+match), not a data question any more.

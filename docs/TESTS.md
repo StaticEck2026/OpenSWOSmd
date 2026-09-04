@@ -14,7 +14,7 @@ Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
 every bound field, every frame.** The rest reach 1108-3916 at level `info`
 (section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
-coverage rather than a porting defect. Twenty-one real defects found and fixed
+coverage rather than a porting defect. Twenty-two real defects found and fixed
 on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -552,15 +552,13 @@ the same players, with the same values, that the table above predicts. Under
 the DOS data Eranio and Ayala below both come out right and fifteen forwards do
 not; the three sets of failures are disjoint, which is the whole point.
 
-The last row is the corpus's own data, and it is a hybrid: the recordings agree
-with **DOS** on every discriminating byte in the first eight slots, and with the
-**Amiga** on the two forward rows, where the tables differ wholesale (31 and 29
-of the 4-4-2's 68 differing bytes, and 32 and 29 of Sweep's 64). The corpus has
-nine 4-4-2/Sweep teams, so eighteen forwards; **fifteen** of them come out
-differently under the two tables, and all fifteen match the Amiga — against one
-player (Eranio) on the DOS side. Which build wrote these recordings is not
-settled by this; what *is* settled is that no single one of the three tables we
-hold is the one it ran.
+> **Retracted.** The last row was read as "the corpus's data is a hybrid — DOS
+> for slots 0-7, Amiga for the two forward rows — so no table we hold is the one
+> it ran". It is not a hybrid, and the table we hold *is* the one it ran. See
+> "The rows that were never executed" below: those forward rows are dead in both
+> binaries, and with the startup copy applied the DOS coverage scores
+> **384/384** on the corpus's own player values — every outfielder in every
+> decodable recording, Eranio and Ayala included.
 
 This also grades the four formations this port deliberately edited (commit
 `23f0c59`, tester-supplied `.TAC` fixes for central defenders / attackers
@@ -615,7 +613,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Nineteen real defects so far, all fixed — plus the two in "The `onScreen`
+Twenty real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -711,6 +709,11 @@ ceiling" below, which that measurement turned up on its own:
 19. **`tacklingTimer == -2` was left alone where the asm folds it to -1.**
     `cmpi.w #$FFFE,…; blt` branches away only when the timer is *strictly* less
     than -2, so -2 itself falls through; our `> -2` kept it.
+20. **`InitUserTactics` wrote its 5-3-2 forward-row copy to the bare
+    `_teamTactics442` / `_teamTacticsSweep` symbols**, so neither variant build
+    received it. See "The rows that were never executed" below — that copy also
+    settles what looked like the largest DOS-vs-Amiga data difference in the
+    project.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1063,6 +1066,62 @@ Two smaller things fell out of the same recording:
   is a truth test and the clear is `&= 0xFF`, so the schema now compares it as a
   boolean — the same class as the `sne`-set flags in "Known non-comparable
   state".
+
+### The rows that were never executed
+
+For a while this document said the DOS release rewrote the 4-4-2's and the
+Sweep's forward line — 121 bytes across four slots, dwarfing every other
+difference — and that the corpus contradicted it, since fifteen recorded
+forwards matched the Amiga rows and none matched the DOS ones. Both halves were
+wrong in the same way.
+
+`InitUserTactics` starts like this, in **both** disassemblies:
+
+```
+    lea  ((teamTactics532+…+$118)).l,a0     ; SWOS2.s:43757
+    lea  ((teamTactics442+…+$118)).l,a1
+    lea  ((teamTacticsSweep+…+$118)).l,a2
+    move.w #69,d0
+loc_120528:
+    move.b (a0),(a1)+
+    move.b (a0)+,(a2)+
+    dbf    d0,loc_120528
+```
+
+`$118` is 280, which is `positions[8]`, and 70 bytes is exactly two player rows.
+**At startup the 5-3-2's last two rows are copied over the 4-4-2's and the
+Sweep's.** Whatever those two formations have baked in slots 8 and 9 is dead the
+moment the game boots. The Amiga's baked rows already equal the 5-3-2's, so the
+copy changes nothing there and the redundancy is invisible; the DOS binary's are
+different, and never run.
+
+So the corpus was right and the disassembly was being read too literally: the
+recordings' forwards match the 5-3-2's rows because that is what every 4-4-2 and
+Sweep uses at runtime, on both releases. The real Amiga-vs-DOS difference is
+**21 coverage bytes** across three formations, not 142.
+
+Two fixes came out of it, and neither is in the data:
+
+- **`InitUserTactics` wrote to the bare `_teamTactics442` / `_teamTacticsSweep`
+  symbols.** With `SWOS_ORIGINAL_TACTICS` or `SWOS_DOS_TACTICS` the table points
+  at variant copies, and those never received the copy. It now writes through
+  `_teamTacticsTable`, which is the set the game actually plays with — and which
+  is what the asm's `lea teamTactics442` means.
+- **The rig never called it.** `InitUserTactics` runs in the front end
+  (`InitMainMenuStuff`), which the rig skips, so the replay was using whatever
+  was baked. `applySetup` now calls it before installing the recording's own
+  user tactics, which is the order the real game loads a `.TAC` in.
+
+With both, `make clean && make SWOS_DOS_TACTICS=1` scores **384/384** on the
+corpus's recorded player values — every outfielder in every decodable recording,
+including Eranio and Ayala, the two the shipped Amiga data gets wrong. The
+shipped default is unchanged at 382/384, which is what it should be: those two
+are genuine Amiga-vs-DOS coverage bytes.
+
+> The lesson is the one this document keeps relearning from the other side: a
+> disassembly shows what is *stored*, not what is *executed*. 121 bytes of
+> difference sat in the listing looking like the biggest finding in the file,
+> and a nine-line loop at startup made all of it moot.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
