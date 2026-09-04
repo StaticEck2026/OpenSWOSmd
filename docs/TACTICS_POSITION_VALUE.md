@@ -463,6 +463,36 @@ the DOS vs the Amiga 4-4-2 — which is exactly the Aldair ↔ Ronaldão swap. (
 header bytes 4,5 — `$00,$41` Amiga vs `$20,$42` DOS — are in the `name[]` field,
 skipped by `GetPlayerPrice`'s `+9`, so they don't affect the value.)
 
+**Where the other 64 bytes are** (added 2026-09-03, from the replay-corpus
+measurement in docs/TESTS.md). The 68-byte 4-4-2 delta is not mostly the CDs.
+Per outfield slot:
+
+| slot | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **8** | **9** |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| bytes differing | 0 | 2 | 2 | 1 | 1 | 0 | 1 | 1 | **31** | **29** |
+
+Slots 8 and 9 — the two forwards — are not re-tuned but **rewritten**: the DOS
+pair holds a narrow central channel (x quadrants 4-7 and 7-A) where the Amiga
+pair spreads wide (2-8 and 6-C). Sweep is the same shape of
+delta (64 bytes: 32 + 29 in slots 8 and 9, 3 elsewhere). Of the six single-byte
+differences in slots 0-7, one matters to a real recording: **slot 4, ball
+position 0 — Amiga `0x33`, DOS `0x23`** — worth +81 to a running total that was
+69 short of the next `÷350` bucket, and so the whole of `zkz-10174427`'s frame-0
+divergence.
+
+Two things follow that §9's original conclusion could not see:
+
+- The DOS release re-tuned the 4-4-2 and Sweep **forward line**, not just the
+  defenders. Any "DOS formations in DOS mode" work has to carry those two rows.
+- The corpus that recorded the DOS behaviour disagrees with those two rows in
+  16 independent players while agreeing with DOS everywhere in slots 0-7, so
+  the DOS snapshot in `docs/tactics_amiga_vs_dos/` is **not** the table that
+  produced the recordings. See docs/TESTS.md, "The recording grades our
+  formation data" — that section also grades the four formations this port
+  edited in `23f0c59`: the 4-4-2 and 4-3-3 fixes are confirmed against the
+  reference (the 4-3-3 forward fix is byte-identical to DOS), and one byte of
+  the Sweep fix — rows 1/2 at ball position 15 — is contradicted by it.
+
 The full data and a per-coordinate spreadsheet are in
 `docs/tactics_amiga_vs_dos/` (`tactics_amiga.json`, `tactics_dos.json`,
 `tactics_amiga_vs_dos.csv`).

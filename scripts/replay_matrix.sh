@@ -50,8 +50,11 @@ for f in tests/dos/*.RGD.gz; do
         fld=$(grep -A1 'DIVERGENCE at frame' "$log" | tail -1 |
               sed -E 's/^\[replay\] +//; s/ +recorded=.*//')
         [ "$rc" = 0 ] && fld='(complete)'
-        printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
-            "$n" "${ver:-?}" "${tot:-?}" "$lvl" "${got:-?}" "${fld:-?}" >> "$ROWS"
+        # Setup-state check: the recording's own per-player match values
+        # (docs/TESTS.md "The recording grades our formation data").
+        val=$(grep -oE 'player values: [0-9]+/[0-9]+' "$log" | head -1 | sed 's/player values: //')
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+            "$n" "${ver:-?}" "${tot:-?}" "$lvl" "${got:-?}" "${fld:-?}" "${val:-?}" >> "$ROWS"
     done
 done
 
@@ -77,14 +80,20 @@ A cell is the frame the replay reached before the first mismatching field; the
 match's own length is in the "frames" column. Higher is better, and the number
 only means something relative to another run of the same corpus.
 
-| recording | ver | frames | scalars | teams | info | sprites |
-|---|---|---:|---:|---:|---:|---:|
+"values" is the setup-state check that runs before frame 0: the recording's own
+per-player match values (\`PlayerFile.cachedMatchValue\`, 16 per team) against
+what this build's \`GetPlayerPrice\` computes. It is reported, not fatal — see
+docs/TESTS.md.
+
+| recording | ver | frames | values | scalars | teams | info | sprites |
+|---|---|---:|:---:|---:|---:|---:|---:|
 EOF
 
 cut -f1 "$ROWS" | awk '!seen[$0]++' | while read -r n; do
     ver=$(awk -F'\t' -v n="$n" '$1==n{print $2; exit}' "$ROWS")
     tot=$(awk -F'\t' -v n="$n" '$1==n{print $3; exit}' "$ROWS")
-    line="| \`$n\` | $ver | $tot"
+    val=$(awk -F'\t' -v n="$n" '$1==n{print $7; exit}' "$ROWS")
+    line="| \`$n\` | $ver | $tot | ${val:--}"
     for lvl in scalars teams info sprites; do
         v=$(awk -F'\t' -v n="$n" -v l="$lvl" '$1==n && $4==l{print $5; exit}' "$ROWS")
         line="$line | ${v:--}"

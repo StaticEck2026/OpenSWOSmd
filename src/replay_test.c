@@ -178,6 +178,11 @@ extern uint8_t  *_menuImageStreamBaseEnd;
 extern void      ProcessImageCommandStream(uint16_t *script, uint8_t *base);
 extern void      InitTeams(void);
 
+/* The per-player match value the recording carries in its own team records
+ * (PlayerFile.cachedMatchValue), and what recomputes it. See checkPlayerValues. */
+extern uint32_t  UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
+extern uint8_t   _playerPositionsArray[32];
+
 /* The 33 sprites the recording carries, in ITS order. Indices 0..29 happen
  * to coincide with our own allSpritesArray (sprite_data.c), which is a
  * useful confirmation, but the list is written out by name so a change to
@@ -969,6 +974,76 @@ static void installTeam(int i, TeamFileEx *dst)
     dst->team.globalTeamNumber = (int16_t)s_setup.team[i].globalTeamNumber;
 }
 
+/* ===================================================================
+ * The recording's own player values
+ * ===================================================================
+ *
+ * A recorded team record carries `PlayerFile.cachedMatchValue` for all 16
+ * players: what the REFERENCE build's UpdatePlayerPositionAndReturnRole
+ * computed for that squad in that formation, before the match. For the ten
+ * outfield starters that is a whole GetPlayerPrice run — the 35-quadrant
+ * walk over the team's tactics coverage, six weight tables, the crowding
+ * count and the nearness ratio — reduced to one byte we can check exactly.
+ *
+ * So this is 32 free assertions per recording, on setup state the frame
+ * comparison never reaches: AdjustPlayerSkills scales every skill nibble by
+ * this value, so a wrong price is the difference between reproducing a
+ * recorded match and not.
+ *
+ * It is reported, not fatal. The corpus was recorded from a DOS release
+ * whose formation COVERAGE differs from the Amiga's in a handful of bytes
+ * (docs/TACTICS_POSITION_VALUE.md section 9), so a mismatch here can be data
+ * rather than code — the report says which player, and the coverage byte
+ * behind it is then a two-line lookup.
+ */
+static void checkPlayerValues(void)
+{
+    uint8_t savedPositions[32];
+    int total = 0, bad = 0, i;
+
+    memcpy(savedPositions, _playerPositionsArray, sizeof savedPositions);
+
+    for (i = 0; i < 2; i++) {
+        TeamFileEx *team = &_selectedTeams[i];
+        const TeamFileEx *rec = (const TeamFileEx *)(s_blob + s_setup.team[i].blobOff);
+        uint8_t savedDirty = team->team.playerValuesDirty;
+        uint8_t saved[16];
+        int j;
+
+        for (j = 0; j < 16; j++)
+            saved[j] = (uint8_t)team->players[j].cachedMatchValue;
+
+        /* Force the recompute: with the flag CLEAN the routine just hands
+         * back the byte we are trying to check. */
+        team->team.playerValuesDirty = TEAM_VALUES_DIRTY;
+        for (j = 0; j < 16; j++) {
+            uint8_t slot = team->team.playerNumbers[j];
+            uint8_t got, want;
+            /* The routine indexes playerPositionsArray by this slot, so a
+             * corrupt lineup entry would write past it — skip rather than
+             * follow it. */
+            if (slot >= 16) continue;
+            (void)UpdatePlayerPositionAndReturnRole(team, (uint16_t)j);
+            got  = (uint8_t)team->players[slot].cachedMatchValue;
+            want = (uint8_t)rec->players[slot].cachedMatchValue;
+            total++;
+            if (got == want) continue;
+            bad++;
+            fprintf(stderr, "[replay]   %s player %d (%.15s): value recorded=%u actual=%u\n",
+                    s_setup.team[i].name, j, (const char *)rec->players[slot].playerName,
+                    want, got);
+        }
+
+        for (j = 0; j < 16; j++)
+            team->players[j].cachedMatchValue = (int8_t)saved[j];
+        team->team.playerValuesDirty = savedDirty;
+    }
+
+    memcpy(_playerPositionsArray, savedPositions, sizeof savedPositions);
+    fprintf(stderr, "[replay] player values: %d/%d match%s\n",
+            total - bad, total, bad ? " — see above (formation coverage, docs/TESTS.md)" : "");
+}
+
 static void applySetup(void)
 {
     uint8_t *tac[6] = { _teamTacticsUSERA, _teamTacticsUSERB, _teamTacticsUSERC,
@@ -1013,6 +1088,10 @@ static void applySetup(void)
     installTeam(0, &_selectedTeams[0]);
     installTeam(1, &_selectedTeams[1]);
     _numSelectedTeams = 2;
+
+    /* Before anything recomputes them: the recording's own per-player match
+     * values are 32 checkable GetPlayerPrice results. */
+    checkPlayerValues();
 
     /* The front end was skipped, so the menu sprite graphics the stadium
      * line-up draws (the little player figures, sprites 210-213) were never

@@ -11,8 +11,11 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, reaching frame 99-786 before the first divergence at level
-`info` (section 5). Four real defects found and fixed on the way in.
+recordings run, reaching frame 117-1335 before the first divergence at level
+`info` (section 5). Seven real defects found and fixed on the way in, and
+**401 of the 416 player values the recordings carry are reproduced exactly** —
+the strongest single measurement the corpus supports (section 5, "The
+player-price audit").
 
 ```bash
 scripts/replay_test.sh                                  # convert + replay + report
@@ -223,6 +226,12 @@ always visible much earlier at `info`.
 
 ## 4. What it compares, and how
 
+Once, before frame 0: `checkPlayerValues` recomputes the per-player match value
+of all 32 players from the recording's own team records and compares it with
+what the reference build stored there. See "The player-price audit" — it is
+setup state, so it is reported rather than fatal, and it is the only check that
+reaches `GetPlayerPrice` and the tactics coverage at all.
+
 Per frame: `ReplayTest_FrameStart` (top of `GameLoop`'s body) writes the
 recorded stick state into `_joy1Dat` / `_joy0Dat` / `_ciaa_pra` — the same
 registers `input_sdl.c` writes, so `Player1StatusProc` decodes a recorded stick
@@ -338,9 +347,11 @@ scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
 The shape of the results, as of the run in that file: **117-1663** frames at
-`scalars`, **117-1335** at `info`, **117-1090** at `sprites`.
+`scalars`, **117-1335** at `info`, **117-1090** at `sprites`, and **401 of 416**
+on the per-player match values (the `values` column — a setup-state check that
+runs before frame 0; see "The player-price audit").
 
-Three things to read into them:
+Four things to read into them:
 
 - **The four levels now reach roughly the same depth.** That is the headline:
   the full sprite compare — 22 player sprites' positions, deltas, directions,
@@ -354,6 +365,10 @@ Three things to read into them:
   are now checked, so several numbers went *down* while the test got
   *stronger*: `zkz-11021807` reads 222 rather than 775 because it now stops on
   `camera_x`, which nothing was looking at before.
+- **`values` is the one column that does not depend on how far a replay
+  runs.** It compares 32 whole `GetPlayerPrice` results per recording against
+  the numbers the reference build left in the header, so it grades the deepest
+  arithmetic in match setup without needing a single frame to line up.
 
 Hundreds of frames in which 930+ named fields agree exactly is a real
 regression net: a change that perturbs the simulation moves these numbers
@@ -405,90 +420,179 @@ defects of ours it exposed. Three classes remain, and none of them is a
 statement about this port's accuracy: two are slots that do not exist here, and
 one is a flag whose exact value is endian-dependent by design.
 
-### The player-price audit — a worked example of "read it against SWOS2.s"
+### The player-price audit — and the 416 checks hiding in the header
 
 `zkz-10174427` was the corpus's one frame-0 divergence: `top_game.players[5]`
 (AC Milan's Stefano Eranio) came out with `passing`/`tackling`/`ballControl` 4
 where the recording has 5. The cleanest possible target — no camera, no cull,
 pure match setup — so it got a full line-by-line read against `data/SWOS2.s`.
-The answer is that **our code is right**; the write-up stays because the method
-is reusable.
+**Our code is right**, and the way that was finally settled turned
+into a permanent part of the rig.
 
-The chain, narrowed one step at a time:
+#### The recording carries the answer
 
-1. `AdjustPlayerSkills` masks each skill nibble with `0x07777777` (so the raw
-   13/14 in the team file become 5/6) and scales it in `ScaleSkill`, which
-   rounds **stochastically** on `Rand2`. The rig pins `Rand2` to the
-   recording's `fixedRandomValue` (187), so `r = (187*100)>>8 = 73` and the
-   rounding is deterministic. Solving `f(5)=5 && f(6)=5` for that `r` forces
-   `d2 = 95` exactly; we produced 92.
-2. `d2 = clamp(d4,75,125) * appPercent / 100`, and `appPercent = 100` here (the
-   `allPlayerTeamsEqual` branch is off in this recording), so `d4 = 95`.
-3. `d4 = price*100/filePrice`, then `GetPlayerPricePercentageChange`. In a
-   friendly that skips both team offsets and adds only `(Rand2()*24>>8) - 12`
-   = **+5** — verified against the asm. So `price = 28` where we compute 27.
-4. `GetPlayerPrice` and everything it touches was then read against the asm:
-   the routine, `CountNearnessFactor`, `GetPlayerPricePercentageChange`,
-   `ScaleSkill`, `ApplyTeamTactics` **and its call site** all match, including
-   the subtle parts — the second `mulu.w` truncating the first's 32-bit result,
-   the byte-wide `sub.b`/`bmi` tail, the divide by `numPlayersAtQuadrant - 1`,
-   and `ext.l` before the unsigned `divu.w #350`. All six data tables
-   (`skillsPerQuadrant`, `quadrantDistanceFactor`,
-   `quadrantCoordinatesToBallQuadrant`, `priceSkillPonders`,
-   `skillValuePonders`, `plPricesIncreaseTable`) match byte-for-byte, and the
-   `loc_122D6A+1 == skillsPerQuadrant - 35` claim our source comment makes was
-   confirmed by counting instruction bytes back from the label.
-5. An independent reimplementation of the asm in Python reproduces our C's 27,
-   and reproduces the recorded skills for **9 of the 10 outfield players**.
+A recorded team record is a whole 684-byte `TeamFile`, and byte 1 of each
+`PlayerFile` is `cachedMatchValue` — what the *reference build's*
+`UpdatePlayerPositionAndReturnRole` computed for that squad in that formation
+before the match. For the ten outfield starters that is an entire
+`GetPlayerPrice` run (the 35-quadrant walk over the team's tactics coverage, six
+weight tables, the crowding count, the nearness ratio) reduced to one byte we
+can check exactly. For the goalkeeper and the five substitutes it is the file
+price, which checks the routine's dispatch rules instead.
 
-So the code is not in question — the *formation data* is. Solving for the `d4`
-each player needs:
+That is **32 assertions per recording, 416 across the corpus**, on setup state
+the frame loop never reaches — and `AdjustPlayerSkills` scales every skill
+nibble by this value, so a wrong price is the difference between reproducing a
+recorded match and not.
 
-| | slot 5 | slot 10 | the other eight |
+`checkPlayerValues()` (`src/replay_test.c`) runs it before frame 0: it installs
+the recorded record, forces `playerValuesDirty` (with the flag CLEAN the routine
+just hands back the byte we are trying to check), recomputes all 16, compares,
+and restores. Every run prints one line:
+
+```
+[replay] player values: 32/32 match
+[replay]   AC MILAN player 5 (STEFANO ERANIO): value recorded=28 actual=27
+[replay] player values: 31/32 match — see above (formation coverage, ...)
+```
+
+It is **reported, not fatal**: the corpus was recorded from a DOS release whose
+formation *coverage* differs from the Amiga's in a handful of bytes, so a
+mismatch here can be data rather than code. The `values` column in
+docs/TESTS_RESULTS.md is this number.
+
+#### The result: 401/416
+
+| | |
+|---|---|
+| all 13 recordings | **401 / 416** |
+| the 12 decodable ones | **382 / 384** |
+| `zkz-11122841` alone (v1.2) | 19 / 32 — see below |
+
+`zkz-11122841` is the file whose `(header, frame)` sizes never resolved. Its
+*first* GREAT OLYMPICS record is perfect (16/16, which is what says the record
+is being parsed correctly); its *second* is a hand-built squad whose ten
+starters are all trialists or reserves (`form` `0x9B`/`0x9A`) with a stored
+value of **0 across the board** — including four **substitutes**, whose value is
+just the file price, a number `GetPlayerPrice` is never even asked for. Byte 1
+of that record does not describe the squad it holds, so the file is excluded
+rather than explained.
+
+That leaves **two** real mismatches in the whole corpus, and both are one byte
+of formation coverage.
+
+#### Eranio: one coverage byte, worth exactly the missing bucket
+
+Narrowed backwards from the recorded value: `ScaleSkill` rounds stochastically
+on `Rand2`, which the rig pins to the recording's `fixedRandomValue` (187), so
+`r = 73` and solving `f(5)=5 && f(6)=5` forces `d2 = 95`; `appPercent` is 100
+here; in a friendly `GetPlayerPricePercentageChange` adds only
+`(Rand2()*24>>8)-12 = +5`. So `GetPlayerPrice` must return 28 and ours returns
+27 — which `cachedMatchValue` then confirmed directly, no back-solving needed.
+
+Inside `GetPlayerPrice` the gap is tiny and structural: our 35-quadrant total is
+12531 and the next `÷350` bucket starts at 12600, so the price is 69 units of
+total short of 28. It all comes from one quadrant. Eranio is player 5, so he
+walks **row 4** of the 4-4-2, and at ball position 0 that row differs between the
+two releases:
+
+| | row 4, ball position 0 | quadrant | contribution |
+|---|---|---:|---:|
+| Amiga `teamTactics442` (what we ship) | `0x33` | 6 | 297 |
+| DOS `tact_4_4_2` | `0x23` | 5 | 378 |
+
+`+81`, total 12612, price 28, recorded skills reproduced. Every other one of
+Eranio's 35 quadrants is identical between the two. Verified against the disassembly
+directly: our `442_original` is byte-identical to `data/SWOS2.s`'s
+`teamTactics442` (0 of 350 differ, and SWOS-RE's copy agrees), so `0x33` is
+genuinely the Amiga's value and this is a data difference, not a transcription
+slip.
+
+**So the last frame-0 divergence in the corpus is the DOS-formation gap**
+(`project_dos_tactics_gap`), not a porting defect: `ApplyGameStyle`
+(`src/dos_gameplay.c`) swaps the physics and timer constants for
+`--dos-gameplay=on` and leaves the formations alone, and `GetPlayerPrice` reads
+them. The `SWOS_ORIGINAL_TACTICS` build switch is most of the machinery a fix
+needs.
+
+> **Retracted:** an earlier revision of this section concluded "the corpus uses
+> the DOS 4-4-2", on the strength of swos-port's baked `tact_4_4_2` being
+> byte-identical to `docs/tactics_amiga_vs_dos/tactics_dos.json`. Substituting
+> that whole table makes things *worse*: it fixes Eranio and breaks the two
+> forwards, in every 4-4-2 team in the corpus. See the next section — the
+> "slot 10 anomaly" that revision left open was an artefact of exactly that
+> substitution.
+
+#### The recording grades our formation data
+
+With `cachedMatchValue` as ground truth, the corpus can be replayed against
+*any* candidate coverage table without running the game. Over the 12 decodable
+recordings — 24 team instances, 240 outfield starters, 5 formations:
+
+| coverage fed to `GetPlayerPrice` | matches |
+|---|---:|
+| what we ship (Amiga + the tester corrections) | 238 / 240 |
+| pristine Amiga (`SWOS_ORIGINAL_TACTICS=1`) | 229 / 240 |
+| the DOS snapshot | 225 / 240 |
+| **DOS rows 0–7 + Amiga rows 8–9** | **240 / 240** |
+
+The first two rows are the build itself: `make clean && make
+SWOS_ORIGINAL_TACTICS=1`, then the rig, prints `31/32`, `29/32`, `30/32`,
+`29/32` on the four affected recordings and `32/32` on the rest — the same
+eleven players, with the same values, that the shipped build gets right. (Under
+the pristine data Ayala below is correct and Baresi and four others are not; the
+two sets of failures are disjoint.)
+
+The last row is the corpus's own data, and it is a hybrid: the recordings agree
+with **DOS** on every discriminating byte in the first eight slots, and with the
+**Amiga** on the two forward rows, where the tables differ wholesale (31 and 29
+of the 4-4-2's 68 differing bytes, and 32 and 29 of Sweep's 64). The corpus has
+nine 4-4-2/Sweep teams, so eighteen forwards; **fifteen** of them come out
+differently under the two tables, and all fifteen match the Amiga — against one
+player (Eranio) on the DOS side. Which build wrote these recordings is not
+settled by this; what *is* settled is that no single one of the three tables we
+hold is the one it ran.
+
+This also grades the four formations this port deliberately edited (commit
+`23f0c59`, tester-supplied `.TAC` fixes for central defenders / attackers
+flipping sides — see docs/TACTICS_POSITION_VALUE.md §9):
+
+| formation | what the fix does | DOS | corpus |
 |---|---|---|---|
-| needs | exactly 95 | exactly 94 | wide tolerance |
-| stock **Amiga** 4-4-2 (what we ship) | 92 ✗ | 94 ✓ | all ✓ |
-| stock **DOS** 4-4-2 | 95 ✓ | 79 ✗ | all ✓ |
+| 4-4-2 | un-swaps CD rows 1↔2 at ball positions 4 and 20 | same at 4; different values at 20 | **confirms** position 4 (5 players) |
+| 4-3-3 | swaps CD rows 1↔2 at 16 and 20, forward rows 6↔8 at 16 and 20 | **byte-identical** to our corrected rows 6 and 8; agrees at CD 16 | **confirms** position 16 (5 players) |
+| Sweep | swaps CD rows 1↔2 at 4 and 15, forward rows 8↔9 at 4 | agrees at 4; keeps the Amiga order at 15 | **contradicts** position 15 (1 player) |
+| 3-4-3 | swaps forward rows 6↔8 at 14 ball positions | keeps the Amiga data | untested — no corpus team uses it |
 
-**The recordings use the DOS 4-4-2**, and that is now established rather than
-inferred: swos-port's own baked formation (`tact_4_4_2` in its `src/vm.c`, the
-table `g_tacticsTable` points at) is **byte-identical** to the DOS snapshot in
-`docs/tactics_amiga_vs_dos/tactics_dos.json` — 0 of 350 bytes differ — while it
-differs from our shipped 4-4-2 in 66 bytes and from the pristine Amiga one in
-68. Its tests pass against this corpus, so that is the data the corpus was
-recorded with.
+Ten recorded players say the 4-4-2 and 4-3-3 fixes are right and the pristine
+Amiga is wrong — the DOS release made the same edit. One says the Sweep fix went
+a step too far: at **Sweep row 1/row 2, ball position 15** our data (`0x42` /
+`0x73`) is the swap of a pair the Amiga *and* DOS both agree on (`0x73` / `0x42`),
+and Argentina's Roberto Ayala comes out 29 where the recording has 28. Left as
+shipped — it is a deliberate gameplay change and reverting one ball position of
+it is the owner's call — but it is the one byte of our tactics data that a
+reference implementation contradicts.
 
-> An earlier revision of this section guessed the session had used an *edited*
-> `.TAC`. That was wrong, and wrong for a reason worth remembering: if the
-> formation had been edited, swos-port's own replay tests would fail too.
-> Check what the reference implementation actually contains before inventing a
-> difference it would also have to explain.
+#### The read itself
 
-**So this is the DOS-vs-Amiga formation re-tune** (documented at 68 coverage
-bytes in docs/TACTICS_POSITION_VALUE.md §9) reaching the simulation through
-`GetPlayerPrice`. Two consequences:
-
-- It is *not* a porting defect — we correctly implement the Amiga.
-- But our **DOS-gameplay mode does not switch it**. `ApplyGameStyle`
-  (`src/dos_gameplay.c`) swaps the physics and timer constants for
-  `--dos-gameplay=on` and leaves the formations alone, so DOS mode currently
-  runs Amiga formations. Since the DOS release re-tuned three of them (4-4-2,
-  4-3-3, Sweep) and `GetPlayerPrice` reads them, that is a real gap — and the
-  build switch added for `SWOS_ORIGINAL_TACTICS` is most of the machinery a
-  fix would need.
-
-**Still open, and the first thing to pick up:** with the DOS 4-4-2, slot 5
-resolves but slot 10 does not — it needs `d4 = 94` (price 35) and the model
-computes 79 (price 29), which is far too large a gap to be rounding. Under the
-Amiga formation slot 10 is exactly right and slot 5 is the odd one out. So the
-Python model in this audit is wrong somewhere that only bites that player, and
-that has to be understood before any conclusion here is final.
+For the record, since the audit was done: `GetPlayerPrice`,
+`CountNearnessFactor`, `GetPlayerPricePercentageChange`, `ScaleSkill`,
+`ApplyTeamTactics` **and its call site** all match the asm, including the parts
+that are easy to get wrong — the second `mulu.w` truncating the first's 32-bit
+result, the byte-wide `sub.b`/`bmi` tail, the divide by `numPlayersAtQuadrant-1`,
+and `ext.l` before the unsigned `divu.w #350`. All six data tables
+(`skillsPerQuadrant`, `quadrantDistanceFactor`,
+`quadrantCoordinatesToBallQuadrant`, `priceSkillPonders`, `skillValuePonders`,
+`plPricesIncreaseTable`) match byte-for-byte, and the
+`loc_122D6A+1 == skillsPerQuadrant - 35` claim our source comment makes was
+confirmed by counting instruction bytes back from the label. 401 recorded values
+now say the same thing from the other end.
 
 **Method worth reusing:** solve backwards from the recorded value to the exact
-input it requires, then check that input, rather than reading the whole chain
-forwards. It turned "three skill nibbles are wrong" into "`GetPlayerPrice` must
-return 28" in a few steps, and a `d4`-tolerance table then separated a code bug
-from a data one.
+input it requires, then check that input — and before positing a difference,
+look for a place the reference already wrote its own answer down. A long chain
+of arithmetic on skill nibbles, and a wrong conclusion drawn from it, were both
+settled by a byte that had been sitting in the recording's header all along.
 
 ### With an Amiga corpus, 100% becomes a real target
 
@@ -697,12 +801,15 @@ Ranked by how early they stop a recording. See
    (`zkz-11215003`), `camera_x_vel` at 1253 (`zkz-12080203`). §20's velocity
    ladder and the two Y clamps are the places to read against `data/SWOS2.s`;
    frame 117 is the cheapest to chase.
-2. **`zkz-10174427` frame 0** skill nibbles — audited against `data/SWOS2.s`
-   (see "The player-price audit"). Our code is verified correct and the corpus
-   is confirmed to use the **DOS** 4-4-2, so the port is not at fault — but the
-   audit's own model does not yet explain slot 10 under that formation, and
-   that must be closed before the conclusion is final. It also exposed a real
-   gap: **DOS-gameplay mode does not switch the three re-tuned formations.**
+2. ~~**`zkz-10174427` frame 0** skill nibbles~~ — **closed.** One byte of
+   4-4-2 coverage (row 4, ball position 0: Amiga `0x33`, DOS `0x23`), worth the
+   exactly-one bucket the `÷350` needs; 401 of the corpus's own 416 recorded
+   player values reproduce (see "The player-price audit"). Not a porting defect
+   — but it is the visible end of a real gap: **DOS-gameplay mode does not
+   switch the re-tuned formations** (`project_dos_tactics_gap`). The same
+   measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
+   ball position 15 is contradicted by the corpus, and by the pristine Amiga
+   and DOS data both.
 3. **Player selection and the pass target**, at 795-1335:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
@@ -760,6 +867,14 @@ arcade-mode branch beside it).
 Not yet injected: the recorded **bench** and **ESC** control bits and the v1.4
 `userKey`. The rig warns once when a recording uses one, so a divergence after
 that point is attributed to the missing input rather than to a port bug.
+
+`checkPlayerValues` is the one comparison that is not per-frame. It runs
+between `installTeam` and `InitTeams`, while the recorded team records are
+still untouched, and it puts everything back afterwards — the 16
+`cachedMatchValue` bytes, `playerValuesDirty`, and `_playerPositionsArray`, all
+of which `UpdatePlayerPositionAndReturnRole` writes. That restore is what keeps
+it from perturbing the replay; the frame depths in TESTS_RESULTS.md are
+unchanged with the check in.
 
 ---
 
