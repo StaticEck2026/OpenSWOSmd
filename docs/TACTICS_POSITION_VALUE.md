@@ -363,6 +363,20 @@ original `SWOS2.s`.*
 > that fix; they remain accurate as a record of the original Amiga-vs-DOS delta,
 > not of the current shipped formations. The formations now live in
 > `bin/data_json/tactics/*.json` (see `docs/` data-pipeline notes).
+>
+> **The pristine data is still buildable.** `make SWOS_ORIGINAL_TACTICS=1`
+> (after a `clean` — the flag changes baked data) selects it. The pre-fix
+> formations live beside the shipped ones as
+> `bin/data_json/tactics/<id>_original.json` and are baked into the same
+> `src/tactics_data.c` as `_teamTactics<id>Original`, round-trip checked by
+> `scripts/emit_tactics.py` like everything else. This exists because the fix
+> is observable well beyond the slots it edits: `GetPlayerPrice` walks the
+> tactics table for every player, and its per-quadrant "how many of our men
+> cover this spot" count reads all ten outfield rows — so changing two
+> central-defender rows perturbs *other* players' computed prices and, through
+> `AdjustPlayerSkills`, their in-game skill nibbles. Anything measuring this
+> port against original behaviour — the recorded-game replay rig especially
+> (docs/TESTS.md) — has to be able to turn the fix off.
 
 A tester noticed that on the **squad screen**, swapping two central defenders
 (Brazil's **Aldair** ↔ **Ronaldão**) produces different indicators:

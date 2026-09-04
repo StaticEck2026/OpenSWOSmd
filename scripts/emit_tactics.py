@@ -6,6 +6,11 @@ runtime via src/tactics_load_json.c). Mirrors emit_competitions.py / emit_menus.
   python3 scripts/emit_tactics.py --out src/tactics_data.c   # write the baked C
   python3 scripts/emit_tactics.py                            # round-trip self-check only
 
+Four formations also have a `<id>_original.json` holding the PRISTINE Amiga
+data, baked alongside as `_teamTactics<id>Original` and selected by
+-DSWOS_ORIGINAL_TACTICS. See the header comment in src/tactics_data.c for what
+they are and why the shipped ones differ.
+
 The self-check re-parses the spliced C and confirms every formation reproduces the
 JSON byte-for-byte (the 370-byte TeamTactics image).
 """
@@ -70,6 +75,18 @@ def splice(text, sym, init):
     return text[:m.start()] + m.group(1) + init + text[i + 1:]
 
 
+# The formations that also ship their pristine pre-fix data (see the header
+# comment in src/tactics_data.c). Any <id>_original.json present is baked as
+# `_teamTactics<id>Original`, so -DSWOS_ORIGINAL_TACTICS is a rebuild, not a
+# file swap.
+ORIG_SUFFIX = "_original"
+
+
+def original_ids():
+    return [tid for tid in ex.IDS
+            if os.path.exists(os.path.join(ex.OUT_DIR, tid + ORIG_SUFFIX + ".json"))]
+
+
 def main():
     out = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else None
     text = open(ex.SRC, encoding="latin1").read()
@@ -77,20 +94,30 @@ def main():
     for tid in ex.IDS:
         text = splice(text, "_teamTactics" + tid, build_init(data[tid]))
 
+    orig_ids = original_ids()
+    orig = {tid: json.load(open(os.path.join(ex.OUT_DIR, tid + ORIG_SUFFIX + ".json")))
+            for tid in orig_ids}
+    for tid in orig_ids:
+        text = splice(text, "_teamTactics" + tid + "Original", build_init(orig[tid]))
+
     # round-trip self-check: the spliced C must reproduce each JSON image exactly.
     bad = 0
     for tid in ex.IDS:
         if c_bytes(text, "_teamTactics" + tid) != json_bytes(data[tid]):
             print("  MISMATCH %s" % tid); bad += 1
+    for tid in orig_ids:
+        if c_bytes(text, "_teamTactics" + tid + "Original") != json_bytes(orig[tid]):
+            print("  MISMATCH %s%s" % (tid, ORIG_SUFFIX)); bad += 1
     if bad:
         raise SystemExit("emit_tactics: %d formation(s) failed round-trip" % bad)
 
     if out:
         open(out, "w", encoding="latin1").write(text)
-        print("wrote %s (%d formations, round-trip OK)" % (out, len(ex.IDS)))
+        print("wrote %s (%d formations + %d pristine variants, round-trip OK)"
+              % (out, len(ex.IDS), len(orig_ids)))
     else:
-        print("round-trip OK: %d/%d formations reproduce the JSON byte-for-byte"
-              % (len(ex.IDS), len(ex.IDS)))
+        print("round-trip OK: %d formations + %d pristine variants reproduce the JSON"
+              % (len(ex.IDS), len(orig_ids)))
 
 
 if __name__ == "__main__":

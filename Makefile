@@ -373,6 +373,18 @@ ifdef SWOS_TEST_NO_INJURIES_CARDS
 DEBUG_FLAGS += -DSWOS_TEST_NO_INJURIES_CARDS=1
 endif
 
+# Build with the PRISTINE Amiga data for the four formations this port
+# deliberately corrected — 4-4-2, 4-3-3, 3-4-3, Sweep (commit 23f0c59, whose
+# tester-supplied fix un-swaps central defenders that crossed sides instead of
+# holding station). It is the port's one intentional gameplay-data divergence,
+# so anything measuring us against ORIGINAL behaviour — the recorded-game
+# replay rig above all (docs/TESTS.md) — needs to be able to turn it off.
+# `make clean` first: this changes baked data and make compares timestamps,
+# not flags. See the header comment in src/tactics_data.c.
+ifdef SWOS_ORIGINAL_TACTICS
+DEBUG_FLAGS += -DSWOS_ORIGINAL_TACTICS=1
+endif
+
 # Debug: force a World Cup for a national-team career, bypassing the natural
 # 4-year competition cycle, so the national-coach WC path can be reproduced on
 # demand (e.g. the season-transition 0x8888 backup-clobber in
