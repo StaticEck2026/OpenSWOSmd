@@ -447,19 +447,42 @@ each player needs:
 | | slot 5 | slot 10 | the other eight |
 |---|---|---|---|
 | needs | exactly 95 | exactly 94 | wide tolerance |
-| stock **Amiga** 4-4-2 | 92 ✗ | 94 ✓ | all ✓ |
-| stock **DOS** 4-4-2 (`docs/tactics_amiga_vs_dos/`) | 95 ✓ | 79 ✗ | all ✓ |
+| stock **Amiga** 4-4-2 (what we ship) | 92 ✗ | 94 ✓ | all ✓ |
+| stock **DOS** 4-4-2 | 95 ✓ | 79 ✗ | all ✓ |
 
-Only those two players sit on a boundary, and **neither stock formation
-satisfies both**. The recording's session was therefore running a 4-4-2 that is
-neither — an edited one, which SWOS saves as a `.TAC` and which this corpus's
-author is exactly the person to have. The header stores the formation **index**
-(0), not its 350 position bytes, so it is not recoverable from the recording.
+**The recordings use the DOS 4-4-2**, and that is now established rather than
+inferred: swos-port's own baked formation (`tact_4_4_2` in its `src/vm.c`, the
+table `g_tacticsTable` points at) is **byte-identical** to the DOS snapshot in
+`docs/tactics_amiga_vs_dos/tactics_dos.json` — 0 of 350 bytes differ — while it
+differs from our shipped 4-4-2 in 66 bytes and from the pristine Amiga one in
+68. Its tests pass against this corpus, so that is the data the corpus was
+recorded with.
 
-That also rules out the two obvious suspects: `make SWOS_ORIGINAL_TACTICS=1`
-(the port's own 4-4-2 fix) diverges identically, and the DOS-vs-Amiga re-tune —
-documented at 68 coverage bytes in docs/TACTICS_POSITION_VALUE.md §9 — makes
-slot 10 far worse.
+> An earlier revision of this section guessed the session had used an *edited*
+> `.TAC`. That was wrong, and wrong for a reason worth remembering: if the
+> formation had been edited, swos-port's own replay tests would fail too.
+> Check what the reference implementation actually contains before inventing a
+> difference it would also have to explain.
+
+**So this is the DOS-vs-Amiga formation re-tune** (documented at 68 coverage
+bytes in docs/TACTICS_POSITION_VALUE.md §9) reaching the simulation through
+`GetPlayerPrice`. Two consequences:
+
+- It is *not* a porting defect — we correctly implement the Amiga.
+- But our **DOS-gameplay mode does not switch it**. `ApplyGameStyle`
+  (`src/dos_gameplay.c`) swaps the physics and timer constants for
+  `--dos-gameplay=on` and leaves the formations alone, so DOS mode currently
+  runs Amiga formations. Since the DOS release re-tuned three of them (4-4-2,
+  4-3-3, Sweep) and `GetPlayerPrice` reads them, that is a real gap — and the
+  build switch added for `SWOS_ORIGINAL_TACTICS` is most of the machinery a
+  fix would need.
+
+**Still open, and the first thing to pick up:** with the DOS 4-4-2, slot 5
+resolves but slot 10 does not — it needs `d4 = 94` (price 35) and the model
+computes 79 (price 29), which is far too large a gap to be rounding. Under the
+Amiga formation slot 10 is exactly right and slot 5 is the odd one out. So the
+Python model in this audit is wrong somewhere that only bites that player, and
+that has to be understood before any conclusion here is final.
 
 **Method worth reusing:** solve backwards from the recorded value to the exact
 input it requires, then check that input, rather than reading the whole chain
@@ -674,9 +697,12 @@ Ranked by how early they stop a recording. See
    (`zkz-11215003`), `camera_x_vel` at 1253 (`zkz-12080203`). §20's velocity
    ladder and the two Y clamps are the places to read against `data/SWOS2.s`;
    frame 117 is the cheapest to chase.
-2. ~~**`zkz-10174427` frame 0** skill nibbles~~ — **audited against
-   `data/SWOS2.s` and closed as not-our-bug**; see "The player-price audit"
-   below.
+2. **`zkz-10174427` frame 0** skill nibbles — audited against `data/SWOS2.s`
+   (see "The player-price audit"). Our code is verified correct and the corpus
+   is confirmed to use the **DOS** 4-4-2, so the port is not at fault — but the
+   audit's own model does not yet explain slot 10 under that formation, and
+   that must be closed before the conclusion is final. It also exposed a real
+   gap: **DOS-gameplay mode does not switch the three re-tuned formations.**
 3. **Player selection and the pass target**, at 795-1335:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
