@@ -450,6 +450,13 @@ extern int16_t _sim_view_height;
 /* The camera POSITION clamp — keeps the view inside the 880-tall pitch. 0x260
  * at 272 lines; swos-port's kCameraMaxY = 680 at 200. */
 #define SIM_CAMERA_POS_MAX_Y  ((int16_t)(880 - _sim_view_height))
+/* "The camera has arrived at the bench view" — MoveCamera's subs-menu test,
+ * camera Y within +/-10 of where the bench target (449) sits once centred.
+ * 303..323 at 272 lines, and 339..359 at 200 — which is exactly what the DOS
+ * release's own MoveCamera compares against, so this is one more f(view)
+ * constant rather than a platform difference. */
+#define SIM_CAMERA_BENCH_Y_LO ((int16_t)(0x1C1 - 10 - SIM_CAMERA_CENTRE_Y))
+#define SIM_CAMERA_BENCH_Y_HI ((int16_t)(0x1C1 + 10 - SIM_CAMERA_CENTRE_Y))
 
 #define FRONTBUFFER_VISIBLE_LINES       SCREEN_HEIGHT
 #define FRONTBUFFER_TOTAL_LINES         (SCREEN_HEIGHT + 1)

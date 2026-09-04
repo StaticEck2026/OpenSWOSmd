@@ -12,7 +12,7 @@ point; an Amiga corpus follows once we can harvest it (see
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, reaching frame 117-1335 before the first divergence at level
-`info` (section 5). Seven real defects found and fixed on the way in, and
+`info` (section 5). Eight real defects found and fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
 player-price audit").
@@ -349,7 +349,10 @@ scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 The shape of the results, as of the run in that file: **117-1663** frames at
 `scalars`, **117-1335** at `info`, **117-1090** at `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
-runs before frame 0; see "The player-price audit").
+runs before frame 0; see "The player-price audit"). One recording sets that 117
+floor and it is not a simulation difference: `zkz-11215003`'s player presses
+**BENCH** on frame 117 and the rig does not inject it yet. The rest run
+714-1663 / 459-1090.
 
 Four things to read into them:
 
@@ -606,7 +609,8 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Five real defects so far, all fixed:
+Six real defects so far, all fixed — plus the two in "The `onScreen` ceiling"
+below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
    `zkz-12065730` reaches game-minute 1 at frame 702 and minute 2 at frame 842
@@ -654,6 +658,57 @@ Five real defects so far, all fixed:
    `sprites` level 117 → 15). Keeping the tick at 0, so it equals the frame
    number as it does in the reference rig, and moving only `_lastGameTick`,
    keeps every gain and loses neither.
+6. **The bench-slide window was hard-coded to the Amiga's view.** See below.
+
+### The bench-slide window — the last camera constant that was not `f(view)`
+
+The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
+`zkz-11054632` at 791, were the same bug, and it is worth writing down because
+of how narrow the evidence was and how completely it decided the answer.
+
+At frame 222 the recording's camera jumps from a 3.25 px/frame drift to the
+5.0 px/frame cap and ours does not. `MoveCamera` moves by
+`clamp((target - cameraX) >> 2 * 0.25, ±5)`, so a delta of exactly 3.25 px
+means `target - cameraX ∈ [-52, -49]` and 5.0 px means `≤ -80`. With the camera
+at 86 and then 83, that is a target of **37 then ≤ 3** — and 37 is
+`boundsMargin`, the left bound the target is clamped to. So the reference's
+`boundsMargin` went **37 → 0** on that frame, and the only branch in the whole
+routine that sets 0 is the subs-menu one, gated on
+
+```
+cmpi.w  #303,(cameraY)   ; below the window -> margin 37
+cmpi.w  #323,(cameraY)   ; above the window -> margin 37
+```
+
+Our camera Y was 360 then 359 — just above 323, so we kept 37 forever. The DOS
+release compares against **339 and 359**: 359 is the last frame *inside* its
+window, which is exactly where the recording switches. swos-port names the same
+pair `kBenchSlideAreaStartY` / `kBenchSlideAreaEndY` with the comment "once the
+camera reaches this area it's allowed to slide all the way left".
+
+339 − 303 = 359 − 323 = **36 = 136 − 100**, the difference between the two
+releases' half view heights. So this is not a platform difference at all: it is
+one more `f(view)` constant of the kind "The simulation view" above already
+collects, and it means "the camera has arrived at the bench view, within ±10 of
+where the bench target 449 sits once centred":
+
+```c
+#define SIM_CAMERA_BENCH_Y_LO ((int16_t)(0x1C1 - 10 - SIM_CAMERA_CENTRE_Y))
+#define SIM_CAMERA_BENCH_Y_HI ((int16_t)(0x1C1 + 10 - SIM_CAMERA_CENTRE_Y))
+```
+
+303/323 at 272 lines — the Amiga literals, so the m68k codegen is unchanged —
+and 339/359 at 200. `zkz-11021807` went 222 → **775** and `zkz-11054632`
+791 → **1140**, and with it **no recording's first divergence is a camera field
+at a frame the `sprites` level had not already diverged by**. Every remaining
+`camera_x_vel` / `camera_y` stop is a symptom of a sprite difference the cheaper
+levels cannot see.
+
+Everything else in swos-port's `src/game/camera.cpp` was already right:
+`kCenterX` 176, `kPitchMaxX` 352, `kBottomStartLocationY` 664,
+`kTrainingPitchMaxY` 616, `kCameraMaxY` 680 all fall out of the existing
+`SIM_CAMERA_*` formulas at 320x200, and the three side limits (37 / 51 / 63)
+are view-independent in both releases.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
@@ -795,13 +850,24 @@ Not bugs; consequences of comparing two different builds.
 Ranked by how early they stop a recording. See
 [TESTS_RESULTS.md](TESTS_RESULTS.md) for which file stops where.
 
-1. **The camera** — the three earliest stops in the corpus and a class nothing
-   could compare before the simulation view existed. `camera_x` at frames 222
-   (`zkz-11021807`) and 791 (`zkz-11054632`), `camera_y_vel` at 117
-   (`zkz-11215003`), `camera_x_vel` at 1253 (`zkz-12080203`). §20's velocity
-   ladder and the two Y clamps are the places to read against `data/SWOS2.s`;
-   frame 117 is the cheapest to chase.
-2. ~~**`zkz-10174427` frame 0** skill nibbles~~ — **closed.** One byte of
+1. ~~**The camera**~~ — **closed as a primary lead.** One view-dependent
+   constant was missing (the bench-slide window, see "The bench-slide window"
+   below); with it, `zkz-11021807` goes 222 -> 775 and `zkz-11054632` 791 ->
+   1140, and **no recording's first divergence is a camera field at a frame the
+   `sprites` level hadn't already diverged by.** Every remaining `camera_x_vel`
+   / `camera_y` stop is downstream of a sprite difference that the cheaper
+   levels are simply not looking at — chase the sprite, not the camera. The one
+   exception is `zkz-11215003` frame 117, which is (2).
+2. **Inject the recorded BENCH bit.** `zkz-11215003` presses it on frame 117 and
+   holds it for 17 frames; the camera stops tracking in the recording and keeps
+   going in ours, and 27702 frames of match go unchecked behind it. It is the
+   corpus's earliest stop and the only one that is a missing rig feature rather
+   than a simulation difference. `MainKeysCheck` turns a hotkey into
+   `bench2Called` (bottom team) / `bench1Called` (top), guarded on that team
+   having a human — the DOS asm agrees byte-for-byte with our port here — so the
+   open question is edge-vs-level: the recording holds the flag, and inside the
+   menu `bench1Called` is what *leaves* it.
+3. ~~**`zkz-10174427` frame 0** skill nibbles~~ — **closed.** One byte of
    4-4-2 coverage (row 4, ball position 0: Amiga `0x33`, DOS `0x23`), worth the
    exactly-one bucket the `÷350` needs; 401 of the corpus's own 416 recorded
    player values reproduce (see "The player-price audit"). Not a porting defect
@@ -810,15 +876,18 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-3. **Player selection and the pass target**, at 795-1335:
+4. **Player selection and the pass target**, at 795-1335:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
    `onScreen`-gated, so some of this may still be view-related — but the window
    now matches the recording's, so it is worth reading
    `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
-4. **Sprite state**, at 689-1090: `dest_y`, `x`, `z`, `player_down_timer`.
-   These are downstream of (3) in every case so far, so start there.
-5. The single **v1.2** recording still resolves to no (header, frame) pair.
+5. **Sprite state**, at 459-1090 (setting aside the two stops whose cause is
+   known, frame 0 and frame 117): `dest_y`, `x`, `z`, `player_down_timer`,
+   `frame_delay`. These are downstream of (4) in every case so far, so start
+   there — and note that `sprites` now stops FIRST on eleven of the twelve
+   recordings, so it is where the corpus still has something to say.
+6. The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---
 

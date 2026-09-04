@@ -125,8 +125,10 @@ void MoveCamera(void)
         boundsMargin = 37;
         {
             int16_t camY = (int16_t)(_cameraY.raw >> 16);
-            if (camY >= 303 && camY <= 323) {
-                /* Camera is near the right Y range */
+            if (camY >= SIM_CAMERA_BENCH_Y_LO && camY <= SIM_CAMERA_BENCH_Y_HI) {
+                /* The camera has reached the bench view (the asm's literal
+                 * 303..323 — see SIM_CAMERA_BENCH_Y_*, which is f(view) and
+                 * reproduces the DOS release's own 339..359 at 200 lines). */
                 boundsMargin = 37;
 
                 /* Check if goal1TopSprite is visible */
