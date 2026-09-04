@@ -11,10 +11,11 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, reaching frame 795-2449 before the first divergence at level
-`info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
-formation coverage rather than a porting defect. Eighteen real defects found
-and fixed on the way in, and
+recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
+every bound field, every frame.** The rest reach 912-2449 at level `info`
+(section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
+coverage rather than a porting defect. Nineteen real defects found and fixed on
+the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
 player-price audit").
@@ -348,8 +349,9 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **714-3390** frames at
-`scalars`, **795-2449** at `info`, **795-2449** at `sprites`, and **401 of 416**
+The shape of the results, as of the run in that file: **714-4064** frames at
+`scalars` (`zkz-11021807` complete), **912-2449** at `info`, **939-2449** at
+`sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -613,7 +615,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Sixteen real defects so far, all fixed — plus the two in "The `onScreen`
+Seventeen real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -698,7 +700,11 @@ ceiling" below, which that measurement turned up on its own:
     `PlayerTackled`'s own 50 stays 50 in the DOS build, and the keeper's 75/15
     and the 20/25s are unchanged everywhere. Two recordings stopped on
     `sprite[N].player_down_timer` counting down from 55 against our 50.
-
+17. **Five "nearest player" scans walked the sprite table backwards** — the
+    68000 counts its loop register down while the address register walks up, and
+    translating the counter into the index reverses the visit order. Invisible
+    until two candidates tie on distance, and then it silently picks the other
+    man. See "The loop that counted down while the pointer went up" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -952,6 +958,55 @@ Worth keeping as a pattern: a routine whose contract is a *flag* can return a
 *value* on some paths, and translating it as "return the thing that was wrong"
 is a plausible, wrong guess. Read what the register actually holds at the `rts`.
 
+### The loop that counted down while the pointer went up
+
+`playa-10090613` stopped at frame 795 on `bottom_info.pass_to_player_ptr` —
+`sprite[11]` recorded against our `sprite[14]`. Every input to that choice
+matched: `on_screen`, `sent_away`, `player_ordinal`, `player_state`, and every
+`ball_distance`. The scan picks the nearest eligible team-mate, so with identical
+inputs it should pick the same man.
+
+It does, unless there is a **tie**. Printing the eleven candidates showed one:
+
+```
+[ 7] onScr=1 away=0 ord=8  st=0 bd=1625
+[ 9] onScr=1 away=0 ord=10 st=0 bd=34     <- the controlled player, excluded
+[10] onScr=1 away=0 ord=11 st=0 bd=1625
+```
+
+Slots 7 and 10 at exactly 1625. The update is strictly-less-than
+(`cmp.l d5,d1 / bcc` — skip when not lower), so the winner is simply **whoever
+is visited first**, and the two ports visit in opposite orders:
+
+```
+    move.w  #10,d6                  ; counter runs DOWN
+loop:
+    movea.l (a1)+,a2                ; table pointer runs UP
+    ...
+    dbf     d6,loop
+```
+
+The 68000 idiom counts the loop register down while the address register walks
+forward, so the players are visited **0..10**. Translating the counter into an
+index — `for (i = 10; i >= 0; i--) sprTable[i]` — reverses that, and nothing
+shows until two candidates tie.
+
+Five scans had it backwards, all of them "nearest player" searches:
+`UpdateControlledPlayer`, both paths of `UpdatePlayerBeingPassedTo`,
+`GetClosestNonControlledPlayerInDirection`, and the nearest-team-mate search in
+`tackle_foul.c`. The rest of the `for (i = 10; i >= 0; i--)` loops in the tree
+are fine: some already walk a pointer forward inside the descending counter
+(which is the faithful translation), and the others set a field on all eleven
+players, where order cannot matter.
+
+`playa-10090613` went 795 → 912 and `zkz-11021807` went from 3390 frames to
+**all 4064 — the first recording in the corpus to replay end to end.**
+
+> The matrix script then reported that as a regression to frame 500, because its
+> "how far did it get" regex took the first `N/M frames matched` line in the log
+> and a passing run's first such line is a progress tick. Fixed; worth
+> remembering that the harness can lie in the direction of bad news too.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1113,17 +1168,19 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and possession**, and it is now the whole remaining
-   cluster: `pass_to_player_ptr` (795), `controlled_pl_direction` (1108, 1976),
-   `current_allowed_direction` (1169), `ball_possession` (1113). They arrive
-   together — `zkz-10190651` frame 1113 has the reference crediting possession
-   to the top team and us to the bottom, `bottom_info.controlled_player`
-   `sprite[25]` against our null, `player_has_ball` 1 against 0, and
-   `last_heading_tackling_player` `sprite[21]` against `sprite[25]`. So it is
-   one question — who is judged to have the ball after a contested touch — and
-   not five. `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` and the
-   `_lastTeamPlayed` writers are where to read against `data/SWOS2.s`.
-5. **Sprite state**, at 795-2449 (setting aside `zkz-10174427`, whose frame-0
+4. **Player selection and possession** — still the largest cluster, but the
+   scan-direction fix took the top off it (`pass_to_player_ptr` at 795 is gone).
+   What remains: `controlled_pl_direction` (1108), `current_allowed_direction`
+   (1169), `ball_possession` (1113). `zkz-10190651` frame 1113 is the clearest
+   sample — the reference credits possession to the top team and we credit the
+   bottom, `bottom_info.controlled_player` is `sprite[25]` against our null,
+   `player_has_ball` 1 against 0, `last_heading_tackling_player` `sprite[21]`
+   against `sprite[25]`. One question, arriving as several fields: who is judged
+   to have the ball after a contested touch.
+   `playa-10090613` at 912 is now a different thing — `game_state` 100 against
+   our 3 (`ST_KEEPER_HOLDS_BALL`): we award the keeper the ball where the
+   reference plays on.
+5. **Sprite state**, at 939-2449 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start
    there — `sprites` is the earliest stop (or tied with it) on all twelve

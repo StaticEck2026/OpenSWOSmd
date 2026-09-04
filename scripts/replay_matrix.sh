@@ -45,8 +45,13 @@ for f in tests/dos/*.RGD.gz; do
         rc=$?
         ver=$(grep -oE 'v1\.[0-9]' "$log" | head -1)
         tot=$(grep -oE '[0-9]+ frames \(' "$log" | grep -oE '^[0-9]+' | head -1)
-        got=$(grep -oE '(diverged|matched) after [0-9]+' "$log" | grep -oE '[0-9]+$' | head -1)
-        [ -z "$got" ] && got=$(grep -oE '[0-9]+/[0-9]+ frames matched' "$log" | head -1 | cut -d/ -f1)
+        got=$(grep -oE 'diverged after [0-9]+' "$log" | grep -oE '[0-9]+$' | head -1)
+        # A clean PASS says "PASS — N/N frames matched"; take THAT line, not the
+        # first "... 500/4064 frames matched" progress tick, which is what the
+        # old `head -1` picked up and reported as a regression to frame 500.
+        [ -z "$got" ] && got=$(grep -oE 'PASS — [0-9]+/[0-9]+ frames matched' "$log" |
+                               grep -oE '[0-9]+/' | head -1 | tr -d /)
+        [ -z "$got" ] && got=$(grep -oE '[0-9]+/[0-9]+ frames matched' "$log" | tail -1 | cut -d/ -f1)
         fld=$(grep -A1 'DIVERGENCE at frame' "$log" | tail -1 |
               sed -E 's/^\[replay\] +//; s/ +recorded=.*//')
         [ "$rc" = 0 ] && fld='(complete)'

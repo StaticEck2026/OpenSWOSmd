@@ -64,7 +64,16 @@ void UpdateControlledPlayer(TeamGeneralInfo *team) {
     int32_t minDist = -1;  /* 0xFFFFFFFF as unsigned = max */
     int16_t i;
 
-    for (i = 10; i >= 0; i--) {
+    /* Scan the table FORWARD, 0..10. The asm's loop counter runs DOWN
+     * (`move.w #10,d6` … `dbf d6`) but the table pointer runs UP
+     * (`movea.l (a1)+,a2`), so the players are visited in ASCENDING order —
+     * translating the counter into the index reverses that. It is invisible
+     * until two candidates TIE on ballDistance, and then it silently picks the
+     * other man: the replay rig caught exactly that (playa-10090613 frame 795,
+     * slots 7 and 10 both at 1625, reference takes 7 and we took 10).
+     * See docs/TESTS.md, "The loop that counted down while the pointer went
+     * up". */
+    for (i = 0; i <= 10; i++) {
         Sprite *pl = sprTable[i];
         int16_t dx = pl->x.s.i - ballX;
         int16_t dy = pl->y.s.i - ballY;
@@ -195,7 +204,8 @@ void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
             int32_t minDist = -1;
             int16_t i;
 
-            for (i = 10; i >= 0; i--) {
+            /* Ascending — see UpdateControlledPlayer above. */
+            for (i = 0; i <= 10; i++) {
                 Sprite *pl = sprTable[i];
 
                 if (pl->sentAway)
@@ -261,7 +271,8 @@ void UpdatePlayerBeingPassedTo(TeamGeneralInfo *team) {
         int32_t minDist = -1;
         int16_t i;
 
-        for (i = 10; i >= 0; i--) {
+        /* Ascending — see UpdateControlledPlayer above. */
+        for (i = 0; i <= 10; i++) {
             Sprite *pl = sprTable[i];
 
             if (!pl->onScreen)

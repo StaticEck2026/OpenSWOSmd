@@ -586,7 +586,10 @@ PlayerTacklingTestFoul(Sprite *player, TeamGeneralInfo *team)
             bestDist = (int32_t)dx * dx + (int32_t)dy * dy;
 
             sprTable = team->spritesTable;
-            for (i = 10; i >= 0; i--) {
+            /* Ascending: `movea.l (a0)+,a4` under a counting-down `dbf`. The
+             * test here is `<=`, so a tie keeps the HIGHEST index — which is
+             * only right if the walk is forward. See UpdateControlledPlayer. */
+            for (i = 0; i <= 10; i++) {
                 Sprite *mate = sprTable[i];
                 if ((uint16_t)mate->sentAway != 0)
                     continue;

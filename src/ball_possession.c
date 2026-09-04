@@ -118,7 +118,10 @@ GetClosestNonControlledPlayerInDirection(uint16_t direction, TeamGeneralInfo *te
     Sprite    *controlledPl = team->controlledPlayer;
     int16_t    i;
 
-    for (i = 10; i >= 0; i--) {
+    /* Ascending: `movea.l (a2)+,a1` under a counting-down `dbf`. Ties on
+     * ballDistance go to the LOWEST index — see UpdateControlledPlayer
+     * (team_control.c) for what getting this backwards costs. */
+    for (i = 0; i <= 10; i++) {
         Sprite *pl = spritesTable[i];
 
         /* Skip controlled player */
