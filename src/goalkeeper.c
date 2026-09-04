@@ -104,6 +104,7 @@ extern void     InitTeamsData(void);
 extern void     StopAllPlayers(void);
 extern void     UpdatePlayerWithBall(uint8_t *player);
 extern void     EndOfGame(void);
+extern void     PlayersLeavingPitch(void);
 
 
 /* ==================================================================
@@ -421,6 +422,41 @@ end_shootout:
     _playingPenalties = 0;
     _statsTeam1Goals = _savedTeam1Goals;
     _statsTeam2Goals = _savedTeam2Goals;
+
+    /* The two releases end a shoot-out differently, and it is not a constant.
+     *
+     *   end_penalty_shootout:                       ; SWOS2.s:27760
+     *           ...
+     *           lea     (topTeamInGame).l,a0
+     *           move.w  (team1PenaltyGoals).l,d0
+     *           cmp.w   (team2PenaltyGoals).l,d0
+     *           bhi.s   set_winning_team_pointer
+     *           lea     (bottomTeamInGame).l,a0
+     *   set_winning_team_pointer:
+     *           move.l  a0,(winningTeamPtr).l
+     *           bsr.w   EndOfGame
+     *
+     *   @@finish_penalties:                         ; swos.asm:104434
+     *           ...
+     *           call    PlayersLeavingPitch
+     *           retn
+     *
+     * The DOS build names no winner and goes straight to
+     * ST_PLAYERS_GOING_TO_SHOWER, skipping ST_GAME_ENDED entirely. It has both
+     * routines and calls `EndOfGame` from `UpdateTime` (swos.asm:98001), so
+     * nothing about the conversion forced this. Measured on zkz-10140228,
+     * which ends in a shoot-out: ST_GAME_ENDED appears on NONE of its 39066
+     * frames, and ST_PLAYERS_GOING_TO_SHOWER begins at f38395 — the exact
+     * frame our `EndOfGame` fired — and runs 275 frames, which is
+     * `PlayersLeavingPitch`'s own DOS reload.
+     *
+     * `winningTeamPtr` is not cosmetic on the Amiga side: it is what
+     * `UpdatePlayers`' post-match gate reads to pick the winning or losing
+     * reaction animation. */
+    if (_gDosGameplay) {
+        PlayersLeavingPitch();
+        return;
+    }
 
     /* Determine winner */
     if (_team1PenaltyGoals > _team2PenaltyGoals)

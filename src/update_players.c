@@ -57,6 +57,7 @@ extern int16_t      _gameStatePl;
 extern int16_t      _gameState;
 extern int16_t      _playingPenalties;
 extern int16_t      _penaltiesTimer;
+extern int16_t      _gsPenaltiesKeeperFree;
 extern int16_t      _penalty;
 extern int16_t      _playerHadBall;
 extern int16_t      _goalOut;
@@ -415,7 +416,7 @@ not_in_penalty:
      * ============================================================ */
     player_goalkeeper:
         if (_playingPenalties) {
-            if (_penaltiesTimer > 50)
+            if (_penaltiesTimer > _gsPenaltiesKeeperFree)   /* Amiga 50 / DOS 55 — dos_gameplay.c */
                 goto finalize;
         }
 

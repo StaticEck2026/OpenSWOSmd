@@ -29,6 +29,15 @@ int16_t  _gsFramesPerGameSecond = 49;         /* Amiga 49 / DOS 54 — clock rel
 int16_t  _gsEndGameCounter      = 50;   /* GS_55_50   game_state.c    last-minute reload */
 int16_t  _gsBallDefensiveZ      = 22;   /* GS_27_22   update_players.c goalie-catch z-thresh */
 int16_t  _gsPenaltyTimer        = 100;  /* GS_110_100 game_timers.c   penalty -> NextPenalty */
+/* The OTHER penaltiesTimer gate, and it scales the same way. During a penalty
+ * shoot-out `UpdatePlayers` sends a goalkeeper straight to the speed/delta tail
+ * once the timer is past this, skipping the whole keeper block:
+ * `cmpi.w #50,(penaltiesTimer)` (SWOS2.s:29226) against `cmp penaltiesTimer,
+ * 55` (swos.asm:112784). One site in each, and its sibling above is already
+ * 100/110, so the pair scales together. Found by the replay rig:
+ * zkz-10140228 gave both keepers the stopped-play speed table five frames
+ * before the reference did (docs/TESTS.md). */
+int16_t  _gsPenaltiesKeeperFree = 50;  /* GS_55_50   update_players.c penalty keeper tail */
 int16_t  _gsHalftimeStoppage    = 350;  /* GS_385_350 ai.c            non-halftime result dismiss */
 int16_t  _gsBallOutOfGameTimer  = 500;  /* GS_550_500 game_timers.c   ball-out-of-play timer */
 int16_t  _gsResultAutoAdvance   = 600;  /* GS_660_600 ai.c            half/fulltime result dismiss */
@@ -174,6 +183,7 @@ void ApplyGameStyle(void)
     _gsEndGameCounter      = dos ? 55  : 50;
     _gsBallDefensiveZ      = dos ? 27  : 22;
     _gsPenaltyTimer        = dos ? 110 : 100;
+    _gsPenaltiesKeeperFree = dos ?  55 :  50;
     _gsHalftimeStoppage    = dos ? 385 : 350;
     _gsBallOutOfGameTimer  = dos ? 550 : 500;
     _gsResultAutoAdvance   = dos ? 660 : 600;
