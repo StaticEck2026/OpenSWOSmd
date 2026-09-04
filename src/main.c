@@ -358,6 +358,8 @@ int main(int argc, char **argv)
         _putenv("SWOS_NO_LOG=1");
         if (!replay_window && !getenv("SDL_VIDEODRIVER"))
             _putenv("SDL_VIDEODRIVER=dummy");
+        if (!getenv("SDL_AUDIODRIVER"))
+            _putenv("SDL_AUDIODRIVER=dummy");
 #else
         setenv("SWOS_HARNESS_TURBO", "1", 1);
         setenv("SWOS_NO_LOG", "1", 1);
@@ -369,6 +371,14 @@ int main(int argc, char **argv)
          * SDL_VIDEODRIVER the caller set explicitly. */
         if (!replay_window && !getenv("SDL_VIDEODRIVER"))
             setenv("SDL_VIDEODRIVER", "dummy", 1);
+        /* Silent too, and unconditionally — a replay never wants to be heard,
+         * and a matrix run is 48 of them. The dummy driver still opens a
+         * device and still drains the queue on its own clock, so the audio
+         * pump and everything it shares a tick with behave exactly as they do
+         * with a real card; it just goes nowhere. Respect an explicit
+         * SDL_AUDIODRIVER from the caller. */
+        if (!getenv("SDL_AUDIODRIVER"))
+            setenv("SDL_AUDIODRIVER", "dummy", 1);
 #endif
         opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */
         /* Replay at the port's OWN native view, not the tester's monitor:

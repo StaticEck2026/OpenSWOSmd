@@ -211,6 +211,12 @@ directly on the binary:
 | `--replay-skip=a,b,…` | mute fields whose name contains any of these substrings |
 | `--replay-window` | open a window; off by default, a replay is a batch run |
 
+A replay is headless **and silent** by default: `--replay-test` sets
+`SDL_VIDEODRIVER=dummy` (unless `--replay-window`) and `SDL_AUDIODRIVER=dummy`,
+so a matrix run opens no windows and makes no noise. Both respect the variable
+if the caller has already set it. The dummy drivers keep every buffer, blit and
+audio-queue drain real — the simulation is bit-identical, it just goes nowhere.
+
 The four levels are cumulative, cheapest first:
 
 | level | fields/frame | what it adds |
