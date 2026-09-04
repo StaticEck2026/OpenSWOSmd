@@ -2143,8 +2143,26 @@ timing, and the recording samples once a frame.
 
 Same class as the terminal-frame `fire_this_frame` above: an input edge inside
 a frame, invisible to a rig that injects a frame's input atomically before the
-frame runs. It costs `playa-10090613` at 11222 and `zkz-11215003` at 11479, and
-those are the only two.
+frame runs.
+
+**And it is the whole remaining gap — measured, not estimated.** A throwaway
+build that defers the call by one frame whenever `gameStatePl != 0` — the one
+rule that fits all three presses — runs
+
+    zkz-11215003   11479 -> 27487 of 27819
+    playa-10090613 11222 -> 22496 of 22497   (the terminal frame)
+
+so nothing else in either recording disagrees with this port. That is the
+corpus at **98.0%** instead of 87.1%.
+
+The rule is NOT shipped, and should not be until somebody finds the mechanism
+behind it. Three presses and a one-bit predicate is not evidence, and this is
+a rule in the HARNESS: a test rig carrying an unexplained fudge to make itself
+pass is worth less than one that stops honestly. Every gate input was traced
+identical at both frames (see above), so if there is a mechanism it is not in
+`BenchCheckControls`. **This is the top open lead in the whole rig** — it is
+worth 11% of the corpus, and it is the only place left where the DOS corpus
+still has something to say about this port.
 
 ### The goalpost has three arms and the port had two
 

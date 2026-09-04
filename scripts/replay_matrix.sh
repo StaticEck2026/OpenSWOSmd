@@ -249,11 +249,17 @@ of the four that remain is something the recording cannot carry:
 | `zkz-10173518` 25490, `zkz-10174427` 21927 | 4793 | `currentGameTick` drifting in real time across a fade |
 | four recordings' last frame | 4 | an input edge inside the frame |
 
-The bench pair is the whole remaining gap: without those two the corpus would
-read 98%. Both readings of the bench timing are backed by 11000 frames of
-agreement on the other side of them, every gate input is identical at both,
-and there is nothing left in the recording to choose between them — see "The
-bench call the rig cannot place".
+The bench pair is the whole remaining gap, and that is measured rather than
+estimated: a throwaway build that defers the call by one frame whenever
+`gameStatePl != 0` — the one rule that fits all three presses in the corpus —
+runs `zkz-11215003` to 27487 of 27819 and `playa-10090613` to its terminal
+frame, which is the corpus at **98.0%**. Nothing else in either recording
+disagrees with this port.
+
+That rule is deliberately NOT shipped. Three presses and a one-bit predicate
+is not evidence, and a rig carrying an unexplained fudge to make itself pass
+is worth less than one that stops honestly. Finding the mechanism behind it is
+the top open lead — see docs/TESTS.md, "The bench call the rig cannot place".
 
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
