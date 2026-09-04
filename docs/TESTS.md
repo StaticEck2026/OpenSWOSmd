@@ -14,7 +14,7 @@ Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
 every bound field, every frame.** The rest reach 1108-3916 at level `info`
 (section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
-coverage rather than a porting defect. Twenty-two real defects found and fixed
+coverage rather than a porting defect. Twenty-seven real defects found and fixed
 on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -349,7 +349,7 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **714-4064** frames at
+The shape of the results, as of the run in that file: **889-5276** frames at
 `scalars` (`zkz-11021807` complete), **1108-3916** at `info`, **939-2694** at
 `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
@@ -613,7 +613,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Twenty real defects so far, all fixed — plus the two in "The `onScreen`
+Twenty-five real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -714,6 +714,21 @@ ceiling" below, which that measurement turned up on its own:
     received it. See "The rows that were never executed" below — that copy also
     settles what looked like the largest DOS-vs-Amiga data difference in the
     project.
+21. **The AI's "don't shoot sideways" gate was inverted on both halves.** The
+    asm no-fires when the ball is deep in the *attacking* third; ours no-fired
+    everywhere else, so a computer player hammered it across his own six-yard
+    box and refused the same shot in midfield. See "Three inverted gates in one
+    AI routine" below.
+22. **A `cmpi.w #$FFFF` arm that `andi.w #7` had already made dead was ported as
+    `diff == 7`**, giving the AI a counter-clockwise turn-and-shoot arm the
+    original does not have.
+23. **`random_rotate_when_no_target`'s two y tests were inverted**, swapping
+    "leave the direction unforced" with "run the rotate gate". CPU-vs-CPU only,
+    so no recording covers it.
+24. **The AI fire-angle tolerance included its own negative bound.**
+    `neg.b d1; cmp.b d1,d2; bgt` fires only on `d2 > -tolerance`.
+25. **The mid-right after-touch spin band included x == 478.** `bcs` is an
+    unsigned *lower* test, so 478 belongs to the midfield band.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1123,6 +1138,85 @@ are genuine Amiga-vs-DOS coverage bytes.
 > difference sat in the listing looking like the biggest finding in the file,
 > and a nine-line loop at startup made all of it moot.
 
+### Three inverted gates in one AI routine
+
+`zkz-10190651` stopped at frame 1113 with the AI's bottom team still holding the
+ball in the recording — `player_has_ball` 1, `controlled_player` `sprite[25]`,
+`ball_can_be_controlled` 1 — and having just hit it in ours: `normal_fire` 1,
+`shooting` 1, `pass_kick_timer` 25, `passing_kicking_player` `sprite[25]`,
+`controlled_player` null. Everything else in the frame follows from that one
+decision: the ball's `delta_x`, `dest_x` and `z`, both possession counters, the
+camera velocities on the frame after.
+
+Frame 1112 matched field for field, so the fork is inside one call to
+`AI_SetControlsDirection` with identical inputs. Printing the gates it walks
+gives the answer in one line:
+
+```
+[ai 1113 bot] tolgate tol=15 d2=6 d2b=-4 d6=21640 d5=196 aiRand=220 aiResume=0 pkt=0
+```
+
+Every gate passes, so we fire. The reference leaves for `no_fire_fallback_flow`
+one gate earlier:
+
+```
+horizontal_dir_half_gate:                       ; SWOS2.s:32052
+                cmpa.l  #topTeamData,a6
+                beq.s   top_team_ball_y_gate
+                cmpi.w  #158,(ballSprite+SPRITE_Y).l
+                ble.s   no_fire_fallback_flow
+                bra.s   distance_and_random_fire_gate
+top_team_ball_y_gate:
+                cmpi.w  #740,(ballSprite+SPRITE_Y).l
+                bge.s   no_fire_fallback_flow
+```
+
+A player facing sideways — direction 2 or 6 — does **not** hit the ball while it
+is deep in the attacking third. The bottom team attacks the y=129 line, so
+`ballY <= 158` is its "in the box" case; the top team's is `ballY >= 740`
+against y=769. There the fallback flow turns him toward goal instead, which is
+the whole point of the gate. Both tests read the other way round in this port:
+we declined the shot out in midfield and took it from six yards out, facing
+across the goal. The ball was at y=147 and `sprite[25]` was facing 6.
+
+Auditing the rest of the routine against the listing turned up two more
+inversions of the same shape. Neither is visible in this corpus:
+
+- **`decide_immediate_turn_or_gate`** (SWOS2.s:32240) tests the
+  bucket-minus-facing delta against 0, 1 and `$FFFF` — but the compare sits
+  after `andi.w #7,d0`, so the third arm can never be taken and only a bucket
+  *at* or one step *clockwise* of the facing gets the shot. Reading that arm as
+  `diff == 7` gave the AI a counter-clockwise arm the original does not have.
+  The same trap as the tactics forward rows, in miniature: a disassembly shows
+  what is stored, not what is executed.
+- **`random_rotate_when_no_target`** (SWOS2.s:32458): the two x tests jump **to**
+  the gate and the two y tests jump **past** it, so a player inside the central
+  corridor and already deep in a box gets no forced direction at all, and
+  everyone else reaches the gate. Ours had the y arms the other way round,
+  swapping the two groups. It runs only when **both** teams are
+  computer-controlled — which sounded like "no recording covers it" until the
+  matrix said otherwise: `zkz-10174427` is a **coach-mode** match
+  (`top_team_player_no` and `bottom_team_player_no` both 0, the human's
+  `team_controls` 3), the game plays itself, and the fix took it 714 → 889.
+  Worth remembering before writing off a CPU-only path as untestable.
+
+And one off-by-one on each of two bounds:
+
+- The fire-angle tolerance is `cmp.b d1,d2 / bgt no_fire` followed by
+  `neg.b d1 / cmp.b d1,d2 / bgt fire`, so it fires on
+  `-tolerance < d2 <= tolerance` — asymmetric by one, because the second test is
+  strict. Ours used `d2 < -tolerance` and let the negative bound itself through.
+- `cmpi.w #478,ballX / bcs mid_right_x_gate` is an unsigned **lower** test, so
+  x == 478 belongs to the midfield spin band rather than the mid-right one.
+
+`zkz-10190651` went **1113 → 2570** at every level, `playa-10095214`
+3505 → 5276 at `scalars`, and `zkz-10174427` 714 → 889.
+
+> Three inversions in one routine is not three mistakes, it is one habit: an
+> `ble`/`bge` that jumps to the *reject* label reads naturally as the accept
+> condition. When a gate's branch target is the failure path, the C `if` has to
+> carry the same sense as the branch, not the opposite of it.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1284,18 +1378,20 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and possession** — still the largest cluster, but the
-   scan-direction fix took the top off it (`pass_to_player_ptr` at 795 is gone).
-   What remains: `controlled_pl_direction` (1108), `current_allowed_direction`
-   (1169), `ball_possession` (1113). `zkz-10190651` frame 1113 is the clearest
-   sample — the reference credits possession to the top team and we credit the
-   bottom, `bottom_info.controlled_player` is `sprite[25]` against our null,
-   `player_has_ball` 1 against 0, `last_heading_tackling_player` `sprite[21]`
-   against `sprite[25]`. One question, arriving as several fields: who is judged
-   to have the ball after a contested touch.
-   `playa-10090613` at 912 is now a different thing — `game_state` 100 against
-   our 3 (`ST_KEEPER_HOLDS_BALL`): we award the keeper the ball where the
-   reference plays on.
+4. **Player selection and possession** — still the largest cluster, and its
+   clearest sample is now closed: `zkz-10190651` at 1113 was the AI firing a
+   shot the reference did not take, and the gate that should have stopped it was
+   inverted (see "Three inverted gates in one AI routine"). That took the
+   recording to 2570, `playa-10095214` to 5276 and `zkz-10174427` to 889.
+   What remains: `controlled_pl_direction` (1108 of `zkz-10140228`, 1976 of
+   `playa-10095214`), `current_allowed_direction` (1169 of `zkz-11054632`), and
+   `top_info.controlled_player` at `zkz-10190651`'s new stop. All four are on
+   the **human**-controlled side of their recording — check the setup before
+   assuming otherwise, as the AI fix above did not move any of them — so they
+   point at `team_control.c` and the kick-direction writers in
+   `ball_possession.c` / `headers.c` / `tackle_foul.c`, not at the AI. The
+   method that closed 1113 transfers: print the gates on the diverging frame
+   rather than reasoning about them.
 5. **Sprite state**, at 939-2694 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start

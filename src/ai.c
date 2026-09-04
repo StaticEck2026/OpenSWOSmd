@@ -527,14 +527,21 @@ theres_a_player_near:
         }
     }
 
-    /* check_direction_and_field_half_gates */
+    /* check_direction_and_field_half_gates
+     *
+     * A player facing sideways does NOT hit it while the ball is deep in the
+     * attacking third — there the fallback flow turns him toward goal instead.
+     * SWOS2.s:32052 `cmpi.w #158,ballY / ble no_fire` for the bottom team
+     * (which attacks the y=129 line) and :32057 `cmpi.w #740,ballY / bge
+     * no_fire` for the top (y=769). Both branch targets are the REJECT label,
+     * so the C test carries the same sense as the branch, not its opposite. */
     if (a5->direction == 2 || a5->direction == 6) {
         /* horizontal_dir_half_gate */
         if (team == &_topTeamData) {
-            if (_ballSprite.y.s.i < 740)
+            if (_ballSprite.y.s.i >= 740)
                 goto no_fire_fallback_flow;
         } else {
-            if (_ballSprite.y.s.i > 158)
+            if (_ballSprite.y.s.i <= 158)
                 goto no_fire_fallback_flow;
         }
         goto distance_and_random_fire_gate;
@@ -559,7 +566,10 @@ distance_and_random_fire_gate:
         if (d2 < 0)
             goto no_fire_fallback_flow;
         d2_byte = (int8_t)((uint8_t)(d2 << 5) - (uint8_t)d5);
-        if (d2_byte > tolerance || d2_byte < -tolerance)
+        /* Fire iff -tolerance < d2_byte <= tolerance: the asm's second test is
+         * `neg.b d1 / cmp.b d1,d2 / bgt fire` (SWOS2.s:32081), so d2_byte
+         * exactly ON the negative bound falls through to no-fire. */
+        if (d2_byte > tolerance || d2_byte <= -tolerance)
             goto no_fire_fallback_flow;
     }
 
@@ -705,7 +715,12 @@ decide_immediate_turn_or_gate:
     {
         int16_t angleBucket = (int16_t)(((uint16_t)(d5 + 16)) & 0xFF) >> 5;
         int16_t diff = (angleBucket - d7) & 7;
-        if (diff == 0 || diff == 1 || diff == 7)
+        /* The asm tests 0, 1 and $FFFF (SWOS2.s:32243-32248) — but the compare
+         * sits after `andi.w #7,d0`, so the -1 arm can never be taken and only
+         * a bucket AT or one step CLOCKWISE of the facing gets the shot. What
+         * is written is not what executes; reading the third test as `diff == 7`
+         * added a counter-clockwise arm the original never had. */
+        if (diff == 0 || diff == 1)
             goto setup_resume_play_and_turn_bias;
         goto gate_field84_cooldown_and_set;
     }
@@ -737,7 +752,9 @@ setup_resume_play_and_turn_bias:
         int16_t timeBucket = (_currentGameTick & 0x1C) >> 2;
         int16_t bx = _ballSprite.x.s.i;
 
-        if (bx >= 193 && bx <= 478) {
+        /* `cmpi.w #478,ballX / bcs mid_right_x_gate` (SWOS2.s:32277) is an
+         * unsigned LOWER test, so x == 478 belongs to the midfield band. */
+        if (bx >= 193 && bx < 478) {
             /* mid_right_x_gate */
             if (timeBucket == 0)
                 goto set_zero_turn;
@@ -996,24 +1013,33 @@ noone_near:
     /* random_rotate_when_no_target: both teams are computer */
     {
         d0 = -1;
-        if (a5->x.s.i < 273 || a5->x.s.i > 398 ||
-            a5->y.s.i <= 158 || a5->y.s.i >= 740) {
-            /* Player on edges: chance of random rotate */
-            if ((_currentGameTick & 0x18) != 0) {
-                /* 87.5%: use base direction */
-                team->currentAllowedDirection = d7;
-                return;
-            }
-            /* 12.5%: random rotate */
-            {
-                int16_t rotateIdx = (_aiRand & 2);  /* 0 or 2 = byte offset */
-                int16_t rotateOffset = _aiRandomRotateTable[rotateIdx >> 1];
-                uint8_t rotated = (uint8_t)(a5->fullDirection + rotateOffset);
-                rotated = (uint8_t)(rotated + 128);  /* flip 180 degrees (byte add) */
-                d0 = (int16_t)(((uint16_t)(rotated + 16)) & 0xFF) >> 5;
-            }
+        /* SWOS2.s:32458-32465. The x tests jump TO the gate, the y tests jump
+         * PAST it: a player inside the central corridor and already deep in
+         * either box gets no forced direction at all (-1). Everyone else — off
+         * the corridor, or between the boxes — reaches the gate. Reached only
+         * when BOTH teams are computer-controlled, which in the corpus means
+         * the coach-mode recording zkz-10174427. */
+        if (a5->x.s.i >= 273 && a5->x.s.i <= 398 &&
+            (a5->y.s.i <= 158 || a5->y.s.i >= 740)) {
+            /* loc_118040: leave the direction unforced */
+            team->currentAllowedDirection = d0;
+            return;
         }
-        /* If player is in center of pitch, d0 stays -1 (0xFFFF) */
+
+        /* random_rotate_or_base_dir_gate */
+        if ((_currentGameTick & 0x18) != 0) {
+            /* 87.5%: use base direction */
+            team->currentAllowedDirection = d7;
+            return;
+        }
+        /* 12.5%: random rotate */
+        {
+            int16_t rotateIdx = (_aiRand & 2);  /* 0 or 2 = byte offset */
+            int16_t rotateOffset = _aiRandomRotateTable[rotateIdx >> 1];
+            uint8_t rotated = (uint8_t)(a5->fullDirection + rotateOffset);
+            rotated = (uint8_t)(rotated + 128);  /* flip 180 degrees (byte add) */
+            d0 = (int16_t)(((uint16_t)(rotated + 16)) & 0xFF) >> 5;
+        }
         team->currentAllowedDirection = d0;
         return;
     }
