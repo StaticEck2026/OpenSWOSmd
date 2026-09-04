@@ -43,10 +43,30 @@ done
 mkdir -p tests/replay
 name=$(basename "$REC" .RGD.gz)
 
+# Converting a long recording at "sprites" writes >100 MB of .swr, which on a
+# /mnt/c working copy costs more than the replay it feeds. The output is a pure
+# function of (recording, level, converter, schema), so a .swr newer than all
+# four is reused. Any edit to either script bumps its mtime and invalidates the
+# cache; --frames never reuses, since a windowed emit is not the whole file.
+swr_is_fresh() {
+    local out=$1
+    [ -n "$FRAMES" ] && return 1
+    [ -f "$out" ] || return 1
+    local dep
+    for dep in "$REC" scripts/rgd_convert.py scripts/rgd_schema.py; do
+        [ "$dep" -nt "$out" ] && return 1
+    done
+    return 0
+}
+
 run_level() {
     local lvl=$1 out="tests/replay/$name-$1.swr"
-    python3 scripts/rgd_convert.py --emit "$out" --level "$lvl" \
-        ${FRAMES:+--frames "$FRAMES"} "$REC" || return 1
+    if swr_is_fresh "$out"; then
+        echo "  reusing $out (newer than the recording, the converter and the schema)" >&2
+    else
+        python3 scripts/rgd_convert.py --emit "$out" --level "$lvl" \
+            ${FRAMES:+--frames "$FRAMES"} "$REC" || return 1
+    fi
     local skip=()
     [ "$lvl" = sprites ] && [ "$STRICT" = 0 ] && skip=(--replay-skip="$INIT_FIELDS")
     ( cd bin && ./SWOS --replay-test="../$out" "${skip[@]}" "${EXTRA[@]+"${EXTRA[@]}"}" )

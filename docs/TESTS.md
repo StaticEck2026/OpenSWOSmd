@@ -211,6 +211,12 @@ directly on the binary:
 | `--replay-skip=a,b,…` | mute fields whose name contains any of these substrings |
 | `--replay-window` | open a window; off by default, a replay is a batch run |
 
+A converted `.swr` is **reused** when it is newer than the recording, the
+converter and the schema — a full matrix regenerates ~600 MB of them otherwise,
+which on a `/mnt/c` working copy costs more than the twelve replays it feeds.
+`--frames` never reuses (a windowed emit is not the whole file), and deleting
+`tests/replay/` forces a rebuild.
+
 A replay is headless **and silent** by default: `--replay-test` sets
 `SDL_VIDEODRIVER=dummy` (unless `--replay-window`) and `SDL_AUDIODRIVER=dummy`,
 so a matrix run opens no windows and makes no noise. Both respect the variable
