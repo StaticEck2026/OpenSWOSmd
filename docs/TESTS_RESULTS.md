@@ -191,15 +191,17 @@ knowing by name:
 
 ### Where the corpus stands
 
-Eight of the twelve recordings read 100.0% and a ninth 99.6%. **No stop in the
-corpus is a known defect in this port.** Every one of the four that remain is
-something the recording cannot carry:
+**Eleven of the twelve recordings read 100.0%.** What is left is one recording,
+one sprite-level stop, and four single frames:
 
 | stop | frames lost | what |
 |---|---:|---|
-| `playa-10090613` 11222, `zkz-11215003` 11479 | 27615 | the bench call's frame — sub-frame key timing |
-| `zkz-10173518` 25490, `zkz-10174427` 21927 | 4793 | `currentGameTick` drifting in real time across a fade |
+| `zkz-10174427` 21927, `zkz-10173518` 25490 | 4793 | `currentGameTick` drifting in real time across a fade — the recording cannot carry it |
+| `zkz-11215003` 27487 | 332 | the walk-off lead below. Sprite level only; that recording is COMPLETE at scalars and teams |
 | four recordings' last frame | 4 | an input edge inside the frame |
+
+Only the middle row is a candidate defect in this port. The other two are
+things the recording does not record.
 
 ### ! The bench frame is ESTIMATED, not recovered
 
@@ -256,11 +258,20 @@ its contents, so a substitution that swaps the wrong player is invisible to
 every level until something like this reads the table back. His stale
 destination of 1406/1370 is off-pitch — where a substituted player walks.
 
-But he cannot simply be absent from the table either: his `player_state` goes
-0 -> 15 between f27400 and f27486, and only `UpdatePlayers` walking that table
-sets it. So the reference writes his destination TWICE in the frame — once
-from `stopPlayers` and again afterwards — and we only write once (a
-watchpoint over the whole frame catches exactly one).
+But he cannot simply be absent from the table either, and this is where the
+evidence stops being consistent — say so rather than pick a story. His
+`player_state` goes 0 -> 15 between f27400 and f27486, PL_HAPPY is written
+from exactly one place in each listing (SWOS2.s:31301,
+`update_players.c`:2358) and that place is inside `UpdatePlayers` walking the
+same `spritesTable` that `StopPlayers` walks. So he is in the table, is
+PL_HAPPY, and is not `sentAway` — and the reference still did not reset his
+destination on the frame `PlayersLeavingPitch` ran. Both listings' version of
+that routine calls `StopAllPlayers` unconditionally (SWOS2.s:28018,
+swos.asm:103820).
+
+Those two readings cannot both be right, so one of the assumptions behind them
+is wrong, and finding which is the next step. `sprite[9]` behaves identically
+in the same frame, so whatever it is, it is systematic rather than one sprite.
 
 The second write's shape is the clue. 1406 - 439 = 967 and 1370 - 403 = 967:
 **the same offset on both axes**, so the reference sets `dest = position +
