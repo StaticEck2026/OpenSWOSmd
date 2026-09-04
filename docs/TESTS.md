@@ -736,6 +736,40 @@ Everything else in swos-port's `src/game/camera.cpp` was already right:
 `SIM_CAMERA_*` formulas at 320x200, and the three side limits (37 / 51 / 63)
 are view-independent in both releases.
 
+### The DOS build is a RECOMPILE of the Amiga one — treat a difference as a bug
+
+Worth stating before any more "DOS says X, Amiga says Y" appears below, because
+it sets how much weight such a claim can carry. `swos-port/swos/swos.asm` is a
+disassembly of the DOS SWOS **96/97** executable, and our `data/SWOS2.s` is the
+Amiga SWOS **96/97** (`SWOS VERSION 152`, 6/11/1996) — the same release. The DOS
+one was not written independently: SWOS-RE's README documents it as a **static
+recompilation** of the Amiga binary, with fifteen dwords at 0x3146d standing in
+for the 68000's D0-D7/A0-A6 (A7 maps to `esp`), which is why its listing reads
+`mov A6, offset topTeamData` and `mov word ptr D1, 37`. Non-portable routines
+(file, input, video) and a few hot ones were rewritten; the rest is the Amiga
+program in x86 clothing.
+
+So the two agree by construction, and the corpus shows it: 401 of 416 recorded
+player values reproduce, and thousands of frames of physics and AI line up
+field-for-field. **A DOS-vs-Amiga difference is therefore a deliberate hand edit
+or a misreading, and the null hypothesis is misreading.** Two of the four
+"differences" this rig has turned up were the second kind and dissolved on
+inspection:
+
+- the bench-slide window, 303..323 against 339..359 — the same constant
+  expressed at a different view height (339 - 303 = 36 = 136 - 100);
+- the ball-quadrant leading bound, which the Amiga reaches by adjacency
+  (`sub.w -4(a1)` lands on `$0081`) and the DOS spells out as the first entry of
+  its own table. Same number, 129. The DOS layout is what *confirmed* the Amiga
+  reading.
+
+Two survived, and both were then confirmed by measurement against a recording,
+not by reading alone — see the sections below. Both live behind
+`_gDosGameplay`; **nothing in this port's Amiga behaviour has been changed on
+the strength of the DOS listing.** Where the DOS asm appears as evidence for a
+fix to the default path, it is as a second witness to what the Amiga asm already
+said.
+
 ### Two bugs in one substitution
 
 `zkz-11021807` stopped at frame 459 on `sprite[4].frame_delay` — the top team's
@@ -768,7 +802,9 @@ artefact, and nothing short of a frame-exact reference was going to point at it.
 **Two: the repeat delay is a DOS constant we did not have.** With the cursor
 free, a held direction repeats after `subsMovementDelayTimer` reaches a
 threshold — `2` in `data/SWOS2.s:18639`, `4` in the DOS asm
-(`swos-port/swos/swos.asm:92055`), routines otherwise identical. At 2 the four
+(`swos-port/swos/swos.asm:92055`), routines otherwise identical. One compare
+site in each listing, so it is not a misread of a second path; and forcing it
+back to 2 reproduces the divergence at 459, so the recording agrees. At 2 the four
 held frames step the cursor *twice* and we substituted a different wrong player.
 Now `_gsSubsMovementDelay` in `dos_gameplay.c`, beside the other GS_* pairs —
 though note it is not one of the ×1.1 frame-rate conversions: 2 → 4 is a feel

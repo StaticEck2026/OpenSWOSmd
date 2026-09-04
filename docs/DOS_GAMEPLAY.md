@@ -101,6 +101,19 @@ passes. `dos_gameplay.c` now uses 70. The Amiga value is the clean **49** and is
 unchanged.
 ² `GS_PT_55_50` DOS value happens to equal the Amiga value (50).
 
+### Why a DOS-vs-Amiga difference needs proof
+
+The DOS executable is a **static recompilation of the Amiga one** — same release
+(SWOS 96/97), fifteen dwords standing in for the 68000's registers, non-portable
+routines rewritten and the rest converted (SWOS-RE README, "DOS Version"). The
+two therefore agree by construction, and the replay corpus measures that
+agreement at thousands of frames. So every entry in the tables above is a
+deliberate hand edit by whoever did the conversion, and anything NEW claimed as
+a difference should be read twice and then measured: the recorded-game rig has
+already dissolved two apparent differences that were really one constant
+expressed at a different view height, and one table entry reached by adjacency
+on one side and spelled out on the other.
+
 ### NOT differentiated (important)
 - **Kick / pass / shot power** are the **same** for DOS and Amiga in shipping
   swos-2020 (`setDeltaZVariables`, `options.cpp:1490-1524`): `ballKickingSpeed=2208,

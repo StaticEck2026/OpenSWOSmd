@@ -339,7 +339,15 @@ BenchCheckControls(void)
      * frameCount keeps going. Which team gets sampled on a given stoppage frame
      * therefore differs, and with it whose taps are counted — the replay rig
      * caught us opening the substitutes menu on a double-tap the reference
-     * never saw (docs/TESTS.md). */
+     * never saw (docs/TESTS.md).
+     *
+     * The DOS build is a static recompilation of the Amiga one, so a difference
+     * like this is a deliberate hand edit and deserves proof: benchPickTeamCounter
+     * has exactly two references in the DOS listing (the add and the test, plus
+     * its definition), the DOS still HAS frameCount elsewhere so the swap was
+     * not forced by the conversion, and the recorded alternateTeamsTimer
+     * confirms the counter's value for 926 frames. The Amiga path below is
+     * unchanged. */
     {
         uint16_t pick;
         if (_gDosGameplay) {
