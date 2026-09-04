@@ -1799,19 +1799,30 @@ Ranked by how early they stop a recording. See
    2449, `zkz-10190651` at 2570. Several are **player-selection** fields — who the game is driving
    rather than a simulation value — which is the `onScreen` ceiling below
    coming into view, and the reason section 7 puts the Amiga dumper first.
-6. **`zkz-12065730` at 1251 — a frame of team-alternation phase.** Diagnosed,
-   not fixed. `_fireBlocked` makes `UpdateAndApplyTeamControls` return without
-   updating *either* team, so the frame it clears on decides which team the
-   next frame updates. Ours clears on replay frame 1250 and the reference on
-   1251, which puts the bottom team's input one frame early and swaps both
-   teams' `update_player_index` (top 4/bottom 3 recorded against our 3/4).
-   Everything around it matches — `p2_controls` drops its fire bit at 1250 in
-   the recording, `pl1Fire`/`pl2Fire` are bytes in both builds, and the asm's
-   clear-and-return is what we do. So the question is narrow: **what makes the
-   reference register that fire release one frame later than we do.** Start
-   there, not at the bench fields it surfaces as.
-7. **Sprite state**, at 939-3356 (setting aside `zkz-10174427`, whose frame-0
-   stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
+6. **The fire-counter family** — two stops, one shape, neither fixed. Both are
+   about `pl1FireCounter`/`pl2FireCounter`, the signed counter
+   `Player1StatusProc` runs down while the button is held and negates on
+   release, and both come down to *how many times that routine ran* rather than
+   to any arithmetic in it (the tracking block is byte-for-byte the asm's,
+   SWOS2.s:6081-6099).
+   - **`playa-10144556` at 1696.** The human's fire is held 1688-1695 and
+     released at 1696. Ours reaches -4 and the release flips it to +4, which
+     classifies as `quickFire` and plays a pass; the recording has
+     `quick_fire` 0 *and* `normal_fire` 0, which only happens when the counter
+     is already **0** — so the reference consumed it earlier. It is consumed at
+     two places: the negative branch when the counter passes -4
+     (SWOS2.s:25630-25633), or `headerOrTackle` after `UpdatePlayers`
+     (:25647-25650). `last_heading_tackling_player` is `sprite[24]` recorded
+     against our `sprite[21]` on that frame, which points at the second.
+   - **`zkz-12065730` at 1251.** `_fireBlocked` makes
+     `UpdateAndApplyTeamControls` return without updating *either* team, so the
+     frame it clears on decides which team the next frame updates. Ours clears
+     on 1250 and the reference on 1251, shifting the alternation by one and
+     swapping both teams' `update_player_index` (top 4/bottom 3 recorded
+     against our 3/4).
+   Take them together, not separately: the question in both is what makes the
+   reference sample the fire button on a different schedule than we do.
+7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.
 8. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
