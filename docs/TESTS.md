@@ -2255,6 +2255,63 @@ Two things worth being precise about:
   reaches is the `tick & mask` decisions, and the two it reached here are the
   two blinking HUD sprites.
 
+### Two defects in one penalty shoot-out
+
+`zkz-10140228` is the longest recording in the corpus and the only one that
+goes to penalties. Both of its remaining stops were in the shoot-out.
+
+**The keeper's free frames.** At 32545 both goalkeepers took the stopped-play
+speed table — 1136 — where the reference held the goalkeeper's own 1024 for
+five more frames. The route in is `UpdatePlayers`' goalkeeper block:
+
+```
+    player_goalkeeper:
+            if (_playingPenalties) {
+                if (_penaltiesTimer > 50)      <-- straight to the speed tail
+                    goto finalize;
+            }
+```
+
+`cmpi.w #50,(penaltiesTimer)` (SWOS2.s:29226) against `cmp penaltiesTimer, 55`
+(swos.asm:112784) — and its sibling twelve instructions earlier in
+`UpdateCameraBreakMode` is already paired as 100/110, so the two scale
+together. The recording gives the flip to the frame, and in the order the team
+alternation predicts: goalkeeper 1 at f32550, goalkeeper 2 at f32551, one team
+per frame. **32545 → 38395.**
+
+**The end of a shoot-out.** Then 38395, `game_state` 24 recorded against our
+30. The Amiga picks a winner from the penalty score and calls `EndOfGame`:
+
+```
+    end_penalty_shootout:                       ; SWOS2.s:27760
+            clr.w   (playingPenalties).l
+            ...
+            lea     (topTeamInGame).l,a0
+            move.w  (team1PenaltyGoals).l,d0
+            cmp.w   (team2PenaltyGoals).l,d0
+            bhi.s   set_winning_team_pointer
+            lea     (bottomTeamInGame).l,a0
+    set_winning_team_pointer:
+            move.l  a0,(winningTeamPtr).l
+            bsr.w   EndOfGame
+```
+
+The DOS build sets no winner and calls `PlayersLeavingPitch` instead
+(swos.asm:104434), skipping `ST_GAME_ENDED` altogether. It has both routines
+and calls `EndOfGame` from `UpdateTime`, so nothing about the recompilation
+forced this.
+
+The recording settles it as firmly as this corpus can. **`ST_GAME_ENDED`
+appears on none of its 39066 frames.** `ST_PLAYERS_GOING_TO_SHOWER` starts at
+f38395 — the exact frame our `EndOfGame` fired — and runs 275 frames, which is
+`PlayersLeavingPitch`'s own DOS reload. **38395 → 39065 of 39066**, the last
+frame being the terminal input edge.
+
+`winningTeamPtr` is not cosmetic on the Amiga side, which is worth saying
+because a "no winner is recorded" difference sounds like one: it is what
+`UpdatePlayers`' post-match gate reads to choose between the winning and
+losing reaction animations (SWOS2.s:31291).
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -2473,9 +2530,10 @@ Ranked by how early they stop a recording. See
    `zkz-10190651` at 2570, `zkz-10173518` at 5051 — are re-opened by it.
    `zkz-12065730` at 1251 was the fourth and a different question — the DOS
    team-alternation counter, defect 42 — and it is closed too. All four moved.
-7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
-   `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
-   every recording, so it is where the corpus has most left to say.
+7. ~~**Sprite state**~~ — **closed.** `sprites` is no longer the earliest stop
+   on any recording — every level now stops on the same frame, or within one
+   of it, and none of the remaining stops is a defect here. See
+   [TESTS_RESULTS.md](TESTS_RESULTS.md) for what is left and why.
 8. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
    paid three times over: the `substituteInProgress` sign bug, the bench-camera
    constant, and `IsThisPlayerOkToSelect`. `zkz-11021807` went 926 → 2262 on

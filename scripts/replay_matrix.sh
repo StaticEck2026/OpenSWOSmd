@@ -187,6 +187,8 @@ they were found.
 | 41 | The Amiga ISR will not advance `currentGameTick` while the stats overlay is up and the DOS `TimerProc` will — one lost count re-phases every `tick & mask` decision for the rest of the match | DOS-vs-Amiga |
 | 42 | The DOS build alternates which team `UpdateAndApplyTeamControls` handles on a dedicated counter that stands still through a fire-block, where the Amiga reads `frameCount`, which never stops | DOS-vs-Amiga |
 | 43 | The goalpost deflection has THREE arms and the port had two: a weak-Y hit on the side of a post adds the tick step to `destY`, and was falling into the crossbar bounce instead | shared tail split in two |
+| 44 | The penalty-shoot-out gate that frees a goalkeeper to the speed tail is 50 on Amiga and 55 on DOS — the sibling of the 100/110 in the same routine | timing constant |
+| 45 | The DOS build ends a shoot-out with `PlayersLeavingPitch` and names no `winningTeamPtr`; the Amiga sets one and calls `EndOfGame`, so DOS never enters ST_GAME_ENDED at all | DOS-vs-Amiga |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -195,7 +197,7 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Twenty-two of the forty-three are a **DOS-vs-Amiga difference** — mostly timing
+Twenty-four of the forty-five are a **DOS-vs-Amiga difference** — mostly timing
 constants, one a whole data set (30), and four (28, 29, 31, 40) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
@@ -238,15 +240,20 @@ stop only on their terminal frame. Of the five stops that remain, **none is
 known to be a defect in this port** — every one is something the recording
 cannot carry:
 
-| stop | what |
-|---|---|
-| `playa-10090613` 11222, `zkz-11215003` 11479 | the bench call's frame — sub-frame key timing |
-| `playa-10095214` 22400, `zkz-12080203` 31634 | a terminal-frame input edge |
-| `zkz-10173518` 25490, `zkz-10174427` 21927 | `currentGameTick` drifting in real time across a fade |
+**No stop in the corpus is a known defect in this port any more.** Every one
+of the four that remain is something the recording cannot carry:
 
-`zkz-10140228` at 32545 is the exception and the one open lead: both
-goalkeepers take the stopped-play speed table five frames before the reference
-does. Everything else in that recording runs to 38395 of 39066.
+| stop | frames lost | what |
+|---|---:|---|
+| `playa-10090613` 11222, `zkz-11215003` 11479 | 27615 | the bench call's frame — sub-frame key timing |
+| `zkz-10173518` 25490, `zkz-10174427` 21927 | 4793 | `currentGameTick` drifting in real time across a fade |
+| four recordings' last frame | 4 | an input edge inside the frame |
+
+The bench pair is the whole remaining gap: without those two the corpus would
+read 98%. Both readings of the bench timing are backed by 11000 frames of
+agreement on the other side of them, every gate input is identical at both,
+and there is nothing left in the recording to choose between them — see "The
+bench call the rig cannot place".
 
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
