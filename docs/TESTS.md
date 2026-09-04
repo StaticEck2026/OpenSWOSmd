@@ -405,6 +405,68 @@ defects of ours it exposed. Three classes remain, and none of them is a
 statement about this port's accuracy: two are slots that do not exist here, and
 one is a flag whose exact value is endian-dependent by design.
 
+### The player-price audit — a worked example of "read it against SWOS2.s"
+
+`zkz-10174427` was the corpus's one frame-0 divergence: `top_game.players[5]`
+(AC Milan's Stefano Eranio) came out with `passing`/`tackling`/`ballControl` 4
+where the recording has 5. The cleanest possible target — no camera, no cull,
+pure match setup — so it got a full line-by-line read against `data/SWOS2.s`.
+The answer is that **our code is right**; the write-up stays because the method
+is reusable.
+
+The chain, narrowed one step at a time:
+
+1. `AdjustPlayerSkills` masks each skill nibble with `0x07777777` (so the raw
+   13/14 in the team file become 5/6) and scales it in `ScaleSkill`, which
+   rounds **stochastically** on `Rand2`. The rig pins `Rand2` to the
+   recording's `fixedRandomValue` (187), so `r = (187*100)>>8 = 73` and the
+   rounding is deterministic. Solving `f(5)=5 && f(6)=5` for that `r` forces
+   `d2 = 95` exactly; we produced 92.
+2. `d2 = clamp(d4,75,125) * appPercent / 100`, and `appPercent = 100` here (the
+   `allPlayerTeamsEqual` branch is off in this recording), so `d4 = 95`.
+3. `d4 = price*100/filePrice`, then `GetPlayerPricePercentageChange`. In a
+   friendly that skips both team offsets and adds only `(Rand2()*24>>8) - 12`
+   = **+5** — verified against the asm. So `price = 28` where we compute 27.
+4. `GetPlayerPrice` and everything it touches was then read against the asm:
+   the routine, `CountNearnessFactor`, `GetPlayerPricePercentageChange`,
+   `ScaleSkill`, `ApplyTeamTactics` **and its call site** all match, including
+   the subtle parts — the second `mulu.w` truncating the first's 32-bit result,
+   the byte-wide `sub.b`/`bmi` tail, the divide by `numPlayersAtQuadrant - 1`,
+   and `ext.l` before the unsigned `divu.w #350`. All six data tables
+   (`skillsPerQuadrant`, `quadrantDistanceFactor`,
+   `quadrantCoordinatesToBallQuadrant`, `priceSkillPonders`,
+   `skillValuePonders`, `plPricesIncreaseTable`) match byte-for-byte, and the
+   `loc_122D6A+1 == skillsPerQuadrant - 35` claim our source comment makes was
+   confirmed by counting instruction bytes back from the label.
+5. An independent reimplementation of the asm in Python reproduces our C's 27,
+   and reproduces the recorded skills for **9 of the 10 outfield players**.
+
+So the code is not in question — the *formation data* is. Solving for the `d4`
+each player needs:
+
+| | slot 5 | slot 10 | the other eight |
+|---|---|---|---|
+| needs | exactly 95 | exactly 94 | wide tolerance |
+| stock **Amiga** 4-4-2 | 92 ✗ | 94 ✓ | all ✓ |
+| stock **DOS** 4-4-2 (`docs/tactics_amiga_vs_dos/`) | 95 ✓ | 79 ✗ | all ✓ |
+
+Only those two players sit on a boundary, and **neither stock formation
+satisfies both**. The recording's session was therefore running a 4-4-2 that is
+neither — an edited one, which SWOS saves as a `.TAC` and which this corpus's
+author is exactly the person to have. The header stores the formation **index**
+(0), not its 350 position bytes, so it is not recoverable from the recording.
+
+That also rules out the two obvious suspects: `make SWOS_ORIGINAL_TACTICS=1`
+(the port's own 4-4-2 fix) diverges identically, and the DOS-vs-Amiga re-tune —
+documented at 68 coverage bytes in docs/TACTICS_POSITION_VALUE.md §9 — makes
+slot 10 far worse.
+
+**Method worth reusing:** solve backwards from the recorded value to the exact
+input it requires, then check that input, rather than reading the whole chain
+forwards. It turned "three skill nibbles are wrong" into "`GetPlayerPrice` must
+return 28" in a few steps, and a `d4`-tolerance table then separated a code bug
+from a data one.
+
 ### With an Amiga corpus, 100% becomes a real target
 
 All four classes above exist only because the recording came from a different
@@ -612,11 +674,9 @@ Ranked by how early they stop a recording. See
    (`zkz-11215003`), `camera_x_vel` at 1253 (`zkz-12080203`). §20's velocity
    ladder and the two Y clamps are the places to read against `data/SWOS2.s`;
    frame 117 is the cheapest to chase.
-2. **`zkz-10174427` frame 0**: `top_game.players[5]` has `passing` /
-   `tackling` / `ballControl` 5 where we compute 4. Pure setup — no camera, no
-   cull — so it is unambiguous. Most likely the `allPlayerTeamsEqual`
-   price-percentage scaling (`GetAveragePlayerPrice`, the `pct + 6`) in
-   `InitInGameTeamStructure`.
+2. ~~**`zkz-10174427` frame 0** skill nibbles~~ — **audited against
+   `data/SWOS2.s` and closed as not-our-bug**; see "The player-price audit"
+   below.
 3. **Player selection and the pass target**, at 795-1335:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
