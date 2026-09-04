@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "team_control.h"
+#include "dos_mode.h"      /* _gDosGameplay: DOS alternates teams on its own counter */
 
 /* ==================================================================
  * Chunk 54 — Team Controls + Player Selection
@@ -26,6 +27,7 @@ extern int16_t    _gameStatePl;
 extern int16_t    _playingPenalties;
 extern Sprite    *_penaltyShooterSprite;
 extern int16_t    _fireBlocked;
+uint16_t          _teamSwitchCounter;   /* DOS-only; see UpdateAndApplyTeamControls */
 extern int16_t    _inSubstitutesMenu;
 extern uint16_t   _frameCount;
 
@@ -439,11 +441,36 @@ void UpdateAndApplyTeamControls(void) {
         return;
     }
 
-    /* Alternate teams each frame */
-    if (_frameCount & 1) {
-        team = &_topTeamData;
-    } else {
-        team = &_bottomTeamData;
+    /* Alternate teams each frame — but the two releases count with DIFFERENT
+     * VARIABLES, the same split as `BenchCheckControls` (bench_subs.c):
+     *
+     *   Amiga  btst #0,(frameCount+1)      SWOS2.s:25593 — the global frame
+     *                                      counter, which advances EVERY frame
+     *   DOS    add teamSwitchCounter,1     swos.asm:100580 — a dedicated
+     *          test byte ptr ...,1         counter, and the `add` sits BELOW
+     *                                      the fireBlocked early-exit above,
+     *                                      so it stands still for every frame
+     *                                      a held fire button blocks
+     *
+     * The phases therefore separate across a fire-block and never come back.
+     * Measured on zkz-12065730: player 2 holds fire through a stoppage to
+     * f1249 and releases at f1250, and the reference resumes writing the
+     * bottom team's `direction` at f1252 where frameCount would have said
+     * f1251 — which is the frame the bench's double-tap detector then latches
+     * `subsPrevPl2Direction` on (recorded -1 at 1251, 7 at 1253).
+     *
+     * Same proof as `benchPickTeamCounter`: one site in each listing, and the
+     * conversion did not force it — the DOS build still has `frameCount` and
+     * uses it elsewhere. The Amiga path is unchanged. */
+    {
+        uint16_t pick;
+        if (_gDosGameplay) {
+            _teamSwitchCounter++;
+            pick = _teamSwitchCounter;
+        } else {
+            pick = _frameCount;
+        }
+        team = (pick & 1) ? &_topTeamData : &_bottomTeamData;
     }
 
     /* Update controlled player and pass target */
