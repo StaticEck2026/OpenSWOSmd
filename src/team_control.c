@@ -3,9 +3,6 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 #include "team_control.h"
 #include "dos_mode.h"      /* _gDosGameplay: DOS alternates teams on its own counter */
 

@@ -8,9 +8,6 @@
  * Chunk 49: 2 exported functions + internal helpers
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "game_timers.h"
 #include "game_types.h"
 
