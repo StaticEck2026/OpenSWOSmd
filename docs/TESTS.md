@@ -12,9 +12,10 @@ point; an Amiga corpus follows once we can harvest it (see
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **`zkz-11021807` now replays end to end — all 4064 frames,
-every bound field, every frame.** The rest reach 1169-4186 at level `info`
+every bound field, every frame — and `zkz-11054632` now does it at every
+level, all 7314 frames of it.** The rest reach 1169-4186 at level `info`
 (section 5), except `zkz-10174427`, whose frame 0 is one byte of formation
-coverage rather than a porting defect. Twenty-eight real defects found and fixed
+coverage rather than a porting defect. Twenty-nine real defects found and fixed
 on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -361,9 +362,9 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **889-5276** frames at
-`scalars` (`zkz-11021807` complete), **1169-4186** at `info`, **939-3356** at
-`sprites`, and **401 of 416**
+The shape of the results, as of the run in that file: **889-7314** frames at
+`scalars`, **1169-7314** at `info`, **939-7314** at `sprites`, and **401 of
+416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -625,7 +626,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Twenty-six real defects so far, all fixed — plus the two in "The `onScreen`
+Twenty-seven real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -746,6 +747,15 @@ ceiling" below, which that measurement turned up on its own:
     `tick & 15` and then steps one entry *down* the table with a floor at 0. One
     unambiguous site in each listing plus a measurement, so it is switched on
     `_gDosGameplay` rather than chosen. See "The keeper's reach entry" below.
+27. **The throw-in "hide the result banner" gate is 50 frames on Amiga and 55
+    on DOS** (`SWOS2.s:30563` `cmpi.w #50` against `swos.asm:115401`
+    `cmp stoppageTimerActive, 55`). It reaches much further than the banner:
+    hiding it *negates* `resultTimer`, a negative `resultTimer` is what makes
+    `ShowResult` zero it, and a zero `resultTimer` is what lets
+    `AI_SetControlsDirection`'s own `tst.w resultTimer` gate fall through and
+    start rotating the thrower. Five frames early there turned an AI throw-in
+    taker the reference left standing. `zkz-11054632` **1169 -> 7314, the whole
+    recording, at every level**. See "One constant, three globals away" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1300,6 +1310,60 @@ gate — **1976 → 4186** at `info` and 1976 → 3356 at `sprites`. Nothing reg
 > A gate that misses by exactly one frame is worth more attention than one that
 > misses by a mile: it means every input is right except a single quantised one.
 
+### One constant, three globals away from the thing it broke
+
+`zkz-11054632` stopped at 1169 on `bottom_info.current_allowed_direction`, 2
+recorded against our 3, with `sprite[12].direction` 2 against 3 and its
+`cycle_frames_timer` 33 against **90**. The timer is the tell: 90 is a fresh
+animation, so our thrower had just been re-pointed and re-animated during a
+throw-in the reference left alone.
+
+A gdb watchpoint on the sprite's direction named the writer immediately
+(`update_players.c`, the `d0 != player->direction` arm of the throw-in
+handler), and a second one on `currentAllowedDirection` named who fed it:
+`AI_SetControlsDirection`, in `try_apply_turn_step` — the AI rotating the
+throw-in taker one step clockwise.
+
+That routine can only get there past `set_direction_core`, which opens with
+
+```
+    tst.w   (resultTimer).l
+    bne.w   locret_118178
+```
+
+so it only rotates anyone while `resultTimer` is **zero**. Watching that global
+gives the whole chain in three writes:
+
+```
+ShowResult          113 -> 112     (counts down each frame)
+UpdatePlayers       112 -> -112    (the throw-in UI "hide the banner" negate)
+ShowResult         -112 -> 0       (negative means hide; hide means zero)
+```
+
+And the negate is behind one gate:
+
+```
+    Amiga  SWOS2.s:30563    cmpi.w  #50,(stoppageTimerActive).l
+                            bhi.s   toggle_stats_timers
+    DOS    swos.asm:115401  cmp     stoppageTimerActive, 55
+                            ja      short @@throw_in_hide_result
+```
+
+50 against 55 — the `GS_55_50` family again, and the fourth member of it the
+corpus has caught (the bench camera, the player-down timer, the bench repeat
+delay). We were hiding the banner five frames early, which zeroed `resultTimer`
+five frames early, which opened the AI's turn gate on the one frame in sixteen
+it samples (`tick & 0xE == 0`, and 1169 mod 16 is 1). Now `_gsThrowInHideResult`.
+
+`zkz-11054632` went **1169 → 7314**: the whole recording, at every level, 2104
+fields a frame. It is the first recording to complete at `sprites`.
+
+> Three globals separate the constant from the symptom, and none of the three is
+> a field the rig compares. What made it findable was that the *symptom* was
+> compared: `cycle_frames_timer` jumping to 90 says "this animation was just
+> restarted", which is a much stronger clue than the direction byte beside it.
+> Watchpoints, then, not reasoning — each one names its writer in a second.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1470,13 +1534,19 @@ Ranked by how early they stop a recording. See
    keeper's reach entry"). `controlledPlDirection` is written by whoever kicks,
    dives or heads, so it names the *symptom's owner*, never the cause: read the
    rest of the frame before believing the field name.
-   What remains from the old cluster is one field —
-   `bottom_info.current_allowed_direction` at 1169 of `zkz-11054632`, on the
-   human side, so `team_control.c` rather than `ai.c`.
-5. **The new earliest stops**, and none of them is a repeat: `sprite[7].x` at
-   939 (`zkz-10173518`, the known 4-4-2 coverage byte), `sprite[1].x` at 1112
-   (`zkz-10140228` — the ball, one frame after the keeper now dives, so start
-   with what the dive does to it), `sprite[1].x` at 1042 (`playa-10144556`) and
+   The last field of it — `bottom_info.current_allowed_direction` at 1169 of
+   `zkz-11054632` — is closed too, and it was a third thing again: a throw-in
+   restart constant three globals away from the AI that acted on it ("One
+   constant, three globals away"). That recording now replays **complete**.
+   ! And check the setup before assuming which side is which: the `.swr`
+   header's `top_team_player_no` / `bottom_team_player_no` do not read the way
+   their names suggest — `top_info.player_number` / `bottom_info.player_number`
+   are the fields that say which side is AI.
+5. **The new earliest stops**, none of them a repeat: `sprite[7].x` at 939
+   (`zkz-10173518`, the known 4-4-2 coverage byte), `sprite[1].x` at 1042
+   (`playa-10144556`), `sprite[1].x` at 1112 (`zkz-10140228` — the ball, one
+   frame after the keeper now dives, so start with what the dive does to it),
+   `bench.pl2_prev_direction` at 1251 (`zkz-12065730`), and
    `top_info.controlled_player` at 2570 / 4186.
 6. **Sprite state**, at 939-3356 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,

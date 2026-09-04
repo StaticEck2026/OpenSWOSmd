@@ -10,6 +10,7 @@
 #include "tackle_foul.h"
 #include "headers.h"
 extern int16_t _gsBallDefensiveZ;   /* GS_27_22 goalie-catch z-threshold — dos_gameplay.c */
+extern int16_t _gsThrowInHideResult; /* GS_55_50 throw-in UI gate — dos_gameplay.c */
 #include "player_anim.h"
 #include "player_positioning.h"
 #include "ai.h"
@@ -1705,7 +1706,8 @@ not_in_penalty:
     manage_throw_in_ui:
         /* Stoppage timer / fire blocking logic (same as controlled player break) */
         if (team->playerNumber == 0) {
-            if (_stoppageTimerActive <= 50)
+            /* Amiga 50 (SWOS2.s:30563) / DOS 55 (swos.asm:115401) */
+            if (_stoppageTimerActive <= (uint16_t)_gsThrowInHideResult)
                 goto throw_in_fire_input_gate;
             goto toggle_stats_timers_throw;
         }

@@ -70,6 +70,17 @@ int16_t  _gsCameraLeavingSubs    = 50;  /* GS_55_50   bench_subs.c    camera bac
  * recorded 55 counting down against our 50 (docs/TESTS.md). */
 int16_t  _gsPlayerDownTimer      = 50;  /* GS_55_50   tackle_foul.c/headers.c */
 
+/* Throw-in: how long the restart is left alone before the result banner is
+ * hidden and the fire is blocked. `cmpi.w #50,(stoppageTimerActive).l / bhi`
+ * (data/SWOS2.s:30563) vs `cmp stoppageTimerActive, 55 / ja`
+ * (swos-port/swos/swos.asm:115401) — one site in each, the same x1.1 family.
+ * It matters well beyond the banner: hiding it NEGATES `resultTimer`, and a
+ * negative `resultTimer` is what makes `ShowResult` zero it, which in turn is
+ * what lets `AI_SetControlsDirection`'s `tst.w resultTimer` gate fall through
+ * and start rotating the thrower. Five frames early there turned an AI
+ * throw-in taker the reference left facing where he was (docs/TESTS.md). */
+int16_t  _gsThrowInHideResult    = 50;  /* GS_55_50   update_players.c  throw-in UI */
+
 /* ---- speed_factor — the per-frame movement-delta scale (docs/DOS_GAMEPLAY.md §8.3).
  * Reproduces swos-2020's CalculateDeltaXAndY_125 hook (symbols.txt:2083 ->
  * render.cpp:4682): the deltaX/deltaY computed by CalculateDeltaXAndY are scaled by
@@ -137,6 +148,7 @@ void ApplyGameStyle(void)
     _gsSubsMovementDelay    = dos ? 4   : 2;
     _gsCameraLeavingSubs    = dos ? 55  : 50;
     _gsPlayerDownTimer      = dos ? 55  : 50;
+    _gsThrowInHideResult    = dos ? 55  : 50;
 
     /* --- Movement speed_factor (swos-2020 CalculateDeltaXAndY_125, §8.3) ---
      * DOS/PC 70fps scales the per-frame movement deltas by 41/64 so players don't
