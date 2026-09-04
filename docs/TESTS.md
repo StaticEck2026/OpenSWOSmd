@@ -2145,6 +2145,13 @@ Same class as the terminal-frame `fire_this_frame` above: an input edge inside
 a frame, invisible to a rig that injects a frame's input atomically before the
 frame runs.
 
+**f117 is definitely a same-frame call, so the ambiguity is real.** Under a
+pure lag-1 build that frame diverges on far more than the camera: the
+reference has `game_state_pl` 101 and every player's destination on the
+bench-walk line (`sprite[4].dest_x` 772 against our 336, and the same for
+5, 6, 7, 8 — a diagonal toward the bench corner). The bench opens there, on
+the frame the button rises.
+
 **And it is the whole remaining gap — measured, not estimated.** A throwaway
 build that defers the call by one frame whenever `gameStatePl != 0` — the one
 rule that fits all three presses — runs
@@ -2155,8 +2162,19 @@ rule that fits all three presses — runs
 so nothing else in either recording disagrees with this port. That is the
 corpus at **98.0%** instead of 87.1%.
 
-The rule is NOT shipped, and should not be until somebody finds the mechanism
-behind it. Three presses and a one-bit predicate is not evidence, and this is
+The mechanism is half-known, and the half that is missing is the half that
+matters. `MainKeysCheck` reads the input at GameLoop line 666 and
+`UpdateAndApplyTeamControls` writes `secondaryFire` — the thing the recording
+carries — at line 703, so the two sample the SAME input at two points in the
+frame. A press before 666 is seen by both and gives lag 0; a press between 666
+and 703 is seen only by the later one and gives lag 1. Both land the recorded
+rise on the same frame, and `p1_controls` (sampled at the frame's end) rises
+there too, so nothing in the record says which side of 666 the press fell on.
+A press after 703 would separate the two signals by a frame, and the schema
+note records that no press in the corpus does.
+
+The rule is NOT shipped, and should not be until somebody closes that last
+gap. Three presses and a one-bit predicate is not evidence, and this is
 a rule in the HARNESS: a test rig carrying an unexplained fudge to make itself
 pass is worth less than one that stops honestly. Every gate input was traced
 identical at both frames (see above), so if there is a mechanism it is not in
