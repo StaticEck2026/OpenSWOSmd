@@ -1862,6 +1862,24 @@ Ranked by how early they stop a recording. See
      against our 3/4).
    Take them together, not separately: the question in both is what makes the
    reference sample the fire button on a different schedule than we do.
+   **Four candidates are already eliminated**, so start past them:
+   - the press/release tracking in `Player1StatusProc` is byte-for-byte the
+     asm's (SWOS2.s:6081-6099) — press sets -1, each held sample decrements,
+     release negates;
+   - so is the classifier (`sne`/`sne`/`beq`/`bmi`, then `cmpi.w #4` +
+     `sle`/`sgt` positive, `cmpi.w #$FFFC` + `slt` negative, SWOS2.s:25612-25633)
+     — and the consume threshold really is `d0 <= -5`, so four held samples can
+     never clear the counter;
+   - `checkFirePressedForEndGame`'s two extra reads are gated on
+     `ST_STARTING_GAME <= gameState <= ST_GAME_ENDED` in the asm too
+     (SWOS2.s:25207-25210), so they do not fire during play;
+   - all four `headerOrTackle = 1` sites match the asm's four
+     (SWOS2.s:30244/30429/30456/31137), including the `bcs` sense of the
+     pass-target and controlled-player distance tests.
+   What is left is the count itself: in `playa-10144556` the button is held
+   across four of our samples and the counter reaches -4, where the reference
+   ends at 0 — which needs either a fifth sample or a consume we do not reach.
+   Read swos-port's own main loop for how often it polls, rather than the asm.
 7. **Sprite state**, at 1251-14519: `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. `sprites` is still the earliest stop, or tied with it, on
    every recording, so it is where the corpus has most left to say.
