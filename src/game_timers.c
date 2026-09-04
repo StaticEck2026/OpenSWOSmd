@@ -8,6 +8,9 @@
  * Chunk 49: 2 exported functions + internal helpers
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "game_timers.h"
 #include "game_types.h"
 
@@ -137,33 +140,46 @@ static void __attribute__((noinline)) negateTimers(void)
     _statsTimer = -_statsTimer;
 }
 
-/* ---- Helper: handle end_game_transmission ---- */
-static void __attribute__((noinline)) handleEndGameTransmission(void)
+/* ---- Helper: handle end_game_transmission ----
+ * Returns 1 when the state was one this chain handles (the caller is done),
+ * 0 when it was not. Zero is NOT "nothing to do": the asm's chain ends
+ *
+ *   game_not_starting:
+ *           cmpi.w  #ST_CAMERA_GOING_TO_SHOWERS,(gameState).l
+ *           bne.s   game_interrupted
+ *
+ * (SWOS2.s:25267) — an unmatched state falls THROUGH into the stoppage-timer
+ * countdown rather than leaving the routine. Returning unconditionally here
+ * froze the countdown for as long as a fire button was held, because the
+ * gate above only asks whether fire is down, not whether this chain can do
+ * anything about it. */
+static int __attribute__((noinline)) handleEndGameTransmission(void)
 {
     if (_gameState == ST_RESULT_ON_HALFTIME) {
         negateTimers();
         SetCameraMovingToShowerState();
         PrepareForInitialKick();
         _stoppageEventTimer = 0;
-        return;
+        return 1;
     }
     if (_gameState == ST_RESULT_AFTER_THE_GAME) {
         negateTimers();
         _playGame = 0;
         _stoppageEventTimer = 0;
-        return;
+        return 1;
     }
     if (_gameState == ST_STARTING_GAME) {
         _showFansCounter = 0;
         PrepareForInitialKick();
         _stoppageEventTimer = 0;
-        return;
+        return 1;
     }
     if (_gameState == ST_CAMERA_GOING_TO_SHOWERS) {
         PrepareForInitialKick();
         _stoppageEventTimer = 0;
-        return;
+        return 1;
     }
+    return 0;   /* -> game_interrupted */
 }
 
 /* ---- Helper: check if fire was pressed to end game state ----
@@ -479,10 +495,8 @@ void UpdateGameTimersAndCameraBreakMode(void)
     }
 
     /* --- Check fire for end-game transmission --- */
-    if (checkFirePressedForEndGame()) {
-        handleEndGameTransmission();
+    if (checkFirePressedForEndGame() && handleEndGameTransmission())
         return;
-    }
 
     /* --- game_interrupted: stoppage event timer countdown --- */
     if (_stoppageEventTimer != 0) {
