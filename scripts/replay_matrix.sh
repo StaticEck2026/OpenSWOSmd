@@ -309,11 +309,16 @@ watchpoint over the whole frame catches exactly one).
 The second write's shape is the clue. 1406 - 439 = 967 and 1370 - 403 = 967:
 **the same offset on both axes**, so the reference sets `dest = position +
 K * direction` with K large — "keep walking that way" rather than a place. By
-f27489 it is 635/392, a real position again. Whatever assigns that walk-off
-destination during ST_PLAYERS_GOING_TO_SHOWER, this port does not have it, and
-`frame_delay` agrees: the reference's 16 is `UpdatePlayerSpeed`'s tail with
-speed 0, and our 5 is below that formula's floor of 6, so our player never
-reached the tail at all.
+f27489 it is 635/392, a real position again.
+
+`frame_delay` looks at first like it says our player never reaches
+`UpdatePlayerSpeed`'s tail — the reference's 16 is that formula at speed 0 and
+our 5 is below its floor of 6 — but the reference reaches 5 itself two frames
+later, so 5 is an animation-table value and what it really says is that our
+sprite is running the same sequence TWO FRAMES EARLY (reference 20, 20, 16,
+16, 5; ours 5 at the first of those). Read it as a phase difference, not a
+missing branch, and start from what makes the reference hold 20 for the frames
+before the whistle.
 
 That is the honest reading of "as accurate as this corpus can measure". It is
 NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
