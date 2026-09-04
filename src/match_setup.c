@@ -170,7 +170,12 @@ void SetBallPosition(int16_t ballX, int16_t ballY)
     _ballSprite.y.s.frac   = 0;
     _ballSprite.destX      = ballX;
     _ballSprite.destY      = ballY;
-    _ballSprite.z.raw      = 0;
+    /* `clr.w SPRITE_Z(a0)` then `clr.l SPRITE_DELTAZ(a0)` — the width
+     * difference is deliberate: placing the ball zeroes only the INTEGER half
+     * of z and leaves its fraction alone, while deltaZ is cleared whole.
+     * Zeroing z.raw here made every set-piece placement start from a different
+     * sub-pixel height than the reference (docs/TESTS.md). */
+    _ballSprite.z.s.i      = 0;
     _ballSprite.deltaZ.raw = 0;
 }
 
@@ -263,7 +268,7 @@ void RemoveReferee(void)
     _refereeSprite.y.s.i         = 439;
     _refereeSprite.destX         = _refereeSprite.x.s.i;
     _refereeSprite.destY         = _refereeSprite.y.s.i;
-    _refereeSprite.z.raw         = 0;
+    _refereeSprite.z.s.i         = 0;   /* clr.w — integer half only, as above */
     _refereeSprite.speed         = 0;
     _refereeSprite.playerDownTimer = 0;
     _refereeSprite.frameIndex    = (int16_t)0xFFFF;

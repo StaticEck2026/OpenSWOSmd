@@ -110,6 +110,7 @@ static const uint8_t *s_rec;       /* the record itself, NULL between frames */
 static int       s_firstFrame = 1;
 static int       s_warnedEsc, s_warnedUserKey;
 static int       s_benchHeld[2];   /* previous frame's recorded bench button */
+static int       s_prevUserKey;    /* previous frame's recorded userKey */
 
 int _replayFixedRandom = -1;
 
@@ -186,6 +187,13 @@ extern uint8_t   _playerPositionsArray[32];
 
 /* What MainKeysCheck's bench hotkey sets — see injectInput. */
 extern uint16_t  _bench1Called, _bench2Called;
+
+/* The keyboard path a recorded `userKey` is pushed through: GetKey() pops a
+ * SCANCODE off this buffer and maps it with keycodeLut before MainKeysCheck
+ * ever sees it, so the rig reverses the LUT rather than faking the result. */
+extern volatile uint16_t _keyCount;
+extern volatile uint8_t  _keyBuffer[];
+extern uint8_t           _keycodeLut[128];
 
 /* The 33 sprites the recording carries, in ITS order. Indices 0..29 happen
  * to coincide with our own allSpritesArray (sprite_data.c), which is a
@@ -431,6 +439,45 @@ static void buildRegistry(void)
     regAdd("fire_blocked",  RT_S16, &_fireBlocked);
     regAdd("stats_timer",   RT_S16, &_statsTimer);
     regAdd("result_timer",  RT_S16, &_resultTimer);
+
+    /* The substitutes-menu state machine (BenchDataV1, v1.3+ recordings). Our
+     * names differ from swos-port's; the schema's are its. */
+    {
+        extern uint16_t _subsPl1TapCount, _subsPl2TapCount;
+        extern uint16_t _subsPrevPl1Direction, _subsPrevPl2Direction;
+        extern uint16_t _pl1BenchBlockWhileHoldingDirection;
+        extern uint16_t _pl2BenchBlockWhileHoldingDirection;
+        extern uint16_t _subsDirection, _subsState, _goToSubsTimer;
+        extern uint16_t _subsBlockDirections, _subsFireTimer, _subsBlockFire;
+        extern uint16_t _subsPrevDirection, _subsMovementDelayTimer;
+        extern uint16_t _subsTrainingTopTeam, _subsTeamsSwapped;
+        extern uint16_t _benchPickTeamCounter;
+        extern uint16_t _plToEnterGameIndex, _plToBeSubstitutedPos;
+        extern uint16_t _plToBeSubstitutedOrd, _selectedFormationEntry;
+        regAdd("bench.pl1_tap_count",        RT_S16, &_subsPl1TapCount);
+        regAdd("bench.pl2_tap_count",        RT_S16, &_subsPl2TapCount);
+        regAdd("bench.pl1_prev_direction",   RT_S16, &_subsPrevPl1Direction);
+        regAdd("bench.pl2_prev_direction",   RT_S16, &_subsPrevPl2Direction);
+        regAdd("bench.pl1_block_hold",       RT_S16, &_pl1BenchBlockWhileHoldingDirection);
+        regAdd("bench.pl2_block_hold",       RT_S16, &_pl2BenchBlockWhileHoldingDirection);
+        regAdd("bench.controls",             RT_S16, &_subsDirection);
+        regAdd("bench.state",                RT_S16, &_subsState);
+        regAdd("bench.go_to_bench_timer",    RT_S16, &_goToSubsTimer);
+        regAdd("bench.bench1_called",        RT_S16, &_bench1Called);
+        regAdd("bench.bench2_called",        RT_S16, &_bench2Called);
+        regAdd("bench.block_directions",     RT_S16, &_subsBlockDirections);
+        regAdd("bench.fire_timer",           RT_S16, &_subsFireTimer);
+        regAdd("bench.block_fire",           RT_S16, &_subsBlockFire);
+        regAdd("bench.last_direction",       RT_S16, &_subsPrevDirection);
+        regAdd("bench.movement_delay_timer", RT_S16, &_subsMovementDelayTimer);
+        regAdd("bench.training_top_team",    RT_S16, &_subsTrainingTopTeam);
+        regAdd("bench.teams_swapped",        RT_S16, &_subsTeamsSwapped);
+        regAdd("bench.alternate_teams_timer", RT_S16, &_benchPickTeamCounter);
+        regAdd("bench.player_to_enter",      RT_S16, &_plToEnterGameIndex);
+        regAdd("bench.player_to_sub_pos",    RT_S16, &_plToBeSubstitutedPos);
+        regAdd("bench.player_to_sub_ord",    RT_S16, &_plToBeSubstitutedOrd);
+        regAdd("bench.selected_formation",   RT_S16, &_selectedFormationEntry);
+    }
 
     regTeamGame("top_game",    &_topTeamInGame);
     regTeamGame("bottom_game", &_bottomTeamInGame);
@@ -1242,11 +1289,29 @@ static void injectInput(void)
         s_warnedEsc = 1;
         fprintf(stderr, "[replay] frame %u presses ESC — not injected yet\n", s_frame);
     }
-    if (key && !s_warnedUserKey) {
-        s_warnedUserKey = 1;
-        fprintf(stderr, "[replay] frame %u presses '%c' — not injected yet\n",
-                s_frame, key);
+    /* The recorded `userKey` ('S', the stats screen, is the only one the
+     * corpus uses) goes in as a real keypress: find the scancode keycodeLut
+     * maps to it and push that, so GetKey/MainKeysCheck run their own guards. */
+    if (key && key != s_prevUserKey) {
+        int sc, pushed = 0;
+        for (sc = 0; sc < 128; sc++) {
+            if (_keycodeLut[sc] != (uint8_t)key) continue;
+            if (_keyCount < 10) {
+                _keyBuffer[_keyCount] = (uint8_t)sc;
+                _keyCount++;
+                pushed = 1;
+                fprintf(stderr, "[replay] frame %u: key '%c' (scancode 0x%02X)\n",
+                        s_frame, key, sc);
+            }
+            break;
+        }
+        if (!pushed && !s_warnedUserKey) {
+            s_warnedUserKey = 1;
+            fprintf(stderr, "[replay] frame %u presses '%c' — no scancode for it, "
+                            "not injected\n", s_frame, key);
+        }
     }
+    s_prevUserKey = key;
 }
 
 void ReplayTest_FrameStart(void)

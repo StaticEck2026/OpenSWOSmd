@@ -353,6 +353,58 @@ def build_schema(major, minor, level):
     out.append(_f("game_state_pl",  "u8",  OFF_CAMERA + 17, 0))
 
     ver = (major, minor)
+    if ver >= (1, 3) and want >= 1:
+        # ---- BenchDataV1, the substitutes-menu state (71 bytes at 7404) ----
+        # swos-port's own snapshot of the bench state machine. Wiring it in is
+        # what makes the menu comparable at all: the two substitution bugs in
+        # docs/TESTS.md were found by reading these bytes in Python first.
+        # `int` is 32-bit and the struct is packed, hence the odd offsets.
+        b = 7404
+        for n, t, o, c in (
+            ("pl1_tap_count",        "u8",  0,  "eq"),
+            ("pl2_tap_count",        "u8",  1,  "eq"),
+            ("pl1_prev_direction",   "s8",  2,  "eq"),
+            ("pl2_prev_direction",   "s8",  3,  "eq"),
+            ("pl1_block_hold",       "u8",  4,  "eq"),
+            ("pl2_block_hold",       "u8",  5,  "eq"),
+            # swos-port recomputes its own `m_controls` every frame; SWOS's
+            # subsDirection is only written on frames where the sampled team
+            # has a human, so ours is legitimately stale in between.
+            ("controls",             "s8",  6,  "na"),
+            # The two team pointers are recorded as small ids whose encoding we
+            # have not pinned; the same information is in benchTeam anyway.
+            ("team_data",            "s8",  7,  "na"),
+            ("team_game",            "s8",  8,  "na"),
+            ("state",                "u8",  9,  "eq"),
+            ("go_to_bench_timer",    "s32", 10, "eq"),
+            ("bench1_called",        "u8",  14, "eq"),
+            ("bench2_called",        "u8",  15, "eq"),
+            ("block_directions",     "u8",  16, "eq"),
+            ("fire_timer",           "s32", 17, "eq"),
+            ("block_fire",           "u8",  21, "eq"),
+            # Same: m_lastDirection is swos-port's live copy, updated every
+            # frame in its filterControls; SWOS writes subsPrevDirection only
+            # while the menu is up (and starts it at 0, not -1).
+            ("last_direction",       "s8",  22, "na"),
+            ("movement_delay_timer", "s32", 23, "eq"),
+            ("training_top_team",    "u8",  27, "eq"),
+            ("teams_swapped",        "u8",  28, "eq"),
+            # The DOS-only team-pick counter — the Amiga tests frameCount
+            # instead, so this is only meaningful with DOS gameplay on. See
+            # BenchCheckControls in src/bench_subs.c.
+            ("alternate_teams_timer", "s32", 29, "eq"),
+            ("arrow_player_index",   "s8",  33, "na"),
+            ("selected_menu_player", "s8",  34, "na"),
+            ("player_to_enter",      "s8",  35, "eq"),
+            ("player_to_sub_pos",    "s8",  36, "eq"),
+            ("player_to_sub_ord",    "s8",  37, "eq"),
+            ("selected_formation",   "s8",  38, "eq"),
+        ):
+            out.append(_f("bench.%s" % n, t, b + o, 1, c))
+        # shirtNumberTable[2 * 16] — a display cache we do not keep.
+        for i in range(32):
+            out.append(_f("bench.shirt_numbers[%d]" % i, "u8", b + 39 + i, 1, "na"))
+
     if ver >= (1, 4):
         # after FrameV1p0 (7404) + BenchDataV1 (71)
         b = 7404 + 71

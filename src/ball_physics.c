@@ -1006,7 +1006,17 @@ after_goalpost:
                 d3 += 5;
             }
             if (i == 0)
-                yRefLimit = _ballYQuadrantLimits[0]; /* fallback */
+                /* The asm's `sub.w -4(a1),d2` with a1 one past the table base
+                 * reads the word BEFORE ballYQuadrantLimits — which is the last
+                 * entry of ballXQuadrantLimits, $0081 = 129: not an X limit at
+                 * all but this loop's missing leading bound. (The X loop's own
+                 * leading bound sits in pad_111202 the same way.) The DOS build
+                 * spells the layout out: `ballYQuadrantLimits dw 129, 220, 312,
+                 * ...` with the loop starting at +2. This used to fall back to
+                 * ballYQuadrantLimits[0] = 220, which put every outfield
+                 * player's target 30 pixels too far up the pitch whenever the
+                 * ball was in the topmost Y band. */
+                yRefLimit = _ballXQuadrantLimits[4]; /* 0x0081 = 129 */
             else if (i == 6)
                 yRefLimit = _ballYQuadrantLimits[5]; /* lea 2(a1),a1 then -4(a1) */
             else

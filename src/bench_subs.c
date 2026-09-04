@@ -36,6 +36,10 @@
 /* ---- external asm globals ---- */
 extern uint16_t _inSubstitutesMenu;
 extern int16_t  _gsSubsMovementDelay;  /* Amiga 2 / DOS 4 — dos_gameplay.c */
+extern int      _gDosGameplay;
+/* DOS's benchPickTeamCounter — see the team alternation in BenchCheckControls.
+ * The Amiga has no such variable; it tests frameCount instead. */
+uint16_t _benchPickTeamCounter;
 extern uintptr_t _benchTeam;          /* Competition*-shaped pointer; retyped uintptr_t for 64-bit. See project_uint32_pointer_storage_trap.md. */
 extern uintptr_t _benchTeamGame;      /* TeamGame*-shaped pointer; retyped uintptr_t for 64-bit. */
 extern uint16_t _subsTeamsSwapped;
@@ -319,11 +323,32 @@ BenchCheckControls(void)
     if (_bench2Called != 0)
         goto activate_bench;
 
-    /* alternate between top/bottom team each frame */
-    if (_frameCount & 1) {
-        a6 = &_topTeamData;
-    } else {
-        a6 = &_bottomTeamData;
+    /* Alternate between the two teams so each player's double-tap is sampled
+     * every other frame — but the two releases count differently, and it is a
+     * DIFFERENT VARIABLE, not a different constant:
+     *
+     *   Amiga  btst #0,(frameCount+1)      SWOS2.s:18581 — the global frame
+     *                                      counter, which advances EVERY frame
+     *   DOS    add benchPickTeamCounter,1  swos.asm:@@game_stopped_and_bench_
+     *          test byte ptr ...,1         possible — a dedicated counter that
+     *                                      advances only when this check runs
+     *
+     * They are not the same phase: everything above returns early during play
+     * (gameStatePl == ST_GAME_IN_PROGRESS, the substitution timers, statsTimer,
+     * ...), so the DOS counter stands still for most of a match while
+     * frameCount keeps going. Which team gets sampled on a given stoppage frame
+     * therefore differs, and with it whose taps are counted — the replay rig
+     * caught us opening the substitutes menu on a double-tap the reference
+     * never saw (docs/TESTS.md). */
+    {
+        uint16_t pick;
+        if (_gDosGameplay) {
+            _benchPickTeamCounter++;
+            pick = _benchPickTeamCounter;
+        } else {
+            pick = _frameCount;
+        }
+        a6 = (pick & 1) ? &_topTeamData : &_bottomTeamData;
     }
 
     /* check if team has a human player */
@@ -533,10 +558,16 @@ menu_active_phase:
             return;
         if ((int16_t)_inSubstitutesMenu < 30)
             return;
-        if (_substituteInProgress != 0) {
-            if ((int16_t)_substituteInProgress < 0) {
-                substitutePlayer();
-            }
+        /* `tst.w (substituteInProgress); bmi SubstitutePlayer` (SWOS2.s:18623,
+         * and `or ax,ax; js` in the DOS asm) — the branch is taken only when
+         * the flag is NEGATIVE. A POSITIVE value (1, set the frame the
+         * substitution is confirmed) falls THROUGH to the direction and fire
+         * handling below. This used to return for any non-zero value, which
+         * froze subsFireTimer for the whole substitution animation — the replay
+         * rig caught it as a fire timer stuck at 1 where the reference counts
+         * on (docs/TESTS.md). */
+        if ((int16_t)_substituteInProgress < 0) {
+            substitutePlayer();
             return;
         }
 

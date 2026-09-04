@@ -11,9 +11,9 @@ point; an Amiga corpus follows once we can harvest it (see
 [Harvesting Amiga data](#harvesting-amiga-data)).
 
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
-recordings run, reaching frame 795-1655 before the first divergence at level
+recordings run, reaching frame 795-2158 before the first divergence at level
 `info` (section 5) — except `zkz-10174427`, whose frame 0 is one byte of
-formation coverage rather than a porting defect. Eleven real defects found and
+formation coverage rather than a porting defect. Fifteen real defects found and
 fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -348,8 +348,8 @@ scripts/replay_matrix.sh > docs/TESTS_RESULTS.md      # a few minutes
 scripts/replay_matrix.sh --levels info --tsv          # quick, diffable
 ```
 
-The shape of the results, as of the run in that file: **714-1694** frames at
-`scalars`, **795-1655** at `info`, **689-1592** at `sprites`, and **401 of 416**
+The shape of the results, as of the run in that file: **714-2466** frames at
+`scalars`, **795-2158** at `info`, **795-2158** at `sprites`, and **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). `zkz-10174427` is left out
 of those ranges: it stops at frame 0 on a skill nibble, for a reason that is
@@ -613,8 +613,8 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Nine real defects so far, all fixed — plus the two in "The `onScreen` ceiling"
-below, which that measurement turned up on its own:
+Thirteen real defects so far, all fixed — plus the two in "The `onScreen`
+ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
    `zkz-12065730` reaches game-minute 1 at frame 702 and minute 2 at frame 842
@@ -670,6 +670,21 @@ below, which that measurement turned up on its own:
 9. **DOS mode latched the AMIGA pitch ball-speed influence for the whole
    match** — an ordering bug in our own `ApplyGameStyle`. See "The constant
    that was right and the value that wasn't" below.
+10. **Every outfield player stood 30 pixels too far up the pitch whenever the
+    ball was in the top Y band** — the ball-quadrant loop's leading bound was
+    read from the wrong table. See "Two tables that are really one" below.
+11. **Placing the ball zeroed all 32 bits of its Z**, where the asm clears only
+    the integer half (`clr.w`, against `clr.l` for deltaZ one line later). Every
+    set-piece placement started from a different sub-pixel height. Same
+    half-write in `RemoveReferee`.
+12. **`substituteInProgress` was treated as a boolean where the asm branches on
+    its SIGN** (`tst.w` / `bmi`). A positive value falls through to the
+    direction and fire handling; we returned, freezing the bench fire timer for
+    the whole substitution animation.
+13. **The bench's team-pick alternation is a different VARIABLE on DOS**, not a
+    different constant — `benchPickTeamCounter`, which advances only when the
+    bench check runs, against the Amiga's global `frameCount`. Both are in
+    `BenchCheckControls`.
 
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
@@ -805,6 +820,49 @@ which makes it the deepest recording in the corpus. Nothing else moved, and
 that is the tell: the pitch is chosen randomly per match, and the Amiga and DOS
 influence tables differ only in their first three entries — the other
 recordings rolled a pitch where the two agree.
+
+### Two tables that are really one
+
+`zkz-12065730` stopped at frame 689 on `sprite[11].dest_y`, and the report made
+the shape obvious immediately: **every** player of **both** teams had a `dest_y`
+about 30 lower than the recording — 244/214, 203/174, 323/293, 283/253,
+242/213. A systematic offset, not a wrong player.
+
+`SetPlayerWithNoBallDestination` builds a target as
+`_playerYQuadrantOffset + _playerYQuadrantCoordinates[yIdx]`, and the offset
+comes from the ball's Y band:
+
+```c
+_playerYQuadrantOffset = (qy - yRefLimit - 45) * 5 / 15;
+```
+
+`yRefLimit` is the *previous* band's bound — and for band 0 there is no previous
+entry, so the asm reads the word before the table:
+
+```
+lea     (ballYQuadrantLimits).l,a1
+cmp.w   (a1)+,d2            ; band 0 taken -> a1 = base+2
+...
+sub.w   -4(a1),d2           ; base-2, i.e. the word BEFORE the table
+```
+
+The word before `ballYQuadrantLimits` is the last entry of
+`ballXQuadrantLimits`, `$0081` — which is **129**, not an X limit at all but
+this loop's missing leading bound. (The X loop's own leading bound sits in
+`pad_111202` immediately before *its* table, the same trick.) The DOS build
+spells the layout out with no adjacency at all —
+`ballYQuadrantLimits dw 129, 220, 312, …` with the loop starting at `+2` — which
+is how the reading was confirmed.
+
+Our port had fallen back to `ballYQuadrantLimits[0]` = 220. With the ball at
+y 219 that gives an offset of **-15** where the reference computes **+15**: the
+whole formation, both teams, thirty pixels too far toward the top goal for as
+long as the ball stayed in that band. `zkz-12065730` went 689 → 1073, and three
+other recordings moved with it — the ones that had a ball in band 0 at all.
+
+This is the "adjacent-globals" pattern CLAUDE.md warns about, seen from the
+other side: not a read that runs off the end of a variable, but a read that runs
+off the *front* of one.
 
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
@@ -967,23 +1025,27 @@ Ranked by how early they stop a recording. See
    measurement leaves one open item of its own: our **Sweep** row 1/row 2 at
    ball position 15 is contradicted by the corpus, and by the pristine Amiga
    and DOS data both.
-4. **Player selection and the pass target**, at 795-1655:
+4. **Player selection and the pass target**, at 795-1335:
    `controlled_player`, `pass_to_player_ptr`, `passing_ball`,
    `pl_not_far_from_ball`, `controlled_pl_direction`. Both selectors are
    `onScreen`-gated, so some of this may still be view-related — but the window
    now matches the recording's, so it is worth reading
    `UpdateControlledPlayer` / `UpdatePlayerBeingPassedTo` against the asm.
-5. **Sprite state**, at 689-1592 (setting aside `zkz-10174427`, whose frame-0
+5. **Sprite state**, at 795-2158 (setting aside `zkz-10174427`, whose frame-0
    stop has a known cause): `dest_y`, `x`, `z`, `player_down_timer`,
    `frame_delay`. These are downstream of (4) in every case so far, so start
    there — `sprites` is the earliest stop (or tied with it) on all twelve
    recordings, so it is where the corpus still has something to say. The
-   earliest of them is now `zkz-12065730` at 689 on `sprite[11].dest_y`.
-6. **Decode `BenchDataV1` in the schema.** The v1.3+ frame carries 30 named
-   fields of substitutes-menu state (tap counts, block flags, timers, cursor
-   indices, the shirt-number table) and the rig decodes none of them. Reading
-   them by hand in Python is what found both substitution bugs above; wiring
-   them in would have found them in one run, and three recordings carry them.
+   earliest is now `playa-10090613` at 795 on `bottom_info.pass_to_player_ptr`,
+   which is really (4).
+6. ~~**Decode `BenchDataV1` in the schema**~~ — **done** (section 6b), and it
+   immediately paid: the `substituteInProgress` sign bug above, and a precise
+   new lead. `bench.alternate_teams_timer` drifts by exactly **one** at frame
+   926 of `zkz-11021807` (and 2158 of `zkz-12080203`): somewhere between the
+   bench closing and there, we run the team-pick check on one frame the
+   reference does not. The guard chain matches the DOS asm line for line, so
+   the difference is in when one of those guards is *satisfied*.
+   `bench.pl2_prev_direction` at 1251 of `zkz-12065730` is the same family.
 7. The single **v1.2** recording still resolves to no (header, frame) pair.
 
 ---
@@ -1040,12 +1102,24 @@ never compared (we have no such field). The edge matters:
 inside the menu the same flag is what *leaves* it, so re-asserting a held
 button would open and close the bench on consecutive frames.
 
-Still not injected: the recorded **ESC** bit and the v1.4 `userKey`. Neither
-blocks anything today — every ESC in the corpus is on the recording's last
-frame (it is how the match ends) and both `userKey` presses ('S', the stats
-screen) are well past where their recordings currently stop. The rig warns once
-when a recording uses one, so a divergence after that point is attributed to the
-missing input rather than to a port bug.
+The v1.4 **`userKey`** goes in as a real keypress: the rig reverses `keycodeLut`
+to find the scancode that maps to the recorded ASCII and pushes THAT into
+`keyBuffer`, so `GetKey` and `MainKeysCheck` run their own guards rather than
+the rig faking their result. Only 'S' (the stats screen) appears in the corpus.
+
+Still not injected: the recorded **ESC** bit. It blocks nothing — every ESC in
+the corpus is on the recording's last frame, since it is how the match ends. The
+rig warns once when a recording uses one.
+
+**`BenchDataV1` is decoded** for v1.3+ recordings — 26 named fields of
+substitutes-menu state at level `teams`, which is how the last two bench bugs
+were found. Five are muted as recorder conventions rather than state we have:
+the two team pointers and the two arrow/menu indices are swos-port's own
+encodings, `shirtNumberTable` is a display cache we do not keep, and `controls`
+/ `last_direction` are its live per-frame copies where SWOS keeps a variable
+that is only written on the frames it samples. The other twenty-one are real,
+and one of them — `alternate_teams_timer` — is what confirmed the DOS
+team-pick counter is right for 926 frames before it drifts by one.
 
 `checkPlayerValues` is the one comparison that is not per-frame. It runs
 between `installTeam` and `InitTeams`, while the recorded team records are
