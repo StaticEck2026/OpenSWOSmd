@@ -189,6 +189,8 @@ they were found.
 | 43 | The goalpost deflection has THREE arms and the port had two: a weak-Y hit on the side of a post adds the tick step to `destY`, and was falling into the crossbar bounce instead | shared tail split in two |
 | 44 | The penalty-shoot-out gate that frees a goalkeeper to the speed tail is 50 on Amiga and 55 on DOS — the sibling of the 100/110 in the same routine | timing constant |
 | 45 | The DOS build ends a shoot-out with `PlayersLeavingPitch` and names no `winningTeamPtr`; the Amiga sets one and calls `EndOfGame`, so DOS never enters ST_GAME_ENDED at all | DOS-vs-Amiga |
+| 46 | `StopPlayers` freezes players in PL_NORMAL, PL_HAPPY or PL_SAD on the Amiga and only PL_NORMAL on DOS — at the whistle the Amiga plants the celebrating players and DOS lets them walk on | DOS-vs-Amiga |
+| 47 | The DOS `secondYellowTable` is 27 bytes with NO terminator and runs off its end into `unusedPalTable01`; index 29 lands on 153, which as a signed byte is the negative sentinel, so a DOS second yellow ends 120 frames early | recompilation artefact |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -197,8 +199,8 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Twenty-four of the forty-five are a **DOS-vs-Amiga difference** — mostly timing
-constants, one a whole data set (30), and four (28, 29, 31, 40) artefacts of the
+Twenty-six of the forty-seven are a **DOS-vs-Amiga difference** — mostly timing
+constants, one a whole data set (30), and five (28, 29, 31, 40, 47) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
 this port does on the Amiga. The other twenty-one are porting defects that would be
@@ -246,6 +248,48 @@ one sprite-level stop, and four single frames:
 
 Only the middle row is a candidate defect in this port. The other two are
 things the recording does not record.
+
+### ! The bench frame is ESTIMATED, not recovered
+
+The one place the rig guesses, and it is worth reading before trusting any
+result that turns on a substitution.
+
+The recording under-determines the bench call by exactly one frame. One key
+reaches the game down two independent latches: the recording carries the
+POLLED BITMASK (`p1_controls` bit 6 -> `pl1SecondaryFire` ->
+`TeamGeneralInfo.secondaryFire`, written at GameLoop line 703) while the bench
+opens off the BUFFERED SCANCODE (`bench1Called`, set only in `MainKeysCheck`
+at line 666). A scancode can arrive a frame after the bitmask sees the key
+held, and nothing in the record times that queue.
+
+The corpus has three presses and neither placement is right for all of them —
+`zkz-11215003` f117 same-frame, `zkz-11215003` f11479 and `playa-10090613`
+f11222 one frame later. The rig defers unless `gameStatePl` is 0, which is
+right on all three and is **fitted to those three, not derived**. Every
+deferral says ESTIMATED in the log, and `src/replay_test.c` carries the whole
+argument. A bench-frame match is evidence of nothing.
+
+What would make it a recovered fact is a recording that carries `bench1Called`
+itself — which the Amiga dumper (docs/TESTS.md section 8) would, being our own
+build. It was worth 11% of this corpus, which is the strongest argument for
+building it, quite apart from the `onScreen` ceiling below.
+
+### The open lead
+
+`zkz-10174427` at 26448 of 26624 is the last stop that is not a terminal
+frame, and it is the real-time tick again rather than a defect. `MarkPlayer`
+blinks the player-mark on `currentGameTick & 0x10`, and the recording's
+`sprite[28].image_index` reads that bit back once a frame. Its windows sit on
+the 32-frame grid for most of the match and then move off it by two at f26450
+— the reference's tick has gained two counts somewhere the frame count did
+not. See "The tick is a real-time counter".
+
+One earlier reading of that field needs care, and it is a good trap to know:
+the blink also INVERTS partway through the match, which looks exactly like a
+16-count drift and is not. `MarkPlayer` picks the team by the tick bit and
+then shows the mark only if THAT team has a marked player, so when the marked
+player moves from one side to the other the pattern flips with the tick
+untouched.
 
 ### ! The bench frame is ESTIMATED, not recovered
 

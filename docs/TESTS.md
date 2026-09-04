@@ -2367,6 +2367,57 @@ because a "no winner is recorded" difference sounds like one: it is what
 `UpdatePlayers`' post-match gate reads to choose between the winning and
 losing reaction animations (SWOS2.s:31291).
 
+### A table that runs off its end — in the DOS binary
+
+`zkz-10174427` stopped at 21927 on `sprite[29].image_index`, the booked
+player's card-or-number sprite: the reference shows an image and we show
+nothing, and we keep showing nothing for as long as the rig looks.
+
+`UpdateBookedPlayerNumberSprite` indexes a card table by `refTimer >> 3`, and
+the tables are three of the shortest data in the game. Two of them are
+identical in both releases — 30 bytes with a -1 at index 29. The third is not:
+
+```
+    secondYellowTable:                              ; SWOS2.s:16637 — 46 bytes
+            dc.b 0,9,0,9,0,9,0,9,0,9,0,9,0,0,0,0
+            dc.b 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+            dc.b 0,0,0,0,0,0,0,0,0,0,0,0,-1,0        ; terminator at index 44
+
+    secondYellowTable db 0,9,0,9,0,9,0,9,0,9,0,9,0,0,0,0,0,0,0,0,0,0,0
+    db 0, 0, 0, 0                                   ; swos.asm:245189 — 27 bytes
+    unusedPalTable01 db 96, 3, 153, 9, 255, 15, ...  ; and this is what follows
+```
+
+**The DOS table is 27 bytes with no terminator at all**, so index 27 reads
+into the palette table the assembler placed behind it. The recording dates it
+to the frame. The booking commits at f21711, so `refTimer` is `frame - 21711`:
+
+| index | refTimer | value | what the sprite does |
+|---|---|---|---|
+| 0..11 | 0..95 | 0/9 | the number blinks, 8 frames on, 8 off |
+| 12..26 | 96..215 | zeros | hidden |
+| **27** | 216..223 | **96** | SHOWN — past the end of the table |
+| **28** | 224..231 | **3** | SHOWN |
+| **29** | 232 | **153** | as a SIGNED byte, -103 — the negative sentinel |
+
+and the recording turns that sprite on at f21927 and off at f21943, which is
+refTimer 216 and 232 exactly. The last row is the part that matters beyond the
+sprite: a negative entry is what makes the referee leave and the player be
+sent off, so **a DOS second yellow ends 120 frames sooner than an Amiga one.**
+
+Reproduced by giving the DOS path its own array — the 27 real bytes followed
+by the palette bytes that actually sit behind them, read as signed. **21927 →
+26448 of 26624.**
+
+> This document has a whole section on reading past the end of a label into
+> the next global, because it is how the Amiga original packs its data and how
+> this port keeps getting caught. It is worth noting that the same bug exists
+> in the DOS build, that nobody noticed for thirty years because the byte it
+> lands on happens to be a palette entry, and that a rig comparing two
+> implementations finds it in an afternoon while reading either listing alone
+> would not — the Amiga table is correct, and the DOS table looks fine until
+> you count it.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
