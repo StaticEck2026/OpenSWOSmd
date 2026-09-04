@@ -2199,6 +2199,62 @@ recording, and it also carried `zkz-10140228` from 29984 to 32545.
 > not duplicates: they differ only in what happens when the test FAILS, which
 > is the arm with no code of its own in the listing, just a fall-through.
 
+### The tick is a real-time counter, and the recording does not carry it
+
+Two of the last stops are the same thing, and it is not a defect.
+
+`zkz-10173518` stops at 25490 on `sprite[28]` — the player-mark, the little
+blob over the marked player. `MarkPlayer` blinks it between the two teams on
+one bit of the game tick:
+
+```
+            lea     (topTeamData).l,a1              ; SWOS2.s:16699
+            btst    #4,(currentGameTick+1).l
+            beq.s   loc_10B130      ; don't blink for both teams at the same time
+            lea     (bottomTeamData).l,a1
+```
+
+and the DOS build is identical (swos.asm:99390). Only one team here has a
+marked player, so the recording's `sprite[28].image_index` is a **direct
+readout of `currentGameTick & 0x10`, once a frame, for the whole match**.
+Reading it back is unambiguous:
+
+```
+    frames 25440..25503, shown = X
+    XXXXXXXXXXXXXXXX................XXXXXXXXXXXXXXXX..XXXXXXXXXXXXXX
+                                                    ^^
+```
+
+Sixteen on, sixteen off, sixteen on — and then a gap of **two** where there
+should be sixteen. The reference's tick gained 14 counts in a single frame.
+Frame 25489 is where `game_state` goes 24 → 26, which is `GameOver`, and the
+first thing `GameOver` does is `FadeOutToBlack`. That is a wall-clock wait,
+the DOS `TimerProc` keeps counting through it, and the game loop does not.
+
+`zkz-10174427` at 21927 is the same shape on `sprite[29]`, the booked-player
+card: a 16-frame blink window that starts 8 frames off where the frame count
+puts it.
+
+**The rig advances `currentGameTick` exactly once per frame, by construction**
+— that is one of the four determinism pins (section 4), and without it a
+replay does not reproduce at all. So a tick that drifts against the frame
+count in the reference cannot be reproduced, and the recording carries no way
+to recover it: the `.RGD` record is a fixed set of structs (the schema maps
+every byte of it) and neither `currentGameTick` nor `lastFrameTicks` is among
+them.
+
+Two things worth being precise about:
+
+- **This is not the stats-overlay finding above.** That one was a real code
+  difference — the Amiga ISR gates the tick on `showingUserStats` and the DOS
+  one does not — and it cost exactly one count, at the frame the overlay went
+  up. This costs fourteen, at a fade, and no code change can produce it.
+- **It is why the drift stayed invisible so long.** The game timers step by
+  `lastFrameTicks`, and at both of these stops the clock is stopped — after
+  the final whistle in one, at a free kick in the other. What the drift
+  reaches is the `tick & mask` decisions, and the two it reached here are the
+  two blinking HUD sprites.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -2341,6 +2397,14 @@ Not bugs; consequences of comparing two different builds.
   frame runs and cannot reproduce it. Costs the last frame of that recording
   and nothing else, since it can only happen on a press the reference then acts
   on by leaving the match.
+- **A tick that drifts in real time.** `currentGameTick` is advanced by the
+  DOS timer interrupt, not by the game loop, so any wall-clock wait — a fade,
+  a load — moves it without moving the frame count. The rig pins it to one per
+  frame because determinism requires that, and the recording carries neither
+  the tick nor `lastFrameTicks`. Reaches the `tick & mask` decisions, and at
+  both stops it reached only a blinking HUD sprite. See "The tick is a
+  real-time counter". Costs `zkz-10173518` at 25490 and `zkz-10174427` at
+  21927.
 - **The bench call's frame.** Two of the corpus's three bench presses are
   acted on one frame after the recorded button rises and one is acted on the
   same frame, with every gate input identical at both — sub-frame key timing

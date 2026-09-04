@@ -187,6 +187,27 @@ knowing by name:
   `bne` points. Factored into a `void` helper it silently becomes "return",
   and the C reads exactly like what it was meant to be.
 
+### Where the corpus stands
+
+Five of the twelve recordings replay COMPLETE at every level, and two more
+stop only on their terminal frame. Of the five stops that remain, **none is
+known to be a defect in this port** — every one is something the recording
+cannot carry:
+
+| stop | what |
+|---|---|
+| `playa-10090613` 11222, `zkz-11215003` 11479 | the bench call's frame — sub-frame key timing |
+| `playa-10095214` 22400, `zkz-12080203` 31634 | a terminal-frame input edge |
+| `zkz-10173518` 25490, `zkz-10174427` 21927 | `currentGameTick` drifting in real time across a fade |
+
+`zkz-10140228` at 32545 is the exception and the one open lead: both
+goalkeepers take the stopped-play speed table five frames before the reference
+does. Everything else in that recording runs to 38395 of 39066.
+
+That is the honest reading of "as accurate as this corpus can measure". It is
+NOT "the port is correct" — see the `onScreen` ceiling in docs/TESTS.md, which
+is why the Amiga dumper is a requirement rather than a nice-to-have.
+
 Five retractions are documented too. Three were data that never executes: a
 "rewritten" DOS forward line, a hybrid tactics table, and a DOS-specific 4-4-2.
 The fourth was about the corpus itself — this document long said the recordings
