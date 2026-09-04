@@ -230,7 +230,39 @@ static void stopPlayers(TeamGeneralInfo *team)
     for (i = 10; i >= 0; i--) {
         Sprite *sprite = spritesTable[i];
         uint8_t state = sprite->playerState;
-        if (state == PL_HAPPY || state == PL_SAD || state == PL_NORMAL) {
+        int stops;
+
+        /* WHICH states get stopped is a real difference between the releases.
+         * The Amiga takes three:
+         *
+         *      cmpi.b  #PL_HAPPY,SPRITE_PLAYERSTATE(a2)     ; SWOS2.s:28265
+         *      beq.s   set_dest_to_current_pos
+         *      cmpi.b  #PL_SAD,SPRITE_PLAYERSTATE(a2)
+         *      beq.s   set_dest_to_current_pos
+         *      cmpi.b  #PL_NORMAL,SPRITE_PLAYERSTATE(a2)
+         *      bne.s   continue_player_loop
+         *
+         * and the DOS build takes one:
+         *
+         *      cmp     [esi+Sprite.playerState], PL_NORMAL  ; swos.asm:104106
+         *      jnz     short @@next
+         *
+         * A recompiler does not delete two compares, and both states exist in
+         * the DOS build — so this is a hand edit. What it means in play: at
+         * the final whistle the Amiga freezes celebrating and dejected players
+         * where they stand, and DOS lets them walk on to wherever they were
+         * already headed.
+         *
+         * Found by the replay rig. zkz-11215003 ends with most of both squads
+         * in PL_HAPPY and PL_SAD, and on the frame `PlayersLeavingPitch` runs
+         * the reference keeps their destinations while we reset every one of
+         * them to the player's own position (docs/TESTS.md). */
+        if (_gDosGameplay)
+            stops = (state == PL_NORMAL);
+        else
+            stops = (state == PL_HAPPY || state == PL_SAD || state == PL_NORMAL);
+
+        if (stops) {
             if ((uint16_t)sprite->sentAway == 0) {
                 sprite->destX = sprite->x.s.i;
                 sprite->destY = sprite->y.s.i;
