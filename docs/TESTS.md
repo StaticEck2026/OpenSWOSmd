@@ -2504,6 +2504,42 @@ render width, so a wide display draws everything it can fit. That is exactly
 what GAMEPLAY.md §25.5 prescribes: cull to a fixed window, let the renderer
 draw wider. At 4:3 and on Amiga the two windows coincide and nothing changes.
 
+**And a third defect fell out of it, months later, that no test could see.**
+`onScreen` was never only a cull — `player_anim.c` gates *animation* on it too,
+while `movePlayer` moves the sprite regardless. So the moment "drawn" and
+"on screen" stopped meaning the same thing, every sprite in the margin between
+x=336 and `_screen_width` was drawn, moved, and never advanced a frame. **It
+slid.** Not subtly: replaying `zkz-11021807` at 484x272 and counting drawn
+sprites whose animation is skipped gives **16,411 of 66,491 — 24.7%**. A
+tester reported it as "sprites sliding backwards" the day the first drop went
+out.
+
+The rig could not have caught it. `main.c` pins a `--replay-test` run to
+`SCREEN_WIDTH x SCREEN_HEIGHT`, so the corpus runs at the one width where the
+two culls coincide exactly — 250,865 frames at 100%, all of them blind to it.
+Nor is that the only pin: the rig also forces `_gDosGameplay = 1`, in `main.c`
+*and* again in `replay_test.c`, so **nothing in this document is evidence about
+Amiga mode**, which is what a tester actually runs. Both pins are worth an
+option; until then, read every result in this file as "DOS gameplay, 336x272".
+
+The fix (`310c1a6`) gives animation its own per-frame visibility set in
+`sprites.c` — `Sprite` has a hard size assert (110 Amiga / 118 SDL) so the flag
+cannot live on the sprite — and only ever *adds* to what `onScreen` allows,
+guarded on `!onScreen && _screen_width > SCREEN_WIDTH`. At the rig's geometry
+the set stays empty and the gate is bit-for-bit what it was. That guard is not
+belt-and-braces: a first attempt computed the test unconditionally, on the
+argument that it must equal `onScreen` under replay. It disagreed on **1 call in
+56,672** and desynced two recordings. When a fix is supposed to be inert in a
+configuration, make it inert by construction rather than by argument.
+
+The general lesson is the one the split itself teaches. `onScreen` carried two
+meanings that were identical in the original — SWOS has one view — and
+separating them fixed the two consumers that were looked at and broke the third
+that was not. **Splitting an overloaded flag is not done when the callers you
+were thinking about are right; it is done when every reader has been
+enumerated.** `grep -n 'onScreen' src/` was four minutes of work and would have
+named `player_anim.c` both times.
+
 ### Known non-comparable state
 
 Not bugs; consequences of comparing two different builds.
@@ -2578,6 +2614,55 @@ Not bugs; consequences of comparing two different builds.
   substitute counts (2 and 5); leaving them 0 benches players 11..15 before the
   first frame. `season` has no safe default, so the rig keeps this build's
   value and says so.
+
+### The audit against SWOS2.s
+
+When the sliding-sprite report came in, the reasonable question was whether the
+47 defects had actually been checked against the listing or whether the corpus
+had been chased into agreeing with itself. So every gameplay change of the run
+was re-read against `data/SWOS2.s` line by line. **All of them hold**, and the
+bug was not among them — it was a rendering change from `22f370a`, months
+earlier, that no gameplay test touches.
+
+Confirmed against the listing:
+
+| change | listing | result |
+|---|---|---|
+| ball-Y fire gates, both halves | `32053-32060` | correct |
+| fire-angle tolerance asymmetry | `32079-32083` | correct — `neg.b`/`bgt` is strict |
+| `random_rotate_when_no_target`, incl. `d0 = -1` and the byte-vs-word add | `32460-32485` | correct |
+| goalie reach, Amiga arm | `26266` | byte-identical to pre-session |
+| `StopPlayers` | `28260-28278` | correct |
+| `PlayersLeavingPitch` | `28007-28021` | correct |
+| leaving-pitch position tables | `42511`, `42558` | correct |
+| second-yellow / card tables | `16629-16640` | correct |
+| goalpost three-arm restructure | `14829-14869` | correct |
+| the dropped `cmpi.w #$FFFF` arm | `32233-32239` | dead after `andi.w #7` — dropping it is right |
+| the `193 <= x < 478` band | `32270-32293` | `bcs` is unsigned lower; 478 falls through to the wings gate, and the C reproduces the fallthrough into `set_zero_turn` |
+| `a2` is the ball, not a local | `29067`, `32103/32111`, `32392` | confirmed twice over |
+
+The last row is worth spelling out, because it is the one that looked weakest.
+`AI_SetControlsDirection` reads `SPRITE_Y(a2)` at `32392` without ever loading
+a2 on that path; the port had declared it `NULL` with a `!= NULL` guard, so the
+gate never fired. The claim that a2 arrives holding the ball rests on three
+independent facts: `UpdatePlayers` does `lea (ballSprite).l,a2` at **29067**
+with the comment *"A2 -> ball sprite, from now on"*, and nothing writes a2
+between there and the `bsr` at 30124; the caller wraps that `bsr` in
+`movem.l a1-a3,-(sp)` precisely because a2 is live and meaningful across it;
+and the only two writes to a2 *inside* the routine (`32103`, `32111`) are each
+immediately followed by `cmpa.l #0,a2 / beq` — the routine NULL-checks a2 where
+it can be NULL and does not at `32392`, which is only consistent with a2 there
+being a guaranteed-non-NULL input.
+
+Two habits came out of the audit rather than out of any single defect. First,
+**an uninitialised-looking register in a disassembly is a parameter you have
+not found yet, and the caller is the tell** — guarding the read with `!= NULL`
+turns a missing parameter into a branch that never runs, which is quieter and
+worse than a crash. Second, **a green corpus is a statement about the
+configuration the corpus runs in**, and this one runs in DOS mode at 336x272.
+It was never evidence about the build a tester installs. The thing that would
+have caught the sliding sprites was not another test — it was launching the
+game once.
 
 ### Open leads
 
