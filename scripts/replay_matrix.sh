@@ -237,17 +237,19 @@ knowing by name:
 
 ### Where the corpus stands
 
-**Eleven of the twelve recordings read 100.0%.** What is left is one recording,
-one sprite-level stop, and four single frames:
+**No stop in this corpus is a defect in this port.** What is left is one
+recording's tail and a handful of single frames, and every one of them is
+something the `.RGD` does not record:
 
 | stop | frames lost | what |
 |---|---:|---|
-| `zkz-10174427` 21927, `zkz-10173518` 25490 | 4793 | `currentGameTick` drifting in real time across a fade — the recording cannot carry it |
-| `zkz-11215003` 27487 | 332 | the walk-off lead below. Sprite level only; that recording is COMPLETE at scalars and teams |
-| four recordings' last frame | 4 | an input edge inside the frame |
+| `zkz-10174427` 26448, `zkz-10173518` 25490 | 272 | `currentGameTick` drifting in real time across a fade |
+| five recordings' last frame | 5 | an input edge inside the frame |
 
-Only the middle row is a candidate defect in this port. The other two are
-things the recording does not record.
+Both classes are written up in docs/TESTS.md ("The tick is a real-time
+counter", and the terminal-frame entry under "Known non-comparable state").
+Neither can be closed against a DOS recording; both would be closed by a
+recording made from THIS build, which is what section 8's Amiga dumper is for.
 
 ### ! The bench frame is ESTIMATED, not recovered
 
