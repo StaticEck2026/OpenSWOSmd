@@ -174,6 +174,8 @@ they were found.
 | 28 | A 32-bit move of "the x" carries x's fraction on m68k and **y's** fraction on x86 — the diving keeper parks the ball with one | recompilation artefact |
 | 29 | `SetStaticHeaderDirection`'s whole tail is missing from the DOS build, so a DOS static header never leaves the *attempt* animation | recompilation artefact |
 | 30 | `--dos-gameplay` swapped the physics and the timers but not the DOS release's re-tuned **formations**, so every destination came off the wrong grid | DOS-vs-Amiga |
+| 31 | The AI's random-rotate **position gate does not exist in the DOS build** — four comparisons the Amiga opens with are simply absent | recompilation artefact |
+| 32 | `a2` is a parameter holding the **ball**, not an uninitialised local; declaring it NULL and guarding the read made the free-kick spin gate never fire | missing parameter |
 
 Plus two the `onScreen` measurement turned up on its own: the sprite cull keyed
 off the live render width, so a widescreen display changed CPU player selection;
@@ -182,11 +184,11 @@ unconditional `onScreen = 1` that undid the cull.
 
 ### What the shape of that list says
 
-Fifteen of the thirty are a **DOS-vs-Amiga difference** — mostly timing
-constants, one of them a whole data set (30), and two (28, 29) artefacts of the
+Sixteen of the thirty-two are a **DOS-vs-Amiga difference** — mostly timing
+constants, one a whole data set (30), and three (28, 29, 31) artefacts of the
 static recompilation itself rather than anything anyone chose. That is what a rig replaying DOS
 recordings against an Amiga port is built to find, and none of them changes what
-this port does on the Amiga. The other fifteen are porting defects that would be
+this port does on the Amiga. The other sixteen are porting defects that would be
 just as wrong on either machine, and they cluster into a handful of shapes worth
 knowing by name:
 
@@ -195,6 +197,9 @@ knowing by name:
 - **Off-by-one bounds** (19, 24, 25) — `bcs`/`bhi`/`blt` are not `<=`.
 - **A flag that is really a value** (12, 15) — a routine whose contract is a
   condition code can still leave a number in the register at the `rts`.
+- **A register that is really a parameter** (32) — nothing assigns it inside the
+  routine because the caller already did; a `movem.l a1-a3,-(sp)` around the
+  `bsr` is the tell.
 - **Reading the listing too literally** (10, 18, 20, 22) — an equate applied to
   a foreign pointer, a table read off its own front, a copy to the wrong symbol,
   and an arm the mask above it had already made unreachable.

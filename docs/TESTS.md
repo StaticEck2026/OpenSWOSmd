@@ -13,9 +13,10 @@ point; an Amiga corpus follows once we can harvest it (see
 Status: **live.** The corpus decodes, converts and replays; all 12 decodable
 recordings run, and **two of them replay end to end at every level** —
 `zkz-11054632`'s 7314 frames and `zkz-11021807`'s 4064, every bound field on
-every frame. The rest reach 1251-11267 at level `info` (section 5).
-`zkz-10174427`'s frame-0 stop is gone too: it was one byte of formation
-coverage, and DOS-gameplay mode now uses the DOS formations. Thirty-two real
+every frame. The rest reach 1251-14519 at level `info` (section 5).
+`zkz-10174427` had stopped at **frame 0** since the rig was built and now runs
+**14519 frames, 54.5% of itself** — the coach-mode recording turned out to be
+the one holding three separate defects nothing else could see. Thirty-two real
 defects found and fixed on the way in, and
 **401 of the 416 player values the recordings carry are reproduced exactly** —
 the strongest single measurement the corpus supports (section 5, "The
@@ -369,15 +370,15 @@ last number is the honest headline: 100% of it is not reachable against a DOS
 corpus (see "Can we claim 100% accurate?"), but it moves for exactly one reason,
 which is a defect being fixed.
 
-The shape of the results, as of the run in that file: **1252-11479** frames at
-`scalars`, **1251-11267** at `info` and at `sprites` — **24.7%** of every
-recorded frame in the corpus at `scalars` and **22.1%** at `sprites` — and
+The shape of the results, as of the run in that file: **1252-14519** frames at
+`scalars`, **1251-14519** at `info` and at `sprites` — **29.9%** of every
+recorded frame in the corpus at `scalars` and **27.4%** at `sprites` — and
 **401 of 416**
 on the per-player match values (the `values` column — a setup-state check that
 runs before frame 0; see "The player-price audit"). Every recording is in those
 ranges now: `zkz-10174427`'s frame-0 stop was the coverage byte that
-`--dos-gameplay` was not switching, and it runs to 1345 with the DOS
-formations in.
+`--dos-gameplay` was not switching, and with the DOS formations plus the two
+AI defects it uncovered it now runs to 14519.
 
 Four things to read into them:
 
@@ -635,7 +636,7 @@ be made — and would mean what it says.
 
 ### What the rig has already found
 
-Thirty real defects so far, all fixed — plus the two in "The `onScreen`
+Thirty-two real defects so far, all fixed — plus the two in "The `onScreen`
 ceiling" below, which that measurement turned up on its own:
 
 1. **`GS_54_49` was 54; it is 70.** The match-clock accumulator reload.
@@ -784,6 +785,16 @@ ceiling" below, which that measurement turned up on its own:
     down for weeks behind a compile-time flag. `TacticsData_SelectRelease` makes
     it runtime. Three recordings roughly quadruple their `sprites` depth. See
     "The formations are part of what `--dos-gameplay` means" below.
+31. **The AI's random-rotate position gate does not exist in the DOS build.**
+    Four comparisons the Amiga opens `random_rotate_when_no_target` with are
+    simply absent from `swos.asm` — 273 and 398 appear nowhere in that listing
+    outside the goalkeeper-area check — so on DOS every player reaches the gate.
+    Gated. `zkz-10174427` 1259 → 13248.
+32. **`a2` is a parameter, not an uninitialised local — it holds the ball.**
+    `AI_SetControlsDirection`'s `ST_FOUL` spin test reads `SPRITE_Y(a2)`, and
+    the caller passes `ballSprite` (SWOS2.s:30123). This port declared it NULL
+    and guarded the read, so the gate never fired. `zkz-10174427` 13248 → 14519.
+    See "The register that arrived holding something" below.
 ### The bench-slide window — the last camera constant that was not `f(view)`
 
 The corpus's two earliest camera stops, `zkz-11021807` at frame 222 and
@@ -1538,6 +1549,72 @@ about where `--dos-gameplay` should take effect rather than about the data.
 > reading the three numbers. A hypothesis that costs one build is not worth
 > reasoning about.
 
+### The register that arrived holding something
+
+`zkz-10174427` — the coach-mode recording, both teams computer-driven — gave up
+two defects in a row once the formation gap let it off frame 0, and both are
+about `AI_SetControlsDirection` reading state this port had not given it.
+
+**The position gate the DOS build does not have.** At frame 1259 the recording
+forces direction 6 and we force nothing (`current_allowed_direction` -1). The
+controlled player is at (361, 757), and the Amiga's `random_rotate_when_no_target`
+opens with four comparisons:
+
+```
+    random_rotate_when_no_target:               ; SWOS2.s:32460
+            move.w  #$FFFF,d0
+            cmpi.w  #273,SPRITE_X(a5)
+            blt.s   random_rotate_or_base_dir_gate
+            cmpi.w  #398,SPRITE_X(a5)
+            bgt.s   random_rotate_or_base_dir_gate
+            cmpi.w  #158,SPRITE_Y(a5)
+            ble.s   loc_118040
+            cmpi.w  #740,SPRITE_Y(a5)
+            bge.s   loc_118040
+```
+
+x is inside the corridor and y is past 740, so the Amiga stores the -1 it
+started with. **The DOS build has no such test.** Its
+`@@randomly_flip_or_continue_direction` (swos.asm:118956) opens straight on
+`mov ax, currentGameTick / and 18h`, and 273 and 398 appear nowhere else in
+that listing except the goalkeeper-area check. Every player reaches the gate
+there, and `tick & 0x18` at 1259 is non-zero, which stores the player's own
+direction — 6. Gated on `_gDosGameplay`; **1259 → 13248**.
+
+That is the third block the recompilation simply does not have, after
+`SetStaticHeaderDirection`'s tail. Worth noticing as a pattern rather than
+three coincidences: when a divergence survives a careful reading of the Amiga
+listing, grep the *constants* in the DOS one — an absent block leaves no
+instruction to misread, only numbers that are not there.
+
+**`a2` is the ball.** The next stop, 13248, was `ai_ball_spin_direction` 0
+recorded against our 1, on the frame a free kick is taken. The spin comes from:
+
+```
+    clr.w   d0
+    cmpi.w  #ST_FOUL,(gameState).l
+    bne.s   compute_turn_from_angle_sign
+    cmpa.l  #topTeamData,a6
+    bne.s   foul_y_gate_bottom_team
+    cmpi.w  #682,SPRITE_Y(a2)
+    bge.w   apply_turn_and_return           ; -> spin stays 0
+```
+
+`a2` is never assigned anywhere on the path that reaches this, so it is an
+*input*: `UpdatePlayers` calls the routine with a2 = `ballSprite`, and wraps
+the call in `movem.l a1-a3,-(sp)` precisely because the routine clobbers those
+(SWOS2.s:30123). This port had declared it `Sprite *a2 = NULL` with a
+`a2 != NULL` guard on the test — so the gate never fired and the spin always
+came from the angle sign instead. The ball was at y=693 against a `>= 682`
+bound. **13248 → 14519.**
+
+> An uninitialised-looking register in a disassembly is a parameter you have not
+> found yet. The tell is the caller: a `movem.l a1-a3,-(sp)` around the `bsr`
+> says those registers mean something on both sides of it. Guarding the read
+> with `!= NULL` turns a missing parameter into a branch that never runs, which
+> is quieter and worse than a crash — the CLAUDE.md rule about NULL guards,
+> arriving from a direction it does not name.
+
 ### The `onScreen` ceiling — how far a DOS corpus can go
 
 `UpdateControlledPlayer` — auto player-selection — **skips players whose
@@ -1716,11 +1793,10 @@ Ranked by how early they stop a recording. See
    header's `top_team_player_no` / `bottom_team_player_no` do not read the way
    their names suggest — `top_info.player_number` / `bottom_info.player_number`
    are the fields that say which side is AI.
-5. **The earliest stops now**, with the formation gap closed and nothing below
-   1251 left: `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, item 6),
-   `zkz-10174427` at 1259, `playa-10144556` at 1696 on
-   `top_info.controlled_player`, `zkz-12080203` at 2449, `zkz-10190651` at
-   2570. Several are **player-selection** fields — who the game is driving
+5. **The earliest stops now**, with nothing below 1251 left:
+   `bench.pl2_prev_direction` at 1251 (`zkz-12065730`, item 6),
+   `playa-10144556` at 1696 on `top_info.controlled_player`, `zkz-12080203` at
+   2449, `zkz-10190651` at 2570. Several are **player-selection** fields — who the game is driving
    rather than a simulation value — which is the `onScreen` ceiling below
    coming into view, and the reason section 7 puts the Amiga dumper first.
 6. **`zkz-12065730` at 1251 — a frame of team-alternation phase.** Diagnosed,

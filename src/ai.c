@@ -13,6 +13,7 @@
  */
 
 #include "ai.h"
+#include "dos_mode.h"       /* _gDosGameplay: the DOS build has no position gate here */
 #include "game_types.h"
 #include "math68k.h"
 
@@ -327,7 +328,15 @@ AI_SetControlsDirection(TeamGeneralInfo *team)
 {
     Sprite *a5;             /* controlled player */
     Sprite *a4;             /* pass-to player */
-    Sprite *a2 = (Sprite *)0; /* opponent's controlled player (set on some paths) */
+    /* a2 arrives holding the BALL. The asm never initialises it — it is the
+     * caller's register, and `UpdatePlayers` calls this with a2 = ballSprite
+     * (SWOS2.s:30123, `movem.l a1-a3,-(sp)` around the bsr because the routine
+     * clobbers them). Only `field84_cooldown_expired_path` overwrites it, with
+     * the opponent's controlled player or pass target. Starting it at NULL and
+     * guarding the reads made the ST_FOUL spin test below silently skip:
+     * zkz-10174427 frame 13248 is a free kick with the ball at y=693, the gate
+     * is `>= 682`, and the recording's spin is 0 where ours was 1. */
+    Sprite *a2 = &_ballSprite;
     Sprite *closestPlayer;
     int16_t d7;             /* controlled player direction, or -1 */
     int32_t d6;             /* squared distance ball to goal center */
@@ -954,7 +963,7 @@ apply_dir_and_normal_fire:
     team->normalFire = 1;
     wVar = 0;
 
-    if (_gameState == ST_FOUL && a2 != (Sprite *)0) {
+    if (_gameState == ST_FOUL) {
         if (team == &_topTeamData) {
             if (a2->y.s.i >= 682)
                 goto apply_turn_and_return;
@@ -1013,13 +1022,25 @@ noone_near:
     /* random_rotate_when_no_target: both teams are computer */
     {
         d0 = -1;
-        /* SWOS2.s:32458-32465. The x tests jump TO the gate, the y tests jump
+        /* SWOS2.s:32462-32469. The x tests jump TO the gate, the y tests jump
          * PAST it: a player inside the central corridor and already deep in
          * either box gets no forced direction at all (-1). Everyone else — off
-         * the corridor, or between the boxes — reaches the gate. Reached only
-         * when BOTH teams are computer-controlled, which in the corpus means
-         * the coach-mode recording zkz-10174427. */
-        if (a5->x.s.i >= 273 && a5->x.s.i <= 398 &&
+         * the corridor, or between the boxes — reaches the gate.
+         *
+         * The DOS build does not have this test. Its
+         * `@@randomly_flip_or_continue_direction` (swos.asm:118956) opens
+         * straight on `mov ax, currentGameTick / and 18h`; all four position
+         * compares are absent, and 273/398 appear nowhere else in that listing
+         * except the goalkeeper-area check. So on DOS every player reaches the
+         * gate. Measured: zkz-10174427 frame 1259 has the controlled player at
+         * (361, 757) — inside the corridor and past 740, so the Amiga leaves
+         * him unforced — and the recording forces direction 6, which is what
+         * the gate's `tick & 0x18` arm gives.
+         *
+         * Reached only when BOTH teams are computer-controlled, which in the
+         * corpus means that one coach-mode recording. */
+        if (!_gDosGameplay &&
+            a5->x.s.i >= 273 && a5->x.s.i <= 398 &&
             (a5->y.s.i <= 158 || a5->y.s.i >= 740)) {
             /* loc_118040: leave the direction unforced */
             team->currentAllowedDirection = d0;
