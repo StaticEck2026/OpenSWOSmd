@@ -145,6 +145,34 @@ void Replay_ResetBallCamera(void) { s_replayBallValid = 0; s_replayCamXSet = 0; 
  *     2020 applies: subtract WIDE_MARGIN = (_screen_width - SCREEN_WIDTH)/2) and
  *     clamp to the pan range.
  * No-op on Amiga / 4:3 (pan range == the classic range, WIDE_MARGIN == 0). */
+/* The replay camera is computed in RENDER space — `ballX - _screen_width/2`,
+ * clamped to `0x2A0 - _screen_width`, with `s_replayShiftX` re-anchoring the
+ * recorded sprites onto it. All of that tuning is what makes a recording play
+ * back correctly at any resolution, and it stays exactly as it was.
+ *
+ * What changed underneath it (97dd23a) is that `_cameraX` is now the
+ * SIMULATION camera and the renderer derives its own origin,
+ * `Render_CameraX() = clamp(_cameraX - WIDE_MARGIN, 0, 0x2A0 - _screen_width)`.
+ * Handing a render-space value straight to the camera therefore had the margin
+ * taken off a second time, and the whole scene — goal overlay included — drew
+ * WIDE_MARGIN too far left in attract mode and in any widescreen HIL playback.
+ *
+ * So convert: hand the camera a simulation X that Render_CameraX() maps back to
+ * exactly the render origin this function computed. Folds to identity at 4:3
+ * and on Amiga, where WIDE_MARGIN is 0. */
+static int16_t ReplaySimCameraX(int16_t outRender)
+{
+#ifdef SWOS_SDL_BUILD
+    int16_t simX = (int16_t)(outRender + (int16_t)WIDE_MARGIN);
+    int16_t simMax = (int16_t)(0x2A0 - SCREEN_WIDTH);
+    if (simX < 0) simX = 0;
+    else if (simX > simMax) simX = simMax;
+    return simX;
+#else
+    return outRender;
+#endif
+}
+
 static int16_t ReplayCameraX(int16_t recordedX)
 {
 #ifdef SWOS_SDL_BUILD
@@ -156,7 +184,7 @@ static int16_t ReplayCameraX(int16_t recordedX)
          * re-anchor below would shift them (the goal overlay landed ~WIDE_MARGIN
          * too far left). Play the recorded path verbatim. */
         s_replayShiftX = 0;
-        return recordedX;
+        return ReplaySimCameraX(recordedX);
     }
     /* The DosReplay loader flags a SWOS-2020 widescreen recording (sprites span
      * wider than the 336 DOS/Amiga view). For those the recorded camera already
@@ -209,7 +237,7 @@ static int16_t ReplayCameraX(int16_t recordedX)
             out = (int16_t)camInt;
         }
         s_replayShiftX = (int16_t)(recordedX - out - WIDE_MARGIN);
-        return out;
+        return ReplaySimCameraX(out);
     }
 #endif
     if (_replayRecordingIsWide) {
@@ -236,7 +264,7 @@ static int16_t ReplayCameraX(int16_t recordedX)
      * so subtract it to avoid double-counting the margin (otherwise everything
      * lands WIDE_MARGIN px too far right). */
     s_replayShiftX = (int16_t)(recordedX - out - WIDE_MARGIN);
-    return out;
+    return ReplaySimCameraX(out);
 #else
     return recordedX;
 #endif
