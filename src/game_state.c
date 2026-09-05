@@ -570,7 +570,7 @@ position_sprites:
      * WIDE_MARGIN to every one shifts the whole score panel / clock into the centered 336
      * region, matching the menus. WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
     /* --- Position team1NameSprite --- */
-    _team1NameSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)_team1NameLength;
+    _team1NameSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 136 - (int16_t)_team1NameLength;
     _team1NameSprite.y.s.i = _cameraY.s.i + 246 + d7 + 10000;
     _team1NameSprite.z.s.i = 10000;
 
@@ -578,14 +578,14 @@ position_sprites:
     d0 = _team1NameSprite.y.s.i - 1015;
 
     /* Grid upper row */
-    _gridUpperRowLeftSprite.x.s.i = _cameraX.s.i + HUD_MARGIN;
+    _gridUpperRowLeftSprite.x.s.i = Render_CameraX() + HUD_MARGIN;
     _gridUpperRowLeftSprite.y.s.i = d0;
     _gridUpperRowLeftSprite.z.s.i = 9000;
-    _gridUpperRowRightSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 168;
+    _gridUpperRowRightSprite.x.s.i = Render_CameraX() + HUD_MARGIN + 168;
     _gridUpperRowRightSprite.y.s.i = d0;
     _gridUpperRowRightSprite.z.s.i = 9000;
 #ifdef SWOS_SDL_BUILD
-    _gridUpperRowExtraSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + HUD_WIDTH - 168;
+    _gridUpperRowExtraSprite.x.s.i = Render_CameraX() + HUD_MARGIN + HUD_WIDTH - 168;
     _gridUpperRowExtraSprite.y.s.i = d0;
     _gridUpperRowExtraSprite.z.s.i = 9000;
 #endif
@@ -593,14 +593,14 @@ position_sprites:
     d0 += 32;
 
     /* Grid middle row */
-    _gridMiddleRowLeftSprite.x.s.i = _cameraX.s.i + HUD_MARGIN;
+    _gridMiddleRowLeftSprite.x.s.i = Render_CameraX() + HUD_MARGIN;
     _gridMiddleRowLeftSprite.y.s.i = d0;
     _gridMiddleRowLeftSprite.z.s.i = 9000;
-    _gridMiddleRowRightSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 168;
+    _gridMiddleRowRightSprite.x.s.i = Render_CameraX() + HUD_MARGIN + 168;
     _gridMiddleRowRightSprite.y.s.i = d0;
     _gridMiddleRowRightSprite.z.s.i = 9000;
 #ifdef SWOS_SDL_BUILD
-    _gridMiddleRowExtraSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + HUD_WIDTH - 168;
+    _gridMiddleRowExtraSprite.x.s.i = Render_CameraX() + HUD_MARGIN + HUD_WIDTH - 168;
     _gridMiddleRowExtraSprite.y.s.i = d0;
     _gridMiddleRowExtraSprite.z.s.i = 9000;
 #endif
@@ -608,25 +608,25 @@ position_sprites:
     d0 += 32;
 
     /* Grid bottom row */
-    _gridBottomRowLeftSprite.x.s.i = _cameraX.s.i + HUD_MARGIN;
+    _gridBottomRowLeftSprite.x.s.i = Render_CameraX() + HUD_MARGIN;
     _gridBottomRowLeftSprite.y.s.i = d0;
     _gridBottomRowLeftSprite.z.s.i = 9000;
-    _gridBottomRowRightSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 168;
+    _gridBottomRowRightSprite.x.s.i = Render_CameraX() + HUD_MARGIN + 168;
     _gridBottomRowRightSprite.y.s.i = d0;
     _gridBottomRowRightSprite.z.s.i = 9000;
 #ifdef SWOS_SDL_BUILD
-    _gridBottomRowExtraSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + HUD_WIDTH - 168;
+    _gridBottomRowExtraSprite.x.s.i = Render_CameraX() + HUD_MARGIN + HUD_WIDTH - 168;
     _gridBottomRowExtraSprite.y.s.i = d0;
     _gridBottomRowExtraSprite.z.s.i = 9000;
 #endif
 
     /* --- Position team2NameSprite --- */
-    _team2NameSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 200;
+    _team2NameSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 200;
     _team2NameSprite.y.s.i = _team1NameSprite.y.s.i;
     _team2NameSprite.z.s.i = 10000;
 
     /* --- Team 1 goals digit 2 (units) --- */
-    _team1GoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 151;
+    _team1GoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 151;
     _team1GoalsDigit2Sprite.y.s.i = _cameraY.s.i + 241 + d7 + 10000;
     _team1GoalsDigit2Sprite.z.s.i = 10000;
     _team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + _team1GoalsDigit2;
@@ -647,7 +647,7 @@ position_sprites:
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        _team1TotalGoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 158;
+        _team1TotalGoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 158;
         if (d1 == 1)
             _team1TotalGoalsDigit2Sprite.x.s.i += 4;
         _team1TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + 263 + d7 + 10002;
@@ -666,7 +666,7 @@ position_sprites:
     }
 
     /* --- Team 2 goals digit 2 (units) --- */
-    _team2GoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 173;
+    _team2GoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 173;
     _team2GoalsDigit2Sprite.y.s.i = _cameraY.s.i + 241 + d7 + 10000;
     _team2GoalsDigit2Sprite.z.s.i = 10000;
     _team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + _team2GoalsDigit2;
@@ -688,7 +688,7 @@ position_sprites:
         d2 = (int16_t)((uint32_t)(uint16_t)d1 / 10u);
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
-        _team2TotalGoalsDigit2Sprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 171;
+        _team2TotalGoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 171;
         _team2TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + 263 + d7 + 10002;
         _team2TotalGoalsDigit2Sprite.z.s.i = 10002;
         _team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
@@ -709,7 +709,7 @@ position_sprites:
     }
 
     /* --- Dash sprite --- */
-    _dashSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 165;
+    _dashSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 165;
     _dashSprite.y.s.i = _cameraY.s.i + 249 + d7 + 10000;
     _dashSprite.z.s.i = 10000;
 
@@ -722,7 +722,7 @@ position_sprites:
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = _cameraX.s.i + WIDE_MARGIN + 136 - (int16_t)*(widths);
+            spr->x.s.i = Render_CameraX() + WIDE_MARGIN + 136 - (int16_t)*(widths);
             spr->y.s.i = _cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
@@ -740,7 +740,7 @@ position_sprites:
         {
             if (*widths == 0)
                 break;
-            spr->x.s.i = _cameraX.s.i + WIDE_MARGIN + 200;
+            spr->x.s.i = Render_CameraX() + WIDE_MARGIN + 200;
             spr->y.s.i = _cameraY.s.i + d1 + 10000;
             spr->z.s.i = 10000;
             d1 += 7;
@@ -751,7 +751,7 @@ position_sprites:
 
     /* --- Position halftime/fulltime result banners --- */
     d0 = _gridUpperRowLeftSprite.y.s.i + 990;
-    _resultOnHalftimeSprite.x.s.i = _cameraX.s.i + WIDE_MARGIN + 168;
+    _resultOnHalftimeSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 168;
     _resultOnHalftimeSprite.y.s.i = d0;
     _resultOnHalftimeSprite.z.s.i = 10000;
     _resultAfterTheGameSprite.x.s.i = _resultOnHalftimeSprite.x.s.i;
@@ -1065,7 +1065,7 @@ not_end_of_second_extra:
 set_time_sprite_x:
     {
         /* Position time sprite relative to camera */
-        _currentTimeSprite.x.s.i = _cameraX.s.i + HUD_MARGIN + 0x14;
+        _currentTimeSprite.x.s.i = Render_CameraX() + HUD_MARGIN + 0x14;
         _currentTimeSprite.y.s.i = _cameraY.s.i + 0x2721;
 
         /* If player indicator is at position 4, shift time down by 8 */

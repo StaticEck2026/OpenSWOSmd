@@ -1547,9 +1547,15 @@ DrawBenchAndSubsMenu(void)
         int16_t threshold = (int16_t)(_benchXLimit + 8);       /* 35 */
 
         /* Mirror MoveCamera's leaving-subs target (targetX=211, boundsMargin=37)
-         * and its X clamp so we know where the camera comes to rest. */
-        int16_t restX        = (int16_t)(211 - _screen_width / 2);
-        int16_t panRange     = (int16_t)(0x2A0 - _screen_width);   /* pitch width 0x2A0=672, as MoveCamera */
+         * and its X clamp so we know where the camera comes to rest. It has to
+         * mirror the SIMULATION geometry, because `_cameraX` compared below is
+         * the game camera (game_types.h): MoveCamera subtracts
+         * `_sim_view_width / 2` and clamps to SIM_CAMERA_PAN_RANGE, so resting
+         * X is 211-168 = 43 at every window size. Using the render width gave
+         * 0 on a 672-wide view and the transition never registered as done.
+         * Identical at 4:3 and on Amiga, where the two widths are both 336. */
+        int16_t restX        = (int16_t)(211 - _sim_view_width / 2);
+        int16_t panRange     = (int16_t)(0x2A0 - SCREEN_WIDTH);   /* SetCameraCoordinates' own constant */
         int16_t boundsMargin = 37;
         int16_t xMax         = (int16_t)(panRange - boundsMargin);
         if (xMax <= boundsMargin)      restX = (int16_t)(panRange / 2);
@@ -1883,7 +1889,7 @@ skip_formation_entry:
     /* draw title box - shadow */
     {
         uint16_t saved_d2 = d2;
-        uint16_t bx = _subsMenuX - _cameraX.s.i + 43;
+        uint16_t bx = _subsMenuX - Render_CameraX() + 43;
         FillRectangle(bx, d2, 41, 33, 8);
         FillRectangle(bx - 2, d2 - 2, 41, 33, _subsMenuBackgroundColor);
         FillRectangle(bx - 1, d2 - 1, 39, 31, _subsMenuHighlightColor);
@@ -1947,7 +1953,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
     int16_t d7 = selectedIndex;
 
     /* draw shadow rectangle */
-    x0 = _subsMenuX - _cameraX.s.i;
+    x0 = _subsMenuX - Render_CameraX();
     FillRectangle(x0, y, 126, 11, 8);
 
     /* draw frame rectangle */
@@ -1958,7 +1964,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
 
     /* "FORMATION" entry (d7 == -1 in state 4) */
     if (_subsState == 4 && d7 == -1) {
-        uint16_t cx = _subsMenuX - _cameraX.s.i + 63;
+        uint16_t cx = _subsMenuX - Render_CameraX() + 63;
         y += 1;
         DrawMenuTextCentered(cx, y, 2, _aFormation, charsTable);
         y -= 1;
@@ -1977,7 +1983,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
         if (_useIndividualPlayerSkinColor != 0) {
             uint16_t faceIdx = (uint16_t)(int16_t)(int8_t)pi->face;
             uint16_t faceSpr = _playerFacesTable[faceIdx];
-            uint16_t fx = _subsMenuX - _cameraX.s.i;
+            uint16_t fx = _subsMenuX - Render_CameraX();
 
             /* check if this player is marked — blink face sprite */
             {
@@ -1998,7 +2004,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
         Sprite **sprites = bt->spritesTable;
         Sprite *spr = sprites[(uint16_t)d7];
         if (spr->injuryLevel == (int16_t)0xFFFE) {
-            uint16_t ix = _subsMenuX - _cameraX.s.i;
+            uint16_t ix = _subsMenuX - Render_CameraX();
             if (_useIndividualPlayerSkinColor != 0)
                 ix += 9;
             DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
@@ -2008,7 +2014,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
 
     /* draw shirt number */
     {
-        uint16_t nx = _subsMenuX - _cameraX.s.i + 4;
+        uint16_t nx = _subsMenuX - Render_CameraX() + 4;
         if (_useIndividualPlayerSkinColor != 0)
             nx += 9;
 
@@ -2044,7 +2050,7 @@ static void drawSubstitutesMenuEntry(uint16_t y, uint16_t baseColor, int16_t sel
             }
             y -= 1;
             {
-                uint16_t cx = _subsMenuX - _cameraX.s.i;
+                uint16_t cx = _subsMenuX - Render_CameraX();
                 if (_useIndividualPlayerSkinColor != 0)
                     cx += 9;
                 DrawSprite16Pixels(cardSpr, cx, y);
@@ -2057,7 +2063,7 @@ draw_name:
     /* draw player short name */
     {
         PlayerInfo *pi = piFromOffset(teamGame, d6);
-        uint16_t nameX = _subsMenuX - _cameraX.s.i + 9;
+        uint16_t nameX = _subsMenuX - Render_CameraX() + 9;
         if (_useIndividualPlayerSkinColor != 0)
             nameX += 9;
         DrawMenuText(nameX, y, 2, (uint8_t *)pi->shortName, charsTable);
@@ -2067,7 +2073,7 @@ draw_name:
     {
         PlayerInfo *pi = piFromOffset(teamGame, d6);
         uint8_t *posStr = (uint8_t *)_playerPositionsStringTable[(uint16_t)(int16_t)(int8_t)pi->position];
-        uint16_t posX = _subsMenuX - _cameraX.s.i + 116;
+        uint16_t posX = _subsMenuX - Render_CameraX() + 116;
         DrawMenuTextCentered(posX, y, 2, posStr, charsTable);
     }
     y -= 1;
@@ -2088,7 +2094,7 @@ draw_name:
         }
     draw_injury:
         {
-            uint16_t ix = _subsMenuX - _cameraX.s.i + 101;
+            uint16_t ix = _subsMenuX - Render_CameraX() + 101;
             DrawSprite16Pixels(SPR_RED_CROSS_INJURY, ix, y);
         }
     }
@@ -2149,7 +2155,7 @@ static void drawFormationMenu(void)
     /* draw title box */
     {
         uint16_t saved_d2 = d2;
-        uint16_t bx = _formationMenuX - _cameraX.s.i + 10;
+        uint16_t bx = _formationMenuX - Render_CameraX() + 10;
         FillRectangle(bx, d2, 41, 33, 8);
         FillRectangle(bx - 2, d2 - 2, 41, 33, _subsMenuBackgroundColor);
         FillRectangle(bx - 1, d2 - 1, 39, 31, _subsMenuHighlightColor);
@@ -2187,7 +2193,7 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
     uint8_t *textStr;
 
     /* draw shadow */
-    x0 = _formationMenuX - _cameraX.s.i;
+    x0 = _formationMenuX - Render_CameraX();
     FillRectangle(x0, y, 60, 11, 8);
 
     /* draw frame */
@@ -2205,7 +2211,7 @@ static void drawFormationMenuEntry(uint8_t *charsTable, uint16_t y, uint16_t ent
 
     /* draw centered text */
     {
-        uint16_t tx = _formationMenuX - _cameraX.s.i + 30;
+        uint16_t tx = _formationMenuX - Render_CameraX() + 30;
         DrawMenuTextCentered(tx, y, 2, textStr, charsTable);
     }
 }
