@@ -613,9 +613,9 @@ void DrawChunkyPitch(void)
     const int fbW = FRONTBUFFER_ROW_STRIDE_BYTES;   /* SDL = SCREEN_WIDTH = 320 */
     const int fbH = SCREEN_HEIGHT;                  /* 200 */
 
-    int startTileX = (int)_cameraX.s.i / PITCH_TILE_SIZE;
+    int startTileX = (int)Render_CameraX() / PITCH_TILE_SIZE;
     int startTileY = (int)_cameraY.s.i / PITCH_TILE_SIZE;
-    int offsetX    = (int)_cameraX.s.i % PITCH_TILE_SIZE;
+    int offsetX    = (int)Render_CameraX() % PITCH_TILE_SIZE;
     int offsetY    = (int)_cameraY.s.i % PITCH_TILE_SIZE;
     if (offsetX < 0) { offsetX += PITCH_TILE_SIZE; startTileX--; }
     if (offsetY < 0) { offsetY += PITCH_TILE_SIZE; startTileY--; }

@@ -273,7 +273,7 @@ position_name:
      * width, capped at 16:9 (see HUD_WIDTH in display.h). The per-corner offsets
      * below are insets from that box's edges: +10/+20 from the left,
      * HUD_WIDTH-10 from the right. HUD_MARGIN folds to 0 on Amiga. */
-    spr->x.s.i      = (int16_t)_cameraX.s.i + HUD_MARGIN;
+    spr->x.s.i      = Render_CameraX() + HUD_MARGIN;
     spr->y.s.i      = (int16_t)_cameraY.s.i + 8000;
     spr->z.s.i      = 8000;
 

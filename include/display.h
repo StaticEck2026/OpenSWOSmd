@@ -382,6 +382,8 @@ static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowByte
  * SDL: 8bpp chunky, 1 byte per pixel = palette index (0..15 for OCS-style
  * palette). Row stride = SCREEN_WIDTH. Sprites store the same format
  * (byte = palette index, 0 = transparent). */
+
+
 #ifdef SWOS_SDL_BUILD
 /* Widescreen: the frontbuffer STRIDE (= visible width) is RUNTIME — _screen_width is
  * 336 (normal, == SCREEN_WIDTH) or WIDESCREEN_WIDTH (widescreen), set once at startup

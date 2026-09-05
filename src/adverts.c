@@ -300,7 +300,7 @@ void UpdateCornerFlagSprite(void)
     Sprite *spr = &_cornerFlagSprite;
 
     /* X position: if cameraX.s.i + 168 >= 336, hide far right; else show at x=81 */
-    d0 = _cameraX.s.i + 168;
+    d0 = Render_CameraX() + 168;
     if ((uint16_t)d0 >= 336)
         spr->x.s.i = 590;
     else
@@ -374,7 +374,7 @@ skip_advance:
     spr->imageIndex = (int16_t)d0;
 
     /* Position relative to camera */
-    spr->x.s.i = _cameraX.s.i + 0x12D;
+    spr->x.s.i = Render_CameraX() + 0x12D;
     spr->y.s.i = _cameraY.s.i + 0x271E;
 
     if (_currentPlayerIndicatorPosition == 3)

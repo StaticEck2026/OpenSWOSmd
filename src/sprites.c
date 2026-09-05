@@ -1951,7 +1951,7 @@ void DrawSpriteInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
     SpriteGraphics **sprGfxTable = (SpriteGraphics **)_spriteGraphicsPtr;
     SpriteGraphics *spr = sprGfxTable[spriteIndex];
 
-    x -= _cameraX.s.i;
+    x -= Render_CameraX();
     y -= _cameraY.s.i;
 
     /* Cull if completely off-screen */
@@ -1989,7 +1989,7 @@ void DrawSpriteHotspotInCameraView(uint16_t spriteIndex, int16_t x, int16_t y)
     y -= spr->centerY;
 
     /* Fall through to DrawSpriteInCameraView logic (with spr already resolved) */
-    x -= _cameraX.s.i;
+    x -= Render_CameraX();
     y -= _cameraY.s.i;
 
     if (x >= _screen_width)
@@ -2370,7 +2370,10 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         SpriteGraphics *a0 = sprGfxTable[(uint16_t)sprIdx];
 
         /* Camera-relative position with hotspot adjustment */
-        int16_t d1 = a1->x.s.i - a0->centerX - _cameraX.s.i;
+        /* The cull is measured from the GAME camera, the placement from the
+         * render origin; identical at 336 wide (display.h). */
+        int16_t d1sim = a1->x.s.i - a0->centerX - _cameraX.s.i;
+        int16_t d1    = a1->x.s.i - a0->centerX - Render_CameraX();
         int16_t d2 = a1->y.s.i - a0->centerY - _cameraY.s.i;
         d2 -= a1->z.s.i;
 
@@ -2401,8 +2404,8 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         {
             int16_t negW = -a0->pixWidth;
             int16_t negH = -a0->nlines;
-            int onScreen = !(d1 >= SCREEN_WIDTH || d2 >= _sim_view_height ||
-                             d1 <= negW || d2 <= negH);
+            int onScreen = !(d1sim >= SCREEN_WIDTH || d2 >= _sim_view_height ||
+                             d1sim <= negW || d2 <= negH);
             int inRenderView = !(d1 >= _screen_width || d2 >= SCREEN_HEIGHT ||
                                  d1 <= negW || d2 <= negH);
             a1->onScreen = (int16_t)onScreen;

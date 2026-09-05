@@ -18,6 +18,24 @@ extern uint16_t _cameraCoordinatesValid;
 /* ---- External C functions ---- */
 extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
 
+#ifdef SWOS_SDL_BUILD
+/* The render origin — see display.h. `_cameraX` is the simulation camera and
+ * may sit anywhere in [0, 0x2A0-336]; a render wider than 336 is centred on it
+ * and then clamped so it never leaves the 0x2A0-wide pitch. Folds to
+ * `_cameraX.s.i` whenever the render is 336 wide. */
+int16_t Render_CameraX(void)
+{
+    int16_t off = (int16_t)((_screen_width - SCREEN_WIDTH) / 2);
+    int16_t max = (int16_t)(0x2A0 - _screen_width);
+    int16_t x   = (int16_t)(_cameraX.s.i - off);
+
+    if (max < 0) max = 0;
+    if (x < 0)   x = 0;
+    else if (x > max) x = max;
+    return x;
+}
+#endif
+
 /* ================================================================
  * ScrollToCurrent  (SWOS2.s line 5625)
  *

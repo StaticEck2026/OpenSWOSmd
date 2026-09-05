@@ -435,6 +435,23 @@ typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
 #define ST_FIRST_HALF_ENDED              29
 #define ST_GAME_ENDED                    30
 #define ST_PENALTIES                      31
+/* ---- The two camera origins ----------------------------------------------
+ * `_cameraX` is the GAME's camera: MoveCamera integrates it, every gameplay
+ * decision reads it, and the `onScreen` cull is measured from it. It is
+ * clamped to the SIMULATION range (0 .. 0x2A0-336) so that the window size
+ * cannot change which players the AI may auto-select.
+ *
+ * `Render_CameraX()` is where we DRAW from: the same camera, backed off by
+ * half the extra width and clamped so a widescreen view stays on the pitch.
+ * On Amiga and on any 4:3 display the two are identical, so the m68k codegen
+ * and the classic view are unchanged.
+ * -------------------------------------------------------------------------- */
+#ifdef SWOS_SDL_BUILD
+int16_t Render_CameraX(void);
+#else
+#define Render_CameraX() (_cameraX.s.i)
+#endif
+
 #define ST_GAME_IN_PROGRESS              100
 #define ST_STOPPED                       101
 #define ST_WAITING_ON_PLAYER             102

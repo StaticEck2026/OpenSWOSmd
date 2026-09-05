@@ -167,7 +167,7 @@ static void drawPatternFromIndex(uint16_t patternIndex)
 #endif
 
     /* compute screen-relative coordinates */
-    screenX = pixelX - (int16_t)_cameraX.s.i;
+    screenX = pixelX - Render_CameraX();
     screenY = pixelY - (int16_t)_cameraY.s.i;
 
 #ifdef SWOS_SDL_BUILD
@@ -580,7 +580,7 @@ pattern_loop:
             /* decompose spriteIdx into row/col and compute pitchDatBuffer index */
             row = spriteIdx / 21;
             col = spriteIdx % 21;
-            pitchIdx = row * 42 + col + ((int16_t)_cameraX.s.i >> 4);
+            pitchIdx = row * 42 + col + (Render_CameraX() >> 4);
             d3 = pitchIdx;
 
             /* bounds check: tileEntryPtr must be within the 9240-byte
