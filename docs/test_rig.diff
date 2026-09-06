@@ -87,6 +87,8 @@ game ships in and what the DOS corpus cannot test:
  include/display.h       |  68 +++++++++++
  include/game_types.h    |  17 +++
  include/sprites.h       |   5 +
+ include/swos_io.h       |  21 ++++
+ include/swos_platform.h |  15 +++
  include/tactics_data.h  |   7 ++
  src/SWOS.c              |   8 ++
  src/adverts.c           |   4 +-
@@ -109,22 +111,28 @@ game ships in and what the DOS corpus cannot test:
  src/image_cmd.c         |  14 ++-
  src/input_sdl.c         |   5 +
  src/interrupts.c        |  40 ++++++-
- src/main.c              | 100 ++++++++++++++++
+ src/main.c              | 113 +++++++++++++++++-
  src/match_setup.c       |  96 ++++++++++++++--
  src/math68k.c           |  22 +++-
+ src/menu_load_json.c    |   5 +-
  src/menus.c             |  17 ++-
  src/move_camera.c       |  31 ++---
  src/pitch.c             |   4 +-
  src/player_anim.c       |  11 +-
  src/random.c            |  22 +++-
  src/referee.c           |  59 +++++++++-
+ src/resload.c           |   6 +-
  src/sprites.c           | 107 +++++++++++++----
  src/swos_globals.c      |   8 ++
+ src/swos_io.c           |  67 ++++++++++-
+ src/swos_settings.c     |   5 +
  src/tackle_foul.c       |   9 +-
  src/tactics_data.c      | 297 +++++++++++++++++++++++++++++++++++++++++++++++-
+ src/tactics_load_json.c |   5 +-
  src/team_control.c      |  66 +++++++++--
+ src/translations.c      |   4 +-
  src/update_players.c    |  56 +++++++--
- 40 files changed, 1658 insertions(+), 294 deletions(-)
+ 48 files changed, 1792 insertions(+), 301 deletions(-)
 ```
 
 ## Per-commit diffs
@@ -4478,4 +4486,320 @@ index 2bebd7c..66cf7d5 100644
  #else
      return recordedX;
  #endif
+```
+
+
+---
+
+### 0a3fddf  [?]  switch: add the Nintendo Switch as a build target
+
+_2026-09-05_
+
+```diff
+diff --git a/include/swos_io.h b/include/swos_io.h
+index 8960643..1e94d89 100644
+--- a/include/swos_io.h
++++ b/include/swos_io.h
+@@ -61,6 +61,27 @@ const char *swos_ini_path(void);
+  * platform; on WASM it is a no-op (relative "save" / "." are already correct). */
+ void swos_save_dir_init(void);
+ 
++/* Resolve a path that is relative to the game's DATA root (data/, grafs/,
++ * sound/, data_json/, …).
++ *
++ * On every desktop target the game chdir()s to the binary's directory at
++ * startup, so a relative path is already correct and this returns `rel`
++ * untouched — no copy, nothing to get wrong. The Switch is the one target
++ * with no chdir and a read-only content mount at rom:/, so the prefix is
++ * added here, at the handful of places that open game data, rather than at
++ * every fopen in the tree. `buf` is only written on that target.
++ *
++ * The returned pointer is either `rel` or `buf`; it is valid for as long as
++ * whichever of those the caller owns. */
++const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz);
++
++/* Make everything written under swos_save_dir() / swos_user_dir() durable.
++ * A no-op everywhere except the Switch, where a write to the save: mount
++ * survives only if it is committed — without this the file reads back
++ * correctly for the rest of the session and is simply absent next launch.
++ * Call it after the writes are closed. */
++void swos_save_commit(void);
++
+ /* ---- Heap (size-tagged allocations) ----
+  *
+  * swos_io_alloc / swos_io_realloc / swos_io_free are a portable
+diff --git a/include/swos_platform.h b/include/swos_platform.h
+index 600cbba..3e9bbd9 100644
+--- a/include/swos_platform.h
++++ b/include/swos_platform.h
+@@ -36,6 +36,21 @@
+ #define SWOS_WASM_BUILD 1
+ #endif
+ 
++/* Nintendo Switch target (another flavour of the SDL build — it links the
++ * licensee SDL fork, so every SDL call site is unchanged). Makefile.switch
++ * passes -DSWOS_SWITCH_BUILD=1; the __NX fallback is what NintendoClang
++ * predefines, so a file compiled outside the makefile still agrees.
++ *
++ * What actually differs is small and all of it is filesystem: the content is
++ * mounted read-only at rom:/ and there is no chdir, the per-user save is
++ * mounted at save:/ and a write there is not durable until it is committed,
++ * and printf reaches nobody — the log has to go through NN_LOG. See
++ * docs/SWITCH.md. */
++#if defined(SWOS_SWITCH_BUILD) || defined(__NX) || defined(__NINTENDO_SWITCH__)
++#undef  SWOS_SWITCH_BUILD
++#define SWOS_SWITCH_BUILD 1
++#endif
++
+ /* On Win32 PE-COFF the C compiler prepends '_' to every C global symbol
+  * at the assembler level (so a C `foo` becomes `_foo` in the .o file).
+  * ELF (Linux/macOS) does not. Many files alias buffers via inline asm
+diff --git a/src/main.c b/src/main.c
+index c2d1426..57a3dcb 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -192,8 +192,10 @@ int main(int argc, char **argv)
+      * from. (SWOS.ini and SWOS.log no longer live here — they go to the per-user
+      * game folder; see swos_save_dir_init() + the freopen below.)
+      * WASM: there is no binary dir — the data is --preload-file'd into MEMFS at
+-     * /data, /grafs, … and cwd is already "/", so skip the chdir. */
+-#ifndef SWOS_WASM_BUILD
++     * /data, /grafs, … and cwd is already "/", so skip the chdir.
++     * Switch: the content is a read-only mount at rom:/ and there is no chdir
++     * to make; swos_data_path() (swos_io.h) anchors the data reads instead. */
++#if !defined(SWOS_WASM_BUILD) && !defined(SWOS_SWITCH_BUILD)
+     chdir_to_binary(argv ? argv[0] : NULL);
+ #endif
+ 
+@@ -403,6 +405,12 @@ int main(int argc, char **argv)
+      * install dir. Works the same from gdb, Explorer, or a terminal. Disable by
+      * setting SWOS_NO_LOG=1 to send stderr back to the console. Unbuffered so
+      * lines flush immediately and we don't lose context on a crash. */
++#ifdef SWOS_SWITCH_BUILD
++    /* Switch: don't redirect. stderr on a devkit reaches the target log through
++     * the SDK, and a log FILE on the save: mount would burn the user's save
++     * quota and need committing to survive anyway. `ControlTarget read-log`
++     * is where the output goes — start it BEFORE launching (docs/SWITCH.md). */
++#else
+     if (getenv("SWOS_NO_LOG") == NULL) {
+         char log_path[1088];
+         snprintf(log_path, sizeof log_path, "%s/SWOS.log", swos_user_dir());
+@@ -411,6 +419,7 @@ int main(int argc, char **argv)
+             setvbuf(log, NULL, _IONBF, 0);
+         }
+     }
++#endif
+ 
+     /* Load the UI translation table for the selected language
+      * (data_json/translations/<lang>.json) now that the CWD is the binary dir
+diff --git a/src/menu_load_json.c b/src/menu_load_json.c
+index 6a6b7f4..a17970e 100644
+--- a/src/menu_load_json.c
++++ b/src/menu_load_json.c
+@@ -22,6 +22,7 @@
+  * ====================================================================== */
+ 
+ #include "mjson.h"
++#include "swos_io.h"   /* swos_data_path — rom:/ on the Switch */
+ #include "menu_symbols.h"
+ #include "translations.h"
+ #include <stdint.h>
+@@ -483,7 +484,9 @@ static const struct { const char *name; uint8_t *menu; } s_staticMenus[] = {
+ 
+ static uint8_t *menu_slurp(const char *path, int *out_len)
+ {
+-    FILE *f = fopen(path, "rb");
++    /* Anchored at the data root — rom:/ on the Switch (swos_io.h). */
++    char anchored[1024];
++    FILE *f = fopen(swos_data_path(path, anchored, (uint32_t)sizeof anchored), "rb");
+     if (!f) return NULL;
+     fseek(f, 0, SEEK_END);
+     long n = ftell(f);
+diff --git a/src/resload.c b/src/resload.c
+index f496592..d3fb58a 100644
+--- a/src/resload.c
++++ b/src/resload.c
+@@ -70,7 +70,11 @@ static void resolve_path(const uint8_t *amiga_name, char *out, size_t out_sz)
+     if (has_save_ext(src) && !strchr(src, '/')) {
+         snprintf(out, out_sz, "%s/%s", swos_save_dir(), src);
+     } else {
+-        snprintf(out, out_sz, "%s", src);
++        /* Relative to the data root. Identity everywhere the game chdir()s to
++         * its own directory; anchored at rom:/ on the Switch (swos_io.h). */
++        char anchored[1024];
++        snprintf(out, out_sz, "%s",
++                 swos_data_path(src, anchored, (uint32_t)sizeof anchored));
+     }
+ }
+ 
+diff --git a/src/swos_io.c b/src/swos_io.c
+index d154f94..78d19d4 100644
+--- a/src/swos_io.c
++++ b/src/swos_io.c
+@@ -5,6 +5,10 @@
+  */
+ /* swos_io.c — portable I/O + heap shim. See swos_io.h. */
+ #include "swos_io.h"
++#ifdef SWOS_SWITCH_BUILD
++#include <SDL.h>                 /* SDL_GetPrefPath, SDL_free */
++#include <SDL_nintendoswitch.h>  /* SDL_NintendoSwitch_CommitSaveData */
++#endif
+ #include <stdarg.h>
+ #include <string.h>
+ 
+@@ -224,7 +228,29 @@ static int swos_make_dirs(const char *path)
+ 
+ void swos_save_dir_init(void)
+ {
+-#ifdef SWOS_WASM_BUILD
++#if defined(SWOS_SWITCH_BUILD)
++    /* Switch: SDL_GetPrefPath mounts the per-user save against the account the
++     * player picked at launch and hands back "save:/". That needs
++     * StartupUserAccount to be Required in the .nmeta — with None it returns
++     * NULL and the game would start fresh every launch (docs/SWITCH.md).
++     *
++     * The mount is flat and small, so unlike the desktops there is no separate
++     * user/ and user/save split: SWOS.ini and the .CAR files share it. */
++    {
++        char *pref = SDL_GetPrefPath(NULL, "SWOS");
++        if (pref && *pref) {
++            size_t n = strlen(pref);
++            /* SDL returns a trailing separator; the rest of this file composes
++             * paths as "%s/%s" and would otherwise produce "save://FOO.CAR". */
++            while (n > 1 && (pref[n - 1] == '/' || pref[n - 1] == '\\'))
++                pref[--n] = '\0';
++            snprintf(s_user_dir, sizeof s_user_dir, "%s", pref);
++            snprintf(s_save_dir, sizeof s_save_dir, "%s", pref);
++        }
++        if (pref) SDL_free(pref);
++    }
++    return;
++#elif defined(SWOS_WASM_BUILD)
+     /* Browser build: saves persist in the IndexedDB-backed /save mount set up in
+      * wasm/pre.js. The game writes "save/…" relative to cwd "/" (chdir is skipped
+      * on WASM), i.e. into /save — so the "save" default is already correct, and
+@@ -313,9 +339,37 @@ int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
+     if (!f) return 1;
+     size_t put = fwrite(buf, 1, size, f);
+     fclose(f);
++    /* Closed before committing — the commit requires it. */
++    swos_save_commit();
+     return (put == size) ? 0 : 1;
+ }
+ 
++/* ---- Data root + save durability (see swos_io.h) -------------------- */
++
++const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
++{
++#ifdef SWOS_SWITCH_BUILD
++    /* The content is mounted read-only at rom:/ and there is no chdir, so the
++     * relative paths the rest of the game uses have to be anchored here. */
++    if (!rel || !buf || buf_sz == 0) return rel;
++    if (strncmp(rel, "rom:/", 5) == 0) return rel;   /* already anchored */
++    snprintf(buf, buf_sz, "rom:/%s", rel);
++    return buf;
++#else
++    (void)buf; (void)buf_sz;
++    return rel;
++#endif
++}
++
++void swos_save_commit(void)
++{
++#ifdef SWOS_SWITCH_BUILD
++    /* Not durable until committed, and SDL will not do it for you. The mount
++     * name matches what SDL_GetPrefPath mounted ("save"). */
++    SDL_NintendoSwitch_CommitSaveData("save");
++#endif
++}
++
+ #else  /* Amiga */
+ 
+ extern uint32_t RobNorthenLoader_C(uint32_t cmd, uint32_t arg1,
+@@ -342,6 +396,17 @@ int swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_siz
+     return 0;
+ }
+ 
++/* Amiga: the game runs from its own directory and resload owns the save
++ * device, so both of these are nothing. Defined anyway so the shared call
++ * sites need no #ifdef. */
++const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
++{
++    (void)buf; (void)buf_sz;
++    return rel;
++}
++
++void swos_save_commit(void) { }
++
+ int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
+ {
+     uint32_t rc = RobNorthenLoader_C(ROBN_SAVE, size, (uint8_t *)name,
+diff --git a/src/swos_settings.c b/src/swos_settings.c
+index 12a10be..4597487 100644
+--- a/src/swos_settings.c
++++ b/src/swos_settings.c
+@@ -28,6 +28,7 @@
+  */
+ 
+ #include "swos_settings.h"
++#include "swos_io.h"   /* swos_save_commit — Switch save durability */
+ #include "ini.h"
+ 
+ #include <ctype.h>
+@@ -454,6 +455,10 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
+         }
+     }
+     fclose(out);
++    /* Closed first — the Switch's save commit requires it, and without the
++     * commit SWOS.ini reads back fine all session and is gone next launch.
++     * Nothing on any other target (swos_io.h). */
++    swos_save_commit();
+ }
+ 
+ /* Back-compat alias for the startup/shutdown path: now identical to the
+diff --git a/src/tactics_load_json.c b/src/tactics_load_json.c
+index 0791a6c..f93ba67 100644
+--- a/src/tactics_load_json.c
++++ b/src/tactics_load_json.c
+@@ -24,6 +24,7 @@
+  * ====================================================================== */
+ 
+ #include "tactics_data.h"   /* TeamTactics + the _teamTactics* externs */
++#include "swos_io.h"   /* swos_data_path — rom:/ on the Switch */
+ #include "mjson.h"
+ #include <stdint.h>
+ #include <stdio.h>
+@@ -107,7 +108,9 @@ static int build_one(const char *j, int jl, TeamTactics *out)
+ 
+ static uint8_t *tactics_slurp(const char *path, int *out_len)
+ {
+-    FILE *f = fopen(path, "rb");
++    /* Anchored at the data root — rom:/ on the Switch (swos_io.h). */
++    char anchored[1024];
++    FILE *f = fopen(swos_data_path(path, anchored, (uint32_t)sizeof anchored), "rb");
+     if (!f) return NULL;
+     fseek(f, 0, SEEK_END);
+     long n = ftell(f);
+diff --git a/src/translations.c b/src/translations.c
+index 380c3a9..6c4b65b 100644
+--- a/src/translations.c
++++ b/src/translations.c
+@@ -14,6 +14,7 @@
+  * ====================================================================== */
+ 
+ #include "translations.h"
++#include "swos_io.h"   /* swos_data_path — rom:/ on the Switch */
+ #include "string_symbols.h"
+ 
+ #ifdef SWOS_SDL_BUILD   /* Runtime JSON translation is host-only: mjson + stdio +
+@@ -154,7 +155,8 @@ void Translations_Load(const char *lang)
+ 
+     char path[160];
+     snprintf(path, sizeof path, "data_json/translations/%s.json", lang);
+-    FILE *f = fopen(path, "rb");
++    char anchored[224];
++    FILE *f = fopen(swos_data_path(path, anchored, (uint32_t)sizeof anchored), "rb");
+     if (!f) {
+         fprintf(stderr, "[i18n] %s not found — using compiled strings\n", path);
+         fflush(stderr);
 ```
