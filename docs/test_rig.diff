@@ -84,56 +84,62 @@ game ships in and what the DOS corpus cannot test:
 ## Cumulative diff stat
 
 ```
- include/display.h       |  68 +++++++++++
- include/game_types.h    |  17 +++
- include/sprites.h       |   5 +
- include/swos_io.h       |  21 ++++
- include/swos_platform.h |  36 ++++++
- include/tactics_data.h  |   7 ++
- src/SWOS.c              |   8 ++
- src/adverts.c           |   4 +-
- src/ai.c                |  97 ++++++++++++----
- src/animated_patterns.c |   4 +-
- src/ball_physics.c      | 198 +++++++++++++++++++-------------
- src/ball_possession.c   |  11 +-
- src/bench_subs.c        | 156 +++++++++++++++++++------
- src/camera.c            |  25 +++-
- src/display.c           |  28 ++++-
- src/dos_gameplay.c      | 117 ++++++++++++++++++-
- src/game_hud.c          |   2 +-
- src/game_init.c         |  13 +++
- src/game_loop.c         |  29 ++++-
- src/game_state.c        |  46 ++++----
- src/game_timers.c       |  29 +++--
- src/goalkeeper.c        |  62 +++++++++-
- src/headers.c           |  28 ++++-
- src/highlight.c         |  34 +++++-
- src/image_cmd.c         |  14 ++-
- src/input_sdl.c         |  74 ++++++++++++
- src/interrupts.c        |  40 ++++++-
- src/main.c              | 119 ++++++++++++++++++-
- src/match_setup.c       |  96 ++++++++++++++--
- src/math68k.c           |  22 +++-
- src/menu_load_json.c    |   5 +-
- src/menus.c             |  17 ++-
- src/move_camera.c       |  31 ++---
- src/pitch.c             |   4 +-
- src/platform_switch.cpp |  40 +++++++
- src/player_anim.c       |  11 +-
- src/random.c            |  22 +++-
- src/referee.c           |  59 +++++++++-
- src/resload.c           |   6 +-
- src/sprites.c           | 107 +++++++++++++----
- src/swos_globals.c      |   8 ++
- src/swos_io.c           |  93 ++++++++++++++-
- src/swos_settings.c     |   5 +
- src/tackle_foul.c       |   9 +-
- src/tactics_data.c      | 297 +++++++++++++++++++++++++++++++++++++++++++++++-
- src/tactics_load_json.c |   5 +-
- src/team_control.c      |  66 +++++++++--
- src/translations.c      |   4 +-
- src/update_players.c    |  56 +++++++--
- 49 files changed, 1953 insertions(+), 302 deletions(-)
+ include/display.h            |  68 ++++++++++
+ include/game_types.h         |  17 +++
+ include/menu_data.h          |   4 +
+ include/sprites.h            |   5 +
+ include/swos_io.h            |  21 +++
+ include/swos_platform.h      |  36 ++++++
+ include/tactics_data.h       |   7 +
+ src/SWOS.c                   |   8 ++
+ src/adverts.c                |   4 +-
+ src/ai.c                     |  97 ++++++++++----
+ src/animated_patterns.c      |   4 +-
+ src/ball_physics.c           | 198 +++++++++++++++++------------
+ src/ball_possession.c        |  11 +-
+ src/bench_subs.c             | 156 ++++++++++++++++++-----
+ src/camera.c                 |  25 +++-
+ src/display.c                |  28 +++-
+ src/dos_gameplay.c           | 124 +++++++++++++++++-
+ src/game_hud.c               |   2 +-
+ src/game_init.c              |  13 ++
+ src/game_loop.c              |  29 ++++-
+ src/game_state.c             |  46 +++----
+ src/game_timers.c            |  29 +++--
+ src/goalkeeper.c             |  62 ++++++++-
+ src/headers.c                |  28 +++-
+ src/highlight.c              |  34 ++++-
+ src/image_cmd.c              |  14 +-
+ src/input_sdl.c              |  74 +++++++++++
+ src/interrupts.c             |  40 +++++-
+ src/main.c                   | 142 ++++++++++++++++++++-
+ src/match_setup.c            |  96 ++++++++++++--
+ src/math68k.c                |  22 +++-
+ src/menu_data.c              |  21 ++-
+ src/menu_load_json.c         |   5 +-
+ src/menu_symbols.c           |  10 ++
+ src/menus.c                  |  76 ++++++++++-
+ src/move_camera.c            |  31 +++--
+ src/pitch.c                  |   4 +-
+ src/platform_switch.cpp      |  40 ++++++
+ src/player_anim.c            |  11 +-
+ src/random.c                 |  22 +++-
+ src/referee.c                |  59 ++++++++-
+ src/resload.c                |   6 +-
+ src/sprites.c                | 107 ++++++++++++----
+ src/string_symbols.c         |   5 +-
+ src/swos_amiga_ptr_imports.c |  12 ++
+ src/swos_amiga_strings.c     |   5 +
+ src/swos_globals.c           |   8 ++
+ src/swos_io.c                | 166 ++++++++++++++++++++++--
+ src/swos_settings.c          |   5 +
+ src/tackle_foul.c            |   9 +-
+ src/tactics_data.c           | 297 ++++++++++++++++++++++++++++++++++++++++++-
+ src/tactics_load_json.c      |   5 +-
+ src/team_control.c           |  66 ++++++++--
+ src/translations.c           |   4 +-
+ src/update_players.c         |  56 ++++++--
+ 55 files changed, 2161 insertions(+), 313 deletions(-)
 ```
 
 ## Per-commit diffs
@@ -5104,4 +5110,463 @@ index 672f5b8..f0d6b5f 100644
      case SDL_JOYDEVICEADDED: {
          /* SDL fires JOYDEVICEADDED for every device. CONTROLLERDEVICEADDED
           * fires *additionally* for devices that have a GameController
+```
+
+
+---
+
+### 43b8658  [?]  options: add a GAMEPLAY row, and fix the macOS .app never finding SWOS.ini
+
+_2026-09-05_
+
+```diff
+diff --git a/include/menu_data.h b/include/menu_data.h
+index 1137b38..c5fbfd9 100644
+--- a/include/menu_data.h
++++ b/include/menu_data.h
+@@ -1113,6 +1113,10 @@ typedef struct Menu_Options
+   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect autoSaveHl;
+   MenuEntry_Byte_Colors_TextPtr labelMenuMusic;
+   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect menuMusic;
++  /* GAMEPLAY: AMIGA / DOS — the same switch as [dos] gameplay in SWOS.ini and
++   * --dos-gameplay. Added after menuMusic so the row order matches the JSON. */
++  MenuEntry_Byte_Colors_TextPtr labelGameplayStyle;
++  MenuEntry_Byte_Nav_Colors_StringTable_OnSelect gameplayStyle;
+   MenuMark_StartMenu startMenuExit;
+   MenuCoords8 exit_rc;
+   MenuCmd_Nav exit_nav;
+diff --git a/src/dos_gameplay.c b/src/dos_gameplay.c
+index f02f44d..9b351fe 100644
+--- a/src/dos_gameplay.c
++++ b/src/dos_gameplay.c
+@@ -127,6 +127,13 @@ int16_t  _gsStoppageGameOver     = 1500; /* GS_1650_1500 GameOver */
+  * exactly. Ball trajectory is NOT scaled here — it rides the §3 physics constants;
+  * callers that read only the direction (AI goal-angle, tactics arrows) are
+  * unaffected. Default 1/1 so the Amiga build (dos=0) never scales. ---------------- */
++/* The OPTIONS menu's "GAMEPLAY" row: 0 = AMIGA, 1 = DOS. A separate 16-bit
++ * mirror of _gDosGameplay because the menu's string-table header reads its
++ * index as a uint16_t (menu_system.c) — pointing it at the `int` would read
++ * the wrong two bytes on the big-endian Amiga build, and read as 0 forever.
++ * ChangeGameplayStyle (menus.c) is what keeps the two in step. */
++uint16_t _gameplayStyleOption = 0;
++
+ int16_t  _gMoveDeltaScaleNum = 1;       /* DOS 41 / Amiga 1  (future Amiga-60: 50) */
+ int16_t  _gMoveDeltaScaleDen = 1;       /* DOS 64 / Amiga 1  (future Amiga-60: 60) */
+ 
+diff --git a/src/main.c b/src/main.c
+index 68d7346..2d10ffe 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -263,6 +263,17 @@ int main(int argc, char **argv)
+      * wasm/pre.js before we get here (edit it via the in-page settings panel).
+      * Missing file is fine — defaults are used, and step 4 writes a fresh one. */
+     const char *ini_path = swos_ini_path();
++    /* Say WHICH file, and whether it was there. swos_save_dir_init() falls back
++     * to "." if the per-user folder cannot be resolved or created, and silently
++     * — so an edited SWOS.ini that "does nothing" is usually the game reading a
++     * different one. Print it before loading so the answer is in the log even
++     * if the load then fails. */
++    {
++        FILE *probe = fopen(ini_path, "rb");
++        fprintf(stderr, "[settings] SWOS.ini: %s (%s)\n",
++                ini_path, probe ? "found" : "not found, using defaults");
++        if (probe) fclose(probe);
++    }
+     Settings_Load(&opts, ini_path);
+ 
+     /* Expose the live options + ini path to the arcade service menu so its
+@@ -398,6 +409,18 @@ int main(int argc, char **argv)
+     _gDosGraphics = opts.dos_graphics;
+     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
+     _gDosGameplay = opts.dos_gameplay;
++    /* The OPTIONS menu draws its GAMEPLAY row from a uint16_t mirror (the
++     * string-table header reads its index as one). Seed it here so the row
++     * shows what SWOS.ini / --dos-gameplay actually selected; the toggle
++     * itself keeps the two in step (ChangeGameplayStyle in menus.c). */
++    { extern uint16_t _gameplayStyleOption;
++      _gameplayStyleOption = (uint16_t)(opts.dos_gameplay != 0); }
++
++    /* And say which style is actually in force, so "it ran in Amiga mode" is
++     * something a tester can read off rather than infer from feel. */
++    fprintf(stderr, "[gameplay] %s\n", _gDosGameplay
++            ? "DOS (70fps physics and timers, DOS formations)"
++            : "AMIGA (the shipped default)");
+     /* _screen_width (the live render width) + _menu_draw_x_offset (UI centering)
+      * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
+     if (opts.dos_dir[0])
+diff --git a/src/menu_data.c b/src/menu_data.c
+index 00e3317..3f609de 100644
+--- a/src/menu_data.c
++++ b/src/menu_data.c
+@@ -52,6 +52,7 @@ extern void ChangeAutoReplays(void);
+ extern void ChangeAutoSaveHighlights(void);
+ extern void ChangeGameLength(void);
+ extern void ChangeMenuMusic(void);
++extern void ChangeGameplayStyle(void);
+ extern void ChangeNationality(void);
+ extern void ChangePitchType(void);
+ extern void ChangeSex(void);
+@@ -488,6 +489,7 @@ extern char _aManagementReco_0[];
+ extern char _aMatch[];
+ extern char _aMemoFromTheClu[];
+ extern char _aMenuMusic[];
++extern char _aGameplay[];
+ extern char _aName[];
+ extern char _aNat[];
+ extern char _aNationalTeams[];
+@@ -644,6 +646,7 @@ extern char* _flipStrTable[];
+ extern char* _friendlyPitchTypeTable[];
+ extern char* _gameLengthStrTable[];
+ extern char* _menuMusicStrTable[];
++extern char* _gameplayStyleStrTable[];
+ extern char* _pitchTypeOrSeasonTable[];
+ extern char* _pitchTypeStrTable[];
+ extern char* _positionFilterStringTable[];
+@@ -2860,15 +2863,29 @@ Menu_Options _optionsMenu = {
+     },
+     {
+         { -102, 124, -116, 11 },
+-        { MENU_CMD_NAV, -1, -1, 10, 13 },
++        { MENU_CMD_NAV, -1, -1, 10, 14 },
+         { MENU_CMD_COLORS, 0xD },
+         { MENU_CMD_STRING_TABLE, 0x0, _menuMusicStrTable },
+         { MENU_CMD_ONSELECT_FIRE, ChangeMenuMusic },
+         MENU_CMD_END
+     },
++    {
++        { 10, 136, -116, 11 },
++        { MENU_CMD_COLORS, 0x9 },
++        { MENU_CMD_TEXT_PTR, 0x0, _aGameplay },
++        MENU_CMD_END
++    },
++    {
++        { -102, 136, -116, 11 },
++        { MENU_CMD_NAV, -1, -1, 12, 15 },
++        { MENU_CMD_COLORS, 0xD },
++        { MENU_CMD_STRING_TABLE, 0x0, _gameplayStyleStrTable },
++        { MENU_CMD_ONSELECT_FIRE, ChangeGameplayStyle },
++        MENU_CMD_END
++    },
+     { MENU_MARK_START_MENU, 0, 0 },
+     { 102, -71, 100, 15 },
+-    { MENU_CMD_NAV, -1, -1, 12, -1 },
++    { MENU_CMD_NAV, -1, -1, 14, -1 },
+     { MENU_CMD_COLORS, 0xC },
+     { MENU_CMD_TEXT_PTR, 0x0, _aExit },
+     { MENU_CMD_INPUT_FUNC, 0x30, ExitOptions },
+diff --git a/src/menu_symbols.c b/src/menu_symbols.c
+index 713c814..d40a16b 100644
+--- a/src/menu_symbols.c
++++ b/src/menu_symbols.c
+@@ -38,6 +38,7 @@ extern void ChangeAutoReplays(void);
+ extern void ChangeAutoSaveHighlights(void);
+ extern void ChangeGameLength(void);
+ extern void ChangeMenuMusic(void);
++extern void ChangeGameplayStyle(void);
+ extern void ChangeNationality(void);
+ extern void ChangePitchType(void);
+ extern void ChangeSex(void);
+@@ -480,6 +481,9 @@ extern char _aManagementReco_0[];
+ extern char _aMatch[];
+ extern char _aMemoFromTheClu[];
+ extern char _aMenuMusic[];
++extern char _aGameplay[];
++extern char _aAmigaStyle[];
++extern char _aDosStyle[];
+ extern char _aName[];
+ extern char _aNat[];
+ extern char _aNationalTeams[];
+@@ -645,6 +649,7 @@ extern char _managerNameBuffer[];
+ extern char _managerSexBuffer[];
+ extern char _managerSurnameBuffer[];
+ extern char* _menuMusicStrTable[];
++extern char* _gameplayStyleStrTable[];
+ extern char _offsetCoachOrPlayer[];
+ extern char* _pitchTypeOrSeasonTable[];
+ extern char* _pitchTypeStrTable[];
+@@ -690,6 +695,7 @@ const MenuSymbol _menuSymbols[] = {
+     { "ChangeAutoReplays", (void*)ChangeAutoReplays, SYM_FUNC },
+     { "ChangeAutoSaveHighlights", (void*)ChangeAutoSaveHighlights, SYM_FUNC },
+     { "ChangeGameLength", (void*)ChangeGameLength, SYM_FUNC },
++    { "ChangeGameplayStyle", (void*)ChangeGameplayStyle, SYM_FUNC },
+     { "ChangeMenuMusic", (void*)ChangeMenuMusic, SYM_FUNC },
+     { "ChangeNationality", (void*)ChangeNationality, SYM_FUNC },
+     { "ChangePitchType", (void*)ChangePitchType, SYM_FUNC },
+@@ -1049,6 +1055,7 @@ const MenuSymbol _menuSymbols[] = {
+     { "_aAdditionalInve_0", (void*)_aAdditionalInve_0, SYM_STRING },
+     { "_aAllMatches", (void*)_aAllMatches, SYM_STRING },
+     { "_aAllPlayerTeams", (void*)_aAllPlayerTeams, SYM_STRING },
++    { "_aAmigaStyle", (void*)_aAmigaStyle, SYM_STRING },
+     { "_aAskForMore", (void*)_aAskForMore, SYM_STRING },
+     { "_aAttack", (void*)_aAttack, SYM_STRING },
+     { "_aAutoReplays", (void*)_aAutoReplays, SYM_STRING },
+@@ -1089,6 +1096,7 @@ const MenuSymbol _menuSymbols[] = {
+     { "_aDesignDiyLeagu", (void*)_aDesignDiyLeagu, SYM_STRING },
+     { "_aDesignDiyTourn", (void*)_aDesignDiyTourn, SYM_STRING },
+     { "_aDiyCompetition_0", (void*)_aDiyCompetition_0, SYM_STRING },
++    { "_aDosStyle", (void*)_aDosStyle, SYM_STRING },
+     { "_aEditCustomTeam", (void*)_aEditCustomTeam, SYM_STRING },
+     { "_aEditTactics", (void*)_aEditTactics, SYM_STRING },
+     { "_aEditedCustomTe_0", (void*)_aEditedCustomTe_0, SYM_STRING },
+@@ -1102,6 +1110,7 @@ const MenuSymbol _menuSymbols[] = {
+     { "_aFriendlyDiyGam", (void*)_aFriendlyDiyGam, SYM_STRING },
+     { "_aFriendly_1", (void*)_aFriendly_1, SYM_STRING },
+     { "_aFrom", (void*)_aFrom, SYM_STRING },
++    { "_aGameplay", (void*)_aGameplay, SYM_STRING },
+     { "_aGateReceipts", (void*)_aGateReceipts, SYM_STRING },
+     { "_aGeneralRunning", (void*)_aGeneralRunning, SYM_STRING },
+     { "_aGiveFreeTransf", (void*)_aGiveFreeTransf, SYM_STRING },
+@@ -1291,6 +1300,7 @@ const MenuSymbol _menuSymbols[] = {
+     { "_flipStrTable", (void*)_flipStrTable, SYM_TABLE },
+     { "_friendlyPitchTypeTable", (void*)_friendlyPitchTypeTable, SYM_TABLE },
+     { "_gameLengthStrTable", (void*)_gameLengthStrTable, SYM_TABLE },
++    { "_gameplayStyleStrTable", (void*)_gameplayStyleStrTable, SYM_TABLE },
+     { "_managerNameBuffer", (void*)_managerNameBuffer, SYM_BUFFER },
+     { "_managerSexBuffer", (void*)_managerSexBuffer, SYM_BUFFER },
+     { "_managerSurnameBuffer", (void*)_managerSurnameBuffer, SYM_BUFFER },
+diff --git a/src/menus.c b/src/menus.c
+index c58413d..e89a04c 100644
+--- a/src/menus.c
++++ b/src/menus.c
+@@ -4,6 +4,12 @@
+  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
+  */
+ #include "menus.h"
++#ifdef SWOS_SDL_BUILD
++/* PlatformInitOptions + Settings_Save, for the OPTIONS -> GAMEPLAY row. Guarded
++ * because this header reaches platform_sdl.h and therefore SDL.h, which the
++ * m68k build has no idea about — and there is no SWOS.ini on the Amiga. */
++#include "swos_settings.h"
++#endif
+ #include "translations.h"
+ #include "comp_identity.h"
+ #include "endian_helpers.h"
+@@ -2059,6 +2065,59 @@ void ChangeMenuMusic(MenuEntry *entry)
+     CallDrawMenuItem(entry);
+ }
+ 
++/* ================================================================
++ * ChangeGameplayStyle — the OPTIONS menu's "GAMEPLAY" row
++ *
++ * Toggles AMIGA <-> DOS, which is the same switch as `--dos-gameplay` and
++ * [dos] gameplay in SWOS.ini: the DOS release's 70fps physics, its timer
++ * reloads and its formation set, against the Amiga's.
++ *
++ * Three things have to happen together, and the order matters:
++ *
++ *   1. _gameplayStyleOption is what the menu DRAWS from (a uint16_t, because
++ *      that is what the string-table header reads); _gDosGameplay is what the
++ *      GAME reads. Keep them in step or the row lies about the setting.
++ *   2. ApplyGameStyle() republishes every derived constant — the speed factor,
++ *      the twelve timer reloads, the formation set. Without it the flag moves
++ *      and nothing else does. It is a pure write of constants, so calling it
++ *      here is free; a match already in progress is not affected because
++ *      InitGameRestoreTeams calls it again at kick-off.
++ *   3. Persist, so the choice survives a restart the way every other row on
++ *      this menu does. g_arcadeOpts/g_arcadeIniPath are the live options and
++ *      the resolved ini path, published by main.c.
++ * ================================================================ */
++void ChangeGameplayStyle(MenuEntry *entry)
++{
++    extern int _gDosGameplay;
++    extern uint16_t _gameplayStyleOption;
++    extern void ApplyGameStyle(void);
++
++    _gameplayStyleOption ^= 1;
++    _gDosGameplay = (int)_gameplayStyleOption;
++
++    ApplyGameStyle();
++
++#ifdef SWOS_SDL_BUILD
++    /* Persist, so the choice survives a restart the way every other row on
++     * this menu does. Declared here rather than including swos_settings.h:
++     * that header pulls in platform_sdl.h and therefore SDL.h, which the m68k
++     * build has no idea about — and there is no SWOS.ini on the Amiga anyway.
++     * g_arcadeOpts / g_arcadeIniPath are the live options and the resolved ini
++     * path, published by main.c. */
++    {
++        extern PlatformInitOptions *g_arcadeOpts;
++        extern const char *g_arcadeIniPath;
++        if (g_arcadeOpts) {
++            g_arcadeOpts->dos_gameplay = _gDosGameplay;
++            if (g_arcadeIniPath)
++                Settings_Save(g_arcadeOpts, g_arcadeIniPath);
++        }
++    }
++#endif
++
++    CallDrawMenuItem(entry);
++}
++
+ /* ================================================================
+  * Simple menu exit/draw callbacks (Chunk 114)
+  * ================================================================ */
+diff --git a/src/string_symbols.c b/src/string_symbols.c
+index dafad6e..1a8ec7e 100644
+--- a/src/string_symbols.c
++++ b/src/string_symbols.c
+@@ -345,7 +345,7 @@ extern char _aCoach_3[];                      extern char _aCoach_4[];
+ extern char _aStats[];                        extern char _aStatistics[];                   extern char _aViewSquads[];
+ extern char _aViewSquad[];                    extern char _aBank[];                         extern char _aH[];
+ extern char _aA_2[];                          extern char _aSemiFinal[];                    extern char _aFinal_4[];
+-extern char _aMenuMusic[];                    extern char _aGoals[];                        extern char _aForm[];
++extern char _aMenuMusic[];  extern char _aGameplay[];  extern char _aAmigaStyle[];  extern char _aDosStyle[];                    extern char _aGoals[];                        extern char _aForm[];
+ extern char _aLge[];                          extern char _aCups[];                         extern char _aCup_3[];
+ extern char _aTot[];                          extern char _aOwnGoals[];                     extern char _aLoad[];
+ extern char _aSave[];                         extern char _aSaveExit[];                     extern char _aFilename[];
+@@ -1390,6 +1390,9 @@ const StringSymbol _stringSymbols[] = {
+     { "_aSemiFinal", (void *)_aSemiFinal },
+     { "_aFinal_4", (void *)_aFinal_4 },
+     { "_aMenuMusic", (void *)_aMenuMusic },
++    { "_aGameplay", (void *)_aGameplay },
++    { "_aAmigaStyle", (void *)_aAmigaStyle },
++    { "_aDosStyle", (void *)_aDosStyle },
+     { "_aGoals", (void *)_aGoals },
+     { "_aForm", (void *)_aForm },
+     { "_aLge", (void *)_aLge },
+diff --git a/src/swos_amiga_ptr_imports.c b/src/swos_amiga_ptr_imports.c
+index 4dc18a0..4e481bb 100644
+--- a/src/swos_amiga_ptr_imports.c
++++ b/src/swos_amiga_ptr_imports.c
+@@ -850,6 +850,18 @@ ON_OFF_TABLE(_allPlTeamsEqualStrTable, _allPlayerTeamsEqual);
+ ON_OFF_TABLE(_autoSaveHlStrTable,      _autoSaveHighlights);
+ ON_OFF_TABLE(_menuMusicStrTable,       _menuMusic);
+ 
++/* OPTIONS -> GAMEPLAY: AMIGA / DOS, indexed by _gameplayStyleOption
++ * (dos_gameplay.c). Same shape as the ON/OFF tables above; spelled out because
++ * the entries are not _aOff/_aOn. */
++extern char _aAmigaStyle[], _aDosStyle[];
++extern uint16_t _gameplayStyleOption;
++struct __attribute__((packed)) {
++    void    *indexPtr; uint16_t base; void    *entries[2];
++} _gameplayStyleStrTable = {
++    (&_gameplayStyleOption), 0,
++    { (void *)_aAmigaStyle, (void *)_aDosStyle }
++};
++
+ #undef ON_OFF_TABLE
+ #undef MONTHS
+ /* ---- DIY Tournament string tables (SWOS2.s lines 75323..75554) ----
+diff --git a/src/swos_amiga_strings.c b/src/swos_amiga_strings.c
+index 7134648..46e221f 100644
+--- a/src/swos_amiga_strings.c
++++ b/src/swos_amiga_strings.c
+@@ -454,6 +454,11 @@ char _aA_2[] = "(A)";
+ char _aSemiFinal[] = "SEMI-FINAL";
+ char _aFinal_4[] = "FINAL";
+ char _aMenuMusic[] = "MENU MUSIC";
++/* OPTIONS -> GAMEPLAY: which release's physics and timers the match uses.
++ * Mirrors [dos] gameplay in SWOS.ini. */
++char _aGameplay[] = "GAMEPLAY";
++char _aAmigaStyle[] = "AMIGA";
++char _aDosStyle[] = "DOS";
+ char _aGoals[] = "GOALS";
+ char _aForm[] = "FORM";
+ char _aLge[] = "LGE";
+diff --git a/src/swos_io.c b/src/swos_io.c
+index 4ea12fc..2cae4ad 100644
+--- a/src/swos_io.c
++++ b/src/swos_io.c
+@@ -5,9 +5,11 @@
+  */
+ /* swos_io.c — portable I/O + heap shim. See swos_io.h. */
+ #include "swos_io.h"
+-#ifdef SWOS_SWITCH_BUILD
+-/* SDL_GetPrefPath, SDL_free, and SDL_NintendoSwitch_CommitSaveData — which the
+- * fork declares in SDL_filesystem.h, not in a header of its own. */
++#if defined(SWOS_SDL_BUILD) && !defined(_WIN32)
++/* SDL_GetPrefPath / SDL_free — the Switch mounts save:/ through them, and
++ * macOS uses SDL_GetPrefPath when a .app launch leaves HOME unset. On the
++ * Switch this header also declares SDL_NintendoSwitch_CommitSaveData, which
++ * the fork puts in SDL_filesystem.h rather than a header of its own. */
+ #include <SDL.h>
+ #endif
+ #include <stdarg.h>
+@@ -301,23 +303,78 @@ void swos_save_dir_init(void)
+     for (char *p = user; *p; p++)
+         if (*p == '\\') *p = '/';
+ # elif defined(__APPLE__)
++    /* ~/Library/Application Support/SWOS, but NOT via $HOME alone.
++     *
++     * A .app launched from Finder gets a trimmed environment, and with HOME
++     * missing every path below silently fell back to "." — which inside a
++     * bundle is read-only. The symptom is the confusing one a tester hit: no
++     * SWOS.ini is ever created, and one placed in the documented location is
++     * never read, so every setting appears to do nothing.
++     *
++     * SDL_GetPrefPath asks the OS instead of the environment
++     * (NSSearchPathForDirectoriesInDomains) and returns that same directory,
++     * so it is a drop-in that works however the app was started. HOME is still
++     * tried first: it is what the docs say and what a terminal launch uses. */
+     const char *home = getenv("HOME");
+-    if (!home || !*home)
+-        return;
+-    snprintf(user, sizeof user, "%s/Library/Application Support/SWOS", home);
++    if (home && *home) {
++        snprintf(user, sizeof user, "%s/Library/Application Support/SWOS", home);
++    } else {
++        char *pref = SDL_GetPrefPath(NULL, "SWOS");
++        if (!pref || !*pref) {
++            fprintf(stderr, "[settings] no HOME and SDL_GetPrefPath failed (%s) "
++                            "— SWOS.ini and saves fall back to the CWD\n",
++                    SDL_GetError());
++            if (pref) SDL_free(pref);
++            return;
++        }
++        {
++            size_t n = strlen(pref);
++            while (n > 1 && pref[n - 1] == '/') pref[--n] = '\0';
++            snprintf(user, sizeof user, "%s", pref);
++        }
++        SDL_free(pref);
++        fprintf(stderr, "[settings] HOME not set; using the OS preferences "
++                        "path: %s\n", user);
++    }
+ # else  /* Linux and other Unix */
++    /* Same shape as the macOS branch above, and for the same reason: if the
++     * process was started without HOME there is still an OS answer, and the
++     * silent "." fallback is the worst of the options. */
+     const char *home = getenv("HOME");
+-    if (!home || !*home)
+-        return;
+-    snprintf(user, sizeof user, "%s/.swos", home);
++    if (home && *home) {
++        snprintf(user, sizeof user, "%s/.swos", home);
++    } else {
++        char *pref = SDL_GetPrefPath(NULL, "SWOS");
++        if (!pref || !*pref) {
++            fprintf(stderr, "[settings] no HOME and SDL_GetPrefPath failed (%s) "
++                            "— SWOS.ini and saves fall back to the CWD\n",
++                    SDL_GetError());
++            if (pref) SDL_free(pref);
++            return;
++        }
++        {
++            size_t n = strlen(pref);
++            while (n > 1 && pref[n - 1] == '/') pref[--n] = '\0';
++            snprintf(user, sizeof user, "%s", pref);
++        }
++        SDL_free(pref);
++        fprintf(stderr, "[settings] HOME not set; using the OS preferences "
++                        "path: %s\n", user);
++    }
+ # endif
+ 
+     char save[1024];
+     snprintf(save, sizeof save, "%s/save", user);
+     /* mkdir -p the save dir also creates its parent (the user dir), so both the
+      * SWOS.ini location and the save location exist afterward. */
+-    if (swos_make_dirs(save) != 0)
+-        return;                                  /* couldn't create; keep defaults */
++    if (swos_make_dirs(save) != 0) {
++        /* Same dead end: without this directory there is nowhere to write, and
++         * the "." fallback is read-only inside a macOS .app. errno names the
++         * reason (permissions, a read-only volume, a file in the way). */
++        fprintf(stderr, "[settings] cannot create %s: %s — SWOS.ini and saves "
++                        "fall back to the CWD\n", save, strerror(errno));
++        return;
++    }
+     snprintf(s_user_dir, sizeof s_user_dir, "%s", user);
+     snprintf(s_save_dir, sizeof s_save_dir, "%s", save);
+ #endif  /* !SWOS_WASM_BUILD */
 ```
