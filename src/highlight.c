@@ -182,9 +182,23 @@ static int16_t ReplayCameraX(int16_t recordedX)
         /* In-game instant replay: the recorded camera + sprites are already in
          * our own (wide) screen space, not the DOS 336-space, so the WIDE_MARGIN
          * re-anchor below would shift them (the goal overlay landed ~WIDE_MARGIN
-         * too far left). Play the recorded path verbatim. */
+         * too far left). Play the recorded path verbatim.
+         *
+         * VERBATIM MEANS VERBATIM — do NOT route this through ReplaySimCameraX.
+         * That helper converts a RENDER origin into a simulation X, which is
+         * right for the two returns below (they compute `out` in render space)
+         * and wrong here: `recordedX` is whatever SaveCoordinatesForHighlights
+         * stored, and game_loop.c passes it `_cameraX.s.i` — ALREADY the
+         * simulation camera. 314bc32 sent all three returns through the helper,
+         * so this one gained WIDE_MARGIN a second time: Render_CameraX() handed
+         * back the recorded SIMULATION value instead of the render origin the
+         * frame was drawn with, and the pitch, goal and hoardings slid out from
+         * under the verbatim-replayed players. Measured at 480 wide, a frame
+         * recorded with sim camera 195 drew at render origin 123 and replayed
+         * at 192. Folds to identity at 4:3 and on Amiga (WIDE_MARGIN == 0) —
+         * and the corpus forces 336 (main.c), which is why nothing caught it. */
         s_replayShiftX = 0;
-        return ReplaySimCameraX(recordedX);
+        return recordedX;
     }
     /* The DosReplay loader flags a SWOS-2020 widescreen recording (sprites span
      * wider than the 336 DOS/Amiga view). For those the recorded camera already
