@@ -88,7 +88,7 @@ game ships in and what the DOS corpus cannot test:
  include/game_types.h    |  17 +++
  include/sprites.h       |   5 +
  include/swos_io.h       |  21 ++++
- include/swos_platform.h |  15 +++
+ include/swos_platform.h |  36 ++++++
  include/tactics_data.h  |   7 ++
  src/SWOS.c              |   8 ++
  src/adverts.c           |   4 +-
@@ -118,13 +118,14 @@ game ships in and what the DOS corpus cannot test:
  src/menus.c             |  17 ++-
  src/move_camera.c       |  31 ++---
  src/pitch.c             |   4 +-
+ src/platform_switch.cpp |  40 +++++++
  src/player_anim.c       |  11 +-
  src/random.c            |  22 +++-
  src/referee.c           |  59 +++++++++-
  src/resload.c           |   6 +-
  src/sprites.c           | 107 +++++++++++++----
  src/swos_globals.c      |   8 ++
- src/swos_io.c           |  68 ++++++++++-
+ src/swos_io.c           |  93 ++++++++++++++-
  src/swos_settings.c     |   5 +
  src/tackle_foul.c       |   9 +-
  src/tactics_data.c      | 297 +++++++++++++++++++++++++++++++++++++++++++++++-
@@ -132,7 +133,7 @@ game ships in and what the DOS corpus cannot test:
  src/team_control.c      |  66 +++++++++--
  src/translations.c      |   4 +-
  src/update_players.c    |  56 +++++++--
- 48 files changed, 1798 insertions(+), 302 deletions(-)
+ 49 files changed, 1884 insertions(+), 302 deletions(-)
 ```
 
 ## Per-commit diffs
@@ -4845,4 +4846,148 @@ index 78d19d4..4037c47 100644
  #endif
  #include <stdarg.h>
  #include <string.h>
+```
+
+
+---
+
+### 6f084af  [?]  switch: mount the ROM filesystem, and route the log where it can be read
+
+_2026-09-05_
+
+```diff
+diff --git a/include/swos_platform.h b/include/swos_platform.h
+index 3e9bbd9..948a165 100644
+--- a/include/swos_platform.h
++++ b/include/swos_platform.h
+@@ -51,6 +51,27 @@
+ #define SWOS_SWITCH_BUILD 1
+ #endif
+ 
++#ifdef SWOS_SWITCH_BUILD
++/* Route the game's diagnostics to the target log.
++ *
++ * printf and fprintf(stderr, ...) reach nobody on a console — nothing connects
++ * stdio to the devkit — so a build that fails during startup gives an error
++ * code and not one word about what it was doing. NN_LOG does reach
++ * `ControlTarget read-log`, and src/platform_switch.cpp wraps it.
++ *
++ * Done here, as macros, rather than by editing several hundred call sites. The
++ * fprintf form tests the stream so that REAL file writes (SWOS.ini, the JSON
++ * saves) still go to their files — only the stderr side is diverted. The
++ * `fprintf` inside the macro is not re-expanded: a macro is never expanded
++ * recursively inside its own expansion, so that arm is the real function. */
++#include <stdio.h>
++int SwosSwitchLog(const char *fmt, ...);
++
++#define fprintf(stream, ...) \
++    (((stream) == stderr) ? SwosSwitchLog(__VA_ARGS__) : fprintf(stream, __VA_ARGS__))
++#define printf(...)  SwosSwitchLog(__VA_ARGS__)
++#endif
++
+ /* On Win32 PE-COFF the C compiler prepends '_' to every C global symbol
+  * at the assembler level (so a C `foo` becomes `_foo` in the .o file).
+  * ELF (Linux/macOS) does not. Many files alias buffers via inline asm
+diff --git a/src/platform_switch.cpp b/src/platform_switch.cpp
+new file mode 100644
+index 0000000..5255343
+--- /dev/null
++++ b/src/platform_switch.cpp
+@@ -0,0 +1,40 @@
++/*
++ * platform_switch.cpp — the Nintendo Switch's log sink.
++ *
++ * SWOS reports through fprintf(stderr, ...) and printf() everywhere, which is
++ * right on the three desktops and reaches NOBODY on a console: nothing
++ * connects stdio to the devkit, so a build that fails during startup produces
++ * an error code and not one word about what it was doing.
++ *
++ * NN_LOG does reach `ControlTarget read-log`, so swos_platform.h redirects the
++ * stderr side of those two calls here. That gets every diagnostic the game
++ * already prints — the [video] line, the asset counts, the panics — onto the
++ * target log with no call-site changes.
++ *
++ * This is the one C++ translation unit in the project. It exists only because
++ * NN_LOG is a C++ macro (::nn::diag::), and it is deliberately tiny: it is a
++ * log sink, not a logging framework, and should not grow into one.
++ */
++
++#include <nn/nn_Log.h>
++#include <stdarg.h>
++
++extern "C" {
++
++/* Matches the fprintf/printf return contract loosely — callers ignore it. */
++int SwosSwitchVLog(const char *fmt, va_list args)
++{
++    NN_VLOG(fmt, args);
++    return 0;
++}
++
++int SwosSwitchLog(const char *fmt, ...)
++{
++    va_list args;
++    va_start(args, fmt);
++    NN_VLOG(fmt, args);
++    va_end(args);
++    return 0;
++}
++
++}  /* extern "C" */
+diff --git a/src/swos_io.c b/src/swos_io.c
+index 4037c47..4ea12fc 100644
+--- a/src/swos_io.c
++++ b/src/swos_io.c
+@@ -173,6 +173,12 @@ static char s_save_dir[1024] = "save";
+  * (= the exe's cwd) so a dev/CLI run and the WASM build keep the old relative
+  * "./SWOS.ini". swos_save_dir_init() overwrites it with the real per-user dir. */
+ static char s_user_dir[1024] = ".";
++#ifdef SWOS_SWITCH_BUILD
++/* The read-only content root, from SDL_GetBasePath() — which also mounts it.
++ * "rom:" until resolved so a read before init fails visibly rather than
++ * silently reading the wrong place. */
++static char s_data_dir[256] = "rom:";
++#endif
+ 
+ const char *swos_save_dir(void)
+ {
+@@ -230,7 +236,26 @@ static int swos_make_dirs(const char *path)
+ void swos_save_dir_init(void)
+ {
+ #if defined(SWOS_SWITCH_BUILD)
+-    /* Switch: SDL_GetPrefPath mounts the per-user save against the account the
++    /* Switch: SDL_GetBasePath() is what MOUNTS the read-only content —
++     * nn::fs::MountRom("rom", ...) happens inside it, on first call. Nothing
++     * else mounts it, so without this every fopen("rom:/...") fails and the
++     * game comes up with no data at all. Do it before anything reads a file.
++     * The returned string is the prefix swos_data_path() then uses, rather
++     * than a hard-coded "rom:/", so the two can never disagree. */
++    {
++        char *base = SDL_GetBasePath();
++        if (base && *base) {
++            size_t n = strlen(base);
++            while (n > 1 && (base[n - 1] == '/' || base[n - 1] == '\\'))
++                base[--n] = '\0';
++            snprintf(s_data_dir, sizeof s_data_dir, "%s", base);
++        } else {
++            fprintf(stderr, "[switch] SDL_GetBasePath failed: %s\n", SDL_GetError());
++        }
++        if (base) SDL_free(base);
++    }
++
++    /* SDL_GetPrefPath mounts the per-user save against the account the
+      * player picked at launch and hands back "save:/". That needs
+      * StartupUserAccount to be Required in the .nmeta — with None it returns
+      * NULL and the game would start fresh every launch (docs/SWITCH.md).
+@@ -353,8 +378,8 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
+     /* The content is mounted read-only at rom:/ and there is no chdir, so the
+      * relative paths the rest of the game uses have to be anchored here. */
+     if (!rel || !buf || buf_sz == 0) return rel;
+-    if (strncmp(rel, "rom:/", 5) == 0) return rel;   /* already anchored */
+-    snprintf(buf, buf_sz, "rom:/%s", rel);
++    if (strchr(rel, ':')) return rel;                /* already anchored */
++    snprintf(buf, buf_sz, "%s/%s", s_data_dir, rel);
+     return buf;
+ #else
+     (void)buf; (void)buf_sz;
 ```
