@@ -3,7 +3,7 @@
  "onInit": "OptionsMenuBeforeDraw",
  "onReturn": null,
  "onDraw": null,
- "defaultEntry": 13,
+ "defaultEntry": 15,
  "items": [
   {
    "kind": "coords_mode",

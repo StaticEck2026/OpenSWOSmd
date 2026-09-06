@@ -2776,7 +2776,7 @@ Menu_DIYCup _diyCupMenu = {
     MENU_MARK_END_MENU
 };
 Menu_Options _optionsMenu = {
-    { OptionsMenuBeforeDraw, 0, 0, 13 },
+    { OptionsMenuBeforeDraw, 0, 0, 15 },
     MENU_MARK_BYTE_COORDS,
     {
         { 92, 0, 120, 15 },
