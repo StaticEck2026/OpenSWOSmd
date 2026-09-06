@@ -86,6 +86,33 @@ extern volatile uint16_t _keyCount;
 #define AKEY_LALT     0x64
 #define AKEY_RALT     0x65
 
+/* ---- Controller buttons -> in-match key functions --------------------------
+ * Play uses only TWO pad buttons — A and B for fire, B doubling as skip — plus
+ * direction. Everything else the match understands is a KEY: pause, the
+ * statistics overlay, the two replay kinds, the substitutes menus, quit. On a
+ * console there is no keyboard at all, so without this none of it is reachable;
+ * on a desktop pad it meant reaching for the keyboard mid-match.
+ *
+ * Pushed as RAW Amiga scancodes into the same _keyBuffer a keypress goes
+ * through, so `_keycodeLut` and every consumer downstream are untouched — this
+ * adds a producer, not a code path. (That LUT is also why the match compares
+ * against 0x50 for pause: 0x50 is ASCII 'P' AFTER the translation, not the raw
+ * scancode for P, which is 0x19.)
+ *
+ * Deliberately NOT mapped: A and B (play), the D-pad and sticks (direction),
+ * and GUIDE — which is HOME on a Switch and belongs to the system. */
+static const struct { int button; uint8_t akey; const char *what; } k_padKeys[] = {
+    { SDL_CONTROLLER_BUTTON_START,         0x19, "P   pause"                    },
+    { SDL_CONTROLLER_BUTTON_BACK,          0x21, "S   statistics"               },
+    { SDL_CONTROLLER_BUTTON_Y,             0x13, "R   instant replay"           },
+    { SDL_CONTROLLER_BUTTON_X,             0x25, "H   replay after the match"   },
+    { SDL_CONTROLLER_BUTTON_LEFTSHOULDER,  0x4C, "UP  substitutes, bottom team" },
+    { SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, 0x4D, "DN  substitutes, top team"    },
+    /* Quit is on a stick CLICK on purpose: it ends the match, and a click is
+     * not something you hit by accident mid-game the way a face button is. */
+    { SDL_CONTROLLER_BUTTON_RIGHTSTICK,    0x45, "ESC quit the match"           },
+};
+
 static int sdl_to_amiga(SDL_Keycode k)
 {
     /* Letters: SDLK_a..SDLK_z are contiguous (0x61..0x7A), and the
@@ -180,6 +207,18 @@ static SDL_GameController *s_pads[INPUTSDL_NUM_PADS];
 static SDL_Joystick       *s_raw_pads[INPUTSDL_NUM_PADS];   /* one of pads[i] / raw_pads[i] is set */
 static SDL_JoystickID      s_pad_instance_id[INPUTSDL_NUM_PADS]; /* for matching DEVICEREMOVED */
 
+
+/* Push a raw Amiga scancode into the FIFO GetKey() drains, exactly as a
+ * keyboard press does: same full-buffer drop, and no repeat handling, since a
+ * pad button generates one event per press. */
+static void push_amiga_key(uint8_t akey)
+{
+    if (_keyCount < (sizeof(_keyBuffer) - 3)) {
+        _keyBuffer[_keyCount] = akey;
+        _keyCount++;
+    }
+}
+
 static int pad_open_into_first_empty(int joystick_index)
 {
     for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
@@ -187,9 +226,25 @@ static int pad_open_into_first_empty(int joystick_index)
             if (SDL_IsGameController(joystick_index)) {
                 SDL_GameController *p = SDL_GameControllerOpen(joystick_index);
                 if (p) {
+                    static int announced;
                     s_pads[i] = p;
                     s_pad_instance_id[i] = SDL_JoystickInstanceID(
                         SDL_GameControllerGetJoystick(p));
+                    /* Print the in-match button map once. On a console there
+                     * is no manual to check and no keyboard to fall back on,
+                     * so the log is where you find out what the pad does. */
+                    if (!announced) {
+                        const char *nm = SDL_GameControllerName(p);
+                        size_t k;
+                        announced = 1;
+                        fprintf(stderr, "[input] pad: %s\n", nm ? nm : "controller");
+                        fprintf(stderr, "[input]   A / B          -> fire (B also skips)\n");
+                        for (k = 0; k < sizeof k_padKeys / sizeof k_padKeys[0]; k++)
+                            fprintf(stderr, "[input]   %-14s -> %s\n",
+                                    SDL_GameControllerGetStringForButton(
+                                        (SDL_GameControllerButton)k_padKeys[k].button),
+                                    k_padKeys[k].what);
+                    }
                     return i;
                 }
             } else {
@@ -387,6 +442,20 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         default: break;
         }
     } break;
+    case SDL_CONTROLLERBUTTONDOWN: {
+        /* Only for pads SDL has a GameController mapping for — the raw
+         * joystick path has no button NAMES to key off, so a gameport adapter
+         * keeps working exactly as before and simply has no key buttons. */
+        size_t i;
+        for (i = 0; i < sizeof k_padKeys / sizeof k_padKeys[0]; i++) {
+            if (e->cbutton.button == k_padKeys[i].button) {
+                push_amiga_key(k_padKeys[i].akey);
+                break;
+            }
+        }
+        break;
+    }
+
     case SDL_JOYDEVICEADDED: {
         /* SDL fires JOYDEVICEADDED for every device. CONTROLLERDEVICEADDED
          * fires *additionally* for devices that have a GameController

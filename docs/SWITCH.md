@@ -223,6 +223,38 @@ translation unit** — it exists because `NN_LOG` is a C++ macro (`::nn::diag::`
 `freopen` is skipped here: a log file on the save mount would burn the player's
 quota and need committing to survive anyway.
 
+### In-match controls
+
+The console has no keyboard, and everything the match understands beyond fire
+and direction is a KEY — so `input_sdl.c` maps pad buttons to them. Not
+Switch-gated: a desktop pad had the same problem, it was just easier to ignore
+because a keyboard was in reach.
+
+| button | key | function |
+|---|---|---|
+| A / B | — | fire (B also skips) |
+| + (Start) | P | pause |
+| − (Back) | S | statistics |
+| Y | R | instant replay |
+| X | H | replay after the match |
+| L | UP | substitutes, bottom team |
+| R | DOWN | substitutes, top team |
+| R-stick click | ESC | quit the match |
+
+The keys go in as **raw Amiga scancodes**, through the same `_keyBuffer` a
+keypress uses, so `_keycodeLut` and everything downstream is untouched — this
+adds a producer, not a code path. Worth knowing that the LUT is why the match
+compares against `0x50` for pause: that is ASCII `'P'` *after* translation, not
+the raw scancode for P, which is `0x19`. Reading the comparison as a scancode
+gets you F1, which is wrong.
+
+Quit is on a stick click deliberately — it ends the match, and a click is not
+something you hit by accident the way a face button is. HOME is left alone; it
+belongs to the system.
+
+The bindings are printed to the log when a pad connects, since there is no
+manual to check on a console.
+
 ### Not yet done
 
 - **Screenshots** (`platform_sdl.c`, `SWOS_SCREENSHOT_INTERVAL` / F9) still
