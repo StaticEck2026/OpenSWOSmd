@@ -1,0 +1,159 @@
+# ============================================================================
+#  OpenSWOS — Nintendo Switch (NX-NXFP2-a64)
+# ============================================================================
+#
+#     make -f Makefile.switch            -> bin/SWOS.nss   (the linked ELF)
+#     make -f Makefile.switch clean
+#
+#  Then package it with scripts/build_switch.bat, which runs MakeNso, MakeMeta
+#  and AuthoringTool. See docs/SWITCH.md.
+#
+#  MUST BE RUN FROM WINDOWS, not WSL: NintendoClang is a Windows executable and
+#  would be handed Linux paths. scripts/build_switch.sh drives it from WSL
+#  through Windows interop, the same trick the Cygwin target uses in
+#  scripts/build_dist.sh.
+#
+#  This target needs two trees that are NOT in this repository and must not be
+#  committed to it — both are under NDA and available only to registered
+#  Nintendo developers:
+#
+#    NINTENDO_SDK_ROOT   the NintendoSDK  (built against 22.2.10)
+#    SDL_SWITCH_ROOT     a checkout of libsdl-org/SDL-switch, licensee-only
+#
+#  Nothing here reproduces SDK source; it describes how this project uses one.
+#
+#  Why a makefile rather than the .vcxproj the SDK expects: the SDK integrates
+#  with Visual Studio through MSBuild props and targets, and building an NX
+#  project needs the VSI package. But NintendoClang takes its flags from plain
+#  config files under Build/ClangConfigs/NX-NXFP2-a64/, so the same compiler
+#  drives directly and SWOS keeps one build system per target instead of a
+#  hand-maintained project file that would drift. The flags below are those
+#  config files reproduced. IF THE SDK IS UPDATED, diff this against
+#  Build/ClangConfigs/NX-NXFP2-a64/{Compile/C,Link}/Application.cfg.
+# ============================================================================
+
+NINTENDO_SDK_ROOT ?= D:/Nintendo/NativeSDK22.2.10/NintendoSDK
+SDL_SWITCH_ROOT   ?= D:/Projects/GitHub/SDL-switch
+
+NX_TARGET := NX-NXFP2-a64
+NX_CLANG  := $(NINTENDO_SDK_ROOT)/Compilers/NintendoClang/bin
+NX_LIB    := $(NINTENDO_SDK_ROOT)/Libraries/$(NX_TARGET)/Develop
+
+CC := $(NX_CLANG)/clang.exe
+AR := $(NX_CLANG)/llvm-ar.exe
+
+BINDIR := bin
+TARGET := $(BINDIR)/SWOS.nss
+OBJDIR := obj-switch
+
+SRCDIR := src
+INCDIR := include
+
+# ---- Sources ---------------------------------------------------------------
+# The same src/ as every other target. The Switch is a flavour of the SDL
+# build, so nothing is excluded — unlike Makefile.amiga's SDL_ONLY_SRCS.
+SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
+OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
+DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
+
+# ---- Flags -----------------------------------------------------------------
+# Build/ClangConfigs/NX-NXFP2-a64/Compile/C/Application.cfg, verbatim except
+# that -x c / -std=gnu17 are dropped: this project is -std=gnu11 and the config
+# bakes in a standard the build has to choose for itself.
+#
+# -fno-common and -fno-short-enums are not cosmetic — the SDK's own libraries
+# are built with them and the ABI has to agree.
+NX_ARCH   := -mcpu=cortex-a57+fp+simd+crypto+crc --target=aarch64-nintendo-nx-elf
+NX_COMMON := $(NX_ARCH) -fdata-sections -ffunction-sections -fno-common \
+             -fno-short-enums -fPIC
+
+# NN_SDK_BUILD_DEVELOP is mandatory: without a build-type macro every SDK
+# header stops with "ビルドタイプマクロが定義されていません" — the build type
+# macro is not defined.
+NX_DEFS := -DNN_SDK_BUILD_DEVELOP \
+           -DNN_BUILD_CONFIG_SPEC_NX01 \
+           -DNN_BUILD_CONFIG_OS_HORIZON \
+           -DSWOS_SWITCH_BUILD=1
+
+# The warning set is the SDL Makefile's, for the same reasons documented there
+# (packed Amiga layouts, deliberate BSS-adjacency reads, the tactics extractor's
+# braces). Three more are clang-only, and each was measured rather than guessed
+# by compiling the whole tree with this compiler:
+#   -Wno-pointer-to-int-cast  display.c stores pointers in the Amiga's 32-bit
+#                             bitplane registers; gcc does not warn, clang does.
+#   -Wno-comment              a handful of pre-existing "/*" inside block
+#                             comments (frontend.c, save_format_json.c).
+#   -Wno-unknown-pragmas      #pragma GCC optimize(...) in four files, which
+#                             clang ignores; the SDL build relies on it, so
+#                             the Switch build is one optimisation short there
+#                             and that is not known to matter.
+CFLAGS := $(NX_COMMON) $(NX_DEFS) -O2 -g -std=gnu11 \
+          -fno-strict-aliasing -fno-builtin -MMD -MP \
+          -D_FILE_OFFSET_BITS=64 \
+          -Wall -Wno-unused-function -Wno-unused-variable \
+          -Wno-unused-but-set-variable -Wno-attributes -Wno-multichar \
+          -Wno-pointer-sign -Wno-int-conversion -Wno-incompatible-pointer-types \
+          -Wno-braces -Wno-address-of-packed-member -Wno-strict-aliasing \
+          -Wno-array-bounds -Wno-unknown-warning-option \
+          -Wno-pointer-to-int-cast -Wno-comment -Wno-unknown-pragmas \
+          -include $(INCDIR)/swos_platform.h \
+          -I$(SRCDIR) -I$(INCDIR) \
+          -isystem $(SDL_SWITCH_ROOT)/include \
+          -isystem $(NINTENDO_SDK_ROOT)/Include \
+          -isystem $(NINTENDO_SDK_ROOT)/TargetSpecificInclude/$(NX_TARGET)
+
+# Build/ClangConfigs/NX-NXFP2-a64/Link/Application.cfg. -pie and the ldscript
+# are what make the output loadable at all.
+LDFLAGS := $(NX_ARCH) -nostartfiles -fuse-ld=lld.exe -pie \
+           -Wl,--pack-dyn-relocs=relr -Wl,--gc-sections \
+           -Wl,-init=_init -Wl,-fini=_fini \
+           -Wl,-z,combreloc -Wl,-z,relro -Wl,--enable-new-dtags \
+           --runtime-libs-root=$(NINTENDO_SDK_ROOT)/Compilers/NintendoClang/lib/NX \
+           -Wl,-T,$(NINTENDO_SDK_ROOT)/Resources/SpecFiles/Application.aarch64.lp64.ldscript
+
+# ORDER MATTERS. All of these are referenced by nnSdk, which comes after them:
+#   rocrt.o             the startup object. NOT optional — it supplies the
+#                       .rocrt.init section the linker script places first in
+#                       .text, and with it the MOD0 header the loader reads.
+#                       Without it everything links, the ELF looks healthy,
+#                       MakeNso produces a structurally valid NSO — and the
+#                       console refuses to launch it.
+#   nnApplication.o     carries __nnDetailNintendoSdkRuntimeObjectFile.
+#   libnn_init_memory.a where malloc comes from; the platform has no C runtime
+#                       of its own to fall back on.
+NX_SYSLIBS := $(NX_LIB)/rocrt.o \
+              $(NX_LIB)/nnApplication.o \
+              $(NX_LIB)/libnn_init_memory.a \
+              $(NX_LIB)/nnSdk.nss \
+              $(NX_LIB)/crtend.o
+
+# SDL's NX video backend renders through GL, so the GL loader and the two
+# system shared libraries come along. They are also why the packaged code
+# directory needs subsdk0/subsdk1 (scripts/build_switch.bat).
+NX_GFXLIBS := $(NX_LIB)/libnn_gll.a $(NX_LIB)/opengl.nss $(NX_LIB)/vulkan.nss
+
+# The SDL fork, built separately — see docs/SWITCH.md.
+SDL_LIB ?= $(SDL_SWITCH_ROOT)/build-nx/libSDL2_nx.a
+
+.DEFAULT_GOAL := all
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(OBJECTS) | $(BINDIR)
+	@echo "  LINK  $@"
+	@$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(SDL_LIB) $(NX_GFXLIBS) $(NX_SYSLIBS)
+
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	@mkdir -p $(dir $@)
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(BINDIR):
+	@mkdir -p $@
+
+clean:
+	@rm -rf $(OBJDIR) $(TARGET)
+	@echo "  CLEAN switch"
+
+-include $(DEPS)

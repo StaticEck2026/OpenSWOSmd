@@ -28,6 +28,7 @@
  */
 
 #include "swos_settings.h"
+#include "swos_io.h"   /* swos_save_commit — Switch save durability */
 #include "ini.h"
 
 #include <ctype.h>
@@ -454,6 +455,10 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
         }
     }
     fclose(out);
+    /* Closed first — the Switch's save commit requires it, and without the
+     * commit SWOS.ini reads back fine all session and is gone next launch.
+     * Nothing on any other target (swos_io.h). */
+    swos_save_commit();
 }
 
 /* Back-compat alias for the startup/shutdown path: now identical to the

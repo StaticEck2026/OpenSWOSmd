@@ -70,7 +70,11 @@ static void resolve_path(const uint8_t *amiga_name, char *out, size_t out_sz)
     if (has_save_ext(src) && !strchr(src, '/')) {
         snprintf(out, out_sz, "%s/%s", swos_save_dir(), src);
     } else {
-        snprintf(out, out_sz, "%s", src);
+        /* Relative to the data root. Identity everywhere the game chdir()s to
+         * its own directory; anchored at rom:/ on the Switch (swos_io.h). */
+        char anchored[1024];
+        snprintf(out, out_sz, "%s",
+                 swos_data_path(src, anchored, (uint32_t)sizeof anchored));
     }
 }
 

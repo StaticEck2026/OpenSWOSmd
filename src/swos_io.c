@@ -5,6 +5,10 @@
  */
 /* swos_io.c — portable I/O + heap shim. See swos_io.h. */
 #include "swos_io.h"
+#ifdef SWOS_SWITCH_BUILD
+#include <SDL.h>                 /* SDL_GetPrefPath, SDL_free */
+#include <SDL_nintendoswitch.h>  /* SDL_NintendoSwitch_CommitSaveData */
+#endif
 #include <stdarg.h>
 #include <string.h>
 
@@ -224,7 +228,29 @@ static int swos_make_dirs(const char *path)
 
 void swos_save_dir_init(void)
 {
-#ifdef SWOS_WASM_BUILD
+#if defined(SWOS_SWITCH_BUILD)
+    /* Switch: SDL_GetPrefPath mounts the per-user save against the account the
+     * player picked at launch and hands back "save:/". That needs
+     * StartupUserAccount to be Required in the .nmeta — with None it returns
+     * NULL and the game would start fresh every launch (docs/SWITCH.md).
+     *
+     * The mount is flat and small, so unlike the desktops there is no separate
+     * user/ and user/save split: SWOS.ini and the .CAR files share it. */
+    {
+        char *pref = SDL_GetPrefPath(NULL, "SWOS");
+        if (pref && *pref) {
+            size_t n = strlen(pref);
+            /* SDL returns a trailing separator; the rest of this file composes
+             * paths as "%s/%s" and would otherwise produce "save://FOO.CAR". */
+            while (n > 1 && (pref[n - 1] == '/' || pref[n - 1] == '\\'))
+                pref[--n] = '\0';
+            snprintf(s_user_dir, sizeof s_user_dir, "%s", pref);
+            snprintf(s_save_dir, sizeof s_save_dir, "%s", pref);
+        }
+        if (pref) SDL_free(pref);
+    }
+    return;
+#elif defined(SWOS_WASM_BUILD)
     /* Browser build: saves persist in the IndexedDB-backed /save mount set up in
      * wasm/pre.js. The game writes "save/…" relative to cwd "/" (chdir is skipped
      * on WASM), i.e. into /save — so the "save" default is already correct, and
@@ -313,7 +339,35 @@ int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
     if (!f) return 1;
     size_t put = fwrite(buf, 1, size, f);
     fclose(f);
+    /* Closed before committing — the commit requires it. */
+    swos_save_commit();
     return (put == size) ? 0 : 1;
+}
+
+/* ---- Data root + save durability (see swos_io.h) -------------------- */
+
+const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
+{
+#ifdef SWOS_SWITCH_BUILD
+    /* The content is mounted read-only at rom:/ and there is no chdir, so the
+     * relative paths the rest of the game uses have to be anchored here. */
+    if (!rel || !buf || buf_sz == 0) return rel;
+    if (strncmp(rel, "rom:/", 5) == 0) return rel;   /* already anchored */
+    snprintf(buf, buf_sz, "rom:/%s", rel);
+    return buf;
+#else
+    (void)buf; (void)buf_sz;
+    return rel;
+#endif
+}
+
+void swos_save_commit(void)
+{
+#ifdef SWOS_SWITCH_BUILD
+    /* Not durable until committed, and SDL will not do it for you. The mount
+     * name matches what SDL_GetPrefPath mounted ("save"). */
+    SDL_NintendoSwitch_CommitSaveData("save");
+#endif
 }
 
 #else  /* Amiga */
@@ -341,6 +395,17 @@ int swos_io_load_alloc(const uint8_t *name, uint8_t **out_buf, uint32_t *out_siz
     *out_size = sz;
     return 0;
 }
+
+/* Amiga: the game runs from its own directory and resload owns the save
+ * device, so both of these are nothing. Defined anyway so the shared call
+ * sites need no #ifdef. */
+const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
+{
+    (void)buf; (void)buf_sz;
+    return rel;
+}
+
+void swos_save_commit(void) { }
 
 int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
 {

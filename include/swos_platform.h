@@ -36,6 +36,21 @@
 #define SWOS_WASM_BUILD 1
 #endif
 
+/* Nintendo Switch target (another flavour of the SDL build — it links the
+ * licensee SDL fork, so every SDL call site is unchanged). Makefile.switch
+ * passes -DSWOS_SWITCH_BUILD=1; the __NX fallback is what NintendoClang
+ * predefines, so a file compiled outside the makefile still agrees.
+ *
+ * What actually differs is small and all of it is filesystem: the content is
+ * mounted read-only at rom:/ and there is no chdir, the per-user save is
+ * mounted at save:/ and a write there is not durable until it is committed,
+ * and printf reaches nobody — the log has to go through NN_LOG. See
+ * docs/SWITCH.md. */
+#if defined(SWOS_SWITCH_BUILD) || defined(__NX) || defined(__NINTENDO_SWITCH__)
+#undef  SWOS_SWITCH_BUILD
+#define SWOS_SWITCH_BUILD 1
+#endif
+
 /* On Win32 PE-COFF the C compiler prepends '_' to every C global symbol
  * at the assembler level (so a C `foo` becomes `_foo` in the .o file).
  * ELF (Linux/macOS) does not. Many files alias buffers via inline asm

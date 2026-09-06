@@ -22,6 +22,7 @@
  * ====================================================================== */
 
 #include "mjson.h"
+#include "swos_io.h"   /* swos_data_path — rom:/ on the Switch */
 #include "menu_symbols.h"
 #include "translations.h"
 #include <stdint.h>
@@ -483,7 +484,9 @@ static const struct { const char *name; uint8_t *menu; } s_staticMenus[] = {
 
 static uint8_t *menu_slurp(const char *path, int *out_len)
 {
-    FILE *f = fopen(path, "rb");
+    /* Anchored at the data root — rom:/ on the Switch (swos_io.h). */
+    char anchored[1024];
+    FILE *f = fopen(swos_data_path(path, anchored, (uint32_t)sizeof anchored), "rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
     long n = ftell(f);

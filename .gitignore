@@ -99,3 +99,10 @@ tests/amiga/
 # Converted recordings (scripts/rgd_convert.py --emit). Derived from tests/dos,
 # regenerate rather than track — a full-level .swr of one recording is ~7 MB.
 tests/replay/
+
+# Nintendo Switch target (docs/SWITCH.md). The SDK and the SDL fork are NDA and
+# are never in this tree; these are just the build outputs.
+obj-switch/
+build-switch/
+bin/SWOS.nss
+dist/

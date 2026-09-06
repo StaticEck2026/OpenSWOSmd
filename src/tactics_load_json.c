@@ -24,6 +24,7 @@
  * ====================================================================== */
 
 #include "tactics_data.h"   /* TeamTactics + the _teamTactics* externs */
+#include "swos_io.h"   /* swos_data_path — rom:/ on the Switch */
 #include "mjson.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -107,7 +108,9 @@ static int build_one(const char *j, int jl, TeamTactics *out)
 
 static uint8_t *tactics_slurp(const char *path, int *out_len)
 {
-    FILE *f = fopen(path, "rb");
+    /* Anchored at the data root — rom:/ on the Switch (swos_io.h). */
+    char anchored[1024];
+    FILE *f = fopen(swos_data_path(path, anchored, (uint32_t)sizeof anchored), "rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
     long n = ftell(f);

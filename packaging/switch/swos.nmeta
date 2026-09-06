@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  OpenSWOS — Nintendo Switch application metadata.
+
+  TWO VALUES ARE BORROWED AND MUST BE REPLACED BEFORE SUBMISSION.
+
+  ApplicationId is the SDK's own Demo1 sample id, used here only because a
+  devkit will actually launch it. Installing this build OVERWRITES the Demo1
+  sample if that is on the console, and two titles sharing an id overwrite
+  each other's saves. Replace it with the id issued on the Nintendo Developer
+  Portal.
+
+  Do not invent one that "looks like" a development range: 0x0100000000010000
+  was tried on the reference port and refused with "Failed to launch
+  application" and an empty log, because an all-zero middle is the SYSTEM
+  title range. Every real application id is 0x01 followed by twelve varying
+  hex digits and 000.
+
+  ApplicationErrorCodeCategory is a placeholder for the same reason. It is
+  required because SDL's assert dialog calls nn::err::ShowApplicationError,
+  and AuthoringTool's get-unpublishable-error reports an unconfigured category
+  as a genuine blocker rather than a submission nicety.
+
+  StartupUserAccount is the field that makes the console ask which profile to
+  play as, and it is load-bearing: SDL_GetPrefPath mounts save:/ against that
+  account and returns NOTHING when this is None, so with None every career and
+  the options file would be lost at exit. See docs/SWITCH.md.
+
+  Editable with the SDK's AuthoringEditor if a GUI is easier. Note that XML
+  comments here cannot contain a double hyphen — MakeMeta fails with an
+  XmlException that does not name the file.
+-->
+<NintendoSdkMeta>
+  <Core>
+    <Name>Application</Name>
+    <ApplicationId>0x01004b9000490000</ApplicationId>
+    <ProgramIndex>0</ProgramIndex>
+    <Is64BitInstruction>True</Is64BitInstruction>
+    <ProcessAddressSpace>AddressSpace64Bit</ProcessAddressSpace>
+
+    <!-- The platform's default thread stack is 80KB, far smaller than the
+         other targets give a main thread. SWOS is a 1990s Amiga program with
+         large automatic buffers on the menu and career paths, so it asks for
+         the megabyte it has everywhere else. -->
+    <MainThreadStackSize>0x00100000</MainThreadStackSize>
+
+    <!-- SystemResourceSize deliberately absent: add it when an allocation
+         actually fails, not in advance. -->
+  </Core>
+
+  <Application>
+    <Title>
+      <Language>AmericanEnglish</Language>
+      <Name>OpenSWOS</Name>
+      <Publisher>Baker76</Publisher>
+    </Title>
+    <Title>
+      <Language>BritishEnglish</Language>
+      <Name>OpenSWOS</Name>
+      <Publisher>Baker76</Publisher>
+    </Title>
+    <Icon>
+      <Language>AmericanEnglish</Language>
+      <IconPath>swos_icon.bmp</IconPath>
+    </Icon>
+    <Icon>
+      <Language>BritishEnglish</Language>
+      <IconPath>swos_icon.bmp</IconPath>
+    </Icon>
+    <SupportedLanguage>AmericanEnglish</SupportedLanguage>
+    <SupportedLanguage>BritishEnglish</SupportedLanguage>
+
+    <ReleaseVersion>0</ReleaseVersion>
+    <DisplayVersion>1.0.0</DisplayVersion>
+
+    <Rating>
+      <Organization>ESRB</Organization>
+      <Age>0</Age>
+    </Rating>
+
+    <StartupUserAccount>Required</StartupUserAccount>
+    <UserAccountSwitchLock>Disable</UserAccountSwitchLock>
+
+    <!-- Sized for SWOS, not for a settings file. A single career .CAR is
+         around 96KB and the game keeps many of them alongside .SEA/.PRE/.DIY
+         and the .HIL highlights, so 64MB leaves real room. The journal is the
+         staging area a commit writes through and only needs to cover the
+         largest single save. -->
+    <UserAccountSaveDataSize>0x0000000004000000</UserAccountSaveDataSize>
+    <UserAccountSaveDataJournalSize>0x0000000000400000</UserAccountSaveDataJournalSize>
+
+    <Screenshot>Allow</Screenshot>
+    <VideoCapture>Enable</VideoCapture>
+    <DataLossConfirmation>None</DataLossConfirmation>
+
+    <ApplicationErrorCodeCategory>ABC12</ApplicationErrorCodeCategory>
+
+    <LogoType>LicensedByNintendo</LogoType>
+    <LogoHandling>Auto</LogoHandling>
+
+    <CrashReport>Allow</CrashReport>
+    <CrashScreenshotForProd>Allow</CrashScreenshotForProd>
+    <CrashScreenshotForDev>Deny</CrashScreenshotForDev>
+
+    <PlayLogQueryCapability>None</PlayLogQueryCapability>
+    <PlayLogPolicy>Open</PlayLogPolicy>
+
+    <RuntimeAddOnContentInstall>Deny</RuntimeAddOnContentInstall>
+    <RuntimeParameterDelivery>Always</RuntimeParameterDelivery>
+    <ContentsAvailabilityTransitionPolicy>Stable</ContentsAvailabilityTransitionPolicy>
+  </Application>
+</NintendoSdkMeta>

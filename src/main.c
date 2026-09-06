@@ -192,8 +192,10 @@ int main(int argc, char **argv)
      * from. (SWOS.ini and SWOS.log no longer live here — they go to the per-user
      * game folder; see swos_save_dir_init() + the freopen below.)
      * WASM: there is no binary dir — the data is --preload-file'd into MEMFS at
-     * /data, /grafs, … and cwd is already "/", so skip the chdir. */
-#ifndef SWOS_WASM_BUILD
+     * /data, /grafs, … and cwd is already "/", so skip the chdir.
+     * Switch: the content is a read-only mount at rom:/ and there is no chdir
+     * to make; swos_data_path() (swos_io.h) anchors the data reads instead. */
+#if !defined(SWOS_WASM_BUILD) && !defined(SWOS_SWITCH_BUILD)
     chdir_to_binary(argv ? argv[0] : NULL);
 #endif
 
@@ -403,6 +405,12 @@ int main(int argc, char **argv)
      * install dir. Works the same from gdb, Explorer, or a terminal. Disable by
      * setting SWOS_NO_LOG=1 to send stderr back to the console. Unbuffered so
      * lines flush immediately and we don't lose context on a crash. */
+#ifdef SWOS_SWITCH_BUILD
+    /* Switch: don't redirect. stderr on a devkit reaches the target log through
+     * the SDK, and a log FILE on the save: mount would burn the user's save
+     * quota and need committing to survive anyway. `ControlTarget read-log`
+     * is where the output goes — start it BEFORE launching (docs/SWITCH.md). */
+#else
     if (getenv("SWOS_NO_LOG") == NULL) {
         char log_path[1088];
         snprintf(log_path, sizeof log_path, "%s/SWOS.log", swos_user_dir());
@@ -411,6 +419,7 @@ int main(int argc, char **argv)
             setvbuf(log, NULL, _IONBF, 0);
         }
     }
+#endif
 
     /* Load the UI translation table for the selected language
      * (data_json/translations/<lang>.json) now that the CWD is the binary dir

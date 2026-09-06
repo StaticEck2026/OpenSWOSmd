@@ -14,6 +14,7 @@
  * ====================================================================== */
 
 #include "translations.h"
+#include "swos_io.h"   /* swos_data_path — rom:/ on the Switch */
 #include "string_symbols.h"
 
 #ifdef SWOS_SDL_BUILD   /* Runtime JSON translation is host-only: mjson + stdio +
@@ -154,7 +155,8 @@ void Translations_Load(const char *lang)
 
     char path[160];
     snprintf(path, sizeof path, "data_json/translations/%s.json", lang);
-    FILE *f = fopen(path, "rb");
+    char anchored[224];
+    FILE *f = fopen(swos_data_path(path, anchored, (uint32_t)sizeof anchored), "rb");
     if (!f) {
         fprintf(stderr, "[i18n] %s not found — using compiled strings\n", path);
         fflush(stderr);

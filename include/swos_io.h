@@ -61,6 +61,27 @@ const char *swos_ini_path(void);
  * platform; on WASM it is a no-op (relative "save" / "." are already correct). */
 void swos_save_dir_init(void);
 
+/* Resolve a path that is relative to the game's DATA root (data/, grafs/,
+ * sound/, data_json/, …).
+ *
+ * On every desktop target the game chdir()s to the binary's directory at
+ * startup, so a relative path is already correct and this returns `rel`
+ * untouched — no copy, nothing to get wrong. The Switch is the one target
+ * with no chdir and a read-only content mount at rom:/, so the prefix is
+ * added here, at the handful of places that open game data, rather than at
+ * every fopen in the tree. `buf` is only written on that target.
+ *
+ * The returned pointer is either `rel` or `buf`; it is valid for as long as
+ * whichever of those the caller owns. */
+const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz);
+
+/* Make everything written under swos_save_dir() / swos_user_dir() durable.
+ * A no-op everywhere except the Switch, where a write to the save: mount
+ * survives only if it is committed — without this the file reads back
+ * correctly for the rest of the session and is simply absent next launch.
+ * Call it after the writes are closed. */
+void swos_save_commit(void);
+
 /* ---- Heap (size-tagged allocations) ----
  *
  * swos_io_alloc / swos_io_realloc / swos_io_free are a portable
