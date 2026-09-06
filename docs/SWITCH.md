@@ -16,25 +16,48 @@ Where SWOS differs it is called out below.
 
 ## Status
 
-**Not yet built end to end.** The SDL fork was not available on the machine
-this was written on, so the target has never linked or run.
+**Builds, links and packages.** `bin/SWOS.nss` (5.6 MB) and `dist/SWOS.nsp`
+(84 MB) come out of a clean run against SDK 22.2.10 and a checkout of the SDL
+fork. **Not yet installed or run on hardware** — everything past the package is
+unverified.
 
-What *has* been verified, by compiling the tree with the real NintendoClang
-(`Nintendo version 1.21.2 clang 21.1.8`, target `aarch64-nintendo-nx-elf`) from
-the SDK at 22.2.10:
+The linked module is what the loader expects:
 
-| | |
-|---|---|
-| sources compiling clean for the Switch | **138 of 147** |
-| remaining 9 | blocked *only* by `SDL.h` not being present |
-| SDK pieces the build references | all confirmed present at the paths used |
+```
+ELF 64-bit LSB pie executable, ARM aarch64
+.rocrt.init  placed first in .text        MOD0 header present at 0x13c040
+DT_NEEDED    opengl.nss  vulkan.nss  nnSdk.nss
+```
 
-So the C is portable and the toolchain flags are right. What is untested is
-everything that needs a link: startup, the loader accepting the package, the
-save mount, input, audio, and whether the frame pacing holds.
+which is why the code directory needs `subsdk0`/`subsdk1`/`sdk` alongside
+`main`. `e_entry` is 0 and that is fine — the loader reads MOD0, and the
+failure the reference port describes is MOD0 *absent* with entry 0.
+
+What is untested: startup, whether the loader accepts the package, the save
+mount and its commit, input, audio, and frame pacing.
 
 Two placeholders **must** be replaced before submission — see
 [Metadata](#metadata).
+
+### What building it actually took
+
+Four things beyond the reference port's list, each found by the link failing:
+
+- **Every `nintendoswitch` backend in the SDL fork is C++**, including
+  `main/nintendoswitch`, which is where `nnMain` lives. Globbing `*.c` only
+  gives `undefined reference: nnMain` with nothing to suggest a file
+  extension is the problem. `Makefile.switch` builds `.cpp` too, with
+  `-std=gnu++20` and `-fno-use-cxa-atexit`, and links with `clang++`.
+- **`DATA_FLAGS` is not optional.** The SDL Makefile passes nine
+  `-D*_DATA_C=1` toggles that compile in the C versions of the leagues,
+  tactics, fixtures, palettes and strings. Without them those files compile to
+  almost nothing — `tactics_data.o` came out at 760 bytes — and the link fails
+  on a wall of undefined data symbols like `_teamTactics532` and `_uefaCup`.
+- **`SIGHUP` is defined but `signal()` is not exported.** `main()` guarded a
+  Cygwin-only `signal(SIGHUP, SIG_IGN)` on `#ifdef SIGHUP`, which is true here
+  and links to nothing. There is no controlling terminal on a console anyway.
+- **`SDL_NintendoSwitch_CommitSaveData` is declared in `SDL_filesystem.h`,**
+  not in a header of its own; there is no `SDL_nintendoswitch.h` in the fork.
 
 ---
 
@@ -57,8 +80,9 @@ target.
 
 ### Building SDL
 
-The fork is built once, separately, and `Makefile.switch` links the result
-(`SDL_LIB`, default `$(SDL_SWITCH_ROOT)/build-nx/libSDL2_nx.a`). It needs no
+`Makefile.switch` builds the fork itself, into `obj-switch/libSDL2_nx.a`, so
+this target needs nothing but a checkout. Point `SDL_LIB` at a prebuilt library
+instead if you have one. It needs no
 special defines: NintendoClang predefines `__NINTENDO__` and `__NX`, so
 `SDL_platform.h` sets `__NINTENDO_SWITCH__` and SDL picks
 `SDL_config_nintendoswitch.h` by itself.
@@ -220,14 +244,23 @@ variable.
 
 ### What goes into `rom:/`
 
-`data grafs grafs_aga grafs_dos sound data_json` — the Amiga data, the two
-Amiga graphics tiers, the DOS tier, the audio, and the editable JSON the
-competition/menu/tactics tables bake from.
+`data grafs grafs_aga grafs_dos grafs_2020 sound data_json` — the
+`FULL_DATA_DIRS` list `scripts/build_dist.sh` ships in the desktop drop, which
+is the project's tested "what the game needs at runtime" set. The asset tiers
+are selectable at runtime and `data_json` carries the translations `tr()`
+reads, so none of it is build-only.
 
-`save/` is deliberately **not** shipped: the console mounts the player's own
-save at `save:/` instead, and `bin/save` in this checkout is 24 MB of test
-careers. `grafs_2020` and `grafs_arcade` are also left out for now — arcade
-mode is a coin-op cabinet mode that does not apply here.
+Two deliberate omissions:
+
+- **`save/`** — the console mounts the player's own save at `save:/`, and
+  `bin/save` in this checkout is 24 MB of test careers.
+- **`grafs_arcade`** — 27 MB of a 111 MB package for the coin-op cabinet mode,
+  which is dedicated-hardware and off by default. Put it back in the list in
+  `scripts/build_switch.bat` if arcade mode is ever wanted here.
+
+For scale, the package is dominated by the SDK's own modules, not by SWOS:
+`opengl.nso` 24 MB and `vulkan.nso` 23 MB in the code directory against 1.1 MB
+for `main`.
 
 ---
 

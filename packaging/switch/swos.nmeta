@@ -4,10 +4,12 @@
 
   TWO VALUES ARE BORROWED AND MUST BE REPLACED BEFORE SUBMISSION.
 
-  ApplicationId is the SDK's own Demo1 sample id, used here only because a
-  devkit will actually launch it. Installing this build OVERWRITES the Demo1
-  sample if that is on the console, and two titles sharing an id overwrite
-  each other's saves. Replace it with the id issued on the Nintendo Developer
+  ApplicationId is BORROWED from an SDK sample, used here only because a devkit
+  will actually launch a real id. This one belongs to the PrepoSimple sample,
+  deliberately NOT Demo1 (0x01004b9000490000): the Jungool port on the same
+  devkit uses Demo1, and two titles sharing an id overwrite each other and each
+  other's saves. Installing this build overwrites PrepoSimple if that sample is
+  on the console. Replace it with the id issued on the Nintendo Developer
   Portal.
 
   Do not invent one that "looks like" a development range: 0x0100000000010000
@@ -33,7 +35,7 @@
 <NintendoSdkMeta>
   <Core>
     <Name>Application</Name>
-    <ApplicationId>0x01004b9000490000</ApplicationId>
+    <ApplicationId>0x0100c0d000494000</ApplicationId>
     <ProgramIndex>0</ProgramIndex>
     <Is64BitInstruction>True</Is64BitInstruction>
     <ProcessAddressSpace>AddressSpace64Bit</ProcessAddressSpace>

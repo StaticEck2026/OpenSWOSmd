@@ -39,8 +39,9 @@ NX_TARGET := NX-NXFP2-a64
 NX_CLANG  := $(NINTENDO_SDK_ROOT)/Compilers/NintendoClang/bin
 NX_LIB    := $(NINTENDO_SDK_ROOT)/Libraries/$(NX_TARGET)/Develop
 
-CC := $(NX_CLANG)/clang.exe
-AR := $(NX_CLANG)/llvm-ar.exe
+CC  := $(NX_CLANG)/clang.exe
+CXX := $(NX_CLANG)/clang++.exe
+AR  := $(NX_CLANG)/llvm-ar.exe
 
 BINDIR := bin
 TARGET := $(BINDIR)/SWOS.nss
@@ -75,6 +76,15 @@ NX_DEFS := -DNN_SDK_BUILD_DEVELOP \
            -DNN_BUILD_CONFIG_OS_HORIZON \
            -DSWOS_SWITCH_BUILD=1
 
+# The Amiga "data module" toggles, exactly as the SDL Makefile sets them: the C
+# versions of the leagues, tactics, fixtures, palettes and strings replace
+# SWOS2.s's data section. NOT optional — without them those files compile to
+# almost nothing (tactics_data.o came out at 760 bytes) and the link fails on
+# a wall of undefined data symbols like _teamTactics532 and _uefaCup.
+DATA_FLAGS := -DCOMPETITION_DATA_C=1 -DTACTICS_DATA_C=1 -DFIXTURE_DATA_C=1 \
+              -DSIMULATION_DATA_C=1 -DPLAYER_DATA_C=1 -DRENDER_DATA_C=1 \
+              -DPALETTE_DATA_C=1 -DSTRINGS_DATA_C=1 -DGENERAL_DATA_C=1
+
 # The warning set is the SDL Makefile's, for the same reasons documented there
 # (packed Amiga layouts, deliberate BSS-adjacency reads, the tactics extractor's
 # braces). Three more are clang-only, and each was measured rather than guessed
@@ -87,7 +97,7 @@ NX_DEFS := -DNN_SDK_BUILD_DEVELOP \
 #                             clang ignores; the SDL build relies on it, so
 #                             the Switch build is one optimisation short there
 #                             and that is not known to matter.
-CFLAGS := $(NX_COMMON) $(NX_DEFS) -O2 -g -std=gnu11 \
+CFLAGS := $(NX_COMMON) $(NX_DEFS) $(DATA_FLAGS) -O2 -g -std=gnu11 \
           -fno-strict-aliasing -fno-builtin -MMD -MP \
           -D_FILE_OFFSET_BITS=64 \
           -Wall -Wno-unused-function -Wno-unused-variable \
@@ -132,17 +142,78 @@ NX_SYSLIBS := $(NX_LIB)/rocrt.o \
 # directory needs subsdk0/subsdk1 (scripts/build_switch.bat).
 NX_GFXLIBS := $(NX_LIB)/libnn_gll.a $(NX_LIB)/opengl.nss $(NX_LIB)/vulkan.nss
 
-# The SDL fork, built separately — see docs/SWITCH.md.
-SDL_LIB ?= $(SDL_SWITCH_ROOT)/build-nx/libSDL2_nx.a
+# ---- The SDL fork ----------------------------------------------------------
+# Built here rather than expected as a prebuilt artifact, so this target needs
+# nothing but a checkout. Its own README recommends building it as part of the
+# project: it needs no special defines, because NintendoClang predefines
+# __NINTENDO__ and __NX, so SDL_platform.h sets __NINTENDO_SWITCH__ and SDL
+# picks SDL_config_nintendoswitch.h by itself.
+#
+# Only these directories belong in an NX build — src/ carries every platform's
+# backend. main/nintendoswitch is SDL's nnMain, which calls SDL_main: our
+# main(). Set SDL_LIB to point at a prebuilt library instead if you have one.
+SDL_NX_DIRS := atomic cpuinfo dynapi events file power render render/opengl \
+               render/opengles2 render/software sensor sensor/dummy stdlib \
+               thread thread/pthread timer timer/unix video video/dummy \
+               video/yuv2rgb audio audio/disk audio/dummy audio/nintendoswitch \
+               filesystem/nintendoswitch haptic haptic/nintendoswitch \
+               joystick joystick/nintendoswitch loadso/nintendoswitch \
+               locale locale/nintendoswitch misc misc/nintendoswitch \
+               video/nintendoswitch main/nintendoswitch
+
+# EVERY nintendoswitch backend is C++, including main/nintendoswitch, which is
+# where nnMain lives — glob .c only and the link fails on `undefined reference:
+# nnMain` with nothing to say it was a file-extension problem.
+SDL_SOURCES     := $(wildcard $(SDL_SWITCH_ROOT)/src/*.c) \
+                   $(foreach d,$(SDL_NX_DIRS),$(wildcard $(SDL_SWITCH_ROOT)/src/$(d)/*.c))
+SDL_SOURCES_CPP := $(foreach d,$(SDL_NX_DIRS),$(wildcard $(SDL_SWITCH_ROOT)/src/$(d)/*.cpp))
+SDL_OBJECTS     := $(patsubst $(SDL_SWITCH_ROOT)/src/%.c,$(OBJDIR)/sdl/%.o,$(SDL_SOURCES)) \
+                   $(patsubst $(SDL_SWITCH_ROOT)/src/%.cpp,$(OBJDIR)/sdl/%.opp,$(SDL_SOURCES_CPP))
+
+SDL_BUILT := $(OBJDIR)/libSDL2_nx.a
+SDL_LIB   ?= $(SDL_BUILT)
+
+# 2010s C with every platform's backend in one tree; its warnings are not this
+# project's to fix, so -w rather than the game's warning set.
+SDL_CFLAGS := $(NX_COMMON) $(NX_DEFS) -O2 -std=gnu11 -w -MMD -MP \
+              -I$(SDL_SWITCH_ROOT)/include \
+              -isystem $(NINTENDO_SDK_ROOT)/Include \
+              -isystem $(NINTENDO_SDK_ROOT)/TargetSpecificInclude/$(NX_TARGET)
+
+$(OBJDIR)/sdl/%.o: $(SDL_SWITCH_ROOT)/src/%.c
+	@mkdir -p $(dir $@)
+	@echo "  CC    sdl/$*.c"
+	@$(CC) $(SDL_CFLAGS) -c $< -o $@
+
+# Build/ClangConfigs/NX-NXFP2-a64/Compile/Cxx/Application.cfg is -std=gnu++20.
+# -fno-use-cxa-atexit because nnSdk exports 44 __cxa_* symbols but NOT
+# __cxa_atexit, so static destructors registered the usual way have nothing to
+# register with; the platform provides plain atexit and expects that.
+SDL_CXXFLAGS := $(NX_COMMON) $(NX_DEFS) -O2 -std=gnu++20 -fno-use-cxa-atexit -w \
+                -MMD -MP -I$(SDL_SWITCH_ROOT)/include \
+                -isystem $(NINTENDO_SDK_ROOT)/Include \
+                -isystem $(NINTENDO_SDK_ROOT)/TargetSpecificInclude/$(NX_TARGET)
+
+$(OBJDIR)/sdl/%.opp: $(SDL_SWITCH_ROOT)/src/%.cpp
+	@mkdir -p $(dir $@)
+	@echo "  CXX   sdl/$*.cpp"
+	@$(CXX) $(SDL_CXXFLAGS) -c $< -o $@
+
+$(SDL_BUILT): $(SDL_OBJECTS)
+	@echo "  AR    $@"
+	@$(AR) rcs $@ $(SDL_OBJECTS)
+
+SDL_DEPS := $(patsubst $(SDL_SWITCH_ROOT)/src/%.c,$(OBJDIR)/sdl/%.d,$(SDL_SOURCES)) \
+            $(patsubst $(SDL_SWITCH_ROOT)/src/%.cpp,$(OBJDIR)/sdl/%.d,$(SDL_SOURCES_CPP))
 
 .DEFAULT_GOAL := all
 .PHONY: all clean
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS) | $(BINDIR)
+$(TARGET): $(OBJECTS) $(SDL_LIB) | $(BINDIR)
 	@echo "  LINK  $@"
-	@$(CC) $(LDFLAGS) -o $@ $(OBJECTS) $(SDL_LIB) $(NX_GFXLIBS) $(NX_SYSLIBS)
+	@$(CXX) $(LDFLAGS) -o $@ $(OBJECTS) $(SDL_LIB) $(NX_GFXLIBS) $(NX_SYSLIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(dir $@)
@@ -157,3 +228,4 @@ clean:
 	@echo "  CLEAN switch"
 
 -include $(DEPS)
+-include $(SDL_DEPS)

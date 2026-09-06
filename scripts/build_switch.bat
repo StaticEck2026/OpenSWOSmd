@@ -115,12 +115,18 @@ echo Building the process descriptor
 "%TOOLS%\MakeMeta\MakeMeta.exe" --desc "%DESC%" --meta "packaging\switch\swos.nmeta" -o "%STAGE%\code\main.npdm"
 if errorlevel 1 ( echo. & echo ERROR: MakeMeta failed & exit /b 1 )
 
-rem  The read-only content, mounted at rom:/ on the console. This is the same
-rem  list scripts/build_dist.sh ships in the Amiga drop plus the SDL-only asset
-rem  tiers the game can select at runtime; save\ is deliberately NOT here - the
-rem  console mounts the player's own save at save:/ instead.
+rem  The read-only content, mounted at rom:/ on the console. Exactly the
+rem  FULL_DATA_DIRS list scripts/build_dist.sh ships in the desktop drop, which
+rem  is the project's tested "what the game needs at runtime" set - the asset
+rem  tiers are selectable at runtime and data_json carries the translations
+rem  tr[] reads. save\ is deliberately NOT here: the console mounts the
+rem  player's own save at save:/ instead, and bin\save is test careers.
+rem
+rem  grafs_arcade is the ONE deliberate omission: 27MB of a 111MB package for
+rem  the coin-op cabinet mode, which is a dedicated-hardware feature and is off
+rem  by default. Add it back to this list if arcade mode is ever wanted here.
 echo Copying the game data into the ROM filesystem
-for %%d in (data grafs grafs_aga grafs_dos sound data_json) do (
+for %%d in (data grafs grafs_aga grafs_dos grafs_2020 sound data_json) do (
     if exist "bin\%%d" (
         echo   %%d
         xcopy /e /i /q /y "bin\%%d" "%STAGE%\data\%%d" >nul
@@ -136,7 +142,8 @@ echo Creating the package
     --type Application ^
     --desc "%DESC%" ^
     --program "%STAGE%\code" "%STAGE%\data" ^
-    --nss "bin\SWOS.nss"
+    --nss "bin\SWOS.nss" ^
+    --platform NX
 if errorlevel 1 ( echo. & echo ERROR: AuthoringTool failed & exit /b 1 )
 
 echo.

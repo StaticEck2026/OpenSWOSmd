@@ -177,7 +177,11 @@ static const char *match_kv(const char *arg, const char *key)
 
 int main(int argc, char **argv)
 {
-#ifdef SIGHUP
+/* Switch: the headers define SIGHUP but nnSdk exports no signal(), so the
+ * #ifdef alone is not the right test — the link fails on `undefined symbol:
+ * signal`. There is no controlling terminal on a console either, which is what
+ * this is for. */
+#if defined(SIGHUP) && !defined(SWOS_SWITCH_BUILD)
     /* Cygwin under the VS Code gdb launcher wires stdio as pipes (not a Cygwin
      * pty), so at startup the runtime sees the controlling terminal "hang up"
      * and delivers SIGHUP — whose default action kills us before the window

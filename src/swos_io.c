@@ -6,8 +6,9 @@
 /* swos_io.c — portable I/O + heap shim. See swos_io.h. */
 #include "swos_io.h"
 #ifdef SWOS_SWITCH_BUILD
-#include <SDL.h>                 /* SDL_GetPrefPath, SDL_free */
-#include <SDL_nintendoswitch.h>  /* SDL_NintendoSwitch_CommitSaveData */
+/* SDL_GetPrefPath, SDL_free, and SDL_NintendoSwitch_CommitSaveData — which the
+ * fork declares in SDL_filesystem.h, not in a header of its own. */
+#include <SDL.h>
 #endif
 #include <stdarg.h>
 #include <string.h>

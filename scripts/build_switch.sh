@@ -45,10 +45,24 @@ echo "   SDK      : $NINTENDO_SDK_ROOT"
 echo "   SDL      : $SDL_SWITCH_ROOT"
 echo
 
-# /d so a different drive letter is handled; the .bat cd's to the repo root
-# itself, so passing its own path is enough.
-"$CMD" /c "set NINTENDO_SDK_ROOT=$NINTENDO_SDK_ROOT&& set SDL_SWITCH_ROOT=$SDL_SWITCH_ROOT&& \"$WINROOT\\scripts\\build_switch.bat\" $ARG"
+# The .bat is passed as ONE argv element and the roots go through the
+# environment: building the whole thing into a single `cmd /c "..."` string
+# means quoting it twice, and cmd then treats the escaped quotes as literal
+# ("... is not recognized as an internal or external command"). WSLENV is how
+# a WSL variable reaches a Windows process at all — without naming them there,
+# cmd would fall back to the .bat's own defaults and silently ignore an
+# override set here.
+export NINTENDO_SDK_ROOT SDL_SWITCH_ROOT
+export WSLENV="${WSLENV:+$WSLENV:}NINTENDO_SDK_ROOT:SDL_SWITCH_ROOT"
+
+set +e
+if [ -n "$ARG" ]; then
+    "$CMD" /c "$WINROOT\\scripts\\build_switch.bat" "$ARG"
+else
+    "$CMD" /c "$WINROOT\\scripts\\build_switch.bat"
+fi
 rc=$?
+set -e
 
 if [ $rc -ne 0 ]; then
     echo "-- FAIL (exit $rc)" >&2
