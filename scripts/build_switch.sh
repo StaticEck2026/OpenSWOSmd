@@ -43,6 +43,7 @@ echo "== Switch build (via Windows interop)"
 echo "   checkout : $WINROOT"
 echo "   SDK      : $NINTENDO_SDK_ROOT"
 echo "   SDL      : $SDL_SWITCH_ROOT"
+[ -n "$EXTRA_CFLAGS" ] && echo "   cflags   : $EXTRA_CFLAGS"
 echo
 
 # The .bat is passed as ONE argv element and the roots go through the
@@ -52,8 +53,12 @@ echo
 # a WSL variable reaches a Windows process at all — without naming them there,
 # cmd would fall back to the .bat's own defaults and silently ignore an
 # override set here.
-export NINTENDO_SDK_ROOT SDL_SWITCH_ROOT
-export WSLENV="${WSLENV:+$WSLENV:}NINTENDO_SDK_ROOT:SDL_SWITCH_ROOT"
+# EXTRA_CFLAGS reaches Makefile.switch the same way: named in WSLENV or cmd
+# never sees it. scripts/build_dist.sh sets it to keep the console build's
+# SWOS_TEST_NO_INJURIES_CARDS in step with every other target in a drop.
+EXTRA_CFLAGS="${EXTRA_CFLAGS:-}"
+export NINTENDO_SDK_ROOT SDL_SWITCH_ROOT EXTRA_CFLAGS
+export WSLENV="${WSLENV:+$WSLENV:}NINTENDO_SDK_ROOT:SDL_SWITCH_ROOT:EXTRA_CFLAGS"
 
 set +e
 if [ -n "$ARG" ]; then

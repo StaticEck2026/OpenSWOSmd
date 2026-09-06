@@ -116,6 +116,15 @@ CFLAGS := $(NX_COMMON) $(NX_DEFS) $(DATA_FLAGS) -O2 -g -std=gnu11 \
           -isystem $(NINTENDO_SDK_ROOT)/Include \
           -isystem $(NINTENDO_SDK_ROOT)/TargetSpecificInclude/$(NX_TARGET)
 
+# Escape hatch for one-off defines, the same one Makefile.amiga carries. This
+# target has no SWOS_* knobs of its own, so without it a drop built by
+# scripts/build_dist.sh would ship every other platform with
+# SWOS_TEST_NO_INJURIES_CARDS=1 and the console without it — and a tester
+# comparing the two files bugs for non-bugs (see .claude/CLAUDE.md).
+# Deliberately NOT added to SDL_CFLAGS/SDL_CXXFLAGS: the fork is third-party
+# code and none of the game's toggles mean anything inside it.
+CFLAGS += $(EXTRA_CFLAGS)
+
 # Build/ClangConfigs/NX-NXFP2-a64/Link/Application.cfg. -pie and the ldscript
 # are what make the output loadable at all.
 LDFLAGS := $(NX_ARCH) -nostartfiles -fuse-ld=lld.exe -pie \

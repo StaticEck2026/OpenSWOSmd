@@ -65,7 +65,14 @@ if defined CLEANONLY (
 
 echo.
 echo Building bin\SWOS.nss
-"!MAKE!" -f Makefile.switch -j%NUMBER_OF_PROCESSORS% NINTENDO_SDK_ROOT=!SDKFWD! SDL_SWITCH_ROOT=!SDLFWD!
+rem  EXTRA_CFLAGS is Makefile.switch's one-off define hatch - scripts/build_dist.sh
+rem  passes SWOS_TEST_NO_INJURIES_CARDS through it so the console build matches the
+rem  rest of a drop. Unquoted on purpose: the value is a single -D token with no
+rem  spaces, and cmd would hand make the quotes as literal characters. Delayed
+rem  expansion, not %%EXTRA_CFLAGS%%: an UNDEFINED var stays literal under %% in a
+rem  batch file, which would put the text into CFLAGS and break the compile. Under
+rem  ! it is simply empty, so running this .bat directly still works.
+"!MAKE!" -f Makefile.switch -j%NUMBER_OF_PROCESSORS% NINTENDO_SDK_ROOT=!SDKFWD! SDL_SWITCH_ROOT=!SDLFWD! EXTRA_CFLAGS=!EXTRA_CFLAGS!
 if errorlevel 1 ( echo. & echo ERROR: build failed & exit /b 1 )
 
 if not defined PACKAGE (

@@ -28,6 +28,14 @@
 #   wasm           make WASM=1          -> bin/SWOS.html/.js/.wasm/.data
 #   amiga          make -f Makefile.amiga -> bin/SWOS2
 #   windows        make (in Cygwin)     -> bin/SWOS.exe
+#   switch         scripts/build_switch.sh package
+#                                       -> bin/SWOS.nss + dist/SWOS.nsp
+#
+# The Switch needs the NintendoSDK and the licensee SDL fork, neither of which
+# is in this repository (both NDA). It SKIPs with a reason when they are not
+# there, so a drop on another machine still builds everything else. Its output
+# is an .nsp package rather than a zip member — an .nsp already IS the
+# installable artifact.
 #
 # macOS is deliberately NOT here: `make macos-app` hard-fails unless
 # `uname -s` is Darwin, and there is no cross-compile path. Run this on a Mac:
@@ -79,8 +87,14 @@ cd "$ROOT" || exit 1
 EMSDK_DIR="${EMSDK_DIR:-/mnt/c/Projects/Linux/emsdk}"
 AMIGA_TOOLCHAIN="${AMIGA_TOOLCHAIN:-/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux}"
 CYGWIN_BASH="${CYGWIN_BASH:-/mnt/c/cygwin64/bin/bash.exe}"
+# Switch: both trees are NDA and live on the Windows side. Defaults match
+# scripts/build_switch.sh, which is what actually consumes them; they are
+# repeated here only so the target can be SKIPPED with a reason instead of
+# failing on a machine that has no SDK. See docs/SWITCH.md.
+NINTENDO_SDK_ROOT="${NINTENDO_SDK_ROOT:-D:\\Nintendo\\NativeSDK22.2.10\\NintendoSDK}"
+SDL_SWITCH_ROOT="${SDL_SWITCH_ROOT:-D:\\Projects\\GitHub\\SDL-switch}"
 
-ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows"
+ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows switch"
 
 # Binaries that go into the zip. The WASM outputs are deliberately excluded:
 # SWOS.html/.js/.wasm/.data are a web deployment, not something a tester runs
@@ -178,12 +192,15 @@ while [ $# -gt 0 ]; do
 done
 
 MAKE_FLAGS="SWOS_SAVE_FORMAT_JSON_VERIFY=$VERIFY"
-AMIGA_EXTRA=""
+EXTRA_DEFS=""
 if [ "$NOINJ" = 1 ]; then
     MAKE_FLAGS="$MAKE_FLAGS SWOS_TEST_NO_INJURIES_CARDS=1"
-    # Makefile.amiga has no SWOS_* knobs of its own; EXTRA_CFLAGS is its
-    # documented escape hatch, so the m68k binary matches the SDL ones.
-    AMIGA_EXTRA="-DSWOS_TEST_NO_INJURIES_CARDS=1"
+    # Neither Makefile.amiga nor Makefile.switch has SWOS_* knobs of its own;
+    # EXTRA_CFLAGS is the documented escape hatch on both, so the m68k and NX
+    # binaries match the SDL ones. Getting this wrong ships one platform in a
+    # drop with injuries and the rest without, and testers file the difference
+    # as a bug (.claude/CLAUDE.md).
+    EXTRA_DEFS="-DSWOS_TEST_NO_INJURIES_CARDS=1"
 fi
 
 wanted() {   # wanted <target> -> 0 if it should be built
@@ -217,10 +234,24 @@ run() {
 if [ "$DO_CLEAN" = 1 ]; then
     banner "clean (object dirs — make compares timestamps, not CFLAGS)"
     # SDL targets keep objects under build/<os>/<arch>; the Amiga makefile uses
-    # its own obj/ tree, so `rm -rf build` alone would leave it stale.
+    # its own obj/ tree and the Switch its own obj-switch/, so `rm -rf build`
+    # alone would leave both stale. This matters MORE for those two than for the
+    # SDL targets, because neither has SWOS_* knobs: the tester flag reaches them
+    # through EXTRA_CFLAGS, and make compares timestamps, not CFLAGS. Skip the
+    # Switch clean and only the files that happened to change get the flag —
+    # measured, not theorised: career_status.o survived from a pre-flag build
+    # with IsPlayerInjured still 88 bytes while the rest of the tree had it
+    # stubbed out.
     rm -rf build
     make -f Makefile.amiga clean >/dev/null 2>&1
-    echo "-- cleaned build/ and the Amiga obj/ tree"
+    # Only OUR objects, which sit at the top of obj-switch/. The SDL fork's live
+    # in obj-switch/sdl/ with its own prebuilt libSDL2_nx.a, and EXTRA_CFLAGS is
+    # deliberately kept out of SDL_CFLAGS (the fork is third-party; none of the
+    # game's toggles mean anything in it), so those cannot go stale on a flag
+    # change and rebuilding them would cost minutes for nothing.
+    rm -f obj-switch/*.o obj-switch/*.opp obj-switch/*.d
+    rm -rf build-switch
+    echo "-- cleaned build/, the Amiga obj/ tree and obj-switch/*.o (SDL fork kept)"
 fi
 
 # ---- SDL targets ------------------------------------------------------------
@@ -275,7 +306,7 @@ if wanted amiga; then
         # the benbaker76 fork (see .claude/CLAUDE.md). A wrong path fails as
         # 'Error 127' and an up-to-date tree hides it as "Nothing to be done".
         if PATH="$AMIGA_TOOLCHAIN/opt/bin:$AMIGA_TOOLCHAIN:$PATH" \
-               make -f Makefile.amiga EXTRA_CFLAGS="$AMIGA_EXTRA" -j"$JOBS"; then
+               make -f Makefile.amiga EXTRA_CFLAGS="$EXTRA_DEFS" -j"$JOBS"; then
             record amiga "OK"; echo "-- OK: amiga"
         else
             record amiga "FAIL"; echo "-- FAIL: amiga"
@@ -313,6 +344,48 @@ if wanted windows; then
             fi
             ;;
     esac
+fi
+
+# ---- switch (NX, via Windows interop) ---------------------------------------
+# Produces dist/SWOS.nsp, not a zip: an .nsp IS the installable package, and at
+# ~84 MB it is dominated by the SDK's own opengl/vulkan modules, which compress
+# to nothing. It is listed in the summary alongside the archives.
+#
+# Both the SDK and the SDL fork are NDA and live on the Windows side, so this
+# SKIPs with a reason on any machine that lacks them rather than failing the
+# whole drop. scripts/build_switch.sh owns the interop; all this does is decide
+# whether it can run and hand it the shared -D flags.
+if wanted switch; then
+    NX_MARK=""
+    if command -v wslpath >/dev/null 2>&1; then
+        NX_MARK="$(wslpath -u "$NINTENDO_SDK_ROOT" 2>/dev/null || echo "")"
+    fi
+    NX_SDL=""
+    if command -v wslpath >/dev/null 2>&1; then
+        NX_SDL="$(wslpath -u "$SDL_SWITCH_ROOT" 2>/dev/null || echo "")"
+    fi
+    if [ -z "$NX_MARK" ] || [ ! -f "$NX_MARK/NintendoSdkRootMark" ]; then
+        record switch "SKIP (no NintendoSDK at $NINTENDO_SDK_ROOT; set NINTENDO_SDK_ROOT)"
+    elif [ -z "$NX_SDL" ] || [ ! -d "$NX_SDL/src/video/nintendoswitch" ]; then
+        # Checked separately from the SDK: the fork is a different NDA tree and
+        # a different thing to go and get. Without this the build would reach
+        # the compiler and die on a missing SDL_config, failing the whole drop
+        # instead of stepping over one unavailable target.
+        record switch "SKIP (no SDL fork at $SDL_SWITCH_ROOT; set SDL_SWITCH_ROOT)"
+    elif [ ! -x "${COMSPEC:-/mnt/c/Windows/System32/cmd.exe}" ] &&
+         [ ! -x /mnt/c/Windows/System32/cmd.exe ]; then
+        record switch "SKIP (no Windows interop — NintendoClang is a Windows .exe)"
+    else
+        banner "switch NX-NXFP2-a64 -> bin/SWOS.nss + dist/SWOS.nsp"
+        # EXTRA_CFLAGS rides through WSLENV -> cmd -> Makefile.switch. Without
+        # it the console build would be the only one in the drop missing
+        # SWOS_TEST_NO_INJURIES_CARDS.
+        if EXTRA_CFLAGS="$EXTRA_DEFS" scripts/build_switch.sh package; then
+            record switch "OK"; echo "-- OK: switch"
+        else
+            record switch "FAIL"; echo "-- FAIL: switch"
+        fi
+    fi
 fi
 
 # ---- package ----------------------------------------------------------------
@@ -413,6 +486,14 @@ done
 echo ""
 echo "  macos          not buildable here — run 'make macos-app' on a Mac"
 echo ""
+# The Switch artifact is a package, not a zip member — say where it landed and
+# when, so "I installed the file from dist" can be checked against the commit
+# that was built rather than assumed to be current.
+if [ "${STATUS[switch]:-}" = "OK" ] && [ -f dist/SWOS.nsp ]; then
+    ls -l --time-style='+%Y-%m-%d %H:%M' dist/SWOS.nsp 2>/dev/null |
+        awk '{ printf "  switch package : %s bytes  %s %s\n", $5, $6, $7 }'
+    echo ""
+fi
 [ "$DO_ZIP" = 1 ] && [ -f "$ZIP_PATH" ] && ls -l "$ZIP_PATH"
 [ -f "$FULL_ZIP_PATH" ] && ls -l "$FULL_ZIP_PATH"
 [ -f "$AMIGA_ZIP_PATH" ] && ls -l "$AMIGA_ZIP_PATH"
