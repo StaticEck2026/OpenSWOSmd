@@ -53,7 +53,12 @@ SDL_ONLY_SRCS := \
     swos_settings.c       \
     tactics_load_json.c
 
-cpp_sources := $(wildcard $(addsuffix /*.cpp,$(SRC_DIRS)))
+# Switch-only C++ is filtered the same way SDL_ONLY_SRCS filters C:
+# platform_switch.cpp is the NN_LOG sink and includes <nn/nn_Log.h>, which the
+# m68k toolchain has no idea about.
+SWITCH_ONLY_SRCS := platform_switch.cpp
+
+cpp_sources := $(filter-out $(addprefix src/,$(SWITCH_ONLY_SRCS)),$(wildcard $(addsuffix /*.cpp,$(SRC_DIRS))))
 cpp_objects := $(addprefix obj/,$(patsubst %.cpp,%.o,$(notdir $(cpp_sources))))
 c_sources := $(filter-out $(addprefix src/,$(SDL_ONLY_SRCS)),$(wildcard $(addsuffix /*.c,$(SRC_DIRS))))
 c_objects := $(addprefix obj/,$(patsubst %.c,%.o,$(notdir $(c_sources))))
@@ -68,6 +73,7 @@ objects := $(cpp_objects) $(c_objects) $(s_objects) $(swos_asm_objects) $(vasm_o
 # Fail loudly if an SDL-only name no longer exists — otherwise the entry rots
 # silently and stops excluding anything the day the file is renamed.
 $(foreach f,$(SDL_ONLY_SRCS),$(if $(wildcard src/$(f)),,$(error SDL_ONLY_SRCS lists src/$(f), which does not exist — update Makefile.amiga)))
+$(foreach f,$(SWITCH_ONLY_SRCS),$(if $(wildcard src/$(f)),,$(error SWITCH_ONLY_SRCS lists src/$(f), which does not exist — update Makefile.amiga)))
 
 # https://stackoverflow.com/questions/4036191/sources-from-subdirectories-in-makefile/4038459
 # http://www.microhowto.info/howto/automatically_generate_makefile_dependencies.html

@@ -53,9 +53,13 @@ INCDIR := include
 # ---- Sources ---------------------------------------------------------------
 # The same src/ as every other target. The Switch is a flavour of the SDL
 # build, so nothing is excluded — unlike Makefile.amiga's SDL_ONLY_SRCS.
-SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
-OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
-DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))
+SOURCES     := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
+# One C++ TU: the log sink, which exists because NN_LOG is a C++ macro.
+SOURCES_CPP := $(wildcard $(SRCDIR)/*.cpp)
+OBJECTS     := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES)) \
+               $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.opp,$(SOURCES_CPP))
+DEPS        := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES)) \
+               $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.d,$(SOURCES_CPP))
 
 # ---- Flags -----------------------------------------------------------------
 # Build/ClangConfigs/NX-NXFP2-a64/Compile/C/Application.cfg, verbatim except
@@ -219,6 +223,17 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(dir $@)
 	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) -c $< -o $@
+
+# Our own C++ (platform_switch.cpp). No -include swos_platform.h: it defines
+# the fprintf/printf redirect that this file is the other end of.
+$(OBJDIR)/%.opp: $(SRCDIR)/%.cpp
+	@mkdir -p $(dir $@)
+	@echo "  CXX   $<"
+	@$(CXX) $(NX_COMMON) $(NX_DEFS) -O2 -g -std=gnu++20 -fno-use-cxa-atexit \
+	        -MMD -MP -Wall -I$(SRCDIR) -I$(INCDIR) \
+	        -isystem $(NINTENDO_SDK_ROOT)/Include \
+	        -isystem $(NINTENDO_SDK_ROOT)/TargetSpecificInclude/$(NX_TARGET) \
+	        -c $< -o $@
 
 $(BINDIR):
 	@mkdir -p $@

@@ -173,6 +173,12 @@ static char s_save_dir[1024] = "save";
  * (= the exe's cwd) so a dev/CLI run and the WASM build keep the old relative
  * "./SWOS.ini". swos_save_dir_init() overwrites it with the real per-user dir. */
 static char s_user_dir[1024] = ".";
+#ifdef SWOS_SWITCH_BUILD
+/* The read-only content root, from SDL_GetBasePath() — which also mounts it.
+ * "rom:" until resolved so a read before init fails visibly rather than
+ * silently reading the wrong place. */
+static char s_data_dir[256] = "rom:";
+#endif
 
 const char *swos_save_dir(void)
 {
@@ -230,7 +236,26 @@ static int swos_make_dirs(const char *path)
 void swos_save_dir_init(void)
 {
 #if defined(SWOS_SWITCH_BUILD)
-    /* Switch: SDL_GetPrefPath mounts the per-user save against the account the
+    /* Switch: SDL_GetBasePath() is what MOUNTS the read-only content —
+     * nn::fs::MountRom("rom", ...) happens inside it, on first call. Nothing
+     * else mounts it, so without this every fopen("rom:/...") fails and the
+     * game comes up with no data at all. Do it before anything reads a file.
+     * The returned string is the prefix swos_data_path() then uses, rather
+     * than a hard-coded "rom:/", so the two can never disagree. */
+    {
+        char *base = SDL_GetBasePath();
+        if (base && *base) {
+            size_t n = strlen(base);
+            while (n > 1 && (base[n - 1] == '/' || base[n - 1] == '\\'))
+                base[--n] = '\0';
+            snprintf(s_data_dir, sizeof s_data_dir, "%s", base);
+        } else {
+            fprintf(stderr, "[switch] SDL_GetBasePath failed: %s\n", SDL_GetError());
+        }
+        if (base) SDL_free(base);
+    }
+
+    /* SDL_GetPrefPath mounts the per-user save against the account the
      * player picked at launch and hands back "save:/". That needs
      * StartupUserAccount to be Required in the .nmeta — with None it returns
      * NULL and the game would start fresh every launch (docs/SWITCH.md).
@@ -353,8 +378,8 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
     /* The content is mounted read-only at rom:/ and there is no chdir, so the
      * relative paths the rest of the game uses have to be anchored here. */
     if (!rel || !buf || buf_sz == 0) return rel;
-    if (strncmp(rel, "rom:/", 5) == 0) return rel;   /* already anchored */
-    snprintf(buf, buf_sz, "rom:/%s", rel);
+    if (strchr(rel, ':')) return rel;                /* already anchored */
+    snprintf(buf, buf_sz, "%s/%s", s_data_dir, rel);
     return buf;
 #else
     (void)buf; (void)buf_sz;

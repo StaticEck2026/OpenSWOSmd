@@ -51,6 +51,27 @@
 #define SWOS_SWITCH_BUILD 1
 #endif
 
+#ifdef SWOS_SWITCH_BUILD
+/* Route the game's diagnostics to the target log.
+ *
+ * printf and fprintf(stderr, ...) reach nobody on a console — nothing connects
+ * stdio to the devkit — so a build that fails during startup gives an error
+ * code and not one word about what it was doing. NN_LOG does reach
+ * `ControlTarget read-log`, and src/platform_switch.cpp wraps it.
+ *
+ * Done here, as macros, rather than by editing several hundred call sites. The
+ * fprintf form tests the stream so that REAL file writes (SWOS.ini, the JSON
+ * saves) still go to their files — only the stderr side is diverted. The
+ * `fprintf` inside the macro is not re-expanded: a macro is never expanded
+ * recursively inside its own expansion, so that arm is the real function. */
+#include <stdio.h>
+int SwosSwitchLog(const char *fmt, ...);
+
+#define fprintf(stream, ...) \
+    (((stream) == stderr) ? SwosSwitchLog(__VA_ARGS__) : fprintf(stream, __VA_ARGS__))
+#define printf(...)  SwosSwitchLog(__VA_ARGS__)
+#endif
+
 /* On Win32 PE-COFF the C compiler prepends '_' to every C global symbol
  * at the assembler level (so a C `foo` becomes `_foo` in the .o file).
  * ELF (Linux/macOS) does not. Many files alias buffers via inline asm

@@ -170,7 +170,14 @@ texture upload, so the whole simulation is untouched.
 
 All four differences are filesystem or logging, and each is one `#ifdef`:
 
-**1. The content is read-only at `rom:/` and there is no `chdir`.** Every other
+**1. The content is read-only at `rom:/`, there is no `chdir`, and the mount
+does not happen by itself.** `SDL_GetBasePath()` is what calls
+`nn::fs::MountRom("rom", ...)`, on its first call — nothing else mounts it. So
+`swos_save_dir_init()` calls it at startup before anything reads a file and
+keeps the result as the data prefix, rather than hard-coding `"rom:/"` so the
+two can never disagree. **Miss this and every `fopen` fails and the game comes
+up with no data at all**, which looks exactly like the content not being in the
+package. Every other
 target `chdir`s to the binary's directory at startup and then opens `data/…`,
 `grafs/…` relative to it. `swos_data_path()` (`include/swos_io.h`) anchors
 those reads instead — identity on every other target, returning the caller's
@@ -192,10 +199,29 @@ calls `SDL_NintendoSwitch_CommitSaveData("save")` and is called from
 `swos_io_save()` and `Settings_Save()`, in both cases **after** the file is
 closed, which the commit requires.
 
-**4. `printf` and `stderr` reach nobody.** The desktop builds redirect `stderr`
-to `SWOS.log` in the user folder; on the Switch that is skipped — a log file on
-the save mount would burn the player's quota and need committing to survive
-anyway. Output goes to the target log; see [Debugging](#deploying-and-debugging).
+**4. `printf` and `stderr` reach nobody.** Nothing connects stdio to a devkit,
+so a build that fails during startup gives an error code and not one word about
+what it was doing. `swos_platform.h` redirects both to `NN_LOG`, which does
+reach `ControlTarget read-log`:
+
+```c
+#define fprintf(stream, ...) \
+    (((stream) == stderr) ? SwosSwitchLog(__VA_ARGS__) : fprintf(stream, __VA_ARGS__))
+#define printf(...)  SwosSwitchLog(__VA_ARGS__)
+```
+
+Done as macros rather than by editing several hundred call sites. The `fprintf`
+form tests the stream so real file writes — `SWOS.ini`, the JSON saves — still
+go to their files; only the stderr side is diverted. The `fprintf` in the else
+arm is the real function, because a macro is never expanded recursively inside
+its own expansion.
+
+`src/platform_switch.cpp` is the other end, and is the project's **only C++
+translation unit** — it exists because `NN_LOG` is a C++ macro (`::nn::diag::`).
+`Makefile.amiga` filters it out through `SWITCH_ONLY_SRCS`, the same way
+`SDL_ONLY_SRCS` filters C. The desktop builds' `stderr`-to-`SWOS.log`
+`freopen` is skipped here: a log file on the save mount would burn the player's
+quota and need committing to survive anyway.
 
 ### Not yet done
 
