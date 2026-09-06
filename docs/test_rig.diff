@@ -88,7 +88,7 @@ game ships in and what the DOS corpus cannot test:
  include/game_types.h         |  17 +++
  include/menu_data.h          |   4 +
  include/sprites.h            |   5 +
- include/swos_io.h            |  21 +++
+ include/swos_io.h            |  30 +++++
  include/swos_platform.h      |  36 ++++++
  include/tactics_data.h       |   7 +
  src/SWOS.c                   |   8 ++
@@ -108,14 +108,14 @@ game ships in and what the DOS corpus cannot test:
  src/game_timers.c            |  29 +++--
  src/goalkeeper.c             |  62 ++++++++-
  src/headers.c                |  28 +++-
- src/highlight.c              |  34 ++++-
+ src/highlight.c              |  48 ++++++-
  src/image_cmd.c              |  14 +-
  src/input_sdl.c              |  74 +++++++++++
  src/interrupts.c             |  40 +++++-
  src/main.c                   | 142 ++++++++++++++++++++-
  src/match_setup.c            |  96 ++++++++++++--
  src/math68k.c                |  22 +++-
- src/menu_data.c              |  21 ++-
+ src/menu_data.c              |  23 +++-
  src/menu_load_json.c         |   5 +-
  src/menu_symbols.c           |  10 ++
  src/menus.c                  |  76 ++++++++++-
@@ -125,13 +125,13 @@ game ships in and what the DOS corpus cannot test:
  src/player_anim.c            |  11 +-
  src/random.c                 |  22 +++-
  src/referee.c                |  59 ++++++++-
- src/resload.c                |   6 +-
+ src/resload.c                |  39 ++++--
  src/sprites.c                | 107 ++++++++++++----
  src/string_symbols.c         |   5 +-
  src/swos_amiga_ptr_imports.c |  12 ++
  src/swos_amiga_strings.c     |   5 +
  src/swos_globals.c           |   8 ++
- src/swos_io.c                | 166 ++++++++++++++++++++++--
+ src/swos_io.c                | 177 ++++++++++++++++++++++++--
  src/swos_settings.c          |   5 +
  src/tackle_foul.c            |   9 +-
  src/tactics_data.c           | 297 ++++++++++++++++++++++++++++++++++++++++++-
@@ -139,7 +139,7 @@ game ships in and what the DOS corpus cannot test:
  src/team_control.c           |  66 ++++++++--
  src/translations.c           |   4 +-
  src/update_players.c         |  56 ++++++--
- 55 files changed, 2161 insertions(+), 313 deletions(-)
+ 55 files changed, 2221 insertions(+), 322 deletions(-)
 ```
 
 ## Per-commit diffs
@@ -5569,4 +5569,173 @@ index 4ea12fc..2cae4ad 100644
      snprintf(s_user_dir, sizeof s_user_dir, "%s", user);
      snprintf(s_save_dir, sizeof s_save_dir, "%s", save);
  #endif  /* !SWOS_WASM_BUILD */
+```
+
+
+---
+
+### ccb26de  [?]  options: defaultEntry still pointed at where EXIT used to be
+
+_2026-09-05_
+
+```diff
+diff --git a/src/menu_data.c b/src/menu_data.c
+index 3f609de..42b3617 100644
+--- a/src/menu_data.c
++++ b/src/menu_data.c
+@@ -2776,7 +2776,7 @@ Menu_DIYCup _diyCupMenu = {
+     MENU_MARK_END_MENU
+ };
+ Menu_Options _optionsMenu = {
+-    { OptionsMenuBeforeDraw, 0, 0, 13 },
++    { OptionsMenuBeforeDraw, 0, 0, 15 },
+     MENU_MARK_BYTE_COORDS,
+     {
+         { 92, 0, 120, 15 },
+```
+
+
+---
+
+### 78b9f96  [?]  switch: the AGA redirect never fired, so the console ran the OCS graphics
+
+_2026-09-05_
+
+```diff
+diff --git a/include/swos_io.h b/include/swos_io.h
+index 1e94d89..5569dfe 100644
+--- a/include/swos_io.h
++++ b/include/swos_io.h
+@@ -75,6 +75,15 @@ void swos_save_dir_init(void);
+  * whichever of those the caller owns. */
+ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz);
+ 
++/* The prefix swos_data_path() adds, with no trailing separator: "" on every
++ * target that chdir()s, "rom:" on the Switch. Exists so code that receives an
++ * ALREADY-anchored data path can recover the relative part and reason about
++ * it. Without it a prefix test written against a relative path (`strncmp(path,
++ * "grafs/", 6)`) silently stops matching on the one target that anchors —
++ * which is how the Switch shipped loading the OCS graphics instead of the AGA
++ * ones. The returned pointer is static and stable after swos_save_dir_init(). */
++const char *swos_data_root(void);
++
+ /* Make everything written under swos_save_dir() / swos_user_dir() durable.
+  * A no-op everywhere except the Switch, where a write to the save: mount
+  * survives only if it is committed — without this the file reads back
+diff --git a/src/resload.c b/src/resload.c
+index d3fb58a..b9cb801 100644
+--- a/src/resload.c
++++ b/src/resload.c
+@@ -120,17 +120,34 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
+      * "grafs_aga/" path) prefers grafs_aga/, then falls back to grafs/ by
+      * basename. So a *partial* grafs_aga set + the shared grafs assets both
+      * resolve, and dropping an AGA version into grafs_aga later just takes over.
+-     * grafs_arcade/ etc. don't match the "grafs/" prefix (next char is '_'). */
++     * grafs_arcade/ etc. don't match the "grafs/" prefix (next char is '_').
++     *
++     * `path` arrives ALREADY ANCHORED at the data root (resolve_path ->
++     * swos_data_path). That is identity on every target that chdir()s, but on
++     * the Switch it is "rom:/grafs/FILE" — so testing the prefix at offset 0
++     * matched nothing there, the whole redirect no-opped, and the console
++     * loaded the 4bpp OCS set for the entire game. Strip the root before
++     * testing, and re-anchor each candidate through swos_data_path so both
++     * arms are opened the same way the caller's path was built. */
++    const char *root = swos_data_root();        /* "" off-Switch, "rom:" on it */
++    const char *rel = path;
++    size_t rootlen = strlen(root);
++    if (rootlen && strncmp(path, root, rootlen) == 0) {
++        rel = path + rootlen;
++        while (*rel == '/') rel++;
++    }
++
+     const char *base = NULL;
+-    if (strncmp(path, "grafs_aga/", 10) == 0)  base = path + 10;
+-    else if (strncmp(path, "grafs/", 6) == 0)  base = path + 6;
++    if (strncmp(rel, "grafs_aga/", 10) == 0)  base = rel + 10;
++    else if (strncmp(rel, "grafs/", 6) == 0)  base = rel + 6;
+     if (base) {
+-        char alt[1024];
++        char cand[1024], anchored[1024];
+         FILE *f;
+-        snprintf(alt, sizeof(alt), "grafs_aga/%s", base);
+-        if ((f = try_open_ci(alt, mode)) != NULL) return f;
+-        snprintf(alt, sizeof(alt), "grafs/%s", base);
+-        return try_open_ci(alt, mode);
++        snprintf(cand, sizeof(cand), "grafs_aga/%s", base);
++        f = try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
++        if (f) return f;
++        snprintf(cand, sizeof(cand), "grafs/%s", base);
++        return try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
+     }
+ #endif
+     return try_open_ci(path, mode);
+diff --git a/src/swos_io.c b/src/swos_io.c
+index 2cae4ad..a25deec 100644
+--- a/src/swos_io.c
++++ b/src/swos_io.c
+@@ -444,6 +444,15 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
+ #endif
+ }
+ 
++const char *swos_data_root(void)
++{
++#ifdef SWOS_SWITCH_BUILD
++    return s_data_dir;          /* "rom:" once swos_save_dir_init() has run */
++#else
++    return "";                  /* every other target chdir()s — no prefix */
++#endif
++}
++
+ void swos_save_commit(void)
+ {
+ #ifdef SWOS_SWITCH_BUILD
+@@ -488,6 +497,8 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
+     return rel;
+ }
+ 
++const char *swos_data_root(void) { return ""; }
++
+ void swos_save_commit(void) { }
+ 
+ int swos_io_save(const uint8_t *name, const uint8_t *buf, uint32_t size)
+```
+
+
+---
+
+### 901dc4c  [?]  replay: the in-match goal replay camera is already a SIMULATION X
+
+_2026-09-06_
+
+```diff
+diff --git a/src/highlight.c b/src/highlight.c
+index 66cf7d5..c567a3e 100644
+--- a/src/highlight.c
++++ b/src/highlight.c
+@@ -182,9 +182,23 @@ static int16_t ReplayCameraX(int16_t recordedX)
+         /* In-game instant replay: the recorded camera + sprites are already in
+          * our own (wide) screen space, not the DOS 336-space, so the WIDE_MARGIN
+          * re-anchor below would shift them (the goal overlay landed ~WIDE_MARGIN
+-         * too far left). Play the recorded path verbatim. */
++         * too far left). Play the recorded path verbatim.
++         *
++         * VERBATIM MEANS VERBATIM — do NOT route this through ReplaySimCameraX.
++         * That helper converts a RENDER origin into a simulation X, which is
++         * right for the two returns below (they compute `out` in render space)
++         * and wrong here: `recordedX` is whatever SaveCoordinatesForHighlights
++         * stored, and game_loop.c passes it `_cameraX.s.i` — ALREADY the
++         * simulation camera. 314bc32 sent all three returns through the helper,
++         * so this one gained WIDE_MARGIN a second time: Render_CameraX() handed
++         * back the recorded SIMULATION value instead of the render origin the
++         * frame was drawn with, and the pitch, goal and hoardings slid out from
++         * under the verbatim-replayed players. Measured at 480 wide, a frame
++         * recorded with sim camera 195 drew at render origin 123 and replayed
++         * at 192. Folds to identity at 4:3 and on Amiga (WIDE_MARGIN == 0) —
++         * and the corpus forces 336 (main.c), which is why nothing caught it. */
+         s_replayShiftX = 0;
+-        return ReplaySimCameraX(recordedX);
++        return recordedX;
+     }
+     /* The DosReplay loader flags a SWOS-2020 widescreen recording (sprites span
+      * wider than the 336 DOS/Amiga view). For those the recorded camera already
 ```
