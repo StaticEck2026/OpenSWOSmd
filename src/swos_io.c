@@ -5,9 +5,11 @@
  */
 /* swos_io.c — portable I/O + heap shim. See swos_io.h. */
 #include "swos_io.h"
-#ifdef SWOS_SWITCH_BUILD
-/* SDL_GetPrefPath, SDL_free, and SDL_NintendoSwitch_CommitSaveData — which the
- * fork declares in SDL_filesystem.h, not in a header of its own. */
+#if defined(SWOS_SDL_BUILD) && !defined(_WIN32)
+/* SDL_GetPrefPath / SDL_free — the Switch mounts save:/ through them, and
+ * macOS uses SDL_GetPrefPath when a .app launch leaves HOME unset. On the
+ * Switch this header also declares SDL_NintendoSwitch_CommitSaveData, which
+ * the fork puts in SDL_filesystem.h rather than a header of its own. */
 #include <SDL.h>
 #endif
 #include <stdarg.h>
@@ -301,23 +303,78 @@ void swos_save_dir_init(void)
     for (char *p = user; *p; p++)
         if (*p == '\\') *p = '/';
 # elif defined(__APPLE__)
+    /* ~/Library/Application Support/SWOS, but NOT via $HOME alone.
+     *
+     * A .app launched from Finder gets a trimmed environment, and with HOME
+     * missing every path below silently fell back to "." — which inside a
+     * bundle is read-only. The symptom is the confusing one a tester hit: no
+     * SWOS.ini is ever created, and one placed in the documented location is
+     * never read, so every setting appears to do nothing.
+     *
+     * SDL_GetPrefPath asks the OS instead of the environment
+     * (NSSearchPathForDirectoriesInDomains) and returns that same directory,
+     * so it is a drop-in that works however the app was started. HOME is still
+     * tried first: it is what the docs say and what a terminal launch uses. */
     const char *home = getenv("HOME");
-    if (!home || !*home)
-        return;
-    snprintf(user, sizeof user, "%s/Library/Application Support/SWOS", home);
+    if (home && *home) {
+        snprintf(user, sizeof user, "%s/Library/Application Support/SWOS", home);
+    } else {
+        char *pref = SDL_GetPrefPath(NULL, "SWOS");
+        if (!pref || !*pref) {
+            fprintf(stderr, "[settings] no HOME and SDL_GetPrefPath failed (%s) "
+                            "— SWOS.ini and saves fall back to the CWD\n",
+                    SDL_GetError());
+            if (pref) SDL_free(pref);
+            return;
+        }
+        {
+            size_t n = strlen(pref);
+            while (n > 1 && pref[n - 1] == '/') pref[--n] = '\0';
+            snprintf(user, sizeof user, "%s", pref);
+        }
+        SDL_free(pref);
+        fprintf(stderr, "[settings] HOME not set; using the OS preferences "
+                        "path: %s\n", user);
+    }
 # else  /* Linux and other Unix */
+    /* Same shape as the macOS branch above, and for the same reason: if the
+     * process was started without HOME there is still an OS answer, and the
+     * silent "." fallback is the worst of the options. */
     const char *home = getenv("HOME");
-    if (!home || !*home)
-        return;
-    snprintf(user, sizeof user, "%s/.swos", home);
+    if (home && *home) {
+        snprintf(user, sizeof user, "%s/.swos", home);
+    } else {
+        char *pref = SDL_GetPrefPath(NULL, "SWOS");
+        if (!pref || !*pref) {
+            fprintf(stderr, "[settings] no HOME and SDL_GetPrefPath failed (%s) "
+                            "— SWOS.ini and saves fall back to the CWD\n",
+                    SDL_GetError());
+            if (pref) SDL_free(pref);
+            return;
+        }
+        {
+            size_t n = strlen(pref);
+            while (n > 1 && pref[n - 1] == '/') pref[--n] = '\0';
+            snprintf(user, sizeof user, "%s", pref);
+        }
+        SDL_free(pref);
+        fprintf(stderr, "[settings] HOME not set; using the OS preferences "
+                        "path: %s\n", user);
+    }
 # endif
 
     char save[1024];
     snprintf(save, sizeof save, "%s/save", user);
     /* mkdir -p the save dir also creates its parent (the user dir), so both the
      * SWOS.ini location and the save location exist afterward. */
-    if (swos_make_dirs(save) != 0)
-        return;                                  /* couldn't create; keep defaults */
+    if (swos_make_dirs(save) != 0) {
+        /* Same dead end: without this directory there is nowhere to write, and
+         * the "." fallback is read-only inside a macOS .app. errno names the
+         * reason (permissions, a read-only volume, a file in the way). */
+        fprintf(stderr, "[settings] cannot create %s: %s — SWOS.ini and saves "
+                        "fall back to the CWD\n", save, strerror(errno));
+        return;
+    }
     snprintf(s_user_dir, sizeof s_user_dir, "%s", user);
     snprintf(s_save_dir, sizeof s_save_dir, "%s", save);
 #endif  /* !SWOS_WASM_BUILD */

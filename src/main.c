@@ -263,6 +263,17 @@ int main(int argc, char **argv)
      * wasm/pre.js before we get here (edit it via the in-page settings panel).
      * Missing file is fine — defaults are used, and step 4 writes a fresh one. */
     const char *ini_path = swos_ini_path();
+    /* Say WHICH file, and whether it was there. swos_save_dir_init() falls back
+     * to "." if the per-user folder cannot be resolved or created, and silently
+     * — so an edited SWOS.ini that "does nothing" is usually the game reading a
+     * different one. Print it before loading so the answer is in the log even
+     * if the load then fails. */
+    {
+        FILE *probe = fopen(ini_path, "rb");
+        fprintf(stderr, "[settings] SWOS.ini: %s (%s)\n",
+                ini_path, probe ? "found" : "not found, using defaults");
+        if (probe) fclose(probe);
+    }
     Settings_Load(&opts, ini_path);
 
     /* Expose the live options + ini path to the arcade service menu so its
@@ -398,6 +409,18 @@ int main(int argc, char **argv)
     _gDosGraphics = opts.dos_graphics;
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
+    /* The OPTIONS menu draws its GAMEPLAY row from a uint16_t mirror (the
+     * string-table header reads its index as one). Seed it here so the row
+     * shows what SWOS.ini / --dos-gameplay actually selected; the toggle
+     * itself keeps the two in step (ChangeGameplayStyle in menus.c). */
+    { extern uint16_t _gameplayStyleOption;
+      _gameplayStyleOption = (uint16_t)(opts.dos_gameplay != 0); }
+
+    /* And say which style is actually in force, so "it ran in Amiga mode" is
+     * something a tester can read off rather than infer from feel. */
+    fprintf(stderr, "[gameplay] %s\n", _gDosGameplay
+            ? "DOS (70fps physics and timers, DOS formations)"
+            : "AMIGA (the shipped default)");
     /* _screen_width (the live render width) + _menu_draw_x_offset (UI centering)
      * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
     if (opts.dos_dir[0])

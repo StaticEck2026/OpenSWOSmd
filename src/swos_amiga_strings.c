@@ -454,6 +454,11 @@ char _aA_2[] = "(A)";
 char _aSemiFinal[] = "SEMI-FINAL";
 char _aFinal_4[] = "FINAL";
 char _aMenuMusic[] = "MENU MUSIC";
+/* OPTIONS -> GAMEPLAY: which release's physics and timers the match uses.
+ * Mirrors [dos] gameplay in SWOS.ini. */
+char _aGameplay[] = "GAMEPLAY";
+char _aAmigaStyle[] = "AMIGA";
+char _aDosStyle[] = "DOS";
 char _aGoals[] = "GOALS";
 char _aForm[] = "FORM";
 char _aLge[] = "LGE";

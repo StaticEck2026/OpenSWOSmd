@@ -127,6 +127,13 @@ int16_t  _gsStoppageGameOver     = 1500; /* GS_1650_1500 GameOver */
  * exactly. Ball trajectory is NOT scaled here — it rides the §3 physics constants;
  * callers that read only the direction (AI goal-angle, tactics arrows) are
  * unaffected. Default 1/1 so the Amiga build (dos=0) never scales. ---------------- */
+/* The OPTIONS menu's "GAMEPLAY" row: 0 = AMIGA, 1 = DOS. A separate 16-bit
+ * mirror of _gDosGameplay because the menu's string-table header reads its
+ * index as a uint16_t (menu_system.c) — pointing it at the `int` would read
+ * the wrong two bytes on the big-endian Amiga build, and read as 0 forever.
+ * ChangeGameplayStyle (menus.c) is what keeps the two in step. */
+uint16_t _gameplayStyleOption = 0;
+
 int16_t  _gMoveDeltaScaleNum = 1;       /* DOS 41 / Amiga 1  (future Amiga-60: 50) */
 int16_t  _gMoveDeltaScaleDen = 1;       /* DOS 64 / Amiga 1  (future Amiga-60: 60) */
 

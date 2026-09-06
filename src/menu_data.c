@@ -52,6 +52,7 @@ extern void ChangeAutoReplays(void);
 extern void ChangeAutoSaveHighlights(void);
 extern void ChangeGameLength(void);
 extern void ChangeMenuMusic(void);
+extern void ChangeGameplayStyle(void);
 extern void ChangeNationality(void);
 extern void ChangePitchType(void);
 extern void ChangeSex(void);
@@ -488,6 +489,7 @@ extern char _aManagementReco_0[];
 extern char _aMatch[];
 extern char _aMemoFromTheClu[];
 extern char _aMenuMusic[];
+extern char _aGameplay[];
 extern char _aName[];
 extern char _aNat[];
 extern char _aNationalTeams[];
@@ -644,6 +646,7 @@ extern char* _flipStrTable[];
 extern char* _friendlyPitchTypeTable[];
 extern char* _gameLengthStrTable[];
 extern char* _menuMusicStrTable[];
+extern char* _gameplayStyleStrTable[];
 extern char* _pitchTypeOrSeasonTable[];
 extern char* _pitchTypeStrTable[];
 extern char* _positionFilterStringTable[];
@@ -2860,15 +2863,29 @@ Menu_Options _optionsMenu = {
     },
     {
         { -102, 124, -116, 11 },
-        { MENU_CMD_NAV, -1, -1, 10, 13 },
+        { MENU_CMD_NAV, -1, -1, 10, 14 },
         { MENU_CMD_COLORS, 0xD },
         { MENU_CMD_STRING_TABLE, 0x0, _menuMusicStrTable },
         { MENU_CMD_ONSELECT_FIRE, ChangeMenuMusic },
         MENU_CMD_END
     },
+    {
+        { 10, 136, -116, 11 },
+        { MENU_CMD_COLORS, 0x9 },
+        { MENU_CMD_TEXT_PTR, 0x0, _aGameplay },
+        MENU_CMD_END
+    },
+    {
+        { -102, 136, -116, 11 },
+        { MENU_CMD_NAV, -1, -1, 12, 15 },
+        { MENU_CMD_COLORS, 0xD },
+        { MENU_CMD_STRING_TABLE, 0x0, _gameplayStyleStrTable },
+        { MENU_CMD_ONSELECT_FIRE, ChangeGameplayStyle },
+        MENU_CMD_END
+    },
     { MENU_MARK_START_MENU, 0, 0 },
     { 102, -71, 100, 15 },
-    { MENU_CMD_NAV, -1, -1, 12, -1 },
+    { MENU_CMD_NAV, -1, -1, 14, -1 },
     { MENU_CMD_COLORS, 0xC },
     { MENU_CMD_TEXT_PTR, 0x0, _aExit },
     { MENU_CMD_INPUT_FUNC, 0x30, ExitOptions },

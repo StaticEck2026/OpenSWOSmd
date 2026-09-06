@@ -4,6 +4,12 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "menus.h"
+#ifdef SWOS_SDL_BUILD
+/* PlatformInitOptions + Settings_Save, for the OPTIONS -> GAMEPLAY row. Guarded
+ * because this header reaches platform_sdl.h and therefore SDL.h, which the
+ * m68k build has no idea about — and there is no SWOS.ini on the Amiga. */
+#include "swos_settings.h"
+#endif
 #include "translations.h"
 #include "comp_identity.h"
 #include "endian_helpers.h"
@@ -2056,6 +2062,59 @@ void ChangeMenuMusic(MenuEntry *entry)
 {
     _menuMusic ^= 1;
     TryRestartingMusic();
+    CallDrawMenuItem(entry);
+}
+
+/* ================================================================
+ * ChangeGameplayStyle — the OPTIONS menu's "GAMEPLAY" row
+ *
+ * Toggles AMIGA <-> DOS, which is the same switch as `--dos-gameplay` and
+ * [dos] gameplay in SWOS.ini: the DOS release's 70fps physics, its timer
+ * reloads and its formation set, against the Amiga's.
+ *
+ * Three things have to happen together, and the order matters:
+ *
+ *   1. _gameplayStyleOption is what the menu DRAWS from (a uint16_t, because
+ *      that is what the string-table header reads); _gDosGameplay is what the
+ *      GAME reads. Keep them in step or the row lies about the setting.
+ *   2. ApplyGameStyle() republishes every derived constant — the speed factor,
+ *      the twelve timer reloads, the formation set. Without it the flag moves
+ *      and nothing else does. It is a pure write of constants, so calling it
+ *      here is free; a match already in progress is not affected because
+ *      InitGameRestoreTeams calls it again at kick-off.
+ *   3. Persist, so the choice survives a restart the way every other row on
+ *      this menu does. g_arcadeOpts/g_arcadeIniPath are the live options and
+ *      the resolved ini path, published by main.c.
+ * ================================================================ */
+void ChangeGameplayStyle(MenuEntry *entry)
+{
+    extern int _gDosGameplay;
+    extern uint16_t _gameplayStyleOption;
+    extern void ApplyGameStyle(void);
+
+    _gameplayStyleOption ^= 1;
+    _gDosGameplay = (int)_gameplayStyleOption;
+
+    ApplyGameStyle();
+
+#ifdef SWOS_SDL_BUILD
+    /* Persist, so the choice survives a restart the way every other row on
+     * this menu does. Declared here rather than including swos_settings.h:
+     * that header pulls in platform_sdl.h and therefore SDL.h, which the m68k
+     * build has no idea about — and there is no SWOS.ini on the Amiga anyway.
+     * g_arcadeOpts / g_arcadeIniPath are the live options and the resolved ini
+     * path, published by main.c. */
+    {
+        extern PlatformInitOptions *g_arcadeOpts;
+        extern const char *g_arcadeIniPath;
+        if (g_arcadeOpts) {
+            g_arcadeOpts->dos_gameplay = _gDosGameplay;
+            if (g_arcadeIniPath)
+                Settings_Save(g_arcadeOpts, g_arcadeIniPath);
+        }
+    }
+#endif
+
     CallDrawMenuItem(entry);
 }
 

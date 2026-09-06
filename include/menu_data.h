@@ -1113,6 +1113,10 @@ typedef struct Menu_Options
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect autoSaveHl;
   MenuEntry_Byte_Colors_TextPtr labelMenuMusic;
   MenuEntry_Byte_Nav_Colors_StringTable_OnSelect menuMusic;
+  /* GAMEPLAY: AMIGA / DOS — the same switch as [dos] gameplay in SWOS.ini and
+   * --dos-gameplay. Added after menuMusic so the row order matches the JSON. */
+  MenuEntry_Byte_Colors_TextPtr labelGameplayStyle;
+  MenuEntry_Byte_Nav_Colors_StringTable_OnSelect gameplayStyle;
   MenuMark_StartMenu startMenuExit;
   MenuCoords8 exit_rc;
   MenuCmd_Nav exit_nav;
