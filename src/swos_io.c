@@ -444,6 +444,15 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
 #endif
 }
 
+const char *swos_data_root(void)
+{
+#ifdef SWOS_SWITCH_BUILD
+    return s_data_dir;          /* "rom:" once swos_save_dir_init() has run */
+#else
+    return "";                  /* every other target chdir()s — no prefix */
+#endif
+}
+
 void swos_save_commit(void)
 {
 #ifdef SWOS_SWITCH_BUILD
@@ -487,6 +496,8 @@ const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz)
     (void)buf; (void)buf_sz;
     return rel;
 }
+
+const char *swos_data_root(void) { return ""; }
 
 void swos_save_commit(void) { }
 

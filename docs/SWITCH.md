@@ -186,6 +186,27 @@ game data: `resload.c`'s `resolve_path` (the funnel for every Amiga-named
 asset), and the three JSON loaders (`translations.c`, `menu_load_json.c`,
 `tactics_load_json.c`).
 
+**Anchoring breaks any prefix test written against a relative path**, and it
+does it silently. `resload.c`'s AGA redirect — which sends a `grafs/FILE` load
+to `grafs_aga/FILE`, i.e. the 8bpp AGA assets rather than the 4bpp OCS ones —
+tested `strncmp(path, "grafs/", 6)`, but by the time it ran the path was
+`rom:/grafs/FILE`. The test matched nothing, the redirect no-opped, and the
+console rendered the OCS set for everything named in `strings_data.c`:
+`soccer_s.raw`, `charset.raw`, the six `swcpich*.map` pitch maps, the `cjc*`
+team and bench banks, `menus.raw` — 36 names, which is essentially everything
+you see. It was not total, which is what made it hard to spot: `SWOS.c`,
+`asset_loader.c`, `asset_sys.c` and `loader_intro.c` compose their names from
+the `GRAFS` macro, which is already `"grafs_aga/"` under `#define AGA`, so
+those loads were unaffected and the console came up as a mixture.
+
+`swos_data_root()` (`include/swos_io.h`) is the counterpart to
+`swos_data_path()` for this: it hands back the prefix — `""` off-Switch,
+`"rom:"` on it — so a test can strip the root before matching and re-anchor
+each candidate it builds. **If you add a path test to shared code, write it
+against the relative part**; a Switch-only failure of this shape does not show
+up on any other target, and it does not look like a path bug from the couch —
+it looks like the wrong art.
+
 **2. `SDL_GetPrefPath` mounts `save:/` against the account chosen at launch,**
 so `StartupUserAccount` must not be `None` — with `None` it returns nothing and
 every career would be lost at exit. The mount is flat, so unlike the desktops

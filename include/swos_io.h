@@ -75,6 +75,15 @@ void swos_save_dir_init(void);
  * whichever of those the caller owns. */
 const char *swos_data_path(const char *rel, char *buf, uint32_t buf_sz);
 
+/* The prefix swos_data_path() adds, with no trailing separator: "" on every
+ * target that chdir()s, "rom:" on the Switch. Exists so code that receives an
+ * ALREADY-anchored data path can recover the relative part and reason about
+ * it. Without it a prefix test written against a relative path (`strncmp(path,
+ * "grafs/", 6)`) silently stops matching on the one target that anchors —
+ * which is how the Switch shipped loading the OCS graphics instead of the AGA
+ * ones. The returned pointer is static and stable after swos_save_dir_init(). */
+const char *swos_data_root(void);
+
 /* Make everything written under swos_save_dir() / swos_user_dir() durable.
  * A no-op everywhere except the Switch, where a write to the save: mount
  * survives only if it is committed — without this the file reads back

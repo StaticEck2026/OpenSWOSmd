@@ -120,17 +120,34 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
      * "grafs_aga/" path) prefers grafs_aga/, then falls back to grafs/ by
      * basename. So a *partial* grafs_aga set + the shared grafs assets both
      * resolve, and dropping an AGA version into grafs_aga later just takes over.
-     * grafs_arcade/ etc. don't match the "grafs/" prefix (next char is '_'). */
+     * grafs_arcade/ etc. don't match the "grafs/" prefix (next char is '_').
+     *
+     * `path` arrives ALREADY ANCHORED at the data root (resolve_path ->
+     * swos_data_path). That is identity on every target that chdir()s, but on
+     * the Switch it is "rom:/grafs/FILE" — so testing the prefix at offset 0
+     * matched nothing there, the whole redirect no-opped, and the console
+     * loaded the 4bpp OCS set for the entire game. Strip the root before
+     * testing, and re-anchor each candidate through swos_data_path so both
+     * arms are opened the same way the caller's path was built. */
+    const char *root = swos_data_root();        /* "" off-Switch, "rom:" on it */
+    const char *rel = path;
+    size_t rootlen = strlen(root);
+    if (rootlen && strncmp(path, root, rootlen) == 0) {
+        rel = path + rootlen;
+        while (*rel == '/') rel++;
+    }
+
     const char *base = NULL;
-    if (strncmp(path, "grafs_aga/", 10) == 0)  base = path + 10;
-    else if (strncmp(path, "grafs/", 6) == 0)  base = path + 6;
+    if (strncmp(rel, "grafs_aga/", 10) == 0)  base = rel + 10;
+    else if (strncmp(rel, "grafs/", 6) == 0)  base = rel + 6;
     if (base) {
-        char alt[1024];
+        char cand[1024], anchored[1024];
         FILE *f;
-        snprintf(alt, sizeof(alt), "grafs_aga/%s", base);
-        if ((f = try_open_ci(alt, mode)) != NULL) return f;
-        snprintf(alt, sizeof(alt), "grafs/%s", base);
-        return try_open_ci(alt, mode);
+        snprintf(cand, sizeof(cand), "grafs_aga/%s", base);
+        f = try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
+        if (f) return f;
+        snprintf(cand, sizeof(cand), "grafs/%s", base);
+        return try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
     }
 #endif
     return try_open_ci(path, mode);
