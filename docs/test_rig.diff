@@ -111,7 +111,7 @@ game ships in and what the DOS corpus cannot test:
  src/image_cmd.c         |  14 ++-
  src/input_sdl.c         |   5 +
  src/interrupts.c        |  40 ++++++-
- src/main.c              | 113 +++++++++++++++++-
+ src/main.c              | 119 ++++++++++++++++++-
  src/match_setup.c       |  96 ++++++++++++++--
  src/math68k.c           |  22 +++-
  src/menu_load_json.c    |   5 +-
@@ -124,7 +124,7 @@ game ships in and what the DOS corpus cannot test:
  src/resload.c           |   6 +-
  src/sprites.c           | 107 +++++++++++++----
  src/swos_globals.c      |   8 ++
- src/swos_io.c           |  67 ++++++++++-
+ src/swos_io.c           |  68 ++++++++++-
  src/swos_settings.c     |   5 +
  src/tackle_foul.c       |   9 +-
  src/tactics_data.c      | 297 +++++++++++++++++++++++++++++++++++++++++++++++-
@@ -132,7 +132,7 @@ game ships in and what the DOS corpus cannot test:
  src/team_control.c      |  66 +++++++++--
  src/translations.c      |   4 +-
  src/update_players.c    |  56 +++++++--
- 48 files changed, 1792 insertions(+), 301 deletions(-)
+ 48 files changed, 1798 insertions(+), 302 deletions(-)
 ```
 
 ## Per-commit diffs
@@ -4802,4 +4802,47 @@ index 380c3a9..6c4b65b 100644
      if (!f) {
          fprintf(stderr, "[i18n] %s not found — using compiled strings\n", path);
          fflush(stderr);
+```
+
+
+---
+
+### 121b218  [?]  switch: it builds, links and packages — and a different ApplicationId
+
+_2026-09-05_
+
+```diff
+diff --git a/src/main.c b/src/main.c
+index 57a3dcb..68d7346 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -177,7 +177,11 @@ static const char *match_kv(const char *arg, const char *key)
+ 
+ int main(int argc, char **argv)
+ {
+-#ifdef SIGHUP
++/* Switch: the headers define SIGHUP but nnSdk exports no signal(), so the
++ * #ifdef alone is not the right test — the link fails on `undefined symbol:
++ * signal`. There is no controlling terminal on a console either, which is what
++ * this is for. */
++#if defined(SIGHUP) && !defined(SWOS_SWITCH_BUILD)
+     /* Cygwin under the VS Code gdb launcher wires stdio as pipes (not a Cygwin
+      * pty), so at startup the runtime sees the controlling terminal "hang up"
+      * and delivers SIGHUP — whose default action kills us before the window
+diff --git a/src/swos_io.c b/src/swos_io.c
+index 78d19d4..4037c47 100644
+--- a/src/swos_io.c
++++ b/src/swos_io.c
+@@ -6,8 +6,9 @@
+ /* swos_io.c — portable I/O + heap shim. See swos_io.h. */
+ #include "swos_io.h"
+ #ifdef SWOS_SWITCH_BUILD
+-#include <SDL.h>                 /* SDL_GetPrefPath, SDL_free */
+-#include <SDL_nintendoswitch.h>  /* SDL_NintendoSwitch_CommitSaveData */
++/* SDL_GetPrefPath, SDL_free, and SDL_NintendoSwitch_CommitSaveData — which the
++ * fork declares in SDL_filesystem.h, not in a header of its own. */
++#include <SDL.h>
+ #endif
+ #include <stdarg.h>
+ #include <string.h>
 ```
