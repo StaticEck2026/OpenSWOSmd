@@ -1,12 +1,13 @@
 # OpenSWOS — Pure C port, Amiga + SDL2 from one source tree
 
 A pure C port of *Sensible World of Soccer* (Amiga, 1994). The original 68k
-assembly has been translated to C, and **one source tree builds two targets**:
+assembly has been translated to C, and **one source tree builds three targets**:
 
 | Target | Build | Output |
 |---|---|---|
 | **SDL2** — Windows, Linux, WSL2, macOS, WebAssembly, ARM | `make` | `bin/SWOS*` |
 | **Amiga m68k** — A1200/AGA, FS-UAE/WinUAE or real hardware | `make -f Makefile.amiga` | `bin/SWOS2` |
+| **Nintendo Switch** — devkit only; needs the licensee SDK + SDL fork | `scripts/build_switch.sh` | `bin/SWOS.nss` |
 
 On SDL the OCS/AGA chipset, Paula audio, and joystick I/O are emulated by thin
 SDL2 shims; on Amiga the same C drives the real hardware. `src/` and `include/`
@@ -54,8 +55,12 @@ Working:
 - Friendly matches, career matches: pitch renders + scrolls, players animate,
   ball physics, AI, set-pieces.
 - Crowd chants, in-match SFX (whistle, kicks, throw-ins).
-- Substitutions (triple-tap or Q/W hotkey), tactics editing.
-- 1-player keyboard, 1-player gamepad, 2-player gamepad.
+- Substitutions (triple-tap, or the L / R shoulder buttons), tactics editing.
+- 1-player keyboard, 1-player gamepad, 2-player gamepad; the spare pad
+  buttons drive pause, statistics, the replays, the substitution menus and
+  quit — see [Controls](#controls).
+- **Nintendo Switch**: builds, packages, installs and runs on a devkit. See
+  [docs/SWITCH.md](docs/SWITCH.md).
 - Arcade (coin-op) mode with attract loop and operator service menu — see
   [Arcade mode](#arcade-mode).
 - Runs in the browser via WebAssembly (`make WASM=1`), saves persisted to
@@ -320,6 +325,38 @@ Useful knobs:
 compile it. A file that needs SDL2 or hosted libc must also be listed in
 `SDL_ONLY_SRCS` in `Makefile.amiga`, or the m68k build will try to compile it.
 
+### Nintendo Switch
+
+**For registered Nintendo developers only.** The NintendoSDK and the Switch
+fork of SDL are both under NDA; neither is in this repository and neither may
+be committed to it. Nothing here reproduces SDK source.
+
+```bat
+scripts\build_switch.bat            :: -> bin\SWOS.nss
+scripts\build_switch.bat package    :: -> dist\SWOS.nsp, installable on a devkit
+```
+
+```bash
+scripts/build_switch.sh [package|clean]   # the same, driven from WSL
+```
+
+The compile must run on the Windows side — NintendoClang is a Windows
+executable — so the shell script wraps the batch file through Windows interop,
+the same way the Cygwin target is reached. Point it at the two trees:
+
+```
+NINTENDO_SDK_ROOT   the NintendoSDK        (built against 22.2.10)
+SDL_SWITCH_ROOT     libsdl-org/SDL-switch  (licensee-only)
+```
+
+The Switch is a flavour of the SDL build, so the same `src/` compiles — SWOS
+renders 8bpp chunky into its own frontbuffer and only meets SDL at the texture
+upload. What differs is filesystem and logging: content is a read-only `rom:/`
+mount, saves are a per-account `save:/` mount that needs an explicit commit,
+and `printf` reaches nobody so output goes to the target log. All of it, plus
+the packaging and the things that cost an afternoon each, is in
+**[docs/SWITCH.md](docs/SWITCH.md)**.
+
 ## Running
 
 Launch the binary from anywhere — the program automatically `chdir()`s to
@@ -489,8 +526,28 @@ present aligns with the display's refresh:
 |--------------|--------------------|----------------------|
 | Move         | Arrow keys         | D-pad / left stick   |
 | Kick / shoot / pass / tackle | Right Ctrl / Space / Left Ctrl / Enter | A or B |
-| Call substitution menu | Triple-tap any direction OR `Q` (away) / `W` (home) | Triple-tap |
-| Pause / unpause | `P`              | —                    |
+| Pause / unpause | `P`             | **+ / Start**        |
+| Statistics   | `S`                | **− / Back**         |
+| Instant replay | `R`              | **Y**                |
+| Replay after the match | `H`      | **X**                |
+| Substitutions, bottom team | Triple-tap any direction | **L** |
+| Substitutions, top team    | Triple-tap any direction | **R** |
+| Quit the match | `Esc`            | **Right-stick click** |
+
+Play itself only ever uses **two** pad buttons — A and B for fire, B doubling
+as skip — so the rest are free, and everything the match understands beyond
+fire and direction is a KEY. The pad bindings above inject those keys, which
+is what makes them reachable on a console (no keyboard) and without reaching
+for one on a desktop. Quit is on a stick click deliberately: it ends the match,
+and a click is not something you hit by accident the way a face button is.
+HOME / Guide is left alone — it belongs to the system on a Switch.
+
+> Older versions of this table listed `Q` and `W` for the substitution menus.
+> That was wrong: through the keycode LUT `Q` lands on a value the match does
+> not handle and `W` on its explicit no-op. The real keys are UP and DOWN, and
+> arrow keys are deliberately kept out of the key FIFO so they stay movement —
+> so before the pad bindings there was **no key route to the substitution
+> menus at all**, only the triple-tap.
 
 ### In-match (Player 2)
 
