@@ -113,7 +113,39 @@ shipped DLLs, with Cygwin off PATH — that is what a tester's machine looks lik
 
 ```bash
 cmd.exe /c "cd /d C:\Temp\dlltest && set PATH=C:\Windows\system32;C:\Windows && SWOS.exe --help"
-``` `--no-full` skips the big one.
+```
+
+**Linux gets the same treatment**, at `lib/<arch>/` in `SWOS-full.zip`:
+`libSDL2-2.0.so.0` **and `libdecor-0.so.0`**, for each of the four ELFs that
+was built. Two things make this work, and both are easy to undo by accident:
+
+- The binaries carry `-Wl,-rpath,$ORIGIN/lib/$(BUILD_ARCH)` with
+  **`--disable-new-dtags`**, i.e. **DT_RPATH, not DT_RUNPATH**. RUNPATH applies
+  only to the executable's *direct* dependencies; RPATH is inherited down the
+  chain. Ubuntu links SDL2's backends instead of dlopening them (20 `DT_NEEDED`
+  entries), so under RUNPATH the bundled libSDL2 loads but *its* dependency on
+  libdecor still comes from `ld.so.cache` — measured, not assumed. The cost is
+  that `LD_LIBRARY_PATH` no longer overrides; delete `lib/` to use a system SDL2.
+- **libdecor is bundled because `libsdl2-2.0-0` is essentially its only
+  consumer** (`apt-cache rdepends libdecor-0-0`), so a machine without SDL2 has
+  no libdecor either, and shipping libSDL2 alone merely trades
+  `libSDL2-2.0.so.0 not found` for `libdecor-0.so.0 not found`.
+
+The other 18 `DT_NEEDED` are deliberately **not** bundled: they are the
+X11/Wayland/Mesa/audio stack, they drag in ~50 transitive libraries including
+libsystemd and libgcrypt, and any machine with a display has them. Our binaries
+need glibc 2.34 anyway (Ubuntu 21.10+ / Debian 12 / Fedora 35+), so a host old
+enough to be missing them cannot run SWOS at all. If one ever *is* missing, the
+fix is not to bundle more of the distro — it is to build SDL2 ourselves with
+`--enable-{x11,wayland,alsa,pulseaudio}-shared`, the way upstream builds its own
+release binaries, which leaves libSDL2 with almost no `DT_NEEDED`. All four
+cross dev stacks are installed here, so that is a script away.
+
+**macOS needs nothing** — and that is by design, not an oversight. The tiers are
+consistent: the *binaries-only* archives (`SWOS.zip`, `SWOS-macOS.zip`) ship no
+libraries on any platform, and the *runnable* ones each carry their own
+(`SWOS-Setup.exe`/`SWOS-full.zip` the Cygwin DLLs and now `lib/<arch>`,
+`SWOS-macOS-app.zip` its bundled `SDL2.framework`). `--no-full` skips the big one.
 
 The **Amiga** drop carries `data grafs grafs_aga sound` plus `c s`. The data list
 was derived from the built binary, not guessed —

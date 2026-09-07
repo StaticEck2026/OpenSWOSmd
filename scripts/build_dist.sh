@@ -166,6 +166,46 @@ FULL_DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound dat
 # with no cygwin1.dll import, and a Cygwin binary cannot load it.
 FULL_DLLS="cygwin1.dll cygSDL2-2-0-0.dll cygSDL3-0.dll cygiconv-2.dll"
 
+# Linux runtime for the four ELFs, the counterpart of FULL_DLLS above. Each
+# binary links libSDL2-2.0.so.0 for its own architecture, so a tester who has
+# never installed libsdl2 gets
+#
+#     error while loading shared libraries: libSDL2-2.0.so.0
+#
+# The binaries carry -Wl,-rpath,$ORIGIN/lib/<arch> (Makefile), so dropping the
+# libs at lib/<arch>/ in the zip is all that is needed. A dev tree has no lib/
+# dir and falls through to the system SDL2 exactly as before.
+#
+# WHY libdecor IS HERE TOO, and why bundling libSDL2 alone is not enough:
+# Ubuntu builds SDL2 with its backends LINKED, not dlopen'd — 20 DT_NEEDED
+# entries (X11, Wayland, Mesa, ALSA, PulseAudio, libdecor). Eighteen of those
+# are core desktop libraries present on any machine with a display. libdecor is
+# the exception: `apt-cache rdepends libdecor-0-0` shows libsdl2-2.0-0 is
+# essentially its ONLY consumer, so a machine without SDL2 almost certainly has
+# no libdecor either — and shipping libSDL2 by itself would just trade
+# "libSDL2-2.0.so.0 not found" for the more baffling "libdecor-0.so.0 not
+# found". It is 17-34 KB and needs only libwayland-client + libc.
+#
+# The remaining 18 are NOT bundled on purpose: they are the X11/Mesa/audio stack,
+# they drag in ~50 transitive libraries including libsystemd and libgcrypt, and
+# a machine with a display already has them. Our binaries also need glibc 2.34
+# (Ubuntu 21.10+ / Debian 12 / Fedora 35+), so a tester old enough to be missing
+# them cannot run SWOS at all regardless.
+#
+# If a tester ever DOES hit one of the other 18, the real fix is not to bundle
+# more of the distro: it is to build SDL2 ourselves with --enable-x11-shared /
+# --enable-wayland-shared / --enable-alsa-shared / --enable-pulseaudio-shared,
+# the way upstream builds its own release binaries, which leaves libSDL2 with
+# almost no DT_NEEDED and probes for backends at run time. All four cross dev
+# stacks are installed here, so that is a script away if it becomes necessary.
+LINUX_SDL_LIBS="libSDL2-2.0.so.0 libdecor-0.so.0"
+# <binary>:<rpath dir, = BUILD_ARCH in the Makefile>:<Debian multiarch triplet>
+LINUX_SDL_ARCHES="SWOS:x86:i386-linux-gnu
+SWOS.x86_64:x86_64:x86_64-linux-gnu
+SWOS.aarch64:arm64:aarch64-linux-gnu
+SWOS.armhf:armhf:arm-linux-gnueabihf"
+LINUX_LIBDIR="${LINUX_LIBDIR:-/usr/lib}"
+
 # SWOS-Amiga.zip — the runnable Amiga drop: the m68k binary plus only the trees
 # the m68k binary actually opens. Verified against the built binary itself
 # (`strings bin/SWOS2 | grep -oE '^(data|grafs|...)/'`): it references data/,
@@ -500,6 +540,32 @@ if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; the
         fi
         [ -n "$DLL_MISS" ] && \
             echo "-- NOTE: Cygwin DLLs not found in $CYGWIN_BIN (SWOS.exe will not run standalone):$DLL_MISS"
+
+        # Linux SDL runtime, one lib/<arch>/ per ELF that actually got built.
+        # Staged in a temp dir so nothing lands in the source tree; -L because
+        # the multiarch names are symlinks onto the versioned .so and the zip
+        # must carry the SONAME with real content behind it.
+        SDL_TMP="$(mktemp -d)"
+        SDL_ADDED=""; SDL_MISS=""
+        echo "$LINUX_SDL_ARCHES" | while read -r spec; do
+            [ -n "$spec" ] || continue
+            bin="${spec%%:*}"; rest="${spec#*:}"
+            arch="${rest%%:*}"; triplet="${rest#*:}"
+            [ -f "bin/$bin" ] || continue          # that arch wasn't built
+            mkdir -p "$SDL_TMP/lib/$arch"
+            for l in $LINUX_SDL_LIBS; do
+                if [ -f "$LINUX_LIBDIR/$triplet/$l" ]; then
+                    cp -L "$LINUX_LIBDIR/$triplet/$l" "$SDL_TMP/lib/$arch/$l"
+                else
+                    echo "!! $bin: $l missing for $triplet — it will need a system SDL2" >&2
+                fi
+            done
+        done
+        if [ -d "$SDL_TMP/lib" ]; then
+            ( cd "$SDL_TMP" && zip -r -q "$ROOT/$FULL_ZIP_PATH" lib ) &&
+                echo "-- linux runtime: $(cd "$SDL_TMP" && ls lib | tr '\n' ' ')(libSDL2 + libdecor)"
+        fi
+        rm -rf "$SDL_TMP"
         echo "-- OK: $FULL_ZIP_PATH"
     fi
 fi

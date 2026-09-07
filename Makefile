@@ -495,6 +495,34 @@ CFLAGS  := $(ARCHFLAGS) -O2 -g -std=gnu11 -fno-strict-aliasing -fno-builtin \
 #                              larger.
 LDFLAGS := $(ARCHFLAGS)
 
+# Linux: look for a bundled SDL beside the binary before falling back to the
+# system one. SWOS-full.zip ships lib/<arch>/libSDL2-2.0.so.0 (see
+# LINUX_SDL_LIBS in scripts/build_dist.sh) so a tester who has never installed
+# libsdl2 can still run it; a dev tree has no lib/ dir, so the loader falls
+# straight through to the system copy and nothing changes here.
+#
+# --disable-new-dtags emits DT_RPATH, NOT the more modern DT_RUNPATH, and that
+# is deliberate. DT_RUNPATH applies only to the executable's DIRECT
+# dependencies; DT_RPATH is inherited down the whole chain. We need the
+# inherited kind, because the distro libSDL2 links its backends rather than
+# dlopening them -- with RUNPATH the bundled libSDL2 loads but its own
+# dependency on libdecor-0.so.0 is resolved from ld.so.cache only, so on a
+# machine without libdecor the bundle fails anyway and shipping it was pointless.
+# Measured, not assumed: under RUNPATH ldd showed libSDL2 coming from the bundle
+# and libdecor from /lib/x86_64-linux-gnu.
+#
+# The cost is that DT_RPATH is searched BEFORE LD_LIBRARY_PATH, so that is no
+# longer an override. To use a system SDL2 instead, delete the lib/ directory --
+# the loader then falls straight through to ld.so.cache. (patchelf on the
+# bundled .so would let us keep RUNPATH semantics, but it is not installed here
+# and a build machine without it would silently produce a broken drop.)
+#
+# $$ORIGIN survives make -> shell -> linker as a literal $ORIGIN, resolved by
+# the loader at run time. Do not "fix" it to an absolute path.
+ifeq ($(BUILD_OS),linux)
+LDFLAGS += -Wl,--disable-new-dtags -Wl,-rpath,'$$ORIGIN/lib/$(BUILD_ARCH)'
+endif
+
 # macOS: switch to Apple's classic linker (-ld_classic). Modern ld64
 # (Xcode 15+) is strict about pointer-relocation alignment and rejects
 # packed-struct atoms whose internal pointer fields aren't 8-byte
