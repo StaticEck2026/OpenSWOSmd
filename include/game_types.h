@@ -448,6 +448,10 @@ typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
  * -------------------------------------------------------------------------- */
 #ifdef SWOS_SDL_BUILD
 int16_t Render_CameraX(void);
+/* Sub-pixel scroll residual (16.16 fractions) — see camera.c. SDL-only; the
+ * m68k build scrolls in whole pixels on real hardware and defines neither. */
+void    Render_PublishScrollSubpixel(void);
+int     Render_ScrollSubpixel(uint16_t *fx, uint16_t *fy);
 #else
 #define Render_CameraX() (_cameraX.s.i)
 #endif

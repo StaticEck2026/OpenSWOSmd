@@ -187,6 +187,25 @@ with any gameplay).
   rate==50`, alpha always 1, so the decoupled loop degenerates to the classic loop on
   the Amiga — no behaviour change, back-portable).
 
+## 9a. Shipped partial mitigation: sub-pixel scroll presentation
+
+`[video] subpixel_scroll` (default on, `--subpixel=off` to compare) addresses the
+**spatial** half of the problem without any of the work above. The camera is 16.16
+but everything is drawn at `_cameraX.s.i`, so a true velocity of 1.5 px/frame
+renders as an alternating 1,2,1,2 px step. Measured on the corpus
+(`scripts/rgd_convert.py --dump-frames`): **38% of consecutive moving frames change
+step size**, and a long ball peaks at **5 px in one 20 ms frame**.
+
+`camera.c` publishes the residual (`Render_PublishScrollSubpixel`, called from
+`ScrollToCurrent`); `platform_sdl.c` `present_frame_copy` shifts the finished frame
+by it. Render-only — the replay rig passes 1519/1519 unchanged. The shift is
+quantised to whole *output* pixels so nearest-neighbour stays crisp, which also
+means it does nothing at 1x window scale.
+
+It does **not** fix the temporal half: 50 discrete positions per second is still
+50, and on a 300 Hz sample-and-hold panel each is held for 6 refreshes. That is
+what §3 is for, and it remains the real fix.
+
 ## 10. Fallback (if full decoupling is deferred)
 
 The `speed_factor 50/60` path (identical mechanism to the DOS 41/64, via

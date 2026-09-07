@@ -405,6 +405,7 @@ values and comments are never rewritten or reordered.
 [video]
 renderer=accel        ; software | accel (hardware-accelerated)
 vsync=off             ; on | off — accel renderer only
+subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling (see below)
 render_driver=auto    ; auto | opengl | direct3d11 | direct3d | software-backend
                       ; auto = SDL default (D3D11 on Windows). Use opengl if
                       ; replays/attract run in slow motion on Windows.
@@ -470,6 +471,13 @@ the F2 service menu, which writes changes straight back to `SWOS.ini`.
                           (D3D / OpenGL / Metal). 'software' is a CPU-only
                           fallback for hosts where the hardware path
                           misbehaves.
+--subpixel=<on|off>       Smooth sub-pixel scrolling. Default: on.
+                          The game draws at whole-pixel camera positions, so a
+                          true scroll of 1.5 px/frame steps 1,2,1,2. This shifts
+                          the presented frame by the fractional remainder.
+                          Quantised to whole output pixels, so it never blurs;
+                          inactive at 1x window scale, where there is no
+                          sub-pixel resolution to use. Turn off to compare.
 --vsync=<on|off>          Sync frame presents to monitor vblank.
                           Default: off. Only meaningful with
                           --renderer=accel. Turn on if you see screen
@@ -509,6 +517,16 @@ present aligns with the display's refresh:
 | 60 Hz / 75 Hz   | default (`--vsync=off`) or `--vsync=on` if you see tearing | Manual 50 Hz pace gates the game; the 50 → 60 pulldown is inherent.              |
 | 144 Hz / 240 Hz | default                                      | Same as above; the manual pace fills the slack between vblanks.                              |
 | Buggy hardware backend | `--renderer=software`                  | Drops to the CPU path. No monitor sync, manual pace only.                                    |
+| Any refresh that is an exact multiple of 50 (100 / 150 / 200 / 300 Hz) | `--vsync=on` | Every game frame gets a whole number of refreshes — pacing is exact. `SWOS.log` says which case you are in. |
+
+**If motion still is not perfectly fluid, it is probably not pacing.** The game
+advances the camera at a fixed 50 Hz and draws at whole-pixel positions, so a
+long ball moves the view up to 5 px in one 20 ms step and a fractional velocity
+renders as an alternating 1,2,1,2 px cadence. `subpixel_scroll` (above) smooths
+the second of those; the first needs the render/logic decoupling designed in
+`docs/AMIGA_60.md`. `SWOS.log` reports the detected refresh rate, whether vsync
+actually engaged (a driver or control panel can silently drop it), and whether
+the refresh is an exact multiple of the game's pace.
 
 ## Controls
 

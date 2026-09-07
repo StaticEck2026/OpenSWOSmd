@@ -6,6 +6,7 @@
  *   [video]
  *   renderer=accel        ; software | accel
  *   vsync=off             ; on | off
+ *   subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling
  *   fullscreen=off        ; off | desktop | exclusive
  *   scale=3               ; 1..4 (windowed only)
  *
@@ -74,6 +75,9 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "vsync")) {
             int b;
             if (parse_bool(value, &b)) opts->vsync = b;
+        } else if (eqi(name, "subpixel_scroll")) {
+            int b;
+            if (parse_bool(value, &b)) opts->subpixel_scroll = b;
         } else if (eqi(name, "render_driver")) {
             snprintf(opts->render_driver, sizeof opts->render_driver, "%s", value);
         } else if (eqi(name, "fullscreen")) {
@@ -191,7 +195,10 @@ static const char *fullscreen_str(PlatformFullscreenMode m)
 
 typedef struct { const char *section, *key, *comment, *value; } IniEntry;
 
-#define SETTINGS_MAX 32
+/* settings_build() fills a stack array of this size and nothing bounds-checks
+ * n, so keep comfortable headroom over the number of entries it appends
+ * (28 as of the subpixel_scroll entry). */
+#define SETTINGS_MAX 40
 
 /* Inline comment appended to a section-header line in a freshly-created file. */
 static const char *section_intro(const char *sec)
@@ -218,9 +225,13 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     snprintf(vbuf[2], 24, "%d", opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45);
     snprintf(vbuf[3], 24, "%d", opts->screen > 0 ? opts->screen : 0);
 
+    /* Keep every comment below INI_MAX_LINE (200, include/ini.h): the writer
+     * happily emits a longer line and the READER then reports "parse error at
+     * line N" on our own generated file. Cost me one round-trip to notice. */
     int n = 0;
     items[n++] = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
     items[n++] = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
+    items[n++] = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: on | off. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "on" : "off" };
     items[n++] = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };

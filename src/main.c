@@ -120,6 +120,12 @@ static void print_usage(const char *argv0)
         "                            (D3D/OpenGL/Metal); 'software' is a CPU-only\n"
         "                            fallback for hosts where the hardware path\n"
         "                            misbehaves.\n"
+        "  --subpixel=<on|off>       Smooth sub-pixel scrolling (default on). The game\n"
+        "                            draws at whole-pixel camera positions, so a true\n"
+        "                            scroll of 1.5 px/frame steps 1,2,1,2. This shifts\n"
+        "                            the presented frame by the remainder. Quantised to\n"
+        "                            whole output pixels, so it never blurs. Turn it off\n"
+        "                            to compare.\n"
         "  --vsync=<on|off>          Sync frame presents to monitor vblank.\n"
         "                            Default: off. Only applies to --renderer=accel.\n"
         "                            Turn on if you see screen tearing; the manual\n"
@@ -230,6 +236,7 @@ int main(int argc, char **argv)
     opts.fullscreen = PLATFORM_FULLSCREEN_NONE;
     opts.renderer   = PLATFORM_RENDERER_ACCEL;
     opts.vsync      = 0;          /* default off — opt-in only */
+    opts.subpixel_scroll = 1;     /* default on — smooth sub-pixel scrolling */
     opts.render_driver[0] = '\0'; /* "" = auto (SDL default backend) */
     opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (fill the desktop aspect) */
     opts.screen = 0;                 /* target display index (0 = primary) */
@@ -321,6 +328,13 @@ int main(int argc, char **argv)
             else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.vsync = 0;
             else {
                 fprintf(stderr, "Invalid --vsync value '%s' (expected on|off)\n", v);
+                return 1;
+            }
+        } else if ((v = match_kv(a, "subpixel")) != NULL) {
+            if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.subpixel_scroll = 1;
+            else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.subpixel_scroll = 0;
+            else {
+                fprintf(stderr, "Invalid --subpixel value '%s' (expected on|off)\n", v);
                 return 1;
             }
         } else if ((v = match_kv(a, "audio")) != NULL) {

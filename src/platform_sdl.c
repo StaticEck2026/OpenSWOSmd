@@ -221,6 +221,7 @@ static int           s_frame_count;
  * hardware (D3D / GL / Metal) contexts are thread-bound. */
 static int           s_renderer_is_hw;
 static int           s_vsync_enabled;
+static int           s_subpixel_scroll = 1;   /* [video] subpixel_scroll — see present_frame_copy */
 
 /* Harness TURBO (env SWOS_HARNESS_TURBO, read once in Platform_Init): when
  * set, the inferior runs frames CPU-bound instead of paced to a 50 Hz wall
@@ -601,14 +602,50 @@ int Platform_Init(const PlatformInitOptions *opts)
         return -1;
     }
 
+    s_subpixel_scroll = opts ? opts->subpixel_scroll : 1;
+
+    /* Report what we actually GOT, not what we asked for. Ruff n Tumble's loop
+     * does the same (SDL_SetRenderVSync then SDL_GetRenderVSync to confirm, and
+     * it warns when vsync is unavailable) and it is the right instinct: a
+     * requested PRESENTVSYNC can be silently dropped by the driver or overridden
+     * in the GPU control panel, and without this line a tester report saying
+     * "vsync on, still stutters" is unfalsifiable.
+     *
+     * The refresh rate matters just as much for triage. Our pacing rate is 50 Hz
+     * (70 in DOS mode); if the panel divides evenly (100/150/200/300 Hz at 50)
+     * every game frame gets a whole number of refreshes and pacing is exact, so
+     * any remaining unevenness is NOT a pacing problem and must be chased
+     * elsewhere — see present_frame_copy and docs/AMIGA_60.md. */
     {
         SDL_RendererInfo info;
         if (SDL_GetRendererInfo(s_renderer, &info) == 0) {
-            fprintf(stderr, "[render] driver=%s flags=0x%x vsync=%s hw=%d\n",
-                    info.name ? info.name : "?", info.flags,
+            int got_vsync = (info.flags & SDL_RENDERER_PRESENTVSYNC) ? 1 : 0;
+            fprintf(stderr, "[render] driver=%s flags=0x%x hw=%d vsync: requested=%s actual=%s\n",
+                    info.name ? info.name : "?", info.flags, s_renderer_is_hw,
                     s_vsync_enabled ? "on" : "off",
-                    s_renderer_is_hw);
+                    got_vsync ? "on" : "off");
+            /* Only BELIEVE the flag on a hardware renderer. The software
+             * renderer reports PRESENTVSYNC (flags 0xd) while doing nothing of
+             * the sort, which is why the branch above deliberately forces
+             * s_vsync_enabled = 0 for it — don't let the readback undo that. */
+            if (s_renderer_is_hw) {
+                if (s_vsync_enabled && !got_vsync)
+                    fprintf(stderr, "[render] WARNING: vsync requested but the renderer did "
+                                    "not enable it — frames are paced by the timer only\n");
+                s_vsync_enabled = got_vsync;
+            }
         }
+        SDL_DisplayMode dm;
+        if (SDL_GetCurrentDisplayMode(screen, &dm) == 0 && dm.refresh_rate > 0) {
+            int fps = Platform_ActivePacingFps();
+            fprintf(stderr, "[render] display=%d %dx%d @%dHz, game paces at %dHz%s\n",
+                    screen, dm.w, dm.h, dm.refresh_rate, fps,
+                    (fps > 0 && dm.refresh_rate % fps == 0)
+                        ? " (exact multiple — pacing is exact)"
+                        : " (not a multiple — some pulldown judder is inherent)");
+        }
+        fprintf(stderr, "[render] subpixel_scroll=%s\n",
+                s_subpixel_scroll ? "on" : "off");
     }
 
     SDL_RenderSetLogicalSize(s_renderer, _screen_width, PLATFORM_SCREEN_H);
@@ -1158,6 +1195,85 @@ static void pump_quit_only(void)
     }
 }
 
+/* ---- Sub-pixel scroll presentation ---------------------------------------
+ * The game draws at the INTEGER camera position, so a true scroll velocity of
+ * 1.5 px/frame renders as an alternating 1,2,1,2 px step (38% of consecutive
+ * moving frames change step size — measured on the corpus). Shifting the
+ * finished frame by the fractional remainder makes that motion continuous.
+ * Everything on screen is drawn relative to the camera, so ONE uniform shift
+ * is correct for the whole scene; camera.c publishes the residual.
+ *
+ * TWO things this must not break:
+ *
+ * 1. ONE upload, ONE main copy. A previous release tanked on Windows/D3D
+ *    because of how the frame reached the GPU; the fix was the single bulk
+ *    SDL_UpdateTexture from cached RAM above. This adds no upload and no
+ *    per-pixel work — just a float dest rect on the same copy.
+ *
+ * 2. NO BLUR. We render nearest-neighbour (SDL_HINT_RENDER_SCALE_QUALITY "0")
+ *    and a fractional dest under nearest would either snap back to whole
+ *    source pixels or, with linear filtering, smear the pixel art. So the
+ *    shift is QUANTISED TO WHOLE OUTPUT PIXELS: at integer scale N we get
+ *    N steps per source pixel, exactly representable, still crisp. On a 4-5x
+ *    window that is a 4-5x finer scroll than today for free.
+ *
+ * The shift uncovers a sliver at the trailing edge (< 1 source pixel wide).
+ * It is filled by re-copying the edge column/row into it — clamp-to-edge, and
+ * visually indistinguishable from the neighbouring pixels. Stretching the main
+ * rect instead would make nearest duplicate an interior column whose position
+ * moves with the fraction, i.e. a shimmer. */
+/* camera.c, SDL-only — declared here rather than pulling in game_types.h,
+ * which this file deliberately does not include. */
+extern int Render_ScrollSubpixel(uint16_t *fx, uint16_t *fy);
+
+static void present_frame_copy(SDL_Texture *tex)
+{
+    const float w = (float)_screen_width;
+    const float h = (float)PLATFORM_SCREEN_H;
+    uint16_t fx = 0, fy = 0;
+    float qx = 0.0f, qy = 0.0f;
+
+    if (s_subpixel_scroll && Render_ScrollSubpixel(&fx, &fy) && (fx || fy)) {
+        /* Logical->output scale, as set by SDL_RenderSetLogicalSize. This is
+         * the resolution we have to work with: at scale N a source pixel is N
+         * output pixels, so the shift can only take N distinct values.
+         *
+         * Below 2x there is NO sub-pixel resolution — the quantiser could only
+         * return 0 or a whole pixel, which does not smooth anything. It merely
+         * rounds the camera instead of flooring it, and rounding shifts the
+         * phase of the 1,2,1,2 pattern without making it any more even, while
+         * still costing the trailing-edge sliver. So leave 1x completely alone
+         * and take the untouched SDL_RenderCopy path. */
+        float sx = 1.0f, sy = 1.0f;
+        SDL_RenderGetScale(s_renderer, &sx, &sy);
+        if (sx >= 2.0f)
+            qx = SDL_floorf((float)fx / 65536.0f * sx + 0.5f) / sx;
+        if (sy >= 2.0f)
+            qy = SDL_floorf((float)fy / 65536.0f * sy + 0.5f) / sy;
+    }
+
+    if (qx == 0.0f && qy == 0.0f) {
+        SDL_RenderCopy(s_renderer, tex, NULL, NULL);   /* unchanged fast path */
+        return;
+    }
+
+    /* The frame was drawn at floor(camera); the true camera is that much
+     * further along, so the picture belongs that much further BACK. */
+    SDL_FRect dst = { -qx, -qy, w, h };
+    SDL_RenderCopyF(s_renderer, tex, NULL, &dst);
+
+    if (qx > 0.0f) {                    /* right sliver: clamp the last column */
+        SDL_Rect  src = { _screen_width - 1, 0, 1, PLATFORM_SCREEN_H };
+        SDL_FRect d   = { w - qx, -qy, qx, h + qy };
+        SDL_RenderCopyF(s_renderer, tex, &src, &d);
+    }
+    if (qy > 0.0f) {                    /* bottom sliver: clamp the last row */
+        SDL_Rect  src = { 0, PLATFORM_SCREEN_H - 1, _screen_width, 1 };
+        SDL_FRect d   = { -qx, h - qy, w + qx, qy };
+        SDL_RenderCopyF(s_renderer, tex, &src, &d);
+    }
+}
+
 static void render_frame_impl(int pump_full)
 {
     /* SDL_PollEvent -> SDL_PumpEvents pulls from the OS window message queue, which on
@@ -1244,7 +1360,7 @@ static void render_frame_impl(int pump_full)
     SDL_UpdateTexture(tex, NULL, fb, _screen_width * 4);
 
     SDL_RenderClear(s_renderer);
-    SDL_RenderCopy(s_renderer, tex, NULL, NULL);
+    present_frame_copy(tex);
     SDL_RenderPresent(s_renderer);
 
     SDL_UnlockMutex(s_render_mtx);
