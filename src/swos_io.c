@@ -214,7 +214,10 @@ const char *swos_ini_path(void)
 
 /* mkdir -p: create every missing component of `path`. Returns 0 if the leaf
  * exists afterwards, -1 otherwise. Intermediate mkdirs on components that
- * already exist (or a drive root like "C:") fail harmlessly and are ignored. */
+ * already exist fail harmlessly and are ignored.
+ *
+ * A bare Windows drive prefix is skipped rather than ignored, because on our
+ * Windows target it is NOT harmless -- see the comment at the skip below. */
 static int swos_make_dirs(const char *path)
 {
     char tmp[1024];
@@ -225,7 +228,16 @@ static int swos_make_dirs(const char *path)
     for (char *p = tmp + 1; *p; p++) {
         if (*p == '/') {
             *p = '\0';
-            SWOS_MKDIR(tmp);
+            /* Never mkdir a bare drive prefix. The Windows path built above is
+             * "C:/Users/...", so the first component is "C:" -- and the Windows
+             * target here is CYGWIN, whose mkdir does not treat that as a drive
+             * root. It creates a literal directory named "C:" in the CWD and
+             * returns 0, which is where the stray bin/C: came from (and one
+             * beside the game in every install). MSVC's _mkdir would reject it
+             * with EEXIST, so nothing is lost by never making the call.
+             * p == tmp + 2 can only ever be the leading component. */
+            if (!(p == tmp + 2 && tmp[1] == ':'))
+                SWOS_MKDIR(tmp);
             *p = '/';
         }
     }
