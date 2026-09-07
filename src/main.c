@@ -148,6 +148,12 @@ static void print_usage(const char *argv0)
         "  --replay-level=<scalars|teams|info|sprites>\n"
         "                            How much of each frame to compare. Default: the\n"
         "                            level the .swr was emitted at.\n"
+        "  --replay-width=<N>        Render width for --replay-test. Default 336,\n"
+        "                            the geometry the corpus was recorded in. Any\n"
+        "                            other value runs the SAME simulation with a\n"
+        "                            wider render, which is how a render/simulation\n"
+        "                            leak shows up: the compared fields must not\n"
+        "                            move. See scripts/replay_widecheck.sh.\n"
         "  --replay-window           Open a window during --replay-test. Off by\n"
         "                            default: a replay is a batch run and a full\n"
         "                            matrix would open one window per cell.\n"
@@ -247,6 +253,7 @@ int main(int argc, char **argv)
     const char *replay_file = NULL, *replay_level = NULL, *replay_skip = NULL;
     int replay_max_errors = 1;
     int replay_window = 0;
+    int replay_width = 0;   /* 0 = the corpus geometry (SCREEN_WIDTH) */
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
@@ -343,6 +350,8 @@ int main(int argc, char **argv)
             replay_file = v;
         } else if ((v = match_kv(a, "replay-level")) != NULL) {
             replay_level = v;
+        } else if ((v = match_kv(a, "replay-width")) != NULL) {
+            replay_width = atoi(v);
         } else if (strcmp(a, "--replay-window") == 0) {
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
@@ -398,10 +407,19 @@ int main(int argc, char **argv)
             setenv("SDL_AUDIODRIVER", "dummy", 1);
 #endif
         opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */
-        /* Replay at the port's OWN native view, not the tester's monitor:
-         * SWOS's camera constants are all derived from the view size, so a
-         * widescreen render puts the camera somewhere else entirely. */
-        opts.res_w = SCREEN_WIDTH;
+        /* Replay at the port's OWN native view, not the tester's monitor. The
+         * original reason given here — "SWOS's camera constants are all derived
+         * from the view size" — no longer holds: 22f370a pinned _sim_view_width
+         * to SCREEN_WIDTH (below), so the SIMULATION is supposed to be
+         * width-independent and only the renderer draws wider. The pin stays as
+         * the DEFAULT because that is the geometry the corpus was recorded in.
+         *
+         * --replay-width=N lifts it deliberately. That is not a curiosity: if
+         * the simulation really is width-independent then every compared field
+         * must be identical at any N, so a divergence at N != 336 is a
+         * render/simulation leak and nothing else. Three tester-reported bugs in
+         * one day were widescreen-only and invisible here. */
+        opts.res_w = (replay_width > 0) ? replay_width : SCREEN_WIDTH;
         opts.res_h = SCREEN_HEIGHT;
     }
 
