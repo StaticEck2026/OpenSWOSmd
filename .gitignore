@@ -3,13 +3,10 @@
 *.exe
 build/
 
-# Emscripten/WASM build outputs (regenerate: make WASM=1). The .data preload
-# bundle is ~21 MB; all four are pure build artifacts from wasm/shell.html +
-# wasm/pre.js + the data dirs.
-bin/SWOS.html
-bin/SWOS.js
-bin/SWOS.wasm
-bin/SWOS.data
+# (The Emscripten/WASM outputs used to be listed here as bin/SWOS.html/.js/
+# .wasm/.data. `make WASM=1` now links into dist/web — a web deployment is
+# release output, not something anyone runs from bin/ — so the dist/ rule at the
+# bottom of this file covers them.)
 
 sensible-soccer-nes-c/
 scripts/__pycache__/
@@ -105,4 +102,9 @@ tests/replay/
 obj-switch/
 build-switch/
 bin/SWOS.nss
+
+# ---- release output ----
+# Everything scripts/build_dist.sh, build_installer.sh, build_macos.sh and
+# build_switch.sh hand to a tester: the zips, SWOS-Setup.exe, SWOS.nsp, and the
+# dist/windows staging tree the Inno Setup script packages. All regenerable.
 dist/

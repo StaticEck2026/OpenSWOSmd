@@ -127,7 +127,7 @@ target architecture. Pass an arch flag for cross builds.
 | macOS (native, single-arch)            | `make`                 | `bin/SWOS.macos`      |
 | macOS universal binary (x86_64 + arm64)| `make macos-universal` | `bin/SWOS.macos`      |
 | macOS `.app` bundle (data + SDL2 inside)| `make macos-app`       | `bin/SWOS.app`        |
-| WebAssembly (browser)                  | `make WASM=1`          | `bin/SWOS.html`       |
+| WebAssembly (browser)                  | `make WASM=1`          | `dist/web/SWOS.html`  |
 | **Amiga m68k (A1200/AGA)**             | `make -f Makefile.amiga` | `bin/SWOS2`         |
 
 Common flags:

@@ -32,7 +32,7 @@ Both targets build from a plain bash shell (WSL included) — the old
 # SDL, native
 make                      # bin/SWOS (linux x86) / bin/SWOS.exe (cygwin)
 make X86_64=1 -j$(nproc)  # bin/SWOS.x86_64
-make WASM=1               # bin/SWOS.html   (needs emsdk on PATH)
+make WASM=1               # dist/web/SWOS.html (needs emsdk on PATH)
 
 # Amiga m68k — toolchain ships inside the amiga-debug VSCode extension.
 # ⚠️ It MUST be the owner's fork, github.com/benbaker76/vscode-amiga-debug —
@@ -55,25 +55,65 @@ compares timestamps, not CFLAGS, so a flag change silently relinks stale objects
 
 ### Release builds — `scripts/build_dist.sh`
 
-Builds every target this machine can produce and writes **two** archives (WASM is
-built but excluded from both — it's a web deployment, and its `.data` preload
-alone is ~21 MB):
+Builds every target this machine can produce and writes the archives below (WASM
+is built but excluded from all of them — it's a web deployment, and its `.data`
+preload alone is ~21 MB).
 
-| archive | ~size | contents |
+**Everything a tester is handed lands in `dist/`.** `bin/` stays what it has
+always been: the shared runtime tree the game reads and every target links its
+binary into. `dist/` is gitignored wholesale, which is why release artifacts no
+longer show up as untracked files in `git status`. `build_switch.sh` already
+wrote `dist/SWOS.nsp`; the zips, the installer and the macOS archives now sit
+beside it.
+
+| artifact | ~size | contents |
 |---|---|---|
-| `bin/SWOS.zip` | 10 MB | the 6 binaries only — for someone who already has a `bin/` |
-| `bin/SWOS-full.zip` | 27 MB | binaries + game data + the Cygwin runtime for `SWOS.exe`: unzip and play |
-| `bin/SWOS-Amiga.zip` | 2 MB | `SWOS2` + only the trees the m68k binary opens + an empty `save/` |
+| `dist/SWOS.zip` | 10 MB | the 6 binaries only — for someone who already has a `bin/` |
+| `dist/SWOS-full.zip` | 27 MB | binaries + game data + the Cygwin runtime for `SWOS.exe`: unzip and play |
+| `dist/SWOS-Amiga.zip` | 2 MB | `SWOS2` + only the trees the m68k binary opens + an empty `save/` |
+| `dist/SWOS-Setup.exe` | 14 MB | Inno Setup installer — the Windows half of the full zip, for a tester who'd rather double-click |
+| `dist/SWOS.nsp` | 84 MB | the Switch package (`scripts/build_switch.sh`) |
+| `dist/SWOS-macOS*.zip` | 19 / 1.4 MB | from `scripts/build_macos.sh` — see below |
 
 The full dist keeps everything at the zip root because the SDL binary chdir's to
 its own directory. Its data list mirrors what `make macos-app` bundles (the
 project's tested "what the game needs at runtime" set). `save/` is deliberately
 excluded — saves go to a per-user dir (`swos_io.c`), and `bin/save` here is 24 MB
-of test careers. The Windows runtime is exactly `cygwin1.dll` +
-`cygSDL2-2-0-0.dll`; that list comes from `cygcheck bin/SWOS.exe`, **not** from
-`strings`, which picks up every DLL name mentioned anywhere — including backends
-SDL only ever `dlopen`s — and lands you at ~14 MB of X11/pulse/codec libraries
-that never load. `--no-full` skips the big one.
+of test careers.
+
+The Windows runtime is **four** DLLs, and only two of them are visible to
+`cygcheck bin/SWOS.exe`:
+
+| DLL | why |
+|---|---|
+| `cygwin1.dll` | the Cygwin runtime |
+| `cygSDL2-2-0-0.dll` | **not SDL2** — it is `sdl2-compat`, a ~350 KB shim |
+| `cygSDL3-0.dll` | the actual SDL, `dlopen`'d by that shim at runtime |
+| `cygiconv-2.dll` | a link-time import of `cygSDL3-0.dll` |
+
+Cygwin now ships SDL2 as **sdl2-compat**, which implements the SDL2 API on top
+of SDL3 and loads `cygSDL3-0.dll` with `dlopen`. A `dlopen` is invisible to
+`cygcheck` and to the PE import table, so a drop built from `cygcheck` on the
+exe alone ships two DLLs and dies on any machine without Cygwin with the shim's
+own message — **`Failed loading SDL3 library.`** That is a real tester report
+(2026-09-07); removing `cygiconv-2.dll` produces the *same* message, because
+SDL3 then fails to load and the shim reports its own failure rather than the
+cause.
+
+So `cygcheck` is still the right tool — but run it on **`cygSDL3-0.dll` too**,
+not only on the exe: it cannot see a library loaded at runtime. It is still
+wrong to derive the list with `strings`, which picks up every DLL name mentioned
+anywhere, including backends SDL only ever `dlopen`s, and lands you at ~14 MB of
+X11/pulse/codec libraries that never load. And **not** the `SDL2.dll` from a
+normal SDL release: that is a native MSVC/MinGW build with no `cygwin1.dll`
+import, which a Cygwin binary cannot load.
+
+To check a change here, run the exe from a directory holding **only** the
+shipped DLLs, with Cygwin off PATH — that is what a tester's machine looks like:
+
+```bash
+cmd.exe /c "cd /d C:\Temp\dlltest && set PATH=C:\Windows\system32;C:\Windows && SWOS.exe --help"
+``` `--no-full` skips the big one.
 
 The **Amiga** drop carries `data grafs grafs_aga sound` plus `c s`. The data list
 was derived from the built binary, not guessed —
@@ -89,11 +129,42 @@ onto the volume FS-UAE/WinUAE boots from is all a tester has to do. (The harness
 is different: it mounts `bin/` as **DH1:** and `cd`s in, so the same relative
 paths resolve without booting from it.)
 
+The **Windows installer** is the fourth artifact, built last because it is the
+only one that needs a tool on the Windows side. `scripts/build_installer.sh`
+stages the runtime tree into `dist/windows` and runs Inno Setup's `ISCC.exe`
+over `packaging/windows/swos.iss`; the result is `dist/SWOS-Setup.exe`. It is a
+**packaging step, not a compile** — it needs `bin/SWOS.exe` to exist already, so
+`--only installer` will not build one for you.
+
+- **It stages rather than sweeping `bin/`.** `bin/` is the shared data directory
+  for every target: the Linux ELFs, `SWOS2` + its `.map`, the WASM bundle,
+  `.uaem` sidecars, `SWOS.log` and 24 MB of test careers in `save/`. A wildcard
+  over it would ship all of that. The stage list mirrors
+  `FULL_DATA_DIRS` in `build_dist.sh`, which mirrors `make macos-app` — **keep
+  the three in step**, or the installer and the zip ship different games and a
+  bug reproduces on one and not the other.
+- **`save/` is never installed and never uninstalled** — saves live in
+  `%USERPROFILE%\Documents\SWOS` (`swos_io.c`), so a reinstall never costs a
+  player their career.
+- **Missing Inno Setup is a SKIP, not a failure.** `build_installer.sh` exits
+  **3** for "not installed" and 1 for a real failure, and `build_dist.sh` maps
+  those onto SKIP / FAIL, so a drop built on a machine without it still succeeds
+  for everything else. Override the search with `ISCC=/path/to/ISCC.exe`.
+- **The `AppId` GUID in `swos.iss` is what makes an install an upgrade** rather
+  than a second copy. Never change it, and never reuse it for another product.
+- The two wizard graphics are `packaging/windows/WizardImage.bmp` (164×314) and
+  `WizardSmallImage.bmp` (55×58), 24-bit BMP. Inno will not take PNG.
+
 ```bash
-scripts/build_dist.sh              # TESTER drop: all targets + bin/SWOS.zip
+scripts/build_dist.sh              # TESTER drop: all targets -> dist/
 scripts/build_dist.sh --release    # PUBLIC build: stock injuries + cards
 scripts/build_dist.sh --only windows --no-clean
+scripts/build_dist.sh --no-installer
 scripts/build_dist.sh --help
+
+# The installer on its own, against whatever bin/SWOS.exe is already built:
+scripts/build_installer.sh
+scripts/build_installer.sh --stage-only    # inspect dist/windows first
 ```
 
 **Tester builds set `SWOS_TEST_NO_INJURIES_CARDS=1` by default** — that is the
@@ -142,8 +213,11 @@ Two archives come back, mirroring `build_dist.sh`'s split:
 
 | archive | ~size | contents |
 |---|---|---|
-| `bin/SWOS-macOS-app.zip` | 19 MB | the drag-installable `.app`, `SDL2.framework` bundled |
-| `bin/SWOS-macOS.zip` | 1.4 MB | the universal binary alone — **needs SDL2 installed system-wide**, since the framework only ships inside the `.app` |
+| `dist/SWOS-macOS-app.zip` | 19 MB | the drag-installable `.app`, `SDL2.framework` bundled |
+| `dist/SWOS-macOS.zip` | 1.4 MB | the universal binary alone — **needs SDL2 installed system-wide**, since the framework only ships inside the `.app` |
+
+They are packed into the **Mac's** `dist/` too, not its `bin/` — the Mac is a
+checkout of this same repo and follows the same split.
 
 Defaults match `build_dist.sh` so a drop is uniform. Overrides: `MAC_HOST`
 (default `bbaker@192.168.1.37`), `MAC_PATH` (`~/Programming/OpenSWOS`),

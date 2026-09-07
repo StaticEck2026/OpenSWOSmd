@@ -152,7 +152,21 @@ BUILD_ARCH  := x86
 endif
 
 BINDIR := bin
-TARGET := $(BINDIR)/$(TARGET_NAME)
+# Where the linked target lands. Everything native goes to bin/ — the shared
+# runtime tree the game chdir's into and reads its data from.
+#
+# WASM is the exception: it is not a binary anyone runs from bin/, it is a web
+# DEPLOYMENT of four coupled files (SWOS.html + .js + .wasm + the ~21 MB .data
+# preload) that are only useful served together. They belong with the rest of
+# the release output, so they go to dist/web — beside the zips, the installer
+# and the .nsp. scripts/build_dist.sh has always excluded them from every
+# archive for the same reason.
+ifdef WASM
+OUTDIR := dist/web
+else
+OUTDIR := $(BINDIR)
+endif
+TARGET := $(OUTDIR)/$(TARGET_NAME)
 
 # ---- Object output dir (build/<os>/<arch>) ----
 # Objects build under build/<os>/<arch> instead of cluttering src/, split by OS
@@ -543,14 +557,15 @@ all: $(TARGET)
 debug:
 	$(MAKE) DEBUG=1 all
 
-# Ensure bin/ exists, then link. $(WASM_LINK_DEPS) re-links on a pre-js change
-# (empty for non-WASM targets).
-$(TARGET): $(OBJECTS) $(WASM_LINK_DEPS) | $(BINDIR)
+# Ensure the output dir exists, then link. $(WASM_LINK_DEPS) re-links on a
+# pre-js change (empty for non-WASM targets). emcc drops SWOS.js/.wasm/.data
+# beside the -o target, so pointing TARGET at dist/web moves all four.
+$(TARGET): $(OBJECTS) $(WASM_LINK_DEPS) | $(OUTDIR)
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) $(LDLIBS)
 
-# Create output directory if needed
-$(BINDIR):
-	mkdir -p $(BINDIR)
+# Create output directory if needed ($(OUTDIR) is bin/ for every native target)
+$(OUTDIR):
+	mkdir -p $(OUTDIR)
 
 # Compile each src/*.c into build/<os>/<arch>/*.o (mirrors src/ subdirs, e.g.
 # src/generated/x.c -> $(OBJDIR)/generated/x.o). The mkdir creates the
@@ -575,6 +590,12 @@ $(OBJDIR)/SWOS.res.o: SWOS.rc SWOS.ico
 clean:
 	rm -rf $(OBJDIR)
 	rm -f $(TARGET)
+ifdef WASM
+# emcc emits four files but only SWOS.html is $(TARGET), so `rm -f $(TARGET)`
+# used to leave .js/.wasm/.data behind — including a stale multi-MB .data.
+# dist/web holds nothing else, so it goes wholesale.
+	rm -rf $(OUTDIR)
+endif
 	rm -f $(SRCDIR)/*.o $(SRCDIR)/generated/*.o SWOS.res.o
 
 distclean: clean

@@ -119,7 +119,7 @@
             "problemMatcher": []
         },
         {
-            // Serves bin/SWOS.html with emrun (no browser — the launch config opens
+            // Serves dist/web/SWOS.html with emrun (no browser — the launch config opens
             // Edge at localhost:8080). isBackground + the endsPattern below let the
             // debugger wait until emrun is actually listening before launching.
             "label": "Serve (wasm)",
@@ -127,7 +127,7 @@
             "command": "wsl.exe",
             "args": [
                 "bash", "-lc",
-                "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/Projects/AI/SWOS/OpenSWOS/bin && exec emrun --no_browser --port 8080 SWOS.html"
+                "source /mnt/c/Projects/Linux/emsdk/emsdk_env.sh && cd /mnt/c/Projects/AI/SWOS/OpenSWOS/dist/web && exec emrun --no_browser --port 8080 SWOS.html"
             ],
             "isBackground": true,
             "dependsOn": "Build (wasm)",

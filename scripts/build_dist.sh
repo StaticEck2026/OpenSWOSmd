@@ -1,23 +1,39 @@
 #!/usr/bin/env bash
 #
 # build_dist.sh — build every OpenSWOS target this machine can produce and
-#                 package the binaries into bin/SWOS.zip.
+#                 package the results into dist/.
 #
-#   scripts/build_dist.sh                 # build everything + write bin/SWOS.zip
+#   scripts/build_dist.sh                 # build everything + write dist/SWOS.zip
 #   scripts/build_dist.sh --only windows  # just the .exe
 #   scripts/build_dist.sh --skip wasm     # everything but the browser build
 #   scripts/build_dist.sh --no-zip        # build only, don't package
 #   scripts/build_dist.sh --no-full       # skip the big SWOS-full.zip
+#   scripts/build_dist.sh --no-installer  # skip dist/SWOS-Setup.exe
 #
-# Two archives are written:
-#   bin/SWOS.zip       binaries only (~10 MB) — for someone who already has bin/
-#   bin/SWOS-full.zip  binaries + game data + the Cygwin runtime for SWOS.exe:
-#                      unzip and play. Excludes save/ (per-user dir, and 24 MB of
-#                      test careers here).
-#   bin/SWOS-Amiga.zip the m68k binary + ONLY the trees it actually opens
-#                      (data grafs grafs_aga sound) + the AmigaDOS boot files
-#                      (c s) + an empty save/. Unpack onto the volume
-#                      FS-UAE/WinUAE boots from and s/startup-sequence runs it.
+# EVERYTHING A TESTER IS GIVEN LANDS IN dist/. bin/ stays what it has always
+# been — the shared runtime tree the game reads and every target writes its
+# binary into — so the two never have to be told apart by name. dist/ is
+# gitignored wholesale, which is also why the artifacts stopped showing up as
+# untracked files in `git status`. build_switch.sh already wrote dist/SWOS.nsp;
+# now the zips, the installer and the macOS archives join it.
+#
+# Three archives and a Windows installer are written:
+#   dist/SWOS.zip       binaries only (~10 MB) — for someone who already has bin/
+#   dist/SWOS-full.zip  binaries + game data + the Cygwin runtime for SWOS.exe:
+#                       unzip and play. Excludes save/ (per-user dir, and 24 MB
+#                       of test careers here).
+#   dist/SWOS-Amiga.zip the m68k binary + ONLY the trees it actually opens
+#                       (data grafs grafs_aga sound) + the AmigaDOS boot files
+#                       (c s) + an empty save/. Unpack onto the volume
+#                       FS-UAE/WinUAE boots from and s/startup-sequence runs it.
+#   dist/SWOS-Setup.exe the Inno Setup installer: the same content as
+#                       SWOS-full.zip minus the non-Windows binaries, for a
+#                       tester who would rather double-click than unzip.
+#                       scripts/build_installer.sh does the work; see it and
+#                       packaging/windows/swos.iss.
+#
+# scripts/build_macos.sh adds dist/SWOS-macOS-app.zip and dist/SWOS-macOS.zip
+# from a real Mac — see it for why that one target cannot be built here.
 #
 # Targets:
 #
@@ -25,11 +41,16 @@
 #   linux-x86_64   make X86_64=1        -> bin/SWOS.x86_64
 #   linux-arm64    make ARM64=1         -> bin/SWOS.aarch64
 #   linux-armhf    make ARM=1           -> bin/SWOS.armhf
-#   wasm           make WASM=1          -> bin/SWOS.html/.js/.wasm/.data
+#   wasm           make WASM=1          -> dist/web/SWOS.html/.js/.wasm/.data
 #   amiga          make -f Makefile.amiga -> bin/SWOS2
 #   windows        make (in Cygwin)     -> bin/SWOS.exe
 #   switch         scripts/build_switch.sh package
 #                                       -> bin/SWOS.nss + dist/SWOS.nsp
+#   installer      scripts/build_installer.sh
+#                                       -> dist/SWOS-Setup.exe  (packaging step,
+#                                          not a compile: it needs bin/SWOS.exe
+#                                          from the `windows` target and Inno
+#                                          Setup on the Windows side)
 #
 # The Switch needs the NintendoSDK and the licensee SDL fork, neither of which
 # is in this repository (both NDA). It SKIPs with a reason when they are not
@@ -94,11 +115,14 @@ CYGWIN_BASH="${CYGWIN_BASH:-/mnt/c/cygwin64/bin/bash.exe}"
 NINTENDO_SDK_ROOT="${NINTENDO_SDK_ROOT:-D:\\Nintendo\\NativeSDK22.2.10\\NintendoSDK}"
 SDL_SWITCH_ROOT="${SDL_SWITCH_ROOT:-D:\\Projects\\GitHub\\SDL-switch}"
 
-ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows switch"
+# `installer` is a packaging step rather than a compile, but it lives in this
+# list so --only/--skip and the summary treat it like everything else.
+ALL_TARGETS="linux-x86 linux-x86_64 linux-arm64 linux-armhf wasm amiga windows switch installer"
 
 # Binaries that go into the zip. The WASM outputs are deliberately excluded:
 # SWOS.html/.js/.wasm/.data are a web deployment, not something a tester runs
-# from a zip, and .data alone is ~21 MB.
+# from a zip, and .data alone is ~21 MB. They are not even in bin/ — `make
+# WASM=1` links them straight into dist/web/ (Makefile, OUTDIR).
 ZIP_MEMBERS="SWOS SWOS.x86_64 SWOS.aarch64 SWOS.armhf SWOS.exe SWOS2"
 
 # SWOS-full.zip — a RUNNABLE drop: the same binaries plus the game data, so a
@@ -111,12 +135,36 @@ ZIP_MEMBERS="SWOS SWOS.x86_64 SWOS.aarch64 SWOS.armhf SWOS.exe SWOS2"
 # to a per-user directory anyway (swos_io.c), so shipping it would both bloat the
 # zip and drop stale saves on testers.
 FULL_DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound data_json"
-# Cygwin runtime for SWOS.exe. `cygcheck bin/SWOS.exe` reports exactly these two
-# as its non-system dependencies; everything else it prints is a Windows system
-# DLL. (Don't derive this list with `strings` — that picks up every DLL name
-# mentioned anywhere, including SDL backends it only ever dlopens, and lands you
-# at ~14 MB of X11/pulse/codec libraries that are never loaded.)
-FULL_DLLS="cygwin1.dll cygSDL2-2-0-0.dll"
+# Cygwin runtime for SWOS.exe. FOUR files, and only two of them are visible to
+# cygcheck:
+#
+#   cygwin1.dll         the Cygwin runtime
+#   cygSDL2-2-0-0.dll   NOT SDL2 -- it is sdl2-compat, a ~350 KB SHIM
+#   cygSDL3-0.dll       the actual SDL, dlopen'd BY that shim at runtime
+#   cygiconv-2.dll      a link-time import of cygSDL3-0.dll
+#
+# Cygwin now ships SDL2 as sdl2-compat, which implements the SDL2 API on top of
+# SDL3 and loads cygSDL3-0.dll with dlopen. A dlopen is invisible to cygcheck
+# and to the PE import table, so `cygcheck bin/SWOS.exe` lists only the first
+# two -- and a drop built from that list fails on any machine without Cygwin
+# with the shim's own message:
+#
+#     Failed loading SDL3 library.
+#
+# That is a real tester report (2026-09-07), reproduced here by running the exe
+# with just those two DLLs and a PATH of C:\Windows\system32 only. Dropping
+# cygiconv-2.dll gives the SAME message, because SDL3 then fails to load and the
+# shim reports its own failure rather than the cause.
+#
+# So: cygcheck is still the right tool, but run it on cygSDL3-0.dll TOO, not
+# only on the exe -- it cannot see a library that is loaded at runtime. It is
+# still wrong to derive this list with `strings`, which picks up every DLL name
+# mentioned anywhere, including backends SDL only ever dlopens, and lands you at
+# ~14 MB of X11/pulse/codec libraries that are never loaded.
+#
+# NOT the SDL2.dll from a normal SDL release: that is a native MSVC/MinGW build
+# with no cygwin1.dll import, and a Cygwin binary cannot load it.
+FULL_DLLS="cygwin1.dll cygSDL2-2-0-0.dll cygSDL3-0.dll cygiconv-2.dll"
 
 # SWOS-Amiga.zip — the runnable Amiga drop: the m68k binary plus only the trees
 # the m68k binary actually opens. Verified against the built binary itself
@@ -142,10 +190,12 @@ DO_CLEAN=1
 DO_ZIP=1
 VERIFY=0
 NOINJ=1          # tester builds: suppress injuries/cards. --release turns it off.
-ZIP_PATH="bin/SWOS.zip"
-FULL_ZIP_PATH="bin/SWOS-full.zip"
-AMIGA_ZIP_PATH="bin/SWOS-Amiga.zip"
+ZIP_PATH="dist/SWOS.zip"
+FULL_ZIP_PATH="dist/SWOS-full.zip"
+AMIGA_ZIP_PATH="dist/SWOS-Amiga.zip"
+INSTALLER_PATH="dist/SWOS-Setup.exe"
 DO_FULL=1
+DO_INSTALLER=1
 ONLY=""
 SKIP=""
 
@@ -162,10 +212,12 @@ Options:
       --release       PUBLIC build: stock injuries + cards (default is a tester
                       build with SWOS_TEST_NO_INJURIES_CARDS=1)
       --no-clean      don't wipe object dirs first (only safe if flags unchanged)
-      --no-zip        build but don't package (neither zip)
+      --no-zip        build but don't package (no zips, no installer)
       --no-full       skip SWOS-full.zip (binaries-only SWOS.zip still written)
-      --full-zip PATH full-dist output path (default: bin/SWOS-full.zip)
-      --amiga-zip PATH Amiga-dist output path (default: bin/SWOS-Amiga.zip)
+      --no-installer  skip dist/SWOS-Setup.exe
+      --full-zip PATH full-dist output path (default: $FULL_ZIP_PATH)
+      --amiga-zip PATH Amiga-dist output path (default: $AMIGA_ZIP_PATH)
+      --installer PATH installer output path (default: $INSTALLER_PATH)
       --zip PATH      zip output path (default: $ZIP_PATH)
   -h, --help          this text
 
@@ -181,8 +233,10 @@ while [ $# -gt 0 ]; do
         --verify)    VERIFY=1; shift ;;
         --release)   NOINJ=0; shift ;;
         --no-clean)  DO_CLEAN=0; shift ;;
-        --no-zip)    DO_ZIP=0; DO_FULL=0; shift ;;
+        --no-zip)    DO_ZIP=0; DO_FULL=0; DO_INSTALLER=0; shift ;;
         --no-full)   DO_FULL=0; shift ;;
+        --no-installer) DO_INSTALLER=0; shift ;;
+        --installer) INSTALLER_PATH="$2"; shift 2 ;;
         --full-zip)  FULL_ZIP_PATH="$2"; shift 2 ;;
         --amiga-zip) AMIGA_ZIP_PATH="$2"; shift 2 ;;
         --zip)       ZIP_PATH="$2"; shift 2 ;;
@@ -221,6 +275,11 @@ banner() {
     echo "== $*"
     echo "======================================================================"
 }
+
+# outdir <path> — make sure an artifact's parent directory exists. Per-artifact
+# rather than one `mkdir -p dist` because --zip / --full-zip / --amiga-zip /
+# --installer can each point somewhere else entirely.
+outdir() { mkdir -p "$(dirname "$1")" 2>/dev/null; }
 
 # run <target> <label> <cmd...>
 run() {
@@ -283,7 +342,7 @@ fi
 # ---- wasm -------------------------------------------------------------------
 if wanted wasm; then
     if command -v emcc >/dev/null 2>&1 || [ -f "$EMSDK_DIR/emsdk_env.sh" ]; then
-        banner "wasm -> bin/SWOS.html/.js/.wasm/.data"
+        banner "wasm -> dist/web/SWOS.html/.js/.wasm/.data"
         # emsdk_env.sh is not -u clean, hence the subshell + set +u.
         if ( set +u
              [ -f "$EMSDK_DIR/emsdk_env.sh" ] && . "$EMSDK_DIR/emsdk_env.sh" >/dev/null 2>&1
@@ -402,6 +461,7 @@ if [ "$DO_ZIP" = 1 ]; then
         if [ -z "$ZIPPED" ]; then
             echo "-- SKIP: nothing to package"
         else
+            outdir "$ZIP_PATH"
             rm -f "$ZIP_PATH"
             # -j junks paths so members sit at the zip root, not under bin/.
             ( cd bin && zip -j -q "$ROOT/$ZIP_PATH" $ZIPPED ) && \
@@ -421,6 +481,7 @@ if [ "$DO_FULL" = 1 ] && [ -n "$ZIPPED" ] && command -v zip >/dev/null 2>&1; the
     if [ -z "$FULL_DIRS" ]; then
         echo "-- SKIP: no data directories under bin/"
     else
+        outdir "$FULL_ZIP_PATH"
         rm -f "$FULL_ZIP_PATH"
         # Binaries junked to the root, then the data trees with their paths kept.
         ( cd bin && zip -j -q "$ROOT/$FULL_ZIP_PATH" $ZIPPED ) &&
@@ -455,6 +516,7 @@ if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; the
     done
     [ -f "bin/s/startup-sequence" ] ||
         echo "!! bin/s/startup-sequence missing — the drop will not self-boot" >&2
+    outdir "$AMIGA_ZIP_PATH"
     rm -f "$AMIGA_ZIP_PATH"
     ( cd bin && zip -j -q "$ROOT/$AMIGA_ZIP_PATH" SWOS2 ) &&
     ( cd bin && zip -r -q "$ROOT/$AMIGA_ZIP_PATH" $AMIGA_DIRS -x '*/.DS_Store' ) && {
@@ -467,6 +529,34 @@ if [ "$DO_FULL" = 1 ] && [ -f bin/SWOS2 ] && command -v zip >/dev/null 2>&1; the
         echo "-- data:    $AMIGA_DIRS + empty save/"
         echo "-- OK: $AMIGA_ZIP_PATH"
     }
+fi
+
+# ---- package: Windows installer (Inno Setup) --------------------------------
+# A packaging step, not a compile: scripts/build_installer.sh stages the runtime
+# tree into dist/windows and runs ISCC over packaging/windows/swos.iss. It is
+# last because it is the only artifact that depends on a Windows-side tool being
+# installed — everything above still lands if Inno Setup is missing.
+if [ "$DO_INSTALLER" = 1 ] && wanted installer; then
+    if [ ! -f bin/SWOS.exe ]; then
+        # Distinguish the two ways there is no .exe: a target that was never
+        # asked for reads very differently from one that failed.
+        case "${STATUS[windows]:-}" in
+            FAIL)  record installer "SKIP (the windows target FAILED)" ;;
+            SKIP*) record installer "SKIP (windows was skipped: ${STATUS[windows]})" ;;
+            *)     record installer "SKIP (no bin/SWOS.exe — build the windows target)" ;;
+        esac
+    else
+        banner "package -> $INSTALLER_PATH  (Windows installer)"
+        scripts/build_installer.sh --output "$INSTALLER_PATH"
+        case $? in
+            0) record installer "OK"; echo "-- OK: installer" ;;
+            # 3 means Inno Setup is not installed here — a missing tool, the same
+            # as no emcc or no m68k gcc, so it SKIPs with a reason rather than
+            # failing the whole drop. build_installer.sh printed where to get it.
+            3) record installer "SKIP (no Inno Setup; set ISCC)" ;;
+            *) record installer "FAIL"; echo "-- FAIL: installer" ;;
+        esac
+    fi
 fi
 
 # ---- summary ----------------------------------------------------------------
@@ -497,4 +587,5 @@ fi
 [ "$DO_ZIP" = 1 ] && [ -f "$ZIP_PATH" ] && ls -l "$ZIP_PATH"
 [ -f "$FULL_ZIP_PATH" ] && ls -l "$FULL_ZIP_PATH"
 [ -f "$AMIGA_ZIP_PATH" ] && ls -l "$AMIGA_ZIP_PATH"
+[ -f "$INSTALLER_PATH" ] && ls -l "$INSTALLER_PATH"
 exit $RC
