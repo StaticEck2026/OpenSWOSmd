@@ -1577,7 +1577,26 @@ DrawBenchAndSubsMenu(void)
 draw_bench:
     d0 = _benchXLimit;
     d0 += 8;
-    if (d0 <= _cameraX.s.i)
+    /* Is the bench ON SCREEN? That is a RENDER question, so it has to be asked
+     * of the render origin — the same one the sprites below are placed with.
+     * DrawSpriteInCameraView/DrawSpriteHotspotInCameraView do `x -=
+     * Render_CameraX()`, and since 97dd23a that is `_cameraX - WIDE_MARGIN`,
+     * i.e. up to WIDE_MARGIN px further LEFT than the simulation camera.
+     *
+     * Asking `_cameraX` instead made this gate lag the picture: the bench
+     * furniture is pitch tiles, drawn from the render origin, so it scrolled
+     * into view while this still returned — and it returns before drawing the
+     * coach AND all five substitutes. Measured at 480 wide on a recorded match,
+     * 19 rendered frames showed both benches bare with the camera parked at the
+     * bench (camY 383 against benchY 389), then everyone appeared at once.
+     * Reported as "going to the bench, for a brief moment you see empty benches
+     * before the players magically appear".
+     *
+     * The comparisons ABOVE are a different question — where MoveCamera is
+     * panning to — and correctly stay on the simulation camera. Folds to
+     * identity at 4:3 and on Amiga, where game_types.h defines
+     * Render_CameraX() as _cameraX.s.i. */
+    if (d0 <= Render_CameraX())
         return;
 
     _initialSubsState = _subsState;
