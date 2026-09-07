@@ -2312,6 +2312,39 @@ __attribute__((used, externally_visible))
 static const Sprite *s_animVisible[SPRITE_ANIMVIS_MAX];
 static int16_t       s_animVisibleCount;
 
+/* Does the ANIMATION view follow the RENDER view (the shipping answer), or the
+ * SIMULATION view (the replay rig)?
+ *
+ * Shipping: yes, it follows the render. That is 310c1a6 — a sprite in the
+ * widescreen margin is drawn, so it has to animate, or it slides along frozen.
+ * That behaviour is deliberate and is NOT to be given up to make a test pass.
+ *
+ * The rig: no. A recording was made on a 336-wide display, where there IS no
+ * margin — nothing outside the simulation view was ever drawn, so nothing
+ * outside it was ever animated. Reproducing the recorded conditions faithfully
+ * therefore means pinning the animation view to the simulation view, exactly as
+ * the rig already pins the gameplay style and (by default) the width. This is
+ * not "switching off the thing under test": it is the difference between
+ * replaying a recording and playing a new game that happens to share its input.
+ *
+ * What it buys is the width-invariance check (scripts/replay_widecheck.sh).
+ * With the animation view pinned, EVERY remaining difference between a 336 run
+ * and a 484 run is a render -> simulation leak, and the check can be run in
+ * anger. Without it, this one accepted behaviour masks every other leak behind
+ * it — it did: all eight failures at 484 stopped here, and no other leak could
+ * be seen until it was taken out of the way.
+ *
+ * A RUNTIME test, not a compile-time one, on purpose: a -D that changes the
+ * simulation is precisely what ReplayTest_Load now refuses to run against
+ * (d77246b), and a flag-gated build would reintroduce the stale-object trap it
+ * exists to close. */
+#ifdef SWOS_SDL_BUILD
+#include "replay_test.h"
+static int anim_follows_render_view(void) { return !ReplayTest_Armed(); }
+#else
+#define anim_follows_render_view() 1
+#endif
+
 int Sprite_AnimVisible(const Sprite *s)
 {
     int16_t i;
@@ -2324,6 +2357,7 @@ int Sprite_AnimVisible(const Sprite *s)
 void BuildSpriteBandAndGeneralRenderStacks(void)
 {
     int16_t d7 = (int16_t)_numSpritesToRender;
+    const int animFollowsRender = anim_follows_render_view();
     s_animVisibleCount = 0;
     if (d7 == 0)
         return;
@@ -2414,7 +2448,7 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
              * `_screen_width == SCREEN_WIDTH` this list stays empty and the
              * animation gate is bit-for-bit what it was — which is the case
              * the replay rig runs in, so the corpus cannot be perturbed. */
-            if (!onScreen && _screen_width > SCREEN_WIDTH) {
+            if (!onScreen && _screen_width > SCREEN_WIDTH && animFollowsRender) {
                 int animVis = !(d1 >= _screen_width || d2 >= _sim_view_height ||
                                 d1 <= negW || d2 <= negH);
                 if (animVis && s_animVisibleCount < SPRITE_ANIMVIS_MAX)
