@@ -828,6 +828,58 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
 
     s_skipPrefixes = (skipPrefixes && skipPrefixes[0]) ? skipPrefixes : NULL;
 
+    /* Refuse to run against a binary whose COMPILE-TIME flags change the
+     * simulation. `make` compares timestamps, not CFLAGS, so a plain `make`
+     * after scripts/build_dist.sh (which builds the tester drop with
+     * SWOS_TEST_NO_INJURIES_CARDS=1) relinks those objects and produces a
+     * binary that still has the flag baked in. Exit 0, no warning — and the
+     * corpus then reports a regression that is not there.
+     *
+     * That has now cost real time three times, twice in one day, and it always
+     * looks the same: four recordings stopping on camera_x/camera_y at roughly
+     * half distance. Injuries change match outcomes, so of course the camera
+     * diverges. Worse, the obvious check does NOT catch it — stashing a change
+     * and re-running compares two builds that share the same contaminated
+     * objects, so the A/B comes back identical and reads like proof of
+     * innocence.
+     *
+     * Failing loudly here is the only reliable guard: the flag is baked into
+     * this translation unit at the same moment it is baked into the gameplay
+     * ones, so it cannot disagree with what is actually linked. Set
+     * SWOS_REPLAY_ALLOW_FLAGS=1 to run anyway when the mismatch is deliberate
+     * (e.g. deciding what a flag actually costs the corpus). */
+    {
+        const char *flags[6];
+        int nflags = 0;
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+        flags[nflags++] = "SWOS_TEST_NO_INJURIES_CARDS";
+#endif
+#ifdef SWOS_ORIGINAL_TACTICS
+        flags[nflags++] = "SWOS_ORIGINAL_TACTICS";
+#endif
+#ifdef SWOS_DOS_TACTICS
+        flags[nflags++] = "SWOS_DOS_TACTICS";
+#endif
+#ifdef SWOS_INJECT_WC
+        flags[nflags++] = "SWOS_INJECT_WC";
+#endif
+        if (nflags > 0 && getenv("SWOS_REPLAY_ALLOW_FLAGS") == NULL) {
+            fprintf(stderr,
+                "[replay] REFUSING: this binary was built with a flag that changes "
+                "the simulation:\n");
+            for (i = 0; i < nflags; i++)
+                fprintf(stderr, "[replay]   -D%s\n", flags[i]);
+            fprintf(stderr,
+                "[replay] The corpus was recorded without it, so every result would be\n"
+                "[replay] wrong — typically four recordings stopping on camera_x/camera_y\n"
+                "[replay] at about half distance, which looks exactly like a regression.\n"
+                "[replay] Usually this is a plain `make` relinking objects left by\n"
+                "[replay] scripts/build_dist.sh; `make clean && make` fixes it.\n"
+                "[replay] Set SWOS_REPLAY_ALLOW_FLAGS=1 to run anyway.\n");
+            return 1;
+        }
+    }
+
     fp = fopen(path, "rb");
     if (!fp) { fprintf(stderr, "[replay] cannot open %s\n", path); return 1; }
     fseek(fp, 0, SEEK_END); size = ftell(fp); fseek(fp, 0, SEEK_SET);
