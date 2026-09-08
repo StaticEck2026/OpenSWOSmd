@@ -6327,9 +6327,22 @@ void SelectNationalTeamAfterDrawCommon(void *entryPtr)
             a5->isDisabled = 1;
         }
 
-        /* If not in pending add mode, check remove mask */
+        /* If not in pending add mode, check remove mask.
+         *
+         * Indexed by fileIdx, matching the toggle in SelectNationalTeamCommon
+         * (which follows the asm: GetPlayerInfoBreakPosition returns the file
+         * index in d1, and `bchg d1` toggles that bit -- SWOS2.s:106351). The
+         * row's visual index is NOT the same thing, and testing the mask with
+         * it highlighted a different row than the one that would actually be
+         * removed: "I hit fire on Southgate and Ian Wright got highlighted...
+         * The actual removal works fine". fileIdx is already to hand here --
+         * this after-draw makes the very same GetPlayerInfoBreakPosition call.
+         *
+         * The starting eleven looked right because for those rows the file
+         * index and the row happen to coincide; the substitutes are where they
+         * diverge, which is exactly where the tester saw it. */
         if (!_careerNationalTeamHasPendingAddPlayer) {
-            if (_careerIntlPlayersRemoveMask & (1UL << d1)) {
+            if (_careerIntlPlayersRemoveMask & (1UL << fileIdx)) {
                 d5 = 0x0D;
             }
         }
