@@ -1706,11 +1706,23 @@ static int fast_object_next(const char *slice, int slen, int pos,
 static int fast_array_next(const char *slice, int slen, int pos,
                            int *voff, int *vlen, int *vt)
 {
-    /* Skip whitespace, opening '[', commas. */
+    /* Skip whitespace and commas, plus the array's OWN opening '[' -- but that
+     * one ONLY at the very start of the slice.
+     *
+     * This used to skip every leading '[', which is right for a flat array and
+     * wrong for an array OF arrays: it also ate each element's own opening
+     * bracket, so the scanner landed on the first number inside and reported
+     * MJSON_TOK_NUMBER instead of MJSON_TOK_ARRAY. Callers that test for
+     * MJSON_TOK_ARRAY therefore rejected every element and silently restored
+     * nothing -- that is what made comp_copy_teamlists a no-op on load, leaving
+     * every cup on its static template (see load_comp_copy_region). */
+    int at_start = (pos == 0);
     while (pos < slen) {
         char c = slice[pos];
-        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' ||
-            c == ',' || c == '[') { pos++; continue; }
+        if (c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ',') {
+            pos++; continue;
+        }
+        if (c == '[' && at_start) { pos++; at_start = 0; continue; }
         break;
     }
     if (pos >= slen || slice[pos] == ']') return 0;
