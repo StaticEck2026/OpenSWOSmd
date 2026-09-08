@@ -5562,7 +5562,7 @@ int16_t EvaluateTransferOfferNegotiation(void)
         uint16_t swapVal = GetAvgTeamValueBaseForCurrentPlayer(_selTeamNumber, (uint16_t)_offerOrdinals.offerSwapPlayerOrdinal);
         uint16_t swapRnd = _swapPlayerValueRandom;
         uint16_t swapPct = (uint16_t)((uint16_t)(swapRnd * 0x4B) >> 8) + 0x32;
-        uint16_t adjustedSwap = (uint16_t)((uint16_t)(swapPct * swapVal) / 100);
+        uint16_t adjustedSwap = (uint16_t)(((uint32_t)swapPct * swapVal) / 100);
         adjustedSwap = SnapToNearestAvgTeamValueBase(adjustedSwap);
         totalOffer += adjustedSwap;
 
@@ -5571,13 +5571,25 @@ int16_t EvaluateTransferOfferNegotiation(void)
             uint16_t extraSwapVal = GetAvgTeamValueBaseForCurrentPlayer(_selTeamNumber, (uint16_t)_offerOrdinals.offerExtraPlayerOrdinal);
             uint16_t extraRnd = _extraPlayerValueRandom;
             uint16_t extraPct = (uint16_t)((uint16_t)(extraRnd * 0x32) >> 8) + 0x32;
-            uint16_t adjustedExtra = (uint16_t)((uint16_t)(extraPct * extraSwapVal) / 100);
+            uint16_t adjustedExtra = (uint16_t)(((uint32_t)extraPct * extraSwapVal) / 100);
             adjustedExtra = SnapToNearestAvgTeamValueBase(adjustedExtra);
             totalOffer += adjustedExtra;
         }
     }
 
-    /* Determine selling team's asking price (d5) */
+    /* Determine selling team's asking price (d5).
+     *
+     * NOTE on the percentage maths throughout this routine: the product is
+     * computed in 32 BITS, then divided. That is what the 68k does --
+     * `mulu.w` produces a 32-bit result and `divu.w` divides a 32-bit
+     * dividend by a 16-bit divisor -- and it matters here because the values
+     * are large. Truncating the product to 16 bits first (as this code used
+     * to) wraps for any player worth more than ~218 value units once the
+     * random percentage reaches 300%, which COLLAPSES the asking price of an
+     * expensive player to a small number and lets a derisory swap deal
+     * through. Reported as "buying expensive top players by offering shitty
+     * players in an exchange deal" -- Newcastle accepting $1M + Edgar Davids
+     * ($1.8M) for Alan Shearer ($16M). Keep these in 32-bit. */
     uint16_t askingPrice;
 
     /* Check if offering team is from a different division than career team.
@@ -5611,7 +5623,7 @@ int16_t EvaluateTransferOfferNegotiation(void)
         /* High-value player: 100-149% of demand */
         rnd = Rand2();
         uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x32) >> 8) + 0x64;
-        askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+        askingPrice = (uint16_t)(((uint32_t)pct * d7demand) / 100);
         /* nullsub_14 — no-op */
         goto compareOffer;
     }
@@ -5638,7 +5650,7 @@ checkMarket:
             /* All requested players are on market → low demand (87-101%) */
             rnd = Rand2();
             uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x26) >> 8) + 0x57;
-            askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+            askingPrice = (uint16_t)(((uint32_t)pct * d7demand) / 100);
             goto compareOffer;
         }
 
@@ -5662,14 +5674,14 @@ checkMarket:
                 /* Rare low demand: 95-133% */
                 rnd = Rand2();
                 uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x28) >> 8) + 0x5F;
-                askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+                askingPrice = (uint16_t)(((uint32_t)pct * d7demand) / 100);
                 goto compareOffer;
             }
 
             /* Normal demand: 150-249% */
             rnd = Rand2();
             uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x64) >> 8) + 0x96;
-            askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+            askingPrice = (uint16_t)(((uint32_t)pct * d7demand) / 100);
             goto compareOffer;
 
         onTransferList:
@@ -5677,7 +5689,7 @@ checkMarket:
             rnd = Rand2();
             {
                 uint16_t pct = (uint16_t)((uint16_t)(rnd * 0x96) >> 8) + 0x96;
-                askingPrice = (uint16_t)((uint16_t)(pct * d7demand) / 100);
+                askingPrice = (uint16_t)(((uint32_t)pct * d7demand) / 100);
             }
             goto compareOffer;
         }
@@ -5693,14 +5705,14 @@ compareOffer:
             goto reject;
 
         uint16_t diff = askingPrice - totalOffer;
-        uint16_t diffPct = (uint16_t)((uint16_t)(diff * 100) / askingPrice);
+        uint16_t diffPct = (uint16_t)(((uint32_t)diff * 100) / askingPrice);
         if (diffPct >= 20)
             goto reject;
 
         /* Close enough — counter-offer */
         rnd = Rand2();
         uint16_t counterPct = (uint16_t)((uint16_t)(rnd * 0xA) >> 8) + 0x64;
-        uint16_t counterVal = (uint16_t)((uint16_t)(counterPct * askingPrice) / 100);
+        uint16_t counterVal = (uint16_t)(((uint32_t)counterPct * askingPrice) / 100);
         counterVal = SnapUpToAvgTeamValueBase(counterVal);
         int16_t counterDiff = (int16_t)(counterVal - totalOffer);
         counterDiff = -counterDiff;
