@@ -2165,7 +2165,15 @@ void FillManagementRecordInfo(void)
     entry = &_menuEntries[5]; /* $118/56 = 5 */
     dest = (uint8_t *)entry->fg;
     {
-        uint8_t countryCode = (uint8_t)si->clubNo;
+        /* HIGH byte. clubNo is the packed team id, (country << 8) | ordinal,
+         * and the original reads it with `move.b (a6),d0` — offset 0 of a
+         * big-endian word, i.e. the country. Casting the uint16 to uint8 on a
+         * little-endian host takes the LOW half instead, which is the team
+         * ordinal: a national side came out as whatever country that ordinal
+         * happened to index, e.g. "BRAZIL (BELGIUM)". Every other reader in the
+         * tree already does `_selTeamNumber >> 8` (career_init.c:1169 spells it
+         * out); this was the one that didn't. SWOS2.s:88206. */
+        uint8_t countryCode = (uint8_t)(si->clubNo >> 8);
         const uint8_t *countryStr;
 
         if (countryCode >= CN_EUROPE && countryCode <= CN_OCEANIA)
