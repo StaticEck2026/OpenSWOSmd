@@ -87,6 +87,13 @@ static SDL_Renderer *s_renderer;
  * flowing. Ring depth 4 stays a frame clear of D3D11's default 3-frame latency
  * queue. Harmless on OpenGL (which never stalled). */
 #define PLATFORM_TEX_RING 4
+/* The streaming texture is TALLER than the screen. Rows [0, PLATFORM_SCREEN_H)
+ * are the frame; the rows below are a scratch strip carrying the HUD overlay,
+ * so the HUD ships to the GPU inside the SAME upload as the world and is then
+ * drawn from the SAME texture. See present_frame_copy: one upload, two draws.
+ * Worst case the HUD covers the whole screen (the result/scoreboard overlay),
+ * hence a full second screen's worth. */
+#define PLATFORM_TEX_H  (PLATFORM_SCREEN_H * 2)
 static SDL_Texture  *s_textures[PLATFORM_TEX_RING];  /* RGBA8888 streaming, _screen_width x 272 */
 static int           s_tex_idx;
 /* Cached-RAM staging buffer: ALL per-pixel work (8bpp→RGBA, overlay blend) happens
@@ -115,9 +122,10 @@ static uint32_t     *s_frame_rgba;
 static int           s_subpixel_scroll = 1;   /* [video] subpixel_scroll — see present_frame_copy */
 Uint64 Platform_NowMs(void);           /* defined below; used by the freshness stamp */
 static uint8_t      *s_hud_layer;      /* 8bpp, same geometry as the frontbuffer */
-static uint32_t     *s_hud_rgba;       /* RGBA scratch, dirty rect only */
-static SDL_Texture  *s_hud_tex;
 static int           s_hud_x0, s_hud_y0, s_hud_x1, s_hud_y1;  /* x1/y1 exclusive */
+/* Where this frame's HUD ended up in the texture's scratch strip, and where it
+ * belongs on screen. w == 0 means "nothing to draw". Set by compose_hud_strip. */
+static int           s_hud_strip_w, s_hud_strip_h, s_hud_dst_x, s_hud_dst_y;
 static Uint64        s_hud_stamp;      /* freshness — menus never draw the HUD */
 
 /* NULL when the layer is inactive: with subpixel_scroll off there is no shift
@@ -739,39 +747,14 @@ int Platform_Init(const PlatformInitOptions *opts)
      * Platform_HudLayerBuffer() then returns NULL and the HUD simply stays in
      * the main framebuffer, i.e. today's behaviour with a wobble. */
     s_hud_layer = (uint8_t *)SDL_calloc(1, (size_t)_screen_width * PLATFORM_SCREEN_H);
-    s_hud_rgba  = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
-    if (!s_hud_layer || !s_hud_rgba) {
+    if (!s_hud_layer)
         fprintf(stderr, "[render] HUD layer alloc failed — the HUD will ride the "
                         "sub-pixel shift (harmless, slightly jittery)\n");
-        if (s_hud_layer) { SDL_free(s_hud_layer); s_hud_layer = NULL; }
-        if (s_hud_rgba)  { SDL_free(s_hud_rgba);  s_hud_rgba  = NULL; }
-    }
     Platform_HudLayerReset();
 
-    /* HUD overlay texture — blended, so index-0 pixels stay transparent and the
-     * shifted world shows through everywhere the HUD is not.
-     *
-     * MUST come after the buffers above. It used to sit 30 lines earlier, where
-     * s_hud_layer was still NULL, so this block was skipped, s_hud_tex stayed
-     * NULL and present_hud_layer() returned immediately: the HUD was diverted
-     * out of the frame and then never drawn back. Screenshots still showed it,
-     * because the capture composites straight from s_hud_layer and never touches
-     * the texture — which is exactly why the bug survived verification. */
-    if (s_hud_layer) {
-        s_hud_tex = SDL_CreateTexture(s_renderer, SDL_PIXELFORMAT_ARGB8888,
-                                      SDL_TEXTUREACCESS_STREAMING,
-                                      _screen_width, PLATFORM_SCREEN_H);
-        if (s_hud_tex)
-            SDL_SetTextureBlendMode(s_hud_tex, SDL_BLENDMODE_BLEND);
-        else
-            fprintf(stderr, "[render] HUD texture failed (%s) — HUD stays in the "
-                            "main frame\n", SDL_GetError());
-    }
-    /* Say it out loud: a silent NULL here loses the entire HUD on screen. */
-    fprintf(stderr, "[render] hud_layer=%s\n",
-            (s_hud_layer && s_hud_tex) ? "on"
-                                       : (s_hud_layer ? "NO TEXTURE — HUD WILL BE INVISIBLE"
-                                                      : "off (no buffer)"));
+    /* No separate HUD texture: the overlay rides in the scratch strip of the
+     * frame texture and is drawn from it. See PLATFORM_TEX_H / compose_hud_strip. */
+    fprintf(stderr, "[render] hud_layer=%s\n", s_hud_layer ? "on" : "off (no buffer)");
 
     SDL_RenderSetLogicalSize(s_renderer, _screen_width, PLATFORM_SCREEN_H);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
@@ -783,14 +766,14 @@ int Platform_Init(const PlatformInitOptions *opts)
             s_renderer,
             SDL_PIXELFORMAT_ARGB8888,
             SDL_TEXTUREACCESS_STREAMING,
-            _screen_width, PLATFORM_SCREEN_H);
+            _screen_width, PLATFORM_TEX_H);
         if (!s_textures[ti]) {
             fprintf(stderr, "SDL_CreateTexture[%d]: %s\n", ti, SDL_GetError());
             return -1;
         }
         (void)0;
     }
-    s_frame_rgba = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
+    s_frame_rgba = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_TEX_H * 4);
     if (!s_frame_rgba) {
         fprintf(stderr, "frame buffer alloc failed (%d x %d)\n", _screen_width, PLATFORM_SCREEN_H);
         return -1;
@@ -867,8 +850,6 @@ void Platform_Shutdown(void)
         if (s_textures[ti]) { SDL_DestroyTexture(s_textures[ti]); s_textures[ti] = NULL; }
     if (s_frame_rgba) { SDL_free(s_frame_rgba); s_frame_rgba = NULL; }
     if (s_hud_layer)  { SDL_free(s_hud_layer);  s_hud_layer  = NULL; }
-    if (s_hud_rgba)   { SDL_free(s_hud_rgba);   s_hud_rgba   = NULL; }
-    if (s_hud_tex)    { SDL_DestroyTexture(s_hud_tex); s_hud_tex = NULL; }
     if (s_renderer) { SDL_DestroyRenderer(s_renderer); s_renderer = NULL; }
     if (s_window)   { SDL_DestroyWindow(s_window);     s_window = NULL; }
 }
@@ -1355,21 +1336,31 @@ static void pump_quit_only(void)
  * which this file deliberately does not include. */
 extern int Render_ScrollSubpixel(uint16_t *fx, uint16_t *fy);
 
-/* Convert the dirty rect of the HUD layer and draw it, unshifted, over the
- * world. Palette index 0 is transparent, which is what keeps this a genuine
- * overlay rather than a box stamped on the pitch — the reason this exists
- * instead of the cheaper "re-copy the HUD's rectangle unshifted" trick, which
- * would have dragged an unshifted square of pitch along with it. */
-static void present_hud_layer(void)
+/* Compose this frame's HUD into the texture's scratch strip, in the SAME cached
+ * RAM buffer the world was just converted into, so it goes to the GPU in the one
+ * upload below. Palette index 0 becomes alpha 0, which is what keeps this a real
+ * overlay rather than a box stamped on the pitch.
+ *
+ * ONE UPLOAD is the rule here. Per-pixel work belongs in cached RAM and the frame
+ * reaches the GPU in a single SDL_UpdateTexture -- writing the mapped texture
+ * directly is ~100x slower on D3D11 and once cost 43 ms/frame (see s_frame_rgba).
+ * An overlay in its own texture meant a second upload every frame; folding it into
+ * the strip keeps the upload count at one and costs only the extra rows it uses.
+ *
+ * Returns the number of scratch rows used, so the upload can cover exactly
+ * PLATFORM_SCREEN_H + that and no more. */
+static int compose_hud_strip(uint32_t *fb, int fbpx)
 {
-    if (!s_hud_tex || !hud_layer_pending()) return;
+    s_hud_strip_w = s_hud_strip_h = 0;
+    if (!hud_layer_pending()) return 0;
 
     const int x0 = s_hud_x0, y0 = s_hud_y0;
     const int rw = s_hud_x1 - x0, rh = s_hud_y1 - y0;
+    if (rw <= 0 || rh <= 0 || rh > PLATFORM_SCREEN_H || rw > fbpx) return 0;
 
     for (int y = 0; y < rh; y++) {
         const uint8_t *src = s_hud_layer + (size_t)(y0 + y) * _screen_width + x0;
-        uint32_t      *dst = s_hud_rgba + (size_t)y * rw;
+        uint32_t      *dst = fb + (size_t)(PLATFORM_SCREEN_H + y) * fbpx;
         for (int x = 0; x < rw; x++) {
             uint8_t ci = src[x];
             if (ci) {
@@ -1381,10 +1372,22 @@ static void present_hud_layer(void)
             }
         }
     }
+    s_hud_strip_w = rw; s_hud_strip_h = rh;
+    s_hud_dst_x   = x0; s_hud_dst_y   = y0;
+    return rh;
+}
 
-    SDL_Rect r = { x0, y0, rw, rh };
-    SDL_UpdateTexture(s_hud_tex, &r, s_hud_rgba, rw * 4);
-    SDL_RenderCopy(s_renderer, s_hud_tex, &r, &r);
+/* Draw the HUD strip back to its screen position, UNSHIFTED -- the whole point
+ * of the layer. Same texture as the world, so no extra upload; blending is
+ * enabled only for this draw so the opaque world copy stays on the fast path. */
+static void present_hud_strip(SDL_Texture *tex)
+{
+    if (s_hud_strip_w <= 0) return;
+    SDL_Rect src = { 0, PLATFORM_SCREEN_H, s_hud_strip_w, s_hud_strip_h };
+    SDL_Rect dst = { s_hud_dst_x, s_hud_dst_y, s_hud_strip_w, s_hud_strip_h };
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    SDL_RenderCopy(s_renderer, tex, &src, &dst);
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
 }
 
 static void present_frame_copy(SDL_Texture *tex)
@@ -1413,16 +1416,21 @@ static void present_frame_copy(SDL_Texture *tex)
             qy = SDL_floorf((float)fy / 65536.0f * sy + 0.5f) / sy;
     }
 
+    /* The texture is TALLER than the screen (PLATFORM_TEX_H) -- the rows below
+     * hold the HUD scratch strip -- so every world draw must name the visible
+     * region explicitly. A NULL src would stretch the strip into the picture. */
+    const SDL_Rect worldSrc = { 0, 0, _screen_width, PLATFORM_SCREEN_H };
+
     if (qx == 0.0f && qy == 0.0f) {
-        SDL_RenderCopy(s_renderer, tex, NULL, NULL);   /* unchanged fast path */
-        present_hud_layer();
+        SDL_RenderCopy(s_renderer, tex, &worldSrc, NULL);   /* unchanged fast path */
+        present_hud_strip(tex);
         return;
     }
 
     /* The frame was drawn at floor(camera); the true camera is that much
      * further along, so the picture belongs that much further BACK. */
     SDL_FRect dst = { -qx, -qy, w, h };
-    SDL_RenderCopyF(s_renderer, tex, NULL, &dst);
+    SDL_RenderCopyF(s_renderer, tex, &worldSrc, &dst);
 
     if (qx > 0.0f) {                    /* right sliver: clamp the last column */
         SDL_Rect  src = { _screen_width - 1, 0, 1, PLATFORM_SCREEN_H };
@@ -1436,7 +1444,7 @@ static void present_frame_copy(SDL_Texture *tex)
     }
 
     /* The HUD goes on LAST and UNSHIFTED — the whole point of the layer. */
-    present_hud_layer();
+    present_hud_strip(tex);
 }
 
 /* Screenshots and frame dumps read the FRAMEBUFFER, which no longer contains
@@ -1450,6 +1458,7 @@ static void present_frame_copy(SDL_Texture *tex)
 static uint32_t *screenshot_frame_with_hud(uint32_t *fb)
 {
     if (!hud_layer_pending()) return fb;
+    /* Only the visible frame, not the scratch strip below it. */
     size_t n = (size_t)_screen_width * PLATFORM_SCREEN_H;
     uint32_t *tmp = (uint32_t *)SDL_malloc(n * 4);
     if (!tmp) return fb;                       /* capture without the HUD */
@@ -1562,8 +1571,15 @@ static void render_frame_impl(int pump_full)
         }
     }
 
-    /* Hand the finished frame to the GPU in ONE bulk upload from cached RAM. */
-    SDL_UpdateTexture(tex, NULL, fb, _screen_width * 4);
+    /* Compose the HUD overlay into the scratch strip of the SAME buffer, then
+     * hand frame + overlay to the GPU in ONE bulk upload from cached RAM. The
+     * rect covers only the rows actually used, so a frame with a small HUD
+     * uploads barely more than the screen itself. */
+    {
+        int stripRows = compose_hud_strip(fb, _screen_width);
+        SDL_Rect up = { 0, 0, _screen_width, PLATFORM_SCREEN_H + stripRows };
+        SDL_UpdateTexture(tex, &up, fb, _screen_width * 4);
+    }
 
     SDL_RenderClear(s_renderer);
     present_frame_copy(tex);
