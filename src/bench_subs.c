@@ -1551,9 +1551,15 @@ static void draw_bench_occupants_only(void)
     _initialSubsState = 0;      /* idle: neutral coach frames, no selection */
 
     drawOpponentsBench();
+    /* X is _benchXLimit, NOT +12. In the menu path the `d1 += 12` immediately
+     * before this call is undoing the `d1 -= 12` taken earlier to place the
+     * SELECT SUBSTITUTE arrow (SWOS2.s:19596 `addi.w #12,d1` against the
+     * matching subtract) -- it is a restore, not an offset. Reading it as an
+     * offset drew the coach and subs 12 px to the RIGHT of the dugouts they
+     * are meant to be sitting in. */
     drawBenchPlayersAndCoach((TeamGame *)_benchTeamGame,
                              (TeamGeneralInfo *)_benchTeam,
-                             (uint16_t)(_benchXLimit + 12), _benchY);
+                             _benchXLimit, _benchY);
 
     _benchXLimit = savedLimit;   _benchY = savedBenchY;
     _opponentBenchY = savedOppY; _subsState = savedState;
