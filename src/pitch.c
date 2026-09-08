@@ -50,7 +50,9 @@ extern void PanicHaltLoop(void) __attribute__((noreturn));
 uint8_t *_s_pitchFullPtrs[PITCH_POINTER_COUNT];
 
 /* pitchFansConvertTable: colour remap for the fan/crowd tiles. Indices 10,11 get
- * replaced with the away team's kit colours at load; everything else is identity.
+ * replaced with the kit each team is PLAYING IN at load (pr*, matching the
+ * player sprites — see the deviation note in FixupAndColorPitchFile, and note
+ * the original asm used the sec* kit); everything else is identity.
  *
  * AGA (8 planes) and SDL (8bpp chunky) fan tiles use 8-BIT colour indices, so
  * AdjustFanColor does convTable[0..255] — the table MUST be 256 entries. The old
@@ -539,11 +541,29 @@ void FixupAndColorPitchFile(void)
     }
 #endif
 
-    /* Step 4: Recolor top team fans (21 sprites) */
+    /* Step 4: Recolor top team fans (21 sprites).
+     *
+     * DELIBERATE DEVIATION FROM SWOS2.s — the fans wear the kit the team is
+     * actually PLAYING IN, not its second-choice kit.
+     *
+     * The original reads topTeamInGame+$C/$E/$10 (SWOS2.s:6389-6396), i.e. the
+     * sec* fields at TeamGame offsets 12/14/16. But the PLAYER sprites in this
+     * port are coloured from the pr* fields (color_sprites.c:325/335/357/414,
+     * which hold the converted in-game palette index), so reading sec* here put
+     * the crowd in a kit nobody on the pitch was wearing.
+     *
+     * Measured on a real match: the fan tiles use palette indices 10 and 11
+     * (140 px / 349 px across the 21 tiles), and the team's sec* values were
+     * shirt=11, stripes=15, shorts=11 — so slot 11 was remapped to itself and
+     * the crowd simply kept the artwork's own colour. Reported by a tester as
+     * "crowd with wrong shirt colors, none of the teams has blue shirts".
+     *
+     * Owner's call, and the AGA tier already departs from the Amiga asm here:
+     * the crowd must match the shirts on the pitch. */
     teamData = &_topTeamInGame;
-    kitPrimary = (uint16_t)teamData->secShirtCol;
-    kitSecondary = (uint16_t)teamData->secStripesCol;
-    kitTertiary = (uint16_t)teamData->secShortsCol;
+    kitPrimary = (uint16_t)teamData->prShirtCol;
+    kitSecondary = (uint16_t)teamData->prStripesCol;
+    kitTertiary = (uint16_t)teamData->prShortsCol;
 
     pitchFansConvertTable[11] = kitPrimary;   /* offset 0x16 */
     if (kitSecondary != kitPrimary)
@@ -556,11 +576,11 @@ void FixupAndColorPitchFile(void)
         AdjustFanColor(fanGroupB[i], pitchFansConvertTable);
     }
 
-    /* Step 5: Recolor bottom team fans (21 sprites) */
+    /* Step 5: Recolor bottom team fans (21 sprites). Same deviation as Step 4. */
     teamData = &_bottomTeamInGame;
-    kitPrimary = (uint16_t)teamData->secShirtCol;
-    kitSecondary = (uint16_t)teamData->secStripesCol;
-    kitTertiary = (uint16_t)teamData->secShortsCol;
+    kitPrimary = (uint16_t)teamData->prShirtCol;
+    kitSecondary = (uint16_t)teamData->prStripesCol;
+    kitTertiary = (uint16_t)teamData->prShortsCol;
 
     pitchFansConvertTable[11] = kitPrimary;
     if (kitSecondary != kitPrimary)
