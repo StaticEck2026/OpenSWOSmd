@@ -2041,6 +2041,11 @@ void DarkenRectangle(uint16_t spriteIndex, int16_t x, int16_t y)
  *   +10 = y (int16_t)
  * ================================================================ */
 __attribute__((used, externally_visible))
+/* Lowest z that means "screen-pinned HUD", not a world object. The HUD sprites
+ * are assigned 8000/9000/10000+ in game_hud.c and game_state.c; pitch-derived
+ * world depths never come near it. */
+#define HUD_LAYER_Z_MIN 8000
+
 void DrawQueuedSprites(void)
 {
     uint8_t *a2 = (uint8_t *)_renderStackPtr;
@@ -2073,12 +2078,47 @@ void DrawQueuedSprites(void)
             continue;
         }
 
+        /* Screen-pinned HUD sprites go to their own layer so the sub-pixel
+         * scroll shift cannot move them — see the HUD layer notes in
+         * platform_sdl.c. They are identified by z: every one of them is set
+         * to 8000 (controlled-player name), 9000 (scoreboard grid) or 10000+
+         * (team names, score digits, dash, half-time result), while world
+         * sprites carry pitch-derived depths far below that. They are already
+         * sorted last for the same reason, so this changes only WHERE they are
+         * written, never the order they are drawn in.
+         *
+         * The diversion is a framebuffer swap rather than a change to the blit:
+         * blitChunkySprite takes its destination from _frontbufferBasePtr, so
+         * pointing that at the layer needs no new blit path and cannot affect
+         * the world sprites at all. */
+#ifdef SWOS_SDL_BUILD
+        uint8_t  *hudLayer = NULL;
+        /* uintptr_t, NOT uint32_t: _frontbufferBasePtr is a volatile uintptr_t
+         * and s_hud_layer is a 64-bit heap pointer — narrowing it here would
+         * lose the top half and blit into nowhere. */
+        uintptr_t savedFbBase = 0;
+        if (a4->z.s.i >= HUD_LAYER_Z_MIN) {
+            extern uint8_t *Platform_HudLayerBuffer(void);
+            extern void     Platform_HudLayerMark(int, int, int, int);
+            hudLayer = Platform_HudLayerBuffer();
+            if (hudLayer) {
+                savedFbBase = _frontbufferBasePtr;
+                _frontbufferBasePtr = (uintptr_t)hudLayer;
+                Platform_HudLayerMark((int)d1 + _menu_draw_x_offset, (int)d2,
+                                      a0 ? a0->pixWidth : 0, a0 ? a0->nlines : 0);
+            }
+        }
+#endif
         /* Check sprite save flag: if SPRITE_SAVESPRITE ($48) in the sprite struct */
         if (a4->saveSprite != 0) {
             DrawSprite_entry2(a0, d1, d2);
         } else {
             DrawSpriteClipped(a0, d1, d2);
         }
+#ifdef SWOS_SDL_BUILD
+        if (hudLayer)
+            _frontbufferBasePtr = savedFbBase;
+#endif
     }
 }
 
@@ -2608,6 +2648,9 @@ post_enqueue:
 __attribute__((used, externally_visible))
 void DrawSprites(void)
 {
+#ifdef SWOS_SDL_BUILD
+    { extern void Platform_HudLayerReset(void); Platform_HudLayerReset(); }
+#endif
     SortSprites();
     BuildSpriteBandAndGeneralRenderStacks();
     DrawQueuedSprites();

@@ -94,6 +94,82 @@ static int           s_tex_idx;
  * mapped memory directly is ~100× slower on D3D11 (write-combined/uncached), which
  * made the render 43 ms/frame; normal RAM makes it ~sub-ms. Sized _screen_width×272. */
 static uint32_t     *s_frame_rgba;
+
+/* ---- HUD layer ------------------------------------------------------------
+ * Screen-pinned sprites (the clock, the controlled-player name, team names,
+ * score digits, the scoreboard grid) are positioned as `Render_CameraX() + K`
+ * so DrawSprites subtracts the camera and they land at a fixed spot. They must
+ * NOT ride the sub-pixel scroll shift, or they wobble by up to a source pixel
+ * every frame — a tester saw the clock and player name flickering as soon as
+ * subpixel_scroll went in.
+ *
+ * They cannot be compensated at their draw site: sprite coordinates are
+ * integers and the shift is a fraction. So they are diverted into their own
+ * 8bpp layer (sprites.c routes any sprite with z >= HUD_LAYER_Z_MIN here by
+ * pointing _frontbufferBasePtr at it) and presented UNSHIFTED on top of the
+ * shifted world.
+ *
+ * Only the dirty rect is converted and uploaded. The HUD is a small corner
+ * block; a full second 336x272 upload every frame is exactly the kind of cost
+ * that made the D3D path crawl before the single-bulk-upload rework. */
+static int           s_subpixel_scroll = 1;   /* [video] subpixel_scroll — see present_frame_copy */
+Uint64 Platform_NowMs(void);           /* defined below; used by the freshness stamp */
+static uint8_t      *s_hud_layer;      /* 8bpp, same geometry as the frontbuffer */
+static uint32_t     *s_hud_rgba;       /* RGBA scratch, dirty rect only */
+static SDL_Texture  *s_hud_tex;
+static int           s_hud_x0, s_hud_y0, s_hud_x1, s_hud_y1;  /* x1/y1 exclusive */
+static Uint64        s_hud_stamp;      /* freshness — menus never draw the HUD */
+
+/* NULL when the layer is inactive: with subpixel_scroll off there is no shift
+ * to escape, so the HUD stays in the main framebuffer exactly as before. */
+uint8_t *Platform_HudLayerBuffer(void)
+{
+    return s_subpixel_scroll ? s_hud_layer : NULL;
+}
+
+/* Called once per frame before the sprites are drawn. Clears only what was
+ * dirtied last frame. */
+void Platform_HudLayerReset(void)
+{
+    if (!s_hud_layer) return;
+    if (s_hud_x1 > s_hud_x0 && s_hud_y1 > s_hud_y0) {
+        for (int y = s_hud_y0; y < s_hud_y1; y++)
+            SDL_memset(s_hud_layer + (size_t)y * _screen_width + s_hud_x0, 0,
+                       (size_t)(s_hud_x1 - s_hud_x0));
+    }
+    s_hud_x0 = s_hud_y0 = 0x7FFF;
+    s_hud_x1 = s_hud_y1 = 0;
+}
+
+/* Union a drawn sprite into the dirty rect. Deliberately generous: the caller
+ * passes the sprite's own box, but DrawSprite_entry2/DrawSpriteClipped may
+ * treat the coordinates as a hotspot rather than a top-left, so pad by the
+ * sprite's own size on each side rather than assume. Still a few hundred
+ * pixels, against 91k for the full frame. */
+void Platform_HudLayerMark(int x, int y, int w, int h)
+{
+    if (!s_hud_layer || w <= 0 || h <= 0) return;
+    int x0 = x - w, y0 = y - h, x1 = x + 2 * w, y1 = y + 2 * h;
+    if (x0 < 0) x0 = 0;
+    if (y0 < 0) y0 = 0;
+    if (x1 > _screen_width) x1 = _screen_width;
+    if (y1 > PLATFORM_SCREEN_H) y1 = PLATFORM_SCREEN_H;
+    if (x0 < s_hud_x0) s_hud_x0 = x0;
+    if (y0 < s_hud_y0) s_hud_y0 = y0;
+    if (x1 > s_hud_x1) s_hud_x1 = x1;
+    if (y1 > s_hud_y1) s_hud_y1 = y1;
+    s_hud_stamp = Platform_NowMs();
+}
+
+/* Is there a HUD layer worth presenting this frame? Same 100 ms freshness rule
+ * as the scroll residual: menus never draw these sprites, so they decay out
+ * instead of leaving a stale clock floating over the frontend. */
+static int hud_layer_pending(void)
+{
+    return s_hud_layer && s_subpixel_scroll && s_hud_stamp &&
+           (Platform_NowMs() - s_hud_stamp) <= 100 &&
+           s_hud_x1 > s_hud_x0 && s_hud_y1 > s_hud_y0;
+}
 static SDL_Color     s_palette[256];
 static SDL_mutex    *s_render_mtx;       /* serializes Platform_RenderFrame calls */
 
@@ -221,7 +297,6 @@ static int           s_frame_count;
  * hardware (D3D / GL / Metal) contexts are thread-bound. */
 static int           s_renderer_is_hw;
 static int           s_vsync_enabled;
-static int           s_subpixel_scroll = 1;   /* [video] subpixel_scroll — see present_frame_copy */
 
 /* Harness TURBO (env SWOS_HARNESS_TURBO, read once in Platform_Init): when
  * set, the inferior runs frames CPU-bound instead of paced to a 50 Hz wall
@@ -648,6 +723,19 @@ int Platform_Init(const PlatformInitOptions *opts)
                 s_subpixel_scroll ? "on" : "off");
     }
 
+    /* HUD overlay texture — blended, so index-0 pixels stay transparent and the
+     * shifted world shows through everywhere the HUD is not. */
+    if (s_hud_layer) {
+        s_hud_tex = SDL_CreateTexture(s_renderer, SDL_PIXELFORMAT_ARGB8888,
+                                      SDL_TEXTUREACCESS_STREAMING,
+                                      _screen_width, PLATFORM_SCREEN_H);
+        if (s_hud_tex)
+            SDL_SetTextureBlendMode(s_hud_tex, SDL_BLENDMODE_BLEND);
+        else
+            fprintf(stderr, "[render] HUD texture failed (%s) — HUD stays in the "
+                            "main frame\n", SDL_GetError());
+    }
+
     SDL_RenderSetLogicalSize(s_renderer, _screen_width, PLATFORM_SCREEN_H);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_EventState(SDL_MOUSEMOTION, SDL_DISABLE);
@@ -663,7 +751,21 @@ int Platform_Init(const PlatformInitOptions *opts)
             fprintf(stderr, "SDL_CreateTexture[%d]: %s\n", ti, SDL_GetError());
             return -1;
         }
+        (void)0;
     }
+    /* HUD layer + its conversion scratch. Allocation failure is not fatal:
+     * Platform_HudLayerBuffer() then returns NULL and the HUD simply stays in
+     * the main framebuffer, i.e. today's behaviour with a wobble. */
+    s_hud_layer = (uint8_t *)SDL_calloc(1, (size_t)_screen_width * PLATFORM_SCREEN_H);
+    s_hud_rgba  = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
+    if (!s_hud_layer || !s_hud_rgba) {
+        fprintf(stderr, "[render] HUD layer alloc failed — the HUD will ride the "
+                        "sub-pixel shift (harmless, slightly jittery)\n");
+        if (s_hud_layer) { SDL_free(s_hud_layer); s_hud_layer = NULL; }
+        if (s_hud_rgba)  { SDL_free(s_hud_rgba);  s_hud_rgba  = NULL; }
+    }
+    Platform_HudLayerReset();
+
     s_frame_rgba = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
     if (!s_frame_rgba) {
         fprintf(stderr, "frame buffer alloc failed (%d x %d)\n", _screen_width, PLATFORM_SCREEN_H);
@@ -740,6 +842,9 @@ void Platform_Shutdown(void)
     for (int ti = 0; ti < PLATFORM_TEX_RING; ti++)
         if (s_textures[ti]) { SDL_DestroyTexture(s_textures[ti]); s_textures[ti] = NULL; }
     if (s_frame_rgba) { SDL_free(s_frame_rgba); s_frame_rgba = NULL; }
+    if (s_hud_layer)  { SDL_free(s_hud_layer);  s_hud_layer  = NULL; }
+    if (s_hud_rgba)   { SDL_free(s_hud_rgba);   s_hud_rgba   = NULL; }
+    if (s_hud_tex)    { SDL_DestroyTexture(s_hud_tex); s_hud_tex = NULL; }
     if (s_renderer) { SDL_DestroyRenderer(s_renderer); s_renderer = NULL; }
     if (s_window)   { SDL_DestroyWindow(s_window);     s_window = NULL; }
 }
@@ -1226,6 +1331,38 @@ static void pump_quit_only(void)
  * which this file deliberately does not include. */
 extern int Render_ScrollSubpixel(uint16_t *fx, uint16_t *fy);
 
+/* Convert the dirty rect of the HUD layer and draw it, unshifted, over the
+ * world. Palette index 0 is transparent, which is what keeps this a genuine
+ * overlay rather than a box stamped on the pitch — the reason this exists
+ * instead of the cheaper "re-copy the HUD's rectangle unshifted" trick, which
+ * would have dragged an unshifted square of pitch along with it. */
+static void present_hud_layer(void)
+{
+    if (!s_hud_tex || !hud_layer_pending()) return;
+
+    const int x0 = s_hud_x0, y0 = s_hud_y0;
+    const int rw = s_hud_x1 - x0, rh = s_hud_y1 - y0;
+
+    for (int y = 0; y < rh; y++) {
+        const uint8_t *src = s_hud_layer + (size_t)(y0 + y) * _screen_width + x0;
+        uint32_t      *dst = s_hud_rgba + (size_t)y * rw;
+        for (int x = 0; x < rw; x++) {
+            uint8_t ci = src[x];
+            if (ci) {
+                SDL_Color c = s_palette[ci];
+                dst[x] = ((uint32_t)0xFFu << 24) | ((uint32_t)c.r << 16) |
+                         ((uint32_t)c.g << 8)    | (uint32_t)c.b;
+            } else {
+                dst[x] = 0u;            /* index 0 = transparent */
+            }
+        }
+    }
+
+    SDL_Rect r = { x0, y0, rw, rh };
+    SDL_UpdateTexture(s_hud_tex, &r, s_hud_rgba, rw * 4);
+    SDL_RenderCopy(s_renderer, s_hud_tex, &r, &r);
+}
+
 static void present_frame_copy(SDL_Texture *tex)
 {
     const float w = (float)_screen_width;
@@ -1254,6 +1391,7 @@ static void present_frame_copy(SDL_Texture *tex)
 
     if (qx == 0.0f && qy == 0.0f) {
         SDL_RenderCopy(s_renderer, tex, NULL, NULL);   /* unchanged fast path */
+        present_hud_layer();
         return;
     }
 
@@ -1272,6 +1410,43 @@ static void present_frame_copy(SDL_Texture *tex)
         SDL_FRect d   = { -qx, h - qy, w + qx, qy };
         SDL_RenderCopyF(s_renderer, tex, &src, &d);
     }
+
+    /* The HUD goes on LAST and UNSHIFTED — the whole point of the layer. */
+    present_hud_layer();
+}
+
+/* Screenshots and frame dumps read the FRAMEBUFFER, which no longer contains
+ * the HUD — it lives in the overlay and is composited by the GPU at present
+ * time. Paste it back into a throwaway copy so a capture still looks like the
+ * screen. A copy, not fb itself: compositing in place would put the HUD in the
+ * world texture as well, and it would then be drawn twice — once shifted,
+ * once not — as a ghost. Captures are rare, so the allocation is free.
+ * Returns fb unchanged when there is nothing to composite; free via
+ * screenshot_frame_release. */
+static uint32_t *screenshot_frame_with_hud(uint32_t *fb)
+{
+    if (!hud_layer_pending()) return fb;
+    size_t n = (size_t)_screen_width * PLATFORM_SCREEN_H;
+    uint32_t *tmp = (uint32_t *)SDL_malloc(n * 4);
+    if (!tmp) return fb;                       /* capture without the HUD */
+    SDL_memcpy(tmp, fb, n * 4);
+    for (int y = s_hud_y0; y < s_hud_y1; y++) {
+        const uint8_t *src = s_hud_layer + (size_t)y * _screen_width;
+        uint32_t      *dst = tmp + (size_t)y * _screen_width;
+        for (int x = s_hud_x0; x < s_hud_x1; x++) {
+            uint8_t ci = src[x];
+            if (!ci) continue;
+            SDL_Color c = s_palette[ci];
+            dst[x] = ((uint32_t)0xFFu << 24) | ((uint32_t)c.r << 16) |
+                     ((uint32_t)c.g << 8)    | (uint32_t)c.b;
+        }
+    }
+    return tmp;
+}
+
+static void screenshot_frame_release(uint32_t *shot, uint32_t *fb)
+{
+    if (shot != fb) SDL_free(shot);
 }
 
 static void render_frame_impl(int pump_full)
@@ -1334,10 +1509,15 @@ static void render_frame_impl(int pump_full)
     /* Screenshots read the packed RAM buffer directly (always the right stride now,
      * so the old pitch-mismatch skip is gone). Only write the F12 shot from the
      * main-thread render (pump_full); the timer-thread fallback would race the draw. */
-    if (s_dump_frames)
-        maybe_dump_frame(fb);
+    if (s_dump_frames) {
+        uint32_t *shot = screenshot_frame_with_hud(fb);
+        maybe_dump_frame(shot);
+        screenshot_frame_release(shot, fb);
+    }
     if (pump_full && s_screenshot_request) {
-        write_screenshot(fb);
+        uint32_t *shot = screenshot_frame_with_hud(fb);
+        write_screenshot(shot);
+        screenshot_frame_release(shot, fb);
         s_screenshot_request = 0;
     }
     if (s_screenshot_interval > 0) {
@@ -1345,7 +1525,9 @@ static void render_frame_impl(int pump_full)
         if (++frame_mod >= s_screenshot_interval) {
             frame_mod = 0;
             if (s_screenshot_auto_count < 200) {
-                write_screenshot(fb);
+                uint32_t *shot = screenshot_frame_with_hud(fb);
+                write_screenshot(shot);
+                screenshot_frame_release(shot, fb);
                 s_screenshot_auto_count++;
             } else if (s_screenshot_auto_count == 200) {
                 fprintf(stderr,
