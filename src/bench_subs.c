@@ -1511,6 +1511,57 @@ static PlayerInfo *getBenchPlayerPointer(uint16_t index, uint16_t *outOrdinal)
  * Main drawing entry for bench/substitutes menu.
  * Called from GameLoop each frame when bench is active.
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* benchXLimit's match value, set by the activation block (SWOS2.s:18776
+ * `move.w #27,(benchXLimit)`). Named here because the play-time draw runs
+ * before the subs menu has ever set the global. */
+#define BENCH_X_LIMIT_PLAY 27
+
+/* The bench geometry is normally established when the subs menu OPENS (see the
+ * activation block: benchY/opponentBenchY from 389/485, benchXLimit 27, and the
+ * team pointers). During ordinary play none of it has been set, so the
+ * play-time draw derives what it needs LOCALLY and touches no menu state — the
+ * menu re-establishes all of it on entry either way, and writing those globals
+ * from the render path could only corrupt a subs flow in progress. */
+static int bench_occupants_visible(void)
+{
+    /* Same predicate the menu path uses, so the occupants appear exactly when
+     * the bench furniture (pitch tiles) is on screen. */
+    return (int16_t)(BENCH_X_LIMIT_PLAY + 8) > Render_CameraX();
+}
+
+static void draw_bench_occupants_only(void)
+{
+    /* Bench Y bases and the side convention, mirroring the activation block. */
+    uint16_t topY = 389, botY = 485;
+    if ((uint8_t)_topTeamInGame.teamName[0] & 2) {
+        uint16_t t = topY; topY = botY; botY = t;
+    }
+
+    uint16_t savedLimit = _benchXLimit, savedBenchY = _benchY;
+    uint16_t savedOppY  = _opponentBenchY, savedState = _subsState;
+    uintptr_t savedTeam = _benchTeam, savedTeamGame = _benchTeamGame;
+    uint16_t savedInitial = _initialSubsState;
+
+    _benchXLimit     = BENCH_X_LIMIT_PLAY;
+    _benchY          = topY;
+    _opponentBenchY  = botY;
+    _benchTeam       = (uintptr_t)&_topTeamData;
+    _benchTeamGame   = (uintptr_t)_topTeamPtr;
+    _initialSubsState = 0;      /* idle: neutral coach frames, no selection */
+
+    drawOpponentsBench();
+    drawBenchPlayersAndCoach((TeamGame *)_benchTeamGame,
+                             (TeamGeneralInfo *)_benchTeam,
+                             (uint16_t)(_benchXLimit + 12), _benchY);
+
+    _benchXLimit = savedLimit;   _benchY = savedBenchY;
+    _opponentBenchY = savedOppY; _subsState = savedState;
+    _benchTeam = savedTeam;      _benchTeamGame = savedTeamGame;
+    _initialSubsState = savedInitial;
+}
+#endif
+
 void __attribute__((used, externally_visible))
 DrawBenchAndSubsMenu(void)
 {
@@ -1519,8 +1570,36 @@ DrawBenchAndSubsMenu(void)
     if (_inSubstitutesMenu != 0)
         goto draw_bench;
 
-    if (_leavingSubsMenu == 0)
+    if (_leavingSubsMenu == 0) {
+#ifdef SWOS_SDL_BUILD
+        /* WIDESCREEN: draw the bench occupants during ordinary play.
+         *
+         * The original returns here, and that is correct FOR 4:3 — not because
+         * the bench should be empty, but because it is never on screen. The
+         * dugouts sit at pitch x 0..35 (_benchXLimit 27, +8) and MoveCamera
+         * clamps its target to a 37 px margin (`#37` four times in SWOS2.s's
+         * MoveCamera, boundsMargin here), so during play the leftmost visible
+         * column is ~37. The only time an Amiga player ever sees the bench is
+         * inside the subs menu, where these same sprites ARE drawn.
+         *
+         * 97dd23a made Render_CameraX() the game camera "backed off by half the
+         * extra width", so a widescreen view now extends LEFT as well as right
+         * and reaches pitch x 0 — revealing a strip the original never showed,
+         * with nobody on it. Reported as "empty benches! Poor team, no coach
+         * available, no substitutes willing to play!".
+         *
+         * There is no original behaviour to be faithful to here: the situation
+         * cannot arise on real hardware. Deliberate divergence, on the rule that
+         * whatever is on screen has to be drawn.
+         *
+         * Occupants ONLY. The select arrow, drawSubstitutesMenu() and the rest
+         * of draw_bench are menu UI and must not appear mid-match. */
+        if (bench_occupants_visible()) {
+            draw_bench_occupants_only();
+        }
+#endif
         return;
+    }
 
     /* Release the leaving-subs camera lock once the view has slid the bench off
      * to the left AND the camera has reached its bench-return rest position.
