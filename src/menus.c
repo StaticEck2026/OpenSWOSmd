@@ -6235,9 +6235,32 @@ void SelectNationalTeamCommon(void *entryPtr)
         Career_RebuildInternationalPlayerSelectionMasks();
         DrawMenu();
     } else {
-        /* Toggle remove mark on this player */
+        /* Toggle remove mark on this player.
+         *
+         * The bit is fileIdx, NOT the visual row d1. In the asm both this and
+         * selectNationalTeamMenuResult come from the SAME register:
+         *
+         *     move.w 2(a5),d1                    ; d1 = visual row
+         *     jsr    GetPlayerInfoBreakPosition  ; RETURNS d1 = file index
+         *     ...
+         *   loc_1472B8:
+         *     move.w d1,(selectNationalTeamMenuResult)
+         *     bchg   d1,d0                       ; toggle bit d1  (SWOS2.s:106351)
+         *
+         * GetPlayerInfoBreakPosition overwrites d1 with the file index, so by
+         * the toggle d1 is no longer the row. We kept a separate C variable
+         * holding the visual row and used it for the bit, while correctly using
+         * fileIdx for the menu result -- the two cannot both be right.
+         *
+         * It matters because visual != storage: for rows 0..10 the row is
+         * remapped through the formation's position table
+         * (GetPlayerInfoBreakPosition, edit_tactics.c:2063), and
+         * Career_RemoveInternationalPlayersByMask walks STORAGE slots. So
+         * selecting a player marked a different one for removal -- reported as
+         * "select a player, hit REMOVE PLAYER, that player is not removed...
+         * you do this three times and all of a sudden empty slots appear". */
         _selectNationalTeamMenuResult = fileIdx;
-        _careerIntlPlayersRemoveMask ^= (1UL << d1);
+        _careerIntlPlayersRemoveMask ^= (1UL << fileIdx);
         Career_UpdateRemovePlayersMenuEntry();
         DrawMenu();
     }
