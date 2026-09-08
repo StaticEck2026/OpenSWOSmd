@@ -77,6 +77,11 @@ uae/fs-uae/
 
 __pycache__/
 
+# The Cygwin runtime DLLs, copied next to bin/SWOS.exe so it runs from a
+# double-click. Artifacts of the host Cygwin install, not sources — the release
+# drop stages its own copies from CYGWIN_BIN (scripts/build_installer.sh).
+bin/*.dll
+
 # Built binaries + runtime log live in bin/ but are artifacts, not sources.
 # (The Linux ELFs used to be tracked, inconsistently with SWOS.exe/SWOS2 which
 # never were; all of them are ignored now.) Rebuild with the Makefile.
