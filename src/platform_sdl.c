@@ -141,15 +141,21 @@ void Platform_HudLayerReset(void)
     s_hud_x1 = s_hud_y1 = 0;
 }
 
-/* Union a drawn sprite into the dirty rect. Deliberately generous: the caller
- * passes the sprite's own box, but DrawSprite_entry2/DrawSpriteClipped may
- * treat the coordinates as a hotspot rather than a top-left, so pad by the
- * sprite's own size on each side rather than assume. Still a few hundred
- * pixels, against 91k for the full frame. */
+/* Union a drawn sprite into the dirty rect — its EXACT box.
+ *
+ * DrawSpriteClipped and DrawSprite_entry2 both hand (d1,d2) straight to
+ * blitChunkySprite, which uses them as the top-left corner, so no padding is
+ * needed. This used to pad by the sprite's size on every side "in case" the
+ * coordinates were a hotspot: nine times the area, which for the wide
+ * scoreboard-grid sprites (168 px) ballooned the rect to nearly the whole
+ * screen and turned the overlay's small sub-rect upload into a near-full-frame
+ * one every frame. That is exactly the per-frame GPU cost this layer was
+ * designed to avoid. One pixel of slack absorbs any off-by-one in the blit's
+ * own clipping. */
 void Platform_HudLayerMark(int x, int y, int w, int h)
 {
     if (!s_hud_layer || w <= 0 || h <= 0) return;
-    int x0 = x - w, y0 = y - h, x1 = x + 2 * w, y1 = y + 2 * h;
+    int x0 = x - 1, y0 = y - 1, x1 = x + w + 1, y1 = y + h + 1;
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     if (x1 > _screen_width) x1 = _screen_width;
@@ -175,6 +181,7 @@ static SDL_mutex    *s_render_mtx;       /* serializes Platform_RenderFrame call
 
 static Uint64        s_perf_freq;
 static Uint64        s_next_frame_perf;  /* high-res counter for 50 Hz pacing */
+static int           s_display_hz;       /* monitor refresh, 0 = unknown. See the pacing note in Platform_VBlank. */
 static double        k_frame_secs = 1.0 / 50.0;  /* refreshed per frame from the
                                                   * active game style (DOS 70 / Amiga 50) */
 /* `s_last_main_render_ms` is the SDL_GetTicks() value of the last
@@ -712,6 +719,7 @@ int Platform_Init(const PlatformInitOptions *opts)
         }
         SDL_DisplayMode dm;
         if (SDL_GetCurrentDisplayMode(screen, &dm) == 0 && dm.refresh_rate > 0) {
+            s_display_hz = dm.refresh_rate;
             int fps = Platform_ActivePacingFps();
             fprintf(stderr, "[render] display=%d %dx%d @%dHz, game paces at %dHz%s\n",
                     screen, dm.w, dm.h, dm.refresh_rate, fps,
@@ -719,8 +727,12 @@ int Platform_Init(const PlatformInitOptions *opts)
                         ? " (exact multiple — pacing is exact)"
                         : " (not a multiple — some pulldown judder is inherent)");
         }
-        fprintf(stderr, "[render] subpixel_scroll=%s\n",
-                s_subpixel_scroll ? "on" : "off");
+        fprintf(stderr, "[render] subpixel_scroll=%s | pacing: %s\n",
+                s_subpixel_scroll ? "on" : "off",
+                (s_vsync_enabled && s_display_hz > 0 &&
+                 s_display_hz == Platform_ActivePacingFps())
+                    ? "vsync alone (timer disabled — rates match)"
+                    : "software timer");
     }
 
     /* HUD layer + its conversion scratch. Allocation failure is not fatal:
@@ -1638,6 +1650,38 @@ int Platform_VBlank(void)
      * "timer-thread starvation" was ballooning to 10–120 s per cont. */
     if (s_harness_turbo)
         return _quitToDos ? 1 : 0;
+
+    /* PACE ONCE, NEVER TWICE.
+     *
+     * When vsync is on AND the monitor refreshes at exactly our frame rate,
+     * SDL_RenderPresent above already blocked for precisely one frame — it IS
+     * the clock, and it is a better one than any timer, because it is the
+     * display's own. Sleeping to a software deadline on top of that is pure
+     * damage:
+     *
+     *  - It adds latency. The sleep sits between the present and the next
+     *    frame's input poll, so everything the player does is seen that much
+     *    later. A tester on a 50 Hz screen reported exactly this: "with vsync
+     *    ON everything is totally smooth... but the input lag seems pretty
+     *    huge, bigger than the +0.5 frames you expect from vsync".
+     *  - It drifts. Our deadline advances by exactly 1/fps while the panel
+     *    runs at its own slightly-different rate, so the gap between the two
+     *    walks through the whole frame interval and periodically pushes the
+     *    next present past a refresh — a hitch, then it repeats.
+     *
+     * Only when the two rates are EQUAL. At 60 Hz with a 50 Hz game, or any
+     * multiple, present-alone would run the game at the monitor's rate, so the
+     * limiter still has to gate it (SDL2's renderer vsync is swap-interval 1;
+     * there is no "present every Nth refresh"). This is what Ruff n Tumble's
+     * loop does too — vsync XOR a precise sleep, never both.
+     *
+     * The deadline is kept fresh so a later mode change (a DOS-gameplay
+     * toggle, a replay at another rate) does not resume against a stale one. */
+    if (s_vsync_enabled && s_display_hz > 0 &&
+        s_display_hz == Platform_ActivePacingFps()) {
+        s_next_frame_perf = SDL_GetPerformanceCounter();
+        return _quitToDos ? 1 : 0;
+    }
 
     /* Read the frame rate live so an in-game DOS-gameplay toggle — or a loaded
      * replay's own recorded framerate — re-paces each frame. */
