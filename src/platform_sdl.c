@@ -723,8 +723,28 @@ int Platform_Init(const PlatformInitOptions *opts)
                 s_subpixel_scroll ? "on" : "off");
     }
 
+    /* HUD layer + its conversion scratch. Allocation failure is not fatal:
+     * Platform_HudLayerBuffer() then returns NULL and the HUD simply stays in
+     * the main framebuffer, i.e. today's behaviour with a wobble. */
+    s_hud_layer = (uint8_t *)SDL_calloc(1, (size_t)_screen_width * PLATFORM_SCREEN_H);
+    s_hud_rgba  = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
+    if (!s_hud_layer || !s_hud_rgba) {
+        fprintf(stderr, "[render] HUD layer alloc failed — the HUD will ride the "
+                        "sub-pixel shift (harmless, slightly jittery)\n");
+        if (s_hud_layer) { SDL_free(s_hud_layer); s_hud_layer = NULL; }
+        if (s_hud_rgba)  { SDL_free(s_hud_rgba);  s_hud_rgba  = NULL; }
+    }
+    Platform_HudLayerReset();
+
     /* HUD overlay texture — blended, so index-0 pixels stay transparent and the
-     * shifted world shows through everywhere the HUD is not. */
+     * shifted world shows through everywhere the HUD is not.
+     *
+     * MUST come after the buffers above. It used to sit 30 lines earlier, where
+     * s_hud_layer was still NULL, so this block was skipped, s_hud_tex stayed
+     * NULL and present_hud_layer() returned immediately: the HUD was diverted
+     * out of the frame and then never drawn back. Screenshots still showed it,
+     * because the capture composites straight from s_hud_layer and never touches
+     * the texture — which is exactly why the bug survived verification. */
     if (s_hud_layer) {
         s_hud_tex = SDL_CreateTexture(s_renderer, SDL_PIXELFORMAT_ARGB8888,
                                       SDL_TEXTUREACCESS_STREAMING,
@@ -735,6 +755,11 @@ int Platform_Init(const PlatformInitOptions *opts)
             fprintf(stderr, "[render] HUD texture failed (%s) — HUD stays in the "
                             "main frame\n", SDL_GetError());
     }
+    /* Say it out loud: a silent NULL here loses the entire HUD on screen. */
+    fprintf(stderr, "[render] hud_layer=%s\n",
+            (s_hud_layer && s_hud_tex) ? "on"
+                                       : (s_hud_layer ? "NO TEXTURE — HUD WILL BE INVISIBLE"
+                                                      : "off (no buffer)"));
 
     SDL_RenderSetLogicalSize(s_renderer, _screen_width, PLATFORM_SCREEN_H);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
@@ -753,19 +778,6 @@ int Platform_Init(const PlatformInitOptions *opts)
         }
         (void)0;
     }
-    /* HUD layer + its conversion scratch. Allocation failure is not fatal:
-     * Platform_HudLayerBuffer() then returns NULL and the HUD simply stays in
-     * the main framebuffer, i.e. today's behaviour with a wobble. */
-    s_hud_layer = (uint8_t *)SDL_calloc(1, (size_t)_screen_width * PLATFORM_SCREEN_H);
-    s_hud_rgba  = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
-    if (!s_hud_layer || !s_hud_rgba) {
-        fprintf(stderr, "[render] HUD layer alloc failed — the HUD will ride the "
-                        "sub-pixel shift (harmless, slightly jittery)\n");
-        if (s_hud_layer) { SDL_free(s_hud_layer); s_hud_layer = NULL; }
-        if (s_hud_rgba)  { SDL_free(s_hud_rgba);  s_hud_rgba  = NULL; }
-    }
-    Platform_HudLayerReset();
-
     s_frame_rgba = (uint32_t *)SDL_malloc((size_t)_screen_width * PLATFORM_SCREEN_H * 4);
     if (!s_frame_rgba) {
         fprintf(stderr, "frame buffer alloc failed (%d x %d)\n", _screen_width, PLATFORM_SCREEN_H);
