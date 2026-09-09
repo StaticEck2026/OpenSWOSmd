@@ -6315,15 +6315,28 @@ void SelectNationalTeamAfterDrawCommon(void *entryPtr)
         if (posType == 0)
             d5 = 0x0E;  /* goalkeeper color */
 
-        /* Disable entry if wrong position type */
+        /* Disable entry if wrong position type.
+         *
+         * Indexed by fileIdx, NOT the visual row — the same domain as the
+         * remove mask below and for the same reason. Both masks are BUILT by
+         * Career_RebuildInternationalPlayerSelectionMasks looping
+         * `GetPlayer(_selTeamNumber, i)` and setting bit i, and GetPlayer's
+         * second parameter is the FILE index (GetPlayerAtIndex is the one that
+         * takes an ordinal, and it resolves it to a file index before calling
+         * GetPlayer). The asm agrees on both halves: the builder is
+         * `move.w #$13,d1 / bsr GetPlayer / bset d1,d5 / bclr d1,d2`
+         * (SWOS2.s:106188), and the reader loads the visual row into d1, lets
+         * GetPlayerInfoBreakPosition OVERWRITE d1 with the file index, then
+         * `btst d1` — SWOS2.s:106349 and :106357, immediately above the
+         * remove-mask btst that shares the very same register. */
         a5->isDisabled = 0;
-        if (_careerIntlPlayersWrongTypeMask & (1UL << d1)) {
+        if (_careerIntlPlayersWrongTypeMask & (1UL << fileIdx)) {
             a5->isDisabled = 1;
             d5 = 9;
         }
 
-        /* Disable entry if not selectable */
-        if (_careerIntlPlayersSelectableMask & (1UL << d1)) {
+        /* Disable entry if not selectable — same domain, same asm register. */
+        if (_careerIntlPlayersSelectableMask & (1UL << fileIdx)) {
             a5->isDisabled = 1;
         }
 
