@@ -6348,7 +6348,16 @@ void SelectNationalTeamAfterDrawCommon(void *entryPtr)
         }
 
         /* Set extra name pointer from careerUnavailablePlayerNames */
-        a4_extra = _careerUnavailablePlayerNames + d1 * 17;
+        /* Indexed by fileIdx, like every other access to this array.
+         * Career_CopyUnavailablePlayerToCareerTeamSlot WRITES the club name at
+         * dstSlotIndex * 17 and SelectNationalTeamCommon passes fileIdx as that
+         * argument; menus.c:1726 reads it back the same way. This site used the
+         * visual row instead, so once the two diverge the row picks up a
+         * different slot's string -- usually an empty one, which is why an added
+         * player showed "()" where his club should be. Same mix-up as the remove
+         * highlight above; fileIdx is already to hand from the shared
+         * GetPlayerInfoBreakPosition call. */
+        a4_extra = _careerUnavailablePlayerNames + fileIdx * 17;
     }
 
     /* Call BuildTransferPlayerMenuEntry and draw */
