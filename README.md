@@ -406,6 +406,7 @@ values and comments are never rewritten or reordered.
 renderer=accel        ; software | accel (hardware-accelerated)
 vsync=off             ; on | off — accel renderer only
 subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling (see below)
+scaling=smooth        ; sharp | smooth — how the frame is scaled (see below)
 render_driver=auto    ; auto | opengl | direct3d11 | direct3d | software-backend
                       ; auto = SDL default (D3D11 on Windows). Use opengl if
                       ; replays/attract run in slow motion on Windows.
@@ -478,6 +479,16 @@ the F2 service menu, which writes changes straight back to `SWOS.ini`.
                           Quantised to whole output pixels, so it never blurs;
                           inactive at 1x window scale, where there is no
                           sub-pixel resolution to use. Turn off to compare.
+--scaling=<sharp|smooth>  How the frame is scaled to the window. Default:
+                          smooth. A fullscreen scale is rarely a whole number
+                          (1080/272 = 3.97), so a plain nearest copy gives one
+                          source pixel 4 output pixels and its neighbour 3 —
+                          uneven text, clock digits and shirt numbers. 'smooth'
+                          pre-multiplies the frame by a whole number first and
+                          resamples only the leftover fraction; 'sharp' is the
+                          old single nearest copy. Both are identical at a
+                          whole-number scale, which is every windowed scale, and
+                          'smooth' needs a hardware renderer.
 --vsync=<on|off>          Sync frame presents to monitor vblank.
                           Default: off. Only meaningful with
                           --renderer=accel. Turn on if you see screen
@@ -527,6 +538,19 @@ the second of those; the first needs the render/logic decoupling designed in
 `docs/AMIGA_60.md`. `SWOS.log` reports the detected refresh rate, whether vsync
 actually engaged (a driver or control panel can silently drop it), and whether
 the refresh is an exact multiple of the game's pace.
+
+**Uneven pixels are a different problem from uneven pacing.** The game renders
+272 rows, and a monitor is almost never a whole multiple of that — 1080/272 =
+3.97 — so scaling the frame with a plain nearest copy hands one source pixel 4
+output pixels and its neighbour 3. Nothing moves, but text, clock digits and
+shirt numbers look subtly wrong. `scaling=smooth` (the default) fixes it without
+black bars or cropped rows: the frame is first blown up by a *whole* number with
+nearest — exact NxN blocks, no error — and only the leftover fraction (3.97/4 =
+0.99) is resampled. Both passes run on the GPU off the same single upload, so
+the cost is one extra blit; measured at 3440x1440 it is 0.33 ms of a 20 ms
+frame, and it drops the edge-placement error from 0.42 to 0.10 output pixels.
+`SWOS.log` reports the factor it chose. `--scaling=sharp` restores the old
+single copy to compare.
 
 ## Controls
 

@@ -7,6 +7,7 @@
  *   renderer=accel        ; software | accel
  *   vsync=off             ; on | off
  *   subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling
+ *   scaling=smooth        ; sharp | smooth — even pixels at a non-integer scale
  *   fullscreen=off        ; off | desktop | exclusive
  *   scale=3               ; 1..4 (windowed only)
  *
@@ -78,6 +79,9 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "subpixel_scroll")) {
             int b;
             if (parse_bool(value, &b)) opts->subpixel_scroll = b;
+        } else if (eqi(name, "scaling")) {
+            if      (eqi(value, "smooth")) opts->scaling_smooth = 1;
+            else if (eqi(value, "sharp"))  opts->scaling_smooth = 0;
         } else if (eqi(name, "render_driver")) {
             snprintf(opts->render_driver, sizeof opts->render_driver, "%s", value);
         } else if (eqi(name, "fullscreen")) {
@@ -197,7 +201,7 @@ typedef struct { const char *section, *key, *comment, *value; } IniEntry;
 
 /* settings_build() fills a stack array of this size and nothing bounds-checks
  * n, so keep comfortable headroom over the number of entries it appends
- * (28 as of the subpixel_scroll entry). */
+ * (29 as of the scaling entry). */
 #define SETTINGS_MAX 40
 
 /* Inline comment appended to a section-header line in a freshly-created file. */
@@ -232,6 +236,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "renderer",   "; renderer: software | accel  (hardware-accelerated)", renderer_str(opts->renderer) };
     items[n++] = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
     items[n++] = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: on | off. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "on" : "off" };
+    items[n++] = (IniEntry){ "video",  "scaling",    "; scaling: sharp | smooth. A fullscreen scale is rarely a whole number (1080/272 = 3.97), so a plain nearest copy makes some pixels bigger than others. smooth evens them", opts->scaling_smooth ? "smooth" : "sharp" };
     items[n++] = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };

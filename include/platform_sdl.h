@@ -68,6 +68,13 @@ typedef struct {
                                               * remainder so scrolling is continuous instead of stepping
                                               * 1,2,1,2 px (default 1). Quantised to whole output pixels,
                                               * so it never blurs. PC-only; see platform_sdl.c. */
+    int                    scaling_smooth;   /* 1 = two-pass scaling (default): pre-multiply the frame
+                                              * by a whole number with NEAREST, then let the leftover
+                                              * fraction resample LINEARLY, so a non-integer fullscreen
+                                              * scale stops giving one source pixel 4 output pixels and
+                                              * its neighbour 3. 0 = the old single nearest copy.
+                                              * No-ops when the output is already a whole multiple
+                                              * (every windowed scale is). PC-only; see platform_sdl.c. */
     char                   render_driver[16];/* accel backend override: "" / "auto" = SDL default (D3D11 on Windows);
                                               * "opengl" / "direct3d11" / "direct3d" / "metal" force one. Windows D3D11
                                               * serialises presents on CPU-idle frames (replays crawl); "opengl" avoids it. */

@@ -120,6 +120,7 @@ static uint32_t     *s_frame_rgba;
  * block; a full second 336x272 upload every frame is exactly the kind of cost
  * that made the D3D path crawl before the single-bulk-upload rework. */
 static int           s_subpixel_scroll = 1;   /* [video] subpixel_scroll — see present_frame_copy */
+
 Uint64 Platform_NowMs(void);           /* defined below; used by the freshness stamp */
 static uint8_t      *s_hud_layer;      /* 8bpp, same geometry as the frontbuffer */
 static int           s_hud_x0, s_hud_y0, s_hud_x1, s_hud_y1;  /* x1/y1 exclusive */
@@ -184,6 +185,39 @@ static int hud_layer_pending(void)
            (Platform_NowMs() - s_hud_stamp) <= 100 &&
            s_hud_x1 > s_hud_x0 && s_hud_y1 > s_hud_y0;
 }
+
+/* ---- Two-pass scaling -----------------------------------------------------
+ * A fullscreen scale is almost never a whole number: 1080/272 = 3.97, so a
+ * plain nearest copy gives some source pixels 4 output pixels and their
+ * neighbours 3. That unevenness is what a tester sees as wobbly text, shirt
+ * numbers and clock digits, and it has been there since the first commit --
+ * SDL_RenderSetLogicalSize's scaling policy has never changed.
+ *
+ * The error is one SOURCE pixel wide, so the fix is to make the source denser
+ * before the fractional part of the scale happens:
+ *
+ *   pass 1  frame -> s_scale_target at a WHOLE number N, NEAREST.  Every source
+ *           pixel becomes an exact NxN block, so this pass adds no error.
+ *   pass 2  s_scale_target -> the screen, LINEAR.  The leftover fraction
+ *           (e.g. 3.97/4 = 0.99) is resampled from an already N-times-dense
+ *           image, so the residual is a fraction of a source pixel instead of
+ *           a whole one.
+ *
+ * swos-2020 does the same thing (src/video/render.cpp: the streaming texture is
+ * created at kVgaWidth * getFilterScalerSize(), and getScreenEnhancment() flips
+ * SDL_HINT_RENDER_SCALE_QUALITY to "best") -- but it runs the pre-scale on the
+ * CPU into a streaming texture, which multiplies the per-frame UPLOAD by N².
+ * That is the regression 47b0998 just removed, so ours is a render target: the
+ * upload is untouched and pass 1 is one GPU blit.
+ *
+ * No bars, no cropped rows, and it costs nothing at a whole-number scale --
+ * scale_pass_factor() returns 0 there and the old single copy runs unchanged,
+ * which is every windowed scale. */
+static int           s_scaling_smooth = 1;  /* [video] scaling = smooth | sharp */
+static SDL_Texture  *s_scale_target;        /* NULL until a fractional scale needs it */
+static int           s_scale_n;             /* the N s_scale_target was built at */
+static int           s_scale_targets_ok = 1;/* cleared if the backend can't render to a texture */
+static int           s_scale_logged;        /* log the chosen factor once, for triage */
 static SDL_Color     s_palette[256];
 static SDL_mutex    *s_render_mtx;       /* serializes Platform_RenderFrame calls */
 
@@ -217,6 +251,10 @@ static volatile Uint32 s_last_main_render_ms;
 static volatile int s_screenshot_request;
 static int          s_screenshot_index;
 static int          s_screenshot_interval;   /* 0 = disabled, N>0 = every N frames */
+static int          s_present_capture;       /* 0 = disabled, N>0 = every N frames (see capture_presented_frame) */
+static int          s_present_stats;         /* SWOS_PRESENT_STATS=1 — report the present path's own cost */
+static Uint64       s_present_ticks;
+static int          s_present_frames;
 static int          s_screenshot_auto_count; /* number written by interval mode */
 
 /* Arcade coin/service input (MAME keys 5/6/F2). Edge-counted in the event pump,
@@ -693,6 +731,7 @@ int Platform_Init(const PlatformInitOptions *opts)
     }
 
     s_subpixel_scroll = opts ? opts->subpixel_scroll : 1;
+    s_scaling_smooth  = opts ? opts->scaling_smooth  : 1;
 
     /* Report what we actually GOT, not what we asked for. Ruff n Tumble's loop
      * does the same (SDL_SetRenderVSync then SDL_GetRenderVSync to confirm, and
@@ -710,6 +749,10 @@ int Platform_Init(const PlatformInitOptions *opts)
         SDL_RendererInfo info;
         if (SDL_GetRendererInfo(s_renderer, &info) == 0) {
             int got_vsync = (info.flags & SDL_RENDERER_PRESENTVSYNC) ? 1 : 0;
+            /* Pass 1 renders into a texture. The software renderer and a few
+             * exotic backends can't, so ask before relying on it rather than
+             * failing per-frame. */
+            s_scale_targets_ok = (info.flags & SDL_RENDERER_TARGETTEXTURE) ? 1 : 0;
             fprintf(stderr, "[render] driver=%s flags=0x%x hw=%d vsync: requested=%s actual=%s\n",
                     info.name ? info.name : "?", info.flags, s_renderer_is_hw,
                     s_vsync_enabled ? "on" : "off",
@@ -735,7 +778,12 @@ int Platform_Init(const PlatformInitOptions *opts)
                         ? " (exact multiple — pacing is exact)"
                         : " (not a multiple — some pulldown judder is inherent)");
         }
-        fprintf(stderr, "[render] subpixel_scroll=%s | pacing: %s\n",
+        fprintf(stderr, "[render] scaling=%s%s | subpixel_scroll=%s | pacing: %s\n",
+                s_scaling_smooth ? "smooth" : "sharp",
+                !s_scaling_smooth ? ""
+                    : !s_renderer_is_hw   ? " (inactive — hardware renderer only)"
+                    : !s_scale_targets_ok ? " (inactive — backend has no render-to-texture)"
+                    : "",
                 s_subpixel_scroll ? "on" : "off",
                 (s_vsync_enabled && s_display_hz > 0 &&
                  s_display_hz == Platform_ActivePacingFps())
@@ -822,9 +870,23 @@ int Platform_Init(const PlatformInitOptions *opts)
             }
         }
     }
+    s_present_stats = (getenv("SWOS_PRESENT_STATS") != NULL);
+    {
+        const char *pc = getenv("SWOS_PRESENT_CAPTURE");
+        if (pc && *pc) {
+            int n = atoi(pc);
+            if (n > 0) {
+                s_present_capture = n;
+                fprintf(stderr,
+                    "[present] capture mode: reading back the PRESENTED output every "
+                    "%d frame(s) (swos_presentNNN.png), capped at 60 files\n", n);
+            }
+        }
+    }
     fprintf(stderr,
         "[screenshot] hotkeys: F9 / F11 / F12 / PrintScreen "
-        "(env SWOS_SCREENSHOT_INTERVAL=N for auto-capture every N frames)\n");
+        "(env SWOS_SCREENSHOT_INTERVAL=N for auto-capture every N frames, "
+        "SWOS_PRESENT_CAPTURE=N for the presented output)\n");
 
     /* 20 ms = 50 Hz, the PAL VBlank rate the game expects. */
 #ifndef SWOS_WASM_BUILD
@@ -848,6 +910,7 @@ void Platform_Shutdown(void)
 
     for (int ti = 0; ti < PLATFORM_TEX_RING; ti++)
         if (s_textures[ti]) { SDL_DestroyTexture(s_textures[ti]); s_textures[ti] = NULL; }
+    if (s_scale_target) { SDL_DestroyTexture(s_scale_target); s_scale_target = NULL; s_scale_n = 0; }
     if (s_frame_rgba) { SDL_free(s_frame_rgba); s_frame_rgba = NULL; }
     if (s_hud_layer)  { SDL_free(s_hud_layer);  s_hud_layer  = NULL; }
     if (s_renderer) { SDL_DestroyRenderer(s_renderer); s_renderer = NULL; }
@@ -1121,6 +1184,46 @@ static void write_screenshot(const uint32_t *argb)
     free(rgba);
 }
 
+/* Capture what is actually PRESENTED — not what was drawn into the framebuffer.
+ *
+ * write_screenshot() reads `fb`, which is UPSTREAM of present_frame_copy, so it
+ * cannot see the scale, the sub-pixel shift, the HUD strip or the two-pass
+ * path. That blind spot is not hypothetical: a framebuffer screenshot looked
+ * perfect while the GPU was drawing nothing at all (f663545, HUD layer never
+ * presented). This reads the render output itself, after every draw and before
+ * the swap, so it is the only capture that can verify a present-path change.
+ *
+ * SWOS_PRESENT_CAPTURE=N writes every Nth frame to swos_presentNNN.png at the
+ * OUTPUT resolution (letterbox bars included). */
+static void capture_presented_frame(void)
+{
+    static int mod, count;
+    if (s_present_capture <= 0 || count >= 60) return;
+    if (++mod < s_present_capture) return;
+    mod = 0;
+
+    int ow = 0, oh = 0;
+    if (SDL_GetRendererOutputSize(s_renderer, &ow, &oh) != 0 || ow <= 0 || oh <= 0)
+        return;
+
+    /* ABGR8888 is 0xAABBGGRR, i.e. R,G,B,A byte order on a little-endian host —
+     * exactly what stb_image_write wants, so no conversion pass. */
+    uint8_t *px = (uint8_t *)malloc((size_t)ow * oh * 4);
+    if (!px) return;
+    if (SDL_RenderReadPixels(s_renderer, NULL, SDL_PIXELFORMAT_ABGR8888, px, ow * 4) == 0) {
+        char path[64];
+        snprintf(path, sizeof path, "swos_present%03d.png", count++);
+        if (stbi_write_png(path, ow, oh, 4, px, ow * 4))
+            fprintf(stderr, "[present] wrote %s (%dx%d — the presented pixels)\n", path, ow, oh);
+        else
+            fprintf(stderr, "[present] stbi_write_png %s failed\n", path);
+    } else {
+        fprintf(stderr, "[present] SDL_RenderReadPixels failed: %s\n", SDL_GetError());
+        s_present_capture = 0;
+    }
+    free(px);
+}
+
 static void maybe_dump_frame(const uint32_t *argb)
 {
     if (!s_dump_frames) return;
@@ -1379,42 +1482,31 @@ static int compose_hud_strip(uint32_t *fb, int fbpx)
 
 /* Draw the HUD strip back to its screen position, UNSHIFTED -- the whole point
  * of the layer. Same texture as the world, so no extra upload; blending is
- * enabled only for this draw so the opaque world copy stays on the fast path. */
-static void present_hud_strip(SDL_Texture *tex)
+ * enabled only for this draw so the opaque world copy stays on the fast path.
+ *
+ * `n` is the whole-number source->destination scale of whatever we are drawing
+ * into: 1 when that is the screen (SDL's logical size does the scaling for us),
+ * or the pre-scale factor when it is the two-pass render target. */
+static void present_hud_strip(SDL_Texture *tex, int n)
 {
     if (s_hud_strip_w <= 0) return;
     SDL_Rect src = { 0, PLATFORM_SCREEN_H, s_hud_strip_w, s_hud_strip_h };
-    SDL_Rect dst = { s_hud_dst_x, s_hud_dst_y, s_hud_strip_w, s_hud_strip_h };
+    SDL_Rect dst = { s_hud_dst_x * n, s_hud_dst_y * n,
+                     s_hud_strip_w * n, s_hud_strip_h * n };
     SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
     SDL_RenderCopy(s_renderer, tex, &src, &dst);
     SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE);
 }
 
-static void present_frame_copy(SDL_Texture *tex)
+/* Draw the world -- shifted by the sub-pixel remainder -- and then the HUD on
+ * top of it, unshifted, into whatever is currently the render target.
+ *
+ * `n` is that target's whole-number scale (1 = straight to the screen). qx/qy
+ * are the shift ALREADY quantised, in the destination's own units. */
+static void draw_world_and_hud(SDL_Texture *tex, int n, float qx, float qy)
 {
-    const float w = (float)_screen_width;
-    const float h = (float)PLATFORM_SCREEN_H;
-    uint16_t fx = 0, fy = 0;
-    float qx = 0.0f, qy = 0.0f;
-
-    if (s_subpixel_scroll && Render_ScrollSubpixel(&fx, &fy) && (fx || fy)) {
-        /* Logical->output scale, as set by SDL_RenderSetLogicalSize. This is
-         * the resolution we have to work with: at scale N a source pixel is N
-         * output pixels, so the shift can only take N distinct values.
-         *
-         * Below 2x there is NO sub-pixel resolution — the quantiser could only
-         * return 0 or a whole pixel, which does not smooth anything. It merely
-         * rounds the camera instead of flooring it, and rounding shifts the
-         * phase of the 1,2,1,2 pattern without making it any more even, while
-         * still costing the trailing-edge sliver. So leave 1x completely alone
-         * and take the untouched SDL_RenderCopy path. */
-        float sx = 1.0f, sy = 1.0f;
-        SDL_RenderGetScale(s_renderer, &sx, &sy);
-        if (sx >= 2.0f)
-            qx = SDL_floorf((float)fx / 65536.0f * sx + 0.5f) / sx;
-        if (sy >= 2.0f)
-            qy = SDL_floorf((float)fy / 65536.0f * sy + 0.5f) / sy;
-    }
+    const float w = (float)(_screen_width * n);
+    const float h = (float)(PLATFORM_SCREEN_H * n);
 
     /* The texture is TALLER than the screen (PLATFORM_TEX_H) -- the rows below
      * hold the HUD scratch strip -- so every world draw must name the visible
@@ -1422,8 +1514,13 @@ static void present_frame_copy(SDL_Texture *tex)
     const SDL_Rect worldSrc = { 0, 0, _screen_width, PLATFORM_SCREEN_H };
 
     if (qx == 0.0f && qy == 0.0f) {
-        SDL_RenderCopy(s_renderer, tex, &worldSrc, NULL);   /* unchanged fast path */
-        present_hud_strip(tex);
+        if (n == 1) {
+            SDL_RenderCopy(s_renderer, tex, &worldSrc, NULL);   /* unchanged fast path */
+        } else {
+            SDL_FRect d = { 0.0f, 0.0f, w, h };
+            SDL_RenderCopyF(s_renderer, tex, &worldSrc, &d);
+        }
+        present_hud_strip(tex, n);
         return;
     }
 
@@ -1443,8 +1540,133 @@ static void present_frame_copy(SDL_Texture *tex)
         SDL_RenderCopyF(s_renderer, tex, &src, &d);
     }
 
-    /* The HUD goes on LAST and UNSHIFTED — the whole point of the layer. */
-    present_hud_strip(tex);
+    /* The HUD goes on LAST and UNSHIFTED -- the whole point of the layer. */
+    present_hud_strip(tex, n);
+}
+
+/* The whole number to pre-multiply the frame by before the final resample, or
+ * 0 to skip the two-pass path entirely. See the s_scale_target comment block.
+ *
+ * 0 when the output is already a whole multiple of the logical size, which is
+ * every windowed scale -- nearest is exact there and the extra pass would only
+ * cost a blit. Rounding to NEAREST rather than up keeps the leftover fraction
+ * as close to 1:1 as possible (5.29 -> 5 resamples by 1.06, not 6 -> 0.88). */
+static int scale_pass_factor(void)
+{
+    if (!s_scaling_smooth || !s_scale_targets_ok) return 0;
+
+    /* HARDWARE ONLY. On a GPU pass 1 is one blit the driver runs asynchronously.
+     * On the software renderer it is real CPU work in the calling thread, and
+     * measured here it costs 2.0 ms/frame at 3440x1440 against 0.006 ms for the
+     * single copy (SDL defers the single copy to RenderPresent; a render target
+     * cannot be deferred) — 10% of a 20 ms frame before pass 2's linear resample
+     * is even counted. The software renderer is the fallback for hosts where the
+     * hardware path already misbehaves; it does not get to pay for this. */
+    if (!s_renderer_is_hw) return 0;
+
+    float sx = 1.0f, sy = 1.0f;
+    SDL_RenderGetScale(s_renderer, &sx, &sy);
+
+    /* Below 1.5x there is not enough output resolution for the pre-scale to
+     * buy anything, and at 1x it would only blur. */
+    if (sx < 1.5f || sy < 1.5f) return 0;
+
+    /* Already whole on both axes? Then the plain copy is already exact. */
+    if (SDL_fabsf(sx - SDL_floorf(sx + 0.5f)) < 0.001f &&
+        SDL_fabsf(sy - SDL_floorf(sy + 0.5f)) < 0.001f) return 0;
+
+    float s = (sx > sy) ? sx : sy;
+    int   n = (int)SDL_floorf(s + 0.5f);
+    if (n < 2) n = 2;
+    if (n > 8) n = 8;                   /* 8x of 672x272 is a 46 MB target; enough */
+    return n;
+}
+
+/* The pass-1 target at factor `n`, rebuilt when `n` changes (a resize or a
+ * fullscreen toggle moves the output scale). NULL disables the two-pass path
+ * for the rest of the run -- a backend that cannot give us one now will not
+ * start being able to. */
+static SDL_Texture *scale_target_for(int n)
+{
+    if (s_scale_target && s_scale_n == n) return s_scale_target;
+
+    if (s_scale_target) {
+        SDL_DestroyTexture(s_scale_target);
+        s_scale_target = NULL;
+        s_scale_n      = 0;
+    }
+
+    SDL_Texture *t = SDL_CreateTexture(s_renderer, SDL_PIXELFORMAT_ARGB8888,
+                                       SDL_TEXTUREACCESS_TARGET,
+                                       _screen_width * n, PLATFORM_SCREEN_H * n);
+    if (!t) {
+        fprintf(stderr, "[render] scaling=smooth: %dx%d render target failed (%s) "
+                        "— falling back to the single nearest copy\n",
+                _screen_width * n, PLATFORM_SCREEN_H * n, SDL_GetError());
+        s_scale_targets_ok = 0;
+        return NULL;
+    }
+    /* LINEAR is the whole point: pass 2 resamples the leftover fraction. The
+     * frame textures stay NEAREST -- pass 1 hits them at exactly n, so nearest
+     * is not an approximation there, it is the correct answer. */
+    SDL_SetTextureScaleMode(t, SDL_ScaleModeLinear);
+    SDL_SetTextureBlendMode(t, SDL_BLENDMODE_NONE);
+
+    s_scale_target = t;
+    s_scale_n      = n;
+    if (!s_scale_logged) {
+        float sx = 1.0f, sy = 1.0f;
+        SDL_RenderGetScale(s_renderer, &sx, &sy);
+        fprintf(stderr, "[render] scaling=smooth: output scale %.3fx%.3f is not whole — "
+                        "pre-scaling %dx (target %dx%d), then resampling %.3f\n",
+                sx, sy, n, _screen_width * n, PLATFORM_SCREEN_H * n, sx / (float)n);
+        s_scale_logged = 1;
+    }
+    return t;
+}
+
+static void present_frame_copy(SDL_Texture *tex)
+{
+    uint16_t fx = 0, fy = 0;
+    int shift = s_subpixel_scroll && Render_ScrollSubpixel(&fx, &fy) && (fx || fy);
+
+    int          n  = scale_pass_factor();
+    SDL_Texture *rt = n ? scale_target_for(n) : NULL;
+
+    if (rt && SDL_SetRenderTarget(s_renderer, rt) == 0) {
+        /* Pass 1. The shift quantises to whole TARGET pixels, i.e. 1/n of a
+         * source pixel -- finer than the old floor(outputScale) steps, and
+         * exact rather than a fraction that has to survive another scale. */
+        float qx = 0.0f, qy = 0.0f;
+        if (shift) {
+            qx = SDL_floorf((float)fx / 65536.0f * (float)n + 0.5f);
+            qy = SDL_floorf((float)fy / 65536.0f * (float)n + 0.5f);
+        }
+        draw_world_and_hud(tex, n, qx, qy);
+
+        /* Pass 2. Back on the screen SDL restores the logical size it saved
+         * when we set the target, so the aspect and letterbox behave exactly
+         * as they did before this path existed. */
+        SDL_SetRenderTarget(s_renderer, NULL);
+        SDL_RenderCopy(s_renderer, rt, NULL, NULL);
+        return;
+    }
+    if (rt) SDL_SetRenderTarget(s_renderer, NULL);   /* the set failed — undo it */
+
+    /* Single-pass: the original path, unchanged.
+     *
+     * Below 2x there is NO sub-pixel resolution -- the quantiser could only
+     * return 0 or a whole pixel, which does not smooth anything. It merely
+     * rounds the camera instead of flooring it, and rounding shifts the phase
+     * of the 1,2,1,2 pattern without making it any more even, while still
+     * costing the trailing-edge sliver. So leave 1x completely alone. */
+    float sx = 1.0f, sy = 1.0f, qx = 0.0f, qy = 0.0f;
+    SDL_RenderGetScale(s_renderer, &sx, &sy);
+    if (shift) {
+        if (sx >= 2.0f) qx = SDL_floorf((float)fx / 65536.0f * sx + 0.5f) / sx;
+        if (sy >= 2.0f) qy = SDL_floorf((float)fy / 65536.0f * sy + 0.5f) / sy;
+    }
+    draw_world_and_hud(tex, 1, qx, qy);
 }
 
 /* Screenshots and frame dumps read the FRAMEBUFFER, which no longer contains
@@ -1582,7 +1804,25 @@ static void render_frame_impl(int pump_full)
     }
 
     SDL_RenderClear(s_renderer);
-    present_frame_copy(tex);
+    /* SWOS_PRESENT_STATS=1 reports what the present path costs. The draw calls
+     * are what changed here (two-pass scaling adds a blit); RenderPresent is
+     * deliberately excluded because on a vsynced hardware renderer it is mostly
+     * the wait, which would drown the signal. On the software renderer the
+     * pixels are pushed inside these calls, so this IS the cost there. */
+    if (s_present_stats) {
+        Uint64 t0 = SDL_GetPerformanceCounter();
+        present_frame_copy(tex);
+        s_present_ticks += SDL_GetPerformanceCounter() - t0;
+        if (++s_present_frames >= 250) {
+            fprintf(stderr, "[present] %.3f ms/frame in the present path (%d frames)\n",
+                    1000.0 * (double)s_present_ticks / (double)s_perf_freq / s_present_frames,
+                    s_present_frames);
+            s_present_ticks = 0; s_present_frames = 0;
+        }
+    } else {
+        present_frame_copy(tex);
+    }
+    capture_presented_frame();     /* after every draw, before the swap */
     SDL_RenderPresent(s_renderer);
 
     SDL_UnlockMutex(s_render_mtx);
