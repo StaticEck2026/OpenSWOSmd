@@ -888,8 +888,17 @@ void DeleteFileMenu(void)
     if (GetFilenameAndExtension(0, _aDeleteFile, _aDeleteFile) != 0)
         return;
 
+    /* The file to delete comes back in `_selectedFilename`, and it has to be
+     * PASSED ON: opcode 6 is the delete, and it deletes whatever name it is
+     * given. The asm makes this implicit — GetFilenameAndExtension ends
+     * `lea (selectedFilename).l,a0 / rts` (SWOS2.s:93604..), so a0 still holds
+     * the chosen name when DeleteFileMenu calls AssetSys_Dispatch two lines
+     * later. Porting that as a plain `!= 0` status check dropped the register,
+     * and passing 0 here asked the loader to delete the empty string — the menu
+     * ran, reported nothing, and left the file alone ("DELETE FILE does not
+     * work"). */
     result = CAssetSys_Dispatch(ASSET_OP_INIT_SOURCE2, 0,
-                                 (void *)0, (void *)0);
+                                 (void *)_selectedFilename, (void *)0);
     if (result != 0) {
         ShowFsErrorByCode((uint16_t)result);
     }
