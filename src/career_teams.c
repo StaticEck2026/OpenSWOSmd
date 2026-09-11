@@ -2413,6 +2413,23 @@ extern void PrintFormatted(const uint8_t *fmt, uint8_t *out,
                             const uint8_t *strA, const uint8_t *strB, const uint8_t *strC);
 extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
 
+/* Is the squad row for display slot `slot` actually holding a player?
+ *
+ * The squad list is indexed by DISPLAY SLOT, but occupancy lives at a FILE
+ * INDEX: slot -> currentMatchPlayers[slot] -> the PlayerFile, whose name starts
+ * 0xFF when the slot is free. The two agree only while currentMatchPlayers is
+ * the identity it is initialised to; every line-up reorder and substitution
+ * swaps its entries (teams.c / edit_tactics.c), so after a few seasons a squad
+ * member can sit at ANY slot. */
+static int nationalSquadSlotOccupied(uint16_t slot)
+{
+    extern uint8_t  _currentMatchPlayers[];
+    extern uint8_t *GetPlayer(uint16_t teamNumber, uint16_t playerFileIndex);
+    uint8_t *player = GetPlayer(_selTeamNumber, _currentMatchPlayers[slot]);
+    PlayerFile *pf = (PlayerFile *)(player + 76);
+    return (uint8_t)pf->playerName[0] != 0xFF;
+}
+
 /* Career_UpdateNationalTeamMenuEntries: update visibility of national team
  * squad menu entries based on careerNumPlayers and pending add state. */
 __attribute__((used, externally_visible))
@@ -2422,13 +2439,30 @@ void Career_UpdateNationalTeamMenuEntries(void)
     _menuEntries[24].isInvisible = 1;
     _menuEntries[25].isInvisible = 1;
 
-    /* Show entry 24 if careerNumPlayers > 16, entry 25 if > 17 */
-    if (_careerNumPlayers > 0x10) {
+    /* Entries 24/25 are the 17th and 18th squad rows — display slots 16 and 17.
+     *
+     * The asm shows them on the COUNT alone (SWOS2.s:106134,
+     * `cmpi.w #$10,careerNumPlayers / bls / clr invisible`), which is right only
+     * while occupied slots are packed from 0. They are not: the reserved
+     * second-keeper slot is a FILE INDEX (11, see
+     * Career_InitInternationalSquadAndLookupTablesForNewSeason), and once
+     * currentMatchPlayers has been permuted by line-up reordering that file can
+     * live at slot 16. Adding a second keeper then legitimately places him
+     * there — and the count-based test hides the only row that would show him.
+     *
+     * Measured on a tester's ENGLAND career (LASTDAN2.CAR): 12 players, slots
+     * 0-10 occupied, 11-15 EMPTY, and slot 16 holding DAVID JAMES at file index
+     * 11, position 0. careerNumPlayers 12 <= 16, so row 17 stayed hidden and he
+     * was invisible — "if you add your 2nd goalkeeper, he just disappears",
+     * while the subtitle still counted him ("SELECT 8 MORE", 20 - 12).
+     *
+     * So ask whether the SLOT is occupied as well. Folds to the asm's behaviour
+     * whenever the order is the identity, where occupied(16) <=> count > 16.
+     * Un-nested too: slot 17 must be able to show even if 16 is free. */
+    if (_careerNumPlayers > 0x10 || nationalSquadSlotOccupied(16))
         _menuEntries[24].isInvisible = 0;
-        if (_careerNumPlayers > 0x11) {
-            _menuEntries[25].isInvisible = 0;
-        }
-    }
+    if (_careerNumPlayers > 0x11 || nationalSquadSlotOccupied(17))
+        _menuEntries[25].isInvisible = 0;
 
     /* Format "%a SQUAD" with team name into entry 0 */
     PrintFormatted(_aASquad, (uint8_t *)_menuEntries[0].fg,
