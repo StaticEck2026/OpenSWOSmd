@@ -326,22 +326,31 @@ void FixupAndColorPitchFile(void)
     uint16_t kitPrimary, kitSecondary;
 
 #ifdef SWOS_SDL_BUILD
-    if (_gDosGraphics) {
-        /* DOS pitch: s_pitchFullPtrs was already built in LoadPitchMap
-         * from the BLK tile bank + DAT tile map. There is no bitplane
-         * pointer table to relocate or decode, and the Amiga fan-kit
-         * recolor (AdjustFanColor) doesn't apply to 256-colour DOS tiles
-         * — it indexes a 16-entry LUT with pixel values that can be 0..255.
-         * Just reset the camera and skip the rest. */
-        _cameraX.s.i = 0;
-        _cameraY.s.i = 0;
-        _cameraXMod320 = 0;
-        _cameraYMod320 = 0;
-        _fansSidesSwapped = 0;
-        return;
-    }
+    /* DOS pitch: s_pitchFullPtrs was already built in LoadPitchMap from the BLK
+     * tile bank + DAT tile map, so there is no bitplane pointer table to
+     * relocate (Step 1) or decode (Step 1b) — but everything from Step 2 on
+     * still applies, and skipping it is what left DOS-graphics crowds in the
+     * raw artwork colours.
+     *
+     * This used to `return` here, on the grounds that "AdjustFanColor indexes a
+     * 16-entry LUT with pixel values that can be 0..255". That is no longer
+     * true on this target: pitchFansConvertTable is 256 entries under
+     * `AGA || SWOS_SDL_BUILD` and is filled to identity before slots 10/11 are
+     * set, so remapping 256-colour data is safe and touches nothing else.
+     *
+     * The symptom that found it: with dos_graphics on, the crowd came out with
+     * palette index 11 (0x000F, pure blue) and index 10 (0x0F00, red) still in
+     * place — i.e. the kit slots unconverted — at exactly the artwork's own
+     * 16.4% / 4.6% frequencies. A tester reported "a small group of crowd
+     * graphics not getting colored correctly"; measured against his screenshot
+     * every one of the seven palette indices matched the artwork histogram, so
+     * the crowd was not partly wrong, it was entirely unrecoloured. */
+    const int dosPitch = (_gDosGraphics != 0);
+#else
+    const int dosPitch = 0;
 #endif
 
+    if (!dosPitch) {
     /* Step 1: Relocate all pointers in pitchDatBuffer.
      * SWOS Amiga pitch files store each mapping entry as a 32-bit
      * big-endian byte offset into the tile-data region. On x86 LE
@@ -495,6 +504,8 @@ void FixupAndColorPitchFile(void)
         }
     }
 #endif
+
+    }
 
     /* Step 2: Reset camera */
     _cameraX.s.i = 0;
