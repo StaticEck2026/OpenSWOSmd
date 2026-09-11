@@ -12,6 +12,7 @@
 
 #include <stdint.h>
 #include "platform_sdl.h"
+#include "crt_effects.h"   /* CRT mask / vignette / curved corners */
 #include "display.h"
 #include "dos_mode.h"        /* gDosGraphics */
 #include "dos_gameplay.h"    /* DosGameplay_TargetFps — 70 (DOS) vs 50 (Amiga) */
@@ -732,6 +733,14 @@ int Platform_Init(const PlatformInitOptions *opts)
 
     s_subpixel_scroll = opts ? opts->subpixel_scroll : 1;
     s_scaling_smooth  = opts ? opts->scaling_smooth  : 1;
+    {
+        CrtEffectsConfig cfx;
+        cfx.mask          = opts ? (CrtMaskKind)opts->crt_mask : CRT_MASK_OFF;
+        cfx.mask_strength = opts ? opts->crt_mask_strength : 0;
+        cfx.vignette      = opts ? opts->crt_vignette : 0;
+        cfx.corners       = opts ? opts->crt_corners : 0;
+        CrtEffects_Configure(&cfx);
+    }
 
     /* Report what we actually GOT, not what we asked for. Ruff n Tumble's loop
      * does the same (SDL_SetRenderVSync then SDL_GetRenderVSync to confirm, and
@@ -911,6 +920,7 @@ void Platform_Shutdown(void)
     for (int ti = 0; ti < PLATFORM_TEX_RING; ti++)
         if (s_textures[ti]) { SDL_DestroyTexture(s_textures[ti]); s_textures[ti] = NULL; }
     if (s_scale_target) { SDL_DestroyTexture(s_scale_target); s_scale_target = NULL; s_scale_n = 0; }
+    CrtEffects_Shutdown();
     if (s_frame_rgba) { SDL_free(s_frame_rgba); s_frame_rgba = NULL; }
     if (s_hud_layer)  { SDL_free(s_hud_layer);  s_hud_layer  = NULL; }
     if (s_renderer) { SDL_DestroyRenderer(s_renderer); s_renderer = NULL; }
@@ -1822,6 +1832,9 @@ static void render_frame_impl(int pump_full)
     } else {
         present_frame_copy(tex);
     }
+    /* CRT effects go on LAST, over the finished frame and its HUD, so the
+     * grille and the glass edge sit on the picture rather than under it. */
+    CrtEffects_Apply(s_renderer);
     capture_presented_frame();     /* after every draw, before the swap */
     SDL_RenderPresent(s_renderer);
 

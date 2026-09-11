@@ -247,6 +247,10 @@ int main(int argc, char **argv)
     opts.vsync      = 0;          /* default off — opt-in only */
     opts.subpixel_scroll = 1;     /* default on — smooth sub-pixel scrolling */
     opts.scaling_smooth  = 1;     /* default on — even pixels at a non-integer scale */
+    opts.crt_mask = 0;            /* CRT effects all default OFF — opt-in */
+    opts.crt_mask_strength = 45;
+    opts.crt_vignette = 0;
+    opts.crt_corners = 0;
     opts.render_driver[0] = '\0'; /* "" = auto (SDL default backend) */
     opts.res_w = 0; opts.res_h = 0;  /* 0,0 = auto (fill the desktop aspect) */
     opts.screen = 0;                 /* target display index (0 = primary) */

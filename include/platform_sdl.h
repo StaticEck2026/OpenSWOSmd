@@ -75,6 +75,12 @@ typedef struct {
                                               * its neighbour 3. 0 = the old single nearest copy.
                                               * No-ops when the output is already a whole multiple
                                               * (every windowed scale is). PC-only; see platform_sdl.c. */
+    /* CRT presentation effects (PC-only; see include/crt_effects.h). All are
+     * applied to the FINISHED frame, so none of them touch the simulation. */
+    int                    crt_mask;         /* 0 off, 1 aperture, 2 slot, 3 scanlines */
+    int                    crt_mask_strength;/* 0..100 — how dark the grille's off-phase is */
+    int                    crt_vignette;     /* 0..100 — corner darkening, 0 = off */
+    int                    crt_corners;      /* 0..100 — rounded-glass corner size, 0 = square */
     char                   render_driver[16];/* accel backend override: "" / "auto" = SDL default (D3D11 on Windows);
                                               * "opengl" / "direct3d11" / "direct3d" / "metal" force one. Windows D3D11
                                               * serialises presents on CPU-idle frames (replays crawl); "opengl" avoids it. */

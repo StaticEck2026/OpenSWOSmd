@@ -8,6 +8,10 @@
  *   vsync=off             ; on | off
  *   subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling
  *   scaling=smooth        ; sharp | smooth — even pixels at a non-integer scale
+ *   crt_mask=off          ; off | aperture | slot | scanlines
+ *   crt_mask_strength=45  ; 0-100
+ *   crt_vignette=0        ; 0-100
+ *   crt_corners=0         ; 0-100
  *   fullscreen=off        ; off | desktop | exclusive
  *   scale=3               ; 1..4 (windowed only)
  *
@@ -79,6 +83,17 @@ static int handler(void *user, const char *section,
         } else if (eqi(name, "subpixel_scroll")) {
             int b;
             if (parse_bool(value, &b)) opts->subpixel_scroll = b;
+        } else if (eqi(name, "crt_mask")) {
+            if      (eqi(value, "off"))       opts->crt_mask = 0;
+            else if (eqi(value, "aperture"))  opts->crt_mask = 1;
+            else if (eqi(value, "slot"))      opts->crt_mask = 2;
+            else if (eqi(value, "scanlines")) opts->crt_mask = 3;
+        } else if (eqi(name, "crt_mask_strength")) {
+            int n = atoi(value); if (n >= 0 && n <= 100) opts->crt_mask_strength = n;
+        } else if (eqi(name, "crt_vignette")) {
+            int n = atoi(value); if (n >= 0 && n <= 100) opts->crt_vignette = n;
+        } else if (eqi(name, "crt_corners")) {
+            int n = atoi(value); if (n >= 0 && n <= 100) opts->crt_corners = n;
         } else if (eqi(name, "scaling")) {
             if      (eqi(value, "smooth")) opts->scaling_smooth = 1;
             else if (eqi(value, "sharp"))  opts->scaling_smooth = 0;
@@ -199,9 +214,19 @@ static const char *fullscreen_str(PlatformFullscreenMode m)
 
 typedef struct { const char *section, *key, *comment, *value; } IniEntry;
 
+static const char *crt_mask_str(int m)
+{
+    switch (m) {
+    case 1:  return "aperture";
+    case 2:  return "slot";
+    case 3:  return "scanlines";
+    default: return "off";
+    }
+}
+
 /* settings_build() fills a stack array of this size and nothing bounds-checks
  * n, so keep comfortable headroom over the number of entries it appends
- * (29 as of the scaling entry). */
+ * (33 as of the crt_* entries). */
 #define SETTINGS_MAX 40
 
 /* Inline comment appended to a section-header line in a freshly-created file. */
@@ -215,7 +240,7 @@ static const char *section_intro(const char *sec)
 /* Fill `items` with the canonical list and return the count. `vbuf` provides
  * scratch storage for the three non-constant values (resolution, scale,
  * game_seconds) and must outlive any use of `items`. */
-static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char vbuf[4][24])
+static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char vbuf[8][24])
 {
     int scale_now = Platform_GetWindowScale();
     PlatformFullscreenMode fs_now = Platform_GetFullscreenMode();
@@ -228,6 +253,9 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     snprintf(vbuf[1], 24, "%d", scale_now);
     snprintf(vbuf[2], 24, "%d", opts->arcade_game_seconds > 0 ? opts->arcade_game_seconds : 45);
     snprintf(vbuf[3], 24, "%d", opts->screen > 0 ? opts->screen : 0);
+    snprintf(vbuf[4], 24, "%d", opts->crt_mask_strength);
+    snprintf(vbuf[5], 24, "%d", opts->crt_vignette);
+    snprintf(vbuf[6], 24, "%d", opts->crt_corners);
 
     /* Keep every comment below INI_MAX_LINE (200, include/ini.h): the writer
      * happily emits a longer line and the READER then reports "parse error at
@@ -237,6 +265,10 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "vsync",      "; vsync: on | off  (accel renderer only)", opts->vsync ? "on" : "off" };
     items[n++] = (IniEntry){ "video",  "subpixel_scroll", "; subpixel_scroll: on | off. Smooths scrolling by shifting the frame by the camera's sub-pixel remainder. Never blurs. Off = compare", opts->subpixel_scroll ? "on" : "off" };
     items[n++] = (IniEntry){ "video",  "scaling",    "; scaling: sharp | smooth. A fullscreen scale is rarely a whole number (1080/272 = 3.97), so a plain nearest copy makes some pixels bigger than others. smooth evens them", opts->scaling_smooth ? "smooth" : "sharp" };
+    items[n++] = (IniEntry){ "video",  "crt_mask",   "; crt_mask: off | aperture | slot | scanlines. Synthetic CRT shadow-mask drawn over the finished frame. Costs one full-screen draw however many effects are on", crt_mask_str(opts->crt_mask) };
+    items[n++] = (IniEntry){ "video",  "crt_mask_strength", "; crt_mask_strength: 0-100. How dark the grille's off-phase gets. 0 = invisible, 100 = black between phosphors", vbuf[4] };
+    items[n++] = (IniEntry){ "video",  "crt_vignette", "; crt_vignette: 0-100. Darkens towards the corners like a tube's edges. 0 = off", vbuf[5] };
+    items[n++] = (IniEntry){ "video",  "crt_corners", "; crt_corners: 0-100. Rounded-glass corner size. 0 = square screen", vbuf[6] };
     items[n++] = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
@@ -270,7 +302,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
 static void settings_write_full(const PlatformInitOptions *opts, const char *path)
 {
     IniEntry items[SETTINGS_MAX];
-    char vbuf[4][24];
+    char vbuf[8][24];
     int n = settings_build(opts, items, vbuf);
 
     FILE *f = fopen(path, "w");
@@ -336,7 +368,7 @@ void Settings_Save(const PlatformInitOptions *opts, const char *path)
     if (!opts || !path) return;
 
     IniEntry items[SETTINGS_MAX];
-    char vbuf[4][24];
+    char vbuf[8][24];
     int n = settings_build(opts, items, vbuf);
 
     /* Slurp the existing file. */
