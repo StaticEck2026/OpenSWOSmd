@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "color_sprites.h"
+#include "team_colors.h"   /* SHIRT_* kit-pattern constants */
 #include "game_types.h"
 #include "dos_mode.h"
 #ifdef SWOS_SDL_BUILD
@@ -100,9 +101,12 @@ static SpriteGraphics *s_dosSprite[DOS_SPRITE_TABLE_SLOTS];   /* NULL = keep Ami
 static int s_dosSpritesBuilt;
 /* Per-.dat chunky regions: `work` is what the table points at (recoloured each
  * match); `pristine` is the un-recoloured decode used to reset `work`. */
-static struct { uint8_t *work; uint8_t *pristine; uint32_t size; }
+static struct { uint8_t *work; uint8_t *pristine; uint32_t size; SpriteGraphics *recs; }
     s_dosRegions[DOS_SPRITE_MAX_REGIONS];
 static int s_dosRegionCount;
+/* Which kit patterns the current build was made from, so a fixture with
+ * different shirt types rebuilds instead of reusing the previous match's. */
+static int s_dosBuiltKit1 = -1, s_dosBuiltKit2 = -1;
 
 static void dos_build_sprite_dat(const char *name, int dosStart, int count)
 {
@@ -174,18 +178,65 @@ static void dos_build_sprite_dat(const char *name, int dosStart, int count)
             s_dosRegions[s_dosRegionCount].work     = chunky;
             s_dosRegions[s_dosRegionCount].pristine = pristine;
             s_dosRegions[s_dosRegionCount].size     = outOff;
+            s_dosRegions[s_dosRegionCount].recs     = recs;
             s_dosRegionCount++;
+            return;
         }
+    }
+    free(chunky);
+    free(recs);
+}
+
+/* The DOS kit .dat files are the same three PATTERNS as the Amiga's
+ * cjcteam1/2/3, and map the same way teamFilenamesTable does
+ * (SWOS2.s:126689 — {cjcteam1, cjcteam2, cjcteam1, cjcteam3}):
+ *
+ *   TEAM1.DAT  vertical stripes  — also serves ORDINARY, which is the same
+ *                                  artwork with both kit slots one colour
+ *   TEAM2.DAT  coloured sleeves
+ *   TEAM3.DAT  horizontal stripes
+ *
+ * Verified by decoding the first sprites of each file: 96% of their bytes are
+ * identical (same geometry, same sprite count) and they differ only in the kit
+ * pixels. */
+static const char *dos_kit_file(int shirtType)
+{
+    switch (shirtType) {
+    case SHIRT_COLORED_SLEEVES:    return "team2.dat";
+    case SHIRT_HORIZONTAL_STRIPES: return "team3.dat";
+    default:                       return "team1.dat";
     }
 }
 
-static void dos_build_all_sprites(void)
+static void dos_free_sprites(void)
 {
-    /* (file, count, DOS start index) — from the reference loadAllGameSprites.
-     * goal1.dat is loaded twice (two keeper copies), team3.dat is the
-     * second team's players. score.dat/charset deliberately omitted. */
-    dos_build_sprite_dat("team1.dat", 341, 303);   /* amiga 227..529 */
-    dos_build_sprite_dat("team3.dat", 644, 303);   /* amiga 530..832 */
+    for (int i = 0; i < s_dosRegionCount; i++) {
+        free(s_dosRegions[i].work);
+        free(s_dosRegions[i].pristine);
+        free(s_dosRegions[i].recs);
+    }
+    s_dosRegionCount = 0;
+    for (int i = 0; i < DOS_SPRITE_TABLE_SLOTS; i++)
+        s_dosSprite[i] = NULL;
+    s_dosSpritesBuilt = 0;
+}
+
+static void dos_build_all_sprites(int kit1, int kit2)
+{
+    /* (file, DOS start index, count) — from the reference loadAllGameSprites.
+     * goal1.dat is loaded twice (two keeper copies).
+     * score.dat/charset deliberately omitted.
+     *
+     * The two player ranges take the kit pattern each TEAM actually wears. This
+     * used to hardcode team1.dat and team3.dat, on the reading that team3.dat
+     * was "the second team's players" — but they are PATTERNS, not per-team
+     * sets, so team 1 always came out in vertical stripes and team 2 always in
+     * horizontal stripes, and team2.dat (coloured sleeves) was never loaded at
+     * all. A tester on dos_graphics: "my team is Freiburg, and they do not have
+     * striped shirts. They should have red shirts with black sleeves" —
+     * Freiburg is primary_shirt_type 1, COLORED_SLEEVES. */
+    dos_build_sprite_dat(dos_kit_file(kit1), 341, 303);   /* amiga 227..529 */
+    dos_build_sprite_dat(dos_kit_file(kit2), 644, 303);   /* amiga 530..832 */
     dos_build_sprite_dat("goal1.dat", 947, 116);   /* amiga 833..948 */
     dos_build_sprite_dat("goal1.dat", 1063, 116);  /* amiga 949..1064 */
     dos_build_sprite_dat("bench.dat", 1179, 155);  /* amiga 1065..1219 */
@@ -195,11 +246,20 @@ static void dos_build_all_sprites(void)
 /* Put the DOS player/keeper/bench sprites into the table, pristine, ready for
  * the per-team kit/skin conversions that run later in ConvertColorsAndTextSprites.
  * Call this BEFORE those conversions (they recolour the pixels in place). */
-static void dos_prepare_sprites(void)
+static void dos_prepare_sprites(int kit1, int kit2)
 {
     SpriteGraphics **table = (SpriteGraphics **)_spriteGraphicsPtr;
     if (!table) return;
-    if (!s_dosSpritesBuilt) dos_build_all_sprites();
+    /* Rebuild when this fixture's shirt types differ from the built set. */
+    if (s_dosSpritesBuilt && (kit1 != s_dosBuiltKit1 || kit2 != s_dosBuiltKit2))
+        dos_free_sprites();
+    if (!s_dosSpritesBuilt) {
+        dos_build_all_sprites(kit1, kit2);
+        s_dosBuiltKit1 = kit1;
+        s_dosBuiltKit2 = kit2;
+        fprintf(stderr, "[dos] kit sprites: team1 type %d -> %s, team2 type %d -> %s\n",
+                kit1, dos_kit_file(kit1), kit2, dos_kit_file(kit2));
+    }
 
     /* Reset each region to its un-recoloured decode so this match's
      * conversions don't stack on the previous match's remap. */
@@ -286,7 +346,7 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
      * instead of the Amiga ones we just loaded. dos_prepare_sprites resets the
      * sprites to their pristine decode first, so per-match remaps don't stack. */
     if (_gDosGraphics)
-        dos_prepare_sprites();
+        dos_prepare_sprites((int)team1->prShirtType, (int)team2->prShirtType);
 #endif
 
     /* Copy advertisement sprite data pointers */
