@@ -5964,18 +5964,41 @@ void Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
                 continue;
         }
 
-        /* Found compatible slot. If slot > 16, shift currentMatchPlayers
-         * to insert the value at position 16. Use volatile to prevent
-         * GCC from optimizing this into a memmove call (no libc). */
-        if (dstSlot > 16) {
+        /* Found a compatible slot. If it is out in the overflow region, rotate
+         * the new player DOWN into the squad list so he is actually visible.
+         *
+         * The asm rotates to a hardcoded slot 16 (`move.b d2,$10(a1)`,
+         * SWOS2.s:105383), which is right only when slots 0..15 are full — the
+         * case it was written for, a full squad. Remove a few players and it is
+         * wrong: the reserved second-keeper FILE (index 11) gets rotated out to
+         * the overflow region by the remove path, so adding a keeper lands him
+         * at slot 16 — the unnumbered 17th row — while slots 11..15 sit empty.
+         * The tester's words: "now the 2nd GK spot is not on No. 12".
+         *
+         * Rotate to the LOWEST FREE display slot instead. The rotate permutes
+         * currentMatchPlayers, so each file's position type travels with it: the
+         * keeper file lands on slot 11 and row 12 becomes the keeper spot again,
+         * exactly where the original puts it on a freshly built squad. Folds to
+         * the asm whenever 0..15 are occupied, because then the lowest free slot
+         * IS 16. Use volatile to prevent GCC turning this into a memmove (no
+         * libc). */
+        if (dstSlot >= 16) {
             volatile uint8_t *cmp = _currentMatchPlayers;
-            uint8_t saved = cmp[dstSlot];
-            uint16_t idx = dstSlot;
-            while (idx != 16) {
-                cmp[idx] = cmp[idx - 1];
-                idx--;
+            uint16_t home = dstSlot;
+            for (uint16_t k = 0; k < dstSlot; k++) {
+                uint8_t *occ = GetPlayerAtIndex(_selTeamNumber, k);
+                PlayerFile *opf = (PlayerFile *)(occ + sizeof(TeamFile));
+                if ((uint8_t)opf->playerName[0] == 0xFF) { home = k; break; }
             }
-            cmp[16] = saved;
+            if (home < dstSlot) {
+                uint8_t saved = cmp[dstSlot];
+                uint16_t idx = dstSlot;
+                while (idx != home) {
+                    cmp[idx] = cmp[idx - 1];
+                    idx--;
+                }
+                cmp[home] = saved;
+            }
         }
 
         /* Copy the international player into the career team slot */

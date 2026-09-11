@@ -2435,6 +2435,33 @@ static int nationalSquadSlotOccupied(uint16_t slot)
 __attribute__((used, externally_visible))
 void Career_UpdateNationalTeamMenuEntries(void)
 {
+    /* REPACK first. A squad member stranded out in the overflow region
+     * (slots 16..19) while lower slots sit empty is exactly what strands the
+     * reserved keeper off the numbered list — see the rotate in
+     * Career_AddInternationalPlayerCommon, which fixes it for future adds but
+     * cannot reach a career that is already in that state. Existing saves
+     * deserve the fix too, so pull any such player down to the lowest free
+     * slot whenever the screen refreshes. Idempotent: once packed it does
+     * nothing, and on a squad that was never permuted there is nothing to do. */
+    {
+        extern uint8_t _currentMatchPlayers[];
+        uint16_t s, k;
+        for (s = 16; s < 20; s++) {
+            if (!nationalSquadSlotOccupied(s)) continue;
+            for (k = 0; k < 16; k++) {
+                if (nationalSquadSlotOccupied(k)) continue;
+                {   /* rotate slot s down to k, preserving the order between */
+                    volatile uint8_t *cmp = _currentMatchPlayers;
+                    uint8_t saved = cmp[s];
+                    uint16_t idx = s;
+                    while (idx != k) { cmp[idx] = cmp[idx - 1]; idx--; }
+                    cmp[k] = saved;
+                }
+                break;
+            }
+        }
+    }
+
     /* Initially hide entries 24 and 25 */
     _menuEntries[24].isInvisible = 1;
     _menuEntries[25].isInvisible = 1;
