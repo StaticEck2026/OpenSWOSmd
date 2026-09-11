@@ -441,13 +441,18 @@ typedef char _charstblhdr_size_check[(sizeof(CharsTableHeader) == 14) ? 1 : -1];
  * clamped to the SIMULATION range (0 .. 0x2A0-336) so that the window size
  * cannot change which players the AI may auto-select.
  *
- * `Render_CameraX()` is where we DRAW from: the same camera, backed off by
- * half the extra width and clamped so a widescreen view stays on the pitch.
+ * `Render_CameraX()` is where we DRAW from: the simulation camera's range
+ * SCALED onto the pan range a wide view actually has (0 .. 0x2A0-W), so the
+ * picture drifts across the whole match instead of sitting still and then
+ * snapping through a narrow live window — see camera.c for the measurements.
  * On Amiga and on any 4:3 display the two are identical, so the m68k codegen
  * and the classic view are unchanged.
  * -------------------------------------------------------------------------- */
 #ifdef SWOS_SDL_BUILD
 int16_t Render_CameraX(void);
+/* Same origin in 16.16 — the presenter's sub-pixel shift needs the fraction,
+ * which under the scaled map is most of the per-frame motion. */
+int32_t Render_CameraX16(void);
 /* Sub-pixel scroll residual (16.16 fractions) — see camera.c. SDL-only; the
  * m68k build scrolls in whole pixels on real hardware and defines neither. */
 void    Render_PublishScrollSubpixel(void);

@@ -163,11 +163,23 @@ void Replay_ResetBallCamera(void) { s_replayBallValid = 0; s_replayCamXSet = 0; 
 static int16_t ReplaySimCameraX(int16_t outRender)
 {
 #ifdef SWOS_SDL_BUILD
-    int16_t simX = (int16_t)(outRender + (int16_t)WIDE_MARGIN);
-    int16_t simMax = (int16_t)(0x2A0 - SCREEN_WIDTH);
+    /* Exact inverse of Render_CameraX(), so the round trip still lands back on
+     * the render origin this function computed — the property the comment above
+     * depends on. It used to be `+ WIDE_MARGIN` because the forward map was
+     * `- WIDE_MARGIN` then clamp; the forward map now SCALES the sim range onto
+     * the render's pan range, so the inverse scales back. Folds to identity at
+     * 336 (max == pan), which is what the corpus and the Amiga run at. */
+    const int32_t pan = 0x2A0 - SCREEN_WIDTH;
+    int32_t max = (int32_t)(0x2A0 - _screen_width);
+    int32_t simX;
+
+    if (max <= 0)        simX = 0;
+    else if (max >= pan) simX = outRender;
+    else                 simX = ((int32_t)outRender * pan + max / 2) / max;
+
     if (simX < 0) simX = 0;
-    else if (simX > simMax) simX = simMax;
-    return simX;
+    else if (simX > pan) simX = pan;
+    return (int16_t)simX;
 #else
     return outRender;
 #endif

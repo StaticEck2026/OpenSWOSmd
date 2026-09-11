@@ -19,20 +19,54 @@ extern uint16_t _cameraCoordinatesValid;
 extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
 
 #ifdef SWOS_SDL_BUILD
-/* The render origin — see display.h. `_cameraX` is the simulation camera and
- * may sit anywhere in [0, 0x2A0-336]; a render wider than 336 is centred on it
- * and then clamped so it never leaves the 0x2A0-wide pitch. Folds to
- * `_cameraX.s.i` whenever the render is 336 wide. */
+/* The render origin — see display.h. `_cameraX` is the simulation camera, with
+ * the constant range [0, 0x2A0-336]; the render may only pan [0, 0x2A0-W], which
+ * on a wide view is much smaller. SCALE the one onto the other rather than
+ * centring-and-clamping.
+ *
+ * Centre-and-clamp (`clamp(_cameraX - (W-336)/2, 0, 0x2A0-W)`) gave a view that
+ * was PINNED for most of the camera's travel and then tracked 1:1 through a
+ * narrow live window before stopping dead against the clamp:
+ *
+ *     W=336  live window 336 of 336 (100%)   — 4:3 and Amiga
+ *     W=484  live window 188 of 336 ( 56%)
+ *     W=650  live window  22 of 336 (6.5%)   — 3440x1440
+ *     W=672  live window   0                 — view never moves
+ *
+ * At 650 the picture sat still for 94% of the camera's range, then raced 22 px
+ * at the FULL simulation-camera speed (a long ball moves it 5 px in one frame)
+ * and halted. That is the tester's "camera jerking around when it's finally
+ * triggered... moving quickly to follow then hitting the edge of the pitch".
+ *
+ * Scaling spreads the same pan over the whole match: the render camera moves at
+ * max/336 of the simulation camera's speed (0.33 px/frame at 650 instead of 5),
+ * reaches each end exactly when the simulation camera does, and never hits a
+ * hard stop. The edges are still exact, so the view cannot leave the pitch.
+ *
+ * Folds to the IDENTITY at 336 (max == pan), so 4:3 displays, the Amiga and the
+ * replay corpus are bit-for-bit unchanged. Render-only: `_cameraX` — what the
+ * cull and player selection read — is untouched (see the two-camera split).
+ *
+ * 16.16 because the presenter's sub-pixel shift needs the fraction: scaling
+ * makes the render camera move by well under a pixel per frame, so the
+ * remainder is now most of the motion rather than a rounding detail. */
+int32_t Render_CameraX16(void)
+{
+    const int32_t pan = 0x2A0 - SCREEN_WIDTH;          /* 336 — the sim range */
+    int32_t max = (int32_t)(0x2A0 - _screen_width);    /* how far we may pan */
+
+    if (max <= 0)   return 0;                          /* whole pitch visible */
+    if (max >= pan) return _cameraX.raw;               /* 336 wide: identity */
+
+    int32_t x = (int32_t)(((int64_t)_cameraX.raw * max) / pan);
+    if (x < 0) x = 0;
+    else if (x > (max << 16)) x = max << 16;
+    return x;
+}
+
 int16_t Render_CameraX(void)
 {
-    int16_t off = (int16_t)((_screen_width - SCREEN_WIDTH) / 2);
-    int16_t max = (int16_t)(0x2A0 - _screen_width);
-    int16_t x   = (int16_t)(_cameraX.s.i - off);
-
-    if (max < 0) max = 0;
-    if (x < 0)   x = 0;
-    else if (x > max) x = max;
-    return x;
+    return (int16_t)(Render_CameraX16() >> 16);
 }
 #endif
 
@@ -63,19 +97,18 @@ static uint64_t s_scroll_frac_ms;
 void Render_PublishScrollSubpixel(void)
 {
     extern uint64_t Platform_NowMs(void);
-    int16_t drawn = Render_CameraX();
-    int16_t off   = (int16_t)((_screen_width - SCREEN_WIDTH) / 2);
-    int16_t max   = (int16_t)(0x2A0 - _screen_width);
-    if (max < 0) max = 0;
 
-    /* X goes through the same clamp Render_CameraX applies, so at the pitch
-     * edges — where the view is pinned and NOT scrolling — the residual comes
-     * out zero instead of smearing the frame by a stale fraction. */
-    int32_t truex = (int32_t)_cameraX.s.i - off;
-    if (truex < 0 || truex > max || truex != (int32_t)drawn)
-        s_scroll_frac_x = 0;          /* clamped or off-view: no sub-pixel term */
-    else
-        s_scroll_frac_x = _cameraX.s.frac;
+    /* The residual is the fraction of the RENDER camera, which since the
+     * proportional map is no longer the fraction of `_cameraX` — at 650 wide
+     * the render camera advances ~1/15 as fast, so its fraction IS most of the
+     * motion. Take both the drawn integer and the remainder from the same
+     * 16.16 value so they cannot disagree.
+     *
+     * No clamp-mirroring any more: the map only saturates at the two ends of
+     * the pitch, where the value stops changing and the fraction is a constant
+     * sub-pixel offset rather than a stale smear. */
+    int32_t truex = Render_CameraX16();
+    s_scroll_frac_x = (uint16_t)((uint32_t)truex & 0xFFFFu);
 
     /* Y has no render-side clamp helper; pitch.c pins `_cameraY.s.i` to 0 at
      * the top without clearing the fraction, so a pinned camera can carry a
