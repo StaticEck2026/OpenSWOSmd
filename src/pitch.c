@@ -323,7 +323,7 @@ void FixupAndColorPitchFile(void)
      * actual pitch buffer for both targets. */
     uint32_t baseAddr = (uint32_t)(uintptr_t)(_pitchDatBuffer + PITCH_POINTER_COUNT * 4);
     TeamGame *teamData;
-    uint16_t kitPrimary, kitSecondary, kitTertiary;
+    uint16_t kitPrimary, kitSecondary;
 
 #ifdef SWOS_SDL_BUILD
     if (_gDosGraphics) {
@@ -559,17 +559,33 @@ void FixupAndColorPitchFile(void)
      * "crowd with wrong shirt colors, none of the teams has blue shirts".
      *
      * Owner's call, and the AGA tier already departs from the Amiga asm here:
-     * the crowd must match the shirts on the pitch. */
+     * the crowd must match the shirts on the pitch.
+     *
+     * SECOND HALF OF THE SAME DEVIATION (2026-09-11). The fan artwork paints
+     * most shirts with palette index 11 and a scattered few with index 10, so
+     * the crowd is deliberately two-tone. The asm sets slot 10 from stripes and,
+     * when a shirt has no stripes, FALLS BACK TO THE SHORTS COLOUR
+     * (SWOS2.s:6390-6396: `cmp.w $C(a0),d0 / bne / move.w $10(a0),d0`). Reading
+     * pr* instead of sec* fixed slot 11 but left that fallback pointing at the
+     * shorts of the kit actually being worn — so a red-shirted team in blue
+     * shorts put a handful of BLUE fans in a red crowd, and a tester reported
+     * "a small group of crowd graphics not getting colored correctly". Measured
+     * from his screenshot: the odd fans are one pure colour (rgb 11,36,251),
+     * individual figures interleaved in the front row, and no team on the pitch
+     * wore blue.
+     *
+     * So take slot 10 from the STRIPES colour with no shorts fallback.
+     * ConvertTeamKitColors sets prStripesCol == prShirtCol for an ORDINARY
+     * shirt (team_colors.c, matching SWOS2.s:54090), so this is self-folding:
+     *   plain shirt   -> slot 10 == slot 11, the crowd is uniformly the shirt
+     *   striped shirt -> slot 10 is the other stripe colour, still two-tone
+     * The crowd now only ever wears colours that are on the shirts. */
     teamData = &_topTeamInGame;
     kitPrimary = (uint16_t)teamData->prShirtCol;
     kitSecondary = (uint16_t)teamData->prStripesCol;
-    kitTertiary = (uint16_t)teamData->prShortsCol;
 
-    pitchFansConvertTable[11] = kitPrimary;   /* offset 0x16 */
-    if (kitSecondary != kitPrimary)
-        pitchFansConvertTable[10] = kitSecondary; /* offset 0x14 */
-    else
-        pitchFansConvertTable[10] = kitTertiary;
+    pitchFansConvertTable[11] = kitPrimary;     /* offset 0x16 */
+    pitchFansConvertTable[10] = kitSecondary;   /* offset 0x14 */
 
     for (i = FAN_PTR_TABLE_SIZE - 1; i >= 0; i--)
     {
@@ -580,13 +596,9 @@ void FixupAndColorPitchFile(void)
     teamData = &_bottomTeamInGame;
     kitPrimary = (uint16_t)teamData->prShirtCol;
     kitSecondary = (uint16_t)teamData->prStripesCol;
-    kitTertiary = (uint16_t)teamData->prShortsCol;
 
     pitchFansConvertTable[11] = kitPrimary;
-    if (kitSecondary != kitPrimary)
-        pitchFansConvertTable[10] = kitSecondary;
-    else
-        pitchFansConvertTable[10] = kitTertiary;
+    pitchFansConvertTable[10] = kitSecondary;
 
     for (i = 20; i >= 0; i--)
     {
