@@ -238,6 +238,38 @@ static uint32_t rob_load(uint8_t *name, uint8_t *dest)
     return got ? 0 : 1;
 }
 
+
+#ifdef SWOS_WASM_BUILD
+#include <emscripten.h>
+/* Flush the /save mount to IndexedDB.
+ *
+ * wasm/pre.js mounts IDBFS at /save and calls FS.syncfs(true, ...) on startup,
+ * so saves are READ back across page loads. But IDBFS is a write-back mirror:
+ * everything the game writes stays in memory until someone calls
+ * FS.syncfs(false, ...). Nothing did — only wasm/shell.html's import button —
+ * so a career saved in the browser survived until the tab was reloaded and then
+ * vanished, while an imported one persisted. docs/WASM.md 2d has carried this as
+ * the outstanding follow-up, and wasm/pre.js has said so in its header since it
+ * was written.
+ *
+ * Asynchronous on purpose: the game does not wait, the browser flushes while
+ * play continues, and the next load picks it up through the existing
+ * syncfs(true). Saves are user-initiated and rare, so one flush per write needs
+ * no debouncing. */
+static void wasm_persist_saves(void)
+{
+    EM_ASM({
+        if (typeof FS !== 'undefined' && FS.syncfs) {
+            FS.syncfs(false, function (err) {
+                if (err) console.warn('SWOS: IDBFS save failed:', err);
+            });
+        }
+    });
+}
+#else
+#define wasm_persist_saves() ((void)0)
+#endif
+
 static uint32_t rob_save(uint8_t *name, uint8_t *src, uint32_t fileSize)
 {
     char path[512];
@@ -245,6 +277,7 @@ static uint32_t rob_save(uint8_t *name, uint8_t *src, uint32_t fileSize)
     uint32_t put = fs_save(path, src, fileSize);
     size = put;
     _rnl_d1_return = put;
+    if (put) wasm_persist_saves();
     return put ? 0 : 1;
 }
 
@@ -253,6 +286,7 @@ static uint32_t rob_delete(uint8_t *name)
     char path[512];
     resolve_path(name, path, sizeof(path));
     fs_delete(path);
+    wasm_persist_saves();     /* a deletion has to stick too */
     _rnl_d1_return = 0;
     return 0;
 }

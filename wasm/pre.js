@@ -2,10 +2,10 @@
 //
 // The game writes save/*.CAR/.HIL/… relative to cwd "/" (the chdir-to-binary
 // is skipped on WASM — see main.c), i.e. into /save. We mount IDBFS there and
-// load any existing saves from IndexedDB on startup. To PERSIST a save you must
-// FS.syncfs(false, …) after writing it — wire that into the save path (a save-
-// side hook is the docs/WASM.md §2d follow-up); the mount + initial load below
-// are enough to round-trip once that hook lands.
+// load any existing saves from IndexedDB on startup. The write side is handled
+// in the game: rob_save/rob_delete (src/resload.c) call FS.syncfs(false, …)
+// after a successful write, so saves made in the browser persist. The mount and
+// initial load below are the read half of that round trip.
 Module['preRun'] = Module['preRun'] || [];
 
 // SWOS.ini lives in the browser's localStorage (a small editable text file).

@@ -155,11 +155,21 @@ the game's own LOAD dialog. Two constraints it has to respect:
   uppercases and sanitises to 8.3.
 - **The selector caps at 45 files** (`SelectFilesInputSaveFilenameOnSelect`).
 
-⚠️ Still missing: the **write-side** hook. `FS.syncfs(false, …)` is only called by
-the importer, so a career SAVED in the browser still lives in the in-memory
-mirror and is lost on reload. `wasm/pre.js` has always said this ("To PERSIST a
-save you must FS.syncfs(false, …) after writing it — wire that into the save
-path"); it needs an `EM_ASM` (or a ccall'd hook) after a successful write.
+**The write-side hook landed (2026-09-12).** `rob_save` / `rob_delete`
+(`resload.c`) now call `FS.syncfs(false, …)` via `EM_ASM` after a successful
+write, so a career saved IN THE BROWSER survives a reload. That single pair of
+functions is the whole SDL-side file path — every save type (`.CAR`, `.HIL`,
+`.TAC`, `.EDT`, `.CFG`) funnels through it — so one hook covers them all, and
+deleting a file sticks too.
+
+Asynchronous on purpose: the game does not block, the browser flushes while play
+continues, and the next load picks it up through the existing `syncfs(true)` in
+`wasm/pre.js`. Saves are user-initiated and rare, so one flush per write needs no
+debouncing.
+
+Before this, only the importer called `syncfs(false)` — so an IMPORTED save
+persisted while a save made in the game did not, which is a confusing pair of
+behaviours to hit in that order.
 
 ### 2e. Rendering — SDL2 as-is
 The 8bpp-chunky → RGBA → `SDL_Texture` → `SDL_RenderCopy/Present` path is standard
