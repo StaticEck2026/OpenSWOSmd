@@ -407,6 +407,11 @@ renderer=accel        ; software | accel (hardware-accelerated)
 vsync=off             ; on | off — accel renderer only
 subpixel_scroll=on    ; on | off — smooth sub-pixel scrolling (see below)
 scaling=smooth        ; sharp | smooth — how the frame is scaled (see below)
+crt_mask=off          ; off | aperture | slot | scanlines — synthetic CRT
+                      ; shadow mask over the finished frame (see below)
+crt_mask_strength=45  ; 0-100 — how dark the grille's off-phase gets
+crt_vignette=0        ; 0-100 — darkens towards the corners, 0 = off
+crt_corners=0         ; 0-100 — rounded-glass corner size, 0 = square
 render_driver=auto    ; auto | opengl | direct3d11 | direct3d | software-backend
                       ; auto = SDL default (D3D11 on Windows). Use opengl if
                       ; replays/attract run in slow motion on Windows.
@@ -538,6 +543,30 @@ the second of those; the first needs the render/logic decoupling designed in
 `docs/AMIGA_60.md`. `SWOS.log` reports the detected refresh rate, whether vsync
 actually engaged (a driver or control panel can silently drop it), and whether
 the refresh is an exact multiple of the game's pace.
+
+### CRT effects
+
+A modern panel draws SWOS's 336x272 as huge, razor-sharp squares. The `crt_*`
+settings put back what an arcade tube did to the picture:
+
+| setting | effect |
+|---|---|
+| `crt_mask=aperture` | vertical RGB phosphor grille (Trinitron-ish) |
+| `crt_mask=slot` | aperture plus row-staggered slots — a shadow mask |
+| `crt_mask=scanlines` | horizontal scanlines only |
+| `crt_vignette` | darkens towards the corners |
+| `crt_corners` | rounded glass edge |
+
+All default off. The mask, vignette and corners fold into **one** pre-built
+texture that is multiplied over the finished frame, so the cost is a single
+full-screen draw no matter how many are enabled — the approach CannonBall-SE
+uses to hold 60 fps on a Pi2 without a shader. Because it is a multiply, black
+stays black and the grille shows in the mid-tones, which is what reads as "CRT"
+rather than merely "dark". The texture is built at output resolution so the
+grille lands on whole screen pixels.
+
+This is presentation only: it runs on the finished frame and cannot affect the
+simulation, so it is safe to leave on for replays and recordings.
 
 **Uneven pixels are a different problem from uneven pacing.** The game renders
 272 rows, and a monitor is almost never a whole multiple of that — 1080/272 =
