@@ -11,7 +11,8 @@
 #include "dos_mode.h"
 #ifdef SWOS_SDL_BUILD
 #include "dos_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
-#include <stdio.h>          /* snprintf for the DOS pitch filenames */
+#include <stdio.h>
+#include <stdlib.h>          /* snprintf for the DOS pitch filenames */
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -615,6 +616,82 @@ void FixupAndColorPitchFile(void)
     {
         AdjustFanColor(fanGroupA[i], pitchFansConvertTable);
     }
+
+#ifdef SWOS_SDL_BUILD
+    /* Step 6: catch crowd cells whose tile ISN'T one of those 42.
+     *
+     * SDL only: s_pitchFullPtrs is the full-width side table built in Step 1b
+     * (or by dos_load_pitch), and the Amiga path does not populate it.
+     *
+     * Steps 4/5 recolour 21+21 POINTERS — map row 0 — and everything else in
+     * the stands only changes because it happens to point at the same tile
+     * DATA. On the Amiga pitches that holds. On the DOS banks it does not:
+     * measured across bin/grafs_dos/PITCH1..6.DAT, row 51 (the bottom crowd's
+     * front row) uses tiles at the very end of the bank that row 0 never
+     * references —
+     *
+     *     PITCH1  row 51  tile 239 (52 kit px), tile 240 (67 kit px)
+     *     PITCH2  row 51  tile 223 (52 kit px), tile 224 (67 kit px)
+     *
+     * — so those blocks of fans kept the raw artwork and showed up as a small
+     * patch of the wrong colour in the bottom-right corner. That is the
+     * long-running "small group of crowd graphics not getting colored
+     * correctly" report; e73ac30 fixed the 99% of it that was the whole
+     * recolour being skipped, and this is the remainder.
+     *
+     * Which kit a stray tile should wear is DERIVED, never assumed: find a
+     * neighbouring cell in the same half of the pitch whose tile did get
+     * recoloured, and reuse that group's table. That stays correct when
+     * fansSidesSwapped flips the groups, and when a pitch assigns the bands
+     * the other way round. */
+    {
+        /* The map is a flat 42 x 55 grid; see DrawChunkyPitch. */
+        const int32_t GRID_COLS = 42, GRID_ROWS = 55;
+        uint16_t topTbl[2], botTbl[2];      /* {slot10, slot11} per group */
+        topTbl[0] = (uint16_t)_topTeamInGame.prStripesCol;
+        topTbl[1] = (uint16_t)_topTeamInGame.prShirtCol;
+        botTbl[0] = (uint16_t)_bottomTeamInGame.prStripesCol;
+        botTbl[1] = (uint16_t)_bottomTeamInGame.prShirtCol;
+
+        for (int32_t half = 0; half < 2; half++) {
+            int32_t r0 = half ? (GRID_ROWS / 2) : 0;
+            int32_t r1 = half ? GRID_ROWS : (GRID_ROWS / 2);
+
+            /* Which group does this half of the ground already use? */
+            int32_t usesA = -1;
+            for (int32_t i2 = r0 * GRID_COLS;
+                 i2 < r1 * GRID_COLS && usesA < 0; i2++) {
+                uint8_t *q = _s_pitchFullPtrs[i2];
+                if (!q) continue;
+                for (int32_t k = 0; k < FAN_PTR_TABLE_SIZE; k++) {
+                    if (fanGroupA[k] == q) { usesA = 1; break; }
+                    if (fanGroupB[k] == q) { usesA = 0; break; }
+                }
+            }
+            if (usesA < 0) continue;                /* no crowd in this half */
+
+            /* Step 5 left fanGroupA's colours in the table; Step 4 used
+             * fanGroupB's. Reload whichever this half needs. */
+            pitchFansConvertTable[10] = usesA ? botTbl[0] : topTbl[0];
+            pitchFansConvertTable[11] = usesA ? botTbl[1] : topTbl[1];
+
+            for (int32_t i2 = r0 * GRID_COLS; i2 < r1 * GRID_COLS; i2++) {
+                uint8_t *q = _s_pitchFullPtrs[i2];
+                int32_t covered = 0, dup = 0;
+                if (!q) continue;
+                for (int32_t k = 0; k < FAN_PTR_TABLE_SIZE; k++)
+                    if (fanGroupA[k] == q || fanGroupB[k] == q) { covered = 1; break; }
+                if (covered) continue;
+                /* Tiles repeat across cells — only convert each one once. */
+                for (int32_t j = r0 * GRID_COLS; j < i2; j++)
+                    if (_s_pitchFullPtrs[j] == q) { dup = 1; break; }
+                if (dup) continue;
+                AdjustFanColor(q, pitchFansConvertTable);
+            }
+        }
+    }
+
+#endif
 }
 
 #ifdef SWOS_SDL_BUILD
