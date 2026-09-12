@@ -19,7 +19,9 @@
 
 #ifdef SWOS_SDL_BUILD
 
-#include <SDL2/SDL.h>
+/* <SDL.h>, NOT <SDL2/SDL.h>: the Switch SDL fork has no SDL2/ prefix on its
+ * include path, and this is the convention platform_sdl.h already follows. */
+#include <SDL.h>
 #include <stdint.h>
 
 /* [video] crt_mask */
