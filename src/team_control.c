@@ -25,6 +25,70 @@ extern int16_t    _playingPenalties;
 extern Sprite    *_penaltyShooterSprite;
 extern int16_t    _fireBlocked;
 uint16_t          _teamSwitchCounter;   /* DOS-only; see UpdateAndApplyTeamControls */
+
+/* ==================================================================
+ * A BUG IN THE ORIGINAL AMIGA GAME, DELIBERATELY FIXED HERE.
+ *
+ * This is NOT a port inaccuracy. SWOS2.s does exactly what is described below,
+ * instruction for instruction, and so did this port until now. The owner's call
+ * (2026-09-13) was that it is a defect in the original and should be fixed,
+ * with the original behaviour kept available.
+ *
+ *   0 (default) = fixed: an OPPONENT's tackle no longer wipes your shot charge.
+ *   1           = the original Amiga behaviour, bit-exact.
+ *
+ * THE MECHANISM
+ *
+ * `plNFireCounter` goes to -1 when fire is pressed and one more negative per
+ * poll while it is held. `processInputForPlayer` arms `normalFire` — the SHOT —
+ * on the single poll it passes -5, and zeroes the counter in the same breath.
+ * `PlayerNStatusProc` only decrements a NON-ZERO counter, so once it is zero a
+ * still-held button never charges again, and a release negates 0 to 0 and does
+ * nothing. Zero means "this hold is spent".
+ *
+ * Both headerOrTackle tails below spend the hold that way (SWOS2.s:25650 /
+ * 25701, swos.asm:100708 — two independent listings agree).
+ *
+ * WHAT IS DELIBERATE, AND WHAT IS AN ACCIDENT
+ *
+ * For a HUMAN team spending its own hold is by design: the press made your
+ * player lunge, so it must not ALSO become a shot. One press, one action. That
+ * tail is left exactly as the original wrote it.
+ *
+ * The other one is an accident of the asm's control flow. A team with
+ * `playerNumber` 0 — the COMPUTER — has no tail of its own: `beq.w
+ * post_input_common_p1` drops it into the PLAYER 1 tail, so when an AI player
+ * tackles, the `clr.w (pl1FireCounter)` it lands on is the HUMAN's. Nothing
+ * about the human's press was consumed; an opponent simply lunged at him, and
+ * his charge dies for it. There is no design reading of that — it is the shared
+ * tail, and the original's own author would have had to write a separate tail
+ * to avoid it. It is also why it hits hardest exactly where a player notices:
+ * in the box, with a defender on you, being tackled at constantly.
+ *
+ * MEASURED over the replay corpus, one full match: 21 of these AI-caused wipes
+ * against 40 shots that actually armed. A tester who plays the original well
+ * reported it as "sometimes your fire button is blocked when in a scoring
+ * position; I am hitting/holding fire and the player won't release the shot",
+ * with a screenshot of a defender overlapping him.
+ *
+ * WHAT THE FIX DOES — AND WHAT IT DELIBERATELY DOES NOT
+ *
+ * Only this: the computer team's tail no longer touches the human's counter.
+ * The human's hold then resolves exactly as it would have if the opponent had
+ * not lunged — it keeps charging, arms the shot at -5, and a release still
+ * produces the pass or shot it always would.
+ *
+ * It does NOT touch the human team's own tail. Restarting a charge there was
+ * tried and rejected: the original's zero also makes the RELEASE inert, so
+ * reviving the counter turns letting go after your own tackle into a surprise
+ * pass — a new bug, not a fix. "One press, one action" stays.
+ *
+ * Set from [gameplay] fire_hold_lockout / --fire-hold-lockout=on. The replay
+ * rig forces it ON: the corpus compares against a reference implementation of
+ * the ORIGINAL, so the rig has to play the original. Amiga builds have no
+ * command line and get the fix (the default).
+ * ================================================================== */
+int _gOriginalFireHoldLockout = 0;
 extern int16_t    _inSubstitutesMenu;
 extern uint16_t   _frameCount;
 
@@ -401,7 +465,9 @@ static int16_t processInputForPlayer(TeamGeneralInfo *team,
     /* Call UpdatePlayers */
     UpdatePlayers(team);
 
-    /* Check headerOrTackle */
+    /* Check headerOrTackle. THIS one is deliberate in the original and stays:
+     * the press made your own player lunge, so it must not also become a shot.
+     * See the block over _gOriginalFireHoldLockout. */
     if (team->headerOrTackle) {
         team->headerOrTackle = 0;
         *fireCounterPtr = 0;
@@ -505,7 +571,8 @@ void UpdateAndApplyTeamControls(void) {
              * opponent's challenge never reaches the -5 that arms normalFire.
              * playa-10095214 diverged at f10129 on exactly that — we shot,
              * the reference kept dribbling. */
-            _pl1FireCounter = 0;
+            if (_gOriginalFireHoldLockout)
+                _pl1FireCounter = 0;
         }
         return;
     }

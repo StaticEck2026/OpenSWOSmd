@@ -127,6 +127,10 @@ static int handler(void *user, const char *section,
             if      (eqi(value, "mono"))   opts->audio_mono = 1;
             else if (eqi(value, "stereo")) opts->audio_mono = 0;
         }
+    } else if (eqi(section, "gameplay")) {
+        int b;
+        if (eqi(name, "fire_hold_lockout") && parse_bool(value, &b))
+            opts->fire_hold_lockout = b;
     } else if (eqi(section, "dos")) {
         int b;
         if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
@@ -232,6 +236,7 @@ static const char *crt_mask_str(int m)
 /* Inline comment appended to a section-header line in a freshly-created file. */
 static const char *section_intro(const char *sec)
 {
+    if (eqi(sec, "gameplay")) return "         ; deliberate departures from the original Amiga game";
     if (eqi(sec, "dos"))    return "              ; PC-only extras (Amiga is the definitive version)";
     if (eqi(sec, "arcade")) return "           ; coin-op mode (PC-only). See docs/ARCADE.md";
     return "";
@@ -275,6 +280,14 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render aspect, or 'auto' for the desktop. Any value works — it need not match the monitor", vbuf[0] };
     items[n++] = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
     items[n++] = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
+    items[n++] = (IniEntry){ "gameplay", "fire_hold_lockout",
+        "; fire_hold_lockout: true | false — true restores a BUG IN THE ORIGINAL\n"
+        "; AMIGA GAME: an OPPONENT's tackle wipes your held fire button's shot charge,\n"
+        "; and it cannot restart while the button is down, so holding fire through a\n"
+        "; challenge never shoots until you let go and press again. Default false\n"
+        "; (fixed). Your OWN tackle still spends the press either way — that half is\n"
+        "; deliberate in the original. See team_control.c.",
+        opts->fire_hold_lockout ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
     items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };

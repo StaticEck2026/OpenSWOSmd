@@ -153,6 +153,14 @@ static void print_usage(const char *argv0)
         "                            play faster), plus the DOS goalkeeper reach and\n"
         "                            ball-physics constants. Default: off (Amiga\n"
         "                            tuning). PC-only extra.\n"
+        "  --fire-hold-lockout=<on|off>\n"
+        "                            Restore an original-Amiga BUG: an OPPONENT's\n"
+        "                            tackle wipes your held fire button's shot charge,\n"
+        "                            and it cannot restart while the button is down, so\n"
+        "                            holding fire through a challenge never shoots —\n"
+        "                            you have to release and press again. Default off\n"
+        "                            (fixed). Your OWN tackle still spends the press\n"
+        "                            in both modes: that part is by design.\n"
         "  --dos-dir=<folder>        Folder (under bin/) to load DOS assets from.\n"
         "                            Default: grafs_dos.\n"
         "  --replay-test=<file.swr>  Replay a recorded match and assert every frame\n"
@@ -257,6 +265,7 @@ int main(int argc, char **argv)
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
+    opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.arcade = 0;              /* default off — normal front-end menu */
     opts.arcade_mode = 0;         /* GOLDEN GOAL */
     opts.arcade_game_seconds = 45;
@@ -372,6 +381,13 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid --dos-graphics value '%s' (expected on|off)\n", v);
                 return 1;
             }
+        } else if ((v = match_kv(a, "fire-hold-lockout")) != NULL) {
+            if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.fire_hold_lockout = 1;
+            else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.fire_hold_lockout = 0;
+            else {
+                fprintf(stderr, "Invalid --fire-hold-lockout value '%s' (expected on|off)\n", v);
+                return 1;
+            }
         } else if ((v = match_kv(a, "dos-gameplay")) != NULL) {
             if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.dos_gameplay = 1;
             else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.dos_gameplay = 0;
@@ -442,6 +458,13 @@ int main(int argc, char **argv)
             setenv("SDL_AUDIODRIVER", "dummy", 1);
 #endif
         opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */
+        /* The recordings were made against a reference implementation of the
+         * ORIGINAL, so a replay has to PLAY the original — including its
+         * fire-hold lockout bug. Without this the rig diverges on quick_fire /
+         * normal_fire the first time a tackle lands on a held button, which is
+         * ~55 times a match. Not overridable: a replay is a comparison, not a
+         * game. See _gOriginalFireHoldLockout in team_control.c. */
+        opts.fire_hold_lockout = 1;
         /* Replay at the port's OWN native view, not the tester's monitor. The
          * original reason given here — "SWOS's camera constants are all derived
          * from the view size" — no longer holds: 22f370a pinned _sim_view_width
@@ -462,6 +485,8 @@ int main(int argc, char **argv)
     _gDosGraphics = opts.dos_graphics;
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
+    { extern int _gOriginalFireHoldLockout;
+      _gOriginalFireHoldLockout = opts.fire_hold_lockout; }
     /* The OPTIONS menu draws its GAMEPLAY row from a uint16_t mirror (the
      * string-table header reads its index as one). Seed it here so the row
      * shows what SWOS.ini / --dos-gameplay actually selected; the toggle
@@ -474,6 +499,11 @@ int main(int argc, char **argv)
     fprintf(stderr, "[gameplay] %s\n", _gDosGameplay
             ? "DOS (70fps physics and timers, DOS formations)"
             : "AMIGA (the shipped default)");
+    /* Say it out loud — this one is a deliberate departure from the original,
+     * so a tester comparing against real SWOS can see which half he is on. */
+    fprintf(stderr, "[gameplay] fire-hold lockout: %s\n", opts.fire_hold_lockout
+            ? "ON — original Amiga behaviour (an opponent's tackle kills your shot charge)"
+            : "off — fixed (an opponent's tackle no longer kills your shot charge)");
     /* _screen_width (the live render width) + _menu_draw_x_offset (UI centering)
      * are derived from the monitor's aspect ratio just after SDL_Init — see below. */
     if (opts.dos_dir[0])

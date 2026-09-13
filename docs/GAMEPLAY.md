@@ -990,6 +990,28 @@ substitutes menu is open all six control fields are forced to
 tackle or header, and the caller clears it and zeroes `fireCounter`, so the same
 press cannot also trigger a pass or shot.
 
+> **A bug in the original, and the one place this port knowingly departs from
+> it.** A team whose `playerNumber` is 0 — the **computer** — has no tail of its
+> own in the asm: `beq.w post_input_common_p1` (SWOS2.s:25599) drops it into the
+> PLAYER 1 tail, so the `clr.w (pl1FireCounter)` there fires on an **AI**
+> tackle and zeroes the **human's** counter. Nothing of the human's press was
+> consumed; an opponent merely lunged at him. And because a zeroed counter can
+> never restart under a still-held button (above), his hold is dead until he
+> releases and presses again — so holding fire through a challenge silently
+> never shoots. Measured over the corpus: 21 such wipes per match against 40
+> shots that armed, and they cluster exactly where a player notices, in the box
+> with a defender on him.
+>
+> The port fixes this: the computer team's tail no longer touches the human's
+> counter. `--fire-hold-lockout=on` / `[gameplay] fire_hold_lockout=true`
+> restores the original bit-exactly, and the replay rig forces it on, because
+> the corpus compares against a reference implementation of the original.
+>
+> The **human** team's own tail is untouched in both modes — zeroing there is
+> deliberate ("one press, one action"), and reviving the counter would make
+> letting go after your own tackle fire a surprise pass, since the zero is also
+> what makes the release inert.
+
 ### 6.4 Fire blocking
 
 `fireBlocked` is set when a menu/overlay consumed a press. While set,
