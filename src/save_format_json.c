@@ -699,12 +699,20 @@ typedef struct {
                              * the careerFileBuffer overlay */
     uint32_t    size;       /* for FLD_STR / FLD_BYTES; ignored for scalars */
     FieldType   type;
-    uint8_t     comp;       /* 1 = member of the .DIY/.PRE/.SEA competition-slot
-                             * save set (the primary slot + save-file header +
-                             * counts). Selected EXPLICITLY by identity for the
-                             * preset/DIY save path, NOT by a runtime address
-                             * span — see emit_scalar_table_comp. The career save
-                             * path ignores this flag and emits the whole table. */
+    uint8_t     comp;       /* 0 = career-only.
+                             * 1 = member of the .DIY/.PRE/.SEA competition-slot
+                             *     save set (the primary slot + save-file header +
+                             *     counts). Zeroed before a load, then restored.
+                             * 2 = also in that save set, but NOT zeroed before a
+                             *     load — the settings block (user tactics + the
+                             *     options the file carries). A .DIY/.PRE written
+                             *     before those keys existed simply has no value
+                             *     to restore, and zeroing would WIPE the live
+                             *     tactics instead of leaving them alone.
+                             * Selected EXPLICITLY by identity for the preset/DIY
+                             * save path, NOT by a runtime address span — see
+                             * emit_scalar_table_comp. The career save path
+                             * ignores this flag and emits the whole table. */
 } FieldDesc;
 
 #ifdef SWOS_SAVE_FORMAT_JSON_VERIFY
@@ -967,6 +975,10 @@ extern uint8_t  _euroCupCopy[];
  * numSelectedTeams, had ballooned to sweep unrelated career globals. */
 #define FXC(name, sym, type) { name, (void *)&sym, 0, type, 1 }
 #define FAC(name, sym, len, type) { name, (void *)&sym, len, type, 1 }
+/* FXS/FAS — comp=2: in the competition save set, but not pre-zeroed on load.
+ * See the `comp` field's comment on FieldDesc. */
+#define FXS(name, sym, type) { name, (void *)&sym, 0, type, 2 }
+#define FAS(name, sym, len, type) { name, (void *)&sym, len, type, 2 }
 
 /* Compile-time invariants for the primary-competition header runs (see
  * the primary_comp_ids/dims/months/state/ex/matchdata_* entries below).
@@ -1235,12 +1247,18 @@ static const FieldDesc s_career_scalars[] = {
     FX("game_type",                       _gameType,                    FLD_U16),
     FX("contest_started",                 _contestStarted,              FLD_U16),
     FX("career_loaded_flag",              _careerLoadedFlag,            FLD_U16),
-    FX("game_length",                     _gameLength,                  FLD_U16),
-    FX("auto_replays",                    _autoReplays,                 FLD_U16),
-    FX("menu_music",                      _menuMusic,                   FLD_U16),
-    FX("auto_save_highlights",            _autoSaveHighlights,          FLD_U16),
-    FX("all_player_teams_equal",          _allPlayerTeamsEqual,         FLD_U16),
-    FX("pitch_type",                      _pitchType,                   FLD_U16),
+    /* The six SaveOptions/RestoreOptions words. In the original these sat inside
+     * the .PRE/.DIY dump region ([competitionFileBuffer, numSelectedTeams)), and
+     * LoadDIYFile/LoadPresetFile only call RestoreOptions on the ERROR path
+     * (SWOS2.s:125758) — a successful load deliberately adopts the file's
+     * options, which is also why it follows up with CycleMenuMusic. Carried in
+     * the competition save so that stays true. */
+    FXS("game_length",                    _gameLength,                  FLD_U16),
+    FXS("auto_replays",                   _autoReplays,                 FLD_U16),
+    FXS("menu_music",                     _menuMusic,                   FLD_U16),
+    FXS("auto_save_highlights",           _autoSaveHighlights,          FLD_U16),
+    FXS("all_player_teams_equal",         _allPlayerTeamsEqual,         FLD_U16),
+    FXS("pitch_type",                     _pitchType,                   FLD_U16),
     FX("seed_2",                          _seed2,                       FLD_U8 ),
     FX("rand_xor_index_2",                _randXorIndex2,               FLD_U8 ),
     FX("rand_xor_key_2",                  _randXorKey2,                 FLD_U8 ),
@@ -1387,13 +1405,24 @@ static const FieldDesc s_career_scalars[] = {
     /* Six user-saved tactic slots (teamTacticsUSERA..F). Same 370-byte
      * TeamTactics shape as a .TAC file (see write_tactics_buf). Saved
      * as flat bytes here for table compactness; structured promotion is
-     * a candidate follow-up using the existing emit/load helpers. */
-    FA("team_tactics_user_a",         _teamTacticsUSERA,            370, FLD_BYTES),
-    FA("team_tactics_user_b",         _teamTacticsUSERB,            370, FLD_BYTES),
-    FA("team_tactics_user_c",         _teamTacticsUSERC,            370, FLD_BYTES),
-    FA("team_tactics_user_d",         _teamTacticsUSERD,            370, FLD_BYTES),
-    FA("team_tactics_user_e",         _teamTacticsUSERE,            370, FLD_BYTES),
-    FA("team_tactics_user_f",         _teamTacticsUSERF,            370, FLD_BYTES),
+     * a candidate follow-up using the existing emit/load helpers.
+     *
+     * These are in the COMPETITION save set too (comp=2). A team's chosen
+     * tactic is stored as an index (TeamFile.tactics; USER A == 12), so a
+     * .DIY/.PRE that carried the index but not the six slots reloaded with
+     * every team still pointing at USER A while USER A held whatever was in
+     * memory — reported as "saving a DIY competition does not save your
+     * custom tactic; reloading leaves the selection on USER A but the tactic
+     * file isn't loaded into it". The original had them by construction: they
+     * live inside the dumped [competitionFileBuffer, numSelectedTeams) region,
+     * and LoadDIYFile only re-runs InitUserTactics when the load FAILS
+     * (SWOS2.s:125758). */
+    FAS("team_tactics_user_a",        _teamTacticsUSERA,            370, FLD_BYTES),
+    FAS("team_tactics_user_b",        _teamTacticsUSERB,            370, FLD_BYTES),
+    FAS("team_tactics_user_c",        _teamTacticsUSERC,            370, FLD_BYTES),
+    FAS("team_tactics_user_d",        _teamTacticsUSERD,            370, FLD_BYTES),
+    FAS("team_tactics_user_e",        _teamTacticsUSERE,            370, FLD_BYTES),
+    FAS("team_tactics_user_f",        _teamTacticsUSERF,            370, FLD_BYTES),
 
     /* NOTE: the *Copy competition record region (euroCupCopy..oceania
      * WorldCupQualificationCopy, 34 records) is NO LONGER saved as a raw
@@ -1412,6 +1441,10 @@ static const FieldDesc s_career_scalars[] = {
 };
 #undef FX
 #undef FA
+#undef FXC
+#undef FAC
+#undef FXS
+#undef FAS
 
 static void emit_scalar_table(mjson_print_fn_t fn, void *fnd,
                               const char *section_key,
@@ -6926,7 +6959,11 @@ static int16_t load_competition_buf(uint8_t *filename, const char *kind)
      * covered by a typed field/blob. (The primary slot itself is the
      * primary_competition_context FLD_BYTES blob — zeroed whole here.) */
     for (const FieldDesc *f = s_career_scalars; f->type != FLD_END; f++) {
-        if (!f->comp) continue;
+        /* comp==2 is the settings block (user tactics + options): saved and
+         * restored with the competition, but NEVER zeroed here. A file written
+         * before those keys existed has nothing to restore, and zeroing would
+         * leave the six USER tactic slots blank instead of untouched. */
+        if (f->comp != 1) continue;
         uint32_t sz = field_byte_size(f);
         if (sz) memset(f->addr, 0, sz);
     }
