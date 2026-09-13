@@ -179,6 +179,19 @@ static int sdl_to_amiga(SDL_Keycode k)
 
 /* ---- Tracked keyboard state for joystick/fire synthesis ---- */
 static int s_kbd_up, s_kbd_down, s_kbd_left, s_kbd_right, s_kbd_fire;
+/* Fire is bound to THREE keys (Right-Ctrl / Left-Ctrl / Enter) but the Amiga
+ * has ONE button, so the three have to behave as one: held while ANY of them
+ * is down. A single shared s_kbd_fire flag got that wrong — releasing one key
+ * cleared it even with another still held, and since a held key sends no
+ * further KEYDOWN, fire stayed off until the player pressed something again.
+ * Mid-charge that reads as a release: the fire counter goes positive and the
+ * hold becomes a pass (counter <= 4) or an early shot, then nothing at all
+ * while the key is still down — i.e. "I'm holding fire and he won't shoot".
+ * One bit per key, OR'd. */
+#define KBD_FIRE_RCTRL  0x1
+#define KBD_FIRE_LCTRL  0x2
+#define KBD_FIRE_RETURN 0x4
+static int s_kbd_fire_keys;
 /* SDL-only "skip auto-advance pause" input. Pressing SPACE (kb) or the
  * second button on a controller sets pauseSkipRequested so dwell loops
  * (e.g. season-end menu chains, future auto-advance pauses) can bail
@@ -390,9 +403,9 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_DOWN:  s_kbd_down  = 1; break;
         case SDLK_LEFT:  s_kbd_left  = 1; break;
         case SDLK_RIGHT: s_kbd_right = 1; break;
-        case SDLK_RCTRL:
-        case SDLK_LCTRL:
-        case SDLK_RETURN: s_kbd_fire = 1; break;
+        case SDLK_RCTRL:  s_kbd_fire_keys |= KBD_FIRE_RCTRL;  s_kbd_fire = 1; break;
+        case SDLK_LCTRL:  s_kbd_fire_keys |= KBD_FIRE_LCTRL;  s_kbd_fire = 1; break;
+        case SDLK_RETURN: s_kbd_fire_keys |= KBD_FIRE_RETURN; s_kbd_fire = 1; break;
         case SDLK_SPACE:
             /* In a live match SPACE is SWOS's highlight-capture key
              * (game_loop.c MainKeysCheck case 0x20 — sets
@@ -435,9 +448,14 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         case SDLK_DOWN:  s_kbd_down  = 0; break;
         case SDLK_LEFT:  s_kbd_left  = 0; break;
         case SDLK_RIGHT: s_kbd_right = 0; break;
-        case SDLK_RCTRL:
-        case SDLK_LCTRL:
-        case SDLK_RETURN: s_kbd_fire = 0; break;
+        /* Clear only THIS key's bit — fire stays down while another
+         * fire key is still held (see s_kbd_fire_keys). */
+        case SDLK_RCTRL:  s_kbd_fire_keys &= ~KBD_FIRE_RCTRL;
+                          s_kbd_fire = (s_kbd_fire_keys != 0); break;
+        case SDLK_LCTRL:  s_kbd_fire_keys &= ~KBD_FIRE_LCTRL;
+                          s_kbd_fire = (s_kbd_fire_keys != 0); break;
+        case SDLK_RETURN: s_kbd_fire_keys &= ~KBD_FIRE_RETURN;
+                          s_kbd_fire = (s_kbd_fire_keys != 0); break;
         case SDLK_SPACE:  s_kbd_skip = 0; break;
         default: break;
         }
@@ -613,6 +631,7 @@ void InputSDL_ClearKeyState(void)
     memset((void *)_keyBuffer, 0, sizeof(_keyBuffer));
     _keyCount = 0;
     s_kbd_up = s_kbd_down = s_kbd_left = s_kbd_right = s_kbd_fire = 0;
+    s_kbd_fire_keys = 0;
     s_kbd_skip = 0;
     _pauseSkipRequested = 0;
     /* joy0Dat / joy1Dat / ciaa_pra are recomputed each frame by
