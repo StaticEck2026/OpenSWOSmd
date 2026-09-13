@@ -802,9 +802,29 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
     EnsureSfxLoadedAndStart();
     SetPitchTypeAndNumber();
     InitGameSaveTeams(topTeam, bottomTeam);
-#ifdef AGA
-    WriteCopperPitchPalette();
-#endif
+    /* NO palette push here.
+     *
+     * InitGameSaveTeams has just faded the screen to black, and nothing has
+     * drawn the pitch yet — the frontbuffer still holds the pre-match team
+     * line-up screen. A WriteCopperPitchPalette() here (added with AGA mode,
+     * 77fa5d9) wrote the full-brightness gamePalette straight into the copper,
+     * which un-blacks the display and shows that stale menu image in the
+     * PITCH palette for the few frames until GameLoop draws and fades in:
+     * colour 0 goes dark-blue -> green and the whole upper 240 entries change,
+     * so the menu backdrop comes back as concentric rings of green/red/blue.
+     * Reported as "right before the match engine starts, the colours get
+     * distorted for a split second".
+     *
+     * Nothing is lost by dropping it. The 9 AGA pitch-condition entries are
+     * applied to gamePalette by InitGameRestoreTeams below (match_setup.c,
+     * apply_palette_and_pitch), and the copper gets the palette from the fade
+     * itself: paletteIndex is already 2 and SetFadeLevel writes
+     * paletteTable[2] (= gamePalette) scaled by the fade level, including the
+     * AGA colour 0-15 -> 16-31 sprite mirror. GameLoop kicks that fade off on
+     * the first frame after the pitch is drawn (fadeState == 0 &&
+     * fadeInitFlag == FADE_SENTINEL). This is also exactly what the friendly
+     * "watch the replay" re-entry above already does, and what the asm does
+     * (SWOS2.s:20591 StartMatchSequence pushes no palette). */
     InitGameRestoreTeams();
     /* Wipe the bitplane frontbuffers before the first pitch draw so leftover
      * menu/intro high-plane (4-7) data can't bleed onto the white pitch lines.
