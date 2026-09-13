@@ -11,8 +11,7 @@
 #include "dos_mode.h"
 #ifdef SWOS_SDL_BUILD
 #include "dos_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
-#include <stdio.h>
-#include <stdlib.h>          /* snprintf for the DOS pitch filenames */
+#include <stdio.h>          /* snprintf for the DOS pitch filenames */
 #endif
 
 /* ---- External globals (all live in SWOS2.s) ---- */
@@ -640,55 +639,82 @@ void FixupAndColorPitchFile(void)
      * recolour being skipped, and this is the remainder.
      *
      * Which kit a stray tile should wear is DERIVED, never assumed: find a
-     * neighbouring cell in the same half of the pitch whose tile did get
-     * recoloured, and reuse that group's table. That stays correct when
-     * fansSidesSwapped flips the groups, and when a pitch assigns the bands
-     * the other way round. */
+     * neighbouring cell in the SAME ROW whose tile did get recoloured, and
+     * reuse that group's table. That stays correct when fansSidesSwapped flips
+     * the groups, and when a pitch assigns the bands the other way round.
+     *
+     * SCOPE IS PER ROW, NOT PER HALF (fixed 2026-09-12). The first cut swept
+     * every cell in each half of the grid, i.e. the whole ground — so it also
+     * recoloured artwork that merely happens to use the kit slots 10/11 but is
+     * not crowd. Measured on both tiers (Amiga grafs_aga and grafs_dos, same
+     * counts): rows 0-3 and 51-54 are the crowd; the uncovered cells holding
+     * kit pixels are row 5 x16, row 7 x2, row 47 x3 and row 51 x2. Row 5 is
+     * the ADVERTISING HOARDINGS — "SOCCER" is painted in slot 10 and the
+     * '96/'97 board's background in slot 11 — so the boards took the playing
+     * teams' shirt colours and a tester reported "the adboards colors are
+     * messed up". Only row 51's two cells were ever the target.
+     *
+     * So sweep only rows that already contain a recoloured crowd cell. That
+     * keeps the row-51 fix (row 51 has 40 covered cells to derive from) and
+     * leaves rows 5/7/47 alone, without hard-coding which rows are stands. */
     {
         /* The map is a flat 42 x 55 grid; see DrawChunkyPitch. */
-        const int32_t GRID_COLS = 42, GRID_ROWS = 55;
+        #define PITCH_GRID_COLS 42
+        #define PITCH_GRID_ROWS 55
         uint16_t topTbl[2], botTbl[2];      /* {slot10, slot11} per group */
+        int8_t   rowGroup[PITCH_GRID_ROWS]; /* -1 = not a crowd row, else 1=A 0=B */
+        int32_t  r, c, k;
+
         topTbl[0] = (uint16_t)_topTeamInGame.prStripesCol;
         topTbl[1] = (uint16_t)_topTeamInGame.prShirtCol;
         botTbl[0] = (uint16_t)_bottomTeamInGame.prStripesCol;
         botTbl[1] = (uint16_t)_bottomTeamInGame.prShirtCol;
 
-        for (int32_t half = 0; half < 2; half++) {
-            int32_t r0 = half ? (GRID_ROWS / 2) : 0;
-            int32_t r1 = half ? GRID_ROWS : (GRID_ROWS / 2);
-
-            /* Which group does this half of the ground already use? */
-            int32_t usesA = -1;
-            for (int32_t i2 = r0 * GRID_COLS;
-                 i2 < r1 * GRID_COLS && usesA < 0; i2++) {
-                uint8_t *q = _s_pitchFullPtrs[i2];
+        /* Which group (if any) does each row's crowd wear? A row with no
+         * recoloured cell at all is not a stand and is left untouched. */
+        for (r = 0; r < PITCH_GRID_ROWS; r++) {
+            rowGroup[r] = -1;
+            for (c = 0; c < PITCH_GRID_COLS && rowGroup[r] < 0; c++) {
+                uint8_t *q = _s_pitchFullPtrs[r * PITCH_GRID_COLS + c];
                 if (!q) continue;
-                for (int32_t k = 0; k < FAN_PTR_TABLE_SIZE; k++) {
-                    if (fanGroupA[k] == q) { usesA = 1; break; }
-                    if (fanGroupB[k] == q) { usesA = 0; break; }
+                for (k = 0; k < FAN_PTR_TABLE_SIZE; k++) {
+                    if (fanGroupA[k] == q) { rowGroup[r] = 1; break; }
+                    if (fanGroupB[k] == q) { rowGroup[r] = 0; break; }
                 }
             }
-            if (usesA < 0) continue;                /* no crowd in this half */
+        }
+
+        for (r = 0; r < PITCH_GRID_ROWS; r++) {
+            if (rowGroup[r] < 0) continue;
 
             /* Step 5 left fanGroupA's colours in the table; Step 4 used
-             * fanGroupB's. Reload whichever this half needs. */
-            pitchFansConvertTable[10] = usesA ? botTbl[0] : topTbl[0];
-            pitchFansConvertTable[11] = usesA ? botTbl[1] : topTbl[1];
+             * fanGroupB's. Reload whichever this row needs. */
+            pitchFansConvertTable[10] = rowGroup[r] ? botTbl[0] : topTbl[0];
+            pitchFansConvertTable[11] = rowGroup[r] ? botTbl[1] : topTbl[1];
 
-            for (int32_t i2 = r0 * GRID_COLS; i2 < r1 * GRID_COLS; i2++) {
-                uint8_t *q = _s_pitchFullPtrs[i2];
+            for (c = 0; c < PITCH_GRID_COLS; c++) {
+                uint8_t *q = _s_pitchFullPtrs[r * PITCH_GRID_COLS + c];
                 int32_t covered = 0, dup = 0;
                 if (!q) continue;
-                for (int32_t k = 0; k < FAN_PTR_TABLE_SIZE; k++)
+                for (k = 0; k < FAN_PTR_TABLE_SIZE; k++)
                     if (fanGroupA[k] == q || fanGroupB[k] == q) { covered = 1; break; }
                 if (covered) continue;
-                /* Tiles repeat across cells — only convert each one once. */
-                for (int32_t j = r0 * GRID_COLS; j < i2; j++)
-                    if (_s_pitchFullPtrs[j] == q) { dup = 1; break; }
+                /* Tiles repeat across cells — only convert each one once.
+                 * Scan the crowd rows already swept (and this row so far);
+                 * a match in a non-crowd row means nothing, since those are
+                 * never converted. */
+                for (int32_t rr = 0; rr <= r && !dup; rr++) {
+                    if (rowGroup[rr] < 0) continue;
+                    int32_t cmax = (rr == r) ? c : PITCH_GRID_COLS;
+                    for (int32_t cc = 0; cc < cmax; cc++)
+                        if (_s_pitchFullPtrs[rr * PITCH_GRID_COLS + cc] == q) { dup = 1; break; }
+                }
                 if (dup) continue;
                 AdjustFanColor(q, pitchFansConvertTable);
             }
         }
+        #undef PITCH_GRID_COLS
+        #undef PITCH_GRID_ROWS
     }
 
 #endif
