@@ -3988,7 +3988,14 @@ void Career_TransferPlayerAndAddReplacedToMarketPool(uint16_t sourceTeam, uint16
             PlayerFile *pf = (PlayerFile *)(scanPtr + PF_OFF);
             uint16_t role = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
             if (role == targetRole) {
-                if (pf->price < bestPrice) {
+                /* asm: `cmp.b $6C(a0),d3 / bcs.s skip` — that computes
+                 * bestPrice - price and skips only when bestPrice < price, so
+                 * the candidate is TAKEN on a tie and the LAST equal-priced
+                 * player in the team wins. `<` here kept the FIRST instead,
+                 * which picks a different player to give away whenever two
+                 * squad members of the same role are valued the same — common,
+                 * since price is a byte. (SWOS2.s:96838.) */
+                if (pf->price <= bestPrice) {
                     bestOrdinal = slot;
                     bestPrice = pf->price;
                     bestPlayer = scanPtr;
