@@ -463,7 +463,18 @@ int main(int argc, char **argv)
          * fire-hold lockout bug. Without this the rig diverges on quick_fire /
          * normal_fire the first time a tackle lands on a held button, which is
          * ~55 times a match. Not overridable: a replay is a comparison, not a
-         * game. See _gOriginalFireHoldLockout in team_control.c. */
+         * game. See _gOriginalFireHoldLockout in team_control.c.
+         *
+         * WHEN THE NEW RECORDING FORMAT LANDS, THIS BECOMES PER FILE.
+         * The owner's call (2026-09-13): new recordings are made with the fix
+         * ACTIVE, because fixed is the new norm. So this constant is only right
+         * for the .RGD corpus — read the setting out of the recording's own
+         * header instead and fall back to 1 for a format that has no such
+         * field (every .RGD). Do NOT decide it by format: that exact shortcut
+         * was already paid for once with the replay framerate, where the
+         * authored rate turned out to be per FILE (a gameStyle byte) and
+         * hardcoding it per format broke the reels that disagreed —
+         * see project_replay_framerate_decouple. */
         opts.fire_hold_lockout = 1;
         /* Replay at the port's OWN native view, not the tester's monitor. The
          * original reason given here — "SWOS's camera constants are all derived
