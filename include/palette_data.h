@@ -4,9 +4,10 @@
 
 #include "game_types.h"
 
-/* Full 16-color palettes (all zeros / near-zeros — runtime-filled) */
-extern uint16_t _blackPalette[16];
-extern uint16_t _panicPalette[16];
+/* paletteTable fade palettes. Unsized: 256 entries under AGA (SetFadeLevel
+ * walks 8 banks x 32), 16 under OCS — see palette_data.c. */
+extern uint16_t _blackPalette[];
+extern uint16_t _panicPalette[];
 
 /* OCS pitch condition palettes: 3 entries each.
  * (AGA mode uses 9 entries each — see SWOS2.s IFNE AGA blocks.)

@@ -10,17 +10,29 @@
 
 #if PALETTE_DATA_C
 
-/* blackPalette: 16 zero entries (SWOS2.s line ~2955) */
-uint16_t _blackPalette[16] = {
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000
-};
+/* blackPalette / panicPalette. Both are paletteTable entries, so SetFadeLevel
+ * walks one of them whenever paletteIndex selects it — and the AGA branch reads
+ * 256 entries (8 banks x 32), not 16. At the original 16 words that is a
+ * 480-byte over-read into whatever global follows, i.e. colours 16..255 of a
+ * panic screen come from unrelated memory. Sized to the full AGA bank count;
+ * the tail stays black, which is what a 16-colour screen wants for the colours
+ * it never uses. OCS keeps the 16 the copper actually has.
+ *
+ * (The other short paletteTable entries — titleScreen/titleText/titleLogo — are
+ * only ever selected under #ifndef AGA, see loader_intro.c, so they cannot be
+ * reached by the 256-entry walk. panicPalette is selected unconditionally by
+ * PanicHaltLoop, which is why these two need the full size.) */
+#ifdef AGA
+#define SWOS_FADE_PALETTE_LEN 256
+#else
+#define SWOS_FADE_PALETTE_LEN 16
+#endif
 
-/* panicPalette: 15 zeros + 0x000F (SWOS2.s line ~2967) */
-uint16_t _panicPalette[16] = {
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x000F
-};
+/* blackPalette: all zero entries (SWOS2.s line ~2955) */
+uint16_t _blackPalette[SWOS_FADE_PALETTE_LEN] = { 0 };
+
+/* panicPalette: zeros + 0x000F at index 15 (SWOS2.s line ~2967) */
+uint16_t _panicPalette[SWOS_FADE_PALETTE_LEN] = { [15] = 0x000F };
 
 /* Pitch condition palettes. WriteCopperPitchPalette overlays these onto
  * gamePalette at _paletteIndices before pushing to the copper.
