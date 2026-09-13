@@ -108,6 +108,7 @@ at all (hence we force `TurnCrowdChantsOn()` at replay start for RPLs).
   version u16               ; format version
   flags   u16               ; widescreen-source, has-audio, has-index, ...
   tickRate u16              ; recording tick rate (e.g. 50 or 70)
+  quirks  u16               ; WHICH GAME this was recorded against — see below
   pitchW, pitchH u16        ; world dimensions (decouples from view width)
   teamsBlobOffset u32       ; -> team/kit/lineup metadata
   frameStreamOffset u32
@@ -134,6 +135,24 @@ Key decisions:
   the audio track in sync; between keyframes we replay deltas forward.
 - **Sprites store direction** (already in the engine) so the camera/renderer can
   do smarter framing and we can re-derive facing without the bitmap.
+- **`quirks` records which game the file was recorded against.** We now
+  deliberately depart from the original in places (the first is the fire-hold
+  lockout — an original-Amiga bug where an opponent's tackle wipes your held
+  shot charge; `_gOriginalFireHoldLockout` in `team_control.c`, docs/GAMEPLAY.md
+  §6.3). A recording made under the fix and one made under the original are
+  recordings of *different games*, and only the file can say which. One bit per
+  deliberate departure, room to grow.
+
+  **Owner's call, 2026-09-13: new recordings are made with the fixes ACTIVE —
+  fixed is the new norm.** So the bit is normally 0 and set only when something
+  was deliberately recorded against original behaviour.
+
+  This is the same shape as `tickRate`, and for the same reason. **Decide it per
+  FILE, never per format.** That shortcut has already been paid for once here:
+  the authored playback rate turned out to live in a per-file byte (SWOS-2020's
+  `gameStyle` at offset 5) and the first implementation hardcoded it per format,
+  which broke every reel that disagreed with its neighbours. `quirks` will fail
+  exactly the same way if it is inferred from the extension.
 
 ---
 
@@ -154,6 +173,13 @@ Key decisions:
   `.HIL` → as today. `.IDX` still read if present alongside a legacy `.RPL`.
 - A "Re-save as v2" path can up-convert a legacy file (positions only; audio
   track empty/crowd-only since the source never had it).
+- **Legacy files have no `quirks` field, so up-conversion must set it to
+  "original", not 0.** Every `.HIL` / `.RPL` / `.RGD` that exists today predates
+  the deliberate departures, and a missing field is not the same as a field
+  saying "fixed". Same rule anywhere else the flag is read: absent ⇒ original.
+  (Today `--replay-test` hardcodes exactly that for the `.RGD` corpus — see the
+  `opts.fire_hold_lockout` line in `main.c`, which carries a pointer back here
+  and stops being correct the moment a v2 recording reaches the rig.)
 - v2 is authored by a **recorder** that taps the live engine: it already has the
   ball physics + every `PlaySample`/SFX trigger, so populating the audio track is
   just logging those at record time.
@@ -179,6 +205,10 @@ Key decisions:
   crowd-intensity envelope in the audio track? (Latter gives goal-roar swells.)
 - Audio under slow-mo: pitch-shift vs event-rescale per SFX class.
 - File size vs delta-compression of sprite positions (most move a few px/tick).
+- `quirks`: one bit per deliberate departure, or a single "game revision" ordinal
+  the reader maps to a set? Bits are simpler now; an ordinal ages better once
+  there are several and they interact. Either way it is per file, never per
+  format, and absent means original.
 - Do we record inputs too (enabling true re-simulation as an alternative to
   position playback)? Re-sim would give *perfect* SFX but risks desync across
   engine changes; position playback is robust. Likely: positions + audio track
