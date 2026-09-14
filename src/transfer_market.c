@@ -1424,8 +1424,29 @@ void AddCareerPoolPlayer(uint16_t teamNumber, uint16_t playerOrdinal, PlayerFile
     uint16_t *src;
     uint16_t i;
 
-    /* Header: team number (word), player ordinal (byte), randomPhase (byte) */
-    entry->teamId = teamNumber;
+    /* Header: team number (word), player ordinal (byte), randomPhase (byte).
+     *
+     * teamId MUST be stored in Amiga byte order. The asm writes it with
+     * `move.w d0,(a6)` (SWOS2.s:96367) and the only reader,
+     * Career_PatchTeamWithForeignMarketPlayers, compares it BYTE BY BYTE
+     * against the team record's separate countryNumber/teamOrdinal fields
+     * (`cmp.b (a5),d5 / cmp.b 1(a5),d4`, SWOS2.s:96497) — so byte 0 has to be
+     * the country and byte 1 the ordinal.
+     *
+     * A plain `entry->teamId = teamNumber` is that on m68k and the REVERSE on
+     * a little-endian host, so the patch never matched a single entry on SDL.
+     * That is not cosmetic: the patch is how a change to a team that is NOT in
+     * the career pool survives. GetTeamPointer resolves such a team by loading
+     * the country's team file into the scratch teamFileBuffer, and the patch
+     * re-applies the career's edits on top of that fresh copy every time. With
+     * the compare dead, the edit was written into scratch memory and lost on
+     * the next lookup — so a player bought from a club outside your pool came
+     * BACK, and the game then had him in both squads, scoring for both. Exactly
+     * the tester's "he reappears on his team, he gets duplicated".
+     *
+     * Measured before the fix: buying slot 1 of team 0x0100 wrote the entry
+     * bytes 0x00,0x01 where the reader wants 0x01,0x00. */
+    BE_WRITE_U16((uint8_t *)&entry->teamId, teamNumber);
     entry->playerOrdinal = (int8_t)playerOrdinal;
     entry->padding = (int8_t)_viewRandomPhase;
 
