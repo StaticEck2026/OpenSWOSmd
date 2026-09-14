@@ -3186,16 +3186,28 @@ void PlayerOffersOnSelect10(void)
     } else {
         /* Build mask of ineligible players (goalies, injured, on transfer list) */
         uint32_t d7mask = 0;
+        /* The mask is indexed by PLAYER FILE INDEX, not by the loop's squad
+         * ordinal. `GetPlayerAtIndex` takes an ordinal and REMAPS it through
+         * currentMatchPlayers; the asm bit-sets the remapped value it leaves in
+         * d1 (`jsr GetPlayerAtIndex / ... / bset d1,d7`, SWOS2.s:100671-100679),
+         * and ShowSquad greys by the same file index. Using the ordinal greys
+         * whoever happens to OCCUPY that file slot instead — so a real player
+         * went grey (the tester's RONALDO, £9M) while a RES/TRIAL stayed
+         * selectable. Identical only while currentMatchPlayers is the identity
+         * permutation, which it stops being after any squad reorder.
+         * Same file-index-vs-display-slot domain error as the national-squad
+         * one; see project_national_squad_index_domains. */
         int16_t i = _careerNumPlayers - 1;
         while (i >= 0) {
             uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
+            uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
             PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
             /* Check if player is a trialist (0x9B) or reserve (0x9A) */
             if ((uint8_t)plf->form == PLAYER_FORM_TRIALIST || (uint8_t)plf->form == PLAYER_FORM_RESERVE) {
-                d7mask |= (1u << i);
+                d7mask |= (1u << fileIdx);
             } else if (plf->positionAndFace & PF_LOAN) {
                 /* on transfer list */
-                d7mask |= (1u << i);
+                d7mask |= (1u << fileIdx);
             }
             i--;
         }
@@ -3227,14 +3239,26 @@ void PlayerOffersOnSelect11(void)
         _offerOrdinals.offerExtraPlayerOrdinal = -1;
     } else {
         /* Build mask of ineligible players */
+        /* The mask is indexed by PLAYER FILE INDEX, not by the loop's squad
+         * ordinal. `GetPlayerAtIndex` takes an ordinal and REMAPS it through
+         * currentMatchPlayers; the asm bit-sets the remapped value it leaves in
+         * d1 (`jsr GetPlayerAtIndex / ... / bset d1,d7`, SWOS2.s:100671-100679),
+         * and ShowSquad greys by the same file index. Using the ordinal greys
+         * whoever happens to OCCUPY that file slot instead — so a real player
+         * went grey (the tester's RONALDO, £9M) while a RES/TRIAL stayed
+         * selectable. Identical only while currentMatchPlayers is the identity
+         * permutation, which it stops being after any squad reorder.
+         * Same file-index-vs-display-slot domain error as the national-squad
+         * one; see project_national_squad_index_domains. */
         int16_t i = _careerNumPlayers - 1;
         while (i >= 0) {
             uint8_t *player = GetPlayerAtIndex(_selTeamNumber, (uint16_t)i);
+            uint16_t fileIdx = _cGetPlayerAtIndexFileIdx;
             PlayerFile *plf = (PlayerFile *)(player + PF_OFF);
             if ((uint8_t)plf->form == PLAYER_FORM_TRIALIST || (uint8_t)plf->form == PLAYER_FORM_RESERVE) {
-                d7mask |= (1u << i);
+                d7mask |= (1u << fileIdx);
             } else if (plf->positionAndFace & PF_LOAN) {
-                d7mask |= (1u << i);
+                d7mask |= (1u << fileIdx);
             }
             i--;
         }
