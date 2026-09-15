@@ -38,6 +38,7 @@
 #include "display.h"    /* _screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
 #include "replay_test.h"        /* --replay-test: recorded-game regression rig */
 #include "online_menus.h"       /* --menu, --menu-selftest */
+#include "netplay.h"            /* --netplay-selftest */
 
 #define WIN_SCALE 3
 
@@ -195,6 +196,8 @@ static void print_usage(const char *argv0)
         "                            data_json/menus/, docs/MENUS.md section 10).\n"
         "  --menu-selftest           Load and unpack every imported SWOS 2020 menu,\n"
         "                            check it against its JSON, and exit.\n"
+        "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
+        "                            loopback, then a synctest session. Exits.\n"
         "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
 }
@@ -417,6 +420,8 @@ int main(int argc, char **argv)
             OnlineMenus_SetStartMenu(v);
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
+        } else if (strcmp(a, "--netplay-selftest") == 0) {
+            return Netplay_SelfTest();
         } else if ((v = match_kv(a, "replay-skip")) != NULL) {
             replay_skip = v;
         } else if ((v = match_kv(a, "replay-max-errors")) != NULL) {

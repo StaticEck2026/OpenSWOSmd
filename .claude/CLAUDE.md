@@ -53,6 +53,12 @@ PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
 ⚠️ **Toggling any `-D` flag requires a `clean` first** on both targets — make
 compares timestamps, not CFLAGS, so a flag change silently relinks stale objects.
 
+**Netplay** (`NETPLAY=1`, docs/NETPLAY.md) compiles the vendored C++ GGPO-X in
+`third_party/ggpo-x` into the SDL binary. Default on for 64-bit Linux (`X86_64=1`) and
+Cygwin64, off elsewhere, never WASM. The C++ runtime is linked statically, so the DLL
+and `lib/<arch>` lists below are unchanged — re-check with `cygcheck`/`ldd` if the link
+changes. `bin/SWOS.x86_64 --netplay-selftest` runs the library with a toy game.
+
 ### Release builds — `scripts/build_dist.sh`
 
 Builds every target this machine can produce and writes the archives below (WASM
@@ -416,6 +422,12 @@ isn't tight enough): add a **new** `asm/<name>.s`, append it to
 re-introduce a single all-encompassing asm unit — the per-routine split is what
 lets the two targets share `src/`.
 - C:\Projects\AI\SWOS\swos-port-c - Partial C++ port with the Amiga game loop working under SDL. Used as the verified game-loop reference.
+- **C:\Projects\GitHub\swos-2020 — SWOS 2020, which OpenSWOS continues.** Its online
+  menus (`src/menus/*.mnu`, compiled by its `mnu2h/`) are imported by
+  `scripts/import_swos2020_menus.py` into `bin/data_json/menus/swos2020/` and run from
+  JSON, with handlers in `src/online_menus.c` (docs/MENUS.md §10). Its netplay
+  (`src/mpgame.cpp`, on GGPO-X) is the reference for `src/netplay.c` (docs/NETPLAY.md).
+  `ggpo-x` and `cereal` are git submodules there — `git submodule update --init` first.
 - C:\Projects\GitHub\SwosGfx - SWOS graphics conversion app (C#). **`SwosGfx\AmigaTools.cs` is the authoritative reference for parsing Amiga SPRITE, PITCH (tile-map mapping + bitplane tile stream), and PALETTE data.** Consult it whenever implementing or debugging an Amiga asset decoder.
 - C:\msys64\home\headk\rjp1player - RJP1 module player for the original Amiga music modules / SFX extraction.
 - github.com/benbaker76/AmigaScope - the gdb/profiling harness, a submodule at `scripts/amiga/amigascope`.

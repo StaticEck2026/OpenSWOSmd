@@ -1,0 +1,104 @@
+/*
+ * netplay.h -- rollback netplay for OpenSWOS (docs/NETPLAY.md).
+ *
+ * Built on GGPO-X (third_party/ggpo-x), the library SWOS 2020 plays online with.
+ * This module is the one place the game talks to it. A session owns a GGPO session;
+ * the game supplies its state save/load and a single-frame step through
+ * NetplayCallbacks, and drives the session once per frame:
+ *
+ *     Netplay_Idle(s);
+ *     if (Netplay_AddLocalInput(s, localPlayer, &input) == NETPLAY_OK &&
+ *         Netplay_SyncInput(s, inputs, &disconnectFlags) == NETPLAY_OK) {
+ *         step the game with inputs[];
+ *         Netplay_AdvanceFrame(s, checksum);
+ *     }
+ *
+ * During a rollback GGPO calls loadState, then advanceFrame once per frame to
+ * re-simulate; advanceFrame must do the SyncInput / step / AdvanceFrame triple.
+ *
+ * Compiled into SDL targets with SWOS_NETPLAY (make NETPLAY=1; default on for
+ * 64-bit Linux and Cygwin). Without it Netplay_Available() is 0 and every session
+ * call returns NETPLAY_ERR_UNAVAILABLE.
+ */
+#ifndef NETPLAY_H
+#define NETPLAY_H
+
+#include "swos_types.h"
+
+#define NETPLAY_MAX_PLAYERS 2
+
+/* Results are GGPO's own error codes (ggponet.h, GGPOErrorCode), plus: */
+#define NETPLAY_OK               0
+#define NETPLAY_ERR_UNAVAILABLE  (-100)   /* built without SWOS_NETPLAY */
+
+/* Same values as ggponet.h's GGPOEventCode. */
+typedef enum {
+    NETPLAY_EVENT_CONNECTED     = 1000,
+    NETPLAY_EVENT_SYNCHRONIZING = 1001,
+    NETPLAY_EVENT_SYNCHRONIZED  = 1002,
+    NETPLAY_EVENT_RUNNING       = 1003,
+    NETPLAY_EVENT_DISCONNECTED  = 1004,
+    NETPLAY_EVENT_TIMESYNC      = 1005,
+    NETPLAY_EVENT_INTERRUPTED   = 1006,
+    NETPLAY_EVENT_RESUMED       = 1007,
+    NETPLAY_EVENT_CHAT          = 1008,
+    NETPLAY_EVENT_DESYNC        = 1009,
+    NETPLAY_EVENT_NETWORK_ERROR = 1010,
+} NetplayEventCode;
+
+typedef struct {
+    int32_t     code;            /* NetplayEventCode */
+    int32_t     player;          /* player handle, for the per-player events */
+    int32_t     count, total;    /* SYNCHRONIZING progress */
+    int32_t     framesAhead;     /* TIMESYNC, rounded */
+    int32_t     desyncFrame;     /* DESYNC */
+    uint16_t    localChecksum;   /* DESYNC */
+    uint16_t    remoteChecksum;  /* DESYNC */
+    int32_t     errorCode;       /* NETWORK_ERROR */
+    const char *chat;            /* CHAT */
+} NetplayEvent;
+
+/* Return 0 from saveState/loadState/advanceFrame to report failure to GGPO. */
+typedef struct {
+    int32_t (*saveState)(void *ctx, uint8_t **state, int32_t *len, int32_t *checksum, int32_t frame);
+    int32_t (*loadState)(void *ctx, const uint8_t *state, int32_t len, int32_t framesToRollback);
+    void    (*freeState)(void *ctx, uint8_t *state);
+    int32_t (*advanceFrame)(void *ctx);
+    void    (*onEvent)(void *ctx, const NetplayEvent *event);   /* may be NULL */
+    void    *ctx;
+} NetplayCallbacks;
+
+typedef struct {
+    uint16_t localPort;
+    int32_t  localPlayer;           /* 1 or 2 */
+    char     remoteAddress[32];     /* dotted IPv4 */
+    uint16_t remotePort;
+    int32_t  inputSize;             /* bytes of input per player per frame */
+    int32_t  frameDelay;            /* local input delay in frames */
+    int32_t  maxPrediction;         /* rollback window in frames, at most 8 */
+    int32_t  disconnectTimeoutMs;   /* 0 keeps GGPO's default */
+    int32_t  disconnectNotifyMs;    /* 0 keeps GGPO's default */
+} NetplayConfig;
+
+typedef struct NetplaySession NetplaySession;
+
+int32_t     Netplay_Available(void);
+int32_t     Netplay_StartP2P(NetplaySession **out, const NetplayConfig *cfg, const NetplayCallbacks *cb);
+/* Local determinism check: every frame is re-simulated checkDistance frames later
+ * and the saved checksums compared. Both players are local. */
+int32_t     Netplay_StartSyncTest(NetplaySession **out, int32_t inputSize, int32_t checkDistance,
+                                  const NetplayCallbacks *cb);
+void        Netplay_Close(NetplaySession *s);
+int32_t     Netplay_Idle(NetplaySession *s);
+int32_t     Netplay_AddLocalInput(NetplaySession *s, int32_t player, const void *input);
+/* inputs receives inputSize bytes for each of NETPLAY_MAX_PLAYERS players. */
+int32_t     Netplay_SyncInput(NetplaySession *s, void *inputs, int32_t *disconnectFlags);
+int32_t     Netplay_AdvanceFrame(NetplaySession *s, uint16_t checksum);
+const char *Netplay_ErrorName(int32_t code);
+
+/* Runs the library for real, without the game: a deterministic toy game through a
+ * two-peer session over loopback (forcing rollbacks), then through a synctest
+ * session. Prints a report; returns 0 on success. `--netplay-selftest`. */
+int32_t     Netplay_SelfTest(void);
+
+#endif /* NETPLAY_H */

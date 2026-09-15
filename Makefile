@@ -579,6 +579,52 @@ endif
 
 LDLIBS  := $(SDL2_LIBS) -lm
 
+# ---- Netplay: GGPO-X rollback networking (docs/NETPLAY.md) ----
+# third_party/ggpo-x is C++; src/netplay.c reaches it through ggponet.h's C API.
+# Default ON where it is built and tested: 64-bit Linux (X86_64=1) and Cygwin64.
+# Anywhere else opt in with NETPLAY=1 -- it needs a C++ compiler for the target,
+# and the default -m32 Linux build also needs g++-multilib. Never on WASM: a
+# browser has no UDP sockets. Without it src/netplay.c compiles to stubs.
+#
+# The C++ runtime is linked STATICALLY, so the binary gains no DLL/.so: the
+# Windows drop's exact four-DLL list (CLAUDE.md) and the Linux lib/<arch> bundle
+# stay as they are. Check with `cygcheck bin/SWOS.exe` / `ldd bin/SWOS.x86_64`.
+#
+# Toggling NETPLAY needs a `clean` first, like every -D flag.
+GGPO_DIR := third_party/ggpo-x/src
+ifndef NETPLAY
+ifeq ($(BUILD_OS)/$(BUILD_ARCH),linux/x86_64)
+NETPLAY := 1
+else ifneq (,$(findstring cygwin,$(GCC_MACHINE)))
+NETPLAY := 1
+else
+NETPLAY := 0
+endif
+endif
+ifdef WASM
+override NETPLAY := 0
+endif
+
+LINK := $(CC)
+ifeq ($(NETPLAY),1)
+GGPO_SRCS := $(filter-out %/platform_windows.cpp, \
+                 $(wildcard $(GGPO_DIR)/lib/ggpo/*.cpp \
+                            $(GGPO_DIR)/lib/ggpo/network/*.cpp \
+                            $(GGPO_DIR)/lib/ggpo/backends/*.cpp))
+GGPO_OBJS := $(patsubst $(GGPO_DIR)/lib/ggpo/%.cpp,$(OBJDIR)/ggpo/%.o,$(GGPO_SRCS))
+OBJECTS   += $(GGPO_OBJS)
+DEPS      += $(GGPO_OBJS:.o=.d)
+CFLAGS    += -DSWOS_NETPLAY=1 -I$(GGPO_DIR)/include
+# -w: third-party code, compiled as upstream ships it (plus OPENSWOS.md's patches).
+GGPO_CXXFLAGS := $(ARCHFLAGS) -O2 -g -std=gnu++17 -MMD -MP -w \
+                 -I$(GGPO_DIR)/include -I$(GGPO_DIR)/lib/ggpo \
+                 -I$(GGPO_DIR)/lib/ggpo/network -I$(GGPO_DIR)/lib/ggpo/backends
+LINK      := $(CXX)
+ifneq ($(UNAME_S),Darwin)
+LDFLAGS   += -static-libstdc++ -static-libgcc
+endif
+endif
+
 # ---- Targets ----
 .PHONY: all clean distclean debug macos-universal macos-app
 all: $(TARGET)
@@ -590,7 +636,7 @@ debug:
 # pre-js change (empty for non-WASM targets). emcc drops SWOS.js/.wasm/.data
 # beside the -o target, so pointing TARGET at dist/web moves all four.
 $(TARGET): $(OBJECTS) $(WASM_LINK_DEPS) | $(OUTDIR)
-	$(CC) $(OBJECTS) -o $@ $(LDFLAGS) $(LDLIBS)
+	$(LINK) $(OBJECTS) -o $@ $(LDFLAGS) $(LDLIBS)
 
 # Create output directory if needed ($(OUTDIR) is bin/ for every native target)
 $(OUTDIR):
@@ -602,6 +648,12 @@ $(OUTDIR):
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+ifeq ($(NETPLAY),1)
+$(OBJDIR)/ggpo/%.o: $(GGPO_DIR)/lib/ggpo/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(GGPO_CXXFLAGS) -c $< -o $@
+endif
 
 # Compile the Windows resource file (icon) on MinGW/Cygwin builds. The output
 # is COFF-format and gets linked into the final exe.
