@@ -39,6 +39,7 @@
 #include "replay_test.h"        /* --replay-test: recorded-game regression rig */
 #include "online_menus.h"       /* --menu, --menu-selftest */
 #include "netplay.h"            /* --netplay-selftest */
+#include "rollback_rig.h"       /* --rollback */
 
 #define WIN_SCALE 3
 
@@ -198,6 +199,24 @@ static void print_usage(const char *argv0)
         "                            check it against its JSON, and exit.\n"
         "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
         "                            loopback, then a synctest session. Exits.\n"
+        "  --rollback=<mode>         With --replay-test: roll the match back to test\n"
+        "                            the rollback state registry (docs/ROLLBACK.md).\n"
+        "                            check | oracle | discover | scan | trace. The\n"
+        "                            recording supplies setup and inputs only.\n"
+        "  --rollback-window=<K>     Frames re-simulated per window. Default 8\n"
+        "                            (discover: 32).\n"
+        "  --rollback-every=<N>      Frames between window starts. Default 64\n"
+        "                            (discover: 1024).\n"
+        "  --rollback-first=<F>      No window before frame F. Default 0.\n"
+        "  --rollback-seed=<n>       RNG seed for the match. Default 0x5EED5EED.\n"
+        "  --rollback-report=<file>  JSON report (scripts/rollback_report.py).\n"
+        "  --rollback-trace=<file>   Per-frame state hashes, for comparing two runs.\n"
+        "  --rollback-restore=all|sim  Restore both registry tiers (default) or only\n"
+        "                            the simulation tier (the resync minimum).\n"
+        "  --rollback-disable=<a,b>  Leave these registry entries out (trial removal).\n"
+        "  --rollback-portable       Restore through the resync (portable) encoding.\n"
+        "  --rollback-dump=<file>    The registry, per region, at one frame; set the\n"
+        "                            frame with --rollback-dump-frame=<n> (default 0).\n"
         "  -h, --help                Show this help and exit.\n",
         argv0 ? argv0 : "SWOS");
 }
@@ -430,6 +449,11 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid --replay-max-errors value '%s' (expected >= 1)\n", v);
                 return 1;
             }
+        } else if (strncmp(a, "--rollback", 10) == 0) {
+            if (Rollback_ParseArg(a) != 1) {
+                fprintf(stderr, "Invalid argument: %s\n", a);
+                return 1;
+            }
         } else if (strcmp(a, "-h") == 0 || strcmp(a, "--help") == 0) {
             print_usage(argv[0]);
             return 0;
@@ -444,6 +468,10 @@ int main(int argc, char **argv)
      * driven per-iteration by the rig, not by the wall clock), skip the loader
      * intro, and keep the log on the terminal where the test output belongs.
      * Both are read inside Platform_Init, so they must be set before it. */
+    if (Rollback_Enabled() && !replay_file) {
+        fprintf(stderr, "--rollback needs --replay-test=<file.swr> (the match's setup and inputs)\n");
+        return 1;
+    }
     if (replay_file) {
 #ifdef _WIN32
         _putenv("SWOS_HARNESS_TURBO=1");
@@ -472,6 +500,12 @@ int main(int argc, char **argv)
         if (!getenv("SDL_AUDIODRIVER"))
             setenv("SDL_AUDIODRIVER", "dummy", 1);
 #endif
+        /* The rollback rig plays its own match and leaves gameplay, the fire-hold
+         * lockout and audio to the command line -- and needs no audio device or pump
+         * thread writing game memory behind the game loop's back (docs/ROLLBACK.md). */
+        if (Rollback_Enabled())
+            SDL_setenv("SWOS_AUDIO_OFF", "1", 1);
+        if (!Rollback_Enabled())
         opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */
         /* The recordings were made against a reference implementation of the
          * ORIGINAL, so a replay has to PLAY the original — including its
@@ -490,6 +524,7 @@ int main(int argc, char **argv)
          * authored rate turned out to be per FILE (a gameStyle byte) and
          * hardcoding it per format broke the reels that disagreed —
          * see project_replay_framerate_decouple. */
+        if (!Rollback_Enabled())
         opts.fire_hold_lockout = 1;
         /* Replay at the port's OWN native view, not the tester's monitor. The
          * original reason given here — "SWOS's camera constants are all derived

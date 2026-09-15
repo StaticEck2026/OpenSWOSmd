@@ -60,5 +60,26 @@ extern int _replayFixedRandom;
  * advances it exactly once per game-loop iteration instead. */
 int  ReplayTest_OwnsGameTick(void);
 
+/* ---- for the rollback rig (src/rollback_rig.c, docs/ROLLBACK.md) ----
+ * The replay's own position and input latches -- what a rewind has to put back
+ * alongside the game state. */
+typedef struct {
+    uint32_t frame;
+    int32_t  benchHeld[2];
+    int32_t  benchPending[2];
+    int32_t  prevUserKey;
+} ReplayDriverState;
+
+void     ReplayTest_GetDriverState(ReplayDriverState *st);
+void     ReplayTest_SetDriverState(const ReplayDriverState *st);
+
+/* FNV-1a over every field the replay compares (~2500: sprites, both teams'
+ * TeamGame/TeamGeneralInfo, stats, clock, camera): the gameplay-observable state,
+ * defined independently of the sim_state registry. */
+uint64_t ReplayTest_ObservableHash(void);
+
+/* Calls fn once per observable field, with its storage. */
+void     ReplayTest_ForEachObservable(void (*fn)(void *addr, uint32_t size, void *ctx), void *ctx);
+
 #endif /* SWOS_SDL_BUILD */
 #endif /* REPLAY_TEST_H */

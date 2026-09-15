@@ -33,4 +33,10 @@ void DrawSprites(void);
  * BuildSpriteBandAndGeneralRenderStacks in sprites.c. */
 int Sprite_AnimVisible(const Sprite *s);
 
+/* Sprites outside the simulation view that still animate because a wider render draws
+ * them (BuildSpriteBandAndGeneralRenderStacks; read by Sprite_AnimVisible). */
+#define SPRITE_ANIMVIS_MAX 128
+extern const Sprite *g_spriteAnimVisible[SPRITE_ANIMVIS_MAX];
+extern int16_t       g_spriteAnimVisibleCount;
+
 #endif

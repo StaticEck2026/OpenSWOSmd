@@ -46,12 +46,16 @@ SDL_ONLY_SRCS := \
     input_sdl.c           \
     menu_load_json.c      \
     menu_symbols.c        \
+    miniz_impl.c          \
     netplay.c             \
     online_menus.c        \
     platform_sdl.c        \
     replay_test.c         \
     rjp1.c                \
+    rollback_rig.c        \
     sfx_debug.c           \
+    sim_state.c           \
+    state_wire.c          \
     stb_image_write_impl.c \
     swos_settings.c       \
     tactics_load_json.c

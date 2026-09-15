@@ -276,6 +276,35 @@ ResetAnimatedPatternsForBothTeams(void)
     resetAnimatedPatterns((uint32_t *)((uint8_t *)_pitchDatBuffer + 0x2178), 125);
 }
 
+#ifdef SWOS_SDL_BUILD
+/* ================================================================
+ * AnimatedPatterns_SyncTileMirror
+ *
+ * Every toggle above writes a fan tile twice: the 4-byte slot in
+ * pitchDatBuffer, which the animation reads back, and the full-width
+ * pointer in s_pitchFullPtrs, which the renderer draws. A rollback
+ * (src/sim_state.c) restores only the slots; this brings the renderer's
+ * copy of slots [first, first+count) back in line with them. Slots
+ * that already agree -- every slot the load did not change -- are left
+ * alone, so the unmapped DOS surround (0 in both) is never touched.
+ * ================================================================ */
+void AnimatedPatterns_SyncTileMirror(int32_t first, int32_t count)
+{
+    extern uint8_t *_s_pitchFullPtrs[];
+    const uint32_t *slots = (const uint32_t *)(void *)_pitchDatBuffer;
+    int32_t i;
+
+    for (i = first; i < first + count && i < 2310; i++) {
+        uint32_t tileIndex;
+        if (slots[i] == (uint32_t)(uintptr_t)_s_pitchFullPtrs[i])
+            continue;
+        tileIndex = ((uint32_t)(slots[i] - (uint32_t)ANIM_TILE_BASE)) >> ANIM_TILE_SIZE_SHIFT;
+        if (tileIndex < 2310)
+            _s_pitchFullPtrs[i] = _pitchChunkyBuffer + (size_t)tileIndex * 256;
+    }
+}
+#endif
+
 /* ================================================================
  * DrawAnimatedPatterns
  * (SWOS2.s line 53273)

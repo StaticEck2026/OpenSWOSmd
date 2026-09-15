@@ -22,4 +22,13 @@ void DrawAnimatedPatterns(void);
  */
 void ResetAnimatedPatternsForBothTeams(void);
 
+#ifdef SWOS_SDL_BUILD
+/* ---- AnimatedPatterns_SyncTileMirror ----
+ * Rebuilds the renderer's full-width tile pointers (s_pitchFullPtrs) for pitch
+ * slots [first, first+count) from the pitchDatBuffer slots, after a rollback
+ * restored those slots (src/sim_state.c).
+ */
+void AnimatedPatterns_SyncTileMirror(int32_t first, int32_t count);
+#endif
+
 #endif

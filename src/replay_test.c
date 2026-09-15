@@ -38,6 +38,7 @@
 #include "game_init.h"
 #include "math68k.h"
 #include "mjson.h"
+#include "rollback_rig.h"
 
 /* ===================================================================
  * Recorded-field types
@@ -157,6 +158,7 @@ extern volatile uint16_t _currentGameTick;
 extern volatile uint16_t _currentTick;
 extern uint16_t          _lastGameTick;
 extern uint16_t          _showingUserStats, _paused;
+extern volatile uint16_t _playGame;
 extern uint16_t          _gameType, _trainingGame, _isCareer, _exitGameFlag, _twoPlayers;
 extern uint16_t          _pitchTypeOrSeason, _friendlyPitchType, _friendlySeason;
 extern uint16_t          _pitchType, _gameLength, _autoReplays, _autoSaveHighlights;
@@ -1165,19 +1167,26 @@ static void applySetup(void)
 
     /* The corpus is DOS gameplay; without the DOS constants every physics
      * field diverges on frame 1 and the report says nothing useful. */
-    if (!_gDosGameplay) {
-        fprintf(stderr, "[replay] forcing --dos-gameplay=on (the corpus is DOS)\n");
-        _gDosGameplay = 1;
+    /* The rollback rig uses a recording for its setup and inputs only and compares
+     * the game with itself: it plays whichever gameplay the command line chose, and it
+     * must NOT pin the RNG -- a Rand() that returns a constant would hide every RNG
+     * variable the rollback registry is missing. */
+    if (!Rollback_Enabled()) {
+        if (!_gDosGameplay) {
+            fprintf(stderr, "[replay] forcing --dos-gameplay=on (the corpus is DOS)\n");
+            _gDosGameplay = 1;
+        }
+        _replayFixedRandom = s_setup.fixedRandomValue;
     }
-
-    _replayFixedRandom = s_setup.fixedRandomValue;
 
 
     _pitchTypeOrSeason   = (uint16_t)s_setup.pitchTypeOrSeason;
     _friendlyPitchType   = (uint16_t)s_setup.pitchType;
     _pitchType           = (uint16_t)s_setup.pitchType;
     _gameLength          = (uint16_t)s_setup.gameLength;
-    _autoReplays         = (uint16_t)s_setup.autoReplays;
+    /* An instant replay leaves the loop body the rollback rig hooks (GameLoop's
+     * PlayInstantReplayLoop branch), so the rig plays with them off. */
+    _autoReplays         = Rollback_Enabled() ? 0 : (uint16_t)s_setup.autoReplays;
     _allPlayerTeamsEqual = (uint16_t)s_setup.allPlayerTeamsEqual;
     /* A v1.0/1.1 header stops before season/substitutes. Forcing 0 there
      * benches players 11..15 (players[].skip) before the first frame, so
@@ -1254,6 +1263,17 @@ static void finish(int code)
     if (s_finished) return;
     s_finished = 1;
     s_running = 0;
+    if (Rollback_Enabled()) {
+        /* Nothing was compared with the recording; the rollback rig decides. A
+         * structural replay failure (a frame that skipped the loop body) still fails. */
+        int rb;
+        fprintf(stderr, "[replay] inputs replayed for %u of %u frames\n", s_frame, s_frameCount);
+        rb = Rollback_Finish();
+        if (code == 0) code = rb;
+        fflush(stderr);
+        fflush(stdout);
+        exit(code);
+    }
     /* A run that kept going past a divergence (--replay-max-errors) still
      * failed, whatever reason it finally stopped for. */
     if (s_errors && code == 0) code = 2;
@@ -1275,11 +1295,14 @@ void ReplayTest_Run(void)
     s_running = 1;
     s_frame = 0;
     s_rec = NULL;
+    if (Rollback_Enabled())
+        Rollback_MatchStart();
     fprintf(stderr, "[replay] kick-off\n");
     InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
     /* The match ended before the recording did — every remaining frame is a
-     * divergence in itself, so say so rather than reporting a pass. */
-    if (s_frame < s_frameCount) {
+     * divergence in itself, so say so rather than reporting a pass. (Not for the
+     * rollback rig, which plays its own match and only borrows the inputs.) */
+    if (s_frame < s_frameCount && !Rollback_Enabled()) {
         fprintf(stderr, "[replay] match ended at frame %u, recording has %u\n",
                 s_frame, s_frameCount);
         finish(2);
@@ -1434,9 +1457,63 @@ static void injectInput(void)
     s_prevUserKey = key;
 }
 
+/* Match state the recording sets up before its first frame. Applied before the rollback
+ * rig's first frame boundary, so a window starting at frame 0 saves it and a rewind to
+ * frame 0 keeps it -- it is never applied twice. */
+static void applyFirstFrameSetup(void)
+{
+    _extraTimeState = (int16_t)s_setup.extraTime;
+    _penaltiesState = (int16_t)s_setup.penaltyShootout;
+    _topTeamInGame.markedPlayer    = (int16_t)s_setup.topTeamMarkedPlayer;
+    _bottomTeamInGame.markedPlayer = (int16_t)s_setup.bottomTeamMarkedPlayer;
+    /* The Amiga VBlank ISR advances both tick counters once per frame in
+     * lockstep with this loop; the rig owns them (see the header) and
+     * starts them from the kick-off frame. _lastGameTick has to be reset
+     * with them: ReadTimerDelta turns the difference into _lastFrameTicks,
+     * which every stoppage/referee/clock timer is stepped by, and the
+     * value it held coming out of the menus is whatever the wall clock had
+     * reached — the one input that made two runs of the same recording
+     * diverge at different frames.
+     *
+     * _lastGameTick starts one BEHIND the tick, not equal to it. GameLoop
+     * reads the timer delta once before the loop and then jumps to the
+     * vblank wait, so on Amiga a VBlank — one tick — falls between that
+     * read and the first pass through the body: frame 0's _lastFrameTicks
+     * is 1, like every other frame's. Leaving them equal gives frame 0 a
+     * delta of 0, and every timer-driven transition in the match then
+     * lands one frame late — three recordings stalled the kick-off at
+     * frame 99 with game_state still ST_STARTING_GAME, where the fixed rig
+     * runs to 912 and 1253.
+     *
+     * The TICK ITSELF still starts at 0, so currentGameTick == the frame
+     * number and the dozens of `tick & mask` AI decisions keep the phase
+     * the reference rig runs at. Starting it at 1 instead gets the same
+     * delta but shifts that phase, which costs two recordings a few
+     * hundred frames (zkz-10190651 1796 -> 1028) — the two effects look
+     * alike and are not. */
+    _currentGameTick = 0;
+    _currentTick = 0;
+    _lastGameTick = 0xFFFF;
+}
+
 void ReplayTest_FrameStart(void)
 {
     if (!s_running) return;
+    if (s_firstFrame) {
+        s_firstFrame = 0;
+        applyFirstFrameSetup();
+    }
+    if (Rollback_Enabled()) {
+        Rollback_FrameBoundary(s_frame);    /* may rewind s_frame */
+        /* The rollback rig plays its own match, which can end before the recorded
+         * inputs do. Stop before GameLoop heads for the post-match menu, which would
+         * wait for input forever. */
+        if (_playGame == 0) {
+            fprintf(stderr, "[replay] the match is over at frame %u\n", s_frame);
+            finish(0);
+            return;
+        }
+    }
     if (s_frame >= s_frameCount) {
         fprintf(stderr, "[replay] recording exhausted at frame %u — match still running\n",
                 s_frame);
@@ -1455,41 +1532,6 @@ void ReplayTest_FrameStart(void)
     s_rec = s_frames + (size_t)s_frame * s_frameSize;
     g_rtFrameNo = (int32_t)s_setup.firstFrame + (int32_t)s_frame;  /* see above */
 
-    if (s_firstFrame) {
-        s_firstFrame = 0;
-        _extraTimeState = (int16_t)s_setup.extraTime;
-        _penaltiesState = (int16_t)s_setup.penaltyShootout;
-        _topTeamInGame.markedPlayer    = (int16_t)s_setup.topTeamMarkedPlayer;
-        _bottomTeamInGame.markedPlayer = (int16_t)s_setup.bottomTeamMarkedPlayer;
-        /* The Amiga VBlank ISR advances both tick counters once per frame in
-         * lockstep with this loop; the rig owns them (see the header) and
-         * starts them from the kick-off frame. _lastGameTick has to be reset
-         * with them: ReadTimerDelta turns the difference into _lastFrameTicks,
-         * which every stoppage/referee/clock timer is stepped by, and the
-         * value it held coming out of the menus is whatever the wall clock had
-         * reached — the one input that made two runs of the same recording
-         * diverge at different frames.
-         *
-         * _lastGameTick starts one BEHIND the tick, not equal to it. GameLoop
-         * reads the timer delta once before the loop and then jumps to the
-         * vblank wait, so on Amiga a VBlank — one tick — falls between that
-         * read and the first pass through the body: frame 0's _lastFrameTicks
-         * is 1, like every other frame's. Leaving them equal gives frame 0 a
-         * delta of 0, and every timer-driven transition in the match then
-         * lands one frame late — three recordings stalled the kick-off at
-         * frame 99 with game_state still ST_STARTING_GAME, where the fixed rig
-         * runs to 912 and 1253.
-         *
-         * The TICK ITSELF still starts at 0, so currentGameTick == the frame
-         * number and the dozens of `tick & mask` AI decisions keep the phase
-         * the reference rig runs at. Starting it at 1 instead gets the same
-         * delta but shifts that phase, which costs two recordings a few
-         * hundred frames (zkz-10190651 1796 -> 1028) — the two effects look
-         * alike and are not. */
-        _currentGameTick = 0;
-        _currentTick = 0;
-        _lastGameTick = 0xFFFF;
-    }
 
     injectInput();
 }
@@ -1529,7 +1571,7 @@ void ReplayTest_FrameEnd(void)
 
     if (!s_running || !s_rec) return;
 
-    for (i = 0; i < s_fieldCount; i++) {
+    for (i = 0; !Rollback_Enabled() && i < s_fieldCount; i++) {
         const RtField *f = &s_field[i];
         int64_t rec, ours;
         if (f->bind < 0) continue;
@@ -1571,6 +1613,61 @@ void ReplayTest_FrameEnd(void)
 
     if ((s_frame % 500) == 0)
         fprintf(stderr, "[replay] ... %u/%u frames matched\n", s_frame, s_frameCount);
+}
+
+/* ===================================================================
+ * Rollback rig support (docs/ROLLBACK.md)
+ * =================================================================== */
+
+void ReplayTest_GetDriverState(ReplayDriverState *st)
+{
+    st->frame = s_frame;
+    st->benchHeld[0] = s_benchHeld[0];
+    st->benchHeld[1] = s_benchHeld[1];
+    st->benchPending[0] = s_benchPending[0];
+    st->benchPending[1] = s_benchPending[1];
+    st->prevUserKey = s_prevUserKey;
+}
+
+void ReplayTest_SetDriverState(const ReplayDriverState *st)
+{
+    s_frame = st->frame;
+    s_rec = NULL;
+    s_benchHeld[0] = st->benchHeld[0];
+    s_benchHeld[1] = st->benchHeld[1];
+    s_benchPending[0] = st->benchPending[0];
+    s_benchPending[1] = st->benchPending[1];
+    s_prevUserKey = st->prevUserKey;
+}
+
+void ReplayTest_ForEachObservable(void (*fn)(void *addr, uint32_t size, void *ctx), void *ctx)
+{
+    uint32_t i;
+    for (i = 0; i < s_regCount; i++)
+        fn(s_reg[i].addr, k_rtSize[s_reg[i].type], ctx);
+}
+
+/* Pointers are hashed as offsets from the executable, so two runs loaded at different
+ * addresses hash alike -- what the rollback rig compares. 0 and all-ones are not
+ * addresses and stay as they are, the same rule as SimState_Hash (sim_state.c). */
+uint64_t ReplayTest_ObservableHash(void)
+{
+    uint64_t h = 0xcbf29ce484222325ull;
+    uint32_t i;
+    for (i = 0; i < s_regCount; i++) {
+        const uint8_t *p = (const uint8_t *)s_reg[i].addr;
+        uint8_t n;
+        uintptr_t rel;
+        if (s_reg[i].type == RT_PTR) {
+            memcpy(&rel, p, sizeof rel);
+            if (rel != 0 && rel != UINTPTR_MAX)
+                rel -= (uintptr_t)&_topTeamData;
+            p = (const uint8_t *)&rel;
+        }
+        for (n = 0; n < k_rtSize[s_reg[i].type]; n++)
+            h = (h ^ p[n]) * 0x100000001b3ull;
+    }
+    return h;
 }
 
 #endif /* SWOS_SDL_BUILD */

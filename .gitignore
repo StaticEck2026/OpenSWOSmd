@@ -106,6 +106,8 @@ tests/amiga/
 # Converted recordings (scripts/rgd_convert.py --emit). Derived from tests/dos,
 # regenerate rather than track — a full-level .swr of one recording is ~7 MB.
 tests/replay/
+# scripts/rollback_test.sh output: traces, logs, JSON reports.
+tests/rollback/
 
 # Nintendo Switch target (docs/SWITCH.md). The SDK and the SDL fork are NDA and
 # are never in this tree; these are just the build outputs.

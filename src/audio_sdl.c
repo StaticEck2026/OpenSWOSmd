@@ -120,6 +120,11 @@ int AudioSDL_Init(int mono)
     return 0;
 #endif
     s_mtx = SDL_CreateMutex();
+    /* SWOS_AUDIO_OFF: no device and no pump thread, for the rollback rig
+     * (docs/ROLLBACK.md), which needs every write to game memory to come from the
+     * game loop. Every entry point already copes with no device. */
+    if (SDL_getenv("SWOS_AUDIO_OFF"))
+        return 0;
 
     SDL_AudioSpec want;
     SDL_zero(want);

@@ -58,6 +58,11 @@ compares timestamps, not CFLAGS, so a flag change silently relinks stale objects
 Cygwin64, off elsewhere, never WASM. The C++ runtime is linked statically, so the DLL
 and `lib/<arch>` lists below are unchanged — re-check with `cygcheck`/`ldd` if the link
 changes. `bin/SWOS.x86_64 --netplay-selftest` runs the library with a toy game.
+The state a rollback saves is the registry in `src/sim_state.c` (SIM + VIEW tiers,
+pointer maps), proved by the rollback rig: run `scripts/rollback_test.sh --all` before
+and after any change to it or to what the match writes (docs/ROLLBACK.md). A resync sends
+it as a binary packet (`src/state_wire.c`: delta against a shared base, deflated with the
+vendored miniz in `third_party/miniz`, update notes in its `OPENSWOS.md`).
 
 ### Release builds — `scripts/build_dist.sh`
 

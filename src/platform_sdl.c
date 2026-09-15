@@ -364,6 +364,11 @@ static int           s_vsync_enabled;
  * normal play (default off). SDL-only file; nothing to back-port to Amiga. */
 static int           s_harness_turbo;
 
+/* Set once the rollback rig's match starts (Platform_QuiesceTimerThread): the timer
+ * worker stops running the ISR, the audio tick and the fallback render, so every write
+ * to game memory comes from the game loop, once per frame (docs/ROLLBACK.md). */
+static volatile int  s_timer_quiesced;
+
 /* ---- VBlank tick driver ------------------------------------------- *
  * The Amiga VBlank ISR (Int3TimerHandler) was responsible for bumping
  * `currentGameTick` once per frame. The game polls that counter in
@@ -437,9 +442,23 @@ void RunInt3HandlerThrottled(void)
     SDL_UnlockMutex(s_isr_mtx);
 }
 
+void Platform_QuiesceTimerThread(void)
+{
+    s_timer_quiesced = 1;
+    /* Wait out a callback that was already running: the ISR holds s_isr_mtx, the
+     * rest of the callback is bounded well inside the delay. */
+    if (s_isr_mtx) {
+        SDL_LockMutex(s_isr_mtx);
+        SDL_UnlockMutex(s_isr_mtx);
+    }
+    SDL_Delay(100);
+}
+
 static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
 {
     (void)param;
+    if (s_timer_quiesced)
+        return interval;
     /* The original Amiga Int3 (Level-3 VBlank) ISR did all per-frame
      * housekeeping: bump currentGameTick / currentTick, run fade ticks,
      * pump audio, do buffer swap if waitingInterrupt was set, etc.

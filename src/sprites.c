@@ -2348,9 +2348,10 @@ __attribute__((used, externally_visible))
  * this identical to `onScreen` — so the corpus is unaffected — while at a
  * 16:9 render (484 wide) the extra margin animates instead of sliding.
  * ------------------------------------------------------------------ */
-#define SPRITE_ANIMVIS_MAX 128
-static const Sprite *s_animVisible[SPRITE_ANIMVIS_MAX];
-static int16_t       s_animVisibleCount;
+/* Not static: the animation gate reads this list a frame after it is built, so it is
+ * match state, and src/sim_state.c registers it (SPRITE_ANIMVIS_MAX: sprites.h). */
+const Sprite *g_spriteAnimVisible[SPRITE_ANIMVIS_MAX];
+int16_t       g_spriteAnimVisibleCount;
 
 /* Does the ANIMATION view follow the RENDER view (the shipping answer), or the
  * SIMULATION view (the replay rig)?
@@ -2388,8 +2389,8 @@ static int anim_follows_render_view(void) { return !ReplayTest_Armed(); }
 int Sprite_AnimVisible(const Sprite *s)
 {
     int16_t i;
-    for (i = 0; i < s_animVisibleCount; i++)
-        if (s_animVisible[i] == s)
+    for (i = 0; i < g_spriteAnimVisibleCount; i++)
+        if (g_spriteAnimVisible[i] == s)
             return 1;
     return 0;
 }
@@ -2398,7 +2399,7 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
 {
     int16_t d7 = (int16_t)_numSpritesToRender;
     const int animFollowsRender = anim_follows_render_view();
-    s_animVisibleCount = 0;
+    g_spriteAnimVisibleCount = 0;
     if (d7 == 0)
         return;
 
@@ -2491,8 +2492,8 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
             if (!onScreen && _screen_width > SCREEN_WIDTH && animFollowsRender) {
                 int animVis = !(d1 >= _screen_width || d2 >= _sim_view_height ||
                                 d1 <= negW || d2 <= negH);
-                if (animVis && s_animVisibleCount < SPRITE_ANIMVIS_MAX)
-                    s_animVisible[s_animVisibleCount++] = a1;
+                if (animVis && g_spriteAnimVisibleCount < SPRITE_ANIMVIS_MAX)
+                    g_spriteAnimVisible[g_spriteAnimVisibleCount++] = a1;
             }
             if (!inRenderView) {
                 d7--;
