@@ -368,9 +368,9 @@ Other fields worth knowing:
   settings file. A single career `.CAR` is around 96 KB and the game keeps many
   alongside `.SEA`/`.PRE`/`.DIY` and the `.HIL` highlights.
 - The icon is a **1024x1024 24-bit uncompressed BMP**; AuthoringTool rejects
-  other formats with a confusing message about baseline JPEG. Generate it with
-  `python3 scripts/make_switch_icon.py` — it scales the game's own title logo
-  (`bin/grafs_arcade/LOGO.bmp`) rather than committing an unexplained blob.
+  other formats with a confusing message about baseline JPEG. It is generated,
+  with every other platform's icon, from `SWOS.svg` by
+  `python3 scripts/generate_icons.py`: the ball, centred on black.
 - XML comments cannot contain a double hyphen. `MakeMeta` fails with an
   `XmlException` that does not name the file.
 

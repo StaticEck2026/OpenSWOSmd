@@ -26,6 +26,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Desktops that take a window's icon from the program: Linux (X11, Wayland) and the like.
+ * The Windows builds get SWOS.ico from their resource (SWOS.rc) and the macOS app its
+ * SWOS.icns, both at every size; the web and Switch builds have no window icon. */
+#if !defined(_WIN32) && !defined(__CYGWIN__) && !defined(__APPLE__) && \
+    !defined(SWOS_WASM_BUILD) && !defined(SWOS_SWITCH_BUILD)
+#define SWOS_SET_WINDOW_ICON 1
+#include "swos_window_icon.h"   /* generated from SWOS.svg by scripts/generate_icons.py */
+#endif
+
 /* Window-title arch suffix so you can tell builds apart at a glance while
  * cross-target testing (e.g. "SWOS (x86 64-bit)" vs "SWOS (x86 32-bit)"). */
 #if   defined(__x86_64__)
@@ -627,6 +636,17 @@ int Platform_Init(const PlatformInitOptions *opts)
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
         return -1;
     }
+#ifdef SWOS_SET_WINDOW_ICON
+    {
+        SDL_Surface *icon = SDL_CreateRGBSurfaceWithFormatFrom(
+            (void *)k_swosWindowIcon, SWOS_WINDOW_ICON_SIZE, SWOS_WINDOW_ICON_SIZE, 32,
+            SWOS_WINDOW_ICON_SIZE * 4, SDL_PIXELFORMAT_RGBA32);
+        if (icon) {
+            SDL_SetWindowIcon(s_window, icon);
+            SDL_FreeSurface(icon);
+        }
+    }
+#endif
 
 #ifndef SWOS_WASM_BUILD
     /* Post-creation window fit (windowed only). The pre-creation scale clamp

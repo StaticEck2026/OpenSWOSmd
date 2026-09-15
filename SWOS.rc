@@ -1,7 +1,8 @@
-/* Windows resource file — only used by the MinGW build via windres.
+/* Windows resource file — used by the Windows builds (MinGW, Cygwin) via windres.
  * Icon ID 1 is the default the OS picks for the .exe icon (in
  * Explorer / file listings) and SDL2 picks for the window/taskbar
  * icon when no explicit SDL_SetWindowIcon() has been called.
  *
- * The 16x16 SWOS.ico in the project root is the source. */
+ * SWOS.ico (16 to 256 pixels) is generated from SWOS.svg by
+ * scripts/generate_icons.py. */
 1 ICON "SWOS.ico"

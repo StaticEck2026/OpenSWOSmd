@@ -252,6 +252,15 @@ plus `SDL2.dll`). The Makefile selects the Windows target from the *host shell*
 through Windows interop (`/mnt/c/cygwin64/bin/bash.exe -lc`). Machine paths are
 overridable: `EMSDK_DIR`, `AMIGA_TOOLCHAIN`, `CYGWIN_BASH`.
 
+**Icons** come from one drawing, `SWOS.svg`. `python3 scripts/generate_icons.py` (cairosvg +
+Pillow) renders every size from the vector and writes `SWOS.ico` (linked into `SWOS.exe` by
+`SWOS.rc`, and the installer's icon), `SWOS.icns` (copied into the `.app`),
+`packaging/macos/SWOS.iconset/`, `packaging/linux/hicolor/`, `packaging/switch/swos_icon.bmp`
+(the 1024x1024 24-bit BMP the Switch tools demand), `include/swos_window_icon.h` (the Linux
+window icon, set in `platform_sdl.c`) and the favicon inlined in `wasm/shell.html`. All of it is
+committed, so no build needs the script; re-run it after changing the SVG. A hand-tuned bitmap
+for a small size goes in `packaging/icons/overrides/<size>.png` and wins over the vector.
+
 ### macOS — `scripts/build_macos.sh`
 
 macOS cannot be built here (`make macos-universal` / `make macos-app` hard-fail
