@@ -151,6 +151,16 @@ ggpo_get_current_frame(GGPOSession *ggpo, int& nFrame)
    return ggpo->CurrentFrame(nFrame);
 }
 
+/* OpenSWOS: see ggponet.h. */
+GGPOErrorCode
+ggpo_get_confirmed_frame(GGPOSession *ggpo, int& nFrame)
+{
+   if (!ggpo) {
+      return GGPO_ERRORCODE_INVALID_SESSION;
+   }
+   return ggpo->ConfirmedFrame(nFrame);
+}
+
 GGPOErrorCode
 ggpo_client_chat(GGPOSession *ggpo, const char *text)
 {

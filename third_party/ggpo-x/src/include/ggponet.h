@@ -567,6 +567,12 @@ GGPO_API GGPOErrorCode __cdecl ggpo_advance_frame(GGPOSession *, uint16_t checks
  *
  */
 GGPO_API GGPOErrorCode __cdecl ggpo_get_current_frame(GGPOSession* ggpo, GGPO_OUT_REF(int) nFrame);
+
+/*
+ * ggpo_get_confirmed_frame -- OpenSWOS: the last frame whose input from every player is
+ * known, so that nothing up to it will be rolled back again (-1 before any).
+ */
+GGPO_API GGPOErrorCode __cdecl ggpo_get_confirmed_frame(GGPOSession* ggpo, GGPO_OUT_REF(int) nFrame);
 /*
  * ggpo_get_network_stats --
  *

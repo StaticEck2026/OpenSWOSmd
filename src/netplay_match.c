@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <SDL.h>        /* SDL_GetTicks, SDL_Delay */
+
 #include "netplay_match.h"
 #include "game_loop.h"
 #include "match_step.h"
@@ -16,38 +18,57 @@
 #include "replay_test.h"
 #include "sim_state.h"
 
-extern int  Platform_Present(void);
-extern void Platform_QuiesceTimerThread(void);
-extern void _Int3TimerHandler(void);
+extern int      Platform_Present(void);
+extern void     Platform_QuiesceTimerThread(void);
+extern void     _Int3TimerHandler(void);
+extern uint16_t _playGame[1];
 
-typedef enum { NETPLAY_MATCH_OFF, NETPLAY_MATCH_DIRECT, NETPLAY_MATCH_SYNCTEST } NetplayMatchMode;
+typedef enum {
+    NETPLAY_MATCH_OFF, NETPLAY_MATCH_DIRECT, NETPLAY_MATCH_SYNCTEST, NETPLAY_MATCH_P2P
+} NetplayMatchMode;
 
-static const char *const k_modeName[] = { "off", "direct", "synctest" };
+static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p" };
 
-#define INPUTS_SIZE (MATCH_INPUT_SIZE * MATCH_PLAYERS)
+#define INPUTS_SIZE         (MATCH_INPUT_SIZE * MATCH_PLAYERS)
+#define MAX_PREDICTION      8           /* frames a peer may play ahead of confirmed input */
+#define DEFAULT_TIMEOUT_MS  30000
+#define LINGER_MS           3000        /* after the end: how long to wait for the peer's acks */
 
 static struct {
+    /* options */
     NetplayMatchMode mode;
-    int32_t          checkDistance;
+    int32_t          checkDistance;       /* synctest */
+    int32_t          player;              /* p2p: the local player, 1 or 2 */
+    int32_t          port;                /* p2p: the local UDP port */
+    char             peerAddress[32];     /* p2p */
+    int32_t          peerPort;
+    int32_t          delay;               /* p2p: input delay in frames */
+    int32_t          stallMs;             /* p2p: the longest pause of a busy machine */
+    int32_t          timeoutMs;
+    const char      *tracePath;
+
+    /* the session */
     NetplaySession  *session;
     uint32_t         stateSize;
-    uint32_t         frames;          /* frames played */
-    uint32_t         resimulated;     /* frames GGPO played again after loading a state */
+    int32_t          running;             /* GGPO reports the session running */
+    int32_t          prepared;            /* p2p: the recording's kick-off state is applied */
+    int32_t          peerGone;            /* p2p: the peer left after the end was known */
+    uint32_t         frames;              /* frames played for the first time */
+    uint32_t         resimulated;         /* frames GGPO played again after loading a state */
     uint32_t         saves, loads;
-    uint32_t         unidentified;    /* checksums that met a pointer with no identity */
+    uint32_t         unidentified;        /* checksums that met a pointer with no identity */
+    int32_t          lastConfirmed;       /* p2p */
+    uint32_t         lastProgressMs;      /* p2p: when a frame was last played or confirmed */
+    int32_t          endFrame;            /* p2p: the frame the match ends at, once final; -1 */
+    uint32_t         endScanFrom;         /* p2p: every frame below this is final, not over */
+    uint32_t         lingerStartMs;       /* p2p: 0 until the end is known */
+    uint32_t         stallRng;            /* p2p: when to pause -- never the game's generator */
+
+    /* per frame, from its last save: the state hashes, and whether the match is over */
+    uint64_t        *traceSim, *traceView, *traceObs;
+    uint8_t         *over;
+    uint32_t         traceLen, traceCap;
 } s_np;
-
-/* Synctest: each frame's state as first played. GGPO compares only checksums and aborts;
- * with these the report names what came out different. */
-#define FIRST_RUN_FRAMES 16     /* more than the 8 frames a synctest goes back */
-
-typedef struct {
-    int32_t  frame;             /* -1: empty */
-    int32_t  checksum;
-    uint8_t *state;
-} FirstRun;
-
-static FirstRun s_firstRun[FIRST_RUN_FRAMES];
 
 static void fail(const char *fmt, ...)
 {
@@ -61,42 +82,109 @@ static void fail(const char *fmt, ...)
     exit(2);
 }
 
-int32_t NetplayMatch_ParseArg(const char *arg)
-{
-    static const char prefix[] = "--netplay-match=";
-    const char *v;
+/* ---- options ---- */
 
-    if (strncmp(arg, prefix, sizeof prefix - 1) != 0) {
-        fprintf(stderr, "--netplay-match: expected --netplay-match=direct|synctest[:N]\n");
+static const char *after(const char *arg, const char *prefix)
+{
+    size_t n = strlen(prefix);
+    return strncmp(arg, prefix, n) == 0 ? arg + n : NULL;
+}
+
+static int32_t parseInt(const char *v, long lo, long hi, const char *what, int32_t *out)
+{
+    char *end;
+    long n = strtol(v, &end, 10);
+    if (end == v || *end != 0 || n < lo || n > hi) {
+        fprintf(stderr, "%s: expected %ld..%ld, got '%s'\n", what, lo, hi, v);
         return -1;
     }
-    v = arg + sizeof prefix - 1;
-    if (strcmp(v, "direct") == 0) {
-        s_np.mode = NETPLAY_MATCH_DIRECT;
-        return 1;
-    }
-    if (strncmp(v, "synctest", 8) == 0 && (v[8] == 0 || v[8] == ':')) {
-        long n = 1;
-        if (v[8] == ':') {
-            char *end;
-            n = strtol(v + 9, &end, 10);
-            if (end == v + 9 || *end != 0 || n < 1 || n > 8) {
-                fprintf(stderr, "--netplay-match=synctest:<N>: N is 1..8, the frames GGPO keeps\n");
-                return -1;
-            }
+    *out = (int32_t)n;
+    return 1;
+}
+
+int32_t NetplayMatch_ParseArg(const char *arg)
+{
+    const char *v;
+
+    if ((v = after(arg, "--netplay-match="))) {
+        if (strcmp(v, "direct") == 0) {
+            s_np.mode = NETPLAY_MATCH_DIRECT;
+            return 1;
         }
-        s_np.mode = NETPLAY_MATCH_SYNCTEST;
-        s_np.checkDistance = (int32_t)n;
+        if (strcmp(v, "p2p") == 0) {
+            s_np.mode = NETPLAY_MATCH_P2P;
+            return 1;
+        }
+        if (strncmp(v, "synctest", 8) == 0 && (v[8] == 0 || v[8] == ':')) {
+            s_np.checkDistance = 1;
+            if (v[8] == ':' && parseInt(v + 9, 1, MAX_PREDICTION, "--netplay-match=synctest:<N>",
+                                        &s_np.checkDistance) != 1)
+                return -1;
+            s_np.mode = NETPLAY_MATCH_SYNCTEST;
+            return 1;
+        }
+        fprintf(stderr, "--netplay-match: expected direct, synctest[:N] or p2p, got '%s'\n", v);
+        return -1;
+    }
+    if ((v = after(arg, "--netplay-player=")))
+        return parseInt(v, 1, MATCH_PLAYERS, "--netplay-player", &s_np.player);
+    if ((v = after(arg, "--netplay-port=")))
+        return parseInt(v, 1, 65535, "--netplay-port", &s_np.port);
+    if ((v = after(arg, "--netplay-peer="))) {
+        const char *colon = strrchr(v, ':');
+        size_t n = colon ? (size_t)(colon - v) : 0;
+        if (n == 0 || n >= sizeof s_np.peerAddress) {
+            fprintf(stderr, "--netplay-peer: expected <IPv4>:<port>, got '%s'\n", v);
+            return -1;
+        }
+        memcpy(s_np.peerAddress, v, n);
+        s_np.peerAddress[n] = 0;
+        return parseInt(colon + 1, 1, 65535, "--netplay-peer's port", &s_np.peerPort);
+    }
+    if ((v = after(arg, "--netplay-delay=")))
+        return parseInt(v, 0, MAX_PREDICTION - 1, "--netplay-delay", &s_np.delay);
+    if ((v = after(arg, "--netplay-stall=")))
+        return parseInt(v, 0, 1000, "--netplay-stall", &s_np.stallMs);
+    if ((v = after(arg, "--netplay-timeout="))) {
+        int32_t seconds;
+        if (parseInt(v, 1, 3600, "--netplay-timeout", &seconds) != 1)
+            return -1;
+        s_np.timeoutMs = seconds * 1000;
         return 1;
     }
-    fprintf(stderr, "--netplay-match: expected direct or synctest[:N], got '%s'\n", v);
+    if ((v = after(arg, "--netplay-trace="))) {
+        s_np.tracePath = v;
+        return 1;
+    }
+    fprintf(stderr, "unknown option %s\n", arg);
     return -1;
+}
+
+const char *NetplayMatch_ArgError(void)
+{
+    int32_t p2pOptions = s_np.player || s_np.port || s_np.peerPort || s_np.delay || s_np.stallMs;
+
+    if (s_np.mode == NETPLAY_MATCH_OFF && (p2pOptions || s_np.tracePath || s_np.timeoutMs))
+        return "the --netplay-* options need --netplay-match";
+    if (s_np.mode != NETPLAY_MATCH_P2P && p2pOptions)
+        return "--netplay-player, -port, -peer, -delay and -stall are for --netplay-match=p2p";
+    if (s_np.mode == NETPLAY_MATCH_P2P && (!s_np.player || !s_np.port || !s_np.peerPort))
+        return "--netplay-match=p2p needs --netplay-player=1|2, --netplay-port=<local UDP port> "
+               "and --netplay-peer=<IPv4>:<port>";
+    return NULL;
 }
 
 int32_t NetplayMatch_Enabled(void)
 {
     return s_np.mode != NETPLAY_MATCH_OFF;
 }
+
+int32_t NetplayMatch_IsP2P(void)
+{
+    return s_np.mode == NETPLAY_MATCH_P2P;
+}
+
+/* ---- the state, hashed ---- */
 
 /* Over the portable encoding, so a peer on any platform computes the same. */
 static uint64_t stateHash(uint32_t tiers)
@@ -107,40 +195,85 @@ static uint64_t stateHash(uint32_t tiers)
     return h;
 }
 
-/* The frame's checksum, the one GGPO compares with a peer's. (Synctest compares the
- * checksums of its saves instead.) */
+/* The frame's checksum, the one GGPO-X compares with the peer's once the frame is
+ * confirmed. (Synctest compares the checksums of its saves instead.) */
 static uint16_t frameChecksum(void)
 {
     uint64_t h = stateHash(SIM_TIER_SIM);
     return (uint16_t)(h ^ (h >> 16) ^ (h >> 32) ^ (h >> 48));
 }
 
-/* One frame: the players' inputs into the game, the frame, its ticks, its buffer swap and
- * the VBlank interrupt's work -- everything a frame does but showing it. GGPO calls it
- * again for every frame it re-simulates; `first` marks the frame as first played, the one
- * the replay compares. */
-static GameFrameResult step(const uint8_t *inputs, int32_t first)
+static void traceGrow(uint32_t frame)
 {
-    MatchPlayerInput in[MATCH_PLAYERS];
-    GameFrameResult r;
-    int32_t p;
+    uint32_t cap;
 
-    for (p = 0; p < MATCH_PLAYERS; p++)
-        MatchStep_UnpackInput(&in[p], inputs + p * MATCH_INPUT_SIZE);
-    MatchStep_ApplyInput(in, first ? (int32_t)ReplayTest_FrameIndex() : -1);
-    r = GameLoop_Frame();
-    if (r != GAME_FRAME_DONE)
-        return r;
-    if (first)
-        ReplayTest_FrameCheck();
-    MatchStep_AdvanceClock();
-    GameLoop_EndFrame(0);
-    /* The VBlank interrupt's work -- the fade ticks among it -- is part of the frame: on the
-     * Amiga it runs once after every frame, so it runs once in every step, and from nowhere
-     * else while a netplay match plays (NetplayMatch_Start). */
-    _Int3TimerHandler();
-    return r;
+    if (frame < s_np.traceCap)
+        return;
+    cap = s_np.traceCap ? s_np.traceCap : 65536;
+    while (cap <= frame)
+        cap *= 2;
+    s_np.traceSim = (uint64_t *)realloc(s_np.traceSim, cap * sizeof(uint64_t));
+    s_np.traceView = (uint64_t *)realloc(s_np.traceView, cap * sizeof(uint64_t));
+    s_np.traceObs = (uint64_t *)realloc(s_np.traceObs, cap * sizeof(uint64_t));
+    s_np.over = (uint8_t *)realloc(s_np.over, cap);
+    if (!s_np.traceSim || !s_np.traceView || !s_np.traceObs || !s_np.over)
+        fail("out of memory for the frame trace");
+    memset(s_np.over + s_np.traceCap, 0, cap - s_np.traceCap);
+    s_np.traceCap = cap;
 }
+
+/* Frame `frame` as it stands now: its hashes, and whether the match is over at it. A later
+ * save of the same frame overwrites them, so once every frame is confirmed each entry is
+ * the frame as finally played. */
+static void traceRecord(uint32_t frame, uint64_t sim, uint64_t view)
+{
+    traceGrow(frame);
+    s_np.traceSim[frame] = sim;
+    s_np.traceView[frame] = view;
+    s_np.traceObs[frame] = s_np.tracePath ? ReplayTest_ObservableHash() : 0;
+    s_np.over[frame] = _playGame[0] == 0;
+    if (frame >= s_np.traceLen)
+        s_np.traceLen = frame + 1;
+}
+
+static void traceRecordNow(uint32_t frame)
+{
+    uint64_t sim = stateHash(SIM_TIER_SIM);
+    traceRecord(frame, sim, stateHash(SIM_TIER_VIEW));
+}
+
+/* The rollback rig's trace format (Rollback_Finish), so the two compare byte for byte. */
+static int32_t writeTrace(uint32_t frames)
+{
+    FILE *f;
+    uint32_t i;
+
+    if (!s_np.tracePath)
+        return 0;
+    f = fopen(s_np.tracePath, "w");
+    if (!f) {
+        fprintf(stderr, "[netplay] cannot write %s\n", s_np.tracePath);
+        return 2;
+    }
+    for (i = 0; i < frames && i < s_np.traceLen; i++)
+        fprintf(f, "%u %016llx %016llx %016llx\n", i, (unsigned long long)s_np.traceSim[i],
+                (unsigned long long)s_np.traceView[i], (unsigned long long)s_np.traceObs[i]);
+    fclose(f);
+    fprintf(stderr, "[netplay] wrote %s (%u frames)\n", s_np.tracePath, i);
+    return 0;
+}
+
+/* Synctest: each frame's state as first played. GGPO compares only checksums and aborts;
+ * with these the report names what came out different. */
+#define FIRST_RUN_FRAMES 16     /* more than the 8 frames a synctest goes back */
+
+typedef struct {
+    int32_t  frame;             /* -1: empty */
+    int32_t  checksum;
+    uint8_t *state;
+} FirstRun;
+
+static FirstRun s_firstRun[FIRST_RUN_FRAMES];
 
 static void reportDifference(int32_t frame, const uint8_t *first, const uint8_t *again)
 {
@@ -180,22 +313,62 @@ static void checkFirstRun(int32_t frame, int32_t checksum, const uint8_t *state)
     }
 }
 
+/* ---- the step ---- */
+
+/* One frame: the players' inputs into the game, the frame, its ticks, its buffer swap and
+ * the VBlank interrupt's work -- everything a frame does but showing it. GGPO calls it
+ * again for every frame it re-simulates. `logFrame` numbers the input's log lines (-1
+ * keeps them quiet); `compare` compares the frame with the recording, for a frame played
+ * once and never rolled back. */
+static GameFrameResult step(const uint8_t *inputs, int32_t logFrame, int32_t compare)
+{
+    MatchPlayerInput in[MATCH_PLAYERS];
+    GameFrameResult r;
+    int32_t p;
+
+    /* Between peers a frame past the end of the match gets played: predicted, or
+     * re-simulated after a correction that ended the match sooner. The match is over at
+     * it, and the frame changes nothing. */
+    if (s_np.mode == NETPLAY_MATCH_P2P && _playGame[0] == 0)
+        return GAME_FRAME_MATCH_OVER;
+
+    for (p = 0; p < MATCH_PLAYERS; p++)
+        MatchStep_UnpackInput(&in[p], inputs + p * MATCH_INPUT_SIZE);
+    MatchStep_ApplyInput(in, logFrame);
+    r = GameLoop_Frame();
+    if (r != GAME_FRAME_DONE && r != GAME_FRAME_HELD)
+        return r;
+    if (compare)
+        ReplayTest_FrameCheck();
+    MatchStep_AdvanceClock();
+    GameLoop_EndFrame(0);
+    /* The VBlank interrupt's work -- the fade ticks among it -- is part of the frame: on the
+     * Amiga it runs once after every frame, so it runs once in every step, and from nowhere
+     * else while a netplay match plays (NetplayMatch_Start). */
+    _Int3TimerHandler();
+    return GAME_FRAME_DONE;     /* a frame the statistics overlay held is a frame too */
+}
+
 /* ---- GGPO's callbacks ---- */
 
 static int32_t cbSave(void *ctx, uint8_t **state, int32_t *len, int32_t *checksum, int32_t frame)
 {
     uint8_t *buf = (uint8_t *)malloc(s_np.stateSize);
-    uint64_t h;
+    uint64_t sim, view, both;
 
     (void)ctx;
     if (!buf)
         return 0;
     SimState_Save(buf, SIM_TIER_ALL);
-    h = stateHash(SIM_TIER_ALL);
+    sim = stateHash(SIM_TIER_SIM);
+    view = stateHash(SIM_TIER_VIEW);
+    both = sim ^ ((view << 1) | (view >> 63));
     *state = buf;
     *len = (int32_t)s_np.stateSize;
-    *checksum = (int32_t)(uint32_t)(h ^ (h >> 32));
+    *checksum = (int32_t)(uint32_t)(both ^ (both >> 32));
     s_np.saves++;
+    if (frame >= 0)
+        traceRecord((uint32_t)frame, sim, view);
     if (s_np.mode == NETPLAY_MATCH_SYNCTEST)
         checkFirstRun(frame, *checksum, buf);
     return 1;
@@ -229,13 +402,38 @@ static int32_t cbAdvance(void *ctx)
     rc = Netplay_SyncInput(s_np.session, inputs, &disconnect);
     if (rc != NETPLAY_OK)
         fail("re-simulating a frame: synchronize input: %s", Netplay_ErrorName(rc));
-    r = step(inputs, 0);
-    if (r != GAME_FRAME_DONE)
-        fail("a re-simulated frame left the match loop (GameFrameResult %d), which it did "
-             "not do when first played", (int)r);
+    r = step(inputs, -1, 0);
+    if (r != GAME_FRAME_DONE && !(s_np.mode == NETPLAY_MATCH_P2P && r == GAME_FRAME_MATCH_OVER))
+        fail("a re-simulated frame left the match loop (GameFrameResult %d)", (int)r);
     s_np.resimulated++;
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     return 1;
+}
+
+static void cbEvent(void *ctx, const NetplayEvent *ev)
+{
+    (void)ctx;
+    switch (ev->code) {
+    case NETPLAY_EVENT_RUNNING:
+        if (!s_np.running)
+            fprintf(stderr, "[netplay] synchronized with the peer\n");
+        s_np.running = 1;
+        break;
+    case NETPLAY_EVENT_DESYNC:
+        fail("GGPO reports a desync at frame %d (local checksum %04X, remote %04X)",
+             ev->desyncFrame, ev->localChecksum, ev->remoteChecksum);
+        break;
+    case NETPLAY_EVENT_DISCONNECTED:
+        if (s_np.endFrame < 0)
+            fail("the peer (player %d) disconnected", ev->player);
+        s_np.peerGone = 1;
+        break;
+    case NETPLAY_EVENT_NETWORK_ERROR:
+        fail("network error %d", ev->errorCode);
+        break;
+    default:
+        break;
+    }
 }
 
 /* ---- the session ---- */
@@ -243,70 +441,105 @@ static int32_t cbAdvance(void *ctx)
 int32_t NetplayMatch_Start(void)
 {
     NetplayCallbacks cb;
-    int32_t rc;
+    int32_t rc, i;
 
     if (s_np.mode == NETPLAY_MATCH_OFF)
         return 0;
     /* Only the frame step may write game memory: no timer thread running the VBlank
      * interrupt behind its back (docs/ROLLBACK.md, "How the rig plays a match"). */
     Platform_QuiesceTimerThread();
+    _gFrameStepInput = 1;      /* input a frame at a time (game_loop.h) */
     s_np.stateSize = SimState_Size(SIM_TIER_ALL);
-    for (int32_t i = 0; i < FIRST_RUN_FRAMES; i++)
+    s_np.endFrame = -1;
+    s_np.lastConfirmed = -1;
+    if (!s_np.timeoutMs)
+        s_np.timeoutMs = DEFAULT_TIMEOUT_MS;
+    for (i = 0; i < FIRST_RUN_FRAMES; i++)
         s_firstRun[i].frame = -1;
+
+    memset(&cb, 0, sizeof cb);
+    cb.saveState = cbSave;
+    cb.loadState = cbLoad;
+    cb.freeState = cbFree;
+    cb.advanceFrame = cbAdvance;
+    cb.onEvent = cbEvent;
+    if (s_np.mode != NETPLAY_MATCH_DIRECT && !Netplay_Available()) {
+        fprintf(stderr, "[netplay] this build has no netplay (make NETPLAY=1)\n");
+        return 1;
+    }
     if (s_np.mode == NETPLAY_MATCH_SYNCTEST) {
-        if (!Netplay_Available()) {
-            fprintf(stderr, "[netplay] this build has no netplay (make NETPLAY=1)\n");
-            return 1;
-        }
-        memset(&cb, 0, sizeof cb);
-        cb.saveState = cbSave;
-        cb.loadState = cbLoad;
-        cb.freeState = cbFree;
-        cb.advanceFrame = cbAdvance;
         rc = Netplay_StartSyncTest(&s_np.session, MATCH_INPUT_SIZE, s_np.checkDistance, &cb);
         if (rc != NETPLAY_OK) {
             fprintf(stderr, "[netplay] starting the synctest session: %s\n", Netplay_ErrorName(rc));
             return 1;
         }
+    } else if (s_np.mode == NETPLAY_MATCH_P2P) {
+        NetplayConfig cfg;
+        memset(&cfg, 0, sizeof cfg);
+        cfg.localPort = (uint16_t)s_np.port;
+        cfg.localPlayer = s_np.player;
+        snprintf(cfg.remoteAddress, sizeof cfg.remoteAddress, "%s", s_np.peerAddress);
+        cfg.remotePort = (uint16_t)s_np.peerPort;
+        cfg.inputSize = MATCH_INPUT_SIZE;
+        cfg.frameDelay = s_np.delay;
+        cfg.maxPrediction = MAX_PREDICTION;
+        cfg.disconnectTimeoutMs = s_np.timeoutMs;
+        cfg.disconnectNotifyMs = 1000;
+        s_np.stallRng = 0x9E3779B9u ^ ((uint32_t)s_np.player * 0x85EBCA6Bu);
+        rc = Netplay_StartP2P(&s_np.session, &cfg, &cb);
+        if (rc != NETPLAY_OK) {
+            fprintf(stderr, "[netplay] starting the p2p session: %s\n", Netplay_ErrorName(rc));
+            return 1;
+        }
     }
+
     fprintf(stderr, "[netplay] %s match: %d bytes of input per player, %u bytes of state per save",
             k_modeName[s_np.mode], MATCH_INPUT_SIZE, s_np.stateSize);
     if (s_np.mode == NETPLAY_MATCH_SYNCTEST)
         fprintf(stderr, ", check distance %d", s_np.checkDistance);
+    if (s_np.mode == NETPLAY_MATCH_P2P)
+        fprintf(stderr, "; player %d on UDP port %d, peer %s:%d, input delay %d, pauses up to %d ms",
+                s_np.player, s_np.port, s_np.peerAddress, s_np.peerPort, s_np.delay, s_np.stallMs);
     fputc('\n', stderr);
     return 0;
 }
 
-int32_t NetplayMatch_Frame(void)
+/* direct and synctest: one process, both players' inputs, one frame per pass. */
+static int32_t singleProcessFrame(void)
 {
     MatchPlayerInput in[MATCH_PLAYERS];
     uint8_t local[INPUTS_SIZE], synced[INPUTS_SIZE];
+    uint32_t frame;
     GameFrameResult r;
     int32_t p, rc, disconnect = 0;
 
     /* The frame boundary: the rollback rig's trace, and this frame's record. */
     ReplayTest_FrameStart();
-    ReplayTest_FrameInput(in);
+    frame = ReplayTest_FrameIndex();
+    ReplayTest_RecordedInput(frame, in);
     for (p = 0; p < MATCH_PLAYERS; p++)
         MatchStep_PackInput(&in[p], local + p * MATCH_INPUT_SIZE);
 
     if (s_np.mode == NETPLAY_MATCH_DIRECT) {
-        r = step(local, 1);
+        if (frame == 0 && s_np.tracePath)
+            traceRecordNow(0);
+        r = step(local, (int32_t)frame, 1);
+        if (r == GAME_FRAME_DONE && s_np.tracePath)
+            traceRecordNow(frame + 1);
     } else {
         Netplay_Idle(s_np.session);
         for (p = 0; p < MATCH_PLAYERS; p++) {
             rc = Netplay_AddLocalInput(s_np.session, p + 1, local + p * MATCH_INPUT_SIZE);
             if (rc != NETPLAY_OK)
-                fail("frame %u: adding player %d's input: %s", ReplayTest_FrameIndex(), p + 1,
-                     Netplay_ErrorName(rc));
+                fail("frame %u: adding player %d's input: %s", frame, p + 1, Netplay_ErrorName(rc));
         }
         rc = Netplay_SyncInput(s_np.session, synced, &disconnect);
         if (rc != NETPLAY_OK)
-            fail("frame %u: synchronize input: %s", ReplayTest_FrameIndex(), Netplay_ErrorName(rc));
+            fail("frame %u: synchronize input: %s", frame, Netplay_ErrorName(rc));
         /* Both players are local and there is no input delay: GGPO hands back what was added. */
         if (memcmp(synced, local, sizeof local) != 0)
-            fail("frame %u: GGPO returned other inputs than the frame's own", ReplayTest_FrameIndex());
-        r = step(synced, 1);
+            fail("frame %u: GGPO returned other inputs than the frame's own", frame);
+        r = step(synced, (int32_t)frame, 1);
         /* Where synctest rolls back and re-simulates, every checkDistance frames. */
         if (r == GAME_FRAME_DONE)
             Netplay_AdvanceFrame(s_np.session, frameChecksum());
@@ -325,13 +558,157 @@ int32_t NetplayMatch_Frame(void)
     return r;
 }
 
+/* p2p: a pass that plays no frame still shows one, and yields to the peer's process. */
+static void waitForPeer(void)
+{
+    Platform_Present();
+    SDL_Delay(1);
+}
+
+/* The frame the match ends at, once nothing can change it: the first frame at which the
+ * match is over, or the end of the recording. Only frames that are final count -- played,
+ * and with every input before them confirmed, so that no rollback saves them again. */
+static void findEnd(int32_t frame, int32_t confirmed)
+{
+    int64_t last = (int64_t)confirmed + 1;
+    uint32_t f;
+
+    if (last > frame)
+        last = frame;
+    for (f = s_np.endScanFrom; (int64_t)f <= last && f < s_np.traceLen; f++) {
+        if (s_np.over[f]) {
+            s_np.endFrame = (int32_t)f;
+            return;
+        }
+    }
+    s_np.endScanFrom = f;
+    if (last >= (int64_t)ReplayTest_FrameCount() && f > ReplayTest_FrameCount())
+        s_np.endFrame = (int32_t)ReplayTest_FrameCount();
+}
+
+static void p2pFinish(void)
+{
+    ReplayDriverState st;
+
+    fprintf(stderr, "[netplay] frame %d is confirmed: %s\n", s_np.endFrame,
+            s_np.endFrame < (int32_t)ReplayTest_FrameCount() ? "the match is over there"
+                                                              : "the recording ends there");
+    st.frame = (uint32_t)s_np.endFrame;
+    ReplayTest_SetDriverState(&st);
+    ReplayTest_Finish(0);
+}
+
+/* p2p: this peer's player's recorded input, GGPO's prediction of the other's, and a frame
+ * whenever GGPO allows one. */
+static int32_t p2pFrame(void)
+{
+    MatchPlayerInput in[MATCH_PLAYERS];
+    uint8_t local[MATCH_INPUT_SIZE], synced[INPUTS_SIZE];
+    int32_t frame = 0, confirmed = -1, rc, disconnect = 0;
+    uint32_t now = SDL_GetTicks();
+    GameFrameResult r;
+
+    if (!s_np.prepared) {
+        int32_t f;
+        /* Before GGPO saves frame 0, which it does when the first input is added. */
+        ReplayTest_PrepareFirstFrame();
+        s_np.prepared = 1;
+        s_np.lastProgressMs = now;
+        /* An input delay of d plays the first d frames with no input from this player. */
+        for (f = 0; f < s_np.delay; f++) {
+            ReplayTest_RecordedInput((uint32_t)f, in);
+            if (in[s_np.player - 1].controls || in[s_np.player - 1].key) {
+                fprintf(stderr, "[netplay] frame %d of the recording carries player %d's input, "
+                                "which an input delay of %d drops: this match cannot equal the "
+                                "plain run\n", f, s_np.player, s_np.delay);
+                break;
+            }
+        }
+    }
+
+    Netplay_Idle(s_np.session);        /* the peer's inputs arrive; a misprediction rolls back */
+    Netplay_CurrentFrame(s_np.session, &frame);
+    Netplay_ConfirmedFrame(s_np.session, &confirmed);
+    if (confirmed > s_np.lastConfirmed) {
+        s_np.lastConfirmed = confirmed;
+        s_np.lastProgressMs = now;
+    }
+    if (now - s_np.lastProgressMs > (uint32_t)s_np.timeoutMs)
+        fail("nothing played or confirmed for %d s (%s, frame %d, confirmed %d)",
+             s_np.timeoutMs / 1000, s_np.running ? "running" : "never synchronized with the peer",
+             frame, confirmed);
+
+    if (s_np.endFrame < 0 && s_np.running)
+        findEnd(frame, confirmed);
+    if (s_np.endFrame >= 0) {
+        /* Stay until the peer has every input of ours, which it needs to reach the same end. */
+        int32_t unacked = 1;
+        if (!s_np.lingerStartMs)
+            s_np.lingerStartMs = now ? now : 1;
+        if (Netplay_UnackedInputs(s_np.session, MATCH_PLAYERS + 1 - s_np.player, &unacked) != NETPLAY_OK)
+            unacked = 1;
+        if (unacked == 0 || s_np.peerGone || now - s_np.lingerStartMs > LINGER_MS)
+            p2pFinish();
+        waitForPeer();
+        return GAME_FRAME_DONE;
+    }
+    if (!s_np.running || (uint32_t)frame >= ReplayTest_FrameCount()) {
+        waitForPeer();
+        return GAME_FRAME_DONE;
+    }
+
+    /* Input added now applies `delay` frames later. */
+    ReplayTest_RecordedInput((uint32_t)(frame + s_np.delay), in);
+    MatchStep_PackInput(&in[s_np.player - 1], local);
+    rc = Netplay_AddLocalInput(s_np.session, s_np.player, local);
+    if (rc != NETPLAY_OK) {
+        if (!Netplay_ShouldWait(rc))
+            fail("frame %d: adding player %d's input: %s", frame, s_np.player, Netplay_ErrorName(rc));
+        waitForPeer();
+        return GAME_FRAME_DONE;
+    }
+    rc = Netplay_SyncInput(s_np.session, synced, &disconnect);
+    if (rc != NETPLAY_OK)
+        fail("frame %d: synchronize input: %s", frame, Netplay_ErrorName(rc));
+    r = step(synced, frame, 0);
+    if (r != GAME_FRAME_DONE && r != GAME_FRAME_MATCH_OVER)
+        fail("frame %d left the match loop (GameFrameResult %d), which a netplay match cannot "
+             "roll back", frame, (int)r);
+    s_np.frames++;
+    s_np.lastProgressMs = now;
+    Netplay_AdvanceFrame(s_np.session, frameChecksum());
+    Platform_Present();
+    if (s_np.stallMs) {
+        /* A busy machine, now and then: the other peer plays on, predicting this one's
+         * input, and rolls back when the real input arrives. */
+        uint32_t x = s_np.stallRng;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        s_np.stallRng = x;
+        if ((x & 15) == 0)
+            SDL_Delay((x >> 8) % (uint32_t)s_np.stallMs + 1);
+    }
+    return GAME_FRAME_DONE;
+}
+
+int32_t NetplayMatch_Frame(void)
+{
+    return s_np.mode == NETPLAY_MATCH_P2P ? p2pFrame() : singleProcessFrame();
+}
+
 int32_t NetplayMatch_Finish(void)
 {
-    int32_t code = 0;
+    int32_t code = 0, i;
+    uint32_t frames = s_np.traceLen;
 
-    if (s_np.mode == NETPLAY_MATCH_OFF)
+    switch (s_np.mode) {
+    case NETPLAY_MATCH_OFF:
         return 0;
-    if (s_np.mode == NETPLAY_MATCH_SYNCTEST) {
+    case NETPLAY_MATCH_DIRECT:
+        fprintf(stderr, "[netplay] direct: %u frames played\n", s_np.frames);
+        break;
+    case NETPLAY_MATCH_SYNCTEST:
         fprintf(stderr, "[netplay] synctest: %u frames played, %u re-simulated with matching "
                         "checksums (%u saves, %u loads)\n",
                 s_np.frames, s_np.resimulated, s_np.saves, s_np.loads);
@@ -340,14 +717,23 @@ int32_t NetplayMatch_Finish(void)
             fprintf(stderr, "[netplay] FAIL: GGPO never rolled the match back\n");
             code = 2;
         }
+        break;
+    case NETPLAY_MATCH_P2P:
+        fprintf(stderr, "[netplay] p2p player %d: %u frames played, %u re-simulated after %u "
+                        "rollbacks (%u saves)\n",
+                s_np.player, s_np.frames, s_np.resimulated, s_np.loads, s_np.saves);
+        frames = s_np.endFrame >= 0 ? (uint32_t)s_np.endFrame + 1 : 0;
+        break;
+    }
+    if (frames)
+        code |= writeTrace(frames);
+    if (s_np.session) {
         Netplay_Close(s_np.session);
         s_np.session = NULL;
-        for (int32_t i = 0; i < FIRST_RUN_FRAMES; i++) {
-            free(s_firstRun[i].state);
-            s_firstRun[i].state = NULL;
-        }
-    } else {
-        fprintf(stderr, "[netplay] direct: %u frames played\n", s_np.frames);
+    }
+    for (i = 0; i < FIRST_RUN_FRAMES; i++) {
+        free(s_firstRun[i].state);
+        s_firstRun[i].state = NULL;
     }
     if (s_np.unidentified) {
         fprintf(stderr, "[netplay] FAIL: %u checksums met a pointer with no identity\n",

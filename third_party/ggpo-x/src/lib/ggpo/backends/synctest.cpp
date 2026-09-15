@@ -104,6 +104,12 @@ GGPOErrorCode SyncTestBackend::CurrentFrame(int& current)
     current = _sync.GetFrameCount();
     return GGPO_OK;
 }
+/* OpenSWOS: every input of a synctest is local, so every frame played is confirmed. */
+GGPOErrorCode SyncTestBackend::ConfirmedFrame(int& confirmed)
+{
+    confirmed = _sync.GetFrameCount() - 1;
+    return GGPO_OK;
+}
 
 GGPOErrorCode
 SyncTestBackend::IncrementFrame(uint16_t )

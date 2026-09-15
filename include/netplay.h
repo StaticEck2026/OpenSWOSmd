@@ -94,6 +94,16 @@ int32_t     Netplay_AddLocalInput(NetplaySession *s, int32_t player, const void 
 /* inputs receives inputSize bytes for each of NETPLAY_MAX_PLAYERS players. */
 int32_t     Netplay_SyncInput(NetplaySession *s, void *inputs, int32_t *disconnectFlags);
 int32_t     Netplay_AdvanceFrame(NetplaySession *s, uint16_t checksum);
+/* The frame GGPO simulates next. */
+int32_t     Netplay_CurrentFrame(NetplaySession *s, int32_t *frame);
+/* The last frame whose input from every player is known, so that nothing up to it will be
+ * rolled back again; -1 before any. */
+int32_t     Netplay_ConfirmedFrame(NetplaySession *s, int32_t *frame);
+/* How many of this peer's inputs `remotePlayer` has not acknowledged yet. */
+int32_t     Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *count);
+/* Whether a refused call is only to be tried again next tick: the session is not
+ * synchronized yet, or this peer is as far ahead of the other's input as GGPO allows. */
+int32_t     Netplay_ShouldWait(int32_t code);
 const char *Netplay_ErrorName(int32_t code);
 
 /* Runs the library for real, without the game: a deterministic toy game through a

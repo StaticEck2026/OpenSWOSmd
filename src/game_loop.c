@@ -594,6 +594,8 @@ AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
     }
 }
 
+int32_t _gFrameStepInput = 0;
+
 /* ====================================================================
  * GameLoop_Frame — one frame of the match
  *
@@ -620,8 +622,12 @@ GameFrameResult GameLoop_Frame(void)
     }
 
     /* Handle user stats overlay */
-    if (_showingUserStats != 0)
+    if (_showingUserStats != 0) {
         KeepStatisticsOnScreen();
+        /* Input a frame at a time: the overlay stays up into the next frame. */
+        if (_showingUserStats != 0)
+            return GAME_FRAME_HELD;
+    }
 
     /* Frame counters */
     _frameCount += 1;
@@ -760,7 +766,7 @@ static GameFrameResult runFrame(void)
      * detour into the highlights or an instant replay deliberately skips
      * this — the rig reports such a frame rather than silently reusing its
      * record. */
-    if (r == GAME_FRAME_DONE) {
+    if (r == GAME_FRAME_DONE || r == GAME_FRAME_HELD) {
         extern void ReplayTest_FrameEnd(void);
         ReplayTest_FrameEnd();
     }
@@ -925,7 +931,12 @@ KeepStatisticsOnScreen(void)
         PlayEnqueuedSamples();
         /* nullsub_5, nullsub_4 — no-ops */
         UpdateAndDrawStatistics();
-    } while (_showingUserStats != 0);
+        /* With input a frame at a time (_gFrameStepInput) nothing can close the overlay
+         * before the next frame: one pass, and GameLoop_Frame ends the frame. Every
+         * recording that opens it closes it on the first pass or before the loop (zkz-12065730
+         * frame 1240, zkz-12080203 frame 3040), so for them this is the loop exactly; a netplay peer holding only a prediction
+         * of the input that closes it would otherwise spin here for ever. */
+    } while (_showingUserStats != 0 && !_gFrameStepInput);
 }
 
 /* ====================================================================

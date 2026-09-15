@@ -2798,6 +2798,11 @@ The v1.4 **`userKey`** goes in as a real keypress: the rig reverses `keycodeLut`
 to find the scancode that maps to the recorded ASCII and pushes THAT into
 `keyBuffer`, so `GetKey` and `MainKeysCheck` run their own guards rather than
 the rig faking their result. Only 'S' (the stats screen) appears in the corpus.
+The screen it opens waited for fire inside a single frame (`KeepStatisticsOnScreen`); with
+input a frame at a time (`_gFrameStepInput`) it makes one pass per frame instead and stays
+up into the next frame. Both recordings that open it (zkz-12065730, zkz-12080203) close it
+within that pass, so their runs are the same -- and a netplay peer holding only a prediction
+of the fire that closes it no longer spins for ever (docs/NETPLAY.md §5).
 
 Still not injected: the recorded **ESC** bit. It blocks nothing — every ESC in
 the corpus is on the recording's last frame, since it is how the match ends. The

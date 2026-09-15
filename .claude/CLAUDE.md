@@ -70,9 +70,11 @@ A netplay match runs each frame as a step GGPO can call again (`src/netplay_matc
 `GameLoop_Frame` (the loop body, drawing included — render calls write match state), the
 input and clock of `src/match_step.c` (shared with the replay rig), the buffer swap and the
 VBlank interrupt's work, never presented on a re-simulation. `scripts/netplay_test.sh --all`
-plays the corpus through it, directly and under GGPO's synctest, and requires every frame's
-state hashes to equal a plain run's — run it after touching the game loop, the step, or
-anything the VBlank interrupt does.
+plays the corpus through it — directly, under GGPO's synctest, and as two peers over loopback
+(`p2p`, with `--stall` to force rollbacks) — and requires every frame's state hashes to equal
+a plain run's; run it after touching the game loop, the step, or anything the VBlank interrupt
+does. A loop that waits for input inside a frame (pause, the old statistics overlay) hangs a
+peer holding only a prediction: under `_gFrameStepInput` such a loop makes one pass per frame.
 
 ### Release builds — `scripts/build_dist.sh`
 

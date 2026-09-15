@@ -26,6 +26,8 @@ int      Rollback_Enabled(void);
 /* Whether the rig changes the match it runs in -- rewinds it or loads state into it --
  * rather than only watching it (trace, dump, save-state). */
 int      Rollback_Intervenes(void);
+/* Whether it does anything at frame boundaries it only watches: a trace, a dump, a save. */
+int      Rollback_WatchesFrames(void);
 
 /* ReplayTest_Run, just before kick-off. */
 void     Rollback_MatchStart(void);

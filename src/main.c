@@ -202,9 +202,17 @@ static void print_usage(const char *argv0)
         "                            loopback, then a synctest session. Exits.\n"
         "  --netplay-match=<mode>    With --replay-test: play the match through the\n"
         "                            netplay frame step on the recording's inputs\n"
-        "                            (docs/NETPLAY.md): direct (no GGPO), or\n"
-        "                            synctest[:N] (every N frames GGPO loads the state\n"
-        "                            of N frames back, re-simulates, compares; 1..8).\n"
+        "                            (docs/NETPLAY.md): direct (no GGPO), synctest[:N]\n"
+        "                            (every N frames GGPO loads the state of N frames\n"
+        "                            back, re-simulates, compares; 1..8), or p2p (one\n"
+        "                            of two peers, with --rollback=trace and:)\n"
+        "  --netplay-player=1|2      p2p: the local player.\n"
+        "  --netplay-port=<port>     p2p: the local UDP port.\n"
+        "  --netplay-peer=<ip:port>  p2p: the other peer.\n"
+        "  --netplay-delay=<frames>  p2p: input delay. Default 0.\n"
+        "  --netplay-stall=<ms>      p2p: pause now and then, up to this long (test).\n"
+        "  --netplay-trace=<file>    Per-frame state hashes as finally played.\n"
+        "  --netplay-timeout=<s>     Give up after this long without progress (30).\n"
         "  --rollback=<mode>         With --replay-test: roll the match back to test\n"
         "                            the rollback state registry (docs/ROLLBACK.md).\n"
         "                            check | oracle | discover | scan | trace. The\n"
@@ -445,13 +453,13 @@ int main(int argc, char **argv)
             OnlineMenus_SetStartMenu(v);
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
-        } else if (strncmp(a, "--netplay-match", 15) == 0) {
+        } else if (strcmp(a, "--netplay-selftest") == 0) {
+            return Netplay_SelfTest();
+        } else if (strncmp(a, "--netplay-", 10) == 0) {
             if (NetplayMatch_ParseArg(a) != 1) {
                 fprintf(stderr, "Invalid argument: %s\n", a);
                 return 1;
             }
-        } else if (strcmp(a, "--netplay-selftest") == 0) {
-            return Netplay_SelfTest();
         } else if ((v = match_kv(a, "replay-skip")) != NULL) {
             replay_skip = v;
         } else if ((v = match_kv(a, "replay-max-errors")) != NULL) {
@@ -491,6 +499,16 @@ int main(int argc, char **argv)
         fprintf(stderr, "--netplay-match takes only the rollback rig's watching options "
                         "(--rollback=trace, -trace, -dump, -save-state): the others rewind the "
                         "match GGPO is playing\n");
+        return 1;
+    }
+    if (NetplayMatch_ArgError()) {
+        fprintf(stderr, "%s\n", NetplayMatch_ArgError());
+        return 1;
+    }
+    if (NetplayMatch_IsP2P() && (!Rollback_Enabled() || Rollback_WatchesFrames())) {
+        fprintf(stderr, "--netplay-match=p2p plays in the rollback rig's environment: give it "
+                        "--rollback=trace and no other --rollback option (--netplay-trace writes "
+                        "the peer's trace)\n");
         return 1;
     }
     if (replay_file) {

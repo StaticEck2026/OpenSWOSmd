@@ -1,11 +1,11 @@
 # NETPLAY.md — rollback netplay (GGPO-X)
 
-**Status (2026-09-15): a real match plays through GGPO.** GGPO-X is vendored and callable
-from C, the match state it saves and loads is a registry the rollback rig proves
+**Status (2026-09-15): a real match plays between two peers.** GGPO-X is vendored and
+callable from C, the match state it saves and loads is a registry the rollback rig proves
 (docs/ROLLBACK.md), and a match runs as a frame step GGPO can call again. Under GGPO's
-synctest, which rolls the match back and re-simulates it, recorded matches come out
-identical to plain runs at every frame (§5). Both players' inputs still come from a
-recording, in one process; two peers are next.
+synctest, and as two processes over loopback that each know only one player's input and roll
+back on every misprediction, recorded matches come out identical to plain runs at every frame
+(§5). The inputs still come from recordings; live input is next.
 
 OpenSWOS continues SWOS 2020, whose online play runs on
 [GGPO-X](https://github.com/thomashenry79/ggpo-x). We use the same library at the same
@@ -19,10 +19,10 @@ The lobby, login and matchmaking are SWOS 2020 menus, imported separately
 |---|---|
 | `third_party/ggpo-x/` | the library (C++), upstream layout; `OPENSWOS.md` = provenance + patch list |
 | `include/netplay.h`, `src/netplay.c` | OpenSWOS's netplay module — the only code that talks to GGPO |
-| `include/netplay_match.h`, `src/netplay_match.c` | a match played through the frame step and GGPO (§5) |
+| `include/netplay_match.h`, `src/netplay_match.c` | a match played through the frame step and GGPO: directly, under synctest, or as one of two peers (§5) |
 | `include/match_step.h`, `src/match_step.c` | one frame of the players' input and the frame's clock, shared with the replay rig |
 | `include/sim_state.h`, `src/sim_state.c` | the match state GGPO saves and loads (docs/ROLLBACK.md) |
-| `scripts/netplay_test.sh` | recorded matches through the step and GGPO's synctest, compared frame by frame with plain runs |
+| `scripts/netplay_test.sh` | recorded matches through the step, GGPO's synctest and two peers over loopback, compared frame by frame with plain runs |
 | `src/online_menus.c` | the imported online menus' handlers (docs/MENUS.md §10) |
 
 ## 2. Building
@@ -149,6 +149,8 @@ on a real match must run without a checksum mismatch. It does (§5).
 - **Instant replays and pause** leave the match loop, and so do the keys that start them
   (`MainKeysCheck`: R, H, P, ESC, and S for the statistics); in a session they have to be
   either disabled or driven by both peers' inputs. A detour into a replay ends a test run.
+  Pause waits for input inside a frame; the statistics overlay did too, and now makes one
+  pass per frame (§5, "Two peers").
 - **Determinism:** the simulation must not read wall-clock state. The rollback rig's
   determinism check runs two processes loaded at different addresses and requires
   identical per-frame hashes.
@@ -224,6 +226,7 @@ the step, with both players' inputs from the recording:
 |---|---|
 | `direct` | the step, without GGPO |
 | `synctest[:N]` | GGPO's synctest: every N frames (1–8, default 1) it loads the state of N frames back, plays them again and compares their checksums with the first run's |
+| `p2p` | one of two peers, each a process with one player's input (below) |
 
 It takes the rollback rig's watching options (`--rollback=trace`, `--rollback-trace`,
 `--rollback-dump`, `--rollback-save-state`) and refuses the ones that rewind the match.
@@ -233,24 +236,76 @@ the traces to be identical at every frame.
 
 Results (2026-09-15), over the recorded corpus — 13 recordings, each with Amiga and with DOS
 gameplay: 26 matches, 488,837 frames — every trace compared at every frame with a plain run
-of the same build (`scripts/netplay_test.sh --all`, 250 s at 6 jobs):
+of the same build (`scripts/netplay_test.sh --all --modes "direct synctest:1 synctest:8 p2p
+p2p:2" --stall 8`, 652 s at 4 jobs):
 
 | mode | result |
 |---|---|
 | direct | 26 of 26 matches identical to the plain run |
 | synctest:1 | 26 of 26 identical; 488,837 frames re-simulated, one load per frame |
 | synctest:8 | 26 of 26 identical; 488,768 frames re-simulated from 61,096 loads |
+| p2p | 26 of 26, both peers identical; 8,481 rollbacks re-simulating 35,343 frames, up to 590 in one match |
+| p2p:2 | 22 of 22, both peers identical; 6,745 rollbacks re-simulating 28,416 frames. 4 skipped: zkz-11122841 and zkz-12065730 have input in the 2 frames the delay drops |
 
 Every re-simulated frame's checksum matched. Compared with the recordings instead, a match
 played through synctest gets the same result as the replay rig on its own: zkz-12065730 and
 playa-10090613 pass every frame, and zkz-11215003 diverges at the same frame (12,646) on the
 same field. A synctest:1 match takes 1.2 to 1.5 times as long as a plain one.
 
+### Two peers (`--netplay-match=p2p`)
+
+Each peer is a process of its own with one player's recorded input. GGPO predicts the other
+player's input — the input it last received — and when the real input arrives and differs,
+loads the state from before the mispredicted frame and plays forward again.
+
+```
+bin/SWOS.x86_64 --replay-test=<file.swr> --rollback=trace --netplay-match=p2p \
+    --netplay-player=1 --netplay-port=7001 --netplay-peer=127.0.0.1:7002 --netplay-trace=p1.trace
+```
+
+What makes a peer's run comparable with a plain one:
+
+- **Its trace is the match as finally played.** A peer's state at a frame boundary may still
+  rest on a prediction, so it is not hashed there. Every save GGPO asks for records that
+  frame's hashes instead, and a later save of the same frame overwrites them: once every
+  frame is confirmed, each entry is the frame as it stands.
+- **It ends on a confirmed frame.** `ggpo_get_confirmed_frame`, added to GGPO-X
+  (`third_party/ggpo-x/OPENSWOS.md`), is the last frame whose input from both players is
+  known. A frame is final once every input before it is confirmed; the match ends at the
+  first final frame where it is over (`_playGame == 0`), or at the recording's end. A frame
+  played past the end — predicted, or re-simulated after a correction ended the match sooner
+  — changes nothing.
+- **It waits for the other peer before leaving**, until that peer has acknowledged every input
+  (GGPO's send queue is empty) and so can reach the same end — 3 seconds at most.
+- **A loop waiting for input inside a frame makes one pass.** The statistics overlay
+  (`KeepStatisticsOnScreen`) spun inside a single frame until a player pressed fire; a peer
+  holding only a prediction of the input that closes it spun for ever, and the first two-peer
+  run of zkz-12065730 hung there. While input arrives a frame at a time (`_gFrameStepInput`,
+  set by the replay rig and by netplay) the loop makes one pass per frame and the overlay
+  stays up into the next frame (`GAME_FRAME_HELD`). Both recordings that open it close it
+  within that pass, and their plain traces are unchanged.
+- **Input delay drops input.** With a delay of D frames, the first D frames play with no input
+  from that player. A recording with input there cannot equal the plain run; the peer says
+  so, and `scripts/netplay_test.sh` reports the match as skipped.
+- **`--netplay-stall=<ms>`** makes a peer pause now and then, as a busy machine does, so the
+  other plays ahead on predicted input and rolls back far more than on an idle loopback.
+  Its own generator decides when — never the game's.
+- GGPO-X compares the peers' checksums of confirmed frames (`frameChecksum`, the SIM hash
+  folded to 16 bits); a `DESYNC` event fails the run.
+
+In most recordings one team is human, so the other player's input rarely changes: the peer
+predicting it is almost always right and seldom rolls back, while the peer predicting the
+human's input rolls back hundreds of times a match (in zkz-12080203 both do). Both peers'
+traces are compared.
+
 ### Next
 
-1. **Two peers over loopback**, headless: each process adds one player's recorded input,
-   GGPO predicts the other's and rolls back when the prediction was wrong; both traces must
-   equal the plain run's. The match may end only on a confirmed frame, never a predicted one.
-2. Sound during re-simulation, the in-match keys, and a session handshake: the same build,
-   simulation width and registry (`SimState_LayoutHash`) on both peers.
-3. Live input, and the lobby.
+1. **Live input**: a peer's input from its own pad and keyboard instead of a recording, and
+   the in-match keys (R, H, P, ESC, S) kept out of a session or sent as input. The pause loop
+   waits for input inside a frame, as the statistics overlay did.
+2. **Presentation during re-simulation**: sound, and the overlay's one pass, which still calls
+   `Platform_VBlank` (it presents, and runs the VBlank interrupt a second time in that frame --
+   deterministically, so the match is unaffected).
+3. **A session handshake** — the same build, simulation width and registry
+   (`SimState_LayoutHash`) on both peers — and pacing from `NETPLAY_EVENT_TIMESYNC`.
+4. The lobby.

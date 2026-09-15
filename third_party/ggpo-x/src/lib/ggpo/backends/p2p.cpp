@@ -415,6 +415,13 @@ GGPOErrorCode Peer2PeerBackend::CurrentFrame(int& current)
     current = _sync.GetFrameCount();
     return GGPO_OK;
 }
+/* OpenSWOS: set in DoPoll after CheckSimulation, so every rollback the confirmed inputs
+ * call for has already been played when this reports them. */
+GGPOErrorCode Peer2PeerBackend::ConfirmedFrame(int& confirmed)
+{
+    confirmed = _sync.GetLastConfirmedFrame();
+    return GGPO_OK;
+}
 GGPOErrorCode
 Peer2PeerBackend::IncrementFrame(uint16_t checksum1)
 {  

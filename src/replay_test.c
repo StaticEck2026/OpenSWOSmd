@@ -39,6 +39,7 @@
 #include "math68k.h"
 #include "mjson.h"
 #include "rollback_rig.h"
+#include "game_loop.h"     /* _gFrameStepInput */
 #include "match_step.h"
 #include "netplay_match.h"
 #include "sim_state.h"
@@ -645,13 +646,18 @@ static int typeFromName(const char *s)
     return -1;
 }
 
-static int64_t recField(const char *name)
+static int64_t recordField(const uint8_t *rec, const char *name)
 {
     uint32_t i;
     for (i = 0; i < s_fieldCount; i++)
         if (strcmp(s_field[i].name, name) == 0)
-            return readTyped(s_rec + s_field[i].off, s_field[i].type);
+            return readTyped(rec + s_field[i].off, s_field[i].type);
     return 0;
+}
+
+static int64_t recField(const char *name)
+{
+    return recordField(s_rec, name);
 }
 
 /* ===================================================================
@@ -1007,6 +1013,7 @@ int ReplayTest_Armed(void)   { return s_armed; }
 int ReplayTest_Running(void) { return s_running; }
 int ReplayTest_OwnsGameTick(void) { return s_running; }
 uint32_t ReplayTest_FrameIndex(void) { return s_frame; }
+uint32_t ReplayTest_FrameCount(void) { return s_frameCount; }
 
 /* ===================================================================
  * CalculateDeltaXAndY reference vectors
@@ -1285,11 +1292,17 @@ static void finish(int code)
     exit(code);
 }
 
+void ReplayTest_Finish(int32_t code)
+{
+    finish((int)code);
+}
+
 void ReplayTest_Run(void)
 {
     if (!s_armed) return;
     applySetup();
     s_running = 1;
+    _gFrameStepInput = 1;      /* input a frame at a time (game_loop.h) */
     s_frame = 0;
     s_rec = NULL;
     if (Rollback_Enabled())
@@ -1327,19 +1340,26 @@ _Static_assert(RC_UP == MATCH_UP && RC_DOWN == MATCH_DOWN && RC_LEFT == MATCH_LE
                RC_RIGHT == MATCH_RIGHT && RC_FIRE == MATCH_FIRE,
                "the recorded stick and fire bits are MatchPlayerInput's");
 
-void ReplayTest_FrameInput(MatchPlayerInput in[MATCH_PLAYERS])
+void ReplayTest_RecordedInput(uint32_t frame, MatchPlayerInput in[MATCH_PLAYERS])
 {
-    int p1 = (int)recField("p1_controls");
-    int p2 = (int)recField("p2_controls");
-    int key = (int)recField("user_key");
+    const TeamGeneralInfo *team[2] = { &_topTeamData, &_bottomTeamData };
+    const int stickAndFire = RC_UP | RC_DOWN | RC_LEFT | RC_RIGHT | RC_FIRE;
+    const uint8_t *rec;
+    int p1, p2, key, bench[2], i;
+
+    if (frame >= s_frameCount) {
+        memset(in, 0, MATCH_PLAYERS * sizeof *in);
+        return;
+    }
+    rec = s_frames + (size_t)frame * s_frameSize;
+    p1 = (int)recordField(rec, "p1_controls");
+    p2 = (int)recordField(rec, "p2_controls");
+    key = (int)recordField(rec, "user_key");
     /* Per TEAM, not per player: see the schema note on top_bench_button. Each is
      * pressed by the player who controls that team, and MatchStep_ApplyInput
      * routes that player's bench call back to it. */
-    int bench[2] = { (int)recField("top_bench_button"),
-                     (int)recField("bottom_bench_button") };
-    const TeamGeneralInfo *team[2] = { &_topTeamData, &_bottomTeamData };
-    const int stickAndFire = RC_UP | RC_DOWN | RC_LEFT | RC_RIGHT | RC_FIRE;
-    int i;
+    bench[0] = (int)recordField(rec, "top_bench_button");
+    bench[1] = (int)recordField(rec, "bottom_bench_button");
 
     in[0].controls = (uint8_t)(p1 & stickAndFire);
     in[1].controls = (uint8_t)(p2 & stickAndFire);
@@ -1358,7 +1378,7 @@ void ReplayTest_FrameInput(MatchPlayerInput in[MATCH_PLAYERS])
             s_warnedBench = 1;
             fprintf(stderr, "[replay] frame %u: the %s team's bench button is pressed, but "
                             "no human controls that team — not injected\n",
-                    s_frame, i == 0 ? "top" : "bottom");
+                    frame, i == 0 ? "top" : "bottom");
         }
     }
 
@@ -1366,7 +1386,7 @@ void ReplayTest_FrameInput(MatchPlayerInput in[MATCH_PLAYERS])
      * to the missing input and not mistaken for a port bug. */
     if ((p1 | p2) & RC_ESC && !s_warnedEsc) {
         s_warnedEsc = 1;
-        fprintf(stderr, "[replay] frame %u presses ESC — not injected yet\n", s_frame);
+        fprintf(stderr, "[replay] frame %u presses ESC — not injected yet\n", frame);
     }
 }
 
@@ -1411,13 +1431,18 @@ static void applyFirstFrameSetup(void)
     MatchStep_Reset();
 }
 
-void ReplayTest_FrameStart(void)
+void ReplayTest_PrepareFirstFrame(void)
 {
-    if (!s_running) return;
     if (s_firstFrame) {
         s_firstFrame = 0;
         applyFirstFrameSetup();
     }
+}
+
+void ReplayTest_FrameStart(void)
+{
+    if (!s_running) return;
+    ReplayTest_PrepareFirstFrame();
     if (Rollback_Enabled()) {
         Rollback_FrameBoundary(s_frame);    /* may rewind s_frame */
         /* The rollback rig plays its own match, which can end before the recorded
@@ -1451,7 +1476,7 @@ void ReplayTest_FrameStart(void)
      * repeats (src/netplay_match.c). */
     if (!NetplayMatch_Enabled()) {
         MatchPlayerInput in[MATCH_PLAYERS];
-        ReplayTest_FrameInput(in);
+        ReplayTest_RecordedInput(s_frame, in);
         MatchStep_ApplyInput(in, (int32_t)s_frame);
     }
 }

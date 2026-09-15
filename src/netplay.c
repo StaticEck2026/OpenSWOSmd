@@ -240,6 +240,40 @@ int32_t Netplay_AdvanceFrame(NetplaySession *s, uint16_t checksum)
     return ggpo_advance_frame(s->ggpo, checksum);
 }
 
+int32_t Netplay_CurrentFrame(NetplaySession *s, int32_t *frame)
+{
+    int f = 0;
+    GGPOErrorCode rc = ggpo_get_current_frame(s->ggpo, &f);
+    *frame = f;
+    return rc;
+}
+
+int32_t Netplay_ConfirmedFrame(NetplaySession *s, int32_t *frame)
+{
+    int f = -1;
+    GGPOErrorCode rc = ggpo_get_confirmed_frame(s->ggpo, &f);
+    *frame = f;
+    return rc;
+}
+
+int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *count)
+{
+    GGPONetworkStats stats;
+    GGPOErrorCode rc;
+    *count = 0;
+    if (remotePlayer < 1 || remotePlayer > NETPLAY_MAX_PLAYERS)
+        return GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE;
+    rc = ggpo_get_network_stats(s->ggpo, s->handles[remotePlayer - 1], &stats);
+    if (GGPO_SUCCEEDED(rc))
+        *count = stats.network.send_queue_len;
+    return rc;
+}
+
+int32_t Netplay_ShouldWait(int32_t code)
+{
+    return code == GGPO_ERRORCODE_NOT_SYNCHRONIZED || code == GGPO_ERRORCODE_PREDICTION_THRESHOLD;
+}
+
 const char *Netplay_ErrorName(int32_t code)
 {
     switch (code) {
@@ -541,6 +575,29 @@ int32_t Netplay_AdvanceFrame(NetplaySession *s, uint16_t checksum)
     (void)s; (void)checksum;
     return NETPLAY_ERR_UNAVAILABLE;
 }
+
+int32_t Netplay_CurrentFrame(NetplaySession *s, int32_t *frame)
+{
+    (void)s;
+    *frame = 0;
+    return NETPLAY_ERR_UNAVAILABLE;
+}
+
+int32_t Netplay_ConfirmedFrame(NetplaySession *s, int32_t *frame)
+{
+    (void)s;
+    *frame = -1;
+    return NETPLAY_ERR_UNAVAILABLE;
+}
+
+int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *count)
+{
+    (void)s; (void)remotePlayer;
+    *count = 0;
+    return NETPLAY_ERR_UNAVAILABLE;
+}
+
+int32_t Netplay_ShouldWait(int32_t code) { (void)code; return 0; }
 
 const char *Netplay_ErrorName(int32_t code)
 {

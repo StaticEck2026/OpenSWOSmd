@@ -56,10 +56,19 @@ void ReplayTest_FrameEnd(void);
  * ReplayTest_FrameStart leaves the input to it and ReplayTest_FrameEnd comes
  * in parts: the comparison, made on the frame as first played, then the move
  * to the next record. The clock is the step's (MatchStep_AdvanceClock). */
-void     ReplayTest_FrameInput(MatchPlayerInput in[MATCH_PLAYERS]);
 void     ReplayTest_FrameCheck(void);
 void     ReplayTest_FrameDone(void);
 uint32_t ReplayTest_FrameIndex(void);   /* the record being replayed */
+
+/* Frame `frame`'s recorded input, as the players' inputs; none past the recording's end. */
+void     ReplayTest_RecordedInput(uint32_t frame, MatchPlayerInput in[MATCH_PLAYERS]);
+
+/* ---- for a netplay match between two peers ----
+ * A peer plays frames ahead of its confirmed input and GGPO rolls them back, so it drives
+ * the recording by frame number rather than through the per-frame hooks. */
+void     ReplayTest_PrepareFirstFrame(void);   /* the recording's kick-off state, once */
+uint32_t ReplayTest_FrameCount(void);
+void     ReplayTest_Finish(int32_t code);       /* report, and exit the process */
 
 /* The recordings pin the RNG to one value — random.c returns it for both
  * Rand and Rand2 while this is >= 0. */

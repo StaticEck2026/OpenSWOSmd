@@ -198,6 +198,11 @@ int Rollback_Enabled(void)
            s_saveStatePath != NULL || s_loadStatePath != NULL;
 }
 
+int Rollback_WatchesFrames(void)
+{
+    return s_tracePath != NULL || s_dumpPath != NULL || s_saveStatePath != NULL;
+}
+
 int Rollback_Intervenes(void)
 {
     return s_mode == ROLLBACK_SCAN || s_mode == ROLLBACK_CHECK || s_mode == ROLLBACK_ORACLE ||

@@ -30,6 +30,7 @@ macOS, and calls it from C.
 | `src/lib/ggpo/network/udp_proto.cpp` | `sin_addr.S_un.S_addr` -> `sin_addr.s_addr` | `S_un` is Winsock-only; `s_addr` works on both. |
 | `src/lib/ggpo/backends/p2p.cpp` | `max(maxDif, diff)` -> a conditional; `std::exception(buf)` -> `std::runtime_error(buf)` (+ `<stdexcept>`) | A local named `max` shadows a function (MSVC's `max` is a macro); `std::exception(const char *)` is an MSVC extension. |
 | `src/lib/ggpo/backends/synctest.cpp` | `BeginLog` returns, and the per-frame `Checksum ... for frame N matches.` line is not printed, unless `Platform::GetConfigBool("ggpo.log")` | Otherwise a synctest opens two log files **per frame** in the working directory — on POSIX, 1200 files named `synclogs\log-NNNN-*.log` (with the backslash) in `bin/` for the 600-frame self-test — and prints a line per frame to stdout: tens of thousands for a whole match (`--netplay-match=synctest`). A mismatch still prints and aborts. |
+| `src/include/ggponet.h`, `src/lib/ggpo/main.cpp`, `sync.h`, `backends/backend.h`, `backends/p2p.*`, `backends/synctest.*` | `ggpo_get_confirmed_frame`: the sync layer's last confirmed frame (a synctest: every frame played) | A peer may end a match only on a frame nothing will roll back again (docs/NETPLAY.md §5), and upstream exposes only the current frame. |
 
 `platform_windows.*` are unmodified and not built.
 
