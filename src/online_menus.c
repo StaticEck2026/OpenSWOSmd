@@ -19,6 +19,7 @@
  * own "server not connected" state, from where SETTINGS and RANKINGS open.
  */
 #include "online_menus.h"
+#include "p2p_menu.h"          /* OpenSWOS's own JSON-only menu */
 #include "swos2020_menus.h"
 #include "menu_load_json.h"
 #include "menu_symbols.h"
@@ -260,6 +261,7 @@ void OnlineMenus_ShowStartMenu(void)
     memcpy(name, s_startMenu, sizeof name);
     s_startMenu[0] = '\0';      /* once: the front end can be re-entered after a match */
     OnlineMenus_Init();
+    P2PMenu_Init();             /* --menu=p2p/p2pMenu wants its handlers too */
     OnlineMenus_Show(name);
 }
 
@@ -269,7 +271,7 @@ void OnlineMenus_ShowStartMenu(void)
 int32_t OnlineMenus_SelfTest(void)
 {
     OnlineMenus_Init();
-    printf("[online-menus] self-test: imported SWOS 2020 menus\n");
+    printf("[online-menus] self-test: the JSON-only menus\n");
 
     int32_t menus = 0, entries = 0, failed = 0;
 #define VERIFY_MENU(menu, key, prefix, count)                                        \
@@ -284,6 +286,18 @@ int32_t OnlineMenus_SelfTest(void)
     } while (0);
     SWOS2020_MENUS(VERIFY_MENU)
 #undef VERIFY_MENU
+
+    /* OpenSWOS's own, checked the same way (src/p2p_menu.c). */
+    P2PMenu_Init();
+    {
+        int bad = MenuJson_VerifyDynamic(P2P_MENU_NAME, P2P_MENU_ENTRIES);
+        menus++;
+        entries += P2P_MENU_ENTRIES;
+        if (bad) {
+            failed++;
+            printf("  FAIL %-26s %s\n", "p2pMenu", bad < 0 ? "did not load" : "mismatch (see log)");
+        }
+    }
 
 #define NAME_STRING(fn) #fn,
     static const char *const handlers[] = { SWOS2020_MENU_CALLBACKS(NAME_STRING) };

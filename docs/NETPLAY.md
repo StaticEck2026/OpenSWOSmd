@@ -7,6 +7,10 @@ synctest, and as two processes over loopback that each know only one player's in
 back on every misprediction, recorded matches come out identical to plain runs at every frame
 (§5). The inputs still come from recordings; live input is next.
 
+The main menu's **MULTIPLAYER** button connects two machines directly, by IP address, and
+checks they would play the same match (§6). Setting a match up over that connection, and
+playing it, is what is left.
+
 OpenSWOS continues SWOS 2020, whose online play runs on
 [GGPO-X](https://github.com/thomashenry79/ggpo-x). We use the same library at the same
 commit, so the protocol and the timing behaviour are the ones SWOS 2020 players know.
@@ -23,6 +27,8 @@ The lobby, login and matchmaking are SWOS 2020 menus, imported separately
 | `include/match_step.h`, `src/match_step.c` | one frame of the players' input and the frame's clock, shared with the replay rig |
 | `include/sim_state.h`, `src/sim_state.c` | the match state GGPO saves and loads (docs/ROLLBACK.md) |
 | `scripts/netplay_test.sh` | recorded matches through the step, GGPO's synctest and two peers over loopback, compared frame by frame with plain runs |
+| `include/p2p_link.h`, `src/p2p_link.c` | the UDP handshake two players make before a match (§6) |
+| `include/p2p_menu.h`, `src/p2p_menu.c` | the MULTIPLAYER menu over it, JSON-only (§6, docs/MENUS.md §10) |
 | `src/online_menus.c` | the imported online menus' handlers (docs/MENUS.md §10) |
 
 ## 2. Building
@@ -306,6 +312,63 @@ traces are compared.
 2. **Presentation during re-simulation**: sound, and the overlay's one pass, which still calls
    `Platform_VBlank` (it presents, and runs the VBlank interrupt a second time in that frame --
    deterministically, so the match is unaffected).
-3. **A session handshake** — the same build, simulation width and registry
-   (`SimState_LayoutHash`) on both peers — and pacing from `NETPLAY_EVENT_TIMESYNC`.
+3. **The match over the link.** The handshake and the connection are §6; what is left is
+   the host sending the match setup, and opening the GGPO session over it. Pacing from
+   `NETPLAY_EVENT_TIMESYNC` too.
 4. The lobby.
+
+----
+
+## 6. The MULTIPLAYER menu (`src/p2p_menu.c`, `src/p2p_link.c`)
+
+The main menu's MULTIPLAYER button opens a menu of OpenSWOS's own, `p2p/p2pMenu`
+(JSON-only, docs/MENUS.md §10): one player hosts on a UDP port, the other joins by the
+host's IPv4 address. No server, no lobby — SWOS 2020's matchmaking menus are a separate
+import (`src/online_menus.c`) and need its servers.
+
+| Row | What it is |
+|---|---|
+| GAME | host a game, or join one |
+| HOST ADDRESS | the host's IPv4 address, typed in; the host itself needs none |
+| UDP PORT | 47885 by default, SWOS 2020's `GGPO_PORT1`. The host binds exactly it, so it is the port a player forwards; a joiner takes the next free one above it, so two peers can share a machine |
+| INPUT DELAY | frames of local input delay for the match to come, 0..6 |
+
+The status panel follows the link every frame — the menu is flagged `dos_redraw`, so its
+`onDraw` polls — and shows the round trip once measured, which is the number to choose an
+input delay from.
+
+**The link is the handshake, not the match.** Both sides must agree on everything the
+simulation depends on before a session starts, because a disagreement is a desync on the
+first frame rather than an error:
+
+- the protocol version,
+- `SimState_LayoutHash` — the shape of the state a rollback saves, so two builds whose
+  match state differs refuse each other,
+- the gameplay style (DOS or Amiga, arcade, the original fire-hold lockout),
+- the screen width, until the simulation stops reading it (§4, "Still to do").
+
+A joiner that differs is refused with the reason, and the host is told who bounced off it.
+
+Six packets, all UDP, each either repeated until it is answered or harmless to lose:
+`HELLO`, `WELCOME` and `REFUSE` for the handshake, `PING`/`PONG` for the round trip, `BYE`
+on leaving. Every one starts with `"SWUN"`, the protocol version and the type, so a peer
+of another version is recognised and told so rather than ignored; fields are big-endian,
+like the save format. The socket is non-blocking and polled from the menu's draw, and it
+closes before GGPO opens its own on the same local port — which is also what keeps a NAT
+mapping open for the session that follows.
+
+```
+bin/SWOS.x86_64 --netplay-selftest     # GGPO's tests, then the link over loopback
+bin/SWOS.x86_64 --menu=p2p/p2pMenu     # open the menu straight away
+bin/SWOS.x86_64 --menu-selftest        # it unpacks the way its JSON says
+```
+
+The self-test runs the whole protocol over loopback: two links connect and measure the
+round trip, a second joiner is turned away, a peer leaving is noticed, a build that would
+play a different game is refused with the reason, and a join with nobody listening gives
+up instead of hanging.
+
+**What is missing is the match itself**: the host sending the match setup, live input from
+the local pad (§5, "Next"), and opening the GGPO session over the link. Until then
+MULTIPLAYER is a connection test — which is the part that needs trying on real routers
+anyway.

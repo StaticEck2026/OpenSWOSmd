@@ -1,0 +1,156 @@
+{
+  "name": "p2pMenu",
+  "comment": "OpenSWOS's MULTIPLAYER menu: two players connect directly, by IP address. JSON-only (docs/MENUS.md section 10); handlers in src/p2p_menu.c, the connection in src/p2p_link.c.",
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "p2pMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "p2pMenu_OnDraw",
+  "defaultEntry": 3,
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": { "x": 72, "y": 0, "w": 176, "h": 16 },
+      "commands": [
+        { "op": "text", "flags": "0x10", "literal": "MULTIPLAYER" },
+        { "op": "colors", "frame_color": 1, "background_color": 7 }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subTitle",
+      "coords": { "x": 32, "y": 20, "w": 250, "h": 14 },
+      "commands": [
+        { "op": "text", "flags": "0x0", "literal": "PLAY A FRIEND OVER THE NETWORK" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "modeLabel",
+      "coords": { "x": 32, "y": 42, "w": 92, "h": 14 },
+      "commands": [
+        { "op": "text", "flags": "0x0", "literal": "GAME" },
+        { "op": "colors", "frame_color": 0, "background_color": 7 }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode",
+      "coords": { "x": 132, "y": 42, "w": 150, "h": 14 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" },
+        { "op": "colors", "frame_color": 0, "background_color": 13 },
+        { "op": "nav", "left": -1, "right": -1, "up": -1, "down": 5 },
+        { "op": "onselect_fire", "func": "p2pMenu_mode_OnSelect" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "addressLabel",
+      "coords": { "x": 32, "y": 60, "w": 92, "h": 14 },
+      "commands": [
+        { "op": "text", "flags": "0x0", "literal": "HOST ADDRESS" },
+        { "op": "colors", "frame_color": 0, "background_color": 7 }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "address",
+      "coords": { "x": 132, "y": 60, "w": 150, "h": 14 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" },
+        { "op": "colors", "frame_color": 0, "background_color": 13 },
+        { "op": "nav", "left": -1, "right": -1, "up": 3, "down": 7 },
+        { "op": "onselect_fire", "func": "p2pMenu_address_OnSelect" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "portLabel",
+      "coords": { "x": 32, "y": 78, "w": 92, "h": 14 },
+      "commands": [
+        { "op": "text", "flags": "0x0", "literal": "UDP PORT" },
+        { "op": "colors", "frame_color": 0, "background_color": 7 }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "port",
+      "coords": { "x": 132, "y": 78, "w": 150, "h": 14 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" },
+        { "op": "colors", "frame_color": 0, "background_color": 13 },
+        { "op": "nav", "left": -1, "right": -1, "up": 5, "down": 9 },
+        { "op": "onselect_fire", "func": "p2pMenu_port_OnSelect" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "delayLabel",
+      "coords": { "x": 32, "y": 96, "w": 92, "h": 14 },
+      "commands": [
+        { "op": "text", "flags": "0x0", "literal": "INPUT DELAY" },
+        { "op": "colors", "frame_color": 0, "background_color": 7 }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "delay",
+      "coords": { "x": 132, "y": 96, "w": 150, "h": 14 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" },
+        { "op": "colors", "frame_color": 0, "background_color": 13 },
+        { "op": "nav", "left": -1, "right": -1, "up": 7, "down": 13 },
+        { "op": "onselect_fire", "func": "p2pMenu_delay_OnSelect" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "panel",
+      "coords": { "x": 32, "y": 118, "w": 250, "h": 36 },
+      "commands": [
+        { "op": "colors", "frame_color": 0, "background_color": 3 }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "status1",
+      "coords": { "x": 34, "y": 122, "w": 246, "h": 12 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "status2",
+      "coords": { "x": 34, "y": 136, "w": 246, "h": 12 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "start",
+      "coords": { "x": 37, "y": 162, "w": 100, "h": 15 },
+      "commands": [
+        { "op": "text_no_ptr", "flags": "0x0" },
+        { "op": "colors", "frame_color": 0, "background_color": 14 },
+        { "op": "nav", "left": -1, "right": 14, "up": 9, "down": -1 },
+        { "op": "onselect_fire", "func": "p2pMenu_start_OnSelect" }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": { "x": 167, "y": 162, "w": 100, "h": 15 },
+      "commands": [
+        { "op": "text", "flags": "0x0", "literal": "EXIT" },
+        { "op": "colors", "frame_color": 0, "background_color": 12 },
+        { "op": "nav", "left": 13, "right": -1, "up": 9, "down": -1 },
+        { "op": "onselect_fire", "func": "p2pMenu_exit_OnSelect" }
+      ]
+    }
+  ]
+}

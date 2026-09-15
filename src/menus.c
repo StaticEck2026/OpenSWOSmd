@@ -2260,6 +2260,31 @@ __attribute__((used, externally_visible))
 void SWOSMainMenuInit(void)
 {
     CommonMenuExit();
+#ifndef SWOS_NETPLAY
+    /* OpenSWOS's MULTIPLAYER button (entry 14) plays over the network, so it is only
+     * in a build that has the netplay library (make NETPLAY=1, docs/NETPLAY.md): never
+     * on the Amiga, and never on the web, where a browser has no UDP to play over. */
+    _menuEntries[14].isInvisible = 1;
+#endif
+}
+
+/* MultiplayerMenuSelected — OpenSWOS's MULTIPLAYER button: connect straight to another
+ * player by IP address, no server in between (src/p2p_menu.c, docs/NETPLAY.md). SWOS
+ * 2020's own online menus need its servers and are opened with --menu=swos2020/logInMenu
+ * (docs/MENUS.md section 10). */
+__attribute__((used, externally_visible))
+void MultiplayerMenuSelected(void)
+{
+#ifdef SWOS_NETPLAY
+    extern void P2PMenu_Show(void);
+    P2PMenu_Show();
+    /* Coming back re-unpacks the main menu from its packed bytes, where the CONTINUE and
+     * SAVE rows (entries 11/12) are visible and LOAD OLD COMPETITION sits below them --
+     * what SWOSMainMenuInit did to them is gone. Every main-menu handler that opens a
+     * submenu puts it back the same way (OptionsMenuSelected, SaveDiskFilingMenu, ...);
+     * without it the two rows return as empty coloured bars. */
+    CommonMenuExit();
+#endif
 }
 
 /* ManagementRecordMenu — show management record menu (SWOS2.s line 59220) */

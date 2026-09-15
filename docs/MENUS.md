@@ -805,14 +805,21 @@ All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and
   exit button. Handler code for the rest is in swos-2020 `src/game.cpp` (login, game
   setup) and `src/mpgame.cpp` (everything else); most of it needs the servers.
 - `bin/SWOS.x86_64 --menu=swos2020/logInMenu` opens a menu before the main menu;
-  leaving it lands on the main menu. Nothing in our own menus links to them yet.
-- `--menu-selftest` loads every imported menu, unpacks it into scratch memory and checks
-  each entry's ordinal, rectangle, nav links and text against its JSON, then prints the
-  handler count. Result: **29 menus, 1321 entries, 0 failed** on x86_64 and on the
-  32-bit build.
-- SDL only: `menu_load_json.c` and `online_menus.c` are in `SDL_ONLY_SRCS`. The Amiga
-  compiles only the shared `UnpackMenu`/`MenuProc`/`DrawMenu` changes and has no JSON
-  menus to load.
+  leaving it lands on the main menu.
+- The main menu's **MULTIPLAYER** button (entry 14, `MultiplayerMenuSelected` in
+  `src/menus.c`) opens OpenSWOS's own JSON-only menu, `p2p/p2pMenu`
+  (`src/p2p_menu.c`): two players connect directly by IP address, no server in between
+  (docs/NETPLAY.md section 6). It was added as a structural row -- the two columns above
+  it moved from 20 to 18 pixels apart to make room -- and `SWOSMainMenuInit` hides it in
+  every build without netplay (`SWOS_NETPLAY`): the Amiga, the web, which has no UDP to
+  play over, and any SDL build made without `NETPLAY=1`.
+- `--menu-selftest` loads every JSON-only menu -- the 29 imported ones and `p2p/p2pMenu`
+  -- unpacks each into scratch memory and checks its entries' ordinals, rectangles, nav
+  links and text against its JSON, then prints the handler count. Result: **30 menus,
+  1336 entries, 0 failed** on x86_64 and on the 32-bit build.
+- SDL only: `menu_load_json.c`, `online_menus.c`, `p2p_menu.c` and `p2p_link.c` are in
+  `SDL_ONLY_SRCS`. The Amiga compiles only the shared `UnpackMenu`/`MenuProc`/`DrawMenu`
+  changes and has no JSON menus to load.
 
 ### 10e. Known differences and follow-ups
 

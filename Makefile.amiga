@@ -51,6 +51,8 @@ SDL_ONLY_SRCS := \
     netplay.c             \
     netplay_match.c       \
     online_menus.c        \
+    p2p_link.c            \
+    p2p_menu.c            \
     platform_sdl.c        \
     replay_test.c         \
     rjp1.c                \

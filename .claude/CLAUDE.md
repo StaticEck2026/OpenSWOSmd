@@ -75,6 +75,10 @@ plays the corpus through it — directly, under GGPO's synctest, and as two peer
 a plain run's; run it after touching the game loop, the step, or anything the VBlank interrupt
 does. A loop that waits for input inside a frame (pause, the old statistics overlay) hangs a
 peer holding only a prediction: under `_gFrameStepInput` such a loop makes one pass per frame.
+The main menu's MULTIPLAYER button opens OpenSWOS's own direct-IP menu (`src/p2p_menu.c` over
+`src/p2p_link.c`, docs/NETPLAY.md §6): a UDP handshake that refuses a peer whose build, gameplay
+style or screen width would desync the match, and shows the ping. `--netplay-selftest` runs it over
+loopback. Playing a match over that link is not built yet.
 
 ### Release builds — `scripts/build_dist.sh`
 

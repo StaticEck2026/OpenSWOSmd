@@ -39,6 +39,7 @@
 #include "replay_test.h"        /* --replay-test: recorded-game regression rig */
 #include "online_menus.h"       /* --menu, --menu-selftest */
 #include "netplay.h"            /* --netplay-selftest */
+#include "p2p_link.h"           /* --netplay-selftest: the MULTIPLAYER menu's link */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
 
@@ -199,7 +200,8 @@ static void print_usage(const char *argv0)
         "  --menu-selftest           Load and unpack every imported SWOS 2020 menu,\n"
         "                            check it against its JSON, and exit.\n"
         "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
-        "                            loopback, then a synctest session. Exits.\n"
+        "                            loopback, then a synctest session, then the\n"
+        "                            MULTIPLAYER menu's own link. Exits.\n"
         "  --netplay-match=<mode>    With --replay-test: play the match through the\n"
         "                            netplay frame step on the recording's inputs\n"
         "                            (docs/NETPLAY.md): direct (no GGPO), synctest[:N]\n"
@@ -454,7 +456,11 @@ int main(int argc, char **argv)
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
         } else if (strcmp(a, "--netplay-selftest") == 0) {
-            return Netplay_SelfTest();
+            /* The library, then the connection the MULTIPLAYER menu makes over it.
+             * Both run whatever the other did, so one report covers both. */
+            int32_t ggpoFailed = Netplay_SelfTest();
+            int32_t linkFailed = P2PLink_SelfTest();
+            return (ggpoFailed || linkFailed) ? 1 : 0;
         } else if (strncmp(a, "--netplay-", 10) == 0) {
             if (NetplayMatch_ParseArg(a) != 1) {
                 fprintf(stderr, "Invalid argument: %s\n", a);

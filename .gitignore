@@ -46,6 +46,11 @@ bin/data_json/menus/*
 !bin/data_json/menus/swos2020
 bin/data_json/menus/swos2020/*
 !bin/data_json/menus/swos2020/*.json
+# OpenSWOS's own JSON-only menus (the MULTIPLAYER menu, src/p2p_menu.c): loaded at
+# run time as well, so they ship too.
+!bin/data_json/menus/p2p
+bin/data_json/menus/p2p/*
+!bin/data_json/menus/p2p/*.json
 !bin/data_json/tactics
 bin/data_json/tactics/*
 !bin/data_json/tactics/*.json

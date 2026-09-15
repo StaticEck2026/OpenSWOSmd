@@ -1301,7 +1301,7 @@ typedef struct Menu_ContinueAbort
 } Menu_ContinueAbort;
 #pragma pack(pop)
 
-/* 205 - Menu 25: SWOS_MainMenu (0x1B6 = 438 bytes) */
+/* 205 - Menu 25: SWOS_MainMenu (0x1B6 = 438 bytes before OpenSWOS added entry14, MULTIPLAYER) */
 #pragma pack(push, 1)
 typedef struct Menu_SWOSMainMenu
 {
@@ -1330,6 +1330,7 @@ typedef struct Menu_SWOSMainMenu
   MenuCommand entry11_end;
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry12;
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry13;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry14;
   MenuMark_StartMenu menu3Start;
   MenuMark markEndMenu;
 } Menu_SWOSMainMenu;
