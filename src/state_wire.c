@@ -32,13 +32,13 @@ static uint64_t read_u64(const uint8_t *p)
 
 uint32_t StateWire_MaxBytes(uint32_t tiers)
 {
-    return STATE_WIRE_HEADER_BYTES + (uint32_t)mz_compressBound(SimState_Size(tiers));
+    return STATE_WIRE_HEADER_BYTES + (uint32_t)mz_compressBound(SimState_PortableSize(tiers));
 }
 
 int32_t StateWire_Encode(uint8_t *out, uint32_t cap, uint32_t tiers, uint32_t frame,
                          const uint8_t *base, uint32_t baseFrame)
 {
-    uint32_t raw = SimState_Size(tiers);
+    uint32_t raw = SimState_PortableSize(tiers);
     uint64_t stateHash, baseHash = 0;
     uint8_t *buf;
     size_t packed;
@@ -49,7 +49,10 @@ int32_t StateWire_Encode(uint8_t *out, uint32_t cap, uint32_t tiers, uint32_t fr
     if (!buf)
         return STATE_WIRE_NO_MEMORY;
 
-    SimState_SavePortable(buf, tiers);
+    if (SimState_SavePortable(buf, tiers) != 0) {
+        free(buf);
+        return STATE_WIRE_BAD_STATE;
+    }
     stateHash = StateWire_BufferHash(buf, raw);
     if (base) {
         baseHash = StateWire_BufferHash(base, raw);
@@ -118,7 +121,7 @@ int StateWire_Decode(const uint8_t *packet, uint32_t len, const uint8_t *base,
         return err;
     if (info)
         *info = h;
-    if (h.layout != SimState_LayoutHash() || h.rawBytes != SimState_Size(h.tiers))
+    if (h.layout != SimState_LayoutHash() || h.rawBytes != SimState_PortableSize(h.tiers))
         return STATE_WIRE_WRONG_LAYOUT;
     if ((h.flags & STATE_WIRE_DELTA) &&
         (!base || StateWire_BufferHash(base, h.rawBytes) != h.baseHash))
@@ -140,9 +143,9 @@ int StateWire_Decode(const uint8_t *packet, uint32_t len, const uint8_t *base,
         free(buf);
         return STATE_WIRE_CORRUPT;
     }
-    SimState_LoadPortable(buf, h.tiers);
+    err = SimState_LoadPortable(buf, h.tiers);
     free(buf);
-    return STATE_WIRE_OK;
+    return err == 0 ? STATE_WIRE_OK : STATE_WIRE_BAD_STATE;
 }
 
 const char *StateWire_ErrorName(int err)
@@ -155,6 +158,7 @@ const char *StateWire_ErrorName(int err)
     case STATE_WIRE_CORRUPT:      return "corrupt";
     case STATE_WIRE_NO_MEMORY:    return "out of memory";
     case STATE_WIRE_NO_ROOM:      return "buffer too small";
+    case STATE_WIRE_BAD_STATE:    return "holds a pointer with no identity in this build";
     default:                      return "unknown error";
     }
 }

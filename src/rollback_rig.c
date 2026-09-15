@@ -221,7 +221,8 @@ static uint32_t load_state_file(Rig *r);
  * identically; a region that does not is holding a pointer its map does not name. */
 static void dump_registry(uint32_t frame)
 {
-    uint32_t len = SimState_Size(SIM_TIER_ALL), off = 0;
+    uint32_t len = SimState_PortableSize(SIM_TIER_ALL), off = 0;
+    int unidentified;
     uint8_t *buf = (uint8_t *)malloc(len ? len : 1);
     FILE *f = fopen(s_dumpPath, "w");
     if (!buf || !f) {
@@ -230,15 +231,19 @@ static void dump_registry(uint32_t frame)
         if (f) fclose(f);
         return;
     }
-    SimState_SavePortable(buf, SIM_TIER_ALL);
+    unidentified = SimState_SavePortable(buf, SIM_TIER_ALL);
+    if (unidentified)
+        fprintf(stderr, "[rollback] frame %u: %d pointer(s) in the match state have no identity\n",
+                frame, unidentified);
     for (int32_t i = 0; i < g_simStateRegionCount; i++) {
         const SimStateRegion *r = &g_simStateRegions[i];
+        const uint32_t size = SimState_RegionPortableSize(i);
         if (!SimState_RegionActive(i, SIM_TIER_ALL)) continue;
         fprintf(f, "%s %s ", r->name, (r->flags & SIM_VIEW) ? "view" : "sim");
-        for (uint32_t k = 0; k < r->size; k++)
+        for (uint32_t k = 0; k < size; k++)
             fprintf(f, "%02x", buf[off + k]);
         fputc('\n', f);
-        off += r->size;
+        off += size;
     }
     fclose(f);
     free(buf);
@@ -307,6 +312,7 @@ typedef struct Rig {
 
     /* trace */
     uint64_t *traceSim, *traceView, *traceObs;
+    uint32_t  unidentifiedFrames;
 
     /* resync files */
     int       stateLoaded;
@@ -541,13 +547,14 @@ static void report_registry_diff(const uint8_t *a, const uint8_t *b, int32_t lim
     for (int32_t i = 0; i < g_simStateRegionCount; i++) {
         const SimStateRegion *r = &g_simStateRegions[i];
         uint32_t n = 0, first = 0;
+        const uint32_t size = s_portable ? SimState_RegionPortableSize(i) : r->size;
         if (!SimState_RegionActive(i, s_restoreTiers)) continue;
-        for (uint32_t k = 0; k < r->size; k++)
+        for (uint32_t k = 0; k < size; k++)
             if (a[off + k] != b[off + k]) { if (!n) first = k; n++; }
         if (n && shown++ < limit)
             fprintf(stderr, "[rollback]     %-36s %u byte(s) differ, first at +%u\n",
                     r->name, n, first);
-        off += r->size;
+        off += size;
     }
     if (shown > limit)
         fprintf(stderr, "[rollback]     ... and %d more registry entries\n", shown - limit);
@@ -633,18 +640,6 @@ static void mark_registry(RbSegment *seg)
                             "%s (%u bytes)\n",
                     r->name, r->size, (unsigned)(a - s->addr), s->name, s->size);
             bad = 1;
-        }
-        if (r->pointers) {
-            const SimPointerMap *m = r->pointers;
-            int ok = m->stride > 0 && m->stride <= SIM_MAX_POINTER_STRIDE &&
-                     r->size % m->stride == 0 && m->count <= SIM_MAX_POINTERS_PER_ELEMENT;
-            for (uint32_t k = 0; ok && k < m->count; k++)
-                ok = m->offsets[k] + m->width <= m->stride;
-            if (!ok) {
-                fprintf(stderr, "[rollback] registry entry %s: its pointer map does not fit it\n",
-                        r->name);
-                bad = 1;
-            }
         }
         if (SimState_RegionActive(i, s_restoreTiers))
             mark_bits(seg, seg->regBits, r->addr, r->size);
@@ -896,7 +891,7 @@ static void save_state_file(Rig *r, uint32_t frame)
     free(allPacket);
     fprintf(stderr, "[rollback] saved resync state at frame %u to %s: SIM %d bytes, SIM+VIEW %d bytes "
                     "(deltas against kick-off; raw %u and %u)\n", frame, path, simBytes, allBytes,
-            SimState_Size(SIM_TIER_SIM), SimState_Size(SIM_TIER_ALL));
+            SimState_PortableSize(SIM_TIER_SIM), SimState_PortableSize(SIM_TIER_ALL));
 }
 
 /* Returns the frame the loaded state belongs to; exits on a file or packet it refuses. */
@@ -968,21 +963,33 @@ static void unpack_window_start(Rig *r)
     }
     /* What was just loaded is what both ends of a session would now hold: the base of the
      * next packet. */
-    SimState_SavePortable(r->wireBase, s_restoreTiers);
+    if (SimState_SavePortable(r->wireBase, s_restoreTiers) != 0) {
+        fprintf(stderr, "[rollback] FAIL: the state of frame %u holds a pointer with no identity\n",
+                r->winStart);
+        exit(2);
+    }
     r->haveWireBase = 1;
     r->wireBaseFrame = r->winStart;
 }
 
 static void save_registry(uint8_t *dst)
 {
-    if (s_portable) SimState_SavePortable(dst, s_restoreTiers);
-    else            SimState_Save(dst, s_restoreTiers);
+    if (!s_portable) {
+        SimState_Save(dst, s_restoreTiers);
+    } else if (SimState_SavePortable(dst, s_restoreTiers) != 0) {
+        fprintf(stderr, "[rollback] FAIL: the match state holds a pointer with no identity\n");
+        exit(2);
+    }
 }
 
 static void load_registry(const uint8_t *src)
 {
-    if (s_portable) SimState_LoadPortable(src, s_restoreTiers);
-    else            SimState_Load(src, s_restoreTiers);
+    if (!s_portable) {
+        SimState_Load(src, s_restoreTiers);
+    } else if (SimState_LoadPortable(src, s_restoreTiers) != 0) {
+        fprintf(stderr, "[rollback] FAIL: a portable state did not resolve in this build\n");
+        exit(2);
+    }
 }
 
 static void window_boundary(Rig *r, uint32_t frame)
@@ -1084,8 +1091,15 @@ static void trace_frame(Rig *r, uint32_t frame)
         }
         r->traceCap = cap;
     }
+    uint32_t unidentified;
     r->traceSim[frame] = SimState_Hash(SIM_TIER_SIM);
+    unidentified = SimState_HashUnidentified();
     r->traceView[frame] = SimState_Hash(SIM_TIER_VIEW);
+    unidentified += SimState_HashUnidentified();
+    if (unidentified && r->unidentifiedFrames++ == 0)
+        fprintf(stderr, "[rollback] FAIL: frame %u: %u pointer(s) in the match state have no "
+                        "identity -- the checksum cannot be compared between builds\n",
+                frame, unidentified);
     r->traceObs[frame] = ReplayTest_ObservableHash();
     if (frame + 1 > r->traceLen)
         r->traceLen = frame + 1;
@@ -1112,6 +1126,15 @@ void Rollback_MatchStart(void)
 
     R = (Rig *)alloc_or_die(sizeof *R);
 
+    /* Every region's portable layout must describe it exactly, on every build. */
+    for (int32_t i = 0; i < g_simStateRegionCount; i++) {
+        const char *why = SimState_LayoutError(i);
+        if (why) {
+            fprintf(stderr, "[rollback] registry entry %s: %s\n", g_simStateRegions[i].name, why);
+            exit(1);
+        }
+    }
+
     /* Only the game loop may write game memory from here on (docs/ROLLBACK.md). */
     Platform_QuiesceTimerThread();
     _currentTick = 0;
@@ -1135,11 +1158,12 @@ void Rollback_MatchStart(void)
         mark_registry(seg);
     }
 
-    R->simLen = SimState_Size(s_restoreTiers);
+    R->simLen = s_portable ? SimState_PortableSize(s_restoreTiers) : SimState_Size(s_restoreTiers);
     fprintf(stderr, "[rollback] mode %s, seed 0x%08X; registry: %d entries, sim %u + view %u "
-                    "bytes; restoring %s",
+                    "bytes (portable %u + %u); restoring %s",
             k_modeName[s_mode], s_seed, g_simStateRegionCount, SimState_Size(SIM_TIER_SIM),
-            SimState_Size(SIM_TIER_VIEW), s_restoreTiers == SIM_TIER_ALL ? "all" : "sim only");
+            SimState_Size(SIM_TIER_VIEW), SimState_PortableSize(SIM_TIER_SIM),
+            SimState_PortableSize(SIM_TIER_VIEW), s_restoreTiers == SIM_TIER_ALL ? "all" : "sim only");
     if (s_portable)
         fprintf(stderr, " (portable encoding)");
     if (R->haveSegment)
@@ -1166,7 +1190,7 @@ void Rollback_MatchStart(void)
         if (s_wire) {
             R->wireCap = StateWire_MaxBytes(s_restoreTiers);
             R->wirePacket = (uint8_t *)alloc_or_die(R->wireCap);
-            R->wireBase = (uint8_t *)alloc_or_die(R->simLen);
+            R->wireBase = (uint8_t *)alloc_or_die(SimState_PortableSize(s_restoreTiers));
         }
         R->simB = (uint8_t *)alloc_or_die(R->simLen);
         R->simC = (uint8_t *)alloc_or_die(R->simLen);
@@ -1199,8 +1223,8 @@ void Rollback_FrameBoundary(uint32_t frame)
         return;
     if ((s_saveStatePath || s_loadStatePath) && !R->kickoffSim) {
         /* The resync base: this process's own state at its first frame. */
-        R->kickoffSim = (uint8_t *)alloc_or_die(SimState_Size(SIM_TIER_SIM));
-        R->kickoffAll = (uint8_t *)alloc_or_die(SimState_Size(SIM_TIER_ALL));
+        R->kickoffSim = (uint8_t *)alloc_or_die(SimState_PortableSize(SIM_TIER_SIM));
+        R->kickoffAll = (uint8_t *)alloc_or_die(SimState_PortableSize(SIM_TIER_ALL));
         SimState_SavePortable(R->kickoffSim, SIM_TIER_SIM);
         SimState_SavePortable(R->kickoffAll, SIM_TIER_ALL);
     }
@@ -1354,6 +1378,11 @@ int Rollback_Finish(void)
             fprintf(stderr, "[rollback] cannot write %s\n", s_tracePath);
             code = 1;
         }
+    }
+    if (R->unidentifiedFrames) {
+        fprintf(stderr, "[rollback] FAIL: %u frame(s) held a pointer with no portable identity\n",
+                R->unidentifiedFrames);
+        code = 2;
     }
     if (s_wire && R->wirePackets)
         fprintf(stderr, "[rollback] wire: %u state packets; the first, standing alone, "

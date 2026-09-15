@@ -22,15 +22,18 @@
  * frontbuffers, the render stacks) is in neither tier on purpose: rolling it back
  * would make the renderer believe the screen shows an older frame than it does.
  *
- * Pointers. A region that holds pointers says exactly where, in a SimPointerMap.
- * SimState_Save/Load copy them as they are, which is right for a rollback inside
- * this process and nowhere else. SimState_Hash and the portable save/load write
- * each one as its offset from this executable instead (0 and all-ones, the sprites'
- * "no animation table" sentinel, are not addresses and stay as they are), which is the
- * same number in every process running the same build -- so a checksum can be
- * compared between peers and a resync buffer loaded by another machine. Every
- * pointer here points into the executable's own data; the rig proves the maps
- * complete by requiring two runs, loaded at different addresses, to hash alike.
+ * Two encodings:
+ *
+ *   SimState_Save/Load        this build's memory, byte for byte: a rollback inside
+ *                             this process, and nothing else.
+ *   SimState_SavePortable/..  the PORTABLE encoding, the same bytes in every build --
+ *                             32- or 64-bit, Linux, Windows or macOS -- the way saves
+ *                             work: every region is a sequence of typed fields
+ *                             (SimLayout) written big-endian, and every pointer is
+ *                             written as an IDENTITY of what it points at (which
+ *                             sprite, which team, which animation table), never as an
+ *                             address. SimState_Hash covers the portable encoding, so
+ *                             peers on different platforms compute the same checksum.
  */
 #ifndef SIM_STATE_H
 #define SIM_STATE_H
@@ -41,27 +44,58 @@
 #define SIM_VIEW         0x0002u   /* SIM_TIER_VIEW; otherwise SIM_TIER_SIM */
 #define SIM_PART         0x0004u   /* covers part of its variable, not all of it */
 
-/* Tier masks for Size/Save/Load/Hash. */
+/* Tier masks. */
 #define SIM_TIER_SIM     0x0001u
 #define SIM_TIER_VIEW    0x0002u
 #define SIM_TIER_ALL     (SIM_TIER_SIM | SIM_TIER_VIEW)
 
-/* Where a region's pointers are: at each of `offsets` in every `stride`-byte element. */
-#define SIM_MAX_POINTERS_PER_ELEMENT 10
-#define SIM_MAX_POINTER_STRIDE       256
-typedef struct {
-    uint32_t stride;       /* element size; the region is a whole number of elements */
-    uint8_t  width;        /* sizeof(void *), or 4 for a slot holding a pointer's low 32 bits */
-    uint8_t  count;
-    uint16_t offsets[SIM_MAX_POINTERS_PER_ELEMENT];
-} SimPointerMap;
+/* SimField.type: how one run of an element travels in the portable encoding. */
+typedef enum {
+    SIM_FIELD_BYTES,        /* `count` bytes, copied */
+    SIM_FIELD_WORD16,       /* `count` 16-bit values, big-endian */
+    SIM_FIELD_WORD32,       /* `count` 32-bit values (int32, FixedPoint), big-endian */
+    SIM_FIELD_POINTER,      /* one native pointer, as a 32-bit identity of `kind` */
+    SIM_FIELD_TILE_SLOT     /* one 32-bit pitch tile slot, as its tile's index */
+} SimFieldType;
+
+/* SimField.kind for SIM_FIELD_POINTER: what the pointer points into. A pointer's
+ * identity is its target object's position in that kind's list and the element it
+ * points at inside it; 0 is the null pointer and all-ones the -1 sentinel. */
+enum {
+    SIM_PTR_SPRITE = 1,         /* a Sprite: its slot in _teamSpritesTable */
+    SIM_PTR_TEAM_INFO,          /* _topTeamData, _bottomTeamData */
+    SIM_PTR_TEAM_GAME,          /* _topTeamInGame, _bottomTeamInGame */
+    SIM_PTR_TEAM_STATS,         /* _team1StatsData, _team2StatsData */
+    SIM_PTR_SPRITES_TABLE,      /* an element of _teamSpritesTable */
+    SIM_PTR_SHOT_CHANCE,        /* _teamPlOfs24Table, then _kGoalieSkillTables[0..7] */
+    SIM_PTR_ANIM_TABLE,         /* an animation table (src/sim_state_ids.h) */
+    SIM_PTR_FRAME_INDICES,      /* a frame-index array, or a word in one (sim_state_ids.h) */
+    SIM_PTR_GOAL_RING,          /* a byte of the highlight ring _goalBase, or its end */
+    SIM_PTR_TACTICS,            /* a byte of a _teamTacticsTable record */
+    SIM_PTR_KINDS
+};
 
 typedef struct {
-    const char          *name;
-    void                *addr;
-    uint32_t             size;
-    uint32_t             flags;
-    const SimPointerMap *pointers;   /* NULL: holds no pointers */
+    uint16_t offset;        /* where the run starts in this build's element */
+    uint16_t count;
+    uint8_t  type;          /* SimFieldType */
+    uint8_t  kind;          /* SIM_PTR_* for SIM_FIELD_POINTER */
+} SimField;
+
+/* One element of a region: `stride` bytes in this build's memory, tiled exactly by
+ * `fields` in order (SimState_LayoutError checks it). */
+typedef struct {
+    uint32_t        stride;
+    uint32_t        fieldCount;
+    const SimField *fields;
+} SimLayout;
+
+typedef struct {
+    const char      *name;
+    void            *addr;
+    uint32_t         size;          /* bytes in this build's memory */
+    uint32_t         flags;
+    const SimLayout *layout;
 } SimStateRegion;
 
 extern const SimStateRegion g_simStateRegions[];
@@ -70,29 +104,46 @@ extern const int32_t        g_simStateRegionCount;
 /* The tier mask a region belongs to. */
 #define SIM_REGION_TIER(r) (((r)->flags & SIM_VIEW) ? SIM_TIER_VIEW : SIM_TIER_SIM)
 
-/* Bytes SimState_Save writes for these tiers. */
-uint32_t SimState_Size(uint32_t tiers);
+/* ---- this build's memory: a rollback in this process ---- */
 
-/* Copy the regions of these tiers, in table order, into dst (SimState_Size bytes) /
- * back. Load also brings derived render mirrors back in line with what it loaded. */
+uint32_t SimState_Size(uint32_t tiers);
 void     SimState_Save(uint8_t *dst, uint32_t tiers);
+/* Also brings derived render mirrors back in line with what it loaded. */
 void     SimState_Load(const uint8_t *src, uint32_t tiers);
 
-/* FNV-1a over the regions of these tiers, in table order, pointers as offsets from the
- * executable: equal in every process running this build. */
+/* ---- the portable encoding: the same in every build ---- */
+
+uint32_t SimState_PortableSize(uint32_t tiers);
+uint32_t SimState_RegionPortableSize(int32_t index);
+
+/* Returns 0, or how many pointers had no identity -- they are written as a reserved
+ * value that no load accepts, so such a buffer must not be sent. */
+int      SimState_SavePortable(uint8_t *dst, uint32_t tiers);
+
+/* Returns 0, or -1 if the buffer names something this build cannot resolve; then
+ * nothing is loaded. */
+int      SimState_LoadPortable(const uint8_t *src, uint32_t tiers);
+
+/* FNV-1a over the portable encoding of these tiers: equal on every platform for the
+ * same match state. */
 uint64_t SimState_Hash(uint32_t tiers);
 
-/* SimState_Save/Load with pointers as offsets from the executable: a buffer that another
- * process running the same build can load (a resync). Same size as SimState_Save. */
-void     SimState_SavePortable(uint8_t *dst, uint32_t tiers);
-void     SimState_LoadPortable(const uint8_t *src, uint32_t tiers);
+/* Pointers the last SimState_Hash found no identity for. Anything but 0 means the
+ * checksum cannot be trusted between builds. */
+uint32_t SimState_HashUnidentified(void);
 
-/* A fingerprint of what a saved buffer means: every region's name, size, tier, pointer
- * map and whether it is disabled, the pointer width and byte order -- and, while
- * pointers travel as offsets from the executable, where each region sits in it. Two
- * processes may exchange portable state only if theirs are equal (src/state_wire.c
- * refuses a packet otherwise). */
+/* A fingerprint of what a portable buffer means: every region's name, portable size,
+ * tier, field layout and whether it is disabled, and the shape of the identity lists.
+ * Nothing about this build's memory -- so equal between builds of the same source. */
 uint64_t SimState_LayoutHash(void);
+
+/* The identity of any pointer the match state holds, whatever its kind: returns 1 with
+ * the kind and the identity word, or 0 if nothing it knows contains it. */
+int      SimState_PointerIdentity(const void *p, uint32_t *kind, uint32_t *identity);
+
+/* NULL, or why region `index`'s layout does not describe it (fields that do not tile
+ * the element exactly, a region that is not a whole number of elements). */
+const char *SimState_LayoutError(int32_t index);
 
 /* Whether region `index` takes part in the calls above for these tiers. */
 int      SimState_RegionActive(int32_t index, uint32_t tiers);

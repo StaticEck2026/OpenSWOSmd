@@ -39,6 +39,8 @@
 #include "math68k.h"
 #include "mjson.h"
 #include "rollback_rig.h"
+#include "sim_state.h"
+#include "endian_helpers.h"
 
 /* ===================================================================
  * Recorded-field types
@@ -1647,25 +1649,49 @@ void ReplayTest_ForEachObservable(void (*fn)(void *addr, uint32_t size, void *ct
         fn(s_reg[i].addr, k_rtSize[s_reg[i].type], ctx);
 }
 
-/* Pointers are hashed as offsets from the executable, so two runs loaded at different
- * addresses hash alike -- what the rollback rig compares. 0 and all-ones are not
- * addresses and stay as they are, the same rule as SimState_Hash (sim_state.c). */
+/* Hashed in the portable encoding (sim_state.h), so runs of different builds -- 32- or
+ * 64-bit, another OS -- can be compared: every value big-endian at its recorded width,
+ * every pointer as the kind and identity of what it points at. */
 uint64_t ReplayTest_ObservableHash(void)
 {
     uint64_t h = 0xcbf29ce484222325ull;
     uint32_t i;
     for (i = 0; i < s_regCount; i++) {
         const uint8_t *p = (const uint8_t *)s_reg[i].addr;
-        uint8_t n;
-        uintptr_t rel;
-        if (s_reg[i].type == RT_PTR) {
-            memcpy(&rel, p, sizeof rel);
-            if (rel != 0 && rel != UINTPTR_MAX)
-                rel -= (uintptr_t)&_topTeamData;
-            p = (const uint8_t *)&rel;
+        uint8_t buf[8];
+        uint32_t n = 0, k;
+        switch (s_reg[i].type) {
+        case RT_U8: case RT_S8:
+            buf[0] = p[0];
+            n = 1;
+            break;
+        case RT_U16: case RT_S16: {
+            uint16_t v;
+            memcpy(&v, p, 2);
+            BE_WRITE_U16(buf, v);
+            n = 2;
+            break;
         }
-        for (n = 0; n < k_rtSize[s_reg[i].type]; n++)
-            h = (h ^ p[n]) * 0x100000001b3ull;
+        case RT_U32: case RT_S32: {
+            uint32_t v;
+            memcpy(&v, p, 4);
+            BE_WRITE_U32(buf, v);
+            n = 4;
+            break;
+        }
+        case RT_PTR: {
+            void *ptr;
+            uint32_t kind = 0, id = 0xFFFFFFFEu;
+            memcpy(&ptr, p, sizeof ptr);
+            SimState_PointerIdentity(ptr, &kind, &id);
+            BE_WRITE_U32(buf, kind);
+            BE_WRITE_U32(buf + 4, id);
+            n = 8;
+            break;
+        }
+        }
+        for (k = 0; k < n; k++)
+            h = (h ^ buf[k]) * 0x100000001b3ull;
     }
     return h;
 }

@@ -74,6 +74,8 @@ case "$RESTORE" in all|sim) ;; *) echo "bad --restore $RESTORE (all|sim)" >&2; e
 case "$GAMEPLAY" in amiga) GPS=(off) ;; dos) GPS=(on) ;; both) GPS=(off on) ;;
     *) echo "bad --gameplay $GAMEPLAY (amiga|dos|both)" >&2; exit 1 ;; esac
 [ -x "$BIN" ] || { echo "$BIN not built -- make X86_64=1" >&2; exit 1; }
+# The identity lists the portable encoding numbers pointers by must match the source.
+python3 scripts/gen_sim_state_ids.py --check >&2 || exit 1
 if [ "$ALL" = 1 ]; then
     RECS=(tests/dos/*.RGD.gz)
 elif [ ${#RECS[@]} -eq 0 ]; then

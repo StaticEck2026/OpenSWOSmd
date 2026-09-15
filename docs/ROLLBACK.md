@@ -24,8 +24,8 @@ itself, and every change is checked by rolling real matches back.
 
 | | what | size | restored on a local rollback | in a resync | in the checksum |
 |---|---|---|---|---|---|
-| `SIM_TIER_SIM` | everything the simulation reads, and everything that decides anything it reads | 16.8 KB | yes | yes | yes |
-| `SIM_TIER_VIEW` | the highlight ring (`_goalBase`), its four pointers and the scene counters | 19.0 KB | yes | optional* | no |
+| `SIM_TIER_SIM` | everything the simulation reads, and everything that decides anything it reads | 15.0 KB portable | yes | yes | yes |
+| `SIM_TIER_VIEW` | the highlight ring (`_goalBase`), its four pointers and the scene counters | 19.0 KB portable | yes | optional* | no |
 | neither | render state describing what is **already drawn**: scroll offsets and their per-buffer copies, frontbuffers, render stacks, palette, copper list, HUD layer; the audio mixer | — | **no** | no | no |
 
 The third row is excluded on purpose. After a rollback the screen still shows the
@@ -58,27 +58,50 @@ presentation into SIM:
   the animation gate reads a frame later. The rig pins animation to the simulation view,
   so it is always empty there; it is registered on the code.
 
-### Pointers
+### Two encodings, and pointers
 
-A region that holds pointers says exactly where, in a `SimPointerMap` (offsets per
-element, element stride, pointer width). Only `Sprite` (`animationTable`,
-`frameIndicesTable`) and `TeamGeneralInfo` (9 fields) have pointer fields; the rest are
-single pointers, pointer arrays, and the 32-bit tile slots of `_pitchDatBuffer`.
+- **`SimState_Save/Load`** copy this build's memory byte for byte: a rollback inside this
+  process, where it is a plain `memcpy`.
+- **`SimState_SavePortable/LoadPortable`** write the **portable encoding**, the same bytes
+  in every build — 32- or 64-bit, Linux, Windows or macOS — the way saves work. Every
+  region has a `SimLayout`: a list of typed fields that tiles its element exactly. Byte
+  runs are copied, 16- and 32-bit values are written big-endian, and every pointer is
+  written as a 32-bit **identity** of what it points at, never as an address.
+  `SimState_Hash` covers the portable encoding, so every platform computes the same
+  checksum for the same match.
 
-- `SimState_Save/Load` copy pointers as they are — right for a rollback in this process.
-- `SimState_Hash` and `SimState_SavePortable/LoadPortable` write each pointer as its
-  offset from the executable, which is the same number in every process running the same
-  build. `0` and all-ones are not addresses and stay as they are: every sprite that is
-  not a player holds `(AnimTable *)-1` (`sprite_data.c`).
-- Every registered pointer points into the executable's own data. This is not assumed:
-  the rig's determinism check runs **two processes loaded at different addresses** and
-  requires identical per-frame hashes, so an unmapped pointer, a heap pointer or an
-  unhandled sentinel fails it. (That check is how the `-1` sentinel was found:
-  `--rollback-dump` of two such runs named `animationTable` of the non-player sprites.)
+Only `Sprite` (`animationTable`, `frameIndicesTable`) and `TeamGeneralInfo` (9 fields) have
+pointer fields; `TeamGame` and `ScorerInfo` hold only 8- and 16-bit ones. Every pointer the
+match holds points into one of these, and its identity is the target's position in that
+kind's list plus the element it points at:
 
-The same encoding is what a resync packet carries (below). An offset from the executable
-is still derived from an address, so CLAUDE.md's rule for the save format — no addresses
-on disk or on the wire — holds only between identical executables so far; see "Limits".
+| kind | points into | identity from |
+|---|---|---|
+| sprite | a `Sprite` | its slot in `_teamSpritesTable` |
+| team info / team game / stats | `_topTeamData`…, `_topTeamInGame`…, `_team1StatsData`… | top or bottom |
+| sprites table | an element of `_teamSpritesTable` | the element index |
+| shot chance | `_teamPlOfs24Table`, `_kGoalieSkillTables[0..7]` | which table |
+| animation table | one of 33 `AnimTable`s | its place in a name-sorted list |
+| frame indices | one of 268 frame arrays, or a word inside one | the same, plus the word |
+| goal ring | a byte of `_goalBase`, or its end | the offset |
+| tactics | a byte of a `_teamTacticsTable` record (`_plPositions` points 9 bytes in) | record and offset |
+
+Plus the 252 fan tile slots of `_pitchDatBuffer`, which hold `pitchChunkyBuffer + tile * 256`
+(its low 32 bits on a 64-bit build) and travel as the tile's index. `0` stays the null
+pointer and all-ones stays the `(AnimTable *)-1` every sprite that is not a player holds.
+
+The animation-table and frame-array lists are generated from the source
+(`scripts/gen_sim_state_ids.py` → `src/sim_state_ids.h`), sorted by name, so every build
+numbers them identically; `scripts/rollback_test.sh` refuses to run on a stale list. A
+pointer that fits no identity is never guessed at: `SimState_SavePortable` reports it,
+`SimState_HashUnidentified` flags a checksum that contains one, and the rig fails the run.
+That is how the first cut was caught registering `_advert1/2/3Pointers`: from frame 2672
+of one recording they held no identity — they are copied from the sprite graphics once at
+load and only read afterwards, so they are not match state and left the registry.
+
+The portable SIM tier is 14,988 bytes, the VIEW tier 19,020. On the 32-bit build the SIM
+tier's memory is exactly those 14,988 bytes: the portable layout is the 32-bit layout with
+pointers made identities.
 
 ### The wire format
 
@@ -106,9 +129,9 @@ is only as good as a base both peers are sure to hold:
 
 **Refused, never misread.** Decode loads nothing unless the magic, version and sizes are
 right; the layout hash equals the receiver's (`SimState_LayoutHash`: every region's name,
-size, tier and pointer map, disabled entries, pointer width, byte order, and where the
-regions and code sit in the executable); the base hashes to what the sender used; and the
-inflated state hashes to what the sender packed. Tried with deliberately broken files:
+portable size, tier, field layout and whether it is disabled, and the shape of the identity
+lists — nothing about the build's memory); the base hashes to what the sender used; and the
+inflated state hashes to what the sender packed; and every identity resolves. Tried with deliberately broken files:
 
 | file | result |
 |---|---|
@@ -118,28 +141,23 @@ inflated state hashes to what the sender packed. Tried with deliberately broken 
 | truncated | refused |
 | the unbroken file | loaded, and the match plays on identically |
 
-**Sizes** (raw: SIM 16,804 B, SIM+VIEW 35,840 B):
+**Sizes** (portable: SIM 14,988 B, SIM+VIEW 34,008 B):
 
 | packet | bytes |
 |---|---|
-| SIM, standing alone | 1.8–2.1 KB at kick-off, 2.7–3.1 KB mid-match |
+| SIM, standing alone | 1.6–1.9 KB at kick-off, 2.6–2.8 KB mid-match |
 | SIM, delta against kick-off | 1.2–1.9 KB, 1.6 KB on average (75 resync saves over the corpus) |
-| SIM, delta against 9 frames earlier | 0.13–1.3 KB, 0.5 KB on average (54,654 packets) — one datagram |
-| SIM+VIEW, delta against kick-off | 1.3–14.9 KB, 7.3 KB on average — the highlight ring dominates |
-| SIM+VIEW, delta against 9 frames earlier | 0.18–13.8 KB, 1.0 KB on average |
+| SIM, delta against 9 frames earlier | 0.12–1.3 KB, 0.5 KB on average (54,654 packets) — one datagram |
+| SIM+VIEW, delta against kick-off | 1.3–14.8 KB, 7.3 KB on average — the highlight ring dominates |
+| SIM+VIEW, delta against 9 frames earlier | 0.17–13.8 KB, 1.0 KB on average |
 
 **Limits.**
 
-- Pointers travel as offsets from the executable, so a packet is valid only between
-  **identical executables**; the layout hash includes where things sit and refuses
-  anything else. That already rules out a Linux peer resyncing a Windows peer — they are
-  different binaries. Cross-platform resync needs pointers as semantic identities (which
-  sprite, which team, which animation table), the rule the save format follows; the
-  pointer maps already say where every pointer is.
-- Byte order and pointer width must match (every netplay target today is 64-bit
-  little-endian).
-- The simulation itself must also be identical on both peers — the same code and the same
-  build flags. A session handshake has to check that before a packet is ever needed.
+- Both peers must run the same simulation — the same source and the same build flags. The
+  portable encoding makes the *state* platform-independent; it cannot make two different
+  games agree. A session handshake has to check that before a packet is ever needed.
+- Both peers must play at the same simulation width until the width-invariance leak (§5)
+  is removed.
 
 ### The crowd animation lives in the pitch tile map
 
@@ -297,39 +315,73 @@ Leave-one-out evidence is one-sided:
   uses the view width; a 484-wide run and a 336-wide run of the same recording differ
   from frame 0. Netplay peers must run the same simulation width until that is removed.
 
-## 6. Results
+## 6. Across builds
 
-The final registry: 357 regions, **SIM 16,804 B + VIEW 19,036 B**. The corpus: 13
-recordings × both gameplays = 26 matches, 491,993 frames. Every run below is the same
-`make X86_64=1` build of this tree.
+The portable encoding is only worth anything if every build produces the same bytes.
+`scripts/rollback_xbuild.sh` plays the same recordings on every build it finds —
+`bin/SWOS.x86_64` (64-bit Linux), `bin/SWOS` (32-bit Linux) and `bin/SWOS.exe` (Cygwin,
+Windows, run through `cmd.exe` from WSL) — and requires two things:
+
+- **traces:** a plain run's per-frame SIM, VIEW and observable hashes are identical on
+  every build — the same match, and the same checksum for it;
+- **resync:** state saved by one build at 25, 50 and 75% of the match, loaded by *each
+  other* build into a fresh process at frame 0, plays on identically to the end.
+
+The observable hash (the replay rig's ~2500 fields) is portable too: values big-endian at
+their recorded width, pointers as identities.
+
+Run over four recordings (the shortest in both gameplays, and 24,601- and 31,636-frame
+matches), 64-bit Linux, 32-bit Linux and Windows:
+
+| | result |
+|---|---|
+| traces | 8 of 8 identical to the 64-bit build at every frame — SIM, VIEW and observable |
+| resync | 66 of 66 loads identical to the end: every build loaded every other build's state (one save point of one recording falls after its match ends, so 66 of 72) |
+| packets | SIM delta against kick-off, 1,282–1,657 bytes, 1,456 on average |
+| unidentified pointers | none, in any run |
+
+Before this, the same recordings on the same three builds already passed the replay rig's
+comparison against the recording (951 fields a frame, 1519 of 1519 frames): the game
+itself computes the same match on each. The portable encoding is what lets a *state* and
+a *checksum* cross between them.
+
+## 7. Results
+
+The registry: 354 regions — **SIM 14,988 + VIEW 19,020 bytes portable** (16,612 + 19,036
+in a 64-bit build's memory, the portable sizes exactly in a 32-bit one). The corpus: 13
+recordings × both gameplays = 26 matches, 491,993 frames.
+
+On the build with the portable encoding:
 
 | test | configuration | result |
 |---|---|---|
 | determinism | two plain runs, separate processes, different load addresses | identical per-frame traces (checked at the start of every script run) |
-| oracle | whole writable data restored, window 8, every 64 | 7,696 rollbacks, 0 failed — the method itself: no match state outside `.data`+`.bss` |
 | check, both tiers | window 8, every 64 | 7,696 rollbacks, 0 failed; 26 of 26 matches identical to the plain run at every frame |
+| check, **SIM only** | window 8, every 9 | 54,656 rollbacks, 0 failed; 26 of 26 identical — the SIM tier is closed |
+| **state packets**, both tiers | `--wire`, window 8, every 9: every restore decoded from a delta packet against the previous window start | 54,656 rollbacks, 0 failed, 0 packets refused; 26 of 26 identical |
+| **state packets**, SIM only | the same with `--restore sim` | 54,656 rollbacks, 0 failed, 0 refused; 26 of 26 identical |
+| resync, both tiers | state packets saved at 25/50/75% of a plain run, loaded into a fresh process at frame 0 | 75 of 75 loads identical to the end (691,773 frames); 3 save points never reached because the match ended first |
+| resync, **SIM only** | the same, loading only SIM | 75 of 75 identical |
+| portable encoding, in process | `--rollback-portable`, window 8 every 9, shortest recording, both gameplays | 336 rollbacks, 0 failed; identical |
+| across builds | 64-bit Linux, 32-bit Linux, Windows (§6) | 8 of 8 traces and 66 of 66 cross-build resync loads identical |
+
+No run held a pointer with no identity, and no packet was refused.
+
+On the build before it (357 regions, pointers hashed as offsets from the executable). Its
+rollbacks go through the raw in-memory save and load, which the portable encoding did not
+change; the registry has lost three load-time tables since:
+
+| test | configuration | result |
+|---|---|---|
+| oracle | whole writable data restored, window 8, every 64 | 7,696 rollbacks, 0 failed — the method itself: no match state outside `.data`+`.bss` |
 | check, both tiers | window 8, every 9 | 54,656 rollbacks, 0 failed; 26 of 26 identical |
 | check, both tiers | window 3, every 5 | 98,393 rollbacks, 0 failed; 26 of 26 identical |
 | check, both tiers | window 1, every 2 | 245,992 rollbacks, 0 failed; 26 of 26 identical |
-| check, **SIM only** | window 8, every 9 | 54,656 rollbacks, 0 failed; 26 of 26 identical — the SIM tier is closed |
-| resync, both tiers | saved at 25/50/75% of a plain run, loaded into a fresh process at frame 0 | 75 of 75 loads identical to the end (691,773 frames); 3 save points never reached because the match ended first |
-| resync, **SIM only** | the same, loading only SIM | 75 of 75 identical |
-
-Since the wire format landed, both resync rows load **state packets** — deltas against the
-kick-off state the loading process computes itself — and the numbers above are from that
-run: 75 of 75 identical, both tiers and SIM only, no packet refused.
-| portable encoding, in process | `--rollback-portable`, window 8 every 9, shortest recording, both gameplays | 336 rollbacks, 0 failed; identical |
-| **state packets**, both tiers | `--wire`, window 8, every 9: every restore decoded from a delta packet against the previous window start | 54,656 rollbacks, 0 failed, 0 packets refused; 26 of 26 identical |
-| **state packets**, SIM only | the same with `--restore sim` | 54,656 rollbacks, 0 failed, 0 refused; 26 of 26 identical |
-
-The resync rows are also the cross-process test of the portable encoding: every load reads
-a file another process wrote, at a different load address, and pointers survive only
-because they travel as offsets from the executable.
 
 ### Trial removals
 
-Each group was left out with `--disable` and checked over the corpus with a SIM-only
-restore every 9 frames:
+On the build before the portable encoding, each group was left out with `--disable` and
+checked over the corpus with a SIM-only restore every 9 frames:
 
 | group | bytes | result |
 |---|---|---|
@@ -351,7 +403,7 @@ The failures are the more useful result. **Every ball helper came out INERT in
 yet leaving them out changes most matches. Leave-one-out evidence says what one window
 needed; only a whole-match trace licenses a removal.
 
-## 7. Not covered by recordings
+## 8. Not covered by recordings
 
 What the corpus reaches, from the variables the scan saw written: open play, goals,
 throw-ins, corners and free kicks, substitutions (team 1's only — `_team2NumSubs` is never
@@ -367,7 +419,7 @@ distinguish from other sprite writes, so the corpus says nothing either way abou
 Those variables are in the registry by code evidence (§2.3); the rig can only confirm them
 once a recording reaches them.
 
-## 8. Running it
+## 9. Running it
 
 ```bash
 make X86_64=1                                   # Linux: the whole-memory modes need the symbol table
@@ -379,6 +431,8 @@ scripts/rollback_test.sh --mode resync --all    # load mid-match state into a fr
 scripts/rollback_test.sh --mode resync --all --restore sim
 scripts/rollback_test.sh --all --disable _currentTick   # trial removal
 scripts/rollback_test.sh --mode oracle --all
+scripts/rollback_xbuild.sh                      # 32/64-bit and Windows: traces + resync between builds
+scripts/gen_sim_state_ids.py                    # after adding or renaming an animation table / frame array
 scripts/rollback_test.sh --mode discover --all  # -> tests/rollback/discover-summary.txt
 scripts/rollback_report.py tests/rollback/discover-*.json
 ```

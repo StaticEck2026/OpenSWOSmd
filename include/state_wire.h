@@ -6,19 +6,20 @@
  * stored, and being small is its whole purpose.
  *
  *   payload  SimState_SavePortable: the registry regions of the chosen tiers, in table
- *            order, pointers as offsets from the executable
+ *            order, in the portable encoding -- typed fields big-endian, every pointer
+ *            as the identity of what it points at -- so any build reads it: 32- or
+ *            64-bit, Linux, Windows or macOS
  *   delta    optionally XORed with a BASE state the receiver holds too -- the kick-off
  *            state both peers compute, or the last frame whose checksums they agreed
  *            on -- which turns everything that has not changed into zeros
  *   packing  raw deflate (miniz)
  *
  * The header says enough for a packet to be refused rather than misread: the registry
- * layout and executable it was made against, the hash of the base it was made from, and
- * the hash of the state it rebuilds. Nothing is loaded unless all three check out.
+ * layout it was made against (SimState_LayoutHash), the hash of the base it was made
+ * from, and the hash of the state it rebuilds. Nothing is loaded unless all three check
+ * out.
  *
- * Header fields travel big-endian (network byte order). The payload is the host's own
- * memory, so both peers must share byte order and pointer width; the layout hash covers
- * both.
+ * Everything travels big-endian (network byte order).
  */
 #ifndef STATE_WIRE_H
 #define STATE_WIRE_H
@@ -38,18 +39,19 @@ typedef struct {
     uint32_t baseFrame;     /* the base's frame; delta only */
     uint64_t baseHash;      /* FNV-1a of the base (portable bytes); delta only */
     uint64_t stateHash;     /* FNV-1a of the rebuilt state (portable bytes) */
-    uint32_t rawBytes;      /* SimState_Size(tiers) */
+    uint32_t rawBytes;      /* SimState_PortableSize(tiers) */
     uint32_t packedBytes;   /* deflated payload following the header */
 } StateWireInfo;
 
 enum {
     STATE_WIRE_OK           =  0,
     STATE_WIRE_BAD_PACKET   = -1,   /* truncated, not a state packet, or an unknown version */
-    STATE_WIRE_WRONG_LAYOUT = -2,   /* made by a build with another registry or executable */
+    STATE_WIRE_WRONG_LAYOUT = -2,   /* made by a build with another registry */
     STATE_WIRE_WRONG_BASE   = -3,   /* a delta against a base this receiver does not hold */
     STATE_WIRE_CORRUPT      = -4,   /* does not inflate, or rebuilds a state that hashes wrong */
     STATE_WIRE_NO_MEMORY    = -5,
-    STATE_WIRE_NO_ROOM      = -6    /* the output buffer is too small */
+    STATE_WIRE_NO_ROOM      = -6,   /* the output buffer is too small */
+    STATE_WIRE_BAD_STATE    = -7    /* holds a pointer with no identity, or names one this build lacks */
 };
 
 /* FNV-1a over a portable buffer: equals SimState_Hash(tiers) of the state it holds. */
@@ -58,7 +60,7 @@ uint64_t    StateWire_BufferHash(const uint8_t *buf, uint32_t len);
 /* Upper bound on the size of a packet of these tiers. */
 uint32_t    StateWire_MaxBytes(uint32_t tiers);
 
-/* Pack the live state of `tiers` for `frame`. With `base` (SimState_Size(tiers) bytes of
+/* Pack the live state of `tiers` for `frame`. With `base` (SimState_PortableSize(tiers) bytes of
  * portable state, from SimState_SavePortable at `baseFrame`) the packet is a delta
  * against it; with NULL it stands alone. Returns the packet size (> 0), or a negative
  * STATE_WIRE_* error. */

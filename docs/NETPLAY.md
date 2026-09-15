@@ -110,14 +110,15 @@ by a linker section. It keeps the snapshot small and names every byte a resync s
 | call | use |
 |---|---|
 | `SimState_Save/Load(buf, SIM_TIER_ALL)` | GGPO `save_game_state` / `load_game_state`: raw copies, this process only |
-| `SimState_Hash(SIM_TIER_SIM)` | the checksum GGPO compares between peers: pointers hashed as offsets from the executable, so it is equal on every machine running the same build |
-| `StateWire_Encode/Decode` (`include/state_wire.h`) | a resync or a mid-match join: SIM (or SIM+VIEW) as a validated, deflated delta against a base both peers hold — 1.3–1.8 KB against the kick-off state, a few hundred bytes against a recent agreed frame |
+| `SimState_Hash(SIM_TIER_SIM)` | the checksum GGPO compares between peers: computed over the portable encoding, so it is equal on every platform for the same match |
+| `StateWire_Encode/Decode` (`include/state_wire.h`) | a resync or a mid-match join: SIM (or SIM+VIEW) in the portable encoding, as a validated, deflated delta against a base both peers hold — about 1.3–1.9 KB against the kick-off state, a few hundred bytes against a recent agreed frame |
 | `SimState_Size(tiers)` | buffer size |
 
 What crosses the network during a match is only the inputs (one control word per player
 per frame) and the SIM checksum; GGPO's save and load stay on the machine. State is sent
-only to resync, in the binary packet described in docs/ROLLBACK.md, "The wire format" —
-valid between identical executables until pointers travel as semantic identities.
+only to resync, in the binary packet described in docs/ROLLBACK.md, "The wire format". Its
+state is pointer-free and big-endian — pointers travel as identities, like saves — so a
+32-bit, a 64-bit and a Windows build exchange it (`scripts/rollback_xbuild.sh`).
 
 Two tiers. `SIM_TIER_SIM` (16.8 KB raw, ~2.6 KB compressed) is everything the simulation
 reads and everything that decides anything it reads — closed: no SIM byte depends on a
