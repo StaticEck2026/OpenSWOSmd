@@ -1,0 +1,188 @@
+{
+  "name": "rankingsMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/rankings.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "rankingsMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "rankingsMenu_OnDraw",
+  "defaultEntry": 1,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ONLINE RANKINGS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "amiga",
+      "coords": {
+        "x": 92,
+        "y": 50,
+        "w": 125,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "     AMIGA"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectAmigaRankingsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pcDOS",
+      "coords": {
+        "x": 92,
+        "y": 86,
+        "w": 125,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "     PC DOS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectPCDOSRankingsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "xbla",
+      "coords": {
+        "x": 92,
+        "y": 122,
+        "w": 125,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "     XBOX"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectXBLARankingsMenu"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 92,
+        "y": 185,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dummy",
+      "coords": {
+        "x": -8,
+        "y": -8,
+        "w": 1,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "draw_mp_game_style_icon_sets"
+        }
+      ]
+    }
+  ]
+}

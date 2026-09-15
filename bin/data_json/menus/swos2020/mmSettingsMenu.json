@@ -1,0 +1,652 @@
+{
+  "name": "mmSettingsMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/mmSettings.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "mmsOnInit",
+  "onReturn": null,
+  "onDraw": "mmsOnDraw",
+  "defaultEntry": 21,
+  "exports": {
+    "EXM_X1": 13,
+    "EXM_X2": 163,
+    "EXM_Y": 27,
+    "EXM_W": 148,
+    "EXM_H": 10,
+    "EXM_GAP": 12
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 82,
+        "y": 0,
+        "w": 140,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MULTIPLAYER SETTINGS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pitchSetLabel",
+      "coords": {
+        "x": 5,
+        "y": 27,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "PITCH SET"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pitchSet",
+      "coords": {
+        "x": 155,
+        "y": 27,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DEFAULT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectPitchSet"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "soundFxLabel",
+      "coords": {
+        "x": 5,
+        "y": 39,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SOUND FX"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "soundFx",
+      "coords": {
+        "x": 155,
+        "y": 39,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DLC SETTING"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectSoundFx"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "commentaryLabel",
+      "coords": {
+        "x": 5,
+        "y": 51,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "COMMENTARY"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "commentary",
+      "coords": {
+        "x": 155,
+        "y": 51,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ON"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": 8
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectCommentary"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatboxTimeoutLabel",
+      "coords": {
+        "x": 5,
+        "y": 63,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AUTO CLOSE CHATBOX"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatboxTimeout",
+      "coords": {
+        "x": 155,
+        "y": 63,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 6,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectChatboxTimeout"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "escPressingMaxLabel",
+      "coords": {
+        "x": 5,
+        "y": 75,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ESC PRESSING TO QUIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "escPressingMax",
+      "coords": {
+        "x": 155,
+        "y": 75,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 8,
+          "down": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectEscPressingMax"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "disableControllerInChatboxLabel",
+      "coords": {
+        "x": 5,
+        "y": 87,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DISABLE CONTROLLER IN CHAT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "disableControllerInChatbox",
+      "coords": {
+        "x": 155,
+        "y": 87,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 10,
+          "down": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsDisableControllerInChatbox"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "acceptSoundLabel",
+      "coords": {
+        "x": 5,
+        "y": 99,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ACCEPT SOUND"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "acceptSound",
+      "coords": {
+        "x": 155,
+        "y": 99,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 12,
+          "down": 16
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsAcceptSound"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatWindowScaleLabel",
+      "coords": {
+        "x": 5,
+        "y": 111,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CHAT WINDOW SCALE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatWindowScale",
+      "coords": {
+        "x": 155,
+        "y": 111,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "1X"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 14,
+          "down": 17
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsChangeChatWindowScale"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "createOwnCustom",
+      "coords": {
+        "x": 40,
+        "y": 123,
+        "w": 228,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MY CUSTOM TEAM"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 16,
+          "down": 18
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectCreateOwnCustom"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "joinASL",
+      "coords": {
+        "x": 5,
+        "y": 147,
+        "w": 298,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "JOIN AMIGA SUPER LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 17,
+          "down": 19
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectJoinASL"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "joinDiscord",
+      "coords": {
+        "x": 5,
+        "y": 159,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "JOIN DISCORD"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 20,
+          "up": 18,
+          "down": 21
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectJoinDiscord"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "helpDesk",
+      "coords": {
+        "x": 155,
+        "y": 159,
+        "w": 148,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "HELP DESK"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 19,
+          "right": -1,
+          "up": 18,
+          "down": 21
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mmsSelectHelpDesk"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exitButton",
+      "coords": {
+        "x": 122,
+        "y": 185,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 19,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    }
+  ]
+}

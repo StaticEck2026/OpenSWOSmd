@@ -1,0 +1,984 @@
+{
+  "name": "mLogStatsMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/mlogStats.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": null,
+  "onReturn": null,
+  "onDraw": "mLogStatsMenu_onDraw",
+  "defaultEntry": 55,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 102,
+        "y": 0,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MATCH STATISTICS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_00",
+      "coords": {
+        "x": -8,
+        "y": 28,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_01",
+      "coords": {
+        "x": -8,
+        "y": 36,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_02",
+      "coords": {
+        "x": -8,
+        "y": 44,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_03",
+      "coords": {
+        "x": -8,
+        "y": 52,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_04",
+      "coords": {
+        "x": -8,
+        "y": 60,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_05",
+      "coords": {
+        "x": -8,
+        "y": 68,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_06",
+      "coords": {
+        "x": -8,
+        "y": 76,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_07",
+      "coords": {
+        "x": -8,
+        "y": 84,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_08",
+      "coords": {
+        "x": -8,
+        "y": 92,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_09",
+      "coords": {
+        "x": -8,
+        "y": 100,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_10",
+      "coords": {
+        "x": -8,
+        "y": 108,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_11",
+      "coords": {
+        "x": -8,
+        "y": 116,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_12",
+      "coords": {
+        "x": -8,
+        "y": 124,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_13",
+      "coords": {
+        "x": -8,
+        "y": 132,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_14",
+      "coords": {
+        "x": -8,
+        "y": 140,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_15",
+      "coords": {
+        "x": -8,
+        "y": 148,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_16",
+      "coords": {
+        "x": -8,
+        "y": 156,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "label_17",
+      "coords": {
+        "x": -8,
+        "y": 164,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "PLAYERS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_00",
+      "coords": {
+        "x": 133,
+        "y": 28,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_01",
+      "coords": {
+        "x": 133,
+        "y": 36,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_02",
+      "coords": {
+        "x": 133,
+        "y": 44,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_03",
+      "coords": {
+        "x": 133,
+        "y": 52,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_04",
+      "coords": {
+        "x": 133,
+        "y": 60,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_05",
+      "coords": {
+        "x": 133,
+        "y": 68,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_06",
+      "coords": {
+        "x": 133,
+        "y": 76,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_07",
+      "coords": {
+        "x": 133,
+        "y": 84,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_08",
+      "coords": {
+        "x": 133,
+        "y": 92,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_09",
+      "coords": {
+        "x": 133,
+        "y": 100,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_10",
+      "coords": {
+        "x": 133,
+        "y": 108,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_11",
+      "coords": {
+        "x": 133,
+        "y": 116,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_12",
+      "coords": {
+        "x": 133,
+        "y": 124,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_13",
+      "coords": {
+        "x": 133,
+        "y": 132,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_14",
+      "coords": {
+        "x": 133,
+        "y": 140,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_15",
+      "coords": {
+        "x": 133,
+        "y": 148,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_16",
+      "coords": {
+        "x": 133,
+        "y": 156,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "sepa_17",
+      "coords": {
+        "x": 133,
+        "y": 164,
+        "w": 10,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " : "
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_00",
+      "coords": {
+        "x": 144,
+        "y": 28,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_01",
+      "coords": {
+        "x": 144,
+        "y": 36,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_02",
+      "coords": {
+        "x": 144,
+        "y": 44,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_03",
+      "coords": {
+        "x": 144,
+        "y": 52,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_04",
+      "coords": {
+        "x": 144,
+        "y": 60,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_05",
+      "coords": {
+        "x": 144,
+        "y": 68,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_06",
+      "coords": {
+        "x": 144,
+        "y": 76,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_07",
+      "coords": {
+        "x": 144,
+        "y": 84,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_08",
+      "coords": {
+        "x": 144,
+        "y": 92,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_09",
+      "coords": {
+        "x": 144,
+        "y": 100,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_10",
+      "coords": {
+        "x": 144,
+        "y": 108,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_11",
+      "coords": {
+        "x": 144,
+        "y": 116,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_12",
+      "coords": {
+        "x": 144,
+        "y": 124,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_13",
+      "coords": {
+        "x": 144,
+        "y": 132,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_14",
+      "coords": {
+        "x": 144,
+        "y": 140,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_15",
+      "coords": {
+        "x": 144,
+        "y": 148,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_16",
+      "coords": {
+        "x": 144,
+        "y": 156,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info_17",
+      "coords": {
+        "x": 144,
+        "y": 164,
+        "w": 140,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOGUN VS. PIERINOLARTISTA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 102,
+        "y": 188,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogStatsMenu_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

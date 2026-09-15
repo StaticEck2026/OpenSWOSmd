@@ -1,0 +1,864 @@
+{
+  "name": "cupMatchViewMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/cupMatchView.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "cupMatchView_onInit",
+  "onReturn": "cupMatchView_onReturn",
+  "onDraw": "cupMatchView_onDraw",
+  "defaultEntry": 45,
+  "exports": {
+    "kRANKING_MaxRowsMyRecords": 14,
+    "kRANKING_ButtonY0": 15,
+    "kRANKING_ButtonHeight": 12,
+    "kRANKING_ButtonStep": 12,
+    "KRANKING_BASIC_WIDTH": 22,
+    "kRANKING_TopLeftPosX": 0,
+    "kRANKING_TopLeftPosY": 15,
+    "kRANKING_TopLeftStep": 12,
+    "kRANKING_TopLeftWidth": 140,
+    "kRANKING_TopLeftBaseColor": 0,
+    "kRANKING_TopCenterPosX": 140,
+    "kRANKING_TopCenterPosY": 15,
+    "kRANKING_TopCenterStep": 12,
+    "kRANKING_TopCenterWidth": 40,
+    "kRANKING_TopCenterBaseColor": 0,
+    "kRANKING_TopRightPosX": 180,
+    "kRANKING_TopRightPosY": 15,
+    "kRANKING_TopRightStep": 12,
+    "kRANKING_TopRightWidth": 140,
+    "kRANKING_TopRightBaseColor": 0
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 102,
+        "y": 0,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MATCH RESULTS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_000",
+      "coords": {
+        "x": -8,
+        "y": 15,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_001",
+      "coords": {
+        "x": -8,
+        "y": 27,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_002",
+      "coords": {
+        "x": -8,
+        "y": 39,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_003",
+      "coords": {
+        "x": -8,
+        "y": 51,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_004",
+      "coords": {
+        "x": -8,
+        "y": 63,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_005",
+      "coords": {
+        "x": -8,
+        "y": 75,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_006",
+      "coords": {
+        "x": -8,
+        "y": 87,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_007",
+      "coords": {
+        "x": -8,
+        "y": 99,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_008",
+      "coords": {
+        "x": -8,
+        "y": 111,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_009",
+      "coords": {
+        "x": -8,
+        "y": 123,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_010",
+      "coords": {
+        "x": -8,
+        "y": 135,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_011",
+      "coords": {
+        "x": -8,
+        "y": 147,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_012",
+      "coords": {
+        "x": -8,
+        "y": 159,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topleft_013",
+      "coords": {
+        "x": -8,
+        "y": 171,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_000",
+      "coords": {
+        "x": 132,
+        "y": 15,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_001",
+      "coords": {
+        "x": 132,
+        "y": 27,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_002",
+      "coords": {
+        "x": 132,
+        "y": 39,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_003",
+      "coords": {
+        "x": 132,
+        "y": 51,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_004",
+      "coords": {
+        "x": 132,
+        "y": 63,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_005",
+      "coords": {
+        "x": 132,
+        "y": 75,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_006",
+      "coords": {
+        "x": 132,
+        "y": 87,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_007",
+      "coords": {
+        "x": 132,
+        "y": 99,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_008",
+      "coords": {
+        "x": 132,
+        "y": 111,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_009",
+      "coords": {
+        "x": 132,
+        "y": 123,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_010",
+      "coords": {
+        "x": 132,
+        "y": 135,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_011",
+      "coords": {
+        "x": 132,
+        "y": 147,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_012",
+      "coords": {
+        "x": 132,
+        "y": 159,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topcenter_013",
+      "coords": {
+        "x": 132,
+        "y": 171,
+        "w": 40,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 - 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_000",
+      "coords": {
+        "x": 172,
+        "y": 15,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_001",
+      "coords": {
+        "x": 172,
+        "y": 27,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_002",
+      "coords": {
+        "x": 172,
+        "y": 39,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_003",
+      "coords": {
+        "x": 172,
+        "y": 51,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_004",
+      "coords": {
+        "x": 172,
+        "y": 63,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_005",
+      "coords": {
+        "x": 172,
+        "y": 75,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_006",
+      "coords": {
+        "x": 172,
+        "y": 87,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_007",
+      "coords": {
+        "x": 172,
+        "y": 99,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_008",
+      "coords": {
+        "x": 172,
+        "y": 111,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_009",
+      "coords": {
+        "x": 172,
+        "y": 123,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_010",
+      "coords": {
+        "x": 172,
+        "y": 135,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_011",
+      "coords": {
+        "x": 172,
+        "y": 147,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_012",
+      "coords": {
+        "x": 172,
+        "y": 159,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "topright_013",
+      "coords": {
+        "x": 172,
+        "y": 171,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "OOOOOOOOOOOOOOOOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp",
+      "coords": {
+        "x": -8,
+        "y": 15,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 44
+        },
+        {
+          "op": "onselect_fire",
+          "func": "cupMatchView_scrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown",
+      "coords": {
+        "x": -8,
+        "y": 171,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 43,
+          "down": 45
+        },
+        {
+          "op": "onselect_fire",
+          "func": "cupMatchView_scrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 122,
+        "y": 185,
+        "w": 64,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 44,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "cupMatchView_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

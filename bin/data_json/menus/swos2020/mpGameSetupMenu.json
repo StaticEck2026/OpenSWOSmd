@@ -1,0 +1,1501 @@
+{
+  "name": "mpGameSetupMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/mpGameSetup.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "mpGameSetupMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "mpGameSetupMenu_OnDraw",
+  "defaultEntry": 45,
+  "exports": {
+    "kGS_ADJUSTY": 0,
+    "kGS_MaxRows": 3,
+    "kGS_ButtonY0": 25,
+    "kGS_ButtonHeight": 12,
+    "kGS_ButtonStep": 14,
+    "kGS_LocationPosX": 0,
+    "kGS_LocationPosY": 25,
+    "kGS_LocationStep": 14,
+    "kGS_LocationWidth": 30,
+    "kGS_LocationHeight": 12,
+    "kGS_LocationBaseColor": 11,
+    "kGS_ConnectedPlayersPosX": 32,
+    "kGS_ConnectedPlayersPosY": 25,
+    "kGS_ConnectedPlayersStep": 14,
+    "kGS_ConnectedPlayersWidth": 106,
+    "kGS_ConnectedPlayersHeight": 12,
+    "kGS_ConnectedPlayersBaseColor": 11,
+    "kGS_TeamsPosX": 140,
+    "kGS_TeamsPosY": 25,
+    "kGS_TeamsStep": 14,
+    "kGS_TeamsWidth": 96,
+    "kGS_TeamsHeight": 12,
+    "kGS_TeamsBaseColor": 32774,
+    "kGS_TacticsPosX": 238,
+    "kGS_TacticsPosY": 25,
+    "kGS_TacticsStep": 14,
+    "kGS_TacticsWidth": 44,
+    "kGS_TacticsHeight": 12,
+    "kGS_TacticsBaseColor": 6,
+    "kGS_GoPosX": 284,
+    "kGS_GoPosY": 25,
+    "kGS_GoStep": 14,
+    "kGS_GoWidth": 36,
+    "kGS_GoHeight": 12,
+    "kGS_GoBaseColor": 10
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 65,
+        "y": 0,
+        "w": 174,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gameStyle",
+      "coords": {
+        "x": -8,
+        "y": 1,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "teamDB",
+      "coords": {
+        "x": -8,
+        "y": 12,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "connectionStatus",
+      "coords": {
+        "x": 193,
+        "y": 1,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x4000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "latency",
+      "coords": {
+        "x": 193,
+        "y": 12,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "latencyLabel",
+      "coords": {
+        "x": 115,
+        "y": 12,
+        "w": 64,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "LATENCY:"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "latencyPing",
+      "coords": {
+        "x": 183,
+        "y": 12,
+        "w": 40,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "latencyPercent",
+      "coords": {
+        "x": 281,
+        "y": 12,
+        "w": 32,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "location_00",
+      "coords": {
+        "x": -8,
+        "y": 25,
+        "w": 30,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "location_01",
+      "coords": {
+        "x": -8,
+        "y": 39,
+        "w": 30,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "location_02",
+      "coords": {
+        "x": -8,
+        "y": 53,
+        "w": 30,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "cPlayers_00",
+      "coords": {
+        "x": 24,
+        "y": 25,
+        "w": 106,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "cPlayers_01",
+      "coords": {
+        "x": 24,
+        "y": 39,
+        "w": 106,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "cPlayers_02",
+      "coords": {
+        "x": 24,
+        "y": 53,
+        "w": 106,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "teams_00",
+      "coords": {
+        "x": 132,
+        "y": 25,
+        "w": 96,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_teams_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "teams_01",
+      "coords": {
+        "x": 132,
+        "y": 39,
+        "w": 96,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_teams_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "teams_02",
+      "coords": {
+        "x": 132,
+        "y": 53,
+        "w": 96,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_teams_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "tactics_00",
+      "coords": {
+        "x": 230,
+        "y": 25,
+        "w": 44,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_tactics_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "tactics_01",
+      "coords": {
+        "x": 230,
+        "y": 39,
+        "w": 44,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_tactics_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "tactics_02",
+      "coords": {
+        "x": 230,
+        "y": 53,
+        "w": 44,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_tactics_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "go_00",
+      "coords": {
+        "x": 276,
+        "y": 25,
+        "w": 36,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_go_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "go_01",
+      "coords": {
+        "x": 276,
+        "y": 39,
+        "w": 36,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_go_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "go_02",
+      "coords": {
+        "x": 276,
+        "y": 53,
+        "w": 36,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpGameSetup_go_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "oppoActivity",
+      "coords": {
+        "x": 2,
+        "y": 67,
+        "w": 300,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rankedMode1Label",
+      "coords": {
+        "x": 163,
+        "y": 80,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MATCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rankedModeOption1",
+      "coords": {
+        "x": 238,
+        "y": 80,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SELECT MATCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectRankedModeOption1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gameStyle1Label",
+      "coords": {
+        "x": 163,
+        "y": 93,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "GAME STYLE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gameStyle1",
+      "coords": {
+        "x": 238,
+        "y": 93,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA (50FPS)"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectGameStyle1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "teamDB1Label",
+      "coords": {
+        "x": 163,
+        "y": 106,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "TEAM DB"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "teamDB1",
+      "coords": {
+        "x": 238,
+        "y": 106,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "96/97"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectTeamDB1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "etPen1Label",
+      "coords": {
+        "x": 163,
+        "y": 119,
+        "w": 27,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CUP"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "legOpt1",
+      "coords": {
+        "x": 191,
+        "y": 119,
+        "w": 46,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "2 LEGS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 32,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectLegOpt1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "etPen1",
+      "coords": {
+        "x": 238,
+        "y": 119,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "OFF"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": 31,
+          "right": -1,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectEtPen1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gameLength1Label",
+      "coords": {
+        "x": 163,
+        "y": 132,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "GAME LENGTH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gameLength1",
+      "coords": {
+        "x": 238,
+        "y": 132,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "3 MIN"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectGameLength1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pitchType1Label",
+      "coords": {
+        "x": 163,
+        "y": 145,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "PITCH TYPE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pitchType1",
+      "coords": {
+        "x": 238,
+        "y": 145,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectPitchType1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subs1Label",
+      "coords": {
+        "x": 163,
+        "y": 158,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SUBSTITUTES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "minSubs1",
+      "coords": {
+        "x": 238,
+        "y": 158,
+        "w": 14,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "3"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectMinSubs1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subs1LabelFrom",
+      "coords": {
+        "x": 252,
+        "y": 158,
+        "w": 46,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "FROM"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "maxSubs1",
+      "coords": {
+        "x": 298,
+        "y": 158,
+        "w": 14,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "5"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectMaxSubs1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ggpoFrameDelayLabel",
+      "coords": {
+        "x": 163,
+        "y": 171,
+        "w": 74,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "FRAME DELAY"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ggpoFrameDelayDec",
+      "coords": {
+        "x": 238,
+        "y": 171,
+        "w": 14,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 43,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectGgpoFrameDelayDec"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ggpoFrameDelay_",
+      "coords": {
+        "x": 252,
+        "y": 171,
+        "w": 46,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AUTO"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": 42,
+          "right": 44,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectGGPOFrameDelay"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ggpoFrameDelayInc",
+      "coords": {
+        "x": 298,
+        "y": 171,
+        "w": 14,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "+"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": 43,
+          "right": -1,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectGgpoFrameDelayInc"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "cancel",
+      "coords": {
+        "x": 163,
+        "y": 184,
+        "w": 74,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CANCEL"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectMPSettingExit"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "start",
+      "coords": {
+        "x": 238,
+        "y": 184,
+        "w": 74,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "START"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectMPSettingStart"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchInfo",
+      "coords": {
+        "x": -8,
+        "y": 80,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "(NO MATCH INFO)"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 49
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectMatchInfo"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatLabel",
+      "coords": {
+        "x": -8,
+        "y": 93,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CHAT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "liveCastUrlBtn",
+      "coords": {
+        "x": 62,
+        "y": 93,
+        "w": 99,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "LIVE CAST URL"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 47,
+          "down": 60
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectLiveCastUrl"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg00",
+      "coords": {
+        "x": -8,
+        "y": 104,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg01",
+      "coords": {
+        "x": -8,
+        "y": 112,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg02",
+      "coords": {
+        "x": -8,
+        "y": 120,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg03",
+      "coords": {
+        "x": -8,
+        "y": 128,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg04",
+      "coords": {
+        "x": -8,
+        "y": 136,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg05",
+      "coords": {
+        "x": -8,
+        "y": 144,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg06",
+      "coords": {
+        "x": -8,
+        "y": 152,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg07",
+      "coords": {
+        "x": -8,
+        "y": 160,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg08",
+      "coords": {
+        "x": -8,
+        "y": 168,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "chatMsg09",
+      "coords": {
+        "x": -8,
+        "y": 176,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp",
+      "coords": {
+        "x": 152,
+        "y": 106,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 49,
+          "down": 61
+        },
+        {
+          "op": "onselect_fire",
+          "func": "matchMaking_chat_scrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown",
+      "coords": {
+        "x": 152,
+        "y": 175,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 60,
+          "down": 62
+        },
+        {
+          "op": "onselect_fire",
+          "func": "matchMaking_chat_scrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "inputChatMsg",
+      "coords": {
+        "x": -8,
+        "y": 188,
+        "w": 169,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x8000"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 61,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectInputChatMsg"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dummy",
+      "coords": {
+        "x": -8,
+        "y": -8,
+        "w": 1,
+        "h": 1
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawGoButtonAndStarsGraphics"
+        }
+      ]
+    }
+  ]
+}

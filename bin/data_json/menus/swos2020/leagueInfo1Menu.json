@@ -1,0 +1,205 @@
+{
+  "name": "leagueInfo1Menu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/leagueInfo1.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "leagueInfo1_onInit",
+  "onReturn": null,
+  "onDraw": "leagueInfo1_onDraw",
+  "defaultEntry": 1,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 72,
+        "y": 0,
+        "w": 160,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "INTERNATIONAL COMPETITIONS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button1",
+      "coords": {
+        "x": 37,
+        "y": 43,
+        "w": 230,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA SUPER LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo1_button1_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button2",
+      "coords": {
+        "x": 37,
+        "y": 75,
+        "w": 230,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "PC LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo1_button2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button3",
+      "coords": {
+        "x": 37,
+        "y": 107,
+        "w": 230,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA PREMIER LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo1_button3_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button4",
+      "coords": {
+        "x": 37,
+        "y": 139,
+        "w": 230,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "INTERNATIONAL SENSIBLE SOCCER FEDERATION"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo1_button4_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 112,
+        "y": 185,
+        "w": 80,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo1_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

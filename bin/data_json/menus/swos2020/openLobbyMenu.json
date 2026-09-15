@@ -1,0 +1,240 @@
+{
+  "name": "openLobbyMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/openLobby.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "openLobbyMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "openLobbyMenu_OnDraw",
+  "defaultEntry": 1,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 112,
+        "y": 0,
+        "w": 80,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "OPEN LOBBY"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "friendly",
+      "coords": {
+        "x": 82,
+        "y": 28,
+        "w": 140,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "FRIENDLY"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectFriendly"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranked",
+      "coords": {
+        "x": 82,
+        "y": 64,
+        "w": 140,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "RANKED MATCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectRanked"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "leagueAndTournament",
+      "coords": {
+        "x": 82,
+        "y": 100,
+        "w": 140,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "LEAGUE / CUP"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 8
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectLeagueAndTournament"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "description1",
+      "coords": {
+        "x": -8,
+        "y": 130,
+        "w": 320,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "IN CASE OF RANKED MATCHES,"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "description2",
+      "coords": {
+        "x": -8,
+        "y": 141,
+        "w": 320,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "GAP OF XXX SRN BY DEFAULT CANNOT BE EXCEEDED"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "description3",
+      "coords": {
+        "x": -8,
+        "y": 152,
+        "w": 320,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "OTHERWISE MATCH WILL BE AUTO-FRIENDLY."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "description4",
+      "coords": {
+        "x": -8,
+        "y": 163,
+        "w": 320,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXCEPTION: BOTH PLAYERS HAVE MORE THAN XXXX SRN"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exitOpenLobby",
+      "coords": {
+        "x": 112,
+        "y": 185,
+        "w": 80,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectExitOpenLobby"
+        }
+      ]
+    }
+  ]
+}

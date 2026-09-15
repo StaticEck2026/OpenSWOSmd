@@ -1,0 +1,233 @@
+{
+  "name": "hostGameMessageMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/hostGameMessage.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "hostGameMessageMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "hostGameMessageMenu_OnDraw",
+  "defaultEntry": 9,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 82,
+        "y": 0,
+        "w": 140,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "panel",
+      "coords": {
+        "x": 22,
+        "y": 37,
+        "w": 260,
+        "h": 65
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message1",
+      "coords": {
+        "x": 52,
+        "y": 43,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message2",
+      "coords": {
+        "x": 52,
+        "y": 53,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message3",
+      "coords": {
+        "x": 52,
+        "y": 63,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message4",
+      "coords": {
+        "x": 52,
+        "y": 73,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message5",
+      "coords": {
+        "x": 52,
+        "y": 83,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button1",
+      "coords": {
+        "x": 52,
+        "y": 125,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 8
+        },
+        {
+          "op": "onselect_fire",
+          "func": "hostGameMessageMenu_button1_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button2",
+      "coords": {
+        "x": 52,
+        "y": 147,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 7,
+          "down": 9
+        },
+        {
+          "op": "onselect_fire",
+          "func": "hostGameMessageMenu_button2_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 102,
+        "y": 185,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 8,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "hostGameMessageMenu_exit_OnSelect"
+        }
+      ]
+    }
+  ]
+}

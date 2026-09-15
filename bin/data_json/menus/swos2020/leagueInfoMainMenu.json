@@ -1,0 +1,205 @@
+{
+  "name": "leagueInfoMainMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/leagueInfoMain.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "leagueInfoMain_onInit",
+  "onReturn": null,
+  "onDraw": "leagueInfoMain_onDraw",
+  "defaultEntry": 1,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ONLINE LEAGUES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button1",
+      "coords": {
+        "x": 72,
+        "y": 35,
+        "w": 160,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "INTERNATIONAL COMPETITIONS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfoMain_button1_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button2",
+      "coords": {
+        "x": 72,
+        "y": 70,
+        "w": 160,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DOMESTIC LEAGUES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfoMain_button2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button3",
+      "coords": {
+        "x": 72,
+        "y": 105,
+        "w": 160,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MY FRIENDLY STATS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfoMain_button3_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button4",
+      "coords": {
+        "x": 72,
+        "y": 140,
+        "w": 160,
+        "h": 20
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MY RANKED STATS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfoMain_button4_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "buttonExit",
+      "coords": {
+        "x": 112,
+        "y": 185,
+        "w": 80,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfoMain_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

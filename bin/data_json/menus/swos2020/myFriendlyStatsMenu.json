@@ -1,0 +1,2417 @@
+{
+  "name": "myFriendlyStatsMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/myFriendlyStats.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "myFriendlyStatsMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "myFriendlyStatsMenu_OnDraw",
+  "defaultEntry": 106,
+  "exports": {
+    "kRANKING_MaxRowsMyRecords": 13,
+    "kRANKING_ButtonY0": 50,
+    "kRANKING_ButtonHeight": 7,
+    "kRANKING_ButtonStep": 8,
+    "KRANKING_BASIC_WIDTH": 32,
+    "kRANKING_UsernamePosX": 28,
+    "kRANKING_UsernamePosY": 50,
+    "kRANKING_UsernameStep": 8,
+    "kRANKING_UsernameWidth": 32,
+    "kRANKING_UsernameBaseColor": 13,
+    "kRANKING_NationPosX": 61,
+    "kRANKING_NationPosY": 50,
+    "kRANKING_NationStep": 8,
+    "kRANKING_NationWidth": 32,
+    "kRANKING_NationBaseColor": 13,
+    "kRANKING_PlayedPosX": 94,
+    "kRANKING_PlayedPosY": 50,
+    "kRANKING_PlayedStep": 8,
+    "kRANKING_PlayedWidth": 32,
+    "kRANKING_PlayedBaseColor": 7,
+    "kRANKING_WinsPosX": 127,
+    "kRANKING_WinsPosY": 50,
+    "kRANKING_WinsStep": 8,
+    "kRANKING_WinsWidth": 32,
+    "kRANKING_WinsBaseColor": 7,
+    "kRANKING_DrawsPosX": 160,
+    "kRANKING_DrawsPosY": 50,
+    "kRANKING_DrawsStep": 8,
+    "kRANKING_DrawsWidth": 32,
+    "kRANKING_DrawsBaseColor": 7,
+    "kRANKING_LostsPosX": 193,
+    "kRANKING_LostsPosY": 50,
+    "kRANKING_LostsStep": 8,
+    "kRANKING_LostsWidth": 32,
+    "kRANKING_LostsBaseColor": 7,
+    "kRANKING_SRNPosX": 226,
+    "kRANKING_SRNPosY": 50,
+    "kRANKING_SRNStep": 8,
+    "kRANKING_SRNWidth": 32,
+    "kRANKING_SRNBaseColor": 7,
+    "kRANKING_SRNCPosX": 259,
+    "kRANKING_SRNCPosY": 50,
+    "kRANKING_SRNCStep": 8,
+    "kRANKING_SRNCWidth": 32,
+    "kRANKING_SRNCBaseColor": 7
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 82,
+        "y": 0,
+        "w": 140,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MY FRIENDLY STATS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username",
+      "coords": {
+        "x": 82,
+        "y": 18,
+        "w": 140,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_000",
+      "coords": {
+        "x": 20,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_001",
+      "coords": {
+        "x": 20,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_002",
+      "coords": {
+        "x": 20,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_003",
+      "coords": {
+        "x": 20,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_004",
+      "coords": {
+        "x": 20,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_005",
+      "coords": {
+        "x": 20,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_006",
+      "coords": {
+        "x": 20,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_007",
+      "coords": {
+        "x": 20,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_008",
+      "coords": {
+        "x": 20,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_009",
+      "coords": {
+        "x": 20,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_010",
+      "coords": {
+        "x": 20,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_011",
+      "coords": {
+        "x": 20,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username_012",
+      "coords": {
+        "x": 20,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_000",
+      "coords": {
+        "x": 53,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_001",
+      "coords": {
+        "x": 53,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_002",
+      "coords": {
+        "x": 53,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_003",
+      "coords": {
+        "x": 53,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_004",
+      "coords": {
+        "x": 53,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_005",
+      "coords": {
+        "x": 53,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_006",
+      "coords": {
+        "x": 53,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_007",
+      "coords": {
+        "x": 53,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_008",
+      "coords": {
+        "x": 53,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_009",
+      "coords": {
+        "x": 53,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_010",
+      "coords": {
+        "x": 53,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_011",
+      "coords": {
+        "x": 53,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "nation_012",
+      "coords": {
+        "x": 53,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_000",
+      "coords": {
+        "x": 86,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_001",
+      "coords": {
+        "x": 86,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_002",
+      "coords": {
+        "x": 86,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_003",
+      "coords": {
+        "x": 86,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_004",
+      "coords": {
+        "x": 86,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_005",
+      "coords": {
+        "x": 86,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_006",
+      "coords": {
+        "x": 86,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_007",
+      "coords": {
+        "x": 86,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_008",
+      "coords": {
+        "x": 86,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_009",
+      "coords": {
+        "x": 86,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_010",
+      "coords": {
+        "x": 86,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_011",
+      "coords": {
+        "x": 86,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "played_012",
+      "coords": {
+        "x": 86,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_000",
+      "coords": {
+        "x": 119,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_001",
+      "coords": {
+        "x": 119,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_002",
+      "coords": {
+        "x": 119,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_003",
+      "coords": {
+        "x": 119,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_004",
+      "coords": {
+        "x": 119,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_005",
+      "coords": {
+        "x": 119,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_006",
+      "coords": {
+        "x": 119,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_007",
+      "coords": {
+        "x": 119,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_008",
+      "coords": {
+        "x": 119,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_009",
+      "coords": {
+        "x": 119,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_010",
+      "coords": {
+        "x": 119,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_011",
+      "coords": {
+        "x": 119,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "wins_012",
+      "coords": {
+        "x": 119,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_000",
+      "coords": {
+        "x": 152,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_001",
+      "coords": {
+        "x": 152,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_002",
+      "coords": {
+        "x": 152,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_003",
+      "coords": {
+        "x": 152,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_004",
+      "coords": {
+        "x": 152,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_005",
+      "coords": {
+        "x": 152,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_006",
+      "coords": {
+        "x": 152,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_007",
+      "coords": {
+        "x": 152,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_008",
+      "coords": {
+        "x": 152,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_009",
+      "coords": {
+        "x": 152,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_010",
+      "coords": {
+        "x": 152,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_011",
+      "coords": {
+        "x": 152,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "draws_012",
+      "coords": {
+        "x": 152,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_000",
+      "coords": {
+        "x": 185,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_001",
+      "coords": {
+        "x": 185,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_002",
+      "coords": {
+        "x": 185,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_003",
+      "coords": {
+        "x": 185,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_004",
+      "coords": {
+        "x": 185,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_005",
+      "coords": {
+        "x": 185,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_006",
+      "coords": {
+        "x": 185,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_007",
+      "coords": {
+        "x": 185,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_008",
+      "coords": {
+        "x": 185,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_009",
+      "coords": {
+        "x": 185,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_010",
+      "coords": {
+        "x": 185,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_011",
+      "coords": {
+        "x": 185,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "losts_012",
+      "coords": {
+        "x": 185,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_000",
+      "coords": {
+        "x": 218,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_001",
+      "coords": {
+        "x": 218,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_002",
+      "coords": {
+        "x": 218,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_003",
+      "coords": {
+        "x": 218,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_004",
+      "coords": {
+        "x": 218,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_005",
+      "coords": {
+        "x": 218,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_006",
+      "coords": {
+        "x": 218,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_007",
+      "coords": {
+        "x": 218,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_008",
+      "coords": {
+        "x": 218,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_009",
+      "coords": {
+        "x": 218,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_010",
+      "coords": {
+        "x": 218,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_011",
+      "coords": {
+        "x": 218,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_012",
+      "coords": {
+        "x": 218,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_000",
+      "coords": {
+        "x": 251,
+        "y": 50,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_001",
+      "coords": {
+        "x": 251,
+        "y": 58,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_002",
+      "coords": {
+        "x": 251,
+        "y": 66,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_003",
+      "coords": {
+        "x": 251,
+        "y": 74,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_004",
+      "coords": {
+        "x": 251,
+        "y": 82,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_005",
+      "coords": {
+        "x": 251,
+        "y": 90,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_006",
+      "coords": {
+        "x": 251,
+        "y": 98,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_007",
+      "coords": {
+        "x": 251,
+        "y": 106,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_008",
+      "coords": {
+        "x": 251,
+        "y": 114,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_009",
+      "coords": {
+        "x": 251,
+        "y": 122,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_010",
+      "coords": {
+        "x": 251,
+        "y": 130,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_011",
+      "coords": {
+        "x": 251,
+        "y": 138,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srnc_012",
+      "coords": {
+        "x": 251,
+        "y": 146,
+        "w": 32,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mexit",
+      "coords": {
+        "x": 107,
+        "y": 185,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "myFriendlyStatsMenu_exit_OnSelect"
+        }
+      ]
+    }
+  ]
+}

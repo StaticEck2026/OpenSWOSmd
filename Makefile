@@ -572,7 +572,8 @@ WASM_LINK_DEPS := wasm/pre.js wasm/shell.html
 # deleted by hand, then jumped to 21MB.) List the preloaded files so a data change
 # forces the relink.
 WASM_PRELOAD_FILES := $(wildcard bin/data/* bin/grafs/* bin/grafs_aga/* bin/sound/* \
-                                 bin/data_json/*.json bin/data_json/*/*.json)
+                                 bin/data_json/*.json bin/data_json/*/*.json \
+                                 bin/data_json/*/*/*.json)
 WASM_LINK_DEPS += $(WASM_PRELOAD_FILES)
 endif
 

@@ -1,0 +1,896 @@
+{
+  "name": "oooInfoMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/oooInfo.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": null,
+  "onReturn": null,
+  "onDraw": "oooInfoMenu_OnDraw",
+  "defaultEntry": 35,
+  "exports": {
+    "kOIM_ADJUSTY": -1,
+    "kOIM_MaxRows": 9,
+    "kOIM_ButtonY0": 50,
+    "kOIM_ButtonHeight": 10,
+    "kOIM_ButtonStep": 12,
+    "kOIM_RankingPosX": 33,
+    "kOIM_RankingPosY": 50,
+    "kOIM_RankingStep": 12,
+    "kOIM_RankingWidth": 50,
+    "kOIM_RankingHeight": 10,
+    "kOIM_RankingBaseColor": 7,
+    "kOIM_HomePosX": 85,
+    "kOIM_HomePosY": 50,
+    "kOIM_HomeStep": 12,
+    "kOIM_HomeWidth": 100,
+    "kOIM_HomeHeight": 10,
+    "kOIM_HomeBaseColor": 7,
+    "kOIM_AwayPosX": 187,
+    "kOIM_AwayPosY": 50,
+    "kOIM_AwayStep": 12,
+    "kOIM_AwayWidth": 100,
+    "kOIM_AwayHeight": 10,
+    "kOIM_AwayBaseColor": 7
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "header2",
+      "coords": {
+        "x": 32,
+        "y": 0,
+        "w": 240,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SELECT A MATCH FOR AUTO RESULT ENTERING"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "friendlyMatch",
+      "coords": {
+        "x": 82,
+        "y": 22,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SWITCH TO FRIENDLY MATCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfo_friendlyMatch_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subHeader",
+      "coords": {
+        "x": 92,
+        "y": 35,
+        "w": 120,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "RANKED MATCHES"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_00",
+      "coords": {
+        "x": 25,
+        "y": 50,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_01",
+      "coords": {
+        "x": 25,
+        "y": 62,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_02",
+      "coords": {
+        "x": 25,
+        "y": 74,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_03",
+      "coords": {
+        "x": 25,
+        "y": 86,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_04",
+      "coords": {
+        "x": 25,
+        "y": 98,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_05",
+      "coords": {
+        "x": 25,
+        "y": 110,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_06",
+      "coords": {
+        "x": 25,
+        "y": 122,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_07",
+      "coords": {
+        "x": 25,
+        "y": 134,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_08",
+      "coords": {
+        "x": 25,
+        "y": 146,
+        "w": 50,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_00",
+      "coords": {
+        "x": 77,
+        "y": 50,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_01",
+      "coords": {
+        "x": 77,
+        "y": 62,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_02",
+      "coords": {
+        "x": 77,
+        "y": 74,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_03",
+      "coords": {
+        "x": 77,
+        "y": 86,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_04",
+      "coords": {
+        "x": 77,
+        "y": 98,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_05",
+      "coords": {
+        "x": 77,
+        "y": 110,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_06",
+      "coords": {
+        "x": 77,
+        "y": 122,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_07",
+      "coords": {
+        "x": 77,
+        "y": 134,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_08",
+      "coords": {
+        "x": 77,
+        "y": 146,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_00",
+      "coords": {
+        "x": 179,
+        "y": 50,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_01",
+      "coords": {
+        "x": 179,
+        "y": 62,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_02",
+      "coords": {
+        "x": 179,
+        "y": 74,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_03",
+      "coords": {
+        "x": 179,
+        "y": 86,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_04",
+      "coords": {
+        "x": 179,
+        "y": 98,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_05",
+      "coords": {
+        "x": 179,
+        "y": 110,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_06",
+      "coords": {
+        "x": 179,
+        "y": 122,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_07",
+      "coords": {
+        "x": 179,
+        "y": 134,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_08",
+      "coords": {
+        "x": 179,
+        "y": 146,
+        "w": 100,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp",
+      "coords": {
+        "x": 279,
+        "y": 62,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfo_scrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown",
+      "coords": {
+        "x": 279,
+        "y": 145,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "onselect_fire",
+          "func": "oooInfo_scrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "page",
+      "coords": {
+        "x": 260,
+        "y": 158,
+        "w": 8,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "(0 / 0)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchInfo",
+      "coords": {
+        "x": 25,
+        "y": 158,
+        "w": 8,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "ID: 12345, 12345"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mexit",
+      "coords": {
+        "x": 122,
+        "y": 185,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    }
+  ]
+}

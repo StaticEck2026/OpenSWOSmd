@@ -130,6 +130,9 @@ extern uint16_t _longFireTime;
 extern uint16_t _longFireFlag;
 extern uint32_t _allowShorterMenuItemsWithFrames;
 
+/* Flags word (MENU_FLAGS_MARKER) of the menu UnpackMenu last unpacked. */
+static uint16_t s_menuFlags;
+
 /* UnpackMenu globals */
 extern uint16_t _menuX;
 extern uint16_t _menuY;
@@ -982,6 +985,16 @@ void UnpackMenu(uint8_t *packed, uint8_t *dest)
 
     a1 += MENU_HEADER_SIZE;
 
+    /* OpenSWOS extension (docs/MENUS.md §0a): an optional flags word directly
+     * after the header. It is only recognised here, where the stream is always in
+     * wide-coords mode and 0xFC18 would be an entry at x = -1000, so no original
+     * menu can be misread as carrying it. */
+    s_menuFlags = 0;
+    if (*(uint16_t *)a0 == MENU_FLAGS_MARKER) {
+        s_menuFlags = *(uint16_t *)(a0 + 2);
+        a0 += 4;
+    }
+
 parse_loop:
     /* Check for end marker (64537 = 0xFC19) */
     if (*(uint16_t *)a0 == 64537)
@@ -1355,6 +1368,10 @@ void DrawMenu(void)
         DrawMenuItem(entry);
         entry = (MenuEntry *)((uint8_t *)entry + MENUENTRY_STRIDE);
     }
+    /* DOS DrawMenu draws the selection frame before it flips; with the whole menu
+     * redrawn every frame, nothing else would. */
+    if (s_menuFlags & MENU_FLAG_DOS_REDRAW)
+        DrawSelectedMenuItemFrame();
     WaitForVSync();
     BlitterCopyOverlayToScreen();
 }
@@ -1601,15 +1618,24 @@ void MenuProc(void)
     if ((_irqCookieObfuscated ^ 0xCFD1F8B3) != 0x1754)
         return;
 
-    if (_menuStatus == 0) {
-        DrawSelectedMenuItemFrame();
-        WaitForVSync();
-    }
-
-    _menuCursorFrame++;
-
-    if (_menuStatus != 0)
+    if (s_menuFlags & MENU_FLAG_DOS_REDRAW) {
+        /* DOS MenuProc, which SWOS 2020's menus are written against: redraw the
+         * whole menu every frame -- onDraw, every entry, the selection frame --
+         * so a handler can change entries from onDraw without redrawing them
+         * itself. DrawMenu presents the frame. */
+        _menuCursorFrame++;
         DrawMenu();
+    } else {
+        if (_menuStatus == 0) {
+            DrawSelectedMenuItemFrame();
+            WaitForVSync();
+        }
+
+        _menuCursorFrame++;
+
+        if (_menuStatus != 0)
+            DrawMenu();
+    }
 
     if (_menuFade != 0) {
         FadeIn();

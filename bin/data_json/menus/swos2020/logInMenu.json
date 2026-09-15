@@ -1,0 +1,510 @@
+{
+  "name": "logInMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/logIn.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "logInMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "logInMenu_OnDraw",
+  "defaultEntry": 4,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subTitle",
+      "coords": {
+        "x": 92,
+        "y": 20,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "username",
+      "coords": {
+        "x": 32,
+        "y": 39,
+        "w": 60,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "USERNAME"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "password",
+      "coords": {
+        "x": 32,
+        "y": 59,
+        "w": 60,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "PASSWORD"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "usernameInput",
+      "coords": {
+        "x": 99,
+        "y": 39,
+        "w": 163,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 5
+        },
+        {
+          "op": "onselect_fire",
+          "func": "usernameInput_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "passwordInput",
+      "coords": {
+        "x": 99,
+        "y": 59,
+        "w": 163,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "passwordInput_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rememberLogInInfoLabel",
+      "coords": {
+        "x": 99,
+        "y": 78,
+        "w": 163,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "REMEMBER LOGIN INFO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rememberLogInInfo",
+      "coords": {
+        "x": 205,
+        "y": 78,
+        "w": 28,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ON"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rememberLogInInfo_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "showPasswordLabel",
+      "coords": {
+        "x": 99,
+        "y": 92,
+        "w": 163,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SHOW PASSWORD"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "showPassword",
+      "coords": {
+        "x": 205,
+        "y": 92,
+        "w": 28,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "OFF"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "showPassword_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "liveCastLabel",
+      "coords": {
+        "x": 99,
+        "y": 106,
+        "w": 163,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "SWOS.EU LIVE CAST"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "liveCast",
+      "coords": {
+        "x": 205,
+        "y": 106,
+        "w": 28,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ON"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "liveCast_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "logInContinue",
+      "coords": {
+        "x": 42,
+        "y": 123,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 15,
+          "up": 5,
+          "down": 13
+        },
+        {
+          "op": "onselect_fire",
+          "func": "logInMenuLogInContinue_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "OfflinelogOut",
+      "coords": {
+        "x": 42,
+        "y": 141,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 16,
+          "up": 12,
+          "down": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "logInMenuOfflinelogOut_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "news",
+      "coords": {
+        "x": 34,
+        "y": 159,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 17,
+          "up": 13,
+          "down": 18
+        },
+        {
+          "op": "onselect_fire",
+          "func": "logInMenuNews_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "registerUser",
+      "coords": {
+        "x": 162,
+        "y": 123,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "REGISTER"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 12,
+          "right": -1,
+          "up": 5,
+          "down": 16
+        },
+        {
+          "op": "onselect_fire",
+          "func": "registerUserMenuNews_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "registerUser2",
+      "coords": {
+        "x": 162,
+        "y": 141,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MY PASSWORD?"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 13,
+          "right": -1,
+          "up": 15,
+          "down": 17
+        },
+        {
+          "op": "onselect_fire",
+          "func": "registerUserMenuNews2_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "registerUser3",
+      "coords": {
+        "x": 162,
+        "y": 159,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MY USERNAME?"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": 14,
+          "right": -1,
+          "up": 16,
+          "down": 18
+        },
+        {
+          "op": "onselect_fire",
+          "func": "registerUserMenuNews3_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "cancel",
+      "coords": {
+        "x": 102,
+        "y": 185,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 14,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "logInMenuCancel_OnSelect"
+        }
+      ]
+    }
+  ]
+}

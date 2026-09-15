@@ -1,0 +1,242 @@
+{
+  "name": "messageMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/message.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "messageMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "messageMenu_OnDraw",
+  "defaultEntry": 10,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SHARE CHALLENGE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "panel",
+      "coords": {
+        "x": 12,
+        "y": 50,
+        "w": 280,
+        "h": 81
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message0",
+      "coords": {
+        "x": 2,
+        "y": 54,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DO YOU WANT TO SHARE YOUR CHALLENGE AND"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message1",
+      "coords": {
+        "x": 2,
+        "y": 64,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MAKE IT AVAILABLE ONLINE?"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message2",
+      "coords": {
+        "x": 2,
+        "y": 74,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message3",
+      "coords": {
+        "x": 2,
+        "y": 84,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "- NEW CHALLENGE -"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message4",
+      "coords": {
+        "x": 2,
+        "y": 94,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "- ARGENTINA 1978 1-2 GERMANY 1992 -"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message5",
+      "coords": {
+        "x": 2,
+        "y": 104,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message6",
+      "coords": {
+        "x": 2,
+        "y": 114,
+        "w": 300,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "BY TESTER1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "yes",
+      "coords": {
+        "x": 102,
+        "y": 163,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "YES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "messageMenu_yes_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "no",
+      "coords": {
+        "x": 102,
+        "y": 185,
+        "w": 100,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "NO"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 9,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "messageMenu_no_OnSelect"
+        }
+      ]
+    }
+  ]
+}

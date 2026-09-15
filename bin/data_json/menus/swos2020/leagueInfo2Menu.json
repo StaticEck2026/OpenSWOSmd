@@ -1,0 +1,370 @@
+{
+  "name": "leagueInfo2Menu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/leagueInfo2.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "leagueInfo2_onInit",
+  "onReturn": null,
+  "onDraw": "leagueInfo2_onDraw",
+  "defaultEntry": 2,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DOMESTIC LEAGUES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button0",
+      "coords": {
+        "x": 87,
+        "y": 41,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EARTH LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button0_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button1",
+      "coords": {
+        "x": 17,
+        "y": 67,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CZECH LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 6,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button1_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button2",
+      "coords": {
+        "x": 17,
+        "y": 93,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DEUTSCHE SENSIBLE LIGA"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 7,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button3",
+      "coords": {
+        "x": 17,
+        "y": 119,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EKSTRAKLASA"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 8,
+          "up": 3,
+          "down": 5
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button3_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button4",
+      "coords": {
+        "x": 17,
+        "y": 145,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EREDIVISIE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 9,
+          "up": 4,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button4_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button5",
+      "coords": {
+        "x": 157,
+        "y": 67,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "IBERIAN LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": 2,
+          "right": -1,
+          "up": 1,
+          "down": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button5_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button6",
+      "coords": {
+        "x": 157,
+        "y": 93,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SERIE A"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": 3,
+          "right": -1,
+          "up": 6,
+          "down": 8
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button6_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button7",
+      "coords": {
+        "x": 157,
+        "y": 119,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "TURKIYE SUPER LIGI"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": 4,
+          "right": -1,
+          "up": 7,
+          "down": 9
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button7_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "button8",
+      "coords": {
+        "x": 157,
+        "y": 145,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "UK PREMIER LEAGUE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": 5,
+          "right": -1,
+          "up": 8,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_button8_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 122,
+        "y": 185,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "leagueInfo2_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

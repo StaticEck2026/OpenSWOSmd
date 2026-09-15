@@ -1,0 +1,2668 @@
+{
+  "name": "mLogReaderMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/mlogReader.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "mLogReaderMenu_onInit",
+  "onReturn": "mLogReaderMenu_onReturn",
+  "onDraw": "mLogReaderMenu_onDraw",
+  "defaultEntry": 101,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 62,
+        "y": 0,
+        "w": 180,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "LOGS OF RECENT 500 MATCHES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode",
+      "coords": {
+        "x": 92,
+        "y": 24,
+        "w": 120,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ALL PLAYERS' MATCHES"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_mode_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_00",
+      "coords": {
+        "x": -1,
+        "y": 44,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_01",
+      "coords": {
+        "x": -1,
+        "y": 52,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_02",
+      "coords": {
+        "x": -1,
+        "y": 60,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_03",
+      "coords": {
+        "x": -1,
+        "y": 68,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_04",
+      "coords": {
+        "x": -1,
+        "y": 76,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_05",
+      "coords": {
+        "x": -1,
+        "y": 84,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_06",
+      "coords": {
+        "x": -1,
+        "y": 92,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_07",
+      "coords": {
+        "x": -1,
+        "y": 100,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_08",
+      "coords": {
+        "x": -1,
+        "y": 108,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_09",
+      "coords": {
+        "x": -1,
+        "y": 116,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_10",
+      "coords": {
+        "x": -1,
+        "y": 124,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_11",
+      "coords": {
+        "x": -1,
+        "y": 132,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_12",
+      "coords": {
+        "x": -1,
+        "y": 140,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_13",
+      "coords": {
+        "x": -1,
+        "y": 148,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_14",
+      "coords": {
+        "x": -1,
+        "y": 156,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "datetime_15",
+      "coords": {
+        "x": -1,
+        "y": 164,
+        "w": 56,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_00",
+      "coords": {
+        "x": 56,
+        "y": 44,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_01",
+      "coords": {
+        "x": 56,
+        "y": 52,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_02",
+      "coords": {
+        "x": 56,
+        "y": 60,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_03",
+      "coords": {
+        "x": 56,
+        "y": 68,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_04",
+      "coords": {
+        "x": 56,
+        "y": 76,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_05",
+      "coords": {
+        "x": 56,
+        "y": 84,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_06",
+      "coords": {
+        "x": 56,
+        "y": 92,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_07",
+      "coords": {
+        "x": 56,
+        "y": 100,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_08",
+      "coords": {
+        "x": 56,
+        "y": 108,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_09",
+      "coords": {
+        "x": 56,
+        "y": 116,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_10",
+      "coords": {
+        "x": 56,
+        "y": 124,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_11",
+      "coords": {
+        "x": 56,
+        "y": 132,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_12",
+      "coords": {
+        "x": 56,
+        "y": 140,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_13",
+      "coords": {
+        "x": 56,
+        "y": 148,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_14",
+      "coords": {
+        "x": 56,
+        "y": 156,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "homeplayer_15",
+      "coords": {
+        "x": 56,
+        "y": 164,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_00",
+      "coords": {
+        "x": 119,
+        "y": 44,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_01",
+      "coords": {
+        "x": 119,
+        "y": 52,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_02",
+      "coords": {
+        "x": 119,
+        "y": 60,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_03",
+      "coords": {
+        "x": 119,
+        "y": 68,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_04",
+      "coords": {
+        "x": 119,
+        "y": 76,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_05",
+      "coords": {
+        "x": 119,
+        "y": 84,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_06",
+      "coords": {
+        "x": 119,
+        "y": 92,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_07",
+      "coords": {
+        "x": 119,
+        "y": 100,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_08",
+      "coords": {
+        "x": 119,
+        "y": 108,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_09",
+      "coords": {
+        "x": 119,
+        "y": 116,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_10",
+      "coords": {
+        "x": 119,
+        "y": 124,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_11",
+      "coords": {
+        "x": 119,
+        "y": 132,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_12",
+      "coords": {
+        "x": 119,
+        "y": 140,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_13",
+      "coords": {
+        "x": 119,
+        "y": 148,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_14",
+      "coords": {
+        "x": 119,
+        "y": 156,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "awayplayer_15",
+      "coords": {
+        "x": 119,
+        "y": 164,
+        "w": 62,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_00",
+      "coords": {
+        "x": 182,
+        "y": 44,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_01",
+      "coords": {
+        "x": 182,
+        "y": 52,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_02",
+      "coords": {
+        "x": 182,
+        "y": 60,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_03",
+      "coords": {
+        "x": 182,
+        "y": 68,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_04",
+      "coords": {
+        "x": 182,
+        "y": 76,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_05",
+      "coords": {
+        "x": 182,
+        "y": 84,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_06",
+      "coords": {
+        "x": 182,
+        "y": 92,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_07",
+      "coords": {
+        "x": 182,
+        "y": 100,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_08",
+      "coords": {
+        "x": 182,
+        "y": 108,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_09",
+      "coords": {
+        "x": 182,
+        "y": 116,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_10",
+      "coords": {
+        "x": 182,
+        "y": 124,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_11",
+      "coords": {
+        "x": 182,
+        "y": 132,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_12",
+      "coords": {
+        "x": 182,
+        "y": 140,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_13",
+      "coords": {
+        "x": 182,
+        "y": 148,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_14",
+      "coords": {
+        "x": 182,
+        "y": 156,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scores_15",
+      "coords": {
+        "x": 182,
+        "y": 164,
+        "w": 30,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_00",
+      "coords": {
+        "x": 213,
+        "y": 44,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_01",
+      "coords": {
+        "x": 213,
+        "y": 52,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_02",
+      "coords": {
+        "x": 213,
+        "y": 60,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_03",
+      "coords": {
+        "x": 213,
+        "y": 68,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_04",
+      "coords": {
+        "x": 213,
+        "y": 76,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_05",
+      "coords": {
+        "x": 213,
+        "y": 84,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_06",
+      "coords": {
+        "x": 213,
+        "y": 92,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_07",
+      "coords": {
+        "x": 213,
+        "y": 100,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_08",
+      "coords": {
+        "x": 213,
+        "y": 108,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_09",
+      "coords": {
+        "x": 213,
+        "y": 116,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_10",
+      "coords": {
+        "x": 213,
+        "y": 124,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_11",
+      "coords": {
+        "x": 213,
+        "y": 132,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_12",
+      "coords": {
+        "x": 213,
+        "y": 140,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_13",
+      "coords": {
+        "x": 213,
+        "y": 148,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_14",
+      "coords": {
+        "x": 213,
+        "y": 156,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchtype_15",
+      "coords": {
+        "x": 213,
+        "y": 164,
+        "w": 50,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_00",
+      "coords": {
+        "x": 264,
+        "y": 44,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_01",
+      "coords": {
+        "x": 264,
+        "y": 52,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_02",
+      "coords": {
+        "x": 264,
+        "y": 60,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_03",
+      "coords": {
+        "x": 264,
+        "y": 68,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_04",
+      "coords": {
+        "x": 264,
+        "y": 76,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_05",
+      "coords": {
+        "x": 264,
+        "y": 84,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_06",
+      "coords": {
+        "x": 264,
+        "y": 92,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_07",
+      "coords": {
+        "x": 264,
+        "y": 100,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_08",
+      "coords": {
+        "x": 264,
+        "y": 108,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_09",
+      "coords": {
+        "x": 264,
+        "y": 116,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_10",
+      "coords": {
+        "x": 264,
+        "y": 124,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_11",
+      "coords": {
+        "x": 264,
+        "y": 132,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_12",
+      "coords": {
+        "x": 264,
+        "y": 140,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_13",
+      "coords": {
+        "x": 264,
+        "y": 148,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_14",
+      "coords": {
+        "x": 264,
+        "y": 156,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "gamestyle_15",
+      "coords": {
+        "x": 264,
+        "y": 164,
+        "w": 40,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_select_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 99
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_scrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 98,
+          "down": 101
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_scrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pageInfo",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 50,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": "(00 / 00)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 102,
+        "y": 188,
+        "w": 100,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 99,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogReaderMenu_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

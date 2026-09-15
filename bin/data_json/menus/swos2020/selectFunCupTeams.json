@@ -1,0 +1,273 @@
+{
+  "name": "selectFunCupTeams",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/selectFunCupTeams.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "selectFunCupTeamsMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "selectFunCupTeamsMenu_OnDraw",
+  "defaultEntry": 1,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "FUN CUP TEAMS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team1",
+      "coords": {
+        "x": 92,
+        "y": 34,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 2
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectFunCupTeam1"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team2",
+      "coords": {
+        "x": 92,
+        "y": 70,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 1,
+          "down": 3
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectFunCupTeam2"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team3",
+      "coords": {
+        "x": 92,
+        "y": 106,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 2,
+          "down": 4
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectFunCupTeam3"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team4",
+      "coords": {
+        "x": 92,
+        "y": 142,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "-"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 3,
+          "down": 9
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectFunCupTeam4"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team1_desc",
+      "coords": {
+        "x": 92,
+        "y": 48,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team2_desc",
+      "coords": {
+        "x": 92,
+        "y": 84,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team3_desc",
+      "coords": {
+        "x": 92,
+        "y": 120,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "team4_desc",
+      "coords": {
+        "x": 92,
+        "y": 156,
+        "w": 125,
+        "h": 18
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 92,
+        "y": 185,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    }
+  ]
+}

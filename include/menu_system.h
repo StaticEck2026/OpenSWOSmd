@@ -128,6 +128,12 @@ typedef char _menuentry_size_check[(sizeof(MenuEntry) == 76) ? 1 : -1];
 #define NO_BACKGROUND      0
 #define NO_FOREGROUND      0
 
+/* OpenSWOS packed-menu extension (docs/MENUS.md §0a): an optional
+ * `MENU_FLAGS_MARKER, u16 flags` pair directly after the menu header. */
+#define MENU_FLAGS_MARKER     0xFC18
+#define MENU_FLAG_DOS_REDRAW  0x0001   /* DOS/SWOS 2020 MenuProc: redraw the whole menu,
+                                          onDraw included, every frame */
+
 /* Background types (MENUENTRY_BACKGROUND field) */
 #define ENTRY_FUNC1                 1
 #define ENTRY_FRAME_AND_BACK_COLOR  2

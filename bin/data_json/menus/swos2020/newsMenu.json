@@ -1,0 +1,1230 @@
+{
+  "name": "newsMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/news.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "newsMenu_OnInit",
+  "onReturn": "newsMenu_OnReturn",
+  "onDraw": "newsMenu_OnDraw",
+  "defaultEntry": 51,
+  "exports": {
+    "kNEWS_MaxRowsMyRecords": 6,
+    "kNEWS_ButtonY0": 60,
+    "kNEWS_ButtonHeight": 16,
+    "kNEWS_ButtonStep": 19,
+    "kNEWS_DatePosX": 0,
+    "kNEWS_DatePosY": 60,
+    "kNEWS_DateStep": 19,
+    "kNEWS_DateWidth": 42,
+    "kNEWS_DateHeight": 16,
+    "kNEWS_DateBaseColor": 11,
+    "kNEWS_StylePosX": 44,
+    "kNEWS_StylePosY": 60,
+    "kNEWS_StyleStep": 19,
+    "kNEWS_StyleWidth": 32,
+    "kNEWS_StyleHeight": 16,
+    "kNEWS_StyleBaseColor": 7,
+    "kNEWS_ModePosX": 78,
+    "kNEWS_ModePosY": 60,
+    "kNEWS_ModeStep": 19,
+    "kNEWS_ModeWidth": 46,
+    "kNEWS_ModeHeight": 16,
+    "kNEWS_ModeBaseColor": 7,
+    "kNEWS_DiffiPosX": 126,
+    "kNEWS_DiffiPosY": 60,
+    "kNEWS_DiffiStep": 19,
+    "kNEWS_DiffiWidth": 53,
+    "kNEWS_DiffiHeight": 16,
+    "kNEWS_DiffiBaseColor": 7,
+    "kNEWS_UserPosX": 181,
+    "kNEWS_UserPosY": 60,
+    "kNEWS_UserStep": 19,
+    "kNEWS_UserWidth": 60,
+    "kNEWS_UserHeight": 16,
+    "kNEWS_UserBaseColor": 7,
+    "kNEWS_BestPosX": 243,
+    "kNEWS_BestPosY": 60,
+    "kNEWS_BestStep": 19,
+    "kNEWS_BestWidth": 40,
+    "kNEWS_BestHeight": 16,
+    "kNEWS_BestBaseColor": 7,
+    "kNEWS_RankPosX": 285,
+    "kNEWS_RankPosY": 60,
+    "kNEWS_RankStep": 19,
+    "kNEWS_RankWidth": 26,
+    "kNEWS_RankHeight": 16,
+    "kNEWS_RankBaseColor": 7
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 62,
+        "y": 0,
+        "w": 180,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "LATEST RUNS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg0",
+      "coords": {
+        "x": -8,
+        "y": 20,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CHECK OUT THE LATEST RUNS AND RECORDS."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg1",
+      "coords": {
+        "x": -8,
+        "y": 30,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CLICK ON THE TIME TO VIEW THE RUN OR ON THE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg2",
+      "coords": {
+        "x": -8,
+        "y": 40,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "RANK TO VIEW THE LEADERBOARD CATEGORY."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "date_00",
+      "coords": {
+        "x": -8,
+        "y": 60,
+        "w": 42,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "00.00.00"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "date_01",
+      "coords": {
+        "x": -8,
+        "y": 79,
+        "w": 42,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "00.00.00"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "date_02",
+      "coords": {
+        "x": -8,
+        "y": 98,
+        "w": 42,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "00.00.00"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "date_03",
+      "coords": {
+        "x": -8,
+        "y": 117,
+        "w": 42,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "00.00.00"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "date_04",
+      "coords": {
+        "x": -8,
+        "y": 136,
+        "w": 42,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "00.00.00"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "date_05",
+      "coords": {
+        "x": -8,
+        "y": 155,
+        "w": 42,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "00.00.00"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 11
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "style_00",
+      "coords": {
+        "x": 36,
+        "y": 60,
+        "w": 32,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "style_01",
+      "coords": {
+        "x": 36,
+        "y": 79,
+        "w": 32,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "style_02",
+      "coords": {
+        "x": 36,
+        "y": 98,
+        "w": 32,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "style_03",
+      "coords": {
+        "x": 36,
+        "y": 117,
+        "w": 32,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "style_04",
+      "coords": {
+        "x": 36,
+        "y": 136,
+        "w": 32,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "style_05",
+      "coords": {
+        "x": 36,
+        "y": 155,
+        "w": 32,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode_00",
+      "coords": {
+        "x": 70,
+        "y": 60,
+        "w": 46,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode_01",
+      "coords": {
+        "x": 70,
+        "y": 79,
+        "w": 46,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode_02",
+      "coords": {
+        "x": 70,
+        "y": 98,
+        "w": 46,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode_03",
+      "coords": {
+        "x": 70,
+        "y": 117,
+        "w": 46,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode_04",
+      "coords": {
+        "x": 70,
+        "y": 136,
+        "w": 46,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mode_05",
+      "coords": {
+        "x": 70,
+        "y": 155,
+        "w": 46,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "diffi_00",
+      "coords": {
+        "x": 118,
+        "y": 60,
+        "w": 53,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "diffi_01",
+      "coords": {
+        "x": 118,
+        "y": 79,
+        "w": 53,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "diffi_02",
+      "coords": {
+        "x": 118,
+        "y": 98,
+        "w": 53,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "diffi_03",
+      "coords": {
+        "x": 118,
+        "y": 117,
+        "w": 53,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "diffi_04",
+      "coords": {
+        "x": 118,
+        "y": 136,
+        "w": 53,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "diffi_05",
+      "coords": {
+        "x": 118,
+        "y": 155,
+        "w": 53,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "user_00",
+      "coords": {
+        "x": 173,
+        "y": 60,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "user_01",
+      "coords": {
+        "x": 173,
+        "y": 79,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "user_02",
+      "coords": {
+        "x": 173,
+        "y": 98,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "user_03",
+      "coords": {
+        "x": 173,
+        "y": 117,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "user_04",
+      "coords": {
+        "x": 173,
+        "y": 136,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "user_05",
+      "coords": {
+        "x": 173,
+        "y": 155,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "best_00",
+      "coords": {
+        "x": 235,
+        "y": 60,
+        "w": 40,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "bestNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "best_01",
+      "coords": {
+        "x": 235,
+        "y": 79,
+        "w": 40,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "bestNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "best_02",
+      "coords": {
+        "x": 235,
+        "y": 98,
+        "w": 40,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "bestNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "best_03",
+      "coords": {
+        "x": 235,
+        "y": 117,
+        "w": 40,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "bestNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "best_04",
+      "coords": {
+        "x": 235,
+        "y": 136,
+        "w": 40,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "bestNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "best_05",
+      "coords": {
+        "x": 235,
+        "y": 155,
+        "w": 40,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "bestNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rank_00",
+      "coords": {
+        "x": 277,
+        "y": 60,
+        "w": 26,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rankNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rank_01",
+      "coords": {
+        "x": 277,
+        "y": 79,
+        "w": 26,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rankNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rank_02",
+      "coords": {
+        "x": 277,
+        "y": 98,
+        "w": 26,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rankNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rank_03",
+      "coords": {
+        "x": 277,
+        "y": 117,
+        "w": 26,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rankNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rank_04",
+      "coords": {
+        "x": 277,
+        "y": 136,
+        "w": 26,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rankNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rank_05",
+      "coords": {
+        "x": 277,
+        "y": 155,
+        "w": 26,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rankNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "news_ScrollUp",
+      "coords": {
+        "x": 303,
+        "y": 79,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 47
+        },
+        {
+          "op": "onselect_fire",
+          "func": "news_ScrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "news_ScrollDown",
+      "coords": {
+        "x": 303,
+        "y": 158,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 46,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "news_ScrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "news_Page",
+      "coords": {
+        "x": 276,
+        "y": 172,
+        "w": 8,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "(000 / 000)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dateInfo",
+      "coords": {
+        "x": 28,
+        "y": 172,
+        "w": 200,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "newsOnDiscord",
+      "coords": {
+        "x": 42,
+        "y": 185,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "NEWS ON DISCORD"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 3
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 51,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "newsOnDiscordNewsMenu_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 172,
+        "y": 185,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": 50,
+          "right": -1,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "exitNewsMenu_OnSelect"
+        }
+      ]
+    }
+  ]
+}

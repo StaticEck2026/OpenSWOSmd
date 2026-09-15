@@ -46,6 +46,7 @@ SDL_ONLY_SRCS := \
     input_sdl.c           \
     menu_load_json.c      \
     menu_symbols.c        \
+    online_menus.c        \
     platform_sdl.c        \
     replay_test.c         \
     rjp1.c                \

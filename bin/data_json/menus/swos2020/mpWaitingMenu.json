@@ -1,0 +1,187 @@
+{
+  "name": "mpWaitingMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/mpWaiting.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "mpWaitingMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "mpWaitingMenu_OnDraw",
+  "defaultEntry": 6,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "panel",
+      "coords": {
+        "x": 32,
+        "y": 50,
+        "w": 240,
+        "h": 45
+      },
+      "commands": [
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message1",
+      "coords": {
+        "x": 52,
+        "y": 60,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "message2",
+      "coords": {
+        "x": 52,
+        "y": 70,
+        "w": 200,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mpAccept",
+      "coords": {
+        "x": 52,
+        "y": 125,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ACCEPT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 5,
+          "up": -1,
+          "down": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpWaiting_mpAccept_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mpDeny",
+      "coords": {
+        "x": 162,
+        "y": 125,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "DENY"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 10
+        },
+        {
+          "op": "nav",
+          "left": 4,
+          "right": -1,
+          "up": -1,
+          "down": 6
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpWaiting_mpDeny_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "menuExit",
+      "coords": {
+        "x": 102,
+        "y": 185,
+        "w": 100,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 4,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mpWaiting_menuExit_OnSelect"
+        }
+      ]
+    }
+  ]
+}

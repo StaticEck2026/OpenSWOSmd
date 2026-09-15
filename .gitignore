@@ -41,6 +41,11 @@ bin/data_json/competitions/*
 !bin/data_json/menus
 bin/data_json/menus/*
 !bin/data_json/menus/*.json
+# Imported SWOS 2020 menus (scripts/import_swos2020_menus.py): loaded at run time,
+# so they must ship like the rest.
+!bin/data_json/menus/swos2020
+bin/data_json/menus/swos2020/*
+!bin/data_json/menus/swos2020/*.json
 !bin/data_json/tactics
 bin/data_json/tactics/*
 !bin/data_json/tactics/*.json

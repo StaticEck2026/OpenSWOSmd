@@ -128,6 +128,10 @@ void FrontEndPreLoopSetup(void)
         extern int MenuJson_InstallAll(void);
         MenuJson_InstallAll();
       } }
+    /* SWOS 2020's online menus (docs/MENUS.md §10) exist only as JSON and load on
+       first use; register their handlers with the loader before anything opens one. */
+    extern void OnlineMenus_Init(void);
+    OnlineMenus_Init();
     /* SWOS_TACTICS_JSON: load the 12 built-in formations from
        bin/data_json/tactics/*.json and overwrite the compiled TeamTactics
        structs IN PLACE (src/tactics_load_json.c), so editing a formation's JSON
@@ -174,6 +178,11 @@ void FrontEndMainLoop(void)
 {
     ReadTimerDelta();
     FrontEndPreLoopSetup();
+#ifdef SWOS_SDL_BUILD
+    /* --menu=<name>: open a JSON-only menu first; leaving it lands on the main menu. */
+    extern void OnlineMenus_ShowStartMenu(void);
+    OnlineMenus_ShowStartMenu();
+#endif
 
     do
     {

@@ -1,0 +1,220 @@
+{
+  "name": "AboutMPMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/aboutMP.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": null,
+  "onReturn": null,
+  "onDraw": "aboutMPMenu_OnDraw",
+  "defaultEntry": 9,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 72,
+        "y": 0,
+        "w": 160,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ABOUT MULTIPLAYER MODE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg01",
+      "coords": {
+        "x": -8,
+        "y": 35,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SWOS 2020 IS UTILIZING GGPO ROLLBACK NETCODE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg02",
+      "coords": {
+        "x": -8,
+        "y": 45,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "WHICH HAS BEEN DESIGNED TO HIDE NETWORK LATENCY"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg03",
+      "coords": {
+        "x": -8,
+        "y": 55,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "IN FAST PACED AND TWITCH STYLE GAMES WHICH REQUIRE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg04",
+      "coords": {
+        "x": -8,
+        "y": 65,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "VERY PRECISE INPUTS AND FRAME PERFECT EXECUTION."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg05",
+      "coords": {
+        "x": -8,
+        "y": 95,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "FEATURING"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg06",
+      "coords": {
+        "x": -8,
+        "y": 150,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ROLLBACK NETWORKING"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ggpo",
+      "coords": {
+        "x": -6,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ggpoLink",
+      "coords": {
+        "x": 62,
+        "y": 93,
+        "w": 182,
+        "h": 74
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 9
+        },
+        {
+          "op": "onselect_fire",
+          "func": "selectGGPOLink"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 112,
+        "y": 185,
+        "w": 80,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 8,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,791 @@
+{
+  "name": "mLogTickerMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/mlogTicker.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "mLogTickerMenu_onInit",
+  "onReturn": "mLogTickerMenu_onReturn",
+  "onDraw": "mLogTickerMenu_onDraw",
+  "defaultEntry": 41,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 62,
+        "y": 0,
+        "w": 180,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "PATIGOAL VS. BRUMMIE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info1",
+      "coords": {
+        "x": 2,
+        "y": 13,
+        "w": 300,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "5-0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info2",
+      "coords": {
+        "x": 2,
+        "y": 21,
+        "w": 300,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "REAL 96/97 WHI VS. BIRMINGHAM CITY"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info3",
+      "coords": {
+        "x": 2,
+        "y": 29,
+        "w": 300,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "TOURNAMENT AMIGA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info4",
+      "coords": {
+        "x": 2,
+        "y": 37,
+        "w": 300,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "PLAYED AT 2024.11.14 02:09:57"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_00",
+      "coords": {
+        "x": -4,
+        "y": 51,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_01",
+      "coords": {
+        "x": -4,
+        "y": 59,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_02",
+      "coords": {
+        "x": -4,
+        "y": 67,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_03",
+      "coords": {
+        "x": -4,
+        "y": 75,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_04",
+      "coords": {
+        "x": -4,
+        "y": 83,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_05",
+      "coords": {
+        "x": -4,
+        "y": 91,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_06",
+      "coords": {
+        "x": -4,
+        "y": 99,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_07",
+      "coords": {
+        "x": -4,
+        "y": 107,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_08",
+      "coords": {
+        "x": -4,
+        "y": 115,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_09",
+      "coords": {
+        "x": -4,
+        "y": 123,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_10",
+      "coords": {
+        "x": -4,
+        "y": 131,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_11",
+      "coords": {
+        "x": -4,
+        "y": 139,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_12",
+      "coords": {
+        "x": -4,
+        "y": 147,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_13",
+      "coords": {
+        "x": -4,
+        "y": 155,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_14",
+      "coords": {
+        "x": -4,
+        "y": 163,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mins_15",
+      "coords": {
+        "x": -4,
+        "y": 171,
+        "w": 24,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "32"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_00",
+      "coords": {
+        "x": 21,
+        "y": 51,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_01",
+      "coords": {
+        "x": 21,
+        "y": 59,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_02",
+      "coords": {
+        "x": 21,
+        "y": 67,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_03",
+      "coords": {
+        "x": 21,
+        "y": 75,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_04",
+      "coords": {
+        "x": 21,
+        "y": 83,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_05",
+      "coords": {
+        "x": 21,
+        "y": 91,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_06",
+      "coords": {
+        "x": 21,
+        "y": 99,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_07",
+      "coords": {
+        "x": 21,
+        "y": 107,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_08",
+      "coords": {
+        "x": 21,
+        "y": 115,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_09",
+      "coords": {
+        "x": 21,
+        "y": 123,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_10",
+      "coords": {
+        "x": 21,
+        "y": 131,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_11",
+      "coords": {
+        "x": 21,
+        "y": 139,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_12",
+      "coords": {
+        "x": 21,
+        "y": 147,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_13",
+      "coords": {
+        "x": 21,
+        "y": 155,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_14",
+      "coords": {
+        "x": 21,
+        "y": 163,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg_15",
+      "coords": {
+        "x": 21,
+        "y": 171,
+        "w": 280,
+        "h": 7
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "CORNER KICK FOR REAL 96/97 WHI... IT IS STILL 2 - 0 (47 MINS.)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 38
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogTickerMenu_scrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 37,
+          "down": 41
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogTickerMenu_scrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "pageInfo",
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "w": 50,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x4000",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "stats",
+      "coords": {
+        "x": 17,
+        "y": 188,
+        "w": 120,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MATCH STATS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 41,
+          "up": -1,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogTickerMenu_stats_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 167,
+        "y": 188,
+        "w": 120,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "EXIT"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": 40,
+          "right": -1,
+          "up": 38,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "mLogTickerMenu_exit_onSelect"
+        }
+      ]
+    }
+  ]
+}

@@ -63,6 +63,13 @@ bytes** on the SDL 64-bit build. `_UnpackMenu` reads the header through a typed
 `sizeof(uintptr_t)`), so the *static C data* uses native pointer width on every
 target. Only `defaultEntry` is fixed at u32.
 
+**OpenSWOS extension — the flags word.** An optional `0xFC18, u16 flags` pair may
+follow the header directly; `UnpackMenu` looks for it only there (where the stream is
+in wide-coords mode, so it would otherwise be an entry at x = -1000). Bit 0,
+`MENU_FLAG_DOS_REDRAW`, gives the menu the DOS MenuProc: redraw the whole menu,
+`onDraw` included, every frame. JSON: `"menu_flags": {"dos_redraw": true}`. No compiled
+menu has it. See §10.
+
 ### 0b. Entry / marker stream (terminated by `end-menu`)
 
 After the header comes a stream of **markers** and **entries**. A marker is a
@@ -718,3 +725,101 @@ Linux arches (memory `project_target_strategy`) before back-porting.
 - **DOS import (Task 7):** reuse the existing `swos-2020/mnu2h/` parser as a
   library and swap in a JSON backend; mind that the corpus is a modern superset
   with different C symbol names — import for geometry/structure, remap callbacks.
+
+---
+
+## 10. SWOS 2020 menus — imported, JSON-only (IMPLEMENTED 2026-09-14)
+
+OpenSWOS continues SWOS 2020, and SWOS 2020's online play — login, matchmaking,
+lobby, rankings, leagues, match logs — is built out of menus. Rather than redraw them,
+they are imported from `C:\Projects\GitHub\swos-2020\src\menus\*.mnu` and run as they
+are, with their handlers ported to C as the features behind them arrive. This is the
+§6 plan, done for the online menus. Netplay itself: docs/NETPLAY.md.
+
+### 10a. Pipeline
+
+`scripts/import_swos2020_menus.py` imports `swos-2020/mnu2h` as a library, lets its
+`Parser` digest each `.mnu` exactly as the SWOS 2020 build does (includes, `#repeat`,
+`#join`, expressions, delayed defaults, forward entry references), and replaces its
+C++ `CodeGenerator` with a JSON backend.
+
+| Output | |
+|---|---|
+| `bin/data_json/menus/swos2020/<menu>.json` | one per menu, loaded at run time |
+| `include/swos2020_menus.h` | entry ordinals (`LogInMenu::header` -> `LogInMenu_header`), exported constants (`MatchMakingMenu_kGS_MaxRows`), `SWOS2020_MENUS(X)`, `SWOS2020_MENU_CALLBACKS(X)` |
+
+The default set is `MULTIPLAYER_MENUS` in the script: 29 menus, 1321 entries, 220
+handler names, from swos-2020 @ `22b96d3`. Re-run with
+`python3 scripts/import_swos2020_menus.py [--swos2020 DIR] [menu ...]`. It overwrites
+the JSON — edit the `.mnu` in swos-2020, or stop re-importing that menu.
+
+The files live in a subfolder on purpose: `MENU_JSON` in the Makefile is
+`bin/data_json/menus/*.json`, and every file there is spliced into `menu_data.c`.
+
+### 10b. What changes on the way in
+
+| SWOS 2020 (DOS dialect) | OpenSWOS | Why |
+|---|---|---|
+| entry coords, `ConvertMenu` adds x+8, y+0 | **unchanged**; `UnpackMenu` adds x+24, y+36 | the same 304x200 menu panel, placed differently on screen |
+| `text: @kAlloc` = opcode 8 with pointer -1 | `text_no_ptr` (opcode 22) | UnpackMenu's allocation pass looks for the 32-bit 0xFFFFFFFF, which a 64-bit -1 is not |
+| `text: "EXIT"` inline | `{"op": "text", "literal": "EXIT"}` | new; the loader interns it |
+| `text: aExit` (a SWOS string) | `"str": "_aExit"` | our registry's name; also makes it translatable |
+| `text: @kNull` | `"str": null` | |
+| `color: kNone` | 0 | `kNone` is swos-2020 `enum Controls`' first member; mnu2h passes it through |
+| `skipLeft` ... | opcode 17 ... by **number** | our JSON names for 17-20 do not match the fields they fill |
+| MenuProc redraws the menu every frame | `menu_flags.dos_redraw` on every imported menu | SWOS 2020 handlers update entries from `onDraw` and never redraw them |
+| entry names, `export` constants | JSON `name` / `exports` + the header | the loader ignores them |
+
+Not supported yet: `stringTable` (the importer stops on one; none in this set).
+
+### 10c. Format extensions
+
+All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and
+`SWOS_MENU_JSON_VERIFY=1` still reports **47/47 byte-identical**.
+
+1. **Flags word** after the header (§0a).
+2. **`literal`** on `text` / `multiline` — a permanent heap string.
+3. **Marker restatement.** `UnpackMenu` tells markers from entries by the entry's first
+   word, so an entry *starting* with a marker's bytes is misread. DOS never had byte
+   coords, and SWOS 2020 puts entries at **x = -1 — 0xFFFF, the byte-coords marker**
+   (`mLogReaderMenu`'s `datetime_00..15`: it unpacked as 199 entries instead of 102).
+   The loader now restates the current coords mode before any such entry; `UnpackMenu`
+   consumes it and reads the coordinates without looking. Automatic, so JSON can hold
+   any coordinate.
+4. **Menus with no compiled counterpart.** `MenuJson_Load("swos2020/logInMenu")` builds
+   the packed stream into its own heap buffer on first use and caches it, so the pointer
+   stays valid for `RestorePreviousMenu`. There is nothing to overwrite in place and no
+   size limit.
+5. **Run-time symbol tables.** `MenuJson_RegisterSymbols` adds a table searched after
+   the generated `menu_symbols.c`. In a JSON-only menu an **unresolved handler becomes
+   a no-op**, logged once per name, instead of NULL — the menus name handlers that are
+   not ported yet, and a NULL custom-draw function would be called. Compiled menus keep
+   NULL.
+
+### 10d. Running them
+
+- Handlers: `src/online_menus.c`, table `k_handlers`, SWOS 2020's names. Ported so far
+  (35 of 220): the login form (username/password input, the three toggles), LOGIN ->
+  matchmaking in SWOS 2020's own not-connected state (`setMatchMakingMenu_Standard`,
+  `MMM_X_SERVER_NOT_CONNECTED`), SETTINGS and RANKINGS from there, and every menu's
+  exit button. Handler code for the rest is in swos-2020 `src/game.cpp` (login, game
+  setup) and `src/mpgame.cpp` (everything else); most of it needs the servers.
+- `bin/SWOS.x86_64 --menu=swos2020/logInMenu` opens a menu before the main menu;
+  leaving it lands on the main menu. Nothing in our own menus links to them yet.
+- `--menu-selftest` loads every imported menu, unpacks it into scratch memory and checks
+  each entry's ordinal, rectangle, nav links and text against its JSON, then prints the
+  handler count. Result: **29 menus, 1321 entries, 0 failed** on x86_64 and on the
+  32-bit build.
+- SDL only: `menu_load_json.c` and `online_menus.c` are in `SDL_ONLY_SRCS`. The Amiga
+  compiles only the shared `UnpackMenu`/`MenuProc`/`DrawMenu` changes and has no JSON
+  menus to load.
+
+### 10e. Known differences and follow-ups
+
+- **Palette.** SWOS 2020 menus were designed on the DOS menu palette. Through ours,
+  `kDarkBlue` (3) buttons render near-black and `kPurple` (11) blue.
+- **Mouse.** SWOS 2020 menus are also mouse-driven (`src/menus/menuMouse.cpp`); ours are
+  keyboard/joystick only.
+- **Literal text is not translated** — `tr()` is keyed by symbol name.
+- **Blinking text** (`kBlinkText`) in a `dos_redraw` menu would add a vsync per blink
+  frame (`UpdateBlinkingMenuText` redraws on its own). None of the imported menus blink.

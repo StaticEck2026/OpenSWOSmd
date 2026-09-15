@@ -1,0 +1,282 @@
+{
+  "name": "playerInfoMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/playerInfo.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "playerInfoMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "playerInfoMenu_OnDraw",
+  "defaultEntry": 10,
+  "exports": {
+    "kPIM_MaxRows": 4,
+    "kPIM_ButtonY0": 75,
+    "kPIM_ButtonHeight": 16,
+    "kPIM_ButtonStep": 18,
+    "kPIM_RankingNamePosX": 64,
+    "kPIM_RankingNamePosY": 75,
+    "kPIM_RankingNameStep": 18,
+    "kPIM_RankingNameWidth": 130,
+    "kPIM_RankingNameHeight": 16,
+    "kPIM_RankingNameBaseColor": 7,
+    "kPIM_SRNPosX": 196,
+    "kPIM_SRNPosY": 75,
+    "kPIM_SRNStep": 18,
+    "kPIM_SRNWidth": 60,
+    "kPIM_SRNHeight": 16,
+    "kPIM_SRNBaseColor": 7
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": -1,
+          "down": 10
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "info",
+      "coords": {
+        "x": -8,
+        "y": 40,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ID: OOOOO, COUNTRY: OOOOOO"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rankingName_00",
+      "coords": {
+        "x": 56,
+        "y": 75,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA SWOS WORLD ONLINE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rankingName_01",
+      "coords": {
+        "x": 56,
+        "y": 93,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA SWOS WORLD ONLINE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rankingName_02",
+      "coords": {
+        "x": 56,
+        "y": 111,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA SWOS WORLD ONLINE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "rankingName_03",
+      "coords": {
+        "x": 56,
+        "y": 129,
+        "w": 130,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "AMIGA SWOS WORLD ONLINE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_00",
+      "coords": {
+        "x": 188,
+        "y": 75,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "2000"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_01",
+      "coords": {
+        "x": 188,
+        "y": 93,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "2000"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_02",
+      "coords": {
+        "x": 188,
+        "y": 111,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "2000"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "srn_03",
+      "coords": {
+        "x": 188,
+        "y": 129,
+        "w": 60,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "2000"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 122,
+        "y": 185,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    }
+  ]
+}

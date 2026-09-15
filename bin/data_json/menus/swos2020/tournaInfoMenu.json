@@ -1,0 +1,1248 @@
+{
+  "name": "tournaInfoMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/tournaInfo.mnu",
+    "commit": "22b96d3"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": null,
+  "onReturn": null,
+  "onDraw": "tournaInfoMenu_OnDraw",
+  "defaultEntry": 48,
+  "exports": {
+    "kTIM_ADJUSTY": -1,
+    "kTIM_MaxRows": 9,
+    "kTIM_ButtonY0": 50,
+    "kTIM_ButtonHeight": 10,
+    "kTIM_ButtonStep": 12,
+    "kTIM_NamePosX": 0,
+    "kTIM_NamePosY": 50,
+    "kTIM_NameStep": 12,
+    "kTIM_NameWidth": 95,
+    "kTIM_NameHeight": 10,
+    "kTIM_NameBaseColor": 7,
+    "kTIM_RankingPosX": 97,
+    "kTIM_RankingPosY": 50,
+    "kTIM_RankingStep": 12,
+    "kTIM_RankingWidth": 45,
+    "kTIM_RankingHeight": 10,
+    "kTIM_RankingBaseColor": 7,
+    "kTIM_HomePosX": 167,
+    "kTIM_HomePosY": 50,
+    "kTIM_HomeStep": 12,
+    "kTIM_HomeWidth": 70,
+    "kTIM_HomeHeight": 10,
+    "kTIM_HomeBaseColor": 7,
+    "kTIM_AwayPosX": 239,
+    "kTIM_AwayPosY": 50,
+    "kTIM_AwayStep": 12,
+    "kTIM_AwayWidth": 70,
+    "kTIM_AwayHeight": 10,
+    "kTIM_AwayBaseColor": 7
+  },
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "header2",
+      "coords": {
+        "x": 32,
+        "y": 0,
+        "w": 240,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SELECT A MATCH FOR AUTO RESULT ENTERING"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "friendlyMatch",
+      "coords": {
+        "x": 82,
+        "y": 22,
+        "w": 140,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SWITCH TO FRIENDLY MATCH"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_friendlyMatch_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subHeader1",
+      "coords": {
+        "x": -8,
+        "y": 35,
+        "w": 142,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "TOURNAMENTS"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_00",
+      "coords": {
+        "x": -8,
+        "y": 50,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_01",
+      "coords": {
+        "x": -8,
+        "y": 62,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_02",
+      "coords": {
+        "x": -8,
+        "y": 74,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_03",
+      "coords": {
+        "x": -8,
+        "y": 86,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_04",
+      "coords": {
+        "x": -8,
+        "y": 98,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_05",
+      "coords": {
+        "x": -8,
+        "y": 110,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_06",
+      "coords": {
+        "x": -8,
+        "y": 122,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_07",
+      "coords": {
+        "x": -8,
+        "y": 134,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "name_08",
+      "coords": {
+        "x": -8,
+        "y": 146,
+        "w": 95,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_name_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_00",
+      "coords": {
+        "x": 89,
+        "y": 50,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_01",
+      "coords": {
+        "x": 89,
+        "y": 62,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_02",
+      "coords": {
+        "x": 89,
+        "y": 74,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_03",
+      "coords": {
+        "x": 89,
+        "y": 86,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_04",
+      "coords": {
+        "x": 89,
+        "y": 98,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_05",
+      "coords": {
+        "x": 89,
+        "y": 110,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_06",
+      "coords": {
+        "x": 89,
+        "y": 122,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_07",
+      "coords": {
+        "x": 89,
+        "y": 134,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "ranking_08",
+      "coords": {
+        "x": 89,
+        "y": 146,
+        "w": 45,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_ranking_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp",
+      "coords": {
+        "x": 134,
+        "y": 62,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_scrollUp_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown",
+      "coords": {
+        "x": 134,
+        "y": 145,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_scrollDown_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "page1",
+      "coords": {
+        "x": 115,
+        "y": 158,
+        "w": 8,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "(0 / 0)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "subHeader2",
+      "coords": {
+        "x": 159,
+        "y": 35,
+        "w": 142,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "MATCHES"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_00",
+      "coords": {
+        "x": 159,
+        "y": 50,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_01",
+      "coords": {
+        "x": 159,
+        "y": 62,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_02",
+      "coords": {
+        "x": 159,
+        "y": 74,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_03",
+      "coords": {
+        "x": 159,
+        "y": 86,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_04",
+      "coords": {
+        "x": 159,
+        "y": 98,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_05",
+      "coords": {
+        "x": 159,
+        "y": 110,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_06",
+      "coords": {
+        "x": 159,
+        "y": 122,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_07",
+      "coords": {
+        "x": 159,
+        "y": 134,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "home_08",
+      "coords": {
+        "x": 159,
+        "y": 146,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_HomeUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_00",
+      "coords": {
+        "x": 231,
+        "y": 50,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_01",
+      "coords": {
+        "x": 231,
+        "y": 62,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_02",
+      "coords": {
+        "x": 231,
+        "y": 74,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_03",
+      "coords": {
+        "x": 231,
+        "y": 86,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_04",
+      "coords": {
+        "x": 231,
+        "y": 98,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_05",
+      "coords": {
+        "x": 231,
+        "y": 110,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_06",
+      "coords": {
+        "x": 231,
+        "y": 122,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_07",
+      "coords": {
+        "x": 231,
+        "y": 134,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "away_08",
+      "coords": {
+        "x": 231,
+        "y": 146,
+        "w": 70,
+        "h": 10
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfoMenu_AwayUser_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollUp2",
+      "coords": {
+        "x": 301,
+        "y": 62,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_scrollUp2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "scrollDown2",
+      "coords": {
+        "x": 301,
+        "y": 145,
+        "w": 9,
+        "h": 13
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": " "
+        },
+        {
+          "op": "onselect_fire",
+          "func": "tournaInfo_scrollDown2_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "page2",
+      "coords": {
+        "x": 282,
+        "y": 158,
+        "w": 8,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "0 / 0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "matchInfo",
+      "coords": {
+        "x": 159,
+        "y": 158,
+        "w": 8,
+        "h": 12
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x8000",
+          "literal": "ID: 12345, 12345"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "mexit",
+      "coords": {
+        "x": 122,
+        "y": 185,
+        "w": 60,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "str": "_aExit"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "onselect_fire",
+          "func": "SetExitMenuFlag"
+        }
+      ]
+    }
+  ]
+}
