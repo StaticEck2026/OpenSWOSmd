@@ -29,13 +29,12 @@ macOS, and calls it from C.
 | `src/lib/ggpo/network/udp.cpp` | `SO_DONTLINGER` under `#ifdef`; `recvfrom` length is `socklen_t` | Winsock-only option; POSIX `recvfrom` takes `socklen_t *`. |
 | `src/lib/ggpo/network/udp_proto.cpp` | `sin_addr.S_un.S_addr` -> `sin_addr.s_addr` | `S_un` is Winsock-only; `s_addr` works on both. |
 | `src/lib/ggpo/backends/p2p.cpp` | `max(maxDif, diff)` -> a conditional; `std::exception(buf)` -> `std::runtime_error(buf)` (+ `<stdexcept>`) | A local named `max` shadows a function (MSVC's `max` is a macro); `std::exception(const char *)` is an MSVC extension. |
-| `src/lib/ggpo/backends/synctest.cpp` | `BeginLog` returns unless `Platform::GetConfigBool("ggpo.log")` | Otherwise a synctest opens two log files **per frame** in the working directory — on POSIX, 1200 files named `synclogs\log-NNNN-*.log` (with the backslash) in `bin/` for the 600-frame self-test. |
+| `src/lib/ggpo/backends/synctest.cpp` | `BeginLog` returns, and the per-frame `Checksum ... for frame N matches.` line is not printed, unless `Platform::GetConfigBool("ggpo.log")` | Otherwise a synctest opens two log files **per frame** in the working directory — on POSIX, 1200 files named `synclogs\log-NNNN-*.log` (with the backslash) in `bin/` for the 600-frame self-test — and prints a line per frame to stdout: tens of thousands for a whole match (`--netplay-match=synctest`). A mismatch still prints and aborts. |
 
 `platform_windows.*` are unmodified and not built.
 
 ## Known upstream behaviour, left as is
 
-- `SyncTestBackend` prints `Checksum ... for frame N matches.` to stdout every frame.
 - `GetConfigBool` is always false, so GGPO's own log file (`ggpo.log`) never opens —
   which matters, because `log.cpp` reuses a consumed `va_list`.
 - `Peer2PeerBackend::IncrementFrame` throws a C++ exception on an internal

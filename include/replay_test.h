@@ -17,6 +17,7 @@
 
 #include "swos_types.h"
 #include "game_types.h"
+#include "match_step.h"
 
 /* Run swos-port's CalculateDeltaXAndY reference vectors against ours and
  * report. Standalone (`--replay-selftest`) — no recording needed. Returns 0
@@ -45,10 +46,20 @@ void ReplayTest_Run(void);
  * SetupPlayers in place of the two ShowPlayMatchMenu prompts. */
 void ReplayTest_SetupPlayers(TeamFileEx *team1, TeamFileEx *team2);
 
-/* Game-loop hooks (game_loop.c): inject this frame's input, then compare
- * the resulting state. */
+/* Game-loop hooks (game_loop.c): take this frame's record and inject its
+ * input, then compare the resulting state and advance the clock. */
 void ReplayTest_FrameStart(void);
 void ReplayTest_FrameEnd(void);
+
+/* ---- for a netplay match (src/netplay_match.c) ----
+ * It applies the input inside its own frame step, which GGPO repeats, so
+ * ReplayTest_FrameStart leaves the input to it and ReplayTest_FrameEnd comes
+ * in parts: the comparison, made on the frame as first played, then the move
+ * to the next record. The clock is the step's (MatchStep_AdvanceClock). */
+void     ReplayTest_FrameInput(MatchPlayerInput in[MATCH_PLAYERS]);
+void     ReplayTest_FrameCheck(void);
+void     ReplayTest_FrameDone(void);
+uint32_t ReplayTest_FrameIndex(void);   /* the record being replayed */
 
 /* The recordings pin the RNG to one value — random.c returns it for both
  * Rand and Rand2 while this is >= 0. */
@@ -61,13 +72,10 @@ extern int _replayFixedRandom;
 int  ReplayTest_OwnsGameTick(void);
 
 /* ---- for the rollback rig (src/rollback_rig.c, docs/ROLLBACK.md) ----
- * The replay's own position and input latches -- what a rewind has to put back
- * alongside the game state. */
+ * The replay's own position -- what a rewind has to put back alongside the
+ * game state. Its input latches are game state (g_matchInputLatch). */
 typedef struct {
     uint32_t frame;
-    int32_t  benchHeld[2];
-    int32_t  benchPending[2];
-    int32_t  prevUserKey;
 } ReplayDriverState;
 
 void     ReplayTest_GetDriverState(ReplayDriverState *st);

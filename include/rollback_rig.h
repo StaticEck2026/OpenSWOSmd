@@ -23,6 +23,9 @@ typedef enum {
 /* A --rollback* command-line argument: 1 = consumed, -1 = bad value. */
 int      Rollback_ParseArg(const char *arg);
 int      Rollback_Enabled(void);
+/* Whether the rig changes the match it runs in -- rewinds it or loads state into it --
+ * rather than only watching it (trace, dump, save-state). */
+int      Rollback_Intervenes(void);
 
 /* ReplayTest_Run, just before kick-off. */
 void     Rollback_MatchStart(void);

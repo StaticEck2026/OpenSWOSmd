@@ -134,6 +134,9 @@ PlatformFullscreenMode Platform_GetFullscreenMode(void);
  * pace to the next 50 Hz boundary. Intended to run on the main thread
  * from game-loop waits. Returns non-zero if the user closed the window. */
 int  Platform_VBlank(void);
+/* Platform_VBlank without running the VBlank interrupt: present the finished frame and
+ * pace. For a caller that runs the interrupt itself, once per simulated frame. */
+int  Platform_Present(void);
 
 /* Just pump SDL events, render bitplanes, and present. No pacing.
  * Safe to call from the SDL_AddTimer thread. */

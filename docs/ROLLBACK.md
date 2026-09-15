@@ -99,16 +99,16 @@ That is how the first cut was caught registering `_advert1/2/3Pointers`: from fr
 of one recording they held no identity — they are copied from the sprite graphics once at
 load and only read afterwards, so they are not match state and left the registry.
 
-The portable SIM tier is 14,988 bytes, the VIEW tier 19,020. On the 32-bit build the SIM
-tier's memory is exactly those 14,988 bytes: the portable layout is the 32-bit layout with
+The portable SIM tier is 14,994 bytes, the VIEW tier 19,020. On the 32-bit build the SIM
+tier's memory is exactly those 14,994 bytes: the portable layout is the 32-bit layout with
 pointers made identities.
 
 ### The wire format
 
-During a match only the **inputs** cross the network — one control word per player per
-frame — plus a checksum of the SIM tier. GGPO's saves and loads never leave the machine.
-State travels only in a **resync**: a peer recovering from a desync, or joining a match in
-progress. That packet (`include/state_wire.h`) is binary:
+During a match only the **inputs** cross the network — two bytes per player per frame
+(docs/NETPLAY.md §5) — plus a checksum of the SIM tier. GGPO's saves and loads never leave
+the machine. State travels only in a **resync**: a peer recovering from a desync, or joining
+a match in progress. That packet (`include/state_wire.h`) is binary:
 
 | part | |
 |---|---|
@@ -223,9 +223,11 @@ The last three guarantee that **every write to game memory comes from the game l
 once per frame**. Without them the ISR and the audio mixer write game globals from other
 threads a varying number of times per frame, and no two runs agree.
 
-A rollback happens at the top of `GameLoop`'s body (`ReplayTest_FrameStart`): the rig
-restores state and rewinds the replay's input cursor (`ReplayTest_SetDriverState`), and
-the loop plays the same frames again. The replay driver's one-time match setup (extra
+A rollback happens at the frame boundary before `GameLoop_Frame` (`ReplayTest_FrameStart`):
+the rig restores state and rewinds the replay's position (`ReplayTest_SetDriverState`), and
+the loop plays the same frames again. Which buttons were held the frame before — the edges
+the bench call and a key press act on — is match state, not the replay's
+(`g_matchInputLatch`), so it comes back with the rest. The replay driver's one-time match setup (extra
 time and penalty flags, marked players, the tick counters) is applied **before** that
 first frame boundary, so a window starting at frame 0 saves it and a rewind keeps it.
 (It used to run after, which made every rollback to frame 0 re-simulate with a tick delta
@@ -347,11 +349,28 @@ a *checksum* cross between them.
 
 ## 7. Results
 
-The registry: 354 regions — **SIM 14,988 + VIEW 19,020 bytes portable** (16,612 + 19,036
+The registry: 355 regions — **SIM 14,994 + VIEW 19,020 bytes portable** (16,618 + 19,036
 in a 64-bit build's memory, the portable sizes exactly in a 32-bit one). The corpus: 13
-recordings × both gameplays = 26 matches, 491,993 frames.
+recordings × both gameplays = 26 matches, 488,837 frames.
 
-On the build with the portable encoding:
+On the current build — the input's edge latches registered (`g_matchInputLatch`), the match
+loop split into `GameLoop_Frame`:
+
+| test | configuration | result |
+|---|---|---|
+| determinism | two plain runs, separate processes | identical per-frame traces |
+| check, both tiers | window 8, every 64 | 7,647 rollbacks, 0 failed; 26 of 26 matches identical to the plain run at every frame |
+| check, **SIM only** | window 8, every 9 | 54,308 rollbacks, 0 failed; 26 of 26 identical — the SIM tier is still closed |
+| resync, both tiers | state packets saved at 25/50/75% of a plain run, loaded into a fresh process at frame 0 | 75 of 75 loads identical to the end; 3 save points never reached; SIM packets 1,283–1,901 bytes |
+| netplay | the corpus through the frame step, directly and under GGPO's synctest (docs/NETPLAY.md §5) | 26 of 26 identical to the plain run in each of direct, synctest:1 and synctest:8 |
+| across builds | 64-bit Linux, 32-bit Linux, Windows, the four recordings of §6 | 8 of 8 traces identical; 66 of 66 cross-build resync loads identical to the end |
+
+One match is shorter than on the builds before: zkz-11215003 with DOS gameplay ends at frame
+24,689, not 27,819. At frame 11,479 its recording presses the bench button of a team that, in
+the rig's own match, no human controls; the rig used to open that team's bench anyway, and
+now leaves the press out, as the game's own key check would (docs/TESTS.md §6b).
+
+On the build with the portable encoding, before the latches (354 regions, 491,993 frames):
 
 | test | configuration | result |
 |---|---|---|

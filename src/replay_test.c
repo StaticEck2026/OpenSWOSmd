@@ -39,6 +39,8 @@
 #include "math68k.h"
 #include "mjson.h"
 #include "rollback_rig.h"
+#include "match_step.h"
+#include "netplay_match.h"
 #include "sim_state.h"
 #include "endian_helpers.h"
 
@@ -117,10 +119,7 @@ static uint32_t  s_frame;          /* index of the record being replayed */
 int32_t g_rtFrameNo = -1;
 static const uint8_t *s_rec;       /* the record itself, NULL between frames */
 static int       s_firstFrame = 1;
-static int       s_warnedEsc, s_warnedUserKey;
-static int       s_benchHeld[2];   /* previous frame's recorded bench button */
-static int       s_benchPending[2]; /* a deferred bench call, due next frame */
-static int       s_prevUserKey;    /* previous frame's recorded userKey */
+static int       s_warnedEsc, s_warnedBench;
 
 int _replayFixedRandom = -1;
 
@@ -159,7 +158,6 @@ extern uint16_t          _fireBlocked, _statsTimer, _resultTimer;
 extern volatile uint16_t _currentGameTick;
 extern volatile uint16_t _currentTick;
 extern uint16_t          _lastGameTick;
-extern uint16_t          _showingUserStats, _paused;
 extern volatile uint16_t _playGame;
 extern uint16_t          _gameType, _trainingGame, _isCareer, _exitGameFlag, _twoPlayers;
 extern uint16_t          _pitchTypeOrSeason, _friendlyPitchType, _friendlySeason;
@@ -174,8 +172,6 @@ extern int16_t           _pl1Tactics, _pl2Tactics;
 extern uint8_t           _teamTacticsUSERA[370], _teamTacticsUSERB[370];
 extern uint8_t           _teamTacticsUSERC[370], _teamTacticsUSERD[370];
 extern uint8_t           _teamTacticsUSERE[370], _teamTacticsUSERF[370];
-extern uint16_t          _joy0Dat, _joy1Dat;
-extern uint8_t           _ciaa_pra;
 extern int               _gDosGameplay;
 extern int16_t           _gMoveDeltaScaleNum, _gMoveDeltaScaleDen;
 
@@ -197,15 +193,8 @@ extern void      InitUserTactics(void);
 extern uint32_t  UpdatePlayerPositionAndReturnRole(TeamFileEx *team, uint16_t playerIdx);
 extern uint8_t   _playerPositionsArray[32];
 
-/* What MainKeysCheck's bench hotkey sets — see injectInput. */
+/* What MainKeysCheck's bench hotkey sets — see MatchStep_ApplyInput. */
 extern uint16_t  _bench1Called, _bench2Called;
-
-/* The keyboard path a recorded `userKey` is pushed through: GetKey() pops a
- * SCANCODE off this buffer and maps it with keycodeLut before MainKeysCheck
- * ever sees it, so the rig reverses the LUT rather than faking the result. */
-extern volatile uint16_t _keyCount;
-extern volatile uint8_t  _keyBuffer[];
-extern uint8_t           _keycodeLut[128];
 
 /* The 33 sprites the recording carries, in ITS order. Indices 0..29 happen
  * to coincide with our own allSpritesArray (sprite_data.c), which is a
@@ -1017,6 +1006,7 @@ int ReplayTest_Load(const char *path, const char *level, int maxErrors,
 int ReplayTest_Armed(void)   { return s_armed; }
 int ReplayTest_Running(void) { return s_running; }
 int ReplayTest_OwnsGameTick(void) { return s_running; }
+uint32_t ReplayTest_FrameIndex(void) { return s_frame; }
 
 /* ===================================================================
  * CalculateDeltaXAndY reference vectors
@@ -1265,6 +1255,11 @@ static void finish(int code)
     if (s_finished) return;
     s_finished = 1;
     s_running = 0;
+    {
+        /* A netplay match reports on its session, and fails if the session did. */
+        int np = NetplayMatch_Finish();
+        if (code == 0) code = np;
+    }
     if (Rollback_Enabled()) {
         /* Nothing was compared with the recording; the rollback rig decides. A
          * structural replay failure (a frame that skipped the loop body) still fails. */
@@ -1299,6 +1294,8 @@ void ReplayTest_Run(void)
     s_rec = NULL;
     if (Rollback_Enabled())
         Rollback_MatchStart();
+    if (NetplayMatch_Enabled() && NetplayMatch_Start() != 0)
+        finish(1);
     fprintf(stderr, "[replay] kick-off\n");
     InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
     /* The match ended before the recording did — every remaining frame is a
@@ -1316,7 +1313,8 @@ void ReplayTest_Run(void)
  * Per-frame hooks
  * =================================================================== */
 
-/* Recorded control bits (swos-port's ControlFlags). */
+/* Recorded control bits (swos-port's ControlFlags). The stick and fire bits are
+ * MatchPlayerInput's own (match_step.h). */
 #define RC_UP     1
 #define RC_DOWN   2
 #define RC_LEFT   4
@@ -1325,138 +1323,51 @@ void ReplayTest_Run(void)
 #define RC_BENCH  64   /* per PLAYER; the rig injects the per-TEAM button instead */
 #define RC_ESC    128
 
-/* JOY0DAT/JOY1DAT encoding, identical to input_sdl.c's encode_joydat —
- * the rig writes the same registers the SDL input path does, so
- * Player1StatusProc/Player2StatusProc decode the recorded stick exactly as
- * they decode a real one. */
-static uint16_t encodeJoy(int ctl)
-{
-    int up = (ctl & RC_UP) != 0, down = (ctl & RC_DOWN) != 0;
-    int left = (ctl & RC_LEFT) != 0, right = (ctl & RC_RIGHT) != 0;
-    uint16_t v = 0;
-    if (right)          v |= (1u << 1);
-    if (right ^ down)   v |= (1u << 0);
-    if (left)           v |= (1u << 9);
-    if (left  ^ up)     v |= (1u << 8);
-    return v;
-}
+_Static_assert(RC_UP == MATCH_UP && RC_DOWN == MATCH_DOWN && RC_LEFT == MATCH_LEFT &&
+               RC_RIGHT == MATCH_RIGHT && RC_FIRE == MATCH_FIRE,
+               "the recorded stick and fire bits are MatchPlayerInput's");
 
-static void injectInput(void)
+void ReplayTest_FrameInput(MatchPlayerInput in[MATCH_PLAYERS])
 {
     int p1 = (int)recField("p1_controls");
     int p2 = (int)recField("p2_controls");
     int key = (int)recField("user_key");
-    /* Per TEAM, not per player: see the schema note on top_bench_button. */
+    /* Per TEAM, not per player: see the schema note on top_bench_button. Each is
+     * pressed by the player who controls that team, and MatchStep_ApplyInput
+     * routes that player's bench call back to it. */
     int bench[2] = { (int)recField("top_bench_button"),
                      (int)recField("bottom_bench_button") };
+    const TeamGeneralInfo *team[2] = { &_topTeamData, &_bottomTeamData };
+    const int stickAndFire = RC_UP | RC_DOWN | RC_LEFT | RC_RIGHT | RC_FIRE;
     int i;
 
-    _joy1Dat = encodeJoy(p1);          /* Amiga port 1 = player 1 */
-    _joy0Dat = encodeJoy(p2);          /* port 0 = player 2 */
-    _ciaa_pra = 0xFF;
-    if (p1 & RC_FIRE) _ciaa_pra &= (uint8_t)~(1u << 7);
-    if (p2 & RC_FIRE) _ciaa_pra &= (uint8_t)~(1u << 6);
+    in[0].controls = (uint8_t)(p1 & stickAndFire);
+    in[1].controls = (uint8_t)(p2 & stickAndFire);
+    /* The recorded userKey belongs to no player (`S`, the stats screen, is the
+     * only one the corpus uses); it travels as player 1's key. */
+    in[0].key = (uint8_t)key;
+    in[1].key = 0;
 
-    /* The bench call, on the RISING edge of the recorded button.
-     *
-     * `MainKeysCheck` sets these from a key EVENT, not from the key being
-     * held: on the reference the hotkey fires once and the menu stays up
-     * (`zkz-11215003` holds it for 17 frames and its camera pans to the bench
-     * and stops). Re-asserting a held button would be wrong twice over —
-     * inside the menu the SAME flag is what LEAVES it
-     * (`BenchMenuHandleControls`), so a level would open and close the bench
-     * on consecutive frames.
-     *
-     * bench1Called is the top team's, bench2Called the bottom's — the guard
-     * `MainKeysCheck` applies (that team must have a human) is the reason the
-     * recorded per-team button is used rather than the per-player control bit. */
-    /* ESTIMATED, NOT RECOVERED — read this before trusting a bench frame.
-     *
-     * One key reaches the game down two independent latches. The recording
-     * carries the POLLED BITMASK: `Player1StatusProc` splits one input word
-     * (`test ax, 64` -> `pl1SecondaryFire`, swos.asm:13033), which is
-     * `p1_controls` bit 6, and `UpdateAndApplyTeamControls` copies it into
-     * `TeamGeneralInfo.secondaryFire` at GameLoop line 703. But the bench
-     * opens off the BUFFERED SCANCODE: `bench1Called` is set nowhere in
-     * either listing except `MainKeysCheck` (swos.asm:7984, SWOS2.s:21900),
-     * which runs at line 666. A scancode can arrive a frame after the bitmask
-     * sees the key held, and nothing in the record times that queue.
-     *
-     * So the recording under-determines this input by one frame, and the rig
-     * has to pick. The corpus has three presses and neither placement is
-     * right for all of them:
-     *
-     *      zkz-11215003   f117     acted on the SAME frame
-     *      zkz-11215003   f11479   acted one frame LATER
-     *      playa-10090613 f11222   acted one frame LATER
-     *
-     * f117 is not a misreading — under a lag-1 build that frame diverges on
-     * `game_state_pl` and on every player's destination, with the reference
-     * walking them to the bench line.
-     *
-     * The predicate below is fitted to those three, not derived: defer unless
-     * `gameStatePl` is 0. It is right on all three and takes the corpus from
-     * 87.1% to 98.0% (`zkz-11215003` to 27487 of 27819, `playa-10090613` to
-     * its terminal frame), which is what says the bench frame is the ONLY
-     * thing those two recordings still disagree with us about.
-     *
-     * Treat a bench-frame match as evidence of nothing. What would make this
-     * a recovered fact rather than an estimate is a recording that carries
-     * `bench1Called` itself — which the Amiga dumper (docs/TESTS.md section 8)
-     * would, being our own build. Until then every deferral says so in the
-     * log. */
     for (i = 0; i < 2; i++) {
-        if (s_benchPending[i]) {
-            if (i == 0) _bench1Called = 1;
-            else        _bench2Called = 1;
-            fprintf(stderr, "[replay] frame %u: %s team calls the bench "
-                            "(deferred one frame — ESTIMATED, see replay_test.c)\n",
+        int owner;
+        if (!bench[i]) continue;
+        owner = MatchStep_TeamOwner(team[i]);
+        if (owner) {
+            in[owner - 1].controls |= MATCH_BENCH;
+        } else if (!s_warnedBench) {
+            s_warnedBench = 1;
+            fprintf(stderr, "[replay] frame %u: the %s team's bench button is pressed, but "
+                            "no human controls that team — not injected\n",
                     s_frame, i == 0 ? "top" : "bottom");
-            s_benchPending[i] = 0;
         }
-        if (bench[i] && !s_benchHeld[i]) {
-            if (_gameStatePl != 0) {
-                /* defer to the next frame */
-                s_benchPending[i] = 1;
-            } else {
-                if (i == 0) _bench1Called = 1;
-                else        _bench2Called = 1;
-                fprintf(stderr, "[replay] frame %u: %s team calls the bench\n",
-                        s_frame, i == 0 ? "top" : "bottom");
-            }
-        }
-        s_benchHeld[i] = bench[i] != 0;
     }
 
-    /* Not injected yet — say so once each, so a divergence downstream is
-     * attributed to the missing input and not mistaken for a port bug. */
+    /* Not injected yet — say so once, so a divergence downstream is attributed
+     * to the missing input and not mistaken for a port bug. */
     if ((p1 | p2) & RC_ESC && !s_warnedEsc) {
         s_warnedEsc = 1;
         fprintf(stderr, "[replay] frame %u presses ESC — not injected yet\n", s_frame);
     }
-    /* The recorded `userKey` ('S', the stats screen, is the only one the
-     * corpus uses) goes in as a real keypress: find the scancode keycodeLut
-     * maps to it and push that, so GetKey/MainKeysCheck run their own guards. */
-    if (key && key != s_prevUserKey) {
-        int sc, pushed = 0;
-        for (sc = 0; sc < 128; sc++) {
-            if (_keycodeLut[sc] != (uint8_t)key) continue;
-            if (_keyCount < 10) {
-                _keyBuffer[_keyCount] = (uint8_t)sc;
-                _keyCount++;
-                pushed = 1;
-                fprintf(stderr, "[replay] frame %u: key '%c' (scancode 0x%02X)\n",
-                        s_frame, key, sc);
-            }
-            break;
-        }
-        if (!pushed && !s_warnedUserKey) {
-            s_warnedUserKey = 1;
-            fprintf(stderr, "[replay] frame %u presses '%c' — no scancode for it, "
-                            "not injected\n", s_frame, key);
-        }
-    }
-    s_prevUserKey = key;
 }
 
 /* Match state the recording sets up before its first frame. Applied before the rollback
@@ -1496,6 +1407,8 @@ static void applyFirstFrameSetup(void)
     _currentGameTick = 0;
     _currentTick = 0;
     _lastGameTick = 0xFFFF;
+    /* No button held and no bench call pending from before kick-off. */
+    MatchStep_Reset();
 }
 
 void ReplayTest_FrameStart(void)
@@ -1534,8 +1447,13 @@ void ReplayTest_FrameStart(void)
     s_rec = s_frames + (size_t)s_frame * s_frameSize;
     g_rtFrameNo = (int32_t)s_setup.firstFrame + (int32_t)s_frame;  /* see above */
 
-
-    injectInput();
+    /* A netplay match applies the input inside its own frame step, which GGPO
+     * repeats (src/netplay_match.c). */
+    if (!NetplayMatch_Enabled()) {
+        MatchPlayerInput in[MATCH_PLAYERS];
+        ReplayTest_FrameInput(in);
+        MatchStep_ApplyInput(in, (int32_t)s_frame);
+    }
 }
 
 static void reportHeader(void)
@@ -1567,7 +1485,7 @@ static void reportPointerMismatch(const RtField *f, int64_t rec,
     s_errors++;
 }
 
-void ReplayTest_FrameEnd(void)
+void ReplayTest_FrameCheck(void)
 {
     uint32_t i;
 
@@ -1603,18 +1521,23 @@ void ReplayTest_FrameEnd(void)
             return;
         }
     }
+}
 
+void ReplayTest_FrameDone(void)
+{
+    if (!s_running || !s_rec) return;
     s_rec = NULL;
     s_frame++;
-    /* One tick per game-loop iteration — the Amiga guarantee the SDL timer
-     * thread cannot make. Mirrors the ISR's own gates. */
-    _currentTick++;
-    /* Same gate as the ISR it stands in for — see interrupts.c. */
-    if (_paused == 0 && (_gDosGameplay || _showingUserStats == 0))
-        _currentGameTick++;
-
     if ((s_frame % 500) == 0)
         fprintf(stderr, "[replay] ... %u/%u frames matched\n", s_frame, s_frameCount);
+}
+
+void ReplayTest_FrameEnd(void)
+{
+    if (!s_running || !s_rec) return;
+    ReplayTest_FrameCheck();
+    MatchStep_AdvanceClock();
+    ReplayTest_FrameDone();
 }
 
 /* ===================================================================
@@ -1624,22 +1547,12 @@ void ReplayTest_FrameEnd(void)
 void ReplayTest_GetDriverState(ReplayDriverState *st)
 {
     st->frame = s_frame;
-    st->benchHeld[0] = s_benchHeld[0];
-    st->benchHeld[1] = s_benchHeld[1];
-    st->benchPending[0] = s_benchPending[0];
-    st->benchPending[1] = s_benchPending[1];
-    st->prevUserKey = s_prevUserKey;
 }
 
 void ReplayTest_SetDriverState(const ReplayDriverState *st)
 {
     s_frame = st->frame;
     s_rec = NULL;
-    s_benchHeld[0] = st->benchHeld[0];
-    s_benchHeld[1] = st->benchHeld[1];
-    s_benchPending[0] = st->benchPending[0];
-    s_benchPending[1] = st->benchPending[1];
-    s_prevUserKey = st->prevUserKey;
 }
 
 void ReplayTest_ForEachObservable(void (*fn)(void *addr, uint32_t size, void *ctx), void *ctx)

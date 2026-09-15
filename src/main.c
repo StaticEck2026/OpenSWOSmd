@@ -39,6 +39,7 @@
 #include "replay_test.h"        /* --replay-test: recorded-game regression rig */
 #include "online_menus.h"       /* --menu, --menu-selftest */
 #include "netplay.h"            /* --netplay-selftest */
+#include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
 
 #define WIN_SCALE 3
@@ -199,6 +200,11 @@ static void print_usage(const char *argv0)
         "                            check it against its JSON, and exit.\n"
         "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
         "                            loopback, then a synctest session. Exits.\n"
+        "  --netplay-match=<mode>    With --replay-test: play the match through the\n"
+        "                            netplay frame step on the recording's inputs\n"
+        "                            (docs/NETPLAY.md): direct (no GGPO), or\n"
+        "                            synctest[:N] (every N frames GGPO loads the state\n"
+        "                            of N frames back, re-simulates, compares; 1..8).\n"
         "  --rollback=<mode>         With --replay-test: roll the match back to test\n"
         "                            the rollback state registry (docs/ROLLBACK.md).\n"
         "                            check | oracle | discover | scan | trace. The\n"
@@ -439,6 +445,11 @@ int main(int argc, char **argv)
             OnlineMenus_SetStartMenu(v);
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
+        } else if (strncmp(a, "--netplay-match", 15) == 0) {
+            if (NetplayMatch_ParseArg(a) != 1) {
+                fprintf(stderr, "Invalid argument: %s\n", a);
+                return 1;
+            }
         } else if (strcmp(a, "--netplay-selftest") == 0) {
             return Netplay_SelfTest();
         } else if ((v = match_kv(a, "replay-skip")) != NULL) {
@@ -472,6 +483,16 @@ int main(int argc, char **argv)
         fprintf(stderr, "--rollback needs --replay-test=<file.swr> (the match's setup and inputs)\n");
         return 1;
     }
+    if (NetplayMatch_Enabled() && !replay_file) {
+        fprintf(stderr, "--netplay-match needs --replay-test=<file.swr> (the match's setup and inputs)\n");
+        return 1;
+    }
+    if (NetplayMatch_Enabled() && Rollback_Intervenes()) {
+        fprintf(stderr, "--netplay-match takes only the rollback rig's watching options "
+                        "(--rollback=trace, -trace, -dump, -save-state): the others rewind the "
+                        "match GGPO is playing\n");
+        return 1;
+    }
     if (replay_file) {
 #ifdef _WIN32
         _putenv("SWOS_HARNESS_TURBO=1");
@@ -502,8 +523,9 @@ int main(int argc, char **argv)
 #endif
         /* The rollback rig plays its own match and leaves gameplay, the fire-hold
          * lockout and audio to the command line -- and needs no audio device or pump
-         * thread writing game memory behind the game loop's back (docs/ROLLBACK.md). */
-        if (Rollback_Enabled())
+         * thread writing game memory behind the game loop's back (docs/ROLLBACK.md).
+         * Nor does a netplay match, which re-simulates frames. */
+        if (Rollback_Enabled() || NetplayMatch_Enabled())
             SDL_setenv("SWOS_AUDIO_OFF", "1", 1);
         if (!Rollback_Enabled())
         opts.dos_gameplay = 1;   /* the corpus is DOS gameplay (docs/TESTS.md 5c) */

@@ -2776,15 +2776,23 @@ control assignment the two `ShowPlayMatchMenu` prompts would have produced
 (`ReplayTest_SetupPlayers`, called from `SetupPlayers` and mirroring the
 arcade-mode branch beside it).
 
-The **bench button** is injected per TEAM, on its rising edge. swos-port's
-`TeamGeneralInfo` is our 144 bytes plus a trailing `secondaryFire` it sets from
-its own bench event, so the recording says which team's bench a press belongs
-to and the rig does not have to infer it from who drives whom — the schema
-exposes that byte as `top_bench_button` / `bottom_bench_button`, injected and
-never compared (we have no such field). The edge matters:
-`MainKeysCheck` sets `bench1Called` / `bench2Called` from a key EVENT, and
-inside the menu the same flag is what *leaves* it, so re-asserting a held
-button would open and close the bench on consecutive frames.
+The **bench button** is recorded per TEAM and injected on its rising edge.
+swos-port's `TeamGeneralInfo` is our 144 bytes plus a trailing `secondaryFire`
+it sets from its own bench event, so the recording says which team's bench a
+press belongs to — the schema exposes that byte as `top_bench_button` /
+`bottom_bench_button`, injected and never compared (we have no such field).
+It reaches the game the way a player's press does, through the input code the
+rig shares with netplay (`src/match_step.c`): as the bench button of the player
+who controls that team, which `MatchStep_ApplyInput` routes back to that team.
+A press for a team no human controls is not injected — `MainKeysCheck`'s guard
+would refuse it. Against the recording that does not happen, but the rollback
+rig plays its own match, where it can: in `zkz-11215003` at frame 11479 the
+rig's bottom team has no human, and the rig used to open that computer team's
+bench. The edge matters: `MainKeysCheck` sets `bench1Called` / `bench2Called`
+from a key EVENT, and inside the menu the same flag is what *leaves* it, so
+re-asserting a held button would open and close the bench on consecutive
+frames. The edge latches are match state (`g_matchInputLatch`, in the
+rollback registry), so a rollback restores them with everything else.
 
 The v1.4 **`userKey`** goes in as a real keypress: the rig reverses `keycodeLut`
 to find the scancode that maps to the recorded ASCII and pushes THAT into

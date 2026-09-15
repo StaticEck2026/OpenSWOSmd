@@ -66,6 +66,13 @@ vendored miniz in `third_party/miniz`, update notes in its `OPENSWOS.md`) in the
 PORTABLE encoding — typed fields big-endian, pointers as identities, like saves — so
 32/64-bit and Windows builds interoperate (`scripts/rollback_xbuild.sh`). Adding or
 renaming an animation table or frame array means rerunning `scripts/gen_sim_state_ids.py`.
+A netplay match runs each frame as a step GGPO can call again (`src/netplay_match.c`):
+`GameLoop_Frame` (the loop body, drawing included — render calls write match state), the
+input and clock of `src/match_step.c` (shared with the replay rig), the buffer swap and the
+VBlank interrupt's work, never presented on a re-simulation. `scripts/netplay_test.sh --all`
+plays the corpus through it, directly and under GGPO's synctest, and requires every frame's
+state hashes to equal a plain run's — run it after touching the game loop, the step, or
+anything the VBlank interrupt does.
 
 ### Release builds — `scripts/build_dist.sh`
 

@@ -198,6 +198,12 @@ int Rollback_Enabled(void)
            s_saveStatePath != NULL || s_loadStatePath != NULL;
 }
 
+int Rollback_Intervenes(void)
+{
+    return s_mode == ROLLBACK_SCAN || s_mode == ROLLBACK_CHECK || s_mode == ROLLBACK_ORACLE ||
+           s_mode == ROLLBACK_DISCOVER || s_loadStatePath != NULL;
+}
+
 /* ---- resync files: what a peer joining or recovering mid-match would receive ----
  * The replay driver's input cursor, then two state packets (state_wire.c) for the same
  * frame -- SIM alone, and SIM+VIEW -- each a delta against the KICK-OFF state. Every

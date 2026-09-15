@@ -44,10 +44,12 @@ SDL_ONLY_SRCS := \
     crt_effects.c         \
     ini.c                 \
     input_sdl.c           \
+    match_step.c          \
     menu_load_json.c      \
     menu_symbols.c        \
     miniz_impl.c          \
     netplay.c             \
+    netplay_match.c       \
     online_menus.c        \
     platform_sdl.c        \
     replay_test.c         \

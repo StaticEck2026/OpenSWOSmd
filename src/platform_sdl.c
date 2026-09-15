@@ -1875,7 +1875,14 @@ int Platform_VBlank(void)
      * thread spin loops can monopolise CPU). The throttle inside the
      * wrapper means double-firing from both threads is harmless. */
     RunInt3HandlerThrottled();
+    return Platform_Present();
+}
 
+/* Platform_VBlank without the VBlank interrupt: show the finished frame and pace. A
+ * netplay match runs the interrupt inside its frame step instead, exactly once per
+ * simulated frame (src/netplay_match.c). */
+int Platform_Present(void)
+{
     /* Stamp first so the async timer callback sees a recent main-thread
      * render as soon as we enter RenderFrame — prevents the timer from
      * firing a concurrent render while we're holding the mutex. */

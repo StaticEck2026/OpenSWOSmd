@@ -8,11 +8,22 @@
 
 #include "game_types.h"
 
+/* One pass of the match loop (GameLoop_Frame). */
+typedef enum {
+    GAME_FRAME_DONE,        /* the frame ran to its end */
+    GAME_FRAME_DETOUR,      /* it played the highlights or an instant replay instead */
+    GAME_FRAME_MATCH_OVER,  /* the match is over: it stopped before the simulation */
+    GAME_FRAME_QUIT         /* quit to DOS */
+} GameFrameResult;
+
 /* Game loop entry points */
 void ViewMatchSequence(void);
 void ViewHighlights(void);
 void StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam);
 void GameLoop(void);
+/* One frame of the match, and the vblank wait that ends it (present 0: not shown). */
+GameFrameResult GameLoop_Frame(void);
+void GameLoop_EndFrame(int32_t present);
 void KeepStatisticsOnScreen(void);
 void ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam);
 void PlayInstantReplayLoop(void);

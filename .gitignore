@@ -108,6 +108,8 @@ tests/amiga/
 tests/replay/
 # scripts/rollback_test.sh output: traces, logs, JSON reports.
 tests/rollback/
+# scripts/netplay_test.sh output: traces and logs.
+tests/netplay/
 
 # Nintendo Switch target (docs/SWITCH.md). The SDK and the SDL fork are NDA and
 # are never in this tree; these are just the build outputs.

@@ -159,7 +159,7 @@ extern void DrawSprites(void);
  * Each loop has its own XOR magic and expected value.
  * The anti-tamper target labels are in asm dead code and never taken.
  */
-static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
+static void waitVBlankSyncPresent(uint32_t xorMagic, uint32_t expected, int32_t present)
 {
     _custom->dmacon = (uint16_t)DMACON_BLT_ON;
     (void)(_custom->dmaconr & (1u << 14));
@@ -191,12 +191,21 @@ static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
         int16_t cy = _cameraY.s.i;
         SwapBuffersAndCameraViewState();
         SetCameraCoordinates(cx, cy);
-        Platform_VBlank();
+        /* A frame netplay re-simulates still swaps and sets the camera,
+         * which the next frame reads, but is never shown. */
+        if (present)
+            Platform_VBlank();
     }
 #else
+    (void)present;
     _waitingInterrupt = 1;
     while (_waitingInterrupt != 0) {}
 #endif
+}
+
+static void waitVBlankSync(uint32_t xorMagic, uint32_t expected)
+{
+    waitVBlankSyncPresent(xorMagic, expected, 1);
 }
 
 /* ---- Pause spin-wait: waits 1 tick (dbf d1 with d1=0 → 1 iteration) ----
@@ -586,54 +595,19 @@ AssignFakeGoalsToScorers(uint16_t teamId, int16_t numGoals)
 }
 
 /* ====================================================================
- * GameLoop — main per-frame game loop
+ * GameLoop_Frame — one frame of the match
+ *
+ * The body of GameLoop's loop, from the timer read at its top to the
+ * highlight bookkeeping at its end; the vblank wait that ends a pass is
+ * GameLoop_EndFrame.
+ *
+ * All of it runs on every frame, drawing included — the render calls write
+ * match state too (DrawSprites sets `onScreen`, DrawAnimatedPatterns calls
+ * Rand) — so a frame netplay re-simulates is this whole function, and only
+ * showing it is left out (src/netplay_match.c).
  * ==================================================================== */
-void __attribute__((used, externally_visible))
-GameLoop(void)
+GameFrameResult GameLoop_Frame(void)
 {
-    int16_t d1, d2;
-
-    _gameCanceled = 0;
-    _instantReplayFlag = 0;
-    _saveHighlightScene = 0;
-    _fadeAndSaveHighlightScene = 0;
-    _spaceReplayTimer = 0;
-
-    /* Training starts at a fixed (168, 313) in both releases. A match starts
-     * centred horizontally on one of the two goal ends, and both of those are
-     * functions of the SIMULATION view (display.h): 168/592 at the port's own
-     * 336x272, and 176/664 — swos-port's kCenterX / kBottomStartLocationY — at
-     * the DOS release's 320x200. */
-    d1 = 168;
-    d2 = 313;
-    if (_trainingGame == 0) {
-        uint16_t r = Rand();
-        if (r & 1)
-            d2 = SIM_CAMERA_MAX_Y;   /* bottom end: 592 at 272 lines */
-        else
-            d2 = 16;                 /* top end: the same in both */
-        d1 = SIM_CAMERA_CENTRE_X;    /* 168 at 336 wide */
-    }
-
-    ReplayUpdateCameraAndSwapBuffers(d1, d2);
-    UpdatePlanePtrsAndBlitParams();
-    /* nullsub_2 — no-op */
-    ReadTimerDelta();
-
-    /* Poll keys until clear */
-    do {
-        GetKey();
-    } while (_currentKey != 0);
-
-    goto wait_for_vblank_sync;
-
-vblank_return_dispatch:
-#ifdef SWOS_SDL_BUILD
-    /* Recorded-game replay: take this frame's record and inject its stick
-     * state before anything reads input (docs/TESTS.md 5b). No-op unless the
-     * rig is running. */
-    { extern void ReplayTest_FrameStart(void); ReplayTest_FrameStart(); }
-#endif
     ReadTimerDelta();
 
     /* Pause spin loop */
@@ -668,7 +642,7 @@ vblank_return_dispatch:
 
     /* Check end of match */
     if (_playGame == 0)
-        goto end_of_match_flow;
+        return GAME_FRAME_MATCH_OVER;
 
     /* Fade state management */
     if (_fadeState == 0 && _fadeInitFlag == 0x3E7)
@@ -678,14 +652,14 @@ vblank_return_dispatch:
     if (_goIntoHighlightsLoop != 0) {
         FadeOutToBlack();
         PlayHighlightsLoop();
-        goto wait_for_vblank_sync;
+        return GAME_FRAME_DETOUR;
     }
 
     /* Handle replay state change */
     if (_replayState != 0) {
         FadeOutToBlack();
         PlayInstantReplayLoop();
-        goto wait_for_vblank_sync;
+        return GAME_FRAME_DETOUR;
     }
 
     /* Run gameplay update */
@@ -725,7 +699,7 @@ vblank_return_dispatch:
     UpdateAndDrawStatistics();
 
     if (_quitToDos != 0)
-        goto cleanup_and_return;
+        return GAME_FRAME_QUIT;
 
     /* Post-frame: save coordinates end marker */
     SaveCoordinatesForHighlights((int16_t)0xFFFE, 0, 0);
@@ -744,20 +718,106 @@ vblank_return_dispatch:
         _goalCameraMode = 0;
     }
 
-#ifdef SWOS_SDL_BUILD
-    /* ... and compare the state this frame produced against the record. The
-     * branches above that jump straight to wait_for_vblank_sync deliberately
-     * skip this — the rig reports such a frame rather than silently reusing
-     * its record. */
-    { extern void ReplayTest_FrameEnd(void); ReplayTest_FrameEnd(); }
-#endif
+    return GAME_FRAME_DONE;
+}
 
-wait_for_vblank_sync:
-    waitVBlankSync(0xCFD1F9BDu, 0x165Au);
+/* The vblank wait that ends a pass of the match loop. On SDL: swap the
+ * buffers, set the camera and show the frame — or, with `present` 0, all of
+ * it but the showing. The Amiga always waits for its VBlank. */
+void GameLoop_EndFrame(int32_t present)
+{
+    waitVBlankSyncPresent(0xCFD1F9BDu, 0x165Au, present);
 #ifdef DETERMINISTIC_DUMP_FRAME
     RngDumpCheck();
 #endif
-    goto vblank_return_dispatch;
+}
+
+/* One pass of GameLoop's loop, ended by its vblank wait unless the match is
+ * leaving the loop. */
+static GameFrameResult runFrame(void)
+{
+    GameFrameResult r;
+
+#ifdef SWOS_SDL_BUILD
+    /* A netplay match runs its frames as steps GGPO can repeat, and ends
+     * them itself (docs/NETPLAY.md). */
+    {
+        extern int32_t NetplayMatch_Enabled(void);
+        extern int32_t NetplayMatch_Frame(void);
+        if (NetplayMatch_Enabled())
+            return (GameFrameResult)NetplayMatch_Frame();
+    }
+    /* Recorded-game replay: take this frame's record and inject its stick
+     * state before anything reads input (docs/TESTS.md 5b). No-op unless the
+     * rig is running. */
+    { extern void ReplayTest_FrameStart(void); ReplayTest_FrameStart(); }
+#endif
+    r = GameLoop_Frame();
+    if (r == GAME_FRAME_MATCH_OVER || r == GAME_FRAME_QUIT)
+        return r;
+#ifdef SWOS_SDL_BUILD
+    /* ... and compare the state this frame produced against the record. A
+     * detour into the highlights or an instant replay deliberately skips
+     * this — the rig reports such a frame rather than silently reusing its
+     * record. */
+    if (r == GAME_FRAME_DONE) {
+        extern void ReplayTest_FrameEnd(void);
+        ReplayTest_FrameEnd();
+    }
+#endif
+    GameLoop_EndFrame(1);
+    return r;
+}
+
+/* ====================================================================
+ * GameLoop — main per-frame game loop
+ * ==================================================================== */
+void __attribute__((used, externally_visible))
+GameLoop(void)
+{
+    int16_t d1, d2;
+
+    _gameCanceled = 0;
+    _instantReplayFlag = 0;
+    _saveHighlightScene = 0;
+    _fadeAndSaveHighlightScene = 0;
+    _spaceReplayTimer = 0;
+
+    /* Training starts at a fixed (168, 313) in both releases. A match starts
+     * centred horizontally on one of the two goal ends, and both of those are
+     * functions of the SIMULATION view (display.h): 168/592 at the port's own
+     * 336x272, and 176/664 — swos-port's kCenterX / kBottomStartLocationY — at
+     * the DOS release's 320x200. */
+    d1 = 168;
+    d2 = 313;
+    if (_trainingGame == 0) {
+        uint16_t r = Rand();
+        if (r & 1)
+            d2 = SIM_CAMERA_MAX_Y;   /* bottom end: 592 at 272 lines */
+        else
+            d2 = 16;                 /* top end: the same in both */
+        d1 = SIM_CAMERA_CENTRE_X;    /* 168 at 336 wide */
+    }
+
+    ReplayUpdateCameraAndSwapBuffers(d1, d2);
+    UpdatePlanePtrsAndBlitParams();
+    /* nullsub_2 — no-op */
+    ReadTimerDelta();
+
+    /* Poll keys until clear */
+    do {
+        GetKey();
+    } while (_currentKey != 0);
+
+    /* The first pass starts at the vblank wait, as the original's does. */
+    GameLoop_EndFrame(1);
+    for (;;) {
+        GameFrameResult r = runFrame();
+        if (r == GAME_FRAME_MATCH_OVER)
+            goto end_of_match_flow;
+        if (r == GAME_FRAME_QUIT)
+            goto cleanup_and_return;
+    }
 
 end_of_match_flow:
     FadeOutToBlack();

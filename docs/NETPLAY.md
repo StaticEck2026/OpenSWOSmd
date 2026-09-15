@@ -1,8 +1,11 @@
 # NETPLAY.md — rollback netplay (GGPO-X)
 
-**Status (2026-09-14): library in, game not yet.** GGPO-X is vendored, builds into
-the SDL binary, is callable from C, and passes a two-peer loopback test and a synctest.
-Nothing in a match uses it yet; the next step is the state snapshot (§4).
+**Status (2026-09-15): a real match plays through GGPO.** GGPO-X is vendored and callable
+from C, the match state it saves and loads is a registry the rollback rig proves
+(docs/ROLLBACK.md), and a match runs as a frame step GGPO can call again. Under GGPO's
+synctest, which rolls the match back and re-simulates it, recorded matches come out
+identical to plain runs at every frame (§5). Both players' inputs still come from a
+recording, in one process; two peers are next.
 
 OpenSWOS continues SWOS 2020, whose online play runs on
 [GGPO-X](https://github.com/thomashenry79/ggpo-x). We use the same library at the same
@@ -16,6 +19,10 @@ The lobby, login and matchmaking are SWOS 2020 menus, imported separately
 |---|---|
 | `third_party/ggpo-x/` | the library (C++), upstream layout; `OPENSWOS.md` = provenance + patch list |
 | `include/netplay.h`, `src/netplay.c` | OpenSWOS's netplay module — the only code that talks to GGPO |
+| `include/netplay_match.h`, `src/netplay_match.c` | a match played through the frame step and GGPO (§5) |
+| `include/match_step.h`, `src/match_step.c` | one frame of the players' input and the frame's clock, shared with the replay rig |
+| `include/sim_state.h`, `src/sim_state.c` | the match state GGPO saves and loads (docs/ROLLBACK.md) |
+| `scripts/netplay_test.sh` | recorded matches through the step and GGPO's synctest, compared frame by frame with plain runs |
 | `src/online_menus.c` | the imported online menus' handlers (docs/MENUS.md §10) |
 
 ## 2. Building
@@ -81,7 +88,7 @@ and a hash of every input consumed):
 Don't run it from the Cygwin build on a desktop you are not watching: binding a UDP
 port makes Windows Firewall ask.
 
-## 4. Integrating with a match — the open design
+## 4. Integrating with a match — the design
 
 ### What SWOS 2020 does (`swos-2020/src/mpgame.cpp`)
 
@@ -114,8 +121,8 @@ by a linker section. It keeps the snapshot small and names every byte a resync s
 | `StateWire_Encode/Decode` (`include/state_wire.h`) | a resync or a mid-match join: SIM (or SIM+VIEW) in the portable encoding, as a validated, deflated delta against a base both peers hold — about 1.3–1.9 KB against the kick-off state, a few hundred bytes against a recent agreed frame |
 | `SimState_Size(tiers)` | buffer size |
 
-What crosses the network during a match is only the inputs (one control word per player
-per frame) and the SIM checksum; GGPO's save and load stay on the machine. State is sent
+What crosses the network during a match is only the inputs (two bytes per player per
+frame, §5) and the SIM checksum; GGPO's save and load stay on the machine. State is sent
 only to resync, in the binary packet described in docs/ROLLBACK.md, "The wire format". Its
 state is pointer-free and big-endian — pointers travel as identities, like saves — so a
 32-bit, a 64-bit and a Windows build exchange it (`scripts/rollback_xbuild.sh`).
@@ -127,30 +134,123 @@ highlight ring and its pointers: restore it on a local rollback so the instant r
 not show a rolled-back goal; a resync can skip it, as long as the session does not play
 in-match replays (their playback reads the ring).
 
-Synctest remains the acceptance test: `Netplay_StartSyncTest` on a real match must run
-without a checksum mismatch before two machines are tried. The rollback rig already
-does the equivalent headless, over the recorded corpus.
+Synctest is the acceptance test before two machines are tried: `Netplay_StartSyncTest`
+on a real match must run without a checksum mismatch. It does (§5).
 
-### Other prerequisites
+### Still to do
 
 - **One simulation width on both peers.** The simulation still reads the render width
   in a few places (the fan-tile column in `DrawAnimatedPatterns`, the camera clamp in
   `SetCameraCoordinates`), so a 16:9 peer and a 4:3 peer diverge from frame 0. Until
   that is removed, a session must pin both to the same width.
-- **A callable single-frame step.** GGPO's `advance_frame` re-simulates frames on demand;
-  `GameLoop` is one long loop with the frame boundary at its top
-  (`ReplayTest_FrameStart`). The rig rewinds in place there; netplay needs the body
-  factored into a step.
-- **Presentation during re-simulation.** Re-simulated frames must not trigger sound
-  effects twice or be presented; the renderer keeps its own record of what it drew
-  (scroll offsets, both frontbuffers), which a rollback deliberately leaves alone.
-- **Instant replays and pause** leave the match loop; in a session they have to be
-  either disabled or driven by both peers' inputs.
+- **Sound during re-simulation.** A re-simulated frame is never presented (§5), but the
+  VBlank interrupt's work, which it runs, includes the audio channel update — a match with
+  sound would play a re-simulated frame's effects again. The tests run with audio off.
+- **Instant replays and pause** leave the match loop, and so do the keys that start them
+  (`MainKeysCheck`: R, H, P, ESC, and S for the statistics); in a session they have to be
+  either disabled or driven by both peers' inputs. A detour into a replay ends a test run.
 - **Determinism:** the simulation must not read wall-clock state. The rollback rig's
   determinism check runs two processes loaded at different addresses and requires
   identical per-frame hashes.
-- **Input:** what one frame of a player's input is — the replay format already records
-  it per frame (docs/REPLAY_FORMAT_V2.md).
 - **Frame pacing:** `NETPLAY_EVENT_TIMESYNC` asks the peer that is ahead to slow down.
 - **The lobby:** the matchmaking server hands out the peer address; until that is
   ported, a direct-IP connect is enough to test two machines.
+
+## 5. Playing a match through GGPO (`src/netplay_match.c`)
+
+GGPO re-simulates from inside its own calls — `Netplay_AdvanceFrame` loads an older state
+and calls `advanceFrame` for every frame since — so a netplay match cannot be a loop with
+the frame boundary at its top. Each frame is a **step**, called once as the frame is first
+played and again for every re-simulation of it:
+
+| part | what | where |
+|---|---|---|
+| input | both players' `MatchPlayerInput` into the joystick registers, the fire bits, the bench calls and the key buffer | `MatchStep_ApplyInput` (`src/match_step.c`) |
+| the frame | the body of `GameLoop`'s loop, **drawing included** | `GameLoop_Frame` (`src/game_loop.c`) |
+| the clock | `_currentTick`, and `_currentGameTick` behind the interrupt's own gates | `MatchStep_AdvanceClock` |
+| the swap | swap the buffers and set the camera | `GameLoop_EndFrame(0)` |
+| the VBlank interrupt | its per-frame work: fade ticks, audio channels, key repeat | `_Int3TimerHandler` |
+
+Only the frame GGPO ends on is shown: `Platform_Present`, which is `Platform_VBlank`
+without the interrupt. `GameLoop` itself is now the same parts in a loop, so the replay
+rig and a plain match run exactly what a netplay step runs.
+
+Three things decide that shape:
+
+- **Drawing is part of the frame.** The render calls write match state: `DrawSprites`
+  sets `onScreen`, which the match reads, and `DrawAnimatedPatterns` calls `Rand`. A
+  re-simulation that skipped drawing would play a different match.
+- **The VBlank interrupt is part of the frame.** On the Amiga it runs once after every
+  frame. On SDL, `Platform_VBlank` ran it between frames, outside anything GGPO calls, and
+  the first synctest failed re-simulating frame 1; with the interrupt in the step, every
+  frame matches. (It steps the fade, and a match starts with a fade-in.) A netplay match
+  also quiesces the timer thread that would run it too, as the rollback rig does.
+- **An input's edges are match state.** The bench call and a key press act on a button's
+  rising edge, so the previous frame's buttons are remembered — in `g_matchInputLatch`, a
+  6-byte registry entry, so a rollback puts them back.
+
+### The input
+
+`MATCH_INPUT_SIZE` is 2 bytes per player per frame, the same on every platform:
+
+| byte | bits |
+|---|---|
+| `controls` | up 0x01, down 0x02, left 0x04, right 0x08, fire 0x20, bench 0x40 |
+| `key` | the key held this frame, as its `keycodeLut` value (0: none) |
+
+The stick and fire bits are the recordings' own. A player's bench button calls the bench of
+the team that player controls — its coach, or with none its player — which is also the
+guard `MainKeysCheck` applies. A recording's bench button is per team, so the replay rig
+hands each press to the player controlling that team (docs/TESTS.md §6b).
+
+### The callbacks
+
+| callback | does |
+|---|---|
+| `saveState` | `SimState_Save(SIM_TIER_ALL)`, 35,654 bytes on x86_64; its checksum is `SimState_Hash` of both tiers — over the portable encoding — folded to 32 bits |
+| `loadState` | `SimState_Load(SIM_TIER_ALL)` |
+| `advanceFrame` | `Netplay_SyncInput`, the step, `Netplay_AdvanceFrame` |
+| a frame's checksum | `SimState_Hash(SIM_TIER_SIM)` folded to 16 bits: what a peer compares |
+
+Under synctest the match also keeps every frame's state as first played. GGPO compares only
+checksums, and aborts; before it does, the match prints which registry entries differ.
+
+### Testing it
+
+`--netplay-match=<mode>` with `--replay-test=<file.swr>` plays that recording's match through
+the step, with both players' inputs from the recording:
+
+| mode | |
+|---|---|
+| `direct` | the step, without GGPO |
+| `synctest[:N]` | GGPO's synctest: every N frames (1–8, default 1) it loads the state of N frames back, plays them again and compares their checksums with the first run's |
+
+It takes the rollback rig's watching options (`--rollback=trace`, `--rollback-trace`,
+`--rollback-dump`, `--rollback-save-state`) and refuses the ones that rewind the match.
+Without `--rollback` the run is the replay rig's comparison with the recording, played
+through GGPO. `scripts/netplay_test.sh` plays recordings plain and in each mode and requires
+the traces to be identical at every frame.
+
+Results (2026-09-15), over the recorded corpus — 13 recordings, each with Amiga and with DOS
+gameplay: 26 matches, 488,837 frames — every trace compared at every frame with a plain run
+of the same build (`scripts/netplay_test.sh --all`, 250 s at 6 jobs):
+
+| mode | result |
+|---|---|
+| direct | 26 of 26 matches identical to the plain run |
+| synctest:1 | 26 of 26 identical; 488,837 frames re-simulated, one load per frame |
+| synctest:8 | 26 of 26 identical; 488,768 frames re-simulated from 61,096 loads |
+
+Every re-simulated frame's checksum matched. Compared with the recordings instead, a match
+played through synctest gets the same result as the replay rig on its own: zkz-12065730 and
+playa-10090613 pass every frame, and zkz-11215003 diverges at the same frame (12,646) on the
+same field. A synctest:1 match takes 1.2 to 1.5 times as long as a plain one.
+
+### Next
+
+1. **Two peers over loopback**, headless: each process adds one player's recorded input,
+   GGPO predicts the other's and rolls back when the prediction was wrong; both traces must
+   equal the plain run's. The match may end only on a confirmed frame, never a predicted one.
+2. Sound during re-simulation, the in-match keys, and a session handshake: the same build,
+   simulation width and registry (`SimState_LayoutHash`) on both peers.
+3. Live input, and the lobby.

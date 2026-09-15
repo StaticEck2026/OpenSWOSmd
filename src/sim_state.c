@@ -48,6 +48,7 @@
 #include "animated_patterns.h"
 #include "sprites.h"
 #include "sim_state_ids.h"
+#include "match_step.h"
 #include "endian_helpers.h"
 
 #include <stdlib.h>
@@ -359,6 +360,9 @@ const SimStateRegion g_simStateRegions[] = {
     REGION(_lastFrameTicks, S, k_word16), REGION(_frameCount, S, k_word16), REGION(_inGameCounter, S, k_word16),
     REGION(_gameSeconds, S, k_word16), REGION(_secondsSwitchAccumulator, S, k_word16), REGION(_gameTime, S, k_bytes),
     REGION(_playGame, S, k_word16),
+
+    /* input edges: what turning the players' inputs into game events remembers (match_step.h) */
+    REGION(g_matchInputLatch, S, k_bytes),
 
     /* match flow */
     REGION(_gameState, S, k_word16), REGION(_gameStatePl, S, k_word16),
