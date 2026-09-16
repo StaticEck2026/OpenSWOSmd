@@ -14,6 +14,7 @@
 #include "dos_mode.h"      /* _gDosGameplay: the DOS second-yellow table runs off its end */
 #include "display.h"      /* SIM_REFEREE_ENTRY_BELOW: f(view) */
 #include "game_types.h"
+#include "math68k.h"     /* CalculateDeltaXAndY */
 
 /* ---- Referee state machine ---- */
 #define REF_INCOMING            1
@@ -65,11 +66,6 @@ extern uint16_t Rand(void);
 extern void InitDisplaySprites(void);
 extern void PanicHaltLoop(void);
 
-/* CalculateDeltaXAndY — now ported to C in math68k.c */
-extern uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
-                                      int16_t srcX, int16_t srcY,
-                                      int16_t speed,
-                                      int32_t *outDeltaX, int32_t *outDeltaY);
 
 /* SendPlayerAway ported to C in tackle_foul.c (still uses uint8_t* params) */
 extern void SendPlayerAway(uint8_t *playerSprite, uint8_t *teamData);

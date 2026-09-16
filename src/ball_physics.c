@@ -5,6 +5,7 @@
  */
 #include "dos_mode.h"       /* _gDosGameplay: the diving-keeper ball straddle */
 #include "ball_physics.h"
+#include "math68k.h"       /* CalculateDeltaXAndY: uint16_t, 0xFFFF = no movement */
 
 /* Sprite image constants */
 #define SPR_BALL_SHADOW             1069
@@ -101,10 +102,6 @@ extern int16_t  _kNormalKickBallSpeed;
 extern void CheckIfBallOutOfPlay(void);
 extern void PlaySample3IfNotTraining(void);
 extern void PlaySfxSample16(void);
-extern int16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
-                                     int16_t srcX, int16_t srcY,
-                                     int16_t speed,
-                                     int32_t *outDeltaX, int32_t *outDeltaY);
 extern void PanicHaltLoop(void);
 
 /* ---- Static helpers ---- */
@@ -602,7 +599,18 @@ has_picture:
         int16_t speed = ball->speed;
 
         int32_t outDX, outDY;
-        int16_t dir = CalculateDeltaXAndY(destX, destY, srcX, srcY, speed, &outDX, &outDY);
+        /* The result is a direction 0..255, or 0xFFFF meaning "not moving"
+         * (math68k.h). The branch below depends on that sentinel reading as
+         * NEGATIVE, so the unsigned return is narrowed to int16_t here, once,
+         * in the open.
+         *
+         * This file used to declare the function as returning int16_t, which it
+         * does not. On x86_64 the caller happened to sign-extend and behaved; on
+         * arm64 (macOS) it saw 65535, took the >= 0 branch and wrote the ball's
+         * fullDirection on every frame the ball was still. Two peers on the two
+         * platforms desynced on frame 1 of the first netplay match between them. */
+        uint16_t rawDir = CalculateDeltaXAndY(destX, destY, srcX, srcY, speed, &outDX, &outDY);
+        int16_t dir = (int16_t)rawDir;
 
         ball->deltaX.raw = (int32_t)outDX;
         ball->deltaY.raw = (int32_t)outDY;

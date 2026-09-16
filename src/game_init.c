@@ -95,7 +95,7 @@ extern uint16_t _cGetPlayerAtIndexFileIdx;
 extern uint8_t *StringCopy(const uint8_t *src, uint8_t *dst);
 extern uint8_t *ExtractSurname(uint8_t *name, uint16_t maxLenAndFlags);
 extern uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode);
-extern int16_t ShouldApplyRandomPlayerStatusAfterSim(void);
+extern uint16_t ShouldApplyRandomPlayerStatusAfterSim(void);   /* career_status.c returns uint16_t */
 extern void Career_UpdateSinglePlayerPostMatchStats(uint8_t *playerFileBase);
 extern uint16_t GetAveragePlayerPrice(TeamFileEx *teamFileBase);
 extern uint8_t *GetPlayerInfoBreakPosition(uint8_t *teamPtr, uint16_t requestedSlot,
