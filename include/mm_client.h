@@ -1,0 +1,138 @@
+/*
+ * mm_client.h -- the matchmaking client (SDL builds).
+ *
+ * Online play in SWOS 2020 goes through a matchmaking server rather than players
+ * swapping IP addresses: you log in, you see who else is on and what games are
+ * open, you create or join one, and the server introduces the two of you. We
+ * speak that same protocol, against the same server, vendored and run locally
+ * (third_party/matchmaker, scripts/run_matchmaker.sh, docs/NETPLAY.md section 7).
+ *
+ * THE SERVER ONLY INTRODUCES YOU. Its START message hands each side the other's
+ * candidate addresses and then it is out of the loop -- the match itself is
+ * peer-to-peer over GGPO (src/netplay.c), reached through the same p2p_link
+ * handshake the old direct-IP menu used (src/p2p_link.c). So the server going
+ * down mid-match does not end the match; it only stops new ones being made.
+ *
+ * POLL AND READ, NOT CALLBACKS. The upstream C++ client delivers everything
+ * through std::function callbacks. Menus here redraw from state every frame, so
+ * this one keeps the lobby in plain arrays you can read whenever you like, and
+ * reserves one-shot "take" calls for the things that are genuinely events (a
+ * player asking to join; being thrown out). Call MmClient_Poll() once a frame.
+ *
+ * Without SWOS_NETPLAY (make NETPLAY=1) there is no ENET and every call fails
+ * with MM_FAIL_UNAVAILABLE -- the same builds that have no GGPO to play through.
+ */
+#ifndef MM_CLIENT_H
+#define MM_CLIENT_H
+
+#ifdef SWOS_SDL_BUILD
+
+#include "swos_types.h"
+
+/* The server's own limits are generous; these are what a menu can show. A list
+ * longer than this is truncated, never overrun -- see the note in mm_client.c. */
+#define MM_NAME_MAX        32
+#define MM_MAX_USERS       64
+#define MM_MAX_GAMES       32
+#define MM_MAX_IN_GAME      8
+#define MM_MAX_PEER_ADDRS   8
+#define MM_ADDR_TEXT_MAX   24      /* "255.255.255.255:65535" + slack */
+
+#define MM_DEFAULT_PORT    19602   /* third_party/matchmaker/OPENSWOS.md */
+#define MM_DEFAULT_HOST    "127.0.0.1"
+
+typedef enum {
+    MM_IDLE,          /* no socket */
+    MM_CONNECTING,    /* ENET connecting, or logging in */
+    MM_CONNECTED,     /* logged in: the lobby is live */
+    MM_FAILED,        /* MmClient_Failure says why; the socket is closed */
+} MmState;
+
+typedef enum {
+    MM_FAIL_NONE,
+    MM_FAIL_UNAVAILABLE,   /* built without SWOS_NETPLAY */
+    MM_FAIL_BAD_ADDRESS,   /* the server address did not resolve */
+    MM_FAIL_NO_SOCKET,     /* could not create the local ENET host */
+    MM_FAIL_NO_ANSWER,     /* the server never completed the connection */
+    MM_FAIL_LOST,          /* connected, then the server went away */
+} MmFailure;
+
+typedef struct { char name[MM_NAME_MAX]; } MmUser;
+typedef struct { char owner[MM_NAME_MAX]; } MmGame;
+
+/* The game you are in, as host or joiner. `requested` are players waiting for
+ * the host to approve them; as host they are yours to approve or eject. */
+typedef struct {
+    char    owner[MM_NAME_MAX];
+    MmUser  joined[MM_MAX_IN_GAME];
+    int32_t numJoined;
+    MmUser  requested[MM_MAX_IN_GAME];
+    int32_t numRequested;
+} MmGameInfo;
+
+/* What the server hands over when a game starts. `addrs[0]` is the address the
+ * SERVER saw (i.e. through any NAT); the rest are what the peer reported about
+ * itself. Try them in order -- on one machine the first already works. */
+typedef struct {
+    int32_t  playerNumber;                 /* 1 = you created the game, 2 = you joined */
+    char     peerName[MM_NAME_MAX];
+    uint16_t localPort;                    /* the port our ENET socket is bound to */
+    char     addrs[MM_MAX_PEER_ADDRS][MM_ADDR_TEXT_MAX];
+    int32_t  numAddrs;
+} MmStartInfo;
+
+/* Connect and log in. `gameId` is the server's compatibility tag: it refuses a
+ * client whose tag differs, which is how a protocol change is kept from meeting
+ * an old build. Returns 0, or non-zero with the reason in MmClient_Failure. */
+int32_t     MmClient_Connect(const char *host, uint16_t port,
+                             const char *userName, const char *gameId);
+
+/* Once a frame: pump ENET, apply what arrived. Cheap when idle. */
+void        MmClient_Poll(void);
+
+/* Log out and close the socket. Idempotent. */
+void        MmClient_Disconnect(void);
+
+MmState     MmClient_State(void);
+MmFailure   MmClient_Failure(void);
+const char *MmClient_FailureText(void);     /* for a menu line; never NULL */
+const char *MmClient_UserName(void);
+
+/* The lobby. Both pointers stay valid until the next MmClient_Poll(). */
+const MmUser *MmClient_Users(int32_t *count);
+const MmGame *MmClient_OpenGames(int32_t *count);
+
+/* The game you are in, or NULL when you are not in one. */
+const MmGameInfo *MmClient_GameInfo(void);
+
+/* Lobby actions. Each returns 0 when the request went out. */
+int32_t MmClient_CreateGame(void);
+int32_t MmClient_JoinGame(const char *owner);
+int32_t MmClient_Approve(const char *player);
+int32_t MmClient_Eject(const char *player);
+int32_t MmClient_LeaveGame(void);
+
+/* One-shot events. Each returns non-zero once, then goes quiet until it happens
+ * again -- so a menu can poll them without seeing the same thing every frame.
+ *   JoinRequest: someone wants into YOUR game; `name` gets who.
+ *   Removed:     the host ejected you, or left, or the game went away. */
+int32_t MmClient_TakeJoinRequest(char *name, int32_t len);
+int32_t MmClient_TakeRemoved(void);
+
+/* Non-NULL once the server has started a game. Stays until MmClient_ClearStart. */
+const MmStartInfo *MmClient_StartInfo(void);
+void               MmClient_ClearStart(void);
+
+/* Connect to a locally running server, log in, list the lobby, create and leave a
+ * game, and log out. Prints a report; 0 on success. Needs
+ * scripts/run_matchmaker.sh running. `bin/SWOS.x86_64 --matchmaker-selftest`. */
+int32_t MmClient_SelfTest(const char *host, uint16_t port);
+
+/* The two-client half: one process hosts, another joins, the host approves, and
+ * both must receive START with the other's addresses. That handoff is the only
+ * part of the protocol a single client cannot exercise.
+ * `role` is "host" or "join". scripts/matchmaker_pair_test.sh runs the pair. */
+int32_t MmClient_PairTest(const char *role, const char *host, uint16_t port);
+
+#endif /* SWOS_SDL_BUILD */
+#endif /* MM_CLIENT_H */
