@@ -14,6 +14,7 @@
 #include "netplay_match.h"
 #include "game_loop.h"
 #include "match_step.h"
+#include "netplay_netem.h"
 #include "netplay.h"
 #include "replay_test.h"
 #include "sim_state.h"
@@ -44,6 +45,8 @@ static struct {
     int32_t          peerPort;
     int32_t          delay;               /* p2p: input delay in frames */
     int32_t          stallMs;             /* p2p: the longest pause of a busy machine */
+    int32_t          live;                /* p2p: input from this machine's pad, not a recording */
+    int32_t          liveFrameLimit;      /* live: stop here (SWOS_LIVE_FRAMES), 0 = play it out */
     int32_t          timeoutMs;
     const char      *tracePath;
 
@@ -177,6 +180,34 @@ const char *NetplayMatch_ArgError(void)
 int32_t NetplayMatch_Enabled(void)
 {
     return s_np.mode != NETPLAY_MATCH_OFF;
+}
+
+/* Where a live match's LOCAL input comes from. NULL = this machine's pad, which
+ * is what a real match uses. A test installs its own so the peer has something
+ * it cannot predict -- with both sides sending nothing, "same as last frame" is
+ * always right, no prediction ever misses and no rollback ever happens, so a
+ * lossy-network test proves nothing. */
+static uint8_t (*s_inputSource)(void);
+
+/* Called when a LIVE session has finished and every frame is confirmed -- the
+ * one moment the state is final and two peers can be compared. A test uses it
+ * to report and exit; leaving the match loop instead lands in the post-match
+ * screens, which wait for input a headless peer never gives. */
+static void (*s_liveFinished)(void);
+
+void NetplayMatch_SetFinishedCallback(void (*fn)(void))
+{
+    s_liveFinished = fn;
+}
+
+void NetplayMatch_SetInputSource(uint8_t (*fn)(void))
+{
+    s_inputSource = fn;
+}
+
+int32_t NetplayMatch_IsLive(void)
+{
+    return s_np.mode == NETPLAY_MATCH_P2P && s_np.live;
 }
 
 int32_t NetplayMatch_IsP2P(void)
@@ -493,6 +524,8 @@ int32_t NetplayMatch_Start(void)
         }
     }
 
+    if (Netem_Enabled())
+        fprintf(stderr, "[netplay] network emulation: %s\n", Netem_Describe());
     fprintf(stderr, "[netplay] %s match: %d bytes of input per player, %u bytes of state per save",
             k_modeName[s_np.mode], MATCH_INPUT_SIZE, s_np.stateSize);
     if (s_np.mode == NETPLAY_MATCH_SYNCTEST)
@@ -502,6 +535,70 @@ int32_t NetplayMatch_Start(void)
                 s_np.player, s_np.port, s_np.peerAddress, s_np.peerPort, s_np.delay, s_np.stallMs);
     fputc('\n', stderr);
     return 0;
+}
+
+/* Start a LIVE match against the peer the matchmaking menu found (or the
+ * direct-IP menu connected to). Everything the corpus p2p mode does, with this
+ * machine's pad as the local input.
+ *
+ * `delay` MUST be the delay BOTH peers agreed (P2PLink_AgreedDelay), not one
+ * this machine picked: an asymmetric delay is what makes one player feel they
+ * are chasing the other, and in a close contest it decides the ball before the
+ * game's own roll is reached.
+ *
+ * The p2p link has to be CLOSED before this is called. GGPO opens its own
+ * socket, and on the same local port -- which is also what keeps a NAT mapping
+ * open across the handover. */
+int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t peerPort,
+                               uint16_t localPort, int32_t delay)
+{
+    if (localPlayer != 1 && localPlayer != 2)
+        return 1;
+    if (!peerIp || !peerIp[0])
+        return 1;
+    if (delay < 0)
+        delay = 0;
+    if (delay > MAX_PREDICTION - 1)
+        delay = MAX_PREDICTION - 1;
+
+    /* Both peers must start the match from the same clock.
+     *
+     * The tick counters have been running since each process booted, so they
+     * hold whatever the wall clock had reached -- a different number on each
+     * machine, and the state hash covers them, so GGPO sees a desync on frame 0
+     * before a single input has been exchanged. Measured: of 355 registry
+     * regions exactly these two differed between two peers.
+     *
+     * _lastGameTick starts one BEHIND the tick, not equal to it: ReadTimerDelta
+     * turns the difference into _lastFrameTicks, and leaving them equal gives
+     * frame 0 a delta of 0, which lands every timer-driven transition in the
+     * match one frame late. The replay rig documents the same values and the
+     * same reason (applyFirstFrameSetup in src/replay_test.c). */
+    {
+        extern volatile uint16_t _currentGameTick;
+        extern volatile uint16_t _currentTick;
+        extern uint16_t          _lastGameTick;
+        _currentGameTick = 0;
+        _currentTick     = 0;
+        _lastGameTick    = 0xFFFF;
+        MatchStep_Reset();          /* no button held, no bench call pending */
+    }
+
+    memset(&s_np, 0, sizeof s_np);
+    s_np.mode        = NETPLAY_MATCH_P2P;
+    s_np.live        = 1;
+    s_np.player      = localPlayer;
+    s_np.port        = localPort;
+    s_np.peerPort    = peerPort;
+    s_np.delay       = delay;
+    s_np.timeoutMs   = DEFAULT_TIMEOUT_MS;
+    {
+        const char *lim = getenv("SWOS_LIVE_FRAMES");
+        s_np.liveFrameLimit = (lim && lim[0]) ? atoi(lim) : 0;
+    }
+    snprintf(s_np.peerAddress, sizeof s_np.peerAddress, "%s", peerIp);
+
+    return NetplayMatch_Start();
 }
 
 /* direct and synctest: one process, both players' inputs, one frame per pass. */
@@ -582,6 +679,14 @@ static void findEnd(int32_t frame, int32_t confirmed)
         }
     }
     s_np.endScanFrom = f;
+    /* A corpus match also ends when the RECORDING does. A live match has no
+     * recording -- ReplayTest_FrameCount() is 0 -- so this test would declare
+     * the match over at frame 0, which is exactly what it did: both peers
+     * synchronized, played one frame, and stopped with "frame 0 is confirmed:
+     * the recording ends there". A live match ends only when the MATCH does,
+     * which is the s_np.over[] scan above. */
+    if (s_np.live)
+        return;
     if (last >= (int64_t)ReplayTest_FrameCount() && f > ReplayTest_FrameCount())
         s_np.endFrame = (int32_t)ReplayTest_FrameCount();
 }
@@ -591,8 +696,20 @@ static void p2pFinish(void)
     ReplayDriverState st;
 
     fprintf(stderr, "[netplay] frame %d is confirmed: %s\n", s_np.endFrame,
-            s_np.endFrame < (int32_t)ReplayTest_FrameCount() ? "the match is over there"
-                                                              : "the recording ends there");
+            s_np.live ? "the session stops there"
+                      : (s_np.endFrame < (int32_t)ReplayTest_FrameCount()
+                             ? "the match is over there" : "the recording ends there"));
+    /* A corpus match hands back to the replay rig, whose finish() reports the
+     * comparison and then EXITS THE PROCESS. A live match has no rig and must
+     * not exit here: the caller still has to leave the match loop, hash the
+     * final state and report it. Returning GAME_FRAME_MATCH_OVER (p2pFrame)
+     * ends the match instead, and the process ends on its own terms. */
+    if (s_np.live) {
+        if (s_liveFinished)
+            s_liveFinished();
+        return;
+    }
+
     st.frame = (uint32_t)s_np.endFrame;
     ReplayTest_SetDriverState(&st);
     ReplayTest_Finish(0);
@@ -610,6 +727,15 @@ static int32_t p2pFrame(void)
 
     if (!s_np.prepared) {
         int32_t f;
+        /* A LIVE match is already standing at kick-off: the menus set the teams
+         * up and the match started normally, and BOTH peers did the same thing
+         * because the host sent the setup. There is no recording to restore
+         * from, and restoring one would throw that away. */
+        if (s_np.live) {
+            s_np.prepared = 1;
+            s_np.lastProgressMs = now;
+            goto prepared;
+        }
         /* Before GGPO saves frame 0, which it does when the first input is added. */
         ReplayTest_PrepareFirstFrame();
         s_np.prepared = 1;
@@ -625,8 +751,20 @@ static int32_t p2pFrame(void)
             }
         }
     }
+prepared:
 
     Netplay_Idle(s_np.session);        /* the peer's inputs arrive; a misprediction rolls back */
+    if (s_np.live) {
+        /* Until the two sessions synchronize, no frame runs at all -- and from
+         * the outside that is indistinguishable from a match that is simply
+         * slow. Say which it is, once a second. */
+        static uint32_t lastSay;
+        if (!s_np.running && now - lastSay > 1000) {
+            lastSay = now;
+            printf("[live] waiting for the peer's session...\n");
+            fflush(stdout);
+        }
+    }
     Netplay_CurrentFrame(s_np.session, &frame);
     Netplay_ConfirmedFrame(s_np.session, &confirmed);
     if (confirmed > s_np.lastConfirmed) {
@@ -638,6 +776,17 @@ static int32_t p2pFrame(void)
              s_np.timeoutMs / 1000, s_np.running ? "running" : "never synchronized with the peer",
              frame, confirmed);
 
+    /* A live match normally ends when the match does. SWOS_LIVE_FRAMES=N stops
+     * it at a set frame instead, so the pair test finishes in bounded time and
+     * both peers report a final hash to compare -- a full match is thousands of
+     * frames of wall clock. The limit is the same on both peers (same
+     * environment, set by the script), so both stop at the same frame. */
+    if (s_np.live && s_np.endFrame < 0 && s_np.running && s_np.liveFrameLimit > 0 &&
+        (int32_t)s_np.frames >= s_np.liveFrameLimit) {
+        s_np.endFrame = frame;
+        printf("[live] stopping at frame %d (SWOS_LIVE_FRAMES)\n", frame);
+        fflush(stdout);
+    }
     if (s_np.endFrame < 0 && s_np.running)
         findEnd(frame, confirmed);
     if (s_np.endFrame >= 0) {
@@ -647,18 +796,42 @@ static int32_t p2pFrame(void)
             s_np.lingerStartMs = now ? now : 1;
         if (Netplay_UnackedInputs(s_np.session, MATCH_PLAYERS + 1 - s_np.player, &unacked) != NETPLAY_OK)
             unacked = 1;
-        if (unacked == 0 || s_np.peerGone || now - s_np.lingerStartMs > LINGER_MS)
+        if (unacked == 0 || s_np.peerGone || now - s_np.lingerStartMs > LINGER_MS) {
             p2pFinish();
+            /* A live match has to END, not just stop stepping: the session is
+             * over, every frame is confirmed, and the caller (InitAndPlayGame)
+             * needs to return so the state can be hashed and compared. Without
+             * this the game loop keeps going with no session behind it and the
+             * final hash is never reached. */
+            if (s_np.live)
+                return GAME_FRAME_MATCH_OVER;
+        }
         waitForPeer();
         return GAME_FRAME_DONE;
     }
-    if (!s_np.running || (uint32_t)frame >= ReplayTest_FrameCount()) {
+    /* A corpus match ends when the recording runs out. A LIVE match has no
+     * recording to run out of -- it ends when the match does. */
+    if (!s_np.running || (!s_np.live && (uint32_t)frame >= ReplayTest_FrameCount())) {
         waitForPeer();
         return GAME_FRAME_DONE;
     }
 
-    /* Input added now applies `delay` frames later. */
-    ReplayTest_RecordedInput((uint32_t)(frame + s_np.delay), in);
+    /* Input added now applies `delay` frames later.
+     *
+     * A LIVE match reads this machine's pad; a corpus match replays a recording.
+     * Only the LOCAL player's half is packed either way -- the other player's
+     * arrives from GGPO in Netplay_SyncInput below -- so live and recorded
+     * differ in exactly one line, and everything after it is the same code the
+     * corpus tests exercise. */
+    if (s_np.live) {
+        extern uint8_t InputSDL_LocalMatchControls(void);
+        memset(in, 0, sizeof in);
+        in[s_np.player - 1].controls =
+            s_inputSource ? s_inputSource() : InputSDL_LocalMatchControls();
+        in[s_np.player - 1].key = 0;       /* see InputSDL_LocalMatchControls */
+    } else {
+        ReplayTest_RecordedInput((uint32_t)(frame + s_np.delay), in);
+    }
     MatchStep_PackInput(&in[s_np.player - 1], local);
     rc = Netplay_AddLocalInput(s_np.session, s_np.player, local);
     if (rc != NETPLAY_OK) {
@@ -676,6 +849,16 @@ static int32_t p2pFrame(void)
              "roll back", frame, (int)r);
     s_np.frames++;
     s_np.lastProgressMs = now;
+    /* A live match has no recording to compare against as it goes, so it says
+     * where it is often enough to tell "playing" from "stalled", and prints the
+     * state hash so two peers can be compared at the SAME frame without waiting
+     * for the end. */
+    if (s_np.live && (s_np.frames == 1 || (s_np.frames % 100) == 0)) {
+        printf("[live] frame %u  hash %016llx  (rollbacks %u)\n",
+               s_np.frames, (unsigned long long)SimState_Hash(SIM_TIER_ALL),
+               s_np.resimulated);
+        fflush(stdout);
+    }
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     Platform_Present();
     if (s_np.stallMs) {

@@ -752,6 +752,36 @@ void SetupPlayers(TeamFileEx *team1, TeamFileEx *team2, int16_t maxSubs,
         }
     }
     {
+        /* A LIVE netplay match: both teams are human, one of them on the other
+         * machine, so there is nobody here to answer a prompt -- and a menu
+         * that waits for input would never return, leaving GGPO's socket
+         * filling up behind it. Measured: two peers sat at kick-off with 28 KB
+         * queued and unread, because InitAndPlayGame had not reached the game
+         * loop that drives the session at all.
+         *
+         * Same shape as the arcade branch below and the replay rig's above:
+         * assign control directly instead of asking. Top team is player 1
+         * (whoever created the game), bottom is player 2. */
+        extern int32_t NetplayMatch_IsLive(void);
+        if (NetplayMatch_IsLive()) {
+            _isCareer = 0;
+            _exitGameFlag = 0;
+            _team1SelectedPlayerIndex = 0xFFFF;
+            _team2SelectedPlayerIndex = 0xFFFF;
+            _twoPlayers = 1;
+            _pl1Coach = 0;
+            _pl2Coach = 0;
+            _topTeamPlayerNo    = 1;
+            _topTeamCoachNo     = 0;
+            _bottomTeamPlayerNo = 2;
+            _bottomTeamCoachNo  = 0;
+            _pl1Tactics = (int16_t)(int8_t)team1->team.tactics;
+            _pl2Tactics = (int16_t)(int8_t)team2->team.tactics;
+            (void)maxSubs; (void)excludeFlags; (void)allowSquadChanges; (void)mode; (void)d0;
+            return;
+        }
+    }
+    {
         extern int _gArcadeMode;
         if (_gArcadeMode) {
             /* Arcade: no pre-match squad/tactics menu — and the front-end menu

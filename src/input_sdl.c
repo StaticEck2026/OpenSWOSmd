@@ -639,12 +639,46 @@ void InputSDL_ClearKeyState(void)
      * they don't need explicit clearing here. */
 }
 
+/* This machine's own controls, as MATCH_* bits, for a netplay match.
+ *
+ * A netplay peer always drives the LOCAL half from player 1's keyboard and
+ * pad 0 -- which side of the pitch that is belongs to the session, not to the
+ * hardware, so this deliberately does not care. The other half arrives over the
+ * wire.
+ *
+ * The KEY is not sampled. A match input carries one (MatchPlayerInput.key) and
+ * the recordings use it for the bench and the in-match hotkeys, but R, H, P, ESC
+ * and S all LEAVE the match loop, which a session cannot roll back
+ * (docs/NETPLAY.md section 5). Sending no key at all is how they stay out,
+ * rather than filtering them one at a time and missing one. */
+uint8_t InputSDL_LocalMatchControls(void)
+{
+    int up = s_kbd_up, down = s_kbd_down, left = s_kbd_left, right = s_kbd_right;
+    int fire = s_kbd_fire, skip = 0;
+    uint8_t bits = 0;
+
+    read_pad_state(0, &up, &down, &left, &right, &fire, &skip);
+
+    if (up)    bits |= 0x01;    /* MATCH_UP    */
+    if (down)  bits |= 0x02;    /* MATCH_DOWN  */
+    if (left)  bits |= 0x04;    /* MATCH_LEFT  */
+    if (right) bits |= 0x08;    /* MATCH_RIGHT */
+    if (fire)  bits |= 0x20;    /* MATCH_FIRE  */
+    return bits;
+}
+
 void InputSDL_PostFrame(void)
 {
     /* The replay rig writes joy0Dat/joy1Dat/ciaa_pra itself, once per game
      * loop iteration. Recomputing them from the real keyboard/pads here
      * would overwrite the recorded stick with whatever is physically held. */
     { extern int ReplayTest_Running(void); if (ReplayTest_Running()) return; }
+
+    /* A netplay match owns them for the same reason, and more sharply: they
+     * carry the SYNCED inputs of both players, so recomputing them from this
+     * machine's pad would replace the opponent's input with nothing and make
+     * every re-simulated frame differ from the first. */
+    { extern int32_t NetplayMatch_Enabled(void); if (NetplayMatch_Enabled()) return; }
 
     /* Player 1: keyboard + pad 0 (combined). */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;

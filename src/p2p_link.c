@@ -28,6 +28,7 @@
 
 #include <SDL.h>            /* SDL_GetTicks, SDL_Delay (the self-test) */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef SWOS_NETPLAY
@@ -50,6 +51,9 @@ enum { kProtocol = 1 };
 enum {
     PKT_HELLO = 1, PKT_WELCOME = 2, PKT_REFUSE = 3,
     PKT_PING  = 4, PKT_PONG    = 5, PKT_BYE    = 6,
+    PKT_DELAY = 7,              /* my proposed input delay, in frames */
+    PKT_BLOB  = 8,              /* one chunk of the match setup */
+    PKT_BLOB_ACK = 9,           /* which chunks the receiver has */
 };
 
 enum {
@@ -57,7 +61,14 @@ enum {
     kSetupLen   = 20,   /* header + the setup fields */
     kRefuseLen  = 9,
     kPingLen    = 12,
-    kPacketMax  = 64,
+    kDelayLen   = 9,
+    /* The READ buffer, so it has to fit the LARGEST packet, not the typical
+     * one. It was 64 -- ample for the control packets, and 16 bytes of header
+     * plus 1024 of payload short of a setup chunk. recvfrom truncates silently,
+     * so every chunk lost all but its first 48 bytes while the transfer still
+     * completed and acked: right length, full bitmap, wrong contents. The setup
+     * blob defines this now (kBlobChunk is declared below and used here). */
+    kPacketMax  = 8 + 8 + 1024,
 };
 
 enum {
@@ -67,6 +78,22 @@ enum {
     kQuietTimeoutMs  = 6000,    /* connected, then nothing heard */
     kMaxReadsPerPoll = 32,      /* a frame's worth; the rest waits for the next poll */
     kJoinPortTries   = 10,      /* two peers on one machine need different local ports */
+    kDelayIntervalMs = 250,     /* re-send the proposal until the peer's is known (UDP) */
+    kDelayMax        = 8,       /* more input lag than this is worse than the rollback */
+
+    /* The match setup blob. It is the whole kick-off state (~35 KB raw, less
+     * once deflated), which is far too big for one datagram, so it goes as
+     * numbered chunks with the receiver naming what it still lacks.
+     *
+     * 1024 bytes of payload keeps a chunk under the smallest MTU anyone
+     * realistically has once IP and UDP headers are on it; going to the
+     * "normal" 1472 saves a third of the packets and loses the match on any
+     * path that fragments. */
+    kBlobChunk       = 1024,
+    kBlobMaxChunks   = 128,                        /* 128 KB, well over what we send */
+    kBlobMax         = kBlobChunk * kBlobMaxChunks,
+    kBlobBitmapBytes = kBlobMaxChunks / 8,
+    kBlobResendMs    = 120,     /* re-send whatever is still unacked */
 };
 
 /* What both sides must agree on, or the very first frame of a match diverges. The
@@ -90,12 +117,30 @@ typedef struct {
     int32_t            hasPeer;
     uint32_t           openedMs, lastHeardMs, lastSentMs;
     int32_t            pingMs;
+    int32_t            delayLocal;      /* what we propose, -1 until we have a ping */
+    int32_t            delayPeer;       /* what they proposed, -1 until it arrives */
+    uint32_t           lastDelaySentMs;
     int32_t            joinTimeoutMs;
     char               peerText[24];    /* "255.255.255.255:65535" */
+
+    /* Sending a setup blob (the host). */
+    uint8_t           *txBlob;
+    uint32_t           txLen;
+    int32_t            txChunks;
+    uint8_t            txAcked[kBlobBitmapBytes];
+    uint32_t           txLastSendMs;
+
+    /* Receiving one (the joiner). */
+    uint8_t           *rxBlob;
+    uint32_t           rxLen;
+    int32_t            rxChunks;
+    uint8_t            rxHave[kBlobBitmapBytes];
+    int32_t            rxComplete;
 } P2PLink;
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
-                          { 0, 0, 0, 0 }, 0, { 0 }, 0, 0, 0, 0, -1, kJoinTimeoutMs, "" };
+                          { 0, 0, 0, 0 }, 0, { 0 }, 0, 0, 0, 0, -1,
+                          -1, -1, 0, kJoinTimeoutMs, "" };
 
 static uint32_t now_ms(void)
 {
@@ -265,9 +310,12 @@ static int32_t same_peer(const P2PLink *l, const struct sockaddr_in *from)
            l->peer.sin_port == from->sin_port;
 }
 
+static void blob_free(P2PLink *l);      /* defined with the rest of the blob code */
+
 static void link_reset(P2PLink *l)
 {
     drop_socket(l);
+    blob_free(l);                       /* a half-sent setup does not outlive its link */
     l->isHost      = 0;
     l->state       = P2P_IDLE;
     l->failure     = P2P_FAIL_NONE;
@@ -305,8 +353,146 @@ static void peer_gone(P2PLink *l, P2PLinkFailure reason)
     }
 }
 
+/* ---- the input delay, agreed rather than each side choosing its own ----------
+ *
+ * THE BUG THIS EXISTS TO NOT HAVE. SWOS 2020 computes a delay on each machine
+ * from that machine's own measurements and applies it to its own player only
+ * (`ggpo_set_frame_delay(ggpo, local_player_handle, frameDelay)`, mpgame.cpp) --
+ * the inputs are ping, jitter, and `1000/getMPFps()`. Two machines on the same
+ * link do not measure the same jitter, and if one runs slower they do not even
+ * agree on the frame time, so the two sides can settle on different numbers: a
+ * match that started "AUTO 3" can end up 1 against 5. That is the reported
+ * "chasing" -- the player carrying 5 frames of lag is reacting a quarter of a
+ * second after the other one, and cannot win a race or a duel. It is very
+ * probably most of the reported "ghosting" too: in a shoulder-to-shoulder
+ * contest, four extra frames decides it before the skill roll is ever reached.
+ *
+ * So the delay is NEGOTIATED, and the rule is chosen so that both sides compute
+ * the SAME answer from the SAME two numbers: each proposes, both take the
+ * maximum. Max, not min or mean: the worse connection is the one that needs the
+ * buffer, and a mean would round differently on each side the moment the two
+ * proposals differ by an odd number.
+ *
+ * It is also agreed ONCE and then left alone. Re-deriving it mid-match is the
+ * other way the two sides drift apart, and a delay that changes under you is
+ * itself indistinguishable from lag.
+ *
+ * Both peers still apply it to their own local player -- that is all GGPO
+ * offers -- but because the number is identical, the two are symmetric. */
+static int32_t propose_delay(int32_t rttMs)
+{
+    extern int _gDosGameplay;               /* dos_mode.h */
+    /* The frame time comes from the GAMEPLAY MODE, not from anything this
+     * machine measures. That matters: setup_mismatch already refuses a peer
+     * whose gameplay flags differ, so both sides are certain to use the same
+     * number here. Taking it from the actual pacing (Platform_ActivePacingFps,
+     * which is display-derived and in any case static to platform_sdl.c) would
+     * let a machine that is running slow propose a different delay from its
+     * opponent -- which is precisely the asymmetry this routine exists to
+     * avoid. */
+    int32_t fps = _gDosGameplay ? 70 : 50;
+    int32_t frameMs, d;
+
+    frameMs = 1000 / fps;
+    if (frameMs <= 0)
+        frameMs = 20;
+    if (rttMs < 0)
+        rttMs = 0;
+
+    /* ceil(rtt / (3 * frameTime)). The 3 is the ratio GGPO-based fighting games
+     * converge on (SWOS 2020 cites the same one): a third of the round trip is
+     * what frame delay has to cover for rollback to absorb the rest. */
+    d = (rttMs + (3 * frameMs - 1)) / (3 * frameMs);
+    if (d < 0)
+        d = 0;
+    if (d > kDelayMax)
+        d = kDelayMax;
+    return d;
+}
+
+static void send_delay(P2PLink *l, uint32_t now)
+{
+    uint8_t pkt[kDelayLen];
+    if (!l->hasPeer || l->delayLocal < 0)
+        return;
+    memcpy(pkt, "SWUN", 4);
+    pkt[4] = (uint8_t)kProtocol;
+    pkt[5] = PKT_DELAY;
+    pkt[6] = 0;
+    pkt[7] = 0;
+    pkt[8] = (uint8_t)l->delayLocal;
+    sendto(l->sock, (const char *)pkt, sizeof pkt, 0,
+           (const struct sockaddr *)&l->peer, sizeof l->peer);
+    l->lastDelaySentMs = now;
+}
+
+/* ---- the match setup blob --------------------------------------------------
+ *
+ * The host's kick-off state, so the joiner starts the match from exactly the
+ * same place. It is the state_wire packet (docs/ROLLBACK.md, "The wire format"),
+ * which already encodes portably -- typed fields big-endian, pointers as
+ * identities -- so a 32-bit peer and a 64-bit one read the same bytes. What is
+ * missing from UDP is only getting ~35 KB there intact, which is all this is.
+ *
+ * Numbered chunks, receiver-driven: the receiver says which chunks it HAS (a
+ * bitmap), the sender re-sends what is missing until the bitmap is full. No
+ * ordering assumptions and no per-chunk ack storm -- one small ack packet
+ * describes the whole transfer, so a lost ack costs one retransmit round rather
+ * than a stall. */
+static void bitmap_set(uint8_t *bm, int32_t i)   { bm[i >> 3] |= (uint8_t)(1u << (i & 7)); }
+static int32_t bitmap_get(const uint8_t *bm, int32_t i) { return (bm[i >> 3] >> (i & 7)) & 1; }
+
+static int32_t bitmap_full(const uint8_t *bm, int32_t n)
+{
+    int32_t i;
+    for (i = 0; i < n; i++)
+        if (!bitmap_get(bm, i))
+            return 0;
+    return 1;
+}
+
+static void blob_free(P2PLink *l)
+{
+    free(l->txBlob); l->txBlob = NULL; l->txLen = 0; l->txChunks = 0;
+    free(l->rxBlob); l->rxBlob = NULL; l->rxLen = 0; l->rxChunks = 0;
+    l->rxComplete = 0;
+    memset(l->txAcked, 0, sizeof l->txAcked);
+    memset(l->rxHave,  0, sizeof l->rxHave);
+}
+
+/* One chunk: header, total length (u32), chunk index (u16), chunk count (u16),
+ * then the bytes. */
+static void send_blob_chunk(P2PLink *l, int32_t idx)
+{
+    uint8_t pkt[kHeaderLen + 8 + kBlobChunk];
+    uint32_t off = (uint32_t)idx * (uint32_t)kBlobChunk;
+    uint32_t n   = l->txLen - off;
+
+    if (n > (uint32_t)kBlobChunk)
+        n = (uint32_t)kBlobChunk;
+    pkt_header(pkt, PKT_BLOB);
+    BE_WRITE_U32(pkt + 8, l->txLen);
+    BE_WRITE_U16(pkt + 12, (uint16_t)idx);
+    BE_WRITE_U16(pkt + 14, (uint16_t)l->txChunks);
+    memcpy(pkt + 16, l->txBlob + off, n);
+    sendto(l->sock, (const char *)pkt, kHeaderLen + 8 + n, 0,
+           (const struct sockaddr *)&l->peer, sizeof l->peer);
+}
+
+static void send_blob_ack(P2PLink *l)
+{
+    uint8_t pkt[kHeaderLen + kBlobBitmapBytes];
+    pkt_header(pkt, PKT_BLOB_ACK);
+    memcpy(pkt + kHeaderLen, l->rxHave, kBlobBitmapBytes);
+    sendto(l->sock, (const char *)pkt, sizeof pkt, 0,
+           (const struct sockaddr *)&l->peer, sizeof l->peer);
+}
+
 static void link_connected(P2PLink *l, const struct sockaddr_in *from, uint32_t now)
 {
+    blob_free(l);   /* nothing carries over from a previous peer */
+    l->delayLocal = l->delayPeer = -1;
+    l->lastDelaySentMs = 0;
     set_peer(l, from);
     l->state       = P2P_CONNECTED;
     l->notice      = P2P_FAIL_NONE;
@@ -401,6 +587,54 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
             if (rtt < 0)
                 rtt = 0;
             l->pingMs = (l->pingMs < 0) ? rtt : (l->pingMs * 3 + rtt) / 4;
+        } else if (type == PKT_DELAY && len >= kDelayLen) {
+            int32_t theirs = buf[8];
+            if (theirs > kDelayMax)
+                theirs = kDelayMax;      /* never take a number we would not send */
+            l->delayPeer = theirs;
+            /* ANSWER IT. Without this the exchange deadlocks: each side stopped
+             * proposing once it had the other's, so whoever heard first went
+             * quiet before the other had heard anything at all, and that side
+             * waited for a proposal that would never be sent again. Measured --
+             * the joiner had both numbers while the host timed out holding one.
+             * A reply is 9 bytes and makes the exchange self-completing. */
+            if (l->delayLocal >= 0)
+                send_delay(l, now);
+        } else if (type == PKT_BLOB && len >= kHeaderLen + 8) {
+            uint32_t total = BE_READ_U32(buf + 8);
+            int32_t  idx   = (int32_t)BE_READ_U16(buf + 12);
+            int32_t  count = (int32_t)BE_READ_U16(buf + 14);
+            uint32_t n     = (uint32_t)len - (kHeaderLen + 8);
+
+            /* Refuse anything that does not describe a transfer we could hold,
+             * rather than trusting a length off the wire. */
+            if (total == 0 || total > (uint32_t)kBlobMax ||
+                count <= 0 || count > kBlobMaxChunks ||
+                idx < 0 || idx >= count || n > (uint32_t)kBlobChunk)
+                break;
+            if (l->rxBlob && (l->rxLen != total || l->rxChunks != count))
+                break;                        /* a different transfer mid-flight */
+            if (!l->rxBlob) {
+                l->rxBlob = (uint8_t *)calloc(1, total);
+                if (!l->rxBlob)
+                    break;
+                l->rxLen = total;
+                l->rxChunks = count;
+                memset(l->rxHave, 0, sizeof l->rxHave);
+                l->rxComplete = 0;
+            }
+            {
+                uint32_t off = (uint32_t)idx * (uint32_t)kBlobChunk;
+                if (off + n > l->rxLen)
+                    break;
+                memcpy(l->rxBlob + off, buf + kHeaderLen + 8, n);
+                bitmap_set(l->rxHave, idx);
+                if (bitmap_full(l->rxHave, l->rxChunks))
+                    l->rxComplete = 1;
+            }
+            send_blob_ack(l);                 /* every chunk: cheap, and self-clocking */
+        } else if (type == PKT_BLOB_ACK && len >= kHeaderLen + kBlobBitmapBytes) {
+            memcpy(l->txAcked, buf + kHeaderLen, kBlobBitmapBytes);
         } else if (type == PKT_BYE) {
             peer_gone(l, P2P_FAIL_PEER_LEFT);
         }
@@ -445,6 +679,30 @@ static void link_poll(P2PLink *l, uint32_t now)
             l->lastSentMs = now;
         }
     } else if (l->state == P2P_CONNECTED) {
+        /* Keep pushing whatever the receiver has not acked yet. */
+        if (l->txBlob && !bitmap_full(l->txAcked, l->txChunks) &&
+            now - l->txLastSendMs >= (uint32_t)kBlobResendMs) {
+            int32_t i, sent = 0;
+            for (i = 0; i < l->txChunks && sent < 16; i++) {
+                if (!bitmap_get(l->txAcked, i)) {
+                    send_blob_chunk(l, i);
+                    sent++;
+                }
+            }
+            l->txLastSendMs = now;
+        }
+
+        /* Propose as soon as there is a round trip to base it on, and keep
+         * re-sending until the peer's proposal arrives: this is UDP and a lost
+         * proposal would otherwise leave the match with no agreed delay. */
+        if (l->delayLocal < 0 && l->pingMs >= 0)
+            l->delayLocal = propose_delay(l->pingMs);
+        /* Keep proposing until BOTH halves are known here. Losing the reply
+         * above is otherwise unrecoverable, and this is UDP. */
+        if (l->delayLocal >= 0 && l->delayPeer < 0 &&
+            now - l->lastDelaySentMs >= (uint32_t)kDelayIntervalMs)
+            send_delay(l, now);
+
         if (now - l->lastHeardMs >= (uint32_t)kQuietTimeoutMs)
             peer_gone(l, P2P_FAIL_LOST);
         else if (now - l->lastSentMs >= (uint32_t)kPingIntervalMs) {
@@ -531,6 +789,67 @@ P2PLinkFailure P2PLink_Failure(void)   { return s_link.failure; }
 P2PLinkFailure P2PLink_Notice(void)    { return s_link.notice; }
 const char    *P2PLink_PeerText(void)  { return s_link.peerText; }
 uint16_t       P2PLink_LocalPort(void) { return s_link.localPort; }
+
+int32_t P2PLink_AgreedDelay(void)
+{
+    const P2PLink *l = &s_link;
+    if (l->state != P2P_CONNECTED || l->delayLocal < 0 || l->delayPeer < 0)
+        return -1;
+    /* Max, computed from the same two numbers on both peers, so both get the
+     * same answer. See the note above propose_delay. */
+    return l->delayLocal > l->delayPeer ? l->delayLocal : l->delayPeer;
+}
+
+/* ---- the setup blob, from the outside ---- */
+
+int32_t P2PLink_SendSetup(const uint8_t *data, uint32_t len)
+{
+    P2PLink *l = &s_link;
+    if (l->state != P2P_CONNECTED || !data || len == 0 || len > (uint32_t)kBlobMax)
+        return 1;
+    free(l->txBlob);
+    l->txBlob = (uint8_t *)malloc(len);
+    if (!l->txBlob)
+        return 1;
+    memcpy(l->txBlob, data, len);
+    l->txLen    = len;
+    l->txChunks = (int32_t)((len + kBlobChunk - 1) / kBlobChunk);
+    memset(l->txAcked, 0, sizeof l->txAcked);
+    l->txLastSendMs = 0;        /* the next poll starts sending */
+    return 0;
+}
+
+int32_t P2PLink_SetupSent(void)
+{
+    const P2PLink *l = &s_link;
+    if (!l->txBlob)
+        return 0;
+    return bitmap_full(l->txAcked, l->txChunks);
+}
+
+const uint8_t *P2PLink_ReceivedSetup(uint32_t *len)
+{
+    const P2PLink *l = &s_link;
+    if (!l->rxComplete)
+        return NULL;
+    if (len)
+        *len = l->rxLen;
+    return l->rxBlob;
+}
+
+int32_t P2PLink_SetupProgress(void)
+{
+    const P2PLink *l = &s_link;
+    int32_t i, have = 0, n = 0;
+    if (l->txBlob) { n = l->txChunks; for (i = 0; i < n; i++) have += bitmap_get(l->txAcked, i); }
+    else if (l->rxBlob) { n = l->rxChunks; for (i = 0; i < n; i++) have += bitmap_get(l->rxHave, i); }
+    if (n <= 0)
+        return -1;
+    return have * 100 / n;
+}
+
+int32_t P2PLink_ProposedDelay(void) { return s_link.delayLocal; }
+int32_t P2PLink_PeerProposedDelay(void) { return s_link.delayPeer; }
 int32_t        P2PLink_PingMs(void)    { return s_link.pingMs; }
 
 int32_t P2PLink_IsAddress(const char *text)
@@ -593,6 +912,37 @@ static int32_t link_settled(void *ctx)
     return l->state == P2P_FAILED;
 }
 
+static int32_t both_have_delay(void *ctx)
+{
+    PairCtx *p = (PairCtx *)ctx;
+    return p->a->delayLocal >= 0 && p->a->delayPeer >= 0 &&
+           p->b->delayLocal >= 0 && p->b->delayPeer >= 0;
+}
+
+static int32_t joiner_has_setup(void *ctx)
+{
+    PairCtx *p = (PairCtx *)ctx;
+    return p->b->rxComplete && bitmap_full(p->a->txAcked, p->a->txChunks);
+}
+
+/* P2PLink_SendSetup works on the game's one link; the self-test drives two of
+ * its own, so it needs the same thing pointed at a given one. */
+static int32_t P2PLink_SendSetupOn(P2PLink *l, const uint8_t *data, uint32_t len)
+{
+    if (l->state != P2P_CONNECTED || !data || len == 0 || len > (uint32_t)kBlobMax)
+        return 1;
+    free(l->txBlob);
+    l->txBlob = (uint8_t *)malloc(len);
+    if (!l->txBlob)
+        return 1;
+    memcpy(l->txBlob, data, len);
+    l->txLen    = len;
+    l->txChunks = (int32_t)((len + kBlobChunk - 1) / kBlobChunk);
+    memset(l->txAcked, 0, sizeof l->txAcked);
+    l->txLastSendMs = 0;
+    return 0;
+}
+
 static int32_t host_waiting_again(void *ctx)
 {
     P2PLink *l = (P2PLink *)ctx;
@@ -627,6 +977,49 @@ int32_t P2PLink_SelfTest(void)
     check(host.state == P2P_CONNECTED && joiner.state == P2P_CONNECTED, "both sides connect");
     check(joiner.pingMs >= 0, "the joiner measures the round trip");
     check(host.peerText[0] != '\0' && joiner.peerText[0] != '\0', "each knows the other's address");
+
+    /* 1b. The delay is AGREED, not chosen twice. Both sides must end up with the
+     * same number -- an asymmetric delay is what makes one player feel they are
+     * chasing the other (see propose_delay). */
+    {
+        PairCtx pairBoth = { &host, &joiner };
+        pump(pair, 2, 3000, both_have_delay, &pairBoth);
+        check(host.delayLocal >= 0 && joiner.delayLocal >= 0, "each side proposes a delay");
+        check(host.delayPeer >= 0 && joiner.delayPeer >= 0, "each side hears the other's");
+        {
+            int32_t a = host.delayLocal > host.delayPeer ? host.delayLocal : host.delayPeer;
+            int32_t b = joiner.delayLocal > joiner.delayPeer ? joiner.delayLocal : joiner.delayPeer;
+            check(a == b, "both agree the SAME delay");
+            if (a != b)
+                printf("    host agreed %d, joiner agreed %d\n", a, b);
+        }
+    }
+
+    /* 1c. The match setup crosses intact. ~40 KB, which is more than the real
+     * kick-off state and well past one datagram, so it exercises the chunking,
+     * the bitmap ack and the retransmit rather than a happy single packet. */
+    {
+        enum { kTestBlob = 40000 };
+        uint8_t *sent = (uint8_t *)malloc(kTestBlob);
+        const uint8_t *got;
+        uint32_t gotLen = 0, i;
+        PairCtx pairBoth = { &host, &joiner };
+
+        if (sent) {
+            for (i = 0; i < kTestBlob; i++)
+                sent[i] = (uint8_t)(i * 31u + (i >> 8));      /* not compressible to nothing */
+            check(P2PLink_SendSetupOn(&host, sent, kTestBlob) == 0, "the host sends a setup");
+            pump(pair, 2, 8000, joiner_has_setup, &pairBoth);
+            got = joiner.rxComplete ? joiner.rxBlob : NULL;
+            gotLen = joiner.rxLen;
+            check(got != NULL, "the joiner receives all of it");
+            check(got && gotLen == kTestBlob, "it is the right length");
+            check(got && gotLen == kTestBlob && memcmp(got, sent, kTestBlob) == 0,
+                  "every byte matches");
+            check(bitmap_full(host.txAcked, host.txChunks), "the host sees it acknowledged");
+            free(sent);
+        }
+    }
 
     /* 2. A second player is turned away while the host has one. */
     check(link_join(&second, "127.0.0.1", host.localPort, NULL) == 0, "a second player tries to join");

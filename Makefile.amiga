@@ -55,8 +55,12 @@ SDL_ONLY_SRCS := \
     menu_load_json.c      \
     menu_symbols.c        \
     miniz_impl.c          \
+    mm_client.c           \
     netplay.c             \
+    netplay_live_test.c   \
+    netplay_setup.c       \
     netplay_match.c       \
+    netplay_netem.c       \
     online_menus.c        \
     p2p_link.c            \
     p2p_menu.c            \

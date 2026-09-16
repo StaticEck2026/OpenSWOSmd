@@ -75,6 +75,41 @@ uint16_t       P2PLink_LocalPort(void);
 /* The round trip in milliseconds, or -1 until one has been measured. */
 int32_t        P2PLink_PingMs(void);
 
+/* The input delay, in frames, that BOTH peers will use -- or -1 until the two
+ * have exchanged proposals.
+ *
+ * It is agreed rather than measured independently on each side, because that is
+ * the bug that makes one player feel like they are chasing the other: SWOS 2020
+ * derives a delay from each machine's own ping, jitter and frame time and
+ * applies it only to that machine's player, so a match that began "AUTO 3" can
+ * end up 1 against 5 (src/p2p_link.c, propose_delay). Here each peer proposes
+ * and both take the maximum -- the same two numbers on both sides, so the same
+ * answer -- and it is then fixed for the match. */
+int32_t        P2PLink_AgreedDelay(void);
+
+/* The two halves of that, for a menu line or a log: what we asked for, and what
+ * they asked for. -1 until known. */
+int32_t        P2PLink_ProposedDelay(void);
+int32_t        P2PLink_PeerProposedDelay(void);
+
+/* ---- the match setup ------------------------------------------------------
+ * The host's kick-off state, so both peers start the match from the same place.
+ * The payload is a state_wire packet (include/state_wire.h), which already
+ * encodes portably, so a 32-bit peer and a 64-bit one read the same bytes; all
+ * the link adds is getting ~35 KB across UDP intact, as numbered chunks the
+ * receiver acks by bitmap.
+ *
+ * Host:    P2PLink_SendSetup(), then poll until P2PLink_SetupSent().
+ * Joiner:  poll until P2PLink_ReceivedSetup() is non-NULL, then decode it.
+ * Either:  P2PLink_SetupProgress() is 0..100 for a progress line, -1 if idle.
+ *
+ * The buffer stays valid until the link closes. Both are dropped on close, so a
+ * half-sent setup never outlives its link. */
+int32_t        P2PLink_SendSetup(const uint8_t *data, uint32_t len);
+int32_t        P2PLink_SetupSent(void);
+const uint8_t *P2PLink_ReceivedSetup(uint32_t *len);
+int32_t        P2PLink_SetupProgress(void);
+
 /* Whether `text` is a dotted IPv4 address -- what P2PLink_Join takes. */
 int32_t        P2PLink_IsAddress(const char *text);
 

@@ -51,9 +51,32 @@ int32_t     NetplayMatch_IsP2P(void);
 /* ReplayTest_Run, before kick-off: open the session. 0, or non-zero on failure. */
 int32_t     NetplayMatch_Start(void);
 
+/* Start a LIVE match against a peer found by the matchmaking menu (or by the
+ * direct-IP one): the same p2p session the corpus tests play, with this
+ * machine's pad as the local input instead of a recording.
+ *
+ * `delay` must be the delay BOTH peers agreed -- P2PLink_AgreedDelay(). Close
+ * the p2p link first: GGPO opens its own socket on the same local port. */
+int32_t     NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t peerPort,
+                                   uint16_t localPort, int32_t delay);
+
 /* GameLoop, in place of one pass of its loop: at most one frame, ended and shown. Returns a
  * GameFrameResult. */
 int32_t     NetplayMatch_Frame(void);
+
+/* A LIVE match against a real opponent (as opposed to a corpus recording played
+ * through the same session). The pre-match prompts are skipped for one, the way
+ * they are for the replay rig and for arcade mode. */
+int32_t     NetplayMatch_IsLive(void);
+
+/* Replace where a live match reads its LOCAL input, for testing. NULL restores
+ * the pad. The returned value is MATCH_* control bits (include/match_step.h). */
+void        NetplayMatch_SetInputSource(uint8_t (*fn)(void));
+
+/* Called when a live session finishes with every frame confirmed -- the moment
+ * the state is final. A headless test reports and exits from here rather than
+ * returning into the post-match screens, which wait for input. */
+void        NetplayMatch_SetFinishedCallback(void (*fn)(void));
 
 /* The end of the run: report what the session did, write the trace, close the session.
  * The exit code: 0, or 2. */

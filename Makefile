@@ -600,6 +600,7 @@ LDLIBS  := $(SDL2_LIBS) -lm
 #
 # Toggling NETPLAY needs a `clean` first, like every -D flag.
 GGPO_DIR := third_party/ggpo-x/src
+ENET_DIR := third_party/enet
 ifndef NETPLAY
 ifeq ($(BUILD_OS)/$(BUILD_ARCH),linux/x86_64)
 NETPLAY := 1
@@ -621,12 +622,48 @@ GGPO_SRCS := $(filter-out %/platform_windows.cpp, \
                             $(GGPO_DIR)/lib/ggpo/backends/*.cpp))
 GGPO_OBJS := $(patsubst $(GGPO_DIR)/lib/ggpo/%.cpp,$(OBJDIR)/ggpo/%.o,$(GGPO_SRCS))
 OBJECTS   += $(GGPO_OBJS)
+# The one C++ file of ours: it bridges the C emulator to GGPO's C++ hook.
+OBJECTS   += $(OBJDIR)/netplay_netem_install.o
+DEPS      += $(OBJDIR)/netplay_netem_install.d
 DEPS      += $(GGPO_OBJS:.o=.d)
 CFLAGS    += -DSWOS_NETPLAY=1 -I$(GGPO_DIR)/include
 # -w: third-party code, compiled as upstream ships it (plus OPENSWOS.md's patches).
 GGPO_CXXFLAGS := $(ARCHFLAGS) -O2 -g -std=gnu++17 -MMD -MP -w \
                  -I$(GGPO_DIR)/include -I$(GGPO_DIR)/lib/ggpo \
-                 -I$(GGPO_DIR)/lib/ggpo/network -I$(GGPO_DIR)/lib/ggpo/backends
+                 -I$(GGPO_DIR)/lib/ggpo/network -I$(GGPO_DIR)/lib/ggpo/backends \
+                 -Iinclude
+
+# ENET: the transport for matchmaking (src/mm_client.c) and the same library the
+# vendored server is built from -- one copy, see third_party/enet/OPENSWOS.md.
+#
+# win32.c ONLY for a real Win32 target. Cygwin sets BUILD_OS=windows but is a
+# POSIX host and does NOT define _WIN32, and enet.h picks its platform header on
+# exactly that (`#if defined(_WIN32)` -> enet/win32.h, else enet/unix.h). Keying
+# this off BUILD_OS would hand Cygwin win32.c against unix.h and fail to build.
+# So it keys off mingw, the same way the rest of the file distinguishes them.
+ENET_SRCS := $(ENET_DIR)/callbacks.c $(ENET_DIR)/compress.c $(ENET_DIR)/host.c \
+             $(ENET_DIR)/list.c $(ENET_DIR)/packet.c $(ENET_DIR)/peer.c \
+             $(ENET_DIR)/protocol.c
+ifneq (,$(findstring mingw,$(GCC_MACHINE)))
+ENET_SRCS += $(ENET_DIR)/win32.c
+ENET_PLATFORM_DEFS :=
+else
+ENET_SRCS += $(ENET_DIR)/unix.c
+# Normally probed by enet's own autotools/CMake. Getting one wrong does not fail
+# the build, it silently changes socket behaviour -- so they are written out.
+ENET_PLATFORM_DEFS := -DHAS_SOCKLEN_T=1 -DHAS_POLL=1 -DHAS_FCNTL=1 \
+                      -DHAS_INET_PTON=1 -DHAS_INET_NTOP=1 -DHAS_MSGHDR_FLAGS=1
+endif
+ENET_OBJS := $(patsubst $(ENET_DIR)/%.c,$(OBJDIR)/enet/%.o,$(ENET_SRCS))
+OBJECTS   += $(ENET_OBJS)
+DEPS      += $(ENET_OBJS:.o=.d)
+CFLAGS    += -I$(ENET_DIR)/include
+# -w: third-party code, compiled as upstream ships it.
+ENET_CFLAGS := $(ARCHFLAGS) -O2 -g -MMD -MP -w -I$(ENET_DIR)/include $(ENET_PLATFORM_DEFS)
+ifneq (,$(findstring mingw,$(GCC_MACHINE)))
+LDLIBS    += -lws2_32 -lwinmm
+endif
+
 LINK      := $(CXX)
 ifneq ($(UNAME_S),Darwin)
 LDFLAGS   += -static-libstdc++ -static-libgcc
@@ -661,6 +698,18 @@ ifeq ($(NETPLAY),1)
 $(OBJDIR)/ggpo/%.o: $(GGPO_DIR)/lib/ggpo/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(GGPO_CXXFLAGS) -c $< -o $@
+
+# Our C++ shim needs GGPO's include path AND our own build defines: compiled
+# with GGPO_CXXFLAGS alone, SWOS_SDL_BUILD/SWOS_NETPLAY are undefined and the
+# whole file preprocesses away to an empty object that links without error and
+# resolves nothing.
+$(OBJDIR)/netplay_netem_install.o: $(SRCDIR)/netplay_netem_install.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(GGPO_CXXFLAGS) -DSWOS_SDL_BUILD=1 -DSWOS_NETPLAY=1 -Iinclude -c $< -o $@
+
+$(OBJDIR)/enet/%.o: $(ENET_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(ENET_CFLAGS) -c $< -o $@
 endif
 
 # Compile the Windows resource file (icon) on MinGW/Cygwin builds. The output

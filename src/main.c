@@ -41,6 +41,9 @@
 #include "netplay.h"            /* --netplay-selftest */
 #include "build_info.h"         /* --version, and the [build] line in SWOS.log */
 #include "p2p_link.h"           /* --netplay-selftest: the MULTIPLAYER menu's link */
+#include "mm_client.h"          /* --matchmaker-selftest */
+#include "netplay_setup.h"      /* --netplay-selftest: the match setup round trip */
+#include "netplay_live_test.h"  /* --netplay-live-pair */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
 
@@ -201,6 +204,10 @@ static void print_usage(const char *argv0)
         "  --menu-selftest           Load and unpack every imported SWOS 2020 menu,\n"
         "                            check it against its JSON, and exit.\n"
         "  --version                 Print the build (commit and date) and exit.\n"
+        "  --matchmaker-selftest[=host[:port]]\n"
+        "                            Talk to a matchmaking server: log in, list the\n"
+        "                            lobby, create and leave a game. Needs one running\n"
+        "                            (scripts/run_matchmaker.sh). Default 127.0.0.1:19602.\n"
         "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
         "                            loopback, then a synctest session, then the\n"
         "                            MULTIPLAYER menu's own link. Exits.\n"
@@ -461,12 +468,55 @@ int main(int argc, char **argv)
             OnlineMenus_SetStartMenu(v);
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
+        } else if (strncmp(a, "--matchmaker-selftest", 21) == 0) {
+            /* --matchmaker-selftest[=host[:port]] — talks to a real server, so
+             * scripts/run_matchmaker.sh has to be running. Defaults to the local
+             * one on its default port. */
+            const char *host = MM_DEFAULT_HOST;
+            uint16_t port = MM_DEFAULT_PORT;
+            static char hostbuf[64];
+            if (a[21] == '=') {
+                const char *spec = a + 22;
+                const char *colon = strrchr(spec, ':');
+                if (colon) {
+                    size_t n = (size_t)(colon - spec);
+                    if (n >= sizeof hostbuf)
+                        n = sizeof hostbuf - 1;
+                    memcpy(hostbuf, spec, n);
+                    hostbuf[n] = '\0';
+                    host = hostbuf;
+                    port = (uint16_t)atoi(colon + 1);
+                } else if (spec[0]) {
+                    snprintf(hostbuf, sizeof hostbuf, "%s", spec);
+                    host = hostbuf;
+                }
+            }
+            return MmClient_SelfTest(host, port);
+        } else if (strncmp(a, "--matchmaker-menu", 17) == 0 &&
+                   (a[17] == '\0' || a[17] == '=')) {
+            OnlineMenus_SetAutoLogin(a[17] == '=' ? a + 18 : "PLAYER");
+        } else if ((v = match_kv(a, "netplay-state-diff")) != NULL) {
+            return NetplayLiveTest_StateDiff(v);
+        } else if ((v = match_kv(a, "netplay-live-pair")) != NULL) {
+            if (NetplayLiveTest_Arm(v) != 0) {
+                fprintf(stderr, "--netplay-live-pair must be 'host' or 'join'\n");
+                return 1;
+            }
+        } else if ((v = match_kv(a, "matchmaker-pair")) != NULL) {
+            /* --matchmaker-pair=host|join — two processes, one each, against a
+             * running server. scripts/matchmaker_pair_test.sh drives both. */
+            if (strcmp(v, "host") != 0 && strcmp(v, "join") != 0) {
+                fprintf(stderr, "--matchmaker-pair must be 'host' or 'join'\n");
+                return 1;
+            }
+            return MmClient_PairTest(v, MM_DEFAULT_HOST, MM_DEFAULT_PORT);
         } else if (strcmp(a, "--netplay-selftest") == 0) {
             /* The library, then the connection the MULTIPLAYER menu makes over it.
              * Both run whatever the other did, so one report covers both. */
-            int32_t ggpoFailed = Netplay_SelfTest();
-            int32_t linkFailed = P2PLink_SelfTest();
-            return (ggpoFailed || linkFailed) ? 1 : 0;
+            int32_t ggpoFailed  = Netplay_SelfTest();
+            int32_t linkFailed  = P2PLink_SelfTest();
+            int32_t setupFailed = NetplaySetup_SelfTest();
+            return (ggpoFailed || linkFailed || setupFailed) ? 1 : 0;
         } else if (strncmp(a, "--netplay-", 10) == 0) {
             if (NetplayMatch_ParseArg(a) != 1) {
                 fprintf(stderr, "Invalid argument: %s\n", a);

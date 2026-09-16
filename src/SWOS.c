@@ -344,8 +344,14 @@ skip_title_screens: ;
     /* ---- Phase 9: Enter front-end loop (or arcade attract loop) ---- */
 #ifdef SWOS_SDL_BUILD
     {
+        extern int  NetplayLiveTest_Armed(void);
+        extern void NetplayLiveTest_Run(void);
         extern int  ReplayTest_Armed(void);
         extern void ReplayTest_Run(void);
+        /* Same hook, same reason as the replay rig: a match needs its data
+         * loaded, and neither wants the front end. */
+        if (NetplayLiveTest_Armed())
+            NetplayLiveTest_Run();   /* plays a live match, then exits */
         if (ReplayTest_Armed()) {
             ReplayTest_Run();   /* replays a recording, then exits the process */
             return;
