@@ -130,3 +130,13 @@ dist/
 
 # The build stamp (scripts/gen_build_info.sh) — regenerated every build, never committed.
 include/swos_build.h
+
+# ---- one-shot investigation probes ----
+# scratch/ holds the gdb-harness scripts written to answer one question each
+# (scratch/README.md). They are NOT committed: what they found lives in docs/ and
+# in the fixes, and the driving code is rewritten from scripts/swos_plugin.py the
+# next time. The two that stayed — the career-drive recipes several docs point at
+# — are tracked already, and .gitignore does not untrack a tracked file.
+scratch/*.py
+!scratch/copa_drive.py
+!scratch/wc_drive2.py
