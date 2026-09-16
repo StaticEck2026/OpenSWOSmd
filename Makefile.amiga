@@ -204,6 +204,23 @@ CCFLAGS_NOLTO = $(subst -flto,,$(subst -fwhole-program,,$(CCFLAGS)))
 # diy_competition.c has complex nested loops that -Ofast miscompiles — use -O2
 CCFLAGS_O2 = $(subst -Ofast,-O2,$(CCFLAGS))
 
+# obj/ is gitignored, so a FRESH CLONE does not have it -- and every rule below
+# writes its .o (and gcc its .i on an error path) straight into it, so the first
+# build of a new checkout died with "opening output file obj/<name>.o: No such
+# file or directory", once per source, before anything else could go wrong. The
+# tree only built here because obj/ was left over from an earlier build.
+# Order-only (|) so the directory's mtime never counts as "newer" and forces a
+# rebuild of everything in it. Every object is flat obj/<name>.o (the lists above
+# use $(notdir ...)), so one directory is the whole story.
+$(objects): | obj
+
+obj:
+ifdef WINDOWS
+	@if not exist obj mkdir obj
+else
+	@mkdir -p obj
+endif
+
 $(c_objects) : obj/%.o : %.c
 	$(info Compiling $<)
 	@$(CC) $(if $(filter obj/diy_competition.o,$@),$(CCFLAGS_O2),$(if $(filter obj/game_timers.o obj/update_players.o obj/sprite_data.o obj/menu_data.o obj/competition_data.o obj/tactics_data.o obj/fixture_data.o obj/simulation_data.o obj/player_data.o obj/render_data.o obj/palette_data.o obj/strings_data.o obj/general_data.o,$@),$(CCFLAGS_NOLTO),$(CCFLAGS))) -c -o $@ $(CURDIR)/$<
