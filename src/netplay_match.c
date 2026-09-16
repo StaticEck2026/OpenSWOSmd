@@ -908,6 +908,11 @@ int32_t NetplayMatch_Finish(void)
         frames = s_np.endFrame >= 0 ? (uint32_t)s_np.endFrame + 1 : 0;
         break;
     }
+    /* What the emulated network actually did, not what it was asked for: a
+     * condition configured at 2% may never have fired in a short match, and a
+     * run that proved nothing should say so. */
+    if (Netem_Enabled())
+        fprintf(stderr, "[netplay] network emulation did: %s\n", Netem_Summary());
     if (frames)
         code |= writeTrace(frames);
     if (s_np.session) {

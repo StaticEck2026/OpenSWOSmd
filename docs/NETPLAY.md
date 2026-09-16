@@ -304,6 +304,90 @@ predicting it is almost always right and seldom rolls back, while the peer predi
 human's input rolls back hundreds of times a match (in zkz-12080203 both do). Both peers'
 traces are compared.
 
+### The network between them (`src/netplay_netem.c`)
+
+Over loopback nothing goes wrong, so nothing is proved: every prediction is correct, and
+the first two-peer run measured 1200 frames with **zero** rollbacks. The emulator puts the
+misbehaviour inside the process, on the SEND side, through GGPO's generic transport filter
+(`Udp::SetTransportFilter`, `third_party/ggpo-x/OPENSWOS.md`). Send-side because a
+one-way delay applied by both peers is the same thing as delay on the path between them,
+and because it lets each peer be given a link of its own — which is how one player on a
+bad line is reproduced. Its randomness is its own and never the game's: `Rand()` is match
+state both peers must agree on, and a harness that perturbed it would desync the match it
+is testing.
+
+The conditions are the set clumsy (jagt.github.io/clumsy) offers, which is the list of
+what a real link does to a packet:
+
+| clumsy | here | what it does |
+|---|---|---|
+| lag | `SWOS_NETEM_DELAY_MS`, `_JITTER_MS` | hold every packet, by a per-packet amount |
+| drop | `SWOS_NETEM_LOSS_PCT` | the packet never leaves |
+| out of order | `SWOS_NETEM_REORDER_PCT`, `_REORDER_MS` | this packet is held back behind the ones sent after it |
+| duplicate | `SWOS_NETEM_DUP_PCT`, `_DUP_COUNT` | the same packet arrives more than once |
+| throttle | `SWOS_NETEM_THROTTLE_PCT`, `_THROTTLE_MS`, `_THROTTLE_DROP` | nothing is sent for a window, then the lot goes out at once — or is thrown away, which is the link simply being gone |
+| tamper | `SWOS_NETEM_TAMPER_PCT`, `_TAMPER_BITS` | bits flipped in the packet |
+| set TCP RST | — | the transport is UDP. What it models, the connection cut from under you, is `_THROTTLE_DROP` |
+
+All of it is one queue of whole packets with a due time, and one rule — send what is due.
+The queue is in send order and the pump scans it, which is what lets packets overtake each
+other. `SWOS_NETEM_PROFILE` names a whole link (`lan adsl wifi mobile satellite awful`);
+any knob set alongside it overrides it. A packet that needs none of this is not touched at
+all, so "no delay" really is no delay rather than "one poll later".
+
+```bash
+scripts/netplay_test.sh --modes p2p --netem wifi              # the corpus, over a wifi link
+scripts/netplay_test.sh --modes p2p --netem delay=80,jitter=30,loss=5,reorder=5
+PROFILE=wifi scripts/netplay_live_test.sh                     # the live pair test
+JOIN_PROFILE=awful scripts/netplay_live_test.sh               # one peer on a bad line
+```
+
+**The result must not change.** Repairing exactly this is what rollback is for, so both
+peers must still finish identical to the plain run, however the link behaves; the seed is
+each peer's port, so a failure repeats. Measured on zkz-12065730 (DOS gameplay, 1520
+frames), every row identical to the plain run:
+
+| conditions | what the link did to player 1's packets (about 1.6k of them) | rollbacks p1 / p2 |
+|---|---|---|
+| none | — | 6 / 8 |
+| `lan` | 1568 delayed by 2 ms | 8 / 11 |
+| `adsl` | 19 dropped, 10 reordered | 9 / 16 |
+| `wifi` | 23 dropped, 19 reordered, 357 burst in 30 throttle windows | 8 / 12 |
+| `mobile` | 37 dropped, 26 reordered, 22 duplicates, 799 burst in 58 windows | 7 / 12 |
+| `satellite` | 1969 delayed by 300 ms, 18 dropped | 9 / 17 |
+| `awful` | 168 dropped, 62 reordered, 38 duplicates, 919 burst in 75 windows | 7 / 11 |
+| `dup=50` | 760 duplicates | 6 / 2 |
+| `reorder=20,reorder_ms=40` | 283 reordered, nothing else | 6 / 3 |
+| `throttle=3,throttle_ms=400,throttle_drop=1` | 565 packets lost in 35 blackouts of 400 ms — 14 s with no link at all | 6 / 7 |
+
+Over the whole corpus (`--all --modes p2p --gameplay dos --netem wifi`): 13 matches,
+248,493 frames, **every peer identical to the plain run** — 6,819 rollbacks re-simulating
+33,619 frames, while the link dropped 2,585 of player 1's packets and stalled 5,615 times.
+
+The live pair test takes the same conditions, and this is where a peer gets a link of its
+own: `PROFILE=wifi JOIN_PROFILE=awful scripts/netplay_live_test.sh` (1200 frames) ends both
+peers on the same state hash, having played very different matches — the wifi peer dropped
+13 packets and rolled back 76 times, the awful one dropped 122 and rolled back 141,
+re-simulating 765 frames.
+
+Each run prints what the link actually **did**, not what it was asked for
+(`[netplay] network emulation did: ...`), because a condition set at 2% may never have
+fired and a run that tested nothing should say so.
+
+**Tamper is a fuzz knob, not a link, and it fails the run.** UDP carries a checksum and
+the hardware drops what fails it, so a flipped bit reaching the game is rare — what it
+tests is whether a corrupt packet is refused rather than acted on, and the answer today is
+that it is acted on. `--netem tamper=2` kills the session within a second of kick-off,
+before a frame is played, and both peers report the other as disconnected. Traced: a
+tampered input packet arrived with `start_frame` 4194339 (bit 22 of frame 35) against a
+last-received frame of 42, GGPO took it, and that peer processed no further packet. GGPO
+trusts every field of an unauthenticated UDP packet — `start_frame`, the per-player
+`last_frame`, the `disconnect_requested` bit that ends the match on its own — and the only
+thing it checks is a 16-bit magic number, which a flipped bit elsewhere leaves intact. A
+fix is a packet-level integrity check in GGPO-X, or bounding the frame numbers a message
+may claim; neither is done. **This is why no profile turns tamper on** and why the corpus
+suite does not run it.
+
 ### Next
 
 1. **Live input**: a peer's input from its own pad and keyboard instead of a recording, and

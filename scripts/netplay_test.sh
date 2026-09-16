@@ -9,6 +9,8 @@
 #   scripts/netplay_test.sh                          # the shortest recording, both gameplays
 #   scripts/netplay_test.sh --all                    # every recording in tests/dos
 #   scripts/netplay_test.sh --modes "p2p p2p:2" --stall 8 tests/dos/zkz-11215003.RGD.gz
+#   scripts/netplay_test.sh --modes p2p --netem wifi
+#   scripts/netplay_test.sh --modes p2p --netem delay=80,jitter=30,loss=5,reorder=5
 #
 # Modes, each compared with the plain run:
 #   direct       the netplay step without GGPO: the input, GameLoop_Frame, the clock, the
@@ -27,6 +29,18 @@
 #   --stall MS      p2p: each peer pauses now and then, up to MS, like a busy machine
 #                   (--netplay-stall); the other peer plays ahead on predicted input and
 #                   rolls back far more than on an idle loopback
+#   --netem SPEC    p2p: put a misbehaving network between the peers
+#                   (src/netplay_netem.c). SPEC is a profile name --
+#                   lan adsl wifi mobile satellite awful -- or a comma list of
+#                   profile= delay= jitter= loss= reorder= reorder_ms= dup=
+#                   dup_count= throttle= throttle_ms= throttle_drop= tamper=
+#                   tamper_bits=, which override a profile named alongside them.
+#                   The result must not change: rollback exists to repair exactly
+#                   this, so both peers must STILL end identical to the plain run.
+#                   Each peer is seeded from its own port, so a run is repeatable
+#                   and the two peers never lose the same packet. Conditions hard
+#                   enough to disconnect a peer fail the run -- that is a link
+#                   nobody could play on, reported honestly, not a netcode bug.
 # Exit code: 0 everything passed, 2 something failed, 1 setup failure.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -38,6 +52,7 @@ OUT=tests/netplay
 ALL=0
 RECS=()
 STALL=0
+NETEM=""              # what --netem parsed to: "VAR=VAL VAR=VAL", for the p2p peers
 BIN=bin/SWOS.x86_64
 DEFAULT_REC=tests/dos/zkz-12065730.RGD.gz    # v1.5, 1519 frames -- the shortest
 BASE_PORT=47950
@@ -51,11 +66,43 @@ while [ $# -gt 0 ]; do
         --out)      OUT=$2; shift 2 ;;
         --all)      ALL=1; shift ;;
         --stall)    STALL=$2; shift 2 ;;
-        -h|--help)  sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --netem)    NETEM_SPEC=$2; shift 2 ;;
+        -h|--help)  sed -n '2,44p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*)         echo "unknown option $1" >&2; exit 1 ;;
         *)          RECS+=("$1"); shift ;;
     esac
 done
+
+# --netem: a profile name, or key=value pairs, or both. Keys are the short names
+# of the SWOS_NETEM_* knobs so the command line does not read like an env dump.
+for kv in ${NETEM_SPEC:+${NETEM_SPEC//,/ }}; do
+    case "$kv" in
+        *=*) k=${kv%%=*}; v=${kv#*=} ;;
+        *)   k=profile;   v=$kv ;;
+    esac
+    case "$k" in
+        profile)       NETEM="$NETEM SWOS_NETEM_PROFILE=$v" ;;
+        delay)         NETEM="$NETEM SWOS_NETEM_DELAY_MS=$v" ;;
+        jitter)        NETEM="$NETEM SWOS_NETEM_JITTER_MS=$v" ;;
+        loss)          NETEM="$NETEM SWOS_NETEM_LOSS_PCT=$v" ;;
+        reorder)       NETEM="$NETEM SWOS_NETEM_REORDER_PCT=$v" ;;
+        reorder_ms)    NETEM="$NETEM SWOS_NETEM_REORDER_MS=$v" ;;
+        dup)           NETEM="$NETEM SWOS_NETEM_DUP_PCT=$v" ;;
+        dup_count)     NETEM="$NETEM SWOS_NETEM_DUP_COUNT=$v" ;;
+        throttle)      NETEM="$NETEM SWOS_NETEM_THROTTLE_PCT=$v" ;;
+        throttle_ms)   NETEM="$NETEM SWOS_NETEM_THROTTLE_MS=$v" ;;
+        throttle_drop) NETEM="$NETEM SWOS_NETEM_THROTTLE_DROP=$v" ;;
+        tamper)        NETEM="$NETEM SWOS_NETEM_TAMPER_PCT=$v" ;;
+        tamper_bits)   NETEM="$NETEM SWOS_NETEM_TAMPER_BITS=$v" ;;
+        *) echo "bad --netem key '$k' (see --help)" >&2; exit 1 ;;
+    esac
+done
+NETEM=${NETEM# }
+# It only reaches the p2p peers: the other modes have no socket to misbehave on.
+case "$NETEM:$MODES" in
+    ?*:*p2p*) ;;
+    ?*:*) echo "--netem needs a p2p mode (--modes p2p); nothing else uses the network" >&2; exit 1 ;;
+esac
 
 for m in $MODES; do
     case "$m" in direct|synctest|synctest:[1-8]|p2p|p2p:[0-7]) ;;
@@ -101,7 +148,11 @@ run_p2p() {
     local tag=$1 swr=$2 gp=$3 delay=$4 port=$5 p
     for p in 1 2; do
         (
+            # Each peer gets its own netem seed, derived from its port: the run
+            # repeats exactly, and the two peers never drop the same packet at
+            # the same moment -- which two real machines never do either.
             cd bin && timeout "$P2P_TIMEOUT" \
+                env $NETEM SWOS_NETEM_SEED=$((port + p)) \
                 ./SWOS.x86_64 --replay-test="../$swr" --dos-gameplay="$gp" --rollback=trace \
                 --netplay-match=p2p --netplay-delay="$delay" --netplay-stall="$STALL" --netplay-player=$p \
                 --netplay-port=$((port + p - 1)) --netplay-peer=127.0.0.1:$((port + 2 - p)) \
@@ -112,7 +163,7 @@ run_p2p() {
     wait
 }
 export -f run run_p2p
-export OUT STALL P2P_TIMEOUT
+export OUT STALL P2P_TIMEOUT NETEM
 
 SWRS=()
 for rec in "${RECS[@]}"; do
@@ -180,10 +231,15 @@ for swr in "${SWRS[@]}"; do
                             "$OUT/$tag-1.log" "$OUT/$tag-2.log" |
                         sed -E 's/player ([12]): [0-9]+ frames played, ([0-9]+) re-simulated after ([0-9]+) rollbacks/p\1 \3 (\2 frames)/' |
                         paste -sd' ' -)
+                # What the emulated network actually did. A condition that never
+                # fired is a run that tested nothing, and only the peer can say.
+                net=""
+                [ -n "$NETEM" ] && net=$(grep -hoE 'network emulation did: .*' "$OUT/$tag-1.log" | tail -1 |
+                                         sed 's/^network emulation did: /; player 1 link: /')
                 if [ "$verdict" = identical ]; then
-                    echo "  $name-$gp $m: both peers identical to the plain run ($frames frames); rollbacks $rolls"
+                    echo "  $name-$gp $m: both peers identical to the plain run ($frames frames); rollbacks $rolls$net"
                 else
-                    echo "  $name-$gp $m: $verdict; rollbacks $rolls"
+                    echo "  $name-$gp $m: $verdict; rollbacks $rolls$net"
                     for p in 1 2; do
                         grep -hE '^\[netplay\] FAIL|^\[netplay\]   |terminate called|what\(\)' "$OUT/$tag-$p.log" | head -4 | sed "s/^/    player $p: /"
                     done

@@ -3,11 +3,21 @@
 # netplay_live_test.sh — two processes play a LIVE match against each other.
 #
 #   scripts/netplay_live_test.sh
+#   PROFILE=wifi scripts/netplay_live_test.sh          # over an emulated wifi link
+#   JOIN_PROFILE=awful scripts/netplay_live_test.sh    # one player on a bad line
 #
 # The end-to-end check for what the multiplayer menus drive: p2p_link connects,
 # the input delay is AGREED, the host sends the match setup, the joiner adopts
 # it, and both open a GGPO session and play. Neither touches a pad — the point
 # is that two machines given no input still agree frame for frame.
+#
+# The network between them is src/netplay_netem.c. PROFILE names a link
+# (lan adsl wifi mobile satellite awful); HOST_PROFILE / JOIN_PROFILE give one
+# peer its own, which is how one player on a bad line is reproduced. Any
+# SWOS_NETEM_* set in the environment is passed through and overrides the
+# profile — except the SEED, which is per peer on purpose: two peers on one
+# machine sharing a seed would lose the same packets at the same moment, which
+# no real pair of machines does.
 #
 # SWOS_NO_LOG=1 is not optional. Without it both processes redirect stderr into
 # the SAME ~/.swos/SWOS.log and clobber each other, and the interesting output
@@ -32,12 +42,28 @@ trap cleanup EXIT INT TERM
 # thousand frames answers. Both peers get the same limit, so both stop together.
 FRAMES="${FRAMES:-3000}"
 
+# The conditions both peers get. DELAY_MS/JITTER_MS/LOSS_PCT are kept as
+# shorthands for the three knobs that came first; every other SWOS_NETEM_* is
+# inherited from the caller's environment untouched.
+#
+# Only a knob the caller actually gave is exported: setting them all to a
+# default of 0 here would silently beat a PROFILE, since the environment is what
+# overrides a profile.
+[ -n "${DELAY_MS:-}" ]  && export SWOS_NETEM_DELAY_MS="$DELAY_MS"
+[ -n "${JITTER_MS:-}" ] && export SWOS_NETEM_JITTER_MS="$JITTER_MS"
+[ -n "${LOSS_PCT:-}" ]  && export SWOS_NETEM_LOSS_PCT="$LOSS_PCT"
+[ -n "${PROFILE:-}" ]   && export SWOS_NETEM_PROFILE="$PROFILE"
+
 run() {   # role, netem-seed-salt, logfile
-    ( cd bin && SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-        SWOS_LIVE_FRAMES="$FRAMES" \
-        SWOS_NETEM_DELAY_MS="${DELAY_MS:-0}" SWOS_NETEM_JITTER_MS="${JITTER_MS:-0}" \
-        SWOS_NETEM_LOSS_PCT="${LOSS_PCT:-0}" SWOS_NETEM_SEED="$2$$" \
-        ./"$BIN" --netplay-live-pair="$1" ) > "$3" 2>&1
+    local prof
+    if [ "$1" = host ]; then prof=${HOST_PROFILE:-}; else prof=${JOIN_PROFILE:-}; fi
+    (
+        cd bin || exit 1
+        [ -n "$prof" ] && export SWOS_NETEM_PROFILE="$prof"
+        SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+            SWOS_LIVE_FRAMES="$FRAMES" SWOS_NETEM_SEED="$2$$" \
+            ./"$BIN" --netplay-live-pair="$1"
+    ) > "$3" 2>&1
 }
 
 echo "-- host"; run host 11 "$OUT.host" & HOST=$!
