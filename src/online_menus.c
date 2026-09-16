@@ -139,18 +139,8 @@ static void liveCast_OnSelect(void)          { s_liveCast = !s_liveCast; }
  * Default is a matchmaker on this machine (scripts/run_matchmaker.sh), which is
  * what the whole local setup exists for. SWOS_MM_HOST / SWOS_MM_PORT point it
  * somewhere else without a rebuild. */
-static const char *mm_host(void)
-{
-    const char *h = getenv("SWOS_MM_HOST");
-    return (h && h[0]) ? h : MM_DEFAULT_HOST;
-}
-
-static uint16_t mm_port(void)
-{
-    const char *p = getenv("SWOS_MM_PORT");
-    int v = (p && p[0]) ? atoi(p) : 0;
-    return (v > 0 && v <= 65535) ? (uint16_t)v : MM_DEFAULT_PORT;
-}
+static const char *mm_host(void) { return MmClient_DefaultHost(); }
+static uint16_t    mm_port(void) { return MmClient_DefaultPort(); }
 
 /* LOGIN: start connecting, then show matchmaking. The connection is not waited
  * for here -- matchMakingMenu's OnDraw polls it and shows CONNECTING / ONLINE /

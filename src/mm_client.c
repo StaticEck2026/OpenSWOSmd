@@ -26,6 +26,23 @@
 #include <string.h>
 #include <stdlib.h>
 
+/* Which server everything here talks to unless told otherwise. One copy, above
+ * the netplay split, because three entry points need it -- the menus, the
+ * self-test and the pair test -- and a test that can only reach the default
+ * port cannot be run beside another server. */
+const char *MmClient_DefaultHost(void)
+{
+    const char *h = getenv("SWOS_MM_HOST");
+    return (h && h[0]) ? h : MM_DEFAULT_HOST;
+}
+
+uint16_t MmClient_DefaultPort(void)
+{
+    const char *p = getenv("SWOS_MM_PORT");
+    int v = (p && p[0]) ? atoi(p) : 0;
+    return (v > 0 && v <= 65535) ? (uint16_t)v : MM_DEFAULT_PORT;
+}
+
 #ifdef SWOS_NETPLAY
 
 #include <enet/enet.h>

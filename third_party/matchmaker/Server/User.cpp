@@ -90,8 +90,15 @@ bool User::CreateGame(const std::string& data)
 {
     try
     {
+        /* OpenSWOS: ">= 2", not "== 2". Upstream's own client
+         * (ServerConnection::CreateGame) sends "<min>,<max>," followed by an
+         * open-game data blob, and this rejected it -- and a rejected CREATE
+         * DISCONNECTS the user, so the client SWOS 2020 ships could not host
+         * against this server at all (scripts/matchmaker_interop_test.sh,
+         * round 3). The blob is accepted and ignored: nothing here stores it,
+         * so the open-games list keeps the old format both clients parse. */
         auto s = stringSplit(data,',');
-        if (s.size() != 2)
+        if (s.size() < 2)
             throw std::exception();
         int min_players = std::stoi(s[0]);
         int max_players = std::stoi(s[1]);

@@ -480,8 +480,8 @@ int main(int argc, char **argv)
             /* --matchmaker-selftest[=host[:port]] — talks to a real server, so
              * scripts/run_matchmaker.sh has to be running. Defaults to the local
              * one on its default port. */
-            const char *host = MM_DEFAULT_HOST;
-            uint16_t port = MM_DEFAULT_PORT;
+            const char *host = MmClient_DefaultHost();
+            uint16_t port = MmClient_DefaultPort();
             static char hostbuf[64];
             if (a[21] == '=') {
                 const char *spec = a + 22;
@@ -517,7 +517,7 @@ int main(int argc, char **argv)
                 fprintf(stderr, "--matchmaker-pair must be 'host' or 'join'\n");
                 return 1;
             }
-            return MmClient_PairTest(v, MM_DEFAULT_HOST, MM_DEFAULT_PORT);
+            return MmClient_PairTest(v, MmClient_DefaultHost(), MmClient_DefaultPort());
         } else if (strcmp(a, "--netplay-selftest") == 0) {
             /* The library, then the connection the MULTIPLAYER menu makes over it.
              * Both run whatever the other did, so one report covers both. */

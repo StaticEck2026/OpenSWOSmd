@@ -61,3 +61,19 @@ target_link_libraries(swos-matchmaker swos_enet)
 if(WIN32)
     target_link_libraries(swos-matchmaker winmm ws2_32)
 endif()
+
+# The reference CLIENT, built only as a test peer (tools/mm_refpeer). Our client
+# is src/mm_client.c and stays the only client the game ships; this exists so the
+# two implementations can be pointed at each other -- see OPENSWOS.md, "The
+# reference client as a test peer". It is not part of any game build.
+add_executable(mm-refpeer
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/mm_refpeer/mm_refpeer.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ServerConnection/ServerConnection.cpp"
+    ${common_sources})
+target_include_directories(mm-refpeer PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/ServerConnection"
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/include")
+target_link_libraries(mm-refpeer swos_enet)
+if(WIN32)
+    target_link_libraries(mm-refpeer winmm ws2_32)
+endif()

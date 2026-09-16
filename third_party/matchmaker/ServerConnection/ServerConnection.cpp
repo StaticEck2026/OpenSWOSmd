@@ -14,6 +14,17 @@
 #include <ifaddrs.h>
 #include <net/if.h>
 #include <cstring>
+#include <ctime>
+/* OpenSWOS: IPConnection::DoConnection polls with Win32 Sleep(). This one
+ * shim is what lets the file compile as a test peer (tools/mm_refpeer); the
+ * rest of it stays untouched, because it is the authority on the protocol. */
+static void Sleep(unsigned ms)
+{
+    struct timespec ts;
+    ts.tv_sec  = (time_t)(ms / 1000u);
+    ts.tv_nsec = (long)(ms % 1000u) * 1000000L;
+    nanosleep(&ts, nullptr);
+}
 #endif
 GameInfoStruct::GameInfoStruct(const std::string& msg)
 {

@@ -586,6 +586,48 @@ while the server has already dropped it. Anything needing a live connection has 
 inside ONE continuously-primed harness session, with the opponent spawned from inside it.
 Splitting it across two script runs lets the connection die in the gap.
 
+### Testing it against the reference client
+
+`scripts/matchmaker_pair_test.sh` runs two copies of `src/mm_client.c`, which proves only
+that our client agrees with **itself** — two implementations of one protocol can share a
+misreading and nothing notices. `tools/mm_refpeer` is the other implementation: upstream's
+C++ `ServerConnection`, the code SWOS 2020 ships, driven through the same host/join
+sequence and asserting the same three things (player number, peer name, at least one
+address).
+
+```bash
+scripts/matchmaker_interop_test.sh    # starts a server on 19604, runs 3 rounds, stops it
+```
+
+| round | |
+|---|---|
+| 1 | the reference hosts, ours joins |
+| 2 | ours hosts, the reference joins |
+| 3 | the reference hosts **with an open-game data blob**, ours joins |
+
+Rounds 1 and 2 passed first time: the whole handshake — `VERSION:`/`INFO:`/`LOGIN:`, the
+user and open-game lists, `JOIN:`, `APPROVE:`, and the `START:` handoff with both sides
+told the right player number, the right peer name and four usable addresses — is read the
+same way by both implementations. It also settles a question that matters if we ever meet
+their server: **the two clients send different `VERSION:` tags** (`SWOS_MatchMaker` against
+our `OPENSWOS`) **and the server does not care**, because `Connections::VerifyVersion` is
+an empty `// TODO` returning true.
+
+**Round 3 failed, and it was a real incompatibility.** Upstream's
+`ServerConnection::CreateGame` sends `"<min>,<max>," + payload`; upstream's own server
+demands exactly two fields and **disconnects** the user otherwise
+(`Server/User.cpp`). The two halves of the same release disagree, and the consequence for
+us was that the client SWOS 2020 actually ships could not host a game against the server we
+test against — it was dropped the moment it pressed CREATE. Our vendored server now accepts
+`>= 2` fields and ignores the payload
+(`third_party/matchmaker/OPENSWOS.md`, "Changes from upstream"); storing it and emitting
+the newer `<count>:<name>:<len>:<data>` open-games format is a separate feature, and
+`src/mm_client.c` only parses the old one today.
+
+Two differences that are not faults: the reference binds a fixed local port (first free of
+6000–6009) where ours takes an ephemeral one, and the reference drops its server connection
+the instant `START:` arrives.
+
 ### Status
 
 Working and tested end to end against a local server:

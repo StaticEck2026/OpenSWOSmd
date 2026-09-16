@@ -123,6 +123,12 @@ int32_t MmClient_TakeRemoved(void);
 const MmStartInfo *MmClient_StartInfo(void);
 void               MmClient_ClearStart(void);
 
+/* The server every entry point defaults to: MM_DEFAULT_HOST / MM_DEFAULT_PORT,
+ * overridden by SWOS_MM_HOST / SWOS_MM_PORT so a test or a tester can point at
+ * another server without a rebuild. */
+const char *MmClient_DefaultHost(void);
+uint16_t    MmClient_DefaultPort(void);
+
 /* Connect to a locally running server, log in, list the lobby, create and leave a
  * game, and log out. Prints a report; 0 on success. Needs
  * scripts/run_matchmaker.sh running. `bin/SWOS.x86_64 --matchmaker-selftest`. */
