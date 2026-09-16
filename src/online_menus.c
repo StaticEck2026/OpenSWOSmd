@@ -187,6 +187,9 @@ static char s_descText[64];
  * to a name. -1 = the row is empty. */
 static int32_t s_rowGame[MatchMakingMenu_kGS_MaxRows];
 
+/* Who is waiting on our yes or no (hostGameMessageMenu). */
+static char s_joinAsker[MM_NAME_MAX];
+
 static void matchMakingMenu_OnInit(void)
 {
     int32_t row;
@@ -219,12 +222,14 @@ static void matchMakingMenu_OnDraw(void)
     MmClient_Poll();
     state = MmClient_State();
 
-    /* Someone asking to join OUR game. Upstream puts a yes/no prompt up
-     * (hostGameMessageMenu); for now the host accepts, because the point of this
-     * pass is to reach a match -- the prompt is the next thing to wire, and the
-     * event is already surfaced one-shot so it can be. */
-    if (MmClient_TakeJoinRequest(who, sizeof who))
-        MmClient_Approve(who);
+    /* Someone is asking to join OUR game: ask, the way SWOS 2020 does, rather
+     * than accepting for the player. One-shot, so the prompt opens once per
+     * request however many frames it takes to answer. */
+    if (MmClient_TakeJoinRequest(who, sizeof who)) {
+        snprintf(s_joinAsker, sizeof s_joinAsker, "%s", who);
+        OnlineMenus_Show(SWOS2020_MENU(hostGameMessageMenu));
+        return;
+    }
 
     if (MmClient_TakeRemoved())
         set_entry(MatchMakingMenu_desc, "THE HOST LEFT THE GAME", 0, 0);
@@ -306,6 +311,53 @@ static void matchMakingMenu_OnDraw(void)
 }
 
 /* ======================================================================
+ * hostGameMessageMenu -- "X wants to play. Yes or no?"
+ * ======================================================================
+ * The host decides. Accepting sends APPROVE, which the server turns into the
+ * START both peers need; refusing ejects them and leaves the game open for
+ * somebody else. Either way the lobby is what we return to.
+ * ====================================================================== */
+static char s_joinPrompt[64];
+
+static void hostGameMessageMenu_OnInit(void)
+{
+    snprintf(s_joinPrompt, sizeof s_joinPrompt, "%s WANTS TO PLAY", s_joinAsker);
+    set_text(HostGameMessageMenu_header,   "A CHALLENGER");
+    set_text(HostGameMessageMenu_message1, s_joinPrompt);
+    set_text(HostGameMessageMenu_message2, "");
+    set_text(HostGameMessageMenu_message3, "");
+    set_entry(HostGameMessageMenu_button1, "ACCEPT", 1, kLightBrownWithRedFrame);
+    set_entry(HostGameMessageMenu_button2, "REFUSE", 1, kLightBrownWithRedFrame);
+    set_text(HostGameMessageMenu_exit,     "EXIT");
+}
+
+/* The lobby is not being drawn while this prompt is up, and its OnDraw is what
+ * pumps the client -- so this one has to, or the connection would time out
+ * exactly while the player is deciding. */
+static void hostGameMessageMenu_OnDraw(void)
+{
+    MmClient_Poll();
+    if (MmClient_State() != MM_CONNECTED)
+        SetExitMenuFlag();          /* nothing left to accept */
+}
+
+static void hostGameMessageMenu_button1_OnSelect(void)   /* ACCEPT */
+{
+    if (s_joinAsker[0])
+        MmClient_Approve(s_joinAsker);
+    s_joinAsker[0] = '\0';
+    SetExitMenuFlag();
+}
+
+static void hostGameMessageMenu_button2_OnSelect(void)   /* REFUSE */
+{
+    if (s_joinAsker[0])
+        MmClient_Eject(s_joinAsker);
+    s_joinAsker[0] = '\0';
+    SetExitMenuFlag();
+}
+
+/* ======================================================================
  * The handoff: matchmaking is over, connect to the peer
  * ======================================================================
  * The server has paired us and given us the other player's addresses. From here
@@ -358,33 +410,23 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
     s_peerPort     = 0;
     s_localPort    = 0;
 
-    if (st->playerNumber == 1) {
-        if (P2PLink_Host(MM_MATCH_PORT) != 0)
-            snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT HOST");
+    /* NAT traversal: BOTH peers punch to all of the other's candidates at once.
+     * Neither hosts -- a peer that only listens is unreachable from behind a
+     * router, because a NAT lets a datagram in only after one has gone out to
+     * that address. The player number decides who is player 1 and nothing else.
+     *
+     * The local port is the one the matchmaker saw us on, so the mapping its own
+     * traffic already opened is the one the peer's packets arrive through. */
+    {
+        const char *list[MM_MAX_PEER_ADDRS];
+        int32_t i;
+        for (i = 0; i < st->numAddrs && i < MM_MAX_PEER_ADDRS; i++)
+            list[i] = st->addrs[i];
+        if (i == 0 || P2PLink_Punch(list, i, st->localPort) != 0)
+            snprintf(s_matchStatus, sizeof s_matchStatus, "NO WAY TO REACH %s", st->peerName);
         else
-            snprintf(s_matchStatus, sizeof s_matchStatus, "WAITING FOR %s", st->peerName);
-    } else {
-        /* Try the candidates in order: the server-observed address first, then
-         * what the peer said about itself. The first that is a dotted IPv4 we can
-         * parse is used -- p2p_link takes one address, so trying each in turn as
-         * a connection fails is, again, the NAT work that is not done. */
-        int32_t i, started = 0;
-        for (i = 0; i < st->numAddrs && !started; i++) {
-            char ip[MM_ADDR_TEXT_MAX];
-            char *colon;
-            snprintf(ip, sizeof ip, "%s", st->addrs[i]);
-            colon = strchr(ip, ':');
-            if (colon)
-                *colon = '\0';
-            if (!P2PLink_IsAddress(ip))
-                continue;
-            if (P2PLink_Join(ip, MM_MATCH_PORT) == 0) {
-                snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s", st->peerName);
-                started = 1;
-            }
-        }
-        if (!started)
-            snprintf(s_matchStatus, sizeof s_matchStatus, "NO USABLE ADDRESS FOR %s", st->peerName);
+            snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s (%d route%s)",
+                     st->peerName, i, i == 1 ? "" : "s");
     }
 
     /* The lobby is done with; the link takes over from here. */
@@ -638,6 +680,11 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(matchMaking_host_onSelect),
     HANDLER(matchMaking_users_onSelect),
     HANDLER(matchMaking_exit_onSelect),
+
+    HANDLER(hostGameMessageMenu_OnInit),
+    HANDLER(hostGameMessageMenu_OnDraw),
+    HANDLER(hostGameMessageMenu_button1_OnSelect),
+    HANDLER(hostGameMessageMenu_button2_OnSelect),
 
     HANDLER(mpWaitingMenu_OnDraw),
     HANDLER(mpWaiting_menuExit_OnSelect),

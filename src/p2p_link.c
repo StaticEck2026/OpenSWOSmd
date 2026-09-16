@@ -78,6 +78,7 @@ enum {
     kQuietTimeoutMs  = 6000,    /* connected, then nothing heard */
     kMaxReadsPerPoll = 32,      /* a frame's worth; the rest waits for the next poll */
     kJoinPortTries   = 10,      /* two peers on one machine need different local ports */
+    kMaxCandidates   = 8,       /* what the matchmaker hands over (MM_MAX_PEER_ADDRS) */
     kDelayIntervalMs = 250,     /* re-send the proposal until the peer's is known (UDP) */
     kDelayMax        = 8,       /* more input lag than this is worse than the rollback */
 
@@ -129,6 +130,11 @@ typedef struct {
     int32_t            txChunks;
     uint8_t            txAcked[kBlobBitmapBytes];
     uint32_t           txLastSendMs;
+
+    /* NAT traversal: every address the peer might be reachable at. Both sides
+     * send to all of them at once -- see punch_send. */
+    struct sockaddr_in candidates[kMaxCandidates];
+    int32_t            numCandidates;
 
     /* Receiving one (the joiner). */
     uint8_t           *rxBlob;
@@ -488,6 +494,37 @@ static void send_blob_ack(P2PLink *l)
            (const struct sockaddr *)&l->peer, sizeof l->peer);
 }
 
+/* Is this packet from one of the addresses the peer might be at?
+ *
+ * HOST ONLY, deliberately: a NAT rewrites the SOURCE PORT, so the datagram that
+ * finally arrives comes from a port nobody advertised. Comparing the port would
+ * reject exactly the packets that prove a path works. The reference
+ * implementation matches the same way (P2PConnection.cpp, matchAddressOnly). */
+static int32_t from_candidate(const P2PLink *l, const struct sockaddr_in *from)
+{
+    int32_t i;
+    for (i = 0; i < l->numCandidates; i++)
+        if (l->candidates[i].sin_addr.s_addr == from->sin_addr.s_addr)
+            return 1;
+    return 0;
+}
+
+/* Say hello to every candidate at once.
+ *
+ * THIS IS THE HOLE PUNCH. Each datagram we send opens a mapping in our own NAT
+ * for the address it went to, so the peer's reply has somewhere to arrive. Both
+ * peers do it simultaneously -- neither is "the host" here -- which is what
+ * gets two players behind different routers talking without either forwarding a
+ * port. Most of these go nowhere (a LAN address on the other side of the
+ * internet); that is the point, they cost a packet each and one of them works. */
+static void punch_send(P2PLink *l)
+{
+    int32_t i;
+    for (i = 0; i < l->numCandidates; i++)
+        send_setup_packet(l, &l->candidates[i], PKT_HELLO);
+    l->lastSentMs = now_ms();
+}
+
 static void link_connected(P2PLink *l, const struct sockaddr_in *from, uint32_t now)
 {
     blob_free(l);   /* nothing carries over from a previous peer */
@@ -555,8 +592,29 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
         break;
 
     case P2P_JOINING:
-        if (!same_peer(l, from))
-            return;                     /* only the host we asked */
+        /* With a candidate list this is the PUNCHING state and any of them may
+         * answer -- and from a port a NAT chose, so the match is on host only.
+         * With a single peer (the direct-IP menu) it is the old behaviour. */
+        if (l->numCandidates > 0 ? !from_candidate(l, from) : !same_peer(l, from))
+            return;
+        if (type == PKT_HELLO && len >= kSetupLen && l->numCandidates > 0) {
+            /* The peer is punching too and its packet arrived first. Answer it
+             * and take THIS address: it is the one demonstrably working, which
+             * the advertised one may not be. */
+            Setup theirs;
+            pkt_read_setup(buf, &theirs);
+            {
+                P2PLinkFailure bad = setup_mismatch(&l->local, &theirs);
+                if (bad != P2P_FAIL_NONE) {
+                    send_refuse(l, from, bad);
+                    link_fail(l, bad);
+                    return;
+                }
+            }
+            send_setup_packet(l, from, PKT_WELCOME);
+            link_connected(l, from, now);
+            return;
+        }
         if (type == PKT_WELCOME && len >= kSetupLen) {
             Setup theirs;
             pkt_read_setup(buf, &theirs);
@@ -675,8 +733,12 @@ static void link_poll(P2PLink *l, uint32_t now)
         if (now - l->openedMs >= (uint32_t)l->joinTimeoutMs) {
             link_fail(l, P2P_FAIL_NO_ANSWER);
         } else if (now - l->lastSentMs >= (uint32_t)kHelloIntervalMs) {
-            send_setup_packet(l, &l->peer, PKT_HELLO);
-            l->lastSentMs = now;
+            if (l->numCandidates > 0) {
+                punch_send(l);      /* keeps every mapping alive, not just one */
+            } else {
+                send_setup_packet(l, &l->peer, PKT_HELLO);
+                l->lastSentMs = now;
+            }
         }
     } else if (l->state == P2P_CONNECTED) {
         /* Keep pushing whatever the receiver has not acked yet. */
@@ -778,6 +840,78 @@ static void link_close(P2PLink *l)
 }
 
 /* ---- the game's link ---- */
+
+/* NAT traversal: both peers call this, with the addresses the matchmaker gave
+ * them for the other one, and both send to all of them at once.
+ *
+ * There is no host and no joiner here. A NAT lets a datagram IN only after one
+ * has gone OUT to that address, so a peer that merely listens is unreachable;
+ * both have to be punching at the same time. The player number still decides
+ * who is player 1, but it plays no part in making the connection.
+ *
+ * The local port matters: it is the one the matchmaker saw us on, so the
+ * mapping the server's traffic already opened is the one the peer's packets
+ * arrive through. Binding a different port throws that away. */
+static int32_t link_punch(P2PLink *l, const char *const *addresses, int32_t count,
+                          uint16_t localPort)
+{
+    int32_t i, n = 0;
+
+    link_reset(l);
+    if (!addresses || count <= 0) {
+        l->state = P2P_FAILED;
+        l->failure = P2P_FAIL_BAD_ADDRESS;
+        return 1;
+    }
+
+    for (i = 0; i < count && n < kMaxCandidates; i++) {
+        char text[24], *colon;
+        struct in_addr host;
+        uint16_t port = 0;
+
+        if (!addresses[i] || !addresses[i][0])
+            continue;
+        snprintf(text, sizeof text, "%s", addresses[i]);
+        colon = strchr(text, ':');
+        if (colon) {
+            *colon = '\0';
+            port = (uint16_t)atoi(colon + 1);
+        }
+        if (!port || inet_pton(AF_INET, text, &host) != 1)
+            continue;               /* not an address we can punch to; skip it */
+        memset(&l->candidates[n], 0, sizeof l->candidates[n]);
+        l->candidates[n].sin_family = AF_INET;
+        l->candidates[n].sin_addr   = host;
+        l->candidates[n].sin_port   = htons(port);
+        n++;
+    }
+    if (n == 0) {
+        l->state = P2P_FAILED;
+        l->failure = P2P_FAIL_BAD_ADDRESS;
+        return 1;
+    }
+    l->numCandidates = n;
+
+    {
+        P2PLinkFailure bad = open_socket(l, localPort, kJoinPortTries);
+        if (bad != P2P_FAIL_NONE) {
+            l->state = P2P_FAILED;
+            l->failure = bad;
+            return 1;
+        }
+    }
+    setup_local(&l->local);
+    l->isHost = 0;
+    l->state  = P2P_JOINING;        /* "connecting", as the menus already read it */
+    l->openedMs = l->lastHeardMs = l->lastSentMs = now_ms();
+    punch_send(l);                  /* open our side's mappings immediately */
+    return 0;
+}
+
+int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t localPort)
+{
+    return link_punch(&s_link, addresses, count, localPort);
+}
 
 int32_t P2PLink_Host(uint16_t port)                    { return link_host(&s_link, port); }
 int32_t P2PLink_Join(const char *address, uint16_t port) { return link_join(&s_link, address, port, NULL); }
@@ -1019,6 +1153,50 @@ int32_t P2PLink_SelfTest(void)
             check(bitmap_full(host.txAcked, host.txChunks), "the host sees it acknowledged");
             free(sent);
         }
+    }
+
+    /* 1d. NAT traversal: two peers punch to each other through a list that is
+     * mostly WRONG. Only one address in each list can work; the rest are
+     * unroutable, which is exactly the shape of a real candidate list (a LAN
+     * address on the other side of the internet, an old NAT mapping). Both
+     * punch at once, as they must -- neither is listening. */
+    {
+        P2PLink pa, pb;
+        P2PLink *both2[2];
+        char aAddr[32], bAddr[32];
+        const char *toB[3], *toA[3];
+        PairCtx pairPunch;
+
+        memset(&pa, 0, sizeof pa); pa.sock = -1; pa.pingMs = -1; pa.joinTimeoutMs = 6000;
+        memset(&pb, 0, sizeof pb); pb.sock = -1; pb.pingMs = -1; pb.joinTimeoutMs = 6000;
+
+        /* Bind both first so each knows the port to advertise. */
+        check(link_punch(&pa, (const char *const[]){ "192.0.2.1:9" }, 1, 0) == 0,
+              "peer A opens a socket and starts punching");
+        check(link_punch(&pb, (const char *const[]){ "192.0.2.2:9" }, 1, 0) == 0,
+              "peer B opens a socket and starts punching");
+        snprintf(aAddr, sizeof aAddr, "127.0.0.1:%u", (unsigned)pa.localPort);
+        snprintf(bAddr, sizeof bAddr, "127.0.0.1:%u", (unsigned)pb.localPort);
+
+        /* Now the real lists: two dead ends (TEST-NET-1, never routed) and the
+         * one address that works -- deliberately last, so finding it means
+         * every candidate was tried rather than the first one happening to be
+         * right. */
+        toB[0] = "192.0.2.10:9999"; toB[1] = "198.51.100.7:9999"; toB[2] = bAddr;
+        toA[0] = "192.0.2.11:9999"; toA[1] = "198.51.100.8:9999"; toA[2] = aAddr;
+        check(link_punch(&pa, toB, 3, pa.localPort) == 0, "A punches to B's three candidates");
+        check(link_punch(&pb, toA, 3, pb.localPort) == 0, "B punches to A's three candidates");
+
+        both2[0] = &pa; both2[1] = &pb;
+        pairPunch.a = &pa; pairPunch.b = &pb;
+        pump(both2, 2, 6000, both_connected, &pairPunch);
+        check(pa.state == P2P_CONNECTED && pb.state == P2P_CONNECTED,
+              "they find each other through the dead ends");
+        check(pa.peerText[0] && pb.peerText[0], "each ends up on the address that worked");
+        if (pa.state != P2P_CONNECTED || pb.state != P2P_CONNECTED)
+            printf("    A %s, B %s\n", state_name(pa.state), state_name(pb.state));
+        link_close(&pa);
+        link_close(&pb);
     }
 
     /* 2. A second player is turned away while the host has one. */

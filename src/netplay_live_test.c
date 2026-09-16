@@ -169,14 +169,19 @@ void NetplayLiveTest_Run(void)
 
     SAY("[live] %s on port %d\n", s_isHost ? "host" : "join", LIVE_TEST_PORT);
 
-    if (s_isHost) {
-        if (P2PLink_Host(LIVE_TEST_PORT) != 0) {
-            SAY("  FAIL could not host: %d\n", (int)P2PLink_Failure());
-            exit(1);
-        }
-    } else {
-        if (P2PLink_Join("127.0.0.1", LIVE_TEST_PORT) != 0) {
-            SAY("  FAIL could not join: %d\n", (int)P2PLink_Failure());
+    /* Punch, the same way a real match does -- both peers to all of the other's
+     * candidates -- rather than host/join. Loopback cannot test a NAT, but it
+     * does test the path the real thing takes, so this test and a real match do
+     * not diverge. The two roles differ only in which fixed port each binds. */
+    {
+        char peerAddr[32];
+        const char *list[1];
+        uint16_t myPort   = s_isHost ? LIVE_TEST_PORT : (uint16_t)(LIVE_TEST_PORT + 1);
+        uint16_t theirPort = s_isHost ? (uint16_t)(LIVE_TEST_PORT + 1) : LIVE_TEST_PORT;
+        snprintf(peerAddr, sizeof peerAddr, "127.0.0.1:%u", (unsigned)theirPort);
+        list[0] = peerAddr;
+        if (P2PLink_Punch(list, 1, myPort) != 0) {
+            SAY("  FAIL could not start punching: %d\n", (int)P2PLink_Failure());
             exit(1);
         }
     }

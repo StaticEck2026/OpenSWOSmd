@@ -51,6 +51,21 @@ typedef enum {
 /* Open the link. Both return 0, or non-zero with the reason in P2PLink_Failure.
  * The joiner binds the same port number when it is free -- on one machine, or behind
  * one router, the next free port above it. */
+/* NAT traversal. BOTH peers call this with the addresses the matchmaker gave
+ * them for the other, and both send to all of them at once.
+ *
+ * There is no host and no joiner: a NAT lets a datagram in only after one has
+ * gone out to that address, so a peer that merely listens cannot be reached.
+ * Simultaneous punching is what connects two players behind different routers
+ * without either of them forwarding a port.
+ *
+ * `localPort` should be the port the matchmaker saw us on -- the mapping its
+ * own traffic opened is the one the peer's packets will arrive through.
+ *
+ * Each address is "a.b.c.d:port"; unparseable ones are skipped. The link ends up
+ * on whichever address actually answered, which a NAT may have rewritten. */
+int32_t        P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t localPort);
+
 int32_t        P2PLink_Host(uint16_t port);
 int32_t        P2PLink_Join(const char *address, uint16_t port);
 

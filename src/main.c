@@ -259,6 +259,14 @@ static const char *match_kv(const char *arg, const char *key)
 
 int main(int argc, char **argv)
 {
+    /* Line-buffer stdout. Every self-test and harness in here reports progress
+     * as it goes, and stdout to a FILE or a PIPE is block buffered -- so a run
+     * that is killed, hangs, or is watched from another terminal shows nothing,
+     * and the last thing it printed (the thing that says where it stopped) is
+     * exactly what is lost. Three separate diagnoses in this codebase have been
+     * slowed down by that. It costs nothing on a run that completes. */
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
 /* Switch: the headers define SIGHUP but nnSdk exports no signal(), so the
  * #ifdef alone is not the right test — the link fails on `undefined symbol:
  * signal`. There is no controlling terminal on a console either, which is what
