@@ -368,7 +368,161 @@ round trip, a second joiner is turned away, a peer leaving is noticed, a build t
 play a different game is refused with the reason, and a join with nobody listening gives
 up instead of hanging.
 
-**What is missing is the match itself**: the host sending the match setup, live input from
-the local pad (§5, "Next"), and opening the GGPO session over the link. Until then
-MULTIPLAYER is a connection test — which is the part that needs trying on real routers
-anyway.
+### The link also settles two things the match needs
+
+**The input delay, agreed rather than chosen twice.** Each peer proposes one from the
+round trip it measured (`propose_delay`), they exchange proposals, and both take the
+**maximum** — the same two numbers on both sides, so the same answer — fixed for the
+match. `P2PLink_AgreedDelay()`.
+
+This is deliberate, and it is the bug that makes one player feel they are **chasing** the
+other. SWOS 2020 derives a delay on each machine from that machine's own ping, jitter and
+`1000/getMPFps()`, and applies it to its own player only; two machines do not measure the
+same jitter, and if one runs slower they do not even agree on the frame time, so a match
+that began "AUTO 3" can end up 1 against 5. It announces the number to the other player
+(`sendFrameDelayInfo`) — as English prose, into the chat, which nothing parses. Ours takes
+its frame time from the **gameplay mode**, which the handshake already forces to be equal,
+rather than from anything either machine measures.
+
+It is very probably most of the reported **ghosting** too: in a shoulder-to-shoulder
+contest for the ball, four extra frames decides it before the game's own skill roll is
+reached, and the rollback that follows drags the losing player visibly back *through* the
+opponent. (A second candidate, not confirmed: `CalculateIfPlayerWinsBall` gates on
+`oppTeam->wonTheBallTimer` and the winner sets it to 12, so whichever team is evaluated
+first in a frame gets to contest and the other is locked out. Against the AI that bias is
+invisible; with two humans one of them is always the team evaluated first.)
+
+**The match setup**, as numbered chunks with a bitmap ack: `P2PLink_SendSetup()` /
+`P2PLink_ReceivedSetup()`. The payload is a `state_wire` packet (docs/ROLLBACK.md, "The
+wire format"), which already encodes portably — typed fields big-endian, pointers as
+identities — so a 32-bit peer and a 64-bit one read the same bytes. All the link adds is
+getting ~35 KB across UDP intact.
+
+> The read buffer is sized by the largest packet, not the typical one. It was 64 bytes —
+> ample for the control packets and 16 short of a setup chunk's header. `recvfrom`
+> truncates silently, so every chunk arrived with all but its first 48 bytes missing while
+> the transfer still completed and acked: right length, full bitmap, wrong contents. The
+> self-test sends 40 KB and compares every byte, which is how that was found.
+
+**What is missing is the match itself**: opening the GGPO session over the link. The live
+input is done (`InputSDL_LocalMatchControls`, `NetplayMatch_StartLive`) and the corpus
+p2p tests still pass with it in; what is left is starting a match on both peers, loading
+the host's state onto the joiner and handing over to the session.
+
+---
+
+## 7. Matchmaking (`src/mm_client.c`, `third_party/matchmaker`)
+
+§6's menu connects two players who already know each other's IP address. That is a
+useful test and a bad way to find an opponent, so online play goes the way SWOS 2020's
+does instead: a **matchmaking server** introduces two players, and the match itself is
+still peer-to-peer.
+
+**The server only introduces you.** Its `START:` message hands each side the other's
+candidate addresses and it is then out of the loop. Killing it mid-match does not end
+the match; it only stops new ones being made.
+
+### Running one locally
+
+```bash
+scripts/run_matchmaker.sh                  # build + run on UDP 19602
+bin/SWOS.x86_64 --matchmaker-selftest      # one client: log in, lobby, create, leave
+scripts/matchmaker_pair_test.sh            # two clients: join, approve, START
+```
+
+The server is SimpleMatchmaker, vendored at `third_party/matchmaker` — the same
+project SWOS 2020 ships. Its `OPENSWOS.md` records what was changed and why. Both it
+and the client are built on the one vendored ENET (`third_party/enet`).
+
+### The protocol
+
+Text over ENET, one message per packet, `HEADER:content`. On connect, in this order:
+
+```
+VERSION:<gameID>            a compatibility tag; a different one is refused
+INFO:<addr,addr,...>        our candidate addresses
+LOGIN:<userName>:<userData>
+```
+
+then `CREATE:<min>,<max>`, `JOIN:<owner>`, `APPROVE:<player>`, `EJECT:<player>`,
+`LEAVE:`, `START:`. Back come `LOGIN:`/`CREATE:`/`LEAVE:`/`EJECT:` as acks,
+`PLAYERSACTIVE:` and `GAMESOPEN:` as list updates, `GAMEINFO:`, `JOIN:<name>` and
+`START:<playerNumber>,<peerName>,<addr>,...`.
+
+**Three things about this protocol are not guessable, and each one fails silently:**
+
+- **`CREATE:` takes `"<minPlayers>,<maxPlayers>"` and nothing else.** The server splits
+  on `,`, requires exactly two parts and `stoi`s both; anything else throws and the game
+  is simply not created, with **no reply at all**. Sending a descriptive name (the
+  obvious guess) looks exactly like the server ignoring you.
+- **The two list messages are encoded differently**, though both are "a list of names":
+  `PLAYERSACTIVE:` is `<count>:<name>:<dataLen>:<data>...` and `GAMESOPEN:` is a bare
+  `name,name,` with a trailing comma and no count. Parsing the second like the first
+  yields zero games, which reads as "nobody is hosting".
+- **Addresses are a decimal uint32, not a dotted quad** — `ToString` is
+  `std::to_string(addr.host)`, the four octets in network byte order printed as one
+  number (127.0.0.1 is 16777343). Sending dotted text does not fail: the server `atoi`s
+  it to `127` and later tells your opponent to connect there. The first pair test
+  reported peers at 127, 10, 192 and 169 — the first octets of the addresses it meant.
+
+`GAMEINFO:` only arrives from the server's `SendInfoToAll()`, i.e. once somebody asks to
+join — so an empty game info straight after `CREATE:` is correct, not a dropped message.
+
+### The client
+
+`src/mm_client.c`, in C, against the vendored ENET. It keeps the lobby in plain arrays
+you read whenever you like (`MmClient_Users`, `MmClient_OpenGames`, `MmClient_GameInfo`)
+rather than delivering callbacks, because menus redraw from state every frame; the only
+one-shot events are a player asking to join and being thrown out. Call `MmClient_Poll()`
+once a frame.
+
+The upstream C++ client (`ServerConnection/`, `P2PConnection/`) is vendored unbuilt, as
+the authority on what the reference implementation does.
+
+### The menus
+
+**MULTIPLAYER now opens SWOS 2020's online flow**, not §6's direct-IP menu: log in →
+matchmaking → the lobby. The handlers are in `src/online_menus.c`, against the menus
+imported from SWOS 2020 (docs/MENUS.md §10). The direct-IP menu is still there and still
+works — it is the way to test a link across a real router with no server in the middle —
+but it is reached with `--menu=p2p/p2pMenu` now.
+
+The matchmaking menu's `OnDraw` is also where the client is pumped: it runs every frame
+(the menu is flagged `dos_redraw`) and there is no other per-frame hook while a menu is
+up. The lobby is redrawn from `MmClient`'s state each frame rather than from callbacks.
+
+```bash
+bin/SWOS.x86_64 --matchmaker-menu=NAME   # log in and open the lobby at startup
+SWOS_MM_HOST=... SWOS_MM_PORT=...        # point it at a server other than localhost
+```
+
+**The gdb harness cannot hold a lobby connection.** A process stopped at a breakpoint
+sends no ENET keepalives, so the server times it out — the menu goes on saying ONLINE
+while the server has already dropped it. Anything needing a live connection has to run
+inside ONE continuously-primed harness session, with the opponent spawned from inside it.
+Splitting it across two script runs lets the connection die in the gap.
+
+### Status
+
+Working and tested end to end against a local server:
+
+- connect, log in, the user list, open games, create, join, approve
+- `START:` on both sides with the peer's name, the right player number and usable
+  addresses (`scripts/matchmaker_pair_test.sh`)
+- MULTIPLAYER → login → lobby, with a real opponent appearing in it: `2 ONLINE`, the
+  opponent's game in the host rows, both names in the user rows
+- joining → the host approving → `START:` → the handoff to `p2p_link`, which puts
+  `mpWaitingMenu` up and reports the link's state
+
+**Still to do — the match itself.** `p2p_link` connects two peers and pings; opening the
+GGPO session over it (the host sending the match setup, live pad input, running the
+session) does not exist on EITHER entry point — see §6, "What is missing". Matchmaking
+therefore ends exactly where the direct-IP menu ended. Two further pieces belong with it:
+
+- **NAT traversal.** The server sends several candidate addresses precisely so a peer
+  behind a router can be reached; the handoff currently takes the first one that parses
+  and meets on a fixed port, which is fine on one machine and on a LAN and is not real
+  hole punching. `third_party/matchmaker/P2PConnection/` is the reference.
+- **The join prompt.** SWOS 2020 asks the host to accept or refuse (`hostGameMessageMenu`);
+  we auto-approve. The event is already surfaced one-shot (`MmClient_TakeJoinRequest`),
+  so wiring the prompt is small.

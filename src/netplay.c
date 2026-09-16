@@ -2,6 +2,7 @@
  * netplay.c -- rollback netplay on GGPO-X. See include/netplay.h and docs/NETPLAY.md.
  */
 #include "netplay.h"
+#include "netplay_netem.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,6 +131,14 @@ int32_t Netplay_Available(void)
 
 int32_t Netplay_StartP2P(NetplaySession **out, const NetplayConfig *cfg, const NetplayCallbacks *cb)
 {
+    /* Latency / packet-loss emulation, when the environment asks for it
+     * (include/netplay_netem.h). Installed through GGPO's generic transport
+     * filter, so the library carries no dependency on us -- see
+     * third_party/ggpo-x/OPENSWOS.md. No cost when it is off. */
+    Netem_Init();
+    if (Netem_Enabled())
+        Netplay_InstallTransportFilter();
+
     *out = NULL;
     if (cfg->localPlayer < 1 || cfg->localPlayer > NETPLAY_MAX_PLAYERS)
         return GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE;

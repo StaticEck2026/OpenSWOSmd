@@ -111,4 +111,8 @@ const char *Netplay_ErrorName(int32_t code);
  * session. Prints a report; returns 0 on success. `--netplay-selftest`. */
 int32_t     Netplay_SelfTest(void);
 
+/* Hand the latency/loss emulator to GGPO's transport filter. Called from
+ * Netplay_StartP2P when the environment configures one. */
+void Netplay_InstallTransportFilter(void);
+
 #endif /* NETPLAY_H */
