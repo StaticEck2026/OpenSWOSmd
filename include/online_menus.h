@@ -22,4 +22,15 @@ void    OnlineMenus_ShowStartMenu(void);
  * of their handlers are ported. 0 on success. */
 int32_t OnlineMenus_SelfTest(void);
 
+/* The matchmaking server has paired us with an opponent: leave the lobby and
+ * connect to them directly (docs/NETPLAY.md section 7). Called from the
+ * matchmaking menu's draw when MmClient_StartInfo() turns up. */
+void        OnlineMenus_StartMatchFromMatchmaking(void);
+
+/* --matchmaker-menu[=name]: log in to the matchmaking server as `name` and open
+ * the matchmaking menu at startup, so the live lobby can be looked at without
+ * navigating to it (and without gdb, which cannot hold the connection). */
+void        OnlineMenus_SetAutoLogin(const char *name);
+const char *OnlineMenus_MatchStatus(void);
+
 #endif /* ONLINE_MENUS_H */

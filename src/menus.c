@@ -20,6 +20,7 @@
 #include "game_types.h"
 #include "frontend.h"
 #include "menu_system.h"
+#include "online_menus.h"   /* MULTIPLAYER opens SWOS 2020's online flow */
 #include "deterministic.h"
 #include "string_utils.h"
 #include "text_render.h"
@@ -2268,16 +2269,20 @@ void SWOSMainMenuInit(void)
 #endif
 }
 
-/* MultiplayerMenuSelected — OpenSWOS's MULTIPLAYER button: connect straight to another
- * player by IP address, no server in between (src/p2p_menu.c, docs/NETPLAY.md). SWOS
- * 2020's own online menus need its servers and are opened with --menu=swos2020/logInMenu
- * (docs/MENUS.md section 10). */
+/* MultiplayerMenuSelected — OpenSWOS's MULTIPLAYER button: SWOS 2020's online flow,
+ * log in to a matchmaking server and be introduced to an opponent (src/online_menus.c,
+ * src/mm_client.c, docs/NETPLAY.md section 7). The server is normally a local one —
+ * scripts/run_matchmaker.sh; SWOS_MM_HOST / SWOS_MM_PORT point it elsewhere.
+ *
+ * The older direct-IP menu (src/p2p_menu.c, docs/NETPLAY.md section 6) is still here and
+ * still works — it is the way to test a link across a real router with no server in the
+ * middle — but it is off the main menu now: `--menu=p2p/p2pMenu` opens it. */
 __attribute__((used, externally_visible))
 void MultiplayerMenuSelected(void)
 {
 #ifdef SWOS_NETPLAY
-    extern void P2PMenu_Show(void);
-    P2PMenu_Show();
+    OnlineMenus_Init();
+    OnlineMenus_Show("swos2020/logInMenu");
     /* Coming back re-unpacks the main menu from its packed bytes, where the CONTINUE and
      * SAVE rows (entries 11/12) are visible and LOAD OLD COMPETITION sits below them --
      * what SWOSMainMenuInit did to them is gone. Every main-menu handler that opens a

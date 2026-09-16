@@ -19,14 +19,20 @@
  * own "server not connected" state, from where SETTINGS and RANKINGS open.
  */
 #include "online_menus.h"
+#include "mm_client.h"         /* the matchmaking server (docs/NETPLAY.md section 7) */
 #include "p2p_menu.h"          /* OpenSWOS's own JSON-only menu */
 #include "swos2020_menus.h"
 #include "menu_load_json.h"
 #include "menu_symbols.h"
 #include "menu_system.h"
 #include "input_text.h"
+#include "p2p_link.h"         /* the peer connection the handoff makes */
+#include "netplay_setup.h"    /* the match setup the host sends */
+#include "netplay_match.h"    /* the live GGPO session */
+#include "game_types.h"       /* TeamFileEx, for the match the handoff starts */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define SWOS2020_MENU(name) "swos2020/" #name
@@ -126,10 +132,35 @@ static void rememberLogInInfo_OnSelect(void) { s_rememberLogin = !s_rememberLogi
 static void showPassword_OnSelect(void)      { s_showPassword = !s_showPassword; }
 static void liveCast_OnSelect(void)          { s_liveCast = !s_liveCast; }
 
-/* There is no login service yet: go straight to matchmaking, which shows SWOS
- * 2020's own "server not connected" state. */
+/* Which server to talk to. There is no account service -- the matchmaker has no
+ * notion of a password, it takes a name and hands out introductions -- so LOGIN
+ * connects with the username typed above and the password is not sent anywhere.
+ *
+ * Default is a matchmaker on this machine (scripts/run_matchmaker.sh), which is
+ * what the whole local setup exists for. SWOS_MM_HOST / SWOS_MM_PORT point it
+ * somewhere else without a rebuild. */
+static const char *mm_host(void)
+{
+    const char *h = getenv("SWOS_MM_HOST");
+    return (h && h[0]) ? h : MM_DEFAULT_HOST;
+}
+
+static uint16_t mm_port(void)
+{
+    const char *p = getenv("SWOS_MM_PORT");
+    int v = (p && p[0]) ? atoi(p) : 0;
+    return (v > 0 && v <= 65535) ? (uint16_t)v : MM_DEFAULT_PORT;
+}
+
+/* LOGIN: start connecting, then show matchmaking. The connection is not waited
+ * for here -- matchMakingMenu's OnDraw polls it and shows CONNECTING / ONLINE /
+ * the failure, so a server that is not there leaves a usable menu saying so
+ * rather than a frozen one. */
 static void logInMenuLogInContinue_OnSelect(void)
 {
+    if (!s_username[0])
+        snprintf(s_username, sizeof s_username, "PLAYER");
+    MmClient_Connect(mm_host(), mm_port(), s_username, NULL);
     OnlineMenus_Show(SWOS2020_MENU(matchMakingMenu));
 }
 
@@ -141,26 +172,431 @@ static void logInMenuNews_OnSelect(void)
 /* ======================================================================
  * matchMakingMenu (swos-2020/src/menus/matchMaking.mnu; handlers in mpgame.cpp)
  * ====================================================================== */
+/* The lobby is redrawn from MmClient's state every frame, so these buffers hold
+ * the text the menu entries point at. A MenuEntry stores a POINTER, so the
+ * storage has to outlive the call that sets it -- a local would leave the menu
+ * drawing freed stack. */
+static char s_hostRow[MatchMakingMenu_kGS_MaxRows][MM_NAME_MAX + 8];
+static char s_modeRow[MatchMakingMenu_kGS_MaxRows][16];
+static char s_userRow[MatchMakingMenu_kGS_MaxRows2][MM_NAME_MAX + 4];
+static char s_statusText[48];
+static char s_numUsersText[24];
+static char s_descText[64];
+
+/* Which open game each visible host row stands for, so a click can resolve back
+ * to a name. -1 = the row is empty. */
+static int32_t s_rowGame[MatchMakingMenu_kGS_MaxRows];
+
 static void matchMakingMenu_OnInit(void)
 {
-    /* No lobby list without a server: hide the host/mode/action rows and the user list. */
-    for (int32_t row = 0; row < MatchMakingMenu_kGS_MaxRows; row++) {
+    int32_t row;
+
+    for (row = 0; row < MatchMakingMenu_kGS_MaxRows; row++) {
         set_visible(MatchMakingMenu_host_00 + row, 0);
         set_visible(MatchMakingMenu_mode_00 + row, 0);
         set_visible(MatchMakingMenu_action_00 + row, 0);
+        s_rowGame[row] = -1;
     }
-    for (int32_t row = 0; row < MatchMakingMenu_kGS_MaxRows2; row++)
+    for (row = 0; row < MatchMakingMenu_kGS_MaxRows2; row++)
         set_visible(MatchMakingMenu_users_00 + row, 0);
 
-    set_text(MatchMakingMenu_connectionStatus, "OFFLINE");
-    set_text(MatchMakingMenu_numOfUsers, "");
     set_text(MatchMakingMenu_userName, s_username);
-
-    /* setMatchMakingMenu_Standard(), menuMode MMM_X_SERVER_NOT_CONNECTED. */
-    set_entry(MatchMakingMenu_desc, "SERVER NOT CONNECTED", 0, 0);
-    set_entry(MatchMakingMenu_openGame, "OPEN", 0, kGray);
-    set_entry(MatchMakingMenu_cancelGame, "CANCEL", 0, kGray);
     set_entry(MatchMakingMenu_menuExit, "EXIT", 1, kLightBrownWithRedFrame);
+}
+
+/* Runs every frame (the menu is flagged dos_redraw). This is also where the
+ * client is pumped: there is no other per-frame hook while a menu is up, and
+ * MmClient_Poll() is cheap when nothing has arrived. */
+static void matchMakingMenu_OnDraw(void)
+{
+    const MmUser *users;
+    const MmGame *games;
+    const MmGameInfo *gi;
+    int32_t numUsers = 0, numGames = 0, row;
+    MmState state;
+    char who[MM_NAME_MAX];
+
+    MmClient_Poll();
+    state = MmClient_State();
+
+    /* Someone asking to join OUR game. Upstream puts a yes/no prompt up
+     * (hostGameMessageMenu); for now the host accepts, because the point of this
+     * pass is to reach a match -- the prompt is the next thing to wire, and the
+     * event is already surfaced one-shot so it can be. */
+    if (MmClient_TakeJoinRequest(who, sizeof who))
+        MmClient_Approve(who);
+
+    if (MmClient_TakeRemoved())
+        set_entry(MatchMakingMenu_desc, "THE HOST LEFT THE GAME", 0, 0);
+
+    switch (state) {
+    case MM_CONNECTING:
+        snprintf(s_statusText, sizeof s_statusText, "CONNECTING");
+        break;
+    case MM_CONNECTED:
+        snprintf(s_statusText, sizeof s_statusText, "ONLINE");
+        break;
+    case MM_FAILED:
+        snprintf(s_statusText, sizeof s_statusText, "%s", MmClient_FailureText());
+        break;
+    default:
+        snprintf(s_statusText, sizeof s_statusText, "OFFLINE");
+        break;
+    }
+    set_text(MatchMakingMenu_connectionStatus, s_statusText);
+
+    users = MmClient_Users(&numUsers);
+    games = MmClient_OpenGames(&numGames);
+    gi    = MmClient_GameInfo();
+
+    snprintf(s_numUsersText, sizeof s_numUsersText, "%d ONLINE", numUsers);
+    set_text(MatchMakingMenu_numOfUsers, state == MM_CONNECTED ? s_numUsersText : "");
+
+    /* The open games, one per host row. */
+    for (row = 0; row < MatchMakingMenu_kGS_MaxRows; row++) {
+        int32_t hasGame = (state == MM_CONNECTED) && (row < numGames);
+        s_rowGame[row] = hasGame ? row : -1;
+        if (hasGame) {
+            snprintf(s_hostRow[row], sizeof s_hostRow[row], "%s", games[row].owner);
+            snprintf(s_modeRow[row], sizeof s_modeRow[row], "FRIENDLY");
+            set_text(MatchMakingMenu_host_00 + row, s_hostRow[row]);
+            set_text(MatchMakingMenu_mode_00 + row, s_modeRow[row]);
+        }
+        set_visible(MatchMakingMenu_host_00 + row, hasGame);
+        set_visible(MatchMakingMenu_mode_00 + row, hasGame);
+        set_visible(MatchMakingMenu_action_00 + row, 0);
+    }
+
+    /* Who else is on. */
+    for (row = 0; row < MatchMakingMenu_kGS_MaxRows2; row++) {
+        int32_t hasUser = (state == MM_CONNECTED) && (row < numUsers);
+        if (hasUser) {
+            snprintf(s_userRow[row], sizeof s_userRow[row], "%s", users[row].name);
+            set_text(MatchMakingMenu_users_00 + row, s_userRow[row]);
+        }
+        set_visible(MatchMakingMenu_users_00 + row, hasUser);
+    }
+
+    /* The description line and what the two buttons can do, from where we are. */
+    if (state != MM_CONNECTED) {
+        set_entry(MatchMakingMenu_desc,
+                  state == MM_CONNECTING ? "CONNECTING TO SERVER" : "SERVER NOT CONNECTED", 0, 0);
+        set_entry(MatchMakingMenu_openGame, "OPEN", 0, kGray);
+        set_entry(MatchMakingMenu_cancelGame, "LEAVE", 0, kGray);
+    } else if (gi) {
+        if (gi->numRequested > 0)
+            snprintf(s_descText, sizeof s_descText, "%s WANTS TO JOIN", gi->requested[0].name);
+        else if (gi->numJoined > 0)
+            snprintf(s_descText, sizeof s_descText, "%s JOINED - STARTING", gi->joined[0].name);
+        else
+            snprintf(s_descText, sizeof s_descText, "WAITING FOR AN OPPONENT");
+        set_entry(MatchMakingMenu_desc, s_descText, 0, 0);
+        set_entry(MatchMakingMenu_openGame, "OPEN", 0, kGray);
+        set_entry(MatchMakingMenu_cancelGame, "LEAVE", 1, kLightBrownWithRedFrame);
+    } else {
+        set_entry(MatchMakingMenu_desc,
+                  numGames ? "PICK A GAME, OR OPEN YOUR OWN" : "OPEN A GAME AND WAIT", 0, 0);
+        set_entry(MatchMakingMenu_openGame, "OPEN", 1, kLightBrownWithRedFrame);
+        set_entry(MatchMakingMenu_cancelGame, "LEAVE", 0, kGray);
+    }
+
+    /* The server has paired us with somebody: hand over to the match. */
+    if (MmClient_StartInfo())
+        OnlineMenus_StartMatchFromMatchmaking();
+}
+
+/* ======================================================================
+ * The handoff: matchmaking is over, connect to the peer
+ * ======================================================================
+ * The server has paired us and given us the other player's addresses. From here
+ * the server is out of the loop and the two of us talk directly, over the same
+ * p2p_link the direct-IP menu used (docs/NETPLAY.md sections 6 and 7).
+ *
+ * WHAT THIS DOES NOT DO YET: play the match. Opening the GGPO session -- the
+ * host sending the match setup, live pad input, running the session over the
+ * link -- does not exist on EITHER path (NETPLAY.md section 6, "What is
+ * missing"), so matchmaking now ends where the direct-IP menu ended: two peers
+ * connected and pinging. That is the next chunk, and it is the same chunk for
+ * both entry points.
+ *
+ * Port: p2p_link binds its own socket, so the matchmaker's addresses supply the
+ * peer's IP but not a port to meet on. Both sides use the same fixed port as the
+ * direct-IP menu (SWOS 2020's GGPO port). That is fine on one machine and on a
+ * LAN -- p2p_link takes the next free port when that one is busy, which is what
+ * makes two instances on one box work -- but it does NOT punch through NAT. Real
+ * NAT traversal is the reason the server sends several candidate addresses, and
+ * using them properly is part of the same unfinished chunk. */
+#define MM_MATCH_PORT 47885
+
+static char s_matchStatus[64];
+static int32_t s_matchPlayer;      /* 1 = we created the game, 2 = we joined */
+static int32_t s_setupSent;        /* host: the setup is on its way */
+static int32_t s_setupApplied;     /* joiner: the host's setup is ours now */
+
+/* The peer's address, taken while the link is CERTAINLY up rather than at
+ * handover. The other side closes its link as soon as it has what it needs, and
+ * the BYE that follows clears our peer -- so reading it late gives an empty
+ * address and a session that will not start. */
+static char     s_peerAddr[24];
+static uint16_t s_peerPort;
+static uint16_t s_localPort;
+
+void OnlineMenus_StartMatchFromMatchmaking(void)
+{
+    const MmStartInfo *st = MmClient_StartInfo();
+    if (!st)
+        return;
+
+    /* Take it once: this runs from a per-frame draw, and without clearing it we
+     * would try to connect again on every one of them. */
+    MmClient_ClearStart();
+
+    s_matchPlayer  = st->playerNumber;
+    s_setupSent    = 0;
+    s_setupApplied = 0;
+    s_peerAddr[0]  = '\0';
+    s_peerPort     = 0;
+    s_localPort    = 0;
+
+    if (st->playerNumber == 1) {
+        if (P2PLink_Host(MM_MATCH_PORT) != 0)
+            snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT HOST");
+        else
+            snprintf(s_matchStatus, sizeof s_matchStatus, "WAITING FOR %s", st->peerName);
+    } else {
+        /* Try the candidates in order: the server-observed address first, then
+         * what the peer said about itself. The first that is a dotted IPv4 we can
+         * parse is used -- p2p_link takes one address, so trying each in turn as
+         * a connection fails is, again, the NAT work that is not done. */
+        int32_t i, started = 0;
+        for (i = 0; i < st->numAddrs && !started; i++) {
+            char ip[MM_ADDR_TEXT_MAX];
+            char *colon;
+            snprintf(ip, sizeof ip, "%s", st->addrs[i]);
+            colon = strchr(ip, ':');
+            if (colon)
+                *colon = '\0';
+            if (!P2PLink_IsAddress(ip))
+                continue;
+            if (P2PLink_Join(ip, MM_MATCH_PORT) == 0) {
+                snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s", st->peerName);
+                started = 1;
+            }
+        }
+        if (!started)
+            snprintf(s_matchStatus, sizeof s_matchStatus, "NO USABLE ADDRESS FOR %s", st->peerName);
+    }
+
+    /* The lobby is done with; the link takes over from here. */
+    MmClient_Disconnect();
+    OnlineMenus_Show(SWOS2020_MENU(mpWaitingMenu));
+}
+
+const char *OnlineMenus_MatchStatus(void)
+{
+    return s_matchStatus;
+}
+
+/* ======================================================================
+ * mpWaitingMenu -- where the two connected players wait
+ * ====================================================================== */
+static char s_waitLine[80];
+
+/* Exchange the match setup, then play.
+ *
+ * Both peers must start from the same teams, tactics, options and random seed,
+ * so the host sends its setup and the joiner adopts it. Then BOTH run the same
+ * deterministic init over it -- which is how the corpus two-peer test gets two
+ * identical machines, and is why this sends the setup rather than a copy of the
+ * host's post-init state.
+ *
+ * The link is CLOSED before the session opens: GGPO wants its own socket, on
+ * the same local port, which is also what keeps a NAT mapping open across the
+ * handover. Everything the session needs is therefore read out first.
+ *
+ * InitAndPlayGame runs the whole match and returns when it is over, exactly as
+ * it does for the friendly menu and for arcade mode. */
+/* Remember where the peer is, the moment we know. */
+static void capture_peer(void)
+{
+    char peer[24], *colon;
+    if (s_peerAddr[0])
+        return;
+    snprintf(peer, sizeof peer, "%s", P2PLink_PeerText());
+    if (!peer[0])
+        return;
+    snprintf(s_peerAddr, sizeof s_peerAddr, "%s", peer);
+    colon = strchr(s_peerAddr, ':');
+    if (colon) {
+        *colon = '\0';
+        s_peerPort = (uint16_t)atoi(colon + 1);
+    }
+    if (!s_peerPort)
+        s_peerPort = MM_MATCH_PORT;
+    s_localPort = P2PLink_LocalPort();
+}
+
+static void run_live_match(void)
+{
+    /* Declared where they are used: this file is menus, and these three belong
+     * to the match. Spellings as game_loop.h / game_types.h define them. */
+    extern uint16_t    _gFrameStepInput;
+    extern TeamFileEx  _selectedTeams[100];
+    extern void        InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
+
+    int32_t delay = P2PLink_AgreedDelay();
+
+    capture_peer();                     /* if it has not happened already */
+    if (delay < 0)
+        delay = 2;                      /* both sides fall back the same way */
+    if (!s_peerAddr[0]) {
+        snprintf(s_matchStatus, sizeof s_matchStatus, "LOST THE OPPONENT'S ADDRESS");
+        return;
+    }
+
+    P2PLink_Close();
+
+    if (NetplayMatch_StartLive(s_matchPlayer, s_peerAddr, s_peerPort, s_localPort, delay) != 0) {
+        snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT START THE MATCH");
+        return;
+    }
+
+    snprintf(s_matchStatus, sizeof s_matchStatus, "PLAYING");
+    _gFrameStepInput = 1;               /* one frame of input at a time (game_loop.h) */
+    InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
+    NetplayMatch_Finish();
+    SetExitMenuFlag();
+}
+
+static void mpWaitingMenu_OnDraw(void)
+{
+    P2PLinkState st;
+
+    P2PLink_Poll();
+    st = P2PLink_State();
+
+    if (st == P2P_CONNECTED)
+        capture_peer();
+
+    /* Connected and the delay agreed: swap the setup, then kick off. */
+    if (st == P2P_CONNECTED && P2PLink_AgreedDelay() >= 0) {
+        if (s_matchPlayer == 1) {
+            if (!s_setupSent) {
+                uint8_t *buf = (uint8_t *)malloc(NetplaySetup_MaxBytes());
+                int32_t n = buf ? NetplaySetup_Encode(buf, NetplaySetup_MaxBytes()) : -1;
+                if (n > 0 && P2PLink_SendSetup(buf, (uint32_t)n) == 0)
+                    s_setupSent = 1;
+                free(buf);
+            } else if (P2PLink_SetupSent()) {
+                run_live_match();
+                return;
+            }
+        } else {
+            uint32_t n = 0;
+            const uint8_t *got = P2PLink_ReceivedSetup(&n);
+            if (got && !s_setupApplied) {
+                if (NetplaySetup_Apply(got, n) == 0)
+                    s_setupApplied = 1;
+                else
+                    snprintf(s_matchStatus, sizeof s_matchStatus, "BAD SETUP FROM THE HOST");
+            }
+            if (s_setupApplied) {
+                run_live_match();
+                return;
+            }
+        }
+    }
+
+    switch (st) {
+    case P2P_CONNECTED: {
+        int32_t ping = P2PLink_PingMs();
+        int32_t pct  = P2PLink_SetupProgress();
+        if (pct >= 0) {
+            snprintf(s_waitLine, sizeof s_waitLine, "MATCH SETUP %d%%", pct);
+            break;
+        }
+        if (ping >= 0)
+            snprintf(s_waitLine, sizeof s_waitLine, "CONNECTED TO %s - %d MS",
+                     P2PLink_PeerText(), ping);
+        else
+            snprintf(s_waitLine, sizeof s_waitLine, "CONNECTED TO %s", P2PLink_PeerText());
+        break;
+    }
+    case P2P_HOSTING:
+    case P2P_JOINING:
+        snprintf(s_waitLine, sizeof s_waitLine, "%s", s_matchStatus);
+        break;
+    case P2P_FAILED:
+        snprintf(s_waitLine, sizeof s_waitLine, "CONNECTION FAILED");
+        break;
+    default:
+        snprintf(s_waitLine, sizeof s_waitLine, "%s", s_matchStatus);
+        break;
+    }
+    set_text(MpWaitingMenu_message1, s_waitLine);
+}
+
+static void mpWaiting_menuExit_OnSelect(void)
+{
+    P2PLink_Close();
+    SetExitMenuFlag();
+}
+
+/* OPEN: advertise a game and wait. */
+static void matchMaking_openGame_onSelect(void)
+{
+    MmClient_CreateGame();
+}
+
+/* LEAVE: stop advertising, or withdraw a join request. */
+static void matchMaking_cancelGame_onSelect(void)
+{
+    MmClient_LeaveGame();
+}
+
+/* A host row: ask to join that game. Which row was clicked is recovered from the
+ * menu's selected entry -- CalcMenuEntryAddress is ordinal -> address, so this
+ * is the inverse. */
+static int32_t current_ordinal(void)
+{
+    /* The live menu's backing buffer. Declared as a byte array to match its real
+     * storage in swos_globals.c (`currentMenu: ds.b $16` + the adjacent
+     * menuEntries) -- the same spelling animated_patterns.c and
+     * highlights_menu.c use. */
+    extern uint8_t _currentMenu[];
+    const Menu *menu = (const Menu *)_currentMenu;
+    const uint8_t *base = _currentMenu + MENU_HEADER_SIZE;
+    const uint8_t *sel  = (const uint8_t *)menu->selectedEntry;
+    if (!sel || sel < base)
+        return -1;
+    return (int32_t)((size_t)(sel - base) / MENUENTRY_STRIDE);
+}
+
+static void matchMaking_host_onSelect(void)
+{
+    int32_t ord = current_ordinal();
+    int32_t row = ord - MatchMakingMenu_host_00;
+    int32_t numGames = 0;
+    const MmGame *games = MmClient_OpenGames(&numGames);
+
+    if (row < 0 || row >= MatchMakingMenu_kGS_MaxRows)
+        return;
+    if (s_rowGame[row] < 0 || s_rowGame[row] >= numGames)
+        return;
+    MmClient_JoinGame(games[s_rowGame[row]].owner);
+}
+
+/* A user row. Upstream opens playerInfoMenu here; nothing to show yet. */
+static void matchMaking_users_onSelect(void)
+{
+}
+
+/* EXIT: leave the lobby properly rather than abandoning a socket -- otherwise
+ * the server keeps advertising a game nobody is behind until the ENET timeout. */
+static void matchMaking_exit_onSelect(void)
+{
+    MmClient_Disconnect();
+    SetExitMenuFlag();
 }
 
 static void matchMaking_menuSettings_onSelect(void)
@@ -194,8 +630,17 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(logInMenuNews_OnSelect),
 
     HANDLER(matchMakingMenu_OnInit),
+    HANDLER(matchMakingMenu_OnDraw),
     HANDLER(matchMaking_menuSettings_onSelect),
     HANDLER(matchMaking_rankings_onSelect),
+    HANDLER(matchMaking_openGame_onSelect),
+    HANDLER(matchMaking_cancelGame_onSelect),
+    HANDLER(matchMaking_host_onSelect),
+    HANDLER(matchMaking_users_onSelect),
+    HANDLER(matchMaking_exit_onSelect),
+
+    HANDLER(mpWaitingMenu_OnDraw),
+    HANDLER(mpWaiting_menuExit_OnSelect),
 
     /* Exit and cancel buttons. Offline there is nothing to cancel or leave on a
      * server, so all of them just close their menu. */
@@ -212,11 +657,9 @@ static const MenuSymbol k_handlers[] = {
     HANDLER_AS("mLogReaderMenu_exit_onSelect",       SetExitMenuFlag),
     HANDLER_AS("mLogStatsMenu_exit_onSelect",        SetExitMenuFlag),
     HANDLER_AS("mLogTickerMenu_exit_onSelect",       SetExitMenuFlag),
-    HANDLER_AS("matchMaking_exit_onSelect",          SetExitMenuFlag),
     HANDLER_AS("matchView_exit_onSelect",            SetExitMenuFlag),
     HANDLER_AS("messageMenu_no_OnSelect",            SetExitMenuFlag),
     HANDLER_AS("messageMenu_yes_OnSelect",           SetExitMenuFlag),
-    HANDLER_AS("mpWaiting_menuExit_OnSelect",        SetExitMenuFlag),
     HANDLER_AS("myFriendlyStatsMenu_exit_OnSelect",  SetExitMenuFlag),
     HANDLER_AS("myRankedStatsMenu_exit_OnSelect",    SetExitMenuFlag),
     HANDLER_AS("selectExitOpenLobby",                SetExitMenuFlag),
@@ -244,9 +687,17 @@ void OnlineMenus_Init(void)
 }
 
 /* ======================================================================
- * --menu=<name>
+ * --menu=<name>, --matchmaker-menu[=name]
  * ====================================================================== */
 static char s_startMenu[64];
+static char s_autoLogin[MM_NAME_MAX];
+
+void OnlineMenus_SetAutoLogin(const char *name)
+{
+    snprintf(s_autoLogin, sizeof s_autoLogin, "%s", (name && name[0]) ? name : "PLAYER");
+    snprintf(s_username, sizeof s_username, "%s", s_autoLogin);
+    OnlineMenus_SetStartMenu("swos2020/matchMakingMenu");
+}
 
 void OnlineMenus_SetStartMenu(const char *name)
 {
@@ -261,6 +712,14 @@ void OnlineMenus_ShowStartMenu(void)
     memcpy(name, s_startMenu, sizeof name);
     s_startMenu[0] = '\0';      /* once: the front end can be re-entered after a match */
     OnlineMenus_Init();
+    /* --matchmaker-menu: log in before the menu opens, so it comes up live.
+     * Driving the lobby under gdb does not work -- a process stopped at a
+     * breakpoint sends no ENET keepalives and the server times it out -- so this
+     * is how the real menu gets looked at. */
+    if (s_autoLogin[0]) {
+        MmClient_Connect(mm_host(), mm_port(), s_autoLogin, NULL);
+        s_autoLogin[0] = '\0';
+    }
     P2PMenu_Init();             /* --menu=p2p/p2pMenu wants its handlers too */
     OnlineMenus_Show(name);
 }
