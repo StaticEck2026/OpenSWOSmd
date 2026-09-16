@@ -329,6 +329,22 @@ run() {
     else       record "$t" "FAIL"; echo "-- FAIL: $label"; fi
 }
 
+# ---- submodules -------------------------------------------------------------
+# third_party/ggpo-x is a SUBMODULE (github.com/benbaker76/ggpo-x, branch
+# openswos). A fresh clone has the directory and nothing in it, and the
+# netplay build then fails on a missing header several hundred lines into make
+# output -- so check it here and say what is wrong in one line.
+if [ -f .gitmodules ] && ! [ -f third_party/ggpo-x/src/include/ggponet.h ]; then
+    banner "submodules"
+    if git submodule update --init --recursive >/dev/null 2>&1; then
+        echo "-- fetched third_party/ggpo-x"
+    else
+        echo "!! third_party/ggpo-x is empty and could not be fetched." >&2
+        echo "!! Run: git submodule update --init --recursive" >&2
+        exit 1
+    fi
+fi
+
 # ---- clean ------------------------------------------------------------------
 if [ "$DO_CLEAN" = 1 ]; then
     banner "clean (object dirs — make compares timestamps, not CFLAGS)"

@@ -117,6 +117,12 @@ eval cd "$REPO" || { echo "!! no checkout at $REPO"; exit 1; }
 if [ "$DO_PULL" = 1 ]; then
     echo "== git pull --ff-only"
     git pull --ff-only || { echo "!! pull failed (diverged? use --no-pull)"; exit 1; }
+    # third_party/ggpo-x is a submodule, and a plain pull does NOT move it: the
+    # Mac would build the commit it was told to build with the WRONG GGPO, which
+    # is the same class of trap as the stale checkout this script already
+    # guards against -- and quieter, because it still compiles.
+    git submodule update --init --recursive || {
+        echo "!! submodule update failed"; exit 1; }
 fi
 echo "== HEAD: $(git log -1 --format='%h %ad %s' --date=short)"
 DIRTY="$(git status --porcelain --untracked-files=no)"
