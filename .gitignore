@@ -127,3 +127,6 @@ bin/SWOS.nss
 # build_switch.sh hand to a tester: the zips, SWOS-Setup.exe, SWOS.nsp, and the
 # dist/windows staging tree the Inno Setup script packages. All regenerable.
 dist/
+
+# The build stamp (scripts/gen_build_info.sh) — regenerated every build, never committed.
+include/swos_build.h

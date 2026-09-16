@@ -265,6 +265,16 @@ window icon, set in `platform_sdl.c`) and the favicon inlined in `wasm/shell.htm
 committed, so no build needs the script; re-run it after changing the SVG. A hand-tuned bitmap
 for a small size goes in `packaging/icons/overrides/<size>.png` and wins over the vector.
 
+**Build stamp.** Every binary says which commit it is, because a tester report that does not
+is expensive to triage (docs/TESTS.md, release provenance). `scripts/gen_build_info.sh` writes
+`include/swos_build.h` (gitignored) with the short hash, a `-dirty` marker when tracked source
+differs from it, and the commit date; `src/build_info.c` exposes it. BOTH makefiles run the
+script at parse time, so the Amiga binary carries it too, and the header is rewritten only when
+it changes, so an unchanged commit does not trigger a rebuild. It shows up in four places: the
+bottom line of the main menu, the SDL window title, the first line of `SWOS.log`, and
+`--version`. **A drop must never be cut from a `-dirty` tree** — that is the stamp telling you
+the binaries are not the commit you think they are.
+
 ### macOS — `scripts/build_macos.sh`
 
 macOS cannot be built here (`make macos-universal` / `make macos-app` hard-fail

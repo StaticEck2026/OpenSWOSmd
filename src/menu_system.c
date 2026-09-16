@@ -8,6 +8,8 @@
 #include "game_utils.h"
 #include "fade.h"
 #include "text_render.h"
+#include "build_info.h"  /* the build stamp drawn on the main menu */
+#include "menus.h"       /* SWOSMainMenuInit -- identifies the main menu, see below */
 #include "sprites.h"
 #include "blitter.h"
 
@@ -1372,6 +1374,24 @@ void DrawMenu(void)
      * redrawn every frame, nothing else would. */
     if (s_menuFlags & MENU_FLAG_DOS_REDRAW)
         DrawSelectedMenuItemFrame();
+
+    /* Which build is this? Every tester report used to open with that question,
+     * unanswerable after the fact -- and one macOS report cost a session because
+     * the binary predated the fix it was testing. The main menu's bottom strip is
+     * the one place reliably empty on both targets, so a screenshot of it answers
+     * the question by itself (build_info.h; also in the window title, SWOS.log and
+     * --version). Drawn after the entries so nothing paints over it, and inside
+     * DrawMenu so it inherits the widescreen centering offset.
+     *
+     * The menu is identified by its onInit rather than by comparing against
+     * _swosMainMenu: menu_data.h cannot be included here, because it declares
+     * STR_COLOR_MASK / STR_FLAGS_MASK / YELLOW_GREEN_BLACK_15 as enum constants
+     * while menu_system.h defines the same three names as macros, so the two
+     * headers cannot meet in one translation unit. */
+    if (menu->onInit == (MenuVoidFn)SWOSMainMenuInit)
+        DrawMenuText(4, 256, 7, (uint8_t *)Build_ScreenText(),
+                     (uint8_t *)_charTables[0]);   /* [0] = the small font */
+
     WaitForVSync();
     BlitterCopyOverlayToScreen();
 }

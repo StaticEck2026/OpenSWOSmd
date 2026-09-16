@@ -27,6 +27,13 @@ DATA_FLAGS = -DCOMPETITION_DATA_C=$(COMPETITION_DATA_C) -DTACTICS_DATA_C=$(TACTI
 # bin/ docs/ tools/ wasm/ scripts/ build/, and a stray .c in any of them (e.g.
 # tools/swos_position_value.c) would silently join the m68k link.
 SRC_DIRS := src
+
+# The build stamp, same as the SDL makefile: src/build_info.c is picked up by the
+# src/*.c scan above, so the m68k binary carries the commit too.
+# Invoked through `sh`, not as an executable: core.filemode is false on the
+# development mount and every script here is recorded 100644, so a fresh clone
+# cannot exec it -- which broke the first clean-export build of this commit.
+BUILD_STAMP_UNUSED := $(shell sh scripts/gen_build_info.sh)
 VPATH     = $(SRC_DIRS) support asm
 
 # SDL-only translation units. They live in the shared src/ (see CLAUDE.md

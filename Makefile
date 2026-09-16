@@ -179,6 +179,14 @@ OBJDIR := build/$(BUILD_OS)/$(BUILD_ARCH)
 # ---- Sources ----
 SRCDIR  := src
 INCDIR  := include
+# The build stamp: regenerate include/swos_build.h before anything compiles.
+# Parse-time, so it is always current; the script rewrites the header only when
+# the commit changes, so this does not force a rebuild (scripts/gen_build_info.sh).
+# Invoked through `sh`, not as an executable: core.filemode is false on the
+# development mount and every script here is recorded 100644, so a fresh clone
+# cannot exec it -- which broke the first clean-export build of this commit.
+BUILD_STAMP_UNUSED := $(shell sh scripts/gen_build_info.sh)
+
 SOURCES := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/generated/*.c)
 OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
 DEPS    := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.d,$(SOURCES))

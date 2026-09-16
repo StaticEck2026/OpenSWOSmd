@@ -17,6 +17,7 @@
 #include "dos_mode.h"        /* gDosGraphics */
 #include "dos_gameplay.h"    /* DosGameplay_TargetFps — 70 (DOS) vs 50 (Amiga) */
 #include "dos_graphics.h"    /* DosGfx_BuildPalette */
+#include "build_info.h"      /* the commit, in the window title */
 
 #include <SDL.h>
 #include <stdio.h>
@@ -35,22 +36,10 @@
 #include "swos_window_icon.h"   /* generated from SWOS.svg by scripts/generate_icons.py */
 #endif
 
-/* Window-title arch suffix so you can tell builds apart at a glance while
- * cross-target testing (e.g. "SWOS (x86 64-bit)" vs "SWOS (x86 32-bit)"). */
-#if   defined(__x86_64__)
-#  define SWOS_ARCH_STR "x86 64-bit"
-#elif defined(__i386__)
-#  define SWOS_ARCH_STR "x86 32-bit"
-#elif defined(__aarch64__)
-#  define SWOS_ARCH_STR "ARM 64-bit"
-#elif defined(__arm__)
-#  define SWOS_ARCH_STR "ARM 32-bit"
-#elif defined(__SIZEOF_POINTER__) && (__SIZEOF_POINTER__ == 8)
-#  define SWOS_ARCH_STR "64-bit"
-#else
-#  define SWOS_ARCH_STR "32-bit"
-#endif
-#define SWOS_WINDOW_TITLE "SWOS (" SWOS_ARCH_STR ")"
+/* The window title names the build and the platform it was built for; both come
+ * from build_info.c, which is the only place either is decided. This file used
+ * to detect the architecture itself for the title -- two detectors that could
+ * drift apart, for one string. */
 
 /* ---- Forward decls from audio_sdl.c / input_sdl.c ----------------- */
 int  AudioSDL_Init(int mono);
@@ -626,8 +615,13 @@ int Platform_Init(const PlatformInitOptions *opts)
 
     /* Open (and, for fullscreen, cover) the requested monitor. CENTERED_DISPLAY
      * places the window on display `screen`; on WASM SDL only has display 0. */
+    /* The build goes in the title bar as well as on the main menu: a windowed
+     * screenshot then carries it even when the shot crops to the game area. */
+    static char s_title[96];
+    snprintf(s_title, sizeof s_title, "OpenSWOS %s (%s)", Build_Id(), Build_Platform());
+
     s_window = SDL_CreateWindow(
-        SWOS_WINDOW_TITLE,
+        s_title,
         SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
         SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
         _screen_width * win_scale, PLATFORM_SCREEN_H * win_scale,

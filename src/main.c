@@ -39,6 +39,7 @@
 #include "replay_test.h"        /* --replay-test: recorded-game regression rig */
 #include "online_menus.h"       /* --menu, --menu-selftest */
 #include "netplay.h"            /* --netplay-selftest */
+#include "build_info.h"         /* --version, and the [build] line in SWOS.log */
 #include "p2p_link.h"           /* --netplay-selftest: the MULTIPLAYER menu's link */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
@@ -199,6 +200,7 @@ static void print_usage(const char *argv0)
         "                            data_json/menus/, docs/MENUS.md section 10).\n"
         "  --menu-selftest           Load and unpack every imported SWOS 2020 menu,\n"
         "                            check it against its JSON, and exit.\n"
+        "  --version                 Print the build (commit and date) and exit.\n"
         "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
         "                            loopback, then a synctest session, then the\n"
         "                            MULTIPLAYER menu's own link. Exits.\n"
@@ -439,6 +441,10 @@ int main(int argc, char **argv)
                 fprintf(stderr, "Invalid --dos-gameplay value '%s' (expected on|off)\n", v);
                 return 1;
             }
+        } else if (strcmp(a, "--version") == 0) {
+            /* So a tester can paste one line instead of describing their download. */
+            printf("%s\n", Build_Version());
+            return 0;
         } else if ((v = match_kv(a, "dos-dir")) != NULL) {
             snprintf(opts.dos_dir, sizeof opts.dos_dir, "%s", v);
         } else if ((v = match_kv(a, "replay-test")) != NULL) {
@@ -637,6 +643,12 @@ int main(int argc, char **argv)
         }
     }
 #endif
+
+    /* First line of SWOS.log: which build wrote it. Deliberately AFTER the
+     * redirect above -- printed any earlier it goes to a terminal the tester
+     * does not have, and the log they actually send us is the thing that has to
+     * answer "which build is this?" on its own. */
+    fprintf(stderr, "[build] %s\n", Build_Version());
 
     /* Load the UI translation table for the selected language
      * (data_json/translations/<lang>.json) now that the CWD is the binary dir
