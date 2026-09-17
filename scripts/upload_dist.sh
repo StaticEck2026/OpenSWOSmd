@@ -8,6 +8,27 @@
 #   scripts/upload_dist.sh --dry-run      # print what would go where, upload nothing
 #   scripts/upload_dist.sh --no-tls       # plain FTP (password in cleartext)
 #
+# KNOWING WHEN IT IS FINISHED, WITHOUT WATCHING IT
+#
+# 112 MB over a home connection takes 20+ minutes, and for minutes at a time a
+# single big file in flight looks exactly like a hang. So the run publishes its
+# own state instead of making you guess from the log:
+#
+#   dist/.upload-status      one line, rewritten atomically:
+#                              running  file=3/10 name=SWOS-full.zip ...
+#                              done     rc=0 ok=10 failed=0 bytes=... elapsed=...
+#                              failed   rc=1 ...
+#   == DONE rc=N ...         the LAST line of the log, on every exit path
+#
+# Both come from the EXIT trap, so a crash, a Ctrl-C or a kill still lands in a
+# terminal state rather than leaving "running" behind for ever. To wait for it
+# from a script, block on the file and stop when it is no longer running:
+#
+#   until grep -qv '^running' dist/.upload-status 2>/dev/null; do sleep 10; done
+#
+# Do NOT poll by sleeping a guessed interval and tailing the log: that is how
+# you end up with a pile of timers firing long after the upload finished.
+#
 # Run it AFTER scripts/build_dist.sh and scripts/build_macos.sh have both
 # finished — it uploads what is in dist/ and never builds anything. It is a
 # separate script rather than a step inside build_dist.sh on purpose: building a
@@ -205,8 +226,72 @@ fi
 # double-quote are escaped because curl unescapes them inside a quoted value.
 # umask first: the file must never exist even briefly as world-readable.
 CFG=""
-cleanup() { [ -n "$CFG" ] && rm -f "$CFG"; }
-trap cleanup EXIT INT TERM
+
+# ---- progress state ---------------------------------------------------------
+# Written atomically (temp + mv) so a reader never catches a half-written line,
+# and finalised from the EXIT trap so EVERY exit path -- success, failure,
+# Ctrl-C, SIGTERM -- ends in a terminal state. A status file that can be left
+# saying "running" after the process is gone is worse than none: it teaches you
+# to distrust it and go back to watching the log.
+STATUS_FILE="${UPLOAD_STATUS_FILE:-dist/.upload-status}"
+# Elapsed time comes from a recorded epoch, never from $SECONDS: SECONDS can be
+# inherited from the environment, which silently shifts its base -- a test run
+# here reported "elapsed=-1". A status file nobody trusts is no better than no
+# status file.
+START_EPOCH="$(date +%s)"
+elapsed() { echo $(( $(date +%s) - START_EPOCH )); }
+STATUS_LIVE=0            # 1 once the upload proper has started
+OK_COUNT=0
+FAIL_COUNT=0
+TOTAL_BYTES=0
+QUEUE_TOTAL=0
+
+status() {
+    [ -n "$STATUS_FILE" ] || return 0
+    mkdir -p "$(dirname "$STATUS_FILE")" 2>/dev/null || return 0
+    printf '%s\n' "$*" > "$STATUS_FILE.tmp" 2>/dev/null &&
+        mv -f "$STATUS_FILE.tmp" "$STATUS_FILE" 2>/dev/null
+    return 0
+}
+
+hms() {
+    local t="${1:-0}"
+    if [ "$t" -ge 60 ]; then printf '%dm%02ds' "$((t / 60))" "$((t % 60))"
+    else printf '%ds' "$t"; fi
+}
+
+# The transfer runs as a background child so `wait` can be INTERRUPTED by a
+# signal. With curl in the foreground bash defers the trap until the child
+# returns, so a killed run would sit at "running" for up to --max-time (30
+# minutes) with the process already gone -- exactly the state this file exists
+# to make impossible. Measured, not assumed.
+CURL_PID=""
+on_signal() {
+    trap - INT TERM
+    [ -n "$CURL_PID" ] && kill -TERM "$CURL_PID" 2>/dev/null
+    echo "" >&2
+    echo "-- interrupted; a part-file is left on the server and the previous file is" >&2
+    echo "   still the one being served." >&2
+    exit 143            # 128 + SIGTERM, so the EXIT trap records a failure
+}
+
+cleanup() {
+    local rc=$?
+    [ -n "$CFG" ] && rm -f "$CFG"
+    if [ "$STATUS_LIVE" = 1 ]; then
+        if [ "$rc" = 0 ]; then
+            status "done rc=0 ok=$OK_COUNT failed=$FAIL_COUNT bytes=$TOTAL_BYTES elapsed=$(elapsed)"
+        else
+            status "failed rc=$rc ok=$OK_COUNT failed=$FAIL_COUNT bytes=$TOTAL_BYTES elapsed=$(elapsed)"
+        fi
+        # The one line a watcher greps for. Last thing printed, always.
+        echo ""
+        echo "== DONE rc=$rc  ($OK_COUNT uploaded, $FAIL_COUNT failed, $(human "$TOTAL_BYTES") in $(hms "$(elapsed)"))"
+    fi
+    return $rc
+}
+trap cleanup EXIT
+trap on_signal INT TERM
 
 if [ "$DRY_RUN" = 0 ]; then
     OLD_UMASK="$(umask)"
@@ -333,16 +418,25 @@ else
 fi
 [ "$DRY_RUN" = 1 ] && echo "-- DRY RUN  : nothing will be transferred"
 
+if [ "$DRY_RUN" = 0 ] && [ "$VERIFY_ONLY" = 0 ]; then
+    # Armed here, not at the first file: everything from this point can fail
+    # (the connect, the credentials, a signal), and every one of those has to
+    # reach the EXIT trap with the status live so it records a terminal state.
+    STATUS_LIVE=1
+    status "running phase=connect commit=$BUILD_COMMIT started=$(date -u +%FT%TZ)"
+fi
 if [ "$DRY_RUN" = 0 ]; then
     echo "-- connecting…"
     preflight || exit 1
     echo "-- connection OK, credentials accepted"
 fi
 
-OK_COUNT=0
-FAIL_COUNT=0
 FAILED=""
-TOTAL_BYTES=0
+QUEUE_TOTAL="$(printf '%s' "$QUEUE" | grep -c . || true)"
+FILE_NO=0
+if [ "$STATUS_LIVE" = 1 ]; then
+    status "running phase=upload file=0/$QUEUE_TOTAL commit=$BUILD_COMMIT elapsed=$(elapsed)"
+fi
 
 while IFS='|' read -r src dir name; do
     [ -n "$src" ] || continue
@@ -357,20 +451,34 @@ while IFS='|' read -r src dir name; do
         continue
     fi
 
+    FILE_NO=$((FILE_NO + 1))
+    FILE_START="$(elapsed)"
+    status "running file=$FILE_NO/$QUEUE_TOTAL name=$name bytes=$BYTES done=$OK_COUNT elapsed=$(elapsed)"
     echo ""
-    echo "-- $name  ($(human "$BYTES"))  ->  $dir/"
+    echo "-- [$FILE_NO/$QUEUE_TOTAL] $name  ($(human "$BYTES"))  ->  $dir/"
 
     # Upload to <name>.part, then rename onto the real name. curl has already
     # CWD'd into the target directory by the time the post-quote commands run,
     # so these are bare basenames, not paths.
-    if curl --config "$CFG" $CURL_OPTS \
+    curl --config "$CFG" $CURL_OPTS \
             -T "$src" "$URL.part" \
             -Q "-RNFR $name.part" \
-            -Q "-RNTO $name"; then
+            -Q "-RNTO $name" &
+    CURL_PID=$!
+    wait "$CURL_PID"
+    RC=$?
+    CURL_PID=""
+    if [ "$RC" = 0 ]; then
         OK_COUNT=$((OK_COUNT + 1))
         TOTAL_BYTES=$((TOTAL_BYTES + BYTES))
+        FILE_SECS=$(( $(elapsed) - FILE_START ))
+        if [ "$FILE_SECS" -gt 0 ]; then
+            echo "   ok  $(hms "$FILE_SECS")  ($(human "$((BYTES / FILE_SECS))")/s)"
+        else
+            echo "   ok  <1s"
+        fi
+        status "running file=$FILE_NO/$QUEUE_TOTAL done=$OK_COUNT bytes=$TOTAL_BYTES elapsed=$(elapsed)"
     else
-        RC=$?
         FAIL_COUNT=$((FAIL_COUNT + 1))
         FAILED="$FAILED  $name (curl exit $RC)"$'\n'
         echo "!! FAILED: $name (curl exit $RC)" >&2

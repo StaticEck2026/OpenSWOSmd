@@ -91,6 +91,37 @@ handles its own `clean` (both makefiles) and the tester flags
 (`SWOS_TEST_NO_INJURIES_CARDS=1`, `SWOS_SAVE_FORMAT_JSON_VERIFY=0`); do not
 hand-roll it. See CLAUDE.md, "Release builds".
 
+### Knowing when a long step is finished
+
+The drop takes 40+ minutes and the publish 20+, and both go quiet for minutes at
+a time — a cross-compile linking, or one 34 MB file in flight. Neither is
+distinguishable from a hang by looking at the log, so both scripts publish their
+own state instead:
+
+| | |
+|---|---|
+| `dist/.build-status` / `dist/.upload-status` | ONE line, rewritten atomically: `running phase=… elapsed=…`, then `done rc=0 …` or `failed rc=N …` |
+| `== DONE rc=N …` | the last line of the log, on every exit path |
+
+Both are written from an EXIT trap, so a crash, a Ctrl-C or a `kill` still lands
+in a terminal state — a status file that can be left saying `running` after the
+process is gone teaches you to distrust it. The upload additionally runs its
+transfer as a background child and `wait`s on it, because bash defers a trap
+until the foreground child returns: with `curl` in front, a killed upload sat at
+`running` for up to `--max-time` (30 minutes) with the process already dead.
+
+To wait for either, block on the state — never on a guessed interval:
+
+```bash
+until grep -qv '^running' dist/.upload-status 2>/dev/null; do sleep 10; done
+```
+
+**Do not arm a timer that sleeps N seconds and then tails the log.** Run the long
+step in the background and let it tell you when it exits, or poll the status
+file. Sleep-and-tail pollers keep firing long after the thing they watched
+finished, and the noise buries the one notification that mattered — which is
+exactly what happened on the first run of this procedure.
+
 ## 6. Publish
 
 ```bash

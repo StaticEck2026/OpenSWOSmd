@@ -104,6 +104,42 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
+# ---- progress state ---------------------------------------------------------
+# Same contract as scripts/upload_dist.sh: one atomically-rewritten line saying
+# what stage this is on, a terminal state on EVERY exit path (including a
+# signal), and a final "== DONE rc=N" line to grep for. A drop takes 40+ minutes
+# and a cross-compile can sit silent for several; without this the only way to
+# tell "still linking" from "died" is to keep tailing the log, which is how you
+# end up with a pile of polling timers firing after the build has finished.
+#
+#   until grep -qv '^running' dist/.build-status 2>/dev/null; do sleep 30; done
+BUILD_STATUS_FILE="${BUILD_STATUS_FILE:-dist/.build-status}"
+BUILD_START_EPOCH="$(date +%s)"
+build_elapsed() { echo $(( $(date +%s) - BUILD_START_EPOCH )); }
+
+build_status() {
+    [ -n "$BUILD_STATUS_FILE" ] || return 0
+    mkdir -p "$(dirname "$BUILD_STATUS_FILE")" 2>/dev/null || return 0
+    printf '%s\n' "$*" > "$BUILD_STATUS_FILE.tmp" 2>/dev/null &&
+        mv -f "$BUILD_STATUS_FILE.tmp" "$BUILD_STATUS_FILE" 2>/dev/null
+    return 0
+}
+
+build_finish() {
+    local rc=$?
+    local secs; secs="$(build_elapsed)"
+    if [ "$rc" = 0 ]; then
+        build_status "done rc=0 elapsed=$secs"
+    else
+        build_status "failed rc=$rc elapsed=$secs"
+    fi
+    echo ""
+    echo "== DONE rc=$rc  (${secs}s)"
+    return $rc
+}
+trap build_finish EXIT
+build_status "running phase=start elapsed=0"
+
 # ---- machine-specific paths (override via the environment) ------------------
 EMSDK_DIR="${EMSDK_DIR:-/mnt/c/Projects/Linux/emsdk}"
 AMIGA_TOOLCHAIN="${AMIGA_TOOLCHAIN:-/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux}"
@@ -280,8 +316,23 @@ while [ $# -gt 0 ]; do
         --full-zip)  FULL_ZIP_PATH="$2"; shift 2 ;;
         --amiga-zip) AMIGA_ZIP_PATH="$2"; shift 2 ;;
         --zip)       ZIP_PATH="$2"; shift 2 ;;
-        -h|--help)   usage; exit 0 ;;
+        -h|--help)   trap - EXIT; usage; exit 0 ;;   # help is not a run: no DONE line
         *) echo "build_dist: unknown option '$1' (try --help)" >&2; exit 2 ;;
+    esac
+done
+
+# A target name that matches nothing is a TYPO, and silently ignoring it is the
+# expensive failure here: `--only windwos` cleans, builds NOTHING, repackages the
+# zips from whatever stale binaries are already in bin/, and exits 0. The publish
+# step then ships those, so a drop goes out claiming a commit it was not built
+# from. Measured, not hypothetical: `--only nosuchtarget` did exactly that in
+# 23 seconds and reported success.
+for want_t in ${ONLY//,/ } ${SKIP//,/ }; do
+    case " $ALL_TARGETS " in
+        *" $want_t "*) ;;
+        *) echo "build_dist: no such target '$want_t'" >&2
+           echo "            targets: $ALL_TARGETS" >&2
+           exit 2 ;;
     esac
 done
 
@@ -310,6 +361,7 @@ ORDER=""
 record() { STATUS["$1"]="$2"; ORDER="$ORDER $1"; }
 
 banner() {
+    build_status "running phase=$* elapsed=$(build_elapsed)"
     echo ""
     echo "======================================================================"
     echo "== $*"
