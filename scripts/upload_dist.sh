@@ -101,6 +101,11 @@ cd "$ROOT" || exit 1
 FTP_HOST="${FTP_HOST:-baker76.com}"
 WEB_DIR="${FTP_WEB_DIR:-/public_html/apps/swos}"
 BIN_DIR="${FTP_BIN_DIR:-/public_html/download/swos}"
+# The downloads page players are pointed at: baker76.com/swos.html. Generated
+# from packaging/web/swos.html just before the upload (below), so its build,
+# date and sizes are the ones actually going out.
+PAGE_DIR="${FTP_PAGE_DIR:-/public_html}"
+PAGE_FILE="swos.html"
 
 # The WASM bundle. Built by `make WASM=1` into dist/web and deliberately kept
 # out of every zip (the .data preload alone is ~21 MB) — the web build IS this
@@ -209,6 +214,14 @@ if [ "$DO_WEB" = 1 ]; then
 fi
 if [ "$DO_BIN" = 1 ]; then
     for f in $BIN_FILES; do queue_add "$BIN_SRC" "$BIN_DIR" "$f"; done
+    # Regenerate the page HERE: every archive is present and about to go out, so
+    # the sizes and the build on it are this drop's. (build_dist.sh also writes
+    # one, but the macOS archives arrive after it.)
+    if ! scripts/gen_downloads_page.sh; then
+        echo "upload_dist: the downloads page could not be generated — not uploading" >&2
+        exit 1
+    fi
+    queue_add "dist" "$PAGE_DIR" "$PAGE_FILE"
 fi
 
 if [ -n "$MISSING" ]; then

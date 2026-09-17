@@ -693,6 +693,14 @@ if [ "$DO_INSTALLER" = 1 ] && wanted installer; then
     fi
 fi
 
+# ---- the downloads page -----------------------------------------------------
+# baker76.com/swos.html, stamped with this build. Written here so a drop can be
+# looked at locally; scripts/upload_dist.sh regenerates it at publish time, when
+# the macOS archives (scripts/build_macos.sh, which runs after this) are in too.
+if [ "$DO_ZIP" = 1 ]; then
+    scripts/gen_downloads_page.sh || echo "-- WARN: downloads page not generated"
+fi
+
 # ---- summary ----------------------------------------------------------------
 banner "SUMMARY"
 printf '  save-format verify : %s\n' \

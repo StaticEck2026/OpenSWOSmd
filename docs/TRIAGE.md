@@ -212,9 +212,14 @@ not go stale when the set changes. Do NOT link
 `https://baker76.com/download/swos/` instead: directory listing is off on the
 server, so the bare folder shows a player nothing.
 
-That page lives on the server, not in this repo, and `upload_dist.sh` does not
-touch it — it only replaces the files the page points at. Adding or renaming an
-archive means editing the page by hand.
+That page is **in this repo** — `packaging/web/swos.html`, a template whose
+`@BUILD@`, `@DATE@` and per-archive `@SIZE_*@` placeholders
+`scripts/gen_downloads_page.sh` fills from the drop in `dist/`.
+`upload_dist.sh` regenerates it and publishes it to the site root with
+everything else, so the page's build and sizes are always the ones going out.
+Edit the template, never the copy on the server: the next drop overwrites it.
+Adding or renaming an archive means editing both the template and the file lists
+in the two scripts.
 
 Write it for a player, not for us: what changed and what they will see. The
 offsets, the register names and the asm citation belong in the commit message —

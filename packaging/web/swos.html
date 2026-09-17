@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<!--
+  The downloads page for baker76.com/swos.html.
+
+  TEMPLATE: scripts/build_dist.sh fills the @...@ placeholders (build, date and
+  each archive's size) and writes the result to dist/swos.html;
+  scripts/upload_dist.sh publishes that to the site root. Edit THIS file, never
+  the copy on the server — the next drop overwrites it.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenSWOS</title>
+<style>
+  :root {
+    --bg: #12160f;
+    --panel: #1b2117;
+    --line: #2f3a27;
+    --text: #e8ece3;
+    --muted: #9aa78e;
+    --accent: #7fd34e;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f6f1;
+      --panel: #ffffff;
+      --line: #d8ded0;
+      --text: #1a1f16;
+      --muted: #5d6a52;
+      --accent: #3d7a1c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 56rem; margin: 0 auto; }
+  h1 { font-size: 2rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
+  h2 {
+    font-size: 1.15rem; margin: 2.5rem 0 .75rem;
+    padding-bottom: .35rem; border-bottom: 1px solid var(--line);
+  }
+  .build { color: var(--muted); font-size: .9rem; margin: 0 0 1.5rem; }
+  .build code { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 0; }
+  th, td {
+    text-align: left; padding: .6rem .7rem;
+    border-bottom: 1px solid var(--line); vertical-align: top;
+  }
+  th { color: var(--muted); font-weight: 600; font-size: .8rem;
+       text-transform: uppercase; letter-spacing: .04em; }
+  tbody tr:hover { background: var(--panel); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .file { font-weight: 600; white-space: nowrap; }
+  .size { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plat { white-space: nowrap; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .9em; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 4px; padding: .05rem .3rem;
+  }
+  p.note { color: var(--muted); font-size: .9rem; }
+  @media (max-width: 34rem) {
+    th:nth-child(2), td:nth-child(2) { display: none; }
+    body { padding-top: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>OpenSWOS</h1>
+<p class="build">Build <code>@BUILD@</code> &middot; @DATE@</p>
+
+<h2>Downloads</h2>
+<table>
+  <thead>
+    <tr><th>File</th><th>Platform</th><th>What it is</th><th>Size</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="file"><a href="/download/swos/SWOS-Setup.exe">SWOS-Setup.exe</a></td>
+      <td class="plat">Windows</td>
+      <td>Installer, everything included &mdash; recommended</td>
+      <td class="size">@SIZE_SETUP@</td>
+    </tr>
+    <tr>
+      <td class="file"><a href="/download/swos/SWOS-full.zip">SWOS-full.zip</a></td>
+      <td class="plat">Windows / Linux</td>
+      <td>Unzip and play</td>
+      <td class="size">@SIZE_FULL@</td>
+    </tr>
+    <tr>
+      <td class="file"><a href="/download/swos/SWOS-macOS-app.zip">SWOS-macOS-app.zip</a></td>
+      <td class="plat">macOS</td>
+      <td>Drag SWOS.app to Applications</td>
+      <td class="size">@SIZE_MACAPP@</td>
+    </tr>
+    <tr>
+      <td class="file"><a href="/download/swos/SWOS-Amiga.zip">SWOS-Amiga.zip</a></td>
+      <td class="plat">Amiga</td>
+      <td>Real hardware, or FS-UAE / WinUAE</td>
+      <td class="size">@SIZE_AMIGA@</td>
+    </tr>
+    <tr>
+      <td class="file"><a href="/download/swos/SWOS.zip">SWOS.zip</a></td>
+      <td class="plat">All</td>
+      <td>Binaries only &mdash; if you already have the game data</td>
+      <td class="size">@SIZE_BIN@</td>
+    </tr>
+    <tr>
+      <td class="file"><a href="/download/swos/SWOS-macOS.zip">SWOS-macOS.zip</a></td>
+      <td class="plat">macOS</td>
+      <td>Binary only &mdash; needs SDL2 installed</td>
+      <td class="size">@SIZE_MACBIN@</td>
+    </tr>
+    <tr>
+      <td class="file"><a href="/apps/swos/SWOS.html">Play in a browser</a></td>
+      <td class="plat">Web</td>
+      <td>Nothing to download</td>
+      <td class="size">&mdash;</td>
+    </tr>
+  </tbody>
+</table>
+<p class="note">The Linux binaries in <code>SWOS-full.zip</code> carry their own
+SDL2; <code>SWOS.zip</code> and <code>SWOS-macOS.zip</code> do not.</p>
+
+<h2>Where your files are</h2>
+<p class="note"><code>SWOS.ini</code> (settings) and <code>SWOS.log</code> sit in
+the folder below. Your saved games are in <code>save</code> inside it, and are
+left alone when you reinstall.</p>
+<table>
+  <thead>
+    <tr><th>Platform</th><th>Folder</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="plat">Windows</td><td><code>%USERPROFILE%\Documents\SWOS</code></td></tr>
+    <tr><td class="plat">macOS</td><td><code>~/Library/Application Support/SWOS</code></td></tr>
+    <tr><td class="plat">Linux</td><td><code>~/.swos</code></td></tr>
+    <tr><td class="plat">Amiga</td><td><code>save/</code> beside the game</td></tr>
+    <tr><td class="plat">Switch</td><td><code>save:/</code></td></tr>
+    <tr><td class="plat">Web</td><td><code>/save</code> (in the browser's storage)</td></tr>
+  </tbody>
+</table>
+
+<h2>Reporting a bug</h2>
+<p class="note">Say which build you are on &mdash; it is on the bottom line of
+the main menu and in the window title, and it is the first line of
+<code>SWOS.log</code>. Attach that log if the game crashed.</p>
+
+</main>
+</body>
+</html>
