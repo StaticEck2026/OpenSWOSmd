@@ -4644,8 +4644,16 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
 
     uint16_t posIdx = ((uint16_t)pf->positionAndFace & PF_POSITION_MASK) >> 5;
     uint16_t posOff = posIdx << 2;
-    uint32_t skills = *(uint32_t *)(tmpl + posOff);
-    uint32_t masks = *(uint32_t *)(_trialistSkillBitMasks + posOff);
+    /* Both tables are Amiga byte tables read as ONE longword (`move.l (a0,d1.w),d0`,
+     * SWOS2.s:97573), so the four bytes {passing, velocityHeading, tacklingControl,
+     * speedFinishing} land BIG-ENDIAN in the register. A native `*(uint32_t *)` read put
+     * them in the opposite order on x86, which is why a generated goalkeeper was worth
+     * 25K: every GK template entry is {0,0,0,price}, the price is the LOW byte of the
+     * big-endian long, and `skills & 0xFF` was picking up the leading zero instead
+     * (price 0 -> _avgTeamValues[0] = 5 -> _avgTeamValueBases[5] = 25K). Outfielders lost
+     * their speed nibble from the price sum below for the same reason. */
+    uint32_t skills = BE_READ_U32(tmpl + posOff);
+    uint32_t masks = BE_READ_U32(_trialistSkillBitMasks + posOff);
 
     /* Restore saved player data from tempTeamBuffer */
     src = _tempTeamBuffer;
@@ -4654,16 +4662,22 @@ static void careerInitTrialistAttributes(PlayerFile *pf, uint16_t sourceTeam)
         *dst++ = *src++;
 
     if (posIdx == 0) {
-        /* Goalkeeper: just set price, clear skills */
+        /* Goalkeeper: just set price, clear skills (asm: `move.b d0,$6C(a3) / clr.l
+         * $68(a3)`, SWOS2.s:97584) — the price is the last byte of the template entry. */
         pf->price = (int8_t)(skills & 0xFF);
-        *(uint32_t *)&pf->passing = 0;
+        BE_WRITE_U32(&pf->passing, 0);
         return;
     }
 
-    /* Set skills with bit masks */
-    *(uint32_t *)&pf->passing = skills | masks;
+    /* Set skills with bit masks. Written back big-endian, so each template byte lands in
+     * the field it was authored for (passing, velocityHeading, tacklingControl,
+     * speedFinishing) on either target. */
+    BE_WRITE_U32(&pf->passing, skills | masks);
 
-    /* Calculate total skill (sum of all nibbles) for price */
+    /* Calculate total skill (sum of all nibbles) for price. Seven nibbles, not eight:
+     * the one dropped is the high nibble of `passing`, which is always 0 (asm loops
+     * `dbf` from 6, SWOS2.s:97590). Reading the long natively dropped the high nibble of
+     * `speedFinishing` instead — the player's SPEED — and under-priced every outfielder. */
     uint8_t totalSkill = 0;
     for (int16_t i = 6; i >= 0; i--) {
         totalSkill += (uint8_t)(skills & 0xF);
