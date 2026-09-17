@@ -107,23 +107,34 @@ int32_t        P2PLink_AgreedDelay(void);
 int32_t        P2PLink_ProposedDelay(void);
 int32_t        P2PLink_PeerProposedDelay(void);
 
-/* ---- the match setup ------------------------------------------------------
- * The host's kick-off state, so both peers start the match from the same place.
- * The payload is a state_wire packet (include/state_wire.h), which already
- * encodes portably, so a 32-bit peer and a 64-bit one read the same bytes; all
- * the link adds is getting ~35 KB across UDP intact, as numbered chunks the
- * receiver acks by bitmap.
+/* ---- messages --------------------------------------------------------------
+ * Delivered, whole, and replaceable: what the lobby exchanges before a match
+ * (src/netplay_lobby.c) -- each player's selection, the match setup, the answer
+ * to it. Up to 128 KB each, sent as numbered chunks the receiver acks by bitmap.
  *
- * Host:    P2PLink_SendSetup(), then poll until P2PLink_SetupSent().
- * Joiner:  poll until P2PLink_ReceivedSetup() is non-NULL, then decode it.
- * Either:  P2PLink_SetupProgress() is 0..100 for a progress line, -1 if idle.
+ * Each kind of message has a CHANNEL, 0..P2P_NUM_CHANNELS-1, in each direction.
+ * Sending on a channel again REPLACES the message there: it gets the next
+ * generation, and the receiver keeps only the newest complete one, so a player
+ * who changes their mind twice is never seen with the first choice after the
+ * second. Generations start at 1 with each connection.
  *
- * The buffer stays valid until the link closes. Both are dropped on close, so a
- * half-sent setup never outlives its link. */
-int32_t        P2PLink_SendSetup(const uint8_t *data, uint32_t len);
-int32_t        P2PLink_SetupSent(void);
-const uint8_t *P2PLink_ReceivedSetup(uint32_t *len);
-int32_t        P2PLink_SetupProgress(void);
+ * The payload is the caller's; encode it portably (endian_helpers.h).
+ *
+ * Buffers stay valid until the next poll that completes a newer message on the
+ * same channel, or until the link closes -- copy out what you keep. */
+#define P2P_NUM_CHANNELS 4
+
+/* Queue a message, replacing the channel's last. 0 on success (connected only). */
+int32_t        P2PLink_Send(int32_t channel, const uint8_t *data, uint32_t len);
+/* The generation the last Send on `channel` got, 0 if none. */
+uint16_t       P2PLink_SentGeneration(int32_t channel);
+/* The last Send on `channel` has arrived whole at the other end. */
+int32_t        P2PLink_Delivered(int32_t channel);
+/* The newest complete message on `channel` from the other end, with its
+ * generation, or NULL. */
+const uint8_t *P2PLink_Received(int32_t channel, uint32_t *len, uint16_t *generation);
+/* 0..100 over every message still crossing, either way; -1 when none is. */
+int32_t        P2PLink_TransferProgress(void);
 
 /* Whether `text` is a dotted IPv4 address -- what P2PLink_Join takes. */
 int32_t        P2PLink_IsAddress(const char *text);

@@ -1,0 +1,107 @@
+/*
+ * netplay_lobby.h -- where two connected players set their match up (SDL builds).
+ * docs/NETPLAY.md, "The lobby".
+ *
+ * SWOS 2020's model: EACH PLAYER PUBLISHES THEIR OWN SIDE -- a team, a tactic, and
+ * whether they are ready -- and THE HOST OWNS THE MATCH RULES (length, pitch,
+ * substitutes). Either may change their mind as often as they like; every change is
+ * re-sent over p2p_link, which keeps only the newest. When both are ready the host
+ * starts, the joiner confirms, and both kick off from the same setup.
+ *
+ * No UI: the SWOS 2020 lobby menu (src/online_menus.c) and the two-process live
+ * test (src/netplay_live_test.c) drive the same state through this API, so the
+ * test exercises exactly what a player does.
+ *
+ * Begin once the link is CONNECTED and the input delay agreed, then Poll every
+ * frame. Player 1 is the host (top team), player 2 the joiner (bottom team).
+ */
+#ifndef NETPLAY_LOBBY_H
+#define NETPLAY_LOBBY_H
+
+#ifdef SWOS_SDL_BUILD
+
+#include "swos_types.h"
+#include "game_types.h"
+
+#define LOBBY_NAME_MAX   16
+#define LOBBY_TACTIC_MAX 17         /* TACTIC_USER_F: the built-in 12, then USER A-F */
+
+typedef enum {
+    LOBBY_ACTIVITY_NONE,
+    LOBBY_ACTIVITY_CHOOSING_TEAM,   /* the other player sees "CHOOSING A TEAM" */
+} LobbyActivity;
+
+typedef struct {
+    int32_t    known;               /* heard from (always true for ourselves) */
+    int32_t    ready;
+    int32_t    activity;            /* LobbyActivity */
+    int32_t    hasTeam;
+    int32_t    tactic;              /* TACTIC_*: 0..LOBBY_TACTIC_MAX */
+    TeamFileEx team;
+    TeamTactics userTactic;         /* the tactic itself when it is a USER one */
+    char       name[LOBBY_NAME_MAX + 1];
+} LobbyPlayer;
+
+typedef struct {
+    uint16_t gameLength;            /* _gameLength: 0..3 = 3, 5, 7, 10 minutes */
+    uint16_t pitchType;             /* _friendlyPitchType: 0..6, or 0xFFFF for random */
+    uint16_t minSubs, maxSubs;      /* 0..5, min <= max, min >= 1 when max > 0 */
+} LobbyRules;
+
+typedef enum {
+    LOBBY_CLOSED,                   /* not begun */
+    LOBBY_OPEN,                     /* choosing */
+    LOBBY_STARTING,                 /* the start is being agreed */
+    LOBBY_KICKOFF,                  /* agreed: close the link and play (NetplayLobby_Peer) */
+    LOBBY_FAILED,                   /* the link went; NetplayLobby_Notice says why */
+} LobbyState;
+
+void               NetplayLobby_Begin(int32_t localPlayer, const char *localName);
+void               NetplayLobby_Poll(void);
+void               NetplayLobby_End(void);
+
+LobbyState         NetplayLobby_State(void);
+int32_t            NetplayLobby_LocalPlayer(void);
+const LobbyPlayer *NetplayLobby_Player(int32_t player);     /* 1 or 2 */
+const LobbyRules  *NetplayLobby_Rules(void);
+/* "" or one line for the player: why a start did not happen, why the lobby failed. */
+const char        *NetplayLobby_Notice(void);
+
+/* This machine's side. Each is sent to the other player; changing the team or the
+ * tactic takes the ready flag down, so nobody starts a match against a team they
+ * have not seen. Ignored unless the lobby is OPEN. */
+void               NetplayLobby_SetTeam(const TeamFileEx *team);
+void               NetplayLobby_SetTactic(int32_t tactic);
+void               NetplayLobby_SetReady(int32_t ready);
+void               NetplayLobby_SetActivity(int32_t activity);
+
+/* The host's. A change takes the joiner's ready flag down on the joiner's side, so
+ * the joiner agrees to the rules they will play. */
+void               NetplayLobby_SetRules(const LobbyRules *rules);
+int32_t            NetplayLobby_IsHost(void);
+/* Both sides ready, on the same rules, and the host has seen the joiner's latest. */
+int32_t            NetplayLobby_CanStart(void);
+/* Host: build the match and offer it. 0 if offered. */
+int32_t            NetplayLobby_Start(void);
+
+/* Where the match is played, captured at Begin while the link is certainly up. */
+void               NetplayLobby_Peer(char *ip, uint32_t ipCap, uint16_t *peerPort,
+                                     uint16_t *localPort, int32_t *delay);
+
+/* Kick-off: put the agreed setup -- teams, tactics, rules, random seeds -- back in
+ * place on this machine, and initialise the teams as the friendly menu does. Call it
+ * immediately before InitAndPlayGame, after the lobby has closed.
+ *
+ * Why again, when START already applied it: between START and kick-off each machine
+ * keeps drawing the lobby for however many frames its half of the handshake takes,
+ * and a different number of menu frames is a different number of random draws. The
+ * kick-off state has to be the agreed one, not the agreed one plus local history.
+ * 0 on success. */
+int32_t            NetplayLobby_ApplyMatch(void);
+
+/* After the match (or a refused start): put back the six USER tactics the match
+ * setup overwrote, so a player's own library is never changed by playing online. */
+void               NetplayLobby_RestoreTactics(void);
+
+#endif /* SWOS_SDL_BUILD */
+#endif /* NETPLAY_LOBBY_H */

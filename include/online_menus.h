@@ -27,6 +27,16 @@ int32_t OnlineMenus_SelfTest(void);
  * matchmaking menu's draw when MmClient_StartInfo() turns up. */
 void        OnlineMenus_StartMatchFromMatchmaking(void);
 
+/* The link is connected and the input delay agreed: open the lobby as `player` (1 the
+ * host, 2 the joiner) and play the match set up there. Returns when it has been
+ * played or someone left, with the link closed. Both ways in use it -- matchmaking
+ * and the direct-IP menu. */
+void        OnlineMenus_EnterLobby(int32_t player, const char *name);
+
+/* --netplay-lobby=host|join: meet another instance on this machine and open the lobby
+ * as the front end starts. Non-zero for an unknown role. */
+int32_t     OnlineMenus_SetLoopbackLobby(const char *role);
+
 /* --matchmaker-menu[=name]: log in to the matchmaking server as `name` and open
  * the matchmaking menu at startup, so the live lobby can be looked at without
  * navigating to it (and without gdb, which cannot hold the connection). */

@@ -71,14 +71,28 @@ extern uint16_t _team1SelectedPlayerIndex, _team2SelectedPlayerIndex;
 extern uint8_t _seed, _randXorIndex, _randXorKey;
 extern uint8_t _seed2, _randXorIndex2, _randXorKey2;
 
+/* What the generators are RE-seeded from during match init, and it is not a
+ * generator's state, so the registry does not carry it either. Randomize2 XORs its
+ * argument with _randomSeed, and ApplyTeamTactics reseeds per player from
+ * GetPlayerRandomNum, which mixes in _newRandomSeedCopy and _currentSeasonShowing --
+ * so every player's skill roll depends on them. All three are taken from the tick
+ * counter when the front end starts (InitCareerVariables), i.e. a different number on
+ * every machine. Two peers that came through the menus kicked off with different
+ * skills and desynced on frame 1; the live test, which skips the front end, never
+ * saw it because both of its processes still had the defaults. _viewRandomPhase feeds
+ * CalcTeamViewOffset the same way. ApplyTeamTactics also runs mid-match, on a
+ * substitution, so these must match for the whole match, not just at kick-off. */
+extern uint16_t _randomSeed, _currentSeasonShowing;
+extern uint8_t  _newRandomSeedCopy, _viewRandomPhase;
+
 #define TACTIC_BYTES  370
 #define NUM_TACTICS   6
 
 #define SETUP_MAGIC   0x53555020u    /* "SUP " */
-#define SETUP_VERSION 1
+#define SETUP_VERSION 2     /* 2: the match-init seeds (_randomSeed and friends) */
 
 /* magic, version, then the scalars, then the teams, then the tactics. */
-#define SCALAR_COUNT  24
+#define SCALAR_COUNT  27
 #define HEADER_BYTES  (4 + 2 + 2)
 #define SCALAR_BYTES  (SCALAR_COUNT * 2)
 #define TEAM_BYTES    ((uint32_t)sizeof(TeamFileEx) * 2)
@@ -87,6 +101,25 @@ extern uint8_t _seed2, _randXorIndex2, _randXorKey2;
 uint32_t NetplaySetup_MaxBytes(void)
 {
     return HEADER_BYTES + SCALAR_BYTES + TEAM_BYTES + TACTIC_TOTAL + 8;
+}
+
+/* TeamFileEx is packed and size-asserted at 684 bytes with no pointer fields, so a
+ * 32-bit peer and a 64-bit one lay it out identically and it can go across as bytes.
+ *
+ * ENDIANNESS: PlayerFile (608 of the 684) is entirely single bytes, and so is the
+ * rest of TeamFile -- except ONE field. `int16_t globalTeamNumber` at offset 2 is
+ * the only multi-byte value in the whole record, so it is the only thing that needs
+ * putting in wire order. */
+void NetplaySetup_WriteTeam(uint8_t *out, const TeamFileEx *team)
+{
+    memcpy(out, team, sizeof(TeamFileEx));
+    BE_WRITE_U16(out + 2, (uint16_t)team->team.globalTeamNumber);
+}
+
+void NetplaySetup_ReadTeam(TeamFileEx *team, const uint8_t *in)
+{
+    memcpy(team, in, sizeof(TeamFileEx));
+    team->team.globalTeamNumber = (int16_t)BE_READ_U16(in + 2);
 }
 
 static uint8_t *tactic_slot(int32_t i)
@@ -146,20 +179,14 @@ int32_t NetplaySetup_Encode(uint8_t *out, uint32_t cap)
     /* The last two generator bytes ride in a word of their own so SCALAR_COUNT
      * stays the count of words above. */
     BE_WRITE_U16(p, ((uint16_t)_randXorIndex2 << 8) | _randXorKey2); p += 2;
+    BE_WRITE_U16(p, _randomSeed);                                      p += 2;
+    BE_WRITE_U16(p, _currentSeasonShowing);                            p += 2;
+    BE_WRITE_U16(p, ((uint16_t)_newRandomSeedCopy << 8) | _viewRandomPhase); p += 2;
 
-    /* The two teams. TeamFileEx is packed and size-asserted at 684 bytes with
-     * no pointer fields, so a 32-bit peer and a 64-bit one lay it out
-     * identically and it can go across as bytes.
-     *
-     * ENDIANNESS: PlayerFile (608 of the 684) is entirely single bytes, and so
-     * is the rest of TeamFile -- except ONE field. `int16_t globalTeamNumber`
-     * at offset 2 is the only multi-byte value in the whole record, so it is
-     * the only thing that needs putting in wire order. */
-    memcpy(p, &_selectedTeams[0], sizeof(TeamFileEx));
-    BE_WRITE_U16(p + 2, (uint16_t)_selectedTeams[0].team.globalTeamNumber);
+    /* The two teams (NetplaySetup_WriteTeam says why bytes are right here). */
+    NetplaySetup_WriteTeam(p, &_selectedTeams[0]);
     p += sizeof(TeamFileEx);
-    memcpy(p, &_selectedTeams[1], sizeof(TeamFileEx));
-    BE_WRITE_U16(p + 2, (uint16_t)_selectedTeams[1].team.globalTeamNumber);
+    NetplaySetup_WriteTeam(p, &_selectedTeams[1]);
     p += sizeof(TeamFileEx);
 
     for (i = 0; i < NUM_TACTICS; i++) {
@@ -221,13 +248,15 @@ int32_t NetplaySetup_Apply(const uint8_t *in, uint32_t len)
         _randXorIndex2 = (uint8_t)(w2 >> 8);
         _randXorKey2   = (uint8_t)(w2 & 0xFF);
     }
+    _randomSeed           = BE_READ_U16(p); p += 2;
+    _currentSeasonShowing = BE_READ_U16(p); p += 2;
+    _newRandomSeedCopy    = p[0];
+    _viewRandomPhase      = p[1];           p += 2;
 #undef GET
 
-    memcpy(&_selectedTeams[0], p, sizeof(TeamFileEx));
-    _selectedTeams[0].team.globalTeamNumber = (int16_t)BE_READ_U16(p + 2);
+    NetplaySetup_ReadTeam(&_selectedTeams[0], p);
     p += sizeof(TeamFileEx);
-    memcpy(&_selectedTeams[1], p, sizeof(TeamFileEx));
-    _selectedTeams[1].team.globalTeamNumber = (int16_t)BE_READ_U16(p + 2);
+    NetplaySetup_ReadTeam(&_selectedTeams[1], p);
     p += sizeof(TeamFileEx);
     if (_numSelectedTeams < 2)
         _numSelectedTeams = 2;
@@ -255,7 +284,8 @@ int32_t NetplaySetup_SelfTest(void)
     int32_t n, failed = 0;
     uint16_t savedLen, savedPitch, savedSubs;
     int16_t savedTactics;
-    uint8_t savedSeed, savedKey2;
+    uint8_t savedSeed, savedKey2, savedSeedCopy;
+    uint16_t savedRandomSeed;
     TeamFileEx savedTeam0;
     uint8_t savedTacticA[TACTIC_BYTES];
 
@@ -269,12 +299,13 @@ int32_t NetplaySetup_SelfTest(void)
 
     /* Something recognisable to send. */
     _gameLength = 2; _pitchType = 3; _maxSubstitutes = 5; _pl1Tactics = 4;
-    _seed = 0xA5; _randXorKey2 = 0x3C;
+    _seed = 0xA5; _randXorKey2 = 0x3C; _randomSeed = 0xBEEF; _newRandomSeedCopy = 0x5D;
     memset(&_selectedTeams[0].team.teamName, 'Q', 4);
     memset(_teamTacticsUSERA, 0x5A, 16);
 
     savedLen = _gameLength; savedPitch = _pitchType; savedSubs = _maxSubstitutes;
     savedTactics = _pl1Tactics; savedSeed = _seed; savedKey2 = _randXorKey2;
+    savedRandomSeed = _randomSeed; savedSeedCopy = _newRandomSeedCopy;
     savedTeam0 = _selectedTeams[0];
     memcpy(savedTacticA, _teamTacticsUSERA, TACTIC_BYTES);
 
@@ -288,7 +319,7 @@ int32_t NetplaySetup_SelfTest(void)
 
     /* Now make every one of them wrong. */
     _gameLength = 0; _pitchType = 0; _maxSubstitutes = 0; _pl1Tactics = 0;
-    _seed = 0; _randXorKey2 = 0;
+    _seed = 0; _randXorKey2 = 0; _randomSeed = 0; _newRandomSeedCopy = 0;
     memset(&_selectedTeams[0], 0, sizeof _selectedTeams[0]);
     memset(_teamTacticsUSERA, 0, TACTIC_BYTES);
 
@@ -308,6 +339,8 @@ int32_t NetplaySetup_SelfTest(void)
     CHECK(_pl1Tactics == savedTactics,        "player 1 tactics");
     CHECK(_seed == savedSeed,                 "primary random seed");
     CHECK(_randXorKey2 == savedKey2,          "secondary random key");
+    CHECK(_randomSeed == savedRandomSeed,     "the seed match init reseeds from");
+    CHECK(_newRandomSeedCopy == savedSeedCopy, "the seed player skill rolls mix in");
     CHECK(memcmp(&_selectedTeams[0], &savedTeam0, sizeof savedTeam0) == 0, "team 1, every byte");
     CHECK(memcmp(_teamTacticsUSERA, savedTacticA, TACTIC_BYTES) == 0,      "user tactics A");
 #undef CHECK
@@ -327,6 +360,8 @@ int32_t NetplaySetup_SelfTest(void)
 #else  /* !SWOS_NETPLAY */
 
 uint32_t NetplaySetup_MaxBytes(void) { return 0; }
+void     NetplaySetup_WriteTeam(uint8_t *out, const TeamFileEx *team) { (void)out; (void)team; }
+void     NetplaySetup_ReadTeam(TeamFileEx *team, const uint8_t *in) { (void)team; (void)in; }
 int32_t  NetplaySetup_Encode(uint8_t *out, uint32_t cap) { (void)out; (void)cap; return -1; }
 int32_t  NetplaySetup_Apply(const uint8_t *in, uint32_t len) { (void)in; (void)len; return 1; }
 int32_t  NetplaySetup_SelfTest(void) { return 0; }

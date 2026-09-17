@@ -3,8 +3,13 @@
  *
  * The end-to-end check for the chain the menus drive:
  *
- *      p2p_link connects  ->  the delay is agreed  ->  the host sends the match
- *      setup  ->  the joiner adopts it  ->  both open a GGPO session and play
+ *      p2p_link connects  ->  the delay is agreed  ->  the lobby: each player picks
+ *      a team and a tactic, the host sets the rules, both are ready, the host starts
+ *      and the joiner confirms  ->  both open a GGPO session and play
+ *
+ * The lobby is driven through the same API the lobby menu uses
+ * (include/netplay_lobby.h), so what is tested here is what a player does -- minus
+ * the menu that turns key presses into those calls.
  *
  * It goes straight to p2p_link rather than through the matchmaking server,
  * because matchmaking -> START -> the peer's address is already covered by
@@ -39,15 +44,19 @@
 #ifdef SWOS_NETPLAY
 
 #include "p2p_link.h"
-#include "netplay_setup.h"
+#include "netplay_lobby.h"
 #include "netplay_match.h"
 #include "sim_state.h"
 #include "game_types.h"
 #include "image_cmd.h"      /* ProcessImageCommandStream */
 #include "match_sim.h"      /* InitTeams */
+#include "teams.h"          /* LoadTeamFile */
 
 extern uint16_t   _gFrameStepInput;
 extern TeamFileEx _selectedTeams[100];
+extern uint8_t    _teamFileBuffer[];
+extern uint8_t    _teamTacticsUSERB[], _teamTacticsUSERC[];
+extern uint16_t   _gameLength, _friendlyPitchType, _minSubstitutes, _maxSubstitutes;
 extern uint16_t   _numSelectedTeams;
 extern void       InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
 extern uint16_t   _menuBGImageCmdStream[];
@@ -150,8 +159,96 @@ static int32_t wait_for(int32_t (*done)(void), uint32_t ms, const char *what)
 
 static int32_t link_up(void)     { return P2PLink_State() == P2P_CONNECTED; }
 static int32_t delay_agreed(void){ return P2PLink_AgreedDelay() >= 0; }
-static int32_t setup_sent(void)  { return P2PLink_SetupSent(); }
-static int32_t setup_here(void)  { return P2PLink_ReceivedSetup(NULL) != NULL; }
+
+/* The joiner's first START gets caught in a change of mind: the joiner touches its own
+ * side the moment the START has arrived, before the lobby has read it -- exactly the
+ * race of a player changing something while the host presses START -- so the lobby
+ * has to refuse it and the host has to go back and try again. Reaching into the
+ * link's channel 1 (the lobby's START) is test knowledge of netplay_lobby.c. */
+static int32_t s_refusedOnce;
+static int32_t s_readyDrops;        /* joiner: times the lobby took its ready flag down before START */
+
+static void change_of_mind(void)
+{
+    uint32_t len = 0;
+    uint16_t gen = 0;
+    if (s_isHost || s_refusedOnce)
+        return;
+    P2PLink_Poll();
+    if (P2PLink_Received(1, &len, &gen)) {
+        NetplayLobby_SetTactic(TACTIC_USER_C);  /* the same tactic, re-chosen: ready drops */
+        s_refusedOnce = 1;
+        SAY("  ok   the joiner changes its mind as the start arrives\n");
+    }
+}
+
+/* The lobby's own wait: NetplayLobby_Poll pumps the link, and a failed lobby ends it. */
+static int32_t lobby_wait(int32_t (*done)(void), uint32_t ms, const char *what)
+{
+    uint32_t start = SDL_GetTicks();
+    while (SDL_GetTicks() - start < ms) {
+        change_of_mind();
+        NetplayLobby_Poll();
+        if (done())
+            return 1;
+        if (NetplayLobby_State() == LOBBY_FAILED) {
+            SAY("  FAIL the lobby failed while waiting for %s: %s\n", what, NetplayLobby_Notice());
+            return 0;
+        }
+        /* The joiner stands in for a player who confirms again whenever their ready
+         * flag is taken down -- which is what the host's rule change below does.
+         *
+         * It is the JOINER that checks the flag went down, not the host: the joiner
+         * says ready again at once, and when both of its STATE messages reach the host
+         * in one poll the link rightly keeps only the newer, so the host may never see
+         * the drop (Windows, measured). What protects the match is that a start needs
+         * the joiner to have echoed the new rules generation (NetplayLobby_CanStart). */
+        if (!s_isHost && NetplayLobby_State() == LOBBY_OPEN) {
+            const LobbyPlayer *me = NetplayLobby_Player(2);
+            if (me && me->hasTeam && !me->ready) {
+                if (!s_refusedOnce && s_readyDrops++ == 0)  /* before the START: the rules */
+                    SAY("  ok   the host's rule change took my ready down; ready again\n");
+                NetplayLobby_SetReady(1);
+            }
+        }
+        SDL_Delay(2);
+    }
+    SAY("  FAIL timed out waiting for %s\n", what);
+    return 0;
+}
+
+static int32_t can_start(void)      { return NetplayLobby_CanStart(); }
+static int32_t kicked_off(void)     { return NetplayLobby_State() == LOBBY_KICKOFF; }
+static int32_t start_settled(void)  { return NetplayLobby_State() != LOBBY_STARTING; }
+static int32_t peer_heard(void)     { return NetplayLobby_Player(3 - NetplayLobby_LocalPlayer())->known; }
+
+/* A national team out of its team file, the way arcade mode loads one. */
+static int32_t load_team(uint8_t file, uint8_t ordinal, TeamFileEx *out)
+{
+    uint16_t count, i;
+    TeamFileEx *rec;
+
+    if (LoadTeamFile(file) != 0)
+        return 1;
+    count = *(uint16_t *)_teamFileBuffer;       /* host-native count, then the records */
+    rec = (TeamFileEx *)(_teamFileBuffer + 2);
+    for (i = 0; i < count; i++) {
+        if (rec[i].team.countryNumber == file && rec[i].team.teamOrdinal == ordinal) {
+            *out = rec[i];
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* A tactic's content, reduced to one number both peers can print and compare. */
+static uint32_t tactic_hash(const uint8_t *t)
+{
+    uint32_t h = 2166136261u;
+    for (int32_t i = 0; i < 370; i++)
+        h = (h ^ t[i]) * 16777619u;
+    return h;
+}
 
 /* The session is over and every frame is confirmed: report and go. Reporting
  * after InitAndPlayGame returns would mean going through the post-match
@@ -161,12 +258,21 @@ static void live_test_finished(void)
     SAY("  ok   the session finished\n");
     SAY("[live] final state hash %016llx\n",
         (unsigned long long)SimState_Hash(SIM_TIER_ALL));
+
+    /* After the hash: the match borrowed USER B for the joiner's tactic, and the
+     * player's own library has to come back. */
+    NetplayLobby_RestoreTactics();
+    if (memcmp(((TeamTactics *)(void *)_teamTacticsUSERB)->name, "LIVETEST", 8) == 0) {
+        SAY("  FAIL USER B still holds the match's tactic after it\n");
+        exit(1);
+    }
+    SAY("  ok   the USER tactics are this player's own again\n");
     exit(NetplayMatch_Finish());
 }
 
 void NetplayLiveTest_Run(void)
 {
-    char ip[24], peer[24], *colon;
+    char ip[24];
     uint16_t peerPort = LIVE_TEST_PORT, localPort;
     int32_t delay, player;
 
@@ -193,20 +299,6 @@ void NetplayLiveTest_Run(void)
         exit(1);
     SAY("  ok   linked to %s\n", P2PLink_PeerText());
 
-    /* Take the peer's address NOW, while the link is certainly up.
-     *
-     * Not at handover: the joiner closes its link the moment it has the setup,
-     * and the BYE that follows clears the host's peer before the host has
-     * finished its own handover. Measured -- the host read an empty address and
-     * fell back to its own port, and the session refused to start. */
-    snprintf(peer, sizeof peer, "%s", P2PLink_PeerText());
-    snprintf(ip, sizeof ip, "%s", peer);
-    colon = strchr(ip, ':');
-    if (colon) {
-        *colon = '\0';
-        peerPort = (uint16_t)atoi(colon + 1);
-    }
-    localPort = P2PLink_LocalPort();
     player = s_isHost ? 1 : 2;
 
     if (!wait_for(delay_agreed, 15000, "the agreed delay"))
@@ -215,33 +307,118 @@ void NetplayLiveTest_Run(void)
     SAY("  ok   delay agreed: %d (mine %d, theirs %d)\n",
            delay, P2PLink_ProposedDelay(), P2PLink_PeerProposedDelay());
 
-    /* The setup. The host's teams win; the joiner throws its own away. */
-    if (s_isHost) {
-        uint8_t *buf = (uint8_t *)malloc(NetplaySetup_MaxBytes());
-        int32_t n = buf ? NetplaySetup_Encode(buf, NetplaySetup_MaxBytes()) : -1;
-        if (n <= 0 || P2PLink_SendSetup(buf, (uint32_t)n) != 0) {
-            SAY("  FAIL could not send the setup\n");
+    /* ---- the lobby ----
+     *
+     * Each side picks a DIFFERENT team, so a peer that played its own choice on
+     * both sides, or the two the wrong way round, cannot pass. The joiner plays a
+     * USER tactic from slot C, which the match has to move to slot B on both
+     * machines. The host changes the rules AFTER the joiner is ready, which has to
+     * take the joiner's ready flag down before a start is allowed. */
+    NetplayLobby_Begin(player, s_isHost ? "HOST PLAYER" : "JOIN PLAYER");
+    {
+        TeamFileEx team;
+        uint8_t file = s_isHost ? 0x50 : 0x52, ordinal = s_isHost ? 0x0B : 0x02;   /* ENG, BRA */
+        if (load_team(file, ordinal, &team) != 0) {
+            SAY("  FAIL could not load team %02X.%02X\n", file, ordinal);
             exit(1);
         }
-        free(buf);
-        if (!wait_for(setup_sent, 30000, "the setup to be acknowledged"))
-            exit(1);
-        SAY("  ok   setup sent\n");
-    } else {
-        uint32_t n = 0;
-        const uint8_t *got;
-        if (!wait_for(setup_here, 30000, "the host's setup"))
-            exit(1);
-        got = P2PLink_ReceivedSetup(&n);
-        if (!got || NetplaySetup_Apply(got, n) != 0) {
-            SAY("  FAIL the host's setup would not apply\n");
-            exit(1);
+        NetplayLobby_SetTeam(&team);
+        if (s_isHost) {
+            NetplayLobby_SetTactic(TACTIC_4_3_3);
+        } else {
+            TeamTactics *c = (TeamTactics *)(void *)_teamTacticsUSERC;
+            memset(c->name, 0, sizeof c->name);
+            memcpy(c->name, "LIVETEST", 8);
+            ((uint8_t *)c)[9 + 3 * 35 + 7] ^= 0x5A;     /* a position byte: not the stock 4-4-2 */
+            NetplayLobby_SetTactic(TACTIC_USER_C);
         }
-        SAY("  ok   setup received and applied (%u bytes)\n", n);
+        NetplayLobby_SetReady(1);
+        SAY("  ok   in the lobby with %.17s\n", (char *)team.team.teamName);
     }
 
+    if (!lobby_wait(peer_heard, 15000, "the other player's side"))
+        exit(1);
+
+    if (s_isHost) {
+        LobbyRules rules = *NetplayLobby_Rules();
+        rules.gameLength = 1;
+        rules.pitchType  = 4;                   /* NORMAL */
+        rules.minSubs    = 2;
+        rules.maxSubs    = 3;
+        NetplayLobby_SetRules(&rules);
+        if (!lobby_wait(can_start, 20000, "both sides ready"))
+            exit(1);
+        SAY("  ok   both ready\n");
+
+        /* The shortest match the game offers: a full-length one is minutes of wall
+         * clock, and this test is about agreement, not about playing 90 minutes. */
+        rules.gameLength = 0;
+        NetplayLobby_SetRules(&rules);
+        if (NetplayLobby_CanStart()) {
+            SAY("  FAIL a start is allowed before the joiner has seen the new rules\n");
+            exit(1);
+        }
+        if (!lobby_wait(can_start, 20000, "the joiner to agree to the new rules"))
+            exit(1);
+        SAY("  ok   the joiner agrees to the changed rules\n");
+
+        /* The first start is refused (change_of_mind); the second has to work. */
+        for (int32_t attempt = 1; ; attempt++) {
+            if (NetplayLobby_Start() != 0) {
+                SAY("  FAIL the host could not start\n");
+                exit(1);
+            }
+            SAY("  ok   the host starts (attempt %d)\n", attempt);
+            if (!lobby_wait(start_settled, 20000, "an answer to the start"))
+                exit(1);
+            if (NetplayLobby_State() == LOBBY_KICKOFF)
+                break;
+            if (attempt >= 2) {
+                SAY("  FAIL refused again: %s\n", NetplayLobby_Notice());
+                exit(1);
+            }
+            SAY("  ok   refused, back in the lobby: %s\n", NetplayLobby_Notice());
+            if (!lobby_wait(can_start, 20000, "both ready again"))
+                exit(1);
+        }
+    }
+    if (!lobby_wait(kicked_off, 30000, "kick-off"))
+        exit(1);
+    if (!s_isHost && s_readyDrops == 0) {
+        SAY("  FAIL the host changed the rules and my ready flag never went down\n");
+        exit(1);
+    }
+    SAY("  ok   both agree: kick-off\n");
+
+    /* What both of them are about to play. The script requires these lines to be
+     * IDENTICAL on the two peers; each peer checks its own side is the one it picked. */
+    {
+        const TeamTactics *b = (const TeamTactics *)(void *)_teamTacticsUSERB;
+        const char *mineName   = (const char *)NetplayLobby_Player(player)->team.team.teamName;
+        const char *placedName = (const char *)_selectedTeams[player - 1].team.teamName;
+        SAY("[live] match: %.17s (tactic %u) v %.17s (tactic %u); USER B %.9s %08X; "
+            "length %u, pitch %u, subs %u of %u\n",
+            (char *)_selectedTeams[0].team.teamName, (unsigned)_selectedTeams[0].team.tactics,
+            (char *)_selectedTeams[1].team.teamName, (unsigned)_selectedTeams[1].team.tactics,
+            (char *)b->name, (unsigned)tactic_hash(_teamTacticsUSERB),
+            (unsigned)_gameLength, (unsigned)_friendlyPitchType,
+            (unsigned)_minSubstitutes, (unsigned)_maxSubstitutes);
+        if (strncmp(mineName, placedName, 17) != 0) {
+            SAY("  FAIL my team is %.17s but the match has %.17s on my side\n", mineName, placedName);
+            exit(1);
+        }
+        SAY("  ok   my side of the match is the team I picked\n");
+    }
+
+    NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay);
+    if (NetplayLobby_ApplyMatch() != 0) {
+        SAY("  FAIL the agreed setup would not apply at kick-off\n");
+        exit(1);
+    }
+    NetplayLobby_End();
+
     /* GGPO takes the same local port, which is also what holds a NAT mapping
-     * open across the handover. The address was captured above. */
+     * open across the handover. */
     P2PLink_Close();
 
     SAY("  ..   player %d, peer %s:%u, local port %u, delay %d\n",
@@ -252,15 +429,6 @@ void NetplayLiveTest_Run(void)
         exit(1);
     }
 
-    /* The shortest match the game offers. A full-length one at the default
-     * setting is minutes of wall clock, and this test is about whether the two
-     * peers agree, not about playing 90 minutes. Both sides set it the same way
-     * -- the joiner adopted the host's setup above, and this overrides both
-     * identically after it. */
-    {
-        extern uint16_t _gameLength;
-        _gameLength = 0;
-    }
     /* The front end was skipped to get here (this runs in its place, like the
      * replay rig), so the menu sprite graphics the stadium line-up draws were
      * never extracted from menus.raw and DrawMenuItem walks into a missing

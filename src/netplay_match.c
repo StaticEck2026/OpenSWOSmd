@@ -584,6 +584,16 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
         MatchStep_Reset();          /* no button held, no bench call pending */
     }
 
+    /* And from released controls. From here InputSDL_PostFrame leaves the joystick
+     * and fire registers to the session, so the pre-match screens would otherwise
+     * keep reading whatever was held when the match started -- including the fire
+     * press on START, which hung the stadium screen's wait for a release
+     * (InputSDL_ReleaseAll). */
+    {
+        extern void InputSDL_ReleaseAll(void);
+        InputSDL_ReleaseAll();
+    }
+
     memset(&s_np, 0, sizeof s_np);
     s_np.mode        = NETPLAY_MATCH_P2P;
     s_np.live        = 1;
@@ -653,6 +663,43 @@ static int32_t singleProcessFrame(void)
         GameLoop_EndFrame(1);
     }
     return r;
+}
+
+/* The joystick history the game keeps between frames -- the registry's "controls"
+ * block (src/sim_state.c) -- back to its boot state, all zero.
+ *
+ * Player1StatusProc/Player2StatusProc carry a fire counter, a last-fired flag and the
+ * was/press edge detectors from one call to the next, and they run in the MENUS too. A
+ * player who pressed START left their counter mid-count: two peers came out of the
+ * lobby with _pl1FireCounter 2 against 0, and desynced on frame 1. The directions
+ * themselves are recomputed from the registers on every call; they are cleared only
+ * so the whole block starts the same. The live test never met this -- it skips the
+ * front end, so its controls were still at boot. */
+static void resetControlHistory(void)
+{
+    extern uint16_t _pl1Direction[1], _pl2Direction[1];
+    extern uint8_t  _pl1Fire, _pl2Fire, _pl1ShortFire, _pl2ShortFire;
+    extern uint8_t  _pl1Up, _pl1Down, _pl1Left, _pl1Right, _pl2Up, _pl2Down, _pl2Left, _pl2Right;
+    extern uint8_t  _pl1UpRight, _pl1UpLeft, _pl1DownLeft, _pl1DownRight;
+    extern uint8_t  _pl2UpRight, _pl2UpLeft, _pl2DownLeft, _pl2DownRight;
+    extern uint8_t  _pl1WasUp, _pl1WasDown, _pl1WasLeft, _pl1WasRight;
+    extern uint8_t  _pl2WasUp, _pl2WasDown, _pl2WasLeft, _pl2WasRight;
+    extern uint8_t  _pl1UpPress, _pl1DownPress, _pl1LeftPress, _pl1RightPress;
+    extern uint8_t  _pl2UpPress, _pl2DownPress, _pl2LeftPress, _pl2RightPress;
+    extern uint16_t _pl1FireCounter[1], _pl2FireCounter[1];
+    extern uint8_t  _pl1LastFired, _pl2LastFired, _subsFire;
+
+    _pl1Direction[0] = _pl2Direction[0] = 0;
+    _pl1Fire = _pl2Fire = _pl1ShortFire = _pl2ShortFire = 0;
+    _pl1Up = _pl1Down = _pl1Left = _pl1Right = _pl2Up = _pl2Down = _pl2Left = _pl2Right = 0;
+    _pl1UpRight = _pl1UpLeft = _pl1DownLeft = _pl1DownRight = 0;
+    _pl2UpRight = _pl2UpLeft = _pl2DownLeft = _pl2DownRight = 0;
+    _pl1WasUp = _pl1WasDown = _pl1WasLeft = _pl1WasRight = 0;
+    _pl2WasUp = _pl2WasDown = _pl2WasLeft = _pl2WasRight = 0;
+    _pl1UpPress = _pl1DownPress = _pl1LeftPress = _pl1RightPress = 0;
+    _pl2UpPress = _pl2DownPress = _pl2LeftPress = _pl2RightPress = 0;
+    _pl1FireCounter[0] = _pl2FireCounter[0] = 0;
+    _pl1LastFired = _pl2LastFired = _subsFire = 0;
 }
 
 /* p2p: a pass that plays no frame still shows one, and yields to the peer's process. */
@@ -734,6 +781,51 @@ static int32_t p2pFrame(void)
         if (s_np.live) {
             s_np.prepared = 1;
             s_np.lastProgressMs = now;
+            resetControlHistory();      /* before GGPO saves frame 0 */
+            /* And the clock, AGAIN, here. StartLive zeroed it, but the pre-match screens
+             * run in between -- the stadium line-up and its waits -- and the SDL timer
+             * thread keeps ticking through them by the wall clock. Two peers spend
+             * different wall time there, so they reached this frame 0x1B against 0x1D
+             * and desynced on frame 1 (reproduced with SWOS_PRESENT_CAPTURE slowing one
+             * of them). The replay rig resets at exactly this point for the same reason
+             * (applyFirstFrameSetup); these are its values, and its note says why
+             * _lastGameTick starts one behind. */
+            {
+                extern volatile uint16_t _currentGameTick;
+                extern volatile uint16_t _currentTick;
+                extern uint16_t          _lastGameTick;
+                extern uint16_t          _lastFrameTicks;
+                _currentGameTick = 0;
+                _currentTick     = 0;
+                _lastGameTick    = 0xFFFF;
+                /* What frame 0's ReadTimerDelta will compute from the two above. It
+                 * is set now as well because GGPO saves frame 0 BEFORE that runs, and a
+                 * leftover here is the one byte that differed in the kick-off dumps. */
+                _lastFrameTicks  = 1;
+            }
+            /* SWOS_LIVE_DUMP=<dir>: the state this peer kicks off from, for
+             * --netplay-state-diff. Taken HERE, at the first frame step, so it is the
+             * same point however the match was reached -- the live test or the
+             * lobby menu, whose pre-match screens run in between. */
+            {
+                const char *dir = getenv("SWOS_LIVE_DUMP");
+                if (dir && dir[0]) {
+                    char path[512];
+                    uint32_t n = SimState_Size(SIM_TIER_ALL);
+                    uint8_t *buf = (uint8_t *)malloc(n);
+                    snprintf(path, sizeof path, "%s/kickoff-p%d.bin", dir, s_np.player);
+                    if (buf) {
+                        FILE *f;
+                        SimState_Save(buf, SIM_TIER_ALL);
+                        if ((f = fopen(path, "wb")) != NULL) {
+                            fwrite(buf, 1, n, f);
+                            fclose(f);
+                            fprintf(stderr, "[netplay] kick-off state dumped to %s\n", path);
+                        }
+                        free(buf);
+                    }
+                }
+            }
             goto prepared;
         }
         /* Before GGPO saves frame 0, which it does when the first input is added. */

@@ -7,9 +7,9 @@
 #   JOIN_PROFILE=awful scripts/netplay_live_test.sh    # one player on a bad line
 #
 # The end-to-end check for what the multiplayer menus drive: p2p_link connects,
-# the input delay is AGREED, the host sends the match setup, the joiner adopts
-# it, and both open a GGPO session and play. Neither touches a pad — the point
-# is that two machines given no input still agree frame for frame.
+# the input delay is AGREED, the lobby sets the match up (each player picks a team
+# and a tactic, the host the rules, both ready, the host starts and the joiner
+# confirms), and both open a GGPO session and play.
 #
 # The network between them is src/netplay_netem.c. PROFILE names a link
 # (lan adsl wifi mobile satellite awful); HOST_PROFILE / JOIN_PROFILE give one
@@ -112,12 +112,22 @@ join -j1 \
         END { printf "  %d sampled, %d matched, %d differed (differences here are expected under rollback)\n", same+bad, same, bad }'
 echo "======================================"
 
+# What the lobby set up, as each peer is about to play it: the two teams and their
+# tactics, the USER tactic that had to move to slot B, the host's rules. Both peers
+# must print the same line -- the final hash would catch a difference eventually, but
+# this names it. (Each peer also checks its own side is the team it picked.)
+hm=$(grep -m1 "^\[live\] match:" "$OUT.host")
+jm=$(grep -m1 "^\[live\] match:" "$OUT.join")
+echo "host ${hm:-[live] match: none}"
+echo "join ${jm:-[live] match: none}"
+
 hh=$(grep -oE "final state hash [0-9a-f]+" "$OUT.host" | awk '{print $4}')
 jh=$(grep -oE "final state hash [0-9a-f]+" "$OUT.join" | awk '{print $4}')
 echo "host hash: ${hh:-none}"
 echo "join hash: ${jh:-none}"
 
-if [ "$HRC" = 0 ] && [ "$JRC" = 0 ] && [ -n "$hh" ] && [ "$hh" = "$jh" ]; then
+if [ "$HRC" = 0 ] && [ "$JRC" = 0 ] && [ -n "$hm" ] && [ "$hm" = "$jm" ] &&
+   [ -n "$hh" ] && [ "$hh" = "$jh" ]; then
     echo "live-test: PASSED — both peers played the same match"
     exit 0
 fi

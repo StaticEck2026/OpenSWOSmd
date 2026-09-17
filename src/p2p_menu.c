@@ -8,10 +8,9 @@
  * src/p2p_link.c. The menu is flagged dos_redraw, so its onDraw runs every frame: that
  * is where the link is polled and the status panel written.
  *
- * What it does today is connect and check the two games match, which is the part a
- * tester can try over the internet: the address, the port, the router. Setting the
- * match up over the link and playing it through GGPO comes next, and the input delay
- * chosen here is for that.
+ * It connects and checks the two games match -- the part a tester can try over the
+ * internet: the address, the port, the router -- and then hands both players to the
+ * lobby (src/online_menus.c, mpGameSetupMenu), where the match is set up and played.
  *
  * SWOS 2020's own online menus are imported separately and are a different thing
  * entirely -- a login, a lobby and a matchmaking server (src/online_menus.c).
@@ -21,6 +20,7 @@
 #ifdef SWOS_SDL_BUILD
 
 #include "p2p_link.h"
+#include "online_menus.h"     /* OnlineMenus_EnterLobby: where a connected pair sets the match up */
 #include "input_text.h"
 #include "menu_load_json.h"
 #include "menu_symbols.h"
@@ -231,6 +231,13 @@ static void p2pMenu_OnInit(void)
 static void p2pMenu_OnDraw(void)
 {
     P2PLink_Poll();
+
+    /* Connected and the delay agreed: the lobby, the same one matchmaking leads to. The
+     * host is player 1. It returns with the link closed, the match played or abandoned. */
+    if (P2PLink_State() == P2P_CONNECTED && P2PLink_AgreedDelay() >= 0) {
+        OnlineMenus_EnterLobby(s_hosting ? 1 : 2, NULL);
+        notice(NULL, NULL);
+    }
 
     P2PLinkState state = P2PLink_State();
     int32_t      open  = link_is_open(state);

@@ -45,15 +45,16 @@
 #include <arpa/inet.h>
 
 /* Raise this when a packet's meaning changes; peers then refuse each other by version
- * instead of misreading a field. */
-enum { kProtocol = 1 };
+ * instead of misreading a field. 2: messages travel on numbered channels, with a
+ * generation, so a peer can replace what it sent (the lobby's selections). */
+enum { kProtocol = 2 };
 
 enum {
     PKT_HELLO = 1, PKT_WELCOME = 2, PKT_REFUSE = 3,
     PKT_PING  = 4, PKT_PONG    = 5, PKT_BYE    = 6,
     PKT_DELAY = 7,              /* my proposed input delay, in frames */
-    PKT_BLOB  = 8,              /* one chunk of the match setup */
-    PKT_BLOB_ACK = 9,           /* which chunks the receiver has */
+    PKT_BLOB  = 8,              /* one chunk of a message */
+    PKT_BLOB_ACK = 9,           /* which chunks of it the receiver has */
 };
 
 enum {
@@ -66,9 +67,10 @@ enum {
      * one. It was 64 -- ample for the control packets, and 16 bytes of header
      * plus 1024 of payload short of a setup chunk. recvfrom truncates silently,
      * so every chunk lost all but its first 48 bytes while the transfer still
-     * completed and acked: right length, full bitmap, wrong contents. The setup
-     * blob defines this now (kBlobChunk is declared below and used here). */
-    kPacketMax  = 8 + 8 + 1024,
+     * completed and acked: right length, full bitmap, wrong contents. A message
+     * chunk defines this now: header, kChunkHeader, then kBlobChunk of payload
+     * (both declared below and used here). */
+    kPacketMax  = 8 + 12 + 1024,
 };
 
 enum {
@@ -82,14 +84,15 @@ enum {
     kDelayIntervalMs = 250,     /* re-send the proposal until the peer's is known (UDP) */
     kDelayMax        = 8,       /* more input lag than this is worse than the rollback */
 
-    /* The match setup blob. It is the whole kick-off state (~35 KB raw, less
-     * once deflated), which is far too big for one datagram, so it goes as
-     * numbered chunks with the receiver naming what it still lacks.
+    /* Messages: the lobby's selections, the match setup. Too big for one
+     * datagram, so they go as numbered chunks with the receiver naming what it
+     * still lacks.
      *
      * 1024 bytes of payload keeps a chunk under the smallest MTU anyone
      * realistically has once IP and UDP headers are on it; going to the
      * "normal" 1472 saves a third of the packets and loses the match on any
      * path that fragments. */
+    kChunkHeader     = 12,      /* channel, pad, generation, total length, index, count */
     kBlobChunk       = 1024,
     kBlobMaxChunks   = 128,                        /* 128 KB, well over what we send */
     kBlobMax         = kBlobChunk * kBlobMaxChunks,
@@ -105,6 +108,32 @@ typedef struct {
     uint16_t screenWidth;
     uint8_t  gameplay;          /* bit 0 DOS gameplay, 1 arcade, 2 the original fire-hold lockout */
 } Setup;
+
+/* The message being sent on one channel. Sending again replaces it: the new one
+ * gets the next generation and whatever of the old one was still unacked is
+ * dropped, because the receiver only wants the newest. */
+typedef struct {
+    uint8_t  *data;
+    uint32_t  len;
+    int32_t   chunks;
+    uint16_t  generation;               /* 0 = nothing sent on this channel yet */
+    uint8_t   acked[kBlobBitmapBytes];
+    uint32_t  lastSendMs;
+} TxChannel;
+
+/* What has arrived on one channel: the newest COMPLETE message, and at most one
+ * newer one still coming in. */
+typedef struct {
+    uint8_t  *data;                     /* the transfer in progress, NULL if none */
+    uint32_t  len;
+    int32_t   chunks;
+    uint16_t  generation;
+    uint8_t   have[kBlobBitmapBytes];
+
+    uint8_t  *done;                     /* the newest complete message */
+    uint32_t  doneLen;
+    uint16_t  doneGeneration;           /* 0 = none yet */
+} RxChannel;
 
 typedef struct {
     int32_t            sock;            /* -1 when closed */
@@ -124,24 +153,15 @@ typedef struct {
     int32_t            joinTimeoutMs;
     char               peerText[24];    /* "255.255.255.255:65535" */
 
-    /* Sending a setup blob (the host). */
-    uint8_t           *txBlob;
-    uint32_t           txLen;
-    int32_t            txChunks;
-    uint8_t            txAcked[kBlobBitmapBytes];
-    uint32_t           txLastSendMs;
-
     /* NAT traversal: every address the peer might be reachable at. Both sides
      * send to all of them at once -- see punch_send. */
     struct sockaddr_in candidates[kMaxCandidates];
     int32_t            numCandidates;
 
-    /* Receiving one (the joiner). */
-    uint8_t           *rxBlob;
-    uint32_t           rxLen;
-    int32_t            rxChunks;
-    uint8_t            rxHave[kBlobBitmapBytes];
-    int32_t            rxComplete;
+    /* Messages, one of each kind per channel, in each direction (see "messages"
+     * below). */
+    TxChannel          tx[P2P_NUM_CHANNELS];
+    RxChannel          rx[P2P_NUM_CHANNELS];
 } P2PLink;
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
@@ -211,13 +231,23 @@ static void pkt_read_setup(const uint8_t *p, Setup *s)
     s->gameplay    = p[18];
 }
 
+/* The self-test's lossy wire: drop every Nth datagram a link sends, 0 for none.
+ * Deterministic rather than random, so a failure repeats. */
+static int32_t s_testDropEvery, s_testSendCount;
+
+static void wire_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *buf, size_t len)
+{
+    if (s_testDropEvery > 0 && ++s_testSendCount % s_testDropEvery == 0)
+        return;
+    (void)sendto(l->sock, (const char *)buf, len, 0, (const struct sockaddr *)to, (socklen_t)sizeof *to);
+}
+
 static void link_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *buf, int32_t len)
 {
     if (l->sock < 0)
         return;
     /* UDP and unreliable by design: every packet here is repeated or expendable. */
-    (void)sendto(l->sock, (const char *)buf, (size_t)len, 0,
-                 (const struct sockaddr *)to, (socklen_t)sizeof *to);
+    wire_send(l, to, buf, (size_t)len);
 }
 
 static void send_setup_packet(P2PLink *l, const struct sockaddr_in *to, uint8_t type)
@@ -427,24 +457,29 @@ static void send_delay(P2PLink *l, uint32_t now)
     pkt[6] = 0;
     pkt[7] = 0;
     pkt[8] = (uint8_t)l->delayLocal;
-    sendto(l->sock, (const char *)pkt, sizeof pkt, 0,
-           (const struct sockaddr *)&l->peer, sizeof l->peer);
+    wire_send(l, &l->peer, pkt, sizeof pkt);
     l->lastDelaySentMs = now;
 }
 
-/* ---- the match setup blob --------------------------------------------------
+/* ---- messages -----------------------------------------------------------------
  *
- * The host's kick-off state, so the joiner starts the match from exactly the
- * same place. It is the state_wire packet (docs/ROLLBACK.md, "The wire format"),
- * which already encodes portably -- typed fields big-endian, pointers as
- * identities -- so a 32-bit peer and a 64-bit one read the same bytes. What is
- * missing from UDP is only getting ~35 KB there intact, which is all this is.
+ * Anything too big for a datagram, or that has to arrive: the lobby's selections,
+ * the match setup and the answer to it (src/netplay_lobby.c). Each kind has a
+ * CHANNEL of its own, in each direction.
  *
  * Numbered chunks, receiver-driven: the receiver says which chunks it HAS (a
  * bitmap), the sender re-sends what is missing until the bitmap is full. No
  * ordering assumptions and no per-chunk ack storm -- one small ack packet
  * describes the whole transfer, so a lost ack costs one retransmit round rather
- * than a stall. */
+ * than a stall.
+ *
+ * GENERATIONS. Sending on a channel again REPLACES what was there: a player who
+ * picks a second team does not want the first one delivered after it. Every
+ * message carries its channel's generation, the receiver keeps only the newest
+ * complete one and ignores anything older, and chunks of an older transfer that
+ * are still in flight cannot be mixed into a newer one -- before generations, a
+ * re-send of the same length was indistinguishable from the first, and would have
+ * been assembled from both. */
 static void bitmap_set(uint8_t *bm, int32_t i)   { bm[i >> 3] |= (uint8_t)(1u << (i & 7)); }
 static int32_t bitmap_get(const uint8_t *bm, int32_t i) { return (bm[i >> 3] >> (i & 7)) & 1; }
 
@@ -459,39 +494,179 @@ static int32_t bitmap_full(const uint8_t *bm, int32_t n)
 
 static void blob_free(P2PLink *l)
 {
-    free(l->txBlob); l->txBlob = NULL; l->txLen = 0; l->txChunks = 0;
-    free(l->rxBlob); l->rxBlob = NULL; l->rxLen = 0; l->rxChunks = 0;
-    l->rxComplete = 0;
-    memset(l->txAcked, 0, sizeof l->txAcked);
-    memset(l->rxHave,  0, sizeof l->rxHave);
+    int32_t c;
+    for (c = 0; c < P2P_NUM_CHANNELS; c++) {
+        free(l->tx[c].data);
+        free(l->rx[c].data);
+        free(l->rx[c].done);
+        memset(&l->tx[c], 0, sizeof l->tx[c]);
+        memset(&l->rx[c], 0, sizeof l->rx[c]);
+    }
 }
 
-/* One chunk: header, total length (u32), chunk index (u16), chunk count (u16),
- * then the bytes. */
-static void send_blob_chunk(P2PLink *l, int32_t idx)
+/* One chunk: header, channel, pad, generation (u16), total length (u32), chunk
+ * index (u16), chunk count (u16), then the bytes. */
+static void send_blob_chunk(P2PLink *l, int32_t channel, int32_t idx)
 {
-    uint8_t pkt[kHeaderLen + 8 + kBlobChunk];
+    const TxChannel *t = &l->tx[channel];
+    uint8_t pkt[kHeaderLen + kChunkHeader + kBlobChunk];
     uint32_t off = (uint32_t)idx * (uint32_t)kBlobChunk;
-    uint32_t n   = l->txLen - off;
+    uint32_t n   = t->len - off;
 
     if (n > (uint32_t)kBlobChunk)
         n = (uint32_t)kBlobChunk;
     pkt_header(pkt, PKT_BLOB);
-    BE_WRITE_U32(pkt + 8, l->txLen);
-    BE_WRITE_U16(pkt + 12, (uint16_t)idx);
-    BE_WRITE_U16(pkt + 14, (uint16_t)l->txChunks);
-    memcpy(pkt + 16, l->txBlob + off, n);
-    sendto(l->sock, (const char *)pkt, kHeaderLen + 8 + n, 0,
-           (const struct sockaddr *)&l->peer, sizeof l->peer);
+    pkt[8] = (uint8_t)channel;
+    pkt[9] = 0;
+    BE_WRITE_U16(pkt + 10, t->generation);
+    BE_WRITE_U32(pkt + 12, t->len);
+    BE_WRITE_U16(pkt + 16, (uint16_t)idx);
+    BE_WRITE_U16(pkt + 18, (uint16_t)t->chunks);
+    memcpy(pkt + kHeaderLen + kChunkHeader, t->data + off, n);
+    wire_send(l, &l->peer, pkt, kHeaderLen + kChunkHeader + n);
 }
 
-static void send_blob_ack(P2PLink *l)
+/* The ack names the channel and generation it is about, so a late ack for a
+ * message since replaced cannot mark chunks of the new one as delivered. */
+static void send_blob_ack(P2PLink *l, int32_t channel, uint16_t generation, const uint8_t *bitmap)
 {
-    uint8_t pkt[kHeaderLen + kBlobBitmapBytes];
+    uint8_t pkt[kHeaderLen + 4 + kBlobBitmapBytes];
     pkt_header(pkt, PKT_BLOB_ACK);
-    memcpy(pkt + kHeaderLen, l->rxHave, kBlobBitmapBytes);
-    sendto(l->sock, (const char *)pkt, sizeof pkt, 0,
-           (const struct sockaddr *)&l->peer, sizeof l->peer);
+    pkt[8] = (uint8_t)channel;
+    pkt[9] = 0;
+    BE_WRITE_U16(pkt + 10, generation);
+    memcpy(pkt + kHeaderLen + 4, bitmap, kBlobBitmapBytes);
+    wire_send(l, &l->peer, pkt, sizeof pkt);
+}
+
+/* A chunk. Returns nothing: every outcome is either stored or ignored, and an ack
+ * goes back for anything this peer has or has moved past. */
+static void receive_chunk(P2PLink *l, const uint8_t *buf, int32_t len)
+{
+    int32_t  channel = buf[8];
+    uint16_t gen     = BE_READ_U16(buf + 10);
+    uint32_t total   = BE_READ_U32(buf + 12);
+    int32_t  idx     = (int32_t)BE_READ_U16(buf + 16);
+    int32_t  count   = (int32_t)BE_READ_U16(buf + 18);
+    uint32_t n       = (uint32_t)len - (kHeaderLen + kChunkHeader);
+    RxChannel *r;
+
+    /* Refuse anything that does not describe a transfer we could hold, rather than
+     * trusting a length off the wire. */
+    if (channel < 0 || channel >= P2P_NUM_CHANNELS || gen == 0 ||
+        total == 0 || total > (uint32_t)kBlobMax ||
+        count <= 0 || count > kBlobMaxChunks ||
+        count != (int32_t)((total + kBlobChunk - 1) / kBlobChunk) ||
+        idx < 0 || idx >= count || n > (uint32_t)kBlobChunk)
+        return;
+    r = &l->rx[channel];
+
+    if (gen <= r->doneGeneration) {
+        /* We already have this one, or something newer. Say so in full, or the
+         * sender keeps retransmitting a message we will never take again. */
+        uint8_t all[kBlobBitmapBytes];
+        int32_t i;
+        memset(all, 0, sizeof all);
+        for (i = 0; i < count; i++)
+            bitmap_set(all, i);
+        send_blob_ack(l, channel, gen, all);
+        return;
+    }
+    if (r->data && gen < r->generation)
+        return;                               /* an older transfer's straggler */
+    if (r->data && (gen != r->generation || r->len != total || r->chunks != count)) {
+        free(r->data);                        /* replaced by a newer message */
+        r->data = NULL;
+    }
+    if (!r->data) {
+        r->data = (uint8_t *)calloc(1, total);
+        if (!r->data)
+            return;
+        r->len = total;
+        r->chunks = count;
+        r->generation = gen;
+        memset(r->have, 0, sizeof r->have);
+    }
+    {
+        uint32_t off = (uint32_t)idx * (uint32_t)kBlobChunk;
+        if (off + n > r->len)
+            return;
+        memcpy(r->data + off, buf + kHeaderLen + kChunkHeader, n);
+        bitmap_set(r->have, idx);
+    }
+    send_blob_ack(l, channel, gen, r->have);  /* every chunk: cheap, and self-clocking */
+
+    if (bitmap_full(r->have, r->chunks)) {
+        free(r->done);
+        r->done           = r->data;
+        r->doneLen        = r->len;
+        r->doneGeneration = r->generation;
+        r->data           = NULL;
+    }
+}
+
+static void receive_ack(P2PLink *l, const uint8_t *buf)
+{
+    int32_t  channel = buf[8];
+    uint16_t gen     = BE_READ_U16(buf + 10);
+    TxChannel *t;
+    int32_t i;
+
+    if (channel < 0 || channel >= P2P_NUM_CHANNELS)
+        return;
+    t = &l->tx[channel];
+    if (!t->data || gen != t->generation)
+        return;                               /* about a message since replaced */
+    for (i = 0; i < kBlobBitmapBytes; i++)
+        t->acked[i] |= buf[kHeaderLen + 4 + i];
+}
+
+/* Queue `data` on `channel`, replacing whatever was there. */
+static int32_t message_send(P2PLink *l, int32_t channel, const uint8_t *data, uint32_t len)
+{
+    TxChannel *t;
+    uint8_t *copy;
+
+    if (l->state != P2P_CONNECTED || channel < 0 || channel >= P2P_NUM_CHANNELS ||
+        !data || len == 0 || len > (uint32_t)kBlobMax)
+        return 1;
+    t = &l->tx[channel];
+    if (t->generation == 0xFFFF)
+        return 1;                             /* 65535 messages on one channel of one link */
+    copy = (uint8_t *)malloc(len);
+    if (!copy)
+        return 1;
+    memcpy(copy, data, len);
+    free(t->data);
+    t->data       = copy;
+    t->len        = len;
+    t->chunks     = (int32_t)((len + kBlobChunk - 1) / kBlobChunk);
+    t->generation = (uint16_t)(t->generation + 1);
+    memset(t->acked, 0, sizeof t->acked);
+    t->lastSendMs = 0;                        /* the next poll starts sending */
+    return 0;
+}
+
+static int32_t message_delivered(const P2PLink *l, int32_t channel)
+{
+    const TxChannel *t;
+    if (channel < 0 || channel >= P2P_NUM_CHANNELS)
+        return 0;
+    t = &l->tx[channel];
+    return t->data && bitmap_full(t->acked, t->chunks);
+}
+
+static const uint8_t *message_received(const P2PLink *l, int32_t channel, uint32_t *len, uint16_t *generation)
+{
+    const RxChannel *r;
+    if (channel < 0 || channel >= P2P_NUM_CHANNELS)
+        return NULL;
+    r = &l->rx[channel];
+    if (len)
+        *len = r->done ? r->doneLen : 0;
+    if (generation)
+        *generation = r->doneGeneration;
+    return r->done;
 }
 
 /* Is this packet from one of the addresses the peer might be at?
@@ -658,41 +833,10 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
              * A reply is 9 bytes and makes the exchange self-completing. */
             if (l->delayLocal >= 0)
                 send_delay(l, now);
-        } else if (type == PKT_BLOB && len >= kHeaderLen + 8) {
-            uint32_t total = BE_READ_U32(buf + 8);
-            int32_t  idx   = (int32_t)BE_READ_U16(buf + 12);
-            int32_t  count = (int32_t)BE_READ_U16(buf + 14);
-            uint32_t n     = (uint32_t)len - (kHeaderLen + 8);
-
-            /* Refuse anything that does not describe a transfer we could hold,
-             * rather than trusting a length off the wire. */
-            if (total == 0 || total > (uint32_t)kBlobMax ||
-                count <= 0 || count > kBlobMaxChunks ||
-                idx < 0 || idx >= count || n > (uint32_t)kBlobChunk)
-                break;
-            if (l->rxBlob && (l->rxLen != total || l->rxChunks != count))
-                break;                        /* a different transfer mid-flight */
-            if (!l->rxBlob) {
-                l->rxBlob = (uint8_t *)calloc(1, total);
-                if (!l->rxBlob)
-                    break;
-                l->rxLen = total;
-                l->rxChunks = count;
-                memset(l->rxHave, 0, sizeof l->rxHave);
-                l->rxComplete = 0;
-            }
-            {
-                uint32_t off = (uint32_t)idx * (uint32_t)kBlobChunk;
-                if (off + n > l->rxLen)
-                    break;
-                memcpy(l->rxBlob + off, buf + kHeaderLen + 8, n);
-                bitmap_set(l->rxHave, idx);
-                if (bitmap_full(l->rxHave, l->rxChunks))
-                    l->rxComplete = 1;
-            }
-            send_blob_ack(l);                 /* every chunk: cheap, and self-clocking */
-        } else if (type == PKT_BLOB_ACK && len >= kHeaderLen + kBlobBitmapBytes) {
-            memcpy(l->txAcked, buf + kHeaderLen, kBlobBitmapBytes);
+        } else if (type == PKT_BLOB && len > kHeaderLen + kChunkHeader) {
+            receive_chunk(l, buf, len);
+        } else if (type == PKT_BLOB_ACK && len >= kHeaderLen + 4 + kBlobBitmapBytes) {
+            receive_ack(l, buf);
         } else if (type == PKT_BYE) {
             peer_gone(l, P2P_FAIL_PEER_LEFT);
         }
@@ -741,17 +885,20 @@ static void link_poll(P2PLink *l, uint32_t now)
             }
         }
     } else if (l->state == P2P_CONNECTED) {
-        /* Keep pushing whatever the receiver has not acked yet. */
-        if (l->txBlob && !bitmap_full(l->txAcked, l->txChunks) &&
-            now - l->txLastSendMs >= (uint32_t)kBlobResendMs) {
-            int32_t i, sent = 0;
-            for (i = 0; i < l->txChunks && sent < 16; i++) {
-                if (!bitmap_get(l->txAcked, i)) {
-                    send_blob_chunk(l, i);
-                    sent++;
+        /* Keep pushing whatever the receiver has not acked yet, on every channel. */
+        for (int32_t c = 0; c < P2P_NUM_CHANNELS; c++) {
+            TxChannel *t = &l->tx[c];
+            if (t->data && !bitmap_full(t->acked, t->chunks) &&
+                now - t->lastSendMs >= (uint32_t)kBlobResendMs) {
+                int32_t i, sent = 0;
+                for (i = 0; i < t->chunks && sent < 16; i++) {
+                    if (!bitmap_get(t->acked, i)) {
+                        send_blob_chunk(l, c, i);
+                        sent++;
+                    }
                 }
+                t->lastSendMs = now;
             }
-            l->txLastSendMs = now;
         }
 
         /* Propose as soon as there is a round trip to base it on, and keep
@@ -934,49 +1081,46 @@ int32_t P2PLink_AgreedDelay(void)
     return l->delayLocal > l->delayPeer ? l->delayLocal : l->delayPeer;
 }
 
-/* ---- the setup blob, from the outside ---- */
+/* ---- messages, from the outside ---- */
 
-int32_t P2PLink_SendSetup(const uint8_t *data, uint32_t len)
+int32_t P2PLink_Send(int32_t channel, const uint8_t *data, uint32_t len)
 {
-    P2PLink *l = &s_link;
-    if (l->state != P2P_CONNECTED || !data || len == 0 || len > (uint32_t)kBlobMax)
-        return 1;
-    free(l->txBlob);
-    l->txBlob = (uint8_t *)malloc(len);
-    if (!l->txBlob)
-        return 1;
-    memcpy(l->txBlob, data, len);
-    l->txLen    = len;
-    l->txChunks = (int32_t)((len + kBlobChunk - 1) / kBlobChunk);
-    memset(l->txAcked, 0, sizeof l->txAcked);
-    l->txLastSendMs = 0;        /* the next poll starts sending */
-    return 0;
+    return message_send(&s_link, channel, data, len);
 }
 
-int32_t P2PLink_SetupSent(void)
+uint16_t P2PLink_SentGeneration(int32_t channel)
 {
-    const P2PLink *l = &s_link;
-    if (!l->txBlob)
+    if (channel < 0 || channel >= P2P_NUM_CHANNELS)
         return 0;
-    return bitmap_full(l->txAcked, l->txChunks);
+    return s_link.tx[channel].generation;
 }
 
-const uint8_t *P2PLink_ReceivedSetup(uint32_t *len)
+int32_t P2PLink_Delivered(int32_t channel)
 {
-    const P2PLink *l = &s_link;
-    if (!l->rxComplete)
-        return NULL;
-    if (len)
-        *len = l->rxLen;
-    return l->rxBlob;
+    return message_delivered(&s_link, channel);
 }
 
-int32_t P2PLink_SetupProgress(void)
+const uint8_t *P2PLink_Received(int32_t channel, uint32_t *len, uint16_t *generation)
+{
+    return message_received(&s_link, channel, len, generation);
+}
+
+int32_t P2PLink_TransferProgress(void)
 {
     const P2PLink *l = &s_link;
-    int32_t i, have = 0, n = 0;
-    if (l->txBlob) { n = l->txChunks; for (i = 0; i < n; i++) have += bitmap_get(l->txAcked, i); }
-    else if (l->rxBlob) { n = l->rxChunks; for (i = 0; i < n; i++) have += bitmap_get(l->rxHave, i); }
+    int32_t c, i, have = 0, n = 0;
+    for (c = 0; c < P2P_NUM_CHANNELS; c++) {
+        const TxChannel *t = &l->tx[c];
+        const RxChannel *r = &l->rx[c];
+        if (t->data && !bitmap_full(t->acked, t->chunks)) {
+            n += t->chunks;
+            for (i = 0; i < t->chunks; i++) have += bitmap_get(t->acked, i);
+        }
+        if (r->data) {
+            n += r->chunks;
+            for (i = 0; i < r->chunks; i++) have += bitmap_get(r->have, i);
+        }
+    }
     if (n <= 0)
         return -1;
     return have * 100 / n;
@@ -1053,28 +1197,13 @@ static int32_t both_have_delay(void *ctx)
            p->b->delayLocal >= 0 && p->b->delayPeer >= 0;
 }
 
-static int32_t joiner_has_setup(void *ctx)
+/* Both ways: a's newest message on channel 0 is b's newest complete one, and the
+ * other way round on channel 1, and both senders have seen them acked. */
+static int32_t messages_across(void *ctx)
 {
     PairCtx *p = (PairCtx *)ctx;
-    return p->b->rxComplete && bitmap_full(p->a->txAcked, p->a->txChunks);
-}
-
-/* P2PLink_SendSetup works on the game's one link; the self-test drives two of
- * its own, so it needs the same thing pointed at a given one. */
-static int32_t P2PLink_SendSetupOn(P2PLink *l, const uint8_t *data, uint32_t len)
-{
-    if (l->state != P2P_CONNECTED || !data || len == 0 || len > (uint32_t)kBlobMax)
-        return 1;
-    free(l->txBlob);
-    l->txBlob = (uint8_t *)malloc(len);
-    if (!l->txBlob)
-        return 1;
-    memcpy(l->txBlob, data, len);
-    l->txLen    = len;
-    l->txChunks = (int32_t)((len + kBlobChunk - 1) / kBlobChunk);
-    memset(l->txAcked, 0, sizeof l->txAcked);
-    l->txLastSendMs = 0;
-    return 0;
+    return p->b->rx[0].doneGeneration == p->a->tx[0].generation && message_delivered(p->a, 0) &&
+           p->a->rx[1].doneGeneration == p->b->tx[1].generation && message_delivered(p->b, 1);
 }
 
 static int32_t host_waiting_again(void *ctx)
@@ -1129,30 +1258,78 @@ int32_t P2PLink_SelfTest(void)
         }
     }
 
-    /* 1c. The match setup crosses intact. ~40 KB, which is more than the real
-     * kick-off state and well past one datagram, so it exercises the chunking,
-     * the bitmap ack and the retransmit rather than a happy single packet. */
+    /* 1c. Messages cross intact, both ways at once. ~40 KB one way, which is more
+     * than the real kick-off state and well past one datagram, so it exercises the
+     * chunking, the bitmap ack and the retransmit rather than a happy single packet.
+     *
+     * Then the thing generations are for: each side sends AGAIN before the first
+     * has finished -- the second message the same length as the first, which is
+     * exactly the case that used to be assembled from both -- and the receiver must
+     * end up with the second, whole, and never report the first. */
     {
-        enum { kTestBlob = 40000 };
-        uint8_t *sent = (uint8_t *)malloc(kTestBlob);
+        enum { kTestBlob = 40000, kSmall = 3000 };
+        uint8_t *big  = (uint8_t *)malloc(kTestBlob);
+        uint8_t *v1   = (uint8_t *)malloc(kSmall);
+        uint8_t *v2   = (uint8_t *)malloc(kSmall);
+        uint8_t *back = (uint8_t *)malloc(kSmall);
         const uint8_t *got;
         uint32_t gotLen = 0, i;
+        uint16_t gotGen = 0;
         PairCtx pairBoth = { &host, &joiner };
 
-        if (sent) {
+        if (big && v1 && v2 && back) {
             for (i = 0; i < kTestBlob; i++)
-                sent[i] = (uint8_t)(i * 31u + (i >> 8));      /* not compressible to nothing */
-            check(P2PLink_SendSetupOn(&host, sent, kTestBlob) == 0, "the host sends a setup");
-            pump(pair, 2, 8000, joiner_has_setup, &pairBoth);
-            got = joiner.rxComplete ? joiner.rxBlob : NULL;
-            gotLen = joiner.rxLen;
+                big[i] = (uint8_t)(i * 31u + (i >> 8));       /* not compressible to nothing */
+            for (i = 0; i < kSmall; i++) {
+                v1[i]   = (uint8_t)(i * 7u);
+                v2[i]   = (uint8_t)(i * 13u + 1);
+                back[i] = (uint8_t)(i * 17u + 3);
+            }
+            check(message_send(&host, 0, big, kTestBlob) == 0, "the host sends a message");
+            check(message_send(&joiner, 1, back, kSmall) == 0, "the joiner sends one back");
+            pump(pair, 2, 8000, messages_across, &pairBoth);
+            got = message_received(&joiner, 0, &gotLen, &gotGen);
             check(got != NULL, "the joiner receives all of it");
             check(got && gotLen == kTestBlob, "it is the right length");
-            check(got && gotLen == kTestBlob && memcmp(got, sent, kTestBlob) == 0,
+            check(got && gotLen == kTestBlob && memcmp(got, big, kTestBlob) == 0,
                   "every byte matches");
-            check(bitmap_full(host.txAcked, host.txChunks), "the host sees it acknowledged");
-            free(sent);
+            check(message_delivered(&host, 0), "the host sees it acknowledged");
+            got = message_received(&host, 1, &gotLen, &gotGen);
+            check(got && gotLen == kSmall && memcmp(got, back, kSmall) == 0,
+                  "the host has the joiner's, at the same time");
+
+            /* Replace: v1 then v2 on the same channel, no poll in between. */
+            check(message_send(&host, 0, v1, kSmall) == 0 && message_send(&host, 0, v2, kSmall) == 0,
+                  "the host replaces a message before it is sent");
+            check(message_send(&joiner, 1, v1, kSmall) == 0, "the joiner starts one");
+            pump(pair, 2, 30, NULL, NULL);                  /* let some of it cross */
+            check(message_send(&joiner, 1, v2, kSmall) == 0, "and replaces it in flight");
+            pump(pair, 2, 8000, messages_across, &pairBoth);
+            got = message_received(&joiner, 0, &gotLen, &gotGen);
+            check(got && gotLen == kSmall && gotGen == host.tx[0].generation &&
+                  memcmp(got, v2, kSmall) == 0, "the joiner ends with the newest, whole");
+            got = message_received(&host, 1, &gotLen, &gotGen);
+            check(got && gotLen == kSmall && gotGen == joiner.tx[1].generation &&
+                  memcmp(got, v2, kSmall) == 0, "so does the host");
+
+            /* All of it again on a wire that loses every third datagram -- chunks,
+             * acks and replacements alike. Retransmission has to cover every one. */
+            s_testDropEvery = 3;
+            s_testSendCount = 0;
+            check(message_send(&host, 0, big, kTestBlob) == 0 &&
+                  message_send(&joiner, 1, v1, kSmall) == 0, "on a lossy wire, both send");
+            pump(pair, 2, 60, NULL, NULL);
+            check(message_send(&joiner, 1, back, kSmall) == 0, "the joiner replaces its own");
+            pump(pair, 2, 15000, messages_across, &pairBoth);
+            got = message_received(&joiner, 0, &gotLen, &gotGen);
+            check(got && gotLen == kTestBlob && gotGen == host.tx[0].generation &&
+                  memcmp(got, big, kTestBlob) == 0, "every byte still arrives");
+            got = message_received(&host, 1, &gotLen, &gotGen);
+            check(got && gotLen == kSmall && gotGen == joiner.tx[1].generation &&
+                  memcmp(got, back, kSmall) == 0, "and the replacement, not the first");
+            s_testDropEvery = 0;
         }
+        free(big); free(v1); free(v2); free(back);
     }
 
     /* 1d. NAT traversal: two peers punch to each other through a list that is
@@ -1284,14 +1461,21 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
 int32_t        P2PLink_AgreedDelay(void)       { return -1; }
 int32_t        P2PLink_ProposedDelay(void)     { return -1; }
 int32_t        P2PLink_PeerProposedDelay(void) { return -1; }
-int32_t        P2PLink_SendSetup(const uint8_t *data, uint32_t len)
+int32_t        P2PLink_Send(int32_t channel, const uint8_t *data, uint32_t len)
 {
-    (void)data; (void)len;
+    (void)channel; (void)data; (void)len;
     return 1;
 }
-int32_t        P2PLink_SetupSent(void)     { return 0; }
-const uint8_t *P2PLink_ReceivedSetup(uint32_t *len) { if (len) *len = 0; return NULL; }
-int32_t        P2PLink_SetupProgress(void) { return 0; }
+uint16_t       P2PLink_SentGeneration(int32_t channel) { (void)channel; return 0; }
+int32_t        P2PLink_Delivered(int32_t channel)      { (void)channel; return 0; }
+const uint8_t *P2PLink_Received(int32_t channel, uint32_t *len, uint16_t *generation)
+{
+    (void)channel;
+    if (len) *len = 0;
+    if (generation) *generation = 0;
+    return NULL;
+}
+int32_t        P2PLink_TransferProgress(void) { return -1; }
 
 int32_t P2PLink_SelfTest(void)
 {

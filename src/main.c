@@ -208,6 +208,11 @@ static void print_usage(const char *argv0)
         "                            Talk to a matchmaking server: log in, list the\n"
         "                            lobby, create and leave a game. Needs one running\n"
         "                            (scripts/run_matchmaker.sh). Default 127.0.0.1:19602.\n"
+        "  --netplay-lobby=<host|join>\n"
+        "                            Meet another instance on this machine over\n"
+        "                            loopback and open the multiplayer lobby: pick\n"
+        "                            teams and tactics, ready up, and play a match.\n"
+        "                            Start one of each.\n"
         "  --netplay-selftest        Run GGPO-X with a toy game: two peers over\n"
         "                            loopback, then a synctest session, then the\n"
         "                            MULTIPLAYER menu's own link. Exits.\n"
@@ -508,6 +513,12 @@ int main(int argc, char **argv)
         } else if (strncmp(a, "--matchmaker-menu", 17) == 0 &&
                    (a[17] == '\0' || a[17] == '=')) {
             OnlineMenus_SetAutoLogin(a[17] == '=' ? a + 18 : "PLAYER");
+        } else if ((v = match_kv(a, "netplay-lobby")) != NULL) {
+            if (OnlineMenus_SetLoopbackLobby(v) != 0) {
+                fprintf(stderr, "--netplay-lobby must be 'host' or 'join'\n");
+                return 1;
+            }
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "netplay-state-diff")) != NULL) {
             return NetplayLiveTest_StateDiff(v);
         } else if ((v = match_kv(a, "netplay-live-pair")) != NULL) {

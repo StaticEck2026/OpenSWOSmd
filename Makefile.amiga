@@ -58,6 +58,7 @@ SDL_ONLY_SRCS := \
     mm_client.c           \
     netplay.c             \
     netplay_live_test.c   \
+    netplay_lobby.c       \
     netplay_setup.c       \
     netplay_match.c       \
     netplay_netem.c       \

@@ -138,6 +138,13 @@ int  Platform_VBlank(void);
  * pace. For a caller that runs the interrupt itself, once per simulated frame. */
 int  Platform_Present(void);
 
+/* A function Platform_VBlank calls every frame, whatever is on screen -- or NULL.
+ * For a connection that must not go quiet while a modal menu owns the loop: the
+ * netplay lobby's link while a player browses the team list (src/online_menus.c).
+ * Keep it cheap, and keep it away from game state: it also runs on the frames of a
+ * local match. */
+void Platform_SetFrameHook(void (*hook)(void));
+
 /* Just pump SDL events, render bitplanes, and present. No pacing.
  * Safe to call from the SDL_AddTimer thread. */
 void Platform_RenderFrame(void);

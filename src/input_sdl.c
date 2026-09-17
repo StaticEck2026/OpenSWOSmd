@@ -639,6 +639,24 @@ void InputSDL_ClearKeyState(void)
      * they don't need explicit clearing here. */
 }
 
+/* Everything released: the keyboard state, and the joystick and fire registers the
+ * game reads (joy0Dat, joy1Dat, CIAA port A).
+ *
+ * For a live netplay match, called as it starts. InputSDL_PostFrame stops writing
+ * the registers the moment a netplay match is enabled -- the synced inputs own them
+ * from the first frame -- but the pre-match screens run BEFORE that frame and read
+ * them, and they would still hold whatever was down when the match was started. The
+ * player who pressed START with fire started it with fire down, so the stadium
+ * screen's wait for fire to be released (InitGameSaveTeams) waited forever. Released
+ * is also the one state both peers can be sure to agree on. */
+void InputSDL_ReleaseAll(void)
+{
+    InputSDL_ClearKeyState();
+    _joy0Dat = 0;
+    _joy1Dat = 0;
+    _ciaa_pra |= (uint8_t)((1u << 7) | (1u << 6));     /* active low: both fire buttons up */
+}
+
 /* This machine's own controls, as MATCH_* bits, for a netplay match.
  *
  * A netplay peer always drives the LOCAL half from player 1's keyboard and

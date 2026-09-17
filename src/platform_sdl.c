@@ -1899,6 +1899,70 @@ void Platform_RenderFrame(void)
 /* ---- Full vblank: render + 50 Hz pacing ---------------------------
  * Called from WaitForVSync on the game/main thread. Pumps SDL events
  * here (main thread only) before rendering the frame. */
+static void (*s_frame_hook)(void);
+
+void Platform_SetFrameHook(void (*hook)(void))
+{
+    s_frame_hook = hook;
+}
+
+/* SWOS_KEY_SCRIPT="<frame>:<key> <frame>:<key> ..." -- press each key on that frame of
+ * Platform_VBlank and release it three frames later. Key names are SDL's (Return,
+ * Escape, Up, Down, Left, Right, Space ...). For driving a menu with nobody at the
+ * keyboard: pair it with SWOS_PRESENT_CAPTURE to see what the keys did. Frame counts
+ * depend on load times, so leave generous gaps. */
+enum { kKeyScriptMax = 128 };
+static struct { uint32_t frame; SDL_Keycode key; } s_key_script[kKeyScriptMax];
+static int      s_key_script_len = -1;      /* -1 = not read yet */
+static uint32_t s_key_script_frame;
+
+static void push_key(SDL_Keycode key, int down)
+{
+    SDL_Event ev;
+    memset(&ev, 0, sizeof ev);
+    ev.type = down ? SDL_KEYDOWN : SDL_KEYUP;
+    ev.key.state = down ? SDL_PRESSED : SDL_RELEASED;
+    ev.key.keysym.sym = key;
+    ev.key.keysym.scancode = SDL_GetScancodeFromKey(key);
+    SDL_PushEvent(&ev);
+}
+
+static void key_script_tick(void)
+{
+    if (s_key_script_len < 0) {
+        const char *spec = getenv("SWOS_KEY_SCRIPT");
+        s_key_script_len = 0;
+        while (spec && *spec && s_key_script_len < kKeyScriptMax) {
+            char name[32];
+            unsigned frame;
+            int used = 0;
+            if (sscanf(spec, " %u:%31[^ ]%n", &frame, name, &used) != 2 || used == 0)
+                break;
+            s_key_script[s_key_script_len].frame = frame;
+            s_key_script[s_key_script_len].key   = SDL_GetKeyFromName(name);
+            if (s_key_script[s_key_script_len].key == SDLK_UNKNOWN)
+                fprintf(stderr, "[keys] SWOS_KEY_SCRIPT: unknown key '%s'\n", name);
+            else
+                s_key_script_len++;
+            spec += used;
+        }
+        if (s_key_script_len > 0)
+            fprintf(stderr, "[keys] SWOS_KEY_SCRIPT: %d key presses\n", s_key_script_len);
+    }
+    if (s_key_script_len == 0)
+        return;
+    for (int i = 0; i < s_key_script_len; i++) {
+        if (s_key_script[i].frame == s_key_script_frame) {
+            push_key(s_key_script[i].key, 1);
+            fprintf(stderr, "[keys] frame %u: %s\n", (unsigned)s_key_script_frame,
+                    SDL_GetKeyName(s_key_script[i].key));
+        }
+        if (s_key_script[i].frame + 3 == s_key_script_frame)
+            push_key(s_key_script[i].key, 0);
+    }
+    s_key_script_frame++;
+}
+
 int Platform_VBlank(void)
 {
     /* Drive the Amiga Level-3 ISR from the main thread too, in case the
@@ -1906,6 +1970,9 @@ int Platform_VBlank(void)
      * thread spin loops can monopolise CPU). The throttle inside the
      * wrapper means double-firing from both threads is harmless. */
     RunInt3HandlerThrottled();
+    if (s_frame_hook)
+        s_frame_hook();
+    key_script_tick();
     return Platform_Present();
 }
 

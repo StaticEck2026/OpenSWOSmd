@@ -516,22 +516,113 @@ opponent. (A second candidate, not confirmed: `CalculateIfPlayerWinsBall` gates 
 first in a frame gets to contest and the other is locked out. Against the AI that bias is
 invisible; with two humans one of them is always the team evaluated first.)
 
-**The match setup**, as numbered chunks with a bitmap ack: `P2PLink_SendSetup()` /
-`P2PLink_ReceivedSetup()`. The payload is a `state_wire` packet (docs/ROLLBACK.md, "The
-wire format"), which already encodes portably — typed fields big-endian, pointers as
-identities — so a 32-bit peer and a 64-bit one read the same bytes. All the link adds is
-getting ~35 KB across UDP intact.
+**Messages**, for anything that must arrive whole: `P2PLink_Send(channel, …)` /
+`P2PLink_Received(channel, …)`, as numbered chunks with a bitmap ack. Each kind of message
+has a **channel**, and sending on a channel again **replaces** what was there: it gets the
+next generation, the receiver keeps only the newest complete one, and chunks of an older
+transfer still in flight cannot be mixed into a newer one. Before generations, a re-send of
+the same length was indistinguishable from the first and would have been assembled from
+both — fine for a one-shot setup, fatal for a lobby where a player changes their mind. Up to
+128 KB a message; payloads are the caller's to encode portably.
 
 > The read buffer is sized by the largest packet, not the typical one. It was 64 bytes —
 > ample for the control packets and 16 short of a setup chunk's header. `recvfrom`
 > truncates silently, so every chunk arrived with all but its first 48 bytes missing while
 > the transfer still completed and acked: right length, full bitmap, wrong contents. The
-> self-test sends 40 KB and compares every byte, which is how that was found.
+> self-test sends 40 KB and compares every byte, which is how that was found. It now also
+> replaces messages before and during sending, both ways at once, and repeats it all on a
+> wire that drops every third datagram.
 
-**What is missing is the match itself**: opening the GGPO session over the link. The live
-input is done (`InputSDL_LocalMatchControls`, `NetplayMatch_StartLive`) and the corpus
-p2p tests still pass with it in; what is left is starting a match on both peers, loading
-the host's state onto the joiner and handing over to the session.
+### The lobby (`src/netplay_lobby.c`, `mpGameSetupMenu`)
+
+Once the link is up and the delay agreed, both players land in SWOS 2020's lobby screen.
+SWOS 2020's model: **each player publishes their own side** — a team, a tactic, ready or
+not — and **the host owns the rules** (game length, pitch, substitutes). Player 1 is the
+host and the top team.
+
+| Row / button | Who | What it does |
+|---|---|---|
+| TEAMS | your row | the game's own team list — clubs, national sides, custom teams (`ChooseTeamsDialog`, as IMPORT TEAM uses it) |
+| TACTICS | your row | steps through the twelve formations and USER A–F |
+| GO | your row | ready, or not |
+| GAME LENGTH, PITCH TYPE, SUBSTITUTES | host | the friendly menu's own cycles; the joiner sees them change |
+| START | host | lit when both are ready on the current rules |
+| FRAME DELAY | — | the delay the link agreed; shown, not chosen |
+
+The protocol is three messages, each on a link channel of its own:
+
+- **STATE** — one player's side (team record, tactic, the USER tactic itself if it is one,
+  ready, name). The host's also carries the rules and their generation; the joiner's echoes
+  the rules generation it has seen. Re-sent on every change.
+- **START** — host → joiner: the whole match setup (`netplay_setup.c`) built from both
+  sides, and **which of the joiner's STATE messages it was built from**.
+- **ANSWER** — joiner → host: yes, or no. The joiner says no when the START names a STATE
+  older than its newest — it changed something while the host was pressing START — and the
+  host goes back to the lobby and says so. Without the answer the host would kick off a
+  match the joiner never agreed to.
+
+**Ready goes down** when what you agreed to changes: your own team or tactic, the other
+player's team or tactic, or (for the joiner) the host's rules. A match starts only from two
+ready flags set after the last change either player could see.
+
+**The USER tactics.** Both teams share six slots. Player 1's USER tactic goes in USER A for
+the match and player 2's in USER B (SWOS 2020's convention), so two players who both use
+their own "USER A" do not collide; both machines put their own six slots back afterwards.
+
+**Kick-off re-applies the setup** (`NetplayLobby_ApplyMatch`) immediately before
+`InitAndPlayGame`; `NetplayMatch_StartLive` releases every input; and the first frame step
+zeroes the joystick history and the match clock. Each was found the hard way — two peers
+that came through the MENUS desynced on frame 1 while the live test, which skips the front
+end, never did:
+
+- **Seeds that are not generator state.** `Randomize2` XORs its argument with
+  `_randomSeed`, and `ApplyTeamTactics` reseeds per player from `GetPlayerRandomNum`,
+  which mixes in `_newRandomSeedCopy` and `_currentSeasonShowing`. All are taken from the
+  tick counter when the front end starts, so every player's skill roll differed by a point
+  here and there. They travel in the setup now (version 2).
+- **Menu key presses.** `Player1StatusProc` keeps a fire counter and edge detectors from
+  call to call, and runs in the menus: the host who pressed START came out with
+  `_pl1FireCounter` 2 against 0. And `InputSDL_PostFrame` stops updating the joystick
+  registers the moment a netplay match is enabled, so the stadium screen's wait for fire to
+  be released waited forever on the held START press.
+- **The clock.** `StartLive` zeroed the tick counters, but the stadium line-up and its waits
+  run after that while the SDL timer thread keeps ticking by the wall clock — so two peers
+  reached frame 0 at 0x1B and 0x1D. Only intermittent on one machine, it reproduced every
+  time once `SWOS_PRESENT_CAPTURE` slowed one peer, and two real machines will always differ.
+  The first frame step now resets the clock where the replay rig does
+  (`applyFirstFrameSetup`), with its values.
+
+`SWOS_LIVE_DUMP=<dir>` writes each peer's state at the first frame step and
+`--netplay-state-diff=A,B` names the regions that differ; that is how both were found.
+
+**The team list is a modal menu**, and nothing polls the link while it is up — the other
+player would see this one go quiet and drop the connection after six seconds. The lobby
+installs `Platform_SetFrameHook(P2PLink_Poll)`, which `Platform_VBlank` runs on every frame
+of every menu. **Returning from it restores the lobby menu from its template**, every hidden
+entry visible again, so the lobby re-applies its layout (and the navigation links SWOS 2020
+wires in code) on every draw.
+
+Not ported: the location flags, ranked and tournament modes, team database choice, cup legs,
+chat and the live cast — hidden. Editing a tactic in the lobby is not there either: players
+choose among the tactics they already have.
+
+```
+bin/SWOS.x86_64 --netplay-lobby=host     # two instances on one machine, over loopback,
+bin/SWOS.x86_64 --netplay-lobby=join     # straight into the lobby
+scripts/netplay_live_test.sh             # the lobby driven through its API, then a match
+```
+
+Test knobs, for looking without a pad: `SWOS_LOBBY_TEAM=<file>:<ordinal>` (hex) picks a
+team as the lobby opens, `SWOS_LOBBY_READY=1` says ready, `SWOS_LOBBY_START=1` has the host
+press START as soon as it can, and `SWOS_KEY_SCRIPT="<frame>:<key> …"` presses keys on given
+frames (SDL key names). With `SWOS_PRESENT_CAPTURE` that is how the lobby screens were
+checked.
+
+The live test drives the lobby through the same API the menu does: each peer picks a
+different team, the joiner a USER tactic from slot C, the host changes the rules after the
+joiner is ready (which must take the joiner's ready down), the joiner changes its mind as
+the first START arrives (which must be refused and retried), and both peers must then print
+the same match — England 4-3-3 v Brazil on USER B — and end with the same state hash.
 
 ---
 

@@ -14,6 +14,14 @@
 #ifdef SWOS_SDL_BUILD
 
 #include "swos_types.h"
+#include "game_types.h"
+
+/* One team record as it crosses the wire: the 684 bytes of TeamFileEx, with its one
+ * multi-byte field (globalTeamNumber) big-endian. The lobby sends each player's team
+ * this way too (src/netplay_lobby.c). */
+#define NETPLAY_TEAM_BYTES 684
+void     NetplaySetup_WriteTeam(uint8_t *out, const TeamFileEx *team);
+void     NetplaySetup_ReadTeam(TeamFileEx *team, const uint8_t *in);
 
 /* Bytes a setup can take; the buffer to hand NetplaySetup_Encode. */
 uint32_t NetplaySetup_MaxBytes(void);

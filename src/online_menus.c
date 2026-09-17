@@ -27,9 +27,11 @@
 #include "menu_system.h"
 #include "input_text.h"
 #include "p2p_link.h"         /* the peer connection the handoff makes */
-#include "netplay_setup.h"    /* the match setup the host sends */
+#include "netplay_lobby.h"    /* where the two players set the match up */
 #include "netplay_match.h"    /* the live GGPO session */
 #include "game_types.h"       /* TeamFileEx, for the match the handoff starts */
+#include "platform_sdl.h"     /* Platform_SetFrameHook: the link outlives a modal menu */
+#include "teams.h"            /* LoadTeamFile, for the lobby's test knobs */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,7 +40,10 @@
 #define SWOS2020_MENU(name) "swos2020/" #name
 
 /* SWOS 2020 mnu2h colour constants used below (mnu2h/Constants.py). */
-enum { kGray = 7, kLightBrownWithRedFrame = 12 };
+enum {
+    kGray = 7, kLightBrownWithYellowFrame = 6, kRed = 10, kPurple = 11,
+    kLightBrownWithRedFrame = 12, kLightBlue = 13, kGreen = 14,
+};
 
 /* ---- entry access, the spelling SWOS 2020's handlers use (swos.h MenuEntry) ---- */
 static MenuEntry *entry_at(int32_t ordinal)
@@ -351,37 +356,13 @@ static void hostGameMessageMenu_button2_OnSelect(void)   /* REFUSE */
  * The handoff: matchmaking is over, connect to the peer
  * ======================================================================
  * The server has paired us and given us the other player's addresses. From here
- * the server is out of the loop and the two of us talk directly, over the same
- * p2p_link the direct-IP menu used (docs/NETPLAY.md sections 6 and 7).
- *
- * WHAT THIS DOES NOT DO YET: play the match. Opening the GGPO session -- the
- * host sending the match setup, live pad input, running the session over the
- * link -- does not exist on EITHER path (NETPLAY.md section 6, "What is
- * missing"), so matchmaking now ends where the direct-IP menu ended: two peers
- * connected and pinging. That is the next chunk, and it is the same chunk for
- * both entry points.
- *
- * Port: p2p_link binds its own socket, so the matchmaker's addresses supply the
- * peer's IP but not a port to meet on. Both sides use the same fixed port as the
- * direct-IP menu (SWOS 2020's GGPO port). That is fine on one machine and on a
- * LAN -- p2p_link takes the next free port when that one is busy, which is what
- * makes two instances on one box work -- but it does NOT punch through NAT. Real
- * NAT traversal is the reason the server sends several candidate addresses, and
- * using them properly is part of the same unfinished chunk. */
-#define MM_MATCH_PORT 47885
+ * the server is out of the loop and the two of us talk directly: both punch to all
+ * of the other's addresses over p2p_link (docs/NETPLAY.md sections 6 and 7), then
+ * the lobby (mpGameSetupMenu below) sets the match up and the match is played. */
 
 static char s_matchStatus[64];
 static int32_t s_matchPlayer;      /* 1 = we created the game, 2 = we joined */
-static int32_t s_setupSent;        /* host: the setup is on its way */
-static int32_t s_setupApplied;     /* joiner: the host's setup is ours now */
-
-/* The peer's address, taken while the link is CERTAINLY up rather than at
- * handover. The other side closes its link as soon as it has what it needs, and
- * the BYE that follows clears our peer -- so reading it late gives an empty
- * address and a session that will not start. */
-static char     s_peerAddr[24];
-static uint16_t s_peerPort;
-static uint16_t s_localPort;
+static char    s_myName[MM_NAME_MAX];
 
 void OnlineMenus_StartMatchFromMatchmaking(void)
 {
@@ -394,11 +375,9 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
     MmClient_ClearStart();
 
     s_matchPlayer  = st->playerNumber;
-    s_setupSent    = 0;
-    s_setupApplied = 0;
-    s_peerAddr[0]  = '\0';
-    s_peerPort     = 0;
-    s_localPort    = 0;
+    /* Our login name, for the lobby's player column: read it before the disconnect
+     * below forgets it. */
+    snprintf(s_myName, sizeof s_myName, "%s", MmClient_UserName());
 
     /* NAT traversal: BOTH peers punch to all of the other's candidates at once.
      * Neither hosts -- a peer that only listens is unreachable from behind a
@@ -430,76 +409,12 @@ const char *OnlineMenus_MatchStatus(void)
 }
 
 /* ======================================================================
- * mpWaitingMenu -- where the two connected players wait
+ * mpWaitingMenu -- until the two players are connected
  * ====================================================================== */
 static char s_waitLine[80];
 
-/* Exchange the match setup, then play.
- *
- * Both peers must start from the same teams, tactics, options and random seed,
- * so the host sends its setup and the joiner adopts it. Then BOTH run the same
- * deterministic init over it -- which is how the corpus two-peer test gets two
- * identical machines, and is why this sends the setup rather than a copy of the
- * host's post-init state.
- *
- * The link is CLOSED before the session opens: GGPO wants its own socket, on
- * the same local port, which is also what keeps a NAT mapping open across the
- * handover. Everything the session needs is therefore read out first.
- *
- * InitAndPlayGame runs the whole match and returns when it is over, exactly as
- * it does for the friendly menu and for arcade mode. */
-/* Remember where the peer is, the moment we know. */
-static void capture_peer(void)
-{
-    char peer[24], *colon;
-    if (s_peerAddr[0])
-        return;
-    snprintf(peer, sizeof peer, "%s", P2PLink_PeerText());
-    if (!peer[0])
-        return;
-    snprintf(s_peerAddr, sizeof s_peerAddr, "%s", peer);
-    colon = strchr(s_peerAddr, ':');
-    if (colon) {
-        *colon = '\0';
-        s_peerPort = (uint16_t)atoi(colon + 1);
-    }
-    if (!s_peerPort)
-        s_peerPort = MM_MATCH_PORT;
-    s_localPort = P2PLink_LocalPort();
-}
-
-static void run_live_match(void)
-{
-    /* Declared where they are used: this file is menus, and these three belong
-     * to the match. Spellings as game_loop.h / game_types.h define them. */
-    extern uint16_t    _gFrameStepInput;
-    extern TeamFileEx  _selectedTeams[100];
-    extern void        InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
-
-    int32_t delay = P2PLink_AgreedDelay();
-
-    capture_peer();                     /* if it has not happened already */
-    if (delay < 0)
-        delay = 2;                      /* both sides fall back the same way */
-    if (!s_peerAddr[0]) {
-        snprintf(s_matchStatus, sizeof s_matchStatus, "LOST THE OPPONENT'S ADDRESS");
-        return;
-    }
-
-    P2PLink_Close();
-
-    if (NetplayMatch_StartLive(s_matchPlayer, s_peerAddr, s_peerPort, s_localPort, delay) != 0) {
-        snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT START THE MATCH");
-        return;
-    }
-
-    snprintf(s_matchStatus, sizeof s_matchStatus, "PLAYING");
-    _gFrameStepInput = 1;               /* one frame of input at a time (game_loop.h) */
-    InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
-    NetplayMatch_Finish();
-    SetExitMenuFlag();
-}
-
+/* Connected and the input delay agreed: into the lobby. It returns when the match has
+ * been played or somebody has left, and either way this menu is done too. */
 static void mpWaitingMenu_OnDraw(void)
 {
     P2PLinkState st;
@@ -507,46 +422,15 @@ static void mpWaitingMenu_OnDraw(void)
     P2PLink_Poll();
     st = P2PLink_State();
 
-    if (st == P2P_CONNECTED)
-        capture_peer();
-
-    /* Connected and the delay agreed: swap the setup, then kick off. */
     if (st == P2P_CONNECTED && P2PLink_AgreedDelay() >= 0) {
-        if (s_matchPlayer == 1) {
-            if (!s_setupSent) {
-                uint8_t *buf = (uint8_t *)malloc(NetplaySetup_MaxBytes());
-                int32_t n = buf ? NetplaySetup_Encode(buf, NetplaySetup_MaxBytes()) : -1;
-                if (n > 0 && P2PLink_SendSetup(buf, (uint32_t)n) == 0)
-                    s_setupSent = 1;
-                free(buf);
-            } else if (P2PLink_SetupSent()) {
-                run_live_match();
-                return;
-            }
-        } else {
-            uint32_t n = 0;
-            const uint8_t *got = P2PLink_ReceivedSetup(&n);
-            if (got && !s_setupApplied) {
-                if (NetplaySetup_Apply(got, n) == 0)
-                    s_setupApplied = 1;
-                else
-                    snprintf(s_matchStatus, sizeof s_matchStatus, "BAD SETUP FROM THE HOST");
-            }
-            if (s_setupApplied) {
-                run_live_match();
-                return;
-            }
-        }
+        OnlineMenus_EnterLobby(s_matchPlayer, s_myName);
+        SetExitMenuFlag();
+        return;
     }
 
     switch (st) {
     case P2P_CONNECTED: {
         int32_t ping = P2PLink_PingMs();
-        int32_t pct  = P2PLink_SetupProgress();
-        if (pct >= 0) {
-            snprintf(s_waitLine, sizeof s_waitLine, "MATCH SETUP %d%%", pct);
-            break;
-        }
         if (ping >= 0)
             snprintf(s_waitLine, sizeof s_waitLine, "CONNECTED TO %s - %d MS",
                      P2PLink_PeerText(), ping);
@@ -571,6 +455,452 @@ static void mpWaitingMenu_OnDraw(void)
 static void mpWaiting_menuExit_OnSelect(void)
 {
     P2PLink_Close();
+    SetExitMenuFlag();
+}
+
+/* ======================================================================
+ * mpGameSetupMenu -- the lobby (swos-2020/src/menus/mpGameSetup.mnu)
+ * ======================================================================
+ * The protocol is src/netplay_lobby.c; this is only its face. Row 01 is player 1
+ * (the host, the top team), row 02 player 2. A player can change their own row --
+ * TEAMS opens the game's team list, TACTICS steps through the formations and the
+ * USER tactics, GO says ready -- and the host the rules on the right. START needs
+ * both GO lights on.
+ *
+ * Kept from SWOS 2020's screen: the columns, the rules, the latency, START and
+ * CANCEL. Hidden until they exist here: the location flags, the ranked and
+ * tournament modes, the team database choice, cup legs, the chat and the live
+ * cast. */
+
+/* The team list is a MENU of its own, modal, and while it is up nothing calls this
+ * screen's onDraw -- so nothing would poll the link, and the other player would
+ * see this one go quiet and drop the connection after six seconds. The frame hook
+ * keeps it breathing: Platform_VBlank runs it on every frame of every menu. */
+static void lobby_frame_hook(void)
+{
+    P2PLink_Poll();
+}
+
+/* Test knobs for looking at the lobby without a pad (docs/NETPLAY.md, "The lobby"):
+ * SWOS_LOBBY_TEAM=<file>:<ordinal> in hex picks a team as the lobby opens,
+ * SWOS_LOBBY_READY=1 says ready, and SWOS_LOBBY_START=1 has the host press START the
+ * moment it can. */
+static void lobby_test_knobs(void)
+{
+    extern uint8_t _teamFileBuffer[];
+    const char *team = getenv("SWOS_LOBBY_TEAM");
+    unsigned file, ordinal;
+
+    if (team && sscanf(team, "%x:%x", &file, &ordinal) == 2 && LoadTeamFile((uint16_t)file) == 0) {
+        uint16_t count = *(uint16_t *)_teamFileBuffer, i;     /* host-native count, then records */
+        TeamFileEx *rec = (TeamFileEx *)(_teamFileBuffer + 2);
+        for (i = 0; i < count; i++) {
+            if (rec[i].team.countryNumber == file && rec[i].team.teamOrdinal == ordinal) {
+                NetplayLobby_SetTeam(&rec[i]);
+                break;
+            }
+        }
+    }
+    if (getenv("SWOS_LOBBY_READY"))
+        NetplayLobby_SetReady(1);
+}
+
+void OnlineMenus_EnterLobby(int32_t player, const char *name)
+{
+    OnlineMenus_Init();
+    NetplayLobby_Begin(player, name);
+    lobby_test_knobs();
+    OnlineMenus_Show(SWOS2020_MENU(mpGameSetupMenu));
+    NetplayLobby_End();
+    P2PLink_Close();
+    Platform_SetFrameHook(NULL);
+}
+
+static char s_lobbyHeader[40], s_lobbyStyle[24], s_lobbyConn[24], s_lobbyPing[16];
+static char s_lobbyActivity[64];
+static char s_rowName[2][LOBBY_NAME_MAX + 1];
+static char s_rowTeam[2][18];
+static char s_rowTactic[2][10];
+static char s_ruleMin[8], s_ruleMax[8], s_ruleDelay[12];
+
+/* The ordinal of this machine's entry in the column whose header row is `column00`. */
+static int32_t my_row(int32_t column00)    { return column00 + NetplayLobby_LocalPlayer(); }
+
+static void lobby_hide(int32_t ordinal)    { set_visible(ordinal, 0); }
+
+static const char *tactic_name(const LobbyPlayer *p, char *buf, uint32_t cap)
+{
+    extern void *_tacticsStringTable[];
+    extern uint8_t _teamTacticsUSERA[], _teamTacticsUSERB[], _teamTacticsUSERC[];
+    extern uint8_t _teamTacticsUSERD[], _teamTacticsUSERE[], _teamTacticsUSERF[];
+    static uint8_t *const slots[6] = {
+        _teamTacticsUSERA, _teamTacticsUSERB, _teamTacticsUSERC,
+        _teamTacticsUSERD, _teamTacticsUSERE, _teamTacticsUSERF,
+    };
+    const char *name;
+
+    if (!p->hasTeam)
+        return "-";
+    if (p->tactic < TACTIC_USER_A)
+        name = (const char *)_tacticsStringTable[p->tactic];
+    else if (p == NetplayLobby_Player(NetplayLobby_LocalPlayer()))
+        name = (const char *)slots[p->tactic - TACTIC_USER_A];     /* our own slot, as it is */
+    else
+        name = (const char *)p->userTactic.name;                   /* theirs, as sent */
+    snprintf(buf, cap, "%.9s", name);
+    return buf;
+}
+
+static const char *pitch_name(uint16_t pitch)
+{
+    extern const char _aRandom[], _aFrozen[], _aMuddy[], _aWet[], _aSoft[];
+    extern const char _aNormal[], _aDry[], _aHard[];
+    static const char *const names[7] = { _aFrozen, _aMuddy, _aWet, _aSoft, _aNormal, _aDry, _aHard };
+    return pitch < 7 ? names[pitch] : _aRandom;
+}
+
+static const char *length_name(uint16_t length)
+{
+    extern const char _a3Mins[], _a5Mins[], _a7Mins[], _a10Mins[];
+    static const char *const names[4] = { _a3Mins, _a5Mins, _a7Mins, _a10Mins };
+    return names[length < 4 ? length : 0];
+}
+
+/* Where the cursor goes from an entry. SWOS 2020 wires this screen in code too
+ * (setEntry in mpGameSetupMenu_OnDraw): the .mnu gives most of these entries no
+ * neighbours at all, and a direction with none goes nowhere. A disabled or hidden
+ * neighbour is passed over along ITS link in the same direction (MenuProc), so one
+ * layout serves both players: the joiner's DOWN runs through the host's rules to
+ * CANCEL. */
+static void lobby_nav(int32_t ordinal, int32_t left, int32_t right, int32_t up, int32_t down)
+{
+    MenuEntry *e = entry_at(ordinal);
+    e->leftEntry  = (int8_t)left;
+    e->rightEntry = (int8_t)right;
+    e->upEntry    = (int8_t)up;
+    e->downEntry  = (int8_t)down;
+    e->directionLeft = e->directionRight = e->directionUp = e->directionDown = -1;
+}
+
+/* What this screen hides, labels and links. Applied on EVERY draw, not once in onInit:
+ * coming back from the team list restores the menu from its template -- every entry
+ * visible again, the column headers blank -- and there is no onReturn to redo it in. */
+static void lobby_layout(void)
+{
+    int32_t i;
+    int32_t row = NetplayLobby_LocalPlayer();       /* 1 or 2: our row */
+    int32_t teams = MpGameSetupMenu_teams_00 + row;
+    int32_t tactics = MpGameSetupMenu_tactics_00 + row;
+    int32_t go = MpGameSetupMenu_go_00 + row;
+
+    lobby_nav(teams,   -1,      tactics, -1, MpGameSetupMenu_gameLength1);
+    lobby_nav(tactics, teams,   go,      -1, MpGameSetupMenu_gameLength1);
+    lobby_nav(go,      tactics, -1,      -1, MpGameSetupMenu_gameLength1);
+    lobby_nav(MpGameSetupMenu_gameLength1, -1, -1, teams, MpGameSetupMenu_pitchType1);
+    lobby_nav(MpGameSetupMenu_pitchType1,  -1, -1, MpGameSetupMenu_gameLength1, MpGameSetupMenu_minSubs1);
+    lobby_nav(MpGameSetupMenu_minSubs1, -1, MpGameSetupMenu_maxSubs1,
+              MpGameSetupMenu_pitchType1, MpGameSetupMenu_cancel);
+    lobby_nav(MpGameSetupMenu_maxSubs1, MpGameSetupMenu_minSubs1, -1,
+              MpGameSetupMenu_pitchType1, MpGameSetupMenu_start);
+    lobby_nav(MpGameSetupMenu_cancel, -1, MpGameSetupMenu_start, MpGameSetupMenu_minSubs1, -1);
+    lobby_nav(MpGameSetupMenu_start, MpGameSetupMenu_cancel, -1, MpGameSetupMenu_maxSubs1, -1);
+
+    lobby_hide(MpGameSetupMenu_teamDB);
+    lobby_hide(MpGameSetupMenu_latency);
+    lobby_hide(MpGameSetupMenu_latencyPercent);
+    for (i = 0; i < MpGameSetupMenu_kGS_MaxRows; i++)
+        lobby_hide(MpGameSetupMenu_location_00 + i);
+    lobby_hide(MpGameSetupMenu_rankedMode1Label);
+    lobby_hide(MpGameSetupMenu_rankedModeOption1);
+    lobby_hide(MpGameSetupMenu_teamDB1Label);
+    lobby_hide(MpGameSetupMenu_teamDB1);
+    lobby_hide(MpGameSetupMenu_etPen1Label);
+    lobby_hide(MpGameSetupMenu_legOpt1);
+    lobby_hide(MpGameSetupMenu_etPen1);
+    lobby_hide(MpGameSetupMenu_ggpoFrameDelayDec);
+    lobby_hide(MpGameSetupMenu_ggpoFrameDelayInc);
+    lobby_hide(MpGameSetupMenu_matchInfo);
+    lobby_hide(MpGameSetupMenu_chatLabel);
+    lobby_hide(MpGameSetupMenu_liveCastUrlBtn);
+    for (i = MpGameSetupMenu_chatMsg00; i <= MpGameSetupMenu_chatMsg09; i++)
+        lobby_hide(i);
+    lobby_hide(MpGameSetupMenu_scrollUp);
+    lobby_hide(MpGameSetupMenu_scrollDown);
+    lobby_hide(MpGameSetupMenu_inputChatMsg);
+
+    set_entry(MpGameSetupMenu_cPlayers_00, "PLAYERS", 0, kGray);
+    set_entry(MpGameSetupMenu_teams_00,    "TEAMS",   0, kGray);
+    set_entry(MpGameSetupMenu_tactics_00,  "TACTICS", 0, kGray);
+    set_entry(MpGameSetupMenu_go_00,       "GO",      0, kGray);
+    set_text(MpGameSetupMenu_latencyLabel, "LATENCY:");
+    set_entry(MpGameSetupMenu_gameStyle1, "", 0, kGray);        /* the link already made both agree */
+    set_entry(MpGameSetupMenu_ggpoFrameDelay_, "", 0, kGray);   /* agreed by the link, not chosen here */
+}
+
+static void mpGameSetupMenu_OnInit(void)
+{
+    Platform_SetFrameHook(lobby_frame_hook);
+    lobby_layout();
+
+    /* Start on this player's TEAMS button: the first thing to do. */
+    {
+        extern uint8_t _currentMenu[];
+        ((Menu *)_currentMenu)->selectedEntry = entry_at(my_row(MpGameSetupMenu_teams_00));
+    }
+}
+
+static void run_live_match(void);
+static int32_t current_ordinal(void);
+
+static void mpGameSetupMenu_OnDraw(void)
+{
+    extern int _gDosGameplay;
+    const LobbyPlayer *players[2];
+    const LobbyRules *rules;
+    LobbyState st;
+    int32_t me, host, open, row;
+
+    NetplayLobby_Poll();
+    if (getenv("SWOS_LOBBY_START") && NetplayLobby_CanStart())
+        (void)NetplayLobby_Start();
+    st = NetplayLobby_State();
+    if (st == LOBBY_KICKOFF) {
+        run_live_match();
+        return;
+    }
+
+    lobby_layout();
+    me    = NetplayLobby_LocalPlayer();
+    host  = NetplayLobby_IsHost();
+    open  = st == LOBBY_OPEN;
+    rules = NetplayLobby_Rules();
+    players[0] = NetplayLobby_Player(1);
+    players[1] = NetplayLobby_Player(2);
+
+    snprintf(s_lobbyHeader, sizeof s_lobbyHeader, "FRIENDLY GAME - LOBBY (%s)", host ? "HOST" : "CLIENT");
+    set_text(MpGameSetupMenu_header, s_lobbyHeader);
+    snprintf(s_lobbyStyle, sizeof s_lobbyStyle, "%s", _gDosGameplay ? "PC (70FPS)" : "AMIGA (50FPS)");
+    set_text(MpGameSetupMenu_gameStyle, s_lobbyStyle);
+    set_text(MpGameSetupMenu_gameStyle1, s_lobbyStyle);
+    snprintf(s_lobbyConn, sizeof s_lobbyConn, "%s", st == LOBBY_FAILED ? "DISCONNECTED" : "CONNECTED");
+    set_text(MpGameSetupMenu_connectionStatus, s_lobbyConn);
+    if (P2PLink_PingMs() >= 0)
+        snprintf(s_lobbyPing, sizeof s_lobbyPing, "%dMS", P2PLink_PingMs());
+    else
+        snprintf(s_lobbyPing, sizeof s_lobbyPing, "...");
+    set_text(MpGameSetupMenu_latencyPing, s_lobbyPing);
+
+    for (row = 0; row < 2; row++) {
+        const LobbyPlayer *p = players[row];
+        int32_t mine = (row + 1 == me);
+        int32_t canEdit = mine && open;
+
+        if (p->known)
+            snprintf(s_rowName[row], sizeof s_rowName[row], "%s", p->name);
+        else
+            snprintf(s_rowName[row], sizeof s_rowName[row], "WAITING...");
+        set_entry(MpGameSetupMenu_cPlayers_01 + row, s_rowName[row], 0, kPurple);
+
+        if (p->hasTeam)
+            snprintf(s_rowTeam[row], sizeof s_rowTeam[row], "%.17s", (char *)p->team.team.teamName);
+        else
+            snprintf(s_rowTeam[row], sizeof s_rowTeam[row], "%s", mine ? "SELECT TEAM" : "-");
+        set_entry(MpGameSetupMenu_teams_01 + row, s_rowTeam[row], canEdit,
+                  canEdit ? kLightBrownWithYellowFrame : kGray);
+
+        set_entry(MpGameSetupMenu_tactics_01 + row,
+                  tactic_name(p, s_rowTactic[row], sizeof s_rowTactic[row]),
+                  canEdit && p->hasTeam, canEdit && p->hasTeam ? kLightBrownWithYellowFrame : kGray);
+
+        set_entry(MpGameSetupMenu_go_01 + row, p->ready ? "READY" : "-",
+                  canEdit && p->hasTeam, p->ready ? kGreen : (canEdit && p->hasTeam ? kRed : kGray));
+    }
+
+    /* The rules: the host's to change, everyone's to read. */
+    set_entry(MpGameSetupMenu_gameLength1, length_name(rules->gameLength), host && open,
+              host && open ? kLightBlue : kGray);
+    set_entry(MpGameSetupMenu_pitchType1, pitch_name(rules->pitchType), host && open,
+              host && open ? kLightBlue : kGray);
+    snprintf(s_ruleMin, sizeof s_ruleMin, "%u", (unsigned)rules->minSubs);
+    snprintf(s_ruleMax, sizeof s_ruleMax, "%u", (unsigned)rules->maxSubs);
+    set_entry(MpGameSetupMenu_minSubs1, s_ruleMin, host && open && rules->maxSubs > 0,
+              host && open && rules->maxSubs > 0 ? kLightBlue : kGray);
+    set_entry(MpGameSetupMenu_maxSubs1, s_ruleMax, host && open, host && open ? kLightBlue : kGray);
+    {
+        int32_t delay;
+        NetplayLobby_Peer(NULL, 0, NULL, NULL, &delay);
+        snprintf(s_ruleDelay, sizeof s_ruleDelay, "%d", delay);
+        set_text(MpGameSetupMenu_ggpoFrameDelay_, s_ruleDelay);
+    }
+
+    if (host) {
+        int32_t can = NetplayLobby_CanStart();
+        set_entry(MpGameSetupMenu_start, "START", can, can ? kRed : kGray);
+    } else {
+        set_visible(MpGameSetupMenu_start, 0);
+    }
+
+    /* One line: what went wrong, what the other player is doing, or what to do next. */
+    {
+        const LobbyPlayer *other = players[2 - me];
+        const LobbyPlayer *self  = players[me - 1];
+        const char *line = NetplayLobby_Notice();
+        if (!line[0]) {
+            if (st == LOBBY_STARTING)
+                line = "STARTING...";
+            else if (other->known && other->activity == LOBBY_ACTIVITY_CHOOSING_TEAM)
+                line = "YOUR OPPONENT IS CHOOSING A TEAM";
+            else if (!self->hasTeam)
+                line = "CHOOSE YOUR TEAM";
+            else if (!self->ready)
+                line = "PRESS GO WHEN YOU ARE READY";
+            else if (!other->ready)
+                line = "WAITING FOR YOUR OPPONENT";
+            else
+                line = host ? "BOTH READY - PRESS START" : "BOTH READY - THE HOST STARTS";
+        }
+        snprintf(s_lobbyActivity, sizeof s_lobbyActivity, "%s", line);
+        set_text(MpGameSetupMenu_oppoActivity, s_lobbyActivity);
+    }
+}
+
+/* Whether the entry just selected is on this player's row of `column00`'s column. */
+static int32_t on_my_row(int32_t column00)
+{
+    return current_ordinal() == my_row(column00) && NetplayLobby_State() == LOBBY_OPEN;
+}
+
+/* TEAMS: the game's own team list -- clubs, national sides and custom teams -- the
+ * way IMPORT TEAM uses it (edit_tactics.c). */
+static void mpGameSetup_teams_onSelect(void)
+{
+    extern void ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showOrigCustom,
+                                  uint8_t *title, void *onSelect);
+    extern uint16_t    _selectedTeamCountryNumber;
+    extern TeamFileEx *_selectedTeamPtr;
+    static char title[] = "CHOOSE YOUR TEAM";
+
+    if (!on_my_row(MpGameSetupMenu_teams_00))
+        return;
+
+    /* Tell the other player first -- and take ready down, so a start cannot be
+     * offered while this player is away in the list. */
+    NetplayLobby_SetReady(0);
+    NetplayLobby_SetActivity(LOBBY_ACTIVITY_CHOOSING_TEAM);
+    NetplayLobby_Poll();
+
+    ChooseTeamsDialog(1, 1, 1, (uint8_t *)title, (void *)0);
+
+    if ((int16_t)_selectedTeamCountryNumber != -1 && _selectedTeamPtr)
+        NetplayLobby_SetTeam(_selectedTeamPtr);
+    NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
+}
+
+/* TACTICS: the next formation, through the USER tactics and round again. */
+static void mpGameSetup_tactics_onSelect(void)
+{
+    const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+    if (!on_my_row(MpGameSetupMenu_tactics_00) || !p->hasTeam)
+        return;
+    NetplayLobby_SetTactic(p->tactic >= LOBBY_TACTIC_MAX ? 0 : p->tactic + 1);
+}
+
+/* GO: ready, or not. */
+static void mpGameSetup_go_onSelect(void)
+{
+    const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+    if (!on_my_row(MpGameSetupMenu_go_00))
+        return;
+    NetplayLobby_SetReady(!p->ready);
+}
+
+static void change_rules(void (*edit)(LobbyRules *r))
+{
+    LobbyRules r;
+    if (!NetplayLobby_IsHost() || NetplayLobby_State() != LOBBY_OPEN)
+        return;
+    r = *NetplayLobby_Rules();
+    edit(&r);
+    NetplayLobby_SetRules(&r);
+}
+
+static void next_length(LobbyRules *r) { r->gameLength = (uint16_t)((r->gameLength + 1) % 4); }
+
+/* RANDOM, FROZEN .. HARD, RANDOM: the friendly menu's order (FriendlyPitchTypeProc). */
+static void next_pitch(LobbyRules *r)
+{
+    r->pitchType = r->pitchType == 0xFFFF ? 0 : r->pitchType >= 6 ? 0xFFFF : (uint16_t)(r->pitchType + 1);
+}
+
+/* The friendly menu's substitutes rules (MinSubstitutes / MaxSubstitutes, menus.c). */
+static void next_min_subs(LobbyRules *r)
+{
+    if (r->maxSubs == 0)
+        return;
+    r->minSubs = (uint16_t)(r->minSubs >= r->maxSubs ? 1 : r->minSubs + 1);
+}
+
+static void next_max_subs(LobbyRules *r)
+{
+    r->maxSubs = (uint16_t)(r->maxSubs >= 5 ? 0 : r->maxSubs + 1);
+    if (r->maxSubs == 0)
+        r->minSubs = 0;
+    else if (r->minSubs == 0 || r->minSubs > r->maxSubs)
+        r->minSubs = 1;
+}
+
+static void selectGameLength1(void) { change_rules(next_length); }
+static void selectPitchType1(void)  { change_rules(next_pitch); }
+static void selectMinSubs1(void)    { change_rules(next_min_subs); }
+static void selectMaxSubs1(void)    { change_rules(next_max_subs); }
+
+static void selectMPSettingStart(void)
+{
+    (void)NetplayLobby_Start();
+}
+
+static void selectMPSettingExit(void)
+{
+    Platform_SetFrameHook(NULL);
+    SetExitMenuFlag();              /* OnlineMenus_EnterLobby closes the link behind us */
+}
+
+/* Both sides agreed: play.
+ *
+ * The link is CLOSED before the session opens: GGPO wants its own socket, on the same
+ * local port, which is also what keeps a NAT mapping open across the handover. The
+ * lobby took the peer's address while the link was up.
+ *
+ * InitAndPlayGame runs the whole match and returns when it is over, exactly as it
+ * does for the friendly menu and for arcade mode. */
+static void run_live_match(void)
+{
+    extern uint16_t    _gFrameStepInput;
+    extern TeamFileEx  _selectedTeams[100];
+    extern void        InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
+
+    char ip[24];
+    uint16_t peerPort, localPort;
+    int32_t delay;
+
+    Platform_SetFrameHook(NULL);
+    NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay);
+    NetplayLobby_End();
+    P2PLink_Close();
+
+    if (!ip[0] || NetplayLobby_ApplyMatch() != 0 ||
+        NetplayMatch_StartLive(NetplayLobby_LocalPlayer(), ip, peerPort, localPort, delay) != 0) {
+        snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT START THE MATCH");
+        NetplayLobby_RestoreTactics();
+        SetExitMenuFlag();
+        return;
+    }
+
+    snprintf(s_matchStatus, sizeof s_matchStatus, "PLAYING");
+    _gFrameStepInput = 1;               /* one frame of input at a time (game_loop.h) */
+    InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
+    NetplayMatch_Finish();
+    NetplayLobby_RestoreTactics();
     SetExitMenuFlag();
 }
 
@@ -679,6 +1009,18 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(mpWaitingMenu_OnDraw),
     HANDLER(mpWaiting_menuExit_OnSelect),
 
+    HANDLER(mpGameSetupMenu_OnInit),
+    HANDLER(mpGameSetupMenu_OnDraw),
+    HANDLER(mpGameSetup_teams_onSelect),
+    HANDLER(mpGameSetup_tactics_onSelect),
+    HANDLER(mpGameSetup_go_onSelect),
+    HANDLER(selectGameLength1),
+    HANDLER(selectPitchType1),
+    HANDLER(selectMinSubs1),
+    HANDLER(selectMaxSubs1),
+    HANDLER(selectMPSettingStart),
+    HANDLER(selectMPSettingExit),
+
     /* Exit and cancel buttons. Offline there is nothing to cancel or leave on a
      * server, so all of them just close their menu. */
     HANDLER_AS("cupMatchView_exit_onSelect",         SetExitMenuFlag),
@@ -700,7 +1042,6 @@ static const MenuSymbol k_handlers[] = {
     HANDLER_AS("myFriendlyStatsMenu_exit_OnSelect",  SetExitMenuFlag),
     HANDLER_AS("myRankedStatsMenu_exit_OnSelect",    SetExitMenuFlag),
     HANDLER_AS("selectExitOpenLobby",                SetExitMenuFlag),
-    HANDLER_AS("selectMPSettingExit",                SetExitMenuFlag),
 };
 
 #undef HANDLER
@@ -741,8 +1082,37 @@ void OnlineMenus_SetStartMenu(const char *name)
     snprintf(s_startMenu, sizeof s_startMenu, "%s", name);
 }
 
+/* --netplay-lobby=host|join: two instances on one machine meet over loopback and open
+ * the lobby, the way a matchmaking handoff would -- how the lobby menu gets tried
+ * without a server or a second computer. */
+static int32_t s_loopbackLobby;     /* 0 off, 1 host, 2 join */
+
+int32_t OnlineMenus_SetLoopbackLobby(const char *role)
+{
+    if (role && strcmp(role, "host") == 0)      s_loopbackLobby = 1;
+    else if (role && strcmp(role, "join") == 0) s_loopbackLobby = 2;
+    else                                        return 1;
+    return 0;
+}
+
 void OnlineMenus_ShowStartMenu(void)
 {
+    if (s_loopbackLobby) {
+        enum { kHostPort = 23921, kJoinPort = 23922 };
+        char peer[24];
+        const char *list[1] = { peer };
+        int32_t player = s_loopbackLobby;
+
+        s_loopbackLobby = 0;        /* once, like --menu */
+        OnlineMenus_Init();
+        snprintf(peer, sizeof peer, "127.0.0.1:%d", player == 1 ? kJoinPort : kHostPort);
+        s_matchPlayer = player;
+        snprintf(s_myName, sizeof s_myName, "%s", player == 1 ? "HOST" : "JOIN");
+        snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING OVER LOOPBACK");
+        if (P2PLink_Punch(list, 1, (uint16_t)(player == 1 ? kHostPort : kJoinPort)) == 0)
+            OnlineMenus_Show(SWOS2020_MENU(mpWaitingMenu));
+        return;
+    }
     if (!s_startMenu[0])
         return;
     char name[sizeof s_startMenu];
