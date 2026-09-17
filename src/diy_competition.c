@@ -9428,11 +9428,21 @@ void InitDIYLeagueFromRecord(uint8_t *leagueRec)
         slot += 1;   /* next tournament slot (sizeof == stride 0x76, both arches) */
     }
 
-    /* Post-loop check: if totalRounds == 6, skip */
+    /* The trailing slot carries the number of teams left when the competition
+     * ends, and the info screen prints it under the last round's arrow
+     * (DesignDIYTournamentOnDraw). That is the QUALIFIER count of the last
+     * stage, not its team count.
+     *
+     * The asm is `move.w $EE(a0),$162(a0)` with a0 = the slot after the last
+     * initialised one. The slot stride is 0x76 and numTeams sits at 0x162, so
+     * the SOURCE $EE is 0x164 - 0x76 = slot[-1].DIVISIONFACTOR; slot[-1].numTeams
+     * would be $EC. This port read $EC — one 16-bit field too early — so a
+     * World Cup qualification whose last stage is "1 GROUP OF 6, TOP 2 QUALIFY"
+     * printed 6 where it should print 2 (Asia), 6 where it should print 3
+     * (North America), 8 where it should print 5 (Africa). Reported by a player
+     * with a screenshot of both. */
     if (a6s->totalMatchesInRound != 6) {  /* 0x52 (= 0x3A + 0x18) */
-        /* slot is now the slot AFTER the last initialized one.
-         * a0+0xEE = slot[-1].numTeams (peek-back), a0+0x162 = slot[0].numTeams. */
-        slot->numTeams = slot[-1].numTeams;
+        slot->numTeams = slot[-1].divisionFactor;
     }
 
     DIYTournament_RecalculateMatchesPerTeam();
