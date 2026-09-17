@@ -109,8 +109,11 @@ domain. `--verify-only` re-checks what is on the server without re-uploading
 
 ```bash
 reportctl status <id> done "fixed in <commit>"
-reportctl archive <id>
 ```
+
+**Archive only after step 8 has actually posted.** `reportctl list --status done
+--unannounced` is how the changelog step finds what to write about, so archiving
+first hides the thing you are about to announce.
 
 `done` is a claim the reporter can overturn with `/reopen`, which puts the report
 back in the queue as `reopened`. Only mark what you actually verified; a report
@@ -125,9 +128,17 @@ reportctl announce --reports 0001,0002 --dry-run < notes.md   # ALWAYS first
 reportctl announce --reports 0001,0002 < notes.md
 ```
 
+then `reportctl archive <id>` for each, once the post is up.
+
 `--reports` credits those reporters and records the release on their reports, so
 the trail from report to published fix stays intact. **Dry-run first: a post
 cannot be undone.**
+
+`announce: Discord refused the post (403 Forbidden)` means the bot has no **View
+Channel** + **Send Messages** on #swos-changelog — Channel Settings →
+Permissions → add the bot. A refused post changes nothing: the reports stay
+`done` and still `--unannounced`, so the same command works once the permission
+is there.
 
 Write it for a player, not for us: what changed and what they will see. The
 offsets, the register names and the asm citation belong in the commit message —
