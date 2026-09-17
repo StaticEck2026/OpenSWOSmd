@@ -5762,6 +5762,7 @@ void ChooseTeamsDialog(uint16_t showClub, uint16_t showNational, uint16_t showOr
     _chooseTeamsHeader1stPart = (uintptr_t)title;
     _chooseTeamsFunc = (uintptr_t)onSelect;
     _careerSquadScreenDidSelectPlayerFlag = 0;
+    chooseTeamsKeepListOpen = 0;     /* never inherit it from an earlier dialog */
     /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
     if (onSelect == (void *)0)
         _careerSquadScreenDidSelectPlayerFlag = 0xFF00;
@@ -5796,6 +5797,7 @@ void ChooseTeamsDialogWithNationality(uint16_t nationality, uint16_t showClub,
     _chooseTeamsHeader1stPart = (uintptr_t)title;
     _chooseTeamsFunc = (uintptr_t)onSelect;
     _careerSquadScreenDidSelectPlayerFlag = 0;
+    chooseTeamsKeepListOpen = 0;     /* never inherit it from an earlier dialog */
     /* seq instruction: sets high byte of word to 0xFF when a1==0 (big-endian) */
     if (onSelect == (void *)0)
         _careerSquadScreenDidSelectPlayerFlag = 0xFF00;
@@ -5835,6 +5837,8 @@ void SelectTeamToManage(void)
  * Chunk 204 — Career_ShowAddInternationalPlayerDialog
  * (SWOS2.s lines 64815-64835)
  * ========================================================================== */
+
+uint16_t chooseTeamsKeepListOpen;    /* include/menus.h says what this is for */
 
 extern uint16_t _careerAddIntlPlayerResult;
 extern uintptr_t _careerAddIntlPlayerSelectedSrcPlayerPtr;
@@ -6041,6 +6045,12 @@ void Career_AddInternationalPlayerCommon(uint8_t *selectedTeam, uint8_t *title)
 
         _careerNumPlayers++;
         _careerAddIntlPlayerResult = 0;
+        /* He is IN the squad, so there is nothing to come back to the squad
+         * screen for: keep the club list open and let the manager walk to the
+         * next club. Only on this path -- a pending add (result 1 below) has to
+         * return, because the player is not placed until a squad slot is picked
+         * to replace. */
+        chooseTeamsKeepListOpen = 1;
         return;
     }
 

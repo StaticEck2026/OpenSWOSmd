@@ -229,6 +229,18 @@ void MinSubstitutes(void);
 void MaxSubstitutes(void);
 void RandomlySwapTeams(void);
 
+/* Set by a chooseTeamsFunc callback that has DONE its job and wants the club
+ * list left open instead of closed. ChooseTeamsFriendlyCommon2 consumes and
+ * clears it; nothing else sets it.
+ *
+ * The original closes the list after any selection the callback reports
+ * (SWOS2.s:65118 — `tst.w careerSquadScreenDidSelectPlayerFlag / bne` ->
+ * abortSelectTeams + SetExitMenuFlag). For adding international players that
+ * means one club per visit: add a player, get returned to the squad screen, and
+ * walk ADD PLAYER -> HOME/ABROAD -> league -> club again for the next one.
+ * Reported by a player, and changed deliberately. */
+extern uint16_t chooseTeamsKeepListOpen;
+
 /* --- ShowSquad (Chunk 164) --- */
 int16_t ShowSquad(TeamFile *teamPtr, uint8_t *title, uint32_t maskLo,
                     uint32_t maskHi, uint16_t arg2, uint16_t arg3);

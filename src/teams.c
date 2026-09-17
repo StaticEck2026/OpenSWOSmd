@@ -2126,6 +2126,16 @@ void ChooseTeamsFriendlyCommon2(MenuEntry *entry)
         void (*func)(uint8_t *) = (void (*)(uint8_t *))_chooseTeamsFunc;
         func((uint8_t *)team);
         if (_careerSquadScreenDidSelectPlayerFlag != 0) {
+            /* The callback finished the job and wants to stay here — adding an
+             * international player who went straight into a free squad slot.
+             * Leaving the list up is what lets the next player be picked from
+             * another club without walking the whole path again. Consume both
+             * flags so the next club starts clean. */
+            if (chooseTeamsKeepListOpen) {
+                chooseTeamsKeepListOpen = 0;
+                _careerSquadScreenDidSelectPlayerFlag = 0;
+                return;
+            }
             _abortSelectTeams = 1;
             _chooseTeamsResult = 0;
             SetExitMenuFlag();
