@@ -855,6 +855,51 @@ The server is SimpleMatchmaker, vendored at `third_party/matchmaker` — the sam
 project SWOS 2020 ships. Its `OPENSWOS.md` records what was changed and why. Both it
 and the client are built on the one vendored ENET (`third_party/enet`).
 
+### Running one for testers
+
+Two players on two machines need a server they can both reach, which means one machine
+with an open UDP port. The server is stateless and tiny: it introduces players and drops
+out, so restarting it interrupts nobody's match, only new ones being made.
+
+**1. Run it.** It binds `ENET_HOST_ANY`, so it is already listening on every interface:
+
+```bash
+scripts/run_matchmaker.sh                  # builds if needed, UDP 19602
+```
+
+Keep it alive across a disconnect with `tmux new -s mm 'scripts/run_matchmaker.sh'`, or
+`nohup`, or a systemd unit if it is going to live somewhere permanently.
+
+**2. Let it through the machine's own firewall.** On this Windows box WSL2 runs in
+**mirrored** networking mode (`networkingMode=mirrored` in `%USERPROFILE%\.wslconfig`),
+so a WSL listener shares the Windows host's addresses — no `netsh portproxy`, which is
+TCP-only and would not have worked for UDP anyway. Mirrored mode is firewalled by the
+Hyper-V firewall, so the rule goes there:
+
+```powershell
+# elevated PowerShell, once
+New-NetFirewallHyperVRule -Name SWOS-MM -DisplayName "SWOS matchmaker" `
+    -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' `
+    -Protocol UDP -LocalPorts 19602 -Action Allow
+```
+
+**3. Forward it on the router**: UDP 19602 → the host machine's LAN address.
+
+**4. Tell the testers the address.** `SWOS_MM_HOST=<public IP or DNS name>`; the port only
+if it is not 19602. **`baker76.com` is the wrong name to hand out** — it resolves to the
+GoDaddy shared host the downloads live on, not to whatever machine is running this. A home
+connection needs its current public IP, or a dynamic-DNS name pointed at it.
+
+**5. Prove it from another machine before handing it out**, rather than trusting the
+forward:
+
+```bash
+SWOS_MM_HOST=<address> bin/SWOS.x86_64 --matchmaker-selftest   # logs in, lobbies, leaves
+```
+
+That is a full protocol handshake, not a ping. There is nothing TCP to telnet at — a TCP
+tool reporting "connection refused" against a UDP service means nothing.
+
 ### The protocol
 
 Text over ENET, one message per packet, `HEADER:content`. On connect, in this order:
