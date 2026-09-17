@@ -2342,49 +2342,26 @@ __attribute__((used, externally_visible))
  * moves without animating — it slides.
  *
  * The port widens the view HORIZONTALLY only (_screen_width >= SCREEN_WIDTH;
- * the line count is fixed), so this test takes the render WIDTH and the
- * simulation HEIGHT. In a replay the rig pins the render width to
- * SCREEN_WIDTH and sets the simulation height from the recording, which makes
- * this identical to `onScreen` — so the corpus is unaffected — while at a
- * 16:9 render (484 wide) the extra margin animates instead of sliding.
+ * the line count is fixed), so this test takes the simulation DRAW width
+ * (display.h: the render width locally, one agreed width in netplay) and the
+ * simulation HEIGHT. In a replay the rig pins that width to SCREEN_WIDTH and
+ * sets the simulation height from the recording, which makes this identical to
+ * `onScreen` — so the corpus is unaffected — while at a 16:9 render (484 wide)
+ * the extra margin animates instead of sliding.
  * ------------------------------------------------------------------ */
 /* Not static: the animation gate reads this list a frame after it is built, so it is
  * match state, and src/sim_state.c registers it (SPRITE_ANIMVIS_MAX: sprites.h). */
 const Sprite *g_spriteAnimVisible[SPRITE_ANIMVIS_MAX];
 int16_t       g_spriteAnimVisibleCount;
 
-/* Does the ANIMATION view follow the RENDER view (the shipping answer), or the
- * SIMULATION view (the replay rig)?
- *
- * Shipping: yes, it follows the render. That is 310c1a6 — a sprite in the
- * widescreen margin is drawn, so it has to animate, or it slides along frozen.
- * That behaviour is deliberate and is NOT to be given up to make a test pass.
- *
- * The rig: no. A recording was made on a 336-wide display, where there IS no
- * margin — nothing outside the simulation view was ever drawn, so nothing
- * outside it was ever animated. Reproducing the recorded conditions faithfully
- * therefore means pinning the animation view to the simulation view, exactly as
- * the rig already pins the gameplay style and (by default) the width. This is
- * not "switching off the thing under test": it is the difference between
- * replaying a recording and playing a new game that happens to share its input.
- *
- * What it buys is the width-invariance check (scripts/replay_widecheck.sh).
- * With the animation view pinned, EVERY remaining difference between a 336 run
- * and a 484 run is a render -> simulation leak, and the check can be run in
- * anger. Without it, this one accepted behaviour masks every other leak behind
- * it — it did: all eight failures at 484 stopped here, and no other leak could
- * be seen until it was taken out of the way.
- *
- * A RUNTIME test, not a compile-time one, on purpose: a -D that changes the
- * simulation is precisely what ReplayTest_Load now refuses to run against
- * (d77246b), and a flag-gated build would reintroduce the stale-object trap it
- * exists to close. */
-#ifdef SWOS_SDL_BUILD
-#include "replay_test.h"
-static int anim_follows_render_view(void) { return !ReplayTest_Armed(); }
-#else
-#define anim_follows_render_view() 1
-#endif
+/* Which margin animates is decided for the SIMULATION DRAW width (display.h), not
+ * the render width. Locally they are the same -- 310c1a6: a sprite in a widescreen
+ * margin is drawn, so it has to animate, or it slides along frozen, and that is not
+ * to be given up. The replay rig pins it to 336, because a recording was made with no
+ * margin, which keeps the corpus exact and leaves every other render -> simulation
+ * leak visible to scripts/replay_widecheck.sh. A netplay session sets it to one width
+ * both peers agreed, so a 4:3 and a 16:9 player animate the same margin. (It used to
+ * be the render width everywhere but the rig, which made two such peers diverge.) */
 
 int Sprite_AnimVisible(const Sprite *s)
 {
@@ -2398,7 +2375,6 @@ int Sprite_AnimVisible(const Sprite *s)
 void BuildSpriteBandAndGeneralRenderStacks(void)
 {
     int16_t d7 = (int16_t)_numSpritesToRender;
-    const int animFollowsRender = anim_follows_render_view();
     g_spriteAnimVisibleCount = 0;
     if (d7 == 0)
         return;
@@ -2485,13 +2461,19 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
                                  d1 <= negW || d2 <= negH);
             a1->onScreen = (int16_t)onScreen;
             /* Only ever ADD to what `onScreen` already allows, and only when
-             * the render really is wider than the simulation view. When
-             * `_screen_width == SCREEN_WIDTH` this list stays empty and the
-             * animation gate is bit-for-bit what it was — which is the case
-             * the replay rig runs in, so the corpus cannot be perturbed. */
-            if (!onScreen && _screen_width > SCREEN_WIDTH && animFollowsRender) {
-                int animVis = !(d1 >= _screen_width || d2 >= _sim_view_height ||
-                                d1 <= negW || d2 <= negH);
+             * the simulation draw width really is wider than the simulation
+             * view. At `_sim_draw_width == SCREEN_WIDTH` this list stays empty
+             * and the animation gate is bit-for-bit what it was -- which is the
+             * case the replay rig runs in, so the corpus cannot be perturbed.
+             * Measured from that width's origin, not the render's: the list is
+             * match state (sim_state.c), so it must not depend on this display.
+             * And world sprites only: a HUD sprite (z >= HUD_LAYER_Z_MIN) is placed
+             * for this display's width, so whether it fell inside the margin
+             * depended on the display -- and nothing animates it anyway. */
+            if (!onScreen && _sim_draw_width > SCREEN_WIDTH && a1->z.s.i < HUD_LAYER_Z_MIN) {
+                int16_t d1draw = a1->x.s.i - a0->centerX - Sim_DrawCameraX();
+                int animVis = !(d1draw >= _sim_draw_width || d2 >= _sim_view_height ||
+                                d1draw <= negW || d2 <= negH);
                 if (animVis && g_spriteAnimVisibleCount < SPRITE_ANIMVIS_MAX)
                     g_spriteAnimVisible[g_spriteAnimVisibleCount++] = a1;
             }

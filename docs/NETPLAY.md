@@ -186,9 +186,6 @@ on a real match must run without a checksum mismatch. It does (§5).
 
 ### Still to do
 
-- **One simulation width on both peers.** The simulation still reads the render width
-  in a few places, so a 16:9 peer and a 4:3 peer diverge; the link refuses a pair whose
-  widths differ.
 - **Instant replays and pause** leave the match loop. A live match keeps them out: its
   input carries no keys (R, H, P, ESC, S), and the goal replay does not start in one
   (`game_timers.c`, `NetplayMatch_IsLive`) -- before that, the first goal of a live match
@@ -517,11 +514,66 @@ subtracted our own input delay where it meant the remote's; OpenSWOS always agre
 delay, so that never bit), and `ggpo_start_session` now takes the frame rate -- 50 or 70 here --
 instead of assuming 60. Both came with catching the submodule up to upstream `master`.
 
+### One simulation width
+
+Two players on a 4:3 and a 16:9 screen used to be refused by the link, because the match
+itself read the render width. It no longer does: they play one match at a width both agreed.
+
+**What read it** (found with the rollback rig, which unlike the replay rig does not pin
+`Rand()`): at 336 and 484 wide, playa-10090613's random seed parted at frame 19 and the whole
+match by frame 1000.
+
+| where | what the width decided | now |
+|---|---|---|
+| `DrawAnimatedPatterns` | which column of crowd tiles toggles, and the widescreen mirror -- whether a slot fills, so the `Rand` calls of every frame after | the simulation draw width |
+| `BuildSpriteBandAndGeneralRenderStacks` | which sprites in the margin animate (310c1a6), a list the match reads a frame later | the simulation draw width, world sprites only |
+| `UpdateCornerFlagSprite` | which corner the flag stands at, and the second flag | the simulation draw width |
+| `DrawBenchAndSubsMenu` | the frame the bench is populated, which writes the subs state | the simulation draw width |
+| the score panel's extra tile | whether it is in the draw list, whose contents are match state | the simulation draw width |
+| HUD sprites (score, clock, names, S) | their `x`, and `onScreen` measured from it | this display's; out of the checksum |
+
+**The simulation draw width** (`_sim_draw_width`, `display.h`; `Sim_DrawCameraX()`, where a
+view that wide draws from) is what those decisions read. Locally it IS the render width, so a
+widescreen player keeps 310c1a6's animated margins; the replay rig pins it to 336 unless
+`--replay-sim-width` says otherwise, which keeps the corpus exact; and a live session takes one
+both peers agreed -- the wider of the two screens (`P2PLink_AgreedSimWidth`, from the widths
+each side's handshake already carried) -- and puts the display's own back when the match ends.
+The narrower player's margin animates off-screen, and its crowd tiles and bench are decided
+for a slightly wider view than it shows; nothing it can see changes.
+
+**The HUD stays where each display puts it.** A HUD sprite's `x` is placed for the local
+width (`WIDE_MARGIN`, `HUD_MARGIN`, a wider score box); nothing the match decides reads it. So
+a new registry field kind, `SIM_FIELD_LOCAL16/32`, covers `x` and `onScreen` of those sprites
+(`k_hudSprite`, `src/sim_state.c`): saved, loaded and sent like any other field, but counted as
+zero in `SimState_Hash`, the checksum peers compare. Their `visible` and `y` stay in it: they
+decide the draw list. (The VIEW tier -- the highlight ring, recorded in drawn coordinates --
+also differs between such peers, and was never compared.)
+
+A first version left those fields out of a sent state as well, and the resync test caught it:
+not every HUD sprite is placed every frame -- the result panel moves only while it shows -- so a
+loaded state kept stale positions, and the decode into a scratch buffer made them garbage. A
+resync between two peers of DIFFERENT widths is refused instead (`state_wire.c` checks the
+delta's base by the hash of its encoded bytes, HUD positions included); live play does not
+resync.
+
+The check: `scripts/netplay_width_test.sh` plays each recording through the rollback rig at
+render widths 336, 484 and 672 with one simulation width, and requires every frame's SIM hash
+to be identical; `scripts/netplay_test.sh --sim-width 484 --peer-widths "336 484"` plays them
+as two peers rendering at different widths, compared on the SIM tier.
+
+**It found a 64-bit bug on the way.** At simulation width 484 one DOS match (zkz-11215003)
+crashed at frame 24269 in `UpdateReferee`. `InitRefereeAnimationTable` read the direction's
+frame table at `animTable + 2 + dir * 4` -- the asm's `lsl.w #2` is the size of an Amiga
+pointer, and `AnimTable` holds native pointers. On every 64-bit build an odd direction read
+half of one pointer and half of the next, and an even one read the table for `dir / 2`: the
+referee animated the wrong way round, and a referee arriving on a diagonal crashed the game.
+The rig at 336 never happened to reach the crash; a different course of the same match did.
+It reads `dir * sizeof(int16_t *)` now, which is the same m68k code.
+
 ### Next
 
 1. **Two humans on two machines**, through MULTIPLAYER, the lobby and a rematch.
-2. **One simulation width** (§4, "Still to do").
-3. **Instant replays in a session**, driven by both peers.
+2. **Instant replays in a session**, driven by both peers.
 
 ----
 
@@ -550,8 +602,10 @@ first frame rather than an error:
 - the protocol version,
 - `SimState_LayoutHash` — the shape of the state a rollback saves, so two builds whose
   match state differs refuse each other,
-- the gameplay style (DOS or Amiga, arcade, the original fire-hold lockout),
-- the screen width, until the simulation stops reading it (§4, "Still to do").
+- the gameplay style (DOS or Amiga, arcade, the original fire-hold lockout).
+
+The screen width travels too, but does not have to match: both take the wider of the two as
+the match's simulation draw width (§5, "One simulation width").
 
 A joiner that differs is refused with the reason, and the host is told who bounced off it.
 

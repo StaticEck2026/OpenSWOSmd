@@ -103,6 +103,12 @@ int32_t        P2PLink_PingMs(void);
  * answer -- and it is then fixed for the match. */
 int32_t        P2PLink_AgreedDelay(void);
 
+/* The simulation draw width both peers will play the match at (display.h,
+ * _sim_draw_width): the wider of their two screens, clamped to 336..672. -1 until
+ * connected. Two players on a 4:3 and a 16:9 display used to be refused; this is what
+ * lets them play. */
+int32_t        P2PLink_AgreedSimWidth(void);
+
 /* The two halves of that, for a menu line or a log: what we asked for, and what
  * they asked for. -1 until known. */
 int32_t        P2PLink_ProposedDelay(void);

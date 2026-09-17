@@ -1680,8 +1680,14 @@ draw_bench:
      * The comparisons ABOVE are a different question — where MoveCamera is
      * panning to — and correctly stay on the simulation camera. Folds to
      * identity at 4:3 and on Amiga, where game_types.h defines
-     * Render_CameraX() as _cameraX.s.i. */
-    if (d0 <= Render_CameraX())
+     * Render_CameraX() as _cameraX.s.i.
+     *
+     * Measured from the SIMULATION draw view (display.h), which is this display's
+     * locally: what runs past the gate writes match state (_initialSubsState, the
+     * bench colours), so two netplay peers must open it on the same frame. The
+     * agreed view is at least as wide as either display, so the bench is never
+     * bare on screen; a narrower peer populates it a little early, off-screen. */
+    if (d0 <= Sim_DrawCameraX())
         return;
 
     _initialSubsState = _subsState;

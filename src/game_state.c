@@ -453,7 +453,10 @@ show_sprites:
     _gridBottomRowLeftSprite.visible = 1;
     _gridBottomRowRightSprite.visible = 1;
     /* 3rd tile only once the HUD box exceeds the 2x168 the base tiles cover. */
-    HUD_EXTRA_TILE_VISIBLE(HUD_WIDTH > 2 * 168 ? 1 : 0);
+    /* Whether the tile is in the draw list is match state (sim_state.c: the list's
+     * contents and order), so it follows the simulation draw width (display.h). A
+     * narrower display than that draws it exactly over the right tile. */
+    HUD_EXTRA_TILE_VISIBLE(SIM_HUD_WIDTH > 2 * 168 ? 1 : 0);
     _team1NameSprite.visible = 1;
     _team2NameSprite.visible = 1;
     _team1GoalsDigit2Sprite.visible = 1;

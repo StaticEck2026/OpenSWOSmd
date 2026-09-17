@@ -50,10 +50,10 @@ extern void SetCameraCoordinates(int16_t targetX, int16_t targetY);
  * 16.16 because the presenter's sub-pixel shift needs the fraction: scaling
  * makes the render camera move by well under a pixel per frame, so the
  * remainder is now most of the motion rather than a rounding detail. */
-int32_t Render_CameraX16(void)
+static int32_t viewOriginX16(int32_t width)
 {
     const int32_t pan = 0x2A0 - SCREEN_WIDTH;          /* 336 — the sim range */
-    int32_t max = (int32_t)(0x2A0 - _screen_width);    /* how far we may pan */
+    int32_t max = (int32_t)(0x2A0 - width);            /* how far we may pan */
 
     if (max <= 0)   return 0;                          /* whole pitch visible */
     if (max >= pan) return _cameraX.raw;               /* 336 wide: identity */
@@ -64,9 +64,24 @@ int32_t Render_CameraX16(void)
     return x;
 }
 
+int32_t Render_CameraX16(void)
+{
+    return viewOriginX16(_screen_width);
+}
+
 int16_t Render_CameraX(void)
 {
     return (int16_t)(Render_CameraX16() >> 16);
+}
+
+/* The same origin for the SIMULATION draw width (display.h): where a view of that
+ * width would draw from. It is what the match's draw-dependent decisions measure from,
+ * so two peers with different displays measure from the same place. A wider view's
+ * window contains every narrower one's, so the wider width sees at least what each
+ * peer draws. Identical to Render_CameraX() whenever the two widths are. */
+int16_t Sim_DrawCameraX(void)
+{
+    return (int16_t)(viewOriginX16(_sim_draw_width) >> 16);
 }
 #endif
 

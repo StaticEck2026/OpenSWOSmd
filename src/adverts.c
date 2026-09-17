@@ -299,8 +299,10 @@ void UpdateCornerFlagSprite(void)
     int16_t d0;
     Sprite *spr = &_cornerFlagSprite;
 
-    /* X position: if cameraX.s.i + 168 >= 336, hide far right; else show at x=81 */
-    d0 = Render_CameraX() + 168;
+    /* X position: if cameraX.s.i + 168 >= 336, hide far right; else show at x=81.
+     * A world sprite in the draw list, so measured from the simulation draw view
+     * (display.h) -- its position also orders the draw list, which is match state. */
+    d0 = Sim_DrawCameraX() + 168;
     if ((uint16_t)d0 >= 336)
         spr->x.s.i = 590;
     else
@@ -326,7 +328,7 @@ void UpdateCornerFlagSprite(void)
      * we just hide it (imageIndex = -1) — this is purely a widescreen extra. */
     {
         Sprite *spr2 = &_cornerFlagSprite2;
-        if (WIDE_MARGIN > 0) {
+        if (_sim_draw_width > SCREEN_WIDTH) {
             spr2->x.s.i      = (spr->x.s.i == 81) ? 590 : 81;  /* opposite side */
             spr2->y.s.i      = spr->y.s.i;                     /* same row as the primary */
             spr2->imageIndex = spr->imageIndex;                /* in sync with the primary */

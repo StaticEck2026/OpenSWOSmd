@@ -47,6 +47,12 @@
 #                   and the two peers never lose the same packet. Conditions hard
 #                   enough to disconnect a peer fail the run -- that is a link
 #                   nobody could play on, reported honestly, not a netcode bug.
+#   --sim-width N   every run plays at simulation draw width N (--replay-sim-width;
+#                   default 336, the corpus's own)
+#   --peer-widths "A B"
+#                   p2p: player 1 renders A wide and player 2 B -- a 4:3 and a 16:9
+#                   player at one agreed simulation width, which must still be the
+#                   plain run (docs/NETPLAY.md, "One simulation width")
 # Exit code: 0 everything passed, 2 something failed, 1 setup failure.
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -63,6 +69,8 @@ BIN=bin/SWOS.x86_64
 DEFAULT_REC=tests/dos/zkz-12065730.RGD.gz    # v1.5, 1519 frames -- the shortest
 BASE_PORT=23950         # below every ephemeral range; see LIVE_TEST_PORT in src/netplay_live_test.c
 P2P_TIMEOUT=1800
+SIM_WIDTH=336
+PEER_WIDTHS="336 336"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -73,7 +81,9 @@ while [ $# -gt 0 ]; do
         --all)      ALL=1; shift ;;
         --stall)    STALL=$2; shift 2 ;;
         --netem)    NETEM_SPEC=$2; shift 2 ;;
-        -h|--help)  sed -n '2,44p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        --sim-width) SIM_WIDTH=$2; shift 2 ;;
+        --peer-widths) PEER_WIDTHS=$2; shift 2 ;;
+        -h|--help)  sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         -*)         echo "unknown option $1" >&2; exit 1 ;;
         *)          RECS+=("$1"); shift ;;
     esac
@@ -143,7 +153,8 @@ swr_for() {
 # $OUT/<tag>.log with its exit code on the last line.
 run() {
     local tag=$1 swr=$2 gp=$3; shift 3
-    ( cd bin && ./SWOS.x86_64 --replay-test="../$swr" --dos-gameplay="$gp" "$@" ) \
+    ( cd bin && ./SWOS.x86_64 --replay-test="../$swr" --dos-gameplay="$gp" \
+        --replay-sim-width="$SIM_WIDTH" "$@" ) \
         > "$OUT/$tag.log" 2>&1
     echo "[netplay-test] exit $?" >> "$OUT/$tag.log"
 }
@@ -160,6 +171,7 @@ run_p2p() {
             cd bin && timeout "$P2P_TIMEOUT" \
                 env $NETEM SWOS_NETEM_SEED=$((port + p)) \
                 ./SWOS.x86_64 --replay-test="../$swr" --dos-gameplay="$gp" --rollback=trace \
+                --replay-sim-width="$SIM_WIDTH" --replay-width="$(echo $PEER_WIDTHS | cut -d' ' -f$p)" \
                 --netplay-match=p2p --netplay-delay="$delay" --netplay-stall="$STALL" --netplay-player=$p \
                 --netplay-port=$((port + p - 1)) --netplay-peer=127.0.0.1:$((port + 2 - p)) \
                 --netplay-trace="$OUT/$tag-$p.trace" --netplay-sound-trace="$OUT/$tag-$p.snd" \
@@ -170,7 +182,7 @@ run_p2p() {
     wait
 }
 export -f run run_p2p
-export OUT STALL P2P_TIMEOUT NETEM
+export OUT STALL P2P_TIMEOUT NETEM SIM_WIDTH PEER_WIDTHS
 
 SWRS=()
 for rec in "${RECS[@]}"; do
@@ -204,6 +216,22 @@ done > "$jobs_file"
 xargs -P "$JOBS" -I{} bash -c '{}' < "$jobs_file"
 
 exited_ok() { grep -q '^\[netplay-test\] exit 0$' "$1"; }
+
+# trace_diff <ref> <trace>: nothing if they agree, else the first frame that does not.
+# Peers on different render widths (--peer-widths) agree on the SIM column only: the VIEW
+# tier (the highlight ring) and the rig's observable fields hold drawn coordinates.
+trace_diff() {
+    set -- "$1" "$2"
+    if [ "${PEER_WIDTHS% *}" = "${PEER_WIDTHS#* }" ]; then
+        cmp -s "$1" "$2" && return
+        line=$(cmp "$1" "$2" 2>&1 | sed -n 's/.*line \([0-9]*\).*/\1/p')
+        echo $(( ${line:-1} - 1 ))
+    else
+        paste -d' ' <(awk '{print $1, $2}' "$1") <(awk '{print $2}' "$2") |
+            awk '$2 != $3 { print $1; found = 1; exit } END { if (!found && NR == 0) print 0 }'
+        [ "$(wc -l < "$1")" = "$(wc -l < "$2")" ] || echo "(length)"
+    fi
+}
 
 # sound_check <reference.snd> <run.snd> exact|superset: prints "; sound ..." and fails the
 # run on a missing (or, for exact, an extra) effect. Nothing without a direct reference.
@@ -239,9 +267,9 @@ for swr in "${SWRS[@]}"; do
                 for p in 1 2; do
                     if ! exited_ok "$OUT/$tag-$p.log" || [ ! -s "$OUT/$tag-$p.trace" ]; then
                         verdict=FAILED
-                    elif ! cmp -s "$ref" "$OUT/$tag-$p.trace"; then
-                        line=$(cmp "$ref" "$OUT/$tag-$p.trace" 2>&1 | sed -n 's/.*line \([0-9]*\).*/\1/p')
-                        verdict="DIFFERS (player $p from frame $(( ${line:-1} - 1 )))"
+                    else
+                        first=$(trace_diff "$ref" "$OUT/$tag-$p.trace" | head -1)
+                        [ -n "$first" ] && verdict="DIFFERS (player $p from frame $first)"
                     fi
                 done
                 rolls=$(grep -hoE 'player [12]: [0-9]+ frames played, [0-9]+ re-simulated after [0-9]+ rollbacks' \
@@ -262,8 +290,11 @@ for swr in "${SWRS[@]}"; do
                         [ "$sound_ok" = 1 ] || verdict="SOUND WRONG"
                     done
                 fi
+                widths=""
+                [ "${PEER_WIDTHS% *}" != "${PEER_WIDTHS#* }" ] &&
+                    widths=" (SIM tier; rendering $PEER_WIDTHS wide at simulation width $SIM_WIDTH)"
                 if [ "$verdict" = identical ]; then
-                    echo "  $name-$gp $m: both peers identical to the plain run ($frames frames); rollbacks $rolls$net$snd"
+                    echo "  $name-$gp $m: both peers identical to the plain run$widths ($frames frames); rollbacks $rolls$net$snd"
                 else
                     echo "  $name-$gp $m: $verdict; rollbacks $rolls$net$snd"
                     for p in 1 2; do

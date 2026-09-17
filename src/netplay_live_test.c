@@ -274,7 +274,7 @@ void NetplayLiveTest_Run(void)
 {
     char ip[24];
     uint16_t peerPort = LIVE_TEST_PORT, localPort;
-    int32_t delay, player;
+    int32_t delay, player, simWidth;
 
     SAY("[live] %s on port %d\n", s_isHost ? "host" : "join", LIVE_TEST_PORT);
 
@@ -410,7 +410,7 @@ void NetplayLiveTest_Run(void)
         SAY("  ok   my side of the match is the team I picked\n");
     }
 
-    NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay);
+    NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay, &simWidth);
     if (NetplayLobby_ApplyMatch() != 0) {
         SAY("  FAIL the agreed setup would not apply at kick-off\n");
         exit(1);
@@ -421,10 +421,10 @@ void NetplayLiveTest_Run(void)
      * open across the handover. */
     P2PLink_Close();
 
-    SAY("  ..   player %d, peer %s:%u, local port %u, delay %d\n",
-           player, ip, (unsigned)peerPort, (unsigned)localPort, delay);
+    SAY("  ..   player %d, peer %s:%u, local port %u, delay %d, simulation width %d\n",
+           player, ip, (unsigned)peerPort, (unsigned)localPort, delay, simWidth);
 
-    if (NetplayMatch_StartLive(player, ip, peerPort, localPort, delay) != 0) {
+    if (NetplayMatch_StartLive(player, ip, peerPort, localPort, delay, simWidth) != 0) {
         SAY("  FAIL the session would not start\n");
         exit(1);
     }

@@ -58,10 +58,13 @@ int32_t     NetplayMatch_Start(void);
  * direct-IP one): the same p2p session the corpus tests play, with this
  * machine's pad as the local input instead of a recording.
  *
- * `delay` must be the delay BOTH peers agreed -- P2PLink_AgreedDelay(). Close
- * the p2p link first: GGPO opens its own socket on the same local port. */
+ * `delay` must be the delay BOTH peers agreed -- P2PLink_AgreedDelay() -- and
+ * `simWidth` the simulation draw width they agreed (P2PLink_AgreedSimWidth): the
+ * match is played at it (display.h, _sim_draw_width) and the display's own width comes
+ * back when it ends. Close the p2p link first: GGPO opens its own socket on the same
+ * local port. */
 int32_t     NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t peerPort,
-                                   uint16_t localPort, int32_t delay);
+                                   uint16_t localPort, int32_t delay, int32_t simWidth);
 
 /* The 16-byte key the NEXT p2p session checksums its packets with, or NULL for none
  * (include/netplay.h, NetplayConfig.packetKey). Both peers must set the same one; the

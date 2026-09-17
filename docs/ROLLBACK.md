@@ -68,7 +68,10 @@ presentation into SIM:
   runs are copied, 16- and 32-bit values are written big-endian, and every pointer is
   written as a 32-bit **identity** of what it points at, never as an address.
   `SimState_Hash` covers the portable encoding, so every platform computes the same
-  checksum for the same match.
+  checksum for the same match -- except fields marked `SIM_FIELD_LOCAL16/32`, which it
+  counts as zero: the `x` and `onScreen` of HUD sprites, placed for this display's width,
+  so two netplay peers on different screens still agree (docs/NETPLAY.md, "One simulation
+  width"). They are saved and sent like any other field.
 
 Only `Sprite` (`animationTable`, `frameIndicesTable`) and `TeamGeneralInfo` (9 fields) have
 pointer fields; `TeamGame` and `ScorerInfo` hold only 8- and 16-bit ones. Every pointer the

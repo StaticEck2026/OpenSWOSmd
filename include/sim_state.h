@@ -55,7 +55,14 @@ typedef enum {
     SIM_FIELD_WORD16,       /* `count` 16-bit values, big-endian */
     SIM_FIELD_WORD32,       /* `count` 32-bit values (int32, FixedPoint), big-endian */
     SIM_FIELD_POINTER,      /* one native pointer, as a 32-bit identity of `kind` */
-    SIM_FIELD_TILE_SLOT     /* one 32-bit pitch tile slot, as its tile's index */
+    SIM_FIELD_TILE_SLOT,    /* one 32-bit pitch tile slot, as its tile's index */
+    /* `count` 16- or 32-bit values that belong to THIS machine's display, not to the match:
+     * saved, loaded and sent like WORD16/WORD32, but counted as zero in SimState_Hash -- the
+     * checksum peers compare -- because two peers on different screens hold different
+     * values. The x of a HUD sprite, placed for this display's width (docs/NETPLAY.md,
+     * "One simulation width"). */
+    SIM_FIELD_LOCAL16,
+    SIM_FIELD_LOCAL32
 } SimFieldType;
 
 /* SimField.kind for SIM_FIELD_POINTER: what the pointer points into. A pointer's

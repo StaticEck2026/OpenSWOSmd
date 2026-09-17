@@ -84,8 +84,14 @@ void InitRefereeAnimationTable(uint8_t *animTable)
     Sprite *a0 = &_refereeSprite;
     uint16_t dir = (uint16_t)a0->direction;
     uint16_t frameDelay = *(uint16_t *)animTable;
-    /* Frame table pointer at offset 2 + dir*4 */
-    int16_t *frameTablePtr = *(int16_t **)(animTable + 2 + dir * 4);
+    /* The frame table for this direction: a packed AnimTable (game_types.h), a 2-byte
+     * delay and then one pointer per direction. The asm's `dir * 4` is the size of a
+     * pointer on the Amiga, not a constant: on a 64-bit host it read half of one pointer
+     * and half of the next for an odd direction (a crash -- a referee arriving on a
+     * diagonal, found at frame 24269 of zkz-11215003 at simulation width 484), and the
+     * table for dir/2 for an even one (the wrong way round). sizeof keeps the m68k code
+     * what it was. */
+    int16_t *frameTablePtr = *(int16_t **)(animTable + 2 + dir * sizeof(int16_t *));
 
     a0->frameDelay        = (int16_t)frameDelay;
     a0->frameIndicesTable = frameTablePtr;

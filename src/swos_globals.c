@@ -111,6 +111,9 @@ int _screen_width = SCREEN_WIDTH;
  * compile-time constants (display.h), so there is nothing to define. */
 int16_t _sim_view_width  = SCREEN_WIDTH;
 int16_t _sim_view_height = SCREEN_HEIGHT;
+/* The width the simulation's draw-dependent decisions use (display.h). main.c sets it
+ * to the render width; the replay rig and a netplay session pin it. */
+int32_t _sim_draw_width  = SCREEN_WIDTH;
 #endif
 #endif
 /* Per-draw X shift for centering 336-wide menu content in a widescreen frame. Set to

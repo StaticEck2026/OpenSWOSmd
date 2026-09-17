@@ -85,9 +85,11 @@ int32_t            NetplayLobby_CanStart(void);
 /* Host: build the match and offer it. 0 if offered. */
 int32_t            NetplayLobby_Start(void);
 
-/* Where the match is played, captured at Begin while the link is certainly up. */
+/* Where the match is played, captured at Begin (and at a rematch's reconnect) while the
+ * link is certainly up: the peer, our port, the agreed input delay and the agreed
+ * simulation draw width (P2PLink_AgreedSimWidth). Any pointer may be NULL. */
 void               NetplayLobby_Peer(char *ip, uint32_t ipCap, uint16_t *peerPort,
-                                     uint16_t *localPort, int32_t *delay);
+                                     uint16_t *localPort, int32_t *delay, int32_t *simWidth);
 
 /* Kick-off: put the agreed setup -- teams, tactics, rules, random seeds -- back in
  * place on this machine, and initialise the teams as the friendly menu does. Call it

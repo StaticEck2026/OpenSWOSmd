@@ -298,6 +298,39 @@ static const SimField k_spriteFields[] = {
     W16(Sprite, field_4E, 16),                      /* field_4E .. sentAway */
 };
 
+/* A sprite of the in-match HUD (z 8000 and up: score panel, clock, scorers, the
+ * controlled player's name, the spinning S). Its x is placed for this display's width
+ * -- WIDE_MARGIN, HUD_MARGIN, Render_CameraX -- and its onScreen measured from that x,
+ * so both differ between two peers on different displays while nothing the match
+ * decides reads them. They are left out of the checksum and still carried by a saved
+ * or sent state: not every HUD sprite is placed every frame (the result panel only
+ * while it shows), so a resync that dropped them left stale positions. Everything
+ * else stays shared -- `visible` and `y` decide the draw list's contents and order. */
+#define L32(st, first, n)   { offsetof(st, first), n, SIM_FIELD_LOCAL32, 0 }
+#define L16(st, first, n)   { offsetof(st, first), n, SIM_FIELD_LOCAL16, 0 }
+static const SimField k_hudSpriteFields[] = {
+    W16(Sprite, teamNumber, 3),
+    PTR(Sprite, animationTable, SIM_PTR_ANIM_TABLE),
+    W16(Sprite, startingDirection, 1),
+    BYT(Sprite, playerState, 2),
+    W16(Sprite, field_E, 2),
+    PTR(Sprite, frameIndicesTable, SIM_PTR_FRAME_INDICES),
+    W16(Sprite, frameIndex, 4),
+    L32(Sprite, x, 1),                              /* this display's */
+    W32(Sprite, y, 2),                              /* y, z */
+    W16(Sprite, direction, 2),
+    W32(Sprite, deltaX, 3),
+    W16(Sprite, destX, 2),
+    BYT(Sprite, field_3E, 6),
+    W16(Sprite, visible, 3),
+    W32(Sprite, ballDistance, 1),
+    W16(Sprite, field_4E, 3),                       /* field_4E, field_50, fullDirection */
+    L16(Sprite, onScreen, 1),                       /* this display's */
+    W16(Sprite, field_56, 12),                      /* field_56 .. sentAway */
+};
+#undef L32
+#undef L16
+
 static const SimField k_teamInfoFields[] = {
     PTR(TeamGeneralInfo, opponentsTeam, SIM_PTR_TEAM_INFO),
     W16(TeamGeneralInfo, playerNumber, 3),          /* playerNumber, playerCoachNumber, isPlCoach */
@@ -339,6 +372,7 @@ static const SimField k_scorerFields[] = {
 #define STRUCT_LAYOUT(var, type) \
     static const SimLayout var = { sizeof(type), sizeof var##Fields / sizeof var##Fields[0], var##Fields };
 STRUCT_LAYOUT(k_sprite, Sprite)
+STRUCT_LAYOUT(k_hudSprite, Sprite)
 STRUCT_LAYOUT(k_teamInfo, TeamGeneralInfo)
 STRUCT_LAYOUT(k_teamGame, TeamGame)
 STRUCT_LAYOUT(k_scorer, ScorerInfo)
@@ -426,7 +460,7 @@ const SimStateRegion g_simStateRegions[] = {
     REGION(_team2Player11Sprite, S, k_sprite),
     REGION(_team1CurPlayerNumSprite, S, k_sprite), REGION(_team2CurPlayerNumSprite, S, k_sprite),
     REGION(_playerMarkSprite, S, k_sprite), REGION(_bookedPlayerCardOrNumberSprite, S, k_sprite),
-    REGION(_refereeSprite, S, k_sprite), REGION(_cornerFlagSprite, S, k_sprite), REGION(_currentPlayerNameSprite, S, k_sprite),
+    REGION(_refereeSprite, S, k_sprite), REGION(_cornerFlagSprite, S, k_sprite), REGION(_currentPlayerNameSprite, S, k_hudSprite),
 
     /* referee and cards */
     REGION(_refState, S, k_word16), REGION(_refTimer, S, k_word16), REGION(_whichCard, S, k_word16), REGION(_bookedPlayer, S, k_ptrSprite),
@@ -498,7 +532,7 @@ const SimStateRegion g_simStateRegions[] = {
     /* advertising boards */
     REGION(_advertSlideTimer, S, k_word16), REGION(_advertIndex, S, k_word16), REGION(_currentAnimatedAdLine, S, k_word16),
     REGION(_advertInGameSprites, S, k_sprite),
-    REGION(_spinBigS, S, k_word16), REGION(_bigSIndex, S, k_word16), REGION(_big_S_Sprite, S, k_sprite),
+    REGION(_spinBigS, S, k_word16), REGION(_bigSIndex, S, k_word16), REGION(_big_S_Sprite, S, k_hudSprite),
 
     /* crowd animation */
     REGION(_animPatternsIndex, S, k_word16), REGION(_animPatternsState, S, k_word16),
@@ -536,21 +570,21 @@ const SimStateRegion g_simStateRegions[] = {
      * decides which scorer sprites are visible. SIM may not depend on VIEW. */
     REGION(_team1Scorers, S, k_scorer), REGION(_team2Scorers, S, k_scorer),
     REGION(_team1TotalGoals, S, k_word16), REGION(_team2TotalGoals, S, k_word16),
-    REGION(_team1ScorerSprite, S, k_sprite), REGION(_team2ScorerSprite, S, k_sprite),
+    REGION(_team1ScorerSprite, S, k_hudSprite), REGION(_team2ScorerSprite, S, k_hudSprite),
     REGION(_team1ScorerSpritesWidths, S, k_word16), REGION(_team2ScorerSpritesWidths, S, k_word16),
-    REGION(_team1GoalsDigit1Sprite, S, k_sprite), REGION(_team1GoalsDigit2Sprite, S, k_sprite),
-    REGION(_team2GoalsDigit1Sprite, S, k_sprite), REGION(_team2GoalsDigit2Sprite, S, k_sprite),
-    REGION(_team1TotalGoalsDigit1Sprite, S, k_sprite), REGION(_team1TotalGoalsDigit2Sprite, S, k_sprite),
-    REGION(_team2TotalGoalsDigit1Sprite, S, k_sprite), REGION(_team2TotalGoalsDigit2Sprite, S, k_sprite),
-    REGION(_team1NameSprite, S, k_sprite), REGION(_team2NameSprite, S, k_sprite), REGION(_dashSprite, S, k_sprite),
-    REGION(_gridUpperRowLeftSprite, S, k_sprite), REGION(_gridUpperRowRightSprite, S, k_sprite),
-    REGION(_gridUpperRowExtraSprite, S, k_sprite),
-    REGION(_gridMiddleRowLeftSprite, S, k_sprite), REGION(_gridMiddleRowRightSprite, S, k_sprite),
-    REGION(_gridMiddleRowExtraSprite, S, k_sprite),
-    REGION(_gridBottomRowLeftSprite, S, k_sprite), REGION(_gridBottomRowRightSprite, S, k_sprite),
-    REGION(_gridBottomRowExtraSprite, S, k_sprite),
-    REGION(_resultAfterTheGameSprite, S, k_sprite), REGION(_resultOnHalftimeSprite, S, k_sprite),
-    REGION(_currentTimeSprite, S, k_sprite), REGION(_cornerFlagSprite2, S, k_sprite),
+    REGION(_team1GoalsDigit1Sprite, S, k_hudSprite), REGION(_team1GoalsDigit2Sprite, S, k_hudSprite),
+    REGION(_team2GoalsDigit1Sprite, S, k_hudSprite), REGION(_team2GoalsDigit2Sprite, S, k_hudSprite),
+    REGION(_team1TotalGoalsDigit1Sprite, S, k_hudSprite), REGION(_team1TotalGoalsDigit2Sprite, S, k_hudSprite),
+    REGION(_team2TotalGoalsDigit1Sprite, S, k_hudSprite), REGION(_team2TotalGoalsDigit2Sprite, S, k_hudSprite),
+    REGION(_team1NameSprite, S, k_hudSprite), REGION(_team2NameSprite, S, k_hudSprite), REGION(_dashSprite, S, k_hudSprite),
+    REGION(_gridUpperRowLeftSprite, S, k_hudSprite), REGION(_gridUpperRowRightSprite, S, k_hudSprite),
+    REGION(_gridUpperRowExtraSprite, S, k_hudSprite),
+    REGION(_gridMiddleRowLeftSprite, S, k_hudSprite), REGION(_gridMiddleRowRightSprite, S, k_hudSprite),
+    REGION(_gridMiddleRowExtraSprite, S, k_hudSprite),
+    REGION(_gridBottomRowLeftSprite, S, k_hudSprite), REGION(_gridBottomRowRightSprite, S, k_hudSprite),
+    REGION(_gridBottomRowExtraSprite, S, k_hudSprite),
+    REGION(_resultAfterTheGameSprite, S, k_hudSprite), REGION(_resultOnHalftimeSprite, S, k_hudSprite),
+    REGION(_currentTimeSprite, S, k_hudSprite), REGION(_cornerFlagSprite2, S, k_sprite),
     REGION(_copyTimeSprite, S, k_word16),
     REGION(_overlayFlagBackup, S, k_word16), REGION(_currentPlayerIndicatorPosition, S, k_word16),
 };
@@ -796,6 +830,8 @@ static uint32_t host_width(const SimField *f)
     case SIM_FIELD_WORD32:    return 4u * f->count;
     case SIM_FIELD_POINTER:   return sizeof(void *);
     case SIM_FIELD_TILE_SLOT: return 4;
+    case SIM_FIELD_LOCAL16:   return 2u * f->count;
+    case SIM_FIELD_LOCAL32:   return 4u * f->count;
     default:                  return 0;
     }
 }
@@ -813,9 +849,11 @@ static uint32_t portable_stride(const SimLayout *l)
     return n;
 }
 
-/* One element, this build's bytes at `src` to portable bytes at `dst`. */
+/* One element, this build's bytes at `src` to portable bytes at `dst`. `hashing`: for the
+ * checksum peers compare, where a LOCAL field (this display's, not the match's) counts as
+ * zero; a saved or sent state carries it. */
 static uint32_t encode_element(const SimLayout *l, const uint8_t *src, uint8_t *dst,
-                               uint32_t *unidentified)
+                               uint32_t *unidentified, int hashing)
 {
     uint32_t out = 0;
     for (uint32_t k = 0; k < l->fieldCount; k++) {
@@ -859,6 +897,22 @@ static uint32_t encode_element(const SimLayout *l, const uint8_t *src, uint8_t *
             out += 4;
             break;
         }
+        case SIM_FIELD_LOCAL16:
+            for (uint32_t c = 0; c < f->count; c++, out += 2) {
+                uint16_t v = 0;
+                if (!hashing)
+                    memcpy(&v, in + 2 * c, 2);
+                BE_WRITE_U16(dst + out, v);
+            }
+            break;
+        case SIM_FIELD_LOCAL32:
+            for (uint32_t c = 0; c < f->count; c++, out += 4) {
+                uint32_t v = 0;
+                if (!hashing)
+                    memcpy(&v, in + 4 * c, 4);
+                BE_WRITE_U32(dst + out, v);
+            }
+            break;
         }
     }
     return out;
@@ -904,6 +958,18 @@ static int decode_element(const SimLayout *l, const uint8_t *src, uint8_t *dst)
             in += 4;
             break;
         }
+        case SIM_FIELD_LOCAL16:
+            for (uint32_t c = 0; c < f->count; c++, in += 2) {
+                uint16_t v = BE_READ_U16(src + in);
+                memcpy(out + 2 * c, &v, 2);
+            }
+            break;
+        case SIM_FIELD_LOCAL32:
+            for (uint32_t c = 0; c < f->count; c++, in += 4) {
+                uint32_t v = BE_READ_U32(src + in);
+                memcpy(out + 4 * c, &v, 4);
+            }
+            break;
         }
     }
     return 1;
@@ -962,7 +1028,7 @@ int SimState_SavePortable(uint8_t *dst, uint32_t tiers)
             continue;
         }
         for (uint32_t off = 0; off < r->size; off += r->layout->stride)
-            dst += encode_element(r->layout, src + off, dst, &unidentified);
+            dst += encode_element(r->layout, src + off, dst, &unidentified, 0);
     }
     return (int)unidentified;
 }
@@ -1016,7 +1082,7 @@ uint64_t SimState_Hash(uint32_t tiers)
             continue;
         }
         for (uint32_t off = 0; off < r->size; off += r->layout->stride) {
-            uint32_t len = encode_element(r->layout, p + off, el, &unidentified);
+            uint32_t len = encode_element(r->layout, p + off, el, &unidentified, 1);
             for (uint32_t n = 0; n < len; n++)
                 h = (h ^ el[n]) * 0x100000001b3ull;
         }

@@ -773,7 +773,7 @@ static void mpGameSetupMenu_OnDraw(void)
     set_entry(MpGameSetupMenu_maxSubs1, s_ruleMax, host && open, host && open ? kLightBlue : kGray);
     {
         int32_t delay;
-        NetplayLobby_Peer(NULL, 0, NULL, NULL, &delay);
+        NetplayLobby_Peer(NULL, 0, NULL, NULL, &delay, NULL);
         snprintf(s_ruleDelay, sizeof s_ruleDelay, "%d", delay);
         set_text(MpGameSetupMenu_ggpoFrameDelay_, s_ruleDelay);
     }
@@ -931,15 +931,16 @@ static void run_live_match(void)
 
     char ip[24];
     uint16_t peerPort, localPort;
-    int32_t delay;
+    int32_t delay, simWidth;
 
     Platform_SetFrameHook(NULL);
-    NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay);
+    NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay, &simWidth);
     NetplayLobby_End();
     P2PLink_Close();
 
     if (!ip[0] || NetplayLobby_ApplyMatch() != 0 ||
-        NetplayMatch_StartLive(NetplayLobby_LocalPlayer(), ip, peerPort, localPort, delay) != 0) {
+        NetplayMatch_StartLive(NetplayLobby_LocalPlayer(), ip, peerPort, localPort, delay,
+                               simWidth) != 0) {
         snprintf(s_matchStatus, sizeof s_matchStatus, "COULD NOT START THE MATCH");
         NetplayLobby_RestoreTactics();
         SetExitMenuFlag();

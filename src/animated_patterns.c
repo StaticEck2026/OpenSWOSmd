@@ -560,7 +560,10 @@ pattern_loop:
             _animatedPatterns[7 - d7] = (int16_t)0xFFFF;
             drawPatternFromIndex((uint16_t)d3);
 #ifdef SWOS_SDL_BUILD
-            if (WIDE_MARGIN > 0)
+            /* The mirror toggles tiles the match hashes and later reads (the base
+             * loop's parity test), so it follows the simulation draw width
+             * (display.h), not this display's. */
+            if (_sim_draw_width > SCREEN_WIDTH)
                 drawFanMirror(d3, 0, 0);   /* widescreen: redraw the right-half mirror too */
 #endif
             continue;
@@ -609,7 +612,11 @@ pattern_loop:
             /* decompose spriteIdx into row/col and compute pitchDatBuffer index */
             row = spriteIdx / 21;
             col = spriteIdx % 21;
-            pitchIdx = row * 42 + col + (Render_CameraX() >> 4);
+            /* The window of columns is the SIMULATION draw view's (display.h): which
+             * tile toggles decides whether this slot fills, and so the Rand calls of
+             * every frame after. Measured on a render origin, a 336 and a 484 display
+             * drew different random numbers from frame 19. */
+            pitchIdx = row * 42 + col + (Sim_DrawCameraX() >> 4);
             d3 = pitchIdx;
 
             /* bounds check: tileEntryPtr must be within the 9240-byte
@@ -675,7 +682,7 @@ pattern_loop:
 #endif
             }
 #ifdef SWOS_SDL_BUILD
-            if (WIDE_MARGIN > 0)
+            if (_sim_draw_width > SCREEN_WIDTH)
                 drawFanMirror(d3, 1, d4);   /* widescreen: mirror the toggle into the right half */
 #endif
         }

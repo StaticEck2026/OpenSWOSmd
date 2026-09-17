@@ -457,8 +457,13 @@ int32_t Render_CameraX16(void);
  * m68k build scrolls in whole pixels on real hardware and defines neither. */
 void    Render_PublishScrollSubpixel(void);
 int     Render_ScrollSubpixel(uint16_t *fx, uint16_t *fy);
+/* The origin a view of the SIMULATION DRAW width (display.h, _sim_draw_width) draws
+ * from. For what the match DECIDES from the drawn view; placing pixels stays on
+ * Render_CameraX(). Equal to it whenever the two widths are. */
+int16_t Sim_DrawCameraX(void);
 #else
 #define Render_CameraX() (_cameraX.s.i)
+#define Sim_DrawCameraX() (_cameraX.s.i)
 #endif
 
 #define ST_GAME_IN_PROGRESS              100

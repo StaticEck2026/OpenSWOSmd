@@ -186,6 +186,12 @@ static void print_usage(const char *argv0)
         "                            wider render, which is how a render/simulation\n"
         "                            leak shows up: the compared fields must not\n"
         "                            move. See scripts/replay_widecheck.sh.\n"
+        "  --replay-sim-width=<N>    The SIMULATION draw width for --replay-test\n"
+        "                            (display.h, _sim_draw_width): what margin\n"
+        "                            animation and the crowd tiles are decided for.\n"
+        "                            Default 336. Two runs at different\n"
+        "                            --replay-width with the same value here must\n"
+        "                            play the same match: scripts/netplay_width_test.sh.\n"
         "  --replay-window           Open a window during --replay-test. Off by\n"
         "                            default: a replay is a batch run and a full\n"
         "                            matrix would open one window per cell.\n"
@@ -355,6 +361,7 @@ int main(int argc, char **argv)
     int replay_max_errors = 1;
     int replay_window = 0;
     int replay_width = 0;   /* 0 = the corpus geometry (SCREEN_WIDTH) */
+    int replay_sim_width = 0;   /* 0 = SCREEN_WIDTH: no margin, as the corpus was recorded */
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
@@ -478,6 +485,8 @@ int main(int argc, char **argv)
             replay_level = v;
         } else if ((v = match_kv(a, "replay-width")) != NULL) {
             replay_width = atoi(v);
+        } else if ((v = match_kv(a, "replay-sim-width")) != NULL) {
+            replay_sim_width = atoi(v);
         } else if (strcmp(a, "--replay-window") == 0) {
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
@@ -814,6 +823,14 @@ int main(int argc, char **argv)
      * The replay rig overrides it to the geometry a recording was made in. */
     _sim_view_width  = SCREEN_WIDTH;
     _sim_view_height = SCREEN_HEIGHT;
+    /* What the match's draw-dependent decisions are made for (display.h): the render
+     * width, so a wide display animates its margins. A recording was made with no
+     * margin, so the rig pins 336 unless told otherwise; a netplay session sets the
+     * width both peers agreed (NetplayMatch_StartLive). */
+    _sim_draw_width = replay_file ? (replay_sim_width > 0 ? replay_sim_width : SCREEN_WIDTH)
+                                  : _screen_width;
+    if (_sim_draw_width < SCREEN_WIDTH)        _sim_draw_width = SCREEN_WIDTH;
+    if (_sim_draw_width > PITCH_VIEW_MAX_WIDTH) _sim_draw_width = PITCH_VIEW_MAX_WIDTH;
 
     _menu_draw_x_offset = WIDE_MARGIN;
 

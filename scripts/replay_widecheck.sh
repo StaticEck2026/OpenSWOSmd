@@ -25,6 +25,12 @@
 # both invisible to any field comparison. Those need a rendered-frame check
 # (widening the view must only ADD content at the edges, never move or drop it).
 # Do not read a pass here as "widescreen is correct".
+#
+# NOR leaks that change how often Rand() is called: the replay rig pins Rand, so the crowd
+# tiles' column (DrawAnimatedPatterns), which parted two widths' matches at frame 19, passed
+# here. The rollback rig does not pin it: scripts/netplay_width_test.sh plays the corpus at
+# several render widths with one simulation draw width and compares the SIM hash of every
+# frame. That is the check for "two displays play the same match" (docs/NETPLAY.md).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 

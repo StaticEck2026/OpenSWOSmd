@@ -14,6 +14,7 @@
 #include "netplay_match.h"
 #include "audio_sfx_filter.h"
 #include "dos_gameplay.h"   /* DosGameplay_TargetFps: the match's frame rate */
+#include "display.h"        /* _sim_draw_width, _screen_width */
 #include "game_loop.h"
 #include "match_step.h"
 #include "netplay_netem.h"
@@ -762,8 +763,10 @@ int32_t NetplayMatch_Start(void)
  * socket, and on the same local port -- which is also what keeps a NAT mapping
  * open across the handover. */
 int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t peerPort,
-                               uint16_t localPort, int32_t delay)
+                               uint16_t localPort, int32_t delay, int32_t simWidth)
 {
+    int32_t rc;
+
     if (localPlayer != 1 && localPlayer != 2)
         return 1;
     if (!peerIp || !peerIp[0])
@@ -827,7 +830,20 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
     }
     snprintf(s_np.peerAddress, sizeof s_np.peerAddress, "%s", peerIp);
 
-    return NetplayMatch_Start();
+    rc = NetplayMatch_Start();
+    if (rc == 0) {
+        /* One simulation draw width on both machines (display.h): what margin animates
+         * and which crowd tiles toggle are decided for it, whatever each display is.
+         * From here, so the pre-match screens that follow run at it too. */
+        if (simWidth < SCREEN_WIDTH)
+            simWidth = SCREEN_WIDTH;
+        if (simWidth > PITCH_VIEW_MAX_WIDTH)
+            simWidth = PITCH_VIEW_MAX_WIDTH;
+        _sim_draw_width = simWidth;
+        fprintf(stderr, "[netplay] simulation draw width %d (this display %d)\n",
+                (int)_sim_draw_width, (int)_screen_width);
+    }
+    return rc;
 }
 
 /* direct and synctest: one process, both players' inputs, one frame per pass. */
@@ -1005,6 +1021,10 @@ static void liveEnd(int32_t outcome, const char *why)
             s_np.frames, s_np.resimulated, s_np.loads, s_np.predictionWaits, s_np.timeSyncs,
             (long long)(s_np.pacedUs / 1000), (long long)s_np.paceBiasUs);
     printf("[live] final state hash %016llx\n", (unsigned long long)SimState_Hash(SIM_TIER_ALL));
+    /* The SIM tier alone is what two peers must agree on. The VIEW tier holds the
+     * highlight ring, recorded in drawn coordinates, so it differs between peers on
+     * different screen widths without the match doing so. */
+    printf("[live] final sim hash %016llx\n", (unsigned long long)SimState_Hash(SIM_TIER_SIM));
     fflush(stdout);
     NetplayMatch_Finish();              /* reports, closes the session, drops the sound filter */
     s_liveOutcome = outcome;
@@ -1012,6 +1032,7 @@ static void liveEnd(int32_t outcome, const char *why)
     s_np.mode = NETPLAY_MATCH_OFF;
     s_np.live = 0;
     _gFrameStepInput = 0;
+    _sim_draw_width = _screen_width;    /* this display's again (display.h) */
     Platform_ResumeTimerThread();
 }
 

@@ -442,6 +442,26 @@ extern int16_t _sim_view_height;
 #define _sim_view_height                SCREEN_HEIGHT
 #endif
 
+/* ---- The SIMULATION DRAW width ----------------------------------------------
+ * The simulation view above is 336 whatever the display. But a few things the match
+ * decides depend on what is DRAWN, and so on how wide the view is: which sprites in a
+ * widescreen margin animate (sprites.c, 310c1a6 -- drawn, so they must, or they
+ * slide), which crowd tiles toggle (animated_patterns.c, which also calls Rand), which
+ * corner flags are placed (adverts.c) and when the bench is populated (bench_subs.c).
+ * They read THIS width, never _screen_width.
+ *
+ * Locally it IS the render width (main.c), so a player sees exactly what 310c1a6
+ * gave them. The replay rig pins it to 336 -- a recording was made on a display with
+ * no margin -- unless --replay-sim-width says otherwise. And a netplay session sets
+ * it to one width both peers agreed (the wider of the two, P2PLink_AgreedSimWidth):
+ * two players on a 4:3 and a 16:9 screen then play the same match, the narrower one
+ * animating a margin it does not show. docs/NETPLAY.md, "One simulation width". */
+#ifdef SWOS_SDL_BUILD
+extern int32_t _sim_draw_width;
+#else
+#define _sim_draw_width                 SCREEN_WIDTH
+#endif
+
 /* The camera constants above, as functions of the simulation view. */
 #define SIM_CAMERA_CENTRE_X   ((int16_t)((0x2A0 - _sim_view_width) / 2))
 #define SIM_CAMERA_PAN_RANGE  ((int16_t)(0x2A0 - _sim_view_width))
@@ -524,11 +544,16 @@ extern int _menu_draw_x_offset;
 #define HUD_WIDTH                       (_screen_width < WIDESCREEN_WIDTH \
                                          ? _screen_width : WIDESCREEN_WIDTH)
 #define HUD_MARGIN                      ((_screen_width - HUD_WIDTH) / 2)
+/* The same box for the simulation draw width (_sim_draw_width), for the one HUD
+ * decision that is match state: whether the extra tile is in the draw list. */
+#define SIM_HUD_WIDTH                   (_sim_draw_width < WIDESCREEN_WIDTH \
+                                         ? _sim_draw_width : WIDESCREEN_WIDTH)
 #else
 /* Amiga has no widescreen (WIDESCREEN_WIDTH is SDL-only), so fold both to
  * compile-time constants — byte-identical geometry to before. */
 #define HUD_WIDTH                       SCREEN_WIDTH
 #define HUD_MARGIN                      0
+#define SIM_HUD_WIDTH                   SCREEN_WIDTH
 #endif
 
 /* ---- Tile / scroll-blit constants ---- */

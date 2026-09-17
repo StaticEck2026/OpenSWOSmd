@@ -35,6 +35,7 @@
 
 #include "endian_helpers.h"
 #include "sim_state.h"
+#include "display.h"        /* _screen_width, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -164,6 +165,8 @@ typedef struct {
      * below). */
     TxChannel          tx[P2P_NUM_CHANNELS];
     RxChannel          rx[P2P_NUM_CHANNELS];
+
+    uint16_t           peerScreenWidth; /* from the peer's handshake: P2PLink_AgreedSimWidth */
 } P2PLink;
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
@@ -176,11 +179,10 @@ static uint32_t now_ms(void)
 }
 
 /* The game this build would play. The three gameplay flags are set from the command
- * line and SWOS.ini in main.c; the simulation still reads the screen width in a couple
- * of places (docs/NETPLAY.md, "Still to do"), so it counts too. */
+ * line and SWOS.ini in main.c. The screen width travels too, but no longer has to match:
+ * the two agree one simulation draw width from both (P2PLink_AgreedSimWidth). */
 static void setup_local(Setup *s)
 {
-    extern int _screen_width;               /* display.h */
     extern int _gDosGameplay;               /* dos_mode.h */
     extern int _gArcadeMode;                /* arcade.c */
     extern int _gOriginalFireHoldLockout;   /* team_control.c */
@@ -200,8 +202,9 @@ static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
         return P2P_FAIL_STATE;
     if (mine->gameplay != theirs->gameplay)
         return P2P_FAIL_GAMEPLAY;
-    if (mine->screenWidth != theirs->screenWidth)
-        return P2P_FAIL_WIDTH;
+    /* Not the screen width. It used to be refused, because the simulation read it; the
+     * match now reads one width both peers agree instead (display.h, _sim_draw_width).
+     * P2P_FAIL_WIDTH stays in the enum for a peer of an older protocol to report. */
     return P2P_FAIL_NONE;
 }
 
@@ -750,9 +753,11 @@ static void punch_send(P2PLink *l)
     l->lastSentMs = now_ms();
 }
 
-static void link_connected(P2PLink *l, const struct sockaddr_in *from, uint32_t now)
+static void link_connected(P2PLink *l, const struct sockaddr_in *from, const Setup *theirs,
+                           uint32_t now)
 {
     blob_free(l);   /* nothing carries over from a previous peer */
+    l->peerScreenWidth = theirs->screenWidth;
     l->delayLocal = l->delayPeer = -1;
     l->lastDelaySentMs = 0;
     set_peer(l, from);
@@ -812,7 +817,7 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
                 return;
             }
             send_setup_packet(l, from, PKT_WELCOME);
-            link_connected(l, from, now);
+            link_connected(l, from, &theirs, now);
         }
         break;
 
@@ -837,7 +842,7 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
                 }
             }
             send_setup_packet(l, from, PKT_WELCOME);
-            link_connected(l, from, now);
+            link_connected(l, from, &theirs, now);
             return;
         }
         if (type == PKT_WELCOME && len >= kSetupLen) {
@@ -848,7 +853,7 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
                 link_fail(l, bad);
                 return;
             }
-            link_connected(l, from, now);
+            link_connected(l, from, &theirs, now);
         } else if (type == PKT_REFUSE && len >= kRefuseLen) {
             link_fail(l, refuse_reason(buf[8]));
         }
@@ -1132,6 +1137,22 @@ int32_t P2PLink_AgreedDelay(void)
     /* Max, computed from the same two numbers on both peers, so both get the
      * same answer. See the note above propose_delay. */
     return l->delayLocal > l->delayPeer ? l->delayLocal : l->delayPeer;
+}
+
+int32_t P2PLink_AgreedSimWidth(void)
+{
+    const P2PLink *l = &s_link;
+    int32_t w;
+    if (l->state != P2P_CONNECTED || l->peerScreenWidth == 0)
+        return -1;
+    /* The wider of the two: then neither player sees a margin that does not animate,
+     * and both sides compute it from the same two numbers. */
+    w = l->local.screenWidth > l->peerScreenWidth ? l->local.screenWidth : l->peerScreenWidth;
+    if (w < SCREEN_WIDTH)
+        w = SCREEN_WIDTH;
+    if (w > PITCH_VIEW_MAX_WIDTH)
+        w = PITCH_VIEW_MAX_WIDTH;
+    return w;
 }
 
 /* ---- messages, from the outside ---- */
@@ -1515,6 +1536,7 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
     return 1;
 }
 int32_t        P2PLink_AgreedDelay(void)       { return -1; }
+int32_t        P2PLink_AgreedSimWidth(void)    { return -1; }
 int32_t        P2PLink_ProposedDelay(void)     { return -1; }
 int32_t        P2PLink_PeerProposedDelay(void) { return -1; }
 int32_t        P2PLink_Send(int32_t channel, const uint8_t *data, uint32_t len)

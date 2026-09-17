@@ -102,6 +102,7 @@ static struct {
     char        peerIp[24];
     uint16_t    peerPort, localPort;
     int32_t     delay;
+    int32_t     simWidth;               /* the simulation draw width both agreed */
 
     int32_t     tacticsSaved;
     uint8_t     savedTactics[6 * TACTIC_BYTES];
@@ -446,6 +447,9 @@ static void take_peer_address(void)
     s_lobby.delay     = P2PLink_AgreedDelay();
     if (s_lobby.delay < 0)
         s_lobby.delay = 2;                      /* both sides fall back the same way */
+    s_lobby.simWidth  = P2PLink_AgreedSimWidth();
+    if (s_lobby.simWidth < 0)
+        s_lobby.simWidth = 336;                 /* ditto: SCREEN_WIDTH */
 }
 
 void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
@@ -711,13 +715,14 @@ int32_t NetplayLobby_ApplyMatch(void)
 }
 
 void NetplayLobby_Peer(char *ip, uint32_t ipCap, uint16_t *peerPort, uint16_t *localPort,
-                       int32_t *delay)
+                       int32_t *delay, int32_t *simWidth)
 {
     if (ip && ipCap)
         snprintf(ip, ipCap, "%s", s_lobby.peerIp);
     if (peerPort)  *peerPort  = s_lobby.peerPort;
     if (localPort) *localPort = s_lobby.localPort;
     if (delay)     *delay     = s_lobby.delay;
+    if (simWidth)  *simWidth  = s_lobby.simWidth;
 }
 
 #else  /* !SWOS_NETPLAY -- no link to set a match up over */
@@ -742,12 +747,13 @@ int32_t            NetplayLobby_IsHost(void) { return 0; }
 int32_t            NetplayLobby_CanStart(void) { return 0; }
 int32_t            NetplayLobby_Start(void) { return 1; }
 void               NetplayLobby_Peer(char *ip, uint32_t ipCap, uint16_t *peerPort,
-                                     uint16_t *localPort, int32_t *delay)
+                                     uint16_t *localPort, int32_t *delay, int32_t *simWidth)
 {
     if (ip && ipCap) ip[0] = '\0';
     if (peerPort) *peerPort = 0;
     if (localPort) *localPort = 0;
     if (delay) *delay = 0;
+    if (simWidth) *simWidth = 0;
 }
 void               NetplayLobby_RestoreTactics(void) {}
 int32_t            NetplayLobby_ApplyMatch(void) { return 1; }
