@@ -162,6 +162,8 @@ typedef struct {
     int32_t            numCandidates;
     int32_t            punchRounds;     /* SWOS_P2P_LOG bookkeeping */
     int32_t            heardAnything;   /* any datagram from anywhere, ever */
+    struct { struct sockaddr_in from; int32_t ours, refused; } heard[6];
+    int32_t            heardSources;
 
     /* Messages, one of each kind per channel, in each direction (see "messages"
      * below). */
@@ -956,11 +958,25 @@ static void link_poll(P2PLink *l, uint32_t now)
         }
         if (from.sin_family == AF_INET) {
             int32_t len = wire_receive(buf, (int32_t)n);
-            if (link_log_on() && !l->heardAnything) {
-                char b[64];
-                fprintf(stderr, "[p2p] first datagram from %s (%d bytes, %s)\n",
-                        addr_text(&from, b, sizeof b), (int)n,
-                        len >= 0 ? "ours" : "REFUSED by the integrity check");
+            /* Tally by SOURCE. One flag is not enough: the matchmaker's own last
+             * packets arrive on this very port (the link reuses it deliberately)
+             * and are refused, which made "we heard something" true while the
+             * peer was still unreachable. */
+            {
+                int32_t h;
+                for (h = 0; h < l->heardSources; h++)
+                    if (l->heard[h].from.sin_addr.s_addr == from.sin_addr.s_addr &&
+                        l->heard[h].from.sin_port == from.sin_port)
+                        break;
+                if (h == l->heardSources && h < (int32_t)(sizeof l->heard / sizeof l->heard[0])) {
+                    l->heard[h].from = from;
+                    l->heard[h].ours = l->heard[h].refused = 0;
+                    l->heardSources++;
+                }
+                if (h < (int32_t)(sizeof l->heard / sizeof l->heard[0])) {
+                    if (len >= 0) l->heard[h].ours++;
+                    else          l->heard[h].refused++;
+                }
             }
             l->heardAnything = 1;
             if (len >= 0)
@@ -972,13 +988,19 @@ static void link_poll(P2PLink *l, uint32_t now)
 
     if (l->state == P2P_JOINING) {
         if (now - l->openedMs >= (uint32_t)l->joinTimeoutMs) {
-            if (link_log_on())
+            if (link_log_on()) {
+                char b[64];
+                int32_t h;
                 fprintf(stderr, "[p2p] giving up after %u ms: %d punch round(s) to %d "
-                                "candidate(s), %s\n",
+                                "candidate(s); heard from %d source(s)%s\n",
                         (unsigned)(now - l->openedMs), (int)l->punchRounds,
-                        (int)l->numCandidates,
-                        l->heardAnything ? "something answered but never completed the setup"
-                                         : "NOTHING arrived from anywhere");
+                        (int)l->numCandidates, (int)l->heardSources,
+                        l->heardSources ? ":" : " -- NOTHING arrived from anywhere");
+                for (h = 0; h < l->heardSources; h++)
+                    fprintf(stderr, "[p2p]   %s: %d ours, %d refused\n",
+                            addr_text(&l->heard[h].from, b, sizeof b),
+                            (int)l->heard[h].ours, (int)l->heard[h].refused);
+            }
             link_fail(l, P2P_FAIL_NO_ANSWER);
         } else if (now - l->lastSentMs >= (uint32_t)kHelloIntervalMs) {
             if (l->numCandidates > 0) {
