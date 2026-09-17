@@ -536,6 +536,10 @@ int main(int argc, char **argv)
         } else if (strncmp(a, "--matchmaker-menu", 17) == 0 &&
                    (a[17] == '\0' || a[17] == '=')) {
             OnlineMenus_SetAutoLogin(a[17] == '=' ? a + 18 : "PLAYER");
+            /* Same reason as --netplay-live-pair: this flag exists to reach the
+             * online menu, and the loader intro plays in real time in front of
+             * it. Two machines driven through matchmaking spent it twice. */
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "netplay-lobby")) != NULL) {
             if (OnlineMenus_SetLoopbackLobby(v) != 0) {
                 fprintf(stderr, "--netplay-lobby must be 'host' or 'join'\n");
