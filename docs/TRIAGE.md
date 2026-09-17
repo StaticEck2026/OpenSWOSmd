@@ -171,6 +171,19 @@ Permissions → add the bot. A refused post changes nothing: the reports stay
 `done` and still `--unannounced`, so the same command works once the permission
 is there.
 
+**Link the files, not the folder.** Directory listing is off on the server, so
+`https://baker76.com/download/swos/` by itself shows a player nothing. The links:
+
+```
+https://baker76.com/download/swos/SWOS-Setup.exe
+https://baker76.com/download/swos/SWOS-full.zip
+https://baker76.com/download/swos/SWOS-macOS-app.zip
+https://baker76.com/download/swos/SWOS-Amiga.zip
+https://baker76.com/download/swos/SWOS.zip
+https://baker76.com/download/swos/SWOS-macOS.zip
+https://www.baker76.com/apps/swos/SWOS.html
+```
+
 Write it for a player, not for us: what changed and what they will see. The
 offsets, the register names and the asm citation belong in the commit message —
 someone reading #swos-changelog wants to know that adding a national-squad player
