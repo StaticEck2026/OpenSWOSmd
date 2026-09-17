@@ -160,6 +160,8 @@ typedef struct {
      * send to all of them at once -- see punch_send. */
     struct sockaddr_in candidates[kMaxCandidates];
     int32_t            numCandidates;
+    int32_t            punchRounds;     /* SWOS_P2P_LOG bookkeeping */
+    int32_t            heardAnything;   /* any datagram from anywhere, ever */
 
     /* Messages, one of each kind per channel, in each direction (see "messages"
      * below). */
@@ -745,11 +747,41 @@ static int32_t from_candidate(const P2PLink *l, const struct sockaddr_in *from)
  * gets two players behind different routers talking without either forwarding a
  * port. Most of these go nowhere (a LAN address on the other side of the
  * internet); that is the point, they cost a packet each and one of them works. */
+/* SWOS_P2P_LOG=1: what the link is doing, for a failure nobody can see. A player
+ * who cannot reach an opponent gets "CONNECTION FAILED" and nothing else, and so
+ * did we -- five runs across two machines with no way to tell a blocked packet
+ * from a wrong address. One line per event, never per packet. */
+static int32_t link_log_on(void)
+{
+    static int32_t on = -1;
+    if (on < 0)
+        on = getenv("SWOS_P2P_LOG") != NULL;
+    return on;
+}
+
+static const char *addr_text(const struct sockaddr_in *a, char *buf, size_t cap)
+{
+    char ip[INET_ADDRSTRLEN];
+    if (!inet_ntop(AF_INET, &a->sin_addr, ip, sizeof ip))
+        snprintf(ip, sizeof ip, "?");
+    snprintf(buf, cap, "%s:%u", ip, (unsigned)ntohs(a->sin_port));
+    return buf;
+}
+
 static void punch_send(P2PLink *l)
 {
     int32_t i;
     for (i = 0; i < l->numCandidates; i++)
         send_setup_packet(l, &l->candidates[i], PKT_HELLO);
+    l->punchRounds++;
+    if (link_log_on() && (l->punchRounds == 1 || (l->punchRounds % 10) == 0)) {
+        char buf[64];
+        fprintf(stderr, "[p2p] punch round %d from :%u to %d candidate(s)",
+                (int)l->punchRounds, (unsigned)l->localPort, (int)l->numCandidates);
+        for (i = 0; i < l->numCandidates; i++)
+            fprintf(stderr, " %s", addr_text(&l->candidates[i], buf, sizeof buf));
+        fprintf(stderr, "  (heard from peer: %s)\n", l->heardAnything ? "yes" : "NOTHING YET");
+    }
     l->lastSentMs = now_ms();
 }
 
@@ -924,6 +956,13 @@ static void link_poll(P2PLink *l, uint32_t now)
         }
         if (from.sin_family == AF_INET) {
             int32_t len = wire_receive(buf, (int32_t)n);
+            if (link_log_on() && !l->heardAnything) {
+                char b[64];
+                fprintf(stderr, "[p2p] first datagram from %s (%d bytes, %s)\n",
+                        addr_text(&from, b, sizeof b), (int)n,
+                        len >= 0 ? "ours" : "REFUSED by the integrity check");
+            }
+            l->heardAnything = 1;
             if (len >= 0)
                 handle_packet(l, buf, len, &from, now);
         }
@@ -933,6 +972,13 @@ static void link_poll(P2PLink *l, uint32_t now)
 
     if (l->state == P2P_JOINING) {
         if (now - l->openedMs >= (uint32_t)l->joinTimeoutMs) {
+            if (link_log_on())
+                fprintf(stderr, "[p2p] giving up after %u ms: %d punch round(s) to %d "
+                                "candidate(s), %s\n",
+                        (unsigned)(now - l->openedMs), (int)l->punchRounds,
+                        (int)l->numCandidates,
+                        l->heardAnything ? "something answered but never completed the setup"
+                                         : "NOTHING arrived from anywhere");
             link_fail(l, P2P_FAIL_NO_ANSWER);
         } else if (now - l->lastSentMs >= (uint32_t)kHelloIntervalMs) {
             if (l->numCandidates > 0) {
