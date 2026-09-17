@@ -2967,11 +2967,11 @@ if (!opp.wonTheBallTimer && opp.playerHasBall && opp.currentAllowedDirection >= 
     a = (theirPlayer.tackling + theirPlayer.ballControl) >> 1     /* our table  */
     b = (theirPlayer.tackling + theirPlayer.ballControl) >> 1     /* their table*/
     diff = (int8)(a - b)
-    winner = opp
-    if (diff < 0) { diff = -diff ; winner = team }
+    loser = opp                                  /* the side with the lower value */
+    if (diff < 0) { diff = -diff ; loser = team }
     if ((Rand() & 0x1F) >= plAvgTacklingBallControlDiffChance[diff])
-            winner = winner.opponentsTeam
-    winner.wonTheBallTimer = 12
+            loser = loser.opponentsTeam          /* the upset: the stronger side loses */
+    loser.wonTheBallTimer = 12                   /* locked OUT -- see below */
     ball.speed = 0 ; ball.dest = ball.pos
     return
 }
@@ -3006,8 +3006,21 @@ ResetBothTeamSpinTimers()
 himself each touch. `ballControlTurnThresholds` runs `4 … 21` — a bad player can
 only hold a turn for 4 update ticks before losing it.
 
-`wonTheBallTimer = 12` is a possession lock-out: while non-zero neither side can
-re-contest, which prevents a 50/50 resolving 25 times a second.
+`wonTheBallTimer = 12` is a possession lock-out, and it goes to the side that LOST
+the roll, whatever its name says: a team with the timer running skips the whole
+win-ball sequence (`if (team.wonTheBallTimer) -> boundary mask`, §8.3) and so cannot
+claim the ball, while the other side meets `!opp.wonTheBallTimer` above and dribbles
+away. The side with the lower skill value is locked out with probability
+`plAvgTacklingBallControlDiffChance[diff]`/32 (16..23 of 32, so 50% at equal skill),
+for 12 of its own updates -- about 24 frames, since only one team updates per frame
+(§5.1). That also prevents a 50/50 resolving 25 times a second.
+
+There is no team-1 or team-2 advantage in the contest. Teams update on alternate
+frames, and whichever sees the other's claim first starts it -- decided by who
+arrived when, not by which team is which. Checked against the DOS recordings
+(2026-09-17): with each recording's pinned random value this model predicts all 186
+contests in the corpus. The one asymmetry is the challenger/defender skill read in
+the NOTE above, and it is original SWOS.
 
 ### 12.5 Aftertouch and spin (`ApplyBallAfterTouch`)
 
