@@ -900,6 +900,27 @@ SWOS_MM_HOST=<address> bin/SWOS.x86_64 --matchmaker-selftest   # logs in, lobbie
 That is a full protocol handshake, not a ping. There is nothing TCP to telnet at — a TCP
 tool reporting "connection refused" against a UDP service means nothing.
 
+**Use the PUBLIC address in that test, even from inside the house.** Measured here
+(2026-09-17, server in WSL on the Windows box, rule added, UDP 19602 forwarded): a machine
+on the same LAN reached the server through the public address and its own port forward
+(`172.249.109.62`) but **not** through the server's LAN address (`192.168.1.43`) — same
+host, same port, same firewall rule. So a failure against the LAN address does not mean
+the setup is broken, and a success against it would not have proved the forward. The
+public address is what a tester uses and the only one worth testing.
+
+With that, a cross-machine run of the pair test is the real rehearsal — one machine hosts,
+another joins, both through the public address:
+
+```bash
+SWOS_MM_HOST=<public> bin/SWOS.x86_64 --matchmaker-pair=host   # on one machine
+SWOS_MM_HOST=<public> bin/SWOS.x86_64 --matchmaker-pair=join   # on the other
+```
+
+Each side should end with `START:`, the right player number, the other's name, and a list
+of candidate addresses that includes both peers' public address. Two machines behind the
+SAME router still reach the server by hairpin, so this proves the forward and the server
+but not yet that the internet side accepts traffic — the first real tester does that.
+
 ### The protocol
 
 Text over ENET, one message per packet, `HEADER:content`. On connect, in this order:
