@@ -131,6 +131,10 @@ static int handler(void *user, const char *section,
         int b;
         if (eqi(name, "fire_hold_lockout") && parse_bool(value, &b))
             opts->fire_hold_lockout = b;
+    } else if (eqi(section, "replays")) {
+        int b;
+        if (eqi(name, "auto_save") && parse_bool(value, &b))
+            opts->replay_auto_save = b;
     } else if (eqi(section, "dos")) {
         int b;
         if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
@@ -288,6 +292,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (fixed). Your OWN tackle still spends the press either way — that half is\n"
         "; deliberate in the original. See team_control.c.",
         opts->fire_hold_lockout ? "true" : "false" };
+    items[n++] = (IniEntry){ "replays", "auto_save",
+        "; auto_save: true | false — every match is recorded to LATEST.SRP in the save\n"
+        "; folder and can be watched from HIGHLIGHTS -> LOAD. true also keeps a dated\n"
+        "; copy of each (MMDDHHMM.SRP), so a match is not overwritten by the next one.",
+        opts->replay_auto_save ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
     items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };

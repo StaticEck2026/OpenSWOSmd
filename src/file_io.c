@@ -987,7 +987,7 @@ int16_t SelectFileToSaveDialog(uint32_t filterExt, uint8_t *defaultFilename,
                 ext == 0x2E48494Cu)   /* .HIL */
             {
                 _totalNumberOfFiles++;
-                if (ext == _extension) {
+                if (ext == _extension && _numMatchedFiles < 45) {   /* the menu's 45 slots */
                     _numMatchedFiles++;
                     *ptrTableCursor++ = fileEntry;
                     *extTableCursor++ = ext;
@@ -1068,13 +1068,22 @@ int16_t GetFilenameAndExtension(uint32_t preferredExt, uint8_t *defaultFilename,
                   (uint32_t)scan[3];
 
             /* Check against known extensions */
+            /* The menu has 45 slots (_foundFilesPtrTable, _extensionsBuffer) and
+             * nothing else stops at them: a save folder with more saves wrote past both.
+             * Automatically saved replays ([replays] auto_save) make that likely. */
+            if (_totalNumberOfFiles >= 45)
+                break;
             if (ext == 0x2E444959u || /* .DIY */
                 ext == 0x2E505245u || /* .PRE */
                 ext == 0x2E534541u || /* .SEA */
                 ext == 0x2E434152u || /* .CAR */
                 ext == 0x2E544143u || /* .TAC */
                 ext == 0x2E48494Cu || /* .HIL */
-                ext == 0x2E52504Cu)   /* .RPL (PC whole-match replay) */
+                ext == 0x2E52504Cu    /* .RPL (PC whole-match replay) */
+#ifdef SWOS_SDL_BUILD
+                || ext == 0x2E535250u /* .SRP (OpenSWOS whole-match replay) */
+#endif
+                )
             {
                 _totalNumberOfFiles++;
                 _numMatchedFiles++;
@@ -1233,7 +1242,7 @@ void SelFilesDrawItemDescription(MenuEntry *entry) {
         descStr = (const uint8_t *)"CAREER";
     else if (ext == 0x2E544143)  /* '.TAC' */
         descStr = (const uint8_t *)"TACT";
-    else if (ext == 0x2E52504C)  /* '.RPL' — PC whole-match replay */
+    else if (ext == 0x2E52504C || ext == 0x2E535250)  /* '.RPL', '.SRP' — whole-match replays */
         descStr = (const uint8_t *)"REPLAY";
     else
         descStr = (const uint8_t *)"HIGH";

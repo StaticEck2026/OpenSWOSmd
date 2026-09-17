@@ -1,8 +1,14 @@
-# Replay Format v2 — Design Doc
+# Replay Format v2 — `.SRP`
 
-Status: **proposal / design** (no code yet). Goal: a resolution-independent,
-seekable, fully-audible match-replay format to replace/supersede the current
-`.HIL` / `.RPL` (+ `.IDX`) family.
+Status: **implemented** (`src/replay_v2.c`, `include/replay_v2.h`, SDL builds).
+A whole match is recorded to `LATEST.SRP` in the save folder and played back
+through the highlights viewer at any screen width, with the sounds the match
+made. Trick play (§6) is specified but not wired yet.
+
+Test: `scripts/replay_v2_test.sh --all` — every recording in the corpus, both
+gameplays, recorded and played back at 336/484/672, requiring the sprites, the
+pitch origin, the sub-pixel scroll and the sounds to be identical to the live
+match **at the playback width**.
 
 ---
 
@@ -25,18 +31,14 @@ never designed for what we now want:
   reconstructed ball-tracked camera (we implemented both in `highlight.c`, but
   it's a workaround layered on a format that bakes in a fixed view width).
 - **Seek is bolted on.** `.IDX` was added in 2020 purely to enable
-  fast-forward / rewind / slow-mo / speed-up by indexing frame offsets. It's a
-  side-car file, easy to lose or desync from its `.RPL`.
+  fast-forward / rewind / slow-mo / speed-up. It's a side-car file, easy to lose
+  or desync from its `.RPL`.
 - **One opaque blob.** No versioning room, no metadata, no clean place to add
   features without breaking older readers.
 
-We want to **record a whole match once** and play it back perfectly at any
-resolution, with all the sound, and with proper trick-play — in a single,
-versioned, self-describing file.
-
 ---
 
-## 2. What the current formats actually contain
+## 2. What the legacy formats contain
 
 (From `highlight.c` `SaveCoordinatesForHighlights` / the playback decode, and
 `dos_replay_load.c` `convert_frames`.)
@@ -55,7 +57,15 @@ Per **frame**, big-endian 32-bit words:
   big-endian, 19000-byte scene slots.
 - `.RPL` — DOS/SWOS-2020, little-endian, 3626-byte header, **one** whole-match
   scene (~1–3 MB), streamed from a dedicated buffer.
-- `.IDX` — SWOS-2020 seek index (frame→offset) for FF/RW/slomo/speed.
+- `.IDX` — one `{u8 minute, f32 timer}` per frame. **It is not a seek index**
+  despite the name: SWOS 2020 uses it to show the clock while scrubbing.
+
+Three details cost time when the `.RPL` reader was written, and are recorded
+here so the next reader does not pay again: the DOS word order is `Y<<16 | X`
+and `t2<<16 | t1` (the opposite of the Amiga's), `0xFFFFFFFF` is a **moving
+sentinel** written one word ahead rather than a per-frame terminator, and byte 5
+of the header is the gameStyle, which is where the playback rate comes from.
+Off-screen sprites are recorded, with their coordinates wrapped into 10 bits.
 
 **There are no key/event/audio markers in the stream.** The crowd toggle
 (`currentKey == 0x89` → `TurnCrowdChantsOn`) is **generated internally at scene
@@ -64,152 +74,211 @@ at all (hence we force `TurnCrowdChantsOn()` at replay start for RPLs).
 
 ---
 
-## 3. Why replays are (mostly) silent today — and what's correct
+## 3. Why legacy replays are (mostly) silent — and what's correct
 
 - **Crowd:** `PlayCrowdChants` (random crowd samples on channel 2, gated by
   `_crowdChantsOn`) is ticked every frame during playback, but it's only
   *enabled* by the `0x89` scene-transition key. RPLs have no scene transitions,
-  so the crowd stays off unless forced on. *(Open: the crowd-chant sample uses
-  the RJP1 wave-id trigger path; confirm on real hardware that an enabled chant
-  is audible — match SFX use the note/preset path.)*
+  so the crowd stays off unless forced on.
 - **Action SFX (kick/bounce/whistle/cheer):** never existed in a replay, in any
   SWOS version, because the replay doesn't re-simulate. **This is by design**,
-  not a regression — and it's the main thing v2 fixes by recording an explicit
-  audio-event track.
+  not a regression — and it is the main thing `.SRP` fixes, by recording an
+  explicit audio-event track. A `.SRP` carries its own sound, so the viewer
+  turns the random chant generator OFF for one (`ReplayV2_HasAudio`) instead of
+  adding chants the match never made.
 
 ---
 
-## 4. Goals for v2
+## 4. The file
 
-1. **Self-describing & versioned.** Magic + version + a TLV/chunked container so
-   we can add features without breaking old readers, and detect & up-convert
-   legacy `.HIL`/`.RPL` on load.
-2. **Resolution-independent.** Record positions in **world/pitch coordinates**,
-   not screen space. The camera is *derived at playback* from the ball (we
-   already reconstruct ball position from the shadow sprite) or stored as an
-   optional hint — never as a baked-in fixed-width pan.
-3. **Full audio.** A timestamped **audio-event track**: every SFX the engine
-   fired (kick, header, tackle, post, whistle, goal cheer, crowd-state changes),
-   with the same ids the SFX bank uses, so playback re-triggers them exactly.
-4. **First-class trick play.** Built-in **keyframe/seek index** (no side-car):
-   fast-forward, rewind, slow-mo, variable speed, frame-step, jump-to-goal.
-5. **Whole-match or clips.** Support both a full match and trimmed highlight
-   clips, with chapter marks (goals, cards, half-time).
-6. **Backward read.** Keep reading `.HIL`/`.RPL` (+ `.IDX`); offer "re-save as
-   v2" to migrate.
+All fields **big-endian**, like every other format in this tree. One match per
+file. Extension `.SRP`; `LATEST.SRP` is the last match played.
+
+### Header (32 bytes)
+
+| Off | Size | Field |
+|----|----|----|
+| 0 | 4 | `"SWRP"` |
+| 4 | 2 | version (1) |
+| 6 | 2 | flags: 1 audio, 2 seek, 4 chapters |
+| 8 | 2 | tick rate (50 Amiga gameplay, 70 DOS) |
+| 10 | 2 | quirks — see below |
+| 12 | 2 | pitch width (0x2A0) |
+| 14 | 2 | pitch height (0x370) |
+| 16 | 4 | frame count |
+| 20 | 2 | chunk count |
+| 22 | 2 | 0 |
+| 24 | 4 | CRC-32 of everything after the header |
+| 28 | 4 | 0 |
+
+Then one 16-byte directory entry per chunk: fourcc, offset, stored size, raw
+size. `stored == raw` means the chunk is stored; otherwise it is raw deflate
+(the vendored miniz, as `state_wire.c` uses). A load that fails magic, version
+or CRC is refused with a reason rather than played.
+
+### `META` — the match (stored)
+
+Version, screen width the recording was made on, gameplay flags (1 DOS
+gameplay, 2 DOS graphics, 4 arcade), the UTC time, the 32-character build
+stamp, the final score, `pitchNumberAndType`, `gameMaxSubstitutes`, the
+competition name and round, and the two teams as the `.HIL` header holds them
+(1018 bytes each, the 11 int16 kit words big-endian).
+
+Everything but the final score is taken at **kick-off**. At the end of a match
+`SetPitchTypeAndNumber` has already run for whatever comes next, so a `.SRP`
+written with the end-of-match value plays on a different pitch than the match
+was played on — green grass for a match played on a soft one.
+
+### `FRMS` — the frames (deflated)
+
+Per frame, a 20-byte head followed by its sprites:
+
+| Off | Size | Field |
+|----|----|----|
+| 0 | 2 | sprite count (≤ 78, `_sortedSprites`) |
+| 2 | 4 | camera X, **16.16** |
+| 6 | 4 | camera Y, 16.16 |
+| 10 | 2 | team 1 goals |
+| 12 | 2 | team 2 goals |
+| 14 | 2 | `animPatternsState` (the crowd) |
+| 16 | 2 | the minute on the clock |
+| 18 | 2 | 0 |
+
+then 6 bytes per sprite: image index, world X, world Y — the sprite's position
+with its graphic's centre and its z already taken out, so playback only has to
+subtract the camera.
+
+Two things this head gets right that the legacy stream does not:
+
+- **The camera is the full 16.16 simulation camera.** A wide display's draw
+  origin *scales* the camera (`Render_CameraX16`, docs/GAMEPLAY.md §25), so the
+  fraction changes the origin by a whole pixel on some frames. Recording only
+  the integer part put playback one pixel out at 484 wide — and lost the
+  presenter's sub-pixel scroll, which reads the same fraction. On playback the
+  fractions are restored **before** `MoveView` pans, so its last
+  `ScrollToCurrent` draws the pitch at, and publishes the shift from, exactly
+  the camera the match drew with.
+- **The head is taken with the sprites, not at the start of the frame.** The
+  camera can move inside a frame — the end-of-match cut does — and
+  `DrawAnimatedPatterns` sets the crowd state for the frame it is about to
+  draw. Taken at frame start, both are a frame stale.
+
+Sprites are recorded **on screen or not**: a wider display shows more of them.
+The screen-pinned HUD (z ≥ `HUD_LAYER_Z_MIN`) is not recorded — it belongs to
+the display it was drawn for, and the viewer draws its own.
+
+### `AUDI` — the sounds (deflated)
+
+8 bytes per event: frame, kind, channel, id. Kind 1 is a preset
+(`AudioApplyPresetToChannels`), 2 a wave (`AudioChannelQueueNextWaveIfEnabled`),
+3 a channel volume (channel 0xFF = all). The recorder is an **observer** on
+`audio_sfx_filter.h`, called before the netplay filter decides what is heard, so
+a match recorded under rollback keeps the sound the match made rather than the
+sound this peer happened to play.
+
+### `SEEK` — keyframes every 50 frames
+
+`{interval, count}` then `{frame, FRMS offset, audio index}`. Written and
+verified; nothing reads it yet (§6).
+
+### `CHAP` — chapters
+
+`{count}` then `{frame, kind (1 goal, 2 half), team, value}`: every goal and the
+start of each half, for jump-to-goal.
+
+### `quirks`
+
+**Which game this was recorded against.** We deliberately depart from the
+original in places (the first is the fire-hold lockout — an original-Amiga bug
+where an opponent's tackle wipes your held shot charge; `_gOriginalFireHoldLockout`
+in `team_control.c`, docs/GAMEPLAY.md §6.3). A recording made under the fix and
+one made under the original are recordings of *different games*, and only the
+file can say which. One bit per deliberate departure, room to grow.
+
+**Owner's call, 2026-09-13: new recordings are made with the fixes ACTIVE.** So
+the bit is normally 0 and set only when something was deliberately recorded
+against original behaviour.
+
+This is the same shape as `tickRate`, and for the same reason. **Decide it per
+FILE, never per format.** That shortcut has already been paid for once here: the
+authored playback rate turned out to live in a per-file byte (SWOS-2020's
+`gameStyle` at offset 5) and the first implementation hardcoded it per format,
+which broke every reel that disagreed with its neighbours.
 
 ---
 
-## 5. Proposed structure (chunked container)
+## 5. How it is wired
 
-```
-[ FILE HEADER ]
-  magic   "SWRP"            ; SWos RePlay
-  version u16               ; format version
-  flags   u16               ; widescreen-source, has-audio, has-index, ...
-  tickRate u16              ; recording tick rate (e.g. 50 or 70)
-  quirks  u16               ; WHICH GAME this was recorded against — see below
-  pitchW, pitchH u16        ; world dimensions (decouples from view width)
-  teamsBlobOffset u32       ; -> team/kit/lineup metadata
-  frameStreamOffset u32
-  audioTrackOffset u32
-  seekIndexOffset u32
-  chapterTableOffset u32
+**Recording** taps `GameLoop_Frame` (`src/game_loop.c`): `ReplayRec_MatchStart`
+before the first frame, `ReplayRec_FrameBegin` after the camera has moved,
+`ReplayRec_CaptureSprites` after `DrawSprites`, `ReplayRec_FrameEnd`, and
+`ReplayRec_MatchEnd` both where a match ends and where it is quit. Training
+games, the arcade cabinet and the replay rig are not recorded unless a test asks
+with `--record-replay=<file>`.
 
-[ METADATA chunk ]   teams, kits, score, competition, date, recorded-version
-[ FRAME STREAM ]     per-tick: camera-hint?, ball(world x,y,z), sprites(world x,y, idx, dir)
-[ AUDIO TRACK ]      sorted by tick: { tick, channel, sfxId, param } events
-[ SEEK INDEX ]       keyframe every N ticks: { tick, frameOffset, audioOffset }
-[ CHAPTER TABLE ]    { tick, kind(goal/card/half), team } for jump-to-goal
-```
+Netplay re-simulates frames, so `ReplayRec_SetFrame` (from `netplay_match.c`)
+keys frames by GGPO frame number: a rewind truncates the frames, sounds and
+chapters from that frame on, and they are recorded again as finally played. A
+step that played no frame leaves a gap, which is filled with a copy of the last
+frame so a frame's number stays its index.
 
-Key decisions:
+**Playback** hooks the highlights viewer that already plays `.HIL` and `.RPL`.
+`ReplayV2_Load` fills the HIL header the viewer reads (teams, score, pitch,
+subs) so the stadium line-up and the score overlay work unchanged; the match is
+one scene, and `DrawReplayFrame` draws a `.SRP` frame instead of decoding the
+legacy stream. The camera is the recording's own, so `MoveView`'s re-fitting
+clamps — which exist to squeeze a foreign 336/200 recording into our view — are
+skipped for a `.SRP`.
 
-- **World coordinates + z for the ball** → resolution-independent rendering and
-  a proper ball-tracked camera at any width (z lets the shadow/height render
-  correctly without guessing).
-- **Audio as an event track**, not interleaved opcodes → trivial to mix, mute,
-  re-time under slow-mo (pitch-preserve or not, our choice), and to *omit* on
-  playback engines that don't want it.
-- **Keyframes** carry both a frame offset *and* an audio offset so seeking lands
-  the audio track in sync; between keyframes we replay deltas forward.
-- **Sprites store direction** (already in the engine) so the camera/renderer can
-  do smarter framing and we can re-derive facing without the bitmap.
-- **`quirks` records which game the file was recorded against.** We now
-  deliberately depart from the original in places (the first is the fire-hold
-  lockout — an original-Amiga bug where an opponent's tackle wipes your held
-  shot charge; `_gOriginalFireHoldLockout` in `team_control.c`, docs/GAMEPLAY.md
-  §6.3). A recording made under the fix and one made under the original are
-  recordings of *different games*, and only the file can say which. One bit per
-  deliberate departure, room to grow.
+`--record-replay=<file>` and `--view-replay=<file>` drive both halves headless
+for tests; `SWOS_REPLAY_TRACE=<file>` writes what was drawn (and
+`SWOS_REPLAY_TRACE_SPRITES=1` every sprite) on both sides, which is what
+`scripts/replay_v2_test.sh` compares.
 
-  **Owner's call, 2026-09-13: new recordings are made with the fixes ACTIVE —
-  fixed is the new norm.** So the bit is normally 0 and set only when something
-  was deliberately recorded against original behaviour.
-
-  This is the same shape as `tickRate`, and for the same reason. **Decide it per
-  FILE, never per format.** That shortcut has already been paid for once here:
-  the authored playback rate turned out to live in a per-file byte (SWOS-2020's
-  `gameStyle` at offset 5) and the first implementation hardcoded it per format,
-  which broke every reel that disagreed with its neighbours. `quirks` will fail
-  exactly the same way if it is inferred from the extension.
+`[replays] auto_save` in `SWOS.ini` additionally keeps a dated `MMDDHHMM.SRP`
+per match. `LATEST.SRP` is always written.
 
 ---
 
-## 6. Trick play (replaces `.IDX`)
+## 6. Trick play (replaces `.IDX`) — not wired yet
 
 - **FF / RW:** jump to nearest keyframe, replay deltas; audio either muted or
   time-compressed.
 - **Slow-mo / speed-up:** scale the tick advance; the audio track is resampled
   or event-rate-scaled (design choice per SFX class — crowd loops stretch,
   one-shots fire at their real pitch).
-- **Frame-step / jump-to-goal:** keyframes + chapter table.
+- **Frame-step / jump-to-goal:** the `SEEK` and `CHAP` chunks, both already
+  written.
 
 ---
 
 ## 7. Migration / compatibility
 
-- Loader sniffs magic: `SWRP` → v2; legacy 3626-byte LE header → `.RPL`; Amiga
-  `.HIL` → as today. `.IDX` still read if present alongside a legacy `.RPL`.
-- A "Re-save as v2" path can up-convert a legacy file (positions only; audio
-  track empty/crowd-only since the source never had it).
-- **Legacy files have no `quirks` field, so up-conversion must set it to
+- The loader sniffs the magic: `SWRP` → `.SRP`; legacy 3626-byte LE header →
+  `.RPL`; Amiga `.HIL` → as today. `.IDX` is still read alongside a legacy
+  `.RPL`. **The legacy readers stay** — the arcade attract reels are `.RPL`.
+- **Legacy files have no `quirks` field, so any up-conversion must set it to
   "original", not 0.** Every `.HIL` / `.RPL` / `.RGD` that exists today predates
   the deliberate departures, and a missing field is not the same as a field
   saying "fixed". Same rule anywhere else the flag is read: absent ⇒ original.
-  (Today `--replay-test` hardcodes exactly that for the `.RGD` corpus — see the
-  `opts.fire_hold_lockout` line in `main.c`, which carries a pointer back here
-  and stops being correct the moment a v2 recording reaches the rig.)
-- v2 is authored by a **recorder** that taps the live engine: it already has the
-  ball physics + every `PlaySample`/SFX trigger, so populating the audio track is
-  just logging those at record time.
+  (`--replay-test` hardcodes exactly that for the `.RGD` corpus — see the
+  `opts.fire_hold_lockout` line in `main.c`.)
+- Re-saving a legacy file as `.SRP` is not implemented (positions only; the
+  audio track would be empty, since the source never had one).
 
 ---
 
-## 8. Implementation phases
+## 8. Open questions
 
-1. **Recorder hooks** — tap world positions + every SFX trigger during a live
-   match into in-memory v2 buffers (no playback yet). Verifies we *can* capture
-   everything.
-2. **Writer** — serialize the chunked container + seek index.
-3. **Reader/player** — play frame stream (reuse the existing render path with
-   world→screen at playback width) + drive audio from the event track.
-4. **Trick play** — wire FF/RW/slomo/speed/seek to the built-in index.
-5. **Migration** — sniff + up-convert legacy `.HIL`/`.RPL`.
-
----
-
-## 9. Open questions
-
-- Crowd: keep the chant state-machine as the ambient bed, or record an explicit
-  crowd-intensity envelope in the audio track? (Latter gives goal-roar swells.)
+- Crowd: keep the chant state-machine as the ambient bed for legacy replays, or
+  record an explicit crowd-intensity envelope? (A `.SRP` already carries the
+  real thing.)
 - Audio under slow-mo: pitch-shift vs event-rescale per SFX class.
-- File size vs delta-compression of sprite positions (most move a few px/tick).
-- `quirks`: one bit per deliberate departure, or a single "game revision" ordinal
-  the reader maps to a set? Bits are simpler now; an ordinal ages better once
-  there are several and they interact. Either way it is per file, never per
-  format, and absent means original.
-- Do we record inputs too (enabling true re-simulation as an alternative to
-  position playback)? Re-sim would give *perfect* SFX but risks desync across
-  engine changes; position playback is robust. Likely: positions + audio track
-  (robust), inputs optional/experimental.
+- Size: ~1 MB for a full match (~22000 frames) after deflate. Delta-compressing
+  sprite positions would cut it further — most move a few px per frame.
+- Bench and substitute sprites are not recorded (nor were they in `.HIL`), so a
+  replay shows an empty bench.
+- Do we record inputs too (enabling true re-simulation)? Re-sim would give
+  *perfect* SFX but risks desync across engine changes; position playback is
+  robust. Now that netplay records every peer's inputs, this is cheaper than it
+  was — but it is still a different format, not this one.

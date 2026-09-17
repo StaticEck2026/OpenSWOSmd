@@ -62,11 +62,17 @@ static AudioChannel *audioChannels[4];
 
 #ifdef SWOS_SDL_BUILD
 /* include/audio_sfx_filter.h: netplay's gate on the effects a re-simulated frame starts. */
-static AudioSfxFilter s_sfxFilter;
+static AudioSfxFilter   s_sfxFilter;
+static AudioSfxObserver s_sfxObserver;
 
 void Audio_SetSfxFilter(AudioSfxFilter filter)
 {
     s_sfxFilter = filter;
+}
+
+void Audio_SetSfxObserver(AudioSfxObserver observer)
+{
+    s_sfxObserver = observer;
 }
 #endif
 
@@ -127,6 +133,10 @@ void AudioSetChannelVolume(uint16_t channelOrAll, uint16_t volume)
     if (volume != 0x40)
         volume &= 0x3F;
     vol = (uint8_t)volume;
+#ifdef SWOS_SDL_BUILD
+    if (s_sfxObserver)
+        s_sfxObserver(AUDIO_SFX_VOLUME, (channelOrAll & 0x80) ? 0xFF : (uint8_t)(channelOrAll & 3), vol);
+#endif
 
     /* tst.b d0 / bmi — tests bit 7 of low byte */
     if (channelOrAll & 0x80)
@@ -469,6 +479,8 @@ void AudioApplyPresetToChannels(uint16_t presetId)
      * noteId fires a sample on its channel after a song_data[3]+[5]
      * indirection. AudioSDL_TriggerSfxPreset does the whole walk. */
     extern void AudioSDL_TriggerSfxPreset(int preset_id);
+    if (s_sfxObserver)
+        s_sfxObserver(AUDIO_SFX_PRESET, 0xFF, (uint16_t)(presetId & 0x3F));
     if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_PRESET, 0xFF, (uint16_t)(presetId & 0x3F)))
         return;
     AudioSDL_TriggerSfxPreset((int)(presetId & 0x3F));   /* 6-bit preset id, see Amiga &= 0x3F */
@@ -522,6 +534,8 @@ void AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
      * Without this, kicks come out as whistles and vice-versa.
      * AudioSDL_TriggerSfxByWaveId does the lookup + trigger. */
     extern void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id);
+    if (s_sfxObserver)
+        s_sfxObserver(AUDIO_SFX_WAVE, (uint8_t)(channel & 3), waveId);
     if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_WAVE, (uint8_t)(channel & 3), waveId))
         return;
     AudioSDL_TriggerSfxByWaveId((int)(channel & 3), (int)waveId);

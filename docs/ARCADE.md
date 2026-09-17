@@ -46,6 +46,10 @@ When idle (no credits, no game in progress) the cabinet runs an **attract loop**
 - Pick the `.HIL` set by gameplay mode: 70 FPS DOS reels when DOS gameplay is on,
   50 FPS Amiga reels otherwise (a reel recorded at one rate plays back wrong at
   the other — see DOS_GAMEPLAY.md timing notes).
+- **`.SRP` reels are accepted too** (`docs/REPLAY_FORMAT_V2.md`): drop a recording
+  from `[replays] auto_save` into `bin/grafs_arcade/attract_mode/` and it joins the
+  rotation. One carries its own tick rate, camera and **sound**, so it needs no
+  per-mode set and plays correctly whichever gameplay the cabinet is running.
 
 ## 3. Service menu (operator menu)
 

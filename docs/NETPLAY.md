@@ -787,6 +787,15 @@ One trap, found by the first two-match test: a message generation starts again a
 every connection, and the lobby remembered the generations it had handled -- so the new
 link's first STATE, START and ANSWER looked already seen. `Rematch` forgets them.
 
+**A live match is recorded like any other** (`docs/REPLAY_FORMAT_V2.md`): `LATEST.SRP` in
+the save folder, watchable from HIGHLIGHTS -> LOAD. Frames are keyed by GGPO frame number
+(`ReplayRec_SetFrame`), so a rollback re-records the frames it re-simulated and the file
+holds the match as it was finally played, not as it was first predicted. The recorder sits
+on the audio OBSERVER, upstream of the sound filter, so a replay has the sound the match
+made rather than the sound this peer happened to hear. Proved by recording both peers of a
+stalled p2p run: the two files are byte-identical, and each plays back exactly what its
+peer drew.
+
 ```
 scripts/netplay_lobby_test.sh                                 # 2 matches, 300 frames each
 MATCHES=3 FRAMES=600 PROFILE=wifi scripts/netplay_lobby_test.sh

@@ -468,6 +468,9 @@ static int32_t soundFilter(uint8_t kind, uint8_t channel, uint16_t id)
 /* Around every step: which frame it is, and whether it has been played before. */
 static void soundFrameBegin(int32_t frame, int32_t again)
 {
+    /* The replay recorder numbers frames the same way, so a re-simulated frame replaces
+     * what was recorded for it (src/replay_v2.c). */
+    { extern void ReplayRec_SetFrame(uint32_t frame); ReplayRec_SetFrame((uint32_t)frame); }
     SoundFrame *f = &s_sound[(uint32_t)frame & (SOUND_FRAMES - 1)];
     if (f->frame != frame) {
         f->frame = frame;

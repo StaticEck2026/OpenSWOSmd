@@ -352,6 +352,12 @@ skip_title_screens: ;
          * loaded, and neither wants the front end. */
         if (NetplayLiveTest_Armed())
             NetplayLiveTest_Run();   /* plays a live match, then exits */
+        {
+            extern int32_t ReplayV2_ViewTestArmed(void);
+            extern void    ReplayV2_ViewTestRun(void);
+            if (ReplayV2_ViewTestArmed())
+                ReplayV2_ViewTestRun();   /* plays a .SRP, then exits */
+        }
         if (ReplayTest_Armed()) {
             ReplayTest_Run();   /* replays a recording, then exits the process */
             return;

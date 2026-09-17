@@ -83,6 +83,21 @@ loopback. A live match through the lobby, and a rematch after it, is `scripts/ne
 match starts or ends. A live match must never `exit()` or leave the frame loop: it ends through
 `liveEnd` and goes back to the lobby.
 
+**Whole-match replays** (`.SRP`, `src/replay_v2.c`, docs/REPLAY_FORMAT_V2.md) are SDL-only and
+recorded from every match that is not training, the arcade cabinet or the rig: `LATEST.SRP` in the
+save folder, plus a dated copy under `[replays] auto_save`. They play through the highlights viewer
+(LOAD/VIEW), which still reads `.HIL` and `.RPL` — the attract reels are `.RPL`, so those readers
+stay. A recording is **resolution independent**: sprites are stored in world coordinates and the
+camera in full 16.16, so a 4:3 match plays on a 16:9 screen exactly as it would have been played
+there. `scripts/replay_v2_test.sh --all` proves it — the corpus recorded and played back at
+336/484/672, requiring the sprites, the pitch origin, the sub-pixel scroll and every sound to
+equal the live match's at the playback width. Two traps it was written to catch: the frame head
+must be taken WITH the sprites (the camera moves inside the end-of-match frame, and
+`DrawAnimatedPatterns` sets the crowd state for the frame it is about to draw), and META must be
+taken at KICK-OFF (by the end of a match `SetPitchTypeAndNumber` has run again, so an end-of-match
+`pitchNumberAndType` plays the match on the wrong pitch). Netplay records by GGPO frame number
+(`ReplayRec_SetFrame`), so a rollback re-records what was finally played.
+
 ### Release builds — `scripts/build_dist.sh`
 
 Builds every target this machine can produce and writes the archives below (WASM

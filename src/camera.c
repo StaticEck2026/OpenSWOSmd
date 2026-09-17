@@ -210,7 +210,15 @@ void MoveView(int16_t newScreenX, int16_t newScreenY)
      * clamping (SetCameraCoordinates), so applying these here clamped the up-pan
      * to the subs bench, which legitimately leaves the playing-field Y range. */
     extern uint16_t _playHighlightFlag;
+#ifdef SWOS_SDL_BUILD
+    /* Not for a .SRP (src/replay_v2.c): it recorded our own simulation camera, which
+     * needs no re-fitting -- and the replay rig simulates a DOS recording in a 200-line
+     * view, whose camera runs past 0x260, so the clamp moved the picture. */
+    extern int32_t ReplayV2_Loaded(void);
+    if (_playHighlightFlag != 0 && !ReplayV2_Loaded()) {
+#else
     if (_playHighlightFlag != 0) {
+#endif
         /* X: 0x2A0 (pitch world width) - _screen_width is the max camera X — the
          * same clamp SetCameraCoordinates applies. No-op at 4:3 / on Amiga. */
         int16_t panRange = SIM_CAMERA_PAN_RANGE;

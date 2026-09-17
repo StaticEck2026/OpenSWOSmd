@@ -37,6 +37,7 @@
 #include "dos_mode.h"   /* gDosGraphics/gDosGameplay — defined in dos_graphics.c */
 #include "display.h"    /* _screen_width, WIDESCREEN_WIDTH, SCREEN_WIDTH */
 #include "replay_test.h"        /* --replay-test: recorded-game regression rig */
+#include "replay_v2.h"          /* --record-replay, --view-replay: whole-match .SRP replays */
 #include "online_menus.h"       /* --menu, --menu-selftest */
 #include "netplay.h"            /* --netplay-selftest */
 #include "build_info.h"         /* --version, and the [build] line in SWOS.log */
@@ -192,6 +193,12 @@ static void print_usage(const char *argv0)
         "                            Default 336. Two runs at different\n"
         "                            --replay-width with the same value here must\n"
         "                            play the same match: scripts/netplay_width_test.sh.\n"
+        "  --record-replay=<file>    Record the match to this .SRP (src/replay_v2.c).\n"
+        "                            Every match is recorded to LATEST.SRP anyway; this\n"
+        "                            names the file, and also records under --replay-test.\n"
+        "  --view-replay=<file>      Play a .SRP headless in place of the front end and\n"
+        "                            exit (0 when every frame played). --replay-width\n"
+        "                            sets the width; SWOS_REPLAY_TRACE=<file> traces it.\n"
         "  --replay-window           Open a window during --replay-test. Off by\n"
         "                            default: a replay is a batch run and a full\n"
         "                            matrix would open one window per cell.\n"
@@ -343,6 +350,7 @@ int main(int argc, char **argv)
     opts.dos_graphics = 0;        /* default Amiga graphics */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
+    opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.arcade = 0;              /* default off — normal front-end menu */
     opts.arcade_mode = 0;         /* GOLDEN GOAL */
     opts.arcade_game_seconds = 45;
@@ -362,6 +370,7 @@ int main(int argc, char **argv)
     int replay_window = 0;
     int replay_width = 0;   /* 0 = the corpus geometry (SCREEN_WIDTH) */
     int replay_sim_width = 0;   /* 0 = SCREEN_WIDTH: no margin, as the corpus was recorded */
+    const char *record_replay = NULL, *view_replay = NULL;   /* src/replay_v2.c */
     snprintf(opts.language, sizeof opts.language, "%s", "en");
     snprintf(opts.currency, sizeof opts.currency, "%s", "pound");
 
@@ -487,6 +496,10 @@ int main(int argc, char **argv)
             replay_width = atoi(v);
         } else if ((v = match_kv(a, "replay-sim-width")) != NULL) {
             replay_sim_width = atoi(v);
+        } else if ((v = match_kv(a, "record-replay")) != NULL) {
+            record_replay = v;
+        } else if ((v = match_kv(a, "view-replay")) != NULL) {
+            view_replay = v;
         } else if (strcmp(a, "--replay-window") == 0) {
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
@@ -679,6 +692,33 @@ int main(int argc, char **argv)
         opts.res_w = (replay_width > 0) ? replay_width : SCREEN_WIDTH;
         opts.res_h = SCREEN_HEIGHT;
     }
+    if (view_replay) {
+        /* A batch run like --replay-test: headless, silent and unpaced unless asked. */
+#ifdef _WIN32
+        _putenv("SWOS_HARNESS_TURBO=1");
+        _putenv("SWOS_NO_LOG=1");
+        if (!replay_window && !getenv("SDL_VIDEODRIVER"))
+            _putenv("SDL_VIDEODRIVER=dummy");
+        if (!getenv("SDL_AUDIODRIVER"))
+            _putenv("SDL_AUDIODRIVER=dummy");
+#else
+        setenv("SWOS_HARNESS_TURBO", "1", 1);
+        setenv("SWOS_NO_LOG", "1", 1);
+        if (!replay_window && !getenv("SDL_VIDEODRIVER"))
+            setenv("SDL_VIDEODRIVER", "dummy", 1);
+        if (!getenv("SDL_AUDIODRIVER"))
+            setenv("SDL_AUDIODRIVER", "dummy", 1);
+#endif
+        if (replay_width > 0) {
+            opts.res_w = replay_width;
+            opts.res_h = SCREEN_HEIGHT;
+        }
+        if (ReplayV2_ArmViewTest(view_replay) != 0)
+            return 1;
+    }
+
+    /* Whole-match recording (src/replay_v2.c). */
+    ReplayRec_Configure(record_replay, opts.replay_auto_save);
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;

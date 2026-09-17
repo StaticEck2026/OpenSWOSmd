@@ -1262,6 +1262,8 @@ static void finish(int code)
     if (s_finished) return;
     s_finished = 1;
     s_running = 0;
+    /* --record-replay: the recording ends here, before the process does. */
+    { extern void ReplayRec_MatchEnd(void); ReplayRec_MatchEnd(); }
     {
         /* A netplay match reports on its session, and fails if the session did. */
         int np = NetplayMatch_Finish();

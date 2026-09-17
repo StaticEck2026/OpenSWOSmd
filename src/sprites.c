@@ -2070,6 +2070,15 @@ void DrawQueuedSprites(void)
             SaveCoordinatesForHighlights(d0, (uint16_t)d1, (uint16_t)d2);
         }
 
+#ifdef SWOS_SDL_BUILD
+        /* SWOS_REPLAY_TRACE (src/replay_v2.c): what the live match drew, to compare a
+         * recording's playback against. */
+        if (a4->z.s.i < HUD_LAYER_Z_MIN) {
+            extern void ReplayTrace_LiveSprite(int16_t ordinal, int16_t x, int16_t y);
+            ReplayTrace_LiveSprite(a0->ordinal, d1, d2);
+        }
+#endif
+
         /* Check if a4 is a player sprite (teamNumber 1 or 2).
          * Original asm used address range check (goalie1Sprite..bottomCornerLeftPositions),
          * but sprites moved from asm to C data sections so addresses are no longer contiguous. */

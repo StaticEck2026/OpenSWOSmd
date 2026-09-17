@@ -195,14 +195,16 @@ static void arc_scan_one_dir(const char *sub)
     struct dirent *e;
     while ((e = readdir(d)) != NULL && s_reelCount < ARC_MAX_REELS) {
         if (e->d_name[0] == '.') continue;
-        if (!(arc_ends_with(e->d_name, ".HIL") || arc_ends_with(e->d_name, ".RPL")))
+        if (!(arc_ends_with(e->d_name, ".HIL") || arc_ends_with(e->d_name, ".RPL") ||
+              arc_ends_with(e->d_name, ".SRP")))
             continue;
         /* The .HIL converter reads the (larger) DOS source into _hilFileBuffer
          * (192254 B), so skip reels too big for it; RPLs use the 2.76 MB buffer. */
         char p[512];
         snprintf(p, sizeof p, "%s/%s", dir, e->d_name);
         struct stat st;
-        uint32_t limit = arc_ends_with(e->d_name, ".RPL") ? (2700u * 1024u) : 192254u;
+        uint32_t limit = arc_ends_with(e->d_name, ".RPL") ? (2700u * 1024u) :
+                         arc_ends_with(e->d_name, ".SRP") ? (64u * 1024u * 1024u) : 192254u;
         if (stat(p, &st) == 0 && (uint32_t)st.st_size > limit) {
             fprintf(stderr, "[arcade] skip oversized reel %s (%ld B)\n",
                     e->d_name, (long)st.st_size);
@@ -243,6 +245,13 @@ static int arc_load_reel(const char *name)
     char path[224];
     snprintf(path, sizeof path, "%s/%s", ARC_REEL_DIR, name);
     DosReplay_ClearRpl();
+    { extern void ReplayV2_Unload(void); ReplayV2_Unload(); }
+
+    /* A .SRP (src/replay_v2.c) carries its own rate, sounds and camera. */
+    if (arc_ends_with(name, ".SRP")) {
+        extern int32_t ReplayV2_Load(const uint8_t *name);
+        return ReplayV2_Load((const uint8_t *)path);
+    }
 
     /* Reset to the native-Amiga rate; the DOS/2020 converter bumps it to 70. This
      * clears a stale 70 if the previous reel was a DOS replay and this one is a

@@ -141,7 +141,18 @@ void LoadHighlightsMenu(void)
     {
         extern void DosReplay_ClearRpl(void);
         extern int  DosReplay_LoadRpl(uint8_t *filename);
+        extern void    ReplayV2_Unload(void);
+        extern int32_t ReplayV2_Load(const uint8_t *name);
         DosReplay_ClearRpl();
+        ReplayV2_Unload();
+        if (_extension == 0x2E535250u) {   /* '.SRP' -- OpenSWOS's own whole-match replay */
+            if (ReplayV2_Load(_selectedFilename) != 0) {
+                ShowErrorMenu(_aNotAHighlights);
+                goto cleanup;
+            }
+            StringCopy(_selectedFilename, _hilFilename);
+            goto cleanup;
+        }
         if (_extension == 0x2E52504Cu) {   /* '.RPL' */
             if (DosReplay_LoadRpl(_selectedFilename) != 0) {
                 ShowErrorMenu(_aNotAHighlights);

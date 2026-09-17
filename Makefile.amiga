@@ -68,6 +68,7 @@ SDL_ONLY_SRCS := \
     platform_sdl.c        \
     platform_timer.c      \
     replay_test.c         \
+    replay_v2.c           \
     rjp1.c                \
     rollback_rig.c        \
     sfx_debug.c           \

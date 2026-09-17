@@ -672,6 +672,9 @@ GameFrameResult GameLoop_Frame(void)
     MoveCamera();
     ScrollToCurrent();
     SaveCoordinatesForHighlights((int16_t)0xFFFF, _cameraX.s.i, _cameraY.s.i);
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayRec_FrameBegin(void); ReplayRec_FrameBegin(); }
+#endif
     PlayEnqueuedSamples();
     UpdateTime();
 #ifdef SWOS_SDL_BUILD
@@ -700,6 +703,9 @@ GameFrameResult GameLoop_Frame(void)
     ShowResult();
     DrawAnimatedPatterns();   /* also ticks _showFansCounter / goal-celebration state */
     DrawSprites();
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayRec_CaptureSprites(void); ReplayRec_CaptureSprites(); }
+#endif
     DrawBenchAndSubsMenu();
     BenchCheckControls();
     UpdateAndDrawStatistics();
@@ -709,6 +715,9 @@ GameFrameResult GameLoop_Frame(void)
 
     /* Post-frame: save coordinates end marker */
     SaveCoordinatesForHighlights((int16_t)0xFFFE, 0, 0);
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayRec_FrameEnd(void); ReplayRec_FrameEnd(); }
+#endif
 
     if (_saveHighlightScene != 0) {
         SaveHighlightScene();
@@ -788,6 +797,10 @@ GameLoop(void)
     _saveHighlightScene = 0;
     _fadeAndSaveHighlightScene = 0;
     _spaceReplayTimer = 0;
+#ifdef SWOS_SDL_BUILD
+    /* Record the whole match (src/replay_v2.c): written to LATEST.SRP when it ends. */
+    { extern void ReplayRec_MatchStart(void); ReplayRec_MatchStart(); }
+#endif
 
     /* Training starts at a fixed (168, 313) in both releases. A match starts
      * centred horizontally on one of the two goal ends, and both of those are
@@ -826,6 +839,9 @@ GameLoop(void)
     }
 
 end_of_match_flow:
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayRec_MatchEnd(void); ReplayRec_MatchEnd(); }
+#endif
     FadeOutToBlack();
     /* nullsub_3 — no-op */
     SetHilFileHeader();
@@ -861,6 +877,9 @@ end_of_match_flow:
     }
 
 cleanup_and_return:
+#ifdef SWOS_SDL_BUILD
+    { extern void ReplayRec_MatchEnd(void); ReplayRec_MatchEnd(); }   /* quit mid-match: keep it */
+#endif
     StopAudioAndClearFlags();
     return;
 }
@@ -979,17 +998,29 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
       extern void LoadSfxResources(void);
       extern void EnsureSfxLoadedAndStart(void);
       extern void TurnCrowdChantsOn(void);
+      extern int32_t ReplayV2_HasAudio(void);
+      extern void CrowdResetMatchState(void);
       if (!_gArcadeMode) { LoadSfxResources(); EnsureSfxLoadedAndStart(); }
-      /* The RPL/HIL stream carries no 0x89 crowd-chant marker, so PlayCrowdChants
-       * (ticked every frame by PlayEnqueuedSamples) stays disabled and the replay
-       * is silent. A live match also resets the crowd state via CrowdResetMatchState
-       * (match setup), which a fresh-loaded replay never runs — leaving
-       * _currentCrowdSample at the BSS default 0, so PlayCrowdChants' "keep current
-       * sample" path fires wave 0 (= channel-off) and the chant is silent until it
-       * randomly re-picks. Reset it to 0xFFFF so the first chant picks a real sample,
-       * then enable. Gated downstream by _gArcadeSfxSuppressed. */
-      { extern uint16_t _currentCrowdSample; _currentCrowdSample = 0xFFFF; }
-      TurnCrowdChantsOn(); }
+      /* A .SRP brings the match's own sounds, crowd chants included (src/replay_v2.c):
+       * the random chants would play over them. Leftover sample countdowns from the last
+       * match (a goal cheer, a whistle) would too, so reset those as a match does. */
+      if (ReplayV2_HasAudio()) {
+          extern uint16_t _crowdChantsOn;
+          CrowdResetMatchState();
+          _crowdChantsOn = 0;
+      } else {
+          /* The RPL/HIL stream carries no 0x89 crowd-chant marker, so PlayCrowdChants
+           * (ticked every frame by PlayEnqueuedSamples) stays disabled and the replay
+           * is silent. A live match also resets the crowd state via CrowdResetMatchState
+           * (match setup), which a fresh-loaded replay never runs — leaving
+           * _currentCrowdSample at the BSS default 0, so PlayCrowdChants' "keep current
+           * sample" path fires wave 0 (= channel-off) and the chant is silent until it
+           * randomly re-picks. Reset it to 0xFFFF so the first chant picks a real sample,
+           * then enable. Gated downstream by _gArcadeSfxSuppressed. */
+          extern uint16_t _currentCrowdSample;
+          _currentCrowdSample = 0xFFFF;
+          TurnCrowdChantsOn();
+      } }
 #endif
 
     /* Drain the keyBuffer — original Amiga waits here while the user
@@ -1234,6 +1265,20 @@ advance_to_next_highlight:
     _hilSceneNumber += 1;
     if (_numScenesInHilFile == _hilSceneNumber)
         goto stop_replay_and_return;
+#ifdef SWOS_SDL_BUILD
+    /* A .SRP is one scene with its own frame stream (src/replay_v2.c). */
+    {
+        extern int32_t ReplayV2_Loaded(void);
+        extern void    ReplayV2_StartScene(void);
+        if (ReplayV2_Loaded()) {
+            ReplayV2_StartScene();
+            waitVBlankSync(0xCFD1F917u, 0x16F0u);
+            ReadTimerDelta();
+            PlayHighlightsLoop();
+            return;
+        }
+    }
+#endif
 
     {
         uint32_t offset = (uint32_t)_hilSceneNumber * 19000u;

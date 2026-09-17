@@ -714,6 +714,22 @@ void DrawReplayFrame(void)
     uint8_t *a0 = _currentGoalPtr;
     uint32_t d0;
 
+#ifdef SWOS_SDL_BUILD
+    /* A loaded .SRP plays from its own frame stream (src/replay_v2.c); the score overlay
+     * and the pause handling below are shared. */
+    {
+        extern uint16_t _playHighlightFlag;
+        extern int32_t  ReplayV2_Loaded(void);
+        extern void     ReplayV2_DrawFrame(void);
+        if (_playHighlightFlag != 0 && ReplayV2_Loaded()) {
+            ReplayV2_DrawFrame();
+            if (_replayState == 0)
+                return;
+            goto after_decode;
+        }
+    }
+#endif
+
     if (_replayState == 1) {
         /* STATE 1 → 2: Initialize replay */
         _replayState = 2;

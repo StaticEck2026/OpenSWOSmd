@@ -45,6 +45,7 @@ uint8_t _keyexit = 0x46;
 static const char *known_save_exts[] = {
     ".DIY", ".PRE", ".SEA", ".CAR", ".TAC", ".HIL", ".EDT",
     ".RPL", /* PC whole-match replay (not native to the Amiga) */
+    ".SRP", /* OpenSWOS whole-match replay (src/replay_v2.c) */
     NULL
 };
 
