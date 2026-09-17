@@ -446,21 +446,41 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
      * that address. The player number decides who is player 1 and nothing else.
      *
      * The local port is the one the matchmaker saw us on, so the mapping its own
-     * traffic already opened is the one the peer's packets arrive through. */
+     * traffic already opened is the one the peer's packets arrive through -- and
+     * that is exactly why the matchmaker's OWN SOCKET HAS TO GO FIRST. It still
+     * holds that port; binding it fails while it is open, and the link quietly
+     * takes the next one instead (kJoinPortTries). The peer is then punching to
+     * the port the server saw, one below the one we are listening on, and
+     * NOTHING ever arrives -- on either side, since both do it. Measured across
+     * two machines: Windows on :61166 punched at :51977 while the Mac sat on
+     * :51978 punching at :61165.
+     *
+     * So: copy what is needed out of the client's state, close it, then punch. */
     {
+        char  addrs[MM_MAX_PEER_ADDRS][MM_ADDR_TEXT_MAX];
         const char *list[MM_MAX_PEER_ADDRS];
-        int32_t i;
-        for (i = 0; i < st->numAddrs && i < MM_MAX_PEER_ADDRS; i++)
-            list[i] = st->addrs[i];
-        if (i == 0 || P2PLink_Punch(list, i, st->localPort) != 0)
-            snprintf(s_matchStatus, sizeof s_matchStatus, "NO WAY TO REACH %s", st->peerName);
+        char  peerName[MM_NAME_MAX];
+        uint16_t localPort = st->localPort;
+        int32_t i, n = 0;
+
+        for (i = 0; i < st->numAddrs && i < MM_MAX_PEER_ADDRS; i++) {
+            snprintf(addrs[n], sizeof addrs[n], "%s", st->addrs[i]);
+            list[n] = addrs[n];
+            n++;
+        }
+        snprintf(peerName, sizeof peerName, "%s", st->peerName);
+
+        /* The lobby is done with; from here the two of us talk directly. */
+        MmClient_Disconnect();
+        st = NULL;      /* it pointed into what that just cleared */
+
+        if (n == 0 || P2PLink_Punch(list, n, localPort) != 0)
+            snprintf(s_matchStatus, sizeof s_matchStatus, "NO WAY TO REACH %s", peerName);
         else
             snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s (%d route%s)",
-                     st->peerName, i, i == 1 ? "" : "s");
+                     peerName, n, n == 1 ? "" : "s");
     }
 
-    /* The lobby is done with; the link takes over from here. */
-    MmClient_Disconnect();
     OnlineMenus_Show(SWOS2020_MENU(mpWaitingMenu));
 }
 
