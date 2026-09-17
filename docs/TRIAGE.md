@@ -155,15 +155,26 @@ from the reporter. Leaving something in the inbox costs nothing.
 
 ```bash
 reportctl list --unannounced                       # fixes not yet posted
-reportctl announce --reports 0001,0002 --dry-run < notes.md   # ALWAYS first
+reportctl announce --reports 0001,0002 --dry-run < notes.md   # prints, sends nothing
 reportctl announce --reports 0001,0002 < notes.md
 ```
 
-then `reportctl archive <id>` for each, once the post is up.
+then `reportctl archive <id>` for each, once the post is up. Archiving does not
+stop a reporter using `/reopen` — it only takes the report out of the working
+queue — so there is no reason to leave an announced fix sitting in the inbox.
 
 `--reports` credits those reporters and records the release on their reports, so
-the trail from report to published fix stays intact. **Dry-run first: a post
-cannot be undone.**
+the trail from report to published fix stays intact. `--dry-run` prints the post
+instead of sending it — worth it when the wording is not settled, since a post
+cannot be undone.
+
+**Keep the post brief and purely technical.** What was broken, what it does now,
+and the download links. No preamble, no sign-off, no thanking anybody, no
+"exciting", no emoji padding, no summary of how hard it was. Cover ONLY the
+reports in `--reports`: other work that happens to be in the same drop is not
+part of this post, and neither is anything the reports did not raise. Two or
+three lines per report is the target — a player reads it to find out whether the
+thing that bit them is fixed.
 
 `announce: Discord refused the post (403 Forbidden)` means the bot has no **View
 Channel** + **Send Messages** on #swos-changelog — Channel Settings →
