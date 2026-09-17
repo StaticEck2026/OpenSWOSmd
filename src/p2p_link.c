@@ -1258,6 +1258,28 @@ uint16_t       P2PLink_LocalPort(void) { return 0; }
 int32_t        P2PLink_PingMs(void)    { return -1; }
 int32_t        P2PLink_IsAddress(const char *text) { (void)text; return 0; }
 
+/* The matchmaking handoff and the agreed input delay. These exist here for the
+ * same reason as everything above: online_menus.c and netplay_match.c call them
+ * unconditionally, and a build without SWOS_NETPLAY has to link. Missing them is
+ * what broke the macOS build (NETPLAY defaults OFF there) while Linux and Cygwin
+ * stayed green — so add the stub WITH the function, not after a release. */
+int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t localPort)
+{
+    (void)addresses; (void)count; (void)localPort;
+    return 1;
+}
+int32_t        P2PLink_AgreedDelay(void)       { return -1; }
+int32_t        P2PLink_ProposedDelay(void)     { return -1; }
+int32_t        P2PLink_PeerProposedDelay(void) { return -1; }
+int32_t        P2PLink_SendSetup(const uint8_t *data, uint32_t len)
+{
+    (void)data; (void)len;
+    return 1;
+}
+int32_t        P2PLink_SetupSent(void)     { return 0; }
+const uint8_t *P2PLink_ReceivedSetup(uint32_t *len) { if (len) *len = 0; return NULL; }
+int32_t        P2PLink_SetupProgress(void) { return 0; }
+
 int32_t P2PLink_SelfTest(void)
 {
     printf("[p2p-link] self-test: built without netplay (make NETPLAY=1), nothing to test\n");
