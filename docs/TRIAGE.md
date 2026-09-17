@@ -200,18 +200,21 @@ Permissions → add the bot. A refused post changes nothing: the reports stay
 `done` and still `--unannounced`, so the same command works once the permission
 is there.
 
-**Link the files, not the folder.** Directory listing is off on the server, so
-`https://baker76.com/download/swos/` by itself shows a player nothing. The links:
+**One link — the downloads page:**
 
 ```
-https://baker76.com/download/swos/SWOS-Setup.exe
-https://baker76.com/download/swos/SWOS-full.zip
-https://baker76.com/download/swos/SWOS-macOS-app.zip
-https://baker76.com/download/swos/SWOS-Amiga.zip
-https://baker76.com/download/swos/SWOS.zip
-https://baker76.com/download/swos/SWOS-macOS.zip
-https://www.baker76.com/apps/swos/SWOS.html
+https://baker76.com/swos.html
 ```
+
+It lists every archive (Windows installer, full zip, both macOS ones, Amiga,
+binaries-only) and the web build, so the post does not carry seven URLs and does
+not go stale when the set changes. Do NOT link
+`https://baker76.com/download/swos/` instead: directory listing is off on the
+server, so the bare folder shows a player nothing.
+
+That page lives on the server, not in this repo, and `upload_dist.sh` does not
+touch it — it only replaces the files the page points at. Adding or renaming an
+archive means editing the page by hand.
 
 Write it for a player, not for us: what changed and what they will see. The
 offsets, the register names and the asm citation belong in the commit message —
