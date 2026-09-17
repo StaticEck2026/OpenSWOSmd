@@ -978,9 +978,19 @@ The matchmaking menu's `OnDraw` is also where the client is pumped: it runs ever
 (the menu is flagged `dos_redraw`) and there is no other per-frame hook while a menu is
 up. The lobby is redrawn from `MmClient`'s state each frame rather than from callbacks.
 
+**The player types the server address, they do not set a variable.** The login screen's
+SERVER row takes `host` or `host:port` and saves it to `SWOS.ini` (`[netplay] matchmaker`)
+the moment it is entered, so a tester is told an address once and never again. The row is
+SWOS 2020's password field: our matchmaker has no accounts -- `LOGIN:` is a name and a
+blob, `VerifyVersion` is an empty TODO -- so a password box would ask for something
+nothing reads. `SWOS_MM_HOST` / `SWOS_MM_PORT` still override it, for a test that has to
+point one process somewhere else.
+
 ```bash
 bin/SWOS.x86_64 --matchmaker-menu=NAME   # log in and open the lobby at startup
-SWOS_MM_HOST=... SWOS_MM_PORT=...        # point it at a server other than localhost
+SWOS_MM_HOST=... SWOS_MM_PORT=...        # override, without touching the player's ini
+SWOS_MM_AUTO=host|join                   # press OPEN, or join the first game, and
+                                         # approve -- both ends of a match, no hands
 ```
 
 **The gdb harness cannot hold a lobby connection.** A process stopped at a breakpoint

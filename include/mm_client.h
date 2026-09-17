@@ -123,11 +123,20 @@ int32_t MmClient_TakeRemoved(void);
 const MmStartInfo *MmClient_StartInfo(void);
 void               MmClient_ClearStart(void);
 
-/* The server every entry point defaults to: MM_DEFAULT_HOST / MM_DEFAULT_PORT,
- * overridden by SWOS_MM_HOST / SWOS_MM_PORT so a test or a tester can point at
- * another server without a rebuild. */
+/* The server every entry point defaults to. Three sources, in order:
+ *   1. SWOS_MM_HOST / SWOS_MM_PORT   -- a test pointing one process somewhere
+ *   2. whatever the player typed on the login menu, kept in SWOS.ini
+ *      ([netplay] matchmaker), published here by main.c
+ *   3. MM_DEFAULT_HOST / MM_DEFAULT_PORT, a server on this machine
+ * so a tester types an address once and never sees an environment variable. */
 const char *MmClient_DefaultHost(void);
 uint16_t    MmClient_DefaultPort(void);
+
+/* "host", "host:port" or "" (this machine). Parsed once, here, so the menu, the
+ * ini and the self-tests cannot disagree about what "the server" means. */
+void        MmClient_SetConfiguredServer(const char *spec);
+/* What to show the player: the configured server as "host:port", or "" if none. */
+const char *MmClient_ConfiguredServer(void);
 
 /* Connect to a locally running server, log in, list the lobby, create and leave a
  * game, and log out. Prints a report; 0 on success. Needs

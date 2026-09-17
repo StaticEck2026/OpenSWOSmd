@@ -93,6 +93,9 @@ typedef struct {
                                               * kills your held fire button's shot charge for good. 0 (default)
                                               * = fixed. See _gOriginalFireHoldLockout in team_control.c */
     int                    replay_auto_save; /* 1 = keep a dated .SRP of every match, not only LATEST.SRP */
+    char                   matchmaker[80];   /* [netplay] matchmaker: the server MULTIPLAYER logs in to,
+                                              * "host" or "host:port". Typed on the login menu and saved
+                                              * there; empty = a server on this machine. */
     int                    arcade;           /* 1 = arcade/coin-op mode — boot to attract. PC-only. See docs/ARCADE.md */
     int                    arcade_mode;         /* arcade game mode index (0 = GOLDEN GOAL) */
     int                    arcade_game_seconds; /* arcade match length in seconds (default 45) */

@@ -31,6 +31,7 @@
 #include "netplay_match.h"    /* the live GGPO session */
 #include "game_types.h"       /* TeamFileEx, for the match the handoff starts */
 #include "platform_sdl.h"     /* Platform_SetFrameHook: the link outlives a modal menu */
+#include "swos_settings.h"    /* Settings_Save: the SERVER row keeps what was typed */
 #include "teams.h"            /* LoadTeamFile, for the lobby's test knobs */
 #include "game_loop.h"        /* _gFrameStepInput */
 
@@ -86,41 +87,70 @@ void OnlineMenus_Show(const char *name)
 /* ======================================================================
  * logInMenu (swos-2020/src/menus/logIn.mnu; handlers in game.cpp)
  * ====================================================================== */
+/* SWOS_MM_AUTO: a test drives both ends of the matchmaking menu. */
+enum { MM_AUTO_OFF = 0, MM_AUTO_HOST, MM_AUTO_JOIN };
+static int32_t s_mmAuto;
+static int32_t s_mmAutoDone;
+
 static char s_username[33];
-static char s_password[33];
-static char s_passwordMask[33];
+/* The row SWOS 2020 used for a password is the SERVER address here: our
+ * matchmaker has no accounts (docs/NETPLAY.md 7 -- LOGIN: is a name and a blob,
+ * and VerifyVersion is an empty TODO), so a password field would ask a player
+ * for something nothing reads. The address is the one thing they DO have to be
+ * told, and typing it here beats an environment variable. */
+static char s_server[64];
 static int32_t s_rememberLogin = 1;   /* the .mnu's initial ON/OFF texts */
-static int32_t s_showPassword = 0;
 static int32_t s_liveCast = 1;
 
-static const char *password_text(void)
+/* What the SERVER row shows: what the player typed, else what SWOS.ini/the
+ * environment resolved to, else that it is this machine. */
+static const char *server_text(void)
 {
-    if (s_showPassword)
-        return s_password;
-    size_t len = strlen(s_password);
-    memset(s_passwordMask, '*', len);
-    s_passwordMask[len] = '\0';
-    return s_passwordMask;
+    const char *cfg;
+    if (s_server[0])
+        return s_server;
+    cfg = MmClient_ConfiguredServer();
+    if (cfg && cfg[0])
+        return cfg;
+    return "THIS MACHINE";
+}
+
+/* Keep it: the menu writes SWOS.ini the way the OPTIONS -> GAMEPLAY row does
+ * (menus.c), through the live options and resolved path main.c publishes. */
+static void server_save(void)
+{
+    extern PlatformInitOptions *g_arcadeOpts;
+    extern const char *g_arcadeIniPath;
+    MmClient_SetConfiguredServer(s_server);
+    if (!g_arcadeOpts)
+        return;
+    snprintf(g_arcadeOpts->matchmaker, sizeof g_arcadeOpts->matchmaker, "%s", s_server);
+    if (g_arcadeIniPath)
+        Settings_Save(g_arcadeOpts, g_arcadeIniPath);
 }
 
 static void logInMenu_OnInit(void)
 {
-    set_text(LogInMenu_header, "SERVER LOGIN");
-    set_text(LogInMenu_subTitle, "LOGIN TO YOUR ONLINE ACCOUNT");
+    set_text(LogInMenu_header, "PLAY ONLINE");
+    set_text(LogInMenu_subTitle, "CHOOSE A NAME AND THE SERVER TO MEET ON");
+    set_text(LogInMenu_username, "NAME");
+    set_text(LogInMenu_password, "SERVER");
     set_text(LogInMenu_usernameInput, s_username);
-    set_text(LogInMenu_passwordInput, password_text());
+    set_text(LogInMenu_passwordInput, server_text());
     set_text(LogInMenu_logInContinue, "LOGIN");
     set_text(LogInMenu_OfflinelogOut, "PLAY OFFLINE");
     set_text(LogInMenu_news, "NEWS");
+    /* Nothing to show or hide about an address, and nothing reads a password. */
+    entry_at(LogInMenu_showPasswordLabel)->isInvisible = 1;
+    entry_at(LogInMenu_showPassword)->isInvisible = 1;
 }
 
 /* Runs every frame (the menu is flagged dos_redraw), so the toggles just follow state. */
 static void logInMenu_OnDraw(void)
 {
     set_text(LogInMenu_rememberLogInInfo, s_rememberLogin ? "ON" : "OFF");
-    set_text(LogInMenu_showPassword, s_showPassword ? "ON" : "OFF");
     set_text(LogInMenu_liveCast, s_liveCast ? "ON" : "OFF");
-    set_text(LogInMenu_passwordInput, password_text());
+    set_text(LogInMenu_passwordInput, server_text());
 }
 
 static void usernameInput_OnSelect(void)
@@ -128,16 +158,24 @@ static void usernameInput_OnSelect(void)
     InputText(sizeof s_username, (uint8_t *)entry_at(LogInMenu_usernameInput));
 }
 
-static void passwordInput_OnSelect(void)
+/* SERVER: type "host" or "host:port". Saved on the way out, so it is typed once
+ * ever rather than once per session. */
+static void serverInput_OnSelect(void)
 {
     MenuEntry *e = entry_at(LogInMenu_passwordInput);
-    e->fg = (uintptr_t)s_password;        /* edit the text itself, not the mask */
-    InputText(sizeof s_password, (uint8_t *)e);
-    e->fg = (uintptr_t)password_text();
+    const char *shown = server_text();
+
+    /* Start from what is in force, not from "THIS MACHINE" -- editing an address
+     * to change one digit is the common case. */
+    if (!s_server[0] && shown && shown[0] && strcmp(shown, "THIS MACHINE") != 0)
+        snprintf(s_server, sizeof s_server, "%s", shown);
+    e->fg = (uintptr_t)s_server;
+    InputText(sizeof s_server, (uint8_t *)e);
+    e->fg = (uintptr_t)server_text();
+    server_save();
 }
 
 static void rememberLogInInfo_OnSelect(void) { s_rememberLogin = !s_rememberLogin; }
-static void showPassword_OnSelect(void)      { s_showPassword = !s_showPassword; }
 static void liveCast_OnSelect(void)          { s_liveCast = !s_liveCast; }
 
 /* Which server to talk to. There is no account service -- the matchmaker has no
@@ -222,11 +260,31 @@ static void matchMakingMenu_OnDraw(void)
 
     /* Someone is asking to join OUR game: ask, the way SWOS 2020 does, rather
      * than accepting for the player. One-shot, so the prompt opens once per
-     * request however many frames it takes to answer. */
+     * request however many frames it takes to answer. SWOS_MM_AUTO=host answers
+     * it for a test -- there is nobody to press the button on either machine. */
     if (MmClient_TakeJoinRequest(who, sizeof who)) {
         snprintf(s_joinAsker, sizeof s_joinAsker, "%s", who);
-        OnlineMenus_Show(SWOS2020_MENU(hostGameMessageMenu));
-        return;
+        if (s_mmAuto == MM_AUTO_HOST) {
+            MmClient_Approve(s_joinAsker);
+            s_joinAsker[0] = '\0';
+        } else {
+            OnlineMenus_Show(SWOS2020_MENU(hostGameMessageMenu));
+            return;
+        }
+    }
+
+    /* SWOS_MM_AUTO=host|join: press OPEN, or pick the first game on offer, as
+     * soon as the server answers. Two machines, no hands -- this is how a match
+     * gets played through real matchmaking without a player at each end
+     * (docs/NETPLAY.md 7). It does nothing unless the variable is set. */
+    if (state == MM_CONNECTED && s_mmAuto != MM_AUTO_OFF && !MmClient_GameInfo()) {
+        int32_t n = 0;
+        const MmGame *open = MmClient_OpenGames(&n);
+        if (s_mmAuto == MM_AUTO_HOST) {
+            if (!s_mmAutoDone) { MmClient_CreateGame(); s_mmAutoDone = 1; }
+        } else if (n > 0) {
+            MmClient_JoinGame(open[0].owner);
+        }
     }
 
     if (MmClient_TakeRemoved())
@@ -1052,9 +1110,11 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(logInMenu_OnInit),
     HANDLER(logInMenu_OnDraw),
     HANDLER(usernameInput_OnSelect),
-    HANDLER(passwordInput_OnSelect),
+    /* The .mnu calls it the password input; it is the SERVER address here. */
+    HANDLER_AS("passwordInput_OnSelect", serverInput_OnSelect),
     HANDLER(rememberLogInInfo_OnSelect),
-    HANDLER(showPassword_OnSelect),
+    /* SHOW PASSWORD has nothing left to show -- the row is hidden in OnInit. */
+    HANDLER_AS("showPassword_OnSelect", SetExitMenuFlag),
     HANDLER(liveCast_OnSelect),
     HANDLER(logInMenuLogInContinue_OnSelect),
     HANDLER(logInMenuNews_OnSelect),
@@ -1192,6 +1252,9 @@ void OnlineMenus_ShowStartMenu(void)
      * breakpoint sends no ENET keepalives and the server times it out -- so this
      * is how the real menu gets looked at. */
     if (s_autoLogin[0]) {
+        const char *au = getenv("SWOS_MM_AUTO");
+        s_mmAuto = (au && !strcmp(au, "host")) ? MM_AUTO_HOST :
+                   (au && !strcmp(au, "join")) ? MM_AUTO_JOIN : MM_AUTO_OFF;
         MmClient_Connect(mm_host(), mm_port(), s_autoLogin, NULL);
         s_autoLogin[0] = '\0';
     }

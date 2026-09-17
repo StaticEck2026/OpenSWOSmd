@@ -135,6 +135,9 @@ static int handler(void *user, const char *section,
         int b;
         if (eqi(name, "auto_save") && parse_bool(value, &b))
             opts->replay_auto_save = b;
+    } else if (eqi(section, "netplay")) {
+        if (eqi(name, "matchmaker"))
+            snprintf(opts->matchmaker, sizeof opts->matchmaker, "%s", value);
     } else if (eqi(section, "dos")) {
         int b;
         if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
@@ -297,6 +300,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; folder and can be watched from HIGHLIGHTS -> LOAD. true also keeps a dated\n"
         "; copy of each (MMDDHHMM.SRP), so a match is not overwritten by the next one.",
         opts->replay_auto_save ? "true" : "false" };
+    items[n++] = (IniEntry){ "netplay", "matchmaker",
+        "; matchmaker: the server MULTIPLAYER logs in to, as \"host\" or \"host:port\"\n"
+        "; (default port 19602). Empty means a server on this machine. You can type it\n"
+        "; on the login screen instead -- it is saved back here.",
+        opts->matchmaker };
     items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
     items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };

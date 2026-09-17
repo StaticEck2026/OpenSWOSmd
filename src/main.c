@@ -351,6 +351,7 @@ int main(int argc, char **argv)
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
+    opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
     opts.arcade = 0;              /* default off — normal front-end menu */
     opts.arcade_mode = 0;         /* GOLDEN GOAL */
     opts.arcade_game_seconds = 45;
@@ -719,6 +720,11 @@ int main(int argc, char **argv)
 
     /* Whole-match recording (src/replay_v2.c). */
     ReplayRec_Configure(record_replay, opts.replay_auto_save);
+
+    /* The matchmaking server the MULTIPLAYER menu logs in to (src/mm_client.c).
+     * SWOS_MM_HOST / SWOS_MM_PORT still win, so a test can point one process
+     * somewhere else without touching the player's SWOS.ini. */
+    MmClient_SetConfiguredServer(opts.matchmaker);
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;

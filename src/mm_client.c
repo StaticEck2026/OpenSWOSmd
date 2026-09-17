@@ -30,17 +30,60 @@
  * the netplay split, because three entry points need it -- the menus, the
  * self-test and the pair test -- and a test that can only reach the default
  * port cannot be run beside another server. */
+/* [netplay] matchmaker, split once. s_cfgHost stays empty when nothing is
+ * configured, which is what makes the fallback order below readable. */
+static char     s_cfgHost[72];
+static uint16_t s_cfgPort;
+static char     s_cfgShown[80];
+
+void MmClient_SetConfiguredServer(const char *spec)
+{
+    const char *colon;
+    size_t hostLen;
+
+    s_cfgHost[0] = '\0';
+    s_cfgPort = 0;
+    s_cfgShown[0] = '\0';
+    if (!spec || !spec[0])
+        return;
+
+    /* An IPv6 literal would need brackets; the split is deliberately the simple
+     * one, and a name or a dotted quad is what a player is given. */
+    colon = strrchr(spec, ':');
+    hostLen = colon ? (size_t)(colon - spec) : strlen(spec);
+    if (hostLen == 0 || hostLen >= sizeof s_cfgHost)
+        return;
+    memcpy(s_cfgHost, spec, hostLen);
+    s_cfgHost[hostLen] = '\0';
+    if (colon) {
+        int v = atoi(colon + 1);
+        if (v > 0 && v <= 65535)
+            s_cfgPort = (uint16_t)v;
+    }
+    snprintf(s_cfgShown, sizeof s_cfgShown, "%s:%u", s_cfgHost,
+             (unsigned)(s_cfgPort ? s_cfgPort : MM_DEFAULT_PORT));
+}
+
+const char *MmClient_ConfiguredServer(void)
+{
+    return s_cfgShown;
+}
+
 const char *MmClient_DefaultHost(void)
 {
     const char *h = getenv("SWOS_MM_HOST");
-    return (h && h[0]) ? h : MM_DEFAULT_HOST;
+    if (h && h[0])
+        return h;
+    return s_cfgHost[0] ? s_cfgHost : MM_DEFAULT_HOST;
 }
 
 uint16_t MmClient_DefaultPort(void)
 {
     const char *p = getenv("SWOS_MM_PORT");
     int v = (p && p[0]) ? atoi(p) : 0;
-    return (v > 0 && v <= 65535) ? (uint16_t)v : MM_DEFAULT_PORT;
+    if (v > 0 && v <= 65535)
+        return (uint16_t)v;
+    return s_cfgPort ? s_cfgPort : MM_DEFAULT_PORT;
 }
 
 #ifdef SWOS_NETPLAY
