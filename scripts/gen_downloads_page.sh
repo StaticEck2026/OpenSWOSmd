@@ -46,17 +46,33 @@ size_of() {
     }'
 }
 
-# The build the drop was cut from. include/swos_build.h is what the binaries
-# themselves carry (scripts/gen_build_info.sh writes it), so the page and the
-# game's own main menu cannot disagree; git is the fallback for a bare checkout.
+# The build the drop was cut from, asked of A BINARY THAT IS IN IT -- the same
+# string the player reads on the main menu. Not include/swos_build.h and not
+# git HEAD: both move on when anything is committed or rebuilt afterwards, and a
+# page claiming a build the archives do not contain is exactly the confusion the
+# stamp exists to prevent. Those two remain as fallbacks for a checkout that has
+# not been built.
 BUILD=""
 DATE=""
-if [ -f include/swos_build.h ]; then
+for b in bin/SWOS.x86_64 bin/SWOS bin/SWOS.exe; do
+    [ -x "$b" ] || continue
+    v=$("$b" --version 2>/dev/null | sed -n 's/^OpenSWOS \([^ ]*\) (\([0-9-]*\),.*/\1 \2/p' | head -1)
+    [ -n "$v" ] || continue
+    BUILD=${v%% *}
+    DATE=${v##* }
+    break
+done
+if [ -z "$BUILD" ] && [ -f include/swos_build.h ]; then
     BUILD=$(sed -n 's/.*SWOS_BUILD_ID  *"\([^"]*\)".*/\1/p' include/swos_build.h | head -1)
     DATE=$(sed -n 's/.*SWOS_BUILD_DATE  *"\([^"]*\)".*/\1/p' include/swos_build.h | head -1)
 fi
 [ -n "$BUILD" ] || BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 [ -n "$DATE" ]  || DATE=$(date +%Y-%m-%d)
+case "$BUILD" in
+    *-dirty) echo "gen_downloads_page: the binaries are stamped $BUILD — that is not a" >&2
+             echo "                    commit anybody can go back to. Rebuild from a clean tree." >&2
+             exit 1 ;;
+esac
 
 mkdir -p "$(dirname "$OUT")"
 sed -e "s|@BUILD@|$BUILD|g" \
