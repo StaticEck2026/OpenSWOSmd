@@ -370,7 +370,11 @@ uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
                 curX = nextX;
                 continue;
             }
-            if ((uint16_t)nextX >= SCREEN_WIDTH)
+            /* The live width, not SCREEN_WIDTH: menus are centred in whatever the
+             * render width is (362 at 4:3 here), so a right-aligned entry ends past
+             * 336 and lost its last glyph ("CONNECTE"). On the Amiga the two are the
+             * same number (display.h). */
+            if ((uint16_t)nextX >= _screen_width)
                 break;
             curX = nextX;
             continue;
@@ -389,7 +393,7 @@ uint16_t DrawMenuText(uint16_t x, uint16_t y, uint16_t color,
             curX = nextX;
             continue;
         }
-        if ((uint16_t)nextX >= SCREEN_WIDTH)
+        if ((uint16_t)nextX >= _screen_width)
             break;
 
         blitStringToFrontBuffer(sprIdx, curX, (int16_t)y, color);
