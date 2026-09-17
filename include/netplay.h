@@ -78,6 +78,11 @@ typedef struct {
     int32_t  maxPrediction;         /* rollback window in frames, at most 8 */
     int32_t  disconnectTimeoutMs;   /* 0 keeps GGPO's default */
     int32_t  disconnectNotifyMs;    /* 0 keeps GGPO's default */
+    /* The key both peers' packets are checksummed with (ggpo_set_packet_key). With
+     * hasPacketKey 0 the key is all zero: damaged packets are still dropped, forged
+     * ones are not. A live match takes it from the lobby's START. */
+    int32_t  hasPacketKey;
+    uint8_t  packetKey[16];
 } NetplayConfig;
 
 typedef struct NetplaySession NetplaySession;

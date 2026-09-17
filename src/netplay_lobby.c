@@ -45,8 +45,12 @@
 #include <string.h>
 
 #include "endian_helpers.h"
+#include "netplay_match.h"
 #include "netplay_setup.h"
 #include "p2p_link.h"
+
+#include <SDL.h>                        /* SDL_GetPerformanceCounter: key entropy fallback */
+#include <time.h>
 
 #ifdef SWOS_NETPLAY
 
@@ -69,13 +73,14 @@ enum {
 #define STATE_MAGIC   0x53554C42u       /* "SULB" */
 #define START_MAGIC   0x53555354u       /* "SUST" */
 #define ANSWER_MAGIC  0x5355414Eu       /* "SUAN" */
-#define LOBBY_VERSION 1
+#define LOBBY_VERSION 2     /* 2: START carries the match's packet key */
 
 /* STATE: magic, version, player, ready, activity, hasTeam, tactic, rulesGen, the four
  * rules, the name, the team, the USER tactic. */
 enum { STATE_BYTES = 4 + 2 + 4 + 2 + 2 + 8 + LOBBY_NAME_MAX + NETPLAY_TEAM_BYTES + TACTIC_BYTES };
-/* START: magic, version, the joiner STATE generation it was built on, rulesGen, setup. */
-enum { START_HEADER = 4 + 2 + 2 + 2 };
+/* START: magic, version, the joiner STATE generation it was built on, rulesGen, the
+ * packet key, setup. */
+enum { KEY_BYTES = 16, START_HEADER = 4 + 2 + 2 + 2 + KEY_BYTES };
 /* ANSWER: magic, version, the START generation, accepted, pad. */
 enum { ANSWER_BYTES = 4 + 2 + 2 + 1 + 1 };
 
@@ -103,6 +108,7 @@ static struct {
 
     uint8_t    *setup;                  /* the agreed match setup, both sides (ApplyMatch) */
     uint32_t    setupLen;
+    uint8_t     packetKey[KEY_BYTES];   /* ...and the key its GGPO packets are checksummed with */
 
     char        notice[64];
 } s_lobby;
@@ -281,6 +287,31 @@ void NetplayLobby_RestoreTactics(void)
 
 /* ---- START and ANSWER ---- */
 
+/* The match's packet key (ggpo_set_packet_key): 16 bytes nobody off the path can guess,
+ * so nobody off the path can make a packet the session accepts -- before this, one
+ * forged packet with the disconnect bit set ended a match. It crosses the link in the
+ * clear, so it is no defence against somebody who can see this traffic; but they can
+ * drop packets anyway, which no checksum prevents. */
+static void make_packet_key(uint8_t *key)
+{
+    FILE *f = fopen("/dev/urandom", "rb");      /* Linux, macOS, and Cygwin all have it */
+    size_t got = f ? fread(key, 1, KEY_BYTES, f) : 0;
+    if (f)
+        fclose(f);
+    if (got != KEY_BYTES) {
+        /* No entropy source: still different on every START, just not secret. */
+        uint64_t x = SDL_GetPerformanceCounter() ^ ((uint64_t)time(NULL) << 32) ^
+                     (uint64_t)(uintptr_t)&x;
+        for (int32_t i = 0; i < KEY_BYTES; i++) {
+            x += 0x9E3779B97F4A7C15ull;
+            uint64_t z = x;
+            z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ull;
+            z = (z ^ (z >> 27)) * 0x94D049BB133111EBull;
+            key[i] = (uint8_t)((z ^ (z >> 31)) >> 24);
+        }
+    }
+}
+
 /* Host: put both sides and the rules where a match starts from. */
 static void assemble_match(void)
 {
@@ -360,6 +391,7 @@ static void read_start(void)
             ok = 0;
         } else {
             keep_setup(m + START_HEADER, len - START_HEADER);
+            memcpy(s_lobby.packetKey, m + 10, KEY_BYTES);
         }
     }
     send_answer(gen, ok);
@@ -576,10 +608,12 @@ int32_t NetplayLobby_Start(void)
         return 1;
 
     assemble_match();
+    make_packet_key(s_lobby.packetKey);
     BE_WRITE_U32(buf, START_MAGIC);
     BE_WRITE_U16(buf + 4, LOBBY_VERSION);
     BE_WRITE_U16(buf + 6, s_lobby.peerStateGen);
     BE_WRITE_U16(buf + 8, s_lobby.rulesGen);
+    memcpy(buf + 10, s_lobby.packetKey, KEY_BYTES);
     n = NetplaySetup_Encode(buf + START_HEADER, NetplaySetup_MaxBytes());
     if (n <= 0 || P2PLink_Send(CH_START, buf, (uint32_t)(START_HEADER + n)) != 0) {
         free(buf);
@@ -609,6 +643,7 @@ int32_t NetplayLobby_ApplyMatch(void)
     s_lobby.setupLen = 0;
     if (rc != 0)
         return rc;
+    NetplayMatch_SetPacketKey(s_lobby.packetKey);
     InitTeams();            /* as the friendly menu does before PlayFriendly (ChooseTeamsMenu) */
     return 0;
 }

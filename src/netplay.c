@@ -157,6 +157,10 @@ int32_t Netplay_StartP2P(NetplaySession **out, const NetplayConfig *cfg, const N
         free(s);
         return rc;
     }
+    /* Before any player is added: adding the remote one starts the sync, and every
+     * packet from then on is checksummed with the key. */
+    if (cfg->hasPacketKey)
+        ggpo_set_packet_key(s->ggpo, cfg->packetKey);
     if (cfg->disconnectTimeoutMs)
         ggpo_set_disconnect_timeout(s->ggpo, cfg->disconnectTimeoutMs);
     if (cfg->disconnectNotifyMs)
@@ -490,6 +494,8 @@ static int32_t selftest_p2p(void)
     memset(&cfg, 0, sizeof cfg);
     cfg.inputSize = 1;
     cfg.maxPrediction = 8;
+    cfg.hasPacketKey = 1;                       /* the same key on both: they must play */
+    memcpy(cfg.packetKey, "toy-game-key-16b", sizeof cfg.packetKey);
     snprintf(cfg.remoteAddress, sizeof cfg.remoteAddress, "127.0.0.1");
 
     cfg.localPort = portA; cfg.localPlayer = 1; cfg.remotePort = portB;
@@ -555,6 +561,61 @@ static int32_t selftest_p2p(void)
     return fail;
 }
 
+/* Two peers with DIFFERENT packet keys: every packet each one sends fails the other's
+ * checksum, so they must never even connect. This is what stops a forged packet -- one
+ * made without the key -- from being read at all. */
+static int32_t selftest_wrong_key(void)
+{
+    static ToyGame a, b;
+    NetplayCallbacks cbA, cbB;
+    NetplayConfig cfg;
+    uint16_t portA, portB;
+    int32_t rc, iter;
+
+    toy_init(&a, "keyed A", 1, &cbA);
+    toy_init(&b, "keyed B", 2, &cbB);
+    if (!free_udp_ports(&portA, &portB)) {
+        printf("  FAIL: no free UDP port for the key test\n");
+        return 1;
+    }
+    memset(&cfg, 0, sizeof cfg);
+    cfg.inputSize = 1;
+    cfg.maxPrediction = 8;
+    cfg.hasPacketKey = 1;
+    snprintf(cfg.remoteAddress, sizeof cfg.remoteAddress, "127.0.0.1");
+
+    memcpy(cfg.packetKey, "key-of-player-A!", sizeof cfg.packetKey);
+    cfg.localPort = portA; cfg.localPlayer = 1; cfg.remotePort = portB;
+    rc = Netplay_StartP2P(&a.session, &cfg, &cbA);
+    if (rc != NETPLAY_OK) {
+        printf("  start keyed A: %s\n", Netplay_ErrorName(rc));
+        return 1;
+    }
+    memcpy(cfg.packetKey, "key-of-player-B!", sizeof cfg.packetKey);
+    cfg.localPort = portB; cfg.localPlayer = 2; cfg.remotePort = portA;
+    rc = Netplay_StartP2P(&b.session, &cfg, &cbB);
+    if (rc != NETPLAY_OK) {
+        printf("  start keyed B: %s\n", Netplay_ErrorName(rc));
+        Netplay_Close(a.session);
+        return 1;
+    }
+    /* Long enough for several sync retries, which with one key would connect in ms. */
+    for (iter = 0; iter < 1500; iter++) {
+        toy_tick(&a, 0);
+        toy_tick(&b, 0);
+        SDL_Delay(1);
+    }
+    printf("  peers with different packet keys: running A=%d B=%d (both must be 0)\n",
+           a.running, b.running);
+    Netplay_Close(a.session);
+    Netplay_Close(b.session);
+    if (a.running || b.running) {
+        printf("  FAIL: a packet made with the wrong key was accepted\n");
+        return 1;
+    }
+    return 0;
+}
+
 static int32_t selftest_synctest(void)
 {
     static ToyGame g;
@@ -580,6 +641,7 @@ int32_t Netplay_SelfTest(void)
 {
     printf("[netplay] self-test: GGPO-X, 2 players, %d frames\n", TOY_FRAMES);
     int32_t fail = selftest_p2p();
+    fail |= selftest_wrong_key();
     fail |= selftest_synctest();
     printf("[netplay] self-test %s\n", fail ? "FAILED" : "passed");
     fflush(stdout);

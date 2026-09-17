@@ -60,6 +60,11 @@ int32_t     NetplayMatch_Start(void);
 int32_t     NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t peerPort,
                                    uint16_t localPort, int32_t delay);
 
+/* The 16-byte key the NEXT p2p session checksums its packets with, or NULL for none
+ * (include/netplay.h, NetplayConfig.packetKey). Both peers must set the same one; the
+ * lobby does, at kick-off. Kept until changed. */
+void        NetplayMatch_SetPacketKey(const uint8_t *key);
+
 /* GameLoop, in place of one pass of its loop: at most one frame, ended and shown. Returns a
  * GameFrameResult. */
 int32_t     NetplayMatch_Frame(void);

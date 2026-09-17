@@ -205,6 +205,17 @@ void NetplayMatch_SetInputSource(uint8_t (*fn)(void))
     s_inputSource = fn;
 }
 
+/* Outside s_np: StartLive clears that, and the key is set before it. */
+static uint8_t s_packetKey[16];
+static int32_t s_hasPacketKey;
+
+void NetplayMatch_SetPacketKey(const uint8_t *key)
+{
+    s_hasPacketKey = key != NULL;
+    if (key)
+        memcpy(s_packetKey, key, sizeof s_packetKey);
+}
+
 int32_t NetplayMatch_IsLive(void)
 {
     return s_np.mode == NETPLAY_MATCH_P2P && s_np.live;
@@ -516,6 +527,8 @@ int32_t NetplayMatch_Start(void)
         cfg.maxPrediction = MAX_PREDICTION;
         cfg.disconnectTimeoutMs = s_np.timeoutMs;
         cfg.disconnectNotifyMs = 1000;
+        cfg.hasPacketKey = s_hasPacketKey;
+        memcpy(cfg.packetKey, s_packetKey, sizeof cfg.packetKey);
         s_np.stallRng = 0x9E3779B9u ^ ((uint32_t)s_np.player * 0x85EBCA6Bu);
         rc = Netplay_StartP2P(&s_np.session, &cfg, &cb);
         if (rc != NETPLAY_OK) {

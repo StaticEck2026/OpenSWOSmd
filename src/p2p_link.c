@@ -46,8 +46,10 @@
 
 /* Raise this when a packet's meaning changes; peers then refuse each other by version
  * instead of misreading a field. 2: messages travel on numbered channels, with a
- * generation, so a peer can replace what it sent (the lobby's selections). */
-enum { kProtocol = 2 };
+ * generation, so a peer can replace what it sent (the lobby's selections). 3: every
+ * packet ends in a checksum (wire_send), and the match's GGPO packets carry a keyed one
+ * whose key the lobby's START hands over. */
+enum { kProtocol = 3 };
 
 enum {
     PKT_HELLO = 1, PKT_WELCOME = 2, PKT_REFUSE = 3,
@@ -70,7 +72,7 @@ enum {
      * completed and acked: right length, full bitmap, wrong contents. A message
      * chunk defines this now: header, kChunkHeader, then kBlobChunk of payload
      * (both declared below and used here). */
-    kPacketMax  = 8 + 12 + 1024,
+    kPacketMax  = 8 + 12 + 1024 + 4,   /* + the checksum trailer (wire_send) */
 };
 
 enum {
@@ -231,15 +233,55 @@ static void pkt_read_setup(const uint8_t *p, Setup *s)
     s->gameplay    = p[18];
 }
 
-/* The self-test's lossy wire: drop every Nth datagram a link sends, 0 for none.
- * Deterministic rather than random, so a failure repeats. */
-static int32_t s_testDropEvery, s_testSendCount;
+/* The self-test's lossy wire: drop every Nth datagram a link sends, and flip a bit in
+ * every Mth; 0 for none. Deterministic rather than random, so a failure repeats. */
+static int32_t s_testDropEvery, s_testTamperEvery, s_testSendCount;
+
+/* A packet's checksum: FNV-1a over every byte before it.
+ *
+ * UDP's own checksum makes a damaged datagram rare, but it is 16 bits, optional on
+ * IPv4, and recomputed by anything that rewrites the header on the way -- and one
+ * damaged field of a lobby message is enough to start two different matches. This is
+ * not a defence against somebody forging packets (the link has no shared secret yet);
+ * the match's GGPO packets are keyed instead, with a key this link carries. */
+static uint32_t wire_checksum(const uint8_t *buf, size_t len)
+{
+    uint32_t h = 2166136261u;
+    for (size_t i = 0; i < len; i++)
+        h = (h ^ buf[i]) * 16777619u;
+    return h;
+}
 
 static void wire_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *buf, size_t len)
 {
-    if (s_testDropEvery > 0 && ++s_testSendCount % s_testDropEvery == 0)
+    uint8_t out[kPacketMax];
+
+    if (len + 4 > sizeof out)
         return;
-    (void)sendto(l->sock, (const char *)buf, len, 0, (const struct sockaddr *)to, (socklen_t)sizeof *to);
+    memcpy(out, buf, len);
+    BE_WRITE_U32(out + len, wire_checksum(buf, len));
+    ++s_testSendCount;
+    if (s_testDropEvery > 0 && s_testSendCount % s_testDropEvery == 0)
+        return;
+    if (s_testTamperEvery > 0 && s_testSendCount % s_testTamperEvery == 0)
+        out[(s_testSendCount * 7u) % (len + 4)] ^= (uint8_t)(1u << (s_testSendCount % 8));
+    (void)sendto(l->sock, (const char *)out, len + 4, 0, (const struct sockaddr *)to, (socklen_t)sizeof *to);
+}
+
+/* Strip and check the trailer; the length without it, or -1 to drop the packet.
+ *
+ * A packet of ANOTHER protocol version is let through unchecked: handle_packet refuses
+ * it with the reason ("a different netplay protocol"), which is worth more to the
+ * player than a join that silently times out. Only ours has to be intact. */
+static int32_t wire_receive(const uint8_t *buf, int32_t len)
+{
+    if (len >= kHeaderLen && memcmp(buf, "SWUN", 4) == 0 && buf[4] != (uint8_t)kProtocol)
+        return len;
+    if (len < kHeaderLen + 4)
+        return -1;
+    if (BE_READ_U32(buf + len - 4) != wire_checksum(buf, (size_t)(len - 4)))
+        return -1;
+    return len - 4;
 }
 
 static void link_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *buf, int32_t len)
@@ -867,8 +909,11 @@ static void link_poll(P2PLink *l, uint32_t now)
                 continue;
             break;
         }
-        if (from.sin_family == AF_INET)
-            handle_packet(l, buf, (int32_t)n, &from, now);
+        if (from.sin_family == AF_INET) {
+            int32_t len = wire_receive(buf, (int32_t)n);
+            if (len >= 0)
+                handle_packet(l, buf, len, &from, now);
+        }
         if (l->sock < 0)
             break;                      /* the packet ended the link */
     }
@@ -1312,9 +1357,11 @@ int32_t P2PLink_SelfTest(void)
             check(got && gotLen == kSmall && gotGen == joiner.tx[1].generation &&
                   memcmp(got, v2, kSmall) == 0, "so does the host");
 
-            /* All of it again on a wire that loses every third datagram -- chunks,
-             * acks and replacements alike. Retransmission has to cover every one. */
+            /* All of it again on a wire that loses every third datagram and damages
+             * every fifth -- chunks, acks and replacements alike. Retransmission has to
+             * cover every one, and a damaged one must never be taken for data. */
             s_testDropEvery = 3;
+            s_testTamperEvery = 5;
             s_testSendCount = 0;
             check(message_send(&host, 0, big, kTestBlob) == 0 &&
                   message_send(&joiner, 1, v1, kSmall) == 0, "on a lossy wire, both send");
@@ -1328,6 +1375,7 @@ int32_t P2PLink_SelfTest(void)
             check(got && gotLen == kSmall && gotGen == joiner.tx[1].generation &&
                   memcmp(got, back, kSmall) == 0, "and the replacement, not the first");
             s_testDropEvery = 0;
+            s_testTamperEvery = 0;
         }
         free(big); free(v1); free(v2); free(back);
     }

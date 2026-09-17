@@ -414,19 +414,48 @@ Each run prints what the link actually **did**, not what it was asked for
 (`[netplay] network emulation did: ...`), because a condition set at 2% may never have
 fired and a run that tested nothing should say so.
 
-**Tamper is a fuzz knob, not a link, and it fails the run.** UDP carries a checksum and
-the hardware drops what fails it, so a flipped bit reaching the game is rare — what it
-tests is whether a corrupt packet is refused rather than acted on, and the answer today is
-that it is acted on. `--netem tamper=2` kills the session within a second of kick-off,
-before a frame is played, and both peers report the other as disconnected. Traced: a
-tampered input packet arrived with `start_frame` 4194339 (bit 22 of frame 35) against a
-last-received frame of 42, GGPO took it, and that peer processed no further packet. GGPO
-trusts every field of an unauthenticated UDP packet — `start_frame`, the per-player
-`last_frame`, the `disconnect_requested` bit that ends the match on its own — and the only
-thing it checks is a 16-bit magic number, which a flipped bit elsewhere leaves intact. A
-fix is a packet-level integrity check in GGPO-X, or bounding the frame numbers a message
-may claim; neither is done. **This is why no profile turns tamper on** and why the corpus
-suite does not run it.
+**Tamper is a fuzz knob, not a link.** UDP carries a checksum and the hardware drops what
+fails it, so a flipped bit reaching the game is rare — what tamper tests is whether a
+corrupt packet is refused rather than acted on. It used to be acted on: `--netem tamper=2`
+killed the session within a second of kick-off. Traced: a tampered input packet arrived with
+`start_frame` 4194339 (bit 22 of frame 35) against a last-received frame of 42, GGPO took
+it, and that peer processed no further packet. GGPO trusted every field of an
+unauthenticated UDP packet — `start_frame`, each player's `last_frame`, the
+`disconnect_requested` bit that ends a match on its own — and checked only a 16-bit magic
+number, which a flipped bit elsewhere leaves intact. So one forged packet could end anyone's
+match.
+
+**Every GGPO packet is now checked before it is read** (GGPO-X fork, `openswos`):
+
+- it must be exactly the size its header describes (`UdpMsg::SizeIsValid` — an unknown
+  type, or an input's `num_bits` claiming more than the datagram holds, fails), and
+- it carries **SipHash-2-4 of itself under a per-session key** (`Udp::PacketMac`, checked
+  against the reference vectors). What fails is dropped as if lost; GGPO resends anything
+  unacknowledged.
+
+The key is 16 random bytes the host draws (`/dev/urandom`) and sends in the lobby's START;
+both peers hand it to GGPO at kick-off (`ggpo_set_packet_key`, before the sync starts). A
+party off the path cannot make a packet the session accepts. A party on the path can read
+the key — the link is not encrypted — but can also simply drop packets, which no checksum
+prevents. Recorded matches played as two peers have no lobby and use the all-zero key:
+damaged packets are still refused, forged ones would not be.
+
+The lobby link has the same need at smaller stakes: a flipped bit in a START would kick two
+peers off from different setups. Its packets end in a 32-bit FNV-1a checksum (unkeyed —
+there is no shared secret yet), except a packet of another protocol version, which is let
+through so it can be refused with the reason. Link protocol 3.
+
+**It found a GGPO bug on the way.** `Platform::GetCurrentTimeMS` on Linux, Cygwin and macOS
+returned 0 on its first call, so the first sync request of a process was stamped 0 — and GGPO
+re-sends a sync request only `if (_last_send_time && ...)`. If that one packet was lost, both
+peers waited for each other forever: "never synchronized", 30 s, both sides. Loss makes it
+possible, tampering made it common (about half of the runs of one recording at 10%).
+Windows' `timeGetTime` is never 0 at startup, which is why upstream never saw it. The clock
+now starts at 1.
+
+`--netplay-selftest` checks that peers with DIFFERENT keys never connect (and that the same
+test with the same keys does); the corpus plays every recording as two peers with 10% of
+packets tampered by up to 8 bits and requires both to match the plain run.
 
 ### Next
 
