@@ -164,6 +164,8 @@ typedef struct {
     int32_t            heardAnything;   /* any datagram from anywhere, ever */
     struct { struct sockaddr_in from; int32_t ours, refused; } heard[6];
     int32_t            heardSources;
+    struct in_addr     sendErr[8];      /* destinations sendto refused, logged once each */
+    int32_t            sendErrCount;
 
     /* Messages, one of each kind per channel, in each direction (see "messages"
      * below). */
@@ -259,6 +261,9 @@ static uint32_t wire_checksum(const uint8_t *buf, size_t len)
     return h;
 }
 
+static int32_t link_log_on(void);
+static const char *addr_text(const struct sockaddr_in *a, char *buf, size_t cap);
+
 static void wire_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *buf, size_t len)
 {
     uint8_t out[kPacketMax];
@@ -272,7 +277,26 @@ static void wire_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *b
         return;
     if (s_testTamperEvery > 0 && s_testSendCount % s_testTamperEvery == 0)
         out[(s_testSendCount * 7u) % (len + 4)] ^= (uint8_t)(1u << (s_testSendCount % 8));
-    (void)sendto(l->sock, (const char *)out, len + 4, 0, (const struct sockaddr *)to, (socklen_t)sizeof *to);
+    {
+        ssize_t sent = sendto(l->sock, (const char *)out, len + 4, 0,
+                              (const struct sockaddr *)to, (socklen_t)sizeof *to);
+        /* A send that never leaves is indistinguishable from a peer that never
+         * answers, and both end as "CONNECTION FAILED". Say which. Once per
+         * destination, since the punch repeats twice a second. */
+        if (sent < 0 && link_log_on()) {
+            char b[64];
+            int32_t h;
+            for (h = 0; h < l->sendErrCount; h++)
+                if (l->sendErr[h].s_addr == to->sin_addr.s_addr)
+                    break;
+            if (h == l->sendErrCount &&
+                h < (int32_t)(sizeof l->sendErr / sizeof l->sendErr[0])) {
+                l->sendErr[l->sendErrCount++] = to->sin_addr;
+                fprintf(stderr, "[p2p] send to %s failed: %s\n",
+                        addr_text(to, b, sizeof b), strerror(errno));
+            }
+        }
+    }
 }
 
 /* Strip and check the trailer; the length without it, or -1 to drop the packet.
