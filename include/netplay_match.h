@@ -27,6 +27,9 @@
  *                                   and rolls back more (a test knob; default 0)
  *   --netplay-trace=<file>          every frame's state hashes as finally played, in the
  *                                   rollback rig's trace format (--rollback-trace)
+ *   --netplay-sound-trace=<file>    every sound effect played, one line per effect: frame,
+ *                                   kind, channel, id, and "late" for one a rollback first
+ *                                   started (a re-simulated frame never repeats one)
  *   --netplay-timeout=<seconds>     give up after this long without progress (default 30)
  *
  * A peer plays frames ahead of its confirmed input, so its state at a frame boundary can
@@ -83,8 +86,20 @@ void        NetplayMatch_SetInputSource(uint8_t (*fn)(void));
  * returning into the post-match screens, which wait for input. */
 void        NetplayMatch_SetFinishedCallback(void (*fn)(void));
 
+/* How the last LIVE match ended. A live match hands the machine back to the menus the
+ * moment it is over -- the session closed, the pad and the timer thread back -- so the
+ * fade and the screens after it run as they do after any match; this says whether it
+ * finished or was cut short, and `why` (never NULL) is a line for the player then. */
+typedef enum {
+    NETPLAY_LIVE_NONE,
+    NETPLAY_LIVE_FINISHED,          /* played to the end, every frame confirmed */
+    NETPLAY_LIVE_ENDED_EARLY,       /* the other player left, the link failed, or a desync */
+} NetplayLiveOutcome;
+int32_t     NetplayMatch_LiveOutcome(const char **why);
+
 /* The end of the run: report what the session did, write the trace, close the session.
- * The exit code: 0, or 2. */
+ * The exit code: 0, or 2. After a live match (which has already done all that) it forgets
+ * the outcome above. */
 int32_t     NetplayMatch_Finish(void);
 
 #endif /* SWOS_SDL_BUILD */

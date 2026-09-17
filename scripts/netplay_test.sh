@@ -25,6 +25,12 @@
 #                run. A recording with input in its first D frames cannot -- the delay
 #                drops it -- and is reported as skipped.
 #
+# Sound: every mode also writes the sound effects it played (--netplay-sound-trace).
+# With direct among the modes its trace is the reference: synctest must play exactly
+# the same effects (a re-simulated frame repeats none), and each p2p peer at least
+# them, on the same frames -- a frame played on a wrong prediction may add effects the
+# corrected frame does not have, and those are counted, not failed.
+#
 # Options: --modes "<m> <m> ...", --gameplay amiga|dos|both, --jobs N, --out DIR, --all,
 #   --stall MS      p2p: each peer pauses now and then, up to MS, like a busy machine
 #                   (--netplay-stall); the other peer plays ahead on predicted input and
@@ -156,7 +162,8 @@ run_p2p() {
                 ./SWOS.x86_64 --replay-test="../$swr" --dos-gameplay="$gp" --rollback=trace \
                 --netplay-match=p2p --netplay-delay="$delay" --netplay-stall="$STALL" --netplay-player=$p \
                 --netplay-port=$((port + p - 1)) --netplay-peer=127.0.0.1:$((port + 2 - p)) \
-                --netplay-trace="$OUT/$tag-$p.trace" > "$OUT/$tag-$p.log" 2>&1
+                --netplay-trace="$OUT/$tag-$p.trace" --netplay-sound-trace="$OUT/$tag-$p.snd" \
+                > "$OUT/$tag-$p.log" 2>&1
             echo "[netplay-test] exit $?" >> "$OUT/$tag-$p.log"
         ) &
     done
@@ -189,7 +196,7 @@ for swr in "${SWRS[@]}"; do
                 echo "run_p2p $mt-$name-$gp $swr $gp ${delay:-0} $port"
                 port=$((port + 2)) ;;
             *)
-                echo "run $mt-$name-$gp $swr $gp --rollback=trace --rollback-trace=$OUT/$mt-$name-$gp.trace --netplay-match=$m" ;;
+                echo "run $mt-$name-$gp $swr $gp --rollback=trace --rollback-trace=$OUT/$mt-$name-$gp.trace --netplay-match=$m --netplay-sound-trace=$OUT/$mt-$name-$gp.snd" ;;
             esac
         done
     done
@@ -197,6 +204,16 @@ done > "$jobs_file"
 xargs -P "$JOBS" -I{} bash -c '{}' < "$jobs_file"
 
 exited_ok() { grep -q '^\[netplay-test\] exit 0$' "$1"; }
+
+# sound_check <reference.snd> <run.snd> exact|superset: prints "; sound ..." and fails the
+# run on a missing (or, for exact, an extra) effect. Nothing without a direct reference.
+sound_ok=1
+sound_check() {
+    local out
+    [ -s "$1" ] || { sound_note=""; return; }
+    out=$(python3 scripts/netplay_sound_compare.py "$1" "$2" "$3") || sound_ok=0
+    sound_note="; $out"
+}
 
 fail=0
 for swr in "${SWRS[@]}"; do
@@ -236,10 +253,19 @@ for swr in "${SWRS[@]}"; do
                 net=""
                 [ -n "$NETEM" ] && net=$(grep -hoE 'network emulation did: .*' "$OUT/$tag-1.log" | tail -1 |
                                          sed 's/^network emulation did: /; player 1 link: /')
+                snd=""
                 if [ "$verdict" = identical ]; then
-                    echo "  $name-$gp $m: both peers identical to the plain run ($frames frames); rollbacks $rolls$net"
+                    for p in 1 2; do
+                        sound_ok=1
+                        sound_check "$OUT/direct-$name-$gp.snd" "$OUT/$tag-$p.snd" superset
+                        [ -n "$sound_note" ] && snd="$snd; player $p ${sound_note#; }"
+                        [ "$sound_ok" = 1 ] || verdict="SOUND WRONG"
+                    done
+                fi
+                if [ "$verdict" = identical ]; then
+                    echo "  $name-$gp $m: both peers identical to the plain run ($frames frames); rollbacks $rolls$net$snd"
                 else
-                    echo "  $name-$gp $m: $verdict; rollbacks $rolls$net"
+                    echo "  $name-$gp $m: $verdict; rollbacks $rolls$net$snd"
                     for p in 1 2; do
                         grep -hE '^\[netplay\] FAIL|^\[netplay\]   |terminate called|what\(\)' "$OUT/$tag-$p.log" | head -4 | sed "s/^/    player $p: /"
                     done
@@ -255,12 +281,19 @@ for swr in "${SWRS[@]}"; do
                     grep -hE '^\[netplay\]   ' "$log" | head -12
                     echo "    (see $log)"
                     fail=1
-                elif cmp -s "$ref" "$trace"; then
-                    echo "  $name-$gp $m: $session; identical to the plain run ($frames frames)"
-                else
+                elif ! cmp -s "$ref" "$trace"; then
                     line=$(cmp "$ref" "$trace" 2>&1 | sed -n 's/.*line \([0-9]*\).*/\1/p')
                     echo "  $name-$gp $m: $session; DIFFERS from the plain run from frame $(( ${line:-1} - 1 ))"
                     fail=1
+                else
+                    sound_ok=1 sound_note=""
+                    [ "$m" != direct ] && sound_check "$OUT/direct-$name-$gp.snd" "$OUT/$tag.snd" exact
+                    if [ "$sound_ok" = 1 ]; then
+                        echo "  $name-$gp $m: $session; identical to the plain run ($frames frames)$sound_note"
+                    else
+                        echo "  $name-$gp $m: $session; identical to the plain run, but$sound_note"
+                        fail=1
+                    fi
                 fi ;;
             esac
         done

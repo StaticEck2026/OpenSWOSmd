@@ -46,6 +46,7 @@ typedef enum {
     P2P_FAIL_STATE,         /* a different match-state registry (a different build) */
     P2P_FAIL_GAMEPLAY,      /* a different gameplay style */
     P2P_FAIL_WIDTH,         /* a different screen width */
+    P2P_FAIL_PORT_RESERVED, /* the system will not let anyone bind that port (EACCES) */
 } P2PLinkFailure;
 
 /* Open the link. Both return 0, or non-zero with the reason in P2PLink_Failure.

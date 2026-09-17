@@ -50,7 +50,9 @@ typedef struct {
     int32_t     code;            /* NetplayEventCode */
     int32_t     player;          /* player handle, for the per-player events */
     int32_t     count, total;    /* SYNCHRONIZING progress */
-    int32_t     framesAhead;     /* TIMESYNC, rounded */
+    int32_t     framesAhead;     /* TIMESYNC: frames this peer is ahead, rounded to nearest */
+    int32_t     framesAheadMilli;/* ... in thousandths of a frame; negative when behind */
+    int32_t     timeSyncPeriod;  /* ... and the frames until the next TIMESYNC */
     int32_t     desyncFrame;     /* DESYNC */
     uint16_t    localChecksum;   /* DESYNC */
     uint16_t    remoteChecksum;  /* DESYNC */
@@ -76,6 +78,8 @@ typedef struct {
     int32_t  inputSize;             /* bytes of input per player per frame */
     int32_t  frameDelay;            /* local input delay in frames */
     int32_t  maxPrediction;         /* rollback window in frames, at most 8 */
+    int32_t  fps;                   /* the match's frame rate (50 Amiga, 70 DOS gameplay):
+                                     * GGPO turns round trips into frames with it. 0 = 60 */
     int32_t  disconnectTimeoutMs;   /* 0 keeps GGPO's default */
     int32_t  disconnectNotifyMs;    /* 0 keeps GGPO's default */
     /* The key both peers' packets are checksummed with (ggpo_set_packet_key). With

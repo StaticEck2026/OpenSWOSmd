@@ -137,6 +137,12 @@ int  Platform_VBlank(void);
 /* Platform_VBlank without running the VBlank interrupt: present the finished frame and
  * pace. For a caller that runs the interrupt itself, once per simulated frame. */
 int  Platform_Present(void);
+/* Make the next frame `us` microseconds longer than the frame rate says -- netplay's frame
+ * pacing (src/netplay_match.c). The limiter keeps deadlines, so a plain sleep between
+ * frames is taken back out of the next one and changes nothing; this moves the deadline.
+ * When the display itself paces (vsync at the game's rate) there is no deadline to move,
+ * and it sleeps instead. */
+void Platform_DelayNextFrame(uint32_t us);
 
 /* A function Platform_VBlank calls every frame, whatever is on screen -- or NULL.
  * For a connection that must not go quiet while a modal menu owns the loop: the

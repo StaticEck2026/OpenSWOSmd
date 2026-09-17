@@ -12,6 +12,8 @@
 #include <SDL.h>        /* SDL_GetTicks, SDL_Delay */
 
 #include "netplay_match.h"
+#include "audio_sfx_filter.h"
+#include "dos_gameplay.h"   /* DosGameplay_TargetFps: the match's frame rate */
 #include "game_loop.h"
 #include "match_step.h"
 #include "netplay_netem.h"
@@ -20,7 +22,9 @@
 #include "sim_state.h"
 
 extern int      Platform_Present(void);
+extern void     Platform_DelayNextFrame(uint32_t us);
 extern void     Platform_QuiesceTimerThread(void);
+extern void     Platform_ResumeTimerThread(void);
 extern void     _Int3TimerHandler(void);
 extern uint16_t _playGame[1];
 
@@ -33,6 +37,11 @@ static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p" };
 #define INPUTS_SIZE         (MATCH_INPUT_SIZE * MATCH_PLAYERS)
 #define MAX_PREDICTION      8           /* frames a peer may play ahead of confirmed input */
 #define DEFAULT_TIMEOUT_MS  30000
+/* A live match: how long a silent peer freezes the game before the match ends and both go
+ * back to the lobby. Long enough for a link that drops out for a moment (the netem
+ * profiles' worst blackout is 400 ms); short enough that a player whose opponent quit is
+ * not left staring at a frozen pitch. SWOS 2020 uses 5 s. */
+#define LIVE_TIMEOUT_MS     10000
 #define LINGER_MS           3000        /* after the end: how long to wait for the peer's acks */
 
 static struct {
@@ -49,6 +58,7 @@ static struct {
     int32_t          liveFrameLimit;      /* live: stop here (SWOS_LIVE_FRAMES), 0 = play it out */
     int32_t          timeoutMs;
     const char      *tracePath;
+    const char      *soundTracePath;      /* the effects played, per frame (--netplay-sound-trace) */
 
     /* the session */
     NetplaySession  *session;
@@ -66,6 +76,17 @@ static struct {
     uint32_t         endScanFrom;         /* p2p: every frame below this is final, not over */
     uint32_t         lingerStartMs;       /* p2p: 0 until the end is known */
     uint32_t         stallRng;            /* p2p: when to pause -- never the game's generator */
+    uint32_t         randomInput;         /* live: SWOS_LIVE_RANDOM_INPUT's generator, 0 = the pad */
+    int32_t          paceUsPerFrame;      /* live: extra wait per frame GGPO's time sync asks for */
+    int32_t          paceFramesLeft;      /* ... for this many more frames */
+    int64_t          paceBiasUs;          /* ... and the standing slowdown it has learned */
+    int64_t          pacedUs;             /* live: all of it, for the report */
+    uint32_t         timeSyncs;           /* p2p: TIMESYNC events that asked for a wait */
+    uint32_t         predictionWaits;     /* p2p: passes held at the prediction limit */
+    int32_t          slowPct;             /* live: SWOS_LIVE_SLOW_PCT, a slow clock for a test */
+    int32_t          slowCount;
+    int32_t          noPacing;            /* live: SWOS_LIVE_NO_PACING, to measure what pacing does */
+    const char      *abortWhy;            /* live: a reason to end the match early, for the player */
 
     /* per frame, from its last save: the state hashes, and whether the match is over */
     uint64_t        *traceSim, *traceView, *traceObs;
@@ -159,6 +180,10 @@ int32_t NetplayMatch_ParseArg(const char *arg)
         s_np.tracePath = v;
         return 1;
     }
+    if ((v = after(arg, "--netplay-sound-trace="))) {
+        s_np.soundTracePath = v;
+        return 1;
+    }
     fprintf(stderr, "unknown option %s\n", arg);
     return -1;
 }
@@ -167,7 +192,8 @@ const char *NetplayMatch_ArgError(void)
 {
     int32_t p2pOptions = s_np.player || s_np.port || s_np.peerPort || s_np.delay || s_np.stallMs;
 
-    if (s_np.mode == NETPLAY_MATCH_OFF && (p2pOptions || s_np.tracePath || s_np.timeoutMs))
+    if (s_np.mode == NETPLAY_MATCH_OFF &&
+        (p2pOptions || s_np.tracePath || s_np.soundTracePath || s_np.timeoutMs))
         return "the --netplay-* options need --netplay-match";
     if (s_np.mode != NETPLAY_MATCH_P2P && p2pOptions)
         return "--netplay-player, -port, -peer, -delay and -stall are for --netplay-match=p2p";
@@ -194,6 +220,10 @@ static uint8_t (*s_inputSource)(void);
  * to report and exit; leaving the match loop instead lands in the post-match
  * screens, which wait for input a headless peer never gives. */
 static void (*s_liveFinished)(void);
+
+/* How the last live match ended, until NetplayMatch_Finish collects it (see liveEnd). */
+static int32_t s_liveOutcome;           /* NetplayLiveOutcome */
+static char    s_liveWhy[64];
 
 void NetplayMatch_SetFinishedCallback(void (*fn)(void))
 {
@@ -224,6 +254,13 @@ int32_t NetplayMatch_IsLive(void)
 int32_t NetplayMatch_IsP2P(void)
 {
     return s_np.mode == NETPLAY_MATCH_P2P;
+}
+
+int32_t NetplayMatch_LiveOutcome(const char **why)
+{
+    if (why)
+        *why = s_liveWhy;
+    return s_liveOutcome;
 }
 
 /* ---- the state, hashed ---- */
@@ -357,6 +394,95 @@ static void checkFirstRun(int32_t frame, int32_t checksum, const uint8_t *state)
 
 /* ---- the step ---- */
 
+/* ---- sound during a rollback ----
+ *
+ * A frame GGPO plays again already played once, and the effects it started were heard
+ * then: a re-simulation that started them again would repeat every kick, whistle and
+ * crowd chant in the rolled-back frames, up to eight frames late and once per rollback.
+ *
+ * So every effect a frame starts is written down against that frame, and a frame played
+ * again starts only what is not written down yet -- an effect that happens only once the
+ * corrected input is known, which then plays a few frames late rather than never. What
+ * the mispredicted frames started and the corrected ones do not cannot be taken back;
+ * those effects are short. Count matters, not just kind: a frame that started the same
+ * effect twice starts it twice.
+ *
+ * The filter decides only what reaches the speakers. The match reads nothing back from
+ * the mixer (the one gate that looks, GateKickSampleAndCrowd's _audioDbgFlagA bit 7, is
+ * never set on SDL), so the state both peers compare is the same with sound on or off. */
+#define SOUND_FRAMES    32      /* a power of two, well past MAX_PREDICTION */
+#define SOUND_EVENTS    16      /* effects one frame starts; more are played, not written down */
+
+typedef struct {
+    int32_t  frame;             /* -1: empty */
+    uint32_t count;
+    uint32_t event[SOUND_EVENTS];
+    uint32_t matched;           /* this pass over the frame: entries already accounted for */
+} SoundFrame;
+
+static SoundFrame s_sound[SOUND_FRAMES];
+static int32_t    s_soundFrame = -1;    /* the frame being stepped; -1 outside a step */
+static int32_t    s_soundAgain;         /* ... and it is a re-simulation */
+static uint32_t   s_soundPlayed, s_soundLate, s_soundRepeats;
+static FILE      *s_soundTrace;
+
+static void soundReset(void)
+{
+    uint32_t i;
+    for (i = 0; i < SOUND_FRAMES; i++)
+        s_sound[i].frame = -1;
+    s_soundFrame = -1;
+    s_soundAgain = 0;
+    s_soundPlayed = s_soundLate = s_soundRepeats = 0;
+}
+
+static int32_t soundFilter(uint8_t kind, uint8_t channel, uint16_t id)
+{
+    SoundFrame *f;
+    uint32_t ev = (uint32_t)kind << 24 | (uint32_t)channel << 16 | id, i;
+
+    if (s_soundFrame < 0)
+        return 1;               /* not a frame of the match: the pre-match screens */
+    f = &s_sound[(uint32_t)s_soundFrame & (SOUND_FRAMES - 1)];
+    for (i = 0; i < f->count; i++) {
+        if (f->event[i] == ev && !(f->matched & (1u << i))) {
+            f->matched |= 1u << i;
+            s_soundRepeats++;
+            return 0;           /* heard when this frame was first played */
+        }
+    }
+    if (f->count < SOUND_EVENTS) {
+        f->matched |= 1u << f->count;
+        f->event[f->count++] = ev;
+    }
+    s_soundPlayed++;
+    if (s_soundAgain)
+        s_soundLate++;
+    if (s_soundTrace)
+        fprintf(s_soundTrace, "%d %u %u %u%s\n", s_soundFrame, kind, channel, id,
+                s_soundAgain ? " late" : "");
+    return 1;
+}
+
+/* Around every step: which frame it is, and whether it has been played before. */
+static void soundFrameBegin(int32_t frame, int32_t again)
+{
+    SoundFrame *f = &s_sound[(uint32_t)frame & (SOUND_FRAMES - 1)];
+    if (f->frame != frame) {
+        f->frame = frame;
+        f->count = 0;
+    }
+    f->matched = 0;
+    s_soundFrame = frame;
+    s_soundAgain = again;
+}
+
+static void soundFrameEnd(void)
+{
+    s_soundFrame = -1;
+    s_soundAgain = 0;
+}
+
 /* One frame: the players' inputs into the game, the frame, its ticks, its buffer swap and
  * the VBlank interrupt's work -- everything a frame does but showing it. GGPO calls it
  * again for every frame it re-simulates. `logFrame` numbers the input's log lines (-1
@@ -444,7 +570,13 @@ static int32_t cbAdvance(void *ctx)
     rc = Netplay_SyncInput(s_np.session, inputs, &disconnect);
     if (rc != NETPLAY_OK)
         fail("re-simulating a frame: synchronize input: %s", Netplay_ErrorName(rc));
+    {
+        int32_t frame = 0;
+        Netplay_CurrentFrame(s_np.session, &frame);
+        soundFrameBegin(frame, 1);
+    }
     r = step(inputs, -1, 0);
+    soundFrameEnd();
     if (r != GAME_FRAME_DONE && !(s_np.mode == NETPLAY_MATCH_P2P && r == GAME_FRAME_MATCH_OVER))
         fail("a re-simulated frame left the match loop (GameFrameResult %d)", (int)r);
     s_np.resimulated++;
@@ -461,17 +593,77 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
             fprintf(stderr, "[netplay] synchronized with the peer\n");
         s_np.running = 1;
         break;
+    /* A corpus run fails on any of these. A live match is somebody's game: it ends,
+     * and they go back to the lobby told why (liveEnd). The event arrives from inside a
+     * GGPO call, which is no place to close the session, so p2pFrame ends it. */
     case NETPLAY_EVENT_DESYNC:
-        fail("GGPO reports a desync at frame %d (local checksum %04X, remote %04X)",
-             ev->desyncFrame, ev->localChecksum, ev->remoteChecksum);
+        if (!s_np.live)
+            fail("GGPO reports a desync at frame %d (local checksum %04X, remote %04X)",
+                 ev->desyncFrame, ev->localChecksum, ev->remoteChecksum);
+        fprintf(stderr, "[netplay] desync at frame %d (local checksum %04X, remote %04X)\n",
+                ev->desyncFrame, ev->localChecksum, ev->remoteChecksum);
+        if (!s_np.abortWhy)
+            s_np.abortWhy = "THE TWO GAMES WENT OUT OF STEP";
         break;
     case NETPLAY_EVENT_DISCONNECTED:
-        if (s_np.endFrame < 0)
-            fail("the peer (player %d) disconnected", ev->player);
         s_np.peerGone = 1;
+        if (s_np.endFrame >= 0)
+            break;
+        if (!s_np.live)
+            fail("the peer (player %d) disconnected", ev->player);
+        fprintf(stderr, "[netplay] the peer (player %d) disconnected\n", ev->player);
+        if (!s_np.abortWhy)
+            s_np.abortWhy = "THE OTHER PLAYER LEFT";
+        break;
+    case NETPLAY_EVENT_TIMESYNC:
+        /* Frame pacing. Two machines never run at exactly the same rate, and nothing
+         * else makes the faster one wait: it plays further and further ahead of the
+         * input it has, until it reaches the prediction limit (8 frames) and from then
+         * on stalls a frame at a time and rolls back up to 8 frames whenever the other
+         * player's input changes -- players see the opponent jump and slide. GGPO
+         * measures the lead every timeSyncPeriod frames and says how many frames this
+         * peer is ahead; the peer that is ahead waits that long, spread thinly over
+         * the frames until the next measurement so no single frame visibly hitches.
+         * The peer that is behind does nothing.
+         *
+         * Two parts. The first closes the lead GGPO reports over the next period. On its
+         * own it leaves the faster peer a steady ~2.5 frames ahead at a 2% clock
+         * difference, because it only acts once there is a lead to measure -- still
+         * predicting, and rolling back, all match long. So the second part LEARNS the
+         * difference: a standing slowdown nudged up by half the first part each time
+         * this peer is found ahead, and down when behind, never below zero or above a
+         * tenth of a frame. Two machines' clocks differ by a steady rate, which is what
+         * it converges to, and the lead goes to nothing. GGPO's figure is already half
+         * the gap (each side is meant to close half). The simulation never sees any of
+         * it: only wall time. */
+        if (s_np.live && getenv("SWOS_LIVE_PACING_LOG"))
+            fprintf(stderr, "[netplay] time sync at frame %u: %d.%03d frames ahead, period %d\n",
+                    s_np.frames, ev->framesAheadMilli / 1000, abs(ev->framesAheadMilli % 1000),
+                    ev->timeSyncPeriod);
+        s_np.paceUsPerFrame = 0;
+        s_np.paceFramesLeft = 0;
+        if (s_np.live && !s_np.noPacing && ev->timeSyncPeriod > 0 &&
+            (ev->framesAheadMilli > 250 || ev->framesAheadMilli < -250)) {
+            int64_t frameUs = 1000000 / DosGameplay_TargetFps();
+            int64_t close = frameUs * ev->framesAheadMilli / 1000 / ev->timeSyncPeriod;
+            s_np.paceBiasUs += close / 2;
+            if (s_np.paceBiasUs < 0)
+                s_np.paceBiasUs = 0;
+            if (s_np.paceBiasUs > frameUs / 10)
+                s_np.paceBiasUs = frameUs / 10;
+            if (close > 0) {
+                s_np.paceUsPerFrame = (int32_t)close;
+                s_np.paceFramesLeft = ev->timeSyncPeriod;
+                s_np.timeSyncs++;
+            }
+        }
         break;
     case NETPLAY_EVENT_NETWORK_ERROR:
-        fail("network error %d", ev->errorCode);
+        if (!s_np.live)
+            fail("network error %d", ev->errorCode);
+        fprintf(stderr, "[netplay] network error %d\n", ev->errorCode);
+        if (!s_np.abortWhy)
+            s_np.abortWhy = "A NETWORK ERROR ENDED THE MATCH";
         break;
     default:
         break;
@@ -498,6 +690,11 @@ int32_t NetplayMatch_Start(void)
         s_np.timeoutMs = DEFAULT_TIMEOUT_MS;
     for (i = 0; i < FIRST_RUN_FRAMES; i++)
         s_firstRun[i].frame = -1;
+    soundReset();
+    if (s_np.soundTracePath && !(s_soundTrace = fopen(s_np.soundTracePath, "w"))) {
+        fprintf(stderr, "[netplay] cannot write %s\n", s_np.soundTracePath);
+        return 1;
+    }
 
     memset(&cb, 0, sizeof cb);
     cb.saveState = cbSave;
@@ -525,6 +722,7 @@ int32_t NetplayMatch_Start(void)
         cfg.inputSize = MATCH_INPUT_SIZE;
         cfg.frameDelay = s_np.delay;
         cfg.maxPrediction = MAX_PREDICTION;
+        cfg.fps = DosGameplay_TargetFps();  /* 50 or 70: the rate the match is played at */
         cfg.disconnectTimeoutMs = s_np.timeoutMs;
         cfg.disconnectNotifyMs = 1000;
         cfg.hasPacketKey = s_hasPacketKey;
@@ -537,6 +735,7 @@ int32_t NetplayMatch_Start(void)
         }
     }
 
+    Audio_SetSfxFilter(soundFilter);      /* sound during a rollback, above */
     if (Netem_Enabled())
         fprintf(stderr, "[netplay] network emulation: %s\n", Netem_Describe());
     fprintf(stderr, "[netplay] %s match: %d bytes of input per player, %u bytes of state per save",
@@ -608,16 +807,23 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
     }
 
     memset(&s_np, 0, sizeof s_np);
+    s_liveOutcome    = NETPLAY_LIVE_NONE;
+    s_liveWhy[0]     = '\0';
     s_np.mode        = NETPLAY_MATCH_P2P;
     s_np.live        = 1;
     s_np.player      = localPlayer;
     s_np.port        = localPort;
     s_np.peerPort    = peerPort;
     s_np.delay       = delay;
-    s_np.timeoutMs   = DEFAULT_TIMEOUT_MS;
+    s_np.timeoutMs   = LIVE_TIMEOUT_MS;
     {
         const char *lim = getenv("SWOS_LIVE_FRAMES");
+        const char *rnd = getenv("SWOS_LIVE_RANDOM_INPUT");
+        const char *slow = getenv("SWOS_LIVE_SLOW_PCT");
+        s_np.slowPct = (slow && slow[0]) ? atoi(slow) : 0;
+        s_np.noPacing = getenv("SWOS_LIVE_NO_PACING") != NULL;
         s_np.liveFrameLimit = (lim && lim[0]) ? atoi(lim) : 0;
+        s_np.randomInput = (rnd && rnd[0]) ? (uint32_t)strtoul(rnd, NULL, 0) | 1u : 0;
     }
     snprintf(s_np.peerAddress, sizeof s_np.peerAddress, "%s", peerIp);
 
@@ -643,7 +849,9 @@ static int32_t singleProcessFrame(void)
     if (s_np.mode == NETPLAY_MATCH_DIRECT) {
         if (frame == 0 && s_np.tracePath)
             traceRecordNow(0);
+        soundFrameBegin((int32_t)frame, 0);
         r = step(local, (int32_t)frame, 1);
+        soundFrameEnd();
         if (r == GAME_FRAME_DONE && s_np.tracePath)
             traceRecordNow(frame + 1);
     } else {
@@ -659,7 +867,9 @@ static int32_t singleProcessFrame(void)
         /* Both players are local and there is no input delay: GGPO hands back what was added. */
         if (memcmp(synced, local, sizeof local) != 0)
             fail("frame %u: GGPO returned other inputs than the frame's own", frame);
+        soundFrameBegin((int32_t)frame, 0);
         r = step(synced, (int32_t)frame, 1);
+        soundFrameEnd();
         /* Where synctest rolls back and re-simulates, every checkDistance frames. */
         if (r == GAME_FRAME_DONE)
             Netplay_AdvanceFrame(s_np.session, frameChecksum());
@@ -715,6 +925,32 @@ static void resetControlHistory(void)
     _pl1LastFired = _pl2LastFired = _subsFire = 0;
 }
 
+/* SWOS_LIVE_RANDOM_INPUT=<seed>: a live match's local input from a generator instead of
+ * the pad, for a test through the menus (scripts/netplay_lobby_test.sh), where nobody
+ * holds one. A direction or none, fire about a fifth of the time, held 3..14 frames --
+ * the other peer's "same as last frame" prediction is wrong often enough to roll back.
+ * Seed the two peers differently. Its own generator, never the game's. */
+static uint8_t randomInput(void)
+{
+    static const uint8_t k_dirs[9] = { 0x01, 0x02, 0x04, 0x08, 0x05, 0x09, 0x06, 0x0A, 0 };
+    static uint8_t held;
+    static int32_t framesLeft;
+    uint32_t x;
+
+    if (framesLeft-- > 0)
+        return held;
+    x = s_np.randomInput;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    s_np.randomInput = x ? x : 0x9E3779B9u;
+    held = k_dirs[x % 9u];
+    if (((x >> 8) % 5u) == 0)
+        held |= 0x20;
+    framesLeft = (int32_t)((x >> 16) % 12u) + 3;
+    return held;
+}
+
 /* p2p: a pass that plays no frame still shows one, and yields to the peer's process. */
 static void waitForPeer(void)
 {
@@ -751,6 +987,34 @@ static void findEnd(int32_t frame, int32_t confirmed)
         s_np.endFrame = (int32_t)ReplayTest_FrameCount();
 }
 
+/* A live match is over -- finished, every frame confirmed, or ended early -- and the
+ * machine goes back to the menus: the session closed, the timer thread and the pad
+ * back, one frame of input at a time no more. The mode goes OFF here, not in
+ * NetplayMatch_Finish, because the game plays on after the last frame: the fade, and
+ * everything InitAndPlayGame does on the way back to the lobby reads input and the
+ * clock the ordinary way. (Before this, they ran with the session still claiming both,
+ * and the first live match that reached its end through the menus waited for ever on
+ * the friendly REPLAY / EXIT screen for a press the pad could no longer deliver.) */
+static void liveEnd(int32_t outcome, const char *why)
+{
+    fprintf(stderr, "[netplay] live match %s at frame %d%s%s: %u frames played, %u re-simulated "
+                    "after %u rollbacks; held at the prediction limit %u times; time sync asked "
+                    "for %u waits, %lld ms in all, ending %lld us a frame slower\n",
+            outcome == NETPLAY_LIVE_FINISHED ? "finished" : "ended early",
+            s_np.endFrame >= 0 ? s_np.endFrame : (int32_t)s_np.frames, why ? ": " : "", why ? why : "",
+            s_np.frames, s_np.resimulated, s_np.loads, s_np.predictionWaits, s_np.timeSyncs,
+            (long long)(s_np.pacedUs / 1000), (long long)s_np.paceBiasUs);
+    printf("[live] final state hash %016llx\n", (unsigned long long)SimState_Hash(SIM_TIER_ALL));
+    fflush(stdout);
+    NetplayMatch_Finish();              /* reports, closes the session, drops the sound filter */
+    s_liveOutcome = outcome;
+    snprintf(s_liveWhy, sizeof s_liveWhy, "%s", why ? why : "");
+    s_np.mode = NETPLAY_MATCH_OFF;
+    s_np.live = 0;
+    _gFrameStepInput = 0;
+    Platform_ResumeTimerThread();
+}
+
 static void p2pFinish(void)
 {
     ReplayDriverState st;
@@ -765,8 +1029,10 @@ static void p2pFinish(void)
      * final state and report it. Returning GAME_FRAME_MATCH_OVER (p2pFrame)
      * ends the match instead, and the process ends on its own terms. */
     if (s_np.live) {
+        /* The callback first: a test hashes the final state there and exits. */
         if (s_liveFinished)
             s_liveFinished();
+        liveEnd(NETPLAY_LIVE_FINISHED, NULL);
         return;
     }
 
@@ -859,6 +1125,10 @@ static int32_t p2pFrame(void)
 prepared:
 
     Netplay_Idle(s_np.session);        /* the peer's inputs arrive; a misprediction rolls back */
+    if (s_np.live && s_np.abortWhy) {
+        liveEnd(NETPLAY_LIVE_ENDED_EARLY, s_np.abortWhy);
+        return GAME_FRAME_MATCH_OVER;
+    }
     if (s_np.live) {
         /* Until the two sessions synchronize, no frame runs at all -- and from
          * the outside that is indistinguishable from a match that is simply
@@ -876,10 +1146,17 @@ prepared:
         s_np.lastConfirmed = confirmed;
         s_np.lastProgressMs = now;
     }
-    if (now - s_np.lastProgressMs > (uint32_t)s_np.timeoutMs)
-        fail("nothing played or confirmed for %d s (%s, frame %d, confirmed %d)",
-             s_np.timeoutMs / 1000, s_np.running ? "running" : "never synchronized with the peer",
-             frame, confirmed);
+    if (now - s_np.lastProgressMs > (uint32_t)s_np.timeoutMs) {
+        if (!s_np.live)
+            fail("nothing played or confirmed for %d s (%s, frame %d, confirmed %d)",
+                 s_np.timeoutMs / 1000, s_np.running ? "running" : "never synchronized with the peer",
+                 frame, confirmed);
+        fprintf(stderr, "[netplay] nothing played or confirmed for %d s (frame %d, confirmed %d)\n",
+                s_np.timeoutMs / 1000, frame, confirmed);
+        liveEnd(NETPLAY_LIVE_ENDED_EARLY, s_np.running ? "THE CONNECTION WENT QUIET"
+                                                       : "THE OTHER PLAYER NEVER ARRIVED");
+        return GAME_FRAME_MATCH_OVER;
+    }
 
     /* A live match normally ends when the match does. SWOS_LIVE_FRAMES=N stops
      * it at a set frame instead, so the pair test finishes in bounded time and
@@ -902,13 +1179,16 @@ prepared:
         if (Netplay_UnackedInputs(s_np.session, MATCH_PLAYERS + 1 - s_np.player, &unacked) != NETPLAY_OK)
             unacked = 1;
         if (unacked == 0 || s_np.peerGone || now - s_np.lingerStartMs > LINGER_MS) {
+            /* Read before p2pFinish: a live match hands the machine back there
+             * (liveEnd), which clears the flag. */
+            int32_t live = s_np.live;
             p2pFinish();
             /* A live match has to END, not just stop stepping: the session is
              * over, every frame is confirmed, and the caller (InitAndPlayGame)
              * needs to return so the state can be hashed and compared. Without
              * this the game loop keeps going with no session behind it and the
              * final hash is never reached. */
-            if (s_np.live)
+            if (live)
                 return GAME_FRAME_MATCH_OVER;
         }
         waitForPeer();
@@ -918,6 +1198,16 @@ prepared:
      * recording to run out of -- it ends when the match does. */
     if (!s_np.running || (!s_np.live && (uint32_t)frame >= ReplayTest_FrameCount())) {
         waitForPeer();
+        return GAME_FRAME_DONE;
+    }
+
+    /* SWOS_LIVE_SLOW_PCT=P: a machine whose clock runs P percent slow, for a test of the
+     * pacing above. A sleep would not do it: the frame limiter keeps deadlines, and takes
+     * any sleep back out of the next frame's. So one pass in every 100/P shows a frame
+     * without playing one -- fewer frames per second, which is what a slow clock is. */
+    if (s_np.slowPct > 0 && ++s_np.slowCount >= 100 / s_np.slowPct) {
+        s_np.slowCount = 0;
+        Platform_Present();
         return GAME_FRAME_DONE;
     }
 
@@ -932,7 +1222,8 @@ prepared:
         extern uint8_t InputSDL_LocalMatchControls(void);
         memset(in, 0, sizeof in);
         in[s_np.player - 1].controls =
-            s_inputSource ? s_inputSource() : InputSDL_LocalMatchControls();
+            s_inputSource ? s_inputSource() :
+            s_np.randomInput ? randomInput() : InputSDL_LocalMatchControls();
         in[s_np.player - 1].key = 0;       /* see InputSDL_LocalMatchControls */
     } else {
         ReplayTest_RecordedInput((uint32_t)(frame + s_np.delay), in);
@@ -940,15 +1231,29 @@ prepared:
     MatchStep_PackInput(&in[s_np.player - 1], local);
     rc = Netplay_AddLocalInput(s_np.session, s_np.player, local);
     if (rc != NETPLAY_OK) {
-        if (!Netplay_ShouldWait(rc))
-            fail("frame %d: adding player %d's input: %s", frame, s_np.player, Netplay_ErrorName(rc));
+        if (!Netplay_ShouldWait(rc)) {
+            if (!s_np.live)
+                fail("frame %d: adding player %d's input: %s", frame, s_np.player, Netplay_ErrorName(rc));
+            fprintf(stderr, "[netplay] frame %d: adding player %d's input: %s\n", frame, s_np.player,
+                    Netplay_ErrorName(rc));
+            liveEnd(NETPLAY_LIVE_ENDED_EARLY, "A NETWORK ERROR ENDED THE MATCH");
+            return GAME_FRAME_MATCH_OVER;
+        }
+        s_np.predictionWaits++;
         waitForPeer();
         return GAME_FRAME_DONE;
     }
     rc = Netplay_SyncInput(s_np.session, synced, &disconnect);
-    if (rc != NETPLAY_OK)
-        fail("frame %d: synchronize input: %s", frame, Netplay_ErrorName(rc));
+    if (rc != NETPLAY_OK) {
+        if (!s_np.live)
+            fail("frame %d: synchronize input: %s", frame, Netplay_ErrorName(rc));
+        fprintf(stderr, "[netplay] frame %d: synchronize input: %s\n", frame, Netplay_ErrorName(rc));
+        liveEnd(NETPLAY_LIVE_ENDED_EARLY, "A NETWORK ERROR ENDED THE MATCH");
+        return GAME_FRAME_MATCH_OVER;
+    }
+    soundFrameBegin(frame, 0);
     r = step(synced, frame, 0);
+    soundFrameEnd();
     if (r != GAME_FRAME_DONE && r != GAME_FRAME_MATCH_OVER)
         fail("frame %d left the match loop (GameFrameResult %d), which a netplay match cannot "
              "roll back", frame, (int)r);
@@ -965,7 +1270,22 @@ prepared:
         fflush(stdout);
     }
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
+    if (s_np.live && s_np.abortWhy) {
+        liveEnd(NETPLAY_LIVE_ENDED_EARLY, s_np.abortWhy);
+        return GAME_FRAME_MATCH_OVER;
+    }
     Platform_Present();
+    if (s_np.paceFramesLeft > 0 || s_np.paceBiasUs > 0) {
+        /* The time sync's wait (above, NETPLAY_EVENT_TIMESYNC): each frame a little
+         * longer, not one frame held. */
+        int64_t us = s_np.paceBiasUs;
+        if (s_np.paceFramesLeft > 0) {
+            s_np.paceFramesLeft--;
+            us += s_np.paceUsPerFrame;
+        }
+        s_np.pacedUs += us;
+        Platform_DelayNextFrame((uint32_t)us);
+    }
     if (s_np.stallMs) {
         /* A busy machine, now and then: the other peer plays on, predicting this one's
          * input, and rolls back when the real input arrives. */
@@ -992,6 +1312,10 @@ int32_t NetplayMatch_Finish(void)
 
     switch (s_np.mode) {
     case NETPLAY_MATCH_OFF:
+        /* A live match reported and closed itself as it ended (liveEnd); what is left
+         * is to forget how it ended, so the next match -- live or not -- starts clean. */
+        s_liveOutcome = NETPLAY_LIVE_NONE;
+        s_liveWhy[0] = '\0';
         return 0;
     case NETPLAY_MATCH_DIRECT:
         fprintf(stderr, "[netplay] direct: %u frames played\n", s_np.frames);
@@ -1020,6 +1344,15 @@ int32_t NetplayMatch_Finish(void)
         fprintf(stderr, "[netplay] network emulation did: %s\n", Netem_Summary());
     if (frames)
         code |= writeTrace(frames);
+    Audio_SetSfxFilter(NULL);
+    fprintf(stderr, "[netplay] sound: %u effects played (%u of them late, first heard when a "
+                    "rollback corrected the input), %u repeats in re-simulated frames kept "
+                    "silent\n", s_soundPlayed, s_soundLate, s_soundRepeats);
+    if (s_soundTrace) {
+        fclose(s_soundTrace);
+        s_soundTrace = NULL;
+        fprintf(stderr, "[netplay] wrote %s\n", s_np.soundTracePath);
+    }
     if (s_np.session) {
         Netplay_Close(s_np.session);
         s_np.session = NULL;

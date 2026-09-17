@@ -430,11 +430,26 @@ static void read_answer(void)
 
 /* ---- the lobby ---- */
 
-void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
+/* Where the match will be played: the connected peer, and our end of the link. */
+static void take_peer_address(void)
 {
     const char *peer = P2PLink_PeerText();
     char *colon;
 
+    snprintf(s_lobby.peerIp, sizeof s_lobby.peerIp, "%s", peer);
+    colon = strchr(s_lobby.peerIp, ':');
+    if (colon) {
+        *colon = '\0';
+        s_lobby.peerPort = (uint16_t)atoi(colon + 1);
+    }
+    s_lobby.localPort = P2PLink_LocalPort();
+    s_lobby.delay     = P2PLink_AgreedDelay();
+    if (s_lobby.delay < 0)
+        s_lobby.delay = 2;                      /* both sides fall back the same way */
+}
+
+void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
+{
     free(s_lobby.setup);
     memset(&s_lobby, 0, sizeof s_lobby);
     s_lobby.me    = localPlayer == 2 ? 2 : 1;
@@ -446,16 +461,7 @@ void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
     /* Where the match will be played. Read now, while the link is certainly up: the
      * other side closes its link as soon as it kicks off, and the BYE that follows
      * clears the peer's address. */
-    snprintf(s_lobby.peerIp, sizeof s_lobby.peerIp, "%s", peer);
-    colon = strchr(s_lobby.peerIp, ':');
-    if (colon) {
-        *colon = '\0';
-        s_lobby.peerPort = (uint16_t)atoi(colon + 1);
-    }
-    s_lobby.localPort = P2PLink_LocalPort();
-    s_lobby.delay     = P2PLink_AgreedDelay();
-    if (s_lobby.delay < 0)
-        s_lobby.delay = 2;                      /* both sides fall back the same way */
+    take_peer_address();
 
     if (s_lobby.me == 1) {
         /* What the friendly menu would start from (FriendlyMenu, menus.c): the game
@@ -476,6 +482,48 @@ void NetplayLobby_End(void)
     s_lobby.state = LOBBY_CLOSED;
 }
 
+int32_t NetplayLobby_Rematch(const char *notice)
+{
+    char addr[32];
+    const char *list[1] = { addr };
+
+    NetplayLobby_RestoreTactics();
+    free(s_lobby.setup);
+    s_lobby.setup    = NULL;
+    s_lobby.setupLen = 0;
+
+    /* Message generations start again at 1 with every connection (p2p_link.h), so the
+     * ones this lobby has already handled would hide the new link's first messages. */
+    s_lobby.peerStateGen  = 0;
+    s_lobby.startGen      = 0;
+    s_lobby.startHandled  = 0;
+    s_lobby.answerHandled = 0;
+    s_lobby.peerRulesSeen = 0;          /* the joiner echoes the rules again */
+    s_lobby.accepted      = 0;
+
+    /* Both sides stay; neither is ready for a match nobody has agreed to yet. */
+    mine()->ready      = 0;
+    mine()->activity   = LOBBY_ACTIVITY_NONE;
+    theirs()->ready    = 0;
+    theirs()->activity = LOBBY_ACTIVITY_NONE;
+    s_lobby.dirty      = 1;
+    set_notice(notice);
+
+    if (!s_lobby.peerIp[0]) {
+        s_lobby.state = LOBBY_FAILED;
+        set_notice("THE OTHER PLAYER'S ADDRESS WAS LOST");
+        return 1;
+    }
+    snprintf(addr, sizeof addr, "%s:%u", s_lobby.peerIp, (unsigned)s_lobby.peerPort);
+    if (P2PLink_Punch(list, 1, s_lobby.localPort) != 0) {
+        s_lobby.state = LOBBY_FAILED;
+        set_notice("COULD NOT RECONNECT");
+        return 1;
+    }
+    s_lobby.state = LOBBY_RECONNECTING;
+    return 0;
+}
+
 void NetplayLobby_Poll(void)
 {
     LobbyState st = s_lobby.state;
@@ -483,6 +531,20 @@ void NetplayLobby_Poll(void)
     if (st == LOBBY_CLOSED || st == LOBBY_FAILED || st == LOBBY_KICKOFF)
         return;
     P2PLink_Poll();
+
+    if (st == LOBBY_RECONNECTING) {
+        if (P2PLink_State() == P2P_FAILED) {
+            s_lobby.state = LOBBY_FAILED;
+            set_notice("YOUR OPPONENT DID NOT COME BACK");
+            return;
+        }
+        /* The same wait mpWaitingMenu makes before a first lobby: linked, and the
+         * input delay agreed between the two. */
+        if (P2PLink_State() != P2P_CONNECTED || P2PLink_AgreedDelay() < 0)
+            return;
+        take_peer_address();                /* a NAT may have moved the peer's port */
+        s_lobby.state = LOBBY_OPEN;
+    }
 
     /* Messages before the link state: they stay readable after the link goes. */
     read_peer_state();
@@ -665,6 +727,7 @@ static LobbyRules  s_noRules;
 void               NetplayLobby_Begin(int32_t localPlayer, const char *localName) { (void)localPlayer; (void)localName; }
 void               NetplayLobby_Poll(void) {}
 void               NetplayLobby_End(void) {}
+int32_t            NetplayLobby_Rematch(const char *notice) { (void)notice; return 1; }
 LobbyState         NetplayLobby_State(void) { return LOBBY_CLOSED; }
 int32_t            NetplayLobby_LocalPlayer(void) { return 0; }
 const LobbyPlayer *NetplayLobby_Player(int32_t player) { (void)player; return NULL; }

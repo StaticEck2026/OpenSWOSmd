@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "audio.h"
+#include "audio_sfx_filter.h"
 #include "endian_helpers.h"
 #include "display.h"
 
@@ -58,6 +59,16 @@ extern int16_t PlaySong(uint8_t *name, uint8_t *dest);  /* asset_loader.c */
 
 /* ---- Pointer to each channel by index ---- */
 static AudioChannel *audioChannels[4];
+
+#ifdef SWOS_SDL_BUILD
+/* include/audio_sfx_filter.h: netplay's gate on the effects a re-simulated frame starts. */
+static AudioSfxFilter s_sfxFilter;
+
+void Audio_SetSfxFilter(AudioSfxFilter filter)
+{
+    s_sfxFilter = filter;
+}
+#endif
 
 static void ensureChannelPtrs(void)
 {
@@ -458,6 +469,8 @@ void AudioApplyPresetToChannels(uint16_t presetId)
      * noteId fires a sample on its channel after a song_data[3]+[5]
      * indirection. AudioSDL_TriggerSfxPreset does the whole walk. */
     extern void AudioSDL_TriggerSfxPreset(int preset_id);
+    if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_PRESET, 0xFF, (uint16_t)(presetId & 0x3F)))
+        return;
     AudioSDL_TriggerSfxPreset((int)(presetId & 0x3F));   /* 6-bit preset id, see Amiga &= 0x3F */
     return;
 #else
@@ -509,6 +522,8 @@ void AudioChannelQueueNextWaveIfEnabled(uint16_t channel, uint16_t waveId)
      * Without this, kicks come out as whistles and vice-versa.
      * AudioSDL_TriggerSfxByWaveId does the lookup + trigger. */
     extern void AudioSDL_TriggerSfxByWaveId(int channel, int wave_id);
+    if (s_sfxFilter && !s_sfxFilter(AUDIO_SFX_WAVE, (uint8_t)(channel & 3), waveId))
+        return;
     AudioSDL_TriggerSfxByWaveId((int)(channel & 3), (int)waveId);
     return;
 #else

@@ -54,6 +54,7 @@ typedef enum {
     LOBBY_STARTING,                 /* the start is being agreed */
     LOBBY_KICKOFF,                  /* agreed: close the link and play (NetplayLobby_Peer) */
     LOBBY_FAILED,                   /* the link went; NetplayLobby_Notice says why */
+    LOBBY_RECONNECTING,             /* after a match: finding the same player again */
 } LobbyState;
 
 void               NetplayLobby_Begin(int32_t localPlayer, const char *localName);
@@ -102,6 +103,16 @@ int32_t            NetplayLobby_ApplyMatch(void);
 /* After the match (or a refused start): put back the six USER tactics the match
  * setup overwrote, so a player's own library is never changed by playing online. */
 void               NetplayLobby_RestoreTactics(void);
+
+/* After a match, on both machines: back to this lobby with the same player. The link
+ * closed for the match, so it is opened again -- both punching to the address the
+ * match was played with, from the port it was played on, which is also the NAT
+ * mapping the match kept open -- and the lobby is RECONNECTING until the two are
+ * linked and have agreed an input delay again (it is measured afresh). Both sides,
+ * their tactics and the host's rules are kept; both ready flags go down, so a rematch
+ * is two GOs and a START. `notice` is the line to show meanwhile ("" for none).
+ * 0 if reconnecting; otherwise the lobby is FAILED and says why. */
+int32_t            NetplayLobby_Rematch(const char *notice);
 
 #endif /* SWOS_SDL_BUILD */
 #endif /* NETPLAY_LOBBY_H */

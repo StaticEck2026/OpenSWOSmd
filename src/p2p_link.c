@@ -334,9 +334,16 @@ static void drop_socket(P2PLink *l)
 
 /* Bind `port`, or the next free one up to `tries` above it (a joiner sharing a machine
  * with the host). Port 0 asks the system for any free one -- the self-test does, so it
- * never collides with whatever else is running. */
+ * never collides with whatever else is running.
+ *
+ * A port can be refused without anything using it: Windows keeps blocks of excluded
+ * ports (Hyper-V takes some, and with WSL2's mirrored networking WSL's whole Linux
+ * ephemeral range, 44620-48715 on the owner's machine), and a bind there fails with
+ * EACCES rather than EADDRINUSE. `netsh int ipv4 show excludedportrange` does not always
+ * list them. Say which it was: "in use" sends a player looking for another program. */
 static P2PLinkFailure open_socket(P2PLink *l, uint16_t port, int32_t tries)
 {
+    P2PLinkFailure why = P2P_FAIL_PORT_IN_USE;
     int32_t s = (int32_t)socket(AF_INET, SOCK_DGRAM, 0);
     if (s < 0)
         return P2P_FAIL_SOCKET;
@@ -364,11 +371,12 @@ static P2PLinkFailure open_socket(P2PLink *l, uint16_t port, int32_t tries)
             l->sock = s;
             return P2P_FAIL_NONE;
         }
+        why = errno == EACCES ? P2P_FAIL_PORT_RESERVED : P2P_FAIL_PORT_IN_USE;
         if (port == 0)
             break;
     }
     close(s);
-    return P2P_FAIL_PORT_IN_USE;
+    return why;
 }
 
 static void set_peer(P2PLink *l, const struct sockaddr_in *from)

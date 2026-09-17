@@ -10,6 +10,7 @@
 
 #include "game_timers.h"
 #include "game_types.h"
+#include "netplay_match.h"    /* NetplayMatch_IsLive: no goal replay online (SDL) */
 
 /* ---- Extern globals ---- */
 extern uint16_t _playingPenalties;
@@ -309,7 +310,14 @@ static void __attribute__((noinline)) handleBreakCameraMode(TeamGeneralInfo *a6)
             if (_goalCameraMode != 0) {
                 if (_autoSaveHighlights != 0)
                     _saveHighlightScene = 1;
-                if (_autoReplays != 0) {
+                if (_autoReplays != 0
+#ifdef SWOS_SDL_BUILD
+                    /* Not in an online match: the replay is a loop of its own outside the
+                     * frame step GGPO repeats, so it cannot be rolled back, and the session
+                     * would end at the first goal (docs/NETPLAY.md, "Rematch"). */
+                    && !NetplayMatch_IsLive()
+#endif
+                    ) {
                     _userRequestedReplay = 0;
                     _instantReplayFlag = 1;
                 }

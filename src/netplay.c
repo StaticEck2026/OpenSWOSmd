@@ -91,9 +91,14 @@ static bool __cdecl on_event(void *context, GGPOEvent *info)
         break;
     case GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER: ev.player = info->u.synchronized.player; break;
     case GGPO_EVENTCODE_DISCONNECTED_FROM_PEER: ev.player = info->u.disconnected.player; break;
-    case GGPO_EVENTCODE_TIMESYNC:
-        ev.framesAhead = (int32_t)(info->u.timesync.frames_ahead + 0.5f);
+    case GGPO_EVENTCODE_TIMESYNC: {
+        /* Round to nearest both ways: +0.5 then truncating sent -0.7 to 0. */
+        float ahead = info->u.timesync.frames_ahead;
+        ev.framesAhead = (int32_t)(ahead < 0 ? ahead - 0.5f : ahead + 0.5f);
+        ev.framesAheadMilli = (int32_t)(ahead * 1000.0f);
+        ev.timeSyncPeriod = info->u.timesync.timeSyncPeriodInFrames;
         break;
+    }
     case GGPO_EVENTCODE_CONNECTION_INTERRUPTED: ev.player = info->u.connection_interrupted.player; break;
     case GGPO_EVENTCODE_CONNECTION_RESUMED:     ev.player = info->u.connection_resumed.player; break;
     case GGPO_EVENTCODE_CHAT:                  ev.chat = info->u.chat.msg; break;
@@ -152,7 +157,8 @@ int32_t Netplay_StartP2P(NetplaySession **out, const NetplayConfig *cfg, const N
 
     GGPOErrorCode rc = ggpo_start_session(&s->ggpo, &s->ggpoCallbacks, "openswos",
                                           NETPLAY_MAX_PLAYERS, cfg->inputSize,
-                                          cfg->localPort, cfg->maxPrediction);
+                                          cfg->localPort, cfg->maxPrediction,
+                                          cfg->fps > 0 ? (float)cfg->fps : 60.0f);
     if (!GGPO_SUCCEEDED(rc)) {
         free(s);
         return rc;

@@ -56,7 +56,12 @@ enum { kMaxInputDelay = 6 };    /* frames; GGPO rolls back at most 8 (docs/NETPL
 
 static int32_t s_hosting = 1;               /* host a game, or join one */
 static char    s_address[16];               /* the host's IPv4, typed in */
-static char    s_port[6] = "47885";         /* SWOS 2020's GGPO port (mpgame.h GGPO_PORT1) */
+/* Not SWOS 2020's 47885 (mpgame.h GGPO_PORT1), which sits in the block Windows reserves
+ * for WSL2's mirrored networking (44620-48715) and so failed on the owner's machine before
+ * anything was sent -- and nothing here talks to SWOS 2020's netplay anyway. Below 32768 is
+ * outside every system's ephemeral range (Linux 32768+, Windows and macOS 49152+), where
+ * both the reservations and the ports other programs are handed out live. */
+static char    s_port[6] = "27885";
 static int32_t s_delay = 2;
 
 static char s_delayText[24];
@@ -136,6 +141,8 @@ static void failure_text(P2PLinkFailure failure, const char **line1, const char 
         *line1 = "THAT IS NOT AN IP ADDRESS"; *line2 = "TYPE IT LIKE 192.168.1.20"; break;
     case P2P_FAIL_PORT_IN_USE:
         *line1 = "THAT UDP PORT IS ALREADY IN USE"; *line2 = "CHOOSE ANOTHER ONE"; break;
+    case P2P_FAIL_PORT_RESERVED:
+        *line1 = "THE SYSTEM RESERVES THAT UDP PORT"; *line2 = "CHOOSE ANOTHER ONE"; break;
     case P2P_FAIL_SOCKET:
         *line1 = "THIS MACHINE WOULD NOT OPEN A SOCKET"; *line2 = ""; break;
     case P2P_FAIL_NO_ANSWER:

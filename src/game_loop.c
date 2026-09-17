@@ -837,6 +837,14 @@ end_of_match_flow:
     /* Arcade returns straight to attract after the match — skip the friendly
      * "watch replay / exit" menu (it would block on cabinet input). */
     { extern int _gArcadeMode; arcadeNoReplayMenu = _gArcadeMode; }
+    /* So does an online match. Its REPLAY would kick off a second match on this
+     * machine alone, with no session and nobody at the other end; playing again is
+     * the lobby's START, where both players agree to it (docs/NETPLAY.md). */
+    {
+        extern int32_t NetplayMatch_LiveOutcome(const char **why);
+        if (NetplayMatch_LiveOutcome(NULL) != 0)
+            arcadeNoReplayMenu = 1;
+    }
 #endif
     if (_isGameFriendly != 0 && _trainingGame == 0 && !arcadeNoReplayMenu) {
         ReplayExitMenuAfterFriendly();

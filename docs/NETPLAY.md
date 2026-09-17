@@ -1,21 +1,18 @@
 # NETPLAY.md — rollback netplay (GGPO-X)
 
-**Status (2026-09-15): a real match plays between two peers.** GGPO-X is vendored and
-callable from C, the match state it saves and loads is a registry the rollback rig proves
-(docs/ROLLBACK.md), and a match runs as a frame step GGPO can call again. Under GGPO's
-synctest, and as two processes over loopback that each know only one player's input and roll
-back on every misprediction, recorded matches come out identical to plain runs at every frame
-(§5). The inputs still come from recordings; live input is next.
-
-The main menu's **MULTIPLAYER** button connects two machines directly, by IP address, and
-checks they would play the same match (§6). Setting a match up over that connection, and
-playing it, is what is left.
+**Status (2026-09-17): two players can play each other, and play again.** MULTIPLAYER
+finds an opponent through a matchmaking server (§7), the two connect directly, pick their
+teams and the rules in the lobby (§6), and play a live match over GGPO with rollback; when
+it ends, or is cut short, both are back in the same lobby with their choices kept (§6,
+"Rematch"). Recorded matches played through GGPO's synctest and as two peers come out
+identical to plain runs at every frame, sound included (§5). No human has yet played it
+across two real machines.
 
 OpenSWOS continues SWOS 2020, whose online play runs on
-[GGPO-X](https://github.com/thomashenry79/ggpo-x). We use the same library at the same
-commit, so the protocol and the timing behaviour are the ones SWOS 2020 players know.
-The lobby, login and matchmaking are SWOS 2020 menus, imported separately
-(docs/MENUS.md §10).
+[GGPO-X](https://github.com/thomashenry79/ggpo-x). It is a submodule of the owner's fork,
+on upstream `master` plus our patches (`third_party/ggpo-x/OPENSWOS.md`); SWOS 2020 pins
+an older commit, and its netplay does not interoperate with ours. The lobby, login and
+matchmaking are SWOS 2020 menus, imported separately (docs/MENUS.md §10).
 
 ## 1. What is where
 
@@ -29,7 +26,10 @@ The lobby, login and matchmaking are SWOS 2020 menus, imported separately
 | `scripts/netplay_test.sh` | recorded matches through the step, GGPO's synctest and two peers over loopback, compared frame by frame with plain runs |
 | `include/p2p_link.h`, `src/p2p_link.c` | the UDP handshake two players make before a match (§6) |
 | `include/p2p_menu.h`, `src/p2p_menu.c` | the MULTIPLAYER menu over it, JSON-only (§6, docs/MENUS.md §10) |
+| `include/netplay_lobby.h`, `src/netplay_lobby.c` | the lobby's protocol: each side, the rules, START and its answer, rematch (§6) |
 | `src/online_menus.c` | the imported online menus' handlers (docs/MENUS.md §10) |
+| `include/audio_sfx_filter.h` | the gate every sound effect passes, so a rollback does not repeat them (§5) |
+| `scripts/netplay_lobby_test.sh` | two players through the lobby MENU, several matches in a row (§6) |
 
 ## 2. Building
 
@@ -106,9 +106,10 @@ port makes Windows Firewall ask.
   of every ephemeral range. The link self-test's "nobody listening" check had the same
   fault intermittently: its port was derived from the host's ephemeral one, and a joiner
   binds the port it dials, so some runs landed in one of Windows' reserved 100-port
-  blocks. It asks the system too now. (The direct-IP menu's default, 47885, is SWOS
-  2020's port and sits in that WSL block as well; there it fails visibly, as PORT IN
-  USE, and the field is editable.)
+  blocks. It asks the system too now. The direct-IP menu's default was SWOS 2020's
+  47885, in that WSL block as well; it is 27885 now, below every ephemeral range, and a
+  bind the system refuses outright (EACCES) says THE SYSTEM RESERVES THAT UDP PORT
+  rather than IN USE, which sent a player looking for another program.
 - **The sleep.** Every `SDL_Delay(1)` slept 15.6 ms, so a 30000-tick loop took ~8
   minutes to give up. See "Sleep granularity on Windows" below.
 
@@ -186,23 +187,15 @@ on a real match must run without a checksum mismatch. It does (§5).
 ### Still to do
 
 - **One simulation width on both peers.** The simulation still reads the render width
-  in a few places (the fan-tile column in `DrawAnimatedPatterns`, the camera clamp in
-  `SetCameraCoordinates`), so a 16:9 peer and a 4:3 peer diverge from frame 0. Until
-  that is removed, a session must pin both to the same width.
-- **Sound during re-simulation.** A re-simulated frame is never presented (§5), but the
-  VBlank interrupt's work, which it runs, includes the audio channel update — a match with
-  sound would play a re-simulated frame's effects again. The tests run with audio off.
-- **Instant replays and pause** leave the match loop, and so do the keys that start them
-  (`MainKeysCheck`: R, H, P, ESC, and S for the statistics); in a session they have to be
-  either disabled or driven by both peers' inputs. A detour into a replay ends a test run.
-  Pause waits for input inside a frame; the statistics overlay did too, and now makes one
-  pass per frame (§5, "Two peers").
+  in a few places, so a 16:9 peer and a 4:3 peer diverge; the link refuses a pair whose
+  widths differ.
+- **Instant replays and pause** leave the match loop. A live match keeps them out: its
+  input carries no keys (R, H, P, ESC, S), and the goal replay does not start in one
+  (`game_timers.c`, `NetplayMatch_IsLive`) -- before that, the first goal of a live match
+  with replays on in OPTIONS ended it. Driving them from both peers' inputs is not built.
 - **Determinism:** the simulation must not read wall-clock state. The rollback rig's
   determinism check runs two processes loaded at different addresses and requires
   identical per-frame hashes.
-- **Frame pacing:** `NETPLAY_EVENT_TIMESYNC` asks the peer that is ahead to slow down.
-- **The lobby:** the matchmaking server hands out the peer address; until that is
-  ported, a direct-IP connect is enough to test two machines.
 
 ## 5. Playing a match through GGPO (`src/netplay_match.c`)
 
@@ -457,18 +450,78 @@ now starts at 1.
 test with the same keys does); the corpus plays every recording as two peers with 10% of
 packets tampered by up to 8 bits and requires both to match the plain run.
 
+### Sound during a rollback
+
+A frame GGPO plays again has already been played once, and the sound effects it started were
+heard then. Replaying them would repeat every kick, whistle and crowd chant of the rolled-back
+frames, up to eight frames late, once per rollback. Effects are now gated
+(`include/audio_sfx_filter.h`, installed by `netplay_match.c`):
+
+- Every effect a frame starts -- a preset (`AudioApplyPresetToChannels`) or a wave
+  (`AudioChannelQueueNextWaveIfEnabled`), the only two ways the match starts one on SDL -- is
+  written down against that frame, 32 frames back.
+- A frame played again starts only what is not written down yet, counting repeats: a frame
+  that started the same effect twice starts it twice. An effect that only exists once the
+  corrected input is known plays then, a few frames late, rather than never.
+- What mispredicted frames started and the corrected ones do not cannot be taken back. The
+  effects are short.
+- Volume changes pass untouched: a crowd fade played again ends on the right value.
+
+The match reads nothing back from the mixer (the one gate that looks,
+`GateKickSampleAndCrowd`'s `_audioDbgFlagA` bit 7, is never set on SDL), so the state peers
+compare is the same with sound on or off.
+
+`--netplay-sound-trace=<file>` writes every effect played -- frame, kind, channel, id, and
+`late` for one a rollback started -- and `scripts/netplay_test.sh` compares them with the
+`direct` run's: synctest must play exactly the same effects, each peer at least them. Over the
+corpus (2026-09-17: 26 matches, direct / synctest:8 / p2p with `--stall 8`): 15,537 effects,
+none missing, synctest exact; the peers played 84 extra effects from mispredicted frames and
+115 late. One match over an emulated wifi link, 423 rollbacks on one peer: 8 repeats kept
+silent that would have been heard.
+
+(The statistics overlay's one pass per frame still calls `Platform_VBlank`, which presents a
+frame during a re-simulation. A live match cannot open the overlay -- its input has no keys --
+so only recorded matches reach it.)
+
+### Frame pacing
+
+Two machines never run at exactly the same rate, and GGPO does not make the faster one wait.
+It plays further and further ahead of the input it has, until it reaches the prediction limit
+(8 frames); from then on it stalls a frame at a time and rolls back up to 8 frames whenever
+the other player's input changes, and players see the opponent jump and slide -- a cause of
+the reported ghosting in its own right. `NETPLAY_EVENT_TIMESYNC` reports every 120 frames
+how far ahead this peer is, and OpenSWOS ignored it.
+
+A live match now acts on it (`netplay_match.c`): the peer that is ahead lengthens its frames
+a little, never holds one. Two parts: one closes the reported lead over the next 120 frames;
+the other learns the clock difference -- a standing slowdown nudged up while ahead and down
+while behind, between zero and a tenth of a frame -- because a correction that only acts on a
+measured lead leaves a steady lead behind. The frame is lengthened by moving the frame
+limiter's deadline (`Platform_DelayNextFrame`): a sleep between frames is taken back out of
+the next one and does nothing, which is how the first version was found not to work. The
+simulation sees none of it.
+
+Measured with `scripts/netplay_lobby_test.sh`, 2500 frames over a `lan` link, the joiner
+running 2% slow (`SWOS_LIVE_SLOW_PCT=2`, which shows a frame without playing one every 50):
+
+| | host re-simulated | host rollbacks | held at the prediction limit | host's lead at the end |
+|---|---|---|---|---|
+| no pacing (`SWOS_LIVE_NO_PACING=1`) | 1,495 frames | 228 | 42 times | 3.5 frames (GGPO's half of a 7-frame gap: at the limit) |
+| closing the lead only | 1,110 | 228 | 0 | 2.5 frames, steady |
+| with the learned slowdown | 231 | 115 | 0 | 0.08 frames; learned 430 µs a frame (the true difference is 400) |
+
+`SWOS_LIVE_PACING_LOG=1` prints each time sync.
+
+GGPO-X's time sync was itself corrected upstream after the commit SWOS 2020 pins (it
+subtracted our own input delay where it meant the remote's; OpenSWOS always agrees one
+delay, so that never bit), and `ggpo_start_session` now takes the frame rate -- 50 or 70 here --
+instead of assuming 60. Both came with catching the submodule up to upstream `master`.
+
 ### Next
 
-1. **Live input**: a peer's input from its own pad and keyboard instead of a recording, and
-   the in-match keys (R, H, P, ESC, S) kept out of a session or sent as input. The pause loop
-   waits for input inside a frame, as the statistics overlay did.
-2. **Presentation during re-simulation**: sound, and the overlay's one pass, which still calls
-   `Platform_VBlank` (it presents, and runs the VBlank interrupt a second time in that frame --
-   deterministically, so the match is unaffected).
-3. **The match over the link.** The handshake and the connection are §6; what is left is
-   the host sending the match setup, and opening the GGPO session over it. Pacing from
-   `NETPLAY_EVENT_TIMESYNC` too.
-4. The lobby.
+1. **Two humans on two machines**, through MULTIPLAYER, the lobby and a rematch.
+2. **One simulation width** (§4, "Still to do").
+3. **Instant replays in a session**, driven by both peers.
 
 ----
 
@@ -483,7 +536,7 @@ import (`src/online_menus.c`) and need its servers.
 |---|---|
 | GAME | host a game, or join one |
 | HOST ADDRESS | the host's IPv4 address, typed in; the host itself needs none |
-| UDP PORT | 47885 by default, SWOS 2020's `GGPO_PORT1`. The host binds exactly it, so it is the port a player forwards; a joiner takes the next free one above it, so two peers can share a machine |
+| UDP PORT | 27885 by default (§3: SWOS 2020's 47885 is inside a block Windows reserves for WSL2). The host binds exactly it, so it is the port a player forwards; a joiner takes the next free one above it, so two peers can share a machine |
 | INPUT DELAY | frames of local input delay for the match to come, 0..6 |
 
 The status panel follows the link every frame — the menu is flagged `dos_redraw`, so its
@@ -540,10 +593,23 @@ rather than from anything either machine measures.
 It is very probably most of the reported **ghosting** too: in a shoulder-to-shoulder
 contest for the ball, four extra frames decides it before the game's own skill roll is
 reached, and the rollback that follows drags the losing player visibly back *through* the
-opponent. (A second candidate, not confirmed: `CalculateIfPlayerWinsBall` gates on
-`oppTeam->wonTheBallTimer` and the winner sets it to 12, so whichever team is evaluated
-first in a frame gets to contest and the other is locked out. Against the AI that bias is
-invisible; with two humans one of them is always the team evaluated first.)
+opponent. The other half is frame pacing (§5): SWOS 2020 does not act on GGPO's time sync
+either, so the faster machine sits at the prediction limit and every input change rolls
+back up to 8 frames.
+
+**Not a cause: the order the teams are updated in** (checked 2026-09-17). It was suspected
+that `CalculateIfPlayerWinsBall`, gating on the opponent's `wonTheBallTimer`, let whichever
+team is evaluated first in a frame contest the ball and locked the other out. It does not:
+only ONE team is updated per frame, alternately (`UpdateAndApplyTeamControls`, SWOS2.s
+25592), and the 12 goes to the side that LOSES the skill roll, as a lock-out
+(docs/GAMEPLAY.md §12). Who starts a contest follows who reached the ball when, not which
+team is which, and at equal skill the roll is exactly 50/50 (`Rand() & 31` is uniform: the
+random table is a permutation of 0..255). The model predicts all 186 contests in the DOS
+recordings. It is identical in the Amiga binary, the DOS binary and SWOS 2020. What the
+contest does do is make a misprediction expensive: it reads the REMOTE team's stick and ball
+claim, so a wrong prediction can roll a contest one peer never had, spend a `Rand`, stop the
+ball and lock a side out for ~24 frames -- all undone when the input arrives. That is a
+reason to keep the input delay and the pacing right, not a bug in the contest.
 
 **Messages**, for anything that must arrive whole: `P2PLink_Send(channel, …)` /
 `P2PLink_Received(channel, …)`, as numbered chunks with a bitmap ack. Each kind of message
@@ -634,6 +700,53 @@ wires in code) on every draw.
 Not ported: the location flags, ranked and tournament modes, team database choice, cup legs,
 chat and the live cast — hidden. Editing a tactic in the lobby is not there either: players
 choose among the tactics they already have.
+
+### When a match ends, and rematch
+
+**A live match hands the machine back the moment it is over** (`liveEnd`,
+`netplay_match.c`): the GGPO session closed, the sound filter off, the timer thread and the
+pad back, one frame of input at a time no more. The mode goes off there rather than after
+`InitAndPlayGame` returns, because the game plays on after the last frame -- the fade, and
+the screens on the way back -- and reads input and the clock the ordinary way. Before this
+the first live match that reached its end through the menus stopped on the friendly REPLAY /
+EXIT screen and waited for ever: the session still owned the pad. That screen is skipped
+after an online match too; its REPLAY would have kicked off a second match on one machine,
+with no session and nobody at the other end.
+
+**It can also end early, and says why**, where it used to exit the game: the other player
+left (GGPO's disconnect, now 10 seconds of silence in a live match rather than 30 --
+`LIVE_TIMEOUT_MS`), the link failed, or the two games went out of step. Corpus runs still
+fail hard on all of these; that is what a test wants. `NetplayMatch_LiveOutcome` tells the
+menus which.
+
+**Then both players are back in the lobby with the same opponent**, which is SWOS 2020's
+model too. `NetplayLobby_Rematch` reopens the link -- both punching to the address the match
+was played with, from the port it was played on, which is also the NAT mapping the match kept
+open -- and the lobby is RECONNECTING until the two are linked and have agreed an input delay
+again, measured afresh. Both sides, their tactics and the host's rules are kept; both ready
+flags go down, so a rematch is two GOs and a START. The line under the players says FULL TIME
+- PRESS GO FOR A REMATCH, or why the match ended; if the other player does not come back
+within the link's 15 seconds, YOUR OPPONENT DID NOT COME BACK. The lobby menu is shown afresh
+after every match rather than carried on with, since the match has had the screen.
+
+One trap, found by the first two-match test: a message generation starts again at 1 with
+every connection, and the lobby remembered the generations it had handled -- so the new
+link's first STATE, START and ANSWER looked already seen. `Rematch` forgets them.
+
+```
+scripts/netplay_lobby_test.sh                                 # 2 matches, 300 frames each
+MATCHES=3 FRAMES=600 PROFILE=wifi scripts/netplay_lobby_test.sh
+JOIN_ENV="SWOS_LIVE_SLOW_PCT=2" MATCHES=1 FRAMES=2500 scripts/netplay_lobby_test.sh
+CAPTURE=5 CAPTURE_FROM=560 MATCHES=1 FRAMES=100 scripts/netplay_lobby_test.sh   # screenshots
+```
+
+It runs two `--netplay-lobby` instances through the real lobby MENU -- the kick-off desyncs
+above were only ever found that way -- with `SWOS_LOBBY_MATCHES=N` to leave after N matches
+and `SWOS_LIVE_RANDOM_INPUT=<seed>`, each side's input from its own generator so both predict
+wrong and roll back. It passes when both played every match to the end and each match ended
+on the same state hash on both sides. 2026-09-17: 3 matches of 600 frames over `wifi`,
+identical, with 59, 37 and 14 rollbacks on one side; and a joiner killed mid-match brings the
+host back to the lobby with THE OTHER PLAYER LEFT.
 
 ```
 bin/SWOS.x86_64 --netplay-lobby=host     # two instances on one machine, over loopback,
@@ -800,15 +913,8 @@ Working and tested end to end against a local server:
 - joining → the host approving → `START:` → the handoff to `p2p_link`, which puts
   `mpWaitingMenu` up and reports the link's state
 
-**Still to do — the match itself.** `p2p_link` connects two peers and pings; opening the
-GGPO session over it (the host sending the match setup, live pad input, running the
-session) does not exist on EITHER entry point — see §6, "What is missing". Matchmaking
-therefore ends exactly where the direct-IP menu ended. Two further pieces belong with it:
-
-- **NAT traversal.** The server sends several candidate addresses precisely so a peer
-  behind a router can be reached; the handoff currently takes the first one that parses
-  and meets on a fixed port, which is fine on one machine and on a LAN and is not real
-  hole punching. `third_party/matchmaker/P2PConnection/` is the reference.
-- **The join prompt.** SWOS 2020 asks the host to accept or refuse (`hostGameMessageMenu`);
-  we auto-approve. The event is already surfaced one-shot (`MmClient_TakeJoinRequest`),
-  so wiring the prompt is small.
+Since then (2026-09-16/17) the rest of the path exists: both peers punch to all of the
+other's candidate addresses at once rather than meeting on the first one (`P2PLink_Punch`),
+the host is asked to accept or refuse a player who wants to join (`hostGameMessageMenu`),
+the link hands over to the lobby (§6), the lobby to a live GGPO match, and the match back to
+the lobby for a rematch. What has not happened is two people doing it on two machines.

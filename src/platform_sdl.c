@@ -251,6 +251,7 @@ static volatile int s_screenshot_request;
 static int          s_screenshot_index;
 static int          s_screenshot_interval;   /* 0 = disabled, N>0 = every N frames */
 static int          s_present_capture;       /* 0 = disabled, N>0 = every N frames (see capture_presented_frame) */
+static int          s_present_capture_from;  /* ... starting at this presented frame */
 static int          s_present_stats;         /* SWOS_PRESENT_STATS=1 — report the present path's own cost */
 static Uint64       s_present_ticks;
 static int          s_present_frames;
@@ -450,6 +451,14 @@ void Platform_QuiesceTimerThread(void)
         SDL_UnlockMutex(s_isr_mtx);
     }
     SDL_Delay(100);
+}
+
+/* A live netplay match hands the machine back to the menus when it ends
+ * (src/netplay_match.c, liveEnd): the ISR, the audio tick and the fallback render go
+ * back to the timer worker. The rollback rig and the corpus runs never call it. */
+void Platform_ResumeTimerThread(void)
+{
+    s_timer_quiesced = 0;
 }
 
 static Uint32 SDLCALL tick_timer_cb(Uint32 interval, void *param)
@@ -932,6 +941,9 @@ int Platform_Init(const PlatformInitOptions *opts)
     s_present_stats = (getenv("SWOS_PRESENT_STATS") != NULL);
     {
         const char *pc = getenv("SWOS_PRESENT_CAPTURE");
+        const char *from = getenv("SWOS_PRESENT_CAPTURE_FROM");
+        if (from && *from)
+            s_present_capture_from = atoi(from);
         if (pc && *pc) {
             int n = atoi(pc);
             if (n > 0) {
@@ -1257,8 +1269,11 @@ static void write_screenshot(const uint32_t *argb)
  * OUTPUT resolution (letterbox bars included). */
 static void capture_presented_frame(void)
 {
-    static int mod, count;
+    static int mod, count, presented;
     if (s_present_capture <= 0 || count >= 60) return;
+    /* SWOS_PRESENT_CAPTURE_FROM=F: start at the F-th presented frame, so the 60 files
+     * can be spent late in a run (after a match, say) rather than on the boot. */
+    if (++presented < s_present_capture_from) return;
     if (++mod < s_present_capture) return;
     mod = 0;
 
@@ -1974,6 +1989,16 @@ int Platform_VBlank(void)
         s_frame_hook();
     key_script_tick();
     return Platform_Present();
+}
+
+void Platform_DelayNextFrame(uint32_t us)
+{
+    if (s_vsync_enabled && s_display_hz > 0 && s_display_hz == Platform_ActivePacingFps()) {
+        if (us >= 1000)
+            SDL_Delay(us / 1000);
+        return;
+    }
+    s_next_frame_perf += (Uint64)us * s_perf_freq / 1000000u;
 }
 
 /* Platform_VBlank without the VBlank interrupt: show the finished frame and pace. A

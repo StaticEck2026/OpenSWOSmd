@@ -32,10 +32,13 @@
 #include "game_types.h"       /* TeamFileEx, for the match the handoff starts */
 #include "platform_sdl.h"     /* Platform_SetFrameHook: the link outlives a modal menu */
 #include "teams.h"            /* LoadTeamFile, for the lobby's test knobs */
+#include "game_loop.h"        /* _gFrameStepInput */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <SDL.h>                /* SDL_GetTicks, for a test knob */
 
 #define SWOS2020_MENU(name) "swos2020/" #name
 
@@ -483,8 +486,15 @@ static void lobby_frame_hook(void)
 
 /* Test knobs for looking at the lobby without a pad (docs/NETPLAY.md, "The lobby"):
  * SWOS_LOBBY_TEAM=<file>:<ordinal> in hex picks a team as the lobby opens,
- * SWOS_LOBBY_READY=1 says ready, and SWOS_LOBBY_START=1 has the host press START the
- * moment it can. */
+ * SWOS_LOBBY_READY=1 says ready -- as it opens, and again each time it comes back
+ * after a match -- SWOS_LOBBY_START=1 has the host press START the moment it can, and
+ * SWOS_LOBBY_MATCHES=N has both leave the game after N matches, the host once the lobby
+ * is back up and the joiner when the host has gone. */
+static int32_t s_lobbyAgain;        /* run_live_match: show the lobby again, for a rematch */
+static int32_t s_lobbyMatches;      /* matches played from this lobby */
+static int32_t s_testReady;         /* SWOS_LOBBY_READY: say ready once the lobby is open */
+static int32_t s_matchEndedEarly;   /* the last match was cut short: its notice says why */
+
 static void lobby_test_knobs(void)
 {
     extern uint8_t _teamFileBuffer[];
@@ -501,16 +511,48 @@ static void lobby_test_knobs(void)
             }
         }
     }
-    if (getenv("SWOS_LOBBY_READY"))
-        NetplayLobby_SetReady(1);
+    s_testReady = getenv("SWOS_LOBBY_READY") != NULL;
 }
 
+/* SWOS_LOBBY_READY and SWOS_LOBBY_MATCHES, from the lobby's draw. */
+static void lobby_test_draw(LobbyState st)
+{
+    const char *matches = getenv("SWOS_LOBBY_MATCHES");
+
+    if (s_testReady && st == LOBBY_OPEN) {
+        NetplayLobby_SetReady(1);
+        s_testReady = 0;
+    }
+    static uint32_t openSince;
+    if (st != LOBBY_OPEN)
+        openSince = 0;
+    else if (!openSince)
+        openSince = SDL_GetTicks() | 1u;
+    /* The host leaves once the lobby has been back up for three seconds -- long enough
+     * for the joiner to be back too, and for a capture to see the screen. */
+    if (matches && s_lobbyMatches >= atoi(matches) &&
+        (st == LOBBY_FAILED ||
+         (st == LOBBY_OPEN && NetplayLobby_IsHost() && SDL_GetTicks() - openSince > 3000))) {
+        printf("[lobby] %d match%s played; leaving (%s)\n", s_lobbyMatches,
+               s_lobbyMatches == 1 ? "" : "es", st == LOBBY_FAILED ? NetplayLobby_Notice() : "host");
+        fflush(stdout);
+        P2PLink_Close();
+        exit(0);
+    }
+}
+
+/* The lobby, for as long as the two players stay in it: after every match it comes
+ * back, reconnecting to the same player (run_live_match), until one of them leaves. */
 void OnlineMenus_EnterLobby(int32_t player, const char *name)
 {
     OnlineMenus_Init();
     NetplayLobby_Begin(player, name);
     lobby_test_knobs();
-    OnlineMenus_Show(SWOS2020_MENU(mpGameSetupMenu));
+    s_lobbyMatches = 0;
+    do {
+        s_lobbyAgain = 0;
+        OnlineMenus_Show(SWOS2020_MENU(mpGameSetupMenu));
+    } while (s_lobbyAgain);
     NetplayLobby_End();
     P2PLink_Close();
     Platform_SetFrameHook(NULL);
@@ -661,7 +703,9 @@ static void mpGameSetupMenu_OnDraw(void)
     int32_t me, host, open, row;
 
     NetplayLobby_Poll();
-    if (getenv("SWOS_LOBBY_START") && NetplayLobby_CanStart())
+    lobby_test_draw(NetplayLobby_State());
+    if (getenv("SWOS_LOBBY_START") && NetplayLobby_CanStart() &&
+        !(getenv("SWOS_LOBBY_MATCHES") && s_lobbyMatches >= atoi(getenv("SWOS_LOBBY_MATCHES"))))
         (void)NetplayLobby_Start();
     st = NetplayLobby_State();
     if (st == LOBBY_KICKOFF) {
@@ -682,7 +726,8 @@ static void mpGameSetupMenu_OnDraw(void)
     snprintf(s_lobbyStyle, sizeof s_lobbyStyle, "%s", _gDosGameplay ? "PC (70FPS)" : "AMIGA (50FPS)");
     set_text(MpGameSetupMenu_gameStyle, s_lobbyStyle);
     set_text(MpGameSetupMenu_gameStyle1, s_lobbyStyle);
-    snprintf(s_lobbyConn, sizeof s_lobbyConn, "%s", st == LOBBY_FAILED ? "DISCONNECTED" : "CONNECTED");
+    snprintf(s_lobbyConn, sizeof s_lobbyConn, "%s",
+             st == LOBBY_FAILED ? "DISCONNECTED" : st == LOBBY_RECONNECTING ? "RECONNECTING" : "CONNECTED");
     set_text(MpGameSetupMenu_connectionStatus, s_lobbyConn);
     if (P2PLink_PingMs() >= 0)
         snprintf(s_lobbyPing, sizeof s_lobbyPing, "%dMS", P2PLink_PingMs());
@@ -745,7 +790,13 @@ static void mpGameSetupMenu_OnDraw(void)
         const LobbyPlayer *other = players[2 - me];
         const LobbyPlayer *self  = players[me - 1];
         const char *line = NetplayLobby_Notice();
-        if (!line[0]) {
+        if (st == LOBBY_RECONNECTING) {
+            /* A match cut short says why (the header already says RECONNECTING); a
+             * finished one says what is happening, or a slow reconnect looks like a
+             * hang. The full-time notice shows once the lobby is open again. */
+            if (!s_matchEndedEarly)
+                line = "FINDING YOUR OPPONENT AGAIN...";
+        } else if (!line[0]) {
             if (st == LOBBY_STARTING)
                 line = "STARTING...";
             else if (other->known && other->activity == LOBBY_ACTIVITY_CHOOSING_TEAM)
@@ -875,7 +926,6 @@ static void selectMPSettingExit(void)
  * does for the friendly menu and for arcade mode. */
 static void run_live_match(void)
 {
-    extern uint16_t    _gFrameStepInput;
     extern TeamFileEx  _selectedTeams[100];
     extern void        InitAndPlayGame(TeamFileEx *team1, TeamFileEx *team2);
 
@@ -899,8 +949,25 @@ static void run_live_match(void)
     snprintf(s_matchStatus, sizeof s_matchStatus, "PLAYING");
     _gFrameStepInput = 1;               /* one frame of input at a time (game_loop.h) */
     InitAndPlayGame(&_selectedTeams[0], &_selectedTeams[1]);
-    NetplayMatch_Finish();
-    NetplayLobby_RestoreTactics();
+    s_lobbyMatches++;
+
+    /* Back to the lobby with the same player: a rematch is two GOs and a START, as it
+     * is in SWOS 2020. The menu is shown afresh (OnlineMenus_EnterLobby) rather than
+     * carried on with, since the match has had the screen. */
+    {
+        const char *why;
+        int32_t outcome = NetplayMatch_LiveOutcome(&why);
+        char notice[64];
+        s_matchEndedEarly = outcome == NETPLAY_LIVE_ENDED_EARLY;
+        if (s_matchEndedEarly && why[0])
+            snprintf(notice, sizeof notice, "%s", why);
+        else
+            snprintf(notice, sizeof notice, "FULL TIME - PRESS GO FOR A REMATCH");
+        NetplayMatch_Finish();
+        (void)NetplayLobby_Rematch(notice);     /* on failure the lobby says why */
+    }
+    s_testReady = getenv("SWOS_LOBBY_READY") != NULL;
+    s_lobbyAgain = 1;
     SetExitMenuFlag();
 }
 

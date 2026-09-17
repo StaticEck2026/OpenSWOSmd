@@ -51,8 +51,8 @@
 #include "image_cmd.h"      /* ProcessImageCommandStream */
 #include "match_sim.h"      /* InitTeams */
 #include "teams.h"          /* LoadTeamFile */
+#include "game_loop.h"      /* _gFrameStepInput */
 
-extern uint16_t   _gFrameStepInput;
 extern TeamFileEx _selectedTeams[100];
 extern uint8_t    _teamFileBuffer[];
 extern uint8_t    _teamTacticsUSERB[], _teamTacticsUSERC[];
