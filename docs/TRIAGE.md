@@ -71,12 +71,15 @@ One commit per report, direct to `main`, source only. Both targets must build:
 make X86_64=1 -j"$(nproc)"                     # SDL
 EXT=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/linux
 PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j"$(nproc)"
-make X86_64=1 clean && make X86_64=1 NETPLAY=0  # what macOS builds — see below
+make X86_64=1 clean && make X86_64=1 NETPLAY=0  # the no-netplay configuration
 ```
 
-The third one is not optional before a drop: macOS defaults `NETPLAY=0`, and a
-call added to `p2p_link.c`'s real branch but not its stub branch links fine on
-Linux and Cygwin and fails only on the Mac, at the end of a remote build.
+The third one is not optional before a drop. Every `P2PLink_*` / `MmClient_*`
+function needs a stub beside its real one, and a call added to the real branch
+alone still links everywhere netplay is ON — so the break only appears on a
+target that builds without it: the 32-bit Linux binary and the ARM ones, which
+are in every drop. (macOS was in that list until 2026-09-17 and is now built
+with netplay like Linux x86_64 and Cygwin64, so it no longer covers this.)
 
 ## 5. Build the drop
 

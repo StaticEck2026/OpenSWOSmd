@@ -594,10 +594,17 @@ endif
 
 # ---- Netplay: GGPO-X rollback networking (docs/NETPLAY.md) ----
 # third_party/ggpo-x is C++; src/netplay.c reaches it through ggponet.h's C API.
-# Default ON where it is built and tested: 64-bit Linux (X86_64=1) and Cygwin64.
-# Anywhere else opt in with NETPLAY=1 -- it needs a C++ compiler for the target,
-# and the default -m32 Linux build also needs g++-multilib. Never on WASM: a
-# browser has no UDP sockets. Without it src/netplay.c compiles to stubs.
+# Default ON where it is built and tested: 64-bit Linux (X86_64=1), macOS (both
+# slices) and Cygwin64. Anywhere else opt in with NETPLAY=1 -- it needs a C++
+# compiler for the target, and the default -m32 Linux build also needs
+# g++-multilib. Never on WASM: a browser has no UDP sockets. Without it
+# src/netplay.c compiles to stubs.
+#
+# macOS was off until 2026-09-17 for no reason but never having been tried: the
+# arch flags were already threaded through the C++ and ENET rules ($(ARCHFLAGS)),
+# and the link already skips -static-libstdc++ on Darwin (clang ships libc++).
+# A Mac player could not see the MULTIPLAYER button at all, since the main menu
+# hides it without SWOS_NETPLAY.
 #
 # The C++ runtime is linked STATICALLY, so the binary gains no DLL/.so: the
 # Windows drop's exact four-DLL list (CLAUDE.md) and the Linux lib/<arch> bundle
@@ -608,6 +615,8 @@ GGPO_DIR := third_party/ggpo-x/src
 ENET_DIR := third_party/enet
 ifndef NETPLAY
 ifeq ($(BUILD_OS)/$(BUILD_ARCH),linux/x86_64)
+NETPLAY := 1
+else ifeq ($(BUILD_OS),macos)
 NETPLAY := 1
 else ifneq (,$(findstring cygwin,$(GCC_MACHINE)))
 NETPLAY := 1

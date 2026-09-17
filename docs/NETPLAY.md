@@ -40,8 +40,9 @@ the C code, and links with `$(CXX)`.
 |---|---|---|
 | Linux x86_64 (`make X86_64=1`) | **on** | built and self-tested |
 | Cygwin64 (`bin/SWOS.exe`) | **on** | built; `cygcheck` shows the same DLLs as before |
+| macOS universal (`make macos-app`) | **on** | both slices; self-tested on arm64 (2026-09-17) |
 | Linux x86 (`make`, -m32) | off | needs g++-multilib (no 32-bit libstdc++ installed here) |
-| macOS, ARM Linux | off | `NETPLAY=1` should work — the POSIX platform layer is shared — not yet tried |
+| ARM Linux | off | `NETPLAY=1` should work — the POSIX platform layer is shared — not yet tried |
 | WASM | never | a browser has no UDP sockets |
 | Switch | off | `Makefile.switch` does not build it; sockets there are `nn::socket` |
 | Amiga | — | `netplay.c` is in `SDL_ONLY_SRCS` |
