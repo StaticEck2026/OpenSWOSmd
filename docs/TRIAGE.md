@@ -119,7 +119,20 @@ from the reporter. Leaving something in the inbox costs nothing.
 
 ## 8. Tell the channel
 
-`/changelog` drafts release notes from the reports fixed in this round and posts
-them to **#swos-changelog**. Post only what a player would notice, credit the
-reporter, and keep the internals in the commit message where they belong. Only
-addressed reports go to the changelog — an untouched or rejected report does not.
+```bash
+reportctl list --unannounced                       # fixes not yet posted
+reportctl announce --reports 0001,0002 --dry-run < notes.md   # ALWAYS first
+reportctl announce --reports 0001,0002 < notes.md
+```
+
+`--reports` credits those reporters and records the release on their reports, so
+the trail from report to published fix stays intact. **Dry-run first: a post
+cannot be undone.**
+
+Write it for a player, not for us: what changed and what they will see. The
+offsets, the register names and the asm citation belong in the commit message —
+someone reading #swos-changelog wants to know that adding a national-squad player
+no longer throws them out of the club list. Credit the reporter by name, and say
+plainly when a related case still behaves the old way on purpose, or the next
+report will be about that. Only addressed reports go in; an untouched or rejected
+one does not.
