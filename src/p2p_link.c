@@ -1227,10 +1227,23 @@ int32_t P2PLink_SelfTest(void)
         link_close(&mismatched);
     }
 
-    /* 5. Nobody there: the join gives up rather than hanging. */
+    /* 5. Nobody there: the join gives up rather than hanging.
+     *
+     * The empty port comes from the system, released again at once. It used to be the
+     * host's port with a bit flipped, but a joiner binds the port it dials (or one of
+     * the next kJoinPortTries), and on Windows a derived number can land in a block
+     * reserved by Hyper-V or WSL2, where every one of those binds fails and the join
+     * never starts. Which block depended on the host's ephemeral port, so the check
+     * passed or failed from one run to the next. */
     {
-        uint16_t empty = (uint16_t)(host.localPort ^ 0x0100);   /* a port with no link on it */
+        P2PLink probe;
+        memset(&probe, 0, sizeof probe);
+        probe.sock = -1;
+        open_socket(&probe, 0, 1);
+        uint16_t empty = probe.localPort;
+        link_reset(&probe);
         P2PLink *one[1] = { &lonely };
+        check(empty != 0, "the system has a free port to dial");
         check(link_join(&lonely, "127.0.0.1", empty, NULL) == 0, "a join with nobody listening");
         pump(one, 1, 2000, link_settled, &lonely);
         check(lonely.state == P2P_FAILED && lonely.failure == P2P_FAIL_NO_ANSWER, "it gives up after the timeout");

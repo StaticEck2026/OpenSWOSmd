@@ -65,6 +65,7 @@ SDL_ONLY_SRCS := \
     p2p_link.c            \
     p2p_menu.c            \
     platform_sdl.c        \
+    platform_timer.c      \
     replay_test.c         \
     rjp1.c                \
     rollback_rig.c        \

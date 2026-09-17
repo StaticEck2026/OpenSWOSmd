@@ -55,7 +55,7 @@ STALL=0
 NETEM=""              # what --netem parsed to: "VAR=VAL VAR=VAL", for the p2p peers
 BIN=bin/SWOS.x86_64
 DEFAULT_REC=tests/dos/zkz-12065730.RGD.gz    # v1.5, 1519 frames -- the shortest
-BASE_PORT=47950
+BASE_PORT=23950         # below every ephemeral range; see LIVE_TEST_PORT in src/netplay_live_test.c
 P2P_TIMEOUT=1800
 
 while [ $# -gt 0 ]; do

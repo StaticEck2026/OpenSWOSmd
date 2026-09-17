@@ -54,16 +54,19 @@ FRAMES="${FRAMES:-3000}"
 [ -n "${LOSS_PCT:-}" ]  && export SWOS_NETEM_LOSS_PCT="$LOSS_PCT"
 [ -n "${PROFILE:-}" ]   && export SWOS_NETEM_PROFILE="$PROFILE"
 
+# Called as `run ... &`, so it already runs in a subshell of its own; the cd and
+# export stay in it. It EXECs the game, so the job's pid IS the game's: the
+# watchdog and the kill -9 below reach the peer itself. With a subshell around
+# the binary they killed only the subshell, and a hung peer outlived the script.
 run() {   # role, netem-seed-salt, logfile
     local prof
     if [ "$1" = host ]; then prof=${HOST_PROFILE:-}; else prof=${JOIN_PROFILE:-}; fi
-    (
-        cd bin || exit 1
-        [ -n "$prof" ] && export SWOS_NETEM_PROFILE="$prof"
-        SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-            SWOS_LIVE_FRAMES="$FRAMES" SWOS_NETEM_SEED="$2$$" \
-            ./"$BIN" --netplay-live-pair="$1"
-    ) > "$3" 2>&1
+    exec > "$3" 2>&1          # before the cd, so a relative TMPDIR still lands where it says
+    cd bin || exit 1
+    [ -n "$prof" ] && export SWOS_NETEM_PROFILE="$prof"
+    exec env SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+        SWOS_LIVE_FRAMES="$FRAMES" SWOS_NETEM_SEED="$2$$" \
+        ./"$BIN" --netplay-live-pair="$1"
 }
 
 echo "-- host"; run host 11 "$OUT.host" & HOST=$!
@@ -71,7 +74,14 @@ sleep 2
 echo "-- join"; run join 22 "$OUT.join" & JOIN=$!
 
 # Bounded wait: a hung peer must not hang the suite.
-( sleep "$WAIT"; kill "$HOST" "$JOIN" 2>/dev/null ) & WATCH=$!
+#
+# The sleep runs as its own job so the watchdog can take it down when it is
+# cancelled. `( sleep; kill ) &` cannot: killing that subshell orphans the sleep,
+# which lives on for the full $WAIT holding the script's stdout -- so
+# `netplay_live_test.sh | tail` took 6m45 for a 22-second run.
+( sleep "$WAIT" & nap=$!
+  trap 'kill $nap 2>/dev/null; exit 0' TERM
+  wait $nap && kill "$HOST" "$JOIN" 2>/dev/null ) & WATCH=$!
 wait "$HOST"; HRC=$?
 wait "$JOIN"; JRC=$?
 kill "$WATCH" 2>/dev/null

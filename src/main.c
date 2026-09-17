@@ -267,6 +267,11 @@ int main(int argc, char **argv)
      * slowed down by that. It costs nothing on a run that completes. */
     setvbuf(stdout, NULL, _IOLBF, 0);
 
+    /* Before anything sleeps: on Windows every SDL_Delay is otherwise rounded up
+     * to a 15.6 ms tick (src/platform_timer.c). That includes the self-tests
+     * below, which is why --netplay-selftest looked hung on Windows. */
+    (void)Platform_RaiseTimerResolution();
+
 /* Switch: the headers define SIGHUP but nnSdk exports no signal(), so the
  * #ifdef alone is not the right test — the link fails on `undefined symbol:
  * signal`. There is no controlling terminal on a console either, which is what
@@ -510,6 +515,9 @@ int main(int argc, char **argv)
                 fprintf(stderr, "--netplay-live-pair must be 'host' or 'join'\n");
                 return 1;
             }
+            /* Skip the loader intro, as the replay rig does: it plays in real time
+             * and cost each peer ~108 s before the test reached its first line. */
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "matchmaker-pair")) != NULL) {
             /* --matchmaker-pair=host|join — two processes, one each, against a
              * running server. scripts/matchmaker_pair_test.sh drives both. */

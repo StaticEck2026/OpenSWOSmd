@@ -13,6 +13,10 @@
 #include <SDL.h>        /* SDL_Delay in the self-test */
 #include "ggponet.h"
 
+#include <unistd.h>         /* close -- the self-test's port probe */
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 _Static_assert(NETPLAY_EVENT_RUNNING == (int)GGPO_EVENTCODE_RUNNING &&
                NETPLAY_EVENT_NETWORK_ERROR == (int)GGPO_EVENTCODE_NETWORK_ERROR,
                "NetplayEventCode must mirror GGPOEventCode");
@@ -299,6 +303,7 @@ const char *Netplay_ErrorName(int32_t code)
     case GGPO_ERRORCODE_PLAYER_DISCONNECTED:       return "PLAYER_DISCONNECTED";
     case GGPO_ERRORCODE_TOO_MANY_SPECTATORS:       return "TOO_MANY_SPECTATORS";
     case GGPO_ERRORCODE_INVALID_REQUEST:           return "INVALID_REQUEST";
+    case GGPO_ERRORCODE_NETWORK_ERROR:             return "NETWORK_ERROR (could not open the UDP port)";
     case GGPO_CHAT_MESSAGE_TOO_LONG:               return "CHAT_MESSAGE_TOO_LONG";
     case NETPLAY_ERR_UNAVAILABLE:                  return "UNAVAILABLE";
     default:                                       return "?";
@@ -310,7 +315,7 @@ const char *Netplay_ErrorName(int32_t code)
  * hash of every input it has consumed, so two peers agree on frame N exactly when
  * they simulated it from the same inputs -- which is what rollback must ensure.
  * ====================================================================== */
-enum { TOY_FRAMES = 600, TOY_PORT_A = 47901, TOY_PORT_B = 47902 };
+enum { TOY_FRAMES = 600 };
 
 typedef struct {
     int32_t  frame;
@@ -439,6 +444,35 @@ static void toy_init(ToyGame *g, const char *name, int32_t player, NetplayCallba
     cb->ctx = g;
 }
 
+/* Two UDP ports nothing is using right now, from the system. Not fixed ones: the
+ * 47901/47902 this used to take sit inside the 44620-48715 block that WSL2's mirrored
+ * networking reserves on the Windows side, so there GGPO could not bind either. Both
+ * probes stay open until both have a port, so the two differ. */
+static int32_t free_udp_ports(uint16_t *portA, uint16_t *portB)
+{
+    int32_t socks[2] = { -1, -1 }, ok = 1;
+    uint16_t ports[2] = { 0, 0 };
+    for (int32_t i = 0; i < 2 && ok; i++) {
+        struct sockaddr_in sin;
+        socklen_t len = (socklen_t)sizeof sin;
+        memset(&sin, 0, sizeof sin);
+        sin.sin_family      = AF_INET;
+        sin.sin_addr.s_addr = htonl(INADDR_ANY);
+        socks[i] = (int32_t)socket(AF_INET, SOCK_DGRAM, 0);
+        ok = socks[i] >= 0 &&
+             bind(socks[i], (struct sockaddr *)&sin, (socklen_t)sizeof sin) == 0 &&
+             getsockname(socks[i], (struct sockaddr *)&sin, &len) == 0;
+        if (ok)
+            ports[i] = ntohs(sin.sin_port);
+    }
+    for (int32_t i = 0; i < 2; i++)
+        if (socks[i] >= 0)
+            close(socks[i]);
+    *portA = ports[0];
+    *portB = ports[1];
+    return ok;
+}
+
 static int32_t selftest_p2p(void)
 {
     static ToyGame a, b;
@@ -446,19 +480,25 @@ static int32_t selftest_p2p(void)
     toy_init(&a, "peer A", 1, &cbA);
     toy_init(&b, "peer B", 2, &cbB);
 
+    uint16_t portA, portB;
+    if (!free_udp_ports(&portA, &portB)) {
+        printf("  FAIL: the system has no free UDP port for the loopback peers\n");
+        return 1;
+    }
+
     NetplayConfig cfg;
     memset(&cfg, 0, sizeof cfg);
     cfg.inputSize = 1;
     cfg.maxPrediction = 8;
     snprintf(cfg.remoteAddress, sizeof cfg.remoteAddress, "127.0.0.1");
 
-    cfg.localPort = TOY_PORT_A; cfg.localPlayer = 1; cfg.remotePort = TOY_PORT_B;
+    cfg.localPort = portA; cfg.localPlayer = 1; cfg.remotePort = portB;
     int32_t rc = Netplay_StartP2P(&a.session, &cfg, &cbA);
     if (rc != NETPLAY_OK) {
         printf("  start peer A: %s\n", Netplay_ErrorName(rc));
         return 1;
     }
-    cfg.localPort = TOY_PORT_B; cfg.localPlayer = 2; cfg.remotePort = TOY_PORT_A;
+    cfg.localPort = portB; cfg.localPlayer = 2; cfg.remotePort = portA;
     rc = Netplay_StartP2P(&b.session, &cfg, &cbB);
     if (rc != NETPLAY_OK) {
         printf("  start peer B: %s\n", Netplay_ErrorName(rc));
@@ -485,8 +525,9 @@ static int32_t selftest_p2p(void)
             mismatches++;
         }
     }
-    printf("  p2p over loopback: A frame %d, B frame %d after %d ticks; "
+    printf("  p2p over loopback (UDP %u/%u): A frame %d, B frame %d after %d ticks; "
            "rollbacks A %d (%d frames) / B %d (%d frames); desyncs %d\n",
+           (unsigned)portA, (unsigned)portB,
            a.state.frame, b.state.frame, iter, a.loads, a.rolledBack, b.loads, b.rolledBack,
            a.desyncs + b.desyncs);
     int32_t fail = 0;

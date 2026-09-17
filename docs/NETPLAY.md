@@ -83,7 +83,7 @@ first.
 Drives the library for real with a toy deterministic game (its state is a frame counter
 and a hash of every input consumed):
 
-1. **Two peers over loopback** (UDP 47901/47902, one process), 600 frames. Each peer's
+1. **Two peers over loopback** (two UDP ports the system hands out, one process), 600 frames. Each peer's
    input changes every few frames, so the other's "repeat last input" prediction keeps
    failing. Passes when both reach frame 600 with identical state at **every** frame,
    rollbacks actually happened, and there were no desync or disconnect events.
@@ -93,6 +93,46 @@ and a hash of every input consumed):
 
 Don't run it from the Cygwin build on a desktop you are not watching: binding a UDP
 port makes Windows Firewall ask.
+
+**It used to hang on Windows, for two reasons that compounded** (2026-09-16):
+
+- **The ports.** It bound fixed 47901/47902, and on a machine running WSL2 with
+  `networkingMode=mirrored` Windows reserves WSL's Linux ephemeral range
+  (`/proc/sys/net/ipv4/ip_local_port_range`, 44620-48715 there) — so the bind failed
+  with EACCES, `netsh ... excludedportrange` does not list it, and GGPO **started the
+  session anyway**, with no socket, and waited for a peer it could never hear. GGPO-X
+  now fails such a session with `GGPO_ERRORCODE_NETWORK_ERROR`, and the self-test asks
+  the system for its ports. The live test and `netplay_test.sh` moved below 32768, out
+  of every ephemeral range. The link self-test's "nobody listening" check had the same
+  fault intermittently: its port was derived from the host's ephemeral one, and a joiner
+  binds the port it dials, so some runs landed in one of Windows' reserved 100-port
+  blocks. It asks the system too now. (The direct-IP menu's default, 47885, is SWOS
+  2020's port and sits in that WSL block as well; there it fails visibly, as PORT IN
+  USE, and the field is editable.)
+- **The sleep.** Every `SDL_Delay(1)` slept 15.6 ms, so a 30000-tick loop took ~8
+  minutes to give up. See "Sleep granularity on Windows" below.
+
+### Sleep granularity on Windows
+
+Not a netplay problem, but netplay found it, and it reaches the whole game. Windows
+rounds a sleep up to its scheduler tick, 15.6 ms unless a process asks for less.
+`platform_sdl.c` asked through `SDL_HINT_TIMER_RESOLUTION`, and on the Cygwin build that
+does nothing: Cygwin ships SDL2 as sdl2-compat over SDL3, SDL3 dropped the hint, and
+SDL3 built for Cygwin sleeps through Cygwin's `nanosleep`. Measured with the hint set and
+SDL initialised:
+
+| | `SDL_Delay(1)` | `SDL_Delay(18)` |
+|---|---|---|
+| default tick | 13.8–16.6 ms | 30.1–33.0 ms |
+| after `timeBeginPeriod(1)` | 0.9–2.5 ms | 18.0–19.3 ms |
+
+18 ms is what the vsync-off frame limiter sleeps at 50 Hz, so every frame overshot by
+11 ms and the next caught up. That fits the uneven vsync-off pacing a tester reported on
+Windows (2026-09-08), though they have not yet confirmed a build with the fix.
+`main()` now calls `timeBeginPeriod(1)` itself before anything sleeps
+(`src/platform_timer.c`), and `SWOS.log` reports the measured cost of a 1 ms sleep as
+`[render] SDL_Delay(1) sleeps up to N ms` — anything near 15 means the request did not
+take.
 
 ## 4. Integrating with a match — the design
 

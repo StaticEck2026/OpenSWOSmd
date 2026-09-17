@@ -54,8 +54,11 @@ extern uint16_t   _menuBGImageCmdStream[];
 extern uint8_t   *_menuImageStreamBaseEnd;
 
 /* The port the two halves meet on. Fixed: both processes are started by the
- * same script and there is no lobby here to hand one out. */
-#define LIVE_TEST_PORT 47901
+ * same script and there is no lobby here to hand one out. Below 32768, so it is
+ * outside every system's ephemeral range -- Linux's (32768-60999), Windows'
+ * (49152-65535), and the block WSL2's mirrored networking reserves on Windows
+ * (44620-48715 here), which is where the old 47901 was. */
+#define LIVE_TEST_PORT 23901
 
 /* ---- the synthetic player -------------------------------------------------
  *

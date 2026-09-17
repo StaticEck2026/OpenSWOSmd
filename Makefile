@@ -586,6 +586,11 @@ WASM_LINK_DEPS += $(WASM_PRELOAD_FILES)
 endif
 
 LDLIBS  := $(SDL2_LIBS) -lm
+# timeBeginPeriod (src/platform_timer.c). winmm.dll is part of Windows, so the
+# shipped DLL list does not change.
+ifeq ($(BUILD_OS),windows)
+LDLIBS  += -lwinmm
+endif
 
 # ---- Netplay: GGPO-X rollback networking (docs/NETPLAY.md) ----
 # third_party/ggpo-x is C++; src/netplay.c reaches it through ggponet.h's C API.

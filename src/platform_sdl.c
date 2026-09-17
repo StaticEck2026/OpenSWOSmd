@@ -831,6 +831,22 @@ int Platform_Init(const PlatformInitOptions *opts)
                  s_display_hz == Platform_ActivePacingFps())
                     ? "vsync alone (timer disabled — rates match)"
                     : "software timer");
+
+#ifndef SWOS_WASM_BUILD   /* the browser paces a WASM frame; SDL_Delay there only busy-waits */
+        /* What a 1 ms sleep really costs on this machine. The software timer
+         * sleeps to within 2 ms of each deadline, so anything much over 2 ms
+         * here makes vsync-off pacing uneven -- 15.6 is Windows' default tick,
+         * i.e. the timer-resolution request did not take. Five samples, ~5 ms. */
+        Uint64 t0 = SDL_GetPerformanceCounter(), worst = 0;
+        for (int32_t i = 0; i < 5; i++) {
+            SDL_Delay(1);
+            Uint64 t1 = SDL_GetPerformanceCounter();
+            if (t1 - t0 > worst) worst = t1 - t0;
+            t0 = t1;
+        }
+        fprintf(stderr, "[render] SDL_Delay(1) sleeps up to %.1f ms\n",
+                (double)worst * 1000.0 / (double)SDL_GetPerformanceFrequency());
+#endif
     }
 
     /* HUD layer + its conversion scratch. Allocation failure is not fatal:
@@ -878,10 +894,11 @@ int Platform_Init(const PlatformInitOptions *opts)
      * Windows' default scheduler tick is 15.6 ms, which means a 20 ms
      * sleep often becomes 30+ ms — making the 50 Hz pacing loop alternate
      * between 20 ms and 30 ms frames and producing the "choppy / uneven
-     * framerate" testers report. SDL_HINT_TIMER_RESOLUTION asks the
-     * underlying platform timer to drop to 1 ms granularity (on Windows
-     * this is `timeBeginPeriod(1)` under the hood). Linux is already
-     * fine but the hint is harmless there. */
+     * framerate" testers report. SDL_HINT_TIMER_RESOLUTION asks a real SDL2
+     * for `timeBeginPeriod(1)`, but it is a no-op under sdl2-compat (what
+     * Cygwin ships), so main() already made that call itself —
+     * Platform_RaiseTimerResolution, src/platform_timer.c. The hint stays for
+     * a native SDL2 build and is harmless everywhere else. */
     SDL_SetHint(SDL_HINT_TIMER_RESOLUTION, "1");
 
     s_perf_freq = SDL_GetPerformanceFrequency();

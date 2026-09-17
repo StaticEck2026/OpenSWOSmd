@@ -168,4 +168,8 @@ void Platform_RequestQuit(void);
 /* Returns the host's high-resolution monotonic millisecond counter. */
 Uint64 Platform_NowMs(void);
 
+/* Ask the OS for a 1 ms sleep granularity (src/platform_timer.c). Only Windows
+ * needs it; call it before anything sleeps. Returns 0 if the request failed. */
+int32_t Platform_RaiseTimerResolution(void);
+
 #endif /* PLATFORM_SDL_H */
