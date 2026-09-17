@@ -169,12 +169,27 @@ instead of sending it — worth it when the wording is not settled, since a post
 cannot be undone.
 
 **Keep the post brief and purely technical.** What was broken, what it does now,
-and the download links. No preamble, no sign-off, no thanking anybody, no
-"exciting", no emoji padding, no summary of how hard it was. Cover ONLY the
+the build, and the download links. No preamble, no sign-off, no thanking anybody,
+no "exciting", no emoji padding, no summary of how hard it was. Cover ONLY the
 reports in `--reports`: other work that happens to be in the same drop is not
 part of this post, and neither is anything the reports did not raise. Two or
 three lines per report is the target — a player reads it to find out whether the
 thing that bit them is fixed.
+
+**Name the build.** Every post carries the build the drop was cut from, in the
+form the game itself shows it (main menu bottom line, window title, `--version`,
+first line of `SWOS.log`):
+
+```
+Build: 0abef86 (2026-09-17)
+```
+
+That is what makes a later report answerable: "is the build in your title bar
+the one with the fix?" is a question with an answer, and "did you re-download?"
+is not. It is also how a tester reporting something already fixed is spotted in
+one line instead of a reproduction attempt. `dist/.build-status` and
+`dist/.upload-status` both record the commit, and `git log --oneline -1` after
+the drop is the same string — take it from there rather than from memory.
 
 `announce: Discord refused the post (403 Forbidden)` means the bot has no **View
 Channel** + **Send Messages** on #swos-changelog — Channel Settings →
