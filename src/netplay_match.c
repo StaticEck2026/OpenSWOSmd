@@ -47,6 +47,10 @@ static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p" };
 #define LIVE_DUMP_FRAMES_MAX 8          /* SWOS_LIVE_DUMP_FRAME takes a list; this is how long */
 
 static void streamNewMatch(void);   /* SWOS_LIVE_DUMP_STREAM: a file per match, below */
+static void streamState(int32_t frame);
+static void ringNewMatch(void);     /* SWOS_LIVE_DESYNC_DUMP: the last frames, kept in memory */
+static void ringRecord(int32_t frame, const uint8_t *inputs);
+static void ringDump(int32_t desyncFrame);
 
 static struct {
     /* options */
@@ -612,6 +616,17 @@ static int32_t cbAdvance(void *ctx)
     if (r != GAME_FRAME_DONE && !(s_np.mode == NETPLAY_MATCH_P2P && r == GAME_FRAME_MATCH_OVER))
         fail("a re-simulated frame left the match loop (GameFrameResult %d)", (int)r);
     s_np.resimulated++;
+    /* Record the CORRECTED frame too, or the record is a lie on any peer that predicted:
+     * first play is what this peer guessed, and the frame GGPO finally kept is this one.
+     * Both writers key on the frame number, so this replaces the earlier pass rather than
+     * adding to it. Without it a local pair test "parts" at frame 2 on the other player's
+     * pad state, which is a prediction being compared with a correction and nothing else. */
+    if (s_np.live) {
+        int32_t done = 0;
+        Netplay_CurrentFrame(s_np.session, &done);
+        streamState(done);
+        ringRecord(done, inputs);
+    }
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     return 1;
 }
@@ -638,6 +653,8 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
         fprintf(stderr, "[netplay] desync at frame %d, noticed at frame %u (local checksum "
                         "%04X, remote %04X)\n",
                 ev->desyncFrame, s_np.frames, ev->localChecksum, ev->remoteChecksum);
+        /* Write what we kept, on BOTH peers, before the match ends and the frames go. */
+        ringDump(ev->desyncFrame);
         if (!s_np.abortWhy)
             s_np.abortWhy = "THE TWO GAMES WENT OUT OF STEP";
         break;
@@ -861,6 +878,7 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
         s_np.slowPct = (slow && slow[0]) ? atoi(slow) : 0;
         s_np.noPacing = getenv("SWOS_LIVE_NO_PACING") != NULL;
         streamNewMatch();
+        ringNewMatch();
         {
             const char *he = getenv("SWOS_LIVE_HASH_EVERY");
             const char *df = getenv("SWOS_LIVE_DUMP_FRAME");
@@ -1072,6 +1090,12 @@ static void findEnd(int32_t frame, int32_t confirmed)
  * the friendly REPLAY / EXIT screen for a press the pad could no longer deliver.) */
 static void liveEnd(int32_t outcome, const char *why)
 {
+    /* A match that ends EARLY has its frames written too, whatever ended it. The peer
+     * that notices the desync first ends the match, and the other one then sees the
+     * disconnect before its own desync event and would never write its half -- and half a
+     * pair proves nothing, because the whole method is diffing the two. */
+    if (outcome != NETPLAY_LIVE_FINISHED)
+        ringDump(-1);
     fprintf(stderr, "[netplay] live match %s at frame %d%s%s: %u frames played, %u re-simulated "
                     "after %u rollbacks; held at the prediction limit %u times; time sync asked "
                     "for %u waits, %lld ms in all, ending %lld us a frame slower\n",
@@ -1119,6 +1143,171 @@ static void p2pFinish(void)
     st.frame = (uint32_t)s_np.endFrame;
     ReplayTest_SetDriverState(&st);
     ReplayTest_Finish(0);
+}
+
+/* SWOS_LIVE_DESYNC_DUMP=<dir>: the last frames, in memory, written only if the peers part.
+ *
+ * SWOS_LIVE_DUMP_STREAM writes every frame and costs ~34 KB a frame, which is fine for a
+ * 600-frame test and hopeless for the thing actually needed here: leaving two machines
+ * playing for hours waiting for a desync that happens once in dozens of matches. So keep
+ * the last frames in a ring instead and spend the disk only when GGPO says the two have
+ * parted. The ring is longer than the detection lag (measured 16-23 frames,
+ * docs/NETPLAY.md), so the frame that parted, and the frames either side of it, are still
+ * in hand when the event arrives.
+ *
+ * The inputs go with them, for the whole match, not just the ring: 4 bytes a frame, so a
+ * 20-minute match is 336 KB. They are what makes a caught desync REPRODUCIBLE -- a state
+ * to start from and the inputs that were played, on any machine, offline, under whatever
+ * sanitizer we like. Without them a desync is a field name and a shrug.
+ *
+ * The states are written in the same SWSP stream format the per-frame dump uses, so
+ * --netplay-state-stream-diff reads them unchanged. */
+#define DESYNC_RING_FRAMES 96
+
+static struct {
+    uint8_t  *state[DESYNC_RING_FRAMES];
+    int32_t   frame[DESYNC_RING_FRAMES];
+    uint32_t  size;                 /* portable state bytes, 0 until armed */
+    int32_t   next;                 /* ring cursor */
+    int32_t   matchNo;
+    int32_t   armed;                /* -1 gave up, 0 untried, 1 running */
+    int32_t   dumped;               /* one dump per match is enough */
+    const char *dir;
+    uint8_t  *inputs;               /* 4 bytes a frame from frame 0 */
+    int32_t   inputCap, inputMax;   /* frames allocated, highest frame seen */
+} s_ring;
+
+static void ringNewMatch(void)
+{
+    int32_t i;
+    for (i = 0; i < DESYNC_RING_FRAMES; i++)
+        s_ring.frame[i] = -1;
+    s_ring.next = 0;
+    s_ring.dumped = 0;
+    s_ring.inputMax = -1;
+    s_ring.matchNo++;
+    s_ring.armed = 0;
+}
+
+static void ringRecord(int32_t frame, const uint8_t *inputs)
+{
+    int32_t slot;
+
+    if (s_ring.armed < 0 || frame < 0)
+        return;
+    if (s_ring.armed == 0) {
+        s_ring.armed = -1;
+        s_ring.dir = getenv("SWOS_LIVE_DESYNC_DUMP");
+        if (!s_ring.dir || !s_ring.dir[0])
+            return;
+        s_ring.size = SimState_PortableSize(SIM_TIER_ALL);
+        for (slot = 0; slot < DESYNC_RING_FRAMES; slot++) {
+            if (!s_ring.state[slot] && !(s_ring.state[slot] = (uint8_t *)malloc(s_ring.size))) {
+                fprintf(stderr, "[netplay] no memory for the desync ring\n");
+                return;
+            }
+        }
+        s_ring.armed = 1;
+        fprintf(stderr, "[netplay] keeping the last %d frames for a desync dump (%u bytes a "
+                        "frame, %s)\n", DESYNC_RING_FRAMES, s_ring.size, s_ring.dir);
+    }
+
+    /* A frame GGPO re-simulates overwrites its own slot rather than taking a new one, so
+     * the ring holds FRAMES, not passes, and always reaches back the same distance. */
+    for (slot = 0; slot < DESYNC_RING_FRAMES; slot++)
+        if (s_ring.frame[slot] == frame)
+            break;
+    if (slot == DESYNC_RING_FRAMES) {
+        slot = s_ring.next;
+        s_ring.next = (s_ring.next + 1) % DESYNC_RING_FRAMES;
+    }
+    s_ring.frame[slot] = frame;
+    SimState_SavePortable(s_ring.state[slot], SIM_TIER_ALL);
+
+    if (frame >= s_ring.inputCap) {
+        int32_t want = frame + 4096;
+        uint8_t *grown = (uint8_t *)realloc(s_ring.inputs, (size_t)want * 4);
+        if (!grown)
+            return;
+        memset(grown + (size_t)s_ring.inputCap * 4, 0, (size_t)(want - s_ring.inputCap) * 4);
+        s_ring.inputs = grown;
+        s_ring.inputCap = want;
+    }
+    memcpy(s_ring.inputs + (size_t)frame * 4, inputs, MATCH_PLAYERS * MATCH_INPUT_SIZE);
+    if (frame > s_ring.inputMax)
+        s_ring.inputMax = frame;
+}
+
+static void ringDump(int32_t desyncFrame)
+{
+    char path[512];
+    uint8_t hdr[16], head[4];
+    uint64_t layout;
+    FILE *f;
+    int32_t i, lo, hi, frame, written = 0;
+
+    if (s_ring.armed != 1 || s_ring.dumped)
+        return;
+    s_ring.dumped = 1;
+
+    lo = hi = -1;
+    for (i = 0; i < DESYNC_RING_FRAMES; i++) {
+        if (s_ring.frame[i] < 0)
+            continue;
+        if (lo < 0 || s_ring.frame[i] < lo) lo = s_ring.frame[i];
+        if (s_ring.frame[i] > hi)           hi = s_ring.frame[i];
+    }
+    if (lo < 0)
+        return;
+
+    /* Named by MATCH and peer, not by the desync frame: the two peers notice at slightly
+     * different frames (200 and 201 in a test), and files that do not pair up by name are
+     * files nobody diffs. */
+    snprintf(path, sizeof path, "%s/desync-m%d-p%d.bin", s_ring.dir, s_ring.matchNo,
+             s_np.player);
+    if ((f = fopen(path, "wb")) == NULL) {
+        fprintf(stderr, "[netplay] cannot write %s\n", path);
+        return;
+    }
+    memcpy(hdr, "SWSP", 4);
+    hdr[4] = (uint8_t)(s_ring.size);       hdr[5] = (uint8_t)(s_ring.size >> 8);
+    hdr[6] = (uint8_t)(s_ring.size >> 16); hdr[7] = (uint8_t)(s_ring.size >> 24);
+    layout = SimState_LayoutHash();
+    for (i = 0; i < 8; i++)
+        hdr[8 + i] = (uint8_t)(layout >> (8 * i));
+    fwrite(hdr, 1, sizeof hdr, f);
+
+    for (frame = lo; frame <= hi; frame++) {
+        for (i = 0; i < DESYNC_RING_FRAMES; i++) {
+            if (s_ring.frame[i] != frame)
+                continue;
+            head[0] = (uint8_t)(frame);       head[1] = (uint8_t)(frame >> 8);
+            head[2] = (uint8_t)(frame >> 16); head[3] = (uint8_t)(frame >> 24);
+            fwrite(head, 1, sizeof head, f);
+            fwrite(s_ring.state[i], 1, s_ring.size, f);
+            written++;
+            break;
+        }
+    }
+    fclose(f);
+
+    /* The inputs, from frame 0: <frame:4 LE><p1:2><p2:2> each, so the match can be
+     * played again offline instead of waited for again. */
+    snprintf(path, sizeof path, "%s/desync-m%d-p%d.inputs", s_ring.dir, s_ring.matchNo,
+             s_np.player);
+    if ((f = fopen(path, "wb")) != NULL) {
+        for (frame = 0; frame <= s_ring.inputMax; frame++) {
+            head[0] = (uint8_t)(frame);       head[1] = (uint8_t)(frame >> 8);
+            head[2] = (uint8_t)(frame >> 16); head[3] = (uint8_t)(frame >> 24);
+            fwrite(head, 1, sizeof head, f);
+            fwrite(s_ring.inputs + (size_t)frame * 4, 1, MATCH_PLAYERS * MATCH_INPUT_SIZE, f);
+        }
+        fclose(f);
+    }
+    fprintf(stderr, "[netplay] desync at frame %d: dumped frames %d..%d (%d) and %d frames of "
+                    "input to %s\n", (int)desyncFrame, lo, hi, written, s_ring.inputMax + 1,
+            s_ring.dir);
+    fflush(stderr);
 }
 
 /* SWOS_LIVE_DUMP_STREAM=<path>: EVERY frame's state, appended as it is played.
@@ -1481,8 +1670,10 @@ prepared:
             }
         }
     }
-    if (s_np.live)
+    if (s_np.live) {
         streamState(frame);
+        ringRecord(frame, synced);
+    }
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     if (s_np.live && s_np.abortWhy) {
         liveEnd(NETPLAY_LIVE_ENDED_EARLY, s_np.abortWhy);
