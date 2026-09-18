@@ -548,6 +548,8 @@ int main(int argc, char **argv)
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "netplay-state-diff")) != NULL) {
             return NetplayLiveTest_StateDiff(v);
+        } else if ((v = match_kv(a, "netplay-state-stream-diff")) != NULL) {
+            return NetplayLiveTest_StreamDiff(v);
         } else if ((v = match_kv(a, "netplay-live-pair")) != NULL) {
             if (NetplayLiveTest_Arm(v) != 0) {
                 fprintf(stderr, "--netplay-live-pair must be 'host' or 'join'\n");

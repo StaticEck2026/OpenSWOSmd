@@ -46,6 +46,8 @@ static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p" };
 #define LINGER_MS           3000        /* after the end: how long to wait for the peer's acks */
 #define LIVE_DUMP_FRAMES_MAX 8          /* SWOS_LIVE_DUMP_FRAME takes a list; this is how long */
 
+static void streamNewMatch(void);   /* SWOS_LIVE_DUMP_STREAM: a file per match, below */
+
 static struct {
     /* options */
     NetplayMatchMode mode;
@@ -832,6 +834,7 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
         const char *slow = getenv("SWOS_LIVE_SLOW_PCT");
         s_np.slowPct = (slow && slow[0]) ? atoi(slow) : 0;
         s_np.noPacing = getenv("SWOS_LIVE_NO_PACING") != NULL;
+        streamNewMatch();
         {
             const char *he = getenv("SWOS_LIVE_HASH_EVERY");
             const char *df = getenv("SWOS_LIVE_DUMP_FRAME");
@@ -1086,6 +1089,106 @@ static void p2pFinish(void)
     st.frame = (uint32_t)s_np.endFrame;
     ReplayTest_SetDriverState(&st);
     ReplayTest_Finish(0);
+}
+
+/* SWOS_LIVE_DUMP_STREAM=<path>: EVERY frame's state, appended as it is played.
+ *
+ * SWOS_LIVE_DUMP_FRAME asks which frame to dump, and between two machines that
+ * question cannot be answered in advance: the frame two peers part on is only known
+ * once both logs are side by side, and by then the match is over. A live match does
+ * not repeat either -- each run starts from its own clock and plays a different match
+ * -- so "run it again and dump frame F" narrows nothing. Write them all instead: one
+ * open, one buffered write per frame, ~21 MB for 600 frames, and
+ * --netplay-state-stream-diff finds the first differing frame afterwards, with the
+ * frame before it still in hand.
+ *
+ * Records carry GGPO's frame number, not the step count, so a re-simulated frame is a
+ * second record for the same number (last one wins) rather than a shift of everything
+ * after it. <path> gets the match ordinal appended, because the lobby plays a rematch
+ * and the second match must not overwrite the first.
+ *
+ * The PORTABLE encoding, not SimState_Save: two peers are two processes, and their raw
+ * saves differ in every pointer region before the match has done anything at all --
+ * a local pair test comes out 34 regions apart on frame 0 and still ends on the same
+ * hash. The portable encoding is what SimState_Hash covers (pointers as identities,
+ * typed fields big-endian), so a stream difference means what a hash difference means. */
+static struct {
+    FILE    *out;
+    uint8_t *buf;
+    uint32_t size;
+    int32_t  matchNo;
+    int32_t  state;      /* 0 = not opened for this match, 1 = open, -1 = gave up */
+    int32_t  warned;
+} s_stream;
+
+static void streamNewMatch(void)
+{
+    if (s_stream.out) {
+        fclose(s_stream.out);
+        s_stream.out = NULL;
+    }
+    s_stream.matchNo++;
+    s_stream.state = 0;
+}
+
+static void streamState(int32_t frame)
+{
+    uint8_t head[4];
+    int32_t i;
+
+    if (s_stream.state < 0)
+        return;
+    if (s_stream.state == 0) {
+        const char *path = getenv("SWOS_LIVE_DUMP_STREAM");
+        char full[512];
+        uint8_t hdr[16];
+        uint64_t layout;
+
+        s_stream.state = -1;
+        if (!path || !path[0])
+            return;
+        s_stream.size = SimState_PortableSize(SIM_TIER_ALL);
+        snprintf(full, sizeof full, "%s.m%d-p%d.bin", path, s_stream.matchNo, s_np.player);
+        if ((s_stream.out = fopen(full, "wb")) == NULL) {
+            fprintf(stderr, "[netplay] cannot write the state stream %s\n", full);
+            return;
+        }
+        if (!s_stream.buf && (s_stream.buf = (uint8_t *)malloc(s_stream.size)) == NULL) {
+            fclose(s_stream.out);
+            s_stream.out = NULL;
+            return;
+        }
+        /* The layout hash rides along so a diff can refuse two peers whose registries
+         * are not the same registry -- different builds name different bytes. */
+        memcpy(hdr, "SWSP", 4);
+        hdr[4] = (uint8_t)(s_stream.size);
+        hdr[5] = (uint8_t)(s_stream.size >> 8);
+        hdr[6] = (uint8_t)(s_stream.size >> 16);
+        hdr[7] = (uint8_t)(s_stream.size >> 24);
+        layout = SimState_LayoutHash();
+        for (i = 0; i < 8; i++)
+            hdr[8 + i] = (uint8_t)(layout >> (8 * i));
+        fwrite(hdr, 1, sizeof hdr, s_stream.out);
+        s_stream.state = 1;
+        fprintf(stderr, "[netplay] streaming every frame's state to %s (%u bytes a frame)\n",
+                full, s_stream.size);
+    }
+    head[0] = (uint8_t)(frame);
+    head[1] = (uint8_t)(frame >> 8);
+    head[2] = (uint8_t)(frame >> 16);
+    head[3] = (uint8_t)(frame >> 24);
+    if (SimState_SavePortable(s_stream.buf, SIM_TIER_ALL) != 0 && !s_stream.warned) {
+        /* A pointer with no identity is written as a value no load accepts, so the
+         * frame would compare as different for a reason that is not the desync. */
+        fprintf(stderr, "[netplay] the state stream holds pointers with no identity -- "
+                        "frame %d onwards cannot be compared between peers\n", frame);
+        s_stream.warned = 1;
+    }
+    fwrite(head, 1, sizeof head, s_stream.out);
+    fwrite(s_stream.buf, 1, s_stream.size, s_stream.out);
+    /* Flushed every frame: a match that ends in a hang, a kill or a disconnect is
+     * exactly the one whose stream is worth having. */
+    fflush(s_stream.out);
 }
 
 /* p2p: this peer's player's recorded input, GGPO's prediction of the other's, and a frame
@@ -1348,6 +1451,8 @@ prepared:
             }
         }
     }
+    if (s_np.live)
+        streamState(frame);
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     if (s_np.live && s_np.abortWhy) {
         liveEnd(NETPLAY_LIVE_ENDED_EARLY, s_np.abortWhy);

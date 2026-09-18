@@ -483,6 +483,33 @@ void NetplayLiveTest_Run(void)
     exit(NetplayMatch_Finish());
 }
 
+/* Name the registry entries two states disagree on. Shared by the single-dump diff
+ * and the stream diff below, because "which field" is the same question either way. */
+static int32_t diffRegions(const uint8_t *ba, const uint8_t *bb, int32_t portable)
+{
+    uint32_t offset = 0;
+    int32_t i, differing = 0;
+
+    for (i = 0; i < g_simStateRegionCount; i++) {
+        const SimStateRegion *reg = &g_simStateRegions[i];
+        uint32_t size;
+        if (!SimState_RegionActive(i, SIM_TIER_ALL))
+            continue;
+        size = portable ? SimState_RegionPortableSize(i) : reg->size;
+        if (memcmp(ba + offset, bb + offset, size) != 0) {
+            uint32_t k = 0;
+            while (k < size && ba[offset + k] == bb[offset + k])
+                k++;
+            if (differing < 40)
+                printf("  %-40s size %6u  first differs at byte %u: %02X vs %02X\n",
+                       reg->name, size, k, ba[offset + k], bb[offset + k]);
+            differing++;
+        }
+        offset += size;
+    }
+    return differing;
+}
+
 /* --netplay-state-diff=A,B -- name the registry entries two kick-off dumps
  * disagree on. GGPO's desync report gives two 16-bit checksums and nothing
  * else; this says which part of the match state actually differs. */
@@ -491,8 +518,8 @@ int32_t NetplayLiveTest_StateDiff(const char *spec)
     char a[256], b[256];
     const char *comma;
     uint8_t *ba = NULL, *bb = NULL;
-    uint32_t n = SimState_Size(SIM_TIER_ALL), offset = 0;
-    int32_t i, differing = 0;
+    uint32_t n = SimState_Size(SIM_TIER_ALL);
+    int32_t differing = 0;
     FILE *f;
 
     if (!spec || !(comma = strchr(spec, ',')))
@@ -514,24 +541,153 @@ int32_t NetplayLiveTest_StateDiff(const char *spec)
     fclose(f);
 
     printf("[state-diff] %s vs %s (%u bytes, %d regions)\n", a, b, n, g_simStateRegionCount);
-    for (i = 0; i < g_simStateRegionCount; i++) {
-        const SimStateRegion *reg = &g_simStateRegions[i];
-        if (!SimState_RegionActive(i, SIM_TIER_ALL))
-            continue;
-        if (memcmp(ba + offset, bb + offset, reg->size) != 0) {
-            uint32_t k = 0;
-            while (k < reg->size && ba[offset + k] == bb[offset + k])
-                k++;
-            if (differing < 40)
-                printf("  %-40s size %6u  first differs at byte %u: %02X vs %02X\n",
-                       reg->name, reg->size, k, ba[offset + k], bb[offset + k]);
-            differing++;
-        }
-        offset += reg->size;
-    }
+    differing = diffRegions(ba, bb, 0);
     printf("[state-diff] %d region(s) differ\n", differing);
     free(ba); free(bb);
     return differing != 0;
+}
+
+/* --netplay-state-stream-diff=A,B -- two SWOS_LIVE_DUMP_STREAM files, one per peer:
+ * find the FIRST frame they disagree on and name the fields, with the frame before it
+ * as the control.
+ *
+ * This is the shape a cross-machine desync actually comes in. Both peers play the same
+ * inputs and one of them ends up somewhere else, but every frame hash up to F is equal,
+ * so the interesting comparison is F against F-1: F says what parted, F-1 says what they
+ * still agreed on a frame earlier -- which is how you tell a field that went wrong here
+ * from one that was already wrong and only now reached the hash.
+ *
+ * A record is <frame:4 LE><state:size>. A re-simulated frame writes a second record for
+ * the same number; the LAST record for a frame is the one GGPO confirmed, so it wins. */
+static int32_t streamIndex(const char *path, FILE **fp, uint32_t *size, uint64_t *layout,
+                           long **offsets, int32_t *maxFrame)
+{
+    uint8_t hdr[16];
+    int32_t b;
+    FILE *f = fopen(path, "rb");
+    long cap = 0;
+
+    *fp = NULL; *offsets = NULL; *maxFrame = -1;
+    if (!f) { printf("cannot read %s\n", path); return 1; }
+    if (fread(hdr, 1, sizeof hdr, f) != sizeof hdr || memcmp(hdr, "SWSP", 4) != 0) {
+        printf("%s is not a portable state stream (no SWSP header)\n", path);
+        fclose(f);
+        return 1;
+    }
+    *size = (uint32_t)hdr[4] | ((uint32_t)hdr[5] << 8) | ((uint32_t)hdr[6] << 16) |
+            ((uint32_t)hdr[7] << 24);
+    *layout = 0;
+    for (b = 7; b >= 0; b--)
+        *layout = (*layout << 8) | hdr[8 + b];
+    if (*size == 0) { printf("%s claims a zero-byte state\n", path); fclose(f); return 1; }
+
+    for (;;) {
+        uint8_t fh[4];
+        int32_t frame;
+        long here;
+        if (fread(fh, 1, sizeof fh, f) != sizeof fh)
+            break;                       /* clean end, or a match killed mid-write */
+        frame = (int32_t)((uint32_t)fh[0] | ((uint32_t)fh[1] << 8) |
+                          ((uint32_t)fh[2] << 16) | ((uint32_t)fh[3] << 24));
+        here = ftell(f);
+        if (fseek(f, (long)*size, SEEK_CUR) != 0)
+            break;                       /* a truncated last record is not a record */
+        if (frame < 0)
+            continue;
+        if (frame >= cap) {
+            long want = frame + 256, i;
+            long *grown = (long *)realloc(*offsets, (size_t)want * sizeof(long));
+            if (!grown) { fclose(f); free(*offsets); *offsets = NULL; return 1; }
+            for (i = cap; i < want; i++)
+                grown[i] = -1;
+            *offsets = grown;
+            cap = want;
+        }
+        (*offsets)[frame] = here;        /* last record for this frame wins */
+        if (frame > *maxFrame)
+            *maxFrame = frame;
+    }
+    *fp = f;
+    return 0;
+}
+
+static int32_t streamRead(FILE *f, long off, uint8_t *buf, uint32_t size)
+{
+    return (fseek(f, off, SEEK_SET) == 0 && fread(buf, 1, size, f) == size) ? 0 : 1;
+}
+
+int32_t NetplayLiveTest_StreamDiff(const char *spec)
+{
+    char pa[256], pb[256];
+    const char *comma;
+    FILE *fa = NULL, *fb = NULL;
+    long *oa = NULL, *ob = NULL;
+    uint8_t *sa = NULL, *sb = NULL;
+    uint32_t na = 0, nb = 0;
+    uint64_t la = 0, lb = 0;
+    int32_t maxa = -1, maxb = -1, frame, first = -1, common = 0, rc = 1;
+
+    if (!spec || !(comma = strchr(spec, ',')))
+        return 1;
+    snprintf(pa, sizeof pa, "%.*s", (int)(comma - spec), spec);
+    snprintf(pb, sizeof pb, "%s", comma + 1);
+
+    if (streamIndex(pa, &fa, &na, &la, &oa, &maxa) ||
+        streamIndex(pb, &fb, &nb, &lb, &ob, &maxb))
+        goto done;
+    if (la != lb) {
+        printf("[stream-diff] the two peers do not share a registry (layout %016llx vs "
+               "%016llx) -- they were not built from the same source\n",
+               (unsigned long long)la, (unsigned long long)lb);
+        goto done;
+    }
+    if (la != SimState_LayoutHash())
+        printf("[stream-diff] note: the streams' registry (%016llx) is not this binary's "
+               "(%016llx), so the names below come from a different build\n",
+               (unsigned long long)la, (unsigned long long)SimState_LayoutHash());
+    if (na != nb) {
+        printf("[stream-diff] the two peers save different-sized states (%u vs %u) -- "
+               "different builds, or a registry that is not the same on both\n", na, nb);
+        goto done;
+    }
+    if (!(sa = (uint8_t *)malloc(na)) || !(sb = (uint8_t *)malloc(nb)))
+        goto done;
+
+    for (frame = 0; frame <= (maxa < maxb ? maxa : maxb); frame++) {
+        if (frame >= 0 && (oa[frame] < 0 || ob[frame] < 0))
+            continue;
+        if (streamRead(fa, oa[frame], sa, na) || streamRead(fb, ob[frame], sb, nb))
+            continue;
+        common++;
+        if (memcmp(sa, sb, na) != 0) { first = frame; break; }
+    }
+
+    printf("[stream-diff] %s vs %s\n", pa, pb);
+    printf("[stream-diff] %u bytes a frame, %d regions; frames up to %d and %d, %d compared\n",
+           na, g_simStateRegionCount, maxa, maxb, common);
+    if (first < 0) {
+        printf("[stream-diff] every frame both peers recorded is identical -- they did not "
+               "part in this match\n");
+        rc = 0;
+        goto done;
+    }
+    if (first > 0 && oa[first - 1] >= 0 && ob[first - 1] >= 0 &&
+        !streamRead(fa, oa[first - 1], sa, na) && !streamRead(fb, ob[first - 1], sb, nb)) {
+        int32_t before = diffRegions(sa, sb, 1);
+        printf("[stream-diff] frame %d (the one before): %d region(s) differ%s\n",
+               first - 1, before, before ? "" : " -- the peers still agreed here");
+    }
+    if (!streamRead(fa, oa[first], sa, na) && !streamRead(fb, ob[first], sb, nb)) {
+        int32_t now = diffRegions(sa, sb, 1);
+        printf("[stream-diff] frame %d is where they part: %d region(s) differ\n", first, now);
+    }
+    rc = 0;
+
+done:
+    if (fa) fclose(fa);
+    if (fb) fclose(fb);
+    free(oa); free(ob); free(sa); free(sb);
+    return rc;
 }
 
 #else  /* !SWOS_NETPLAY */
@@ -540,6 +696,7 @@ int32_t NetplayLiveTest_Arm(const char *role) { (void)role; return 1; }
 int32_t NetplayLiveTest_Armed(void) { return 0; }
 void    NetplayLiveTest_Run(void) {}
 int32_t NetplayLiveTest_StateDiff(const char *spec) { (void)spec; return 1; }
+int32_t NetplayLiveTest_StreamDiff(const char *spec) { (void)spec; return 1; }
 
 #endif /* SWOS_NETPLAY */
 #endif /* SWOS_SDL_BUILD */

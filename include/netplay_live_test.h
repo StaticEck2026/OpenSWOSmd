@@ -22,5 +22,10 @@ void    NetplayLiveTest_Run(void);
  * disagree on (SWOS_LIVE_DUMP=<dir> makes the pair test write them). */
 int32_t NetplayLiveTest_StateDiff(const char *spec);
 
+/* --netplay-state-stream-diff=A,B: the same question asked of two whole matches
+ * (SWOS_LIVE_DUMP_STREAM=<path> writes one file per peer per match) -- the first
+ * frame the two disagree on, its fields, and the frame before it as the control. */
+int32_t NetplayLiveTest_StreamDiff(const char *spec);
+
 #endif /* SWOS_SDL_BUILD */
 #endif /* NETPLAY_LIVE_TEST_H */
