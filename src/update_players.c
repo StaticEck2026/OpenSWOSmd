@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "update_players.h"
+#include "dos_mode.h"       /* _gDosGameplay: the DOS-only clear on the keeper handoff */
 #include "ball_physics.h"
 #include "ball_possession.h"
 #include "goalkeeper.h"
@@ -1117,6 +1118,33 @@ not_in_penalty:
                 int16_t dy = player->y.s.i - ball->y.s.i;
                 if (dy > 7 || dy < -7)
                     goto finalize;
+                /* DOS ONLY, and the two releases really do differ here. The DOS
+                 * build starts the pass clock and clears the attacker's pass state
+                 * on this non-penalty handoff, UNCONDITIONALLY:
+                 *
+                 *   swos-port/swos/swos.asm:114157  (cseg_805A7)
+                 *     mov [esi+TeamGeneralInfo.passKickTimer], 25
+                 *     mov [esi+TeamGeneralInfo.passingToPlayer], 0
+                 *     mov [esi+TeamGeneralInfo.passingKickingPlayer], 0
+                 *
+                 * The Amiga falls straight through to the goalie flag
+                 * (data/SWOS2.s:29951 non_penalty_handoff_after_save) and only
+                 * reaches the CONDITIONAL clear further down in
+                 * reset_possession_after_save, which is skipped whenever
+                 * goalkeeperSavedCommentTimer is negative (`bmi`).
+                 *
+                 * The consequence is visible: with the pointer left set, the
+                 * player-selection loops skip that player (they refuse
+                 * passingKickingPlayer), so control does not come back to the
+                 * man who shot. tests/dos/shootout-08200245 diverged on exactly
+                 * that at frame 2285 -- DOS handing control back, us leaving it
+                 * null -- and the shot's result banner followed 400 frames later. */
+                if (_gDosGameplay) {
+                    TeamGeneralInfo *opp = team->opponentsTeam;
+                    team->passKickTimer = 25;
+                    opp->passingToPlayer = 0;
+                    opp->passingKickingPlayer = (Sprite *)0;
+                }
             }
 
             /* flag_goalie_intervention_and_slow_player */

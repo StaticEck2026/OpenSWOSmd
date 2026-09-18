@@ -376,15 +376,18 @@ last number is the honest headline: 100% of it is not reachable against a DOS
 corpus (see "Can we claim 100% accurate?"), but it moves for exactly one reason,
 which is a defect being fixed.
 
-The shape of the results, as of the run in that file: **1252-14519** frames at
-`scalars`, **1251-21927** at `info` and at `sprites` — **40.9%** of every
-recorded frame in the corpus at `scalars` and **40.8%** at `sprites`, which are
-now within a tenth of a point of each other — and **401 of 416**
-on the per-player match values (the `values` column — a setup-state check that
-runs before frame 0; see "The player-price audit"). Every recording is in those
-ranges now: `zkz-10174427`'s frame-0 stop was the coverage byte that
-`--dos-gameplay` was not switching, and with the DOS formations plus the two
-AI defects it uncovered it now runs to 14519.
+The shape of the results, as of the run in that file: **every recording in the
+corpus replays to its last frame** at `scalars`, `teams` and `info` — 100.0% of
+297918 recorded frames — and 99.9% at `sprites`, where two recordings stop a few
+frames short (`zkz-10173518` at 99.6%, `zkz-10174427` at 99.3%). The `values`
+column, the setup-state check that runs before frame 0, is 32/32 on all but
+those same two.
+
+That is a different claim from the one this section used to make (40.9% at
+`scalars`), and it is worth being clear about why it moved: each percentage
+point came from a defect found and fixed, the last of them the DOS-only clear on
+the goalkeeper handoff that `shootout-08200245` exposed — it stopped at 11% and
+now runs complete.
 
 Four things to read into them:
 
