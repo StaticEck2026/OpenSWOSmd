@@ -18,6 +18,23 @@ typedef int int32_t;
  * Returns direction 0..255 (or 0xFFFF if no movement).
  * outDeltaX/outDeltaY receive 32-bit fixed-point deltas (16×16 muls result).
  */
+/* An m68k `lsl` on a signed register shifts the BIT PATTERN, and the port is full of
+ * registers held as int32_t. `v << n` with v negative is UNDEFINED in C -- and the two
+ * netplay platforms are built by different compilers (gcc on Linux and Cygwin, clang on
+ * macOS), so "every compiler does the obvious thing" is a bet, not a guarantee, and a
+ * simulation that loses that bet desyncs. Shift the unsigned value and convert back,
+ * which is defined, is what the 68k did, and compiles to the same instruction.
+ * UBSan over the corpus named three sites (ball_physics.c, sprites.c). */
+static inline int32_t M68kShiftLeft32(int32_t v, int32_t n)
+{
+    return (int32_t)((uint32_t)v << n);
+}
+
+static inline int16_t M68kShiftLeft16(int16_t v, int32_t n)
+{
+    return (int16_t)((uint16_t)v << n);
+}
+
 uint16_t CalculateDeltaXAndY(int16_t destX, int16_t destY,
                                int16_t srcX, int16_t srcY,
                                int16_t speed,

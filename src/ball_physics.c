@@ -324,9 +324,9 @@ CalculateNextBallPosition(void)
         }
 
     scale8:
-        d1 <<= 3;
-        d2 <<= 3;
-        d4 <<= 3;
+        d1 = M68kShiftLeft32(d1, 3);
+        d2 = M68kShiftLeft32(d2, 3);
+        d4 = M68kShiftLeft32(d4, 3);
         d7 >>= 3;
         do {
             d5 += d1;
@@ -337,9 +337,9 @@ CalculateNextBallPosition(void)
         goto store;
 
     scale4:
-        d1 <<= 2;
-        d2 <<= 2;
-        d4 <<= 2;
+        d1 = M68kShiftLeft32(d1, 2);
+        d2 = M68kShiftLeft32(d2, 2);
+        d4 = M68kShiftLeft32(d4, 2);
         d7 >>= 2;
         do {
             d5 += d1;
@@ -350,9 +350,9 @@ CalculateNextBallPosition(void)
         goto store;
 
     scale2:
-        d1 <<= 1;
-        d2 <<= 1;
-        d4 <<= 1;
+        d1 = M68kShiftLeft32(d1, 1);
+        d2 = M68kShiftLeft32(d2, 1);
+        d4 = M68kShiftLeft32(d4, 1);
         d7 >>= 1;
         do {
             d5 += d1;

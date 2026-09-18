@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "ball_possession.h"
+#include "math68k.h"  /* M68kShiftLeft16: a signed left shift is UB, and the two platforms differ */
 #include "game_types.h"
 
 /* ---- External globals ---- */
@@ -208,7 +209,7 @@ DoPass(Sprite *player, TeamGeneralInfo *team)
                 int16_t dx = targetPlayer->x.s.i - ball->x.s.i;
                 if (!((_currentGameTick >> 5) & 1))  /* btst #5,currentGameTick+1 -> bne */
                     dx >>= 1;
-                dx <<= 5;
+                dx = M68kShiftLeft16(dx, 5);
                 dx += ball->x.s.i;
                 ball->destX = dx;
             }
@@ -216,7 +217,7 @@ DoPass(Sprite *player, TeamGeneralInfo *team)
                 int16_t dy = targetPlayer->y.s.i - ball->y.s.i;
                 if ((_currentGameTick >> 5) & 1)     /* btst #5,currentGameTick+1 -> beq */
                     dy >>= 1;
-                dy <<= 5;
+                dy = M68kShiftLeft16(dy, 5);
                 dy += ball->y.s.i;
                 ball->destY = dy;
             }
@@ -244,8 +245,8 @@ DoPass(Sprite *player, TeamGeneralInfo *team)
                     if (testY < 0 || testY >= 880)
                         break;
                 }
-                d1 <<= 1;
-                d2 <<= 1;
+                d1 = M68kShiftLeft16(d1, 1);
+                d2 = M68kShiftLeft16(d2, 1);
             }
 
             ball->destX = ball->x.s.i + d1;

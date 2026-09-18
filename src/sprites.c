@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "sprites.h"
+#include "math68k.h"
 #include "game_types.h"
 #include "display.h"
 #include "deterministic.h"
@@ -2521,8 +2522,9 @@ void BuildSpriteBandAndGeneralRenderStacks(void)
         if (_overlayActiveFlag != 0 || a0->pixWidth > 16) {
 #endif
             /* Wide sprite: update occlusion buckets and go to general stack */
-            int16_t leftBucket = (d1 >> 4) << 1;
-            int16_t rightBucket = ((d1 + a0->pixWidth - 1) >> 4) << 1;
+            /* `>> 4` then `<< 1` on a negative x: the shift left is UB (include/math68k.h). */
+            int16_t leftBucket = M68kShiftLeft16((int16_t)(d1 >> 4), 1);
+            int16_t rightBucket = M68kShiftLeft16((int16_t)((d1 + a0->pixWidth - 1) >> 4), 1);
 #ifdef SWOS_SDL_BUILD
             /* Clamp the column span to the occlusion array. a3 = occlBuckets_combined+5,
              * so the valid a3 index is [-5, OCCL_ACTIVE_BUCKETS-1]; a sprite spanning past
