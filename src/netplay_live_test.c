@@ -500,9 +500,18 @@ static int32_t diffRegions(const uint8_t *ba, const uint8_t *bb, int32_t portabl
             uint32_t k = 0;
             while (k < size && ba[offset + k] == bb[offset + k])
                 k++;
-            if (differing < 40)
-                printf("  %-40s size %6u  first differs at byte %u: %02X vs %02X\n",
-                       reg->name, size, k, ba[offset + k], bb[offset + k]);
+            if (differing < 40) {
+                char where[96];
+                /* Name the FIELD, not just the byte: the native offset it prints is the
+                 * one game_types.h's struct member sits at, which is the difference
+                 * between "region _ballSprite byte 42" and "direction". */
+                if (portable)
+                    SimState_DescribePortableByte(i, k, where, sizeof where);
+                else
+                    snprintf(where, sizeof where, "byte %u", k);
+                printf("  %-40s size %6u  %-22s  %02X vs %02X\n",
+                       reg->name, size, where, ba[offset + k], bb[offset + k]);
+            }
             differing++;
         }
         offset += size;

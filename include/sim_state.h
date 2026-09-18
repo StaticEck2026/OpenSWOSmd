@@ -148,6 +148,13 @@ uint64_t SimState_LayoutHash(void);
  * the kind and the identity word, or 0 if nothing it knows contains it. */
 int      SimState_PointerIdentity(const void *p, uint32_t *kind, uint32_t *identity);
 
+/* Which field a differing byte of the PORTABLE encoding belongs to: writes something like
+ * "[3 of 40] +42 word16" -- the element, and the NATIVE offset, which is what the struct in
+ * game_types.h names. Returns 0 (and "byte N") when the region has no usable layout. */
+#ifdef SWOS_SDL_BUILD
+int      SimState_DescribePortableByte(int32_t index, uint32_t offset, char *out, uint32_t outLen);
+#endif
+
 /* NULL, or why region `index`'s layout does not describe it (fields that do not tile
  * the element exactly, a region that is not a whole number of elements). */
 const char *SimState_LayoutError(int32_t index);

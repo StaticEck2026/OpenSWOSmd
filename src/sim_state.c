@@ -43,6 +43,9 @@
  * _s_pitchFullPtrs (pitch.c) mirrors the fan tile slots of _pitchDatBuffer at full
  * pointer width for the renderer; SimState_Load rebuilds it from the slots.
  */
+#ifdef SWOS_SDL_BUILD
+#include <stdio.h>      /* SimState_DescribePortableByte only; the m68k build has no stdio */
+#endif
 #include "sim_state.h"
 #include "game_types.h"
 #include "animated_patterns.h"
@@ -841,6 +844,20 @@ static uint32_t portable_width(const SimField *f)
     return f->type == SIM_FIELD_POINTER ? 4u : host_width(f);
 }
 
+static const char *field_type_name(uint8_t t)
+{
+    switch (t) {
+    case SIM_FIELD_BYTES:     return "bytes";
+    case SIM_FIELD_WORD16:    return "word16";
+    case SIM_FIELD_WORD32:    return "word32";
+    case SIM_FIELD_POINTER:   return "pointer";
+    case SIM_FIELD_TILE_SLOT: return "tile";
+    case SIM_FIELD_LOCAL16:   return "local16";
+    case SIM_FIELD_LOCAL32:   return "local32";
+    default:                  return "?";
+    }
+}
+
 static uint32_t portable_stride(const SimLayout *l)
 {
     uint32_t n = 0;
@@ -848,6 +865,51 @@ static uint32_t portable_stride(const SimLayout *l)
         n += portable_width(&l->fields[k]);
     return n;
 }
+
+#ifdef SWOS_SDL_BUILD
+/* Which FIELD a differing portable byte belongs to. A diff that says "region _ballSprite,
+ * byte 42" leaves the reader to redo by hand what this file already knows -- walking the
+ * layout to turn that into an element and a field. The native offset is the useful half:
+ * it is what game_types.h's struct says, so it names the member. */
+int SimState_DescribePortableByte(int32_t index, uint32_t offset, char *out, uint32_t outLen)
+{
+    const SimStateRegion *r;
+    const SimLayout *l;
+    uint32_t pstride, elem, within, at = 0, elems, i;
+
+    if (!out || outLen == 0)
+        return 0;
+    out[0] = 0;
+    if (index < 0 || index >= g_simStateRegionCount)
+        return 0;
+    r = &g_simStateRegions[index];
+    l = r->layout;
+    if (!l || l->fieldCount == 0 || (pstride = portable_stride(l)) == 0) {
+        snprintf(out, outLen, "byte %u", offset);
+        return 0;
+    }
+    elems = l->stride ? r->size / l->stride : 1;
+    elem = offset / pstride;
+    within = offset % pstride;
+    for (i = 0; i < l->fieldCount; i++) {
+        const SimField *f = &l->fields[i];
+        uint32_t w = portable_width(f);
+        if (within < at + w) {
+            if (elems > 1)
+                snprintf(out, outLen, "[%u of %u] +%u %s%s", elem, elems, f->offset,
+                         field_type_name(f->type),
+                         f->count > 1 ? " (array)" : "");
+            else
+                snprintf(out, outLen, "+%u %s%s", f->offset, field_type_name(f->type),
+                         f->count > 1 ? " (array)" : "");
+            return 1;
+        }
+        at += w;
+    }
+    snprintf(out, outLen, "byte %u", offset);
+    return 0;
+}
+#endif /* SWOS_SDL_BUILD */
 
 /* One element, this build's bytes at `src` to portable bytes at `dst`. `hashing`: for the
  * checksum peers compare, where a LOCAL field (this display's, not the match's) counts as
