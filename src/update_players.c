@@ -1619,6 +1619,13 @@ not_in_penalty:
                 Sprite *passTarget = team->passToPlayerPtr;
                 if (passTarget == (Sprite *)0 ||
                     passTarget->ballDistance >= player->ballDistance) {
+                    /* Tackle site 1 of 2: `begin_tackle_and_clear_control`
+                     * (data/SWOS2.s:30428) = `@@begin_tackling`
+                     * (swos-port/swos/swos.asm:115123). NO opponent clears here, in
+                     * EITHER release -- site 2 below has them and this one does not,
+                     * and that asymmetry is deliberate in both. Adding them here
+                     * because site 2's asm reads like this one's took nine recordings
+                     * from 100% to 11-66% on camera_y (2026-09-17). */
                     team->headerOrTackle = 1;
                     PlayerBeginTackling(team->currentAllowedDirection, player, team);
                     team->ballCanBeControlled = 0;
@@ -2252,6 +2259,10 @@ not_in_penalty:
             if (team->ballLessEqual4 || team->ball4To8) {
                 Sprite *ctrl = team->controlledPlayer;
                 if (ctrl == (Sprite *)0 || ctrl->ballDistance >= player->ballDistance) {
+                    /* Tackle site 2 of 2: `tackle_start_and_clear_control`
+                     * (data/SWOS2.s:31139) = `cseg_82CE1`
+                     * (swos-port/swos/swos.asm:116491). THIS one clears the
+                     * opponent's pass state, in both releases; site 1 above does not. */
                     team->headerOrTackle = 1;
                     PlayerBeginTackling(team->currentAllowedDirection, player, team);
                     team->ballCanBeControlled = 0;
