@@ -629,11 +629,43 @@ int Platform_Init(const PlatformInitOptions *opts)
     static char s_title[96];
     snprintf(s_title, sizeof s_title, "OpenSWOS %s (%s)", Build_Id(), Build_Platform());
 
+    /* [video] resolution=WxH IS THE CLIENT AREA, when one is named.
+     *
+     * It used to set only the render ASPECT, so "resolution=320x200, scale=1" opened a
+     * 436x272 window -- the number in the file appeared nowhere on screen, which is what a
+     * tester reported. A resolution the game never shows you is a strange thing to ask a
+     * player to set, so now it is exactly the size of the client rect and `scale` applies
+     * only to 'auto'. The render is letterboxed inside it by SDL_RenderSetLogicalSize,
+     * which is already how fullscreen works. */
+    int client_w = (int)_screen_width * win_scale;
+    int client_h = PLATFORM_SCREEN_H * win_scale;
+    int pinned = 0;
+    if (opts && opts->res_w > 0 && opts->res_h > 0 && fs_mode == PLATFORM_FULLSCREEN_NONE) {
+        client_w = opts->res_w;
+        client_h = opts->res_h;
+        pinned = 1;
+#ifndef SWOS_WASM_BUILD
+        /* A window bigger than the monitor is not a setting, it is a mistake nobody can
+         * undo from inside the game -- the title bar ends up off-screen. Clamp to the
+         * usable area, keeping the shape asked for. */
+        {
+            SDL_Rect ub;
+            if (SDL_GetDisplayUsableBounds(screen, &ub) == 0 && ub.w > 0 && ub.h > 0 &&
+                (client_w > ub.w || client_h > ub.h)) {
+                int fit_w = ub.w, fit_h = (int)((long)ub.w * client_h / client_w);
+                if (fit_h > ub.h) { fit_h = ub.h; fit_w = (int)((long)ub.h * client_w / client_h); }
+                fprintf(stderr, "[video] %dx%d does not fit this display, using %dx%d\n",
+                        client_w, client_h, fit_w, fit_h);
+                client_w = fit_w; client_h = fit_h;
+            }
+        }
+#endif
+    }
     s_window = SDL_CreateWindow(
         s_title,
         SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
         SDL_WINDOWPOS_CENTERED_DISPLAY(screen),
-        _screen_width * win_scale, PLATFORM_SCREEN_H * win_scale,
+        client_w, client_h,
         wflags);
     if (!s_window) {
         fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
@@ -684,15 +716,20 @@ int Platform_Init(const PlatformInitOptions *opts)
             int bt = 0, bl = 0, bb = 0, br = 0;
             SDL_GetWindowBordersSize(s_window, &bt, &bl, &bb, &br);
 
-            /* Shrink until the DECORATED window fits the usable area. */
-            while (win_scale > 1 &&
-                   ((int)_screen_width * win_scale + bl + br > ub.w ||
-                    PLATFORM_SCREEN_H * win_scale + bt + bb > ub.h)) {
-                win_scale--;
+            /* Shrink until the DECORATED window fits the usable area. A PINNED client
+             * size is left alone: the player asked for that many pixels, and shrinking it
+             * to an integer multiple of the render size is exactly what this change is
+             * undoing. It still gets moved on-screen below. */
+            if (!pinned) {
+                while (win_scale > 1 &&
+                       ((int)_screen_width * win_scale + bl + br > ub.w ||
+                        PLATFORM_SCREEN_H * win_scale + bt + bb > ub.h)) {
+                    win_scale--;
+                }
+                SDL_SetWindowSize(s_window,
+                                  _screen_width * win_scale,
+                                  PLATFORM_SCREEN_H * win_scale);
             }
-            SDL_SetWindowSize(s_window,
-                              _screen_width * win_scale,
-                              PLATFORM_SCREEN_H * win_scale);
             s_win_scale_current = win_scale;
 
             /* Reposition so the full frame (client + borders) sits inside the
