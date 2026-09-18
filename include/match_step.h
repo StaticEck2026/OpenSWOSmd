@@ -53,6 +53,12 @@ int32_t MatchStep_TeamOwner(const TeamGeneralInfo *team);
 /* Kick-off: no button held, no bench call pending. */
 void    MatchStep_Reset(void);
 
+/* The DOS second fire button in local play: opens the subs menu of the team this player
+ * controls, which is what DOS's secondaryFire does (swos.asm:92110). DOS mode only -- the
+ * Amiga has no second button, its bench is the 'W' scancode. Netplay carries the same
+ * press as MATCH_BENCH (bit 6, the bit DOS reads it from) and needs nothing here. */
+void    MatchStep_LocalBenchButton(int32_t player, int32_t pressed);
+
 /* Put both players' input where the game reads it: the joystick registers, the fire bits,
  * the bench calls and the key buffer. `frame` numbers the log lines; -1 keeps a frame
  * being re-simulated quiet. */

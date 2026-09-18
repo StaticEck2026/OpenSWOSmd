@@ -70,6 +70,51 @@ static void callBench(int32_t team)
     else           _bench2Called = 1;
 }
 
+/* THE DOS SECOND FIRE BUTTON, in local play.
+ *
+ * DOS routes it through TeamGeneralInfo.secondaryFire and BenchCheckControls opens the
+ * substitutes menu on it: `mov al, subsSecondaryFire / or al, al / js
+ * @@enter_substitutes_menu` (swos-port/swos/swos.asm:92110). The AMIGA HAS NO SECOND
+ * BUTTON -- its bench is the 'W' scancode through MainKeysCheck, which this port already
+ * has and which is not touched -- so this is DOS-mode only, and the caller checks that.
+ *
+ * It ends at the same callBench() the recorded MATCH_BENCH bit uses, so local play, a
+ * recording and a netplay peer all open the bench by one path. Netplay needs nothing
+ * extra: the press travels as MATCH_BENCH, which is bit 6, the same bit DOS reads the
+ * second button from.
+ *
+ * Edge-triggered, and it defers while the ball is in play exactly as the frame step does
+ * -- opening the bench mid-move is what that guard is for. */
+void MatchStep_LocalBenchButton(int32_t player, int32_t pressed)
+{
+    static int32_t s_wasDown[MATCH_PLAYERS];
+    static int32_t s_pending[2];
+    const TeamGeneralInfo *team[2] = { &_topTeamData, &_bottomTeamData };
+    int32_t i;
+
+    if (player < 1 || player > MATCH_PLAYERS)
+        return;
+
+    for (i = 0; i < 2; i++) {
+        if (s_pending[i] && _gameStatePl == 0) {
+            callBench(i);
+            s_pending[i] = 0;
+        }
+    }
+    if (pressed && !s_wasDown[player - 1]) {
+        for (i = 0; i < 2; i++) {
+            if (MatchStep_TeamOwner(team[i]) != player)
+                continue;
+            if (_gameStatePl != 0)
+                s_pending[i] = 1;
+            else
+                callBench(i);
+            break;
+        }
+    }
+    s_wasDown[player - 1] = pressed ? 1 : 0;
+}
+
 void MatchStep_ApplyInput(const MatchPlayerInput in[MATCH_PLAYERS], int32_t frame)
 {
     MatchInputLatch *latch = &g_matchInputLatch;

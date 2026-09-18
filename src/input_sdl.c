@@ -27,6 +27,8 @@
 #include <SDL.h>
 #include <stdio.h>
 #include <string.h>
+#include "match_step.h"   /* MatchStep_LocalBenchButton: the DOS second button */
+#include "dos_mode.h"     /* _gDosGameplay */
 
 /* ---- Game-side globals (defined in swos_globals.c) ---- */
 extern uint8_t  _keyState[128];
@@ -657,6 +659,23 @@ void InputSDL_ReleaseAll(void)
     _ciaa_pra |= (uint8_t)((1u << 7) | (1u << 6));     /* active low: both fire buttons up */
 }
 
+/* The DOS SECOND FIRE BUTTON (pad X), which opens the substitutes menu of the team this
+ * player controls -- swos.asm routes it through TeamGeneralInfo.secondaryFire and
+ * BenchCheckControls enters the menu on it. The AMIGA HAS NO SECOND BUTTON, so every
+ * caller checks _gDosGameplay first and the Amiga input path is byte-for-byte unchanged.
+ *
+ * X, not B: A and B are both already fire (B is also the skip button), and a button that
+ * shoots and opens the bench at once is not a second button. A keyboard player keeps the
+ * 'W' scancode, which is the port's bench key in both modes. */
+static int pad_secondary(int slot)
+{
+    if (slot < 0 || slot >= (int)(sizeof s_pads / sizeof s_pads[0]))
+        return 0;
+    if (s_pads[slot])
+        return SDL_GameControllerGetButton(s_pads[slot], SDL_CONTROLLER_BUTTON_X) ? 1 : 0;
+    return 0;
+}
+
 /* This machine's own controls, as MATCH_* bits, for a netplay match.
  *
  * A netplay peer always drives the LOCAL half from player 1's keyboard and
@@ -682,6 +701,11 @@ uint8_t InputSDL_LocalMatchControls(void)
     if (left)  bits |= 0x04;    /* MATCH_LEFT  */
     if (right) bits |= 0x08;    /* MATCH_RIGHT */
     if (fire)  bits |= 0x20;    /* MATCH_FIRE  */
+    /* DOS's second button, on the wire as MATCH_BENCH -- the same bit 6 DOS reads it
+     * from. The frame step turns it into callBench for the team this player controls, so
+     * a netplay peer needs nothing else. Amiga mode never sets it. */
+    if (_gDosGameplay && pad_secondary(0))
+        bits |= 0x40;          /* MATCH_BENCH */
     return bits;
 }
 
@@ -727,4 +751,12 @@ void InputSDL_PostFrame(void)
     else         _ciaa_pra |= (uint8_t)(1u << 7);
     if (p2_fire) _ciaa_pra &= (uint8_t)~(1u << 6);
     else         _ciaa_pra |= (uint8_t)(1u << 6);
+
+    /* DOS's second button in LOCAL play. The registers above carry what the Amiga has;
+     * this is the one input DOS has and the Amiga does not, so it goes in beside them
+     * rather than through them, and only in DOS mode. */
+    if (_gDosGameplay) {
+        MatchStep_LocalBenchButton(1, pad_secondary(0));
+        MatchStep_LocalBenchButton(2, pad_secondary(1));
+    }
 }
