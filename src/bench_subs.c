@@ -137,7 +137,9 @@ extern TeamGame _topTeamInGame;
 extern TeamGame _bottomTeamInGame;
 extern uint8_t  _plOrdinalsTable[];
 extern uint8_t  _plNamesLengthTableCopy[];
-extern uint16_t _ingameTeamPlayerOffsets[];
+/* 16 slots: 11 on the pitch and 5 on the bench (swos_amiga_data_imports.c). */
+#define INGAME_TEAM_PLAYER_SLOTS 16
+extern uint16_t _ingameTeamPlayerOffsets[INGAME_TEAM_PLAYER_SLOTS];
 extern void *_positionsTable[];
 extern AnimTable _playerNormalStandingAnimTable;
 
@@ -1069,10 +1071,28 @@ markPlayersMenuHandler(void)
     TeamGame *a0;
     uint16_t off;
 
-    /* check for long fire press -> toggle marked player */
+    /* Check for a long fire press -> toggle the marked player. NOTHING HIGHLIGHTED,
+     * NOTHING TO MARK: _plToBeSubstitutedPos is 0xFFFF whenever the cursor is not on a
+     * player, and both originals index the table with it anyway.
+     *
+     * They do not even agree on where that lands. The Amiga's `move.w (a1,d0.w),d0`
+     * SIGN-extends (SWOS2.s, MarkPlayersMenuHandler), so index -1 reads the two bytes
+     * BEFORE the table -- the low half of a POINTER, the last dc.l of
+     * teamFilenamesTable. DOS's `movzx ebx, word ptr D0` (swos.asm:91766) ZERO-extends
+     * and reads 131070 bytes PAST it. Two releases, two different pieces of garbage, and
+     * this port inherited the DOS one.
+     *
+     * Whatever it lands on gates a WRITE to markedPlayer, which is match state (it is in
+     * the replay setup and travels in the netplay setup). A value that depends on what
+     * the linker happened to put 128 KB away is exactly the shape of the goalkeeper
+     * price bug -- there the two platforms disagreed and the match desynced. Found by
+     * AddressSanitizer over the corpus: one site in 90 runs, 50 hits in a single match.
+     *
+     * So the read only happens for an index the table actually has. A long press with no
+     * player highlighted now does nothing, which is what it means. */
     a0 = (TeamGame *)_benchTeamGame;
-    off = _ingameTeamPlayerOffsets[_plToBeSubstitutedPos];
-    {
+    if (_plToBeSubstitutedPos < INGAME_TEAM_PLAYER_SLOTS) {
+        off = _ingameTeamPlayerOffsets[_plToBeSubstitutedPos];
         PlayerInfo *pi = piFromOffset(a0, off);
         if ((uint8_t)pi->numYellowCards < 2) {
             if (_subsFireTimer == 8) {
