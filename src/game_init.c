@@ -1039,6 +1039,21 @@ void InitializeInGameTeamsAndStartGame(int16_t randomizePitch, int16_t minSubs,
     uint32_t avail;
 
     _hilStarted = 0;
+    /* The Rand2 save stack starts empty for every match.
+     *
+     * SaveRand2State / RestoreRand2State push and pop 3 bytes of secondary-generator
+     * state through _savedRandStatePtr, and every caller is balanced, so the pointer is
+     * normally back at the base by now -- but "normally" is not a guarantee a match
+     * should rest on, and it is the one piece of RNG state that InitDeterministicMode
+     * resets which netplay's setup does NOT carry across (src/netplay_setup.c sends all
+     * six generator bytes and what they are re-seeded from; there is nowhere in that blob
+     * for a stack depth). Two peers that came to the lobby through different menus would
+     * start a match with the pointer at different depths, and the deeper one would panic
+     * (0x9793) rather than desync -- but neither belongs in a match, and this costs a
+     * store. Nothing saves state across a kick-off: the callers are the career screens
+     * and ApplyTeamTactics, each balanced inside one function. */
+    { extern uint8_t _savedRandState[]; extern uint8_t *_savedRandStatePtr;
+      _savedRandStatePtr = _savedRandState; }
     _plgD0Param = (uint16_t)randomizePitch;
     _maxSubsPerTeam = (uint16_t)minSubs;
     _gameMaxSubstitutes = (uint16_t)maxSubs;
