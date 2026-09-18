@@ -745,6 +745,38 @@ end, never did:
 `SWOS_LIVE_DUMP=<dir>` writes each peer's state at the first frame step and
 `--netplay-state-diff=A,B` names the regions that differ; that is how both were found.
 
+**A desync that happens mid-match needs a different tool**, because it names no frame:
+
+```
+SWOS_LIVE_HASH_EVERY=1            a [live] hash line every frame, not every 100
+SWOS_LIVE_DUMP=<dir> SWOS_LIVE_DUMP_FRAME=399,400    those frames' states
+SWOS_LIVE_DUMP_STREAM=<path>      EVERY frame, to <path>.m<match>-p<peer>.bin
+bin/SWOS.x86_64 --netplay-state-stream-diff=A,B      where they part, and what differs
+```
+
+`SWOS_LIVE_DUMP_FRAME` needs the frame number in advance, which is fine for a desync
+that repeats and useless for one between two machines: the frame two peers part on is
+only known once both logs are side by side, and by then the match is over. A live match
+does not repeat either — each run starts from its own clock and plays a different match.
+`SWOS_LIVE_DUMP_STREAM` writes every frame instead (~20 MB per 600-frame match, one
+open and one buffered write a frame) and the stream diff finds the first differing
+frame afterwards, printing the frame BEFORE it as the control: that pair is the whole
+point, since it separates a field that went wrong here from one that was already wrong
+and has only now reached the hash.
+
+The stream is the **portable** encoding, not `SimState_Save`: two peers are two
+processes, and their raw saves differ in every pointer region from frame 0 while ending
+on the same hash (a passing local pair test measures 34 regions apart). Records carry
+GGPO's frame number, so a re-simulated frame replaces its own earlier record rather than
+shifting the rest, and the header carries `SimState_LayoutHash` so the diff can refuse
+two peers whose registries are not the same registry.
+
+One caveat when reading a diff: each peer's own pad state is in the registry
+(`_pl1Direction`, `_pl1Down`, …), and in a test where both sides generate their own
+input — `scripts/netplay_live_test.sh` — those regions genuinely differ from the second
+frame on without the match having desynced. A matchmaker-driven AI-vs-AI run has no
+local input at all, which is why it is the clean way to chase a platform divergence.
+
 **The team list is a modal menu**, and nothing polls the link while it is up — the other
 player would see this one go quiet and drop the connection after six seconds. The lobby
 installs `Platform_SetFrameHook(P2PLink_Poll)`, which `Platform_VBlank` runs on every frame
