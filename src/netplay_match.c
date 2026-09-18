@@ -93,6 +93,7 @@ static struct {
     int32_t          hashEvery;           /* live: SWOS_LIVE_HASH_EVERY, frames between hash lines */
     int32_t          dumpFrames[LIVE_DUMP_FRAMES_MAX];  /* live: SWOS_LIVE_DUMP_FRAME, dump the state at these */
     int32_t          dumpFrameCount;
+    int32_t          desyncFrame;         /* live: SWOS_LIVE_DESYNC_FRAME, go out of step on purpose */
     const char      *abortWhy;            /* live: a reason to end the match early, for the player */
 
     /* per frame, from its last save: the state hashes, and whether the match is over */
@@ -513,6 +514,27 @@ static GameFrameResult step(const uint8_t *inputs, int32_t logFrame, int32_t com
     for (p = 0; p < MATCH_PLAYERS; p++)
         MatchStep_UnpackInput(&in[p], inputs + p * MATCH_INPUT_SIZE);
     MatchStep_ApplyInput(in, logFrame);
+    /* SWOS_LIVE_DESYNC_FRAME=N on ONE peer: simulate frame N differently, on purpose, so
+     * what happens when two peers go out of step can be watched instead of waited for.
+     * One bit of _seed is a real divergence: _seed is a COUNTER, so the two Rand()
+     * streams stay one step apart for the rest of the match, and it is in the checksummed
+     * SIM tier.
+     *
+     * INSIDE the frame, and re-applied every time GGPO simulates that frame -- which is
+     * what a real divergence is, and what makes it survive. Applied after the step
+     * instead, it was undone by the first rollback (the state GGPO saved for that frame
+     * predates it), and the peers quietly re-converged: satellite "detected" 0 of 5
+     * injected desyncs because there was no longer one to find. */
+    if (s_np.live && s_np.desyncFrame > 0) {
+        int32_t dsFrame = 0;
+        Netplay_CurrentFrame(s_np.session, &dsFrame);
+        if (dsFrame == s_np.desyncFrame) {
+            extern uint8_t _seed;
+            _seed ^= 0x01;
+            fprintf(stderr, "[netplay] TEST: simulating frame %d out of step on purpose "
+                            "(SWOS_LIVE_DESYNC_FRAME)\n", dsFrame);
+        }
+    }
     r = GameLoop_Frame();
     if (r != GAME_FRAME_DONE && r != GAME_FRAME_HELD)
         return r;
@@ -610,8 +632,12 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
         if (!s_np.live)
             fail("GGPO reports a desync at frame %d (local checksum %04X, remote %04X)",
                  ev->desyncFrame, ev->localChecksum, ev->remoteChecksum);
-        fprintf(stderr, "[netplay] desync at frame %d (local checksum %04X, remote %04X)\n",
-                ev->desyncFrame, ev->localChecksum, ev->remoteChecksum);
+        /* Two frame numbers, because they are never the same one and the gap is the
+         * interesting half: the checksums for a frame are only compared once both peers
+         * have CONFIRMED it, so a slow link is found out later, not differently. */
+        fprintf(stderr, "[netplay] desync at frame %d, noticed at frame %u (local checksum "
+                        "%04X, remote %04X)\n",
+                ev->desyncFrame, s_np.frames, ev->localChecksum, ev->remoteChecksum);
         if (!s_np.abortWhy)
             s_np.abortWhy = "THE TWO GAMES WENT OUT OF STEP";
         break;
@@ -843,6 +869,10 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
              * interesting beside the frame before it: the first one that differs says
              * what parted, its predecessor says what they still agreed on. Dumping both
              * in one run is one cross-machine match instead of two. */
+            /* SWOS_LIVE_DESYNC_FRAME=N: a desync ON PURPOSE, so the thing that happens
+             * when two peers go out of step can be watched rather than waited for. */
+            { const char *dsf = getenv("SWOS_LIVE_DESYNC_FRAME");
+              s_np.desyncFrame = (dsf && dsf[0]) ? atoi(dsf) : 0; }
             s_np.dumpFrameCount = 0;
             while (df && *df && s_np.dumpFrameCount < LIVE_DUMP_FRAMES_MAX) {
                 char *end;

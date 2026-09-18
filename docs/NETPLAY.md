@@ -448,6 +448,49 @@ now starts at 1.
 test with the same keys does); the corpus plays every recording as two peers with 10% of
 packets tampered by up to 8 bits and requires both to match the plain run.
 
+### When the two DO go out of step
+
+Everything above is recovery from the network: a misprediction is rolled back and the peers
+stay identical. This is the other case -- the simulations themselves disagree -- and it is
+worth being able to watch rather than wait for:
+
+```
+JOIN_ENV="SWOS_LIVE_DESYNC_FRAME=200" scripts/netplay_live_test.sh     # one peer, one bit
+PROFILE=satellite JOIN_ENV="SWOS_LIVE_DESYNC_FRAME=200" MATCHES=2 scripts/netplay_lobby_test.sh
+```
+
+`SWOS_LIVE_DESYNC_FRAME=N` makes this peer simulate frame N differently on purpose: one bit
+of `_seed`, which is a COUNTER, so the two `Rand()` streams stay a step apart for the rest of
+the match. `HOST_ENV` / `JOIN_ENV` put it on ONE side (`netplay_live_test.sh` has them too
+now -- the lobby test already did).
+
+**It is applied inside the frame, and re-applied every time GGPO simulates that frame.** That
+is not a detail: a change made to match state AFTER the step and before the frame is
+committed is **undone by the first rollback**, because the state GGPO saved for that frame
+predates it. Injected there, the peers quietly re-converged and `satellite` "detected" 0 of 5
+injected desyncs -- the rig lying, not the netcode working. Anything that writes simulation
+state outside the step has the same problem.
+
+Measured (2026-09-18, 5 runs a profile, injected at frame 200, 600-frame matches):
+
+| link | detected | noticed after |
+|---|---|---|
+| `lan` | 5/5 | 16-17 frames |
+| `mobile` | 5/5 | 16-18 frames |
+| `satellite` | 5/5 | 21-23 frames |
+| `awful` | 5/5 | 16-21 frames |
+
+**20 of 20, on every link.** The lag is GGPO's confirmation window, not the network: a
+frame's checksums are only compared once both peers have confirmed it, so a slow link is
+found out later, not less reliably. At 70 fps that is about a quarter of a second.
+
+What recovery means today: **the match ends, on both peers, and they go back to the lobby**
+(`liveEnd`, "THE TWO GAMES WENT OUT OF STEP"), where a rematch connects and plays normally --
+verified through the real menus with `netplay_lobby_test.sh`. There is no in-match resync:
+`src/state_wire.c` can encode the whole state as a packet and the rollback rig proves it
+round-trips, but nothing in a live match sends one. That is the piece to build if a desync
+should ever be survivable rather than fatal.
+
 ### Sound during a rollback
 
 A frame GGPO plays again has already been played once, and the sound effects it started were

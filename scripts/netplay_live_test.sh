@@ -5,6 +5,7 @@
 #   scripts/netplay_live_test.sh
 #   PROFILE=wifi scripts/netplay_live_test.sh          # over an emulated wifi link
 #   JOIN_PROFILE=awful scripts/netplay_live_test.sh    # one player on a bad line
+#   JOIN_ENV="SWOS_LIVE_DESYNC_FRAME=200" scripts/netplay_live_test.sh   # desync on purpose
 #
 # The end-to-end check for what the multiplayer menus drive: p2p_link connects,
 # the input delay is AGREED, the lobby sets the match up (each player picks a team
@@ -59,13 +60,16 @@ FRAMES="${FRAMES:-3000}"
 # watchdog and the kill -9 below reach the peer itself. With a subshell around
 # the binary they killed only the subshell, and a hung peer outlived the script.
 run() {   # role, netem-seed-salt, logfile
-    local prof
-    if [ "$1" = host ]; then prof=${HOST_PROFILE:-}; else prof=${JOIN_PROFILE:-}; fi
+    local prof extra
+    if [ "$1" = host ]; then prof=${HOST_PROFILE:-}; extra=${HOST_ENV:-};
+    else                    prof=${JOIN_PROFILE:-}; extra=${JOIN_ENV:-}; fi
     exec > "$3" 2>&1          # before the cd, so a relative TMPDIR still lands where it says
     cd bin || exit 1
     [ -n "$prof" ] && export SWOS_NETEM_PROFILE="$prof"
+    # HOST_ENV / JOIN_ENV put variables on ONE side, which is the only way to ask for
+    # something asymmetric -- a slow clock, or a peer told to go out of step on purpose.
     exec env SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-        SWOS_LIVE_FRAMES="$FRAMES" SWOS_NETEM_SEED="$2$$" \
+        SWOS_LIVE_FRAMES="$FRAMES" SWOS_NETEM_SEED="$2$$" $extra \
         ./"$BIN" --netplay-live-pair="$1"
 }
 
