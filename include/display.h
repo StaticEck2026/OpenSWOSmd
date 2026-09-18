@@ -466,6 +466,24 @@ extern int32_t _sim_draw_width;
 #define SIM_CAMERA_CENTRE_X   ((int16_t)((0x2A0 - _sim_view_width) / 2))
 #define SIM_CAMERA_PAN_RANGE  ((int16_t)(0x2A0 - _sim_view_width))
 #define SIM_CAMERA_CENTRE_Y   ((int16_t)(_sim_view_height / 2))
+
+/* The view the camera AIMS with, which is not always the one we draw.
+ *
+ * MoveCamera is the same routine in both releases; what makes the DOS camera feel
+ * different is that every constant is derived from a 320x200 view rather than 336x272 --
+ * the ball is held 100 lines from the top instead of 136. In DOS mode the camera aims
+ * with the DOS view so its MOVEMENT matches, while the clamps stay on the geometry this
+ * port can actually draw (a 272-line render driven by the DOS Y clamp of 664 would scroll
+ * past the bottom of the pitch). The replay rig already sets _sim_view_* to the
+ * recording's own 320x200, so a DOS recording is unaffected: the two agree there. */
+#ifdef SWOS_SDL_BUILD
+#define SIM_CAM_AIM_WIDTH     ((int16_t)(_gDosGameplay ? 320 : _sim_view_width))
+#define SIM_CAM_AIM_HEIGHT    ((int16_t)(_gDosGameplay ? 200 : _sim_view_height))
+#else
+/* Amiga: one geometry, folded at compile time -- the m68k codegen is unchanged. */
+#define SIM_CAM_AIM_WIDTH     SCREEN_WIDTH
+#define SIM_CAM_AIM_HEIGHT    SCREEN_HEIGHT
+#endif
 /* The camera DESTINATION clamp (where MoveCamera may aim). */
 #define SIM_CAMERA_MAX_Y      ((int16_t)(664 - (_sim_view_height - 200)))
 #define SIM_CAMERA_MAX_Y_TRN  ((int16_t)(616 - (_sim_view_height - 200)))

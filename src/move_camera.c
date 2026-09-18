@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "game_types.h"
 #include "display.h"
+#include "dos_mode.h"   /* _gDosGameplay: SIM_CAM_AIM_* */
 
 /* cameraX / cameraY are FixedPoint unions (see game_types.h).
  *   cameraX.raw     = full 32-bit 16.16 fixed-point value
@@ -296,9 +297,23 @@ offset_and_clamp_to_view:
     /* Center the view: subtract half screen dimensions */
     /* Centre the view on the target. Both halves come from the SIMULATION view
      * (display.h), not the render width: 168/136 at the port's own 336x272,
-     * 160/100 at the DOS release's 320x200. */
-    targetX -= (_sim_view_width / 2);
-    targetY -= SIM_CAMERA_CENTRE_Y;
+     * 160/100 at the DOS release's 320x200.
+     *
+     * DOS MODE AIMS WITH THE DOS VIEW. MoveCamera itself is the same routine in both
+     * releases -- same branches, same easing (delta >> 2, times 0x4000, 16.16), and the
+     * same cap (swos.asm's `maxCameraMovement dd 50000h` is our MAX_CAMERA_MOVEMENT) --
+     * so there is no separate DOS algorithm to port. What differs is the view every
+     * constant is derived from, and the half-view above is the one that decides where the
+     * camera AIMS: the ball is held 100 lines from the top in DOS and 136 in this port,
+     * so the camera sits lower, starts moving at a different moment and reaches its
+     * limits at different times. That is the movement difference, and it is this line.
+     *
+     * The CLAMPS below deliberately keep using _sim_view_*, which is the geometry we
+     * actually draw: a 272-line render driven by the DOS Y clamp (664) would scroll 56
+     * lines past the bottom of the 880-tall pitch. So the camera moves like DOS and stops
+     * where this port can still draw -- position differs at the edges, by design. */
+    targetX -= (SIM_CAM_AIM_WIDTH / 2);
+    targetY -= (int16_t)(SIM_CAM_AIM_HEIGHT / 2);
 
     /* Apply camera velocity */
     targetX += (int16_t)_cameraXVelocity;
