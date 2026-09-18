@@ -876,12 +876,37 @@ int main(int argc, char **argv)
             if (SDL_GetDesktopDisplayMode(opts.screen, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
         }
         int w = (int)((long)SCREEN_HEIGHT * dw / dh);
+        int aspectW;
         w = (w + 1) & ~1;                          /* round up to even */
+        aspectW = w;
+        /* NEVER WIDER THAN THE DISPLAY IT IS FILLING. The width above is "how much game
+         * fits this shape at 272 lines", which is the point on a 2560x1080 monitor -- but
+         * a small resolution means a small screen, not a wide one. `resolution=320x200`
+         * (someone comparing against DOS, which really is 320x200) has an aspect of
+         * 1.60:1, and 272 * 1.60 = 436, so the game came up 436x272: WIDER than either
+         * original, showing more pitch than the thing being compared against. Reported by
+         * a tester 2026-09-18, and reproduced exactly. */
+        if (w > dw) w = dw & ~1;
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
         _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, SCREEN_HEIGHT, opts.screen, nd, dw, dh, (double)dw / dh);
+        /* Say so when the asked-for size is not what came out, because "I set 320x200 and
+         * got 436x272" is otherwise a silent surprise. The height is not negotiable: the
+         * frontbuffer, the HUD and every menu are 272 lines (PLATFORM_SCREEN_H), and the
+         * width has a floor of 336 for the same reason. */
+        /* Only when the number LOOKS like a render size (<= the widest the game draws).
+         * 1920x1080 is obviously a monitor and needs no explaining; 320x200 and 640x480
+         * are exactly what someone types when they mean "run at this size". */
+        if (opts.res_w > 0 && opts.res_h > 0 && opts.res_w <= PITCH_VIEW_MAX_WIDTH &&
+            (_screen_width != opts.res_w || SCREEN_HEIGHT != opts.res_h))
+            fprintf(stderr, "[video] %dx%d is the render size, not %dx%d: the height is "
+                            "always %d (the HUD and menus are that tall) and the width is "
+                            "%d..%d%s\n",
+                    _screen_width, SCREEN_HEIGHT, opts.res_w, opts.res_h, SCREEN_HEIGHT,
+                    SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH,
+                    aspectW > dw ? " -- capped at the width you asked for" : "");
     }
     /* The SIMULATION view (display.h) is the port's own fixed geometry, NOT the
      * render width. SWOS reads the view size from inside the simulation — the

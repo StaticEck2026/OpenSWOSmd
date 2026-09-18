@@ -284,7 +284,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "video",  "render_driver", "; render_driver: auto | opengl | direct3d11 | direct3d | software-backend. auto = SDL default (D3D11 on Windows). Use opengl if replays/attract run in slow motion on Windows", opts->render_driver[0] ? opts->render_driver : "auto" };
     items[n++] = (IniEntry){ "video",  "fullscreen", "; fullscreen: off | desktop | exclusive", fullscreen_str(fs_now) };
     items[n++] = (IniEntry){ "video",  "scale",      "; scale: window scale 1-4 (windowed only)", vbuf[1] };
-    items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render aspect, or 'auto' for the desktop. Any value works — it need not match the monitor", vbuf[0] };
+    items[n++] = (IniEntry){ "video",  "resolution", "; resolution: WxH (e.g. 2560x1080) drives the render ASPECT, or 'auto' for the desktop.\n; It is not the render SIZE: the picture is always 272 lines tall and 336..672 wide,\n; so a wider shape shows more pitch and a small one (320x200) just clamps to 336x272", vbuf[0] };
     items[n++] = (IniEntry){ "video",  "screen",     "; screen: monitor index to open on, 0 = primary. Auto-clamped if out of range; window size auto-fits that screen", vbuf[3] };
     items[n++] = (IniEntry){ "audio",  "mode",       "; mode: mono | stereo", opts->audio_mono ? "mono" : "stereo" };
     items[n++] = (IniEntry){ "gameplay", "fire_hold_lockout",
