@@ -1906,11 +1906,42 @@ int16_t GetPlayerPrice(TeamFile *teamFile, PlayerFile *playerFile, uint16_t play
     /* Position type (0-7) from top 3 bits of positionAndFace */
     uint16_t position = (plFile->positionAndFace & PF_POSITION_MASK) >> 5;
 
-    /* Skill weights for this position.
-     * Position 0 (GK) reads from dead code bytes 35 bytes before skillsPerQuadrant.
-     * Asm: lea loc_122D6A+1(d0.w),a5 where d0 = position * 35.
-     * loc_122D6A+1 is exactly skillsPerQuadrant - 35. */
-    const uint8_t *skillsPerQ = _skillsPerQuadrant - 35 + position * 35;
+    /* Skill weights for this position -- and position 0 (GK) has NO ROW.
+     *
+     * Both originals index `skillsPerQuadrant + position * 35 - 35` (SWOS2.s:48254,
+     * swos.asm:127992 "make it zero based"), so position 0 reads the 35 bytes BEFORE
+     * the table. On the Amiga those are instruction bytes (loc_122D6A+1); in DOS they
+     * are zero, and deliberately so -- ReadPitchFile zero-fills everything from
+     * g_currentMenu up to skillsPerQuadrant (swos.asm:100633) before every match.
+     *
+     * In a C port that read is whatever the linker put in front of the array, which is
+     * neither: on x86_64 it lands on the tail of _skillQuadrantAdjustDeltas (zeros, so
+     * it happens to behave like DOS), and on macOS arm64 on a POINTER TABLE -- so a
+     * goalkeeper's weights moved with ASLR and the price changed on every run. That is
+     * a simulation value: it reaches AdjustPlayerSkills, and _totalSkillsFactorSum is
+     * in the netplay checksum, so two peers computed different state from the same
+     * inputs (found 2026-09-17 comparing frame hashes of zkz-11122841 on macOS arm64
+     * against Windows and Linux x86_64 -- one registry entry of 355 differed).
+     *
+     * So position 0 gets a defined row of its own: DOS's zeros, which is also what the
+     * x86_64 builds the corpus is verified against have been using all along, so no
+     * verified behaviour moves -- only macOS stops being random.
+     *
+     * The AMIGA row is reconstructible if we ever want that fidelity instead. SWOS-RE's
+     * Variables.md and reloc dump put oldPlayerSkillDivisor at 0x00122D8C and
+     * oldPlayerSkill at 0x00157400, and skillsPerQuadrant at 0x00122D8E = loc_122D6A+36,
+     * so the 35 bytes are that block's opcodes:
+     *
+     *   43 00 E0 EA 49 0C 01 00 00 67 02 E2 48 48 C0 80 F9 00 12 2D 8C
+     *   33 C0 00 15 74 00 42 28 00 3B 4E 75  + the live oldPlayerSkillDivisor word
+     *
+     * read as SIGNED bytes, so a position-0 player's Amiga price is loud nonsense --
+     * and its last two bytes are a VARIABLE the edit-tactics screen writes, which would
+     * make the simulation depend on a peer's menu history. That is the same class of
+     * bug as the one above, so it stays out until someone wants it deliberately. */
+    static const uint8_t k_gkQuadrantWeights[35] = { 0 };
+    const uint8_t *skillsPerQ = position ? _skillsPerQuadrant + (position - 1) * 35
+                                         : k_gkQuadrantWeights;
 
     /* Player skills packed: 4 bytes starting at passing (offset 28).
      * Big-endian: passing, velocityHeading, tacklingControl, speedFinishing */
