@@ -548,6 +548,24 @@ int main(int argc, char **argv)
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if ((v = match_kv(a, "netplay-state-diff")) != NULL) {
             return NetplayLiveTest_StateDiff(v);
+        } else if (!strcmp(a, "--team-audit")) {
+            extern void TeamAudit_Arm(void);
+            TeamAudit_Arm();
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
+            /* Headless and silent, for the same reason the replay rig is: this is a batch
+             * run that prints a hash, and it has no business opening a window. The audit
+             * runs after Phase 9, so without this the game comes all the way up first. */
+#ifdef _WIN32
+            _putenv("SWOS_HARNESS_TURBO=1");
+            _putenv("SWOS_NO_LOG=1");
+            if (!getenv("SDL_VIDEODRIVER")) _putenv("SDL_VIDEODRIVER=dummy");
+            if (!getenv("SDL_AUDIODRIVER")) _putenv("SDL_AUDIODRIVER=dummy");
+#else
+            setenv("SWOS_HARNESS_TURBO", "1", 1);
+            setenv("SWOS_NO_LOG", "1", 1);
+            if (!getenv("SDL_VIDEODRIVER")) setenv("SDL_VIDEODRIVER", "dummy", 1);
+            if (!getenv("SDL_AUDIODRIVER")) setenv("SDL_AUDIODRIVER", "dummy", 1);
+#endif
         } else if ((v = match_kv(a, "netplay-state-stream-diff")) != NULL) {
             return NetplayLiveTest_StreamDiff(v);
         } else if ((v = match_kv(a, "netplay-live-pair")) != NULL) {

@@ -358,6 +358,14 @@ skip_title_screens: ;
             if (ReplayV2_ViewTestArmed())
                 ReplayV2_ViewTestRun();   /* plays a .SRP, then exits */
         }
+        {
+            extern int32_t TeamAudit_Armed(void);
+            extern void    TeamAudit_Run(void);
+            if (TeamAudit_Armed()) {
+                TeamAudit_Run();   /* hashes every team's player prices, then exits */
+                return;
+            }
+        }
         if (ReplayTest_Armed()) {
             ReplayTest_Run();   /* replays a recording, then exits the process */
             return;
