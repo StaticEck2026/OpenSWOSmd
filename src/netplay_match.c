@@ -44,6 +44,7 @@ static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p" };
  * not left staring at a frozen pitch. SWOS 2020 uses 5 s. */
 #define LIVE_TIMEOUT_MS     10000
 #define LINGER_MS           3000        /* after the end: how long to wait for the peer's acks */
+#define LIVE_DUMP_FRAMES_MAX 8          /* SWOS_LIVE_DUMP_FRAME takes a list; this is how long */
 
 static struct {
     /* options */
@@ -88,7 +89,8 @@ static struct {
     int32_t          slowCount;
     int32_t          noPacing;            /* live: SWOS_LIVE_NO_PACING, to measure what pacing does */
     int32_t          hashEvery;           /* live: SWOS_LIVE_HASH_EVERY, frames between hash lines */
-    int32_t          dumpFrame;           /* live: SWOS_LIVE_DUMP_FRAME, dump the state at this one */
+    int32_t          dumpFrames[LIVE_DUMP_FRAMES_MAX];  /* live: SWOS_LIVE_DUMP_FRAME, dump the state at these */
+    int32_t          dumpFrameCount;
     const char      *abortWhy;            /* live: a reason to end the match early, for the player */
 
     /* per frame, from its last save: the state hashes, and whether the match is over */
@@ -834,7 +836,20 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
             const char *he = getenv("SWOS_LIVE_HASH_EVERY");
             const char *df = getenv("SWOS_LIVE_DUMP_FRAME");
             s_np.hashEvery = (he && he[0]) ? atoi(he) : 100;
-            s_np.dumpFrame = (df && df[0]) ? atoi(df) : 0;
+            /* A COMMA-SEPARATED LIST, because the frame a desync is found at is only
+             * interesting beside the frame before it: the first one that differs says
+             * what parted, its predecessor says what they still agreed on. Dumping both
+             * in one run is one cross-machine match instead of two. */
+            s_np.dumpFrameCount = 0;
+            while (df && *df && s_np.dumpFrameCount < LIVE_DUMP_FRAMES_MAX) {
+                char *end;
+                int32_t f = (int32_t)strtol(df, &end, 10);
+                if (end == df)
+                    break;
+                if (f > 0)
+                    s_np.dumpFrames[s_np.dumpFrameCount++] = f;
+                df = (*end == ',') ? end + 1 : end;
+            }
         }
         s_np.liveFrameLimit = (lim && lim[0]) ? atoi(lim) : 0;
         s_np.randomInput = (rnd && rnd[0]) ? (uint32_t)strtoul(rnd, NULL, 0) | 1u : 0;
@@ -1302,28 +1317,34 @@ prepared:
                s_np.resimulated);
         fflush(stdout);
     }
-    /* SWOS_LIVE_DUMP_FRAME=N with SWOS_LIVE_DUMP=<dir>: the state at ONE frame, on both
-     * peers, for --netplay-state-diff. The kick-off dump answers "did we start the same
-     * match"; this one answers "what had differed by the time the hashes parted", which is
+    /* SWOS_LIVE_DUMP_FRAME=N[,N...] with SWOS_LIVE_DUMP=<dir>: the state at those frames,
+     * on both peers, for --netplay-state-diff. The kick-off dump answers "did we start the
+     * same match"; these answer "what had differed by the time the hashes parted", which is
      * the question a desync actually poses. */
-    if (s_np.live && s_np.dumpFrame > 0 && s_np.frames == (uint32_t)s_np.dumpFrame) {
-        const char *dir = getenv("SWOS_LIVE_DUMP");
-        if (dir && dir[0]) {
-            char path[512];
-            uint32_t n = SimState_Size(SIM_TIER_ALL);
-            uint8_t *buf = (uint8_t *)malloc(n);
-            snprintf(path, sizeof path, "%s/frame%d-p%d.bin", dir, (int)s_np.dumpFrame,
-                     s_np.player);
-            if (buf) {
-                FILE *f;
-                SimState_Save(buf, SIM_TIER_ALL);
-                if ((f = fopen(path, "wb")) != NULL) {
-                    fwrite(buf, 1, n, f);
-                    fclose(f);
-                    fprintf(stderr, "[netplay] frame %d state dumped to %s\n",
-                            (int)s_np.dumpFrame, path);
+    if (s_np.live && s_np.dumpFrameCount > 0) {
+        int32_t i;
+        for (i = 0; i < s_np.dumpFrameCount; i++) {
+            const char *dir;
+            if (s_np.frames != (uint32_t)s_np.dumpFrames[i])
+                continue;
+            dir = getenv("SWOS_LIVE_DUMP");
+            if (dir && dir[0]) {
+                char path[512];
+                uint32_t n = SimState_Size(SIM_TIER_ALL);
+                uint8_t *buf = (uint8_t *)malloc(n);
+                snprintf(path, sizeof path, "%s/frame%d-p%d.bin", dir,
+                         (int)s_np.dumpFrames[i], s_np.player);
+                if (buf) {
+                    FILE *f;
+                    SimState_Save(buf, SIM_TIER_ALL);
+                    if ((f = fopen(path, "wb")) != NULL) {
+                        fwrite(buf, 1, n, f);
+                        fclose(f);
+                        fprintf(stderr, "[netplay] frame %d state dumped to %s\n",
+                                (int)s_np.dumpFrames[i], path);
+                    }
+                    free(buf);
                 }
-                free(buf);
             }
         }
     }
