@@ -2,8 +2,8 @@
 <!--
   The downloads page for baker76.com/swos.html.
 
-  TEMPLATE: scripts/build_dist.sh fills the @...@ placeholders (build, date and
-  each archive's size) and writes the result to dist/swos.html;
+  TEMPLATE: scripts/gen_downloads_page.sh fills the @...@ placeholders (build,
+  when it was built, each archive's size) and writes the result to dist/swos.html;
   scripts/upload_dist.sh publishes that to the site root. Edit THIS file, never
   the copy on the server — the next drop overwrites it.
 -->
@@ -76,7 +76,7 @@
 <main>
 
 <h1>OpenSWOS</h1>
-<p class="build">Build <code>@BUILD@</code> &middot; @DATE@</p>
+<p class="build">Build <code>@BUILD@</code> &middot; <time datetime="@STAMP_ISO@" title="@STAMP@">@STAMP@</time></p>
 
 <h2>Downloads</h2>
 <table>
@@ -155,5 +155,19 @@ the main menu and in the window title, and it is the first line of
 <code>SWOS.log</code>. Attach that log if the game crashed.</p>
 
 </main>
+<script>
+  /* The build time is written in UTC; show it in the reader's own time zone.
+     Without script the UTC text stays, which is still right. */
+  (function () {
+    var t = document.querySelector('p.build time[datetime]');
+    var d = t && new Date(t.getAttribute('datetime'));
+    if (!d || isNaN(d.getTime()))
+      return;
+    t.textContent = d.toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+    });
+  })();
+</script>
 </body>
 </html>

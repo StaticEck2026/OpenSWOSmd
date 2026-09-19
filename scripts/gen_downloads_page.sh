@@ -5,7 +5,7 @@
 #   scripts/gen_downloads_page.sh --out X.html
 #
 # The template is packaging/web/swos.html and carries @PLACEHOLDERS@ for the
-# build, the date and each archive's size. This fills them from the drop that is
+# build, when the drop was built, and each archive's size. This fills them from the drop that is
 # actually in dist/, so the page can never advertise a build or a size that is
 # not the one being published.
 #
@@ -68,6 +68,21 @@ if [ -z "$BUILD" ] && [ -f include/swos_build.h ]; then
 fi
 [ -n "$BUILD" ] || BUILD=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 [ -n "$DATE" ]  || DATE=$(date +%Y-%m-%d)
+# WHEN the drop was built: the newest archive in it, in UTC (the page shows it in
+# the reader's own zone). Not "now": the page is regenerated at every publish,
+# and sending the page again must not move the time of a drop that has not
+# changed. The commit date above says which code; this says which drop.
+STAMP_EPOCH=0
+for f in SWOS-Setup.exe SWOS-full.zip SWOS-macOS-app.zip SWOS-Amiga.zip SWOS.zip SWOS-macOS.zip; do
+    [ -f "dist/$f" ] || continue
+    t=$(stat -c %Y "dist/$f" 2>/dev/null || stat -f %m "dist/$f" 2>/dev/null) || continue
+    [ "$t" -gt "$STAMP_EPOCH" ] && STAMP_EPOCH=$t
+done
+[ "$STAMP_EPOCH" -gt 0 ] || STAMP_EPOCH=$(date +%s)
+utc() { date -u -d "@$STAMP_EPOCH" "$1" 2>/dev/null || date -u -r "$STAMP_EPOCH" "$1"; }
+STAMP_ISO=$(utc +%Y-%m-%dT%H:%MZ)
+STAMP=$(utc '+%Y-%m-%d %H:%M UTC')
+
 case "$BUILD" in
     *-dirty) echo "gen_downloads_page: the binaries are stamped $BUILD — that is not a" >&2
              echo "                    commit anybody can go back to. Rebuild from a clean tree." >&2
@@ -77,6 +92,8 @@ esac
 mkdir -p "$(dirname "$OUT")"
 sed -e "s|@BUILD@|$BUILD|g" \
     -e "s|@DATE@|$DATE|g" \
+    -e "s|@STAMP_ISO@|$STAMP_ISO|g" \
+    -e "s|@STAMP@|$STAMP|g" \
     -e "s|@SIZE_SETUP@|$(size_of SWOS-Setup.exe)|g" \
     -e "s|@SIZE_FULL@|$(size_of SWOS-full.zip)|g" \
     -e "s|@SIZE_MACAPP@|$(size_of SWOS-macOS-app.zip)|g" \
@@ -94,4 +111,4 @@ if [ -n "$LEFT" ]; then
     exit 1
 fi
 
-echo "== $OUT  (build $BUILD, $DATE)"
+echo "== $OUT  (build $BUILD of $DATE, built $STAMP)"

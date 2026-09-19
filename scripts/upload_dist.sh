@@ -5,6 +5,8 @@
 #   scripts/upload_dist.sh                # upload the web bundle + the binaries
 #   scripts/upload_dist.sh --web-only     # just dist/web/* -> /public_html/apps/swos
 #   scripts/upload_dist.sh --bin-only     # just the archives -> /public_html/download/swos
+#   scripts/upload_dist.sh --page-only    # just the downloads page (baker76.com/swos.html),
+#                                         # regenerated from the drop already in dist/
 #   scripts/upload_dist.sh --dry-run      # print what would go where, upload nothing
 #   scripts/upload_dist.sh --no-tls       # plain FTP (password in cleartext)
 #
@@ -120,6 +122,7 @@ BIN_SRC="dist"
 
 DO_WEB=1
 DO_BIN=1
+DO_PAGE=1     # the downloads page goes with the archives it lists
 DRY_RUN=0
 USE_TLS=1
 INSECURE_TLS=0
@@ -132,7 +135,9 @@ usage() {
 
 Options:
       --web-only      upload only $WEB_SRC/* -> $WEB_DIR
-      --bin-only      upload only the archives -> $BIN_DIR
+      --bin-only      upload only the archives -> $BIN_DIR (and the page)
+      --page-only     upload only the downloads page -> $PAGE_DIR/$PAGE_FILE,
+                      describing the archives in dist/ (all must be there)
       --dry-run       show what would be uploaded, transfer nothing
       --verify-only   upload nothing; just compare the sizes already on the
                       server against dist/ (re-runs the check after a fix)
@@ -158,8 +163,9 @@ EOF
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --web-only) DO_BIN=0; shift ;;
+        --web-only) DO_BIN=0; DO_PAGE=0; shift ;;
         --bin-only) DO_WEB=0; shift ;;
+        --page-only) DO_WEB=0; DO_BIN=0; DO_PAGE=1; shift ;;
         --dry-run)  DRY_RUN=1; shift ;;
         --no-tls)   USE_TLS=0; shift ;;
         --insecure-tls) INSECURE_TLS=1; shift ;;
@@ -173,7 +179,7 @@ done
 die() { echo "upload_dist: $*" >&2; exit 1; }
 banner() { echo ""; echo "======================================================================"; echo "== $*"; echo "======================================================================"; }
 
-[ "$DO_WEB" = 0 ] && [ "$DO_BIN" = 0 ] && die "--web-only and --bin-only are mutually exclusive"
+[ "$DO_WEB" = 0 ] && [ "$DO_BIN" = 0 ] && [ "$DO_PAGE" = 0 ] && die "--web-only and --bin-only are mutually exclusive"
 
 # ---- credentials ------------------------------------------------------------
 [ -n "${FTP_USERNAME:-}" ] || die "FTP_USERNAME is not set (see --help)"
@@ -214,10 +220,20 @@ if [ "$DO_WEB" = 1 ]; then
 fi
 if [ "$DO_BIN" = 1 ]; then
     for f in $BIN_FILES; do queue_add "$BIN_SRC" "$BIN_DIR" "$f"; done
-    # Regenerate the page HERE: every archive is present and about to go out, so
-    # the sizes and the build on it are this drop's. (build_dist.sh also writes
-    # one, but the macOS archives arrive after it.)
-    if ! scripts/gen_downloads_page.sh; then
+fi
+if [ "$DO_PAGE" = 1 ]; then
+    # The page lists every archive, so each must be here to size it -- also when
+    # only the page is going out, or it would advertise a "—" for one. (With the
+    # archives going too, the queue above has already said which are missing.)
+    if [ "$DO_BIN" = 0 ]; then
+        for f in $BIN_FILES; do
+            [ -f "$BIN_SRC/$f" ] || MISSING="$MISSING  $BIN_SRC/$f (the page lists it)"$'\n'
+        done
+    fi
+    # Regenerate the page HERE: every archive is present, so the sizes and the
+    # build on it are this drop's. (build_dist.sh also writes one, but the macOS
+    # archives arrive after it.)
+    if [ -z "$MISSING" ] && ! scripts/gen_downloads_page.sh; then
         echo "upload_dist: the downloads page could not be generated — not uploading" >&2
         exit 1
     fi
