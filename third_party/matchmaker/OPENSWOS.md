@@ -110,7 +110,9 @@ Keep this list short and justified — it is a fork, and every entry is drift.
   match id and compared as they arrive, and a desync is reported the moment it is seen.
   A full recording also streams the match's `.SRP` frames, which the recorder writes
   to `--recordings DIR` with the game's own writer (`src/srp_writer.c` + miniz via
-  `src/miniz_impl.c`, compiled in) — the same file as the host's `LATEST.SRP`.
+  `src/miniz_impl.c`, compiled in) — the same file as the host's `LATEST.SRP`,
+  including what it takes to play the match again (the RESUME message and each
+  frame's input: setup, kick-off state, inputs, hashes; `--srp-resim` in the game).
   Independent of the relay — a match played peer to peer can be recorded too. POSIX
   only; a Windows build of the server says so and carries on without it.
 - **`Server/include/Ledger.h` (new):** the `--ledger` file the relay and the recorder

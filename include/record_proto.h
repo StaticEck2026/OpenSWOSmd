@@ -75,7 +75,20 @@
  *         then a 2-byte count of chapters and the chapters (8 bytes each, as CHAP)
  *         -- the ones those frames played
  *
+ *         then a 2-byte count of frame inputs (0, or one per frame above) and the
+ *         inputs, SRP_INPUT_BYTES each, as INPT
+ *
  * RECORD_REPLAY_SCORE, before END: the final score, 2 + 2 bytes, for META.
+ *
+ * RECORD_REPLAY_RESUME, once, when the recording is RESUMABLE (replay_v2.h: the match
+ * can be played again exactly, from any frame) -- the parts SIMV, SETP and STAT hold:
+ *   0  8  the registry layout (SimState_LayoutHash)
+ *   8  1  the rules (P2P_RULE_*)
+ *   9  1  0
+ *  10  2  the simulation draw width
+ *  12  4  the setup's length
+ *  16     the setup (NetplaySetup_Encode), then the kick-off state (a state_wire packet)
+ * The per-frame hashes HASH holds are RECORD_FRAMES', the low half of each.
  */
 #ifndef RECORD_PROTO_H
 #define RECORD_PROTO_H
@@ -94,6 +107,7 @@
 #define RECORD_REPLAY_META   4
 #define RECORD_REPLAY_FRAMES 5
 #define RECORD_REPLAY_SCORE  6
+#define RECORD_REPLAY_RESUME 7
 
 #define RECORD_MODE_HASHES   0     /* the frames' hashes: enough to find a desync */
 #define RECORD_MODE_FULL     1     /* ... and the match itself, as a .SRP */

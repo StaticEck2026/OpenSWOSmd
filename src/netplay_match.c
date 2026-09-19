@@ -21,6 +21,9 @@
 #include "netplay_lobby.h"
 #include "p2p_link.h"
 #include "record_proto.h"
+#include "replay_v2.h"     /* the resumable recording: kick-off state, inputs, hashes */
+#include "state_wire.h"
+#include "srp_writer.h"      /* SRP_INPUT_BYTES */
 #include "netplay_netem.h"
 #include "netplay.h"
 #include "replay_test.h"
@@ -34,10 +37,11 @@ extern void     _Int3TimerHandler(void);
 extern uint16_t _playGame[1];
 
 typedef enum {
-    NETPLAY_MATCH_OFF, NETPLAY_MATCH_DIRECT, NETPLAY_MATCH_SYNCTEST, NETPLAY_MATCH_P2P
+    NETPLAY_MATCH_OFF, NETPLAY_MATCH_DIRECT, NETPLAY_MATCH_SYNCTEST, NETPLAY_MATCH_P2P,
+    NETPLAY_MATCH_RESIM
 } NetplayMatchMode;
 
-static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p" };
+static const char *const k_modeName[] = { "off", "direct", "synctest", "p2p", "resim" };
 
 #define INPUTS_SIZE         (MATCH_INPUT_SIZE * MATCH_PLAYERS)
 #define MAX_PREDICTION      8           /* frames a peer may play ahead of confirmed input */
@@ -109,6 +113,7 @@ static struct {
     uint8_t         *over;
     uint32_t         traceLen, traceCap;
     uint32_t         recordNext;          /* live: the next frame the recorder is owed */
+    int32_t          kickoffTaken;        /* live: frame 0's state went to the recording */
 } s_np;
 
 static void fail(const char *fmt, ...)
@@ -263,9 +268,12 @@ void NetplayMatch_SetPacketKey(const uint8_t *key)
         memcpy(s_packetKey, key, sizeof s_packetKey);
 }
 
+/* A match played between two machines -- or one of those played again from its
+ * recording (--srp-resim), which has to be played the same way: controls assigned
+ * without the pre-match menu, no goal replay. */
 int32_t NetplayMatch_IsLive(void)
 {
-    return s_np.mode == NETPLAY_MATCH_P2P && s_np.live;
+    return (s_np.mode == NETPLAY_MATCH_P2P && s_np.live) || s_np.mode == NETPLAY_MATCH_RESIM;
 }
 
 int32_t NetplayMatch_IsP2P(void)
@@ -323,6 +331,8 @@ static void traceGrow(uint32_t frame)
  * the frame as finally played. */
 static void traceRecord(uint32_t frame, uint64_t sim, uint64_t view)
 {
+    if (s_np.live)
+        ReplayRec_SetHash(frame, sim);      /* the resumable recording's HASH */
     traceGrow(frame);
     s_np.traceSim[frame] = sim;
     s_np.traceView[frame] = view;
@@ -576,6 +586,22 @@ static int32_t cbSave(void *ctx, uint8_t **state, int32_t *len, int32_t *checksu
     *len = (int32_t)s_np.stateSize;
     *checksum = (int32_t)(uint32_t)(both ^ (both >> 32));
     s_np.saves++;
+    /* The state the match kicked off in, for the resumable recording (replay_v2.h): with
+     * the setup and every frame's input it plays the match again exactly. Frame 0's first
+     * save is the state before frame 0 is played -- the point a re-simulation starts from. */
+    if (frame == 0 && s_np.live && !s_np.kickoffTaken) {
+        uint32_t cap = StateWire_MaxBytes(SIM_TIER_ALL);
+        uint8_t *packet = (uint8_t *)malloc(cap);
+        int32_t n = packet ? StateWire_Encode(packet, cap, SIM_TIER_ALL, 0, NULL, 0) : -1;
+        s_np.kickoffTaken = 1;
+        if (n > 0)
+            ReplayRec_SetKickoff(packet, (uint32_t)n, SimState_LayoutHash(), P2PLink_GameplayFlags(),
+                                 (uint16_t)_sim_draw_width);
+        else
+            fprintf(stderr, "[netplay] the kick-off state could not be recorded (%s): the "
+                            "replay will not be resumable\n", n < 0 ? StateWire_ErrorName(n) : "no memory");
+        free(packet);
+    }
     if (frame >= 0)
         traceRecord((uint32_t)frame, sim, view);
     if (s_np.mode == NETPLAY_MATCH_SYNCTEST)
@@ -631,6 +657,8 @@ static int32_t cbAdvance(void *ctx)
         Netplay_CurrentFrame(s_np.session, &done);
         streamState(done);
         ringRecord(done, inputs);
+        if (done >= 0)
+            ReplayRec_SetInput((uint32_t)done, inputs);     /* replaces the predicted one */
     }
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     return 1;
@@ -1783,6 +1811,8 @@ prepared:
     if (s_np.live) {
         streamState(frame);
         ringRecord(frame, synced);
+        if (frame >= 0)
+            ReplayRec_SetInput((uint32_t)frame, synced);
     }
     Netplay_AdvanceFrame(s_np.session, frameChecksum());
     if (s_np.live && s_np.abortWhy) {
@@ -1815,8 +1845,143 @@ prepared:
     return GAME_FRAME_DONE;
 }
 
+/* ---- playing a recorded match again (--srp-resim, src/srp_resim.c) ----
+ *
+ * A resumable .SRP (replay_v2.h) holds the setup, the state at frame 0 and every frame's
+ * input and SIM hash. This plays it again the way a live match is played -- the same
+ * step, the same first-frame reset -- from the recorded state instead of a lobby, and
+ * checks every frame's hash against the recording's. On the build and rules it was
+ * recorded with, every frame must agree; the first that does not is where this machine
+ * plays the match differently from the one that recorded it -- a desync, found offline. */
+static struct {
+    const uint8_t  *kickoff;
+    uint32_t        kickoffLen;
+    const uint8_t  *inputs;
+    const uint32_t *hashes;
+    uint32_t        frames, frame, matched;
+    int32_t         loaded, firstDiff;
+    uint32_t        diffHave, diffWant;
+} s_resim;
+
+int32_t NetplayMatch_StartResim(const uint8_t *kickoff, uint32_t kickoffLen, const uint8_t *inputs,
+                                const uint32_t *hashes, uint32_t frames, int32_t simWidth)
+{
+    int32_t rc;
+
+    memset(&s_np, 0, sizeof s_np);
+    memset(&s_resim, 0, sizeof s_resim);
+    s_np.mode = NETPLAY_MATCH_RESIM;
+    s_resim.kickoff = kickoff;
+    s_resim.kickoffLen = kickoffLen;
+    s_resim.inputs = inputs;
+    s_resim.hashes = hashes;
+    s_resim.frames = frames;
+    s_resim.firstDiff = -1;
+    /* The clock and the controls as a live match starts them (NetplayMatch_StartLive). */
+    {
+        extern volatile uint16_t _currentGameTick;
+        extern volatile uint16_t _currentTick;
+        extern uint16_t          _lastGameTick;
+        extern void              InputSDL_ReleaseAll(void);
+        _currentGameTick = 0;
+        _currentTick     = 0;
+        _lastGameTick    = 0xFFFF;
+        MatchStep_Reset();
+        InputSDL_ReleaseAll();
+    }
+    rc = NetplayMatch_Start();
+    if (rc == 0) {
+        if (simWidth < SCREEN_WIDTH)
+            simWidth = SCREEN_WIDTH;
+        if (simWidth > PITCH_VIEW_MAX_WIDTH)
+            simWidth = PITCH_VIEW_MAX_WIDTH;
+        _sim_draw_width = simWidth;
+    }
+    return rc;
+}
+
+void NetplayMatch_ResimResult(uint32_t *played, uint32_t *matched, int32_t *firstDiff,
+                              uint32_t *have, uint32_t *want)
+{
+    *played = s_resim.frame;
+    *matched = s_resim.matched;
+    *firstDiff = s_resim.firstDiff;
+    *have = s_resim.diffHave;
+    *want = s_resim.diffWant;
+}
+
+static int32_t resimFrame(void)
+{
+    GameFrameResult r;
+    uint32_t f = s_resim.frame, h;
+
+    if (!s_resim.loaded) {
+        uint32_t size = SimState_Size(SIM_TIER_ALL);
+        uint8_t *mine = (uint8_t *)malloc(size);
+        int err;
+        s_resim.loaded = 1;
+        /* The first step of a live match (p2pFrame): released controls, the clock at its
+         * kick-off values. The recorded state overwrites what it holds of them. */
+        resetControlHistory();
+        {
+            extern volatile uint16_t _currentGameTick;
+            extern volatile uint16_t _currentTick;
+            extern uint16_t          _lastGameTick;
+            extern uint16_t          _lastFrameTicks;
+            _currentGameTick = 0;
+            _currentTick     = 0;
+            _lastGameTick    = 0xFFFF;
+            _lastFrameTicks  = 1;
+        }
+        /* The match as it stood before frame 0; this display keeps its own LOCAL fields. */
+        if (mine)
+            SimState_Save(mine, SIM_TIER_ALL);
+        err = StateWire_Decode(s_resim.kickoff, s_resim.kickoffLen, NULL, NULL);
+        if (err != STATE_WIRE_OK)
+            fail("the recording's kick-off state does not load: %s", StateWire_ErrorName(err));
+        if (mine)
+            SimState_RestoreLocal(mine, SIM_TIER_ALL);
+        free(mine);
+    }
+    /* However it ends -- the recording runs out, a frame parts from it, or the match
+     * leaves its loop -- it ends HERE, through the callback: out of the loop lies the
+     * post-match screen, waiting for a press nobody headless gives. */
+    if (f >= s_resim.frames)
+        goto over;                          /* the recording ends here */
+
+    /* The frame's state at its start, as the recording saw it at the same point. */
+    h = (uint32_t)stateHash(SIM_TIER_SIM);
+    if (h != s_resim.hashes[f]) {
+        s_resim.firstDiff = (int32_t)f;
+        s_resim.diffHave = h;
+        s_resim.diffWant = s_resim.hashes[f];
+        goto over;
+    }
+    s_resim.matched++;
+
+    soundFrameBegin((int32_t)f, 0);
+    r = step(s_resim.inputs + (size_t)f * SRP_INPUT_BYTES, (int32_t)f, 0);
+    soundFrameEnd();
+    if (r == GAME_FRAME_DONE) {
+        s_resim.frame++;
+        s_np.frames++;
+        Platform_Present();
+    } else if (r == GAME_FRAME_DETOUR) {
+        GameLoop_EndFrame(1);
+    } else {
+        goto over;
+    }
+    return r;
+over:
+    if (s_liveFinished)
+        s_liveFinished();
+    return GAME_FRAME_MATCH_OVER;
+}
+
 int32_t NetplayMatch_Frame(void)
 {
+    if (s_np.mode == NETPLAY_MATCH_RESIM)
+        return resimFrame();
     return s_np.mode == NETPLAY_MATCH_P2P ? p2pFrame() : singleProcessFrame();
 }
 
@@ -1851,6 +2016,10 @@ int32_t NetplayMatch_Finish(void)
                 s_np.player, s_np.frames, s_np.resimulated, s_np.loads, s_np.saves);
         frames = s_np.endFrame >= 0 ? (uint32_t)s_np.endFrame + 1 : 0;
         break;
+    case NETPLAY_MATCH_RESIM:
+        /* src/srp_resim.c reports it (NetplayMatch_ResimResult). */
+        Audio_SetSfxFilter(NULL);
+        return 0;
     }
     /* What the emulated network actually did, not what it was asked for: a
      * condition configured at 2% may never have fired in a short match, and a

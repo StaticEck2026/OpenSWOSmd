@@ -60,6 +60,15 @@ private:
         bool haveScore = false;
         uint16_t score[2] = { 0, 0 };
         uint32_t writtenFrames = 0;             // frames in the last file written
+
+        // A RESUMABLE recording (replay_v2.h): the parts SIMV, SETP, STAT, INPT hold.
+        // HASH comes from `hashes` above -- the frames it compares.
+        bool resume = false;
+        uint64_t layout = 0;
+        uint8_t rules = 0;
+        uint16_t resumeSimWidth = 0;
+        std::vector<uint8_t> setup, kickoff, inputs;   // inputs: SRP_INPUT_BYTES a frame
+        bool inputsBroken = false;              // a batch came without its inputs
     };
     struct Match
     {
@@ -92,6 +101,7 @@ private:
     void OnReplayMeta(Connection& c, const uint8_t* p, uint32_t len);
     bool OnReplayFrames(Connection& c, const uint8_t* p, uint32_t len);
     void OnReplayScore(Connection& c, const uint8_t* p, uint32_t len);
+    void OnReplayResume(Connection& c, const uint8_t* p, uint32_t len);
     void WriteReplay(Match& m, bool last);
     void Compare(Match& m, int from, uint32_t frame);
     void CloseConnection(Connection& c, const char* why);

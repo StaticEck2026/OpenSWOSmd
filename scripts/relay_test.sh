@@ -12,6 +12,8 @@
 #                                             # ON PURPOSE; the recorder must name 151
 #   HOST_RES=1024x768 JOIN_RES=320x200 ...    # a [video] resolution each: two display
 #                                             # widths (362 and 336), as a Mac and a PC had
+#   GAMEPLAY=dos RECORD=1 ...                 # DOS gameplay on both (a resim must take it
+#                                             # from the file, not from its own SWOS.ini)
 #
 # The relay (include/relay_proto.h, third_party/matchmaker/Server/Relay.cpp): the
 # server makes a session at START, tells each OpenSWOS player RELAY:<token>, and
@@ -34,6 +36,11 @@
 # their games are writing, and the recorder keeps it. Each player runs in a HOME of its
 # own, so each writes its own LATEST.SRP -- and the recorder's file of the last match
 # must be the HOST's LATEST.SRP byte for byte (include/srp_writer.h lays out both).
+# And every copy must play again, frame for frame, from its own setup, kick-off state
+# and inputs (--srp-resim, src/srp_resim.c).
+#
+# SERVER=<path> runs another copy of the matchmaker: netplay_desync_hunt.sh stops every
+# build/matchmaker/swos-matchmaker between its rounds, a relay test's among them.
 #
 # Each side's input comes from its own generator (SWOS_LIVE_RANDOM_INPUT), so both
 # predict wrong and roll back, and the relay carries real rollback traffic.
@@ -50,8 +57,13 @@ RELAY="${RELAY:-1}"
 RECORD="${RECORD:-0}"
 RECORD_MODE="${RECORD_MODE:-full}"
 DESYNC_FRAME="${DESYNC_FRAME:-}"
-SERVER=build/matchmaker/swos-matchmaker
-mkdir -p "$OUT"
+SERVER="${SERVER:-build/matchmaker/swos-matchmaker}"
+GAMEPLAY="${GAMEPLAY:-}"                # dos | amiga: both players, whatever SWOS.ini says
+case "$GAMEPLAY" in
+    ''|amiga|dos) ;;
+    *) echo "relay-test: GAMEPLAY must be amiga or dos" >&2; exit 1 ;;
+esac
+mkdir -p "$OUT" && OUT="$(cd "$OUT" && pwd)"   # the game chdirs to bin/
 [ -n "$DESYNC_FRAME" ] && [ "$RECORD" != 1 ] && { echo "relay-test: DESYNC_FRAME needs RECORD=1" >&2; exit 1; }
 [ -n "$DESYNC_FRAME" ] && MATCHES=1     # the match ends at the desync; one is the test
 [ -x "bin/$BIN" ] || { echo "relay-test: bin/$BIN not built" >&2; exit 1; }
@@ -90,7 +102,8 @@ run() {   # name, auto, team, extra env...
         SWOS_MM_HOST=127.0.0.1 SWOS_MM_PORT="$PORT" SWOS_MM_AUTO="$auto" SWOS_P2P_LOG=1 \
         SWOS_LOBBY_TEAM="$team" SWOS_LOBBY_READY=1 SWOS_LOBBY_MATCHES="$MATCHES" \
         SWOS_LIVE_FRAMES="$FRAMES" $RECORD_ENV "$@" \
-        timeout -s KILL "$WAIT" ./"$BIN" --matchmaker-menu="$name"
+        timeout -s KILL "$WAIT" ./"$BIN" --matchmaker-menu="$name" \
+        ${GAMEPLAY:+--dos-gameplay=$([ "$GAMEPLAY" = dos ] && echo on || echo off)}
 }
 # <side>.log is the raw output; <side>.ts the same lines with the time each arrived,
 # to line up against the server's timed [relay] and [record] lines.
@@ -208,15 +221,44 @@ EOF
     then srp_ok=1; else echo "!! the recorder's .SRP ($server_srp) is not the host's ($host_srp)"; fi
 fi
 
+# And the last match plays again from each copy of its recording (--srp-resim,
+# src/srp_resim.c): the recorder's, the host's and the joiner's, every frame as recorded
+# -- except, with DESYNC_FRAME=N, the joiner's, which must part at frame N+1: the frame
+# its own match went out of step, played again as the host played it.
+resim_ok=1
+if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ]; then
+    resim_ok=0
+    mkdir -p "$OUT/home-resim"
+    server_srp=$(ls "$OUT"/recordings/*.SRP 2>/dev/null | sort | tail -1)
+    host_srp=$(find "$OUT/home-host" -name LATEST.SRP 2>/dev/null | head -1)
+    join_srp=$(find "$OUT/home-join" -name LATEST.SRP 2>/dev/null | head -1)
+    bad=0
+    for who in recorder host join; do
+        case $who in recorder) f=$server_srp ;; host) f=$host_srp ;; join) f=$join_srp ;; esac
+        [ -n "$f" ] || { echo "!! resim: no $who recording"; bad=1; continue; }
+        line=$(HOME="$OUT/home-resim" timeout -s KILL 300 "bin/$BIN" --srp-resim="$f" 2>"$OUT/resim-$who.log" |
+               grep '^\[resim\]' | tail -1)
+        rc=${PIPESTATUS[0]}
+        echo "resim $who: ${line#\[resim\] } (exit $rc)"
+        if [ -n "$DESYNC_FRAME" ] && [ $who = join ]; then
+            [ "$rc" = 2 ] && [[ "$line" == *"parts at frame $((DESYNC_FRAME + 1)):"* ]] || bad=1
+        else
+            [ "$rc" = 0 ] || bad=1
+        fi
+    done
+    [ "$bad" = 0 ] && resim_ok=1
+fi
+
 what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")"
 if [ -n "$DESYNC_FRAME" ]; then
     # A desync on purpose: the match ends early on both sides, and the recorder named the frame.
-    if [ "$ledger_ok" = 1 ] && grep -q "live match ended early" "$OUT/host.log" &&
+    if [ "$ledger_ok" = 1 ] && [ "$resim_ok" = 1 ] && grep -q "live match ended early" "$OUT/host.log" &&
        grep -q "live match ended early" "$OUT/join.log"; then
         echo "relay-test: PASSED — the desync at frame $DESYNC_FRAME was caught by the recorder at frame $((DESYNC_FRAME + 1)) (logs in $OUT)"
         exit 0
     fi
-elif [ "$fail" = 0 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$hn" = "$MATCHES" ] && [ "$jn" = "$MATCHES" ] &&
+elif [ "$fail" = 0 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$resim_ok" = 1 ] &&
+     [ "$hn" = "$MATCHES" ] && [ "$jn" = "$MATCHES" ] &&
    [ -n "$hh" ] && [ "$hh" = "$jh" ]; then
     echo "relay-test: PASSED — $what, both peers identical (logs in $OUT)"
     exit 0

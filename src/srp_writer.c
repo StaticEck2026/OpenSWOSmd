@@ -108,25 +108,60 @@ static uint8_t *build_chapters(const SrpContent *c, uint32_t *len)
     return out;
 }
 
+static uint8_t *build_simv(const SrpContent *c)
+{
+    uint8_t *v = (uint8_t *)calloc(1, SRP_SIMV_BYTES);
+    if (!v)
+        return NULL;
+    BE_WRITE_U16(v, SRP_SIMV_VERSION);
+    v[2] = c->rules;
+    BE_WRITE_U32(v + 4, (uint32_t)(c->layout >> 32));
+    BE_WRITE_U32(v + 8, (uint32_t)c->layout);
+    BE_WRITE_U16(v + 12, c->simWidth);
+    return v;
+}
+
+static uint8_t *build_hashes(const SrpContent *c)
+{
+    uint8_t *h = (uint8_t *)malloc((size_t)c->frameCount * SRP_HASH_BYTES + 1);
+    uint32_t i;
+    if (!h)
+        return NULL;
+    for (i = 0; i < c->frameCount; i++)
+        BE_WRITE_U32(h + i * SRP_HASH_BYTES, c->hashes[i]);
+    return h;
+}
+
 uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
 {
-    Chunk chunks[5];
-    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0;
-    uint8_t *raw[5], *file, *p;
+    Chunk chunks[10];
+    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0, parts = 5;
+    uint8_t *raw[10], *file, *p;
     int32_t missing = 0;
+    int32_t resumable = c->setup && c->setupLen && c->kickoff && c->kickoffLen &&
+                        c->inputs && c->hashes && c->frameCount;
 
     /* Every chunk's raw bytes first: nothing is laid out unless all of them exist. */
+    memset(raw, 0, sizeof raw);
     raw[0] = copy_of(c->meta, c->metaLen);
     raw[1] = copy_of(c->frms, c->frmsLen);
     raw[2] = build_audio(c);
     raw[3] = build_seek(c, &seekLen);
     raw[4] = build_chapters(c, &chapLen);
+    if (resumable) {
+        raw[5] = build_simv(c);
+        raw[6] = copy_of(c->setup, c->setupLen);
+        raw[7] = copy_of(c->kickoff, c->kickoffLen);
+        raw[8] = copy_of(c->inputs, c->frameCount * SRP_INPUT_BYTES);
+        raw[9] = build_hashes(c);
+        parts = 10;
+    }
     memset(chunks, 0, sizeof chunks);
-    for (i = 0; i < 5; i++)
+    for (i = 0; i < parts; i++)
         if (!raw[i])
             missing = 1;
     if (missing) {
-        for (i = 0; i < 5; i++)
+        for (i = 0; i < parts; i++)
             free(raw[i]);
         return NULL;
     }
@@ -135,6 +170,14 @@ uint8_t *Srp_Build(const SrpContent *c, uint32_t *outLen)
     chunk_make(&chunks[n++], CHUNK_AUDI, raw[2], c->audioCount * AUDIO_EVENT_BYTES, 1);
     chunk_make(&chunks[n++], CHUNK_SEEK, raw[3], seekLen, 0);
     chunk_make(&chunks[n++], CHUNK_CHAP, raw[4], chapLen, 0);
+    if (resumable) {
+        /* The state packet is deflated already; the hashes do not compress. */
+        chunk_make(&chunks[n++], CHUNK_SIMV, raw[5], SRP_SIMV_BYTES, 0);
+        chunk_make(&chunks[n++], CHUNK_SETP, raw[6], c->setupLen, 1);
+        chunk_make(&chunks[n++], CHUNK_STAT, raw[7], c->kickoffLen, 0);
+        chunk_make(&chunks[n++], CHUNK_INPT, raw[8], c->frameCount * SRP_INPUT_BYTES, 1);
+        chunk_make(&chunks[n++], CHUNK_HASH, raw[9], c->frameCount * SRP_HASH_BYTES, 0);
+    }
 
     total = SWRP_HEADER_BYTES + n * SWRP_DIR_BYTES;
     for (i = 0; i < n; i++)

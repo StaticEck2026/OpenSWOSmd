@@ -215,6 +215,7 @@ static struct {
     uint32_t    chapterCount, chapterCap;
 
     uint8_t    *meta;           /* the match's identity, taken at kick-off */
+    int32_t     suppressed;     /* ReplayRec_Suppress: nothing is recorded */
 } s_rec;
 
 void ReplayRec_Configure(const char *path, int32_t autoSave)
@@ -226,6 +227,11 @@ void ReplayRec_Configure(const char *path, int32_t autoSave)
 int32_t ReplayRec_Recording(void)
 {
     return s_rec.on;
+}
+
+void ReplayRec_Suppress(int32_t on)
+{
+    s_rec.suppressed = on;
 }
 
 static void rec_on_sound(uint8_t kind, uint8_t channel, uint16_t id)
@@ -263,9 +269,117 @@ static void rec_free(void)
     s_rec.chapterCount = s_rec.chapterCap = 0;
 }
 
+/* ---- a RESUMABLE recording --------------------------------------------------------
+ * What the match was set up from, the state it kicked off in, and every frame's input and
+ * hash (include/srp_writer.h: SIMV, SETP, STAT, INPT, HASH): enough to play the match
+ * again exactly -- to re-simulate it on another machine, or to play on from any frame of
+ * it -- not only to watch it. Only a netplay match gives them (the lobby's setup, GGPO's
+ * frame-0 save, the confirmed inputs); a match played any other way leaves them empty and
+ * its .SRP is exactly what it was.
+ *
+ * The setup arrives BEFORE ReplayRec_MatchStart (the lobby applies it, then the match
+ * starts), so it waits as `pending` and MatchStart takes it. Inputs and hashes are kept by
+ * frame number: a frame GGPO plays again replaces its own, and once confirmed it is the
+ * frame as finally played. */
+static struct {
+    uint8_t  *pendingSetup;
+    uint32_t  pendingSetupLen;
+    uint8_t  *setup;
+    uint32_t  setupLen;
+    uint8_t  *kickoff;
+    uint32_t  kickoffLen;
+    uint64_t  layout;
+    uint8_t   rules;
+    uint16_t  simWidth;
+    uint8_t  *inputs;           /* SRP_INPUT_BYTES a frame */
+    uint32_t *hashes;
+    uint32_t  cap;              /* frames both arrays hold */
+    uint32_t  known;            /* frames with an input AND a hash, from 0 */
+} s_resume;
+
+static void resume_clear(void)
+{
+    free(s_resume.setup);
+    free(s_resume.kickoff);
+    free(s_resume.inputs);
+    free(s_resume.hashes);
+    s_resume.setup = s_resume.kickoff = s_resume.inputs = NULL;
+    s_resume.hashes = NULL;
+    s_resume.setupLen = s_resume.kickoffLen = s_resume.cap = s_resume.known = 0;
+}
+
+void ReplayRec_SetSetup(const uint8_t *setup, uint32_t len)
+{
+    free(s_resume.pendingSetup);
+    s_resume.pendingSetup = len ? (uint8_t *)malloc(len) : NULL;
+    s_resume.pendingSetupLen = s_resume.pendingSetup ? len : 0;
+    if (s_resume.pendingSetup)
+        memcpy(s_resume.pendingSetup, setup, len);
+}
+
+void ReplayRec_SetKickoff(const uint8_t *packet, uint32_t len, uint64_t layout, uint8_t rules,
+                          uint16_t simWidth)
+{
+    free(s_resume.kickoff);
+    s_resume.kickoff = len ? (uint8_t *)malloc(len) : NULL;
+    s_resume.kickoffLen = s_resume.kickoff ? len : 0;
+    if (s_resume.kickoff)
+        memcpy(s_resume.kickoff, packet, len);
+    s_resume.layout = layout;
+    s_resume.rules = rules;
+    s_resume.simWidth = simWidth;
+}
+
+static int32_t resume_grow(uint32_t frame)
+{
+    uint32_t cap;
+    uint8_t *in;
+    uint32_t *h;
+
+    if (frame < s_resume.cap)
+        return 0;
+    cap = s_resume.cap ? s_resume.cap : 4096;
+    while (cap <= frame)
+        cap *= 2;
+    /* The capacity moves only once BOTH have grown, so a failure leaves them agreeing. */
+    in = (uint8_t *)realloc(s_resume.inputs, (size_t)cap * SRP_INPUT_BYTES);
+    if (!in)
+        return 1;
+    s_resume.inputs = in;
+    h = (uint32_t *)realloc(s_resume.hashes, (size_t)cap * sizeof(uint32_t));
+    if (!h)
+        return 1;
+    s_resume.hashes = h;
+    s_resume.cap = cap;
+    return 0;
+}
+
+void ReplayRec_SetInput(uint32_t frame, const uint8_t *input)
+{
+    if (!s_resume.setup || resume_grow(frame))
+        return;
+    memcpy(s_resume.inputs + (size_t)frame * SRP_INPUT_BYTES, input, SRP_INPUT_BYTES);
+}
+
+void ReplayRec_SetHash(uint32_t frame, uint64_t hash)
+{
+    if (!s_resume.setup || resume_grow(frame))
+        return;
+    s_resume.hashes[frame] = (uint32_t)hash;
+    if (frame >= s_resume.known)
+        s_resume.known = frame + 1;
+}
+
 void ReplayRec_MatchStart(void)
 {
     ReplayRec_MatchEnd();       /* a match that never reached its end still gets written */
+
+    /* This match's setup, if the lobby gave one; a previous match's is gone either way. */
+    resume_clear();
+    s_resume.setup = s_resume.pendingSetup;
+    s_resume.setupLen = s_resume.pendingSetupLen;
+    s_resume.pendingSetup = NULL;
+    s_resume.pendingSetupLen = 0;
 
     /* A loaded replay is not this match's: before this, watching a .RPL and then playing a
      * friendly left the .RPL behind for the in-match highlights (H) to play. */
@@ -274,7 +388,7 @@ void ReplayRec_MatchStart(void)
 
     /* Not training, not the arcade cabinet, and not the replay rig's corpus runs -- a
      * test that wants a recording says so (--record-replay). */
-    if (_trainingGame != 0 || _gArcadeMode || (ReplayTest_Armed() && !s_rec.path))
+    if (_trainingGame != 0 || _gArcadeMode || (ReplayTest_Armed() && !s_rec.path) || s_rec.suppressed)
         return;
 
     rec_free();
@@ -537,6 +651,19 @@ static void content(SrpContent *c)
     c->chapterCount = s_rec.chapterCount;
     c->tickRate     = (uint16_t)DosGameplay_TargetFps();
     c->quirks       = _gOriginalFireHoldLockout ? SWRP_QUIRK_ORIGINAL_FIRE_HOLD_LOCKOUT : 0;
+    /* The resume parts whenever there are any (the recorder's stream sends them as they
+     * come); write_recording keeps them only when every frame has its input and hash. */
+    if (s_resume.setup && s_resume.kickoff) {
+        c->setup      = s_resume.setup;
+        c->setupLen   = s_resume.setupLen;
+        c->kickoff    = s_resume.kickoff;
+        c->kickoffLen = s_resume.kickoffLen;
+        c->inputs     = s_resume.inputs;
+        c->hashes     = s_resume.hashes;
+        c->layout     = s_resume.layout;
+        c->rules      = s_resume.rules;
+        c->simWidth   = s_resume.simWidth;
+    }
 }
 
 int32_t ReplayRec_Content(SrpContent *out)
@@ -559,6 +686,11 @@ static int32_t write_recording(void)
         return 1;
     }
     content(&c);
+    if (c.setup && s_resume.known < s_rec.frameCount) {
+        fprintf(stderr, "[replay] %u of %u frames have their input: this replay will not be "
+                        "resumable\n", s_resume.known, s_rec.frameCount);
+        c.setup = NULL;
+    }
     file = Srp_Build(&c, &total);
     if (!file) {
         fprintf(stderr, "[replay] out of memory: the match could not be saved\n");
@@ -599,6 +731,7 @@ void ReplayRec_MatchEnd(void)
         write_recording();
     }
     rec_free();
+    resume_clear();
     if (s_trace)
         fflush(s_trace);
 }
@@ -685,6 +818,60 @@ static uint8_t *chunk_get(const uint8_t *file, uint32_t fileLen, uint32_t fourcc
         return out;
     }
     return NULL;
+}
+
+/* A resumable recording's parts (replay_v2.h ReplayResume). 0, or 1 no such .SRP, 2 a
+ * replay that was only recorded to be watched, 3 parts that do not add up. */
+int32_t ReplayV2_LoadResume(const char *name, ReplayResume *out)
+{
+    uint32_t len = 0, simvLen = 0, inLen = 0, hashLen = 0, f;
+    uint8_t *file, *simv = NULL, *hash = NULL;
+    int32_t rc = 0;
+
+    memset(out, 0, sizeof *out);
+    file = read_file(name, &len);
+    if (!file || memcmp(file, "SWRP", 4) != 0) {
+        free(file);
+        return 1;
+    }
+    simv = chunk_get(file, len, CHUNK_SIMV, &simvLen);
+    out->setup = chunk_get(file, len, CHUNK_SETP, &out->setupLen);
+    out->kickoff = chunk_get(file, len, CHUNK_STAT, &out->kickoffLen);
+    out->inputs = chunk_get(file, len, CHUNK_INPT, &inLen);
+    hash = chunk_get(file, len, CHUNK_HASH, &hashLen);
+    out->frames = BE_READ_U32(file + 16);
+    free(file);
+    if (!simv || !out->setup || !out->kickoff || !out->inputs || !hash) {
+        rc = 2;
+    } else if (simvLen < SRP_SIMV_BYTES || BE_READ_U16(simv) != SRP_SIMV_VERSION ||
+               out->frames == 0 || out->frames > 0x1000000u ||   /* the sizes below cannot wrap */
+               inLen != out->frames * SRP_INPUT_BYTES || hashLen != out->frames * SRP_HASH_BYTES) {
+        rc = 3;
+    } else {
+        out->rules = simv[2];
+        out->layout = ((uint64_t)BE_READ_U32(simv + 4) << 32) | BE_READ_U32(simv + 8);
+        out->simWidth = BE_READ_U16(simv + 12);
+        out->hashes = (uint32_t *)malloc((size_t)out->frames * sizeof(uint32_t) + 1);
+        if (!out->hashes)
+            rc = 3;
+        else
+            for (f = 0; f < out->frames; f++)
+                out->hashes[f] = BE_READ_U32(hash + f * SRP_HASH_BYTES);
+    }
+    free(simv);
+    free(hash);
+    if (rc)
+        ReplayV2_FreeResume(out);
+    return rc;
+}
+
+void ReplayV2_FreeResume(ReplayResume *r)
+{
+    free(r->setup);
+    free(r->kickoff);
+    free(r->inputs);
+    free(r->hashes);
+    memset(r, 0, sizeof *r);
 }
 
 /* Into the HIL header the highlights viewer reads (CopyTeamsAndHeader), as a .RPL load

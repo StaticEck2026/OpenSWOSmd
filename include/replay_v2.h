@@ -40,6 +40,9 @@ void    ReplayRec_MatchEnd(void);       /* the match is over (or quit): write th
 void    ReplayRec_SetFrame(uint32_t frame);
 
 int32_t ReplayRec_Recording(void);
+/* Record nothing from now on, for a run that plays a match only to check it (--srp-resim):
+ * LATEST.SRP is the last match PLAYED, and a re-simulation is not one. */
+void    ReplayRec_Suppress(int32_t on);
 
 /* The recording so far, as the parts of a file (include/srp_writer.h): what the match
  * recorder (src/match_record.c) streams, frame by confirmed frame. Pointers into the
@@ -47,6 +50,39 @@ int32_t ReplayRec_Recording(void);
  * being recorded, 1 when it is not. */
 struct SrpContent;
 int32_t ReplayRec_Content(struct SrpContent *out);
+
+/* A RESUMABLE recording: enough to play the match again exactly, from any frame
+ * (include/srp_writer.h, SETP/STAT/INPT/HASH/SIMV). The netplay match gives them; any
+ * other match leaves them empty and its .SRP is what it always was.
+ *   SetSetup    the match setup (NetplaySetup_Encode), from the lobby, BEFORE MatchStart
+ *   SetKickoff  the state at frame 0 (a state_wire packet), and what it needs to be
+ *               re-simulated: the registry layout, the rules (P2P_RULE_*), the sim width
+ *   SetInput    frame `frame`'s input, SRP_INPUT_BYTES; a later call for the same frame
+ *               replaces it (a rollback), so a confirmed frame holds what was played
+ *   SetHash     frame `frame`'s SIM-tier hash at its start, the same way */
+void    ReplayRec_SetSetup(const uint8_t *setup, uint32_t len);
+void    ReplayRec_SetKickoff(const uint8_t *packet, uint32_t len, uint64_t layout, uint8_t rules,
+                             uint16_t simWidth);
+void    ReplayRec_SetInput(uint32_t frame, const uint8_t *input);
+void    ReplayRec_SetHash(uint32_t frame, uint64_t hash);
+
+/* A resumable .SRP's parts, read back: what --srp-resim plays the match again from. */
+typedef struct {
+    uint8_t  *setup;        /* NetplaySetup_Encode */
+    uint32_t  setupLen;
+    uint8_t  *kickoff;      /* a state_wire packet: the state at frame 0 */
+    uint32_t  kickoffLen;
+    uint8_t  *inputs;       /* SRP_INPUT_BYTES a frame */
+    uint32_t *hashes;       /* the low half of each frame's SIM hash, at its start */
+    uint32_t  frames;
+    uint64_t  layout;       /* SimState_LayoutHash of the build that recorded it */
+    uint8_t   rules;        /* P2P_RULE_* it was played by */
+    uint16_t  simWidth;
+} ReplayResume;
+/* 0; 1 no such .SRP; 2 recorded only to be watched (no resume parts); 3 broken. A bare
+ * name is looked for in the save folder, like LOAD. */
+int32_t ReplayV2_LoadResume(const char *name, ReplayResume *out);
+void    ReplayV2_FreeResume(ReplayResume *r);
 
 /* ---- playback -------------------------------------------------------------- */
 

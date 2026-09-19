@@ -50,6 +50,7 @@
 #include "p2p_link.h"
 #include "sim_state.h"
 #include "state_wire.h"
+#include "replay_v2.h"     /* ReplayRec_SetSetup: the resumable recording */
 
 #include <SDL.h>                        /* SDL_GetPerformanceCounter: key entropy fallback */
 #include <time.h>
@@ -794,6 +795,10 @@ int32_t NetplayLobby_ApplyMatch(void)
         keep_kickoff(NULL, 0);
     }
     rc = NetplaySetup_Apply(s_lobby.setup, s_lobby.setupLen);
+    /* The recording keeps it: with the kick-off state and every frame's input it plays
+     * this match again exactly (replay_v2.h). */
+    if (rc == 0)
+        ReplayRec_SetSetup(s_lobby.setup, s_lobby.setupLen);
     free(s_lobby.setup);
     s_lobby.setup = NULL;
     s_lobby.setupLen = 0;

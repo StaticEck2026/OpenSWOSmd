@@ -46,6 +46,7 @@
 #include "match_record.h"        /* [netplay] record */
 #include "netplay_setup.h"      /* --netplay-selftest: the match setup round trip */
 #include "netplay_live_test.h"  /* --netplay-live-pair */
+#include "srp_resim.h"          /* --srp-resim */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
 
@@ -503,6 +504,13 @@ int main(int argc, char **argv)
             record_replay = v;
         } else if ((v = match_kv(a, "view-replay")) != NULL) {
             view_replay = v;
+        } else if ((v = match_kv(a, "srp-resim")) != NULL) {
+            /* Play a recorded match again and check every frame (src/srp_resim.c). */
+            if (SrpResim_Arm(v) != 0) {
+                fprintf(stderr, "--srp-resim needs a .SRP file\n");
+                return 1;
+            }
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if (strcmp(a, "--replay-window") == 0) {
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
@@ -742,6 +750,25 @@ int main(int argc, char **argv)
         }
         if (ReplayV2_ArmViewTest(view_replay) != 0)
             return 1;
+    }
+    if (SrpResim_Armed()) {
+        /* The match is played by the rules it was recorded with, whatever SWOS.ini says;
+         * headless, silent and unlogged like the replay rig, and with no audio pump
+         * writing game memory behind the step's back (docs/ROLLBACK.md). */
+        if (SrpResim_Rules(&opts.dos_gameplay, &opts.fire_hold_lockout) != 0)
+            return 1;
+#ifdef _WIN32
+        _putenv("SWOS_HARNESS_TURBO=1");
+        _putenv("SWOS_NO_LOG=1");
+        if (!getenv("SDL_VIDEODRIVER")) _putenv("SDL_VIDEODRIVER=dummy");
+        if (!getenv("SDL_AUDIODRIVER")) _putenv("SDL_AUDIODRIVER=dummy");
+#else
+        setenv("SWOS_HARNESS_TURBO", "1", 1);
+        setenv("SWOS_NO_LOG", "1", 1);
+        if (!getenv("SDL_VIDEODRIVER")) setenv("SDL_VIDEODRIVER", "dummy", 1);
+        if (!getenv("SDL_AUDIODRIVER")) setenv("SDL_AUDIODRIVER", "dummy", 1);
+#endif
+        SDL_setenv("SWOS_AUDIO_OFF", "1", 1);
     }
 
     /* Whole-match recording (src/replay_v2.c). */

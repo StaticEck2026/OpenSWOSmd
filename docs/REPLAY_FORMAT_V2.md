@@ -186,6 +186,38 @@ verified; nothing reads it yet (§6).
 `{count}` then `{frame, kind (1 goal, 2 half), team, value}`: every goal and the
 start of each half, for jump-to-goal.
 
+### The match itself: `SIMV` `SETP` `STAT` `INPT` `HASH`
+
+The chunks above are what was **drawn**. These five are what was **played**:
+what the match was set up from, the state it kicked off in, every frame's input,
+and every frame's state hash. With them a match can be played again exactly
+(`--srp-resim`, §5), and eventually be taken over from any frame and played on.
+
+They are written for a **live netplay match** only: the setup is what the lobby
+sent, the kick-off state is GGPO's first save of frame 0, and the inputs and
+hashes are the frames as finally confirmed, so a rollback re-records them.
+All five are written or none: a match whose inputs or hashes are not known for
+every frame is written without them, and says so in the log (a reader that
+finds some but not all refuses the file, rather than play half of it).
+
+| Chunk | Stored | Content |
+|---|---|---|
+| `SIMV` | as is, 16 bytes | version u16 (1); the handshake's rules byte (`P2P_RULE_*`: 0x01 DOS gameplay, 0x02 arcade, 0x04 fire-hold lockout, 0x08 no bookings, 0x10 no injuries); 0; the registry's layout hash u64 (`SimState_LayoutHash`); the simulation width u16 (`_sim_draw_width`); 0 |
+| `SETP` | deflated | the match setup the host sent (`include/netplay_setup.h`): teams, tactics, the rules they are played by |
+| `STAT` | as is (it is deflated already) | a `state_wire` packet of the SIM and VIEW tiers at the start of frame 0, in the portable encoding (`src/state_wire.c`) |
+| `INPT` | deflated | 4 bytes a frame: player 1's two bytes (controls, key), then player 2's, as `MatchStep_UnpackInput` reads them |
+| `HASH` | as is | 4 bytes a frame: the low 32 bits of the SIM-tier hash at the START of that frame, the state GGPO saved for it |
+
+The layout hash and the rules byte are the same two things the netplay handshake
+compares (docs/NETPLAY.md §6), for the same reason: a build whose match state is
+laid out differently, or that plays by other rules, is not playing the same match,
+and a re-simulation on it proves nothing. The width is there because the match is
+simulated at a width (`_sim_draw_width`); it is not the width anyone watches it at.
+
+A 600-frame match gains about 5.7 KB: `STAT` 1.9 KB, `SETP` 1.1 KB, `INPT`
+0.2 KB, `HASH` 2.4 KB. `HASH` does not compress, so a full match carries about
+90 KB of it — beside a ~1 MB file.
+
 ### `quirks`
 
 **Which game this was recorded against.** We deliberately depart from the
@@ -246,6 +278,39 @@ for tests; `SWOS_REPLAY_TRACE=<file>` writes what was drawn (and
 `[replays] auto_save` in `SWOS.ini` additionally keeps a dated `MMDDHHMM.SRP`
 per match. `LATEST.SRP` is always written.
 
+**Re-simulation** — `--srp-resim=<file.SRP>` (`src/srp_resim.c`) plays a live
+match's recording again, headless, from its own setup, kick-off state and inputs,
+through the same netplay step the match was played with (`netplay_match.c`, the
+`resim` mode), and checks every frame's state against `HASH`:
+
+```
+bin/SWOS.x86_64 --srp-resim=LATEST.SRP
+[resim] 600 frames, every one as recorded                               exit 0
+[resim] parts at frame 251: this build 498AFE21, the recording 752D25C4  exit 2
+```
+
+It takes the gameplay style and the fire-hold lockout from the file, whatever
+`SWOS.ini` says, and refuses (exit 1) a file recorded by a build with a different
+layout or rules. On the build and rules it was recorded with, every frame must
+agree; the first that does not is where THIS machine plays the match differently
+from the one that recorded it. So a desync between two machines no longer has to
+be caught live: the recorder keeps a copy of every match streamed to it, and any
+machine can play that copy again and name the frame. A match that went out of
+step on purpose (`SWOS_LIVE_DESYNC_FRAME=N` on one peer) parts at frame N+1 when
+that peer's own file is played again — and matches the other peer's hash there,
+which says which of the two was the odd one out.
+
+It also catches a file that was changed after the match: one input changed
+anywhere (a fire press, a direction) parts within a frame or two, one byte of
+`STAT` fails the packet's own check, and a changed hash claim parts at its frame.
+What it cannot catch alone is a file made up from scratch by a build that plays
+the same rules — that file is self-consistent. The copy that counts is the
+recorder's, which neither player wrote (docs/NETPLAY.md §7).
+
+`RECORD=1 scripts/relay_test.sh` plays every copy of the last match again — the
+recorder's, the host's and the joiner's — and with `DESYNC_FRAME=N` requires the
+joiner's to part at exactly N+1.
+
 ---
 
 ## 6. Trick play (replaces `.IDX`) — not wired yet
@@ -286,7 +351,8 @@ per match. `LATEST.SRP` is always written.
   sprite positions would cut it further — most move a few px per frame.
 - Bench and substitute sprites are not recorded (nor were they in `.HIL`), so a
   replay shows an empty bench.
-- Do we record inputs too (enabling true re-simulation)? Re-sim would give
-  *perfect* SFX but risks desync across engine changes; position playback is
-  robust. Now that netplay records every peer's inputs, this is cheaper than it
-  was — but it is still a different format, not this one.
+- ~~Do we record inputs too (enabling true re-simulation)?~~ Done for live
+  matches, **beside** the positions rather than instead of them (§4, "The match
+  itself"): the drawn frames still play on any build, and the re-simulation is
+  refused by one whose layout or rules differ. Next: **play on from a frame** —
+  load the state a re-simulation reached and hand the pads to players.

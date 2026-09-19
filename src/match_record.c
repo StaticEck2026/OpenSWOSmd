@@ -69,6 +69,7 @@ static struct {
     /* A FULL recording: the .SRP the game is writing, as it is confirmed. */
     int32_t  full;
     int32_t  metaSent;
+    int32_t  resumeSent;
     uint32_t replayNext;            /* the next replay frame owed */
     uint32_t audioNext, chapterNext;/* the next sound / chapter owed, as indices */
     uint32_t replayFrames;          /* how many were streamed */
@@ -239,6 +240,7 @@ void MatchRecord_Begin(const MatchRecordInfo *info)
     s_rec.frames = 0;
     s_rec.outLen = 0;
     s_rec.metaSent = 0;
+    s_rec.resumeSent = 0;
     s_rec.replayNext = s_rec.audioNext = s_rec.chapterNext = 0;
     s_rec.replayFrames = 0;
     {
@@ -343,6 +345,7 @@ static void send_replay(const SrpContent *c, uint32_t from, uint32_t to)
     for (chapEnd = s_rec.chapterNext; chapEnd < c->chapterCount && c->chapters[chapEnd].frame <= to; chapEnd++)
         nChap++;
     len += 2 + nAudio * AUDIO_EVENT_BYTES + 2 + nChap * CHAPTER_BYTES;
+    len += 2 + (c->inputs ? (to - from + 1) * SRP_INPUT_BYTES : 0);
     buf = (uint8_t *)malloc(len);
     if (!buf) {
         drop("out of memory");
@@ -371,6 +374,13 @@ static void send_replay(const SrpContent *c, uint32_t from, uint32_t to)
         p[4] = c->chapters[i].kind;
         p[5] = c->chapters[i].team;
         Record_Put16(p + 6, c->chapters[i].value);
+    }
+    /* Each frame's input, for a resumable recording: confirmed, so final. */
+    Record_Put16(p, c->inputs ? to - from + 1 : 0);
+    p += 2;
+    if (c->inputs) {
+        memcpy(p, c->inputs + (size_t)from * SRP_INPUT_BYTES, (size_t)(to - from + 1) * SRP_INPUT_BYTES);
+        p += (to - from + 1) * SRP_INPUT_BYTES;
     }
     hold_message(RECORD_REPLAY_FRAMES, buf, len);
     free(buf);
@@ -402,6 +412,29 @@ void MatchRecord_Replay(uint32_t confirmed)
         free(m);
         s_rec.metaSent = 1;
     }
+    /* The parts that make it resumable, once they all exist: the kick-off state comes
+     * with GGPO's first save of frame 0, before any frame is confirmed. */
+    if (!s_rec.resumeSent && c.setup && c.kickoff) {
+        uint32_t n = 16 + c.setupLen + c.kickoffLen;
+        uint8_t *m = (uint8_t *)malloc(n);
+        if (!m) {
+            drop("out of memory");
+            return;
+        }
+        Record_Put64(m, c.layout);
+        m[8] = c.rules;
+        m[9] = 0;
+        Record_Put16(m + 10, c.simWidth);
+        Record_Put32(m + 12, c.setupLen);
+        memcpy(m + 16, c.setup, c.setupLen);
+        memcpy(m + 16 + c.setupLen, c.kickoff, c.kickoffLen);
+        hold_message(RECORD_REPLAY_RESUME, m, n);
+        free(m);
+        s_rec.resumeSent = 1;
+    }
+    /* Inputs go with the frames only once the recorder has the rest to use them with. */
+    if (!s_rec.resumeSent)
+        c.inputs = NULL;
     if (c.frameCount == 0)
         return;
     /* Recorded AND confirmed: every rollback the confirmed inputs called for has been

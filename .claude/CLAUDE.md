@@ -112,6 +112,11 @@ must be taken WITH the sprites (the camera moves inside the end-of-match frame, 
 taken at KICK-OFF (by the end of a match `SetPitchTypeAndNumber` has run again, so an end-of-match
 `pitchNumberAndType` plays the match on the wrong pitch). Netplay records by GGPO frame number
 (`ReplayRec_SetFrame`), so a rollback re-records what was finally played.
+A live match's `.SRP` also carries what it takes to PLAY it again — `SIMV SETP STAT INPT HASH`:
+the setup, the state at frame 0, every confirmed frame's input and SIM hash (REPLAY_FORMAT_V2.md
+§4). `--srp-resim=<file>` (`src/srp_resim.c`) replays it headless through the netplay step and
+names the first frame that parts from the recording: a cross-machine desync reproduced offline from
+the recorder's copy. `RECORD=1 scripts/relay_test.sh` resims every copy of what it records.
 
 ### Release builds — `scripts/build_dist.sh`
 

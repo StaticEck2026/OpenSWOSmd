@@ -353,6 +353,12 @@ skip_title_screens: ;
         if (NetplayLiveTest_Armed())
             NetplayLiveTest_Run();   /* plays a live match, then exits */
         {
+            extern int32_t SrpResim_Armed(void);
+            extern void    SrpResim_Run(void);
+            if (SrpResim_Armed())
+                SrpResim_Run();       /* plays a recorded match again, then exits */
+        }
+        {
             extern int32_t ReplayV2_ViewTestArmed(void);
             extern void    ReplayV2_ViewTestRun(void);
             if (ReplayV2_ViewTestArmed())

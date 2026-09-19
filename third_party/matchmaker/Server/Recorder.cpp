@@ -231,6 +231,8 @@ bool Recorder::Handle(Connection& c, uint8_t type, const uint8_t* p, uint32_t le
     }
     else if (type == RECORD_REPLAY_SCORE)
         OnReplayScore(c, p, len);
+    else if (type == RECORD_REPLAY_RESUME)
+        OnReplayResume(c, p, len);
     // Anything newer than us is skipped: a player may be a later build.
     c.match->lastMs = ServerTime::NowMs();
     return true;
@@ -429,9 +431,33 @@ bool Recorder::OnReplayFrames(Connection& c, const uint8_t* p, uint32_t len)
         ch.value = (uint16_t)Record_Get16(p + at + 6);
         s.chapters.push_back(ch);
     }
+    // Each frame's input (a resumable recording), or none. A batch without them leaves
+    // the recording watchable but not resumable.
+    uint32_t nInputs = at + 2 <= len ? Record_Get16(p + at) : 0;
+    at += at + 2 <= len ? 2 : 0;
+    if (nInputs == count && at + nInputs * SRP_INPUT_BYTES <= len)
+        s.inputs.insert(s.inputs.end(), p + at, p + at + nInputs * SRP_INPUT_BYTES);
+    else if (count)
+        s.inputsBroken = true;
     if (s.offsets.size() - s.writtenFrames >= kCheckpointFrames)
         WriteReplay(*c.match, false);
     return true;
+}
+
+void Recorder::OnReplayResume(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 16)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    uint32_t setupLen = Record_Get32(p + 12);
+    if (16 + (uint64_t)setupLen > len)
+        return;
+    s.layout = Record_Get64(p);
+    s.rules = p[8];
+    s.resumeSimWidth = (uint16_t)Record_Get16(p + 10);
+    s.setup.assign(p + 16, p + 16 + setupLen);
+    s.kickoff.assign(p + 16 + setupLen, p + len);
+    s.resume = !s.setup.empty() && !s.kickoff.empty();
 }
 
 void Recorder::OnReplayScore(Connection& c, const uint8_t* p, uint32_t len)
@@ -473,6 +499,25 @@ void Recorder::WriteReplay(Match& m, bool last)
     c.chapterCount = (uint32_t)s->chapters.size();
     c.tickRate = s->tickRate;
     c.quirks = s->quirks;
+    // Resumable when every frame has its input and its hash -- as the player's game
+    // decides it (replay_v2.c write_recording), so the two files still agree.
+    std::vector<uint32_t> hashes;
+    if (s->resume && !s->inputsBroken && s->inputs.size() == (size_t)c.frameCount * SRP_INPUT_BYTES &&
+        s->hashes.size() >= c.frameCount)
+    {
+        hashes.resize(c.frameCount);
+        for (uint32_t f = 0; f < c.frameCount; f++)
+            hashes[f] = (uint32_t)s->hashes[f];
+        c.setup = s->setup.data();
+        c.setupLen = (uint32_t)s->setup.size();
+        c.kickoff = s->kickoff.data();
+        c.kickoffLen = (uint32_t)s->kickoff.size();
+        c.inputs = s->inputs.data();
+        c.hashes = hashes.data();
+        c.layout = s->layout;
+        c.rules = s->rules;
+        c.simWidth = s->resumeSimWidth;
+    }
     uint32_t len = 0;
     uint8_t* file = Srp_Build(&c, &len);
     if (!file)

@@ -1281,11 +1281,31 @@ That is also the live-stream path: the frames reach the server a few frames behi
 so a viewer served from them (later, and the browser build's) watches the match as it
 happens.
 
+**And what it takes to play it again.** A live match's `.SRP` also carries its setup, the
+state it kicked off in, and every frame's input and SIM hash (docs/REPLAY_FORMAT_V2.md §4,
+"The match itself"). The player streams them too: a RESUME message once the kick-off is
+known (the layout hash, the rules byte, the simulation width, the setup, the kick-off
+packet), and each confirmed frame's input beside its replay frame. So the recorder's copy
+can be played again anywhere, by `--srp-resim=<file>` (docs/REPLAY_FORMAT_V2.md §5), which
+checks every frame against the recorded hashes and names the first that parts. A desync
+between two machines no longer has to be caught while the match is played: any machine
+can play the recorder's copy again and say whether it plays the match the same way.
+
+That makes the recorder's copy the one to trust for a result — a league table, a
+tournament. Neither player wrote it, both players' hash streams agreed on every frame of
+it, and anyone can check that its inputs produce its states. A player's own file proves
+only that it is self-consistent: a build that plays the same rules can make up one that
+is. One thing the recorder cannot see is a doctored kick-off, because both players load
+the HOST's kick-off state (the lobby, above) and so agree on it; checking that state
+against what the setup alone produces is the next step there.
+
 ```bash
 RECORD=1 scripts/relay_test.sh                       # relayed and recorded, .SRP checked
 RECORD=1 RELAY=0 scripts/relay_test.sh               # peer to peer and recorded
 RECORD=1 RECORD_MODE=hashes scripts/relay_test.sh    # hashes only
-RECORD=1 DESYNC_FRAME=150 scripts/relay_test.sh      # the recorder must name frame 151
+RECORD=1 DESYNC_FRAME=150 scripts/relay_test.sh      # the recorder must name frame 151,
+                                                     # and the joiner's own .SRP part there
+bin/SWOS.x86_64 --srp-resim=recordings/<match>.SRP  # play a recorded match again
 ```
 
 ### Status

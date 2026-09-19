@@ -80,6 +80,17 @@ int32_t     NetplayMatch_Frame(void);
  * they are for the replay rig and for arcade mode. */
 int32_t     NetplayMatch_IsLive(void);
 
+/* Play a recorded match again (src/srp_resim.c): the state at frame 0 (a state_wire
+ * packet), every frame's input and the SIM hash each frame started with, from a
+ * resumable .SRP. The pointers must outlive the match. Then InitAndPlayGame; each frame's
+ * hash is checked before it is played, and the first that differs ends it. */
+int32_t     NetplayMatch_StartResim(const uint8_t *kickoff, uint32_t kickoffLen, const uint8_t *inputs,
+                                    const uint32_t *hashes, uint32_t frames, int32_t simWidth);
+/* After it: frames played, how many started as recorded, the first that did not (-1:
+ * none), and that frame's hash here and in the recording. */
+void        NetplayMatch_ResimResult(uint32_t *played, uint32_t *matched, int32_t *firstDiff,
+                                     uint32_t *have, uint32_t *want);
+
 /* Replace where a live match reads its LOCAL input, for testing. NULL restores
  * the pad. The returned value is MATCH_* control bits (include/match_step.h). */
 void        NetplayMatch_SetInputSource(uint8_t (*fn)(void));
