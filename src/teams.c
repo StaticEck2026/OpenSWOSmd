@@ -1214,8 +1214,14 @@ static const uint8_t *replPosSearchOrderTable[8] = {
  *   d1=removedPlayerOrdinal, d5=rangeStart, d6=rangeEnd
  *   Returns best candidate ordinal in d2, also sets a3=player ptr.
  *
- * Priority: match position, prefer trialist/trial players ($9A/$9B form),
- * then compare by skill byte ($6C = price).
+ * Priority: match position, then prefer a REGULAR player over a TRIAL/RES
+ * one ($9B/$9A form), then the highest price byte ($6C); on a tie the first
+ * one found stays. The asm (SWOS2.s FindReplacementPlayerByPositionOrder):
+ *   candidate TRIAL/RES, best regular  -> bra skip
+ *   candidate regular,   best TRIAL/RES -> take it (loc_1421F8)
+ *   same kind                           -> cmp.b $6C(a0),d3 / bge skip
+ * An earlier port had the first two the wrong way round, so selling a
+ * starter promoted a trialist off the bench ahead of a better regular.
  * ================================================================ */
 static uint16_t findReplacementPlayerByPositionOrder(
     uint16_t removedOrdinal, uint16_t rangeStart, uint16_t rangeEnd)
@@ -1234,7 +1240,7 @@ static uint16_t findReplacementPlayerByPositionOrder(
             PanicHaltLoop();
         }
 
-        int16_t bestSkill = -1;      /* d3: 0xFF as signed byte = -1 */
+        int8_t bestPrice = -1;       /* d3: move.b #$FF */
         uint16_t bestIdx = 0xFFFF;   /* d2 */
         PlayerFile *bestPf = (void *)0;   /* a3 */
 
@@ -1247,31 +1253,26 @@ static uint16_t findReplacementPlayerByPositionOrder(
             if (candPos != desiredPos)
                 continue;
 
-            if (bestSkill < 0) {
-                /* No candidate yet — take this one */
-                goto accept;
+            /* tst.b d3 / bmi: with no candidate yet there is no a3 to classify,
+             * so go straight to the price compare. */
+            if (bestPrice >= 0) {
+                int16_t candTrial = (uint8_t)candPf->form == PLAYER_FORM_TRIALIST ||
+                                    (uint8_t)candPf->form == PLAYER_FORM_RESERVE;
+                int16_t bestTrial = (uint8_t)bestPf->form == PLAYER_FORM_TRIALIST ||
+                                    (uint8_t)bestPf->form == PLAYER_FORM_RESERVE;
+                if (candTrial && !bestTrial)
+                    continue;       /* a regular player is never displaced by a trialist */
+                if (!candTrial && bestTrial)
+                    goto accept;    /* ...and always displaces one, whatever the price */
             }
 
-            /* Check if existing best is trialist/trial */
-            if ((uint8_t)bestPf->form == PLAYER_FORM_TRIALIST || (uint8_t)bestPf->form == PLAYER_FORM_RESERVE) {
-                /* Best IS trialist — compare skill directly */
-                if ((uint8_t)bestSkill >= (uint8_t)candPf->price)
-                    continue;
-                goto accept;
-            }
-
-            /* Best is NOT trialist — if candidate IS trialist, prefer candidate */
-            if ((uint8_t)candPf->form == PLAYER_FORM_TRIALIST || (uint8_t)candPf->form == PLAYER_FORM_RESERVE) {
-                goto accept;
-            }
-
-            /* Neither is trialist — compare by skill */
-            if ((uint8_t)bestSkill >= (uint8_t)candPf->price)
+            /* Same kind: cmp.b $6C(a0),d3 / bge skip — signed, higher price wins */
+            if (bestPrice >= candPf->price)
                 continue;
 
         accept:
             bestIdx = i;
-            bestSkill = (int16_t)candPf->price;
+            bestPrice = candPf->price;
             bestPf = candPf;
         }
 

@@ -4311,13 +4311,21 @@ void Career_RemovePlayerAndAddAsTrialist(uint16_t sourceTeam, uint16_t playerOrd
 /* ================================================================
  * PickRandomTeamRecordAvoidingTeam  (SWOS2.s line 64261)
  *
- * Picks a random team from TMD file or selected teams, avoiding
- * team with matching countryNumber (d7) or globalTeamNumber (d6).
+ * Picks a random team from TMD file or selected teams: any team OTHER
+ * than d6 whose countryNumber EQUALS d7. After 100 misses it returns
+ * whatever it drew last.
  *
- * in:  d6 = team number to avoid (word), d7 = team byte to avoid
+ * The IDA prototype calls d7 "avoidTeamByte", but only the team word is
+ * avoided — the country byte is WANTED: `cmp.b (a0),d7 / beq.s return`
+ * (SWOS2.s:97714, :97728). So a generated replacement borrows its name,
+ * nationality and face from another club in the same country, which is
+ * what the Amiga shows (a Spanish club's replacement gets a Spanish-league
+ * name). Testing `!=` here drew them from foreign clubs instead.
+ *
+ * in:  d6 = team number to avoid (word), d7 = country byte to match
  * out: a0 = pointer to team record
  * ================================================================ */
-static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t avoidTeamByte)
+static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t countryByte)
 {
     TeamFileEx *result;
     uint16_t retries = 100;
@@ -4338,7 +4346,7 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
             uint16_t candTeamId = PACK_BE_U16(result->team.countryNumber,
                                               result->team.teamOrdinal);
             if (candTeamId != avoidTeamWord) {
-                if (result->team.countryNumber != avoidTeamByte)
+                if (result->team.countryNumber == countryByte)
                     return (uint8_t *)result;
             }
             if (retries == 0)
@@ -4354,7 +4362,7 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
         uint16_t candTeamId2 = PACK_BE_U16(result->team.countryNumber,
                                            result->team.teamOrdinal);
         if (candTeamId2 != avoidTeamWord) {
-            if (result->team.countryNumber != avoidTeamByte)
+            if (result->team.countryNumber == countryByte)
                 return (uint8_t *)result;
         }
         if (retries == 0)
@@ -4371,11 +4379,11 @@ static uint8_t *pickRandomTeamRecordAvoidingTeam(uint16_t avoidTeamWord, uint8_t
  * trialist name. Builds name by taking last word(s) from player
  * surname. Also returns nationality and position flags.
  *
- * in:  d0 = avoidTeamByte (country), d3 = avoidTeamWord (team#)
+ * in:  d0 = country byte to match, d3 = avoidTeamWord (team#)
  * out: d0 = nationality byte, d3 = position flags (bits 3-4),
  *      a2 = pointer to trialistNameBuffer
  * ================================================================ */
-static uint32_t pickRandomTrialistOriginValue(uint8_t avoidTeamByte, uint16_t avoidTeamWord)
+static uint32_t pickRandomTrialistOriginValue(uint8_t countryByte, uint16_t avoidTeamWord)
 {
     uint8_t nationality;
     uint8_t posFlags;
@@ -4384,7 +4392,7 @@ restart:;
     uint8_t *nameDst = _trialistNameBuffer;
 
     /* Pick random team, then random player from it */
-    uint8_t *team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, avoidTeamByte);
+    uint8_t *team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, countryByte);
     uint16_t r = Rand2();
     uint16_t playerIdx = (r & 0xF) * 0x26;
     uint8_t *playerBase = team + playerIdx;
@@ -4437,7 +4445,7 @@ restart:;
 
     handleSpace:
         /* On space: pick a new random team/player, take last word of their surname */
-        team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, avoidTeamByte);
+        team = pickRandomTeamRecordAvoidingTeam(avoidTeamWord, countryByte);
         r = Rand2();
         playerIdx = (r & 0xF) * 0x26;
         playerBase = team + playerIdx;
@@ -4502,10 +4510,10 @@ void Career_GenerateTrialistForTeamPlayer(uint16_t playerIndex)
     uint8_t *base = GetPlayer(_selTeamNumber, playerIndex);
     PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
 
-    uint8_t avoidByte = (uint8_t)(_selTeamNumber >> 8);  /* move.b — high byte */
+    uint8_t country = (uint8_t)(_selTeamNumber >> 8);  /* move.b — high byte */
     uint16_t avoidWord = _selTeamNumber;
 
-    uint32_t result = pickRandomTrialistOriginValue(avoidByte, avoidWord);
+    uint32_t result = pickRandomTrialistOriginValue(country, avoidWord);
     uint8_t nationality = (uint8_t)(result & 0xFF);
     uint8_t posFlags = (uint8_t)((result >> 8) & 0xFF);
 
@@ -4704,11 +4712,11 @@ void Career_ConvertPlayerToTrialistFromName(uint16_t sourceTeam, uint16_t player
     uint8_t *base = GetPlayer(sourceTeam, playerOrd);
     PlayerFile *pf = (PlayerFile *)(base + PF_OFF);
 
-    /* Use high byte of team number for avoid byte, full word for avoid word */
-    uint8_t avoidByte = (uint8_t)(sourceTeam >> 8);
+    /* High byte of the team number = the country to draw from; the full word = the team to avoid */
+    uint8_t country = (uint8_t)(sourceTeam >> 8);
     uint16_t avoidWord = sourceTeam;
 
-    uint32_t result = pickRandomTrialistOriginValue(avoidByte, avoidWord);
+    uint32_t result = pickRandomTrialistOriginValue(country, avoidWord);
     uint8_t nationality = (uint8_t)(result & 0xFF);
     uint8_t posFlags = (uint8_t)((result >> 8) & 0xFF);
 
