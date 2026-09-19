@@ -62,6 +62,11 @@
  *
  * Off unless the environment sets it, so a normal match pays a single
  * predictable branch and nothing else.
+ *
+ * The rules and the profile table are include/netem_core.h, shared with the
+ * matchmaking server's relay (third_party/matchmaker, `--netem`), which applies
+ * the same conditions in the middle of a relayed match. This one stays: most
+ * matches are peer to peer, and only an emulator on the peer can disturb those.
  */
 #ifndef NETPLAY_NETEM_H
 #define NETPLAY_NETEM_H

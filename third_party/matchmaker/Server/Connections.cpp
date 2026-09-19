@@ -8,6 +8,7 @@
 #include <iostream>
 #include "Sender.h"
 #include "UserChangedStateVisitor.h"
+#include "Relay.h"
 
 Connections::Connections(uint16_t port) : 
     address{ ENET_HOST_ANY,port },
@@ -246,6 +247,25 @@ bool Connections::StartGame(User* owner)
         for (const auto& ip : owner->LocalIPs())
             gameInfo2 += "," + ToString(ip);
         std::cout << "Users starting a game, sending\n";
+        // OpenSWOS: a relayed match (Relay.h). Only between two OpenSWOS
+        // clients -- the SWOS 2020 client's parser throws on a header it does not
+        // know, and could not use a relay anyway. RELAY: goes first, on the same
+        // reliable channel, so it is in hand when START arrives.
+        const std::string ours = "OPENSWOS";
+        if (m_relay && m_relay->Enabled() &&
+            owner->Version().compare(0, ours.size(), ours) == 0 &&
+            p2->Version().compare(0, ours.size(), ours) == 0)
+        {
+            uint64_t token = m_relay->CreateSession(owner->Name(), owner->Peer()->address,
+                                                    p2->Name(), p2->Peer()->address);
+            if (token)
+            {
+                char hex[17];
+                snprintf(hex, sizeof hex, "%016llx", (unsigned long long)token);
+                SendTo(owner->Peer())(std::string(RELAY_MM_HEADER) + hex + ",1");
+                SendTo(p2->Peer())(std::string(RELAY_MM_HEADER) + hex + ",2");
+            }
+        }
         auto m1 = Message::Make(MessageType::Start, gameInfo1); 
         m1.OnData(SendTo(owner->Peer()));
         m1.OnData([&](const std::string& s) {std::cout << "To " << owner->Name() << " send " << s << "\n"; });

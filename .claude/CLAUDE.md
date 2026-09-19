@@ -82,6 +82,17 @@ loopback. A live match through the lobby, and a rematch after it, is `scripts/ne
 (two instances through the real menus); run it after touching the lobby, the link, or how a live
 match starts or ends. A live match must never `exit()` or leave the frame loop: it ends through
 `liveEnd` and goes back to the lobby.
+The matchmaking server can also play a match THROUGH itself (`--relay`, docs/NETPLAY.md §7
+"The relay"): for testing, the browser build and NATs that will not punch — players stay peer
+to peer. `--netem <profile|cycle>` puts the game's own emulator (`src/netem_core.c`, shared) in
+the middle, where it disturbs the lobby's link too, which the client-side one never does.
+`scripts/relay_test.sh` (`NETEM=wifi|awful|...`) plays two local players through it via the real
+menus; run it after touching `p2p_link`, the lobby's start, or the relay. `--record` makes the
+same server a recorder any live match can stream to (`SWOS_RECORD`/`[netplay] record`, relayed
+or peer to peer): it compares both players' confirmed-frame hashes and logs a desync with its
+exact frame, and keeps the match as a `.SRP` that must be the host's `LATEST.SRP` byte for byte
+— both are laid out by `src/srp_writer.c` (§7 "The recorder";
+`RECORD=1 [RELAY=0] [DESYNC_FRAME=N] scripts/relay_test.sh`).
 
 **Whole-match replays** (`.SRP`, `src/replay_v2.c`, docs/REPLAY_FORMAT_V2.md) are SDL-only and
 recorded from every match that is not training, the arcade cabinet or the rig: `LATEST.SRP` in the

@@ -138,6 +138,8 @@ static int handler(void *user, const char *section,
     } else if (eqi(section, "netplay")) {
         if (eqi(name, "matchmaker"))
             snprintf(opts->matchmaker, sizeof opts->matchmaker, "%s", value);
+        else if (eqi(name, "record"))
+            snprintf(opts->record, sizeof opts->record, "%s", value);
     } else if (eqi(section, "dos")) {
         int b;
         if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
@@ -237,8 +239,8 @@ static const char *crt_mask_str(int m)
 
 /* settings_build() fills a stack array of this size and nothing bounds-checks
  * n, so keep comfortable headroom over the number of entries it appends
- * (33 as of the crt_* entries). */
-#define SETTINGS_MAX 40
+ * (36 as of [netplay] record). */
+#define SETTINGS_MAX 48
 
 /* Inline comment appended to a section-header line in a freshly-created file. */
 static const char *section_intro(const char *sec)
@@ -305,6 +307,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (default port 19602). Empty means a server on this machine. You can type it\n"
         "; on the login screen instead -- it is saved back here.",
         opts->matchmaker };
+    items[n++] = (IniEntry){ "netplay", "record",
+        "; record: stream every live match to a recorder, which keeps it and compares the\n"
+        "; two players' frames to catch a desync: \"server\" (the matchmaker above), a\n"
+        "; recorder of your own as \"host\" or \"host:port\", or empty for none.",
+        opts->record };
     items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
     items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };

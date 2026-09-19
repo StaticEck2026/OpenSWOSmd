@@ -1,0 +1,572 @@
+// OpenSWOS: the recorder. See include/Recorder.h, and include/record_proto.h in
+// the game tree for the protocol.
+#include "Recorder.h"
+#include "record_proto.h"
+#include <iostream>
+
+#ifndef _WIN32
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#endif
+#include <ctime>
+
+namespace
+{
+    // A match whose streams have all closed is over. One whose other player never
+    // recorded is given this long after the last stream closes before it is written.
+    const uint32_t kLoneSideGraceMs = 15000;
+    // Nothing from anyone for this long: over, whatever state it is in.
+    const uint32_t kIdleTimeoutMs = 120000;
+    // A full recording is written to disk as it goes, every this many frames (a
+    // minute or so), so a server that dies mid-match keeps most of it.
+    const uint32_t kCheckpointFrames = 3000;
+
+    std::string CompactStamp()
+    {
+        char buf[32];
+        std::time_t t = std::time(nullptr);
+        std::strftime(buf, sizeof buf, "%Y%m%d-%H%M%S", std::localtime(&t));
+        return buf;
+    }
+
+    std::string Tag()
+    {
+        return "[record] " + ServerTime::TimeOfDay() + " ";
+    }
+
+    // A length-prefixed string at p[*at], bounded by len. False if it runs off the end.
+    bool TakeString(const uint8_t* p, uint32_t len, uint32_t* at, std::string* out)
+    {
+        if (*at >= len)
+            return false;
+        uint32_t n = p[*at];
+        if (*at + 1 + n > len)
+            return false;
+        out->assign((const char*)p + *at + 1, n);
+        *at += 1 + n;
+        return true;
+    }
+}
+
+#ifdef _WIN32
+
+// The server has only ever been run on Linux (WSL included); the recorder is POSIX.
+Recorder::Recorder(bool enabled, uint16_t, Ledger& ledger, const std::string& dir) :
+    m_ledger(ledger), m_dir(dir)
+{
+    if (enabled)
+        std::cout << "[record] not available on a Windows build of the server\n";
+}
+Recorder::~Recorder() {}
+void Recorder::Update() {}
+
+#else
+
+Recorder::Recorder(bool enabled, uint16_t port, Ledger& ledger, const std::string& dir) :
+    m_ledger(ledger), m_dir(dir)
+{
+    if (!enabled)
+        return;
+    if (!m_dir.empty())
+        mkdir(m_dir.c_str(), 0755);             // one level; EEXIST is the usual answer
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0)
+    {
+        std::cout << "[record] cannot open a socket: " << strerror(errno) << "\n";
+        return;
+    }
+    int one = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
+    sockaddr_in sin{};
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
+    sin.sin_port = htons(port);
+    if (bind(fd, (sockaddr*)&sin, sizeof sin) != 0 || listen(fd, 16) != 0 ||
+        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) != 0)
+    {
+        std::cout << "[record] cannot listen on TCP " << port << ": " << strerror(errno) << "\n";
+        close(fd);
+        return;
+    }
+    m_listen = fd;
+    std::cout << "[record] on: players stream their matches to TCP " << port
+              << ", full recordings kept in " << m_dir << "/\n";
+}
+
+Recorder::~Recorder()
+{
+    for (auto& c : m_connections)
+        if (c->fd >= 0)
+            CloseConnection(*c, "server stopping");
+    while (!m_matches.empty())
+        Finish(*m_matches.begin()->second, "server stopping");
+    if (m_listen >= 0)
+        close(m_listen);
+}
+
+std::string Recorder::Label(const Match& m) const
+{
+    std::string n1 = m.side[0].present ? m.side[0].name : m.side[1].peer;
+    std::string n2 = m.side[1].present ? m.side[1].name : m.side[0].peer;
+    return Hex64(m.id) + " " + n1 + " vs " + n2;
+}
+
+void Recorder::Accept()
+{
+    for (;;)
+    {
+        sockaddr_in from{};
+        socklen_t len = sizeof from;
+        int fd = accept(m_listen, (sockaddr*)&from, &len);
+        if (fd < 0)
+            return;
+        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+        auto c = std::make_unique<Connection>();
+        c->fd = fd;
+        char ip[INET_ADDRSTRLEN] = "?";
+        inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
+        c->address = std::string(ip) + ":" + std::to_string(ntohs(from.sin_port));
+        m_connections.push_back(std::move(c));
+    }
+}
+
+void Recorder::Update()
+{
+    if (m_listen < 0)
+        return;
+    Accept();
+    for (auto& c : m_connections)
+        if (c->fd >= 0 && !Read(*c) && c->fd >= 0)
+            CloseConnection(*c, "closed");
+    for (size_t i = 0; i < m_connections.size();)
+    {
+        if (m_connections[i]->fd < 0)
+            m_connections.erase(m_connections.begin() + i);
+        else
+            i++;
+    }
+
+    uint32_t now = ServerTime::NowMs();
+    if (now - m_lastSweepMs < 1000)
+        return;
+    m_lastSweepMs = now;
+    std::vector<Match*> done;
+    for (auto& entry : m_matches)
+    {
+        Match& m = *entry.second;
+        bool anyOpen = (m.side[0].present && m.side[0].open) || (m.side[1].present && m.side[1].open);
+        bool both = m.side[0].present && m.side[1].present;
+        if (!anyOpen && (both || now - m.lastMs > kLoneSideGraceMs))
+            done.push_back(&m);
+        else if (now - m.lastMs > kIdleTimeoutMs)
+            done.push_back(&m);
+    }
+    for (Match* m : done)
+        Finish(*m, "over");
+}
+
+bool Recorder::Read(Connection& c)
+{
+    uint8_t buf[16384];
+    bool closed = false;
+    for (;;)
+    {
+        ssize_t n = recv(c.fd, buf, sizeof buf, 0);
+        if (n > 0)
+        {
+            c.in.insert(c.in.end(), buf, buf + n);
+            continue;
+        }
+        if (n == 0)
+            closed = true;                          // the player closed it: parse, then close
+        else if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
+            closed = true;
+        break;
+    }
+    size_t at = 0;
+    while (c.in.size() - at >= RECORD_HEADER_LEN)
+    {
+        const uint8_t* h = c.in.data() + at;
+        uint32_t len = ((uint32_t)h[1] << 16) | ((uint32_t)h[2] << 8) | h[3];
+        if (len > RECORD_MAX_PAYLOAD)
+        {
+            c.in.clear();
+            return false;
+        }
+        if (c.in.size() - at < RECORD_HEADER_LEN + len)
+            break;
+        if (!Handle(c, h[0], h + RECORD_HEADER_LEN, len))
+        {
+            c.in.clear();
+            return false;
+        }
+        at += RECORD_HEADER_LEN + len;
+    }
+    c.in.erase(c.in.begin(), c.in.begin() + at);
+    return !closed;
+}
+
+bool Recorder::Handle(Connection& c, uint8_t type, const uint8_t* p, uint32_t len)
+{
+    if (type == RECORD_HELLO)
+        return c.player == 0 && OnHello(c, p, len);
+    if (c.player == 0 || !c.match)
+        return false;                               // nothing before the HELLO
+    if (type == RECORD_FRAMES)
+        OnFrames(c, p, len);
+    else if (type == RECORD_END)
+        OnEnd(c, p, len);
+    else if (type == RECORD_REPLAY_META)
+        OnReplayMeta(c, p, len);
+    else if (type == RECORD_REPLAY_FRAMES)
+    {
+        if (!OnReplayFrames(c, p, len))
+            return false;                           // a malformed stream: stop listening to it
+    }
+    else if (type == RECORD_REPLAY_SCORE)
+        OnReplayScore(c, p, len);
+    // Anything newer than us is skipped: a player may be a later build.
+    c.match->lastMs = ServerTime::NowMs();
+    return true;
+}
+
+bool Recorder::OnHello(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < RECORD_HELLO_FIXED || memcmp(p, RECORD_MAGIC, 4) != 0 || p[4] != RECORD_PROTOCOL)
+        return false;
+    int player = p[5];
+    if (player != 1 && player != 2)
+        return false;
+    uint64_t id = Record_Get64(p + 8);
+    if (id == 0)
+    {
+        // No packet key: nothing to pair by. Its own match, then.
+        static uint64_t lone = 0;
+        id = 0x8000000000000000ULL | ++lone;
+    }
+    auto& slot = m_matches[id];
+    if (!slot)
+    {
+        slot = std::make_unique<Match>();
+        slot->id = id;
+        slot->started = ServerTime::WallClock();
+        slot->stamp = CompactStamp();
+    }
+    Match& m = *slot;
+    Side& s = m.side[player - 1];
+    if (s.present)
+    {
+        std::cout << Tag() << Hex64(id) << " a second stream for player " << player
+                  << " from " << c.address << ": refused\n";
+        return false;
+    }
+    s.present = s.open = true;
+    s.address = c.address;
+    s.mode = p[6];
+    s.gameplay = p[7];
+    s.relayToken = Record_Get64(p + 16);
+    s.simWidth = (int)Record_Get16(p + 24);
+    s.delay = p[26];
+    uint32_t at = RECORD_HELLO_FIXED;
+    if (!TakeString(p, len, &at, &s.build) || !TakeString(p, len, &at, &s.platform) ||
+        !TakeString(p, len, &at, &s.name) || !TakeString(p, len, &at, &s.peer) ||
+        !TakeString(p, len, &at, &s.team1) || !TakeString(p, len, &at, &s.team2))
+        return false;
+    c.match = &m;
+    c.player = player;
+    m.lastMs = ServerTime::NowMs();
+
+    std::cout << Tag() << Hex64(id) << " player " << player << " (" << s.name << ", "
+              << s.build << ", " << s.platform << ") recording from " << c.address << ": "
+              << s.team1 << " v " << s.team2
+              << (s.relayToken ? ", through the relay " + Hex64(s.relayToken) : std::string(", peer to peer"))
+              << "\n";
+    return true;
+}
+
+void Recorder::OnFrames(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 6)
+        return;
+    uint32_t first = Record_Get32(p);
+    uint32_t count = Record_Get16(p + 4);
+    if (6 + (uint64_t)count * 8 > len)
+        return;
+    Match& m = *c.match;
+    int i = c.player - 1;
+    Side& s = m.side[i];
+    for (uint32_t k = 0; k < count; k++)
+    {
+        uint32_t f = first + k;
+        if (f < s.hashes.size())
+            continue;                               // a repeat
+        if (f > s.hashes.size())
+            s.hashes.resize(f, 0);                  // a gap -- a player bug, but keep the frame numbers
+        s.hashes.push_back(Record_Get64(p + 6 + 8 * k));
+        Compare(m, i, f);
+    }
+}
+
+void Recorder::Compare(Match& m, int from, uint32_t frame)
+{
+    const Side& other = m.side[1 - from];
+    if (frame >= other.hashes.size())
+        return;                                     // compared when the other one arrives
+    m.compared++;
+    if (m.side[from].hashes[frame] == other.hashes[frame])
+        return;
+    if (m.desyncFrame >= 0)
+        return;                                     // the first is the one that matters
+    m.desyncFrame = frame;
+    m.desyncHash[0] = m.side[0].hashes[frame];
+    m.desyncHash[1] = m.side[1].hashes[frame];
+    m.desyncAt = ServerTime::WallClock();
+    const Side& a = m.side[0];
+    const Side& b = m.side[1];
+    std::cout << Tag() << Label(m) << " DESYNC at frame " << frame << ": player 1 "
+              << Hex64(m.desyncHash[0]) << " (" << a.build << ", " << a.platform << "), player 2 "
+              << Hex64(m.desyncHash[1]) << " (" << b.build << ", " << b.platform << "); "
+              << (frame ? "frame " + std::to_string(frame - 1) + " was the last they agreed on"
+                        : std::string("they never agreed"))
+              << "\n";
+    m_ledger.Write("{\"kind\":\"desync\",\"match\":\"" + Hex64(m.id) + "\""
+        + ",\"at\":" + JsonString(m.desyncAt)
+        + ",\"frame\":" + std::to_string(frame)
+        + ",\"hashes\":[\"" + Hex64(m.desyncHash[0]) + "\",\"" + Hex64(m.desyncHash[1]) + "\"]"
+        + ",\"players\":[" + JsonString(a.name) + "," + JsonString(b.name) + "]"
+        + ",\"builds\":[" + JsonString(a.build) + "," + JsonString(b.build) + "]"
+        + ",\"platforms\":[" + JsonString(a.platform) + "," + JsonString(b.platform) + "]"
+        + ",\"teams\":[" + JsonString(a.team1) + "," + JsonString(a.team2) + "]"
+        + ",\"relay\":" + (a.relayToken ? "\"" + Hex64(a.relayToken) + "\"" : std::string("null"))
+        + "}");
+}
+
+void Recorder::OnEnd(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 13)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    s.ended = true;
+    s.outcome = p[0];
+    s.endFrame = Record_Get32(p + 1);
+    s.finalHash = Record_Get64(p + 5);
+    uint32_t at = 13;
+    TakeString(p, len, &at, &s.why);
+}
+
+void Recorder::OnReplayMeta(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 4)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    s.tickRate = (uint16_t)Record_Get16(p);
+    s.quirks = (uint16_t)Record_Get16(p + 2);
+    s.meta.assign(p + 4, p + len);
+    s.replay = true;
+}
+
+bool Recorder::OnReplayFrames(Connection& c, const uint8_t* p, uint32_t len)
+{
+    Side& s = c.match->side[c.player - 1];
+    if (!s.replay || len < 6)
+        return false;
+    uint32_t first = Record_Get32(p);
+    uint32_t count = Record_Get16(p + 4);
+    if (first != s.offsets.size())
+        return false;                               // frames arrive in order, each once
+    uint32_t at = 6;
+    for (uint32_t k = 0; k < count; k++)
+    {
+        if (at + FRAME_HEAD_BYTES > len)
+            return false;
+        uint32_t n = FRAME_HEAD_BYTES + SPRITE_BYTES * Record_Get16(p + at);
+        if (at + n > len)
+            return false;
+        s.offsets.push_back((uint32_t)s.frms.size());
+        s.frms.insert(s.frms.end(), p + at, p + at + n);
+        at += n;
+    }
+    if (at + 2 > len)
+        return false;
+    uint32_t nAudio = Record_Get16(p + at);
+    at += 2;
+    if (at + nAudio * AUDIO_EVENT_BYTES + 2 > len)
+        return false;
+    for (uint32_t k = 0; k < nAudio; k++, at += AUDIO_EVENT_BYTES)
+    {
+        SrpAudioEvent e;
+        e.frame = Record_Get32(p + at);
+        e.kind = p[at + 4];
+        e.channel = p[at + 5];
+        e.id = (uint16_t)Record_Get16(p + at + 6);
+        s.audio.push_back(e);
+    }
+    uint32_t nChap = Record_Get16(p + at);
+    at += 2;
+    if (at + nChap * CHAPTER_BYTES > len)
+        return false;
+    for (uint32_t k = 0; k < nChap; k++, at += CHAPTER_BYTES)
+    {
+        SrpChapter ch;
+        ch.frame = Record_Get32(p + at);
+        ch.kind = p[at + 4];
+        ch.team = p[at + 5];
+        ch.value = (uint16_t)Record_Get16(p + at + 6);
+        s.chapters.push_back(ch);
+    }
+    if (s.offsets.size() - s.writtenFrames >= kCheckpointFrames)
+        WriteReplay(*c.match, false);
+    return true;
+}
+
+void Recorder::OnReplayScore(Connection& c, const uint8_t* p, uint32_t len)
+{
+    if (len < 4)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    s.score[0] = (uint16_t)Record_Get16(p);
+    s.score[1] = (uint16_t)Record_Get16(p + 2);
+    s.haveScore = true;
+}
+
+// The .SRP, from player 1's stream when it has one (the host, the top team), else
+// player 2's. `last` = the match is over: the final score goes into META.
+void Recorder::WriteReplay(Match& m, bool last)
+{
+    Side* s = nullptr;
+    for (int i = 0; i < 2 && !s; i++)
+        if (m.side[i].replay && !m.side[i].offsets.empty())
+            s = &m.side[i];
+    if (!s || m_dir.empty())
+        return;
+    std::vector<uint8_t> meta = s->meta;
+    if (s->haveScore && meta.size() >= SRP_META_SCORE_OFF + 4)
+    {
+        Record_Put16(meta.data() + SRP_META_SCORE_OFF, s->score[0]);
+        Record_Put16(meta.data() + SRP_META_SCORE_OFF + 2, s->score[1]);
+    }
+    SrpContent c{};
+    c.meta = meta.data();
+    c.metaLen = (uint32_t)meta.size();
+    c.frms = s->frms.data();
+    c.frmsLen = (uint32_t)s->frms.size();
+    c.offsets = s->offsets.data();
+    c.frameCount = (uint32_t)s->offsets.size();
+    c.audio = s->audio.data();
+    c.audioCount = (uint32_t)s->audio.size();
+    c.chapters = s->chapters.data();
+    c.chapterCount = (uint32_t)s->chapters.size();
+    c.tickRate = s->tickRate;
+    c.quirks = s->quirks;
+    uint32_t len = 0;
+    uint8_t* file = Srp_Build(&c, &len);
+    if (!file)
+        return;
+    std::string path = m_dir + "/" + m.stamp + "-" + Hex64(m.id).substr(0, 8) + ".SRP";
+    std::string tmp = path + ".part";
+    FILE* f = fopen(tmp.c_str(), "wb");
+    bool ok = f && fwrite(file, 1, len, f) == len;
+    if (f)
+        ok = (fclose(f) == 0) && ok;
+    free(file);
+    // Written whole, then renamed over the last one: a reader never sees half a file.
+    if (ok && rename(tmp.c_str(), path.c_str()) == 0)
+    {
+        m.recording = path;
+        s->writtenFrames = c.frameCount;
+        if (last)
+            std::cout << Tag() << Hex64(m.id) << " wrote " << path << " (" << c.frameCount
+                      << " frames, " << len << " bytes)\n";
+    }
+    else
+    {
+        std::cout << Tag() << Hex64(m.id) << " cannot write " << path << "\n";
+        remove(tmp.c_str());
+    }
+}
+
+void Recorder::CloseConnection(Connection& c, const char* why)
+{
+    if (c.fd >= 0)
+        close(c.fd);
+    c.fd = -1;
+    if (!c.match)
+        return;
+    Side& s = c.match->side[c.player - 1];
+    s.open = false;
+    c.match->lastMs = ServerTime::NowMs();
+    std::cout << Tag() << Hex64(c.match->id) << " player " << c.player << " stream " << why
+              << " after " << s.hashes.size() << " frames"
+              << (s.ended ? (s.outcome == 0 ? ", the match finished" : ", ended early: " + s.why)
+                          : std::string(", with no END"))
+              << "\n";
+    c.match = nullptr;
+}
+
+void Recorder::Finish(Match& m, const char* why)
+{
+    // A connection still pointing at it (only when the server stops) lets go first.
+    for (auto& c : m_connections)
+        if (c->match == &m)
+            c->match = nullptr;
+
+    WriteReplay(m, true);
+
+    const Side& a = m.side[0];
+    const Side& b = m.side[1];
+    bool both = a.present && b.present;
+    std::string finalAgree = "null";
+    if (both && a.ended && b.ended && a.endFrame == b.endFrame)
+        finalAgree = a.finalHash == b.finalHash ? "true" : "false";
+
+    std::cout << Tag() << Label(m) << " recorded (" << why << "): "
+              << (both ? std::to_string(m.compared) + " frames compared, " : std::string("one side only, "))
+              << (m.desyncFrame >= 0 ? "DESYNC at frame " + std::to_string(m.desyncFrame)
+                                     : std::string(both ? "no desync" : "nothing to compare with"))
+              << "\n";
+
+    auto sideJson = [](int player, const Side& s) {
+        if (!s.present)
+            return std::string("null");
+        return "{\"player\":" + std::to_string(player)
+            + ",\"name\":" + JsonString(s.name)
+            + ",\"address\":" + JsonString(s.address)
+            + ",\"build\":" + JsonString(s.build)
+            + ",\"platform\":" + JsonString(s.platform)
+            + ",\"frames\":" + std::to_string(s.hashes.size())
+            + ",\"replayFrames\":" + std::to_string(s.offsets.size())
+            + ",\"ended\":" + (s.ended ? "true" : "false")
+            + ",\"outcome\":" + JsonString(!s.ended ? "none" : s.outcome == 0 ? "finished" : "ended early")
+            + ",\"endFrame\":" + std::to_string(s.endFrame)
+            + ",\"finalSimHash\":\"" + Hex64(s.finalHash) + "\""
+            + ",\"why\":" + JsonString(s.why)
+            + "}";
+    };
+    const Side& any = a.present ? a : b;
+    m_ledger.Write("{\"kind\":\"match\",\"match\":\"" + Hex64(m.id) + "\""
+        + ",\"started\":" + JsonString(m.started)
+        + ",\"closed\":" + JsonString(ServerTime::WallClock())
+        + ",\"why\":" + JsonString(why)
+        + ",\"teams\":[" + JsonString(any.team1) + "," + JsonString(any.team2) + "]"
+        + ",\"gameplay\":" + std::to_string(any.gameplay)
+        + ",\"delay\":" + std::to_string(any.delay)
+        + ",\"simWidth\":" + std::to_string(any.simWidth)
+        + ",\"relay\":" + (any.relayToken ? "\"" + Hex64(any.relayToken) + "\"" : std::string("null"))
+        + ",\"players\":[" + sideJson(1, a) + "," + sideJson(2, b) + "]"
+        + ",\"compared\":" + std::to_string(m.compared)
+        + ",\"desync\":" + (m.desyncFrame < 0 ? std::string("null")
+            : "{\"frame\":" + std::to_string(m.desyncFrame) + ",\"at\":" + JsonString(m.desyncAt)
+              + ",\"hashes\":[\"" + Hex64(m.desyncHash[0]) + "\",\"" + Hex64(m.desyncHash[1]) + "\"]}")
+        + ",\"finalAgree\":" + finalAgree
+        + ",\"recording\":" + (m.recording.empty() ? std::string("null") : JsonString(m.recording))
+        + "}");
+    m_matches.erase(m.id);
+}
+
+#endif

@@ -79,6 +79,12 @@ typedef struct {
     uint16_t localPort;                    /* the port our ENET socket is bound to */
     char     addrs[MM_MAX_PEER_ADDRS][MM_ADDR_TEXT_MAX];
     int32_t  numAddrs;
+    /* A RELAYED match (include/relay_proto.h): the server said to play through it
+     * rather than punch to the peer. `relayAddr` is the server itself, as we
+     * reached it; `relayToken` is what registers us there. 0 = play direct. */
+    int32_t  relay;
+    uint64_t relayToken;
+    char     relayAddr[MM_ADDR_TEXT_MAX];
 } MmStartInfo;
 
 /* Connect and log in. `gameId` is the server's compatibility tag: it refuses a

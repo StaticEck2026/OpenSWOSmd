@@ -43,6 +43,7 @@
 #include "build_info.h"         /* --version, and the [build] line in SWOS.log */
 #include "p2p_link.h"           /* --netplay-selftest: the MULTIPLAYER menu's link */
 #include "mm_client.h"          /* --matchmaker-selftest */
+#include "match_record.h"        /* [netplay] record */
 #include "netplay_setup.h"      /* --netplay-selftest: the match setup round trip */
 #include "netplay_live_test.h"  /* --netplay-live-pair */
 #include "netplay_match.h"      /* --netplay-match */
@@ -352,6 +353,7 @@ int main(int argc, char **argv)
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
     opts.matchmaker[0] = '\0';    /* default: a matchmaking server on this machine */
+    opts.record[0] = '\0';        /* default: live matches are not recorded */
     opts.arcade = 0;              /* default off — normal front-end menu */
     opts.arcade_mode = 0;         /* GOLDEN GOAL */
     opts.arcade_game_seconds = 45;
@@ -749,6 +751,8 @@ int main(int argc, char **argv)
      * SWOS_MM_HOST / SWOS_MM_PORT still win, so a test can point one process
      * somewhere else without touching the player's SWOS.ini. */
     MmClient_SetConfiguredServer(opts.matchmaker);
+    /* And where a live match is recorded, if anywhere (SWOS_RECORD still wins). */
+    MatchRecord_SetConfigured(opts.record);
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;

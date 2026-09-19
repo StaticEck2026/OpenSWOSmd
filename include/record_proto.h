@@ -1,0 +1,141 @@
+/*
+ * record_proto.h -- a live match's recording stream, from a player to a recorder.
+ *
+ * Each player that is asked to (SWOS_RECORD, or [netplay] record in SWOS.ini) opens
+ * a TCP connection to a recorder when a live match starts and streams it: who is
+ * playing what, then the SIM-tier hash of every frame as finally played, then how
+ * it ended. The recorder is the matchmaking server run with --record
+ * (third_party/matchmaker/Server/Recorder.cpp) -- the same server that relays, or
+ * any other one at any address -- so a match can be recorded whether it is played
+ * through the relay or peer to peer.
+ *
+ * WHY HASHES. Both players of a match stream to the same recorder, which pairs
+ * the two streams by match id and compares them frame by frame. The first frame
+ * whose hashes differ is the frame the match desynced at -- found by a machine that
+ * was watching both, with a wall-clock time, the two builds and platforms, and the
+ * teams, written to its ledger. Until now a desync between two machines left only
+ * what each side printed, every 100 frames.
+ *
+ * Nothing here may touch the match: the stream reads the hashes the netplay step
+ * already keeps (traceSim), only for CONFIRMED frames, and never waits for the
+ * network during play. A recorder that is down costs the players nothing.
+ *
+ * The match id is derived from the GGPO packet key the lobby's START carries, so
+ * the two players arrive with the same id without the recorder -- or the
+ * matchmaker -- having to hand one out. One-way (FNV-1a over a tag and the key):
+ * the id is public, the key is not.
+ *
+ * TCP, big-endian. The stream is a sequence of messages:
+ *
+ *   0  1  type
+ *   1  3  payload length
+ *   4  n  payload
+ *
+ * RECORD_HELLO, first and once:
+ *   0  4  "SWRC"
+ *   4  1  RECORD_PROTOCOL
+ *   5  1  player (1 = the host, the top team)
+ *   6  1  mode (RECORD_MODE_*)
+ *   7  1  gameplay flags, as the link's handshake: 1 DOS, 2 arcade, 4 fire-hold lockout
+ *   8  8  match id
+ *  16  8  relay token, 0 when played peer to peer
+ *  24  2  simulation width
+ *  26  1  input delay
+ *  27  1  0
+ *  28     strings, each a length byte then the bytes: build id, platform, this
+ *         player's name, the other player's name, team 1, team 2
+ *
+ * RECORD_FRAMES:
+ *   0  4  first frame
+ *   4  2  count
+ *   6     count x 8: each frame's SIM-tier hash, at its start, as finally played
+ *
+ * RECORD_END, last:
+ *   0  1  outcome: 0 finished, 1 ended early
+ *   1  4  the frame it ended at
+ *   5  8  the final SIM-tier hash
+ *  13     a string: why it ended, as the player saw it
+ *
+ * A FULL recording (mode RECORD_MODE_FULL) also carries the match itself -- the .SRP
+ * the player's game is writing (src/replay_v2.c), confirmed frame by confirmed frame,
+ * so the recorder can keep the same file (include/srp_writer.h lays out both):
+ *
+ * RECORD_REPLAY_META, once, before the first replay frames:
+ *   0  2  tick rate (frames a second)
+ *   2  2  quirks (SWRP_QUIRK_*)
+ *   4     META, as the .SRP holds it
+ *
+ * RECORD_REPLAY_FRAMES:
+ *   0  4  first frame
+ *   4  2  count
+ *   6     each frame's bytes as in FRMS (self-sized: a 20-byte head whose first word
+ *         is its sprite count, then 6 bytes a sprite)
+ *         then a 2-byte count of sound events and the events (8 bytes each, as AUDI)
+ *         then a 2-byte count of chapters and the chapters (8 bytes each, as CHAP)
+ *         -- the ones those frames played
+ *
+ * RECORD_REPLAY_SCORE, before END: the final score, 2 + 2 bytes, for META.
+ */
+#ifndef RECORD_PROTO_H
+#define RECORD_PROTO_H
+
+#include <stdint.h>
+#include <string.h>
+
+#define RECORD_MAGIC         "SWRC"
+#define RECORD_PROTOCOL      1
+#define RECORD_HEADER_LEN    4
+#define RECORD_MAX_PAYLOAD   (1u << 20)
+
+#define RECORD_HELLO         1
+#define RECORD_FRAMES        2
+#define RECORD_END           3
+#define RECORD_REPLAY_META   4
+#define RECORD_REPLAY_FRAMES 5
+#define RECORD_REPLAY_SCORE  6
+
+#define RECORD_MODE_HASHES   0     /* the frames' hashes: enough to find a desync */
+#define RECORD_MODE_FULL     1     /* ... and the match itself, as a .SRP */
+
+#define RECORD_HELLO_FIXED   28    /* before the strings */
+#define RECORD_BATCH_MAX     1024  /* frames per RECORD_FRAMES */
+
+static inline void Record_Put16(uint8_t *p, uint32_t v) { p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v; }
+static inline void Record_Put32(uint8_t *p, uint32_t v)
+{
+    p[0] = (uint8_t)(v >> 24); p[1] = (uint8_t)(v >> 16); p[2] = (uint8_t)(v >> 8); p[3] = (uint8_t)v;
+}
+static inline void Record_Put64(uint8_t *p, uint64_t v)
+{
+    Record_Put32(p, (uint32_t)(v >> 32));
+    Record_Put32(p + 4, (uint32_t)v);
+}
+static inline uint32_t Record_Get16(const uint8_t *p) { return ((uint32_t)p[0] << 8) | p[1]; }
+static inline uint32_t Record_Get32(const uint8_t *p)
+{
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
+}
+static inline uint64_t Record_Get64(const uint8_t *p)
+{
+    return ((uint64_t)Record_Get32(p) << 32) | Record_Get32(p + 4);
+}
+
+/* A message header: type, then a 24-bit length. */
+static inline void Record_PutHeader(uint8_t *p, uint8_t type, uint32_t len)
+{
+    p[0] = type;
+    p[1] = (uint8_t)(len >> 16); p[2] = (uint8_t)(len >> 8); p[3] = (uint8_t)len;
+}
+
+/* The match id both players compute from the packet key the lobby's START gave
+ * them. FNV-1a 64 over "SWRC" and the key; never 0. */
+static inline uint64_t Record_MatchId(const uint8_t key[16])
+{
+    uint64_t h = 1469598103934665603ULL;
+    int i;
+    for (i = 0; i < 4; i++) { h ^= (uint8_t)RECORD_MAGIC[i]; h *= 1099511628211ULL; }
+    for (i = 0; i < 16; i++) { h ^= key[i]; h *= 1099511628211ULL; }
+    return h ? h : 1;
+}
+
+#endif /* RECORD_PROTO_H */

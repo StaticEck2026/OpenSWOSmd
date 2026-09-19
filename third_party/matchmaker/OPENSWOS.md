@@ -86,6 +86,38 @@ Keep this list short and justified — it is a fork, and every entry is drift.
   peer. Nothing else in it is touched.
 - **Builds against `third_party/enet` (1.3.18)** instead of its own bundled ENET
   (1.3.17). See `third_party/enet/OPENSWOS.md` for why one copy.
+- **The relay: `Server/Relay.cpp` + `Server/include/Relay.h` (new), hooked into
+  `Connections::StartGame` and `main.cpp`.** `--relay` makes OpenSWOS pairs play
+  THROUGH the server: at START it makes a session with a random token, sends each
+  player `RELAY:<token>,<n>` just before START, and forwards every datagram between
+  the two addresses that register with that token. It shares the matchmaker's UDP
+  port through ENet's `intercept` hook, so it needs no port of its own. Only between
+  two clients whose `VERSION:` tag is `OPENSWOS` — the SWOS 2020 client's parser
+  throws on a header it does not know (`ServerConnection.cpp:432` has no catch), and
+  it could not use a relay anyway. Off by default, so a server run without flags is
+  byte-for-byte the matchmaker it was. Protocol and reasons:
+  `include/relay_proto.h` in the game tree; docs/NETPLAY.md §7, "The relay".
+  - `--netem <profile|cycle>` puts the game's own network emulator
+    (`include/netem_core.h` + `src/netem_core.c`, compiled in from the game tree so
+    the two cannot drift) in each direction of every relayed match.
+  - `--ledger <file>` appends one JSON line per finished session.
+  - Its clock is `steady_clock`, NOT `enet_time_get`: that is `gettimeofday`, and a
+    wall-clock step under WSL2 made a session in the middle of a match look a minute
+    idle and closed it.
+- **The recorder: `Server/Recorder.cpp` + `Server/include/Recorder.h` (new).**
+  `--record` listens on TCP (the same port number) for players streaming a live match
+  (`include/record_proto.h` in the game tree): both players' frame hashes are paired by
+  match id and compared as they arrive, and a desync is reported the moment it is seen.
+  A full recording also streams the match's `.SRP` frames, which the recorder writes
+  to `--recordings DIR` with the game's own writer (`src/srp_writer.c` + miniz via
+  `src/miniz_impl.c`, compiled in) — the same file as the host's `LATEST.SRP`.
+  Independent of the relay — a match played peer to peer can be recorded too. POSIX
+  only; a Windows build of the server says so and carries on without it.
+- **`Server/include/Ledger.h` (new):** the `--ledger` file the relay and the recorder
+  share (one JSON object per line: `relay`, `match`, `desync`), and the clocks they use.
+- **`Server/main.cpp`: options, and a clean stop.** The port is still the first bare
+  number. SIGINT/SIGTERM end the loop (upstream's never ended), so the relay can
+  close its sessions and write their ledger lines.
 
 ## The protocol
 
@@ -109,10 +141,17 @@ Server -> client: `LOGIN:` `CREATE:` `LEAVE:` `EJECT:` as acks,
 accepted; anyone else = they want to join **your** game), `APPROVE:<name>`, and
 `START:<playerNumber>,<peerName>,<addr>,<addr>,...`.
 
-**It is a matchmaker, not a game server.** `START:` hands each side the other's
-candidate addresses and the server is then out of the loop — the match runs
-peer-to-peer over GGPO (docs/NETPLAY.md). Killing the server mid-match does not
-end the match; it only stops new ones being made.
+**It is a matchmaker, not a game server** — unless it is run with `--relay`.
+`START:` hands each side the other's candidate addresses and the server is then out
+of the loop — the match runs peer-to-peer over GGPO (docs/NETPLAY.md). Killing the
+server mid-match does not end the match; it only stops new ones being made. A
+RELAYED match is the exception: its packets go through the server, so it ends with
+it.
+
+`RELAY:<token as 16 hex digits>,<playerNumber>` (server -> client, ours, only to
+`OPENSWOS` clients, just before `START:`) says the match is to be played through
+the server; the client then registers there with that token (a 16-byte `SWRL`
+datagram, `include/relay_proto.h`) from the socket it plays on.
 
 To update: re-copy from upstream, re-apply the changes listed above, rebuild
 (`scripts/run_matchmaker.sh --rebuild`), and re-run

@@ -222,6 +222,14 @@ chapters from that frame on, and they are recorded again as finally played. A
 step that played no frame leaves a gap, which is filled with a copy of the last
 frame so a frame's number stays its index.
 
+**Writing** the file is `src/srp_writer.c` (`Srp_Build`, `include/srp_writer.h`,
+which also holds the layout's constants): the parts in, the whole file out, no game
+state. It is shared with the matchmaking server's recorder
+(`third_party/matchmaker/Server/Recorder.cpp`), which is streamed a live match's
+frames as they are confirmed (`ReplayRec_Content`, `src/match_record.c`) and writes
+the same file — byte for byte the host's own `LATEST.SRP`, which
+`RECORD=1 scripts/relay_test.sh` checks (docs/NETPLAY.md §7, "The recorder").
+
 **Playback** hooks the highlights viewer that already plays `.HIL` and `.RPL`.
 `ReplayV2_Load` fills the HIL header the viewer reads (teams, score, pitch,
 subs) so the stadium line-up and the score overlay work unchanged; the match is

@@ -117,6 +117,7 @@ uint16_t MmClient_DefaultPort(void)
 #define H_GAMEINFO      "GAMEINFO:"
 #define H_USERMESSAGE   "USERMESSAGE:"
 #define H_READY         "READY:"
+#define H_RELAY         "RELAY:"        /* ours, not upstream's: include/relay_proto.h */
 
 /* How long to wait for the server to complete the ENET connection. The server is
  * usually on this machine; a human needs to see "no answer" rather than a menu
@@ -147,6 +148,12 @@ typedef struct {
 
     MmStartInfo start;
     int32_t     haveStart;
+
+    /* RELAY:, which the server sends just before START when the match is to be
+     * played through it. Held until START takes it. */
+    uint64_t    relayToken;
+    int32_t     relayPlayer;
+    int32_t     haveRelay;
 } MmClient;
 
 static MmClient s_mm;
@@ -463,8 +470,43 @@ static void parse_start(const char *p, size_t len)
             st.localPort = local.port;
     }
 
+    /* Relayed: the peer is the server. Only if RELAY: named the player number
+     * START did -- a token for one seat is no good in the other. */
+    if (s_mm.haveRelay && s_mm.relayPlayer == st.playerNumber && s_mm.server) {
+        char dotted[16];
+        addr_u32_to_dotted(s_mm.server->address.host, dotted, (int32_t)sizeof dotted);
+        snprintf(st.relayAddr, sizeof st.relayAddr, "%s:%u", dotted,
+                 (unsigned)s_mm.server->address.port);
+        st.relay      = 1;
+        st.relayToken = s_mm.relayToken;
+    }
+    s_mm.haveRelay = 0;
+
     s_mm.start = st;
     s_mm.haveStart = 1;
+}
+
+/* RELAY:<token as 16 hex digits>,<player> */
+static void parse_relay(const char *p, size_t len)
+{
+    const char *end = p + len;
+    uint64_t token = 0;
+    int32_t digits = 0;
+
+    for (; p < end && *p != ','; p++, digits++) {
+        char c = *p;
+        int32_t v = (c >= '0' && c <= '9') ? c - '0'
+                  : (c >= 'a' && c <= 'f') ? c - 'a' + 10
+                  : (c >= 'A' && c <= 'F') ? c - 'A' + 10 : -1;
+        if (v < 0 || digits >= 16)
+            return;
+        token = (token << 4) | (uint64_t)v;
+    }
+    if (p >= end || digits == 0 || token == 0)
+        return;
+    s_mm.relayToken  = token;
+    s_mm.relayPlayer = parse_int(p + 1, end);
+    s_mm.haveRelay   = 1;
 }
 
 /* ---- the INFO message: our own candidate addresses ------------------------ */
@@ -542,6 +584,7 @@ static void reset_lobby(void)
     s_mm.haveJoinRequest = 0;
     s_mm.removed = 0;
     s_mm.haveStart = 0;
+    s_mm.haveRelay = 0;
 }
 
 static void close_socket(void)
@@ -643,6 +686,10 @@ static void handle_packet(const char *data, size_t len)
     }
     if ((body = match_header(data, len, H_GAMEINFO, &blen)) != NULL) {
         parse_game_info(body, blen);
+        return;
+    }
+    if ((body = match_header(data, len, H_RELAY, &blen)) != NULL) {
+        parse_relay(body, blen);
         return;
     }
     if ((body = match_header(data, len, H_START, &blen)) != NULL) {

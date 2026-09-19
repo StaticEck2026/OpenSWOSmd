@@ -47,6 +47,7 @@ typedef enum {
     P2P_FAIL_GAMEPLAY,      /* a different gameplay style */
     P2P_FAIL_WIDTH,         /* a different screen width */
     P2P_FAIL_PORT_RESERVED, /* the system will not let anyone bind that port (EACCES) */
+    P2P_FAIL_RELAY,         /* the server's relay does not know our token (expired, or never) */
 } P2PLinkFailure;
 
 /* Open the link. Both return 0, or non-zero with the reason in P2PLink_Failure.
@@ -67,6 +68,15 @@ typedef enum {
  * on whichever address actually answered, which a NAT may have rewritten. */
 int32_t        P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t localPort);
 
+/* A RELAYED match (include/relay_proto.h): the one address given to P2PLink_Punch
+ * is the matchmaking server, and every punch round also registers us there as
+ * `player` with the server's `token`. Kept across P2PLink_Punch calls, so a
+ * rematch through the lobby registers again by itself. token 0 = direct, which
+ * the direct-IP entry points (Host, Join) also set. */
+void           P2PLink_SetRelay(uint64_t token, int32_t player);
+/* The token of the relayed match in progress, or 0 when it is played direct. */
+uint64_t       P2PLink_RelayToken(void);
+
 int32_t        P2PLink_Host(uint16_t port);
 int32_t        P2PLink_Join(const char *address, uint16_t port);
 
@@ -78,6 +88,11 @@ void           P2PLink_Close(void);
 
 P2PLinkState   P2PLink_State(void);
 P2PLinkFailure P2PLink_Failure(void);
+
+/* Two lines a menu can show for a failure, never NULL ("" for none). Every screen
+ * that can end in a failed link says WHY with these -- "CONNECTION FAILED" on its
+ * own sent a player (and a test run) looking in the wrong place. */
+void           P2PLink_FailureText(P2PLinkFailure failure, const char **line1, const char **line2);
 
 /* What happened to the last player who tried, while hosting continues: one who was
  * turned away (a mismatch, or the host was busy), or the one who left or went quiet.

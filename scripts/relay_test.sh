@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+#
+# relay_test.sh — two players meet through the matchmaker and play THROUGH IT.
+#
+#   scripts/relay_test.sh                     # 2 matches, 300 frames each, a clean link
+#   NETEM=wifi scripts/relay_test.sh          # the server puts wifi in the middle
+#   NETEM=cycle MATCHES=1 ...                 # a different profile per session
+#   MATCHES=3 FRAMES=600 scripts/relay_test.sh
+#   RECORD=1 scripts/relay_test.sh            # both players also stream to the recorder
+#   RECORD=1 RELAY=0 scripts/relay_test.sh    # ... while playing peer to peer
+#   RECORD=1 DESYNC_FRAME=150 ...             # the joiner goes out of step at frame 150
+#                                             # ON PURPOSE; the recorder must name 151
+#
+# The relay (include/relay_proto.h, third_party/matchmaker/Server/Relay.cpp): the
+# server makes a session at START, tells each OpenSWOS player RELAY:<token>, and
+# both send everything to the server, which forwards it. This goes through what a
+# player goes through -- login, create, join, START, the lobby, the match, a rematch
+# -- with the matchmaker run here with --relay, and checks three things:
+#
+#   * both peers played MATCHES matches and each ended on the same SIM-tier hash;
+#   * each peer's match was set up with the SERVER as its peer (so the packets did go
+#     through it -- a direct punch would name the other process's port);
+#   * the server's ledger has the session, linked, with packets forwarded each way.
+#
+# With RECORD=1 the server is also the recorder (include/record_proto.h) and each
+# match must be in its ledger with both players' streams, every frame compared, and
+# the same final hash -- or, with DESYNC_FRAME=N, a desync found at exactly frame N+1:
+# the frame is simulated differently, so the first START-of-frame hash that differs
+# is the next one. RELAY=0 plays peer to peer (the relay checks are skipped).
+#
+# A recording is FULL unless RECORD_MODE=hashes: the players also stream the .SRP
+# their games are writing, and the recorder keeps it. Each player runs in a HOME of its
+# own, so each writes its own LATEST.SRP -- and the recorder's file of the last match
+# must be the HOST's LATEST.SRP byte for byte (include/srp_writer.h lays out both).
+#
+# Each side's input comes from its own generator (SWOS_LIVE_RANDOM_INPUT), so both
+# predict wrong and roll back, and the relay carries real rollback traffic.
+set -uo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT" || exit 1
+BIN="${BIN:-SWOS.x86_64}"
+PORT="${PORT:-19612}"
+MATCHES="${MATCHES:-2}"
+FRAMES="${FRAMES:-300}"
+WAIT="${WAIT:-$((120 + MATCHES * 60))}"
+OUT="${OUT:-${TMPDIR:-/tmp}/swos-relay.$$}"
+RELAY="${RELAY:-1}"
+RECORD="${RECORD:-0}"
+RECORD_MODE="${RECORD_MODE:-full}"
+DESYNC_FRAME="${DESYNC_FRAME:-}"
+SERVER=build/matchmaker/swos-matchmaker
+mkdir -p "$OUT"
+[ -n "$DESYNC_FRAME" ] && [ "$RECORD" != 1 ] && { echo "relay-test: DESYNC_FRAME needs RECORD=1" >&2; exit 1; }
+[ -n "$DESYNC_FRAME" ] && MATCHES=1     # the match ends at the desync; one is the test
+[ -x "bin/$BIN" ] || { echo "relay-test: bin/$BIN not built" >&2; exit 1; }
+[ -x "$SERVER" ] || scripts/run_matchmaker.sh --build-only >/dev/null 2>&1
+[ -x "$SERVER" ] || { echo "relay-test: $SERVER not built" >&2; exit 1; }
+if command -v ss >/dev/null && ss -ulnp 2>/dev/null | grep -q ":$PORT "; then
+    echo "relay-test: UDP $PORT is taken; set PORT=" >&2
+    exit 1
+fi
+
+SERVER_ARGS=()
+[ "$RELAY" = 1 ] && SERVER_ARGS+=(--relay ${NETEM:+--netem "$NETEM"} --netem-seed 7)
+[ "$RECORD" = 1 ] && SERVER_ARGS+=(--record --recordings "$OUT/recordings")
+"$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
+SERVER_PID=$!
+trap 'kill -INT $SERVER_PID 2>/dev/null' EXIT
+for _ in $(seq 1 50); do
+    grep -q "running on Port" "$OUT/server.log" 2>/dev/null && break
+    sleep 0.1
+done
+
+RECORD_ENV=""
+[ "$RECORD" = 1 ] && RECORD_ENV="SWOS_RECORD=server SWOS_RECORD_MODE=$RECORD_MODE"
+# A HOME each: its own SWOS.ini (the defaults, the same on both) and its own save folder,
+# so the two LATEST.SRP files are two files.
+mkdir -p "$OUT/home-host" "$OUT/home-join"
+[ -n "$DESYNC_FRAME" ] && JOIN_ENV="${JOIN_ENV:-} SWOS_LIVE_DESYNC_FRAME=$DESYNC_FRAME"
+
+# SWOS_NO_LOG=1: two processes would otherwise share one SWOS.log.
+run() {   # name, auto, team, extra env...
+    local name=$1 auto=$2 team=$3; shift 3
+    cd bin || exit 1
+    env SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+        SWOS_MM_HOST=127.0.0.1 SWOS_MM_PORT="$PORT" SWOS_MM_AUTO="$auto" SWOS_P2P_LOG=1 \
+        SWOS_LOBBY_TEAM="$team" SWOS_LOBBY_READY=1 SWOS_LOBBY_MATCHES="$MATCHES" \
+        SWOS_LIVE_FRAMES="$FRAMES" $RECORD_ENV "$@" \
+        timeout -s KILL "$WAIT" ./"$BIN" --matchmaker-menu="$name"
+}
+# <side>.log is the raw output; <side>.ts the same lines with the time each arrived,
+# to line up against the server's timed [relay] and [record] lines.
+stamp() { gawk '{ print strftime("%H:%M:%S"), $0; fflush() }'; }
+( run RELAYHOST host 50:0B SWOS_LOBBY_START=1 SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
+    2>&1 | tee "$OUT/host.log" | stamp > "$OUT/host.ts"
+  echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/host.log" ) &
+HOST_PID=$!
+sleep 3
+( run RELAYJOIN join 52:02 SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0 HOME="$OUT/home-join" ${JOIN_ENV:-} \
+    2>&1 | tee "$OUT/join.log" | stamp > "$OUT/join.ts"
+  echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/join.log" ) &
+JOIN_PID=$!
+wait "$HOST_PID" "$JOIN_PID"
+kill -INT "$SERVER_PID" 2>/dev/null
+wait "$SERVER_PID" 2>/dev/null
+trap - EXIT
+
+fail=0
+for side in host join; do
+    echo "================ $side ================"
+    grep -E "^\[p2p\] (relay|link (failed|closed))|^\[netplay\] (p2p match|live match|desync|the peer|network)|^\[live\] final sim|^\[record\]|^\[relay-test\]" \
+        "$OUT/$side.log"
+    grep -q '^\[relay-test\] exit 0$' "$OUT/$side.log" || { echo "!! $side did not exit 0"; fail=1; }
+    # Relayed: the match's peer must be the server itself.
+    if [ "$RELAY" = 1 ]; then
+        if grep -q "^\[netplay\] p2p match:" "$OUT/$side.log" &&
+           ! grep "^\[netplay\] p2p match:" "$OUT/$side.log" | grep -qv "peer 127.0.0.1:$PORT,"; then
+            :
+        else
+            echo "!! $side: a match whose peer was not the relay (127.0.0.1:$PORT)"; fail=1
+        fi
+    fi
+done
+echo "================ server ================"
+grep -E "^\[relay\]|^\[record\]" "$OUT/server.log"
+
+hh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/host.log" | awk '{print $4}' | paste -sd' ')
+jh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/join.log" | awk '{print $4}' | paste -sd' ')
+hn=$(grep -c "live match finished" "$OUT/host.log")
+jn=$(grep -c "live match finished" "$OUT/join.log")
+echo "host: $hn finished, hashes $hh"
+echo "join: $jn finished, hashes $jh"
+
+# The ledger. Relayed: one session, linked, packets forwarded each way. Recorded: a
+# "match" line per match with both players' streams -- and either every frame agreeing
+# and the same final hash, or (DESYNC_FRAME) a desync found at exactly the next frame.
+ledger_ok=0
+if [ -s "$OUT/ledger.jsonl" ] && RELAY=$RELAY RECORD=$RECORD MATCHES=$MATCHES \
+   DESYNC_FRAME=$DESYNC_FRAME python3 - "$OUT/ledger.jsonl" <<'PYEOF'
+import json, os, sys
+rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+ok = True
+if os.environ["RELAY"] == "1":
+    relay = [r for r in rows if r.get("kind") == "relay"]
+    ok &= len(relay) == 1 and relay[0]["linked"] and all(n > 0 for n in relay[0]["packets"])
+    for r in relay:
+        print("ledger: relay %s %s vs %s, linked %s, packets %s, netem %s %s" % (
+            r["token"], r["players"][0], r["players"][1], r["linked"], r["packets"],
+            r["netem"], [s for s in r["netemSummary"] if s]))
+if os.environ["RECORD"] == "1":
+    matches = [r for r in rows if r.get("kind") == "match"]
+    desyncs = [r for r in rows if r.get("kind") == "desync"]
+    want = os.environ.get("DESYNC_FRAME")
+    for m in matches:
+        p = m["players"]
+        both = p[0] is not None and p[1] is not None
+        print("ledger: match %s %s, %s frames compared, desync %s, final hashes agree %s, relay %s" % (
+            m["match"], " v ".join(m["teams"]), m["compared"],
+            m["desync"]["frame"] if m["desync"] else "none", m["finalAgree"], m["relay"]))
+        ok &= both and m["compared"] > 0
+        if want:
+            ok &= m["desync"] is not None and m["desync"]["frame"] == int(want) + 1
+        else:
+            ok &= m["desync"] is None and m["finalAgree"] is True
+        ok &= (m["relay"] is not None) == (os.environ["RELAY"] == "1")
+    ok &= len(matches) == (1 if want else int(os.environ["MATCHES"]))
+    for d in desyncs:
+        print("ledger: DESYNC match %s at frame %d (%s): %s vs %s" % (
+            d["match"], d["frame"], d["at"], d["hashes"][0], d["hashes"][1]))
+    ok &= len(desyncs) == (1 if want else 0)
+sys.exit(0 if ok else 1)
+PYEOF
+then ledger_ok=1; fi
+
+# The recorder's .SRP of the last match against the host's own LATEST.SRP.
+srp_ok=1
+if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ] && [ -z "$DESYNC_FRAME" ]; then
+    srp_ok=0
+    server_srp=$(ls "$OUT"/recordings/*.SRP 2>/dev/null | sort | tail -1)
+    host_srp=$(find "$OUT/home-host" -name LATEST.SRP 2>/dev/null | head -1)
+    if [ -n "$server_srp" ] && [ -n "$host_srp" ] && python3 - "$server_srp" "$host_srp" <<'EOF'
+import struct, sys, zlib
+a, b = (open(p, "rb").read() for p in sys.argv[1:3])
+def chunks(f):
+    n = struct.unpack(">H", f[20:22])[0]
+    out = {}
+    for i in range(n):
+        cc, off, stored, raw = struct.unpack(">4sIII", f[32 + 16 * i:48 + 16 * i])
+        data = f[off:off + stored]
+        out[cc.decode()] = data if stored == raw else zlib.decompress(data, -15)
+    return out
+if a == b:
+    print("srp: the recorder's %s is the host's LATEST.SRP byte for byte (%d bytes, %d frames)"
+          % (sys.argv[1].split("/")[-1], len(a), struct.unpack(">I", a[16:20])[0]))
+    sys.exit(0)
+ca, cb = chunks(a), chunks(b)
+print("srp: DIFFERENT -- recorder %d bytes / %d frames, host %d bytes / %d frames"
+      % (len(a), struct.unpack(">I", a[16:20])[0], len(b), struct.unpack(">I", b[16:20])[0]))
+for k in sorted(set(ca) | set(cb)):
+    print("  %s %s" % (k, "same" if ca.get(k) == cb.get(k) else
+                           "differs (%d vs %d bytes)" % (len(ca.get(k, b"")), len(cb.get(k, b"")))))
+sys.exit(1)
+EOF
+    then srp_ok=1; else echo "!! the recorder's .SRP ($server_srp) is not the host's ($host_srp)"; fi
+fi
+
+what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")"
+if [ -n "$DESYNC_FRAME" ]; then
+    # A desync on purpose: the match ends early on both sides, and the recorder named the frame.
+    if [ "$ledger_ok" = 1 ] && grep -q "live match ended early" "$OUT/host.log" &&
+       grep -q "live match ended early" "$OUT/join.log"; then
+        echo "relay-test: PASSED — the desync at frame $DESYNC_FRAME was caught by the recorder at frame $((DESYNC_FRAME + 1)) (logs in $OUT)"
+        exit 0
+    fi
+elif [ "$fail" = 0 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$hn" = "$MATCHES" ] && [ "$jn" = "$MATCHES" ] &&
+   [ -n "$hh" ] && [ "$hh" = "$jh" ]; then
+    echo "relay-test: PASSED — $what, both peers identical (logs in $OUT)"
+    exit 0
+fi
+echo "relay-test: FAILED (logs in $OUT)"
+exit 1

@@ -51,11 +51,13 @@ SDL_ONLY_SRCS := \
     crt_effects.c         \
     ini.c                 \
     input_sdl.c           \
+    match_record.c        \
     match_step.c          \
     menu_load_json.c      \
     menu_symbols.c        \
     miniz_impl.c          \
     mm_client.c           \
+    netem_core.c          \
     netplay.c             \
     netplay_live_test.c   \
     netplay_lobby.c       \
@@ -73,6 +75,7 @@ SDL_ONLY_SRCS := \
     rollback_rig.c        \
     sfx_debug.c           \
     sim_state.c           \
+    srp_writer.c          \
     state_wire.c          \
     stb_image_write_impl.c \
     swos_settings.c       \

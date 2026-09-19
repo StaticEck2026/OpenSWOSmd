@@ -36,6 +36,7 @@
 #include "endian_helpers.h"
 #include "sim_state.h"
 #include "display.h"        /* _screen_width, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH */
+#include "relay_proto.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -173,6 +174,13 @@ typedef struct {
     RxChannel          rx[P2P_NUM_CHANNELS];
 
     uint16_t           peerScreenWidth; /* from the peer's handshake: P2PLink_AgreedSimWidth */
+
+    /* A relayed match (P2PLink_SetRelay). NOT cleared by link_reset: it belongs to
+     * the matchmaking session, which outlives any one link -- a rematch punches
+     * again and has to register again. */
+    uint64_t           relayToken;      /* 0 = direct */
+    int32_t            relayPlayer;
+    int32_t            relayAcked;      /* the server has answered RELAY_OK */
 } P2PLink;
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
@@ -444,8 +452,24 @@ static void link_reset(P2PLink *l)
     memset(&l->peer, 0, sizeof l->peer);
 }
 
+static const char *failure_name(P2PLinkFailure f)
+{
+    static const char *const names[] = {
+        "none", "unavailable", "bad address", "port in use", "socket", "no answer",
+        "lost", "peer left", "host busy", "protocol", "state (a different build)",
+        "gameplay style", "screen width", "port reserved", "relay refused us",
+    };
+    return (uint32_t)f < sizeof names / sizeof names[0] ? names[f] : "?";
+}
+
 static void link_fail(P2PLink *l, P2PLinkFailure reason)
 {
+    /* Every failure, not only the join timeout: a refusal (a different gameplay
+     * style, say) used to close the link in silence, and both players just sat on
+     * the waiting screen with nothing in the log to say why. */
+    if (link_log_on())
+        fprintf(stderr, "[p2p] link %s: %s\n",
+                reason == P2P_FAIL_PEER_LEFT ? "closed" : "failed", failure_name(reason));
     drop_socket(l);
     l->hasPeer = 0;
     l->pingMs  = -1;
@@ -794,9 +818,48 @@ static const char *addr_text(const struct sockaddr_in *a, char *buf, size_t cap)
     return buf;
 }
 
+/* RELAY_REGISTER to the server (include/relay_proto.h). Raw: the relay's control
+ * packets are its own format, not ours, so no checksum trailer. */
+static void relay_register(P2PLink *l)
+{
+    uint8_t buf[RELAY_CONTROL_LEN];
+    RelayControl c;
+
+    memset(&c, 0, sizeof c);
+    c.type   = RELAY_REGISTER;
+    c.player = (uint8_t)l->relayPlayer;
+    c.token  = l->relayToken;
+    Relay_WriteControl(buf, &c);
+    sendto(l->sock, (const char *)buf, sizeof buf, 0,
+           (const struct sockaddr *)&l->candidates[0], (socklen_t)sizeof l->candidates[0]);
+}
+
+/* The server's answer. 1 if `buf` was one (and has been dealt with). */
+static int32_t relay_answer(P2PLink *l, const uint8_t *buf, int32_t len)
+{
+    RelayControl c;
+    if (!l->relayToken || Relay_ReadControl(buf, len, &c) != 0 || c.type != RELAY_REGISTERED ||
+        c.token != l->relayToken)
+        return 0;
+    if (c.status != RELAY_OK) {
+        if (l->state == P2P_JOINING)
+            link_fail(l, P2P_FAIL_RELAY);
+        return 1;
+    }
+    if (!l->relayAcked && link_log_on())
+        fprintf(stderr, "[p2p] relay: registered as player %d, waiting for the other\n",
+                (int)c.player);
+    l->relayAcked = 1;
+    return 1;
+}
+
 static void punch_send(P2PLink *l)
 {
     int32_t i;
+    /* First, so the server knows us before our hello reaches it: a hello from an
+     * address it cannot place is not forwarded. */
+    if (l->relayToken)
+        relay_register(l);
     for (i = 0; i < l->numCandidates; i++)
         send_setup_packet(l, &l->candidates[i], PKT_HELLO);
     l->punchRounds++;
@@ -979,6 +1042,11 @@ static void link_poll(P2PLink *l, uint32_t now)
             if (errno == ECONNRESET || errno == ECONNREFUSED)
                 continue;
             break;
+        }
+        if (from.sin_family == AF_INET && relay_answer(l, buf, (int32_t)n)) {
+            if (l->sock < 0)
+                break;                  /* the relay refused us: the link is over */
+            continue;
         }
         if (from.sin_family == AF_INET) {
             int32_t len = wire_receive(buf, (int32_t)n);
@@ -1210,8 +1278,26 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
     return link_punch(&s_link, addresses, count, localPort);
 }
 
-int32_t P2PLink_Host(uint16_t port)                    { return link_host(&s_link, port); }
-int32_t P2PLink_Join(const char *address, uint16_t port) { return link_join(&s_link, address, port, NULL); }
+void P2PLink_SetRelay(uint64_t token, int32_t player)
+{
+    s_link.relayToken  = token;
+    s_link.relayPlayer = token ? player : 0;
+    s_link.relayAcked  = 0;
+}
+
+uint64_t P2PLink_RelayToken(void) { return s_link.relayToken; }
+
+/* The direct-IP menu: never relayed, whatever the last matchmaking session was. */
+int32_t P2PLink_Host(uint16_t port)
+{
+    P2PLink_SetRelay(0, 0);
+    return link_host(&s_link, port);
+}
+int32_t P2PLink_Join(const char *address, uint16_t port)
+{
+    P2PLink_SetRelay(0, 0);
+    return link_join(&s_link, address, port, NULL);
+}
 void    P2PLink_Poll(void)                             { link_poll(&s_link, now_ms()); }
 void    P2PLink_Close(void)                            { link_close(&s_link); }
 
@@ -1627,6 +1713,8 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
     (void)addresses; (void)count; (void)localPort;
     return 1;
 }
+void           P2PLink_SetRelay(uint64_t token, int32_t player) { (void)token; (void)player; }
+uint64_t       P2PLink_RelayToken(void) { return 0; }
 int32_t        P2PLink_AgreedDelay(void)       { return -1; }
 int32_t        P2PLink_AgreedSimWidth(void)    { return -1; }
 int32_t        P2PLink_ProposedDelay(void)     { return -1; }
@@ -1654,4 +1742,40 @@ int32_t P2PLink_SelfTest(void)
 }
 
 #endif /* SWOS_NETPLAY */
+
+void P2PLink_FailureText(P2PLinkFailure failure, const char **line1, const char **line2)
+{
+    switch (failure) {
+    case P2P_FAIL_UNAVAILABLE:
+        *line1 = "NETWORK PLAY IS NOT IN THIS BUILD"; *line2 = ""; break;
+    case P2P_FAIL_BAD_ADDRESS:
+        *line1 = "THAT IS NOT AN IP ADDRESS"; *line2 = "TYPE IT LIKE 192.168.1.20"; break;
+    case P2P_FAIL_PORT_IN_USE:
+        *line1 = "THAT UDP PORT IS ALREADY IN USE"; *line2 = "CHOOSE ANOTHER ONE"; break;
+    case P2P_FAIL_PORT_RESERVED:
+        *line1 = "THE SYSTEM RESERVES THAT UDP PORT"; *line2 = "CHOOSE ANOTHER ONE"; break;
+    case P2P_FAIL_SOCKET:
+        *line1 = "THIS MACHINE WOULD NOT OPEN A SOCKET"; *line2 = ""; break;
+    case P2P_FAIL_NO_ANSWER:
+        *line1 = "THE HOST DID NOT ANSWER"; *line2 = "CHECK THE ADDRESS, PORT AND FIREWALL"; break;
+    case P2P_FAIL_LOST:
+        *line1 = "THE CONNECTION WENT QUIET"; *line2 = ""; break;
+    case P2P_FAIL_PEER_LEFT:
+        *line1 = "THE OTHER PLAYER LEFT"; *line2 = ""; break;
+    case P2P_FAIL_HOST_BUSY:
+        *line1 = "THE HOST ALREADY HAS A PLAYER"; *line2 = ""; break;
+    case P2P_FAIL_PROTOCOL:
+    case P2P_FAIL_STATE:
+        *line1 = "THE OTHER PLAYER HAS ANOTHER VERSION"; *line2 = "BOTH OF YOU NEED THE SAME BUILD"; break;
+    case P2P_FAIL_GAMEPLAY:
+        *line1 = "YOUR GAMEPLAY STYLES ARE DIFFERENT"; *line2 = "SET THE SAME ONE IN OPTIONS"; break;
+    case P2P_FAIL_WIDTH:
+        *line1 = "YOUR SCREEN WIDTHS ARE DIFFERENT"; *line2 = "BOTH OF YOU NEED THE SAME ONE"; break;
+    case P2P_FAIL_RELAY:
+        *line1 = "THE SERVER'S RELAY HAS CLOSED"; *line2 = "FIND EACH OTHER AGAIN"; break;
+    default:
+        *line1 = ""; *line2 = ""; break;
+    }
+}
+
 #endif /* SWOS_SDL_BUILD */

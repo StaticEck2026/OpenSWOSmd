@@ -7,6 +7,7 @@
 
 class User;
 class Message;
+class Relay;
 
 class Connections : public IConnections
 {
@@ -20,6 +21,9 @@ public:
     bool VerifyVersion(const std::string& version) override;
     void OnUserChangeState(class User*) override;
     ENetHost* Host() { return m_host.get(); }
+    // OpenSWOS: the relay, when the server runs one (Relay.h). StartGame makes a
+    // session for a OpenSWOS pair and hands each player its token.
+    void SetRelay(Relay* relay) { m_relay = relay; }
     void BroadcastMessage(const class Message& m) const override;
     void BroadcastActiveUsers() const override;
     void BroadcastOpenGames() const override;
@@ -36,5 +40,6 @@ private:
     ENetAddress address;
     ENetHostPtr m_host;
     UserMap m_users;
+    Relay* m_relay = nullptr;
 
 };

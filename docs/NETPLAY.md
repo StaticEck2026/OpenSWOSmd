@@ -347,6 +347,10 @@ bad line is reproduced. Its randomness is its own and never the game's: `Rand()`
 state both peers must agree on, and a harness that perturbed it would desync the match it
 is testing.
 
+The rules and the profile table live in `include/netem_core.h` / `src/netem_core.c`, shared
+with the matchmaking server's relay, which applies the same conditions in the middle of a
+relayed match — to the lobby's traffic as well as GGPO's (§7, "The relay").
+
 The conditions are the set clumsy (jagt.github.io/clumsy) offers, which is the list of
 what a real link does to a packet:
 
@@ -916,7 +920,8 @@ still peer-to-peer.
 
 **The server only introduces you.** Its `START:` message hands each side the other's
 candidate addresses and it is then out of the loop. Killing it mid-match does not end
-the match; it only stops new ones being made.
+the match; it only stops new ones being made. The exception is a server run with
+`--relay`, which plays the match through itself — see "The relay" below.
 
 ### Running one locally
 
@@ -1115,6 +1120,129 @@ the newer `<count>:<name>:<len>:<data>` open-games format is a separate feature,
 Two differences that are not faults: the reference binds a fixed local port (first free of
 6000–6009) where ours takes an ephemeral one, and the reference drops its server connection
 the instant `START:` arrives.
+
+### The relay (`--relay`, `third_party/matchmaker/Server/Relay.cpp`)
+
+Matches are peer to peer, and stay that way for players. The relay is for the cases
+that cannot be, or should not be:
+
+- **testing** — the server can put a misbehaving network in the middle of a real match
+  between two real machines (`--netem`), which neither of them knows is there;
+- **the browser build** — a browser has no UDP, so no peer to peer (phase 2 carries the
+  same sessions over WebSocket);
+- **players whose NATs will not punch**, and a match being streamed live.
+
+**How.** At `START:` the server makes a session with a random 64-bit token and sends each
+OpenSWOS player `RELAY:<token>,<n>` just before `START:` (never to a SWOS 2020 client,
+whose parser throws on a header it does not know). Both then punch to ONE candidate, the
+server, and each punch round also registers there: a 16-byte `SWRL` datagram with the
+token, from the socket the match will be played on (`include/relay_proto.h`). The server
+binds each source address to the session and from then on forwards every datagram from
+one registered address to the other, unchanged, from the port it arrived on. `p2p_link`
+and GGPO each see one peer at one address and never learn it is the server's — GGPO is
+not touched at all. A rematch punches the same address and registers again, so one
+session carries every match two players play in a row; it closes after a minute with no
+traffic.
+
+It shares UDP **19602** with the matchmaker through ENet's `intercept` hook, so a server
+needs no second port forwarded. A datagram is the relay's only if it is a well-formed
+`SWRL` control packet or comes from a registered address; everything else is ENet's. It
+never forwards for an address that did not register with a token the server issued.
+
+```bash
+build/matchmaker/swos-matchmaker 19602 --relay                   # relay every OpenSWOS pair
+build/matchmaker/swos-matchmaker 19602 --relay --netem wifi      # ... through wifi
+build/matchmaker/swos-matchmaker 19602 --relay --netem cycle \
+    --ledger matches.jsonl                                        # a new profile per session
+scripts/relay_test.sh                     # two players, the real menus, two matches through it
+NETEM=awful scripts/relay_test.sh         # ... under the server's worst link
+```
+
+**The server's emulator is the game's.** `include/netem_core.h` + `src/netem_core.c` hold
+the profile table and every rule; the game's `src/netplay_netem.c` is now only its env
+vars, its clock and GGPO's socket, and the server compiles the same file in from the game
+tree. So `wifi` is the same link in both places. The two are not redundant: the game's
+touches only GGPO's packets, on a match played peer to peer; the server's touches
+EVERYTHING in between — the link's handshake and the lobby too, which no emulator had
+disturbed before. Each direction has its own queue and its own generator.
+
+**The ledger** (`--ledger FILE`) gets one JSON line per session when it closes: the token,
+when, the two names and registered addresses, how long it was linked, packets and bytes
+each way, the profile, and what the emulator actually did each way. Every `[relay]` line on
+the console is timed to the millisecond, because the question a relay log answers is
+usually *when*.
+
+**What it found on its first runs:**
+
+- **The lobby's kick-off raced the network** (fixed, `src/netplay_lobby.c`). The host kicks
+  off the moment it READS the joiner's answer and hangs up at once (`link_close`'s BYE);
+  the joiner kicked off only when the ACK of its answer came back. On a link with any
+  latency the BYE overtook the ack, the joiner read it as "the other player left", and the
+  host sat in its session until "THE OTHER PLAYER NEVER ARRIVED". Invisible before because
+  the client emulator never touches the link. Now a joiner that has accepted treats the
+  host hanging up (or going quiet) as the kick-off it is.
+- **Wall-clock time is not a timer.** The first version timed sessions with
+  `enet_time_get()`, which is `gettimeofday`; a step in WSL2's clock made a session look a
+  minute idle fifteen seconds into a match, and it was closed under the players. The relay
+  uses `steady_clock`.
+
+### The recorder (`--record`, `third_party/matchmaker/Server/Recorder.cpp`)
+
+Any live match — relayed or peer to peer — can be streamed by each of its players to a
+recorder, which is the matchmaking server run with `--record` (TCP, on the same port
+number as its UDP). It can be the server that relays, the one that introduced the
+players without relaying, or one of its own anywhere else:
+
+```bash
+build/matchmaker/swos-matchmaker 19602 --record --ledger matches.jsonl
+SWOS_RECORD=server ...          # the player: stream to the matchmaker it logged in to
+SWOS_RECORD=10.0.0.5:19602 ...  #             ... or to any recorder
+# or in SWOS.ini:  [netplay] record = server | host[:port] | (empty = off)
+```
+
+**What is streamed** (`include/record_proto.h`, client `src/match_record.c`): a HELLO
+(match id, player, both names, the teams, gameplay flags, delay, simulation width, the
+build and platform, the relay token if relayed), then the SIM-tier hash of every frame
+as it is confirmed, then an END (finished or not, the end frame, the final hash, why).
+Only CONFIRMED frames — the GGPO-X fork sets the confirmed frame after the rollback its
+inputs called for has been played, so each hash is the frame as finally played — and
+only read from the trace the netplay step already keeps, so the recorder cannot touch
+the match. It never waits during play: a recorder that is slow or gone costs the
+players nothing; only the end of a match waits, a second at most, for the tail.
+
+**Why hashes: the recorder is the desync detector for real matches.** Both players'
+streams are paired by match id — derived from the lobby's GGPO packet key, which both
+already share, so nobody hands one out — and compared frame by frame as they arrive.
+The first frame whose hashes differ is reported the moment it is seen, on the console
+and as a `desync` line in the ledger, with both builds and platforms, the teams, the
+relay token and the wall-clock time; the match's `match` line follows when it closes
+(frames compared, each side's frames, outcome and final hash, whether the final hashes
+agree). That is exactly what the 2026-09-17 macOS/Windows desync did not leave behind:
+it was found by comparing two logs by hand, hashed every 100 frames.
+
+A frame is hashed at its START, so a desync injected INTO frame N
+(`SWOS_LIVE_DESYNC_FRAME=N`) is reported at frame N+1 — the test requires exactly that.
+
+**The match itself, too.** A recording is FULL unless `SWOS_RECORD_MODE=hashes`: each
+player also streams the `.SRP` its game is recording (`src/replay_v2.c`) — the META once,
+then every replay frame as it is confirmed with the sounds and chapters it played, then
+the final score — and the recorder keeps it (`--recordings DIR`, default `recordings/`),
+from player 1's stream when it has one. The file is laid out by the same code the game
+writes `LATEST.SRP` with (`src/srp_writer.c`), so it is that file: the test requires the
+recorder's copy of a match to be the host's own `LATEST.SRP` BYTE FOR BYTE. It is
+written as the match goes (every 3000 frames, via a rename so a reader never sees half a
+file) and finished when the match closes; the ledger's `match` line names it.
+
+That is also the live-stream path: the frames reach the server a few frames behind play,
+so a viewer served from them (later, and the browser build's) watches the match as it
+happens.
+
+```bash
+RECORD=1 scripts/relay_test.sh                       # relayed and recorded, .SRP checked
+RECORD=1 RELAY=0 scripts/relay_test.sh               # peer to peer and recorded
+RECORD=1 RECORD_MODE=hashes scripts/relay_test.sh    # hashes only
+RECORD=1 DESYNC_FRAME=150 scripts/relay_test.sh      # the recorder must name frame 151
+```
 
 ### Status
 

@@ -456,17 +456,31 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
      * :51978 punching at :61165.
      *
      * So: copy what is needed out of the client's state, close it, then punch. */
+    /*
+     * A RELAYED match (include/relay_proto.h) is the same thing with one candidate:
+     * the server. Both players register there with the token and send it
+     * everything; it forwards to the other. p2p_link and GGPO each see one peer at
+     * one address, and never learn that the address is the server's. */
     {
         char  addrs[MM_MAX_PEER_ADDRS][MM_ADDR_TEXT_MAX];
         const char *list[MM_MAX_PEER_ADDRS];
         char  peerName[MM_NAME_MAX];
         uint16_t localPort = st->localPort;
         int32_t i, n = 0;
+        int32_t relay = st->relay;
 
-        for (i = 0; i < st->numAddrs && i < MM_MAX_PEER_ADDRS; i++) {
-            snprintf(addrs[n], sizeof addrs[n], "%s", st->addrs[i]);
-            list[n] = addrs[n];
-            n++;
+        if (relay) {
+            snprintf(addrs[0], sizeof addrs[0], "%s", st->relayAddr);
+            list[0] = addrs[0];
+            n = 1;
+            P2PLink_SetRelay(st->relayToken, st->playerNumber);
+        } else {
+            for (i = 0; i < st->numAddrs && i < MM_MAX_PEER_ADDRS; i++) {
+                snprintf(addrs[n], sizeof addrs[n], "%s", st->addrs[i]);
+                list[n] = addrs[n];
+                n++;
+            }
+            P2PLink_SetRelay(0, 0);
         }
         snprintf(peerName, sizeof peerName, "%s", st->peerName);
 
@@ -476,6 +490,9 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
 
         if (n == 0 || P2PLink_Punch(list, n, localPort) != 0)
             snprintf(s_matchStatus, sizeof s_matchStatus, "NO WAY TO REACH %s", peerName);
+        else if (relay)
+            snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s VIA THE SERVER",
+                     peerName);
         else
             snprintf(s_matchStatus, sizeof s_matchStatus, "CONNECTING TO %s (%d route%s)",
                      peerName, n, n == 1 ? "" : "s");
@@ -523,9 +540,14 @@ static void mpWaitingMenu_OnDraw(void)
     case P2P_JOINING:
         snprintf(s_waitLine, sizeof s_waitLine, "%s", s_matchStatus);
         break;
-    case P2P_FAILED:
-        snprintf(s_waitLine, sizeof s_waitLine, "CONNECTION FAILED");
+    case P2P_FAILED: {
+        /* Why, not just that: a refused handshake (two gameplay styles) looked
+         * exactly like a firewall here, and cost a morning's test run. */
+        const char *line1, *line2;
+        P2PLink_FailureText(P2PLink_Failure(), &line1, &line2);
+        snprintf(s_waitLine, sizeof s_waitLine, "%s", line1[0] ? line1 : "CONNECTION FAILED");
         break;
+    }
     default:
         snprintf(s_waitLine, sizeof s_waitLine, "%s", s_matchStatus);
         break;

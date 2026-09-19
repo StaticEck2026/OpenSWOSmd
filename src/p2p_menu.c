@@ -132,39 +132,6 @@ static const char *delay_text(void)
 
 /* ---- the status panel ---- */
 
-static void failure_text(P2PLinkFailure failure, const char **line1, const char **line2)
-{
-    switch (failure) {
-    case P2P_FAIL_UNAVAILABLE:
-        *line1 = "NETWORK PLAY IS NOT IN THIS BUILD"; *line2 = ""; break;
-    case P2P_FAIL_BAD_ADDRESS:
-        *line1 = "THAT IS NOT AN IP ADDRESS"; *line2 = "TYPE IT LIKE 192.168.1.20"; break;
-    case P2P_FAIL_PORT_IN_USE:
-        *line1 = "THAT UDP PORT IS ALREADY IN USE"; *line2 = "CHOOSE ANOTHER ONE"; break;
-    case P2P_FAIL_PORT_RESERVED:
-        *line1 = "THE SYSTEM RESERVES THAT UDP PORT"; *line2 = "CHOOSE ANOTHER ONE"; break;
-    case P2P_FAIL_SOCKET:
-        *line1 = "THIS MACHINE WOULD NOT OPEN A SOCKET"; *line2 = ""; break;
-    case P2P_FAIL_NO_ANSWER:
-        *line1 = "THE HOST DID NOT ANSWER"; *line2 = "CHECK THE ADDRESS, PORT AND FIREWALL"; break;
-    case P2P_FAIL_LOST:
-        *line1 = "THE CONNECTION WENT QUIET"; *line2 = ""; break;
-    case P2P_FAIL_PEER_LEFT:
-        *line1 = "THE OTHER PLAYER LEFT"; *line2 = ""; break;
-    case P2P_FAIL_HOST_BUSY:
-        *line1 = "THE HOST ALREADY HAS A PLAYER"; *line2 = ""; break;
-    case P2P_FAIL_PROTOCOL:
-    case P2P_FAIL_STATE:
-        *line1 = "THE OTHER PLAYER HAS ANOTHER VERSION"; *line2 = "BOTH OF YOU NEED THE SAME BUILD"; break;
-    case P2P_FAIL_GAMEPLAY:
-        *line1 = "YOUR GAMEPLAY STYLES ARE DIFFERENT"; *line2 = "SET THE SAME ONE IN OPTIONS"; break;
-    case P2P_FAIL_WIDTH:
-        *line1 = "YOUR SCREEN WIDTHS ARE DIFFERENT"; *line2 = "BOTH OF YOU NEED THE SAME ONE"; break;
-    default:
-        *line1 = ""; *line2 = ""; break;
-    }
-}
-
 static void set_status(const char *line1, const char *line2)
 {
     snprintf(s_status1, sizeof s_status1, "%s", line1);
@@ -190,7 +157,7 @@ static void update_status(P2PLinkState state)
         snprintf(s_status1, sizeof s_status1, "WAITING FOR A PLAYER ON PORT %u",
                  (unsigned)P2PLink_LocalPort());
         if (P2PLink_Notice() != P2P_FAIL_NONE) {
-            failure_text(P2PLink_Notice(), &line1, &line2);
+            P2PLink_FailureText(P2PLink_Notice(), &line1, &line2);
             snprintf(s_status2, sizeof s_status2, "%s", line1);
         } else {
             snprintf(s_status2, sizeof s_status2, "CHOOSE CANCEL TO STOP");
@@ -212,7 +179,7 @@ static void update_status(P2PLinkState state)
         break;
 
     case P2P_FAILED:
-        failure_text(P2PLink_Failure(), &line1, &line2);
+        P2PLink_FailureText(P2PLink_Failure(), &line1, &line2);
         set_status(line1, line2);
         break;
     }

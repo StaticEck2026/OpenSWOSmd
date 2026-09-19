@@ -17,6 +17,10 @@
 #include "display.h"        /* _sim_draw_width, _screen_width */
 #include "game_loop.h"
 #include "match_step.h"
+#include "match_record.h"   /* the recorder: SWOS_RECORD, [netplay] record */
+#include "netplay_lobby.h"
+#include "p2p_link.h"
+#include "record_proto.h"
 #include "netplay_netem.h"
 #include "netplay.h"
 #include "replay_test.h"
@@ -104,6 +108,7 @@ static struct {
     uint64_t        *traceSim, *traceView, *traceObs;
     uint8_t         *over;
     uint32_t         traceLen, traceCap;
+    uint32_t         recordNext;          /* live: the next frame the recorder is owed */
 } s_np;
 
 static void fail(const char *fmt, ...)
@@ -814,6 +819,59 @@ int32_t NetplayMatch_Start(void)
  * The p2p link has to be CLOSED before this is called. GGPO opens its own
  * socket, and on the same local port -- which is also what keeps a NAT mapping
  * open across the handover. */
+/* The recorder (include/match_record.h): who is playing what, then every confirmed
+ * frame's SIM-tier hash, then how it ended. Off unless SWOS_RECORD or [netplay] record
+ * asks for it; it only ever READS the trace, so it cannot touch the match. */
+static void team_name(char *out, size_t cap, const TeamFileEx *t)
+{
+    size_t i;
+    for (i = 0; i + 1 < cap && i < sizeof t->team.teamName && t->team.teamName[i]; i++)
+        out[i] = (char)t->team.teamName[i];
+    out[i] = '\0';
+}
+
+static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
+{
+    extern TeamFileEx _selectedTeams[100];
+    extern int _gDosGameplay;               /* dos_mode.h */
+    extern int _gArcadeMode;                /* arcade.c */
+    extern int _gOriginalFireHoldLockout;   /* team_control.c */
+    const LobbyPlayer *me = NetplayLobby_Player(localPlayer);
+    const LobbyPlayer *them = NetplayLobby_Player(3 - localPlayer);
+    char team1[20], team2[20];
+    MatchRecordInfo info;
+
+    team_name(team1, sizeof team1, &_selectedTeams[0]);
+    team_name(team2, sizeof team2, &_selectedTeams[1]);
+    memset(&info, 0, sizeof info);
+    info.matchId    = s_hasPacketKey ? Record_MatchId(s_packetKey) : 0;
+    info.relayToken = P2PLink_RelayToken();
+    info.player     = localPlayer;
+    info.gameplay   = (_gDosGameplay ? 1 : 0) | (_gArcadeMode ? 2 : 0) |
+                      (_gOriginalFireHoldLockout ? 4 : 0);
+    info.simWidth   = simWidth;
+    info.delay      = delay;
+    info.myName     = me ? me->name : "";
+    info.peerName   = them ? them->name : "";
+    info.team1      = team1;
+    info.team2      = team2;
+    MatchRecord_Begin(&info);
+}
+
+/* Every frame up to `confirmed` whose start has been saved. Confirmed is set after
+ * any rollback its inputs called for has been played (the GGPO-X fork's
+ * ConfirmedFrame), so these hashes are the frames as finally played. */
+static void recordConfirmed(int32_t confirmed)
+{
+    while ((int64_t)s_np.recordNext <= (int64_t)confirmed && s_np.recordNext < s_np.traceLen) {
+        MatchRecord_Frame(s_np.recordNext, s_np.traceSim[s_np.recordNext]);
+        s_np.recordNext++;
+    }
+    if (confirmed >= 0)
+        MatchRecord_Replay((uint32_t)confirmed);
+    MatchRecord_Pump();
+}
+
 int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t peerPort,
                                uint16_t localPort, int32_t delay, int32_t simWidth)
 {
@@ -908,6 +966,8 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
     snprintf(s_np.peerAddress, sizeof s_np.peerAddress, "%s", peerIp);
 
     rc = NetplayMatch_Start();
+    if (rc == 0)
+        recordBegin(localPlayer, delay, simWidth);
     if (rc == 0) {
         /* One simulation draw width on both machines (display.h): what margin animates
          * and which crowd tiles toggle are decided for it, whatever each display is.
@@ -1109,6 +1169,10 @@ static void liveEnd(int32_t outcome, const char *why)
      * different screen widths without the match doing so. */
     printf("[live] final sim hash %016llx\n", (unsigned long long)SimState_Hash(SIM_TIER_SIM));
     fflush(stdout);
+    recordConfirmed(s_np.lastConfirmed);
+    MatchRecord_End(outcome == NETPLAY_LIVE_FINISHED,
+                    s_np.endFrame >= 0 ? s_np.endFrame : (int32_t)s_np.frames,
+                    SimState_Hash(SIM_TIER_SIM), why);
     NetplayMatch_Finish();              /* reports, closes the session, drops the sound filter */
     s_liveOutcome = outcome;
     snprintf(s_liveWhy, sizeof s_liveWhy, "%s", why ? why : "");
@@ -1515,6 +1579,8 @@ prepared:
         s_np.lastConfirmed = confirmed;
         s_np.lastProgressMs = now;
     }
+    if (s_np.live)
+        recordConfirmed(s_np.lastConfirmed);
     if (now - s_np.lastProgressMs > (uint32_t)s_np.timeoutMs) {
         if (!s_np.live)
             fail("nothing played or confirmed for %d s (%s, frame %d, confirmed %d)",

@@ -41,6 +41,13 @@ void    ReplayRec_SetFrame(uint32_t frame);
 
 int32_t ReplayRec_Recording(void);
 
+/* The recording so far, as the parts of a file (include/srp_writer.h): what the match
+ * recorder (src/match_record.c) streams, frame by confirmed frame. Pointers into the
+ * recorder's own buffers, good until the next frame is recorded. 0 when this match is
+ * being recorded, 1 when it is not. */
+struct SrpContent;
+int32_t ReplayRec_Content(struct SrpContent *out);
+
 /* ---- playback -------------------------------------------------------------- */
 
 /* Load a .SRP for the highlights viewer. 0 on success; the teams, score and pitch are

@@ -96,6 +96,9 @@ typedef struct {
     char                   matchmaker[80];   /* [netplay] matchmaker: the server MULTIPLAYER logs in to,
                                               * "host" or "host:port". Typed on the login menu and saved
                                               * there; empty = a server on this machine. */
+    char                   record[80];       /* [netplay] record: stream every live match to a
+                                              * recorder -- "server" (the matchmaker), "host[:port]",
+                                              * or empty/"off". include/match_record.h */
     int                    arcade;           /* 1 = arcade/coin-op mode — boot to attract. PC-only. See docs/ARCADE.md */
     int                    arcade_mode;         /* arcade game mode index (0 = GOLDEN GOAL) */
     int                    arcade_game_seconds; /* arcade match length in seconds (default 45) */

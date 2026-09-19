@@ -24,6 +24,7 @@
 #include "endian_helpers.h"
 #include "game_types.h"
 #include "miniz_swos.h"
+#include "srp_writer.h"     /* the file's layout, shared with the recorder */
 #include "swos_io.h"
 #include "image_cmd.h"      /* ProcessImageCommandStream */
 #include "match_sim.h"      /* InitTeams */
@@ -35,29 +36,12 @@
 
 /* ---- the file ---------------------------------------------------------------------- */
 
-#define SWRP_VERSION        1
-#define SWRP_HEADER_BYTES   32
-#define SWRP_DIR_BYTES      16
-#define SWRP_FLAG_AUDIO     0x0001u
-#define SWRP_FLAG_SEEK      0x0002u
-#define SWRP_FLAG_CHAPTERS  0x0004u
-#define SWRP_QUIRK_ORIGINAL_FIRE_HOLD_LOCKOUT 0x0001u
+/* The layout's constants (SWRP_*, CHUNK_*, FRAME_HEAD_BYTES, SPRITE_BYTES, ...) are
+ * include/srp_writer.h's: the recorder writes these files too. */
 
-#define FOURCC(a, b, c, d)  ((uint32_t)(a) << 24 | (uint32_t)(b) << 16 | (uint32_t)(c) << 8 | (uint32_t)(d))
-#define CHUNK_META          FOURCC('M', 'E', 'T', 'A')
-#define CHUNK_FRMS          FOURCC('F', 'R', 'M', 'S')
-#define CHUNK_AUDI          FOURCC('A', 'U', 'D', 'I')
-#define CHUNK_SEEK          FOURCC('S', 'E', 'E', 'K')
-#define CHUNK_CHAP          FOURCC('C', 'H', 'A', 'P')
-
-#define FRAME_HEAD_BYTES    20      /* count, camera x/y (16.16), goals, crowd, minute, flags */
-#define SPRITE_BYTES        6       /* image, world x, world y */
-#define AUDIO_EVENT_BYTES   8       /* frame, kind, channel, id */
-#define CHAPTER_BYTES       8       /* frame, kind, team, value */
-#define SEEK_INTERVAL       50
 #define TEAM_BYTES          1018    /* a TeamGame as the HIL header holds it */
 #define TEAM_HDR_INT16S     11
-#define META_SCORE_OFF      (2 + 2 + 2 + 2 + 4 + 32)    /* the final score inside META */
+#define META_SCORE_OFF      SRP_META_SCORE_OFF          /* the final score inside META */
 #define META_BYTES          (2 + 2 + 2 + 2 + 4 + 32 + 2 + 2 + 2 + 2 + 2 + 40 + 40 + 2 * TEAM_BYTES)
 #define MAX_FRAME_SPRITES   78      /* _sortedSprites */
 
@@ -67,17 +51,8 @@
 
 enum { CHAPTER_GOAL = 1, CHAPTER_HALF = 2 };
 
-typedef struct {
-    uint32_t frame;
-    uint8_t  kind, channel;
-    uint16_t id;
-} AudioEvent;
-
-typedef struct {
-    uint32_t frame;
-    uint8_t  kind, team;
-    uint16_t value;
-} Chapter;
+typedef SrpAudioEvent AudioEvent;
+typedef SrpChapter    Chapter;
 
 /* ---- game state it reads and writes ------------------------------------------------ */
 
@@ -479,37 +454,6 @@ void ReplayTrace_LiveSprite(int16_t ordinal, int16_t x, int16_t y)
 
 /* ---- writing ----------------------------------------------------------------------------- */
 
-typedef struct {
-    uint32_t fourcc;
-    uint8_t *data;              /* owned */
-    uint32_t stored, raw;
-} Chunk;
-
-/* Raw deflate when it saves anything, else stored as it is. Takes ownership of `raw`
- * (never NULL). */
-static void chunk_make(Chunk *c, uint32_t fourcc, uint8_t *raw, uint32_t rawLen, int32_t compress)
-{
-    c->fourcc = fourcc;
-    c->raw = rawLen;
-    c->data = raw;
-    c->stored = rawLen;
-    if (compress && rawLen > 256) {
-        size_t cap = (size_t)mz_compressBound(rawLen);
-        uint8_t *packed = (uint8_t *)malloc(cap);
-        size_t n = packed ? tdefl_compress_mem_to_mem(packed, cap, raw, rawLen,
-                                  tdefl_create_comp_flags_from_zip_params(
-                                      MZ_BEST_COMPRESSION, -MZ_DEFAULT_WINDOW_BITS,
-                                      MZ_DEFAULT_STRATEGY)) : 0;
-        if (n > 0 && n < rawLen) {
-            free(raw);
-            c->data = packed;
-            c->stored = (uint32_t)n;
-        } else {
-            free(packed);
-        }
-    }
-}
-
 static void put_team(uint8_t *out, const TeamGame *team)
 {
     const uint8_t *src = (const uint8_t *)team;
@@ -546,62 +490,6 @@ static uint8_t *build_meta(void)
     return m;
 }
 
-static uint8_t *build_audio(void)
-{
-    uint8_t *a = (uint8_t *)malloc((size_t)s_rec.audioCount * AUDIO_EVENT_BYTES + 1);
-    uint32_t i;
-    if (!a)
-        return NULL;
-    for (i = 0; i < s_rec.audioCount; i++) {
-        uint8_t *p = a + i * AUDIO_EVENT_BYTES;
-        BE_WRITE_U32(p, s_rec.audio[i].frame);
-        p[4] = s_rec.audio[i].kind;
-        p[5] = s_rec.audio[i].channel;
-        BE_WRITE_U16(p + 6, s_rec.audio[i].id);
-    }
-    return a;
-}
-
-static uint8_t *build_seek(uint32_t *len)
-{
-    uint32_t count = (s_rec.frameCount + SEEK_INTERVAL - 1) / SEEK_INTERVAL, i, ai = 0;
-    uint8_t *s = (uint8_t *)malloc(8 + (size_t)count * 12);
-    if (!s)
-        return NULL;
-    BE_WRITE_U16(s, SEEK_INTERVAL);
-    BE_WRITE_U16(s + 2, 0);
-    BE_WRITE_U32(s + 4, count);
-    for (i = 0; i < count; i++) {
-        uint32_t frame = i * SEEK_INTERVAL;
-        uint8_t *p = s + 8 + i * 12;
-        while (ai < s_rec.audioCount && s_rec.audio[ai].frame < frame)
-            ai++;
-        BE_WRITE_U32(p, frame);
-        BE_WRITE_U32(p + 4, s_rec.offsets[frame]);
-        BE_WRITE_U32(p + 8, ai);
-    }
-    *len = 8 + count * 12;
-    return s;
-}
-
-static uint8_t *build_chapters(uint32_t *len)
-{
-    uint8_t *c = (uint8_t *)malloc(4 + (size_t)s_rec.chapterCount * CHAPTER_BYTES);
-    uint32_t i;
-    if (!c)
-        return NULL;
-    BE_WRITE_U32(c, s_rec.chapterCount);
-    for (i = 0; i < s_rec.chapterCount; i++) {
-        uint8_t *p = c + 4 + i * CHAPTER_BYTES;
-        BE_WRITE_U32(p, s_rec.chapters[i].frame);
-        p[4] = s_rec.chapters[i].kind;
-        p[5] = s_rec.chapters[i].team;
-        BE_WRITE_U16(p + 6, s_rec.chapters[i].value);
-    }
-    *len = 4 + s_rec.chapterCount * CHAPTER_BYTES;
-    return c;
-}
-
 /* A name with a directory in it is used as it is; a bare name goes to the save folder,
  * where the highlights menu lists it. */
 static void file_path(const char *name, char *out, size_t cap)
@@ -633,85 +521,62 @@ static int32_t write_file(const char *name, const uint8_t *buf, uint32_t len)
     return 0;
 }
 
+/* The recording so far as the parts of a file (include/srp_writer.h). */
+static void content(SrpContent *c)
+{
+    memset(c, 0, sizeof *c);
+    c->meta         = s_rec.meta;
+    c->metaLen      = s_rec.meta ? META_BYTES : 0;
+    c->frms         = s_rec.frms;
+    c->frmsLen      = s_rec.frmsLen;
+    c->offsets      = s_rec.offsets;
+    c->frameCount   = s_rec.frameCount;
+    c->audio        = s_rec.audio;
+    c->audioCount   = s_rec.audioCount;
+    c->chapters     = s_rec.chapters;
+    c->chapterCount = s_rec.chapterCount;
+    c->tickRate     = (uint16_t)DosGameplay_TargetFps();
+    c->quirks       = _gOriginalFireHoldLockout ? SWRP_QUIRK_ORIGINAL_FIRE_HOLD_LOCKOUT : 0;
+}
+
+int32_t ReplayRec_Content(SrpContent *out)
+{
+    if (!s_rec.on || !s_rec.meta)
+        return 1;
+    content(out);
+    return 0;
+}
+
 static int32_t write_recording(void)
 {
-    Chunk chunks[5];
-    uint32_t n = 0, total, off, i, seekLen = 0, chapLen = 0;
-    uint8_t *raw[5], *file, *p;
-    int32_t rc = 0;
+    SrpContent c;
+    uint8_t *file;
+    uint32_t total = 0;
+    int32_t rc;
 
-    /* Every chunk's raw bytes first: nothing is written unless all of them exist. */
-    raw[0] = s_rec.meta;                        /* taken at kick-off; handed over here */
-    s_rec.meta = NULL;
-    raw[1] = s_rec.frms;                        /* handed over; freed with the chunks */
-    raw[2] = build_audio();
-    raw[3] = build_seek(&seekLen);
-    raw[4] = build_chapters(&chapLen);
-    s_rec.frms = NULL;
-    s_rec.frmsCap = 0;
-    memset(chunks, 0, sizeof chunks);
-    for (i = 0; i < 5; i++)
-        if (!raw[i])
-            rc = 1;
-    if (rc) {
-        for (i = 0; i < 5; i++)
-            free(raw[i]);
+    if (!s_rec.meta) {
         fprintf(stderr, "[replay] out of memory: the match could not be saved\n");
         return 1;
     }
-    chunk_make(&chunks[n++], CHUNK_META, raw[0], META_BYTES, 0);
-    chunk_make(&chunks[n++], CHUNK_FRMS, raw[1], s_rec.frmsLen, 1);
-    chunk_make(&chunks[n++], CHUNK_AUDI, raw[2], s_rec.audioCount * AUDIO_EVENT_BYTES, 1);
-    chunk_make(&chunks[n++], CHUNK_SEEK, raw[3], seekLen, 0);
-    chunk_make(&chunks[n++], CHUNK_CHAP, raw[4], chapLen, 0);
-
-    total = SWRP_HEADER_BYTES + n * SWRP_DIR_BYTES;
-    for (i = 0; i < n; i++)
-        total += chunks[i].stored;
-    file = (uint8_t *)malloc(total);
-    if (file) {
-        memcpy(file, "SWRP", 4);
-        BE_WRITE_U16(file + 4, SWRP_VERSION);
-        BE_WRITE_U16(file + 6, SWRP_FLAG_AUDIO | SWRP_FLAG_SEEK | SWRP_FLAG_CHAPTERS);
-        BE_WRITE_U16(file + 8, (uint16_t)DosGameplay_TargetFps());
-        BE_WRITE_U16(file + 10, _gOriginalFireHoldLockout ? SWRP_QUIRK_ORIGINAL_FIRE_HOLD_LOCKOUT : 0);
-        BE_WRITE_U16(file + 12, 0x2A0);
-        BE_WRITE_U16(file + 14, 0x370);
-        BE_WRITE_U32(file + 16, s_rec.frameCount);
-        BE_WRITE_U16(file + 20, (uint16_t)n);
-        BE_WRITE_U16(file + 22, 0);
-        BE_WRITE_U32(file + 28, 0);
-        off = SWRP_HEADER_BYTES + n * SWRP_DIR_BYTES;
-        for (i = 0; i < n; i++) {
-            p = file + SWRP_HEADER_BYTES + i * SWRP_DIR_BYTES;
-            BE_WRITE_U32(p, chunks[i].fourcc);
-            BE_WRITE_U32(p + 4, off);
-            BE_WRITE_U32(p + 8, chunks[i].stored);
-            BE_WRITE_U32(p + 12, chunks[i].raw);
-            memcpy(file + off, chunks[i].data, chunks[i].stored);
-            off += chunks[i].stored;
-        }
-        BE_WRITE_U32(file + 24, (uint32_t)mz_crc32(MZ_CRC32_INIT, file + SWRP_HEADER_BYTES,
-                                                   total - SWRP_HEADER_BYTES));
-
-        rc = write_file(s_rec.path ? s_rec.path : REPLAY_V2_LATEST, file, total);
-        if (!rc && s_rec.autoSave && !s_rec.path) {
-            /* A dated copy: MMDDHHMM.SRP, eight characters as the file menus want. */
-            char name[32];
-            time_t t = time(NULL);
-            struct tm *tm = localtime(&t);
-            if (tm) {
-                snprintf(name, sizeof name, "%02d%02d%02d%02d.SRP", tm->tm_mon + 1,
-                         tm->tm_mday, tm->tm_hour, tm->tm_min);
-                write_file(name, file, total);
-            }
-        }
-        free(file);
-    } else {
-        rc = 1;
+    content(&c);
+    file = Srp_Build(&c, &total);
+    if (!file) {
+        fprintf(stderr, "[replay] out of memory: the match could not be saved\n");
+        return 1;
     }
-    for (i = 0; i < n; i++)
-        free(chunks[i].data);
+    rc = write_file(s_rec.path ? s_rec.path : REPLAY_V2_LATEST, file, total);
+    if (!rc && s_rec.autoSave && !s_rec.path) {
+        /* A dated copy: MMDDHHMM.SRP, eight characters as the file menus want. */
+        char name[32];
+        time_t t = time(NULL);
+        struct tm *tm = localtime(&t);
+        if (tm) {
+            snprintf(name, sizeof name, "%02d%02d%02d%02d.SRP", tm->tm_mon + 1,
+                     tm->tm_mday, tm->tm_hour, tm->tm_min);
+            write_file(name, file, total);
+        }
+    }
+    free(file);
     if (rc)
         fprintf(stderr, "[replay] the match could not be saved\n");
     return rc;

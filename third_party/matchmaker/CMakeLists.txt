@@ -52,10 +52,21 @@ endif()
 file(GLOB server_sources "${CMAKE_CURRENT_SOURCE_DIR}/Server/*.cpp")
 file(GLOB common_sources "${CMAKE_CURRENT_SOURCE_DIR}/common/*.cpp")
 
-add_executable(swos-matchmaker ${server_sources} ${common_sources})
+# OpenSWOS: the relay and the recorder (Server/Relay.cpp, Server/Recorder.cpp)
+# share files with the game, so the two ends cannot drift: the network emulator
+# (src/netem_core.c), the relay and recording protocols (include/relay_proto.h,
+# include/record_proto.h), and the .SRP layout (src/srp_writer.c, with miniz from
+# src/miniz_impl.c). Plain C, no SDL, nothing else from the game tree. See
+# OPENSWOS.md.
+set(SWOS_TREE "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+add_executable(swos-matchmaker ${server_sources} ${common_sources}
+    "${SWOS_TREE}/src/netem_core.c"
+    "${SWOS_TREE}/src/srp_writer.c"
+    "${SWOS_TREE}/src/miniz_impl.c")
 target_include_directories(swos-matchmaker PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/Server/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/common/include")
+    "${CMAKE_CURRENT_SOURCE_DIR}/common/include"
+    "${SWOS_TREE}/include")
 target_link_libraries(swos-matchmaker swos_enet)
 
 if(WIN32)

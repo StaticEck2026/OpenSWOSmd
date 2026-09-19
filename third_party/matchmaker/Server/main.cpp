@@ -11,6 +11,14 @@
 #include "Sender.h"
 #include <iostream>
 #include "Utils.h"
+#include "Relay.h"
+#include "Recorder.h"
+#include <csignal>
+
+// OpenSWOS: a clean stop on SIGINT/SIGTERM, so the relay can close its
+// sessions and write their ledger lines. Upstream's loop never ended.
+static volatile std::sig_atomic_t g_stop = 0;
+static void OnStopSignal(int) { g_stop = 1; }
 
 int main(int argc, char** argv)
 {
@@ -24,23 +32,82 @@ int main(int argc, char** argv)
     // Upstream hardcoded 19602 while its README documented 19601 and "pass a
     // different port as an optional argument". Honour the argument, and keep
     // 19602 as the default so an existing swos-2020 client still finds us.
+    //
+    // OpenSWOS: and the relay's options (Relay.h). The port stays the first bare
+    // number, so `swos-matchmaker 19602` means what it always did.
     int port = 19602;
-    if (argc > 1) {
-        int requested = atoi(argv[1]);
-        if (requested <= 0 || requested > 65535) {
-            std::cerr << "usage: " << argv[0] << " [port]   (1-65535, default 19602)\n";
-            return 2;
+    RelayOptions relayOptions;
+    bool record = false;
+    std::string recordings = "recordings";
+    std::string ledgerPath;
+    auto usage = [&]() {
+        std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
+                     " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
+                     "  port        UDP, 1-65535, default 19602\n"
+                     "  --relay     OpenSWOS pairs play through this server\n"
+                     "  --netem     a misbehaving network in the middle of every relayed\n"
+                     "              match: a profile (";
+        int32_t count = 0;
+        const NetemProfile* all = NetemCore_Profiles(&count);
+        for (int32_t i = 0; i < count; i++)
+            std::cerr << (i ? " " : "") << all[i].name;
+        std::cerr << "), or cycle for a different one each match\n"
+                     "  --record    players may stream their matches here (TCP, the same port\n"
+                     "              number), relayed or peer to peer; both players' frames are\n"
+                     "              compared and a desync is reported the moment it happens;\n"
+                     "              a full recording is kept as a .SRP\n"
+                     "  --recordings  where those go (default: recordings/)\n"
+                     "  --ledger    append a JSON line per relay session, recorded match and desync\n";
+        return 2;
+    };
+    for (int i = 1; i < argc; i++) {
+        std::string a = argv[i];
+        if (a == "--relay") {
+            relayOptions.enabled = true;
+        } else if (a == "--netem" && i + 1 < argc) {
+            relayOptions.netem = argv[++i];
+            if (relayOptions.netem != "cycle" && relayOptions.netem != "none" &&
+                !NetemCore_FindProfile(relayOptions.netem.c_str()))
+                return usage();
+            if (relayOptions.netem == "none")
+                relayOptions.netem.clear();
+        } else if (a == "--netem-seed" && i + 1 < argc) {
+            relayOptions.netemSeed = (uint32_t)strtoul(argv[++i], nullptr, 0);
+        } else if (a == "--record") {
+            record = true;
+        } else if (a == "--recordings" && i + 1 < argc) {
+            recordings = argv[++i];
+        } else if (a == "--ledger" && i + 1 < argc) {
+            ledgerPath = argv[++i];
+        } else {
+            int requested = atoi(a.c_str());
+            if (requested <= 0 || requested > 65535)
+                return usage();
+            port = requested;
         }
-        port = requested;
+    }
+    if (!relayOptions.netem.empty() && !relayOptions.enabled) {
+        std::cerr << "--netem acts on relayed matches: add --relay\n";
+        return 2;
     }
     Connections connections(port);
+    Ledger ledger(ledgerPath);
+    if (!ledgerPath.empty())
+        std::cout << (ledger.IsOpen() ? "ledger: " : "cannot open the ledger ") << ledgerPath << "\n";
+    Relay relay(connections.Host(), relayOptions, ledger);
+    connections.SetRelay(&relay);
+    Recorder recorder(record, (uint16_t)port, ledger, recordings);
+    std::signal(SIGINT, OnStopSignal);
+    std::signal(SIGTERM, OnStopSignal);
     // loop
     bool loop = true;
     std::cout << "SimpleMatchmaking Server running on Port " << port << "\n";
     std::cout.flush();
-    while (loop) {
+    while (loop && !g_stop) {
     ENetEvent event;
         connections.Update();
+        relay.Update();
+        recorder.Update();
         while (enet_host_service(connections.Host(), &event, 1) > 0)
         {
             switch (event.type) {
