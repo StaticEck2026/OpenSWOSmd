@@ -24,6 +24,8 @@
 struct RelayOptions
 {
     bool enabled = false;       // --relay: OpenSWOS pairs play through the server
+    bool web = false;           // --websocket: any match with a BROWSER in it does
+                                // (it can reach nothing but this server; WebGate.h)
     std::string netem;          // --netem: "", a profile name, or "cycle"
     uint32_t netemSeed = 0;     // --netem-seed: 0 = from the clock
 };
@@ -36,10 +38,12 @@ public:
     ~Relay();
 
     bool Enabled() const { return m_options.enabled; }
+    bool ServesWeb() const { return m_options.web; }
 
     // At START. Returns the session's token, or 0 when this match is not relayed.
+    // `web`: a browser is in it, which is relayed whenever the server serves browsers.
     uint64_t CreateSession(const std::string& name1, const ENetAddress& seen1,
-                           const std::string& name2, const ENetAddress& seen2);
+                           const std::string& name2, const ENetAddress& seen2, bool web = false);
 
     // Once per main-loop pass: send what the emulator has made due, and close
     // sessions nobody is using any more.

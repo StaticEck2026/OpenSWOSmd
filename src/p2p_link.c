@@ -47,6 +47,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifdef SWOS_WASM_BUILD
+#include <emscripten.h>         /* emscripten_random */
+#endif
 
 /* Raise this when a packet's meaning changes; peers then refuse each other by version
  * instead of misreading a field. 2: messages travel on numbered channels, with a
@@ -408,6 +411,14 @@ static P2PLinkFailure open_socket(P2PLink *l, uint16_t port, int32_t tries)
     int32_t s = (int32_t)socket(AF_INET, SOCK_DGRAM, 0);
     if (s < 0)
         return P2P_FAIL_SOCKET;
+#ifdef SWOS_WASM_BUILD
+    /* In a browser a port is only a name: nothing is bound, and 0 stays 0. But it is
+     * the name the server's WebSocket gate knows this player by -- the link's socket and
+     * then GGPO's, on the same port, must reach the relay from one address -- so two
+     * browsers behind one address must not both say 0. */
+    if (port == 0)
+        port = (uint16_t)(20000 + (uint32_t)(emscripten_random() * 40000.0f));
+#endif
 
     int32_t flags = fcntl(s, F_GETFL, 0);
     if (flags < 0 || fcntl(s, F_SETFL, flags | O_NONBLOCK) < 0) {

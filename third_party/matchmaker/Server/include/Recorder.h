@@ -22,15 +22,20 @@
 class Recorder
 {
 public:
-    // Listens on TCP `port` when `enabled`; `ledger` gets the match and desync lines,
-    // and a full recording's .SRP goes into `recordingsDir`.
+    // Takes players' streams on TCP `port` when `enabled` -- the TCP gate (WebGate.h)
+    // listens, since browsers' WebSockets arrive on the same port, and hands each
+    // stream over (Adopt). `ledger` gets the match and desync lines, and a full
+    // recording's .SRP goes into `recordingsDir`.
     Recorder(bool enabled, uint16_t port, Ledger& ledger, const std::string& recordingsDir);
     ~Recorder();
 
-    bool Listening() const { return m_listen >= 0; }
+    bool Enabled() const { return m_enabled; }
 
-    // Once per main-loop pass: take new connections, read what arrived, compare,
-    // and close matches that are over.
+    // A connection the TCP gate accepted and found to be a player's stream.
+    void Adopt(int fd, const std::string& address);
+
+    // Once per main-loop pass: read what arrived, compare, and close matches that
+    // are over.
     void Update();
 
 private:
@@ -92,7 +97,6 @@ private:
         int player = 0;             // 1 or 2 once its HELLO has arrived
     };
 
-    void Accept();
     bool Read(Connection& c);                       // false = close it
     bool Handle(Connection& c, uint8_t type, const uint8_t* p, uint32_t len);
     bool OnHello(Connection& c, const uint8_t* p, uint32_t len);
@@ -108,7 +112,7 @@ private:
     void Finish(Match& m, const char* why);
     std::string Label(const Match& m) const;
 
-    int m_listen = -1;
+    bool m_enabled = false;
     Ledger& m_ledger;
     std::string m_dir;
     std::vector<std::unique_ptr<Connection>> m_connections;

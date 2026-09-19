@@ -44,11 +44,12 @@ Relay::Relay(ENetHost* host, const RelayOptions& options, Ledger& ledger) :
     m_rng = (uint64_t(rd()) << 32) ^ rd() ^
             (uint64_t)std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
-    if (!m_options.enabled)
+    if (!m_options.enabled && !m_options.web)
         return;
     s_instance = this;
     m_host->intercept = &Relay::Intercept;
-    std::cout << "[relay] on: OpenSWOS pairs play through this server";
+    std::cout << (m_options.enabled ? "[relay] on: OpenSWOS pairs play through this server"
+                                    : "[relay] on for browsers: a match with one in it plays through this server");
     if (!m_options.netem.empty())
         std::cout << ", network emulation " << m_options.netem;
     std::cout << "\n";
@@ -77,9 +78,9 @@ std::string Relay::PickNetem()
 }
 
 uint64_t Relay::CreateSession(const std::string& name1, const ENetAddress& seen1,
-                              const std::string& name2, const ENetAddress& seen2)
+                              const std::string& name2, const ENetAddress& seen2, bool web)
 {
-    if (!m_options.enabled)
+    if (!m_options.enabled && !(web && m_options.web))
         return 0;
 
     // xorshift64*, seeded from the device: a token is what stands between the

@@ -22,6 +22,7 @@ ifdef WASM
 # first so emcc is on PATH. SDL2 comes from emcc's bundled port (-sUSE_SDL=2),
 # NOT pkg-config. Single-threaded + ASYNCIFY — see docs/WASM.md.
 CC := emcc
+CXX := em++
 PKGCONF := true
 # Verify-on reloads the career into live globals on every save (corrupts live
 # state) — pointless in the browser; default off (command line still overrides).
@@ -595,8 +596,13 @@ endif
 # Default ON where it is built and tested: 64-bit Linux (X86_64=1), macOS (both
 # slices) and Cygwin64. Anywhere else opt in with NETPLAY=1 -- it needs a C++
 # compiler for the target, and the default -m32 Linux build also needs
-# g++-multilib. Never on WASM: a browser has no UDP sockets. Without it
-# src/netplay.c compiles to stubs.
+# g++-multilib. Without it src/netplay.c compiles to stubs.
+#
+# WASM (`make WASM=1 NETPLAY=1`): a browser has no UDP sockets, so Emscripten's
+# socket layer carries each datagram as one WebSocket message to ws://host:port --
+# the matchmaker's WebSocket gate (--websocket, docs/NETPLAY.md §8), which hands it
+# to the server's UDP port as if it came from an ordinary client. A browser can
+# only ever talk to that server, so it always plays through the relay.
 #
 # macOS was off until 2026-09-17 for no reason but never having been tried: the
 # arch flags were already threaded through the C++ and ENET rules ($(ARCHFLAGS)),
@@ -622,10 +628,6 @@ else
 NETPLAY := 0
 endif
 endif
-ifdef WASM
-override NETPLAY := 0
-endif
-
 LINK := $(CC)
 ifeq ($(NETPLAY),1)
 GGPO_SRCS := $(filter-out %/platform_windows.cpp, \
@@ -677,8 +679,11 @@ LDLIBS    += -lws2_32 -lwinmm
 endif
 
 LINK      := $(CXX)
+# Not Darwin (clang ships libc++) and not WASM (em++ links its own runtime).
 ifneq ($(UNAME_S),Darwin)
+ifndef WASM
 LDFLAGS   += -static-libstdc++ -static-libgcc
+endif
 endif
 endif
 

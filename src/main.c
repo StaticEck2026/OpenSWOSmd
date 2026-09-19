@@ -757,7 +757,10 @@ int main(int argc, char **argv)
          * writing game memory behind the step's back (docs/ROLLBACK.md). */
         if (SrpResim_Rules(&opts.dos_gameplay, &opts.fire_hold_lockout) != 0)
             return 1;
-#ifdef _WIN32
+#if defined(SWOS_WASM_BUILD)
+        /* The browser's SDL has no dummy drivers: it draws to its canvas, as it would. */
+        setenv("SWOS_NO_LOG", "1", 1);
+#elif defined(_WIN32)
         _putenv("SWOS_HARNESS_TURBO=1");
         _putenv("SWOS_NO_LOG=1");
         if (!getenv("SDL_VIDEODRIVER")) _putenv("SDL_VIDEODRIVER=dummy");

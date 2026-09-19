@@ -33,3 +33,39 @@ Module['preRun'].push(function () {
     });
   }
 });
+
+// Netplay: a browser has no UDP, so Emscripten's socket layer sends each datagram
+// as a WebSocket message to ws://<server>:<port> -- the matchmaker's WebSocket gate
+// (docs/NETPLAY.md §8). A page served over https may only open wss://, so follow
+// the page: the prefix form lets Emscripten complete it with the server and port.
+if (typeof location !== 'undefined')
+  Module['websocket'] = { url: location.protocol === 'https:' ? 'wss://' : 'ws://' };
+
+// Test hooks, from the page's query string -- nothing is read without one, so a
+// normal visit is unchanged:
+//   ?arg=--srp-resim=/in/x.SRP&arg=...   command-line arguments, in order
+//   ?env=SWOS_MM_AUTO=host&env=...        environment variables (getenv)
+//   ?file=<url>                           fetched into /in/<name> before main()
+// scripts/wasm_netplay_test.sh drives the browser build with these the way the
+// native tests drive a binary with its command line and environment.
+(function () {
+  if (typeof location === 'undefined' || !location.search) return;
+  var q = new URLSearchParams(location.search);
+  var args = q.getAll('arg');
+  if (args.length) Module['arguments'] = (Module['arguments'] || []).concat(args);
+  var env = q.getAll('env');
+  var files = q.getAll('file');
+  Module['preRun'].push(function () {
+    env.forEach(function (kv) {
+      var i = kv.indexOf('=');
+      if (i > 0) ENV[kv.slice(0, i)] = kv.slice(i + 1);
+    });
+    if (files.length) {
+      try { FS.mkdir('/in'); } catch (e) { /* already there */ }
+      files.forEach(function (url) {
+        var name = url.split('?')[0].split('/').pop();
+        FS.createPreloadedFile('/in', name, url, true, false);
+      });
+    }
+  });
+})();

@@ -64,37 +64,18 @@ Recorder::Recorder(bool enabled, uint16_t, Ledger& ledger, const std::string& di
         std::cout << "[record] not available on a Windows build of the server\n";
 }
 Recorder::~Recorder() {}
+void Recorder::Adopt(int, const std::string&) {}
 void Recorder::Update() {}
 
 #else
 
 Recorder::Recorder(bool enabled, uint16_t port, Ledger& ledger, const std::string& dir) :
-    m_ledger(ledger), m_dir(dir)
+    m_enabled(enabled), m_ledger(ledger), m_dir(dir)
 {
     if (!enabled)
         return;
     if (!m_dir.empty())
         mkdir(m_dir.c_str(), 0755);             // one level; EEXIST is the usual answer
-    int fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0)
-    {
-        std::cout << "[record] cannot open a socket: " << strerror(errno) << "\n";
-        return;
-    }
-    int one = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one);
-    sockaddr_in sin{};
-    sin.sin_family = AF_INET;
-    sin.sin_addr.s_addr = htonl(INADDR_ANY);
-    sin.sin_port = htons(port);
-    if (bind(fd, (sockaddr*)&sin, sizeof sin) != 0 || listen(fd, 16) != 0 ||
-        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) != 0)
-    {
-        std::cout << "[record] cannot listen on TCP " << port << ": " << strerror(errno) << "\n";
-        close(fd);
-        return;
-    }
-    m_listen = fd;
     std::cout << "[record] on: players stream their matches to TCP " << port
               << ", full recordings kept in " << m_dir << "/\n";
 }
@@ -106,8 +87,6 @@ Recorder::~Recorder()
             CloseConnection(*c, "server stopping");
     while (!m_matches.empty())
         Finish(*m_matches.begin()->second, "server stopping");
-    if (m_listen >= 0)
-        close(m_listen);
 }
 
 std::string Recorder::Label(const Match& m) const
@@ -117,30 +96,24 @@ std::string Recorder::Label(const Match& m) const
     return Hex64(m.id) + " " + n1 + " vs " + n2;
 }
 
-void Recorder::Accept()
+void Recorder::Adopt(int fd, const std::string& address)
 {
-    for (;;)
+    if (!m_enabled)
     {
-        sockaddr_in from{};
-        socklen_t len = sizeof from;
-        int fd = accept(m_listen, (sockaddr*)&from, &len);
-        if (fd < 0)
-            return;
-        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
-        auto c = std::make_unique<Connection>();
-        c->fd = fd;
-        char ip[INET_ADDRSTRLEN] = "?";
-        inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
-        c->address = std::string(ip) + ":" + std::to_string(ntohs(from.sin_port));
-        m_connections.push_back(std::move(c));
+        close(fd);
+        return;
     }
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+    auto c = std::make_unique<Connection>();
+    c->fd = fd;
+    c->address = address;
+    m_connections.push_back(std::move(c));
 }
 
 void Recorder::Update()
 {
-    if (m_listen < 0)
+    if (!m_enabled)
         return;
-    Accept();
     for (auto& c : m_connections)
         if (c->fd >= 0 && !Read(*c) && c->fd >= 0)
             CloseConnection(*c, "closed");

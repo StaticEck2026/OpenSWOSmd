@@ -251,13 +251,19 @@ bool Connections::StartGame(User* owner)
         // clients -- the SWOS 2020 client's parser throws on a header it does not
         // know, and could not use a relay anyway. RELAY: goes first, on the same
         // reliable channel, so it is in hand when START arrives.
+        // A browser (VERSION OPENSWOS-WEB, through the WebSocket gate) can reach
+        // nothing but this server, so its match is relayed whether or not the server
+        // relays everyone's.
         const std::string ours = "OPENSWOS";
-        if (m_relay && m_relay->Enabled() &&
+        const std::string web = "OPENSWOS-WEB";
+        bool anyWeb = owner->Version().compare(0, web.size(), web) == 0 ||
+                      p2->Version().compare(0, web.size(), web) == 0;
+        if (m_relay && (m_relay->Enabled() || (anyWeb && m_relay->ServesWeb())) &&
             owner->Version().compare(0, ours.size(), ours) == 0 &&
             p2->Version().compare(0, ours.size(), ours) == 0)
         {
             uint64_t token = m_relay->CreateSession(owner->Name(), owner->Peer()->address,
-                                                    p2->Name(), p2->Peer()->address);
+                                                    p2->Name(), p2->Peer()->address, anyWeb);
             if (token)
             {
                 char hex[17];

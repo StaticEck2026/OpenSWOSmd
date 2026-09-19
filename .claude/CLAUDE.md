@@ -59,7 +59,8 @@ could not, and a live match desynced at the first booking (2026-09-19, docs/NETP
 
 **Netplay** (`NETPLAY=1`, docs/NETPLAY.md) compiles the vendored C++ GGPO-X in
 `third_party/ggpo-x` into the SDL binary. Default on for 64-bit Linux (`X86_64=1`) and
-Cygwin64 and macOS (both slices), off elsewhere, never WASM. The C++ runtime is linked statically, so the DLL
+Cygwin64 and macOS (both slices), off elsewhere; opt-in on WASM (`NETPLAY=1`, below). The C++
+runtime is linked statically, so the DLL
 and `lib/<arch>` lists below are unchanged — re-check with `cygcheck`/`ldd` if the link
 changes. `bin/SWOS.x86_64 --netplay-selftest` runs the library with a toy game.
 The state a rollback saves is the registry in `src/sim_state.c` (SIM + VIEW tiers,
@@ -97,6 +98,13 @@ or peer to peer): it compares both players' confirmed-frame hashes and logs a de
 exact frame, and keeps the match as a `.SRP` that must be the host's `LATEST.SRP` byte for byte
 — both are laid out by `src/srp_writer.c` (§7 "The recorder";
 `RECORD=1 [RELAY=0] [DESYNC_FRAME=N] scripts/relay_test.sh`).
+The **web build plays online too** (`make WASM=1 NETPLAY=1`, docs/NETPLAY.md §8): a browser
+has no UDP, so Emscripten sends each datagram as a WebSocket message to the server, whose
+`--websocket` gate (`Server/WebGate.cpp`) gives each browser socket a UDP address of its own;
+a match with a browser in it is always relayed. `scripts/wasm_netplay_test.sh` plays it in
+headless Chrome against a browser, the native build, or the Mac's (`PAIR=web-web|web-native|
+native-web|web-mac|mac-web`); run it after touching the gate, the link's sockets or the web
+build's pacing. Opt-in for WASM until the gate is behind TLS: an https page can only open `wss://`.
 
 **Whole-match replays** (`.SRP`, `src/replay_v2.c`, docs/REPLAY_FORMAT_V2.md) are SDL-only and
 recorded from every match that is not training, the arcade cabinet or the rig: `LATEST.SRP` in the

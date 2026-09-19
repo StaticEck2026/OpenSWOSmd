@@ -115,6 +115,16 @@ Keep this list short and justified — it is a fork, and every entry is drift.
   frame's input: setup, kick-off state, inputs, hashes; `--srp-resim` in the game).
   Independent of the relay — a match played peer to peer can be recorded too. POSIX
   only; a Windows build of the server says so and carries on without it.
+- **The WebSocket gate: `Server/WebGate.cpp` + `Server/include/WebGate.h` (new).**
+  `--websocket`: browsers (the game's web build) send their datagrams as WebSocket
+  messages over TCP on the server's port number; each browser socket gets a UDP socket
+  of its own here, talking to the server's own UDP port, so everything behind the gate
+  sees an ordinary client. `TcpGate` owns the TCP listener and sniffs each connection:
+  `GET ` is a WebSocket, anything else goes to the recorder (`Recorder::Adopt` -- the
+  recorder no longer listens itself). The relay serves any match with a browser in it
+  (`RelayOptions::web`, `VERSION:OPENSWOS-WEB`). SHA-1 and base64 for the handshake
+  are in the file; no new dependency. POSIX only, like the recorder. The game side is
+  docs/NETPLAY.md §8.
 - **`Server/include/Ledger.h` (new):** the `--ledger` file the relay and the recorder
   share (one JSON object per line: `relay`, `match`, `desync`), and the clocks they use.
 - **`Server/main.cpp`: options, and a clean stop.** The port is still the first bare

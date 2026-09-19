@@ -90,7 +90,9 @@ uint16_t MmClient_DefaultPort(void)
 
 #include <enet/enet.h>
 
-#if defined(__unix__) || defined(__APPLE__) || defined(__CYGWIN__)
+/* Not in a browser: its socket layer has no interfaces to list, and a browser's
+ * local addresses are no use to a peer -- it only ever talks to the server. */
+#if (defined(__unix__) || defined(__APPLE__) || defined(__CYGWIN__)) && !defined(__EMSCRIPTEN__)
 #  include <sys/types.h>
 #  include <ifaddrs.h>
 #  include <netinet/in.h>
@@ -100,7 +102,14 @@ uint16_t MmClient_DefaultPort(void)
 
 /* The compatibility tag sent as VERSION:. The server refuses a client whose tag
  * differs, which is what keeps a protocol change from meeting an old build. */
+#ifdef SWOS_WASM_BUILD
+/* The browser build says so: it can only play through the server, so the server
+ * relays any match it is in (Connections.cpp). Still OPENSWOS to everything that
+ * compares the prefix. */
+#define MM_GAME_ID_DEFAULT "OPENSWOS-WEB"
+#else
 #define MM_GAME_ID_DEFAULT "OPENSWOS"
+#endif
 
 /* ---- message headers, exactly as common/Message.cpp spells them ---- */
 #define H_INFO          "INFO:"

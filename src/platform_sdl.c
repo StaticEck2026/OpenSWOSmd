@@ -2028,8 +2028,21 @@ int Platform_VBlank(void)
     return Platform_Present();
 }
 
+#ifdef SWOS_WASM_BUILD
+/* Platform_DelayNextFrame's wait, for the browser's own pacing (Platform_Present). */
+static double s_wasm_extra_ms;
+#endif
+
 void Platform_DelayNextFrame(uint32_t us)
 {
+#ifdef SWOS_WASM_BUILD
+    /* The browser paces with its own deadline, below, not s_next_frame_perf: without
+     * this a netplay time sync's "slow down a little" went nowhere, the browser that
+     * ran ahead stayed ahead, and its peer rolled back (a clean two-browser match:
+     * 31 rollbacks on one side, 1 on the other, 2 waits asked for and not taken). */
+    s_wasm_extra_ms += us / 1000.0;
+    return;
+#endif
     if (s_vsync_enabled && s_display_hz > 0 && s_display_hz == Platform_ActivePacingFps()) {
         if (us >= 1000)
             SDL_Delay(us / 1000);
@@ -2078,6 +2091,14 @@ int Platform_Present(void)
         } else if (sleep_ms > period) {       /* first frame / clock jumped back */
             sleep_ms = period;
             s_frame_deadline = now + period;
+        }
+        /* A wait netplay asked for (Platform_DelayNextFrame): this frame waits longer
+         * and the whole schedule moves with it, as the native limiter's does. */
+        if (s_wasm_extra_ms > 0.0) {
+            double extra = s_wasm_extra_ms > 100.0 ? 100.0 : s_wasm_extra_ms;
+            s_wasm_extra_ms = 0.0;
+            sleep_ms += extra;
+            s_frame_deadline += extra;
         }
         emscripten_sleep((unsigned)(sleep_ms + 0.5));
     }

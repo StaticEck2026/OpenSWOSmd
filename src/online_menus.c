@@ -475,6 +475,18 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
             n = 1;
             P2PLink_SetRelay(st->relayToken, st->playerNumber);
         } else {
+#ifdef SWOS_WASM_BUILD
+            /* A browser reaches nothing but the server (its datagrams are WebSocket
+             * messages to it), so a match the server does not relay cannot be played:
+             * n stays 0 and the waiting screen says why. */
+            P2PLink_SetRelay(0, 0);
+            snprintf(peerName, sizeof peerName, "%s", st->peerName);
+            MmClient_Disconnect();
+            st = NULL;
+            snprintf(s_matchStatus, sizeof s_matchStatus, "THIS SERVER CANNOT RELAY A BROWSER GAME");
+            OnlineMenus_Show(SWOS2020_MENU(mpWaitingMenu));
+            return;
+#endif
             for (i = 0; i < st->numAddrs && i < MM_MAX_PEER_ADDRS; i++) {
                 snprintf(addrs[n], sizeof addrs[n], "%s", st->addrs[i]);
                 list[n] = addrs[n];

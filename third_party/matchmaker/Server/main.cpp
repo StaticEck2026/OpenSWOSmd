@@ -13,6 +13,7 @@
 #include "Utils.h"
 #include "Relay.h"
 #include "Recorder.h"
+#include "WebGate.h"
 #include <csignal>
 
 // OpenSWOS: a clean stop on SIGINT/SIGTERM, so the relay can close its
@@ -38,11 +39,13 @@ int main(int argc, char** argv)
     int port = 19602;
     RelayOptions relayOptions;
     bool record = false;
+    bool websocket = false;
     std::string recordings = "recordings";
     std::string ledgerPath;
     auto usage = [&]() {
         std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
                      " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
+                     "       [--websocket]\n"
                      "  port        UDP, 1-65535, default 19602\n"
                      "  --relay     OpenSWOS pairs play through this server\n"
                      "  --netem     a misbehaving network in the middle of every relayed\n"
@@ -57,7 +60,9 @@ int main(int argc, char** argv)
                      "              compared and a desync is reported the moment it happens;\n"
                      "              a full recording is kept as a .SRP\n"
                      "  --recordings  where those go (default: recordings/)\n"
-                     "  --ledger    append a JSON line per relay session, recorded match and desync\n";
+                     "  --ledger    append a JSON line per relay session, recorded match and desync\n"
+                     "  --websocket browsers (the web build) connect over WebSocket on TCP, the\n"
+                     "              same port number, and any match with one in it is relayed\n";
         return 2;
     };
     for (int i = 1; i < argc; i++) {
@@ -75,6 +80,8 @@ int main(int argc, char** argv)
             relayOptions.netemSeed = (uint32_t)strtoul(argv[++i], nullptr, 0);
         } else if (a == "--record") {
             record = true;
+        } else if (a == "--websocket") {
+            websocket = true;
         } else if (a == "--recordings" && i + 1 < argc) {
             recordings = argv[++i];
         } else if (a == "--ledger" && i + 1 < argc) {
@@ -90,6 +97,7 @@ int main(int argc, char** argv)
         std::cerr << "--netem acts on relayed matches: add --relay\n";
         return 2;
     }
+    relayOptions.web = websocket;
     Connections connections(port);
     Ledger ledger(ledgerPath);
     if (!ledgerPath.empty())
@@ -97,6 +105,10 @@ int main(int argc, char** argv)
     Relay relay(connections.Host(), relayOptions, ledger);
     connections.SetRelay(&relay);
     Recorder recorder(record, (uint16_t)port, ledger, recordings);
+    // Both take TCP on the port number the game uses for UDP: a browser's WebSocket
+    // arrives there, because the browser build sends its datagrams to that port.
+    WebGate web(websocket, (uint16_t)port);
+    TcpGate tcp((uint16_t)port, web.Enabled() ? &web : nullptr, recorder.Enabled() ? &recorder : nullptr);
     std::signal(SIGINT, OnStopSignal);
     std::signal(SIGTERM, OnStopSignal);
     // loop
@@ -107,6 +119,8 @@ int main(int argc, char** argv)
     ENetEvent event;
         connections.Update();
         relay.Update();
+        tcp.Update();
+        web.Update();
         recorder.Update();
         while (enet_host_service(connections.Host(), &event, 1) > 0)
         {

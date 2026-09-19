@@ -1325,3 +1325,81 @@ other's candidate addresses at once rather than meeting on the first one (`P2PLi
 the host is asked to accept or refuse a player who wants to join (`hostGameMessageMenu`),
 the link hands over to the lobby (§6), the lobby to a live GGPO match, and the match back to
 the lobby for a rematch. What has not happened is two people doing it on two machines.
+
+## 8. The browser (the web build, `third_party/matchmaker/Server/WebGate.cpp`)
+
+The web build plays online too: `make WASM=1 NETPLAY=1` compiles GGPO-X, ENet and the
+link into it. What it cannot do is send a UDP datagram -- a browser has no UDP -- so
+Emscripten's socket layer (`libsockfs.js`) carries each datagram as ONE WebSocket message
+to `ws://<host>:<port>`, the same port number the datagram was for, over TCP, and hands
+each message back as one datagram. The game's code is unchanged: matchmaking (ENet), the
+link, GGPO and the recorder all still call `sendto`/`recvfrom`.
+
+**The server's gate** (`--websocket`) is the other end. Every TCP connection on the
+server's port number is sniffed (`TcpGate`): one that opens with `GET ` is a WebSocket,
+anything else is a player's recorder stream (its magic is `SWRC`), since both arrive on
+the same port. Each browser socket gets a UDP socket of its own on the server machine,
+connected to the server's own UDP port -- so the matchmaker, the relay and GGPO's packets
+through it see an ordinary client at `127.0.0.1:<port>`, and nothing behind the gate knows
+a browser is there.
+
+**One browser socket, one address.** Emscripten opens a WebSocket per socket and, for a
+BOUND socket, sends its port first (`\xFF\xFF\xFF\xFFport` and two bytes). The link and
+then GGPO bind the same local port, one after the other, and the relay knows a player by
+the address its packets come from -- so a tunnel is keyed by (the browser's address, that
+port) and outlives its WebSocket for a minute: GGPO's socket arrives on the tunnel the
+link's left, and reaches the relay from the same address. In a browser a port is only a
+name (nothing is bound, and 0 stays 0), so the web build picks a random one for the link
+(`open_socket`), or two browsers behind one address would both be `:0`.
+
+**A browser can only ever play through the relay** -- it reaches nothing but the server.
+It says so at login (`VERSION:OPENSWOS-WEB`, still `OPENSWOS` to every prefix test),
+and a server with `--websocket` relays any match with a browser in it, `--relay` or not
+(`Connections.cpp`). A START the server did not relay is refused on the waiting screen:
+"THIS SERVER CANNOT RELAY A BROWSER GAME". There are no local addresses to offer
+(`getifaddrs` is compiled out), and none would be any use.
+
+**The browser has to honour the time sync.** It paces with its own deadline
+(`emscripten_sleep`, `Platform_Present`), so `Platform_DelayNextFrame` has to move THAT
+one: before it did, a browser that ran ahead stayed ahead and its peer rolled back
+(a Mac joiner against a browser host: 383 frames re-simulated, 31 holds at the prediction
+limit; after: 57 and 0). A browser only reads the network when it yields -- once a frame
+-- so its packets land up to a frame later than a native build's, and a link on one
+machine still rolls back ~30 times in 600 frames where two native builds roll back none.
+The input delay rule is not changed for it: that is what rollback is for, and the delay
+is agreed from the ping both sides measure (§6).
+
+**It plays the same match, bit for bit.** The state hash is taken over the portable
+encoding (sim_state.c), so a 32-bit wasm build and a 64-bit native one hash the same state
+the same way. Proven two ways: every Linux-recorded match in the resim set plays again in
+headless Chrome frame for frame (`--srp-resim`, REPLAY_FORMAT_V2.md), and live matches
+between browsers, and between a browser and the Linux and macOS builds, end on the same
+hash.
+
+```bash
+build/matchmaker/swos-matchmaker 19602 --websocket     # [--relay --netem P] [--record]
+make WASM=1 NETPLAY=1 [SWOS_TEST_NO_INJURIES_CARDS=1]  # the same rules as the natives
+scripts/wasm_netplay_test.sh                  # browser v browser, headless Chrome
+PAIR=web-native scripts/wasm_netplay_test.sh  # browser v this machine's native build
+PAIR=mac-web scripts/wasm_netplay_test.sh     # the Mac's native build v a browser here
+MATCHES=2 NETEM=awful ...                     # a rematch; a disturbed relay
+```
+
+The test drives the browser through the web build's query-string hooks (`wasm/pre.js`:
+`?arg=` command-line arguments, `?env=` environment, `?file=` fetched into `/in/`), the
+way the native tests drive a binary. Headless Chrome is Playwright's
+`chrome-headless-shell` (or `CHROME=`); the page's console reaches the test through
+`--enable-logging=stderr`, so no browser driver is needed. `SWOS_NO_LOG=1` matters there:
+without it the game's stderr goes to a `SWOS.log` in the browser's memory.
+
+**Not done yet:**
+- **`wss://`.** A page served over https (baker76.com is) may only open `wss://`, so the
+  public web build needs the gate behind TLS: a certificate for the server's name, and a
+  TLS terminator (or TLS in the gate). `wasm/pre.js` already picks `wss://` on an https
+  page. Until then the public web build stays without netplay (`NETPLAY` is opt-in for
+  WASM), since its MULTIPLAYER button would lead nowhere.
+- **Recording from a browser.** The recorder's TCP stream would arrive as a WebSocket too;
+  the gate sees `SWRC` in its first message and could hand it to the recorder. Not wired:
+  a browser player's match is recorded only if the other player records it.
+- **A browser tab in the background** is throttled by the browser (timers to about once a
+  second), which a live match will not survive; the player has to keep the tab in front.
