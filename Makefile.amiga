@@ -231,6 +231,22 @@ CCFLAGS_O2 = $(subst -Ofast,-O2,$(CCFLAGS))
 # use $(notdir ...)), so one directory is the whole story.
 $(objects): | obj
 
+# A changed flag rebuilds everything, as in the SDL Makefile (BUILD_FLAGS_STAMP there
+# says why): EXTRA_CFLAGS is how build_dist.sh hands this target
+# SWOS_TEST_NO_INJURIES_CARDS, and a toggled one used to relink the old objects --
+# some files with the flag, some without. Not for a cmd.exe build: it has no printf.
+ifndef WINDOWS
+BUILD_FLAGS_STAMP := obj/.build-flags
+BUILD_FLAGS_NOW   := $(strip $(CC) $(CCFLAGS) :: $(CPPFLAGS) :: $(ASFLAGS) :: $(VASMFLAGS))
+ifneq ($(BUILD_FLAGS_NOW),$(strip $(shell cat $(BUILD_FLAGS_STAMP) 2>/dev/null)))
+$(shell mkdir -p obj && printf '%s\n' '$(BUILD_FLAGS_NOW)' > $(BUILD_FLAGS_STAMP))
+endif
+$(BUILD_FLAGS_STAMP):
+	@mkdir -p obj
+	@printf '%s\n' '$(BUILD_FLAGS_NOW)' > $@
+$(objects): $(BUILD_FLAGS_STAMP)
+endif
+
 obj:
 ifdef WINDOWS
 	@if not exist obj mkdir obj

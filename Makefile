@@ -357,13 +357,11 @@ ifdef SWOS_DEBUG
 DEBUG_FLAGS := -DSWOS_DEBUG_AUTOSKIP=1 -DSWOS_DEBUG_SFX=1
 endif
 
-# ⚠️ TOGGLING ANY -D FLAG BELOW REQUIRES A `clean` FIRST. make compares
-# TIMESTAMPS, not CFLAGS: if the .o files are already newer than the sources,
-# `make X86_64=1` after `make X86_64=1 SWOS_TEST_NO_INJURIES_CARDS=1` RELINKS
-# THE OLD OBJECTS and silently hands you a binary that still has the flag baked
-# in. Always `make <TARGET-VARS> clean && make <TARGET-VARS> <FLAGS>` when the
-# flag set changes. (`clean` is per-target — it removes build/<os>/<arch> for
-# the selected target only, so it won't disturb your other builds.)
+# Toggling a -D flag below rebuilds every object that the flag reaches -- see
+# BUILD_FLAGS_STAMP further down. It used not to: make compares TIMESTAMPS, so
+# `make X86_64=1` after `make X86_64=1 SWOS_TEST_NO_INJURIES_CARDS=1` relinked
+# the old objects, and a binary could carry the flag in some files and not in
+# others -- which desynced a live match (2026-09-19, see there).
 #
 # Beta-testing convenience: build with `make SWOS_TEST_NO_INJURIES_CARDS=1`
 # to suppress in-match yellow/red cards and post-match random injuries.
@@ -684,6 +682,27 @@ LDFLAGS   += -static-libstdc++ -static-libgcc
 endif
 endif
 
+# ---- A changed flag rebuilds everything ----
+# make compares TIMESTAMPS, not flags. Toggling a -D (SWOS_TEST_NO_INJURIES_CARDS,
+# say) used to relink the old objects, and hand back a binary with the old flag in
+# every file that had not changed since and the new one in the rest. That is how a
+# Windows build that books players (a stale tackle_foul.o, compiled without the flag)
+# met a clean Mac build that cannot: a live match desynced at the first booking
+# (2026-09-19), with both build stamps reading the same commit.
+#
+# So the compile flags are written to one file per object tree, rewritten only when
+# they change, and every object depends on it. $(shell), not $(file): macOS still
+# ships GNU make 3.81.
+BUILD_FLAGS_STAMP := $(OBJDIR)/.build-flags
+BUILD_FLAGS_NOW   := $(strip $(CC) $(CFLAGS) :: $(CXX) $(GGPO_CXXFLAGS) :: $(ENET_CFLAGS))
+ifneq ($(BUILD_FLAGS_NOW),$(strip $(shell cat $(BUILD_FLAGS_STAMP) 2>/dev/null)))
+$(shell mkdir -p $(OBJDIR) && printf '%s\n' '$(BUILD_FLAGS_NOW)' > $(BUILD_FLAGS_STAMP))
+endif
+# Gone after a `clean` in the same run: write it again rather than stop.
+$(BUILD_FLAGS_STAMP):
+	@mkdir -p $(dir $@)
+	@printf '%s\n' '$(BUILD_FLAGS_NOW)' > $@
+
 # ---- Targets ----
 .PHONY: all clean distclean debug macos-universal macos-app
 all: $(TARGET)
@@ -704,12 +723,12 @@ $(OUTDIR):
 # Compile each src/*.c into build/<os>/<arch>/*.o (mirrors src/ subdirs, e.g.
 # src/generated/x.c -> $(OBJDIR)/generated/x.o). The mkdir creates the
 # per-target object tree on first build.
-$(OBJDIR)/%.o: $(SRCDIR)/%.c
+$(OBJDIR)/%.o: $(SRCDIR)/%.c $(BUILD_FLAGS_STAMP)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 ifeq ($(NETPLAY),1)
-$(OBJDIR)/ggpo/%.o: $(GGPO_DIR)/lib/ggpo/%.cpp
+$(OBJDIR)/ggpo/%.o: $(GGPO_DIR)/lib/ggpo/%.cpp $(BUILD_FLAGS_STAMP)
 	@mkdir -p $(dir $@)
 	$(CXX) $(GGPO_CXXFLAGS) -c $< -o $@
 
@@ -717,11 +736,11 @@ $(OBJDIR)/ggpo/%.o: $(GGPO_DIR)/lib/ggpo/%.cpp
 # with GGPO_CXXFLAGS alone, SWOS_SDL_BUILD/SWOS_NETPLAY are undefined and the
 # whole file preprocesses away to an empty object that links without error and
 # resolves nothing.
-$(OBJDIR)/netplay_netem_install.o: $(SRCDIR)/netplay_netem_install.cpp
+$(OBJDIR)/netplay_netem_install.o: $(SRCDIR)/netplay_netem_install.cpp $(BUILD_FLAGS_STAMP)
 	@mkdir -p $(dir $@)
 	$(CXX) $(GGPO_CXXFLAGS) -DSWOS_SDL_BUILD=1 -DSWOS_NETPLAY=1 -Iinclude -c $< -o $@
 
-$(OBJDIR)/enet/%.o: $(ENET_DIR)/%.c
+$(OBJDIR)/enet/%.o: $(ENET_DIR)/%.c $(BUILD_FLAGS_STAMP)
 	@mkdir -p $(dir $@)
 	$(CC) $(ENET_CFLAGS) -c $< -o $@
 endif
