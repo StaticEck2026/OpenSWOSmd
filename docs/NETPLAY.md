@@ -851,6 +851,18 @@ Not ported: the location flags, ranked and tournament modes, team database choic
 chat and the live cast — hidden. Editing a tactic in the lobby is not there either: players
 choose among the tactics they already have.
 
+**Both peers kick off from the host's state.** The init (`InitAndPlayGame`) does not write
+everything a match reads: the game state, the stoppage timers, where the ball and players
+stood, the bench and crowd are whatever the machine last had. After a normal match both
+machines had the same, so rematches agreed — but after one that ended out of step, or at
+different frames on the two machines, every rematch started out of step at frame 0. So
+START carries the host's SIM-tier state as it stood when it pressed START (a `state_wire`
+packet after the setup; `LOBBY_VERSION` 3), and at kick-off BOTH peers — the host too —
+load it, then apply the setup, then run the init (`NetplayLobby_ApplyMatch`). Each keeps
+its own LOCAL fields (`SimState_RestoreLocal`): the HUD is placed for its own display.
+Checked with `SWOS_LIVE_DESYNC_FRAME=150` on the joiner for three matches in a row: every
+one now agrees up to 151; before, matches 2 and 3 parted at frame 0.
+
 ### When a match ends, and rematch
 
 **A live match hands the machine back the moment it is over** (`liveEnd`,

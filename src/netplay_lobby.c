@@ -48,6 +48,8 @@
 #include "netplay_match.h"
 #include "netplay_setup.h"
 #include "p2p_link.h"
+#include "sim_state.h"
+#include "state_wire.h"
 
 #include <SDL.h>                        /* SDL_GetPerformanceCounter: key entropy fallback */
 #include <time.h>
@@ -73,13 +75,14 @@ enum {
 #define STATE_MAGIC   0x53554C42u       /* "SULB" */
 #define START_MAGIC   0x53555354u       /* "SUST" */
 #define ANSWER_MAGIC  0x5355414Eu       /* "SUAN" */
-#define LOBBY_VERSION 2     /* 2: START carries the match's packet key */
+#define LOBBY_VERSION 3     /* 2: START carries the match's packet key; 3: and the kick-off state */
 
 /* STATE: magic, version, player, ready, activity, hasTeam, tactic, rulesGen, the four
  * rules, the name, the team, the USER tactic. */
 enum { STATE_BYTES = 4 + 2 + 4 + 2 + 2 + 8 + LOBBY_NAME_MAX + NETPLAY_TEAM_BYTES + TACTIC_BYTES };
 /* START: magic, version, the joiner STATE generation it was built on, rulesGen, the
- * packet key, setup. */
+ * packet key; then the setup's length and the setup; then the host's state to kick off
+ * from (a state_wire packet, the rest of the message -- see NetplayLobby_ApplyMatch). */
 enum { KEY_BYTES = 16, START_HEADER = 4 + 2 + 2 + 2 + KEY_BYTES };
 /* ANSWER: magic, version, the START generation, accepted, pad. */
 enum { ANSWER_BYTES = 4 + 2 + 2 + 1 + 1 };
@@ -109,6 +112,8 @@ static struct {
 
     uint8_t    *setup;                  /* the agreed match setup, both sides (ApplyMatch) */
     uint32_t    setupLen;
+    uint8_t    *kickoff;                /* the host's state it was offered from, both sides */
+    uint32_t    kickoffLen;
     uint8_t     packetKey[KEY_BYTES];   /* ...and the key its GGPO packets are checksummed with */
 
     char        notice[64];
@@ -353,6 +358,15 @@ static void keep_setup(const uint8_t *setup, uint32_t len)
         memcpy(s_lobby.setup, setup, len);
 }
 
+static void keep_kickoff(const uint8_t *packet, uint32_t len)
+{
+    free(s_lobby.kickoff);
+    s_lobby.kickoff = len ? (uint8_t *)malloc(len) : NULL;
+    s_lobby.kickoffLen = s_lobby.kickoff ? len : 0;
+    if (s_lobby.kickoff)
+        memcpy(s_lobby.kickoff, packet, len);
+}
+
 static void send_answer(uint16_t startGen, int32_t accepted)
 {
     uint8_t buf[ANSWER_BYTES];
@@ -378,21 +392,40 @@ static void read_start(void)
     if (s_lobby.state != LOBBY_OPEN)
         return;
 
-    ok = len > (uint32_t)START_HEADER &&
+    ok = len > (uint32_t)START_HEADER + 4 &&
          BE_READ_U32(m) == START_MAGIC && BE_READ_U16(m + 4) == LOBBY_VERSION &&
          /* built on our newest side, which we have not changed since */
          BE_READ_U16(m + 6) == P2PLink_SentGeneration(CH_STATE) && !s_lobby.dirty &&
          BE_READ_U16(m + 8) == s_lobby.rulesGen &&
          mine()->ready && mine()->hasTeam;
+    {
+        uint32_t setupLen = ok ? BE_READ_U32(m + START_HEADER) : 0;
+        const uint8_t *setup = m + START_HEADER + 4;
+        const uint8_t *kick = setup + setupLen;
+        uint32_t kickLen = 0;
+        StateWireInfo info;
 
-    if (ok) {
-        save_tactics();
-        if (NetplaySetup_Apply(m + START_HEADER, len - START_HEADER) != 0) {
-            NetplayLobby_RestoreTactics();
+        if (ok && (setupLen == 0 || setupLen > len - START_HEADER - 4))
             ok = 0;
-        } else {
-            keep_setup(m + START_HEADER, len - START_HEADER);
-            memcpy(s_lobby.packetKey, m + 10, KEY_BYTES);
+        if (ok) {
+            kickLen = len - START_HEADER - 4 - setupLen;
+            /* A kick-off state this build could not load would start the two of us
+             * somewhere different; better to say no now. */
+            if (kickLen && StateWire_Peek(kick, kickLen, &info) != STATE_WIRE_OK) {
+                fprintf(stderr, "[lobby] the host's kick-off state does not fit this build\n");
+                ok = 0;
+            }
+        }
+        if (ok) {
+            save_tactics();
+            if (NetplaySetup_Apply(setup, setupLen) != 0) {
+                NetplayLobby_RestoreTactics();
+                ok = 0;
+            } else {
+                keep_setup(setup, setupLen);
+                keep_kickoff(kick, kickLen);
+                memcpy(s_lobby.packetKey, m + 10, KEY_BYTES);
+            }
         }
     }
     send_answer(gen, ok);
@@ -455,6 +488,7 @@ static void take_peer_address(void)
 void NetplayLobby_Begin(int32_t localPlayer, const char *localName)
 {
     free(s_lobby.setup);
+    free(s_lobby.kickoff);
     memset(&s_lobby, 0, sizeof s_lobby);
     s_lobby.me    = localPlayer == 2 ? 2 : 1;
     s_lobby.state = LOBBY_OPEN;
@@ -495,6 +529,7 @@ int32_t NetplayLobby_Rematch(const char *notice)
     free(s_lobby.setup);
     s_lobby.setup    = NULL;
     s_lobby.setupLen = 0;
+    keep_kickoff(NULL, 0);
 
     /* Message generations start again at 1 with every connection (p2p_link.h), so the
      * ones this lobby has already handled would hide the new link's first messages. */
@@ -681,9 +716,13 @@ int32_t NetplayLobby_Start(void)
     uint8_t *buf;
     int32_t n;
 
+    uint32_t cap;
+    int32_t k;
+
     if (!NetplayLobby_CanStart())
         return 1;
-    buf = (uint8_t *)malloc(START_HEADER + NetplaySetup_MaxBytes());
+    cap = START_HEADER + 4 + NetplaySetup_MaxBytes() + StateWire_MaxBytes(SIM_TIER_SIM);
+    buf = (uint8_t *)malloc(cap);
     if (!buf)
         return 1;
 
@@ -694,13 +733,33 @@ int32_t NetplayLobby_Start(void)
     BE_WRITE_U16(buf + 6, s_lobby.peerStateGen);
     BE_WRITE_U16(buf + 8, s_lobby.rulesGen);
     memcpy(buf + 10, s_lobby.packetKey, KEY_BYTES);
-    n = NetplaySetup_Encode(buf + START_HEADER, NetplaySetup_MaxBytes());
-    if (n <= 0 || P2PLink_Send(CH_START, buf, (uint32_t)(START_HEADER + n)) != 0) {
+    n = NetplaySetup_Encode(buf + START_HEADER + 4, NetplaySetup_MaxBytes());
+    if (n <= 0) {
         free(buf);
         NetplayLobby_RestoreTactics();
         return 1;
     }
-    keep_setup(buf + START_HEADER, (uint32_t)n);
+    BE_WRITE_U32(buf + START_HEADER, (uint32_t)n);
+    /* The match state to kick off from -- this machine's, as it stands now. Both of us
+     * load it before the setup and the match's own init (NetplayLobby_ApplyMatch), so the
+     * two kick-offs cannot differ by anything either of us did before: a previous match
+     * that ended out of step, or at different frames on the two machines, used to leave
+     * a rematch out of step from frame 0 (2026-09-19). Without it (a pointer with no
+     * identity, say), both peers start as before. */
+    k = StateWire_Encode(buf + START_HEADER + 4 + n, cap - START_HEADER - 4 - (uint32_t)n,
+                         SIM_TIER_SIM, 0, NULL, 0);
+    if (k < 0) {
+        fprintf(stderr, "[lobby] no kick-off state to offer (%s); each side kicks off from its own\n",
+                StateWire_ErrorName(k));
+        k = 0;
+    }
+    if (P2PLink_Send(CH_START, buf, (uint32_t)(START_HEADER + 4 + n + k)) != 0) {
+        free(buf);
+        NetplayLobby_RestoreTactics();
+        return 1;
+    }
+    keep_setup(buf + START_HEADER + 4, (uint32_t)n);
+    keep_kickoff(buf + START_HEADER + 4 + n, (uint32_t)k);
     free(buf);
     s_lobby.startGen = P2PLink_SentGeneration(CH_START);
     s_lobby.state = LOBBY_STARTING;
@@ -717,6 +776,23 @@ int32_t NetplayLobby_ApplyMatch(void)
         return 1;
     if (!s_lobby.setup)
         return 1;
+    /* Both of us from the host's state, then the setup, then the match's own init: the
+     * same state through the same steps. This machine keeps its own LOCAL fields -- the
+     * HUD is placed for this display, not the host's (sim_state.c). */
+    if (s_lobby.kickoff) {
+        uint32_t size = SimState_Size(SIM_TIER_SIM);
+        uint8_t *mine = (uint8_t *)malloc(size);
+        int err;
+        if (mine)
+            SimState_Save(mine, SIM_TIER_SIM);
+        err = StateWire_Decode(s_lobby.kickoff, s_lobby.kickoffLen, NULL, NULL);
+        if (err != STATE_WIRE_OK)
+            fprintf(stderr, "[lobby] the kick-off state did not load: %s\n", StateWire_ErrorName(err));
+        else if (mine)
+            SimState_RestoreLocal(mine, SIM_TIER_SIM);
+        free(mine);
+        keep_kickoff(NULL, 0);
+    }
     rc = NetplaySetup_Apply(s_lobby.setup, s_lobby.setupLen);
     free(s_lobby.setup);
     s_lobby.setup = NULL;

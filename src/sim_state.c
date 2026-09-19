@@ -641,6 +641,32 @@ void SimState_Load(const uint8_t *src, uint32_t tiers)
     }
 }
 
+/* Put back the LOCAL fields (this display's, not the match's) from a native state `src`
+ * that SimState_Save wrote, leaving everything else as it is. For a peer that has just
+ * loaded ANOTHER peer's state: the match is theirs, the HUD's placement is ours. */
+void SimState_RestoreLocal(const uint8_t *src, uint32_t tiers)
+{
+    for (int32_t i = 0; i < g_simStateRegionCount; i++) {
+        const SimStateRegion *r = &g_simStateRegions[i];
+        const SimLayout *l = r->layout;
+        if (!SimState_RegionActive(i, tiers)) continue;
+        if (l && l->fieldCount) {
+            uint32_t elems = l->stride ? r->size / l->stride : 1;
+            for (uint32_t e = 0; e < elems; e++) {
+                for (uint32_t k = 0; k < l->fieldCount; k++) {
+                    const SimField *f = &l->fields[k];
+                    uint32_t at = e * l->stride + f->offset, w;
+                    if (f->type == SIM_FIELD_LOCAL16)      w = 2u * f->count;
+                    else if (f->type == SIM_FIELD_LOCAL32) w = 4u * f->count;
+                    else continue;
+                    memcpy((uint8_t *)r->addr + at, src + at, w);
+                }
+            }
+        }
+        src += r->size;
+    }
+}
+
 /* ======================================================================
  * The portable encoding
  * ====================================================================== */

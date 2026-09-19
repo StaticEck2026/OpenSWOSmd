@@ -14,6 +14,16 @@
  * overwrite, and would leave the two ways of starting a match (recording, live)
  * not sharing the code that makes them agree.
  *
+ * BUT THE INIT DOES NOT WRITE EVERYTHING. Whatever it leaves alone -- the game
+ * state, the stoppage timers, where the ball and players stood, the bench and crowd
+ * -- is what the machine last had: after a match that ended out of step (or at
+ * different frames on the two machines), a rematch started out of step at frame 0
+ * (2026-09-19). So the lobby's START also carries the host's state as it was when it
+ * pressed START (a state_wire packet, SIM tier), and BOTH peers load it before this
+ * setup and the init run (NetplayLobby_ApplyMatch): the same state through the same
+ * steps, whatever either did before. The setup still does the work; the state only
+ * makes sure the init starts from one place.
+ *
  * ~3.6 KB: two TeamFileEx at 684 bytes, six tactics at 370, and the scalars.
  * p2p_link chunks it (include/p2p_link.h, "the match setup").
  *

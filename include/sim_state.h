@@ -117,6 +117,9 @@ uint32_t SimState_Size(uint32_t tiers);
 void     SimState_Save(uint8_t *dst, uint32_t tiers);
 /* Also brings derived render mirrors back in line with what it loaded. */
 void     SimState_Load(const uint8_t *src, uint32_t tiers);
+/* From a SimState_Save buffer, put back only the LOCAL fields (this display's): after
+ * loading another peer's state, the match is theirs and the HUD's placement ours. */
+void     SimState_RestoreLocal(const uint8_t *src, uint32_t tiers);
 
 /* ---- the portable encoding: the same in every build ---- */
 
