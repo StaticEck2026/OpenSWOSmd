@@ -10,6 +10,12 @@
 #   NETEM=wifi scripts/wasm_netplay_test.sh       # the server disturbs the relayed link
 #   PAIR=web-mac scripts/wasm_netplay_test.sh     # the joiner is the MAC's native build
 #   PAIR=mac-web ...                              # (MAC_HOST, MAC_PATH; over the LAN)
+#   PAIR=macweb-web ...                           # a browser ON THE MAC v one here
+#
+# PAIR is <host>-<join>, each one of: web (headless Chrome here), native (bin/$BIN here),
+# mac (the Mac's native build), macweb (headless Chrome on the Mac: MAC_CHROME, a Chrome
+# for Testing chrome-headless-shell, serving a copy of the web build from its own
+# localhost and reaching this machine's gate over the LAN -- TCP and UDP 19602).
 #
 # A browser has no UDP, so the web build's datagrams travel as WebSocket messages to
 # the server (Emscripten's socket layer), and the server's gate hands each browser
@@ -42,6 +48,9 @@ case "$PAIR" in *mac*) PORT="${PORT:-19602}" ;; *) PORT="${PORT:-19613}" ;; esac
 MAC_HOST="${MAC_HOST:-bbaker@192.168.1.37}"
 MAC_PATH="${MAC_PATH:-Programming/OpenSWOS}"
 MAC_BIN="${MAC_BIN:-SWOS.macos}"
+MAC_CHROME="${MAC_CHROME:-/tmp/swos-chrome/chrome-headless-shell-mac-arm64/chrome-headless-shell}"
+MAC_WEB="${MAC_WEB:-/tmp/swos-web}"
+MAC_HTTP_PORT="${MAC_HTTP_PORT:-18124}"
 # The address the Mac reaches us on: whichever the route to it leaves from. (The first
 # private address on an interface is wrong under WSL's mirrored networking, which adds
 # a 10.255.255.254 of its own.)
@@ -55,12 +64,16 @@ SERVER="${SERVER:-build/matchmaker/swos-matchmaker}"
 OUT="${OUT:-${TMPDIR:-/tmp}/swos-wasm-netplay.$$}"
 mkdir -p "$OUT" && OUT="$(cd "$OUT" && pwd)"
 
-case "$PAIR" in
-    web-web|web-native|native-web|web-mac|mac-web) ;;
-    *) echo "wasm-netplay-test: PAIR must be web-web, web-native, native-web, web-mac or mac-web" >&2; exit 1 ;;
-esac
 HOST_KIND=${PAIR%-*}
 JOIN_KIND=${PAIR#*-}
+for k in "$HOST_KIND" "$JOIN_KIND"; do
+    case "$k" in web|native|mac|macweb) ;;
+        *) echo "wasm-netplay-test: PAIR is <host>-<join>, each web, native, mac or macweb" >&2; exit 1 ;;
+    esac
+done
+case "$PAIR" in *web*) ;;
+    *) echo "wasm-netplay-test: PAIR needs a browser in it (web or macweb)" >&2; exit 1 ;;
+esac
 
 if [ -z "${CHROME:-}" ]; then
     for c in ~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell \
@@ -80,8 +93,27 @@ esac
 case "$PAIR" in *mac*)
     [ -n "$LAN_IP" ] || { echo "wasm-netplay-test: no LAN address for the Mac to reach (set LAN_IP=)" >&2; exit 1; }
     ssh -o BatchMode=yes -o ConnectTimeout=10 "$MAC_HOST" true 2>/dev/null ||
-        { echo "wasm-netplay-test: cannot ssh to $MAC_HOST" >&2; exit 1; }
+        { echo "wasm-netplay-test: cannot ssh to $MAC_HOST" >&2; exit 1; } ;;
+esac
+case " $HOST_KIND $JOIN_KIND " in *" mac "*)
     echo "mac: $(ssh "$MAC_HOST" "cd $MAC_PATH/bin && ./$MAC_BIN --version 2>&1 | tail -1"), to $LAN_IP:$PORT" ;;
+esac
+case " $HOST_KIND $JOIN_KIND " in *" macweb "*)
+    ssh "$MAC_HOST" "test -x $MAC_CHROME" || {
+        echo "wasm-netplay-test: no headless Chrome on the Mac at $MAC_CHROME -- Chrome for Testing's" >&2
+        echo "  chrome-headless-shell for mac-arm64, unzipped (see docs/NETPLAY.md §8)" >&2; exit 1; }
+    # The web build, served from the Mac's own localhost: only the gate's port has to
+    # be open on this machine. Copied only when it changed.
+    ssh "$MAC_HOST" "mkdir -p $MAC_WEB"
+    for f in SWOS.html SWOS.js SWOS.wasm SWOS.data; do
+        here=$(md5sum "$WEBDIR/$f" | cut -d' ' -f1)
+        there=$(ssh "$MAC_HOST" "md5 -q $MAC_WEB/$f 2>/dev/null")
+        [ "$here" = "$there" ] || scp -q "$WEBDIR/$f" "$MAC_HOST:$MAC_WEB/$f" ||
+            { echo "wasm-netplay-test: could not copy $f to the Mac" >&2; exit 1; }
+    done
+    MAC_HTTP_PID=$(ssh "$MAC_HOST" "cd $MAC_WEB && nohup python3 -m http.server $MAC_HTTP_PORT --bind 127.0.0.1 \
+        > /tmp/swos-web-http.log 2>&1 & echo \$!")
+    echo "macweb: $(ssh "$MAC_HOST" "$MAC_CHROME --version"), serving $MAC_WEB, to $LAN_IP:$PORT" ;;
 esac
 
 PIDS=()
@@ -89,6 +121,10 @@ cleanup() {
     for p in "${PIDS[@]}"; do kill -9 "$p" 2>/dev/null; done
     [ -n "${SERVER_PID:-}" ] && kill -INT "$SERVER_PID" 2>/dev/null
     [ -n "${HTTP_PID:-}" ] && kill "$HTTP_PID" 2>/dev/null
+    if [ -n "${MAC_HTTP_PID:-}" ]; then
+        # [e]: a pattern that cannot match the shell running it
+        ssh "$MAC_HOST" "kill $MAC_HTTP_PID 2>/dev/null; pkill -f 'user-data-dir=/tmp/swos-wasm-test-chrom[e]-'" 2>/dev/null
+    fi
     wait 2>/dev/null
 }
 trap cleanup EXIT
@@ -119,6 +155,7 @@ web_player() {   # name auto env...
         --disable-renderer-backgrounding --disable-backgrounding-occluded-windows \
         "$url" > "$OUT/$name.raw" 2>&1 &
     PIDS+=($!)
+    disown $!           # killed at the end: no "Killed" job notice
 }
 native_player() {   # name auto env...
     local name=$1 auto=$2; shift 2
@@ -126,6 +163,7 @@ native_player() {   # name auto env...
         SWOS_MM_AUTO="$auto" "${common_env[@]}" "$@" \
         timeout -s KILL "$WAIT" ./"$BIN" --matchmaker-menu="$name" > "$OUT/$name.log" 2>&1 ) &
     PIDS+=($!)
+    disown $!           # killed at the end: no "Killed" job notice
 }
 # The Mac's native build, over ssh, pointed at this machine's LAN address. A watchdog
 # instead of timeout(1), which macOS does not have; a HOME of its own, so the test
@@ -142,17 +180,37 @@ mac_player() {   # name auto env...
         ./$MAC_BIN --matchmaker-menu=$name 2>&1 & p=\$!; ( sleep $WAIT; kill -9 \$p 2>/dev/null ) & w=\$!;
         wait \$p; kill \$w 2>/dev/null" > "$OUT/$name.log" 2>&1 &
     PIDS+=($!)
+    disown $!           # killed at the end: no "Killed" job notice
+}
+# A browser on the Mac: headless Chrome there, the page from its own localhost, the
+# gate at this machine's LAN address. Its console comes back over ssh.
+macweb_player() {   # name auto env...
+    local name=$1 auto=$2; shift 2
+    local url="http://127.0.0.1:$MAC_HTTP_PORT/SWOS.html?arg=--matchmaker-menu=$name&env=SWOS_MM_AUTO=$auto"
+    local kv
+    for kv in "${common_env[@]}" "$@"; do
+        case "$kv" in SWOS_MM_HOST=*) kv="SWOS_MM_HOST=$LAN_IP" ;; esac
+        url="$url&env=$kv"
+    done
+    ssh "$MAC_HOST" "rm -rf /tmp/swos-wasm-test-chrome-$name;
+        $MAC_CHROME --enable-logging=stderr --v=0 --user-data-dir=/tmp/swos-wasm-test-chrome-$name \
+        --autoplay-policy=no-user-gesture-required --disable-background-timer-throttling \
+        --disable-renderer-backgrounding --disable-backgrounding-occluded-windows $(printf %q "$url") 2>&1 &
+        p=\$!; ( sleep $WAIT; kill -9 \$p 2>/dev/null ) & w=\$!; wait \$p; kill \$w 2>/dev/null" > "$OUT/$name.raw" 2>&1 &
+    PIDS+=($!)
+    disown $!           # killed at the end: no "Killed" job notice
 }
 player() {   # kind name auto env...
     local kind=$1; shift
     case "$kind" in
-        web) web_player "$@" ;;
-        mac) mac_player "$@" ;;
-        *)   native_player "$@" ;;
+        web)    web_player "$@" ;;
+        macweb) macweb_player "$@" ;;
+        mac)    mac_player "$@" ;;
+        *)      native_player "$@" ;;
     esac
 }
 log_of() {   # name kind -> the game's lines
-    if [ "$2" = web ]; then
+    if [ "$2" = web ] || [ "$2" = macweb ]; then
         grep -oE 'CONSOLE[^"]*"[^"]*"' "$OUT/$1.raw" 2>/dev/null | sed -E 's/^CONSOLE:[0-9]+\] "//; s/"$//'
     else
         cat "$OUT/$1.log" 2>/dev/null

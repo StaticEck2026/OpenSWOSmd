@@ -1369,6 +1369,16 @@ machine still rolls back ~30 times in 600 frames where two native builds roll ba
 The input delay rule is not changed for it: that is what rollback is for, and the delay
 is agreed from the ping both sides measure (§6).
 
+**Its clock has to be monotonic.** SDL asks `clock_gettime` for `CLOCK_MONOTONIC_RAW`;
+Emscripten's accepts only the WASI clocks 0-3, answers `EINVAL`, and SDL quietly falls
+back to `gettimeofday` -- the wall clock, which steps (NTP, sleep and wake; under WSL2 all
+the time). One step back wrapped a live match's unsigned "time since the last progress",
+and its 10 s watchdog ended a match that had just finished, as "THE CONNECTION WENT QUIET"
+(a browser host against a browser on the Mac, intermittently). The web build now defines
+`clock_gettime` itself (`platform_sdl.c`, over musl's weak one): every clock but realtime
+from `emscripten_get_now`, as WASI does. GGPO reads `CLOCK_MONOTONIC` and was never
+affected.
+
 **It plays the same match, bit for bit.** The state hash is taken over the portable
 encoding (sim_state.c), so a 32-bit wasm build and a 64-bit native one hash the same state
 the same way. Proven two ways: every Linux-recorded match in the resim set plays again in
@@ -1382,8 +1392,18 @@ make WASM=1 NETPLAY=1 [SWOS_TEST_NO_INJURIES_CARDS=1]  # the same rules as the n
 scripts/wasm_netplay_test.sh                  # browser v browser, headless Chrome
 PAIR=web-native scripts/wasm_netplay_test.sh  # browser v this machine's native build
 PAIR=mac-web scripts/wasm_netplay_test.sh     # the Mac's native build v a browser here
+PAIR=macweb-web scripts/wasm_netplay_test.sh  # a browser ON the Mac v a browser here
 MATCHES=2 NETEM=awful ...                     # a rematch; a disturbed relay
 ```
+
+`PAIR` is `<host>-<join>`, each `web` (headless Chrome here), `native` (`bin/SWOS.x86_64`),
+`mac` (the Mac's native build, over ssh) or `macweb` (headless Chrome on the Mac). A Mac
+player reaches this machine's server over the LAN, so the gate's port has to be open for
+UDP (matchmaking, the natives' match) and TCP (a browser's WebSocket). The Mac browser is
+Chrome for Testing's `chrome-headless-shell` for mac-arm64, unzipped into
+`/tmp/swos-chrome` (`MAC_CHROME=`); the test copies the web build to the Mac and serves it
+from the Mac's own localhost, so no port but the gate's is needed. Proven: a browser on
+the Mac against a browser here, the Linux build and the Mac's own native build.
 
 The test drives the browser through the web build's query-string hooks (`wasm/pre.js`:
 `?arg=` command-line arguments, `?env=` environment, `?file=` fetched into `/in/`), the

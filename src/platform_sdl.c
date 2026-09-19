@@ -23,9 +23,43 @@
 #include <stdio.h>
 #ifdef SWOS_WASM_BUILD
 #include <emscripten.h>      /* emscripten_sleep — the ASYNCIFY yield point */
+#include <emscripten/html5.h>   /* emscripten_date_now */
+#include <errno.h>
+#include <time.h>
 #endif
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef SWOS_WASM_BUILD
+/* SDL_GetTicks has to be monotonic in the browser too. SDL asks clock_gettime for
+ * CLOCK_MONOTONIC_RAW (4); Emscripten's accepts only the WASI clocks 0-3 and answers
+ * EINVAL, so SDL silently fell back to gettimeofday -- the WALL clock, which steps (NTP,
+ * sleep and wake; under WSL2, all the time). One step back made the unsigned "since the
+ * last progress" of a live match wrap, and its "nothing confirmed for 10 s" watchdog
+ * ended a match that had just finished (a browser host against a browser on the Mac, at
+ * frame 600 of 600). So the browser's clock_gettime serves the raw monotonic clock from
+ * the same source as the monotonic one -- as WASI does every clock but realtime. A strong
+ * definition, over musl's weak alias, so SDL's prebuilt port gets it too. */
+int clock_gettime(clockid_t clk, struct timespec *ts)
+{
+    double ms;
+    if (!ts) {
+        errno = EFAULT;
+        return -1;
+    }
+    if (clk == CLOCK_REALTIME)
+        ms = emscripten_date_now();
+    else if (clk >= 0)
+        ms = emscripten_get_now();
+    else {
+        errno = EINVAL;
+        return -1;
+    }
+    ts->tv_sec  = (time_t)(ms / 1000.0);
+    ts->tv_nsec = (long)((ms - (double)ts->tv_sec * 1000.0) * 1000000.0);
+    return 0;
+}
+#endif
 
 /* Desktops that take a window's icon from the program: Linux (X11, Wayland) and the like.
  * The Windows builds get SWOS.ico from their resource (SWOS.rc) and the macOS app its
