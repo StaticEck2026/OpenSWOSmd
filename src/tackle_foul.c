@@ -279,6 +279,16 @@ set_tackled:
     SetPlayerAnimationTable((AnimTable *)&_playerTackledAnimTable, player);
 }
 
+/* See tackle_foul.h: what THIS object was compiled to do, for the netplay handshake. */
+int32_t TackleFoul_BookingsEnabled(void)
+{
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    return 0;
+#else
+    return 1;
+#endif
+}
+
 /* ========================================================================
  * TryBookingThePlayer
  * Returns 0 if card was given, 1 if not eligible.

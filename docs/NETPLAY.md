@@ -676,6 +676,22 @@ round trip, a second joiner is turned away, a peer leaving is noticed, a build t
 play a different game is refused with the reason, and a join with nobody listening gives
 up instead of hanging.
 
+### The handshake refuses a peer that would play a different match
+
+Every rule a match is played by is one bit of the handshake's `gameplay` byte
+(`P2PLink_GameplayFlags`, `P2P_RULE_*`): what the player chose — DOS gameplay, arcade mode,
+the fire-hold lockout (P2P_FAIL_GAMEPLAY, "YOUR GAMEPLAY STYLES ARE DIFFERENT") — and what
+the BUILD decided: `SWOS_TEST_NO_INJURIES_CARDS` turns bookings and injuries off
+(P2P_FAIL_BUILD, "YOUR BUILDS PLAY BY DIFFERENT RULES / ONE OF YOU HAS A TEST BUILD").
+
+The build's bits are reported by the objects that implement the rules —
+`TackleFoul_BookingsEnabled` (tackle_foul.c), `CareerStatus_InjuriesEnabled`
+(career_status.c) — not by a `-D` in p2p_link.c, because the build that desynced was
+MIXED: its tackle_foul.o was compiled without the flag and everything around it with, so
+it booked players while claiming it could not. Asked this way, a mixed binary reports
+what it will do. (The makefiles no longer produce one: a flag change rebuilds every
+object.)
+
 ### The link also settles two things the match needs
 
 **The input delay, agreed rather than chosen twice.** Each peer proposes one from the
@@ -1173,6 +1189,22 @@ the console is timed to the millisecond, because the question a relay log answer
 usually *when*.
 
 **What it found on its first runs:**
+
+- **The first cross-machine desync it caught was two builds, not the network.** Mac v
+  Windows through the relay, cycling every netem profile, recording on: 34 matches clean,
+  then a desync at frame 739 in round 7 (awful). The recorder named the frame; the dumps'
+  SIM-only diff (`--netplay-state-stream-diff=A,B,sim`, which masks the display-local
+  fields the checksum skips) showed the machines agreeing on every hashed byte at 738 and
+  parting at 739 on a booking — `_refState`, `_whichCard`, `_bookedPlayer` — with identical
+  inputs. The Mac's `TryBookingThePlayer` disassembles to `return 1` (a clean tester build);
+  Windows' was the full routine, from a `tackle_foul.o` compiled two days earlier without
+  the flag and never rebuilt. A flag build against a flag-less one on ONE machine, on a
+  clean link, desyncs the same way at the first booking. Ruled out on the way: awful and
+  rollback depth (16 local matches, ~2800 rollbacks, clean), display width (362 v 336
+  under awful, 16 matches, clean), and state a rollback does not restore (2400
+  random-input synctest runs, `SWOS_SYNCTEST_RANDOM_INPUT`, clean). Fixed three ways: the
+  makefiles rebuild on a flag change, the handshake compares the build's rules (above),
+  and the recorder warns when two players' rules differ.
 
 - **The lobby's kick-off raced the network** (fixed, `src/netplay_lobby.c`). The host kicks
   off the moment it READS the joiner's answer and hangs up at once (`link_close`'s BYE);

@@ -36,7 +36,8 @@
  *   4  1  RECORD_PROTOCOL
  *   5  1  player (1 = the host, the top team)
  *   6  1  mode (RECORD_MODE_*)
- *   7  1  gameplay flags, as the link's handshake: 1 DOS, 2 arcade, 4 fire-hold lockout
+ *   7  1  the rules, as the link's handshake compares them (P2P_RULE_*): 1 DOS, 2 arcade,
+ *         4 fire-hold lockout, 8 no bookings / 16 no injuries (a test build)
  *   8  8  match id
  *  16  8  relay token, 0 when played peer to peer
  *  24  2  simulation width

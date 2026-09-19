@@ -153,6 +153,10 @@ int      SimState_PointerIdentity(const void *p, uint32_t *kind, uint32_t *ident
  * game_types.h names. Returns 0 (and "byte N") when the region has no usable layout. */
 #ifdef SWOS_SDL_BUILD
 int      SimState_DescribePortableByte(int32_t index, uint32_t offset, char *out, uint32_t outLen);
+/* Which bytes of region `index`'s portable encoding are LOCAL fields (1 = local): zero in
+ * the hash peers compare, so a diff of two peers should skip them too. `mask` must hold
+ * SimState_RegionPortableSize(index) bytes. */
+void     SimState_PortableLocalMask(int32_t index, uint8_t *mask);
 #endif
 
 /* NULL, or why region `index`'s layout does not describe it (fields that do not tile

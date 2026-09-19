@@ -833,9 +833,6 @@ static void team_name(char *out, size_t cap, const TeamFileEx *t)
 static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
 {
     extern TeamFileEx _selectedTeams[100];
-    extern int _gDosGameplay;               /* dos_mode.h */
-    extern int _gArcadeMode;                /* arcade.c */
-    extern int _gOriginalFireHoldLockout;   /* team_control.c */
     const LobbyPlayer *me = NetplayLobby_Player(localPlayer);
     const LobbyPlayer *them = NetplayLobby_Player(3 - localPlayer);
     char team1[20], team2[20];
@@ -847,8 +844,7 @@ static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
     info.matchId    = s_hasPacketKey ? Record_MatchId(s_packetKey) : 0;
     info.relayToken = P2PLink_RelayToken();
     info.player     = localPlayer;
-    info.gameplay   = (_gDosGameplay ? 1 : 0) | (_gArcadeMode ? 2 : 0) |
-                      (_gOriginalFireHoldLockout ? 4 : 0);
+    info.gameplay   = P2PLink_GameplayFlags();      /* the handshake's rules byte */
     info.simWidth   = simWidth;
     info.delay      = delay;
     info.myName     = me ? me->name : "";
@@ -983,6 +979,73 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
     return rc;
 }
 
+/* SWOS_LIVE_RANDOM_INPUT=<seed>: a live match's local input from a generator instead of
+ * the pad, for a test through the menus (scripts/netplay_lobby_test.sh), where nobody
+ * holds one. A direction or none, fire about a fifth of the time, held 3..14 frames --
+ * the other peer's "same as last frame" prediction is wrong often enough to roll back.
+ * Seed the two peers differently. Its own generator, never the game's. */
+typedef struct {
+    uint32_t state;
+    uint8_t  held;
+    int32_t  framesLeft;
+} RandomPad;
+
+static uint8_t randomPad(RandomPad *pad)
+{
+    static const uint8_t k_dirs[9] = { 0x01, 0x02, 0x04, 0x08, 0x05, 0x09, 0x06, 0x0A, 0 };
+    uint32_t x;
+
+    if (pad->framesLeft-- > 0)
+        return pad->held;
+    x = pad->state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    pad->state = x ? x : 0x9E3779B9u;
+    pad->held = k_dirs[x % 9u];
+    if (((x >> 8) % 5u) == 0)
+        pad->held |= 0x20;
+    pad->framesLeft = (int32_t)((x >> 16) % 12u) + 3;
+    return pad->held;
+}
+
+static uint8_t randomInput(void)
+{
+    static RandomPad pad;
+    pad.state = s_np.randomInput;
+    {
+        uint8_t v = randomPad(&pad);
+        s_np.randomInput = pad.state;
+        return v;
+    }
+}
+
+/* SWOS_SYNCTEST_RANDOM_INPUT=<seed>, direct and synctest only: both players' input from
+ * the live match's generator instead of the recording, which then only sets the match
+ * up. The corpus's own inputs never reached what a random pad does -- a live desync
+ * under heavy rollback (2026-09-19, Mac v Windows, the relay's awful profile) parted on
+ * a booking with player 2's bench controls in play -- and synctest is that rollback,
+ * deterministic, in one process: every frame played again from a loaded state, and any
+ * state a load does not put back named. The match no longer follows its recording, so
+ * the rig's per-frame comparison with it is off. */
+static RandomPad s_testPad[MATCH_PLAYERS];
+static int32_t   s_testRandom = -1;         /* -1: not read yet */
+
+static int32_t testRandomInput(void)
+{
+    if (s_testRandom < 0) {
+        const char *v = getenv("SWOS_SYNCTEST_RANDOM_INPUT");
+        uint32_t seed = (v && v[0]) ? (uint32_t)strtoul(v, NULL, 0) : 0;
+        s_testRandom = seed != 0;
+        s_testPad[0].state = seed | 1u;
+        s_testPad[1].state = (seed * 2654435761u) | 1u;
+        if (s_testRandom)
+            fprintf(stderr, "[netplay] both players' input from a generator, seed 0x%08X "
+                            "(SWOS_SYNCTEST_RANDOM_INPUT)\n", seed);
+    }
+    return s_testRandom;
+}
+
 /* direct and synctest: one process, both players' inputs, one frame per pass. */
 static int32_t singleProcessFrame(void)
 {
@@ -996,6 +1059,12 @@ static int32_t singleProcessFrame(void)
     ReplayTest_FrameStart();
     frame = ReplayTest_FrameIndex();
     ReplayTest_RecordedInput(frame, in);
+    if (testRandomInput()) {
+        for (p = 0; p < MATCH_PLAYERS; p++) {
+            in[p].controls = randomPad(&s_testPad[p]);
+            in[p].key = 0;
+        }
+    }
     for (p = 0; p < MATCH_PLAYERS; p++)
         MatchStep_PackInput(&in[p], local + p * MATCH_INPUT_SIZE);
 
@@ -1003,7 +1072,7 @@ static int32_t singleProcessFrame(void)
         if (frame == 0 && s_np.tracePath)
             traceRecordNow(0);
         soundFrameBegin((int32_t)frame, 0);
-        r = step(local, (int32_t)frame, 1);
+        r = step(local, (int32_t)frame, !testRandomInput());
         soundFrameEnd();
         if (r == GAME_FRAME_DONE && s_np.tracePath)
             traceRecordNow(frame + 1);
@@ -1021,7 +1090,7 @@ static int32_t singleProcessFrame(void)
         if (memcmp(synced, local, sizeof local) != 0)
             fail("frame %u: GGPO returned other inputs than the frame's own", frame);
         soundFrameBegin((int32_t)frame, 0);
-        r = step(synced, (int32_t)frame, 1);
+        r = step(synced, (int32_t)frame, !testRandomInput());
         soundFrameEnd();
         /* Where synctest rolls back and re-simulates, every checkDistance frames. */
         if (r == GAME_FRAME_DONE)
@@ -1078,31 +1147,6 @@ static void resetControlHistory(void)
     _pl1LastFired = _pl2LastFired = _subsFire = 0;
 }
 
-/* SWOS_LIVE_RANDOM_INPUT=<seed>: a live match's local input from a generator instead of
- * the pad, for a test through the menus (scripts/netplay_lobby_test.sh), where nobody
- * holds one. A direction or none, fire about a fifth of the time, held 3..14 frames --
- * the other peer's "same as last frame" prediction is wrong often enough to roll back.
- * Seed the two peers differently. Its own generator, never the game's. */
-static uint8_t randomInput(void)
-{
-    static const uint8_t k_dirs[9] = { 0x01, 0x02, 0x04, 0x08, 0x05, 0x09, 0x06, 0x0A, 0 };
-    static uint8_t held;
-    static int32_t framesLeft;
-    uint32_t x;
-
-    if (framesLeft-- > 0)
-        return held;
-    x = s_np.randomInput;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    s_np.randomInput = x ? x : 0x9E3779B9u;
-    held = k_dirs[x % 9u];
-    if (((x >> 8) % 5u) == 0)
-        held |= 0x20;
-    framesLeft = (int32_t)((x >> 16) % 12u) + 3;
-    return held;
-}
 
 /* p2p: a pass that plays no frame still shows one, and yields to the peer's process. */
 static void waitForPeer(void)

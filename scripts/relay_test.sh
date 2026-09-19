@@ -10,6 +10,8 @@
 #   RECORD=1 RELAY=0 scripts/relay_test.sh    # ... while playing peer to peer
 #   RECORD=1 DESYNC_FRAME=150 ...             # the joiner goes out of step at frame 150
 #                                             # ON PURPOSE; the recorder must name 151
+#   HOST_RES=1024x768 JOIN_RES=320x200 ...    # a [video] resolution each: two display
+#                                             # widths (362 and 336), as a Mac and a PC had
 #
 # The relay (include/relay_proto.h, third_party/matchmaker/Server/Relay.cpp): the
 # server makes a session at START, tells each OpenSWOS player RELAY:<token>, and
@@ -75,7 +77,9 @@ RECORD_ENV=""
 [ "$RECORD" = 1 ] && RECORD_ENV="SWOS_RECORD=server SWOS_RECORD_MODE=$RECORD_MODE"
 # A HOME each: its own SWOS.ini (the defaults, the same on both) and its own save folder,
 # so the two LATEST.SRP files are two files.
-mkdir -p "$OUT/home-host" "$OUT/home-join"
+mkdir -p "$OUT/home-host/.swos" "$OUT/home-join/.swos"
+[ -n "${HOST_RES:-}" ] && printf '[video]\nresolution=%s\n' "$HOST_RES" > "$OUT/home-host/.swos/SWOS.ini"
+[ -n "${JOIN_RES:-}" ] && printf '[video]\nresolution=%s\n' "$JOIN_RES" > "$OUT/home-join/.swos/SWOS.ini"
 [ -n "$DESYNC_FRAME" ] && JOIN_ENV="${JOIN_ENV:-} SWOS_LIVE_DESYNC_FRAME=$DESYNC_FRAME"
 
 # SWOS_NO_LOG=1: two processes would otherwise share one SWOS.log.

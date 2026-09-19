@@ -75,9 +75,17 @@ const char *Build_Platform(void)
     return SWOS_PLATFORM;
 }
 
+/* A tester's build plays by other rules than a release (no bookings, no injuries), and
+ * a report from one is read differently -- so the version line says which it is. */
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+#define SWOS_BUILD_RULES ", test build: no injuries or cards"
+#else
+#define SWOS_BUILD_RULES ""
+#endif
+
 const char *Build_Version(void)
 {
-    return "OpenSWOS " SWOS_BUILD_ID " (" SWOS_BUILD_DATE ", " SWOS_PLATFORM ")";
+    return "OpenSWOS " SWOS_BUILD_ID " (" SWOS_BUILD_DATE ", " SWOS_PLATFORM SWOS_BUILD_RULES ")";
 }
 
 /* ---- the on-screen form ---------------------------------------------------

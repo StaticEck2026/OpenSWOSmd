@@ -50,8 +50,12 @@ EXT=/mnt/c/Users/headk/.vscode/extensions/bartmanabyss.amiga-debug-1.8.2/bin/lin
 PATH="$EXT/opt/bin:$EXT:$PATH" make -f Makefile.amiga -j$(nproc)
 ```
 
-⚠️ **Toggling any `-D` flag requires a `clean` first** on both targets — make
-compares timestamps, not CFLAGS, so a flag change silently relinks stale objects.
+**A `-D` flag change rebuilds every object** on both targets: each makefile writes its
+compile flags to a stamp (`build/<os>/<arch>/.build-flags`, `obj/.build-flags`) that every
+object depends on. It used to be "toggle ⇒ `clean` first" — make compares timestamps, and
+a toggled flag relinked stale objects. That is not theoretical: a Windows build with a
+stale `tackle_foul.o` (no `SWOS_TEST_NO_INJURIES_CARDS`) booked players a clean Mac build
+could not, and a live match desynced at the first booking (2026-09-19, docs/NETPLAY.md §7).
 
 **Netplay** (`NETPLAY=1`, docs/NETPLAY.md) compiles the vendored C++ GGPO-X in
 `third_party/ggpo-x` into the SDL binary. Default on for 64-bit Linux (`X86_64=1`) and
@@ -261,7 +265,10 @@ season: substitution menus and booking prompts every match). `--release` turns i
 off for a public build. Keep the flag **identical across every platform in one
 drop**: a macOS build with it next to a Windows build without it generates bug
 reports for non-bugs (under the flag, subbing an injured player scores as a
-DOWNGRADE — see the Makefile's "KNOWN DISPLAY SIDE-EFFECTS" block).
+DOWNGRADE — see the Makefile's "KNOWN DISPLAY SIDE-EFFECTS" block). Netplay now
+enforces it: two builds that differ in it refuse each other at the handshake
+("YOUR BUILDS PLAY BY DIFFERENT RULES"), and a test build's version line says
+"test build: no injuries or cards".
 
 Three traps it exists to handle — **don't hand-roll a release without them**:
 

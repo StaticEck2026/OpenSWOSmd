@@ -37,6 +37,8 @@
 #include "sim_state.h"
 #include "display.h"        /* _screen_width, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH */
 #include "relay_proto.h"
+#include "tackle_foul.h"        /* TackleFoul_BookingsEnabled */
+#include "career_status.h"      /* CareerStatus_InjuriesEnabled */
 
 #include <errno.h>
 #include <fcntl.h>
@@ -195,25 +197,45 @@ static uint32_t now_ms(void)
 /* The game this build would play. The three gameplay flags are set from the command
  * line and SWOS.ini in main.c. The screen width travels too, but no longer has to match:
  * the two agree one simulation draw width from both (P2PLink_AgreedSimWidth). */
-static void setup_local(Setup *s)
+/* The rules a match is played by, one bit each: what the player chose (the gameplay
+ * style, arcade mode, the fire-hold lockout) and what the BUILD decided
+ * (SWOS_TEST_NO_INJURIES_CARDS). Two peers that differ in any bit play different
+ * matches from the same inputs.
+ *
+ * The build's bits come from the objects that implement them, not from a -D here: a
+ * binary once carried a stale tackle_foul.o compiled without the flag, so it booked
+ * players while every other file said it could not -- and a live match against a clean
+ * build desynced at the first booking (2026-09-19). Asked this way, a mixed build
+ * reports what it will actually do. */
+uint8_t P2PLink_GameplayFlags(void)
 {
     extern int _gDosGameplay;               /* dos_mode.h */
     extern int _gArcadeMode;                /* arcade.c */
     extern int _gOriginalFireHoldLockout;   /* team_control.c */
 
+    return (uint8_t)((_gDosGameplay ? P2P_RULE_DOS : 0) |
+                     (_gArcadeMode ? P2P_RULE_ARCADE : 0) |
+                     (_gOriginalFireHoldLockout ? P2P_RULE_FIRE_LOCKOUT : 0) |
+                     (TackleFoul_BookingsEnabled() ? 0 : P2P_RULE_NO_BOOKINGS) |
+                     (CareerStatus_InjuriesEnabled() ? 0 : P2P_RULE_NO_INJURIES));
+}
+
+static void setup_local(Setup *s)
+{
     uint64_t hash = SimState_LayoutHash();
     s->stateHi     = (uint32_t)(hash >> 32);
     s->stateLo     = (uint32_t)hash;
     s->screenWidth = (uint16_t)_screen_width;
-    s->gameplay    = (uint8_t)((_gDosGameplay ? 1 : 0) |
-                               (_gArcadeMode ? 2 : 0) |
-                               (_gOriginalFireHoldLockout ? 4 : 0));
+    s->gameplay    = P2PLink_GameplayFlags();
 }
 
 static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
 {
     if (mine->stateHi != theirs->stateHi || mine->stateLo != theirs->stateLo)
         return P2P_FAIL_STATE;
+    /* The build's rules first: nothing in OPTIONS can make those agree. */
+    if ((mine->gameplay ^ theirs->gameplay) & P2P_RULES_BUILD)
+        return P2P_FAIL_BUILD;
     if (mine->gameplay != theirs->gameplay)
         return P2P_FAIL_GAMEPLAY;
     /* Not the screen width. It used to be refused, because the simulation read it; the
@@ -458,6 +480,7 @@ static const char *failure_name(P2PLinkFailure f)
         "none", "unavailable", "bad address", "port in use", "socket", "no answer",
         "lost", "peer left", "host busy", "protocol", "state (a different build)",
         "gameplay style", "screen width", "port reserved", "relay refused us",
+        "build rules (one is a test build)",
     };
     return (uint32_t)f < sizeof names / sizeof names[0] ? names[f] : "?";
 }
@@ -902,6 +925,7 @@ static P2PLinkFailure refuse_reason(uint8_t byte)
     case P2P_FAIL_STATE:
     case P2P_FAIL_GAMEPLAY:
     case P2P_FAIL_WIDTH:
+    case P2P_FAIL_BUILD:
         return (P2PLinkFailure)byte;
     default:
         return P2P_FAIL_PROTOCOL;   /* a reason this version does not know */
@@ -1715,6 +1739,7 @@ int32_t P2PLink_Punch(const char *const *addresses, int32_t count, uint16_t loca
 }
 void           P2PLink_SetRelay(uint64_t token, int32_t player) { (void)token; (void)player; }
 uint64_t       P2PLink_RelayToken(void) { return 0; }
+uint8_t        P2PLink_GameplayFlags(void) { return 0; }
 int32_t        P2PLink_AgreedDelay(void)       { return -1; }
 int32_t        P2PLink_AgreedSimWidth(void)    { return -1; }
 int32_t        P2PLink_ProposedDelay(void)     { return -1; }
@@ -1773,6 +1798,8 @@ void P2PLink_FailureText(P2PLinkFailure failure, const char **line1, const char 
         *line1 = "YOUR SCREEN WIDTHS ARE DIFFERENT"; *line2 = "BOTH OF YOU NEED THE SAME ONE"; break;
     case P2P_FAIL_RELAY:
         *line1 = "THE SERVER'S RELAY HAS CLOSED"; *line2 = "FIND EACH OTHER AGAIN"; break;
+    case P2P_FAIL_BUILD:
+        *line1 = "YOUR BUILDS PLAY BY DIFFERENT RULES"; *line2 = "ONE OF YOU HAS A TEST BUILD"; break;
     default:
         *line1 = ""; *line2 = ""; break;
     }

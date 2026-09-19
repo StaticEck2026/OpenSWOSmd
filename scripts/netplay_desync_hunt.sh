@@ -17,6 +17,16 @@
 #   handshake refuses the pair (P2P_FAIL_GAMEPLAY) without a line in SWOS_P2P_LOG -- both
 #   peers just sit on the waiting screen until the round ends. Lost two rounds on
 #   2026-09-18 when one machine's INI had been switched to DOS gameplay.
+# RELAY=1                     play THROUGH the matchmaker (--relay, include/relay_proto.h)
+# NETEM=<profile>|cycle       ... with the server's network emulator in the middle; cycle
+#                             is a new profile each round: none lan adsl wifi mobile
+#                             satellite awful. Each round's ledger lines go to hunt/ledger.jsonl.
+# MAX_ROUNDS=N                stop after N rounds, whatever the hours (NETEM=cycle: 7 is
+#                             one of each profile)
+# MAC_LEDGER=<path on the Mac>  a recorder's ledger to watch too: a "desync" line there is a
+#                             catch. Run the recorder on the Mac (its firewall is off, and
+#                             only UDP 19602 is open on this machine) and point both players
+#                             at it with HOST_ENV/JOIN_ENV SWOS_RECORD=... (docs/NETPLAY.md §7)
 # HOST_ENV / JOIN_ENV         extra K=V pairs for one side only. The 2026-09-17 joiner ran
 #   JOIN_ENV="SWOS_PRESENT_CAPTURE=200 SWOS_PRESENT_CAPTURE_FROM=200", a PNG every 200
 #   presented frames, which stalls that peer. It stops after 60 files a process, so keep
@@ -30,6 +40,10 @@ HUNT_INPUT="${HUNT_INPUT:-random}"
 GAMEPLAY="${GAMEPLAY:-amiga}"
 HOST_ENV="${HOST_ENV:-}"
 JOIN_ENV="${JOIN_ENV:-}"
+RELAY="${RELAY:-0}"
+NETEM="${NETEM:-}"
+MAC_LEDGER="${MAC_LEDGER:-}"
+MAX_ROUNDS="${MAX_ROUNDS:-0}"          # stop after this many rounds (0 = only the hours)
 OUT="$SCR/hunt"; mkdir -p "$OUT"
 END=$(( $(date +%s) + HOURS * 3600 ))
 round=0
@@ -37,6 +51,7 @@ round=0
 caught() {
     [ -n "$(ls /mnt/c/Temp/swhunt/ 2>/dev/null)" ] && return 0
     [ -n "$(ssh bbaker@192.168.1.37 'ls /tmp/swhunt/ 2>/dev/null' 2>/dev/null)" ] && return 0
+    [ -n "$MAC_LEDGER" ] && ssh bbaker@192.168.1.37 "grep -q '\"kind\":\"desync\"' $MAC_LEDGER" 2>/dev/null && return 0
     return 1
 }
 
@@ -48,7 +63,7 @@ collect() {   # round
 ssh bbaker@192.168.1.37 'rm -rf /tmp/swhunt; mkdir -p /tmp/swhunt' >/dev/null 2>&1
 rm -rf /mnt/c/Temp/swhunt; mkdir -p /mnt/c/Temp/swhunt
 
-while [ "$(date +%s)" -lt "$END" ]; do
+while [ "$(date +%s)" -lt "$END" ] && { [ "$MAX_ROUNDS" = 0 ] || [ "$round" -lt "$MAX_ROUNDS" ]; }; do
     round=$((round + 1))
     hseed=$(printf '0x%08X' $(( (round * 2654435761 + 12345) & 0x7FFFFFFF )))
     jseed=$(printf '0x%08X' $(( (round * 40503 + 98765) & 0x7FFFFFFF )))
@@ -68,10 +83,21 @@ while [ "$(date +%s)" -lt "$END" ]; do
         jextra="set SWOS_LIVE_RANDOM_INPUT=$jseed"$'\n'
     fi
     for kv in $JOIN_ENV; do jextra+="set $kv"$'\n'; done
-    echo "== round $round  $(date +%T)  $gp $input  host $hteam/$hseed  join $jteam/$jseed${JOIN_ENV:+  join+ $JOIN_ENV}${HOST_ENV:+  host+ $HOST_ENV}"
+    mmargs=(--ledger "$OUT/ledger.jsonl")
+    np=""
+    if [ "$RELAY" = 1 ]; then
+        mmargs+=(--relay)
+        np=$NETEM
+        if [ "$NETEM" = cycle ]; then
+            profiles=(none lan adsl wifi mobile satellite awful)
+            np=${profiles[$(( (round - 1) % ${#profiles[@]} ))]}
+        fi
+        [ -n "$np" ] && [ "$np" != none ] && mmargs+=(--netem "$np")
+    fi
+    echo "== round $round  $(date +%T)  $gp $input$([ "$RELAY" = 1 ] && echo "  relay ${np:-none}")  host $hteam/$hseed  join $jteam/$jseed${JOIN_ENV:+  join+ $JOIN_ENV}${HOST_ENV:+  host+ $HOST_ENV}"
 
-    pkill -f 'build/matchmaker/swos-matchmaker' 2>/dev/null; sleep 1
-    ( cd "$ROOT" && nohup build/matchmaker/swos-matchmaker 19602 > "$OUT/mm.log" 2>&1 & ); sleep 2
+    pkill -INT -f 'build/matchmaker/swos-matchmaker' 2>/dev/null; sleep 1
+    ( cd "$ROOT" && nohup build/matchmaker/swos-matchmaker 19602 "${mmargs[@]}" > "$OUT/mm-round$round.log" 2>&1 & ); sleep 2
     cmd.exe /c "taskkill /F /IM SWOS.exe" >/dev/null 2>&1
     ssh bbaker@192.168.1.37 'pkill -9 -f SWOS.macos' >/dev/null 2>&1
     sleep 2

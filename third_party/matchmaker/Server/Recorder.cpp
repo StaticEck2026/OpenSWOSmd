@@ -283,10 +283,18 @@ bool Recorder::OnHello(Connection& c, const uint8_t* p, uint32_t len)
     m.lastMs = ServerTime::NowMs();
 
     std::cout << Tag() << Hex64(id) << " player " << player << " (" << s.name << ", "
-              << s.build << ", " << s.platform << ") recording from " << c.address << ": "
-              << s.team1 << " v " << s.team2
+              << s.build << ", " << s.platform << ", rules 0x" << std::hex << s.gameplay << std::dec
+              << ") recording from " << c.address << ": " << s.team1 << " v " << s.team2
               << (s.relayToken ? ", through the relay " + Hex64(s.relayToken) : std::string(", peer to peer"))
               << "\n";
+    // Two players on different rules cannot stay in step -- say so now, not at the
+    // desync. The handshake refuses such a pair since 2026-09-19; a build older than
+    // that does not, and one such pair (a stale tackle_foul.o) is how this was found.
+    const Side& other = m.side[2 - player];
+    if (other.present && other.gameplay != s.gameplay)
+        std::cout << Tag() << Hex64(id) << " WARNING: the two players play by different rules"
+                  << " (player 1 0x" << std::hex << m.side[0].gameplay << ", player 2 0x"
+                  << m.side[1].gameplay << std::dec << ") -- this match cannot stay in step\n";
     return true;
 }
 
@@ -342,6 +350,7 @@ void Recorder::Compare(Match& m, int from, uint32_t frame)
         + ",\"players\":[" + JsonString(a.name) + "," + JsonString(b.name) + "]"
         + ",\"builds\":[" + JsonString(a.build) + "," + JsonString(b.build) + "]"
         + ",\"platforms\":[" + JsonString(a.platform) + "," + JsonString(b.platform) + "]"
+        + ",\"rules\":[" + std::to_string(a.gameplay) + "," + std::to_string(b.gameplay) + "]"
         + ",\"teams\":[" + JsonString(a.team1) + "," + JsonString(a.team2) + "]"
         + ",\"relay\":" + (a.relayToken ? "\"" + Hex64(a.relayToken) + "\"" : std::string("null"))
         + "}");

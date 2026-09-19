@@ -582,6 +582,15 @@ uint16_t IsPlayerInjured(PlayerFile *playerFile, int16_t mode) {
  * under SWOS_TEST_NO_INJURIES_CARDS, so the edit-tactics squad screen colours a
  * suspended/injured player's name red to match its drawn indicator. On non-beta
  * builds this is identical to IsPlayerInjured (both just call the core). */
+int32_t CareerStatus_InjuriesEnabled(void)
+{
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+    return 0;
+#else
+    return 1;
+#endif
+}
+
 __attribute__((used, externally_visible))
 uint16_t IsPlayerInjuredForDisplay(PlayerFile *playerFile, int16_t mode) {
     return player_injury_status(playerFile, mode);

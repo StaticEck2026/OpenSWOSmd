@@ -48,7 +48,16 @@ typedef enum {
     P2P_FAIL_WIDTH,         /* a different screen width */
     P2P_FAIL_PORT_RESERVED, /* the system will not let anyone bind that port (EACCES) */
     P2P_FAIL_RELAY,         /* the server's relay does not know our token (expired, or never) */
+    P2P_FAIL_BUILD,         /* the builds play by different rules (a test build and a release) */
 } P2PLinkFailure;
+
+/* The rules a match is played by (P2PLink_GameplayFlags), one bit each. */
+#define P2P_RULE_DOS            0x01    /* DOS gameplay */
+#define P2P_RULE_ARCADE         0x02    /* arcade mode */
+#define P2P_RULE_FIRE_LOCKOUT   0x04    /* the original's fire-hold lockout */
+#define P2P_RULE_NO_BOOKINGS    0x08    /* SWOS_TEST_NO_INJURIES_CARDS, as tackle_foul.c was built */
+#define P2P_RULE_NO_INJURIES    0x10    /* SWOS_TEST_NO_INJURIES_CARDS, as career_status.c was built */
+#define P2P_RULES_BUILD         (P2P_RULE_NO_BOOKINGS | P2P_RULE_NO_INJURIES)
 
 /* Open the link. Both return 0, or non-zero with the reason in P2PLink_Failure.
  * The joiner binds the same port number when it is free -- on one machine, or behind
@@ -76,6 +85,9 @@ int32_t        P2PLink_Punch(const char *const *addresses, int32_t count, uint16
 void           P2PLink_SetRelay(uint64_t token, int32_t player);
 /* The token of the relayed match in progress, or 0 when it is played direct. */
 uint64_t       P2PLink_RelayToken(void);
+/* The rules this build and these settings play a match by (P2P_RULE_*): what the
+ * handshake compares, and what a recording reports. */
+uint8_t        P2PLink_GameplayFlags(void);
 
 int32_t        P2PLink_Host(uint16_t port);
 int32_t        P2PLink_Join(const char *address, uint16_t port);

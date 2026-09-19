@@ -911,6 +911,37 @@ int SimState_DescribePortableByte(int32_t index, uint32_t offset, char *out, uin
 }
 #endif /* SWOS_SDL_BUILD */
 
+#ifdef SWOS_SDL_BUILD
+/* Mark the bytes of region `index`'s portable encoding that are LOCAL fields -- this
+ * display's, not the match's, and zero in the hash. `mask` is the region's portable size;
+ * 1 = local. So a diff of two peers' states can skip what their checksum skips. */
+void SimState_PortableLocalMask(int32_t index, uint8_t *mask)
+{
+    const SimStateRegion *r;
+    const SimLayout *l;
+    uint32_t pstride, elems, e, i, at;
+
+    if (index < 0 || index >= g_simStateRegionCount)
+        return;
+    r = &g_simStateRegions[index];
+    l = r->layout;
+    memset(mask, 0, SimState_RegionPortableSize(index));
+    if (!l || l->fieldCount == 0 || (pstride = portable_stride(l)) == 0)
+        return;
+    elems = l->stride ? r->size / l->stride : 1;
+    for (e = 0; e < elems; e++) {
+        at = e * pstride;
+        for (i = 0; i < l->fieldCount; i++) {
+            const SimField *f = &l->fields[i];
+            uint32_t w = portable_width(f);
+            if (f->type == SIM_FIELD_LOCAL16 || f->type == SIM_FIELD_LOCAL32)
+                memset(mask + at, 1, w);
+            at += w;
+        }
+    }
+}
+#endif
+
 /* One element, this build's bytes at `src` to portable bytes at `dst`. `hashing`: for the
  * checksum peers compare, where a LOCAL field (this display's, not the match's) counts as
  * zero; a saved or sent state carries it. */

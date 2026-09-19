@@ -485,7 +485,11 @@ void NetplayLiveTest_Run(void)
 
 /* Name the registry entries two states disagree on. Shared by the single-dump diff
  * and the stream diff below, because "which field" is the same question either way. */
-static int32_t diffRegions(const uint8_t *ba, const uint8_t *bb, int32_t portable)
+/* `simOnly`: compare the SIM-tier regions and skip the rest -- what two peers on
+ * different screen widths must agree on (the VIEW tier holds drawn coordinates, the HUD's
+ * sprites among them, and differs between them by design). */
+static int32_t diffRegionsTier(const uint8_t *ba, const uint8_t *bb, int32_t portable,
+                               int32_t simOnly, int32_t print)
 {
     uint32_t offset = 0;
     int32_t i, differing = 0;
@@ -496,7 +500,52 @@ static int32_t diffRegions(const uint8_t *ba, const uint8_t *bb, int32_t portabl
         if (!SimState_RegionActive(i, SIM_TIER_ALL))
             continue;
         size = portable ? SimState_RegionPortableSize(i) : reg->size;
+        if (simOnly && !SimState_RegionActive(i, SIM_TIER_SIM)) {
+            offset += size;
+            continue;
+        }
+        if (simOnly && portable) {
+            /* What the checksum sees: LOCAL fields (this display's, not the match's) are
+             * zero in the hash, so a difference there is not a desync. */
+            static uint8_t *mask;
+            static uint32_t maskCap;
+            uint32_t k;
+            int32_t real = 0;
+            if (size > maskCap) {
+                free(mask);
+                mask = (uint8_t *)malloc(size);
+                maskCap = mask ? size : 0;
+            }
+            if (mask) {
+                SimState_PortableLocalMask(i, mask);
+                for (k = 0; k < size && !real; k++)
+                    real = !mask[k] && ba[offset + k] != bb[offset + k];
+                if (!real) {
+                    offset += size;
+                    continue;
+                }
+                if (print) {
+                    char where[96];
+                    for (k = 0; k < size; k++)
+                        if (!mask[k] && ba[offset + k] != bb[offset + k])
+                            break;
+                    if (differing < 40) {
+                        SimState_DescribePortableByte(i, k, where, sizeof where);
+                        printf("  %-40s size %6u  %-22s  %02X vs %02X\n",
+                               reg->name, size, where, ba[offset + k], bb[offset + k]);
+                    }
+                }
+                differing++;
+                offset += size;
+                continue;
+            }
+        }
         if (memcmp(ba + offset, bb + offset, size) != 0) {
+            if (!print) {
+                differing++;
+                offset += size;
+                continue;
+            }
             uint32_t k = 0;
             while (k < size && ba[offset + k] == bb[offset + k])
                 k++;
@@ -517,6 +566,11 @@ static int32_t diffRegions(const uint8_t *ba, const uint8_t *bb, int32_t portabl
         offset += size;
     }
     return differing;
+}
+
+static int32_t diffRegions(const uint8_t *ba, const uint8_t *bb, int32_t portable)
+{
+    return diffRegionsTier(ba, bb, portable, 0, 1);
 }
 
 /* --netplay-state-diff=A,B -- name the registry entries two kick-off dumps
@@ -628,7 +682,8 @@ static int32_t streamRead(FILE *f, long off, uint8_t *buf, uint32_t size)
 int32_t NetplayLiveTest_StreamDiff(const char *spec)
 {
     char pa[256], pb[256];
-    const char *comma;
+    const char *comma, *second;
+    int32_t simOnly = 0;
     FILE *fa = NULL, *fb = NULL;
     long *oa = NULL, *ob = NULL;
     uint8_t *sa = NULL, *sb = NULL;
@@ -639,7 +694,15 @@ int32_t NetplayLiveTest_StreamDiff(const char *spec)
     if (!spec || !(comma = strchr(spec, ',')))
         return 1;
     snprintf(pa, sizeof pa, "%.*s", (int)(comma - spec), spec);
-    snprintf(pb, sizeof pb, "%s", comma + 1);
+    /* A,B[,sim]: ",sim" compares the SIM tier only -- the peers of a live match on two
+     * screen widths differ in the VIEW tier from the first frame, by design. */
+    second = strchr(comma + 1, ',');
+    if (second && strcmp(second + 1, "sim") == 0) {
+        simOnly = 1;
+        snprintf(pb, sizeof pb, "%.*s", (int)(second - comma - 1), comma + 1);
+    } else {
+        snprintf(pb, sizeof pb, "%s", comma + 1);
+    }
 
     if (streamIndex(pa, &fa, &na, &la, &oa, &maxa) ||
         streamIndex(pb, &fb, &nb, &lb, &ob, &maxb))
@@ -668,12 +731,15 @@ int32_t NetplayLiveTest_StreamDiff(const char *spec)
         if (streamRead(fa, oa[frame], sa, na) || streamRead(fb, ob[frame], sb, nb))
             continue;
         common++;
-        if (memcmp(sa, sb, na) != 0) { first = frame; break; }
+        if (simOnly ? diffRegionsTier(sa, sb, 1, 1, 0) != 0 : memcmp(sa, sb, na) != 0) {
+            first = frame;
+            break;
+        }
     }
 
     printf("[stream-diff] %s vs %s\n", pa, pb);
-    printf("[stream-diff] %u bytes a frame, %d regions; frames up to %d and %d, %d compared\n",
-           na, g_simStateRegionCount, maxa, maxb, common);
+    printf("[stream-diff] %u bytes a frame, %d regions; frames up to %d and %d, %d compared%s\n",
+           na, g_simStateRegionCount, maxa, maxb, common, simOnly ? " (SIM tier only)" : "");
     if (first < 0) {
         printf("[stream-diff] every frame both peers recorded is identical -- they did not "
                "part in this match\n");
@@ -682,12 +748,12 @@ int32_t NetplayLiveTest_StreamDiff(const char *spec)
     }
     if (first > 0 && oa[first - 1] >= 0 && ob[first - 1] >= 0 &&
         !streamRead(fa, oa[first - 1], sa, na) && !streamRead(fb, ob[first - 1], sb, nb)) {
-        int32_t before = diffRegions(sa, sb, 1);
+        int32_t before = diffRegionsTier(sa, sb, 1, simOnly, 1);
         printf("[stream-diff] frame %d (the one before): %d region(s) differ%s\n",
                first - 1, before, before ? "" : " -- the peers still agreed here");
     }
     if (!streamRead(fa, oa[first], sa, na) && !streamRead(fb, ob[first], sb, nb)) {
-        int32_t now = diffRegions(sa, sb, 1);
+        int32_t now = diffRegionsTier(sa, sb, 1, simOnly, 1);
         printf("[stream-diff] frame %d is where they part: %d region(s) differ\n", first, now);
     }
     rc = 0;
