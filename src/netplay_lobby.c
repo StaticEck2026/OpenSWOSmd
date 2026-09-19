@@ -560,6 +560,20 @@ void NetplayLobby_Poll(void)
     if (s_lobby.state == LOBBY_STARTING && s_lobby.me == 2 && s_lobby.accepted &&
         P2PLink_Delivered(CH_ANSWER))
         s_lobby.state = LOBBY_KICKOFF;
+    /* The same, when the link ends before our answer's ack arrived. The host kicks
+     * off the moment it READS the answer and hangs up straight away (link_close's
+     * BYE), so on a link with any latency the BYE can overtake the ack -- and the
+     * joiner used to read it as "the other player left", while the host waited in
+     * its session for a peer that never came. Found by the relay's network
+     * emulator, the first to disturb this link (netplay_netem only touches GGPO's).
+     *
+     * Having said yes, a host that hangs up (or goes quiet: both BYEs lost) has
+     * kicked off -- in STARTING the only other way out is quitting, and then the
+     * match's own "never arrived" timeout ends it cleanly. */
+    if (s_lobby.state == LOBBY_STARTING && s_lobby.me == 2 && s_lobby.accepted &&
+        P2PLink_State() == P2P_FAILED &&
+        (P2PLink_Failure() == P2P_FAIL_PEER_LEFT || P2PLink_Failure() == P2P_FAIL_LOST))
+        s_lobby.state = LOBBY_KICKOFF;
     if (s_lobby.state == LOBBY_KICKOFF)
         return;
 
