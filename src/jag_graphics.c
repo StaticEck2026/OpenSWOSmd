@@ -313,6 +313,38 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
      * pixels alone. */
     for (i = 0; i < 16; i++)
         out256[i] = amiga16[i];
+    /* HAIR. The art draws it in three shades (13 light, 9 mid, 12 dark), and for a
+     * ginger head the game's own table keeps three (F60 B40 620). For a BLACK one it
+     * sends all three to colour 3, so the Jaguar's shading is thrown away and the hair
+     * is a flat block -- which is what the 16-colour game draws, and looks it. When the
+     * three collapse onto one colour, shade that colour instead. A colour with nothing
+     * darker than it (black) lifts its highlight rather than deepening its shadow. */
+    {
+        static const uint8_t hairArt[3] = { 13, 9, 12 };     /* light, mid, dark */
+        uint16_t c = (uint16_t)(amiga16[hairArt[0]] & 0xFF);
+        if ((uint16_t)(amiga16[hairArt[1]] & 0xFF) == c && (uint16_t)(amiga16[hairArt[2]] & 0xFF) == c) {
+            uint16_t base = _gamePalette[c];
+            uint8_t ch[3];
+            int32_t k;
+            ch[0] = (uint8_t)((base >> 8) & 15);
+            ch[1] = (uint8_t)((base >> 4) & 15);
+            ch[2] = (uint8_t)(base & 15);
+            for (k = 0; k < 3; k++) {
+                uint8_t want[3];
+                int32_t j, near;
+                for (j = 0; j < 3; j++) {
+                    int32_t v;
+                    if (ch[0] <= 3 && ch[1] <= 3 && ch[2] <= 3)
+                        v = (int32_t)ch[j] + (k == 0 ? 3 : k == 1 ? 1 : 0);   /* lift */
+                    else
+                        v = ((int32_t)ch[j] * (k == 0 ? 16 : k == 1 ? 13 : 9)) >> 4;
+                    want[j] = (uint8_t)(v > 15 ? 15 : v);
+                }
+                near = nearestEntry(want, 0, NULL);
+                out256[hairArt[k]] = (uint16_t)(near < 0 ? c : near);
+            }
+        }
+    }
     for (slot = 0; slot < JAG_KIT_SLOTS; slot++) {
         uint16_t colour = (uint16_t)(amiga16[k_kitSlotAmiga[slot]] & 0xFF);
         uint16_t c = _gamePalette[colour];

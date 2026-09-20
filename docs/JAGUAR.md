@@ -40,6 +40,25 @@ those indices per player (`ConvertColorTableToSkinColor` rewrites 4,5,6 and
 9,12,13, and no others), and the art kept them. The keeper needs nothing either:
 its jersey is drawn in the shorts and socks slots, as on the Amiga.
 
+### Hair, where SWOS throws the shading away
+
+The art draws hair in three shades (13 light, 9 mid, 12 dark) and the game's own
+table decides what they become per face type. For a ginger head it keeps three
+(`F60 B40 620`), so that hair shades by itself. For a **black** head — face types
+0 and 2 — it sends all three to colour 3, and the Jaguar's shading is lost: a flat
+block, exactly what the 16-colour game draws.
+
+So when the three collapse onto one colour, this tier shades that colour instead.
+Black has nothing darker than it, so the highlight lifts rather than the shadow
+deepening: `000000` stays the shadow and the lit side becomes `111111` and
+`333333`. The lift is the `k == 0 ? 3 : k == 1 ? 1 : 0` in `JagGfx_TeamTable` —
+one constant, if it wants to be stronger or subtler. Hair the game already shades
+is left alone.
+
+Skin has a milder version of the same thing: face type 2 sends 6,5,4 to 4,4,3, so
+its darkest tone is drawn with two shades rather than three. Left as the game has
+it — changing it would move a skin tone, not just its shading.
+
 ## It needs almost no palette of its own
 
 The game's 256 colours were converted from the DOS palette, which carries dimmed
