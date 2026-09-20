@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "image_cmd.h"
+#include "jag_graphics.h"
 #include "game_types.h"
 #include "display.h"
 #ifdef SWOS_SDL_BUILD
@@ -70,6 +71,13 @@ extern int16_t LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSiz
  * NUM_PLANES on the Amiga build (only the SDL load branch updates it), so the
  * Amiga bitplane path is byte-identical. */
 static uint16_t s_bankSrcPlanes = NUM_PLANES;
+
+#ifdef SWOS_SDL_BUILD
+/* Set for the banks the Jaguar tier provides, cleared for every other: their
+ * colours are the Jaguar sheets' own and have to be placed (JagGfx_SheetRemap).
+ * Like s_bankSrcPlanes, it follows the bank being loaded, not the build. */
+static const uint8_t *s_jagRemap;
+#endif
 
 
 /* ================================================================
@@ -224,7 +232,11 @@ static void blitDispatch(uint16_t spriteIndex, uint16_t xOffset, uint16_t yOffse
                         uint8_t planeByte = rowSrc[p * BITPLANE_ROW_BYTES + byte];
                         idx |= (uint8_t)(((planeByte >> bit) & 1u) << p);
                     }
-                    rowDst[px] = idx;
+                    /* A Jaguar bank is drawn in its own 256 colours; put them
+                     * where they live in the palette (jag_graphics.c). The kit
+                     * block and the low 16 pass through -- the per-team recolour
+                     * is what turns those into a team's colours. */
+                    rowDst[px] = s_jagRemap ? s_jagRemap[idx] : idx;
                 }
             }
         }
@@ -481,6 +493,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
                  * size (320x256 planar sheet: 40 bytes/plane row * 256 rows).
                  * 4bpp for cjc / team kits, 8bpp for soccer_s. */
                 s_bankSrcPlanes = DetectBankPlanes(bankSize, BITPLANE_ROW_BYTES, SPRITE_SHEET_ROWS);
+                s_jagRemap = JagGfx_IsBank((const char *)filename) ? JagGfx_SheetRemap() : 0;
             }
 #else
             {
@@ -527,6 +540,7 @@ void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer)
                  * size (320x256 planar sheet: 40 bytes/plane row * 256 rows).
                  * 4bpp for cjc / team kits, 8bpp for soccer_s. */
                 s_bankSrcPlanes = DetectBankPlanes(bankSize, BITPLANE_ROW_BYTES, SPRITE_SHEET_ROWS);
+                s_jagRemap = JagGfx_IsBank((const char *)filename) ? JagGfx_SheetRemap() : 0;
             }
 #else
             {

@@ -14,6 +14,7 @@
 #ifdef SWOS_SDL_BUILD
 
 #include "resload.h"
+#include "jag_graphics.h"
 #include "display.h"
 #include "rnc_magic.h"
 #include "swos_io.h"      /* swos_save_dir() — shared save-dir base */
@@ -144,6 +145,14 @@ static FILE *open_case_insensitive(const char *path, const char *mode)
     if (base) {
         char cand[1024], anchored[1024];
         FILE *f;
+        /* The Jaguar sprite tier goes first when it is on: it holds the gameplay
+         * banks only (jag_graphics.c), so everything else falls through to the
+         * AGA set exactly as before. */
+        if (JagGfx_Enabled()) {
+            snprintf(cand, sizeof(cand), "grafs_jag/%s", base);
+            f = try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
+            if (f) return f;
+        }
         snprintf(cand, sizeof(cand), "grafs_aga/%s", base);
         f = try_open_ci(swos_data_path(cand, anchored, sizeof(anchored)), mode);
         if (f) return f;

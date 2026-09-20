@@ -67,7 +67,7 @@ VERSION=""
 STAGE_ONLY=0
 
 # Mirrors FULL_DATA_DIRS in scripts/build_dist.sh. See "WHAT SHIPS" above.
-DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound data_json"
+DATA_DIRS="data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound data_json"
 # Cygwin runtime for SWOS.exe — mirrors FULL_DLLS in build_dist.sh.
 # FOUR files, and only two of them are visible to
 # cygcheck:

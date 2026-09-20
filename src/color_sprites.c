@@ -28,6 +28,8 @@
 #define SPR_TEAM1_NAME          193
 #define SPR_TEAM2_NAME          194
 
+#include "jag_graphics.h"
+
 /* ---- External functions (already ported) ---- */
 extern void ProcessImageCommandStream(const uint16_t *cmdBuffer, uint8_t *workBuffer);
 extern void CopyAdvertisementsData(void);
@@ -275,6 +277,18 @@ static void dos_prepare_sprites(int kit1, int kit2)
 static void convertSpriteRange(uint16_t start, uint16_t end, uint16_t *colorTable)
 {
     uint16_t d0;
+#ifdef SWOS_SDL_BUILD
+    /* Jaguar sprites carry four shades of each kit colour, so the 16-entry table
+     * the game just built becomes a 256-entry one: each shade of each kit slot to
+     * that shade of the team's colour, everything else as the game says
+     * (jag_graphics.c). Built per call, because the skin and hair entries change
+     * between ranges. */
+    uint16_t jagTable[256];
+    if (JagGfx_Enabled()) {
+        JagGfx_TeamTable(colorTable, jagTable);
+        colorTable = jagTable;
+    }
+#endif
     for (d0 = start; d0 != end; d0++) {
         ConvertSpriteColors(d0, colorTable);
     }
@@ -326,6 +340,7 @@ static uint16_t findMostFrequentFaceAndApplyLUT(TeamGame *team, uint16_t *colorT
 __attribute__((used, externally_visible))
 void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
 {
+    JagGfx_NewMatch();      /* these two teams' kit ramps, not the last pair's */
     uint16_t d0;
     uint16_t totalWidth;
 

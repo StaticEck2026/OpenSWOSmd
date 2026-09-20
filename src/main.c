@@ -47,6 +47,7 @@
 #include "netplay_setup.h"      /* --netplay-selftest: the match setup round trip */
 #include "netplay_live_test.h"  /* --netplay-live-pair */
 #include "srp_resim.h"          /* --srp-resim */
+#include "jag_graphics.h"       /* --jag-graphics */
 #include "netplay_match.h"      /* --netplay-match */
 #include "rollback_rig.h"       /* --rollback */
 
@@ -157,6 +158,8 @@ static void print_usage(const char *argv0)
         "                            (1,2 → left, 0,3 → right) which sounds\n"
         "                            lopsided on most modern playback setups.\n"
         "                            'stereo' restores the original Amiga panning.\n"
+        "  --jag-graphics=<on|off>   Render the Atari Jaguar's gameplay sprites\n"
+        "                            (bin/grafs_jag; scripts/make_jag_graphics.py)\n"
         "  --dos-graphics=<on|off>   Render the DOS-version graphics (bin/grafs_dos)\n"
         "                            instead of the Amiga graphics. Default: off.\n"
         "                            PC-only extra; the Amiga look is the default.\n"
@@ -350,6 +353,7 @@ int main(int argc, char **argv)
     opts.screen = 0;                 /* target display index (0 = primary) */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
+    opts.jag_graphics = 0;        /* ... and not the Jaguar's either */
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
@@ -477,6 +481,14 @@ int main(int argc, char **argv)
             else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.fire_hold_lockout = 0;
             else {
                 fprintf(stderr, "Invalid --fire-hold-lockout value '%s' (expected on|off)\n", v);
+                return 1;
+            }
+        } else if ((v = match_kv(a, "jag-graphics")) != NULL) {
+            /* The Atari Jaguar's gameplay art, from bin/grafs_jag (docs/JAGUAR.md). */
+            if (strcmp(v, "on") == 0 || strcmp(v, "1") == 0)       opts.jag_graphics = 1;
+            else if (strcmp(v, "off") == 0 || strcmp(v, "0") == 0) opts.jag_graphics = 0;
+            else {
+                fprintf(stderr, "Invalid --jag-graphics value '%s' (expected on|off)\n", v);
                 return 1;
             }
         } else if ((v = match_kv(a, "dos-gameplay")) != NULL) {
@@ -786,6 +798,7 @@ int main(int argc, char **argv)
 
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;
+    JagGfx_SetEnabled(opts.jag_graphics);
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
     { extern int _gOriginalFireHoldLockout;

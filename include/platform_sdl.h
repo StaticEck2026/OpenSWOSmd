@@ -88,6 +88,7 @@ typedef struct {
     int                    screen;           /* target display index (0 = primary). The window opens on / fullscreens on this monitor and its size is auto-fitted to that screen's usable bounds. Clamped to a valid display. PC-only */
     int                    audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga panned */
     int                    dos_graphics;     /* 1 = render DOS-version graphics. PC-only */
+    int                    jag_graphics;     /* 1 = the Atari Jaguar's sprites (bin/grafs_jag) */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
     int                    fire_hold_lockout;/* 1 = keep the ORIGINAL Amiga bug where an OPPONENT's tackle
                                               * kills your held fire button's shot charge for good. 0 (default)

@@ -449,6 +449,11 @@ Nothing is duplicated under `uae/` any more.
 - bin/grafs - Amiga graphics in 4 bitplane format
 - bin/grafs_aga - Amiga graphics in 8 bitplane format (AGA pre-processor switches between AGA and non-AGA)
 - bin/grafs_dos, bin/grafs_2020, bin/grafs_arcade - alternate asset tiers (SDL only)
+- bin/grafs_jag - the Atari Jaguar's gameplay sprites, 8bpp (SDL only, `--jag-graphics`,
+  docs/JAGUAR.md). Built from SwosGfx's `-jag2amiga` output by `scripts/make_jag_graphics.py`.
+  The Jaguar redrew each flat colour as a ramp, so a kit slot is FOUR shades (240-255) and
+  only those follow the team; the art's own colours are installed in free palette entries
+  (82-175), the ramps in 176-239, so the pitch, HUD and menus are untouched.
 - bin/sound - Amiga music modules and sound effects in RJP1 format
 - bin/save - save games, shared by both targets
 - bin/data_json - editable JSON that bakes into competition/menu/tactics C (SDL only)

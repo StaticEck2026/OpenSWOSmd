@@ -1,0 +1,353 @@
+/*
+ * jag_graphics.c -- the Atari Jaguar sprite tier (SDL only, --jag-graphics).
+ *
+ * The 1995 Jaguar release redrew SWOS's gameplay art at 256 colours: the same
+ * sprites, in the same bank layout, with every flat colour turned into a little
+ * ramp of shades. SwosGfx converts it back into the Amiga banks, and
+ * scripts/make_jag_graphics.py lays those out as the planar sheets the game
+ * loads (bin/grafs_jag), so the game's own image scripts cut the same sprites
+ * from Jaguar pixels. What is left -- and what this file is -- is COLOUR.
+ *
+ * WHAT THE ART DOES WITH COLOUR
+ *
+ * Comparing the Jaguar sheets with the 16-colour originals, pixel for pixel,
+ * every Amiga colour became either itself or a ramp:
+ *
+ *      Amiga 1,2,3  9,12,13  4,5,6      kept, 1:1   (greys, hair, skin: they
+ *                                                    were already ramps)
+ *      Amiga 8      (shadow)  -> 29-31, 220-223     the art's own grass-tinted
+ *                                                    shadow shades
+ *      Amiga 10     stripes   -> 240-243            \
+ *      Amiga 11     shirt     -> 244-247             | the KIT: four slots,
+ *      Amiga 14     shorts    -> 248-251             | four shades each
+ *      Amiga 15     socks     -> 252-255            /
+ *
+ * So a Jaguar pixel is "(the colour SWOS means) at (a shade)", and only the kit
+ * has to follow the team. Skin and hair need nothing new: the game already
+ * varies exactly those indices per player (ConvertColorTableToSkinColor), and
+ * the art kept them.
+ *
+ * IT DOES NOT NEED A PALETTE OF ITS OWN
+ *
+ * The game's 256 colours came from the DOS palette, which carries dimmed copies
+ * of the 16 SWOS colours -- which is exactly what a kit ramp is. Every kit
+ * colour's four shades are already in there (measured: the furthest is 3 units
+ * of 4096 from the shade we would have made), and so are 64 of the art's own 76
+ * colours. So this tier RE-USES entries rather than installing them:
+ *
+ *   - a kit shade is the nearest existing entry to colour x {16,13,9,6}/16, and
+ *     shade 0 is the kit colour ITSELF, so a Jaguar kit is the colour the Amiga
+ *     draws with shading under it;
+ *   - an art colour takes the nearest entry when one is close enough and free,
+ *     and only otherwise costs an entry from a small pool.
+ *
+ * That matters more than the entries it saves. The palette is NOT a scratchpad:
+ * the pitch rewrites nine entries per pitch condition, the replay "R" bank
+ * (soccer_s, sprites 0x447..0x486) owns 0x70..0x7F, the stadium and crowd
+ * backgrounds are 8bpp art that reaches across it, and the fade walks all of it.
+ * Installing this tier's colours across that range is how the spinning R came
+ * out in the wrong colours. Those entries are volatile below: never written,
+ * never re-used.
+ */
+#include "jag_graphics.h"
+
+#ifdef SWOS_SDL_BUILD
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+extern int16_t   LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
+extern uint16_t  _gamePalette[];
+/* The nine the PITCH owns: WriteCopperPitchPalette rewrites them with the grass
+ * and line colours of the pitch being played on. */
+extern uint8_t   _paletteIndices[];
+#define JAG_PITCH_ENTRIES 9
+
+enum {
+    /* The replay "R" (soccer_s) bank's own 16 (display.h). */
+    JAG_R_FIRST     = 0x70,
+    JAG_R_LAST      = 0x7F,
+    /* The few art colours with nothing close enough in the palette live here.
+     * Small, and high: measured free through a match, the stadium line-up and
+     * the goal celebration. */
+    JAG_POOL_FIRST  = 201,
+    JAG_POOL_LAST   = 239,
+    /* Near enough to re-use an entry rather than spend one, as 12-bit channels
+     * squared: 2 is one channel one step out -- invisible, and the difference
+     * between 64 of the art's colours costing nothing and costing an entry. */
+    JAG_NEAR_ENOUGH = 2,
+    JAG_UNASSIGNED  = 0xFF
+};
+
+/* Which of SWOS's colours each kit slot is, in the order the art's ramps run. */
+static const uint8_t k_kitSlotAmiga[JAG_KIT_SLOTS] = { 10, 11, 14, 15 };
+
+/* The shade of a ramp, as sixteenths of the colour. */
+static const uint8_t k_shade[JAG_KIT_SHADES] = { 16, 13, 9, 6 };
+
+static const char *const k_banks[] = {
+    "CJCTEAM1", "CJCTEAM2", "CJCTEAM3", "CJCTEAMG", "CJCBITS", "CJCBENCH"
+};
+
+static int32_t  s_enabled;
+static int32_t  s_haveArt;                  /* JAG.PAL is loaded */
+static int32_t  s_triedArt;
+static uint8_t  s_art[256][3];              /* the sheets' own palette, 8 bits a channel */
+static uint8_t  s_used[256];                /* ... and which of it the banks draw in */
+static uint8_t  s_remap[256];               /* sheet colour -> palette entry */
+static uint8_t  s_taken[256];               /* entries this tier has spoken for */
+static uint8_t  s_nextPool = JAG_POOL_FIRST;
+static int32_t  s_saidFull;
+
+static int32_t ensureArt(void);
+
+/* Cheap and without side effects on purpose: the asset loader asks this while it
+ * is opening a file, so loading anything here would be a loader inside a loader. */
+int32_t JagGfx_Enabled(void) { return s_enabled; }
+
+void JagGfx_SetEnabled(int32_t on) { s_enabled = on != 0; }
+
+int32_t JagGfx_IsBank(const char *name)
+{
+    const char *base;
+    size_t i;
+
+    if (!s_enabled || !name || !ensureArt())
+        return 0;
+    base = strrchr(name, '/');
+    base = base ? base + 1 : name;
+    for (i = 0; i < sizeof k_banks / sizeof k_banks[0]; i++) {
+        size_t n = strlen(k_banks[i]);
+        if (strncasecmp(base, k_banks[i], n) == 0 && (base[n] == '.' || base[n] == '\0'))
+            return 1;
+    }
+    return 0;
+}
+
+/* An entry whose colour is not this tier's to read or to write: the pitch's nine
+ * (they follow the pitch condition), the replay R bank's sixteen, and the kit
+ * block, which is what a Jaguar sprite's pixels MEAN before they are recoloured. */
+static int32_t volatileEntry(int32_t entry)
+{
+    int32_t i;
+    if (entry >= JAG_R_FIRST && entry <= JAG_R_LAST)
+        return 1;
+    if (entry >= JAG_KIT_FIRST)
+        return 1;
+    for (i = 0; i < JAG_PITCH_ENTRIES; i++)
+        if ((int32_t)_paletteIndices[i] == entry)
+            return 1;
+    return 0;
+}
+
+static int32_t distance(uint16_t pal, const uint8_t rgb12[3])
+{
+    int32_t dr = (int32_t)((pal >> 8) & 15) - rgb12[0];
+    int32_t dg = (int32_t)((pal >> 4) & 15) - rgb12[1];
+    int32_t db = (int32_t)(pal & 15) - rgb12[2];
+    return dr * dr + dg * dg + db * db;
+}
+
+/* The entry nearest `rgb12`, and how far off it is. `freeOnly` skips entries this
+ * tier has already given to another colour, so two shades of the art's own ramps
+ * cannot collapse onto one entry and flatten it. */
+static int32_t nearestEntry(const uint8_t rgb12[3], int32_t freeOnly, int32_t *outDist)
+{
+    int32_t best = -1, bestD = 1 << 30, i;
+    for (i = 0; i < 256; i++) {
+        int32_t d;
+        if (volatileEntry(i) || (freeOnly && s_taken[i]))
+            continue;
+        d = distance(_gamePalette[i], rgb12);
+        if (d < bestD) { bestD = d; best = i; }
+    }
+    if (outDist)
+        *outDist = bestD;
+    return best;
+}
+
+static void to12(const uint8_t rgb8[3], uint8_t out[3])
+{
+    out[0] = (uint8_t)(rgb8[0] >> 4);
+    out[1] = (uint8_t)(rgb8[1] >> 4);
+    out[2] = (uint8_t)(rgb8[2] >> 4);
+}
+
+/* The sheets' palette, read the first time the game asks about a Jaguar bank.
+ * NOT at the command line: LoadFileEx stages through the frontbuffer, which the
+ * game has not allocated yet. */
+static int32_t ensureArt(void)
+{
+    uint8_t buf[4 + 768 + 256];
+    uint32_t size = 0;
+    int32_t i;
+
+    if (s_haveArt)
+        return 1;
+    if (!s_enabled || s_triedArt)
+        return 0;
+    s_triedArt = 1;
+    if (LoadFileEx((uint8_t *)"grafs_jag/JAG.PAL", buf, &size) != 0 || size < sizeof buf ||
+        memcmp(buf, "JGP1", 4) != 0) {
+        fprintf(stderr, "[jag] bin/grafs_jag/JAG.PAL is missing or not this format: staying with "
+                        "the Amiga art (scripts/make_jag_graphics.py)\n");
+        s_enabled = 0;
+        return 0;
+    }
+    for (i = 0; i < 256; i++) {
+        s_art[i][0] = buf[4 + i * 3];
+        s_art[i][1] = buf[4 + i * 3 + 1];
+        s_art[i][2] = buf[4 + i * 3 + 2];
+        s_used[i]   = buf[4 + 768 + i];
+        /* Identity where a sprite's colours already mean what the game means: the
+         * low 16 are SWOS's own (the team table recolours them), and the kit block
+         * is replaced per team. */
+        s_remap[i] = (i < 16 || i >= JAG_KIT_FIRST) ? (uint8_t)i : JAG_UNASSIGNED;
+    }
+    s_haveArt = 1;
+    return 1;
+}
+
+/* Where one of the art's own colours goes: the nearest entry when one is close
+ * enough and not already spoken for, else an entry of its own from the pool. */
+static uint8_t artEntry(int32_t sheetIndex)
+{
+    uint8_t rgb12[3];
+    int32_t d = 0, near;
+
+    to12(s_art[sheetIndex], rgb12);
+    /* An entry holding exactly this colour is shared gladly -- the art spends
+     * several indices on one colour where its ramps overlap. */
+    near = nearestEntry(rgb12, 0, &d);
+    if (near >= 0 && d == 0) {
+        s_taken[near] = 1;
+        s_remap[sheetIndex] = (uint8_t)near;
+        return (uint8_t)near;
+    }
+    /* Otherwise it needs one of its own, or two shades of a ramp would land on
+     * one entry and flatten it. */
+    near = nearestEntry(rgb12, 1, &d);
+    if (near >= 0 && d <= JAG_NEAR_ENOUGH) {
+        s_taken[near] = 1;
+        s_remap[sheetIndex] = (uint8_t)near;
+        return (uint8_t)near;
+    }
+    while (s_nextPool <= JAG_POOL_LAST && volatileEntry(s_nextPool))
+        s_nextPool++;
+    if (s_nextPool <= JAG_POOL_LAST) {
+        uint8_t slot = s_nextPool++;
+        _gamePalette[slot] = (uint16_t)((rgb12[0] << 8) | (rgb12[1] << 4) | rgb12[2]);
+        s_taken[slot] = 1;
+        s_remap[sheetIndex] = slot;
+        return slot;
+    }
+    if (!s_saidFull) {
+        s_saidFull = 1;
+        fprintf(stderr, "[jag] the art wants more colours than the %d spare entries: the rest "
+                        "take the nearest one in the palette\n", JAG_POOL_LAST - JAG_POOL_FIRST + 1);
+    }
+    near = nearestEntry(rgb12, 0, NULL);
+    s_remap[sheetIndex] = (uint8_t)(near < 0 ? 0 : near);
+    return s_remap[sheetIndex];
+}
+
+const uint8_t *JagGfx_SheetRemap(void)
+{
+    static int32_t said;
+    int32_t i, reused = 0, spent = 0;
+
+    if (!s_enabled || !ensureArt())
+        return NULL;
+    for (i = 16; i < JAG_KIT_FIRST; i++) {
+        if (s_remap[i] != JAG_UNASSIGNED)
+            continue;
+        if (!s_used[i]) {
+            s_remap[i] = 0;             /* the art never draws in it */
+            continue;
+        }
+        artEntry(i);
+        if (s_remap[i] >= JAG_POOL_FIRST && s_remap[i] <= JAG_POOL_LAST)
+            spent++;
+        else
+            reused++;
+    }
+    if (!said && (reused || spent)) {
+        said = 1;
+        fprintf(stderr, "[jag] Jaguar sprites: bin/grafs_jag; %d of the art's colours found in "
+                        "the palette, %d given spare entries (%d..%d)\n",
+                reused, spent, JAG_POOL_FIRST, JAG_POOL_LAST);
+    }
+    return s_remap;
+}
+
+void JagGfx_NewMatch(void)
+{
+    if (s_enabled)
+        (void)ensureArt();               /* a safe moment: the game is up */
+    /* SWOS_JAG_DUMP=1: the entries this tier must not have touched -- the replay
+     * "R" bank's, whose colours the spinning R is drawn in. They are what the
+     * game put there, or this tier has trodden on them again. */
+    if (s_enabled && getenv("SWOS_JAG_DUMP")) {
+        int32_t i;
+        fprintf(stderr, "[jag] R bank (%02X..%02X):", JAG_R_FIRST, JAG_R_LAST);
+        for (i = JAG_R_FIRST; i <= JAG_R_LAST; i++)
+            fprintf(stderr, " %03X", _gamePalette[i] & 0xFFF);
+        fprintf(stderr, "\n");
+    }
+}
+
+void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
+{
+    int32_t i, slot, shade;
+
+    if (!s_haveArt) {
+        for (i = 0; i < 256; i++)
+            out256[i] = (uint16_t)(i < 16 ? amiga16[i] : i);
+        return;
+    }
+    for (i = 0; i < 256; i++)
+        out256[i] = (uint16_t)i;
+    /* What the game says about its own colours -- skin and hair among them -- and
+     * [0] with it, which is what tells ConvertSpriteColors to leave transparent
+     * pixels alone. */
+    for (i = 0; i < 16; i++)
+        out256[i] = amiga16[i];
+    for (slot = 0; slot < JAG_KIT_SLOTS; slot++) {
+        uint16_t colour = (uint16_t)(amiga16[k_kitSlotAmiga[slot]] & 0xFF);
+        uint16_t c = _gamePalette[colour];
+        for (shade = 0; shade < JAG_KIT_SHADES; shade++) {
+            uint16_t entry;
+            if (shade == 0) {
+                /* The colour itself, entry and all: a Jaguar kit is the kit the
+                 * Amiga draws. (Kit colour 0 is one the pitch rewrites, and the
+                 * 16-colour game lets that follow the pitch too.) */
+                entry = colour;
+            } else {
+                uint8_t want[3];
+                int32_t near;
+                want[0] = (uint8_t)((((c >> 8) & 15) * k_shade[shade]) >> 4);
+                want[1] = (uint8_t)((((c >> 4) & 15) * k_shade[shade]) >> 4);
+                want[2] = (uint8_t)(((c & 15) * k_shade[shade]) >> 4);
+                near = nearestEntry(want, 0, NULL);
+                entry = (uint16_t)(near < 0 ? colour : near);
+            }
+            out256[JAG_KIT_FIRST + slot * JAG_KIT_SHADES + shade] = entry;
+        }
+    }
+}
+
+#else   /* the Amiga build has no Jaguar tier: 8bpp sprite banks are twice the
+         * chip RAM and bandwidth of the 4bpp ones the A1200 draws today. */
+
+int32_t        JagGfx_Enabled(void) { return 0; }
+void           JagGfx_SetEnabled(int32_t on) { (void)on; }
+int32_t        JagGfx_IsBank(const char *name) { (void)name; return 0; }
+const uint8_t *JagGfx_SheetRemap(void) { return 0; }
+void           JagGfx_NewMatch(void) {}
+void           JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
+{
+    (void)amiga16; (void)out256;
+}
+
+#endif /* SWOS_SDL_BUILD */

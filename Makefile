@@ -879,7 +879,7 @@ macos-app: macos-universal
 	  else \
 	    echo "    WARNING: SDL2.framework not found — user will need to install it system-wide" >&2; \
 	  fi; \
-	  for d in data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade sound data_json; do \
+	  for d in data grafs grafs_aga grafs_dos grafs_2020 grafs_arcade grafs_jag sound data_json; do \
 	    if [ -d "$(BINDIR)/$$d" ]; then \
 	      echo "    copying $$d/"; \
 	      cp -R "$(BINDIR)/$$d" $$APP/Contents/MacOS/; \

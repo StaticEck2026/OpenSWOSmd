@@ -146,6 +146,9 @@ static int handler(void *user, const char *section,
         else if (eqi(name, "gameplay") && parse_bool(value, &b)) opts->dos_gameplay = b;
         else if (eqi(name, "directory") && value && value[0])
             snprintf(opts->dos_dir, sizeof opts->dos_dir, "%s", value);
+    } else if (eqi(section, "jaguar")) {
+        int b;
+        if (eqi(name, "graphics") && parse_bool(value, &b)) opts->jag_graphics = b;
     } else if (eqi(section, "arcade")) {
         int b;
         if (eqi(name, "enabled") && parse_bool(value, &b)) opts->arcade = b;
@@ -240,7 +243,7 @@ static const char *crt_mask_str(int m)
 /* settings_build() fills a stack array of this size and nothing bounds-checks
  * n, so keep comfortable headroom over the number of entries it appends
  * (36 as of [netplay] record). */
-#define SETTINGS_MAX 48
+#define SETTINGS_MAX 49
 
 /* Inline comment appended to a section-header line in a freshly-created file. */
 static const char *section_intro(const char *sec)
@@ -315,6 +318,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
     items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
     items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
     items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };
+    items[n++] = (IniEntry){ "jaguar", "graphics",
+        "; graphics: true | false - play with the Atari Jaguar's gameplay sprites\n"
+        "; (bin/grafs_jag, built by scripts/make_jag_graphics.py). The players and the\n"
+        "; ball only: the pitch, the menus and the HUD stay as they are.",
+        opts->jag_graphics ? "true" : "false" };
     items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
     items[n++] = (IniEntry){ "arcade", "mode",       "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL", Arcade_ModeName(opts->arcade_mode) };
     items[n++] = (IniEntry){ "arcade", "game_seconds", "; game rules (F2 service menu). game_seconds 10..600;  golden_goal/penalties_on_draw/goal_replay: true | false", vbuf[2] };
