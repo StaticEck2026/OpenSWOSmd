@@ -469,8 +469,15 @@ void swos_save_commit(void)
 {
 #ifdef SWOS_SWITCH_BUILD
     /* Not durable until committed, and SDL will not do it for you. The mount
-     * name matches what SDL_GetPrefPath mounted ("save"). */
-    SDL_NintendoSwitch_CommitSaveData("save");
+     * name matches what SDL_GetPrefPath mounted ("save"). Files must already be
+     * CLOSED -- every caller does that first.
+     *
+     * A failure here costs the player whatever they just saved, so it is said
+     * out loud: silent is how you get "my career vanished" with nothing in the
+     * log to explain it. */
+    if (!SDL_NintendoSwitch_CommitSaveData("save"))
+        fprintf(stderr, "[save] commit to save: FAILED (%s) -- what was just "
+                        "written will not survive this launch\n", SDL_GetError());
 #endif
 }
 

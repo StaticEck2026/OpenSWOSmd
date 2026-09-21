@@ -287,7 +287,15 @@ static uint32_t rob_save(uint8_t *name, uint8_t *src, uint32_t fileSize)
     uint32_t put = fs_save(path, src, fileSize);
     size = put;
     _rnl_d1_return = put;
-    if (put) wasm_persist_saves();
+    if (put) {
+        wasm_persist_saves();
+        /* The Switch's twin of that: a write to save:/ is not durable until it
+         * is committed, and SDL will not do it for you. THIS is the game's save
+         * path -- careers, tactics, edited teams, options all arrive here -- so
+         * without it a Switch player's season reads back fine all session and is
+         * gone at the next launch (docs/SWITCH.md, swos_io.h). */
+        swos_save_commit();
+    }
     return put ? 0 : 1;
 }
 
@@ -297,6 +305,7 @@ static uint32_t rob_delete(uint8_t *name)
     resolve_path(name, path, sizeof(path));
     fs_delete(path);
     wasm_persist_saves();     /* a deletion has to stick too */
+    swos_save_commit();       /* ... on both of the targets that need telling */
     _rnl_d1_return = 0;
     return 0;
 }

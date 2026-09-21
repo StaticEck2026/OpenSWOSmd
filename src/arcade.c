@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 
 #include "arcade.h"
+#include "swos_io.h"   /* swos_save_commit — Switch save durability */
 #include "text_render.h"    /* DrawMenuText, DrawMenuTextRightAligned */
 #include "display.h"        /* _screen_width, SCREEN_HEIGHT */
 #include "platform_sdl.h"   /* PlatformInitOptions — service-menu settings */
@@ -1670,6 +1671,7 @@ static void arc_hs_save(void)
         }
     }
     fclose(f);
+    swos_save_commit();     /* durable on the Switch only after this (swos_io.h) */
     fprintf(stderr, "[arcade] high scores saved to %s\n", arc_hs_path());
 }
 

@@ -631,6 +631,7 @@ static int32_t write_file(const char *name, const uint8_t *buf, uint32_t len)
         fprintf(stderr, "[replay] short write to %s\n", path);
         return 1;
     }
+    swos_save_commit();          /* the save mount, on the Switch (swos_io.h) */
     fprintf(stderr, "[replay] wrote %s (%u bytes)\n", path, len);
     return 0;
 }

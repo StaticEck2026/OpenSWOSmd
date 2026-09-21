@@ -370,6 +370,7 @@ static void settings_write_full(const PlatformInitOptions *opts, const char *pat
         fprintf(f, "%s=%s\n", items[i].key, items[i].value);
     }
     fclose(f);
+    swos_save_commit();   /* as Settings_Save does -- a fresh ini must survive the launch */
 }
 
 /* Trim a value string (after '=') into `out`: skip leading blanks, stop at
