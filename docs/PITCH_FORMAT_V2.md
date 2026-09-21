@@ -98,49 +98,94 @@ as a JSON **string** in `swos:anim` and parsed by us. That is deliberate: it
 survives a Tiled round-trip untouched, our editor can later present it properly,
 and no part of it depends on Tiled growing a feature.
 
-### 2.2 An animation
+### 2.2 An animation, specified
 
 ```jsonc
 {
-  "id": "waves",
+  "id": "waves",             // unique within its layer
   "trigger": "always",       // always | kickoff | goal | halftime | whistle | never
-  "delay": 0,                // frames before the first step
-  "duration": 24,            // frames for one pass
+  "delay": 0,                // frames before the FIRST pass, not before each loop
+  "duration": 24,            // frames in one pass, >= 1
   "loop": true,
   "pingpong": false,
-  "ease": "inoutsine",       // any name from src/easing.c
+  "ease": "linear",          // any name from src/easing.c; eases TIME (see below)
   "tracks": [
-    { "kind": "blit",        // copy tiles: source rect -> target rect
-      "from": "surf-frames", // a hidden layer
-      "src":  { "x": 0, "y": 0, "w": 6, "h": 2, "frames": 12, "stride": 6 },
-      "dst":  { "x": 4, "y": 51 } },
+    { "kind": "blit",        // copy tiles: a frame from a hidden layer -> the grid
+      "from": "surf-frames",
+      "src": { "x": 0, "y": 0, "w": 6, "h": 2, "frames": 12, "stride": 6 },
+      "dst": { "x": 4, "y": 51 } },                       // all in TILES
 
-    { "kind": "shift",       // move the WHOLE layer, no copying
-      "dx": 48, "dy": 0,     // in 1/16 of a tile, so sub-tile drift is possible
-      "wrap": true },
+    { "kind": "shift", "dxPx": 48, "dyPx": 0, "wrap": true },   // PIXELS
 
-    { "kind": "fade", "from": 255, "to": 96 }
+    { "kind": "fade", "from": 255, "to": 96 }                   // 0..255
   ]
 }
 ```
 
-- **Frames, never milliseconds.** The match runs on a fixed tick (50 Hz, or 70 in
-  DOS-gameplay mode), replays are frame-indexed, and netplay rolls back by frame
-  number. A duration in milliseconds would make the same pitch animate
-  differently in a replay than it did live.
-- **`blit`** is the source-rect/target-rect copy the whole design is built
-  around: `frames` rectangles laid out `stride` tiles apart in the hidden layer,
-  stepped by the eased `t`. This is how waves, birds, a rotating sun and a
-  flapping flag all work, with one code path.
-- **`shift`** moves a layer wholesale — the cloud case, where copying nothing is
-  the point. Sub-tile units because a cloud bank that jumps 16 px at a time is
-  not drifting.
-- **`fade`** is per-layer alpha. See §7: this is the one track that needs
-  rendering work we do not have.
-- `ease` names come from `EaseName()` — 31 of them, `"linear"` through
-  `"inoutbounce"`.
+**Time, not value, is what gets eased.** One `ease` field, one meaning
+everywhere: the curve maps *elapsed fraction* to *progress fraction*, and each
+track then reads that progress linearly. For `shift` and `fade` this is
+identical to easing the value (easing `t` and lerping is what "ease a value"
+means anyway); for `blit` it is the only reading that makes sense, because a
+frame index cannot be interpolated. So there is no second field and no per-kind
+special case — and the honest consequence is that **easing a flipbook is a time
+warp**, which is why `blit` defaults to `linear`. An `outbounce` on a twelve
+frame wave will re-show frames as the curve doubles back. Occasionally that is
+what you want; mostly it is a mistake, and now it is a documented one.
 
----
+**The clock, exactly.** `startFrame` is the match frame the trigger fired on:
+
+```
+e = frame - startFrame - delay            e < 0  -> nothing drawn yet
+n = e / duration                          which pass
+u = (e % duration) / duration             0..1 within the pass
+if pingpong and n is odd:  u = 1 - u
+if not loop and n >= (pingpong ? 2 : 1):  hold at the final value
+p = Ease(ease, u)
+```
+
+Everything derives from the frame number, so a replay re-deriving an animation
+at frame N always gets what the live match drew. `delay` applies once, before
+the first pass — a looping animation that re-waited every cycle would stutter,
+and a gap between cycles belongs in `duration` as hold frames, not in a second
+field. `pingpong` without `loop` means out and back once, then hold.
+
+**Units are in the field names.** Grid rectangles (`x`, `y`, `w`, `h`, `stride`,
+`dst`) are in **tiles**, because they address cells. Motion is in **pixels**
+(`dxPx`, `dyPx`), because a drifting layer that can only move in 16 px steps is
+not drifting. A tile is exactly 16 px, so the two are not really different units
+— but mixing them silently is how a format gets misread, so the pixel ones say
+so.
+
+**A `blit` picks its frame by flooring:**
+`index = clamp(floor(p * frames), 0, frames - 1)`. Floor gives every frame an
+equal share of the duration; rounding would give the first and last frames half
+a share each, which makes a looping flipbook stutter at the wrap. The clamp is
+what absorbs `back` and `elastic` overshooting outside 0..1, so no curve needs
+special-casing.
+
+**Re-triggering restarts, and the game already told us so.** A `goal` animation
+that is still running when a second goal goes in re-arms from `delay` and starts
+again. That is not a coin toss: it is exactly what the game's own celebration
+clock does — `patternsGoalCounter` is *armed to 1* when a goal fires
+(`src/game_timers.c:614`), restarting the 300-frame celebration rather than
+queueing or ignoring it. Matching it keeps a v2 animation in step with the crowd
+reacting beside it. `always` starts at kick-off and free-runs; `never` is for
+animations only something else will start, which today means the editor.
+
+**When two tracks write the same cell, the last one wins** — layer order in the
+file, then track order within the animation. It is defined rather than forbidden
+because deliberate occlusion is legitimate (a bird passing in front of surf on
+one layer), but it is almost always a mistake, so **the emitter warns** on
+overlapping `dst` rectangles within a layer. Warn, not reject: the same call the
+exporter makes about a suspicious fan range, and for the same reason — a tool
+that refuses to build is worse than one that says what it saw.
+
+**A `fade` where nothing can blend is ignored, with one warning at load.** The
+pipeline is 8bpp indexed and has no alpha (§7.1), so until the GPU path exists
+this track does nothing on most targets. Ignoring it means a pitch authored for
+a machine that can blend still loads and plays everywhere else, just flatter —
+which is the same bargain the capability word in §6 makes for the Amiga.
 
 ## 3. Easing — done
 
@@ -304,8 +349,16 @@ Sketch:
 "SWPC" u16 version u16 caps
 u16 cols, rows, tileW, tileH, layerCount, animBytes
 per layer: u8 role, i16 z, u8 flags(visible, alpha), u16 tileCount, u16 cells[cols*rows]
-anim block: the parsed animation table, fixed-width records, no strings
+anim block: fixed-width records, no strings and no floats
+  per anim:  u8 trigger, u8 ease, u8 flags(loop, pingpong), u8 trackCount,
+             u16 delay, u16 duration
+  per track: u8 kind, u8 srcLayer, then the kind's fields as i16
 ```
+
+Everything symbolic is resolved by the emitter, not the game: `"inoutsine"`
+becomes `EASE_IN_OUT_SINE` through `EaseFromName()`, a `from` layer name becomes
+that layer's index, and a trigger name becomes its enum. The runtime never sees
+a string, which is what makes the Amiga side a table walk rather than a parser.
 
 The animation table is **baked from the JSON at build time too** — the runtime
 never sees `"inoutsine"`, only `EASE_IN_OUT_SINE`. That is what `EaseFromName()`
@@ -459,6 +512,10 @@ it, because the crowd is in the simulation's RNG stream.
   first — the six stock pitches must keep loading from the existing files while
   v2 is proven, and `src/resload.c`'s tier search already gives us a clean way to
   prefer one.
+- **Nothing consumes the animation schema yet**, which is the point at which a
+  format is cheapest to change. §2.2 is settled enough to build the emitter
+  against; expect the first real pitch to argue with one of its defaults, and
+  change it then rather than guessing more now.
 - **Per-tile animation, Tiled's own kind?** Tiled supports an `animation` array
   on a tile in the tileset (flipbook, fixed ms per frame). It is tempting for
   flags and water, but its timing is in milliseconds and its frames are a fixed
