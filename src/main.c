@@ -353,7 +353,14 @@ int main(int argc, char **argv)
     opts.screen = 0;                 /* target display index (0 = primary) */
     opts.audio_mono = 1;
     opts.dos_graphics = 0;        /* default Amiga graphics */
+#ifdef SWOS_WASM_BUILD
+    /* The browser build ships the Jaguar art and plays with it unless SWOS.ini
+     * says otherwise: it is the better-looking half of what the web build is for,
+     * and a browser player has no command line to turn it on with. */
+    opts.jag_graphics = 1;
+#else
     opts.jag_graphics = 0;        /* ... and not the Jaguar's either */
+#endif
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
@@ -529,6 +536,9 @@ int main(int argc, char **argv)
             return ReplayTest_MathSelfTest();
         } else if ((v = match_kv(a, "menu")) != NULL) {
             OnlineMenus_SetStartMenu(v);
+            /* Same reason as --matchmaker-menu: this flag exists to reach a menu,
+             * and the loader intro plays in front of it in real time. */
+            { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if (strcmp(a, "--menu-selftest") == 0) {
             return OnlineMenus_SelfTest();
         } else if (strncmp(a, "--matchmaker-selftest", 21) == 0) {
@@ -670,7 +680,12 @@ int main(int argc, char **argv)
         return 1;
     }
     if (replay_file) {
-#ifdef _WIN32
+#if defined(SWOS_WASM_BUILD)
+        /* The browser's SDL has no dummy drivers -- it draws to its canvas, which
+         * is where a replay in a browser is meant to go anyway (it was
+         * "SDL_Init: dummy not available" and no game at all). */
+        setenv("SWOS_NO_LOG", "1", 1);
+#elif defined(_WIN32)
         _putenv("SWOS_HARNESS_TURBO=1");
         _putenv("SWOS_NO_LOG=1");
         if (!replay_window && !getenv("SDL_VIDEODRIVER"))
@@ -741,7 +756,11 @@ int main(int argc, char **argv)
     }
     if (view_replay) {
         /* A batch run like --replay-test: headless, silent and unpaced unless asked. */
-#ifdef _WIN32
+#if defined(SWOS_WASM_BUILD)
+        /* Except in a browser, whose SDL has no dummy drivers and whose canvas is
+         * where the replay is meant to be watched anyway. */
+        setenv("SWOS_NO_LOG", "1", 1);
+#elif defined(_WIN32)
         _putenv("SWOS_HARNESS_TURBO=1");
         _putenv("SWOS_NO_LOG=1");
         if (!replay_window && !getenv("SDL_VIDEODRIVER"))
