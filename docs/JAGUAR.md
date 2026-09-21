@@ -16,6 +16,11 @@ screen are exactly what they were — this is a sprite tier, not a palette swap.
 SDL only: an 8bpp bank is twice the chip RAM and twice the blitter bandwidth of
 the 4bpp one the A1200 draws today, so the Amiga build does not take it.
 
+**The web build plays with it by default** and carries the banks in its preload
+(`--preload-file bin/grafs_jag`, ~0.5 MB): it is the better-looking half of what
+the web build is for, and a browser player has no command line to turn it on
+with. `[jaguar] graphics = false` in the in-browser `SWOS.ini` turns it off.
+
 ## What the art does with colour
 
 Comparing the Jaguar sheets against the 16-colour originals pixel for pixel —
@@ -27,7 +32,7 @@ became either itself or a ramp:
 | 1, 2, 3 | greys, black | the same, 1:1 |
 | 4, 5, 6 | skin | the same, 1:1 |
 | 9, 12, 13 | hair | the same, 1:1 |
-| 8 | the drop shadow | 29–31, 220–223 (its own grass-tinted shades) |
+| 8 | the drop shadow | 29–31, 220–223 — a ramp, see below |
 | 10 | shirt stripes | **240–243** |
 | 11 | shirt | **244–247** |
 | 14 | shorts | **248–251** |
@@ -50,14 +55,55 @@ block, exactly what the 16-colour game draws.
 
 So when the three collapse onto one colour, this tier shades that colour instead.
 Black has nothing darker than it, so the highlight lifts rather than the shadow
-deepening: `000000` stays the shadow and the lit side becomes `111111` and
-`333333`. The lift is the `k == 0 ? 3 : k == 1 ? 1 : 0` in `JagGfx_TeamTable` —
-one constant, if it wants to be stronger or subtler. Hair the game already shades
-is left alone.
+deepening: `000000` stays the shadow and the lit side becomes `333333` and
+`666666`.
+
+**How far it lifts is the whole point of the tier, and it was too timid.** The
+first attempt lifted to `111111` and `333333`, and `111111` is indistinguishable
+from the black beside it — so a black-haired player still read as the flat block
+the 16-colour game draws, which is exactly what got reported (2026-09-21). The
+other end is just as wrong: lift to `777777` and it reads as grey hair, not shaded
+black. `666666`/`333333`/`000000` shades it while the mass stays black. It is
+taste, so `SWOS_JAG_HAIR=<hi>,<mid>` (4-bit channels) overrides `s_lift0`/`s_lift1`
+without a rebuild, and `SWOS_JAG_DUMP=1` prints the ramp a collapse produced.
+Hair the game already shades is left alone.
 
 Skin has a milder version of the same thing: face type 2 sends 6,5,4 to 4,4,3, so
 its darkest tone is drawn with two shades rather than three. Left as the game has
 it — changing it would move a skin tone, not just its shading.
+
+### The shadow is the pitch, not a colour
+
+The 16-colour game draws its drop shadow in one near-black colour (`0x020`),
+which reads as a shadow on any pitch. The Jaguar replaced it with seven shades
+— and they are **green**, because a shadow is *the ground in shade* and its
+ground was the Jaguar's own grass (`317100` in the cartridge's pitch CLUT). Ours
+is not: the pitch palette changes with the condition, and muddy is brown
+(`705000`). Keeping the art's greens put green patches under the players on a
+muddy pitch — reported 2026-09-21, and the whole reason this section exists.
+
+So these seven are the only entries the tier re-makes after placing them. Each
+keeps the brightness the artist gave it, measured against the grass it was drawn
+on, and is rebuilt from **our** grass whenever the pitch palette is applied
+(`JagGfx_PitchApplied`, called from `match_setup.c` and again when the banks are
+decoded, since either can come first):
+
+| art | of the grass | muddy `750` | normal `790` |
+|---|---|---|---|
+| 29 | 16/16 | `750` | `790` |
+| 30 | 14/16 | `640` | `670` |
+| 31 | 12/16 | `530` | `560` |
+| 220 | 13/16 | `540` | `570` |
+| 221 | 10/16 | `430` | `450` |
+| 222 | 8/16 | `320` | `340` |
+| 223 | 6/16 | `210` | `230` |
+
+The grass is worked out for the pitch being set up rather than read back out of
+the palette, so it does not matter which of the two callers runs first — and it
+comes from whichever palette the match will be drawn in, the DOS one included.
+`SWOS_JAG_DUMP=1` prints the ramp at kick-off; `SWOS_PITCH_TYPE=0..6` pins the
+pitch (frozen, muddy, wet, soft, normal, dry, hard) so all seven can be looked at
+without playing a season.
 
 ## It needs almost no palette of its own
 
@@ -143,7 +189,10 @@ The tier is off by default and every part of it is behind that flag: with it off
 remap is a null pointer and the recolour is the 16-entry table the game built.
 
 To see it: `--jag-graphics=on --view-replay=<file>.SRP` with
-`SWOS_SCREENSHOT_INTERVAL=N` renders a recorded match to PNGs. A player sprite
+`SWOS_SCREENSHOT_INTERVAL=N` renders a recorded match to PNGs, and
+`SWOS_PITCH_TYPE=1 --replay-test=tests/replay/p95-spr.swr` plays one on a muddy
+pitch (the rig's own assertions diverge under a pinned pitch — it is being used
+as a match, not as a test). A player sprite
 comes out with about 19 colours in its box where the Amiga has 10, and the kit's
 brightest shade equals the Amiga's flat kit colour.
 

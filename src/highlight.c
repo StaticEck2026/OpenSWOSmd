@@ -406,6 +406,25 @@ void SetPitchTypeAndNumber(void)
         needChoose = 1;
     }
 
+#ifdef SWOS_SDL_BUILD
+    {
+        /* SWOS_PITCH_TYPE=0..6 pins the pitch (frozen, muddy, wet, soft, normal,
+         * dry, hard) for a test run: the pitch's colours are what the players are
+         * drawn against, and picking one from the menus costs a key script.
+         * Reads the same Rand() either way, so a pinned run stays deterministic. */
+        const char *pin = getenv("SWOS_PITCH_TYPE");
+        if (pin && *pin) {
+            int32_t want = (int32_t)strtol(pin, NULL, 10);
+            if (want >= 0 && want <= 6) {
+                if (needChoose)
+                    (void)Rand();
+                _pitchType = (int16_t)want;
+                needChoose = 0;
+            }
+        }
+    }
+#endif
+
     if (needChoose) {
         /* Random selection based on cumulative probabilities */
         uint16_t r = Rand();

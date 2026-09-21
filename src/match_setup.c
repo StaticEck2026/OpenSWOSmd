@@ -4,6 +4,7 @@
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
 #include "match_setup.h"
+#include "jag_graphics.h"
 #include "dos_gameplay.h"   /* ApplyGameStyle — the pitch factors below latch its tables */
 #include "game_types.h"
 #include "display.h"        /* single source of `#define AGA` — without it the #ifdef AGA
@@ -894,6 +895,10 @@ apply_palette_and_pitch:
             *(uint16_t *)(_gamePalette + 0x12) = palPtr[2];
         }
 #endif
+
+        /* The Jaguar sprites' shadow is the PITCH in shade, so it is re-made from
+         * the grass this match is played on (jag_graphics.c). No-op otherwise. */
+        JagGfx_PitchApplied();
 
         /* Pitch physics factors (pitchIdx >> 1 for word-indexed tables) */
         uint16_t physIdx = pitchIdx;

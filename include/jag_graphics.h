@@ -29,6 +29,10 @@ const uint8_t *JagGfx_SheetRemap(void);
 /* A match is being set up: the kit ramps of the last one are forgotten. */
 void JagGfx_NewMatch(void);
 
+/* The pitch's palette has just been applied (match_setup.c), so the shadow can be
+ * worked out from the grass this match is played on. */
+void JagGfx_PitchApplied(void);
+
 /* The 256-entry table that recolours a Jaguar sprite, from the 16-entry one the
  * game builds for a team (shirt, stripes, shorts, socks, skin and hair). Each kit
  * shade becomes that colour's own shade; everything else keeps what the 16-entry

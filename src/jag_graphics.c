@@ -83,6 +83,27 @@ enum {
     JAG_UNASSIGNED  = 0xFF
 };
 
+/* THE SHADOW, and why it is not just another of the art's colours.
+ *
+ * A drop shadow is the pitch in shade, and the Jaguar drew it that way: against
+ * its own grass (its pitch CLUT's 317100) these seven shades run from the grass
+ * itself down to about a third of it. But OUR pitch changes with the condition --
+ * muddy is brown (705000), frozen pale, dry yellow -- so keeping the art's greens
+ * puts green patches under the players on a muddy pitch (reported 2026-09-21).
+ * The 16-colour game does not have the problem: its shadow is one near-black
+ * colour that reads on anything.
+ *
+ * So these shades are worked out from the grass of the pitch being played on,
+ * keeping the artist's ramp: sixteenths of the live grass colour, re-made
+ * whenever the pitch palette is (JagGfx_PitchApplied). They are the only entries
+ * this tier rewrites after it has placed them. */
+static const struct { uint8_t art; uint8_t sixteenths; } k_shadow[] = {
+    {  29, 16 }, {  30, 14 }, {  31, 12 },          /* the shadow cast on the grass */
+    { 220, 13 }, { 221, 10 }, { 222,  8 }, { 223, 6 },   /* ... and its deeper part */
+};
+#define JAG_SHADOW_SHADES ((int32_t)(sizeof k_shadow / sizeof k_shadow[0]))
+static uint8_t s_shadowEntry[JAG_SHADOW_SHADES];    /* the entries they were given */
+
 /* Which of SWOS's colours each kit slot is, in the order the art's ramps run. */
 static const uint8_t k_kitSlotAmiga[JAG_KIT_SLOTS] = { 10, 11, 14, 15 };
 
@@ -287,6 +308,27 @@ static uint8_t artEntry(int32_t sheetIndex)
     return s_remap[sheetIndex];
 }
 
+/* An entry of this tier's own, for a colour that will be re-made later (the
+ * shadow): never shared with the art, since rewriting it would move something
+ * else's colour too. */
+static uint8_t ownEntry(int32_t sheetIndex)
+{
+    while (s_nextPool <= JAG_POOL_LAST && volatileEntry(s_nextPool))
+        s_nextPool++;
+    if (s_nextPool > JAG_POOL_LAST)
+        return artEntry(sheetIndex);          /* no room: as good as it gets */
+    {
+        uint8_t slot = s_nextPool++;
+        uint8_t rgb12[3];
+        to12(s_art[sheetIndex], rgb12);
+        _gamePalette[slot] = (uint16_t)((rgb12[0] << 8) | (rgb12[1] << 4) | rgb12[2]);
+        DosGfx_SetExtraColour(slot, s_art[sheetIndex][0], s_art[sheetIndex][1], s_art[sheetIndex][2]);
+        s_taken[slot] = 1;
+        s_remap[sheetIndex] = slot;
+        return slot;
+    }
+}
+
 const uint8_t *JagGfx_SheetRemap(void)
 {
     static int32_t said;
@@ -294,6 +336,17 @@ const uint8_t *JagGfx_SheetRemap(void)
 
     if (!s_enabled || !ensureArt())
         return NULL;
+    /* The shadow first, so it has entries of its own before the art takes any. */
+    for (i = 0; i < JAG_SHADOW_SHADES; i++) {
+        if (s_remap[k_shadow[i].art] != JAG_UNASSIGNED)
+            continue;
+        if (!s_used[k_shadow[i].art]) {
+            s_remap[k_shadow[i].art] = 0;        /* the art never draws in it */
+            continue;
+        }
+        s_shadowEntry[i] = ownEntry(k_shadow[i].art);
+        spent++;
+    }
     for (i = 16; i < JAG_KIT_FIRST; i++) {
         if (s_remap[i] != JAG_UNASSIGNED)
             continue;
@@ -313,13 +366,77 @@ const uint8_t *JagGfx_SheetRemap(void)
                         "the palette, %d given spare entries (%d..%d)\n",
                 reused, spent, JAG_POOL_FIRST, JAG_POOL_LAST);
     }
+    /* The shadow entries hold the art's greens until the pitch says otherwise, and
+     * the banks may well decode after the pitch palette was applied. */
+    JagGfx_PitchApplied();
     return s_remap;
+}
+
+/* The grass this match is played on, as 12-bit channels: whichever palette the
+ * match will be drawn with, for the pitch it is being set up for -- worked out
+ * the way the two sources do it rather than read back, so it does not matter
+ * whether the pitch palette has been applied yet. */
+static void grassColour(uint8_t out[3])
+{
+    extern uint16_t  _pitchNumberAndType;
+    extern const uint16_t *_pitchPalettePtrs[];
+    extern int       _gArcadePitchActive;
+    uint16_t pitch = (uint16_t)(_pitchNumberAndType & 0xFF);
+
+    if (_gDosGraphics) {
+        uint8_t rgb[768];
+        /* The pitch platform_sdl.c will draw with, arcade cabinet included. */
+        DosGfx_BuildPalette(_gArcadePitchActive ? 4 : (int)pitch, rgb);
+        out[0] = (uint8_t)(rgb[0] >> 4);
+        out[1] = (uint8_t)(rgb[1] >> 4);
+        out[2] = (uint8_t)(rgb[2] >> 4);
+        return;
+    }
+    {
+        /* The first of the nine the pitch owns is the grass (general_data.c's
+         * _paletteIndices[0]), and the palettes are in the same order. */
+        const uint16_t *pal = _pitchPalettePtrs[pitch];
+        uint16_t c = pal ? pal[0] : _gamePalette[0];
+        out[0] = (uint8_t)((c >> 8) & 15);
+        out[1] = (uint8_t)((c >> 4) & 15);
+        out[2] = (uint8_t)(c & 15);
+    }
+}
+
+void JagGfx_PitchApplied(void)
+{
+    uint8_t grass[3];
+    int32_t i;
+
+    if (!s_enabled || !s_haveArt)
+        return;
+    grassColour(grass);
+    for (i = 0; i < JAG_SHADOW_SHADES; i++) {
+        uint8_t e = s_shadowEntry[i];
+        uint16_t r, g, b;
+        if (!e)
+            continue;                    /* the art has not been placed yet */
+        r = (uint16_t)((grass[0] * k_shadow[i].sixteenths) >> 4);
+        g = (uint16_t)((grass[1] * k_shadow[i].sixteenths) >> 4);
+        b = (uint16_t)((grass[2] * k_shadow[i].sixteenths) >> 4);
+        _gamePalette[e] = (uint16_t)((r << 8) | (g << 4) | b);
+        DosGfx_SetExtraColour(e, (uint8_t)(r * 17), (uint8_t)(g * 17), (uint8_t)(b * 17));
+    }
+    if (getenv("SWOS_JAG_DUMP")) {
+        fprintf(stderr, "[jag] shadow on grass %X%X%X:", grass[0], grass[1], grass[2]);
+        for (i = 0; i < JAG_SHADOW_SHADES; i++)
+            if (s_shadowEntry[i])
+                fprintf(stderr, " %d=%03X", s_shadowEntry[i],
+                        _gamePalette[s_shadowEntry[i]] & 0xFFF);
+        fprintf(stderr, "\n");
+    }
 }
 
 void JagGfx_NewMatch(void)
 {
     if (s_enabled)
         (void)ensureArt();               /* a safe moment: the game is up */
+    JagGfx_PitchApplied();               /* in case the pitch was set first */
     /* SWOS_JAG_DUMP=1: the entries this tier must not have touched -- the replay
      * "R" bank's, whose colours the spinning R is drawn in. They are what the
      * game put there, or this tier has trodden on them again. */
@@ -332,8 +449,21 @@ void JagGfx_NewMatch(void)
     }
 }
 
+/* How far a collapsed hair colour is lifted for its two lighter shades, in
+ * 4-bit channels. Black has nothing darker than it, so the highlight lifts
+ * rather than the shadow deepening -- and it has to lift FAR ENOUGH: at 3/1 the
+ * mid shade is 111, indistinguishable from the 000 beside it, and the hair reads
+ * as the flat block the 16-colour game draws (reported 2026-09-21). At 7/3 it
+ * reads as grey hair. 6/3 shades it while the mass stays black. Taste, so
+ * SWOS_JAG_HAIR=hi,mid overrides it without a rebuild. */
+static int32_t s_lift0 = 6, s_lift1 = 3;
+
 void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
 {
+    {
+        const char *t = getenv("SWOS_JAG_HAIR");
+        if (t && *t) { s_lift0 = atoi(t); if (strchr(t, ',')) s_lift1 = atoi(strchr(t, ',') + 1); }
+    }
     int32_t i, slot, shade;
 
     if (!s_haveArt) {
@@ -367,7 +497,7 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
                 for (j = 0; j < 3; j++) {
                     int32_t v;
                     if (ch[0] <= 3 && ch[1] <= 3 && ch[2] <= 3)
-                        v = (int32_t)ch[j] + (k == 0 ? 3 : k == 1 ? 1 : 0);   /* lift */
+                        v = (int32_t)ch[j] + (k == 0 ? s_lift0 : k == 1 ? s_lift1 : 0); /* lift */
                     else
                         v = ((int32_t)ch[j] * (k == 0 ? 16 : k == 1 ? 13 : 9)) >> 4;
                     want[j] = (uint8_t)(v > 15 ? 15 : v);
@@ -375,6 +505,11 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
                 near = nearestEntry(want, 0, NULL);
                 out256[hairArt[k]] = (uint16_t)(near < 0 ? c : near);
             }
+            if (getenv("SWOS_JAG_DUMP"))
+                fprintf(stderr, "[jag] hair %d collapsed -> %03X %03X %03X\n", c,
+                        _gamePalette[out256[hairArt[0]]] & 0xFFF,
+                        _gamePalette[out256[hairArt[1]]] & 0xFFF,
+                        _gamePalette[out256[hairArt[2]]] & 0xFFF);
         }
     }
     for (slot = 0; slot < JAG_KIT_SLOTS; slot++) {
@@ -410,6 +545,7 @@ void           JagGfx_SetEnabled(int32_t on) { (void)on; }
 int32_t        JagGfx_IsBank(const char *name) { (void)name; return 0; }
 const uint8_t *JagGfx_SheetRemap(void) { return 0; }
 void           JagGfx_NewMatch(void) {}
+void           JagGfx_PitchApplied(void) {}
 void           JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
 {
     (void)amiga16; (void)out256;
