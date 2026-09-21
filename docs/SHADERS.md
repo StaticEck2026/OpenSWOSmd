@@ -78,9 +78,9 @@ The GPU gets three things instead of one RGBA image:
 
 | texture | format | size | uploaded |
 |---|---|---|---|
-| **index** | `GL_LUMINANCE`/`R8`, 1 byte/px | 336×272 = 91 KB | every frame |
+| **index** | `R8`, 1 byte/px | 336×272 = 91 KB | every frame |
 | **palette** | RGBA8, 256×1 | 1 KB | only when `_gamePalette` changes |
-| **shadow mask** | `GL_LUMINANCE`, 1 byte/px | 91 KB | every frame, only when shadows are on |
+| **shadow mask** | `R8`, 1 byte/px | 91 KB | every frame, only when shadows are on |
 
 That is **a quarter of today's upload** for the frame itself, and the palette —
 which fades rewrite constantly — stops costing a full-frame re-expansion.
