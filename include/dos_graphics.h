@@ -33,6 +33,13 @@ int DosGfx_DecodePlanarSprite(const uint8_t *planar, int nlines, int wquads,
  * pitchType (0..6, clamped). Writes 256 RGB triples (8-bit) to rgb888Out[768]. */
 void DosGfx_BuildPalette(int _pitchType, uint8_t *rgb888Out);
 
+/* Put a colour in the DOS palette that the DOS art itself does not carry. The
+ * Jaguar sprite tier (jag_graphics.c) needs a few for colours of its art with
+ * nothing near enough in this palette; in DOS graphics mode this palette is what
+ * the screen is drawn with, so writing _gamePalette would go nowhere. 8-bit RGB,
+ * applied after the pitch-condition overlay. */
+void DosGfx_SetExtraColour(int entry, uint8_t r8, uint8_t g8, uint8_t b8);
+
 /* Arcade service-menu palette: 16 true-8-bit RGB entries (from SVCFONT.bmp's
  * embedded palette / DosPalette.Service). Writes 16 RGB triples to
  * rgb888Out[48]. Used by the arcade service menu (see docs/ARCADE.md). */

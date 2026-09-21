@@ -83,6 +83,20 @@ void DosGfx_BuildServicePalette(uint8_t *rgb888Out)
     memcpy(rgb888Out, kDosServicePalette, sizeof kDosServicePalette);
 }
 
+/* Colours another tier has placed here (DosGfx_SetExtraColour). */
+static uint8_t s_extra[768];
+static uint8_t s_extraSet[256];
+
+void DosGfx_SetExtraColour(int entry, uint8_t r8, uint8_t g8, uint8_t b8)
+{
+    if (entry < 0 || entry > 255)
+        return;
+    s_extra[entry * 3 + 0] = r8;
+    s_extra[entry * 3 + 1] = g8;
+    s_extra[entry * 3 + 2] = b8;
+    s_extraSet[entry] = 1;
+}
+
 void DosGfx_BuildPalette(int pitchType, uint8_t *rgb888Out)
 {
     uint8_t pal6[768];
@@ -97,6 +111,14 @@ void DosGfx_BuildPalette(int pitchType, uint8_t *rgb888Out)
     }
     for (int i = 0; i < 768; i++)
         rgb888Out[i] = DosGfx_6to8(pal6[i]);
+    /* After the conversion: these arrive as 8-bit already. */
+    for (int i = 0; i < 256; i++) {
+        if (!s_extraSet[i])
+            continue;
+        rgb888Out[i * 3 + 0] = s_extra[i * 3 + 0];
+        rgb888Out[i * 3 + 1] = s_extra[i * 3 + 1];
+        rgb888Out[i * 3 + 2] = s_extra[i * 3 + 2];
+    }
 }
 
 int DosGfx_DecodePlanarSprite(const uint8_t *planar, int nlines, int wquads,

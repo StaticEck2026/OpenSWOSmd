@@ -360,7 +360,10 @@ void ConvertColorsAndTextSprites(TeamGame *team1, TeamGame *team2)
      * recolour the DOS sprites (16-colour, same kit indices as the Amiga)
      * instead of the Amiga ones we just loaded. dos_prepare_sprites resets the
      * sprites to their pristine decode first, so per-match remaps don't stack. */
-    if (_gDosGraphics)
+    /* ... unless the JAGUAR tier is on too: both want to be the players, and then
+     * the Jaguar sprites are what was asked for -- DOS keeps the pitch and the rest
+     * of its look (docs/JAGUAR.md, "With the DOS graphics"). */
+    if (_gDosGraphics && !JagGfx_Enabled())
         dos_prepare_sprites((int)team1->prShirtType, (int)team2->prShirtType);
 #endif
 

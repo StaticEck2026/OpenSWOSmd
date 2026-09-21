@@ -57,8 +57,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dos_graphics.h"        /* the palette a DOS-graphics match is drawn with */
+
 extern int16_t   LoadFileEx(uint8_t *filename, uint8_t *dest, uint32_t *outFileSize);
 extern uint16_t  _gamePalette[];
+extern int       _gDosGraphics;
 /* The nine the PITCH owns: WriteCopperPitchPalette rewrites them with the grass
  * and line colours of the pitch being played on. */
 extern uint8_t   _paletteIndices[];
@@ -141,11 +144,38 @@ static int32_t volatileEntry(int32_t entry)
     return 0;
 }
 
-static int32_t distance(uint16_t pal, const uint8_t rgb12[3])
+/* THE PALETTE THE SCREEN IS ACTUALLY DRAWN WITH. With --dos-graphics a match is
+ * drawn in the DOS palette, not the Amiga one (platform_sdl.c), so matching the
+ * art against _gamePalette there would pick entries by colours nobody displays.
+ * It covers this art just as well -- the Amiga palette was converted from it. */
+static void liveColour(int32_t entry, uint8_t out[3])
 {
-    int32_t dr = (int32_t)((pal >> 8) & 15) - rgb12[0];
-    int32_t dg = (int32_t)((pal >> 4) & 15) - rgb12[1];
-    int32_t db = (int32_t)(pal & 15) - rgb12[2];
+    if (_gDosGraphics) {
+        static uint8_t rgb[768];
+        static int32_t have;
+        if (!have) {
+            have = 1;
+            /* Any pitch type: the nine it changes are volatile here anyway. */
+            DosGfx_BuildPalette(4, rgb);
+        }
+        out[0] = (uint8_t)(rgb[entry * 3 + 0] >> 4);
+        out[1] = (uint8_t)(rgb[entry * 3 + 1] >> 4);
+        out[2] = (uint8_t)(rgb[entry * 3 + 2] >> 4);
+        return;
+    }
+    out[0] = (uint8_t)((_gamePalette[entry] >> 8) & 15);
+    out[1] = (uint8_t)((_gamePalette[entry] >> 4) & 15);
+    out[2] = (uint8_t)(_gamePalette[entry] & 15);
+}
+
+static int32_t distance(int32_t entry, const uint8_t rgb12[3])
+{
+    uint8_t c[3];
+    int32_t dr, dg, db;
+    liveColour(entry, c);
+    dr = (int32_t)c[0] - rgb12[0];
+    dg = (int32_t)c[1] - rgb12[1];
+    db = (int32_t)c[2] - rgb12[2];
     return dr * dr + dg * dg + db * db;
 }
 
@@ -159,7 +189,7 @@ static int32_t nearestEntry(const uint8_t rgb12[3], int32_t freeOnly, int32_t *o
         int32_t d;
         if (volatileEntry(i) || (freeOnly && s_taken[i]))
             continue;
-        d = distance(_gamePalette[i], rgb12);
+        d = distance(i, rgb12);
         if (d < bestD) { bestD = d; best = i; }
     }
     if (outDist)
@@ -238,6 +268,11 @@ static uint8_t artEntry(int32_t sheetIndex)
     if (s_nextPool <= JAG_POOL_LAST) {
         uint8_t slot = s_nextPool++;
         _gamePalette[slot] = (uint16_t)((rgb12[0] << 8) | (rgb12[1] << 4) | rgb12[2]);
+        /* And in the palette a DOS-graphics match is drawn with, which is a
+         * different one (DosGfx_SetExtraColour). Both, so the tier does not
+         * depend on which mode the game is in when a bank is decoded. */
+        DosGfx_SetExtraColour(slot, (uint8_t)(s_art[sheetIndex][0]),
+                              (uint8_t)(s_art[sheetIndex][1]), (uint8_t)(s_art[sheetIndex][2]));
         s_taken[slot] = 1;
         s_remap[sheetIndex] = slot;
         return slot;
@@ -323,12 +358,9 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
         static const uint8_t hairArt[3] = { 13, 9, 12 };     /* light, mid, dark */
         uint16_t c = (uint16_t)(amiga16[hairArt[0]] & 0xFF);
         if ((uint16_t)(amiga16[hairArt[1]] & 0xFF) == c && (uint16_t)(amiga16[hairArt[2]] & 0xFF) == c) {
-            uint16_t base = _gamePalette[c];
             uint8_t ch[3];
             int32_t k;
-            ch[0] = (uint8_t)((base >> 8) & 15);
-            ch[1] = (uint8_t)((base >> 4) & 15);
-            ch[2] = (uint8_t)(base & 15);
+            liveColour(c, ch);
             for (k = 0; k < 3; k++) {
                 uint8_t want[3];
                 int32_t j, near;
@@ -347,7 +379,8 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
     }
     for (slot = 0; slot < JAG_KIT_SLOTS; slot++) {
         uint16_t colour = (uint16_t)(amiga16[k_kitSlotAmiga[slot]] & 0xFF);
-        uint16_t c = _gamePalette[colour];
+        uint8_t base[3];
+        liveColour(colour, base);
         for (shade = 0; shade < JAG_KIT_SHADES; shade++) {
             uint16_t entry;
             if (shade == 0) {
@@ -358,9 +391,9 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
             } else {
                 uint8_t want[3];
                 int32_t near;
-                want[0] = (uint8_t)((((c >> 8) & 15) * k_shade[shade]) >> 4);
-                want[1] = (uint8_t)((((c >> 4) & 15) * k_shade[shade]) >> 4);
-                want[2] = (uint8_t)(((c & 15) * k_shade[shade]) >> 4);
+                want[0] = (uint8_t)((base[0] * k_shade[shade]) >> 4);
+                want[1] = (uint8_t)((base[1] * k_shade[shade]) >> 4);
+                want[2] = (uint8_t)((base[2] * k_shade[shade]) >> 4);
                 near = nearestEntry(want, 0, NULL);
                 entry = (uint16_t)(near < 0 ? colour : near);
             }

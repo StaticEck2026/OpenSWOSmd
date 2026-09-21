@@ -95,6 +95,27 @@ The stadium and crowd backgrounds are 8bpp art that reaches across the palette
 too, which is why the pool sits high and small. To check: `SWOS_JAG_DUMP=1`
 prints the R bank's entries at kick-off — they must be what the game put there.
 
+## With the DOS graphics
+
+`[dos] graphics` and `[jaguar] graphics` can both be on — DOS pitch and
+backgrounds (`grafs_2020`, say) with Jaguar players. Two things make that work,
+and neither is automatic:
+
+- **The DOS overlay leaves the players alone.** DOS mode rebuilds the player,
+  keeper and bench sprites from its own `.dat` files *after* the banks have
+  loaded, which overwrote the Jaguar ones. With the Jaguar tier on it skips them
+  and keeps the rest of its look.
+- **A DOS match is drawn in the DOS palette**, not the Amiga one
+  (`platform_sdl.c`), so this tier matches its colours against whichever palette
+  is live — otherwise it picks entries by colours nobody displays. The DOS
+  palette covers the art just as well (worst kit shade 3 of 4096, 64 of 76 art
+  colours within 2), which is no coincidence: the Amiga palette was converted
+  from it. The few colours that need an entry of their own are placed in both
+  (`DosGfx_SetExtraColour`).
+
+The mode is read at startup, so the colours are placed for the mode the game
+started in.
+
 ## How it is wired
 
 - **`scripts/make_jag_graphics.py`** turns SwosGfx's `Amiga_Images_256_Jag` BMPs
