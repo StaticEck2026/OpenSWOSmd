@@ -189,6 +189,13 @@
         {
           "op": "onselect_fire",
           "func": "rememberLogInInfo_OnSelect"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": 9
         }
       ]
     },
@@ -232,6 +239,13 @@
         {
           "op": "onselect_fire",
           "func": "showPassword_OnSelect"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 7,
+          "down": 11
         }
       ]
     },
@@ -275,6 +289,13 @@
         {
           "op": "onselect_fire",
           "func": "liveCast_OnSelect"
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 9,
+          "down": 12
         }
       ]
     },
@@ -301,7 +322,7 @@
           "op": "nav",
           "left": -1,
           "right": 15,
-          "up": 5,
+          "up": 11,
           "down": 13
         },
         {
@@ -398,7 +419,7 @@
           "op": "nav",
           "left": 12,
           "right": -1,
-          "up": 5,
+          "up": 11,
           "down": 16
         },
         {

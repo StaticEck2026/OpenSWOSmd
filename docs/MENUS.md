@@ -772,6 +772,23 @@ The files live in a subfolder on purpose: `MENU_JSON` in the Makefile is
 
 Not supported yet: `stringTable` (the importer stops on one; none in this set).
 
+**Fix-ups for the source's own gaps** (`NAV_FIXUPS` in the importer). The `.mnu`
+files are imported faithfully, bugs included, so where SWOS 2020's own definition
+is wrong the mend goes in the importer — a re-import keeps it, and the table says
+which menu, which entry and why. The one entry so far is `logIn`:
+`passwordInput` sends the cursor DOWN into `rememberLogInInfo`, but that entry
+and the two toggles under it carry no navigation at all, so the cursor arrived
+and could not leave in any direction (reported 2026-09-20). The buttons below
+reached back UP to `passwordInput`, over the toggles — the other half of the same
+gap. The fix-up gives the three toggles the column they already look like and
+lets the button rows come back to the last of them. `showPassword` is hidden at
+run time (`online_menus.c`) and the menu walks THROUGH an invisible entry by its
+own links, so it needs them as much as the visible two.
+
+To see a menu without playing to it: `--menu=swos2020/logInMenu` (the folder is
+part of the name), with `SWOS_KEY_SCRIPT="300:Down 340:Down ..."` and
+`SWOS_SCREENSHOT_INTERVAL=N` to drive it and see where the cursor went.
+
 ### 10c. Format extensions
 
 All in the loader and `UnpackMenu`. None occurs in the 47 compiled menus, and

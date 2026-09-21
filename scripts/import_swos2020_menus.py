@@ -157,6 +157,57 @@ def load_data_symbols():
     return _data_symbols
 
 
+# ---------------------------------------------------------------- fix-ups
+#
+# Gaps in SWOS 2020's OWN menu definitions, mended here so a re-import keeps the
+# mend. Keyed by menu stem, then entry name; each value is the directions to set,
+# by entry NAME (or -1 for none). Anything not named is left as the .mnu has it.
+#
+# logIn: passwordInput sends the cursor DOWN into rememberLogInInfo, but that
+# entry and the two toggles under it carry no navigation of their own, so the
+# cursor arrives and cannot leave in any direction -- reported 2026-09-20, "when
+# I move to the REMEMBER LOGIN INFO setting it gets stuck". The buttons below
+# reach back UP to passwordInput, over the toggles, which is the other half of
+# the same gap. So: give the three toggles the column they already look like,
+# and let the two button columns come back to the last of them. showPassword is
+# hidden at run time (online_menus.c) and the menu walks THROUGH an invisible
+# entry by its own links, so it needs them as much as the visible two.
+NAV_FIXUPS = {
+    "logIn": {
+        "rememberLogInInfo": {"up": "passwordInput",     "down": "showPassword"},
+        "showPassword":      {"up": "rememberLogInInfo", "down": "liveCast"},
+        "liveCast":          {"up": "showPassword",      "down": "logInContinue"},
+        "logInContinue":     {"up": "liveCast"},
+        "registerUser":      {"up": "liveCast"},
+    },
+}
+
+
+def apply_nav_fixups(stem, items, entries):
+    """Set the navigation NAV_FIXUPS names, by entry name, on the built items."""
+    fixups = NAV_FIXUPS.get(stem)
+    if not fixups:
+        return 0
+    ordinals = {e.name: i for i, e in enumerate(entries) if e.name}
+    by_name = {it.get("name"): it for it in items if it.get("kind") == "entry" and it.get("name")}
+    changed = 0
+    for name, dirs in fixups.items():
+        item = by_name.get(name)
+        if item is None:
+            die("%s: nav fix-up names %s, which the menu does not have" % (stem, name))
+        nav = next((c for c in item["commands"] if c.get("op") == "nav"), None)
+        if nav is None:
+            nav = {"op": "nav", "left": -1, "right": -1, "up": -1, "down": -1}
+            item["commands"].append(nav)
+        for direction, target in dirs.items():
+            if target != -1 and target not in ordinals:
+                die("%s.%s: nav fix-up points %s at %s, which the menu does not have"
+                    % (stem, name, direction, target))
+            nav[direction] = -1 if target == -1 else ordinals[target]
+        changed += 1
+    return changed
+
+
 # ---------------------------------------------------------------- entries
 class MenuImporter:
     def __init__(self, mnu2h, menu_name, menu, src_rel, commit):
@@ -326,6 +377,8 @@ class MenuImporter:
 
         if len(entries) > 255:
             die("%s: %d entries; ordinals are a byte" % (self.name, len(entries)))
+
+        apply_nav_fixups(self.src_rel.rsplit("/", 1)[-1][:-4], items, entries)
 
         doc = {
             "name": self.name,
