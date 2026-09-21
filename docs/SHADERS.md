@@ -365,11 +365,21 @@ mechanical half.
 | macOS | Homebrew `sdl3`; the `.app` bundles `SDL3.framework` instead of SDL2's |
 | Linux | **Ubuntu 22.04 here has no `libsdl3-dev`** — build it for the four cross targets and bundle `libSDL3.so.0` in `SWOS-full.zip` in place of `libSDL2` (and re-check whether libdecor is still needed: CLAUDE.md bundles it *because SDL2 is its only consumer*) |
 
-**And `SDL_GPU`?** Not yet, and the reason is the browser: SDL3's GPU backends
-are Vulkan, D3D12 and Metal, with no WebGPU backend, so the web build would still
-need the GL path — two renderers to keep in step for one API's convenience. Worth
-revisiting the day a WebGPU backend lands, at which point the Switch could use
-its Vulkan 1.0 surface through the same code.
+**And `SDL_GPU`?** Not yet, and the reason is the browser. SDL3's GPU backends
+are Vulkan, D3D12 and Metal, so `SDL_CreateGPUDevice` has nothing to create in a
+WASM build and the web would still need the GL path — two renderers to keep in
+step for one API's convenience.
+
+Note what the blocker is **not**: WebGPU has shipped in browsers. The missing
+piece is an SDL_GPU *backend* that targets it (a `src/gpu/webgpu` driver
+upstream), which is one grep of an SDL3 checkout to re-check — do that before
+quoting this paragraph, it is the part most likely to have gone stale.
+
+Even then, it is not free: SDL_GPU consumes **precompiled** shaders (SPIR-V,
+DXIL, MSL, via SDL_shadercross), so adopting it adds a shader-compilation step to
+every build on every platform. GL takes GLSL source at runtime and needs no
+toolchain at all — which, for a project that already juggles five toolchains, is
+worth more than the API being nicer.
 
 **Recommended order:**
 
