@@ -370,6 +370,10 @@ is for, and it runs in the emitter, not the game.
 
 Not design — capability. In rough order of effort:
 
+0. **Or it goes away**: if a layer declares itself `rgba` rather than `indexed`,
+   items 1 and 3 below stop being problems — it blends and it shifts like any
+   truecolour surface. Only the crowd layer has to stay indexed, because its
+   pixels are recoloured to the kits. See `docs/PALETTE_V2.md` §8.
 1. **Per-layer alpha (`fade`) has no renderer.** The pipeline is 8bpp indexed
    end to end; blending two palette indices means either a 64 KB blend LUT per
    palette pair, or the GPU path in `docs/SHADERS.md`. **The cloud example needs

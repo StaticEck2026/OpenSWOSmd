@@ -206,7 +206,54 @@ Step 5 is the measure of whether this worked: the code that picks "free" entries
 the volatile-entry exclusions and the whole idea of a pool all delete, because a
 sprite can no longer be in a pitch's way.
 
-## 8. Related
+## 8. Where this ends: truecolour pitches
+
+Once the pitch has a bank of its own, the obvious next question is why it needs a
+palette at all. It does not — and the answer is better than "more colours".
+
+**Per layer, a v2 pitch declares its format: `indexed` or `rgba`.** The crowd
+layer stays indexed, because its pixels are recoloured to the playing kits and
+that is an index operation. Everything else — grass, stands, roofs, clouds — can
+be truecolour, with no palette constraint whatsoever.
+
+Three things fall out, and the third is the one worth having:
+
+- **The pitch's palette problem disappears entirely.** The 2020 art's 182
+  colours stop being a budget. New pitch art can be photographic.
+- **Per-layer alpha becomes real.** `docs/PITCH_FORMAT_V2.md` §7.1 lists the
+  `fade` track as having no renderer, because blending two palette indices means
+  a 64 KB LUT or a GPU. An RGBA layer just blends.
+- **True blended shadows, with no shader.** This thread started with "can we
+  blend the shadow with the background like a real shadow?", and the answer was
+  no — a shader cannot recover a background the sprite has already overwritten,
+  and a CPU blend can only reach colours the palette happens to hold. **If the
+  destination is RGBA, a shadow pixel is a multiply.** Not an approximation, not
+  a nearest-entry search: the actual thing, on any pitch, in any condition.
+
+Shape: the composite target becomes an RGBA surface. Indexed layers and sprites
+still draw through the bank plane and resolve at the top of the frame; RGBA
+layers write it directly. The Amiga keeps indexed everything, as it must.
+
+**Three things that need answers before this is designed properly:**
+
+1. **Weather.** The pitch nine is how SWOS makes a pitch muddy or frozen —
+   nine palette entries rewritten per condition. Truecolour art has no such
+   handle, so either it ships seven variants of every pitch (seven times the
+   data) or a per-condition tint is applied at load, which is a multiply over the
+   layer and is probably the better answer anyway.
+2. **Fades.** `fade.c` ramps the palette, and an RGBA surface does not fade with
+   it. Either the fade becomes a multiply over the composite, or it stops being a
+   palette operation at all.
+3. **The shadow's reference.** It currently tints itself from the grass *entry*.
+   With no palette there is no such entry, so a v2 pitch declares its
+   representative grass colour in metadata — which it should arguably do anyway,
+   since that is a fact about the pitch rather than about its palette.
+
+Cost is the honest part: the pitch fill goes from one byte a pixel to four —
+91 KB a frame to 366 KB. Nothing on a desktop, measurable on WASM and Switch,
+and worth measuring there before committing.
+
+## 9. Related
 
 - `docs/PITCH_FORMAT_V2.md` — the pitch format this pairs with. Its layers are
   where per-layer palettes would live, and its animation system is the reason the
