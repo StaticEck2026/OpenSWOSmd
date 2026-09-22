@@ -502,6 +502,15 @@ it, because the crowd is in the simulation's RNG stream.
 
 ---
 
+## 9a. The palette
+
+Layers, and the crowd on its own layer, both run into the same wall: which
+palette entries may a pitch use, and which belong to the sprites? That is
+`docs/PALETTE_V2.md` — **two banks selected per pixel, with only the 16-entry kit
+block shared** — and it is what makes a per-layer palette possible at all. The
+crowd's tie to the sprite palette is exactly the kit block: fan tiles are pitch
+art wearing the teams' shirts.
+
 ## 10. Open questions
 
 - **Do hidden frame layers cost tiles in the sheet?** They must, since their
