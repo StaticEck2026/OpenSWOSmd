@@ -206,7 +206,13 @@ Step 5 is the measure of whether this worked: the code that picks "free" entries
 the volatile-entry exclusions and the whole idea of a pool all delete, because a
 sprite can no longer be in a pitch's way.
 
-## 8. Where this ends: truecolour pitches
+## 8. Where this ends: truecolour pitches — PARKED
+
+> **Parked 2026-09-22** on the technical challenges below — chiefly weather,
+> which has no handle without a palette, and fades, which stop being a palette
+> operation at all. Kept because the analysis is the reason, and because alpha
+> has to come from somewhere: for now that is `docs/SHADERS.md`.
+
 
 Once the pitch has a bank of its own, the obvious next question is why it needs a
 palette at all. It does not — and the answer is better than "more colours".
