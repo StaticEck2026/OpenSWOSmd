@@ -913,7 +913,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
      * below is not enough when dstX is so negative that `dx` wraps into
      * the visible range for huge sprites (replay frame path was passing
      * dstX=-384). */
-    if (dstX >= _screen_width || dstY >= SCREEN_HEIGHT) return;
+    if (dstX >= _screen_width || dstY >= _screen_height) return;
     if (dstX + sprW <= 0 || dstY + sprH <= 0) return;
 
     /* cameraXMod320/cameraYMod320 are Amiga hardware-scroll wrap
@@ -925,7 +925,7 @@ static void blitChunkySprite(SpriteGraphics *a0, int16_t dstX, int16_t dstY)
 
     for (int16_t py = 0; py < sprH; py++) {
         int16_t dy = dstY + py;
-        if (dy < 0 || dy >= SCREEN_HEIGHT) continue;
+        if (dy < 0 || dy >= _screen_height) continue;
 
         const uint8_t *srcRow = data + (size_t)py * pitch;
         uint8_t       *dstRow = dstBase + (size_t)dy * FRONTBUFFER_ROW_STRIDE_BYTES;

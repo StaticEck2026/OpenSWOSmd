@@ -790,8 +790,11 @@ void DrawChunkyPitch(void)
     uint8_t  *fb        = (uint8_t *)(uintptr_t)_frontbufferBasePtr;
     if (!fb) return;
 
-    const int fbW = FRONTBUFFER_ROW_STRIDE_BYTES;   /* SDL = SCREEN_WIDTH = 320 */
-    const int fbH = SCREEN_HEIGHT;                  /* 200 */
+    /* Both runtime: 336x272 for the Amiga view, 320x200 for the DOS one. The
+     * old comments here said 320/200 -- inherited from the DOS source this was
+     * ported from, and wrong for every build since. */
+    const int fbW = FRONTBUFFER_ROW_STRIDE_BYTES;
+    const int fbH = _screen_height;
 
     int startTileX = (int)Render_CameraX() / PITCH_TILE_SIZE;
     int startTileY = (int)_cameraY.s.i / PITCH_TILE_SIZE;

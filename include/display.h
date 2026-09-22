@@ -391,6 +391,14 @@ static inline uint16_t DetectBankPlanes(uint32_t byteSize, uint32_t planeRowByte
  * stays a link-time constant (FRONTBUFFER_ALLOC_TOTAL_BYTES); only the row-stride
  * arithmetic is runtime. SCREEN_WIDTH stays the 336 logical/centered width (menus). */
 extern int _screen_width;
+/* The visible HEIGHT, runtime for the same reason the width is: the DOS release
+ * draws 320x200 where the Amiga draws 336x272, and "100% DOS" has to mean the
+ * view too -- every camera constant below is already f(view) and yields the DOS
+ * numbers at 200 (SIM_CAMERA_MAX_Y = 664, which is swos.asm:7539's
+ * `mov word ptr D2, 664`). Buffers stay ALLOCATED at 272 (the max), so only the
+ * line counts are runtime; SCREEN_HEIGHT remains the allocation/menu height.
+ * docs/DOS_VIEW.md. */
+extern int _screen_height;
 /* _screen_width (the live render width) is derived at startup from the monitor's
  * aspect ratio (main.c), so the picture fills any display with no bars. The buffer is
  * ALLOCATED at the MAX useful width = the full pitch world width (the view never
@@ -403,6 +411,7 @@ extern int _screen_width;
 /* Amiga has no widescreen: _screen_width folds to the fixed visible width at
  * compile time, so the synced per-site culls/camera math are identical to before. */
 #define _screen_width                  SCREEN_WIDTH
+#define _screen_height                 SCREEN_HEIGHT
 #define FRONTBUFFER_MAX_STRIDE_BYTES    ROW_STRIDE_BYTES
 #define FRONTBUFFER_ROW_STRIDE_BYTES    ROW_STRIDE_BYTES
 #endif

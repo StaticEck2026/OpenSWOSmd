@@ -968,7 +968,9 @@ int Platform_Init(const PlatformInitOptions *opts)
      * frame texture and is drawn from it. See PLATFORM_TEX_H / compose_hud_strip. */
     fprintf(stderr, "[render] hud_layer=%s\n", s_hud_layer ? "on" : "off (no buffer)");
 
-    SDL_RenderSetLogicalSize(s_renderer, _screen_width, PLATFORM_SCREEN_H);
+    /* The picture's own size, both runtime (display.h): what gets letterboxed
+     * into whatever client area the window has. */
+    SDL_RenderSetLogicalSize(s_renderer, _screen_width, _screen_height);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_EventState(SDL_MOUSEMOTION, SDL_DISABLE);
 

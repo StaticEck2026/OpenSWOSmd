@@ -104,6 +104,7 @@ SWOS_CHIP_BSS uint8_t _frontbufferMaskBuffer[FRONTBUFFER_ALLOC_TOTAL_BYTES];
 /* Live frontbuffer stride / visible width: SCREEN_WIDTH (336) or WIDESCREEN_WIDTH,
  * set once at startup from gWidescreen (main.c). 336 = unchanged behaviour. */
 int _screen_width = SCREEN_WIDTH;
+int _screen_height = SCREEN_HEIGHT;
 #ifdef SWOS_SDL_BUILD
 /* The SIMULATION view (display.h). Defaults to the port's own geometry; main.c
  * follows _screen_width into it so behaviour is unchanged, and the replay rig
