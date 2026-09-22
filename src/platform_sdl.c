@@ -568,6 +568,13 @@ extern void Platform_PreArmIsrGlobals(void);
 /* ---- Lifecycle ----------------------------------------------------- */
 /* Persisted across the run so Alt+Enter / +/- keys can read them. */
 static int                    s_win_scale_current = 1;   /* clamp 1..4 */
+/* The client area [video] resolution=WxH asked for, 0 when it said 'auto'.
+ * Kept so leaving fullscreen restores the size the file named: the restore used
+ * to always recompute it from the scale, so an Alt-Tab round trip silently threw
+ * the setting away and the window came back a different size than it started
+ * (reported 2026-09-22). Pressing +/- is a deliberate override and clears it. */
+static int s_pinned_w, s_pinned_h;
+
 static PlatformFullscreenMode s_fullscreen_mode   = PLATFORM_FULLSCREEN_NONE;
 
 int Platform_Init(const PlatformInitOptions *opts)
@@ -674,10 +681,28 @@ int Platform_Init(const PlatformInitOptions *opts)
     int client_w = (int)_screen_width * win_scale;
     int client_h = PLATFORM_SCREEN_H * win_scale;
     int pinned = 0;
+    s_pinned_w = s_pinned_h = 0;
     if (opts && opts->res_w > 0 && opts->res_h > 0 && fs_mode == PLATFORM_FULLSCREEN_NONE) {
         client_w = opts->res_w;
         client_h = opts->res_h;
         pinned = 1;
+        s_pinned_w = client_w;
+        s_pinned_h = client_h;
+        /* A client area SMALLER than the picture shrinks it to fit, which is
+         * almost never what was meant: "resolution=320x200" reads like "run at
+         * the DOS size" but the picture is 336x272, so it comes out at 0.73x --
+         * blurry, non-integer, and smaller than 1:1 (reported 2026-09-22). Say
+         * so, and name the setting that does what they wanted. */
+        if (client_w < (int)_screen_width || client_h < PLATFORM_SCREEN_H)
+            fprintf(stderr,
+                "[video] %dx%d is smaller than the %dx%d picture, so it is being shrunk "
+                "to fit (%.2fx). For a crisp window use 'resolution=auto' with 'scale=N'; "
+                "the picture is always %d lines tall -- the render SIZE is not settable\n",
+                client_w, client_h, (int)_screen_width, PLATFORM_SCREEN_H,
+                (double)client_w / (double)_screen_width < (double)client_h / (double)PLATFORM_SCREEN_H
+                    ? (double)client_w / (double)_screen_width
+                    : (double)client_h / (double)PLATFORM_SCREEN_H,
+                PLATFORM_SCREEN_H);
 #ifndef SWOS_WASM_BUILD
         /* A window bigger than the monitor is not a setting, it is a mistake nobody can
          * undo from inside the game -- the title bar ends up off-screen. Clamp to the
@@ -691,6 +716,7 @@ int Platform_Init(const PlatformInitOptions *opts)
                 fprintf(stderr, "[video] %dx%d does not fit this display, using %dx%d\n",
                         client_w, client_h, fit_w, fit_h);
                 client_w = fit_w; client_h = fit_h;
+                s_pinned_w = client_w; s_pinned_h = client_h;
             }
         }
 #endif
@@ -1069,10 +1095,14 @@ void Platform_ToggleFullscreen(void)
 
     if (currently_fullscreen) {
         SDL_SetWindowFullscreen(s_window, 0);
-        /* Restore windowed size from the persisted scale. */
-        SDL_SetWindowSize(s_window,
-            _screen_width * s_win_scale_current,
-            PLATFORM_SCREEN_H * s_win_scale_current);
+        /* Back to the size the window actually had: the one [video] resolution
+         * named, or the scale when it said 'auto'. */
+        if (s_pinned_w > 0 && s_pinned_h > 0)
+            SDL_SetWindowSize(s_window, s_pinned_w, s_pinned_h);
+        else
+            SDL_SetWindowSize(s_window,
+                _screen_width * s_win_scale_current,
+                PLATFORM_SCREEN_H * s_win_scale_current);
         SDL_ShowCursor(SDL_ENABLE);
     } else {
         /* Toggle into the flavour the user launched with. If they
@@ -1116,6 +1146,10 @@ void Platform_SetWindowScale(int scale)
     if (scale < 1) scale = 1;
     if (scale > 4) scale = 4;
     s_win_scale_current = scale;
+    /* Choosing a scale by hand overrides whatever [video] resolution pinned, and
+     * keeps it overridden for the rest of the session -- otherwise the next
+     * fullscreen round trip would undo what the player just pressed. */
+    s_pinned_w = s_pinned_h = 0;
     /* Only resize when actually windowed — fullscreen ignores the size
      * (SDL_RenderSetLogicalSize handles letterboxing for us). */
     Uint32 flags = SDL_GetWindowFlags(s_window);
