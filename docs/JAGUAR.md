@@ -93,10 +93,14 @@ decoded, since either can come first):
 | 29 | 16/16 | `750` | `790` |
 | 30 | 14/16 | `640` | `670` |
 | 31 | 12/16 | `530` | `560` |
-| 220 | 13/16 | `540` | `570` |
-| 221 | 10/16 | `430` | `450` |
-| 222 | 8/16 | `320` | `340` |
-| 223 | 6/16 | `210` | `230` |
+
+**These three and no others.** 220–223 look like a deeper shadow ramp and are
+not. A pixel-for-pixel diff says they come from Amiga colour 8 — but only on
+`CJCTEAMG`, where colour 8 *also* draws the keeper's green jersey, and the Jaguar
+artists split the two: 29–31 for the ground shadow, 220–223 for the jersey. The
+outfield sheets contain no 220–223 at all. Recolouring them per pitch turned the
+keeper brown on a muddy pitch (reported 2026-09-22). An index does not say what a
+colour *means* — only the sheet it is drawn on does.
 
 The grass is worked out for the pitch being set up rather than read back out of
 the palette, so it does not matter which of the two callers runs first — and it

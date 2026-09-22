@@ -93,13 +93,21 @@ enum {
  * The 16-colour game does not have the problem: its shadow is one near-black
  * colour that reads on anything.
  *
+ * IT IS THESE THREE AND NO OTHERS. 220..223 look like a deeper shadow ramp and
+ * are not: a pixel-for-pixel diff of the sheets says they come from Amiga colour
+ * 8, which is the shadow -- but only on CJCTEAMG, where colour 8 ALSO draws the
+ * keeper's green jersey, and the Jaguar artists split the two (29..31 the ground
+ * shadow, 220..223 the jersey). The outfield sheets contain no 220..223 at all.
+ * Recolouring them per pitch turned the keeper brown on a muddy pitch (reported
+ * 2026-09-22). The index alone does not say what a colour MEANS -- only the
+ * sheet it is drawn on does, which is one of the arguments for docs/PALETTE_V2.md.
+ *
  * So these shades are worked out from the grass of the pitch being played on,
  * keeping the artist's ramp: sixteenths of the live grass colour, re-made
  * whenever the pitch palette is (JagGfx_PitchApplied). They are the only entries
  * this tier rewrites after it has placed them. */
 static const struct { uint8_t art; uint8_t sixteenths; } k_shadow[] = {
-    {  29, 16 }, {  30, 14 }, {  31, 12 },          /* the shadow cast on the grass */
-    { 220, 13 }, { 221, 10 }, { 222,  8 }, { 223, 6 },   /* ... and its deeper part */
+    {  29, 16 }, {  30, 14 }, {  31, 12 },
 };
 #define JAG_SHADOW_SHADES ((int32_t)(sizeof k_shadow / sizeof k_shadow[0]))
 static uint8_t s_shadowEntry[JAG_SHADOW_SHADES];    /* the entries they were given */
