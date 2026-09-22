@@ -1146,7 +1146,33 @@ static void refresh_palette_from_copper(void)
      * sets playGame. Either flag means the DOS pitch is on screen, so we must
      * use the DOS palette. (DOS menu backgrounds are a separate follow-up.) */
     extern volatile uint16_t _playGame, _playHighlightFlag;
-    if (_gDosGraphics && (_playGame || _playHighlightFlag)) {
+    extern int32_t Pitch_DrawnThisMatch(void);
+    extern void    Pitch_ResetDrawn(void);
+
+    /* ... and only once the pitch is actually ON SCREEN, which is later than
+     * "a match has started": _playGame is set on the first line of
+     * StartMatchSequence, while the frontbuffer still holds the pre-match team
+     * line-up that InitGameSaveTeams has yet to fade out. Without this the
+     * line-up is displayed through the DOS PITCH palette for those frames --
+     * the "distorted VS background for a frame or two" (reported 2026-09-22).
+     * The highlights path avoids the same trap by setting its flag after the
+     * fade (game_loop.c, ViewHighLightsMain); the live-match path cannot,
+     * because _playGame means other things to the game logic, so the display
+     * asks the pitch instead. */
+    if (!_playGame && !_playHighlightFlag)
+        Pitch_ResetDrawn();
+    /* SWOS_VSDEBUG=1 counts the frames this gate saves. It is how the bug was
+     * proved and is the cheapest regression check for it: on the rig path it
+     * reports 1, and through the real menus one per frame of the VS fade. */
+    {
+        static int32_t dbg = -1, n;
+        if (dbg < 0) dbg = getenv("SWOS_VSDEBUG") != NULL;
+        if (dbg && _gDosGraphics && (_playGame || _playHighlightFlag)
+            && !Pitch_DrawnThisMatch() && ++n <= 20)
+            fprintf(stderr, "[vsdebug] blocked the DOS pitch palette before the pitch "
+                            "was on screen (#%d)\n", n);
+    }
+    if (_gDosGraphics && (_playGame || _playHighlightFlag) && Pitch_DrawnThisMatch()) {
         /* The pitch-condition overlay keys off the low byte of
          * pitchNumberAndType (the high byte is which pitch graphic). */
         extern uint16_t _pitchNumberAndType;

@@ -766,8 +766,27 @@ extern uint8_t _pitchDatBuffer[];
 extern volatile uintptr_t _frontbufferBasePtr;
 
 __attribute__((used, externally_visible))
+/* How many times the pitch has been drawn since the match (or replay) began.
+ *
+ * The display asks this before switching to the DOS pitch palette, because
+ * "a match has started" and "the pitch is on screen" are not the same moment:
+ * _playGame is set on the FIRST line of StartMatchSequence, while the frontbuffer
+ * still holds the pre-match team line-up and InitGameSaveTeams has yet to fade it
+ * out. Switching palettes there showed that line-up through the pitch palette --
+ * the "distorted VS background for a frame or two" (reported 2026-09-22).
+ *
+ * Two, not one: the frame being PRESENTED is the completed one (the alt buffer,
+ * platform_sdl.c chunky_to_rgba), so the first pitch draw lands in the buffer
+ * that is not on screen yet. By the second, the presented buffer has a pitch in
+ * it. The same reasoning the highlights path applies by ordering its flag. */
+static int32_t s_pitchDrawn;
+int32_t Pitch_DrawnThisMatch(void) { return s_pitchDrawn >= 2; }
+void    Pitch_ResetDrawn(void) { s_pitchDrawn = 0; }
+
 void DrawChunkyPitch(void)
 {
+    if (s_pitchDrawn < 2) s_pitchDrawn++;
+
     uint8_t  *fb        = (uint8_t *)(uintptr_t)_frontbufferBasePtr;
     if (!fb) return;
 
