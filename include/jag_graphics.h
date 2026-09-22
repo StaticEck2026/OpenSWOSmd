@@ -34,6 +34,13 @@ int32_t JagGfx_IsBank(const char *name);
  * are first met. NULL if the tier is off or has no palette. */
 const uint8_t *JagGfx_SheetRemap(void);
 
+/* Move a chunky buffer's pixels off the entries this tier has taken for itself.
+ * Those entries are exact duplicates of another entry, so every pixel moved lands
+ * on the identical colour and nothing changes visibly -- which is what makes the
+ * entry free. Call it on pitch tiles after they are decoded. Returns how many
+ * pixels moved; 0 when the tier is off. docs/PALETTE_V2.md. */
+int32_t JagGfx_RemapDonated(uint8_t *pixels, uint32_t count);
+
 /* A match is being set up: the kit ramps of the last one are forgotten. */
 void JagGfx_NewMatch(void);
 

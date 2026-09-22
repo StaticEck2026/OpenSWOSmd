@@ -10,7 +10,8 @@
 #include "swos_types.h"
 #include "dos_mode.h"
 #ifdef SWOS_SDL_BUILD
-#include "dos_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
+#include "dos_graphics.h"
+#include "jag_graphics.h"   /* DosGfx_ParsePitchMap, DOS_TILE_BYTES */
 #include <stdio.h>          /* snprintf for the DOS pitch filenames */
 #endif
 
@@ -185,6 +186,16 @@ static void dos_load_pitch(uint16_t mapIndex)
     LoadFileEx((uint8_t *)name, _pitchDatBuffer, &datSize);
 
     static uint16_t tileMap[PITCH_POINTER_COUNT];
+    /* The Jaguar tier keeps a few duplicate palette entries for its own colours;
+     * move the pitch's pixels onto the twins so those entries are really free.
+     * Identical colours, so nothing changes on screen (docs/PALETTE_V2.md). */
+    {
+        int32_t moved = JagGfx_RemapDonated(_pitchChunkyBuffer, (uint32_t)blkSize);
+        if (moved && getenv("SWOS_JAG_DUMP"))
+            fprintf(stderr, "[jag] pitch: %d pixels moved off donated entries "
+                            "(same colour, so nothing looks different)\n", moved);
+    }
+
     int n = DosGfx_ParsePitchMap(_pitchDatBuffer, datSize, tileMap,
                                  PITCH_POINTER_COUNT);
 
@@ -503,6 +514,10 @@ void FixupAndColorPitchFile(void)
             _s_pitchFullPtrs[i] = chunky;
         }
     }
+    /* Same as the DOS path: move the pitch off the duplicate entries the Jaguar
+     * tier keeps for itself. Identical colours, so nothing changes on screen
+     * (docs/PALETTE_V2.md). */
+    JagGfx_RemapDonated(_pitchChunkyBuffer, (uint32_t)(PITCH_POINTER_COUNT * 256));
 #endif
 
     }

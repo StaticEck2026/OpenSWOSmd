@@ -181,6 +181,85 @@ int32_t JagGfx_IsBank(const char *name)
     return 0;
 }
 
+/* THE DONATION MAP — where this tier's spare entries actually come from.
+ *
+ * The old answer was a hard-coded pool at 201..239, and it was a guess that has
+ * now been wrong twice: it ran through the replay R bank (the spinning R came
+ * out wrong), and in the grafs_2020 tier every one of those 39 entries is real
+ * pitch art (the stadium roof turned yellow). Measured, entries 16..239 that
+ * nothing draws are 163 in the AGA tier and ZERO in both DOS tiers, so there is
+ * no better range -- there is no free range at all.
+ *
+ * But the palette is full of colours nobody needs: the DOS palette carries 62
+ * entries whose colour is byte-identical to another entry (109, 110, 147, 163,
+ * 177, 178, 237, 238 are all #000000, the same as entry 3). An entry like that
+ * can be DONATED -- remap the art that draws in it to its twin, which is the
+ * same colour, so nothing changes visibly, and the entry is genuinely free.
+ *
+ * Duplicates are a property of the palette alone, so this can be worked out
+ * without knowing which pitch is loaded, which is what makes it order
+ * independent: the tier allocates whenever its banks decode, and the pitch
+ * remaps its pixels whenever it loads (JagGfx_RemapDonated).
+ *
+ * docs/PALETTE_V2.md is the eventual answer -- two palette banks, where a sprite
+ * cannot be in a pitch's way at all. This is what fits in front of it. */
+static int32_t takeSpareEntry(void);
+static int32_t volatileEntry(int32_t entry);
+static void    liveColour(int32_t entry, uint8_t out[3]);
+static void    liveColour8(int32_t entry, uint8_t out[3]);
+
+static uint8_t s_donateTo[256];        /* entry -> its twin, or 0 = not donated */
+static uint8_t s_owned[256];           /* entries this tier WROTE (vs merely shares) */
+static int32_t s_donateBuilt;
+
+static void buildDonations(void)
+{
+    int32_t i, j, n = 0;
+
+    if (s_donateBuilt)
+        return;
+    s_donateBuilt = 1;
+
+    /* Against the LIVE palette, which in DOS-graphics mode is the DOS one and not
+     * _gamePalette. Getting this wrong would be the whole bug in miniature: two
+     * entries identical in the palette nobody is looking at, so the remap moves
+     * pitch pixels to a DIFFERENT colour on screen. */
+    for (i = 16; i < JAG_KIT_FIRST; i++) {
+        uint8_t ci[3], cj[3];
+        if (volatileEntry(i))
+            continue;
+        liveColour8(i, ci);
+        for (j = 1; j < i; j++) {          /* the LOWER twin survives */
+            if (volatileEntry(j))
+                continue;
+            liveColour8(j, cj);
+            if (ci[0] == cj[0] && ci[1] == cj[1] && ci[2] == cj[2]) {
+                s_donateTo[i] = (uint8_t)j;
+                n++;
+                break;
+            }
+        }
+    }
+    if (getenv("SWOS_JAG_DUMP"))
+        fprintf(stderr, "[jag] %d palette entries are exact duplicates and can be "
+                        "donated to the sprites\n", n);
+}
+
+int32_t JagGfx_RemapDonated(uint8_t *pixels, uint32_t count)
+{
+    uint32_t i;
+    int32_t moved = 0;
+
+    if (!s_enabled || !pixels)
+        return 0;
+    buildDonations();
+    for (i = 0; i < count; i++) {
+        uint8_t t = s_donateTo[pixels[i]];
+        if (t) { pixels[i] = t; moved++; }
+    }
+    return moved;
+}
+
 /* An entry whose colour is not this tier's to read or to write: the pitch's nine
  * (they follow the pitch condition), the replay R bank's sixteen, and the kit
  * block, which is what a Jaguar sprite's pixels MEAN before they are recoloured. */
@@ -201,6 +280,26 @@ static int32_t volatileEntry(int32_t entry)
  * drawn in the DOS palette, not the Amiga one (platform_sdl.c), so matching the
  * art against _gamePalette there would pick entries by colours nobody displays.
  * It covers this art just as well -- the Amiga palette was converted from it. */
+/* The live palette at ITS OWN precision -- 8 bits a channel in DOS mode, and the
+ * Amiga's 4 bits widened. Donations compare with this and not with liveColour():
+ * at 4 bits two DOS colours that merely look alike collapse into one, and a
+ * "duplicate" that is not identical moves pitch pixels to a different colour. */
+static void liveColour8(int32_t entry, uint8_t out[3])
+{
+    if (_gDosGraphics) {
+        static uint8_t rgb[768];
+        static int32_t have;
+        if (!have) { have = 1; DosGfx_BuildPalette(4, rgb); }
+        out[0] = rgb[entry * 3 + 0];
+        out[1] = rgb[entry * 3 + 1];
+        out[2] = rgb[entry * 3 + 2];
+        return;
+    }
+    out[0] = (uint8_t)(((_gamePalette[entry] >> 8) & 15) * 17);
+    out[1] = (uint8_t)(((_gamePalette[entry] >> 4) & 15) * 17);
+    out[2] = (uint8_t)((_gamePalette[entry] & 15) * 17);
+}
+
 static void liveColour(int32_t entry, uint8_t out[3])
 {
     if (_gDosGraphics) {
@@ -316,10 +415,10 @@ static uint8_t artEntry(int32_t sheetIndex)
         s_remap[sheetIndex] = (uint8_t)near;
         return (uint8_t)near;
     }
-    while (s_nextPool <= JAG_POOL_LAST && volatileEntry(s_nextPool))
-        s_nextPool++;
-    if (s_nextPool <= JAG_POOL_LAST) {
-        uint8_t slot = s_nextPool++;
+    {
+        int32_t slot32 = takeSpareEntry();
+        if (slot32 >= 0) {
+        uint8_t slot = (uint8_t)slot32;
         _gamePalette[slot] = (uint16_t)((rgb12[0] << 8) | (rgb12[1] << 4) | rgb12[2]);
         /* And in the palette a DOS-graphics match is drawn with, which is a
          * different one (DosGfx_SetExtraColour). Both, so the tier does not
@@ -327,8 +426,10 @@ static uint8_t artEntry(int32_t sheetIndex)
         DosGfx_SetExtraColour(slot, (uint8_t)(s_art[sheetIndex][0]),
                               (uint8_t)(s_art[sheetIndex][1]), (uint8_t)(s_art[sheetIndex][2]));
         s_taken[slot] = 1;
+        s_owned[slot] = 1;
         s_remap[sheetIndex] = slot;
         return slot;
+        }
     }
     if (!s_saidFull) {
         s_saidFull = 1;
@@ -340,22 +441,43 @@ static uint8_t artEntry(int32_t sheetIndex)
     return s_remap[sheetIndex];
 }
 
+/* The next entry this tier may keep for itself: a donated duplicate if the
+ * palette has one, else the old high pool for tiers that genuinely have room
+ * (AGA has 163 free entries; the DOS tiers have none, which is the whole point
+ * of donations). */
+static int32_t takeSpareEntry(void)
+{
+    int32_t i;
+
+    buildDonations();
+    for (i = JAG_KIT_FIRST - 1; i >= 16; i--)      /* high first: out of the way */
+        if (s_donateTo[i] && !s_taken[i] && !volatileEntry(i)) {
+            s_taken[i] = 1;
+            return i;
+        }
+    while (s_nextPool <= JAG_POOL_LAST && (volatileEntry(s_nextPool) || s_taken[s_nextPool]))
+        s_nextPool++;
+    if (s_nextPool <= JAG_POOL_LAST)
+        return s_nextPool++;
+    return -1;
+}
+
 /* An entry of this tier's own, for a colour that will be re-made later (the
  * shadow): never shared with the art, since rewriting it would move something
  * else's colour too. */
 static uint8_t ownEntry(int32_t sheetIndex)
 {
-    while (s_nextPool <= JAG_POOL_LAST && volatileEntry(s_nextPool))
-        s_nextPool++;
-    if (s_nextPool > JAG_POOL_LAST)
+    int32_t slot32 = takeSpareEntry();
+    if (slot32 < 0)
         return artEntry(sheetIndex);          /* no room: as good as it gets */
     {
-        uint8_t slot = s_nextPool++;
+        uint8_t slot = (uint8_t)slot32;
         uint8_t rgb12[3];
         to12(s_art[sheetIndex], rgb12);
         _gamePalette[slot] = (uint16_t)((rgb12[0] << 8) | (rgb12[1] << 4) | rgb12[2]);
         DosGfx_SetExtraColour(slot, s_art[sheetIndex][0], s_art[sheetIndex][1], s_art[sheetIndex][2]);
         s_taken[slot] = 1;
+        s_owned[slot] = 1;
         s_remap[sheetIndex] = slot;
         return slot;
     }
@@ -395,8 +517,21 @@ const uint8_t *JagGfx_SheetRemap(void)
     if (!said && (reused || spent)) {
         said = 1;
         fprintf(stderr, "[jag] Jaguar sprites: bin/grafs_jag; %d of the art's colours found in "
-                        "the palette, %d given spare entries (%d..%d)\n",
-                reused, spent, JAG_POOL_FIRST, JAG_POOL_LAST);
+                        "the palette, %d given entries of their own\n", reused, spent);
+        if (getenv("SWOS_JAG_DUMP")) {
+            int32_t e;
+            int32_t risky = 0;
+            fprintf(stderr, "[jag] entries WRITTEN:");
+            for (e = 16; e < JAG_KIT_FIRST; e++) {
+                if (!s_owned[e]) continue;
+                if (s_donateTo[e]) fprintf(stderr, " %d(dup of %d)", e, s_donateTo[e]);
+                else { fprintf(stderr, " %d(POOL!)", e); risky++; }
+            }
+            fprintf(stderr, "\n");
+            if (risky)
+                fprintf(stderr, "[jag] %d entries came from the old pool -- those can "
+                                "collide with pitch art\n", risky);
+        }
     }
     /* The shadow entries hold the art's greens until the pitch says otherwise, and
      * the banks may well decode after the pitch palette was applied. */
@@ -604,6 +739,7 @@ int32_t        JagGfx_IsBank(const char *name) { (void)name; return 0; }
 const uint8_t *JagGfx_SheetRemap(void) { return 0; }
 void           JagGfx_NewMatch(void) {}
 void           JagGfx_SetShading(int32_t o, int32_t s, int32_t st) { (void)o; (void)s; (void)st; }
+int32_t        JagGfx_RemapDonated(uint8_t *p, uint32_t n) { (void)p; (void)n; return 0; }
 void           JagGfx_PitchApplied(void) {}
 void           JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
 {
