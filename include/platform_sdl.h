@@ -89,6 +89,12 @@ typedef struct {
     int                    audio_mono;       /* 1 = down-mix to mono (default), 0 = Amiga panned */
     int                    dos_graphics;     /* 1 = render DOS-version graphics. PC-only */
     int                    jag_graphics;     /* 1 = the Atari Jaguar's sprites (bin/grafs_jag) */
+    /* Sprite shading (docs/PALETTE_V2.md §5). Both off is the 16-colour Amiga
+     * look exactly, which is the point: the shaded sprites become the default
+     * renderer and the flat look becomes a setting. */
+    int                    outfit_shading;   /* 1 = shade the kit, 0 = flat team colour */
+    int                    shadow_shading;   /* 1 = shade the drop shadow, 0 = SWOS's colour 8 */
+    int                    shade_step;       /* sixteenths between kit shades: 16, 16-N, 16-2N, 16-3N */
     int                    dos_gameplay;     /* 1 = DOS gameplay tweaks (framerate etc.). PC-only; reserved */
     int                    fire_hold_lockout;/* 1 = keep the ORIGINAL Amiga bug where an OPPONENT's tackle
                                               * kills your held fire button's shot charge for good. 0 (default)

@@ -149,6 +149,12 @@ static int handler(void *user, const char *section,
     } else if (eqi(section, "jaguar")) {
         int b;
         if (eqi(name, "graphics") && parse_bool(value, &b)) opts->jag_graphics = b;
+        else if (eqi(name, "outfit_shading") && parse_bool(value, &b)) opts->outfit_shading = b;
+        else if (eqi(name, "shadow_shading") && parse_bool(value, &b)) opts->shadow_shading = b;
+        else if (eqi(name, "shade_step")) {
+            int v = atoi(value);
+            if (v >= 1 && v <= 5) opts->shade_step = v;
+        }
     } else if (eqi(section, "arcade")) {
         int b;
         if (eqi(name, "enabled") && parse_bool(value, &b)) opts->arcade = b;
@@ -323,6 +329,30 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (bin/grafs_jag, built by scripts/make_jag_graphics.py). The players and the\n"
         "; ball only: the pitch, the menus and the HUD stay as they are.",
         opts->jag_graphics ? "true" : "false" };
+
+    items[n++] = (IniEntry){ "jaguar", "outfit_shading",
+        "; Shade the kit into four tones per colour, the way the Jaguar art does.\n"
+        "; false draws each kit colour flat, exactly as the 16-colour Amiga game\n"
+        "; does -- so the shaded sprites are the renderer and the original look is\n"
+        "; a setting, not a separate asset tier (docs/PALETTE_V2.md).\n",
+        opts->outfit_shading ? "true" : "false" };
+
+    items[n++] = (IniEntry){ "jaguar", "shadow_shading",
+        "; Shade the drop shadow, tinted from the grass of the pitch being played\n"
+        "; on. false uses SWOS's own colour 8 -- one near-black that reads on any\n"
+        "; pitch, and costs the palette nothing.\n",
+        opts->shadow_shading ? "true" : "false" };
+
+    {
+        static char stepBuf[8];
+        snprintf(stepBuf, sizeof stepBuf, "%d", opts->shade_step);
+        items[n++] = (IniEntry){ "jaguar", "shade_step",
+            "; How far apart the four kit shades are, in sixteenths: 16, 16-N, 16-2N,\n"
+            "; 16-3N. The Jaguar's own artwork used about 3.3, which takes a\n"
+            "; near-white sock down to 37.5% and reads as dark grey. 2 keeps it\n"
+            "; white; 3 is close to the Jaguar's own look. Range 1..5.\n",
+            stepBuf };
+    }
     items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
     items[n++] = (IniEntry){ "arcade", "mode",       "; mode: arcade game mode (F2 service menu). Currently: GOLDEN GOAL", Arcade_ModeName(opts->arcade_mode) };
     items[n++] = (IniEntry){ "arcade", "game_seconds", "; game rules (F2 service menu). game_seconds 10..600;  golden_goal/penalties_on_draw/goal_replay: true | false", vbuf[2] };

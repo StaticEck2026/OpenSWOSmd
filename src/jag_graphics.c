@@ -115,8 +115,32 @@ static uint8_t s_shadowEntry[JAG_SHADOW_SHADES];    /* the entries they were giv
 /* Which of SWOS's colours each kit slot is, in the order the art's ramps run. */
 static const uint8_t k_kitSlotAmiga[JAG_KIT_SLOTS] = { 10, 11, 14, 15 };
 
-/* The shade of a ramp, as sixteenths of the colour. */
-static const uint8_t k_shade[JAG_KIT_SHADES] = { 16, 13, 9, 6 };
+/* The shade of a ramp, as sixteenths of the colour: 16, 16-step, 16-2*step,
+ * 16-3*step. The Jaguar's own ratios were 16,13,9,6 -- a step of about 3.3,
+ * chosen for its own artwork rather than for SWOS kit colours, which are often
+ * near-white. At that depth a white sock bottoms out at 37.5% and reads as dark
+ * grey (reported 2026-09-22), so the step is a setting and the default is 2. */
+static uint8_t k_shade[JAG_KIT_SHADES] = { 16, 14, 12, 10 };
+
+static int32_t s_outfitShading = 1;
+static int32_t s_shadowShading = 1;
+
+/* SWOS's own drop shadow: one near-black colour that reads on any pitch, which
+ * is what "shadow_shading = false" asks for. */
+#define JAG_FLAT_SHADOW_COLOUR 8
+
+void JagGfx_SetShading(int32_t outfit, int32_t shadow, int32_t step)
+{
+    int32_t k;
+    s_outfitShading = outfit != 0;
+    s_shadowShading = shadow != 0;
+    if (step < 1) step = 1;
+    if (step > 5) step = 5;                 /* 16,11,6,1 is already almost black */
+    for (k = 0; k < JAG_KIT_SHADES; k++) {
+        int32_t v = 16 - k * step;
+        k_shade[k] = (uint8_t)(v < 1 ? 1 : v);
+    }
+}
 
 static const char *const k_banks[] = {
     "CJCTEAM1", "CJCTEAM2", "CJCTEAM3", "CJCTEAMG", "CJCBITS", "CJCBENCH"
@@ -418,6 +442,19 @@ void JagGfx_PitchApplied(void)
 
     if (!s_enabled || !s_haveArt)
         return;
+    if (!s_shadowShading) {
+        /* Flat: every shadow shade IS SWOS's colour 8, so the tier spends no
+         * entries on a shadow at all and the ground looks like the 16-colour
+         * game's. The entries it was given keep whatever they hold; nothing
+         * draws in them. */
+        for (i = 0; i < JAG_SHADOW_SHADES; i++)
+            s_remap[k_shadow[i].art] = JAG_FLAT_SHADOW_COLOUR;
+        return;
+    }
+    for (i = 0; i < JAG_SHADOW_SHADES; i++)
+        if (s_shadowEntry[i])
+            s_remap[k_shadow[i].art] = s_shadowEntry[i];   /* undo a previous flat */
+
     grassColour(grass);
     for (i = 0; i < JAG_SHADOW_SHADES; i++) {
         uint8_t e = s_shadowEntry[i];
@@ -520,13 +557,17 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
                         _gamePalette[out256[hairArt[2]]] & 0xFFF);
         }
     }
+    if (getenv("SWOS_JAG_DUMP"))
+        fprintf(stderr, "[jag] shades %d/%d/%d/%d sixteenths, outfit=%s shadow=%s\n",
+                k_shade[0], k_shade[1], k_shade[2], k_shade[3],
+                s_outfitShading ? "on" : "off", s_shadowShading ? "on" : "off");
     for (slot = 0; slot < JAG_KIT_SLOTS; slot++) {
         uint16_t colour = (uint16_t)(amiga16[k_kitSlotAmiga[slot]] & 0xFF);
         uint8_t base[3];
         liveColour(colour, base);
         for (shade = 0; shade < JAG_KIT_SHADES; shade++) {
             uint16_t entry;
-            if (shade == 0) {
+            if (shade == 0 || !s_outfitShading) {
                 /* The colour itself, entry and all: a Jaguar kit is the kit the
                  * Amiga draws. (Kit colour 0 is one the pitch rewrites, and the
                  * 16-colour game lets that follow the pitch too.) */
@@ -542,6 +583,15 @@ void JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
             }
             out256[JAG_KIT_FIRST + slot * JAG_KIT_SHADES + shade] = entry;
         }
+        if (getenv("SWOS_JAG_DUMP")) {
+            static const char *k_slotName[JAG_KIT_SLOTS] =
+                { "stripes", "shirt", "shorts", "socks" };
+            fprintf(stderr, "[jag]   %-7s colour %2d ->", k_slotName[slot], colour);
+            for (shade = 0; shade < JAG_KIT_SHADES; shade++)
+                fprintf(stderr, " %03X",
+                        _gamePalette[out256[JAG_KIT_FIRST + slot * JAG_KIT_SHADES + shade]] & 0xFFF);
+            fprintf(stderr, "\n");
+        }
     }
 }
 
@@ -553,6 +603,7 @@ void           JagGfx_SetEnabled(int32_t on) { (void)on; }
 int32_t        JagGfx_IsBank(const char *name) { (void)name; return 0; }
 const uint8_t *JagGfx_SheetRemap(void) { return 0; }
 void           JagGfx_NewMatch(void) {}
+void           JagGfx_SetShading(int32_t o, int32_t s, int32_t st) { (void)o; (void)s; (void)st; }
 void           JagGfx_PitchApplied(void) {}
 void           JagGfx_TeamTable(const uint16_t *amiga16, uint16_t *out256)
 {

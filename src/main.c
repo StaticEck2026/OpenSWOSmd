@@ -160,6 +160,15 @@ static void print_usage(const char *argv0)
         "                            'stereo' restores the original Amiga panning.\n"
         "  --jag-graphics=<on|off>   Render the Atari Jaguar's gameplay sprites\n"
         "                            (bin/grafs_jag; scripts/make_jag_graphics.py)\n"
+        "  --outfit-shading=<on|off> Shade the kit into four tones per colour\n"
+        "                            (default on). Off draws each kit colour flat,\n"
+        "                            exactly as the 16-colour Amiga game does.\n"
+        "  --shadow-shading=<on|off> Shade the drop shadow, tinted from the pitch\n"
+        "                            it falls on (default on). Off uses SWOS's own\n"
+        "                            colour 8, one near-black.\n"
+        "  --shade-step=<1..5>       How far apart the four kit shades are, in\n"
+        "                            sixteenths (default 2). Higher is more\n"
+        "                            contrast; the Jaguar's own artwork used 3.\n"
         "  --dos-graphics=<on|off>   Render the DOS-version graphics (bin/grafs_dos)\n"
         "                            instead of the Amiga graphics. Default: off.\n"
         "                            PC-only extra; the Amiga look is the default.\n"
@@ -361,6 +370,12 @@ int main(int argc, char **argv)
 #else
     opts.jag_graphics = 0;        /* ... and not the Jaguar's either */
 #endif
+    /* Shading defaults (docs/PALETTE_V2.md §5). Step 2 rather than the Jaguar's
+     * own ~3.3: at that depth a near-white sock bottoms out at 37.5% and reads
+     * as dark grey. */
+    opts.outfit_shading = 1;
+    opts.shadow_shading = 1;
+    opts.shade_step = 2;
     opts.dos_gameplay = 0;        /* default Amiga gameplay */
     opts.fire_hold_lockout = 0;   /* default: the original's fire-hold bug is FIXED */
     opts.replay_auto_save = 0;    /* default: LATEST.SRP only, no dated copy per match */
@@ -534,6 +549,17 @@ int main(int argc, char **argv)
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
             return ReplayTest_MathSelfTest();
+        } else if ((v = match_kv(a, "outfit-shading")) != NULL) {
+            opts.outfit_shading = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
+        } else if ((v = match_kv(a, "shadow-shading")) != NULL) {
+            opts.shadow_shading = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
+        } else if ((v = match_kv(a, "shade-step")) != NULL) {
+            int st = atoi(v);
+            if (st < 1 || st > 5) {
+                fprintf(stderr, "--shade-step must be 1..5 (got %s)\n", v);
+                return 1;
+            }
+            opts.shade_step = st;
         } else if ((v = match_kv(a, "menu")) != NULL) {
             OnlineMenus_SetStartMenu(v);
             /* Same reason as --matchmaker-menu: this flag exists to reach a menu,
@@ -818,6 +844,7 @@ int main(int argc, char **argv)
     /* Publish DOS-mode flags for the game code (default = Amiga graphics). */
     _gDosGraphics = opts.dos_graphics;
     JagGfx_SetEnabled(opts.jag_graphics);
+    JagGfx_SetShading(opts.outfit_shading, opts.shadow_shading, opts.shade_step);
     { extern int _gArcadeMode; _gArcadeMode = opts.arcade; }
     _gDosGameplay = opts.dos_gameplay;
     { extern int _gOriginalFireHoldLockout;
