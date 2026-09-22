@@ -120,7 +120,7 @@ static SDL_Renderer *s_renderer;
  * flowing. Ring depth 4 stays a frame clear of D3D11's default 3-frame latency
  * queue. Harmless on OpenGL (which never stalled). */
 #define PLATFORM_TEX_RING 4
-/* The streaming texture is TALLER than the screen. Rows [0, PLATFORM_SCREEN_H)
+/* The streaming texture is TALLER than the screen. Rows [0, _screen_height)
  * are the frame; the rows below are a scratch strip carrying the HUD overlay,
  * so the HUD ships to the GPU inside the SAME upload as the world and is then
  * drawn from the SAME texture. See present_frame_copy: one upload, two draws.
@@ -201,7 +201,7 @@ void Platform_HudLayerMark(int x, int y, int w, int h)
     if (x0 < 0) x0 = 0;
     if (y0 < 0) y0 = 0;
     if (x1 > _screen_width) x1 = _screen_width;
-    if (y1 > PLATFORM_SCREEN_H) y1 = PLATFORM_SCREEN_H;
+    if (y1 > _screen_height) y1 = _screen_height;
     if (x0 < s_hud_x0) s_hud_x0 = x0;
     if (y0 < s_hud_y0) s_hud_y0 = y0;
     if (x1 > s_hud_x1) s_hud_x1 = x1;
@@ -608,7 +608,7 @@ int Platform_Init(const PlatformInitOptions *opts)
             if (SDL_GetDisplayUsableBounds(screen, &ub) == 0 && ub.w > 0 && ub.h > 0) {
                 while (win_scale > 1 &&
                        ((int)_screen_width * win_scale > ub.w ||
-                        PLATFORM_SCREEN_H * win_scale > ub.h)) {
+                        _screen_height * win_scale > ub.h)) {
                     win_scale--;
                 }
             }
@@ -679,7 +679,7 @@ int Platform_Init(const PlatformInitOptions *opts)
      * only to 'auto'. The render is letterboxed inside it by SDL_RenderSetLogicalSize,
      * which is already how fullscreen works. */
     int client_w = (int)_screen_width * win_scale;
-    int client_h = PLATFORM_SCREEN_H * win_scale;
+    int client_h = _screen_height * win_scale;
     int pinned = 0;
     s_pinned_w = s_pinned_h = 0;
     if (opts && opts->res_w > 0 && opts->res_h > 0 && fs_mode == PLATFORM_FULLSCREEN_NONE) {
@@ -693,16 +693,16 @@ int Platform_Init(const PlatformInitOptions *opts)
          * the DOS size" but the picture is 336x272, so it comes out at 0.73x --
          * blurry, non-integer, and smaller than 1:1 (reported 2026-09-22). Say
          * so, and name the setting that does what they wanted. */
-        if (client_w < (int)_screen_width || client_h < PLATFORM_SCREEN_H)
+        if (client_w < (int)_screen_width || client_h < _screen_height)
             fprintf(stderr,
                 "[video] %dx%d is smaller than the %dx%d picture, so it is being shrunk "
                 "to fit (%.2fx). For a crisp window use 'resolution=auto' with 'scale=N'; "
                 "the picture is always %d lines tall -- the render SIZE is not settable\n",
-                client_w, client_h, (int)_screen_width, PLATFORM_SCREEN_H,
-                (double)client_w / (double)_screen_width < (double)client_h / (double)PLATFORM_SCREEN_H
+                client_w, client_h, (int)_screen_width, _screen_height,
+                (double)client_w / (double)_screen_width < (double)client_h / (double)_screen_height
                     ? (double)client_w / (double)_screen_width
-                    : (double)client_h / (double)PLATFORM_SCREEN_H,
-                PLATFORM_SCREEN_H);
+                    : (double)client_h / (double)_screen_height,
+                _screen_height);
 #ifndef SWOS_WASM_BUILD
         /* A window bigger than the monitor is not a setting, it is a mistake nobody can
          * undo from inside the game -- the title bar ends up off-screen. Clamp to the
@@ -783,12 +783,12 @@ int Platform_Init(const PlatformInitOptions *opts)
             if (!pinned) {
                 while (win_scale > 1 &&
                        ((int)_screen_width * win_scale + bl + br > ub.w ||
-                        PLATFORM_SCREEN_H * win_scale + bt + bb > ub.h)) {
+                        _screen_height * win_scale + bt + bb > ub.h)) {
                     win_scale--;
                 }
                 SDL_SetWindowSize(s_window,
                                   _screen_width * win_scale,
-                                  PLATFORM_SCREEN_H * win_scale);
+                                  _screen_height * win_scale);
             }
             s_win_scale_current = win_scale;
 
@@ -1104,7 +1104,7 @@ void Platform_ToggleFullscreen(void)
         else
             SDL_SetWindowSize(s_window,
                 _screen_width * s_win_scale_current,
-                PLATFORM_SCREEN_H * s_win_scale_current);
+                _screen_height * s_win_scale_current);
         SDL_ShowCursor(SDL_ENABLE);
     } else {
         /* Toggle into the flavour the user launched with. If they
@@ -1158,7 +1158,7 @@ void Platform_SetWindowScale(int scale)
     if ((flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) == 0) {
         SDL_SetWindowSize(s_window,
             _screen_width * scale,
-            PLATFORM_SCREEN_H * scale);
+            _screen_height * scale);
         /* Re-centre on the desktop after a size change so a 4× window
          * doesn't end up clipped against the bottom-right of the screen. */
         SDL_SetWindowPosition(s_window,
@@ -1330,7 +1330,7 @@ static void chunky_to_rgba(uint32_t *dst, int dst_pitch_pixels)
      * irrelevant to the chunky frontbuffer. */
     (void)_cameraYMod320;
 
-    for (int y = 0; y < PLATFORM_SCREEN_H; ++y) {
+    for (int y = 0; y < _screen_height; ++y) {
         const uint8_t *line = fb + (size_t)y * FRONTBUFFER_ROW_STRIDE_BYTES;
         uint32_t      *out  = dst + (size_t)y * dst_pitch_pixels;
         for (int x = 0; x < _screen_width; ++x) {
@@ -1366,7 +1366,7 @@ static void write_screenshot(const uint32_t *argb)
     /* stb_image_write wants RGBA byte order in memory. Our ARGB8888 SDL
      * buffer stores pixels as 0xAARRGGBB uint32, which on LE is bytes
      * BB,GG,RR,AA — i.e. BGRA in memory. Convert to RGBA before write. */
-    const int N = _screen_width * PLATFORM_SCREEN_H;
+    const int N = _screen_width * _screen_height;
     uint8_t *rgba = (uint8_t *)malloc((size_t)N * 4);
     if (!rgba) {
         fprintf(stderr, "[screenshot] malloc failed\n");
@@ -1381,7 +1381,7 @@ static void write_screenshot(const uint32_t *argb)
     }
     char path[64];
     snprintf(path, sizeof(path), "swos_shot%03d.png", s_screenshot_index++);
-    if (stbi_write_png(path, _screen_width, PLATFORM_SCREEN_H, 4,
+    if (stbi_write_png(path, _screen_width, _screen_height, 4,
                        rgba, _screen_width * 4))
         fprintf(stderr, "[screenshot] wrote %s\n", path);
     else
@@ -1442,8 +1442,8 @@ static void maybe_dump_frame(const uint32_t *argb)
     snprintf(path, sizeof(path), "/tmp/swos_frame_%04d.ppm", n);
     FILE *f = fopen(path, "wb");
     if (!f) return;
-    fprintf(f, "P6\n%d %d\n255\n", _screen_width, PLATFORM_SCREEN_H);
-    for (int i = 0; i < _screen_width * PLATFORM_SCREEN_H; ++i) {
+    fprintf(f, "P6\n%d %d\n255\n", _screen_width, _screen_height);
+    for (int i = 0; i < _screen_width * _screen_height; ++i) {
         uint32_t p = argb[i];
         uint8_t rgb[3] = { (uint8_t)(p >> 16), (uint8_t)(p >> 8), (uint8_t)p };
         fwrite(rgb, 1, 3, f);
@@ -1453,7 +1453,7 @@ static void maybe_dump_frame(const uint32_t *argb)
     /* Single-line summary: count distinct colors on a mid-screen row. */
     int d = 0;
     uint32_t seen[16] = {0}; int sn = 0;
-    const uint32_t *mid = argb + (PLATFORM_SCREEN_H / 2) * _screen_width;
+    const uint32_t *mid = argb + (_screen_height / 2) * _screen_width;
     for (int i = 0; i < _screen_width; ++i) {
         uint32_t p = mid[i] & 0xFFFFFF;
         int found = 0;
@@ -1714,12 +1714,12 @@ static void present_hud_strip(SDL_Texture *tex, int n)
 static void draw_world_and_hud(SDL_Texture *tex, int n, float qx, float qy)
 {
     const float w = (float)(_screen_width * n);
-    const float h = (float)(PLATFORM_SCREEN_H * n);
+    const float h = (float)(_screen_height * n);
 
     /* The texture is TALLER than the screen (PLATFORM_TEX_H) -- the rows below
      * hold the HUD scratch strip -- so every world draw must name the visible
      * region explicitly. A NULL src would stretch the strip into the picture. */
-    const SDL_Rect worldSrc = { 0, 0, _screen_width, PLATFORM_SCREEN_H };
+    const SDL_Rect worldSrc = { 0, 0, _screen_width, _screen_height };
 
     if (qx == 0.0f && qy == 0.0f) {
         if (n == 1) {
@@ -1738,12 +1738,12 @@ static void draw_world_and_hud(SDL_Texture *tex, int n, float qx, float qy)
     SDL_RenderCopyF(s_renderer, tex, &worldSrc, &dst);
 
     if (qx > 0.0f) {                    /* right sliver: clamp the last column */
-        SDL_Rect  src = { _screen_width - 1, 0, 1, PLATFORM_SCREEN_H };
+        SDL_Rect  src = { _screen_width - 1, 0, 1, _screen_height };
         SDL_FRect d   = { w - qx, -qy, qx, h + qy };
         SDL_RenderCopyF(s_renderer, tex, &src, &d);
     }
     if (qy > 0.0f) {                    /* bottom sliver: clamp the last row */
-        SDL_Rect  src = { 0, PLATFORM_SCREEN_H - 1, _screen_width, 1 };
+        SDL_Rect  src = { 0, _screen_height - 1, _screen_width, 1 };
         SDL_FRect d   = { -qx, h - qy, w + qx, qy };
         SDL_RenderCopyF(s_renderer, tex, &src, &d);
     }
@@ -1806,11 +1806,11 @@ static SDL_Texture *scale_target_for(int n)
 
     SDL_Texture *t = SDL_CreateTexture(s_renderer, SDL_PIXELFORMAT_ARGB8888,
                                        SDL_TEXTUREACCESS_TARGET,
-                                       _screen_width * n, PLATFORM_SCREEN_H * n);
+                                       _screen_width * n, _screen_height * n);
     if (!t) {
         fprintf(stderr, "[render] scaling=smooth: %dx%d render target failed (%s) "
                         "— falling back to the single nearest copy\n",
-                _screen_width * n, PLATFORM_SCREEN_H * n, SDL_GetError());
+                _screen_width * n, _screen_height * n, SDL_GetError());
         s_scale_targets_ok = 0;
         return NULL;
     }
@@ -1827,7 +1827,7 @@ static SDL_Texture *scale_target_for(int n)
         SDL_RenderGetScale(s_renderer, &sx, &sy);
         fprintf(stderr, "[render] scaling=smooth: output scale %.3fx%.3f is not whole — "
                         "pre-scaling %dx (target %dx%d), then resampling %.3f\n",
-                sx, sy, n, _screen_width * n, PLATFORM_SCREEN_H * n, sx / (float)n);
+                sx, sy, n, _screen_width * n, _screen_height * n, sx / (float)n);
         s_scale_logged = 1;
     }
     return t;
@@ -1889,7 +1889,7 @@ static uint32_t *screenshot_frame_with_hud(uint32_t *fb)
 {
     if (!hud_layer_pending()) return fb;
     /* Only the visible frame, not the scratch strip below it. */
-    size_t n = (size_t)_screen_width * PLATFORM_SCREEN_H;
+    size_t n = (size_t)_screen_width * _screen_height;
     uint32_t *tmp = (uint32_t *)SDL_malloc(n * 4);
     if (!tmp) return fb;                       /* capture without the HUD */
     SDL_memcpy(tmp, fb, n * 4);
@@ -1960,13 +1960,13 @@ static void render_frame_impl(int pump_full)
     { extern int _gArcadeMode;
       extern int Arcade_RenderFullScreen(uint32_t *, int, int, int);
       if (_gArcadeMode)
-          arcade_full = Arcade_RenderFullScreen(fb, fbpx, _screen_width, PLATFORM_SCREEN_H); }
+          arcade_full = Arcade_RenderFullScreen(fb, fbpx, _screen_width, _screen_height); }
     if (!arcade_full) {
         chunky_to_rgba(fb, fbpx);
         { extern int _gArcadeMode;
           extern void Arcade_CompositeOverlay(uint32_t *, int, int, int);
           if (_gArcadeMode)
-              Arcade_CompositeOverlay(fb, fbpx, _screen_width, PLATFORM_SCREEN_H); }
+              Arcade_CompositeOverlay(fb, fbpx, _screen_width, _screen_height); }
     }
 
     /* Screenshots read the packed RAM buffer directly (always the right stride now,

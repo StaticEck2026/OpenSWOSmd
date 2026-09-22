@@ -373,6 +373,7 @@ int main(int argc, char **argv)
     /* Shading defaults (docs/PALETTE_V2.md §5). Step 2 rather than the Jaguar's
      * own ~3.3: at that depth a near-white sock bottoms out at 37.5% and reads
      * as dark grey. */
+    opts.view_style = VIEW_STYLE_AUTO;   /* follow the gameplay style */
     opts.outfit_shading = 1;
     opts.shadow_shading = 1;
     opts.shade_step = 2;
@@ -549,6 +550,11 @@ int main(int argc, char **argv)
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
             return ReplayTest_MathSelfTest();
+        } else if ((v = match_kv(a, "view")) != NULL) {
+            if      (strcmp(v, "auto") == 0)  opts.view_style = VIEW_STYLE_AUTO;
+            else if (strcmp(v, "amiga") == 0) opts.view_style = VIEW_STYLE_AMIGA;
+            else if (strcmp(v, "dos") == 0)   opts.view_style = VIEW_STYLE_DOS;
+            else { fprintf(stderr, "--view must be auto, amiga or dos (got %s)\n", v); return 1; }
         } else if ((v = match_kv(a, "outfit-shading")) != NULL) {
             opts.outfit_shading = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
         } else if ((v = match_kv(a, "shadow-shading")) != NULL) {
@@ -955,6 +961,36 @@ int main(int argc, char **argv)
         if (nd < 1) nd = 1;
         if (opts.screen < 0 || opts.screen >= nd) opts.screen = 0;
 
+    /* THE DOS VIEW. 320x200, as the PC release draws it, and as a whole: the
+     * renderer AND the simulation, because the view size feeds the onScreen cull
+     * (GAMEPLAY.md §25.4). Drawing 200 lines while the simulation believed 272
+     * would position the camera for 272 and crop what it culled in -- less than
+     * the game thinks is visible, which is worse than either original.
+     *
+     * Every camera constant is already f(view) and lands on the DOS numbers here:
+     * SIM_CAMERA_MAX_Y = 664 - (200-200) = 664, which is swos.asm:7539's
+     * `mov word ptr D2, 664`, and SIM_CAMERA_POS_MAX_Y = 880-200 = 680, which is
+     * swos-port's kCameraMaxY. SIM_CAM_AIM_HEIGHT already used 200 under DOS
+     * gameplay before any of this existed. */
+    {
+        int dosView = (opts.view_style == VIEW_STYLE_DOS) ||
+                      (opts.view_style == VIEW_STYLE_AUTO && opts.dos_gameplay);
+        if (dosView) {
+            _screen_width    = DOS_VIEW_WIDTH;
+            _screen_height   = DOS_VIEW_HEIGHT;
+            _sim_view_width  = DOS_VIEW_WIDTH;
+            _sim_view_height = DOS_VIEW_HEIGHT;
+            fprintf(stderr, "[video] DOS view: %dx%d (the PC release's), simulation included\n",
+                    _screen_width, _screen_height);
+        }
+        if (opts.view_style == VIEW_STYLE_AMIGA && opts.dos_gameplay)
+            fprintf(stderr, "[video] DOS gameplay with the Amiga view: a mix that matches "
+                            "neither original -- 'view = auto' follows the gameplay\n");
+        if (opts.view_style == VIEW_STYLE_DOS && !opts.dos_gameplay)
+            fprintf(stderr, "[video] the DOS view with Amiga gameplay: a mix that matches "
+                            "neither original -- 'view = auto' follows the gameplay\n");
+    }
+
         int dw, dh;
         if (opts.res_w > 0 && opts.res_h > 0) {
             /* SWOS.ini [video] resolution=WxH — any aspect, monitor-independent. */
@@ -982,9 +1018,12 @@ int main(int argc, char **argv)
         if (w > dw) w = dw & ~1;
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
-        _screen_width = w;
+        /* The DOS view is a fixed 320x200 and does not stretch to the monitor:
+         * showing more pitch is exactly what it must not do. */
+        if (_screen_height != DOS_VIEW_HEIGHT)
+            _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
-                _screen_width, SCREEN_HEIGHT, opts.screen, nd, dw, dh, (double)dw / dh);
+                _screen_width, _screen_height, opts.screen, nd, dw, dh, (double)dw / dh);
         /* Say so when the asked-for size is not what came out, because "I set 320x200 and
          * got 436x272" is otherwise a silent surprise. The height is not negotiable: the
          * frontbuffer, the HUD and every menu are 272 lines (PLATFORM_SCREEN_H), and the
@@ -993,11 +1032,12 @@ int main(int argc, char **argv)
          * 1920x1080 is obviously a monitor and needs no explaining; 320x200 and 640x480
          * are exactly what someone types when they mean "run at this size". */
         if (opts.res_w > 0 && opts.res_h > 0 && opts.res_w <= PITCH_VIEW_MAX_WIDTH &&
-            (_screen_width != opts.res_w || SCREEN_HEIGHT != opts.res_h))
+            _screen_height != DOS_VIEW_HEIGHT &&     /* the DOS view sets its own size */
+            (_screen_width != opts.res_w || _screen_height != opts.res_h))
             fprintf(stderr, "[video] %dx%d is the render size, not %dx%d: the height is "
                             "always %d (the HUD and menus are that tall) and the width is "
                             "%d..%d%s\n",
-                    _screen_width, SCREEN_HEIGHT, opts.res_w, opts.res_h, SCREEN_HEIGHT,
+                    _screen_width, _screen_height, opts.res_w, opts.res_h, _screen_height,
                     SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH,
                     aspectW > dw ? " -- capped at the width you asked for" : "");
     }
@@ -1009,8 +1049,12 @@ int main(int argc, char **argv)
      * choice changes. Pinning it here means every display plays the same game
      * and the renderer simply draws wider (GAMEPLAY.md §25.4/§25.5).
      * The replay rig overrides it to the geometry a recording was made in. */
-    _sim_view_width  = SCREEN_WIDTH;
-    _sim_view_height = SCREEN_HEIGHT;
+    if (_screen_height != DOS_VIEW_HEIGHT) {
+        _sim_view_width  = SCREEN_WIDTH;
+        _sim_view_height = SCREEN_HEIGHT;
+    }
+
+
     /* What the match's draw-dependent decisions are made for (display.h): the render
      * width, so a wide display animates its margins. A recording was made with no
      * margin, so the rig pins 336 unless told otherwise; a netplay session sets the

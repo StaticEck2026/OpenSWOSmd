@@ -59,6 +59,8 @@ typedef enum {
     PLATFORM_FULLSCREEN_EXCLUSIVE = 2,
 } PlatformFullscreenMode;
 
+enum { VIEW_STYLE_AUTO = 0, VIEW_STYLE_AMIGA = 1, VIEW_STYLE_DOS = 2 };
+
 typedef struct {
     int                    win_scale;        /* 1, 2, 3, 4 */
     PlatformFullscreenMode fullscreen;       /* none / desktop / exclusive */
@@ -92,6 +94,12 @@ typedef struct {
     /* Sprite shading (docs/PALETTE_V2.md §5). Both off is the 16-colour Amiga
      * look exactly, which is the point: the shaded sprites become the default
      * renderer and the flat look becomes a setting. */
+    /* Which view the match is played with. NOT a display setting: the view size
+     * feeds the onScreen cull, so it decides which players auto-selection may
+     * pick -- "amiga" and "dos" are different games, which is the point.
+     * AUTO follows the gameplay style, so one switch gives one authentic
+     * experience and the hybrids have to be asked for by name. */
+    int                    view_style;
     int                    outfit_shading;   /* 1 = shade the kit, 0 = flat team colour */
     int                    shadow_shading;   /* 1 = shade the drop shadow, 0 = SWOS's colour 8 */
     int                    shade_step;       /* sixteenths between kit shades: 16, 16-N, 16-2N, 16-3N */

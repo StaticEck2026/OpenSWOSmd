@@ -131,6 +131,18 @@ static int handler(void *user, const char *section,
         int b;
         if (eqi(name, "fire_hold_lockout") && parse_bool(value, &b))
             opts->fire_hold_lockout = b;
+        else if (eqi(name, "style")) {
+            if      (eqi(value, "amiga")) opts->dos_gameplay = 0;
+            else if (eqi(value, "dos"))   opts->dos_gameplay = 1;
+        }
+        else if (eqi(name, "view")) {
+            /* Here and not under [video], because it is not a display setting:
+             * the view size feeds the onScreen cull, so it decides which players
+             * auto-selection may pick. It changes the GAME. */
+            if      (eqi(value, "auto"))  opts->view_style = VIEW_STYLE_AUTO;
+            else if (eqi(value, "amiga")) opts->view_style = VIEW_STYLE_AMIGA;
+            else if (eqi(value, "dos"))   opts->view_style = VIEW_STYLE_DOS;
+        }
     } else if (eqi(section, "replays")) {
         int b;
         if (eqi(name, "auto_save") && parse_bool(value, &b))
@@ -140,15 +152,27 @@ static int handler(void *user, const char *section,
             snprintf(opts->matchmaker, sizeof opts->matchmaker, "%s", value);
         else if (eqi(name, "record"))
             snprintf(opts->record, sizeof opts->record, "%s", value);
-    } else if (eqi(section, "dos")) {
+    } else if (eqi(section, "graphics")) {
         int b;
-        if      (eqi(name, "graphics") && parse_bool(value, &b)) opts->dos_graphics = b;
-        else if (eqi(name, "gameplay") && parse_bool(value, &b)) opts->dos_gameplay = b;
-        else if (eqi(name, "directory") && value && value[0])
-            snprintf(opts->dos_dir, sizeof opts->dos_dir, "%s", value);
-    } else if (eqi(section, "jaguar")) {
-        int b;
-        if (eqi(name, "graphics") && parse_bool(value, &b)) opts->jag_graphics = b;
+        if (eqi(name, "style")) {
+            /* amiga | dos | 2020 -- one key for the art pipeline, because that is
+             * what the engine has: DOS graphics plus a directory. "2020" is SWOS
+             * 2020's art, which is why a path in the file was always a smell. */
+            if (eqi(value, "amiga")) opts->dos_graphics = 0;
+            else if (eqi(value, "dos")) {
+                opts->dos_graphics = 1;
+                snprintf(opts->dos_dir, sizeof opts->dos_dir, "grafs_dos");
+            } else if (eqi(value, "2020")) {
+                opts->dos_graphics = 1;
+                snprintf(opts->dos_dir, sizeof opts->dos_dir, "grafs_2020");
+            }
+        }
+        else if (eqi(name, "sprites")) {
+            if      (eqi(value, "amiga"))  opts->jag_graphics = 0;
+            else if (eqi(value, "jaguar")) opts->jag_graphics = 1;
+            /* "auto" keeps the built-in default: the Jaguar art on the web build,
+             * where it is the better-looking half of what that build is for. */
+        }
         else if (eqi(name, "outfit_shading") && parse_bool(value, &b)) opts->outfit_shading = b;
         else if (eqi(name, "shadow_shading") && parse_bool(value, &b)) opts->shadow_shading = b;
         else if (eqi(name, "shade_step")) {
@@ -306,6 +330,24 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; (fixed). Your OWN tackle still spends the press either way — that half is\n"
         "; deliberate in the original. See team_control.c.",
         opts->fire_hold_lockout ? "true" : "false" };
+
+
+    items[n++] = (IniEntry){ "gameplay", "style",
+        "; style: amiga | dos. The Amiga release is the definitive one and what this\n"
+        "; port is reverse engineered from; dos is the PC release's 70 FPS physics,\n"
+        "; timers and formations -- and its 320x200 view, since that is part of how\n"
+        "; it plays (see view below).\n",
+        opts->dos_gameplay ? "dos" : "amiga" };
+
+
+    items[n++] = (IniEntry){ "gameplay", "view",
+        "; view: auto | amiga | dos. How much of the pitch is on screen: 336x272 the\n"
+        "; Amiga way, 320x200 the DOS way. This is NOT a display setting -- the view\n"
+        "; size feeds the cull that decides which players the computer may pick, so it\n"
+        "; changes the game. auto follows style, which is what you want; naming one\n"
+        "; explicitly gives a hybrid that matches neither original.\n",
+        opts->view_style == VIEW_STYLE_AMIGA ? "amiga" :
+        opts->view_style == VIEW_STYLE_DOS   ? "dos" : "auto" };
     items[n++] = (IniEntry){ "replays", "auto_save",
         "; auto_save: true | false — every match is recorded to LATEST.SRP in the save\n"
         "; folder and can be watched from HIGHLIGHTS -> LOAD. true also keeps a dated\n"
@@ -321,36 +363,40 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; two players' frames to catch a desync: \"server\" (the matchmaker above), a\n"
         "; recorder of your own as \"host\" or \"host:port\", or empty for none.",
         opts->record };
-    items[n++] = (IniEntry){ "dos",    "directory",  "; directory: folder under bin/ to load the DOS assets from", opts->dos_dir[0] ? opts->dos_dir : "grafs_dos" };
-    items[n++] = (IniEntry){ "dos",    "graphics",   "; graphics: true | false — render the DOS-version graphics", opts->dos_graphics ? "true" : "false" };
-    items[n++] = (IniEntry){ "dos",    "gameplay",   "; gameplay: true | false — DOS 70 FPS physics/timer tuning", opts->dos_gameplay ? "true" : "false" };
-    items[n++] = (IniEntry){ "jaguar", "graphics",
-        "; graphics: true | false - play with the Atari Jaguar's gameplay sprites\n"
-        "; (bin/grafs_jag, built by scripts/make_jag_graphics.py). The players and the\n"
-        "; ball only: the pitch, the menus and the HUD stay as they are.",
-        opts->jag_graphics ? "true" : "false" };
 
-    items[n++] = (IniEntry){ "jaguar", "outfit_shading",
-        "; Shade the kit into four tones per colour, the way the Jaguar art does.\n"
-        "; false draws each kit colour flat, exactly as the 16-colour Amiga game\n"
-        "; does -- so the shaded sprites are the renderer and the original look is\n"
-        "; a setting, not a separate asset tier (docs/PALETTE_V2.md).\n",
+
+    items[n++] = (IniEntry){ "graphics", "style",
+        "; style: amiga | dos | 2020. Which artwork the pitch, HUD and menus are drawn\n"
+        "; from. Gameplay is unaffected -- this is only what it looks like.\n",
+        !opts->dos_graphics ? "amiga" :
+        (opts->dos_dir[0] && !strcmp(opts->dos_dir, "grafs_2020")) ? "2020" : "dos" };
+
+    items[n++] = (IniEntry){ "graphics", "sprites",
+        "; sprites: auto | amiga | jaguar. The Atari Jaguar redrew the players at 256\n"
+        "; colours -- same animations, more shades (docs/JAGUAR.md). auto is the\n"
+        "; per-platform default.\n",
+        opts->jag_graphics ? "jaguar" : "amiga" };
+
+
+    items[n++] = (IniEntry){ "graphics", "outfit_shading",
+        "; outfit_shading: true | false. Shade the kit into four tones per colour, the\n"
+        "; way the Jaguar art does. false draws each kit colour flat, exactly as the\n"
+        "; 16-colour Amiga game does.\n",
         opts->outfit_shading ? "true" : "false" };
 
-    items[n++] = (IniEntry){ "jaguar", "shadow_shading",
-        "; Shade the drop shadow, tinted from the grass of the pitch being played\n"
-        "; on. false uses SWOS's own colour 8 -- one near-black that reads on any\n"
-        "; pitch, and costs the palette nothing.\n",
+    items[n++] = (IniEntry){ "graphics", "shadow_shading",
+        "; shadow_shading: true | false. Shade the drop shadow, tinted from the grass of\n"
+        "; the pitch being played on. false uses SWOS's own colour 8 -- one near-black\n"
+        "; that reads on any pitch, and costs the palette nothing.\n",
         opts->shadow_shading ? "true" : "false" };
 
     {
         static char stepBuf[8];
         snprintf(stepBuf, sizeof stepBuf, "%d", opts->shade_step);
-        items[n++] = (IniEntry){ "jaguar", "shade_step",
-            "; How far apart the four kit shades are, in sixteenths: 16, 16-N, 16-2N,\n"
-            "; 16-3N. The Jaguar's own artwork used about 3.3, which takes a\n"
-            "; near-white sock down to 37.5% and reads as dark grey. 2 keeps it\n"
-            "; white; 3 is close to the Jaguar's own look. Range 1..5.\n",
+        items[n++] = (IniEntry){ "graphics", "shade_step",
+            "; shade_step: 1..5. How far apart the four kit shades are, in sixteenths:\n"
+            "; 16, 16-N, 16-2N, 16-3N. The Jaguar's own artwork used about 3, which takes\n"
+            "; a near-white sock down to 37.5% and reads as dark grey; 2 keeps it white.\n",
             stepBuf };
     }
     items[n++] = (IniEntry){ "arcade", "enabled",    "; enabled: true | false — boot straight to attract mode, no main menu", opts->arcade ? "true" : "false" };
