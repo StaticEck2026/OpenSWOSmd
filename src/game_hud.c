@@ -6,6 +6,7 @@
 #include "game_hud.h"
 #include "game_types.h"
 #include "display.h"    /* _screen_width, WIDE_MARGIN — center the controlled-player name in widescreen */
+#include "dos_mode.h"   /* _gDosView: the DOS release places the name indicator differently */
 
 /* ---- Sprite indices ---- */
 #define SPR_CORNER_FLAG_FRAME_3         1073
@@ -277,28 +278,41 @@ position_name:
     spr->y.s.i      = (int16_t)_cameraY.s.i + 8000;
     spr->z.s.i      = 8000;
 
+    /* The two releases put this indicator in measurably different places, and
+     * the reason is the screen: the Amiga's is 336x272, the DOS one's 320x200.
+     * Both bottom corners sit 21 rows off the bottom edge (272-21 = 251,
+     * 200-21 = 179) and both right corners 10 columns off the right edge
+     * (336-10 = 326, 320-10 = 310, which HUD_WIDTH-10 already gives). The TOP
+     * offsets are not a screen-size difference at all -- the DOS name is flush
+     * with the top where the Amiga's is 14 rows down, and 12 columns in rather
+     * than 20 -- so they are listed out rather than derived.
+     *
+     * SWOS2.s loc_10B2B6 against swos.asm SetCurrentPlayerName
+     * @@set_picture_index. Kept as literals per mode: _gDosView is exactly
+     * 320x200 (widescreen there widens, it does not heighten), and writing the
+     * Amiga side as a formula would change a view this bug is not about. */
     switch (_currentPlayerIndicatorPosition) {
     case 1:
         /* Bottom-left */
         spr->x.s.i += 10;
-        spr->y.s.i += 251;
+        spr->y.s.i += _gDosView ? 179 : 251;
         return;
     case 2:
         /* Bottom-right */
         spr->x.s.i += HUD_WIDTH - 10;
         spr->x.s.i -= d2;
-        spr->y.s.i += 251;
+        spr->y.s.i += _gDosView ? 179 : 251;
         return;
     case 3:
         /* Top-right */
         spr->x.s.i += HUD_WIDTH - 10;
         spr->x.s.i -= d2;
-        spr->y.s.i += 14;
+        spr->y.s.i += _gDosView ? 8 : 14;
         return;
     default:
         /* Top-left (position == 4 or any other) */
-        spr->x.s.i += 20;
-        spr->y.s.i += 14;
+        spr->x.s.i += _gDosView ? 12 : 20;
+        spr->y.s.i += _gDosView ? 0 : 14;
         return;
     }
 

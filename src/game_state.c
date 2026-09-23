@@ -7,6 +7,7 @@
 #include "game_types.h"
 #include "endian_helpers.h"
 #include "display.h"    /* _screen_width, WIDE_MARGIN — center the in-match HUD in widescreen */
+#include "dos_mode.h"   /* _gDosView: the DOS release places the match clock differently */
 
 /* ---- External globals ---- */
 extern uint16_t _isGoalAttempt;
@@ -1070,6 +1071,17 @@ set_time_sprite_x:
         /* Position time sprite relative to camera */
         _currentTimeSprite.x.s.i = Render_CameraX() + HUD_MARGIN + 0x14;
         _currentTimeSprite.y.s.i = _cameraY.s.i + 0x2721;
+
+        /* The DOS release moves the clock 16 rows up and 6 columns left of
+         * where the Amiga puts it, and the Amiga has no such adjustment --
+         * swos.asm UpdateTime @@set_time_sprite_y has the two `sub`s that
+         * SWOS2.s loc_10B77A simply does not. Without them the clock sat 16
+         * rows too low in the DOS view, over the pitch rather than above it;
+         * reported by a tester against a screenshot of the real DOS game. */
+        if (_gDosView) {
+            _currentTimeSprite.y.s.i -= 16;
+            _currentTimeSprite.x.s.i -= 6;
+        }
 
         /* If player indicator is at position 4, shift time down by 8 */
         if (_currentPlayerIndicatorPosition == 4)
