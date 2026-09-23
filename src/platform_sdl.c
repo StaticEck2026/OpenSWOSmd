@@ -1142,6 +1142,12 @@ PlatformFullscreenMode Platform_GetFullscreenMode(void)
     return PLATFORM_FULLSCREEN_NONE;
 }
 
+void Platform_ViewChanged(void)
+{
+    if (!s_renderer) return;
+    SDL_RenderSetLogicalSize(s_renderer, _screen_width, _screen_height);
+}
+
 void Platform_SetWindowScale(int scale)
 {
     if (!s_window) return;

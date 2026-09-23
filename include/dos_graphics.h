@@ -50,4 +50,7 @@ void DosGfx_BuildServicePalette(uint8_t *rgb888Out);
 int DosGfx_ParsePitchMap(const uint8_t *datBuf, uint32_t datSize,
                          uint16_t *tileIndexOut, int maxOut);
 
+extern int _gDosGameplay;
+extern int _gDosView;
+
 #endif /* SWOS_DOS_GRAPHICS_H */

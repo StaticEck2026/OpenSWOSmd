@@ -975,14 +975,15 @@ int main(int argc, char **argv)
     {
         int dosView = (opts.view_style == VIEW_STYLE_DOS) ||
                       (opts.view_style == VIEW_STYLE_AUTO && opts.dos_gameplay);
-        if (dosView) {
-            _screen_width    = DOS_VIEW_WIDTH;
-            _screen_height   = DOS_VIEW_HEIGHT;
-            _sim_view_width  = DOS_VIEW_WIDTH;
-            _sim_view_height = DOS_VIEW_HEIGHT;
-            fprintf(stderr, "[video] DOS view: %dx%d (the PC release's), simulation included\n",
-                    _screen_width, _screen_height);
-        }
+        /* Remembered, not applied: the MENUS are 272 lines tall (Amiga artwork),
+         * so switching the whole game to 200 cuts their bottom rows off -- which
+         * is exactly what it did when this was set at startup. The view changes
+         * at kick-off and changes back after (game_loop.c). */
+        { extern int _gDosView; _gDosView = dosView; }
+        if (dosView)
+            fprintf(stderr, "[video] DOS view: %dx%d in a match (the PC release's), "
+                            "simulation included; menus stay %dx%d\n",
+                    DOS_VIEW_WIDTH, DOS_VIEW_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT);
         if (opts.view_style == VIEW_STYLE_AMIGA && opts.dos_gameplay)
             fprintf(stderr, "[video] DOS gameplay with the Amiga view: a mix that matches "
                             "neither original -- 'view = auto' follows the gameplay\n");
@@ -1020,8 +1021,7 @@ int main(int argc, char **argv)
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
         /* The DOS view is a fixed 320x200 and does not stretch to the monitor:
          * showing more pitch is exactly what it must not do. */
-        if (_screen_height != DOS_VIEW_HEIGHT)
-            _screen_width = w;
+        _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, _screen_height, opts.screen, nd, dw, dh, (double)dw / dh);
         /* Say so when the asked-for size is not what came out, because "I set 320x200 and
@@ -1032,7 +1032,6 @@ int main(int argc, char **argv)
          * 1920x1080 is obviously a monitor and needs no explaining; 320x200 and 640x480
          * are exactly what someone types when they mean "run at this size". */
         if (opts.res_w > 0 && opts.res_h > 0 && opts.res_w <= PITCH_VIEW_MAX_WIDTH &&
-            _screen_height != DOS_VIEW_HEIGHT &&     /* the DOS view sets its own size */
             (_screen_width != opts.res_w || _screen_height != opts.res_h))
             fprintf(stderr, "[video] %dx%d is the render size, not %dx%d: the height is "
                             "always %d (the HUD and menus are that tall) and the width is "
@@ -1049,10 +1048,8 @@ int main(int argc, char **argv)
      * choice changes. Pinning it here means every display plays the same game
      * and the renderer simply draws wider (GAMEPLAY.md §25.4/§25.5).
      * The replay rig overrides it to the geometry a recording was made in. */
-    if (_screen_height != DOS_VIEW_HEIGHT) {
-        _sim_view_width  = SCREEN_WIDTH;
-        _sim_view_height = SCREEN_HEIGHT;
-    }
+    _sim_view_width  = SCREEN_WIDTH;
+    _sim_view_height = SCREEN_HEIGHT;
 
 
     /* What the match's draw-dependent decisions are made for (display.h): the render

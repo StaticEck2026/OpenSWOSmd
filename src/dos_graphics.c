@@ -15,6 +15,11 @@
  * Default 0 = the normal Amiga graphics/gameplay. */
 int _gDosGraphics = 0;
 int _gDosGameplay = 0;
+/* 1 = play matches in the DOS release's 320x200 view (display.h, DOS_VIEW_*).
+ * Menus keep their own 336x272 -- they are Amiga artwork and do not fit 200
+ * lines, which is what cut the main menu in half when this was applied at
+ * startup rather than per scene. */
+int _gDosView = 0;
 int _gWidescreen  = 0;   /* 1 = wider 16:9 pitch view. SDL main sets from opts; Amiga stays 0 */
 char _gDosGraphicsDir[256] = "grafs_dos";   /* asset dir; see dos_mode.h */
 

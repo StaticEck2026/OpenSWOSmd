@@ -145,6 +145,12 @@ void Platform_ToggleFullscreen(void);
  * from the +/- key handlers. No-op while fullscreen. */
 void Platform_SetWindowScale(int scale);
 
+/* The picture's size has changed (the DOS view is 320x200, menus are 336x272),
+ * so the presenter must letterbox the new shape. The WINDOW is deliberately not
+ * resized: it stays the size the menus need, and a smaller match view sits
+ * inside it, rather than the window jumping about at every kick-off. */
+void Platform_ViewChanged(void);
+
 /* Snapshot the current windowed scale (1..4) and current fullscreen
  * mode. Used by the settings-save path so SWOS.ini round-trips reflect
  * runtime adjustments (Alt+Enter, +/-) — not just whatever was on the

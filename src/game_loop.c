@@ -885,6 +885,56 @@ cleanup_and_return:
 }
 
 /* ====================================================================
+ * MatchViewEnter / MatchViewLeave — the DOS view is per scene
+ *
+ * The DOS release draws 320x200 and so must a DOS-accurate match. The menus
+ * cannot: they are Amiga artwork, 272 lines tall, and a 200-line view cuts
+ * their bottom rows off (which is what it did when the view was set once at
+ * startup). So the view changes at kick-off and changes back after.
+ *
+ * The SIMULATION view moves with it, because it must: the onScreen cull reads
+ * the view size and decides which players auto-selection may pick, so drawing
+ * 200 lines while the simulation believed 272 would be a third thing that
+ * matches neither original (GAMEPLAY.md §25.4, docs/PALETTE_V2.md's sibling
+ * argument). Every camera constant is f(view) and lands on the DOS numbers at
+ * 200: SIM_CAMERA_MAX_Y = 664, which is swos.asm:7539.
+ * ==================================================================== */
+#ifdef SWOS_SDL_BUILD
+extern void Platform_ViewChanged(void);
+
+static int s_viewSavedW, s_viewSavedH;
+
+void MatchViewEnter(void)
+{
+    extern int _gDosView;
+    if (!_gDosView) return;
+    s_viewSavedW = _screen_width;      /* whatever the menus are using, including
+                                        * an adaptive widescreen width */
+    s_viewSavedH = _screen_height;
+    _screen_width    = DOS_VIEW_WIDTH;
+    _screen_height   = DOS_VIEW_HEIGHT;
+    _sim_view_width  = DOS_VIEW_WIDTH;
+    _sim_view_height = DOS_VIEW_HEIGHT;
+    Platform_ViewChanged();
+}
+
+void MatchViewLeave(void)
+{
+    extern int _gDosView;
+    if (!_gDosView) return;
+    if (!s_viewSavedW) return;         /* never entered */
+    _screen_width    = s_viewSavedW;
+    _screen_height   = s_viewSavedH;
+    _sim_view_width  = SCREEN_WIDTH;
+    _sim_view_height = SCREEN_HEIGHT;
+    Platform_ViewChanged();
+}
+#else
+#define MatchViewEnter()  ((void)0)
+#define MatchViewLeave()  ((void)0)
+#endif
+
+/* ====================================================================
  * StartMatchSequence — sets up and starts a match
  * ==================================================================== */
 void __attribute__((used, externally_visible))
@@ -892,6 +942,7 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
 {
     LoadSfxResources();
     _playGame = 1;
+    MatchViewEnter();
     EnsureSfxLoadedAndStart();
     SetPitchTypeAndNumber();
     InitGameSaveTeams(topTeam, bottomTeam);
@@ -924,6 +975,7 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
      * No-op on SDL / OCS (see ClearFrontbuffers). */
     ClearFrontbuffers();
     GameLoop();
+    MatchViewLeave();
 }
 
 /* ====================================================================
