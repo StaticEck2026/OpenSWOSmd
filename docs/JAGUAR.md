@@ -231,10 +231,25 @@ Two options each time:
   `<bank>_DOS.bmp` (the whole original bank's DOS art in the Jaguar palette),
   `<bank>_TODO.bmp` (only the cells the Jaguar has not got — the redraw list)
   and `<bank>_placements.csv` (every cell's index, source and rectangle).
-  Repaint the TODO sheet and save it as `Jag/<bank>_PATCH.bmp`: a whole 320x256
-  bank whose non-zero pixels are laid over the Jaguar sheet, and whose cells are
-  then taken from the sheet whatever `Except` says. Colour 0 is transparent, so
-  an unpainted cell keeps falling back. `JAG_GAME.act` is the palette to load.
+  The repaint goes back as `Jag/<bank>_PATCH.bmp`, a whole 320x256 bank, or as
+  `Jag/<bank>_PATCH_<x>_<y>.bmp`, a crop of any size pasted at that bank
+  position — the coordinates are in the name, so the art carries its own
+  placement and no table in the converter has to know about it. Either way the
+  cells it covers are then taken from the sheet whatever `Except` says.
+  `JAG_GAME.act` is the palette to load.
+
+  The two differ in what colour 0 means. In the whole-bank file it is
+  transparent, or the file would have to redraw the bank. **A positioned crop
+  replaces its rectangle outright, zeros included**, because the sprite it
+  covers is usually a different shape: painting only the non-zero pixels of the
+  white-shirted manager left 11–38 pixels of the Jaguar's brown one showing
+  around each of the six frames.
+
+  What the repaint may use is the same rule as any other sprite: **not Amiga
+  colours 10, 11, 14 or 15**, which are the kit slots and follow the team. The
+  original manager sprites stay inside 0–8 and 12 for exactly that reason, so
+  the practical recipe is to keep the Amiga art and move its shadow (Amiga 8)
+  onto a Jaguar shadow index — which is what was done here.
 
 `-jag-dump-sheets` writes the raw unpacked Jaguar sheet, which is how you tell
 "the Jaguar has not got it" from "the Jaguar has it somewhere else".
@@ -247,8 +262,9 @@ Two options each time:
   colours are patched per pitch condition).
 - **The celebration cells.** The Jaguar game has no goal celebration; SwosGfx
   stamps hand-drawn art over those cells, so they are not Jaguar art.
-- **The white-shirted bench manager** (`CJCBENCH` 1189-1194) and `CJCBITS` 1090,
-  which come from the DOS sprites until someone paints them — see above.
+- **`CJCBITS` 1090**, which comes from the DOS sprites — see above. The
+  white-shirted bench manager (`CJCBENCH` 1189-1194) was the other one and is
+  now painted: `Jag/CJCBENCH_PATCH_16_24.bmp` and `_PATCH_256_24.bmp`.
 - **`CJCGRAFS`** (the scoreboard font and clock captions) is left to the Amiga
   set, so the HUD keeps its own palette entries.
 - **The Amiga target**, for the memory and bandwidth reason above.
