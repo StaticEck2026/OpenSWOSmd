@@ -671,7 +671,30 @@ GameFrameResult GameLoop_Frame(void)
     /* Run gameplay update */
     MoveCamera();
     ScrollToCurrent();
-    SaveCoordinatesForHighlights((int16_t)0xFFFF, _cameraX.s.i, _cameraY.s.i);
+    /* Record the camera in the SAME space the per-sprite coordinates are written
+     * in. Those come off the draw path (sprites.c), which measures from
+     * Render_CameraX() -- the RENDER camera. `_cameraX` is the SIMULATION one,
+     * and since 97dd23a the two are not a shift apart but a SCALE, so storing
+     * `_cameraX` here made `sprite_x + cam_x` mean nothing: it was a world
+     * position plus cam * (1 - max/pan), drifting further the more the camera had
+     * moved. Every stationary object -- the goal overlay most visibly -- slid
+     * against the pitch as the camera panned.
+     *
+     * Measured in a tester's own .HIL (ReportBot 0006, recorded at ~485 wide):
+     * the bottom goal is pinned at world x = 300 (sprite_data.c) yet
+     * `sprite_x + cam_x` walked 415 -> 379 across one scene, fitting
+     * 300 + cam * 0.443 on every frame -- exactly 1 - max/pan at that width.
+     *
+     * With both in render space, `sprite_x + cam_x` IS the world position, which
+     * is what DrawReplayFrame now reconstructs and re-projects through the
+     * playback camera. Identity at 336 and on the Amiga, where max == pan. */
+    SaveCoordinatesForHighlights((int16_t)0xFFFF,
+#ifdef SWOS_SDL_BUILD
+                                 (uint16_t)Render_CameraX(),
+#else
+                                 _cameraX.s.i,
+#endif
+                                 _cameraY.s.i);
 #ifdef SWOS_SDL_BUILD
     { extern void ReplayRec_FrameBegin(void); ReplayRec_FrameBegin(); }
 #endif

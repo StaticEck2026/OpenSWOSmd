@@ -90,11 +90,35 @@ extern void ResetAnimatedPatternsForBothTeams(void);
 extern void DrawAnimatedPatterns(void);
 extern uint16_t _panicReasonCode;
 
-/* Per-frame X shift that re-anchors recorded screen-space sprite coordinates
- * (which have the recording camera baked in) onto the current playback camera.
- * Set by ReplayCameraX each frame; applied in the sprite decode below. */
-static int16_t s_replayShiftX = 0;
-static int16_t s_replayShiftY = 0;   /* same re-anchor for Y (DOS HIL camera clamp) */
+/* The camera the CURRENT frame was recorded with, in render space (game_loop.c
+ * writes Render_CameraX()). Recorded sprite coordinates are screen-space against
+ * it, so `recorded + this` is the sprite's WORLD position -- which is all the
+ * decode needs. There is deliberately no "shift" any more: the decode rebuilds
+ * the world position and re-projects it through the live playback camera, the
+ * same expression live drawing uses, so the two cannot drift apart however the
+ * camera mapping changes. Four regressions came from keeping a second, parallel
+ * way to get from a recording to the screen (ReportBot 0006 and the three cited
+ * in ReplayCameraX below). */
+static int16_t s_replayRecCamY = 0;
+
+/* Goal-overlay anchor guard state — see the check in DrawReplayFrame. Both goals
+ * are pinned at world x = 300 (sprite_data.c), so a change means the recording
+ * and the playback disagree about which camera space they are in. 0 = not seen
+ * yet; a real anchor is never 0. `Replay_GoalAnchorDrift()` lets a test assert
+ * on it without parsing output. */
+#define REPLAY_GOAL_TOP_SPR     1091
+#define REPLAY_GOAL_BOTTOM_SPR  1092
+static int32_t s_goalAnchorX[2]      = { 0, 0 };
+static uint8_t s_goalAnchorWarned[2] = { 0, 0 };
+static int32_t s_goalAnchorDrift     = 0;
+
+int32_t Replay_GoalAnchorDrift(void) { return s_goalAnchorDrift; }
+void    Replay_ResetGoalAnchor(void)
+{
+    s_goalAnchorX[0] = s_goalAnchorX[1] = 0;
+    s_goalAnchorWarned[0] = s_goalAnchorWarned[1] = 0;
+    s_goalAnchorDrift = 0;
+}
 
 /* --- Ball-tracked replay camera ------------------------------------------
  * A wide (e.g. SWOS-2020) recording's camera barely scrolls — the wide view
@@ -146,9 +170,10 @@ void Replay_ResetBallCamera(void) { s_replayBallValid = 0; s_replayCamXSet = 0; 
  *     clamp to the pan range.
  * No-op on Amiga / 4:3 (pan range == the classic range, WIDE_MARGIN == 0). */
 /* The replay camera is computed in RENDER space — `ballX - _screen_width/2`,
- * clamped to `0x2A0 - _screen_width`, with `s_replayShiftX` re-anchoring the
- * recorded sprites onto it. All of that tuning is what makes a recording play
- * back correctly at any resolution, and it stays exactly as it was.
+ * clamped to `0x2A0 - _screen_width`. That tuning is what makes a recording play
+ * back correctly at any resolution, and it stays exactly as it was; what is gone
+ * is the re-anchor that used to sit beside it (the decode rebuilds world
+ * positions instead, see s_replayRecCamY).
  *
  * What changed underneath it (97dd23a) is that `_cameraX` is now the
  * SIMULATION camera and the renderer derives its own origin,
@@ -191,26 +216,16 @@ static int16_t ReplayCameraX(int16_t recordedX)
     extern uint16_t _playHighlightFlag;
     s_replayRecCamX = recordedX;   /* the sprite decode reads this to reconstruct the ball's world X */
     if (_playHighlightFlag == 0) {
-        /* In-game instant replay: the recorded camera + sprites are already in
-         * our own (wide) screen space, not the DOS 336-space, so the WIDE_MARGIN
-         * re-anchor below would shift them (the goal overlay landed ~WIDE_MARGIN
-         * too far left). Play the recorded path verbatim.
+        /* In-game instant replay: play the recorded camera path back as it was.
          *
-         * VERBATIM MEANS VERBATIM — do NOT route this through ReplaySimCameraX.
-         * That helper converts a RENDER origin into a simulation X, which is
-         * right for the two returns below (they compute `out` in render space)
-         * and wrong here: `recordedX` is whatever SaveCoordinatesForHighlights
-         * stored, and game_loop.c passes it `_cameraX.s.i` — ALREADY the
-         * simulation camera. 314bc32 sent all three returns through the helper,
-         * so this one gained WIDE_MARGIN a second time: Render_CameraX() handed
-         * back the recorded SIMULATION value instead of the render origin the
-         * frame was drawn with, and the pitch, goal and hoardings slid out from
-         * under the verbatim-replayed players. Measured at 480 wide, a frame
-         * recorded with sim camera 195 drew at render origin 123 and replayed
-         * at 192. Folds to identity at 4:3 and on Amiga (WIDE_MARGIN == 0) —
-         * and the corpus forces 336 (main.c), which is why nothing caught it. */
-        s_replayShiftX = 0;
-        return recordedX;
+         * This used to return `recordedX` verbatim and was RIGHT to, because
+         * game_loop.c stored `_cameraX.s.i` — already a simulation X — and
+         * 314bc32 broke it by converting. That is no longer what is stored: the
+         * recorder now writes Render_CameraX(), a RENDER origin, so the
+         * conversion is exactly what belongs here, the same as the two returns
+         * below. It is not a second WIDE_MARGIN either way; the decode no longer
+         * re-anchors anything, it re-projects world positions. */
+        return ReplaySimCameraX(recordedX);
     }
     /* The DosReplay loader flags a SWOS-2020 widescreen recording (sprites span
      * wider than the 336 DOS/Amiga view). For those the recorded camera already
@@ -262,7 +277,6 @@ static int16_t ReplayCameraX(int16_t recordedX)
             else if (camInt > panRange) { camInt = panRange; s_replayCamXraw = (int32_t)panRange << 16; }
             out = (int16_t)camInt;
         }
-        s_replayShiftX = (int16_t)(recordedX - out - WIDE_MARGIN);
         return ReplaySimCameraX(out);
     }
 #endif
@@ -282,14 +296,6 @@ static int16_t ReplayCameraX(int16_t recordedX)
         if (out < 0) out = 0;
         else if (out > panRange) out = panRange;        /* 336 content: re-centre + follow */
     }
-    /* Recorded sprites are in screen space relative to the recording camera;
-     * shift them by (recorded - playback) so they re-anchor onto our playback
-     * camera. A stationary world object has a constant world position, so its
-     * shift cancels the recording camera -> it no longer slides. The recorded
-     * coords already sit in the centred 336 region of a wide view (WIDE_MARGIN),
-     * so subtract it to avoid double-counting the margin (otherwise everything
-     * lands WIDE_MARGIN px too far right). */
-    s_replayShiftX = (int16_t)(recordedX - out - WIDE_MARGIN);
     return ReplaySimCameraX(out);
 #else
     return recordedX;
@@ -306,15 +312,21 @@ static int16_t ReplayCameraY(int16_t recordedY)
 {
 #ifdef SWOS_SDL_BUILD
     extern uint16_t _playHighlightFlag;
-    if (_playHighlightFlag == 0) {
-        /* In-game instant replay: recorded in our own space, no re-anchor. */
-        s_replayShiftY = 0;
-        return recordedY;
-    }
+    s_replayRecCamY = recordedY;   /* the decode rebuilds world Y from this */
+    if (_playHighlightFlag == 0)
+        return recordedY;          /* in-game instant replay: same space already */
+
+    /* Y is not scaled the way X is, so the playback camera is just the recorded
+     * one clamped into the live vertical range. Sprites follow it regardless of
+     * how far it is clamped, because the decode re-projects world positions
+     * rather than shifting by the clamp -- which is the point of the rewrite.
+     *
+     * NOTE 0x260 is still a constant while the visible height became runtime in
+     * f860c9a. That is a FRAMING choice now, not a correctness one, but it is
+     * wrong for the DOS view's 200 lines and wants revisiting. */
     int16_t out = recordedY;
     if (out < 0x10) out = 0x10;
     else if (out > 0x260) out = 0x260;
-    s_replayShiftY = (int16_t)(recordedY - out);
     return out;
 #else
     return recordedY;
@@ -823,8 +835,54 @@ sprite_decode:
             }
         }
 #endif
-        sx += s_replayShiftX;   /* re-anchor recorded screen coords onto playback camera */
-        sy += s_replayShiftY;   /* same re-anchor for Y (DOS HIL camera clamp) */
+        /* Rebuild the WORLD position, then project it through the LIVE playback
+         * camera -- byte for byte the expression live drawing uses. Nothing is
+         * anchored to a value we merely asked for, so any rounding in the
+         * sim<->render conversion above is absorbed here instead of accumulating
+         * into a slide: `_menu_draw_x_offset` is cancelled for the same reason
+         * drawPatternFromIndex cancels it (the blit adds it, the pitch is drawn
+         * without it). */
+        {
+            extern int _menu_draw_x_offset;
+            int32_t worldX = sx + (int32_t)s_replayRecCamX;
+            int32_t worldY = sy + (int32_t)s_replayRecCamY;
+
+            /* ---- Goal-overlay anchor guard ------------------------------------
+             * The goal overlay is the one recorded sprite whose world position is
+             * a CONSTANT -- sprite_data.c pins both goals at world x = 300 -- so
+             * it is a free, exact check that the recording and the playback agree
+             * about what space they are in. If this drifts, every stationary
+             * object is sliding against the pitch and the net will visibly walk
+             * out of the goal as the camera pans. That is ReportBot 0006, and the
+             * three regressions cited in ReplayCameraX before it; each one was a
+             * camera-mapping change that nothing caught because the replay corpus
+             * pins 336, where all the mappings coincide. RUN THIS AT A WIDTH THAT
+             * IS NOT 336 or it can never fire. */
+            if (sprIdx == REPLAY_GOAL_TOP_SPR || sprIdx == REPLAY_GOAL_BOTTOM_SPR) {
+                int slot = (sprIdx == REPLAY_GOAL_BOTTOM_SPR);
+                if (s_goalAnchorX[slot] == 0)
+                    s_goalAnchorX[slot] = worldX;
+                else if (worldX != s_goalAnchorX[slot]) {
+                    int32_t drift = worldX - s_goalAnchorX[slot];
+                    if (drift > s_goalAnchorDrift) s_goalAnchorDrift = drift;
+                    else if (-drift > s_goalAnchorDrift) s_goalAnchorDrift = -drift;
+                    if (!s_goalAnchorWarned[slot]) {
+                        s_goalAnchorWarned[slot] = 1;
+                        SWOS_DBG("[replay] GOAL ANCHOR DRIFT: %s goal world x %d, "
+                                 "was %d (%+d) at width %d. The recording and the "
+                                 "playback camera disagree about their space; every "
+                                 "stationary object is sliding against the pitch.\n",
+                                 slot ? "bottom" : "top", (int)worldX,
+                                 (int)s_goalAnchorX[slot], (int)drift,
+                                 (int)_screen_width);
+                        SWOS_DBG_FLUSH();
+                    }
+                }
+            }
+
+            sx = worldX - (int32_t)Render_CameraX() - _menu_draw_x_offset;
+            sy = worldY - (int32_t)_cameraY.s.i;
+        }
 #endif
         DarkenRectangle((uint16_t)sprIdx, (uint16_t)(int16_t)sx,
                           (uint16_t)(int16_t)sy);
