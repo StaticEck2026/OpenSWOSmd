@@ -1146,6 +1146,24 @@ void Platform_ViewChanged(void)
 {
     if (!s_renderer) return;
     SDL_RenderSetLogicalSize(s_renderer, _screen_width, _screen_height);
+
+    /* And the WINDOW follows the view, so the picture keeps its whole-pixel
+     * scale instead of being letterboxed inside a window sized for the other
+     * one: 336x272 x3 in the menus, 320x200 x3 in a DOS-view match. The window
+     * used to stay put, which left bars in the match -- and then a trip through
+     * fullscreen "fixed" it, because the restore recomputes from the CURRENT
+     * view. Two sizes for the same state is worse than a window that resizes.
+     *
+     * Not when fullscreen (SDL letterboxes, which is right), and not when
+     * [video] resolution pinned a client area -- that was asked for by name. */
+    if (!s_window || s_pinned_w > 0) return;
+    {
+        Uint32 flags = SDL_GetWindowFlags(s_window);
+        if (flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_FULLSCREEN_DESKTOP)) return;
+        SDL_SetWindowSize(s_window,
+                          _screen_width  * s_win_scale_current,
+                          _screen_height * s_win_scale_current);
+    }
 }
 
 void Platform_SetWindowScale(int scale)

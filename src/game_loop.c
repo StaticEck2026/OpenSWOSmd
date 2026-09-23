@@ -942,10 +942,15 @@ StartMatchSequence(TeamGame *topTeam, TeamGame *bottomTeam)
 {
     LoadSfxResources();
     _playGame = 1;
-    MatchViewEnter();
     EnsureSfxLoadedAndStart();
     SetPitchTypeAndNumber();
     InitGameSaveTeams(topTeam, bottomTeam);
+    /* AFTER the fade, not before: InitGameSaveTeams fades the pre-match team
+     * line-up out, and that line-up is menu-sized. Switching the view while it is
+     * still on screen resizes the window and re-letterboxes it mid-fade. The
+     * screen is black here, so the change is invisible -- the same rule the
+     * palette learned on this exact transition. */
+    MatchViewEnter();
     /* NO palette push here.
      *
      * InitGameSaveTeams has just faded the screen to black, and nothing has
