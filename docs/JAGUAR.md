@@ -200,6 +200,45 @@ as a match, not as a test). A player sprite
 comes out with about 19 colours in its box where the Amiga has 10, and the kit's
 brightest shade equals the Amiga's flat kit colour.
 
+## Where the Jaguar has not got the sprite
+
+The conversion lays the Jaguar sheet into the Amiga bank layout by lifting each
+placement from the *same coordinates*, so it only works while the two releases
+agree on where a sprite lives. Where they do not, the walk quietly picks up
+whatever the Jaguar put there instead, and you get a real sprite in the wrong
+slot — much harder to notice than a blank one.
+
+`JagBank.Only` / `JagBank.Except` in `JagToAmiga.cs` are that list. To re-derive
+it, score every placement's non-zero mask in the Jaguar sheet against the same
+rectangle in `Amiga_Images_256/<bank>.bmp` (intersection over union) and look at
+anything below ~0.7. Look at it — a low score is as often a legitimate Jaguar
+redraw (its clock captions are the same words in a different font) as it is a
+wrong sprite.
+
+**The bench managers were the expensive one.** The Amiga has two: COACH1 in a
+brown coat at 1182-1187, COACH2 in a white shirt at 1189-1194. The Jaguar drew
+only the brown one, and repeated it across COACH2's six cells and the blanks
+either side. `bench_subs.c` picks the coach by team (`teamNumber != 1` adds 7),
+so the top bench drew a brown manager and the white-shirted one was missing from
+the tier entirely — reported as a coach "turned 180° vs the pitch", because the
+white shirt is what gives that figure its facing.
+
+Two options each time:
+
+- **Fall back to DOS.** Add the range to `Except` and the DOS sprite is blitted
+  in the Jaguar palette instead. Correct immediately, and it looks like DOS art.
+- **Paint it.** `SwosGfx -dos -jag2amiga -jag-template` writes, per bank,
+  `<bank>_DOS.bmp` (the whole original bank's DOS art in the Jaguar palette),
+  `<bank>_TODO.bmp` (only the cells the Jaguar has not got — the redraw list)
+  and `<bank>_placements.csv` (every cell's index, source and rectangle).
+  Repaint the TODO sheet and save it as `Jag/<bank>_PATCH.bmp`: a whole 320x256
+  bank whose non-zero pixels are laid over the Jaguar sheet, and whose cells are
+  then taken from the sheet whatever `Except` says. Colour 0 is transparent, so
+  an unpainted cell keeps falling back. `JAG_GAME.act` is the palette to load.
+
+`-jag-dump-sheets` writes the raw unpacked Jaguar sheet, which is how you tell
+"the Jaguar has not got it" from "the Jaguar has it somewhere else".
+
 ## What is not done
 
 - **The Jaguar's own pitch, menus and HUD.** The Jaguar CLUTs include a pitch
@@ -208,6 +247,8 @@ brightest shade equals the Amiga's flat kit colour.
   colours are patched per pitch condition).
 - **The celebration cells.** The Jaguar game has no goal celebration; SwosGfx
   stamps hand-drawn art over those cells, so they are not Jaguar art.
+- **The white-shirted bench manager** (`CJCBENCH` 1189-1194) and `CJCBITS` 1090,
+  which come from the DOS sprites until someone paints them — see above.
 - **`CJCGRAFS`** (the scoreboard font and clock captions) is left to the Amiga
   set, so the HUD keeps its own palette entries.
 - **The Amiga target**, for the memory and bandwidth reason above.
