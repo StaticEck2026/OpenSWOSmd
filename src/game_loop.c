@@ -911,9 +911,9 @@ void MatchViewEnter(void)
     s_viewSavedW = _screen_width;      /* whatever the menus are using, including
                                         * an adaptive widescreen width */
     s_viewSavedH = _screen_height;
-    _screen_width    = DOS_VIEW_WIDTH;
+    { extern int _dos_view_width; _screen_width = _dos_view_width; }
     _screen_height   = DOS_VIEW_HEIGHT;
-    _sim_view_width  = DOS_VIEW_WIDTH;
+    _sim_view_width  = DOS_VIEW_WIDTH;   /* pinned: the game is DOS at any width */
     _sim_view_height = DOS_VIEW_HEIGHT;
     Platform_ViewChanged();
 }

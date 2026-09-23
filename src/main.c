@@ -374,6 +374,7 @@ int main(int argc, char **argv)
      * own ~3.3: at that depth a near-white sock bottoms out at 37.5% and reads
      * as dark grey. */
     opts.view_style = VIEW_STYLE_AUTO;   /* follow the gameplay style */
+    opts.widescreen = 1;                 /* fill the display, as it always has */
     opts.outfit_shading = 1;
     opts.shadow_shading = 1;
     opts.shade_step = 2;
@@ -550,6 +551,8 @@ int main(int argc, char **argv)
             replay_window = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
             return ReplayTest_MathSelfTest();
+        } else if ((v = match_kv(a, "widescreen")) != NULL) {
+            opts.widescreen = !(strcmp(v, "off") == 0 || strcmp(v, "0") == 0);
         } else if ((v = match_kv(a, "view")) != NULL) {
             if      (strcmp(v, "auto") == 0)  opts.view_style = VIEW_STYLE_AUTO;
             else if (strcmp(v, "amiga") == 0) opts.view_style = VIEW_STYLE_AMIGA;
@@ -972,8 +975,9 @@ int main(int argc, char **argv)
      * `mov word ptr D2, 664`, and SIM_CAMERA_POS_MAX_Y = 880-200 = 680, which is
      * swos-port's kCameraMaxY. SIM_CAM_AIM_HEIGHT already used 200 under DOS
      * gameplay before any of this existed. */
+    int dosView;
     {
-        int dosView = (opts.view_style == VIEW_STYLE_DOS) ||
+        dosView = (opts.view_style == VIEW_STYLE_DOS) ||
                       (opts.view_style == VIEW_STYLE_AUTO && opts.dos_gameplay);
         /* Remembered, not applied: the MENUS are 272 lines tall (Amiga artwork),
          * so switching the whole game to 200 cuts their bottom rows off -- which
@@ -981,9 +985,7 @@ int main(int argc, char **argv)
          * at kick-off and changes back after (game_loop.c). */
         { extern int _gDosView; _gDosView = dosView; }
         if (dosView)
-            fprintf(stderr, "[video] DOS view: %dx%d in a match (the PC release's), "
-                            "simulation included; menus stay %dx%d\n",
-                    DOS_VIEW_WIDTH, DOS_VIEW_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT);
+            ;   /* reported below, once the display shape is known */
         if (opts.view_style == VIEW_STYLE_AMIGA && opts.dos_gameplay)
             fprintf(stderr, "[video] DOS gameplay with the Amiga view: a mix that matches "
                             "neither original -- 'view = auto' follows the gameplay\n");
@@ -1005,6 +1007,27 @@ int main(int argc, char **argv)
             dw = 16; dh = 9;   /* 16:9 fallback if the query fails */
             if (SDL_GetDesktopDisplayMode(opts.screen, &dm) == 0 && dm.h > 0) { dw = dm.w; dh = dm.h; }
         }
+        /* The DOS view is 200 lines, so its widescreen width is 200 * the display
+         * shape -- about 356 on 16:9 -- not 272 * it. Same rule as the Amiga view,
+         * different height. The SIMULATION stays pinned at 320x200 either way
+         * (MatchViewEnter), so a wider window shows more of the margins and plays
+         * exactly the same game: the port's whole widescreen bargain. */
+        {
+            extern int _dos_view_width;
+            int dosw = (int)((long)DOS_VIEW_HEIGHT * dw / dh);
+            dosw = (dosw + 1) & ~1;
+            if (dosw > dw)                 dosw = dw & ~1;
+            if (dosw < DOS_VIEW_WIDTH)     dosw = DOS_VIEW_WIDTH;
+            if (dosw > PITCH_VIEW_MAX_WIDTH) dosw = PITCH_VIEW_MAX_WIDTH;
+            if (!opts.widescreen) dosw = DOS_VIEW_WIDTH;   /* the PC release's own */
+            _dos_view_width = dosw;
+            if (dosView)
+                fprintf(stderr, "[video] DOS view: %dx%d in a match%s; the simulation is "
+                                "the PC release's %dx%d either way\n",
+                        dosw, DOS_VIEW_HEIGHT,
+                        dosw > DOS_VIEW_WIDTH ? " -- widescreen, showing more margin" : "",
+                        DOS_VIEW_WIDTH, DOS_VIEW_HEIGHT);
+        }
         int w = (int)((long)SCREEN_HEIGHT * dw / dh);
         int aspectW;
         w = (w + 1) & ~1;                          /* round up to even */
@@ -1019,8 +1042,7 @@ int main(int argc, char **argv)
         if (w > dw) w = dw & ~1;
         if (w < SCREEN_WIDTH)          w = SCREEN_WIDTH;
         if (w > PITCH_VIEW_MAX_WIDTH)  w = PITCH_VIEW_MAX_WIDTH;
-        /* The DOS view is a fixed 320x200 and does not stretch to the monitor:
-         * showing more pitch is exactly what it must not do. */
+        if (!opts.widescreen)          w = SCREEN_WIDTH;   /* the Amiga's own width */
         _screen_width = w;
         fprintf(stderr, "[video] render %dx%d (screen %d/%d, resolution %dx%d, %.2f:1)\n",
                 _screen_width, _screen_height, opts.screen, nd, dw, dh, (double)dw / dh);

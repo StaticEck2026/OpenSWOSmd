@@ -6,6 +6,7 @@
  * (vm_stubs.cpp, ultimately DosPalette.cs). DOS files are little-endian.
  */
 #include "dos_graphics.h"
+#include "display.h"
 #include "dos_mode.h"
 #include <string.h>
 
@@ -20,6 +21,11 @@ int _gDosGameplay = 0;
  * lines, which is what cut the main menu in half when this was applied at
  * startup rather than per scene. */
 int _gDosView = 0;
+/* What a DOS-view match is RENDERED at: 320 wide, or more on a wide display.
+ * The simulation is pinned to 320x200 regardless, so the extra columns are
+ * margin the game does not know about -- the same bargain the Amiga view's
+ * widescreen makes (display.h, "the SIMULATION view"). */
+int _dos_view_width = DOS_VIEW_WIDTH;
 int _gWidescreen  = 0;   /* 1 = wider 16:9 pitch view. SDL main sets from opts; Amiga stays 0 */
 char _gDosGraphicsDir[256] = "grafs_dos";   /* asset dir; see dos_mode.h */
 

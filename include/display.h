@@ -285,6 +285,12 @@ static inline uint16_t spriteNumPlanes(int16_t ordinal)
 #define SCREEN_WIDTH                336
 #define SCREEN_HEIGHT               272
 
+/* The DOS release's screen: 320x200, mode 13h. Its camera clamps fall out of the
+ * f(view) macros below at this height (SIM_CAMERA_MAX_Y = 664 = swos.asm:7539). */
+#define DOS_VIEW_WIDTH                  320
+#define DOS_VIEW_HEIGHT                 200
+
+
 /* ---- Source-image sprite-sheet height ----
  * The Amiga sprite-source banks (charset, cjc*, team kits, soccer_s) are a
  * fixed 320x256 planar sheet: BITPLANE_ROW_BYTES (40) per plane row, this
@@ -403,10 +409,6 @@ extern int _screen_height;
  * aspect ratio (main.c), so the picture fills any display with no bars. The buffer is
  * ALLOCATED at the MAX useful width = the full pitch world width (the view never
  * usefully exceeds the pitch; the camera clamp keys off the same 0x2A0). */
-/* The DOS release's screen: 320x200, mode 13h. Its camera clamps fall out of the
- * f(view) macros below at this height (SIM_CAMERA_MAX_Y = 664 = swos.asm:7539). */
-#define DOS_VIEW_WIDTH                  320
-#define DOS_VIEW_HEIGHT                 200
 #define WIDESCREEN_WIDTH                480   /* 16:9 reference (1.76); the width is now adaptive */
 #define PITCH_VIEW_MAX_WIDTH            672   /* = 0x2A0, pitch world width = max render width */
 #define FRONTBUFFER_MAX_STRIDE_BYTES    PITCH_VIEW_MAX_WIDTH
