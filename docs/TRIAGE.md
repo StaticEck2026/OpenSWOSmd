@@ -50,7 +50,7 @@ a line of code was read.
 
 Nothing here is triage-specific except where the evidence comes from:
 
-- **Reproduce it first.** The gdb harness (docs/HARNESS.md) drives real menus on
+- **Reproduce it first.** The gdb harness (docs/GDB_HARNESS.md) drives real menus on
   a real save; `~/.swos/save` is where careers live. Reproducing report 0001 took
   a tester's own career and six steps of driving, and it immediately showed that
   half the reported behaviour (the "pending add" return) was CORRECT and must not

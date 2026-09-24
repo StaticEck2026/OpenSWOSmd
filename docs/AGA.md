@@ -152,7 +152,7 @@ scripts/amiga/amiga_gdb.sh up          # launch FS-UAE + attach gdb (DH1: = bin/
 python3 scripts/amiga/amigascope/gdb_proxy.py cmd "info registers"
 python3 scripts/swos_harness.py where  # drive menus (works on SDL and Amiga)
 ```
-See [HARNESS.md](HARNESS.md) for the FS-UAE write-support details.
+See [GDB_HARNESS.md](GDB_HARNESS.md) for the FS-UAE write-support details.
 
 ### 9a. ⚠️ GOTCHA — every `#ifdef AGA` file MUST include `display.h`
 

@@ -3,7 +3,7 @@
 WITHOUT screenshots (fast + token-light). Screenshots (`cap`) are for
 orientation only; navigation feedback comes from reading the menu state.
 
-This is a thin CLI over the layered harness (see docs/HARNESS.md):
+This is a thin CLI over the layered harness (see docs/GDB_HARNESS.md):
   gdb_proxy.py (transport) -> harness_lib.py (generic) -> swos_plugin.py (game).
 
 Driving works on BOTH the SDL build and the Amiga build (FS-UAE), via one

@@ -5,11 +5,11 @@ This is the game-knowledge layer on top of the generic harness_lib.GdbHarness
 (itself on top of gdb_proxy.py). Everything SWOS-specific lives here: the Menu
 struct accessors, the menu-input injection point + direction encoding, the
 framebuffer/palette geometry, and career save loading. Lifting the harness to
-another game means swapping THIS file, not the framework. See docs/HARNESS.md.
+another game means swapping THIS file, not the framework. See docs/GDB_HARNESS.md.
 
 Driving works on BOTH targets (SDL native + Amiga FS-UAE) because the menu
 system is shared C and the FS-UAE stub is now write-capable (see
-docs/HARNESS.md "FS-UAE write support"). The injection point is a single line in
+docs/GDB_HARNESS.md "FS-UAE write support"). The injection point is a single line in
 the shared MenuProc, so one mechanism drives both.
 """
 import os
@@ -107,7 +107,7 @@ class SwosHarness:
         daemon has LOADED the ELF but not started it, so `continue` silently
         no-ops — the recurring cold-start failure. Empirically grounded:
         not-booted `info inferiors` shows '<null>' (no process); booted shows
-        'process NNNN'. See docs/HARNESS.md."""
+        'process NNNN'. See docs/GDB_HARNESS.md."""
         return "process " in self.h.cmd("info inferiors")
 
     def prime(self, timeout=120):
@@ -344,7 +344,7 @@ class SwosHarness:
         is faint on some frames). _menuCursorFrame=8 -> after the frame's ++ -> 9
         -> index (9&14)>>1=4 -> colour 7 (brightest). One input-free frame is
         consumed to re-render with the pinned values. Use this to ORIENT — see
-        docs/HARNESS.md 'Navigating by screenshot'."""
+        docs/GDB_HARNESS.md 'Navigating by screenshot'."""
         self.prime()
         self.h.set_var("_menuCursorFrame", 8)
         self.h.set_var("_menuTextBlinkCounter", 0)
@@ -399,7 +399,7 @@ class SwosHarness:
         SDL mode with a HEADLESS env (SDL_VIDEODRIVER=dummy /
         SDL_AUDIODRIVER=dummy) + the season-loop flags
         (SWOS_TEST_NO_INJURIES_CARDS=1, SWOS_SAVE_FORMAT_JSON_VERIFY=0) — see
-        docs/HARNESS.md 'Reliability'. Sets the inject breakpoint, (re)starts
+        docs/GDB_HARNESS.md 'Reliability'. Sets the inject breakpoint, (re)starts
         the inferior with `run`, and waits for the first MenuProc stop (the
         main menu). `set confirm off` + `kill` make a re-boot in the SAME daemon
         non-interactive (no 'restart from beginning?' prompt to hang on).
@@ -438,7 +438,7 @@ class SwosHarness:
         across every continent/country/division/club; only the displayed STRING
         identifies a row. Matching by label (case-insensitive, leading-substring
         fallback) also survives data edits that renumber ordinals — exactly what
-        we want when testing the data-jailbreak changes. See docs/HARNESS.md
+        we want when testing the data-jailbreak changes. See docs/GDB_HARNESS.md
         'Starting a fresh career'."""
         path = path or self.FRESH_CAREER_PATH
         self.prime()
@@ -503,7 +503,7 @@ class SwosHarness:
         return self._current_init()
 
     # ---- season-loop driver -----------------------------------------------
-    # Per-screen INPUT MODEL (reverse-engineered 2026-06-17; see docs/HARNESS.md
+    # Per-screen INPUT MODEL (reverse-engineered 2026-06-17; see docs/GDB_HARNESS.md
     # "Season loop"). The career advances through THREE kinds of screen, each
     # taking a DIFFERENT input. Using the wrong one is exactly what made the
     # driver appear to "wedge" — it was NEVER gdb / multithread instability:

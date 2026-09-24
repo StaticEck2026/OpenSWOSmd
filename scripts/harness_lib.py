@@ -7,7 +7,7 @@ can be lifted to any project that drives a target through gdb_proxy. A
 game-specific PLUGIN (e.g. swos_plugin.py) supplies the symbol names, struct
 layouts, injection points, and screen geometry.
 
-Layers (see docs/HARNESS.md):
+Layers (see docs/GDB_HARNESS.md):
   gdb_proxy.py   — generic transport: one persistent gdb session, cmd/waitstop/
                    health, SDL (native) or Amiga (FS-UAE remote) mode.
   harness_lib.py — THIS: generic primitives (read/write vars, breakpoints,
@@ -17,7 +17,7 @@ Layers (see docs/HARNESS.md):
 
 Memory/register WRITES require a write-capable gdb stub. Native SDL gdb is fine;
 the FS-UAE stub needed a patch to add M/P/G packets (see
-docs/HARNESS.md "FS-UAE write support"). write_check() verifies a write stuck —
+docs/GDB_HARNESS.md "FS-UAE write support"). write_check() verifies a write stuck —
 use it to fail loudly on a read-only target instead of silently no-op'ing.
 """
 import os

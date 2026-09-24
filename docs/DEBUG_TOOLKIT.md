@@ -9,7 +9,7 @@ This document covers the **inspection** layer. Two sibling docs cover the rest:
 
 - **`GDB.md`** — the low-level gdb workflow (boot FS-UAE, attach, `gdb_proxy.py`, read
   memory, breakpoints, watchpoints).
-- **`HARNESS.md`** — the higher-level *control* layer (drive the game: load careers,
+- **`GDB_HARNESS.md`** — the higher-level *control* layer (drive the game: load careers,
   open menus, step seasons).
 
 All tools live in the **AmigaScope** repo (github.com/benbaker76/AmigaScope, checked out
@@ -248,5 +248,5 @@ the **live capture + DMA profiler**. `fb_capture`/frozen-shot *clean* + `capture
   conventions consistent (`vpos 0..312`, `hpos 0..226`; the SWOS pitch display window is
   `vpos 36..307`).
 
-See also: `GDB.md` (gdb harness), `HARNESS.md` (driving the game), `AGA.md` (the AGA
+See also: `GDB.md` (gdb harness), `GDB_HARNESS.md` (driving the game), `AGA.md` (the AGA
 rendering pipeline these tools were built to debug).
