@@ -223,6 +223,15 @@ so the top bench drew a brown manager and the white-shirted one was missing from
 the tier entirely — reported as a coach "turned 180° vs the pitch", because the
 white shirt is what gives that figure its facing.
 
+**The SELECT SUBSTITUTE arrow (`CJCBENCH` 1170) points the other way.** The Jaguar
+draws it pointing LEFT; ours sits at the bench's top and must point RIGHT, at the
+substitutes beside it (ReportBot 0009, "the arrow is turned 180°"). A right place,
+a right shape, a wrong direction -- the placement score cannot see that, since a
+mirror image matches as well as the original. `Jag/CJCBENCH_PATCH_272_120.bmp` is
+the Jaguar's own arrow mirrored, with its drop shadow recast down-right (the body
+shifted one right and one down, shaded 62/61/60 as the Jaguar shades it) instead of
+mirrored to the left.
+
 Two options each time:
 
 - **Fall back to DOS.** Add the range to `Except` and the DOS sprite is blitted
@@ -264,7 +273,8 @@ Two options each time:
   stamps hand-drawn art over those cells, so they are not Jaguar art.
 - **`CJCBITS` 1090**, which comes from the DOS sprites — see above. The
   white-shirted bench manager (`CJCBENCH` 1189-1194) was the other one and is
-  now painted: `Jag/CJCBENCH_PATCH_16_24.bmp` and `_PATCH_256_24.bmp`.
+  now painted: `Jag/CJCBENCH_PATCH_16_24.bmp` and `_PATCH_256_24.bmp`. The bench
+  arrow (1170) is the Jaguar's own, mirrored: `Jag/CJCBENCH_PATCH_272_120.bmp`.
 - **`CJCGRAFS`** (the scoreboard font and clock captions) is left to the Amiga
   set, so the HUD keeps its own palette entries.
 - **The Amiga target**, for the memory and bandwidth reason above.
