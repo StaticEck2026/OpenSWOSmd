@@ -2099,6 +2099,37 @@ void ChangeGameplayStyle(MenuEntry *entry)
     ApplyGameStyle();
 
 #ifdef SWOS_SDL_BUILD
+    /* 4. The VIEW follows the style when the ini leaves it on `auto`, which is
+     *    the same rule main.c applies at startup:
+     *        dosView = (view == DOS) || (view == AUTO && dos_gameplay)
+     *    An explicit [gameplay] view=amiga|dos is the player's choice and is
+     *    left alone. This is what carries the DOS release's 320x200 screen --
+     *    and with it the camera's vertical range, since SIM_CAMERA_MAX_Y is
+     *    derived from _sim_view_height (display.h).
+     *
+     *    Only the FLAG moves here. The view itself is switched per scene, at
+     *    kick-off, by game_loop.c's MatchViewEnter: the menus are 272 lines of
+     *    Amiga artwork, so resizing to 200 while one is on screen cuts its
+     *    bottom rows off -- which is exactly what applying it globally did
+     *    (eafa8fc). The next match picks it up.
+     *
+     *    Everything else the style covers already tracks the flag live and
+     *    needs nothing here: the frame rate through DosGameplay_TargetFps()
+     *    (platform_sdl.c re-reads it per frame and re-arms the tick timer),
+     *    the camera aim through SIM_CAM_AIM_HEIGHT, and the ball physics,
+     *    goalkeeper reach, formations and stoppage timers through
+     *    ApplyGameStyle above. */
+    {
+        extern int _gDosView;
+        extern PlatformInitOptions *g_arcadeOpts;
+        if (g_arcadeOpts) {
+            _gDosView = (g_arcadeOpts->view_style == VIEW_STYLE_DOS) ||
+                        (g_arcadeOpts->view_style == VIEW_STYLE_AUTO && _gDosGameplay);
+        }
+    }
+#endif
+
+#ifdef SWOS_SDL_BUILD
     /* Persist, so the choice survives a restart the way every other row on
      * this menu does. Declared here rather than including swos_settings.h:
      * that header pulls in platform_sdl.h and therefore SDL.h, which the m68k
