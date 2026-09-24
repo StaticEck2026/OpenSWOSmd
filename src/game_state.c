@@ -654,7 +654,7 @@ position_sprites:
         _team1TotalGoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 158;
         if (d1 == 1)
             _team1TotalGoalsDigit2Sprite.x.s.i += 4;
-        _team1TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + 263 + d7 + 10002;
+        _team1TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y + 17) + d7 + 10002;
         _team1TotalGoalsDigit2Sprite.z.s.i = 10002;
         _team1TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
@@ -693,7 +693,7 @@ position_sprites:
         d1 = (int16_t)((uint32_t)(uint16_t)d1 % 10u);
 
         _team2TotalGoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 171;
-        _team2TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + 263 + d7 + 10002;
+        _team2TotalGoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y + 17) + d7 + 10002;
         _team2TotalGoalsDigit2Sprite.z.s.i = 10002;
         _team2TotalGoalsDigit2Sprite.imageIndex = SPR_SMALL_ZERO + (uint16_t)d1;
 
@@ -714,14 +714,14 @@ position_sprites:
 
     /* --- Dash sprite --- */
     _dashSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 165;
-    _dashSprite.y.s.i = _cameraY.s.i + 249 + d7 + 10000;
+    _dashSprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y + 3) + d7 + 10000;
     _dashSprite.z.s.i = 10000;
 
     /* --- Team 1 scorer sprites --- */
     {
         Sprite *spr = _team1ScorerSprite;
         uint16_t *widths = _team1ScorerSpritesWidths;
-        d1 = 263 + d7;
+        d1 = (SIM_RESULT_PANEL_Y + 17) + d7;
         for (d0 = 7; d0 >= 0; d0--)
         {
             if (*widths == 0)
@@ -739,7 +739,7 @@ position_sprites:
     {
         Sprite *spr = _team2ScorerSprite;
         uint16_t *widths = _team2ScorerSpritesWidths;
-        d1 = 263 + d7;
+        d1 = (SIM_RESULT_PANEL_Y + 17) + d7;
         for (d0 = 7; d0 >= 0; d0--)
         {
             if (*widths == 0)

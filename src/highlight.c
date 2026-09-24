@@ -14,6 +14,7 @@
 #include "panic.h"
 #include "endian_helpers.h"
 #include "display.h"    /* WIDE_MARGIN — centre the replay overlay in widescreen (0 on Amiga) */
+#include "dos_mode.h"   /* _gDosView — the overlay's DOS positions */
 
 /* ---- Sprite constants ---- */
 #define SPR_REPLAY_FRAME_00  1095
@@ -914,11 +915,19 @@ end_replay:
 after_decode:
     /* loc_10C4E2: overlay drawing */
 
-    /* Show replay icon (spinning R) when NOT in normal replay. Add WIDE_MARGIN so the icon
-     * tracks the centred HUD in widescreen instead of sitting at the screen's left edge. */
+    /* The overlay's coordinates are each release's own, against its own screen:
+     * swos.asm's against 320 in the DOS view, SWOS2.s's against 336 otherwise. So the
+     * margin that centres that screen in ours is measured from the matching width --
+     * WIDE_MARGIN is measured from 336 and is -8 in the DOS view, which would put
+     * both of these 8 pixels further left than the DOS draws them. */
+    const int dosv = (_gDosView != 0);
+    const int overlayMargin = (_screen_width - (dosv ? DOS_VIEW_WIDTH : SCREEN_WIDTH)) / 2;
+
+    /* Show replay icon (spinning R) when NOT in normal replay: (11, 14) in both
+     * releases. */
     if (_normalReplayRunning == 0) {
         uint16_t frame = (_currentGameTick >> 1) & 0x1F;
-        DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, 0xB + WIDE_MARGIN, 0xE);
+        DarkenRectangle(SPR_REPLAY_FRAME_00 + frame, (uint16_t)(0xB + overlayMargin), 0xE);
     }
 
     /* Show score overlay during normal replay (same playfield-relative offset).
@@ -928,21 +937,18 @@ after_decode:
     { extern int _gArcadeMode; if (_gArcadeMode) showScore = 0; }
 #endif
     if (showScore) {
-        uint16_t by = 17;                 /* d2 = 0xD + 4 */
+        /* The score sits in the TOP-LEFT corner, as both releases draw it: SWOS2.s
+         * `move.w #$D,d1 / #$D,d2 / addq.w #4` = (17, 17), swos.asm `mov D1, 9 /
+         * D2, 9 / add 4` = (13, 13). It was once centred across the screen, which
+         * no release ever did (ReportBot 0010). */
+        const uint16_t corner = dosv ? 13 : 17;
+        uint16_t by = corner;
+        uint16_t bx = (uint16_t)(corner + overlayMargin);
 
         uint16_t leftGoals  = _hilLeftTeamGoals;
         uint16_t rightGoals = _hilRightTeamGoals;
         uint16_t lTens = leftGoals / 10,  lUnits = leftGoals % 10;
         uint16_t rTens = rightGoals / 10, rUnits = rightGoals % 10;
-
-        /* Centre the "L-R" big-digit line horizontally. The original fixed X
-         * (17 + WIDE_MARGIN) is anchored to the 336 region, so it sits
-         * left-of-centre at any other width. Widths: digit advances 12/15, dash 8. */
-        int total_w = 15 + 8 + 15;        /* left units + dash + right units */
-        if (lTens) total_w += 12;
-        if (rTens) total_w += 12;
-        uint16_t bx = (_screen_width > total_w)
-                          ? (uint16_t)((_screen_width - total_w) / 2) : 0;
 
         /* Left team goals (SPR_BIG_0 digit sprites) */
         if (lTens) { DarkenRectangle(SPR_BIG_0 + lTens, bx, by); bx += 12; }

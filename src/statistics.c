@@ -164,7 +164,14 @@ void DrawStatistics(void)
      * draw base by WIDE_MARGIN so the whole panel centers, same as the menus; restored on
      * exit. WIDE_MARGIN folds to 0 on Amiga / non-widescreen (no shift). */
     const int saved_x_offset = _menu_draw_x_offset;
-    _menu_draw_x_offset = WIDE_MARGIN;
+    const int dosv = (_gDosView != 0);
+    /* Centre the panel against the width it was laid out for. The DOS layout below
+     * is already 320-wide (rows 16..304, centred on 160), so in the DOS view the
+     * margin is measured from 320, not from 336 -- WIDE_MARGIN there is -8, which
+     * put the board 8 pixels left of centre (ReportBot 0010). The result scoreboard
+     * is the other way round: swos.asm writes its X's 8 less than SWOS2.s (128 v 136,
+     * 157 v 165), so WIDE_MARGIN's -8 is exactly right for it. */
+    _menu_draw_x_offset = (_screen_width - (dosv ? DOS_VIEW_WIDTH : SCREEN_WIDTH)) / 2;
 
     /* The DOS release lays this panel out for its 320x200 screen, and the
      * difference is not a margin: every row is 16 higher, the grids are 16
@@ -176,7 +183,6 @@ void DrawStatistics(void)
      *
      * swos.asm DrawStatistics against SWOS2.s:22799. The left column is 80 in
      * both releases, which is why it stays a literal below. */
-    const int      dosv        = (_gDosView != 0);
     const uint16_t kTitleGridY = dosv ?  19 :  35;
     const uint16_t kTitleGridW = dosv ? 160 : 176;
     const uint16_t kRowY0      = dosv ?  39 :  55;
