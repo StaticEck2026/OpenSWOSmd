@@ -280,6 +280,34 @@ static void matchMakingMenu_OnInit(void)
 /* Runs every frame (the menu is flagged dos_redraw). This is also where the
  * client is pumped: there is no other per-frame hook while a menu is up, and
  * MmClient_Poll() is cheap when nothing has arrived. */
+/* The open-games column's navigation. SWOS 2020 moves through this list in code, so
+ * its .mnu gives the rows no neighbours at all, and every button below points UP at
+ * the eighth row (action_07) -- hidden unless eight games are open, and with no links
+ * of its own a dead end: a tester could see a game and not reach it (2026-09-24).
+ * So the host rows are a column: each down to the next, the last down to the
+ * buttons, and the buttons up into its bottom. A hidden row is passed over along its
+ * own link (MenuProc), so UP from the buttons lands on the lowest game actually
+ * listed, and with none listed it stays where it is. Every draw, because coming
+ * back from SETTINGS restores the menu from its template. */
+static void matchMaking_link_list(void)
+{
+    const int32_t last = MatchMakingMenu_host_00 + MatchMakingMenu_kGS_MaxRows - 1;
+    int32_t row;
+    for (row = 0; row < MatchMakingMenu_kGS_MaxRows; row++) {
+        MenuEntry *e = entry_at(MatchMakingMenu_host_00 + row);
+        e->leftEntry  = -1;
+        e->rightEntry = -1;
+        e->upEntry    = (int8_t)(row > 0 ? MatchMakingMenu_host_00 + row - 1 : -1);
+        e->downEntry  = (int8_t)(row < MatchMakingMenu_kGS_MaxRows - 1
+                                     ? MatchMakingMenu_host_00 + row + 1
+                                     : MatchMakingMenu_openGame);
+        e->directionLeft = e->directionRight = e->directionUp = e->directionDown = -1;
+    }
+    entry_at(MatchMakingMenu_menuSettings)->upEntry = (int8_t)last;
+    entry_at(MatchMakingMenu_openGame)->upEntry     = (int8_t)last;
+    entry_at(MatchMakingMenu_rankings)->upEntry     = (int8_t)last;
+}
+
 static void matchMakingMenu_OnDraw(void)
 {
     const MmUser *users;
@@ -295,6 +323,7 @@ static void matchMakingMenu_OnDraw(void)
      * Re-applied here, first, so the early return below cannot skip them. */
     set_text(MatchMakingMenu_userName, s_username);
     set_entry(MatchMakingMenu_menuExit, "EXIT", 1, kLightBrownWithRedFrame);
+    matchMaking_link_list();
 
     MmClient_Poll();
     state = MmClient_State();
