@@ -499,6 +499,26 @@ extern int32_t _sim_draw_width;
 #define SIM_CAM_AIM_WIDTH     SCREEN_WIDTH
 #define SIM_CAM_AIM_HEIGHT    SCREEN_HEIGHT
 #endif
+/* The half-time / full-time RESULT PANEL's vertical anchor — ShowResult's 246.
+ *
+ * This is NOT a DOS/Amiga constant pair: swos.asm ShowResult adds the same 246,
+ * the same +10000/z=10000, the same -1015/z=9000 grid chain and the same +32 row
+ * pitch that SWOS2.s does, and the two releases' sprite metadata is identical
+ * (spr 212 centerY=5, spr 138 centerY=0, measured in both tiers). Only X differs
+ * (the DOS grid's right half sits at 152 = 320-168 where the Amiga's is at 168).
+ *
+ * It is one constant expressed against the view -- exactly the case
+ * docs/DOS_GAMEPLAY.md's proof-standard section warns about. Working the z's
+ * through, the panel's top grid row lands at `P + d7 - 15` and the banner at
+ * `P + d7 - 30`. At 272 with P=246 that is 217 and 202, which is what the game
+ * measurably draws. The panel is 96 rows tall (3 rows x 32) and is MEANT to run
+ * off the bottom, showing its top 55 rows; anchoring P to the view keeps exactly
+ * that much visible at any height instead of pushing the whole thing off a
+ * 200-line screen (ReportBot 0007: "the scoreboard is not fully visible").
+ *
+ * 246 at 272 lines -- byte-identical to the literal it replaces -- and 174 at 200. */
+#define SIM_RESULT_PANEL_Y    ((int16_t)(_sim_view_height - 26))
+
 /* The camera DESTINATION clamp (where MoveCamera may aim). */
 #define SIM_CAMERA_MAX_Y      ((int16_t)(664 - (_sim_view_height - 200)))
 #define SIM_CAMERA_MAX_Y_TRN  ((int16_t)(616 - (_sim_view_height - 200)))

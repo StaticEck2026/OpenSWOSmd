@@ -575,7 +575,7 @@ position_sprites:
      * region, matching the menus. WIDE_MARGIN folds to 0 on Amiga / non-widescreen. */
     /* --- Position team1NameSprite --- */
     _team1NameSprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 136 - (int16_t)_team1NameLength;
-    _team1NameSprite.y.s.i = _cameraY.s.i + 246 + d7 + 10000;
+    _team1NameSprite.y.s.i = _cameraY.s.i + SIM_RESULT_PANEL_Y + d7 + 10000;
     _team1NameSprite.z.s.i = 10000;
 
     /* d0 = base row Y for grid sprites */
@@ -631,7 +631,7 @@ position_sprites:
 
     /* --- Team 1 goals digit 2 (units) --- */
     _team1GoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 151;
-    _team1GoalsDigit2Sprite.y.s.i = _cameraY.s.i + 241 + d7 + 10000;
+    _team1GoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y - 5) + d7 + 10000;
     _team1GoalsDigit2Sprite.z.s.i = 10000;
     _team1GoalsDigit2Sprite.imageIndex = SPR_BIG_0 + _team1GoalsDigit2;
 
@@ -671,7 +671,7 @@ position_sprites:
 
     /* --- Team 2 goals digit 2 (units) --- */
     _team2GoalsDigit2Sprite.x.s.i = Render_CameraX() + WIDE_MARGIN + 173;
-    _team2GoalsDigit2Sprite.y.s.i = _cameraY.s.i + 241 + d7 + 10000;
+    _team2GoalsDigit2Sprite.y.s.i = _cameraY.s.i + (SIM_RESULT_PANEL_Y - 5) + d7 + 10000;
     _team2GoalsDigit2Sprite.z.s.i = 10000;
     _team2GoalsDigit2Sprite.imageIndex = SPR_SCROLL_ARROW_UP + _team2GoalsDigit2;
 
