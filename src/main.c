@@ -210,12 +210,18 @@ static void print_usage(const char *argv0)
         "  --record-replay=<file>    Record the match to this .SRP (src/replay_v2.c).\n"
         "                            Every match is recorded to LATEST.SRP anyway; this\n"
         "                            names the file, and also records under --replay-test.\n"
-        "  --view-replay=<file>      Play a .SRP headless in place of the front end and\n"
-        "                            exit (0 when every frame played). --replay-width\n"
-        "                            sets the width; SWOS_REPLAY_TRACE=<file> traces it.\n"
-        "  --replay-window           Open a window during --replay-test. Off by\n"
-        "                            default: a replay is a batch run and a full\n"
-        "                            matrix would open one window per cell.\n"
+        "  --view-replay=<file>      Play a .SRP or a .HIL headless in place of the\n"
+        "                            front end and exit (0 when every frame of a .SRP\n"
+        "                            played). A .HIL is a NAME in the save folder, as\n"
+        "                            the highlights menu loads it. --replay-width sets\n"
+        "                            the width; SWOS_REPLAY_TRACE=<file> traces a .SRP.\n"
+        "  --replay-window           Open a window during --replay-test or\n"
+        "                            --view-replay. Off by default: a replay is a batch\n"
+        "                            run and a full matrix would open one window per\n"
+        "                            cell. Implies --replay-paced for --view-replay.\n"
+        "  --replay-paced            Play --view-replay in real time, not as fast as\n"
+        "                            possible. With SWOS_PRESENT_STATS=1 it measures\n"
+        "                            the replay's frame pacing.\n"
         "  --replay-selftest         Check CalculateDeltaXAndY against swos-port's\n"
         "                            reference vectors and exit. No recording needed.\n"
         "  --replay-skip=<a,b,...>   Mute every field whose name contains one of these\n"
@@ -400,6 +406,7 @@ int main(int argc, char **argv)
     const char *replay_file = NULL, *replay_level = NULL, *replay_skip = NULL;
     int replay_max_errors = 1;
     int replay_window = 0;
+    int replay_paced = 0;       /* --view-replay in real time: --replay-paced / --replay-window */
     int replay_width = 0;   /* 0 = the corpus geometry (SCREEN_WIDTH) */
     int replay_sim_width = 0;   /* 0 = SCREEN_WIDTH: no margin, as the corpus was recorded */
     const char *record_replay = NULL, *view_replay = NULL;   /* src/replay_v2.c */
@@ -549,6 +556,8 @@ int main(int argc, char **argv)
             { extern volatile uint8_t _skipLoaderIntro; _skipLoaderIntro = 1; }
         } else if (strcmp(a, "--replay-window") == 0) {
             replay_window = 1;
+        } else if (strcmp(a, "--replay-paced") == 0) {
+            replay_paced = 1;
         } else if (strcmp(a, "--replay-selftest") == 0) {
             return ReplayTest_MathSelfTest();
         } else if ((v = match_kv(a, "widescreen")) != NULL) {
@@ -790,20 +799,26 @@ int main(int argc, char **argv)
         opts.res_h = SCREEN_HEIGHT;
     }
     if (view_replay) {
-        /* A batch run like --replay-test: headless, silent and unpaced unless asked. */
+        /* A batch run like --replay-test: headless, silent and unpaced unless asked.
+         * --replay-paced (or a window, which is for watching) keeps the real frame
+         * clock -- what SWOS_PRESENT_STATS measures a replay's pacing against. */
+        const int unpaced = !(replay_paced || replay_window);
 #if defined(SWOS_WASM_BUILD)
         /* Except in a browser, whose SDL has no dummy drivers and whose canvas is
          * where the replay is meant to be watched anyway. */
+        (void)unpaced;
         setenv("SWOS_NO_LOG", "1", 1);
 #elif defined(_WIN32)
-        _putenv("SWOS_HARNESS_TURBO=1");
+        if (unpaced)
+            _putenv("SWOS_HARNESS_TURBO=1");
         _putenv("SWOS_NO_LOG=1");
         if (!replay_window && !getenv("SDL_VIDEODRIVER"))
             _putenv("SDL_VIDEODRIVER=dummy");
         if (!getenv("SDL_AUDIODRIVER"))
             _putenv("SDL_AUDIODRIVER=dummy");
 #else
-        setenv("SWOS_HARNESS_TURBO", "1", 1);
+        if (unpaced)
+            setenv("SWOS_HARNESS_TURBO", "1", 1);
         setenv("SWOS_NO_LOG", "1", 1);
         if (!replay_window && !getenv("SDL_VIDEODRIVER"))
             setenv("SDL_VIDEODRIVER", "dummy", 1);

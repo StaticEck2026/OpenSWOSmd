@@ -2174,12 +2174,44 @@ void Platform_DelayNextFrame(uint32_t us)
 /* Platform_VBlank without the VBlank interrupt: show the finished frame and pace. A
  * netplay match runs the interrupt inside its frame step instead, exactly once per
  * simulated frame (src/netplay_match.c). */
+/* SWOS_PRESENT_STATS=1, the other half: how EVENLY frames are shown. The cost above
+ * says whether a frame fits its budget; this says whether the frames arrive on a
+ * steady beat, which is what a player sees as smooth or stuttering. Measured between
+ * successive main-thread presents, against the rate the game is pacing at, so a
+ * replay at its own recorded rate is judged against that rate. */
+static void present_interval_stats(void)
+{
+    static Uint64 s_last, s_sum, s_min, s_max;
+    static int32_t s_n, s_long, s_short;
+    Uint64 now = SDL_GetPerformanceCounter();
+    if (s_last) {
+        Uint64 d = now - s_last;
+        double period = (double)s_perf_freq / (double)Platform_ActivePacingFps();
+        if (!s_n || d < s_min) s_min = d;
+        if (d > s_max) s_max = d;
+        s_sum += d;
+        if ((double)d > period * 1.5) s_long++;
+        if ((double)d < period * 0.5) s_short++;
+        if (++s_n >= 250) {
+            double ms = 1000.0 / (double)s_perf_freq;
+            fprintf(stderr, "[present] interval %.2f ms mean, %.2f..%.2f ms, target %.2f ms "
+                            "(%d Hz): %d long (>1.5x), %d short (<0.5x) of %d\n",
+                    (double)s_sum / s_n * ms, (double)s_min * ms, (double)s_max * ms,
+                    period * ms, Platform_ActivePacingFps(), s_long, s_short, s_n);
+            s_sum = s_max = 0; s_n = s_long = s_short = 0;
+        }
+    }
+    s_last = now;
+}
+
 int Platform_Present(void)
 {
     /* Stamp first so the async timer callback sees a recent main-thread
      * render as soon as we enter RenderFrame — prevents the timer from
      * firing a concurrent render while we're holding the mutex. */
     s_last_main_render_ms = SDL_GetTicks();
+    if (s_present_stats)
+        present_interval_stats();
     Platform_RenderFrame();
 
 #ifdef SWOS_WASM_BUILD

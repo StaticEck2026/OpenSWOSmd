@@ -1115,6 +1115,28 @@ void ReplayV2_ViewTestRun(void)
      * extracted -- the replay rig and the live netplay test do the same. */
     ProcessImageCommandStream(_menuBGImageCmdStream, _menuImageStreamBaseEnd);
     InitTeams();
+    /* A .HIL goes through the highlights menu's own loader (LoadHilFile: our JSON,
+     * a legacy Amiga dump, or a DOS / SWOS 2020 file), then ShowHighlights' setup.
+     * Like the menu it takes a name in the save folder, not a path. */
+    {
+        uint32_t n = (uint32_t)strlen(s_viewPath);
+        const char *ext = n >= 4 ? s_viewPath + n - 4 : "";
+        if (ext[0] == '.' && (ext[1] | 0x20) == 'h' && (ext[2] | 0x20) == 'i' && (ext[3] | 0x20) == 'l') {
+            extern int16_t LoadHilFile(uint8_t *filename);
+            extern void    CopyTeamsAndHeader(void);
+            if (LoadHilFile((uint8_t *)s_viewPath) != 0)
+                exit(1);
+            _hilStarted = 1;
+            _gameMaxSubstitutes = _hilMaxSubstitutes;
+            _teamsLoaded = 0;
+            _poolplyrLoaded = 0;
+            CopyTeamsAndHeader();
+            ViewHighlights();
+            fprintf(stderr, "[replay] played the highlights in %s\n", s_viewPath);
+            fflush(stderr);
+            exit(0);
+        }
+    }
     if (ReplayV2_Load((const uint8_t *)s_viewPath) != 0)
         exit(1);
     _hilStarted = 1;
