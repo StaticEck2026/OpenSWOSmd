@@ -3,6 +3,10 @@
  * SWOS Amiga C/68000 Reversed by Ben Baker (https://github.com/benbaker76)
  * SWOS DOS Reversed by Zlatko Karakaš (https://github.com/zlatkok)
  */
+#ifdef SWOS_SDL_BUILD
+#include <stdio.h>   /* SWOS_MENU_NAV_LOG */
+#include <stdlib.h>
+#endif
 #include "menu_system.h"
 #include "display.h"
 #include "game_utils.h"
@@ -1755,6 +1759,22 @@ void MenuProc(void)
     SWOS_AUTOSKIP_LOG("MenuProc: <- CallMenuOnSelect (exitMenu after=%u)", (unsigned)_exitMenu);
 
 no_event_or_done:
+#ifdef SWOS_SDL_BUILD
+    /* SWOS_MENU_NAV_LOG=1: every direction the menu sees, what it walked through and
+     * where the cursor ended up -- for a cursor that will not move on one machine
+     * and moves on every other (the log-in screen, 2026-09-24). A tester runs with it
+     * and sends SWOS.log. Ordinals are the menu JSON's item numbers. */
+    static int8_t s_navLog = -1;
+    if (s_navLog < 0)
+        s_navLog = getenv("SWOS_MENU_NAV_LOG") != NULL;
+    if (s_navLog && (_menuControlsDirection >= 0 || _pl1Direction >= 0 || (_twoPlayers && _pl2Direction >= 0) ||
+                     (_currentKey >= 0x10 && _currentKey <= 0x13)))
+        fprintf(stderr, "[menu-nav] on #%u: dir=%d fire=%u (pl1 dir=%d fire=%u, pl2 dir=%d fire=%u, "
+                        "two=%u, key=0x%02x)%s\n", (unsigned)selectedEntry->ordinal,
+                (int)_menuControlsDirection, (unsigned)_fire, (int)_pl1Direction,
+                (unsigned)_pl1Fire, (int)_pl2Direction, (unsigned)_pl2Fire, (unsigned)_twoPlayers,
+                (unsigned)_currentKey, _fire ? " -- fire held, not moving" : "");
+#endif
     if (_fire != 0)
         return;
 
@@ -1769,14 +1789,28 @@ no_event_or_done:
         int8_t navOrd;
 
         navOrd = *((int8_t *)(navBase + 8 + fieldOff));
+#ifdef SWOS_SDL_BUILD
+        if (s_navLog)
+            fprintf(stderr, "[menu-nav]   #%u dir %u -> %d%s\n", (unsigned)selectedEntry->ordinal,
+                    (unsigned)dirIdx, (int)navOrd, navOrd == -1 ? " (no link: stays)" : "");
+#endif
         if (navOrd == -1)
             return;
 
         for (;;) {
             MenuEntry *cand = CalcMenuEntryAddress((uint16_t)(uint8_t)navOrd);
 
+#ifdef SWOS_SDL_BUILD
+            if (s_navLog)
+                fprintf(stderr, "[menu-nav]   #%d%s%s\n", (int)navOrd,
+                        cand->isInvisible ? " invisible" : "", cand->isDisabled ? " disabled" : "");
+#endif
             if (cand->isDisabled == 0 && cand->isInvisible == 0) {
                 menu->selectedEntry = cand;
+#ifdef SWOS_SDL_BUILD
+                if (s_navLog)
+                    fprintf(stderr, "[menu-nav]   moved to #%u\n", (unsigned)cand->ordinal);
+#endif
                 if (selectedEntry->background == NO_BACKGROUND)
                     DrawMenu();
                 else
@@ -1788,6 +1822,11 @@ no_event_or_done:
                 int8_t dirField = *((int8_t *)((uint8_t *)cand + 12 + fieldOff));
                 if (dirField == -1) {
                     navOrd = *((int8_t *)((uint8_t *)cand + 8 + fieldOff));
+#ifdef SWOS_SDL_BUILD
+                    if (s_navLog && navOrd == -1)
+                        fprintf(stderr, "[menu-nav]   dead end: stays on #%u\n",
+                                (unsigned)selectedEntry->ordinal);
+#endif
                     if (navOrd == -1)
                         return;
                     continue;

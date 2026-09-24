@@ -171,12 +171,16 @@ def load_data_symbols():
 # the same gap. So: give the three toggles the column they already look like,
 # and let the two button columns come back to the last of them. showPassword is
 # hidden at run time (online_menus.c) and the menu walks THROUGH an invisible
-# entry by its own links, so it needs them as much as the visible two.
+# entry by its own links, so it keeps them -- but the visible two link to each
+# other directly rather than through it. A tester's cursor still stuck on REMEMBER
+# LOGIN INFO on 2026-09-24 in a way no other machine reproduced; the walk through a
+# hidden entry was the one unusual step on that path, and it has no reason to be
+# there when the entry is hidden for good.
 NAV_FIXUPS = {
     "logIn": {
-        "rememberLogInInfo": {"up": "passwordInput",     "down": "showPassword"},
+        "rememberLogInInfo": {"up": "passwordInput",     "down": "liveCast"},
         "showPassword":      {"up": "rememberLogInInfo", "down": "liveCast"},
-        "liveCast":          {"up": "showPassword",      "down": "logInContinue"},
+        "liveCast":          {"up": "rememberLogInInfo", "down": "logInContinue"},
         "logInContinue":     {"up": "liveCast"},
         "registerUser":      {"up": "liveCast"},
     },
