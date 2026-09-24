@@ -365,7 +365,7 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         opts->replay_auto_save ? "true" : "false" };
     items[n++] = (IniEntry){ "netplay", "matchmaker",
         "; matchmaker: the server MULTIPLAYER logs in to, as \"host\" or \"host:port\"\n"
-        "; (default port 19602). Empty means a server on this machine. You can type it\n"
+        "; (default port 19602). Empty means the public server, us.swos.eu. You can type it\n"
         "; on the login screen instead -- it is saved back here.",
         opts->matchmaker };
     items[n++] = (IniEntry){ "netplay", "record",

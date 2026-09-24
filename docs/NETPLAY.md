@@ -955,8 +955,17 @@ the match; it only stops new ones being made. The exception is a server run with
 
 ```bash
 scripts/run_matchmaker.sh                  # build + run on UDP 19602
-bin/SWOS.x86_64 --matchmaker-selftest      # one client: log in, lobby, create, leave
+SWOS_MM_HOST=127.0.0.1 bin/SWOS.x86_64 --matchmaker-selftest   # one client: log in, lobby, create, leave
 scripts/matchmaker_pair_test.sh            # two clients: join, approve, START
+```
+
+**Name the local server.** The game's default is the public server, `us.swos.eu`, so a
+client pointed nowhere in particular reaches THAT one, not yours. Every script here sets
+`SWOS_MM_HOST=127.0.0.1` for the server it starts; do the same by hand, or the self-test
+above quietly tests the public server instead.
+
+```bash
+bin/SWOS.x86_64 --matchmaker-selftest      # the public server: a quick check that it is up
 ```
 
 The server is SimpleMatchmaker, vendored at `third_party/matchmaker` — the same

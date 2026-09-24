@@ -39,6 +39,8 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 [ -x "$BIN" ] || { echo "interop: $BIN not built -- make X86_64=1" >&2; exit 1; }
+# The server this script starts, by name: the game's own default is the public server.
+export SWOS_MM_HOST=127.0.0.1
 if [ ! -x "$REF" ]; then
     echo "-- building the reference peer"
     cmake -S third_party/matchmaker -B build/matchmaker -DCMAKE_BUILD_TYPE=Release >/dev/null &&

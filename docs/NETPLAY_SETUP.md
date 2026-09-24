@@ -234,13 +234,15 @@ traffic. The first real outside player proves that.
 
 ## 7. Point the games at the server
 
-**Players do this in the game, once.** Out of the box a game looks for a server on its own
-machine. To point it at yours:
+**Out of the box a game uses the public server, `us.swos.eu`** (`MM_DEFAULT_HOST`,
+`include/mm_client.h`), so a player on it has nothing to set: MULTIPLAYER, LOGIN. To use
+another server — your own — players do this in the game, once:
 
 1. Main menu → **MULTIPLAYER**. This opens the **PLAY ONLINE** screen.
 2. **NAME** — the name other players will see.
 3. **SERVER** — type the server's address: `your.server.name`, or `your.server.name:port`
-   if it is not on 19602. Until something is typed it reads **THIS MACHINE**.
+   if it is not on 19602. Until something is typed it shows the server LOGIN will use:
+   **US.SWOS.EU**.
 4. **LOGIN**.
 
 The SERVER row is **saved to `SWOS.ini` as soon as it is typed**, so a player enters it once

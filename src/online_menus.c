@@ -113,17 +113,28 @@ static char s_server[64];
 static int32_t s_rememberLogin = 1;   /* the .mnu's initial ON/OFF texts */
 static int32_t s_liveCast = 1;
 
-/* What the SERVER row shows: what the player typed, else what SWOS.ini/the
- * environment resolved to, else that it is this machine. */
+/* What the SERVER row shows: what the player typed, else what SWOS.ini holds, else
+ * the server LOGIN will actually use -- the public default, or a test's SWOS_MM_HOST.
+ * Upper-cased for the menu font (a host name is case-blind), in a buffer of its own
+ * because set_text keeps the pointer. */
 static const char *server_text(void)
 {
-    const char *cfg;
+    static char shown[80];
+    const char *src;
+    char *c;
+    const char *cfg = MmClient_ConfiguredServer();
+
     if (s_server[0])
-        return s_server;
-    cfg = MmClient_ConfiguredServer();
-    if (cfg && cfg[0])
-        return cfg;
-    return "THIS MACHINE";
+        src = s_server;
+    else if (cfg && cfg[0])
+        src = cfg;
+    else
+        src = MmClient_DefaultHost();
+    snprintf(shown, sizeof shown, "%s", src);
+    for (c = shown; *c; c++)
+        if (*c >= 'a' && *c <= 'z')
+            *c = (char)(*c - 'a' + 'A');
+    return shown;
 }
 
 /* Keep it: the menu writes SWOS.ini the way the OPTIONS -> GAMEPLAY row does
@@ -188,9 +199,9 @@ static void serverInput_OnSelect(void)
     MenuEntry *e = entry_at(LogInMenu_passwordInput);
     const char *shown = server_text();
 
-    /* Start from what is in force, not from "THIS MACHINE" -- editing an address
-     * to change one digit is the common case. */
-    if (!s_server[0] && shown && shown[0] && strcmp(shown, "THIS MACHINE") != 0)
+    /* Start from what is in force -- editing an address to change one digit is
+     * the common case. */
+    if (!s_server[0] && shown && shown[0])
         snprintf(s_server, sizeof s_server, "%s", shown);
     e->fg = (uintptr_t)s_server;
     InputText(sizeof s_server, (uint8_t *)e);

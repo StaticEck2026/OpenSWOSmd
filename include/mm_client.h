@@ -39,7 +39,10 @@
 #define MM_ADDR_TEXT_MAX   24      /* "255.255.255.255:65535" + slack */
 
 #define MM_DEFAULT_PORT    19602   /* third_party/matchmaker/OPENSWOS.md */
-#define MM_DEFAULT_HOST    "127.0.0.1"
+/* The public server, run by a team member (docs/NETPLAY_SETUP.md). A default, not a lock:
+ * the SERVER row and [netplay] matchmaker override it, and SWOS_MM_HOST overrides both --
+ * which every local test sets, so none of them reaches this server by accident. */
+#define MM_DEFAULT_HOST    "us.swos.eu"
 
 typedef enum {
     MM_IDLE,          /* no socket */
@@ -133,7 +136,7 @@ void               MmClient_ClearStart(void);
  *   1. SWOS_MM_HOST / SWOS_MM_PORT   -- a test pointing one process somewhere
  *   2. whatever the player typed on the login menu, kept in SWOS.ini
  *      ([netplay] matchmaker), published here by main.c
- *   3. MM_DEFAULT_HOST / MM_DEFAULT_PORT, a server on this machine
+ *   3. MM_DEFAULT_HOST / MM_DEFAULT_PORT, the public server
  * so a tester types an address once and never sees an environment variable. */
 const char *MmClient_DefaultHost(void);
 uint16_t    MmClient_DefaultPort(void);

@@ -29,6 +29,9 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 [ -x "$BIN" ] || { echo "pair-test: $BIN not built" >&2; exit 1; }
+# The server this script starts, by name: the game's own default is the public server,
+# and a matchmaker in the player's SWOS.ini would win over a default anyway.
+export SWOS_MM_HOST=127.0.0.1 SWOS_MM_PORT="$PORT"
 
 if command -v ss >/dev/null && ss -ulnp 2>/dev/null | grep -q ":$PORT "; then
     echo "-- using the matchmaker already running on $PORT"
