@@ -88,6 +88,16 @@ void OnlineMenus_Show(const char *name)
 /* ======================================================================
  * logInMenu (swos-2020/src/menus/logIn.mnu; handlers in game.cpp)
  * ====================================================================== */
+/* SWOS_MM_AUTO_PEER=<name>: the one player an automated test may play. Without it
+ * the auto-joiner takes the first game on offer and the auto-host approves anyone --
+ * fine against a server of our own, and wrong against a public one, where that is a
+ * real player's game or a real player asking to join ours. Unset = any. */
+static int32_t mm_auto_is_peer(const char *name)
+{
+    const char *peer = getenv("SWOS_MM_AUTO_PEER");
+    return !peer || !peer[0] || (name && strcmp(name, peer) == 0);
+}
+
 /* SWOS_MM_AUTO: a test drives both ends of the matchmaking menu. */
 enum { MM_AUTO_OFF = 0, MM_AUTO_HOST, MM_AUTO_JOIN };
 static int32_t s_mmAuto;
@@ -285,7 +295,11 @@ static void matchMakingMenu_OnDraw(void)
     if (MmClient_TakeJoinRequest(who, sizeof who)) {
         snprintf(s_joinAsker, sizeof s_joinAsker, "%s", who);
         if (s_mmAuto == MM_AUTO_HOST) {
-            MmClient_Approve(s_joinAsker);
+            if (mm_auto_is_peer(s_joinAsker))
+                MmClient_Approve(s_joinAsker);
+            else
+                fprintf(stderr, "[mm-auto] not approving '%s': waiting for '%s'\n",
+                        s_joinAsker, getenv("SWOS_MM_AUTO_PEER"));
             s_joinAsker[0] = '\0';
         } else {
             OnlineMenus_Show(SWOS2020_MENU(hostGameMessageMenu));
@@ -302,8 +316,13 @@ static void matchMakingMenu_OnDraw(void)
         const MmGame *open = MmClient_OpenGames(&n);
         if (s_mmAuto == MM_AUTO_HOST) {
             if (!s_mmAutoDone) { MmClient_CreateGame(); s_mmAutoDone = 1; }
-        } else if (n > 0) {
-            MmClient_JoinGame(open[0].owner);
+        } else {
+            int32_t g;
+            for (g = 0; g < n; g++)
+                if (mm_auto_is_peer(open[g].owner)) {
+                    MmClient_JoinGame(open[g].owner);
+                    break;
+                }
         }
     }
 

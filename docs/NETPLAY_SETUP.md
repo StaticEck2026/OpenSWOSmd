@@ -408,6 +408,28 @@ builds and both platforms. A recorded match can be played again anywhere with
 These drive the real menus with real binaries; run them after changing anything in the
 path. NETPLAY.md says what each one proves.
 
+**Against a deployed server.** Both match tests take `MM_HOST=<server>`: they then start no
+server of their own and play through that one, so they test the DEPLOYMENT — the round
+trip to it, its relay and its browser gate — with two CPU players in real matches:
+
+```bash
+MM_HOST=your.server.name scripts/relay_test.sh                       # two natives, 2 matches
+make WASM=1 NETPLAY=1 OUTDIR=dist/web-netplay                        # a web build WITH netplay,
+                                                                     # kept apart from the release one
+WEBDIR=dist/web-netplay MM_HOST=your.server.name scripts/wasm_netplay_test.sh   # browser v browser
+PAIR=web-native WEBDIR=dist/web-netplay MM_HOST=... scripts/wasm_netplay_test.sh # browser v native
+```
+
+The checks that read the server's own log and ledger are skipped, and say so — those are
+on the server's machine. What the players can see replaces them: each match's peer was
+the server (relayed), and each browser registered with the relay. The two players get
+names of their own and `SWOS_MM_AUTO_PEER`, so **on a public server they meet only each
+other** — never joining a real player's game, never letting a real player into theirs. The
+web build has to be built by the same rules as the native binary for `web-native` (a test
+build and a release build refuse each other, which is the handshake working).
+
+Locally, against a server the test starts itself:
+
 ```bash
 scripts/netplay_lobby_test.sh                     # two instances, lobby, match, rematch
 scripts/relay_test.sh                             # two players through the relay

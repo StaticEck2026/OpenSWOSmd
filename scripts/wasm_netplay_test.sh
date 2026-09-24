@@ -11,6 +11,15 @@
 #   PAIR=web-mac scripts/wasm_netplay_test.sh     # the joiner is the MAC's native build
 #   PAIR=mac-web ...                              # (MAC_HOST, MAC_PATH; over the LAN)
 #   PAIR=macweb-web ...                           # a browser ON THE MAC v one here
+#   MM_HOST=us.swos.eu scripts/wasm_netplay_test.sh   # through an EXISTING server
+#
+# MM_HOST=<name> [MM_PORT=19602] plays through a server someone else runs (it must run
+# --websocket, and relays any match with a browser in it). No server is started, and the
+# two checks that read the server's own log -- that it forwarded, and one address per
+# browser tunnel -- are replaced by what the players can see: each registered with the
+# relay. The players get names of their own and SWOS_MM_AUTO_PEER, so on a public server
+# they meet only each other. WEBDIR can point at a netplay build kept apart from the
+# release one: WEBDIR=dist/web-netplay after `make WASM=1 NETPLAY=1 OUTDIR=dist/web-netplay`.
 #
 # PAIR is <host>-<join>, each one of: web (headless Chrome here), native (bin/$BIN here),
 # mac (the Mac's native build), macweb (headless Chrome on the Mac: MAC_CHROME, a Chrome
@@ -61,6 +70,9 @@ FRAMES="${FRAMES:-300}"
 WAIT="${WAIT:-$((150 + MATCHES * 90))}"
 NETEM="${NETEM:-}"
 SERVER="${SERVER:-build/matchmaker/swos-matchmaker}"
+MM_HOST="${MM_HOST:-}"                  # an existing server to play through instead of our own
+MM_PORT="${MM_PORT:-19602}"
+REMOTE=0; [ -n "$MM_HOST" ] && REMOTE=1
 OUT="${OUT:-${TMPDIR:-/tmp}/swos-wasm-netplay.$$}"
 mkdir -p "$OUT" && OUT="$(cd "$OUT" && pwd)"
 
@@ -86,7 +98,18 @@ fi
 [ -f "$WEBDIR/SWOS.wasm" ] || { echo "wasm-netplay-test: no web build in $WEBDIR (make WASM=1 NETPLAY=1)" >&2; exit 1; }
 grep -aq "OPENSWOS-WEB" "$WEBDIR/SWOS.wasm" ||
     { echo "wasm-netplay-test: $WEBDIR was built without netplay (make WASM=1 NETPLAY=1)" >&2; exit 1; }
-[ -x "$SERVER" ] || { echo "wasm-netplay-test: $SERVER not built" >&2; exit 1; }
+[ "$REMOTE" = 1 ] || [ -x "$SERVER" ] || { echo "wasm-netplay-test: $SERVER not built" >&2; exit 1; }
+HN=HOST; JN=JOIN
+if [ "$REMOTE" = 1 ]; then
+    PLAY_HOST=$MM_HOST; PLAY_PORT=$MM_PORT
+    MAC_MM_HOST=$MM_HOST                  # the Mac goes to the same server, not to us
+    n=$(( $$ % 10000 )); HN="WHOST$n"; JN="WJOIN$n"   # never two runs' players mixed
+    [ -n "$NETEM" ] && echo "wasm-netplay-test: NETEM is the server's to choose; ignored for $MM_HOST" >&2
+    echo "wasm-netplay-test: through $MM_HOST:$MM_PORT as $HN and $JN"
+else
+    PLAY_HOST=127.0.0.1; PLAY_PORT=$PORT
+    MAC_MM_HOST=$LAN_IP
+fi
 case "$PAIR" in *native*)
     [ -x "bin/$BIN" ] || { echo "wasm-netplay-test: bin/$BIN not built" >&2; exit 1; } ;;
 esac
@@ -131,16 +154,18 @@ trap cleanup EXIT
 
 python3 -m http.server "$HTTP_PORT" --bind 127.0.0.1 --directory "$WEBDIR" > "$OUT/http.log" 2>&1 &
 HTTP_PID=$!
-SERVER_ARGS=(--websocket)
-[ -n "$NETEM" ] && SERVER_ARGS+=(--relay --netem "$NETEM")
-"$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
-SERVER_PID=$!
+if [ "$REMOTE" = 0 ]; then
+    SERVER_ARGS=(--websocket)
+    [ -n "$NETEM" ] && SERVER_ARGS+=(--relay --netem "$NETEM")
+    "$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
+    SERVER_PID=$!
+fi
 sleep 1
 
 # What both players are told, as environment: the server, the lobby's choices, the
 # match's length. Each side's input comes from its own generator, so both predict
 # wrong and roll back, and the relay carries real rollback traffic.
-common_env=(SWOS_MM_HOST=127.0.0.1 SWOS_MM_PORT="$PORT" SWOS_P2P_LOG=1 SWOS_NO_LOG=1
+common_env=(SWOS_MM_HOST="$PLAY_HOST" SWOS_MM_PORT="$PLAY_PORT" SWOS_P2P_LOG=1 SWOS_NO_LOG=1
             SWOS_LOBBY_READY=1 SWOS_LOBBY_MATCHES="$MATCHES" SWOS_LIVE_FRAMES="$FRAMES")
 
 # A browser player: the page, with its command line and environment in the query
@@ -172,7 +197,7 @@ mac_player() {   # name auto env...
     local name=$1 auto=$2; shift 2
     local kv envs=""
     for kv in "${common_env[@]}" "$@"; do
-        case "$kv" in SWOS_MM_HOST=*) kv="SWOS_MM_HOST=$LAN_IP" ;; esac
+        case "$kv" in SWOS_MM_HOST=*) kv="SWOS_MM_HOST=$MAC_MM_HOST" ;; esac
         envs="$envs $(printf %q "$kv")"
     done
     ssh "$MAC_HOST" "cd $MAC_PATH/bin && rm -rf /tmp/swos-wasm-test-$name && mkdir -p /tmp/swos-wasm-test-$name &&
@@ -189,7 +214,7 @@ macweb_player() {   # name auto env...
     local url="http://127.0.0.1:$MAC_HTTP_PORT/SWOS.html?arg=--matchmaker-menu=$name&env=SWOS_MM_AUTO=$auto"
     local kv
     for kv in "${common_env[@]}" "$@"; do
-        case "$kv" in SWOS_MM_HOST=*) kv="SWOS_MM_HOST=$LAN_IP" ;; esac
+        case "$kv" in SWOS_MM_HOST=*) kv="SWOS_MM_HOST=$MAC_MM_HOST" ;; esac
         url="$url&env=$kv"
     done
     ssh "$MAC_HOST" "rm -rf /tmp/swos-wasm-test-chrome-$name;
@@ -217,10 +242,10 @@ log_of() {   # name kind -> the game's lines
     fi
 }
 
-mkdir -p "$OUT/home-HOST" "$OUT/home-JOIN"
-player "$HOST_KIND" HOST host SWOS_LOBBY_TEAM=50:0B SWOS_LOBBY_START=1 SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D
+mkdir -p "$OUT/home-$HN" "$OUT/home-$JN"
+player "$HOST_KIND" "$HN" host SWOS_MM_AUTO_PEER="$JN" SWOS_LOBBY_TEAM=50:0B SWOS_LOBBY_START=1 SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D
 sleep 3
-player "$JOIN_KIND" JOIN join SWOS_LOBBY_TEAM=52:02 SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0
+player "$JOIN_KIND" "$JN" join SWOS_MM_AUTO_PEER="$HN" SWOS_LOBBY_TEAM=52:02 SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0
 
 # A browser does not end: the game leaves its lobby after MATCHES matches and the page
 # stays. So wait for that line (or a crash) from each, then close the browsers.
@@ -228,27 +253,39 @@ done_line='\[lobby\] [0-9]+ match(es)? played; leaving'
 crash='Aborted\(|RuntimeError|program exited \(with status: [1-9]'
 deadline=$((SECONDS + WAIT))
 while [ $SECONDS -lt $deadline ]; do
-    h=$(log_of HOST "$HOST_KIND" | grep -cE "$done_line|$crash")
-    j=$(log_of JOIN "$JOIN_KIND" | grep -cE "$done_line|$crash")
+    h=$(log_of "$HN" "$HOST_KIND" | grep -cE "$done_line|$crash")
+    j=$(log_of "$JN" "$JOIN_KIND" | grep -cE "$done_line|$crash")
     [ "$h" -gt 0 ] && [ "$j" -gt 0 ] && break
     sleep 2
 done
 sleep 2
-for s in HOST:$HOST_KIND JOIN:$JOIN_KIND; do log_of "${s%%:*}" "${s#*:}" > "$OUT/${s%%:*}.game.log"; done
+for s in "$HN:$HOST_KIND" "$JN:$JOIN_KIND"; do log_of "${s%%:*}" "${s#*:}" > "$OUT/${s%%:*}.game.log"; done
 
 fail=0
-for s in HOST JOIN; do
+for s in "$HN" "$JN"; do
     grep -qE "$done_line" "$OUT/$s.game.log" || { echo "!! $s never left its lobby"; fail=1; }
     grep -E "$crash|DIFFERENT RULES|link failed" "$OUT/$s.game.log" | head -3 | sed "s/^/!! $s: /"
 done
-hh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/HOST.game.log" | awk '{print $4}' | paste -sd' ')
-jh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/JOIN.game.log" | awk '{print $4}' | paste -sd' ')
-hn=$(grep -c "live match finished" "$OUT/HOST.game.log")
-jn=$(grep -c "live match finished" "$OUT/JOIN.game.log")
+hh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/$HN.game.log" | awk '{print $4}' | paste -sd' ')
+jh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/$JN.game.log" | awk '{print $4}' | paste -sd' ')
+hn=$(grep -c "live match finished" "$OUT/$HN.game.log")
+jn=$(grep -c "live match finished" "$OUT/$JN.game.log")
 echo "host ($HOST_KIND): $hn finished, hashes $hh"
 echo "join ($JOIN_KIND): $jn finished, hashes $jh"
 [ "$hn" = "$MATCHES" ] && [ "$jn" = "$MATCHES" ] && [ -n "$hh" ] && [ "$hh" = "$jh" ] || fail=1
 
+if [ "$REMOTE" = 1 ]; then
+    # The server's log is on its machine. What the players can show instead: each one
+    # registered with the relay -- which a browser must, since it can reach nothing else.
+    for s in "$HN" "$JN"; do
+        if grep -q "^\[p2p\] relay: registered" "$OUT/$s.game.log"; then
+            echo "$s: $(grep -m1 '^\[p2p\] relay: registered' "$OUT/$s.game.log")"
+        else
+            echo "!! $s never registered with the relay"; fail=1
+        fi
+    done
+    echo "(the server's forwarding and tunnel checks are on $MM_HOST; not checked from here)"
+else
 # Relayed: one session (a rematch stays in it), forwarding between the two.
 fw=$(grep -c "both players here: forwarding" "$OUT/server.log")
 [ "$fw" -ge 1 ] || { echo "!! the relay never forwarded between the players"; fail=1; }
@@ -273,8 +310,10 @@ print("tunnels: %d browser port(s), %d reused by the socket that followed, %d mo
 sys.exit(1 if bad or not reused else 0)
 PYEOF
 fi
+fi
 
 what="$MATCHES match(es) $HOST_KIND v $JOIN_KIND through the WebSocket gate${NETEM:+ ($NETEM)}"
+[ "$REMOTE" = 1 ] && what="$MATCHES match(es) $HOST_KIND v $JOIN_KIND through $MM_HOST's gate and relay"
 if [ "$fail" = 0 ]; then
     echo "wasm-netplay-test: PASSED — $what, both players identical (logs in $OUT)"
     exit 0

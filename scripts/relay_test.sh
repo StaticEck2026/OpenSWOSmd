@@ -14,6 +14,15 @@
 #                                             # widths (362 and 336), as a Mac and a PC had
 #   GAMEPLAY=dos RECORD=1 ...                 # DOS gameplay on both (a resim must take it
 #                                             # from the file, not from its own SWOS.ini)
+#   MM_HOST=us.swos.eu scripts/relay_test.sh  # through an EXISTING server, not one of ours
+#
+# MM_HOST=<name> [MM_PORT=19602] plays through a server someone else runs, so it tests a
+# DEPLOYMENT: the round trip to it and its relay. No server is started. What cannot be
+# checked from here is skipped and said so -- the server's own log and ledger are on its
+# machine -- so there RELAY decides nothing: the server does, and the summary says which it
+# was. The two players get names of their own and SWOS_MM_AUTO_PEER, so on a public server
+# they meet only each other: never a real player's game, never a real player in ours.
+# DESYNC_FRAME needs the recorder's ledger, so it needs a server of our own.
 #
 # The relay (include/relay_proto.h, third_party/matchmaker/Server/Relay.cpp): the
 # server makes a session at START, tells each OpenSWOS player RELAY:<token>, and
@@ -59,31 +68,48 @@ RECORD_MODE="${RECORD_MODE:-full}"
 DESYNC_FRAME="${DESYNC_FRAME:-}"
 SERVER="${SERVER:-build/matchmaker/swos-matchmaker}"
 GAMEPLAY="${GAMEPLAY:-}"                # dos | amiga: both players, whatever SWOS.ini says
+MM_HOST="${MM_HOST:-}"                  # an existing server to play through instead of our own
+MM_PORT="${MM_PORT:-19602}"
+REMOTE=0; [ -n "$MM_HOST" ] && REMOTE=1
 case "$GAMEPLAY" in
     ''|amiga|dos) ;;
     *) echo "relay-test: GAMEPLAY must be amiga or dos" >&2; exit 1 ;;
 esac
 mkdir -p "$OUT" && OUT="$(cd "$OUT" && pwd)"   # the game chdirs to bin/
 [ -n "$DESYNC_FRAME" ] && [ "$RECORD" != 1 ] && { echo "relay-test: DESYNC_FRAME needs RECORD=1" >&2; exit 1; }
+[ -n "$DESYNC_FRAME" ] && [ "$REMOTE" = 1 ] && { echo "relay-test: DESYNC_FRAME needs a server of our own (its ledger names the frame)" >&2; exit 1; }
 [ -n "$DESYNC_FRAME" ] && MATCHES=1     # the match ends at the desync; one is the test
 [ -x "bin/$BIN" ] || { echo "relay-test: bin/$BIN not built" >&2; exit 1; }
-[ -x "$SERVER" ] || scripts/run_matchmaker.sh --build-only >/dev/null 2>&1
-[ -x "$SERVER" ] || { echo "relay-test: $SERVER not built" >&2; exit 1; }
-if command -v ss >/dev/null && ss -ulnp 2>/dev/null | grep -q ":$PORT "; then
-    echo "relay-test: UDP $PORT is taken; set PORT=" >&2
-    exit 1
-fi
+HNAME=RELAYHOST; JNAME=RELAYJOIN
+if [ "$REMOTE" = 1 ]; then
+    # Theirs: resolve it, because a relayed match's peer is the server by ADDRESS.
+    MM_IP=$(getent ahostsv4 "$MM_HOST" 2>/dev/null | awk 'NR == 1 { print $1 }')
+    [ -n "$MM_IP" ] || { echo "relay-test: cannot resolve $MM_HOST" >&2; exit 1; }
+    PLAY_HOST=$MM_HOST; PLAY_PORT=$MM_PORT; RELAY_PEER="$MM_IP:$MM_PORT"
+    n=$(( $$ % 10000 )); HNAME="UHOST$n"; JNAME="UJOIN$n"   # never two runs' players mixed
+    [ -n "${NETEM:-}" ] && echo "relay-test: NETEM is the server's to choose; ignored for $MM_HOST" >&2
+    echo "relay-test: through $MM_HOST ($RELAY_PEER) as $HNAME and $JNAME"
+    SERVER_PID=
+else
+    PLAY_HOST=127.0.0.1; PLAY_PORT=$PORT; RELAY_PEER="127.0.0.1:$PORT"
+    [ -x "$SERVER" ] || scripts/run_matchmaker.sh --build-only >/dev/null 2>&1
+    [ -x "$SERVER" ] || { echo "relay-test: $SERVER not built" >&2; exit 1; }
+    if command -v ss >/dev/null && ss -ulnp 2>/dev/null | grep -q ":$PORT "; then
+        echo "relay-test: UDP $PORT is taken; set PORT=" >&2
+        exit 1
+    fi
 
-SERVER_ARGS=()
-[ "$RELAY" = 1 ] && SERVER_ARGS+=(--relay ${NETEM:+--netem "$NETEM"} --netem-seed 7)
-[ "$RECORD" = 1 ] && SERVER_ARGS+=(--record --recordings "$OUT/recordings")
-"$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
-SERVER_PID=$!
-trap 'kill -INT $SERVER_PID 2>/dev/null' EXIT
-for _ in $(seq 1 50); do
-    grep -q "running on Port" "$OUT/server.log" 2>/dev/null && break
-    sleep 0.1
-done
+    SERVER_ARGS=()
+    [ "$RELAY" = 1 ] && SERVER_ARGS+=(--relay ${NETEM:+--netem "$NETEM"} --netem-seed 7)
+    [ "$RECORD" = 1 ] && SERVER_ARGS+=(--record --recordings "$OUT/recordings")
+    "$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
+    SERVER_PID=$!
+    trap 'kill -INT $SERVER_PID 2>/dev/null' EXIT
+    for _ in $(seq 1 50); do
+        grep -q "running on Port" "$OUT/server.log" 2>/dev/null && break
+        sleep 0.1
+    done
+fi
 
 RECORD_ENV=""
 [ "$RECORD" = 1 ] && RECORD_ENV="SWOS_RECORD=server SWOS_RECORD_MODE=$RECORD_MODE"
@@ -99,7 +125,7 @@ run() {   # name, auto, team, extra env...
     local name=$1 auto=$2 team=$3; shift 3
     cd bin || exit 1
     env SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
-        SWOS_MM_HOST=127.0.0.1 SWOS_MM_PORT="$PORT" SWOS_MM_AUTO="$auto" SWOS_P2P_LOG=1 \
+        SWOS_MM_HOST="$PLAY_HOST" SWOS_MM_PORT="$PLAY_PORT" SWOS_MM_AUTO="$auto" SWOS_P2P_LOG=1 \
         SWOS_LOBBY_TEAM="$team" SWOS_LOBBY_READY=1 SWOS_LOBBY_MATCHES="$MATCHES" \
         SWOS_LIVE_FRAMES="$FRAMES" $RECORD_ENV "$@" \
         timeout -s KILL "$WAIT" ./"$BIN" --matchmaker-menu="$name" \
@@ -108,19 +134,21 @@ run() {   # name, auto, team, extra env...
 # <side>.log is the raw output; <side>.ts the same lines with the time each arrived,
 # to line up against the server's timed [relay] and [record] lines.
 stamp() { gawk '{ print strftime("%H:%M:%S"), $0; fflush() }'; }
-( run RELAYHOST host 50:0B SWOS_LOBBY_START=1 SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
+( run "$HNAME" host 50:0B SWOS_MM_AUTO_PEER="$JNAME" SWOS_LOBBY_START=1 SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
     2>&1 | tee "$OUT/host.log" | stamp > "$OUT/host.ts"
   echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/host.log" ) &
 HOST_PID=$!
 sleep 3
-( run RELAYJOIN join 52:02 SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0 HOME="$OUT/home-join" ${JOIN_ENV:-} \
+( run "$JNAME" join 52:02 SWOS_MM_AUTO_PEER="$HNAME" SWOS_LIVE_RANDOM_INPUT=0x5A5A0FF0 HOME="$OUT/home-join" ${JOIN_ENV:-} \
     2>&1 | tee "$OUT/join.log" | stamp > "$OUT/join.ts"
   echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/join.log" ) &
 JOIN_PID=$!
 wait "$HOST_PID" "$JOIN_PID"
-kill -INT "$SERVER_PID" 2>/dev/null
-wait "$SERVER_PID" 2>/dev/null
-trap - EXIT
+if [ -n "$SERVER_PID" ]; then
+    kill -INT "$SERVER_PID" 2>/dev/null
+    wait "$SERVER_PID" 2>/dev/null
+    trap - EXIT
+fi
 
 fail=0
 for side in host join; do
@@ -131,15 +159,27 @@ for side in host join; do
     # Relayed: the match's peer must be the server itself.
     if [ "$RELAY" = 1 ]; then
         if grep -q "^\[netplay\] p2p match:" "$OUT/$side.log" &&
-           ! grep "^\[netplay\] p2p match:" "$OUT/$side.log" | grep -qv "peer 127.0.0.1:$PORT,"; then
+           ! grep "^\[netplay\] p2p match:" "$OUT/$side.log" | grep -qv "peer $RELAY_PEER,"; then
             :
         else
-            echo "!! $side: a match whose peer was not the relay (127.0.0.1:$PORT)"; fail=1
+            echo "!! $side: a match whose peer was not the relay ($RELAY_PEER)"; fail=1
         fi
     fi
 done
 echo "================ server ================"
-grep -E "^\[relay\]|^\[record\]" "$OUT/server.log"
+HOW=
+if [ "$REMOTE" = 1 ]; then
+    echo "(the server's log and ledger are on $MM_HOST; not checked from here)"
+    # What the players saw instead: relayed if every match's peer was the server.
+    np=$(grep -c "^\[netplay\] p2p match:" "$OUT/host.log")
+    nr=$(grep "^\[netplay\] p2p match:" "$OUT/host.log" | grep -c "peer $RELAY_PEER,")
+    if [ "$np" -gt 0 ] && [ "$np" = "$nr" ]; then HOW="relayed by $MM_HOST"
+    elif [ "$nr" = 0 ]; then HOW="peer to peer (introduced by $MM_HOST)"
+    else HOW="mixed: $nr of $np relayed"; fi
+    echo "played: $HOW"
+else
+    grep -E "^\[relay\]|^\[record\]" "$OUT/server.log"
+fi
 
 hh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/host.log" | awk '{print $4}' | paste -sd' ')
 jh=$(grep -oE "final sim hash [0-9a-f]+" "$OUT/join.log" | awk '{print $4}' | paste -sd' ')
@@ -152,7 +192,9 @@ echo "join: $jn finished, hashes $jh"
 # "match" line per match with both players' streams -- and either every frame agreeing
 # and the same final hash, or (DESYNC_FRAME) a desync found at exactly the next frame.
 ledger_ok=0
-if [ -s "$OUT/ledger.jsonl" ] && RELAY=$RELAY RECORD=$RECORD MATCHES=$MATCHES \
+if [ "$REMOTE" = 1 ]; then
+    ledger_ok=1     # it is on the server's machine
+elif [ -s "$OUT/ledger.jsonl" ] && RELAY=$RELAY RECORD=$RECORD MATCHES=$MATCHES \
    DESYNC_FRAME=$DESYNC_FRAME python3 - "$OUT/ledger.jsonl" <<'PYEOF'
 import json, os, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
@@ -191,7 +233,7 @@ then ledger_ok=1; fi
 
 # The recorder's .SRP of the last match against the host's own LATEST.SRP.
 srp_ok=1
-if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ] && [ -z "$DESYNC_FRAME" ]; then
+if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ] && [ -z "$DESYNC_FRAME" ] && [ "$REMOTE" = 0 ]; then
     srp_ok=0
     server_srp=$(ls "$OUT"/recordings/*.SRP 2>/dev/null | sort | tail -1)
     host_srp=$(find "$OUT/home-host" -name LATEST.SRP 2>/dev/null | head -1)
@@ -233,7 +275,9 @@ if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ]; then
     host_srp=$(find "$OUT/home-host" -name LATEST.SRP 2>/dev/null | head -1)
     join_srp=$(find "$OUT/home-join" -name LATEST.SRP 2>/dev/null | head -1)
     bad=0
-    for who in recorder host join; do
+    whos="recorder host join"
+    [ "$REMOTE" = 1 ] && whos="host join"     # the recorder's copy is on the server's machine
+    for who in $whos; do
         case $who in recorder) f=$server_srp ;; host) f=$host_srp ;; join) f=$join_srp ;; esac
         [ -n "$f" ] || { echo "!! resim: no $who recording"; bad=1; continue; }
         line=$(HOME="$OUT/home-resim" timeout -s KILL 300 "bin/$BIN" --srp-resim="$f" 2>"$OUT/resim-$who.log" |
@@ -250,6 +294,7 @@ if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ]; then
 fi
 
 what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")"
+[ "$REMOTE" = 1 ] && what="$MATCHES matches through $MM_HOST, $HOW$([ "$RECORD" = 1 ] && echo ", recorded")"
 if [ -n "$DESYNC_FRAME" ]; then
     # A desync on purpose: the match ends early on both sides, and the recorder named the frame.
     if [ "$ledger_ok" = 1 ] && [ "$resim_ok" = 1 ] && grep -q "live match ended early" "$OUT/host.log" &&
