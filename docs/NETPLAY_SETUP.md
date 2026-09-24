@@ -230,13 +230,18 @@ After LOGIN the matchmaking screen shows how the connection is going — **CONNE
 SERVER**, then the players and games online, or **SERVER NOT CONNECTED** if it cannot reach
 it (§11).
 
-**Not in the menu yet: match recording.** Streaming matches to the server's recorder (§4's
-`--record`) is switched on only in `SWOS.ini`:
+**Recording matches** is in the menu too. After LOGIN, open **SETTINGS** on the matchmaking
+screen: **MULTIPLAYER SETTINGS → RECORD MATCHES**, OFF or ON. ON streams every match to the
+server's recorder (§4's `--record`), which keeps it and compares both players frame by frame
+to catch a desync. Like the SERVER row it is saved as soon as it is changed, and it applies
+from the very next match — no restart.
 
-```ini
-[netplay]
-record = server        ; the matchmaker above. Or host[:port] for a recorder elsewhere; empty = off
-```
+ON means the server the player logged in to. A player who names a recorder somewhere else
+in `SWOS.ini` (`[netplay] record = host[:port]`) sees that address in the row instead of ON,
+and switching the row off and back on restores it rather than losing it.
+
+The other rows on MULTIPLAYER SETTINGS — SOUND FX, COMMENTARY, the chat options and the
+buttons under them — are SWOS 2020's and do nothing in OpenSWOS yet.
 
 > **For operators and scripts only** — never something to ask a player to do. The SERVER
 > row *is* `[netplay] matchmaker` in `SWOS.ini`: typing one writes the other. The only thing

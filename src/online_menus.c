@@ -34,6 +34,7 @@
 #include "swos_settings.h"    /* Settings_Save: the SERVER row keeps what was typed */
 #include "teams.h"            /* LoadTeamFile, for the lobby's test knobs */
 #include "game_loop.h"        /* _gFrameStepInput */
+#include "match_record.h"     /* MatchRecord_SetConfigured: the RECORD MATCHES row */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1146,6 +1147,89 @@ static void matchMaking_menuSettings_onSelect(void)
     OnlineMenus_Show(SWOS2020_MENU(mmSettingsMenu));
 }
 
+/* ======================================================================
+ * mmSettingsMenu -- MULTIPLAYER SETTINGS
+ *
+ * SWOS 2020's rows here (pitch set, sound, commentary, the chat options) set
+ * things OpenSWOS does not have, and none of them was ever bound -- the
+ * loader maps a handler nobody lists to a no-op. The first pair is taken over
+ * for the one multiplayer setting a player otherwise had to edit SWOS.ini for:
+ * streaming each match to a recorder (docs/NETPLAY.md 7 "The recorder",
+ * docs/NETPLAY_SETUP.md 7). Same move as logInMenu_OnInit turning the password
+ * row into SERVER.
+ * ====================================================================== */
+
+/* What ON means. "server" -- the matchmaker the player logged in to -- is what
+ * nearly everyone wants. But if SWOS.ini already names a recorder of its own
+ * (host[:port]), THAT is what ON restores, so switching the row off and back on
+ * never throws away an address someone typed by hand. */
+static char s_recordOn[64];
+static char s_recordShown[64];   /* set_text keeps the pointer, so it must outlive the call */
+
+static const char *record_current(void)
+{
+    extern PlatformInitOptions *g_arcadeOpts;
+    return g_arcadeOpts ? g_arcadeOpts->record : "";
+}
+
+/* The same test match_record.c's resolve_target() makes: "", "off" and
+ * "false" are off, anything else names a recorder. */
+static int32_t record_is_on(const char *spec)
+{
+    return spec && spec[0] &&
+           SDL_strcasecmp(spec, "off") != 0 && SDL_strcasecmp(spec, "false") != 0;
+}
+
+static void mmsOnInit(void)
+{
+    const char *cur = record_current();
+    set_text(MmSettingsMenu_pitchSetLabel, "RECORD MATCHES");
+    if (!s_recordOn[0])
+        snprintf(s_recordOn, sizeof s_recordOn, "%s", record_is_on(cur) ? cur : "server");
+}
+
+/* Every frame, so the row just follows the setting: ON for the matchmaker, the
+ * address itself for a recorder of the player's own so it is not hidden. */
+static void mmsOnDraw(void)
+{
+    const char *cur = record_current();
+    if (!record_is_on(cur)) {
+        set_text(MmSettingsMenu_pitchSet, "OFF");
+    } else if (SDL_strcasecmp(cur, "server") == 0) {
+        set_text(MmSettingsMenu_pitchSet, "ON");
+    } else {
+        char *c;
+        snprintf(s_recordShown, sizeof s_recordShown, "%s", cur);
+        for (c = s_recordShown; *c; c++)          /* menu text is upper case */
+            if (*c >= 'a' && *c <= 'z')
+                *c = (char)(*c - 'a' + 'A');
+        set_text(MmSettingsMenu_pitchSet, s_recordShown);
+    }
+}
+
+/* Toggle and keep it, both places it lives: SWOS.ini, the way the SERVER row
+ * writes it, and the live value match_record.c reads as each match starts --
+ * so it applies to the very next match with no restart. */
+static void mmsSelectPitchSet(void)
+{
+    extern PlatformInitOptions *g_arcadeOpts;
+    extern const char *g_arcadeIniPath;
+
+    if (!g_arcadeOpts)
+        return;
+    if (!s_recordOn[0])
+        snprintf(s_recordOn, sizeof s_recordOn, "server");
+
+    if (record_is_on(g_arcadeOpts->record))
+        g_arcadeOpts->record[0] = '\0';
+    else
+        snprintf(g_arcadeOpts->record, sizeof g_arcadeOpts->record, "%s", s_recordOn);
+
+    MatchRecord_SetConfigured(g_arcadeOpts->record);
+    if (g_arcadeIniPath)
+        Settings_Save(g_arcadeOpts, g_arcadeIniPath);
+}
+
 static void matchMaking_rankings_onSelect(void)
 {
     OnlineMenus_Show(SWOS2020_MENU(rankingsMenu));
@@ -1176,6 +1260,10 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(matchMakingMenu_OnInit),
     HANDLER(matchMakingMenu_OnDraw),
     HANDLER(matchMaking_menuSettings_onSelect),
+    /* MULTIPLAYER SETTINGS: its first row is RECORD MATCHES. */
+    HANDLER(mmsOnInit),
+    HANDLER(mmsOnDraw),
+    HANDLER(mmsSelectPitchSet),
     HANDLER(matchMaking_rankings_onSelect),
     HANDLER(matchMaking_openGame_onSelect),
     HANDLER(matchMaking_cancelGame_onSelect),
