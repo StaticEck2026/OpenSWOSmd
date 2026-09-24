@@ -1054,6 +1054,16 @@ ViewHighLightsMain(TeamGame *leftTeam, TeamGame *rightTeam)
 {
     CopyTeamsAndHeader();
     InitGameSaveTeams(leftTeam, rightTeam);
+    /* The DOS view, on the same seam StartMatchSequence uses: AFTER
+     * InitGameSaveTeams has faded out, because the stadium "VS" line-up above is
+     * menu-sized and resizing while it is on screen re-letterboxes it mid-fade.
+     * Without this the viewer played a DOS recording in the Amiga's 336x272 --
+     * reported as "the pitch view is not in DOS mode anymore, and the score is
+     * centered at the top" (ReportBot 0008), the score being the HUD at its
+     * Amiga coordinates. The camera constants just below are already f(view)
+     * and only land on the DOS numbers once the view is set.
+     * MatchViewLeave is in viewAndRestoreMenu, so every exit path is covered. */
+    MatchViewEnter();
     /* Set the highlight flag AFTER InitGameSaveTeams' fade-out. The flag is what
      * flips refresh_palette_from_copper to the DOS pitch palette; setting it
      * earlier made the (Amiga-graphics) stadium "VS" line-up fade out through DOS

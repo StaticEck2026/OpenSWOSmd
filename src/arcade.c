@@ -2358,7 +2358,12 @@ void ArcadeMainLoop(void)
         _poolplyrLoaded    = 0;
         ViewHighlights();
 
-        /* Reel finished — restore the menu palette and loop to the next reel. */
+        /* Reel finished — restore the view, then the menu palette, and loop to
+         * the next reel. This path does not go through viewAndRestoreMenu, so it
+         * owns the MatchViewLeave the viewer's MatchViewEnter needs; without it
+         * an attract reel played under DOS gameplay would leave the cabinet's
+         * idle screens at 320x200. No-op when the view was never entered. */
+        { extern void MatchViewLeave(void); MatchViewLeave(); }
         { extern uint16_t _menuPalette[]; WriteCopperPalette(_menuPalette); }
     }
 }

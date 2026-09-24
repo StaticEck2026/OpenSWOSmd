@@ -257,6 +257,16 @@ static void viewAndRestoreMenu(void (*viewFunc)(void))
 
     viewFunc();
 
+#ifdef SWOS_SDL_BUILD
+    /* Back to the menu view. Every full-screen viewer routed through here may
+     * have switched to the DOS 320x200 (game_loop.c MatchViewEnter), and the
+     * menus are 272 lines of Amiga artwork. Safe unconditionally: MatchViewLeave
+     * is a no-op when the view was never entered, and the match path's own call
+     * restores the same saved values. Doing it HERE rather than inside the
+     * viewer covers its early-return paths too. */
+    { extern void MatchViewLeave(void); MatchViewLeave(); }
+#endif
+
     _menuStatus = 1;
     _exitMenu = 0;
     RestorePreviousMenu(savedSelectedEntry, (uint8_t *)savedMenuPtr);

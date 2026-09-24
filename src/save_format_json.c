@@ -7206,6 +7206,7 @@ int16_t SaveJson_LoadDIY(uint8_t *filename, const uint8_t *src_unused,
 
 extern uint8_t  _hilFileBuffer[];
 extern uint16_t _hilNumGoals;
+extern int      DosGameplay_TargetFps(void);   /* 70 DOS / 50 Amiga — stored as replay_fps */
 extern uint8_t  _hilGameName[];
 extern uint8_t  _hilGameRound[];
 
@@ -7687,13 +7688,21 @@ int16_t SaveJson_WriteHighlights(uint8_t *filename)
                 offsetof(HilFileHeader, game_round),
                 sizeof(hdr->game_round));
 
+    /* `replay_fps` is the rate the match was PLAYED at, which is the rate the
+     * scenes below must be played back at: 70 under DOS gameplay, 50 under the
+     * Amiga's. Nothing in the old header recorded it, so file_io.c's default of
+     * 50 was used for every .HIL -- and a DOS-mode recording therefore played at
+     * 50/70 = 71% speed, reported as "too slow and it stutters" (ReportBot 0008).
+     * A file without the field still reads as 50, which is what the Amiga
+     * recordings it applies to actually are. */
     mjson_printf(json_out_emit, &out,
-        ",\n  %Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
+        ",\n  %Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u,%Q:%u",
         "num_goals",       (unsigned)num_goals,
         "team_1_goals",    (unsigned)hdr->team_1_goals,
         "team_2_goals",    (unsigned)hdr->team_2_goals,
         "pitch_number",    (unsigned)hdr->pitch_number,
-        "max_substitutes", (unsigned)hdr->max_substitutes);
+        "max_substitutes", (unsigned)hdr->max_substitutes,
+        "replay_fps",      (unsigned)DosGameplay_TargetFps());
     PROF_END(header, "highlights-write");
 
     PROF_START(scenes);
@@ -7783,6 +7792,22 @@ int16_t SaveJson_LoadHighlights(uint8_t *filename, const uint8_t *src_unused,
     if (mjson_get_long((const char *)src, (int)src_size,
                          "$.max_size", &num) > 0)
         BE_WRITE_U32((uint8_t *)&hdr->max_size,  (uint32_t)num);
+
+    /* The rate the match was played at, so playback matches it (see the writer).
+     * Absent in files written before this field existed -- those are 50 Hz Amiga
+     * recordings, which is file_io.c's default, so leave it alone then. */
+#ifdef SWOS_SDL_BUILD
+    {
+        /* SDL only: _replayPlaybackFps lives in dos_replay_load.c, which the m68k
+         * build filters out (SDL_ONLY_SRCS). The Amiga plays at 50 Hz regardless,
+         * so there is nothing for it to pace to. */
+        extern int _replayPlaybackFps;
+        long fps = 0;
+        if (mjson_get_long((const char *)src, (int)src_size,
+                             "$.replay_fps", &fps) > 0 && fps >= 1 && fps <= 240)
+            _replayPlaybackFps = (int)fps;
+    }
+#endif
 
     load_team_game((const char *)src, (int)src_size,
                    "$.top_team",    (uint8_t *)&hdr->top_team);

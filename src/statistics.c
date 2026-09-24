@@ -11,6 +11,7 @@
 #include "play_match_menu.h"
 #include "input_text.h"
 #include "endian_helpers.h"
+#include "dos_mode.h"      /* _gDosView: the DOS release lays this panel out for 320x200 */
 #include "display.h"    /* _screen_width, WIDE_MARGIN — center the stats overlay in widescreen */
 #include "auto_skip_debug.h"
 
@@ -159,40 +160,60 @@ void DrawStatistics(void)
     uint16_t d7;
 
     /* Widescreen: the stats overlay is laid out on 336-frame coords (the DrawGrid /
-     * DrawMenuTextCentered / writeStatsNumber x's below — 16/80/168/256/304). Shift the
+     * DrawMenuTextCentered / writeStatsNumber x's below). Shift the
      * draw base by WIDE_MARGIN so the whole panel centers, same as the menus; restored on
      * exit. WIDE_MARGIN folds to 0 on Amiga / non-widescreen (no shift). */
     const int saved_x_offset = _menu_draw_x_offset;
     _menu_draw_x_offset = WIDE_MARGIN;
 
-    /* Draw title grid (80, 35, 176, 16) */
-    DrawGrid(80, 35, 176, 16);
+    /* The DOS release lays this panel out for its 320x200 screen, and the
+     * difference is not a margin: every row is 16 higher, the grids are 16
+     * narrower, and the centre and right columns pull in. The decisive number is
+     * that the DOS rows start at 39, and 39 + 8*18 + 16 = 199 -- SENDINGS OFF
+     * ends exactly on the last line of a 200-line screen. Ours started at 55 and
+     * ran to 215, which fits 272 and falls off 200: reported as the stats board
+     * being cut off in DOS mode (ReportBot 0007).
+     *
+     * swos.asm DrawStatistics against SWOS2.s:22799. The left column is 80 in
+     * both releases, which is why it stays a literal below. */
+    const int      dosv        = (_gDosView != 0);
+    const uint16_t kTitleGridY = dosv ?  19 :  35;
+    const uint16_t kTitleGridW = dosv ? 160 : 176;
+    const uint16_t kRowY0      = dosv ?  39 :  55;
+    const uint16_t kRowW       = dosv ? 288 : 304;
+    const uint16_t kTitleTextY = dosv ?  23 :  39;
+    const uint16_t kColCentre  = dosv ? 160 : 168;
+    const uint16_t kColRight   = dosv ? 240 : 256;
+    /* ---- layout constants above; no raw coordinates past this line ---- */
 
-    /* Draw 9 data rows starting at y=55, each 304 wide, 16 tall,
+    /* Draw the title grid (x 80, kTitleGridY, kTitleGridW wide, 16 tall) */
+    DrawGrid(80, kTitleGridY, kTitleGridW, 16);
+
+    /* Draw the 9 data rows from kRowY0, each kRowW wide, 16 tall,
      * spaced 18 apart. (1 title row + 9 data rows = 10 DrawGrid
      * calls total, matching SWOS2.s line 22799-22850. The previous
      * code had a 10th data row that left a visible empty band below
      * SENDINGS OFF.) Rows host: team names, GOALS, POSSESSION, GOAL
      * ATTEMPTS, ON TARGET, CORNERS WON, FOULS CONCEDED, BOOKINGS,
      * SENDINGS OFF. */
-    y = 55;
-    DrawGrid(16, y, 304, 16);
+    y = kRowY0;
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
     y += 18;
-    DrawGrid(16, y, 304, 16);
+    DrawGrid(16, y, kRowW, 16);
 
     /* Determine team order: topInfo = team whose inGameTeamPtr matches topTeamInGame */
     topInfo = &_topTeamData;
@@ -207,11 +228,11 @@ void DrawStatistics(void)
     a5 = topInfo->teamStatsPtr;
     a6 = botInfo->teamStatsPtr;
 
-    /* Title: "M A T C H   S T A T S" at y=39 */
-    y = 39;
-    DrawMenuTextCentered(168, y, color, _aMATCHSTATS, charTable);
+    /* Title: "M A T C H   S T A T S" */
+    y = kTitleTextY;
+    DrawMenuTextCentered(kColCentre, y, color, _aMATCHSTATS, charTable);
 
-    /* Team names at y=59 */
+    /* Team names */
     y += 20;
     {
         uint16_t topX = 80;
@@ -220,69 +241,69 @@ void DrawStatistics(void)
         DrawMenuTextCentered(topX, y, color, (uint8_t *)_topTeamInGame.teamName, charTable);
     }
     {
-        uint16_t botX = 256;
+        uint16_t botX = kColRight;
         if (_trainingGame)
             botX -= 5;
         DrawMenuTextCentered(botX, y, color, (uint8_t *)_bottomTeamInGame.teamName, charTable);
     }
 
-    /* GOALS at y=77 */
+    /* GOALS */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aGoals, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aGoals, charTable);
     writeStatsNumber(_statsTeam1Goals, 80, y, color, charTable);
-    writeStatsNumber(_statsTeam2Goals, 256, y, color, charTable);
+    writeStatsNumber(_statsTeam2Goals, kColRight, y, color, charTable);
 
-    /* POSSESSION at y=95 */
+    /* POSSESSION */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aPossession, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aPossession, charTable);
     d7 = (uint16_t)a5->ballPossession + (uint16_t)a6->ballPossession;
     if (d7 == 0)
     {
         DrawMenuTextCentered(80, y, color, _aMinus, charTable);
-        DrawMenuTextCentered(256, y, color, _aMinus, charTable);
+        DrawMenuTextCentered(kColRight, y, color, _aMinus, charTable);
     }
     else
     {
         uint16_t pct = (uint16_t)(((uint32_t)(uint16_t)a5->ballPossession * 100u) / d7);
         writeStatsPercent(pct, 80, y, color, charTable);
-        writeStatsPercent((uint16_t)(100 - pct), 256, y, color, charTable);
+        writeStatsPercent((uint16_t)(100 - pct), kColRight, y, color, charTable);
     }
 
-    /* GOAL ATTEMPTS at y=113 */
+    /* GOAL ATTEMPTS */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aGoalAttempts, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aGoalAttempts, charTable);
     writeStatsNumber((uint16_t)a5->goalAttempts, 80, y, color, charTable);
-    writeStatsNumber((uint16_t)a6->goalAttempts, 256, y, color, charTable);
+    writeStatsNumber((uint16_t)a6->goalAttempts, kColRight, y, color, charTable);
 
-    /* ON TARGET at y=131 */
+    /* ON TARGET */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aOnTarget, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aOnTarget, charTable);
     writeStatsNumber((uint16_t)a5->onTarget, 80, y, color, charTable);
-    writeStatsNumber((uint16_t)a6->onTarget, 256, y, color, charTable);
+    writeStatsNumber((uint16_t)a6->onTarget, kColRight, y, color, charTable);
 
-    /* CORNERS WON at y=149 */
+    /* CORNERS WON */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aCornersWon, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aCornersWon, charTable);
     writeStatsNumber((uint16_t)a5->cornersWon, 80, y, color, charTable);
-    writeStatsNumber((uint16_t)a6->cornersWon, 256, y, color, charTable);
+    writeStatsNumber((uint16_t)a6->cornersWon, kColRight, y, color, charTable);
 
-    /* FOULS CONCEDED at y=167 */
+    /* FOULS CONCEDED */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aFoulsConceded, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aFoulsConceded, charTable);
     writeStatsNumber((uint16_t)a5->foulsConceded, 80, y, color, charTable);
-    writeStatsNumber((uint16_t)a6->foulsConceded, 256, y, color, charTable);
+    writeStatsNumber((uint16_t)a6->foulsConceded, kColRight, y, color, charTable);
 
-    /* BOOKINGS at y=185 */
+    /* BOOKINGS */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aBookings, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aBookings, charTable);
     writeStatsNumber((uint16_t)a5->bookings, 80, y, color, charTable);
-    writeStatsNumber((uint16_t)a6->bookings, 256, y, color, charTable);
+    writeStatsNumber((uint16_t)a6->bookings, kColRight, y, color, charTable);
 
-    /* SENDINGS OFF at y=203 */
+    /* SENDINGS OFF */
     y += 18;
-    DrawMenuTextCentered(168, y, color, _aSendingsOff, charTable);
+    DrawMenuTextCentered(kColCentre, y, color, _aSendingsOff, charTable);
     writeStatsNumber((uint16_t)a5->sendingsOff, 80, y, color, charTable);
-    writeStatsNumber((uint16_t)a6->sendingsOff, 256, y, color, charTable);
+    writeStatsNumber((uint16_t)a6->sendingsOff, kColRight, y, color, charTable);
 
     _menu_draw_x_offset = saved_x_offset;
 }
