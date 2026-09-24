@@ -26,6 +26,21 @@ extern uint8_t _inputAllowedControlKeys[];
 extern void PanicHaltLoop(void);
 extern void MenuCheckControls(void);
 extern void CallDrawMenuItem(MenuEntry *entry);
+extern void DrawMenuItemBackgroundMasked(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+
+/* Redraw the entry being edited. An entry with a background clears its own box
+ * (DrawMenuItem fills it first), and every text input in SWOS itself has one. The
+ * SWOS 2020 menus have text inputs WITHOUT one -- the log-in screen's NAME and
+ * SERVER boxes -- because that game redraws the whole menu every frame; drawn over
+ * the old text, a shortened string left the longer one showing through it. So put
+ * the menu picture back under the box first, the way a transparent entry is
+ * cleared. */
+static void inputTextRedraw(MenuEntry *entry)
+{
+    if (entry->background == NO_BACKGROUND)
+        DrawMenuItemBackgroundMasked(entry->x, entry->y, entry->dwWidth, entry->dwHeight);
+    CallDrawMenuItem(entry);
+}
 
 /* ============================================================
  * PrintFormatted
@@ -257,7 +272,7 @@ uint16_t InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
 
         if (key == 27) { /* Escape — cancel */
             entry->fg = (uintptr_t)origStr;
-            CallDrawMenuItem(entry);
+            inputTextRedraw(entry);
             _deadVar02 = 0;
             return 1;
         }
@@ -287,14 +302,14 @@ uint16_t InputText(uint16_t maxLenPlus1, uint8_t *entryRaw)
     insert_cursor:
         /* Show cursor: insert 0xFF at pos, draw, then remove it */
         InsertCharacter(pos, 0xFF);
-        CallDrawMenuItem(entry);
+        inputTextRedraw(entry);
         InputTextDeleteCharAtCursor(pos);
     }
 
 commit:
     StringCopy(_inMenuKeyboardBuffer, origStr);
     entry->fg = (uintptr_t)origStr;
-    CallDrawMenuItem(entry);
+    inputTextRedraw(entry);
     _deadVar02 = 0;
     return 0;
 }
