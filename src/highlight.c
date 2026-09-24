@@ -774,8 +774,8 @@ void DrawReplayFrame(void)
         val &= ~(1u << 31);  /* bclr #31 */
 
         ResetAnimatedPatternsForBothTeams();
-        ReplayUpdateCameraAndSwapBuffers((int16_t)(val >> 16),
-                                          (int16_t)(val & 0xFFFF));
+        ReplayUpdateCameraAndSwapBuffers(ReplayCameraX((int16_t)(val >> 16)),
+                                          ReplayCameraY((int16_t)(val & 0xFFFF)));
     }
 
     /* loc_10C434: read entry */
@@ -996,8 +996,14 @@ void ReplayUpdateCameraAndSwapBuffers(int16_t targetX, int16_t targetY)
     /* AGA: populate the 2x-tall frontbuffer's mirror half after each full fill,
      * so the copper's block A displays with no block-B reload. No-op elsewhere. */
     extern void MirrorFrontbuffer(void);
-    targetX = ReplayCameraX(targetX);
-    targetY = ReplayCameraY(targetY);
+    /* targetX/Y are SIMULATION camera coordinates. Two of the three callers already
+     * hold them -- the match start (SIM_CAMERA_CENTRE_X) and RestoreCameraPosition
+     * (_cameraX saved before the replay) -- so a recorded value is converted by
+     * its one caller, DrawReplayFrame, and never here. Converting here treated the
+     * kick-off centre as a render origin: away from 336 the camera started in the
+     * wrong place and slid back over the first second, jumped again after every
+     * instant replay, and left a width-dependent fraction in `_cameraX`. Caught by
+     * scripts/replay_v2_test.sh at 484, broken since cb5602c. */
     SetCameraCoordinates(targetX, targetY);
     InitCameraMoveView(targetX, targetY);
     MirrorFrontbuffer();
