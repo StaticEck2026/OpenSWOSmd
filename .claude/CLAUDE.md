@@ -58,8 +58,8 @@ stale `tackle_foul.o` (no `SWOS_TEST_NO_INJURIES_CARDS`) booked players a clean 
 could not, and a live match desynced at the first booking (2026-09-19, docs/NETPLAY.md §7).
 
 **Netplay** (`NETPLAY=1`, docs/NETPLAY.md) compiles the vendored C++ GGPO-X in
-`third_party/ggpo-x` into the SDL binary. Default on for 64-bit Linux (`X86_64=1`) and
-Cygwin64 and macOS (both slices), off elsewhere; opt-in on WASM (`NETPLAY=1`, below). The C++
+`third_party/ggpo-x` into the SDL binary. Default on for 64-bit Linux (`X86_64=1`),
+Cygwin64, macOS (both slices) and WASM (below), off elsewhere. The C++
 runtime is linked statically, so the DLL
 and `lib/<arch>` lists below are unchanged — re-check with `cygcheck`/`ldd` if the link
 changes. `bin/SWOS.x86_64 --netplay-selftest` runs the library with a toy game.
@@ -105,9 +105,9 @@ a match with a browser in it is always relayed. `scripts/wasm_netplay_test.sh` p
 headless Chrome against a browser, the native build, the Mac's, or a browser on the Mac
 (`PAIR=<host>-<join>` of `web|native|mac|macweb`); run it after touching the gate, the link's
 sockets or the web build's pacing or clock (its `clock_gettime` is ours: Emscripten's refuses
-the clock SDL asks for, and SDL's wall-clock fallback steps -- NETPLAY.md §8). Opt-in for WASM until the public server has its certificate: an https page can only open `wss://`,
-which the gate speaks with `--tls-cert`/`--tls-key` (TLS on the same port; NETPLAY_SETUP.md §10,
-`TLS=1 scripts/wasm_netplay_test.sh`).
+the clock SDL asks for, and SDL's wall-clock fallback steps -- NETPLAY.md §8). On by default for WASM since us.swos.eu got its certificate (2026-09-24): an https page can only
+open `wss://`, which the gate speaks with `--tls-cert`/`--tls-key` (TLS on the same port;
+NETPLAY_SETUP.md §10, `TLS=1 scripts/wasm_netplay_test.sh`).
 
 **Whole-match replays** (`.SRP`, `src/replay_v2.c`, docs/REPLAY_FORMAT_V2.md) are SDL-only and
 recorded from every match that is not training, the arcade cabinet or the rig: `LATEST.SRP` in the

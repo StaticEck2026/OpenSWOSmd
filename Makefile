@@ -599,11 +599,14 @@ endif
 # compiler for the target, and the default -m32 Linux build also needs
 # g++-multilib. Without it src/netplay.c compiles to stubs.
 #
-# WASM (`make WASM=1 NETPLAY=1`): a browser has no UDP sockets, so Emscripten's
-# socket layer carries each datagram as one WebSocket message to ws://host:port --
+# WASM: a browser has no UDP sockets, so Emscripten's socket layer carries each
+# datagram as one WebSocket message to ws://host:port -- wss:// from an https page --
 # the matchmaker's WebSocket gate (--websocket, docs/NETPLAY.md §8), which hands it
 # to the server's UDP port as if it came from an ordinary client. A browser can
-# only ever talk to that server, so it always plays through the relay.
+# only ever talk to that server, so it always plays through the relay. Default ON
+# since 2026-09-24, when the public server (us.swos.eu) got its certificate: the
+# public page is https, and until the gate spoke wss:// its MULTIPLAYER button
+# would have led nowhere. `make WASM=1 NETPLAY=0` builds one without.
 #
 # macOS was off until 2026-09-17 for no reason but never having been tried: the
 # arch flags were already threaded through the C++ and ENET rules ($(ARCHFLAGS)),
@@ -615,11 +618,13 @@ endif
 # Windows drop's exact four-DLL list (CLAUDE.md) and the Linux lib/<arch> bundle
 # stay as they are. Check with `cygcheck bin/SWOS.exe` / `ldd bin/SWOS.x86_64`.
 #
-# Toggling NETPLAY needs a `clean` first, like every -D flag.
+# Toggling NETPLAY rebuilds every object by itself: the flags stamp (CLAUDE.md).
 GGPO_DIR := third_party/ggpo-x/src
 ENET_DIR := third_party/enet
 ifndef NETPLAY
-ifeq ($(BUILD_OS)/$(BUILD_ARCH),linux/x86_64)
+ifdef WASM
+NETPLAY := 1
+else ifeq ($(BUILD_OS)/$(BUILD_ARCH),linux/x86_64)
 NETPLAY := 1
 else ifeq ($(BUILD_OS),macos)
 NETPLAY := 1

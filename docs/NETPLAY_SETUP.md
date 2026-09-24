@@ -412,11 +412,11 @@ The web build can play online — against another browser, or against a native L
 Windows or macOS player. It is proven bit for bit: the same match ends on the same state
 hash in a browser as natively.
 
-**1. Build the web build with netplay.** Netplay is **opt-in** for WASM:
+**1. Build the web build.** Netplay is on by default for WASM:
 
 ```bash
-make WASM=1 NETPLAY=1                                   # -> dist/web/SWOS.html (+ .js .wasm .data)
-make WASM=1 NETPLAY=1 SWOS_TEST_NO_INJURIES_CARDS=1     # to play the TESTER natives (§8 rules)
+make WASM=1                                             # -> dist/web/SWOS.html (+ .js .wasm .data)
+make WASM=1 SWOS_TEST_NO_INJURIES_CARDS=1               # to play the TESTER natives (§8 rules)
 ```
 
 Match the native builds' rules, or the handshake refuses them (§8).
@@ -444,9 +444,8 @@ once per browser.
 second, and a live match does not survive that.
 
 **The public build at baker76.com** is served over `https://`, so it reaches the server
-with `wss://` — it can play online once the server it points at has a certificate (§10).
-Until us.swos.eu has one it is built without `NETPLAY`, since its MULTIPLAYER button would
-lead nowhere.
+with `wss://`, which us.swos.eu serves with its certificate (§10). The web build has
+netplay ON by default since that went in (`make WASM=1`; `NETPLAY=0` for one without).
 
 ## 10. Certificates and `wss://`
 
@@ -484,8 +483,23 @@ sudo certbot certonly --standalone -d us.swos.eu \
      --agree-tos -m you@example.com --no-eff-email
 ```
 
-`--standalone` runs its own brief web server on port 80. If the machine **already runs a
-web server** on 80, use it instead: `--webroot -w /var/www/html` (or `--nginx`/`--apache`).
+`--standalone` runs its own brief web server on port 80, so it only works when nothing
+else is on 80.
+
+**If nginx already runs on port 80** (us.swos.eu's case), let certbot go through it:
+
+```bash
+sudo apt install certbot python3-certbot-nginx
+# nginx needs a server block for the name (server_name us.swos.eu;) -- the default one will do
+sudo certbot certonly --nginx -d us.swos.eu --agree-tos -m you@example.com --no-eff-email
+```
+
+`certonly` gets the certificate without touching nginx's configuration. Plain
+`certbot --nginx -d us.swos.eu` also works -- it additionally switches nginx's own site to
+https, which is harmless here: nginx serves web pages on 80/443, the matchmaker does its
+own TLS on 19602, and the two never meet. Either way renewals go through nginx too, with
+nothing stopped. (Apache: `--apache`; any other web server: `--webroot -w <its root>`.)
+
 No port 80 at all? Prove it with DNS instead: `--manual --preferred-challenges dns`, which
 asks you to add a TXT record (renewal then needs your DNS provider's certbot plugin).
 
@@ -493,9 +507,17 @@ The result is in `/etc/letsencrypt/live/us.swos.eu/`: `fullchain.pem` (the certi
 its chain — use this, **not** `cert.pem`, or some browsers cannot build the chain) and
 `privkey.pem`.
 
-**3. Give the server a copy it can read.** `/etc/letsencrypt` is readable by root only,
-and the server runs as `swos` (§4). A certbot **deploy hook** copies the pair into the
-server's directory every time the certificate is issued or renewed:
+**3. Let the server read it.** Which way depends on the user the service runs as — the
+`User=` line in its unit (§4):
+
+- **As root** (no `User=` line): skip this step and point the server straight at
+  certbot's files, `--tls-cert /etc/letsencrypt/live/us.swos.eu/fullchain.pem --tls-key
+  /etc/letsencrypt/live/us.swos.eu/privkey.pem`. Those names are symlinks certbot
+  repoints on each renewal, and the server follows them.
+- **As its own user** (the recommended unit, and us.swos.eu): `/etc/letsencrypt` is
+  readable by root only, so a certbot **deploy hook** copies the pair into a folder that
+  user owns, every time the certificate is issued or renewed. Replace `swos` with the
+  unit's `User=`, and `/srv/swos-matchmaker` with the server's checkout:
 
 ```bash
 sudo tee /etc/letsencrypt/renewal-hooks/deploy/swos-matchmaker.sh >/dev/null <<'EOF'
@@ -514,8 +536,14 @@ sudo RENEWED_LINEAGE=/etc/letsencrypt/live/us.swos.eu \
      /etc/letsencrypt/renewal-hooks/deploy/swos-matchmaker.sh
 ```
 
-**4. Start (or restart) the server with the two `--tls-*` lines** (the unit in §4). It
-should print:
+**4. Start (or restart) the server with the two `--tls-*` lines** (the unit in §4):
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl restart swos-matchmaker
+journalctl -u swos-matchmaker -b | head -20
+```
+
+It should print:
 
 ```
 [web] wss:// on the same port, certificate /srv/swos-matchmaker/tls/fullchain.pem
