@@ -8,7 +8,7 @@ menu state over gdb (fast + token-light); screenshots are an orientation aid
 only.
 
 This document is **separate from the generic gdb daemon doc**
-(`SWOS_C/docs/GDB.md`). GDB.md documents the reusable transport; this documents
+(`docs/GDB_DEBUGGING.md`). GDB_DEBUGGING.md documents the reusable transport; this documents
 the SWOS automation built on top of it.
 
 ---
@@ -445,7 +445,7 @@ unwinds. `-O0` emits a real `strncmp` that `-Ofast` inlined — provided in the
 
 ## Usage
 
-Bring a target up (see `SWOS_C/docs/GDB.md` for the daemon / `amiga_gdb.sh`),
+Bring a target up (see `docs/GDB_DEBUGGING.md` for the daemon / `amiga_gdb.sh`),
 get it to a menu, then:
 
 ```sh

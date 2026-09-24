@@ -610,19 +610,22 @@ needed.
 
 ## File layout
 
-```
-/mnt/c/Projects/AI/SWOS/OpenSWOS/                     # Amiga port
-├── gdb_proxy.py                                     # the proxy script (used by both modes)
-├── uae/dh0/data/
-│   ├── SWOS2                # hunk binary FS-UAE runs
-│   ├── SWOS2.elf            # ELF gdb loads for symbols
-│   └── SWOS2.map            # linker map (adjacent-symbol lookups)
-└── GDB.md                   # this file
+One tree builds both targets (the two repos merged on 2026-08-12), and `bin/` is the one
+runtime directory for both: the SDL binary runs from it, and FS-UAE mounts it as **DH1:**.
 
-/mnt/c/Projects/AI/SWOS/OpenSWOS/               # SDL port
-├── bin/SWOS                 # x86 Linux ELF the SDL daemon launches
-├── data/ grafs/ sound/      # runtime assets (loaded relative to bin/)
-└── Makefile
+```
+/mnt/c/Projects/AI/SWOS/OpenSWOS/
+├── bin/
+│   ├── SWOS2                  # m68k hunk binary FS-UAE runs (bin/ is DH1:)
+│   ├── SWOS2.elf              # ELF gdb loads for its symbols
+│   ├── SWOS2.map              # linker map (adjacent-symbol lookups)
+│   ├── SWOS, SWOS.x86_64      # SDL Linux ELFs the SDL daemon launches
+│   └── data/ grafs/ sound/    # runtime assets, shared by both targets
+└── docs/GDB_DEBUGGING.md      # this file
+
+/mnt/c/Projects/AI/AmigaScope/gdb_proxy.py
+                               # the proxy (both modes); also the submodule
+                               # scripts/amiga/amigascope
 ```
 
 State files used by the proxy:

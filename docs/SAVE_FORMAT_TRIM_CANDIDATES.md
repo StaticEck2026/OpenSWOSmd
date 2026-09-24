@@ -36,7 +36,7 @@ unconditionally overwritten before any read. Confirm with **either**:
 2. **Live (preferred):** cross-target gdb read. Load a save whose field holds a
    distinctive non-zero value, read the field on the other-endian target; if it
    reads back as 0 / the derived value regardless of what was saved, it is
-   recomputed and safe to trim. (See `docs/GDB.md` for the attach + read flow.)
+   recomputed and safe to trim. (See `docs/GDB_DEBUGGING.md` for the attach + read flow.)
 
 A field read only as a `!= 0` zero-check is *cross-target-safe* but that alone
 does **not** make it trimmable — trimming requires the value to be genuinely

@@ -17,7 +17,7 @@ copper/blitter scroll path — all of this is `#if !defined(SWOS_SDL_BUILD)` / `
 |---|---|
 | **`docs/AGA.md` §11** | THE FMODE=1 pitch-scroll write-up. The 6 layered fixes (§11 "SOLVED"), the DMA-contention analysis (§11a), and the "debugging lessons paid in blood" (static-vs-live). **§11 Layer 3 is the coarse-boundary jump; Layer 4 is the leftward write.** Read before touching scroll_blit.c / the display fine-scroll. |
 | **`docs/DEBUG_TOOLKIT.md`** | The headless tools + **the two FS-UAE binaries** (§ "READ THIS FIRST" — this is the trap that cost days: stock re-composites, only the modified binary retains live frames). |
-| **`docs/GDB.md`** | Low-level harness: boot FS-UAE, attach, `gdb_proxy.py` command interface, read/write memory, breakpoints, watchpoints, the one-shot-port discipline. |
+| **`docs/GDB_DEBUGGING.md`** | Low-level harness: boot FS-UAE, attach, `gdb_proxy.py` command interface, read/write memory, breakpoints, watchpoints, the one-shot-port discipline. |
 | **`docs/AMIGA_SPRITES.md`** | Hardware-sprite vs bob design (P3): band routing, attached pairs (16-colour), `RenderSpriteBandsToCopperLists`, the plane-count storage. Read before the full-load sprite test (§5b). |
 | **AGA hardware docs** `/mnt/c/Projects/Amiga/doc/aga/` | Authoritative chipset behaviour — **read these instead of guessing.** `RandyAGA.txt` ("Smooth Hardware Scrolling", "LONG burst mode" — the fine-scroll model), `AGA Registers.pdf`, `AGA.guide`, `A1200FuncSpec.txt`. |
 | **Memory** (`~/.claude/.../memory/`) | `project_aga_fmode_impl`, `project_aga_fmode_leftscroll_jitter`, `project_aga_mixed_depth_rendering`, `project_aga_sprite_ddfstrt_dma_steal`, `feedback_dont_blame_wsl`. Point-in-time findings; verify against code. |
@@ -45,7 +45,7 @@ make -f Makefile.amiga EXTRA_CFLAGS=-DPITCH_SCROLL_TEST   # -> bin/SWOS2 (+ .elf
 The scroll-test build also **compile-time-skips the loader intro** (`#ifndef PITCH_SCROLL_TEST`
 around `ShowLoaderIntroSequence` in SWOS.c) so it boots straight to the pitch.
 
-**Boot + drive (see GDB.md for detail):**
+**Boot + drive (see GDB_DEBUGGING.md for detail):**
 ```sh
 scripts/amiga/amiga_gdb.sh up            # or: down / status / restart
 P="python3 scripts/amiga/gdb_proxy.py cmd"
@@ -225,7 +225,7 @@ architectural work, not a quick patch. The rig's 6-per-row grid is a pathologica
   pattern contains no '%'". `rm obj/*.d` before building.
 - **`elf2hunk` lives in `$BART` (bin/linux), gcc in `$BART/opt/bin`** — put BOTH on PATH or the
   make succeeds to `.elf` then fails the hunk step.
-- **One-shot debugger port** (GDB.md): each gdb connect/disconnect burns FS-UAE's port. Boot
+- **One-shot debugger port** (GDB_DEBUGGING.md): each gdb connect/disconnect burns FS-UAE's port. Boot
   once; don't throwaway-connect.
 - **Don't blame WSL** (`feedback_dont_blame_wsl`): blank window / slowness is relanch churn /
   two clients / wrong state — diagnose, don't reach for `wsl --shutdown`. Real root causes hit
