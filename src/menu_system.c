@@ -1760,13 +1760,22 @@ void MenuProc(void)
 
 no_event_or_done:
 #ifdef SWOS_SDL_BUILD
-    /* SWOS_MENU_NAV_LOG=1: every direction the menu sees, what it walked through and
+    /* Menu navigation log: every direction the menu sees, what it walked through and
      * where the cursor ended up -- for a cursor that will not move on one machine
-     * and moves on every other (the log-in screen, 2026-09-24). A tester runs with it
-     * and sends SWOS.log. Ordinals are the menu JSON's item numbers. */
+     * and moves on every other (the log-in screen, 2026-09-24). ON by default in a
+     * TESTER build, so a tester only has to run the game and send SWOS.log -- no
+     * environment variables to set; a line is written only when a direction is
+     * pressed. SWOS_MENU_NAV_LOG=0/1 overrides either way. Ordinals are the menu
+     * JSON's item numbers. */
     static int8_t s_navLog = -1;
-    if (s_navLog < 0)
-        s_navLog = getenv("SWOS_MENU_NAV_LOG") != NULL;
+    if (s_navLog < 0) {
+        const char *v = getenv("SWOS_MENU_NAV_LOG");
+#ifdef SWOS_TEST_NO_INJURIES_CARDS
+        s_navLog = v ? (v[0] != '0') : 1;
+#else
+        s_navLog = v ? (v[0] != '0') : 0;
+#endif
+    }
     if (s_navLog && (_menuControlsDirection >= 0 || _pl1Direction >= 0 || (_twoPlayers && _pl2Direction >= 0) ||
                      (_currentKey >= 0x10 && _currentKey <= 0x13)))
         fprintf(stderr, "[menu-nav] on #%u: dir=%d fire=%u (pl1 dir=%d fire=%u, pl2 dir=%d fire=%u, "
