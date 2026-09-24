@@ -1092,6 +1092,14 @@ static void print_start(const MmStartInfo *st)
     for (i = 0; i < st->numAddrs; i++)
         printf("    addr[%d] %s%s\n", i, st->addrs[i],
                i == 0 ? "   (as the SERVER saw the peer)" : "   (peer-reported)");
+    /* Whether the server will play this match itself. The only way to tell from
+     * outside that a server was started with --relay: a relaying one sends RELAY:
+     * just before START (docs/NETPLAY_SETUP.md 6). */
+    if (st->relayToken)
+        printf("  RELAYED through %s, token %016llx\n",
+               st->relayAddr, (unsigned long long)st->relayToken);
+    else
+        printf("  not relayed: the players connect to each other directly\n");
 }
 
 int32_t MmClient_PairTest(const char *role, const char *host, uint16_t port)

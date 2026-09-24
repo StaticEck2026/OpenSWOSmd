@@ -204,7 +204,31 @@ SWOS_MM_HOST=<public> bin/SWOS.x86_64 --matchmaker-pair=join    # machine 2
 ```
 
 Each side should end with `START:`, the right player number, the other's name, and a list
-of candidate addresses. Two machines behind the **same** router still reach the server by
+of candidate addresses — then one line saying whether the server will play the match
+itself: `RELAYED through <server>, token <n>` (the **same** token on both sides) if it runs
+`--relay`, or `not relayed` if not. That is the only way to confirm `--relay` from outside.
+
+The TCP side can be proved from outside too, if the server runs `--websocket`: a real
+WebSocket handshake must come back `101 Switching Protocols`. ("Connection refused" means
+nothing is listening on TCP — the flag is off, or the firewall has not been opened.)
+
+```bash
+curl -si --max-time 5 --http1.1 -H "Connection: Upgrade" -H "Upgrade: websocket" \
+     -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+     http://<address>:19602/ | head -1
+```
+
+`--record` shares that TCP port but not the WebSocket protocol, so confirm it from the
+server's own startup lines, which list what it is running before `running on Port`:
+
+```
+[relay] on: OpenSWOS pairs play through this server
+[record] on: players stream their matches to TCP 19602 ...
+[web] on: browsers connect over WebSocket on TCP 19602 ...
+```
+
+A server started with no flags prints none of them — which is what `run_matchmaker.sh`
+does, since it does not pass them on (§3). Two machines behind the **same** router still reach the server by
 hairpin, so this proves the forward and the server — not yet that the internet side accepts
 traffic. The first real outside player proves that.
 
