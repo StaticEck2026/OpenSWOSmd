@@ -130,7 +130,13 @@ static void server_save(void)
         Settings_Save(g_arcadeOpts, g_arcadeIniPath);
 }
 
-static void logInMenu_OnInit(void)
+/* What this screen relabels and hides. Applied on EVERY draw, not once in onInit
+ * -- the same trap lobby_layout() documents: coming back from a menu opened from
+ * here (matchmaking, SETTINGS) restores this one from its template, so SWOS 2020's
+ * USERNAME / PASSWORD / SHOW PASSWORD come back and the buttons lose their text,
+ * and there is no onReturn to redo it in. Every assignment here is a pointer
+ * store, so doing it each frame costs nothing. */
+static void logInMenu_layout(void)
 {
     set_text(LogInMenu_header, "PLAY ONLINE");
     set_text(LogInMenu_subTitle, "CHOOSE A NAME AND THE SERVER TO MEET ON");
@@ -146,9 +152,15 @@ static void logInMenu_OnInit(void)
     entry_at(LogInMenu_showPassword)->isInvisible = 1;
 }
 
+static void logInMenu_OnInit(void)
+{
+    logInMenu_layout();
+}
+
 /* Runs every frame (the menu is flagged dos_redraw), so the toggles just follow state. */
 static void logInMenu_OnDraw(void)
 {
+    logInMenu_layout();
     set_text(LogInMenu_rememberLogInInfo, s_rememberLogin ? "ON" : "OFF");
     set_text(LogInMenu_liveCast, s_liveCast ? "ON" : "OFF");
     set_text(LogInMenu_passwordInput, server_text());
@@ -255,6 +267,13 @@ static void matchMakingMenu_OnDraw(void)
     int32_t numUsers = 0, numGames = 0, row;
     MmState state;
     char who[MM_NAME_MAX];
+
+    /* Every row's text and visibility is rebuilt below each frame, but these two
+     * were set only in onInit -- so coming back from SETTINGS, which restores this
+     * menu from its template, left the player's name and the EXIT button blank.
+     * Re-applied here, first, so the early return below cannot skip them. */
+    set_text(MatchMakingMenu_userName, s_username);
+    set_entry(MatchMakingMenu_menuExit, "EXIT", 1, kLightBrownWithRedFrame);
 
     MmClient_Poll();
     state = MmClient_State();
@@ -1183,7 +1202,6 @@ static int32_t record_is_on(const char *spec)
 static void mmsOnInit(void)
 {
     const char *cur = record_current();
-    set_text(MmSettingsMenu_pitchSetLabel, "RECORD MATCHES");
     if (!s_recordOn[0])
         snprintf(s_recordOn, sizeof s_recordOn, "%s", record_is_on(cur) ? cur : "server");
 }
@@ -1193,6 +1211,9 @@ static void mmsOnInit(void)
 static void mmsOnDraw(void)
 {
     const char *cur = record_current();
+    /* The label on every draw, not once: a menu is restored from its template
+     * when one opened from it closes (see logInMenu_layout). */
+    set_text(MmSettingsMenu_pitchSetLabel, "RECORD MATCHES");
     if (!record_is_on(cur)) {
         set_text(MmSettingsMenu_pitchSet, "OFF");
     } else if (SDL_strcasecmp(cur, "server") == 0) {
