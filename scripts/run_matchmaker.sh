@@ -6,6 +6,11 @@
 #   scripts/run_matchmaker.sh --port 20000 # a different port
 #   scripts/run_matchmaker.sh --rebuild    # force a reconfigure + rebuild
 #   scripts/run_matchmaker.sh --build-only # build, don't run
+#   scripts/run_matchmaker.sh -- --relay --websocket   # anything after -- goes to the server
+#
+# A public server runs under systemd with its full argument list, including wss://'s
+# certificate: docs/NETPLAY_SETUP.md §4 and §10. This script is for building it and
+# for local testing.
 #
 # This is the server SWOS 2020's online play talks to — SimpleMatchmaker,
 # vendored at third_party/matchmaker (see its OPENSWOS.md). Running it here
@@ -27,8 +32,9 @@
 # as the default (so a stock swos-2020 client still finds us) and made the
 # argument work as the README always claimed. The game defaults to the same.
 #
-# It is UDP. `ss -ulnp | grep 19602` shows it listening; there is no TCP socket
-# to telnet at, so "connection refused" from a TCP tool means nothing here.
+# It is UDP. `ss -ulnp | grep 19602` shows it listening. TCP on the same number
+# exists only with --websocket or --record, so without them "connection refused"
+# from a TCP tool means nothing here.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -40,6 +46,7 @@ BIN="$BUILD_DIR/swos-matchmaker"
 PORT=19602
 REBUILD=0
 BUILD_ONLY=0
+SERVER_ARGS=()
 
 usage() {
     awk 'NR >= 3 { if ($0 !~ /^#/) exit; sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
@@ -49,6 +56,8 @@ Options:
       --port N      listen on port N (default $PORT)
       --rebuild     wipe $BUILD_DIR and reconfigure first
       --build-only  build and exit without running
+      -- ARGS...    pass ARGS to the server (--relay, --websocket, --tls-cert ...;
+                    see: $BIN --help)
   -h, --help        this text
 EOF
 }
@@ -59,6 +68,7 @@ while [ $# -gt 0 ]; do
         --rebuild)    REBUILD=1; shift ;;
         --build-only) BUILD_ONLY=1; shift ;;
         -h|--help)    usage; exit 0 ;;
+        --)           shift; SERVER_ARGS=("$@"); break ;;
         *) echo "run_matchmaker: unknown option '$1' (try --help)" >&2; exit 2 ;;
     esac
 done
@@ -88,5 +98,5 @@ if command -v ss >/dev/null && ss -ulnp 2>/dev/null | grep -q ":$PORT "; then
     exit 1
 fi
 
-echo "== running on UDP $PORT (ctrl-c to stop)"
-exec "$BIN" "$PORT"
+echo "== running on UDP $PORT${SERVER_ARGS[*]:+ with ${SERVER_ARGS[*]}} (ctrl-c to stop)"
+exec "$BIN" "$PORT" "${SERVER_ARGS[@]}"

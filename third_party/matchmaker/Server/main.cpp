@@ -42,10 +42,11 @@ int main(int argc, char** argv)
     bool websocket = false;
     std::string recordings = "recordings";
     std::string ledgerPath;
+    std::string tlsCert, tlsKey;
     auto usage = [&]() {
         std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
                      " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
-                     "       [--websocket]\n"
+                     "       [--websocket [--tls-cert FILE --tls-key FILE]]\n"
                      "  port        UDP, 1-65535, default 19602\n"
                      "  --relay     OpenSWOS pairs play through this server\n"
                      "  --netem     a misbehaving network in the middle of every relayed\n"
@@ -62,7 +63,10 @@ int main(int argc, char** argv)
                      "  --recordings  where those go (default: recordings/)\n"
                      "  --ledger    append a JSON line per relay session, recorded match and desync\n"
                      "  --websocket browsers (the web build) connect over WebSocket on TCP, the\n"
-                     "              same port number, and any match with one in it is relayed\n";
+                     "              same port number, and any match with one in it is relayed\n"
+                     "  --tls-cert  with --tls-key: also wss://, on the same port, for pages\n"
+                     "              served over https -- PEM files (certbot's fullchain.pem and\n"
+                     "              privkey.pem), re-read within a minute when they change\n";
         return 2;
     };
     for (int i = 1; i < argc; i++) {
@@ -84,6 +88,10 @@ int main(int argc, char** argv)
             websocket = true;
         } else if (a == "--recordings" && i + 1 < argc) {
             recordings = argv[++i];
+        } else if (a == "--tls-cert" && i + 1 < argc) {
+            tlsCert = argv[++i];
+        } else if (a == "--tls-key" && i + 1 < argc) {
+            tlsKey = argv[++i];
         } else if (a == "--ledger" && i + 1 < argc) {
             ledgerPath = argv[++i];
         } else {
@@ -97,6 +105,14 @@ int main(int argc, char** argv)
         std::cerr << "--netem acts on relayed matches: add --relay\n";
         return 2;
     }
+    if (tlsCert.empty() != tlsKey.empty()) {
+        std::cerr << "--tls-cert and --tls-key go together\n";
+        return 2;
+    }
+    if (!tlsCert.empty() && !websocket) {
+        std::cerr << "--tls-cert is for browsers: add --websocket\n";
+        return 2;
+    }
     relayOptions.web = websocket;
     Connections connections(port);
     Ledger ledger(ledgerPath);
@@ -107,10 +123,15 @@ int main(int argc, char** argv)
     Recorder recorder(record, (uint16_t)port, ledger, recordings);
     // Both take TCP on the port number the game uses for UDP: a browser's WebSocket
     // arrives there, because the browser build sends its datagrams to that port.
-    WebGate web(websocket, (uint16_t)port);
+    WebGate web(websocket, (uint16_t)port, tlsCert, tlsKey);
     TcpGate tcp((uint16_t)port, web.Enabled() ? &web : nullptr, recorder.Enabled() ? &recorder : nullptr);
     std::signal(SIGINT, OnStopSignal);
     std::signal(SIGTERM, OnStopSignal);
+#ifndef _WIN32
+    // A browser that goes away mid-write must not kill the server: plain sends say
+    // MSG_NOSIGNAL, but OpenSSL writes to the socket itself.
+    std::signal(SIGPIPE, SIG_IGN);
+#endif
     // loop
     bool loop = true;
     std::cout << "SimpleMatchmaking Server running on Port " << port << "\n";

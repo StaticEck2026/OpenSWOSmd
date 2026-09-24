@@ -1422,11 +1422,12 @@ way the native tests drive a binary. Headless Chrome is Playwright's
 without it the game's stderr goes to a `SWOS.log` in the browser's memory.
 
 **Not done yet:**
-- **`wss://`.** A page served over https (baker76.com is) may only open `wss://`, so the
-  public web build needs the gate behind TLS: a certificate for the server's name, and a
-  TLS terminator (or TLS in the gate). `wasm/pre.js` already picks `wss://` on an https
-  page. Until then the public web build stays without netplay (`NETPLAY` is opt-in for
-  WASM), since its MULTIPLAYER button would lead nowhere.
+- **`wss://` on the public server.** A page served over https (baker76.com is) may only
+  open `wss://`. The gate speaks it (`--tls-cert`/`--tls-key`, TLS on the same port,
+  `TLS=1 scripts/wasm_netplay_test.sh`; docs/NETPLAY_SETUP.md §10), and `wasm/pre.js`
+  picks `wss://` on an https page. What is left is deploying it: a certificate on
+  us.swos.eu. Until then the public web build stays without netplay (`NETPLAY` is opt-in
+  for WASM), since its MULTIPLAYER button would lead nowhere.
 - **Recording from a browser.** The recorder's TCP stream would arrive as a WebSocket too;
   the gate sees `SWRC` in its first message and could hand it to the recorder. Not wired:
   a browser player's match is recorded only if the other player records it.

@@ -8,13 +8,14 @@
 
 #ifdef _WIN32
 
-WebGate::WebGate(bool enabled, uint16_t serverPort) : m_enabled(false), m_serverPort(serverPort)
+WebGate::WebGate(bool enabled, uint16_t serverPort, const std::string&, const std::string&)
+    : m_enabled(false), m_serverPort(serverPort)
 {
     if (enabled)
         std::cout << "[web] not available on a Windows build of the server\n";
 }
 WebGate::~WebGate() {}
-void WebGate::Adopt(int, const std::string&, uint16_t) {}
+void WebGate::Adopt(int, const std::string&, uint16_t, bool) {}
 void WebGate::Update() {}
 
 TcpGate::TcpGate(uint16_t, WebGate* web, Recorder* recorder) : m_web(web), m_recorder(recorder) {}
@@ -30,6 +31,11 @@ void TcpGate::Update() {}
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#ifdef SWOS_MM_TLS
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#endif
 
 namespace
 {
@@ -40,6 +46,7 @@ const size_t   kMaxMessage       = 1u << 20;
 const size_t   kMaxBacklog       = 4u << 20;    // unsent to one slow browser
 const size_t   kMaxConnections   = 1024;
 const size_t   kMaxPerAddress    = 64;
+const uint32_t kTlsCheckMs       = 60000;       // how often to look for a renewed certificate
 
 void NonBlocking(int fd)
 {
@@ -134,30 +141,175 @@ std::string Trim(const std::string& s)
     size_t b = s.find_last_not_of(" \t\r");
     return a == std::string::npos ? "" : s.substr(a, b - a + 1);
 }
+
+// A file's mtime in nanoseconds, 0 if it cannot be read. certbot's live/ names are
+// symlinks to a new file on each renewal; stat follows them.
+int64_t Stamp(const std::string& path)
+{
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0)
+        return 0;
+    return (int64_t)st.st_mtim.tv_sec * 1000000000 + st.st_mtim.tv_nsec;
+}
+
+#ifdef SWOS_MM_TLS
+// OpenSSL's reason for the last failure, for the log.
+std::string TlsError()
+{
+    unsigned long e = ERR_get_error();
+    ERR_clear_error();
+    if (!e)
+        return "unknown error";
+    char buf[256];
+    ERR_error_string_n(e, buf, sizeof buf);
+    return buf;
+}
+#endif
 } // namespace
 
 // ============================================================================
 // WebGate
 // ============================================================================
 
-WebGate::WebGate(bool enabled, uint16_t serverPort) : m_enabled(enabled), m_serverPort(serverPort)
+WebGate::WebGate(bool enabled, uint16_t serverPort, const std::string& certPath,
+                 const std::string& keyPath)
+    : m_enabled(enabled), m_serverPort(serverPort), m_certPath(certPath), m_keyPath(keyPath)
 {
-    if (enabled)
-        std::cout << "[web] on: browsers connect over WebSocket on TCP " << serverPort
-                  << " and play through the relay\n";
+    if (!enabled)
+        return;
+    std::cout << "[web] on: browsers connect over WebSocket on TCP " << serverPort
+              << " and play through the relay\n";
+    if (m_certPath.empty())
+        return;
+#ifdef SWOS_MM_TLS
+    m_tls = LoadTls();
+    m_tlsCheckedMs = ServerTime::NowMs();
+    if (m_tls)
+        std::cout << "[web] wss:// on the same port, certificate " << m_certPath << "\n";
+    else
+        std::cout << "[web] wss:// OFF: ws:// only until the certificate loads\n";
+#else
+    std::cout << "[web] wss:// OFF: this server was built without OpenSSL (install libssl-dev "
+                 "and rebuild: scripts/run_matchmaker.sh --rebuild)\n";
+#endif
 }
 
 WebGate::~WebGate()
 {
     for (auto& c : m_connections)
-        if (c->fd >= 0)
-            close(c->fd);
+        Close(*c, "server stopping");
     for (auto& t : m_tunnels)
         if (t.second->udp >= 0)
             close(t.second->udp);
+#ifdef SWOS_MM_TLS
+    if (m_tls)
+        SSL_CTX_free(m_tls);
+#endif
 }
 
-void WebGate::Adopt(int fd, const std::string& ip, uint16_t port)
+#ifdef SWOS_MM_TLS
+ssl_ctx_st* WebGate::LoadTls()
+{
+    int64_t certStamp = Stamp(m_certPath), keyStamp = Stamp(m_keyPath);
+    SSL_CTX* ctx = SSL_CTX_new(TLS_server_method());
+    if (!ctx)
+    {
+        std::cout << "[web] TLS: " << TlsError() << "\n";
+        return nullptr;
+    }
+    SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
+    // Partial writes, from a buffer that may have moved: Flush sends from the front
+    // of a vector that is appended to between retries.
+    SSL_CTX_set_mode(ctx, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    std::string what;
+    if (SSL_CTX_use_certificate_chain_file(ctx, m_certPath.c_str()) != 1)
+        what = "cannot use the certificate " + m_certPath;
+    else if (SSL_CTX_use_PrivateKey_file(ctx, m_keyPath.c_str(), SSL_FILETYPE_PEM) != 1)
+        what = "cannot use the key " + m_keyPath;
+    else if (SSL_CTX_check_private_key(ctx) != 1)
+        what = "the key " + m_keyPath + " does not match the certificate " + m_certPath;
+    if (!what.empty())
+    {
+        std::cout << "[web] TLS: " << what << ": " << TlsError() << "\n";
+        SSL_CTX_free(ctx);
+        return nullptr;
+    }
+    m_certStamp = certStamp;
+    m_keyStamp = keyStamp;
+    return ctx;
+}
+
+// A renewed certificate is picked up within a minute. Connections already open keep
+// the context they started with (OpenSSL counts its references); only new ones get
+// the new one. A renewal that does not load leaves the old one serving.
+void WebGate::ReloadTlsIfChanged()
+{
+    uint32_t now = ServerTime::NowMs();
+    if (m_certPath.empty() || now - m_tlsCheckedMs < kTlsCheckMs)
+        return;
+    m_tlsCheckedMs = now;
+    int64_t certStamp = Stamp(m_certPath), keyStamp = Stamp(m_keyPath);
+    if (!certStamp || !keyStamp || (m_tls && certStamp == m_certStamp && keyStamp == m_keyStamp))
+        return;
+    SSL_CTX* fresh = LoadTls();
+    if (!fresh)
+    {
+        // Do not retry a bad pair every minute; wait for the files to change again.
+        m_certStamp = certStamp;
+        m_keyStamp = keyStamp;
+        return;
+    }
+    if (m_tls)
+        SSL_CTX_free(m_tls);
+    m_tls = fresh;
+    std::cout << "[web] TLS: loaded the renewed certificate " << m_certPath << "\n";
+}
+
+// Non-blocking: called each pass until the handshake is done.
+bool WebGate::TlsAccept(Connection& c)
+{
+    ERR_clear_error();
+    int r = SSL_accept(c.ssl);
+    if (r == 1)
+    {
+        c.tlsReady = true;
+        return true;
+    }
+    int e = SSL_get_error(c.ssl, r);
+    if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+        return ServerTime::NowMs() - c.openedMs < kPendingMs;
+    // Usually a browser that does not trust the certificate, or a scanner.
+    std::cout << "[web] " << c.address << ": TLS handshake failed: " << TlsError() << "\n";
+    return false;
+}
+#else
+ssl_ctx_st* WebGate::LoadTls() { return nullptr; }
+void WebGate::ReloadTlsIfChanged() {}
+bool WebGate::TlsAccept(Connection&) { return false; }
+#endif
+
+int WebGate::Receive(Connection& c, uint8_t* buf, size_t len)
+{
+#ifdef SWOS_MM_TLS
+    if (c.ssl)
+    {
+        ERR_clear_error();
+        int r = SSL_read(c.ssl, buf, (int)len);
+        if (r > 0)
+            return r;
+        int e = SSL_get_error(c.ssl, r);
+        return e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE ? 0 : -1;
+    }
+#endif
+    ssize_t n = recv(c.fd, buf, len, 0);
+    if (n > 0)
+        return (int)n;
+    if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR))
+        return 0;
+    return -1;
+}
+
+void WebGate::Adopt(int fd, const std::string& ip, uint16_t port, bool tls)
 {
     size_t fromHere = 0;
     for (auto& c : m_connections)
@@ -173,6 +325,27 @@ void WebGate::Adopt(int fd, const std::string& ip, uint16_t port)
     c->ip = ip;
     c->address = ip + ":" + std::to_string(port);
     c->openedMs = ServerTime::NowMs();
+#ifdef SWOS_MM_TLS
+    if (tls)
+    {
+        c->ssl = m_tls ? SSL_new(m_tls) : nullptr;
+        if (!c->ssl || SSL_set_fd(c->ssl, fd) != 1)
+        {
+            if (c->ssl)
+                SSL_free(c->ssl);
+            close(fd);
+            return;
+        }
+        c->tlsReady = false;
+        c->address = "wss " + c->address;
+    }
+#else
+    if (tls)
+    {
+        close(fd);
+        return;
+    }
+#endif
     m_connections.push_back(std::move(c));
 }
 
@@ -413,6 +586,24 @@ bool WebGate::Flush(Connection& c)
 {
     while (!c.out.empty())
     {
+#ifdef SWOS_MM_TLS
+        if (c.ssl)
+        {
+            if (!c.tlsReady)
+                break;                              // nothing of ours goes out before it
+            ERR_clear_error();
+            int r = SSL_write(c.ssl, c.out.data(), (int)std::min(c.out.size(), (size_t)1 << 20));
+            if (r > 0)
+            {
+                c.out.erase(c.out.begin(), c.out.begin() + r);
+                continue;
+            }
+            int e = SSL_get_error(c.ssl, r);
+            if (e == SSL_ERROR_WANT_READ || e == SSL_ERROR_WANT_WRITE)
+                break;
+            return false;
+        }
+#endif
         ssize_t n = send(c.fd, c.out.data(), c.out.size(), MSG_NOSIGNAL);
         if (n > 0)
         {
@@ -440,6 +631,15 @@ void WebGate::Close(Connection& c, const char* why)
                   << " closed (" << why << ") after " << (ServerTime::NowMs() - c.openedMs) / 1000 << " s"
                   << (c.tunnel ? ", " + std::to_string(c.tunnel->toServer) + " datagrams in, " +
                                  std::to_string(c.tunnel->toBrowser) + " out" : "") << "\n";
+#ifdef SWOS_MM_TLS
+    if (c.ssl)
+    {
+        if (c.tlsReady)
+            SSL_shutdown(c.ssl);                    // one try: say goodbye, do not wait
+        SSL_free(c.ssl);
+        c.ssl = nullptr;
+    }
+#endif
     close(c.fd);
     c.fd = -1;
     c.tunnel = nullptr;
@@ -471,23 +671,33 @@ void WebGate::Update()
 {
     if (!m_enabled)
         return;
+    ReloadTlsIfChanged();
     uint8_t buf[16384];
     for (auto& cp : m_connections)
     {
         Connection& c = *cp;
         if (c.fd < 0)
             continue;
+        if (!c.tlsReady)
+        {
+            if (!TlsAccept(c))
+            {
+                Close(c, "TLS handshake");
+                continue;
+            }
+            if (!c.tlsReady)
+                continue;                           // still shaking hands
+        }
         bool gone = false;
         for (;;)
         {
-            ssize_t n = recv(c.fd, buf, sizeof buf, 0);
+            int n = Receive(c, buf, sizeof buf);
             if (n > 0)
             {
                 c.in.insert(c.in.end(), buf, buf + n);
                 continue;
             }
-            if (n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR))
-                gone = true;
+            gone = n < 0;
             break;
         }
         bool ok = true;
@@ -599,9 +809,13 @@ void TcpGate::Update()
         char head[4];
         ssize_t n = recv(p.fd, head, sizeof head, MSG_PEEK);
         bool decided = true;
+        // A TLS handshake record: 0x16, then version 3.x.
+        bool tls = n == 4 && head[0] == 0x16 && head[1] == 0x03;
         if (n == 4 && memcmp(head, "GET ", 4) == 0 && m_web)
             m_web->Adopt(p.fd, p.ip, p.port);
-        else if (n == 4 && memcmp(head, "GET ", 4) != 0 && m_recorder)
+        else if (tls && m_web && m_web->TlsEnabled())
+            m_web->Adopt(p.fd, p.ip, p.port, true);
+        else if (n == 4 && !tls && memcmp(head, "GET ", 4) != 0 && m_recorder)
             m_recorder->Adopt(p.fd, p.ip + ":" + std::to_string(p.port));
         else if (n == 4 || n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) ||
                  now - p.sinceMs > kPendingMs)

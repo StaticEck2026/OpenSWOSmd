@@ -123,8 +123,17 @@ Keep this list short and justified — it is a fork, and every entry is drift.
   `GET ` is a WebSocket, anything else goes to the recorder (`Recorder::Adopt` -- the
   recorder no longer listens itself). The relay serves any match with a browser in it
   (`RelayOptions::web`, `VERSION:OPENSWOS-WEB`). SHA-1 and base64 for the handshake
-  are in the file; no new dependency. POSIX only, like the recorder. The game side is
-  docs/NETPLAY.md §8.
+  are in the file. POSIX only, like the recorder. The game side is docs/NETPLAY.md §8.
+- **`wss://` in the gate: `--tls-cert FILE --tls-key FILE`.** A page served over https
+  may only open `wss://`, and Emscripten dials it on the datagram's own port, so TLS is
+  terminated in the gate rather than by a proxy: `TcpGate` sends a connection opening
+  with a TLS record (`0x16 0x03`) to `WebGate::Adopt(..., tls)`, which runs OpenSSL
+  non-blocking (`SSL_accept`, then `SSL_read`/`SSL_write` in place of recv/send) and
+  is a plain WebSocket after that. The pair is re-read within a minute of changing
+  (a certbot renewal needs no restart). OpenSSL is the system's (`libssl-dev`,
+  `find_package(OpenSSL)` in CMakeLists.txt); without it the server builds `ws://`
+  only. SIGPIPE is ignored, since OpenSSL writes to the socket without MSG_NOSIGNAL.
+  Deploying it: docs/NETPLAY_SETUP.md §10.
 - **`Server/include/Ledger.h` (new):** the `--ledger` file the relay and the recorder
   share (one JSON object per line: `relay`, `match`, `desync`), and the clocks they use.
 - **`Server/main.cpp`: options, and a clean stop.** The port is still the first bare

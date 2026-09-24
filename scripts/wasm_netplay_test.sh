@@ -12,6 +12,16 @@
 #   PAIR=mac-web ...                              # (MAC_HOST, MAC_PATH; over the LAN)
 #   PAIR=macweb-web ...                           # a browser ON THE MAC v one here
 #   MM_HOST=us.swos.eu scripts/wasm_netplay_test.sh   # through an EXISTING server
+#   TLS=1 scripts/wasm_netplay_test.sh            # the page over https, so wss:// to the gate
+#
+# TLS=1 serves the page over https, as the public site does, so the browsers open
+# wss:// (wasm/pre.js follows the page). The page gets a throwaway self-signed
+# certificate, and Chrome is told to accept THAT key and no other
+# (--ignore-certificate-errors-spki-list). Locally our server runs wss:// with the same
+# certificate, and the test requires every browser socket to have come in over TLS.
+# With MM_HOST, the server's own certificate must pass Chrome's ordinary checks: it is
+# the real test of a deployment's certificate (docs/NETPLAY_SETUP.md §10). Browsers on
+# this machine only: not with mac or macweb.
 #
 # MM_HOST=<name> [MM_PORT=19602] plays through a server someone else runs (it must run
 # --websocket, and relays any match with a browser in it). No server is started, and the
@@ -69,6 +79,7 @@ MATCHES="${MATCHES:-1}"
 FRAMES="${FRAMES:-300}"
 WAIT="${WAIT:-$((150 + MATCHES * 90))}"
 NETEM="${NETEM:-}"
+TLS="${TLS:-0}"
 SERVER="${SERVER:-build/matchmaker/swos-matchmaker}"
 MM_HOST="${MM_HOST:-}"                  # an existing server to play through instead of our own
 MM_PORT="${MM_PORT:-19602}"
@@ -86,6 +97,10 @@ done
 case "$PAIR" in *web*) ;;
     *) echo "wasm-netplay-test: PAIR needs a browser in it (web or macweb)" >&2; exit 1 ;;
 esac
+if [ "$TLS" = 1 ]; then
+    case "$PAIR" in *mac*) echo "wasm-netplay-test: TLS=1 is for browsers on this machine" >&2; exit 1 ;; esac
+    command -v openssl >/dev/null || { echo "wasm-netplay-test: TLS=1 needs openssl" >&2; exit 1; }
+fi
 
 if [ -z "${CHROME:-}" ]; then
     for c in ~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell \
@@ -152,10 +167,35 @@ cleanup() {
 }
 trap cleanup EXIT
 
-python3 -m http.server "$HTTP_PORT" --bind 127.0.0.1 --directory "$WEBDIR" > "$OUT/http.log" 2>&1 &
+SCHEME=http
+CHROME_TLS=()
+if [ "$TLS" = 1 ]; then
+    # One throwaway certificate, for the page and (locally) for the gate.
+    openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
+        -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+        -keyout "$OUT/tls-key.pem" -out "$OUT/tls-cert.pem" 2>/dev/null ||
+        { echo "wasm-netplay-test: cannot make a test certificate" >&2; exit 1; }
+    SPKI=$(openssl x509 -in "$OUT/tls-cert.pem" -pubkey -noout | openssl pkey -pubin -outform der |
+           openssl dgst -sha256 -binary | base64)
+    CHROME_TLS=(--ignore-certificate-errors-spki-list="$SPKI")
+    SCHEME=https
+    python3 - "$HTTP_PORT" "$WEBDIR" "$OUT/tls-cert.pem" "$OUT/tls-key.pem" > "$OUT/http.log" 2>&1 <<'PYEOF' &
+import functools, http.server, ssl, sys
+port, root, cert, key = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
+handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=root)
+httpd = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ctx.load_cert_chain(cert, key)
+httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+httpd.serve_forever()
+PYEOF
+else
+    python3 -m http.server "$HTTP_PORT" --bind 127.0.0.1 --directory "$WEBDIR" > "$OUT/http.log" 2>&1 &
+fi
 HTTP_PID=$!
 if [ "$REMOTE" = 0 ]; then
     SERVER_ARGS=(--websocket)
+    [ "$TLS" = 1 ] && SERVER_ARGS+=(--tls-cert "$OUT/tls-cert.pem" --tls-key "$OUT/tls-key.pem")
     [ -n "$NETEM" ] && SERVER_ARGS+=(--relay --netem "$NETEM")
     "$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
     SERVER_PID=$!
@@ -172,10 +212,11 @@ common_env=(SWOS_MM_HOST="$PLAY_HOST" SWOS_MM_PORT="$PLAY_PORT" SWOS_P2P_LOG=1 S
 # string (wasm/pre.js). Its console is Chrome's log; <name>.log is just the game's lines.
 web_player() {   # name auto env...
     local name=$1 auto=$2; shift 2
-    local url="http://127.0.0.1:$HTTP_PORT/SWOS.html?arg=--matchmaker-menu=$name&env=SWOS_MM_AUTO=$auto"
+    local url="$SCHEME://127.0.0.1:$HTTP_PORT/SWOS.html?arg=--matchmaker-menu=$name&env=SWOS_MM_AUTO=$auto"
     local kv
     for kv in "${common_env[@]}" "$@"; do url="$url&env=$kv"; done
     "$CHROME" --no-sandbox --enable-logging=stderr --v=0 --user-data-dir="$OUT/chrome-$name" \
+        "${CHROME_TLS[@]}" \
         --autoplay-policy=no-user-gesture-required --disable-background-timer-throttling \
         --disable-renderer-backgrounding --disable-backgrounding-occluded-windows \
         "$url" > "$OUT/$name.raw" 2>&1 &
@@ -296,7 +337,7 @@ if grep -q "browser socket :" "$OUT/server.log"; then
 import re, sys
 seen, bad, reused = {}, 0, 0
 for line in open(sys.argv[1]):
-    m = re.search(r"\[web\] ([\d.]+):\d+: browser socket :(\d+) is ([\d.]+:\d+)", line)
+    m = re.search(r"\[web\] (?:wss )?([\d.]+):\d+: browser socket :(\d+) is ([\d.]+:\d+)", line)
     if not m:
         continue
     key = (m.group(1), m.group(2))
@@ -310,10 +351,18 @@ print("tunnels: %d browser port(s), %d reused by the socket that followed, %d mo
 sys.exit(1 if bad or not reused else 0)
 PYEOF
 fi
+if [ "$TLS" = 1 ]; then
+    # Every browser socket came in over TLS: the gate names those "wss <address>".
+    ws=$(grep -cE "^\[web\] [0-9]" "$OUT/server.log")
+    wss=$(grep -cE "^\[web\] wss [0-9].*browser socket" "$OUT/server.log")
+    echo "tls: $wss browser socket(s) over wss://, $ws over plain ws://"
+    { [ "$wss" -ge 1 ] && [ "$ws" = 0 ]; } || { echo "!! the browsers did not all come in over wss://"; fail=1; }
+fi
 fi
 
 what="$MATCHES match(es) $HOST_KIND v $JOIN_KIND through the WebSocket gate${NETEM:+ ($NETEM)}"
 [ "$REMOTE" = 1 ] && what="$MATCHES match(es) $HOST_KIND v $JOIN_KIND through $MM_HOST's gate and relay"
+[ "$TLS" = 1 ] && what="$what, over wss://"
 if [ "$fail" = 0 ]; then
     echo "wasm-netplay-test: PASSED — $what, both players identical (logs in $OUT)"
     exit 0

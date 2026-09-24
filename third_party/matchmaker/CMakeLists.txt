@@ -69,6 +69,20 @@ target_include_directories(swos-matchmaker PRIVATE
     "${SWOS_TREE}/include")
 target_link_libraries(swos-matchmaker swos_enet)
 
+# wss:// for the web build (Server/include/WebGate.h, docs/NETPLAY_SETUP.md §10).
+# OpenSSL from the system (libssl-dev), so a TLS fix arrives with the distro's
+# updates rather than waiting on us. Without it the server still builds and serves
+# ws:// only, and says so if it is given a certificate.
+find_package(OpenSSL)
+if(OPENSSL_FOUND AND NOT WIN32)
+    target_compile_definitions(swos-matchmaker PRIVATE SWOS_MM_TLS=1)
+    target_link_libraries(swos-matchmaker OpenSSL::SSL OpenSSL::Crypto)
+    message(STATUS "swos-matchmaker: wss:// with OpenSSL ${OPENSSL_VERSION}")
+else()
+    message(WARNING "swos-matchmaker: OpenSSL not found (apt install libssl-dev) -- "
+                    "building without wss://")
+endif()
+
 if(WIN32)
     target_link_libraries(swos-matchmaker winmm ws2_32)
 endif()

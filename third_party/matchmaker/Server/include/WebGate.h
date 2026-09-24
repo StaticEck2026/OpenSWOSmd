@@ -18,6 +18,14 @@
 // TcpGate owns the TCP listener, because the recorder (Recorder.h) listens on the same
 // port number: a connection that opens with "GET " is a WebSocket, anything else goes
 // to the recorder, whose stream opens with its magic "SWRC".
+//
+// wss://. A page served over https may only open wss://, and Emscripten dials it on the
+// same port as ws:// (the datagram's). So TLS is terminated HERE, not by a proxy in
+// front: a connection that opens with a TLS record (0x16 0x03) is a secure WebSocket,
+// and after the TLS handshake it is exactly a plain one -- same tunnels, same address
+// (a proxy would have hidden the browser's), same port. Given --tls-cert/--tls-key
+// (OpenSSL; docs/NETPLAY_SETUP.md §10); the files are re-read when they change, so a
+// certbot renewal needs no restart.
 #pragma once
 #include <cstdint>
 #include <map>
@@ -26,17 +34,24 @@
 #include <vector>
 
 class Recorder;
+struct ssl_st;
+struct ssl_ctx_st;
 
 class WebGate
 {
 public:
-    WebGate(bool enabled, uint16_t serverPort);
+    // certPath/keyPath empty: no TLS. Otherwise both PEM files, or the gate says why
+    // not and serves ws:// only.
+    WebGate(bool enabled, uint16_t serverPort, const std::string& certPath = "",
+            const std::string& keyPath = "");
     ~WebGate();
 
     bool Enabled() const { return m_enabled; }
+    bool TlsEnabled() const { return m_enabled && m_tls != nullptr; }
 
-    // A connection TcpGate has accepted, whose first bytes are "GET ".
-    void Adopt(int fd, const std::string& ip, uint16_t port);
+    // A connection TcpGate has accepted, whose first bytes are "GET " -- or, with
+    // tls, a TLS record.
+    void Adopt(int fd, const std::string& ip, uint16_t port, bool tls = false);
 
     // Once per main-loop pass: read and write every connection and tunnel.
     void Update();
@@ -65,6 +80,8 @@ private:
         uint8_t messageOp = 0;
         uint32_t openedMs = 0;
         uint16_t browserPort = 0;
+        ssl_st* ssl = nullptr;          // wss://: everything goes through it
+        bool tlsReady = true;           // false until its TLS handshake is done
     };
 
     bool Handshake(Connection& c);                 // false = close it
@@ -72,6 +89,10 @@ private:
     void Deliver(Connection& c, const uint8_t* p, size_t len);
     void SendFrame(Connection& c, uint8_t op, const uint8_t* p, size_t len);
     bool Flush(Connection& c);                     // false = close it
+    int Receive(Connection& c, uint8_t* buf, size_t len);   // >0 bytes, 0 none yet, <0 gone
+    bool TlsAccept(Connection& c);                 // false = close it
+    ssl_ctx_st* LoadTls();                         // nullptr = could not, and says why
+    void ReloadTlsIfChanged();
     Tunnel* TunnelFor(const std::string& key);
     void Close(Connection& c, const char* why);
     void PumpTunnels();
@@ -81,6 +102,10 @@ private:
     uint32_t m_nextUnique = 1;
     std::vector<std::unique_ptr<Connection>> m_connections;
     std::map<std::string, std::unique_ptr<Tunnel>> m_tunnels;
+    std::string m_certPath, m_keyPath;
+    ssl_ctx_st* m_tls = nullptr;
+    int64_t m_certStamp = 0, m_keyStamp = 0;       // mtimes the loaded context came from
+    uint32_t m_tlsCheckedMs = 0;
 };
 
 class TcpGate
