@@ -89,7 +89,6 @@ included:
 ```bash
 cd /srv/swos-matchmaker        # the working directory matters: see --recordings
 build/matchmaker/swos-matchmaker 19602 \
-    --relay \
     --websocket \
     --tls-cert /srv/swos-matchmaker/tls/fullchain.pem \
     --tls-key  /srv/swos-matchmaker/tls/privkey.pem \
@@ -98,13 +97,21 @@ build/matchmaker/swos-matchmaker 19602 \
     --ledger /srv/swos-matchmaker/matches.jsonl
 ```
 
-That is **every** option a production server uses; only `--netem`/`--netem-seed` (testing)
-are left out. `swos-matchmaker --help` prints the list.
+That is every option a production server uses. Left out on purpose: `--relay` (below) and
+`--netem`/`--netem-seed` (testing). `swos-matchmaker --help` prints the list.
+
+**Native players play peer to peer; only browser games go through the server.** That is
+what the command above does: `--websocket` relays any match with a browser in it (a
+browser has no other way to reach anyone), and every native pair connects directly, as in
+SWOS 2020. Do NOT add `--relay` to a public server: it sends every native match through
+the server too, so both players' packets make the round trip to wherever it is hosted.
+On us.swos.eu (Virginia) that put two European testers' ping -- and so the input delay
+the game picks from it -- far above what the same two get directly (2026-09-25).
 
 | flag | use it for |
 |---|---|
 | `19602` | the port, UDP and TCP. First bare argument; default 19602 |
-| `--relay` | relay every OpenSWOS pair. Without it, only browser matches are relayed |
+| `--relay` | relay EVERY OpenSWOS pair, natives too. **Not for a public server** (above): for testing, or a private server for players whose NATs will not punch. Without it only browser matches are relayed |
 | `--websocket` | accept browsers. Opens TCP on the port |
 | `--tls-cert FILE` | with `--tls-key`: also accept `wss://` on the same port, for a web build served over `https://`. The certificate chain, PEM — certbot's `fullchain.pem` (§10). Needs `--websocket` |
 | `--tls-key FILE` | the certificate's private key, PEM — certbot's `privkey.pem`. Both files are re-read within a minute of changing, so a renewal needs no restart |
@@ -114,10 +121,10 @@ are left out. `swos-matchmaker --help` prints the list.
 | `--netem P` | **testing only.** Puts a misbehaving network (`wifi`, `awful`, `cycle`...) in the middle of every relayed match. Never on a server real players use |
 | `--netem-seed N` | **testing only.** The seed for `--netem`, to replay one run |
 
-Drop `--relay` if you would rather players connect directly and only lean on the server to
-find each other: it costs the server nothing, and a match survives the server restarting.
-Keep it if your players are likely to be behind NATs that will not punch (many home
-routers, most mobile connections).
+Without `--relay` a native match costs the server nothing, adds no latency, and survives
+the server restarting. The price: two players whose NATs will not punch (some home
+routers, most mobile connections) cannot play each other -- there is no automatic fallback
+to the relay yet -- and see THE HOST DID NOT ANSWER (§11).
 
 ### Run it as a service (systemd)
 
@@ -151,7 +158,6 @@ User=swos
 Group=swos
 WorkingDirectory=/srv/swos-matchmaker
 ExecStart=/srv/swos-matchmaker/build/matchmaker/swos-matchmaker 19602 \
-    --relay \
     --websocket \
     --tls-cert /srv/swos-matchmaker/tls/fullchain.pem \
     --tls-key /srv/swos-matchmaker/tls/privkey.pem \
@@ -178,7 +184,8 @@ WantedBy=multi-user.target
 `ReadWritePaths` names a file, so create the ledger before the first start
 (`sudo -u swos touch /srv/swos-matchmaker/matches.jsonl`) — under `ProtectSystem=strict`
 the server may not create it. Leave out lines you do not want: without the two `--tls-*`
-lines it serves `ws://` only; without `--relay` it relays browser matches only; without
+lines it serves `ws://` only; `--relay` would put native matches through the server too
+(don't, above); without
 `--record`/`--recordings` there is no recorder; without `--ledger` no ledger.
 
 ```bash
@@ -191,7 +198,7 @@ journalctl -u swos-matchmaker -f       # every [relay] line is timed to the mill
 Its first lines say what it is running — check them after every change to the unit (§6):
 
 ```
-[relay] on: OpenSWOS pairs play through this server
+[relay] on for browsers: a match with one in it plays through this server
 [record] on: players stream their matches to TCP 19602 ...
 [web] on: browsers connect over WebSocket on TCP 19602 and play through the relay
 [web] wss:// on the same port, certificate /srv/swos-matchmaker/tls/fullchain.pem
@@ -328,7 +335,7 @@ has the causes.
 server's own startup lines, which list what it is running before `running on Port`:
 
 ```
-[relay] on: OpenSWOS pairs play through this server
+[relay] on for browsers: a match with one in it plays through this server
 [record] on: players stream their matches to TCP 19602 ...
 [web] on: browsers connect over WebSocket on TCP 19602 ...
 [web] wss:// on the same port, certificate ...
@@ -590,7 +597,7 @@ accepted for that key only (§12).
 |---|---|---|
 | **SERVER NOT CONNECTED** (matchmaking screen) | the server was not reached | check the **SERVER** row (§7); the server's firewall and router forward (§5) |
 | stuck on **CONNECTING TO SERVER** | nothing answering at that address | wrong address or port in **SERVER**, or UDP 19602 blocked (§5) |
-| **THE HOST DID NOT ANSWER** / CHECK THE ADDRESS, PORT AND FIREWALL | the other player was never reached | usually NATs that will not punch: run the server with `--relay` (§4). Otherwise the firewall and forward (§5) |
+| **THE HOST DID NOT ANSWER** / CHECK THE ADDRESS, PORT AND FIREWALL | the other player was never reached | usually NATs that will not punch -- one player forwarding UDP 19602 on their router often fixes it; a private server with `--relay` always does, at the cost of latency (§4). Otherwise the firewall and forward (§5) |
 | **THE OTHER PLAYER HAS ANOTHER VERSION** / BOTH OF YOU NEED THE SAME BUILD | different commits | both download the same build; compare the version line |
 | **YOUR BUILDS PLAY BY DIFFERENT RULES** / ONE OF YOU HAS A TEST BUILD | tester build v release build | both use tester, or both release (§8) |
 | **YOUR GAMEPLAY STYLES ARE DIFFERENT** / SET THE SAME ONE IN OPTIONS | AMIGA v DOS | OPTIONS → GAMEPLAY, the same on both |
@@ -599,7 +606,7 @@ accepted for that key only (§12).
 | **THE SERVER'S RELAY HAS CLOSED** / FIND EACH OTHER AGAIN | a relay session closes after about a minute with no traffic | go back to the lobby and join again |
 | **THIS SERVER CANNOT RELAY A BROWSER GAME** | a browser is in the match and the server lacks `--websocket` | restart the server with `--websocket` (§4) |
 | **THE CONNECTION WENT QUIET** | the link stopped. In a browser, most often the tab went to the background | keep the tab in front (§9); otherwise the network dropped |
-| two natives never connect, but the server is fine | their NATs will not punch | run the server with `--relay` (§4) |
+| two natives never connect, but the server is fine | their NATs will not punch | as above: a port forward on one side, or a private `--relay` server (§4) |
 | a browser on an `https://` page cannot connect at all | the server has no `wss://`: no `--tls-cert`/`--tls-key`, or they did not load | §10; the server's first lines say which |
 | server log: `[web] TLS: cannot use the certificate ...` / `the key ... does not match` | the files are missing, unreadable by the `swos` user, or not a pair | rerun the deploy hook (§10 step 3); `fullchain.pem` and `privkey.pem` from the same issue |
 | server log: `[web] wss:// OFF: this server was built without OpenSSL` | built before `libssl-dev` was installed | install it and `scripts/run_matchmaker.sh --rebuild --build-only` (§3) |
