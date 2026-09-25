@@ -374,7 +374,7 @@ it (§11).
 screen: **MULTIPLAYER SETTINGS → RECORD MATCHES**, OFF or ON. ON streams every match to the
 server's recorder (§4's `--record`), which keeps it and compares both players frame by frame
 to catch a desync. Like the SERVER row it is saved as soon as it is changed, and it applies
-from the very next match — no restart.
+from the very next match — no restart. What it keeps and how to use it: §12.
 
 ON means the server the player logged in to. A player who names a recorder somewhere else
 in `SWOS.ini` (`[netplay] record = host[:port]`) sees that address in the row instead of ON,
@@ -589,7 +589,7 @@ A browser refuses a self-signed certificate for a WebSocket **without asking**: 
 first opens `https://my.server.name:19602/` in the same browser and accepts the warning,
 and then the game's `wss://` is let through. (That page itself shows an error: it is a
 WebSocket port, not a web site.) `TLS=1 scripts/wasm_netplay_test.sh` uses one of these,
-accepted for that key only (§12).
+accepted for that key only (§13).
 
 ## 11. Troubleshooting
 
@@ -620,7 +620,80 @@ recorded match and **desync** is a JSON line: a desync line names the exact fram
 builds and both platforms. A recorded match can be played again anywhere with
 `bin/SWOS.x86_64 --srp-resim=recordings/<match>.SRP`, which names the first frame that parts.
 
-## 12. Testing a deployment with the repo's own tests
+## 12. Recording matches, and finding out why a match felt laggy
+
+Two different questions, answered by two different things:
+
+| the question | where the answer is |
+|---|---|
+| **Did the two games go out of step** (a desync: a goal on one screen and not the other)? At which frame, and can we replay it? | the **recorder** -- this section's first half |
+| **Why did it feel laggy** -- delay, stutter, freezing? | each player's **`SWOS.log`** -- the second half. A recording does not measure lag |
+
+### Recording
+
+**On the server:** `--record`, with `--recordings DIR` and `--ledger FILE` (§4). It takes
+TCP on the same port as everything else.
+
+**On each player's game:** MULTIPLAYER, LOGIN, **SETTINGS → MULTIPLAYER SETTINGS → RECORD
+MATCHES: ON** (§7). That is `[netplay] record = server` in `SWOS.ini`; a recorder somewhere
+else is `host` or `host:port`. It applies from the next match, and both players should
+have it on: the recorder's whole method is comparing the two.
+
+**What it keeps:**
+
+- **A `.SRP` of the match** in `recordings/`, the same file the host's own game writes as
+  `LATEST.SRP` in its save folder, byte for byte. It plays in the game: HIGHLIGHTS, LOAD,
+  then VIEW.
+- **One JSON line per match in the ledger** (`"kind":"match"`): the teams, the gameplay
+  style, the **agreed input delay** (`"delay"`), whether it was relayed (`"relay"`, `null`
+  for peer to peer), both players' names, builds, platforms and addresses, how each side
+  ended and why, and whether their final states agreed (`"finalAgree"`).
+- **A desync line the moment one happens** (`"kind":"desync"`), naming the exact frame and
+  both hashes, and the match line repeats it (`"desync": {"frame": …}`).
+
+**Using it:** a desync is reproduced offline from the recorder's copy, on any machine:
+
+```bash
+bin/SWOS.x86_64 --srp-resim=recordings/<match>.SRP
+```
+
+That replays the match from its recorded inputs and names the first frame that parts from
+what was recorded (docs/REPLAY_FORMAT_V2.md, docs/NETPLAY.md §7 "The recorder").
+
+### Lag, delay and stutter: read both players' SWOS.log
+
+`SWOS.log` is in the save folder (`Documents\SWOS` on Windows). Every online match writes
+two lines to it, and a lag report is answerable only with **both** players' logs.
+
+At kick-off (the numbers here are an example):
+
+```
+[netplay] p2p match: …; player 1 on UDP port 51234, peer 81.2.3.4:51240, input delay 3, pauses up to 0 ms
+```
+
+At the end:
+
+```
+[netplay] live match finished at frame 18000: 18000 frames played, 2210 re-simulated after
+640 rollbacks; held at the prediction limit 3 times; time sync asked for 12 waits, 180 ms in
+all, ending 0 us a frame slower
+```
+
+What each number means, and what it points at:
+
+| in the log | what it is | high means |
+|---|---|---|
+| `input delay N` | frames between pressing and the player moving, agreed by both (SWOS 2020's AUTO rule: 3 at most on AMIGA, 4 on DOS) | a high ping when the match started. Compare it with the ping on the connecting screen (`CONNECTED TO … - 120 MS`) |
+| `peer` | who the game sent its packets to | if it is **the server's address**, the match was relayed (a browser was in it, or the server runs `--relay` -- §4): the round trip went through the server |
+| `rollbacks`, `re-simulated` | how often the other player's input arrived late and the game corrected itself | a jittery or slow link. Corrections show as players jumping a step. Normal: a few percent of the frames |
+| `held at the prediction limit` | how often the game **stopped** because it was too far ahead of the other player's input | freezes. The link dropped out for a moment, or the other machine stalled |
+| `time sync … waits, … ms` | the game slowing itself to stay level with the other one | one machine running ahead -- usually a slower machine, or a browser tab in the background |
+
+A match that **felt** laggy with a low delay, few rollbacks and no holds was probably the
+display, not the network: compare the `[render]` lines at the top of both logs
+(refresh rate, vsync).
+
+## 13. Testing a deployment with the repo's own tests
 
 These drive the real menus with real binaries; run them after changing anything in the
 path. NETPLAY.md says what each one proves.
@@ -664,7 +737,7 @@ PAIR=web-native scripts/wasm_netplay_test.sh      # browser v the native build
 PAIR=mac-web scripts/wasm_netplay_test.sh         # the Mac's native build v a browser
 ```
 
-## 13. Related
+## 14. Related
 
 - **docs/NETPLAY.md** — the design: §6 the MULTIPLAYER menu and the handshake, §7
   matchmaking, the relay and the recorder, §8 the browser.
