@@ -85,6 +85,8 @@ enum {
 enum {
     kHelloIntervalMs = 500,     /* until the host answers */
     kPingIntervalMs  = 1000,
+    kPingWarmupMs    = 100,     /* until kDelaySamples round trips are in */
+    kDelaySamples    = 4,       /* round trips averaged before the delay is proposed */
     kJoinTimeoutMs   = 15000,   /* no answer at all: wrong address, port or firewall */
     kQuietTimeoutMs  = 6000,    /* connected, then nothing heard */
     kMaxReadsPerPoll = 32,      /* a frame's worth; the rest waits for the next poll */
@@ -156,6 +158,8 @@ typedef struct {
     int32_t            hasPeer;
     uint32_t           openedMs, lastHeardMs, lastSentMs;
     int32_t            pingMs;
+    int32_t            jitterMs;        /* mean deviation of a round trip from pingMs */
+    int32_t            pingSamples;     /* round trips measured so far */
     int32_t            delayLocal;      /* what we propose, -1 until we have a ping */
     int32_t            delayPeer;       /* what they proposed, -1 until it arrives */
     uint32_t           lastDelaySentMs;
@@ -190,6 +194,7 @@ typedef struct {
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
                           { 0, 0, 0, 0 }, 0, { 0 }, 0, 0, 0, 0, -1,
+                          0, 0,     /* jitterMs, pingSamples */
                           -1, -1, 0, kJoinTimeoutMs, "" };
 
 static uint32_t now_ms(void)
@@ -480,6 +485,8 @@ static void link_reset(P2PLink *l)
     l->notice      = P2P_FAIL_NONE;
     l->hasPeer     = 0;
     l->pingMs      = -1;
+    l->pingSamples = 0;
+    l->jitterMs = 0;
     l->localPort   = 0;
     l->peerText[0] = '\0';
     memset(&l->peer, 0, sizeof l->peer);
@@ -507,6 +514,8 @@ static void link_fail(P2PLink *l, P2PLinkFailure reason)
     drop_socket(l);
     l->hasPeer = 0;
     l->pingMs  = -1;
+    l->pingSamples = 0;
+    l->jitterMs = 0;
     l->state   = P2P_FAILED;
     l->failure = reason;
 }
@@ -521,6 +530,8 @@ static void peer_gone(P2PLink *l, P2PLinkFailure reason)
         l->notice  = reason;
         l->hasPeer = 0;
         l->pingMs  = -1;
+        l->pingSamples = 0;
+        l->jitterMs = 0;
         l->peerText[0] = '\0';
         memset(&l->peer, 0, sizeof l->peer);
     } else {
@@ -554,34 +565,42 @@ static void peer_gone(P2PLink *l, P2PLinkFailure reason)
  *
  * Both peers still apply it to their own local player -- that is all GGPO
  * offers -- but because the number is identical, the two are symmetric. */
-static int32_t propose_delay(int32_t rttMs)
+static int32_t propose_delay(int32_t pingMs, int32_t jitterMs)
 {
     extern int _gDosGameplay;               /* dos_mode.h */
-    /* The frame time comes from the GAMEPLAY MODE, not from anything this
+    /* The frame rate comes from the GAMEPLAY MODE, not from anything this
      * machine measures. That matters: setup_mismatch already refuses a peer
      * whose gameplay flags differ, so both sides are certain to use the same
-     * number here. Taking it from the actual pacing (Platform_ActivePacingFps,
-     * which is display-derived and in any case static to platform_sdl.c) would
-     * let a machine that is running slow propose a different delay from its
-     * opponent -- which is precisely the asymmetry this routine exists to
-     * avoid. */
-    int32_t fps = _gDosGameplay ? 70 : 50;
-    int32_t frameMs, d;
+     * number here. Taking it from the actual pacing would let a machine that is
+     * running slow propose a different delay from its opponent -- which is
+     * precisely the asymmetry this routine exists to avoid. */
+    const int32_t fps = _gDosGameplay ? 70 : 50;
+    int32_t rtt, d, cap;
 
-    frameMs = 1000 / fps;
-    if (frameMs <= 0)
-        frameMs = 20;
-    if (rttMs < 0)
-        rttMs = 0;
-
-    /* ceil(rtt / (3 * frameTime)). The 3 is the ratio GGPO-based fighting games
-     * converge on (SWOS 2020 cites the same one): a third of the round trip is
-     * what frame delay has to cover for rollback to absorb the rest. */
-    d = (rttMs + (3 * frameMs - 1)) / (3 * frameMs);
-    if (d < 0)
-        d = 0;
-    if (d > kDelayMax)
-        d = kDelayMax;
+    /* SWOS 2020's AUTO, exactly (MPGame::getAutoFrameDelay, mpgame.cpp):
+     *
+     *  - 33 ms off the measured ping first: "the extra added by the delay of the
+     *    menu loop". Ours is measured the same way -- stamped and answered from
+     *    the per-frame poll -- so each end adds up to a frame too.
+     *  - 0 frames only on a genuinely clean link: under 15 ms AND jitter under one
+     *    frame, since 0 leaves no buffer for the next spike.
+     *  - otherwise ceil(rtt / (3 * frameTime)), at least 1,
+     *  - capped at 3 frames at 50 fps (AMIGA) and 4 at 70 (DOS): more than that
+     *    is more input lag than a player accepts without choosing it.
+     *
+     * We had ported the formula alone -- no 33 ms, no cap -- and so picked more
+     * than SWOS 2020 at the same ping: 5 frames at 190 ms in DOS where it picks 4,
+     * and climbing with no ceiling (a tester's "HUGE delay", 2026-09-25). */
+    rtt = (pingMs > 33 ? pingMs : 33) - 33;
+    if (rtt < 15 && jitterMs * fps < 1000)
+        return 0;
+    /* ceil(rtt / (3 * 1000/fps)), in integers */
+    d = (rtt * fps + 2999) / 3000;
+    if (d < 1)
+        d = 1;
+    cap = fps <= 50 ? 3 : 4;
+    if (d > cap)
+        d = cap;
     return d;
 }
 
@@ -920,6 +939,8 @@ static void link_connected(P2PLink *l, const struct sockaddr_in *from, const Set
     l->notice      = P2P_FAIL_NONE;
     l->lastHeardMs = now;
     l->pingMs      = -1;
+    l->pingSamples = 0;
+    l->jitterMs = 0;
     /* Measure the round trip straight away rather than a ping interval later: it is
      * the number a player picks an input delay from. */
     send_stamped(l, &l->peer, PKT_PING, now);
@@ -1030,7 +1051,15 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
             int32_t rtt = (int32_t)(now - BE_READ_U32(buf + 8));
             if (rtt < 0)
                 rtt = 0;
-            l->pingMs = (l->pingMs < 0) ? rtt : (l->pingMs * 3 + rtt) / 4;
+            if (l->pingMs < 0) {
+                l->pingMs = rtt;
+                l->jitterMs = 0;
+            } else {
+                int32_t dev = rtt > l->pingMs ? rtt - l->pingMs : l->pingMs - rtt;
+                l->jitterMs = (l->jitterMs * 3 + dev) / 4;
+                l->pingMs = (l->pingMs * 3 + rtt) / 4;
+            }
+            l->pingSamples++;
         } else if (type == PKT_DELAY && len >= kDelayLen) {
             int32_t theirs = buf[8];
             if (theirs > kDelayMax)
@@ -1157,8 +1186,8 @@ static void link_poll(P2PLink *l, uint32_t now)
         /* Propose as soon as there is a round trip to base it on, and keep
          * re-sending until the peer's proposal arrives: this is UDP and a lost
          * proposal would otherwise leave the match with no agreed delay. */
-        if (l->delayLocal < 0 && l->pingMs >= 0)
-            l->delayLocal = propose_delay(l->pingMs);
+        if (l->delayLocal < 0 && l->pingSamples >= kDelaySamples)
+            l->delayLocal = propose_delay(l->pingMs, l->jitterMs);
         /* Keep proposing until BOTH halves are known here. Losing the reply
          * above is otherwise unrecoverable, and this is UDP. */
         if (l->delayLocal >= 0 && l->delayPeer < 0 &&
@@ -1167,7 +1196,8 @@ static void link_poll(P2PLink *l, uint32_t now)
 
         if (now - l->lastHeardMs >= (uint32_t)kQuietTimeoutMs)
             peer_gone(l, P2P_FAIL_LOST);
-        else if (now - l->lastSentMs >= (uint32_t)kPingIntervalMs) {
+        else if (now - l->lastSentMs >= (uint32_t)(l->pingSamples < kDelaySamples
+                                                        ? kPingWarmupMs : kPingIntervalMs)) {
             send_stamped(l, &l->peer, PKT_PING, now);
             l->lastSentMs = now;
         }
