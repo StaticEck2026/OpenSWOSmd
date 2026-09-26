@@ -2078,7 +2078,7 @@ void Platform_SetFrameHook(void (*hook)(void))
     s_frame_hook = hook;
 }
 
-/* SWOS_KEY_SCRIPT="<frame>:<key> <frame>:<key> ..." -- press each key on that frame of
+/* SWOS_KEY_SCRIPT="<frame>:<key> <frame>:<key> ..." (or comma-separated) -- press each key on that frame of
  * Platform_VBlank and release it three frames later. Key names are SDL's (Return,
  * Escape, Up, Down, Left, Right, Space ...). For driving a menu with nobody at the
  * keyboard: pair it with SWOS_PRESENT_CAPTURE to see what the keys did. Frame counts
@@ -2108,7 +2108,12 @@ static void key_script_tick(void)
             char name[32];
             unsigned frame;
             int used = 0;
-            if (sscanf(spec, " %u:%31[^ ]%n", &frame, name, &used) != 2 || used == 0)
+            /* Entries are separated by spaces OR commas: a test harness that passes
+             * environment through a word-split variable (relay_test.sh's HOST_ENV)
+             * cannot carry spaces. */
+            while (*spec == ',' || *spec == ' ')
+                spec++;
+            if (sscanf(spec, "%u:%31[^ ,]%n", &frame, name, &used) != 2 || used == 0)
                 break;
             s_key_script[s_key_script_len].frame = frame;
             s_key_script[s_key_script_len].key   = SDL_GetKeyFromName(name);
