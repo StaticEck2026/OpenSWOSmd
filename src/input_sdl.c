@@ -379,7 +379,19 @@ void InputSDL_HandleEvent(const SDL_Event *e)
          * (not our keyState), so it keeps working. */
         int is_alt = (e->key.keysym.sym == SDLK_LALT ||
                       e->key.keysym.sym == SDLK_RALT);
-        if (is_alt) {
+        /* A netplay match: no key reaches the game's own keyboard state at all.
+         * keyBuffer feeds GetKey/MainKeysCheck and keyState is polled directly,
+         * and either one acted on THIS machine only -- Q called the bench, S the
+         * statistics -- so the two games parted (ReportBot 0011). The match's
+         * controls do not come from here: InputSDL_LocalMatchControls reads the
+         * s_kbd_* flags below and they travel in the shared input. ESC asks the
+         * match to end cleanly instead (netplay_match.c). */
+        extern int32_t NetplayMatch_Enabled(void);
+        extern void    NetplayMatch_RequestLeave(void);
+        int in_match = NetplayMatch_Enabled();
+        if (in_match && e->key.keysym.sym == SDLK_ESCAPE && e->key.repeat == 0)
+            NetplayMatch_RequestLeave();
+        if (is_alt || in_match) {
             /* Don't record keyState, don't push to keyBuffer, don't
              * trigger fire. Alt is purely a modifier on this build. */
         } else if (a >= 0 && !is_movement_arrow) {

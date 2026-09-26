@@ -230,6 +230,13 @@ int32_t NetplayMatch_Enabled(void)
     return s_np.mode != NETPLAY_MATCH_OFF;
 }
 
+/* ESC during a live match (input_sdl.c): end it cleanly at the next frame. */
+static volatile int32_t s_leaveRequested;
+void NetplayMatch_RequestLeave(void)
+{
+    s_leaveRequested = 1;
+}
+
 /* Where a live match's LOCAL input comes from. NULL = this machine's pad, which
  * is what a real match uses. A test installs its own so the peer has something
  * it cannot predict -- with both sides sending nothing, "same as last frame" is
@@ -1633,6 +1640,35 @@ prepared:
     if (s_np.live && s_np.abortWhy) {
         liveEnd(NETPLAY_LIVE_ENDED_EARLY, s_np.abortWhy);
         return GAME_FRAME_MATCH_OVER;
+    }
+    /* The keyboard, emptied before every frame, and ESC is a way out.
+     *
+     * A live match sends NO key to the other side (InputSDL_LocalMatchControls): R, H,
+     * P, S and ESC all leave the match loop, which a session cannot roll back. But that
+     * only filtered what was SENT. The event pump still filled this machine's key
+     * buffer, so GetKey/MainKeysCheck ran every press here and nowhere else -- Q called
+     * the bench, R a replay -- and the two games parted: "pressing F or Q during a
+     * match throws you back to the lobby" as THE TWO GAMES WENT OUT OF STEP (ReportBot
+     * 0011). The simulation must see the same key buffer on both machines, and the only
+     * one both can see is an empty one.
+     *
+     * ESC was the same desync, which made leaving a match look like one. Now it ends the
+     * match here, cleanly -- the other side sees the session close and says THE OTHER
+     * PLAYER LEFT. */
+    if (s_np.live) {
+        extern volatile uint16_t _keyCount;
+        extern volatile uint8_t  _keyBuffer[];
+        extern uint8_t           _keycodeLut[128];
+        int32_t i, leave = s_leaveRequested;
+        for (i = 0; i < (int32_t)_keyCount; i++)
+            if (_keycodeLut[_keyBuffer[i] & 0x7F] == 0x1B)
+                leave = 1;
+        _keyCount = 0;
+        s_leaveRequested = 0;
+        if (leave) {
+            liveEnd(NETPLAY_LIVE_ENDED_EARLY, "YOU LEFT THE MATCH");
+            return GAME_FRAME_MATCH_OVER;
+        }
     }
     if (s_np.live) {
         /* Until the two sessions synchronize, no frame runs at all -- and from
