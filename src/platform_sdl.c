@@ -2149,7 +2149,6 @@ int Platform_VBlank(void)
     RunInt3HandlerThrottled();
     if (s_frame_hook)
         s_frame_hook();
-    key_script_tick();
     return Platform_Present();
 }
 
@@ -2215,6 +2214,10 @@ int Platform_Present(void)
      * render as soon as we enter RenderFrame — prevents the timer from
      * firing a concurrent render while we're holding the mutex. */
     s_last_main_render_ms = SDL_GetTicks();
+    /* Here, not in Platform_VBlank: a live netplay match presents its frames
+     * directly, so a key script ticked only from VBlank stopped at kick-off and
+     * could never press a key during an online match. */
+    key_script_tick();
     if (s_present_stats)
         present_interval_stats();
     Platform_RenderFrame();
