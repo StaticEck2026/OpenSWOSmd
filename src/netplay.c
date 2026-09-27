@@ -292,6 +292,23 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
     return rc;
 }
 
+int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
+                         int32_t *framesAheadX10)
+{
+    GGPONetworkStats stats;
+    GGPOErrorCode rc;
+    *pingMs = -1;
+    *framesAheadX10 = 0;
+    if (remotePlayer < 1 || remotePlayer > NETPLAY_MAX_PLAYERS)
+        return GGPO_ERRORCODE_PLAYER_OUT_OF_RANGE;
+    rc = ggpo_get_network_stats(s->ggpo, s->handles[remotePlayer - 1], &stats);
+    if (GGPO_SUCCEEDED(rc)) {
+        *pingMs = stats.network.ping;
+        *framesAheadX10 = (int32_t)(stats.timesync.local_frames_behind * -10.0f);
+    }
+    return rc;
+}
+
 int32_t Netplay_ShouldWait(int32_t code)
 {
     return code == GGPO_ERRORCODE_NOT_SYNCHRONIZED || code == GGPO_ERRORCODE_PREDICTION_THRESHOLD;
@@ -712,6 +729,15 @@ int32_t Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *
 {
     (void)s; (void)remotePlayer;
     *count = 0;
+    return NETPLAY_ERR_UNAVAILABLE;
+}
+
+int32_t Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
+                         int32_t *framesAheadX10)
+{
+    (void)s; (void)remotePlayer;
+    *pingMs = -1;
+    *framesAheadX10 = 0;
     return NETPLAY_ERR_UNAVAILABLE;
 }
 

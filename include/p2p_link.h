@@ -49,6 +49,7 @@ typedef enum {
     P2P_FAIL_PORT_RESERVED, /* the system will not let anyone bind that port (EACCES) */
     P2P_FAIL_RELAY,         /* the server's relay does not know our token (expired, or never) */
     P2P_FAIL_BUILD,         /* the builds play by different rules (a test build and a release) */
+    P2P_FAIL_VERSION,       /* a different build: another commit, or uncommitted changes */
 } P2PLinkFailure;
 
 /* The rules a match is played by (P2PLink_GameplayFlags), one bit each. */
@@ -117,6 +118,10 @@ const char    *P2PLink_PeerText(void);
 uint16_t       P2PLink_LocalPort(void);
 /* The round trip in milliseconds, or -1 until one has been measured. */
 int32_t        P2PLink_PingMs(void);
+int32_t        P2PLink_JitterMs(void);   /* mean deviation of a round trip, ms */
+/* The ping and jitter the input delay was proposed from; kept after the link resets. */
+int32_t        P2PLink_ProposedPingMs(void);
+int32_t        P2PLink_ProposedJitterMs(void);
 
 /* The input delay, in frames, that BOTH peers will use -- or -1 until the two
  * have exchanged proposals.

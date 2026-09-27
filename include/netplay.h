@@ -110,6 +110,10 @@ int32_t     Netplay_CurrentFrame(NetplaySession *s, int32_t *frame);
 int32_t     Netplay_ConfirmedFrame(NetplaySession *s, int32_t *frame);
 /* How many of this peer's inputs `remotePlayer` has not acknowledged yet. */
 int32_t     Netplay_UnackedInputs(NetplaySession *s, int32_t remotePlayer, int32_t *count);
+/* GGPO's view of the link to `remotePlayer`: its round-trip ping in ms, and how many
+ * frames this peer is ahead of the other, in tenths (negative = behind). For the log. */
+int32_t     Netplay_NetStats(NetplaySession *s, int32_t remotePlayer, int32_t *pingMs,
+                             int32_t *framesAheadX10);
 /* Whether a refused call is only to be tried again next tick: the session is not
  * synchronized yet, or this peer is as far ahead of the other's input as GGPO allows. */
 int32_t     Netplay_ShouldWait(int32_t code);

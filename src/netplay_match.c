@@ -99,6 +99,13 @@ static struct {
     int64_t          pacedUs;             /* live: all of it, for the report */
     uint32_t         timeSyncs;           /* p2p: TIMESYNC events that asked for a wait */
     uint32_t         predictionWaits;     /* p2p: passes held at the prediction limit */
+    /* live: the connection, for the log (logStats). Nothing here reaches the match. */
+    int32_t          linkPing, linkJitter;            /* the link's, when the delay was agreed */
+    uint32_t         statStartMs, statNextSampleMs, statNextReportMs;
+    int32_t          statLastPing;                    /* the previous sample, for jitter */
+    int32_t          statN, statSum, statMin, statMax, statJitSum;   /* this 30 s */
+    int32_t          statAllN, statAllSum, statAllMin, statAllMax, statAllJitSum;
+    uint32_t         statLoads, statWaits;            /* rollbacks / holds at the last report */
     int32_t          slowPct;             /* live: SWOS_LIVE_SLOW_PCT, a slow clock for a test */
     int32_t          slowCount;
     int32_t          noPacing;            /* live: SWOS_LIVE_NO_PACING, to measure what pacing does */
@@ -676,8 +683,15 @@ static void cbEvent(void *ctx, const NetplayEvent *ev)
     (void)ctx;
     switch (ev->code) {
     case NETPLAY_EVENT_RUNNING:
-        if (!s_np.running)
+        if (!s_np.running) {
             fprintf(stderr, "[netplay] synchronized with the peer\n");
+            if (s_np.live) {
+                /* What the link measured before the match -- what the delay was
+                 * agreed from (p2p_link.c propose_delay). */
+                fprintf(stderr, "[netplay] kick-off: ping %d ms, jitter %d ms (measured by the link), "
+                                "input delay %d\n", s_np.linkPing, s_np.linkJitter, s_np.delay);
+            }
+        }
         s_np.running = 1;
         break;
     /* A corpus run fails on any of these. A live match is somebody's game: it ends,
@@ -959,6 +973,12 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
     s_np.port        = localPort;
     s_np.peerPort    = peerPort;
     s_np.delay       = delay;
+    {   /* The link's measurement, taken now: by the time GGPO synchronizes it owns the
+         * socket and the link has let go of it. */
+        extern int32_t P2PLink_ProposedPingMs(void), P2PLink_ProposedJitterMs(void);
+        s_np.linkPing   = P2PLink_ProposedPingMs();
+        s_np.linkJitter = P2PLink_ProposedJitterMs();
+    }
     s_np.timeoutMs   = LIVE_TIMEOUT_MS;
     {
         const char *lim = getenv("SWOS_LIVE_FRAMES");
@@ -1227,6 +1247,72 @@ static void findEnd(int32_t frame, int32_t confirmed)
  * clock the ordinary way. (Before this, they ran with the session still claiming both,
  * and the first live match that reached its end through the menus waited for ever on
  * the friendly REPLAY / EXIT screen for a press the pad could no longer deliver.) */
+/* The connection during a live match, in the log: GGPO's ping sampled once a second, and
+ * every 30 s a line with its average, range and jitter (the mean change from one sample to
+ * the next), the rollbacks and holds since the last line, and how far this peer runs
+ * ahead. A lag report is then answerable from the two players' logs alone (docs/
+ * NETPLAY_SETUP.md section 12). Wall-clock driven and read-only: none of it touches the match. */
+static void logStatsLine(const char *what, int32_t n, int32_t sum, int32_t mn, int32_t mx,
+                         int32_t jit)
+{
+    if (n <= 0) {
+        fprintf(stderr, "[netplay] %s: no ping samples\n", what);
+        return;
+    }
+    fprintf(stderr, "[netplay] %s: ping %d ms (%d..%d), jitter %d ms", what, sum / n, mn, mx,
+            n > 1 ? jit / (n - 1) : 0);
+}
+
+static void logStats(uint32_t now, int32_t force)
+{
+    int32_t ping = -1, aheadX10 = 0;
+    if (!s_np.live || !s_np.running || !s_np.session)
+        return;
+    if (!s_np.statStartMs) {                /* a new match, rematches included */
+        s_np.statStartMs = now ? now : 1;
+        s_np.statNextSampleMs = now;
+        s_np.statNextReportMs = now + 30000;
+        s_np.statLastPing = -1;
+        s_np.statN = s_np.statSum = s_np.statJitSum = s_np.statMax = 0;
+        s_np.statAllN = s_np.statAllSum = s_np.statAllJitSum = s_np.statAllMax = 0;
+        s_np.statMin = s_np.statAllMin = 1 << 30;
+        s_np.statLoads = s_np.loads;
+        s_np.statWaits = s_np.predictionWaits;
+    }
+    if (now >= s_np.statNextSampleMs) {
+        s_np.statNextSampleMs = now + 1000;
+        Netplay_NetStats(s_np.session, 3 - s_np.player, &ping, &aheadX10);
+        if (ping > 0) {
+            int32_t d = s_np.statLastPing > 0 ? (ping > s_np.statLastPing ? ping - s_np.statLastPing
+                                                                          : s_np.statLastPing - ping) : 0;
+            s_np.statLastPing = ping;
+            s_np.statN++;    s_np.statSum += ping;    s_np.statJitSum += d;
+            s_np.statAllN++; s_np.statAllSum += ping; s_np.statAllJitSum += d;
+            if (ping < s_np.statMin) s_np.statMin = ping;
+            if (ping > s_np.statMax) s_np.statMax = ping;
+            if (ping < s_np.statAllMin) s_np.statAllMin = ping;
+            if (ping > s_np.statAllMax) s_np.statAllMax = ping;
+        }
+    }
+    if (force || now >= s_np.statNextReportMs) {
+        char what[48];
+        uint32_t secs = (now - s_np.statStartMs) / 1000;
+        s_np.statNextReportMs = now + 30000;
+        Netplay_NetStats(s_np.session, 3 - s_np.player, &ping, &aheadX10);
+        snprintf(what, sizeof what, "%u:%02u, frame %u", secs / 60, secs % 60, s_np.frames);
+        logStatsLine(what, s_np.statN, s_np.statSum, s_np.statMin, s_np.statMax, s_np.statJitSum);
+        if (s_np.statN > 0)
+            fprintf(stderr, "; %u rollbacks, %u holds since the last line; %s%d.%d frames ahead\n",
+                    s_np.loads - s_np.statLoads, s_np.predictionWaits - s_np.statWaits,
+                    aheadX10 < 0 ? "-" : "", (aheadX10 < 0 ? -aheadX10 : aheadX10) / 10,
+                    (aheadX10 < 0 ? -aheadX10 : aheadX10) % 10);
+        s_np.statLoads = s_np.loads;
+        s_np.statWaits = s_np.predictionWaits;
+        s_np.statN = s_np.statSum = s_np.statJitSum = s_np.statMax = 0;
+        s_np.statMin = 1 << 30;
+    }
+}
+
 static void liveEnd(int32_t outcome, const char *why)
 {
     /* A match that ends EARLY has its frames written too, whatever ended it. The peer
@@ -1235,6 +1321,13 @@ static void liveEnd(int32_t outcome, const char *why)
      * pair proves nothing, because the whole method is diffing the two. */
     if (outcome != NETPLAY_LIVE_FINISHED)
         ringDump(-1);
+    if (s_np.live && s_np.statStartMs) {
+        logStatsLine("whole match", s_np.statAllN, s_np.statAllSum, s_np.statAllMin,
+                     s_np.statAllMax, s_np.statAllJitSum);
+        if (s_np.statAllN > 0)
+            fputc('\n', stderr);
+        s_np.statStartMs = 0;
+    }
     fprintf(stderr, "[netplay] live match %s at frame %d%s%s: %u frames played, %u re-simulated "
                     "after %u rollbacks; held at the prediction limit %u times; time sync asked "
                     "for %u waits, %lld ms in all, ending %lld us a frame slower\n",
@@ -1670,6 +1763,8 @@ prepared:
             return GAME_FRAME_MATCH_OVER;
         }
     }
+    if (s_np.live)
+        logStats(now, 0);
     if (s_np.live) {
         /* Until the two sessions synchronize, no frame runs at all -- and from
          * the outside that is indistinguishable from a match that is simply

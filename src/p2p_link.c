@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "build_info.h"      /* Build_Id: the handshake compares builds */
 
 #ifdef SWOS_NETPLAY
 
@@ -56,7 +57,7 @@
  * generation, so a peer can replace what it sent (the lobby's selections). 3: every
  * packet ends in a checksum (wire_send), and the match's GGPO packets carry a keyed one
  * whose key the lobby's START hands over. */
-enum { kProtocol = 3 };
+enum { kProtocol = 4 };      /* 4: the setup carries the build (2026-09-27) */
 
 enum {
     PKT_HELLO = 1, PKT_WELCOME = 2, PKT_REFUSE = 3,
@@ -68,7 +69,7 @@ enum {
 
 enum {
     kHeaderLen  = 8,
-    kSetupLen   = 20,   /* header + the setup fields */
+    kSetupLen   = 28,   /* header + the setup fields + the build id */
     kRefuseLen  = 9,
     kPingLen    = 12,
     kDelayLen   = 9,
@@ -118,6 +119,7 @@ typedef struct {
     uint32_t stateHi, stateLo;
     uint16_t screenWidth;
     uint8_t  gameplay;          /* bit 0 DOS gameplay, 1 arcade, 2 the original fire-hold lockout */
+    char     build[9];          /* Build_Id()'s first 8: the commit, and '-' if it was dirty */
 } Setup;
 
 /* The message being sent on one channel. Sending again replaces it: the new one
@@ -235,10 +237,23 @@ static void setup_local(Setup *s)
     s->stateLo     = (uint32_t)hash;
     s->screenWidth = (uint16_t)_screen_width;
     s->gameplay    = P2PLink_GameplayFlags();
+    memset(s->build, 0, sizeof s->build);
+    strncpy(s->build, Build_Id(), 8);
 }
 
 static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
 {
+    /* The SAME BUILD, before anything finer. The state layout below catches a build
+     * whose match state has a different shape, but two builds with the same shape and
+     * different behaviour played each other and went out of step in the middle of a
+     * match -- and a tester on last week's game got bug reports filed against this
+     * week's (2026-09-27: 3a522bd against e09f6cc). The commit, with '-' for a build
+     * made from uncommitted changes, which is not the commit it says. */
+    if (memcmp(mine->build, theirs->build, 8) != 0) {
+        fprintf(stderr, "[p2p] the other player runs build %.8s, this is %.8s: refused\n",
+                theirs->build, mine->build);
+        return P2P_FAIL_VERSION;
+    }
     if (mine->stateHi != theirs->stateHi || mine->stateLo != theirs->stateLo)
         return P2P_FAIL_STATE;
     /* The build's rules first: nothing in OPTIONS can make those agree. */
@@ -270,6 +285,7 @@ static void pkt_write_setup(uint8_t *p, const Setup *s)
     BE_WRITE_U16(p + 16, s->screenWidth);
     p[18] = s->gameplay;
     p[19] = 0;
+    memcpy(p + 20, s->build, 8);
 }
 
 static void pkt_read_setup(const uint8_t *p, Setup *s)
@@ -278,6 +294,8 @@ static void pkt_read_setup(const uint8_t *p, Setup *s)
     s->stateLo     = BE_READ_U32(p + 12);
     s->screenWidth = BE_READ_U16(p + 16);
     s->gameplay    = p[18];
+    memcpy(s->build, p + 20, 8);
+    s->build[8] = '\0';
 }
 
 /* The self-test's lossy wire: drop every Nth datagram a link sends, and flip a bit in
@@ -565,6 +583,8 @@ static void peer_gone(P2PLink *l, P2PLinkFailure reason)
  *
  * Both peers still apply it to their own local player -- that is all GGPO
  * offers -- but because the number is identical, the two are symmetric. */
+static int32_t s_proposedPing = -1, s_proposedJitter = -1;
+
 static int32_t propose_delay(int32_t pingMs, int32_t jitterMs)
 {
     extern int _gDosGameplay;               /* dos_mode.h */
@@ -958,6 +978,7 @@ static P2PLinkFailure refuse_reason(uint8_t byte)
     case P2P_FAIL_GAMEPLAY:
     case P2P_FAIL_WIDTH:
     case P2P_FAIL_BUILD:
+    case P2P_FAIL_VERSION:
         return (P2PLinkFailure)byte;
     default:
         return P2P_FAIL_PROTOCOL;   /* a reason this version does not know */
@@ -1186,8 +1207,14 @@ static void link_poll(P2PLink *l, uint32_t now)
         /* Propose as soon as there is a round trip to base it on, and keep
          * re-sending until the peer's proposal arrives: this is UDP and a lost
          * proposal would otherwise leave the match with no agreed delay. */
-        if (l->delayLocal < 0 && l->pingSamples >= kDelaySamples)
+        if (l->delayLocal < 0 && l->pingSamples >= kDelaySamples) {
             l->delayLocal = propose_delay(l->pingMs, l->jitterMs);
+            /* What the delay was proposed FROM, for the match's kick-off log line. Kept
+             * across the link's resets (the match takes over the socket) until the next
+             * proposal replaces it. */
+            s_proposedPing   = l->pingMs;
+            s_proposedJitter = l->jitterMs;
+        }
         /* Keep proposing until BOTH halves are known here. Losing the reply
          * above is otherwise unrecoverable, and this is UDP. */
         if (l->delayLocal >= 0 && l->delayPeer < 0 &&
@@ -1446,6 +1473,9 @@ int32_t P2PLink_TransferProgress(void)
 int32_t P2PLink_ProposedDelay(void) { return s_link.delayLocal; }
 int32_t P2PLink_PeerProposedDelay(void) { return s_link.delayPeer; }
 int32_t        P2PLink_PingMs(void)    { return s_link.pingMs; }
+int32_t        P2PLink_JitterMs(void)  { return s_link.jitterMs; }
+int32_t        P2PLink_ProposedPingMs(void)   { return s_proposedPing; }
+int32_t        P2PLink_ProposedJitterMs(void) { return s_proposedJitter; }
 
 int32_t P2PLink_IsAddress(const char *text)
 {
@@ -1723,6 +1753,22 @@ int32_t P2PLink_SelfTest(void)
         check(host.state == P2P_HOSTING && host.notice == P2P_FAIL_GAMEPLAY, "the host says who bounced off");
         link_close(&mismatched);
     }
+    /* 4b. Another build -- another commit, or the same one with uncommitted changes --
+     * is refused before anything else is compared. */
+    {
+        Setup theirs;
+        setup_local(&theirs);
+        theirs.build[7] = theirs.build[7] == '0' ? '1' : '0';   /* one digit of the commit */
+        memset(&mismatched, 0, sizeof mismatched); mismatched.sock = -1; mismatched.pingMs = -1;
+        mismatched.joinTimeoutMs = 1000;
+        check(link_join(&mismatched, "127.0.0.1", host.localPort, &theirs) == 0, "another build joins");
+        P2PLink *two[2] = { &host, &mismatched };
+        pump(two, 2, 1500, link_settled, &mismatched);
+        check(mismatched.state == P2P_FAILED && mismatched.failure == P2P_FAIL_VERSION,
+              "it is refused: a different build");
+        check(host.state == P2P_HOSTING && host.notice == P2P_FAIL_VERSION, "the host says which build");
+        link_close(&mismatched);
+    }
 
     /* 5. Nobody there: the join gives up rather than hanging.
      *
@@ -1766,6 +1812,9 @@ P2PLinkFailure P2PLink_Notice(void)    { return P2P_FAIL_NONE; }
 const char    *P2PLink_PeerText(void)  { return ""; }
 uint16_t       P2PLink_LocalPort(void) { return 0; }
 int32_t        P2PLink_PingMs(void)    { return -1; }
+int32_t        P2PLink_JitterMs(void)  { return -1; }
+int32_t        P2PLink_ProposedPingMs(void)   { return -1; }
+int32_t        P2PLink_ProposedJitterMs(void) { return -1; }
 int32_t        P2PLink_IsAddress(const char *text) { (void)text; return 0; }
 
 /* The matchmaking handoff and the agreed input delay. These exist here for the
@@ -1832,6 +1881,7 @@ void P2PLink_FailureText(P2PLinkFailure failure, const char **line1, const char 
         *line1 = "THE HOST ALREADY HAS A PLAYER"; *line2 = ""; break;
     case P2P_FAIL_PROTOCOL:
     case P2P_FAIL_STATE:
+    case P2P_FAIL_VERSION:
         *line1 = "THE OTHER PLAYER HAS ANOTHER VERSION"; *line2 = "BOTH OF YOU NEED THE SAME BUILD"; break;
     case P2P_FAIL_GAMEPLAY:
         *line1 = "YOUR GAMEPLAY STYLES ARE DIFFERENT"; *line2 = "SET THE SAME ONE IN OPTIONS"; break;
