@@ -64,16 +64,16 @@ pre{{background:#181818;border:1px solid #333;border-radius:4px;padding:12px;fon
 <script>
 document.querySelectorAll('button[data-action]').forEach(function(btn){{
   btn.addEventListener('click', function(){{
-    fetch('/action', {{method:'POST', headers:{{'Content-Type':'application/x-www-form-urlencoded'}}, body:'action='+encodeURIComponent(btn.dataset.action)}})
+    fetch('action', {{method:'POST', headers:{{'Content-Type':'application/x-www-form-urlencoded'}}, body:'action='+encodeURIComponent(btn.dataset.action)}})
       .then(function(){{ poll(); }})
       .catch(function(e){{ document.getElementById('log').textContent = 'error: '+e; }});
   }});
 }});
 function poll(){{
-  fetch('/status').then(function(r){{return r.json();}}).then(function(s){{
+  fetch('status').then(function(r){{return r.json();}}).then(function(s){{
     document.getElementById('pending').textContent = s.pending>0 ? ('pending: '+s.pending+' ('+s.pendingNames+')') : '';
     document.getElementById('log').textContent = s.log;
-  }}).catch(function(){{}});
+  }}).catch(function(e){{ document.getElementById('log').textContent = 'poll error: '+e; }});
 }}
 poll();
 setInterval(poll, 2000);
