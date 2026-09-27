@@ -120,7 +120,7 @@ Keep this list short and justified — it is a fork, and every entry is drift.
   messages over TCP on the server's port number; each browser socket gets a UDP socket
   of its own here, talking to the server's own UDP port, so everything behind the gate
   sees an ordinary client. `TcpGate` owns the TCP listener and sniffs each connection:
-  `GET ` is a WebSocket, anything else goes to the recorder (`Recorder::Adopt` -- the
+  `GET ` is a WebSocket, `SWMR` a match report, anything else goes to the recorder (`Recorder::Adopt` -- the
   recorder no longer listens itself). The relay serves any match with a browser in it
   (`RelayOptions::web`, `VERSION:OPENSWOS-WEB`). SHA-1 and base64 for the handshake
   are in the file. POSIX only, like the recorder. The game side is docs/NETPLAY.md §8.
@@ -134,8 +134,16 @@ Keep this list short and justified — it is a fork, and every entry is drift.
   `find_package(OpenSSL)` in CMakeLists.txt); without it the server builds `ws://`
   only. SIGPIPE is ignored, since OpenSSL writes to the socket without MSG_NOSIGNAL.
   Deploying it: docs/NETPLAY_SETUP.md §10.
-- **`Server/include/Ledger.h` (new):** the `--ledger` file the relay and the recorder
-  share (one JSON object per line: `relay`, `match`, `desync`), and the clocks they use.
+- **Match reports: `Server/ReportDesk.cpp` + `Server/include/ReportDesk.h` (new).**
+  `--reports DIR`: after an online match each player's game sends one zip -- both
+  players' `SWOS.log` and ratings (`include/report_proto.h` in the game tree) -- on the
+  TCP port; `TcpGate` hands a connection opening with `SWMR` here. Kept as
+  `DIR/<match id>/player<N>.zip` (written to `.part` and renamed), a `report` ledger
+  line, and a five-byte answer. At most 512 KB a zip, 64 at once, 30 s each. POSIX
+  only, like the recorder. docs/NETPLAY_REPORT.md.
+- **`Server/include/Ledger.h` (new):** the `--ledger` file the relay, the recorder and
+  the report desk share (one JSON object per line: `relay`, `match`, `desync`,
+  `report`), and the clocks they use.
 - **`Server/main.cpp`: options, and a clean stop.** The port is still the first bare
   number. SIGINT/SIGTERM end the loop (upstream's never ended), so the relay can
   close its sessions and write their ledger lines.

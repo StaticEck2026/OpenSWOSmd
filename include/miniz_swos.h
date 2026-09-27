@@ -8,8 +8,13 @@
 #define MINIZ_SWOS_H
 
 #define MINIZ_NO_STDIO                  /* buffers only: no files */
+#ifdef SWOS_SDL_BUILD
+/* ZIP archives, in memory: the netplay match report (src/match_report.c) is one
+ * zip of both players' logs. The entries carry the time they were written. */
+#else
 #define MINIZ_NO_TIME
-#define MINIZ_NO_ARCHIVE_APIS           /* no ZIP reading or writing */
+#define MINIZ_NO_ARCHIVE_APIS           /* the Amiga: no ZIP reading or writing */
+#endif
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES  /* mz_* names only: never clashes with a system zlib */
 
 #include "../third_party/miniz/miniz.h"

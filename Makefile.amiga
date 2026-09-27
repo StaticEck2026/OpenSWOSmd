@@ -52,6 +52,7 @@ SDL_ONLY_SRCS := \
     ini.c                 \
     input_sdl.c           \
     match_record.c        \
+    match_report.c        \
     match_step.c          \
     menu_load_json.c      \
     menu_symbols.c        \

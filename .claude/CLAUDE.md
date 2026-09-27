@@ -98,6 +98,11 @@ or peer to peer): it compares both players' confirmed-frame hashes and logs a de
 exact frame, and keeps the match as a `.SRP` that must be the host's `LATEST.SRP` byte for byte
 — both are laid out by `src/srp_writer.c` (§7 "The recorder";
 `RECORD=1 [RELAY=0] [DESYNC_FRAME=N] scripts/relay_test.sh`).
+After every online match the two games swap their `SWOS.log` over the lobby's link and each
+writes one zip of both logs and both HOW WAS THE MATCH? answers (`src/match_report.c`,
+docs/NETPLAY_REPORT.md): kept in `save/netplay/` and sent to the server's `--reports DIR` —
+unless SEND MATCH REPORTS (`[netplay] reports`, on in tester builds) is off. Run
+`REPORTS=1 RELAY=0 scripts/relay_test.sh` after touching it, the rating screen, or the lobby's end.
 The **web build plays online too** (`make WASM=1 NETPLAY=1`, docs/NETPLAY.md §8): a browser
 has no UDP, so Emscripten sends each datagram as a WebSocket message to the server, whose
 `--websocket` gate (`Server/WebGate.cpp`) gives each browser socket a UDP address of its own;

@@ -1,7 +1,8 @@
 # miniz in OpenSWOS
 
 Deflate/inflate for the match-state resync packet (`src/state_wire.c`, docs/ROLLBACK.md
-"The wire format").
+"The wire format"), and the zip of a netplay match report (`src/match_report.c`,
+docs/NETPLAY_REPORT.md).
 
 | | |
 |---|---|
@@ -12,9 +13,12 @@ Deflate/inflate for the match-state resync packet (`src/state_wire.c`, docs/ROLL
 | files taken | `miniz.c`, `miniz.h`, `LICENSE` — **unmodified** |
 
 It is compiled once, by `src/miniz_impl.c`, with the configuration in
-`include/miniz_swos.h`: no stdio, no time, no ZIP archive API, and no zlib-compatible
-names (so it can never clash with a system zlib pulled in by another library). Only the
-raw deflate API is used (`tdefl_compress_mem_to_mem` / `tinfl_decompress_mem_to_mem`).
+`include/miniz_swos.h`: no stdio and no zlib-compatible names (so it can never clash with
+a system zlib pulled in by another library). The SDL builds keep the ZIP archive API and
+the time functions, for the match report's zip, written in memory
+(`mz_zip_writer_init_heap`); everything else — the matchmaker's copy included — is built
+without them. Otherwise only the raw deflate API is used (`tdefl_compress_mem_to_mem` /
+`tinfl_decompress_mem_to_mem`).
 
 Vendored rather than linked because the SDL targets have no common zlib: Cygwin and
 emscripten ship none, and the release archives deliberately bundle no extra libraries.

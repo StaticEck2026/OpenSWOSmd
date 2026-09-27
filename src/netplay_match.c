@@ -18,6 +18,7 @@
 #include "game_loop.h"
 #include "match_step.h"
 #include "match_record.h"   /* the recorder: SWOS_RECORD, [netplay] record */
+#include "match_report.h"   /* both players' logs, after the match */
 #include "netplay_lobby.h"
 #include "p2p_link.h"
 #include "record_proto.h"
@@ -901,6 +902,7 @@ static void recordBegin(int32_t localPlayer, int32_t delay, int32_t simWidth)
     info.team1      = team1;
     info.team2      = team2;
     MatchRecord_Begin(&info);
+    MatchReport_Begin(&info);           /* both players' logs, zipped, after the match */
 }
 
 /* Every frame up to `confirmed` whose start has been saved. Confirmed is set after

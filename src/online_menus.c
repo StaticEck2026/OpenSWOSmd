@@ -37,6 +37,7 @@
 #include "teams.h"            /* LoadTeamFile, for the lobby's test knobs */
 #include "game_loop.h"        /* _gFrameStepInput */
 #include "match_record.h"     /* MatchRecord_SetConfigured: the RECORD MATCHES row */
+#include "match_report.h"     /* the match report: HOW WAS THE MATCH?, SEND MATCH REPORTS */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -675,6 +676,7 @@ static void mpWaiting_menuExit_OnSelect(void)
 static void lobby_frame_hook(void)
 {
     P2PLink_Poll();
+    MatchReport_Poll();         /* the last match's report crosses while the lobby is up */
 }
 
 /* Test knobs for looking at the lobby without a pad (docs/NETPLAY.md, "The lobby"):
@@ -722,13 +724,16 @@ static void lobby_test_draw(LobbyState st)
     else if (!openSince)
         openSince = SDL_GetTicks() | 1u;
     /* The host leaves once the lobby has been back up for three seconds -- long enough
-     * for the joiner to be back too, and for a capture to see the screen. */
+     * for the joiner to be back too, and for a capture to see the screen -- and the last
+     * match's report has crossed both ways. */
     if (matches && s_lobbyMatches >= atoi(matches) &&
         (st == LOBBY_FAILED ||
-         (st == LOBBY_OPEN && NetplayLobby_IsHost() && SDL_GetTicks() - openSince > 3000))) {
+         (st == LOBBY_OPEN && NetplayLobby_IsHost() && SDL_GetTicks() - openSince > 3000 &&
+          !MatchReport_Pending()))) {
         printf("[lobby] %d match%s played; leaving (%s)\n", s_lobbyMatches,
                s_lobbyMatches == 1 ? "" : "es", st == LOBBY_FAILED ? NetplayLobby_Notice() : "host");
         fflush(stdout);
+        MatchReport_Flush(20000);
         P2PLink_Close();
         exit(0);
     }
@@ -746,6 +751,8 @@ void OnlineMenus_EnterLobby(int32_t player, const char *name)
         s_lobbyAgain = 0;
         OnlineMenus_Show(SWOS2020_MENU(mpGameSetupMenu));
     } while (s_lobbyAgain);
+    MatchReport_Poll();
+    MatchReport_Finish();       /* the other player's half, if it came, before the link goes */
     NetplayLobby_End();
     P2PLink_Close();
     Platform_SetFrameHook(NULL);
@@ -1117,8 +1124,8 @@ static void selectMPSettingExit(void)
  * them an optional line about any problems, typed as the log-in screen's NAME is, then
  * SEND, and SKIP for neither. Away from the stars they show the rating chosen. The stars
  * are SWOS 2020's own (its starsMap: a 7x8 star in one colour with its lower right in a
- * second), drawn three times the size. What is sent goes to SWOS.log for now; the match
- * report is to carry it to the server (docs/NETPLAY_REPORT.md).
+ * second), drawn three times the size. The answer goes to SWOS.log, and with both
+ * players' logs into the match report (src/match_report.c, docs/NETPLAY_REPORT.md).
  * ====================================================================== */
 #define RATE_MATCH_MENU   "p2p/rateMatchMenu"
 extern volatile uintptr_t _frontbufferBasePtr;
@@ -1211,15 +1218,11 @@ static void rateMatch_skip_OnSelect(void)
 
 /* After an online match (run_live_match). Not in the automated tests, which play
  * match after match with nobody at the keyboard -- unless SWOS_RATE_MATCH=1 asks for
- * it, to test the screen itself; SWOS_NO_RATING=1 skips it anywhere. */
+ * it, to test the screen itself; SWOS_NO_RATING=1 skips it anywhere. Answered or
+ * not, the match report goes on its way (src/match_report.c), without a rating. */
 static void rate_match(const char *opponent, int32_t outcome, const char *why)
 {
     extern uint16_t _statsTeam1Goals, _statsTeam2Goals;
-    if (getenv("SWOS_NO_RATING"))
-        return;
-    if (!getenv("SWOS_RATE_MATCH") &&
-        (getenv("SWOS_LOBBY_READY") || getenv("SWOS_LIVE_FRAMES") || getenv("SWOS_MM_AUTO")))
-        return;
     snprintf(s_rateAgainst, sizeof s_rateAgainst, "AGAINST %s", opponent && opponent[0] ? opponent : "YOUR OPPONENT");
     if (outcome == NETPLAY_LIVE_ENDED_EARLY)
         snprintf(s_rateResult, sizeof s_rateResult, "%s", why && why[0] ? why : "THE MATCH ENDED EARLY");
@@ -1229,6 +1232,12 @@ static void rate_match(const char *opponent, int32_t outcome, const char *why)
     s_rating = 3;
     s_rateSent = 0;
     s_rateIssues[0] = '\0';
+    if (getenv("SWOS_NO_RATING") ||
+        (!getenv("SWOS_RATE_MATCH") &&
+         (getenv("SWOS_LOBBY_READY") || getenv("SWOS_LIVE_FRAMES") || getenv("SWOS_MM_AUTO")))) {
+        MatchReport_Submit(0, "", s_rateResult);
+        return;
+    }
     OnlineMenus_Show(RATE_MATCH_MENU);
     if (!s_rateSent)
         fprintf(stderr, "[netplay] rating: skipped, %s (%s)\n", s_rateAgainst, s_rateResult);
@@ -1238,6 +1247,7 @@ static void rate_match(const char *opponent, int32_t outcome, const char *why)
     else
         fprintf(stderr, "[netplay] rating: %d of 5 stars, %s (%s)\n", (int)s_rating,
                 s_rateAgainst, s_rateResult);
+    MatchReport_Submit(s_rateSent ? s_rating : 0, s_rateSent ? s_rateIssues : "", s_rateResult);
 }
 
 /* Both sides agreed: play.
@@ -1258,6 +1268,8 @@ static void run_live_match(void)
     int32_t delay, simWidth;
 
     Platform_SetFrameHook(NULL);
+    MatchReport_Poll();
+    MatchReport_Finish();               /* the last match's, with what there is */
     NetplayLobby_Peer(ip, sizeof ip, &peerPort, &localPort, &delay, &simWidth);
     NetplayLobby_End();
     P2PLink_Close();
@@ -1370,11 +1382,11 @@ static void matchMaking_menuSettings_onSelect(void)
  *
  * SWOS 2020's rows here (pitch set, sound, commentary, the chat options) set
  * things OpenSWOS does not have, and none of them was ever bound -- the
- * loader maps a handler nobody lists to a no-op. The first pair is taken over
- * for the one multiplayer setting a player otherwise had to edit SWOS.ini for:
+ * loader maps a handler nobody lists to a no-op. The first two pairs are taken
+ * over for multiplayer settings a player would otherwise edit SWOS.ini for:
  * streaming each match to a recorder (docs/NETPLAY.md 7 "The recorder",
- * docs/NETPLAY_SETUP.md 7). Same move as logInMenu_OnInit turning the password
- * row into SERVER.
+ * docs/NETPLAY_SETUP.md 7), and sending match reports (docs/NETPLAY_REPORT.md).
+ * Same move as logInMenu_OnInit turning the password row into SERVER.
  * ====================================================================== */
 
 /* What ON means. "server" -- the matchmaker the player logged in to -- is what
@@ -1425,6 +1437,10 @@ static void mmsOnDraw(void)
                 *c = (char)(*c - 'a' + 'A');
         set_text(MmSettingsMenu_pitchSet, s_recordShown);
     }
+    /* After an online match, both players' logs and ratings, zipped, to the server
+     * (include/match_report.h). */
+    set_text(MmSettingsMenu_soundFxLabel, "SEND MATCH REPORTS");
+    set_text(MmSettingsMenu_soundFx, MatchReport_Enabled() ? "ON" : "OFF");
 }
 
 /* Toggle and keep it, both places it lives: SWOS.ini, the way the SERVER row
@@ -1446,6 +1462,20 @@ static void mmsSelectPitchSet(void)
         snprintf(g_arcadeOpts->record, sizeof g_arcadeOpts->record, "%s", s_recordOn);
 
     MatchRecord_SetConfigured(g_arcadeOpts->record);
+    if (g_arcadeIniPath)
+        Settings_Save(g_arcadeOpts, g_arcadeIniPath);
+}
+
+/* SEND MATCH REPORTS, on the SOUND FX row: the same two places as RECORD MATCHES. */
+static void mmsSelectSoundFx(void)
+{
+    extern PlatformInitOptions *g_arcadeOpts;
+    extern const char *g_arcadeIniPath;
+
+    if (!g_arcadeOpts)
+        return;
+    g_arcadeOpts->reports = !g_arcadeOpts->reports;
+    MatchReport_SetEnabled(g_arcadeOpts->reports);
     if (g_arcadeIniPath)
         Settings_Save(g_arcadeOpts, g_arcadeIniPath);
 }
@@ -1681,6 +1711,7 @@ static const MenuSymbol k_handlers[] = {
     HANDLER(mmsOnInit),
     HANDLER(mmsOnDraw),
     HANDLER(mmsSelectPitchSet),
+    HANDLER(mmsSelectSoundFx),
     HANDLER(matchMaking_rankings_onSelect),
     HANDLER(matchMaking_openGame_onSelect),
     HANDLER(matchMaking_cancelGame_onSelect),

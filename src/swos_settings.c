@@ -155,6 +155,11 @@ static int handler(void *user, const char *section,
             snprintf(opts->matchmaker, sizeof opts->matchmaker, "%s", value);
         else if (eqi(name, "record"))
             snprintf(opts->record, sizeof opts->record, "%s", value);
+        else if (eqi(name, "reports")) {
+            int b;
+            if (parse_bool(value, &b))
+                opts->reports = b;
+        }
     } else if (eqi(section, "graphics")) {
         int b;
         if (eqi(name, "style")) {
@@ -373,6 +378,11 @@ static int settings_build(const PlatformInitOptions *opts, IniEntry *items, char
         "; two players' frames to catch a desync: \"server\" (the matchmaker above), a\n"
         "; recorder of your own as \"host\" or \"host:port\", or empty for none.",
         opts->record };
+    items[n++] = (IniEntry){ "netplay", "reports",
+        "; reports: true | false -- after an online match, send both players' SWOS.log and\n"
+        "; HOW WAS THE MATCH? to the other player and the server, zipped (a copy is kept in\n"
+        "; save/netplay either way). false: nothing leaves this machine.",
+        opts->reports ? "true" : "false" };
 
 
     items[n++] = (IniEntry){ "graphics", "style",

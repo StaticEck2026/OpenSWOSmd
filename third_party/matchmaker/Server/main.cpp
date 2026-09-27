@@ -13,6 +13,7 @@
 #include "Utils.h"
 #include "Relay.h"
 #include "Recorder.h"
+#include "ReportDesk.h"
 #include "WebGate.h"
 #include <csignal>
 
@@ -41,12 +42,13 @@ int main(int argc, char** argv)
     bool record = false;
     bool websocket = false;
     std::string recordings = "recordings";
+    std::string reportsDir;
     std::string ledgerPath;
     std::string tlsCert, tlsKey;
     auto usage = [&]() {
         std::cerr << "usage: " << argv[0] << " [port] [--relay] [--netem PROFILE|cycle]"
                      " [--netem-seed N] [--record] [--recordings DIR] [--ledger FILE]\n"
-                     "       [--websocket [--tls-cert FILE --tls-key FILE]]\n"
+                     "       [--reports DIR] [--websocket [--tls-cert FILE --tls-key FILE]]\n"
                      "  port        UDP, 1-65535, default 19602\n"
                      "  --relay     OpenSWOS pairs play through this server\n"
                      "  --netem     a misbehaving network in the middle of every relayed\n"
@@ -61,7 +63,10 @@ int main(int argc, char** argv)
                      "              compared and a desync is reported the moment it happens;\n"
                      "              a full recording is kept as a .SRP\n"
                      "  --recordings  where those go (default: recordings/)\n"
-                     "  --ledger    append a JSON line per relay session, recorded match and desync\n"
+                     "  --reports   keep the match reports players send after an online match\n"
+                     "              (both players' logs and ratings, a zip each) in DIR/<match id>/\n"
+                     "  --ledger    append a JSON line per relay session, recorded match, desync\n"
+                     "              and match report\n"
                      "  --websocket browsers (the web build) connect over WebSocket on TCP, the\n"
                      "              same port number, and any match with one in it is relayed\n"
                      "  --tls-cert  with --tls-key: also wss://, on the same port, for pages\n"
@@ -86,6 +91,8 @@ int main(int argc, char** argv)
             record = true;
         } else if (a == "--websocket") {
             websocket = true;
+        } else if (a == "--reports" && i + 1 < argc) {
+            reportsDir = argv[++i];
         } else if (a == "--recordings" && i + 1 < argc) {
             recordings = argv[++i];
         } else if (a == "--tls-cert" && i + 1 < argc) {
@@ -124,7 +131,9 @@ int main(int argc, char** argv)
     // Both take TCP on the port number the game uses for UDP: a browser's WebSocket
     // arrives there, because the browser build sends its datagrams to that port.
     WebGate web(websocket, (uint16_t)port, tlsCert, tlsKey);
-    TcpGate tcp((uint16_t)port, web.Enabled() ? &web : nullptr, recorder.Enabled() ? &recorder : nullptr);
+    ReportDesk reports(!reportsDir.empty(), ledger, reportsDir);
+    TcpGate tcp((uint16_t)port, web.Enabled() ? &web : nullptr, recorder.Enabled() ? &recorder : nullptr,
+                reports.Enabled() ? &reports : nullptr);
     std::signal(SIGINT, OnStopSignal);
     std::signal(SIGTERM, OnStopSignal);
 #ifndef _WIN32
@@ -143,6 +152,7 @@ int main(int argc, char** argv)
         tcp.Update();
         web.Update();
         recorder.Update();
+        reports.Update();
         while (enet_host_service(connections.Host(), &event, 1) > 0)
         {
             switch (event.type) {

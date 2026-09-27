@@ -16,8 +16,9 @@
 // while, and the socket that follows on the same port gets the same address.
 //
 // TcpGate owns the TCP listener, because the recorder (Recorder.h) listens on the same
-// port number: a connection that opens with "GET " is a WebSocket, anything else goes
-// to the recorder, whose stream opens with its magic "SWRC".
+// port number: a connection that opens with "GET " is a WebSocket, one that opens with
+// "SWMR" a match report (ReportDesk.h), anything else goes to the recorder, whose
+// stream opens with its magic "SWRC".
 //
 // wss://. A page served over https may only open wss://, and Emscripten dials it on the
 // same port as ws:// (the datagram's). So TLS is terminated HERE, not by a proxy in
@@ -34,6 +35,7 @@
 #include <vector>
 
 class Recorder;
+class ReportDesk;
 struct ssl_st;
 struct ssl_ctx_st;
 
@@ -112,7 +114,7 @@ class TcpGate
 {
 public:
     // Listens only if there is someone to hand a connection to.
-    TcpGate(uint16_t port, WebGate* web, Recorder* recorder);
+    TcpGate(uint16_t port, WebGate* web, Recorder* recorder, ReportDesk* reports = nullptr);
     ~TcpGate();
 
     void Update();
@@ -128,5 +130,6 @@ private:
     int m_listen = -1;
     WebGate* m_web;
     Recorder* m_recorder;
+    ReportDesk* m_reports;
     std::vector<Pending> m_pending;
 };

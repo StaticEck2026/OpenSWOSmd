@@ -119,6 +119,9 @@ typedef struct {
     char                   record[80];       /* [netplay] record: stream every live match to a
                                               * recorder -- "server" (the matchmaker), "host[:port]",
                                               * or empty/"off". include/match_record.h */
+    int                    reports;          /* [netplay] reports: SEND MATCH REPORTS -- both players'
+                                              * logs and ratings to the server after an online
+                                              * match. include/match_report.h */
     int                    arcade;           /* 1 = arcade/coin-op mode — boot to attract. PC-only. See docs/ARCADE.md */
     int                    arcade_mode;         /* arcade game mode index (0 = GOLDEN GOAL) */
     int                    arcade_game_seconds; /* arcade match length in seconds (default 45) */

@@ -9,7 +9,7 @@ test proves. Where this file says *why* in one line, NETPLAY.md has the section.
 
 The server is SimpleMatchmaker — the same project SWOS 2020 ships — vendored at
 `third_party/matchmaker`, with OpenSWOS's additions recorded in its `OPENSWOS.md`.
-It does up to four jobs, each switched on by a flag:
+It does up to five jobs, each switched on by a flag:
 
 | job | flag | what it does |
 |---|---|---|
@@ -17,6 +17,7 @@ It does up to four jobs, each switched on by a flag:
 | **relay** | `--relay` | plays the match *through* the server instead. For players whose NATs will not punch, and for testing |
 | **browser gate** | `--websocket` | lets the web build connect. A browser has no UDP, so every browser match is relayed, `--relay` or not. With `--tls-cert`/`--tls-key` it also takes `wss://`, which a page served over `https://` needs (§10) |
 | **recorder** | `--record` | players stream their matches to it; it compares both sides frame by frame, names the first desync, and keeps the match as a `.SRP` |
+| **report desk** | `--reports DIR` | after an online match each player's game sends one zip — both players' `SWOS.log` and their HOW WAS THE MATCH? answers — filed by match id (§12, docs/NETPLAY_REPORT.md) |
 
 ```
   native player A ──UDP 19602──┐                     ┌──UDP 19602── native player B
@@ -38,12 +39,12 @@ Everything is on **one port number, 19602**, split by protocol:
 | port | protocol | needed when | carries |
 |---|---|---|---|
 | 19602 | **UDP** | **always** | matchmaking (ENet), the relay, relayed native matches |
-| 19602 | **TCP** | only with `--websocket` or `--record` | browsers' WebSockets (`ws://` and `wss://`), and players' recorder streams |
+| 19602 | **TCP** | only with `--websocket`, `--record` or `--reports` | browsers' WebSockets (`ws://` and `wss://`), players' recorder streams and match reports |
 
 The relay shares UDP 19602 with the matchmaker through ENet's `intercept` hook, so relaying
 needs no second port. The TCP side is sniffed per connection: one opening with `GET ` is a
 browser's WebSocket, one opening with a TLS handshake (`0x16 0x03`) is a browser's `wss://`,
-one opening with `SWRC` is a recorder stream.
+one opening with `SWMR` is a match report, one opening with `SWRC` is a recorder stream.
 
 **TCP and UDP cannot be given different numbers.** The server takes one `port` argument and
 binds both to it, because the web build sends its "datagrams" (WebSocket messages) to the
@@ -94,6 +95,7 @@ build/matchmaker/swos-matchmaker 19602 \
     --tls-key  /srv/swos-matchmaker/tls/privkey.pem \
     --record \
     --recordings /srv/swos-matchmaker/recordings \
+    --reports /srv/swos-matchmaker/reports \
     --ledger /srv/swos-matchmaker/matches.jsonl
 ```
 
@@ -116,7 +118,8 @@ the game picks from it -- far above what the same two get directly (2026-09-25).
 | `--tls-cert FILE` | with `--tls-key`: also accept `wss://` on the same port, for a web build served over `https://`. The certificate chain, PEM — certbot's `fullchain.pem` (§10). Needs `--websocket` |
 | `--tls-key FILE` | the certificate's private key, PEM — certbot's `privkey.pem`. Both files are re-read within a minute of changing, so a renewal needs no restart |
 | `--record` | accept match streams from players who set `[netplay] record = server`. Opens TCP on the port |
-| `--ledger FILE` | append one JSON line per relay session, recorded match and desync |
+| `--reports DIR` | keep the match reports players send after each online match: `DIR/<match id>/player1.zip` and `player2.zip`, each holding both players' `SWOS.log` and ratings, and a `"report"` ledger line each. Opens TCP on the port. A report is a few KB; nothing prunes them (§12) |
+| `--ledger FILE` | append one JSON line per relay session, recorded match, desync and match report |
 | `--recordings DIR` | where recorded `.SRP`s go. **Default `recordings/`, relative to the working directory** |
 | `--netem P` | **testing only.** Puts a misbehaving network (`wifi`, `awful`, `cycle`...) in the middle of every relayed match. Never on a server real players use |
 | `--netem-seed N` | **testing only.** The seed for `--netem`, to replay one run |
@@ -137,7 +140,7 @@ sudo useradd --system --home-dir /srv/swos-matchmaker --shell /usr/sbin/nologin 
 # 2. The checkout, built (§3). Its directory is also where the ledger and recordings go.
 sudo git clone https://github.com/benbaker76/OpenSWOS.git /srv/swos-matchmaker
 cd /srv/swos-matchmaker && sudo scripts/run_matchmaker.sh --build-only
-sudo mkdir -p /srv/swos-matchmaker/recordings /srv/swos-matchmaker/tls
+sudo mkdir -p /srv/swos-matchmaker/recordings /srv/swos-matchmaker/reports /srv/swos-matchmaker/tls
 sudo chown -R swos:swos /srv/swos-matchmaker
 
 # 3. The certificate, copied where the swos user can read it: §10.
@@ -163,6 +166,7 @@ ExecStart=/srv/swos-matchmaker/build/matchmaker/swos-matchmaker 19602 \
     --tls-key /srv/swos-matchmaker/tls/privkey.pem \
     --record \
     --recordings /srv/swos-matchmaker/recordings \
+    --reports /srv/swos-matchmaker/reports \
     --ledger /srv/swos-matchmaker/matches.jsonl
 Restart=always
 RestartSec=2
@@ -170,12 +174,12 @@ RestartSec=2
 KillSignal=SIGTERM
 TimeoutStopSec=10
 
-# Hardening. It reads its certificate and writes only the ledger and recordings.
+# Hardening. It reads its certificate and writes only the ledger, recordings and reports.
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/srv/swos-matchmaker/recordings /srv/swos-matchmaker/matches.jsonl
+ReadWritePaths=/srv/swos-matchmaker/recordings /srv/swos-matchmaker/reports /srv/swos-matchmaker/matches.jsonl
 
 [Install]
 WantedBy=multi-user.target
@@ -186,7 +190,8 @@ WantedBy=multi-user.target
 the server may not create it. Leave out lines you do not want: without the two `--tls-*`
 lines it serves `ws://` only; `--relay` would put native matches through the server too
 (don't, above); without
-`--record`/`--recordings` there is no recorder; without `--ledger` no ledger.
+`--record`/`--recordings` there is no recorder; without `--reports` players' match reports
+are turned away (their games log it and carry on); without `--ledger` no ledger.
 
 ```bash
 sudo systemctl daemon-reload
@@ -704,8 +709,28 @@ A match that **felt** laggy with a low delay, few rollbacks and no holds was pro
 display, not the network: compare the `[render]` lines at the top of both logs
 (refresh rate, vsync).
 
-Getting both players' logs for one match back to us without asking testers to dig for
-files is an open question: docs/NETPLAY_REPORT.md is the proposal.
+### Match reports: both logs, without asking anyone for them
+
+After every online match, once both players have answered HOW WAS THE MATCH? (or skipped
+it), each game sends its `SWOS.log` to the other over the lobby's connection and writes one
+zip — `SWOS_player1.log` (the host's), `SWOS_player2.log`, and `rating.txt` (the teams, the
+input delay, whether it was relayed, and each player's build, rating and comment):
+
+- **on each player's machine** in `save/netplay/`, named by the kick-off time and both
+  players (`2026-09-27_211405_PREDICADOR_vs_ELSHEIMY.zip`), the last 20 kept;
+- **on the server** with `--reports DIR` (§4): `DIR/<match id>/player1.zip` and
+  `player2.zip` — both players send one, so a match is covered if either gets through —
+  and a `"kind":"report"` line in the ledger with the names, build, rating and comment.
+
+Grep the ledger for a low `"rating"` or a comment, and the match id is the folder.
+
+The player's side is **MULTIPLAYER SETTINGS → SEND MATCH REPORTS** (`[netplay] reports` in
+`SWOS.ini`): ON by default in tester builds, OFF in a public release. OFF means nothing
+leaves that player's machine — the other player's zip then says only that they had it
+off. The game folder's path in a log (which names the player's account) is replaced by
+`<SWOS folder>`; the logs still hold both players' IP addresses, which is why it asks.
+The web build exchanges logs but never uploads (a browser has no TCP to give it).
+docs/NETPLAY_REPORT.md has the design and the wire format.
 
 ## 13. Testing a deployment with the repo's own tests
 
@@ -745,6 +770,7 @@ scripts/netplay_lobby_test.sh                     # two instances, lobby, match,
 scripts/relay_test.sh                             # two players through the relay
 NETEM=awful scripts/relay_test.sh                 #   ... under the worst emulated link
 RECORD=1 scripts/relay_test.sh                    #   ... recorded; the .SRP must match byte for byte
+REPORTS=1 RELAY=0 scripts/relay_test.sh           #   ... peer to peer, each side zips both logs to --reports
 scripts/wasm_netplay_test.sh                      # browser v browser, headless Chrome
 TLS=1 scripts/wasm_netplay_test.sh                #   ... over wss://, a self-signed certificate
 PAIR=web-native scripts/wasm_netplay_test.sh      # browser v the native build

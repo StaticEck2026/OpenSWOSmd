@@ -15,6 +15,8 @@
 #   GAMEPLAY=dos RECORD=1 ...                 # DOS gameplay on both (a resim must take it
 #                                             # from the file, not from its own SWOS.ini)
 #   MM_HOST=us.swos.eu scripts/relay_test.sh  # through an EXISTING server, not one of ours
+#   REPORTS=1 RELAY=0 scripts/relay_test.sh   # the match reports (include/match_report.h):
+#                                             # each player zips both logs and sends it here
 #
 # MM_HOST=<name> [MM_PORT=19602] plays through a server someone else runs, so it tests a
 # DEPLOYMENT: the round trip to it and its relay. No server is started. What cannot be
@@ -48,6 +50,12 @@
 # And every copy must play again, frame for frame, from its own setup, kick-off state
 # and inputs (--srp-resim, src/srp_resim.c).
 #
+# With REPORTS=1 the server keeps match reports (--reports) and each player sends one
+# after every match: each side's zip -- its own copy in save/netplay and the server's --
+# must hold BOTH players' SWOS.log and a rating.txt, and the ledger must have a "report"
+# line from each player for each match. The players then log to SWOS.log in their HOMEs
+# (a report is made of it), which the checks below read in place of their output.
+#
 # SERVER=<path> runs another copy of the matchmaker: netplay_desync_hunt.sh stops every
 # build/matchmaker/swos-matchmaker between its rounds, a relay test's among them.
 #
@@ -64,6 +72,7 @@ WAIT="${WAIT:-$((120 + MATCHES * 60))}"
 OUT="${OUT:-${TMPDIR:-/tmp}/swos-relay.$$}"
 RELAY="${RELAY:-1}"
 RECORD="${RECORD:-0}"
+REPORTS="${REPORTS:-0}"
 RECORD_MODE="${RECORD_MODE:-full}"
 DESYNC_FRAME="${DESYNC_FRAME:-}"
 SERVER="${SERVER:-build/matchmaker/swos-matchmaker}"
@@ -77,6 +86,7 @@ case "$GAMEPLAY" in
 esac
 mkdir -p "$OUT" && OUT="$(cd "$OUT" && pwd)"   # the game chdirs to bin/
 [ -n "$DESYNC_FRAME" ] && [ "$RECORD" != 1 ] && { echo "relay-test: DESYNC_FRAME needs RECORD=1" >&2; exit 1; }
+[ "$REPORTS" = 1 ] && [ "$REMOTE" = 1 ] && { echo "relay-test: REPORTS needs a server of our own" >&2; exit 1; }
 [ -n "$DESYNC_FRAME" ] && [ "$REMOTE" = 1 ] && { echo "relay-test: DESYNC_FRAME needs a server of our own (its ledger names the frame)" >&2; exit 1; }
 [ -n "$DESYNC_FRAME" ] && MATCHES=1     # the match ends at the desync; one is the test
 [ -x "bin/$BIN" ] || { echo "relay-test: bin/$BIN not built" >&2; exit 1; }
@@ -102,6 +112,7 @@ else
     SERVER_ARGS=()
     [ "$RELAY" = 1 ] && SERVER_ARGS+=(--relay ${NETEM:+--netem "$NETEM"} --netem-seed 7)
     [ "$RECORD" = 1 ] && SERVER_ARGS+=(--record --recordings "$OUT/recordings")
+    [ "$REPORTS" = 1 ] && SERVER_ARGS+=(--reports "$OUT/reports")
     "$SERVER" "$PORT" "${SERVER_ARGS[@]}" --ledger "$OUT/ledger.jsonl" > "$OUT/server.log" 2>&1 &
     SERVER_PID=$!
     trap 'kill -INT $SERVER_PID 2>/dev/null' EXIT
@@ -113,6 +124,9 @@ fi
 
 RECORD_ENV=""
 [ "$RECORD" = 1 ] && RECORD_ENV="SWOS_RECORD=server SWOS_RECORD_MODE=$RECORD_MODE"
+# A report is made of SWOS.log, so REPORTS=1 lets each player write one (in its own HOME).
+NO_LOG="SWOS_NO_LOG=1"
+[ "$REPORTS" = 1 ] && { NO_LOG=""; RECORD_ENV="$RECORD_ENV SWOS_REPORTS=server"; }
 # A HOME each: its own SWOS.ini (the defaults, the same on both) and its own save folder,
 # so the two LATEST.SRP files are two files.
 mkdir -p "$OUT/home-host/.swos" "$OUT/home-join/.swos"
@@ -124,7 +138,7 @@ mkdir -p "$OUT/home-host/.swos" "$OUT/home-join/.swos"
 run() {   # name, auto, team, extra env...
     local name=$1 auto=$2 team=$3; shift 3
     cd bin || exit 1
-    env SWOS_NO_LOG=1 SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+    env $NO_LOG SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
         SWOS_MM_HOST="$PLAY_HOST" SWOS_MM_PORT="$PLAY_PORT" SWOS_MM_AUTO="$auto" SWOS_P2P_LOG=1 \
         SWOS_LOBBY_TEAM="$team" SWOS_LOBBY_READY=1 SWOS_LOBBY_MATCHES="$MATCHES" \
         SWOS_LIVE_FRAMES="$FRAMES" $RECORD_ENV "$@" \
@@ -144,6 +158,13 @@ sleep 3
   echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/join.log" ) &
 JOIN_PID=$!
 wait "$HOST_PID" "$JOIN_PID"
+# REPORTS=1: what each player printed went to its SWOS.log -- read that instead.
+if [ "$REPORTS" = 1 ]; then
+    for side in host join; do
+        { cat "$OUT/home-$side/.swos/SWOS.log" 2>/dev/null; cat "$OUT/$side.log"; } > "$OUT/$side.all" &&
+            mv "$OUT/$side.all" "$OUT/$side.log"
+    done
+fi
 if [ -n "$SERVER_PID" ]; then
     kill -INT "$SERVER_PID" 2>/dev/null
     wait "$SERVER_PID" 2>/dev/null
@@ -293,7 +314,44 @@ if [ "$RECORD" = 1 ] && [ "$RECORD_MODE" = full ]; then
     [ "$bad" = 0 ] && resim_ok=1
 fi
 
-what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")"
+# The match reports: every copy -- each player's own, and the server's of each -- holds
+# both players' logs and the ratings, and the ledger has a report from each side.
+reports_ok=1
+if [ "$REPORTS" = 1 ]; then
+    reports_ok=0
+    if MATCHES=$MATCHES python3 - "$OUT" <<'PYEOF'
+import glob, json, os, sys, zipfile
+out, matches = sys.argv[1], int(os.environ["MATCHES"])
+ok = True
+want = {"SWOS_player1.log", "SWOS_player2.log", "rating.txt"}
+def check(path):
+    z = zipfile.ZipFile(path)
+    names = set(z.namelist())
+    logs = {n: z.read(n).decode("latin-1") for n in names if n.endswith(".log")}
+    good = names == want and all("[build]" in t or "live match" in t for t in logs.values())
+    print("report: %s %s" % (os.path.relpath(path, out), "ok" if good else "MISSING %s" % sorted(want - names)))
+    return good
+for side in ("host", "join"):
+    mine = sorted(glob.glob(os.path.join(out, "home-" + side, ".swos", "**", "netplay", "*.zip"), recursive=True))
+    ok &= len(mine) == matches
+    for p in mine:
+        ok &= check(p)
+kept = sorted(glob.glob(os.path.join(out, "reports", "*", "player*.zip")))
+ok &= len(kept) == 2 * matches
+for p in kept:
+    ok &= check(p)
+rows = [json.loads(l) for l in open(os.path.join(out, "ledger.jsonl")) if l.strip()]
+rep = [r for r in rows if r.get("kind") == "report"]
+for r in rep:
+    print("ledger: report %s player %d (%s v %s), rating %s, %d bytes" % (
+        r["match"], r["player"], r["name"], r["peer"], r["rating"], r["bytes"]))
+ok &= len(rep) == 2 * matches and len({r["match"] for r in rep}) == matches
+sys.exit(0 if ok else 1)
+PYEOF
+    then reports_ok=1; else echo "!! the match reports are not all there"; fi
+fi
+
+what="$MATCHES matches $([ "$RELAY" = 1 ] && echo "through the relay${NETEM:+ ($NETEM)}" || echo "peer to peer")$([ "$RECORD" = 1 ] && echo ", recorded")$([ "$REPORTS" = 1 ] && echo ", reported")"
 [ "$REMOTE" = 1 ] && what="$MATCHES matches through $MM_HOST, $HOW$([ "$RECORD" = 1 ] && echo ", recorded")"
 if [ -n "$DESYNC_FRAME" ]; then
     # A desync on purpose: the match ends early on both sides, and the recorder named the frame.
@@ -302,7 +360,7 @@ if [ -n "$DESYNC_FRAME" ]; then
         echo "relay-test: PASSED — the desync at frame $DESYNC_FRAME was caught by the recorder at frame $((DESYNC_FRAME + 1)) (logs in $OUT)"
         exit 0
     fi
-elif [ "$fail" = 0 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$resim_ok" = 1 ] &&
+elif [ "$fail" = 0 ] && [ "$ledger_ok" = 1 ] && [ "$srp_ok" = 1 ] && [ "$resim_ok" = 1 ] && [ "$reports_ok" = 1 ] &&
      [ "$hn" = "$MATCHES" ] && [ "$jn" = "$MATCHES" ] &&
    [ -n "$hh" ] && [ "$hh" = "$jh" ]; then
     echo "relay-test: PASSED — $what, both peers identical (logs in $OUT)"
