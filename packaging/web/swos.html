@@ -66,8 +66,17 @@
     border: 1px solid var(--line); border-radius: 4px; padding: .05rem .3rem;
   }
   p.note { color: var(--muted); font-size: .9rem; }
+  /* A list, not a table: the narrow-screen rule below hides every table's second column. */
+  dl.credits {
+    display: grid; grid-template-columns: max-content 1fr;
+    gap: .45rem 1.25rem; margin: 0;
+  }
+  dl.credits dt { color: var(--muted); }
+  dl.credits dd { margin: 0; }
   @media (max-width: 34rem) {
     th:nth-child(2), td:nth-child(2) { display: none; }
+    dl.credits { grid-template-columns: 1fr; gap: .1rem; }
+    dl.credits dd { margin-bottom: .6rem; }
     body { padding-top: 1.25rem; }
   }
 </style>
@@ -153,6 +162,20 @@ left alone when you reinstall.</p>
 <p class="note">Say which build you are on &mdash; it is on the bottom line of
 the main menu and in the window title, and it is the first line of
 <code>SWOS.log</code>. Attach that log if the game crashed.</p>
+
+<h2>Credits</h2>
+<dl class="credits">
+  <dt>Project Management</dt><dd>Playaveli</dd>
+  <dt>Engineering Lead</dt><dd>benbaker76</dd>
+  <dt>SWOS 2020 Feature Engineering</dt><dd>starwindz</dd>
+  <dt>SWOS Reverse Engineering</dt><dd>benbaker76 (Amiga) / zkz (DOS)</dd>
+  <dt>SWOS Live (swos.eu)</dt><dd>Redhair</dd>
+  <dt>SWOS Multiplayer (GGPO-X)</dt><dd>thd79</dd>
+  <dt>SWOS Web Online Rankings</dt><dd>ElMichaJ</dd>
+  <dt>Custom Graphics</dt><dd>Francescomanetti82</dd>
+  <dt>Beta Testers</dt><dd>crom1, ElMichaJ, EMPI, gatifun, petarku, Playaveli, Predicador, Redhair, segra, starwindz, thd79</dd>
+  <dt>Donators</dt><dd>benbaker76, Playaveli, starwindz, Petarku, gatifun, burellapaolo, az0man0, Cartoplotus68, JoSon, aliko</dd>
+</dl>
 
 </main>
 <script>
