@@ -18,6 +18,9 @@
  */
 
 #include "match_sim.h"
+#ifdef SWOS_SDL_BUILD
+#include <stdio.h>          /* MatchSim_LogSkillRoll */
+#endif
 #include "game_types.h"
 #include "diy_competition.h"
 #include "deterministic.h"
@@ -1429,6 +1432,13 @@ int16_t GetPlayerPricePercentageChange(int16_t factor, TeamFile *teamFile,
  *      playerBase = GetPlayer result (a5 in asm)
  *      pi         = PlayerInfo for this player in TeamGame (a6 in asm)
  * ================================================================ */
+#ifdef SWOS_SDL_BUILD
+/* The factor each starting player's skills were scaled by at kick-off, as rolled
+ * (ScaleSkill clamps it to 75..125). Written for the log line below, read by nothing
+ * the match does -- so it is not match state, and not in the rollback registry. */
+static int16_t s_skillFactor[2][11];
+#endif
+
 __attribute__((used, externally_visible))
 void AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
                          TeamFile *oppTeamFile, TeamGame *teamGame,
@@ -1482,6 +1492,10 @@ void AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
 
     /* Apply team view offset + rank + random to factor */
     d4 = GetPlayerPricePercentageChange(d4, teamFile, callerD0);
+#ifdef SWOS_SDL_BUILD
+    if (playerIdx < 11)                 /* for MatchSim_LogSkillRoll only; never read back */
+        s_skillFactor[teamGame == &_topTeamInGame ? 0 : 1][playerIdx] = d4;
+#endif
 
     /* Read packed skills longword from PlayerFile:
      * passing(28), velocityHeading(29), tacklingControl(30), speedFinishing(31).
@@ -1619,6 +1633,37 @@ void ApplyTeamTactics(TeamGame *teamGame)
     /* Restore original tactics byte */
     tf->tactics = savedTactics;
 }
+
+#ifdef SWOS_SDL_BUILD
+/* SWOS rolls every player's form for the match at kick-off (AdjustPlayerSkills): their
+ * skills are scaled by a factor around 100%, from their price, the team's standing and
+ * a random draw seeded per player -- the reason a side can feel sharper in one match
+ * than the next. One line per team for SWOS.log: each starting player's factor (clamped
+ * as ScaleSkill clamps it), the team's appearance percentage, and the seven skills of
+ * all eleven summed as they play this match (0..7 each, so at most 539). */
+void MatchSim_LogSkillRoll(void)
+{
+    int32_t t, i, k;
+    for (t = 0; t < 2; t++) {
+        TeamGame *tg = t == 0 ? &_topTeamInGame : &_bottomTeamInGame;
+        TeamFile *tf = t == 0 ? _gameTeam1 : _gameTeam2;
+        char factors[11 * 5 + 1];
+        int32_t n = 0, sumFactor = 0, played = 0;
+        for (i = 0; i < 11; i++) {
+            int32_t f = s_skillFactor[t][i];
+            f = f < 75 ? 75 : f > 125 ? 125 : f;
+            sumFactor += f;
+            n += snprintf(factors + n, sizeof factors - (size_t)n, "%s%d", i ? " " : "", (int)f);
+            for (k = 0; k < 7; k++)
+                played += (&tg->players[i].passing)[k];
+        }
+        fprintf(stderr, "[match] skill roll, %s %.17s: form %d%% on average (%s), appearance %u%%, "
+                "skills %d in play\n", t == 0 ? "team 1" : "team 2", (const char *)tf->teamName,
+                (int)(sumFactor / 11), factors, (unsigned)(t == 0 ? _team1AppPercent : _team2AppPercent),
+                (int)played);
+    }
+}
+#endif
 
 /* ===== BuildMatchResultString (Chunk 106) =====
  * Builds a formatted result string from match scores and flags.
