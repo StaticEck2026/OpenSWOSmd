@@ -404,8 +404,9 @@ buttons under them — are SWOS 2020's and do nothing in OpenSWOS yet.
 **The handshake refuses to start a match the two games would play differently** — and
 this is the most common reason a match will not start. Both players need:
 
-- **the same build** — same commit. The version on the main menu's bottom line, the window
-  title and `--version` must match;
+- **the same build** — same commit, and the game checks it (since 2026-09-27): a different
+  one is refused with THE OTHER PLAYER HAS ANOTHER VERSION, and `SWOS.log` names both. The
+  version is on the main menu's bottom line, the window title and `--version`;
 - **the same rules** — a **tester build** (`SWOS_TEST_NO_INJURIES_CARDS=1`, "test build: no
   injuries or cards" on its version line) cannot play a **release** build;
 - **the same gameplay style** — AMIGA or DOS, in OPTIONS;
@@ -671,6 +672,16 @@ At kick-off (the numbers here are an example):
 [netplay] p2p match: …; player 1 on UDP port 51234, peer 81.2.3.4:51240, input delay 3, pauses up to 0 ms
 ```
 
+During the match, a line every 30 seconds, and one for the whole match at the end —
+GGPO's own ping, its range and jitter, the rollbacks and holds since the last line, and
+how far this player's game runs ahead of the other's:
+
+```
+[netplay] kick-off: ping 118 ms, jitter 9 ms (measured by the link), input delay 2
+[netplay] 0:30, frame 1500: ping 121 ms (110..140), jitter 4 ms; 43 rollbacks, 0 holds since the last line; 0.3 frames ahead
+[netplay] whole match: ping 124 ms (108..190), jitter 5 ms
+```
+
 At the end:
 
 ```
@@ -692,6 +703,9 @@ What each number means, and what it points at:
 A match that **felt** laggy with a low delay, few rollbacks and no holds was probably the
 display, not the network: compare the `[render]` lines at the top of both logs
 (refresh rate, vsync).
+
+Getting both players' logs for one match back to us without asking testers to dig for
+files is an open question: docs/NETPLAY_REPORT.md is the proposal.
 
 ## 13. Testing a deployment with the repo's own tests
 
