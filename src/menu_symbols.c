@@ -73,6 +73,7 @@ extern void ContinueInit(void);
 extern void ContinueMenuContinueSelected(void);
 extern void ContinueSelected(void);
 extern void CopyTactics(void);
+extern void CreditsMenuSelected(void);
 extern void DIYCompetitionMenu(void);
 extern void DIYCupFinish(void);
 extern void DIYCupInit(void);
@@ -428,6 +429,7 @@ extern char _aConsider[];
 extern char _aContinue[];
 extern char _aContinueCareer[];
 extern char _aCopy[];
+extern char _aCredits[];
 extern char _aCriteria[];
 extern char _aCup1[];
 extern char _aCup2[];
@@ -731,6 +733,7 @@ const MenuSymbol _menuSymbols[] = {
     { "ContinueMenuContinueSelected", (void*)ContinueMenuContinueSelected, SYM_FUNC },
     { "ContinueSelected", (void*)ContinueSelected, SYM_FUNC },
     { "CopyTactics", (void*)CopyTactics, SYM_FUNC },
+    { "CreditsMenuSelected", (void*)CreditsMenuSelected, SYM_FUNC },
     { "DIYCompetitionMenu", (void*)DIYCompetitionMenu, SYM_FUNC },
     { "DIYCupFinish", (void*)DIYCupFinish, SYM_FUNC },
     { "DIYCupInit", (void*)DIYCupInit, SYM_FUNC },
@@ -1083,6 +1086,7 @@ const MenuSymbol _menuSymbols[] = {
     { "_aContinue", (void*)_aContinue, SYM_STRING },
     { "_aContinueCareer", (void*)_aContinueCareer, SYM_STRING },
     { "_aCopy", (void*)_aCopy, SYM_STRING },
+    { "_aCredits", (void*)_aCredits, SYM_STRING },
     { "_aCriteria", (void*)_aCriteria, SYM_STRING },
     { "_aCup1", (void*)_aCup1, SYM_STRING },
     { "_aCup2", (void*)_aCup2, SYM_STRING },

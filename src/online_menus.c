@@ -25,6 +25,8 @@
 #include "menu_load_json.h"
 #include "menu_symbols.h"
 #include "menu_system.h"
+#include "display.h"        /* FRONTBUFFER_ROW_STRIDE_BYTES: the credits photos */
+#include "text_render.h"    /* GetTextWidth, DrawMenuTextCentered: their names */
 #include "input_text.h"
 #include "p2p_link.h"         /* the peer connection the handoff makes */
 #include "netplay_lobby.h"    /* where the two players set the match up */
@@ -1107,6 +1109,137 @@ static void selectMPSettingExit(void)
     SetExitMenuFlag();              /* OnlineMenus_EnterLobby closes the link behind us */
 }
 
+/* ======================================================================
+ * HOW WAS THE MATCH? (p2p/rateMatchMenu.json) -- after every online match.
+ *
+ * Five stars in a row: LEFT and RIGHT move along them and every star up to the cursor
+ * lights, FIRE chooses and moves on to SEND -- so a quick rating is two presses. Below
+ * them an optional line about any problems, typed as the log-in screen's NAME is, then
+ * SEND, and SKIP for neither. Away from the stars they show the rating chosen. The stars
+ * are SWOS 2020's own (its starsMap: a 7x8 star in one colour with its lower right in a
+ * second), drawn three times the size. What is sent goes to SWOS.log for now; the match
+ * report is to carry it to the server (docs/NETPLAY_REPORT.md).
+ * ====================================================================== */
+#define RATE_MATCH_MENU   "p2p/rateMatchMenu"
+extern volatile uintptr_t _frontbufferBasePtr;
+extern int      _menu_draw_x_offset;
+enum {
+    RateMatch_header = 0, RateMatch_against, RateMatch_result,
+    RateMatch_star1, RateMatch_star2, RateMatch_star3, RateMatch_star4, RateMatch_star5,
+    RateMatch_hint, RateMatch_issuesLabel, RateMatch_issues, RateMatch_send, RateMatch_skip,
+    RateMatch_numEntries
+};
+
+/* SWOS 2020's full star (PixelmapAndStrings.h starsMap, rows 10..17): 'C' the star,
+ * '8' its shaded lower right. */
+static const char *const k_starShape[8] = {
+    "...C...", "...C8..", "CCCCCCC", ".CCCCC8", "..CCC88", ".CCCCC.", ".C888C8", "..8...8",
+};
+enum { kStarScale = 3, kStarLit = 15, kStarLitShade = 5, kStarDim = 9, kStarDimShade = 8 };
+
+static char    s_rateAgainst[64], s_rateResult[64];
+static char    s_rateIssues[51];        /* the optional line: 50 characters */
+static int32_t s_rating;                /* 1..5 chosen; 3 until one is */
+static int32_t s_rateSent;              /* 1 SEND, 0 SKIP */
+
+static void select_entry(int32_t ordinal)
+{
+    extern uint8_t _currentMenu[];
+    ((Menu *)_currentMenu)->selectedEntry = entry_at(ordinal);
+}
+
+static void rateMatch_OnInit(void)
+{
+    set_text(RateMatch_against, s_rateAgainst);
+    set_text(RateMatch_result, s_rateResult);
+    set_text(RateMatch_hint, "LEFT AND RIGHT TO RATE, FIRE TO CHOOSE");
+    set_text(RateMatch_issues, s_rateIssues);
+    /* UP from the comment box goes back to the star chosen. */
+    entry_at(RateMatch_issues)->upEntry = (int8_t)(RateMatch_star1 + s_rating - 1);
+}
+
+static void rateMatch_OnDraw(void)
+{
+    uint8_t *fb = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
+    int32_t on = current_ordinal() - RateMatch_star1 + 1;   /* 1..5 on a star */
+    int32_t lit = (on >= 1 && on <= 5) ? on : s_rating;
+    int32_t star, x, y, dy;
+
+    rateMatch_OnInit();                 /* coming back restores the template */
+    for (star = 0; star < 5; star++) {
+        const MenuEntry *e = entry_at(RateMatch_star1 + star);
+        /* Centred in its entry, whose frame is the cursor. */
+        int32_t ox = e->x + (e->dwWidth - 7 * kStarScale) / 2;
+        int32_t oy = e->y + (e->dwHeight - 8 * kStarScale) / 2;
+        for (y = 0; y < 8; y++)
+            for (x = 0; x < 7; x++) {
+                char c = k_starShape[y][x];
+                uint8_t col;
+                if (c == '.')
+                    continue;
+                col = star < lit ? (c == 'C' ? kStarLit : kStarLitShade)
+                                 : (c == 'C' ? kStarDim : kStarDimShade);
+                for (dy = 0; dy < kStarScale; dy++)
+                    memset(fb + (uint32_t)(oy + y * kStarScale + dy) * FRONTBUFFER_ROW_STRIDE_BYTES +
+                           ox + x * kStarScale, col, kStarScale);
+            }
+    }
+}
+
+static void rateMatch_star_OnSelect(void)
+{
+    s_rating = current_ordinal() - RateMatch_star1 + 1;
+    select_entry(RateMatch_send);
+}
+
+static void rateMatch_issues_OnSelect(void)
+{
+    InputText(sizeof s_rateIssues, (uint8_t *)entry_at(RateMatch_issues));
+}
+
+static void rateMatch_send_OnSelect(void)
+{
+    s_rateSent = 1;
+    SetExitMenuFlag();
+}
+
+static void rateMatch_skip_OnSelect(void)
+{
+    s_rateSent = 0;
+    SetExitMenuFlag();
+}
+
+/* After an online match (run_live_match). Not in the automated tests, which play
+ * match after match with nobody at the keyboard -- unless SWOS_RATE_MATCH=1 asks for
+ * it, to test the screen itself; SWOS_NO_RATING=1 skips it anywhere. */
+static void rate_match(const char *opponent, int32_t outcome, const char *why)
+{
+    extern uint16_t _statsTeam1Goals, _statsTeam2Goals;
+    if (getenv("SWOS_NO_RATING"))
+        return;
+    if (!getenv("SWOS_RATE_MATCH") &&
+        (getenv("SWOS_LOBBY_READY") || getenv("SWOS_LIVE_FRAMES") || getenv("SWOS_MM_AUTO")))
+        return;
+    snprintf(s_rateAgainst, sizeof s_rateAgainst, "AGAINST %s", opponent && opponent[0] ? opponent : "YOUR OPPONENT");
+    if (outcome == NETPLAY_LIVE_ENDED_EARLY)
+        snprintf(s_rateResult, sizeof s_rateResult, "%s", why && why[0] ? why : "THE MATCH ENDED EARLY");
+    else
+        snprintf(s_rateResult, sizeof s_rateResult, "FULL TIME  %u-%u",
+                 (unsigned)_statsTeam1Goals, (unsigned)_statsTeam2Goals);
+    s_rating = 3;
+    s_rateSent = 0;
+    s_rateIssues[0] = '\0';
+    OnlineMenus_Show(RATE_MATCH_MENU);
+    if (!s_rateSent)
+        fprintf(stderr, "[netplay] rating: skipped, %s (%s)\n", s_rateAgainst, s_rateResult);
+    else if (s_rateIssues[0])
+        fprintf(stderr, "[netplay] rating: %d of 5 stars, %s (%s): \"%s\"\n", (int)s_rating,
+                s_rateAgainst, s_rateResult, s_rateIssues);
+    else
+        fprintf(stderr, "[netplay] rating: %d of 5 stars, %s (%s)\n", (int)s_rating,
+                s_rateAgainst, s_rateResult);
+}
+
 /* Both sides agreed: play.
  *
  * The link is CLOSED before the session opens: GGPO wants its own socket, on the same
@@ -1157,6 +1290,13 @@ static void run_live_match(void)
             snprintf(notice, sizeof notice, "FULL TIME - PRESS GO FOR A REMATCH");
         NetplayMatch_Finish();
         (void)NetplayLobby_Rematch(notice);     /* on failure the lobby says why */
+        /* HOW WAS THE MATCH? -- with the link to the other player kept polled, so a
+         * player can take their time without the rematch connection timing out. */
+        Platform_SetFrameHook(lobby_frame_hook);
+        {
+            const LobbyPlayer *other = NetplayLobby_Player(3 - NetplayLobby_LocalPlayer());
+            rate_match(other ? other->name : NULL, outcome, why);
+        }
     }
     s_testReady = getenv("SWOS_LOBBY_READY") != NULL;
     s_lobbyAgain = 1;
@@ -1316,6 +1456,181 @@ static void matchMaking_rankings_onSelect(void)
 }
 
 /* ======================================================================
+ * creditsMenu (swos-2020/src/menus/credits.mnu; handlers in game.cpp), from the main
+ * menu's CREDITS button (menus.c CreditsMenuSelected).
+ *
+ * SWOS 2020's screen, text as it wrote it, with OpenSWOS's developer added among its
+ * six, second after PLAYAVELI. Its photos are drawn here rather than by the .mnu's dev1..dev6 entries --
+ * seven do not fit six entries -- from bin/data/credits_icons.bmp, made by
+ * scripts/make_credits_icons.py: one 8-bit strip, 40 px a photo, whose pixels are
+ * already palette indices 128..255. The menu screens use only 0..31, so those entries
+ * are LENT to the photos while this screen is up and given back when it closes.
+ * ====================================================================== */
+extern uint16_t _menuPalette[256];
+extern void     WriteCopperPalette(const uint16_t *palette);
+extern volatile uintptr_t _frontbufferBasePtr;
+extern int      _menu_draw_x_offset;
+extern void    *_charTables[];
+
+enum {
+    kCreditPhotos   = 7,
+    kCreditPhoto    = 40,          /* px, square */
+    kCreditStep     = 44,          /* photo + 4 px, as SWOS 2020 spaces its six */
+    kCreditY        = 110,         /* SWOS 2020's kDevIconY */
+    kCreditNameY    = 154,         /* its kDevNameY: 4 px under the photos */
+    kCreditPalBase  = 128,         /* the lent block: 128..255 */
+    kCreditShadow   = 3,           /* the menu palette's black, for the 1 px drop shadow */
+};
+
+/* In the order drawn, which is the order of the photos in credits_icons.bmp
+ * (scripts/make_credits_icons.py PORTRAIT_AT): PLAYAVELI, OpenSWOS's, then the rest
+ * of SWOS 2020's in its own order. */
+static const char *const k_creditNames[kCreditPhotos] = {
+    "PLAYAVELI", "BENBAKER76", "STARWINDZ", "ZKZ", "THD79", "REDHAIR", "ELMICHAJ",
+};
+
+static uint8_t  s_creditPixels[kCreditPhoto][kCreditPhoto * kCreditPhotos];
+static uint16_t s_creditPal[256 - kCreditPalBase];     /* 12-bit, the photos' */
+static uint16_t s_creditSaved[256 - kCreditPalBase];   /* what they borrowed */
+static int32_t  s_creditLoaded;                         /* 1 ok, -1 failed, 0 not tried */
+
+static uint32_t le32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
+
+/* An uncompressed 8-bit BMP of exactly the strip's size; anything else is refused. */
+static int32_t credits_load(void)
+{
+    enum { W = kCreditPhoto * kCreditPhotos, H = kCreditPhoto };
+    uint8_t hdr[54], pal[256 * 4], row[(W + 3) & ~3];
+    FILE *f;
+    int32_t y, i;
+
+    if (s_creditLoaded)
+        return s_creditLoaded > 0;
+    s_creditLoaded = -1;
+    f = fopen("data/credits_icons.bmp", "rb");
+    if (!f) {
+        fprintf(stderr, "[credits] data/credits_icons.bmp is missing: no photos\n");
+        return 0;
+    }
+    if (fread(hdr, 1, sizeof hdr, f) != sizeof hdr || hdr[0] != 'B' || hdr[1] != 'M' ||
+        (int32_t)le32(hdr + 18) != W || (int32_t)le32(hdr + 22) != H ||
+        (hdr[28] | hdr[29] << 8) != 8 || le32(hdr + 30) != 0) {
+        fprintf(stderr, "[credits] data/credits_icons.bmp is not a %dx%d 8-bit BMP\n", W, H);
+        fclose(f);
+        return 0;
+    }
+    fseek(f, 14 + (long)le32(hdr + 14), SEEK_SET);          /* the palette follows the info header */
+    if (fread(pal, 4, 256, f) != 256) {
+        fclose(f);
+        return 0;
+    }
+    for (i = kCreditPalBase; i < 256; i++)                  /* BGRA, 8-bit -> 12-bit */
+        s_creditPal[i - kCreditPalBase] = (uint16_t)((pal[i * 4 + 2] >> 4) << 8 |
+                                                     (pal[i * 4 + 1] >> 4) << 4 | pal[i * 4] >> 4);
+    fseek(f, (long)le32(hdr + 10), SEEK_SET);
+    for (y = H - 1; y >= 0; y--) {                          /* bottom-up rows */
+        if (fread(row, 1, sizeof row, f) != sizeof row) {
+            fclose(f);
+            return 0;
+        }
+        memcpy(s_creditPixels[y], row, W);
+    }
+    fclose(f);
+    s_creditLoaded = 1;
+    return 1;
+}
+
+static void creditsMenu_OnInit(void)
+{
+    MenuEntry *header = entry_at(CreditsMenu_header);
+    int32_t i;
+
+    /* OpenSWOS's credits, in SWOS 2020's box -- 20 px wider for the longer name,
+     * still centred. Once per unpack: the template comes back at 120 wide. */
+    set_text(CreditsMenu_header, "OPENSWOS - CREDITS");
+    /* The first paragraph is OpenSWOS's; the second is SWOS 2020's but for one word
+     * (MAKING -> MAKE); the rest is SWOS 2020's, as it wrote it. */
+    set_text(CreditsMenu_msg01, "YOU ARE PLAYING OPENSWOS AN ORIGINAL PROJECT BASED ON");
+    set_text(CreditsMenu_msg02, "SENSIBLE SOCCER BY SENSIBLE SOFTWARE. WE HOPE YOU ENJOY");
+    set_text(CreditsMenu_msg03, "THIS NEW RELEASE BY THE TEAM THAT BROUGHT YOU SWOS 2020!");
+    set_text(CreditsMenu_msg06, "HELPED MAKE IT HAPPEN. TEAM UPDATERS, ARTISTS, BETA");
+    set_text(CreditsMenu_exit, "STAY UNITED");      /* SWOS 2020's STAY SENSIBLE */
+    if (header->dwWidth == 120) {
+        header->x -= 10;
+        header->dwWidth = 140;
+    }
+    /* The .mnu's own photo name entries and links: ours are drawn below instead,
+     * and the links opened SWOS 2020's web pages, which have no equivalent here. */
+    for (i = CreditsMenu_dev1; i <= CreditsMenu_dev6; i++)
+        set_visible(i, 0);
+    for (i = CreditsMenu_dev1Link; i <= CreditsMenu_dev6Link; i++)
+        set_visible(i, 0);
+    entry_at(CreditsMenu_exit)->upEntry = -1;
+}
+
+/* Runs every frame, after the background and before the entries (DrawMenu). */
+static void creditsMenu_OnDraw(void)
+{
+    uint8_t *fb = (uint8_t *)_frontbufferBasePtr + _menu_draw_x_offset;
+    const MenuEntry *anchor = entry_at(CreditsMenu_dev1Link);
+    int32_t p, y, x0, top, stagger = 0;
+
+    creditsMenu_OnInit();                   /* coming back restores the template */
+    if (!credits_load())
+        return;
+    /* Where the loader put this menu: dev1Link is at (22, 110) in credits.mnu's own
+     * coordinates, and every SWOS 2020 entry is moved by the same amount to centre its
+     * 320x200 screen on ours (menu_load_json.c). SWOS 2020 centres its six photos on its
+     * 320-wide canvas; seven, the same way ("x - 8" is the .mnu's own convention). */
+    x0  = (int32_t)anchor->x - 22 + (320 - (kCreditPhotos * kCreditStep - 4)) / 2 - 8;
+    top = (int32_t)anchor->y - 110;
+    for (p = 0; p < kCreditPhotos; p++) {
+        int32_t px = x0 + p * kCreditStep;
+        /* SWOS 2020's 1 px drop shadow, right and down; the photos are full squares. */
+        for (y = 0; y < kCreditPhoto; y++)
+            memset(fb + (uint32_t)(top + kCreditY + y + 1) * FRONTBUFFER_ROW_STRIDE_BYTES + px + 1,
+                   kCreditShadow, kCreditPhoto);
+        for (y = 0; y < kCreditPhoto; y++) {
+            uint8_t *dst = fb + (uint32_t)(top + kCreditY + y) * FRONTBUFFER_ROW_STRIDE_BYTES + px;
+            memcpy(dst, &s_creditPixels[y][p * kCreditPhoto], kCreditPhoto);
+        }
+    }
+    /* The names, centred under their photos in the small font. Seven in 44 px each is
+     * tight: when any name is wider than its slot, every other one drops a line. */
+    for (p = 0; p < kCreditPhotos; p++)
+        if (GetTextWidth((uint8_t *)k_creditNames[p], (uint8_t *)_charTables[0]) > kCreditStep - 2)
+            stagger = 1;
+    for (p = 0; p < kCreditPhotos; p++)
+        DrawMenuTextCentered((uint16_t)(x0 + p * kCreditStep + kCreditPhoto / 2),
+                             (uint16_t)(top + kCreditNameY + (stagger && (p & 1) ? 8 : 0)), 2,
+                             (uint8_t *)k_creditNames[p], (uint8_t *)_charTables[0]);
+}
+
+/* CREDITS from the main menu: lend the photos their palette entries, show the screen,
+ * give them back. Around ShowMenu rather than in the exit button, so every way out --
+ * ESC included -- returns the entries. */
+void OnlineMenus_ShowCredits(void)
+{
+    int32_t i, lent = 0;
+    if (credits_load()) {
+        for (i = 0; i < 256 - kCreditPalBase; i++) {
+            s_creditSaved[i] = _menuPalette[kCreditPalBase + i];
+            _menuPalette[kCreditPalBase + i] = s_creditPal[i];
+        }
+        WriteCopperPalette(_menuPalette);
+        lent = 1;
+    }
+    OnlineMenus_Show(SWOS2020_MENU(creditsMenu));
+    if (lent) {
+        for (i = 0; i < 256 - kCreditPalBase; i++)
+            _menuPalette[kCreditPalBase + i] = s_creditSaved[i];
+        WriteCopperPalette(_menuPalette);
+    }
+}
+
+static void credits_nothing(void) {}
+
+/* ======================================================================
  * Handler table. Unlisted names are bound to a no-op by the loader.
  * ====================================================================== */
 #define HANDLER(fn)            { #fn, (void *)fn, SYM_FUNC }
@@ -1324,6 +1639,28 @@ static void matchMaking_rankings_onSelect(void)
 static const MenuSymbol k_handlers[] = {
     /* ~SetExitMenuFlag in the .mnu files is the SWOS routine of the same name. */
     HANDLER(SetExitMenuFlag),
+
+    HANDLER(rateMatch_OnInit),
+    HANDLER(rateMatch_OnDraw),
+    HANDLER(rateMatch_star_OnSelect),
+    HANDLER(rateMatch_issues_OnSelect),
+    HANDLER(rateMatch_send_OnSelect),
+    HANDLER(rateMatch_skip_OnSelect),
+
+    HANDLER(creditsMenu_OnInit),
+    HANDLER(creditsMenu_OnDraw),
+    HANDLER_AS("exitCreditsMenu_onSelect", SetExitMenuFlag),
+    /* Drawn by creditsMenu_OnDraw (seven photos for six entries); the links are hidden. */
+    HANDLER_AS("drawDev1Name", credits_nothing),
+    HANDLER_AS("drawDev2Name", credits_nothing),
+    HANDLER_AS("drawDev3Name", credits_nothing),
+    HANDLER_AS("drawDev4Name", credits_nothing),
+    HANDLER_AS("drawDev5Name", credits_nothing),
+    HANDLER_AS("drawDev6Name", credits_nothing),
+    HANDLER_AS("dev1LinkMenu_onSelect", credits_nothing),
+    HANDLER_AS("dev2LinkMenu_onSelect", credits_nothing),
+    HANDLER_AS("dev5LinkMenu_onSelect", credits_nothing),
+    HANDLER_AS("dev6LinkMenu_onSelect", credits_nothing),
 
     HANDLER(logInMenu_OnInit),
     HANDLER(logInMenu_OnDraw),
@@ -1481,7 +1818,10 @@ void OnlineMenus_ShowStartMenu(void)
         s_autoLogin[0] = '\0';
     }
     P2PMenu_Init();             /* --menu=p2p/p2pMenu wants its handlers too */
-    OnlineMenus_Show(name);
+    if (!strcmp(name, SWOS2020_MENU(creditsMenu)))
+        OnlineMenus_ShowCredits();  /* with its photos' palette, as the button opens it */
+    else
+        OnlineMenus_Show(name);
 }
 
 /* ======================================================================
@@ -1506,7 +1846,16 @@ int32_t OnlineMenus_SelfTest(void)
     SWOS2020_MENUS(VERIFY_MENU)
 #undef VERIFY_MENU
 
-    /* OpenSWOS's own, checked the same way (src/p2p_menu.c). */
+    /* OpenSWOS's own, checked the same way (src/p2p_menu.c, and HOW WAS THE MATCH?). */
+    {
+        int bad = MenuJson_VerifyDynamic(RATE_MATCH_MENU, RateMatch_numEntries);
+        menus++;
+        entries += RateMatch_numEntries;
+        if (bad) {
+            failed++;
+            printf("  FAIL %-26s %s\n", "rateMatchMenu", bad < 0 ? "did not load" : "mismatch (see log)");
+        }
+    }
     P2PMenu_Init();
     {
         int bad = MenuJson_VerifyDynamic(P2P_MENU_NAME, P2P_MENU_ENTRIES);

@@ -203,7 +203,7 @@ extern char _aSoundHeroSng[];                 extern char _aSoundHeroIns[];     
 extern char _aSoundSfxIn1[];                  extern char _aSoundSfxIn2[];                  extern char _aDataPoolplyrDa[];
 extern char _aGrafsMenubgRaw[];               extern char _aGrafsMenubg2Ra[];               extern char _aHighlights_0[];
 extern char _aOptions[];                      extern char _aFriendly_1[];                   extern char _aSeason_1[];
-extern char _aCareer_1[];                     extern char _aMultiplayer[];                  extern char _aDataEurocupTmd[];
+extern char _aCareer_1[];                     extern char _aMultiplayer[];                  extern char _aCredits[];                  extern char _aDataEurocupTmd[];
 extern char _aDataEurocwcTmd[];               extern char _aDataTeamNnn[];                  extern char _aLoadLiverpool[];
 extern char _aResigned[];                     extern char _a12Season[];                     extern char _a102Season[];
 extern char _aManagementReco[];               extern char _aNotQualified[];                 extern char _aPosition0[];
@@ -967,6 +967,7 @@ const StringSymbol _stringSymbols[] = {
     { "_aSeason_1", (void *)_aSeason_1 },
     { "_aCareer_1", (void *)_aCareer_1 },
     { "_aMultiplayer", (void *)_aMultiplayer },
+    { "_aCredits", (void *)_aCredits },
     { "_aDataEurocupTmd", (void *)_aDataEurocupTmd },
     { "_aDataEurocwcTmd", (void *)_aDataEurocwcTmd },
     { "_aDataTeamNnn", (void *)_aDataTeamNnn },

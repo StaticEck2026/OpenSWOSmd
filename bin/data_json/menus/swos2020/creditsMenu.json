@@ -1,0 +1,604 @@
+{
+  "name": "creditsMenu",
+  "source": {
+    "project": "swos-2020",
+    "file": "src/menus/credits.mnu",
+    "commit": "ebf1cc4"
+  },
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "creditsMenu_OnInit",
+  "onReturn": null,
+  "onDraw": "creditsMenu_OnDraw",
+  "defaultEntry": 30,
+  "exports": {},
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 92,
+        "y": 0,
+        "w": 120,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SWOS 2020 - CREDITS"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg01",
+      "coords": {
+        "x": -8,
+        "y": 18,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "YOU ARE USING THE SWOS 2020 MOD, AND VALIDATED INSTALLATION"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg02",
+      "coords": {
+        "x": -8,
+        "y": 28,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "WITH A PREVIOUSLY OWNED ORIGINAL COPY OF SWOS 96/97."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg03",
+      "coords": {
+        "x": -8,
+        "y": 38,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "THANK YOU. ENJOY THE BEAUTIFUL GAME IN ALL ITS NEW GLORY."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg04",
+      "coords": {
+        "x": -8,
+        "y": 48,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg05",
+      "coords": {
+        "x": -8,
+        "y": 58,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "WE WOULD LIKE TO THANK EVERYONE WHO HAS CONTRIBUTED AND"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg06",
+      "coords": {
+        "x": -8,
+        "y": 68,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "HELPED MAKING IT HAPPEN. TEAM UPDATERS, ARTISTS, BETA"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg07",
+      "coords": {
+        "x": -8,
+        "y": 78,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "TESTERS, AND THE WHOLE OPENSWOS COMMUNITY. PLEASE"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg08",
+      "coords": {
+        "x": -8,
+        "y": 88,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "CHECK THE ABOUT MENU IN THE GAME LAUNCHER FOR A FULL LIST."
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg09",
+      "coords": {
+        "x": -8,
+        "y": 98,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg10",
+      "coords": {
+        "x": -8,
+        "y": 108,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg11",
+      "coords": {
+        "x": -8,
+        "y": 118,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg12",
+      "coords": {
+        "x": -8,
+        "y": 128,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg13",
+      "coords": {
+        "x": -8,
+        "y": 138,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg14",
+      "coords": {
+        "x": -8,
+        "y": 148,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg15",
+      "coords": {
+        "x": -8,
+        "y": 158,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg16",
+      "coords": {
+        "x": -8,
+        "y": 168,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SPECIAL THANKS: INSANE AND FRANCESCOMANETTI82"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg17",
+      "coords": {
+        "x": -8,
+        "y": 178,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg18",
+      "coords": {
+        "x": -8,
+        "y": 188,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "msg19",
+      "coords": {
+        "x": -8,
+        "y": 198,
+        "w": 320,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev1",
+      "coords": {
+        "x": -6,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawDev1Name"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev2",
+      "coords": {
+        "x": 89,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawDev2Name"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev3",
+      "coords": {
+        "x": 182,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawDev3Name"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev4",
+      "coords": {
+        "x": 0,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawDev4Name"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev5",
+      "coords": {
+        "x": 0,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawDev5Name"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev6",
+      "coords": {
+        "x": 0,
+        "y": 170,
+        "w": 125,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "fg_func",
+          "func": "drawDev6Name"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev1Link",
+      "coords": {
+        "x": 22,
+        "y": 110,
+        "w": 40,
+        "h": 40
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 27,
+          "up": -1,
+          "down": 30
+        },
+        {
+          "op": "onselect_fire",
+          "func": "dev1LinkMenu_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev2Link",
+      "coords": {
+        "x": 66,
+        "y": 110,
+        "w": 40,
+        "h": 40
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 26,
+          "right": 28,
+          "up": -1,
+          "down": 30
+        },
+        {
+          "op": "onselect_fire",
+          "func": "dev2LinkMenu_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev5Link",
+      "coords": {
+        "x": 198,
+        "y": 110,
+        "w": 40,
+        "h": 40
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 27,
+          "right": 29,
+          "up": -1,
+          "down": 30
+        },
+        {
+          "op": "onselect_fire",
+          "func": "dev5LinkMenu_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "dev6Link",
+      "coords": {
+        "x": 242,
+        "y": 110,
+        "w": 40,
+        "h": 40
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 28,
+          "right": -1,
+          "up": -1,
+          "down": 30
+        },
+        {
+          "op": "onselect_fire",
+          "func": "dev6LinkMenu_onSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "exit",
+      "coords": {
+        "x": 82,
+        "y": 185,
+        "w": 140,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "STAY SENSIBLE"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 4
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 26,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "exitCreditsMenu_onSelect"
+        }
+      ]
+    }
+  ]
+}

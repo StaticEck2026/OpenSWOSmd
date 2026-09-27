@@ -2292,6 +2292,10 @@ __attribute__((used, externally_visible))
 void SWOSMainMenuInit(void)
 {
     CommonMenuExit();
+#ifndef SWOS_SDL_BUILD
+    /* CREDITS (entry 15) opens a JSON menu, which only the SDL build runs. */
+    _menuEntries[15].isInvisible = 1;
+#endif
 #ifndef SWOS_NETPLAY
     /* OpenSWOS's MULTIPLAYER button (entry 14) plays over the network, so it is only
      * in a build that has the netplay library (make NETPLAY=1, docs/NETPLAY.md): never
@@ -2319,6 +2323,20 @@ void MultiplayerMenuSelected(void)
      * what SWOSMainMenuInit did to them is gone. Every main-menu handler that opens a
      * submenu puts it back the same way (OptionsMenuSelected, SaveDiskFilingMenu, ...);
      * without it the two rows return as empty coloured bars. */
+    CommonMenuExit();
+#endif
+}
+
+/* CreditsMenuSelected -- OpenSWOS's CREDITS button (entry 15): SWOS 2020's credits
+ * screen, run from JSON like its online menus (src/online_menus.c, creditsMenu). Those
+ * menus are SDL-only, so on the Amiga the button is hidden (SWOSMainMenuInit) and this
+ * does nothing. Returning re-unpacks the main menu, hence CommonMenuExit, as above. */
+__attribute__((used, externally_visible))
+void CreditsMenuSelected(void)
+{
+#ifdef SWOS_SDL_BUILD
+    OnlineMenus_Init();
+    OnlineMenus_ShowCredits();
     CommonMenuExit();
 #endif
 }

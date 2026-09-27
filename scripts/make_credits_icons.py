@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Build bin/data/credits_icons.bmp -- the developer photos on the CREDITS screen.
+
+The CREDITS menu is SWOS 2020's (credits.mnu, imported by import_swos2020_menus.py),
+with OpenSWOS's own developer added in front. SWOS 2020 draws its six developers
+from developer_icons/dev_icons_40px_indexed.bmp, whose indices are ITS palette; ours
+is different, so the photos are rebuilt here from the truecolour sheet instead:
+
+  * the six SWOS 2020 developers, in SWOS 2020's order, from
+    swos-2020/developer_icons/dev_icons_40px_truecolor.bmp (a 3x3 grid of 40x40 cells,
+    reading order, the last row unused);
+  * OpenSWOS's, second -- after PLAYAVELI -- from a square portrait given with
+    --first (the option keeps its name; the order is PORTRAIT_AT below).
+
+The result is ONE 8-bit image, 40 px tall and 40 px a photo wide, in the order drawn.
+Its pixels are already the palette indices the game shows them with: 128..255, a
+block the menu screens do not use (menus use 0..31), which the CREDITS screen lends to
+the photos while it is open and gives back when it closes (online_menus.c). Index 0
+is never used, so a pixel is always part of a photo. The colours are 12-bit, as the
+Amiga-style palette stores them (4 bits a channel), quantized together to 128.
+
+  scripts/make_credits_icons.py --first PORTRAIT.jpg [--swos2020 DIR] [-o OUT]
+"""
+import argparse
+import os
+import sys
+
+from PIL import Image
+
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+CELL = 40
+BASE = 128              # first palette index the photos use
+COLOURS = 128           # 128..255
+SWOS2020_ORDER = [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)]   # PLAYAVELI .. ELMICHAJ
+PORTRAIT_AT = 1         # where --first's photo goes: after PLAYAVELI (online_menus.c k_creditNames)
+
+
+def square(img):
+    w, h = img.size
+    s = min(w, h)
+    return img.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s))
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--first", required=True, help="OpenSWOS developer's portrait (any size, cropped square)")
+    ap.add_argument("--swos2020", default=os.environ.get("SWOS2020_DIR", "/mnt/c/Projects/GitHub/swos-2020"))
+    ap.add_argument("-o", "--out", default=os.path.join(REPO, "bin", "data", "credits_icons.bmp"))
+    args = ap.parse_args()
+
+    sheet_path = os.path.join(args.swos2020, "developer_icons", "dev_icons_40px_truecolor.bmp")
+    sheet = Image.open(sheet_path).convert("RGB")
+    if sheet.size != (3 * CELL, 3 * CELL):
+        sys.exit("make_credits_icons: %s is %dx%d, expected 120x120" % ((sheet_path,) + sheet.size))
+
+    photos = [sheet.crop((col * CELL, row * CELL, (col + 1) * CELL, (row + 1) * CELL))
+              for col, row in SWOS2020_ORDER]
+    photos.insert(PORTRAIT_AT,
+                  square(Image.open(args.first).convert("RGB")).resize((CELL, CELL), Image.LANCZOS))
+
+    strip = Image.new("RGB", (CELL * len(photos), CELL))
+    for i, p in enumerate(photos):
+        strip.paste(p, (i * CELL, 0))
+    # 12-bit first, so the quantizer and its dithering see the colours the game can show.
+    strip = strip.point(lambda v: ((v + 8) // 17) * 17)
+    q = strip.quantize(colors=COLOURS, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
+
+    pal = q.getpalette()[:COLOURS * 3]
+    pal = [((v + 8) // 17) * 17 for v in pal]
+    pal += [0] * (COLOURS * 3 - len(pal))
+    out = Image.new("P", strip.size)
+    out.putpalette([0, 0, 0] * BASE + pal)
+    flat = q.get_flattened_data() if hasattr(q, "get_flattened_data") else q.getdata()
+    out.putdata([BASE + v for v in flat])
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    out.save(args.out)
+    print("make_credits_icons: %d photos, %d colours -> %s" % (len(photos), COLOURS, os.path.relpath(args.out, REPO)))
+
+
+if __name__ == "__main__":
+    main()

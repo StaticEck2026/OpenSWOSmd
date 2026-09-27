@@ -1,0 +1,338 @@
+{
+  "name": "rateMatchMenu",
+  "comment": "OpenSWOS: HOW WAS THE MATCH? -- shown after every online match: a 1-5 star rating and an optional line about any problems, for the match report (docs/NETPLAY_REPORT.md). JSON-only (docs/MENUS.md section 10); handlers and the star drawing in src/online_menus.c.",
+  "menu_flags": {
+    "dos_redraw": true
+  },
+  "onInit": "rateMatch_OnInit",
+  "onReturn": null,
+  "onDraw": "rateMatch_OnDraw",
+  "defaultEntry": 5,
+  "items": [
+    {
+      "kind": "entry",
+      "name": "header",
+      "coords": {
+        "x": 72,
+        "y": 0,
+        "w": 176,
+        "h": 16
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x10",
+          "literal": "HOW WAS THE MATCH?"
+        },
+        {
+          "op": "colors",
+          "frame_color": 1,
+          "background_color": 7
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "against",
+      "coords": {
+        "x": 0,
+        "y": 26,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "result",
+      "coords": {
+        "x": 0,
+        "y": 38,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "star1",
+      "coords": {
+        "x": 90,
+        "y": 56,
+        "w": 24,
+        "h": 27
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 4,
+          "up": -1,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_star_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "star2",
+      "coords": {
+        "x": 119,
+        "y": 56,
+        "w": 24,
+        "h": 27
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 3,
+          "right": 5,
+          "up": -1,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_star_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "star3",
+      "coords": {
+        "x": 148,
+        "y": 56,
+        "w": 24,
+        "h": 27
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 4,
+          "right": 6,
+          "up": -1,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_star_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "star4",
+      "coords": {
+        "x": 177,
+        "y": 56,
+        "w": 24,
+        "h": 27
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 5,
+          "right": 7,
+          "up": -1,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_star_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "star5",
+      "coords": {
+        "x": 206,
+        "y": 56,
+        "w": 24,
+        "h": 27
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": ""
+        },
+        {
+          "op": "nav",
+          "left": 6,
+          "right": -1,
+          "up": -1,
+          "down": 10
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_star_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "hint",
+      "coords": {
+        "x": 0,
+        "y": 86,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "issuesLabel",
+      "coords": {
+        "x": 0,
+        "y": 108,
+        "w": 320,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "ANY PROBLEMS? (OPTIONAL)"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "issues",
+      "coords": {
+        "x": 20,
+        "y": 122,
+        "w": 280,
+        "h": 14
+      },
+      "commands": [
+        {
+          "op": "text_no_ptr",
+          "flags": "0x0"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 7
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": -1,
+          "up": 5,
+          "down": 11
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_issues_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "send",
+      "coords": {
+        "x": 60,
+        "y": 150,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SEND"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 14
+        },
+        {
+          "op": "nav",
+          "left": -1,
+          "right": 12,
+          "up": 10,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_send_OnSelect"
+        }
+      ]
+    },
+    {
+      "kind": "entry",
+      "name": "skip",
+      "coords": {
+        "x": 170,
+        "y": 150,
+        "w": 90,
+        "h": 15
+      },
+      "commands": [
+        {
+          "op": "text",
+          "flags": "0x0",
+          "literal": "SKIP"
+        },
+        {
+          "op": "colors",
+          "frame_color": 0,
+          "background_color": 12
+        },
+        {
+          "op": "nav",
+          "left": 11,
+          "right": -1,
+          "up": 10,
+          "down": -1
+        },
+        {
+          "op": "onselect_fire",
+          "func": "rateMatch_skip_OnSelect"
+        }
+      ]
+    }
+  ]
+}

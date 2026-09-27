@@ -59,6 +59,8 @@ MULTIPLAYER_MENUS = [
     "mlogReader", "mlogTicker", "mlogStats",
     # online stats                                                  (replays/replaysMenu.cpp)
     "myRankedStats", "myFriendlyStats",
+    # the credits, from the main menu                               (game.cpp)
+    "credits",
 ]
 
 # SWOS 2020's skip opcodes, by NUMBER (menuCodes.h: kLeftSkip = 17 ... kDownSkip = 20),

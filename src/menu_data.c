@@ -6,6 +6,7 @@
 #include "menu_data.h"
 
 extern void MultiplayerMenuSelected(void);
+extern void CreditsMenuSelected(void);
 extern void SetExitMenuFlag(void);
 extern void TopGoalScorersMenu_0(void);
 extern void SetupDIYCompetitionStatsMenu(void);
@@ -492,6 +493,7 @@ extern char _aMemoFromTheClu[];
 extern char _aMenuMusic[];
 extern char _aGameplay[];
 extern char _aMultiplayer[];
+extern char _aCredits[];
 extern char _aName[];
 extern char _aNat[];
 extern char _aNationalTeams[];
@@ -6892,7 +6894,7 @@ Menu_SWOSMainMenu _swosMainMenu = {
     },
     {
         { 27, -50, -6, 14 },
-        { MENU_CMD_NAV, -1, -1, 12, -1 },
+        { MENU_CMD_NAV, -1, -1, 12, 15 },
         { MENU_CMD_COLORS, 0xC },
         { MENU_CMD_TEXT_PTR, 0x0, _aLoadOldCompeti },
         { MENU_CMD_ONSELECT_FIRE, LoadOldCompetitionMenu },
@@ -6904,6 +6906,14 @@ Menu_SWOSMainMenu _swosMainMenu = {
         { MENU_CMD_COLORS, 0xB },
         { MENU_CMD_TEXT_PTR, 0x10, _aMultiplayer },
         { MENU_CMD_ONSELECT_FIRE, MultiplayerMenuSelected },
+        MENU_CMD_END
+    },
+    {
+        { -12, -36, 60, 14 },
+        { MENU_CMD_NAV, -1, -1, 13, -1 },
+        { MENU_CMD_COLORS, 0xD },
+        { MENU_CMD_TEXT_PTR, 0x0, _aCredits },
+        { MENU_CMD_ONSELECT_FIRE, CreditsMenuSelected },
         MENU_CMD_END
     },
     { MENU_MARK_START_MENU, 0, 0 },

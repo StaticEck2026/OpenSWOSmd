@@ -1331,6 +1331,7 @@ typedef struct Menu_SWOSMainMenu
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry12;
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry13;
   MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry14;
+  MenuEntry_Byte_Nav_Colors_TextPtr_OnSelect entry15;   /* CREDITS (SDL only) */
   MenuMark_StartMenu menu3Start;
   MenuMark markEndMenu;
 } Menu_SWOSMainMenu;
