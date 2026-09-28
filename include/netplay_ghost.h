@@ -37,4 +37,10 @@ void Ghost_Mark(int32_t frame);
  * top of the man on the ball who wins nothing), and for each mark what led up to it. */
 void Ghost_Report(int32_t lastFrame);
 
+/* The windows Ghost_Report kept, as CSV text: CLIP_S seconds either side of every mark
+ * and of the longest events, each frame as played and, where it differed, as drawn. NULL
+ * when there are none. Valid until the next Ghost_Begin -- the match report
+ * (src/match_report.c) puts both players' in its zip. */
+const char *Ghost_Clips(uint32_t *len);
+
 #endif /* NETPLAY_GHOST_H */

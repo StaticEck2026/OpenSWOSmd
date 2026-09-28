@@ -43,6 +43,7 @@ static int32_t sending(void)
 #include "record_proto.h"   /* Record_Put / Record_Get */
 #include "report_proto.h"
 #include "swos_io.h"
+#include "netplay_ghost.h"    /* Ghost_Clips: the windows the zip carries */
 
 #ifndef __EMSCRIPTEN__
 #include <fcntl.h>
@@ -75,6 +76,8 @@ typedef struct {
     char     name[32], build[24], platform[24], result[64], comment[64];
     char    *log;                   /* the log, as text; NULL without one */
     uint32_t logLen;
+    char    *ghost;                 /* the ghost windows, as CSV (netplay_ghost.h); NULL without */
+    uint32_t ghostLen;
 } Half;
 
 static struct {
@@ -100,6 +103,7 @@ static void copy_text(char *out, size_t cap, const char *s)
 static void half_free(Half *h)
 {
     free(h->log);
+    free(h->ghost);
     memset(h, 0, sizeof *h);
 }
 
@@ -205,38 +209,64 @@ static int32_t get_string(const uint8_t **p, const uint8_t *end, char *out, size
 }
 
 /* The half as REPORT_HALF: the log deflated, cut from the front until it fits. */
-static void build_message(const Half *h)
+/* Deflate `text` into at most `budget` bytes: whole if it fits, else cut -- from the
+ * front (`keepEnd`: a log, whose newest lines matter) or from the back at a line
+ * (the ghost windows, whose header comes first). *used is how much of it went in. */
+static uint8_t *pack_within(const char *text, uint32_t len, size_t budget, int32_t keepEnd,
+                            size_t *packedLen, uint32_t *from, uint32_t *used)
 {
-    uint8_t *packed = NULL, *m;
-    size_t packedLen = 0;
-    uint32_t from = 0, fixed;
-
-    if (h->log) {
-        for (;;) {
-            packed = (uint8_t *)tdefl_compress_mem_to_heap(h->log + from, h->logLen - from,
-                                                           &packedLen, TDEFL_DEFAULT_MAX_PROBES);
-            if (!packed || packedLen < REPORT_HALF_MAX - 2048 || h->logLen - from < 4096)
-                break;
-            free(packed);
-            packed = NULL;
-            from += (h->logLen - from) / 2;         /* keep the newer half */
+    uint32_t start = 0, n = len;
+    for (;;) {
+        uint8_t *packed = (uint8_t *)tdefl_compress_mem_to_heap(text + start, n, packedLen,
+                                                               TDEFL_DEFAULT_MAX_PROBES);
+        if (!packed || *packedLen <= budget || n < 4096) {
+            *from = start;
+            *used = packed ? n : 0;
+            return packed;
+        }
+        free(packed);
+        if (keepEnd) {
+            start += n / 2;
+            n = len - start;
+        } else {
+            n /= 2;
+            while (n > 0 && text[n - 1] != '\n')
+                n--;
         }
     }
+}
+
+/* The half as REPORT_HALF: the log and the ghost windows deflated, cut until they fit. */
+static void build_message(const Half *h)
+{
+    uint8_t *packed = NULL, *ghost = NULL, *m;
+    size_t packedLen = 0, ghostLen = 0;
+    uint32_t from = 0, logUsed = 0, gFrom = 0, gUsed = 0, fixed;
+
+    if (h->ghost)
+        ghost = pack_within(h->ghost, h->ghostLen, REPORT_GHOST_MAX, 0, &ghostLen, &gFrom, &gUsed);
+    if (!ghost)
+        ghostLen = 0;
+    if (h->log)
+        packed = pack_within(h->log, h->logLen, REPORT_HALF_MAX - 2048 - ghostLen, 1,
+                             &packedLen, &from, &logUsed);
     if (!packed)
         packedLen = 0;
 
-    m = (uint8_t *)malloc(REPORT_HALF_FIXED + 5 * 256 + packedLen);
+    m = (uint8_t *)malloc(REPORT_HALF_FIXED + 5 * 256 + packedLen + 8 + ghostLen);
     if (!m) {
         free(packed);
+        free(ghost);
         return;
     }
     memcpy(m, REPORT_HALF_MAGIC, 4);
     m[4] = REPORT_PROTOCOL;
     m[5] = (uint8_t)s_rep.player;
     m[6] = (uint8_t)h->rating;
-    m[7] = (uint8_t)((packed ? REPORT_HALF_LOG : 0) | (h->off ? REPORT_HALF_OFF : 0));
+    m[7] = (uint8_t)((packed ? REPORT_HALF_LOG : 0) | (h->off ? REPORT_HALF_OFF : 0) |
+                     (ghost ? REPORT_HALF_GHOST : 0));
     Record_Put64(m + 8, s_rep.matchId);
-    Record_Put32(m + 16, packed ? h->logLen - from : 0);
+    Record_Put32(m + 16, packed ? logUsed : 0);
     Record_Put32(m + 20, (uint32_t)packedLen);
     fixed = REPORT_HALF_FIXED;
     fixed += put_string(m + fixed, h->name);
@@ -246,9 +276,18 @@ static void build_message(const Half *h)
     fixed += put_string(m + fixed, h->comment);
     if (packed)
         memcpy(m + fixed, packed, packedLen);
+    fixed += (uint32_t)packedLen;
+    if (ghost) {
+        Record_Put32(m + fixed, gUsed);
+        Record_Put32(m + fixed + 4, (uint32_t)ghostLen);
+        memcpy(m + fixed + 8, ghost, ghostLen);
+        fixed += 8 + (uint32_t)ghostLen;
+    }
+    (void)from; (void)gFrom;
     free(packed);
+    free(ghost);
     s_rep.msg = m;
-    s_rep.msgLen = fixed + (uint32_t)packedLen;
+    s_rep.msgLen = fixed;
 }
 
 void MatchReport_Submit(int32_t rating, const char *comment, const char *result)
@@ -265,6 +304,15 @@ void MatchReport_Submit(int32_t rating, const char *comment, const char *result)
     copy_text(h->comment, sizeof h->comment, comment);
     h->log = read_log(&h->logLen);
     h->hasLog = h->log != NULL;
+    {
+        uint32_t n = 0;
+        const char *clips = Ghost_Clips(&n);
+        if (clips && n && (h->ghost = (char *)malloc(n + 1)) != NULL) {
+            memcpy(h->ghost, clips, n);
+            h->ghost[n] = '\0';
+            h->ghostLen = n;
+        }
+    }
     /* Off: this player's own zip still has everything of theirs, but nothing about
      * them leaves the machine -- the other player is told only that. */
     {
@@ -316,6 +364,23 @@ static void take_peer_half(const uint8_t *p, uint32_t len)
             h->hasLog = 1;
         } else {
             free(log);
+        }
+    }
+    if (p[7] & REPORT_HALF_LOG)
+        q += packedLen;
+    if ((p[7] & REPORT_HALF_GHOST) && q + 8 <= end) {
+        uint32_t rawLen = Record_Get32(q), zLen = Record_Get32(q + 4);
+        q += 8;
+        if (zLen <= (uint32_t)(end - q) && rawLen <= 4 * REPORT_LOG_MAX) {
+            char *g = (char *)malloc(rawLen + 1);
+            if (g && tinfl_decompress_mem_to_mem(g, rawLen, q, zLen,
+                                                 TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF) == rawLen) {
+                g[rawLen] = '\0';
+                h->ghost = g;
+                h->ghostLen = rawLen;
+            } else {
+                free(g);
+            }
         }
     }
     h->have = 1;
@@ -385,10 +450,14 @@ static uint32_t summary(char *out, size_t cap)
                 "saw          %s\r\n"
                 "rating       %s\r\n"
                 "comment      %s\r\n"
-                "log          %s\r\n",
+                "log          %s\r\n"
+                "ghosts       %s\r\n",
                 h->build, h->platform, h->result[0] ? h->result : "-", stars(h->rating),
                 h->comment[0] ? h->comment : "-",
-                h->hasLog ? (i == 0 ? "SWOS_player1.log" : "SWOS_player2.log") : "not sent");
+                h->hasLog ? (i == 0 ? "SWOS_player1.log" : "SWOS_player2.log") : "not sent",
+                h->ghost ? (i == 0 ? "ghost_player1.csv (scripts/ghost_view.py)"
+                                   : "ghost_player2.csv (scripts/ghost_view.py)")
+                         : "none: no G-mark and nothing detected");
     }
     return n < cap ? (uint32_t)n : (uint32_t)cap - 1;
 }
@@ -660,6 +729,9 @@ void MatchReport_Finish(void)
         if (h->log)
             ok = mz_zip_writer_add_mem(&zip, i == 0 ? "SWOS_player1.log" : "SWOS_player2.log",
                                        h->log, h->logLen, MZ_DEFAULT_COMPRESSION);
+        if (ok && h->ghost)
+            ok = mz_zip_writer_add_mem(&zip, i == 0 ? "ghost_player1.csv" : "ghost_player2.csv",
+                                       h->ghost, h->ghostLen, MZ_DEFAULT_COMPRESSION);
     }
     if (ok) {
         uint32_t n = summary(text, sizeof text);

@@ -4,6 +4,7 @@
  */
 #include "netplay_ghost.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,9 @@ enum {
     MAX_PRINTED   = 12,         /* events printed, longest first */
     MAX_MARKS     = 64,
     MARK_WINDOW_S = 3,          /* a mark looks back this many seconds */
+    CLIP_S        = 3,          /* a saved window: this many seconds either side */
+    CLIP_EVENTS   = 3,          /* ... around the worst events, as well as every mark */
+    CLIP_MAX      = 8,          /* windows kept at most */
 };
 
 typedef enum {
@@ -64,6 +68,8 @@ static struct {
     int32_t     markCount;
     GhostEvent *events;
     uint32_t    eventCount, eventCap;
+    char       *clips;              /* Ghost_Clips: the windows, as CSV */
+    uint32_t    clipsLen, clipsCap;
 } s_g;
 
 static int32_t reserve(uint32_t frame)
@@ -95,6 +101,7 @@ void Ghost_Begin(int32_t player)
     s_g.corrections = s_g.changed = 0;
     s_g.markCount = 0;
     s_g.eventCount = 0;
+    s_g.clipsLen = 0;
     if (s_g.cap) {
         memset(s_g.drawn, 0, s_g.cap * sizeof *s_g.drawn);
         memset(s_g.final, 0, s_g.cap * sizeof *s_g.final);
@@ -342,6 +349,125 @@ static void findWalkThroughs(int32_t lastFrame)
     }
 }
 
+/* ---- the windows a match report carries (Ghost_Clips) ---- */
+
+static void clipPrintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+static void clipPrintf(const char *fmt, ...)
+{
+    va_list ap;
+    int n;
+    for (;;) {
+        uint32_t room = s_g.clipsCap - s_g.clipsLen;
+        va_start(ap, fmt);
+        n = vsnprintf(s_g.clips ? s_g.clips + s_g.clipsLen : NULL, room, fmt, ap);
+        va_end(ap);
+        if (n < 0)
+            return;
+        if ((uint32_t)n < room) {
+            s_g.clipsLen += (uint32_t)n;
+            return;
+        }
+        {
+            uint32_t cap = s_g.clipsCap ? s_g.clipsCap * 2 : 65536;
+            char *grown;
+            while (cap < s_g.clipsLen + (uint32_t)n + 1)
+                cap *= 2;
+            grown = (char *)realloc(s_g.clips, cap);
+            if (!grown)
+                return;
+            s_g.clips = grown;
+            s_g.clipsCap = cap;
+        }
+    }
+}
+
+static void clipRow(int32_t window, const char *why, int32_t fr, const char *version, const GhostFrame *g)
+{
+    int32_t i;
+    clipPrintf("%d,%s,%d,%s,%d,%d,%d,%d", (int)window, why, (int)fr, version, g->bx, g->by, g->bz, g->owner);
+    for (i = 0; i < GHOST_PLAYERS; i++)
+        clipPrintf(",%d,%d", g->x[i], g->y[i]);
+    clipPrintf("\n");
+}
+
+/* Windows of CLIP_S either side of every mark and of the CLIP_EVENTS longest events,
+ * overlapping ones merged: every frame as finally played, and as this player drew it
+ * wherever that differed -- what the viewer (scripts/ghost_view.py) sets side by side. */
+static void buildClips(int32_t lastFrame, int32_t fps, const GhostEvent *longest, int32_t nLongest)
+{
+    int32_t from[CLIP_MAX + 64], to[CLIP_MAX + 64], n = 0, i, j, fr;
+    char why[CLIP_MAX + 64][48];
+
+    s_g.clipsLen = 0;
+    for (i = 0; i < s_g.markCount && n < CLIP_MAX; i++, n++) {
+        from[n] = s_g.marks[i] - CLIP_S * fps;
+        to[n] = s_g.marks[i] + CLIP_S * fps;
+        snprintf(why[n], sizeof why[n], "mark %d", (int)i + 1);
+    }
+    for (i = 0; i < nLongest && i < CLIP_EVENTS && n < CLIP_MAX; i++, n++) {
+        static const char *const k_short[EV_KINDS] = { "drawn-not-real", "real-not-drawn", "walk-through" };
+        from[n] = longest[i].frame - CLIP_S * fps;
+        to[n] = longest[i].frame + longest[i].frames + CLIP_S * fps;
+        snprintf(why[n], sizeof why[n], "%s", k_short[longest[i].kind]);
+    }
+    if (!n)
+        return;
+    /* Sorted by start, then merged where they overlap. */
+    for (i = 1; i < n; i++)
+        for (j = i; j > 0 && from[j] < from[j - 1]; j--) {
+            char t[48];
+            int32_t a = from[j], b = to[j];
+            from[j] = from[j - 1]; to[j] = to[j - 1];
+            from[j - 1] = a; to[j - 1] = b;
+            memcpy(t, why[j], sizeof t); memcpy(why[j], why[j - 1], sizeof t); memcpy(why[j - 1], t, sizeof t);
+        }
+    for (i = 0, j = 0; i < n; i++) {
+        if (j > 0 && from[i] <= to[j - 1]) {
+            if (to[i] > to[j - 1])
+                to[j - 1] = to[i];
+            if (strlen(why[j - 1]) + strlen(why[i]) + 2 < sizeof why[j - 1]) {
+                strcat(why[j - 1], "+");
+                strcat(why[j - 1], why[i]);
+            }
+            continue;
+        }
+        from[j] = from[i]; to[j] = to[i];
+        memcpy(why[j], why[i], sizeof why[j]);
+        j++;
+    }
+    n = j;
+
+    clipPrintf("# OpenSWOS ghost windows (src/netplay_ghost.c): player %d, %d frames a second.\n"
+               "# Every frame as finally played ('final'), and as this player drew it ('drawn') "
+               "where that differed.\n# Players 1-11 are team 1, 12-22 team 2; positions in "
+               "pitch pixels. scripts/ghost_view.py draws it.\n",
+               (int)s_g.player, (int)fps);
+    clipPrintf("window,why,frame,version,ball_x,ball_y,ball_z,owner");
+    for (i = 0; i < GHOST_PLAYERS; i++)
+        clipPrintf(",t%dp%d_x,t%dp%d_y", i / 11 + 1, i % 11 + 1, i / 11 + 1, i % 11 + 1);
+    clipPrintf("\n");
+    for (i = 0; i < n; i++) {
+        if (from[i] < 0)
+            from[i] = 0;
+        if (to[i] > lastFrame)
+            to[i] = lastFrame;
+        for (fr = from[i]; fr <= to[i]; fr++) {
+            const GhostFrame *d = &s_g.drawn[fr], *t = &s_g.final[fr];
+            if (!t->have)
+                continue;
+            clipRow(i + 1, why[i], fr, "final", t);
+            if (d->have && memcmp(d, t, sizeof *d) != 0)
+                clipRow(i + 1, why[i], fr, "drawn", d);
+        }
+    }
+}
+
+const char *Ghost_Clips(uint32_t *len)
+{
+    *len = s_g.clipsLen;
+    return s_g.clipsLen ? s_g.clips : NULL;
+}
+
 void Ghost_Report(int32_t lastFrame)
 {
     uint32_t frames = 0, differed = 0, ownerWrong = 0, count[EV_KINDS] = { 0 }, total[EV_KINDS] = { 0 };
@@ -410,8 +536,11 @@ void Ghost_Report(int32_t lastFrame)
         qsort(sorted, s_g.eventCount, sizeof *sorted, compareEvents);
         for (k = 0; k < (int32_t)s_g.eventCount && k < MAX_PRINTED; k++)
             printEvent(&sorted[k]);
-        qsort(sorted, s_g.eventCount, sizeof *sorted, compareFrames);
     }
+    /* The windows the match report carries: every mark, and the longest events. */
+    buildClips(lastFrame, fps, sorted, sorted ? (int32_t)s_g.eventCount : 0);
+    if (sorted && s_g.eventCount)
+        qsort(sorted, s_g.eventCount, sizeof *sorted, compareFrames);
 
     /* Each mark: what this player drew against what happened, in the seconds before. */
     for (m = 0; m < s_g.markCount; m++) {

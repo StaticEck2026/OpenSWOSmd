@@ -103,6 +103,10 @@ writes one zip of both logs and both HOW WAS THE MATCH? answers (`src/match_repo
 docs/NETPLAY_REPORT.md): kept in `save/netplay/` and sent to the server's `--reports DIR` —
 unless SEND MATCH REPORTS (`[netplay] reports`, on in tester builds) is off. Run
 `REPORTS=1 RELAY=0 scripts/relay_test.sh` after touching it, the rating screen, or the lobby's end.
+"Ghosting" (players running through each other online) has its own doc, docs/NETPLAY_GHOSTING.md:
+every match records each frame as drawn and as played (`src/netplay_ghost.c`), logs `[ghost]`
+lines, keeps windows around G-marks (G / pad BACK) for the report zip, and
+`scripts/ghost_view.py` draws them; `SWOS_LIVE_CHASE_INPUT` + `SWOS_NETEM_LINK=1` reproduce it.
 The **web build plays online too** (`make WASM=1 NETPLAY=1`, docs/NETPLAY.md §8): a browser
 has no UDP, so Emscripten sends each datagram as a WebSocket message to the server, whose
 `--websocket` gate (`Server/WebGate.cpp`) gives each browser socket a UDP address of its own;

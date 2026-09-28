@@ -18,6 +18,9 @@
  *  20  4  its length deflated (raw deflate, miniz tdefl)
  *  24     strings, each a length byte then the bytes: name, build id, platform, the
  *         result as that player saw it, the comment; then the deflated log
+ *         then, with REPORT_HALF_GHOST: 4 bytes the ghost windows' length, 4 bytes their
+ *         length deflated, and them -- CSV from netplay_ghost.c (Ghost_Clips), each frame
+ *         around a G-mark or a detected ghost as played and, where it differed, as drawn
  *
  * REPORT_UPLOAD -- one player's whole report, sent to the server on its TCP port
  * (the recorder's and the WebSocket gate's: the gate tells them apart by the magic):
@@ -43,6 +46,8 @@
 #define REPORT_HALF_FIXED    24
 #define REPORT_HALF_LOG      0x01
 #define REPORT_HALF_OFF      0x02   /* that player has SEND MATCH REPORTS off: no more than this */
+#define REPORT_HALF_GHOST    0x04   /* the ghost windows follow the log (netplay_ghost.h) */
+#define REPORT_GHOST_MAX     (64u << 10)   /* their share of a half, deflated */
 
 #define REPORT_UPLOAD_FIXED  20
 #define REPORT_ZIP_MAX       (512u << 10)   /* two logs deflated fit many times over */

@@ -1411,6 +1411,10 @@ static void liveEnd(int32_t outcome, const char *why)
      * pair proves nothing, because the whole method is diffing the two. */
     if (outcome != NETPLAY_LIVE_FINISHED)
         ringDump(-1);
+    /* What this player drew against what happened -- an early end too, which is when
+     * it is most wanted: frames up to the last confirmed one are final. */
+    Ghost_Report(outcome == NETPLAY_LIVE_FINISHED && s_np.endFrame >= 0 ? s_np.endFrame
+                                                                        : s_np.lastConfirmed);
     if (s_np.live && s_np.statStartMs) {
         logStatsLine("whole match", s_np.statAllN, s_np.statAllSum, s_np.statAllMin,
                      s_np.statAllMax, s_np.statAllJitSum);
@@ -1449,7 +1453,8 @@ static void p2pFinish(void)
 {
     ReplayDriverState st;
 
-    Ghost_Report(s_np.endFrame);        /* every frame is final now */
+    if (!s_np.live)
+        Ghost_Report(s_np.endFrame);    /* every frame is final now (a live match: liveEnd) */
     fprintf(stderr, "[netplay] frame %d is confirmed: %s\n", s_np.endFrame,
             s_np.live ? "the session stops there"
                       : (s_np.endFrame < (int32_t)ReplayTest_FrameCount()

@@ -328,7 +328,7 @@ def check(path):
     z = zipfile.ZipFile(path)
     names = set(z.namelist())
     logs = {n: z.read(n).decode("latin-1") for n in names if n.endswith(".log")}
-    good = names == want and all("[build]" in t or "live match" in t for t in logs.values())
+    good = want <= names and all("[build]" in t or "live match" in t for t in logs.values())
     print("report: %s %s" % (os.path.relpath(path, out), "ok" if good else "MISSING %s" % sorted(want - names)))
     return good
 for side in ("host", "join"):

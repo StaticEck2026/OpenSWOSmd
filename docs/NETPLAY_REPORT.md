@@ -46,6 +46,7 @@ What went wrong before this existed (the first multiplayer weekend, 2026-09-26):
    save/netplay/2026-09-27_211405_PREDICADOR_vs_ELSHEIMY.zip
        SWOS_player1.log     the host's SWOS.log
        SWOS_player2.log     the joiner's
+       ghost_player<N>.csv  each player's ghost windows (docs/NETPLAY_GHOSTING.md)
        rating.txt           match id, teams, input delay, relayed or not, and for each
                             player: build, platform, the result they saw, rating, comment
    ```
@@ -100,44 +101,12 @@ also switches reports on (or off) for any run; without it the automated tests (w
 `SWOS_LOBBY_READY` and friends) never upload. HOW WAS THE MATCH? itself is skipped in them
 unless `SWOS_RATE_MATCH=1`, so their reports carry no rating.
 
-## Ghosting: what the log says, and the G key
+## Ghosting
 
-"Ghosting" is players running through each other without a tackle. It has two possible
-causes, and every online match now logs both (`src/netplay_ghost.c`), as `[ghost]` lines
-at the end of the match in SWOS.log -- so they arrive in the match report too:
-
-- **Rollback.** When the other player's input is late the game guesses it, draws that
-  frame, and quietly corrects it when the input arrives. Each frame is recorded twice --
-  as drawn, and as finally played -- and compared: how many frames were drawn wrong, how
-  far players were drawn from where they really were, possession drawn wrong, and
-  *rollback ghosts*: opponents drawn touching near the ball who were 12+ px apart in the
-  real game, or the reverse.
-- **The game itself.** *Walk-throughs* in the real game: an opponent on top of the man on
-  the ball for 4+ frames who did not win it. SWOS has no bodies, only the ball, so some of
-  these are ordinary SWOS; they matter most next to a mark.
-
-**Press G (keyboard) or BACK (pad) the moment you see a ghost.** It does nothing to the
-match -- the other player never knows -- and logs `[ghost] MARKED ... at 0:34`. At the end
-of the match each mark is broken down: what this player's screen got wrong in the 3
-seconds before it, and which rollback ghosts or walk-throughs happened then. "Nothing"
-means what you saw is what the match really did. Times are time since kick-off, not the
-match clock on the screen. Keep `LATEST.SRP` from that match as well: with the frame
-number it can be replayed to the exact moment.
-
-Reproducing it without testers (docs/NETPLAY.md): two ball-chasing players
-(`SWOS_LIVE_CHASE_INPUT=<seed>` -- a random pad never reaches the ball) over an emulated
-network that the lobby's ping check sees too (`SWOS_NETEM_LINK=1`), so the input delay is
-agreed from the emulated ping as in a real match:
-
-```bash
-SWOS_NETEM_LINK=1 SWOS_LIVE_PLAIN_LOBBY=1 PROFILE=mobile \
-  HOST_ENV=SWOS_LIVE_CHASE_INPUT=1 JOIN_ENV=SWOS_LIVE_CHASE_INPUT=2 scripts/netplay_live_test.sh
-```
-
-`SWOS_GHOST_TRACE=<file>` writes every frame, drawn and final, as CSV. Measured
-2026-09-27, one minute per run: at Mladen and Crom's link (about 100 ms, delay 2) 2-6% of
-frames drawn wrong, at most 8 px, and no rollback ghosts; on the `mobile` profile 9-11%,
-up to 28 px, and 0-2 ghosts a minute, 1-3 frames each.
+Every report also carries each player's ghost windows (`ghost_player1.csv`,
+`ghost_player2.csv`): what that player's screen drew against the match as played, around
+every G-mark and the worst detected ghosts. docs/NETPLAY_GHOSTING.md has what they are,
+the G key, and `scripts/ghost_view.py`, which draws them.
 
 ## Still to do
 
