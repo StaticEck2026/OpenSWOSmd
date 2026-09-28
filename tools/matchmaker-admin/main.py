@@ -1,44 +1,69 @@
 #!/usr/bin/env python3
-"""matchmaker-admin: a tiny, deliberately powerless web trigger for a handful of
-matchmaker maintenance actions (git pull, rebuild, systemd service control).
+"""matchmaker-admin: a small web trigger for a handful of matchmaker
+maintenance actions (git pull, rebuild, systemd service control).
 
 This process runs as an UNPRIVILEGED user and binds 127.0.0.1 only - nginx
 reverse-proxies it from outside with auth_basic (see README.md), so it's never
 reachable without a password and never reachable except through TLS.
 
-It cannot run git, cmake, or systemctl itself. All it can do is drop a named,
-empty request file into REQUESTS_DIR - the action name IS the filename, taken
-from a fixed allowlist below, never shell-interpolated. A ROOT cron job
-(admin-cron-worker.sh, run once a minute) is the only thing that actually
-executes anything; this process never runs as root and never will.
+Two tiers, by whether the action actually needs root:
+  - pull/build/status need no elevated privilege at all (git, a plain build,
+    and reading a unit's status are all fine as this same unprivileged user) -
+    these run IMMEDIATELY, in a background thread, no delay.
+  - install/remove/restart genuinely need root (systemctl enable/disable/
+    start/stop --now, and writing the unit file into /etc/systemd) - this
+    process must never have that, so for these it only ever drops a named,
+    empty request file into REQUESTS_DIR (the action name IS the filename,
+    from the fixed allowlist below, never shell-interpolated). A ROOT cron
+    job (admin-cron-worker.sh, run once a minute) is the only thing that ever
+    executes those three; this process never runs as root and never will.
 
 Stdlib only, on purpose - one file, nothing to pip install on the server.
 """
 import json
 import os
+import subprocess
+import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
 LISTEN_ADDR = ("127.0.0.1", 8899)
+REPO_DIR = "/home/redhair/git/OpenSWOS"
 ADMIN_DIR = "/srv/swos-matchmaker/admin"
 REQUESTS_DIR = os.path.join(ADMIN_DIR, "requests")
 PROCESSED_DIR = os.path.join(ADMIN_DIR, "processed")
 LATEST_LOG = os.path.join(PROCESSED_DIR, "latest.log")
 
-# action name -> button label. admin-cron-worker.sh has its own copy of this
-# same list; both must agree, or a queued file just sits there unprocessed
-# (the worker only recognizes what's in its own case statement).
+# Runs immediately, right here, as this same unprivileged user - no root, no
+# queue, no cron delay.
+LOCAL_ACTIONS = {
+    "pull": ["git", "pull", "--ff-only"],
+    "build": ["scripts/run_matchmaker.sh", "--rebuild", "--build-only"],
+    "status": ["scripts/swos-matchmaker-service.sh", "status"],
+}
+# Needs real root - queued for admin-cron-worker.sh instead. That script has
+# its own copy of this same set; both must agree, or a queued file just sits
+# there unprocessed (the worker only recognizes what's in its own case
+# statement).
+QUEUED_ACTIONS = {"install", "restart", "remove"}
+
 ACTIONS = [
     ("pull", "git pull"),
     ("build", "Rebuild (--rebuild --build-only)"),
+    ("status", "Service: status"),
     ("install", "Service: install"),
     ("restart", "Service: restart"),
-    ("status", "Service: status"),
     ("remove", "Service: remove"),
 ]
 ACTION_NAMES = {name for name, _ in ACTIONS}
 CONFIRM_ACTIONS = {"remove", "restart"}
+assert ACTION_NAMES == set(LOCAL_ACTIONS) | QUEUED_ACTIONS
+
+# Guards against two local actions (e.g. two clicks on "build") racing in the
+# same build/ directory - admin-cron-worker.sh has its own, separate flock for
+# the same reason on the queued side.
+local_run_lock = threading.Lock()
 
 
 def render_index():
@@ -81,6 +106,45 @@ setInterval(poll, 2000);
 </body></html>"""
 
 
+def write_log(action, text):
+    os.makedirs(PROCESSED_DIR, exist_ok=True)
+    fname = os.path.join(PROCESSED_DIR, f"{time.time_ns()}-{action}.log")
+    with open(fname, "w", encoding="utf-8") as f:
+        f.write(text)
+    with open(LATEST_LOG, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def run_local_action(action):
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    header = f"=== {ts}  action={action} ===\n"
+    try:
+        result = subprocess.run(
+            LOCAL_ACTIONS[action], cwd=REPO_DIR,
+            capture_output=True, text=True, timeout=1800,
+        )
+        out = result.stdout + result.stderr
+        footer = "--- OK ---\n" if result.returncode == 0 else f"--- FAILED (exit {result.returncode}) ---\n"
+    except Exception as e:
+        out = str(e) + "\n"
+        footer = "--- FAILED (exception) ---\n"
+    write_log(action, header + out + footer)
+
+
+def start_local_action(action):
+    if not local_run_lock.acquire(blocking=False):
+        return "busy: another local action is already running, try again shortly\n"
+
+    def worker():
+        try:
+            run_local_action(action)
+        finally:
+            local_run_lock.release()
+
+    threading.Thread(target=worker, daemon=True).start()
+    return f"started: {action}\n"
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "matchmaker-admin/1.0"
 
@@ -110,14 +174,20 @@ class Handler(BaseHTTPRequestHandler):
         if action not in ACTION_NAMES:
             self.send_error(400, "unknown action")
             return
-        # Filename alone carries the request - contents are empty and never
-        # read. Nanosecond timestamp keeps multiple queued requests ordered
-        # and gives the worker a human-readable history.
-        fname = f"{time.time_ns()}-{action}.req"
-        os.makedirs(REQUESTS_DIR, exist_ok=True)
-        with open(os.path.join(REQUESTS_DIR, fname), "wb"):
-            pass
-        body = f"queued: {action}\n".encode("utf-8")
+
+        if action in LOCAL_ACTIONS:
+            msg = start_local_action(action)
+        else:
+            # Filename alone carries the request - contents are empty and
+            # never read. Nanosecond timestamp keeps multiple queued requests
+            # ordered and gives the worker a human-readable history.
+            fname = f"{time.time_ns()}-{action}.req"
+            os.makedirs(REQUESTS_DIR, exist_ok=True)
+            with open(os.path.join(REQUESTS_DIR, fname), "wb"):
+                pass
+            msg = f"queued: {action} (root cron picks this up within a minute)\n"
+
+        body = msg.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

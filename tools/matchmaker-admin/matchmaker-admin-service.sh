@@ -42,12 +42,15 @@ Restart=always
 RestartSec=2
 
 # Binds 127.0.0.1:8899 only (see main.py) - this hardening is defense in depth
-# on top of that, not a substitute for it.
+# on top of that, not a substitute for it. REPO_DIR needs to be writable too
+# now: pull/build run right in this process (main.py's LOCAL_ACTIONS), not
+# delegated to root via sudo -u anymore - ProtectHome=read-only still locks
+# down the rest of /home, this is a narrow, explicit exception.
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/srv/swos-matchmaker/admin
+ReadWritePaths=/srv/swos-matchmaker/admin ${REPO_DIR}
 
 [Install]
 WantedBy=multi-user.target
