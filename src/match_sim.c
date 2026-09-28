@@ -20,6 +20,7 @@
 #include "match_sim.h"
 #ifdef SWOS_SDL_BUILD
 #include <stdio.h>          /* MatchSim_LogSkillRoll */
+#include <stdlib.h>         /* getenv: SWOS_SKILL_DEBUG */
 #endif
 #include "game_types.h"
 #include "diy_competition.h"
@@ -1490,6 +1491,14 @@ void AdjustPlayerSkills(uint16_t playerIdx, TeamFile *teamFile,
         }
     }
 
+#ifdef SWOS_SDL_BUILD
+    if (getenv("SWOS_SKILL_DEBUG"))
+        fprintf(stderr, "[skill] %s slot %u: file price %d, computed %d -> %d%% before the random, controls %d\n",
+                teamGame == &_topTeamInGame ? "top" : "bottom", (unsigned)playerIdx,
+                (int)(int8_t)pf->price,
+                playerIdx ? (int)GetPlayerPrice(teamFile, (PlayerFile *)playerBase, playerIdx) : -1,
+                (int)d4, (int)tf->teamControls);
+#endif
     /* Apply team view offset + rank + random to factor */
     d4 = GetPlayerPricePercentageChange(d4, teamFile, callerD0);
 #ifdef SWOS_SDL_BUILD

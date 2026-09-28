@@ -690,6 +690,8 @@ static int32_t s_lobbyMatches;      /* matches played from this lobby */
 static int32_t s_testReady;         /* SWOS_LOBBY_READY: say ready once the lobby is open */
 static int32_t s_matchEndedEarly;   /* the last match was cut short: its notice says why */
 
+static void lineup_test_swap(void);    /* SWOS_LOBBY_LINEUP_SWAP, beside the TACTICS screen */
+
 static void lobby_test_knobs(void)
 {
     extern uint8_t _teamFileBuffer[];
@@ -702,6 +704,7 @@ static void lobby_test_knobs(void)
         for (i = 0; i < count; i++) {
             if (rec[i].team.countryNumber == file && rec[i].team.teamOrdinal == ordinal) {
                 NetplayLobby_SetTeam(&rec[i]);
+                lineup_test_swap();
                 break;
             }
         }
@@ -1001,6 +1004,8 @@ static void mpGameSetupMenu_OnDraw(void)
                 line = "STARTING...";
             else if (other->known && other->activity == LOBBY_ACTIVITY_CHOOSING_TEAM)
                 line = "YOUR OPPONENT IS CHOOSING A TEAM";
+            else if (other->known && other->activity == LOBBY_ACTIVITY_ARRANGING_TEAM)
+                line = "YOUR OPPONENT IS ARRANGING THEIR TEAM";
             else if (!self->hasTeam)
                 line = "CHOOSE YOUR TEAM";
             else if (!self->ready)
@@ -1047,13 +1052,111 @@ static void mpGameSetup_teams_onSelect(void)
     NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
 }
 
-/* TACTICS: the next formation, through the USER tactics and round again. */
+/* TACTICS: the game's own team screen, the one a friendly shows before kick-off -- the
+ * line-up (FIRE on two players swaps them, a starter for a substitute too) and the
+ * formation, and VIEW OPPONENTS. Then the arranged team goes to the other player.
+ *
+ * It matters more than it looks (ReportBot 0014): SWOS scales each human player's skills
+ * by how well he suits the slot he is in, down to 75% (AdjustPlayerSkills), so a team
+ * played in its file's order with a misplaced defender plays him a quarter weaker at
+ * everything. Offline a player fixes that on this screen; the lobby had no way to.
+ *
+ * The screen finds a team by its number among the cached teams (GetTeamPointer: the
+ * selected teams among them), and a swap edits the copy it finds -- so the two sides go
+ * where a friendly puts them, _selectedTeams[0] and [1], for as long as it is open. The
+ * host's START fills those slots afresh anyway (netplay_lobby.c assemble_match). */
+static struct {
+    TeamFileEx keep[2];
+    uint16_t   numSel, curNo, selNo, gameType, isCareer, training;
+    uint8_t    controls;
+} s_lineup;
+
+enum { kLineupControls = 2 };           /* TEAM_PLAYER_COACH: what the lobby plays a side as */
+
+/* The two sides where the team screen looks for them; the lobby's own state kept. */
+static void lineup_begin(void)
+{
+    extern TeamFileEx _selectedTeams[100];
+    extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
+    extern uint16_t   _gameType, _isCareer, _trainingGame;
+    const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+    const LobbyPlayer *other = NetplayLobby_Player(3 - NetplayLobby_LocalPlayer());
+
+    s_lineup.keep[0] = _selectedTeams[0];
+    s_lineup.keep[1] = _selectedTeams[1];
+    s_lineup.numSel = _numSelectedTeams; s_lineup.curNo = _currentTeamNumber;
+    s_lineup.selNo = _selTeamNumber; s_lineup.gameType = _gameType;
+    s_lineup.isCareer = _isCareer; s_lineup.training = _trainingGame;
+
+    _selectedTeams[0] = p->team;
+    _selectedTeams[1] = other && other->hasTeam ? other->team : p->team;
+    s_lineup.controls = p->team.team.teamControls;
+    _selectedTeams[0].team.teamControls = kLineupControls;   /* a CPU team cannot swap */
+    _selectedTeams[1].team.teamControls = kLineupControls;
+    _selectedTeams[0].team.tactics = (uint8_t)p->tactic;
+    _numSelectedTeams = 2;
+    _currentTeamNumber = 0xFFFF;        /* neither the edit team nor a career team */
+    _selTeamNumber = 0xFFFF;
+    _gameType = 0;                      /* a friendly's screen */
+    _isCareer = 0;
+    _trainingGame = 0;
+}
+
+/* Everything put back, and the arranged team -- formation with it (team.tactics) --
+ * sent to the other player. */
+static void lineup_end(void)
+{
+    extern TeamFileEx _selectedTeams[100];
+    extern uint16_t   _numSelectedTeams, _currentTeamNumber, _selTeamNumber;
+    extern uint16_t   _gameType, _isCareer, _trainingGame;
+    TeamFileEx arranged = _selectedTeams[0];
+
+    arranged.team.teamControls = s_lineup.controls;
+    _selectedTeams[0] = s_lineup.keep[0];
+    _selectedTeams[1] = s_lineup.keep[1];
+    _numSelectedTeams = s_lineup.numSel; _currentTeamNumber = s_lineup.curNo;
+    _selTeamNumber = s_lineup.selNo; _gameType = s_lineup.gameType;
+    _isCareer = s_lineup.isCareer; _trainingGame = s_lineup.training;
+    NetplayLobby_SetTeam(&arranged);
+}
+
 static void mpGameSetup_tactics_onSelect(void)
 {
+    extern int16_t ShowPlayMatchMenu(int16_t controlFlags, int16_t maxSubstitutes, int16_t excludeFlags,
+                                     int16_t isFirstPlayer, int16_t squadChanges,
+                                     TeamFileEx *team1, TeamFileEx *team2);
+    extern TeamFileEx _selectedTeams[100];
+    extern uint16_t   _exitGameFlag;
     const LobbyPlayer *p = NetplayLobby_Player(NetplayLobby_LocalPlayer());
+
     if (!on_my_row(MpGameSetupMenu_tactics_00) || !p->hasTeam)
         return;
-    NetplayLobby_SetTactic(p->tactic >= LOBBY_TACTIC_MAX ? 0 : p->tactic + 1);
+    NetplayLobby_SetReady(0);
+    NetplayLobby_SetActivity(LOBBY_ACTIVITY_ARRANGING_TEAM);
+    NetplayLobby_Poll();
+    lineup_begin();
+    ShowPlayMatchMenu(1, (int16_t)NetplayLobby_Rules()->maxSubs, 0, 1, 1,
+                      &_selectedTeams[0], &_selectedTeams[1]);
+    _exitGameFlag = 0;                  /* PLAY or EXIT: either way, back to the lobby */
+    lineup_end();
+    NetplayLobby_SetActivity(LOBBY_ACTIVITY_NONE);
+}
+
+/* SWOS_LOBBY_LINEUP_SWAP=a:b -- for a test, the same arranging with one swap made by the
+ * team screen's own swap (slots 0..15, as PlayMatchMenuSwapPlayers numbers them), and no
+ * screen: that the arranged team reaches the match on both machines. */
+static void lineup_test_swap(void)
+{
+    extern TeamFileEx _selectedTeams[100];
+    extern void PlayMatchMenuSwapPlayers(TeamFileEx *team, int16_t d3, int16_t d4);
+    const char *v = getenv("SWOS_LOBBY_LINEUP_SWAP");
+    int a, b;
+    if (!v || sscanf(v, "%d:%d", &a, &b) != 2 || !NetplayLobby_Player(NetplayLobby_LocalPlayer())->hasTeam)
+        return;
+    lineup_begin();
+    PlayMatchMenuSwapPlayers(&_selectedTeams[0], (int16_t)a, (int16_t)b);
+    lineup_end();
+    fprintf(stderr, "[lobby] test: swapped line-up slots %d and %d\n", a, b);
 }
 
 /* GO: ready, or not. */

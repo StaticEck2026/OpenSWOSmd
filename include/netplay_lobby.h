@@ -29,6 +29,7 @@
 typedef enum {
     LOBBY_ACTIVITY_NONE,
     LOBBY_ACTIVITY_CHOOSING_TEAM,   /* the other player sees "CHOOSING A TEAM" */
+    LOBBY_ACTIVITY_ARRANGING_TEAM,  /* ... "ARRANGING THEIR TEAM": line-up and formation */
 } LobbyActivity;
 
 typedef struct {

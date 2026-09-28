@@ -134,6 +134,11 @@ mkdir -p "$OUT/home-host/.swos" "$OUT/home-join/.swos"
 [ -n "${JOIN_RES:-}" ] && printf '[video]\nresolution=%s\n' "$JOIN_RES" > "$OUT/home-join/.swos/SWOS.ini"
 [ -n "$DESYNC_FRAME" ] && JOIN_ENV="${JOIN_ENV:-} SWOS_LIVE_DESYNC_FRAME=$DESYNC_FRAME"
 
+# HOST_START=0: the host does not press START by itself, so a key script can use the
+# lobby first (the team screen, docs/NETPLAY.md "The lobby"); the run then ends at WAIT.
+HOST_START_ENV="SWOS_LOBBY_START=1"
+[ "${HOST_START:-1}" = 0 ] && HOST_START_ENV=""
+
 # SWOS_NO_LOG=1: two processes would otherwise share one SWOS.log.
 run() {   # name, auto, team, extra env...
     local name=$1 auto=$2 team=$3; shift 3
@@ -148,7 +153,7 @@ run() {   # name, auto, team, extra env...
 # <side>.log is the raw output; <side>.ts the same lines with the time each arrived,
 # to line up against the server's timed [relay] and [record] lines.
 stamp() { gawk '{ print strftime("%H:%M:%S"), $0; fflush() }'; }
-( run "$HNAME" host 50:0B SWOS_MM_AUTO_PEER="$JNAME" SWOS_LOBBY_START=1 SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
+( run "$HNAME" host 50:0B SWOS_MM_AUTO_PEER="$JNAME" ${HOST_START_ENV} SWOS_LIVE_RANDOM_INPUT=0xA5A5F00D HOME="$OUT/home-host" ${HOST_ENV:-} \
     2>&1 | tee "$OUT/host.log" | stamp > "$OUT/host.ts"
   echo "[relay-test] exit ${PIPESTATUS[0]}" >> "$OUT/host.log" ) &
 HOST_PID=$!

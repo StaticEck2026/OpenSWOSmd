@@ -756,7 +756,7 @@ host and the top team.
 | Row / button | Who | What it does |
 |---|---|---|
 | TEAMS | your row | the game's own team list — clubs, national sides, custom teams (`ChooseTeamsDialog`, as IMPORT TEAM uses it) |
-| TACTICS | your row | steps through the twelve formations and USER A–F |
+| TACTICS | your row | opens the game's own team screen, the one a friendly shows before kick-off: the line-up (FIRE on two players swaps them, a starter for a substitute too), the formation, VIEW OPPO and EDIT TACTICS. On leaving it the arranged team goes to the other player, who sees YOUR OPPONENT IS ARRANGING THEIR TEAM meanwhile. It matters: SWOS scales each human player's skills by how well he suits his slot, down to 75% (ReportBot 0014), and a team played in its file's order can have a quarter of its players misplaced |
 | GO | your row | ready, or not |
 | GAME LENGTH, PITCH TYPE, SUBSTITUTES | host | the friendly menu's own cycles; the joiner sees them change |
 | START | host | lit when both are ready on the current rules |
