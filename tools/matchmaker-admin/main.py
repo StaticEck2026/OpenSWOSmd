@@ -78,6 +78,7 @@ body{{background:#111;color:#ddd;font-family:-apple-system,BlinkMacSystemFont,'S
 h1{{font-size:18px;margin:0 0 16px;}}
 button{{background:#222;color:#ddd;border:1px solid #444;border-radius:4px;padding:8px 14px;margin:0 8px 8px 0;cursor:pointer;font-size:13px;}}
 button:hover{{background:#2a2a2a;}}
+button:disabled{{opacity:.45;cursor:default;}}
 #pending{{color:#8ecbff;font-size:12px;margin:8px 0;}}
 pre{{background:#181818;border:1px solid #333;border-radius:4px;padding:12px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:70vh;overflow:auto;}}
 </style></head>
@@ -89,13 +90,13 @@ pre{{background:#181818;border:1px solid #333;border-radius:4px;padding:12px;fon
 <script>
 var allButtons = document.querySelectorAll('button[data-action]');
 allButtons.forEach(function(btn){{
-  var label = btn.textContent;
   btn.addEventListener('click', function(){{
     // Immediate, unmissable feedback that the click registered - disabling
-    // every button (not just this one) also stops a second click starting a
-    // different action while this one's still only queued/starting.
+    // every button (not just this one, greyed out via CSS, no label/size
+    // change) also stops a second click starting a different action while
+    // this one's still only queued/starting. Every bit of actual status text
+    // goes into the log pane, nowhere else.
     allButtons.forEach(function(b){{ b.disabled = true; }});
-    btn.textContent = label+' (sent...)';
     document.getElementById('log').textContent = 'starting: '+btn.dataset.action+' ... please wait';
     fetch('action', {{method:'POST', headers:{{'Content-Type':'application/x-www-form-urlencoded'}}, body:'action='+encodeURIComponent(btn.dataset.action)}})
       .then(function(r){{ return r.text(); }})
@@ -104,7 +105,7 @@ allButtons.forEach(function(btn){{
       // click shows SOMETHING immediately instead of the still-stale old log.
       .then(function(t){{ document.getElementById('log').textContent = t; }})
       .catch(function(e){{ document.getElementById('log').textContent = 'error: '+e; }})
-      .finally(function(){{ allButtons.forEach(function(b){{ b.disabled = false; }}); btn.textContent = label; }});
+      .finally(function(){{ allButtons.forEach(function(b){{ b.disabled = false; }}); }});
   }});
 }});
 function poll(){{
