@@ -15,6 +15,9 @@ the match report for the same match when scripts/fetch_reports.py has fetched it
   scripts/fetch_recordings.py --match 4d33222c # only that match (a prefix of its id)
   scripts/fetch_recordings.py --no-fetch       # list what is already here
   scripts/fetch_recordings.py --url URL --out DIR
+  scripts/fetch_recordings.py --clear          # then delete from the server what we now hold
+                                               # (SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD, as
+                                               # fetch_reports.py --clear)
 
 Default folder: build/recordings (gitignored).
 """
@@ -44,13 +47,17 @@ def is_index(url):
 
 
 def fetch(url, out_dir):
-    new = 0
+    """Returns (new, held): recordings that came down or grew, and every file now here at
+    the size the server lists it, as 'name:size' -- what --clear may delete there."""
+    new, held = 0, []
     for href, size in fetch_reports.listing(url):
         name = fetch_reports.safe_name(href)
         if not name or not NAME.match(name):
             continue
         path = os.path.join(out_dir, name)
         if os.path.exists(path) and (size is None or os.path.getsize(path) == size):
+            if size is not None:
+                held.append("%s:%d" % (name, size))
             continue
         with urllib.request.urlopen(urllib.parse.urljoin(url, href), timeout=120) as r:
             data = r.read()
@@ -58,7 +65,9 @@ def fetch(url, out_dir):
             f.write(data)
         os.replace(path + ".part", path)
         new += 1
-    return new
+        if size is not None and len(data) == size:
+            held.append("%s:%d" % (name, size))
+    return new, held
 
 
 def frames(path):
@@ -89,6 +98,8 @@ def main():
     ap.add_argument("--reports", default=DEFAULT_REPORTS, help="where fetch_reports.py keeps reports")
     ap.add_argument("--no-fetch", action="store_true")
     ap.add_argument("--match", help="only recordings whose match id starts with this")
+    ap.add_argument("--clear", action="store_true", help="then delete from the server what is now held here")
+    ap.add_argument("--admin-url", default=fetch_reports.DEFAULT_ADMIN)
     args = ap.parse_args()
 
     os.makedirs(args.out, exist_ok=True)
@@ -98,9 +109,11 @@ def main():
             print("fetch_recordings: %s is not a file listing -- the server does not publish its "
                   "recordings there (yet)" % url, file=sys.stderr)
         else:
-            n = fetch(url, args.out)
+            n, held = fetch(url, args.out)
             print("fetch_recordings: %d new or grown recording(s) from %s -> %s"
                   % (n, url, os.path.relpath(args.out, REPO)), file=sys.stderr)
+            if args.clear:
+                fetch_reports.clear_on_server(held, args.admin_url, "fetch_recordings")
 
     for name in sorted(os.listdir(args.out)):
         m = NAME.match(name)

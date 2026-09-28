@@ -22,6 +22,7 @@ Stdlib only, on purpose - one file, nothing to pip install on the server.
 """
 import json
 import os
+import re
 import subprocess
 import threading
 import time
@@ -34,6 +35,14 @@ ADMIN_DIR = "/srv/swos-matchmaker/admin"
 REQUESTS_DIR = os.path.join(ADMIN_DIR, "requests")
 PROCESSED_DIR = os.path.join(ADMIN_DIR, "processed")
 LATEST_LOG = os.path.join(PROCESSED_DIR, "latest.log")
+# What the matchmaker keeps for us (--reports, --recordings): cleared from here once
+# fetched (scripts/fetch_reports.py / fetch_recordings.py --clear, or the buttons).
+REPORTS_DIR = "/srv/swos-matchmaker/reports"
+RECORDINGS_DIR = "/srv/swos-matchmaker/recordings"
+# The only names /clear will touch -- a report is <match id>/player<N>.zip, a recording
+# <date>-<time>-<match id prefix>.SRP. Nothing else, and nothing outside those two dirs.
+REPORT_NAME = re.compile(r"^([0-9a-f]{16})/(player[12]\.zip)$")
+RECORDING_NAME = re.compile(r"^(\d{8}-\d{6}-[0-9a-f]{8}\.SRP)$")
 
 # Runs immediately, right here, as this same unprivileged user - no root, no
 # queue, no cron delay.
@@ -47,6 +56,9 @@ LOCAL_ACTIONS = {
 # there unprocessed (the worker only recognizes what's in its own case
 # statement).
 QUEUED_ACTIONS = {"install", "restart", "remove"}
+# Run here too, as Python rather than a command: emptying the two folders the
+# matchmaker writes for us. Same user, no root.
+CLEAR_ACTIONS = {"clear-reports", "clear-recordings"}
 
 ACTIONS = [
     ("pull", "git pull"),
@@ -55,10 +67,12 @@ ACTIONS = [
     ("install", "Service: install"),
     ("restart", "Service: restart"),
     ("remove", "Service: remove"),
+    ("clear-reports", "Clear all reports"),
+    ("clear-recordings", "Clear all recordings"),
 ]
 ACTION_NAMES = {name for name, _ in ACTIONS}
-CONFIRM_ACTIONS = {"remove", "restart", "install"}
-assert ACTION_NAMES == set(LOCAL_ACTIONS) | QUEUED_ACTIONS
+CONFIRM_ACTIONS = {"remove", "restart", "install", "clear-reports", "clear-recordings"}
+assert ACTION_NAMES == set(LOCAL_ACTIONS) | QUEUED_ACTIONS | CLEAR_ACTIONS
 
 # Guards against two local actions (e.g. two clicks on "build") racing in the
 # same build/ directory - admin-cron-worker.sh has its own, separate flock for
@@ -145,8 +159,70 @@ def write_log(action, text):
         f.write(text)
 
 
+def delete_file(path, size=None):
+    """Remove one file, only if it is still that size (None: any). True if removed."""
+    try:
+        if size is not None and os.path.getsize(path) != size:
+            return False
+        os.remove(path)
+        return True
+    except OSError:
+        return False
+
+
+def prune_empty_report_dirs():
+    for d in os.listdir(REPORTS_DIR) if os.path.isdir(REPORTS_DIR) else []:
+        full = os.path.join(REPORTS_DIR, d)
+        if re.fullmatch(r"[0-9a-f]{16}", d) and os.path.isdir(full):
+            try:
+                os.rmdir(full)          # only succeeds when empty
+            except OSError:
+                pass
+
+
+def clear_entries(entries):
+    """entries: 'path:size' strings from a fetch script. Deletes each listed file that
+    still has exactly that size -- anything uploaded, or grown, since the fetch stays."""
+    removed, kept, refused = [], [], []
+    for entry in entries:
+        name, _, size = entry.strip().rpartition(":")
+        if not name or not size.isdigit():
+            refused.append(entry)
+            continue
+        m = REPORT_NAME.match(name)
+        if m:
+            path = os.path.join(REPORTS_DIR, m.group(1), m.group(2))
+        elif RECORDING_NAME.match(name):
+            path = os.path.join(RECORDINGS_DIR, name)
+        else:
+            refused.append(entry)
+            continue
+        (removed if delete_file(path, int(size)) else kept).append(name)
+    prune_empty_report_dirs()
+    return removed, kept, refused
+
+
+def clear_all(which):
+    """The buttons: every report, or every recording, whatever its size."""
+    removed = 0
+    if which == "clear-reports":
+        for d in os.listdir(REPORTS_DIR) if os.path.isdir(REPORTS_DIR) else []:
+            for z in ("player1.zip", "player2.zip"):
+                removed += delete_file(os.path.join(REPORTS_DIR, d, z)) if re.fullmatch(r"[0-9a-f]{16}", d) else 0
+        prune_empty_report_dirs()
+    else:
+        for f in os.listdir(RECORDINGS_DIR) if os.path.isdir(RECORDINGS_DIR) else []:
+            if RECORDING_NAME.match(f):
+                removed += delete_file(os.path.join(RECORDINGS_DIR, f))
+    return removed
+
+
 def run_local_action(action):
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    if action in CLEAR_ACTIONS:
+        n = clear_all(action)
+        write_log(action, f"=== {ts}  action={action} ===\nremoved {n} file(s)\n--- OK ---\n")
+        return
     header = f"=== {ts}  action={action} ===\n"
     # LC_ALL=C forces git (and anything else that gettext-translates its own
     # output) to print its untranslated, English messages regardless of the
@@ -200,6 +276,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
+        if self.path == "/clear":
+            self.handle_clear()
+            return
         if self.path != "/action":
             self.send_error(404)
             return
@@ -210,7 +289,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400, "unknown action")
             return
 
-        if action in LOCAL_ACTIONS:
+        if action in LOCAL_ACTIONS or action in CLEAR_ACTIONS:
             msg = start_local_action(action)
         else:
             # Filename alone carries the request - contents are empty and
@@ -225,6 +304,26 @@ class Handler(BaseHTTPRequestHandler):
         body = msg.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def handle_clear(self):
+        """POST /clear, body 'entries=<path:size>,<path:size>,...' (form-encoded): what a
+        fetch script has downloaded. Answers JSON: removed, kept (gone or changed), refused."""
+        length = int(self.headers.get("Content-Length", 0))
+        if length > (1 << 20):
+            self.send_error(413)
+            return
+        raw = self.rfile.read(length).decode("utf-8", "replace")
+        entries = [e for e in parse_qs(raw).get("entries", [""])[0].split(",") if e]
+        removed, kept, refused = clear_entries(entries)
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        write_log("clear", f"=== {ts}  action=clear (from a fetch script) ===\n"
+                           f"removed {len(removed)}, kept {len(kept)}, refused {len(refused)}\n--- OK ---\n")
+        body = json.dumps({"removed": removed, "kept": kept, "refused": refused}).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)

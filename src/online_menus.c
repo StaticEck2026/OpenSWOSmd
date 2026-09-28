@@ -1067,6 +1067,7 @@ static void mpGameSetup_teams_onSelect(void)
  * host's START fills those slots afresh anyway (netplay_lobby.c assemble_match). */
 static struct {
     TeamFileEx keep[2];
+    TeamFileEx before;                  /* this player's side as the screen opened */
     uint16_t   numSel, curNo, selNo, gameType, isCareer, training;
     uint8_t    controls;
 } s_lineup;
@@ -1090,6 +1091,8 @@ static void lineup_begin(void)
 
     _selectedTeams[0] = p->team;
     _selectedTeams[1] = other && other->hasTeam ? other->team : p->team;
+    s_lineup.before = p->team;
+    s_lineup.before.team.tactics = (uint8_t)p->tactic;
     s_lineup.controls = p->team.team.teamControls;
     _selectedTeams[0].team.teamControls = kLineupControls;   /* a CPU team cannot swap */
     _selectedTeams[1].team.teamControls = kLineupControls;
@@ -1102,6 +1105,33 @@ static void lineup_begin(void)
     _trainingGame = 0;
 }
 
+/* What the team screen changed, in SWOS.log -- a match report then says whether a
+ * player arranged their side before kick-off (docs/NETPLAY_GHOSTING.md: a misplaced
+ * player plays at 75%). */
+static void lineup_log(const TeamFileEx *before, const TeamFileEx *after)
+{
+    extern void *_tacticsStringTable[];
+    int32_t slot, changed = 0;
+
+    if (before->team.tactics != after->team.tactics) {
+        const char *was = before->team.tactics < 12 ? (const char *)_tacticsStringTable[before->team.tactics] : "USER";
+        const char *now = after->team.tactics < 12 ? (const char *)_tacticsStringTable[after->team.tactics] : "USER";
+        fprintf(stderr, "[lobby] team screen: formation %s -> %s\n", was, now);
+        changed = 1;
+    }
+    for (slot = 0; slot < 16; slot++) {
+        uint8_t a = before->team.playerNumbers[slot], b = after->team.playerNumbers[slot];
+        if (a == b || a >= 16 || b >= 16)
+            continue;
+        fprintf(stderr, "[lobby] team screen: %s %d: %.22s -> %.22s\n", slot < 11 ? "slot" : "sub",
+                (int)slot + 1, (const char *)before->players[a].playerName,
+                (const char *)after->players[b].playerName);
+        changed = 1;
+    }
+    if (!changed)
+        fprintf(stderr, "[lobby] team screen: opened, nothing changed\n");
+}
+
 /* Everything put back, and the arranged team -- formation with it (team.tactics) --
  * sent to the other player. */
 static void lineup_end(void)
@@ -1111,6 +1141,7 @@ static void lineup_end(void)
     extern uint16_t   _gameType, _isCareer, _trainingGame;
     TeamFileEx arranged = _selectedTeams[0];
 
+    lineup_log(&s_lineup.before, &arranged);
     arranged.team.teamControls = s_lineup.controls;
     _selectedTeams[0] = s_lineup.keep[0];
     _selectedTeams[1] = s_lineup.keep[1];

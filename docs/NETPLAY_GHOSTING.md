@@ -64,9 +64,13 @@ played -- and at the end of the match (an early end too) writes `[ghost]` lines 
   real match ("drawn touching, never did"), or the reverse ("touched, never drawn").
 - **Walk-throughs**: in the real match, an opponent on top of the man on the ball for 4+
   frames who did not win it. Plenty are ordinary SWOS; they matter next to a mark.
+- **Jumps**: a player drawn 24+ px from where he really was -- he jumps when the
+  correction arrives. And `the worst:` names the frame and player of the single largest
+  drawing error of the match.
 - **Marks**: see below.
 
-**The windows.** Around every mark and the 3 longest detected events, 3 s either side, the
+**The windows.** Around every mark, the 3 longest detected events and the 2 biggest jumps,
+3 s either side, the
 game keeps each frame as played and, where it differed, as drawn. The match report
 (docs/NETPLAY_REPORT.md) carries both players' to the other player and to the server:
 `ghost_player1.csv` and `ghost_player2.csv` in the zip, a few tens of KB. They are what the
@@ -101,7 +105,20 @@ For a test session:
 scripts/fetch_reports.py --grep MARK        # matches where someone pressed G
 scripts/fetch_recordings.py                 # their recordings, paired with the reports
 scripts/ghost_view.py build/reports/<match id>/player1.zip
+scripts/fetch_reports.py --clear            # then empty the server of what we now hold
+scripts/fetch_recordings.py --clear         #   (SWOS_ADMIN_USER / SWOS_ADMIN_PASSWORD:
+                                            #   tools/matchmaker-admin/README.md)
 ```
+
+**Did they arrange their team?** The lobby logs every use of the team screen
+(`[lobby] team screen: formation 4-4-2 -> 3-5-2`, `slot 3: A -> B`, or `opened, nothing
+changed`), and each side's form at kick-off is `[match] skill roll`. A misplaced player
+plays at 75% of every skill -- tackling included, which is what a challenge on the man on
+the ball rolls against -- so a walk-through by a floored player is the rules at work.
+`SWOS_SKILL_DEBUG=1` prints each slot's file price, computed price and form.
+
+`SWOS_SCREENSHOT_FROM=N` with `SWOS_SCREENSHOT_INTERVAL=1` screenshots a replay from its
+N-th frame (the 200-shot cap otherwise ends in the first minutes of a match).
 
 `ghost_view.py` draws each window around the ball: a filled dot where a player really was,
 a hollow ring where this player's screen drew him (joined by a line) when that was
@@ -133,10 +150,11 @@ The same knobs work through the real menus and the match report:
 
 ## Found along the way, not yet fixed
 
-- **The `mobile` profile on the lobby link breaks the matchmaker's punch-through**: the
-  link connects and then reports "lost" (nothing heard for 6 s). A plain delay, and delay +
-  jitter + 2% loss, connect fine; `mobile` adds reordering, duplicates and 250 ms stalls.
-  Real players on mobile data could hit this.
+- **High jitter and loss on the lobby link break the matchmaker's punch-through**: the
+  link reports "lost" (nothing heard for 6 s) and no match starts. A plain delay, and 70 ms
+  +/-40 with 2% loss, connect fine; the `mobile` profile (reordering, duplicates, 250 ms
+  stalls) and 150 ms +/-70 with 3% loss do not. The direct-IP path copes with both. Real
+  players on a bad line could hit this.
 - **`netplay_live_test.sh` passes a match that never started**: under `PROFILE=awful` both
   peers ended at frame 0 (THE OTHER PLAYER NEVER ARRIVED) with equal hashes.
 - **The live test's lobby race** (the joiner changes side as START lands) is refused twice

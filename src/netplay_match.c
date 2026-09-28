@@ -1453,8 +1453,9 @@ static void p2pFinish(void)
 {
     ReplayDriverState st;
 
-    if (!s_np.live)
-        Ghost_Report(s_np.endFrame);    /* every frame is final now (a live match: liveEnd) */
+    /* Every frame is final now. Before the live callback: a test exits there, and
+     * liveEnd -- which reports a match that ends early -- would never run. */
+    Ghost_Report(s_np.endFrame);
     fprintf(stderr, "[netplay] frame %d is confirmed: %s\n", s_np.endFrame,
             s_np.live ? "the session stops there"
                       : (s_np.endFrame < (int32_t)ReplayTest_FrameCount()

@@ -2008,7 +2008,15 @@ static void render_frame_impl(int pump_full)
         s_screenshot_request = 0;
     }
     if (s_screenshot_interval > 0) {
-        static int frame_mod;
+        static int frame_mod, presented, from = -1;
+        /* SWOS_SCREENSHOT_FROM=N: start the interval shots at the N-th present, so the
+         * 200 of them can cover one moment of a long replay (docs/NETPLAY_GHOSTING.md). */
+        if (from < 0) {
+            const char *v = getenv("SWOS_SCREENSHOT_FROM");
+            from = (v && v[0]) ? atoi(v) : 0;
+        }
+        if (++presented < from)
+            goto shots_done;
         if (++frame_mod >= s_screenshot_interval) {
             frame_mod = 0;
             if (s_screenshot_auto_count < 200) {
@@ -2024,6 +2032,7 @@ static void render_frame_impl(int pump_full)
             }
         }
     }
+shots_done:
 
     /* Compose the HUD overlay into the scratch strip of the SAME buffer, then
      * hand frame + overlay to the GPU in ONE bulk upload from cached RAM. The

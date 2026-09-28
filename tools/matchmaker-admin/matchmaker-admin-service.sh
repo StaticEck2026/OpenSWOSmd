@@ -54,6 +54,9 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ReadWritePaths=/srv/swos-matchmaker/admin
+# Clearing fetched reports and recordings (main.py CLEAR_ACTIONS, POST /clear).
+ReadWritePaths=/srv/swos-matchmaker/reports
+ReadWritePaths=/srv/swos-matchmaker/recordings
 
 [Install]
 WantedBy=multi-user.target

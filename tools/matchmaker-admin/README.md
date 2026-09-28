@@ -1,8 +1,31 @@
 # matchmaker-admin
 
-A tiny password-protected web page with six buttons (`git pull`, rebuild, and
-the four `swos-matchmaker-service.sh` actions) plus a live output pane, for
-maintaining the matchmaker server without an SSH session.
+A tiny password-protected web page with eight buttons (`git pull`, rebuild, the
+four `swos-matchmaker-service.sh` actions, and clearing the reports and the
+recordings) plus a live output pane, for maintaining the matchmaker server without
+an SSH session.
+
+## Clearing reports and recordings
+
+The matchmaker keeps match reports in `/srv/swos-matchmaker/reports` and recordings
+in `/srv/swos-matchmaker/recordings`, which nginx publishes for
+`scripts/fetch_reports.py` and `scripts/fetch_recordings.py` to download. Once they
+are downloaded they can go:
+
+- **From the fetch scripts** (the usual way): `--clear` sends `POST /cc/clear` with
+  exactly the files that run downloaded, each at the size it downloaded it; the
+  gateway deletes only those, and only if they are still that size -- a report that
+  arrived, or a recording that grew, since the fetch stays. Names are checked against
+  `<match id>/player<N>.zip` and `<date>-<time>-<id>.SRP`; anything else is refused.
+  The scripts take the page's login from `SWOS_ADMIN_USER` / `SWOS_ADMIN_PASSWORD`.
+- **From the page**: "Clear all reports" / "Clear all recordings" delete everything
+  in the folder (after a confirmation).
+
+Both run as the gateway's own unprivileged user -- the matchmaker writes those files
+as the same account -- so no root and no queue. The gateway's unit needs write access
+to the two folders (`ReadWritePaths` in `matchmaker-admin-service.sh`): after pulling
+this, run `tools/matchmaker-admin/matchmaker-admin-service.sh install` once, not just
+`restart`, so the new unit is written.
 
 ## Two tiers, by whether the action actually needs root
 

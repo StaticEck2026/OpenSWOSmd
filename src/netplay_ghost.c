@@ -29,6 +29,8 @@ enum {
     MARK_WINDOW_S = 3,          /* a mark looks back this many seconds */
     CLIP_S        = 3,          /* a saved window: this many seconds either side */
     CLIP_EVENTS   = 3,          /* ... around the worst events, as well as every mark */
+    CLIP_JUMPS    = 2,          /* ... and around the biggest jumps */
+    JUMP_PX       = 24,         /* a player drawn this far from where he was: a jump */
     CLIP_MAX      = 8,          /* windows kept at most */
 };
 
@@ -36,6 +38,7 @@ typedef enum {
     EV_DRAWN_ONLY,              /* drawn touching near the ball, apart in the final game */
     EV_FINAL_ONLY,              /* touching in the final game, drawn apart */
     EV_WALK_THROUGH,            /* on top of the ball carrier in the final game, won nothing */
+    EV_JUMP,                    /* a player drawn JUMP_PX+ from where he was: he jumps when corrected */
     EV_KINDS
 } GhostKind;
 
@@ -43,6 +46,7 @@ static const char *const k_kindText[EV_KINDS] = {
     "drawn touching, never did",
     "touched, never drawn",
     "walked through the man on the ball, won nothing",
+    "drawn far from where he was",
 };
 
 typedef struct {
@@ -64,6 +68,7 @@ static struct {
     GhostFrame *drawn, *final;
     uint32_t    cap;
     uint32_t    corrections, changed;   /* re-simulated plays, and those that moved anything */
+    int32_t     reported;               /* Ghost_Report has run for this match */
     int32_t     marks[MAX_MARKS];
     int32_t     markCount;
     GhostEvent *events;
@@ -99,6 +104,7 @@ void Ghost_Begin(int32_t player)
 {
     s_g.player = player;
     s_g.corrections = s_g.changed = 0;
+    s_g.reported = 0;
     s_g.markCount = 0;
     s_g.eventCount = 0;
     s_g.clipsLen = 0;
@@ -234,6 +240,12 @@ static void printEvent(const GhostEvent *e)
 {
     char t[16];
     int32_t a = e->a < 11 ? e->a : e->b, b = e->a < 11 ? e->b : e->a;
+    if (e->kind == EV_JUMP) {
+        fprintf(stderr, "[ghost]   %s (frame %d), %d frame(s): team %d #%d %s -- up to %d px\n",
+                clock_text(e->frame, t, sizeof t), (int)e->frame, (int)e->frames, (int)e->a / 11 + 1,
+                (int)e->a % 11 + 1, k_kindText[e->kind], (int)e->drawnPx);
+        return;
+    }
     fprintf(stderr, "[ghost]   %s (frame %d), %d frame(s): team 1 #%d and team 2 #%d %s -- "
                     "%d px apart drawn, %d px in the final game\n",
             clock_text(e->frame, t, sizeof t), (int)e->frame, (int)e->frames, (int)a + 1,
@@ -404,11 +416,38 @@ static void buildClips(int32_t lastFrame, int32_t fps, const GhostEvent *longest
         to[n] = s_g.marks[i] + CLIP_S * fps;
         snprintf(why[n], sizeof why[n], "mark %d", (int)i + 1);
     }
-    for (i = 0; i < nLongest && i < CLIP_EVENTS && n < CLIP_MAX; i++, n++) {
-        static const char *const k_short[EV_KINDS] = { "drawn-not-real", "real-not-drawn", "walk-through" };
+    for (i = 0, j = 0; i < nLongest && j < CLIP_EVENTS && n < CLIP_MAX; i++) {
+        static const char *const k_short[EV_KINDS] = { "drawn-not-real", "real-not-drawn", "walk-through", "jump" };
+        if (longest[i].kind == EV_JUMP)
+            continue;                   /* by size, below: a jump is short and can be huge */
         from[n] = longest[i].frame - CLIP_S * fps;
         to[n] = longest[i].frame + longest[i].frames + CLIP_S * fps;
         snprintf(why[n], sizeof why[n], "%s", k_short[longest[i].kind]);
+        n++;
+        j++;
+    }
+    /* The biggest jumps: the largest drawn error first. */
+    {
+        int32_t taken[CLIP_JUMPS], t, best;
+        for (t = 0; t < CLIP_JUMPS && n < CLIP_MAX; t++) {
+            best = -1;
+            for (i = 0; i < nLongest; i++) {
+                int32_t used = 0, u;
+                if (longest[i].kind != EV_JUMP)
+                    continue;
+                for (u = 0; u < t; u++)
+                    used |= taken[u] == i;
+                if (!used && (best < 0 || longest[i].drawnPx > longest[best].drawnPx))
+                    best = i;
+            }
+            if (best < 0)
+                break;
+            taken[t] = best;
+            from[n] = longest[best].frame - CLIP_S * fps;
+            to[n] = longest[best].frame + longest[best].frames + CLIP_S * fps;
+            snprintf(why[n], sizeof why[n], "jump %dpx", (int)longest[best].drawnPx);
+            n++;
+        }
     }
     if (!n)
         return;
@@ -462,6 +501,53 @@ static void buildClips(int32_t lastFrame, int32_t fps, const GhostEvent *longest
     }
 }
 
+/* Jumps: runs of frames in which some player was drawn JUMP_PX or more from where he
+ * really was -- on the correction he jumps there. The biggest one's player is named. */
+static int32_t worstOffset(const GhostFrame *d, const GhostFrame *t, int32_t *who)
+{
+    int32_t i, worst = 0;
+    *who = -1;
+    for (i = 0; i < GHOST_PLAYERS; i++) {
+        int32_t dx = d->x[i] - t->x[i], dy = d->y[i] - t->y[i], off;
+        dx = dx < 0 ? -dx : dx;
+        dy = dy < 0 ? -dy : dy;
+        off = dx > dy ? dx : dy;
+        if (off > worst) {
+            worst = off;
+            *who = i;
+        }
+    }
+    return worst;
+}
+
+static void findJumps(int32_t lastFrame)
+{
+    GhostEvent e;
+    int32_t fr, open = 0;
+    for (fr = 0; fr <= lastFrame + 1; fr++) {
+        const GhostFrame *d = fr <= lastFrame ? &s_g.drawn[fr] : NULL;
+        const GhostFrame *t = fr <= lastFrame ? &s_g.final[fr] : NULL;
+        int32_t who = -1, off = d && t && d->have && t->have ? worstOffset(d, t, &who) : 0;
+        if (off >= JUMP_PX) {
+            if (!open) {
+                memset(&e, 0, sizeof e);
+                e.frame = fr;
+                e.kind = EV_JUMP;
+                e.b = -1;
+                open = 1;
+            }
+            e.frames++;
+            if (off > e.drawnPx) {
+                e.drawnPx = off;
+                e.a = who;
+            }
+        } else if (open) {
+            addEvent(&e);
+            open = 0;
+        }
+    }
+}
+
 const char *Ghost_Clips(uint32_t *len)
 {
     *len = s_g.clipsLen;
@@ -471,12 +557,13 @@ const char *Ghost_Clips(uint32_t *len)
 void Ghost_Report(int32_t lastFrame)
 {
     uint32_t frames = 0, differed = 0, ownerWrong = 0, count[EV_KINDS] = { 0 }, total[EV_KINDS] = { 0 };
-    int32_t fr, i, k, m, maxOff = 0, fps = DosGameplay_TargetFps();
+    int32_t fr, i, k, m, maxOff = 0, maxOffFrame = -1, maxOffWho = -1, fps = DosGameplay_TargetFps();
     uint64_t sumOff = 0, offSamples = 0;
     GhostEvent *sorted;
 
-    if (!s_g.cap || lastFrame < 0)
+    if (!s_g.cap || lastFrame < 0 || s_g.reported)
         return;
+    s_g.reported = 1;                   /* once a match: p2pFinish and liveEnd both ask */
     if ((uint32_t)lastFrame >= s_g.cap)
         lastFrame = (int32_t)s_g.cap - 1;
     if (fps <= 0)
@@ -497,8 +584,11 @@ void Ghost_Report(int32_t lastFrame)
                 same = 0;
                 sumOff += (uint32_t)off;
                 offSamples++;
-                if (off > maxOff)
+                if (off > maxOff) {
                     maxOff = off;
+                    maxOffFrame = fr;
+                    maxOffWho = i;
+                }
             }
         }
         if (d->bx != t->bx || d->by != t->by || d->bz != t->bz)
@@ -509,6 +599,7 @@ void Ghost_Report(int32_t lastFrame)
     s_g.eventCount = 0;
     findRollbackGhosts(lastFrame);
     findWalkThroughs(lastFrame);
+    findJumps(lastFrame);
     for (i = 0; i < (int32_t)s_g.eventCount; i++) {
         count[s_g.events[i].kind]++;
         total[s_g.events[i].kind] += (uint32_t)s_g.events[i].frames;
@@ -529,6 +620,14 @@ void Ghost_Report(int32_t lastFrame)
     fprintf(stderr, "[ghost] player %d: %u walk-throughs in the final game -- an opponent on top of "
                     "the man on the ball for %d+ frames who did not win it (%u frames)\n",
             (int)s_g.player, count[EV_WALK_THROUGH], WALK_FRAMES, total[EV_WALK_THROUGH]);
+    fprintf(stderr, "[ghost] player %d: %u jumps -- a player drawn %d+ px from where he was (%u frames)\n",
+            (int)s_g.player, count[EV_JUMP], JUMP_PX, total[EV_JUMP]);
+    if (maxOffFrame >= 0) {
+        char t[16];
+        fprintf(stderr, "[ghost] player %d: the worst: %s (frame %d), team %d #%d drawn %d px from where he was\n",
+                (int)s_g.player, clock_text(maxOffFrame, t, sizeof t), (int)maxOffFrame,
+                (int)maxOffWho / 11 + 1, (int)maxOffWho % 11 + 1, (int)maxOff);
+    }
 
     sorted = (GhostEvent *)malloc((s_g.eventCount ? s_g.eventCount : 1) * sizeof *sorted);
     if (sorted && s_g.eventCount) {
