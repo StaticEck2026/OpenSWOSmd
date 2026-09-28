@@ -57,7 +57,7 @@ ACTIONS = [
     ("remove", "Service: remove"),
 ]
 ACTION_NAMES = {name for name, _ in ACTIONS}
-CONFIRM_ACTIONS = {"remove", "restart"}
+CONFIRM_ACTIONS = {"remove", "restart", "install"}
 assert ACTION_NAMES == set(LOCAL_ACTIONS) | QUEUED_ACTIONS
 
 # Guards against two local actions (e.g. two clicks on "build") racing in the
