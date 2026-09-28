@@ -42,15 +42,18 @@ Restart=always
 RestartSec=2
 
 # Binds 127.0.0.1:8899 only (see main.py) - this hardening is defense in depth
-# on top of that, not a substitute for it. REPO_DIR needs to be writable too
-# now: pull/build run right in this process (main.py's LOCAL_ACTIONS), not
-# delegated to root via sudo -u anymore - ProtectHome=read-only still locks
-# down the rest of /home, this is a narrow, explicit exception.
+# on top of that, not a substitute for it. No ProtectHome: pull/build run
+# right in this process now (main.py's LOCAL_ACTIONS), as this same user, and
+# git itself touches more of $HOME than just the repo (confirmed on the live
+# deploy: credential.helper=store's lock file under ~/.git-credentials failed
+# under ProtectHome=read-only) - enumerating every dotfile git might lock
+# isn't worth it when this already runs as the account's own normal user;
+# ProtectSystem=strict is the hardening that actually matters here (the rest
+# of the OS stays read-only regardless).
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=/srv/swos-matchmaker/admin ${REPO_DIR}
+ReadWritePaths=/srv/swos-matchmaker/admin
 
 [Install]
 WantedBy=multi-user.target
