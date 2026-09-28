@@ -111,7 +111,17 @@ allButtons.forEach(function(btn){{
 function poll(){{
   fetch('status').then(function(r){{return r.json();}}).then(function(s){{
     document.getElementById('pending').textContent = s.pending>0 ? ('pending: '+s.pending+' ('+s.pendingNames+')') : '';
-    document.getElementById('log').textContent = s.log;
+    var logEl = document.getElementById('log');
+    if(s.running || s.pending>0){{
+      // Something is still in flight (local action running, or a queued one
+      // not yet picked up by the cron) - s.log is still the PREVIOUS action's
+      // result at this point, so leave whatever's already shown (our own
+      // "starting:.../started:..." message from the click, or this) alone
+      // rather than flashing that stale old entry back up.
+      if(logEl.textContent==='(loading...)') logEl.textContent = '(an action is currently running, please wait...)';
+    }} else {{
+      logEl.textContent = s.log;
+    }}
   }}).catch(function(e){{ document.getElementById('log').textContent = 'poll error: '+e; }});
 }}
 poll();
@@ -226,6 +236,12 @@ class Handler(BaseHTTPRequestHandler):
             "pending": len(pending),
             "pendingNames": ",".join(pending),
             "log": log_text,
+            # True exactly while a local action's write_log() hasn't run yet
+            # (release() only happens after it does - see start_local_action) -
+            # lets the page tell "still running" apart from "already finished,
+            # this really is the current log", instead of showing the PREVIOUS
+            # action's now-stale log while a new one is still in flight.
+            "running": local_run_lock.locked(),
         }).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
