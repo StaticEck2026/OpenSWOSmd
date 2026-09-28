@@ -27,7 +27,15 @@ PROCESSED_DIR="$ADMIN_DIR/processed"
 LATEST_LOG="$PROCESSED_DIR/latest.log"
 LOCK_FILE="$ADMIN_DIR/worker.lock"
 
+RUN_USER="redhair"
+
+# Whichever of this (root, once a minute) or main.py (redhair, on startup)
+# happens to create these dirs FIRST owns them - if this runs first, they'd
+# end up root-owned and main.py could never write into them again (confirmed:
+# exactly this happened on first deploy). Root can always chown regardless of
+# current ownership, so just re-assert it every tick - self-healing either way.
 mkdir -p "$REQUESTS_DIR" "$PROCESSED_DIR"
+chown "$RUN_USER:$RUN_USER" "$ADMIN_DIR" "$REQUESTS_DIR" "$PROCESSED_DIR"
 
 # install/restart aren't as slow as a rebuild, but the lock still protects
 # against two clicks in the same minute overlapping (e.g. install then remove).
