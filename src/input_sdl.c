@@ -391,6 +391,11 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int in_match = NetplayMatch_Enabled();
         if (in_match && e->key.keysym.sym == SDLK_ESCAPE && e->key.repeat == 0)
             NetplayMatch_RequestLeave();
+        /* G: "that was a ghost" -- the moment goes in SWOS.log (netplay_ghost.h). */
+        if (in_match && e->key.keysym.sym == SDLK_g && e->key.repeat == 0) {
+            extern void NetplayMatch_MarkMoment(void);
+            NetplayMatch_MarkMoment();
+        }
         if (is_alt || in_match) {
             /* Don't record keyState, don't push to keyBuffer, don't
              * trigger fire. Alt is purely a modifier on this build. */
@@ -479,6 +484,16 @@ void InputSDL_HandleEvent(const SDL_Event *e)
          * joystick path has no button NAMES to key off, so a gameport adapter
          * keeps working exactly as before and simply has no key buttons. */
         size_t i;
+        /* An online match takes no keys from the pad (they are emptied every frame),
+         * so BACK -- statistics offline -- is "that was a ghost" there, as G is. */
+        {
+            extern int32_t NetplayMatch_Enabled(void);
+            extern void    NetplayMatch_MarkMoment(void);
+            if (e->cbutton.button == SDL_CONTROLLER_BUTTON_BACK && NetplayMatch_Enabled()) {
+                NetplayMatch_MarkMoment();
+                break;
+            }
+        }
         for (i = 0; i < sizeof k_padKeys / sizeof k_padKeys[0]; i++) {
             if (e->cbutton.button == k_padKeys[i].button) {
                 push_amiga_key(k_padKeys[i].akey);

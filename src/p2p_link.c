@@ -38,6 +38,7 @@
 #include "sim_state.h"
 #include "display.h"        /* _screen_width, SCREEN_WIDTH, PITCH_VIEW_MAX_WIDTH */
 #include "relay_proto.h"
+#include "netplay_netem.h"     /* SWOS_NETEM_LINK: the emulated network in front of the link too */
 #include "tackle_foul.h"        /* TackleFoul_BookingsEnabled */
 #include "career_status.h"      /* CareerStatus_InjuriesEnabled */
 
@@ -334,7 +335,10 @@ static void wire_send(P2PLink *l, const struct sockaddr_in *to, const uint8_t *b
     if (s_testTamperEvery > 0 && s_testSendCount % s_testTamperEvery == 0)
         out[(s_testSendCount * 7u) % (len + 4)] ^= (uint8_t)(1u << (s_testSendCount % 8));
     {
-        ssize_t sent = sendto(l->sock, (const char *)out, len + 4, 0,
+        ssize_t sent = !Netem_LinkSend(l->sock, (const char *)out, (int)(len + 4), 0,
+                                       (const struct sockaddr *)to, (int)sizeof *to)
+                     ? (ssize_t)(len + 4)       /* the emulator has it */
+                     : sendto(l->sock, (const char *)out, len + 4, 0,
                               (const struct sockaddr *)to, (socklen_t)sizeof *to);
         /* A send that never leaves is indistinguishable from a peer that never
          * answers, and both end as "CONNECTION FAILED". Say which. Once per
@@ -903,8 +907,10 @@ static void relay_register(P2PLink *l)
     c.player = (uint8_t)l->relayPlayer;
     c.token  = l->relayToken;
     Relay_WriteControl(buf, &c);
-    sendto(l->sock, (const char *)buf, sizeof buf, 0,
-           (const struct sockaddr *)&l->candidates[0], (socklen_t)sizeof l->candidates[0]);
+    if (Netem_LinkSend(l->sock, (const char *)buf, (int)sizeof buf, 0,
+                       (const struct sockaddr *)&l->candidates[0], (int)sizeof l->candidates[0]))
+        sendto(l->sock, (const char *)buf, sizeof buf, 0,
+               (const struct sockaddr *)&l->candidates[0], (socklen_t)sizeof l->candidates[0]);
 }
 
 /* The server's answer. 1 if `buf` was one (and has been dealt with). */
@@ -1112,6 +1118,7 @@ static void link_poll(P2PLink *l, uint32_t now)
 {
     if (l->sock < 0)
         return;
+    Netem_LinkPump(l->sock);            /* what the emulated network is now due to deliver */
 
     for (int32_t i = 0; i < kMaxReadsPerPoll; i++) {
         uint8_t buf[kPacketMax];

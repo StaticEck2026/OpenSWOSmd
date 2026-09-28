@@ -19,6 +19,7 @@
 #include "match_step.h"
 #include "match_record.h"   /* the recorder: SWOS_RECORD, [netplay] record */
 #include "match_report.h"   /* both players' logs, after the match */
+#include "netplay_ghost.h"  /* what this peer drew against what finally happened */
 #include "netplay_lobby.h"
 #include "p2p_link.h"
 #include "record_proto.h"
@@ -94,6 +95,7 @@ static struct {
     uint32_t         lingerStartMs;       /* p2p: 0 until the end is known */
     uint32_t         stallRng;            /* p2p: when to pause -- never the game's generator */
     uint32_t         randomInput;         /* live: SWOS_LIVE_RANDOM_INPUT's generator, 0 = the pad */
+    uint32_t         chaseInput;          /* live: SWOS_LIVE_CHASE_INPUT's generator, 0 = off */
     int32_t          paceUsPerFrame;      /* live: extra wait per frame GGPO's time sync asks for */
     int32_t          paceFramesLeft;      /* ... for this many more frames */
     int64_t          paceBiasUs;          /* ... and the standing slowdown it has learned */
@@ -243,6 +245,13 @@ static volatile int32_t s_leaveRequested;
 void NetplayMatch_RequestLeave(void)
 {
     s_leaveRequested = 1;
+}
+
+/* G or the pad's BACK during a live match (input_sdl.c): the player saw a ghost. */
+static volatile int32_t s_markRequested;
+void NetplayMatch_MarkMoment(void)
+{
+    s_markRequested = 1;
 }
 
 /* Where a live match's LOCAL input comes from. NULL = this machine's pad, which
@@ -652,13 +661,13 @@ static int32_t cbAdvance(void *ctx)
     rc = Netplay_SyncInput(s_np.session, inputs, &disconnect);
     if (rc != NETPLAY_OK)
         fail("re-simulating a frame: synchronize input: %s", Netplay_ErrorName(rc));
-    {
-        int32_t frame = 0;
-        Netplay_CurrentFrame(s_np.session, &frame);
-        soundFrameBegin(frame, 1);
-    }
+    int32_t resimFrame = 0;
+    Netplay_CurrentFrame(s_np.session, &resimFrame);
+    soundFrameBegin(resimFrame, 1);
     r = step(inputs, -1, 0);
     soundFrameEnd();
+    if (s_np.mode == NETPLAY_MATCH_P2P)
+        Ghost_Played(resimFrame, 0);        /* the correction replaces what was drawn */
     if (r != GAME_FRAME_DONE && !(s_np.mode == NETPLAY_MATCH_P2P && r == GAME_FRAME_MATCH_OVER))
         fail("a re-simulated frame left the match loop (GameFrameResult %d)", (int)r);
     s_np.resimulated++;
@@ -794,6 +803,7 @@ int32_t NetplayMatch_Start(void)
     s_np.stateSize = SimState_Size(SIM_TIER_ALL);
     s_np.endFrame = -1;
     s_np.lastConfirmed = -1;
+    Ghost_Begin(s_np.player);
     if (!s_np.timeoutMs)
         s_np.timeoutMs = DEFAULT_TIMEOUT_MS;
     for (i = 0; i < FIRST_RUN_FRAMES; i++)
@@ -1015,6 +1025,10 @@ int32_t NetplayMatch_StartLive(int32_t localPlayer, const char *peerIp, uint16_t
         }
         s_np.liveFrameLimit = (lim && lim[0]) ? atoi(lim) : 0;
         s_np.randomInput = (rnd && rnd[0]) ? (uint32_t)strtoul(rnd, NULL, 0) | 1u : 0;
+        {
+            const char *ch = getenv("SWOS_LIVE_CHASE_INPUT");
+            s_np.chaseInput = (ch && ch[0]) ? (uint32_t)strtoul(ch, NULL, 0) | 1u : 0;
+        }
     }
     snprintf(s_np.peerAddress, sizeof s_np.peerAddress, "%s", peerIp);
 
@@ -1075,6 +1089,80 @@ static uint8_t randomInput(void)
         s_np.randomInput = pad.state;
         return v;
     }
+}
+
+/* SWOS_LIVE_CHASE_INPUT=<seed>: a live match's local input from a player who chases the
+ * ball, for reproducing what two humans do to each other under rollback (netplay_ghost.h).
+ * A random pad seldom reaches the ball, and two of them seldom meet there; this one plays
+ * the way people do: runs its controlled player at the ball, re-aiming every few frames,
+ * slides in when an opponent has it close by, weaves at the other goal when it has it
+ * and now and then shoots, with a random re-aim among the rest.
+ *
+ * It reads what THIS peer has on screen -- the frame just played, which under rollback may
+ * be a guess -- exactly as a person reacts to what they see. Only this peer's input
+ * depends on it, and GGPO carries that input to the other side, so it cannot desync. */
+extern TeamGeneralInfo _topTeamData, _bottomTeamData;
+extern Sprite _ballSprite;
+
+static uint8_t chaseInput(void)
+{
+    static uint8_t held;
+    static int32_t framesLeft;
+    TeamGeneralInfo *me, *them;
+    const Sprite *pl, *keeper;
+    uint32_t x;
+    int32_t dx, dy;
+    uint8_t v = 0;
+
+    if (framesLeft-- > 0)
+        return held;
+    x = s_np.chaseInput;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    s_np.chaseInput = x ? x : 0x9E3779B9u;
+
+    me = _topTeamData.playerNumber == s_np.player ? &_topTeamData
+       : _bottomTeamData.playerNumber == s_np.player ? &_bottomTeamData
+       : s_np.player == 1 ? &_topTeamData : &_bottomTeamData;
+    them = me == &_topTeamData ? &_bottomTeamData : &_topTeamData;
+    pl = me->controlledPlayer;
+    framesLeft = (int32_t)((x >> 16) % 5u) + 2;         /* a human re-aims every 2..6 frames */
+
+    if (!pl || (x % 100u) < 12) {                       /* nobody to steer, or a stray push */
+        static const uint8_t k_dirs[8] = { 0x01, 0x02, 0x04, 0x08, 0x05, 0x09, 0x06, 0x0A };
+        held = k_dirs[(x >> 8) % 8u];
+        return held;
+    }
+    if (me->playerHasBall) {
+        /* Away from our own keeper, weaving. */
+        keeper = me->spritesTable ? me->spritesTable[0] : NULL;
+        dy = keeper && keeper->y.s.i > pl->y.s.i ? -1 : 1;
+        dx = (int32_t)((x >> 4) % 3u) - 1;
+        if ((x >> 12) % 100u < 3)
+            v |= 0x20;                                  /* have a shot */
+    } else {
+        dx = _ballSprite.x.s.i - pl->x.s.i;
+        dy = _ballSprite.y.s.i - pl->y.s.i;
+        if (them->playerHasBall && dx > -10 && dx < 10 && dy > -10 && dy < 10 &&
+            (x >> 12) % 100u < 30)
+            v |= 0x20;                                  /* slide in */
+        else if (!them->playerHasBall && dx > -6 && dx < 6 && dy > -6 && dy < 6 &&
+                 (x >> 12) % 100u < 25)
+            v |= 0x20;                                  /* a loose ball at our feet: kick it
+                                                         * (the kick-off waits for this) */
+        /* A diagonal only when both axes matter, as a thumb on a pad does. */
+        if (dx > -3 && dx < 3) dx = 0;
+        if (dy > -3 && dy < 3) dy = 0;
+    }
+    if (dy < 0) v |= 0x01;
+    if (dy > 0) v |= 0x02;
+    if (dx < 0) v |= 0x04;
+    if (dx > 0) v |= 0x08;
+    held = v;
+    if (v & 0x20)
+        framesLeft = 1;                                 /* a tap, not a hold */
+    return held;
 }
 
 /* SWOS_SYNCTEST_RANDOM_INPUT=<seed>, direct and synctest only: both players' input from
@@ -1361,6 +1449,7 @@ static void p2pFinish(void)
 {
     ReplayDriverState st;
 
+    Ghost_Report(s_np.endFrame);        /* every frame is final now */
     fprintf(stderr, "[netplay] frame %d is confirmed: %s\n", s_np.endFrame,
             s_np.live ? "the session stops there"
                       : (s_np.endFrame < (int32_t)ReplayTest_FrameCount()
@@ -1760,6 +1849,12 @@ prepared:
                 leave = 1;
         _keyCount = 0;
         s_leaveRequested = 0;
+        if (s_markRequested) {
+            int32_t at = 0;
+            s_markRequested = 0;
+            Netplay_CurrentFrame(s_np.session, &at);
+            Ghost_Mark(at);
+        }
         if (leave) {
             liveEnd(NETPLAY_LIVE_ENDED_EARLY, "YOU LEFT THE MATCH");
             return GAME_FRAME_MATCH_OVER;
@@ -1862,6 +1957,7 @@ prepared:
         extern uint8_t InputSDL_LocalMatchControls(void);
         memset(in, 0, sizeof in);
         in[s_np.player - 1].controls =
+            s_np.chaseInput ? chaseInput() :       /* asked for by name: beats a test's own */
             s_inputSource ? s_inputSource() :
             s_np.randomInput ? randomInput() : InputSDL_LocalMatchControls();
         in[s_np.player - 1].key = 0;       /* see InputSDL_LocalMatchControls */
@@ -1894,6 +1990,7 @@ prepared:
     soundFrameBegin(frame, 0);
     r = step(synced, frame, 0);
     soundFrameEnd();
+    Ghost_Played(frame, 1);             /* what this peer draws */
     if (r != GAME_FRAME_DONE && r != GAME_FRAME_MATCH_OVER)
         fail("frame %d left the match loop (GameFrameResult %d), which a netplay match cannot "
              "roll back", frame, (int)r);

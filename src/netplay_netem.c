@@ -29,6 +29,7 @@
 
 static int32_t   s_ready;
 static NetemLink s_link;
+static NetemLink s_lobby;           /* SWOS_NETEM_LINK=1: the same, in front of p2p_link */
 static char      s_desc[320];
 static char      s_summary[256];
 
@@ -93,6 +94,8 @@ void Netem_Init(void)
         seed = (uint32_t)SDL_GetTicks() * 2654435761u + 1u;
 
     NetemCore_Init(&s_link, &c, seed);
+    if (env_int("SWOS_NETEM_LINK", 0))
+        NetemCore_Init(&s_lobby, &c, seed * 2654435761u + 7u);   /* its own dice */
     NetemCore_Describe(&s_link.cfg, p ? p->name : NULL, s_desc, sizeof s_desc);
 }
 
@@ -140,6 +143,23 @@ void Netem_Pump(int sock)
     NetemCore_Pump(&s_link, SDL_GetTicks(), emit_sendto, (void *)(intptr_t)sock);
 }
 
+int Netem_LinkSend(int sock, const char *buf, int len, int flags,
+                   const struct sockaddr *dst, int dstLen)
+{
+    Netem_Init();
+    if (!s_lobby.enabled)
+        return 1;
+    return (int)NetemCore_Send(&s_lobby, SDL_GetTicks(), (const uint8_t *)buf, len,
+                               dst, dstLen, flags, emit_sendto, (void *)(intptr_t)sock);
+}
+
+void Netem_LinkPump(int sock)
+{
+    Netem_Init();
+    if (s_lobby.enabled)
+        NetemCore_Pump(&s_lobby, SDL_GetTicks(), emit_sendto, (void *)(intptr_t)sock);
+}
+
 #else  /* !SWOS_NETPLAY */
 
 void Netem_Init(void) {}
@@ -153,6 +173,13 @@ int  Netem_Send(int sock, const char *buf, int len, int flags,
     return 1;
 }
 void Netem_Pump(int sock) { (void)sock; }
+int  Netem_LinkSend(int sock, const char *buf, int len, int flags,
+                    const struct sockaddr *dst, int dstLen)
+{
+    (void)sock; (void)buf; (void)len; (void)flags; (void)dst; (void)dstLen;
+    return 1;
+}
+void Netem_LinkPump(int sock) { (void)sock; }
 
 #endif /* SWOS_NETPLAY */
 #endif /* SWOS_SDL_BUILD */

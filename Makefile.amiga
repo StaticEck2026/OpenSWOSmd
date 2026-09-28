@@ -64,6 +64,7 @@ SDL_ONLY_SRCS := \
     netplay_lobby.c       \
     netplay_setup.c       \
     netplay_match.c       \
+    netplay_ghost.c       \
     netplay_netem.c       \
     online_menus.c        \
     p2p_link.c            \

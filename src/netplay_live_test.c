@@ -166,13 +166,18 @@ static int32_t delay_agreed(void){ return P2PLink_AgreedDelay() >= 0; }
  * has to refuse it and the host has to go back and try again. Reaching into the
  * link's channel 1 (the lobby's START) is test knowledge of netplay_lobby.c. */
 static int32_t s_refusedOnce;
+/* SWOS_LIVE_PLAIN_LOBBY=1: none of the lobby's scripted races -- no rule change under
+ * a ready player, no change of mind as START lands -- just ready, START, kick-off. For
+ * runs about the MATCH (netplay_ghost.h) on a slow emulated link, where those races are
+ * not what is being tested and a 100 ms round trip changes how they fall. */
+static int32_t s_plainLobby;
 static int32_t s_readyDrops;        /* joiner: times the lobby took its ready flag down before START */
 
 static void change_of_mind(void)
 {
     uint32_t len = 0;
     uint16_t gen = 0;
-    if (s_isHost || s_refusedOnce)
+    if (s_isHost || s_refusedOnce || s_plainLobby)
         return;
     P2PLink_Poll();
     if (P2PLink_Received(1, &len, &gen)) {
@@ -339,7 +344,19 @@ void NetplayLiveTest_Run(void)
     if (!lobby_wait(peer_heard, 15000, "the other player's side"))
         exit(1);
 
-    if (s_isHost) {
+    s_plainLobby = getenv("SWOS_LIVE_PLAIN_LOBBY") != NULL;
+    if (s_isHost && s_plainLobby) {
+        LobbyRules rules = *NetplayLobby_Rules();
+        rules.gameLength = 0;                   /* the shortest match, as below */
+        NetplayLobby_SetRules(&rules);
+        if (!lobby_wait(can_start, 20000, "both sides ready"))
+            exit(1);
+        if (NetplayLobby_Start() != 0) {
+            SAY("  FAIL the host could not start\n");
+            exit(1);
+        }
+        SAY("  ok   the host starts (plain lobby)\n");
+    } else if (s_isHost) {
         LobbyRules rules = *NetplayLobby_Rules();
         rules.gameLength = 1;
         rules.pitchType  = 4;                   /* NORMAL */
@@ -384,7 +401,7 @@ void NetplayLiveTest_Run(void)
     }
     if (!lobby_wait(kicked_off, 30000, "kick-off"))
         exit(1);
-    if (!s_isHost && s_readyDrops == 0) {
+    if (!s_isHost && s_readyDrops == 0 && !s_plainLobby) {
         SAY("  FAIL the host changed the rules and my ready flag never went down\n");
         exit(1);
     }

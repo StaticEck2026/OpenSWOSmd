@@ -32,6 +32,8 @@
  *   SWOS_NETEM_TAMPER_PCT=N    N% of packets have bits flipped in them -- clumsy: tamper
  *   SWOS_NETEM_TAMPER_BITS=N   how many bits (default 1)
  *   SWOS_NETEM_SEED=N          the emulator's own generator (default: the clock)
+ *   SWOS_NETEM_LINK=1          the same conditions in front of the lobby's link too, so
+ *                              the ping the input delay is agreed from sees them
  *
  * Profiles are the shape of a link, not a measurement of one. Every knob above
  * still overrides what the profile set, so `SWOS_NETEM_PROFILE=wifi
@@ -94,6 +96,16 @@ int  Netem_Send(int sock, const char *buf, int len, int flags,
 
 /* Send whatever is now due. Call often -- once per network poll is right. */
 void Netem_Pump(int sock);
+
+/* The same network in front of the LOBBY's link (src/p2p_link.c), when
+ * SWOS_NETEM_LINK=1 asks for it: a second queue with the same conditions and a
+ * seed of its own. The link measures the ping the input delay is agreed from
+ * (p2p_link.c propose_delay), so without it an emulated 100 ms link agrees on a
+ * delay for 0 ms and the match plays with one no real player would get. Off by
+ * default: the lobby tests want a clean handshake, whatever the match gets. */
+int  Netem_LinkSend(int sock, const char *buf, int len, int flags,
+                    const struct sockaddr *dst, int dstlen);
+void Netem_LinkPump(int sock);
 
 /* "delay 80ms +/-20, loss 2%" for a log line, or "" when off. */
 const char *Netem_Describe(void);
