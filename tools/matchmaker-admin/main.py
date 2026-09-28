@@ -87,11 +87,24 @@ pre{{background:#181818;border:1px solid #333;border-radius:4px;padding:12px;fon
 <div id="pending"></div>
 <pre id="log">(loading...)</pre>
 <script>
-document.querySelectorAll('button[data-action]').forEach(function(btn){{
+var allButtons = document.querySelectorAll('button[data-action]');
+allButtons.forEach(function(btn){{
+  var label = btn.textContent;
   btn.addEventListener('click', function(){{
+    // Immediate, unmissable feedback that the click registered - disabling
+    // every button (not just this one) also stops a second click starting a
+    // different action while this one's still only queued/starting.
+    allButtons.forEach(function(b){{ b.disabled = true; }});
+    btn.textContent = label+' (sent...)';
+    document.getElementById('log').textContent = 'starting: '+btn.dataset.action+' ... please wait';
     fetch('action', {{method:'POST', headers:{{'Content-Type':'application/x-www-form-urlencoded'}}, body:'action='+encodeURIComponent(btn.dataset.action)}})
-      .then(function(){{ poll(); }})
-      .catch(function(e){{ document.getElementById('log').textContent = 'error: '+e; }});
+      .then(function(r){{ return r.text(); }})
+      // The real result replaces this on the next poll() tick (already running
+      // every 2s below) once the action actually finishes - this is just so a
+      // click shows SOMETHING immediately instead of the still-stale old log.
+      .then(function(t){{ document.getElementById('log').textContent = t; }})
+      .catch(function(e){{ document.getElementById('log').textContent = 'error: '+e; }})
+      .finally(function(){{ allButtons.forEach(function(b){{ b.disabled = false; }}); btn.textContent = label; }});
   }});
 }});
 function poll(){{
