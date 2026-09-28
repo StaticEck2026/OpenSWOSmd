@@ -80,7 +80,9 @@ int32_t        P2PLink_Punch(const char *const *addresses, int32_t count, uint16
 
 /* A RELAYED match (include/relay_proto.h): the one address given to P2PLink_Punch
  * is the matchmaking server, and every punch round also registers us there as
- * `player` with the server's `token`. Kept across P2PLink_Punch calls, so a
+ * `player` with the server's `token`. With token 0 (direct) `player` still matters
+ * when punching to several candidates: the two sides may each find a different working
+ * path, and they settle on player 1's. Kept across P2PLink_Punch calls, so a
  * rematch through the lobby registers again by itself. token 0 = direct, which
  * the direct-IP entry points (Host, Join) also set. */
 void           P2PLink_SetRelay(uint64_t token, int32_t player);

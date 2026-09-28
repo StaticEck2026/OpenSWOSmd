@@ -574,7 +574,9 @@ void OnlineMenus_StartMatchFromMatchmaking(void)
                 list[n] = addrs[n];
                 n++;
             }
-            P2PLink_SetRelay(0, 0);
+            /* Not relayed -- but the link still needs to know which player it is: with
+             * several candidate addresses the two sides settle on player 1's path. */
+            P2PLink_SetRelay(0, st->playerNumber);
         }
         snprintf(peerName, sizeof peerName, "%s", st->peerName);
 

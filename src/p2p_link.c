@@ -193,6 +193,9 @@ typedef struct {
     uint64_t           relayToken;      /* 0 = direct */
     int32_t            relayPlayer;
     int32_t            relayAcked;      /* the server has answered RELAY_OK */
+    /* 1 or 2 when punching to several candidates, 0 when unknown: which side settles
+     * the path (see the CONNECTED case of handle_packet). */
+    int32_t            punchPlayer;
 } P2PLink;
 
 static P2PLink s_link = { -1, 0, P2P_IDLE, P2P_FAIL_NONE, P2P_FAIL_NONE,
@@ -1065,15 +1068,45 @@ static void handle_packet(P2PLink *l, const uint8_t *buf, int32_t len,
 
     case P2P_CONNECTED:
         if (!same_peer(l, from)) {
-            if (type == PKT_HELLO)
-                send_refuse(l, from, P2P_FAIL_HOST_BUSY);
-            return;
+            /* ONE PEER, SEVERAL PATHS. Punching sends to every candidate at once, and each
+             * side takes the first address that answers -- so on a jittery link the two can
+             * settle on DIFFERENT paths (one on the other's loopback or LAN address, the
+             * other on its public one), each then sending down its own path and dropping
+             * everything arriving down the other: both went deaf and the link timed out
+             * "lost" six seconds later (150 ms +/-70, 3% loss; the mobile profile). Any
+             * two working paths do it -- two players behind one router, for a start.
+             *
+             * So a packet from another of the peer's candidate addresses is the peer, and
+             * the two converge on one path: player 1 keeps its choice, player 2 follows
+             * whatever player 1 sends from. Within a round trip both use player 1's path --
+             * which the match that follows needs, since GGPO takes one address each side. */
+            if (l->numCandidates > 0 && from_candidate(l, from)) {
+                /* Followed on player 1's ordinary traffic only. Its punch HELLOs and
+                 * WELCOMEs go to EVERY candidate for a moment after the link is up, and
+                 * following those made player 2 hop between addresses packet by packet. */
+                if (l->punchPlayer == 2 && type != PKT_HELLO && type != PKT_WELCOME) {
+                    if (link_log_on()) {
+                        char was[64], now_[64];
+                        fprintf(stderr, "[p2p] player 1 is sending from %s, not %s: following it\n",
+                                addr_text(from, now_, sizeof now_), addr_text(&l->peer, was, sizeof was));
+                    }
+                    set_peer(l, from);
+                }
+            } else {
+                if (type == PKT_HELLO)
+                    send_refuse(l, from, P2P_FAIL_HOST_BUSY);
+                return;
+            }
         }
         l->lastHeardMs = now;
+        /* Replies go to OUR peer address, not back where the packet came from: the
+         * peer may be reaching us down another of its paths (above), and answering down
+         * that one had player 1 sending on two paths at once -- its pings on its own, its
+         * pongs on player 2's -- so player 2 hopped between them for ever. One path each. */
         if (type == PKT_HELLO) {
-            send_setup_packet(l, from, PKT_WELCOME);    /* our welcome was lost */
+            send_setup_packet(l, &l->peer, PKT_WELCOME);    /* our welcome was lost */
         } else if (type == PKT_PING && len >= kPingLen) {
-            send_stamped(l, from, PKT_PONG, BE_READ_U32(buf + 8));
+            send_stamped(l, &l->peer, PKT_PONG, BE_READ_U32(buf + 8));
         } else if (type == PKT_PONG && len >= kPingLen) {
             int32_t rtt = (int32_t)(now - BE_READ_U32(buf + 8));
             if (rtt < 0)
@@ -1310,8 +1343,10 @@ static void link_close(P2PLink *l)
  *
  * There is no host and no joiner here. A NAT lets a datagram IN only after one
  * has gone OUT to that address, so a peer that merely listens is unreachable;
- * both have to be punching at the same time. The player number still decides
- * who is player 1, but it plays no part in making the connection.
+ * both have to be punching at the same time. The player number decides who is
+ * player 1, and once connected which path the two settle on: several candidates
+ * may all work, and each side may have found a different one first (the
+ * CONNECTED case of handle_packet) -- player 2 follows player 1's.
  *
  * The local port matters: it is the one the matchmaker saw us on, so the
  * mapping the server's traffic already opened is the one the peer's packets
@@ -1382,6 +1417,7 @@ void P2PLink_SetRelay(uint64_t token, int32_t player)
     s_link.relayToken  = token;
     s_link.relayPlayer = token ? player : 0;
     s_link.relayAcked  = 0;
+    s_link.punchPlayer = player;        /* direct too: which side settles the path */
 }
 
 uint64_t P2PLink_RelayToken(void) { return s_link.relayToken; }

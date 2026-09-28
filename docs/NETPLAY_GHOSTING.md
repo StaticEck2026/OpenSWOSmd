@@ -150,11 +150,12 @@ The same knobs work through the real menus and the match report:
 
 ## Found along the way, not yet fixed
 
-- **High jitter and loss on the lobby link break the matchmaker's punch-through**: the
-  link reports "lost" (nothing heard for 6 s) and no match starts. A plain delay, and 70 ms
-  +/-40 with 2% loss, connect fine; the `mobile` profile (reordering, duplicates, 250 ms
-  stalls) and 150 ms +/-70 with 3% loss do not. The direct-IP path copes with both. Real
-  players on a bad line could hit this.
+- **Fixed: a jittery line broke the matchmaker's punch-through** (the link "lost" after
+  6 s, no match). Punching goes to every candidate address at once and each side took the
+  first that answered -- on a jittery link, different ones -- then dropped the other's
+  packets. Now a packet from another of the peer's addresses is the peer, replies go down
+  the chosen path, and player 2 follows player 1's (src/p2p_link.c). The `mobile` profile
+  and 150 ms +/-70 with 3% loss both connect and play through the lobby.
 - **`netplay_live_test.sh` passes a match that never started**: under `PROFILE=awful` both
   peers ended at frame 0 (THE OTHER PLAYER NEVER ARRIVED) with equal hashes.
 - **The live test's lobby race** (the joiner changes side as START lands) is refused twice
