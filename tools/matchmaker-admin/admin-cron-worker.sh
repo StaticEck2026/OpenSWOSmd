@@ -20,6 +20,12 @@
 # silently dropping requests.
 set -uo pipefail
 
+# Forces systemctl/git/etc. to print their untranslated, English messages
+# regardless of the server's own locale (see main.py's own LOCAL_ACTIONS for
+# the matching fix on the other tier - confirmed needed there: git printed
+# "Bereits aktuell." otherwise).
+export LC_ALL=C LANGUAGE=C
+
 REPO_DIR="/home/redhair/git/OpenSWOS"
 ADMIN_DIR="/srv/swos-matchmaker/admin"
 REQUESTS_DIR="$ADMIN_DIR/requests"

@@ -131,9 +131,14 @@ def write_log(action, text):
 def run_local_action(action):
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
     header = f"=== {ts}  action={action} ===\n"
+    # LC_ALL=C forces git (and anything else that gettext-translates its own
+    # output) to print its untranslated, English messages regardless of the
+    # server's own locale - confirmed needed: git pull printed "Bereits
+    # aktuell." here otherwise.
+    env = dict(os.environ, LC_ALL="C", LANGUAGE="C")
     try:
         result = subprocess.run(
-            LOCAL_ACTIONS[action], cwd=REPO_DIR,
+            LOCAL_ACTIONS[action], cwd=REPO_DIR, env=env,
             capture_output=True, text=True, timeout=1800,
         )
         out = result.stdout + result.stderr
