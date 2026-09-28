@@ -69,8 +69,8 @@ local_run_lock = threading.Lock()
 def render_index():
     buttons = []
     for name, label in ACTIONS:
-        confirm = f" onclick=\"return confirm('{label}?')\"" if name in CONFIRM_ACTIONS else ""
-        buttons.append(f'<button data-action="{name}"{confirm}>{label}</button>')
+        confirm_attr = f' data-confirm="{label}?"' if name in CONFIRM_ACTIONS else ""
+        buttons.append(f'<button data-action="{name}"{confirm_attr}>{label}</button>')
     return f"""<!doctype html>
 <html><head><meta charset="utf-8"><title>swos-matchmaker admin</title>
 <style>
@@ -91,6 +91,12 @@ pre{{background:#181818;border:1px solid #333;border-radius:4px;padding:12px;fon
 var allButtons = document.querySelectorAll('button[data-action]');
 allButtons.forEach(function(btn){{
   btn.addEventListener('click', function(){{
+    // Was a separate inline onclick="return confirm(...)" before - which did
+    // NOT stop this addEventListener handler from firing regardless of
+    // Cancel/OK (confirmed live: two "remove" requests got queued from two
+    // cancelled dialogs). The confirm check has to live in THIS handler,
+    // the one that actually sends the request, not a second, independent one.
+    if(btn.dataset.confirm && !confirm(btn.dataset.confirm)) return;
     // Immediate, unmissable feedback that the click registered - disabling
     // every button (not just this one, greyed out via CSS, no label/size
     // change) also stops a second click starting a different action while
