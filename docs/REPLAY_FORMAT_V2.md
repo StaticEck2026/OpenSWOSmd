@@ -202,7 +202,7 @@ finds some but not all refuses the file, rather than play half of it).
 
 | Chunk | Stored | Content |
 |---|---|---|
-| `SIMV` | as is, 16 bytes | version u16 (1); the handshake's rules byte (`P2P_RULE_*`: 0x01 DOS gameplay, 0x02 arcade, 0x04 fire-hold lockout, 0x08 no bookings, 0x10 no injuries); 0; the registry's layout hash u64 (`SimState_LayoutHash`); the simulation width u16 (`_sim_draw_width`); 0 |
+| `SIMV` | as is, 16 bytes | version u16 (1); the handshake's rules byte (`P2P_RULE_*`: 0x01 DOS gameplay, 0x02 arcade, 0x04 fire-hold lockout, 0x08 no bookings, 0x10 no injuries, 0x20 the DOS view, 0x40 the view is known -- `--srp-resim` plays in the recorded view; a recording without 0x40 plays in the local one and, if it parts at frame 1, says to try the other `--view`); 0; the registry's layout hash u64 (`SimState_LayoutHash`); the simulation width u16 (`_sim_draw_width`); 0 |
 | `SETP` | deflated | the match setup the host sent (`include/netplay_setup.h`): teams, tactics, the rules they are played by |
 | `STAT` | as is (it is deflated already) | a `state_wire` packet of the SIM and VIEW tiers at the start of frame 0, in the portable encoding (`src/state_wire.c`) |
 | `INPT` | deflated | 4 bytes a frame: player 1's two bytes (controls, key), then player 2's, as `MatchStep_UnpackInput` reads them |

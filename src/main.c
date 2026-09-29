@@ -842,8 +842,11 @@ int main(int argc, char **argv)
         /* The match is played by the rules it was recorded with, whatever SWOS.ini says;
          * headless, silent and unlogged like the replay rig, and with no audio pump
          * writing game memory behind the step's back (docs/ROLLBACK.md). */
-        if (SrpResim_Rules(&opts.dos_gameplay, &opts.fire_hold_lockout) != 0)
+        int recView;
+        if (SrpResim_Rules(&opts.dos_gameplay, &opts.fire_hold_lockout, &recView) != 0)
             return 1;
+        if (recView >= 0)
+            opts.view_style = recView ? VIEW_STYLE_DOS : VIEW_STYLE_AMIGA;
 #if defined(SWOS_WASM_BUILD)
         /* The browser's SDL has no dummy drivers: it draws to its canvas, as it would. */
         setenv("SWOS_NO_LOG", "1", 1);

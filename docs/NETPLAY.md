@@ -668,7 +668,12 @@ first frame rather than an error:
 - the protocol version,
 - `SimState_LayoutHash` — the shape of the state a rollback saves, so two builds whose
   match state differs refuse each other,
-- the gameplay style (DOS or Amiga, arcade, the original fire-hold lockout).
+- the gameplay style (DOS or Amiga, arcade, the original fire-hold lockout),
+- the VIEW (`[gameplay] view`, DOS or Amiga), which reads like a display setting and is
+  not one: the simulation camera is placed for the screen the match is seen on
+  (`MatchViewEnter` pins it to 320x200 for the DOS view), and the camera moves players.
+  Two peers on different views went out of step at frame 0; a recording replayed only on
+  a machine with the recorder's view (2026-09-29, the `82fbf0f` recordings).
 
 The screen width travels too, but does not have to match: both take the wider of the two as
 the match's simulation draw width (§5, "One simulation width").
@@ -698,7 +703,8 @@ up instead of hanging.
 
 Every rule a match is played by is one bit of the handshake's `gameplay` byte
 (`P2PLink_GameplayFlags`, `P2P_RULE_*`): what the player chose — DOS gameplay, arcade mode,
-the fire-hold lockout (P2P_FAIL_GAMEPLAY, "YOUR GAMEPLAY STYLES ARE DIFFERENT") — and what
+the fire-hold lockout (P2P_FAIL_GAMEPLAY, "YOUR GAMEPLAY STYLES ARE DIFFERENT"), the view
+(P2P_FAIL_VIEW, "ONE OF YOU PLAYS THE DOS VIEW / SET THE SAME VIEW IN SWOS.INI") — and what
 the BUILD decided: `SWOS_TEST_NO_INJURIES_CARDS` turns bookings and injuries off
 (P2P_FAIL_BUILD, "YOUR BUILDS PLAY BY DIFFERENT RULES / ONE OF YOU HAS A TEST BUILD").
 

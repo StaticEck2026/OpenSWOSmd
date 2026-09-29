@@ -226,8 +226,15 @@ uint8_t P2PLink_GameplayFlags(void)
     extern int _gDosGameplay;               /* dos_mode.h */
     extern int _gArcadeMode;                /* arcade.c */
     extern int _gOriginalFireHoldLockout;   /* team_control.c */
+    extern int _gDosView;                   /* dos_graphics.c */
 
+    /* The VIEW too, though it reads like a display setting: the simulation camera is
+     * placed for the screen the match is seen on -- MatchViewEnter pins it to 320x200
+     * for the DOS view -- and the camera moves players (which one you control, who is
+     * on screen). Two peers on different views went out of step at frame 0, and a
+     * recording replayed only on a machine with the recorder's view (2026-09-29). */
     return (uint8_t)((_gDosGameplay ? P2P_RULE_DOS : 0) |
+                     (_gDosView ? P2P_RULE_DOS_VIEW : 0) | P2P_RULE_VIEW_KNOWN |
                      (_gArcadeMode ? P2P_RULE_ARCADE : 0) |
                      (_gOriginalFireHoldLockout ? P2P_RULE_FIRE_LOCKOUT : 0) |
                      (TackleFoul_BookingsEnabled() ? 0 : P2P_RULE_NO_BOOKINGS) |
@@ -263,8 +270,10 @@ static P2PLinkFailure setup_mismatch(const Setup *mine, const Setup *theirs)
     /* The build's rules first: nothing in OPTIONS can make those agree. */
     if ((mine->gameplay ^ theirs->gameplay) & P2P_RULES_BUILD)
         return P2P_FAIL_BUILD;
-    if (mine->gameplay != theirs->gameplay)
+    if ((mine->gameplay ^ theirs->gameplay) & ~(P2P_RULE_DOS_VIEW | P2P_RULE_VIEW_KNOWN))
         return P2P_FAIL_GAMEPLAY;
+    if (mine->gameplay != theirs->gameplay)
+        return P2P_FAIL_VIEW;
     /* Not the screen width. It used to be refused, because the simulation read it; the
      * match now reads one width both peers agree instead (display.h, _sim_draw_width).
      * P2P_FAIL_WIDTH stays in the enum for a peer of an older protocol to report. */
@@ -523,7 +532,8 @@ static const char *failure_name(P2PLinkFailure f)
         "none", "unavailable", "bad address", "port in use", "socket", "no answer",
         "lost", "peer left", "host busy", "protocol", "state (a different build)",
         "gameplay style", "screen width", "port reserved", "relay refused us",
-        "build rules (one is a test build)",
+        "build rules (one is a test build)", "version (another build)",
+        "view (one DOS, one Amiga)",
     };
     return (uint32_t)f < sizeof names / sizeof names[0] ? names[f] : "?";
 }
@@ -988,6 +998,7 @@ static P2PLinkFailure refuse_reason(uint8_t byte)
     case P2P_FAIL_WIDTH:
     case P2P_FAIL_BUILD:
     case P2P_FAIL_VERSION:
+    case P2P_FAIL_VIEW:
         return (P2PLinkFailure)byte;
     default:
         return P2P_FAIL_PROTOCOL;   /* a reason this version does not know */
@@ -1796,6 +1807,21 @@ int32_t P2PLink_SelfTest(void)
         check(host.state == P2P_HOSTING && host.notice == P2P_FAIL_GAMEPLAY, "the host says who bounced off");
         link_close(&mismatched);
     }
+    /* 4a. The other view: a different simulation camera, so a different match. */
+    {
+        Setup theirs;
+        setup_local(&theirs);
+        theirs.gameplay ^= P2P_RULE_DOS_VIEW;
+        memset(&mismatched, 0, sizeof mismatched); mismatched.sock = -1; mismatched.pingMs = -1;
+        mismatched.joinTimeoutMs = 1000;
+        check(link_join(&mismatched, "127.0.0.1", host.localPort, &theirs) == 0, "a player on the other view joins");
+        P2PLink *two[2] = { &host, &mismatched };
+        pump(two, 2, 1500, link_settled, &mismatched);
+        check(mismatched.state == P2P_FAILED && mismatched.failure == P2P_FAIL_VIEW,
+              "it is refused: a different view");
+        check(host.state == P2P_HOSTING && host.notice == P2P_FAIL_VIEW, "the host says which view");
+        link_close(&mismatched);
+    }
     /* 4b. Another build -- another commit, or the same one with uncommitted changes --
      * is refused before anything else is compared. */
     {
@@ -1928,6 +1954,8 @@ void P2PLink_FailureText(P2PLinkFailure failure, const char **line1, const char 
         *line1 = "THE OTHER PLAYER HAS ANOTHER VERSION"; *line2 = "BOTH OF YOU NEED THE SAME BUILD"; break;
     case P2P_FAIL_GAMEPLAY:
         *line1 = "YOUR GAMEPLAY STYLES ARE DIFFERENT"; *line2 = "SET THE SAME ONE IN OPTIONS"; break;
+    case P2P_FAIL_VIEW:
+        *line1 = "ONE OF YOU PLAYS THE DOS VIEW"; *line2 = "SET THE SAME VIEW IN SWOS.INI"; break;
     case P2P_FAIL_WIDTH:
         *line1 = "YOUR SCREEN WIDTHS ARE DIFFERENT"; *line2 = "BOTH OF YOU NEED THE SAME ONE"; break;
     case P2P_FAIL_RELAY:

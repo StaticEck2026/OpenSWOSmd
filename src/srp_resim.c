@@ -39,6 +39,7 @@
 #include "replay_v2.h"
 #include "sim_state.h"
 #include "game_loop.h"          /* _gFrameStepInput */
+#include "dos_mode.h"           /* _gDosView: the view it was replayed with */
 
 extern TeamFileEx _selectedTeams[100];
 extern uint16_t   _numSelectedTeams;
@@ -63,7 +64,7 @@ int32_t SrpResim_Armed(void)
 
 /* Read it now -- at the command line, before the options are published -- so the match is
  * played by the rules it was recorded with. */
-int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout)
+int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout, int *dosView)
 {
     int32_t rc;
     if (!s_loaded) {
@@ -79,6 +80,9 @@ int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout)
     }
     *dosGameplay = (s_rec.rules & P2P_RULE_DOS) != 0;
     *fireHoldLockout = (s_rec.rules & P2P_RULE_FIRE_LOCKOUT) != 0;
+    /* The view is a rule too (P2PLink_GameplayFlags). A recording from before it said
+     * so plays by this machine's own -- see the hint if it parts at frame 1. */
+    *dosView = (s_rec.rules & P2P_RULE_VIEW_KNOWN) ? (s_rec.rules & P2P_RULE_DOS_VIEW) != 0 : -1;
     return 0;
 }
 
@@ -99,6 +103,9 @@ static void resim_finished(void)
         printf("[resim] parts at frame %d: this build %08X, the recording %08X -- frames 0..%d "
                "agreed%s\n", (int)firstDiff, (unsigned)have, (unsigned)want, (int)firstDiff - 1,
                firstDiff == 0 ? " (none: the kick-off state itself differs)" : "");
+    if (firstDiff == 1 && !(s_rec.rules & P2P_RULE_VIEW_KNOWN))
+        printf("[resim] this recording does not say which view it was played on, and the view "
+               "moves the camera: try it with --view=%s\n", _gDosView ? "amiga" : "dos");
     else
         printf("[resim] the match ended after %u of %u frames\n", (unsigned)played,
                (unsigned)s_rec.frames);
@@ -154,9 +161,9 @@ void SrpResim_Run(void)
 
 int32_t SrpResim_Arm(const char *path) { (void)path; return 1; }
 int32_t SrpResim_Armed(void) { return 0; }
-int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout)
+int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout, int *dosView)
 {
-    (void)dosGameplay; (void)fireHoldLockout;
+    (void)dosGameplay; (void)fireHoldLockout; (void)dosView;
     return 1;
 }
 void    SrpResim_Run(void) {}

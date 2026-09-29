@@ -11,10 +11,11 @@
 int32_t SrpResim_Arm(const char *path);
 int32_t SrpResim_Armed(void);
 
-/* Read the recording and say how it was played: the gameplay style and the fire-hold
- * lockout, for main.c to publish before anything reads them. 0, or 1 if it is not a
- * resumable .SRP (and why is printed). */
-int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout);
+/* Read the recording and say how it was played: the gameplay style, the fire-hold
+ * lockout and the view (1 DOS, 0 Amiga, -1 a recording from before it said), for main.c
+ * to publish before anything reads them. 0, or 1 if it is not a resumable .SRP (and why
+ * is printed). */
+int32_t SrpResim_Rules(int *dosGameplay, int *fireHoldLockout, int *dosView);
 
 /* Play it again and check every frame; exits the process (0 as recorded, 2 parted, 1
  * refused). From SWOS.c, where the replay rig and the live test start. */

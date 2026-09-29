@@ -50,6 +50,7 @@ typedef enum {
     P2P_FAIL_RELAY,         /* the server's relay does not know our token (expired, or never) */
     P2P_FAIL_BUILD,         /* the builds play by different rules (a test build and a release) */
     P2P_FAIL_VERSION,       /* a different build: another commit, or uncommitted changes */
+    P2P_FAIL_VIEW,          /* one plays the DOS view, the other the Amiga view */
 } P2PLinkFailure;
 
 /* The rules a match is played by (P2PLink_GameplayFlags), one bit each. */
@@ -58,6 +59,8 @@ typedef enum {
 #define P2P_RULE_FIRE_LOCKOUT   0x04    /* the original's fire-hold lockout */
 #define P2P_RULE_NO_BOOKINGS    0x08    /* SWOS_TEST_NO_INJURIES_CARDS, as tackle_foul.c was built */
 #define P2P_RULE_NO_INJURIES    0x10    /* SWOS_TEST_NO_INJURIES_CARDS, as career_status.c was built */
+#define P2P_RULE_DOS_VIEW       0x20    /* the DOS view: the simulation camera sees 320x200 */
+#define P2P_RULE_VIEW_KNOWN     0x40    /* this byte says the view (a .SRP from before it did not) */
 #define P2P_RULES_BUILD         (P2P_RULE_NO_BOOKINGS | P2P_RULE_NO_INJURIES)
 
 /* Open the link. Both return 0, or non-zero with the reason in P2PLink_Failure.
