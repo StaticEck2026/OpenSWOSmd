@@ -26,6 +26,7 @@
 #include "platform_sdl.h"
 #include <SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "match_step.h"   /* MatchStep_LocalBenchButton: the DOS second button */
 #include "dos_mode.h"     /* _gDosGameplay */
@@ -206,22 +207,53 @@ volatile uint16_t _pauseSkipRequested;
  * lingering in the match-state range (21..31) after the player's last match. */
 extern uint16_t _seasonUpdateInProgress;
 
-/* Up to two game controllers, mapped to players 1 and 2 respectively.
- * Pad 0 is shared with the keyboard for player 1; pad 1 drives player 2
- * exclusively (no keyboard binding for P2 — matches the Amiga which
- * always read P2 from physical Port 0). New pads fill the lowest empty
- * slot, so plugging a single pad always lands on P1.
+/* Every connected controller is opened (up to INPUTSDL_MAX_DEVICES), and two of
+ * them are PLAYED: s_player_dev[0] drives player 1, shared with the keyboard, and
+ * s_player_dev[1] player 2 exclusively (no keyboard binding for P2 -- matches the
+ * Amiga, which always read P2 from physical Port 0). A new device takes the lowest
+ * free player, so plugging a single pad always lands on P1, and a device that is
+ * left over waits: it steps in when a played one is unplugged, or claims P1 by
+ * pressing fire on the intro (InputSDL_SetIntroClaim). That is for a player with
+ * more pads connected than players -- three, say, and the one they want is the
+ * Amiga joystick on an Arduino Leonardo, which was opened third and so never at all.
  *
- * Each slot can be either an SDL_GameController (high-level mapped pad)
- * or a raw SDL_Joystick (no mapping in SDL's DB — we read axes/buttons
- * by index). The raw fallback is what makes generic "Gameport to USB"
- * adapters and other DIY pads work without the user having to author a
- * gamecontrollerdb.txt entry. */
-#define INPUTSDL_NUM_PADS 2
-static SDL_GameController *s_pads[INPUTSDL_NUM_PADS];
-static SDL_Joystick       *s_raw_pads[INPUTSDL_NUM_PADS];   /* one of pads[i] / raw_pads[i] is set */
-static SDL_JoystickID      s_pad_instance_id[INPUTSDL_NUM_PADS]; /* for matching DEVICEREMOVED */
+ * Each device is either an SDL_GameController (high-level mapped pad) or a raw
+ * SDL_Joystick (no mapping in SDL's DB -- we read axes/buttons by index). The raw
+ * fallback is what makes generic "Gameport to USB" adapters and other DIY pads work
+ * without the user having to author a gamecontrollerdb.txt entry. */
+#define INPUTSDL_NUM_PADS    2
+#define INPUTSDL_MAX_DEVICES 8
+static SDL_GameController *s_dev_gc[INPUTSDL_MAX_DEVICES];
+static SDL_Joystick       *s_dev_raw[INPUTSDL_MAX_DEVICES];  /* one of gc[i] / raw[i] is set */
+static SDL_JoystickID      s_dev_id[INPUTSDL_MAX_DEVICES];   /* for matching DEVICEREMOVED */
+static int                 s_player_dev[INPUTSDL_NUM_PADS] = { -1, -1 };
+static int                 s_intro_claim;                     /* the intro is on screen */
+static int                 s_frames;                          /* PostFrame calls, for the test knobs */
 
+static int dev_open(int d) { return s_dev_gc[d] || s_dev_raw[d]; }
+
+static const char *dev_name(int d)
+{
+    const char *nm = s_dev_gc[d] ? SDL_GameControllerName(s_dev_gc[d])
+                   : s_dev_raw[d] ? SDL_JoystickName(s_dev_raw[d]) : NULL;
+    return nm ? nm : "controller";
+}
+
+/* A device nobody plays gets the lowest free player. -1 if both are taken. */
+static int dev_assign(int d)
+{
+    for (int p = 0; p < INPUTSDL_NUM_PADS; ++p) {
+        if (s_player_dev[p] == d)
+            return p;
+    }
+    for (int p = 0; p < INPUTSDL_NUM_PADS; ++p) {
+        if (s_player_dev[p] < 0) {
+            s_player_dev[p] = d;
+            return p;
+        }
+    }
+    return -1;
+}
 
 /* Push a raw Amiga scancode into the FIFO GetKey() drains, exactly as a
  * keyboard press does: same full-buffer drop, and no repeat handling, since a
@@ -234,17 +266,18 @@ static void push_amiga_key(uint8_t akey)
     }
 }
 
+/* Open a device and give it a player if one is free. Returns the player (0 or 1),
+ * -1 if it is open but waiting for a player, -2 if it could not be opened. */
 static int pad_open_into_first_empty(int joystick_index)
 {
-    for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
-        if (!s_pads[i] && !s_raw_pads[i]) {
+    for (int i = 0; i < INPUTSDL_MAX_DEVICES; ++i) {
+        if (!dev_open(i)) {
             if (SDL_IsGameController(joystick_index)) {
                 SDL_GameController *p = SDL_GameControllerOpen(joystick_index);
                 if (p) {
                     static int announced;
-                    s_pads[i] = p;
-                    s_pad_instance_id[i] = SDL_JoystickInstanceID(
-                        SDL_GameControllerGetJoystick(p));
+                    s_dev_gc[i] = p;
+                    s_dev_id[i] = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(p));
                     /* Print the in-match button map once. On a console there
                      * is no manual to check and no keyboard to fall back on,
                      * so the log is where you find out what the pad does. */
@@ -260,7 +293,7 @@ static int pad_open_into_first_empty(int joystick_index)
                                         (SDL_GameControllerButton)k_padKeys[k].button),
                                     k_padKeys[k].what);
                     }
-                    return i;
+                    return dev_assign(i);
                 }
             } else {
                 /* No GameController mapping — open as a raw joystick.
@@ -268,25 +301,74 @@ static int pad_open_into_first_empty(int joystick_index)
                  * Amiga/Atari shape SWOS expects) fall through here. */
                 SDL_Joystick *j = SDL_JoystickOpen(joystick_index);
                 if (j) {
-                    s_raw_pads[i] = j;
-                    s_pad_instance_id[i] = SDL_JoystickInstanceID(j);
-                    return i;
+                    s_dev_raw[i] = j;
+                    s_dev_id[i] = SDL_JoystickInstanceID(j);
+                    return dev_assign(i);
                 }
             }
-            return -1;
+            return -2;
         }
     }
-    return -1;
+    return -2;
 }
 
-static int pad_find_slot_for_instance(SDL_JoystickID id)
+static int dev_find_instance(SDL_JoystickID id)
 {
-    for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
-        if ((s_pads[i] || s_raw_pads[i]) && s_pad_instance_id[i] == id)
+    for (int i = 0; i < INPUTSDL_MAX_DEVICES; ++i) {
+        if (dev_open(i) && s_dev_id[i] == id)
             return i;
     }
     return -1;
 }
+
+/* SWOS_TEST_VIRTUAL_PADS=N attaches N virtual gameport sticks (two axes, two
+ * buttons, no mapping: the raw path) before the real ones are counted, and
+ * SWOS_TEST_VIRTUAL_FIRE=<pad>:<frame> holds fire on virtual pad <pad> (0-based) for
+ * ten frames from the <frame>-th -- how the intro's "fire picks player 1" is checked
+ * without three controllers on the desk. */
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+static int s_virt_first = -1, s_virt_count;
+static void virtual_pads_attach(void)
+{
+    const char *v = getenv("SWOS_TEST_VIRTUAL_PADS");
+    int n = v ? atoi(v) : 0;
+    /* A test runs windowless, and SDL drops joystick input with no window focused. */
+    if (n > 0)
+        SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+    for (int i = 0; i < n && i < INPUTSDL_MAX_DEVICES; ++i) {
+        int idx = SDL_JoystickAttachVirtual(SDL_JOYSTICK_TYPE_UNKNOWN, 2, 2, 0);
+        if (idx < 0) {
+            fprintf(stderr, "[input] test: virtual pad %d not attached: %s\n", i, SDL_GetError());
+            break;
+        }
+        if (s_virt_first < 0)
+            s_virt_first = idx;
+        s_virt_count++;
+    }
+}
+
+static void virtual_pads_frame(void)
+{
+    const char *v = getenv("SWOS_TEST_VIRTUAL_FIRE");
+    int pad, at, frame = s_frames;
+    if (s_virt_count)
+        SDL_JoystickUpdate();       /* a virtual stick's state lands on an update */
+    if (!v || s_virt_count == 0 || sscanf(v, "%d:%d", &pad, &at) != 2 || pad < 0 || pad >= s_virt_count)
+        return;
+    if (frame == at || frame == at + 10) {
+        SDL_JoystickID id = SDL_JoystickGetDeviceInstanceID(s_virt_first + pad);
+        SDL_Joystick *j = SDL_JoystickFromInstanceID(id);
+        if (!j || SDL_JoystickSetVirtualButton(j, 0, frame == at ? SDL_PRESSED : SDL_RELEASED) != 0)
+            fprintf(stderr, "[input] test: virtual fire not set (%s)\n", j ? SDL_GetError() : "not open");
+        if (frame == at)
+            fprintf(stderr, "[input] test: fire on virtual pad %d at frame %d%s\n", pad, frame,
+                    s_intro_claim ? " (the intro is on)" : "");
+    }
+}
+#else
+static void virtual_pads_attach(void) {}
+static void virtual_pads_frame(void) {}
+#endif
 
 int InputSDL_Init(void)
 {
@@ -313,6 +395,8 @@ int InputSDL_Init(void)
             fprintf(stderr, "[input] gamecontrollerdb.txt not loaded: %s\n", SDL_GetError());
     }
 
+    virtual_pads_attach();
+
     int n = SDL_NumJoysticks();
     fprintf(stderr, "[input] SDL_NumJoysticks=%d\n", n);
     for (int i = 0; i < n; ++i) {
@@ -325,25 +409,30 @@ int InputSDL_Init(void)
         if (slot >= 0)
             fprintf(stderr, "[input]     opened as P%d (%s)\n",
                     slot + 1, is_gc ? "GameController" : "raw Joystick");
+        else if (slot == -1)
+            fprintf(stderr, "[input]     opened, not played: both players have a pad "
+                            "(press fire on it during the intro to play it as P1)\n");
         else
-            fprintf(stderr, "[input]     skipped (both pad slots full or open failed)\n");
+            fprintf(stderr, "[input]     skipped (open failed, or %d devices already open)\n",
+                    INPUTSDL_MAX_DEVICES);
     }
     return 0;
 }
 
 void InputSDL_Shutdown(void)
 {
-    for (int i = 0; i < INPUTSDL_NUM_PADS; ++i) {
-        if (s_pads[i]) {
-            SDL_GameControllerClose(s_pads[i]);
-            s_pads[i] = NULL;
+    for (int i = 0; i < INPUTSDL_MAX_DEVICES; ++i) {
+        if (s_dev_gc[i]) {
+            SDL_GameControllerClose(s_dev_gc[i]);
+            s_dev_gc[i] = NULL;
         }
-        if (s_raw_pads[i]) {
-            SDL_JoystickClose(s_raw_pads[i]);
-            s_raw_pads[i] = NULL;
+        if (s_dev_raw[i]) {
+            SDL_JoystickClose(s_dev_raw[i]);
+            s_dev_raw[i] = NULL;
         }
-        s_pad_instance_id[i] = 0;
+        s_dev_id[i] = 0;
     }
+    s_player_dev[0] = s_player_dev[1] = -1;
 }
 
 void InputSDL_HandleEvent(const SDL_Event *e)
@@ -514,25 +603,45 @@ void InputSDL_HandleEvent(const SDL_Event *e)
         int idx = e->jdevice.which;
         const char *name = SDL_JoystickNameForIndex(idx);
         int is_gc = SDL_IsGameController(idx);
-        int slot = pad_open_into_first_empty(idx);
+        int slot;
+        /* SDL also announces every device that was already connected when it
+         * started, and InputSDL_Init has opened those: opening one again gave it
+         * a second slot -- a lone pad drove player 2 as well. */
+        if (dev_find_instance(SDL_JoystickGetDeviceInstanceID(idx)) >= 0)
+            break;
+        slot = pad_open_into_first_empty(idx);
         fprintf(stderr, "[input] hot-plug: \"%s\" (%s) %s\n",
                 name ? name : "(null)",
                 is_gc ? "GameController" : "raw Joystick",
-                slot >= 0 ? (slot == 0 ? "→ P1" : "→ P2") : "(no free slot)");
+                slot >= 0 ? (slot == 0 ? "→ P1" : "→ P2")
+                          : slot == -1 ? "(not played: both players have a pad)" : "(not opened)");
     } break;
     case SDL_JOYDEVICEREMOVED: {
-        int slot = pad_find_slot_for_instance(e->jdevice.which);
-        if (slot >= 0) {
-            if (s_pads[slot]) {
-                SDL_GameControllerClose(s_pads[slot]);
-                s_pads[slot] = NULL;
+        int d = dev_find_instance(e->jdevice.which);
+        if (d >= 0) {
+            if (s_dev_gc[d]) {
+                SDL_GameControllerClose(s_dev_gc[d]);
+                s_dev_gc[d] = NULL;
             }
-            if (s_raw_pads[slot]) {
-                SDL_JoystickClose(s_raw_pads[slot]);
-                s_raw_pads[slot] = NULL;
+            if (s_dev_raw[d]) {
+                SDL_JoystickClose(s_dev_raw[d]);
+                s_dev_raw[d] = NULL;
             }
-            s_pad_instance_id[slot] = 0;
-            fprintf(stderr, "[input] pad P%d removed\n", slot + 1);
+            s_dev_id[d] = 0;
+            for (int p = 0; p < INPUTSDL_NUM_PADS; ++p) {
+                if (s_player_dev[p] != d)
+                    continue;
+                s_player_dev[p] = -1;
+                fprintf(stderr, "[input] pad P%d removed\n", p + 1);
+                /* A device that was waiting steps in. */
+                for (int w = 0; w < INPUTSDL_MAX_DEVICES; ++w) {
+                    if (dev_open(w) && s_player_dev[0] != w && s_player_dev[1] != w) {
+                        s_player_dev[p] = w;
+                        fprintf(stderr, "[input] P%d is now \"%s\"\n", p + 1, dev_name(w));
+                        break;
+                    }
+                }
+            }
         }
     } break;
     default:
@@ -544,12 +653,17 @@ void InputSDL_HandleEvent(const SDL_Event *e)
  * NULL) is set when the conventional "second button" (B on mapped pads,
  * button index 1 on raw joysticks) is pressed — used for the SDL-only
  * "skip auto-advance pause" feature, independent of fire. */
-static void read_pad_state(int slot,
-                           int *_up, int *_down, int *left, int *right,
-                           int *_fire, int *skip)
+static void read_device_state(int d,
+                              int *_up, int *_down, int *left, int *right,
+                              int *_fire, int *skip)
 {
-    SDL_GameController *pad = s_pads[slot];
-    SDL_Joystick *raw = s_raw_pads[slot];
+    SDL_GameController *pad;
+    SDL_Joystick *raw;
+
+    if (d < 0 || d >= INPUTSDL_MAX_DEVICES)
+        return;
+    pad = s_dev_gc[d];
+    raw = s_dev_raw[d];
 
     if (pad) {
         Sint16 ax = SDL_GameControllerGetAxis(pad, SDL_CONTROLLER_AXIS_LEFTX);
@@ -602,6 +716,47 @@ static void read_pad_state(int slot,
          * pads) also raises skip. Button 0 alone never triggers skip. */
         if (skip && nbtns >= 2 && SDL_JoystickGetButton(raw, 1))
             *skip = 1;
+    }
+}
+
+/* The same for player `slot` (0 or 1): whichever device that player has. */
+static void read_pad_state(int slot,
+                           int *_up, int *_down, int *left, int *right,
+                           int *_fire, int *skip)
+{
+    read_device_state(s_player_dev[slot], _up, _down, left, right, _fire, skip);
+}
+
+/* While the intro is on screen, a device other than player 1's that presses fire
+ * becomes player 1: "the one I press fire on is the one I play with". The one it
+ * replaces takes its place -- player 2's pad if it was player 2's, or waits if it
+ * was waiting -- so a two-player setup only ever swaps. The same press then skips
+ * the intro, as fire always has, because it is now player 1's. */
+void InputSDL_SetIntroClaim(int on)
+{
+    s_intro_claim = on != 0;
+    if (getenv("SWOS_TEST_VIRTUAL_PADS"))
+        fprintf(stderr, "[input] test: intro %s at frame %d\n", on ? "begins" : "ends", s_frames);
+}
+
+static void intro_claim_poll(void)
+{
+    for (int d = 0; d < INPUTSDL_MAX_DEVICES; ++d) {
+        int up = 0, down = 0, left = 0, right = 0, fire = 0;
+        int old = s_player_dev[0];
+        if (!dev_open(d) || d == old)
+            continue;
+        read_device_state(d, &up, &down, &left, &right, &fire, NULL);
+        if (!fire)
+            continue;
+        if (s_player_dev[1] == d)
+            s_player_dev[1] = old;
+        s_player_dev[0] = d;
+        fprintf(stderr, "[input] fire on the intro: P1 is now controller %d, \"%s\"", d + 1, dev_name(d));
+        if (old >= 0)
+            fprintf(stderr, " (was controller %d, now %s)", old + 1, s_player_dev[1] == old ? "P2" : "not played");
+        fprintf(stderr, "\n");
+        return;
     }
 }
 
@@ -696,10 +851,12 @@ void InputSDL_ReleaseAll(void)
  * 'W' scancode, which is the port's bench key in both modes. */
 static int pad_secondary(int slot)
 {
-    if (slot < 0 || slot >= (int)(sizeof s_pads / sizeof s_pads[0]))
+    int d;
+    if (slot < 0 || slot >= INPUTSDL_NUM_PADS)
         return 0;
-    if (s_pads[slot])
-        return SDL_GameControllerGetButton(s_pads[slot], SDL_CONTROLLER_BUTTON_X) ? 1 : 0;
+    d = s_player_dev[slot];
+    if (d >= 0 && s_dev_gc[d])
+        return SDL_GameControllerGetButton(s_dev_gc[d], SDL_CONTROLLER_BUTTON_X) ? 1 : 0;
     return 0;
 }
 
@@ -748,6 +905,11 @@ void InputSDL_PostFrame(void)
      * machine's pad would replace the opponent's input with nothing and make
      * every re-simulated frame differ from the first. */
     { extern int32_t NetplayMatch_Enabled(void); if (NetplayMatch_Enabled()) return; }
+
+    s_frames++;
+    virtual_pads_frame();
+    if (s_intro_claim)
+        intro_claim_poll();
 
     /* Player 1: keyboard + pad 0 (combined). */
     int p1_up = s_kbd_up, p1_down = s_kbd_down, p1_left = s_kbd_left, p1_right = s_kbd_right;

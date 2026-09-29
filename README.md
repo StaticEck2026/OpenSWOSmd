@@ -633,6 +633,13 @@ arrow keys don't get hijacked when a P2 pad is plugged in but unused).
 Two pads connected at startup map to P1 / P2 in enumeration order. Pads can
 be hot-plugged; new pads fill the lowest empty slot.
 
+**More pads than players?** Every connected controller is opened (up to
+eight), but only two are played. To choose yours, **press fire on it during
+the intro**: it becomes P1 (and the press skips the intro, as usual). If it
+was P2's pad the two swap; otherwise the old P1 pad is left unused. A pad
+that isn't played takes over when a played one is unplugged. `SWOS.log`
+says which is which.
+
 ### Function keys
 
 | Key          | Action                                                           |

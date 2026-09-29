@@ -259,7 +259,17 @@ void mainC(void)
 #ifdef SWOS_SDL_BUILD
     /* Arcade: no intro/credits — boot straight to attract (asset loading below
      * still runs; only the visible intro animation is skipped). */
-    { extern int _gArcadeMode; if (!_gArcadeMode) ShowLoaderIntroSequence(); }
+    {
+        /* The intro is where a player with more pads than players picks theirs: the
+         * one fire is pressed on becomes player 1 (input_sdl.c). */
+        extern int _gArcadeMode;
+        extern void InputSDL_SetIntroClaim(int on);
+        if (!_gArcadeMode) {
+            InputSDL_SetIntroClaim(1);
+            ShowLoaderIntroSequence();
+            InputSDL_SetIntroClaim(0);
+        }
+    }
 #else
 #ifndef PITCH_SCROLL_TEST
     ShowLoaderIntroSequence();   /* skipped in the scroll-test rig: boot straight to the pitch */
